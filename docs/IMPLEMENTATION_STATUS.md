@@ -171,6 +171,14 @@ approve; all 11 package/36 nested web stages passed, including 4,419 Vitest test
 [Acceptance and boundaries](status/2026-10-26-flow-group-names.md). No live bus,
 application deployment or new synchronization guarantee is claimed.
 
+## Website highlights and typing for every heading (27 October 2026 source)
+
+The landing page lists nine detailed product highlights instead of release-specific
+cards, keeps the alpha notice, and shows fresh `v0.1.0-alpha.17` real-app stills.
+Every heading types once and then rolls again; the fade entrance is removed
+([website contract](WEBSITE.md#highlights-instead-of-release-notes-27-october-2026)).
+Deployment happens with the push that touches `website/`.
+
 ## Selective website typing (26 October 2026)
 
 WP-21 is published as `b517930e7`: only the hero and Features headings type,

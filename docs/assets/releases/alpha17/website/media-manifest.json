@@ -1,0 +1,75 @@
+{
+  "schema": "knxbench-website-highlights-media/1",
+  "captured_on": "2026-10-27",
+  "application_release": "v0.1.0-alpha.17",
+  "application_source_commit": "a9ea32d72364478b25e158d0b95465af7a4702df",
+  "knx_server_version": "knx-server 0.1.0-alpha.17+ga9ea32d72",
+  "server_binary_sha256": "3ccf6c7536db72b98859e982e916ca8f27809ff0fb059bf70627d43b4a2d7fd0",
+  "frontend": "production build (npm ci && npm run build) of the tagged source",
+  "network": "isolated loopback-only user/network namespace (only interface: lo)",
+  "data": "fictional schema-11 Sample house (tools/manual_sample_project.py); fictional demo product package in a vendor-style ZIP, previewed only",
+  "captures": {
+    "stills_and_group_details_clip": {
+      "spec": {
+        "path": "apps/knx-web/e2e/release-media.shots.ts",
+        "sha256": "8806725d8175cfaf2654475fb9b911d58c4e5308f28bbbbc33342dbba34f8660"
+      },
+      "config": {
+        "path": "apps/knx-web/playwright.release-media.config.ts",
+        "sha256": "3c0e8562064c37fb071a84ca2d8f515b2796626e166cd7d3c1ed2d0f1f97b45d"
+      },
+      "result": {
+        "passed": 1,
+        "failed": 0,
+        "skipped": 0
+      },
+      "server": "actual knx-server; no application response replaced",
+      "refused_requests_asserted_absent": "support diagnose/export, device-diagnostics start/export, device download/address start, catalogue install/apply",
+      "notes": "device wizard cancelled at the review step (nothing created); vendor ZIP stopped at the bound preview (nothing installed); sample saved as .knxdb in the scratch data directory so a named version could be created"
+    }
+  },
+  "stills": {
+    "graphite-addresses.png": {
+      "sha256": "e45299936848cf8551c8f563af13a3cda1d26a10ca745f6d30a62473b2caf264",
+      "website_asset": "graphite.webp"
+    },
+    "lcars-addresses.png": {
+      "sha256": "45afb205e7bdf491b4eee351b8e8d27d4008932318952ed0e919d8ae4adc15e4",
+      "website_asset": "lcars.webp"
+    },
+    "user-modern-retro-green-crt-addresses.png": {
+      "sha256": "63d4f1dd59fab117dfbe1599d96ea77a322952cbb88c04843ea1a8e443f512a7",
+      "website_asset": "crt.webp"
+    },
+    "graphite-import.png": {
+      "sha256": "2bb64f7dd328b32c85d1718fb9bd4dca982e4e7e352aee1a195a577afb4add69",
+      "website_asset": "highlight-import.webp"
+    },
+    "graphite-history.png": {
+      "sha256": "12e85a2c5c8f4d702e2b9b0f48ec5d0963de553e91756cda54396953bca5562b",
+      "website_asset": "highlight-history.webp"
+    },
+    "graphite-device-wizard.png": {
+      "sha256": "780e7ba709a372c49b00bb27a5d334527fa4f58722d7b4fdae7c093539be9333",
+      "website_asset": "highlight-wizard.webp"
+    },
+    "graphite-parameters.png": {
+      "sha256": "9dd72862886bb25b9e772a66ce98e580d0e80a70bcb0d07fdd3f5edbeabde62d",
+      "website_asset": "highlight-parameters.webp"
+    },
+    "graphite-vendor-zip.png": {
+      "sha256": "393ccadc72ef797604ea63ae1e37bda94ddab393791e4616e7f757f7f1d9d142",
+      "website_asset": "highlight-catalogue.webp"
+    },
+    "graphite-search.png": {
+      "sha256": "6c9892d1c69df6f3201922fb0816687b9c24f3e5626855b3a3d514844e4945bc",
+      "website_asset": "highlight-search.webp"
+    }
+  },
+  "clip": {
+    "group-details.mp4": {
+      "sha256": "ebe142c41b1dfb48400da0b5a22bc74772513d614af871a3d492c279e8aa8aec",
+      "poster": "group-details.webp, lossless WebP of the decoded frame at 4.0 s"
+    }
+  }
+}

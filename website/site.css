@@ -74,13 +74,16 @@ p { max-width: 68ch; }
 .demo-copy > p { color: var(--muted); font-size: 15px; }
 .demo-row video { width: 100%; background: var(--surface-deep); border: 1px solid var(--rule); border-radius: 7px; }
 .demo-row figcaption { color: var(--muted); font-size: 12px; margin-top: 12px; }
-.release-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 48px 32px; }
-.release-grid article { border-top: 1px solid var(--rule); padding-top: 24px; }
-.release-grid img { width: 100%; border: 1px solid var(--rule); border-radius: 7px; }
-.release-grid figcaption { color: var(--muted); font-size: 12px; margin-top: 12px; }
-.release-grid h3 { margin: 22px 0 16px; }
-.release-grid article > p { color: var(--muted); font-size: 15px; }
-@media (max-width: 800px) { .release-grid { grid-template-columns: 1fr; } }
+.highlight-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 64px 40px; }
+.highlight-grid article { border-top: 1px solid var(--rule); padding-top: 24px; }
+.highlight-grid img { width: 100%; height: auto; border: 1px solid var(--rule); border-radius: 7px; }
+.highlight-grid figcaption { color: var(--muted); font-size: 12px; margin-top: 12px; }
+.highlight-grid .step { margin: 22px 0 10px; }
+.highlight-grid h3 { margin: 0 0 16px; }
+.highlight-grid article > p { color: var(--muted); font-size: 15px; }
+.highlight-grid .detail-note { color: var(--ink); font-size: 12px; margin-top: 18px; }
+.highlight-more { margin-top: 72px; }
+@media (max-width: 800px) { .highlight-grid { grid-template-columns: 1fr; } }
 .transcript { margin-top: 23px; color: var(--muted); font-size: 13px; }
 summary { cursor: pointer; width: fit-content; }
 .transcript p { margin-top: 14px; line-height: 1.7; }
@@ -134,17 +137,13 @@ summary { cursor: pointer; width: fit-content; }
 .char { display: inline-block; position: relative; }
 .char::after { content: attr(data-char); position: absolute; left: 0; top: 0; opacity: 0; transform: translateX(-100%); }
 .char-glyph { display: inline-block; }
-/* Live-typed headings: untyped glyphs keep their space; the zero-width cursor trails the last one. */
+/* Live-typed headings: untyped glyphs keep their space; the zero-width cursor trails the last one.
+   Only progressive enhancement may hide glyphs; motion-off is always readable. */
 :root[data-motion="on"] .char[data-untyped] .char-glyph { visibility: hidden; }
 .typing-cursor { display: inline-block; position: relative; width: 0; height: 0; vertical-align: baseline; }
 .typing-cursor::after { content: ""; position: absolute; left: .06em; bottom: -.18em; width: .09em; height: .95em; background: var(--accent); }
 @media (forced-colors: active) {
   .typing-cursor::after { background: CanvasText; forced-color-adjust: none; }
-}
-/* Only progressive enhancement may hide glyphs; motion-off is always readable. */
-:root[data-motion="on"] [data-headline-state="hidden"] .char {
-  opacity: 0;
-  transform: translateY(.3em) rotateX(-45deg);
 }
 .motion-toggle { background: none; border: 1px solid var(--rule); border-radius: 3px; padding: 8px 12px; min-height: 44px; font: 12px var(--mono); cursor: pointer; white-space: nowrap; }
 .motion-toggle:hover { border-color: var(--accent); }

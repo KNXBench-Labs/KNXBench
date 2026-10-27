@@ -1,9 +1,8 @@
-/** Real Chromium acceptance for the selective live-typing headlines (WP-21). */
+/** Real Chromium acceptance: every heading types once, then its glyphs roll again. */
 async (page) => {
   const origin = new URL(page.url()).origin, checks = [], errors = [], unexpected = [];
   const browser = page.context().browser();
   const assert = (name, value) => { if (!value) throw new Error(name); checks.push(name); };
-  const TYPED = ['hero-title', 'features-title'];
   // Visible glyph count plus cursor/last-glyph geometry for one heading, in one synchronous read.
   const probe = (id, on = page) => on.evaluate((id) => {
     const h = document.getElementById(id);
@@ -11,10 +10,10 @@ async (page) => {
     const cursors = h.querySelectorAll('.typing-cursor');
     const last = shown[shown.length - 1], cursor = cursors[0];
     const box = el => { const r = el.getBoundingClientRect(); return { left: r.left, right: r.right, top: r.top, bottom: r.bottom }; };
-    // Anything animating inside the heading except the cursor blink: reveal or ambient glyph swaps.
+    // Anything animating inside the heading except the cursor blink, i.e. ambient glyph swaps.
     const foreign = h.getAnimations({ subtree: true }).filter(a => a.id !== 'headline-typing-cursor').length;
     return { total: h.querySelectorAll('.char').length, shown: shown.length, cursors: cursors.length, foreign,
-      state: h.dataset.headlineState, hiddenAria: cursor ? cursor.getAttribute('aria-hidden') : null,
+      state: h.dataset.typingState, hiddenAria: cursor ? cursor.getAttribute('aria-hidden') : null,
       opacity: cursor ? getComputedStyle(cursor).opacity : null, at: performance.now(),
       last: last && box(last), cursor: cursor && box(cursor), line: cursor && Math.round(cursor.getBoundingClientRect().top) };
   }, id);
@@ -38,17 +37,31 @@ async (page) => {
     s.cursor.top < s.last.bottom && s.cursor.bottom > s.last.top;
   const finished = (s) => s.shown === s.total && s.cursors === 0;
 
-  // Exactly the selected headings carry the explicit template marker.
+  // No selective template marker any more: the runtime types every marketing heading.
   for (const lang of ['en', 'de']) {
     await page.goto(`${origin}/${lang}/`);
-    const marked = await page.$$eval('[data-headline-typing]', e => e.map(x => x.id));
-    assert(`${lang}: exactly hero-title and features-title are marked for typing`, JSON.stringify(marked) === JSON.stringify(TYPED));
-    assert(`${lang}: only marked headings are on-page headings with that marker`, await page.$$eval('main h1, main h2, main h3', hs => hs.filter(h => h.hasAttribute('data-headline-typing')).length === 2));
+    assert(`${lang}: no heading carries a selective typing marker`, await page.locator('[data-headline-typing]').count() === 0);
+    assert(`${lang}: every marketing heading is prepared for typing`, await page.$$eval('main h1, main h2, main h3', hs => hs.length > 10 && hs.every(h => h.dataset.typingState)));
+    await page.waitForTimeout(300);
+    assert(`${lang}: headings below the fold wait untyped until first seen`, await page.$$eval('main h1, main h2, main h3', hs => {
+      const below = hs.filter(h => h.getBoundingClientRect().top > innerHeight);
+      return below.length > 10 && below.every(h => h.dataset.typingState === 'pending' && h.querySelector('[data-untyped]'));
+    }));
   }
 
   // Desktop hero: live typing with real intermediate glyph visibility and an inline cursor.
   const [c1, p1] = await context({});
   try {
+    // Record every heading that ever receives a typing cursor, from the first paint on.
+    await c1.addInitScript(() => {
+      window.__cursorHeadings = new Set();
+      new MutationObserver(records => {
+        for (const record of records) for (const node of record.addedNodes) {
+          const heading = node.classList && node.classList.contains('typing-cursor') && node.closest('h1, h2, h3');
+          if (heading) window.__cursorHeadings.add(heading);
+        }
+      }).observe(document, { childList: true, subtree: true });
+    });
     await p1.goto(`${origin}/en/`);
     const label = await p1.locator('#hero-title').getAttribute('aria-label');
     const size = async () => p1.locator('#hero-title').evaluate(h => [h.offsetWidth, h.offsetHeight]);
@@ -66,18 +79,22 @@ async (page) => {
     assert('cursor blink is discrete: only fully on or fully off', blinkS.every(s => s.opacity === '0' || s.opacity === '1'));
     assert('cursor blink lasts about four seconds then ends', blinkS[blinkS.length - 1].at - blinkS[0].at >= 3500);
     assert('cursor is aria-hidden while it exists', samples.filter(s => s.cursors).every(s => s.hiddenAria === 'true') && samples.some(s => s.cursors));
-    assert('typed hero never gets reveal or ambient glyph animations, incl. after the first ambient tick', samples.every(s => s.foreign === 0 && s.state === 'shown') && samples[samples.length - 1].at - samples[0].at > 2500);
+    assert('hero gets no glyph swaps while it types and its cursor blinks', samples.every(s => s.foreign === 0) && samples[samples.length - 1].at - samples[0].at > 2500);
+    assert('hero typing state ends done', samples[samples.length - 1].state === 'done');
     assert('hero ends fully visible with the cursor gone after its finite blink', finished(samples[samples.length - 1]));
     const afterSize = await size();
     assert('hero layout box is stable through typing', JSON.stringify(before) === JSON.stringify(afterSize));
     assert('hero accessible name unchanged and keeps its line break boundary', label === 'Your KNX project. Your workbench.' && await p1.locator('#hero-title br').count() === 1 && await p1.locator('#hero-title').getAttribute('aria-label') === label);
-    assert('no endless cursor animation remains', await p1.evaluate(() => document.getAnimations().filter(a => a.id === 'headline-typing-cursor').length === 0));
+    assert('no endless cursor animation remains', await p1.evaluate(() => document.querySelector('#hero-title').getAnimations({ subtree: true }).filter(a => a.id === 'headline-typing-cursor').length === 0));
+    // Owner request: once typing is through, the glyphs move again as before.
+    await p1.waitForFunction(() => document.querySelector('#hero-title').getAnimations({ subtree: true }).some(a => a.id === 'ambient-char-swap'), null, { timeout: 15000, polling: 30 });
+    assert('typed hero glyphs roll again after the cursor is gone', await probe('hero-title', p1).then(s => finished(s) && s.foreign > 0));
     // Features heading types on first visibility only, and other headings never get a cursor.
     assert('features heading has not typed before it is seen', (await probe('features-title', p1)).shown === 0);
     await p1.evaluate(() => { const h = document.getElementById('features-title'); window.scrollTo(0, h.getBoundingClientRect().top + scrollY - innerHeight / 2); });
     const feat = await sample(p1, 'features-title', finished);
     assert('features heading types on first visibility', feat.some(s => s.shown > 0 && s.shown < s.total) && finished(feat[feat.length - 1]));
-    assert('typed features heading never gets reveal or ambient glyph animations', feat.every(s => s.foreign === 0 && s.state === 'shown'));
+    assert('features heading gets no glyph swaps while typing', feat.every(s => s.foreign === 0));
     assert('features cursor follows the revealed text', feat.filter(s => s.shown > 0 && s.shown < s.total).every(adjacent));
     await p1.evaluate(() => window.scrollTo(0, 0));
     await p1.waitForTimeout(400);
@@ -89,15 +106,15 @@ async (page) => {
     const others = await p1.evaluate(async () => {
       const seen = [];
       for (const h of document.querySelectorAll('main h1, main h2, main h3')) {
-        if (h.hasAttribute('data-headline-typing')) continue;
+        if (h.id === 'hero-title' || h.id === 'features-title') continue;
         h.scrollIntoView({ block: 'center' });
-        for (let i = 0; i < 40 && h.dataset.headlineState !== 'shown'; i++) await new Promise(r => setTimeout(r, 50));
-        seen.push({ cursor: !!h.querySelector('.typing-cursor'), untyped: !!h.querySelector('[data-untyped]'), state: h.dataset.headlineState });
+        for (let i = 0; i < 120 && h.dataset.typingState !== 'done'; i++) await new Promise(r => setTimeout(r, 25));
+        seen.push({ cursor: window.__cursorHeadings.has(h), state: h.dataset.typingState, untyped: !!h.querySelector('[data-untyped]') });
       }
       return seen;
     });
-    assert('other headings never get a typing cursor or typing hiding', others.length > 5 && others.every(o => !o.cursor && !o.untyped));
-    assert('other headings keep the existing reveal state', others.every(o => o.state === 'shown'));
+    assert('every other heading typed with a cursor', others.length > 10 && others.every(o => o.cursor));
+    assert('every other heading ends fully typed', others.every(o => o.state === 'done' && !o.untyped));
   } finally { await c1.close(); }
 
   // Mobile, wrapped headings (German is longer): the cursor follows onto later lines.

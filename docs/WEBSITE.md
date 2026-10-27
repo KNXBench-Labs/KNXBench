@@ -7,6 +7,42 @@ remote IPv6 HTTPS were verified on 2026-10-09; Pages actions now use Node 24.
 Owner privacy review and optional WebKit evidence remain separate follow-ups.
 Decision: [ADR-0095](adr/0095-static-marketing-companion.md).
 
+## Highlights instead of release notes (27 October 2026)
+
+Owner request: take the release-specific material off the landing page, list only the
+highlights with more detailed, benefit-led copy, keep the alpha notice and refresh
+the screenshots. Separately: every heading gets the same typing animation, and once it
+is through, the characters move again as before.
+
+- **Content:** `#features` now holds nine numbered highlights: import with report,
+  history/undo/versions, wizards, parameter workspace, product catalogue, search and
+  keyboard (each with a real-app still), plus bus/flow view, documents/comparison and AI
+  agents over MCP (text). The three short step cards, the Alpha 17 section, the
+  Alpha 14 picture history, the upgrade/migration note and the per-release download links
+  are gone. The alpha notice stays in the hero tag and the status section with its
+  boundaries; the start section links the releases page instead of one release's files.
+  Claims follow `docs/FEATURES.md`/README; single-device-only work (device downloads)
+  stays out of the highlights and in the status boundaries.
+- **Media:** hero, LCARS/CRT gallery, six highlight stills and the group-details clip
+  are new captures of the `v0.1.0-alpha.17` tag (`a9ea32d7`) from the real server and
+  production frontend, fictional Sample house, loopback-only namespace. The wizard stops
+  at its review (cancelled, nothing created); the vendor ZIP stops at the bound preview
+  (nothing installed). PNGs and manifest: `docs/assets/releases/alpha17/website/`.
+  `project-work` and `bus-flow` remain the Alpha 14 recordings; captions and VTT tracks
+  no longer carry release numbers, `media.json` keeps each clip's exact source.
+- **Typing:** the selective marker and the reversible fade/3D entrance are removed.
+  Every marketing `h1/h2/h3` types once on first visibility, its cursor blinks four times,
+  then the heading joins the ambient random-direction rolls. Pause, reduced motion,
+  hidden document and pagehide still reveal all text at once and never replay typing.
+- **Release process:** a release no longer requires a website copy change; refreshing
+  the stills with `release-media.shots.ts` is optional.
+
+Acceptance (self-review, Chromium only): media capture 1/1 passed on the tagged server;
+website unittest 30/30; offline browser recipes on the preview build 667 checks in 9
+recipes and on the release build 361 checks in 4 recipes, zero page errors and zero
+foreign requests; every still inspected. No WebKit, native screen-reader or deployment
+claim until the Pages run and live readback.
+
 <a id="phosphor-atlas--private-implementation-15-october-2026"></a>
 
 <a id="story-style-phosphor-crt--private-revision-15-october-2026"></a>
@@ -73,6 +109,8 @@ Self-review is not independent approval. Preview/public-variant builds do not de
 
 ## Selective live typing (26 October 2026)
 
+*Superseded on 27 October 2026: every heading now types, then rolls (see above).*
+
 WP-21 selects only the main hero and Features headings with explicit template
 markers. They type once, on first visibility in each page load, at 50ms per glyph;
 they do not use the other headings' reversible entrance or ambient rolls. An
@@ -97,6 +135,8 @@ accepted artifact byte-for-byte and the deployed host passed the 41-check typing
 recipe. [Acceptance](status/2026-10-26-website-headline-typing.md).
 
 ## Reversible headline entrances (18 October 2026)
+
+*Removed on 27 October 2026: typing replaced the entrance for every heading.*
 
 Marketing `main h1/h2/h3` headings (except the two WP-21 typing headings below)
 enter with the SessionRadar-inspired
@@ -141,6 +181,8 @@ headings can remain transparent in print output; the independent review observed
 a print-specific fix. Pause motion before printing for readable static headings.
 
 ## Alpha 14 refresh (18 October 2026)
+
+*Historical: the release section and Alpha 14 stills were replaced on 27 October 2026.*
 
 Owner request: bring knxbench.com to Alpha 14, refresh screenshots and videos,
 and drop "no bus / no hardware" style tags. Design, root language, legal/privacy

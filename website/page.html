@@ -37,7 +37,7 @@ ${preview_banner}  <header class="site-header wrap">
   <main id="main" tabindex="-1">
     <section class="hero wrap" aria-labelledby="hero-title">
       <div class="hero-intro">
-        <div class="hero-title"><p class="alpha-tag"><span></span>${alpha_tag}</p><h1 id="hero-title" data-headline-typing>${hero_line_one}<br>${hero_line_two}</h1></div>
+        <div class="hero-title"><p class="alpha-tag"><span></span>${alpha_tag}</p><h1 id="hero-title">${hero_line_one}<br>${hero_line_two}</h1></div>
         <div class="hero-copy"><p class="lede">${hero_lede}</p><div class="hero-actions"><a class="button" href="#start">${try}</a><a class="text-link" href="#watch">${watch_cta}<span aria-hidden="true">↗</span></a></div><p class="hero-platforms">${platforms}</p></div>
       </div>
       <figure class="hero-media">
@@ -47,35 +47,21 @@ ${preview_banner}  <header class="site-header wrap">
       <div class="benefit-strip"><p>${strip_one}</p><p>${strip_two}</p><p>${strip_three}</p></div>
     </section>
     <section class="section wrap" id="features" aria-labelledby="features-title">
-      <div class="section-heading"><h2 id="features-title" data-headline-typing>${features_title}</h2><p>${features_intro}</p></div>
-      <div class="feature-list">
-        <article><span class="step">01</span><h3>${feature_one_title}</h3><p>${feature_one_body}</p><p class="detail-note">.knxproj → .knxdb</p></article>
-        <article><span class="step">02</span><h3>${feature_two_title}</h3><p>${feature_two_body}</p><p class="detail-note">${feature_two_note}</p></article>
-        <article><span class="step">03</span><h3>${feature_three_title}</h3><p>${feature_three_body}</p><p class="detail-note">${feature_three_note}</p></article>
+      <div class="section-heading"><h2 id="features-title">${features_title}</h2><p>${features_intro}</p></div>
+      <div class="highlight-grid">
+        <article><figure><a href="${base}assets/highlight-import.webp" target="_blank" rel="noopener" aria-label="${hl_import_alt}"><img src="${base}assets/highlight-import.webp" width="1440" height="1080" alt="${hl_import_alt}" loading="lazy"></a><figcaption>${hl_caption}</figcaption></figure><span class="step">01</span><h3>${hl_import_title}</h3><p>${hl_import_body}</p><p class="detail-note">${hl_import_note}</p></article>
+        <article><figure><a href="${base}assets/highlight-history.webp" target="_blank" rel="noopener" aria-label="${hl_history_alt}"><img src="${base}assets/highlight-history.webp" width="1440" height="1080" alt="${hl_history_alt}" loading="lazy"></a><figcaption>${hl_caption}</figcaption></figure><span class="step">02</span><h3>${hl_history_title}</h3><p>${hl_history_body}</p><p class="detail-note">${hl_history_note}</p></article>
+        <article><figure><a href="${base}assets/highlight-wizard.webp" target="_blank" rel="noopener" aria-label="${hl_wizard_alt}"><img src="${base}assets/highlight-wizard.webp" width="1440" height="1080" alt="${hl_wizard_alt}" loading="lazy"></a><figcaption>${hl_caption}</figcaption></figure><span class="step">03</span><h3>${hl_wizard_title}</h3><p>${hl_wizard_body}</p><p class="detail-note">${hl_wizard_note}</p></article>
+        <article><figure><a href="${base}assets/highlight-parameters.webp" target="_blank" rel="noopener" aria-label="${hl_params_alt}"><img src="${base}assets/highlight-parameters.webp" width="1440" height="1080" alt="${hl_params_alt}" loading="lazy"></a><figcaption>${hl_caption}</figcaption></figure><span class="step">04</span><h3>${hl_params_title}</h3><p>${hl_params_body}</p><p class="detail-note">${hl_params_note}</p></article>
+        <article><figure><a href="${base}assets/highlight-catalogue.webp" target="_blank" rel="noopener" aria-label="${hl_catalog_alt}"><img src="${base}assets/highlight-catalogue.webp" width="1440" height="1080" alt="${hl_catalog_alt}" loading="lazy"></a><figcaption>${hl_caption}</figcaption></figure><span class="step">05</span><h3>${hl_catalog_title}</h3><p>${hl_catalog_body}</p><p class="detail-note">${hl_catalog_note}</p></article>
+        <article><figure><a href="${base}assets/highlight-search.webp" target="_blank" rel="noopener" aria-label="${hl_search_alt}"><img src="${base}assets/highlight-search.webp" width="1440" height="1080" alt="${hl_search_alt}" loading="lazy"></a><figcaption>${hl_caption}</figcaption></figure><span class="step">06</span><h3>${hl_search_title}</h3><p>${hl_search_body}</p><p class="detail-note">${hl_search_note}</p></article>
       </div>
-    </section>
-    <section class="section wrap" id="release-features" aria-labelledby="release-title">
-      <div class="section-heading"><h2 id="release-title">${release_title}</h2><p>${release_intro}</p></div>
-      <div class="release-grid">
-        <article><h3>${release_download_title}</h3><p>${release_download_body}</p></article>
-        <article><h3>${release_adoption_title}</h3><p>${release_adoption_body}</p></article>
-        <article><h3>${release_workbench_title}</h3><p>${release_workbench_body}</p></article>
-        <article><h3>${release_system2_title}</h3><p>${release_system2_body}</p></article>
+      <div class="feature-list highlight-more">
+        <article><span class="step">07</span><h3>${hl_bus_title}</h3><p>${hl_bus_body}</p><p class="detail-note">${hl_bus_note}</p></article>
+        <article><span class="step">08</span><h3>${hl_docs_title}</h3><p>${hl_docs_body}</p><p class="detail-note">${hl_docs_note}</p></article>
+        <article><span class="step">09</span><h3>${hl_ai_title}</h3><p>${hl_ai_body}</p><p class="detail-note">${hl_ai_note}</p></article>
       </div>
-      <p class="quiet-note">${release_more_note}</p>
-      <p class="quiet-note">${release_scope_note}</p>
-      <div class="support-links"><a class="text-link" href="https://github.com/KNXBench-Labs/KNXBench/releases/tag/v0.1.0-alpha.17" target="_blank" rel="noopener">${release_cta}<span aria-hidden="true"> ↗</span></a><a href="https://github.com/KNXBench-Labs/KNXBench/blob/main/docs/releases/alpha17.md" target="_blank" rel="noopener">${release_source_cta}</a><a href="https://github.com/KNXBench-Labs/KNXBench/blob/main/docs/evidence/release-alpha17-2026-10-26.json" target="_blank" rel="noopener">${release_evidence_cta}</a></div>
-      <div class="support-links"><a href="https://github.com/KNXBench-Labs/KNXBench/releases/download/v0.1.0-alpha.17/KNXBench_0.1.0-alpha.17_amd64.AppImage" rel="noopener">${release_appimage_cta}</a><a href="https://github.com/KNXBench-Labs/KNXBench/releases/download/v0.1.0-alpha.17/knx-mcp-x86_64-linux" rel="noopener">${release_mcp_cta}</a><a href="https://github.com/KNXBench-Labs/KNXBench/releases/download/v0.1.0-alpha.17/SHA256SUMS" rel="noopener">${release_checksums_cta}</a></div>
-    </section>
-    <section class="section wrap" id="release-history" aria-labelledby="history-title">
-      <div class="section-heading"><h2 id="history-title">${history_title}</h2><p>${history_intro}</p></div>
-      <div class="release-grid">
-        <article><figure><a href="${base}assets/alpha14-parameters.webp" target="_blank" rel="noopener" aria-label="${release_parameters_alt}"><img src="${base}assets/alpha14-parameters.webp" width="1440" height="1080" alt="${release_parameters_alt}" loading="lazy"></a><figcaption>${release_caption}</figcaption></figure><h3>${release_parameters_title}</h3><p>${release_parameters_body}</p></article>
-        <article><figure><a href="${base}assets/alpha14-vendor-zip.webp" target="_blank" rel="noopener" aria-label="${release_vendor_alt}"><img src="${base}assets/alpha14-vendor-zip.webp" width="1440" height="1080" alt="${release_vendor_alt}" loading="lazy"></a><figcaption>${release_caption}</figcaption></figure><h3>${release_vendor_title}</h3><p>${release_vendor_body}</p></article>
-        <article><figure><a href="${base}assets/alpha14-notes.webp" target="_blank" rel="noopener" aria-label="${release_notes_alt}"><img src="${base}assets/alpha14-notes.webp" width="1440" height="1080" alt="${release_notes_alt}" loading="lazy"></a><figcaption>${release_caption}</figcaption></figure><h3>${release_notes_title}</h3><p>${release_notes_body}</p></article>
-        <article><figure><a href="${base}assets/alpha14-diagnostics.webp" target="_blank" rel="noopener" aria-label="${release_diagnostics_alt}"><img src="${base}assets/alpha14-diagnostics.webp" width="1440" height="1080" alt="${release_diagnostics_alt}" loading="lazy"></a><figcaption>${release_caption}</figcaption></figure><h3>${release_diagnostics_title}</h3><p>${release_diagnostics_body}</p></article>
-      </div>
-      <p class="quiet-note">${history_scope_note}</p><div class="support-links"><a class="text-link" href="https://github.com/KNXBench-Labs/KNXBench/releases/tag/v0.1.0-alpha.14" target="_blank" rel="noopener">${history_cta}<span aria-hidden="true"> ↗</span></a><a href="https://github.com/KNXBench-Labs/KNXBench/releases/tag/v0.1.0-alpha.15" target="_blank" rel="noopener">${history_alpha15_cta}</a><a href="https://github.com/KNXBench-Labs/KNXBench/releases/tag/v0.1.0-alpha.16" target="_blank" rel="noopener">${history_alpha16_cta}</a></div>
+      <div class="support-links"><a class="text-link" href="https://github.com/KNXBench-Labs/KNXBench/blob/main/docs/FEATURES.md" target="_blank" rel="noopener">${hl_more_cta}<span aria-hidden="true"> ↗</span></a><a href="https://github.com/KNXBench-Labs/KNXBench/releases" target="_blank" rel="noopener">${hl_releases_cta}</a></div>
     </section>
     <section class="section wrap" id="watch" aria-labelledby="watch-title">
       <div class="section-heading"><h2 id="watch-title">${watch_title}</h2><p>${watch_intro}</p></div>
@@ -105,7 +91,7 @@ ${preview_banner}  <header class="site-header wrap">
     </section>
     <section class="section wrap status-section" id="status" aria-labelledby="status-title">
       <div><span class="alpha-tag"><span></span>Alpha</span><h2 id="status-title">${status_title}</h2><p>${status_body}</p></div>
-      <div class="status-details"><p class="status-summary">${status_summary}</p><details><summary>${scope_title}</summary><ul><li>${scope_import}</li><li>${scope_export}</li><li>${scope_hardware}</li><li>${scope_secure}</li></ul></details><p class="quiet-note">${backup_note}</p><p class="quiet-note">${upgrade_note}</p></div>
+      <div class="status-details"><p class="status-summary">${status_summary}</p><details><summary>${scope_title}</summary><ul><li>${scope_import}</li><li>${scope_export}</li><li>${scope_hardware}</li><li>${scope_secure}</li></ul></details><p class="quiet-note">${backup_note}</p></div>
     </section>
     <section class="section wrap" id="demos" aria-labelledby="demos-title">
       <div class="section-heading"><h2 id="demos-title">${demos_title}</h2><p>${demos_intro}</p></div>

@@ -1,4 +1,4 @@
-/** Browser recipe for Alpha 17 copy and retained Alpha 14 media. */
+/** Browser recipe for the highlights section and its real-app stills. */
 async (page) => {
   const origin = new URL(page.url()).origin;
   const checks = [], errors = [], unexpected = [];
@@ -6,7 +6,8 @@ async (page) => {
     if (!condition) throw new Error(name);
     checks.push(name);
   };
-  const assets = ['alpha14-parameters.webp', 'alpha14-vendor-zip.webp', 'alpha14-notes.webp', 'alpha14-diagnostics.webp'];
+  const assets = ['highlight-import.webp', 'highlight-history.webp', 'highlight-wizard.webp',
+    'highlight-parameters.webp', 'highlight-catalogue.webp', 'highlight-search.webp'];
   for (const javaScriptEnabled of [true, false]) {
     const context = await page.context().browser().newContext({ javaScriptEnabled, reducedMotion: 'reduce' });
     try {
@@ -24,38 +25,37 @@ async (page) => {
           await tab.setViewportSize({ width, height: 1080 });
           await tab.goto(`${origin}/${lang}/`);
           await tab.evaluate(() => document.fonts.ready);
-          const section = tab.locator('#release-features');
+          const section = tab.locator('#features');
           await section.scrollIntoViewIfNeeded();
-          assert(`${prefix}: Alpha 17 heading`, (await section.locator('h2').textContent()).includes('Alpha 17'));
-          assert(`${prefix}: four feature cards`, await section.locator('article').count() === 4);
-          const history = tab.locator('#release-history');
-          assert(`${prefix}: Alpha 14 history heading`, (await history.locator('h2').textContent()).includes('Alpha 14'));
+          assert(`${prefix}: nine highlights`, await section.locator('article').count() === 9);
+          assert(`${prefix}: numbered 01 to 09`, (await section.locator('.step').allTextContents()).join(',') ===
+            '01,02,03,04,05,06,07,08,09');
           for (const asset of assets) {
-            const image = history.locator(`img[src$="/${asset}"]`);
+            const image = section.locator(`img[src$="/${asset}"]`);
             await image.scrollIntoViewIfNeeded();
             await tab.waitForFunction(node => node.complete && node.naturalWidth > 0, await image.elementHandle());
             const data = await image.evaluate(node => ({
               alt: node.alt, width: node.naturalWidth, height: node.naturalHeight,
               declaredWidth: Number(node.getAttribute('width')), declaredHeight: Number(node.getAttribute('height')),
-              link: node.parentElement.getAttribute('href')
+              link: node.parentElement.getAttribute('href'), shown: node.getBoundingClientRect().width
             }));
             assert(`${prefix}: ${asset} decodes with honest dimensions and enlarge link`,
-              !!data.alt && data.width === data.declaredWidth && data.height === data.declaredHeight && data.link.endsWith('/' + asset));
+              !!data.alt && data.width === data.declaredWidth && data.height === data.declaredHeight &&
+              data.link.endsWith('/' + asset) && data.shown > 0);
           }
-          assert(`${prefix}: release notes link`, await section.locator('a[href="https://github.com/KNXBench-Labs/KNXBench/releases/tag/v0.1.0-alpha.17"]').count() === 1);
-          assert(`${prefix}: history release links`, await history.locator('a[href*="/releases/tag/"]').count() === 3);
-          const status = await tab.locator('#status').textContent();
-          assert(`${prefix}: schema and downgrade boundaries`, status.includes('16') && status.includes('28') && status.includes('Alpha 16') && status.includes('Alpha 15'));
-          const watch = await tab.locator('#watch').textContent();
-          assert(`${prefix}: videos are labelled as Alpha 14 recordings`, (watch.match(/Alpha 14/g) || []).length >= 3);
-          assert(`${prefix}: no negative disclaimer tags`, !/no live bus|no hardware|kein live-bus|kein hardwarekontakt/i.test(await tab.locator('main').textContent()));
+          assert(`${prefix}: no release-specific sections`, await tab.locator('#release-features, #release-history').count() === 0);
+          const main = await tab.locator('main').textContent();
+          assert(`${prefix}: no release numbers in the page`, !/Alpha[ -]?\d|alpha\.\d|System-2|#30/.test(main));
+          assert(`${prefix}: alpha notice stays visible`, await tab.locator('.hero .alpha-tag').isVisible() &&
+            /alpha/i.test(await tab.locator('#status h2').textContent()));
+          assert(`${prefix}: no negative disclaimer tags`, !/no live bus|no hardware|kein live-bus|kein hardwarekontakt/i.test(main));
           assert(`${prefix}: no horizontal page overflow`, await tab.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
           assert(`${prefix}: Docker starts from ready-made image`, (await tab.locator('.docker-path ol').textContent()).includes(lang === 'de' ? 'fertige Image' : 'ready-made image'));
           if (javaScriptEnabled && [390, 1440].includes(width)) {
             await section.locator('article').first().scrollIntoViewIfNeeded();
-            await tab.screenshot({ path: `website/output/playwright/alpha17-${lang}-${width}-top.png` });
+            await tab.screenshot({ path: `website/output/playwright/highlights-${lang}-${width}-top.png` });
             await section.locator('article').last().scrollIntoViewIfNeeded();
-            await tab.screenshot({ path: `website/output/playwright/alpha17-${lang}-${width}-bottom.png` });
+            await tab.screenshot({ path: `website/output/playwright/highlights-${lang}-${width}-bottom.png` });
           }
         }
       }
@@ -63,5 +63,5 @@ async (page) => {
   }
   assert('no third-party requests', unexpected.length === 0);
   assert('no page or console errors', errors.length === 0);
-  return { count: checks.length, checks, unexpected, errors, scope: 'Built static site in Chromium, DE/EN, 320–1440px, JavaScript on/off. No hardware, native GUI or universal compatibility acceptance.' };
+  return { count: checks.length, checks, unexpected, errors, scope: 'Built static site in Chromium, DE/EN, 320–1440px, JavaScript on/off. No native GUI or universal compatibility acceptance.' };
 }

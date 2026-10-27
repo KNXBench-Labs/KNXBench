@@ -1,4 +1,4 @@
-/** Captures Alpha 14 website stills from the real server and a fictional project. */
+/** Captures the website highlight stills from the real server and a fictional project. */
 import {expect, test, type Page} from "@playwright/test";
 import {execFileSync} from "node:child_process";
 import {mkdirSync, writeFileSync} from "node:fs";
@@ -102,23 +102,7 @@ async function kitchenLight(page: Page): Promise<void> {
     .toHaveValue("Kitchen light");
 }
 
-async function addNote(page: Page, target: string, title: string, body: string): Promise<void> {
-  await nav(page, "Notes");
-  const editor = page.locator(".notes-workspace section").first();
-  await editor.getByRole("button", {name: "New note", exact: true}).click();
-  await editor.getByLabel("Title", {exact: true}).fill(title);
-  await editor.getByLabel("Note text", {exact: true}).fill(body);
-  const select = editor.locator("select");
-  const value = await select.locator("option").filter({hasText: target}).first().getAttribute("value");
-  await select.selectOption(value!);
-  await editor.getByRole("button", {name: "Preview change", exact: true}).click();
-  const review = editor.getByRole("region", {name: "Review change"});
-  await expect(review).toContainText("Action: Create note");
-  await review.getByRole("button", {name: "Confirm change", exact: true}).click();
-  await expect(editor.locator("nav li button").filter({hasText: title})).toBeVisible();
-}
-
-test("Alpha 14 website stills, real application and fictional project", async ({page}) => {
+test("website highlight stills, real application and fictional project", async ({page}) => {
   const errors: string[] = [];
   const forbidden: string[] = [];
   page.on("pageerror", error => errors.push(error.message));
@@ -144,6 +128,9 @@ test("Alpha 14 website stills, real application and fictional project", async ({
   await expect(page.getByText("Project status", {exact: true})).toBeVisible({timeout: 20_000});
   await dismissToasts(page);
 
+  // Highlight: the imported project's status page, straight after the import.
+  await shot(page, "graphite-import");
+
   // Clip: filter the group addresses, inspect the kitchen light, clear the filter.
   await page.setViewportSize({width: 1440, height: 900});
   await nav(page, "Group addresses");
@@ -163,6 +150,16 @@ test("Alpha 14 website stills, real application and fictional project", async ({
   await kitchenLight(page);
   await shot(page, "graphite-addresses");
 
+  // Highlight: Ctrl+K search across devices and group addresses.
+  await page.keyboard.press("Control+k");
+  const search = page.getByRole("dialog", {name: "Search"});
+  await expect(search).toBeVisible();
+  await page.keyboard.type("light", {delay: 60});
+  await page.waitForTimeout(600);
+  await shot(page, "graphite-search");
+  await page.keyboard.press("Escape");
+  await expect(search).toBeHidden();
+
   // Parameter workspace: area register, aligned rows, information pane.
   await nav(page, "Devices");
   await page.getByRole("button", {name: /Switch actuator ground floor/}).first().click();
@@ -175,28 +172,57 @@ test("Alpha 14 website stills, real application and fictional project", async ({
   await expect(page.locator(".parameter-workspace-closed")).toHaveCount(0);
   await shot(page, "graphite-parameters");
 
-  // Notes ask before a delete: a new, unlinked address gets two notes, then Delete.
-  await kitchenLight(page);
-  await page.getByRole("button", {name: "New group address in Switching", exact: true}).first().click();
-  const create = page.getByRole("dialog", {name: "New group address in this range", exact: true});
-  await expect(create.locator("[data-ga-next-free]")).toHaveText("0/0/5");
-  await create.getByLabel("Name", {exact: true}).fill("Dining light");
-  await create.getByLabel("Name", {exact: true}).press("Enter");
-  await expect(create).toHaveCount(0);
-  await addNote(page, "0/0/5 Dining light", "Dining light waits for its actuator",
-    "Channel D of the ground-floor actuator is reserved for it.");
-  await addNote(page, "0/0/5 Dining light", "Scene 3 will use this address",
-    "Add it to the evening scene once the actuator is linked.");
-  await nav(page, "Group addresses");
-  await page.locator("[data-ga-expand-all]").click();
-  await page.getByRole("button", {name: "0/0/5", exact: true}).first().click();
-  await page.locator(".inspector").getByRole("button", {name: "Delete", exact: true}).click();
-  const decision = page.getByRole("dialog", {name: "Notes need a decision", exact: true});
-  await expect(decision).toBeVisible();
-  await expect(decision.getByRole("radio")).not.toHaveCount(0);
-  await shot(page, "graphite-note-decision");
-  await decision.getByRole("button", {name: "Cancel", exact: true}).click();
-  await expect(decision).toBeHidden();
+  // Highlight: the add-device wizard previews name and address before anything exists.
+  await openNavigationSections(page);
+  const explorer = page.locator(".project-explorer");
+  await explorer.getByRole("button", {name: "Expand all", exact: true}).click();
+  const line = page.locator("li").filter({
+    has: page.locator("button.tree-label", {hasText: /^Line 1: Ground floor$/}),
+  }).last();
+  await line.getByRole("button", {name: "+ Add device", exact: true}).click();
+  const wizard = page.getByRole("dialog", {name: "Add device", exact: true});
+  await expect(wizard).toBeVisible();
+  await wizard.getByRole("button", {name: /Switch actuator 4-fold, DIN rail/}).click();
+  await wizard.getByRole("button", {name: "Next", exact: true}).click();
+  await wizard.getByRole("button", {name: "Next", exact: true}).click();
+  await wizard.getByLabel("Device name", {exact: true}).fill("Dining room actuator");
+  await wizard.getByLabel(/Assign free addresses on the line/).check();
+  await wizard.getByRole("button", {name: "Next", exact: true}).click();
+  await expect(wizard.getByText("1 device will be created")).toBeVisible();
+  await shot(page, "graphite-device-wizard");
+  // Cancelling a filled wizard asks before discarding; nothing is created.
+  await wizard.getByRole("button", {name: "Cancel", exact: true}).click();
+  await wizard.locator(".project-wizard-discard .danger-action").click();
+  await expect(wizard).toBeHidden();
+
+  // Highlight: named versions on the project history timeline; versions need a saved .knxdb.
+  await page.getByRole("button", {name: "Save", exact: true}).first().click();
+  const save = page.getByRole("dialog", {name: "Save as", exact: true});
+  await expect(save).toBeVisible();
+  await save.getByPlaceholder("filename").fill("sample-house.knxdb");
+  await save.getByRole("button", {name: "Save", exact: true}).click();
+  await expect(save).toBeHidden();
+  await expect.poll(async () => (await (await page.request.get("/api/project")).json()).is_modified).toBe(false);
+  await dismissToasts(page);
+  await page.locator(".file-menu > summary").click();
+  await openFileSubmenu(page, "history");
+  await page.getByRole("menuitem", {name: "Project history", exact: true}).click();
+  const history = page.getByRole("dialog", {name: "Project history", exact: true});
+  await expect(history).toBeVisible();
+  await history.getByLabel("Version name", {exact: true}).fill("Before the kitchen redesign");
+  await history.getByRole("button", {name: "Create version", exact: true}).click();
+  await expect(history.getByText("Before the kitchen redesign", {exact: true}).first()).toBeVisible();
+  await shot(page, "graphite-history");
+  await history.getByRole("button", {name: "Close", exact: true}).click();
+  await expect(history).toBeHidden();
+
+  // Optional themes, before the catalogue job's status pill joins the header.
+  for (const value of ["lcars", "user-modern-retro-green-crt"]) {
+    await theme(page, value);
+    await kitchenLight(page);
+    await shot(page, value + "-addresses");
+  }
+  await theme(page, "graphite");
 
   // Vendor ZIP: preview only, nothing is installed.
   await page.keyboard.press("Control+Shift+P");
@@ -206,32 +232,14 @@ test("Alpha 14 website stills, real application and fictional project", async ({
   await catalogue.locator('input[type="file"]').setInputFiles({
     name: "example-devices-vendor.zip", mimeType: "application/zip", buffer: vendorZip(),
   });
-  const wrapper = catalogue.getByRole("region", {name: "Packages in this ZIP"});
-  await expect(wrapper).toBeVisible({timeout: 20_000});
-  await wrapper.scrollIntoViewIfNeeded();
+  // Since Alpha 16 a catalogue job prepares the preview first; it never installs on its own.
+  await catalogue.getByRole("button", {name: "Upload once and prepare preview", exact: true}).click();
+  const job = catalogue.getByRole("region", {name: "Catalogue update"}).filter({hasText: "Bound preview"});
+  await expect(job.getByText("Nothing is installed yet.", {exact: true})).toBeVisible({timeout: 20_000});
+  await expect(job.getByRole("button", {name: "Back up and install", exact: true})).toBeDisabled();
+  await job.getByRole("heading", {name: "example-devices-vendor.zip"}).scrollIntoViewIfNeeded();
   await shot(page, "graphite-vendor-zip");
 
-  // Diagnostic export: device, interface and the read-only preview.
-  await page.locator(".file-menu > summary").click();
-  await openFileSubmenu(page, "help");
-  await page.locator(".file-menu [data-diagnostics-open]").click();
-  const diagnostics = page.getByRole("dialog", {name: "Export diagnostic data", exact: true});
-  await expect(diagnostics).toBeVisible();
-  const device = diagnostics.locator("[data-diagnostics-device]");
-  const first = await device.locator("option").filter({hasText: "1.1.1"}).first().getAttribute("value");
-  await device.selectOption(first!);
-  await diagnostics.locator("[data-diagnostics-gateway]").fill("192.0.2.10:3671");
-  await diagnostics.locator("[data-diagnostics-preview]").click();
-  await expect(diagnostics.locator("[data-diagnostics-review]")).toContainText("1.1.1");
-  await shot(page, "graphite-diagnostics");
-  await diagnostics.getByRole("button", {name: "Close", exact: true}).click();
-  await expect(diagnostics).toBeHidden();
-
-  for (const value of ["lcars", "user-modern-retro-green-crt"]) {
-    await theme(page, value);
-    await kitchenLight(page);
-    await shot(page, value + "-addresses");
-  }
   expect(errors).toEqual([]);
   expect(forbidden).toEqual([]);
 });

@@ -7,8 +7,8 @@
   const toggle = document.querySelector('[data-motion-toggle]');
   if (!headings.length || !toggle) return;
   const reduce = window.matchMedia('(prefers-reduced-motion: reduce)');
-  const boxes = new Map(), reveals = new Map(), visible = new Set(), active = new Set();
-  // Selected headings (data-headline-typing) type once per page load instead of the fade reveal.
+  const boxes = new Map(), visible = new Set(), active = new Set();
+  // Every heading types once per page load; its glyphs start rolling once the cursor is gone.
   const typings = new Map();
   const TYPE_MS = 50, BLINKS = 4, BLINK_MS = 1000;
   const SWAP = { duration: 720, easing: 'cubic-bezier(.65,0,.35,1)', id: 'ambient-char-swap' };
@@ -52,59 +52,6 @@
   }
 
   const allowed = () => !paused && !unsupported && !pageHidden && !reduce.matches && !document.hidden;
-  function settleReveal(heading, shown) {
-    const state = reveals.get(heading);
-    state.shown = shown;
-    state.target = shown;
-    heading.dataset.headlineState = shown ? 'shown' : 'hidden';
-    const animations = state.animations;
-    state.animations = [];
-    animations.forEach(animation => animation.cancel());
-  }
-  function reveal(heading, shown) {
-    const state = reveals.get(heading);
-    if (state.animations.length) {
-      if (state.target !== shown) {
-        state.target = shown;
-        // Keep the exact current time: fast scroll reversals must not jump.
-        for (const animation of state.animations) {
-          animation.playbackRate = shown ? 1 : -1;
-          animation.play();
-        }
-      }
-      return;
-    }
-    if (state.shown === shown) return;
-    state.target = shown;
-    const chars = boxes.get(heading);
-    // SessionRadar's 650ms roll-in + 24ms stagger, capped for long headings.
-    const stagger = Math.min(24, 600 / Math.max(1, chars.length - 1));
-    const duration = 650 + stagger * Math.max(0, chars.length - 1);
-    const animations = state.animations;
-    try {
-      chars.forEach((box, index) => {
-        const hidden = { opacity: 0, transform: 'translateY(.3em) rotateX(-45deg)' };
-        const shownFrame = { opacity: 1, transform: 'translateY(0) rotateX(0)' };
-        const animation = box.animate([
-          { ...hidden, offset: 0 },
-          { ...hidden, offset: index * stagger / duration, easing: 'ease' },
-          { ...shownFrame, offset: (index * stagger + 650) / duration },
-          { ...shownFrame, offset: 1 }
-        ], { duration, fill: 'both', id: 'headline-reveal' });
-        animations.push(animation);
-        animation.currentTime = state.shown ? duration : 0;
-        animation.playbackRate = shown ? 1 : -1;
-        animation.play();
-      });
-      Promise.all(animations.map(animation => animation.finished)).then(() => {
-        if (state.animations === animations) settleReveal(heading, state.target);
-      }, () => {});
-    } catch (_) {
-      unsupported = true;
-      toggle.hidden = true;
-      sync();
-    }
-  }
   function placeCursor(typing, index) {
     const { cursor, chars } = typing;
     // Zero-width and inside the nowrap word: layout and wrapping stay those of the full text.
@@ -155,6 +102,10 @@
     };
     typing.timer = window.setTimeout(step, TYPE_MS);
   }
+  function settled(heading) {
+    const typing = typings.get(heading);
+    return !typing || (typing.status === 'done' && !typing.cursor.isConnected);
+  }
   function cancelWhere(predicate) {
     for (const animation of active) if (predicate(animation)) animation.cancel();
   }
@@ -184,9 +135,7 @@
     if (!allowed() || !visible.size) return;
     const pool = [];
     for (const heading of visible) {
-      if (typings.has(heading)) continue;
-      const state = reveals.get(heading);
-      if (!state.shown || state.animations.length) continue;
+      if (!settled(heading)) continue;
       for (const box of boxes.get(heading)) if (!box.getAnimations({ subtree: true }).length) pool.push(box);
     }
     ticks += 1;
@@ -209,15 +158,9 @@
   }
   function sync() {
     document.documentElement.dataset.motion = allowed() ? 'on' : 'off';
-    for (const heading of headings) {
-      const typing = typings.get(heading);
-      if (typing) {
-        if (!allowed()) stopTyping(heading);
-        else if (typing.status === 'idle' && visible.has(heading)) startTyping(heading);
-        continue;
-      }
-      if (allowed()) reveal(heading, visible.has(heading));
-      else settleReveal(heading, true);
+    for (const typing of typings.values()) {
+      if (!allowed()) stopTyping(typing.heading);
+      else if (typing.status === 'idle' && visible.has(typing.heading)) startTyping(typing.heading);
     }
     if (!allowed() || !visible.size) {
       window.clearTimeout(timer);
@@ -228,19 +171,13 @@
   headings.forEach(heading => {
     const found = split(heading);
     boxes.set(heading, found);
-    if (heading.hasAttribute('data-headline-typing') && found.length) {
-      const cursor = document.createElement('span');
-      cursor.className = 'typing-cursor';
-      cursor.setAttribute('aria-hidden', 'true');
-      found.forEach(box => box.setAttribute('data-untyped', ''));
-      typings.set(heading, { chars: found, cursor, index: -1, status: 'idle', timer: 0, blink: null });
-      heading.dataset.typingState = 'pending';
-      reveals.set(heading, { shown: true, target: true, animations: [] });
-      heading.dataset.headlineState = 'shown';
-      return;
-    }
-    reveals.set(heading, { shown: false, target: false, animations: [] });
-    heading.dataset.headlineState = 'hidden';
+    if (!found.length) return;
+    const cursor = document.createElement('span');
+    cursor.className = 'typing-cursor';
+    cursor.setAttribute('aria-hidden', 'true');
+    found.forEach(box => box.setAttribute('data-untyped', ''));
+    typings.set(heading, { heading, chars: found, cursor, index: -1, status: 'idle', timer: 0, blink: null });
+    heading.dataset.typingState = 'pending';
   });
   const observer = new IntersectionObserver(entries => {
     for (const entry of entries) {

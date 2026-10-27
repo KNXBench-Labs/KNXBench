@@ -14,7 +14,9 @@ fragment aliases and update this index. Do not rewrite previous results.
 
 ## WP-11 bounded native Alpha 17 acceptance (27 October 2026)
 
-The owner authorised isolated desktop tests; the actual published Alpha 17
+Published as `cc9d8fab2` after independent review/re-review APPROVE and the
+13-stage integrated scoped gate (103 xtask tests; tooling 461 methods,
+six skips; no selected corpus cases, web/browser or bindings). The owner authorised isolated desktop tests; the actual published Alpha 17
 AppImage was exercised under native Wayland/WebKitGTK, with loopback-only
 networking and masked real home/project paths. Save/Cancel/Replace, exact note
 save/reopen before and after restart, settings focus wrap/return, 80/150% zoom

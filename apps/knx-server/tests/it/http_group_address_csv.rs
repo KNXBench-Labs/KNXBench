@@ -1,3 +1,5 @@
+//! Tests group-address CSV exchange, diagnostics and atomic command application over HTTP.
+//!
 //! HTTP tests for the two CSV group-address routes (T12 —
 //! `docs/superpowers/specs/2026-09-10-csv-group-address-exchange-design.md`
 //! §7): `POST /api/group-addresses/csv-export` and
@@ -141,6 +143,129 @@ async fn import_csv_with_confirmation(
         })),
     )
     .await
+}
+
+#[tokio::test]
+async fn column_profiles_apply_one_undoable_batch_and_keep_omitted_addresses() {
+    let profiles = [
+        (
+            "Group name;Address",
+            "Workshop;1/-/-",
+            "Pump;1/1/1",
+            "Fan;1/1/3",
+        ),
+        (
+            "Group name;Main;Middle;Sub",
+            "Workshop;1;;",
+            "Pump;1;1;1",
+            "Fan;1;1;3",
+        ),
+        (
+            "Main;Middle;Sub;Address",
+            "Workshop;;;1/-/-",
+            ";;Pump;1/1/1",
+            ";;Fan;1/1/3",
+        ),
+        (
+            "Main;Middle;Sub;Main;Middle;Sub",
+            "Workshop;;;1;;",
+            ";;Pump;1;1;1",
+            ";;Fan;1;1;3",
+        ),
+    ];
+    for (header, range, update, create) in profiles {
+        let state = Arc::new(state_with_two_group_addresses());
+        let before = state.project.lock().unwrap().clone();
+        let app = knx_server::app(state.clone(), None);
+        let dir = tempfile::tempdir().unwrap();
+        let input = dir.path().join("column-profile.csv");
+        std::fs::write(
+            &input,
+            format!(
+                "{header};Central;Unfiltered;Description;DatapointType;Security\n\
+             {range};;;;;Auto\n{update};true;false;;;Auto\n{create};;;;;Auto\n"
+            ),
+        )
+        .unwrap();
+        let response = import_csv(&app, &input).await;
+        let status = response.status();
+        let body = body_json(response).await;
+        assert_eq!(status, StatusCode::OK, "{body}");
+        assert_eq!(body["applied"], true);
+        assert_eq!(body["report"]["rowsRead"], 2);
+        assert_eq!(body["report"]["created"], 1);
+        assert_eq!(body["report"]["updated"], 1);
+        assert_eq!(body["report"]["deleted"], 0);
+        assert_eq!(body["report"]["readdressed"], 0);
+        let problems = body["report"]["problems"].as_array().unwrap();
+        assert!(problems.iter().all(|p| p["severity"] == "warning"));
+        assert!(problems
+            .iter()
+            .any(|p| p["row"] == 2 && p["detail"].as_str().unwrap().contains("range")));
+        assert!(problems
+            .iter()
+            .any(|p| p["row"] == 3 && p["detail"].as_str().unwrap().contains("Security")));
+        let project = state.project.lock().unwrap().clone().unwrap();
+        let addresses = &project.installations[0].group_addresses;
+        assert_eq!(addresses.len(), 3);
+        assert_eq!(addresses[0].name, "Pump");
+        assert!(addresses[0].central);
+        assert_eq!(
+            addresses[1],
+            before.as_ref().unwrap().installations[0].group_addresses[1]
+        );
+        assert_eq!(addresses[2].name, "Fan");
+        assert!(project.installations[0].group_ranges.is_empty());
+        let undo = call(&app, "POST", "/api/undo", Some(json!({}))).await;
+        assert_eq!(undo.status(), StatusCode::OK);
+        let mut expected_undo = before.clone();
+        // Undo restores entities, while allocated stable IDs remain consumed.
+        expected_undo.as_mut().unwrap().ids = project.ids.clone();
+        assert_eq!(*state.project.lock().unwrap(), expected_undo);
+        assert!(!state.command_stack.lock().unwrap().can_undo());
+        assert!(state.command_stack.lock().unwrap().can_redo());
+        let log = body_json(call(&app, "GET", "/api/log", None).await).await;
+        assert!(log
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|e| e["source"] == "csv-import:warning" && e["location"] == "row 2"));
+    }
+}
+
+#[tokio::test]
+async fn column_profile_errors_preserve_full_project_and_command_history() {
+    for (row, diagnostic) in [
+        ("Pump;1/1/2;;;note;;Auto", "Description"),
+        ("Pump;1/1/2;;;;;Off", "Security"),
+        ("Pump;1/1/2;;;;DPST-1-1;Auto", "read-only"),
+        ("Workshop;1/-/-;false;;;;Auto", "range"),
+        ("Workshop;1/-/-;;;hidden;;Auto", "Description"),
+    ] {
+        let state = Arc::new(state_with_two_group_addresses());
+        let app = knx_server::app(state.clone(), None);
+        let before = state.project.lock().unwrap().clone();
+        let dir = tempfile::tempdir().unwrap();
+        let input = dir.path().join("unsupported.csv");
+        std::fs::write(
+            &input,
+            format!(
+                "Group name;Address;Central;Unfiltered;Description;DatapointType;Security\n\
+             First update;1/1/1;;;;;Auto\n{row}\n"
+            ),
+        )
+        .unwrap();
+        let response = import_csv(&app, &input).await;
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+        let body = body_json(response).await;
+        let error = body["error"].as_str().unwrap();
+        assert!(error.contains("row 3"), "{body}");
+        assert!(error.contains(diagnostic), "{body}");
+        assert!(error.contains("nothing applied"), "{body}");
+        assert_eq!(*state.project.lock().unwrap(), before);
+        assert!(!state.command_stack.lock().unwrap().can_undo());
+        assert!(!state.command_stack.lock().unwrap().can_redo());
+    }
 }
 
 #[tokio::test]

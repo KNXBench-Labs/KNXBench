@@ -6,6 +6,24 @@ This dossier preserves the technical detail and dated history. Earlier
 headings, failures and lifting conditions are historical where later
 updates supersede them; they are not new work assignments.
 
+## Address-only column profiles
+
+The import adapter recognises four fixed ordered headers with either one name
+column or separate hierarchy-name columns, and either one address column or
+three numeric address components. See the exact
+[contract](../contracts/group-address-csv-profiles.md). This improves bounded
+spreadsheet exchange without changing the native CSV export or project schema.
+
+Range rows are explicitly reported and not applied. Nonempty descriptions and
+security tokens other than `Auto` refuse the entire import. `Auto` is reported
+as not imported; it never becomes a guessed security value. DPT is validated
+read-only, not assigned. Only three-level addresses and UTF-8 comma/semicolon
+files are admitted in these profiles. Native CSV behaviour is unchanged.
+
+This is not full hierarchy/metadata roundtrip, a new external export format,
+ESF/OPC support or general application interoperability. The historical record
+below describes the earlier native-format-only boundary.
+
 <!-- BEGIN retained catalogue record -->
 
 ## 38. Group-address CSV export/import (T12) has no verified ETS interoperability

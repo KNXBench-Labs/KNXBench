@@ -393,9 +393,8 @@ fn severity_text(severity: knx_csv::Severity) -> &'static str {
     }
 }
 
-/// `validate_ga_csv`: plans a "KNXBench group-address CSV v1" text against
-/// the project exactly as `knx ga-import --dry-run` would, and applies
-/// nothing. The plan's command is discarded unexamined.
+/// `validate_ga_csv` plans native CSV or a supported address-only column profile.
+/// It matches `knx ga-import --dry-run` and discards the command without applying it.
 pub fn validate_ga_csv(
     ws: &Workspace,
     alias: &str,

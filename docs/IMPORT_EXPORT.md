@@ -1255,22 +1255,13 @@ data (same blocker as schema 23 project data).
 
 ## 11. Group-address CSV exchange
 
-**This is a format KNXBench defines and owns, not an ETS one.** ETS has its
-own "Export Group Addresses" feature, but no sample of what it actually
-writes exists in this repository, and none of the 179 documents in the
-extracted KNX Standard v3.0.0 corpus specifies a group-address CSV/Excel
-exchange format — group-address CSV export is an ETS *application* feature,
-not something the KNX Association standardizes. So this document does not,
-and cannot, claim that "KNXBench group-address CSV v1" round-trips through
-ETS, and nothing in the UI, CLI, or server API may say "ETS CSV" or imply
-that interoperability. If a genuine ETS-produced CSV sample is obtained
-later, a second, ETS-shaped column profile would fit alongside this one by
-extending the importer's header matching (`map_headers` in
-`crates/knx-csv/src/read.rs`) — one hard-coded `match` block, not a plug-in
-seam, so adding a profile means editing that function rather than
-registering with it, but the change stays contained to it. That is the
-upgrade path, and it is the only claim of ETS interoperability this feature
-is entitled to make.
+**The native export is "KNXBench group-address CSV v1", a format KNXBench owns.**
+The importer also accepts four bounded, fixed column profiles with separate
+name/address components. Their [address-only contract](contracts/group-address-csv-profiles.md)
+reports omitted range rows, keeps DPT read-only, and refuses unsupported metadata
+atomically. This is not a hierarchy-preserving exchange or a claim that native
+exports can be imported by ETS. ESF/OPC, XML exchange and other profile variants
+remain outside this adapter.
 
 Implemented in `crates/knx-csv`, a pure crate depending only on `knx-core`,
 `csv`, and `serde` — it knows nothing of SQLite, HTTP, or the CLI. Its three
@@ -1358,11 +1349,10 @@ undo step.
   placed into the innermost existing group range whose bounds already
   contain it, if any; if none contains it, the address is created without a
   range and the report says so. No range is ever created by a CSV import.
-- **There are no `Description`/`Comment` columns**, in either direction.
-  The `.knxproj` schema has `GroupAddress/@Description` and `@Comment`
-  attributes, but this domain model does not carry them yet
-  (`GroupAddressEntry`, `crates/knx-core/src/group.rs`), so the CSV format
-  cannot round-trip fields that do not exist here.
+- **It never applies `Description` or `Comment`.** The native format has no
+  such columns. The fixed column profiles recognise `Description` and refuse
+  nonempty cells (including whitespace-only content), rather than losing them.
+  The domain model has no corresponding fields or CSV edit commands.
 
 **One server undo step.** A successful server/web import applies as one
 `Command::Batch`, so the whole import is one undo. The standalone CLI writes

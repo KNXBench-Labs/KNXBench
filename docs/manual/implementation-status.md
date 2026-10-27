@@ -851,7 +851,7 @@ Main source delivery is [verified](../status/2026-10-09-offline-ap1-verification
 | Choosing free, two-level or three-level style when the project is created | ✅ Implemented | Initial display/address structure; the next row describes changing it later |
 | Changing the style afterwards | ✅ Implemented | On the Project node in the properties pane, undoable |
 | CSV export and re-import in KNXBench's own format | ✅ Implemented | Every address in the reference project round-trips unchanged |
-| CSV interoperability with ETS or `.esf` | ❌ Not implemented | Never claimed, never tested — [§38](../KNOWN_LIMITATIONS.md#38-group-address-csv-exportimport-t12-has-no-verified-ets-interoperability) |
+| CSV column-profile import | ✅ Bounded adapter | Four fixed name/address layouts; range rows explicitly omitted, unsupported metadata atomically refused, DPT read-only. [Contract](../contracts/group-address-csv-profiles.md). No external export or general ETS/ESF interoperability claim. |
 | Explicit, preview-confirmed re-addressing and unreferenced deletion through CSV | ✅ Implemented | Stable ids, directional-link preview, state-bound confirmation |
 | Creating or restructuring ranges through CSV | ❌ Not implemented | [§39](../KNOWN_LIMITATIONS.md#39-csv-import-never-re-addresses-deletes-or-manages-group-ranges) |
 

@@ -81,8 +81,15 @@ and is held by `tools/tests/test_rust_gate_order.py`.
   same tag lanes (`production-<suite>-functional` with the gate's workers,
   `-exclusive` on one worker, empty lanes recorded), per
   [ADR-0154](../adr/0154-production-browser-suites-use-tag-lanes.md). The
-  configs keep `workers: 1` for standalone runs. No dev-versus-production
-  deduplication.
+  configs keep `workers: 1` for standalone runs. Since 27 October 2026 only the
+  production functional lane also passes `--fully-parallel`
+  ([ADR-0155](../adr/0155-production-functional-case-parallelism.md)); default
+  and exclusive lanes keep file-local ordering. The package tool tests run
+  `tools/production_lanes.py` over every production spec and its recursive
+  test-side helpers to catch common shared-state hazards. This lexical check
+  has documented blind spots (aliases, describe-local state, hidden effects,
+  external modules) and does not replace independence review. No
+  dev-versus-production deduplication.
 - Existing common-directory workspace/alpha/browser leases are respected in fixed
   order and retained for the whole package in this first version. Shorter locks,
   cross-suite parallelism, Rust/nextest/corpus work and GPU work are deferred.

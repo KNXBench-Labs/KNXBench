@@ -8,8 +8,12 @@ Small and optional; none blocks a delivery.
 
 - Production browser suites now run in the tag lanes
   ([ADR-0154](../adr/0154-production-browser-suites-use-tag-lanes.md),
-  [record](../status/2026-10-26-production-browser-lanes.md)); case-level
-  parallelism inside a file and concurrent suites remain unreviewed.
+  [record](../status/2026-10-26-production-browser-lanes.md)). Case-level
+  functional parallelism is implemented and measured twice; integrated
+  acceptance/publication pending
+  ([ADR-0155](../adr/0155-production-functional-case-parallelism.md),
+  [record](../research/2026-10-27-production-case-parallelism.md)). Concurrent
+  suites and case-level parallelism in the default lane remain unreviewed.
 - Three `file-menu-submenus` cases timed out at eight workers while a cold
   Vite development server started (they pass at the gate's four workers).
 - The cause of the earlier observed SIGTERM-test timeouts remains unproven;

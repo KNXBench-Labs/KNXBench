@@ -33,6 +33,21 @@ use crate::tunnelling;
 /// the existing CONNECT/CONNECTIONSTATE control-response budget.
 const DISCONNECT_RESPONSE_TIMEOUT: Duration = Duration::from_secs(10);
 
+/// The connection heartbeat's timing (Core v01.06.02 AS §5.4).
+#[derive(Debug, Clone, Copy)]
+struct HeartbeatTiming {
+    /// Time between two `CONNECTIONSTATE_REQUEST`s.
+    interval: Duration,
+    /// Wait for each `CONNECTIONSTATE_RESPONSE`.
+    response_timeout: Duration,
+}
+
+/// §5.4: a request every 60 seconds, ten seconds for each response.
+const HEARTBEAT: HeartbeatTiming = HeartbeatTiming {
+    interval: Duration::from_secs(60),
+    response_timeout: Duration::from_secs(10),
+};
+
 #[derive(Debug)]
 pub enum BusError {
     Io(std::io::Error),
@@ -390,6 +405,9 @@ struct TunnelState {
     closed_announced: AtomicBool,
     /// `receive_loop` has ended: no further reply can arrive.
     receiver_done: AtomicBool,
+    /// Receiving on the socket failed; the receive loop ended for that.
+    socket_failed: AtomicBool,
+    heartbeat: HeartbeatTiming,
     /// Set before `shutdown` is notified, so a loop that was busy when
     /// `notify_waiters` fired still stops at its next iteration.
     stopped: AtomicBool,
@@ -402,6 +420,7 @@ impl TunnelState {
         channel_id: u8,
         assigned_address: IndividualAddress,
         tx: broadcast::Sender<TunnelEvent>,
+        heartbeat: HeartbeatTiming,
     ) -> Self {
         Self {
             socket,
@@ -423,6 +442,8 @@ impl TunnelState {
             gateway_disconnected: AtomicBool::new(false),
             closed_announced: AtomicBool::new(false),
             receiver_done: AtomicBool::new(false),
+            socket_failed: AtomicBool::new(false),
+            heartbeat,
             stopped: AtomicBool::new(false),
         }
     }
@@ -459,16 +480,23 @@ impl TunnelState {
     fn stop(&self) {
         self.stopped.store(true, Ordering::SeqCst);
         self.shutdown.notify_waiters();
+        self.heartbeat_notify.notify_one();
     }
 
-    /// Sends this connection's `DISCONNECT_REQUEST` after clearing any older
-    /// reply, so the reply that follows is the one `disconnect()` reads.
+    /// Sends this connection's one `DISCONNECT_REQUEST`; a second caller
+    /// sends nothing. A `DISCONNECT_RESPONSE` is stored only after a request,
+    /// so the stored reply always answers this one and is never cleared.
     async fn request_disconnect(&self) -> Result<(), BusError> {
-        *self.disconnect_reply.lock().await = None;
+        // Claimed before sending: the response may arrive before `send` returns.
+        if self
+            .disconnect_requested
+            .compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst)
+            .is_err()
+        {
+            return Ok(());
+        }
         let body = services::encode_disconnect_request(self.channel_id, self.control_hpai);
         let datagram = frame::encode_frame(services::DISCONNECT_REQUEST, &body);
-        // Set before sending: the response may be received before `send` returns.
-        self.disconnect_requested.store(true, Ordering::SeqCst);
         if let Err(error) = self.socket.send(&datagram).await {
             self.disconnect_requested.store(false, Ordering::SeqCst);
             return Err(BusError::Io(error));
@@ -484,8 +512,10 @@ impl TunnelState {
         if first {
             let _ = self.request_disconnect().await;
             self.announce_closed();
-            // A sender waiting for its acknowledgement stops waiting.
+            // A sender waiting for its acknowledgement, and a heartbeat
+            // waiting for its response, stop waiting.
             self.ack_notify.notify_one();
+            self.heartbeat_notify.notify_one();
         }
         kept
     }
@@ -503,6 +533,15 @@ impl TunnelClient {
     async fn connect(
         gateway: SocketAddrV4,
         return_path: TunnelReturnPath,
+    ) -> Result<Self, BusError> {
+        Self::connect_timed(gateway, return_path, HEARTBEAT).await
+    }
+
+    /// [`Self::connect`] with an explicit heartbeat timing; tests shorten it.
+    async fn connect_timed(
+        gateway: SocketAddrV4,
+        return_path: TunnelReturnPath,
+        heartbeat: HeartbeatTiming,
     ) -> Result<Self, BusError> {
         let socket = UdpSocket::bind("0.0.0.0:0").await.map_err(BusError::Io)?;
         socket.connect(gateway).await.map_err(BusError::Io)?;
@@ -544,6 +583,7 @@ impl TunnelClient {
             response.channel_id,
             crd.individual_address,
             tx,
+            heartbeat,
         ));
 
         tokio::spawn(receive_loop(state.clone()));
@@ -662,7 +702,8 @@ impl TunnelClient {
             }
         }
 
-        drop(seq_guard);
+        // Recorded before the sequence lock is released, so no waiting sender
+        // transmits on the channel that is being torn down.
         let cause = self
             .state
             .terminate(TunnelClosure::Unacknowledged {
@@ -670,6 +711,7 @@ impl TunnelClient {
                 last_status,
             })
             .await;
+        drop(seq_guard);
         Err(BusError::TunnelClosed(cause))
     }
 
@@ -679,9 +721,12 @@ impl TunnelClient {
     ///
     /// A tunnel this client already terminated (unacknowledged request,
     /// failed heartbeat) is not asked twice: the response to the earlier
-    /// request is awaited instead. A channel the gateway itself ended is
-    /// already terminated, so that is `Ok`. Only a confirmed termination is
-    /// `Ok`; no reply within `DISCONNECT_RESPONSE_TIMEOUT` stays `Timeout`.
+    /// request is awaited instead, even if it has already arrived. A channel
+    /// the gateway itself ended is already terminated, so that is `Ok`. Only a
+    /// confirmed termination is `Ok`; no reply within
+    /// `DISCONNECT_RESPONSE_TIMEOUT` stays `Timeout`. After a socket failure
+    /// the request is still sent, best-effort, so a gateway that is alive can
+    /// release its channel; the result is `TunnelClosed(SocketFailed)`.
     ///
     /// The background tasks are always told to stop, even on `Err` —
     /// `disconnect` consumes `self`, so a caller has no way to retry.
@@ -696,11 +741,12 @@ impl TunnelClient {
         if self.state.gateway_disconnected.load(Ordering::SeqCst) {
             return Ok(());
         }
-        if !self.state.disconnect_requested.load(Ordering::SeqCst)
-            && !self.state.receiver_done.load(Ordering::SeqCst)
-        {
-            self.state.request_disconnect().await?;
+        let requested = self.state.request_disconnect().await;
+        if self.state.socket_failed.load(Ordering::SeqCst) {
+            // No reply can be read any more.
+            return Err(BusError::TunnelClosed(TunnelClosure::SocketFailed));
         }
+        requested?;
 
         let deadline = tokio::time::Instant::now() + DISCONNECT_RESPONSE_TIMEOUT;
         let response = wait_for_reply(
@@ -717,8 +763,7 @@ impl TunnelClient {
                 "DISCONNECT_RESPONSE returned status {status:#04x}"
             ))),
             None if self.state.gateway_disconnected.load(Ordering::SeqCst) => Ok(()),
-            // The receive loop ends without a response only when its socket failed.
-            None if self.state.receiver_done.load(Ordering::SeqCst) => {
+            None if self.state.socket_failed.load(Ordering::SeqCst) => {
                 Err(BusError::TunnelClosed(TunnelClosure::SocketFailed))
             }
             None => Err(BusError::Timeout),
@@ -1157,6 +1202,7 @@ async fn receive_loop(state: Arc<TunnelState>) {
                 Err(_) => {
                     // Socket gone; nothing more to receive.
                     state.close(TunnelClosure::SocketFailed);
+                    state.socket_failed.store(true, Ordering::SeqCst);
                     break;
                 }
             },
@@ -1175,7 +1221,13 @@ async fn receive_loop(state: Arc<TunnelState>) {
                 if req.sequence_counter == recv_seq {
                     send_ack(&state, req.sequence_counter, tunnelling::E_NO_ERROR).await;
                     recv_seq = recv_seq.wrapping_add(1);
-                    if state.closure().is_some() {
+                    // Forwarded under the closure lock: `close` happens before
+                    // `Closed` is announced, so no telegram can follow it.
+                    let closure = state
+                        .closure
+                        .lock()
+                        .unwrap_or_else(std::sync::PoisonError::into_inner);
+                    if closure.is_some() {
                         // Still acknowledged, but `Closed` was the last event.
                         continue;
                     }
@@ -1253,6 +1305,7 @@ async fn receive_loop(state: Arc<TunnelState>) {
     // Wake a sender or `disconnect()` still waiting: no reply can follow.
     state.ack_notify.notify_one();
     state.disconnect_notify.notify_one();
+    state.heartbeat_notify.notify_one();
 }
 
 async fn send_ack(state: &TunnelState, sequence_counter: u8, status: u8) {
@@ -1267,7 +1320,7 @@ async fn send_ack(state: &TunnelState, sequence_counter: u8, status: u8) {
 /// on no reply (or an error status) within 10 seconds, repeat up to three
 /// times, then disconnect.
 async fn heartbeat_loop(state: Arc<TunnelState>) {
-    let mut interval = tokio::time::interval(Duration::from_secs(60));
+    let mut interval = tokio::time::interval(state.heartbeat.interval);
     interval.tick().await; // the first tick fires immediately; consume it
                            // so the first heartbeat happens 60s in, not at connect time
     loop {
@@ -1279,9 +1332,6 @@ async fn heartbeat_loop(state: Arc<TunnelState>) {
             _ = shutdown => return,
             _ = interval.tick() => {}
         }
-        if state.closure().is_some() {
-            return;
-        }
         if !send_heartbeat_with_retries(&state).await {
             state.terminate(TunnelClosure::HeartbeatFailed).await;
             return;
@@ -1291,13 +1341,17 @@ async fn heartbeat_loop(state: Arc<TunnelState>) {
 
 async fn send_heartbeat_with_retries(state: &Arc<TunnelState>) -> bool {
     for _attempt in 0..4 {
+        if state.closure().is_some() {
+            // Closed for another cause; `terminate` then keeps that cause.
+            return false;
+        }
         let body = services::encode_connectionstate_request(state.channel_id, state.control_hpai);
         let datagram = frame::encode_frame(services::CONNECTIONSTATE_REQUEST, &body);
         *state.heartbeat_reply.lock().await = None;
         if state.socket.send(&datagram).await.is_err() {
             return false;
         }
-        let deadline = tokio::time::Instant::now() + Duration::from_secs(10);
+        let deadline = tokio::time::Instant::now() + state.heartbeat.response_timeout;
         let status = wait_for_reply(
             &state.heartbeat_notify,
             &state.heartbeat_reply,
@@ -2733,6 +2787,7 @@ mod tests {
             channel_id,
             IndividualAddress::new(1, 1, 1).unwrap(),
             tx,
+            HEARTBEAT,
         ));
         let client = TunnelClient {
             state: state.clone(),

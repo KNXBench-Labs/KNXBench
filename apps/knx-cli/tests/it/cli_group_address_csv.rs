@@ -1,3 +1,5 @@
+//! Tests group-address CSV exchange and atomic refusals through the built CLI.
+//!
 //! Drives the built `knx` binary to test `ga-export`/`ga-import` (T12 —
 //! `docs/superpowers/specs/2026-09-10-csv-group-address-exchange-design.md`
 //! §7). Builds a tiny `.knxdb` directly through `knx-core`/`knx-store`
@@ -99,6 +101,148 @@ fn split_trailing_status_line(stdout: &str) -> (&str, &str) {
     let trimmed = stdout.strip_suffix('\n').unwrap_or(stdout);
     let idx = trimmed.rfind('\n').map(|i| i + 1).unwrap_or(0);
     (&trimmed[..idx], &trimmed[idx..])
+}
+
+#[test]
+fn ga_import_column_profiles_apply_and_reexport_without_implicit_deletion() {
+    let profiles = [
+        (
+            "Group name;Address",
+            "Workshop;1/-/-",
+            "Pump;1/1/1",
+            "Fan;1/1/3",
+        ),
+        (
+            "Group name;Main;Middle;Sub",
+            "Workshop;1;;",
+            "Pump;1;1;1",
+            "Fan;1;1;3",
+        ),
+        (
+            "Main;Middle;Sub;Address",
+            "Workshop;;;1/-/-",
+            ";;Pump;1/1/1",
+            ";;Fan;1/1/3",
+        ),
+        (
+            "Main;Middle;Sub;Main;Middle;Sub",
+            "Workshop;;;1;;",
+            ";;Pump;1;1;1",
+            ";;Fan;1;1;3",
+        ),
+    ];
+    for (header, range, update, create) in profiles {
+        let dir = tempfile::tempdir().unwrap();
+        let store = dir.path().join("project.knxdb");
+        let csv_path = dir.path().join("column-profile.csv");
+        write_store(&store);
+        let before_bytes = std::fs::read(&store).unwrap();
+        std::fs::write(
+            &csv_path,
+            format!(
+                "\u{FEFF}{header};Central;Unfiltered;Description;DatapointType;Security\r\n\
+             {range};;;;;Auto\r\n{update};true;false;;;Auto\r\n{create};;;;;Auto\r\n"
+            ),
+        )
+        .unwrap();
+        let dry = run_cli(&[
+            "ga-import",
+            store.to_str().unwrap(),
+            csv_path.to_str().unwrap(),
+            "--dry-run",
+        ]);
+        let dry_stdout = String::from_utf8(dry.stdout).unwrap();
+        assert_eq!(dry.status.code(), Some(0), "{dry_stdout}");
+        assert_eq!(std::fs::read(&store).unwrap(), before_bytes);
+        assert!(dry_stdout.contains("warning: row 2"), "{dry_stdout}");
+        assert!(dry_stdout.contains("Security"), "{dry_stdout}");
+        let real = run_cli(&[
+            "ga-import",
+            store.to_str().unwrap(),
+            csv_path.to_str().unwrap(),
+        ]);
+        let real_stdout = String::from_utf8(real.stdout).unwrap();
+        assert_eq!(real.status.code(), Some(0), "{real_stdout}");
+        assert_eq!(
+            split_trailing_status_line(&dry_stdout).0,
+            split_trailing_status_line(&real_stdout).0
+        );
+        let conn = knx_store::open_and_migrate(&store).unwrap();
+        let project = knx_store::load_project(&conn).unwrap();
+        assert!(project.installations[0].group_ranges.is_empty());
+        assert_eq!(project.installations[0].group_addresses.len(), 2);
+        let pump = &project.installations[0].group_addresses[0];
+        assert_eq!(pump.name, "Pump");
+        assert!(pump.central);
+        assert!(!pump.unfiltered);
+        assert_eq!(
+            pump.id,
+            tiny_project().installations[0].group_addresses[0].id
+        );
+        let exported = dir.path().join("native.csv");
+        let out = run_cli(&[
+            "ga-export",
+            store.to_str().unwrap(),
+            exported.to_str().unwrap(),
+        ]);
+        assert!(out.status.success());
+        let replanned = run_cli(&[
+            "ga-import",
+            store.to_str().unwrap(),
+            exported.to_str().unwrap(),
+        ]);
+        assert!(replanned.status.success());
+        assert!(String::from_utf8(replanned.stdout)
+            .unwrap()
+            .contains("store written: no (nothing to do)"));
+        assert_eq!(knx_store::load_project(&conn).unwrap(), project);
+    }
+}
+
+#[test]
+fn ga_import_column_profile_refusals_preserve_store_bytes_and_model() {
+    let cases = [
+        ("Pump;1/1/1;;;note;;Auto", "Description"),
+        ("Pump;1/1/1;;; ;;Auto", "Description"),
+        ("Pump;1/1/1;;;;;On", "Security"),
+        ("Pump;1/1/2;;;;DPST-1-1;Auto", "read-only"),
+        ("Workshop;1/-/-;false;;;;Auto", "range"),
+        ("Workshop;1/-/-;;;hidden;;Auto", "Description"),
+        ("Pump;32/0/1;;;;;Auto", "32"),
+    ];
+    for (row, diagnostic) in cases {
+        let dir = tempfile::tempdir().unwrap();
+        let store = dir.path().join("project.knxdb");
+        let input = dir.path().join("refused.csv");
+        write_store(&store);
+        let before = std::fs::read(&store).unwrap();
+        std::fs::write(
+            &input,
+            format!(
+                "Group name;Address;Central;Unfiltered;Description;DatapointType;Security\n\
+             First update;1/1/1;;;;;Auto\n{row}\n"
+            ),
+        )
+        .unwrap();
+        for dry_run in [false, true] {
+            let mut args = vec![
+                "ga-import",
+                store.to_str().unwrap(),
+                input.to_str().unwrap(),
+            ];
+            if dry_run {
+                args.push("--dry-run");
+            }
+            let out = run_cli(&args);
+            let stdout = String::from_utf8(out.stdout).unwrap();
+            assert_eq!(out.status.code(), Some(2), "{stdout}");
+            assert!(stdout.contains(diagnostic), "{stdout}");
+            assert!(stdout.contains("store written: no (rejected)"), "{stdout}");
+            assert_eq!(std::fs::read(&store).unwrap(), before);
+        }
+        let conn = knx_store::open_and_migrate(&store).unwrap();
+        assert_eq!(knx_store::load_project(&conn).unwrap(), tiny_project());
+    }
 }
 
 #[test]

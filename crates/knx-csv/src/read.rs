@@ -7,6 +7,8 @@
 use knx_core::{GroupAddress, GroupAddressStyle};
 use serde::Serialize;
 
+use crate::profile::{self, Detected};
+
 /// Mirrors `knx_etsproj::report::Severity`'s shape (lowercase on the wire).
 /// Duplicated rather than shared because `knx-csv` must not depend on
 /// `knx-etsproj` (see the layering rule in `xtask`).
@@ -31,9 +33,10 @@ pub struct CsvProblem {
 /// Why a header column was not used to build [`CsvRow`]s.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum IgnoredColumnReason {
-    /// A column this format derives on export and validates on import, but
-    /// never applies. Its cell is retained in [`CsvRow`] so editing a
-    /// read-only value is reported instead of silently ignored.
+    /// A column this format derives on export or carries as metadata, validates
+    /// on import, but never applies. Native read-only fields are retained in
+    /// [`CsvRow`] so project validation can report an edited value; profile
+    /// columns are validated per row and need not be retained there.
     ReadOnly,
     /// A column this reader does not recognize at all.
     Unknown,
@@ -150,31 +153,57 @@ pub fn parse_group_addresses(text: &str, style: GroupAddressStyle) -> ParsedCsv 
         }
     };
 
-    let (columns, ignored_columns, mut problems) = map_headers(&headers);
-    if columns.address.is_none() {
-        problems.push(CsvProblem {
-            row: None,
-            severity: Severity::Error,
-            detail: "missing required column \"Address\"".to_string(),
-        });
+    let (columns, ignored_columns, mut problems, profile) = match profile::detect(&headers, style) {
+        Detected::Native => {
+            let (columns, ignored, problems) = map_headers(&headers);
+            (columns, ignored, problems, None)
+        }
+        Detected::Profile(shape) => (
+            HeaderMap::default(),
+            profile::ignored_columns(&headers, shape),
+            Vec::new(),
+            Some(shape),
+        ),
+        Detected::Refused(detail) => {
+            return ParsedCsv {
+                separator,
+                rows: Vec::new(),
+                ignored_columns: Vec::new(),
+                problems: vec![CsvProblem {
+                    row: None,
+                    severity: Severity::Error,
+                    detail,
+                }],
+            };
+        }
+    };
+    if profile.is_none() {
+        if columns.address.is_none() {
+            problems.push(CsvProblem {
+                row: None,
+                severity: Severity::Error,
+                detail: "missing required column \"Address\"".to_string(),
+            });
+        }
+        if columns.name.is_none() {
+            problems.push(CsvProblem {
+                row: None,
+                severity: Severity::Error,
+                detail: "missing required column \"Name\"".to_string(),
+            });
+        }
+        if columns.address.is_none() || columns.name.is_none() {
+            return ParsedCsv {
+                separator,
+                rows: Vec::new(),
+                ignored_columns,
+                problems,
+            };
+        }
     }
-    if columns.name.is_none() {
-        problems.push(CsvProblem {
-            row: None,
-            severity: Severity::Error,
-            detail: "missing required column \"Name\"".to_string(),
-        });
-    }
-    if columns.address.is_none() || columns.name.is_none() {
-        return ParsedCsv {
-            separator,
-            rows: Vec::new(),
-            ignored_columns,
-            problems,
-        };
-    }
-    let address_col = columns.address.expect("checked above");
-    let name_col = columns.name.expect("checked above");
+    // Unused for profile files, which never reach the native row code below.
+    let address_col = columns.address.unwrap_or(0);
+    let name_col = columns.name.unwrap_or(0);
 
     // Neither `Position::line()` nor `Position::byte()` from the `csv`
     // crate can be trusted here (verified empirically against `csv` 1.4.0,
@@ -239,6 +268,12 @@ pub fn parse_group_addresses(text: &str, style: GroupAddressStyle) -> ParsedCsv 
             }
         };
         let line = record.position().map(|p| line_of(p.byte())).unwrap_or(0);
+        if let Some(shape) = profile {
+            let (row, row_problems) = profile::parse_record(shape, &record, line);
+            rows.extend(row);
+            problems.extend(row_problems);
+            continue;
+        }
         let mut row_ok = true;
 
         let address_raw = record.get(address_col).unwrap_or("").trim();
@@ -412,7 +447,7 @@ fn read_optional_cell(record: &csv::StringRecord, column: Option<usize>) -> Opti
 /// problem and clearing `row_ok` on an unrecognized spelling. `column`
 /// being absent from the header, or the cell being empty, both read as
 /// `None` ("leave unchanged"), never a silent `Some(false)`.
-fn read_bool_column(
+pub(crate) fn read_bool_column(
     record: &csv::StringRecord,
     column: Option<usize>,
     label: &str,

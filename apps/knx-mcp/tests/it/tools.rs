@@ -635,6 +635,63 @@ fn validate_ga_csv_plans_without_applying() {
 }
 
 #[test]
+fn validate_ga_csv_profiles_report_omissions_and_refusals_without_writing() {
+    let dir = tempfile::tempdir().unwrap();
+    let original = project("Workshop");
+    let path = save(dir.path(), "workshop.knxdb", &original);
+    let before = std::fs::read(&path).unwrap();
+    let saved_before = {
+        let store = knx_store::open_existing_read_only(&path).unwrap();
+        knx_store::load_project(&store.conn).unwrap()
+    };
+    let ws = workspace(&[("workshop", &path)], None);
+    let header = "Group name;Address;Central;Unfiltered;Description;DatapointType;Security";
+    let accepted = tools::validate_ga_csv(
+        &ws,
+        "workshop",
+        &format!("{header}\nWorkshop;1/-/-;;;;;Auto\nPump;1/1/10;;;;;Auto\n"),
+        None,
+    )
+    .unwrap();
+    let result = &accepted["result"];
+    assert_eq!(result["valid"], true, "{result}");
+    assert_eq!(result["wouldChangeProject"], true);
+    assert_eq!(result["applied"], false);
+    assert_eq!(result["counts"]["created"], 1);
+    assert_eq!(result["counts"]["deleted"], 0);
+    let problems = result["problems"].as_array().unwrap();
+    assert!(problems.iter().all(|p| p["severity"] == "warning"));
+    assert!(problems.iter().any(|p| p["row"] == 2
+        && p["detail"]
+            .as_str()
+            .unwrap()
+            .contains("range name and address are not imported")));
+    assert!(problems.iter().any(|p| p["row"] == 3
+        && p["detail"] == "Security Auto is not imported; project security is unchanged"));
+    for (row, diagnostic) in [
+        ("Pump;1/1/10;;;note;;Auto", "Description"),
+        ("Pump;1/1/10;;;;;On", "Security"),
+    ] {
+        let refused =
+            tools::validate_ga_csv(&ws, "workshop", &format!("{header}\n{row}\n"), None).unwrap();
+        let result = &refused["result"];
+        assert_eq!(result["valid"], false, "{result}");
+        assert_eq!(result["wouldChangeProject"], false);
+        assert_eq!(result["applied"], false);
+        assert!(result["problems"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|p| p["row"] == 2
+                && p["severity"] == "error"
+                && p["detail"].as_str().unwrap().contains(diagnostic)));
+    }
+    assert_eq!(std::fs::read(&path).unwrap(), before);
+    let store = knx_store::open_existing_read_only(&path).unwrap();
+    assert_eq!(knx_store::load_project(&store.conn).unwrap(), saved_before);
+}
+
+#[test]
 fn a_saved_change_is_picked_up_and_a_vanished_file_is_an_error() {
     let dir = tempfile::tempdir().unwrap();
     let path = save(dir.path(), "home.knxdb", &project("Before"));

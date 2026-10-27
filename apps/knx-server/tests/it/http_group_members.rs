@@ -129,6 +129,7 @@ fn fixture() -> (Arc<knx_server::AppState>, tempfile::TempDir) {
         device_system2: Arc::new(knx_server::System2Service::new(dir.path())),
         next_device_download_id: Default::default(),
         device_download_timing: Default::default(),
+        system2_timing: Default::default(),
         diagnostic_lease_dir: None,
         address_programming: Default::default(),
         next_address_programming_id: Default::default(),

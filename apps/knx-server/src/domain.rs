@@ -182,6 +182,11 @@ pub struct AppState {
     /// The management-session timing for downloads. The Standard's figures
     /// in production; tests shorten it, the way the CLI's tests do.
     pub device_download_timing: knx_net::SessionTiming,
+    /// The management-session timing for the experimental System2 download
+    /// and recovery worker: the owner-approved patient profile, a local wait
+    /// policy and not a standard timing. Ordinary downloads keep
+    /// `device_download_timing`; tests shorten this one too.
+    pub system2_timing: knx_net::SessionTiming,
     /// Read-only diagnostic cross-process lease directory (ADR-0134). `None`
     /// uses the per-user runtime location shared with `knx device diagnostics`;
     /// tests inject an owned directory so they never touch the user's lease.
@@ -381,6 +386,7 @@ impl AppState {
             device_download: tokio::sync::Mutex::new(None),
             next_device_download_id: std::sync::atomic::AtomicU64::new(1),
             device_download_timing: knx_net::SessionTiming::default(),
+            system2_timing: knx_net::SessionTiming::patient_system2(),
             diagnostic_lease_dir: None,
             address_programming: tokio::sync::Mutex::new(None),
             next_address_programming_id: std::sync::atomic::AtomicU64::new(1),

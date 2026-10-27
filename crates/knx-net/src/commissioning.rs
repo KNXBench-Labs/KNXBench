@@ -133,6 +133,16 @@ pub struct SessionTiming {
     /// `[D]` **TL** clause 4 via RESEARCH §8.5 and spec §11.1: the
     /// acknowledge time-out is 3 s.
     pub response_timeout: Duration,
+    /// How long to wait for the answer once the device has positively
+    /// acknowledged the request at the Transport Layer; `None` keeps
+    /// [`Self::response_timeout`] for that wait too.
+    ///
+    /// A local client-patience figure, not a standard timing. It starts at the
+    /// device's `T_ACK` and replaces the remainder of the first slice and every
+    /// later one, while the unacknowledged-request timer, and with it the
+    /// repetition cadence of a request nobody acknowledged, stays at
+    /// `response_timeout`.
+    pub answer_timeout: Option<Duration>,
     /// How often the wait loop reads `PID_LOAD_STATE_CONTROL`.
     ///
     /// `[D]` RES §4.23.2.4.1: *"The period for reading shall not exceed half
@@ -205,6 +215,7 @@ impl Default for SessionTiming {
         Self {
             connection_timeout: CONNECTION_TIMEOUT,
             response_timeout: ACKNOWLEDGE_TIMEOUT,
+            answer_timeout: None,
             poll_interval: Duration::from_secs(3),
             max_transition: Duration::from_secs(30),
             programming_delay: Duration::from_millis(500),
@@ -212,6 +223,25 @@ impl Default for SessionTiming {
             restart_responsive_again: Duration::from_secs(5),
             post_restart_disconnect_wait: Duration::from_secs(6),
             programming_mode_broadcast_timeout: Duration::from_secs(1),
+        }
+    }
+}
+
+impl SessionTiming {
+    /// The default timing with only the local waits for the experimental
+    /// System2 download and recovery stretched: 15 s per answer slice once the
+    /// device has acknowledged a request, and a 120 s transition budget.
+    ///
+    /// Owner-approved client patience for issue #30, not a normative timing:
+    /// the 3 s transport acknowledge timer, the 6 s connection time-out, the
+    /// 3 s poll interval, every retry count and the programming and restart
+    /// timers stay as they are. A longer wait cannot revive a connection the
+    /// device or gateway has already closed.
+    pub fn patient_system2() -> Self {
+        Self {
+            answer_timeout: Some(Duration::from_secs(15)),
+            max_transition: Duration::from_secs(120),
+            ..Self::default()
         }
     }
 }
@@ -1332,7 +1362,11 @@ impl<'t, T: ManagementTransport> ManagementSession<'t, T> {
         attempts += 1;
 
         loop {
-            let deadline = tokio::time::Instant::now() + self.timing.response_timeout;
+            let mut deadline = tokio::time::Instant::now()
+                + match (acknowledged, self.timing.answer_timeout) {
+                    (true, Some(answer)) => answer,
+                    _ => self.timing.response_timeout,
+                };
             loop {
                 let remaining = deadline.saturating_duration_since(tokio::time::Instant::now());
                 if remaining.is_zero() {
@@ -1359,6 +1393,12 @@ impl<'t, T: ManagementTransport> ManagementSession<'t, T> {
                         }
                         match frame.transport {
                             Tpci::Ack { seq: acked } if acked == seq => {
+                                if !acknowledged {
+                                    if let Some(answer) = self.timing.answer_timeout {
+                                        // Only the first T_ACK starts the answer wait.
+                                        deadline = tokio::time::Instant::now() + answer;
+                                    }
+                                }
                                 acknowledged = true;
                                 disposition = "ack-matched";
                                 if ack_is_enough == AckIsEnough::Yes {
@@ -1466,7 +1506,11 @@ impl<'t, T: ManagementTransport> ManagementSession<'t, T> {
                 }
                 return Err(SessionError::NoAnswer {
                     waiting_for,
-                    each: self.timing.response_timeout * u32::from(answer_slices),
+                    each: self
+                        .timing
+                        .answer_timeout
+                        .unwrap_or(self.timing.response_timeout)
+                        * u32::from(answer_slices),
                     attempts,
                 });
             }
@@ -3436,6 +3480,7 @@ mod tests {
         SessionTiming {
             connection_timeout: Duration::from_millis(50),
             response_timeout: Duration::from_millis(50),
+            answer_timeout: None,
             poll_interval: Duration::from_millis(1),
             max_transition: Duration::from_millis(40),
             programming_delay: Duration::from_millis(0),
@@ -6415,4 +6460,5 @@ mod tests {
 
     mod load_control_response;
     mod memory_response_pairing;
+    mod patient_timing;
 }

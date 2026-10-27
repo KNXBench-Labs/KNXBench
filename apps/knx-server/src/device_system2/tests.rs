@@ -1,5 +1,6 @@
 //! Regression assertions reserved for the single final integrated candidate.
 mod mounted_hardware;
+mod patient_wiring;
 
 use super::dto::*;
 

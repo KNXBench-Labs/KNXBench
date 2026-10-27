@@ -335,6 +335,25 @@ same operation is not retried, and a new operation starts with no diagnostic.
 Keep the private journal, which still holds the raw prefix, and do not post it.
 [Contract](../../contracts/system2-safe-failure-diagnostic.md).
 
+### More patient experimental waits (source builds after Alpha 17)
+
+The experimental hardware path uses longer bounded waits: 10 seconds for each
+matching gateway acknowledgement, 15 seconds per management-answer slice after
+positive device transport acknowledgement, and 120 seconds for a load-state
+transition. The device transport ACK/repetition timer stays at three seconds. This also applies to explicit recovery
+and the experimental hardware CLI path, not ordinary downloads or bus monitoring.
+The existing repetition limits remain; response slices can add up, so these are
+not total-download deadlines. A gateway that explicitly closes the channel still
+ends the wait immediately. The panel may therefore stay at one checkpoint longer
+without being stuck: refresh status rather than starting a second operation.
+
+Backup, identity checks, final readback and once-only recovery rules are unchanged.
+These are experimental client wait values, not new standard timings or proof of
+successful device programming. Use a source build containing the
+[patient wait profile](../../contracts/system2-patient-waits.md) and the receiver/
+teardown fix `1ab4ad6a5`; the published Alpha 17 image does not gain them merely
+by restarting it. A failed attempt still stops without automatic retry.
+
 ### Original-state recovery, not a second download
 
 Status reattaches the durable **selected original operation**, including after a

@@ -33,6 +33,32 @@ use crate::tunnelling;
 /// the existing CONNECT/CONNECTIONSTATE control-response budget.
 const DISCONNECT_RESPONSE_TIMEOUT: Duration = Duration::from_secs(10);
 
+/// How long one `TUNNELLING_REQUEST` attempt waits for its `TUNNELLING_ACK`
+/// before the single same-sequence repetition (or, after that, teardown).
+///
+/// `Standard` is the 1 s of Tunnelling v01.07.01 AS §2.6.1 and the default.
+/// `Patient` is a local, owner-approved client-side wait policy for the
+/// experimental System2 download path only; it is not a normative timing and
+/// cannot revive a peer that has closed or ignores the channel.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum TunnelAckWait {
+    /// One second per attempt.
+    #[default]
+    Standard,
+    /// Ten seconds per attempt; still the original plus one repetition.
+    Patient,
+}
+
+impl TunnelAckWait {
+    /// The wait for one attempt.
+    pub const fn timeout(self) -> Duration {
+        match self {
+            Self::Standard => Duration::from_secs(1),
+            Self::Patient => Duration::from_secs(10),
+        }
+    }
+}
+
 /// The connection heartbeat's timing (Core v01.06.02 AS §5.4).
 #[derive(Debug, Clone, Copy)]
 struct HeartbeatTiming {
@@ -188,6 +214,7 @@ pub enum TunnelReturnPath {
 /// Session 6 Cycle 4.
 pub struct KnxNetIpClient {
     tunnel_return_path: TunnelReturnPath,
+    tunnel_ack_wait: TunnelAckWait,
 }
 
 impl KnxNetIpClient {
@@ -200,7 +227,15 @@ impl KnxNetIpClient {
     pub fn with_tunnel_return_path(path: TunnelReturnPath) -> Self {
         Self {
             tunnel_return_path: path,
+            tunnel_ack_wait: TunnelAckWait::default(),
         }
+    }
+
+    /// The same client, keeping its return path, whose tunnels wait `wait`
+    /// for each `TUNNELLING_ACK`. Discovery and routing are unaffected.
+    pub fn with_tunnel_ack_wait(mut self, wait: TunnelAckWait) -> Self {
+        self.tunnel_ack_wait = wait;
+        self
     }
 }
 
@@ -330,7 +365,7 @@ impl BusConnection for KnxNetIpClient {
     }
 
     async fn connect_tunnel(&self, gateway: SocketAddrV4) -> Result<TunnelClient, BusError> {
-        TunnelClient::connect(gateway, self.tunnel_return_path).await
+        TunnelClient::connect(gateway, self.tunnel_return_path, self.tunnel_ack_wait).await
     }
 
     async fn connect_routing(
@@ -408,6 +443,8 @@ struct TunnelState {
     /// Receiving on the socket failed; the receive loop ended for that.
     socket_failed: AtomicBool,
     heartbeat: HeartbeatTiming,
+    /// How long each attempt of a send waits for its `TUNNELLING_ACK`.
+    ack_wait: TunnelAckWait,
     /// Set before `shutdown` is notified, so a loop that was busy when
     /// `notify_waiters` fired still stops at its next iteration.
     stopped: AtomicBool,
@@ -421,6 +458,7 @@ impl TunnelState {
         assigned_address: IndividualAddress,
         tx: broadcast::Sender<TunnelEvent>,
         heartbeat: HeartbeatTiming,
+        ack_wait: TunnelAckWait,
     ) -> Self {
         Self {
             socket,
@@ -444,6 +482,7 @@ impl TunnelState {
             receiver_done: AtomicBool::new(false),
             socket_failed: AtomicBool::new(false),
             heartbeat,
+            ack_wait,
             stopped: AtomicBool::new(false),
         }
     }
@@ -533,8 +572,9 @@ impl TunnelClient {
     async fn connect(
         gateway: SocketAddrV4,
         return_path: TunnelReturnPath,
+        ack_wait: TunnelAckWait,
     ) -> Result<Self, BusError> {
-        Self::connect_timed(gateway, return_path, HEARTBEAT).await
+        Self::connect_timed(gateway, return_path, HEARTBEAT, ack_wait).await
     }
 
     /// [`Self::connect`] with an explicit heartbeat timing; tests shorten it.
@@ -542,6 +582,7 @@ impl TunnelClient {
         gateway: SocketAddrV4,
         return_path: TunnelReturnPath,
         heartbeat: HeartbeatTiming,
+        ack_wait: TunnelAckWait,
     ) -> Result<Self, BusError> {
         let socket = UdpSocket::bind("0.0.0.0:0").await.map_err(BusError::Io)?;
         socket.connect(gateway).await.map_err(BusError::Io)?;
@@ -584,6 +625,7 @@ impl TunnelClient {
             crd.individual_address,
             tx,
             heartbeat,
+            ack_wait,
         ));
 
         tokio::spawn(receive_loop(state.clone()));
@@ -635,10 +677,11 @@ impl TunnelClient {
     /// (T17) needs `T_Connect`/numbered `T_Data_Connected`/`T_Disconnect`,
     /// which a fixed `Tpci::UnnumberedData` cannot express.
     ///
-    /// Per §2.6.1/§2.6.2: waits up to `TUNNELLING_REQUEST_TIMEOUT` (1s)
-    /// for a matching `TUNNELLING_ACK`; on timeout or an error status,
-    /// repeats the same `TUNNELLING_REQUEST` once with the same sequence
-    /// counter. If that repeat also fails, the connection is terminated (a
+    /// Per §2.6.1/§2.6.2: waits up to [`TunnelAckWait::timeout`] (1 s unless
+    /// the client was built with [`TunnelAckWait::Patient`]) for a matching
+    /// `TUNNELLING_ACK`; on timeout or an error status, repeats the same
+    /// `TUNNELLING_REQUEST` once with the same sequence counter. If that
+    /// repeat also fails, the connection is terminated (a
     /// `DISCONNECT_REQUEST` is sent, best-effort, and subscribers get
     /// `TunnelEvent::Closed`) and `BusError::TunnelClosed` names the
     /// unacknowledged sequence. The receive loop keeps running, so a later
@@ -680,7 +723,7 @@ impl TunnelClient {
                 .send(&datagram)
                 .await
                 .map_err(BusError::Io)?;
-            let deadline = tokio::time::Instant::now() + Duration::from_secs(1);
+            let deadline = tokio::time::Instant::now() + self.state.ack_wait.timeout();
             let reply = wait_for_reply(
                 &self.state.ack_notify,
                 &self.state.ack_reply,
@@ -2788,6 +2831,7 @@ mod tests {
             IndividualAddress::new(1, 1, 1).unwrap(),
             tx,
             HEARTBEAT,
+            TunnelAckWait::default(),
         ));
         let client = TunnelClient {
             state: state.clone(),

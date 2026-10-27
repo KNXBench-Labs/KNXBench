@@ -61,9 +61,9 @@ included; a hidden document or pagehide finishes only headings already typing, a
 ones still type once the page is visible again. Typing never replays, not on scroll, not
 on resume. Without JS a headline is plain static text.
 
-Only visible, settled headings run ambient rolls. Header Pause/Resume, live OS reduced
-motion, hidden-document and pagehide cleanup cancel typing and rolls and restore all
-text. The setting is page-local, never persisted. No-JS/missing APIs/animation
+Only visible, settled headings run ambient rolls. Header Pause/Resume and live OS reduced
+motion cancel typing and rolls and restore all text; hidden-document and pagehide cleanup
+cancel rolls and finish typing already in progress. The setting is page-local, never persisted. No-JS/missing APIs/animation
 failure leave static text; legal/privacy pages stay static. No animation is
 needed to read or navigate.
 

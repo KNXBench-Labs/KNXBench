@@ -220,6 +220,24 @@ async (page) => {
     } finally { await c.close(); }
   }
 
+  // A page loaded in a background tab: the visible hero waits, then types once the tab is shown.
+  {
+    const [c, p] = await context({});
+    try {
+      await c.addInitScript(() => {
+        Object.defineProperty(document, 'hidden', { configurable: true, get: () => true });
+        Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => 'hidden' });
+      });
+      await p.goto(`${origin}/en/`);
+      await p.waitForTimeout(600);
+      const waiting = await probe('hero-title', p);
+      assert('background-tab load: the hero waits untyped and without a cursor', waiting.state === 'pending' && waiting.cursors === 0);
+      await p.evaluate(() => { delete document.hidden; delete document.visibilityState; document.dispatchEvent(new Event('visibilitychange')); });
+      const typed = await sample(p, 'hero-title', finished);
+      assert('background-tab load: the hero types once the tab is shown', typed.some(s => s.shown > 0 && s.shown < s.total && s.cursors === 1) && finished(typed[typed.length - 1]));
+    } finally { await c.close(); }
+  }
+
   // Typed h3 headings join the ambient rolls too.
   {
     const [c, p] = await context({});

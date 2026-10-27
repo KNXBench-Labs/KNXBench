@@ -132,7 +132,7 @@
   "hl_history_note": "Undo/redo · Named versions · Timeline",
   "hl_history_alt": "KNXBench in Graphite: the Project history dialog of the fictional Sample house with the named version Before the kitchen redesign.",
   "hl_wizard_title": "Wizards that show their homework.",
-  "hl_wizard_body": "The new-project wizard sets up areas, lines, rooms and group ranges in one go. The add-device wizard takes a product from the catalogue, places it on a line and lets the server preview names and free individual addresses before anything is created. Check the review, confirm, done. No surprises, no address collisions.",
+  "hl_wizard_body": "The new-project wizard sets up areas, lines, rooms and group ranges in one go. The add-device wizard takes a product from the catalogue, places it on a line and lets the server preview names and free individual addresses before anything is created. Check the review, confirm, done. No surprises, no address collisions within the project.",
   "hl_wizard_note": "New project · Add device · Preview first",
   "hl_wizard_alt": "KNXBench in Graphite: the review step of the Add device wizard, announcing that one device, Dining room actuator, will be created with the free address 1.1.3.",
   "hl_params_title": "Parameters, seated properly.",

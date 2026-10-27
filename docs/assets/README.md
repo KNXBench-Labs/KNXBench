@@ -31,7 +31,6 @@ Reproduction: `apps/knx-web/e2e/release-media.shots.ts` and its config; see
 *Historical: `release-media.shots.ts` now captures the scenes above; the Alpha 14
 manifest binds the earlier version of the spec by hash.*
 
-
 Seven PNGs and the [capture manifest](releases/alpha14/media-manifest.json) are in
 `releases/alpha14/`. They show the tagged Alpha 14 source (`8d104e2f`): production
 frontend, actual `knx-server` and the fictional Sample house, captured in an

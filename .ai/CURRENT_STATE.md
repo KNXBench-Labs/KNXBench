@@ -1,13 +1,16 @@
 # Restart snapshot
 
-Updated: 2026-10-27 19:22 CET. Operational snapshot, not an append-only journal.
-## GATE-01 cold-start follow-up (SOURCE PREPARATION, observed 2026-10-27 19:22 CET; session ddbf32f04371)
-- Owner `triage/gate01-cold-start-20261027`; read-only source/retained-failure investigation first.
-- Witness: three historical File-submenu timeouts with cold Vite at eight workers; four-worker gate passes.
-- STOP browser/benchmark/config/runner edits until exact failed identities, source provenance and lease admission.
-- No worker-policy/coverage change, new scheduler, real bus/projects, release/deployment or foreign cleanup.
-- Evidence `<profile>/evidence/gate01-cold-start-20261027/`; no matching gate runner observed, no tests started.
-- Next recover historical raw failure and trace startup/test readiness; only admit a bounded reproduced fix.
+Updated: 2026-10-27 20:22 CET. Operational snapshot, not an append-only journal.
+## GATE-01 signal fixture (CLAIMED, observed 2026-10-27 20:22 CET; session ddbf32f04371)
+- Owner `fix/gate01-spawn-record-framing-20261027`; only `tools/tests/test_browser_tmp_spawn_signals.py` plus own docs.
+- Witness: integrated `83871cd88` tool-tests SIGHUP child-PID reader IndexError at line255; original failed receipt retained.
+- GO deterministic original-source fragment-reader regression and test-only framing correction; preserve real signal/cleanup oracles.
+- STOP browser_tmp/runner/config/policy edits, timeouts/retries, app/hardware/releases, foreign cleanup.
+- Evidence `<profile>/evidence/gate01-spawn-record-20261027/`; next bounded Claude implementation, independent review and gates.
+## GATE-01 cold-start follow-up (PARKED, observed 2026-10-27 20:22 CET; session ddbf32f04371)
+- Source-only candidate `763d7fbe6` APPROVE; branch gate10 green; integrated `83871cd88` failed the fixture above.
+- Current repeat3 inventory has three groups at caps4/8; historical raw IDs/source/cause still unavailable.
+- No browser benchmark or speculative fix admitted; own assessment worktree/evidence retained until repaired acceptance.
 ## WP-11 native capture (DELIVERED/RETIRED, observed 2026-10-27 19:22 CET; session ddbf32f04371)
 - Main-first `8227419a5`, result `7ccb53f8a`; reviews APPROVE, branch/integrated/result gates10 green/frozen.
 - Actual Alpha17 one-frame native capture Cancel/Save/overwrite Cancel/Replace, heartbeat11 and close0.

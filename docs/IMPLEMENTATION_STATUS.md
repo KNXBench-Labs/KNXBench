@@ -12,6 +12,15 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Docker signing design preparation (27 October 2026; documentation only)
+
+The [OWN-01 design proposal](research/2026-10-27-docker-image-signing-design.md)
+records identity, index-digest verification, non-atomic publication and recovery
+requirements from primary documentation and the current workflow. Design
+preparation is complete; approval, implementation and operational acceptance are
+not. No signing, registry write, key creation, workflow or runtime change occurred;
+existing container limitations and ledger statuses are unchanged.
+
 ## Explicit catalogue installation target (27 October 2026 source)
 
 Published as main-first `a17420239` after independent reviews APPROVE;

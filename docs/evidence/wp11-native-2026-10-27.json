@@ -1,0 +1,68 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-10-27",
+  "scope": "WP-11 first bounded native acceptance slice",
+  "result": "bounded-native-evidence-passed",
+  "wholeWp11Complete": false,
+  "artifact": {
+    "tag": "v0.1.0-alpha.17",
+    "sourceCommit": "a9ea32d72364478b25e158d0b95465af7a4702df",
+    "name": "KNXBench_0.1.0-alpha.17_amd64.AppImage",
+    "bytes": 92047864,
+    "sha256": "cd1f0cdf129bfad9e143062e4395c52f9376fa49a51c35145a5c0046a49e1d8a",
+    "verification": "Matches release asset digest and downloaded SHA256SUMS"
+  },
+  "method": "Actual native Wayland WebKitGTK, AT-SPI actions and guarded keyboard input; no response mocks",
+  "safety": {
+    "network": "Separate user/network namespace with loopback only and no external route",
+    "filesystem": "Read-only host root, real home and project mount masked, private writable HOME/XDG and fixture copies",
+    "realBusAccess": false,
+    "realProjectEdits": false,
+    "productRuntimeChanges": false
+  },
+  "retainedLoggedOperations": 130,
+  "thematicEvidenceLabels": 19,
+  "countMeaning": "Thematic labels and logged operations, not independently counted tests. A logged operation alone is not workflow success; retained state/file assertions establish the listed bounded outcomes.",
+  "passed": [
+    "Native startup of the verified artifact and live isolation checks",
+    "Fictional project creation, keyboard search and command palette",
+    "Settings initial focus, backwards/forwards Tab wrap and Escape focus return",
+    "Native Save As, SQLite integrity and cancelled overwrite hash/mtime preservation",
+    "Explicit native Replace followed by valid project reopen",
+    "Note draft/preview root preservation, confirmation/save and exact native reopen before and after process restart",
+    "80/150 percent application shortcuts; stored zoom and pane preferences survive restart",
+    "Native keyboard table-column and navigation resizing at 80/150 percent; navigation hide/show at 150 percent",
+    "All three File submenus expose their items at 80/150 percent in the tested window",
+    "Fictional catalogue upload/preview/consent/install and fictional demo project opening",
+    "Checked-editor unsupportedXml refusal retains original value; MissingSource instruction warning",
+    "Two ordinary native closes exit zero; fictional input copies remain byte-identical"
+  ],
+  "notEstablished": [
+    "Orca or actual screen-reader announcements: Orca not installed",
+    "Firefox: not installed",
+    "Positive checked-source and instruction-editor workflows: fictional fixture lacks admitted source",
+    "Native bus-monitor capture export",
+    "Pointer drag geometry, hover, full viewport/theme/zoom matrix or visual clipping acceptance",
+    "Newer-Mesa vendor-specific EGL or physical-GPU acceptance",
+    "Universal desktop parity or accessibility conformance"
+  ],
+  "harnessCaveats": [
+    "Root-mapped initial startup failed AT-SPI authentication; retained separately, not credited as interaction acceptance",
+    "Refused namespace/mount/capability preflights and focus/dialog-selector corrections are retained harness outcomes, not product failures",
+    "An unscoped Save action opened another chooser; corrected evidence uses the top-level native chooser or alert",
+    "First close succeeded but its subsequent accessibility capture found no application; separate exit/window proof establishes settlement",
+    "Driver evolved during manual steps; retained step evidence is not a frozen single-run automated suite",
+    "Renderer warnings were retained; startup success does not identify the EGL vendor or prove issue #6 on another machine"
+  ],
+  "privateEvidence": {
+    "directory": "<profile>/evidence/wp11-native-20261027/",
+    "validator": "verify_retained.py",
+    "validatorReceipt": "retained-verifier-attempt2.json",
+    "summary": "verified-native-summary.json",
+    "actions": "actions.jsonl",
+    "nativeTrees": "steps/",
+    "isolation": "runtime-isolation-before-close.json",
+    "noteReopen": "note-native-reopen-proof.json",
+    "finalSettlement": "final-native-settlement.json"
+  }
+}

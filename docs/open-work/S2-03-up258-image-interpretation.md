@@ -27,12 +27,17 @@ Published as `678082047` ([delivery](../status/2026-10-26-up258-image-differenti
    simulator oracle. Missing evidence: a defining document for `Background`
    precedence. Until then the defaults image policy stays unchanged and named as a
    hypothesis; do not switch it on oracle agreement alone.
-2. **Communication enable for unlinked and inactive objects.** KNXBench keeps the
-   product's communication-enable bit on active objects without an association and
-   derives inactive descriptors from the base octet; the oracle clears the bit for
-   every unlinked object and encodes inactive ones from product flags. Both are
-   inert under Resources v01.10.01 §4.18.3.1.2.1. Missing evidence: a clause or
-   owner decision choosing one policy.
+
+## Decided — 27 October 2026
+
+**Communication enable for unlinked and inactive objects.** The owner explicitly
+retains the existing source-based policy: KNXBench keeps the product's
+communication-enable bit on active objects without an association and derives
+inactive descriptors from the base octet. The oracle instead clears the bit for
+every unlinked object and encodes inactive ones from product flags. Both are
+inert under Resources v01.10.01 §4.18.3.1.2.1. Do not align the policy solely to
+match the comparison image. This decision neither resolves invisible-parameter
+precedence nor establishes general ETS equivalence or hardware approval.
 
 Unchanged boundaries: TaskSegment identity, the omitted program-version octets,
 `FEh` handling, the [PID 7 width blocker](S2-01-pid7-raw-response.md), gateway

@@ -8,8 +8,11 @@ Independent, input-gated import/model cases:
 
 1. `IMPORT-02`: authorised ETS restore-point exports of distinct revisions
    plus independently reviewed baselines.
-2. `MODEL-05`: a multi-installation export or an explicit native-site
-   requirement before any model change.
+2. `MODEL-05`: explicitly deferred by the owner on 27 October 2026; no current
+   need for a KNXBench-native site spanning separate installations. No model
+   change is commissioned or implemented. Reopen only on a new owner decision
+   backed by a multi-installation export or an explicit native-site requirement
+   ([ADR-0125](../adr/0125-multi-installation-site-is-blocked.md)).
 3. KL-177: the project-side `SubModule` grammar, schema-22 samples with
    devices, and independent samples for other untested schemas (12/13/14).
 4. Real CSV/ESF/report/compare references (KL-038/044/051) when supplied.
@@ -18,7 +21,9 @@ Independent, input-gated import/model cases:
 7. Installation instructions: other source schemas/encodings and an ETS
    export of edited overrides.
 
-## Done when (per case)
+## Done when (per active evidence case)
+
+MODEL-05 is deferred, not done; it has no current implementation task.
 
 Production import/service/native reopen and reports match the independent
 baseline, preserve unknowns, and refuse malformed or unsupported mappings

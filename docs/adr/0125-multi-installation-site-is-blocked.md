@@ -1,7 +1,7 @@
-# ADR 0125: A site over several installations is not modelled; its invariants are fixed and it waits for evidence
+# ADR 0125: A site over several installations is not modelled; its invariants are fixed and design is deferred
 
 Date: 2026-10-13
-Status: Proposed — blocked design (no implementation until the evidence in *Lifted when* exists)
+Status: Proposed — owner-deferred on 2026-10-27 (nothing implemented; reopening conditions below)
 Session: Goal A4 (`docs/goals/unassigned-data-integrity.md`), design only — no code, no UI
 
 ## Context
@@ -49,6 +49,10 @@ operation that moves or links entities across installations**. A site that
 covers several buildings stays the ADR-0038 `Ground` root inside one
 installation.
 
+**Owner decision 2026-10-27:** there is no current need for a KNXBench-native
+site spanning separate installations. MODEL-05 is explicitly deferred, not
+implemented or completed; no additional model work is commissioned.
+
 Should a multi-installation site be admitted later, it must satisfy these
 invariants, so that no future design has to rediscover them:
 
@@ -85,12 +89,12 @@ invariants, so that no future design has to rediscover them:
 
 ## Consequences
 
-- MODEL-05 is **blocked**, not open-ended: nothing is implemented, and these
-  invariants are the acceptance contract for any later attempt.
-- **Lifted when** (any one starts a real design): a real ETS export with more
-  than one installation is added to the corpus, showing how ETS scopes
-  buildings, global addresses and IDs across them; or a user requirement
-  states a KNXBench-native site with the operations it needs (then invariant
-  2 applies and ETS compatibility is not claimed).
+- MODEL-05 remains an unimplemented design, explicitly **deferred** by the
+  owner; these invariants remain the contract for any later attempt.
+- **Lifted when:** a new owner decision reopens design, backed by either a real
+  ETS export with more than one installation showing how ETS scopes buildings,
+  global addresses and IDs across them, or an explicit requirement for a
+  KNXBench-native site and its operations (then invariant 2 applies and ETS
+  compatibility is not claimed). New evidence alone does not undo the deferral.
 - Goal B's workbench shows installations as today; it must not present a
   cross-installation site or offer cross-installation moves.

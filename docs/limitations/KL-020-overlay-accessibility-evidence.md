@@ -101,3 +101,20 @@ handling); no result list anywhere carried `role="listbox"`/`role="option"`;
 nothing backing it; and `CatalogBrowser.tsx`'s rows had no keyboard path
 into the list at all.
 <!-- END retained catalogue record -->
+
+## Update 27 October 2026: bounded native input/focus evidence
+
+The published Alpha 17 AppImage was exercised in an isolated actual native
+Wayland/WebKitGTK window with fictional data. Search and command-palette
+shortcuts, Settings initial focus, backwards/forwards Tab wrap and Escape
+focus return passed through AT-SPI and guarded native keyboard input. Native
+file chooser Save/Cancel/Replace and exact plain-text note save/reopen, also
+after process restart, have resulting file/state evidence.
+[WP-11 record](../status/2026-10-27-wp11-native-acceptance.md).
+
+This narrows the older absence of native interaction evidence; it does not
+supply a whole-app/theme audit or positive checked-source/instruction editor
+acceptance. The fictional fixture exposes their unsupported/missing-source
+branches only. Orca and Firefox were not installed. AT-SPI observations do not
+establish spoken announcements, human screen-reader acceptance or WCAG
+conformance; those boundaries and the ledger disposition stay unchanged.

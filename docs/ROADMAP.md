@@ -15,6 +15,19 @@ Publication is verified at immutable `a9ea32d72364478b25e158d0b95465af7a4702df`
 ([public verification record](evidence/release-alpha17-2026-10-26.json)).
 Work merged on main after `20ab2f7ea` belongs to the next alpha.
 
+## Native acceptance after the Alpha 17 release
+
+Owner consent for isolated [WP-11](open-work/WP-11-native-linux-acceptance.md)
+tests is granted (27 October). The first bounded native Wayland/WebKitGTK
+slice exercised the published Alpha 17 AppImage with fictional data and no
+external network: keyboard/focus, project save/reopen, note drafts and bounded
+zoom/menu controls. [Acceptance and exclusions](status/2026-10-27-wp11-native-acceptance.md).
+WP-11 stays open for positive source-bound editors, capture export, remaining
+layout/pointer cells and unavailable environments; no code, hardware or release
+capability is added. The separate confirmed owner decisions are recorded in
+[OWN-01](open-work/OWN-01-owner-decisions.md), including MODEL-05's deferral and
+retention of the S2-03 communication-bit policy.
+
 ## Deliveries up to the Alpha 17 cutoff
 
 Website task WP-21 is delivered and deployed (`b517930e7`), with reviewed

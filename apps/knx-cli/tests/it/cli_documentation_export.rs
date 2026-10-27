@@ -310,3 +310,179 @@ fn doc_export_with_wrong_argument_count_prints_usage_and_exits_1() {
     let stderr = String::from_utf8(out.stderr).unwrap();
     assert!(stderr.contains("usage:"), "{stderr}");
 }
+
+/// Replaces the one clock-derived cell ("Generated at" / "Erzeugt am") so two
+/// separate process runs can be compared without pretending that two
+/// wall-clock reads agree. Nothing else in the document is touched.
+fn without_generated_time(html: &str) -> String {
+    let mut out = String::new();
+    let mut rest = html;
+    while let Some(at) = ["Generated at</th><td>", "Erzeugt am</th><td>"]
+        .iter()
+        .filter_map(|label| rest.find(label).map(|i| (i, label.len())))
+        .min()
+    {
+        let (start, len) = at;
+        out.push_str(&rest[..start + len]);
+        rest = &rest[start + len..];
+        let end = rest.find('<').expect("timestamp cell closes");
+        out.push_str("<generated-time>");
+        rest = &rest[end..];
+    }
+    out.push_str(rest);
+    out
+}
+
+/// Exports a fresh store with arguments from `build` and asserts its bytes stay unchanged.
+/// Returns the process output and generated HTML text.
+fn export_with(dir: &Path, build: impl Fn(&str, &str) -> Vec<String>) -> (Output, String) {
+    let store = dir.join("project.knxdb");
+    let html = dir.join("documentation.html");
+    write_store(&store, &tiny_project());
+    let before = std::fs::read(&store).unwrap();
+    let args = build(store.to_str().unwrap(), html.to_str().unwrap());
+    let refs: Vec<&str> = args.iter().map(String::as_str).collect();
+    let out = run_cli(&refs);
+    assert_eq!(
+        std::fs::read(&store).unwrap(),
+        before,
+        "store bytes changed"
+    );
+    let text = std::fs::read_to_string(&html).unwrap_or_default();
+    (out, text)
+}
+
+#[test]
+fn doc_export_language_de_and_de_de_render_german_in_any_flag_position() {
+    for value in ["de", "de-DE"] {
+        for position in 0..3 {
+            let dir = tempfile::tempdir().unwrap();
+            let (out, text) = export_with(dir.path(), |store, html| {
+                let mut args: Vec<String> = vec!["doc-export".into()];
+                let mut rest = vec![store.to_string(), html.to_string()];
+                rest.insert(position, "--language".into());
+                rest.insert(position + 1, value.into());
+                args.extend(rest);
+                args
+            });
+            assert_eq!(
+                out.status.code(),
+                Some(0),
+                "{value}@{position}: {}",
+                String::from_utf8_lossy(&out.stderr)
+            );
+            assert!(text.contains("<html lang=\"de\">"), "{value}@{position}");
+            assert!(text.contains("Erzeugt am"), "{value}@{position}");
+            assert!(!text.contains(">Contents<"), "{value}@{position}");
+        }
+    }
+}
+
+#[test]
+fn doc_export_language_en_en_us_and_no_flag_render_the_same_english() {
+    let mut documents = Vec::new();
+    for flags in [
+        &[][..],
+        &["--language", "en"][..],
+        &["--language", "en-US"][..],
+    ] {
+        let dir = tempfile::tempdir().unwrap();
+        let (out, text) = export_with(dir.path(), |store, html| {
+            let mut args = vec!["doc-export".to_string(), store.into(), html.into()];
+            args.extend(flags.iter().map(|f| f.to_string()));
+            args
+        });
+        assert_eq!(out.status.code(), Some(0), "{flags:?}");
+        assert!(text.contains("<html lang=\"en\">"), "{flags:?}");
+        assert!(text.contains("Generated at"), "{flags:?}");
+        documents.push(without_generated_time(&text));
+    }
+    assert_eq!(
+        documents[0], documents[1],
+        "explicit en differs from default"
+    );
+    assert_eq!(documents[0], documents[2], "en-US differs from default");
+    let german = {
+        let dir = tempfile::tempdir().unwrap();
+        export_with(dir.path(), |s, h| {
+            ["doc-export", s, h, "--language", "de"]
+                .map(String::from)
+                .to_vec()
+        })
+        .1
+    };
+    assert_ne!(documents[0], without_generated_time(&german));
+}
+
+#[test]
+fn doc_export_refuses_bad_language_options_before_touching_store_or_output() {
+    let cases: &[&[&str]] = &[
+        &["--language", "fr"],
+        &["--language", "DE"],
+        &["--language", "en-us"],
+        &["--language", "de_DE"],
+        &["--language", ""],
+        &["--language"],
+        &["--language", "--language", "de"],
+        &["--language", "en", "--language", "de"],
+        &["--language", "de", "--language", "de"],
+        &["--lang", "de"],
+    ];
+    for flags in cases {
+        for sentinel in [true, false] {
+            let dir = tempfile::tempdir().unwrap();
+            let store = dir.path().join("project.knxdb");
+            let html = dir.path().join("documentation.html");
+            write_store(&store, &tiny_project());
+            let store_before = std::fs::read(&store).unwrap();
+            if sentinel {
+                std::fs::write(&html, b"SENTINEL \xff bytes").unwrap();
+            }
+            let mut args = vec![
+                "doc-export",
+                store.to_str().unwrap(),
+                html.to_str().unwrap(),
+            ];
+            args.extend_from_slice(flags);
+            let out = run_cli(&args);
+            assert_eq!(out.status.code(), Some(1), "{flags:?}");
+            assert!(out.stdout.is_empty(), "{flags:?}");
+            assert!(
+                String::from_utf8_lossy(&out.stderr).contains("usage:"),
+                "{flags:?}"
+            );
+            assert_eq!(std::fs::read(&store).unwrap(), store_before, "{flags:?}");
+            if sentinel {
+                assert_eq!(
+                    std::fs::read(&html).unwrap(),
+                    b"SENTINEL \xff bytes",
+                    "{flags:?}"
+                );
+            } else {
+                assert!(!html.exists(), "{flags:?} created output");
+            }
+        }
+    }
+}
+
+#[test]
+fn doc_export_language_error_comes_before_a_missing_store_is_opened() {
+    let dir = tempfile::tempdir().unwrap();
+    let html = dir.path().join("documentation.html");
+    let missing = dir.path().join("nope.knxdb");
+    let out = run_cli(&[
+        "doc-export",
+        missing.to_str().unwrap(),
+        html.to_str().unwrap(),
+        "--language",
+        "fr",
+    ]);
+    assert_eq!(out.status.code(), Some(1));
+    let stderr = String::from_utf8_lossy(&out.stderr);
+    assert!(
+        stderr.contains("unsupported report language: fr"),
+        "{stderr}"
+    );
+    assert!(!stderr.contains("failed to open store"), "{stderr}");
+    assert!(!missing.exists() && !html.exists());
+}

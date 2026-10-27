@@ -28,7 +28,8 @@ product strings. Remaining detailed English prose can still appear in either.
 diagnostic sentences are still English. No third language or external report
 language pack exists. The web documentation dialog (CT-2) requests the
 report in the UI language (`de` for German, `en` otherwise); a separate report
-language selector is still absent.
+language selector is still absent in the web dialog. `knx doc-export --language
+en|en-US|de|de-DE` (2026-10-27) exposes the same two renderer languages natively.
 <!-- END retained catalogue record -->
 
 ## Update 2026-10-14: the German report labels its tables too (Goal B8)
@@ -45,3 +46,12 @@ on purpose: stored enum values (`ThreeLevel`, `Editing`, link directions) and
 references, which are raw identifiers, and the diagnostic sentences that carry
 raw references (*product database did not resolve …*, *… raw value shown*),
 the KL-066 boundary. No third language, no separate report language selector.
+
+## Update 2026-10-27: CLI language selector
+
+`knx doc-export <store.knxdb> <out.html> [--language en|en-US|de|de-DE]` maps the
+HTTP spellings onto the existing `ReportLanguage` and passes it through the same
+`report_options` call, so German also asks the product database for German text.
+Default stays English; arguments are validated before the store or output is
+opened. This is the existing two-language renderer, not report parity and not a
+new translation catalogue; no third language, sections option or PDF.

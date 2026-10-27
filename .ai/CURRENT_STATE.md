@@ -1,12 +1,14 @@
 # Restart snapshot
 
-Updated: 2026-10-27 12:02 CET. Operational snapshot, not an append-only journal.
-## OWN-01 Docker signing design (CLAIMED, observed 2026-10-27; session ddbf32f04371)
-- GO: documentation-only design for identity, verification and recovery before stable.
+Updated: 2026-10-27 13:40 CET. Operational snapshot, not an append-only journal.
+## OWN-01 Docker signing design (ACCEPTANCE, observed 2026-10-27 13:40 CET; session ddbf32f04371)
+- GO: documentation-only proposal; claim `fc39eb193` published and exact readback verified.
 - Owner branch `docs/own01-signing-design-20261027`; source baseline `6c9bded56`.
-- Reserve only signing-design documentation and its OWN-01/status/roadmap links.
+- Reserve only signing-design documentation and its OWN-01/status/roadmap/research links.
+- Whole/correction/final design reviews APPROVE; primary/citation/docs/local-info checks passed.
+- Gate-chain state and exact candidate: `<profile>/evidence/own01-signing-design-20261027/` receipts.
 - No workflow/runtime edits, keys, external login, image publication, release or bus actions.
-- Next: primary-source research, bounded proposal, review and documentation gates.
+- Next: maintained branch/integrated gates and publication; activation remains separately gated.
 ## Catalogue installation target (DELIVERED runtime, observed 2026-10-27 12:02 CET)
 - PUBLISHED main-first `a17420239` (feature `8d3ebe69d`); local/tracking/live exact readback.
 - Whole/correction/final reviews APPROVE; branch14/integrated14 green, frozen and user-data safe.

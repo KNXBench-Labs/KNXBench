@@ -33,9 +33,11 @@ These decisions are not delivery evidence or blanket execution authority.
   `refs/kl185-rewritten/*` leftovers: none may be removed without that fresh
   ownership/reachability/use check; previously used paths are not presumed idle.
 - Keep the private pre-launch rollback repository; it is not a cleanup target.
-- Docker signing: plan a bounded design before the first stable release,
-  covering identity, verification and recovery. No key creation, external login,
-  publication or retrospective Alpha 17 change is authorised.
+- Docker signing: the [bounded design proposal](../research/2026-10-27-docker-image-signing-design.md)
+  covers identity, verification and recovery before the first stable release.
+  Design preparation is complete; approval, implementation and operational
+  acceptance remain pending. No key creation, external login, image publication
+  or retrospective Alpha 17 change is authorised.
 - Scheduled Docker base-image rebuilds remain deferred; reconsider before the
   first stable release. No automatic republication or silent version-tag reuse.
 - Docker `latest`: from the first stable release, follow only the newest verified

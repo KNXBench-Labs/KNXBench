@@ -1,15 +1,15 @@
 # Restart snapshot
 
-Updated: 2026-10-27 18:40 UTC+01:00. Operational snapshot, not an append-only journal.
-## WP-11 native capture (EVIDENCE VERIFIED, observed 2026-10-27 18:40 UTC+01:00; session ddbf32f04371)
-- Owner `verify/wp11-native-capture-20261027`; source/desktop runtime reservation RELEASED.
-- Actual Alpha17: native Export Cancel/Save/overwrite-cancel/Replace; literal one-row v1 and zero loss counters.
-- Original-source fixture case PASS; omission keeps raw101. Actual heartbeat11 + disconnect answered.
-- Ordinary desktop/peer close exit0; exact owned PIDs/windows absent; retained evidence reader exit0/frozen.
-- 25 native driver calls are steps, not 25 independent tests. Whole-evidence review/package gates PENDING.
-- Evidence `<profile>/evidence/wp11-native-capture-20261027/`; `capture-verification-1.json` owns read-only proof.
-- Next review/document/gate/publish this bounded record; no more native execution planned for this cell.
-- No real projects/bus/hardware, source runtime edit, compatibility, release/deployment or full WP-11 claim.
+Updated: 2026-10-27 19:13 CET. Operational snapshot, not an append-only journal.
+## WP-11 native capture (PUBLISHED, observed 2026-10-27 19:13 CET; session ddbf32f04371)
+- Main-first `8227419a5`, feature `ae0b8fc71`; local/tracking/live and exact owned payloads read back.
+- Whole-evidence/focused-core source-text reviews APPROVE; branch10/integrated10 frozen, user-data guards clear.
+- Each gate: tool461 registered/6 optional skips; no product Rust/web/browser/bindings/corpus selected.
+- Actual Alpha17 native capture Cancel/Save/overwrite Cancel/Replace; one literal backend row and zero reported loss.
+- Original-client fixture1 identity/2 variants raw101/0; native25 driver steps, heartbeat11/disconnect, normal app+peer close0.
+- Source/desktop reservation RELEASED; no native runtime remains; WP-11 stays OPEN for remaining cells/environments.
+- Evidence `<profile>/evidence/wp11-native-capture-20261027/`; result-note gate/publication and verified retirement pending.
+- Root untouched. Next close own result notes and archive/retire own trees/cache; no bus/hardware/release/deployment scope.
 ## Issue #30 tunnel timeout (PUBLISHED, observed 2026-10-27 14:38 CET)
 - Source merge `1ab4ad6a5` published; local/tracking/live exact readback. Both reviews APPROVE.
 - Branch14 + integrated2 gate14 accepted: each Rust3447/140ignored, corpus91/91, inputs frozen.

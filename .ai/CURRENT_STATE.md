@@ -1,15 +1,15 @@
 # Restart snapshot
 
-Updated: 2026-10-27 18:04 CET. Operational snapshot, not an append-only journal.
-## WP-11 native capture (CLAIMED, observed 2026-10-27 18:04 CET; session ddbf32f04371)
-- Owner `verify/wp11-native-capture-20261027`; desktop reserved only for this fictional Alpha17 capture cell.
-- GO one loopback software session/frame, native Export Cancel/Save/overwrite-cancel/Replace and ordinary close.
-- No real projects/bus/hardware, source runtime edit, original-device instruction, release/deployment scope.
-- Original-source client fixture PASSED; no-frame control retains raw named failure101, not a product defect.
-- Independent fixture/source-text review READY; source/header/row correction bound to actual retained runs.
-- Native execution NOT STARTED; fresh launcher confinement, owned PID and embedded ELF proof required first.
-- Evidence `<profile>/evidence/wp11-native-capture-20261027/`; original attempts and exact executables retained.
-- Next preflight + live namespace/PID/executable proof, then actual native dialogs and artifact oracles.
+Updated: 2026-10-27 18:40 UTC+01:00. Operational snapshot, not an append-only journal.
+## WP-11 native capture (EVIDENCE VERIFIED, observed 2026-10-27 18:40 UTC+01:00; session ddbf32f04371)
+- Owner `verify/wp11-native-capture-20261027`; source/desktop runtime reservation RELEASED.
+- Actual Alpha17: native Export Cancel/Save/overwrite-cancel/Replace; literal one-row v1 and zero loss counters.
+- Original-source fixture case PASS; omission keeps raw101. Actual heartbeat11 + disconnect answered.
+- Ordinary desktop/peer close exit0; exact owned PIDs/windows absent; retained evidence reader exit0/frozen.
+- 25 native driver calls are steps, not 25 independent tests. Whole-evidence review/package gates PENDING.
+- Evidence `<profile>/evidence/wp11-native-capture-20261027/`; `capture-verification-1.json` owns read-only proof.
+- Next review/document/gate/publish this bounded record; no more native execution planned for this cell.
+- No real projects/bus/hardware, source runtime edit, compatibility, release/deployment or full WP-11 claim.
 ## Issue #30 tunnel timeout (PUBLISHED, observed 2026-10-27 14:38 CET)
 - Source merge `1ab4ad6a5` published; local/tracking/live exact readback. Both reviews APPROVE.
 - Branch14 + integrated2 gate14 accepted: each Rust3447/140ignored, corpus91/91, inputs frozen.

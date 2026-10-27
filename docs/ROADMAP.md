@@ -15,6 +15,14 @@ Publication is verified at immutable `a9ea32d72364478b25e158d0b95465af7a4702df`
 ([public verification record](evidence/release-alpha17-2026-10-26.json)).
 Work merged on main after `20ab2f7ea` belongs to the next alpha.
 
+## Docker signing design before the first stable release
+
+The [bounded proposal](research/2026-10-27-docker-image-signing-design.md) records
+exact release-workflow identity, signed-index verification, staged promotion and
+recovery requirements. This completes design preparation only: owner approval,
+implementation and separately authorised registry acceptance remain pending.
+No image, workflow, channel rule or Alpha 17 artifact changes.
+
 ## Explicit catalogue installation target after Alpha 17
 
 Source builds require an explicit **Installation** choice when creating a

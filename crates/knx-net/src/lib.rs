@@ -30,8 +30,8 @@ pub use cemi::{
     ApplicationService, CemiError, Destination, FrameControl, LDataFrame, LDataMessageKind, Tpci,
 };
 pub use client::{
-    BusConnection, BusError, DiscoveredGateway, KnxNetIpClient, RoutingClient, TunnelClient,
-    TunnelEvent, TunnelReturnPath,
+    BusConnection, BusError, DiscoveredGateway, KnxNetIpClient, RoutingClient, TunnelAckWait,
+    TunnelClient, TunnelEvent, TunnelReturnPath,
 };
 pub use commissioning::{
     ConnectionState, ManagementSession, SessionError, SessionTiming, VerifyMode,

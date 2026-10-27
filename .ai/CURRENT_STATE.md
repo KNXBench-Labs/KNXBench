@@ -1,6 +1,18 @@
 # Restart snapshot
 
-Updated: 2026-10-27 23:33 CET. Operational snapshot, not an append-only journal.
+Updated: 2026-10-27 23:38 CET. Operational snapshot, not an append-only journal.
+## Issue #30 patient waits (TAKEN; observed 2026-10-27 23:38 CET)
+- Owner: this WebUI; branch `fix/issue30-patient-timeouts-20261027`, own worktree.
+- User Go: deliver larger bounded System-2 waits, then request one reporter retest.
+- Policy: tunnel ACK1→10s; device ACK/repetition3s unchanged; post-ACK answer3→15s;
+  transition30→120s. Standard defaults/retries/identity/backup/readback preserved.
+- Implementation/focused tests complete; initial/correction reviews retained, duplicate-ACK
+  boundedness correction RED140s→GREEN60s (six timing cases). Final confirmation APPROVE.
+- Public acknowledgement #6454382575 read back; no reporter retry requested yet.
+- Evidence `<profile>/evidence/issue30-patient-timeouts-20261027/`.
+- Foreign ordinary/server helper fix published `ca940e2ed`, claim released; preserved on integration.
+- Next: branch14/main-first14 maintained gates, publication and bounded retest.
+- No real bus/release/image/deployment scope; root remains stale/dirty. No further Go required.
 ## S2-04 ordinary/server persistence (PUBLISHED; observed 2026-10-27 23:33 CET)
 - Main-first `ca940e2ed`; feature `9103c80db`, corrections `51f7598b5`; exact refs read back.
 - Whole/correction reviews APPROVE; branch14/integrated14 accepted, frozen/user-data safe.

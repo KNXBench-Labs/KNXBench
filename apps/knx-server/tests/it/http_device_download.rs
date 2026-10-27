@@ -333,6 +333,7 @@ fn fast() -> SessionTiming {
     SessionTiming {
         connection_timeout: Duration::from_millis(50),
         response_timeout: Duration::from_millis(50),
+        answer_timeout: None,
         poll_interval: Duration::from_millis(1),
         max_transition: Duration::from_millis(40),
         programming_delay: Duration::from_millis(0),

@@ -6,6 +6,7 @@ Moved here from `docs/` on 2026-10-08 (relative links adjusted by script).
 
 | Contract | Scope |
 | --- | --- |
+| [system2-patient-waits](system2-patient-waits.md) | Experimental System-2 extended ACK/response/transition waits; standard tunnel defaults, retry limits and verification unchanged |
 | [communication-object-folders](communication-object-folders.md) | WP-06A saved project-tree retention and device identity versus evaluated Dynamic channels; no folder implementation |
 | [parameter-number-bound-admission](parameter-number-bound-admission.md) | A declared TypeNumber bound the image builder cannot read refuses the value by name; absent bounds unchanged; not ETS schema validation |
 | [parameter-workspace](parameter-workspace.md) | Source-group navigation, compact rows, retained editors, search and metadata; no inferred channel/grid mapping |

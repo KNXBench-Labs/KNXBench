@@ -1,18 +1,24 @@
 # Restart snapshot
 
-Updated: 2026-10-27 10:02 CET. Operational snapshot, not an append-only journal.
-## CLI documentation report language (ACTIVE, observed 2026-10-27 10:02 CET)
-- GO: expose existing EN/DE renderer on `feat/cli-report-language`; no report-parity expansion.
-- Owned tree `<sources>/knxbench-cli-report-language-20261027`, base CSV merge `ed8b8ec13`.
-- CSV dependency/result docs published `ed8b8ec13`/`1f2fad76a`; local/tracking/live verified.
-- Own surface: CLI parser/tests, manual, report-language dossier and status docs.
-- Independent whole-feature review APPROVE; runtime unchanged since reviewed `fe8b57981`.
-- Original6 baseline; new semantic RED3; final10 built-CLI +2 unit green; focused Clippy green.
-- First gate refused missing browser dependencies and changed retained dossier; logs preserved.
-- Dependencies/bundle now prepared; retained section restored exactly, catalogue regression14 green.
-- Next: correction re-check, fresh branch gate and main-first integrated gate/publication.
-- Separate catalogue-target tree owns retry/HTTP evidence and documentation corrections.
-- No release/deployment/hardware authority; preserve parked/foreign tracks.
+Updated: 2026-10-27 10:34 CET. Operational snapshot, not an append-only journal.
+## Catalogue installation target (ACTIVE, observed 2026-10-27 10:34 CET)
+- GO: `feat/catalog-installation-target` in `<sources>/knxbench-catalog-installation-20261027`.
+- Required live context, explicit multi-installation target; existing command/Undo/retry path.
+- Independent review/correction re-review APPROVE; final themed browser11 green at reviewed source.
+- Parent found two-to-one lost-target fallback before gate; bounded RED/GREEN correction running.
+- No catalogue branch/full merge gate started; final correction review and browser rerun remain.
+- Own surface: catalogue UI/tests, HTTP tests and feature docs; no server runtime/schema change.
+- No site-model expansion, release, deployment or hardware authority; preserve other owners.
+## CLI documentation report language (DELIVERED runtime, observed 2026-10-27 10:34 CET)
+- PUBLISHED main-first `5679ba3c5` (feature `fe8b57981`, docs correction `41c7c84cc`).
+- Independent whole/correction review APPROVE; branch13/integrated13 green and frozen.
+- Integrated Rust529/21ignored, corpus17/17; tooling461 registered/6optional skips.
+- Original6 baseline, semantic RED3; final10 built-CLI +2 unit and focused Clippy green.
+- Default EN, explicit EN/DE spellings, invalid options refuse before store/output access.
+- Auth-only push retry reused unchanged accepted inputs; local/tracking/live exact readback.
+- Feature tree/ref/cache retired after12-payload archive verification; root untouched.
+- Integration tree held for result-documentation gate/publication, then own final cleanup.
+- No renderer/parity, third-language, release/deployment or hardware expansion.
 ## Group-address CSV import profiles (DELIVERED, observed 2026-10-27 09:37 CET)
 - PUBLISHED main-first `ed8b8ec13` (feature `301a795b6`); local/tracking/live equal.
 - Whole-feature + correction review APPROVE; branch14/integrated14 green and frozen.

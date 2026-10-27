@@ -1,18 +1,20 @@
 # Restart snapshot
 
-Updated: 2026-10-27 23:38 CET. Operational snapshot, not an append-only journal.
-## Issue #30 patient waits (TAKEN; observed 2026-10-27 23:38 CET)
-- Owner: this WebUI; branch `fix/issue30-patient-timeouts-20261027`, own worktree.
-- User Go: deliver larger bounded System-2 waits, then request one reporter retest.
+Updated: 2026-10-28 00:13 CET. Operational snapshot, not an append-only journal.
+## Issue #30 patient waits (PUBLISHED; observed 2026-10-28 00:13 CET)
+- Owner: this WebUI; runtime claim RELEASED; owned integration checkout retained for docs closure.
+- Main-first `3583ab8e0`, feature `6f7d22228`; local/tracking/live refs matched.
 - Policy: tunnel ACK1→10s; device ACK/repetition3s unchanged; post-ACK answer3→15s;
   transition30→120s. Standard defaults/retries/identity/backup/readback preserved.
-- Implementation/focused tests complete; initial/correction reviews retained, duplicate-ACK
-  boundedness correction RED140s→GREEN60s (six timing cases). Final confirmation APPROVE.
-- Public acknowledgement #6454382575 read back; no reporter retry requested yet.
-- Evidence `<profile>/evidence/issue30-patient-timeouts-20261027/`.
-- Foreign ordinary/server helper fix published `ca940e2ed`, claim released; preserved on integration.
-- Next: branch14/main-first14 maintained gates, publication and bounded retest.
-- No real bus/release/image/deployment scope; root remains stale/dirty. No further Go required.
+- Independent final confirmation APPROVE; duplicate-ACK RED140s→GREEN60s, timing6 green.
+- Branch14/integrated14 ACCEPTED, frozen/user-data safe; Rust3472/3479 respectively,
+  140ignored each, corpus91/91 each (overlapping runs, not additive coverage).
+- Integrated server built; isolated loopback `/healthz` and `/` 200; no device endpoints.
+- Retest request #6455873678 exact readback: one optional new confirmed attempt, ETS fallback,
+  prior evidence/data backup, stop on failure. #30/#22 and actual hardware outcome remain OPEN.
+- Evidence `<profile>/evidence/issue30-patient-timeouts-20261027/`; original refusals retained.
+- Next: result-doc gate/publication and own trees/cache retirement; preserve foreign work/root.
+- No real bus/release/image/deployment action; source build required, root remains stale/dirty.
 ## S2-04 ordinary/server persistence (PUBLISHED; observed 2026-10-27 23:33 CET)
 - Main-first `ca940e2ed`; feature `9103c80db`, corrections `51f7598b5`; exact refs read back.
 - Whole/correction reviews APPROVE; branch14/integrated14 accepted, frozen/user-data safe.

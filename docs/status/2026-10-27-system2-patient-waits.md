@@ -58,11 +58,27 @@ answer timing through an absent optional override.
 
 ## Acceptance boundary
 
-Implementation and focused correction tests are complete; final independent
-confirmation and maintained branch/main-first integration gates are **pending**
-at this checkpoint. No successful publication, released image, hardware outcome
-or issue closure is claimed here. The final result record will name the
-accepted source and executed stage scope after those observations exist.
+Published source: main-first merge `3583ab8e0`, containing feature `6f7d22228`
+and the ordinary-server persistence follow-up `ca940e2ed`. Final independent
+confirmation is APPROVE. Branch and integrated maintained package gates each
+passed all 14 selected stages with frozen inputs and no touched or unchecked
+user data. Branch: 3,472 Rust tests passed, 140 ignored; integrated: 3,479 passed,
+140 ignored. Each selected corpus run passed 91/91. These overlapping executions
+are not additive unique coverage. No frontend test, browser execution or bindings
+stage was selected; the web bundle was built as a desktop dependency.
+
+The integrated server was built and run with isolated state, using loopback HTTP
+only: `/healthz` and `/` returned 200, version
+`knx-server 0.1.0-alpha.17+g3583ab8e0`. No device endpoint was called.
+Local HEAD, tracking and live remote refs matched at publication. On 28 October
+2026, issue comment `6455873678` requested one optional separately confirmed
+retest on this source or a descendant, with evidence/data backup, ETS fallback
+and stop-on-failure boundaries; its exact body was read back. No release, updated
+image, deployment, hardware outcome or issue closure is claimed.
+
+The first branch controller failed during private runner import before product
+checks because a helper shadowed Python's `inspect` module. That setup refusal
+is retained separately; the corrected runner's branch gate is the accepted run.
 
 ## Preserved safety and follow-up
 

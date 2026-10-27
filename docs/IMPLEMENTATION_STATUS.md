@@ -12,13 +12,17 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
-## Experimental System-2 patient waits (27 October 2026 candidate)
+## Experimental System-2 patient waits (28 October 2026 source delivery)
 
-The [bounded timing package](status/2026-10-27-system2-patient-waits.md) increases
-experimental hardware wait budgets while retaining standard defaults for other
-tunnel users. [Exact values and response/repetition contract](contracts/system2-patient-waits.md).
-Independent review is approved; maintained acceptance remains pending. This
-entry records a candidate, not published source, a new Alpha image or a successful device test.
+Published main-first `3583ab8e0` after independent confirmation APPROVE and
+14/14 branch/integrated package gates; integrated Rust3,479/140ignored,
+corpus91/91, frozen inputs and unchanged user data. The
+[bounded timing package and acceptance](status/2026-10-27-system2-patient-waits.md)
+increases experimental hardware wait budgets while retaining standard defaults
+for other tunnel users. [Exact values and response/repetition contract](contracts/system2-patient-waits.md).
+The built server passed isolated loopback HTTP smoke checks. Reporter retest
+request `6455873678` was posted and read back; real device outcome remains open.
+Source-only: no new Alpha image, release or successful device test.
 
 ## Ordinary server tunnel persistence (27 October 2026 source)
 

@@ -12,6 +12,16 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## CLI report language selection (27 October 2026 source)
+
+`knx doc-export` accepts `--language en`, `en-US`, `de` or `de-DE`, using the
+existing report renderer and product-string locale. Omitting the option keeps
+English. Invalid, missing and repeated language options refuse before store or
+output access. Built-CLI regressions verify German output, unchanged default
+English content apart from the generated timestamp, and unchanged store/output
+bytes on refusal. No new language, schema, renderer, PDF or report-parity claim.
+[Workflow](manual/user-guide/08-reports-and-diff.md#exporting-from-the-command-line).
+
 ## Group-address CSV column profiles (27 October 2026 source)
 
 The shared CSV reader accepts four fixed ordered name/address column profiles,

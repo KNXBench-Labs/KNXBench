@@ -347,8 +347,10 @@ a preview of the document:
   and suggests `project-documentation.html`) and writes the same sections you
   previewed.
 
-The document follows the application language: German when the interface is
-German, English otherwise.
+The web document follows the application language: German when the interface is
+German, English otherwise. The CLI defaults to English and accepts an explicit
+`--language de` or `--language en` (also `de-DE` and `en-US`). This chooses the
+existing report and product-string locale without changing the project language.
 
 When it is done you get one of two messages: *"Project documentation exported, no
 warnings."* or *"Project documentation exported, 3 warnings — see Log."* The warnings
@@ -359,6 +361,7 @@ themselves land in the session log, described in
 
 ```bash
 knx doc-export project.knxdb project-documentation.html
+knx doc-export project.knxdb projekt-dokumentation.html --language de
 ```
 
 It prints the output path, the number of warnings, and then each warning on its own

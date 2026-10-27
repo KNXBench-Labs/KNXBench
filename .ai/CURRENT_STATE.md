@@ -1,16 +1,25 @@
 # Restart snapshot
 
-Updated: 2026-10-27 09:06 CET. Operational snapshot, not an append-only journal.
-## Group-address CSV import profiles (ACTIVE, observed 2026-10-27 09:06 CET)
-- GO: address-only import adapter on `feat/group-address-csv-profiles`, base `ae47331e5`.
-- Owned tree `<sources>/knxbench-ga-csv-profiles-20261027`; root remains untouched.
-- Own surface: knx-csv parser, CSV CLI/HTTP/MCP regressions and feature documentation.
-- Fixed profiles, explicit range/security diagnostics; no range or security mutations/export expansion.
-- Whole-feature review APPROVE; six minor corrections applied, focused re-review pending.
-- Owning CSV104 green; CLI14/server17/MCP2 focused green; Web consumer104 green.
-- Implementation/correction workers exited. Branch/integrated maintained gates and publication pending.
-- No release/deployment/hardware authority. Preserve other owners and parked trees.
-- Next: focused correction review, commit candidate, scoped branch/integrated package gates.
+Updated: 2026-10-27 09:43 CET. Operational snapshot, not an append-only journal.
+## CLI documentation report language (ACTIVE, observed 2026-10-27 09:43 CET)
+- GO: expose existing EN/DE renderer on `feat/cli-report-language`; no report-parity expansion.
+- Owned tree `<sources>/knxbench-cli-report-language-20261027`, base CSV merge `ed8b8ec13`.
+- CSV dependency/result docs published `ed8b8ec13`/`1f2fad76a`; local/tracking/live verified.
+- Own surface: CLI parser/tests, manual, report-language dossier and status docs.
+- Independent review APPROVE; two documentation nits corrected, no runtime change since review.
+- Original6 baseline; new semantic RED3; final10 built-CLI +2 unit green; focused Clippy green.
+- Worker exited; branch/integrated package gates and publication pending. Catalog target tree separate.
+- Next: commit reviewed candidate, maintained scoped gates and main-first integration.
+- No release/deployment/hardware authority; preserve parked/foreign tracks.
+## Group-address CSV import profiles (DELIVERED, observed 2026-10-27 09:37 CET)
+- PUBLISHED main-first `ed8b8ec13` (feature `301a795b6`); local/tracking/live equal.
+- Whole-feature + correction review APPROVE; branch14/integrated14 green and frozen.
+- Integrated Rust2878/129ignored, corpus91/91; tooling461/6optional skips.
+- Owning CSV104; CLI14/server17/MCP2; Web consumers104 unit tests, no new browser claim.
+- Address-only profiles diagnose omitted ranges/security; native output and schema unchanged.
+- Next: owning result note and independent consumer packages; no range/security edit expansion.
+- Separate CLI report-language and catalog-target trees own their consumer work; root untouched.
+- No release/deployment/hardware authority; preserve foreign/parked tracks.
 ## WP-11 native acceptance / owner decisions (DELIVERED, observed 2026-10-27 06:34 CET)
 - PUBLISHED main-first merge `cc9d8fab2`, feature `f4f112fe5`; local/tracking/live equal.
 - Claude review + correction re-review APPROVE; branch/integrated13 gates green/frozen.

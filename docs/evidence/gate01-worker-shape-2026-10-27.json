@@ -1,0 +1,254 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-10-27",
+  "task": "GATE-01",
+  "result": "bounded-source-and-compiled-inventory-assessment",
+  "wholeGate01Complete": false,
+  "baseline": "f18af565dd0c8528efefbc7f2a0cb8c8f06a743a",
+  "lockedTools": {
+    "vite": "8.3.5",
+    "@playwright/test": "1.63.0",
+    "playwright": "1.63.0",
+    "playwright-core": "1.63.0"
+  },
+  "historicalRelatedSource": "86c949466",
+  "historicalExactFailedSourceAuthenticated": false,
+  "historicalFailedIdsRecovered": false,
+  "historicalColdViteCauseProven": false,
+  "browserOrDispatcherRuns": 0,
+  "testBodiesExecuted": 0,
+  "measuredSpeedup": false,
+  "policyChanged": false,
+  "compiledGrouping": {
+    "focused4": {
+      "listedOnly": true,
+      "testBodiesExecuted": false,
+      "requestedWorkers": 4,
+      "runnerSourceSha256": "7a2e4e1114d3237d61b87723b4d86a37944c9143f3ce2fb0b2e8867e0c612a5e",
+      "extractedRoutineSha256": "8c231df71afd1d592f1556239d7dc55b5989cfc7a5b5a98dc743c83d809e6f2f",
+      "suiteTests": 27,
+      "groupCount": 3,
+      "sourceModelConcurrencyCeiling": 3,
+      "groupSizes": [
+        9,
+        9,
+        9
+      ]
+    },
+    "focused8": {
+      "listedOnly": true,
+      "testBodiesExecuted": false,
+      "requestedWorkers": 8,
+      "runnerSourceSha256": "7a2e4e1114d3237d61b87723b4d86a37944c9143f3ce2fb0b2e8867e0c612a5e",
+      "extractedRoutineSha256": "8c231df71afd1d592f1556239d7dc55b5989cfc7a5b5a98dc743c83d809e6f2f",
+      "suiteTests": 27,
+      "groupCount": 3,
+      "sourceModelConcurrencyCeiling": 3,
+      "groupSizes": [
+        9,
+        9,
+        9
+      ]
+    },
+    "whole8": {
+      "listedOnly": true,
+      "testBodiesExecuted": false,
+      "requestedWorkers": 8,
+      "runnerSourceSha256": "7a2e4e1114d3237d61b87723b4d86a37944c9143f3ce2fb0b2e8867e0c612a5e",
+      "extractedRoutineSha256": "8c231df71afd1d592f1556239d7dc55b5989cfc7a5b5a98dc743c83d809e6f2f",
+      "suiteTests": 327,
+      "groupCount": 3,
+      "sourceModelConcurrencyCeiling": 3,
+      "groupSizes": [
+        109,
+        109,
+        109
+      ]
+    }
+  },
+  "verification": {
+    "verified": true,
+    "method": "compiled listing and exact isolated installed grouping-function execution, not dispatcher/browser execution",
+    "baselineContextDocsHashMatch": true,
+    "currentRuntimeInputsUnchanged": true,
+    "contextDocsEditedByThisPackage": [
+      "docs/open-work/GATE-01-test-gate-follow-ups.md",
+      "docs/research/2026-10-19-test-suite-speed.md"
+    ],
+    "observedHierarchyVerified": [
+      {
+        "cap": 4,
+        "uniqueTitles": 9,
+        "allParentsNonparallel": true,
+        "allFocusedBeforeAfterAllHooksAbsent": true
+      },
+      {
+        "cap": 8,
+        "uniqueTitles": 9,
+        "allParentsNonparallel": true,
+        "allFocusedBeforeAfterAllHooksAbsent": true
+      }
+    ],
+    "uniqueFocusedCases": 9,
+    "focusedRepeatEntries": 27,
+    "wholeRepeatEntries": 327,
+    "computedGroups": 3,
+    "sourceModelCeilingAtRequested4": 3,
+    "sourceModelCeilingAtRequested8": 3,
+    "speedupMeasured": false,
+    "historicalCauseEstablished": false,
+    "historicalFailedIdsRecovered": false,
+    "browserRuns": 0,
+    "testBodiesExecuted": 0,
+    "controlRefusals": [
+      {
+        "case": "missing-case",
+        "rejected": true
+      },
+      {
+        "case": "duplicate-case",
+        "rejected": true
+      },
+      {
+        "case": "wrong-ceiling",
+        "rejected": true
+      },
+      {
+        "case": "wrong-repeat",
+        "rejected": true
+      },
+      {
+        "case": "false-runtime",
+        "rejected": true
+      }
+    ],
+    "rejectedExperiment": "same one-file repeat3 fullyParallelfalse scope at worker caps4 and8 is not a source-level4-way/8-way concurrency comparison",
+    "scope": "current Playwright1.63.0 compilation; historical related lock matches Playwright but exact failed runtime bytes/config not authenticated"
+  },
+  "privateEvidence": {
+    "group_reporter.cjs": {
+      "bytes": 870,
+      "sha256": "2f656ec3599d087bbe64c649636dc64c345ab74948a02b390602d9e8574b7807"
+    },
+    "group_routine_reporter.cjs": {
+      "bytes": 1763,
+      "sha256": "36c69399d16b377bd148e51f8761d50544f23bf4e210b202bbed3effa601d844"
+    },
+    "grouping-routine-source.js": {
+      "bytes": 2854,
+      "sha256": "633dc12d48632d2411eda49244f95c7745b46277723236fa26a315139d20b3a0"
+    },
+    "verify_worker_shape.py": {
+      "bytes": 3645,
+      "sha256": "f19a4c84693bdd61c6797ad84cab3a39d62607f9d05437798478eeab0619194c"
+    },
+    "focused4-routine.json": {
+      "bytes": 8130,
+      "sha256": "39e95124af56d3b42583468689cae9a3fd41916988d97994b308bb45a726c1c1"
+    },
+    "focused8-routine.json": {
+      "bytes": 8130,
+      "sha256": "a583c63c69da43e66e765dd715ed0e3d41c95e875723eed3aaed61618f84f4f2"
+    },
+    "whole8-routine.json": {
+      "bytes": 96802,
+      "sha256": "1948299b51c55d52ae80cfa6f50f35fcb54ed7038c8c0501db35a70d9466790b"
+    },
+    "verified-worker-shape.json": {
+      "bytes": 1188,
+      "sha256": "d6bb31d96a3f5e515633b76ec3f546aaf5ae7364cb95835735e60cf3043bbc43"
+    },
+    "group-routine-exits.json": {
+      "bytes": 1495,
+      "sha256": "b1f2a1e74144d5bac040fa543c11f23a7ed0bc3d6c2f2be286a53d5367aeabf8"
+    },
+    "historical-frameworks.json": {
+      "bytes": 286,
+      "sha256": "805afef0f1d6eec0cc4d19bd744cb076c5ac36a404ffee78b08cf0652040b3bc"
+    },
+    "primary-page-retrieval.json": {
+      "bytes": 518,
+      "sha256": "da7444e295a42583b60e32e95ac463a23c282ebf1abdeb612dc78974335043d7"
+    },
+    "verify_worker_shape_v2.py": {
+      "bytes": 5551,
+      "sha256": "1216c351542e412b9bd067504b6e8bb051129dd278a7a51982d4125ebb8d5be2"
+    },
+    "verified-worker-shape-v2.json": {
+      "bytes": 1698,
+      "sha256": "1fa791bcd7849fabdb7890a999cde7053d18211285510d7762c15e0920b74308"
+    },
+    "compiled-groups-4.json": {
+      "bytes": 27224,
+      "sha256": "616f73eb603ed1b1b60bc3e93a1979e2a667c13490b3918ee0510b988ead971b"
+    },
+    "compiled-groups-8.json": {
+      "bytes": 27224,
+      "sha256": "7f3768ebbfb700ef75db45162e6e3e0227ec4eea013c069c607f5ac8b6240dd9"
+    },
+    "current-group-inventory.json": {
+      "bytes": 20729,
+      "sha256": "ec28d5180943d1be76d8c0b2b1941ea4018dec9eb84af9f3fca430c8b4eb335d"
+    },
+    "playwright-runner-index.js": {
+      "bytes": 315445,
+      "sha256": "7a2e4e1114d3237d61b87723b4d86a37944c9143f3ce2fb0b2e8867e0c612a5e"
+    }
+  },
+  "retainedEvidence": "<profile>/evidence/gate01-cold-start-20261027/",
+  "limitations": [
+    "Compilation and isolated original source-function execution only; no active worker/process count was measured.",
+    "No claim that the historical failed run actually used three or eight concurrent workers.",
+    "Focused cap4/cap8 have identical group inventories; the proposed load comparison is not admitted."
+  ],
+  "baselineRepoInputs": {
+    "apps/knx-web/e2e/file-menu-submenus.e2e.ts": {
+      "sha256": "58ccebdf0371a217dfd8ecb921f58a2e34fbf1531453cd1d0314438c4c355236",
+      "bytes": 63617
+    },
+    "apps/knx-web/e2e/file-menu.ts": {
+      "sha256": "403f2e898af8e40925573cb18f5344e4133f6059e825b9aa0598d70f72a843d0",
+      "bytes": 627
+    },
+    "apps/knx-web/playwright.config.ts": {
+      "sha256": "4f1206a38fff78d07dc9da24befb47c7f4a78db9dec05e7754200330142487de",
+      "bytes": 875
+    },
+    "apps/knx-web/vite.fixtures.config.ts": {
+      "sha256": "cf197cd4ab43c624706be08f4cf1acc42d13e07f649be2c5ad9cb91d7fa88220",
+      "bytes": 443
+    },
+    "apps/knx-web/package.json": {
+      "sha256": "6db84c4ac31506e3e9c48f422b4e8199e4d4608578983b617e80e477ad85fd5a",
+      "bytes": 1152
+    },
+    "apps/knx-web/package-lock.json": {
+      "sha256": "5eda5bc3416427a863164683526211b6e60d51f51403285d46617cc5501cb49e",
+      "bytes": 58556
+    },
+    "docs/open-work/GATE-01-test-gate-follow-ups.md": {
+      "sha256": "b3e60fc867179ea5982c1d52ccc7a6c78b980d8f3c29632942e230bd0a8fff10",
+      "bytes": 3892
+    },
+    "docs/research/2026-10-19-test-suite-speed.md": {
+      "sha256": "9d2f18a53bd537ba33b1984ddd46d6de7343ac73fa75ebfbca75cb9d0caee2b6",
+      "bytes": 12093
+    }
+  },
+  "inputHashScope": {
+    "revision": "f18af565dd0c8528efefbc7f2a0cb8c8f06a743a",
+    "meaning": "repository input hashes are base blobs consumed before the assessment, not all final package blobs",
+    "contextDocsEditedByThisPackage": [
+      "docs/open-work/GATE-01-test-gate-follow-ups.md",
+      "docs/research/2026-10-19-test-suite-speed.md"
+    ],
+    "unchangedCurrentRuntimeInputsVerifiedSeparately": true
+  },
+  "sourceModelAssumptions": {
+    "singleImplicitProject": true,
+    "fullyParallel": false,
+    "cliFullyParallelOverride": false,
+    "dispatcherClampSource": "playwright/lib/runner/index.js:6539-6547 (createPhasesTask)"
+  },
+  "primaryEvidenceReader": "verify_worker_shape_v2.py"
+}

@@ -1,7 +1,8 @@
 # Production browser case parallelism — 27 October 2026
 
-Status: implementation and targeted measurements complete; independent review,
-final integrated package gate and publication pending.
+Status: delivered on 27 October 2026 as main-first merge `3af5ea9e4` on
+`277d8eca3` (feature `51ee72c1b`, review fixes `644fb69f1`, `c7c8877a7`).
+Local, tracking and live `main` read back equal.
 Decision: [ADR-0155](../adr/0155-production-functional-case-parallelism.md).
 Task: [GATE-01](../open-work/GATE-01-test-gate-follow-ups.md).
 
@@ -95,7 +96,7 @@ them. No current config used that form; this was a demonstrated regression-net
 admission defect, not an observed current browser omission. The correction
 locates executable keys in masked code and admits only a complete literal RHS;
 trailing expressions and ambiguous keys are refused. Focused independent
-re-review is pending.
+re-review followed (see below).
 
 Two MINOR findings requested ordinary syntax hardening (comma declarators,
 whitespace before mutator calls, multiline import aliases) and negative
@@ -121,12 +122,16 @@ tokens are consumed lazily only through the immediate decision token. Unrelated
 later template/regex text is no longer tokenized as part of the selection.
 The two regressions failed on the reviewed input (four refusal assertions and
 three tokenizer errors); all 60 focused tests pass after correction. Final
-confirmation review and integrated acceptance are pending.
+confirmation review of `c7c8877a7` returned APPROVE (N1/N2 resolved;
+computed-expression keys such as `['test'+'Match']` remain a documented
+lexical blind spot).
 
-## Remaining acceptance
+## Integrated acceptance
 
-Independent whole-feature review, any required fix/re-review, a main-first
-integrated package gate, publication readback and evidence-backed cleanup.
-Default-lane case parallelism and concurrent production suites remain out of
-scope; the earlier eight-worker development cold-start and historical SIGTERM
-questions are not answered by these runs.
+Package gate on the merge (change-scoped, 11/11 stages, inputs frozen):
+Vitest 4553 passed; default browser 925 cases (856 functional, 69 exclusive);
+production 557 cases across 16 suites with case identity per lane checked.
+Production stages took 455.7 s against 681.7 s on the ADR-0154 gate (one run on
+the dev machine; the two targeted runs measured 438.95/439.84 s). An external
+validator additionally checked exact stage plans, frozen sources, no user-data
+changes and the per-lane case identity before the conditional push.

@@ -1,13 +1,9 @@
-//! Reader/writer for **"KNXBench group-address CSV v1"** — a format this
-//! project defines and owns.
+//! Native group-address CSV exchange and bounded address-only import profiles.
 //!
-//! This is deliberately *not* a claim of compatibility with ETS's own
-//! "Export Group Addresses" feature. No sample of that export exists
-//! anywhere in this repository or in the KNX Standard v3.0.0 corpus, so
-//! there is nothing to be compatible *with* — see
-//! `docs/superpowers/specs/2026-09-10-csv-group-address-exchange-design.md`
-//! §1 for the full accounting. Never describe this format as "ETS CSV" or
-//! imply interoperability with it in code, comments, or UI text.
+//! The writer produces "KNXBench group-address CSV v1". The reader additionally
+//! accepts four fixed column profiles; unsupported metadata is diagnosed and
+//! never granted mutation authority. See `docs/contracts/group-address-csv-profiles.md`.
+//! Neither path claims general interoperability with another application.
 //!
 //! `knx-csv` is pure: text in, typed rows/plans out, and project data in,
 //! text out. It knows nothing of the filesystem, SQLite, HTTP, or
@@ -15,6 +11,9 @@
 //! `apps/knx-cli`).
 
 mod plan;
+mod profile;
+#[cfg(test)]
+mod profile_tests;
 mod read;
 #[cfg(test)]
 mod testutil;

@@ -15,6 +15,15 @@ Publication is verified at immutable `a9ea32d72364478b25e158d0b95465af7a4702df`
 ([public verification record](evidence/release-alpha17-2026-10-26.json)).
 Work merged on main after `20ab2f7ea` belongs to the next alpha.
 
+## Group-address CSV import profiles after Alpha 17
+
+Four fixed [name/address column layouts](contracts/group-address-csv-profiles.md)
+are supported in source builds by the shared CSV import path. This is an
+address-only improvement, not a range/security synchronisation format. Omitted
+ranges and security policy are explicit diagnostics; unsupported metadata
+refuses the entire import. Native export, native format behaviour, schema and
+hardware scope are unchanged. No release or external-application parity is implied.
+
 ## Native acceptance after the Alpha 17 release
 
 Owner consent for isolated [WP-11](open-work/WP-11-native-linux-acceptance.md)

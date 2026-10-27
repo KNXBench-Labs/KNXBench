@@ -1,6 +1,16 @@
 # Restart snapshot
 
-Updated: 2026-10-27 07:15 CET. Operational snapshot, not an append-only journal.
+Updated: 2026-10-27 09:06 CET. Operational snapshot, not an append-only journal.
+## Group-address CSV import profiles (ACTIVE, observed 2026-10-27 09:06 CET)
+- GO: address-only import adapter on `feat/group-address-csv-profiles`, base `ae47331e5`.
+- Owned tree `<sources>/knxbench-ga-csv-profiles-20261027`; root remains untouched.
+- Own surface: knx-csv parser, CSV CLI/HTTP/MCP regressions and feature documentation.
+- Fixed profiles, explicit range/security diagnostics; no range or security mutations/export expansion.
+- Whole-feature review APPROVE; six minor corrections applied, focused re-review pending.
+- Owning CSV104 green; CLI14/server17/MCP2 focused green; Web consumer104 green.
+- Implementation/correction workers exited. Branch/integrated maintained gates and publication pending.
+- No release/deployment/hardware authority. Preserve other owners and parked trees.
+- Next: focused correction review, commit candidate, scoped branch/integrated package gates.
 ## WP-11 native acceptance / owner decisions (DELIVERED, observed 2026-10-27 06:34 CET)
 - PUBLISHED main-first merge `cc9d8fab2`, feature `f4f112fe5`; local/tracking/live equal.
 - Claude review + correction re-review APPROVE; branch/integrated13 gates green/frozen.

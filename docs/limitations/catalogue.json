@@ -88,7 +88,7 @@
       "number": 38,
       "title": "CSV interoperability",
       "topic": "Import and export",
-      "summary": "KNXBench CSV v1 is its own exchange format. Its roundtrip tests do not verify ETS CSV/ESF interoperability.",
+      "summary": "Native CSV v1 export is unchanged. Four fixed address-only import profiles report omitted ranges/security and refuse unsupported metadata; no general ETS/ESF interoperability or full hierarchy roundtrip is claimed.",
       "file": "KL-038-csv-interoperability.md",
       "ledger_ids": [
         "KL-38"
@@ -117,7 +117,7 @@
       "number": 40,
       "title": "CSV read-only and absent columns",
       "topic": "Import and export",
-      "summary": "Derived DPT/group columns are read-only; changed values are refused. Description/Comment interchange columns are absent.",
+      "summary": "DPT/group context is read-only; changed values are refused. The address-only profiles recognise but refuse nonempty Description; Description/Comment editing and native interchange remain unsupported.",
       "file": "KL-040-csv-read-only-and-absent-columns.md",
       "ledger_ids": [
         "KL-40"

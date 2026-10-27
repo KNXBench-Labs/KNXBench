@@ -14,6 +14,11 @@ fragment aliases and update this index. Do not rewrite previous results.
 
 ## Group-address CSV column profiles (27 October 2026 source)
 
+Published as main-first `ed8b8ec13` after whole-feature and correction reviews
+APPROVE; both maintained 14-stage gates passed (integrated Rust2,878,
+corpus91/91; frozen inputs and unchanged user data).
+[Acceptance and exclusions](status/2026-10-27-group-address-csv-profiles.md).
+
 The shared CSV reader accepts four fixed ordered name/address column profiles,
 including separate numeric address components and positional duplicate headers.
 The address-only adapter reports range rows as omitted, refuses nonempty

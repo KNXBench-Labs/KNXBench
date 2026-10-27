@@ -21,8 +21,9 @@ is through, the characters move again as before.
   Alpha 14 picture history, the upgrade/migration note and the per-release download links
   are gone. The alpha notice stays in the hero tag and the status section with its
   boundaries; the start section links the releases page instead of one release's files.
-  Claims follow `docs/FEATURES.md`/README; single-device-only work (device downloads)
-  stays out of the highlights and in the status boundaries.
+  Claims follow `docs/FEATURES.md`/README; single-device-only work (device downloads,
+  sending group values) stays out of the highlights and in the status boundaries. The
+  import highlight keeps the word "supported"; the status section names the limits.
 - **Media:** hero, LCARS/CRT gallery, six highlight stills and the group-details clip
   are new captures of the `v0.1.0-alpha.17` tag (`a9ea32d7`) from the real server and
   production frontend, fictional Sample house, loopback-only namespace. The wizard stops
@@ -34,13 +35,17 @@ is through, the characters move again as before.
   Every marketing `h1/h2/h3` types once on first visibility, its cursor blinks four times,
   then the heading joins the ambient random-direction rolls. Pause, reduced motion,
   hidden document and pagehide still reveal all text at once and never replay typing.
+  Pause and reduced motion settle unseen headings too; a hidden document or pagehide
+  finishes only running typing, so a page opened in a background tab still types.
 - **Release process:** a release no longer requires a website copy change; refreshing
   the stills with `release-media.shots.ts` is optional.
 
-Acceptance (self-review, Chromium only): media capture 1/1 passed on the tagged server;
-website unittest 30/30; offline browser recipes on the preview build 667 checks in 9
-recipes and on the release build 361 checks in 4 recipes, zero page errors and zero
-foreign requests; every still inspected. No WebKit, native screen-reader or deployment
+Acceptance (Chromium only): media capture 1/1 passed on the tagged server; independent
+review BLOCK (overclaims, background-tab typing, test gaps) fixed; website unittest 30/30;
+offline browser recipes on the preview build 679 checks in 9 recipes and on the release
+build 373 checks in 4 recipes, zero page errors and zero foreign requests; six
+`headlines.js` mutants (hidden/pagehide, blink cancel, pause, roll failure, h3 rolls) all
+caught by `verify-headline-typing.js`; every still inspected. No WebKit, native screen-reader or deployment
 claim until the Pages run and live readback.
 
 <a id="phosphor-atlas--private-implementation-15-october-2026"></a>

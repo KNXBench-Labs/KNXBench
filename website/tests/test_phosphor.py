@@ -25,7 +25,7 @@ class PhosphorTests(unittest.TestCase):
 
     def test_browser_recipes_follow_the_current_artifact_origin(self):
         for name in ("verify-browser", "verify-imprint", "verify-default-language", "verify-release",
-                     "verify-headlines", "verify-headline-reveal", "verify-demos", "verify-phosphor", "verify-roll-directions"):
+                     "verify-headlines", "verify-headline-typing", "verify-demos", "verify-phosphor", "verify-roll-directions"):
             source = (WEBSITE / "tests" / (name + ".js")).read_text()
             self.assertIn("new URL(page.url()).origin", source, name)
             self.assertNotIn("const origin = 'http://127.0.0.1:", source, name)

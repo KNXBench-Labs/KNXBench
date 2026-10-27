@@ -50,13 +50,16 @@ class BuildTests(unittest.TestCase):
             self.assertEqual(sum(tag == "h1" for tag, _ in doc.elements), 1)
             self.assertNotIn("${", page)
 
-    def test_only_hero_and_features_headings_are_marked_for_live_typing(self):
+    def test_every_heading_types_without_a_selective_marker(self):
+        # Owner request (27 October 2026): every marketing heading types, then rolls again.
         self.require_build()
         for path in ("index.html", "de/index.html", "en/index.html"):
-            doc = Document((self.out / path).read_text())
-            typed = [attrs.get("id") for tag, attrs in doc.elements
-                     if tag in ("h1", "h2", "h3") and "data-headline-typing" in attrs]
-            self.assertEqual(typed, ["hero-title", "features-title"], path)
+            self.assertNotIn("data-headline-typing", (self.out / path).read_text(), path)
+        script = (self.out / "assets/headlines.js").read_text()
+        self.assertIn("main h1, main h2, main h3", script)
+        self.assertNotIn("headline-reveal", script)
+        self.assertNotIn("headlineState", script)
+        self.assertNotIn("data-headline-state", (self.out / "assets/site.css").read_text())
 
     def test_root_defaults_to_english_with_explicit_language_links(self):
         self.require_build()
@@ -193,94 +196,36 @@ class BuildTests(unittest.TestCase):
             self.assertIn("noindex", html)
             self.assertIn('class="preview-note"', html)
 
-    def test_alpha17_release_copy_links_history_and_upgrade_boundaries(self):
+    def test_highlights_replace_release_specific_sections(self):
+        # Owner request (27 October 2026): highlights only, described in more detail; the
+        # alpha notice stays, release numbers, upgrade chains and per-release cards go.
         self.require_build()
-        release = "https://github.com/KNXBench-Labs/KNXBench/releases/"
-        evidence_path = "docs/evidence/release-alpha17-2026-10-26.json"
-        evidence = json.loads((WEBSITE.parent / evidence_path).read_text())
-        self.assertEqual(evidence["tag"], "v0.1.0-alpha.17")
-        self.assertEqual(evidence["candidate"], "a9ea32d72364478b25e158d0b95465af7a4702df")
-        self.assertTrue(evidence["prerelease"])
-        self.assertFalse(evidence["draft"])
-        self.assertEqual(evidence["public_artifact_verification"], "PASS")
-        # The site is deployed after this record; accept the later PASS readback too.
-        website = evidence["website"]
-        self.assertIn(website["status"], {"not executed", "PASS"})
-        if website["status"] == "PASS":
-            self.assertEqual(website["excluded_files"], [])
-            self.assertGreater(website["artifact_files_http_200_and_hash_match"], 0)
-            self.assertRegex(website["artifact_sha256"], r"^[0-9a-f]{64}$")
-        self.assertEqual({w["run_id"] for w in evidence["workflows"]}, {40406000191, 40406000758})
-        for workflow in evidence["workflows"]:
-            self.assertEqual(workflow["head_sha"], evidence["candidate"])
-            self.assertEqual(workflow["conclusion"], "success")
-            self.assertTrue(workflow["publication_success"])
-        for dry_run in evidence["dry_runs"]:
-            self.assertEqual(dry_run["head_sha"], evidence["candidate"])
-            self.assertEqual(dry_run["publish_jobs"], "skipped")
-        self.assertEqual({a["name"] for a in evidence["assets"]},
-                         {"KNXBench_0.1.0-alpha.17_amd64.AppImage", "knx-mcp-x86_64-linux", "SHA256SUMS"})
-        for asset in evidence["assets"]:
-            self.assertGreater(asset["bytes"], 0)
-            self.assertRegex(asset["sha256"], r"^[0-9a-f]{64}$")
-            self.assertEqual(asset["provider_digest"], "sha256:" + asset["sha256"])
-        docker = evidence["docker"]
-        self.assertTrue(docker["latest_index_digest_equal"])
-        self.assertRegex(docker["index_digest"], r"^sha256:[0-9a-f]{64}$")
-        self.assertEqual(set(docker["platforms"]), {"linux/amd64", "linux/arm64"})
-        self.assertEqual(docker["oci_labels"], {"revision": evidence["candidate"], "version": evidence["tag"]})
-        self.assertTrue(evidence["candidate"].startswith(evidence["mcp_version"].rsplit("+g", 1)[1]))
+        images = ("highlight-import.webp", "highlight-history.webp", "highlight-wizard.webp",
+                  "highlight-parameters.webp", "highlight-catalogue.webp", "highlight-search.webp")
         for lang in ("de", "en"):
             page = (self.out / lang / "index.html").read_text()
             doc = Document(page)
-            for section in ("release-features", "release-history"):
-                self.assertTrue(any(attrs.get("id") == section for _, attrs in doc.elements), (lang, section))
-            for asset in ("alpha14-parameters.webp", "alpha14-vendor-zip.webp",
-                          "alpha14-notes.webp", "alpha14-diagnostics.webp"):
+            ids = {attrs.get("id") for _, attrs in doc.elements}
+            self.assertIn("features", ids)
+            self.assertFalse({"release-features", "release-history"} & ids, lang)
+            features = page[page.index('id="features"'):page.index('id="watch"')]
+            self.assertEqual(features.count("<h3>"), 9, lang)
+            for asset in images:
                 self.assertTrue(any(tag == "img" and attrs.get("src", "").endswith("/" + asset)
                                     and attrs.get("alt") for tag, attrs in doc.elements), (lang, asset))
-            self.assertNotIn("alpha12-", page)
+                self.assertIn("assets/" + asset, features)
+            self.assertNotIn("alpha14-", page)
             text = json.loads((WEBSITE / "content" / f"{lang}.json").read_text())
-            for key in ("alpha_tag", "release_title", "release_intro", "release_download_body", "release_adoption_body",
-                        "release_workbench_body", "release_system2_body", "release_more_note",
-                        "history_title", "history_intro", "release_parameters_body", "release_vendor_body",
-                        "release_notes_body", "release_diagnostics_body", "upgrade_note", "release_scope_note"):
-                self.assertIn(text[key], page)
-            self.assertIn("Alpha 17", text["release_title"])
-            self.assertIn("veröffentlicht" if lang == "de" else "published", text["release_intro"])
-            for key in ("alpha_tag", "release_intro", "release_scope_note", "release_cta",
-                        "release_appimage_cta", "release_mcp_cta", "release_checksums_cta", "docker_note", "native_body"):
-                self.assertNotRegex(text[key], r"(?i)candidate|pending|intended|prepared|Kandidat|vorgesehen|steht aus|nach Veröffentlichung")
-            release_copy = " ".join(v for k, v in text.items() if k.startswith("release_"))
-            self.assertNotRegex(release_copy, r"(?i)\bcertified\b|zertifiziert")
-            evidence_url = "https://github.com/KNXBench-Labs/KNXBench/blob/main/" + evidence_path
-            self.assertEqual(sum(tag == "a" and attrs.get("href") == evidence_url
-                                 for tag, attrs in doc.elements), 1, lang)
-            self.assertIn(text["release_evidence_cta"], page)
-            self.assertIn("Alpha 14", text["history_title"])
-            self.assertIn("Alpha 14", text["release_caption"])
-            self.assertIn("16", text["upgrade_note"])
-            self.assertIn("28", text["upgrade_note"])
-            self.assertIn("26 → 27 → 28", text["upgrade_note"])
-            self.assertIn("Alpha 15", text["upgrade_note"])
-            self.assertIn("Alpha 16", text["upgrade_note"])
-            self.assertIn("M-0001_A-9205-04-9270", text["release_system2_body"])
-            self.assertIn("UP 258D12", text["release_system2_body"])
-            self.assertIn("#30", text["release_system2_title"])
-            self.assertIn("0.1.0-alpha.17", text["docker_note"])
-            for arch in ("amd64", "arm64"):
-                self.assertIn(arch, text["release_scope_note"])
-            for tag in ("v0.1.0-alpha.14", "v0.1.0-alpha.15", "v0.1.0-alpha.16", "v0.1.0-alpha.17"):
-                self.assertEqual(sum(tag_name == "a" and attrs.get("href") == release + "tag/" + tag
-                                     for tag_name, attrs in doc.elements), 1, (lang, tag))
-            for asset in ("KNXBench_0.1.0-alpha.17_amd64.AppImage", "knx-mcp-x86_64-linux", "SHA256SUMS"):
-                self.assertEqual(sum(tag_name == "a" and attrs.get("href") ==
-                                     release + "download/v0.1.0-alpha.17/" + asset
-                                     for tag_name, attrs in doc.elements), 1, (lang, asset))
-            self.assertNotIn("download/v0.1.0-alpha.16/", page)
-            for key in ("real_app", "project_caption", "flow_caption", "details_caption"):
-                self.assertIn("Alpha 14", text[key], (lang, key))
-            self.assertNotIn("v0.1.0-alpha.12", page)
+            self.assertEqual([k for k in text if k.startswith(("release_", "history_")) or k == "upgrade_note"], [])
+            for key in [k for k in text if k.startswith("hl_")]:
+                self.assertIn(text[key], page, (lang, key))
+            main = page[page.index("<main"):page.index("</main>")]
+            self.assertIsNone(re.search(r"Alpha[ -]?\d|alpha\.\d|#30|System-2|UP 258", main), lang)
+            self.assertIn("Alpha", text["alpha_tag"])
+            self.assertIn("alpha", text["status_title"].lower())
+            highlight_copy = " ".join(v for k, v in text.items() if k.startswith("hl_"))
+            self.assertNotRegex(highlight_copy, r"(?i)\bcertified\b|zertifiziert|full ETS compatib|volle ETS-Kompatib")
+            self.assertIn("Experiment", text["hl_ai_body"])
 
     def test_site_copy_and_captions_carry_no_negative_disclaimer_tags(self):
         # Owner decision (18 October 2026): captions describe what is shown,
@@ -293,11 +238,10 @@ class BuildTests(unittest.TestCase):
         for track in sorted((WEBSITE / "assets").glob("*.vtt")):
             self.assertIsNone(tags.search(track.read_text()), track.name)
 
-    def test_alpha14_media_has_reproducible_release_provenance(self):
+    def test_highlight_media_has_reproducible_release_provenance(self):
         media = json.loads((WEBSITE / "media.json").read_text())
-        self.assertIn("alpha14Capture", media)
-        capture = media["alpha14Capture"]
-        self.assertEqual(capture["application_release"], "v0.1.0-alpha.14")
+        capture = media["highlightCapture"]
+        self.assertEqual(capture["application_release"], "v0.1.0-alpha.17")
         self.assertEqual(media["applicationSource"], capture["application_source_commit"])
         self.assertEqual(capture["capture_result"], {"passed": 1, "failed": 0, "skipped": 0})
         self.assertIn("recordingChecks", media["historicalRecording"])
@@ -307,20 +251,23 @@ class BuildTests(unittest.TestCase):
                                         cwd=WEBSITE.parent, capture_output=True).returncode, 0)
         manifest = WEBSITE.parent / capture["manifest"]
         self.assertEqual(capture["manifest_sha256"], hashlib.sha256(manifest.read_bytes()).hexdigest())
-        self.assertEqual(json.loads(manifest.read_text())["application_source_commit"], source_commit)
-        for name in ("graphite.webp", "crt.webp", "lcars.webp", "alpha14-parameters.webp",
-                     "alpha14-vendor-zip.webp", "alpha14-notes.webp", "alpha14-diagnostics.webp"):
+        recorded = json.loads(manifest.read_text())
+        self.assertEqual(recorded["application_source_commit"], source_commit)
+        spec = WEBSITE.parent / recorded["captures"]["stills_and_group_details_clip"]["spec"]["path"]
+        self.assertEqual(capture["capture_spec_sha256"], hashlib.sha256(spec.read_bytes()).hexdigest())
+        for name in ("graphite.webp", "crt.webp", "lcars.webp", "highlight-import.webp", "highlight-history.webp",
+                     "highlight-wizard.webp", "highlight-parameters.webp", "highlight-catalogue.webp",
+                     "highlight-search.webp"):
             record = media["assets"][name]
             source = WEBSITE.parent / record["source"]
             self.assertEqual(record["sourceSha256"], hashlib.sha256(source.read_bytes()).hexdigest(), name)
             self.assertEqual(record["applicationSource"], source_commit, name)
             self.assertIn("lossless", record["encoding"])
-        for name in ("project-work.mp4", "bus-flow.mp4", "group-details.mp4"):
-            self.assertEqual(media["assets"][name]["applicationSource"], source_commit, name)
-        for lang in ("de", "en"):
-            text = json.loads((WEBSITE / "content" / f"{lang}.json").read_text())
-            for key in ("project_caption", "flow_caption", "details_caption"):
-                self.assertIn("Alpha 14", text[key], (lang, key))
+        self.assertEqual(media["assets"]["group-details.mp4"]["applicationSource"], source_commit)
+        historical = media["alpha14Capture"]["application_source_commit"]
+        for name in ("project-work.mp4", "bus-flow.mp4"):
+            self.assertEqual(media["assets"][name]["applicationSource"], historical, name)
+        self.assertFalse(any(name.startswith("alpha14-") for name in media["assets"]))
 
     def test_page_assets_are_local_exist_and_videos_do_not_autoplay(self):
         self.require_build()

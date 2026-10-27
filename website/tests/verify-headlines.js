@@ -11,7 +11,7 @@ async (page) => {
     return route.abort();
   });
   const active = () => page.evaluate(() => document.getAnimations().filter(a => a.id === 'ambient-char-swap' && a.playState === 'running').length);
-  const waitForRoll = () => page.waitForFunction(() => document.getAnimations().some(a => a.id === 'ambient-char-swap' && a.playState === 'running'), null, { timeout: 7000, polling: 30 });
+  const waitForRoll = () => page.waitForFunction(() => document.getAnimations().some(a => a.id === 'ambient-char-swap' && a.playState === 'running'), null, { timeout: 15000, polling: 30 });
   await page.emulateMedia({ reducedMotion: 'no-preference' });
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.goto(`${origin}/de/`);
@@ -19,8 +19,8 @@ async (page) => {
   assert('hero keeps its explicit line break', await page.locator('h1 br').count() === 1);
   assert('hero accessible name retains the word boundary across its line break', await page.locator('h1').getAttribute('aria-label') === 'Dein KNX-Projekt. Deine Werkbank.');
   assert('decorative words are hidden from assistive technology', await page.locator('main .char-word').evaluateAll(words => words.every(word => word.getAttribute('aria-hidden') === 'true')));
-  // The hero types (WP-21) instead of rolling: ambient glyph swaps are exercised on an unselected heading.
-  const sample = page.locator('#release-title');
+  // Every heading types first; ambient swaps start on the features heading once its cursor is gone.
+  const sample = page.locator('#features-title');
   await sample.scrollIntoViewIfNeeded();
   const before = await sample.boundingBox();
   await waitForRoll();
@@ -78,8 +78,8 @@ async (page) => {
   await waitForRoll();
   assert('visible-document lifecycle resumes ambient rolls', await active() > 0);
   await page.locator('#start').scrollIntoViewIfNeeded();
-  await page.waitForFunction(() => document.querySelector('#release-title').getAnimations({ subtree: true }).length === 0, null, { timeout: 3000 });
-  assert('offscreen heading stops animating after its finite reverse entrance', await sample.evaluate(h => h.getAnimations({ subtree: true }).length === 0));
+  await page.waitForFunction(() => document.querySelector('#features-title').getAnimations({ subtree: true }).length === 0, null, { timeout: 3000 });
+  assert('offscreen heading stops its ambient rolls', await sample.evaluate(h => h.getAnimations({ subtree: true }).length === 0));
   for (const lang of ['de', 'en']) {
     for (const width of [320, 390, 768, 1440]) {
       await page.emulateMedia({ reducedMotion: 'reduce' });

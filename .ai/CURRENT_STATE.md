@@ -1,14 +1,14 @@
 # Restart snapshot
 
-Updated: 2026-10-27 22:40 CET. Operational snapshot, not an append-only journal.
-## S2-04 ordinary/server persistence (TAKEN; observed 2026-10-27 22:40 CET)
-- Owner: this WebUI; branch `fix/s2-04-ordinary-tunnel-workers-20261027` in its own worktree.
-- Scope: `tunnel_workers.rs`, ordinary download worker/tests, service-control callback/tests,
-  System-2 helper extraction and their S2-04/pitfall/result documentation. No other runtime claim.
-- Local candidate `9103c80db`; independent Claude review `sa-0-d6d2380d` running when recorded.
-- Focused/server tests + Clippy/fmt/headers green; maintained package/integrated gates PENDING.
-- Evidence `<profile>/evidence/s204-ordinary-20261027/`; next: review corrections, gates, delivery.
-- Root stale/dirty preserved. No bus/device, release, image or deployment scope.
+Updated: 2026-10-27 23:33 CET. Operational snapshot, not an append-only journal.
+## S2-04 ordinary/server persistence (PUBLISHED; observed 2026-10-27 23:33 CET)
+- Main-first `ca940e2ed`; feature `9103c80db`, corrections `51f7598b5`; exact refs read back.
+- Whole/correction reviews APPROVE; branch14/integrated14 accepted, frozen/user-data safe.
+- Integrated Rust1446/64ignored, corpus51/51; public mounted liveness2 each.
+- S1/S3/S2 original survivors killed after witness fixes; failed/zero-scope attempts retained.
+- Runtime claim released; individual-address settlement and field outcome remain OPEN.
+- Evidence `<profile>/evidence/s204-ordinary-20261027/`; result-doc gate and own retirement next.
+- Root intentionally stale/dirty preserved. No bus/device/release/image/deployment claim.
 ## GATE-01 residual evidence boundary (observed 2026-10-27 21:13 CET; session ddbf32f04371)
 - Bounded study `2890ad2d0`/result `96829b97e` and fixture `bc1b47a9a`/result `939c1b384` published with exact readbacks.
 - Independent reviews APPROVE; maintained accepted gates10 frozen; original failed `83871cd88` remains failed/retained.
@@ -20,7 +20,7 @@ Updated: 2026-10-27 22:40 CET. Operational snapshot, not an append-only journal.
 - Branch14 + integrated2 gate14 accepted: each Rust3447/140ignored, corpus91/91, inputs frozen.
 - Integrated1 failed a 20ms simulator response deadline; retained as failed, cause unproven.
 - Delivery comment #6443271993 verified; issue stays open. No release/image/hardware claim.
-- Runtime claim RELEASED. Ordinary download/service-control starvation + device evidence open (S2-04).
+- Original runtime claim RELEASED; ordinary/service-control follow-up published above; field evidence open.
 - Evidence `<profile>/evidence/issue30-tunnel-20261027/`; integration held only for result docs/retirement.
 ## Catalogue installation target (DELIVERED runtime, observed 2026-10-27 12:02 CET)
 - PUBLISHED main-first `a17420239` (feature `8d3ebe69d`); local/tracking/live exact readback.

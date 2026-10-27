@@ -1,8 +1,8 @@
 # S2-04 — System-2 server: tunnel lost after the durable checkpoint
 
 **Priority:** P1. **Status:** System-2 fix published on `main` as `1ab4ad6a5`;
-ordinary download/service-control candidate awaits delivery; individual-address
-settlement and field verification remain open.
+ordinary download/service-control follow-up published as `ca940e2ed`;
+individual-address settlement and field verification remain open.
 Listed in [OPEN_WORK](../OPEN_WORK.md). Origin: GitHub issue #30.
 
 ## Field report (27 October 2026)
@@ -127,6 +127,27 @@ its inline path, makes the matching test fail with one or two ticks. No identity
 backup, consent, cancellation or read-back rule changes; no gateway, bus or device.
 Not examined: other request handlers that block a runtime worker while a different
 operation holds a tunnel (for example a project save during a bus monitor session).
+
+## Follow-up software delivery (27 October 2026)
+
+- Main-first merge `ca940e2ed`, feature `9103c80db` and correction `51f7598b5`.
+  Whole-feature review found the overbroad audit claim and missing discrimination;
+  focused correction review APPROVE. Individual-address settlement is explicitly
+  retained below, not silently claimed fixed.
+- Branch and integrated package gates each passed 14/14 stages, with frozen
+  inputs and no touched or unchecked user data. Integrated execution: 1,446
+  Rust tests passed, 64 ignored; 51/51 selected corpus cases passed.
+  These are overlapping runs, not additive unique coverage.
+- Both existing digest-pinned mounted System-2 liveness tests passed separately
+  on branch and merge. An initial private branch selector executed zero tests;
+  that attempt is unmeasured, not accepted. The corrected selector ran both.
+- Original review survivors S1 (keeper-only), S3 (transfer-only), and S2
+  (marker-only, file backup inline) now fail their named post-check/file-backup
+  liveness assertions; each restored witness passes. Earlier incomplete
+  mutation-controller attempts remain incomplete, not successful campaigns.
+- No web/browser or bindings stage was selected; the web bundle was built as
+  the desktop build prerequisite. No release/image/deployment or field-outcome
+  claim; issues #30 and #22 remain open. Exact publication refs were read back.
 
 ## Remaining
 

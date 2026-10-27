@@ -15,6 +15,15 @@ Publication is verified at immutable `a9ea32d72364478b25e158d0b95465af7a4702df`
 ([public verification record](evidence/release-alpha17-2026-10-26.json)).
 Work merged on main after `20ab2f7ea` belongs to the next alpha.
 
+## Server tunnel persistence after Alpha 17
+
+The ordinary download worker and service-control backup callback now keep
+synchronous recovery/journal persistence off tunnel runtime workers on multi-thread
+runtimes, following the System-2 fix. Current-thread fallback remains inline. [S2-04](open-work/S2-04-tunnel-loss-after-checkpoint.md) retains
+individual-address settlement and field verification; published source is not
+an updated release or container image. Consent, backups, stop-token policy and
+read-back remain unchanged.
+
 ## Docker signing design before the first stable release
 
 The [bounded proposal](research/2026-10-27-docker-image-signing-design.md) records

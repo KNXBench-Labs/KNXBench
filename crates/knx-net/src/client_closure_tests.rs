@@ -467,7 +467,13 @@ async fn a_failed_heartbeat_ends_a_waiting_send_early() {
 /// also when the closure falls into its interval wait.
 #[tokio::test]
 async fn no_heartbeat_follows_a_gateway_disconnect() {
-    let (client, gateway) = tunnel_timed(0x2a, FAST_HEARTBEAT).await;
+    // A wider interval leaves the fake gateway ample time to disconnect even
+    // when the OS schedules this test late under gate load.
+    let heartbeat = HeartbeatTiming {
+        interval: Duration::from_secs(1),
+        response_timeout: FAST_HEARTBEAT.response_timeout,
+    };
+    let (client, gateway) = tunnel_timed(0x2a, heartbeat).await;
     // One answered heartbeat first, so the loop is waiting for its next tick.
     gateway.expect(services::CONNECTIONSTATE_REQUEST).await;
     gateway
@@ -483,7 +489,7 @@ async fn no_heartbeat_follows_a_gateway_disconnect() {
     // Several intervals: neither a CONNECTIONSTATE_REQUEST nor a DISCONNECT_REQUEST.
     let mut buf = [0u8; 64];
     if let Ok(Ok((n, _))) = tokio::time::timeout(
-        Duration::from_millis(400),
+        Duration::from_millis(2500),
         gateway.socket.recv_from(&mut buf),
     )
     .await

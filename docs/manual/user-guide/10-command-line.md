@@ -203,11 +203,19 @@ checking the label before flipping the breaker.
 
 ```bash
 knx doc-export house.knxdb house-documentation.html
+knx doc-export house.knxdb haus-dokumentation.html --language de
 ```
 
 Writes the self-contained HTML project documentation described in
 [Documentation export and project comparison](08-reports-and-diff.md), then prints the
 path, a warning count and each warning.
+
+`--language` takes `en`, `en-US`, `de` or `de-DE`, the same spellings as the web
+export, and may stand anywhere among the arguments. Without it the report is English.
+It picks the built-in report wording, the HTML `lang` attribute and the language asked of
+the product database. It does not translate your project, and nothing is guessed from the
+environment. Any other value, a missing value or a repeated `--language` prints the usage
+and exits 1 before the store is opened, leaving an existing output file untouched.
 
 ### `knx diff` — compare two projects
 

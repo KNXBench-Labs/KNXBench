@@ -15,6 +15,13 @@ Publication is verified at immutable `a9ea32d72364478b25e158d0b95465af7a4702df`
 ([public verification record](evidence/release-alpha17-2026-10-26.json)).
 Work merged on main after `20ab2f7ea` belongs to the next alpha.
 
+## CLI report language selection after Alpha 17
+
+Source builds allow an explicit EN/DE locale in `knx doc-export`, reusing the
+existing renderer. The default stays English and invalid options cannot write
+an output. [Command-line workflow](manual/user-guide/08-reports-and-diff.md#exporting-from-the-command-line).
+No new language or external-report parity is added.
+
 ## Group-address CSV import profiles after Alpha 17
 
 Four fixed [name/address column layouts](contracts/group-address-csv-profiles.md)

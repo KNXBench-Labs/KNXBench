@@ -51,7 +51,7 @@ const USAGE: &str = "usage: knx import <file.knxproj> [--store <path.knxdb> [--r
      \x20     knx monitor-export <project.knxdb> <new.zip> [--installation <id>]\n\
      \x20                   [--language <code>] [--product-db <path>] [--no-product-db]\n\
      \x20         (offline reduced monitoring projection, not a backup; never overwrites)\n\
-     \x20     knx doc-export <store.knxdb> <out.html>\n\
+     \x20     knx doc-export <store.knxdb> <out.html> [--language en|en-US|de|de-DE]\n\
      \x20     knx diff [--exit-code] <a.knxdb|a.knxproj> <b.knxdb|b.knxproj>\n\
      \x20     knx contribution analyze <file.knxproj|file.knxprod>\n\
      \x20     knx contribution preview <file> --options <options.json>\n\
@@ -776,13 +776,34 @@ fn print_csv_problem(problem: &knx_csv::CsvProblem) {
 struct DocExportArgs {
     store: String,
     output: String,
+    language: knx_report::ReportLanguage,
+}
+
+/// The same spellings, and nothing more, as the HTTP `language` field
+/// (`documentation_options` in `knx-server`).
+fn parse_report_language(value: &str) -> Result<knx_report::ReportLanguage, String> {
+    match value {
+        "en" | "en-US" => Ok(knx_report::ReportLanguage::English),
+        "de" | "de-DE" => Ok(knx_report::ReportLanguage::German),
+        other => Err(format!("unsupported report language: {other}")),
+    }
 }
 
 fn parse_doc_export_args(args: &[String]) -> Result<DocExportArgs, String> {
     let mut store = None;
     let mut output = None;
-    for arg in args {
-        match arg.as_str() {
+    let mut language = None;
+    let mut i = 0;
+    while i < args.len() {
+        match args[i].as_str() {
+            "--language" => {
+                i += 1;
+                let value = take_value(args, i, "--language")?;
+                if language.is_some() {
+                    return Err("--language given more than once".to_string());
+                }
+                language = Some(parse_report_language(&value)?);
+            }
             other if other.starts_with("--") => {
                 return Err(format!("unknown flag: {other}"));
             }
@@ -790,10 +811,15 @@ fn parse_doc_export_args(args: &[String]) -> Result<DocExportArgs, String> {
             other if output.is_none() => output = Some(other.to_string()),
             other => return Err(format!("unexpected extra argument: {other}")),
         }
+        i += 1;
     }
     let store = store.ok_or_else(|| "missing <store.knxdb>".to_string())?;
     let output = output.ok_or_else(|| "missing <out.html>".to_string())?;
-    Ok(DocExportArgs { store, output })
+    Ok(DocExportArgs {
+        store,
+        output,
+        language: language.unwrap_or(knx_report::ReportLanguage::English),
+    })
 }
 
 /// `knx doc-export` — writes the store's project as one self-contained
@@ -849,7 +875,7 @@ fn run_doc_export(args: &[String]) -> ExitCode {
         &project,
         products.as_ref(),
         chrono::Utc::now(),
-        knx_report::ReportLanguage::English,
+        parsed.language,
         knx_report::ReportSection::ALL.into_iter().collect(),
     );
     let report = knx_report::render_html(&project, &options);
@@ -5024,7 +5050,7 @@ mod tests {
     use super::{
         format_control, format_telegram, format_version_line, load_project_bus_view,
         load_project_individual_addresses, parse_bus_monitor_args, parse_bus_route_monitor_args,
-        parse_bus_route_send_args, DISCOVER_EMPTY_HINT,
+        parse_bus_route_send_args, parse_doc_export_args, DISCOVER_EMPTY_HINT,
     };
     use std::path::Path;
 
@@ -5299,6 +5325,56 @@ mod tests {
         ];
         let parsed = parse_bus_route_monitor_args(&args).unwrap();
         assert_eq!(parsed.multicast_group, Some("239.0.2.1".to_string()));
+    }
+
+    fn strings(args: &[&str]) -> Vec<String> {
+        args.iter().map(|a| a.to_string()).collect()
+    }
+
+    #[test]
+    fn doc_export_args_default_to_english_and_map_each_spelling() {
+        use knx_report::ReportLanguage::{English, German};
+        let parsed = parse_doc_export_args(&strings(&["s", "o"])).unwrap();
+        assert_eq!(parsed.language, English);
+        for (value, expected) in [
+            ("en", English),
+            ("en-US", English),
+            ("de", German),
+            ("de-DE", German),
+        ] {
+            let parsed = parse_doc_export_args(&strings(&["--language", value, "s", "o"])).unwrap();
+            assert_eq!((parsed.store.as_str(), parsed.output.as_str()), ("s", "o"));
+            assert_eq!(parsed.language, expected, "{value}");
+            let parsed = parse_doc_export_args(&strings(&["s", "o", "--language", value])).unwrap();
+            assert_eq!(parsed.language, expected, "{value}");
+        }
+    }
+
+    #[test]
+    fn doc_export_args_refuse_unsupported_missing_and_duplicate_language() {
+        for bad in ["fr", "DE", "en-us", "de_DE", ""] {
+            let error = parse_doc_export_args(&strings(&["s", "o", "--language", bad])).err();
+            assert_eq!(error, Some(format!("unsupported report language: {bad}")));
+        }
+        for args in [
+            &["s", "o", "--language"][..],
+            &["--language", "--language", "de", "s", "o"][..],
+        ] {
+            let error = parse_doc_export_args(&strings(args)).err();
+            assert_eq!(error, Some("--language needs a value".to_string()));
+        }
+        let error = parse_doc_export_args(&strings(&[
+            "--language",
+            "en",
+            "s",
+            "o",
+            "--language",
+            "de",
+        ]));
+        assert_eq!(
+            error.err(),
+            Some("--language given more than once".to_string())
+        );
     }
 
     /// Same cue, same default, for `route-send`.

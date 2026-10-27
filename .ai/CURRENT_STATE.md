@@ -1,13 +1,25 @@
 # Restart snapshot
 
-Updated: 2026-10-27 09:37 CET. Operational snapshot, not an append-only journal.
+Updated: 2026-10-27 10:02 CET. Operational snapshot, not an append-only journal.
+## CLI documentation report language (ACTIVE, observed 2026-10-27 10:02 CET)
+- GO: expose existing EN/DE renderer on `feat/cli-report-language`; no report-parity expansion.
+- Owned tree `<sources>/knxbench-cli-report-language-20261027`, base CSV merge `ed8b8ec13`.
+- CSV dependency/result docs published `ed8b8ec13`/`1f2fad76a`; local/tracking/live verified.
+- Own surface: CLI parser/tests, manual, report-language dossier and status docs.
+- Independent whole-feature review APPROVE; runtime unchanged since reviewed `fe8b57981`.
+- Original6 baseline; new semantic RED3; final10 built-CLI +2 unit green; focused Clippy green.
+- First gate refused missing browser dependencies and changed retained dossier; logs preserved.
+- Dependencies/bundle now prepared; retained section restored exactly, catalogue regression14 green.
+- Next: correction re-check, fresh branch gate and main-first integrated gate/publication.
+- Separate catalogue-target tree owns retry/HTTP evidence and documentation corrections.
+- No release/deployment/hardware authority; preserve parked/foreign tracks.
 ## Group-address CSV import profiles (DELIVERED, observed 2026-10-27 09:37 CET)
 - PUBLISHED main-first `ed8b8ec13` (feature `301a795b6`); local/tracking/live equal.
 - Whole-feature + correction review APPROVE; branch14/integrated14 green and frozen.
 - Integrated Rust2878/129ignored, corpus91/91; tooling461/6optional skips.
 - Owning CSV104; CLI14/server17/MCP2; Web consumers104 unit tests, no new browser claim.
 - Address-only profiles diagnose omitted ranges/security; native output and schema unchanged.
-- Next: owning result note and independent consumer packages; no range/security edit expansion.
+- Result docs `1f2fad76a` published; own CSV trees/refs/scratch retired after verified archives.
 - Separate CLI report-language and catalog-target trees own their consumer work; root untouched.
 - No release/deployment/hardware authority; preserve foreign/parked tracks.
 ## WP-11 native acceptance / owner decisions (DELIVERED, observed 2026-10-27 06:34 CET)

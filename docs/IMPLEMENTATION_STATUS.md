@@ -12,6 +12,19 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Bounded native capture export (27 October 2026; acceptance evidence only)
+
+The [capture continuation](status/2026-10-27-wp11-native-capture-export.md)
+exercised the actual Alpha 17 AppImage with one source-bound fictional UDP
+peer and real backend row: native Export Cancel, Save, overwrite Cancel and
+Replace. Exact original/replaced JSON, zero reported loss counters and
+ordinary desktop/peer closure corroborate the native steps. One original-
+source fixture test identity has positive and expected-omission variants;
+25 native driver calls are steps, not 25 independent tests. The
+[receipt](evidence/wp11-native-capture-2026-10-27.json) pins actual artifacts,
+source, vector, read-only oracles and exclusions. No product runtime changes,
+real bus/projects, full WP-11, accessibility or compatibility claim follows.
+
 ## Positive native editor cells (27 October 2026; acceptance evidence only)
 
 The [bounded native continuation](status/2026-10-27-wp11-positive-native-editors.md)

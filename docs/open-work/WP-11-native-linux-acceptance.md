@@ -1,6 +1,6 @@
 # WP-11 — Native Linux acceptance
 
-**Status:** In progress: first bounded native Alpha 17 slice recorded; remaining cells open. Listed in [OPEN_WORK](../OPEN_WORK.md); per-ID status of record is the [ledger](../status/LEDGER.md).
+**Status:** In progress: first bounded native slice and two positive editor cells recorded; remaining cells open. Listed in [OPEN_WORK](../OPEN_WORK.md); per-ID status of record is the [ledger](../status/LEDGER.md).
 
 ## Task
 
@@ -33,11 +33,26 @@ after process restart, settings focus wrap/return, 80/150% shortcuts, bounded
 keyboard table/pane controls and File submenus have resulting state/file
 evidence. See [acceptance and exclusions](../status/2026-10-27-wp11-native-acceptance.md).
 
-The fictional demo only established checked-editor `unsupportedXml` refusal and
-instruction `MissingSource` feedback, not positive editing. Those positive
-cells need an admitted-source synthetic fixture. Bus-monitor capture export,
-pointer/hover/full-layout and vendor-specific EGL/GPU acceptance remain open.
-Orca and Firefox were not installed and remain untested. No ledger row is closed.
+At that first cutoff the fictional demo only established checked-editor
+`unsupportedXml` refusal and instruction `MissingSource` feedback, not positive
+editing. Those historical outcomes remain refusal evidence.
+
+## Positive native editor cells — 27 October 2026
+
+A separate [positive continuation](../status/2026-10-27-wp11-positive-native-editors.md)
+uses independently reviewed original fictional source-20 data. It verifies one
+declared integer slider's Cancel/Apply/Save/Undo/Redo and native-created-device
+plain instruction preview/cancel/confirm/save. Read-only saved-result oracles
+and a real native process restart verify slider `7` and exact instruction text.
+This is not all checked controls or imported-original instruction editing.
+Virtual-key replacement remains unestablished; physical-keyboard comparison
+and product-cause attribution are missing.
+
+Next bounded native work can cover capture export with admitted fictional or
+simulator data, then remaining keyboard/pointer/layout cells. Other controls,
+imported-original instructions and vendor-specific EGL/GPU acceptance stay
+open. Orca and Firefox were not installed and remain untested. No ledger row
+is closed.
 
 ## Done when
 

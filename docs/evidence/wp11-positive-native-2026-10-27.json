@@ -1,0 +1,80 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-10-27",
+  "scope": "WP-11 bounded positive integer-slider and native-created-device instruction cells",
+  "result": "bounded-native-evidence-passed",
+  "wholeWp11Complete": false,
+  "artifact": {
+    "tag": "v0.1.0-alpha.17",
+    "sourceCommit": "a9ea32d72364478b25e158d0b95465af7a4702df",
+    "name": "KNXBench_0.1.0-alpha.17_amd64.AppImage",
+    "bytes": 92047864,
+    "sha256": "cd1f0cdf129bfad9e143062e4395c52f9376fa49a51c35145a5c0046a49e1d8a",
+    "verification": "Authenticated retained Alpha 17 asset: prior evidence archive digest checked, extracted member size/digest checked; no fresh release download claimed",
+    "embeddedExecutable": {
+      "member": "usr/bin/knx-desktop",
+      "sha256": "0f531f4c0fb23d0e93f1eee99a1067a02aff49709e2a88d64a6637e60c7fdc08",
+      "bytes": 48255640,
+      "matchesBothLiveProcessObservations": true,
+      "method": "Recovered from the authenticated original AppImage; no rebuild or product UI replay"
+    }
+  },
+  "method": "Actual native Wayland/WebKitGTK; AT-SPI actions, guarded slider keys/plain-text typing and native GTK editable-text file selection; no response mocks or direct project mutation",
+  "safety": {
+    "network": "Observed separate namespaces, loopback only and no external route",
+    "filesystem": "Observed read-only host root and input ZIPs, masked real home/projects, private HOME/XDG and results",
+    "realBusAccess": false,
+    "realProjectEdits": false,
+    "productRuntimeChanges": false
+  },
+  "nativeDriverInvocations": 118,
+  "uncreditedHarnessInvocations": [
+    "039-slider-file-picker",
+    "093-reopen-path"
+  ],
+  "countMeaning": "Driver invocations include refused/unsuccessful harness calls and are not independently counted tests. The outcome assertions bind native actions to raw UI and saved-file evidence.",
+  "fixtures": "wp11-positive-native-fixtures-2026-10-27.json",
+  "passed": [
+    "authenticated actual native artifact; two observed isolated process identities",
+    "both fictional ZIP witnesses equal retained member bytes; originals preserved",
+    "actual persisted product source is the exact declared-slider XML; negative control untouched",
+    "specialized slider admitted; keyboard draft 7; cancel/reopen 2 and unchanged saved bytes/mtime",
+    "Apply/save 7; one Undo/save removes override and shows 2; Redo/save restores 7",
+    "native instruction draft/preview/cancel preserve saved state; explicit discard/reopen clears draft",
+    "confirmed native instructions persist exact text/style; actual process restart renders instructions and slider 7",
+    "two ordinary native closes, exact process/window disappearance and launcher exit zero"
+  ],
+  "notEstablished": [
+    "Ctrl+A/Delete virtual-key replacement; cause unassigned",
+    "imported-original instruction editing",
+    "other checked editor types",
+    "capture export",
+    "Orca/Firefox",
+    "pointer/hover/full layout or vendor GPU acceptance",
+    "hardware/bus/ETS compatibility"
+  ],
+  "harnessCaveats": [
+    "Driver versions and failed guards are retained separately; this is manual-step evidence, not one frozen automated suite.",
+    "A disabled picker and a native text-focus refusal were not credited as successful actions.",
+    "Native chooser auto-suffix and partial path input caused pre-action guard refusals; final accepted paths were read back.",
+    "Virtual-key Ctrl+A/Delete replacement did not establish correct replacement; one unapplied draft contained a DEL character. No physical-keyboard or product-cause attribution.",
+    "The accepted instruction text was entered from an empty editor after explicit draft discard/reopen, then previewed, confirmed, saved and reopened after actual process restart.",
+    "Preparation receipts keep their pre-execution Pending cutoff; the final versioned summary is authoritative for these cells.",
+    "Evidence readers/results are single-write; a later reader needs a fresh receipt namespace, never deletion or replacement of original results."
+  ],
+  "privateEvidence": {
+    "directory": "<profile>/evidence/wp11-positive-editors-20261027/",
+    "validator": "verify_acceptance-v3.py",
+    "validatorReceipt": "verification-3.json",
+    "summary": "verified-native-outcomes-v3.json",
+    "nativeCalls": "calls/",
+    "nativeTrees": "steps/",
+    "savedProjectOracles": "project-oracles/",
+    "sourceBinding": "positive-source-binding-v3.json",
+    "closures": [
+      "native-one-settlement.json",
+      "native-two-settlement.json"
+    ],
+    "executableBinding": "native-executable-binding.json"
+  }
+}

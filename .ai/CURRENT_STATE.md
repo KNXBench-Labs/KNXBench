@@ -1,15 +1,17 @@
 # Restart snapshot
 
-Updated: 2026-10-27 10:34 CET. Operational snapshot, not an append-only journal.
-## Catalogue installation target (ACTIVE, observed 2026-10-27 10:34 CET)
+Updated: 2026-10-27 10:53 CET. Operational snapshot, not an append-only journal.
+## Catalogue installation target (ACTIVE, observed 2026-10-27 10:53 CET)
 - GO: `feat/catalog-installation-target` in `<sources>/knxbench-catalog-installation-20261027`.
-- Required live context, explicit multi-installation target; existing command/Undo/retry path.
-- Independent review/correction re-review APPROVE; final themed browser11 green at reviewed source.
-- Parent found two-to-one lost-target fallback before gate; bounded RED/GREEN correction running.
-- No catalogue branch/full merge gate started; final correction review and browser rerun remain.
-- Own surface: catalogue UI/tests, HTTP tests and feature docs; no server runtime/schema change.
-- No site-model expansion, release, deployment or hardware authority; preserve other owners.
-## CLI documentation report language (DELIVERED runtime, observed 2026-10-27 10:34 CET)
+- Required live context, explicit line-less target; existing command/Undo/captured retry path.
+- Whole/correction reviews APPROVE; first final themed browser11 green at its historical source.
+- Parent found two-to-one lost-target fallback; semantic RED3, corrected focused257 green.
+- Line-switch reset regression RED1 then corrected; focused257, all27 TS configs and build green.
+- No catalogue branch/full merge gate started; final independent confirmation and browser rerun remain.
+- Own surface: catalogue UI/tests, HTTP tests and feature docs; server runtime/schema unchanged.
+- Next: final review, scoped branch/integrated gates and publication on latest main.
+- No site-model expansion, release/deployment/hardware authority; preserve other owners.
+## CLI documentation report language (DELIVERED, observed 2026-10-27 10:53 CET)
 - PUBLISHED main-first `5679ba3c5` (feature `fe8b57981`, docs correction `41c7c84cc`).
 - Independent whole/correction review APPROVE; branch13/integrated13 green and frozen.
 - Integrated Rust529/21ignored, corpus17/17; tooling461 registered/6optional skips.
@@ -17,7 +19,7 @@ Updated: 2026-10-27 10:34 CET. Operational snapshot, not an append-only journal.
 - Default EN, explicit EN/DE spellings, invalid options refuse before store/output access.
 - Auth-only push retry reused unchanged accepted inputs; local/tracking/live exact readback.
 - Feature tree/ref/cache retired after12-payload archive verification; root untouched.
-- Integration tree held for result-documentation gate/publication, then own final cleanup.
+- Result notes `71e73b915` published; integration tree/ref/cache retired, archive proof retained.
 - No renderer/parity, third-language, release/deployment or hardware expansion.
 ## Group-address CSV import profiles (DELIVERED, observed 2026-10-27 09:37 CET)
 - PUBLISHED main-first `ed8b8ec13` (feature `301a795b6`); local/tracking/live equal.

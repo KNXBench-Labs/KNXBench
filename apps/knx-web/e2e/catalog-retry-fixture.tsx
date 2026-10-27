@@ -11,6 +11,6 @@ setSetting(UI_LANGUAGE_STORAGE_KEY, language);
 
 createRoot(document.getElementById("root")!).render(
   <main className="workbench">
-    <CatalogBrowser lineId={7} serverIncarnation="fixture-incarnation-1" onCreated={() => {}} onClose={() => {}} />
+    <CatalogBrowser lineId={7} installations={[{ id: 0, name: "Main house" }]} serverIncarnation="fixture-incarnation-1" onCreated={() => {}} onClose={() => {}} />
   </main>,
 );

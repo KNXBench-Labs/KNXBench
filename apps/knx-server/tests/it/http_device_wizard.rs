@@ -299,3 +299,141 @@ async fn a_malformed_expected_address_is_refused_before_anything_happens() {
     );
     assert_eq!(project(&app).await, before);
 }
+
+/// Two synthetic installations with ids 0 and 1, each with its own area and line.
+fn app_with_two_installations() -> (tempfile::TempDir, axum::Router) {
+    use knx_core::{
+        Area, AreaId, CompletionStatus, IdAllocators, Installation, InstallationId, Language, Line,
+        LineId, Project, SourceRef, Topology,
+    };
+    let source = || SourceRef {
+        path: "t".into(),
+        ets_id: "t".into(),
+    };
+    let installation = |id: u8, name: &str| Installation {
+        id: InstallationId(id),
+        name: name.into(),
+        default_line: None,
+        multicast_address: None,
+        completion: CompletionStatus::FinishedDesign,
+        topology: Topology {
+            areas: vec![Area {
+                id: AreaId(u32::from(id) + 1),
+                source: source(),
+                name: format!("Area {id}"),
+                address: id + 1,
+                completion: CompletionStatus::FinishedDesign,
+                lines: vec![LineId(u32::from(id) + 1)],
+            }],
+            lines: vec![Line {
+                id: LineId(u32::from(id) + 1),
+                source: source(),
+                name: format!("Line {id}"),
+                address: 1,
+                medium_ref: "TP".into(),
+                domain_address: None,
+                domain_address_is_checked: None,
+                ip_routing_multicast_address: None,
+                multicast_ttl: None,
+                completion: CompletionStatus::FinishedDesign,
+                devices: vec![],
+            }],
+            unassigned: vec![],
+        },
+        buildings: vec![],
+        group_ranges: vec![],
+        group_addresses: vec![],
+        parameters: vec![],
+    };
+    let mut seeded = Project::new(Language("en".into()));
+    seeded.installations.push(installation(0, "Main house"));
+    seeded.installations.push(installation(1, "Garden"));
+    seeded.ids.raise_to(&IdAllocators::from_counts(
+        10, 10, 10, 10, 10, 10, 10, 10, 10,
+    ));
+    let dir = tempfile::tempdir().unwrap();
+    let state = knx_server::AppState {
+        product_db: Some(
+            knx_server::CatalogueOwner::adopt_opened(products(&dir), std::path::PathBuf::new())
+                .unwrap(),
+        ),
+        ..Default::default()
+    };
+    *state.project.lock().unwrap() = Some(seeded);
+    (dir, knx_server::app(Arc::new(state), None))
+}
+
+fn unassigned_names(tree: &Value, installation: usize) -> Vec<String> {
+    tree["installations"][installation]["unassigned"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|d| d["name"].as_str().unwrap().to_string())
+        .collect()
+}
+
+#[tokio::test]
+async fn a_line_less_device_lands_unassigned_in_the_named_second_installation_and_undoes_in_one_step(
+) {
+    let (_dir, app) = app_with_two_installations();
+    let before = project(&app).await;
+    let request = json!({ "catalogItemId": ITEM, "name": "Sensor", "installationId": 1 });
+    let (status, created) = post(&app, "/api/devices", request.clone()).await;
+    assert_eq!(status, StatusCode::OK, "{created}");
+    let tree = &created["tree"];
+    assert_eq!(unassigned_names(tree, 0), Vec::<String>::new());
+    assert_eq!(unassigned_names(tree, 1), ["Sensor"]);
+    assert_eq!(
+        tree["installations"][0], before["installations"][0],
+        "first installation untouched"
+    );
+    let id = tree["installations"][1]["unassigned"][0]["id"].clone();
+
+    let (status, undone) = post(&app, "/api/undo", json!({})).await;
+    assert_eq!(status, StatusCode::OK, "{undone}");
+    assert_eq!(unassigned_names(&undone, 1), Vec::<String>::new());
+    assert_eq!(
+        undone["installations"], before["installations"],
+        "one undo removes the whole create"
+    );
+
+    let (status, redone) = post(&app, "/api/redo", json!({})).await;
+    assert_eq!(status, StatusCode::OK, "{redone}");
+    assert_eq!(unassigned_names(&redone, 1), ["Sensor"]);
+    assert_eq!(
+        redone["installations"][1]["unassigned"][0]["id"], id,
+        "redo restores the same device id"
+    );
+
+    // Undo does not rewind id allocation: a fresh create after an undo gets a new id.
+    let (_, _) = post(&app, "/api/undo", json!({})).await;
+    let (status, again) = post(
+        &app,
+        "/api/devices",
+        json!({ "catalogItemId": ITEM, "name": "Sensor 2", "installationId": 1 }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{again}");
+    assert_ne!(again["tree"]["installations"][1]["unassigned"][0]["id"], id);
+}
+
+#[tokio::test]
+async fn an_unknown_installation_refuses_atomically_in_a_two_installation_project() {
+    let (_dir, app) = app_with_two_installations();
+    let before = project(&app).await;
+    let (status, body) = post(
+        &app,
+        "/api/devices",
+        json!({ "catalogItemId": ITEM, "name": "Sensor", "installationId": 2 }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::BAD_REQUEST, "{body}");
+    assert!(
+        body["error"]
+            .as_str()
+            .unwrap()
+            .contains("installation 2 not found"),
+        "{body}"
+    );
+    assert_eq!(project(&app).await, before, "tree and revision unchanged");
+}

@@ -1,3 +1,4 @@
+/* Styles the engineering workspace with shared component and theme tokens. */
 /* The component layer's base. ADR-0022 draws the line down the middle of
    this stylesheet: the tokens below belong to a *setting*, never to a
    palette, so they live here and the [data-motion-*] / [data-density]
@@ -1105,6 +1106,10 @@ main {
 .catalog-create-row > input { flex: 1 1 12rem; min-width: 8rem; }
 .catalog-create-row label { display: flex; align-items: center; gap: 0.4rem; }
 .catalog-create-row label input { width: 5rem; }
+.catalog-create-options { min-inline-size: 0; }
+.catalog-installation { display: flex; flex-direction: column; gap: 0.25rem; min-width: 0; }
+.catalog-installation select { max-width: 100%; min-width: 0; }
+.catalog-create-options #catalog-installation-hint { display: block; }
 .catalog-create-preview {
   margin-top: 0.75rem;
   padding: 0.75rem;

@@ -15,6 +15,15 @@ Publication is verified at immutable `a9ea32d72364478b25e158d0b95465af7a4702df`
 ([public verification record](evidence/release-alpha17-2026-10-26.json)).
 Work merged on main after `20ab2f7ea` belongs to the next alpha.
 
+## Explicit catalogue installation target after Alpha 17
+
+Source builds require an explicit **Installation** choice when creating a
+line-less catalogue device in a project with several installations. The existing
+create/Undo path is reused, with live target validation and captured retry
+identity; the one-installation body and line-owned target are unchanged.
+This closes a consumer gap, not the deferred multi-installation/site model or
+cross-installation transfers. [Scope and retained boundaries](limitations/structure-editor-scope.md#update-2026-10-27-explicit-catalogue-installation-target).
+
 ## CLI report language selection after Alpha 17
 
 Source builds allow an explicit EN/DE locale in `knx doc-export`, reusing the

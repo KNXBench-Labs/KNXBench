@@ -1,6 +1,13 @@
 # Restart snapshot
 
-Updated: 2026-10-27 13:47 CET. Operational snapshot, not an append-only journal.
+Updated: 2026-10-27 14:38 CET. Operational snapshot, not an append-only journal.
+## Issue #30 tunnel timeout (PUBLISHED, observed 2026-10-27 14:38 CET)
+- Source merge `1ab4ad6a5` published; local/tracking/live exact readback. Both reviews APPROVE.
+- Branch14 + integrated2 gate14 accepted: each Rust3447/140ignored, corpus91/91, inputs frozen.
+- Integrated1 failed a 20ms simulator response deadline; retained as failed, cause unproven.
+- Delivery comment #6443271993 verified; issue stays open. No release/image/hardware claim.
+- Runtime claim RELEASED. Ordinary download/service-control starvation + device evidence open (S2-04).
+- Evidence `<profile>/evidence/issue30-tunnel-20261027/`; integration held only for result docs/retirement.
 ## WP-11 positive native editors (CLAIMED, observed 2026-10-27 13:47 CET; session ddbf32f04371)
 - GO: exact Alpha 17 AppImage, isolated fictional source-20 numeric editor and native-device instructions.
 - Owner branch `verify/wp11-positive-editors-20261027`; only these two acceptance cells reserved.

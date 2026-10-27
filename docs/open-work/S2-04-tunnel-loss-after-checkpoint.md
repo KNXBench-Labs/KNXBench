@@ -1,7 +1,8 @@
 # S2-04 — System-2 server: tunnel lost after the durable checkpoint
 
-**Priority:** P1. **Status:** In progress: fix implemented on its branch, review
-and gates pending. Listed in [OPEN_WORK](../OPEN_WORK.md). Origin: GitHub issue #30.
+**Priority:** P1. **Status:** System-2 fix published on `main` as `1ab4ad6a5`;
+ordinary download/service-control follow-ups and field verification remain open.
+Listed in [OPEN_WORK](../OPEN_WORK.md). Origin: GitHub issue #30.
 
 ## Field report (27 October 2026)
 
@@ -60,9 +61,33 @@ container CPU count or gateway log is available.
 No identity, backup, consent or final read-back rule changes. Verification is
 software and loopback only: no real gateway, bus or device.
 
+## Software delivery (27 October 2026)
+
+- Published merge `1ab4ad6a5`, containing feature `26634deb5`, review corrections
+  `5b333d77b` and test-timing correction `630739ea`. Whole-feature and correction
+  reviews approved; the final timing change retains its killed heartbeat mutant.
+- Branch and accepted merged package gates each completed all 14 selected stages:
+  3,447 Rust tests passed, 140 ignored; 91/91 selected corpus tests passed.
+  These are separate overlapping executions, not additive unique-test counts.
+  No web/browser or bindings stage was selected; the bundled frontend was built
+  for the desktop build dependency. Hardware was not contacted.
+- Focused software witnesses: 35 client tests, ten repeated passes before the
+  final timing-only change; both mounted single-worker liveness cases passed
+  (download and recovery). Two mutation rounds caught 10 and 9 selected defects.
+- The first integrated gate failed in the unchanged configured-hardware simulator
+  test with `NoAnswer` at a 20 ms response deadline. Its isolated probe passed;
+  the full unchanged successor gate passed. The failed receipt remains failed;
+  the timing budget was not increased and its cause is not established.
+- An optional public-package cancellation/recovery test also failed during
+  focused testing. It fails on the unmodified base too, including at an earlier
+  wait boundary; those failures are not proven to share one cause. This witness
+  is not claimed green, and is separate from the runner-selected corpus set.
+- Publication readback matched local, tracking and remote refs. Delivery comment
+  `#6443271993` was read back exactly; issues #30 and #22 remain open. Published
+  source is not a new release or verification of an updated Docker artifact.
+
 ## Remaining
 
-- Review, package gate, publication and a delivery note.
 - The same starvation class still exists on two server paths that persist
   synchronously while they hold a tunnel: the ordinary `/api/device-download`
   backup and send-possible marker (`device_download.rs`, the `keep` closure) and

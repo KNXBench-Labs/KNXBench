@@ -175,6 +175,10 @@ struct TestHardware {
     release_write: Notify,
     pid7_fault: Mutex<Option<Pid7Fault>>,
     pid7_reads: Mutex<std::collections::BTreeMap<u8, usize>>,
+    /// Blocks the executor thread once at the first mutation, like a slow
+    /// durable checkpoint, and counts another runtime task's ticks meanwhile.
+    mutation_stall: Mutex<Option<(Duration, Arc<AtomicUsize>)>>,
+    stall_ticks: Mutex<Option<(usize, usize)>>,
 }
 impl TestHardware {
     fn new(data: &Path) -> Arc<Self> {
@@ -196,6 +200,8 @@ impl TestHardware {
             release_write: Notify::new(),
             pid7_fault: Mutex::new(None),
             pid7_reads: Mutex::default(),
+            mutation_stall: Mutex::new(None),
+            stall_ticks: Mutex::new(None),
         })
     }
     /// Replace exactly one later PID 7 answer; read indices count from this call.
@@ -426,6 +432,7 @@ impl TestHardware {
                         BusError::NotImplemented => "not-implemented",
                         BusError::Protocol(_) => "protocol",
                         BusError::NotMulticast(_) => "not-multicast",
+                        BusError::TunnelClosed(_) => "tunnel-closed",
                     }),
                 };
             }
@@ -535,6 +542,13 @@ impl crate::BusTunnel for TestHardwareTunnel {
                 let connection = self.0.connects.load(Ordering::SeqCst);
                 if self.0.checked_connection.swap(connection, Ordering::SeqCst) != connection {
                     self.0.check_durable_backup_before_send();
+                }
+                let stall = self.0.mutation_stall.lock().unwrap().take();
+                if let Some((stall, ticks)) = stall {
+                    let before = ticks.load(Ordering::SeqCst);
+                    std::thread::sleep(stall);
+                    *self.0.stall_ticks.lock().unwrap() =
+                        Some((before, ticks.load(Ordering::SeqCst)));
                 }
                 self.0.writes.fetch_add(1, Ordering::SeqCst);
             }
@@ -1302,3 +1316,5 @@ async fn worker_activity_refusal_reaches_status_without_touching_the_bus() {
 
 #[path = "mounted_failure_diagnostic.rs"]
 mod failure_diagnostic;
+#[path = "mounted_tunnel_liveness.rs"]
+mod tunnel_liveness;

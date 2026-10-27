@@ -99,7 +99,7 @@ fn checked_raw(raw: &str, operation: &Path, raws: &[&str]) -> (Value, String) {
 }
 /// Like `settled`, with a wider budget: a debug-build restore under load can outlast 10 s
 /// while still progressing (observed on the unchanged base as well).
-async fn settled_slow(state: &crate::SharedState, router: &Router, outcome: &str) {
+pub(super) async fn settled_slow(state: &crate::SharedState, router: &Router, outcome: &str) {
     tokio::time::timeout(Duration::from_secs(180), async {
         while !state
             .device_system2
@@ -127,15 +127,15 @@ fn last_checkpoint(journal: &Path) -> Value {
     serde_json::from_slice(&std::fs::read(journal.join(name)).unwrap()).unwrap()
 }
 
-struct Fixture {
-    directory: tempfile::TempDir,
-    hardware: Arc<TestHardware>,
-    state: crate::SharedState,
-    router: Router,
-    device: DeviceId,
+pub(super) struct Fixture {
+    pub(super) directory: tempfile::TempDir,
+    pub(super) hardware: Arc<TestHardware>,
+    pub(super) state: crate::SharedState,
+    pub(super) router: Router,
+    pub(super) device: DeviceId,
 }
 /// Public package, one addressed device with the nondefault PIR value, no data-write pause.
-async fn fixture() -> Fixture {
+pub(super) async fn fixture() -> Fixture {
     let package = std::fs::read(
         std::env::var_os("KNXBENCH_PUBLIC_UP258")
             .expect("set KNXBENCH_PUBLIC_UP258 to the existing read-only public fixture"),

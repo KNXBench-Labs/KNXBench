@@ -26,9 +26,9 @@ from tools.browser_lanes import IMPORT_FROM, mask, parse, references
 
 DECLARATION = re.compile(r'\b(?P<kind>let|var|const)\s+(?P<name>[A-Za-z_$][\w$]*)')
 ORDERED = re.compile(r'\b(?:beforeAll|afterAll)\s*\(|\.describe\.serial\b|\.describe\.configure\s*\(')
-TEST_MATCH = re.compile(r'''testMatch\s*:\s*(\[[^\]]*\]|"[^"]*"|'[^']*')''')
-QUOTED = re.compile(r'''(["'])(.*?)\1''')
+TEST_MATCH_KEY = re.compile(r'(?<![\w$.])testMatch\s*:')
 SPEC_NAME = re.compile(r'(?:\*\*/)?([\w.-]+\.e2e\.ts)')
+DECLARATOR = re.compile(r'\s*([A-Za-z_$][\w$]*)\s*(?=[=,;:]|$)')
 MUTATORS = r'push|pop|shift|unshift|splice|sort|reverse|set|delete|clear|add|fill|copyWithin'
 
 
@@ -46,8 +46,37 @@ def _module_declarations(code: str) -> list[tuple[int, str, str]]:
             depth += 1
         elif char in '}])':
             depth -= 1
-    return [(m.start(), m['kind'], m['name']) for m in DECLARATION.finditer(code)
-            if depths[m.start()] == 0]
+    found = []
+    for m in DECLARATION.finditer(code):
+        if depths[m.start()] == 0:
+            found.append((m.start(), m['kind'], m['name']))
+            found += [(offset, m['kind'], name) for offset, name in _more_declarators(code, m.end())]
+    return found
+
+
+def _more_declarators(code: str, start: int) -> list[tuple[int, str]]:
+    """`, second = ...` names of one declaration statement (`const a = 1, b = 2;`)."""
+    found, depth = [], 0
+    for k in range(start, len(code)):
+        char = code[k]
+        if char in '{[(':
+            depth += 1
+        elif char in '}])':
+            depth -= 1
+            if depth < 0:
+                break
+        elif depth == 0 and char == ';':
+            break
+        elif depth == 0 and char == '\n':
+            before = code[start:k].rstrip()[-1:]
+            after = code[k:].lstrip()[:1]
+            if before not in ',=+-*/&|?:(' and after not in ',.+-*/&|?:':
+                break
+        elif depth == 0 and char == ',':
+            name = DECLARATOR.match(code, k + 1)
+            if name:
+                found.append((name.start(1), name[1]))
+    return found
 
 
 def _imported_bindings(source: str, code: str) -> set[str]:
@@ -61,7 +90,7 @@ def _imported_bindings(source: str, code: str) -> set[str]:
             for item in named[1].split(','):
                 item = item.strip()
                 if item and not item.startswith('type '):
-                    names.add(item.split(' as ')[-1].strip())
+                    names.add(re.split(r'\s+as\s+', item)[-1].strip())
         default = re.match(r'([A-Za-z_$][\w$]*)\s*(?:,|$)', clause)
         namespace = re.search(r'\*\s*as\s+([A-Za-z_$][\w$]*)', clause)
         for found in (default, namespace):
@@ -82,7 +111,7 @@ def hazards(source: str) -> list[tuple[int, str]]:
     for name in names:
         word = r'(?<![\w$.])' + re.escape(name)
         path = r'(?:\.[\w$]+|\[[^\]\n]+\])'
-        mutation = re.compile(word + path + r'*\s*(?:\.(?:' + MUTATORS + r')\(|' + path
+        mutation = re.compile(word + path + r'*\s*(?:\.(?:' + MUTATORS + r')\s*\(|' + path
                               + r'\s*(?:=(?!=)|\+=|-=|\*=|/=|\+\+|--))')
         whole = re.compile(r'(?:Object\.assign\s*\(\s*|delete\s+)' + re.escape(name) + r'\b')
         for pattern in (mutation, whole):
@@ -91,17 +120,76 @@ def hazards(source: str) -> list[tuple[int, str]]:
     return sorted(found)
 
 
+def _literal_tokens(source: str, code: str, start: int) -> list[tuple[str, str]]:
+    """Tokens after `start`: ('str', value) or ('code', char); comments are skipped.
+
+    `code` is the masked source, so a blank over non-blank source is a comment,
+    string, regex or template; anything but a comment or quoted string stays opaque.
+    """
+    tokens: list[tuple[str, str]] = []
+    k = start
+    while k < len(source):
+        if not code[k].isspace():
+            tokens.append(('code', code[k]))
+            k += 1
+        elif source[k] in '"\'':
+            end = k + 1
+            while source[end] != source[k]:
+                end += 2 if source[end] == '\\' else 1
+            tokens.append(('str', source[k + 1:end]))
+            k = end + 1
+        elif source.startswith('//', k):
+            k = source.find('\n', k)
+            k = len(source) if k < 0 else k
+        elif source.startswith('/*', k):
+            k = source.index('*/', k + 2) + 2
+        elif source[k].isspace():
+            k += 1
+        else:
+            tokens.append(('code', source[k]))  # regex or template text
+            k += 1
+        if len(tokens) > 4096:
+            break
+    return tokens
+
+
+def _selection(source: str) -> list[str] | None:
+    """Literals of the one executable `testMatch:` RHS if it is exactly a string or array of strings."""
+    code = mask(source)
+    keys = list(TEST_MATCH_KEY.finditer(code))
+    if len(keys) != 1:
+        return None
+    tokens = _literal_tokens(source, code, keys[0].end())
+    kinds = [kind for kind, _ in tokens]
+    if tokens[:1] and kinds[0] == 'str':
+        values, rest = [tokens[0][1]], tokens[1:]
+    elif tokens[:1] == [('code', '[')]:
+        values, k = [], 1
+        while k < len(tokens) and kinds[k] == 'str':
+            values.append(tokens[k][1])
+            k += 1
+            if tokens[k:k + 1] == [('code', ',')]:
+                k += 1
+            elif tokens[k:k + 1] != [('code', ']')]:
+                return None
+        if tokens[k:k + 1] != [('code', ']')]:
+            return None
+        rest = tokens[k + 1:]
+    else:
+        return None
+    if rest and rest[0] not in (('code', ','), ('code', '}'), ('code', ')')):
+        return None
+    return values or None
+
+
 def production_specs(app: Path, configs: tuple[str, ...]) -> list[str]:
     """Read explicit testMatch names; refuse globs/expressions rather than partial coverage."""
     files: set[str] = set()
     for config in configs:
         text = (app / f'playwright.{config}.config.ts').read_text(encoding='utf-8')
-        match = TEST_MATCH.search(text)
-        value = match[1] if match else ''
-        literals = QUOTED.findall(value)
-        remainder = QUOTED.sub('', value).strip('[], \t\r\n')
-        names = [SPEC_NAME.fullmatch(literal) for _, literal in literals]
-        if not names or remainder or not all(names):
+        literals = _selection(text)
+        names = [SPEC_NAME.fullmatch(literal) for literal in literals or []]
+        if not names or not all(names):
             raise ValueError(f'playwright.{config}.config.ts must name only explicit spec files')
         files.update(name[1] for name in names if name is not None)
     return sorted(files)

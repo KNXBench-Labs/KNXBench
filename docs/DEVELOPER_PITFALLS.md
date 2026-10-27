@@ -9,6 +9,14 @@ already found lying in the grass.
 
 ## Gates
 
+- **Production functional cases run independently within one file (ADR-0155).**
+  Only the reviewed production functional lane opts into `--fully-parallel`;
+  default and exclusive lanes keep file-local ordering. Do not introduce shared
+  test/module state or ordering hooks. `tools/production_lanes.py` and its owning
+  tool test catch common hazards, but aliases and hidden effects still need
+  review. Config selections must use complete explicit spec literals, not an
+  apparently literal array extended by an expression. A direct targeted web
+  measurement does not run the package tool tests; invoke the guard separately.
 - **Do not move a `CARGO_TARGET_DIR` between gates.** Tauri's build script caches
   absolute paths under `target/debug/build/tauri-*/out`; after a move, clippy and the
   workspace tests stop at `failed to read plugin permissions` for `knx-desktop`. Keep

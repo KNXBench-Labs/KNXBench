@@ -85,6 +85,34 @@ limitations (including possible false positives). A new fixture or spec still
 needs review. A direct targeted measurement does not execute the package gate's
 tool tests; invoke the scanner separately if using only that entry point.
 
+## Independent review
+
+The first whole-feature review of `51ee72c1b` returned **BLOCK** on one
+IMPORTANT finding: lexical `testMatch` extraction accepted a literal prefix of a
+computed selection (for example an array followed by `.concat(...)`). Actual
+Playwright scheduling would include the extra specs while the guard omitted
+them. No current config used that form; this was a demonstrated regression-net
+admission defect, not an observed current browser omission. The correction
+locates executable keys in masked code and admits only a complete literal RHS;
+trailing expressions and ambiguous keys are refused. Focused independent
+re-review is pending.
+
+Two MINOR findings requested ordinary syntax hardening (comma declarators,
+whitespace before mutator calls, multiline import aliases) and negative
+flag-placement tests for exclusive/listing/default orchestration. These are
+covered by the correction. Additional review mutants showed missing
+characterization for `afterAll` and `clear`; new tests cover both. The first
+58-test corrected run is green, as is an independent parent rerun. The worker's
+original RED and intermediate failed GREEN attempt are retained, including its
+corrected tokenizer issue and two corrected test-line expectations. No failed
+attempt is relabelled as acceptance.
+
+These findings do not invalidate the retained timing runs or establish an
+existing spec dependency. They require acceptance of the corrected guard on
+the final package candidate. The original review and probes remain private.
+Quoted config keys, destructured declarations and generic declaration syntax
+are not newly admitted by this bounded correction.
+
 ## Remaining acceptance
 
 Independent whole-feature review, any required fix/re-review, a main-first

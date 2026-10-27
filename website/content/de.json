@@ -132,7 +132,7 @@
   "hl_history_note": "Undo/Redo · Benannte Versionen · Zeitleiste",
   "hl_history_alt": "KNXBench in Graphite: der Dialog Projekthistorie des fiktiven Sample house mit der benannten Version Before the kitchen redesign.",
   "hl_wizard_title": "Assistenten, die ihre Hausaufgaben zeigen.",
-  "hl_wizard_body": "Der Assistent für neue Projekte legt Bereiche, Linien, Räume und Gruppenbereiche in einem Durchgang an. Der Geräte-Assistent nimmt ein Produkt aus dem Katalog, setzt es auf eine Linie und lässt den Server Namen und freie Individualadressen vorab anzeigen, bevor irgendetwas entsteht. Zusammenfassung prüfen, bestätigen, fertig. Keine Überraschungen, keine Adresskollisionen.",
+  "hl_wizard_body": "Der Assistent für neue Projekte legt Bereiche, Linien, Räume und Gruppenbereiche in einem Durchgang an. Der Geräte-Assistent nimmt ein Produkt aus dem Katalog, setzt es auf eine Linie und lässt den Server Namen und freie Individualadressen vorab anzeigen, bevor irgendetwas entsteht. Zusammenfassung prüfen, bestätigen, fertig. Keine Überraschungen, keine Adresskollisionen im Projekt.",
   "hl_wizard_note": "Neues Projekt · Gerät hinzufügen · Erst die Vorschau",
   "hl_wizard_alt": "KNXBench in Graphite: der Prüfschritt des Assistenten Gerät hinzufügen; ein Gerät, Dining room actuator, wird mit der freien Adresse 1.1.3 angelegt.",
   "hl_params_title": "Parameter, ordentlich platziert.",

@@ -41,7 +41,7 @@ is through, the characters move again as before.
   the stills with `release-media.shots.ts` is optional.
 
 Acceptance (Chromium only): media capture 1/1 passed on the tagged server; independent
-review BLOCK (overclaims, background-tab typing, test gaps) fixed; website unittest 30/30;
+review BLOCK (overclaims, background-tab typing, test gaps) fixed, re-review APPROVE; website unittest 30/30;
 offline browser recipes on the preview build 679 checks in 9 recipes and on the release
 build 373 checks in 4 recipes, zero page errors and zero foreign requests; six
 `headlines.js` mutants (hidden/pagehide, blink cancel, pause, roll failure, h3 rolls) all

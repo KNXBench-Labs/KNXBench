@@ -100,3 +100,18 @@ the control. Four source mutants each fail a named case: the pane delta, the
 splitter delta, the splitter's observed height and its interaction-time
 height left unscaled. Rounding the pane width to whole layout pixels is not
 discriminated by these scales (60 / 0.8 and 60 / 1.5 are whole numbers).
+
+## Update 27 October 2026: first bounded native zoom controls
+
+The actual published Alpha 17 AppImage now has isolated Wayland/WebKitGTK
+input evidence: shortcuts reached 80%/150%, keyboard Right increased table
+column/navigation separator values at both scales, navigation hide/show worked
+at 150%, and all three File submenus exposed their items at both scales in the
+tested window. Stored zoom and navigation width survived process restart.
+[Native record and exclusions](../status/2026-10-27-wp11-native-acceptance.md).
+
+This supersedes the blanket absence of native evidence above, not the full
+lifting conditions. Pointer-drag distance, complete table fit/announced widths,
+hover, further window sizes/themes, visual clipping and actual screen-reader
+output remain unverified. Native AT-SPI control/value observations and stored
+settings are not a full rendering-parity result; the ledger stays unchanged.

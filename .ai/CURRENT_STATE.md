@@ -1,6 +1,19 @@
 # Restart snapshot
 
-Updated: 2026-10-27 00:45 CET. Operational snapshot, not an append-only journal.
+Updated: 2026-10-27 06:14 CET. Operational snapshot, not an append-only journal.
+
+## WP-11 native acceptance / owner decisions (REVIEW PENDING, observed 2026-10-27 06:14 CET)
+- Owner confirmed all 11 decisions; task descriptions reconciled without runtime changes.
+- Own branch `verify/wp11-native-20261027`, worktree `<sources>/knxbench-wp11-native-20261027`.
+- Actual Alpha17 AppImage: retained assertions passed; 130 logged operations, not 130 tests; closes exit0.
+- Loopback-only namespace, masked real home/projects, isolated HOME/XDG; no bus or real-project edits.
+- Native Save/Cancel/Replace, notes/reopen/restart, focus, zoom and bounded controls recorded.
+- WP-11 stays OPEN: positive source-bound editors, capture export, pointer/hover/full matrix;
+  Orca/Firefox absent, GPU/vendor acceptance unverified. No native runner remains.
+- Evidence `<profile>/evidence/wp11-native-20261027/`; public acceptance record and receipt drafted.
+- Next: independent review, maintained docs package gate, main-first integration and verified push.
+- Preserve foreign GATE-01 runner/plumbing/tests/ADR-0155, stats track and stale dirty root.
+- No release/deployment/key/vendor/contact/cleanup of foreign state. Prior tracks preserved below.
 ## GATE-01 production browser lanes (DELIVERED, observed 2026-10-27 00:45 CET)
 - PUBLISHED main-first merge `745932994` (feature `1baff6c3a`, fixes `a91ba795f`); readbacks equal.
 - Review + re-review APPROVE; merged gate 11/11 green, Vitest4553, browser925+production557.

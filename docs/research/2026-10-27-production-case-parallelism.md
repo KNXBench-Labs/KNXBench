@@ -113,6 +113,16 @@ the final package candidate. The original review and probes remain private.
 Quoted config keys, destructured declarations and generic declaration syntax
 are not newly admitted by this bounded correction.
 
+The focused review of `644fb69f1` returned APPROVE, confirmed R1/R2/R3 fixed,
+and raised two nonblocking MINOR findings. Both are corrected before the final
+gate: quoted/computed duplicate `testMatch` keys are explicitly refused when
+their colon is executable (comment/string decoys remain harmless), and RHS
+tokens are consumed lazily only through the immediate decision token. Unrelated
+later template/regex text is no longer tokenized as part of the selection.
+The two regressions failed on the reviewed input (four refusal assertions and
+three tokenizer errors); all 60 focused tests pass after correction. Final
+confirmation review and integrated acceptance are pending.
+
 ## Remaining acceptance
 
 Independent whole-feature review, any required fix/re-review, a main-first

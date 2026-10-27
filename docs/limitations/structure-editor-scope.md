@@ -92,3 +92,19 @@ the direction shown in that row (default Send, the same default as the
 keyboard path); an address the device cannot link is refused locally. Verified
 in headless Chromium with real HTML5 drag events, not in native WebKitGTK.
 <!-- END retained catalogue record -->
+
+## Update 2026-10-27: explicit catalogue installation target
+
+The catalogue workspace no longer silently targets the first installation when
+several installations are open and no line is selected. A labelled
+**Installation** selector starts without a choice; Create and Enter are blocked
+until a current installation is selected. Removing that installation clears the
+choice rather than falling back, even if only one installation remains; that
+case requires a fresh explicit choice. Lost-response retries retain the original
+request and installation instead of rebuilding them from current controls.
+
+With a single installation the request stays unchanged. A selected line decides
+its installation; with no open project, creation is disabled. The catalogue
+workspace still sends no building part. These controls use the existing
+validated, undoable create command and do not add cross-installation transfers,
+a new site model or native-platform acceptance.

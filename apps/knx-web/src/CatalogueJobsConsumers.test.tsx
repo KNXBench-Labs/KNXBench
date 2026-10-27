@@ -37,7 +37,7 @@ it("keeps actual wizard origin across product-step detachment, dismissal, and co
  setup();const api=fakeApi();const c=new CatalogueJobsController(api);let commandId="";
  api.apply.mockImplementation(async(_owner,command)=>{commandId=command.commandId;const s=status("ready","3");return {...s,phase:"waitingForWriter",apply:{state:"accepted",acceptedCommandId:commandId},lease:{kind:"working",deadlineTickMs:"94000"}};});
  const close=vi.fn();
- const render=(wizard:boolean)=>root.render(<StrictMode><CatalogueJobsProvider controller={c}><CatalogueJobsRootNotice /><CatalogBrowser lineId={null} active={false} onCreated={()=>{}} onClose={()=>{}} />{wizard&&<DeviceWizard tree={tree} target={{lineId:null}} product={product} onCreated={()=>{}} onOpenDevice={()=>{}} onClose={close} />}</CatalogueJobsProvider></StrictMode>);
+ const render=(wizard:boolean)=>root.render(<StrictMode><CatalogueJobsProvider controller={c}><CatalogueJobsRootNotice /><CatalogBrowser lineId={null} installations={tree.installations} active={false} onCreated={()=>{}} onClose={()=>{}} />{wizard&&<DeviceWizard tree={tree} target={{lineId:null}} product={product} onCreated={()=>{}} onOpenDevice={()=>{}} onClose={close} />}</CatalogueJobsProvider></StrictMode>);
  await act(async()=>render(true));
  const backups=host.querySelector<HTMLDetailsElement>(".catalog-backups")!;
  await act(async()=>{backups.open=true;backups.dispatchEvent(new Event("toggle"));});

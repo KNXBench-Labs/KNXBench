@@ -51,11 +51,12 @@ function make(id: string, over: Partial<CatalogItem> = {}): CatalogItem {
     hardware2programRefId: `HP-${id}`, nameLanguage: null, visibleDescriptionLanguage: null, sourceLanguage: null, ...over };
 }
 const settle = () => act(async () => { await new Promise((resolve) => setTimeout(resolve, 250)); });
+const SINGLE_INSTALLATION = [{ id: 0, name: "Main house" }];
 async function render(onCreated = vi.fn(), onWizard?: (item: CatalogItem) => void) {
   host = document.createElement("div");
   document.body.appendChild(host);
   const root = createRoot(host);
-  await act(async () => { root.render(<CatalogBrowser lineId={null} onCreated={onCreated} onClose={vi.fn()} onWizard={onWizard} />); });
+  await act(async () => { root.render(<CatalogBrowser lineId={null} installations={SINGLE_INSTALLATION} onCreated={onCreated} onClose={vi.fn()} onWizard={onWizard} />); });
   await settle();
   return root;
 }
@@ -283,7 +284,7 @@ describe("catalogue results table", () => {
     try {
       await press("ArrowDown");
       expect(status().textContent).not.toBe("");
-      await act(async () => root.render(<CatalogBrowser lineId={null} active={false} onCreated={vi.fn()} onClose={vi.fn()} />));
+      await act(async () => root.render(<CatalogBrowser lineId={null} installations={SINGLE_INSTALLATION} active={false} onCreated={vi.fn()} onClose={vi.fn()} />));
       expect(status().textContent, "an off-screen workspace stays silent").toBe("");
     } finally { await act(async () => root.unmount()); }
   });

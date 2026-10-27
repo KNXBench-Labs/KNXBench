@@ -1474,7 +1474,7 @@ function AppBody({ manifestVersion = packageVersion, session, editorReturn = fal
         </section>
       )}
       {catalogTarget && <CatalogBrowser lineId={catalogTarget.lineId} active={!logOpen && !monitorOpen && view === "catalog"}
-        serverIncarnation={tree?.server_incarnation} onCreated={handleTreeUpdate} onClose={() => { setCatalogTarget(null); setView("overview"); }}
+        serverIncarnation={tree?.server_incarnation} installations={tree?.installations ?? []} onCreated={handleTreeUpdate} onClose={() => { setCatalogTarget(null); setView("overview"); }}
         onWizard={tree ? (item) => setDeviceWizard({ target: { lineId: catalogTarget.lineId }, product: item }) : undefined} />}
       {tree && <div hidden={logOpen || monitorOpen || view !== "devices"}>
         <DevicesWorkspace key={loadKey} tree={tree} active={!logOpen && !monitorOpen && view === "devices"}

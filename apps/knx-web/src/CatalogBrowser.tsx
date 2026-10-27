@@ -8,6 +8,7 @@ import type {
   CreationDiagnostic,
   CreatedCatalogDevice,
 } from "./api";
+import type { InstallationNode } from "./bindings/InstallationNode";
 import type { ProjectTree } from "./bindings/ProjectTree";
 
 import { useProductLanguage } from "./productLanguage";
@@ -44,8 +45,10 @@ export default function CatalogBrowser(props: {
   serverIncarnation?: string;
   /** ADR-0093: continue with the add-device wizard for the selected item. */
   onWizard?: (item: CatalogItem) => void;
+  /** ADR-0093: installations of the open project, live; empty = no project open. */
+  installations: ReadonlyArray<Pick<InstallationNode, "id" | "name">>;
 }) {
-  const { lineId, active = true, onCreated, onClose, serverIncarnation, onWizard } = props;
+  const { lineId, active = true, onCreated, onClose, serverIncarnation, onWizard, installations } = props;
   const t = useTranslate();
   const jobs = useOptionalCatalogueJobs();
   const catalogueRevision = jobs?.state.catalogueRevision ?? 0n;
@@ -77,6 +80,25 @@ export default function CatalogBrowser(props: {
   // MODEL-04: both opt-in; allocation needs a target line to take addresses from.
   const [allocateAddresses, setAllocateAddresses] = useState(false);
   const [uniqueNames, setUniqueNames] = useState(false);
+  // The installation chosen for a line-less device; "removed" marks a choice that vanished from the
+  // live list and stays until the user picks again, so the sole survivor is never a silent fallback.
+  const [chosenInstallation, setChosenInstallation] = useState<number | "removed" | null>(null);
+  const choiceInList = typeof chosenInstallation === "number" && installations.some((i) => i.id === chosenInstallation);
+  const choiceRemoved = lineId === null
+    && (chosenInstallation === "removed" || (typeof chosenInstallation === "number" && !choiceInList));
+  const validChoice = lineId === null && choiceInList;
+  const installationChoice = lineId === null && installations.length > 0
+    && (installations.length > 1 || chosenInstallation !== null);
+  // A line names its own installation; without one, a closed project, a lost choice or an unmade choice blocks.
+  const targetReady = lineId !== null ? installations.length > 0
+    : installations.length > 0 && !choiceRemoved && (installations.length === 1 || validChoice);
+  const targetInstallation = validChoice ? installations.find((i) => i.id === chosenInstallation) : undefined;
+  useEffect(() => {
+    // Latch the loss before the id can reappear, so a removed choice never returns.
+    // A line owns the target; returning to line-less creation starts a fresh choice.
+    if (lineId !== null && chosenInstallation !== null) setChosenInstallation(null);
+    else if (typeof chosenInstallation === "number" && !choiceInList) setChosenInstallation("removed");
+  }, [chosenInstallation, choiceInList, lineId]);
   // DATA-03: the exact request whose outcome is unknown, kept for a resend
   // with the same requestId; `retry` says whether that resend is offered.
   const pendingRef = useRef<{ args: CreateArgs; incarnation: string } | null>(null);
@@ -202,9 +224,11 @@ export default function CatalogBrowser(props: {
   }
 
   async function create() {
-    if (!selected || name.trim() === "" || !validQuantity || createInFlightRef.current || createdWithDiagnostics) return;
+    if (!selected || name.trim() === "" || !validQuantity || createInFlightRef.current || createdWithDiagnostics
+      || !targetReady) return;
     await submit([lineId, selected.id, name.trim(), quantityNumber, newRequestId(),
-      { allocateAddresses: allocateAddresses && lineId !== null, uniqueNames }], serverIncarnation);
+      { allocateAddresses: allocateAddresses && lineId !== null, uniqueNames,
+        ...(targetInstallation && installations.length > 1 ? { installationId: targetInstallation.id } : {}) }], serverIncarnation);
   }
 
   async function retryPending() {
@@ -338,7 +362,7 @@ export default function CatalogBrowser(props: {
               <input type="number" min="1" max="32" step="1" value={quantity}
                 aria-label={t("catalog.quantity")} onChange={(e) => setQuantity(e.target.value)} />
             </label>
-            <button onClick={create} disabled={name.trim() === "" || !validQuantity || creating}>
+            <button onClick={create} disabled={name.trim() === "" || !validQuantity || creating || !targetReady}>
               {creating ? t("catalog.creating") : t("catalog.create")}
             </button>
             {onWizard && (
@@ -356,6 +380,18 @@ export default function CatalogBrowser(props: {
               {t("catalog.allocateAddresses")}
             </label>
             {lineId === null && <small id="catalog-allocate-hint">{t("catalog.allocateNeedsLine")}</small>}
+            {installationChoice && (
+              <label className="catalog-installation">{t("catalog.installation")}
+                <select aria-label={t("catalog.installation")} required aria-invalid={!validChoice}
+                  aria-describedby={validChoice ? undefined : "catalog-installation-hint"} value={validChoice ? String(chosenInstallation) : ""}
+                  disabled={creating} onChange={(e) => { const v = e.target.value; setChosenInstallation((prev) => v !== "" ? Number(v) : prev === "removed" ? prev : null); }}>
+                  <option value="">{t("catalog.installationPlaceholder")}</option>
+                  {installations.map((i) => <option key={i.id} value={String(i.id)}>{i.name || `#${i.id}`}</option>)}
+                </select>
+              </label>
+            )}
+            {installations.length === 0 && <small role="status">{t("catalog.noProject")}</small>}
+            {installationChoice && !validChoice && <small id="catalog-installation-hint" role="status">{t("catalog.installationRequired")}</small>}
             <label>
               <input type="checkbox" name="uniqueNames" checked={uniqueNames}
                 onChange={(e) => setUniqueNames(e.target.checked)} />
@@ -370,6 +406,7 @@ export default function CatalogBrowser(props: {
               ))}</ul>
             )}
             <p>{lineId === null ? t("catalog.noTargetLine") : t("catalog.targetLine", { lineId })}</p>
+            {targetInstallation && <p>{t("catalog.targetInstallation", { name: targetInstallation.name || `#${targetInstallation.id}` })}</p>}
             <p>{allocateAddresses && lineId !== null ? t("catalog.addressAllocated") : t("catalog.addressUnassigned")}</p>
             {uniqueNames && <p>{t("catalog.uniqueNamesNote")}</p>}
           </section>

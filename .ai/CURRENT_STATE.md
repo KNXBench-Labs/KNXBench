@@ -1,6 +1,6 @@
 # Restart snapshot
 
-Updated: 2026-10-27 07:10 CET. Operational snapshot, not an append-only journal.
+Updated: 2026-10-27 06:57 CET. Operational snapshot, not an append-only journal.
 ## WP-11 native acceptance / owner decisions (DELIVERED, observed 2026-10-27 06:34 CET)
 - PUBLISHED main-first merge `cc9d8fab2`, feature `f4f112fe5`; local/tracking/live equal.
 - Claude review + correction re-review APPROVE; branch/integrated13 gates green/frozen.
@@ -13,11 +13,13 @@ Updated: 2026-10-27 07:10 CET. Operational snapshot, not an append-only journal.
 - Evidence `<profile>/evidence/wp11-native-20261027/`; result-doc gate/publication and owned
   evidence archival/cleanup remain. Root stays stale/dirty; preserve all foreign tracks.
 - No release/deployment/key/vendor/foreign cleanup authority.
-## GATE-01 SIGTERM fixture flake (IN PROGRESS, observed 2026-10-27 07:10 CET)
-- Owner: this WebUI; branch `fix/gate01-sigterm-fixture-20261027`, own worktree; test-only change.
-- Two pidfd-identity fixtures in `tools/tests/test_browser_tmp_launch.py` now event-bound.
-- Review1 BLOCK C1 (cleanup fallback no longer reached) fixed: forced first timeout + assertion;
-  Popen-signal fallback mutant fails, 5 s stall probe passes. Next: confirmation, gate, push.
+## GATE-01 SIGTERM fixture flake (DELIVERED, observed 2026-10-27 06:57 CET)
+- PUBLISHED main-first `0791ddb77` on `909412381` (feature `081ccb1a5`, fix `953b2c9b8`);
+  local/tracking/live equal. Test-only change; review C1 fixed, confirmation APPROVE.
+- Integrated gate10/10 green/frozen: tool461 registered,455 passed,6 skipped; no runtime suites selected.
+- Event-bound fixtures retain the fallback regression oracle; old fallback mutant fails, stall passes.
+- Feature tree/branch retired; evidence `<profile>/evidence/gate01-sigterm-flake-20261027/`.
+- Next: finish result-doc publication, retire integration tree; other GATE-01 follow-ups stay open.
 ## GATE-01 production case parallelism (DELIVERED, observed 2026-10-27 06:35 CET)
 - PUBLISHED main-first merge `3af5ea9e4` on `277d8eca3` (feature `51ee72c1b`, fixes `644fb69f1`,
   `c7c8877a7`); local/tracking/live readbacks equal.

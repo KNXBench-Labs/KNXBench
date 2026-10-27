@@ -1,6 +1,6 @@
 # Restart snapshot
 
-Updated: 2026-10-27 06:57 CET. Operational snapshot, not an append-only journal.
+Updated: 2026-10-27 07:15 CET. Operational snapshot, not an append-only journal.
 ## WP-11 native acceptance / owner decisions (DELIVERED, observed 2026-10-27 06:34 CET)
 - PUBLISHED main-first merge `cc9d8fab2`, feature `f4f112fe5`; local/tracking/live equal.
 - Claude review + correction re-review APPROVE; branch/integrated13 gates green/frozen.
@@ -13,20 +13,28 @@ Updated: 2026-10-27 06:57 CET. Operational snapshot, not an append-only journal.
 - Evidence `<profile>/evidence/wp11-native-20261027/`; result-doc gate/publication and owned
   evidence archival/cleanup remain. Root stays stale/dirty; preserve all foreign tracks.
 - No release/deployment/key/vendor/foreign cleanup authority.
+## GATE-01 parallelism assessment (CLOSED, observed 2026-10-27 07:15 CET)
+- Default case parallelism not admitted: four-worker historical model has little granularity gain;
+  no fresh timing or exhaustive independence proof. Cross-suite concurrency needs separate design.
+- Policy unchanged: aggregate4 functional workers, exclusive isolation, sequential production suites.
+- Audit source `448a647a0`; retained run `3af5ea9e4`,925default+557production suite executions.
+- Record: `docs/research/2026-10-27-default-browser-parallelism-assessment.md`.
+- Evidence `<profile>/evidence/gate01-default-audit-20261027/`; no runtime worker remains.
+- Next: no further small speedup admitted; cold8-worker and older timeout causes stay open.
 ## GATE-01 SIGTERM fixture flake (DELIVERED, observed 2026-10-27 06:57 CET)
 - PUBLISHED main-first `0791ddb77` on `909412381` (feature `081ccb1a5`, fix `953b2c9b8`);
   local/tracking/live equal. Test-only change; review C1 fixed, confirmation APPROVE.
 - Integrated gate10/10 green/frozen: tool461 registered,455 passed,6 skipped; no runtime suites selected.
 - Event-bound fixtures retain the fallback regression oracle; old fallback mutant fails, stall passes.
 - Feature tree/branch retired; evidence `<profile>/evidence/gate01-sigterm-flake-20261027/`.
-- Next: finish result-doc publication, retire integration tree; other GATE-01 follow-ups stay open.
+- Result docs `448a647a0` published/gate10 green; own feature/integration trees and branch retired.
 ## GATE-01 production case parallelism (DELIVERED, observed 2026-10-27 06:35 CET)
 - PUBLISHED main-first merge `3af5ea9e4` on `277d8eca3` (feature `51ee72c1b`, fixes `644fb69f1`,
   `c7c8877a7`); local/tracking/live readbacks equal.
 - Review BLOCK R1 fixed; re-review + confirmation APPROVE. Gate 11/11 green, Vitest4553,
   browser925+production557; production stages 681.7 s -> 455.7 s (ADR-0155).
 - Evidence `<profile>/evidence/gate01-fullypar-20261027/`; own trees retired after result docs.
-- Next: GATE-01 remainder (cross-suite parallelism, default-lane case parallelism) unreviewed.
+- Further parallelism assessed above; no new scheduling policy admitted.
 ## GATE-01 production browser lanes (DELIVERED, observed 2026-10-27 00:45 CET)
 - PUBLISHED merge `745932994` (ADR-0154, 850.3 -> 681.7 s); superseded by the entry above.
 ## Alpha 17 release (PUBLISHED, observed 2026-10-26 22:53 CET)

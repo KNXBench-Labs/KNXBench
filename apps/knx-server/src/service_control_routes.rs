@@ -291,21 +291,25 @@ async fn write(
         authorisation,
         body.enable,
         |before| {
-            let path = write_backup(
-                &state.data_dir.join("device-backups"),
-                address,
-                before.before.mask.0,
-                before.before.raw,
-                before.device_control,
-            )
-            .map_err(|e| e.to_string())?;
-            backup_path = Some(path);
-            // The protocol invokes this callback immediately before its
-            // write. A transport failure after here cannot prove no send.
-            activity
-                .mark_send_possible()
-                .map_err(|_| "activity write intent unavailable; not sent".to_string())?;
-            Ok(())
+            // Both records are durable (fsync) while the tunnel is open: keep
+            // them off the tunnel's runtime workers (S2-04, issue #30), but
+            // only them, so the request stays cancellable everywhere else.
+            crate::tunnel_workers::blocking_off_tunnel_workers(|| {
+                let path = write_backup(
+                    &state.data_dir.join("device-backups"),
+                    address,
+                    before.before.mask.0,
+                    before.before.raw,
+                    before.device_control,
+                )
+                .map_err(|e| e.to_string())?;
+                backup_path = Some(path);
+                // The protocol invokes this callback immediately before its
+                // write. A transport failure after here cannot prove no send.
+                activity
+                    .mark_send_possible()
+                    .map_err(|_| "activity write intent unavailable; not sent".to_string())
+            })
         },
     )
     .await;

@@ -86,15 +86,45 @@ software and loopback only: no real gateway, bus or device.
   `#6443271993` was read back exactly; issues #30 and #22 remain open. Published
   source is not a new release or verification of an updated Docker artifact.
 
+## Ordinary download and service-control (follow-up package)
+
+Source reading on `ccc69d93f` found two further server paths that persist
+synchronously while they hold a tunnel, and no third:
+
+- `/api/device-download` (`device_download.rs`): the `keep` closure writes the
+  pre-write backup and the send-possible journal row; after the transfer the
+  worker records the result, the settler's receipt, the check start and the
+  check result while the tunnel stays open for the read-only post-download check.
+- `/api/device/service-control` `POST`: its pre-write callback writes the
+  property backup and the send-possible journal row just before the property write.
+
+Serial-number lookup/write, the service-control read, device comparison and
+diagnostics persist nothing between frames; individual-address programming only
+settles the in-memory project before its disconnect. They are unchanged.
+
+The fix moves the System-2 helper to `tunnel_workers.rs` and adds a second shape:
+
+1. The ordinary download task runs as a whole through `off_tunnel_workers`, as
+   the System-2 executors already do. Nothing in production aborts that task;
+   its stop is the existing `DownloadStop` token.
+2. The service-control callback runs only its two durable records through
+   `blocking_off_tunnel_workers`. The HTTP request stays cancellable at every
+   other await point, so a dropped request still leaves the activity `unknown`
+   (the existing cancellation tests keep passing).
+
+Software and loopback evidence only, on a one-worker `multi_thread` runtime:
+a synchronous stall where the download keeps its backup, and an exclusive SQLite
+lock on the real activity history held while the service-control callback writes
+its send-possible row, both leave a spawned ticker running (each test requires at
+least ten ticks during the stall). Reverting either call site, or either helper to
+its inline path, makes the matching test fail with one or two ticks. No identity,
+backup, consent, cancellation or read-back rule changes; no gateway, bus or device.
+Not examined: other request handlers that block a runtime worker while a different
+operation holds a tunnel (for example a project save during a bus monitor session).
+
 ## Remaining
 
-- The same starvation class still exists on two server paths that persist
-  synchronously while they hold a tunnel: the ordinary `/api/device-download`
-  backup and send-possible marker (`device_download.rs`, the `keep` closure) and
-  the service-control backup (`service_control_routes.rs`). They are not
-  changed here; they need the same `off_tunnel_workers` treatment with their own
-  tests.
-- A reporter re-test on a build that contains the fix. The new closure cause in
+- A reporter re-test on a build that contains both fixes. The new closure cause in
   the private journal, the checkpoint timestamps and the container CPU count
   would show whether the hypothesis held.
 - The hardware outcome stays in [WP-12](WP-12-field-evidence-and-owner-acceptance.md)

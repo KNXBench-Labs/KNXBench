@@ -36,6 +36,17 @@ first timeout and asserts the fallback ran. Reinstating the earlier Popen-signal
 fallback in memory still fails it. This closes that flake only; it says nothing
 about the older SIGTERM timeouts above.
 
+Delivered as main-first merge `0791ddb77` on `909412381` (feature `081ccb1a5`,
+review correction `953b2c9b8`). Independent review first blocked on a lost
+cleanup-fallback oracle; the corrected test forces its first timeout and the
+confirmation review approved it. The integrated change-scoped gate passed
+10/10 stages with frozen inputs and no touched or unchecked user data:
+461 registered tool tests, 455 passed and 6 optional skips. No additional Rust,
+browser, bindings or corpus execution was selected for this test-only change.
+Local, tracking and live `main` matched after publication. Original failed
+attempts, stall probes, fallback mutation and accepted receipts remain in
+`<profile>/evidence/gate01-sigterm-flake-20261027/`.
+
 ## Known boundary
 
 Killing the stage supervisor with SIGKILL can still orphan children; see the

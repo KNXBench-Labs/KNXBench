@@ -502,24 +502,27 @@ is the remaining copy defect.
 ### CSV import does not manage group ranges
 
 - **Affected:** the group-address CSV import.
-- **Limitation:** explicit, preview-confirmed readdress/delete is supported,
-  but import does not create or restructure group ranges. Derived columns are
-  validated read-only, and there are no description or comment columns.
+- **Limitation:** native CSV supports explicit, preview-confirmed readdress/delete,
+  but import does not create or restructure group ranges. The additional fixed
+  column profiles are address-only: range rows are reported as not imported,
+  DPT is read-only, and nonempty descriptions reject the entire file.
 - **Consequence:** CSV can perform safe bulk address edits, but it is not a
   range-hierarchy or replacement/synchronisation format. Missing rows never
   imply deletion.
 - **Details:** [§39](../KNOWN_LIMITATIONS.md#39-csv-import-never-re-addresses-deletes-or-manages-group-ranges),
   [§40](../KNOWN_LIMITATIONS.md#40-csv-export-only-columns-are-never-applied-on-import-and-there-are-no-descriptioncomment-columns)
 
-### The CSV format is KNXBench's own
+### CSV export stays native; column-profile import is bounded
 
-- **Affected:** exchanging group addresses with ETS.
-- **Limitation:** the columns are this application's design. No
-  interoperability with ETS's own group-address CSV or XML export has been
-  verified.
-- **Consequence:** do not assume an ETS import will accept the file.
-- **Workaround:** a spreadsheet re-arranged by hand, if you need the other
-  direction.
+- **Affected:** exchanging group addresses with other applications.
+- **Limitation:** export remains KNXBench's own CSV format. Import additionally
+  accepts four fixed [column profiles](../contracts/group-address-csv-profiles.md)
+  for three-level addresses. Range rows and `Security=Auto` are explicitly not
+  imported; unsupported metadata refuses the whole file. This is not a full
+  hierarchy/security roundtrip, XML exchange or ESF/OPC adapter.
+- **Consequence:** do not assume another application will accept the native export.
+- **Workaround:** inspect import warnings and keep the original input for fields
+  that this address-only adapter cannot transfer.
 - **Details:** [§38 no verified ETS interoperability](../KNOWN_LIMITATIONS.md#38-group-address-csv-exportimport-t12-has-no-verified-ets-interoperability),
   [§41 a CSV saved from Excel under a German locale](../KNOWN_LIMITATIONS.md#41-a-csv-file-saved-from-excel-under-a-german-locale-may-still-surprise-a-user)
 

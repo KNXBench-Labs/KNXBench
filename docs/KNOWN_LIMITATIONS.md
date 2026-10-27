@@ -83,7 +83,7 @@ Whole-file response buffering is resolved by streaming. Export still creates a t
 ### 38. CSV interoperability
 
 **Ledger status:** `ACCEPTED_BOUNDARY` ([KL-38](status/LEDGER.md#snapshot-ids)).
-KNXBench CSV v1 is its own exchange format. Its roundtrip tests do not verify ETS CSV/ESF interoperability.
+Native CSV v1 export is unchanged. Four fixed address-only import profiles report omitted ranges/security and refuse unsupported metadata; no general ETS/ESF interoperability or full hierarchy roundtrip is claimed.
 [Details and history](limitations/KL-038-csv-interoperability.md)
 
 <a id="catalogue-kl-039"></a>
@@ -99,7 +99,7 @@ CSV does not edit group ranges; removing rows alone does nothing. Explicit moves
 ### 40. CSV read-only and absent columns
 
 **Ledger status:** `ACCEPTED_BOUNDARY` ([KL-40](status/LEDGER.md#snapshot-ids)).
-Derived DPT/group columns are read-only; changed values are refused. Description/Comment interchange columns are absent.
+DPT/group context is read-only; changed values are refused. The address-only profiles recognise but refuse nonempty Description; Description/Comment editing and native interchange remain unsupported.
 [Details and history](limitations/KL-040-csv-read-only-and-absent-columns.md)
 
 <a id="catalogue-kl-041"></a>

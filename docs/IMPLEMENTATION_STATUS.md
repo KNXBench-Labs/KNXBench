@@ -12,6 +12,19 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Group-address CSV column profiles (27 October 2026 source)
+
+The shared CSV reader accepts four fixed ordered name/address column profiles,
+including separate numeric address components and positional duplicate headers.
+The address-only adapter reports range rows as omitted, refuses nonempty
+Description and unsupported Security values atomically, and validates DPT
+read-only. `Security=Auto` is explicitly not imported; it never becomes a guessed
+security value. Native CSV export and native extra-column handling are unchanged.
+Synthetic parser, built-CLI and HTTP regressions cover all four layouts, dry-run,
+refusal preservation and one server Undo step. No schema, external export,
+ESF/OPC, hierarchy/security roundtrip or general application compatibility claim.
+[Supported contract](contracts/group-address-csv-profiles.md).
+
 ## WP-11 bounded native Alpha 17 acceptance (27 October 2026)
 
 Published as `cc9d8fab2` after independent review/re-review APPROVE and the

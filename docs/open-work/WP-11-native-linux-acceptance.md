@@ -1,6 +1,6 @@
 # WP-11 — Native Linux acceptance
 
-**Status:** In progress: first bounded native slice and two positive editor cells recorded; remaining cells open. Listed in [OPEN_WORK](../OPEN_WORK.md); per-ID status of record is the [ledger](../status/LEDGER.md).
+**Status:** In progress: first bounded native slice, two positive editor cells and bounded capture export recorded; remaining cells open. Listed in [OPEN_WORK](../OPEN_WORK.md); per-ID status of record is the [ledger](../status/LEDGER.md).
 
 ## Task
 
@@ -48,11 +48,23 @@ This is not all checked controls or imported-original instruction editing.
 Virtual-key replacement remains unestablished; physical-keyboard comparison
 and product-cause attribution are missing.
 
-Next bounded native work can cover capture export with admitted fictional or
-simulator data, then remaining keyboard/pointer/layout cells. Other controls,
-imported-original instructions and vendor-specific EGL/GPU acceptance stay
-open. Orca and Firefox were not installed and remain untested. No ledger row
-is closed.
+## Bounded native capture export — 27 October 2026
+
+The [capture continuation](../status/2026-10-27-wp11-native-capture-export.md)
+uses one source-bound fictional UDP peer and the actual Alpha 17 backend,
+not mocked Tauri/HTTP. Native Export Cancel creates no capture; Save writes
+one real received row with JSON-v1 session/loss provenance; overwrite Cancel
+preserves exact bytes/mtime and Replace changes only the export timestamp.
+Actual heartbeat/disconnect and ordinary native/peer closure are recorded.
+The original/replaced JSON and original-source fixture discrimination remain
+separate retained evidence. This is one bounded capture cell, not protocol,
+hardware, complete bus-history or whole-WP-11 acceptance.
+
+Remaining work includes other controls, imported-original instructions,
+virtual-key replacement attribution, keyboard/pointer/layout cells and
+vendor-specific EGL/GPU evidence. Orca and Firefox remain untested; their
+previously missing environments were not installed by this continuation.
+No ledger row is closed.
 
 ## Done when
 

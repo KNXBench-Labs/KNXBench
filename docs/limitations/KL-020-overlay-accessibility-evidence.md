@@ -6,6 +6,16 @@ This dossier preserves the technical detail and dated history. Earlier
 headings, failures and lifting conditions are historical where later
 updates supersede them; they are not new work assignments.
 
+## Bounded native capture continuation (27 October 2026)
+
+The [Alpha 17 capture continuation](../status/2026-10-27-wp11-native-capture-export.md)
+adds actual native Export Cancel/Save/overwrite Cancel/Replace evidence with
+one fictional source-bound UDP frame and the original backend, not a mock.
+Resulting JSON/session/loss data, overwrite preservation and ordinary process
+closure are reconciled independently of the rendered labels. This adds no
+spoken screen-reader, full layout/keyboard/pointer, conformance, real-bus or
+hardware claim. WP-11 and the retained catalogue record below remain open.
+
 ## Bounded positive native continuation (27 October 2026)
 
 The [Alpha 17 native continuation](../status/2026-10-27-wp11-positive-native-editors.md)

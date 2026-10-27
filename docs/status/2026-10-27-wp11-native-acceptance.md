@@ -4,6 +4,10 @@
 now cover one declared integer slider and native-created-device plain
 instructions after actual process restart. The results/exclusions below remain
 the historical first slice, not positive editor or whole-WP-11 evidence.
+A further [bounded capture continuation](2026-10-27-wp11-native-capture-export.md)
+records actual native Export Cancel/Save/overwrite Cancel/Replace with one
+fictional UDP frame. The exclusions and next cells below describe the original
+first-slice cutoff; the maintained WP-11 detail owns the current remainder.
 
 ## Delivery and package checks
 

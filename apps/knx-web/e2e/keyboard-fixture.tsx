@@ -35,7 +35,7 @@ function Fixture() {
     </main>
     {view === "search" && <Search tree={tree} onSelect={noop} onClose={() => setView(null)} />}
     {view === "palette" && <CommandPalette ctx={ctx} onClose={() => setView(null)} />}
-    {view === "catalog" && <CatalogBrowser lineId={null} onCreated={noop} onClose={() => setView(null)} />}
+    {view === "catalog" && <CatalogBrowser lineId={null} installations={tree.installations} onCreated={noop} onClose={() => setView(null)} />}
     {view === "modal" && <Overlay label="Fixture modal" onClose={() => setView(null)}>
       <button onClick={() => setNested(true)}>Nested dialog</button>
       <HelpTip labelKey="help.tip.comFlags.label" textKey="help.tip.comFlags.text" />

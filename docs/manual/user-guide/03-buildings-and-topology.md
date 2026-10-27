@@ -87,8 +87,9 @@ creating at the installation root does not silently choose the selected part.
 > **Note**
 >
 > Creation works in every installation: root entries name their installation,
-> and a child goes into the installation that owns the selected parent. A device
-> added from the catalog without a line still lands in the first installation.
+> and a child goes into the installation that owns the selected parent. Without
+> a line, the catalog requires an explicit **Installation** choice when several
+> installations are open; it does not silently choose the first one.
 > Imported duplicate IDs are not used to guess a parent; such a parent offers no
 > child entry.
 

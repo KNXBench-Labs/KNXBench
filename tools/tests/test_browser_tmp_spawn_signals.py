@@ -250,11 +250,13 @@ class SpawnSignalRealChild(unittest.TestCase):
                 deadline = time.monotonic() + 30
                 child_pid = None
                 while child_pid is None:
-                    for line in out.read_text().splitlines():
+                    # Poll first: a read after the exit sees everything; only whole lines are records.
+                    exited = wrapper.poll() is not None
+                    for line in out.read_text().split('\n')[:-1]:
                         if line.startswith('child '):
                             child_pid = int(line.split()[1])
                     if child_pid is None:
-                        self.assertIsNone(wrapper.poll(), f'driver ended early: {err.read_text()}')
+                        self.assertFalse(exited, f'driver ended early: {err.read_text()}')
                         self.assertLess(time.monotonic(), deadline, 'driver never reported its child')
                         time.sleep(0.01)
                 owned = open_owned_process(child_pid, marker.encode())
@@ -289,6 +291,78 @@ class SpawnSignalRealChild(unittest.TestCase):
         for disposition in ('ign', 'pydefault'):
             with self.subTest(disposition=disposition):
                 self.run_case('SIGINT', disposition)
+
+
+class ScriptedWrapper:
+    """Synthetic stand-in for the driver process: a scripted stdout file, no process behind it."""
+
+    def __init__(self, out: Path, receipt: Path, signum: int, initial: str, steps) -> None:
+        self.out, self.receipt, self.signum = out, receipt, signum
+        self.steps = list(steps)
+        self.returncode = None
+        self.append(initial)
+
+    def append(self, text: str) -> None:
+        with self.out.open('ab') as stream:
+            stream.write(text.encode())
+
+    def poll(self):
+        if self.steps:
+            text, self.returncode = self.steps.pop(0)
+            self.append(text)
+        return self.returncode
+
+    def wait(self, timeout=None) -> int:
+        self.append('status 7\n')
+        self.receipt.write_text(str(int(self.signum)))
+        self.returncode = 0
+        return 0
+
+    def kill(self) -> None:
+        self.returncode = -9
+
+
+class SpawnRecordFraming(unittest.TestCase):
+    """Synthetic fixture controls (not app evidence): run_case against a scripted driver stdout.
+
+    Only run_case's own reader runs; the process helpers and Popen are stubbed, so no child exists.
+    """
+
+    def run_scripted(self, initial: str, steps) -> mock.MagicMock:
+        def fake_popen(argv, cwd, env, stdout, stderr):
+            return ScriptedWrapper(Path(stdout.name), Path(argv[-2]), signal.SIGHUP, initial, steps)
+
+        module = sys.modules[__name__]
+        with mock.patch.object(subprocess, 'Popen', fake_popen), \
+                mock.patch.object(module, 'require_pidfd_cleanup'), \
+                mock.patch.object(module, 'open_owned_process', return_value=object()) as opened, \
+                mock.patch.object(module, 'process_state', return_value='S'), \
+                mock.patch.object(module, 'signal_owned_processes'), \
+                mock.patch.object(module, 'wait_for_owned_processes'), \
+                mock.patch.object(module, 'close_owned_processes'):
+            SpawnSignalRealChild().run_case('SIGHUP', 'dfl')
+        return opened
+
+    def test_an_unfinished_print_snapshot_waits_for_its_newline(self) -> None:
+        opened = self.run_scripted('child ', [('', None), ('123 ready\n', None)])
+        self.assertEqual(opened.call_args.args[0], 123)
+
+    def test_a_partial_pid_fragment_waits_for_the_complete_record(self) -> None:
+        opened = self.run_scripted('child 1', [('', None), ('23 ready\n', None)])
+        self.assertEqual(opened.call_args.args[0], 123)
+
+    def test_a_snapshot_cut_before_the_wrapper_exit_is_drained_not_blamed_on_the_exit(self) -> None:
+        opened = self.run_scripted('child ', [('', None), ('123 ready\n', 0)])
+        self.assertEqual(opened.call_args.args[0], 123)
+
+    def test_a_complete_identity_row_without_a_pid_still_fails(self) -> None:
+        with self.assertRaises(IndexError):
+            self.run_scripted('child \n', [('', None)])
+
+    def test_an_exited_wrapper_with_only_a_fragment_still_fails(self) -> None:
+        with self.assertRaises(AssertionError) as raised:
+            self.run_scripted('child ', [('', 0)])
+        self.assertIn('driver ended early', str(raised.exception))
 
 
 if __name__ == '__main__':

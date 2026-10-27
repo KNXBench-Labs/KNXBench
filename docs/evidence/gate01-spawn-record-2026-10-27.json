@@ -1,0 +1,93 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-10-27",
+  "task": "GATE-01",
+  "scope": "test-only spawn-record reader framing",
+  "base": "04940c9b832b4e1fedc274b7edb26784000c2bf4",
+  "failedOriginalIntegration": "83871cd88ec68a294caa26e8e8a43d109a051758",
+  "failure": "SIGHUP real-child fixture IndexError on child-PID token",
+  "fixturePath": "tools/tests/test_browser_tmp_spawn_signals.py",
+  "finalFixtureSha256": "005701bf1df6d15d5cd2d74c47378b9a69617df05e3d30a4ef10020986689466",
+  "proof": {
+    "verified": true,
+    "workerModel": "claude-sonnet-5-5",
+    "originalReaderASTEqualsRedAndCalibration": true,
+    "originalRedSyntheticControls": 4,
+    "finalSyntheticControls": 5,
+    "finalOldReaderCalibration": {
+      "exit": 1,
+      "registered": 5,
+      "failures": 1,
+      "errors": 3,
+      "namedAdditionalFailure": "partial PID 1 was accepted instead of complete PID123"
+    },
+    "finalOwningModule": {
+      "exit": 0,
+      "registered": 14,
+      "skipped": 0
+    },
+    "productionChanged": false,
+    "newTimeoutOrRetry": false,
+    "syntheticControlsSpawnProcesses": false,
+    "originalIntermittentSighupGateRerun": false,
+    "cleanupScope": "synthetic regressions stub all process helpers and spawn nothing; unchanged existing real-child methods passed in final owning module",
+    "finalTestModuleSha256": "005701bf1df6d15d5cd2d74c47378b9a69617df05e3d30a4ef10020986689466",
+    "limitations": [
+      "Deterministic reader snapshots reproduce parser mechanism, not the original random OS scheduling.",
+      "No attribution of earlier SIGTERM or cold-Vite timeouts."
+    ]
+  },
+  "sourceAndObservationRoles": "original source and raw failed observations retained; final corrected fixture intentionally differs; source hashes are not an unchanged-source claim",
+  "privateEvidence": {
+    "original-test-module.py": {
+      "bytes": 12950,
+      "sha256": "7c767caf1c4c35db25f377891f8671f0a8d2620a9ab8bbd025ae9a1fc0bd1341"
+    },
+    "red1/red-test-module.py": {
+      "bytes": 15866,
+      "sha256": "3c8e5349560c0df8bd6242259eaa026277ca4c1a2f5dfa78e0997512b58f36a4"
+    },
+    "red1/stderr.txt": {
+      "bytes": 4342,
+      "sha256": "f6031fbedef8573ab7093e7278eafb7fd66ea3d1f8faf2dd5950ef3336d3a27f"
+    },
+    "green1/final-test-module.py": {
+      "bytes": 16020,
+      "sha256": "6eb56adc12b0e2b1e1e58816c33cf7c37428293ca9be82f20a528bbb57a64c26"
+    },
+    "module1/stderr.txt": {
+      "bytes": 2675,
+      "sha256": "b9487d70cead7108a28a32f3241a6aebbe151a894198e7167c7cdc40cfb7b077"
+    },
+    "parent-final-test-module.py": {
+      "bytes": 16240,
+      "sha256": "005701bf1df6d15d5cd2d74c47378b9a69617df05e3d30a4ef10020986689466"
+    },
+    "calibrate_final_reader.py": {
+      "bytes": 904,
+      "sha256": "68ff1b23c8b8f7088f66bc61a97ea17d279327956fbe8c70f490bb747b952cf9"
+    },
+    "parent-calib-final.err": {
+      "bytes": 5036,
+      "sha256": "dd5f1b75040f6fb137e96caabd5c73a3ed00a7b2d465c3db813d6a74da0437b7"
+    },
+    "parent-module-final.err": {
+      "bytes": 2862,
+      "sha256": "8ff7d30b46e829df96879087b6c7409e0ce812609f57a5478ed61d114353a60b"
+    },
+    "parent-final-execution.json": {
+      "bytes": 590,
+      "sha256": "08af7ad153d72e00018f836eb8d2fdd5131e33f885f0f072555c49b6c9548d1b"
+    },
+    "parent-proof.json": {
+      "bytes": 1054,
+      "sha256": "027d3b76cf41c0713acaff4e8ae094a0b9e172e6a698200fd5c6ae7b5267bf4a"
+    }
+  },
+  "retainedEvidence": "<profile>/evidence/gate01-spawn-record-20261027/",
+  "originalFailedReceipt": "<profile>/evidence/gate01-cold-start-20261027/integrated/receipt.json",
+  "wholeGate01Complete": false,
+  "productionWrapperChanged": false,
+  "browserOrBusRun": false,
+  "packageAcceptance": "pending"
+}

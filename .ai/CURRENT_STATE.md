@@ -1,15 +1,18 @@
 # Restart snapshot
 
-Updated: 2026-10-27 19:13 CET. Operational snapshot, not an append-only journal.
-## WP-11 native capture (PUBLISHED, observed 2026-10-27 19:13 CET; session ddbf32f04371)
-- Main-first `8227419a5`, feature `ae0b8fc71`; local/tracking/live and exact owned payloads read back.
-- Whole-evidence/focused-core source-text reviews APPROVE; branch10/integrated10 frozen, user-data guards clear.
-- Each gate: tool461 registered/6 optional skips; no product Rust/web/browser/bindings/corpus selected.
-- Actual Alpha17 native capture Cancel/Save/overwrite Cancel/Replace; one literal backend row and zero reported loss.
-- Original-client fixture1 identity/2 variants raw101/0; native25 driver steps, heartbeat11/disconnect, normal app+peer close0.
-- Source/desktop reservation RELEASED; no native runtime remains; WP-11 stays OPEN for remaining cells/environments.
-- Evidence `<profile>/evidence/wp11-native-capture-20261027/`; result-note gate/publication and verified retirement pending.
-- Root untouched. Next close own result notes and archive/retire own trees/cache; no bus/hardware/release/deployment scope.
+Updated: 2026-10-27 19:22 CET. Operational snapshot, not an append-only journal.
+## GATE-01 cold-start follow-up (SOURCE PREPARATION, observed 2026-10-27 19:22 CET; session ddbf32f04371)
+- Owner `triage/gate01-cold-start-20261027`; read-only source/retained-failure investigation first.
+- Witness: three historical File-submenu timeouts with cold Vite at eight workers; four-worker gate passes.
+- STOP browser/benchmark/config/runner edits until exact failed identities, source provenance and lease admission.
+- No worker-policy/coverage change, new scheduler, real bus/projects, release/deployment or foreign cleanup.
+- Evidence `<profile>/evidence/gate01-cold-start-20261027/`; no matching gate runner observed, no tests started.
+- Next recover historical raw failure and trace startup/test readiness; only admit a bounded reproduced fix.
+## WP-11 native capture (DELIVERED/RETIRED, observed 2026-10-27 19:22 CET; session ddbf32f04371)
+- Main-first `8227419a5`, result `7ccb53f8a`; reviews APPROVE, branch/integrated/result gates10 green/frozen.
+- Actual Alpha17 one-frame native capture Cancel/Save/overwrite Cancel/Replace, heartbeat11 and close0.
+- Archive1694 resolved payloads/modes/gzip verified; own two trees/refs/caches RETIRED, root untouched.
+- `<profile>/evidence/wp11-native-capture-20261027/retirement.json` owns closure; WP-11 remaining cells OPEN.
 ## Issue #30 tunnel timeout (PUBLISHED, observed 2026-10-27 14:38 CET)
 - Source merge `1ab4ad6a5` published; local/tracking/live exact readback. Both reviews APPROVE.
 - Branch14 + integrated2 gate14 accepted: each Rust3447/140ignored, corpus91/91, inputs frozen.

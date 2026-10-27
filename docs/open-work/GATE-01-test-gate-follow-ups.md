@@ -20,8 +20,14 @@ Small and optional; none blocks a delivery.
   headroom, not a measured gain
   ([assessment](../research/2026-10-27-default-browser-parallelism-assessment.md)).
   Reopen on a material new tail or an explicit priority for the larger scheduler.
-- Three `file-menu-submenus` cases timed out at eight workers while a cold
-  Vite development server started (they pass at the gate's four workers).
+- Three historical `file-menu-submenus` timeouts remain unresolved. The run
+  requested eight workers; active concurrency and a cold-Vite cause were not
+  established. A [27 October source/compiled-inventory assessment](../research/2026-10-27-cold-start-worker-shape.md)
+  finds only three groups for the current same-file repeat-three selection,
+  including with an eight-worker cap. Its focused four-cap/eight-cap scopes
+  are identical, so that comparison is not admitted as a load discriminator.
+  Exact historical failed identities/log and runtime provenance are missing;
+  no browser probe, timeout fix or policy change is claimed.
 - The cause of the earlier observed SIGTERM-test timeouts remains unproven;
   no field timeout is attributed to the separately repaired spawn/signal window.
 

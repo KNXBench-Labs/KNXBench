@@ -211,6 +211,19 @@ change-scoped gate with every default spec but no Rust, corpus or production
 stage: 11 stages, all 846 default cases (781 functional, 65 exclusive), 790.4 s
 of work plus 1,324.3 s waiting for another session's browser leases.
 
+## Cold-start concurrency qualification — 27 October 2026
+
+The earlier eight-worker cold-start explanation above is an inference, not
+measured concurrency or an established root cause. The raw three failure
+identities/stacks and exact failed worktree were not recovered. On current
+source with the same locked Playwright 1.63.0, the whole-file untagged
+repeat-three selection compiles to 327 entries in only three ordered groups.
+The proposed focused four-cap/eight-cap comparison likewise has three groups
+in either arm, so it is not a four-way/eight-way load experiment. This is a
+compiled-inventory/source-function result, not a rerun of the old failures;
+see the [bounded assessment](2026-10-27-cold-start-worker-shape.md). The old
+reported passes, failures and durations remain historical observations.
+
 ## Limits of these numbers
 
 One host, one run per configuration, background load from other work. The

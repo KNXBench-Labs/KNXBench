@@ -7,9 +7,10 @@
 
 use std::future::Future;
 use std::net::SocketAddrV4;
+use std::path::PathBuf;
 use std::pin::Pin;
-use std::sync::atomic::{AtomicUsize, Ordering};
-use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
+use std::sync::{Arc, Mutex, OnceLock};
 use std::time::Duration;
 
 use axum::body::Body;
@@ -37,7 +38,49 @@ const HANG_GUARD: Duration = Duration::from_secs(10);
 enum WriteTrap {
     Fail,
     SendThenFail,
-    Block { entered: Notify, resume: Notify },
+    Block {
+        entered: Notify,
+        resume: Notify,
+    },
+    /// Not a write trap: [`HistoryLock`] at the backup's last read.
+    LockHistory(HistoryLock),
+}
+
+/// Holds an exclusive SQLite lock on the activity history from the backup's
+/// last read (`PID_DEVICE_CONTROL`) for `HOLD`. The backup callback's durable
+/// send-possible row then waits synchronously in SQLite's busy handler (the
+/// store allows one second), as a slow fsync would, with the tunnel open.
+struct HistoryLock {
+    path: OnceLock<PathBuf>,
+    armed: AtomicBool,
+    ticks: Arc<AtomicUsize>,
+    /// Ticker values when the lock was taken and just before it was released.
+    window: Arc<Mutex<Option<(usize, usize)>>>,
+}
+
+impl HistoryLock {
+    const HOLD: Duration = Duration::from_millis(500);
+
+    fn hold_from_here(&self) {
+        if !self.armed.swap(false, Ordering::SeqCst) {
+            return;
+        }
+        let path = self.path.get().expect("history path set").clone();
+        let (ticks, window) = (Arc::clone(&self.ticks), Arc::clone(&self.window));
+        let (locked, taken) = std::sync::mpsc::channel();
+        std::thread::spawn(move || {
+            let blocker = rusqlite::Connection::open(&path).unwrap();
+            blocker.execute_batch("BEGIN EXCLUSIVE").unwrap();
+            let before = ticks.load(Ordering::SeqCst);
+            locked.send(()).unwrap();
+            std::thread::sleep(HistoryLock::HOLD);
+            let after = ticks.load(Ordering::SeqCst);
+            // Recorded first: the write can finish as soon as the lock goes.
+            *window.lock().unwrap() = Some((before, after));
+            blocker.execute_batch("ROLLBACK").unwrap();
+        });
+        taken.recv().expect("history locked");
+    }
 }
 
 struct SimTunnel(Arc<SimulatedDevice>, Option<Arc<WriteTrap>>);
@@ -66,6 +109,15 @@ impl BusTunnel for SimTunnel {
         service: ApplicationService,
     ) -> Pin<Box<dyn Future<Output = Result<(), BusError>> + Send + '_>> {
         Box::pin(async move {
+            if let (
+                Some(WriteTrap::LockHistory(lock)),
+                ApplicationService::PropertyValueRead {
+                    property_id: 14, ..
+                },
+            ) = (self.1.as_deref(), &service)
+            {
+                lock.hold_from_here();
+            }
             if matches!(
                 service,
                 ApplicationService::PropertyValueWrite { property_id: 8, .. }
@@ -86,7 +138,7 @@ impl BusTunnel for SimTunnel {
                         entered.notify_one();
                         resume.notified().await;
                     }
-                    None => {}
+                    Some(WriteTrap::LockHistory(_)) | None => {}
                 }
             }
             ManagementTransport::send_frame(self.0.as_ref(), destination, transport, service).await
@@ -857,4 +909,63 @@ async fn a_device_without_the_property_is_named_not_guessed() {
         activity["oneShot"][1]["writeEvidence"]["sendPossible"],
         false
     );
+}
+
+/// S2-04 (issue #30): one runtime worker, as in a container limited to one
+/// CPU. The backup callback's durable records wait on a locked history while
+/// the tunnel is open; a spawned ticker stands in for the tunnel's receive
+/// task, which must keep acknowledging the gateway meanwhile.
+#[tokio::test(flavor = "multi_thread", worker_threads = 1)]
+async fn a_blocking_pre_write_backup_leaves_tunnel_tasks_running() {
+    let ticks = Arc::new(AtomicUsize::new(0));
+    let trap = Arc::new(WriteTrap::LockHistory(HistoryLock {
+        path: OnceLock::new(),
+        armed: AtomicBool::new(true),
+        ticks: Arc::clone(&ticks),
+        window: Arc::default(),
+    }));
+    let h = harness_with_trap(locked_device(), Duration::ZERO, Some(Arc::clone(&trap)));
+    let WriteTrap::LockHistory(lock) = trap.as_ref() else {
+        unreachable!()
+    };
+    lock.path
+        .set(h._dir.path().join("activity-history.sqlite"))
+        .unwrap();
+    enable_debug(&h, json!(true)).await;
+    let address = h.device.address();
+    let ticker = tokio::spawn({
+        let ticks = Arc::clone(&ticks);
+        async move {
+            loop {
+                tokio::time::sleep(Duration::from_millis(5)).await;
+                ticks.fetch_add(1, Ordering::SeqCst);
+            }
+        }
+    });
+    // Spawned, as the server runs a request, so it shares the one worker.
+    let app = h.app.clone();
+    let request = tokio::spawn(async move {
+        send(
+            &app,
+            post(
+                "/api/device/service-control",
+                write_request(address, &phrase(address), true),
+            ),
+        )
+        .await
+    });
+    let (status, body) = tokio::time::timeout(HANG_GUARD, request)
+        .await
+        .expect("the write ended")
+        .unwrap();
+    ticker.abort();
+    assert_eq!(status, StatusCode::OK, "{body}");
+    assert_eq!(body["written"], true);
+    let (before, after) = lock.window.lock().unwrap().expect("the history was locked");
+    assert!(
+        after - before >= 10,
+        "runtime tasks starved during the backup: {before} -> {after}"
+    );
+    let (_, activity) = send(&h.app, get("/api/bus/activity")).await;
+    assert_eq!(activity["oneShot"][0]["state"], "verified");
 }

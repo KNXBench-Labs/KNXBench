@@ -125,6 +125,7 @@ mod selective_import_routes;
 mod session_log;
 mod settings;
 mod tunnel_holder;
+mod tunnel_workers;
 /// Exported so `apps/knx-desktop` and integration tests can name the file
 /// and the version without re-deriving either. The file's *shape* stays
 /// private: everything outside this crate talks to it over `/api/settings`.

@@ -1263,3 +1263,108 @@ async fn a_receipted_run_dropped_without_a_result_keeps_its_preparation_and_gain
 
 #[path = "device_download_failure_tests.rs"]
 mod failure_tests;
+
+/// Longer than the one-second TUNNELLING_ACK window (Tunnelling v01.07.01 AS §2.6.1).
+const KEEP_STALL: Duration = Duration::from_millis(1500);
+
+/// S2-04 (issue #30): one runtime worker, as in a container limited to one
+/// CPU. A synchronous stall where the worker keeps its backup stands in for a
+/// slow fsync with the tunnel open; a spawned ticker stands in for the
+/// tunnel's receive task, which must keep acknowledging the gateway meanwhile.
+#[tokio::test(flavor = "multi_thread", worker_threads = 1)]
+async fn a_blocking_backup_keeper_leaves_tunnel_tasks_running() {
+    download_persistence_leaves_tunnel_tasks_running(PersistenceStage::Backup).await;
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 1)]
+async fn a_blocking_post_transfer_settler_leaves_tunnel_tasks_running() {
+    download_persistence_leaves_tunnel_tasks_running(PersistenceStage::Settlement).await;
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 1)]
+async fn a_blocking_post_check_record_leaves_tunnel_tasks_running() {
+    download_persistence_leaves_tunnel_tasks_running(PersistenceStage::Check).await;
+}
+
+#[derive(Clone, Copy)]
+enum PersistenceStage {
+    Backup,
+    Settlement,
+    Check,
+}
+
+async fn download_persistence_leaves_tunnel_tasks_running(at: PersistenceStage) {
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    let ticks = Arc::new(AtomicUsize::new(0));
+    let ticker = tokio::spawn({
+        let ticks = Arc::clone(&ticks);
+        async move {
+            loop {
+                tokio::time::sleep(Duration::from_millis(5)).await;
+                ticks.fetch_add(1, Ordering::SeqCst);
+            }
+        }
+    });
+    while ticks.load(Ordering::SeqCst) == 0 {
+        tokio::time::sleep(Duration::from_millis(1)).await;
+    }
+    let window = Arc::new(Mutex::new(None));
+    // The keeper hook is installed after the spawn: hold the run before its
+    // first frame until it is.
+    let gate = Gate::at(GateAt::FirstConnect);
+    let device = device(APPLICATION, SimulatorConfig::default());
+    let mut started = start_registered(
+        &device,
+        plan(),
+        AfterRestart::Pass,
+        Some(Arc::clone(&gate)),
+        Arc::new(DownloadStop::new()),
+        {
+            let (ticks, window) = (Arc::clone(&ticks), Arc::clone(&window));
+            move |_| {
+                if matches!(at, PersistenceStage::Backup) {
+                    let before = ticks.load(Ordering::SeqCst);
+                    std::thread::sleep(KEEP_STALL);
+                    *window.lock().unwrap() = Some((before, ticks.load(Ordering::SeqCst)));
+                }
+            }
+        },
+    );
+    if matches!(at, PersistenceStage::Settlement) {
+        let mut on_end = started.session.shared.on_end.lock().unwrap();
+        let original = on_end.take().expect("settler installed");
+        let (ticks, window) = (Arc::clone(&ticks), Arc::clone(&window));
+        *on_end = Some(Box::new(move |status| {
+            // Past the transfer, but before the read-only check and disconnect:
+            // the real settler may persist the native project at this boundary.
+            let before = ticks.load(Ordering::SeqCst);
+            std::thread::sleep(KEEP_STALL);
+            *window.lock().unwrap() = Some((before, ticks.load(Ordering::SeqCst)));
+            original(status);
+        }));
+    }
+    if matches!(at, PersistenceStage::Check) {
+        let (ticks, window) = (Arc::clone(&ticks), Arc::clone(&window));
+        *started.session.shared.before_record_check.lock().unwrap() = Some(Box::new(move || {
+            let before = ticks.load(Ordering::SeqCst);
+            std::thread::sleep(KEEP_STALL);
+            *window.lock().unwrap() = Some((before, ticks.load(Ordering::SeqCst)));
+        }));
+    }
+    tokio::time::timeout(Duration::from_secs(10), gate.entered.notified())
+        .await
+        .expect("the run reached its first frame");
+    gate.release.notify_one();
+    tokio::time::timeout(Duration::from_secs(30), started.session.join())
+        .await
+        .expect("the run ended");
+    ticker.abort();
+    let (before, after) = window.lock().unwrap().expect("the run kept its backup");
+    assert!(
+        after - before >= 10,
+        "runtime tasks starved during the backup: {before} -> {after}"
+    );
+    let json = serde_json::to_value(started.session.status()).unwrap();
+    assert_eq!(json["state"], "finished", "{json}");
+    assert_eq!(json["written"], "yes", "{json}");
+}

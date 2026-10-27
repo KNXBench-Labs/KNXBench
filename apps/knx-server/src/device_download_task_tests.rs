@@ -18,6 +18,7 @@ fn session(
         shared: Arc::new(Shared {
             stop: Arc::new(DownloadStop::already_committed()),
             after_keep: Mutex::new(None),
+            before_record_check: Mutex::new(None),
             status: Mutex::new(status),
             transfer: Mutex::new(None),
             events: Mutex::new(Vec::new()),

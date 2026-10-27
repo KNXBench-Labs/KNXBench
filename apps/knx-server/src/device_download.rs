@@ -134,6 +134,9 @@ struct Shared {
     /// Test-only: runs once when the backup is durable, before the commit.
     #[cfg(test)]
     after_keep: Mutex<Option<Box<dyn FnOnce() + Send>>>,
+    /// Test-only: stalls the journal boundary after the asynchronous check.
+    #[cfg(test)]
+    before_record_check: Mutex<Option<Box<dyn FnOnce() + Send>>>,
     status: Mutex<DownloadStatus>,
     /// The witnessed transfer while its read-only check runs: an abrupt end
     /// then keeps it, with the check interrupted, instead of a failure.
@@ -256,6 +259,8 @@ impl DeviceDownloadSession {
             stop,
             #[cfg(test)]
             after_keep: Mutex::new(None),
+            #[cfg(test)]
+            before_record_check: Mutex::new(None),
             status: Mutex::new(DownloadStatus::Running),
             transfer: Mutex::new(None),
             events: Mutex::new(Vec::new()),
@@ -281,7 +286,9 @@ impl DeviceDownloadSession {
             task: None,
             report,
         };
-        let task = tokio::spawn(run(
+        // The backup keeper, the journal rows and the settler persist
+        // synchronously while the tunnel is open (S2-04, issue #30).
+        let task = tokio::spawn(crate::tunnel_workers::off_tunnel_workers(run(
             tunnel,
             authorisation,
             keying,
@@ -291,7 +298,7 @@ impl DeviceDownloadSession {
             shared,
             activity,
             settlement,
-        ));
+        )));
         Self {
             task: Some(task),
             ..session
@@ -671,6 +678,26 @@ async fn run(
         )
         .await;
         let check = PostDownloadCheck::from_observation(&observation);
+        #[cfg(test)]
+        if shared
+            .before_record_check
+            .lock()
+            .expect("hook poisoned")
+            .is_some()
+        {
+            // Force a pending boundary: a transfer-only block_in_place can
+            // leave this poll on its handed-off thread until the next yield.
+            tokio::time::sleep(std::time::Duration::from_millis(1)).await;
+        }
+        #[cfg(test)]
+        if let Some(hook) = shared
+            .before_record_check
+            .lock()
+            .expect("hook poisoned")
+            .take()
+        {
+            hook();
+        }
         let _ = began.and_then(|()| activity.record_check(&check));
         with_check(status, check)
     } else {
@@ -797,6 +824,8 @@ impl DeviceDownloadSession {
                 // too late, as for a real run past its first change.
                 stop: Arc::new(DownloadStop::already_committed()),
                 after_keep: Mutex::new(None),
+                #[cfg(test)]
+                before_record_check: Mutex::new(None),
                 status: Mutex::new(DownloadStatus::Running),
                 transfer: Mutex::new(None),
                 events: Mutex::new(Vec::new()),

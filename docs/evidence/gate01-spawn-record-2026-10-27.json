@@ -89,5 +89,20 @@
   "wholeGate01Complete": false,
   "productionWrapperChanged": false,
   "browserOrBusRun": false,
-  "packageAcceptance": "pending"
+  "packageAcceptance": {
+    "published": "bc1b47a9abe41d4b3cd0a23c4afed3b772258ee0",
+    "feature": "c82db6d5167ed0c16289a275dbbc2e09344d6375",
+    "review": "APPROVE",
+    "branchAndIntegratedStages": 10,
+    "integratedTooling": {
+      "toolingRegistered": 466,
+      "toolingPassed": 460,
+      "toolingSkipped": 6
+    },
+    "inputsFrozen": true,
+    "userDataTouched": [],
+    "userDataUnchecked": [],
+    "exactTargetReadback": true,
+    "resultNoteAcceptance": "separate"
+  }
 }

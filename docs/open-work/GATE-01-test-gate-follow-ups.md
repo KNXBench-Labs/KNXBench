@@ -15,11 +15,6 @@ Small and optional; none blocks a delivery.
   suites and case-level parallelism in the default lane remain unreviewed.
 - Three `file-menu-submenus` cases timed out at eight workers while a cold
   Vite development server started (they pass at the gate's four workers).
-- `test_sigterm_diagnostics_reject_mismatched_scanned_identity` failed once in
-  a package gate's tool tests on 27 October 2026 ("identities changed before
-  pidfd retention") and passed 8/8 in isolation and on the rerun. Suspected,
-  unproven: the fixture child lives only 4 s, so a loaded host can let it exit
-  before its identity is pinned.
 - The cause of the earlier observed SIGTERM-test timeouts remains unproven;
   no field timeout is attributed to the separately repaired spawn/signal window.
 
@@ -27,6 +22,15 @@ The spawn/signal correction was delivered as `ed156ef9b`; its
 [acceptance record](../status/2026-10-26-browser-tmp-spawn-signals.md) owns the
 bounded result. It is no longer pending work; the two performance bullets and
 unresolved historical timeout causes above remain open.
+
+The two SIGTERM pidfd-identity fixtures in `tools/tests/test_browser_tmp_launch.py`
+used timed lifetimes (4 s fixture, 8 s sentinel). One failed in a package gate
+on 27 October 2026 ("identities changed before pidfd retention") and reproduced
+once in 12 runs under CPU oversubscription; a 5 s stall injected before identity
+pinning fails both on the old fixtures and passes on the new ones. The fixtures
+are now event-bound (exit on parent death or on the cleanup release file; 120 s
+only bounds a leak), and failure paths reap the direct children. This closes that
+flake only; it says nothing about the older SIGTERM timeouts above.
 
 ## Known boundary
 

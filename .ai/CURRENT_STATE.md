@@ -1,6 +1,14 @@
 # Restart snapshot
 
-Updated: 2026-10-27 21:13 CET. Operational snapshot, not an append-only journal.
+Updated: 2026-10-27 22:40 CET. Operational snapshot, not an append-only journal.
+## S2-04 ordinary/server persistence (TAKEN; observed 2026-10-27 22:40 CET)
+- Owner: this WebUI; branch `fix/s2-04-ordinary-tunnel-workers-20261027` in its own worktree.
+- Scope: `tunnel_workers.rs`, ordinary download worker/tests, service-control callback/tests,
+  System-2 helper extraction and their S2-04/pitfall/result documentation. No other runtime claim.
+- Local candidate `9103c80db`; independent Claude review `sa-0-d6d2380d` running when recorded.
+- Focused/server tests + Clippy/fmt/headers green; maintained package/integrated gates PENDING.
+- Evidence `<profile>/evidence/s204-ordinary-20261027/`; next: review corrections, gates, delivery.
+- Root stale/dirty preserved. No bus/device, release, image or deployment scope.
 ## GATE-01 residual evidence boundary (observed 2026-10-27 21:13 CET; session ddbf32f04371)
 - Bounded study `2890ad2d0`/result `96829b97e` and fixture `bc1b47a9a`/result `939c1b384` published with exact readbacks.
 - Independent reviews APPROVE; maintained accepted gates10 frozen; original failed `83871cd88` remains failed/retained.

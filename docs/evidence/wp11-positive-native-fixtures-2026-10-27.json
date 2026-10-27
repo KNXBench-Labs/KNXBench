@@ -1,0 +1,86 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-10-27",
+  "purpose": "Original fictional inputs for bounded native editor acceptance; no firmware, vendor allocation, certification or bus use",
+  "sourceBaseline": "3c7e705bf7b0e60f459f0eb2888bdaffdfb9d8b1",
+  "builder": "tools/community_demos.py",
+  "builderSha256": "14f966ace4f5505b2e98cfa8082c71359019ed0ca48251e1f4b85591aae59172",
+  "fixtures": [
+    {
+      "name": "native-editors.knxprod",
+      "sha256": "a9d336075b861fd703abdcd1374dc6864b146668e28610dfca4d869dccb6693d",
+      "bytes": 2301,
+      "zipBase64": "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",
+      "recipe": {
+        "namespace": "http://knx.org/xml/project/20",
+        "manufacturer": "M-7FF1",
+        "productKey": "NATIVE",
+        "singleProductName": "Native editor acceptance device",
+        "communicationObjects": [],
+        "typeNumberUiHint": null,
+        "default": "2",
+        "bounds": [
+          "0",
+          "240"
+        ],
+        "notes": "In-memory demo builder overrides; Slider only adds the declared UIHint to the generated TypeNumber. ZIP dates are 2026-10-27 00:00:00, members sorted, ZIP_DEFLATED, regular mode 0644."
+      },
+      "members": {
+        "M-7FF1/Catalog.xml": {
+          "bytes": 707,
+          "sha256": "f5f0b2a33213eabfd1e753f680b780a0e9d67454db3270c3ce565bd8c375f323"
+        },
+        "M-7FF1/Hardware.xml": {
+          "bytes": 787,
+          "sha256": "cd0fb154925d818d04cc073c5759147517d374fbcc2bc1fcbe21b13556f474fb"
+        },
+        "M-7FF1/M-7FF1_A-0001-10-0001.xml": {
+          "bytes": 1493,
+          "sha256": "becc7899c89a1203914ab123ec4d89c9b95ddde8b4b8ac70291228126a9338d8"
+        },
+        "knx_master.xml": {
+          "bytes": 1328,
+          "sha256": "591af037d970e22e9f487acd5c9d89ad76fdc263b64a1ddabddf9b8af1a7070e"
+        }
+      }
+    },
+    {
+      "name": "native-slider.knxprod",
+      "sha256": "32e8a5b4cf21a14c0e8dda2c861a5babbac54559707d82353074aae02d06f2e1",
+      "bytes": 2311,
+      "zipBase64": "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",
+      "recipe": {
+        "namespace": "http://knx.org/xml/project/20",
+        "manufacturer": "M-7FF2",
+        "productKey": "SLIDER",
+        "singleProductName": "Native slider acceptance device",
+        "communicationObjects": [],
+        "typeNumberUiHint": "Slider",
+        "default": "2",
+        "bounds": [
+          "0",
+          "240"
+        ],
+        "notes": "In-memory demo builder overrides; Slider only adds the declared UIHint to the generated TypeNumber. ZIP dates are 2026-10-27 00:00:00, members sorted, ZIP_DEFLATED, regular mode 0644."
+      },
+      "members": {
+        "M-7FF2/Catalog.xml": {
+          "bytes": 707,
+          "sha256": "2685aca69ffb98640799c5d00661ea8ed164484a9beaf7f9dbc2a5dd92ddf5b7"
+        },
+        "M-7FF2/Hardware.xml": {
+          "bytes": 787,
+          "sha256": "83f4370068679ab0ddfe88a5d97a0a76332b10128e57b690ffa84bb339438b9e"
+        },
+        "M-7FF2/M-7FF2_A-0001-10-0001.xml": {
+          "bytes": 1509,
+          "sha256": "d5e612f0de98e40d2733abbba424ac65d70b342ff8da056480599ae8a00765b3"
+        },
+        "knx_master.xml": {
+          "bytes": 1328,
+          "sha256": "bdf0308d719f8953a7848d4453d669a01f7eecfffe758527fc513175a539d2fd"
+        }
+      }
+    }
+  ]
+}

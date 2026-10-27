@@ -6,6 +6,18 @@ This dossier preserves the technical detail and dated history. Earlier
 headings, failures and lifting conditions are historical where later
 updates supersede them; they are not new work assignments.
 
+## Bounded positive native continuation (27 October 2026)
+
+The [Alpha 17 native continuation](../status/2026-10-27-wp11-positive-native-editors.md)
+adds actual declared integer-slider and native-created-device instruction
+evidence, with Apply/Save/Undo/Redo or preview/confirm as applicable and both
+values after full process restart. It uses original fictional sources and
+read-only saved-result oracles, not mocks. It does not close WP-11 or extend to
+other controls, imported-original instructions, spoken screen-reader output,
+full keyboard/pointer/layout coverage or compatibility. Virtual-key replacement
+remains unestablished; no physical-keyboard or product-cause conclusion follows.
+The retained historical record below and its ledger status are unchanged.
+
 <!-- BEGIN retained catalogue record -->
 
 ## 20. Command palette and search share overlay CSS and an accessibility gap — partially resolved
@@ -115,6 +127,8 @@ after process restart, have resulting file/state evidence.
 This narrows the older absence of native interaction evidence; it does not
 supply a whole-app/theme audit or positive checked-source/instruction editor
 acceptance. The fictional fixture exposes their unsupported/missing-source
-branches only. Orca and Firefox were not installed. AT-SPI observations do not
+branches only. The [two bounded positive cells](#bounded-positive-native-continuation-27-october-2026)
+are a later continuation, not part of that first slice. Orca and Firefox were
+not installed. AT-SPI observations do not
 establish spoken announcements, human screen-reader acceptance or WCAG
 conformance; those boundaries and the ledger disposition stay unchanged.

@@ -1,5 +1,10 @@
 # WP-11: first bounded native acceptance slice — 27 October 2026
 
+**Later bounded follow-up:** the [positive native editor cells](2026-10-27-wp11-positive-native-editors.md)
+now cover one declared integer slider and native-created-device plain
+instructions after actual process restart. The results/exclusions below remain
+the historical first slice, not positive editor or whole-WP-11 evidence.
+
 ## Delivery and package checks
 
 Published on main as `cc9d8fab2168d10e788e89026dbc58c1d229bd94`

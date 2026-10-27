@@ -1,16 +1,18 @@
 # Restart snapshot
 
-Updated: 2026-10-27 15:33 CET. Operational snapshot, not an append-only journal.
-## WP-11 positive native editors (EVIDENCE COMPLETE / CORRECTION REVIEW, observed 2026-10-27 15:33 CET; session ddbf32f04371)
-- Owner branch `verify/wp11-positive-editors-20261027`; only result-package source reservation remains.
-- Actual Alpha 17: declared source-20 slider Cancel/Apply/Save/Undo/Redo and native instructions verified.
-- Two isolated native processes; actual restart renders slider7/exact instruction; ordinary closes exit0.
-- Native/desktop lease RELEASED; exact owned PIDs/windows absent. No real data or bus scope.
-- No-hint control stays generic; exact declared positive XML equals actual installed source.
-- Whole-evidence review APPROVE; cheap weaknesses corrected, focused re-review pending before package gates.
-- Pending branch/integrated maintained gates, publication and retirement.
-- Evidence `<profile>/evidence/wp11-positive-editors-20261027/`; `verification-3.json` exit0; original readers/results preserved.
-- No full WP-11, keyboard replacement, imported-original instructions, capture, release or deployment claim.
+Updated: 2026-10-27 16:34 CET. Operational snapshot, not an append-only journal.
+## WP-11 positive native editors (DELIVERED slice, observed 2026-10-27 16:34 CET; session ddbf32f04371)
+- PUBLISHED main-first `1173e1daf`, feature `0aab69508`; local/tracking/live exact readback.
+- Whole-evidence + focused correction source/text reviews APPROVE; all six weaknesses disposed.
+- Branch10/integrated10 green/frozen, user-data guards clear; tool461 registered/6 optional skips each.
+- No product Rust, web/browser, bindings or private corpus selected; native artifact evidence is separate.
+- Actual Alpha17 slider Cancel/Apply/Save/Undo/Redo and native plain instructions persist after restart.
+- Two ordinary closes exit0; exact owned PIDs/windows absent; original ELF bound to authenticated AppImage.
+- Source/desktop reservation RELEASED; no native execution pending. Root stays stale/dirty and untouched.
+- Evidence `<profile>/evidence/wp11-positive-editors-20261027/`; `verification-3.json` exit0.
+- Verified retirement uses `retirement.json` there; original/failed attempts and exact executables retained.
+- WP-11 remains OPEN: other controls/imported originals, keyboard replacement, capture, full layout and absent environments.
+- Next choose another admitted bounded cell; no bus/hardware/release/deployment authority.
 ## Issue #30 tunnel timeout (PUBLISHED, observed 2026-10-27 14:38 CET)
 - Source merge `1ab4ad6a5` published; local/tracking/live exact readback. Both reviews APPROVE.
 - Branch14 + integrated2 gate14 accepted: each Rust3447/140ignored, corpus91/91, inputs frozen.

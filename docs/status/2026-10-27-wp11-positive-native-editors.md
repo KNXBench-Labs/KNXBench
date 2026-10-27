@@ -1,5 +1,23 @@
 # WP-11: positive native editor cells — 27 October 2026
 
+## Delivery and package checks
+
+Published main-first as `1173e1daf` (feature `0aab69508`) after
+independent whole-evidence source/text review and focused correction review
+APPROVE. Parent-recomputed source/evidence identities were unchanged across
+both reviews; the reviewers' narrower inspection limits remain in the private
+reports. All six recorded non-blocking weaknesses have explicit dispositions.
+
+Branch and actual integrated maintained change-scoped gates each passed all
+10 planned stages with frozen inputs and no touched/unchecked user data.
+Each registered 461 tool-test methods, including six optional skips. No product
+Rust tests, web/browser tests, bindings or private corpus were selected by this
+documentation package; the real native observations below remain their own
+artifact-bound execution evidence. Web dependency/build preparation also passed.
+Local, fetched and live main matched after publication. The initial publication
+helper-context refusal is retained; only publication was retried on the same
+accepted source, without replaying the gates.
+
 ## Scope and acceptance boundary
 
 **Bounded native execution evidence passed.** Package delivery does not enlarge this scope.

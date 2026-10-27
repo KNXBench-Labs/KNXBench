@@ -24,13 +24,17 @@ bounded result. It is no longer pending work; the two performance bullets and
 unresolved historical timeout causes above remain open.
 
 The two SIGTERM pidfd-identity fixtures in `tools/tests/test_browser_tmp_launch.py`
-used timed lifetimes (4 s fixture, 8 s sentinel). One failed in a package gate
-on 27 October 2026 ("identities changed before pidfd retention") and reproduced
-once in 12 runs under CPU oversubscription; a 5 s stall injected before identity
-pinning fails both on the old fixtures and passes on the new ones. The fixtures
-are now event-bound (exit on parent death or on the cleanup release file; 120 s
-only bounds a leak), and failure paths reap the direct children. This closes that
-flake only; it says nothing about the older SIGTERM timeouts above.
+used timed lifetimes (4 s fixture or child, 8 s sentinel or wrapper). One failed
+in a package gate on 27 October 2026 ("identities changed before pidfd
+retention") and reproduced once in 12 runs under CPU oversubscription; a 5 s
+stall injected before identity pinning fails both on the old fixtures and passes
+on the new ones. Fixture lifetimes are now event-bound (parent death, or a
+proceed file; 120 s only bounds a leak), and failure paths reap the direct
+children. The cleanup test previously reached its timeout fallback only because
+its fixture outlived a 3 s wait; it now forces that fallback with a simulated
+first timeout and asserts the fallback ran. Reinstating the earlier Popen-signal
+fallback in memory still fails it. This closes that flake only; it says nothing
+about the older SIGTERM timeouts above.
 
 ## Known boundary
 

@@ -961,6 +961,48 @@ describe("App — catalog is a persistent centre workspace (ISSUE-07)", () => {
     await act(async () => root.unmount());
   });
 
+  it("feeds the live installation list to the catalog and drops the choice with the project", async () => {
+    const installation = (id: number, name: string) => ({ id, name, topology: [], buildings: [], unassigned: [],
+      group_addresses: [], group_ranges: [] });
+    const withInstallations = (ids: number[]): ProjectTree => ({ ...baseTree(), can_undo: true,
+      installations: ids.map((id) => installation(id, `Site ${id}`)) });
+    const selector = () => host!.querySelector<HTMLSelectElement>('.catalog-workspace select[aria-label="Installation"]');
+    filePickerMock.pickOpenPath.mockResolvedValue("/project.knxproj");
+    apiMock.importProject.mockResolvedValueOnce(withInstallations([0, 1]));
+    apiMock.catalogItems.mockResolvedValue([{ id: "cat-1", manufacturerId: "M-1", name: "Actuator",
+      number: null, visibleDescription: null, productRefId: "P-1", hardware2programRefId: "HP-1" }]);
+    const root = await renderApp();
+    await act(async () => findButton("Open project…").click());
+    await act(async () => findButton(enMessages["workbench.catalog"]).click());
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 250)); });
+    await act(async () => host!.querySelector<HTMLElement>(".catalog-workspace .search-result")!.click());
+    expect(Array.from(selector()!.options).map((o) => o.value)).toEqual(["", "0", "1"]);
+    await act(async () => {
+      selector()!.value = "1";
+      selector()!.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+    expect(selector()!.value).toBe("1");
+
+    // Same project, live edit: the list grows, the choice stays (runtime proof of the callsite).
+    apiMock.undo.mockResolvedValueOnce(withInstallations([0, 1, 2]));
+    await act(async () => findButton("Undo").click());
+    expect(Array.from(selector()!.options).map((o) => o.value)).toEqual(["", "0", "1", "2"]);
+    expect(selector()!.value).toBe("1");
+
+    // The chosen installation disappears: the choice is dropped.
+    apiMock.undo.mockResolvedValueOnce(withInstallations([0, 2]));
+    await act(async () => findButton("Undo").click());
+    expect(selector()!.value).toBe("");
+
+    // Another project: the whole browser, selection included, starts over.
+    apiMock.importProject.mockResolvedValueOnce(withInstallations([0, 1]));
+    await act(async () => findButton("Open project…").click());
+    await act(async () => findButton(enMessages["workbench.catalog"]).click());
+    expect(host!.querySelector(".catalog-create-row")).toBeNull();
+    expect(selector()).toBeNull();
+    await act(async () => root.unmount());
+  });
+
   it("shows the catalogue immediately on narrow screens instead of below a full-height navigation", async () => {
     const originalWidth = window.innerWidth;
     Object.defineProperty(window, "innerWidth", { configurable: true, value: 400 });

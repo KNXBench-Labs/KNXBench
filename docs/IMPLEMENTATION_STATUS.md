@@ -12,6 +12,17 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Explicit catalogue installation target (27 October 2026 source)
+
+The catalogue workspace requires an explicit installation choice for a line-less
+create when the current project has several installations. A removed choice is
+cleared; no open project blocks creation, and lost-response retries keep the
+original target and request identity. A selected line still owns its target;
+the single-installation request is unchanged. The live App tree supplies the
+required context, using the existing validated create command and one Undo step.
+No cross-installation transfer, new site model or native-platform claim follows.
+[Bounded scope](limitations/structure-editor-scope.md#update-2026-10-27-explicit-catalogue-installation-target).
+
 ## CLI report language selection (27 October 2026 source)
 
 Published as main-first `5679ba3c5` after whole-feature and correction reviews

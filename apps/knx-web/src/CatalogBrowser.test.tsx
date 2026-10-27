@@ -3,6 +3,7 @@
 import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import type { InstallationNode } from "./bindings/InstallationNode";
 import type {
   CatalogInstallCount,
   CatalogInstallDiagnostic,
@@ -125,8 +126,8 @@ async function renderBrowser(onCreated = vi.fn(), onClose = vi.fn(), serverIncar
   document.body.appendChild(host);
   const root = createRoot(host);
   await act(async () => {
-    root.render(<CatalogBrowser lineId={lineId} onCreated={onCreated} onClose={onClose}
-      serverIncarnation={serverIncarnation} />);
+    root.render(<CatalogBrowser lineId={lineId} installations={[{ id: 0, name: "Main house" }]} onCreated={onCreated}
+      onClose={onClose} serverIncarnation={serverIncarnation} />);
   });
   return { root, onCreated, onClose };
 }
@@ -912,7 +913,7 @@ describe("CatalogBrowser", () => {
     await act(async () => {
       root.render(
         <>
-          <CatalogBrowser lineId={null} onCreated={vi.fn()} onClose={vi.fn()} />
+          <CatalogBrowser lineId={null} installations={[{ id: 0, name: "Main house" }]} onCreated={vi.fn()} onClose={vi.fn()} />
           <Writer />
         </>,
       );
@@ -979,6 +980,260 @@ describe("CatalogBrowser", () => {
     const { root } = await renderBrowser();
     await act(async () => { await new Promise((resolve) => setTimeout(resolve, 250)); });
     expect(host!.querySelectorAll(".language-fallback-badge")).toHaveLength(0);
+    await act(async () => root.unmount());
+  });
+});
+
+// ADR-0093: the catalogue workspace names the installation of a line-less device.
+describe("CatalogBrowser installation target", () => {
+  const installation = (id: number, name: string) => ({ id, name, topology: [], buildings: [], unassigned: [],
+    group_addresses: [], group_ranges: [] }) satisfies InstallationNode;
+  // Real projects number from 0; id 0 must count as a choice, not as "none".
+  const one = [installation(0, "Main house")];
+  const two = [installation(0, "Main house"), installation(1, "Garden")];
+  const created = { tree: { installations: [] }, diagnostics: [], replayed: false };
+  type Props = { installations: InstallationNode[]; lineId?: number | null; serverIncarnation?: string };
+  let root: ReturnType<typeof createRoot>;
+
+  async function show(props: Props) {
+    host = document.createElement("div");
+    document.body.appendChild(host);
+    root = createRoot(host);
+    await rerender(props);
+  }
+  async function rerender({ lineId = null, ...rest }: Props) {
+    await act(async () => { root.render(<CatalogBrowser lineId={lineId} onCreated={vi.fn()} onClose={vi.fn()} {...rest} />); });
+  }
+  async function pickItem() {
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 250)); });
+    await act(async () => host!.querySelector<HTMLElement>(".search-result")!.click());
+  }
+  const select = () => host!.querySelector<HTMLSelectElement>('select[aria-label="Installation"]');
+  const create = () => host!.querySelector<HTMLButtonElement>(".catalog-create-row button")!;
+  async function choose(value: string) {
+    await act(async () => { select()!.value = value; select()!.dispatchEvent(new Event("change", { bubbles: true })); });
+  }
+  async function enter() {
+    const name = host!.querySelector<HTMLInputElement>('input[aria-label="Device name"]')!;
+    await act(async () => { name.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true })); });
+  }
+  const options = { allocateAddresses: false, uniqueNames: false };
+
+  it("keeps the request body of a single installation free of installationId", async () => {
+    apiMock.catalogItems.mockResolvedValue([item]);
+    apiMock.createDevice.mockResolvedValue(created);
+    await show({ installations: one });
+    await pickItem();
+    expect(select()).toBeNull();
+    await act(async () => create().click());
+    expect(apiMock.createDevice).toHaveBeenCalledWith(null, "cat-1", "Actuator", 1, expect.stringMatching(REQUEST_ID), options);
+    await act(async () => root.unmount());
+  });
+
+  it("blocks create and Enter until one of several installations is chosen, then sends it", async () => {
+    apiMock.catalogItems.mockResolvedValue([item]);
+    apiMock.createDevice.mockResolvedValue(created);
+    await show({ installations: two });
+    await pickItem();
+    expect(select()!.value, "no implicit first choice").toBe("");
+    expect(create().disabled).toBe(true);
+    await enter();
+    expect(apiMock.createDevice).not.toHaveBeenCalled();
+    await choose("1");
+    expect(create().disabled).toBe(false);
+    await enter();
+    expect(apiMock.createDevice).toHaveBeenCalledWith(null, "cat-1", "Actuator", 1, expect.stringMatching(REQUEST_ID),
+      { ...options, installationId: 1 });
+    await act(async () => root.unmount());
+  });
+
+  it("drops a chosen installation that disappears and never falls back to another", async () => {
+    apiMock.catalogItems.mockResolvedValue([item]);
+    await show({ installations: two });
+    await pickItem();
+    await choose("1");
+    await rerender({ installations: [installation(0, "Main house"), installation(3, "Cellar")] });
+    expect(select()!.value).toBe("");
+    expect(create().disabled).toBe(true);
+    await enter();
+    await rerender({ installations: one });
+    expect(create().disabled, "removed choice is not replaced by the sole installation").toBe(true);
+    await enter();
+    expect(apiMock.createDevice).not.toHaveBeenCalled();
+    expect(select()!.value).toBe("");
+    await rerender({ installations: two });
+    expect(select()!.value, "a removed choice does not come back").toBe("");
+    expect(apiMock.createDevice).not.toHaveBeenCalled();
+    await act(async () => root.unmount());
+  });
+
+  it("blocks create and Enter when the chosen installation leaves a list of two for the other one", async () => {
+    apiMock.catalogItems.mockResolvedValue([item]);
+    apiMock.createDevice.mockResolvedValue(created);
+    await show({ installations: two });
+    await pickItem();
+    await choose("1");
+    await rerender({ installations: one });
+    expect(create().disabled, "no fall back to the remaining installation").toBe(true);
+    await enter();
+    expect(apiMock.createDevice).not.toHaveBeenCalled();
+    expect(select()!.value).toBe("");
+    await choose("");
+    expect(create().disabled, "the placeholder confirms nothing").toBe(true);
+    await rerender({ installations: two });
+    expect(select()!.value, "the stale choice does not return with its id").toBe("");
+    expect(create().disabled).toBe(true);
+    await rerender({ installations: one });
+    await choose("0");
+    expect(create().disabled, "an explicit choice of the current installation is allowed").toBe(false);
+    await enter();
+    expect(apiMock.createDevice).toHaveBeenCalledTimes(1);
+    expect(apiMock.createDevice).toHaveBeenCalledWith(null, "cat-1", "Actuator", 1, expect.stringMatching(REQUEST_ID), options);
+    await act(async () => root.unmount());
+  });
+
+  it("does not refuse when the chosen installation survives a shrink to one", async () => {
+    apiMock.catalogItems.mockResolvedValue([item]);
+    apiMock.createDevice.mockResolvedValue(created);
+    await show({ installations: two });
+    await pickItem();
+    await choose("0");
+    await rerender({ installations: one });
+    expect(create().disabled).toBe(false);
+    await enter();
+    expect(apiMock.createDevice).toHaveBeenCalledWith(null, "cat-1", "Actuator", 1, expect.stringMatching(REQUEST_ID), options);
+    await act(async () => root.unmount());
+  });
+
+  it("keeps a lost choice blocked across an empty list and a new one", async () => {
+    apiMock.catalogItems.mockResolvedValue([item]);
+    await show({ installations: two });
+    await pickItem();
+    await choose("1");
+    await rerender({ installations: [] });
+    expect(create().disabled).toBe(true);
+    await rerender({ installations: [installation(1, "Garden")] });
+    expect(create().disabled, "a new list needs a fresh choice").toBe(true);
+    await enter();
+    expect(apiMock.createDevice).not.toHaveBeenCalled();
+    await act(async () => root.unmount());
+  });
+
+  it("sends installationId 0 for an explicit choice among several", async () => {
+    apiMock.catalogItems.mockResolvedValue([item]);
+    apiMock.createDevice.mockResolvedValue(created);
+    await show({ installations: two });
+    await pickItem();
+    await choose("0");
+    await act(async () => create().click());
+    expect(apiMock.createDevice.mock.calls[0][5].installationId).toBe(0);
+    expect(apiMock.createDevice).toHaveBeenCalledWith(null, "cat-1", "Actuator", 1, expect.stringMatching(REQUEST_ID),
+      { ...options, installationId: 0 });
+    await act(async () => root.unmount());
+  });
+
+  it("lets the target line decide: no selector, no installationId, stale choice ignored", async () => {
+    apiMock.catalogItems.mockResolvedValue([item]);
+    apiMock.createDevice.mockResolvedValue(created);
+    await show({ installations: two });
+    await pickItem();
+    await choose("1");
+    await rerender({ installations: two, lineId: 7 });
+    expect(select()).toBeNull();
+    await rerender({ installations: two });
+    expect(select()!.value, "leaving a line requires a fresh installation choice").toBe("");
+    expect(create().disabled).toBe(true);
+    await rerender({ installations: two, lineId: 7 });
+    await act(async () => create().click());
+    expect(apiMock.createDevice).toHaveBeenCalledWith(7, "cat-1", "Actuator", 1, expect.stringMatching(REQUEST_ID), options);
+    await act(async () => root.unmount());
+  });
+
+  it("refuses to create without an open project", async () => {
+    apiMock.catalogItems.mockResolvedValue([item]);
+    await show({ installations: [] });
+    await pickItem();
+    expect(create().disabled).toBe(true);
+    await enter();
+    expect(apiMock.createDevice).not.toHaveBeenCalled();
+    await act(async () => root.unmount());
+  });
+
+  it("retries a lost response with the captured request, even after the chosen installation is gone", async () => {
+    apiMock.catalogItems.mockResolvedValue([item]);
+    apiMock.createDevice.mockRejectedValueOnce(new TypeError("connection lost")).mockResolvedValueOnce(created);
+    apiMock.currentProject.mockResolvedValue({ installations: [], server_incarnation: "inc-1" });
+    await show({ installations: two, serverIncarnation: "inc-1" });
+    await pickItem();
+    await choose("1");
+    await act(async () => create().click());
+    expect(apiMock.createDevice).toHaveBeenCalledTimes(1);
+    const first = apiMock.createDevice.mock.calls[0];
+    expect(first[5]).toEqual({ ...options, installationId: 1 });
+    // The live list loses installation 1 before the user retries.
+    await rerender({ installations: [installation(0, "Main house"), installation(3, "Cellar")], serverIncarnation: "inc-1" });
+    await act(async () => host!.querySelector<HTMLButtonElement>(".catalog-retry")!.click());
+    expect(apiMock.createDevice).toHaveBeenCalledTimes(2);
+    const retried = apiMock.createDevice.mock.calls[1];
+    expect(retried).toEqual(first);
+    expect(retried[4], "same request id").toBe(first[4]);
+    expect(retried[5], "original installationId, not the live list").toEqual({ ...options, installationId: 1 });
+    await act(async () => root.unmount());
+  });
+
+  it("disables the selector while a create is pending and names the target installation", async () => {
+    apiMock.catalogItems.mockResolvedValue([item]);
+    const pending = deferred<typeof created>();
+    apiMock.createDevice.mockReturnValueOnce(pending.promise);
+    await show({ installations: two });
+    await pickItem();
+    expect(host!.textContent).not.toContain("Target installation:");
+    await choose("1");
+    expect(host!.textContent).toContain("Target installation: Garden");
+    await act(async () => create().click());
+    expect(select()!.disabled).toBe(true);
+    await act(async () => pending.resolve(created));
+    await act(async () => root.unmount());
+  });
+
+  it("links the selector to its hint and marks it required and invalid until chosen", async () => {
+    apiMock.catalogItems.mockResolvedValue([item]);
+    await show({ installations: two });
+    await pickItem();
+    expect(select()!.required).toBe(true);
+    expect(select()!.getAttribute("aria-invalid")).toBe("true");
+    const hint = host!.querySelector("#" + select()!.getAttribute("aria-describedby"));
+    expect(hint?.textContent).toBe("Several installations exist; choose where the unassigned devices go.");
+    await choose("0");
+    expect(select()!.getAttribute("aria-invalid")).toBe("false");
+    expect(select()!.hasAttribute("aria-describedby")).toBe(false);
+    await act(async () => root.unmount());
+  });
+
+  it("refuses a line target when no project is open", async () => {
+    apiMock.catalogItems.mockResolvedValue([item]);
+    await show({ installations: [], lineId: 7 });
+    await pickItem();
+    expect(create().disabled).toBe(true);
+    await enter();
+    expect(apiMock.createDevice).not.toHaveBeenCalled();
+    await act(async () => root.unmount());
+  });
+
+  it("labels the selector in English and German", async () => {
+    apiMock.catalogItems.mockResolvedValue([item]);
+    await show({ installations: two });
+    await pickItem();
+    expect(select()!.options[0].textContent).toBe("Choose an installation");
+    await act(async () => root.unmount());
+    host?.remove();
+    saveUiLanguage(settingsStorage, "de");
+    await show({ installations: two });
+    await pickItem();
+    expect(host!.querySelector(`select[aria-label="${deMessages["catalog.installation"]}"]`)).not.toBeNull();
+    expect(deMessages["catalog.installation"]).not.toBe("Installation");
+    const german = host!.querySelector<HTMLSelectElement>(`select[aria-label="${deMessages["catalog.installation"]}"]`)!;
+    expect(german.options[0].textContent).toBe(deMessages["catalog.installationPlaceholder"]);
     await act(async () => root.unmount());
   });
 });

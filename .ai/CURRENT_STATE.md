@@ -1,16 +1,18 @@
 # Restart snapshot
 
 Updated: 2026-10-27 05:50 CET. Operational snapshot, not an append-only journal.
-## WP-11 native acceptance / owner decisions (INTEGRATION PENDING, observed 2026-10-27 06:31 CET)
-- Candidate `f4f112fe5`: Claude review + correction re-review APPROVE; branch gate13 green.
-- Rust xtask103/0 ignored; corpus selection empty, no corpus case executed; web/browser not selected.
-- Actual Alpha17 native observations retained; 130 logged operations, not 130 tests; two closes exit0.
-- Task descriptions align all 11 decisions; no product runtime changes or ledger closure.
+## WP-11 native acceptance / owner decisions (DELIVERED, observed 2026-10-27 06:34 CET)
+- PUBLISHED main-first merge `cc9d8fab2`, feature `f4f112fe5`; local/tracking/live equal.
+- Claude review + correction re-review APPROVE; branch/integrated13 gates green/frozen.
+- Integrated Rust xtask103/0 ignored; tool461 methods/6skips; corpus no cases, no web/browser/bindings.
+- All 11 owner decisions reconciled; no product runtime changes or ledger status closure.
+- Actual Alpha17 native evidence:130 logged operations, not tests; two ordinary closes exit0.
+- Loopback-only sandbox, real home/projects masked; no bus or real-project edit, no native runner.
 - WP-11 OPEN: positive source-bound editors, capture export, pointer/hover/full matrix;
-  Orca/Firefox absent; vendor/GPU acceptance unverified. No bus or real-project edits.
-- Own `verify/wp11-native-20261027`; main-first integration uses current upstream tooling.
-- Evidence `<profile>/evidence/wp11-native-20261027/`; next integrated gate and conditional push.
-- Preserve foreign GATE-01, website and stats tracks, root private/dirty state; no release/deployment.
+  Orca/Firefox absent, vendor/GPU evidence unverified. No inferred compatibility or hardware Go.
+- Evidence `<profile>/evidence/wp11-native-20261027/`; result-doc gate/publication and owned
+  evidence archival/cleanup remain. Root stays stale/dirty; preserve all foreign tracks.
+- No release/deployment/key/vendor/foreign cleanup authority.
 ## GATE-01 production case parallelism (IN PROGRESS, observed 2026-10-27 05:50 CET)
 - Owner: this WebUI; branch `perf/gate01-fullypar-20261027`, isolated feature worktree.
 - Scope reserved: `tools/production_lanes.py`, runner flag plumbing, owning tests and ADR-0155.

@@ -229,6 +229,10 @@ struct WriteRequest {
     gateway: String,
     confirmation: String,
     enable: bool,
+    /// Unit-test stall at the file-write boundary; never accepted over HTTP.
+    #[cfg(test)]
+    #[serde(skip)]
+    before_backup: Option<Box<dyn FnOnce() + Send>>,
 }
 
 #[derive(Serialize)]
@@ -284,6 +288,8 @@ async fn write(
     };
     let tunnel = TunnelTransport(connected.as_ref());
     let mut backup_path = None;
+    #[cfg(test)]
+    let mut before_backup = body.before_backup;
     let outcome = set_individual_address_write_enable(
         &tunnel,
         plan,
@@ -295,6 +301,10 @@ async fn write(
             // them off the tunnel's runtime workers (S2-04, issue #30), but
             // only them, so the request stays cancellable everywhere else.
             crate::tunnel_workers::blocking_off_tunnel_workers(|| {
+                #[cfg(test)]
+                if let Some(hook) = before_backup.take() {
+                    hook();
+                }
                 let path = write_backup(
                     &state.data_dir.join("device-backups"),
                     address,
@@ -340,3 +350,6 @@ async fn write(
         }
     }
 }
+
+#[cfg(test)]
+mod tests;

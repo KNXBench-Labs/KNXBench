@@ -1273,6 +1273,27 @@ const KEEP_STALL: Duration = Duration::from_millis(1500);
 /// tunnel's receive task, which must keep acknowledging the gateway meanwhile.
 #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
 async fn a_blocking_backup_keeper_leaves_tunnel_tasks_running() {
+    download_persistence_leaves_tunnel_tasks_running(PersistenceStage::Backup).await;
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 1)]
+async fn a_blocking_post_transfer_settler_leaves_tunnel_tasks_running() {
+    download_persistence_leaves_tunnel_tasks_running(PersistenceStage::Settlement).await;
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 1)]
+async fn a_blocking_post_check_record_leaves_tunnel_tasks_running() {
+    download_persistence_leaves_tunnel_tasks_running(PersistenceStage::Check).await;
+}
+
+#[derive(Clone, Copy)]
+enum PersistenceStage {
+    Backup,
+    Settlement,
+    Check,
+}
+
+async fn download_persistence_leaves_tunnel_tasks_running(at: PersistenceStage) {
     use std::sync::atomic::{AtomicUsize, Ordering};
     let ticks = Arc::new(AtomicUsize::new(0));
     let ticker = tokio::spawn({
@@ -1301,12 +1322,35 @@ async fn a_blocking_backup_keeper_leaves_tunnel_tasks_running() {
         {
             let (ticks, window) = (Arc::clone(&ticks), Arc::clone(&window));
             move |_| {
-                let before = ticks.load(Ordering::SeqCst);
-                std::thread::sleep(KEEP_STALL);
-                *window.lock().unwrap() = Some((before, ticks.load(Ordering::SeqCst)));
+                if matches!(at, PersistenceStage::Backup) {
+                    let before = ticks.load(Ordering::SeqCst);
+                    std::thread::sleep(KEEP_STALL);
+                    *window.lock().unwrap() = Some((before, ticks.load(Ordering::SeqCst)));
+                }
             }
         },
     );
+    if matches!(at, PersistenceStage::Settlement) {
+        let mut on_end = started.session.shared.on_end.lock().unwrap();
+        let original = on_end.take().expect("settler installed");
+        let (ticks, window) = (Arc::clone(&ticks), Arc::clone(&window));
+        *on_end = Some(Box::new(move |status| {
+            // Past the transfer, but before the read-only check and disconnect:
+            // the real settler may persist the native project at this boundary.
+            let before = ticks.load(Ordering::SeqCst);
+            std::thread::sleep(KEEP_STALL);
+            *window.lock().unwrap() = Some((before, ticks.load(Ordering::SeqCst)));
+            original(status);
+        }));
+    }
+    if matches!(at, PersistenceStage::Check) {
+        let (ticks, window) = (Arc::clone(&ticks), Arc::clone(&window));
+        *started.session.shared.before_record_check.lock().unwrap() = Some(Box::new(move || {
+            let before = ticks.load(Ordering::SeqCst);
+            std::thread::sleep(KEEP_STALL);
+            *window.lock().unwrap() = Some((before, ticks.load(Ordering::SeqCst)));
+        }));
+    }
     tokio::time::timeout(Duration::from_secs(10), gate.entered.notified())
         .await
         .expect("the run reached its first frame");

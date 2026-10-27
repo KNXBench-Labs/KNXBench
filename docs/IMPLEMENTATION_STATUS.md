@@ -14,6 +14,11 @@ fragment aliases and update this index. Do not rewrite previous results.
 
 ## Explicit catalogue installation target (27 October 2026 source)
 
+Published as main-first `a17420239` after independent reviews APPROVE;
+branch/integrated14 green (integrated Rust1503/62ignored, corpus51/51,
+Vitest4568 and Chromium932; frozen inputs and unchanged user data).
+[Acceptance and retained boundaries](status/2026-10-27-catalogue-installation-target.md).
+
 The catalogue workspace requires an explicit installation choice for a line-less
 create when the current project has several installations. A removed choice is
 cleared; no open project blocks creation, and lost-response retries keep the

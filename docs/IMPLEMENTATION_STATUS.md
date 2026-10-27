@@ -21,6 +21,15 @@ preparation is complete; approval, implementation and operational acceptance are
 not. No signing, registry write, key creation, workflow or runtime change occurred;
 existing container limitations and ledger statuses are unchanged.
 
+Published as main-first `7b76dd22c` (feature `0e9dfab3a`) after independent
+whole-design, correction and final reviews APPROVE. Both maintained
+change-scoped package gates passed 10/10 planned stages with frozen inputs and
+no touched/unchecked user data. Tooling registered 461 methods with six optional
+skips; no product Rust tests, web/browser, bindings or private corpus were
+selected. Primary-source/citation checks passed; local, tracking and live main
+matched after publication. These are design/documentation checks, not an
+executed signing or registry-integration test.
+
 ## Explicit catalogue installation target (27 October 2026 source)
 
 Published as main-first `a17420239` after independent reviews APPROVE;

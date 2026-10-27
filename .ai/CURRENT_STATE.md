@@ -1,14 +1,20 @@
 # Restart snapshot
 
-Updated: 2026-10-27 13:40 CET. Operational snapshot, not an append-only journal.
-## OWN-01 Docker signing design (ACCEPTANCE, observed 2026-10-27 13:40 CET; session ddbf32f04371)
-- GO: documentation-only proposal; claim `fc39eb193` published and exact readback verified.
-- Owner branch `docs/own01-signing-design-20261027`; source baseline `6c9bded56`.
-- Reserve only signing-design documentation and its OWN-01/status/roadmap/research links.
-- Whole/correction/final design reviews APPROVE; primary/citation/docs/local-info checks passed.
-- Gate-chain state and exact candidate: `<profile>/evidence/own01-signing-design-20261027/` receipts.
-- No workflow/runtime edits, keys, external login, image publication, release or bus actions.
-- Next: maintained branch/integrated gates and publication; activation remains separately gated.
+Updated: 2026-10-27 13:47 CET. Operational snapshot, not an append-only journal.
+## WP-11 positive native editors (CLAIMED, observed 2026-10-27 13:47 CET; session ddbf32f04371)
+- GO: exact Alpha 17 AppImage, isolated fictional source-20 numeric editor and native-device instructions.
+- Owner branch `verify/wp11-positive-editors-20261027`; only these two acceptance cells reserved.
+- Artifact authenticated; original synthetic product prepared; native admission/execution PENDING.
+- Evidence `<profile>/evidence/wp11-positive-editors-20261027/`; no native app launched yet.
+- Next: verify confinement, native edit/Cancel/Apply/Save/reopen, independent evidence review.
+- No bus, real projects, imported-original instruction claim, capture, release or deployment scope.
+## OWN-01 Docker signing design (DELIVERED, observed 2026-10-27 13:47 CET)
+- PUBLISHED main-first `7b76dd22c`, feature `0e9dfab3a`; local/tracking/live exact readback.
+- Whole/correction/final design reviews APPROVE; branch10/integrated10 green/frozen, user-data guards clear.
+- Tool461 registered/6 optional skips; no product Rust, web/browser, bindings or corpus selected.
+- Proposal only: no signing/key/registry/workflow/runtime change; activation still owner/evidence gated.
+- Source reservation RELEASED; own signing tree/cache held only for result-note gate and retirement.
+- Evidence `<profile>/evidence/own01-signing-design-20261027/`; root stays stale/dirty and untouched.
 ## Catalogue installation target (DELIVERED runtime, observed 2026-10-27 12:02 CET)
 - PUBLISHED main-first `a17420239` (feature `8d3ebe69d`); local/tracking/live exact readback.
 - Whole/correction/final reviews APPROVE; branch14/integrated14 green, frozen and user-data safe.

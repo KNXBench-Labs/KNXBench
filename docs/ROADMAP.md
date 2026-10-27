@@ -55,9 +55,12 @@ tests is granted (27 October). The first bounded native Wayland/WebKitGTK
 slice exercised the published Alpha 17 AppImage with fictional data and no
 external network: keyboard/focus, project save/reopen, note drafts and bounded
 zoom/menu controls. [Acceptance and exclusions](status/2026-10-27-wp11-native-acceptance.md).
-WP-11 stays open for positive source-bound editors, capture export, remaining
-layout/pointer cells and unavailable environments; no code, hardware or release
-capability is added. The separate confirmed owner decisions are recorded in
+A [positive native continuation](status/2026-10-27-wp11-positive-native-editors.md)
+now verifies one declared integer slider and native-created-device plain
+instructions, including persistence across actual process restart. WP-11 stays
+open for other controls/imported-original instructions, capture export, remaining
+keyboard/layout/pointer cells and unavailable environments; no code, hardware or
+release capability is added. The separate confirmed owner decisions are recorded in
 [OWN-01](open-work/OWN-01-owner-decisions.md), including MODEL-05's deferral and
 retention of the S2-03 communication-bit policy.
 

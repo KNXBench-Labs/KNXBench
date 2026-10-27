@@ -1,6 +1,16 @@
 # Restart snapshot
 
-Updated: 2026-10-27 14:38 CET. Operational snapshot, not an append-only journal.
+Updated: 2026-10-27 15:33 CET. Operational snapshot, not an append-only journal.
+## WP-11 positive native editors (EVIDENCE COMPLETE / CORRECTION REVIEW, observed 2026-10-27 15:33 CET; session ddbf32f04371)
+- Owner branch `verify/wp11-positive-editors-20261027`; only result-package source reservation remains.
+- Actual Alpha 17: declared source-20 slider Cancel/Apply/Save/Undo/Redo and native instructions verified.
+- Two isolated native processes; actual restart renders slider7/exact instruction; ordinary closes exit0.
+- Native/desktop lease RELEASED; exact owned PIDs/windows absent. No real data or bus scope.
+- No-hint control stays generic; exact declared positive XML equals actual installed source.
+- Whole-evidence review APPROVE; cheap weaknesses corrected, focused re-review pending before package gates.
+- Pending branch/integrated maintained gates, publication and retirement.
+- Evidence `<profile>/evidence/wp11-positive-editors-20261027/`; `verification-3.json` exit0; original readers/results preserved.
+- No full WP-11, keyboard replacement, imported-original instructions, capture, release or deployment claim.
 ## Issue #30 tunnel timeout (PUBLISHED, observed 2026-10-27 14:38 CET)
 - Source merge `1ab4ad6a5` published; local/tracking/live exact readback. Both reviews APPROVE.
 - Branch14 + integrated2 gate14 accepted: each Rust3447/140ignored, corpus91/91, inputs frozen.
@@ -8,20 +18,14 @@ Updated: 2026-10-27 14:38 CET. Operational snapshot, not an append-only journal.
 - Delivery comment #6443271993 verified; issue stays open. No release/image/hardware claim.
 - Runtime claim RELEASED. Ordinary download/service-control starvation + device evidence open (S2-04).
 - Evidence `<profile>/evidence/issue30-tunnel-20261027/`; integration held only for result docs/retirement.
-## WP-11 positive native editors (CLAIMED, observed 2026-10-27 13:47 CET; session ddbf32f04371)
-- GO: exact Alpha 17 AppImage, isolated fictional source-20 numeric editor and native-device instructions.
-- Owner branch `verify/wp11-positive-editors-20261027`; only these two acceptance cells reserved.
-- Artifact authenticated; original synthetic product prepared; native admission/execution PENDING.
-- Evidence `<profile>/evidence/wp11-positive-editors-20261027/`; no native app launched yet.
-- Next: verify confinement, native edit/Cancel/Apply/Save/reopen, independent evidence review.
-- No bus, real projects, imported-original instruction claim, capture, release or deployment scope.
 ## OWN-01 Docker signing design (DELIVERED, observed 2026-10-27 13:47 CET)
 - PUBLISHED main-first `7b76dd22c`, feature `0e9dfab3a`; local/tracking/live exact readback.
 - Whole/correction/final design reviews APPROVE; branch10/integrated10 green/frozen, user-data guards clear.
 - Tool461 registered/6 optional skips; no product Rust, web/browser, bindings or corpus selected.
 - Proposal only: no signing/key/registry/workflow/runtime change; activation still owner/evidence gated.
-- Source reservation RELEASED; own signing tree/cache held only for result-note gate and retirement.
-- Evidence `<profile>/evidence/own01-signing-design-20261027/`; root stays stale/dirty and untouched.
+- Source reservation RELEASED; result notes/next claim `3c7e705bf` published with exact readback.
+- Own signing tree/three refs/cache RETIRED after 368-payload archive + gzip verification.
+- Evidence `<profile>/evidence/own01-signing-design-20261027/retirement.json`; root untouched.
 ## Catalogue installation target (DELIVERED runtime, observed 2026-10-27 12:02 CET)
 - PUBLISHED main-first `a17420239` (feature `8d3ebe69d`); local/tracking/live exact readback.
 - Whole/correction/final reviews APPROVE; branch14/integrated14 green, frozen and user-data safe.

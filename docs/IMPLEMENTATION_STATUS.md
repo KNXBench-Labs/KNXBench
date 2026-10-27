@@ -12,6 +12,20 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Positive native editor cells (27 October 2026; acceptance evidence only)
+
+The [bounded native continuation](status/2026-10-27-wp11-positive-native-editors.md)
+exercised the actual Alpha 17 AppImage with independently reviewed original
+fictional data: declared integer-slider Cancel/Apply/Save/Undo/Redo, native-created
+device instruction preview/cancel/confirm/save, and both values after an actual
+process restart. Saved-result queries and exact native process/window settlement
+corroborate the UI observations. Exact fictional inputs are published with the
+[receipt](evidence/wp11-positive-native-2026-10-27.json); no runtime changed.
+WP-11 stays open for other controls, imported-original instructions, capture,
+remaining interaction/layout cells and unavailable screen-reader/browser/GPU
+environments. Virtual-key replacement remains unestablished, not a diagnosed
+product defect; no general accessibility or compatibility claim follows.
+
 ## Docker signing design preparation (27 October 2026; documentation only)
 
 The [OWN-01 design proposal](research/2026-10-27-docker-image-signing-design.md)

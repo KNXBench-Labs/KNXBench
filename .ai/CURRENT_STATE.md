@@ -1,6 +1,6 @@
 # Restart snapshot
 
-Updated: 2026-10-27 05:50 CET. Operational snapshot, not an append-only journal.
+Updated: 2026-10-27 06:45 CET. Operational snapshot, not an append-only journal.
 ## WP-11 native acceptance / owner decisions (INTEGRATION PENDING, observed 2026-10-27 06:31 CET)
 - Candidate `f4f112fe5`: Claude review + correction re-review APPROVE; branch gate13 green.
 - Rust xtask103/0 ignored; corpus selection empty, no corpus case executed; web/browser not selected.
@@ -11,20 +11,15 @@ Updated: 2026-10-27 05:50 CET. Operational snapshot, not an append-only journal.
 - Own `verify/wp11-native-20261027`; main-first integration uses current upstream tooling.
 - Evidence `<profile>/evidence/wp11-native-20261027/`; next integrated gate and conditional push.
 - Preserve foreign GATE-01, website and stats tracks, root private/dirty state; no release/deployment.
-## GATE-01 production case parallelism (IN PROGRESS, observed 2026-10-27 05:50 CET)
-- Owner: this WebUI; branch `perf/gate01-fullypar-20261027`, isolated feature worktree.
-- Scope reserved: `tools/production_lanes.py`, runner flag plumbing, owning tests and ADR-0155.
-- User GO for this slice. No bus/hardware/release/deployment authority inferred.
-- Two measured runs green/frozen: production557 each, 438.95/439.84 s vs prior681.7 s.
-- Raw evidence `<profile>/evidence/gate01-fullypar-20261027/`; no own measurement runner now.
-- Review1 R1/R2/R3 fixed; focused Opus review APPROVE, then two cheap MINOR corrections.
-- Parent60/60 green; next confirmation review, then main-first package gate. No gate runner now.
+## GATE-01 production case parallelism (DELIVERED, observed 2026-10-27 06:35 CET)
+- PUBLISHED main-first merge `3af5ea9e4` on `277d8eca3` (feature `51ee72c1b`, fixes `644fb69f1`,
+  `c7c8877a7`); local/tracking/live readbacks equal.
+- Review BLOCK R1 fixed; re-review + confirmation APPROVE. Gate 11/11 green, Vitest4553,
+  browser925+production557; production stages 681.7 s -> 455.7 s (ADR-0155).
+- Evidence `<profile>/evidence/gate01-fullypar-20261027/`; own trees retired after result docs.
+- Next: GATE-01 remainder (cross-suite parallelism, default-lane case parallelism) unreviewed.
 ## GATE-01 production browser lanes (DELIVERED, observed 2026-10-27 00:45 CET)
-- PUBLISHED main-first merge `745932994` (feature `1baff6c3a`, fixes `a91ba795f`); readbacks equal.
-- Review + re-review APPROVE; merged gate 11/11 green, Vitest4553, browser925+production557.
-- Production stages 850.3 s -> 681.7 s (ADR-0154). Case-level/cross-suite parallelism stays open.
-- Evidence `<profile>/evidence/gate01-prod-lanes-20261026/`; own trees retired after result docs.
-- Next: OPEN_WORK has no other plain-Open row; remaining rows evidence/owner/consent blocked.
+- PUBLISHED merge `745932994` (ADR-0154, 850.3 -> 681.7 s); superseded by the entry above.
 ## Alpha 17 release (PUBLISHED, observed 2026-10-26 22:53 CET)
 - Release freeze: released by claude-release-alpha17
 - Tag `v0.1.0-alpha.17` (object `0fd5fabda`) → commit `a9ea32d72`, cutoff `20ab2f7ea`; GitHub pre-release.

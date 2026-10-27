@@ -203,6 +203,16 @@ def pidfd_process_id(pidfd: int) -> int | None:
         return None
 
 
+# A fixture child that exits once its parent (argv[1]) is gone; 120 s only bounds a leak.
+ORPHAN_EXIT = ('import os,sys,time\n'
+               'parent=int(sys.argv[1]);end=time.monotonic()+120\n'
+               'while os.getppid()==parent and time.monotonic()<end: time.sleep(0.05)\n')
+# A fixture process that exits once the path in argv[1] exists; 120 s only bounds a leak.
+RELEASE_EXIT = ('import os,sys,time\n'
+                'end=time.monotonic()+120\n'
+                'while not os.path.exists(sys.argv[1]) and time.monotonic()<end: time.sleep(0.05)\n')
+
+
 def open_owned_process(pid: int, marker: bytes) -> OwnedProcessIdentity | None:
     """Pin and revalidate one marker-owned process without trusting its numeric PID."""
     pidfd = None
@@ -577,7 +587,8 @@ class BrowserTempLaunch(unittest.TestCase):
         with self.workspace() as tmp:
             release = Path(tmp) / 'owned-release'
             env = {**self.clean_environment(), 'KNXBENCH_SIGTERM_RELEASE': str(release)}
-            fixture = subprocess.Popen([sys.executable, '-c', 'import time; time.sleep(4)'], env=env)
+            # Event-bound like the diagnostic fixture: cleanup's release file ends it.
+            fixture = subprocess.Popen([sys.executable, '-c', RELEASE_EXIT, str(release)], env=env)
             sentinel_marker = f'KNXBENCH_SIGTERM_SENTINEL={release}'.encode()
             real_pidfd_open = os.pidfd_open
             sentinel = None
@@ -586,7 +597,7 @@ class BrowserTempLaunch(unittest.TestCase):
             scanned_pidfds = []
             try:
                 sentinel = subprocess.Popen(
-                    [sys.executable, '-c', 'import time; time.sleep(8)'],
+                    [sys.executable, '-c', 'import time; time.sleep(120)'],
                     env={**self.clean_environment(), 'KNXBENCH_SIGTERM_SENTINEL': str(release)})
                 fixture_identity = open_owned_process(
                     fixture.pid, f'KNXBENCH_SIGTERM_RELEASE={release}'.encode())
@@ -617,8 +628,11 @@ class BrowserTempLaunch(unittest.TestCase):
                               if identity is not None]
                 signal_owned_processes(running_owned_processes(identities), signal.SIGKILL)
                 wait_for_owned_processes(identities)
+                # Unreaped direct children: Popen.kill cannot hit a reused PID here.
+                fixture.kill()
                 fixture.wait(timeout=10)
                 if sentinel is not None:
+                    sentinel.kill()
                     sentinel.wait(timeout=10)
                 close_owned_processes(identities)
 
@@ -627,12 +641,14 @@ class BrowserTempLaunch(unittest.TestCase):
         with self.workspace() as tmp:
             directory = Path(tmp) / 'diagnostic-directory'
             marker = str(directory)
+            # Lifetimes are event-bound, not timed: under load a 4 s child could exit before
+            # its identity was pinned. The child leaves once diagnostics end its wrapper.
             program = (
                 'import os,subprocess,sys,time;'
-                'child=subprocess.Popen([sys.executable,"-c","import time;time.sleep(4)"],'
+                f'child=subprocess.Popen([sys.executable,"-c",{ORPHAN_EXIT!r},str(os.getpid())],'
                 'env=os.environ.copy());'
                 'print(child.pid,flush=True);'
-                'time.sleep(8)')
+                'time.sleep(120)')
             env = {**self.clean_environment(), 'PYTHONFAULTHANDLER': '1',
                    'KNXBENCH_BROWSER_TMP_DIR': marker}
             wrapper = subprocess.Popen(
@@ -650,7 +666,7 @@ class BrowserTempLaunch(unittest.TestCase):
                 child_pid = int(wrapper.stdout.readline())
                 sentinel_marker = f'KNXBENCH_SIGTERM_SENTINEL={directory}'.encode()
                 sentinel = subprocess.Popen(
-                    [sys.executable, '-c', 'import time; time.sleep(8)'],
+                    [sys.executable, '-c', 'import time; time.sleep(120)'],
                     env={**self.clean_environment(), 'KNXBENCH_SIGTERM_SENTINEL': marker})
                 fixture_marker = f'KNXBENCH_BROWSER_TMP_DIR={directory}'.encode()
                 wrapper_identity = open_owned_process(wrapper.pid, fixture_marker)
@@ -685,8 +701,11 @@ class BrowserTempLaunch(unittest.TestCase):
                     wrapper_identity, child_identity, sentinel_identity) if identity is not None]
                 signal_owned_processes(running_owned_processes(identities), signal.SIGKILL)
                 wait_for_owned_processes(identities)
+                # Unreaped direct children: Popen.kill cannot hit a reused PID here.
+                wrapper.kill()
                 wrapper.wait(timeout=10)
                 if sentinel is not None:
+                    sentinel.kill()
                     sentinel.wait(timeout=10)
                 close_owned_processes(identities)
 

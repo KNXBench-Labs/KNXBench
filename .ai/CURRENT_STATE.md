@@ -1,18 +1,15 @@
 # Restart snapshot
 
-Updated: 2026-10-27 16:34 CET. Operational snapshot, not an append-only journal.
-## WP-11 positive native editors (DELIVERED slice, observed 2026-10-27 16:34 CET; session ddbf32f04371)
-- PUBLISHED main-first `1173e1daf`, feature `0aab69508`; local/tracking/live exact readback.
-- Whole-evidence + focused correction source/text reviews APPROVE; all six weaknesses disposed.
-- Branch10/integrated10 green/frozen, user-data guards clear; tool461 registered/6 optional skips each.
-- No product Rust, web/browser, bindings or private corpus selected; native artifact evidence is separate.
-- Actual Alpha17 slider Cancel/Apply/Save/Undo/Redo and native plain instructions persist after restart.
-- Two ordinary closes exit0; exact owned PIDs/windows absent; original ELF bound to authenticated AppImage.
-- Source/desktop reservation RELEASED; no native execution pending. Root stays stale/dirty and untouched.
-- Evidence `<profile>/evidence/wp11-positive-editors-20261027/`; `verification-3.json` exit0.
-- Verified retirement uses `retirement.json` there; original/failed attempts and exact executables retained.
-- WP-11 remains OPEN: other controls/imported originals, keyboard replacement, capture, full layout and absent environments.
-- Next choose another admitted bounded cell; no bus/hardware/release/deployment authority.
+Updated: 2026-10-27 18:04 CET. Operational snapshot, not an append-only journal.
+## WP-11 native capture (CLAIMED, observed 2026-10-27 18:04 CET; session ddbf32f04371)
+- Owner `verify/wp11-native-capture-20261027`; desktop reserved only for this fictional Alpha17 capture cell.
+- GO one loopback software session/frame, native Export Cancel/Save/overwrite-cancel/Replace and ordinary close.
+- No real projects/bus/hardware, source runtime edit, original-device instruction, release/deployment scope.
+- Original-source client fixture PASSED; no-frame control retains raw named failure101, not a product defect.
+- Independent fixture/source-text review READY; source/header/row correction bound to actual retained runs.
+- Native execution NOT STARTED; fresh launcher confinement, owned PID and embedded ELF proof required first.
+- Evidence `<profile>/evidence/wp11-native-capture-20261027/`; original attempts and exact executables retained.
+- Next preflight + live namespace/PID/executable proof, then actual native dialogs and artifact oracles.
 ## Issue #30 tunnel timeout (PUBLISHED, observed 2026-10-27 14:38 CET)
 - Source merge `1ab4ad6a5` published; local/tracking/live exact readback. Both reviews APPROVE.
 - Branch14 + integrated2 gate14 accepted: each Rust3447/140ignored, corpus91/91, inputs frozen.
@@ -20,14 +17,6 @@ Updated: 2026-10-27 16:34 CET. Operational snapshot, not an append-only journal.
 - Delivery comment #6443271993 verified; issue stays open. No release/image/hardware claim.
 - Runtime claim RELEASED. Ordinary download/service-control starvation + device evidence open (S2-04).
 - Evidence `<profile>/evidence/issue30-tunnel-20261027/`; integration held only for result docs/retirement.
-## OWN-01 Docker signing design (DELIVERED, observed 2026-10-27 13:47 CET)
-- PUBLISHED main-first `7b76dd22c`, feature `0e9dfab3a`; local/tracking/live exact readback.
-- Whole/correction/final design reviews APPROVE; branch10/integrated10 green/frozen, user-data guards clear.
-- Tool461 registered/6 optional skips; no product Rust, web/browser, bindings or corpus selected.
-- Proposal only: no signing/key/registry/workflow/runtime change; activation still owner/evidence gated.
-- Source reservation RELEASED; result notes/next claim `3c7e705bf` published with exact readback.
-- Own signing tree/three refs/cache RETIRED after 368-payload archive + gzip verification.
-- Evidence `<profile>/evidence/own01-signing-design-20261027/retirement.json`; root untouched.
 ## Catalogue installation target (DELIVERED runtime, observed 2026-10-27 12:02 CET)
 - PUBLISHED main-first `a17420239` (feature `8d3ebe69d`); local/tracking/live exact readback.
 - Whole/correction/final reviews APPROVE; branch14/integrated14 green, frozen and user-data safe.

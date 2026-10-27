@@ -134,6 +134,7 @@ impl Observation {
                 BusError::NotImplemented => ("transport-not-implemented", None),
                 BusError::Protocol(_) => ("transport-protocol", None),
                 BusError::NotMulticast(_) => ("transport-not-multicast", None),
+                BusError::TunnelClosed(_) => ("transport-tunnel-closed", None),
             },
         };
         self.failure(phase, class, kind);

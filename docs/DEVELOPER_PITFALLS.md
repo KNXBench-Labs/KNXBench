@@ -287,7 +287,16 @@ already found lying in the grass.
   service-control` use it; the last three persist a pre-write backup and a
   send-possible marker between frames. A source-contract test in `main.rs`
   pins those three call sites (not a CLI end-to-end proof); other tunnel
-  commands still build current-thread runtimes.
+  commands still build current-thread runtimes. The server's System-2 worker
+  had the same starvation on a runtime worker (issue #30; a container limited
+  to one CPU can end up with a single worker): it runs its executors through `off_tunnel_workers`
+  (`block_in_place`) in `apps/knx-server/src/device_system2/worker.rs`. Any new
+  server path that persists synchronously while it holds a tunnel needs the same.
+- **A failed tunnel send names its cause.** `BusError::TunnelClosed` carries a
+  `TunnelClosure` (gateway disconnect, unacknowledged sequence and last ACK
+  status, heartbeat, socket, client). Do not map it back to a bare timeout. After
+  an unacknowledged request the receive loop keeps running until `disconnect()`
+  so the gateway's `DISCONNECT_RESPONSE` can still confirm the teardown.
 
 ## Docker image
 

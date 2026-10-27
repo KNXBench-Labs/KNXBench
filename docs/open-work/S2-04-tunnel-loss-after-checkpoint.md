@@ -36,9 +36,14 @@ disconnect. The private journal was not shared and was not inspected here.
   starve the tunnel receive task during the largest checkpoint of the run. Then
   the gateway's own requests go unacknowledged and it may drop the connection.
 
-The last point is the leading hypothesis. It fits the timing and the earlier
-CLI observation, but it is not proven for this run: no checkpoint timing,
-container CPU count or gateway log is available.
+The last point was the initial hypothesis, not a proven cause. The reporter's
+later comment `6453935381` supplies checkpoint times and eight available CPUs
+without container CPU limits, with non-rotational storage and no other tunnel
+client. These observations weaken the specific few-workers/slow-storage account.
+The 30.040-second checkpoint gap includes hardware checks, prestate reads,
+validation and persistence; it is not a measured fsync or idle duration. The
+4.083-second next gap does not identify one failed frame. No gateway log or
+independent device measurement establishes the original cause.
 
 ## Fix (this package)
 
@@ -157,8 +162,12 @@ operation holds a tunnel (for example a project save during a bus monitor sessio
   The address result is already decided, but the open tunnel can still starve
   while the project is saved. This source-traced path needs a separately tested
   wrapper; no runtime or field test of it is claimed here.
-- A reporter re-test on a build that contains both fixes. The new closure cause in
-  the private journal, the checkpoint timestamps and the container CPU count
-  would show whether the hypothesis held.
+- One optional reporter retest on source `3583ab8e0` or a descendant, containing
+  the receiver/teardown correction and the bounded experimental wait profile.
+  [Software acceptance and exact scope](../status/2026-10-27-system2-patient-waits.md#acceptance-boundary).
+  Request `6455873678` was posted and read back on 28 October 2026: preserve prior
+  evidence and independently back up data, use the normal new-preview/confirmation
+  flow with ETS fallback, stop on failure. Existing checkpoint and CPU captures
+  describe the older attempt, not a retest; original cause remains unproven.
 - The hardware outcome stays in [WP-12](WP-12-field-evidence-and-owner-acceptance.md)
   and issue #22.

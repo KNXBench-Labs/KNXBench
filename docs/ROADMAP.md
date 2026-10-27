@@ -24,7 +24,10 @@ load-state transitions 30 → 120 seconds. Device transport ACK/repetition stays
 at three seconds. Ordinary tunnel users, retry counts,
 backup and final verification are unchanged. The existing receiver/teardown fix
 is included; neither change proves the cause of issue #30 or a successful device
-outcome. Source-only; no Alpha 17 image or release update is implied.
+outcome. Published source `3583ab8e0` passed branch/integrated 14-stage gates;
+[acceptance and retest boundary](status/2026-10-27-system2-patient-waits.md#acceptance-boundary).
+One optional reporter retest has been requested. Source-only; no Alpha 17 image
+or release update is implied.
 
 ## Server tunnel persistence after Alpha 17
 

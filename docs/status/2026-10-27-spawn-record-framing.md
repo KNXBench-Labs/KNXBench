@@ -58,8 +58,19 @@ integration remains in `<profile>/evidence/gate01-cold-start-20261027/`.
 
 ## Acceptance boundary
 
-Independent whole-package review, branch gate, main-first integrated gate and
-publication are pending until their actual receipts are recorded. The deterministic
-controls reproduce the parser mechanism, not the original OS scheduling. No
-browser/application test, bus operation, new retry, relaxed assertion or production
-wrapper change is claimed.
+Published main-first as `bc1b47a9abe41d4b3cd0a23c4afed3b772258ee0` (feature `c82db6d5167ed0c16289a275dbbc2e09344d6375`)
+after independent review APPROVE. Branch and integrated maintained package gates
+each passed all ten planned stages, with frozen inputs and no touched or unchecked
+user data. Integrated tooling: 466 registered methods,
+460 passed, 6 explicit optional skips.
+The fourteen-method owning-module evidence above is separate from these package
+runs, not additional distinct product coverage. Rust/application/browser/bindings
+and corpus runtime suites were not selected by the test-only scope. Local,
+tracking and live main plus all owned target bytes matched after publication.
+
+The original failed assessment integration remains failed and retained. The
+cold-start assessment must be re-integrated on this correction before its own
+publication. The deterministic controls reproduce the parser mechanism, not the
+original OS scheduling. No bus operation, new retry, relaxed assertion or
+production wrapper change is claimed. This result-note gate and own retirement
+are separate operational closeout.

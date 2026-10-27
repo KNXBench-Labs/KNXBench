@@ -54,15 +54,16 @@ Local, tracking and live `main` matched after publication. Original failed
 attempts, stall probes, fallback mutation and accepted receipts remain in
 `<profile>/evidence/gate01-sigterm-flake-20261027/`.
 
-## Spawn-record reader candidate — 27 October 2026
+## Spawn-record reader correction — 27 October 2026
 
 A separate integrated package gate exposed a SIGHUP fixture `IndexError` while
 reading an unfinished `child ` stdout record. The test-only reader correction
 polls before reading and accepts newline-terminated records only. Final owning
 module: 14 methods, zero skips; five deterministic synthetic framing controls
 are calibrated against the original reader. These are not application tests or
-an explanation of the older SIGTERM/cold-Vite timeouts. Review/package acceptance
-and publication remain pending in the [bounded record](../status/2026-10-27-spawn-record-framing.md).
+an explanation of the older SIGTERM/cold-Vite timeouts. Published main-first as
+`bc1b47a9a` after independent review APPROVE and branch/integrated gates10 green;
+see the [bounded record](../status/2026-10-27-spawn-record-framing.md).
 
 ## Known boundary
 

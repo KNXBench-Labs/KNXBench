@@ -1,13 +1,12 @@
 # Restart snapshot
 
-Updated: 2026-10-27 20:34 CET. Operational snapshot, not an append-only journal.
-## GATE-01 signal fixture (IMPLEMENTED, observed 2026-10-27 20:34 CET; session ddbf32f04371)
-- Owner `fix/gate01-spawn-record-framing-20261027`; test-only reader framing; browser_tmp/runner/config unchanged.
-- Original semantic RED and final old-reader calibration retained: five synthetic controls, one failure/three errors.
-- Restored owning module14/0skips passes; incomplete PID and final-drain cases preserve complete-malformed refusal.
-- No synthetic child process, added timeout/retry or historical SIGTERM/cold-cause attribution.
-- Evidence `<profile>/evidence/gate01-spawn-record-20261027/parent-proof.json`; review/branch/integrated publication PENDING.
-- Next independent whole-package review, exact maintained gates and main-first delivery; no bus/release/foreign cleanup.
+Updated: 2026-10-27 20:49 CET. Operational snapshot, not an append-only journal.
+## GATE-01 signal fixture (PUBLISHED, observed 2026-10-27 20:49 CET; session ddbf32f04371)
+- Main-first `bc1b47a9a` (feature `c82db6d51`); independent APPROVE, branch/integrated10 green/frozen, exact readback.
+- Tool466 registered/460passed/6optional skips; owning module14/0skips; synthetic controls5 are not app tests.
+- Exact old-reader RED/calibration retained; no production wrapper, timeout/retry or older-cause change.
+- Evidence `<profile>/evidence/gate01-spawn-record-20261027/`; result-only docs gate/publication and own retirement next.
+- Cold-start assessment stays parked below until fresh main-first integration; no bus/release/foreign cleanup.
 ## GATE-01 cold-start follow-up (PARKED, observed 2026-10-27 20:22 CET; session ddbf32f04371)
 - Source-only candidate `763d7fbe6` APPROVE; branch gate10 green; integrated `83871cd88` failed the fixture above.
 - Current repeat3 inventory has three groups at caps4/8; historical raw IDs/source/cause still unavailable.

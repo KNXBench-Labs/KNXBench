@@ -149,12 +149,18 @@ def offline(command: list[str]) -> list[str]:
 
 
 def browser_command(config: str, output: Path, workers: int, lane: str | None = None,
-                    listing: bool = False, files: list[str] | None = None) -> list[str]:
-    """`lane` selects by tag: 'functional' excludes @exclusive, 'exclusive' keeps only it."""
+                    listing: bool = False, files: list[str] | None = None,
+                    fully_parallel: bool = False) -> list[str]:
+    """`lane` selects by tag: 'functional' excludes @exclusive, 'exclusive' keeps only it.
+
+    `fully_parallel` spreads one file's cases over workers; only reviewed suites use it.
+    """
     command = ['node', 'node_modules/@playwright/test/cli.js', 'test',
                f'--config={config}', f'--workers={workers}', '--retries=0',
                '--repeat-each=1', '--forbid-only', '--reporter=json',
                f'--output={output}']
+    if fully_parallel:
+        command.append('--fully-parallel')
     if listing:
         command.append('--list')
     whole_tag = TAG + r'(?![\w-])'  # Playwright greps title and tags; `@exclusive-x` is not the tag
@@ -189,7 +195,7 @@ def read_cases(path: Path) -> dict[str, dict]:
 def browser_stage(run: MeasuredRun, app: Path, env: dict[str, str], name: str,
                   config: str, lane: str | None, workers: int,
                   expected: dict[str, dict] | None = None,
-                  files: list[str] | None = None) -> dict:
+                  files: list[str] | None = None, fully_parallel: bool = False) -> dict:
     """Run one lane (or list the inventory when `expected` is None).
 
     An expected lane without cases is recorded as empty instead of asking
@@ -205,7 +211,8 @@ def browser_stage(run: MeasuredRun, app: Path, env: dict[str, str], name: str,
     verify = (lambda: len(read_cases(report))) if expected is None else (
         lambda: validate_browser(json.loads(report.read_text()), expected))
     stage = run.step(name, browser_command(config, run.output / f'{name}-artifacts', workers,
-                                          lane, listing=expected is None, files=files),
+                                          lane, listing=expected is None, files=files,
+                                          fully_parallel=fully_parallel),
                      app, stage_env, verify)
     print(f'{name}: exit={stage["exit"]}, proof={stage["proofValid"]}, '
           f'wall={stage["wallSeconds"]:.2f}s', flush=True)
@@ -253,7 +260,9 @@ def run_production(run: MeasuredRun, app: Path, env: dict[str, str], config: str
 
     The lane review of 26 October 2026 found every production spec file in the
     default inventory, a static preview server per suite and no shared state;
-    the config's own `workers: 1` stays for standalone runs.
+    the config's own `workers: 1` stays for standalone runs. The functional
+    lane also spreads one file's cases over workers (ADR-0155); the tool test
+    `tools/tests/test_production_lanes.py` keeps those specs free of shared state.
     """
     name, file = f'production-{config}', f'playwright.{config}.config.ts'
     browser_stage(run, app, env, name + '-inventory', file, None, 1)
@@ -267,7 +276,8 @@ def run_production(run: MeasuredRun, app: Path, env: dict[str, str], config: str
     run.receipt.setdefault('production', {})[config] = {
         'total': len(cases), 'functional': len(functional), 'exclusive': len(exclusive)}
     run.save()
-    browser_stage(run, app, env, name + '-functional', file, 'functional', workers, functional)
+    browser_stage(run, app, env, name + '-functional', file, 'functional', workers, functional,
+                  fully_parallel=True)
     browser_stage(run, app, env, name + '-exclusive', file, 'exclusive', 1, exclusive)
 
 

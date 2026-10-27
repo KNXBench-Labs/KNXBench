@@ -160,3 +160,4 @@ the old one gets `Status: Superseded by ADR-NNNN`.
 | [0151](0151-monitoring-export-is-a-sparse-snapshot.md) | Monitoring export is a sparse snapshot with a bound loss report | Accepted for implementation; runtime acceptance pending | 2026-10-20 |
 | [0153](0153-regular-download-stop-ends-at-first-change.md) | A regular download may be stopped until its first change, and not after | Accepted for implementation; runtime acceptance pending | 2026-10-25 |
 | [0154](0154-production-browser-suites-use-tag-lanes.md) | Production browser suites use the tag lanes | Accepted | 2026-10-26 |
+| [0155](0155-production-functional-case-parallelism.md) | Production functional cases may run in parallel within one file | Accepted | 2026-10-27 |

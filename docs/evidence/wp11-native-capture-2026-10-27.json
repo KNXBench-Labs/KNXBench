@@ -1,0 +1,149 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-10-27",
+  "scope": "WP-11 bounded native fictional loopback capture export",
+  "result": "bounded-native-evidence-passed",
+  "wholeWp11Complete": false,
+  "artifact": {
+    "tag": "v0.1.0-alpha.17",
+    "sourceCommit": "a9ea32d72364478b25e158d0b95465af7a4702df",
+    "name": "KNXBench_0.1.0-alpha.17_amd64.AppImage",
+    "bytes": 92047864,
+    "sha256": "cd1f0cdf129bfad9e143062e4395c52f9376fa49a51c35145a5c0046a49e1d8a",
+    "embeddedExecutableSha256": "0f531f4c0fb23d0e93f1eee99a1067a02aff49709e2a88d64a6637e60c7fdc08",
+    "embeddedExecutableBytes": 48255640,
+    "restorationArchiveSha256": "82172e059f0a8f9644d6e39aa474b37a57c30f1eaee781dc2810ec7b98a76841",
+    "verification": "Authenticated retained prior asset and observed process ELF; no fresh download, rebuild, or current-main artifact claim"
+  },
+  "method": "Actual native Wayland/WebKitGTK; guarded AT-SPI, native GTK editable-text and chooser/alert actions; actual original backend receives real UDP from a confined fictional peer; no mocked HTTP/Tauri or JS injection",
+  "safety": {
+    "network": "Observed separate loopback-only namespace shared by actual app and peer",
+    "filesystem": "Observed real home/projects masked, private HOME/XDG/results, read-only host/input mounts",
+    "nativeEffectiveCapabilities": "zero",
+    "realBusAccess": false,
+    "realProjectEdits": false,
+    "productRuntimeChanges": false
+  },
+  "fixture": {
+    "targetSource": "a9ea32d72364478b25e158d0b95465af7a4702df",
+    "cemiSource": "crates/knx-net/src/cemi.rs:4049-4054",
+    "handshakeSource": "crates/knx-net/src/client.rs:1403-1491",
+    "cemiHex": "2900bce011010801010081",
+    "tunnellingRequestHex": "061004200015042100002900bce011010801010081",
+    "source": "1.1.1",
+    "sourceRaw": 4353,
+    "groupAddress": "1/0/1",
+    "destinationRaw": 2049,
+    "nativeNoProjectDestination": "2049",
+    "service": "GroupValueWrite",
+    "rawPayload": "0x01 (6-bit)",
+    "control": {
+      "priority": "low",
+      "repeated": false,
+      "hopCount": 6
+    },
+    "sourceBinding": "Original fictional protocol vector, not manufacturer data or normative/hardware compatibility evidence",
+    "peerSha256": "588c7c8c251be8b443fbeeded968e0c66831ff9232b4fd19422a9505a9e8f974",
+    "integrationTestSourceSha256": "ddf80ccf01f20129304fa6e6d9c3fc3806ee32d2f3e8997120a3c816f8ed72a6",
+    "integrationTestExecutableSha256": "786d70c6f994bdb94c11c82af123caa98603ab5c3068853040dc8abd538082c1",
+    "originalProductionSourceUnchanged": true,
+    "fixtureTestIdentities": 1,
+    "fixtureVariants": {
+      "noEmission": {
+        "rawExit": 101,
+        "diagnostic": "fixture_delivery_missing",
+        "handshakeAndDisconnectSucceeded": true,
+        "isProductDefect": false
+      },
+      "literalFrame": {
+        "rawExit": 0,
+        "receivedAndAcknowledgedSourceFrame": true
+      }
+    },
+    "nativeDefaultReturnPath": "Observed nonzero local-address HPAIs; not RouteBack/NAT evidence"
+  },
+  "nativeDriverInvocations": 25,
+  "countMeaning": "25 successful recorded native driver steps, not 25 independently counted tests; one original-source fixture test identity runs in two variants",
+  "nativeSessions": 1,
+  "receivedFrames": 1,
+  "heartbeatRoundtrips": 11,
+  "passed": [
+    "native Export Cancel creates no capture",
+    "native Save produces literal real backend row and v1 zero-loss provenance",
+    "native overwrite Cancel preserves original bytes and mtime",
+    "native Replace changes only exportedAt and advances mtime",
+    "actual heartbeat and disconnect responses",
+    "ordinary native and peer close exit0, exact PIDs/windows absent"
+  ],
+  "artifacts": {
+    "fileName": "native-capture",
+    "format": "knxbench-bus-monitor",
+    "version": 1,
+    "bytesBeforeReplace": 1024,
+    "savedSha256": "55267a7124e27090471991157b10f6786556615f161055d4ce9252a6331b8f54",
+    "bytesAfterReplace": 1024,
+    "replacedSha256": "afc86b98d11134e3edc44b6c857d5f80d2327acbd62f0c68b645bd8fd808c5b5",
+    "rows": 1,
+    "sessionStatus": "active",
+    "serverDroppedBefore": 0,
+    "clientPrunedCount": 0,
+    "replaceChangesOnly": "exportedAt",
+    "filenameNote": "Actual GTK Name field accepted an extensionless owned path; JSON contents verified, no suffix guarantee claimed"
+  },
+  "readerDiscriminationControls": [
+    {
+      "case": "missing-row",
+      "rejected": true
+    },
+    {
+      "case": "wrong-destination",
+      "rejected": true
+    },
+    {
+      "case": "concealed-loss",
+      "rejected": true
+    },
+    {
+      "case": "wrong-payload",
+      "rejected": true
+    },
+    {
+      "case": "closed-status",
+      "rejected": true
+    },
+    {
+      "case": "unchanged-export-time",
+      "rejected": true
+    }
+  ],
+  "notEstablished": [
+    "full WP-11",
+    "real bus/hardware/firmware/ETS compatibility",
+    "NAT/RouteBack/reconnect/general protocol conformance",
+    "Orca/Firefox/full layout/vendor GPU"
+  ],
+  "harnessCaveats": [
+    "Source-only plan was BLOCK until a composed real-UDP peer was built and exercised.",
+    "The plan suggested a wrong destination oracle; source plus actual client/native row verify raw 2049, not 1.",
+    "Preparation receipts preserve their historical pre-execution cutoff; later executed receipts own current outcomes.",
+    "Native test is retained step evidence with constant authenticated driver bytes, not a supported automated native runner.",
+    "The only emitted frame was requested after actual native backend session readiness; no replay or reconnect was used.",
+    "Initial interface discovery failed with network-unreachable under the deliberate fence; manual loopback entry succeeded without relaxing isolation.",
+    "Saved JSON is retained privately; the raw artifacts and their original/replaced bytes are not reconstructed from prose."
+  ],
+  "privateEvidence": {
+    "directory": "<profile>/evidence/wp11-native-capture-20261027/",
+    "validator": "verify_capture.py",
+    "validatorReceipt": "capture-verification-1.json",
+    "summary": "verified-native-capture.json",
+    "nativeCalls": "calls/",
+    "nativeTrees": "steps/",
+    "originalSavedJson": "capture-original-saved.json",
+    "replacedJson": "capture-replaced.json",
+    "liveBinding": "native-one-live-binding.json",
+    "socketTrace": "sandbox/results/peer/peer.jsonl",
+    "settlement": "sandbox/results/native-settlement.json",
+    "launcherExit": "native-capture-one-launch-exit.json",
+    "fixtureSourceReview": "fixture-review-verdict.json"
+  }
+}

@@ -1,6 +1,6 @@
 # Project Statistics
 
-**Last update:** 2026-10-10 00:05:50 CEST (UTC+02:00)
+**Last update:** 2026-10-27 05:37:45 CET (UTC+01:00)
 
 Welcome to the numerical engine room of KNXBench: this page counts commits,
 tokens, agents, models, tools, caffeine-adjacent productivity and several things
@@ -11,52 +11,52 @@ Git and session logs; the ants in the fun-fact section remain under observation.
 
 ## 💡 Fun Facts
 ### 📚 Books, Pages & Literary Suffering
-- 📚 **56.223.257 book pages** of code & docs generated and processed (equivalent to reading *The Lord of the Rings* trilogy **46.852 times**).
-- 📜 The entire *Encyclopædia Britannica* contains ~44 million words. This repository processed **383.3 full sets**.
-- 🎭 Shakespeare's complete works contain roughly 884,000 words; this is about **19.080 complete Bards**.
-- 📄 Printed at 300 words per page and 500 sheets per ream, it would consume roughly **112.446 reams of paper**.
-- 📚 Binding those 90,000-word novels at 3 cm each would create about **5.6 kilometers of bookshelf**.
+- 📚 **97.713.157 book pages** of code & docs generated and processed (equivalent to reading *The Lord of the Rings* trilogy **81.427 times**).
+- 📜 The entire *Encyclopædia Britannica* contains ~44 million words. This repository processed **666.2 full sets**.
+- 🎭 Shakespeare's complete works contain roughly 884,000 words; this is about **33.160 complete Bards**.
+- 📄 Printed at 300 words per page and 500 sheets per ream, it would consume roughly **195.426 reams of paper**.
+- 📚 Binding those 90,000-word novels at 3 cm each would create about **9.8 kilometers of bookshelf**.
 
 ### ⏱️ Human Time & Manual Effort
-- ⌨️ Average professional coding speed is ~2,000 words/day. The project processed **23105.4 human-years worth of typing**.
-- ☕ At 10,000 tokens per manual coding sprint, completing this via human effort would take **2.248.930 cups of espresso**.
-- 🗣️ Spoken continuously at 130 words per minute, it would take **246.9 years** to say everything out loud.
-- 👓 Read at 238 words per minute for eight hours a day, it would occupy about **404.5 reader-years**.
-- ⌨️ At roughly four characters per output token, AI generation avoided about **360.729.772 physical keystrokes** (backspace heroics not included).
+- ⌨️ Average professional coding speed is ~2,000 words/day. The project processed **40156.1 human-years worth of typing**.
+- ☕ At 10,000 tokens per manual coding sprint, completing this via human effort would take **3.908.526 cups of espresso**.
+- 🗣️ Spoken continuously at 130 words per minute, it would take **429.0 years** to say everything out loud.
+- 👓 Read at 238 words per minute for eight hours a day, it would occupy about **703.0 reader-years**.
+- ⌨️ At roughly four characters per output token, AI generation avoided about **575.561.816 physical keystrokes** (backspace heroics not included).
 
 ### 🌍 Scale, Biology & Suspicious Liquids
-- 🧬 Human DNA contains ~3 billion base pairs. This project's token history is **7.50x the length of the human genome**.
-- 🦠 A single gram of soil contains ~40 million bacteria. Token volume equals the bacterial population in **562.2 grams of fertile dirt**.
-- 🐜 An ant colony has ~100,000 ants. Enough tokens were processed to give **224.893 ants** their own full context window.
-- 🌌 If every token were 1 millimeter, the line would stretch **22.489 kilometers** (about **0.56x around Earth**).
-- 💧 If every token were one microliter of water, they would fill about **9.00 Olympic swimming pools**.
+- 🧬 Human DNA contains ~3 billion base pairs. This project's token history is **13.03x the length of the human genome**.
+- 🦠 A single gram of soil contains ~40 million bacteria. Token volume equals the bacterial population in **977.1 grams of fertile dirt**.
+- 🐜 An ant colony has ~100,000 ants. Enough tokens were processed to give **390.852 ants** their own full context window.
+- 🌌 If every token were 1 millimeter, the line would stretch **39.085 kilometers** (about **0.98x around Earth**).
+- 💧 If every token were one microliter of water, they would fill about **15.63 Olympic swimming pools**.
 
 ### 💾 Messages & Retro Storage
-- 💾 At an assumed 4 bytes per token, this is **83.78 GiB of text equivalent**, not measured network traffic.
-- 🐦 At 280 characters each, the generated and processed text would fill about **321.275.755 maximally packed posts**.
-- 🗂️ At 80 characters per punched card, this would require **1.124.465.144 cards** and a warehouse-sized debugging session.
-- 💽 Stored as plain text on 1.44 MB floppy disks, it would need roughly **59.576 disks** — please label them carefully.
+- 💾 At an assumed 4 bytes per token, this is **145.60 GiB of text equivalent**, not measured network traffic.
+- 🐦 At 280 characters each, the generated and processed text would fill about **558.360.898 maximally packed posts**.
+- 🗂️ At 80 characters per punched card, this would require **1.954.263.144 cards** and a warehouse-sized debugging session.
+- 💽 Stored as plain text on 1.44 MB floppy disks, it would need roughly **103.540 disks** — please label them carefully.
 
 ### ⚡ Resources & Emissions
-- ⚡ At the stated inference scenario, the processed tokens represent roughly **2.248 kWh** and **742.1 kg CO₂e**.
+- ⚡ At the stated inference scenario, the processed tokens represent roughly **3.908 kWh** and **1289.8 kg CO₂e**.
 
 *No ants were harmed in the making of these statistics — at least none that I know of.*
 
 ## Git Statistics (Current Repository)
-- **Commits:** 2.404
-- **Merges:** 277
-- **Pushes/Sync:** 2.404
-- **Lines Added (+):** 742.360
-- **Lines Deleted (-):** 222.493
+- **Commits:** 4.030
+- **Merges:** 626
+- **Pushes/Sync:** 4.030
+- **Lines Added (+):** 1.230.141
+- **Lines Deleted (-):** 287.803
 
 ## Git Text Churn Distribution
 
 | P50 changed text lines | P90 | P95 |
 | ---: | ---: | ---: |
-| 112 | 800 | 1.389 |
+| 100 | 857 | 1.423 |
 
-**2.077** measured commits;
-**327** unavailable (for example, merge-only
+**3.343** measured commits;
+**687** unavailable (for example, merge-only
 history or binary/unsupported `--numstat` entries). A zero means Git explicitly
 reported zero text-line changes; missing data is not turned into zero. This
 counts historical additions + deletions per commit, **not AI-attributed** work
@@ -64,37 +64,37 @@ or surviving source lines. Branch lifetime cannot be inferred from this table.
 
 ## Coding Statistics (Current Working Tree)
 
-**Git-tracked source files:** 993; **physical lines:** 360.592;
-**code:** 294.569; **comments:** 41.970; **blank:** 24.053.
-**Code/comment ratio:** 7.02:1; **comment share of nonblank lines:** 12.5%.
+**Git-tracked source files:** 2.011; **physical lines:** 640.063;
+**code:** 547.537; **comments:** 55.732; **blank:** 36.794.
+**Code/comment ratio:** 9.82:1; **comment share of nonblank lines:** 9.2%.
 Tracked source paths unavailable in the working tree: **0**;
-excluded generated/vendor/build source paths: **21**.
+excluded generated/vendor/build source paths: **31**.
 
 | Language | Files | Code lines | Comment lines | Blank lines |
 | :--- | ---: | ---: | ---: | ---: |
-| Rust | 494 | 214.224 | 32.879 | 16.411 |
-| TSX | 175 | 37.335 | 3.888 | 3.584 |
-| TypeScript | 261 | 31.779 | 4.595 | 2.748 |
-| Python | 39 | 4.943 | 82 | 746 |
-| CSS | 5 | 3.648 | 419 | 430 |
-| JavaScript | 16 | 2.441 | 71 | 106 |
-| Shell | 3 | 199 | 36 | 28 |
+| Rust | 1.015 | 402.343 | 43.039 | 24.793 |
+| TSX | 318 | 59.886 | 5.099 | 4.964 |
+| TypeScript | 526 | 58.752 | 6.443 | 4.191 |
+| Python | 86 | 17.548 | 319 | 2.219 |
+| CSS | 33 | 5.325 | 670 | 484 |
+| JavaScript | 28 | 3.460 | 110 | 115 |
+| Shell | 5 | 223 | 52 | 28 |
 
 ### Direct-source syntax structures
 
 | Language | Parsed files | Functions/methods | Loops | Type declarations | Branch constructs |
 | :--- | ---: | ---: | ---: | ---: | ---: |
-| Rust | 494/494 | 8.901 | 2.132 | 1.264 | 4.921 |
-| TSX | 175/175 | 6.207 | 93 | 63 | 1.553 |
-| TypeScript | 261/261 | 3.968 | 502 | 389 | 1.541 |
-| Python | 39/39 | 317 | 203 | 38 | 379 |
+| Rust | 1.015/1.015 | 16.185 | 4.136 | 2.392 | 9.746 |
+| TSX | 0/318 | N/A | N/A | N/A | N/A |
+| TypeScript | 0/526 | N/A | N/A | N/A | N/A |
+| Python | 86/86 | 1.193 | 664 | 114 | 1.308 |
 | CSS | N/A (no parser) | N/A | N/A | N/A | N/A |
-| JavaScript | 16/16 | 531 | 57 | 0 | 217 |
+| JavaScript | 0/28 | N/A | N/A | N/A | N/A |
 | Shell | N/A (no parser) | N/A | N/A | N/A | N/A |
-| **Supported-source subtotal** | **985/985** | **19.924** | **2.987** | **1.754** | **8.611** |
+| **Supported-source subtotal** | **1.101/1.973** | **N/A** | **N/A** | **N/A** | **N/A** |
 
-Structure coverage is **985/985 supported source files**;
-**8** source files have no structural parser (for example CSS/Shell).
+Structure coverage is **1.101/1.973 supported source files**;
+**38** source files have no function/type/loop structural parser (for example CSS/Shell).
 `N/A` is not zero: if any file of a supported language cannot be parsed, its
 language counts and the subtotal are unavailable, not partial values. Counts
 are direct syntax nodes (Rust `fn`/`for`/`while`/`loop`, Python definitions and
@@ -110,7 +110,7 @@ parser may accept some malformed but balanced source without an `ERROR` node;
 these counts are not compiler validation. Tooling: tokei line classification,
 rust-analyzer syntax JSON, Python `ast`, and the repository's optional
 TypeScript parser. Tokei attributes Rust documentation Markdown to Rust
-comments/blanks; **10** nested
+comments/blanks; **11** nested
 code-fence example lines are also classified as comments, not executable
 source. Python docstrings remain code lines. Tests are included. Untracked
 source, non-programming files, known generated/vendor/build directories and
@@ -118,13 +118,28 @@ binary files are excluded.
 This is a **current checkout** inventory, not Git history, AI attribution or
 proof that all lines execute. Line classification follows tokei's syntax rules.
 
+### CSS syntax structures
+
+| Parsed CSS files | Rule nodes | At-rule nodes | Declaration nodes |
+| :--- | ---: | ---: | ---: |
+| 0/33 | N/A | N/A | N/A |
+
+Optional PostCSS 8 parser: `unavailable`.
+Unavailable CSS files: **33**. Partial coverage
+makes all CSS totals **N/A**, not zero or a successful-file subtotal. Rule nodes
+include nested selectors and keyframe steps; declarations include custom
+properties. Comments and string contents are not nodes of those types. These
+are syntax counts, **not compiler/browser validation**, computed without
+plugins or source-map/resource loading. CSS counts are a separate metric family,
+not functions, loops or type declarations. Shell has no admitted AST parser.
+
 ## Session Time & Execution Analysis
 | Provider | Reasoning-adjacent gap estimate | Execution interval proxy | Executed Tasks |
 | :--- | ---: | ---: | ---: |
-| **Claude** | 153h 33m 53s | 176h 26m 28s | 3.845 |
-| **Codex** | N/A | 113h 16m 55s | 710 |
-| **Other** | N/A | N/A | 0 |
-| **TOTAL** | **153h 33m 53s** | **289h 43m 24s** | **4.555** |
+| **Claude** | 157h 43m 41s | 182h 25m 54s | 4.136 |
+| **Codex** | N/A | 127h 20m 20s | 1.282 |
+| **Other** | N/A | N/A | 20 |
+| **TOTAL** | **157h 43m 41s** | **309h 46m 14s** | **5.438** |
 
 `N/A` means there is no attributable interval in the available logs; it does
 not mean the model achieved enlightenment instantaneously. Claude/Codex local
@@ -138,12 +153,12 @@ must not be used for provider latency or throughput comparisons.
 
 | Measured Hermes sessions | P50 | P90 | P95 | Longest |
 | ---: | ---: | ---: | ---: | ---: |
-| 59 | 4m 41s | 22m 24s | 25m 32s | 1h 22m 8s |
+| 457 | 9m 11s | 31m 12s | 45m 13s | 271h 5m 10s |
 
-**59** measured Hermes sessions;
-**92** unavailable (open sessions,
+**457** measured Hermes sessions;
+**324** unavailable (open sessions,
 invalid timestamps or untrusted end reasons). Percentiles use the nearest-rank
-method. Peak concurrency: **3**
+method. Peak concurrency: **9**
 trusted closed Hermes sessions, counting touching endpoints as non-overlapping.
 Open/orphaned sessions are excluded, so this is not total provider concurrency.
 These elapsed start-to-close intervals can include human pauses and tool waits:
@@ -154,28 +169,28 @@ they are **not API generation time**. Other providers' session durations are
 
 | Provider | Input Tokens | Output Tokens | Cache Read Tokens | Cache Write Tokens |
 | :--- | ---: | ---: | ---: | ---: |
-| **Claude** | 4.658.058 | 65.464.653 | 15.654.589.715 | 669.650.253 |
-| **Codex** | 152.209.873 | 24.717.790 | 5.918.012.544 | 0 |
-| **Other** | 0 | 0 | 0 | 0 |
-| **TOTAL** | **156.867.931** | **90.182.443** | **21.572.602.259** | **669.650.253** |
+| **Claude** | 6.865.370 | 87.388.317 | 21.620.878.508 | 975.833.130 |
+| **Codex** | 376.021.642 | 53.311.784 | 15.111.516.288 | 0 |
+| **Other** | 9.663.585 | 3.190.353 | 840.593.920 | 0 |
+| **TOTAL** | **392.550.597** | **143.890.454** | **37.572.988.716** | **975.833.130** |
 
 ### 🚀 GRAND TOTAL CONSUMPTION
-**22.489.302.886 Total Tokens**
+**39.085.262.897 Total Tokens**
 
 ## Weekly Usage Trend
 
 | Day (UTC) | Tokens | Output tokens | Tasks |
 | :--- | ---: | ---: | ---: |
-| Monday | 4.088.699.726 | 14.966.495 | 490 |
-| Tuesday | 948.723.549 | 3.354.454 | 387 |
-| Wednesday | 2.376.045.878 | 9.274.042 | 243 |
-| Thursday | 3.839.327.454 | 16.339.515 | 663 |
-| Friday | 2.694.945.910 | 13.150.280 | 369 |
-| Saturday | 4.313.946.675 | 13.977.164 | 1.114 |
-| Sunday | 4.227.613.694 | 19.120.493 | 1.289 |
+| Monday | 7.114.450.839 | 24.159.068 | 642 |
+| Tuesday | 3.921.081.331 | 11.958.500 | 545 |
+| Wednesday | 3.450.171.848 | 12.427.754 | 264 |
+| Thursday | 5.346.962.794 | 20.577.977 | 689 |
+| Friday | 4.183.681.689 | 17.446.226 | 469 |
+| Saturday | 7.298.501.163 | 24.793.045 | 1.250 |
+| Sunday | 7.770.413.233 | 32.527.884 | 1.501 |
 
-Dated: **22.489.302.886 tokens / 4.555 tasks**;
-unallocated: **0 tokens / 0 tasks**.
+Dated: **39.085.262.897 tokens / 5.360 tasks**;
+unallocated: **0 tokens / 78 tasks**.
 Monday through Sunday sum **all observed UTC days** for the selected project;
 these are weekday totals, not a single calendar week or daily averages. Zero
 means no attributable dated usage in that weekday bucket, not proof of no activity.
@@ -188,12 +203,12 @@ the weekday totals. The existing collector ledger is not a billing audit.
 
 | Agent / transport | Total tokens | Input | Output | Cache read | Execution interval proxy | Tasks | Tool calls |
 | :--- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| Claude Code | 12.483.795.956 | 291.478 | 50.037.163 | 11.965.507.607 | 176h 26m 28s | 3.790 | 69.612 |
-| Hermes Agent via Headroom | 6.671.182.042 | 114.765.158 | 29.026.117 | 6.386.601.049 | 0s | 122 | 11.157 |
-| Hermes Agent (direct) | 2.281.578.371 | 3.640.885 | 7.020.752 | 2.210.015.907 | 0s | 29 | 3.710 |
-| Codex CLI | 1.052.746.517 | 38.170.410 | 4.098.411 | 1.010.477.696 | 113h 16m 55s | 614 | 797 |
+| Hermes Agent (direct) | 15.783.219.845 | 177.548.506 | 46.346.879 | 15.207.767.297 | 0s | 613 | 64.864 |
+| Claude Code | 13.010.773.739 | 300.028 | 53.700.724 | 12.473.286.738 | 182h 25m 54s | 3.946 | 73.471 |
+| Hermes Agent via Headroom | 9.042.664.931 | 169.165.039 | 38.811.589 | 8.693.898.585 | 0s | 168 | 19.188 |
+| Codex CLI | 1.248.604.382 | 45.537.024 | 5.031.262 | 1.198.036.096 | 127h 20m 20s | 711 | 840 |
 
-Hermes sessions routed through a local billing proxy are
+Hermes sessions routed through a billing base URL on `127.0.0.1:8787` are
 classified as **Hermes Agent via Headroom**. Caveman is detected from Caveman/
 `glm-5.2` model identifiers and appears only when matching usage exists. Direct
 Claude Code and Codex CLI logs remain separate systems while their
@@ -203,22 +218,26 @@ tokens still roll up into the Claude/Codex provider totals above.
 
 | Model | Total tokens | Input | Output | Cache read | Execution interval proxy | Tasks | Tool calls |
 | :--- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| GPT-6.1 Sol (`gpt-6.1-sol`) | 9.929.553.221 | 260.508.815 | 36.534.838 | 9.632.509.568 | 10h 31m 54s | 496 | 45.316 |
+| Claude Opus 5.5 (`claude-opus-5-5`) | 9.747.682.213 | 4.176.677 | 34.246.145 | 9.229.447.444 | 3h 18m 13s | 199 | 23.843 |
 | Claude Sonnet 5 (`claude-sonnet-5`) | 8.638.737.325 | 162.531 | 28.854.876 | 8.318.199.041 | 72h 28m 43s | 1.317 | 44.974 |
-| Claude Opus 5.5 (`claude-opus-5-5`) | 3.771.199.808 | 2.618.779 | 14.368.955 | 3.570.338.218 | 0s | 51 | 6.286 |
 | Claude Opus 5 (`claude-opus-5`) | 3.767.184.218 | 100.370 | 20.790.313 | 3.568.644.548 | 100h 14m 31s | 1.298 | 22.640 |
-| GPT-6.1 Sol (`gpt-6.1-sol`) | 2.111.780.221 | 66.936.963 | 12.819.834 | 2.032.023.424 | 0s | 23 | 2.206 |
-| GPT-5.6 Sol (`gpt-5.6-sol`) | 1.460.223.501 | 34.710.821 | 4.243.304 | 1.421.269.376 | 80h 10m 0s | 227 | 891 |
+| gpt-6.1-sol-900k | 2.257.754.690 | 40.287.780 | 6.901.534 | 2.210.565.376 | 0s | 58 | 10.014 |
+| GPT-5.6 Sol (`gpt-5.6-sol`) | 1.500.242.387 | 36.794.050 | 4.437.009 | 1.459.011.328 | 82h 40m 21s | 244 | 894 |
 | gpt-6-sol-900k | 1.217.683.037 | 13.755.988 | 2.635.145 | 1.201.291.904 | 0s | 3 | 624 |
-| gpt-6.1-sol-900k | 686.971.598 | 11.852.212 | 2.043.418 | 673.075.968 | 0s | 17 | 2.874 |
-| GPT-6 Sol (`gpt-6-sol`) | 190.171.069 | 2.082.754 | 303.739 | 187.784.576 | 0s | 3 | 124 |
+| DeepSeek V4 Pro (`deepseek-v4-pro`) | 853.447.858 | 9.663.585 | 3.190.353 | 840.593.920 | 0s | 20 | 3.338 |
+| Claude Sonnet 5.5 (`claude-sonnet-5-5`) | 319.136.547 | 4.116 | 1.796.186 | 307.155.247 | 2h 40m 59s | 16 | 1.931 |
+| GPT-6 Sol (`gpt-6-sol`) | 207.689.703 | 2.367.661 | 372.410 | 204.949.632 | 56m 37s | 5 | 125 |
 | GPT-5.6 Luna (`gpt-5.6-luna`) | 183.022.732 | 13.937.809 | 2.164.987 | 166.919.936 | 3h 0m 5s | 55 | 2.293 |
 | Claude Haiku 4.5 (`claude-haiku-4-5-20251001`) | 153.728.019 | 38.190 | 330.177 | 140.766.004 | 2h 37m 49s | 11 | 1.781 |
 | GPT-5.6 Terra (`gpt-5.6-terra`) | 136.567.795 | 6.447.704 | 685.851 | 129.434.240 | 20h 9m 9s | 174 | 87 |
-| GPT-6 Astra (`gpt-6-astra`) | 110.929.072 | 4.207.023 | 508.929 | 106.213.120 | 9h 53m 35s | 21 | 182 |
+| GPT-6 Astra (`gpt-6-astra`) | 111.635.050 | 4.288.522 | 512.224 | 106.834.304 | 9h 57m 13s | 21 | 183 |
 | Claude Fable 5.1 (`claude-fable-5-1`) | 61.104.491 | 16.787 | 432.915 | 56.641.904 | 31m 49s | 6 | 314 |
+| Claude Haiku 5.5 (`claude-haiku-5-5`) | 93.611 | 12 | 5.491 | 24.320 | 12s | 0 | 6 |
 | <synthetic> | 0 | 0 | 0 | 0 | 33m 35s | 113 | 0 |
 | Claude Sonnet 4.6 (`claude-sonnet-4-6`) | 0 | 0 | 0 | 0 | 0s | 1 | 0 |
-| unknown | 0 | 0 | 0 | 0 | 4m 4s | 1.235 | 0 |
+| GPT-5.5 (`gpt-5.5`) | 0 | 0 | 0 | 0 | 2s | 1 | 0 |
+| unknown | 0 | 0 | 0 | 0 | 4m 56s | 1.400 | 0 |
 
 Model IDs are discovered directly from Claude, Codex and Hermes usage records;
 display names are loaded dynamically from every available Hermes model cache.
@@ -229,21 +248,27 @@ and unknown IDs remain visible verbatim instead of being discarded.
 
 | Relative week | Model | Tokens | Cache read | Cache-read share |
 | :--- | :--- | ---: | ---: | ---: |
-| 2 weeks earlier | Claude Sonnet 5 (`claude-sonnet-5`) | 64.808.814 | 58.343.740 | 90.4% |
-| 3 weeks earlier | Claude Sonnet 5 (`claude-sonnet-5`) | 2.094.049.771 | 2.022.052.095 | 96.9% |
-| 4 weeks earlier | Claude Sonnet 5 (`claude-sonnet-5`) | 4.588.883.015 | 4.376.501.810 | 95.7% |
-| 5 weeks earlier | Claude Sonnet 5 (`claude-sonnet-5`) | 1.890.995.725 | 1.861.301.396 | 98.6% |
-| Latest observed week | Claude Opus 5.5 (`claude-opus-5-5`) | 1.102.462.484 | 1.071.711.186 | 97.6% |
-| 1 week earlier | Claude Opus 5.5 (`claude-opus-5-5`) | 2.117.292.797 | 2.025.763.198 | 96.0% |
-| 2 weeks earlier | Claude Opus 5.5 (`claude-opus-5-5`) | 551.444.527 | 472.863.834 | 86.3% |
-| 2 weeks earlier | Claude Opus 5 (`claude-opus-5`) | 303.582.253 | 276.558.994 | 91.4% |
-| 3 weeks earlier | Claude Opus 5 (`claude-opus-5`) | 1.739.086.785 | 1.656.048.885 | 95.7% |
-| 4 weeks earlier | Claude Opus 5 (`claude-opus-5`) | 1.692.215.588 | 1.605.147.744 | 95.4% |
-| 5 weeks earlier | Claude Opus 5 (`claude-opus-5`) | 32.299.592 | 30.888.925 | 95.7% |
-| Latest observed week | GPT-6.1 Sol (`gpt-6.1-sol`) | 520.530.092 | 501.741.184 | 96.9% |
-| 1 week earlier | GPT-6.1 Sol (`gpt-6.1-sol`) | 1.591.250.129 | 1.530.282.240 | 96.8% |
-| 2 weeks earlier | GPT-5.6 Sol (`gpt-5.6-sol`) | 1.233.389.499 | 1.202.323.712 | 97.8% |
-| 3 weeks earlier | GPT-5.6 Sol (`gpt-5.6-sol`) | 226.834.002 | 218.945.664 | 96.9% |
+| Latest observed week | GPT-6.1 Sol (`gpt-6.1-sol`) | 363.923.131 | 357.163.520 | 98.3% |
+| 1 week earlier | GPT-6.1 Sol (`gpt-6.1-sol`) | 4.177.581.004 | 4.055.693.824 | 97.4% |
+| 2 weeks earlier | GPT-6.1 Sol (`gpt-6.1-sol`) | 2.440.227.752 | 2.383.230.336 | 97.9% |
+| 3 weeks earlier | GPT-6.1 Sol (`gpt-6.1-sol`) | 1.356.571.205 | 1.306.139.648 | 96.9% |
+| 4 weeks earlier | GPT-6.1 Sol (`gpt-6.1-sol`) | 1.591.250.129 | 1.530.282.240 | 96.8% |
+| Latest observed week | Claude Opus 5.5 (`claude-opus-5-5`) | 427.278.507 | 409.741.335 | 96.3% |
+| 1 week earlier | Claude Opus 5.5 (`claude-opus-5-5`) | 1.316.385.507 | 1.225.104.623 | 93.4% |
+| 2 weeks earlier | Claude Opus 5.5 (`claude-opus-5-5`) | 4.073.497.603 | 3.881.843.614 | 95.6% |
+| 3 weeks earlier | Claude Opus 5.5 (`claude-opus-5-5`) | 1.261.783.272 | 1.214.130.840 | 96.6% |
+| 4 weeks earlier | Claude Opus 5.5 (`claude-opus-5-5`) | 2.117.292.797 | 2.025.763.198 | 96.0% |
+| 5 weeks earlier | Claude Opus 5.5 (`claude-opus-5-5`) | 551.444.527 | 472.863.834 | 86.3% |
+| 5 weeks earlier | Claude Sonnet 5 (`claude-sonnet-5`) | 64.808.814 | 58.343.740 | 90.4% |
+| 6 weeks earlier | Claude Sonnet 5 (`claude-sonnet-5`) | 2.094.049.771 | 2.022.052.095 | 96.9% |
+| 7 weeks earlier | Claude Sonnet 5 (`claude-sonnet-5`) | 4.588.883.015 | 4.376.501.810 | 95.7% |
+| 5 weeks earlier | Claude Opus 5 (`claude-opus-5`) | 303.582.253 | 276.558.994 | 91.4% |
+| 6 weeks earlier | Claude Opus 5 (`claude-opus-5`) | 1.739.086.785 | 1.656.048.885 | 95.7% |
+| 7 weeks earlier | Claude Opus 5 (`claude-opus-5`) | 1.692.215.588 | 1.605.147.744 | 95.4% |
+| 1 week earlier | `gpt-6.1-sol-900k` | 98.461.199 | 96.081.152 | 97.8% |
+| 2 weeks earlier | `gpt-6.1-sol-900k` | 195.558.189 | 190.849.408 | 97.8% |
+| 3 weeks earlier | `gpt-6.1-sol-900k` | 1.963.119.321 | 1.923.225.088 | 98.3% |
+| 4 weeks earlier | `gpt-6.1-sol-900k` | 615.981 | 409.728 | 66.7% |
 
 Top five models by selected-project token volume, across the last eight
 observed UTC weeks (Monday through Sunday). **Latest observed week** is the most
@@ -252,7 +277,7 @@ recent week with dated usage among these models, not necessarily the current wee
 weeks without recorded activity. **Unallocated** means that a canonical model ledger has
 no reliable per-day timestamp (especially cumulative cloud usage); it is not
 placed on the last result's day. Model-time mapping covers
-**22.489.302.886 tokens**; **0 tokens**
+**39.085.262.897 tokens**; **0 tokens**
 have no model-time evidence. Cache-read share uses cache-read / (input +
 cache-read + cache-creation) tokens, excluding output; a zero denominator is
 `N/A`. It is not an invoice, a measured cost saving, or proof of cache hit
@@ -273,10 +298,10 @@ in the integration row, avoiding double-counted tokens.
 
 | Effort | Total tokens | Input | Output | Cache read | Execution interval proxy | Tasks | Tool calls |
 | :--- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| high | 20.556.221.058 | 124.771.458 | 81.733.113 | 19.733.456.937 | 189h 45m 52s | 2.615 | 75.436 |
-| medium | 1.058.713.712 | 29.712.689 | 3.862.468 | 1.014.352.332 | 73h 24m 19s | 406 | 4.195 |
-| xhigh | 701.478.238 | 1.429.132 | 4.171.672 | 665.866.602 | 22h 4m 42s | 273 | 3.654 |
-| unknown | 171.753.871 | 879.425 | 402.602 | 157.878.196 | 4h 8m 17s | 1.261 | 1.989 |
+| high | 35.971.138.443 | 344.390.391 | 131.884.992 | 34.595.674.404 | 206h 56m 25s | 3.281 | 144.225 |
+| medium | 2.228.346.549 | 44.981.463 | 7.353.018 | 2.141.972.074 | 75h 22m 51s | 453 | 8.488 |
+| xhigh | 712.876.041 | 2.212.187 | 4.237.172 | 676.415.850 | 22h 57m 36s | 277 | 3.657 |
+| unknown | 171.765.857 | 891.329 | 402.684 | 157.878.196 | 4h 9m 10s | 1.427 | 1.991 |
 | max | 1.136.007 | 75.227 | 12.588 | 1.048.192 | 19m 17s | 0 | 2 |
 | low | 0 | 0 | 0 | 0 | 53s | 0 | 0 |
 
@@ -289,46 +314,46 @@ effort value. It is retained rather than guessed from model names or response si
 
 | Rank | Tool | Calls |
 | ---: | :--- | ---: |
-| 1 | Bash | 51.657 |
-| 2 | read_file | 37.471 |
-| 3 | terminal | 23.456 |
-| 4 | execute_code | 14.989 |
-| 5 | skill_view | 10.329 |
-| 6 | patch | 9.577 |
-| 7 | Read | 9.203 |
-| 8 | search_files | 7.338 |
-| 9 | Edit | 5.290 |
-| 10 | tool_call | 4.082 |
-| 11 | write_file | 2.268 |
-| 12 | Write | 941 |
-| 13 | Agent | 880 |
-| 14 | ToolSearch | 554 |
-| 15 | tool_describe | 543 |
-| 16 | vision_analyze | 441 |
-| 17 | Monitor | 369 |
-| 18 | wait_agent | 368 |
-| 19 | skill_manage | 192 |
-| 20 | SendMessage | 187 |
+| 1 | read_file | 77.262 |
+| 2 | terminal | 56.260 |
+| 3 | Bash | 53.919 |
+| 4 | execute_code | 28.788 |
+| 5 | patch | 17.299 |
+| 6 | skill_view | 15.265 |
+| 7 | search_files | 12.409 |
+| 8 | Read | 9.987 |
+| 9 | tool_call | 7.569 |
+| 10 | write_file | 6.628 |
+| 11 | Edit | 5.320 |
+| 12 | vision_analyze | 1.873 |
+| 13 | tool_describe | 1.135 |
+| 14 | Write | 959 |
+| 15 | Agent | 886 |
+| 16 | delegate_task | 849 |
+| 17 | Grep | 619 |
+| 18 | ToolSearch | 564 |
+| 19 | skill_manage | 532 |
+| 20 | Monitor | 410 |
 
 ### Top Skills
 
 | Rank | Skill | Calls |
 | ---: | :--- | ---: |
-| 1 | autonomous-goal-boundaries | 952 |
-| 2 | test-driven-development | 951 |
-| 3 | cross-layer-contract-verification | 868 |
-| 4 | compressed-tool-output-recovery | 865 |
-| 5 | repository-delivery | 739 |
-| 6 | frontend-design | 728 |
-| 7 | playwright | 706 |
-| 8 | systematic-debugging | 550 |
-| 9 | safety-confirmation-gates | 467 |
-| 10 | requesting-code-review | 452 |
-| 11 | private-corpus-regression-testing | 450 |
-| 12 | data-integrity-feature-verification | 367 |
-| 13 | project-completion-auditing | 363 |
-| 14 | hermes-agent | 280 |
-| 15 | grounded-citations | 252 |
+| 1 | repository-delivery | 1.491 |
+| 2 | compressed-tool-output-recovery | 1.397 |
+| 3 | autonomous-goal-boundaries | 1.339 |
+| 4 | test-driven-development | 1.291 |
+| 5 | cross-layer-contract-verification | 1.012 |
+| 6 | playwright | 812 |
+| 7 | frontend-design | 756 |
+| 8 | requesting-code-review | 720 |
+| 9 | systematic-debugging | 714 |
+| 10 | private-corpus-regression-testing | 668 |
+| 11 | data-integrity-feature-verification | 499 |
+| 12 | project-completion-auditing | 494 |
+| 13 | safety-confirmation-gates | 481 |
+| 14 | delegated-code-verification | 349 |
+| 15 | grounded-citations | 327 |
 
 Tool rankings use executed Claude tool-use blocks, Codex function-call events and
 Hermes `messages.tool_calls`. Hermes `sessions.tool_names` is an availability
@@ -340,10 +365,10 @@ or older log records remain in the overall tool count without inventing a skill 
 
 | Metric | Value | Interpretation |
 | :--- | ---: | :--- |
-| Tokens per committed added line | 30,294.3 | All selected input/output/cache tokens ÷ historical Git additions |
-| Code churn ratio (added ÷ deleted) | 3.34:1 | Above 1 means the history added more lines than it removed |
-| Output tokens per changed line | 93.5 | AI output ÷ added and deleted Git lines |
-| Git commit density | 9,354,951.3 tokens/commit | Total selected token volume ÷ commits |
+| Tokens per committed added line | 31,773.0 | All selected input/output/cache tokens ÷ historical Git additions |
+| Code churn ratio (added ÷ deleted) | 4.27:1 | Above 1 means the history added more lines than it removed |
+| Output tokens per changed line | 94.8 | AI output ÷ added and deleted Git lines |
+| Git commit density | 9,698,576.4 tokens/commit | Total selected token volume ÷ commits |
 
 > Git `--numstat` measures historical committed additions/deletions, not surviving
 > present-day source lines. Generated files, documentation and vendored changes are
@@ -353,10 +378,10 @@ or older log records remain in the overall tool count without inventing a skill 
 
 | Provider | Estimated API-equivalent cost | Cache share of logical input | Estimated cache savings |
 | :--- | ---: | ---: | ---: |
-| Claude | $8,203.51 | 95.9% | $42,267.39 |
-| Codex | $2,230.79 | 97.5% | $13,315.53 |
+| Claude | $11,477.06 | 95.7% | $58,376.37 |
+| Codex | $5,517.61 | 97.6% | $34,000.91 |
 | Other | N/A | N/A | N/A |
-| **PRICED SUBTOTAL** | **$10,434.30** | **96.3%** | **$55,582.92** |
+| **PRICED SUBTOTAL** | **$16,994.67** | **96.5%** | **$92,377.28** |
 
 `Other` preserves unknown Hermes providers/models in usage totals. Their cost is
 not assigned Claude/OpenAI prices; the priced subtotal excludes them. Cache share
@@ -374,32 +399,32 @@ the corresponding ordinary-input list rate.
 
 ## Time & Intensity Patterns
 
-- **Prime hour:** 16:00–17:00 local time (337 logged activity events)
-- **Prime weekday:** Sunday (1.283 logged activity events)
+- **Prime hour:** 16:00–17:00 local time (398 logged activity events)
+- **Prime weekday:** Sunday (1.501 logged activity events)
 - **Generation throughput:** N/A — output tokens and measured generation seconds are not joined per event across all sources
-- **Autonomy input/output ratio:** 1.74:1 recorded non-cache input tokens per output token
-- **Tool autonomy:** 18.72 logged tool calls per task (85.276 calls)
+- **Autonomy input/output ratio:** 2.73:1 recorded non-cache input tokens per output token
+- **Tool autonomy:** 29.12 logged tool calls per task (158.363 calls)
 
 ### Activity by Time of Day
 
 | Local time | Activity events | Share |
 | :--- | ---: | ---: |
-| Night (00-05) | 518 | 11.4% |
-| Morning (06-11) | 1.372 | 30.1% |
-| Afternoon (12-17) | 1.550 | 34.0% |
-| Evening (18-23) | 1.115 | 24.5% |
+| Night (00-05) | 615 | 11.5% |
+| Morning (06-11) | 1.538 | 28.7% |
+| Afternoon (12-17) | 1.811 | 33.8% |
+| Evening (18-23) | 1.396 | 26.0% |
 
 ### Activity by Weekday
 
 | Weekday | Activity events | Share |
 | :--- | ---: | ---: |
-| Monday | 536 | 11.8% |
-| Tuesday | 396 | 8.7% |
-| Wednesday | 230 | 5.0% |
-| Thursday | 641 | 14.1% |
-| Friday | 390 | 8.6% |
-| Saturday | 1.079 | 23.7% |
-| Sunday | 1.283 | 28.2% |
+| Monday | 691 | 12.9% |
+| Tuesday | 556 | 10.4% |
+| Wednesday | 259 | 4.8% |
+| Thursday | 667 | 12.4% |
+| Friday | 479 | 8.9% |
+| Saturday | 1.207 | 22.5% |
+| Sunday | 1.501 | 28.0% |
 
 Activity events are timestamped prompts/tasks found in the selected logs. Session
 velocity uses logged output tokens and measured generation/session time; tool-call
@@ -408,9 +433,9 @@ not a billing-grade audit.
 
 ## Resource Scenario
 
-- **Estimated inference energy:** 2,248.9 kWh
-- **Estimated CO₂ equivalent:** 742.1 kg CO₂e
-- **Estimated physical keystrokes avoided:** 360.729.772
+- **Estimated inference energy:** 3,908.5 kWh
+- **Estimated CO₂ equivalent:** 1,289.8 kg CO₂e
+- **Estimated physical keystrokes avoided:** 575.561.816
 
 The environmental estimate is deliberately rough and transparent: **0.1 Wh
 per 1,000 processed tokens** and **330 g CO₂e/kWh**. Real energy varies
@@ -421,7 +446,7 @@ presented as measured provider emissions.
 
 ## Project Size & File Inventory
 
-Scope: **partial — measured subset only**, no tracked index/stat changes detected; HEAD revision: <code>ff4e88a2357173735db3a1fa5ba8f1034b9c44c4</code>.
+Scope: **partial — measured subset only**, no tracked index/stat changes detected; HEAD revision: <code>eabea810cf95d5bb2e45b8662a0ee55b284a8f43</code>.
 
 Git index/stat metadata only; conservative, without content comparisons. Secret/cache/report exclusions and submodule working contents are not assessed.
 
@@ -431,50 +456,50 @@ Directories are unique parents of measured tracked files, including the root at 
 
 | Metric | Value |
 | --- | --- |
-| Files (measured) | 1,464 |
-| Logical bytes (measured) | 47,864,760 |
-| Source files | 984 |
-| Source logical bytes | 14,763,046 |
-| Source physical lines | 359,675 |
-| Tracked directories (including root) | 157 |
-| Maximum directory depth | 6 |
+| Files (measured) | 3,309 |
+| Logical bytes (measured) | 80,638,221 |
+| Source files | 2,002 |
+| Source logical bytes | 27,198,662 |
+| Source physical lines | 639,257 |
+| Tracked directories (including root) | 280 |
+| Maximum directory depth | 8 |
 
 | Category | Files | Logical bytes |
 | --- | --- | --- |
-| source | 594 | 10,126,667 |
-| tests | 388 | 4,612,062 |
-| docs | 342 | 23,189,353 |
-| config | 63 | 1,011,022 |
-| assets | 26 | 2,785,660 |
-| other | 51 | 6,139,996 |
+| source | 1,185 | 17,206,312 |
+| tests | 819 | 13,183,357 |
+| docs | 1,115 | 36,133,895 |
+| config | 97 | 1,530,943 |
+| assets | 31 | 3,371,820 |
+| other | 62 | 9,211,894 |
 
-Readable UTF-8 source files: **984**; median file lines: **171.0**; p95 file lines: **1,225** (nearest-rank). Unreadable source files are excluded from distributions; their aggregate source lines are N/A.
+Readable UTF-8 source files: **2,002**; median file lines: **160.5**; p95 file lines: **994** (nearest-rank). Unreadable source files are excluded from distributions; their aggregate source lines are N/A.
 
 ### Extension distribution (top 10 by bytes)
 
 | Extension | Files | Logical bytes |
 | --- | --- | --- |
-| <code>.gif</code> | 5 | 11,468,773 |
-| <code>.rs</code> | 486 | 10,112,115 |
-| <code>.png</code> | 56 | 6,363,232 |
-| <code>.md</code> | 230 | 4,690,127 |
+| <code>.rs</code> | 1,007 | 17,934,921 |
+| <code>.png</code> | 95 | 13,239,652 |
+| <code>.gif</code> | 5 | 11,482,795 |
+| <code>.md</code> | 853 | 9,203,621 |
+| <code>.sqlite</code> | 11 | 6,905,856 |
+| <code>.ts</code> | 525 | 4,011,508 |
+| <code>.tsx</code> | 318 | 3,630,789 |
+| <code>.json</code> | 210 | 3,323,178 |
 | <code>.knxdb</code> | 3 | 3,059,712 |
-| <code>.mp4</code> | 3 | 2,114,631 |
-| <code>.tsx</code> | 175 | 2,048,988 |
-| <code>.ts</code> | 260 | 1,962,414 |
-| <code>.zip</code> | 4 | 1,601,762 |
-| <code>.json</code> | 69 | 1,422,444 |
+| <code>.mp4</code> | 3 | 2,147,882 |
 
 ### File and path extremes
 
 | Extreme | Path/name | Measurement |
 | --- | --- | --- |
-| Longest filename | <code>docs/adr/0053-contributions-come-with-a-license-grant-for-dual-licensing.md</code> | 66 Unicode characters; 66 filesystem-encoded bytes |
-| Longest relative path | <code>docs/evidence/community-demos/screenshots/multi-unit-residential-buildings.png</code> | 78 Unicode characters; 78 filesystem-encoded bytes |
-| Deepest file | <code>crates/knx-productdb/fixtures/legacy/src-pr/MARVIN/ets.pr&#95;</code> | Parent depth 6 |
+| Longest filename | <code>docs/research/commissioning/2026-09-29-download-coverage-re-measured-signed-and-text-values-honest-mask.md</code> | 78 Unicode characters; 78 filesystem-encoded bytes |
+| Longest relative path | <code>crates/knx-app/tests/it/system2&#95;validation&#95;preparation/configured&#95;hardware/pid7&#95;policy/pid7&#95;failure&#95;diagnostic.rs</code> | 113 Unicode characters; 113 filesystem-encoded bytes |
+| Deepest file | <code>crates/knx-net/src/commissioning/memory&#95;download/tests/region&#95;reads/budget/note.rs</code> | Parent depth 8 |
 | Shortest nonempty readable source | <code>apps/knx-web/src/vite-env.d.ts</code> | 1 physical lines; 38 bytes |
-| Longest readable source line | <code>crates/knx-app/src/contribution&#95;bundle.rs</code> | Line 197; 1,036 Unicode characters (without newline) |
-| Most common basename (case-sensitive) | <code>Cargo.toml</code> | 19 files |
+| Longest readable source line | <code>tools/design-studies/group-addresses/style.css</code> | Line 4; 14,666 Unicode characters (without newline) |
+| Most common basename (case-sensitive) | <code>mod.rs</code> | 21 files |
 
 ### Largest files by logical bytes (up to 10)
 
@@ -482,29 +507,29 @@ Readable UTF-8 source files: **984**; median file lines: **171.0**; p95 file lin
 | --- | --- | --- |
 | <code>docs/assets/readme/hero-add-device.gif</code> | 7,883,659 | N/A |
 | <code>docs/assets/readme/telegram-flow.gif</code> | 2,752,893 | N/A |
+| <code>crates/knx-store/tests/fixtures/native13-before-notes-working.sqlite</code> | 1,806,336 | N/A |
+| <code>website/assets/project-work.mp4</code> | 1,537,621 | N/A |
+| <code>crates/knx-store/fixtures/project&#95;v12&#95;instruction&#95;history.sqlite</code> | 1,474,560 | N/A |
+| <code>crates/knx-store/fixtures/project&#95;v12&#95;instruction&#95;history&#95;device.sqlite</code> | 1,474,560 | N/A |
 | <code>demos/1.0.0/office-building.knxdb</code> | 1,421,312 | N/A |
-| <code>website/assets/project-work.mp4</code> | 1,256,389 | N/A |
+| <code>crates/knx-store/tests/fixtures/native13-before-notes-saved.sqlite</code> | 1,290,240 | N/A |
 | <code>demos/1.0.0/multi-unit-residential.knxdb</code> | 1,146,880 | N/A |
-| <code>docs/history/IMPLEMENTATION&#95;STATUS&#95;2026-09.md</code> | 832,001 | N/A |
-| <code>website/assets/bus-flow.mp4</code> | 761,738 | N/A |
-| <code>demos/1.0.0/knxbench-community-demos-1.0.0.zip</code> | 725,144 | N/A |
-| <code>demos/1.0.0/projects.json</code> | 593,778 | N/A |
-| <code>docs/KNOWN&#95;LIMITATIONS.md</code> | 573,283 | N/A |
+| <code>docs/history/IMPLEMENTATION&#95;STATUS&#95;2026-09.md</code> | 831,943 | N/A |
 
 ### Largest source files by physical lines (up to 10)
 
 | Path | Logical bytes | Source physical lines |
 | --- | --- | --- |
-| <code>crates/knx-core/src/command.rs</code> | 352,915 | 9,306 |
-| <code>apps/knx-server/src/domain.rs</code> | 310,715 | 7,715 |
-| <code>crates/knx-net/src/commissioning.rs</code> | 266,441 | 6,221 |
+| <code>crates/knx-core/src/command.rs</code> | 375,748 | 9,833 |
+| <code>apps/knx-server/src/domain.rs</code> | 367,917 | 9,087 |
+| <code>crates/knx-net/src/commissioning.rs</code> | 275,342 | 6,418 |
 | <code>crates/knx-core/src/dpt/codec.rs</code> | 238,140 | 5,961 |
-| <code>apps/knx-cli/src/main.rs</code> | 184,379 | 4,852 |
-| <code>crates/knx-productdb/tests/dynamic&#95;tree.rs</code> | 176,748 | 4,443 |
-| <code>crates/knx-productdb/src/migration.rs</code> | 186,163 | 4,237 |
-| <code>crates/knx-net/src/cemi.rs</code> | 177,343 | 4,132 |
-| <code>crates/knx-productdb/src/query.rs</code> | 164,613 | 3,958 |
-| <code>apps/knx-web/src/styles.css</code> | 142,820 | 3,950 |
+| <code>apps/knx-cli/src/main.rs</code> | 208,683 | 5,370 |
+| <code>crates/knx-productdb/src/migration.rs</code> | 223,139 | 5,119 |
+| <code>apps/knx-web/src/styles.css</code> | 205,419 | 4,943 |
+| <code>apps/knx-web/src/App.test.tsx</code> | 218,728 | 4,651 |
+| <code>apps/knx-web/src/messages/en.ts</code> | 349,188 | 4,462 |
+| <code>crates/knx-productdb/tests/it/dynamic&#95;tree.rs</code> | 177,414 | 4,458 |
 
 ### Empty files (up to 10)
 
@@ -528,13 +553,13 @@ Total collision groups: **0**.
 - docs/ProjectStats.md and .projectstats state are excluded to prevent report self-growth.
 - Secret/credential-looking paths are excluded without opening files or exposing names; heuristic, not a secret scan.
 - Symlink files/ancestors, submodules, nonregular files and unsafe paths are excluded.
-- Excluded generated or cache: 21.
-- Excluded ignored: 265.
+- Excluded generated or cache: 31.
+- Excluded ignored: 431.
 - Excluded report or state: 1.
 - Excluded secret or credential: 11.
 - Excluded symlink: 1.
 - Unavailable tracked working files: 1; unreadable source files: 0.
-- Excluded tracked files&#58; generated or cache=21, ignored=265, report or state=1, secret or credential=11, symlink=1.
+- Excluded tracked files&#58; generated or cache=31, ignored=431, report or state=1, secret or credential=11, symlink=1.
 - Partial inventory&#58; unavailable working files are omitted; unreadable source lines are N/A.
 
 
@@ -544,10 +569,10 @@ Offline, Git-tracked declarations and lockfiles only; no package code is execute
 
 | Metric | Value |
 |---|---:|
-| Unique declared dependencies | 65 |
+| Unique declared dependencies | 67 |
 | Unique locked package versions | N/A |
 | Packages with multiple locked versions | N/A |
-| Internal/local package names | 19 |
+| Internal/local package names | 20 |
 | Maximum resolved depth (edges) | N/A |
 | Unresolved lock edges | 26 |
 | Cyclic components | 0 |
@@ -559,17 +584,17 @@ Lock inventory coverage: **incomplete / unavailable**; resolved records are a me
 
 | Ecosystem | Package | Declarations |
 |---|---|---:|
-| cargo | knx\-core | 13 |
+| cargo | knx\-core | 14 |
 | cargo | tempfile | 12 |
+| cargo | serde\_json | 9 |
+| cargo | tokio | 9 |
 | cargo | chrono | 8 |
-| cargo | serde\_json | 8 |
-| cargo | serde | 7 |
+| cargo | serde | 8 |
+| cargo | knx\-testsupport | 7 |
+| cargo | sha2 | 7 |
 | cargo | zip | 7 |
-| cargo | knx\-testsupport | 6 |
-| cargo | sha2 | 6 |
-| cargo | tokio | 6 |
-| cargo | knx\-store | 5 |
-Other 55 package names omitted; full records remain in JSON.
+| cargo | knx\-store | 6 |
+Other 57 package names omitted; full records remain in JSON.
 
 ### Multiple locked versions (up to 5; observed subset if coverage is incomplete)
 
@@ -583,36 +608,36 @@ Other 55 package names omitted; full records remain in JSON.
 
 At most 3 roots, 10 direct branches, display depth 3 and 30 tree lines; repeated nodes are not expanded.
 
-- Cargo\.lock:package:knx\-cli@0\.1\.0\-alpha\.7\#194
+- Cargo\.lock:package:knx\-cli@0\.1\.0\-alpha\.17\#194
   - Cargo\.lock:package:chrono@0\.4\.45\#45
     - Cargo\.lock:package:iana\-time\-zone@0\.1\.65\#159
       - Cargo\.lock:package:android\_system\_properties@0\.1\.6\#4
       - Cargo\.lock:package:core\-foundation\-sys@0\.8\.7\#49
       - Cargo\.lock:package:iana\-time\-zone\-haiku@0\.1\.2\#160
-    - Cargo\.lock:package:num\-traits@0\.2\.19\#241
+    - Cargo\.lock:package:num\-traits@0\.2\.19\#242
       - Cargo\.lock:package:autocfg@1\.5\.1\#13
-    - Cargo\.lock:package:serde@1\.0\.229\#332
-      - Cargo\.lock:package:serde\_core@1\.0\.229\#334
-      - Cargo\.lock:package:serde\_derive@1\.0\.229\#335
+    - Cargo\.lock:package:serde@1\.0\.229\#333
+      - Cargo\.lock:package:serde\_core@1\.0\.229\#335
+      - Cargo\.lock:package:serde\_derive@1\.0\.229\#336
   - Cargo\.lock:package:knx\-app@0\.1\.0\-alpha\.3\#192
     - Cargo\.lock:package:base64@0\.22\.1\#17
     - Cargo\.lock:package:chrono@0\.4\.45\#45 (repeated/cyclic)
     - Cargo\.lock:package:getrandom@0\.4\.3\#131
       - Cargo\.lock:package:cfg\-if@1\.0\.4\#44
-      - Cargo\.lock:package:libc@0\.2\.189\#213
-      - Cargo\.lock:package:r\-efi@6\.0\.0\#297
+      - Cargo\.lock:package:libc@0\.2\.189\#214
+      - Cargo\.lock:package:r\-efi@6\.0\.0\#298
   - Cargo\.lock:package:knx\-build\-stamp@0\.1\.0\-alpha\.1\#193
-    - Cargo\.lock:package:tempfile@3\.27\.0\#388
+    - Cargo\.lock:package:tempfile@3\.27\.0\#389
       - Cargo\.lock:package:fastrand@2\.5\.0\#101
       - Cargo\.lock:package:getrandom@0\.4\.3\#131 (repeated/cyclic)
-      - Cargo\.lock:package:once\_cell@1\.21\.4\#262
+      - Cargo\.lock:package:once\_cell@1\.21\.4\#263
   - Cargo\.lock:package:knx\-core@0\.1\.0\-alpha\.1\#195
     - Cargo\.lock:package:chrono@0\.4\.45\#45 (repeated/cyclic)
   - Cargo\.lock:package:knx\-csv@0\.1\.0\-alpha\.1\#196
     - Cargo\.lock:package:csv@1\.4\.0\#59
       - Cargo\.lock:package:csv\-core@0\.1\.13\#60
       - Cargo\.lock:package:itoa@1\.0\.18\#176
-      - Cargo\.lock:package:ryu@1\.0\.23\#322
+      - Cargo\.lock:package:ryu@1\.0\.23\#323
 
 Display is truncated where limits apply; full measured graph remains in JSON.
 
@@ -625,34 +650,6 @@ Display is truncated where limits apply; full measured graph remains in JSON.
 
 ## Changes Since the Previous Run
 
-Previous run (UTC): 2026-10-09T21:37:17.643097+00:00
-
-| Metric | Previous | Current | Change |
-| :--- | ---: | ---: | ---: |
-| Tracked files | N/A | N/A | N/A |
-| Logical project bytes | N/A | N/A | N/A |
-| Source files | N/A | N/A | N/A |
-| Source bytes | N/A | N/A | N/A |
-| Physical source lines | N/A | N/A | N/A |
-| Tracked-file directories | N/A | N/A | N/A |
-| Maximum directory depth | N/A | N/A | N/A |
-| Unique declared dependencies | 65 | 65 | +0 |
-| Resolved packages | N/A | N/A | N/A |
-| Packages with multiple versions | N/A | N/A | N/A |
-| Git commits | 2403 | 2404 | +1 |
-| Logged tasks | 4555 | 4555 | +0 |
-| Logged tool calls | 85154 | 85276 | +122 |
-| Input tokens | 156700153 | 156867931 | +167778 |
-| Output tokens | 90091981 | 90182443 | +90462 |
-| Cache-read tokens | 21553026451 | 21572602259 | +19575808 |
-| Cache-write tokens | 669650253 | 669650253 | +0 |
-
-### Dependency Changes
-
-- **Added declarations:** 0
-- **Removed declarations:** 0
-- **Changed requirements:** 0
-- **Changed locked versions:** N/A — incomplete source coverage in either run
-
+Baseline recorded; no previous compatible snapshot exists. Changes are N/A, not zero.
 
 These are inventory differences between successful local runs, not interval billing, code authorship or an agent-efficiency score. Removed/moved session logs can reduce counts. The generated report and private state are excluded from file-size measurements. Missing measurements remain N/A; snapshots stay in Git-ignored private state.

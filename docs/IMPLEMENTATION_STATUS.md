@@ -14,6 +14,11 @@ fragment aliases and update this index. Do not rewrite previous results.
 
 ## CLI report language selection (27 October 2026 source)
 
+Published as main-first `5679ba3c5` after whole-feature and correction reviews
+APPROVE; both maintained 13-stage gates passed (integrated Rust529,
+corpus17/17; frozen inputs and unchanged user data).
+[Acceptance and exclusions](status/2026-10-27-cli-report-language.md).
+
 `knx doc-export` accepts `--language en`, `en-US`, `de` or `de-DE`, using the
 existing report renderer and product-string locale. Omitting the option keeps
 English. Invalid, missing and repeated language options refuse before store or

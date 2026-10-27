@@ -1,6 +1,14 @@
 # Restart snapshot
 
-Updated: 2026-10-27 00:45 CET. Operational snapshot, not an append-only journal.
+Updated: 2026-10-27 05:50 CET. Operational snapshot, not an append-only journal.
+## GATE-01 production case parallelism (IN PROGRESS, observed 2026-10-27 05:50 CET)
+- Owner: this WebUI; branch `perf/gate01-fullypar-20261027`, isolated feature worktree.
+- Scope reserved: `tools/production_lanes.py`, runner flag plumbing, owning tests and ADR-0155.
+- User GO for this slice. No bus/hardware/release/deployment authority inferred.
+- Two measured runs green/frozen: production557 each, 438.95/439.84 s vs prior681.7 s.
+- Raw evidence `<profile>/evidence/gate01-fullypar-20261027/`; no own measurement runner now.
+- Review1 R1/R2/R3 fixed; focused Opus review APPROVE, then two cheap MINOR corrections.
+- Parent60/60 green; next confirmation review, then main-first package gate. No gate runner now.
 ## GATE-01 production browser lanes (DELIVERED, observed 2026-10-27 00:45 CET)
 - PUBLISHED main-first merge `745932994` (feature `1baff6c3a`, fixes `a91ba795f`); readbacks equal.
 - Review + re-review APPROVE; merged gate 11/11 green, Vitest4553, browser925+production557.

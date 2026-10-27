@@ -357,6 +357,9 @@ class GatePlan(unittest.TestCase):
         for title, hit in (('a > b @exclusive', True), ('a > b @exclusive @slow', True),
                            ('a > b @exclusive-x', False), ('a > exclusive', False)):
             self.assertEqual(bool(re.search(tag, title)), hit, title)
+        self.assertNotIn('--fully-parallel', command)
+        self.assertIn('--fully-parallel', browser_command('playwright.config.ts', Path('/output'), 4,
+                                                          'functional', fully_parallel=True))
         listing = browser_command('playwright.config.ts', Path('/output'), 1, None, listing=True)
         self.assertFalse(any(a.startswith('--grep') for a in listing))
         selected = browser_command('playwright.config.ts', Path('/output'), 4, 'functional',
@@ -427,10 +430,12 @@ class GatePlan(unittest.TestCase):
         from unittest import mock
         from tools import run_web_gate as runner
         inventory = report('plain', 'other', 'timed', tags={'timed': ['exclusive']})
-        calls = []
+        calls, parallel = [], []
 
-        def stage(run, app, env, name, config, lane, workers, expected=None, files=None):
+        def stage(run, app, env, name, config, lane, workers, expected=None, files=None,
+                  fully_parallel=False):
             calls.append((name, config, lane, workers, None if expected is None else sorted(expected)))
+            parallel.append(fully_parallel)
             if expected is None:
                 (run.output / f'{name}.json').write_text(json.dumps(inventory))
             return {}
@@ -455,6 +460,8 @@ class GatePlan(unittest.TestCase):
             ])
             self.assertEqual(run.receipt['production']['devices'],
                              {'total': 3, 'functional': 2, 'exclusive': 1})
+            # Only the functional lane spreads one file's cases over workers (ADR-0155).
+            self.assertEqual(parallel, [False, True, False])
             # A second suite adds its counts; the saved receipt carries both.
             inventory = report('plain')
             runner.run_production(run, app, {}, 'notes', 4)
@@ -468,6 +475,55 @@ class GatePlan(unittest.TestCase):
             inventory['suites'][0]['specs'][0]['tags'] = []
             with self.assertRaisesRegex(ValueError, 'compiled to no exclusive case'):
                 runner.run_production(run, app, {}, 'dialogs', 4)
+
+    def test_browser_stage_forwards_the_case_parallel_switch(self) -> None:
+        from unittest import mock
+        from tools import run_web_gate as runner
+        with TemporaryDirectory() as tmp:
+            run = mock.Mock(output=Path(tmp))
+            run.step.return_value = {'exit': 0, 'proofValid': True, 'wallSeconds': 0.0}
+            for enabled in (False, True):
+                runner.browser_stage(run, Path(tmp), {}, 'lane', 'playwright.devices.config.ts',
+                                     'functional', 4, {'one': {}}, fully_parallel=enabled)
+                command = run.step.call_args.args[1]
+                self.assertEqual('--fully-parallel' in command, enabled)
+
+    def test_exclusive_and_listing_commands_never_carry_the_case_parallel_switch(self) -> None:
+        # Characterization of already-correct placement (review1 R3), not an original bug.
+        from tools.run_web_gate import browser_command
+        out = Path('/output')
+        for lane, workers, listing in (('exclusive', 1, False), (None, 1, True),
+                                       ('functional', 4, False), ('functional', 4, True)):
+            with self.subTest(lane=lane, listing=listing):
+                self.assertNotIn('--fully-parallel', browser_command(
+                    'playwright.config.ts', out, workers, lane, listing=listing))
+        self.assertNotIn('--fully-parallel', browser_command(
+            'playwright.config.ts', out, 1, 'exclusive', files=['a.e2e.ts']))
+
+    def test_default_browser_orchestration_never_opts_into_case_parallelism(self) -> None:
+        # Characterization: the default suite keeps file-level scheduling (ADR-0155).
+        from unittest import mock
+        from tools import run_web_gate as runner
+        inventory = report('plain', 'timed', tags={'timed': ['exclusive']})
+        calls = []
+
+        def stage(run, app, env, name, config, lane, workers, expected=None, files=None,
+                  fully_parallel=False):
+            calls.append((name, lane, workers, fully_parallel))
+            if expected is None:
+                (run.output / f'{name}.json').write_text(json.dumps(inventory))
+            return {}
+
+        with TemporaryDirectory() as tmp, \
+                mock.patch.object(runner, 'browser_stage', stage), \
+                mock.patch.object(runner, 'checked_step'), \
+                mock.patch.object(runner, 'exclusive_scopes', return_value=[]):
+            app = Path(tmp)
+            run = support.MeasuredRun(app / 'attempt', [])
+            runner.run_browser(run, app, {}, 4)
+        self.assertEqual(calls, [('browser-inventory', None, 1, False),
+                                 ('browser-functional', 'functional', 4, False),
+                                 ('browser-exclusive', 'exclusive', 1, False)])
 
     def test_production_configs_still_pin_one_worker_for_standalone_runs(self) -> None:
         import inspect

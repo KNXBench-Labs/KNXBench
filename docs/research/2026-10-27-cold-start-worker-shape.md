@@ -5,6 +5,26 @@ No application, runner, deadline, lane or worker-policy change. No browser,
 dispatcher, test body, real project or bus operation ran in this assessment.
 The historical timeout cause remains **unresolved**; GATE-01 remains open.
 
+## Delivery and package acceptance
+
+Published main-first as `2890ad2d09c5f0cecee9d32cceac42866e18208e` (source-only feature `763d7fbe6`) after independent
+review and four reporting corrections confirmed APPROVE. The original branch gate
+passed ten stages with 461 registered tool methods (455 passed, six optional skips).
+The first integrated candidate `83871cd88` failed the existing SIGHUP fixture's
+partial-record reader; that failed receipt is preserved, not reclassified as green.
+The separately reviewed test-only correction is published as `bc1b47a9a`, result
+`939c1b384`, with its own final fourteen-method module and package acceptance.
+
+This assessment was rebuilt main-first on that accepted correction. Its fresh
+integrated gate passed all ten planned stages with frozen inputs and no touched
+or unchecked user data: 466 tool methods registered,
+460 passed and 6 explicit optional skips.
+Local, tracking and live main and all owned target bytes matched after publication.
+No application Rust/web/browser/bindings or corpus runtime suite was selected by
+the documentation scope. These package checks are separate from the compiled-list
+assessment; they are not browser timings or proof of the historical failure cause.
+This result-note gate and own evidence retirement are separate operational closeout.
+
 ## Historical evidence boundary
 
 The [19 October dossier](2026-10-19-test-suite-speed.md) records three failures

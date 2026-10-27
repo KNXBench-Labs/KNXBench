@@ -28,8 +28,7 @@ product strings. Remaining detailed English prose can still appear in either.
 diagnostic sentences are still English. No third language or external report
 language pack exists. The web documentation dialog (CT-2) requests the
 report in the UI language (`de` for German, `en` otherwise); a separate report
-language selector is still absent in the web dialog. `knx doc-export --language
-en|en-US|de|de-DE` (2026-10-27) exposes the same two renderer languages natively.
+language selector is still absent.
 <!-- END retained catalogue record -->
 
 ## Update 2026-10-14: the German report labels its tables too (Goal B8)

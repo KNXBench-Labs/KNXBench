@@ -7,6 +7,7 @@ the former dated sections are in the [archive](history/OPEN_WORK_2026-10-25.md).
 | ID | Task | Status | Details |
 | --- | --- | --- | --- |
 | S2-02 | System-2: own-run busy hint and missing refusal reason (#30) | P1: diagnostic shipped in Alpha 17, reporter re-test can be requested; actual failure unresolved | [S2-02](open-work/S2-02-gateway-busy-after-failed-runs.md) |
+| S2-04 | System-2 server: tunnel lost after the durable checkpoint (#30) | P1: fix on branch; review, gates and reporter re-test pending | [S2-04](open-work/S2-04-tunnel-loss-after-checkpoint.md) |
 | S2-03 | System-2 UP258 image: invisible-parameter precedence | P2: defaults v2 and tunnel runtimes delivered; source communication-bit policy retained by owner; invisible precedence open | [S2-03](open-work/S2-03-up258-image-interpretation.md) |
 | PRG-01 | Close non-Secure programming gaps | In progress | [PRG-01](open-work/PRG-01-programming-gaps.md) |
 | WP-03 | Legacy binary enumeration values | Blocked: evidence | [WP-03](open-work/WP-03-legacy-binary-enumerations.md) |

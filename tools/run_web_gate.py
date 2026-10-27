@@ -262,7 +262,7 @@ def run_production(run: MeasuredRun, app: Path, env: dict[str, str], config: str
     default inventory, a static preview server per suite and no shared state;
     the config's own `workers: 1` stays for standalone runs. The functional
     lane also spreads one file's cases over workers (ADR-0155); the tool test
-    `tools/tests/test_production_lanes.py` keeps those specs free of shared state.
+    `tools/tests/test_production_lanes.py` checks common shared-state hazards.
     """
     name, file = f'production-{config}', f'playwright.{config}.config.ts'
     browser_stage(run, app, env, name + '-inventory', file, None, 1)

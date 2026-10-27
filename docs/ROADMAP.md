@@ -15,6 +15,17 @@ Publication is verified at immutable `a9ea32d72364478b25e158d0b95465af7a4702df`
 ([public verification record](evidence/release-alpha17-2026-10-26.json)).
 Work merged on main after `20ab2f7ea` belongs to the next alpha.
 
+## Experimental System-2 waits after Alpha 17
+
+Source builds select a [patient wait profile](contracts/system2-patient-waits.md)
+for experimental hardware download and explicit recovery: gateway ACK waits
+1 → 10 seconds per attempt, post-ACK management answer slices 3 → 15 seconds and
+load-state transitions 30 → 120 seconds. Device transport ACK/repetition stays
+at three seconds. Ordinary tunnel users, retry counts,
+backup and final verification are unchanged. The existing receiver/teardown fix
+is included; neither change proves the cause of issue #30 or a successful device
+outcome. Source-only; no Alpha 17 image or release update is implied.
+
 ## Docker signing design before the first stable release
 
 The [bounded proposal](research/2026-10-27-docker-image-signing-design.md) records

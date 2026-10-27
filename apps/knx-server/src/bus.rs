@@ -46,7 +46,7 @@ use knx_core::{
 };
 use knx_net::{
     ApplicationService, BusConnection, BusError, Destination, DiscoveredGateway, KnxNetIpClient,
-    Tpci,
+    Tpci, TunnelAckWait,
 };
 use tokio::sync::{broadcast, oneshot};
 use tokio::task::JoinHandle;
@@ -67,6 +67,21 @@ pub trait GatewayConnector: Send + Sync {
         &self,
         gateway: SocketAddrV4,
     ) -> Pin<Box<dyn Future<Output = Result<Box<dyn BusTunnel>, BusSessionError>> + Send + '_>>;
+
+    /// [`Self::connect_tunnel`] with an explicit wait for each
+    /// `TUNNELLING_ACK`. A connector with no tunnel of its own to configure,
+    /// such as an injected fake, opens its ordinary tunnel. That fallback is
+    /// accepted: only `RealConnector` opens real tunnels, and a new production
+    /// connector must override this method to honour the wait.
+    #[allow(clippy::type_complexity)]
+    fn connect_tunnel_with_ack_wait(
+        &self,
+        gateway: SocketAddrV4,
+        _wait: TunnelAckWait,
+    ) -> Pin<Box<dyn Future<Output = Result<Box<dyn BusTunnel>, BusSessionError>> + Send + '_>>
+    {
+        self.connect_tunnel(gateway)
+    }
 
     /// One multicast `SEARCH_REQUEST` and whatever `SEARCH_RESPONSE`s come
     /// back inside `knx-net`'s search window (Core v01.06.02 AS §4.2 /
@@ -173,6 +188,7 @@ impl std::error::Error for BusSessionError {}
 /// server lifetime).
 pub struct RealConnector {
     client: KnxNetIpClient,
+    return_path: knx_net::TunnelReturnPath,
 }
 
 impl RealConnector {
@@ -181,6 +197,7 @@ impl RealConnector {
     pub fn new(path: knx_net::TunnelReturnPath) -> Self {
         Self {
             client: KnxNetIpClient::with_tunnel_return_path(path),
+            return_path: path,
         }
     }
 }
@@ -201,6 +218,23 @@ impl GatewayConnector for RealConnector {
         Box::pin(async move {
             let tunnel = self
                 .client
+                .connect_tunnel(gateway)
+                .await
+                .map_err(BusSessionError::Transport)?;
+            Ok(Box::new(RealTunnel(tunnel)) as Box<dyn BusTunnel>)
+        })
+    }
+
+    #[allow(clippy::type_complexity)]
+    fn connect_tunnel_with_ack_wait(
+        &self,
+        gateway: SocketAddrV4,
+        wait: TunnelAckWait,
+    ) -> Pin<Box<dyn Future<Output = Result<Box<dyn BusTunnel>, BusSessionError>> + Send + '_>>
+    {
+        Box::pin(async move {
+            let tunnel = KnxNetIpClient::with_tunnel_return_path(self.return_path)
+                .with_tunnel_ack_wait(wait)
                 .connect_tunnel(gateway)
                 .await
                 .map_err(BusSessionError::Transport)?;
@@ -1771,6 +1805,10 @@ async fn drain_task(
         let _ = tunnel.disconnect().await;
     }
 }
+
+#[cfg(test)]
+#[path = "bus_patient_ack_tests.rs"]
+mod patient_ack_tests;
 
 #[cfg(test)]
 mod tests {

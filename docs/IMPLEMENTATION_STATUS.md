@@ -12,6 +12,14 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Experimental System-2 patient waits (27 October 2026 candidate)
+
+The [bounded timing package](status/2026-10-27-system2-patient-waits.md) increases
+experimental hardware wait budgets while retaining standard defaults for other
+tunnel users. [Exact values and response/repetition contract](contracts/system2-patient-waits.md).
+Independent review and maintained acceptance are pending; this entry records a
+candidate, not published source, a new Alpha image or a successful device test.
+
 ## Bounded native capture export (27 October 2026; acceptance evidence only)
 
 The [capture continuation](status/2026-10-27-wp11-native-capture-export.md)

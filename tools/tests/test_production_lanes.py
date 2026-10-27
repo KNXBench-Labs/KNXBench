@@ -175,6 +175,23 @@ class Hazards(unittest.TestCase):
             with self.subTest(config=text):
                 self.assertEqual(self._selection(text), expected)
 
+    def test_duplicate_quoted_or_computed_selection_keys_are_refused(self) -> None:
+        for key in ('"testMatch"', "'testMatch'", '["testMatch"]', "['testMatch']"):
+            with self.subTest(key=key):
+                with self.assertRaisesRegex(ValueError, 'explicit spec'):
+                    self._selection('export default { testMatch: ["demo.e2e.ts"], '
+                                    + key + ': ["demo.e2e.ts", "other.e2e.ts"] };')
+        self.assertEqual(self._selection(
+            '// "testMatch": OTHER\nexport default { testMatch: "demo.e2e.ts" };'),
+            ['demo.e2e.ts'])
+
+    def test_unrelated_template_or_regex_after_selection_is_not_tokenized(self) -> None:
+        for tail in ("webServer: { command: `echo it's` }", "note: /it's/", 'note: `say "hello`'):
+            with self.subTest(tail=tail):
+                self.assertEqual(self._selection(
+                    'export default { testMatch: "demo.e2e.ts", ' + tail + ' };'),
+                    ['demo.e2e.ts'])
+
     def test_production_spec_files_come_from_every_config(self) -> None:
         files = lanes.production_specs(APP, PRODUCTION_CONFIGS)
         self.assertEqual(sorted(files), sorted(set(files)))

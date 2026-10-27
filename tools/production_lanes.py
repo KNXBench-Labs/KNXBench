@@ -15,6 +15,7 @@ uses its resolver too.
 from __future__ import annotations
 
 import argparse
+from collections.abc import Iterator
 from pathlib import Path
 import re
 import sys
@@ -27,6 +28,7 @@ from tools.browser_lanes import IMPORT_FROM, mask, parse, references
 DECLARATION = re.compile(r'\b(?P<kind>let|var|const)\s+(?P<name>[A-Za-z_$][\w$]*)')
 ORDERED = re.compile(r'\b(?:beforeAll|afterAll)\s*\(|\.describe\.serial\b|\.describe\.configure\s*\(')
 TEST_MATCH_KEY = re.compile(r'(?<![\w$.])testMatch\s*:')
+QUOTED_MATCH_KEY = re.compile(r'''(["'])testMatch\1\s*\]?\s*:''')
 SPEC_NAME = re.compile(r'(?:\*\*/)?([\w.-]+\.e2e\.ts)')
 DECLARATOR = re.compile(r'\s*([A-Za-z_$][\w$]*)\s*(?=[=,;:]|$)')
 MUTATORS = r'push|pop|shift|unshift|splice|sort|reverse|set|delete|clear|add|fill|copyWithin'
@@ -120,23 +122,21 @@ def hazards(source: str) -> list[tuple[int, str]]:
     return sorted(found)
 
 
-def _literal_tokens(source: str, code: str, start: int) -> list[tuple[str, str]]:
-    """Tokens after `start`: ('str', value) or ('code', char); comments are skipped.
-
-    `code` is the masked source, so a blank over non-blank source is a comment,
-    string, regex or template; anything but a comment or quoted string stays opaque.
-    """
-    tokens: list[tuple[str, str]] = []
+def _literal_tokens(source: str, code: str, start: int) -> Iterator[tuple[str, str]]:
+    """Yield RHS tokens lazily, so unrelated later template/regex text is never read."""
     k = start
     while k < len(source):
         if not code[k].isspace():
-            tokens.append(('code', code[k]))
+            yield ('code', code[k])
             k += 1
-        elif source[k] in '"\'':
+        elif source[k] in '\"\'':
             end = k + 1
-            while source[end] != source[k]:
+            while end < len(source) and source[end] != source[k]:
                 end += 2 if source[end] == '\\' else 1
-            tokens.append(('str', source[k + 1:end]))
+            if end >= len(source):
+                yield ('code', 'unterminated string')
+                return
+            yield ('str', source[k + 1:end])
             k = end + 1
         elif source.startswith('//', k):
             k = source.find('\n', k)
@@ -146,38 +146,39 @@ def _literal_tokens(source: str, code: str, start: int) -> list[tuple[str, str]]
         elif source[k].isspace():
             k += 1
         else:
-            tokens.append(('code', source[k]))  # regex or template text
+            yield ('code', source[k])  # opaque regex/template; not an admitted RHS
             k += 1
-        if len(tokens) > 4096:
-            break
-    return tokens
 
 
 def _selection(source: str) -> list[str] | None:
-    """Literals of the one executable `testMatch:` RHS if it is exactly a string or array of strings."""
+    """Admit only one complete literal RHS; refuse quoted/computed key ambiguity."""
     code = mask(source)
     keys = list(TEST_MATCH_KEY.finditer(code))
-    if len(keys) != 1:
+    # The colon must remain executable: identical text in comments or strings is harmless.
+    if len(keys) != 1 or any(code[m.end() - 1] == ':'
+                             for m in QUOTED_MATCH_KEY.finditer(source)):
         return None
     tokens = _literal_tokens(source, code, keys[0].end())
-    kinds = [kind for kind, _ in tokens]
-    if tokens[:1] and kinds[0] == 'str':
-        values, rest = [tokens[0][1]], tokens[1:]
-    elif tokens[:1] == [('code', '[')]:
-        values, k = [], 1
-        while k < len(tokens) and kinds[k] == 'str':
-            values.append(tokens[k][1])
-            k += 1
-            if tokens[k:k + 1] == [('code', ',')]:
-                k += 1
-            elif tokens[k:k + 1] != [('code', ']')]:
+    token = next(tokens, None)
+    values = []
+    if token is not None and token[0] == 'str':
+        values.append(token[1])
+    elif token == ('code', '['):
+        token = next(tokens, None)
+        while token is not None and token[0] == 'str':
+            values.append(token[1])
+            token = next(tokens, None)
+            if token == ('code', ','):
+                token = next(tokens, None)
+            elif token != ('code', ']'):
                 return None
-        if tokens[k:k + 1] != [('code', ']')]:
+        if token != ('code', ']'):
             return None
-        rest = tokens[k + 1:]
     else:
         return None
-    if rest and rest[0] not in (('code', ','), ('code', '}'), ('code', ')')):
+    # Consume only the first token after the RHS, not the rest of the config file.
+    following = next(tokens, None)
+    if following is not None and following not in (('code', ','), ('code', '}'), ('code', ')')):
         return None
     return values or None
 

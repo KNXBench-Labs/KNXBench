@@ -22,9 +22,10 @@ disconnect. The private journal was not shared and was not inspected here.
   neither the `TUNNELLING_REQUEST` nor its repetition (Tunnelling v01.07.01 AS
   §2.6.1). A request on a channel the gateway had already closed fails the same
   way. A device that does not answer produces a different session error.
-- The unconfirmed disconnect was produced by the client itself: after the failed
+- The old client could not have confirmed that disconnect: after the failed
   send it stopped its own receive loop and then waited for a
-  `DISCONNECT_RESPONSE` that loop could no longer deliver.
+  `DISCONNECT_RESPONSE` that loop could no longer deliver. A gateway that had
+  already dropped the channel may not have answered either.
 - The server's System-2 worker ran the App executor, including its synchronous
   checkpoint persistence (fsync, readback) and send-possible marker, on a
   runtime worker. The CLI had the same starvation on 26 October and fixed it with
@@ -46,9 +47,12 @@ container CPU count or gateway log is available.
    `BusError::TunnelClosed` at once. The cause reaches the private journal's
    diagnostic text.
 2. After an unacknowledged request the client sends its `DISCONNECT_REQUEST` once
-   and keeps receiving, so `disconnect()` can confirm the teardown. A channel the
-   gateway ended is reported as terminated. `TunnelEvent::Closed` is still sent
-   once and stays the last event.
+   and keeps receiving, so `disconnect()` can confirm the teardown when the
+   gateway answers. A gateway that already dropped the channel may still not
+   answer, and the panel then still reports an unconfirmed disconnect. A channel
+   the gateway ended is reported as terminated. `TunnelEvent::Closed` is still
+   sent once and stays the last event. After a socket failure the request is
+   still sent, best-effort, so a live gateway can release its channel.
 3. The server worker runs the download and recovery executors through
    `block_in_place`, as the CLI runs its operation off the worker pool, so
    synchronous persistence no longer blocks tunnel tasks.
@@ -59,6 +63,12 @@ software and loopback only: no real gateway, bus or device.
 ## Remaining
 
 - Review, package gate, publication and a delivery note.
+- The same starvation class still exists on two server paths that persist
+  synchronously while they hold a tunnel: the ordinary `/api/device-download`
+  backup and send-possible marker (`device_download.rs`, the `keep` closure) and
+  the service-control backup (`service_control_routes.rs`). They are not
+  changed here; they need the same `off_tunnel_workers` treatment with their own
+  tests.
 - A reporter re-test on a build that contains the fix. The new closure cause in
   the private journal, the checkpoint timestamps and the container CPU count
   would show whether the hypothesis held.

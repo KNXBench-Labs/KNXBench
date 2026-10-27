@@ -290,8 +290,11 @@ already found lying in the grass.
   commands still build current-thread runtimes. The server's System-2 worker
   had the same starvation on a runtime worker (issue #30; a container limited
   to one CPU can end up with a single worker): it runs its executors through `off_tunnel_workers`
-  (`block_in_place`) in `apps/knx-server/src/device_system2/worker.rs`. Any new
-  server path that persists synchronously while it holds a tunnel needs the same.
+  (`block_in_place`) in `apps/knx-server/src/device_system2/worker.rs`. The
+  ordinary `/api/device-download` backup (`keep` closure) and the service-control
+  backup still persist on a runtime worker while they hold a tunnel; they are
+  open in [S2-04](open-work/S2-04-tunnel-loss-after-checkpoint.md). Any new server
+  path that persists synchronously while it holds a tunnel needs the same.
 - **A failed tunnel send names its cause.** `BusError::TunnelClosed` carries a
   `TunnelClosure` (gateway disconnect, unacknowledged sequence and last ACK
   status, heartbeat, socket, client). Do not map it back to a bare timeout. After

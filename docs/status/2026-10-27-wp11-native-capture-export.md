@@ -107,7 +107,19 @@ Private evidence is retained under
 `<profile>/evidence/wp11-native-capture-20261027/`: `verify_capture.py`,
 `capture-verification-1.json`, `verified-native-capture.json`, native calls and
 trees, original/replaced JSON, actual socket trace and both lifetime receipts.
-The read-only reconciliation passed with unchanged consumed inputs. Whole-
-evidence/documentation review and maintained branch/integrated package gates
-are pending at this preparation cutoff; source/desktop runtime reservation is
-already released after the actual ordinary close.
+The read-only reconciliation passed with unchanged consumed inputs. Independent
+whole-evidence and focused core source/text reviews returned APPROVE; the tiny
+roadmap-wrap finding was corrected and the original preparation cutoff kept
+until execution completed. No native replay was needed for review.
+
+Published main-first as `8227419a52dd6ab2e3981ae5571999886056f671` (feature
+`ae0b8fc71f3f6fc65b8e541464b35e6682aba7f9`). Branch and integrated
+maintained change-scoped gates each passed all **10/10** planned stages, with
+frozen inputs and no touched or unchecked user data. Each registered
+461 tooling methods: 455 passed, 6 optional skips. No product Rust
+suite, web/browser runtime, bindings or private corpus was selected; the actual
+native and original-client fixture observations above are separate evidence,
+not coverage inferred from these documentation gates. Local, tracking and live
+main matched, and every committed owned payload was read back byte-exact.
+Source/desktop reservation is released. Owned evidence retirement follows only
+a separately verified archive; no cleanup is claimed prematurely here.

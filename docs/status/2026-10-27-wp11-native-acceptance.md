@@ -1,5 +1,23 @@
 # WP-11: first bounded native acceptance slice — 27 October 2026
 
+## Delivery and package checks
+
+Published on main as `cc9d8fab2168d10e788e89026dbc58c1d229bd94`
+(feature `f4f112fe5`) after independent Claude review and correction re-review
+APPROVE. Branch and main-first integrated change-scoped package gates each
+passed all 13 planned stages with frozen inputs and no touched/unchecked user
+data. Integrated owning Rust checks ran 103 xtask tests with zero failures or
+ignored cases; tooling reported 461 methods, including six explicit skips
+(455 executed). The selected corpus lane had no cases and was a recorded
+no-op, not corpus execution. Web/browser/bindings were not selected by this
+documentation package; native artifact observations above remain their own
+execution evidence. Local, tracking and live main readback matched after push.
+
+Review corrected the original count wording: 19 is a thematic label count,
+not independently counted assertion groups. The expanded retained verifier
+passed on unchanged native observations without repeating product execution;
+the original review and verifier result remain retained separately.
+
 ## Authority and target
 
 The owner confirmed the 27 October decisions and expressly admitted native

@@ -4,6 +4,24 @@
   "task": "GATE-01",
   "result": "bounded-source-and-compiled-inventory-assessment",
   "wholeGate01Complete": false,
+  "packageAcceptance": {
+    "published": "2890ad2d09c5f0cecee9d32cceac42866e18208e",
+    "feature": "763d7fbe68c28f5dc3c9372f3b34fa7d0d17219b",
+    "review": "APPROVE after four corrections",
+    "branchStages": 10,
+    "originalIntegratedAttempt": "83871cd88ec68a294caa26e8e8a43d109a051758 remains failed",
+    "acceptedIntegratedStages": 10,
+    "integratedTooling": {
+      "toolingRegistered": 466,
+      "toolingPassed": 460,
+      "toolingSkipped": 6
+    },
+    "inputsFrozen": true,
+    "userDataTouched": [],
+    "userDataUnchecked": [],
+    "exactTargetReadback": true,
+    "resultNoteAcceptance": "separate"
+  },
   "baseline": "f18af565dd0c8528efefbc7f2a0cb8c8f06a743a",
   "lockedTools": {
     "vite": "8.3.5",

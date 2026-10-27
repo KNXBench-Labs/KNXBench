@@ -1,17 +1,18 @@
 # Restart snapshot
 
-Updated: 2026-10-27 21:03 CET. Operational snapshot, not an append-only journal.
+Updated: 2026-10-27 21:07 CET. Operational snapshot, not an append-only journal.
 ## GATE-01 signal fixture (DELIVERED/RETIRED, observed 2026-10-27 21:03 CET; session ddbf32f04371)
 - Main-first `bc1b47a9a`, result `939c1b384`; independent APPROVE, branch/integrated/result10 accepted/frozen, exact readbacks.
 - Tool466 registered/460passed/6optional skips; owning module14/0skips; five synthetic controls are not app tests.
 - Archive198 exact payloads/modes/gzip verified; own tree/refs/cache retired; root untouched.
 - `<profile>/evidence/gate01-spawn-record-20261027/retirement.json`; production wrapper unchanged, older causes still open.
-## GATE-01 cold-start follow-up (INTEGRATING, observed 2026-10-27 21:03 CET; session ddbf32f04371)
-- Owner `integrate/gate01-worker-shape-r2-20261027`; source-only candidate `763d7fbe6` independently APPROVE.
-- Current repeat3 lists/exact routine: focused27, whole327 entries, three groups; cap4/8 same model ceiling3.
-- Original integrated `83871cd88` remains failed; exact signal-fixture reader repair below is published/retired.
-- Historical exact three IDs/log/source/cause remain unavailable; STOP browser/benchmark/runner/config changes.
-- Evidence `<profile>/evidence/gate01-cold-start-20261027/`; next fresh integrated2 gate and conditional docs publication.
+## GATE-01 cold-start follow-up (PUBLISHED, observed 2026-10-27 21:07 CET; session ddbf32f04371)
+- Main-first `2890ad2d0` (feature `763d7fbe6`); independent review/correction APPROVE; branch10/integrated2-10 green/frozen.
+- Integrated tooling 466 registered/460passed/6optional skips; exact refs/owned bytes read back.
+- Original `83871cd88` stays failed; separate signal-fixture correction published/retired above.
+- Current repeat3: focused27/whole327 lists in three groups, cap4/8 same source-model ceiling3; no browser/speedup claim.
+- Historical exact IDs/log/source/cause missing. GATE-01 OPEN; no browser/benchmark/policy/code fix admitted.
+- Evidence `<profile>/evidence/gate01-cold-start-20261027/`; next result-doc gate/publication and verified own retirement.
 ## WP-11 native capture (DELIVERED/RETIRED, observed 2026-10-27 19:22 CET; session ddbf32f04371)
 - Main-first `8227419a5`, result `7ccb53f8a`; reviews APPROVE, branch/integrated/result gates10 green/frozen.
 - Actual Alpha17 one-frame native capture Cancel/Save/overwrite Cancel/Replace, heartbeat11 and close0.

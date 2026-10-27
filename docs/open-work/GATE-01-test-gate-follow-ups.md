@@ -12,7 +12,14 @@ Small and optional; none blocks a delivery.
   lane runs case-parallel since `3af5ea9e4` (production 681.7 → 455.7 s;
   [ADR-0155](../adr/0155-production-functional-case-parallelism.md),
   [record](../research/2026-10-27-production-case-parallelism.md)). Concurrent
-  suites and case-level parallelism in the default lane remain unreviewed.
+  suites were assessed on 27 October 2026 and are not admitted as a small
+  change: aggregate worker scheduling, global exclusive isolation and receipt
+  writing need a separate design; no overlap speedup was measured.
+  Default-lane case parallelism was assessed on the same date and is not admitted:
+  retained four-worker scheduling has only about 28 s of fixed-duration model
+  headroom, not a measured gain
+  ([assessment](../research/2026-10-27-default-browser-parallelism-assessment.md)).
+  Reopen on a material new tail or an explicit priority for the larger scheduler.
 - Three `file-menu-submenus` cases timed out at eight workers while a cold
   Vite development server started (they pass at the gate's four workers).
 - The cause of the earlier observed SIGTERM-test timeouts remains unproven;

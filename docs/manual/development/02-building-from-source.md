@@ -183,7 +183,7 @@ The workflow also validates the artifact afterwards, and you can run that check 
 
 ```bash
 cargo run -p xtask -- check-appimage
-cargo run -p xtask -- check-appimage --tag v0.1.0-alpha.17
+cargo run -p xtask -- check-appimage --tag v0.1.0-alpha.18
 ```
 
 The tagged form additionally checks that the artifact's file name matches the tag.

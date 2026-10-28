@@ -166,7 +166,7 @@ knx ga-import house.knxdb group-addresses.csv --dry-run
 
 Reads KNXBench's group-address CSV back into a project, or imports one of the
 four fixed [name/address column profiles](../../contracts/group-address-csv-profiles.md).
-Those profiles are address-only: range rows and `Security=Auto` are explicitly
+Since Alpha 18 those profiles are address-only: range rows and `Security=Auto` are explicitly
 reported as not imported; nonempty descriptions or other security values reject
 the whole file. DPT remains read-only. They do not change the native export format.
 `--dry-run` parses, plans and reports without writing anything.
@@ -210,7 +210,7 @@ Writes the self-contained HTML project documentation described in
 [Documentation export and project comparison](08-reports-and-diff.md), then prints the
 path, a warning count and each warning.
 
-`--language` takes `en`, `en-US`, `de` or `de-DE`, the same spellings as the web
+Since Alpha 18, `--language` takes `en`, `en-US`, `de` or `de-DE`, the same spellings as the web
 export, and may stand anywhere among the arguments. Without it the report is English.
 It picks the built-in report wording, the HTML `lang` attribute and the language asked of
 the product database. It does not translate your project, and nothing is guessed from the

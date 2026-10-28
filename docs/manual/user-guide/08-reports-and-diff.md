@@ -348,7 +348,7 @@ a preview of the document:
   previewed.
 
 The web document follows the application language: German when the interface is
-German, English otherwise. The CLI defaults to English and accepts an explicit
+German, English otherwise. Since Alpha 18 the CLI defaults to English and accepts an explicit
 `--language de` or `--language en` (also `de-DE` and `en-US`). This chooses the
 existing report and product-string locale without changing the project language.
 

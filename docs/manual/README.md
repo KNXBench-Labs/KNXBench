@@ -32,8 +32,8 @@ are file workflows. A bus connection is needed only for bus operations.
 public AppImage and Docker Hub images are release snapshots and may not contain
 later source changes.
 [Project status](getting-started/03-project-status.md) explains how to compare them.
-[Alpha 17](../releases/alpha17.md) is the current published pre-release
-(26 October 2026); its notes name the scope and boundaries.
+[Alpha 18](../releases/alpha18.md) is the current pre-release
+(source cutoff 28 October 2026); its notes name the scope and boundaries.
 
 ## A visual map of the workbench
 

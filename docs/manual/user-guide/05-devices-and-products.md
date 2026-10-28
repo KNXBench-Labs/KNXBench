@@ -19,11 +19,11 @@ manufacturer publishes, not something KNXBench invents. See
 This chapter covers the catalog, adding a device, and the device panel's objects,
 parameters, product data, diagnostics and inspection-only manufacturer fields.
 
-> Section labels such as *since Alpha 16* or *since Alpha 17* name the first
-> published pre-release that carries the behaviour. Alpha 17 (26 October 2026) is the
-> current published pre-release; its [release scope](../../releases/alpha17.md)
-> keeps the exact boundaries together. [Alpha 16](../../releases/alpha16.md) was
-> published on 24 October 2026.
+> Section labels such as *since Alpha 17* or *since Alpha 18* name the first
+> pre-release that carries the behaviour. Alpha 18 (source cutoff 28 October 2026) is the
+> current pre-release; its [release scope](../../releases/alpha18.md)
+> keeps the exact boundaries together. [Alpha 17](../../releases/alpha17.md) was
+> published on 26 October 2026.
 
 ## The Devices view
 
@@ -335,7 +335,9 @@ same operation is not retried, and a new operation starts with no diagnostic.
 Keep the private journal, which still holds the raw prefix, and do not post it.
 [Contract](../../contracts/system2-safe-failure-diagnostic.md).
 
-### What an ended experimental run proves (issue #31)
+<a id="what-an-ended-experimental-run-proves-issue-31"></a>
+
+### What an ended experimental run proves (issue #31, since Alpha 18)
 
 The Result line of the System-2 panel is derived from the retained operation record
 only. "All planned transfer steps finished, but the final verification step did not
@@ -348,12 +350,27 @@ table the same fact appears as a small dashed "S2" chip beside the pending marks
 with a tooltip). It appears only for the project, server and device the run was bound to,
 and is starred once the project was edited afterwards.
 
+**Which operation of the last step stopped.** The final step reads the whole
+allocation back, reads the Loaded states and program version and restores Verify
+Mode. When it fails in its own verification or restore, the panel lists, per run
+(download first, a recovery as its own entry), a category and a stage: *a completed
+read disagreed*, *a read gave no usable answer* or *the Verify Mode write did not
+complete*, with the stage (for example allocation or Verify Mode read-back). This names
+the operation that stopped, not the cause: "no usable answer" does not say whether the
+device was silent or refused. Any other stop, such as a journal failure or a
+cancellation, and every operation from an older build shows *unavailable*; nothing is
+reconstructed or guessed. It is not a statement about the device holding the requested
+configuration, does not diagnose the allocation mismatch reported in issues #30 and
+#22 and implies no hardware or ETS equivalence. The saved report carries the same list.
+
 **Save report** writes a small local JSON file (counts and closed facts, no address,
 name, parameters, backup bytes or paths). Check it, then email it to issue@knxbench.com
 or attach it to an issue. It is experimental evidence, not a compatibility claim.
 [Contract](../../contracts/system2-download-result.md).
 
-### More patient experimental waits (source builds after Alpha 17)
+<a id="more-patient-experimental-waits-source-builds-after-alpha-17"></a>
+
+### More patient experimental waits (since Alpha 18)
 
 The experimental hardware path uses longer bounded waits: 10 seconds for each
 matching gateway acknowledgement, 15 seconds per management-answer slice after
@@ -367,10 +384,10 @@ without being stuck: refresh status rather than starting a second operation.
 
 Backup, identity checks, final readback and once-only recovery rules are unchanged.
 These are experimental client wait values, not new standard timings or proof of
-successful device programming. Use a source build containing the
+successful device programming. The
 [patient wait profile](../../contracts/system2-patient-waits.md) and the receiver/
-teardown fix `1ab4ad6a5`; the published Alpha 17 image does not gain them merely
-by restarting it. A failed attempt still stops without automatic retry.
+teardown fix `1ab4ad6a5` ship in Alpha 18; an Alpha 17 image does not gain them
+merely by restarting it. A failed attempt still stops without automatic retry.
 
 ### Original-state recovery, not a second download
 
@@ -477,6 +494,12 @@ differs. The `+ Add device` rows in the project explorer open the
 ![Alpha 14’s Device catalog in the main workspace: an install file picker,
 a closed Catalogue backups section, manufacturer filter and search, and four fictional
 products. The first list row is highlighted, but no creation form or address preview is open](../../assets/screenshots/porcelain-product-catalog.png)
+
+**Installation choice (since Alpha 18).** Creating a catalogue device without a
+target line in a project with several installations requires an explicit
+**Installation**; removing that installation clears the choice instead of picking
+another, and a retry after a lost response keeps the original target. Projects with
+one installation and devices created from a line behave as before.
 
 **Sortable table (since Alpha 17).** Results use Product, Manufacturer,
 Order number and Application columns. Product starts ascending; click a heading

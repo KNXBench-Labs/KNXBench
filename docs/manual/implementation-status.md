@@ -2,21 +2,33 @@
 
 # Implementation status
 
-## Source implementation after Alpha 17: System-2 results and reports
+<a id="source-implementation-after-alpha-17-system-2-results-and-reports"></a>
 
-The experimental System-2 path now distinguishes completed transfer steps from
-an unfinished final check, preserves download and recovery results separately,
-and can save a privacy-safe report of an ended retained operation without a new
-bus read. Automatic project settlement uses the normal persistence/history
-boundary: uncertain writes make memory parts pending; only verified results
-whose exact preparation/source is still current can clear programming marks.
-A central notice and explicit reload retry identify stale displayed marks even
-outside the Download tab or Devices table. This is source functionality, not an
-updated Alpha 17 image or a new hardware-support claim.
-[Workflow](user-guide/05-devices-and-products.md) ·
-[Evidence and retained limits](../status/2026-10-28-system2-result-integration.md).
+## Alpha 18 — current pre-release
 
-## Alpha 17 — current published pre-release
+Alpha 18 (`v0.1.0-alpha.18`, source cutoff `bb2d8e51e`) answers issue #31 and
+follows up on issue #30. None of it is new hardware support; System-2, tunnel and
+report behaviour is tested with simulated or loopback transports only, and the
+allocation mismatch of issues #30/#22 is unresolved.
+[Release scope, upgrade notes and boundaries](../releases/alpha18.md).
+
+| Capability | Boundary |
+| --- | --- |
+| System-2 result and report | The experimental path distinguishes completed transfer steps from an unfinished final check, keeps download and recovery results separate and saves a privacy-safe report of an ended retained operation without a new bus read (status schema 4, report format 3). Workflow: [devices](user-guide/05-devices-and-products.md). |
+| Final-step failure category | When the last step fails in its own verification or Verify Mode restore, the panel and report say whether a comparison disagreed, a read gave no usable answer or the final write did not complete, with the stage. This names the operation, not its cause. Older operations and uncertain stops show "unavailable"; nothing is backfilled. [Contract](../contracts/system2-download-result.md#final-step-failure). |
+| Project settlement | Uncertain writes make memory parts pending; only verified results whose exact preparation/source is still current clear programming marks. A central notice and explicit **Reload marks** retry identify stale displayed marks outside the Download tab or Devices table. [Evidence](../status/2026-10-28-system2-result-integration.md). |
+| Tunnel and waits | A closed tunnel ends a send with a typed cause; System-2 and ordinary download persistence no longer run on the tunnel's runtime workers; experimental waits are 10 s / 15 s / 120 s. Field verification (S2-04) stays open. |
+| UP258 defaults profile v3 | Invisible parameters keep their source data (observation-supported hypothesis). New physical execution of v1/v2 bundles refuses. |
+| Workbench and CLI | Group-address CSV column profiles (address-only), `knx doc-export --language de`, explicit installation for line-less catalogue devices, `TypeDate` and legacy long-enum binary retention, desktop separator text-selection fix. |
+
+Native/store and model **16** are unchanged; the product database moves **28 → 30**
+through data-only migrations on a writable open. Alpha 17 refuses product30,
+defaults-profile-v3 bundles and System-2 journals with a final-step record. Opening
+Alpha 18 files in Alpha 17 is not tested. Keep independent backups before upgrading.
+
+<a id="alpha-17--current-published-pre-release"></a>
+
+## Alpha 17 — previous published pre-release (history)
 
 Alpha 17 (`v0.1.0-alpha.17`, source cutoff `20ab2f7ea`) is published as a
 pre-release on 26 October 2026. It answers issue #30 for the experimental UP 258D12

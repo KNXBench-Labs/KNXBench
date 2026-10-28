@@ -1,15 +1,39 @@
-Last updated: 2026-10-26 (Alpha 17 published pre-release)
+Last updated: 2026-10-29 (Alpha 18 pre-release; source cutoff 2026-10-28)
 
 # KNXBench Features
 
 | Reference | Value |
 | --- | --- |
-| Source snapshot | `v0.1.0-alpha.17` (cutoff `20ab2f7ea`) |
-| Released baseline | `v0.1.0-alpha.17` |
+| Source snapshot | `v0.1.0-alpha.18` (cutoff `bb2d8e51e`) |
+| Released baseline | `v0.1.0-alpha.18` |
 | Main-only | Newer than released baseline |
 | Local-only | Unpublished; not accepted on main |
 | Scope | Listed boundaries; not universal compatibility |
 | Later scope | No delivery dates promised |
+
+## New in Alpha 18
+
+The [release scope](releases/alpha18.md) covers changes after Alpha 17 up to
+cutoff `bb2d8e51e`. Native/store and model 16 are unchanged; the product database
+moves 28 → 30 through two data-only migrations, which Alpha 17 refuses. Defaults
+bundles of profile v3 and System-2 journals holding a final-step record are refused
+by Alpha 17 as well. Opening Alpha 18 files in Alpha 17 is not tested. Nothing
+below adds hardware support; System-2, tunnel and report behaviour is tested with
+simulated or loopback transports only, and issues #30 and #22 stay open.
+
+| Feature | Scope | Availability |
+| --- | --- | --- |
+| [System-2 download result and report](contracts/system2-download-result.md) | Journal-derived result (transfer complete vs final verification unfinished), device-list chip bound to project/device, automatic project-belief settlement (ADR-0129), local report save (issue #31); HTTP status schema 4, report format 3 | alpha.18 |
+| [System-2 final-step failure category](contracts/system2-download-result.md#final-step-failure) | Closed category and stage of the operation that stopped the last `Disconnect` step (mismatch, read failed, write failed), per download or recovery run, in journal envelope 3, status, report and EN/DE panel; the operation, not its cause; older operations show "unavailable"; the allocation mismatch of #30/#22 stays unresolved | alpha.18 |
+| Tunnel close causes (issue #30 follow-up) | Shared KNXnet/IP client ends a send on a closed tunnel with a typed cause and sends one `DISCONNECT_REQUEST` after an unacknowledged request; persistence of System-2 and ordinary download runs moved off the tunnel's runtime workers | alpha.18 |
+| [Patient experimental waits](contracts/system2-patient-waits.md) | Experimental System-2 path, recovery and CLI wait 10 s per gateway acknowledgement attempt, 15 s per management-answer slice and 120 s per load-state transition; other tunnel users keep their timings | alpha.18 |
+| [Defaults profile v3](status/2026-10-28-s203-background-defaults-v3.md) | UP258 validation workflow keeps source `Data` of invisible parameters (`DownloadInvisibleParameters="Background"` required); observation-supported hypothesis; new physical execution of v1/v2 bundles refuses | alpha.18 |
+| [Group-address CSV column profiles](contracts/group-address-csv-profiles.md) | Four fixed name/address layouts for three-level projects in CLI, server import and MCP validation; address-only, ranges and `Security=Auto` reported not imported; no export profile | alpha.18 |
+| [German CLI reports](status/2026-10-27-cli-report-language.md) | `knx doc-export --language de`; default stays English | alpha.18 |
+| [Catalogue installation target](status/2026-10-27-catalogue-installation-target.md) | Line-less catalogue device creation in a multi-installation project needs an explicit installation | alpha.18 |
+| [`TypeDate` parameters](status/2026-10-28-typedate-lexical-slice.md) | Stored as kind `Date`, calendar-validated `yyyy-mm-dd`; date-parameter download images stay refused | alpha.18 |
+| [Legacy long-enum binary values](status/2026-10-28-wp03-legacy-binary-retention.md) | Exact bytes retained in the typed binary-value column; no legacy programming | alpha.18 |
+| [Pane separators](status/2026-10-28-wp11-native-separator-recheck.md) | Desktop separators block text selection and native drag | alpha.18 |
 
 ## New in Alpha 17
 
@@ -26,7 +50,6 @@ and diagnostic behaviour is tested with simulated or loopback transports only.
 | Own-run gateway hint and refusal reason | System-2's shared locks are not announced as a foreign holder; current-run early refusals show the server's reason code. Volatile diagnostics only, actual issue #30 failure unresolved. [Workflow](manual/user-guide/05-devices-and-products.md#a-busy-hint-is-not-the-system-2-failure-reason-since-alpha-17) | alpha.17 |
 | [PID 7 pointer width](status/2026-10-26-up258-pid7-width.md) | Exact-UP258 record admits one two- or four-octet element on objects 1/2/3 and keeps the raw width; Alpha 16 operations keep their four-octet interpretation | alpha.17 |
 | [Typed PID 7 refusal diagnostic](contracts/system2-safe-failure-diagnostic.md) | Closed reason with object, property, element and octet counts per download/restore run; raw bytes stay in the private journal; report format 2, HTTP status schema 2 | alpha.17 |
-| [System-2 download result and report](contracts/system2-download-result.md) | Journal-derived result (transfer complete vs final verification unfinished), device-list chip bound to project/device, automatic project-belief settlement (ADR-0129), local report save | source |
 | [UP258 validation workflow](contracts/up258-system2-validation.md) | Defaults profile v2, own activity kind, `notSent` refusals before the send boundary, tunnel acknowledgements during checkpoints | alpha.17 |
 | [Identity widths](contracts/hardware-identity-comparison.md) | PID 78 hardware type exactly six octets, partial-download application identity exactly five, before backup or mutation | alpha.17 |
 | [Scope advice](contracts/device-programming-support-guidance.md) | *Only what the project marks pending* download choice; `knx device download --changes` plans only | alpha.17 |

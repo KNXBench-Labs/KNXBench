@@ -29,6 +29,14 @@ outcome. Published source `3583ab8e0` passed branch/integrated 14-stage gates;
 One optional reporter retest has been requested. Source-only; no Alpha 17 image
 or release update is implied.
 
+## UP258 invisible-parameter reading after Alpha 17
+
+[S2-03](open-work/S2-03-up258-image-interpretation.md) is delivered as source
+`d39668393`: defaults profile v3 shares the configured path's template-retention
+reading, admitted only for an explicit `DownloadInvisibleParameters="Background"`;
+new physical v1/v2 execution refuses, recovery stays. Observation-supported
+hypothesis on simulator evidence; no hardware, ETS-equivalence or release claim.
+
 ## Server tunnel persistence after Alpha 17
 
 The ordinary download worker and service-control backup callback now keep

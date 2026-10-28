@@ -1,6 +1,6 @@
 # S2-03 — System-2 UP258 image: open interpretation differences
 
-**Priority:** P2. **Status:** Implemented; acceptance pending (owner decision 28 October 2026; observation-supported hypothesis). Listed in [OPEN_WORK](../OPEN_WORK.md).
+**Priority:** P2. **Status:** Delivered as `d39668393` (owner decision 28 October 2026; observation-supported hypothesis; [delivery](../status/2026-10-28-s203-background-defaults-v3.md)). Listed in [OPEN_WORK](../OPEN_WORK.md).
 Origin: the 26 October 2026 image differential
 ([research](../research/2026-10-26-up258-image-differential.md)).
 

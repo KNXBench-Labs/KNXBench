@@ -1,29 +1,27 @@
 # Restart snapshot
 
-Observed: 2026-10-28 11:56 CET. Overwrite-in-place; maintained docs own project status.
+Observed: 2026-10-28 12:38 CET. Maintained docs own status; this is not a delivery journal.
 
-## WP-08 TypeDate lexical slice — GO, package acceptance pending
-- Owner: current WebUI; clean publication branch `feat/wp08-typedate-sanitized-20261028`
-  in `<sources>/knxbench-wp08-typedate-integration-20261028`, code `b5dc92aa`.
-- Date kind/lexical validation, productdb v29 data-only promotion; image codec
-  stays refused. No bus/hardware/release/deployment scope.
-- Whole-feature review found report-history/identity defects; each has a
-  semantic RED then GREEN fix. Correction re-review APPROVE (64 unique tests,
-  three mutants caught). Separate Opus final mode-fix review APPROVE with
-  genuine v28 copies and 27 retained mode variants; no source-data mutation.
-- Focused23 and server date validation green after independently synthetic
-  fixture values. Production/test tree equals sanitized private candidate;
-  old local investigation commits are retained privately, not for publication.
-- Gate1 failed missing dependencies (now installed/built); gate2 explicitly
-  interrupted/reaped on rejection. Neither is acceptance. Final plan14 ready.
-- Next: complete branch gate; fresh main-first merge and complete merged gate;
-  fresh freeze/ref check, publish/readback, result docs and owned cleanup.
-- Evidence `<profile-scratch>/wp08-typedate/`, `wp08-rereview/`,
-  `wp08-review/mixed-mode/`, `wp08-final-review/`; final archive pending.
+## WP-08 TypeDate lexical slice — source PUBLISHED, result-doc closeout GO
+- Published `4beabe531` (first parent `58375375b`; feature `b5dc92aa8`, docs `c57ba4147`).
+  Local/tracking/live main readbacks matched. Old private investigation lineage
+  is not an ancestor of publication; independent synthetic vectors are public.
+- Two independent correction reviews APPROVE. Branch and merged gates14/14
+  each accepted: Rust4476/165ignored and selected corpus97/97 each, frozen
+  inputs, checked/untouched user data. Tooling466 registered/6optional skips.
+  Scopes overlap; not a full-workspace/browser/native/hardware assertion.
+- Own tree `<sources>/knxbench-wp08-typedate-integration-20261028`, branch
+  `integration/wp08-typedate-public-20261028`; result docs being completed.
+- Runtime/productdb write reservation RELEASED to the WP-03 legacy-mapping
+  owner against published `4beabe531`. No more runtime edits in this closeout.
+- Next: docs-only gate and publication/readback, final evidence verification,
+  owned scratch/worktree retirement; root stays unsynchronized and preserved.
+- Durable evidence `<profile>/evidence/wp08-typedate-20261028/`.
+  Date image/native editor, Colour/Picture and historical v15 repair stay open.
 
-## Foreign WP-03 legacy enum mapping — preserve, evidence-only GO
-- Shared root observation (28 October, 11:16):
-  `research/wp03-enum-mapping-20261028`, isolated source-investigation track.
-- No shared productdb edits/schema assignment while WP-08 owns this surface.
-- Re-read shared snapshot before coordination; do not infer current liveness
-  from that old observation. Native WP-11 re-check still needs desktop consent.
+## Foreign WP-03 legacy enum mapping — ready owner, no takeover
+- Shared snapshot observation 28 October 12:28: evidence complete/reviewed,
+  own `research/wp03-enum-mapping-20261028` tree; no own jobs/gates reported.
+- Its wait for WP-08 source publication is satisfied; take fresh main before
+  independently implementing/reviewing/gating legacy mapping and any new schema.
+- Preserve its evidence/worktree. Native WP-11 re-check still requires consent.

@@ -12,6 +12,16 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## TypeDate lexical contract and evidence-safe promotion (28 October 2026 source)
+
+Published main-first `4beabe531` (code `b5dc92aa8`, documentation `c57ba4147`).
+`TypeDate` is kind `Date` with schema-spelled calendar validation; productdb
+v29 preserves historical evidence or explicitly refuses ambiguous promotion.
+Independent correction and final mode reviews approved; branch and merge gates
+14/14 each, integrated Rust4,476/165ignored and selected corpus97/97, frozen
+inputs and unchanged user data. [Exact scope and acceptance](status/2026-10-28-typedate-lexical-slice.md).
+No memory codec, checked native date editor, hardware or broad WP-08 closure.
+
 ## Document-language fanout (28 October 2026 source)
 
 `useUiLanguage()` writes `<html lang>` only when the actual attribute differs,

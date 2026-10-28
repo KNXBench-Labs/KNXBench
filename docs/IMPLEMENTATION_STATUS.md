@@ -12,6 +12,19 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Alpha 18 pre-release (source cutoff 28 October 2026)
+
+`v0.1.0-alpha.18` is the current pre-release, cut from main at source cutoff
+`bb2d8e51e`. Application versions are aligned at `0.1.0-alpha.18`; native/store and
+core model stay at 16, the product database moves 28 → 30 through two data-only
+migrations (Alpha 17 refuses v30). Every dated delivery entry from 26–28 October
+2026 below that is an ancestor of the cutoff ships in Alpha 18; their "source"
+labels record the delivery date, not a missing release. The System-2 final-step
+failure category (status schema 4, report format 3, journal envelope 3) ships with
+it; the allocation mismatch of #30/#22 stays unresolved and no hardware acceptance
+follows. Scope, upgrade notes and boundaries:
+[Alpha 18 release notes](releases/alpha18.md).
+
 ## System-2 final-step failure category (28 October 2026 source)
 
 A failure inside the last System-2 `Disconnect` step is now classified by the Net executor
@@ -236,7 +249,7 @@ cross-suite parallelism stay open.
 
 ## Alpha 17 published pre-release (26 October 2026)
 
-`v0.1.0-alpha.17` is the current published pre-release, cut from main at
+`v0.1.0-alpha.17` is the previous published pre-release, cut from main at
 `20ab2f7ea`. Application versions are aligned at `0.1.0-alpha.17`; native/store
 and core model stay at 16 and the product database at 28, so no migration is
 needed. Every dated delivery entry from 24–26 October 2026 below that is an

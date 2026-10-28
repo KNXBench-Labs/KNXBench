@@ -22,7 +22,26 @@ sidecars to bypass the refusal; see [CLI input handling](user-guide/10-command-l
 Source delivery and internal runtime checks are complete on `4eee65d8`; a new
 release is not implied. No receiver/bus compatibility is claimed.
 
-## Alpha 17 — published pre-release scope and evidence limits
+## Alpha 18 — pre-release scope and evidence limits
+
+Alpha 18 (`v0.1.0-alpha.18`) is a pre-release with source cutoff `bb2d8e51e`
+(28 October 2026). Its System-2, tunnel and report behaviour is tested with simulated or
+loopback transports only: no physical-hardware certification, recovery guarantee or
+ETS equivalence follows. System-2 stays experimental and limited to UP 258D12
+application `M-0001_A-9205-04-9270`. The actual allocation mismatch behind issues #30
+and #22 is unresolved and both stay open; issue #31 is closed for the display and
+report gap only. The final-step category names the operation that stopped, not its
+cause. The invisible-parameter reading (defaults profile v3) is an
+observation-supported hypothesis, not a defined rule. S2-02 and the field
+verification of the tunnel changes (S2-04) stay open. Group-address CSV profiles make
+no interoperability claim with any particular application.
+The product database moves 28 → 30 and Alpha 17 refuses it; opening Alpha 18 files in
+Alpha 17 is not tested and there is no downgrade path.
+[Release scope and boundaries](../releases/alpha18.md#boundaries).
+
+<a id="alpha-17--published-pre-release-scope-and-evidence-limits"></a>
+
+## Alpha 17 — previous published pre-release scope and evidence limits
 
 Alpha 17 (`v0.1.0-alpha.17`, source cutoff `20ab2f7ea`) is published as a
 pre-release on 26 October 2026. Its new download, System-2 and diagnostic
@@ -32,8 +51,8 @@ System-2 stays experimental and limited to UP 258D12 application
 `M-0001_A-9205-04-9270`; masked-byte survival, allocator state and complete
 physical recovery remain open, and `gatewayBusy` does not identify its mechanism.
 Issue #30 and issue #22 stay open; S2-02 (the original start failure) remains
-open work. S2-03's two image-interpretation differences are decided in source
-after Alpha 17: the invisible-parameter reading is an observation-supported
+open work. S2-03's two image-interpretation differences were decided after
+Alpha 17 and ship in Alpha 18: the invisible-parameter reading is an observation-supported
 hypothesis, not a defined rule. An unproved hardware
 route is capped at 12 data octets per request, which can slow transfers.
 Device backups (format 2), new activity-history rows and new System-2 operation
@@ -138,7 +157,9 @@ backup/readback and recovery-integrity barriers; no general speedup is establish
 - **Details:** [safe failure diagnostic](../contracts/system2-safe-failure-diagnostic.md),
   [S2-01](../open-work/S2-01-pid7-raw-response.md).
 
-### System-2 run result and project marks (issue #31)
+<a id="system-2-run-result-and-project-marks-issue-31"></a>
+
+### System-2 run result and project marks (issue #31, since Alpha 18)
 
 - **What happens:** an experimental System-2 run that ends with the transfer complete and
   its final verification step unfinished is explained in the panel, the device table and a
@@ -147,8 +168,12 @@ backup/readback and recovery-integrity barriers; no general speedup is establish
   retained source unchanged since the start, marks them programmed. Any edit that changes
   the preparation leaves them pending. These marks are the project's belief, not a device
   read or a compatibility claim.
-- **Not known:** whether the unfinished step found a difference, could not read or failed
-  its last write; the record does not say. The device is never shown as loaded.
+- **Not known:** why the last step stopped. Since Alpha 18 the panel and report say
+  which operation stopped (a comparison disagreed, a read gave no usable answer or the
+  final write did not complete) when it could be classified; older operations and
+  unclassified stops (for example a journal failure or a cancellation) show
+  *unavailable*, and a classified operation is not a cause. The device is never shown
+  as loaded, and the actual allocation mismatch of issues #30/#22 is not diagnosed.
 - **Table scope:** only the selected operation of the current server session and the
   open project appears there; after a server restart it stays in the panel and report.
 - **Details:** [System-2 download result](../contracts/system2-download-result.md),
@@ -466,8 +491,8 @@ is the remaining copy defect.
   Siemens `07B0h` programs (merged procedures) stay refused. No mapped
   legacy DPT codes. Since 13 October 2026 the legacy `string` and
   `long enum` parameters are shown and editable like ETS4's own conversion
-  of them. Source builds after Alpha 17 retain validated long-enum binary
-  values in a typed column and backfill authenticated historical source;
+  of them. Alpha 18 retains validated long-enum binary
+  values in a typed column and backfills authenticated historical source;
   invalid values, ambiguous backfills and ordinary-enum binary fields are
   explicitly diagnosed. This does not enable legacy programming. A large VD5 takes 20–40 s and over 1 GiB of
   memory to import. (Untyped `TypeNone` spacers are drawn as headings or blank

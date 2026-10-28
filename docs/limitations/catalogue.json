@@ -522,7 +522,7 @@
       "number": 128,
       "title": "Legacy product import boundaries",
       "topic": "Manufacturer data and parameters",
-      "summary": "VD3–VD5 import and validated long-enum binary retention/backfill are delivered in source. Ordinary-enum binary fields, damaged historical source, PR/VD2, legacy DPTs and unverified hardware downloads remain bounded.",
+      "summary": "VD3–VD5 import is available; validated long-enum binary retention/backfill ships in Alpha 18. Ordinary-enum binary fields, damaged historical source, PR/VD2, legacy DPTs and unverified hardware downloads remain bounded.",
       "file": "KL-128-legacy-product-import-boundaries.md",
       "ledger_ids": [
         "KL-128"

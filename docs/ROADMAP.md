@@ -1,9 +1,23 @@
 # Roadmap
 
+## Alpha 18 pre-release (source cutoff 28 October 2026)
+
+`v0.1.0-alpha.18` is the current pre-release, cut from main at source cutoff
+`bb2d8e51e`. It ships the deliveries in the "in Alpha 18" sections below: the issue
+#31 result/report/settlement work with the System-2 final-step failure category,
+the issue #30 tunnel-cause, persistence and patient-wait follow-ups, S2-03
+defaults profile v3, group-address CSV profiles, German CLI reports, the explicit
+catalogue installation target, `TypeDate` and legacy long-enum retention (product
+database 28 → 30, data-only), and the desktop separator fix. Native/model 16 is
+unchanged. No hardware support, recovery guarantee or ETS equivalence follows; the
+allocation mismatch of issues #30/#22 is unresolved and both stay open.
+[Release scope and boundaries](releases/alpha18.md).
+Work merged on main after `bb2d8e51e` belongs to the next alpha.
+
 ## Alpha 17 published pre-release (26 October 2026)
 
-`v0.1.0-alpha.17` is the current published pre-release, cut from main at
-`20ab2f7ea`. It ships every delivery below up to that cutoff: the issue #30
+`v0.1.0-alpha.17` is the previous published pre-release, cut from main at
+`20ab2f7ea`. It shipped every delivery below up to that cutoff: the issue #30
 System-2 changes (prestate observations, own-run gateway hint, PID 7 widths and
 typed refusal diagnostic), the regular-download correctness and failure-cause
 work, Diagnostics-tab entry points, association link adoption, saved object
@@ -13,42 +27,49 @@ recovery guarantee or ETS equivalence follows; issue #30, S2-02 and S2-03 stay
 open. [Release scope and boundaries](releases/alpha17.md).
 Publication is verified at immutable `a9ea32d72364478b25e158d0b95465af7a4702df`
 ([public verification record](evidence/release-alpha17-2026-10-26.json)).
-Work merged on main after `20ab2f7ea` belongs to the next alpha.
+Deliveries after `20ab2f7ea` through `bb2d8e51e` ship in Alpha 18.
 
-## System-2 final-step failure category after Alpha 17
+<a id="system-2-final-step-failure-category-after-alpha-17"></a>
 
-The unfinished final verification step is split in source into mismatch, read failure and
+## System-2 final-step failure category in Alpha 18
+
+The unfinished final verification step is split into mismatch, read failure and
 write failure with a closed stage, carried through journal, status and report. It names the
 operation that stopped, not its cause; the allocation mismatch in #30/#22 and any hardware
-evidence stay separate. Source is delivered main-first as `309384726`, with reviewed
+evidence stay separate. Ships in Alpha 18: delivered main-first as `309384726`, with reviewed
 branch/integration acceptance and a built-server smoke; the later docs-only delta does
 not relabel the accepted runtime revision. [Software acceptance](status/2026-10-28-system2-final-step-failure.md#software-acceptance-and-source-delivery) ·
 [Contract](contracts/system2-download-result.md#final-step-failure).
 
-## System-2 result integration after Alpha 17
+<a id="system-2-result-integration-after-alpha-17"></a>
 
-The source implementation connects experimental result/report presentation and
+## System-2 result integration in Alpha 18
+
+The implementation connects experimental result/report presentation and
 project-belief settlement without merging the two protocol executors. A verified
 run needs current source/preparation evidence before clearing marks; uncertain
 writes invalidate memory-part beliefs outside undo. Application-level status
 ownership and a global stale-mark notice survive navigation. Reports of ended
 retained operations require no new bus contact. [Scope and software acceptance](status/2026-10-28-system2-result-integration.md).
 The allocation mismatch in #30/#22, per-part source equivalence and physical
-acceptance remain separate; no Alpha 17 image or device retry is implied.
+acceptance remain separate; no device retry is implied. Ships in Alpha 18.
 
-## Legacy binary enumeration retention after Alpha 17
+<a id="legacy-binary-enumeration-retention-after-alpha-17"></a>
 
-[WP-03](open-work/WP-03-legacy-binary-enumerations.md) is implemented in source:
+## Legacy binary enumeration retention in Alpha 18
+
+[WP-03](open-work/WP-03-legacy-binary-enumerations.md) is implemented (Alpha 18):
 validated legacy long-enum bytes reach the existing Base64 column; data-only
 productdb v30 backfills authenticated retained payloads without rewriting
 historical reports. Invalid/ambiguous inputs and ordinary-enum binary fields
 remain explicitly diagnosed. This closes the storage/backfill package, not
-legacy image/programming or all-file conversion equivalence. No Alpha 17 image,
-release, deployment or bus action follows.
+legacy image/programming or all-file conversion equivalence. No deployment or bus action follows.
 
-## Experimental System-2 waits after Alpha 17
+<a id="experimental-system-2-waits-after-alpha-17"></a>
 
-Source builds select a [patient wait profile](contracts/system2-patient-waits.md)
+## Experimental System-2 waits in Alpha 18
+
+Alpha 18 selects a [patient wait profile](contracts/system2-patient-waits.md)
 for experimental hardware download and explicit recovery: gateway ACK waits
 1 → 10 seconds per attempt, post-ACK management answer slices 3 → 15 seconds and
 load-state transitions 30 → 120 seconds. Device transport ACK/repetition stays
@@ -57,24 +78,26 @@ backup and final verification are unchanged. The existing receiver/teardown fix
 is included; neither change proves the cause of issue #30 or a successful device
 outcome. Published source `3583ab8e0` passed branch/integrated 14-stage gates;
 [acceptance and retest boundary](status/2026-10-27-system2-patient-waits.md#acceptance-boundary).
-One optional reporter retest has been requested. Source-only; no Alpha 17 image
-or release update is implied.
+One optional reporter retest has been requested; it needs Alpha 18 or a newer build.
 
-## UP258 invisible-parameter reading after Alpha 17
+<a id="up258-invisible-parameter-reading-after-alpha-17"></a>
+
+## UP258 invisible-parameter reading in Alpha 18
 
 [S2-03](open-work/S2-03-up258-image-interpretation.md) is delivered as source
 `d39668393`: defaults profile v3 shares the configured path's template-retention
 reading, admitted only for an explicit `DownloadInvisibleParameters="Background"`;
 new physical v1/v2 execution refuses, recovery stays. Observation-supported
-hypothesis on simulator evidence; no hardware, ETS-equivalence or release claim.
+hypothesis on simulator evidence; no hardware or ETS-equivalence claim. Ships in Alpha 18.
 
-## Server tunnel persistence after Alpha 17
+<a id="server-tunnel-persistence-after-alpha-17"></a>
+
+## Server tunnel persistence in Alpha 18
 
 The ordinary download worker and service-control backup callback now keep
 synchronous recovery/journal persistence off tunnel runtime workers on multi-thread
 runtimes, following the System-2 fix. Current-thread fallback remains inline. [S2-04](open-work/S2-04-tunnel-loss-after-checkpoint.md) adds the
-individual-address settler (preparatory; its route still refuses) and retains field verification; published source is not
-an updated release or container image. Consent, backups, stop-token policy and
+individual-address settler (preparatory; its route still refuses) and retains field verification; ships in Alpha 18. Consent, backups, stop-token policy and
 read-back remain unchanged.
 
 ## Docker signing design before the first stable release
@@ -83,32 +106,38 @@ The [bounded proposal](research/2026-10-27-docker-image-signing-design.md) recor
 exact release-workflow identity, signed-index verification, staged promotion and
 recovery requirements. This completes design preparation only: owner approval,
 implementation and separately authorised registry acceptance remain pending.
-No image, workflow, channel rule or Alpha 17 artifact changes.
+No image, workflow, channel rule or release artifact changes; images remain unsigned.
 
-## Explicit catalogue installation target after Alpha 17
+<a id="explicit-catalogue-installation-target-after-alpha-17"></a>
 
-Source builds require an explicit **Installation** choice when creating a
+## Explicit catalogue installation target in Alpha 18
+
+Alpha 18 requires an explicit **Installation** choice when creating a
 line-less catalogue device in a project with several installations. The existing
 create/Undo path is reused, with live target validation and captured retry
 identity; the one-installation body and line-owned target are unchanged.
 This closes a consumer gap, not the deferred multi-installation/site model or
 cross-installation transfers. [Scope and retained boundaries](limitations/structure-editor-scope.md#update-2026-10-27-explicit-catalogue-installation-target).
 
-## CLI report language selection after Alpha 17
+<a id="cli-report-language-selection-after-alpha-17"></a>
 
-Source builds allow an explicit EN/DE locale in `knx doc-export`, reusing the
+## CLI report language selection in Alpha 18
+
+Alpha 18 allows an explicit EN/DE locale in `knx doc-export`, reusing the
 existing renderer. The default stays English and invalid options cannot write
 an output. [Command-line workflow](manual/user-guide/08-reports-and-diff.md#exporting-from-the-command-line).
 No new language or external-report parity is added.
 
-## Group-address CSV import profiles after Alpha 17
+<a id="group-address-csv-import-profiles-after-alpha-17"></a>
+
+## Group-address CSV import profiles in Alpha 18
 
 Four fixed [name/address column layouts](contracts/group-address-csv-profiles.md)
-are supported in source builds by the shared CSV import path. This is an
+are supported by the shared CSV import path since Alpha 18. This is an
 address-only improvement, not a range/security synchronisation format. Omitted
 ranges and security policy are explicit diagnostics; unsupported metadata
 refuses the entire import. Native export, native format behaviour, schema and
-hardware scope are unchanged. No release or external-application parity is implied.
+hardware scope are unchanged. No external-application parity is implied.
 
 ## Native acceptance after the Alpha 17 release
 

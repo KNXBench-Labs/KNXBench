@@ -61,10 +61,20 @@ ZIP excludes parameter values; the older ended-download verification report is
 separate and can contain them. See the
 [reporting guide](../user-guide/08-reports-and-diff.md#universal-device-support-reporting).
 
-**What changes when I upgrade to Alpha 17?**
+**What changes when I upgrade to Alpha 18?**
 
-Native/store and model 16 and product database 28 are unchanged from Alpha 16;
-no migration is needed. Opening Alpha 17 saves in Alpha 16 is not tested. Device
+Native/store and model 16 are unchanged. The product database moves from 28 to 30
+through data-only migrations on writable open, including server, desktop and Docker
+startup and catalogue-writing CLI commands. Read-only CLI readers migrate only in memory. Alpha 17 refuses product30 and
+starts without products, and also refuses defaults-profile-v3 bundles and System-2
+journals with a final-step record. Opening Alpha 18 files in Alpha 17 is not tested.
+Close KNXBench and keep independent project/catalogue/Docker-data backups first.
+[Release scope](../../releases/alpha18.md#upgrade).
+
+**What changed when upgrading to Alpha 17?**
+
+Native/store and model 16 and product database 28 were unchanged from Alpha 16;
+no migration was needed. Opening Alpha 17 saves in Alpha 16 is not tested. Device
 backups are written as format 2, and new activity-history rows and System-2
 operation records use versions that Alpha 16 refuses rather than drops. Close
 KNXBench and keep independent project/catalogue/Docker-data backups first.
@@ -153,7 +163,7 @@ exists," not certification by the KNX Association.
 
 **What does "alpha" mean for this project specifically?**
 
-The `0.1.0-alpha` series is at `v0.1.0-alpha.17`. Concretely: `docs/KNOWN_LIMITATIONS.md` lists
+The `0.1.0-alpha` series is at `v0.1.0-alpha.18`. Concretely: `docs/KNOWN_LIMITATIONS.md` lists
 known limitations, several classified critical, and writing to a real device is verified
 only for narrowly recorded device/application cases. See
 [Project status](../getting-started/03-project-status.md) for the evidence boundaries and what

@@ -1,39 +1,32 @@
 # Restart snapshot
 
-## Alpha 18 release freeze (ACTIVE, observed 2026-10-28 23:05 CET)
+## Alpha 18 release freeze (ACTIVE, observed 2026-10-29 00:19 CET)
 - Release owner: this WebUI; source cutoff `bb2d8e51efcbd029034c694ab4da9638f80961ee`.
-- Prerequisite delivered: feature `96f41c7f1`, main `309384726`, result docs `bb2d8e51e`;
-  both runtime trees/refs retired; no matching cwd worker or package gate remains.
-- Candidate branch `release/a18-prep-20261028`, tree `<sources>/knxbench-a18-release-20261028`.
+- Freeze `0b8d80278` is published; prerequisite delivery and local retirement verified.
+- Candidate branch `release/a18-prep-20261028`, tree `<sources>/knxbench-a18-release-20261028`;
+  app versions `0.1.0-alpha.18`; native/model16 unchanged, productdb28->30.
 - `main` stays release-frozen for code until the tag is published. Other packages stay local;
   no branch/main pushes by other tracks. Later work belongs to the next release.
-- GO: finish notes/docs/version bump, full local release gate and packaging dry runs.
+- Reader/version review found one stale Docker pin and two disclosure/date defects; corrected.
+- Tooling/anchors preflight green; full acceptance has not run. No hardware/real-bus access.
+- Historical111-file restoration permission unanswered: no copy restored; two pinned opt-ins
+  NOT RUN. Other acceptance remains GO; do not call omissions a complete release gate.
+- Next: commit corrected candidate, full repository gate plus release extras, packaging dry runs.
 - STOP before tag, GitHub release or Docker publication: explicit owner GO still required.
-- Draft reviewed; project/core16 unchanged, productdb28->30; distribution requires public readback.
 - Evidence `<profile>/evidence/a18-release-20261028/`; root/user data preserved.
-- Next: commit the candidate on the freeze, run full gate and nonpublishing packaging dry runs.
 
-## Alpha 18 follow-ups 1 + 2 — source PUBLISHED, closeout GO
-- Publication verified 2026-10-28 22:44 CET. Maintained docs own feature status.
-- Native point 2 published `923b34599`; independent review, branch10/integrated10 accepted;
-  native12 cells/42drags/20restorations, app/children exit0. Both trees/refs/caches retired
-  after551-member archive checks. Placement rules remain until compositor reload.
-- Runtime feature `96f41c7f1`, reviewed tree `7a1b3831f`: correction re-review approved0/0/0.
-  Branch15 + integrated15 accepted at `8bdc42c7e`: each Rust3530/143ignored, Vitest4654,
-  browser940 + production-devices57, selected corpus91/91; overlapping, not additive runs.
-- Source published main-first `309384726`; exact upstream docs delta on `8bbd8ea76`
-  separately accepted10/10. No runtime/test/build/gate source changed after accepted `8bdc42c7e`.
-  Parent verified local/tracking/live equality. Router-byte EN/DE UI/report join separate.
-- Built server at `8bdc42c7e`: isolated loopback health/frontend/version/empty-status smoke,
-  ordinary termination exit0/no listener; executable/frontend retained, not relabelled.
-- Own runtime feature tree `<sources>/knxbench-system2-final-diagnostic-20261028`, branch
-  `feat/system2-final-diagnostic-20261028`; integration tree
-  `<sources>/knxbench-alpha18-system2-integration-20261028`, branch
-  `integration/alpha18-system2-final-diagnostic-20261028` retained for result-doc closeout.
-- Next: accept/publish result docs, archive and verify owned source/evidence, idle/ancestry
-  checks, retire only both runtime trees/refs/caches, then mark root coordination retired.
-- Evidence `<profile>/evidence/alpha18-followups-20261028/`. No new source reservation.
-  No bus/device/VM/user data, release/tag/deployment, hardware-cause or ETS-parity claim.
+## Alpha 18 follow-ups 1 + 2 (DELIVERED, RETIRED; observed 2026-10-28 23:01 CET)
+- Owner's root checkpoint records final closeout; source delivery is verified on the cutoff.
+- Runtime feature `96f41c7f1`, main-first `309384726`, result docs `bb2d8e51e`.
+- Review APPROVE0/0/0; branch15/integrated15 at `8bdc42c7e`: each Rust3530/143ignored,
+  Vitest4654, browser940 +production57, selected corpus91/91 (overlapping runs).
+- Built server at `8bdc42c7e`: isolated startup/frontend/status smoke, ordinary exit0;
+  later docs-only revisions are not relabelled as runtime execution.
+- Native `923b34599`, native12 cells/42drags/20restorations; placement rules until reload.
+- All four own native/runtime trees, refs and caches retired after idle/ancestry and
+ 551/1076-member native/runtime archive checks; executable/frontend retained.
+- Evidence `<profile>/evidence/alpha18-followups-20261028/`; no source/desktop reservation.
+- #30/#22 allocation cause, per-part equivalence and wider WP-11/KL-130 stay open.
 
 ## Retained boundaries
 - Prior WP-03, issue31 and WP-08 delivery evidence stays in maintained docs/Git history;

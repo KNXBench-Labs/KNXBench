@@ -99,8 +99,8 @@ warning. The quick-start plaintext password is visible in the container environm
 and may enter shell history; use [Setting a password](#setting-a-password) for a
 hashed credential in a lasting setup.
 
-- **Tags:** the release version without its `v` (`0.1.0-alpha.17` for the tag
-  `v0.1.0-alpha.17`) and `latest`. While KNXBench is in alpha, `latest` moves
+- **Tags:** the release version without its `v` (`0.1.0-alpha.18` for the tag
+  `v0.1.0-alpha.18`) and `latest`. While KNXBench is in alpha, `latest` moves
   with every pre-release; pin a version tag if an update should be your own
   decision.
 - **Availability:** from `v0.1.0-alpha.6` (9 October 2026) on; `v0.1.0-alpha.5`
@@ -165,7 +165,22 @@ those devices' **Parameters** tab and choose **Restore from original .knxproj…
 project byte for byte are installed; save the project afterwards so its file carries
 them from then on.
 
-### Alpha 17 upgrade boundary
+### Alpha 18 upgrade boundary
+
+Close KNXBench and independently back up the entire mounted data directory,
+including `products.sqlite`, `device-backups/` and `activity-history.sqlite`, before
+replacing the container. Native/store and model 16 are unchanged. The server
+migrates the product database 28 → 30 in place at startup through data-only
+migrations. Catalogue-writing CLI commands also migrate on writable open. An Alpha 17 image refuses product30 as newer than it supports and
+starts without a catalogue; there is no downgrade path, so going back means
+restoring the pre-upgrade copies. Alpha 17 also refuses UP258 defaults-profile-v3
+bundles and System-2 journals with a final-step record. Opening Alpha 18 data in an
+Alpha 17 image is not tested. Port 8484 and host-network exposure are unchanged.
+[Release scope](../../releases/alpha18.md#upgrade).
+
+<a id="alpha-17-upgrade-boundary"></a>
+
+### Alpha 17 upgrade boundary (historical)
 
 Close KNXBench and independently back up the entire mounted data directory,
 including `device-backups/` and `activity-history.sqlite`, before replacing the
@@ -372,7 +387,7 @@ stopping fails, the service remains stopped until you correct it; this is not an
 automatic rollback.
 
 To choose a fixed release, replace `latest` in **both** image references with a
-published version such as `0.1.0-alpha.17`. The Linux default keeps
+published version such as `0.1.0-alpha.18`. The Linux default keeps
 `--network host` and `-e KNX_PORT=8484` (or your chosen port), as explained in
 [Networking](#networking). If migrating an older bridge deployment to host mode,
 review the firewall first: the authenticated listener becomes reachable on all

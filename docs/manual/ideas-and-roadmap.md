@@ -10,7 +10,7 @@ than anything inside them:
 3. **Ideas and experiments** — things someone wrote down. Not commitments.
 
 No future release schedule is promised here. KNXBench is in its `0.1.0-alpha`
-series; [Alpha 17](../releases/alpha17.md) is the current published pre-release. The original source audit below was checked on **8 October
+series; [Alpha 18](../releases/alpha18.md) is the current pre-release. The original source audit below was checked on **8 October
 2026**, at `608a204b`; dated release updates supersede its delivery status, not
 its historical evidence. An item's position in part 2 does not schedule it or
 reopen a recorded alpha boundary. Released artifacts are separate snapshots.
@@ -23,6 +23,13 @@ reopen a recorded alpha boundary. Released artifacts are separate snapshots.
 ---
 
 ## What is already built
+
+**Since Alpha 18:** an experimental System-2 run reports a journal-derived result,
+which operation of its last step stopped, an **S2** chip in the device list and a
+saveable report; the tunnel names why it closed and experimental waits are longer;
+group-address CSV column profiles, German CLI reports, an explicit installation
+choice for catalogue devices and product database 30 arrive. No new hardware support
+and the #30/#22 allocation mismatch is unresolved. [Release scope](../releases/alpha18.md#boundaries).
 
 **Since Alpha 17:** the experimental UP 258D12 System-2 download records differing
 device observations and typed table-reference refusals; the regular memory download

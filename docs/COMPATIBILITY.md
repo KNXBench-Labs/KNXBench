@@ -62,6 +62,10 @@ measured reports rather than invent history. Native/model16 and master
 provenance semantics are unchanged. [Accepted source delivery](IMPLEMENTATION_STATUS.md#product-column-promotion-repair--source-delivery)
 is published as `8fa0d76b9fd41f81c4e135c29e54f2a98d516b38`; this is not an Alpha 15 artifact
 upgrade or new release. Alpha 16 and Alpha 17 use product28/native-model16.
+Alpha 18 keeps native-model16 and moves to product30 through data-only migrations
+(v29 `TypeDate` re-kinding, v30 legacy long-enum binary backfill); Alpha 17 refuses
+product30 by its version check, which is source-established and not an executed
+downgrade test ([Alpha 18 upgrade notes](releases/alpha18.md#upgrade)).
 Alpha 15 supports product26, and the preceding master-provenance source
 supports product27; builds with either older maximum refuse product28 by
 their version check. This is source-established refusal, not an executed

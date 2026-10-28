@@ -88,7 +88,7 @@ fn hardware_auth(device: &SimulatedDevice) -> WriteAuthorisation {
 
 const SERIAL: [u8; 6] = [0, 2, 1, 2, 3, 4];
 const VERSION: [u8; 5] = [0, 2, 0x12, 0x34, 1];
-fn fixture() -> (
+pub(super) fn fixture() -> (
     SimulatedDevice,
     PropertyDownloadPlan,
     ExperimentalPropertyPreconditions,
@@ -146,7 +146,7 @@ fn fixture() -> (
     // Establish exactly the source allocation shape before recovery acquisition.
     (device, plan, preconditions)
 }
-fn timing() -> SessionTiming {
+pub(super) fn timing() -> SessionTiming {
     SessionTiming {
         connection_timeout: Duration::from_millis(20),
         response_timeout: Duration::from_millis(5),
@@ -156,10 +156,10 @@ fn timing() -> SessionTiming {
         ..SessionTiming::default()
     }
 }
-fn auth(device: &SimulatedDevice) -> WriteAuthorisation {
+pub(super) fn auth(device: &SimulatedDevice) -> WriteAuthorisation {
     WriteAuthorisation::for_simulator(device.address(), WriteScope::Download).unwrap()
 }
-async fn establish_shape(device: &SimulatedDevice, plan: &PropertyDownloadPlan) {
+pub(super) async fn establish_shape(device: &SimulatedDevice, plan: &PropertyDownloadPlan) {
     knx_net::commissioning::property_download::run_simulated_property_plan(
         device,
         plan,
@@ -1123,15 +1123,15 @@ async fn durable_snapshot_failure_prevents_first_verify_mode_mutation() {
 
 // Rewrites only the final PID_TABLE_REFERENCE answers after LoadCompleted, so a
 // fully verified download meets a pointer the source model did not predict.
-struct FinalReference<'a> {
-    device: &'a SimulatedDevice,
-    armed: std::sync::Arc<std::sync::atomic::AtomicBool>,
-    property: u8,
-    elements: u8,
+pub(super) struct FinalReference<'a> {
+    pub(super) device: &'a SimulatedDevice,
+    pub(super) armed: std::sync::Arc<std::sync::atomic::AtomicBool>,
+    pub(super) property: u8,
+    pub(super) elements: u8,
     /// `None` answers with zero elements, the AL refusal.
-    replacement: Option<Vec<u8>>,
+    pub(super) replacement: Option<Vec<u8>>,
     /// First PID 5 octet that arms the rewrite (2 LoadCompleted, 3 allocation).
-    arm_on: u8,
+    pub(super) arm_on: u8,
 }
 impl ManagementTransport for FinalReference<'_> {
     fn assigned_address(&self) -> IndividualAddress {
@@ -2275,6 +2275,16 @@ mod pointer_width_rule {
                     read_after_mutation(&preconditions, arm_on, elements, answer.clone()).await;
                 let error = result.unwrap_err();
                 assert!(error.mutation_may_have_started, "{phase} {answer:?}");
+                // Only the final read is a final-step failure; the in-procedure one is not.
+                let final_read = Some(knx_net::commissioning::final_step::FinalStepFailure {
+                    kind: knx_net::commissioning::final_step::FinalStepKind::ReadFailed,
+                    stage: knx_net::commissioning::final_step::FinalStepStage::Pointer,
+                });
+                assert_eq!(
+                    error.final_step,
+                    if phase == "final" { final_read } else { None },
+                    "{phase} {answer:?}"
+                );
                 let PropertySimulationFailure::PointerWidth(refusal) = &error.failure else {
                     panic!(
                         "{phase}: expected the typed refusal, got {:?}",

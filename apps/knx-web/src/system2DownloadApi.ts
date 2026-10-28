@@ -13,6 +13,12 @@ export interface System2FailureDiagnostic {
   run: "download" | "restore"; reason: "zeroElementsWithData" | "elementCount" | "unsupportedWidth";
   object: number; propertyId: 7; elements: number; octets: number;
 }
+/** Closed final Disconnect-step failure, classified by the executor from the typed operation in flight, never from text. */
+export const SYSTEM2_FINAL_CATEGORIES = ["verificationMismatch", "readFailed", "writeFailed"] as const;
+export const SYSTEM2_FINAL_STAGES = ["limit", "allocation", "loadedState", "pointer", "programVersion", "verifyModeRead", "verifyModeWrite", "verifyModeReadback"] as const;
+export interface System2FinalStepFailure {
+  run: "download" | "restore"; category: typeof SYSTEM2_FINAL_CATEGORIES[number]; stage: typeof SYSTEM2_FINAL_STAGES[number];
+}
 /** What a run provably achieved; derived on the server from the validated journal, never from text. */
 export const SYSTEM2_RESULTS = ["inProgress", "nothingWritten", "transferIncomplete", "transferCompleteVerificationNotStarted",
   "transferCompleteVerificationUnfinished", "verified", "unknown"] as const;
@@ -20,9 +26,9 @@ export type System2DownloadResult = typeof SYSTEM2_RESULTS[number];
 /** What this process's terminal project settlement did; `notRecorded` after restart, select or reopen. */
 export const SYSTEM2_SETTLEMENTS = ["notRecorded", "noMutation", "persisted", "sessionOnly", "persistenceFailed", "noProject", "otherProject", "deviceMissing", "unavailable"] as const;
 export type System2Settlement = typeof SYSTEM2_SETTLEMENTS[number];
-/** Status as the client uses it: wire v1/v2 are normalized (`failureDiagnostics: []`, `downloadResult: "unknown"`). */
+/** Status as the client uses it: wire v1/v2 are normalized (`failureDiagnostics: []`, `downloadResult: "unknown"`), v1-v3 to `finalStepFailures: []`. */
 export interface System2Status {
-  schemaVersion: 1 | 2 | 3; failureDiagnostics: System2FailureDiagnostic[]; downloadResult: System2DownloadResult;
+  schemaVersion: 1 | 2 | 3 | 4; failureDiagnostics: System2FailureDiagnostic[]; finalStepFailures: System2FinalStepFailure[]; downloadResult: System2DownloadResult;
   /** A recovery was started: `state`, `completedSteps` and `totalSteps` are then the recovery's. */
   restoreAttempted: boolean; downloadCompletedSteps: number; downloadTotalSteps: number | null; projectSettlement: System2Settlement; operationId: string; binding: System2Binding; address: string; deviceName: string; state: typeof SYSTEM2_STATES[number];
   completedSteps: number; totalSteps: number | null; backupAvailable: boolean; recoveryPhrase: string | null;
@@ -42,7 +48,7 @@ export interface System2PointerObservation {
   run: "download" | "restore"; phase: "prestate" | "inProcedure" | "final"; object: number; operationIndex: number | null; expected: string; observed: string; loadState: string;
 }
 /** The exact pre-diagnostic status wire: no `failureDiagnostics` key. */
-export type System2StatusWireV1 = Omit<System2Status, "schemaVersion" | "failureDiagnostics" | "downloadResult" | "restoreAttempted" | "downloadCompletedSteps" | "downloadTotalSteps" | "projectSettlement"> & { schemaVersion: 1 };
+export type System2StatusWireV1 = Omit<System2Status, "schemaVersion" | "failureDiagnostics" | "finalStepFailures" | "downloadResult" | "restoreAttempted" | "downloadCompletedSteps" | "downloadTotalSteps" | "projectSettlement"> & { schemaVersion: 1 };
 export type RecoveryTrack = "knxbenchBestEffort" | "externalETS";
 export interface System2Start {
   preparationId: string; gateway: string; confirmation: string; hypothesisConfirmation: string; downloadConfirmation: string; releaseConfirmation: string; recoveryTrack: RecoveryTrack;
@@ -91,6 +97,14 @@ const consistent = (d: System2FailureDiagnostic) => d.reason === "zeroElementsWi
 // At most one per run, download before restore.
 const diagnostics: Check = (v) => Array.isArray(v) && v.length <= 2 && v.every((d) => diagnostic(d) && consistent(d)) &&
   (v.length < 2 || (v[0].run === "download" && v[1].run === "restore"));
+// Allowed pairs: a mismatch needs a comparison; the one write is restoring Verify Mode; every other stage reads.
+const finalPair = (f: System2FinalStepFailure) => f.category === "verificationMismatch" ? ["allocation", "loadedState", "programVersion", "verifyModeReadback"].includes(f.stage) :
+  f.category === "writeFailed" ? f.stage === "verifyModeWrite" : f.stage !== "verifyModeWrite";
+const finalFailure = object({ run: (v) => v === "download" || v === "restore", category: (v) => SYSTEM2_FINAL_CATEGORIES.some((c) => c === v),
+  stage: (v) => SYSTEM2_FINAL_STAGES.some((s) => s === v) });
+// At most one per run, download before restore.
+const finalFailures: Check = (v) => Array.isArray(v) && v.length <= 2 && v.every((f) => finalFailure(f) && finalPair(f)) &&
+  (v.length < 2 || (v[0].run === "download" && v[1].run === "restore"));
 const statusFields: Record<string, Check> = { ...shared, operationId: id, state: (v) => SYSTEM2_STATES.some((state) => state === v),
   completedSteps: count, totalSteps: nullable(count), backupAvailable: (v) => typeof v === "boolean", recoveryPhrase: nullable(nonempty),
   downloadPhrase: nullable(nonempty), releasePhrase: nullable(nonempty), message: nullable(text), refusal: nullable(token),
@@ -101,11 +115,14 @@ const statusFields: Record<string, Check> = { ...shared, operationId: id, state:
 const statusV1 = object({ ...statusFields, schemaVersion: (v: unknown) => v === 1 });
 const statusV2 = object({ ...statusFields, schemaVersion: (v: unknown) => v === 2, failureDiagnostics: diagnostics });
 const result: Check = (v) => SYSTEM2_RESULTS.some((r) => r === v);
-const statusV3 = object({ ...statusFields, schemaVersion: (v: unknown) => v === 3, failureDiagnostics: diagnostics, downloadResult: result,
-  restoreAttempted: flag, downloadCompletedSteps: count, downloadTotalSteps: nullable(count), projectSettlement: (v) => SYSTEM2_SETTLEMENTS.some((x) => x === v) });
+const v3Fields: Record<string, Check> = { ...statusFields, failureDiagnostics: diagnostics, downloadResult: result,
+  restoreAttempted: flag, downloadCompletedSteps: count, downloadTotalSteps: nullable(count), projectSettlement: (v) => SYSTEM2_SETTLEMENTS.some((x) => x === v) };
+const statusV3 = object({ ...v3Fields, schemaVersion: (v: unknown) => v === 3 });
+// v4 requires the final-step list; v1-v3 may not carry it.
+const statusV4 = object({ ...v3Fields, schemaVersion: (v: unknown) => v === 4, finalStepFailures: finalFailures });
 const statusCheck: Check = (v) => {
   const version = (v as { schemaVersion?: unknown } | null)?.schemaVersion;
-  return version === 3 ? statusV3(v) : version === 2 ? statusV2(v) : statusV1(v);
+  return version === 4 ? statusV4(v) : version === 3 ? statusV3(v) : version === 2 ? statusV2(v) : statusV1(v);
 };
 function checked<T>(value: unknown, check: Check): T {
   if (!check(value)) throw new Error("Invalid System-2 response; operation outcome is not confirmed.");
@@ -115,8 +132,10 @@ function checkedStatus(value: unknown): System2Status {
   const row = checked<System2Status>(value, statusCheck);
   // Older wires carry no journal-derived result: it is unknown, never inferred from the state.
   const legacy = { downloadResult: "unknown" as const, restoreAttempted: false, downloadCompletedSteps: row.completedSteps, downloadTotalSteps: row.totalSteps, projectSettlement: "notRecorded" as const };
-  if (row.schemaVersion === 1) return checkedStatusBody({ ...row, ...legacy, failureDiagnostics: [] });
-  if (row.schemaVersion === 2) return checkedStatusBody({ ...row, ...legacy });
+  // Older wires carry no final-step classification: none is inferred.
+  if (row.schemaVersion === 1) return checkedStatusBody({ ...row, ...legacy, failureDiagnostics: [], finalStepFailures: [] });
+  if (row.schemaVersion === 2) return checkedStatusBody({ ...row, ...legacy, finalStepFailures: [] });
+  if (row.schemaVersion === 3) return checkedStatusBody({ ...row, finalStepFailures: [] });
   return checkedStatusBody(row);
 }
 function checkedStatusBody(row: System2Status): System2Status {
@@ -137,6 +156,12 @@ function checkedStatusBody(row: System2Status): System2Status {
   if ((row.downloadResult === "verified" && (row.state === "failed" || row.state === "cancelled" || row.state === "running")) ||
     (row.downloadResult === "nothingWritten" && row.mutationMayHaveStarted)) {
     throw new Error("Invalid System-2 download result.");
+  }
+  // Producer-proven relations of the final-step list (never a terminal `state`: a live
+  // supervisor reports `running` + `inProgress` beside a journalled download entry).
+  if (row.finalStepFailures.some((f) => f.run === "restore") && !row.restoreAttempted) throw new Error("Invalid System-2 final-step failures.");
+  if (row.finalStepFailures.some((f) => f.run === "download") && row.downloadResult !== "inProgress" && row.downloadResult !== "transferCompleteVerificationUnfinished") {
+    throw new Error("Invalid System-2 final-step failures.");
   }
   return row;
 }
@@ -163,11 +188,11 @@ export const cancelSystem2 = async (operationId: string): Promise<System2Status>
 export const recoverSystem2 = async (body: System2Recovery): Promise<System2Status> => checkedStatus(await post("recover", body));
 /** Privacy-safe summary of an ended run: no address, name, parameter, path, phrase or journal text. */
 export interface System2Report {
-  format: 2; kind: "knxbench-system2-download-summary"; support: string; evidence: "local-journal-only";
+  format: 3; kind: "knxbench-system2-download-summary"; support: string; evidence: "local-journal-only";
   /** The download's own frozen outcome and counters; a recovery never rewrites them. */
   download: { outcome: Exclude<typeof SYSTEM2_STATES[number], "running" | "restoring">; result: Exclude<System2DownloadResult, "inProgress">; completedSteps: number; totalSteps: number | null };
   recovery: { outcome: Exclude<typeof SYSTEM2_STATES[number], "running" | "restoring">; completedSteps: number; totalSteps: number | null } | null;
-  mutationPossible: boolean; prestateDiffers: boolean; failureDiagnostics: System2FailureDiagnostic[];
+  mutationPossible: boolean; prestateDiffers: boolean; failureDiagnostics: System2FailureDiagnostic[]; finalStepFailures: System2FinalStepFailure[];
   /** Build that executed the run when it was recorded; unknown for older operations. Never the exporting build. */
   executionBuild: { state: "recorded"; version: string } | { state: "unknown" };
   exporterBuild: string;
@@ -177,15 +202,18 @@ const ended: Check = (v) => SYSTEM2_STATES.some((s) => s === v && s !== "running
 const buildText: Check = (v) => typeof v === "string" && v.length <= 64 && /^\d{1,9}\.\d{1,9}\.\d{1,9}(-[0-9A-Za-z.-]+)?(\+g[0-9a-f]{1,40})?$/.test(v);
 const section = (fields: Record<string, Check>) => object({ outcome: ended, completedSteps: count, totalSteps: nullable(count), ...fields });
 const executionBuild: Check = (v) => object({ state: (x) => x === "unknown" })(v) || object({ state: (x) => x === "recorded", version: buildText })(v);
-const reportCheck = object({ format: (v) => v === 2, kind: (v) => v === "knxbench-system2-download-summary", support: nonempty,
+const reportCheck = object({ format: (v) => v === 3, kind: (v) => v === "knxbench-system2-download-summary", support: nonempty,
   evidence: (v) => v === "local-journal-only", download: section({ result: (v) => result(v) && v !== "inProgress" }), recovery: nullable(section({})),
-  mutationPossible: flag, prestateDiffers: flag, failureDiagnostics: diagnostics, executionBuild, exporterBuild: buildText });
+  mutationPossible: flag, prestateDiffers: flag, failureDiagnostics: diagnostics, finalStepFailures: finalFailures, executionBuild, exporterBuild: buildText });
 const inRange = (s: { completedSteps: number; totalSteps: number | null }) => s.totalSteps === null || s.completedSteps <= s.totalSteps;
 export async function getSystem2Report(operationId: string): Promise<System2Report> {
   if (!id(operationId)) throw new Error("Invalid System-2 operation id.");
   const row = checked<System2Report>(await request<unknown>(`/api/device-system2/report?operationId=${operationId}`), reportCheck);
   if (!inRange(row.download) || (row.recovery !== null && !inRange(row.recovery)) ||
     (row.download.result === "verified" && (row.download.outcome === "failed" || row.download.outcome === "cancelled")) ||
-    (row.download.result === "nothingWritten" && row.mutationPossible)) throw new Error("Invalid System-2 report.");
+    (row.download.result === "nothingWritten" && row.mutationPossible) ||
+    // A final-step entry belongs to a run that reached the final step: the download's to an unfinished verification, the restore's to a recovery.
+    (row.finalStepFailures.some((f) => f.run === "download") && row.download.result !== "transferCompleteVerificationUnfinished") ||
+    (row.finalStepFailures.some((f) => f.run === "restore") && row.recovery === null)) throw new Error("Invalid System-2 report.");
   return row;
 }

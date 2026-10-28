@@ -22,7 +22,7 @@ const tree = (marks: boolean, revision = 1): ProjectTree => ({ schema_version: 1
   installations: [{ id: 1, name: "House", topology: [], buildings: [], group_addresses: [], group_ranges: [], unassigned: [
     { id: 10, name: "Configured button", address: "1.1.67", description: null, com_object_count: 0,
       pending_programming: { address: false, application: marks, parameters: marks, group_addresses: marks } }] }] });
-const base = { ...status, schemaVersion: 3 as const, address: "1.1.67", deviceName: "Configured button" };
+const base = { ...status, schemaVersion: 4 as const, address: "1.1.67", deviceName: "Configured button" };
 const running = { ...base, state: "running" as const, downloadResult: "inProgress" as const };
 const failed = { ...base, state: "failed" as const, downloadResult: "transferCompleteVerificationUnfinished" as const, mutationMayHaveStarted: true,
   completedSteps: 26, totalSteps: 27, downloadCompletedSteps: 26, downloadTotalSteps: 27, projectSettlement: "persisted" as const };

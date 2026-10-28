@@ -132,7 +132,11 @@ acceptance or complete accessibility certification.
 
 A 5000-device synthetic production-browser scenario is measured in the receipt; it is
 not an unlimited-size or real-installation performance guarantee. The table uses local
-scrolling and no new virtualization/framework dependency.
+scrolling and no new virtualization/framework dependency. The default fixture config
+uses the development server, not that production build. A
+[28 October follow-up](research/2026-10-28-devices-browser-load-sensitivity.md)
+separates both modes and the expensive explorer preparation; it reproduces a dev-case
+timeout under CPU contention without changing the gate or dropping expanded-state coverage.
 
 ## Verification surfaces
 

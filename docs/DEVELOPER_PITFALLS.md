@@ -9,6 +9,15 @@ already found lying in the grass.
 
 ## Gates
 
+- **A test name is not the browser build mode.** The default
+  `playwright.config.ts` serves Vite development fixtures;
+  `playwright.devices.config.ts` previews the production bundle. Building `dist`
+  does not change the first config. The 5000-device case expands the explorer
+  before starting its `renderMs` attachment, so that metric excludes expensive
+  preparation and is not the whole timeout budget. Preserve the expanded-state
+  coverage and profile it separately rather than dropping setup or raising the
+  timeout. [Bounded evidence](research/2026-10-28-devices-browser-load-sensitivity.md).
+
 - **Production functional cases run independently within one file (ADR-0155).**
   Only the reviewed production functional lane opts into `--fully-parallel`;
   default and exclusive lanes keep file-local ordering. Do not introduce shared

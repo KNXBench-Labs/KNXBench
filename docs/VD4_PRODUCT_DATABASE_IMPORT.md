@@ -10,6 +10,11 @@ Investigation date: **2026-09-16**.
 > `string`/`long enum` parameters, DPT mapping and a first live legacy
 > download remain separate. See [ADR-0094](adr/0094-legacy-exim-product-files.md) and
 > [the user guide](manual/user-guide/05-devices-and-products.md#old-ets3-product-databases-vd3-vd4-vd5).
+> Source update, 28 October 2026: validated long-enum binary retention and
+> authenticated historical backfill are implemented by
+> [WP-03](open-work/WP-03-legacy-binary-enumerations.md). This supersedes the
+> binary-retention gap, not the live legacy programming boundary.
+>
 > The historical converter/research sections below do not reopen closed work.
 
 This document covers the supplied file

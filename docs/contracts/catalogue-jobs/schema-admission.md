@@ -52,7 +52,7 @@ B1 alone cannot certify continuous schema identity or grant installation consent
 
 ### Complete inspection and explicit refusal
 
-- Require main user_version 29 and UTF-8 (see the data-only v29 amendment below); reject attachments and application TEMP
+- Require main user_version 30 and UTF-8 (see the data-only amendments below); reject attachments and application TEMP
   objects, permitting SQLite's implicit empty temp schema. Do not copy/retain
   filesystem paths from database_list or open/repair any database.
 - Enumerate every stored main.sqlite_schema row without sqlite-prefix filtering.
@@ -162,11 +162,23 @@ branch/main-first gates, publication/readback and owned cleanup follow separatel
 Product database v29 (WP-08, `TypeDate` as kind `Date`) re-derives rows only
 and changes no DDL, so the pinned fresh-chain shape (`schema28.rs`, the
 `schema28-fixture.json` oracle) is unchanged and remains the one v28 introduced.
-The admitted `user_version` is now the named constant `ADMITTED_VERSION = 29`,
+**Amendment below supersedes the version requirement:** the admitted `user_version` at v29 was `ADMITTED_VERSION = 29`,
 with a compile-time assertion that it equals `CURRENT_PRODUCTDB_VERSION`: a
 later version bump fails to build until its shape is re-established and the
-constant deliberately raised. Versions 28 and 30 are now refused like any other
+constant deliberately raised. At that stage, versions 28 and 30 were refused like any other
 unsupported version. The witness encodes the observed `user_version`, so
 witnesses of a v29 catalogue differ from those of the same content at v28; no
 witness is persisted across a migration. The oracle file keeps its observed
 `user_version` 28 as recorded evidence; tests read only its descriptors.
+
+## Amendment: data-only product database v30 (28 October 2026)
+
+Product database v30 (WP-03) fills legacy enum binary columns and appends
+backfill findings; it adds no DDL. The same independently pinned v28
+fresh-chain schema descriptors remain authoritative. Admission now requires
+`ADMITTED_VERSION = 30`, still compile-time-bound to
+`CURRENT_PRODUCTDB_VERSION`; v29 and v31 are refused. The witness retains the
+observed version, not a normalized v28 value. Neither the oracle's recorded
+version nor historical descriptor evidence is rewritten, and no persisted
+witness is carried across the migration. See the
+[bounded migration contract](../../research/2026-10-28-legacy-enum-binary-mapping.md#persistence-and-migration-boundary).

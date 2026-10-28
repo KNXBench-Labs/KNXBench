@@ -7,6 +7,24 @@ headings, failures and lifting conditions are historical where later
 updates supersede them; they are not new work assignments.
 
 
+## WP-03 binary retention and backfill (28 October 2026 source)
+
+The legacy long-enum storage gap below is superseded by
+[WP-03](../open-work/WP-03-legacy-binary-enumerations.md): validated atomic-type-5
+hex is decoded with exact byte/type-width checks and stored as canonical Base64
+in `parameter_type_enum.binary_value`. Productdb v30 backfills historical NULL
+columns only from authenticated retained source and matching normalized keys;
+whole-payload refusal is diagnosed without rewriting old reports or findings.
+Fresh/reopen/re-ingest and refusal regressions cover the bounded storage path.
+
+Ordinary atomic-type-4 binary/length fields remain uninterpreted and reported;
+invalid long-enum fields remain NULL and retained in source. Failed historical
+backfills do not silently retry on skipped re-ingest. The
+[mapping witness](../research/2026-10-28-legacy-enum-binary-mapping.md) is finite:
+unpaired converted types, historical reconstruction and large-payload migration
+cost remain outside acceptance. Existing source-bound image checks and the
+live-legacy-download boundary are unchanged; no bus or hardware was used.
+
 ## G16 diagnostic follow-up (20 October 2026 source)
 
 `MissingMaster` now says "ZIP is not a standalone product package: missing

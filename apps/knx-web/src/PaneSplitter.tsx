@@ -93,8 +93,13 @@ export default function PaneSplitter(props: {
               : clamp(interactionHeight() + (e.key === "ArrowDown" ? KEYBOARD_STEP : -KEYBOARD_STEP) * direction),
         );
       }}
+      onDragStart={(e) => e.preventDefault()}
       onPointerDown={(e) => {
         if (e.button !== 0) return;
+        // As in ResizablePane: no text selection may start from or survive a drag.
+        e.preventDefault();
+        window.getSelection()?.removeAllRanges();
+        e.currentTarget.focus();
         drag.current = { y: e.clientY, height: interactionHeight(), scale: appUiScale() };
         // Guarded rather than assumed: a pointer event can arrive without
         // a capture API behind it (a synthesised one in a test, an older

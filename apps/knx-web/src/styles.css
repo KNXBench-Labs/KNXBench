@@ -3161,13 +3161,13 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
 .workbench-pane-left { border-right: 1px solid var(--knx-border); background: color-mix(in srgb, var(--knx-bg) 65%, var(--knx-surface)); }
 .workbench-pane-right { border-left: 1px solid var(--knx-border); }
 .workbench-pane-content { height: 100%; overflow: auto; display: flex; flex-direction: column; }
-.pane-resizer { position: absolute; inset-block: 0; width: 6px; cursor: col-resize; touch-action: none; z-index: 2; }
+.pane-resizer { position: absolute; inset-block: 0; width: 6px; cursor: col-resize; touch-action: none; user-select: none; z-index: 2; }
 .workbench-pane-left .pane-resizer { right: -3px; }
 .workbench-pane-right .pane-resizer { left: -3px; }
 /* T28/F3 — `.pane-resizer`'s horizontal counterpart. Not absolutely
    positioned like that one: this handle is a flex item sitting *between*
    the two blocks it divides, not an overlay on one block's edge. */
-.pane-splitter { position: relative; flex: 0 0 6px; cursor: row-resize; touch-action: none; }
+.pane-splitter { position: relative; flex: 0 0 6px; cursor: row-resize; touch-action: none; user-select: none; }
 /* UI-02: a separator is seen at rest, not found by hovering. Each draws a
    centred hairline in the theme's border colour inside its unchanged 6px
    hit area; hover, keyboard focus and a held drag (`:active`, which pointer

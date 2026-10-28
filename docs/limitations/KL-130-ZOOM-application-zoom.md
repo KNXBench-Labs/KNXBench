@@ -127,8 +127,11 @@ stretched to fill the width and announces +111 per 100 layout px, consistent
 with fit distribution rather than the double correction feared above.
 Topology-device hover keeps the card geometry and content unclipped.
 
-**Known open defect.** Pane separators and height splitters do not cancel the
-`pointerdown` default. In WebKitGTK an earlier drag can leave a document text
-selection, and later separator drags then stop after their first motion
-without committing. The ledger status is unchanged. Properties-pane drag,
-further window sizes and themes, and screen-reader output remain unverified.
+**Defect, fixed in source.** Pane separators and height splitters did not
+cancel the `pointerdown` default. In WebKitGTK an earlier drag could leave a
+document text selection, and later separator drags then stopped after their
+first motion without committing. Since 28 October 2026 they use the column
+handle's guards (see [WP-11](../open-work/WP-11-native-linux-acceptance.md));
+a native WebKitGTK re-check is still open. The ledger status is unchanged.
+Properties-pane drag, further window sizes and themes, and screen-reader output
+remain unverified.

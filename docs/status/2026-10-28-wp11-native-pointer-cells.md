@@ -68,6 +68,13 @@ That the next drag becomes a native drag-and-drop of the selection is a
 plausible mechanism, but it was not separately observed. Chromium tests did
 not exercise repeated real drags with a live selection.
 
+**Amendment 28 October 2026 (source fix).** `ResizablePane` and
+`PaneSplitter` now cancel the primary `pointerdown` default, block
+`dragstart`, set `user-select: none` and focus the separator, matching the
+control; a primary press also clears an existing selection. This record's observations stay as recorded; they describe the
+build before the fix. Whether the fix removes the native loss is not yet
+observed: the reproduction above has to be repeated in WebKitGTK.
+
 ## Harness observations (not product results)
 
 - The first path entry went to the main window instead of the same-PID file

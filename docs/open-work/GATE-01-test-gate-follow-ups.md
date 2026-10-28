@@ -84,6 +84,20 @@ not coverage-equivalent replacements. No timeout, source, lane or concurrency
 policy changed; the historical S2-03 red cause and production CPU attribution
 remain unproved. GATE-01 stays open for a production preparation profile.
 
+## Document-language fanout correction — 28 October 2026
+
+The subsequent production profile found repeated global `lang` writes from
+`useUiLanguage()` consumers. The effect now writes only if the actual document
+attribute differs; the language store and all browser-case assertions are
+unchanged. Original semantic tests red4 → green4, targeted language tests35
+passed, inverted guard caught. A leased repeat-three production comparison
+measured 41.803 → 21.434 s whole-case medians; the table's render attachment
+remains about 10.4 s. Fixed dev cases also pass3 under 16 shell busy loops,
+with limited headroom (99–105 s of a 120 s limit). These are bounded software
+results, not arbitrary-load stability or a historical timeout-cause claim.
+[Evidence, attribution and limits](../status/2026-10-28-document-language-fanout.md).
+GATE-01 remains open; no scheduler, timeout or coverage policy changed.
+
 ## Known boundary
 
 Killing the stage supervisor with SIGKILL can still orphan children; see the

@@ -17,6 +17,13 @@ already found lying in the grass.
   preparation and is not the whole timeout budget. Preserve the expanded-state
   coverage and profile it separately rather than dropping setup or raising the
   timeout. [Bounded evidence](research/2026-10-28-devices-browser-load-sensitivity.md).
+- **Shared hooks must not repeat identical global DOM writes for every consumer.**
+  `useUiLanguage()` is reached by translated children. Its effect compares the
+  actual `<html lang>` before writing, so mounting many subscribers does not
+  mutate the document root hundreds of times. Keep language changes and repair
+  on a later mount after an external attribute change working; do not replace
+  the actual DOM comparison with a stale module-level cache.
+  [Fanout regression and measured limits](status/2026-10-28-document-language-fanout.md).
 
 - **Production functional cases run independently within one file (ADR-0155).**
   Only the reviewed production functional lane opts into `--fully-parallel`;

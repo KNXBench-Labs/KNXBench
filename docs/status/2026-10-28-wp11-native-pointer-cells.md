@@ -48,6 +48,9 @@ hover crops. No JavaScript injection, mocked HTTP or mocked Tauri was used.
 
 ## Found defect (open)
 
+This heading retains its historical anchor; the defect was open at this slice's
+cutoff. The later bounded trigger check is linked in the amendment below.
+
 `ResizablePane` (navigation/properties separators) and `PaneSplitter`
 (navigation block heights) start a drag on `pointerdown` with pointer capture,
 but they neither call `preventDefault()` nor set `user-select: none`. In
@@ -95,8 +98,8 @@ whole-WP-11 acceptance.
 
 ## Still open
 
-- The historical pane-drag defect is fixed in source and its named native
-  reproduction has a [positive bounded re-check](2026-10-28-wp11-native-separator-recheck.md);
+- The historical pane-drag defect is fixed in source and its drag-after-selection
+  trigger has a [positive bounded re-check](2026-10-28-wp11-native-separator-recheck.md);
   broader native acceptance remains open.
 - Pointer drag of the Properties pane, other window sizes and themes, Orca,
   Firefox, and vendor-specific GPU/EGL evidence.

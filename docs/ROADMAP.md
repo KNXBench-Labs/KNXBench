@@ -20,7 +20,10 @@ Work merged on main after `20ab2f7ea` belongs to the next alpha.
 The unfinished final verification step is split in source into mismatch, read failure and
 write failure with a closed stage, carried through journal, status and report. It names the
 operation that stopped, not its cause; the allocation mismatch in #30/#22 and any hardware
-evidence stay separate. [Contract](contracts/system2-download-result.md#final-step-failure).
+evidence stay separate. Source is delivered main-first as `309384726`, with reviewed
+branch/integration acceptance and a built-server smoke; the later docs-only delta does
+not relabel the accepted runtime revision. [Software acceptance](status/2026-10-28-system2-final-step-failure.md#software-acceptance-and-source-delivery) ·
+[Contract](contracts/system2-download-result.md#final-step-failure).
 
 ## System-2 result integration after Alpha 17
 

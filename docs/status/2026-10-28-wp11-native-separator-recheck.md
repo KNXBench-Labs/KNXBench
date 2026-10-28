@@ -119,3 +119,18 @@ is closed. Private evidence:
 `<profile>/evidence/alpha18-followups-20261028/native/` (build/launch receipts,
 raw per-cell trees and settings, real-pointer readings, selections, focus crops,
 verified summary, isolation and restoration/closure receipts).
+
+## Reviewed source delivery
+
+The bounded evidence is published as main-first `923b34599`, with focused documentation
+corrections `f4244c5b1` and `523f726b9` after the initial `58c50f867`. Independent review
+and correction re-review approved. Feature and integrated change-scoped gates each
+passed 10/10 stages with frozen inputs and checked, unchanged user data (466 registered
+tool tests, six existing skips). These docs/tool checks do not add native GUI
+cells or change the tested artifact identity above.
+
+The parent independently checked raw measurements, settings, crop hashes, restoration
+receipts and source/artifact binding. Both owned worktrees/branches and their build
+caches were retired only after source ancestry, idle checks and a 551-member archive
+byte/hash verification. The executable/frontend and private evidence remain retained;
+the wider WP-11/KL-130 boundaries remain open.

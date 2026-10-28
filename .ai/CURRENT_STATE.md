@@ -1,16 +1,17 @@
 # Restart snapshot
 
-## Alpha 18 release (WAITING, observed 2026-10-28 22:22 CET, separate WebUI)
-- Owner: start the Alpha 18 release once the running System-2 final-diagnostic session is done.
-- Watcher `proc_c120e8cd3647` (24 h cap) fires when no `system2-final|alpha18` worktree, cwd
-  process or package gate remains; then verify delivery on origin/main and begin at step 1.
-- No freeze posted, nothing pushed; that session continues unhindered. No competing build/gate.
-- Prep: local tree `<sources>/knxbench-a18-release-20261028`, branch `release/a18-prep-20261028`
-  (unpushed); draft `707f0e68d`, `PART-B-PENDING` intentional. Review `deleg_fcfa6c52` complete:
-  no unsupported code/ancestry claims found; public asset availability needs later readback.
-- Parent verified scope/identity, unchanged core/store, DB28->30/openers; diff/docs/local-info green.
-- Final distribution copy intentionally retained for tagged reader docs; not publication evidence.
-- Next: wait for runtime delivery/result docs/retirement before cutoff; both foreign trees remain.
+## Alpha 18 release freeze (ACTIVE, observed 2026-10-28 23:05 CET)
+- Release owner: this WebUI; source cutoff `bb2d8e51efcbd029034c694ab4da9638f80961ee`.
+- Prerequisite delivered: feature `96f41c7f1`, main `309384726`, result docs `bb2d8e51e`;
+  both runtime trees/refs retired; no matching cwd worker or package gate remains.
+- Candidate branch `release/a18-prep-20261028`, tree `<sources>/knxbench-a18-release-20261028`.
+- `main` stays release-frozen for code until the tag is published. Other packages stay local;
+  no branch/main pushes by other tracks. Later work belongs to the next release.
+- GO: finish notes/docs/version bump, full local release gate and packaging dry runs.
+- STOP before tag, GitHub release or Docker publication: explicit owner GO still required.
+- Draft reviewed; project/core16 unchanged, productdb28->30; distribution requires public readback.
+- Evidence `<profile>/evidence/a18-release-20261028/`; root/user data preserved.
+- Next: commit the candidate on the freeze, run full gate and nonpublishing packaging dry runs.
 
 ## Alpha 18 follow-ups 1 + 2 — source PUBLISHED, closeout GO
 - Publication verified 2026-10-28 22:44 CET. Maintained docs own feature status.

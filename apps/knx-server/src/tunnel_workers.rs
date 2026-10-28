@@ -17,7 +17,9 @@
 //!   download task): while it runs, the future is not polled from outside.
 //! * [`blocking_off_tunnel_workers`] runs one synchronous step there. For a
 //!   request handler whose future must stay cancellable at its other await
-//!   points (the service-control backup callback).
+//!   points (the service-control backup callback), or for the one durable
+//!   step of a task whose protocol future runs normally (the
+//!   individual-address settler, which saves the project before disconnect).
 //!
 //! A current-thread runtime has no second thread; both keep the inline path.
 

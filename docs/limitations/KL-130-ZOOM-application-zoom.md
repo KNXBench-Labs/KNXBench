@@ -115,3 +115,20 @@ lifting conditions. Pointer-drag distance, complete table fit/announced widths,
 hover, further window sizes/themes, visual clipping and actual screen-reader
 output remain unverified. Native AT-SPI control/value observations and stored
 settings are not a full rendering-parity result; the ledger stays unchanged.
+
+## Update 28 October 2026: native real-pointer drag and hover
+
+The [pointer record](../status/2026-10-28-wp11-native-pointer-cells.md) used
+the actual Alpha 17 AppImage and the real compositor cursor at 80%, 100% and
+150%. When a navigation-separator drag completes, the edge follows the pointer
+and the announced width changes by pointer/zoom. The Devices table's Name column
+is exact at 100% and 150% and stable at all three scales. At 80% that table is
+stretched to fill the width and announces +111 per 100 layout px, consistent
+with fit distribution rather than the double correction feared above.
+Topology-device hover keeps the card geometry and content unclipped.
+
+**Known open defect.** Pane separators and height splitters do not cancel the
+`pointerdown` default. In WebKitGTK an earlier drag can leave a document text
+selection, and later separator drags then stop after their first motion
+without committing. The ledger status is unchanged. Properties-pane drag,
+further window sizes and themes, and screen-reader output remain unverified.

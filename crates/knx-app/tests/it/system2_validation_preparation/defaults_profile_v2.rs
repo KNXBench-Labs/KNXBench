@@ -179,7 +179,7 @@ fn reference_plan_sha256(
 }
 
 /// Source `Data` of the installed segment holding `address`, never a second origin.
-fn source_octet(code: &knx_productdb::code::ProgramCode, address: u16) -> u8 {
+pub(super) fn source_octet(code: &knx_productdb::code::ProgramCode, address: u16) -> u8 {
     let address = u32::from(address);
     let segment = code
         .segments

@@ -1,6 +1,6 @@
 # S2-03 — System-2 UP258 image: open interpretation differences
 
-**Priority:** P2. **Status:** Open: evidence (one narrow follow-up). Listed in [OPEN_WORK](../OPEN_WORK.md).
+**Priority:** P2. **Status:** Implemented; acceptance pending (owner decision 28 October 2026; observation-supported hypothesis). Listed in [OPEN_WORK](../OPEN_WORK.md).
 Origin: the 26 October 2026 image differential
 ([research](../research/2026-10-26-up258-image-differential.md)).
 
@@ -34,17 +34,17 @@ hardware approval. Profile v2 stays readable for simulator reproduction and
 recovery; new physical execution of a v2 bundle refuses
 ([contract](../contracts/up258-system2-validation.md)).
 
-## Open
+## Follow-up — 28 October 2026
 
-1. **`DefaultValue` and an absent option under the configured reading.** The
-   experimental builder admits `Background`, `DefaultValue` and an absent
-   option (schema default `DefaultValue`) alike, and the revision-2 reading then
-   keeps the template for all three. Both defaults v3 and the configured
-   hardware path are bound to the exact UP258 source, which declares
-   `Background`; a simulated project profile for another mask-`0025h` source is
-   not. Missing evidence: a definition of `DefaultValue`/`None`; until then a
-   follow-up should refuse them under revision 2 rather than reuse the
-   `Background` reading.
+The revision-2 template-retention reading (configured path and defaults v3) now
+requires an explicit `DownloadInvisibleParameters="Background"`; `DefaultValue`,
+an absent attribute or `Options` element, `None` and unknown values refuse
+before an image is returned
+([contract](../contracts/project-system2-offline-preparation.md)). The exact
+UP258 source declares `Background`, so its outputs are unchanged. Revision-1
+(superseded defaults v1/v2) reproduction keeps its historical reading.
+
+No open S2-03 interpretation item remains. Unchanged boundaries below still apply.
 
 ## Decided — 27 October 2026
 

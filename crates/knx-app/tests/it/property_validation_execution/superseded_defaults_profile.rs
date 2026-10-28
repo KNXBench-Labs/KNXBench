@@ -175,3 +175,39 @@ async fn recovery_is_admitted(version: u32) {
     assert!(journal.contains("NotASimulator"), "{journal}");
     assert!(store.recovery().is_some(), "original recovery retained");
 }
+
+/// Format-1 admission binds each defaults version to its own id suffix, also after a JSON roundtrip.
+#[test]
+fn format1_bundles_admit_only_known_defaults_versions_with_matching_id_suffix() {
+    for (version, id) in [(1, "anything"), (2, "x-defaults-v2"), (3, "x-defaults-v3")] {
+        let mut bundle = fixture_version(version).1;
+        bundle.binding.profile_id = id.into();
+        let bundle = PreparedBundle::new(bundle.binding, bundle.normalized_plan).unwrap();
+        bundle.rebind_hardware(SERIAL).unwrap();
+    }
+    for (version, id) in [
+        (3, "x-defaults-v2"),
+        (3, "up258d12-configured-v3"),
+        (2, "x-defaults-v3"),
+        (4, "x-defaults-v4"),
+        (0, "x-defaults-v3"),
+    ] {
+        let mut binding = fixture_version(3).1.binding;
+        binding.profile_version = version;
+        binding.profile_id = id.into();
+        let plan = fixture_version(3).1.normalized_plan;
+        assert!(
+            PreparedBundle::new(binding.clone(), plan.clone()).is_err(),
+            "direct v{version} {id}"
+        );
+        // A deserialized bundle bypasses the constructor; plan and rebind still refuse.
+        let mut value = serde_json::to_value(fixture_version(3).1).unwrap();
+        value["binding"] = serde_json::to_value(&binding).unwrap();
+        let read: PreparedBundle = serde_json::from_value(value).unwrap();
+        assert!(read.plan().is_err(), "deserialized v{version} {id}");
+        assert!(
+            read.rebind_hardware(SERIAL).is_err(),
+            "rebind v{version} {id}"
+        );
+    }
+}

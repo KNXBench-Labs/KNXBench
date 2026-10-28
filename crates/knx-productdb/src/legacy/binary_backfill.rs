@@ -6,8 +6,9 @@
 //! inventory, owners, type shape, enumeration keys with selector, text and
 //! order) and mapped by the very mapper a fresh import runs. Only then are
 //! the NULL columns filled. A payload that cannot be authenticated, or
-//! whose keys are missing, extra, ambiguous or conflicting, keeps every row
-//! and gets a `binary-values-backfill-error` finding. Old diagnostics are
+//! whose relevant source-mapped enum keys are missing, extra, ambiguous or
+//! conflicting, keeps every row and gets a `binary-values-backfill-error`
+//! finding. Unrelated stored types are preserved. Old diagnostics are
 //! never edited; v30 findings are appended after them.
 
 use std::collections::{BTreeMap, BTreeSet};

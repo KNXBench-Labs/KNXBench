@@ -89,6 +89,11 @@ write stay pending rather than acquiring the old run's clean claim. The
 product source is checked the same way: see the
 [source-freshness contract](../contracts/download-settlement-source-freshness.md).
 
+The experimental System-2 worker settles through the same service, once at its terminal
+status: a possible mutation makes Application, Parameters and Group addresses pending, only a
+verified run on an unchanged preparation marks parts programmed, and a recovery never does. See
+the [System-2 download result contract](../contracts/system2-download-result.md#settlement).
+
 ### Manual marks and presentation
 
 `POST /api/device/{id}/programming` takes `programmed` plus the existing

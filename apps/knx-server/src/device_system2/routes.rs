@@ -2,17 +2,19 @@
 use super::*;
 use axum::{
     body::Bytes,
-    extract::{DefaultBodyLimit, State},
+    extract::{DefaultBodyLimit, Query, State},
     http::{header, HeaderMap, HeaderValue},
     response::Response,
     routing::{get, post},
     Json, Router,
 };
 use dto::*;
+use knx_app::property_validation::System2Report;
 use knx_app::system2_validation_preparation::{
     prepare_retained_project_hardware_source, validate_project_hardware_recovery, RecoveryTrack,
 };
 use knx_core::DeviceId;
+use serde::Deserialize;
 
 pub(crate) fn routes() -> Router<SharedState> {
     Router::new()
@@ -23,6 +25,7 @@ pub(crate) fn routes() -> Router<SharedState> {
         .route("/api/device-system2/recover", post(recover))
         .route("/api/device-system2/operations", get(operations))
         .route("/api/device-system2/select", post(select))
+        .route("/api/device-system2/report", get(report))
         .layer(DefaultBodyLimit::max(16 * 1024))
         .layer(axum::middleware::map_response(
             |mut r: Response| async move {
@@ -211,10 +214,11 @@ async fn start(
         control_id: meta.operation_id.clone(),
         message: Some("Experimental configured download; cancellation is not rollback."),
         refusal: None,
+        settlement: Receipt::NotRecorded,
     });
     drop(reservation);
     let copy = state.clone();
-    let task = tokio::spawn(worker::download(
+    let task = tokio::spawn(worker::supervised_download(
         copy,
         root,
         preparation,
@@ -307,6 +311,7 @@ async fn recover(
             control_id: format!("{id}-restore"),
             message: None,
             refusal: None,
+            settlement: Receipt::NotRecorded,
         };
         Ok((root, record, bundle, store))
     })
@@ -327,7 +332,7 @@ async fn recover(
         .map_err(|_| refuse("system2Unavailable"))?;
     let copy = state.clone();
     drop(reservation);
-    record.task = Some(tokio::spawn(worker::recover(
+    record.task = Some(tokio::spawn(worker::supervised_recover(
         copy, root, bundle, store, body, gateway, lease,
     )));
     inner.current = Some(record);
@@ -403,4 +408,51 @@ async fn select(
     inner.preparation = None;
     inner.selection_unavailable = false;
     Ok(Json(result))
+}
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct ReportQuery {
+    operation_id: Option<String>,
+}
+/// Bounded privacy-safe summary of one ended retained operation; read-only, no bus access.
+/// A running operation, an unknown id or an unreadable journal refuses explicitly.
+async fn report(
+    State(state): State<SharedState>,
+    Query(query): Query<ReportQuery>,
+) -> Result<Json<System2Report>, ApiError> {
+    let id = query
+        .operation_id
+        .filter(|id| valid_id(id))
+        .ok_or_else(|| ApiError::bad_request("system2InvalidOperation"))?;
+    let _command = state
+        .device_system2
+        .command
+        .try_lock()
+        .map_err(|_| refuse("system2Busy"))?;
+    state.device_system2.no_live_task()?;
+    let copy = state.clone();
+    blocking(move || {
+        let root = copy.device_system2.root(&copy)?;
+        let known = root
+            .ids()
+            .map_err(|_| refuse("system2ReportUnavailable"))?
+            .contains(&id);
+        if !known {
+            return Err(refuse("system2OperationUnknown"));
+        }
+        root.metadata(&id)
+            .map_err(|_| refuse("system2ReportUnavailable"))?;
+        let progress = root
+            .progress(&id)
+            .map_err(|_| refuse("system2ReportUnavailable"))?
+            .unwrap_or_else(journalless);
+        System2Report::from_progress(
+            &progress,
+            root.execution_build(&id),
+            &crate::version_string(),
+        )
+        .map(Json)
+        .ok_or_else(|| refuse("system2Busy"))
+    })
+    .await
 }

@@ -1,6 +1,7 @@
 //! Process-owned configured System-2 service; no request/component owns its task.
 mod dto;
 mod routes;
+mod settlement;
 pub(crate) mod static_files;
 mod storage;
 #[cfg(test)]
@@ -15,12 +16,13 @@ use crate::{errors::ApiError, SharedState};
 use dto::{refuse, Binding, Metadata, Status};
 use knx_app::{
     property_validation::{
-        LocalOutcome, OperationProgress, PointerObservationPhase, PointerObservationRun,
-        System2DrainOutcome, System2OperationControl, System2Settlement,
+        DownloadFacts, DownloadResult, LocalOutcome, OperationProgress, PointerObservationPhase,
+        PointerObservationRun, System2DrainOutcome, System2OperationControl, System2Settlement,
     },
     system2_validation_preparation::ProjectHardwareSource,
 };
 use knx_core::commissioning::load_state::LoadState;
+use settlement::Receipt;
 use std::{
     path::Path,
     sync::{Arc, Mutex},
@@ -43,6 +45,8 @@ struct Record {
     message: Option<&'static str>,
     /// Volatile worker refusal kind; deliberately absent from durable evidence.
     refusal: Option<&'static str>,
+    /// Volatile receipt of this process's terminal project settlement.
+    settlement: Receipt,
 }
 fn initial(outcome: LocalOutcome) -> OperationProgress {
     OperationProgress {
@@ -58,6 +62,13 @@ fn initial(outcome: LocalOutcome) -> OperationProgress {
         pointer_observations: Vec::new(),
         program_version_observation: None,
         failure_diagnostics: Vec::new(),
+        download: DownloadFacts {
+            result: DownloadResult::InProgress,
+            outcome,
+            completed_steps: 0,
+            total_steps: None,
+        },
+        restore_attempted: false,
     }
 }
 impl Record {
@@ -89,7 +100,29 @@ impl Record {
             // a completed recovery; the durable command remains consumed.
             p.outcome = LocalOutcome::Interrupted;
         }
+        // A worker that ended unexpectedly did not end by its own checkpoint: never a finished
+        // or verified claim, whatever the journal had reached.
+        let worker_lost = self.refusal == Some("system2WorkerEnded");
+        if worker_lost && p.outcome == LocalOutcome::Finished {
+            p.outcome = LocalOutcome::Interrupted;
+        }
+        if worker_lost && p.download.result == DownloadResult::Verified {
+            p.download.result = DownloadResult::Unknown;
+        }
         let phrases = p.recovery_phrases;
+        // A live task has no final result yet, whatever App already published.
+        let download_result = if running && !p.restore_attempted {
+            DownloadResult::InProgress
+        } else {
+            let outcome = if p.download.outcome == LocalOutcome::Running {
+                // The journal never recorded the download's end (worker ended it): the status
+                // outcome is the best fact, and `settled` keeps it from promoting anything.
+                p.outcome
+            } else {
+                p.download.outcome
+            };
+            DownloadResult::settled(outcome, p.mutation_possible, p.download.result)
+        };
         Status {
             schema_version: dto::STATUS_SCHEMA_VERSION,
             metadata: (&self.metadata).into(),
@@ -164,6 +197,11 @@ impl Record {
                 },
             ),
             failure_diagnostics: p.failure_diagnostics,
+            download_result,
+            restore_attempted: p.restore_attempted,
+            download_completed_steps: p.download.completed_steps,
+            download_total_steps: p.download.total_steps,
+            project_settlement: self.settlement,
         }
     }
 }
@@ -251,6 +289,32 @@ impl System2Service {
             return Err(refuse("system2Busy"));
         }
         Ok(())
+    }
+    /// Read-only admission: refuses only while a task is actually live. A quarantined
+    /// coordinator (failed teardown) must not lock a historical report away.
+    fn no_live_task(&self) -> Result<(), ApiError> {
+        let inner = self
+            .inner
+            .lock()
+            .map_err(|_| refuse("system2Unavailable"))?;
+        if inner
+            .current
+            .as_ref()
+            .is_some_and(|r| r.task.as_ref().is_some_and(|t| !t.is_finished()))
+        {
+            return Err(refuse("system2Busy"));
+        }
+        Ok(())
+    }
+    fn publish_settlement(&self, id: &str, receipt: Receipt) {
+        let mut inner = self.inner.lock().expect("System-2 status poisoned");
+        if let Some(record) = inner
+            .current
+            .as_mut()
+            .filter(|r| r.metadata.operation_id == id)
+        {
+            record.settlement = receipt;
+        }
     }
     fn status(&self) -> Result<Option<Status>, ApiError> {
         if self.storage_unavailable {
@@ -355,7 +419,22 @@ impl System2Service {
     }
 }
 fn load_record(root: &storage::Storage, id: &str) -> std::io::Result<Record> {
-    Ok(Record { metadata: root.metadata(id)?, progress: root.progress(id)?.unwrap_or_else(|| initial(LocalOutcome::Interrupted)), updates: None, task: None, control_id: id.into(), message: Some("Original retained operation; no automatic resume or retry. Recovery remains experimental best-effort."), refusal: None })
+    Ok(Record { metadata: root.metadata(id)?, progress: root.progress(id)?.unwrap_or_else(journalless), updates: None, task: None, control_id: id.into(), message: Some("Original retained operation; no automatic resume or retry. Recovery remains experimental best-effort."), refusal: None, settlement: Receipt::NotRecorded })
+}
+/// Retained operation without a journal or observed record (lost, never written, or deleted).
+fn journalless() -> OperationProgress {
+    // Neither a journal nor an observed record survives: the absence of evidence is not
+    // evidence that nothing was written. Uncertain, never "nothing written".
+    OperationProgress {
+        mutation_possible: true,
+        download: DownloadFacts {
+            result: DownloadResult::Unknown,
+            outcome: LocalOutcome::Interrupted,
+            completed_steps: 0,
+            total_steps: None,
+        },
+        ..initial(LocalOutcome::Interrupted)
+    }
 }
 fn binding(state: &crate::AppState, device: u32) -> Binding {
     use std::sync::atomic::Ordering;

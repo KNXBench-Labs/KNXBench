@@ -12,6 +12,8 @@ use crate::property_validation_bundle::{
 mod diagnostic;
 #[path = "property_validation_lifecycle.rs"]
 mod lifecycle;
+#[path = "property_validation_result.rs"]
+mod result;
 pub use diagnostic::{
     FailureDiagnostic, FailureDiagnosticRun, PointerFailureReason, PointerFailureRecord,
 };
@@ -21,6 +23,7 @@ pub use lifecycle::{
     System2ControlError, System2ControlSnapshot, System2DrainOutcome, System2OperationControl,
     System2OperationLease, System2Settlement,
 };
+pub use result::{is_build_version, DownloadFacts, DownloadResult, ExecutionBuild, System2Report};
 use serde::{Deserialize, Serialize};
 use std::{
     fs::{self, File, OpenOptions},
@@ -232,6 +235,8 @@ struct State {
     in_procedure_observations: Vec<(PointerObservationRun, usize, PointerObservationRecord)>,
     /// One typed failure per run at most: `Failed` and `RestoreFailed` each end their run.
     failure_diagnostics: Vec<FailureDiagnostic>,
+    /// Frozen when the download run ends (terminal checkpoint or restore start).
+    download_end: Option<DownloadFacts>,
 }
 impl State {
     fn new(binding: Binding) -> Self {
@@ -247,6 +252,43 @@ impl State {
             final_observations: Vec::new(),
             in_procedure_observations: Vec::new(),
             failure_diagnostics: Vec::new(),
+            download_end: None,
+        }
+    }
+    fn facts(&self, result: DownloadResult, outcome: LocalOutcome) -> DownloadFacts {
+        DownloadFacts {
+            result,
+            outcome,
+            completed_steps: self.completed,
+            total_steps: self
+                .recovery
+                .as_ref()
+                .map(|r| r.original_bundle.normalized_plan.steps.len()),
+        }
+    }
+    /// What an ended, not-`Finished` download provably achieved; see [`DownloadResult`].
+    fn ended_result(&self) -> DownloadResult {
+        let Some(recovery) = &self.recovery else {
+            return if self.mutation {
+                DownloadResult::Unknown
+            } else {
+                DownloadResult::NothingWritten
+            };
+        };
+        let steps = &recovery.original_bundle.normalized_plan.steps;
+        let Some(last) = steps.len().checked_sub(1) else {
+            return DownloadResult::Unknown;
+        };
+        if !matches!(steps[last].operation, OperationRecord::Disconnect) {
+            return DownloadResult::Unknown;
+        }
+        match (self.completed, self.active) {
+            (done, _) if done < last => DownloadResult::TransferIncomplete,
+            (done, None) if done == last => DownloadResult::TransferCompleteVerificationNotStarted,
+            (done, Some(active)) if done == last && active == last => {
+                DownloadResult::TransferCompleteVerificationUnfinished
+            }
+            _ => DownloadResult::Unknown,
         }
     }
     /// The run an observation belongs to: an explicit restore or the download.
@@ -403,6 +445,8 @@ impl State {
                     return Err(invalid("incomplete operation cannot finish"));
                 }
                 self.outcome = LocalOutcome::Finished;
+                self.download_end =
+                    Some(self.facts(DownloadResult::Verified, LocalOutcome::Finished));
             }
             Checkpoint::Failed { .. } | Checkpoint::Cancelled => {
                 if self.outcome != LocalOutcome::Running {
@@ -416,6 +460,14 @@ impl State {
                 {
                     self.record_failure(*code, record, FailureDiagnosticRun::Download)?;
                 }
+                self.download_end = Some(self.facts(
+                    self.ended_result(),
+                    if matches!(event, Checkpoint::Cancelled) {
+                        LocalOutcome::Cancelled
+                    } else {
+                        LocalOutcome::Failed
+                    },
+                ));
                 self.outcome = if matches!(event, Checkpoint::Cancelled) {
                     LocalOutcome::Cancelled
                 } else {
@@ -429,6 +481,10 @@ impl State {
                     ));
                 }
                 self.restore_attempted = true;
+                if self.download_end.is_none() {
+                    self.download_end =
+                        Some(self.facts(self.ended_result(), LocalOutcome::Interrupted));
+                }
                 self.outcome = LocalOutcome::Restoring;
                 self.active = None;
                 self.completed = 0;
@@ -516,6 +572,10 @@ pub struct OperationProgress {
     pub prestate_unreadable_allocations: Vec<UnreadableAllocation>,
     /// Typed, non-raw failure facts: at most one per run, download before restore.
     pub failure_diagnostics: Vec<FailureDiagnostic>,
+    /// Provable achievement of the download run, derived from the journal alone.
+    pub download: DownloadFacts,
+    /// A recovery was started for this operation: the current outcome and counters are its.
+    pub restore_attempted: bool,
 }
 /// One declared allocation whose prior memory could not be read.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -781,6 +841,16 @@ impl OperationStore {
                 )
                 .collect(),
             failure_diagnostics: self.state.failure_diagnostics.clone(),
+            download: match (self.state.download_end, self.outcome()) {
+                (Some(frozen), _) => frozen,
+                (None, LocalOutcome::Interrupted) => self
+                    .state
+                    .facts(self.state.ended_result(), LocalOutcome::Interrupted),
+                _ => self
+                    .state
+                    .facts(DownloadResult::InProgress, LocalOutcome::Running),
+            },
+            restore_attempted: self.state.restore_attempted,
         }
     }
     /// Pure in-memory projection suitable for status after navigation/restart.

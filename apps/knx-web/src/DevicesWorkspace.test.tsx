@@ -8,10 +8,13 @@ import DevicesWorkspace from "./DevicesWorkspace";
 import type { ProjectTree } from "./bindings/ProjectTree";
 import type { DeviceCatalog } from "./deviceList";
 import { resetSettingsForTests, setSetting } from "./settingsStore";
+import { publishSystem2Status, resetSystem2StatusForTests } from "./system2Status";
 import { resetProductLanguageForTests } from "./productLanguage";
 import { resetUiLanguageForTests } from "./uiLanguage";
 
 const apiMock = vi.hoisted(() => ({ deviceCatalog: vi.fn(), compareDevice: vi.fn() }));
+const system2 = vi.hoisted(() => ({ getSystem2Status: vi.fn() }));
+vi.mock("./system2DownloadApi", async (importOriginal) => ({ ...await importOriginal<typeof import("./system2DownloadApi")>(), ...system2 }));
 vi.mock("./api", () => ({ ...apiMock, errorMessage: (error: unknown) => error instanceof Error ? error.message : String(error) }));
 const tree: ProjectTree = { schema_version: 11, errors: 0, warnings: 0, can_undo: false, can_redo: false,
   is_modified: false, group_address_style: "ThreeLevel", server_incarnation: "table-test", snapshot_revision: 1,
@@ -25,6 +28,7 @@ beforeEach(() => {
   vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("offline")));
   apiMock.deviceCatalog.mockReset(); apiMock.deviceCatalog.mockResolvedValue(batch);
   apiMock.compareDevice.mockReset();
+  resetSystem2StatusForTests(); system2.getSystem2Status.mockReset(); system2.getSystem2Status.mockResolvedValue(null);
   click.mockClear(); catalogue.mockClear();
   host = document.createElement("div"); document.body.append(host); root = createRoot(host);
 });
@@ -267,3 +271,96 @@ it.each(["en", "de"] as const)("%s System column shows the declared family, expl
 });
 
 tableColumnSmoke([["devices", 13]], async () => { await render(); return { host }; });
+
+// Issue #31: a retained System-2 run explains the pending marks without touching them.
+const bound: ProjectTree = { ...tree, project_incarnation: 4 };
+const failedRun = {
+  schemaVersion: 3, failureDiagnostics: [], downloadResult: "transferCompleteVerificationUnfinished", operationId: "a".repeat(32),
+  binding: { serverIncarnation: "table-test", projectIncarnation: "4", projectRevision: "1", deviceId: 2 }, address: "1.1.2", deviceName: "Device 2",
+  state: "failed", completedSteps: 26, totalSteps: 27, backupAvailable: true, recoveryPhrase: null, downloadPhrase: null, releasePhrase: null,
+  message: null, refusal: null, mutationMayHaveStarted: true, prestateDiffers: false, pointerObservations: [], programVersionObservation: null,
+  prestateUnreadableAllocations: [],
+};
+const markers = () => [...host.querySelectorAll("[data-system2-result]")];
+it("reads the retained run once for the whole table and marks only the bound device", async () => {
+  system2.getSystem2Status.mockResolvedValue(failedRun);
+  await render(true, bound); await act(async () => { for (let i = 0; i < 10; i++) await Promise.resolve(); });
+  expect(system2.getSystem2Status).toHaveBeenCalledTimes(1);
+  expect(markers()).toHaveLength(1);
+  expect(markers()[0].closest("tr")!.textContent).toContain("Device 2");
+  expect(markers()[0].getAttribute("data-system2-result")).toBe("transferCompleteVerificationUnfinished");
+  await render(true, { ...bound, snapshot_revision: 2 });
+  expect(system2.getSystem2Status).toHaveBeenCalledTimes(1);
+  expect(markers()[0].getAttribute("data-system2-edited")).toBe("true");
+});
+it("shows nothing for another project, another server or a failed read", async () => {
+  system2.getSystem2Status.mockResolvedValue(failedRun);
+  await render(true, { ...bound, project_incarnation: 5 }); await act(async () => { for (let i = 0; i < 10; i++) await Promise.resolve(); });
+  expect(markers()).toHaveLength(0);
+  await render(true, { ...bound, server_incarnation: "elsewhere" }); await act(async () => { for (let i = 0; i < 10; i++) await Promise.resolve(); });
+  expect(markers()).toHaveLength(0);
+});
+it("shows nothing when the first shared read fails", async () => {
+  system2.getSystem2Status.mockRejectedValue(new Error("offline"));
+  await render(true, bound); await act(async () => { for (let i = 0; i < 10; i++) await Promise.resolve(); });
+  expect(markers()).toHaveLength(0);
+});
+it("drops a read that began before the panel published a newer status", async () => {
+  let release!: (value: unknown) => void;
+  system2.getSystem2Status.mockReturnValueOnce(new Promise((resolve) => { release = resolve; }));
+  await render(true, bound);
+  await act(async () => publishSystem2Status(null));
+  await act(async () => { release(failedRun); await Promise.resolve(); });
+  expect(markers()).toHaveLength(0);
+});
+const settle = async () => act(async () => { for (let i = 0; i < 10; i++) await Promise.resolve(); });
+it("shows a run that ended after the table was first visited while it was still running (shared lifetime)", async () => {
+  const running = { ...failedRun, state: "running", downloadResult: "inProgress" };
+  system2.getSystem2Status.mockResolvedValue(running);
+  await render(true, bound); await settle();
+  expect(markers()).toHaveLength(0);
+  // The panel's single poll owner publishes the terminal status: no table request, no poll.
+  await act(async () => publishSystem2Status(failedRun as never)); await settle();
+  expect(markers()).toHaveLength(1);
+  expect(system2.getSystem2Status).toHaveBeenCalledTimes(1);
+});
+it("replaces an older verified chip as soon as the next run starts", async () => {
+  system2.getSystem2Status.mockResolvedValue({ ...failedRun, state: "finished", downloadResult: "verified", mutationMayHaveStarted: true });
+  await render(true, bound); await settle();
+  expect(markers()[0].getAttribute("data-system2-result")).toBe("verified");
+  await act(async () => publishSystem2Status(null)); await settle();
+  expect(markers()).toHaveLength(0);
+  await act(async () => publishSystem2Status({ ...failedRun, operationId: "b".repeat(32), state: "running", downloadResult: "inProgress" } as never)); await settle();
+  expect(markers()).toHaveLength(0);
+  await act(async () => publishSystem2Status(failedRun as never)); await settle();
+  expect(markers()[0].getAttribute("data-system2-result")).toBe("transferCompleteVerificationUnfinished");
+});
+it("never shows a recovered device as the requested configuration's success", async () => {
+  system2.getSystem2Status.mockResolvedValue({ ...failedRun, state: "restored", restoreAttempted: true, downloadResult: "verified", mutationMayHaveStarted: true });
+  await render(true, bound); await settle();
+  expect(markers()[0].getAttribute("data-system2-result")).toBe("recoveryRestored");
+});
+it("the explicit catalogue refresh asks once more for the shared status", async () => {
+  await render(true, bound); await settle();
+  expect(system2.getSystem2Status).toHaveBeenCalledTimes(1);
+  system2.getSystem2Status.mockResolvedValue(failedRun);
+  const refresh = [...host.querySelectorAll("button")].find((b) => b.textContent === "Refresh product data")!;
+  await act(async () => refresh.click()); await settle();
+  expect(system2.getSystem2Status).toHaveBeenCalledTimes(2);
+  expect(markers()).toHaveLength(1);
+});
+it("finds the bound row by its visible System-2 text", async () => {
+  system2.getSystem2Status.mockResolvedValue(failedRun);
+  await render(true, bound); await settle();
+  await query("S2 unverified");
+  expect(host.querySelectorAll(".devices-table tbody tr")).toHaveLength(1);
+});
+it("says so when the shared status cannot be read, instead of silently showing nothing", async () => {
+  system2.getSystem2Status.mockRejectedValue(new Error("offline"));
+  await render(true, bound); await settle();
+  expect(host.querySelector("[data-system2-read-failed]")).not.toBeNull();
+  system2.getSystem2Status.mockResolvedValue(null);
+  const refresh = [...host.querySelectorAll("button")].find((b) => b.textContent === "Refresh product data")!;
+  await act(async () => refresh.click()); await settle();
+  expect(host.querySelector("[data-system2-read-failed]")).toBeNull();
+});

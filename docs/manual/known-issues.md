@@ -138,6 +138,22 @@ backup/readback and recovery-integrity barriers; no general speedup is establish
 - **Details:** [safe failure diagnostic](../contracts/system2-safe-failure-diagnostic.md),
   [S2-01](../open-work/S2-01-pid7-raw-response.md).
 
+### System-2 run result and project marks (issue #31)
+
+- **What happens:** an experimental System-2 run that ends with the transfer complete and
+  its final verification step unfinished is explained in the panel, the device table and a
+  saveable report. When a run may have written, the project's Application, Parameters and
+  Group-address marks become pending; only a fully verified run, with the project and
+  retained source unchanged since the start, marks them programmed. Any edit that changes
+  the preparation leaves them pending. These marks are the project's belief, not a device
+  read or a compatibility claim.
+- **Not known:** whether the unfinished step found a difference, could not read or failed
+  its last write; the record does not say. The device is never shown as loaded.
+- **Table scope:** only the selected operation of the current server session and the
+  open project appears there; after a server restart it stays in the panel and report.
+- **Details:** [System-2 download result](../contracts/system2-download-result.md),
+  [S2-05](../open-work/S2-05-result-and-settlement.md).
+
 ### Catalogue jobs: finite resources and uncertain outcomes
 
 The integrated picker/wizard uses the process-owned job service and App-root

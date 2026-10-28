@@ -31,20 +31,25 @@ function fixtureTree(first: PendingProgramming, revision: number): ProjectTree {
       buildings: [], group_ranges: [], group_addresses: [] }] };
 }
 async function intercept(page: Page, language: "en" | "de", theme = "porcelain") {
-  const state = { tree: fixtureTree(pending(true, false, true, false), 1), unexpected: [] as string[], marks: [] as unknown[] };
+  const state = { tree: fixtureTree(pending(true, false, true, false), 1), unexpected: [] as string[], marks: [] as unknown[], system2: null as unknown, system2Reads: 0, failProjectReads: 0 };
   let projectOpen = false;
   await page.route("**/api/**", (route) => {
     const url = new URL(route.request().url()); const path = url.pathname; const method = route.request().method();
     let body: unknown; let status = 200;
     if (path === "/api/auth/status" && method === "GET") body = { required: false, authenticated: true };
     else if (path === "/api/settings" && method === "GET") body = { schemaVersion: 1, status: "ok", settings: { uiLanguage: language, theme } };
-    else if (path === "/api/project" && method === "GET") { if (!projectOpen) return fulfillNoProjectOpen(route); body = state.tree; }
+    else if (path === "/api/project" && method === "GET") {
+      if (!projectOpen) return fulfillNoProjectOpen(route);
+      if (state.failProjectReads > 0) { state.failProjectReads -= 1; status = 503; body = { error: "synthetic project reload failure" }; }
+      else body = state.tree;
+    }
     else if (path === "/api/project/new" && method === "POST") { projectOpen = true; body = state.tree; }
     else if (path === "/api/project/load-progress" && method === "GET") body = null;
     else if (path === "/api/project/status-metrics" && method === "GET") body = statusMetricsFixtureBody(state.tree);
     else if (path === "/api/bus/discover" && method === "POST") body = { interfaces: [] };
     else if (path === "/api/product-languages" && method === "GET") body = [];
     else if (["/api/device-download/status", "/api/device-address/status"].includes(path) && method === "GET") { status = 404; body = { error: "no operation in this fixture" }; }
+    else if (path === "/api/device-system2/status" && method === "GET") { state.system2Reads += 1; body = state.system2; }
     else if (path === "/api/devices" && method === "GET") {
       const devices = state.tree.installations[0].topology[0].lines[0].devices;
       body = { schemaVersion: 1, serverIncarnation: "pending-browser", snapshotRevision: state.tree.snapshot_revision,
@@ -146,5 +151,106 @@ for (const language of ["en", "de"] as const) {
     expect(state.marks).toEqual([{ programmed: true, serverIncarnation: "pending-browser", projectIncarnation: 3, snapshotRevision: 1 }]);
     await capture(page, `inspector-marked-${language}-1440`);
     expect(state.unexpected).toEqual([]);
+  });
+}
+
+// Issue #31: a retained System-2 run explains, beside the untouched marks, what is provable about the device.
+const failedRun = {
+  schemaVersion: 3, failureDiagnostics: [], downloadResult: "transferCompleteVerificationUnfinished", operationId: "a".repeat(32),
+  binding: { serverIncarnation: "pending-browser", projectIncarnation: "3", projectRevision: "1", deviceId: 1 }, address: "1.1.2", deviceName: "Dimmer kitchen",
+  state: "failed", completedSteps: 26, totalSteps: 27, backupAvailable: true, recoveryPhrase: null, downloadPhrase: null, releasePhrase: null,
+  message: null, refusal: null, mutationMayHaveStarted: true, prestateDiffers: false, pointerObservations: [], programVersionObservation: null,
+  prestateUnreadableAllocations: [],
+  restoreAttempted: false, downloadCompletedSteps: 26, downloadTotalSteps: 27, projectSettlement: "persisted",
+};
+for (const language of ["en", "de"] as const) {
+  const m = language === "en" ? en : de;
+  for (const width of [1440, 400]) {
+    test(`${language} device list explains an unverified System-2 run without clearing pending marks at ${width}px`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 850 });
+      const state = await intercept(page, language); state.system2 = failedRun;
+      await openProject(page, language); await openList(page, language);
+      const row = (name: string) => page.locator(".devices-table tbody tr").filter({ hasText: name });
+      const marker = row("Dimmer kitchen").locator("[data-system2-result]");
+      await expect(marker).toHaveCount(1);
+      const sentence = m["devices.system2.title"].replace("{result}", m["system2.result.transferCompleteVerificationUnfinished"]);
+      await expect(marker).toHaveAttribute("aria-label", sentence);
+      await expect(marker).toHaveAttribute("title", sentence);
+      await expect(marker).toHaveAttribute("data-system2-result", "transferCompleteVerificationUnfinished");
+      // The project's own marks stay; the run is never shown as a clean or loaded device.
+      await expect(row("Dimmer kitchen").locator(".programming-chip")).toHaveText([
+        m["programming.part.address.short"], m["programming.part.parameters.short"]]);
+      await expect(row("Dimmer kitchen").locator('.programming-chips[data-state="pending"]')).toHaveCount(1);
+      await expect(page.locator("[data-system2-result]")).toHaveCount(1);
+      // Sorting and the pending filter keep their meaning.
+      await page.getByRole("checkbox", { name: m["devices.pendingOnly"], exact: true }).check();
+      await expect(page.locator(".devices-table tbody tr")).toHaveCount(2);
+      await expect(marker).toHaveCount(1);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(1);
+      await capture(page, `system2-result-${language}-${width}`);
+      expect(state.system2Reads).toBe(1);
+      expect(state.unexpected).toEqual([]);
+    });
+  }
+  test(`${language} device list ignores a System-2 run bound to another project`, async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 850 });
+    const state = await intercept(page, language);
+    state.system2 = { ...failedRun, binding: { ...failedRun.binding, projectIncarnation: "9" } };
+    await openProject(page, language); await openList(page, language);
+    await expect(page.locator(".devices-table tbody tr")).toHaveCount(3);
+    await expect(page.locator("[data-system2-result]")).toHaveCount(0);
+    expect(state.unexpected).toEqual([]);
+  });
+}
+
+for (const language of ["en", "de"] as const) {
+  const m = language === "en" ? en : de;
+  test(`${language} stale programming marks stay visible and retryable outside the device list`, async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 850 });
+    const state = await intercept(page, language);
+    state.system2 = { ...failedRun, state: "running", downloadResult: "inProgress", projectSettlement: "notRecorded" };
+    await openProject(page, language); await openList(page, language);
+    await page.locator(".tree-label", { hasText: "1.1.2 Dimmer kitchen" }).click();
+    await expect(page.locator(".devices-workspace")).toBeHidden();
+    const hiddenReads = state.system2Reads;
+    await expect.poll(() => state.system2Reads, { timeout: 15_000 }).toBeGreaterThan(hiddenReads + 1);
+    state.tree = fixtureTree(pending(true, true, true, true), 2);
+    state.failProjectReads = 1;
+    state.system2 = failedRun;
+    const notice = page.locator(".workbench-center > [data-system2-belief='stale']");
+    await expect(notice).toBeVisible();
+    await expect(notice).toContainText(m["system2.belief.stale"]);
+    await capture(page, `system2-root-stale-${language}`);
+    await notice.getByRole("button", { name: m["system2.belief.retry"], exact: true }).click();
+    await expect(page.locator("[data-system2-belief]")).toHaveCount(0);
+    await openList(page, language);
+    await expect(page.locator(".devices-table tbody tr").filter({ hasText: "Dimmer kitchen" }).locator(".programming-chip")).toHaveCount(4);
+    expect(state.unexpected).toEqual([]);
+  });
+  test(`${language} a System-2 run that ends while the table is hidden is settled, reloaded and shown on return`, async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 850 });
+    const state = await intercept(page, language);
+    state.system2 = { ...failedRun, state: "running", downloadResult: "inProgress", projectSettlement: "notRecorded" };
+    await openProject(page, language); await openList(page, language);
+    const kitchen = () => page.locator(".devices-table tbody tr").filter({ hasText: "Dimmer kitchen" });
+    await expect(kitchen().locator(".programming-chip")).toHaveCount(2);
+    await expect(page.locator("[data-system2-result]")).toHaveCount(0);
+    // Leave the table (open the editor); the application-level owner keeps following the run.
+    await page.locator(".tree-label", { hasText: "1.1.2 Dimmer kitchen" }).click();
+    await expect(page.locator(".devices-workspace")).toBeHidden();
+    // With the table hidden, only the application-level owner can still be reading the status.
+    const hiddenReads = state.system2Reads;
+    await expect.poll(() => state.system2Reads, { timeout: 15_000 }).toBeGreaterThan(hiddenReads + 1);
+    // The run ends; the server has settled the marks (all memory parts pending now).
+    state.tree = fixtureTree(pending(true, true, true, true), 2);
+    state.system2 = { ...failedRun, projectSettlement: "persisted" };
+    const endedAt = state.system2Reads;
+    await expect.poll(() => state.system2Reads, { timeout: 15_000 }).toBeGreaterThan(endedAt);
+    await openList(page, language);
+    await expect(page.locator("[data-system2-belief]")).toHaveCount(0);
+    await expect(kitchen().locator("[data-system2-result]")).toHaveAttribute("data-system2-result", "transferCompleteVerificationUnfinished");
+    await expect(kitchen().locator(".programming-chip")).toHaveCount(4);
+    expect(state.unexpected).toEqual([]);
+    void m;
   });
 }

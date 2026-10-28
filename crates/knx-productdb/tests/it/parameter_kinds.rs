@@ -7,7 +7,8 @@
 //! scan): `TypeRestriction` 20,759, `TypeNumber` 4,153, `TypePicture` 1,118,
 //! `TypeFloat` 579, `TypeText` 554, `TypeColor` 115, `TypeNone` 87,
 //! `TypeIPAddress` 19, `TypeTime` 17, `TypeRawData` 3. Before PDB-9
-//! `TypeColor` and `TypeTime` fell into the `Other` bucket. The fixture
+//! `TypeColor` and `TypeTime` fell into the `Other` bucket; before WP-08
+//! (v29) `TypeDate` (2 programs of a later collection) did. The fixture
 //! below is synthetic; attribute *shapes* follow the corpus, values do not
 //! copy any manufacturer's data.
 
@@ -74,6 +75,9 @@ const PROGRAM: &str = r#"<?xml version="1.0" encoding="utf-8"?>
               </ParameterType>
               <ParameterType Id="PT-Color2" Name="accent">
                 <TypeColor Space="HSV" />
+              </ParameterType>
+              <ParameterType Id="PT-Date" Name="service date">
+                <TypeDate Encoding="DPT 11" />
               </ParameterType>
             </ParameterTypes>
             <Parameters />
@@ -179,6 +183,11 @@ fn every_observed_parameter_kind_is_stored_as_its_own_kind() {
         ("Time".into(), Some(16), None, s("0"), s("3600"), None),
         "TypeTime keeps its size and integer bounds, like TypeNumber"
     );
+    assert_eq!(
+        type_row(&conn, "PT-Date"),
+        ("Date".into(), None, None, None, None, None),
+        "TypeDate is its own kind (WP-08), not the Other bucket"
+    );
     let other: i64 = conn
         .query_row(
             "SELECT count(*) FROM parameter_type WHERE kind = 'Other'",
@@ -219,6 +228,7 @@ fn unmodelled_parameter_kind_attributes_are_reported_not_dropped() {
     reported("TypeColor", "Space", "RGB");
     reported("TypeTime", "Unit", "Seconds");
     reported("TypeTime", "UIHint", "Duration_hhmmss");
+    reported("TypeDate", "Encoding", "DPT 11");
     assert!(
         !rows
             .iter()

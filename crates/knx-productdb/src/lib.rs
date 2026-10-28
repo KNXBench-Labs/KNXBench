@@ -15,6 +15,7 @@ pub mod catalogue_sources;
 mod catalogue_schema;
 pub mod cleanup;
 pub mod code;
+mod date_kind_backfill;
 pub mod declared_segments;
 pub mod device_evaluation;
 pub mod download_plan;

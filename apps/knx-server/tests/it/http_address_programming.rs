@@ -506,7 +506,9 @@ async fn a_blocking_address_settler_leaves_tunnel_tasks_running() {
         },
         on_end,
     );
-    session.join().await;
+    tokio::time::timeout(Duration::from_secs(10), session.join())
+        .await
+        .expect("the programming ended");
     ticker.abort();
     assert!(
         matches!(

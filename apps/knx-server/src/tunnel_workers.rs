@@ -10,16 +10,16 @@
 //! `block_in_place`, which hands the worker's other tasks to a fresh worker
 //! while the blocking code runs here, in order.
 //!
-//! Two shapes, chosen by who may cancel the work:
+//! Two shapes, chosen by who may cancel the work and how much must run there:
 //!
 //! * [`off_tunnel_workers`] runs a whole future there. For owned worker tasks
 //!   that nothing cancels by dropping them (System-2 executors, the ordinary
 //!   download task): while it runs, the future is not polled from outside.
 //! * [`blocking_off_tunnel_workers`] runs one synchronous step there. For a
 //!   request handler whose future must stay cancellable at its other await
-//!   points (the service-control backup callback), or for the one durable
-//!   step of a task whose protocol future runs normally (the
-//!   individual-address settler, which saves the project before disconnect).
+//!   points (the service-control backup callback), or where only one durable
+//!   step of an owned task needs it (the individual-address settler, which
+//!   may save the project before disconnect).
 //!
 //! A current-thread runtime has no second thread; both keep the inline path.
 

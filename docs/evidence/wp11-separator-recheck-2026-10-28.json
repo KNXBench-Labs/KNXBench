@@ -82,7 +82,7 @@
           "focused": true
         }
       ],
-      "heightPersistence": "settings readback matches every announced width",
+      "persistence": "settings readback matches every announced width",
       "pointerAwayCropSha256": "c4c4b95776a80bf7dd14328e585f46975d716d9ebdcf82fa4494545824d15a7e",
       "keyboardCropSha256": "c4c4b95776a80bf7dd14328e585f46975d716d9ebdcf82fa4494545824d15a7e"
     },
@@ -114,7 +114,7 @@
           "focused": true
         }
       ],
-      "heightPersistence": "settings readback matches every announced width",
+      "persistence": "settings readback matches every announced width",
       "pointerAwayCropSha256": "c4c4b95776a80bf7dd14328e585f46975d716d9ebdcf82fa4494545824d15a7e",
       "keyboardCropSha256": "c4c4b95776a80bf7dd14328e585f46975d716d9ebdcf82fa4494545824d15a7e"
     },
@@ -166,7 +166,7 @@
           "focused": true
         }
       ],
-      "heightPersistence": "not applicable; component state only",
+      "persistence": "not applicable; component state only",
       "pointerAwayCropSha256": "13bed7b4cb2be38cc1747608148153b001053bb3d16a47c8597594c8aada1de5",
       "keyboardCropSha256": "13bed7b4cb2be38cc1747608148153b001053bb3d16a47c8597594c8aada1de5"
     },
@@ -198,7 +198,7 @@
           "focused": true
         }
       ],
-      "heightPersistence": "not applicable; component state only",
+      "persistence": "not applicable; component state only",
       "pointerAwayCropSha256": "13bed7b4cb2be38cc1747608148153b001053bb3d16a47c8597594c8aada1de5",
       "keyboardCropSha256": "13bed7b4cb2be38cc1747608148153b001053bb3d16a47c8597594c8aada1de5"
     },
@@ -270,7 +270,7 @@
           "focused": true
         }
       ],
-      "heightPersistence": "settings readback matches every announced width",
+      "persistence": "settings readback matches every announced width",
       "pointerAwayCropSha256": "bd9375955660635207a2412dd37deb137156b7a87d3ad99399ec06b10f92caa6",
       "keyboardCropSha256": "bd9375955660635207a2412dd37deb137156b7a87d3ad99399ec06b10f92caa6"
     },
@@ -322,7 +322,7 @@
           "focused": true
         }
       ],
-      "heightPersistence": "not applicable; component state only",
+      "persistence": "not applicable; component state only",
       "pointerAwayCropSha256": "370deb4a84bd95ee902423cc77d74f746e20ad824b89722b46d8f3b30c6f9a78",
       "keyboardCropSha256": "370deb4a84bd95ee902423cc77d74f746e20ad824b89722b46d8f3b30c6f9a78"
     },
@@ -354,7 +354,7 @@
           "focused": true
         }
       ],
-      "heightPersistence": "settings readback matches every announced width",
+      "persistence": "settings readback matches every announced width",
       "pointerAwayCropSha256": "bd9375955660635207a2412dd37deb137156b7a87d3ad99399ec06b10f92caa6",
       "keyboardCropSha256": "bd9375955660635207a2412dd37deb137156b7a87d3ad99399ec06b10f92caa6"
     },
@@ -386,7 +386,7 @@
           "focused": true
         }
       ],
-      "heightPersistence": "not applicable; component state only",
+      "persistence": "not applicable; component state only",
       "pointerAwayCropSha256": "370deb4a84bd95ee902423cc77d74f746e20ad824b89722b46d8f3b30c6f9a78",
       "keyboardCropSha256": "370deb4a84bd95ee902423cc77d74f746e20ad824b89722b46d8f3b30c6f9a78"
     },
@@ -458,7 +458,7 @@
           "focused": true
         }
       ],
-      "heightPersistence": "settings readback matches every announced width",
+      "persistence": "settings readback matches every announced width",
       "pointerAwayCropSha256": "3c85088443c2895baadbc11fd9323460ffabf7db8904b5e21f45c2843004e980",
       "keyboardCropSha256": "3c85088443c2895baadbc11fd9323460ffabf7db8904b5e21f45c2843004e980"
     },
@@ -510,7 +510,7 @@
           "focused": true
         }
       ],
-      "heightPersistence": "not applicable; component state only",
+      "persistence": "not applicable; component state only",
       "pointerAwayCropSha256": "db2057577dc4b4ff65c2a71072a659ae45e69ff19b9acf71b5b8e68427ae2182",
       "keyboardCropSha256": "db2057577dc4b4ff65c2a71072a659ae45e69ff19b9acf71b5b8e68427ae2182"
     },
@@ -542,7 +542,7 @@
           "focused": true
         }
       ],
-      "heightPersistence": "settings readback matches every announced width",
+      "persistence": "settings readback matches every announced width",
       "pointerAwayCropSha256": "3c85088443c2895baadbc11fd9323460ffabf7db8904b5e21f45c2843004e980",
       "keyboardCropSha256": "3c85088443c2895baadbc11fd9323460ffabf7db8904b5e21f45c2843004e980"
     },
@@ -574,7 +574,7 @@
           "focused": true
         }
       ],
-      "heightPersistence": "not applicable; component state only",
+      "persistence": "not applicable; component state only",
       "pointerAwayCropSha256": "db2057577dc4b4ff65c2a71072a659ae45e69ff19b9acf71b5b8e68427ae2182",
       "keyboardCropSha256": "db2057577dc4b4ff65c2a71072a659ae45e69ff19b9acf71b5b8e68427ae2182"
     }

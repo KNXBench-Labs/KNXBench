@@ -90,7 +90,9 @@ immediately after selecting text elsewhere; all post-drag selections are empty.
 Width settings match each announced value. Pointer-away focus crops show the
 accent outline, byte-identical to native keyboard-refocus controls; this is an
 observed appearance, not a keyboard-only ring policy assertion. The historical
-pre-fix defect remains recorded, but the named re-check is no longer open.
+pre-fix defect remains recorded; the bounded drag-after-selection trigger check
+passes. This sequence is not a replay of the exact original +100 then −5
+sequence with a live selection before the small return drag.
 Properties-pane drags, other sizes/themes and the wider native matrix remain
 untested; no ledger row is closed.
 

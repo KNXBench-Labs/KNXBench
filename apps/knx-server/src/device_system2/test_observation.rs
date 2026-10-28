@@ -6,7 +6,7 @@ use serde_json::{json, Value};
 use std::{io, io::Read, path::PathBuf};
 
 #[derive(Default)]
-pub(super) struct Observation(Mutex<Snapshot>);
+pub(super) struct Observation(Mutex<Snapshot>, Mutex<Option<&'static str>>);
 #[derive(Default)]
 struct Snapshot {
     kind: Option<&'static str>,
@@ -81,6 +81,10 @@ impl Observation {
             }
         });
     }
+    /// Test-only: the worker panics when it reaches this phase (an unexpected task end).
+    pub(super) fn arm_panic(&self, phase: &'static str) {
+        *self.1.lock().unwrap() = Some(phase);
+    }
     pub(super) fn phase(&self, phase: &'static str) {
         self.update(|s| {
             s.phase = Some(phase);
@@ -88,6 +92,9 @@ impl Observation {
                 s.executor_entry = s.started.map(|start| start.elapsed());
             }
         });
+        if *self.1.lock().unwrap() == Some(phase) {
+            panic!("armed test panic at phase {phase}");
+        }
     }
     pub(super) fn memory_read(&self, marker: knx_net::management::MemoryReadObservation) {
         let now = std::time::Instant::now();

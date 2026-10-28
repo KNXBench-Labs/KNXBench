@@ -335,6 +335,24 @@ same operation is not retried, and a new operation starts with no diagnostic.
 Keep the private journal, which still holds the raw prefix, and do not post it.
 [Contract](../../contracts/system2-safe-failure-diagnostic.md).
 
+### What an ended experimental run proves (issue #31)
+
+The Result line of the System-2 panel is derived from the retained operation record
+only. "All planned transfer steps finished, but the final verification step did not
+finish" means exactly that: the device is **not** confirmed loaded, and the record does
+not say whether the check found a difference or could not read. Only a run whose final
+verification finished is "verified". A run that may have written makes the project's Application,
+Parameters and Group-address marks pending; only a verified run on an unchanged project and source
+marks them programmed again (the panel shows what happened to the marks). In the device
+table the same fact appears as a small dashed "S2" chip beside the pending marks (EN/DE,
+with a tooltip). It appears only for the project, server and device the run was bound to,
+and is starred once the project was edited afterwards.
+
+**Save report** writes a small local JSON file (counts and closed facts, no address,
+name, parameters, backup bytes or paths). Check it, then email it to issue@knxbench.com
+or attach it to an issue. It is experimental evidence, not a compatibility claim.
+[Contract](../../contracts/system2-download-result.md).
+
 ### More patient experimental waits (source builds after Alpha 17)
 
 The experimental hardware path uses longer bounded waits: 10 seconds for each

@@ -12,6 +12,17 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## System-2 result and project-belief integration (28 October 2026 source)
+
+Feature `d52ee440e` connects experimental results, retained-operation reports
+and automatic programming-belief settlement without sharing the ordinary
+memory executor. Unknown/final-step failures stay distinct from verified runs;
+recovery keeps its own outcome, and the global stale-mark notice survives view
+switches. Independent correction review approved; final focused unit104 and
+Chromium12 passed. [Maintained package acceptance and exact boundaries](status/2026-10-28-system2-result-integration.md)
+are tracked separately. The physical allocation mismatch in #30/#22 stays open;
+no release, device retry or hardware-support claim follows.
+
 ## Legacy long-enum binary storage and authenticated backfill (28 October 2026 source)
 
 Published main-first `6dbdaf8b9` after independent Opus correction approval.

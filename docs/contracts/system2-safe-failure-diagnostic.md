@@ -114,3 +114,8 @@ pointer-read observation exists for the failed run, not that a pointer read caus
 No retry, resume or automatic restore follows a diagnosis. Recovery stays explicit and
 once-only. No live-bus or hardware evidence backs this projection; it is tested on
 hardware-kind simulated transports only.
+
+## Later versions
+
+Status schema 3 adds the journal-derived `downloadResult`; the report for an ended run is
+a separate kind. See [System-2 download result](system2-download-result.md).

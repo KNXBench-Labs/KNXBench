@@ -2,6 +2,20 @@
 
 # Implementation status
 
+## Source implementation after Alpha 17: System-2 results and reports
+
+The experimental System-2 path now distinguishes completed transfer steps from
+an unfinished final check, preserves download and recovery results separately,
+and can save a privacy-safe report of an ended retained operation without a new
+bus read. Automatic project settlement uses the normal persistence/history
+boundary: uncertain writes make memory parts pending; only verified results
+whose exact preparation/source is still current can clear programming marks.
+A central notice and explicit reload retry identify stale displayed marks even
+outside the Download tab or Devices table. This is source functionality, not an
+updated Alpha 17 image or a new hardware-support claim.
+[Workflow](user-guide/05-devices-and-products.md) ·
+[Evidence and retained limits](../status/2026-10-28-system2-result-integration.md).
+
 ## Alpha 17 — current published pre-release
 
 Alpha 17 (`v0.1.0-alpha.17`, source cutoff `20ab2f7ea`) is published as a

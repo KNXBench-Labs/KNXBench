@@ -15,6 +15,17 @@ Publication is verified at immutable `a9ea32d72364478b25e158d0b95465af7a4702df`
 ([public verification record](evidence/release-alpha17-2026-10-26.json)).
 Work merged on main after `20ab2f7ea` belongs to the next alpha.
 
+## System-2 result integration after Alpha 17
+
+The source implementation connects experimental result/report presentation and
+project-belief settlement without merging the two protocol executors. A verified
+run needs current source/preparation evidence before clearing marks; uncertain
+writes invalidate memory-part beliefs outside undo. Application-level status
+ownership and a global stale-mark notice survive navigation. Reports of ended
+retained operations require no new bus contact. [Scope and software acceptance](status/2026-10-28-system2-result-integration.md).
+The allocation mismatch in #30/#22, per-part source equivalence and physical
+acceptance remain separate; no Alpha 17 image or device retry is implied.
+
 ## Legacy binary enumeration retention after Alpha 17
 
 [WP-03](open-work/WP-03-legacy-binary-enumerations.md) is implemented in source:

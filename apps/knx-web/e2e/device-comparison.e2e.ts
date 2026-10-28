@@ -68,6 +68,7 @@ async function intercept(page: Page, language: "en" | "de", mode: "normal" | "bu
     else if (path === "/api/bus/discover" && method === "POST") body = { interfaces: [] };
     else if (path === "/api/product-languages" && method === "GET") body = [];
     else if (["/api/device-download/status", "/api/device-address/status"].includes(path) && method === "GET") { status = 404; body = { error: "no active operation" }; }
+    else if (path === "/api/device-system2/status" && method === "GET") body = null;
     else if (path === "/api/devices" && method === "GET") body = { schemaVersion: 1, serverIncarnation: "comparison-browser",
       snapshotRevision: state.tree.snapshot_revision, devices: [] };
     else if (path === "/api/undo" && method === "POST") {

@@ -3,13 +3,14 @@ use super::*;
 use dto::{Recover, Start};
 use knx_app::{
     commissioning_activity::{DownloadGuard, DownloadResult, Restart, Written},
-    property_validation::{OperationStore, System2OperationLease},
+    property_validation::{OperationProgress, OperationStore, System2OperationLease},
     property_validation_bundle::PreparedBundle,
     system2_validation_preparation::{self as app, CurrentProjectHardware},
 };
 use knx_net::{
     ApplicationService, BusError, Destination, ManagementTransport, Tpci, TunnelAckWait,
 };
+use settlement::Run;
 use std::{net::SocketAddrV4, sync::atomic::Ordering};
 
 use crate::tunnel_workers::off_tunnel_workers;
@@ -270,11 +271,147 @@ fn finish_activity(activity: Activity, result: bool, clean: bool) {
         let _ = guard.record_cleanup(clean);
     }
 }
+/// Terminal project-belief settlement on the blocking pool: the project lock, catalogue read
+/// and durable persistence never run on a runtime worker.
+async fn settle_off_runtime(
+    state: &SharedState,
+    meta: &Metadata,
+    progress: OperationProgress,
+    run: Run,
+    bundle: Option<PreparedBundle>,
+) -> Receipt {
+    let copy = state.clone();
+    let meta = meta.clone();
+    tokio::task::spawn_blocking(move || {
+        settlement::settle(&copy, &meta, &progress, run, |project, device| {
+            bundle.as_ref().is_some_and(|bundle| {
+                copy.product_db.as_ref().is_some_and(|owner| {
+                    owner
+                        .with_read(|conn| {
+                            Ok::<_, std::convert::Infallible>(
+                                app::admit_current_project_hardware(conn, project, device, bundle)
+                                    .is_ok(),
+                            )
+                        })
+                        .ok()
+                        .and_then(Result::ok)
+                        .unwrap_or(false)
+                })
+            })
+        })
+    })
+    .await
+    .unwrap_or(Receipt::Unavailable)
+}
 fn terminal(store: &OperationStore) -> LocalOutcome {
     match store.outcome() {
         LocalOutcome::Running | LocalOutcome::Restoring => LocalOutcome::Interrupted,
         outcome => outcome,
     }
+}
+
+/// Aborts the supervised worker if the supervisor itself is dropped (runtime shutdown), so a
+/// detached worker can never outlive the handle the service retains.
+struct AbortOnDrop(tokio::task::JoinHandle<()>);
+impl Drop for AbortOnDrop {
+    fn drop(&mut self) {
+        self.0.abort();
+    }
+}
+
+/// The retained service handle: ends only after the worker AND, on an unexpected end, the
+/// conservative terminal settlement, so no status is terminal before its belief is settled.
+pub(super) async fn supervised_download(
+    state: SharedState,
+    root: Arc<storage::Storage>,
+    preparation: Preparation,
+    body: Start,
+    gateway: SocketAddrV4,
+    lease: System2OperationLease,
+) {
+    let meta = preparation.metadata.clone();
+    let (copy, storage) = (state.clone(), root.clone());
+    let mut worker = AbortOnDrop(tokio::spawn(download(
+        state,
+        root,
+        preparation,
+        body,
+        gateway,
+        lease,
+    )));
+    if (&mut worker.0).await.is_err() {
+        unexpected_end(&copy, &storage, &meta, Run::Download).await;
+    }
+}
+
+/// Recovery counterpart of [`supervised_download`].
+pub(super) async fn supervised_recover(
+    state: SharedState,
+    root: Arc<storage::Storage>,
+    bundle: PreparedBundle,
+    store: OperationStore,
+    body: Recover,
+    gateway: SocketAddrV4,
+    lease: System2OperationLease,
+) {
+    let id = body.operation_id.clone();
+    let (copy, storage) = (state.clone(), root.clone());
+    let mut worker = AbortOnDrop(tokio::spawn(recover(
+        state, root, bundle, store, body, gateway, lease,
+    )));
+    if (&mut worker.0).await.is_err() {
+        match storage.metadata(&id) {
+            Ok(meta) => unexpected_end(&copy, &storage, &meta, Run::Recovery).await,
+            Err(_) => copy.device_system2.publish_end(
+                &id,
+                LocalOutcome::Interrupted,
+                Some(UNEXPECTED_END),
+                Some("system2WorkerEnded"),
+            ),
+        }
+    }
+}
+
+const UNEXPECTED_END: &str =
+    "The worker ended unexpectedly; the device state is uncertain. No automatic retry.";
+
+/// A panic or abort of the worker inside this process. Settles once, from the durable journal
+/// only (never a verified claim, since the run did not end under its own control), then
+/// publishes the end. A process crash or runtime shutdown cannot run this and promises
+/// nothing; GET, select and reopen never reach it.
+async fn unexpected_end(
+    state: &SharedState,
+    root: &Arc<storage::Storage>,
+    meta: &Metadata,
+    run: Run,
+) {
+    let (copy, storage, metadata) = (state.clone(), root.clone(), meta.clone());
+    let receipt = tokio::task::spawn_blocking(move || {
+        let progress = match storage.reopen(&metadata.operation_id) {
+            Ok((_, store)) => {
+                let mut progress = store.progress();
+                // Whatever the journal says, this run did not end by its own checkpoint.
+                if progress.outcome == LocalOutcome::Finished {
+                    progress.outcome = LocalOutcome::Interrupted;
+                }
+                progress
+            }
+            // Neither journal nor observed record can prove that nothing was written.
+            Err(_) => journalless(),
+        };
+        settlement::settle(&copy, &metadata, &progress, run, |_, _| false)
+    })
+    .await
+    .unwrap_or(Receipt::Unavailable);
+    state
+        .device_system2
+        .publish_settlement(&meta.operation_id, receipt);
+    state.device_system2.publish_end(
+        &meta.operation_id,
+        LocalOutcome::Interrupted,
+        Some(UNEXPECTED_END),
+        Some("system2WorkerEnded"),
+    );
 }
 
 pub(super) async fn download(
@@ -288,11 +425,12 @@ pub(super) async fn download(
     let id = preparation.metadata.operation_id.clone();
     let cancel = lease.cancel_token();
     observe!(state, begin(&preparation, &body.preparation_id));
+    let meta = preparation.metadata.clone();
     let result = download_inner(&state, root, preparation, body, gateway, &cancel).await;
     // The refusal kind is a stable token already on the error; keep it for the
     // volatile status, never the message. Journal and settlement are untouched.
-    let (outcome, clean, refusal) = match result {
-        Ok((outcome, clean)) => (outcome, clean, None),
+    let (outcome, clean, refusal, evidence) = match result {
+        Ok((outcome, clean, evidence)) => (outcome, clean, None, evidence),
         Err(error) => (
             if cancel.load(Ordering::SeqCst) {
                 LocalOutcome::Cancelled
@@ -301,8 +439,19 @@ pub(super) async fn download(
             },
             true,
             error.kind(),
+            None,
         ),
     };
+    // Once, before the status becomes terminal: the client that sees the end and reloads
+    // the project sees the settled belief. A refusal before any device contact has no
+    // evidence and so no mutation to settle.
+    let receipt = match evidence {
+        Some((progress, bundle)) => {
+            settle_off_runtime(&state, &meta, progress, Run::Download, Some(bundle)).await
+        }
+        None => Receipt::NoMutation,
+    };
+    state.device_system2.publish_settlement(&id, receipt);
     state.device_system2.publish_end(
         &id,
         outcome,
@@ -326,7 +475,14 @@ async fn download_inner(
     body: Start,
     gateway: SocketAddrV4,
     cancel: &std::sync::atomic::AtomicBool,
-) -> Result<(LocalOutcome, bool), ApiError> {
+) -> Result<
+    (
+        LocalOutcome,
+        bool,
+        Option<(OperationProgress, PreparedBundle)>,
+    ),
+    ApiError,
+> {
     observe!(state, phase("reservation"));
     let _guards = reserve(state).inspect_err(|_| {
         observe!(state, failure("reservation", "reservation-refused", None));
@@ -354,7 +510,11 @@ async fn download_inner(
         storage.create(&checked.metadata).map_err(|_error| {
             observe!(copy, failure("evidence-create", "io", Some(_error.kind())));
             refuse("system2EvidenceUnavailable")
-        })
+        })?;
+        // Provenance only: a missing sidecar reports "unknown", it never stops the run.
+        let _ = storage
+            .record_execution_build(&checked.metadata.operation_id, &crate::version_string());
+        Ok(())
     })
     .await
     {
@@ -518,8 +678,12 @@ async fn download_inner(
             LocalOutcome::Failed
         }
     });
+    let evidence = retained_store
+        .as_ref()
+        .zip(retained_admission.as_ref())
+        .map(|(store, admission)| (store.progress(), admission.bundle().clone()));
     finish_activity(activity, verified, clean);
-    Ok((outcome, clean))
+    Ok((outcome, clean, evidence))
 }
 
 // Keep original durable store and target independent of the current project.
@@ -657,6 +821,14 @@ pub(super) async fn recover(
     observe!(state, phase("end-publication"));
     let outcome = terminal(&store);
     let refusal = result.as_ref().err().and_then(ApiError::kind);
+    // A recovery never earns "programmed"; if it reached the device it invalidates memory beliefs.
+    let receipt = match root.metadata(&id) {
+        Ok(metadata) => {
+            settle_off_runtime(&state, &metadata, store.progress(), Run::Recovery, None).await
+        }
+        Err(_) => Receipt::Unavailable,
+    };
+    state.device_system2.publish_settlement(&id, receipt);
     state.device_system2.publish_end(&id, outcome, if matches!(result, Ok(true)) { None } else { Some("Recovery did not complete with confirmed teardown; inspect the original retained operation. No automatic retry.") }, refusal);
     // Release original store/bundle ownership only AFTER actual IP teardown.
     // Immutable evidence stays on disk; no timeout/HTTP/component can erase it.

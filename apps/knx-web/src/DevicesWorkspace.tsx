@@ -13,6 +13,8 @@ import { useProductLanguage } from "./productLanguage";
 import { useUiLanguage } from "./uiLanguage";
 import { fellBack, LanguageFallbackBadge } from "./languageFallback";
 import { createProgrammingChips } from "./ProgrammingChips";
+import { refreshSystem2Status, useSystem2Status } from "./system2Status";
+import { matchSystem2Result } from "./system2Result";
 import { useDeviceComparisons } from "./useDeviceComparisons";
 import DeviceComparisonDialog, { ComparisonTag } from "./DeviceComparisonDialog";
 import "./deviceComparisons.css";
@@ -64,6 +66,16 @@ export default function DevicesWorkspace({ tree, active, selection, multiSelecti
   const [language] = useUiLanguage();
   const programmingChips = useMemo(() => createProgrammingChips(t, language), [t, language]);
   const [productLanguage] = useProductLanguage();
+  // The panel's status lifetime is shared: no per-row request and no table-owned polling.
+  // A visit and an explicit catalogue refresh each ask for one coalesced read; a newer
+  // publication from the panel (start, terminal, recovery) supersedes any older read.
+  const system2Snapshot = useSystem2Status();
+  const system2Status = system2Snapshot.status;
+  const [refresh, setRefresh] = useState(0);
+  useEffect(() => {
+    if (active) void refreshSystem2Status();
+  }, [active, refresh, tree.server_incarnation, tree.project_incarnation]);
+  const system2Result = useMemo(() => matchSystem2Result(system2Status, tree, system2Snapshot.authority), [system2Status, tree, system2Snapshot.authority]);
   const [query, setQuery] = useState("");
   const [pendingOnly, setPendingOnly] = useState(false);
   // Do not build thousands of hidden chip nodes on project open. Once
@@ -74,7 +86,6 @@ export default function DevicesWorkspace({ tree, active, selection, multiSelecti
   const [metadata, setMetadata] = useState<{ tree: ProjectTree; language: string | null; rows: DeviceCatalogRow[] } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [refresh, setRefresh] = useState(0);
   useEffect(() => {
     if (!active) return;
     let disposed = false;
@@ -91,10 +102,16 @@ export default function DevicesWorkspace({ tree, active, selection, multiSelecti
     return () => { disposed = true; };
   }, [active, tree, productLanguage, refresh]);
   const currentMetadata = metadata?.tree === tree && metadata.language === productLanguage ? metadata.rows : [];
-  const rows = useMemo(() => visibleDeviceRows(projectDeviceRows(tree, currentMetadata), query, sort, language, { pendingOnly, systemText }),
-    [tree, metadata, productLanguage, query, sort, language, pendingOnly, t]);
+  const rows = useMemo(() => visibleDeviceRows(projectDeviceRows(tree, currentMetadata), query, sort, language, { pendingOnly, systemText, system2Text, system2Rank }),
+    [tree, metadata, productLanguage, query, sort, language, pendingOnly, t, system2Result]);
   const visibleOrder = rows.map((row) => row.id);
   const total = useMemo(() => projectDeviceRows(tree, currentMetadata).length, [tree, metadata, productLanguage]);
+  /** The visible, localized System-2 chip text of the one bound row (searchable). */
+  function system2Text(row: DeviceListRow): string {
+    if (!system2Result || row.id !== system2Result.deviceId) return "";
+    return `${t(`devices.system2.short.${system2Result.result}`)} ${t(`system2.result.${system2Result.result}`)}`;
+  }
+  function system2Rank(row: DeviceListRow): number { return system2Result && row.id === system2Result.deviceId ? 1 : 0; }
   /** The declared family (WP-20); an unresolved product, or a row without metadata, shows why like its siblings. */
   function systemText(row: DeviceListRow): string {
     const label = row.catalog ? systemLabel(row.catalog.system) : null;
@@ -122,6 +139,7 @@ export default function DevicesWorkspace({ tree, active, selection, multiSelecti
       <button type="button" disabled={comparisons.running || rows.length === 0} onClick={() => comparisons.open(rows)}>{t("compare.all")}</button>
     </div>
     {loading && <p role="status"><span className="task-status-text">{t("devices.loading")}</span></p>}
+    {system2Snapshot.failed && <p className="field-error" role="status" data-system2-read-failed>{t("devices.system2.readFailed")}</p>}
     {error && <p className="field-error" role="alert">{t("devices.catalogueFailed", { reason: error })}</p>}
       <ResizableTable scrollClassName="workspace-table-wrap devices-table-scroll" scrollLabel={t("devices.table")} tableId="devices"
         columns={DEVICES_COLUMNS} className="workspace-table devices-table"><thead><tr>
@@ -142,7 +160,7 @@ export default function DevicesWorkspace({ tree, active, selection, multiSelecti
           onChange={() => onItemClick(CHECKBOX_CLICK, "device", row.id, { kind: "device", id: row.id }, visibleOrder)} /></td>
         <td className="mono"><button className="table-select" onClick={(event) => onItemClick(event, "device", row.id, { kind: "device", id: row.id }, visibleOrder, true)}>{row.address ?? t("workbench.unassigned")}</button></td>
         <td><button className="table-select" onClick={(event) => onItemClick(event, "device", row.id, { kind: "device", id: row.id }, visibleOrder, true)}>{row.name}</button></td>
-        <td>{programmingMounted ? programmingChips(row) : null}</td>
+        <td>{programmingMounted ? programmingChips(row, row.id === system2Result?.deviceId ? system2Result : null) : null}</td>
         <td>{row.catalog?.manufacturerName ?? row.catalog?.manufacturerId ?? resolution(row)}</td>
         <td>{row.catalog?.productText ?? resolution(row)}
           {productLanguage && fellBack(row.catalog?.productText, row.catalog?.productTextLanguage)

@@ -7,6 +7,7 @@ import type { DeviceNode } from "./bindings/DeviceNode";
 import { useTranslate, type Translate } from "./i18n";
 import { useUiLanguage } from "./uiLanguage";
 import { PART_LABELS, pendingParts, type ProgrammingPart } from "./programmingState";
+import type { System2ResultView } from "./system2Result";
 
 const listFormats = new Map<string, Intl.ListFormat>();
 
@@ -25,20 +26,38 @@ export function createProgrammingChips(t: Translate, language: string) {
   // Four booleans plus unknown: at most seventeen entries, owned by this
   // table/locale. Reuse the immutable element too, so unrelated updates do
   // not reconcile and translate every identical chip subtree again.
+  // A System-2 result adds at most 6 results x 2 edited flags per pending state, still bounded.
   const views = new Map<string, ReturnType<typeof programmingChipView>>();
-  return (device: Pick<DeviceNode, "pending_programming">) => {
-    const key = device.pending_programming ? pendingParts(device).join(" ") : "unknown";
+  return (device: Pick<DeviceNode, "pending_programming">, system2: System2ResultView | null = null) => {
+    const pending = device.pending_programming ? pendingParts(device).join(" ") : "unknown";
+    const key = system2 ? `${pending}|${system2.result}|${system2.edited}` : pending;
     let view = views.get(key);
     if (!view) {
-      view = programmingChipView(device, t, language);
+      view = programmingChipView(device, t, language, system2);
       views.set(key, view);
     }
     return view;
   };
 }
 
+/** The retained System-2 run's journal fact beside the project's own marks; never replaces them. */
+function system2Chip(view: System2ResultView, t: Translate) {
+  const label = t("devices.system2.title", { result: t(`system2.result.${view.result}`) });
+  const text = view.edited ? `${label} ${t("devices.system2.edited")}` : label;
+  return <span className="programming-system2" data-system2-result={view.result} data-system2-edited={view.edited ? "true" : undefined}
+    title={text} role="img" aria-label={text}>
+    <span aria-hidden="true">{t(`devices.system2.short.${view.result}`)}{view.edited ? " *" : ""}</span>
+  </span>;
+}
+
 /** Device view cell: one chip per pending part, nothing visible when none is pending. */
-function programmingChipView(device: Pick<DeviceNode, "pending_programming">, t: Translate, language: string) {
+function programmingChipView(device: Pick<DeviceNode, "pending_programming">, t: Translate, language: string, system2: System2ResultView | null) {
+  const base = marksView(device, t, language);
+  if (!system2) return base;
+  return <span className="programming-cell">{base}{system2Chip(system2, t)}</span>;
+}
+
+function marksView(device: Pick<DeviceNode, "pending_programming">, t: Translate, language: string) {
   if (!device.pending_programming) {
     return <span className="programming-chips" data-state="unknown" role="img"
       aria-label={t("devices.programmingUnknown")} title={t("devices.programmingUnknown")}>—</span>;

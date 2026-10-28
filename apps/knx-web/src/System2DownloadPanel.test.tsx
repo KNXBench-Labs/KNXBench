@@ -3,7 +3,9 @@
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-const mock = vi.hoisted(() => ({ prepareSystem2: vi.fn(), getSystem2Status: vi.fn(), startSystem2: vi.fn(), cancelSystem2: vi.fn(), recoverSystem2: vi.fn() }));
+const mock = vi.hoisted(() => ({ prepareSystem2: vi.fn(), getSystem2Status: vi.fn(), startSystem2: vi.fn(), cancelSystem2: vi.fn(), recoverSystem2: vi.fn(), getSystem2Report: vi.fn() }));
+const saved = vi.hoisted(() => vi.fn());
+vi.mock("./localJsonDownload", () => ({ downloadLocalJson: saved }));
 const consent = vi.hoisted(() => ({ request: vi.fn() }));
 const ordinary = vi.hoisted(() => ({ discoverBusInterfaces: vi.fn(), planDeviceDownload: vi.fn(), startDeviceDownload: vi.fn() }));
 vi.mock("./system2DownloadApi", async (importOriginal) => ({
@@ -23,6 +25,7 @@ import type { ProjectTree } from "./bindings/ProjectTree";
 import type { BusDiscoveredInterface } from "./api";
 import { resetBusDiscoveryForTests } from "./busDiscovery";
 import { resetSettingsForTests } from "./settingsStore";
+import { resetSystem2StatusForTests } from "./system2Status";
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 const project: ProjectTree = { schema_version: 1, errors: 0, warnings: 0, can_undo: false, can_redo: false, is_modified: false, group_address_style: "ThreeLevel", server_incarnation: "server", project_incarnation: 1,
   installations: [{ id: 0, name: "Test", buildings: [], group_addresses: [], group_ranges: [], unassigned: [], topology: [{ id: 1, name: "Area", address: 1, lines: [{ id: 2, name: "Line", address: 1, devices: [{id: 10, name: "Configured button", address: "1.1.67", description: null, com_object_count: 0 }] }] }] }] };
@@ -43,7 +46,7 @@ async function confirmations() {
   await act(async () => { select.value = "knxbenchBestEffort"; select.dispatchEvent(new Event("change", {bubbles:true})); });
 }
 beforeEach(() => {
-  vi.clearAllMocks(); window.localStorage.clear(); resetSettingsForTests(); resetBusDiscoveryForTests();
+  vi.clearAllMocks(); window.localStorage.clear(); resetSettingsForTests(); resetBusDiscoveryForTests(); resetSystem2StatusForTests();
   mock.getSystem2Status.mockResolvedValue(null); mock.prepareSystem2.mockResolvedValue(preview); mock.startSystem2.mockResolvedValue(status);
   mock.cancelSystem2.mockResolvedValue({ ...status, state: "cancelled" }); consent.request.mockResolvedValue(true);
   ordinary.discoverBusInterfaces.mockResolvedValue({ interfaces: [] });
@@ -338,4 +341,91 @@ it("renders diagnostics without enabling retry or changing recovery", async () =
   expect(host.querySelector("[data-system2-recover]")).toBeNull();
   mock.getSystem2Status.mockResolvedValue(restoreFailedStatus); await click("[data-system2-refresh]");
   expect(host.querySelectorAll("[data-system2-recovery]")).toHaveLength(3); expect(host.querySelector<HTMLButtonElement>("[data-system2-recover]")!.disabled).toBe(true);
+});
+
+// Issue #31: an ended run is explained from the journal facts and its report can be saved.
+const unfinished = { ...recoveryStatus, state: "failed" as const, completedSteps: 26, totalSteps: 27, downloadResult: "transferCompleteVerificationUnfinished" as const };
+const reportBody = { format: 1, kind: "knxbench-system2-download-summary", support: "EXPERIMENTAL BEST-EFFORT; HARDWARE COMPATIBILITY AND RECOVERY UNVERIFIED",
+  evidence: "local-journal-only", outcome: "failed", downloadResult: "transferCompleteVerificationUnfinished", mutationPossible: true,
+  completedSteps: 26, totalSteps: 27, prestateDiffers: false, failureDiagnostics: [] };
+it("explains transfer-complete-but-unverified runs without claiming a loaded device", async () => {
+  mock.getSystem2Status.mockResolvedValue(unfinished); await render();
+  const text = host.querySelector("[data-system2-result-text]")!.textContent!;
+  expect(text).toContain("final verification step did not finish"); expect(text).toContain("not confirmed loaded");
+  expect(host.querySelector("[data-system2-status]")!.textContent).not.toMatch(/nothing was written/i);
+});
+it("shows no result and no report while the operation is running", async () => {
+  mock.getSystem2Status.mockResolvedValue(status); await render();
+  expect(host.querySelector("[data-system2-result-text]")).toBeNull(); expect(host.querySelector("[data-system2-report-save]")).toBeNull();
+});
+it("saves the privacy-bounded report locally and points to the support address", async () => {
+  mock.getSystem2Status.mockResolvedValue(unfinished); mock.getSystem2Report.mockResolvedValue(reportBody); await render();
+  expect(host.querySelector("[data-system2-report-guidance]")!.textContent).toContain("issue@knxbench.com");
+  await click("[data-system2-report-save]");
+  expect(mock.getSystem2Report).toHaveBeenCalledExactlyOnceWith(unfinished.operationId);
+  expect(saved).toHaveBeenCalledExactlyOnceWith(JSON.stringify(reportBody, null, 2), "knxbench-system2-report.json");
+  const written = String(saved.mock.calls[0][0]);
+  for (const forbidden of [unfinished.address, unfinished.deviceName, unfinished.operationId, "Recover original", "192.0.2.1"]) expect(written).not.toContain(forbidden);
+  expect(host.querySelector("[data-system2-report-saved]")).not.toBeNull();
+});
+it("keeps a failed report request visible and saves nothing", async () => {
+  mock.getSystem2Status.mockResolvedValue(unfinished); mock.getSystem2Report.mockRejectedValue(new Error("refused"));
+  await render(); await click("[data-system2-report-save]");
+  expect(saved).not.toHaveBeenCalled(); expect(host.querySelector("[data-system2-report-failed]")).not.toBeNull();
+});
+it("drops a report that arrives after another operation was attached", async () => {
+  mock.getSystem2Status.mockResolvedValue(unfinished);
+  let release!: (value: unknown) => void; mock.getSystem2Report.mockReturnValue(new Promise((resolve) => { release = resolve; }));
+  await render(); await click("[data-system2-report-save]");
+  mock.getSystem2Status.mockResolvedValue({ ...unfinished, operationId: "e".repeat(32) });
+  await click("[data-system2-refresh]");
+  await act(async () => { release(reportBody); await Promise.resolve(); });
+  expect(saved).not.toHaveBeenCalled();
+});
+
+it("hands a settled terminal status to the shared lifecycle as a pending belief refresh, once", async () => {
+  const { getSystem2Snapshot, resetSystem2StatusForTests } = await import("./system2Status");
+  resetSystem2StatusForTests();
+  mock.getSystem2Status.mockResolvedValue({ ...status, downloadResult: "inProgress" });
+  await render();
+  expect(getSystem2Snapshot().belief).toBe("current");
+  mock.getSystem2Status.mockResolvedValue({ ...unfinished, projectSettlement: "persisted" });
+  await click("[data-system2-refresh]");
+  expect(getSystem2Snapshot()).toMatchObject({ belief: "refreshing", pendingKey: `${unfinished.operationId}:false` });
+  // The application-level lifecycle owns the one visible notice, not this disposable tab.
+  expect(host.querySelector("[data-system2-belief='refreshing']")).toBeNull();
+  expect(host.querySelector("[data-system2-settlement='persisted']")).not.toBeNull();
+});
+it("withdraws the shared authority when a known operation disappears or its read fails", async () => {
+  const { getSystem2Snapshot, resetSystem2StatusForTests } = await import("./system2Status");
+  resetSystem2StatusForTests();
+  mock.getSystem2Status.mockResolvedValue({ ...unfinished, downloadResult: "verified", state: "finished" });
+  await render();
+  expect(getSystem2Snapshot().authority).toBe("ok");
+  mock.getSystem2Status.mockResolvedValue(null); await click("[data-system2-refresh]");
+  expect(getSystem2Snapshot().authority).toBe("unavailable");
+});
+it("coalesces the panel poll with an already pending lifecycle read", async () => {
+  const { refreshSystem2Status, resetSystem2StatusForTests } = await import("./system2Status");
+  resetSystem2StatusForTests();
+  mock.getSystem2Status.mockResolvedValue(unfinished);
+  await render();
+  const before = mock.getSystem2Status.mock.calls.length;
+  let release!: (value: unknown) => void;
+  const pending = new Promise((resolve) => { release = resolve; });
+  mock.getSystem2Status.mockReturnValue(pending);
+  let read!: Promise<void>;
+  await act(async () => { read = refreshSystem2Status(); });
+  await click("[data-system2-refresh]");
+  const calls = mock.getSystem2Status.mock.calls.length;
+  await act(async () => { release(unfinished); await read; });
+  await flush();
+  expect(calls).toBe(before + 1);
+});
+it("keeps the download's counters apart from the recovery's and says the settlement failed visibly", async () => {
+  mock.getSystem2Status.mockResolvedValue({ ...unfinished, state: "restoreFailed", restoreAttempted: true, completedSteps: 2, totalSteps: 9,
+    downloadCompletedSteps: 26, downloadTotalSteps: 27, projectSettlement: "persistenceFailed" });
+  await render();
+  expect(host.querySelector("[data-system2-download-counts]")!.textContent).toContain("26 of 27");
+  expect(host.querySelector("[data-system2-settlement='persistenceFailed']")!.textContent).toContain("could NOT be saved");
 });

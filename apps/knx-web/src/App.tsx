@@ -44,6 +44,7 @@ import { DeviceNavigationProvider } from "./DeviceLink";
 import LogPanel, { type LogImportFocus } from "./LogPanel";
 import type { ImportFindingSeverity } from "./importFindings";
 import BusDiagnosticsPanel from "./BusDiagnosticsPanel";
+import System2Lifecycle from "./System2Lifecycle";
 import { publishProjectContext, rebasePublishedSessionContext } from "./busContext";
 import { ensureBusDiscovery } from "./busDiscovery";
 import { downloadHandoff as buildDownloadHandoff, type DownloadHandoff } from "./downloadHandoff";
@@ -1435,6 +1436,7 @@ function AppBody({ manifestVersion = packageVersion, session, editorReturn = fal
   const welcomeVisible = !tree && !logOpen && !monitorOpen && view !== "catalog";
   const centerWorkspace = (
     <div className="workbench-center">
+      {tree && <System2Lifecycle onTreeUpdate={handleTreeUpdate} />}
       {(monitorMounted || monitorOpen) && <div hidden={!monitorOpen}><BusDiagnosticsPanel active={monitorOpen} project={tree} onTreeUpdate={handleTreeUpdate} projectScope={flowProjectScope} onFlowNavigate={navigateFlow} downloadHandoff={downloadHandoff} /></div>}
       {logOpen ? <LogPanel tree={tree} refreshKey={logVersion} notifications={notifications} notificationDroppedCount={notificationDroppedCount} notificationTarget={logTarget} onNotificationTargetHandled={() => setLogTarget(null)} importFocus={logImportFocus} onImportFocusHandled={() => setLogImportFocus(null)} /> : monitorOpen ? null : view === "catalog" ? null : tree ? (
         view === "device" ? <section className="device-editor-view" aria-label={t("workbench.device")}>

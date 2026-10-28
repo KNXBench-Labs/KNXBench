@@ -1,8 +1,8 @@
-//! Typed PID 7 failure facts through the real worker, private journal, restart and status v2.
+//! Typed PID 7 failure facts through the real worker, private journal, restart and status v3.
 use super::*;
 
-/// The complete status v2 key set: version 1 keys plus `failureDiagnostics`.
-const STATUS_KEYS: [&str; 20] = [
+/// The complete status v3 key set: version 1 keys plus `failureDiagnostics`.
+const STATUS_KEYS: [&str; 25] = [
     "schemaVersion",
     "operationId",
     "binding",
@@ -23,6 +23,11 @@ const STATUS_KEYS: [&str; 20] = [
     "pointerObservations",
     "programVersionObservation",
     "failureDiagnostics",
+    "downloadResult",
+    "restoreAttempted",
+    "downloadCompletedSteps",
+    "downloadTotalSteps",
+    "projectSettlement",
 ];
 
 /// Raw status body: the parsed value would hide a duplicated key.
@@ -94,7 +99,7 @@ fn checked_raw(raw: &str, operation: &Path, raws: &[&str]) -> (Value, String) {
     let mut expected: Vec<_> = STATUS_KEYS.iter().map(|k| k.to_string()).collect();
     expected.sort();
     assert_eq!(keys, expected);
-    assert_eq!(status["schemaVersion"], 2);
+    assert_eq!(status["schemaVersion"], 3);
     (status, raw.to_owned())
 }
 /// Like `settled`, with a wider budget: a debug-build restore under load can outlast 10 s
@@ -218,7 +223,7 @@ async fn download_and_restore_refusals_reach_status_v2_across_restarts() {
     let preview = prepare(&router, device).await;
     let accepted_raw = raw_http(&router, "/api/device-system2/start", Some(start(&preview))).await;
     let accepted: Value = serde_json::from_str(&accepted_raw).unwrap();
-    assert_eq!(accepted["schemaVersion"], 2);
+    assert_eq!(accepted["schemaVersion"], 3);
     assert_eq!(
         accepted["failureDiagnostics"],
         json!([]),

@@ -1,6 +1,8 @@
 //! Regression assertions reserved for the single final integrated candidate.
 mod mounted_hardware;
 mod patient_wiring;
+mod settlement;
+mod system2_result;
 
 use super::dto::*;
 
@@ -67,7 +69,7 @@ async fn mounted_routes_are_authenticated_and_idle_is_null() {
     assert!(!state.device_system2.control.snapshot().accepting);
 }
 
-fn metadata() -> Metadata {
+pub(super) fn metadata() -> Metadata {
     Metadata {
         schema_version: 1,
         operation_id: "0123456789abcdef0123456789abcdef".into(),
@@ -139,6 +141,7 @@ async fn timeout_keeps_actual_task_and_busy_legacy_locks_cannot_escape_their_dea
         control_id: meta.operation_id,
         message: None,
         refusal: None,
+        settlement: crate::device_system2::settlement::Receipt::NotRecorded,
     });
     // Directly hold an admission lock: the ordinary drain's initial inspection
     // must itself be inside its bounded behavior, not wait before starting it.
@@ -238,6 +241,7 @@ fn settled_status(progress: knx_app::property_validation::OperationProgress) -> 
         control_id: meta.operation_id,
         message: None,
         refusal: None,
+        settlement: crate::device_system2::settlement::Receipt::NotRecorded,
     };
     serde_json::to_value(record.view()).unwrap()
 }
@@ -274,6 +278,7 @@ fn a_published_end_keeps_the_refusal_kind_of_the_worker() {
         control_id: meta.operation_id.clone(),
         message: None,
         refusal: None,
+        settlement: crate::device_system2::settlement::Receipt::NotRecorded,
     });
     let error = super::dto::refuse("gatewayBusy");
     assert_eq!(error.kind(), Some("gatewayBusy"));

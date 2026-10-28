@@ -48,8 +48,8 @@ pub(super) struct Preview {
     pub summary: knx_app::system2_validation_preparation::ConfiguredHardwarePreview,
 }
 /// Status output version; the private `Metadata` file and `Preview` stay at version 1.
-/// Version 2 added `failureDiagnostics`; old exact-version-1 clients refuse it.
-pub(super) const STATUS_SCHEMA_VERSION: u8 = 2;
+/// Version 2 added `failureDiagnostics`, version 3 `downloadResult`; older exact-version clients refuse it.
+pub(super) const STATUS_SCHEMA_VERSION: u8 = 3;
 /// The operation identity the status shows, without the private file's schema version, so
 /// the flattened status carries exactly one `schemaVersion` key.
 #[derive(Clone, Serialize)]
@@ -101,6 +101,17 @@ pub(super) struct Status {
     /// Typed, non-raw failure facts: at most one per run, download before restore.
     /// Never the private journal text; empty when none was recorded or it is unknown.
     pub failure_diagnostics: Vec<knx_app::property_validation::FailureDiagnostic>,
+    /// What the download run provably achieved, derived from the validated journal and
+    /// the plan. `verified` only after the final verification step finished; never a
+    /// loaded or clean claim about the project.
+    pub download_result: knx_app::property_validation::DownloadResult,
+    /// A recovery was started: `state`, `completedSteps` and `totalSteps` are then the recovery's.
+    pub restore_attempted: bool,
+    /// The download's own frozen counters, unaffected by a later recovery.
+    pub download_completed_steps: usize,
+    pub download_total_steps: Option<usize>,
+    /// What this process's terminal project settlement did; `notRecorded` after restart or reopen.
+    pub project_settlement: super::settlement::Receipt,
 }
 /// Source-model pointer versus device read: lower-case hex (eight digits, or four for a
 /// two-octet reply, never padded) or "refused".

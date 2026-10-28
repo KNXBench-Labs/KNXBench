@@ -604,3 +604,265 @@ fn genuine_pointer_observations_reuse_the_validated_original_snapshot() {
     assert_eq!(after, 0);
     assert_eq!(reopened.progress().pointer_observations.len(), 4);
 }
+
+// Journal-only derivation of the download result: no message, count or free text is read.
+mod download_result {
+    use super::*;
+    use crate::property_validation::{DownloadResult, LocalOutcome};
+
+    fn failed() -> Checkpoint {
+        Checkpoint::Failed {
+            code: crate::property_validation::FailureCode::IdentityOrRecovery,
+            local_diagnostic: "private text that must never decide anything".into(),
+            pointer_failure: None,
+        }
+    }
+
+    /// Journal with `finished` completed steps, optionally the next one started, then `end`.
+    fn run(
+        dir: &std::path::Path,
+        bundle: &PreparedBundle,
+        acquired: bool,
+        finished: usize,
+        started_next: bool,
+        end: Option<Checkpoint>,
+    ) -> OperationStore {
+        let mut store = OperationStore::create(dir, bundle.binding.clone()).unwrap();
+        if acquired {
+            let recovery = recovery_store(&dir.with_extension("seed"), bundle)
+                .recovery()
+                .unwrap()
+                .clone();
+            store
+                .checkpoint(Checkpoint::RecoveryAcquired { recovery })
+                .unwrap();
+        }
+        for index in 0..finished {
+            store
+                .checkpoint(Checkpoint::StepStarted {
+                    index,
+                    mutation: acquired,
+                })
+                .unwrap();
+            store
+                .checkpoint(Checkpoint::StepFinished { index })
+                .unwrap();
+        }
+        if started_next {
+            store
+                .checkpoint(Checkpoint::StepStarted {
+                    index: finished,
+                    mutation: acquired,
+                })
+                .unwrap();
+        }
+        if let Some(end) = end {
+            store.checkpoint(end).unwrap();
+        }
+        store
+    }
+
+    fn total(bundle: &PreparedBundle) -> usize {
+        bundle.plan().unwrap().steps().len()
+    }
+
+    #[test]
+    fn last_plan_step_hosts_the_verification() {
+        let plan = bundle().plan().unwrap();
+        assert!(matches!(
+            plan.steps().last().unwrap().operation,
+            PropertyOperation::Disconnect
+        ));
+    }
+
+    #[test]
+    fn failure_inside_the_final_step_is_transfer_complete_but_unverified() {
+        let bundle = bundle();
+        let n = total(&bundle);
+        let dir = tempfile::tempdir().unwrap();
+        let store = run(
+            &dir.path().join("j"),
+            &bundle,
+            true,
+            n - 1,
+            true,
+            Some(failed()),
+        );
+        let progress = store.progress();
+        assert_eq!(progress.outcome, LocalOutcome::Failed);
+        assert_eq!(
+            (progress.completed_steps, progress.total_steps),
+            (n - 1, Some(n))
+        );
+        assert_eq!(
+            progress.download.result,
+            DownloadResult::TransferCompleteVerificationUnfinished
+        );
+    }
+
+    #[test]
+    fn cancel_before_the_final_step_starts_never_started_verification() {
+        let bundle = bundle();
+        let n = total(&bundle);
+        let dir = tempfile::tempdir().unwrap();
+        let store = run(
+            &dir.path().join("j"),
+            &bundle,
+            true,
+            n - 1,
+            false,
+            Some(Checkpoint::Cancelled),
+        );
+        assert_eq!(
+            store.progress().download.result,
+            DownloadResult::TransferCompleteVerificationNotStarted
+        );
+    }
+
+    #[test]
+    fn failure_before_the_last_transfer_step_is_incomplete() {
+        let bundle = bundle();
+        let n = total(&bundle);
+        let dir = tempfile::tempdir().unwrap();
+        for done in [2, n / 2, n - 2] {
+            let path = dir.path().join(format!("j{done}"));
+            let store = run(&path, &bundle, true, done, true, Some(failed()));
+            assert_eq!(
+                store.progress().download.result,
+                DownloadResult::TransferIncomplete,
+                "{done}"
+            );
+        }
+    }
+
+    #[test]
+    fn ended_without_acquired_recovery_is_nothing_written() {
+        let bundle = bundle();
+        let dir = tempfile::tempdir().unwrap();
+        let store = run(
+            &dir.path().join("j"),
+            &bundle,
+            false,
+            1,
+            true,
+            Some(failed()),
+        );
+        assert!(!store.progress().mutation_possible);
+        assert_eq!(
+            store.progress().download.result,
+            DownloadResult::NothingWritten
+        );
+    }
+
+    #[test]
+    fn finished_is_verified_only_when_every_step_ran() {
+        let bundle = bundle();
+        let n = total(&bundle);
+        let dir = tempfile::tempdir().unwrap();
+        let store = run(
+            &dir.path().join("j"),
+            &bundle,
+            true,
+            n,
+            false,
+            Some(Checkpoint::Finished),
+        );
+        assert_eq!(store.progress().download.result, DownloadResult::Verified);
+    }
+
+    #[test]
+    fn all_steps_done_without_a_finished_checkpoint_stays_unknown() {
+        let bundle = bundle();
+        let n = total(&bundle);
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("j");
+        drop(run(&path, &bundle, true, n, false, None));
+        let reopened = OperationStore::open(&path, &bundle.binding).unwrap();
+        assert_eq!(reopened.progress().outcome, LocalOutcome::Interrupted);
+        assert_eq!(reopened.progress().download.result, DownloadResult::Unknown);
+    }
+
+    #[test]
+    fn running_is_in_progress_and_reopened_running_is_derived_from_steps() {
+        let bundle = bundle();
+        let n = total(&bundle);
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("j");
+        let live = run(&path, &bundle, true, n - 1, true, None);
+        assert_eq!(live.progress().download.result, DownloadResult::InProgress);
+        drop(live);
+        let reopened = OperationStore::open(&path, &bundle.binding).unwrap();
+        assert_eq!(reopened.progress().outcome, LocalOutcome::Interrupted);
+        assert_eq!(
+            reopened.progress().download.result,
+            DownloadResult::TransferCompleteVerificationUnfinished
+        );
+    }
+
+    #[test]
+    fn restore_keeps_the_download_result_and_survives_reopen() {
+        let bundle = bundle();
+        let n = total(&bundle);
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("j");
+        drop(run(&path, &bundle, true, n - 1, true, Some(failed())));
+        let mut store = OperationStore::open(&path, &bundle.binding).unwrap();
+        store.checkpoint(Checkpoint::RestoreStarted).unwrap();
+        assert_eq!(
+            store.progress().outcome,
+            LocalOutcome::Interrupted,
+            "reopened store never claims a live restore"
+        );
+        assert_eq!(
+            store.progress().download.result,
+            DownloadResult::TransferCompleteVerificationUnfinished
+        );
+        // The download keeps its own ended outcome and counters; the recovery has its own.
+        let progress = store.progress();
+        assert!(progress.restore_attempted);
+        assert_eq!(progress.download.outcome, LocalOutcome::Failed);
+        assert_eq!(
+            (
+                progress.download.completed_steps,
+                progress.download.total_steps
+            ),
+            (n - 1, Some(n))
+        );
+        assert_eq!(
+            progress.completed_steps, 0,
+            "current counters are the recovery's"
+        );
+        drop(store);
+        let reopened = OperationStore::open(&path, &bundle.binding).unwrap();
+        assert_eq!(
+            reopened.progress().download.result,
+            DownloadResult::TransferCompleteVerificationUnfinished
+        );
+        assert_eq!(reopened.progress().download.outcome, LocalOutcome::Failed);
+        assert!(reopened.progress().restore_attempted);
+    }
+
+    #[test]
+    fn a_verified_download_stays_verified_in_its_own_facts_after_a_recovery_started() {
+        let bundle = bundle();
+        let n = total(&bundle);
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("j");
+        drop(run(
+            &path,
+            &bundle,
+            true,
+            n,
+            false,
+            Some(Checkpoint::Finished),
+        ));
+        let mut store = OperationStore::open(&path, &bundle.binding).unwrap();
+        store.checkpoint(Checkpoint::RestoreStarted).unwrap();
+        let p = store.progress();
+        assert_eq!(
+            (p.download.result, p.download.outcome),
+            (DownloadResult::Verified, LocalOutcome::Finished)
+        );
+        assert!(p.restore_attempted);
+    }
+}

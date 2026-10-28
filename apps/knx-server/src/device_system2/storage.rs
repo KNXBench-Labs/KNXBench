@@ -1,7 +1,7 @@
 //! Private immutable operation evidence and explicit restart selection.
 use super::dto::{valid_id, Metadata};
 use knx_app::property_validation::{
-    read_bundle, write_prepared_bundle, OperationProgress, OperationStore,
+    read_bundle, write_prepared_bundle, ExecutionBuild, OperationProgress, OperationStore,
 };
 use knx_app::property_validation_bundle::PreparedBundle;
 use std::{
@@ -180,6 +180,40 @@ impl Storage {
             &serde_json::to_vec(meta).map_err(io::Error::other)?,
         )?;
         self.select(&meta.operation_id)
+    }
+    /// Operation-bound record of the build that executes this run; written once, before any
+    /// device contact. Old operations have none and report an unknown execution build.
+    pub fn record_execution_build(&self, id: &str, version: &str) -> io::Result<()> {
+        if !matches!(
+            ExecutionBuild::recorded(version),
+            ExecutionBuild::Recorded { .. }
+        ) {
+            return Err(invalid());
+        }
+        let body = serde_json::json!({ "format": 1, "operationId": id, "version": version });
+        write_new(
+            &self.path(id)?.join("execution-build.json"),
+            &serde_json::to_vec(&body).map_err(io::Error::other)?,
+        )
+    }
+    /// The recorded execution build; any absent, oversized, foreign or malformed record is unknown.
+    pub fn execution_build(&self, id: &str) -> ExecutionBuild {
+        let read_record = || -> io::Result<ExecutionBuild> {
+            let bytes = read(&self.path(id)?.join("execution-build.json"), 512)?;
+            let value: serde_json::Value = serde_json::from_slice(&bytes).map_err(|_| invalid())?;
+            let object = value.as_object().ok_or_else(invalid)?;
+            if object.len() != 3
+                || object.get("format") != Some(&serde_json::json!(1))
+                || object.get("operationId").and_then(|v| v.as_str()) != Some(id)
+            {
+                return Err(invalid());
+            }
+            Ok(object
+                .get("version")
+                .and_then(|v| v.as_str())
+                .map_or(ExecutionBuild::Unknown, ExecutionBuild::recorded))
+        };
+        read_record().unwrap_or(ExecutionBuild::Unknown)
     }
     pub fn metadata(&self, id: &str) -> io::Result<Metadata> {
         let meta: Metadata =

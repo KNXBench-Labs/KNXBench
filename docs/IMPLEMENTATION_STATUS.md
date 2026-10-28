@@ -12,6 +12,16 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Document-language fanout (28 October 2026 source)
+
+`useUiLanguage()` writes `<html lang>` only when the actual attribute differs,
+not once for every translated component. Language selection and all 5000-device
+browser assertions stay unchanged. Test-first regression4, targeted language
+suite35 and a bounded leased before/after comparison cover the change;
+production whole-case medians are 41.803 → 21.434 s, not faster table rendering.
+[Evidence and limits](status/2026-10-28-document-language-fanout.md).
+GATE-01 remains open; no timeout, scheduler, native or hardware claim.
+
 ## S2-03 defaults v3 and explicit-Background admission (28 October 2026 source delivery)
 
 Published main-first `d39668393` after a no-findings review and a 10/10 full

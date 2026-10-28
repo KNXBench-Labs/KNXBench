@@ -18,6 +18,7 @@
 //! application layer (`knx_app::legacy`) decrypts with a password the user
 //! supplied, through `knx-secure`, and never guesses one.
 
+mod binary_backfill;
 mod code;
 mod container;
 mod error;
@@ -29,6 +30,7 @@ mod publish;
 mod secrets;
 mod text;
 
+pub(crate) use binary_backfill::migrate_v29_to_v30;
 pub use code::{legacy_program_code, load_legacy_program_code, LegacyCodeError, LegacyProgramCode};
 pub(crate) use container::detect_legacy_container_controlled;
 pub use container::{

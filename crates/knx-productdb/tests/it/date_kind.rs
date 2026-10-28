@@ -680,6 +680,11 @@ fn v28_to_v29_leaves_a_database_without_date_element_rows_alone() {
     let before = snapshot(&Connection::open(&path).unwrap());
     let conn = open_and_migrate(&path).unwrap();
     let after = snapshot(&conn);
-    assert_eq!(after[0], vec![vec![Some("29".to_string())]]);
+    assert_eq!(
+        after[0],
+        vec![vec![Some(
+            knx_productdb::CURRENT_PRODUCTDB_VERSION.to_string()
+        )]]
+    );
     assert_eq!(after[1..], before[1..]);
 }

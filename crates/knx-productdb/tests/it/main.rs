@@ -20,6 +20,7 @@ mod experimental_system2_image;
 mod golden_reference_products;
 mod install_reports;
 mod legacy_atomic_types;
+mod legacy_binary;
 mod legacy_container;
 mod legacy_exim;
 mod legacy_mapping;

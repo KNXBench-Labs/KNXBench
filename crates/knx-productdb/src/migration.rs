@@ -1,5 +1,4 @@
-//! `products.sqlite`'s own schema and migration chain, keyed off SQLite's
-//! `user_version` pragma.
+//! The product database's own schema and migration chain, keyed off SQLite's `user_version`.
 //!
 //! Deliberately not `knx-store`'s chain: a project-schema bump must not
 //! force a product-database migration, or the other way round (ADR-0005,
@@ -16,7 +15,7 @@ use crate::parse::translation::{ingest_translations, TranslationScope};
 use crate::report::{insert_unknown, UnknownKind};
 
 /// The product-database schema version this build writes.
-pub const CURRENT_PRODUCTDB_VERSION: i64 = 29;
+pub const CURRENT_PRODUCTDB_VERSION: i64 = 30;
 
 #[derive(Debug)]
 pub enum ProductDbError {
@@ -337,6 +336,7 @@ fn migrations() -> Vec<Migration> {
         migrate_v26_to_v27,
         crate::promotion_repair::repair,
         crate::date_kind_backfill::migrate_v28_to_v29,
+        crate::legacy::migrate_v29_to_v30,
     ]
 }
 

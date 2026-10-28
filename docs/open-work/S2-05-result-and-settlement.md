@@ -1,9 +1,12 @@
 # S2-05 — System-2: result in the device list, report, project settlement
 
-**Priority:** P1. **Status:** typed result, automatic project-belief settlement, shared
-status lifetime (application-level owner, acknowledged reload), supervised terminal settlement and
-report implemented in the tree for review; #30's allocation mismatch
-unresolved. Origin: GitHub issue #31.
+**Priority:** P1. **Status:** bounded result/report and automatic project-belief
+integration accepted on main-first `8c06ddc96`, including supervised terminal
+settlement and application-level status/reload ownership. Feature and integrated
+selected gates15/15 each passed; #30's allocation mismatch remains unresolved.
+Origin: GitHub issue #31.
+
+[Acceptance, counts and boundaries](../status/2026-10-28-system2-result-integration.md).
 
 Contract: [system2-download-result](../contracts/system2-download-result.md).
 

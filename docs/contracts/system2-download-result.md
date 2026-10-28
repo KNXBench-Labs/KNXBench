@@ -12,7 +12,7 @@ settles the project's programming belief through the existing ADR-0129 mechanism
 
 ## Source of the facts
 
-`OperationProgress.download_result` (App, `DownloadResult`) is derived only from the
+`OperationProgress.download.result` (App, `DownloadResult`) is derived only from the
 validated checkpoint chain and the exact plan inside the durable recovery record. It
 reads no message, no free text and no step count taken from a label:
 
@@ -117,10 +117,11 @@ absent; the retained journal remains the evidence.
 `recovery` (`null`, or `outcome`, `completedSteps`, `totalSteps`), `mutationPossible`,
 `prestateDiffers`, `failureDiagnostics` (the typed list of the
 [safe failure diagnostic](system2-safe-failure-diagnostic.md)), `executionBuild` and
-`exporterBuild`. The ordinary `knxbench-property-validation-summary` is not reused: it says
-nothing of the restart or per-block verification the run did or did not do. No address,
-device name, parameters, backup bytes, paths, operation id, binding, phrases or journal text
-is in it.
+`exporterBuild`. The ordinary download report (`knxbench-download-report`) is
+not reused: its restart and per-block verification semantics differ. This endpoint
+is a distinct journal-fact summary, also separate from the existing
+`knxbench-property-validation-summary` export. No address, device name, parameters,
+backup bytes, paths, operation id, binding, phrases or journal text is in it.
 
 `executionBuild` is `{state: "recorded", version}` only for operations that wrote the
 operation-bound sidecar `execution-build.json` (format 1, the operation id, the version

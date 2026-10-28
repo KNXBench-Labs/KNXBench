@@ -53,8 +53,22 @@ production suites; selected corpus91/91. Tooling registered466 tests with six
 optional skips. Every selected stage exited zero, both source fingerprints
 matched, and the user-data guard checked its paths with no change.
 
-The main-first integrated gate is **PENDING**. Feature acceptance is not merged
-acceptance, publication, a full-workspace/release gate or hardware validation.
+The main-first integrated gate on `8c06ddc96806603f775d47dfb55f773a3532e546`
+**ACCEPTED all 15 selected stages** with the same counts and explicit skips,
+frozen source inputs and checked/unchanged user data. The two runs overlap;
+their counts must not be added as unique coverage. The merged result includes
+WP-03's independently published productdb v30 source.
+
+A separate real `cargo build --offline --locked -p knx-server` succeeded.
+The resulting `knx-server 0.1.0-alpha.17+g8c06ddc96` passed an isolated-loopback
+smoke: `/healthz` and the built frontend returned 200, a synthetic retained
+historical operation stayed `unknown` with no settlement replay, the actual
+report route passed its privacy whitelist/provenance checks, and graceful
+shutdown exited zero. No device-contact endpoint or external network was used.
+
+Final result-documentation acceptance/publication is tracked separately.
+These are change-selected software gates, not a full-workspace/release gate,
+independent physical validation or resolution of the allocation mismatch.
 
 ## Retained boundaries
 

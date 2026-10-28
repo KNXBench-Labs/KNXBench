@@ -457,6 +457,84 @@ async fn a_programmed_address_is_no_longer_pending_on_its_project_device() {
     );
 }
 
+/// S2-04 (issue #30): the settler can save the native project while the
+/// tunnel is still open. One runtime worker, as in a one-CPU container: a
+/// synchronous stall before the real settler stands in for a slow fsync, a
+/// spawned ticker for the tunnel's receive task, which must keep running.
+#[tokio::test(flavor = "multi_thread", worker_threads = 1)]
+async fn a_blocking_address_settler_leaves_tunnel_tasks_running() {
+    const STALL: Duration = Duration::from_millis(300);
+    let h = harness(SimulatorConfig {
+        programming_mode: true,
+        ..SimulatorConfig::default()
+    });
+    *h.state.project.lock().unwrap() = Some(project_with_devices(&[29, 30]));
+    let ticks = Arc::new(AtomicUsize::new(0));
+    let ticker = tokio::spawn({
+        let ticks = Arc::clone(&ticks);
+        async move {
+            loop {
+                tokio::time::sleep(Duration::from_millis(5)).await;
+                ticks.fetch_add(1, Ordering::SeqCst);
+            }
+        }
+    });
+    while ticks.load(Ordering::SeqCst) == 0 {
+        tokio::time::sleep(Duration::from_millis(1)).await;
+    }
+    let address: IndividualAddress = NEW.parse().unwrap();
+    let window = Arc::new(std::sync::Mutex::new(None));
+    let settle = knx_server::address_programming_settler(&h.state, address);
+    let on_end: knx_server::OnProgrammingEnd = Box::new({
+        let (ticks, window) = (Arc::clone(&ticks), Arc::clone(&window));
+        move |status| {
+            let before = ticks.load(Ordering::SeqCst);
+            std::thread::sleep(STALL);
+            *window.lock().unwrap() = Some((before, ticks.load(Ordering::SeqCst)));
+            settle(status);
+        }
+    });
+    let mut session = knx_server::AddressProgrammingSession::start(
+        1,
+        Box::new(SimTunnel(Arc::clone(&h.device))),
+        address,
+        AddressProgrammingAuthorisation::for_hardware(address, PHRASE).unwrap(),
+        fast(),
+        ButtonWait {
+            give_up_after: Duration::from_secs(30),
+            pause_between_rounds: Duration::from_millis(10),
+        },
+        on_end,
+    );
+    tokio::time::timeout(Duration::from_secs(10), session.join())
+        .await
+        .expect("the programming ended");
+    ticker.abort();
+    assert!(
+        matches!(
+            session.status(),
+            knx_server::AddressProgrammingStatus::Finished {
+                written: knx_server::AddressWritten::Yes,
+                ..
+            }
+        ),
+        "{:?}",
+        session.status()
+    );
+    let (before, after) = window.lock().unwrap().expect("the settler ran");
+    // About 60 nominal; inline on the only worker it is at most one.
+    assert!(
+        after - before >= 10,
+        "only {} ticks while the settler blocked",
+        after - before
+    );
+    assert_eq!(
+        loaded_addresses(&h),
+        [false, true],
+        "the real settler still settles the device at 1.1.30"
+    );
+}
+
 /// The project open when the programming started is the only one it may
 /// settle: after another project was opened, nothing is applied.
 #[tokio::test]

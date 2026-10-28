@@ -5,7 +5,7 @@
 The actual Alpha 17 desktop was driven with the **real compositor pointer** at
 80%, 100% and 150% application zoom, using fictional data only. Three KL-130
 pointer cells now have native evidence, and one product defect was found
-and is recorded as open:
+and was recorded as open at this slice's cutoff:
 
 | Cell | Result |
 | --- | --- |
@@ -48,6 +48,9 @@ hover crops. No JavaScript injection, mocked HTTP or mocked Tauri was used.
 
 ## Found defect (open)
 
+This heading retains its historical anchor; the defect was open at this slice's
+cutoff. The later bounded trigger check is linked in the amendment below.
+
 `ResizablePane` (navigation/properties separators) and `PaneSplitter`
 (navigation block heights) start a drag on `pointerdown` with pointer capture,
 but they neither call `preventDefault()` nor set `user-select: none`. In
@@ -60,8 +63,8 @@ Exact reproduction from a cleared selection at 100% (pointer ±100 px):
 +100 (committed, selection created), −5 (not committed), 0, 0. The last
 press cleared the selection. The table column handle is the control. It calls
 `preventDefault()` on `pointerdown`, blocks `dragstart`, sets
-`user-select: none` and never lost a drag in 12 attempts. Both affected
-components are unchanged on `main`.
+`user-select: none` and never lost a drag in 12 attempts. At that observation
+cutoff, both affected components were unchanged on `main`.
 
 This finding is attributed from source differences plus native observation.
 That the next drag becomes a native drag-and-drop of the selection is a
@@ -72,8 +75,12 @@ not exercise repeated real drags with a live selection.
 `PaneSplitter` now cancel the primary `pointerdown` default, block
 `dragstart`, set `user-select: none` and focus the separator, matching the
 control; a primary press also clears an existing selection. This record's observations stay as recorded; they describe the
-build before the fix. Whether the fix removes the native loss is not yet
-observed: the reproduction above has to be repeated in WebKitGTK.
+build before the fix. A later
+[source-bound native re-check](2026-10-28-wp11-native-separator-recheck.md)
+records 12 cells / 42 drags at 80/100/150%, including real text preselection and
+pointer-away focus appearance. No cut-short drag or surviving selection was
+observed in those attempts; this is bounded positive re-check evidence, not
+whole-WP-11 acceptance.
 
 ## Harness observations (not product results)
 
@@ -91,8 +98,9 @@ observed: the reproduction above has to be repeated in WebKitGTK.
 
 ## Still open
 
-- Fixing the defect above, followed by a native re-check on a build that
-  contains the fix.
+- The historical pane-drag defect is fixed in source and its drag-after-selection
+  trigger has a [positive bounded re-check](2026-10-28-wp11-native-separator-recheck.md);
+  broader native acceptance remains open.
 - Pointer drag of the Properties pane, other window sizes and themes, Orca,
   Firefox, and vendor-specific GPU/EGL evidence.
 - The KL-130 ledger status is unchanged.

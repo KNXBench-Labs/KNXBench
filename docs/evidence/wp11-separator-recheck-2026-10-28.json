@@ -1,0 +1,610 @@
+{
+  "date": "2026-10-28",
+  "scope": "WP-11 bounded native separator selection-fix recheck; not full acceptance",
+  "source": "1a4f5a9708532977375c461d3fc3f23add21c15b",
+  "requiredFixAncestor": "1822a975673e0d632b9165f455826462fb73e2ed",
+  "artifactKind": "fresh unbundled cargo release desktop plus source-built frontend, not the old Alpha 17 AppImage",
+  "displayedVersion": "0.1.0-alpha.17",
+  "binarySha256": "bf51ea26b2fcecd4cb8325edf50e7de1793d888a9e925265824381bcd955042e",
+  "frontendManifestSha256": "4050577689ef8179a75a4d3f7f330b81f7d94cb78c59980ad9214520b18e2c2a",
+  "fixtureSha256": "ddda4fd55e077f00bc34d5b0ca02dcd3c6d2d54da52f836ac7eea7e4f244dc2a",
+  "cellCount": 12,
+  "dragCount": 42,
+  "nativeWayland": true,
+  "input": "compositor virtual-pointer protocol with integer cursor readback at press/release; guarded native virtual keyboard for zoom/focus control; no injected JavaScript or mocked runtime",
+  "cursorRounding": "41 drags have exact requested/readback displacement; one 150% requested -5 reads -4 while edge moves -5 and value -3",
+  "cells": [
+    {
+      "label": "nav100-clean",
+      "separator": "Navigation",
+      "zoom": 1,
+      "mode": "clean",
+      "selectedHeading": null,
+      "steps": [
+        {
+          "requestedPointerDelta": 100,
+          "actualPointerDelta": 100,
+          "edgeDelta": 100,
+          "valueBefore": 320.0,
+          "valueAfter": 420.0,
+          "storedNavigationWidth": 420,
+          "selectionAliasesAfter": 0,
+          "focused": true
+        },
+        {
+          "requestedPointerDelta": -100,
+          "actualPointerDelta": -100,
+          "edgeDelta": -100,
+          "valueBefore": 420.0,
+          "valueAfter": 320.0,
+          "storedNavigationWidth": 320,
+          "selectionAliasesAfter": 0,
+          "focused": true
+        },
+        {
+          "requestedPointerDelta": 100,
+          "actualPointerDelta": 100,
+          "edgeDelta": 100,
+          "valueBefore": 320.0,
+          "valueAfter": 420.0,
+          "storedNavigationWidth": 420,
+          "selectionAliasesAfter": 0,
+          "focused": true
+        },
+        {
+          "requestedPointerDelta": -100,
+          "actualPointerDelta": -100,
+          "edgeDelta": -100,
+          "valueBefore": 420.0,
+          "valueAfter": 320.0,
+          "storedNavigationWidth": 320,
+          "selectionAliasesAfter": 0,
+          "focused": true
+        },
+        {
+          "requestedPointerDelta": -5,
+          "actualPointerDelta": -5,
+          "edgeDelta": -5,
+          "valueBefore": 320.0,
+          "valueAfter": 315.0,
+          "storedNavigationWidth": 315,
+          "selectionAliasesAfter": 0,
+          "focused": true
+        },
+        {
+          "requestedPointerDelta": 5,
+          "actualPointerDelta": 5,
+          "edgeDelta": 5,
+          "valueBefore": 315.0,
+          "valueAfter": 320.0,
+          "storedNavigationWidth": 320,
+          "selectionAliasesAfter": 0,
+          "focused": true
+        }
+      ],
+      "persistence": "settings readback matches every announced width",
+      "pointerAwayCropSha256": "c4c4b95776a80bf7dd14328e585f46975d716d9ebdcf82fa4494545824d15a7e",
+      "keyboardCropSha256": "c4c4b95776a80bf7dd14328e585f46975d716d9ebdcf82fa4494545824d15a7e"
+    },
+    {
+      "label": "nav100-selected",
+      "separator": "Navigation",
+      "zoom": 1,
+      "mode": "selected",
+      "selectedHeading": "Project statu",
+      "steps": [
+        {
+          "requestedPointerDelta": 100,
+          "actualPointerDelta": 100,
+          "edgeDelta": 100,
+          "valueBefore": 320.0,
+          "valueAfter": 420.0,
+          "storedNavigationWidth": 420,
+          "selectionAliasesAfter": 0,
+          "focused": true
+        },
+        {
+          "requestedPointerDelta": -100,
+          "actualPointerDelta": -100,
+          "edgeDelta": -100,
+          "valueBefore": 420.0,
+          "valueAfter": 320.0,
+          "storedNavigationWidth": 320,
+          "selectionAliasesAfter": 0,
+          "focused": true
+        }
+      ],
+      "persistence": "settings readback matches every announced width",
+      "pointerAwayCropSha256": "c4c4b95776a80bf7dd14328e585f46975d716d9ebdcf82fa4494545824d15a7e",
+      "keyboardCropSha256": "c4c4b95776a80bf7dd14328e585f46975d716d9ebdcf82fa4494545824d15a7e"
+    },
+    {
+      "label": "height100-clean",
+      "separator": "Height of the navigation block",
+      "zoom": 1,
+      "mode": "clean",
+      "selectedHeading": null,
+      "steps": [
+        {
+          "requestedPointerDelta": 60,
+          "actualPointerDelta": 60,
+          "edgeDelta": 60,
+          "valueBefore": 252.0,
+          "valueAfter": 312.0,
+          "storedNavigationWidth": null,
+          "selectionAliasesAfter": 0,
+          "focused": true
+        },
+        {
+          "requestedPointerDelta": -60,
+          "actualPointerDelta": -60,
+          "edgeDelta": -60,
+          "valueBefore": 312.0,
+          "valueAfter": 252.0,
+          "storedNavigationWidth": null,
+          "selectionAliasesAfter": 0,
+          "focused": true
+        },
+        {
+          "requestedPointerDelta": 60,
+          "actualPointerDelta": 60,
+          "edgeDelta": 60,
+          "valueBefore": 252.0,
+          "valueAfter": 312.0,
+          "storedNavigationWidth": null,
+          "selectionAliasesAfter": 0,
+          "focused": true
+        },
+        {
+          "requestedPointerDelta": -60,
+          "actualPointerDelta": -60,
+          "edgeDelta": -60,
+          "valueBefore": 312.0,
+          "valueAfter": 252.0,
+          "storedNavigationWidth": null,
+          "selectionAliasesAfter": 0,
+          "focused": true
+        }
+      ],
+      "persistence": "not applicable; component state only",
+      "pointerAwayCropSha256": "13bed7b4cb2be38cc1747608148153b001053bb3d16a47c8597594c8aada1de5",
+      "keyboardCropSha256": "13bed7b4cb2be38cc1747608148153b001053bb3d16a47c8597594c8aada1de5"
+    },
+    {
+      "label": "height100-selected",
+      "separator": "Height of the navigation block",
+      "zoom": 1,
+      "mode": "selected",
+      "selectedHeading": "Project statu",
+      "steps": [
+        {
+          "requestedPointerDelta": 60,
+          "actualPointerDelta": 60,
+          "edgeDelta": 60,
+          "valueBefore": 252.0,
+          "valueAfter": 312.0,
+          "storedNavigationWidth": null,
+          "selectionAliasesAfter": 0,
+          "focused": true
+        },
+        {
+          "requestedPointerDelta": -60,
+          "actualPointerDelta": -60,
+          "edgeDelta": -60,
+          "valueBefore": 312.0,
+          "valueAfter": 252.0,
+          "storedNavigationWidth": null,
+          "selectionAliasesAfter": 0,
+          "focused": true
+        }
+      ],
+      "persistence": "not applicable; component state only",
+      "pointerAwayCropSha256": "13bed7b4cb2be38cc1747608148153b001053bb3d16a47c8597594c8aada1de5",
+      "keyboardCropSha256": "13bed7b4cb2be38cc1747608148153b001053bb3d16a47c8597594c8aada1de5"
+    },
+    {
+      "label": "nav80-clean",
+      "separator": "Navigation",
+      "zoom": 0.8,
+      "mode": "clean",
+      "selectedHeading": null,
+      "steps": [
+        {
+          "requestedPointerDelta": 100,
+          "actualPointerDelta": 100,
+          "edgeDelta": 100,
+          "valueBefore": 320.0,
+          "valueAfter": 445.0,
+          "storedNavigationWidth": 445,
+          "selectionAliasesAfter": 0,
+          "focused": true
+        },
+        {
+          "requestedPointerDelta": -100,
+          "actualPointerDelta": -100,
+          "edgeDelta": -100,
+          "valueBefore": 445.0,
+          "valueAfter": 320.0,
+          "storedNavigationWidth": 320,
+          "selectionAliasesAfter": 0,
+          "focused": true
+        },
+        {
+          "requestedPointerDelta": 100,
+          "actualPointerDelta": 100,
+          "edgeDelta": 100,
+          "valueBefore": 320.0,
+          "valueAfter": 445.0,
+          "storedNavigationWidth": 445,
+          "selectionAliasesAfter": 0,
+          "focused": true
+        },
+        {
+          "requestedPointerDelta": -100,
+          "actualPointerDelta": -100,
+          "edgeDelta": -100,
+          "valueBefore": 445.0,
+          "valueAfter": 320.0,
+          "storedNavigationWidth": 320,
+          "selectionAliasesAfter": 0,
+          "focused": true
+        },
+        {
+          "requestedPointerDelta": -5,
+          "actualPointerDelta": -5,
+          "edgeDelta": -5,
+          "valueBefore": 320.0,
+          "valueAfter": 314.0,
+          "storedNavigationWidth": 314,
+          "selectionAliasesAfter": 0,
+          "focused": true
+        },
+        {
+          "requestedPointerDelta": 5,
+          "actualPointerDelta": 5,
+          "edgeDelta": 5,
+          "valueBefore": 314.0,
+          "valueAfter": 320.0,
+          "storedNavigationWidth": 320,
+          "selectionAliasesAfter": 0,
+          "focused": true
+        }
+      ],
+      "persistence": "settings readback matches every announced width",
+      "pointerAwayCropSha256": "bd9375955660635207a2412dd37deb137156b7a87d3ad99399ec06b10f92caa6",
+      "keyboardCropSha256": "bd9375955660635207a2412dd37deb137156b7a87d3ad99399ec06b10f92caa6"
+    },
+    {
+      "label": "height80-clean",
+      "separator": "Height of the navigation block",
+      "zoom": 0.8,
+      "mode": "clean",
+      "selectedHeading": null,
+      "steps": [
+        {
+          "requestedPointerDelta": 60,
+          "actualPointerDelta": 60,
+          "edgeDelta": 60,
+          "valueBefore": 252.0,
+          "valueAfter": 327.0,
+          "storedNavigationWidth": null,
+          "selectionAliasesAfter": 0,
+          "focused": true
+        },
+        {
+          "requestedPointerDelta": -60,
+          "actualPointerDelta": -60,
+          "edgeDelta": -60,
+          "valueBefore": 327.0,
+          "valueAfter": 252.0,
+          "storedNavigationWidth": null,
+          "selectionAliasesAfter": 0,
+          "focused": true
+        },
+        {
+          "requestedPointerDelta": 60,
+          "actualPointerDelta": 60,
+          "edgeDelta": 60,
+          "valueBefore": 252.0,
+          "valueAfter": 327.0,
+          "storedNavigationWidth": null,
+          "selectionAliasesAfter": 0,
+          "focused": true
+        },
+        {
+          "requestedPointerDelta": -60,
+          "actualPointerDelta": -60,
+          "edgeDelta": -60,
+          "valueBefore": 327.0,
+          "valueAfter": 252.0,
+          "storedNavigationWidth": null,
+          "selectionAliasesAfter": 0,
+          "focused": true
+        }
+      ],
+      "persistence": "not applicable; component state only",
+      "pointerAwayCropSha256": "370deb4a84bd95ee902423cc77d74f746e20ad824b89722b46d8f3b30c6f9a78",
+      "keyboardCropSha256": "370deb4a84bd95ee902423cc77d74f746e20ad824b89722b46d8f3b30c6f9a78"
+    },
+    {
+      "label": "nav80-selected",
+      "separator": "Navigation",
+      "zoom": 0.8,
+      "mode": "selected",
+      "selectedHeading": "Project statu",
+      "steps": [
+        {
+          "requestedPointerDelta": 100,
+          "actualPointerDelta": 100,
+          "edgeDelta": 100,
+          "valueBefore": 320.0,
+          "valueAfter": 445.0,
+          "storedNavigationWidth": 445,
+          "selectionAliasesAfter": 0,
+          "focused": true
+        },
+        {
+          "requestedPointerDelta": -100,
+          "actualPointerDelta": -100,
+          "edgeDelta": -100,
+          "valueBefore": 445.0,
+          "valueAfter": 320.0,
+          "storedNavigationWidth": 320,
+          "selectionAliasesAfter": 0,
+          "focused": true
+        }
+      ],
+      "persistence": "settings readback matches every announced width",
+      "pointerAwayCropSha256": "bd9375955660635207a2412dd37deb137156b7a87d3ad99399ec06b10f92caa6",
+      "keyboardCropSha256": "bd9375955660635207a2412dd37deb137156b7a87d3ad99399ec06b10f92caa6"
+    },
+    {
+      "label": "height80-selected",
+      "separator": "Height of the navigation block",
+      "zoom": 0.8,
+      "mode": "selected",
+      "selectedHeading": "Project statu",
+      "steps": [
+        {
+          "requestedPointerDelta": 60,
+          "actualPointerDelta": 60,
+          "edgeDelta": 60,
+          "valueBefore": 252.0,
+          "valueAfter": 327.0,
+          "storedNavigationWidth": null,
+          "selectionAliasesAfter": 0,
+          "focused": true
+        },
+        {
+          "requestedPointerDelta": -60,
+          "actualPointerDelta": -60,
+          "edgeDelta": -60,
+          "valueBefore": 327.0,
+          "valueAfter": 252.0,
+          "storedNavigationWidth": null,
+          "selectionAliasesAfter": 0,
+          "focused": true
+        }
+      ],
+      "persistence": "not applicable; component state only",
+      "pointerAwayCropSha256": "370deb4a84bd95ee902423cc77d74f746e20ad824b89722b46d8f3b30c6f9a78",
+      "keyboardCropSha256": "370deb4a84bd95ee902423cc77d74f746e20ad824b89722b46d8f3b30c6f9a78"
+    },
+    {
+      "label": "nav150-clean",
+      "separator": "Navigation",
+      "zoom": 1.5,
+      "mode": "clean",
+      "selectedHeading": null,
+      "steps": [
+        {
+          "requestedPointerDelta": 100,
+          "actualPointerDelta": 100,
+          "edgeDelta": 100,
+          "valueBefore": 320.0,
+          "valueAfter": 387.0,
+          "storedNavigationWidth": 387,
+          "selectionAliasesAfter": 0,
+          "focused": true
+        },
+        {
+          "requestedPointerDelta": -100,
+          "actualPointerDelta": -100,
+          "edgeDelta": -100,
+          "valueBefore": 387.0,
+          "valueAfter": 320.0,
+          "storedNavigationWidth": 320,
+          "selectionAliasesAfter": 0,
+          "focused": true
+        },
+        {
+          "requestedPointerDelta": 100,
+          "actualPointerDelta": 100,
+          "edgeDelta": 100,
+          "valueBefore": 320.0,
+          "valueAfter": 387.0,
+          "storedNavigationWidth": 387,
+          "selectionAliasesAfter": 0,
+          "focused": true
+        },
+        {
+          "requestedPointerDelta": -100,
+          "actualPointerDelta": -100,
+          "edgeDelta": -100,
+          "valueBefore": 387.0,
+          "valueAfter": 320.0,
+          "storedNavigationWidth": 320,
+          "selectionAliasesAfter": 0,
+          "focused": true
+        },
+        {
+          "requestedPointerDelta": -5,
+          "actualPointerDelta": -4,
+          "edgeDelta": -5,
+          "valueBefore": 320.0,
+          "valueAfter": 317.0,
+          "storedNavigationWidth": 317,
+          "selectionAliasesAfter": 0,
+          "focused": true
+        },
+        {
+          "requestedPointerDelta": 5,
+          "actualPointerDelta": 5,
+          "edgeDelta": 5,
+          "valueBefore": 317.0,
+          "valueAfter": 320.0,
+          "storedNavigationWidth": 320,
+          "selectionAliasesAfter": 0,
+          "focused": true
+        }
+      ],
+      "persistence": "settings readback matches every announced width",
+      "pointerAwayCropSha256": "3c85088443c2895baadbc11fd9323460ffabf7db8904b5e21f45c2843004e980",
+      "keyboardCropSha256": "3c85088443c2895baadbc11fd9323460ffabf7db8904b5e21f45c2843004e980"
+    },
+    {
+      "label": "height150-clean",
+      "separator": "Height of the navigation block",
+      "zoom": 1.5,
+      "mode": "clean",
+      "selectedHeading": null,
+      "steps": [
+        {
+          "requestedPointerDelta": 60,
+          "actualPointerDelta": 60,
+          "edgeDelta": 60,
+          "valueBefore": 252.0,
+          "valueAfter": 292.0,
+          "storedNavigationWidth": null,
+          "selectionAliasesAfter": 0,
+          "focused": true
+        },
+        {
+          "requestedPointerDelta": -60,
+          "actualPointerDelta": -60,
+          "edgeDelta": -60,
+          "valueBefore": 292.0,
+          "valueAfter": 252.0,
+          "storedNavigationWidth": null,
+          "selectionAliasesAfter": 0,
+          "focused": true
+        },
+        {
+          "requestedPointerDelta": 60,
+          "actualPointerDelta": 60,
+          "edgeDelta": 60,
+          "valueBefore": 252.0,
+          "valueAfter": 292.0,
+          "storedNavigationWidth": null,
+          "selectionAliasesAfter": 0,
+          "focused": true
+        },
+        {
+          "requestedPointerDelta": -60,
+          "actualPointerDelta": -60,
+          "edgeDelta": -60,
+          "valueBefore": 292.0,
+          "valueAfter": 252.0,
+          "storedNavigationWidth": null,
+          "selectionAliasesAfter": 0,
+          "focused": true
+        }
+      ],
+      "persistence": "not applicable; component state only",
+      "pointerAwayCropSha256": "db2057577dc4b4ff65c2a71072a659ae45e69ff19b9acf71b5b8e68427ae2182",
+      "keyboardCropSha256": "db2057577dc4b4ff65c2a71072a659ae45e69ff19b9acf71b5b8e68427ae2182"
+    },
+    {
+      "label": "nav150-selected",
+      "separator": "Navigation",
+      "zoom": 1.5,
+      "mode": "selected",
+      "selectedHeading": "Project statu",
+      "steps": [
+        {
+          "requestedPointerDelta": 100,
+          "actualPointerDelta": 100,
+          "edgeDelta": 100,
+          "valueBefore": 320.0,
+          "valueAfter": 387.0,
+          "storedNavigationWidth": 387,
+          "selectionAliasesAfter": 0,
+          "focused": true
+        },
+        {
+          "requestedPointerDelta": -100,
+          "actualPointerDelta": -100,
+          "edgeDelta": -100,
+          "valueBefore": 387.0,
+          "valueAfter": 320.0,
+          "storedNavigationWidth": 320,
+          "selectionAliasesAfter": 0,
+          "focused": true
+        }
+      ],
+      "persistence": "settings readback matches every announced width",
+      "pointerAwayCropSha256": "3c85088443c2895baadbc11fd9323460ffabf7db8904b5e21f45c2843004e980",
+      "keyboardCropSha256": "3c85088443c2895baadbc11fd9323460ffabf7db8904b5e21f45c2843004e980"
+    },
+    {
+      "label": "height150-selected",
+      "separator": "Height of the navigation block",
+      "zoom": 1.5,
+      "mode": "selected",
+      "selectedHeading": "Project statu",
+      "steps": [
+        {
+          "requestedPointerDelta": 60,
+          "actualPointerDelta": 60,
+          "edgeDelta": 60,
+          "valueBefore": 252.0,
+          "valueAfter": 292.0,
+          "storedNavigationWidth": null,
+          "selectionAliasesAfter": 0,
+          "focused": true
+        },
+        {
+          "requestedPointerDelta": -60,
+          "actualPointerDelta": -60,
+          "edgeDelta": -60,
+          "valueBefore": 292.0,
+          "valueAfter": 252.0,
+          "storedNavigationWidth": null,
+          "selectionAliasesAfter": 0,
+          "focused": true
+        }
+      ],
+      "persistence": "not applicable; component state only",
+      "pointerAwayCropSha256": "db2057577dc4b4ff65c2a71072a659ae45e69ff19b9acf71b5b8e68427ae2182",
+      "keyboardCropSha256": "db2057577dc4b4ff65c2a71072a659ae45e69ff19b9acf71b5b8e68427ae2182"
+    }
+  ],
+  "focusVisuals": {
+    "method": "pointer moved away without clicking; native Tab/ShiftTab comparison; inspected contact sheet and exact crop byte hashes",
+    "identicalPairs": 12,
+    "observation": "separator retains AT-SPI focus and visible accent outline/band after pointer drag at every tested scale; same image after keyboard refocus",
+    "semanticBoundary": "CSS styles :focus-visible, :hover and :active; does not establish keyboard-only focus-ring policy or DOM pseudo-class identity"
+  },
+  "restoration": {
+    "verifiedCells": 20,
+    "includesSetupGuardAbort": true,
+    "activeWindowCursorAndAllOutputWorkspacesRestored": true
+  },
+  "teardown": {
+    "ordinaryNativeClose": true,
+    "launcherExit": 0,
+    "ownedAppAndWebKitProcessesAbsent": true,
+    "ownedWindowsAbsent": true,
+    "runtimeRulesRemainUntilConfigReload": true
+  },
+  "exclusions": [
+    "Properties-pane drag",
+    "other sizes/themes",
+    "Orca",
+    "Firefox",
+    "AppImage packaging/startup acceptance",
+    "vendor-specific GPU/EGL certification",
+    "independent WebKit subprocess sandbox attestation; no disabling option was set",
+    "complete WP-11 or KL-130 closure"
+  ]
+}

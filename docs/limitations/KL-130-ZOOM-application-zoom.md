@@ -132,6 +132,8 @@ cancel the `pointerdown` default. In WebKitGTK an earlier drag could leave a
 document text selection, and later separator drags then stopped after their
 first motion without committing. Since 28 October 2026 they use the column
 handle's guards (see [WP-11](../open-work/WP-11-native-linux-acceptance.md));
-a native WebKitGTK re-check is still open. The ledger status is unchanged.
-Properties-pane drag, further window sizes and themes, and screen-reader output
-remain unverified.
+the [bounded native WebKitGTK re-check](../status/2026-10-28-wp11-native-separator-recheck.md)
+now records repeated and drag-after-selection navigation/height cells at
+80/100/150%, with focus appearance and width-settings readback. The ledger status
+is unchanged. Properties-pane drag, further window sizes and themes, and
+screen-reader output remain unverified.

@@ -1,5 +1,17 @@
 # Restart snapshot
 
+## Alpha 18 follow-ups 1 + 2 — GO (observed 2026-10-28 21:18 CET)
+- Native point 2: source `1a4f5a970`, feature `58c50f867`, corrections `f4244c5b1`/
+  `523f726b9`; independent review APPROVE, branch docs gate10 accepted/frozen/user-data safe.
+- Actual native12 cells/42drags/20seat restorations; parent evidence verifier passed.
+  App/children closed, exit0; runtime placement rules retained until compositor reload.
+- Main-first native integration: `integration/alpha18-native-recheck-20261028`,
+  `<sources>/knxbench-alpha18-native-integration-20261028`; integrated gate/push next.
+- Runtime point 1 reserved: `feat/system2-final-diagnostic-20261028`, separate same-name
+  tree; staged candidate `bc9e1a6f9` frozen for independent review, no package gate yet.
+- Evidence `<profile>/evidence/alpha18-followups-20261028/`. No bus/release/deployment;
+  root stays preserved. Next: native delivery, runtime review/corrections and scoped gates.
+
 Observed: 2026-10-28 17:58 CET. Operational snapshot; maintained docs own status.
 
 ## WP-03 legacy enum binary retention — PUBLISHED, result-doc closeout GO
@@ -34,5 +46,5 @@ Observed: 2026-10-28 17:58 CET. Operational snapshot; maintained docs own status
 
 ## Retained boundaries
 - WP-08 source `4beabe531` / result `1329fb8e8` delivered; reservation released.
-- Native WP-11 re-check needs fresh desktop consent. Root intentionally stale/dirty,
-  preserved and not synchronized. No release/deployment/bus authority.
+- Native WP-11 bounded re-check consent renewed and evidence recorded above;
+  Properties pane and broader matrix open. Root stays stale/dirty and preserved.

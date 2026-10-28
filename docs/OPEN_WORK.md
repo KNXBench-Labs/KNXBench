@@ -16,7 +16,7 @@ the former dated sections are in the [archive](history/OPEN_WORK_2026-10-25.md).
 | WP-08 | Parameter value codecs (Date, Colour, Picture) | Blocked: evidence | [WP-08](open-work/WP-08-parameter-value-codecs.md) |
 | WP-09 | Offline image evidence gates | Blocked: evidence | [WP-09](open-work/WP-09-offline-image-evidence.md) |
 | WP-10 | Import and model evidence (incl. issue #7) | Blocked: input; MODEL-05 explicitly deferred | [WP-10](open-work/WP-10-import-and-model-evidence.md) |
-| WP-11 | Native Linux acceptance | In progress: native slices incl. real-pointer drag/hover recorded; pane-drag defect (WebKitGTK selection) fixed in source, native re-check open; remaining cells open | [WP-11](open-work/WP-11-native-linux-acceptance.md) |
+| WP-11 | Native Linux acceptance | In progress: bounded native separator re-check recorded 28 Oct at 80/100/150%; Properties pane and broader matrix remain open | [WP-11](open-work/WP-11-native-linux-acceptance.md) |
 | WP-12 | Field evidence and owner acceptance (incl. issue #22) | Blocked: consent | [WP-12](open-work/WP-12-field-evidence-and-owner-acceptance.md) |
 | WP-14 | Complete offline family outcomes (System 1/B/300) | Blocked: evidence | [WP-14](open-work/WP-14-offline-family-outcomes.md) |
 | GATE-01 | Test-gate speed and stability follow-ups | Open: root-language fanout corrected; residual load and historical failures remain | [GATE-01](open-work/GATE-01-test-gate-follow-ups.md) |

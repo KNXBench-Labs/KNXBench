@@ -1,6 +1,6 @@
 # WP-11 — Native Linux acceptance
 
-**Status:** In progress: first bounded native slice, two positive editor cells, bounded capture export and real-pointer drag/hover cells recorded; one pane-drag defect found and fixed in source (native re-check open); remaining cells open. Listed in [OPEN_WORK](../OPEN_WORK.md); per-ID status of record is the [ledger](../status/LEDGER.md).
+**Status:** In progress: bounded native editor, capture and real-pointer cells recorded; the pane-drag selection fix now has a positive source-bound native re-check at 80/100/150%; remaining cells open. Listed in [OPEN_WORK](../OPEN_WORK.md); per-ID status of record is the [ledger](../status/LEDGER.md).
 
 ## Task
 
@@ -82,10 +82,19 @@ cancel the primary `pointerdown` default, block `dragstart`, set
 `user-select: none` and take focus; a primary press also clears an existing
 selection, as the native press did. Unit tests pin these guards. A Chromium
 test checks repeated drags still commit without a selection, but Chromium never
-showed the loss, so it also passes without the fix. A native WebKitGTK re-run
-of the ±100/−5 reproduction, including a drag after selecting text elsewhere
-and the focus ring after a pointer drag, has not been made yet; until it is,
-the native cell stays a recorded defect, not a positive result.
+showed the loss, so it also passes without the fix. The
+[source-bound native re-check](../status/2026-10-28-wp11-native-separator-recheck.md)
+now records 12 cells / 42 real-pointer drags on a fresh build containing the fix,
+at 80/100/150%. Repeated ±100 drags and the height splitter complete, including
+immediately after selecting text elsewhere; all post-drag selections are empty.
+Width settings match each announced value. Pointer-away focus crops show the
+accent outline, byte-identical to native keyboard-refocus controls; this is an
+observed appearance, not a keyboard-only ring policy assertion. The historical
+pre-fix defect remains recorded; the bounded drag-after-selection trigger check
+passes. This sequence is not a replay of the exact original +100 then −5
+sequence with a live selection before the small return drag.
+Properties-pane drags, other sizes/themes and the wider native matrix remain
+untested; no ledger row is closed.
 
 ## Done when
 

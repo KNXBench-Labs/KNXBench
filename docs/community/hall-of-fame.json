@@ -1,7 +1,7 @@
 {
   "schema_version": 2,
   "repository": "KNXBench-Labs/KNXBench",
-  "generated_at": "2026-10-28T12:20:52Z",
+  "generated_at": "2026-10-28T12:27:28Z",
   "policy": {
     "excluded_logins": [
       "KNXBench-Labs",
@@ -245,7 +245,7 @@
   "contributors": [
     {
       "login": "thengsty",
-      "issues": 23,
+      "issues": 24,
       "replies": 25,
       "resolutions": 21,
       "pull_requests": 1,
@@ -253,12 +253,12 @@
       "pull_requests_closed": 0,
       "pull_requests_merged": 1,
       "xp_breakdown": {
-        "issues": 115,
+        "issues": 120,
         "replies": 25,
         "resolutions": 210,
         "pull_requests": 25
       },
-      "xp": 375,
+      "xp": 380,
       "rank": {
         "minimum_xp": 325,
         "title": "Tunnel Trouble Exorcist"

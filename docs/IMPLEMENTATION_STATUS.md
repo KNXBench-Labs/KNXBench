@@ -18,8 +18,11 @@ Feature `d52ee440e` connects experimental results, retained-operation reports
 and automatic programming-belief settlement without sharing the ordinary
 memory executor. Unknown/final-step failures stay distinct from verified runs;
 recovery keeps its own outcome, and the global stale-mark notice survives view
-switches. Independent correction review approved; final focused unit104 and
-Chromium12 passed. [Maintained package acceptance and exact boundaries](status/2026-10-28-system2-result-integration.md)
+switches. Independent correction review approved; feature and main-first
+integrated gates each accepted all 15 selected stages with frozen inputs and
+checked/unchanged user data. A separately built server passed isolated-loopback
+health/frontend and actual retained-report checks, then exited cleanly.
+[Exact acceptance, counts and boundaries](status/2026-10-28-system2-result-integration.md)
 are tracked separately. The physical allocation mismatch in #30/#22 stays open;
 no release, device retry or hardware-support claim follows.
 

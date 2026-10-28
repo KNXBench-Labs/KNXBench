@@ -71,6 +71,19 @@ an explanation of the older SIGTERM/cold-Vite timeouts. Published main-first as
 `bc1b47a9a` after independent review APPROVE and branch/integrated gates10 green;
 see the [bounded record](../status/2026-10-27-spawn-record-framing.md).
 
+## 5000-device measurement load sensitivity — 28 October 2026
+
+A new bounded [browser investigation](../research/2026-10-28-devices-browser-load-sensitivity.md)
+reproduces the 120 s default-case timeout under synthetic CPU contention:
+3/3 unchanged dev-fixture runs time out while opening the command palette,
+compared with 3/3 passes at about 73 s without synthetic load. The test expands
+the explorer before its table measurement; the attachment omits that setup.
+A separate shared-lease-protected dev/production and expanded/closed comparison
+finds substantial preparation cost. Closed-state variants are diagnostic only,
+not coverage-equivalent replacements. No timeout, source, lane or concurrency
+policy changed; the historical S2-03 red cause and production CPU attribution
+remain unproved. GATE-01 stays open for a production preparation profile.
+
 ## Known boundary
 
 Killing the stage supervisor with SIGKILL can still orphan children; see the

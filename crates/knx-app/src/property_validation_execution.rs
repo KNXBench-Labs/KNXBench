@@ -118,17 +118,24 @@ fn hardware_event(
     }
 }
 
-/// New physical execution refuses defaults profile v1, which omits independent source data.
+/// New physical execution refuses superseded defaults profiles v1 and v2.
 ///
-/// Fresh execution only: recovery of an existing v1 operation and every
+/// v1 omits independent source data; v2 writes the superseded invisible-parameter
+/// reading. Fresh execution only: recovery of an existing operation and every
 /// simulator path stay available, so historical evidence remains reproducible.
 pub fn refuse_superseded_defaults_profile(bundle: &PreparedBundle) -> io::Result<()> {
-    if bundle.format == 1 && bundle.binding.profile_version == 1 {
-        return Err(invalid(
-            "defaults profile v1 omits independent source data outside the declared table reservation; prepare the bundle again with defaults profile v2 before a physical execution (recovery of an existing v1 operation stays available)",
-        ));
+    if bundle.format != 1 {
+        return Ok(());
     }
-    Ok(())
+    match bundle.binding.profile_version {
+        1 => Err(invalid(
+            "defaults profile v1 omits independent source data outside the declared table reservation; prepare the bundle again with defaults profile v3 before a physical execution (recovery of an existing v1 operation stays available)",
+        )),
+        2 => Err(invalid(
+            "defaults profile v2 writes the superseded invisible-parameter reading (inactive defaults and Union bases); prepare the bundle again with defaults profile v3 before a physical execution (recovery of an existing v2 operation stays available)",
+        )),
+        _ => Ok(()),
+    }
 }
 /// Refuse before RestoreStarted, so an unavailable recovery appends nothing.
 pub(crate) fn refuse_unavailable_recovery(

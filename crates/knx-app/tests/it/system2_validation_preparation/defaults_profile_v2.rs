@@ -15,14 +15,14 @@ use knx_productdb::system2_procedure::{plan_system2_candidate, System2ProcedureP
 
 use super::{synthetic_package, synthetic_profile, PROFILE, SYN_ID};
 
-const PROFILE_V2: &[u8] = include_bytes!(concat!(
+pub(super) const PROFILE_V2: &[u8] = include_bytes!(concat!(
     env!("CARGO_MANIFEST_DIR"),
     "/../../data/system2-validation/up258d12-920504-v2.json"
 ));
 const DECLARED: &str = "declared-counts-zero-flags-full-table-identity-v1";
 const INDEPENDENT: &str = "source-capacity-preserving-independent-data-v1";
 
-fn json(bytes: &[u8]) -> serde_json::Value {
+pub(super) fn json(bytes: &[u8]) -> serde_json::Value {
     serde_json::from_slice(bytes).unwrap()
 }
 
@@ -109,7 +109,7 @@ fn tailed_package() -> (Vec<u8>, Vec<u8>) {
 }
 
 /// A synthetic complete-defaults profile carrying the grammar fields of `defaults`.
-fn synthetic_defaults(defaults: &[u8], package: &[u8], source: &[u8]) -> Vec<u8> {
+pub(super) fn synthetic_defaults(defaults: &[u8], package: &[u8], source: &[u8]) -> Vec<u8> {
     let mut value = json(&synthetic_profile(20, package, source));
     let defaults = json(defaults);
     for field in [
@@ -128,7 +128,7 @@ fn synthetic_defaults(defaults: &[u8], package: &[u8], source: &[u8]) -> Vec<u8>
 }
 
 /// Every written octet by address; overlapping writes would be a planner defect.
-fn written(bundle: &PreparedBundle) -> BTreeMap<u16, u8> {
+pub(super) fn written(bundle: &PreparedBundle) -> BTreeMap<u16, u8> {
     let mut octets = BTreeMap::new();
     for step in &bundle.normalized_plan.steps {
         if let OperationRecord::WriteMemory { address, data, .. } = &step.operation {
@@ -179,7 +179,7 @@ fn reference_plan_sha256(
 }
 
 /// Source `Data` of the installed segment holding `address`, never a second origin.
-fn source_octet(code: &knx_productdb::code::ProgramCode, address: u16) -> u8 {
+pub(super) fn source_octet(code: &knx_productdb::code::ProgramCode, address: u16) -> u8 {
     let address = u32::from(address);
     let segment = code
         .segments
@@ -189,7 +189,7 @@ fn source_octet(code: &knx_productdb::code::ProgramCode, address: u16) -> u8 {
     segment.data.as_ref().unwrap()[usize::try_from(address - segment.address).unwrap()]
 }
 
-fn assert_counts(candidate: &PreparedCandidate, expected: (usize, usize, usize, usize)) {
+pub(super) fn assert_counts(candidate: &PreparedCandidate, expected: (usize, usize, usize, usize)) {
     assert_eq!(
         (
             candidate.source_positions,
@@ -282,7 +282,7 @@ fn defaults_v2_writes_independent_source_octets_outside_the_reservation_v1_omits
     v2.bundle.plan().unwrap();
 }
 
-fn public_conn() -> (tempfile::TempDir, knx_productdb::Connection) {
+pub(super) fn public_conn() -> (tempfile::TempDir, knx_productdb::Connection) {
     let path = std::env::var_os("KNXBENCH_PUBLIC_UP258").expect("set KNXBENCH_PUBLIC_UP258");
     let bytes = std::fs::read(path).unwrap();
     assert_eq!(

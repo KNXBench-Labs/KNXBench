@@ -28,8 +28,8 @@ use std::io;
 use knx_core::commissioning::property_download::PropertyOperation;
 use knx_core::{ContactableAddress, IndividualAddress};
 use knx_productdb::image::{
-    build_experimental_system2_image, ExperimentalSystem2ImagePolicy,
-    ExperimentalSystem2SourceBinding, ImageRequest,
+    build_experimental_system2_image, build_project_experimental_system2_image,
+    ExperimentalSystem2ImagePolicy, ExperimentalSystem2SourceBinding, ImageRequest,
 };
 use knx_productdb::system2_procedure::{plan_system2_candidate, System2ProcedurePolicy};
 use serde::{Deserialize, Serialize};
@@ -75,6 +75,22 @@ const INDEPENDENT_DATA: &str = "source-capacity-preserving-independent-data-v1";
 /// Project profiles are version 2 as well; this id suffix keeps an unchanged
 /// project profile and plan out of the format-1 defaults bundle.
 pub(crate) const DEFAULTS_V2_ID_SUFFIX: &str = "-defaults-v2";
+/// Current defaults profile v3; the suffix rule keeps every defaults version unambiguous.
+pub(crate) const DEFAULTS_V3_ID_SUFFIX: &str = "-defaults-v3";
+/// Superseded v1/v2 invisible-parameter reading: inactive defaults and Union bases.
+const BACKGROUND_DEFAULTS: &str = "background-parameter-default-union-base-active-overlay-v1";
+/// v3 reading, shared with the configured path: inactive parameters keep source Data.
+const SOURCE_TEMPLATE: &str = "source-template-inactive-legacy-patch-active-overlay-v1";
+
+/// Whether a format-1 bundle binding names one of the known defaults profile versions.
+pub(crate) fn is_defaults_profile(version: u32, id: &str) -> bool {
+    match version {
+        1 => true,
+        2 => id.ends_with(DEFAULTS_V2_ID_SUFFIX),
+        3 => id.ends_with(DEFAULTS_V3_ID_SUFFIX),
+        _ => false,
+    }
+}
 
 impl ValidationProfile {
     /// The procedure policy bound to this profile version; no other pairing exists.
@@ -86,7 +102,18 @@ impl ValidationProfile {
             (2, INDEPENDENT_DATA) if self.id.ends_with(DEFAULTS_V2_ID_SUFFIX) => {
                 Some(System2ProcedurePolicy::source_capacity_preserving_independent_data())
             }
+            (3, INDEPENDENT_DATA) if self.id.ends_with(DEFAULTS_V3_ID_SUFFIX) => {
+                Some(System2ProcedurePolicy::source_capacity_preserving_independent_data())
+            }
             _ => None,
+        }
+    }
+    /// The one invisible-parameter reading bound to this profile version.
+    fn invisible_policy(&self) -> &'static str {
+        if self.version >= 3 {
+            SOURCE_TEMPLATE
+        } else {
+            BACKGROUND_DEFAULTS
         }
     }
     /// Parse only the named complete-defaults experimental profile grammar.
@@ -103,6 +130,7 @@ impl ValidationProfile {
         };
         if result.format != 1
             || result.procedure().is_none()
+            || result.invisible_parameters != result.invisible_policy()
             || result.id.is_empty()
             || result.id.len() > 128
             || result.classification != "strong-hypothesis-simulator-validation-only"
@@ -177,7 +205,8 @@ pub fn prepare_simulated_candidate(
         flag_overrides: BTreeMap::new(),
     };
     let policy = ExperimentalSystem2ImagePolicy {
-        revision: 1,
+        // Revision 2 is the configured path's source-template reading (v3 only).
+        revision: if profile.version >= 3 { 2 } else { 1 },
         binding: ExperimentalSystem2SourceBinding {
             program_id: profile.program_id.clone(),
             schema_namespace: profile.schema_namespace.clone(),
@@ -191,9 +220,14 @@ pub fn prepare_simulated_candidate(
         binary_restrictions: profile.binary_restrictions.clone(),
         reference_activation: profile.reference_activation.clone(),
     };
-    let image = build_experimental_system2_image(conn, &request, &policy)
-        .map_err(|e| invalid(e.to_string()))?
-        .image;
+    let image = if profile.version >= 3 {
+        // The request above carries no values, links or flag overrides: complete defaults.
+        build_project_experimental_system2_image(conn, &request, &policy)
+    } else {
+        build_experimental_system2_image(conn, &request, &policy)
+    }
+    .map_err(|e| invalid(e.to_string()))?
+    .image;
     let plan =
         plan_system2_candidate(&image, target, &procedure).map_err(|e| invalid(e.to_string()))?;
     check_identity(&plan, &profile)?;
@@ -234,6 +268,11 @@ pub fn prepare_simulated_candidate(
         "table segments carry their computed table span, and independent source data outside the declared table reservation is written; unused declared table capacity is not"
     };
     inferences.push(format!("STRONG HYPOTHESIS ({}): declared allocation counts; zero flags map to disabled checksum; every task segment carries the full application identity; {tables}; exact tool metadata retained without wire write. Same-application reconstruction and masked-byte survival are simulator assumptions, not physical recovery evidence.", profile.procedure_policy));
+    inferences.push(if profile.version >= 3 {
+        format!("OBSERVATION-SUPPORTED HYPOTHESIS ({}): DownloadInvisibleParameters=Background keeps the source segment Data for inactive parameters, the same reading as the configured path (owner decision 28 October 2026). No public document defines Background precedence; agreement with a reference image is an observation, not ETS equivalence or hardware support.", profile.invisible_parameters)
+    } else {
+        format!("SUPERSEDED HYPOTHESIS ({}): inactive parameters receive their defaults and one declared Union default base; defaults profile v3 replaced this reading. Simulator reproduction and recovery of existing operations only.", profile.invisible_parameters)
+    });
     Ok(PreparedCandidate {
         bundle: PreparedBundle::new(binding, normalized)?,
         source_positions,

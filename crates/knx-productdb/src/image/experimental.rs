@@ -545,14 +545,20 @@ impl Prepared {
         activation: &Activation,
         tables: &[(String, usize, usize)],
     ) -> Result<BTreeMap<String, Vec<u8>>, ImageError> {
-        if !matches!(
-            code.options
-                .get("DownloadInvisibleParameters")
-                .map(String::as_str),
-            None | Some("Background" | "DefaultValue")
-        ) {
+        let behavior = code
+            .options
+            .get("DownloadInvisibleParameters")
+            .map(String::as_str);
+        if !matches!(behavior, None | Some("Background" | "DefaultValue")) {
             return Err(unsupported(
                 "unrecognized DownloadInvisibleParameters value",
+            ));
+        }
+        // Template retention is the observed reading of Background only; an absent
+        // option (schema default DefaultValue) or DefaultValue has no defined image rule.
+        if self.source_template && behavior != Some("Background") {
+            return Err(unsupported(
+                "source-template retention requires explicit DownloadInvisibleParameters=Background",
             ));
         }
         let mut images: BTreeMap<String, ParameterImage> = code

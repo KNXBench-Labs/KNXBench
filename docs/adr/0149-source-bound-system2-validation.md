@@ -51,9 +51,14 @@ unwritten: 338 masked (no source write) plus 416 octets of declared
 address/association-table capacity beyond the computed tables.
 **Correction (26 October 2026):** 15 of those 416 octets (`03F1h`–`03FFh` in
 `AS-0260`) are independent source data beyond the 401-octet declared table
-capacity, which profile v1 omits. The current defaults profile v2 writes them
+capacity, which profile v1 omits. Defaults profile v2 writes them
 (775 written, 739 unwritten = 338 + 401); see the
 [contract](../contracts/up258-system2-validation.md).
+**Amendment (28 October 2026):** the current defaults profile v3 keeps those
+counts and changes only the invisible-parameter reading to the configured
+path's template retention (owner decision; observation-supported hypothesis,
+no defining public document; [source search](../research/2026-10-28-background-precedence-source-search.md)).
+New physical execution of a v1 or v2 bundle refuses.
 Their survival through real Unload/reallocation is unresolved. The CLI has no
 physical transport; even explicit consent plus `--gateway` refuses before a
 socket, activity lease or operation receipt. The generic experimental Net entry

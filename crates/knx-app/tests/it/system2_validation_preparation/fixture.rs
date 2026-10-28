@@ -20,6 +20,7 @@ pub(crate) fn synthetic_package(namespace: u8) -> (Vec<u8>, Vec<u8>) {
     use std::io::{Cursor, Write};
     let application = r#"<KNX xmlns="http://knx.org/xml/project/20"><ManufacturerData><Manufacturer RefId="M-0000"><ApplicationPrograms>
 <ApplicationProgram Id="M-0000_A-0001-01-0000" Name="Synthetic" ApplicationNumber="1" ApplicationVersion="1" PeiType="0" MaskVersion="MV-0025" LoadProcedureStyle="ProductProcedure"><Static>
+<Options DownloadInvisibleParameters="Background" />
 <Code>
 <AbsoluteSegment Id="GA" Address="278" Size="16"><Data>AAAAAAAAAAAAAAAAAAAAAA==</Data></AbsoluteSegment>
 <AbsoluteSegment Id="AA" Address="608" Size="16"><Data>AAAAAAAAAAAAAAAAAAAAAA==</Data></AbsoluteSegment>

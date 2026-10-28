@@ -250,7 +250,12 @@ const PUBLISHED: [Published; 3] = [
         parameter_refs: 572,
         com_object_refs: 148,
         translations: 1468,
-        diagnostics: &[("orphan-translation", 5), ("skipped-rows", 2), ("unmapped-table", 18)],
+        diagnostics: &[
+            ("atomic4-binary-fields-unmodeled", 30),
+            ("orphan-translation", 5),
+            ("skipped-rows", 2),
+            ("unmapped-table", 18),
+        ],
         skipped: &[
             "3 product_to_program rows were not mapped (PROD2PROG_ID, PRODUCT_ID or PROGRAM_ID is empty); they stay in the payload",
             "385 text_attribute rows were not mapped (LANGUAGE_ID, COLUMN_ID, ENTITY_ID or the text is empty); they stay in the payload",
@@ -274,8 +279,8 @@ const PUBLISHED: [Published; 3] = [
     // (KL-128, Goal A5) atomic types 3 (`string`) and 5 (`long enum`) map
     // as ETS4 converted them: their 56 types and 1,515 parameters (once the
     // 1,607 dangling references and 56 unknown-atomic-type notes) are in the
-    // model, and each of the 29 long-enum types reports that its binary
-    // values stay in the stored payload only.
+    // model. WP-03 now stores valid long-enum binary values and reports the
+    // ordinary-enum binary fields whose meaning is not established.
     Published {
         name: "SIEMENS_KNX_PDB_Nov_2016_ETS3.vd5",
         programs: 88,
@@ -287,7 +292,7 @@ const PUBLISHED: [Published; 3] = [
         com_object_refs: 55381,
         translations: 293955,
         diagnostics: &[
-            ("binary-values-not-modeled", 29),
+            ("atomic4-binary-fields-unmodeled", 1133),
             ("no-page", 18),
             ("orphan-translation", 5),
             ("overlapping-memory", 26),
@@ -310,7 +315,8 @@ fn the_real_databases_publish_completely_and_evaluate() {
     let root = corpus_root();
     let dir = tempfile::tempdir().unwrap();
     let conn = knx_productdb::open_and_migrate(&dir.path().join("products.sqlite")).unwrap();
-    for expected in &PUBLISHED {
+    let mut mismatches = Vec::new();
+    for (ordinal, expected) in PUBLISHED.iter().enumerate() {
         let bytes = read(&root, expected.name);
         let report =
             knx_app::legacy::import_legacy_file(&conn, expected.name, &bytes, Some(&password()))
@@ -338,7 +344,11 @@ fn the_real_databases_publish_completely_and_evaluate() {
             expected.translations,
             expected.diagnostics.to_vec(),
         );
-        assert_eq!(actual, pinned, "{}", expected.name);
+        if actual != pinned {
+            mismatches.push(format!(
+                "fixture {ordinal}: actual {actual:?}, pinned {pinned:?}"
+            ));
+        }
         let skipped: Vec<&str> = report
             .diagnostics
             .iter()
@@ -390,4 +400,5 @@ fn the_real_databases_publish_completely_and_evaluate() {
             assert_eq!(active > 0, placed > 0, "{program}: {placed} placed");
         }
     }
+    assert!(mismatches.is_empty(), "{}", mismatches.join("\n"));
 }

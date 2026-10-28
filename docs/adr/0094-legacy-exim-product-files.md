@@ -321,6 +321,32 @@ ETS4's conversion of the same Siemens database
   nine `070nh` programs) and `knx-productdb/tests/legacy_atomic_types.rs`
   (synthetic).
 
+## Amendment: WP-03 (2026-10-28), exact long-enum binary retention
+
+The 13 October paragraph above is historical. The `.knxprod` enumeration
+column/reporting gap was closed by v25 / [ADR-0141](0141-placements-and-enumeration-attributes-reach-columns.md).
+WP-03 now fills that same `binary_value` column for validated legacy atomic
+type 5: strict hex and exact byte/type width are decoded without trimming or
+integer coercion, preserving leading zeros, then stored as canonical Base64.
+Invalid values remain NULL with a current diagnostic. Atomic type 4 binary or
+length fields have no established mapping and remain retained/uninterpreted,
+with an explicit diagnostic, including length-only fields.
+
+The [bounded independent witness](../research/2026-10-28-legacy-enum-binary-mapping.md)
+supports this representation rule, not all-file conversion equivalence.
+Data-only productdb v30 authenticates retained payload hashes, ownership and
+relevant normalized identities before filling historical NULL values. A whole
+payload's ambiguous/conflicting backfill refuses explicitly; historical import
+reports and diagnostics are not relabeled as current encounters. In particular,
+old `binary-values-not-modeled` rows remain historical evidence, not a promise
+that fresh imports emit that retired diagnosis. New aliases may add provenance
+without changing mapped rows or diagnostics on skipped re-ingest.
+
+This changes storage only. It invents no `source_xml`, changes no image or
+commissioning guard, and grants no legacy download or hardware acceptance.
+Missing/corrupt-source repair, unpaired converted types and large-payload
+migration benchmarking remain separate. See [WP-03](../open-work/WP-03-legacy-binary-enumerations.md).
+
 ## Alternatives considered
 
 - **Built-in or "known" password.** Rejected. VD4_PRODUCT_DATABASE_IMPORT.md

@@ -1,6 +1,6 @@
 # WP-11 — Native Linux acceptance
 
-**Status:** In progress: first bounded native slice, two positive editor cells and bounded capture export recorded; remaining cells open. Listed in [OPEN_WORK](../OPEN_WORK.md); per-ID status of record is the [ledger](../status/LEDGER.md).
+**Status:** In progress: first bounded native slice, two positive editor cells, bounded capture export and real-pointer drag/hover cells recorded; one pane-drag defect found and open; remaining cells open. Listed in [OPEN_WORK](../OPEN_WORK.md); per-ID status of record is the [ledger](../status/LEDGER.md).
 
 ## Task
 
@@ -65,6 +65,19 @@ virtual-key replacement attribution, keyboard/pointer/layout cells and
 vendor-specific EGL/GPU evidence. Orca and Firefox remain untested; their
 previously missing environments were not installed by this continuation.
 No ledger row is closed.
+
+## Real-pointer drag and hover cells — 28 October 2026
+
+The [pointer continuation](../status/2026-10-28-wp11-native-pointer-cells.md)
+drove the real compositor cursor at 80/100/150% with fictional data. Completed
+navigation-pane drags follow the pointer and scale correctly. Table column drags
+are stable and reversible: exact at 100/150%, fit-stretched at 80%. Topology
+device hover keeps its geometry and shows the highlight at all three scales.
+
+**Open defect:** the pane separators and height splitters do not cancel the
+`pointerdown` default. In WebKitGTK a drag can select document text, and
+later drags then stop after their first motion without committing. The table
+column handle, which cancels the default, is unaffected. Not fixed by this record.
 
 ## Done when
 

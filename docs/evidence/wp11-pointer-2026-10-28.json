@@ -1,0 +1,294 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-10-28",
+  "scope": "WP-11 bounded native real-pointer cells (pane/table drag, topology hover) at 80/100/150%",
+  "result": "bounded-native-evidence-recorded-with-one-open-defect",
+  "wholeWp11Complete": false,
+  "artifact": {
+    "tag": "v0.1.0-alpha.17",
+    "sourceCommit": "a9ea32d72364478b25e158d0b95465af7a4702df",
+    "name": "KNXBench_0.1.0-alpha.17_amd64.AppImage",
+    "bytes": 92047864,
+    "sha256": "cd1f0cdf129bfad9e143062e4395c52f9376fa49a51c35145a5c0046a49e1d8a",
+    "verification": "Retained prior asset restored from the sealed WP-11 archive; launcher asserts the SHA-256 before start; no rebuild or current-main artifact claim"
+  },
+  "method": "Actual native Wayland/WebKitGTK window; real compositor pointer via zwlr_virtual_pointer_v1 (stdlib Wayland client, absolute motion on one output, left button); guarded AT-SPI reads; screen-capture crops for hover; no JS injection, mocked HTTP or Tauri",
+  "authority": "Owner Go on 28 October 2026 for real-cursor WP-11 pointer cells with fictional data",
+  "safety": {
+    "network": "Separate loopback-only namespace",
+    "filesystem": "Real home/projects masked; private HOME/XDG/results",
+    "realBusAccess": false,
+    "realProjectEdits": false,
+    "productRuntimeChanges": false,
+    "userDesktop": "App placed silently on its own workspace; pointer, focus and visible workspace restored after every cell"
+  },
+  "fixture": {
+    "project": "demos/1.0.0/office-building.knxdb (fictional community demo) at the target source",
+    "gitBlob": "8f3472f4484c8c3812320de4b347d775cd867768",
+    "sha256": "ddda4fd55e077f00bc34d5b0ca02dcd3c6d2d54da52f836ac7eea7e4f244dc2a"
+  },
+  "cells": {
+    "C1-navigation-pane-drag": {
+      "z100-first-drag": {
+        "pointerDelta": 100,
+        "announcedDelta": 100.0,
+        "edgeDelta": 100,
+        "persistedWidth": 350
+      },
+      "z100-sequence-after-clearing-selection": [
+        {
+          "pointerDelta": 100,
+          "announcedDelta": 100.0,
+          "edgeDelta": 100,
+          "selectionNodesAfter": 11
+        },
+        {
+          "pointerDelta": -100,
+          "announcedDelta": -5.0,
+          "edgeDelta": -5,
+          "selectionNodesAfter": 11
+        },
+        {
+          "pointerDelta": 100,
+          "announcedDelta": 0.0,
+          "edgeDelta": 0,
+          "selectionNodesAfter": 11
+        },
+        {
+          "pointerDelta": -100,
+          "announcedDelta": 0.0,
+          "edgeDelta": 0,
+          "selectionNodesAfter": 0
+        }
+      ],
+      "z80-clear-before-each": [
+        {
+          "pointerDelta": 100,
+          "announcedDelta": 100.0,
+          "edgeDelta": 80,
+          "selectionNodesAfter": 11
+        },
+        {
+          "pointerDelta": -100,
+          "announcedDelta": -125.0,
+          "edgeDelta": -100,
+          "selectionNodesAfter": 0
+        }
+      ],
+      "z150-clear-before-each": [
+        {
+          "pointerDelta": 100,
+          "announcedDelta": 67.0,
+          "edgeDelta": 101,
+          "selectionNodesAfter": 0
+        },
+        {
+          "pointerDelta": -100,
+          "announcedDelta": -67.0,
+          "edgeDelta": -101,
+          "selectionNodesAfter": 0
+        },
+        {
+          "pointerDelta": 100,
+          "announcedDelta": 67.0,
+          "edgeDelta": 101,
+          "selectionNodesAfter": 0
+        }
+      ],
+      "verdict": "Edge follows the pointer and the announced width changes by pointer/zoom whenever a drag completes (100/80/150%); drags are intermittently cut short once a drag has created a document text selection"
+    },
+    "C1b-navigation-block-height-splitter-z150": {
+      "sequence": [
+        {
+          "pointerDelta": 60,
+          "announcedDelta": 40.0,
+          "edgeDelta": 0,
+          "selectionNodesAfter": 2
+        },
+        {
+          "pointerDelta": -60,
+          "announcedDelta": -2.0,
+          "edgeDelta": 0,
+          "selectionNodesAfter": 0
+        },
+        {
+          "pointerDelta": 60,
+          "announcedDelta": 4.0,
+          "edgeDelta": 0,
+          "selectionNodesAfter": 2
+        },
+        {
+          "pointerDelta": -60,
+          "announcedDelta": -2.0,
+          "edgeDelta": 0,
+          "selectionNodesAfter": 0
+        }
+      ],
+      "verdict": "First drag 60 px -> +40 (60/1.5); following drags moved 2-4 px; a selection appeared after each forward drag"
+    },
+    "C2-device-table-name-column": {
+      "z100": [
+        {
+          "pointerDelta": 80,
+          "announcedDelta": 80.0,
+          "edgeDelta": 80,
+          "selectionNodesAfter": 0
+        },
+        {
+          "pointerDelta": -80,
+          "announcedDelta": -80.0,
+          "edgeDelta": -80,
+          "selectionNodesAfter": 0
+        },
+        {
+          "pointerDelta": 80,
+          "announcedDelta": 80.0,
+          "edgeDelta": 80,
+          "selectionNodesAfter": 0
+        },
+        {
+          "pointerDelta": -80,
+          "announcedDelta": -80.0,
+          "edgeDelta": -80,
+          "selectionNodesAfter": 0
+        }
+      ],
+      "z150": [
+        {
+          "pointerDelta": 80,
+          "announcedDelta": 53.0,
+          "edgeDelta": 79,
+          "selectionNodesAfter": 0
+        },
+        {
+          "pointerDelta": -80,
+          "announcedDelta": -53.0,
+          "edgeDelta": -79,
+          "selectionNodesAfter": 0
+        },
+        {
+          "pointerDelta": 80,
+          "announcedDelta": 53.0,
+          "edgeDelta": 79,
+          "selectionNodesAfter": 0
+        },
+        {
+          "pointerDelta": -80,
+          "announcedDelta": -53.0,
+          "edgeDelta": -79,
+          "selectionNodesAfter": 0
+        }
+      ],
+      "z80": [
+        {
+          "pointerDelta": 80,
+          "announcedDelta": 111.0,
+          "edgeDelta": 77,
+          "selectionNodesAfter": 0
+        },
+        {
+          "pointerDelta": -80,
+          "announcedDelta": -111.0,
+          "edgeDelta": -77,
+          "selectionNodesAfter": 0
+        },
+        {
+          "pointerDelta": 80,
+          "announcedDelta": 111.0,
+          "edgeDelta": 77,
+          "selectionNodesAfter": 0
+        },
+        {
+          "pointerDelta": -80,
+          "announcedDelta": -111.0,
+          "edgeDelta": -77,
+          "selectionNodesAfter": 0
+        }
+      ],
+      "verdict": "4/4 drags complete and reversible at every scale, no selection; exact at 100/150%; at 80% the stretched table announces +111 for 100 layout px (fit distribution, rendered 157 vs 103 at 100%), not classified as a defect"
+    },
+    "C3-topology-device-hover": {
+      "z80": {
+        "zoom": 0.8,
+        "geometryStationary": true,
+        "backgroundMeanRgb": {
+          "unhovered": [
+            48.6,
+            52.6,
+            61.4
+          ],
+          "hovered": [
+            58.8,
+            60.9,
+            76.9
+          ]
+        },
+        "cropSha256": [
+          "e434c299d9bdd7d1272df978010d0b096bb6e4e05f433f42051de3a83ea1d372",
+          "ebefabf109fda6207e6490cc68770ca0eea3ea1716965c94a29eb257fa415bc7"
+        ]
+      },
+      "z100": {
+        "zoom": 1.0,
+        "geometryStationary": true,
+        "backgroundMeanRgb": {
+          "unhovered": [
+            52.7,
+            56.5,
+            65.3
+          ],
+          "hovered": [
+            62.5,
+            64.7,
+            80.5
+          ]
+        },
+        "cropSha256": [
+          "ffb55fba04ee41ddc86f35ec35c3dcf19cf935dd15f2e80a569eeff5edc66489",
+          "0d746a3580d0c3be23437dd5cdc770157dcc50b44c6617cb6ea6fbda8ddf10d6"
+        ]
+      },
+      "z150": {
+        "zoom": 1.5,
+        "geometryStationary": true,
+        "backgroundMeanRgb": {
+          "unhovered": [
+            61.9,
+            66.8,
+            74.3
+          ],
+          "hovered": [
+            71.3,
+            74.5,
+            88.9
+          ]
+        },
+        "cropSha256": [
+          "7fcbbe6aabb4eda3519bb823e1a3a48e78d05fb5d9ac9f141835be5305d44635",
+          "578ee25e071b1fdc6409ffac89e4581726daf32c131d9eccdcb6e84a5dd88680"
+        ]
+      },
+      "verdict": "Geometry stationary, background highlight visible, icon/name/address/count not clipped (visual review of crops)"
+    }
+  },
+  "defect": {
+    "summary": "Pane separators (ResizablePane, PaneSplitter) do not cancel the pointerdown default; in WebKitGTK a drag can start a document text selection and later drags lose their pointer stream (no commit)",
+    "contrast": "ResizableTable's column handle calls preventDefault on pointerdown, blocks dragstart and sets user-select:none; it never lost a drag",
+    "sourceUnchangedOnMain": true,
+    "status": "open, not fixed by this record"
+  },
+  "harnessObservations": [
+    "Keys first reached the main window instead of the same-PID chooser; the driver now focuses the exact window address",
+    "Return in the chooser location field did not confirm; the native Open action did",
+    "One run labelled c1-z80 ran at 100% (zoom keys refused by a stale environment variable); kept only as an interruption observation",
+    "Under 80% zoom WebKitGTK reported separator x in visual pixels but heights in layout pixels"
+  ],
+  "privateEvidence": "<profile>/evidence/wp11-pointer-20261028/ (cells.jsonl, actions.jsonl, AT-SPI steps, crops, scripts)",
+  "notCovered": [
+    "Orca, Firefox",
+    "Pointer drag of the Properties pane",
+    "Other window sizes/themes",
+    "Vendor-specific GPU/EGL",
+    "A fixed build"
+  ]
+}

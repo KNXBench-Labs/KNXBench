@@ -1,6 +1,13 @@
 # Restart snapshot
 
-Updated: 2026-10-28 05:50 CET. Operational snapshot, not an append-only journal.
+Updated: 2026-10-28 06:30 CET. Operational snapshot, not an append-only journal.
+## WP-11 real-pointer cells (RECORDED; observed 2026-10-28 06:30 CET, this WebUI)
+- Owner Go 28 Oct: real cursor, fictional data. Alpha 17 AppImage, office demo, loopback sandbox.
+- Pane drag scales correctly when it completes; table column stable (80% fit-stretched); hover OK.
+- OPEN DEFECT: ResizablePane/PaneSplitter lack pointerdown preventDefault; WebKitGTK text
+  selection makes later drags stop without commit. Not fixed. Next package: fix + native re-check.
+- Record `docs/status/2026-10-28-wp11-native-pointer-cells.md`; evidence
+  `<profile>/evidence/wp11-pointer-20261028/`. App closed; desktop restored. Owner: stop after this.
 ## S2-04 individual-address settler (PUBLISHED; observed 2026-10-28 05:50 CET, this WebUI)
 - Main-first `c59d14280` (feature `5efcf506a`, correction `cc3588d4f`); local/tracking/live equal.
 - Settler's synchronous project save runs via `blocking_off_tunnel_workers`; review APPROVE.

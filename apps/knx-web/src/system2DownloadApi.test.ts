@@ -134,15 +134,15 @@ it("admits unreadable prestate allocations only with the prestate flag and witho
 it("admits the exact legacy v1 status keyset and normalizes it to no diagnostics", async () => {
   const { wireV1, recoveryStatus: recovery } = await import("./system2DownloadTestFixtures");
   expect(Object.keys(wireV1(status))).not.toContain("failureDiagnostics");
-  reply(wireV1(status)); expect(await system2.getSystem2Status()).toEqual({ ...status, schemaVersion: 1, failureDiagnostics: [] });
-  reply(wireV1(recovery)); expect(await system2.getSystem2Status()).toEqual({ ...recovery, schemaVersion: 1, failureDiagnostics: [] });
+  reply(wireV1(status)); expect(await system2.getSystem2Status()).toEqual({ ...status, schemaVersion: 1, failureDiagnostics: [], downloadResult: "unknown" });
+  reply(wireV1(recovery)); expect(await system2.getSystem2Status()).toEqual({ ...recovery, schemaVersion: 1, failureDiagnostics: [], downloadResult: "unknown" });
 });
 it("rejects a diagnosis key on v1 and a missing or non-list diagnosis on v2", async () => {
   const { wireV1, downloadDiagnostic } = await import("./system2DownloadTestFixtures");
   const { failureDiagnostics: _omitted, ...missing } = status;
   for (const value of [
     { ...wireV1(status), failureDiagnostics: [] }, { ...wireV1(status), failureDiagnostics: [downloadDiagnostic] },
-    missing, { ...status, failureDiagnostics: null }, { ...status, failureDiagnostics: {} }, { ...status, schemaVersion: 3 }, { ...status, schemaVersion: 0 },
+    missing, { ...status, failureDiagnostics: null }, { ...status, failureDiagnostics: {} }, { ...status, schemaVersion: 4 }, { ...status, schemaVersion: 0 },
   ]) { reply(value); await expect(system2.getSystem2Status()).rejects.toThrow("System-2"); }
 });
 it("admits closed, count-consistent failure diagnostics in order, once per run", async () => {
@@ -167,4 +167,65 @@ it("rejects malformed, extended, inconsistent, duplicate or misordered failure d
     [d, d], [r, r], [r, d], [d, r, d], [d, r, r],
     42, "download", [null], [[]],
   ]) { reply({ ...status, state: "failed", failureDiagnostics }); await expect(system2.getSystem2Status()).rejects.toThrow("System-2"); }
+});
+
+it("normalizes the exact v2 wire to an unknown result and refuses a downloadResult key on it", async () => {
+  const { wireV2, downloadFailedStatus } = await import("./system2DownloadTestFixtures");
+  expect(Object.keys(wireV2(downloadFailedStatus))).not.toContain("downloadResult");
+  reply(wireV2(downloadFailedStatus));
+  expect(await system2.getSystem2Status()).toEqual({ ...downloadFailedStatus, schemaVersion: 2, downloadResult: "unknown" });
+  reply({ ...wireV2(downloadFailedStatus), downloadResult: "verified" });
+  await expect(system2.getSystem2Status()).rejects.toThrow("System-2");
+});
+it("admits each closed v3 result and refuses unknown, missing or contradictory ones", async () => {
+  const { downloadFailedStatus: failed } = await import("./system2DownloadTestFixtures");
+  for (const downloadResult of system2.SYSTEM2_RESULTS) {
+    const row = { ...failed, downloadResult, mutationMayHaveStarted: downloadResult !== "nothingWritten" };
+    if (downloadResult === "verified") continue;
+    reply(row); expect(await system2.getSystem2Status()).toEqual(row);
+  }
+  const { downloadResult: _omitted, ...missing } = failed;
+  for (const value of [
+    missing, { ...failed, downloadResult: "loaded" }, { ...failed, downloadResult: null }, { ...failed, downloadResult: 1 },
+    // A failed or cancelled run is never verified; "nothing written" cannot follow a possible write.
+    { ...failed, downloadResult: "verified" }, { ...failed, state: "cancelled", downloadResult: "verified" },
+    { ...failed, downloadResult: "nothingWritten", mutationMayHaveStarted: true },
+  ]) { reply(value); await expect(system2.getSystem2Status()).rejects.toThrow("System-2"); }
+  const finished = { ...failed, state: "finished", failureDiagnostics: [], downloadResult: "verified" };
+  reply(finished); expect(await system2.getSystem2Status()).toEqual(finished);
+});
+const reportBody = { format: 2, kind: "knxbench-system2-download-summary", support: "EXPERIMENTAL BEST-EFFORT; HARDWARE COMPATIBILITY AND RECOVERY UNVERIFIED",
+  evidence: "local-journal-only", download: { outcome: "failed", result: "transferCompleteVerificationUnfinished", completedSteps: 26, totalSteps: 27 },
+  recovery: null, mutationPossible: true, prestateDiffers: false, failureDiagnostics: [], executionBuild: { state: "unknown" }, exporterBuild: "0.1.0-alpha.1+gabc" };
+it("reads the ended-run report by operation id only and admits exactly its keyset", async () => {
+  reply(reportBody);
+  expect(await system2.getSystem2Report(status.operationId)).toEqual(reportBody);
+  const recorded = { ...reportBody, recovery: { outcome: "restored", completedSteps: 3, totalSteps: 3 }, executionBuild: { state: "recorded", version: "0.1.0-alpha.1+g0ld1234".replace("0ld","01d") } };
+  reply(recorded); expect(await system2.getSystem2Report(status.operationId)).toEqual(recorded);
+  expect(fetch).toHaveBeenCalledWith(`/api/device-system2/report?operationId=${status.operationId}`, { headers: undefined });
+  await expect(system2.getSystem2Report("../x")).rejects.toThrow("System-2");
+  for (const value of [
+    { ...reportBody, address: "1.1.67" }, { ...reportBody, kind: "knxbench-property-validation-summary" }, { ...reportBody, format: 1 },
+    { ...reportBody, download: { ...reportBody.download, outcome: "running" } }, { ...reportBody, download: { ...reportBody.download, result: "inProgress" } },
+    { ...reportBody, download: { ...reportBody.download, completedSteps: 28 } }, { ...reportBody, evidence: "device-read" },
+    { ...reportBody, download: { ...reportBody.download, result: "verified" } },
+    { ...reportBody, recovery: { outcome: "restored", completedSteps: 3, totalSteps: 2 } }, { ...reportBody, recovery: { outcome: "running", completedSteps: 1, totalSteps: 2 } },
+    { ...reportBody, executionBuild: { state: "recorded" } }, { ...reportBody, executionBuild: { state: "unknown", version: "x" } },
+    { ...reportBody, executionBuild: { state: "recorded", version: "has space" } }, { ...reportBody, exporterBuild: "" }, null,
+    { ...reportBody, executionBuild: { state: "recorded", version: "/home/alice/private-project.knxproj" } },
+    { ...reportBody, exporterBuild: "/home/alice/private-project.knxproj" }, { ...reportBody, exporterBuild: "1.0" },
+    { ...reportBody, executionBuild: { state: "recorded", version: "1.2.3+gXYZ" } },
+  ]) { reply(value); await expect(system2.getSystem2Report(status.operationId)).rejects.toThrow("System-2"); }
+});
+
+it("admits the v3 settlement and recovery fields strictly", async () => {
+  const { downloadFailedStatus: failed } = await import("./system2DownloadTestFixtures");
+  for (const projectSettlement of ["notRecorded", "noMutation", "persisted", "sessionOnly", "persistenceFailed", "noProject", "otherProject", "deviceMissing", "unavailable"]) {
+    const row = { ...failed, projectSettlement }; reply(row); expect(await system2.getSystem2Status()).toEqual(row);
+  }
+  const { projectSettlement: _p, ...missing } = failed;
+  for (const value of [missing, { ...failed, projectSettlement: "applied" }, { ...failed, restoreAttempted: "yes" }, { ...failed, downloadCompletedSteps: -1 },
+    { ...failed, downloadCompletedSteps: 5, downloadTotalSteps: 4 }, { ...failed, downloadTotalSteps: undefined }]) {
+    reply(value); await expect(system2.getSystem2Status()).rejects.toThrow("System-2");
+  }
 });

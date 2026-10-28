@@ -716,6 +716,209 @@ fn state(
     Arc::new(state)
 }
 
+struct Mounted {
+    directory: tempfile::TempDir,
+    hardware: Arc<TestHardware>,
+    state: crate::SharedState,
+    router: Router,
+    device: DeviceId,
+}
+/// The cancellation test's setup: public package, one addressed device with the nondefault PIR value.
+async fn mounted() -> Mounted {
+    let package = std::fs::read(
+        std::env::var_os("KNXBENCH_PUBLIC_UP258")
+            .expect("set KNXBENCH_PUBLIC_UP258 to the existing read-only public fixture"),
+    )
+    .unwrap();
+    assert_eq!(knx_productdb::sha256_hex(&package), PACKAGE_SHA256);
+    let directory = tempfile::tempdir().unwrap();
+    let products = directory.path().join("products.sqlite");
+    let conn = knx_productdb::open_and_migrate(&products).unwrap();
+    knx_productdb::install_package_with_limits(
+        &conn,
+        "public-up258.knxprod",
+        &package,
+        knx_productdb::PackageLimits::LARGE,
+    )
+    .unwrap();
+    drop(conn);
+    let hardware = TestHardware::new(directory.path());
+    let state = state(directory.path(), Some(products), &hardware);
+    let router = crate::app(state.clone(), None);
+    http(&router, "/api/project/new", Some(json!({})), 200).await;
+    http(
+        &router,
+        "/api/devices",
+        Some(json!({"catalogItemId":CATALOG_ITEM,"name":"Mounted System-2 selected device"})),
+        200,
+    )
+    .await;
+    let device = {
+        let mut project = state.project.lock().unwrap();
+        let project = project.as_mut().unwrap();
+        let ids: Vec<_> = project.devices.iter().map(|d| d.id).collect();
+        assert_eq!(ids.len(), 1);
+        project.devices.get_mut(ids[0]).unwrap().address = Some(TARGET.parse().unwrap());
+        ids[0]
+    };
+    // A newly created catalogue device has no explicit project parameters.
+    // Configure the public source's nondefault PIR sensitivity through the real
+    // panel write authority; a refusal here must remain a refusal, not a model edit.
+    let path = format!("/api/device/{}/parameters", device.0);
+    let panel = http(&router, &path, None, 200).await;
+    assert_eq!(panel["programId"], "M-0001_A-9205-04-9270");
+    let fields = pir_fields(&panel);
+    assert_eq!(fields.len(), 1, "one active source PIR field");
+    let field = fields[0];
+    assert_eq!(field["value"], "3");
+    assert_eq!(field["editable"], true);
+    assert_eq!(field["writeEtsId"], PIR_REFERENCE);
+    assert!(field["enumOptions"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .any(|option| option["value"] == PIR_RAW));
+    let tree = http(&router, "/api/project", None, 200).await;
+    assert!(tree["server_incarnation"].is_string());
+    assert!(tree["project_incarnation"].is_u64());
+    assert!(tree["snapshot_revision"].is_u64());
+    let edited = http(
+        &router,
+        &path,
+        Some(json!({
+            "etsId": field["writeEtsId"],
+            "raw": PIR_RAW,
+            "serverIncarnation": tree["server_incarnation"],
+            "projectIncarnation": tree["project_incarnation"],
+            "snapshotRevision": tree["snapshot_revision"],
+            "expectedValue": field["value"]
+        })),
+        200,
+    )
+    .await;
+    let fields = pir_fields(&edited);
+    assert_eq!(fields.len(), 1);
+    assert_eq!(fields[0]["value"], PIR_RAW);
+    let stored = {
+        let project = state.project.lock().unwrap();
+        project
+            .as_ref()
+            .unwrap()
+            .installations
+            .iter()
+            .flat_map(|installation| &installation.parameters)
+            .filter(|parameter| parameter.device == device)
+            .map(|parameter| (parameter.source.ets_id.clone(), parameter.raw.clone()))
+            .collect::<Vec<_>>()
+    };
+    assert_eq!(stored, [(PIR_REFERENCE.to_string(), PIR_RAW.to_string())]);
+    Mounted {
+        directory,
+        hardware,
+        state,
+        router,
+        device,
+    }
+}
+
+#[tokio::test]
+#[ignore = "requires digest-pinned public package; set KNXBENCH_PUBLIC_UP258; no network or hardware"]
+async fn an_unexpected_worker_end_after_the_send_barrier_is_settled_conservatively_by_the_supervisor(
+) {
+    let m = mounted().await;
+    {
+        let mut project = m.state.project.lock().unwrap();
+        let c = &mut project
+            .as_mut()
+            .unwrap()
+            .devices
+            .get_mut(m.device)
+            .unwrap()
+            .commissioning;
+        c.individual_address_loaded = true;
+        c.application_program_loaded = true;
+        c.parameters_loaded = true;
+        c.communication_part_loaded = true;
+    }
+    let preview = prepare(&m.router, m.device).await;
+    // The worker panics after its executor ran (the durable backup barrier is behind it).
+    m.hardware.pause_data_write.store(false, Ordering::SeqCst);
+    m.hardware.observation.arm_panic("disconnect");
+    http(
+        &m.router,
+        "/api/device-system2/start",
+        Some(start(&preview)),
+        200,
+    )
+    .await;
+    // A full debug-build download outlasts the shared 10 s helper; this test owns a wider budget.
+    tokio::time::timeout(Duration::from_secs(240), async {
+        while !m
+            .state
+            .device_system2
+            .inner
+            .lock()
+            .unwrap()
+            .current
+            .as_ref()
+            .and_then(|r| r.task.as_ref())
+            .is_some_and(tokio::task::JoinHandle::is_finished)
+        {
+            tokio::time::sleep(Duration::from_millis(50)).await;
+        }
+    })
+    .await
+    .expect("the supervised worker must end");
+    m.state.device_system2.join_finished().await;
+    let ended = http(&m.router, "/api/device-system2/status", None, 200).await;
+    assert_eq!(ended["state"], "interrupted");
+    // The retained handle only ended after the supervisor settled: no premature terminal.
+    assert!(
+        matches!(
+            ended["projectSettlement"].as_str(),
+            Some("persisted" | "sessionOnly")
+        ),
+        "{}",
+        ended["projectSettlement"]
+    );
+    assert_ne!(ended["downloadResult"], "verified");
+    assert_eq!(ended["mutationMayHaveStarted"], true);
+    let revision = crate::domain::current_project_revision(&m.state);
+    {
+        let project = m.state.project.lock().unwrap();
+        let c = &project
+            .as_ref()
+            .unwrap()
+            .devices
+            .get(m.device)
+            .unwrap()
+            .commissioning;
+        assert!(
+            c.individual_address_loaded,
+            "the address is not blindly invalidated"
+        );
+        assert!(
+            !c.application_program_loaded && !c.parameters_loaded && !c.communication_part_loaded
+        );
+    }
+    // GET, select and report never settle again.
+    for _ in 0..2 {
+        http(&m.router, "/api/device-system2/status", None, 200).await;
+    }
+    http(
+        &m.router,
+        &format!(
+            "/api/device-system2/report?operationId={}",
+            ended["operationId"].as_str().unwrap()
+        ),
+        None,
+        200,
+    )
+    .await;
+    assert_eq!(crate::domain::current_project_revision(&m.state), revision);
+    drop(m.directory);
+}
+
 #[tokio::test]
 #[ignore = "requires digest-pinned public package; set KNXBENCH_PUBLIC_UP258; no network or hardware"]
 async fn pinned_public_http_worker_cancellation_reopens_original_once_only_recovery() {
@@ -908,6 +1111,21 @@ async fn pinned_public_http_worker_cancellation_reopens_original_once_only_recov
         &[0, 1, 0, 0, 0, 91],
     );
 
+    // The project believes the device fully programmed before the run starts.
+    {
+        let mut project = state.project.lock().unwrap();
+        let c = &mut project
+            .as_mut()
+            .unwrap()
+            .devices
+            .get_mut(device)
+            .unwrap()
+            .commissioning;
+        c.individual_address_loaded = true;
+        c.application_program_loaded = true;
+        c.parameters_loaded = true;
+        c.communication_part_loaded = true;
+    }
     let preview = prepare(&router, device).await;
     let accepted = http(
         &router,
@@ -964,6 +1182,31 @@ async fn pinned_public_http_worker_cancellation_reopens_original_once_only_recov
     assert_eq!(cancel["operationId"], operation_id);
     hardware.release_write.notify_one();
     let cancelled = settled(&state, &router, "cancelled").await;
+    // The worker settled once, before the end became readable: the write may have reached the
+    // device, so the memory beliefs are invalidated; the address is not blindly invalidated.
+    assert!(
+        matches!(
+            cancelled["projectSettlement"].as_str(),
+            Some("persisted" | "sessionOnly")
+        ),
+        "{}",
+        cancelled["projectSettlement"]
+    );
+    assert_eq!(cancelled["downloadResult"], "transferIncomplete");
+    {
+        let project = state.project.lock().unwrap();
+        let c = &project
+            .as_ref()
+            .unwrap()
+            .devices
+            .get(device)
+            .unwrap()
+            .commissioning;
+        assert!(c.individual_address_loaded);
+        assert!(
+            !c.application_program_loaded && !c.parameters_loaded && !c.communication_part_loaded
+        );
+    }
     assert_eq!(hardware.connects.load(Ordering::SeqCst), 2);
     assert_eq!(hardware.disconnects.load(Ordering::SeqCst), 2);
     assert_ne!(
@@ -1227,6 +1470,7 @@ impl Refusal {
             control_id: meta.operation_id.clone(),
             message: None,
             refusal: None,
+            settlement: crate::device_system2::settlement::Receipt::NotRecorded,
         });
         let root = self.state.device_system2.root(&self.state).unwrap();
         let body = super::super::dto::decode(

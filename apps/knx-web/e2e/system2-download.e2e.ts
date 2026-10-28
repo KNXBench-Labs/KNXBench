@@ -15,7 +15,7 @@ const tree: ProjectTree = { schema_version: 1, errors: 0, warnings: 0, can_undo:
 
 async function interceptSystem2(page: Page, language: "en" | "de" = "en") {
   const unexpected: string[] = []; const commands: { path: string; body: unknown }[] = [];
-  const state = { projectOpen: false, operation: null as System2Status | System2StatusWireV1 | null, raw: null as string | null, busyLocks: [] as string[] };
+  const state = { projectOpen: false, operation: null as System2Status | System2StatusWireV1 | null, raw: null as string | null, busyLocks: [] as string[], report: null as unknown, reports: [] as string[] };
   await page.route("**/api/**", (route) => {
     const request = route.request(); const path = new URL(request.url()).pathname; const method = request.method();
     const json = (body: unknown, code = 200) => route.fulfill({ status: code, contentType: "application/json", body: JSON.stringify(body) });
@@ -37,6 +37,7 @@ async function interceptSystem2(page: Page, language: "en" | "de" = "en") {
       if (state.raw !== null) return route.fulfill({ status: 200, contentType: "application/json", body: state.raw });
       return json(state.operation);
     }
+    if (path === "/api/device-system2/report" && method === "GET") { state.reports.push(new URL(request.url()).search); return json(state.report); }
     if (path.startsWith("/api/device-system2/") && method === "POST") {
       commands.push({ path, body: request.postDataJSON() });
       if (path.endsWith("/prepare")) return json(preview);
@@ -220,6 +221,47 @@ if (capture) for (const language of ["en", "de"] as const) for (const width of [
     }
     const box = await page.locator("[data-system2-diagnostics]").boundingBox(); expect(box).not.toBeNull();
     expect(box!.x + box!.width).toBeLessThanOrEqual(width + 1);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1);
+    expect(commands).toEqual([]); expect(unexpected).toEqual([]);
+  });
+}
+
+// Issue #31: the ended run's result is explained from the journal facts and its report is saved locally.
+const unfinishedRun: System2Status = { ...downloadFailedStatus, failureDiagnostics: [], completedSteps: 26, totalSteps: 27, downloadResult: "transferCompleteVerificationUnfinished",
+  downloadCompletedSteps: 26, downloadTotalSteps: 27, projectSettlement: "persisted" };
+const unfinishedReport = { format: 2, kind: "knxbench-system2-download-summary", support: "EXPERIMENTAL BEST-EFFORT; HARDWARE COMPATIBILITY AND RECOVERY UNVERIFIED",
+  evidence: "local-journal-only", download: { outcome: "failed", result: "transferCompleteVerificationUnfinished", completedSteps: 26, totalSteps: 27 },
+  recovery: null, mutationPossible: true, prestateDiffers: false, failureDiagnostics: [], executionBuild: { state: "unknown" }, exporterBuild: "0.1.0-alpha.1+g1234abcd" };
+for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
+  test(`${language} unverified System-2 result and local report save at ${width}px`, async ({ page }) => {
+    const m = language === "en" ? en : de;
+    const { state, commands, unexpected } = await interceptSystem2(page, language);
+    state.operation = unfinishedRun; state.report = unfinishedReport;
+    await page.setViewportSize({ width, height: 1000 });
+    await openProject(page, language); await dismissToasts(page, language);
+    await page.keyboard.press("Control+Shift+P");
+    await page.getByRole("combobox").fill(m["toolbar.busMonitor"]);
+    await page.getByRole("combobox").press("Enter");
+    await page.getByRole("button", { name: m["deviceDownload.title"], exact: true }).click();
+    await page.locator("[data-download-mode]").selectOption("system2");
+    const result = page.locator("[data-system2-result-text]");
+    await expect(result).toContainText(m["system2.result.transferCompleteVerificationUnfinished"]);
+    await expect(page.locator("[data-system2-report-guidance]")).toContainText("issue@knxbench.com");
+    await expect(page.locator("[data-system2-settlement='persisted']")).toContainText(m["system2.settlement.persisted"]);
+    const download = page.waitForEvent("download");
+    await page.locator("[data-system2-report-save]").click();
+    const file = await download;
+    expect(file.suggestedFilename()).toBe("knxbench-system2-report.json");
+    const { readFile } = await import("node:fs/promises");
+    const text = await readFile((await file.path())!, "utf8");
+    expect(JSON.parse(text)).toEqual(unfinishedReport);
+    for (const forbidden of [unfinishedRun.address, unfinishedRun.deviceName, unfinishedRun.operationId, "recoveryPhrase", "192.0.2.1"]) expect(text).not.toContain(forbidden);
+    await expect(page.locator("[data-system2-report-saved]")).toHaveText(m["system2.report.saved"]);
+    expect(state.reports).toEqual([`?operationId=${unfinishedRun.operationId}`]);
+    // A running operation offers neither result nor report.
+    state.operation = { ...status, operationId: "f".repeat(32) }; await page.locator("[data-system2-refresh]").click();
+    await expect(page.locator("[data-system2-result-text]")).toHaveCount(0);
+    await expect(page.locator("[data-system2-report-save]")).toHaveCount(0);
     expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1);
     expect(commands).toEqual([]); expect(unexpected).toEqual([]);
   });

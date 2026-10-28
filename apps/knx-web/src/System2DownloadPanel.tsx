@@ -4,6 +4,8 @@ import type { ProjectTree } from "./bindings/ProjectTree";
 import * as api from "./system2DownloadApi";
 import { useTranslate } from "./i18n";
 import { useProgrammingConsent } from "./useProgrammingConsent";
+import { downloadLocalJson } from "./localJsonDownload";
+import { getSystem2Snapshot, publishSystem2Status, publishSystem2Unavailable, refreshSystem2Status } from "./system2Status";
 import "./System2DownloadPanel.css";
 
 interface Props {
@@ -39,6 +41,8 @@ export default function System2DownloadPanel({ project, deviceId, gateway, enabl
   const [preparing, setPreparing] = useState(false);
   const [error, setError] = useState(false); const [unknown, setUnknown] = useState<"start" | "cancel" | "recover" | null>(null);
   const [startRefusal, setStartRefusal] = useState<string | null>(null);
+  const [reportOutcome, setReportOutcome] = useState<{ id: string; kind: "saved" | "failed" } | null>(null);
+  const reportBusy = useRef(false);
   const mounted = useRef(false); const generation = useRef(0); const reads = useRef(0); const pollInFlight = useRef(false);
   const context = useRef({ project, deviceId, gateway, enabled }); context.current = { project, deviceId, gateway, enabled };
 
@@ -54,19 +58,27 @@ export default function System2DownloadPanel({ project, deviceId, gateway, enabl
       setRecovery({ recoveryConfirmation: "", downloadConfirmation: "", releaseConfirmation: "" });
     }
     statusRef.current = next; setStatus(next); setUnavailable(false); setChecking(false);
+    // The shared lifetime: the device table reads what this single poll owner saw.
+    publishSystem2Status(next);
   }
   async function poll() {
     if (pollInFlight.current || action.current) return;
     pollInFlight.current = true; const read = ++reads.current;
     try {
-      const next = await api.getSystem2Status();
+      await refreshSystem2Status();
       if (!mounted.current || read !== reads.current) return;
+      const shared = getSystem2Snapshot();
+      if (shared.failed || shared.authority === "unavailable") {
+        setUnavailable(true); setChecking(false); return;
+      }
+      const next = shared.status;
       if (next === null) {
         // A disappeared record is not proof of rollback or permission to resend.
         setUnavailable(statusRef.current !== null); setChecking(false);
+        if (statusRef.current !== null) publishSystem2Unavailable();
       } else accept(next);
     } catch {
-      if (mounted.current && read === reads.current) { setUnavailable(true); setChecking(false); }
+      if (mounted.current && read === reads.current) { setUnavailable(true); setChecking(false); publishSystem2Unavailable(); }
     } finally { pollInFlight.current = false; }
   }
   useEffect(() => {
@@ -115,7 +127,7 @@ export default function System2DownloadPanel({ project, deviceId, gateway, enabl
       // Drop local execution capability before sending, even when its response is lost.
       setPreview(null); setPhrases(EMPTY); setTrack("");
       // A previous settled operation cannot stand in for status of this new start.
-      statusRef.current = null; setStatus(null);
+      statusRef.current = null; setStatus(null); publishSystem2Status(null);
       try {
         const next = await api.startSystem2(body);
         if (!sameTarget(next, shown)) throw new Error("Mismatched System-2 start response");
@@ -136,6 +148,21 @@ export default function System2DownloadPanel({ project, deviceId, gateway, enabl
     try { const next = await api.cancelSystem2(original.operationId); requireOriginal(next, original); if (mounted.current) accept(next); }
     catch { if (mounted.current) setUnknown("cancel"); }
     finally { action.current = false; reads.current += 1; if (mounted.current) { setPending(false); void poll(); } }
+  }
+  // Local save only: the server composes a bounded journal-fact summary, nothing is uploaded.
+  // An answer for an operation that is no longer the attached one is dropped.
+  async function saveReport() {
+    const original = statusRef.current;
+    if (original === null || active(original) || reportBusy.current) return;
+    reportBusy.current = true; setReportOutcome(null);
+    const current = () => mounted.current && statusRef.current?.operationId === original.operationId && !active(statusRef.current);
+    try {
+      const report = await api.getSystem2Report(original.operationId);
+      if (!current()) return;
+      downloadLocalJson(JSON.stringify(report, null, 2), "knxbench-system2-report.json");
+      setReportOutcome({ id: original.operationId, kind: "saved" });
+    } catch { if (current()) setReportOutcome({ id: original.operationId, kind: "failed" }); }
+    finally { reportBusy.current = false; }
   }
   // Only the server's original-operation status can supply recovery terms, including
   // after reattachment or a lost start response. A later preview is never a fallback.
@@ -209,6 +236,16 @@ export default function System2DownloadPanel({ project, deviceId, gateway, enabl
       {nothingWritten(status) && <p data-system2-nothing-written>{t("system2.nothingWritten")}</p>}
       <p>{status.totalSteps === null ? t("system2.checkpointsUnknown", { done: status.completedSteps }) : t("system2.checkpoints", { done: status.completedSteps, total: status.totalSteps })}</p>
       {status.totalSteps !== null && status.totalSteps > 0 && <progress aria-label={t("system2.steps")} value={status.completedSteps} max={status.totalSteps} />}
+      {!active(status) && <section data-system2-result aria-label={t("system2.result.heading")}>
+        <p data-system2-result-text data-system2-download-result={status.downloadResult}><strong>{t("system2.result.heading")}:</strong> {t(`system2.result.${status.downloadResult === "inProgress" ? "unknown" : status.downloadResult}`)}</p>
+        <p>{t("system2.result.note")}</p>
+        <p data-system2-settlement={status.projectSettlement}><strong>{t("system2.settlement.heading")}:</strong> {t(`system2.settlement.${status.projectSettlement}`)}</p>
+        {status.restoreAttempted && <p data-system2-download-counts>{status.downloadTotalSteps === null ? t("system2.downloadCountsUnknown", { done: status.downloadCompletedSteps }) : t("system2.downloadCounts", { done: status.downloadCompletedSteps, total: status.downloadTotalSteps })}</p>}
+        <button type="button" data-system2-report-save disabled={pending} onClick={() => void saveReport()}>{t("system2.report.save")}</button>
+        <p data-system2-report-guidance>{t("system2.report.guidance")} <a href="mailto:issue@knxbench.com?subject=KNXBench%20System-2%20download%20report">issue@knxbench.com</a></p>
+        {reportOutcome?.id === status.operationId && reportOutcome.kind === "saved" && <p role="status" data-system2-report-saved>{t("system2.report.saved")}</p>}
+        {reportOutcome?.id === status.operationId && reportOutcome.kind === "failed" && <p role="alert" data-system2-report-failed className="form-warning">{t("system2.report.failed")}</p>}
+      </section>}
       {status.message && <p>{status.message}</p>}
       {status.refusal && <p data-system2-refusal>{t("system2.refusal", { reason: status.refusal })}</p>}
       {status.prestateUnreadableAllocations.length > 0 ? <p data-system2-prestate-unreadable className="form-warning">

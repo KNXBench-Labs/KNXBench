@@ -17,13 +17,18 @@ Observed: 2026-10-28 17:58 CET. Operational snapshot; maintained docs own status
 - Evidence `<profile>/evidence/wp03-{enum-mapping,implementation,review}-20261028/`.
   No bus, VM, user catalogue, hardware, release or deployment action.
 
-## Foreign Issue #31 / #30 System-2 result integration — preserve owner
-- Shared root observation 2026-10-28 17:53 CET: GO, own branch
-  `fix/issue31-system2-status-20261028`, original base `0154b8ae9`; no takeover.
-- Its server/web/application result scope excludes productdb/migrations, protocol
-  and device writes. Correction2 complete; whole-feature review3 running at observation.
-- Its package acceptance was not yet run; prior focused results are not acceptance.
-- Preserve its tree and evidence `<profile-scratch>/issue31-evidence/`.
+## Issue #31 / #30 System-2 result integration — acceptance GO
+- Observed 2026-10-28 18:41 CET: reviewed feature `d52ee440e`, focused unit104/browser12 green.
+- Final correction review APPROVE; no open source blocker. No hardware acceptance inferred.
+- Feature gate15 ACCEPTED in `<sources>/knxbench-issue31-system2-status-20261028`, head
+  `d52ee440e`: Rust2794/133ignored, Vitest4640, browser947 +production109, corpus91/91;
+  inputs frozen, checked user data unchanged. Evidence `<profile-scratch>/issue31-evidence/`.
+- Own main-first integration `<sources>/knxbench-issue31-system2-integration-20261028`, branch
+  `integration/issue31-system2-result-20261028`, parent `d8f4b3ca0`; source merge prepared.
+- Next commit integrated candidate, run selected integrated gate15, then publish only after fresh
+  freeze/owner check and exact local/tracking/live readback.
+- #30/#22 allocation mismatch, per-part source equivalence and hardware outcome remain open.
+- No bus/VM/user data/release/deployment permission; root intentionally not synchronized.
 
 ## Retained boundaries
 - WP-08 source `4beabe531` / result `1329fb8e8` delivered; reservation released.

@@ -59,6 +59,7 @@ async function intercept(page: Page, language: "en" | "de") {
     else if (path === "/api/bus/discover" && method === "POST") body = { interfaces: [] };
     else if (path === "/api/product-languages" && method === "GET") body = [];
     else if (["/api/device-download/status", "/api/device-address/status"].includes(path) && method === "GET") { status = 404; body = { error: "no operation in this fixture" }; }
+    else if (path === "/api/device-system2/status" && method === "GET") body = null;
     else if (path === "/api/devices" && method === "GET") body = { schemaVersion: 1, serverIncarnation: "matrix-browser", snapshotRevision: 1,
       devices: [{ id: 1, device, productRef: "Fictional-P-1", resolution: "Resolved", manufacturerId: "Fictional-M-1",
         manufacturerName: "Fictional Devices", productText: "Fictional keypad", orderNumber: "FK-4", productTextLanguage: null, productSourceLanguage: null,

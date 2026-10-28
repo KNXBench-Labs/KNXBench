@@ -176,3 +176,22 @@ describe("device catalogue admission", () => {
     expect(() => admitDeviceCatalog(value)).toThrow("device catalogue");
   });
 });
+
+describe("System-2 result in the visible list model", () => {
+  const rows = () => projectDeviceRows(deviceTree());
+  const text = (row: { id: number }) => (row.id === 10 ? "Experimental S2 unverified" : "");
+  it("finds a row by its visible localized System-2 text without changing pending-only", () => {
+    const found = visibleDeviceRows(rows(), "unverified", { column: "address", descending: false }, "en", { system2Text: text });
+    expect(found.map((row) => row.id)).toEqual([10]);
+    expect(visibleDeviceRows(rows(), "unverified", { column: "address", descending: false }, "en").map((row) => row.id)).toEqual([]);
+    const pendingOnly = visibleDeviceRows(rows(), "", { column: "address", descending: false }, "en", { pendingOnly: true, system2Text: text });
+    expect(pendingOnly.map((row) => row.id)).toEqual([]);
+  });
+  it("breaks programming-sort ties by an explicit System-2 rank, never by pending state", () => {
+    const rank = (row: { id: number }) => (row.id === 10 ? 1 : 0);
+    const asc = visibleDeviceRows(rows(), "", { column: "programming", descending: false }, "en", { system2Rank: rank });
+    expect(asc.map((row) => row.id)).toEqual([2, 10]);
+    const desc = visibleDeviceRows(rows(), "", { column: "programming", descending: true }, "en", { system2Rank: rank });
+    expect(desc.map((row) => row.id)).toEqual([10, 2]);
+  });
+});

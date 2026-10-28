@@ -89,6 +89,10 @@ export interface DeviceRowOptions {
   pendingOnly?: boolean;
   /** The System cell's shown (translated) text, used to filter and sort it. */
   systemText?: (row: DeviceListRow) => string;
+  /** Visible localized System-2 result text of a row, searchable; empty when it has none. */
+  system2Text?: (row: DeviceListRow) => string;
+  /** Explicit tie-break for the programming sort; never changes what pending-only means. */
+  system2Rank?: (row: DeviceListRow) => number;
 }
 
 export function visibleDeviceRows(rows: DeviceListRow[], query: string, sort: DeviceSort, language: string,
@@ -99,11 +103,11 @@ export function visibleDeviceRows(rows: DeviceListRow[], query: string, sort: De
   const filtered = rows.filter((row) => !options.pendingOnly || pendingParts(row).length > 0).filter((row) => !needle || [
     row.name, row.address, row.description, ...row.topology, ...row.building,
     row.catalog?.manufacturerName, row.catalog?.manufacturerId, row.catalog?.productText,
-    row.catalog?.orderNumber, row.catalog?.productRef, system(row), declaredMask(row),
+    row.catalog?.orderNumber, row.catalog?.productRef, system(row), declaredMask(row), options.system2Text?.(row),
   ].some((value) => value?.toLocaleLowerCase(language).includes(needle)));
   return filtered.sort((a, b) => {
     const order = sort.column === "com_object_count" ? a.com_object_count - b.com_object_count
-      : sort.column === "programming" ? pendingRank(a) - pendingRank(b)
+      : sort.column === "programming" ? pendingRank(a) - pendingRank(b) || (options.system2Rank?.(a) ?? 0) - (options.system2Rank?.(b) ?? 0)
       : sort.column === "system" ? collator.compare(system(a), system(b))
       : collator.compare(columnText(a, sort.column), columnText(b, sort.column));
     return (sort.descending ? -order : order) || a.id - b.id;

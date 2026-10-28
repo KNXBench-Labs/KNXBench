@@ -52,7 +52,7 @@ B1 alone cannot certify continuous schema identity or grant installation consent
 
 ### Complete inspection and explicit refusal
 
-- Require main user_version 28 and UTF-8; reject attachments and application TEMP
+- Require main user_version 29 and UTF-8 (see the data-only v29 amendment below); reject attachments and application TEMP
   objects, permitting SQLite's implicit empty temp schema. Do not copy/retain
   filesystem paths from database_list or open/repair any database.
 - Enumerate every stored main.sqlite_schema row without sqlite-prefix filtering.
@@ -156,3 +156,17 @@ incomplete index metadata/SQL and charge-after-copy. Each control needs original
 GREEN, intended semantic failure and byte-exact restoration/restored GREEN.
 Source mutation never occurs in a checkout under acceptance. Maintained scoped
 branch/main-first gates, publication/readback and owned cleanup follow separately.
+
+## Amendment: data-only product database v29 (28 October 2026)
+
+Product database v29 (WP-08, `TypeDate` as kind `Date`) re-derives rows only
+and changes no DDL, so the pinned fresh-chain shape (`schema28.rs`, the
+`schema28-fixture.json` oracle) is unchanged and remains the one v28 introduced.
+The admitted `user_version` is now the named constant `ADMITTED_VERSION = 29`,
+with a compile-time assertion that it equals `CURRENT_PRODUCTDB_VERSION`: a
+later version bump fails to build until its shape is re-established and the
+constant deliberately raised. Versions 28 and 30 are now refused like any other
+unsupported version. The witness encodes the observed `user_version`, so
+witnesses of a v29 catalogue differ from those of the same content at v28; no
+witness is persisted across a migration. The oracle file keeps its observed
+`user_version` 28 as recorded evidence; tests read only its descriptors.

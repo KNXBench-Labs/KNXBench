@@ -8,6 +8,7 @@ mod catalog_update;
 mod channel_name_number;
 mod corpus_compatibility_matrix;
 mod corpus_support;
+mod date_kind;
 mod device_evaluation;
 mod duplicate_segment_start;
 mod dynamic_block_access;

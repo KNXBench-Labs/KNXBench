@@ -2395,6 +2395,124 @@ pub(crate) fn add_report_unknowns(
     }
 }
 
+/// v28 -> v29 (WP-08): applies the member blobs' unknown-row changes to one
+/// measured report. `changes` are `((xpath, kind, name), occurrence delta,
+/// sample after)` in member order; install merges member rows by summing
+/// occurrences, so a delta is exact for the merged row. A row reaching zero
+/// leaves; a new row takes the first member's sample. A negative delta for a
+/// row the report lacks, or one below zero, means the report does not match
+/// its members and is refused. The original report must validate first; a
+/// gained row conflicting with an original sample is ambiguous and refused.
+/// Header and `unknown_construct` counts are recomputed and validated by
+/// `persist_facts`.
+pub(crate) fn apply_report_unknown_deltas(
+    conn: &Connection,
+    sha256: &str,
+    changes: &[(crate::date_kind_backfill::Key, i64, Option<String>)],
+) -> Result<Result<(), ReportNotUpgradable>, ProductDbError> {
+    // Validate historical facts before rebuilding counts: absence is not zero.
+    let Some(mut facts) = load_facts(conn, sha256)? else {
+        return Ok(Ok(()));
+    };
+    // A key gaining occurrences can have been supplied by an earlier member
+    // than its original sample. A merged report cannot identify that member;
+    // conflicting samples therefore refuse, rather than silently retaining
+    // whichever sample happened to exist before the migration. Check original
+    // rows before applying any deltas; wholly new keys keep member order.
+    for ((xpath, kind, name), delta, sample) in changes {
+        if *delta > 0
+            && facts.unknown_constructs.iter().any(|row| {
+                &row.xpath == xpath
+                    && row.kind.as_str() == kind
+                    && &row.name == name
+                    && &row.sample != sample
+            })
+        {
+            return Ok(Err(ReportNotUpgradable(
+                "a gained row conflicts with the merged report's historical sample".into(),
+            )));
+        }
+    }
+    for ((xpath, kind, name), delta, sample) in changes {
+        let kind = match kind.as_str() {
+            "Element" => crate::report::UnknownKind::Element,
+            "Attribute" => crate::report::UnknownKind::Attribute,
+            other => {
+                return Ok(Err(ReportNotUpgradable(format!(
+                    "unknown row kind {other:?}"
+                ))))
+            }
+        };
+        let at = facts
+            .unknown_constructs
+            .iter()
+            .position(|u| u.kind == kind && &u.name == name && &u.xpath == xpath);
+        let current = at.map_or(0, |i| i64::from(facts.unknown_constructs[i].occurrences));
+        let Some(next) = current.checked_add(*delta).filter(|n| *n >= 0) else {
+            return Ok(Err(ReportNotUpgradable(format!(
+                "report row {xpath} {name} cannot lose {} occurrences",
+                -delta
+            ))));
+        };
+        let Ok(occurrences) = u32::try_from(next) else {
+            return Ok(Err(ReportNotUpgradable(
+                "unknown occurrence counter overflow".into(),
+            )));
+        };
+        match (at, occurrences) {
+            (Some(i), 0) => {
+                facts.unknown_constructs.remove(i);
+            }
+            (Some(i), n) => facts.unknown_constructs[i].occurrences = n,
+            (None, 0) => {}
+            (None, n) => facts
+                .unknown_constructs
+                .push(crate::report::UnknownConstruct {
+                    xpath: xpath.clone(),
+                    kind,
+                    name: name.clone(),
+                    occurrences: n,
+                    sample: sample.clone(),
+                }),
+        }
+    }
+    facts
+        .counts
+        .retain(|row| row.category != InstallCategory::UnknownConstruct);
+    // `sort` re-derives `unknown_occurrences` from the rows.
+    facts.sort()?;
+    let occurrences = facts.unknown_occurrences;
+    let distinct = usize_to_u64(facts.unknown_constructs.len(), "unknown distinct")?;
+    add_count(
+        &mut facts,
+        InstallCategory::UnknownConstruct,
+        InstallDisposition::Read,
+        occurrences,
+    )?;
+    add_count(
+        &mut facts,
+        InstallCategory::UnknownConstruct,
+        InstallDisposition::Stored,
+        distinct,
+    )?;
+    for table in [
+        "package_install_count",
+        "package_install_unknown",
+        "package_install_diagnostic",
+        "package_install_report",
+    ] {
+        conn.execute(
+            &format!("DELETE FROM {table} WHERE package_sha256 = ?1"),
+            [sha256],
+        )?;
+    }
+    match persist_facts(conn, sha256, facts) {
+        Ok(()) => Ok(Ok(())),
+        Err(ProductDbError::Sqlite(error)) => Err(ProductDbError::Sqlite(error)),
+        Err(error) => Ok(Err(ReportNotUpgradable(error.to_string()))),
+    }
+}
+
 /// Replace a byte-derived subset without repairing or inventing historical
 /// facts. Unlike the older additive helpers, validate the original report too.
 pub(crate) fn reconcile_promotion_report(

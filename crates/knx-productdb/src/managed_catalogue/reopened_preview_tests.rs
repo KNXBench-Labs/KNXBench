@@ -438,7 +438,7 @@ fn reopened_preview_native_source_close_failure_retains_live_handle() {
         retained
             .query_row("PRAGMA user_version", [], |r| r.get::<_, i64>(0))
             .unwrap(),
-        28
+        crate::migration::CURRENT_PRODUCTDB_VERSION
     );
     assert!(
         owner.conn.as_ref().unwrap().is_autocommit(),

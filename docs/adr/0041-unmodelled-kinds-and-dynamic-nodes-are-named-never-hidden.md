@@ -125,3 +125,17 @@ integer bounds; `TypeColor/@Space` takes only `RGB` (64) and `HSV` (51).
   may override them.
 - **A typed storage model for `Rows`/`Columns`/`Rename`.** No feature
   consumes it yet; the diagnostic path is complete and cheaper to verify.
+
+## Amendment: `TypeDate` (WP-08, 28 October 2026)
+
+A later collection added `TypeDate` (two programs, `Encoding="DPT 11"`), which
+fell into `Other` like `TypeColor`/`TypeTime` before this decision. Product
+database v29 gives it kind `Date` by the same rule: the type child is named,
+its attributes (`Encoding` included) are reported, and a v28 database is
+re-derived from its retained blobs to equal a fresh install (shared
+`backfill_type_child_kinds`; package counters and measured reports follow,
+or the report is downgraded and named). The value spelling `yyyy-mm-dd` is
+schema-documented and validated on edit; the memory encoding is not, so the
+download keeps refusing the type by name
+([evidence](../research/2026-10-28-typedate-value-form.md)). An unseen type
+child still stays `Other` and reported.

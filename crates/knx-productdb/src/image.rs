@@ -2926,6 +2926,29 @@ mod tests {
         );
     }
 
+    /// WP-08: a `TypeDate` value has a schema-documented spelling, but no
+    /// source fixes how a declared `Encoding="DPT 11"` is laid out in a
+    /// product's memory, so a placed date is refused by name, for its type.
+    #[test]
+    fn a_date_parameter_is_refused_for_its_type() {
+        let xml = kinds_program_with(
+            LATIN_9,
+            "Grüß",
+            r#"<ParameterType Id="PT-D" Name="D"><TypeDate Encoding="DPT 11" /></ParameterType>"#,
+            r#"<Parameter Id="P-D" Name="D" ParameterType="PT-D" Value="2022-09-15"><Memory CodeSegment="AS-4600" Offset="9" BitOffset="0" /></Parameter>"#,
+            r#"<ParameterRef Id="P-D_R-1" RefId="P-D" />"#,
+        )
+        .replace(
+            r#"<ParameterRefRef RefId="P-T_R-1" />"#,
+            r#"<ParameterRefRef RefId="P-T_R-1" /><ParameterRefRef RefId="P-D_R-1" />"#,
+        );
+        let error = build(&xml, &[], vec![]).unwrap_err();
+        assert!(
+            matches!(&error, ImageError::Unsupported { what } if what.contains("P-D") && what.contains("\"Date\"")),
+            "{error}"
+        );
+    }
+
     /// `parameter_image` writes high octet first and leaves it to its
     /// caller to refuse another declared order; this is that caller.
     #[test]

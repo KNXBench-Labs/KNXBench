@@ -165,9 +165,14 @@ fn large_blob_streams_in_chunks_and_is_sensitive_to_middle_bytes() {
 
 #[test]
 fn admission_refusals_propagate_typed_errors() {
-    // Empty schema at user_version 28 cannot be admitted.
+    // Empty schema at the admitted user_version cannot be admitted.
     let mut conn = rusqlite::Connection::open_in_memory().unwrap();
-    conn.pragma_update(None, "user_version", 28).unwrap();
+    conn.pragma_update(
+        None,
+        "user_version",
+        crate::migration::CURRENT_PRODUCTDB_VERSION,
+    )
+    .unwrap();
     let tx = conn.transaction().unwrap();
     assert!(matches!(
         witness_current(&tx, &PublicationGate::new()),

@@ -656,7 +656,7 @@ impl CatalogueArtifacts for ConfiguredArtifacts {
             ("recursive_triggers", 1),
             ("application_id", 12345),
             ("schema_version", 1),
-            ("user_version", 28),
+            ("user_version", crate::migration::CURRENT_PRODUCTDB_VERSION),
         ] {
             assert_eq!(
                 conn.query_row(&format!("PRAGMA {pragma}"), [], |r| r.get::<_, i64>(0))

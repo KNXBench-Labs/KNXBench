@@ -134,7 +134,11 @@ export function useUiLanguage(): [UiLanguage, (language: UiLanguage) => void] {
   const language = useSyncExternalStore(subscribe, getSnapshot);
 
   useEffect(() => {
-    document.documentElement.setAttribute("lang", language);
+    // Every translated component subscribes here. Repeating the same root
+    // mutation for all of them is expensive on a large document.
+    if (document.documentElement.getAttribute("lang") !== language) {
+      document.documentElement.setAttribute("lang", language);
+    }
   }, [language]);
 
   return [language, setStoredUiLanguage];

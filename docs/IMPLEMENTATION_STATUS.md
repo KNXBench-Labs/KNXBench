@@ -12,6 +12,16 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## System-2 final-step failure category (28 October 2026 source)
+
+A failure inside the last System-2 `Disconnect` step is now classified by the Net executor
+as verification mismatch, final read failure or final write failure, with a closed stage,
+persisted in the journal (envelope version 3), reproduced on reopen and shown through status
+schema 4, report format 3 and the EN/DE panel. Older journals and unclassified stops show
+"unavailable"; the PID 7 diagnostic stays separate. Focused Net, App, server and web proof on
+simulators only; no package or integration gate has run for it, and #30/#22 stays unresolved.
+[Contract](contracts/system2-download-result.md#final-step-failure).
+
 ## System-2 result and project-belief integration (28 October 2026 source)
 
 Feature `d52ee440e` connects experimental results, retained-operation reports

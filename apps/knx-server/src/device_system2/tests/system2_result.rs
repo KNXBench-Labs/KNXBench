@@ -50,7 +50,8 @@ fn status_projects_the_journal_derived_result_in_camel_case() {
             LocalOutcome::Failed
         };
         let s = status_of(progress(outcome, true, result));
-        assert_eq!(s["schemaVersion"], 3);
+        assert_eq!(s["schemaVersion"], 4);
+        assert_eq!(s["finalStepFailures"], serde_json::json!([]));
         assert_eq!(s["downloadResult"], text);
     }
 }
@@ -144,6 +145,7 @@ async fn report_of_an_operation_without_evidence_is_unknown_not_nothing_written_
             "executionBuild",
             "exporterBuild",
             "failureDiagnostics",
+            "finalStepFailures",
             "format",
             "kind",
             "mutationPossible",
@@ -153,7 +155,8 @@ async fn report_of_an_operation_without_evidence_is_unknown_not_nothing_written_
         ]
     );
     assert_eq!(body["kind"], "knxbench-system2-download-summary");
-    assert_eq!(body["format"], 2);
+    assert_eq!(body["format"], 3);
+    assert_eq!(body["finalStepFailures"], serde_json::json!([]));
     // Missing journal and observed record cannot prove that nothing was written.
     assert_eq!(body["download"]["result"], "unknown");
     assert_eq!(body["mutationPossible"], true);
@@ -358,5 +361,43 @@ fn the_build_vocabulary_accepts_real_versions_only() {
                 ExecutionBuild::recorded(&crate::version_string()),
                 ExecutionBuild::Recorded { .. }
             )
+    );
+}
+
+#[test]
+fn status_projects_the_typed_final_step_failures_per_run_without_text() {
+    use knx_app::property_validation::{
+        FailureDiagnosticRun, FinalStepCategory, FinalStepDiagnostic, FinalStepStage,
+    };
+    let mut p = progress(
+        LocalOutcome::RestoreFailed,
+        true,
+        DownloadResult::TransferCompleteVerificationUnfinished,
+    );
+    p.download.outcome = LocalOutcome::Failed;
+    p.restore_attempted = true;
+    p.final_step_failures = vec![
+        FinalStepDiagnostic {
+            run: FailureDiagnosticRun::Download,
+            category: FinalStepCategory::VerificationMismatch,
+            stage: FinalStepStage::LoadedState,
+        },
+        FinalStepDiagnostic {
+            run: FailureDiagnosticRun::Restore,
+            category: FinalStepCategory::WriteFailed,
+            stage: FinalStepStage::VerifyModeWrite,
+        },
+    ];
+    let s = status_of(p);
+    assert_eq!(
+        s["finalStepFailures"],
+        serde_json::json!([
+            {"run": "download", "category": "verificationMismatch", "stage": "loadedState"},
+            {"run": "restore", "category": "writeFailed", "stage": "verifyModeWrite"},
+        ])
+    );
+    assert_eq!(
+        s["downloadResult"],
+        "transferCompleteVerificationUnfinished"
     );
 }

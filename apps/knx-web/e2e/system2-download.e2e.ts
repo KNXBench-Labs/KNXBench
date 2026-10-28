@@ -5,7 +5,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { messages as de } from "../src/messages/de";
 import { dismissToasts, openProject } from "./communication-fixture";
 import { openNavigationSections } from "./disclosure-fixture";
-import { preview, status, recoveryStatus, restoreFailedStatus, downloadFailedStatus, wireV1 } from "../src/system2DownloadTestFixtures";
+import { preview, status, recoveryStatus, restoreFailedStatus, downloadFailedStatus, wireV1, finalStepStatus, finalDownloadMismatch, finalRestoreRead } from "../src/system2DownloadTestFixtures";
 import type { ProjectTree } from "../src/bindings/ProjectTree";
 import type { System2Status, System2StatusWireV1 } from "../src/system2DownloadApi";
 import { messages as en } from "../src/messages/en";
@@ -15,7 +15,7 @@ const tree: ProjectTree = { schema_version: 1, errors: 0, warnings: 0, can_undo:
 
 async function interceptSystem2(page: Page, language: "en" | "de" = "en") {
   const unexpected: string[] = []; const commands: { path: string; body: unknown }[] = [];
-  const state = { projectOpen: false, operation: null as System2Status | System2StatusWireV1 | null, raw: null as string | null, busyLocks: [] as string[], report: null as unknown, reports: [] as string[] };
+  const state = { projectOpen: false, operation: null as System2Status | System2StatusWireV1 | null, raw: null as string | null, reportRaw: null as string | null, busyLocks: [] as string[], report: null as unknown, reports: [] as string[] };
   await page.route("**/api/**", (route) => {
     const request = route.request(); const path = new URL(request.url()).pathname; const method = request.method();
     const json = (body: unknown, code = 200) => route.fulfill({ status: code, contentType: "application/json", body: JSON.stringify(body) });
@@ -37,7 +37,12 @@ async function interceptSystem2(page: Page, language: "en" | "de" = "en") {
       if (state.raw !== null) return route.fulfill({ status: 200, contentType: "application/json", body: state.raw });
       return json(state.operation);
     }
-    if (path === "/api/device-system2/report" && method === "GET") { state.reports.push(new URL(request.url()).search); return json(state.report); }
+    if (path === "/api/device-system2/report" && method === "GET") {
+      state.reports.push(new URL(request.url()).search);
+      // A captured report is served byte for byte, like a captured status.
+      if (state.reportRaw !== null) return route.fulfill({ status: 200, contentType: "application/json", body: state.reportRaw });
+      return json(state.report);
+    }
     if (path.startsWith("/api/device-system2/") && method === "POST") {
       commands.push({ path, body: request.postDataJSON() });
       if (path.endsWith("/prepare")) return json(preview);
@@ -226,12 +231,70 @@ if (capture) for (const language of ["en", "de"] as const) for (const width of [
   });
 }
 
+// Opt-in join for the final-step cause: the router's own failed and reopened status bytes and its report,
+// served untouched, through the production decoder, the real panel and the local report save.
+// Source run: the download's final program-version read disagrees with the plan, so no pointer fact exists.
+const FINAL_BODIES = ["final-failed.json", "final-reopened.json"] as const;
+if (capture) for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
+  test(`${language} backend-emitted final-step bodies and report render and save unchanged at ${width}px`, async ({ page }, testInfo) => {
+    const m = language === "en" ? en : de;
+    const { state, commands, unexpected } = await interceptSystem2(page, language);
+    const reportRaw = readFileSync(join(capture!, "final-report.json"), "utf8");
+    state.reportRaw = reportRaw;
+    await page.setViewportSize({ width, height: 1000 });
+    await openProject(page, language); await dismissToasts(page, language);
+    await page.keyboard.press("Control+Shift+P");
+    await page.getByRole("combobox").fill(m["toolbar.busMonitor"]);
+    await page.getByRole("combobox").press("Enter");
+    await page.getByRole("button", { name: m["deviceDownload.title"], exact: true }).click();
+    await page.locator("[data-download-mode]").selectOption("system2");
+    const operationId = JSON.parse(readFileSync(join(capture!, FINAL_BODIES[0]), "utf8")).operationId as string;
+    for (const file of FINAL_BODIES) {
+      const body = readFileSync(join(capture!, file), "utf8");
+      await testInfo.attach(file, { body, contentType: "application/json" });
+      state.raw = body;
+      // Two refreshes: the retained status must read back identically.
+      for (let read = 0; read < 2; read++) {
+        await page.locator("[data-system2-refresh]").click();
+        await expect(page.locator("[data-system2-result-text]")).toContainText(m["system2.result.transferCompleteVerificationUnfinished"]);
+        const section = page.getByRole("region", { name: m["system2.finalStep.heading"] });
+        await expect(section).toBeVisible();
+        await expect(section.locator("[data-system2-final-step]")).toHaveCount(1);
+        const line = section.locator("[data-system2-final-step='download']");
+        await expect(line).toHaveText(m["system2.finalStep.download"]
+          .replace("{category}", m["system2.finalStep.category.verificationMismatch"]).replace("{stage}", m["system2.finalStep.stage.programVersion"]));
+        await expect(line).toHaveAttribute("data-system2-final-category", "verificationMismatch");
+        await expect(line).toHaveAttribute("data-system2-final-stage", "programVersion");
+        await expect(section.locator("[data-system2-final-step='restore']")).toHaveCount(0);
+        await expect(section.locator("[data-system2-final-step-unavailable]")).toHaveCount(0);
+        const shown = await section.innerText();
+        for (const raw of ["verificationMismatch", "programVersion", operationId, "/home/", "/tmp/", "/mnt/"]) expect(shown).not.toContain(raw);
+      }
+    }
+    const download = page.waitForEvent("download");
+    await page.locator("[data-system2-report-save]").click();
+    const file = await download;
+    expect(file.suggestedFilename()).toBe("knxbench-system2-report.json");
+    const { readFile } = await import("node:fs/promises");
+    const saved = await readFile((await file.path())!, "utf8");
+    // The saved file is the emitted report, decoded and written with the panel's own two-space layout.
+    expect(JSON.parse(saved)).toEqual(JSON.parse(reportRaw));
+    expect(saved).toBe(JSON.stringify(JSON.parse(reportRaw), null, 2));
+    expect(JSON.parse(saved).finalStepFailures).toEqual([{ run: "download", category: "verificationMismatch", stage: "programVersion" }]);
+    for (const forbidden of [operationId, "recoveryPhrase", "local_diagnostic", "192.0.2.1"]) expect(saved).not.toContain(forbidden);
+    await expect(page.locator("[data-system2-report-saved]")).toHaveText(m["system2.report.saved"]);
+    expect(state.reports).toEqual([`?operationId=${operationId}`]);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1);
+    expect(commands).toEqual([]); expect(unexpected).toEqual([]);
+  });
+}
+
 // Issue #31: the ended run's result is explained from the journal facts and its report is saved locally.
 const unfinishedRun: System2Status = { ...downloadFailedStatus, failureDiagnostics: [], completedSteps: 26, totalSteps: 27, downloadResult: "transferCompleteVerificationUnfinished",
   downloadCompletedSteps: 26, downloadTotalSteps: 27, projectSettlement: "persisted" };
-const unfinishedReport = { format: 2, kind: "knxbench-system2-download-summary", support: "EXPERIMENTAL BEST-EFFORT; HARDWARE COMPATIBILITY AND RECOVERY UNVERIFIED",
+const unfinishedReport = { format: 3, kind: "knxbench-system2-download-summary", support: "EXPERIMENTAL BEST-EFFORT; HARDWARE COMPATIBILITY AND RECOVERY UNVERIFIED",
   evidence: "local-journal-only", download: { outcome: "failed", result: "transferCompleteVerificationUnfinished", completedSteps: 26, totalSteps: 27 },
-  recovery: null, mutationPossible: true, prestateDiffers: false, failureDiagnostics: [], executionBuild: { state: "unknown" }, exporterBuild: "0.1.0-alpha.1+g1234abcd" };
+  recovery: null, mutationPossible: true, prestateDiffers: false, failureDiagnostics: [], finalStepFailures: [], executionBuild: { state: "unknown" }, exporterBuild: "0.1.0-alpha.1+g1234abcd" };
 for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
   test(`${language} unverified System-2 result and local report save at ${width}px`, async ({ page }) => {
     const m = language === "en" ? en : de;
@@ -262,6 +325,41 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
     state.operation = { ...status, operationId: "f".repeat(32) }; await page.locator("[data-system2-refresh]").click();
     await expect(page.locator("[data-system2-result-text]")).toHaveCount(0);
     await expect(page.locator("[data-system2-report-save]")).toHaveCount(0);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1);
+    expect(commands).toEqual([]); expect(unexpected).toEqual([]);
+  });
+}
+
+// Final-step failure diagnostic: a v4 body's typed final-step cause reaches the mounted panel through the real decoder.
+for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
+  test(`${language} final-step cause of an unverified System-2 download at ${width}px`, async ({ page }) => {
+    const m = language === "en" ? en : de;
+    const { state, commands, unexpected } = await interceptSystem2(page, language);
+    state.raw = JSON.stringify(finalStepStatus);
+    await page.setViewportSize({ width, height: 1000 });
+    await openProject(page, language); await dismissToasts(page, language);
+    await page.keyboard.press("Control+Shift+P");
+    await page.getByRole("combobox").fill(m["toolbar.busMonitor"]);
+    await page.getByRole("combobox").press("Enter");
+    await page.getByRole("button", { name: m["deviceDownload.title"], exact: true }).click();
+    await page.locator("[data-download-mode]").selectOption("system2");
+    await expect(page.locator("[data-system2-result-text]")).toContainText(m["system2.result.transferCompleteVerificationUnfinished"]);
+    const section = page.getByRole("region", { name: m["system2.finalStep.heading"] });
+    await expect(section).toBeVisible();
+    const download = section.locator("[data-system2-final-step='download']");
+    await expect(download).toHaveText(m["system2.finalStep.download"].replace("{category}", m["system2.finalStep.category.verificationMismatch"]).replace("{stage}", m["system2.finalStep.stage.allocation"]));
+    await expect(section.locator("[data-system2-final-step='restore']")).toHaveCount(0);
+    // The recovery's own cause appears beside the frozen download cause, never in its place.
+    state.raw = JSON.stringify({ ...finalStepStatus, state: "restoreFailed", restoreAttempted: true, finalStepFailures: [finalDownloadMismatch, finalRestoreRead] });
+    await page.locator("[data-system2-refresh]").click();
+    await expect(section.locator("[data-system2-final-step='restore']")).toHaveText(m["system2.finalStep.restore"].replace("{category}", m["system2.finalStep.category.readFailed"]).replace("{stage}", m["system2.finalStep.stage.loadedState"]));
+    await expect(download).toContainText(m["system2.finalStep.category.verificationMismatch"]);
+    // An older journal without a typed cause says so and guesses nothing.
+    state.raw = JSON.stringify({ ...finalStepStatus, finalStepFailures: [] });
+    await page.locator("[data-system2-refresh]").click();
+    await expect(section.locator("[data-system2-final-step-unavailable='download']")).toHaveText(m["system2.finalStep.unavailable"]);
+    await expect(section.locator("[data-system2-final-step]")).toHaveCount(0);
+    if (process.env.SYSTEM2_UI_CAPTURE) await section.screenshot({ path: `${process.env.SYSTEM2_UI_CAPTURE}/final-step-${language}-${width}.png` });
     expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1);
     expect(commands).toEqual([]); expect(unexpected).toEqual([]);
   });

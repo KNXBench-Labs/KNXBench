@@ -48,8 +48,9 @@ pub(super) struct Preview {
     pub summary: knx_app::system2_validation_preparation::ConfiguredHardwarePreview,
 }
 /// Status output version; the private `Metadata` file and `Preview` stay at version 1.
-/// Version 2 added `failureDiagnostics`, version 3 `downloadResult`; older exact-version clients refuse it.
-pub(super) const STATUS_SCHEMA_VERSION: u8 = 3;
+/// Version 2 added `failureDiagnostics`, version 3 `downloadResult`, version 4
+/// `finalStepFailures`; older exact-version clients refuse it.
+pub(super) const STATUS_SCHEMA_VERSION: u8 = 4;
 /// The operation identity the status shows, without the private file's schema version, so
 /// the flattened status carries exactly one `schemaVersion` key.
 #[derive(Clone, Serialize)]
@@ -101,6 +102,9 @@ pub(super) struct Status {
     /// Typed, non-raw failure facts: at most one per run, download before restore.
     /// Never the private journal text; empty when none was recorded or it is unknown.
     pub failure_diagnostics: Vec<knx_app::property_validation::FailureDiagnostic>,
+    /// Typed final-step failure per run (category and stage, no text): at most one per run,
+    /// download before restore. Empty when none was recorded or it is unknown (older journal).
+    pub final_step_failures: Vec<knx_app::property_validation::FinalStepDiagnostic>,
     /// What the download run provably achieved, derived from the validated journal and
     /// the plan. `verified` only after the final verification step finished; never a
     /// loaded or clean claim about the project.

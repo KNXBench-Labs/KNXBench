@@ -118,4 +118,7 @@ hardware-kind simulated transports only.
 ## Later versions
 
 Status schema 3 adds the journal-derived `downloadResult`; the report for an ended run is
-a separate kind. See [System-2 download result](system2-download-result.md).
+a separate kind. Status schema 4 and envelope version 3 add the typed final-step failure
+(a failure inside the last `Disconnect` step), which is independent of this PID 7 record and
+may sit beside it only for the final pointer read. See
+[System-2 download result](system2-download-result.md#final-step-failure).

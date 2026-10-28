@@ -311,7 +311,7 @@ it.each([["failed", "download"], ["restoreFailed", "restore"]] as const)("shows 
 });
 it("shows no diagnostics block for an old-wire status or a healthy run", async () => {
   const { wireV1 } = await import("./system2DownloadTestFixtures");
-  mock.getSystem2Status.mockResolvedValue({ ...wireV1(status), failureDiagnostics: [], state: "finished" }); await render();
+  mock.getSystem2Status.mockResolvedValue({ ...wireV1(status), failureDiagnostics: [], finalStepFailures: [], state: "finished" }); await render();
   expect(host.querySelector("[data-system2-diagnostics]")).toBeNull();
 });
 it("renders the diagnosis fully in German", async () => {
@@ -428,4 +428,79 @@ it("keeps the download's counters apart from the recovery's and says the settlem
   await render();
   expect(host.querySelector("[data-system2-download-counts]")!.textContent).toContain("26 of 27");
   expect(host.querySelector("[data-system2-settlement='persistenceFailed']")!.textContent).toContain("could NOT be saved");
+});
+
+// Final-step failure diagnostic (status v4): the closing Disconnect step's typed cause, never guessed.
+const finalLine = (run: string) => host.querySelector(`[data-system2-final-step='${run}']`)?.textContent ?? null;
+it("names each final-step category and stage in plain words for an unverified download", async () => {
+  const { finalStepStatus, finalDownloadMismatch, finalDownloadRead, finalDownloadWrite } = await import("./system2DownloadTestFixtures");
+  for (const [failure, category, stage] of [
+    [finalDownloadMismatch, "verification mismatch", "reading back and comparing the full memory allocations"],
+    [finalDownloadRead, "final read failed", "reading the final table reference of each resource"],
+    [finalDownloadWrite, "final write failed", "writing Device Control to restore Verify Mode"],
+    [{ ...finalDownloadRead, stage: "limit" as const }, "final read failed", "maximum APDU length"],
+    [{ ...finalDownloadMismatch, stage: "programVersion" as const }, "verification mismatch", "reading and comparing the final program version"],
+  ] as const) {
+    mock.getSystem2Status.mockResolvedValue({ ...finalStepStatus, finalStepFailures: [failure] }); await render(); await click("[data-system2-refresh]");
+    const line = finalLine("download");
+    expect(line).toContain("Download run"); expect(line).toContain(category); expect(line).toContain(stage);
+    // No raw wire token (camelCase) and no id reaches the text.
+    expect(line).not.toMatch(/[a-z][A-Z]/); expect(line).not.toContain(finalStepStatus.operationId);
+    expect(host.querySelector("[data-system2-final-step-unavailable]")).toBeNull(); expect(finalLine("restore")).toBeNull();
+    expect(host.querySelector("[data-system2-result]")!.textContent).toContain("not confirmed loaded");
+  }
+});
+it("says the download's final-step cause is unavailable instead of guessing one", async () => {
+  const { finalStepStatus, wireV3 } = await import("./system2DownloadTestFixtures");
+  for (const row of [{ ...finalStepStatus, finalStepFailures: [] }, { ...wireV3(finalStepStatus), finalStepFailures: [] }]) {
+    mock.getSystem2Status.mockResolvedValue(row); await render(); await click("[data-system2-refresh]");
+    const line = host.querySelector("[data-system2-final-step-unavailable='download']")?.textContent ?? "";
+    expect(line).toContain("no typed cause is available"); expect(line).toContain("No cause is inferred");
+    expect(finalLine("download")).toBeNull();
+    for (const guess of ["mismatch", "read failed", "write failed"]) expect(line).not.toContain(guess);
+  }
+});
+it("shows nothing about a final-step cause for any other download result", async () => {
+  const { finalStepStatus, finalDownloadMismatch } = await import("./system2DownloadTestFixtures");
+  for (const downloadResult of ["transferIncomplete", "transferCompleteVerificationNotStarted", "unknown", "nothingWritten"] as const) {
+    mock.getSystem2Status.mockResolvedValue({ ...finalStepStatus, downloadResult, mutationMayHaveStarted: downloadResult !== "nothingWritten", finalStepFailures: downloadResult === "unknown" ? [finalDownloadMismatch] : [] });
+    await render(); await click("[data-system2-refresh]");
+    expect(host.querySelector("[data-system2-final-steps]")).toBeNull(); expect(host.querySelector("[data-system2-final-step-unavailable]")).toBeNull();
+  }
+});
+it("never shows a download cause beside another download result, even while a recovery cause is shown", async () => {
+  const { finalStepStatus, finalDownloadMismatch, finalRestoreRead } = await import("./system2DownloadTestFixtures");
+  // The recovery entry makes the section visible, so only the download guard can hold the download entry back.
+  for (const downloadResult of ["transferIncomplete", "transferCompleteVerificationNotStarted", "unknown"] as const) {
+    mock.getSystem2Status.mockResolvedValue({ ...finalStepStatus, state: "restoreFailed", restoreAttempted: true, downloadResult, finalStepFailures: [finalDownloadMismatch, finalRestoreRead] });
+    await render(); await click("[data-system2-refresh]");
+    expect(finalLine("download")).toBeNull(); expect(host.querySelector("[data-system2-final-step-unavailable]")).toBeNull();
+    expect(finalLine("restore")).toContain("Recovery run"); expect(finalLine("restore")).toContain("not the download");
+    expect(host.querySelector("[data-system2-final-steps]")!.textContent).not.toContain("verification mismatch");
+  }
+});
+it("keeps the frozen download cause beside the recovery's own, labelled apart", async () => {
+  const { finalStepStatus, finalDownloadMismatch, finalRestoreRead } = await import("./system2DownloadTestFixtures");
+  mock.getSystem2Status.mockResolvedValue({ ...finalStepStatus, state: "restoreFailed", restoreAttempted: true, finalStepFailures: [finalDownloadMismatch, finalRestoreRead] }); await render();
+  expect(finalLine("download")).toContain("Download run"); expect(finalLine("download")).toContain("verification mismatch");
+  const restore = finalLine("restore")!;
+  expect(restore).toContain("Recovery run"); expect(restore).toContain("not the download"); expect(restore).toContain("final read failed");
+  expect(restore).toContain("final Loaded state"); expect(restore).not.toContain("verification mismatch");
+  // A recovery's cause alone is never attributed to the download, whose cause stays unavailable.
+  mock.getSystem2Status.mockResolvedValue({ ...finalStepStatus, state: "restoreFailed", restoreAttempted: true, finalStepFailures: [finalRestoreRead] }); await click("[data-system2-refresh]");
+  expect(finalLine("download")).toBeNull(); expect(host.querySelector("[data-system2-final-step-unavailable='download']")).not.toBeNull();
+  expect(finalLine("restore")).toContain("Recovery run");
+});
+it("renders the final-step cause fully in German", async () => {
+  const { setSetting } = await import("./settingsStore"); const { finalStepStatus, finalDownloadWrite, finalRestoreRead } = await import("./system2DownloadTestFixtures");
+  await act(async () => setSetting("uiLanguage", "de"));
+  mock.getSystem2Status.mockResolvedValue({ ...finalStepStatus, state: "restoreFailed", restoreAttempted: true, finalStepFailures: [finalDownloadWrite, finalRestoreRead] }); await render();
+  const section = host.querySelector("[data-system2-final-steps]")!.textContent!;
+  expect(section).toContain("Ursache im abschließenden Schritt"); expect(finalLine("download")).toContain("Download-Lauf");
+  expect(finalLine("download")).toContain("abschließendes Schreiben fehlgeschlagen"); expect(finalLine("download")).toContain("Wiederherstellen des Verify-Modus");
+  expect(finalLine("restore")).toContain("Wiederherstellungslauf"); expect(finalLine("restore")).toContain("abschließendes Lesen fehlgeschlagen");
+  expect(section).not.toContain("Download run"); expect(section).not.toContain("final write failed");
+  mock.getSystem2Status.mockResolvedValue({ ...finalStepStatus, finalStepFailures: [] }); await click("[data-system2-refresh]");
+  expect(host.querySelector("[data-system2-final-step-unavailable='download']")!.textContent).toContain("keine typisierte Ursache verfügbar");
+  await act(async () => setSetting("uiLanguage", "en"));
 });

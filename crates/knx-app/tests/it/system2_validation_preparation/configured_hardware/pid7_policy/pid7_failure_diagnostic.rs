@@ -6,7 +6,13 @@ use knx_app::property_validation::{
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
 
-fn diag(run: R, reason: Why, object: u8, elements: u8, octets: u32) -> FailureDiagnostic {
+pub(super) fn diag(
+    run: R,
+    reason: Why,
+    object: u8,
+    elements: u8,
+    octets: u32,
+) -> FailureDiagnostic {
     FailureDiagnostic {
         run,
         reason,
@@ -17,7 +23,7 @@ fn diag(run: R, reason: Why, object: u8, elements: u8, octets: u32) -> FailureDi
     }
 }
 /// Every checkpoint's envelope format and its checkpoint value, in sequence order.
-fn checkpoints(run: &Run) -> Vec<(u64, Value)> {
+pub(super) fn checkpoints(run: &Run) -> Vec<(u64, Value)> {
     run.journal_bytes()
         .into_iter()
         .filter(|(name, _)| name.starts_with("checkpoint-"))
@@ -31,12 +37,12 @@ fn checkpoints(run: &Run) -> Vec<(u64, Value)> {
         .collect()
 }
 /// Public projections of a reopened store: progress list and the shareable report value.
-fn public(run: &Run) -> (Vec<FailureDiagnostic>, Value) {
+pub(super) fn public(run: &Run) -> (Vec<FailureDiagnostic>, Value) {
     let store = run.store();
     let report = serde_json::to_value(store.shareable_report()).unwrap();
     (store.progress().failure_diagnostics, report)
 }
-fn assert_public_clean(report: &Value, run: &Run, raw: &str) {
+pub(super) fn assert_public_clean(report: &Value, run: &Run, raw: &str) {
     let text = report.to_string();
     for forbidden in [
         raw,
@@ -56,7 +62,7 @@ fn assert_public_clean(report: &Value, run: &Run, raw: &str) {
 }
 /// Characterizes the real create-new writer on a reopened store: its bytes equal the
 /// in-memory report, leak nothing, and a second write refuses without touching them.
-fn written_report(run: &Run, name: &str, expected: &Value, raws: &[&str]) {
+pub(super) fn written_report(run: &Run, name: &str, expected: &Value, raws: &[&str]) {
     let store = run.store();
     let path = run.operation.with_file_name(name);
     store.write_shareable_report(&path).unwrap();
@@ -78,12 +84,12 @@ fn written_report(run: &Run, name: &str, expected: &Value, raws: &[&str]) {
 }
 /// An object with at least three PID 7 reads (prestate, in procedure, final), found by a
 /// clean valid-control run: its second read follows a mutation.
-async fn in_procedure_object() -> u8 {
+pub(super) async fn in_procedure_object() -> u8 {
     let clean = execute(Policy::Width, None).await;
     finished(&clean);
     let (diagnostics, report) = public(&clean);
     assert!(diagnostics.is_empty(), "valid control has no diagnosis");
-    assert_eq!(report["format"], 2);
+    assert_eq!(report["format"], 3);
     assert_eq!(report["failure_diagnostics"], json!([]));
     assert!(checkpoints(&clean).iter().all(|(format, _)| *format == 1));
     clean
@@ -134,7 +140,7 @@ async fn three_closed_reasons_reach_the_reopened_journal_progress_and_report() {
         let expected = diag(R::Download, reason, object, elements, data.len() as u32);
         let (diagnostics, report) = public(&run);
         assert_eq!(diagnostics, [expected], "{reason:?}");
-        assert_eq!(report["format"], 2);
+        assert_eq!(report["format"], 3);
         assert_eq!(report["outcome"], "failed");
         assert_eq!(
             report["failure_diagnostics"],
@@ -275,9 +281,10 @@ async fn untyped_and_legacy_failures_carry_no_invented_diagnosis() {
     let (diagnostics, report) = public(&run);
     assert!(diagnostics.is_empty());
     assert_eq!(report["failure_diagnostics"], json!([]));
+    // No pointer fact is invented; the final step's own typed record is a separate field.
     assert!(checkpoints(&run)
         .iter()
-        .all(|(format, c)| *format == 1 && c.get("pointer_failure").is_none()));
+        .all(|(_, c)| c.get("pointer_failure").is_none()));
     // Legacy policy keeps its untyped Recovery(String) refusal: no widening to typed facts.
     let run = execute(Policy::Legacy, refusal_case(1, 1, &[1, 0x16])).await;
     assert!(run.result.is_err());
@@ -289,7 +296,7 @@ async fn untyped_and_legacy_failures_carry_no_invented_diagnosis() {
 }
 
 /// Replace the last checkpoint and re-commit HEAD, so only the record grammar decides.
-fn rewrite_last(run: &Run, edit: impl FnOnce(&mut Value)) {
+pub(super) fn rewrite_last(run: &Run, edit: impl FnOnce(&mut Value)) {
     let head_path = run.operation.join("HEAD");
     let mut head: Value = serde_json::from_slice(&std::fs::read(&head_path).unwrap()).unwrap();
     let last = run.operation.join(format!(

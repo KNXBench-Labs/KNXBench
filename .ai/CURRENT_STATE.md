@@ -1,16 +1,18 @@
 # Restart snapshot
 
-## Alpha 18 follow-ups 1 + 2 — GO (observed 2026-10-28 21:18 CET)
-- Native point 2: source `1a4f5a970`, feature `58c50f867`, corrections `f4244c5b1`/
-  `523f726b9`; independent review APPROVE, branch docs gate10 accepted/frozen/user-data safe.
-- Actual native12 cells/42drags/20seat restorations; parent evidence verifier passed.
-  App/children closed, exit0; runtime placement rules retained until compositor reload.
-- Main-first native integration: `integration/alpha18-native-recheck-20261028`,
-  `<sources>/knxbench-alpha18-native-integration-20261028`; integrated gate/push next.
-- Runtime point 1 reserved: `feat/system2-final-diagnostic-20261028`, separate same-name
-  tree; staged candidate `bc9e1a6f9` frozen for independent review, no package gate yet.
-- Evidence `<profile>/evidence/alpha18-followups-20261028/`. No bus/release/deployment;
-  root stays preserved. Next: native delivery, runtime review/corrections and scoped gates.
+## Alpha 18 follow-ups 1 + 2 — GO (observed 2026-10-28 22:08 CET)
+- Native point 2 PUBLISHED `923b34599`: independent review + branch10/integrated10 accepted;
+  native12 cells/42drags/20restorations. Both trees/refs/caches retired after551-member
+  archive verification. App/children exit0; placement rules remain until compositor reload.
+- Runtime feature `96f41c7f1`, tree `7a1b3831f`: Opus re-review APPROVE0Critical/0Important/
+  0Minor. Branch15 accepted/frozen/user-data safe: Rust3530/143ignored, corpus91/91,
+  browser940 + production-devices suite; real router-byte EN/DE UI/report join separate.
+- Runtime integration owns `integration/alpha18-system2-final-diagnostic-20261028`,
+  tree `<sources>/knxbench-alpha18-system2-integration-20261028` on `923b34599`.
+- Next: integrated15, actual built-server isolated smoke, conditional push/readback;
+  runtime not yet published. Own inputs frozen during gates; root stays preserved.
+- Evidence `<profile>/evidence/alpha18-followups-20261028/`. No bus/VM/user-data mutation,
+  release/tag/deployment or actual #30/#22 allocation-cause/ETS/hardware claim.
 
 Observed: 2026-10-28 17:58 CET. Operational snapshot; maintained docs own status.
 

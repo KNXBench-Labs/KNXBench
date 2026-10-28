@@ -15,6 +15,7 @@ use knx_core::commissioning::properties::{ObjectIndex, PID_HARDWARE_TYPE};
 use knx_core::commissioning::property_download::{PropertyDownloadPlan, PropertyOperation};
 use knx_core::IndividualAddress;
 
+use super::final_step::FinalStepFailure;
 use super::hardware_release::HardwareRelease;
 use super::pointer_width::{PointerWidthAdmission, PointerWidthRefusal};
 use super::property_recovery::{
@@ -93,6 +94,9 @@ pub struct PropertySimulationError {
     pub completed: Vec<CompletedPropertyOperation>,
     /// Actual cause retained for diagnosis.
     pub failure: PropertySimulationFailure,
+    /// Set only when the failure arose in the final step's own verification or Verify Mode
+    /// restore; `None` for every other failure, including journal and cancellation stops there.
+    pub final_step: Option<FinalStepFailure>,
 }
 impl fmt::Display for PropertySimulationError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -145,6 +149,7 @@ pub async fn run_simulated_property_plan(
         mutation_may_have_started: false,
         completed: Vec::new(),
         failure,
+        final_step: None,
     };
     if device.address() != plan.target() {
         return Err(early(PropertySimulationFailure::TargetMismatch {
@@ -363,6 +368,7 @@ pub async fn restore_experimental_property_plan<T: ManagementTransport>(
             mutation_may_have_started: false,
             completed: Vec::new(),
             failure,
+            final_step: None,
         })?;
     let report = run_property_plan_inner(
         transport,
@@ -405,6 +411,7 @@ pub async fn restore_experimental_property_plan_on_hardware<T: ManagementTranspo
             mutation_may_have_started: false,
             completed: Vec::new(),
             failure,
+            final_step: None,
         })?;
     let report = run_property_plan_inner(
         transport,
@@ -460,6 +467,7 @@ async fn run_property_plan_inner<T: ManagementTransport>(
         mutation_may_have_started: false,
         completed: Vec::new(),
         failure,
+        final_step: None,
     };
     if let Some(preconditions) = preconditions {
         preconditions
@@ -502,6 +510,7 @@ async fn run_property_plan_inner<T: ManagementTransport>(
     let mut recovery = None;
     let mut final_pointer_observations = Vec::new();
     let mut in_procedure_pointer_observations = Vec::new();
+    let mut final_step = None;
     for (operation_index, step) in plan.steps().iter().enumerate() {
         let result: Result<(), PropertySimulationFailure> = async {
             if abort_requested() {
@@ -572,8 +581,13 @@ async fn run_property_plan_inner<T: ManagementTransport>(
                 PropertyOperation::ToolMetadata { .. } => {}
                 PropertyOperation::Disconnect => {
                     if let Some(snapshot) = &recovery {
-                        final_pointer_observations =
-                            snapshot.verify_outcome(&mut session, plan).await?;
+                        final_pointer_observations = snapshot
+                            .verify_outcome(&mut session, plan)
+                            .await
+                            .map_err(|error| {
+                                final_step = Some(error.classified);
+                                error.failure
+                            })?;
                         if !final_pointer_observations.is_empty() {
                             journal(PropertyJournalEvent::FinalPointerObservations(
                                 &final_pointer_observations,
@@ -581,7 +595,13 @@ async fn run_property_plan_inner<T: ManagementTransport>(
                             .map_err(PropertySimulationFailure::Persistence)?;
                         }
                         // Observations are durable before this only remaining write.
-                        snapshot.restore_verify_mode(&mut session).await?;
+                        snapshot
+                            .restore_verify_mode(&mut session)
+                            .await
+                            .map_err(|error| {
+                                final_step = Some(error.classified);
+                                error.failure
+                            })?;
                     }
                     session.disconnect().await;
                 }
@@ -607,6 +627,7 @@ async fn run_property_plan_inner<T: ManagementTransport>(
                 mutation_may_have_started,
                 completed,
                 failure,
+                final_step,
             });
         }
     }

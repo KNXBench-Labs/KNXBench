@@ -177,25 +177,35 @@ fn a_long_enum_becomes_a_binary_value_restriction_keyed_like_any_enumeration() {
 }
 
 #[test]
-fn binary_values_are_checked_and_reported_not_silently_dropped() {
+fn binary_values_are_decoded_and_inexact_ones_reported_not_silently_dropped() {
     let (program, diagnostics) = mapping();
     let reported: Vec<_> = diagnostics
         .iter()
         .filter_map(|d| match d {
-            MappingDiagnostic::BinaryValuesNotModeled {
+            MappingDiagnostic::InvalidBinaryValues {
                 parameter_type,
                 values,
-                inconsistent,
-            } => Some((parameter_type.as_str(), *values, *inconsistent)),
+                invalid,
+            } => Some((parameter_type.as_str(), *values, *invalid)),
             _ => None,
         })
         .collect();
-    assert_eq!(reported, [("21", 2, 0), ("22", 1, 1)]);
-    assert!(diagnostics.iter().all(
-        |d| d.kind() != "binary-values-not-modeled" || d.to_string().contains("stored payload")
-    ));
-    // The inconsistent type is still mapped: its value and text are what ETS
-    // keys the enumeration by.
+    assert_eq!(reported, [("22", 1, 1)]);
+    assert!(diagnostics
+        .iter()
+        .all(|d| d.kind() != "binary-values-not-modeled"));
+    let binary = |type_n: &str| -> Vec<Option<String>> {
+        program
+            .enumerations
+            .iter()
+            .filter(|e| e.parameter_type_id == format!("{}_PT-{type_n}", program.id))
+            .map(|e| e.binary_value.clone())
+            .collect()
+    };
+    // Sorted by DISPLAY_ORDER: 0001 then 0201.
+    assert_eq!(binary("21"), [Some("AAE=".into()), Some("AgE=".into())]);
+    // The inexact type is still mapped (value and text are what ETS keys by), without a binary value.
+    assert_eq!(binary("22"), [None]);
     assert_eq!(
         type_shape(&program, "22"),
         Some(("Restriction".into(), Some(16), Some("BinaryValue".into())))
@@ -217,4 +227,18 @@ fn an_undescribed_atomic_type_is_still_reported_and_not_mapped() {
         })
         .collect();
     assert_eq!(unknown, [("23", "9")]);
+}
+
+#[test]
+fn the_historical_not_modeled_diagnostic_keeps_its_kind_and_text() {
+    let old = MappingDiagnostic::BinaryValuesNotModeled {
+        parameter_type: "21".into(),
+        values: 4,
+        inconsistent: 1,
+    };
+    assert_eq!(old.kind(), "binary-values-not-modeled");
+    assert_eq!(
+        old.to_string(),
+        "parameter type 21: 4 binary enumeration values (1 inconsistent with their length or the type's size) are kept in the stored payload only; the product database does not model them"
+    );
 }

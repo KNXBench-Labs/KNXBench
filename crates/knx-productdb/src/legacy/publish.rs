@@ -421,14 +421,15 @@ fn write_program(
     for e in &p.enumerations {
         conn.execute(
             "INSERT INTO parameter_type_enum (program_id, parameter_type_id, id, value, text,
-              display_order) VALUES (?1,?2,?3,?4,?5,?6)",
+              display_order, binary_value) VALUES (?1,?2,?3,?4,?5,?6,?7)",
             params![
                 p.id,
                 e.parameter_type_id,
                 e.id,
                 e.value,
                 e.text,
-                e.display_order
+                e.display_order,
+                e.binary_value
             ],
         )?;
     }

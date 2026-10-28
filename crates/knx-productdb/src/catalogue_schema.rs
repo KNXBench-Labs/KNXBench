@@ -11,9 +11,9 @@ mod schema28;
 mod witness;
 
 /// The admitted `user_version`. The pinned fresh-chain shape (`schema28`) is
-/// the one v28 introduced; v29 (WP-08) is a data-only migration and changes no
-/// DDL. Any later version must re-establish its shape before it is admitted.
-const ADMITTED_VERSION: i64 = 29;
+/// the one v28 introduced; v29 (WP-08) and v30 (WP-03) are data-only migrations and
+/// change no DDL. Any later version must re-establish its shape before it is admitted.
+const ADMITTED_VERSION: i64 = 30;
 const _: () = assert!(ADMITTED_VERSION == crate::migration::CURRENT_PRODUCTDB_VERSION);
 
 pub(crate) use witness::{

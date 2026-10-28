@@ -1218,3 +1218,191 @@ fn a_v29_file_is_upgraded_in_a_read_only_copy_only() {
     drop(db);
     assert_eq!(std::fs::read(&path).unwrap(), before);
 }
+
+// Independent review regressions: type admission, source identity and refusal continuation.
+
+#[test]
+fn refused_first_payload_does_not_skip_later_payload() {
+    let (_dir, path, ctx) = two_payloads();
+    assert!(
+        ctx.b_sha < ctx.a_sha,
+        "this witness deliberately refuses the first sorted payload"
+    );
+    let mut changed = b_source();
+    let at = changed.windows(4).position(|w| w == b"0007").unwrap();
+    changed[at + 3] = b'8';
+    let hex: String = changed.iter().map(|b| format!("{b:02x}")).collect();
+    tamper_exec(
+        &path,
+        &[format!(
+            "UPDATE source_file SET bytes = X'{hex}' WHERE sha256 = '{}'",
+            ctx.b_sha
+        )],
+    );
+    let fresh_a = {
+        let (_d, _p, c) = database();
+        let a = publish(&c, &a_source(), "300");
+        dump(
+            &c,
+            &format!(
+                "SELECT * FROM parameter_type_enum WHERE program_id = '{}'",
+                a.program_id
+            ),
+        )
+    };
+    let conn = open_and_migrate(&path).unwrap();
+    assert!(enums(&conn, &ctx.b, "21").iter().all(|e| e.4.is_none()));
+    assert_eq!(
+        dump(
+            &conn,
+            &format!(
+                "SELECT * FROM parameter_type_enum WHERE program_id = '{}'",
+                ctx.a
+            )
+        ),
+        fresh_a,
+        "refusal of first sorted payload B must not skip the later healthy A payload"
+    );
+}
+
+#[test]
+fn atomic4_matched_width_is_never_decoded_fresh_or_backfill() {
+    let source = exim(
+        "300",
+        &[("31", "4", "16")],
+        &[["31", "1", "A", "1", "b1", "7e7e", "2"]],
+        true,
+    );
+    let (_dir, path, conn) = database();
+    let p = publish(&conn, &source, "300");
+    assert_eq!(
+        enums(&conn, &p.program_id, "31")[0].4,
+        None,
+        "even valid-width Atomic4 binary fields must remain uninterpreted"
+    );
+    assert_eq!(
+        kind_details(&p.report, "atomic4-binary-fields-unmodeled").len(),
+        1
+    );
+    rewind_to_v29(&conn, &[(&p, &[])]);
+    drop(conn);
+    let conn = open_and_migrate(&path).unwrap();
+    assert_eq!(enums(&conn, &p.program_id, "31")[0].4, None);
+}
+
+#[test]
+fn atomic4_value_only_field_is_diagnosed() {
+    let source = exim(
+        "300",
+        &[("30", "4", "8")],
+        &[["30", "1", "D", "1", "a1", "7e", ""]],
+        true,
+    );
+    let (_dir, _path, conn) = database();
+    let p = publish(&conn, &source, "300");
+    assert_eq!(enums(&conn, &p.program_id, "30")[0].4, None);
+    assert_eq!(
+        kind_details(&p.report, "atomic4-binary-fields-unmodeled").len(),
+        1,
+        "a nonempty BINARY_VALUE alone must be diagnosed"
+    );
+}
+
+#[test]
+fn parseable_hash_mismatch_is_refused_before_any_binary_fill() {
+    let (_dir, path, ctx) = two_payloads();
+    let mut changed = a_source();
+    let at = changed.windows(4).position(|w| w == b"0001").unwrap();
+    changed[at + 3] = b'2';
+    assert_ne!(sha256_hex(&changed), ctx.a_sha);
+    let hex: String = changed.iter().map(|b| format!("{b:02x}")).collect();
+    tamper_exec(
+        &path,
+        &[format!(
+            "UPDATE source_file SET bytes = X'{hex}' WHERE sha256 = '{}'",
+            ctx.a_sha
+        )],
+    );
+    let (a_before, facts, old_diags) = {
+        let conn = Connection::open(&path).unwrap();
+        (
+            dump(
+                &conn,
+                &format!(
+                    "SELECT * FROM parameter_type_enum WHERE program_id = '{}'",
+                    ctx.a
+                ),
+            ),
+            all_tables_except(&conn, &["parameter_type_enum", "legacy_diagnostic"]),
+            diagnostics(&conn, &ctx.a_sha),
+        )
+    };
+    let conn = open_and_migrate(&path).unwrap();
+    assert_eq!(dump(&conn, &format!("SELECT * FROM parameter_type_enum WHERE program_id = '{}'", ctx.a)), a_before,
+               "parseable hash mismatch must refuse every binary fill for A, not trust reparsed bytes under the historical source key");
+    assert_eq!(
+        all_tables_except(&conn, &["parameter_type_enum", "legacy_diagnostic"]),
+        facts
+    );
+    assert_eq!(
+        dump(
+            &conn,
+            &format!(
+                "SELECT * FROM parameter_type_enum WHERE program_id = '{}'",
+                ctx.b
+            )
+        ),
+        fresh_b_enums(&ctx)
+    );
+    let d = diagnostics(&conn, &ctx.a_sha);
+    assert_eq!(&d[..old_diags.len()], &old_diags[..]);
+    assert_eq!(
+        d.iter()
+            .filter(|(_, k, t)| k == "binary-values-backfill-error"
+                && t.contains("does not match its SHA-256"))
+            .count(),
+        1
+    );
+    assert!(!d.iter().any(|(_, k, _)| k == "binary-values-backfilled"));
+}
+
+#[test]
+fn characterization_empty_atomic4_zero_length_is_diagnosed() {
+    let source = exim(
+        "300",
+        &[("40", "4", "8")],
+        &[["40", "1", "Plain", "1", "v1", "", "0"]],
+        true,
+    );
+    let (_dir, path, conn) = database();
+    let p = publish(&conn, &source, "300");
+    assert_eq!(enums(&conn, &p.program_id, "40")[0].4, None);
+    let d = kind_details(&p.report, "atomic4-binary-fields-unmodeled");
+    assert_eq!(
+        d.len(),
+        1,
+        "empty BINARY_VALUE plus literal zero LENGTH currently diagnoses one type"
+    );
+    assert!(d[0].contains("1 enumeration rows"));
+    let stored: Vec<u8> = conn
+        .query_row(
+            "SELECT bytes FROM source_file WHERE sha256=?1",
+            [&p.payload_sha],
+            |r| r.get(0),
+        )
+        .unwrap();
+    assert_eq!(stored, source);
+    rewind_to_v29(&conn, &[(&p, &[])]);
+    drop(conn);
+    let conn = open_and_migrate(&path).unwrap();
+    let d = diagnostics(&conn, &p.payload_sha);
+    assert_eq!(
+        d.iter()
+            .filter(|(_, k, _)| k == "atomic4-binary-fields-unmodeled")
+            .count(),
+        1
+    );
+    assert!(d
+        .iter()
+        .any(|(_, k, t)| k == "atomic4-binary-fields-unmodeled" && t.contains(BACKFILL_NOTE)));
+}

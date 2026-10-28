@@ -14,6 +14,11 @@ fragment aliases and update this index. Do not rewrite previous results.
 
 ## Legacy long-enum binary storage and authenticated backfill (28 October 2026 source)
 
+Published main-first `6dbdaf8b9` after independent Opus correction approval.
+Branch and integrated selected gates14/14 each accepted: Rust4,494/165ignored,
+selected corpus97/97, frozen inputs and checked/unchanged user data.
+[Exact acceptance and limits](status/2026-10-28-wp03-legacy-binary-retention.md).
+
 WP-03 maps validated atomic-type-5 hex to exact bytes and canonical Base64 in
 `parameter_type_enum.binary_value`; productdb v30 fills historical NULL fields
 only after authenticating retained source and normalized identity. Whole-payload

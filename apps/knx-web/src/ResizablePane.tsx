@@ -33,8 +33,16 @@ export default function ResizablePane(props: {
         setWidth(next);
         props.onWidthCommit?.(next);
       }}
+      onDragStart={(e) => e.preventDefault()}
       onPointerDown={(e) => {
         if (e.button !== 0) return;
+        // A drag must not start a text selection: in WebKitGTK it made later
+        // separator drags lose their moves (WP-11, 28 October 2026). Cancelling
+        // the default also stops the press clearing an existing selection, so
+        // clear it explicitly as the native press did.
+        e.preventDefault();
+        window.getSelection()?.removeAllRanges();
+        e.currentTarget.focus();
         drag.current = { x: e.clientX, width: widthRef.current, scale: appUiScale() };
         e.currentTarget.setPointerCapture(e.pointerId);
       }}

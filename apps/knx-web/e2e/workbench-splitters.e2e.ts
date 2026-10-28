@@ -150,3 +150,30 @@ for (const scale of [0.8, 1, 1.5]) {
     expect(unexpected).toEqual([]);
   });
 }
+
+// WP-11 (28 October 2026): in WebKitGTK a separator drag selected document
+// text and later drags then lost their moves. Chromium does not reproduce that
+// loss (this case also passes without the fix); the unit guards in
+// separatorSelection.test.tsx discriminate. Here real drags must still commit
+// and leave no selection with the cancelled pointerdown default.
+test("repeated separator drags start no text selection and every drag commits", async ({ page }) => {
+  const stored: Record<string, unknown> = {};
+  const unexpected = await openProject(page, stored);
+  const selection = () => page.evaluate(() => window.getSelection()?.toString() ?? "");
+  const navigationSeparator = page.getByRole("separator", { name: "Navigation", exact: true });
+  for (const [step, dx] of [[1, 100], [2, -40], [3, 60]] as const) {
+    const before = Number(await navigationSeparator.getAttribute("aria-valuenow"));
+    await dragX(page, navigationSeparator, dx);
+    expect(await selection(), `drag ${step} selected text`).toBe("");
+    await expect.poll(() => stored.navigationPaneWidth, `drag ${step} commits`).toBe(before + dx);
+  }
+  const block = page.getByRole("navigation", { name: "Navigation" });
+  const splitter = page.getByRole("separator", { name: "Height of the navigation block" });
+  for (const dy of [40, -20, 30]) {
+    const before = await height(block);
+    await drag(page, splitter, dy);
+    expect(await selection(), "block drag selected text").toBe("");
+    expect(Math.abs(await height(block) - before - dy)).toBeLessThan(1.5);
+  }
+  expect(unexpected).toEqual([]);
+});

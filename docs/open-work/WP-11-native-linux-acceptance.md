@@ -1,6 +1,6 @@
 # WP-11 — Native Linux acceptance
 
-**Status:** In progress: first bounded native slice, two positive editor cells, bounded capture export and real-pointer drag/hover cells recorded; one pane-drag defect found and open; remaining cells open. Listed in [OPEN_WORK](../OPEN_WORK.md); per-ID status of record is the [ledger](../status/LEDGER.md).
+**Status:** In progress: first bounded native slice, two positive editor cells, bounded capture export and real-pointer drag/hover cells recorded; one pane-drag defect found and fixed in source (native re-check open); remaining cells open. Listed in [OPEN_WORK](../OPEN_WORK.md); per-ID status of record is the [ledger](../status/LEDGER.md).
 
 ## Task
 
@@ -74,10 +74,18 @@ navigation-pane drags follow the pointer and scale correctly. Table column drags
 are stable and reversible: exact at 100/150%, fit-stretched at 80%. Topology
 device hover keeps its geometry and shows the highlight at all three scales.
 
-**Open defect:** the pane separators and height splitters do not cancel the
-`pointerdown` default. In WebKitGTK a drag can select document text, and
-later drags then stop after their first motion without committing. The table
-column handle, which cancels the default, is unaffected. Not fixed by this record.
+**Defect, fixed in source 28 October 2026:** the pane separators and height
+splitters did not cancel the `pointerdown` default. In WebKitGTK a drag could
+select document text, and later drags then stopped after their first motion
+without committing. Both now apply the table column handle's guards: they
+cancel the primary `pointerdown` default, block `dragstart`, set
+`user-select: none` and take focus; a primary press also clears an existing
+selection, as the native press did. Unit tests pin these guards. A Chromium
+test checks repeated drags still commit without a selection, but Chromium never
+showed the loss, so it also passes without the fix. A native WebKitGTK re-run
+of the ±100/−5 reproduction, including a drag after selecting text elsewhere
+and the focus ring after a pointer drag, has not been made yet; until it is,
+the native cell stays a recorded defect, not a positive result.
 
 ## Done when
 

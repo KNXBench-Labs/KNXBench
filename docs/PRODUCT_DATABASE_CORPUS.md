@@ -590,6 +590,8 @@ schema v15. Unrecognized Dynamic kinds: `Rows`/`Columns` 4,267 each
 `ParameterBlockRename` 270, `Rename` 56, `Button` 20, `Repeat` 16 (each
 holding exactly one `Module`). Static constructs reported but not
 evaluated: `ParameterCalculation` 1,236 in 91 programs, `Allocator` 94 in 14.
+A later collection added `TypeDate` (2 programs, `Encoding="DPT 11"`), typed as
+kind `Date` since schema v29 ([evidence](research/2026-10-28-typedate-value-form.md)).
 
 Tests for parameter editing and reporting should cover every observed kind,
 including raw fallback for kinds without an editor. Enum display text,

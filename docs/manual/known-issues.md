@@ -31,8 +31,10 @@ physical-hardware certification, recovery guarantee or ETS equivalence follows.
 System-2 stays experimental and limited to UP 258D12 application
 `M-0001_A-9205-04-9270`; masked-byte survival, allocator state and complete
 physical recovery remain open, and `gatewayBusy` does not identify its mechanism.
-Issue #30 and issue #22 stay open; S2-02 (the original start failure) and S2-03
-(two image-interpretation differences) remain open work. An unproved hardware
+Issue #30 and issue #22 stay open; S2-02 (the original start failure) remains
+open work. S2-03's two image-interpretation differences are decided in source
+after Alpha 17: the invisible-parameter reading is an observation-supported
+hypothesis, not a defined rule. An unproved hardware
 route is capped at 12 data octets per request, which can slow transfers.
 Device backups (format 2), new activity-history rows and new System-2 operation
 records are refused by Alpha 16; opening Alpha 17 saves in Alpha 16 is not tested.

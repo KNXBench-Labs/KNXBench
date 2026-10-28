@@ -12,6 +12,17 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## S2-03 defaults v3 and explicit-Background admission (28 October 2026 source delivery)
+
+Published main-first `d39668393` after a no-findings review and a 10/10 full
+package gate (Rust 7,113 passed / 236 ignored summed, corpus155/155, frozen
+inputs, unchanged user data). Defaults profile v3 keeps the source `Data` of
+inactive parameters like the configured path; new physical v1/v2 execution
+refuses, recovery stays. Template retention requires an explicit
+`DownloadInvisibleParameters="Background"`.
+[Evidence and boundaries](status/2026-10-28-s203-background-defaults-v3.md).
+Simulator-only: no ETS equivalence, hardware or `DefaultValue` claim.
+
 ## Experimental System-2 patient waits (28 October 2026 source delivery)
 
 Published main-first `3583ab8e0` after independent confirmation APPROVE and

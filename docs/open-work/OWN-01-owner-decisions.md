@@ -11,8 +11,9 @@ These decisions are not delivery evidence or blanket execution authority.
   access or real-project changes. The first bounded Alpha 17 slice is now
   [recorded](../status/2026-10-27-wp11-native-acceptance.md); WP-11 remains open.
 - [S2-03](S2-03-up258-image-interpretation.md): retain the existing source-based
-  communication-bit policy. Invisible-parameter precedence stays open; no ETS
-  equivalence or hardware approval follows.
+  communication-bit policy. Invisible-parameter precedence: decided 28 October
+  2026 as defaults v3 template retention for explicit `Background` only
+  (observation-supported hypothesis); no ETS equivalence or hardware approval follows.
 - [WP-10 / MODEL-05](WP-10-import-and-model-evidence.md): no current native-site
   need across separate installations; explicitly deferred, not implemented.
   Other import/model evidence cases remain independent.
@@ -58,8 +59,9 @@ live Docker Hub verification.
 
 - WP-11 has a first bounded native slice; the remaining cells and missing
   environments stay open, not accepted by consent alone.
-- S2-03 needs defining evidence for invisible-parameter precedence; other
-  import/model and hardware evidence boundaries are unchanged.
+- S2-03's invisible-parameter precedence was decided by the owner on 28 October
+  2026 (defaults v3, observation-supported hypothesis); defining evidence is still
+  absent. Other import/model and hardware evidence boundaries are unchanged.
 - Website / Evolution Story privacy acceptance requires a concrete review copy;
   no blanket privacy approval was given. Optional WebKit evidence remains open.
 - Private mailbox verification remains a separate external/owner action and was

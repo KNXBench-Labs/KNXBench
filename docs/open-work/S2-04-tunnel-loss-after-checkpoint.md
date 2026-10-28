@@ -2,7 +2,8 @@
 
 **Priority:** P1. **Status:** System-2 fix published on `main` as `1ab4ad6a5`;
 ordinary download/service-control follow-up published as `ca940e2ed`;
-individual-address settlement and field verification remain open.
+individual-address settler hardening published as `c59d14280`; field
+verification remains open.
 Listed in [OPEN_WORK](../OPEN_WORK.md). Origin: GitHub issue #30.
 
 ## Field report (27 October 2026)
@@ -154,14 +155,40 @@ operation holds a tunnel (for example a project save during a bus monitor sessio
   the desktop build prerequisite. No release/image/deployment or field-outcome
   claim; issues #30 and #22 remain open. Exact publication refs were read back.
 
+## Individual-address settler (follow-up, 28 October 2026)
+
+Individual-address programming calls its settler (`OnProgrammingEnd`) before
+the tunnel disconnects. When a saved native project and one unchanged matching
+device exist, that settler saves the project synchronously. The task now runs
+this one step through `blocking_off_tunnel_workers`, so on a multi-thread
+runtime the tunnel's receive and heartbeat tasks keep running while it saves.
+The rest of the programming future runs as before; a current-thread runtime
+keeps the inline path.
+
+- Feature `5efcf506a`, correction `cc3588d4f` (documentation wording, test hang
+  guard), main-first merge `c59d14280`. Independent review APPROVE.
+- Witness `a_blocking_address_settler_leaves_tunnel_tasks_running`: a one-worker
+  `multi_thread` runtime, a 300 ms synchronous stall ahead of the real settler and a
+  spawned ticker; at least ten ticks are required during the stall (about 50
+  observed), and the real settler still settles the device. If the call site or the
+  helper's multi-thread arm is reverted to inline, the test fails with zero
+  ticks. The reviewer repeated the call-site mutant and ran 40 passes under 2× and 4× CPU
+  oversubscription.
+- Branch-scoped package gate on the merge passed all 14 selected stages with frozen
+  inputs and no touched or unchecked user data: 1,454 Rust tests passed, 64
+  ignored; 51/51 selected corpus cases; 466 tool tests, 6 optional skips. No
+  web/browser or bindings stage was selected. Local, tracking and live refs read back equal.
+- **Not reachable in production yet.** The HTTP start route refuses before any
+  tunnel opens (`require_persistent_pre_write_recovery`, fail-closed until a
+  durable pre-write recovery contract exists). This fix is preparatory
+  hardening for that path, not a runtime or field claim.
+- Not covered: the settler holds the project mutex for the whole save, so a
+  request handler waiting on that lock can still occupy the replacement worker.
+  The download and service-control fixes share that limit. The witness's
+  harness has no store path and does not run a real fsync.
+
 ## Remaining
 
-- Individual-address programming invokes its settler before disconnect. When a
-  saved native project and a unique matching device exist, that settler calls
-  `persist_native_working_reported` synchronously (through `settle_programming`).
-  The address result is already decided, but the open tunnel can still starve
-  while the project is saved. This source-traced path needs a separately tested
-  wrapper; no runtime or field test of it is claimed here.
 - One optional reporter retest on source `3583ab8e0` or a descendant, containing
   the receiver/teardown correction and the bounded experimental wait profile.
   [Software acceptance and exact scope](../status/2026-10-27-system2-patient-waits.md#acceptance-boundary).

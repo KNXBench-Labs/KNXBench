@@ -32,7 +32,9 @@ corpus51/51, with frozen inputs and unchanged user data.
 On multi-thread runtimes, the ordinary download worker and service-control
 backup no longer persist on the runtime worker serving their tunnel. Separate mounted System-2 liveness2
 also passed on each source. [Exact scope, discrimination and remaining paths](open-work/S2-04-tunnel-loss-after-checkpoint.md#follow-up-software-delivery-27-october-2026).
-Individual-address settlement and field verification remain open. Source-only;
+The individual-address settler's project save follows as preparatory hardening
+(`c59d14280`; that HTTP route still refuses before any tunnel). Field verification
+remains open. Source-only;
 no release, container, hardware or universal scheduler guarantee.
 
 ## Bounded native capture export (27 October 2026; acceptance evidence only)

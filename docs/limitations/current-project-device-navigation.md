@@ -6,6 +6,16 @@ This dossier preserves the technical detail and dated history. Earlier
 headings, failures and lifting conditions are historical where later
 updates supersede them; they are not new work assignments.
 
+## 28 October 2026 — document-language source correction
+
+A subsequent [bounded correction](../status/2026-10-28-document-language-fanout.md)
+removes identical root `lang` writes repeated by translated components. The
+unchanged expanded-explorer production case measures 41.803 → 21.434 s whole-case
+medians (three runs each), while table render remains about 10.4 s. Candidate
+dev cases pass three times under synthetic CPU contention, but only with
+limited timeout margin. No gate relaxation, native acceptance or general
+performance guarantee follows. The initial investigation below is historical.
+
 ## 28 October 2026 — browser preparation follow-up
 
 The original 9742/1264 ms production observations below are dated, not a current

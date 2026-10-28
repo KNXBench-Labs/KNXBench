@@ -137,6 +137,9 @@ uses the development server, not that production build. A
 [28 October follow-up](research/2026-10-28-devices-browser-load-sensitivity.md)
 separates both modes and the expensive explorer preparation; it reproduces a dev-case
 timeout under CPU contention without changing the gate or dropping expanded-state coverage.
+A subsequent [document-language correction](status/2026-10-28-document-language-fanout.md)
+removes repeated identical root `lang` writes on subscriber mount; its measured
+whole-case saving is preparation cost, not faster table rendering.
 
 ## Verification surfaces
 

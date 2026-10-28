@@ -20,10 +20,13 @@ The System-2 plan deliberately leaves 754 octets unwritten — 338 masked bytes
 (no source write) plus 416 octets of declared address/association-table capacity
 beyond the computed tables — so the full-coverage requirement can never hold for
 this plan. (**Correction, 26 October 2026:** 15 of those 416 octets are
-independent source data, not table capacity; the current defaults profile v2
-writes them and leaves 739 = 338 + 401 unwritten. New physical execution with a
-v1 bundle refuses; see the
-[contract](../contracts/up258-system2-validation.md).) The open points 1–4
+independent source data, not table capacity; defaults profile v2 writes them
+and leaves 739 = 338 + 401 unwritten. New physical execution with a v1 bundle
+refuses; see the
+[contract](../contracts/up258-system2-validation.md). **Amendment, 28 October
+2026:** the current defaults profile v3 keeps these counts with the configured
+path's invisible-parameter reading; new physical execution with a v2 bundle
+refuses as well.) The open points 1–4
 (masked-byte survival, the master-schema
 pointer/flag transforms, physical read-back, parameter-encoding authority) remain
 blocked on defining sources that are not in the authorized corpus and are not
@@ -112,7 +115,7 @@ not inferred from this architectural decision.
   consent that names the target and the best-effort/masked-byte nature; the
   compiler, not convention, prevents a hardware run without it.
 - The residual risk is explicit and documented: the 338 masked bytes and the
-  416 capacity bytes are not written (401 with profile v2; see the correction
+  416 capacity bytes are not written (401 with profiles v2 and v3; see the correction
   under Context); recovery is best-effort and depends on the
   pre-dump plus (for KNXBench-only runs) the device retaining those bytes across
   Unload/reallocation. A failed or interrupted run reports `RestoreFailed`

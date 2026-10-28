@@ -22,7 +22,7 @@ def run(package: Path, binary: Path, output: Path) -> None:
         raise ValueError("package digest differs from the pinned public source")
     if not binary.is_file():
         raise ValueError("build the knx CLI first or specify --knx")
-    profile = Path(__file__).resolve().parents[1] / "data/system2-validation/up258d12-920504-v2.json"
+    profile = Path(__file__).resolve().parents[1] / "data/system2-validation/up258d12-920504-v3.json"
     if not profile.is_file():
         raise ValueError("run from a source checkout containing the validation profile")
     output.mkdir(mode=0o700, parents=False, exist_ok=False)

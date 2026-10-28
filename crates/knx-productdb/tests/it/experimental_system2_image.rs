@@ -1,5 +1,7 @@
 //! Explicit experimental image rules are isolated from ordinary admission.
 
+mod background_admission;
+
 use std::collections::BTreeMap;
 
 use knx_core::IndividualAddress;
@@ -45,8 +47,18 @@ fn policy(xml: &str) -> ExperimentalSystem2ImagePolicy {
     }
 }
 
+/// Revision 2 retains the template only for an explicit `Background` declaration.
+fn explicit_background(xml: &str) -> String {
+    assert_eq!(xml.matches("<Static>").count(), 1);
+    xml.replace(
+        "<Static>",
+        r#"<Static><Options DownloadInvisibleParameters="Background" />"#,
+    )
+}
+
 fn project_union_xml() -> String {
-    XML.replace("<Data>AAAAAAAAAAA=</Data>", "<Data>qrvM3e7/ABI=</Data>")
+    explicit_background(XML)
+        .replace("<Data>AAAAAAAAAAA=</Data>", "<Data>qrvM3e7/ABI=</Data>")
         .replace("</ParameterTypes>", r#"<ParameterType Id="PT3"><TypeNumber SizeInBit="3" Type="unsignedInt" minInclusive="0" maxInclusive="7" /></ParameterType></ParameterTypes>"#)
         .replace("</Parameters>", r#"<Union SizeInBit="16"><Memory CodeSegment="PAR" Offset="4" BitOffset="0" /><Parameter Id="UD" ParameterType="PT" Value="4660" Offset="0" BitOffset="0" DefaultUnionParameter="true" /><Parameter Id="UA" ParameterType="PT3" Value="5" Offset="1" BitOffset="2" /></Union></Parameters>"#)
         .replace("</ParameterRefs>", r#"<ParameterRef Id="UDR" RefId="UD" /><ParameterRef Id="UAR" RefId="UA" /></ParameterRefs>"#)
@@ -310,7 +322,7 @@ fn project_experimental_rejects_inactive_invalid_union_overlap_type_and_table_pl
 #[test]
 fn project_experimental_exact_active_flags_no_alias_reassignment_and_standard_refusals() {
     use knx_productdb::image::{build_project_experimental_system2_image as build, FlagOverrides};
-    let xml = XML.replace("</ComObjectRefs>", r#"<ComObjectRef Id="ALIAS" RefId="O" /></ComObjectRefs>"#)
+    let xml = explicit_background(XML).replace("</ComObjectRefs>", r#"<ComObjectRef Id="ALIAS" RefId="O" /></ComObjectRefs>"#)
         .replace("</ParameterBlock>", r#"<choose ParamRefId="R"><when test="0"><ComObjectRefRef RefId="ALIAS" /></when></choose></ParameterBlock>"#);
     let (_dir, conn, mut request) = fixture(&xml);
     request.flag_overrides.insert(
@@ -343,7 +355,7 @@ fn project_experimental_exact_active_flags_no_alias_reassignment_and_standard_re
         .unwrap_err()
         .to_string()
         .contains("ReadOnInit"));
-    let high = XML.replace(
+    let high = explicit_background(XML).replace(
         "ObjectSize=\"1 Byte\"",
         "ObjectSize=\"1 Byte\" Priority=\"High\"",
     );
@@ -729,7 +741,7 @@ fn project_experimental_validates_inactive_alternative_masks() {
 
 #[test]
 fn project_experimental_validates_requested_binary_payload_using_policy() {
-    let xml = XML.replace("<TypeNumber SizeInBit=\"16\" Type=\"unsignedInt\" minInclusive=\"0\" maxInclusive=\"65535\" />", "<TypeRestriction Base=\"BinaryValue\" SizeInBit=\"8\"><Enumeration Id=\"E\" Value=\"0\" Text=\"six\" BinaryValue=\"Bg==\" /><Enumeration Id=\"E2\" Value=\"1\" Text=\"nine\" BinaryValue=\"CQ==\" /></TypeRestriction>")
+    let xml = explicit_background(XML).replace("<TypeNumber SizeInBit=\"16\" Type=\"unsignedInt\" minInclusive=\"0\" maxInclusive=\"65535\" />", "<TypeRestriction Base=\"BinaryValue\" SizeInBit=\"8\"><Enumeration Id=\"E\" Value=\"0\" Text=\"six\" BinaryValue=\"Bg==\" /><Enumeration Id=\"E2\" Value=\"1\" Text=\"nine\" BinaryValue=\"CQ==\" /></TypeRestriction>")
         .replace("Value=\"4660\"", "Value=\"0\"");
     let (_dir, conn, mut request) = fixture(&xml);
     request.values.insert("R".into(), "1".into());

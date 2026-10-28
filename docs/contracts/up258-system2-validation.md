@@ -4,12 +4,15 @@
 
 **STRONG HYPOTHESIS / SIMULATOR TESTED.** Application
 `M-0001_A-9205-04-9270`, exact public package and source digests in the current
-defaults profile v2,
-[`up258d12-920504-v2.json`](../../data/system2-validation/up258d12-920504-v2.json).
-The superseded profile v1,
+defaults profile v3,
+[`up258d12-920504-v3.json`](../../data/system2-validation/up258d12-920504-v3.json).
+The superseded profiles v1,
 [`up258d12-920504-v1.json`](../../data/system2-validation/up258d12-920504-v1.json),
-differs only in its id, version and procedure policy; it stays for simulator
-reproduction of historical evidence and recovery of existing v1 operations.
+and v2,
+[`up258d12-920504-v2.json`](../../data/system2-validation/up258d12-920504-v2.json),
+stay for simulator reproduction of historical evidence and recovery of existing
+operations. v2 differs from v1 only in its id, version and procedure policy; v3
+differs from v2 only in its id, version and invisible-parameter policy.
 One complete configuration: product defaults, no group links, no project
 parameter/flag overrides. This is a complete source-derived candidate, not a
 selected handful of load events, ETS equivalence or verified firmware support.
@@ -25,15 +28,22 @@ lead, not implementation text or defining authority.
 2. `knx device system2-prepare` reads that database without migration or writes.
    The dedicated experimental builder requires all six named policies: numeric
    byte order, bit/Union offsets, legacy patch/reference precedence, invisible
-   defaults/Union overlay, one-octet BinaryValue restriction payloads, and
-   no-Dynamic-occurrence reference activation. Missing/unrecognized policy,
+   parameters, one-octet BinaryValue restriction payloads, and
+   no-Dynamic-occurrence reference activation. Profile v3 reads
+   `DownloadInvisibleParameters="Background"` as the configured path does
+   (`source-template-inactive-legacy-patch-active-overlay-v1`, builder revision
+   2): inactive parameters keep the source segment `Data`, explicit
+   `LegacyPatchAlways` reference consensus and active overlays are written.
+   Superseded v1/v2 wrote inactive defaults and one declared Union default base
+   (`background-parameter-default-union-base-active-overlay-v1`). Each profile
+   version accepts exactly its own reading. Missing/unrecognized policy,
    mismatched digest/namespace or unsupported required source data refuses.
    Production evaluation/resolution/table generation is reused; ordinary image
    and mask admission remain unchanged. Every source parameter has a coverage
    disposition; virtual/inactive alternatives are not silently confused with
    missing data.
 3. Translate all 21 source positions in order, retaining source indices. Four
-   absolute allocations reserve 1,514 bytes. With profile v2
+   absolute allocations reserve 1,514 bytes. With profile v2 or v3
    (`source-capacity-preserving-independent-data-v1`) writes cover 775 bytes;
    the remaining 739 are not written: 338 masked (no source write) plus 401
    octets of unused declared address/association-table capacity beyond the
@@ -57,11 +67,11 @@ lead, not implementation text or defining authority.
    emitted the full application identity on all three task segments (see
    docs/research/2026-10-22-system2-ets-download-procedure.md).
    The App entry derives the procedure policy from the validated profile:
-   version 1 is bound to the v1 policy and version 2 to the v2 policy; every
-   other pairing refuses. Project profiles are version 2 as well, so a
-   defaults v2 id must end in `-defaults-v2`; a defaults-format bundle with
-   version 2 and any other id refuses, keeping an unchanged project profile
-   and plan out of the defaults format.
+   version 1 is bound to the v1 policy and versions 2 and 3 to the v2 policy;
+   every other pairing refuses. Project profiles are version 2 as well, so a
+   defaults v2 id must end in `-defaults-v2` and a v3 id in `-defaults-v3`; a
+   defaults-format bundle with any other id refuses, keeping an unchanged
+   project profile and plan out of the defaults format.
 4. The existing management-session operation loop executes normalized controls
    and verified writes. A complete source plan is bound to target, application,
    profile version/hash and source hash. No resume from a guessed later step.
@@ -110,7 +120,7 @@ python3 tools/validate_up258_system2.py \
   --output ./up258-validation-private
 ```
 
-The workflow prepares with the current defaults profile v2. Use a new output
+The workflow prepares with the current defaults profile v3. Use a new output
 directory. It verifies the package digest before
 creating it, isolates data/config homes, then performs ingest → preparation →
 preview → simulator execution → recovery in a second CLI process. All commands
@@ -177,7 +187,7 @@ data.
 | 1 | Masked-byte preservation / reconstruction (338 bytes) | **Blocked.** The standard defines only logical invalidation on Unload (Management Procedures `03_05_02` v02.01.02 §3.31.3.1, printed p. 138: all data declared invalid) and clears only the PID 7 pointer (Resources `03_05_01` v01.10.01 §4.2.7, printed p. 31). The only "keep existing memory contents unchanged" clause belongs to the relative data allocation (subtype `0Bh`), which mask `0025h` does not use (Profiles `06` v02.01.01 §A.2.4.1, printed p. 144). No clause states physical byte retention or reconstruction. Missing evidence: a firmware-level or destructive-hardware observation defining whether/how the 338 bytes survive. The offline destructive-Unload test already models loss and asserts refusal, never "restored". |
 | 2 | Pointer/property widths and resource transforms | **Narrow width correction published (`54b052885`); wider transforms unresolved.** The standard still defines the general four-octet absolute pointer (Resources §4.2.7, printed p. 31). The 26 October public field reply establishes one two-octet element on object 1 only. The independently retrieved public package declares PID 7 two/four-octet types and two-octet resources on objects 1/2/3 ([research](../research/2026-10-26-up258-pid7-width.md)). A separately versioned exact-profile model preserves raw width and recovery binding; objects 2/3 remain unverified source-bound hypotheses. This does not define general master/XML transforms, `SegFlags` or `AllocExtraByte`. No raw padding, truncation or broader firmware claim. |
 | 3 | Whole-mutation recovery | **Offline exercised; physical read-back blocked.** PID 5 returns only the current load state (Management Procedures §3.31.3.5, printed p. 142); PID 7 only the pointer (Resources §4.2.7); Verify Mode Control's used-by list omits mask `0025h` (Resources §4.2.14.7, printed pp. 35–36). Success / partial-failure / interrupted cases are already exercised offline. Missing evidence: a standard read-back for the masked bytes and firmware-internal state. |
-| 4 | Parameter-encoding confirmation | **Six hypotheses, all still-unresolved.** Each rests on historical Schema10 prose or a revision-bound namespace-20 mirror, not a defining document for this converted legacy application. Listed as unresolved in the [rule sources](../research/2026-10-20-system2-validation-rules.md). The 26 October 2026 [image differential](../research/2026-10-26-up258-image-differential.md) narrows the invisible-parameter case to precedence only ([S2-03](../open-work/S2-03-up258-image-interpretation.md)). |
+| 4 | Parameter-encoding confirmation | **Six hypotheses, all still-unresolved.** Each rests on historical Schema10 prose or a revision-bound namespace-20 mirror, not a defining document for this converted legacy application. Listed as unresolved in the [rule sources](../research/2026-10-20-system2-validation-rules.md). The 26 October 2026 [image differential](../research/2026-10-26-up258-image-differential.md) narrows the invisible-parameter case to precedence only. **Owner decision (28 October 2026):** profile v3 adopts the configured path's template-retention reading as an observation-supported hypothesis; no public document defines `Background` ([source search](../research/2026-10-28-background-precedence-source-search.md), [S2-03](../open-work/S2-03-up258-image-interpretation.md)). |
 | 5 | Hardware-validation adapter | **Gated on 1–4** (unchanged). Separate approval does not bypass the technical prerequisites. |
 | 6 | Physical validation | **Gated, last** (unchanged). One target, one plan, fresh consent, exclusive gateway, readback plus the operator's functional presence/brightness check. |
 
@@ -195,10 +205,11 @@ never claiming restored. Hardware absence is not the software development
 blocker; the missing physical preservation/reconstruction rule is.
 
 A new physical execution of a defaults bundle prepared with superseded profile
-v1 refuses in the App executor, and in the CLI before any socket, operation
-directory or activity journal: v1 omits the independent source data above, and
-the bundle must be prepared again with profile v2. Recovery of an existing v1
-operation and every simulator path stay available.
+v1 or v2 refuses in the App executor, and in the CLI before any socket,
+operation directory or activity journal: v1 omits the independent source data
+above, v2 writes the superseded invisible-parameter reading, and the bundle must
+be prepared again with profile v3. Recovery of an existing v1 or v2 operation
+and every simulator path stay available.
 
 On 22 October 2026 the owner released a consent-gated, best-effort hardware
 path, defined in [ADR-0152](../adr/0152-gated-hardware-system2-download.md).

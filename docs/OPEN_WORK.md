@@ -19,7 +19,7 @@ the former dated sections are in the [archive](history/OPEN_WORK_2026-10-25.md).
 | WP-11 | Native Linux acceptance | In progress: native slices incl. real-pointer drag/hover recorded; pane-drag defect (WebKitGTK selection) fixed in source, native re-check open; remaining cells open | [WP-11](open-work/WP-11-native-linux-acceptance.md) |
 | WP-12 | Field evidence and owner acceptance (incl. issue #22) | Blocked: consent | [WP-12](open-work/WP-12-field-evidence-and-owner-acceptance.md) |
 | WP-14 | Complete offline family outcomes (System 1/B/300) | Blocked: evidence | [WP-14](open-work/WP-14-offline-family-outcomes.md) |
-| GATE-01 | Test-gate speed and stability follow-ups | Open | [GATE-01](open-work/GATE-01-test-gate-follow-ups.md) |
+| GATE-01 | Test-gate speed and stability follow-ups | Open: 5000-device dev-case load sensitivity measured; production preparation profile remains | [GATE-01](open-work/GATE-01-test-gate-follow-ups.md) |
 | OWN-01 | Recorded owner decisions, deferred items and remaining review | Decisions recorded; evidence/owner review pending | [OWN-01](open-work/OWN-01-owner-decisions.md) |
 | LS-01 | Automation and agent writes beyond the rename recipe | Later scope | [LS-01](open-work/LS-01-automation.md) |
 | LS-02 | Online catalogue source | Later scope | [LS-02](open-work/LS-02-online-catalogue.md) |

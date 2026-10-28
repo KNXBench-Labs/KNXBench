@@ -15,7 +15,7 @@ use knx_productdb::image::{
 use knx_productdb::system2_procedure::{plan_system2_candidate, System2ProcedurePolicy};
 
 use super::defaults_profile_v2::{
-    assert_counts, json, public_conn, synthetic_defaults, written, PROFILE_V2,
+    assert_counts, json, public_conn, source_octet, synthetic_defaults, written, PROFILE_V2,
 };
 use super::{syn_ref, synthetic_package, PROFILE};
 
@@ -95,11 +95,11 @@ fn hidden_parameter_package() -> (Vec<u8>, Vec<u8>) {
         let mut text = String::new();
         member.read_to_string(&mut text).unwrap();
         if name.ends_with("Application.xml") {
-            // The pinned UP258 source declares Background; so does this fixture.
-            assert_eq!(text.matches("<Static>").count(), 1);
-            text = text.replace(
-                "<Static>",
-                r#"<Static><Options DownloadInvisibleParameters="Background" />"#,
+            // The shared fixture declares Background, as the pinned UP258 source does.
+            assert_eq!(
+                text.matches(r#"<Options DownloadInvisibleParameters="Background" />"#)
+                    .count(),
+                1
             );
             // Default 1 differs from the all-zero template octet at offset 3.
             for (anchor, insert) in [
@@ -173,6 +173,36 @@ fn oracle(
     let plan = plan_system2_candidate(&built.image, target, &procedure).unwrap();
     let sha = PlanRecord::from_plan(&plan).sha256().unwrap();
     (built, sha)
+}
+
+/// Per-address bit masks (MSB = bit 0) covered by active and by inactive parameter fields.
+fn field_masks(
+    code: &knx_productdb::code::ProgramCode,
+    built: &ExperimentalSystem2Image,
+) -> (BTreeMap<u16, u8>, BTreeMap<u16, u8>) {
+    let (mut active, mut inactive) = (BTreeMap::new(), BTreeMap::new());
+    for entry in &built.coverage {
+        let (Some(segment), Some(field)) = (&entry.segment, entry.field) else {
+            continue;
+        };
+        let base = code
+            .segments
+            .iter()
+            .find(|s| &s.id == segment)
+            .unwrap()
+            .address;
+        let target = if entry.active_reference.is_some() {
+            &mut active
+        } else {
+            &mut inactive
+        };
+        let first = u32::from(field.bit_offset);
+        for bit in first..first + field.size_in_bit {
+            let address = u16::try_from(base + field.offset + bit / 8).unwrap();
+            *target.entry(address).or_insert(0u8) |= 0x80 >> (bit % 8);
+        }
+    }
+    (active, inactive)
 }
 
 fn disposition(image: &ExperimentalSystem2Image, parameter: &str) -> Disposition {
@@ -275,6 +305,32 @@ fn exact_public_v3_changes_only_inactive_parameter_octets_of_v2() {
         changed.iter().all(|a| (0x3c01..=0x3ceb).contains(a)),
         "{changed:x?}"
     );
+    // Independent of the builder: every changed v3 octet is the stored source Data.
+    let code = knx_productdb::code::load_program_code(&conn, "M-0001_A-9205-04-9270")
+        .unwrap()
+        .unwrap();
+    for address in &changed {
+        assert_eq!(
+            new[address],
+            source_octet(&code, *address),
+            "{address:#06x}"
+        );
+        assert_ne!(old[address], new[address]);
+    }
+    // Every changed bit lies in an inactive field; active bits of a shared octet are unchanged.
+    let (built_v2, _) = oracle(&conn, PROFILE_V2, target);
+    let (active, inactive) = field_masks(&code, &built_v2);
+    for address in &changed {
+        let diff = old[address] ^ new[address];
+        let inactive_bits = inactive.get(address).copied().unwrap_or(0);
+        let active_bits = active.get(address).copied().unwrap_or(0);
+        assert_eq!(
+            diff & !inactive_bits,
+            0,
+            "{address:#06x}: change outside inactive fields"
+        );
+        assert_eq!(diff & active_bits, 0, "{address:#06x}: active bits changed");
+    }
     let (built, sha) = oracle(&conn, PROFILE_V3, target);
     assert_eq!(v3.bundle.binding.plan_sha256, sha);
     assert!(built.coverage.iter().all(|c| !matches!(

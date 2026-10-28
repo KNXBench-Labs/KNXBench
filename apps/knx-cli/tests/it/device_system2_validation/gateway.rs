@@ -314,10 +314,17 @@ fn a_failed_report_write_keeps_the_witnessed_device_result() {
 }
 
 #[test]
-fn v1_defaults_recovery_of_an_existing_operation_is_admitted_and_restores() {
+fn superseded_defaults_recovery_of_an_existing_operation_is_admitted_and_restores() {
+    // v1 omits independent data, v2 has the superseded invisible reading; both still restore.
+    for version in [1, 2] {
+        superseded_recovery_restores(version);
+    }
+}
+
+fn superseded_recovery_restores(version: u32) {
     use knx_app::property_validation::{execute_simulated, Checkpoint, FailureCode};
     let dir = tempfile::tempdir().unwrap();
-    let (path, bundle) = bundle_version(dir.path(), 1);
+    let (path, bundle) = bundle_version(dir.path(), version);
     let device = device(&bundle, [1; 6], SimulatorConfig::default());
     // An existing v1 hardware operation: durable original recovery, then a failed download.
     let mut simulated =
@@ -345,7 +352,7 @@ fn v1_defaults_recovery_of_an_existing_operation_is_admitted_and_restores() {
     existing
         .checkpoint(Checkpoint::Failed {
             code: FailureCode::Executor,
-            local_diagnostic: "synthetic existing v1 operation".into(),
+            local_diagnostic: format!("synthetic existing v{version} operation"),
             pointer_failure: None,
         })
         .unwrap();
@@ -357,7 +364,11 @@ fn v1_defaults_recovery_of_an_existing_operation_is_admitted_and_restores() {
         "{}",
         String::from_utf8_lossy(&out.stderr)
     );
-    assert_eq!(store(dir.path(), &bundle).outcome(), LocalOutcome::Restored);
+    assert_eq!(
+        store(dir.path(), &bundle).outcome(),
+        LocalOutcome::Restored,
+        "profile v{version}"
+    );
     let row = journal(dir.path());
-    assert_eq!(row["state"], "verified", "{row}");
+    assert_eq!(row["state"], "verified", "profile v{version}: {row}");
 }

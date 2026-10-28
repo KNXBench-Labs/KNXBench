@@ -396,9 +396,9 @@ fn property_validation_rebind_hardware_swaps_serial_and_marks_physical() {
 #[tokio::test]
 async fn property_validation_execute_hardware_refuses_wrong_phrases_before_any_frame() {
     let (device, mut bundle) = fixture();
-    // Profile v2: the superseded v1 refusal must not mask the phrase checks.
-    bundle.binding.profile_version = 2;
-    bundle.binding.profile_id = "synthetic-defaults-v2".into();
+    // Profile v3: the superseded v1/v2 refusal must not mask the phrase checks.
+    bundle.binding.profile_version = 3;
+    bundle.binding.profile_id = "synthetic-defaults-v3".into();
     let bundle = PreparedBundle::new(bundle.binding, bundle.normalized_plan).unwrap();
     let rebound = bundle.rebind_hardware([0, 7, 0, 1, 2, 3]).unwrap();
     let target = rebound.plan().unwrap().target();

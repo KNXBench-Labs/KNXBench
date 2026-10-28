@@ -1,10 +1,11 @@
-//! Defaults profile v1 refuses new physical execution; recovery of its existing operations stays.
+//! Defaults profiles v1/v2 refuse new physical execution; recovery of existing operations stays.
 use std::sync::atomic::AtomicBool;
 
 use knx_app::property_validation::{self as app, Checkpoint, LocalOutcome, OperationStore};
 use knx_app::property_validation_bundle::PreparedBundle;
 use knx_core::commissioning::mutation::{required_confirmation_phrase, WriteScope};
 use knx_net::commissioning::hardware_release::required_release_phrase;
+use knx_net::commissioning::simulator::SimulatedDevice;
 
 use super::{establish, fixture, timing, SERIAL};
 
@@ -31,43 +32,54 @@ fn journal_files(path: &std::path::Path) -> Vec<(String, Vec<u8>)> {
     files
 }
 
+/// The synthetic fixture plan, bound to the named defaults profile version.
+fn fixture_version(version: u32) -> (SimulatedDevice, PreparedBundle) {
+    let (device, mut bundle) = fixture();
+    if version != 1 {
+        bundle.binding.profile_version = version;
+        bundle.binding.profile_id = format!("synthetic-defaults-v{version}");
+    }
+    let bundle = PreparedBundle::new(bundle.binding, bundle.normalized_plan).unwrap();
+    (device, bundle)
+}
+
 #[tokio::test]
-async fn v1_defaults_hardware_execution_is_refused_before_any_frame_or_checkpoint() {
-    let (device, bundle) = fixture();
-    assert_eq!(bundle.binding.profile_version, 1);
+async fn superseded_defaults_hardware_execution_is_refused_before_any_frame_or_checkpoint() {
+    let temp = tempfile::tempdir().unwrap();
+    for version in [1, 2] {
+        let (device, bundle) = fixture_version(version);
+        assert_eq!(bundle.binding.profile_version, version);
+        let rebound = bundle.rebind_hardware(SERIAL).unwrap();
+        let (download, release) = phrases(&rebound);
+        let path = temp.path().join(format!("v{version}"));
+        let mut store = OperationStore::create(&path, rebound.binding.clone()).unwrap();
+        let before = journal_files(&path);
+        let error = app::execute_hardware(
+            &device,
+            &rebound,
+            &mut store,
+            timing(),
+            &download,
+            &release,
+            &AtomicBool::new(false),
+        )
+        .await
+        .unwrap_err()
+        .to_string();
+        assert!(error.contains(&format!("profile v{version}")), "{error}");
+        assert!(error.contains("v3"), "{error}");
+        assert!(device.seen().is_empty(), "refused before any frame");
+        assert_eq!(journal_files(&path), before, "no checkpoint written");
+        assert!(store.recovery().is_none());
+        assert!(!store.mutation_possible());
+    }
+
+    // The same synthetic plan under profile version 3 passes this rule: the executor
+    // starts, journals, and only the in-process simulator's hardware refusal stops it.
+    let (device, bundle) = fixture_version(3);
     let rebound = bundle.rebind_hardware(SERIAL).unwrap();
     let (download, release) = phrases(&rebound);
-    let temp = tempfile::tempdir().unwrap();
-    let path = temp.path().join("op");
-    let mut store = OperationStore::create(&path, rebound.binding.clone()).unwrap();
-    let before = journal_files(&path);
-    let error = app::execute_hardware(
-        &device,
-        &rebound,
-        &mut store,
-        timing(),
-        &download,
-        &release,
-        &AtomicBool::new(false),
-    )
-    .await
-    .unwrap_err()
-    .to_string();
-    assert!(error.contains("profile v1"), "{error}");
-    assert!(error.contains("v2"), "{error}");
-    assert!(device.seen().is_empty(), "refused before any frame");
-    assert_eq!(journal_files(&path), before, "no checkpoint written");
-    assert!(store.recovery().is_none());
-    assert!(!store.mutation_possible());
-
-    // The same synthetic plan under profile version 2 passes this rule: the executor
-    // starts, journals, and only the in-process simulator's hardware refusal stops it.
-    let (device, mut bundle) = fixture();
-    bundle.binding.profile_version = 2;
-    bundle.binding.profile_id = "synthetic-defaults-v2".into();
-    let bundle = PreparedBundle::new(bundle.binding, bundle.normalized_plan).unwrap();
-    let rebound = bundle.rebind_hardware(SERIAL).unwrap();
-    let path = temp.path().join("v2");
+    let path = temp.path().join("v3");
     let mut store = OperationStore::create(&path, rebound.binding.clone()).unwrap();
     let error = app::execute_hardware(
         &device,
@@ -81,7 +93,7 @@ async fn v1_defaults_hardware_execution_is_refused_before_any_frame_or_checkpoin
     .await
     .unwrap_err()
     .to_string();
-    assert!(!error.contains("profile v1"), "{error}");
+    assert!(!error.contains("profile v"), "{error}");
     assert_eq!(store.outcome(), LocalOutcome::Failed);
     assert!(journal_text(&path).contains("NotASimulator"));
 }
@@ -94,8 +106,14 @@ fn journal_text(path: &std::path::Path) -> String {
 }
 
 #[tokio::test]
-async fn v1_defaults_hardware_recovery_of_an_existing_operation_is_still_admitted() {
-    let (device, bundle) = fixture();
+async fn superseded_defaults_hardware_recovery_of_an_existing_operation_is_still_admitted() {
+    for version in [1, 2] {
+        recovery_is_admitted(version).await;
+    }
+}
+
+async fn recovery_is_admitted(version: u32) {
+    let (device, bundle) = fixture_version(version);
     establish(&device, &bundle).await;
     // An existing v1 operation: durable original recovery, then a failed download.
     let temp = tempfile::tempdir().unwrap();
@@ -115,7 +133,7 @@ async fn v1_defaults_hardware_recovery_of_an_existing_operation_is_still_admitte
         [Some(1), Some(2), Some(3), Some(4)]
     );
     let rebound = bundle.rebind_hardware(SERIAL).unwrap();
-    assert_eq!(rebound.binding.profile_version, 1);
+    assert_eq!(rebound.binding.profile_version, version);
     let mut recovery = simulated.recovery().unwrap().clone();
     recovery.original_bundle = rebound.clone();
     recovery.to_snapshot(&rebound).unwrap();
@@ -127,7 +145,7 @@ async fn v1_defaults_hardware_recovery_of_an_existing_operation_is_still_admitte
     store
         .checkpoint(Checkpoint::Failed {
             code: app::FailureCode::Executor,
-            local_diagnostic: "synthetic existing v1 operation".into(),
+            local_diagnostic: format!("synthetic existing v{version} operation"),
             pointer_failure: None,
         })
         .unwrap();
@@ -150,7 +168,7 @@ async fn v1_defaults_hardware_recovery_of_an_existing_operation_is_still_admitte
     // Admission passed: restore started and reached the transport, which (an
     // in-process simulator) refuses hardware authority. The CLI gateway test
     // completes a v1 recovery end to end over loopback.
-    assert!(!error.contains("profile v1"), "{error}");
+    assert!(!error.contains("profile v"), "{error}");
     assert_eq!(store.outcome(), LocalOutcome::RestoreFailed);
     let journal = journal_text(&path);
     assert!(journal.contains("restore_started"), "{journal}");

@@ -1,6 +1,6 @@
 # S2-03 — System-2 UP258 image: open interpretation differences
 
-**Priority:** P2. **Status:** Open: evidence. Listed in [OPEN_WORK](../OPEN_WORK.md).
+**Priority:** P2. **Status:** Open: evidence (one narrow follow-up). Listed in [OPEN_WORK](../OPEN_WORK.md).
 Origin: the 26 October 2026 image differential
 ([research](../research/2026-10-26-up258-image-differential.md)).
 
@@ -19,14 +19,32 @@ Published as `678082047` ([delivery](../status/2026-10-26-up258-image-differenti
   barriers. [Acceptance and limits](../status/2026-10-26-cli-durable-tunnel-runtime.md)
   distinguish loopback ACK characterization from lexical call-site coverage.
 
+## Decided — 28 October 2026
+
+**Invisible-parameter precedence (`DownloadInvisibleParameters="Background"`).**
+A renewed public source search (Project Scheme20 and Schema23 descriptions,
+ETS release notes, KNX Help Center) found only the value names `None`,
+`Background` and `DefaultValue` without an image algorithm
+([source search](../research/2026-10-28-background-precedence-source-search.md)).
+The owner chose to remove the contradiction between the two KNXBench readings:
+defaults profile v3 keeps the source segment `Data` for inactive parameters,
+like the configured path, whose result matched the reference image. This is an
+observation-supported hypothesis, not a defined rule, ETS equivalence or
+hardware approval. Profile v2 stays readable for simulator reproduction and
+recovery; new physical execution of a v2 bundle refuses
+([contract](../contracts/up258-system2-validation.md)).
+
 ## Open
 
-1. **Invisible-parameter precedence (`DownloadInvisibleParameters="Background"`).**
-   The defaults policy writes inactive parameter defaults and union default bases;
-   the project-configured policy retains segment data. Only the latter matches the
-   simulator oracle. Missing evidence: a defining document for `Background`
-   precedence. Until then the defaults image policy stays unchanged and named as a
-   hypothesis; do not switch it on oracle agreement alone.
+1. **`DefaultValue` and an absent option under the configured reading.** The
+   experimental builder admits `Background`, `DefaultValue` and an absent
+   option (schema default `DefaultValue`) alike, and the revision-2 reading then
+   keeps the template for all three. Both defaults v3 and the configured
+   hardware path are bound to the exact UP258 source, which declares
+   `Background`; a simulated project profile for another mask-`0025h` source is
+   not. Missing evidence: a definition of `DefaultValue`/`None`; until then a
+   follow-up should refuse them under revision 2 rather than reuse the
+   `Background` reading.
 
 ## Decided — 27 October 2026
 

@@ -15,9 +15,9 @@ use std::{fs, net::UdpSocket, process::Command, time::Duration};
 mod gateway;
 mod journal;
 
-/// The current defaults profile version; v1 stays simulator and recovery only.
+/// The current defaults profile version; v1 and v2 stay simulator and recovery only.
 fn bundle(dir: &std::path::Path) -> (std::path::PathBuf, PreparedBundle) {
-    bundle_version(dir, 2)
+    bundle_version(dir, 3)
 }
 fn bundle_version(
     dir: &std::path::Path,
@@ -176,9 +176,14 @@ fn system2_validation_cli_gateway_requires_exact_download_and_release_confirmati
     assert!(socket.recv(&mut [0; 1024]).is_err());
 }
 #[test]
-fn system2_validation_cli_refuses_new_v1_defaults_hardware_execution_before_any_socket() {
+fn system2_validation_cli_refuses_new_superseded_defaults_hardware_execution_before_any_socket() {
+    for version in [1, 2] {
+        refuses_superseded_hardware_execution(version);
+    }
+}
+fn refuses_superseded_hardware_execution(profile_version: u32) {
     let dir = tempfile::tempdir().unwrap();
-    let (path, b) = bundle_version(dir.path(), 1);
+    let (path, b) = bundle_version(dir.path(), profile_version);
     let socket = UdpSocket::bind("127.0.0.1:0").unwrap();
     socket
         .set_read_timeout(Some(Duration::from_millis(100)))
@@ -216,7 +221,9 @@ fn system2_validation_cli_refuses_new_v1_defaults_hardware_execution_before_any_
         .unwrap();
     let stderr = String::from_utf8_lossy(&out.stderr);
     assert_eq!(out.status.code(), Some(1), "{stderr}");
-    assert!(stderr.contains("profile v1"), "{stderr}");
+    let named = format!("profile v{profile_version}");
+    assert!(stderr.contains(&named), "{stderr}");
+    assert!(stderr.contains("profile v3"), "{stderr}");
     assert!(!operation.exists(), "no operation store");
     assert!(!history.exists(), "no activity journal");
     assert!(socket.recv(&mut [0; 1024]).is_err(), "no frame sent");
@@ -240,8 +247,8 @@ fn system2_validation_cli_simulator_cannot_take_gateway_or_skip_hypothesis() {
 }
 #[test]
 fn system2_validation_cli_simulator_writes_private_protocol_then_fresh_process_restore() {
-    // Superseded defaults v1 stays reproducible in the simulator.
-    for version in [1, 2] {
+    // Superseded defaults v1 and v2 stay reproducible in the simulator.
+    for version in [1, 2, 3] {
         simulator_writes_then_fresh_process_restore(version);
     }
 }

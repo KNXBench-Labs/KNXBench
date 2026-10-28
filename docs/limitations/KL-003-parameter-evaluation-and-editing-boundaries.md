@@ -67,9 +67,17 @@ there is no browser-lane case yet.
 
 A later [addendum](../research/2026-10-17-product-database-gap-census.md#addendum-two-more-databases-17-october-2026-later)
 found the first `TypeDate` declarations in the collection (2, `Encoding="DPT 11"`).
-They are reported as unknown and stored as kind `Other`, so the offline editor
-accepts any non-empty text for them; the download refuses them by name. The
-value format is not verified here, so no date editor or validation exists yet.
+Since product database v29 (WP-08, 28 October 2026) they are stored as kind
+`Date`; `Encoding` stays reported as unmodelled. A source with mode-dependent
+promotion evidence stays `Other` with explicit backfill diagnostics, unchanged
+source evidence/counter contributions and unavailable affected reports: historical
+ingest-mode ownership cannot be guessed, even if only one extended package is
+currently recorded (an earlier standalone import is not authenticated). A `Date` value edit must be the
+Project Schema23 `Value_t` spelling `yyyy-mm-dd` and name an existing Gregorian
+day; no year range is imposed, because a collection default lies before the
+DPT 11 range. The editor is still a plain text field, and the download refuses
+a placed `Date` parameter by name: its memory encoding is not established
+([evidence](../research/2026-10-28-typedate-value-form.md)).
 
 ## Product-database series (18 October 2026, after Alpha 13)
 

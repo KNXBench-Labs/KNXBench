@@ -10,6 +10,12 @@ use rusqlite::Transaction;
 mod schema28;
 mod witness;
 
+/// The admitted `user_version`. The pinned fresh-chain shape (`schema28`) is
+/// the one v28 introduced; v29 (WP-08) is a data-only migration and changes no
+/// DDL. Any later version must re-establish its shape before it is admitted.
+const ADMITTED_VERSION: i64 = 29;
+const _: () = assert!(ADMITTED_VERSION == crate::migration::CURRENT_PRODUCTDB_VERSION);
+
 pub(crate) use witness::{
     copy_content_witness, witness_current, CatalogueWitness, CopyContentWitness, WitnessError,
 };
@@ -196,7 +202,7 @@ impl Inspection<'_, '_, '_> {
             self.tx
                 .query_row("PRAGMA main.user_version", [], |r| r.get(0))
         })?;
-        if version != 28 {
+        if version != ADMITTED_VERSION {
             return Err(AdmissionError::UnsupportedVersion(version));
         }
         let utf8 = self.sql(|| {

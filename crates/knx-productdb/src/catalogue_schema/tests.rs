@@ -34,7 +34,8 @@ fn version_and_object_counts_cannot_admit_substituted_schema() {
 #[test]
 fn empty_current_schema_refuses() {
     let mut conn = rusqlite::Connection::open_in_memory().unwrap();
-    conn.pragma_update(None, "user_version", 28).unwrap();
+    conn.pragma_update(None, "user_version", super::ADMITTED_VERSION)
+        .unwrap();
     let tx = conn.transaction().unwrap();
     assert!(matches!(
         admit(&tx, &PublicationGate::new()),
@@ -493,7 +494,7 @@ fn unsupported_rowid_strict_generated_pkless_and_alias_shapes_refuse() {
 
 #[test]
 fn old_and_future_versions_preserve_caller_state() {
-    for version in [1, 27, 29, i32::MAX] {
+    for version in [1, 27, 28, 30, i32::MAX] {
         let (_dir, mut conn) = fresh();
         conn.pragma_update(None, "user_version", version).unwrap();
         let tx = conn.transaction().unwrap();

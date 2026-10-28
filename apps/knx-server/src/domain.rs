@@ -6653,6 +6653,36 @@ fn is_schema_ipv6(s: &str) -> bool {
             .all(|g| g.len() == 4 && g.chars().all(|c| c.is_ascii_hexdigit()))
 }
 
+/// WP-08: `TypeDate`'s value as Project Schema23 v01.00.00 §1.1.3.19
+/// (`Value_t`, p.30-31/64) spells it, `yyyy-mm-dd`, and naming a day that
+/// exists in the Gregorian calendar. Exactly four year digits and two each
+/// for month and day; no sign, time zone, time or padding, which that text
+/// does not mention. No year range is imposed: the declared `Encoding`
+/// (`DPT 11`, years 1990-2089) is not attributed to the stored value, and a
+/// collection default lies before 1990 (docs/research/2026-10-28-typedate-value-form.md).
+fn is_schema_date(s: &str) -> bool {
+    let b = s.as_bytes();
+    let digits = |r: std::ops::Range<usize>| b[r].iter().all(u8::is_ascii_digit);
+    if b.len() != 10 || b[4] != b'-' || b[7] != b'-' || !digits(0..4) || !digits(5..7) {
+        return false;
+    }
+    if !digits(8..10) {
+        return false;
+    }
+    let number =
+        |r: std::ops::Range<usize>| b[r].iter().fold(0u32, |n, d| n * 10 + u32::from(d - b'0'));
+    let (year, month, day) = (number(0..4), number(5..7), number(8..10));
+    let leap = (year % 4 == 0 && year % 100 != 0) || year % 400 == 0;
+    let days = match month {
+        1 | 3 | 5 | 7 | 8 | 10 | 12 => 31,
+        4 | 6 | 9 | 11 => 30,
+        2 if leap => 29,
+        2 => 28,
+        _ => return false,
+    };
+    (1..=days).contains(&day)
+}
+
 /// D24 step 3: kind-appropriate validation of a candidate raw value
 /// against its declared `ParameterView`. `Number`/`Restriction` use the
 /// program's own bounds/enumeration. `None` is never writable (slice 1's
@@ -6662,7 +6692,8 @@ fn is_schema_ipv6(s: &str) -> bool {
 /// `Time` (PDB-9) shares `Number`'s integer-and-bounds check: the Project
 /// Schema's `Value_t` table documents its encoding as "Same as TypeNumber",
 /// and every one of the 17 corpus `TypeTime` declarations carries integer
-/// bounds. `Picture`/`Raw`/`Color` stay a non-empty-string-plus-XML-safety
+/// bounds. `Date` (WP-08) checks `Value_t`'s `yyyy-mm-dd` (`is_schema_date`).
+/// `Picture`/`Raw`/`Color` stay a non-empty-string-plus-XML-safety
 /// check: none of them has a documented value encoding in `Value_t` or in
 /// either spec knowledge base. They are *not* absent from the corpus — the
 /// PDB-9 read-only scan of 304 distinct programs found `TypePicture` 1,118,
@@ -6886,6 +6917,16 @@ fn validate_kind_and_bounds(
             } else {
                 Err(format!(
                     "'{}' is IPAddress-kind; '{raw}' is neither IPv4 in decimal-dotted notation nor IPv6 as eight colon-separated groups of four hex digits",
+                    view.id
+                ))
+            }
+        }
+        "Date" => {
+            if is_schema_date(raw) {
+                Ok(())
+            } else {
+                Err(format!(
+                    "'{}' is Date-kind; '{raw}' is not a calendar date written yyyy-mm-dd",
                     view.id
                 ))
             }
@@ -7807,6 +7848,48 @@ mod tests {
             enum_option_languages: Vec::new(),
             suffix_text: None,
             suffix_text_language: None,
+        }
+    }
+
+    /// WP-08: Schema23's `yyyy-mm-dd` with calendar days, nothing wider.
+    #[test]
+    fn date_accepts_only_schema_spelled_calendar_dates() {
+        let view = view_of_kind("Date");
+        for good in [
+            "2022-09-15",
+            "1964-06-17",
+            "2000-02-29",
+            "2024-02-29",
+            "0001-01-01",
+            "9999-12-31",
+            "2026-04-30",
+        ] {
+            assert!(validate_kind_and_bounds(&view, good).is_ok(), "{good}");
+        }
+        for bad in [
+            "",
+            "2018-1-24",
+            "18-01-24",
+            "2018/01/24",
+            "24.01.2018",
+            "2022-09-15T00:00:00",
+            "2022-09-15Z",
+            " 2022-09-15",
+            "2022-09-15 ",
+            "+2022-09-15",
+            "20180124",
+            "2018-00-10",
+            "2018-13-01",
+            "2018-01-00",
+            "2018-01-32",
+            "2026-04-31",
+            "1900-02-29",
+            "2023-02-29",
+            "２０１８-01-24",
+            "2018-0a-24",
+        ] {
+            let error = validate_kind_and_bounds(&view, bad).unwrap_err();
+            assert!(error.contains("Date-kind"), "{bad}: {error}");
         }
     }
 

@@ -139,6 +139,7 @@ pub fn parameter_editor_evidence(
         "Restriction" => "TypeRestriction",
         "None" => "TypeNone",
         "IPAddress" => "TypeIPAddress",
+        "Date" => "TypeDate",
         "Raw" => "TypeRawData",
         _ => return Ok(unavailable(EditorEvidenceIssue::ModelMismatch)),
     };

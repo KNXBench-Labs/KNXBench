@@ -837,10 +837,29 @@ fn fill_parameter_type_bounds_element(
     Ok(0)
 }
 
-/// PDB-9 (v14 -> v15). Re-derives the two `ParameterType` kinds a v14
-/// parser filed under `Other` — `TypeColor` and `TypeTime` — out of one
-/// already-stored blob, and brings that blob's `ingest_unknown` rows to
-/// exactly what a fresh v15 ingest writes: the stale `Element` row for the
+/// The columns a backfill re-derives for one type-deciding child, exactly as
+/// `insert_parameter_type` stores them; `None` for a child no backfill owns.
+type RederivedKind<'a> = (&'static str, Option<i64>, Option<&'a str>, Option<&'a str>);
+
+fn rederived_kind<'a>(child: &str, a: &'a Attrs) -> Option<RederivedKind<'a>> {
+    match child {
+        "TypeTime" => Some((
+            "Time",
+            parse_i64(a.get("SizeInBit")),
+            a.get("minInclusive"),
+            a.get("maxInclusive"),
+        )),
+        "TypeColor" => Some(("Color", None, None, None)),
+        "TypeDate" => Some(("Date", None, None, None)),
+        _ => None,
+    }
+}
+
+/// PDB-9 (v14 -> v15) and WP-08 (v28 -> v29). Re-derives the
+/// `ParameterType` kinds an older parser filed under `Other` — `children`
+/// names them: `TypeColor`/`TypeTime` for v15, `TypeDate` for v29 — out of
+/// one already-stored blob, and brings that blob's `ingest_unknown` rows to
+/// exactly what a fresh current ingest writes: the stale `Element` row for the
 /// type child is retired, and the child's unmodelled attributes (which the
 /// `Other` arm never reported) are recorded through the same
 /// `report_unknown_attrs`/`known_type_child_attrs` pair ingest uses, so the
@@ -858,7 +877,7 @@ fn fill_parameter_type_bounds_element(
 ///   `open_path` — and every xpath — matches ingest's even for a childless
 ///   `<ParameterType/>`.
 /// - The stale row is *decremented* by the number of type-deciding
-///   `TypeColor`/`TypeTime` occurrences at that path, not deleted, because
+///   `children` occurrences at that path, not deleted, because
 ///   the same `(xpath, name)` row also counts any non-deciding occurrence
 ///   the generic arm reported, which a v15 ingest still reports. Ingest
 ///   before commit a4ba902 (schema <= v6) wrote this row at a hardcoded
@@ -875,12 +894,13 @@ fn fill_parameter_type_bounds_element(
 ///
 /// Runs once per database, under the schema-version gate; it is not
 /// idempotent on its own (a second run would decrement again).
-pub(crate) fn backfill_color_time_kinds(
+pub(crate) fn backfill_type_child_kinds(
     conn: &Connection,
     source_sha256: &str,
     source_path: &str,
     bytes: &[u8],
     scheme21_package: bool,
+    children: &[&str],
 ) -> Result<usize, ProductDbError> {
     let mut reader = Reader::from_reader(bytes);
     let mut buf = Vec::new();
@@ -891,6 +911,8 @@ pub(crate) fn backfill_color_time_kinds(
     let mut unknown = UnknownCollector::default();
     let mut retired: std::collections::BTreeMap<(String, String), i64> =
         std::collections::BTreeMap::new();
+    let mut seen_programs = HashSet::new();
+    let mut first_program_declaration = false;
     let mut rekinded = 0usize;
 
     loop {
@@ -921,27 +943,30 @@ pub(crate) fn backfill_color_time_kinds(
         let a = attrs(e, source_path)?;
         if expecting_type_child {
             expecting_type_child = false;
-            if let (Some(pt_id), "TypeColor" | "TypeTime") =
-                (current_parameter_type_id.as_deref(), name.as_str())
-            {
-                let (kind, size, min, max) = if name == "TypeTime" {
-                    (
-                        "Time",
-                        parse_i64(a.get("SizeInBit")),
-                        a.get("minInclusive"),
-                        a.get("maxInclusive"),
-                    )
-                } else {
-                    ("Color", None, None, None)
-                };
+            let rekind = current_parameter_type_id
+                .as_deref()
+                .filter(|_| children.contains(&name.as_str()))
+                .and_then(|pt_id| Some((pt_id, rederived_kind(&name, &a)?)));
+            if let Some((pt_id, (kind, size, min, max))) = rekind {
                 rekinded += conn.execute(
                     "UPDATE parameter_type
                      SET kind = ?1, size_in_bit = ?2, min_inclusive = ?3, max_inclusive = ?4
                      WHERE program_id = ?5 AND id = ?6 AND kind = 'Other'
-                       AND EXISTS (
+                       AND ?8 AND EXISTS (
                          SELECT 1 FROM application_program WHERE id = ?5 AND source_sha256 = ?7
                        )",
-                    params![kind, size, min, max, program_id, pt_id, source_sha256],
+                    // v29's Date promotion follows ingest's first-program rule.
+                    // Keep the released v15 Color/Time backfill unchanged.
+                    params![
+                        kind,
+                        size,
+                        min,
+                        max,
+                        program_id,
+                        pt_id,
+                        source_sha256,
+                        first_program_declaration || name != "TypeDate"
+                    ],
                 )?;
                 *retired
                     .entry((xpath_of(&open_path), name.clone()))
@@ -960,7 +985,7 @@ pub(crate) fn backfill_color_time_kinds(
             }
             continue;
         }
-        if matches!(name.as_str(), "TypeColor" | "TypeTime") {
+        if children.contains(&name.as_str()) {
             // Not type-deciding (schema-invalid, but possible): ingest's
             // generic arm reports every attribute. Collected in document
             // order alongside the deciding ones so a shared row's count and
@@ -968,7 +993,10 @@ pub(crate) fn backfill_color_time_kinds(
             report_unknown_attrs(&mut unknown, &xpath_of_child(&open_path, &name), &a, &[]);
         }
         match name.as_str() {
-            "ApplicationProgram" => program_id = a.get("Id").unwrap_or_default().to_string(),
+            "ApplicationProgram" => {
+                program_id = a.get("Id").unwrap_or_default().to_string();
+                first_program_declaration = seen_programs.insert(program_id.clone());
+            }
             "ParameterType" => {
                 current_parameter_type_id = Some(a.get("Id").unwrap_or_default().to_string());
                 expecting_type_child = true;
@@ -1553,6 +1581,10 @@ type TypeFields<'a> = (
 /// integers; `@Unit` and `@UIHint` are reported, not interpreted.
 /// `TypeColor/@Space` (`RGB`/`HSV`) is reported: no documented value
 /// encoding exists to validate against.
+///
+/// WP-08 adds `TypeDate` (2 of the collection's programs, v29): every
+/// attribute, `Encoding` included, is reported. Its lexical value form is
+/// schema-documented; its memory encoding is not established here.
 fn known_type_child_attrs(child_name: &str) -> &'static [&'static str] {
     match child_name {
         "TypeRestriction" => &["SizeInBit", "Base"],
@@ -1565,6 +1597,7 @@ fn known_type_child_attrs(child_name: &str) -> &'static [&'static str] {
         "TypeRawData" => &[],
         "TypeColor" => &[],
         "TypeTime" => &["SizeInBit", "minInclusive", "maxInclusive"],
+        "TypeDate" => &[],
         _ => &[],
     }
 }
@@ -1636,6 +1669,10 @@ fn insert_parameter_type(
             "TypePicture" => ("Picture", None, None, None, None, None),
             "TypeRawData" => ("Raw", None, None, None, None, None),
             "TypeColor" => ("Color", None, None, None, None, None),
+            // WP-08: Project Schema23 §1.1.3.19 spells a `TypeDate` value
+            // `yyyy-mm-dd`. Its `Encoding` (`DPT 11` in the collection) is
+            // reported, not interpreted: no memory placement is admitted.
+            "TypeDate" => ("Date", None, None, None, None, None),
             "TypeTime" => (
                 "Time",
                 parse_i64(a.get("SizeInBit")),

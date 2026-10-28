@@ -16,7 +16,7 @@ use crate::parse::translation::{ingest_translations, TranslationScope};
 use crate::report::{insert_unknown, UnknownKind};
 
 /// The product-database schema version this build writes.
-pub const CURRENT_PRODUCTDB_VERSION: i64 = 28;
+pub const CURRENT_PRODUCTDB_VERSION: i64 = 29;
 
 #[derive(Debug)]
 pub enum ProductDbError {
@@ -336,6 +336,7 @@ fn migrations() -> Vec<Migration> {
         migrate_v25_to_v26,
         migrate_v26_to_v27,
         crate::promotion_repair::repair,
+        crate::date_kind_backfill::migrate_v28_to_v29,
     ]
 }
 
@@ -2116,7 +2117,7 @@ fn measure_baggage(
 /// `parameter_type.kind` (`Color`, `Time`) instead of `Other`; no DDL is
 /// needed because `kind` has no CHECK list. Every blob that still carries a
 /// v14-era unknown-`Element` row for either child is re-read with
-/// `parse::program::backfill_color_time_kinds` (ADR-0020), which re-kinds
+/// `parse::program::backfill_type_child_kinds` (ADR-0020), which re-kinds
 /// the winning rows and swaps the stale element row for the attribute rows
 /// a fresh ingest writes. Package install reports are historical encounter
 /// records and are left as measured, the v12 -> v13 precedent. Per-blob
@@ -2152,8 +2153,14 @@ fn migrate_v14_to_v15(conn: &Connection) -> Result<(), ProductDbError> {
             |r| r.get(0),
         )?;
         conn.execute_batch("SAVEPOINT color_time_backfill")?;
-        match crate::parse::program::backfill_color_time_kinds(conn, &sha, &path, &bytes, scheme21)
-        {
+        match crate::parse::program::backfill_type_child_kinds(
+            conn,
+            &sha,
+            &path,
+            &bytes,
+            scheme21,
+            &["TypeColor", "TypeTime"],
+        ) {
             Ok(_) => conn.execute_batch("RELEASE color_time_backfill")?,
             Err(error) => {
                 conn.execute_batch("ROLLBACK TO color_time_backfill; RELEASE color_time_backfill")?;

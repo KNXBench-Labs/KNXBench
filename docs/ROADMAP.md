@@ -33,8 +33,8 @@ or release update is implied.
 
 The ordinary download worker and service-control backup callback now keep
 synchronous recovery/journal persistence off tunnel runtime workers on multi-thread
-runtimes, following the System-2 fix. Current-thread fallback remains inline. [S2-04](open-work/S2-04-tunnel-loss-after-checkpoint.md) retains
-individual-address settlement and field verification; published source is not
+runtimes, following the System-2 fix. Current-thread fallback remains inline. [S2-04](open-work/S2-04-tunnel-loss-after-checkpoint.md) adds the
+individual-address settler (preparatory; its route still refuses) and retains field verification; published source is not
 an updated release or container image. Consent, backups, stop-token policy and
 read-back remain unchanged.
 

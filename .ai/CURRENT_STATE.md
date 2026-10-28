@@ -1,6 +1,13 @@
 # Restart snapshot
 
-Updated: 2026-10-28 00:13 CET. Operational snapshot, not an append-only journal.
+Updated: 2026-10-28 05:50 CET. Operational snapshot, not an append-only journal.
+## S2-04 individual-address settler (PUBLISHED; observed 2026-10-28 05:50 CET, this WebUI)
+- Main-first `c59d14280` (feature `5efcf506a`, correction `cc3588d4f`); local/tracking/live equal.
+- Settler's synchronous project save runs via `blocking_off_tunnel_workers`; review APPROVE.
+- Gate14 accepted, frozen/user-data safe: Rust1454/64ignored, corpus51/51, tool466/6optional skips.
+- Preparatory only: HTTP start route still refuses before any tunnel (recovery gate).
+- Not covered: project mutex held during save; witness has no real fsync. Field outcome OPEN.
+- Evidence `<profile>/evidence/s204-ia-settler-20261028/`. Next: retire own tree/branch/scratch.
 ## Issue #30 patient waits (PUBLISHED; observed 2026-10-28 00:13 CET)
 - Owner: this WebUI; runtime claim RELEASED; owned integration checkout retained for docs closure.
 - Main-first `3583ab8e0`, feature `6f7d22228`; local/tracking/live refs matched.

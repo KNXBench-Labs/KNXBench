@@ -22,7 +22,7 @@ pub enum DownloadResult {
     Unknown,
 }
 
-use super::{FailureDiagnostic, LocalOutcome, OperationProgress};
+use super::{FailureDiagnostic, FinalStepDiagnostic, LocalOutcome, OperationProgress};
 
 /// The download run's own ended facts, frozen when it ends so a later recovery cannot rewrite them.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
@@ -151,6 +151,9 @@ pub struct System2Report {
     mutation_possible: bool,
     prestate_differs: bool,
     failure_diagnostics: Vec<FailureDiagnostic>,
+    /// Format 3: the typed final-step failure per run; empty when none was recorded or it is
+    /// unknown (older journal), never guessed.
+    final_step_failures: Vec<FinalStepDiagnostic>,
     /// Build that executed the run, when it was recorded; unknown for older operations.
     execution_build: ExecutionBuild,
     /// Build that wrote this report; never a claim about the execution.
@@ -178,7 +181,7 @@ impl System2Report {
             total_steps: progress.total_steps,
         });
         Some(Self {
-            format: 2,
+            format: 3,
             kind: "knxbench-system2-download-summary",
             support: "EXPERIMENTAL BEST-EFFORT; HARDWARE COMPATIBILITY AND RECOVERY UNVERIFIED",
             evidence: "local-journal-only",
@@ -196,6 +199,7 @@ impl System2Report {
             mutation_possible: progress.mutation_possible,
             prestate_differs: progress.prestate_differs,
             failure_diagnostics: progress.failure_diagnostics.clone(),
+            final_step_failures: progress.final_step_failures.clone(),
             execution_build,
             exporter_build: exporter_build
                 .chars()

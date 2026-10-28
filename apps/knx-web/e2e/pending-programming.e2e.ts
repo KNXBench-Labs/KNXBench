@@ -156,7 +156,7 @@ for (const language of ["en", "de"] as const) {
 
 // Issue #31: a retained System-2 run explains, beside the untouched marks, what is provable about the device.
 const failedRun = {
-  schemaVersion: 3, failureDiagnostics: [], downloadResult: "transferCompleteVerificationUnfinished", operationId: "a".repeat(32),
+  schemaVersion: 4, failureDiagnostics: [], finalStepFailures: [], downloadResult: "transferCompleteVerificationUnfinished", operationId: "a".repeat(32),
   binding: { serverIncarnation: "pending-browser", projectIncarnation: "3", projectRevision: "1", deviceId: 1 }, address: "1.1.2", deviceName: "Dimmer kitchen",
   state: "failed", completedSteps: 26, totalSteps: 27, backupAvailable: true, recoveryPhrase: null, downloadPhrase: null, releasePhrase: null,
   message: null, refusal: null, mutationMayHaveStarted: true, prestateDiffers: false, pointerObservations: [], programVersionObservation: null,

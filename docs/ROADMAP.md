@@ -15,6 +15,13 @@ Publication is verified at immutable `a9ea32d72364478b25e158d0b95465af7a4702df`
 ([public verification record](evidence/release-alpha17-2026-10-26.json)).
 Work merged on main after `20ab2f7ea` belongs to the next alpha.
 
+## System-2 final-step failure category after Alpha 17
+
+The unfinished final verification step is split in source into mismatch, read failure and
+write failure with a closed stage, carried through journal, status and report. It names the
+operation that stopped, not its cause; the allocation mismatch in #30/#22 and any hardware
+evidence stay separate. [Contract](contracts/system2-download-result.md#final-step-failure).
+
 ## System-2 result integration after Alpha 17
 
 The source implementation connects experimental result/report presentation and

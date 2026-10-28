@@ -142,7 +142,7 @@ it("rejects a diagnosis key on v1 and a missing or non-list diagnosis on v2", as
   const { failureDiagnostics: _omitted, ...missing } = status;
   for (const value of [
     { ...wireV1(status), failureDiagnostics: [] }, { ...wireV1(status), failureDiagnostics: [downloadDiagnostic] },
-    missing, { ...status, failureDiagnostics: null }, { ...status, failureDiagnostics: {} }, { ...status, schemaVersion: 4 }, { ...status, schemaVersion: 0 },
+    missing, { ...status, failureDiagnostics: null }, { ...status, failureDiagnostics: {} }, { ...status, schemaVersion: 5 }, { ...status, schemaVersion: 0 },
   ]) { reply(value); await expect(system2.getSystem2Status()).rejects.toThrow("System-2"); }
 });
 it("admits closed, count-consistent failure diagnostics in order, once per run", async () => {
@@ -194,9 +194,9 @@ it("admits each closed v3 result and refuses unknown, missing or contradictory o
   const finished = { ...failed, state: "finished", failureDiagnostics: [], downloadResult: "verified" };
   reply(finished); expect(await system2.getSystem2Status()).toEqual(finished);
 });
-const reportBody = { format: 2, kind: "knxbench-system2-download-summary", support: "EXPERIMENTAL BEST-EFFORT; HARDWARE COMPATIBILITY AND RECOVERY UNVERIFIED",
+const reportBody = { format: 3, kind: "knxbench-system2-download-summary", support: "EXPERIMENTAL BEST-EFFORT; HARDWARE COMPATIBILITY AND RECOVERY UNVERIFIED",
   evidence: "local-journal-only", download: { outcome: "failed", result: "transferCompleteVerificationUnfinished", completedSteps: 26, totalSteps: 27 },
-  recovery: null, mutationPossible: true, prestateDiffers: false, failureDiagnostics: [], executionBuild: { state: "unknown" }, exporterBuild: "0.1.0-alpha.1+gabc" };
+  recovery: null, mutationPossible: true, prestateDiffers: false, failureDiagnostics: [], finalStepFailures: [], executionBuild: { state: "unknown" }, exporterBuild: "0.1.0-alpha.1+gabc" };
 it("reads the ended-run report by operation id only and admits exactly its keyset", async () => {
   reply(reportBody);
   expect(await system2.getSystem2Report(status.operationId)).toEqual(reportBody);
@@ -205,7 +205,7 @@ it("reads the ended-run report by operation id only and admits exactly its keyse
   expect(fetch).toHaveBeenCalledWith(`/api/device-system2/report?operationId=${status.operationId}`, { headers: undefined });
   await expect(system2.getSystem2Report("../x")).rejects.toThrow("System-2");
   for (const value of [
-    { ...reportBody, address: "1.1.67" }, { ...reportBody, kind: "knxbench-property-validation-summary" }, { ...reportBody, format: 1 },
+    { ...reportBody, address: "1.1.67" }, { ...reportBody, kind: "knxbench-property-validation-summary" }, { ...reportBody, format: 1 }, { ...reportBody, format: 2 },
     { ...reportBody, download: { ...reportBody.download, outcome: "running" } }, { ...reportBody, download: { ...reportBody.download, result: "inProgress" } },
     { ...reportBody, download: { ...reportBody.download, completedSteps: 28 } }, { ...reportBody, evidence: "device-read" },
     { ...reportBody, download: { ...reportBody.download, result: "verified" } },
@@ -227,5 +227,100 @@ it("admits the v3 settlement and recovery fields strictly", async () => {
   for (const value of [missing, { ...failed, projectSettlement: "applied" }, { ...failed, restoreAttempted: "yes" }, { ...failed, downloadCompletedSteps: -1 },
     { ...failed, downloadCompletedSteps: 5, downloadTotalSteps: 4 }, { ...failed, downloadTotalSteps: undefined }]) {
     reply(value); await expect(system2.getSystem2Status()).rejects.toThrow("System-2");
+  }
+});
+
+// Final-step failure diagnostic (status v4, report format 3): closed category and stage, never text.
+const finalPairs = [
+  ["verificationMismatch", "allocation"], ["verificationMismatch", "loadedState"], ["verificationMismatch", "programVersion"], ["verificationMismatch", "verifyModeReadback"],
+  ["readFailed", "limit"], ["readFailed", "allocation"], ["readFailed", "loadedState"], ["readFailed", "pointer"], ["readFailed", "programVersion"],
+  ["readFailed", "verifyModeRead"], ["readFailed", "verifyModeReadback"], ["writeFailed", "verifyModeWrite"],
+] as const;
+it("admits exact v4 bodies with every allowed final-step category and stage, download before restore", async () => {
+  const { finalStepStatus, finalDownloadMismatch, finalRestoreRead } = await import("./system2DownloadTestFixtures");
+  // The exact JSON shape the server emits, decoded from text rather than an object literal.
+  const emitted = JSON.parse(JSON.stringify({ ...finalStepStatus, state: "restoreFailed", restoreAttempted: true, finalStepFailures: [finalDownloadMismatch, finalRestoreRead] }));
+  reply(emitted); expect(await system2.getSystem2Status()).toEqual(emitted);
+  for (const [category, stage] of finalPairs) for (const run of ["download", "restore"] as const) {
+    const row = { ...finalStepStatus, restoreAttempted: run === "restore", finalStepFailures: [{ run, category, stage }] };
+    reply(row); expect(await system2.getSystem2Status()).toEqual(row);
+  }
+  const none = { ...finalStepStatus, finalStepFailures: [] }; reply(none); expect(await system2.getSystem2Status()).toEqual(none);
+});
+it("refuses malformed, extended, contradictory, duplicate or misordered v4 final-step failures", async () => {
+  const { finalStepStatus: row, finalDownloadMismatch: d, finalRestoreRead: r } = await import("./system2DownloadTestFixtures");
+  reply(row); expect(await system2.getSystem2Status()).toEqual(row);
+  const { finalStepFailures: _omitted, ...missing } = row;
+  for (const value of [missing, { ...row, finalStepFailures: null }, { ...row, finalStepFailures: {} }, { ...row, finalStepFailures: d }]) {
+    reply(value); await expect(system2.getSystem2Status()).rejects.toThrow("System-2");
+  }
+  for (const finalStepFailures of [
+    [{ ...d, message: "raw" }], [{ ...d, operationId: "a".repeat(32) }], [{ run: d.run, category: d.category }], [{ run: d.run, stage: d.stage }],
+    [{ ...d, run: "retry" }], [{ ...d, category: "VerificationMismatch" }], [{ ...d, category: "timeout" }], [{ ...d, stage: "disconnect" }], [{ ...d, stage: 1 }],
+    // Contradictory pairs: a mismatch needs a comparison, a write failure only the Verify Mode write.
+    [{ ...d, stage: "limit" }], [{ ...d, stage: "pointer" }], [{ ...d, stage: "verifyModeRead" }], [{ ...d, stage: "verifyModeWrite" }],
+    [{ ...d, category: "readFailed", stage: "verifyModeWrite" }], [{ ...d, category: "writeFailed", stage: "verifyModeReadback" }], [{ ...d, category: "writeFailed", stage: "allocation" }],
+    // One per run, download first, at most two.
+    [d, d], [r, r], [r, d], [d, r, d], [d, r, r], 42, "download", [null], [[]],
+  ]) { reply({ ...row, finalStepFailures }); await expect(system2.getSystem2Status()).rejects.toThrow("System-2"); }
+});
+it("normalizes v1 to v3 wires to no final-step failures and refuses the key on them", async () => {
+  const { finalStepStatus, finalDownloadMismatch, wireV1, wireV2, wireV3 } = await import("./system2DownloadTestFixtures");
+  expect(Object.keys(wireV3(finalStepStatus))).not.toContain("finalStepFailures");
+  reply(wireV3(finalStepStatus)); expect(await system2.getSystem2Status()).toEqual({ ...finalStepStatus, schemaVersion: 3, finalStepFailures: [] });
+  reply(wireV2(finalStepStatus)); expect((await system2.getSystem2Status())!.finalStepFailures).toEqual([]);
+  reply(wireV1(finalStepStatus)); expect((await system2.getSystem2Status())!.finalStepFailures).toEqual([]);
+  for (const wire of [wireV1, wireV2, wireV3]) for (const finalStepFailures of [[], [finalDownloadMismatch]]) {
+    reply({ ...wire(finalStepStatus), finalStepFailures }); await expect(system2.getSystem2Status()).rejects.toThrow("System-2");
+  }
+});
+// Source-proven relations only. A live supervisor reports running + inProgress beside a journalled download entry, so no terminal state is required.
+it("admits the live-supervisor and settled bodies that legitimately carry a final-step entry", async () => {
+  const { finalStepStatus, finalDownloadMismatch: d, finalRestoreRead: r } = await import("./system2DownloadTestFixtures");
+  for (const row of [
+    { ...finalStepStatus, state: "running", downloadResult: "inProgress" },
+    { ...finalStepStatus, state: "restoring", restoreAttempted: true, finalStepFailures: [d] },
+    { ...finalStepStatus, state: "restoreFailed", restoreAttempted: true, finalStepFailures: [d, r] },
+    { ...finalStepStatus, state: "restoreFailed", restoreAttempted: true, finalStepFailures: [r] },
+  ]) { reply(row); expect(await system2.getSystem2Status()).toEqual(row); }
+});
+it("refuses a v4 final-step entry that contradicts the restore flag or the download result", async () => {
+  const { finalStepStatus: row, finalDownloadMismatch: d, finalRestoreRead: r } = await import("./system2DownloadTestFixtures");
+  for (const value of [
+    // A restore entry needs a restore attempt.
+    { ...row, state: "restoreFailed", restoreAttempted: false, finalStepFailures: [r] },
+    { ...row, state: "restoreFailed", restoreAttempted: false, finalStepFailures: [d, r] },
+    // A download entry needs an unfinished or running download, never another result.
+    { ...row, downloadResult: "unknown" }, { ...row, downloadResult: "nothingWritten", mutationMayHaveStarted: false },
+    { ...row, state: "finished", downloadResult: "verified" }, { ...row, state: "restoreFailed", restoreAttempted: true, downloadResult: "unknown", finalStepFailures: [d, r] },
+  ]) { reply(value); await expect(system2.getSystem2Status()).rejects.toThrow("System-2"); }
+});
+it("keeps the old wires without a final-step list unaffected by the cross-field relations", async () => {
+  const { finalStepStatus, wireV1, wireV2, wireV3 } = await import("./system2DownloadTestFixtures");
+  const settled = { ...finalStepStatus, state: "finished" as const, downloadResult: "verified" as const, finalStepFailures: [] };
+  reply(wireV3(settled)); expect((await system2.getSystem2Status())!.finalStepFailures).toEqual([]);
+  reply(wireV2(settled)); expect((await system2.getSystem2Status())!.downloadResult).toBe("unknown");
+  reply(wireV1(settled)); expect((await system2.getSystem2Status())!.restoreAttempted).toBe(false);
+});
+it("refuses a report final-step entry that contradicts the download result or the missing recovery", async () => {
+  const { finalDownloadMismatch: d, finalRestoreRead: r } = await import("./system2DownloadTestFixtures");
+  const recovered = { outcome: "restoreFailed", completedSteps: 2, totalSteps: 3 };
+  reply({ ...reportBody, recovery: recovered, finalStepFailures: [r] });
+  expect((await system2.getSystem2Report(status.operationId)).finalStepFailures).toEqual([r]);
+  for (const value of [
+    { ...reportBody, finalStepFailures: [r] }, { ...reportBody, finalStepFailures: [d, r] },
+    { ...reportBody, download: { ...reportBody.download, outcome: "finished", result: "verified" }, finalStepFailures: [d] },
+    { ...reportBody, download: { ...reportBody.download, result: "unknown" }, finalStepFailures: [d] },
+    { ...reportBody, mutationPossible: false, download: { ...reportBody.download, result: "nothingWritten" }, finalStepFailures: [d] },
+  ]) { reply(value); await expect(system2.getSystem2Report(status.operationId)).rejects.toThrow("System-2"); }
+});
+it("reads report format 3 with the same closed final-step list and refuses a contradictory one", async () => {
+  const { finalDownloadMismatch, finalRestoreRead } = await import("./system2DownloadTestFixtures");
+  const both = { ...reportBody, recovery: { outcome: "restoreFailed", completedSteps: 2, totalSteps: 3 }, finalStepFailures: [finalDownloadMismatch, finalRestoreRead] };
+  reply(both); expect(await system2.getSystem2Report(status.operationId)).toEqual(both);
+  const { finalStepFailures: _omitted, ...missing } = reportBody;
+  for (const value of [missing, { ...both, format: 2 }, { ...reportBody, finalStepFailures: [{ ...finalDownloadMismatch, stage: "pointer" }] },
+    { ...reportBody, finalStepFailures: [finalRestoreRead, finalDownloadMismatch] }, { ...reportBody, finalStepFailures: [{ ...finalDownloadMismatch, detail: "x" }] }]) {
+    reply(value); await expect(system2.getSystem2Report(status.operationId)).rejects.toThrow("System-2");
   }
 });

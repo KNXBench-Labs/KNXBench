@@ -10,6 +10,8 @@ use crate::property_validation_bundle::{
 };
 #[path = "property_validation_diagnostic.rs"]
 mod diagnostic;
+#[path = "property_validation_final_step.rs"]
+mod final_step;
 #[path = "property_validation_lifecycle.rs"]
 mod lifecycle;
 #[path = "property_validation_result.rs"]
@@ -17,6 +19,7 @@ mod result;
 pub use diagnostic::{
     FailureDiagnostic, FailureDiagnosticRun, PointerFailureReason, PointerFailureRecord,
 };
+pub use final_step::{FinalStepCategory, FinalStepDiagnostic, FinalStepRecord, FinalStepStage};
 use knx_core::{ContactableAddress, IndividualAddress};
 use knx_net::commissioning::property_recovery::PropertyRecoverySnapshot;
 pub use lifecycle::{
@@ -170,6 +173,14 @@ pub enum Checkpoint {
             skip_serializing_if = "Option::is_none"
         )]
         pointer_failure: Option<PointerFailureRecord>,
+        /// Typed final-step facts: set only when Net classified the stop inside the final
+        /// Disconnect step. Absent in every older journal; never backfilled from text.
+        #[serde(
+            default,
+            deserialize_with = "final_step::present_record",
+            skip_serializing_if = "Option::is_none"
+        )]
+        final_step: Option<FinalStepRecord>,
     },
     Cancelled,
     Finished,
@@ -183,14 +194,30 @@ pub enum Checkpoint {
             skip_serializing_if = "Option::is_none"
         )]
         pointer_failure: Option<PointerFailureRecord>,
+        /// Typed final-step facts: set only when Net classified the stop inside the final
+        /// Disconnect step. Absent in every older journal; never backfilled from text.
+        #[serde(
+            default,
+            deserialize_with = "final_step::present_record",
+            skip_serializing_if = "Option::is_none"
+        )]
+        final_step: Option<FinalStepRecord>,
     },
     Restored,
 }
 impl Checkpoint {
-    /// Envelope version 2 marks exactly a populated typed failure record, so an older strict
-    /// reader (version 1 only) refuses it instead of dropping the field; all else stays 1.
+    /// Envelope version 3 marks a populated final-step record and version 2 a populated PID 7
+    /// record, so an older strict reader refuses either instead of dropping it; all else is 1.
     fn envelope_format(&self) -> u16 {
         match self {
+            Self::Failed {
+                final_step: Some(_),
+                ..
+            }
+            | Self::RestoreFailed {
+                final_step: Some(_),
+                ..
+            } => 3,
             Self::Failed {
                 pointer_failure: Some(_),
                 ..
@@ -235,6 +262,8 @@ struct State {
     in_procedure_observations: Vec<(PointerObservationRun, usize, PointerObservationRecord)>,
     /// One typed failure per run at most: `Failed` and `RestoreFailed` each end their run.
     failure_diagnostics: Vec<FailureDiagnostic>,
+    /// One typed final-step failure per run at most, in the same order.
+    final_step_failures: Vec<FinalStepDiagnostic>,
     /// Frozen when the download run ends (terminal checkpoint or restore start).
     download_end: Option<DownloadFacts>,
 }
@@ -252,6 +281,7 @@ impl State {
             final_observations: Vec::new(),
             in_procedure_observations: Vec::new(),
             failure_diagnostics: Vec::new(),
+            final_step_failures: Vec::new(),
             download_end: None,
         }
     }
@@ -454,11 +484,17 @@ impl State {
                 }
                 if let Checkpoint::Failed {
                     code,
-                    pointer_failure: Some(record),
+                    pointer_failure,
+                    final_step,
                     ..
                 } = event
                 {
-                    self.record_failure(*code, record, FailureDiagnosticRun::Download)?;
+                    self.record_failure(
+                        *code,
+                        pointer_failure.as_ref(),
+                        final_step.as_ref(),
+                        FailureDiagnosticRun::Download,
+                    )?;
                 }
                 self.download_end = Some(self.facts(
                     self.ended_result(),
@@ -492,14 +528,18 @@ impl State {
             Checkpoint::RestoreFailed {
                 code,
                 pointer_failure,
+                final_step,
                 ..
             } => {
                 if self.outcome != LocalOutcome::Restoring {
                     return Err(invalid("no restore in progress"));
                 }
-                if let Some(record) = pointer_failure {
-                    self.record_failure(*code, record, FailureDiagnosticRun::Restore)?;
-                }
+                self.record_failure(
+                    *code,
+                    pointer_failure.as_ref(),
+                    final_step.as_ref(),
+                    FailureDiagnosticRun::Restore,
+                )?;
                 self.outcome = LocalOutcome::RestoreFailed;
             }
             Checkpoint::Restored => {
@@ -518,20 +558,54 @@ impl State {
         }
         Ok(())
     }
-    /// A typed record is valid only under the code Net's width refusal maps to.
+    /// The index of the final `Disconnect` step while it is the active, started step of the
+    /// current run with every earlier step completed; `None` at any other point.
+    fn active_final_step(&self) -> Option<usize> {
+        let steps = &self
+            .recovery
+            .as_ref()?
+            .original_bundle
+            .normalized_plan
+            .steps;
+        let last = steps.len().checked_sub(1)?;
+        (matches!(steps[last].operation, OperationRecord::Disconnect)
+            && self.active == Some(last)
+            && self.completed == last)
+            .then_some(last)
+    }
+    /// Typed records are valid only as Net produces them: a PID 7 record under the code its
+    /// width refusal maps to, a final-step record only while the final step is active.
     fn record_failure(
         &mut self,
         code: FailureCode,
-        record: &PointerFailureRecord,
+        pointer: Option<&PointerFailureRecord>,
+        final_step: Option<&FinalStepRecord>,
         run: FailureDiagnosticRun,
     ) -> io::Result<()> {
-        record.validate()?;
-        if code != FailureCode::IdentityOrRecovery
-            || self.failure_diagnostics.iter().any(|d| d.run == run)
-        {
-            return Err(invalid("typed pointer failure contradicts its checkpoint"));
+        if let Some(record) = pointer {
+            record.validate()?;
+            if code != FailureCode::IdentityOrRecovery
+                || self.failure_diagnostics.iter().any(|d| d.run == run)
+            {
+                return Err(invalid("typed pointer failure contradicts its checkpoint"));
+            }
         }
-        self.failure_diagnostics.push(record.diagnostic(run));
+        if let Some(record) = final_step {
+            record.validate(code, pointer.is_some())?;
+            if self.active_final_step().is_none()
+                || self.final_step_failures.iter().any(|d| d.run == run)
+            {
+                return Err(invalid(
+                    "typed final-step failure contradicts its checkpoint",
+                ));
+            }
+        }
+        if let Some(record) = pointer {
+            self.failure_diagnostics.push(record.diagnostic(run));
+        }
+        if let Some(record) = final_step {
+            self.final_step_failures.push(record.diagnostic(run));
+        }
         Ok(())
     }
 }
@@ -572,6 +646,8 @@ pub struct OperationProgress {
     pub prestate_unreadable_allocations: Vec<UnreadableAllocation>,
     /// Typed, non-raw failure facts: at most one per run, download before restore.
     pub failure_diagnostics: Vec<FailureDiagnostic>,
+    /// Typed final-step failures: at most one per run, download before restore.
+    pub final_step_failures: Vec<FinalStepDiagnostic>,
     /// Provable achievement of the download run, derived from the journal alone.
     pub download: DownloadFacts,
     /// A recovery was started for this operation: the current outcome and counters are its.
@@ -841,6 +917,7 @@ impl OperationStore {
                 )
                 .collect(),
             failure_diagnostics: self.state.failure_diagnostics.clone(),
+            final_step_failures: self.state.final_step_failures.clone(),
             download: match (self.state.download_end, self.outcome()) {
                 (Some(frozen), _) => frozen,
                 (None, LocalOutcome::Interrupted) => self
@@ -953,7 +1030,7 @@ impl OperationStore {
     }
     pub fn shareable_report(&self) -> ShareableReport {
         ShareableReport {
-            format: 2,
+            format: 3,
             kind: "knxbench-property-validation-summary",
             support: if self.state.binding.simulated {
                 "STRONG HYPOTHESIS SIMULATOR TESTED"
@@ -965,6 +1042,7 @@ impl OperationStore {
             mutation_possible: self.state.mutation,
             completed_operations: self.state.completed,
             failure_diagnostics: self.state.failure_diagnostics.clone(),
+            final_step_failures: self.state.final_step_failures.clone(),
         }
     }
     pub fn write_shareable_report(&self, path: &Path) -> io::Result<()> {
@@ -982,6 +1060,8 @@ pub struct ShareableReport {
     completed_operations: usize,
     /// Format 2: typed failure facts only; empty when none was recorded or it is unknown.
     failure_diagnostics: Vec<FailureDiagnostic>,
+    /// Format 3: typed final-step failures only; empty when none was recorded or it is unknown.
+    final_step_failures: Vec<FinalStepDiagnostic>,
 }
 fn encode(value: &impl Serialize) -> io::Result<Vec<u8>> {
     serde_json::to_vec_pretty(value).map_err(io::Error::other)

@@ -340,7 +340,7 @@ Display names deliberately use last-writer-wins. Ingest order can change names i
 ### 128. Legacy product import boundaries
 
 **Ledger status:** `DONE` ([KL-128](status/LEDGER.md#snapshot-ids)).
-VD3–VD5 import is delivered. PR/VD2, legacy DPTs, unsupported parameter forms and unverified hardware downloads remain bounded.
+VD3–VD5 import and validated long-enum binary retention/backfill are delivered in source. Ordinary-enum binary fields, damaged historical source, PR/VD2, legacy DPTs and unverified hardware downloads remain bounded.
 [Details and history](limitations/KL-128-legacy-product-import-boundaries.md)
 
 <a id="catalogue-kl-134"></a>

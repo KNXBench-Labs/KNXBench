@@ -3,7 +3,6 @@
 // ADR-0090: the read-only MCP adapter keeps this connection open for its
 // whole lifetime, so it must never migrate or create the user's database.
 
-use crate::v20_rewind;
 use std::path::Path;
 
 use knx_productdb::{open_and_migrate, open_read_only, ProductDbError, CURRENT_PRODUCTDB_VERSION};
@@ -44,9 +43,8 @@ fn an_older_database_is_migrated_in_memory_only() {
     let dir = tempfile::tempdir().unwrap();
     let path = dir.path().join("products.sqlite");
     let conn = open_and_migrate(&path).unwrap();
-    // v21 -> v22 only adds the legacy provenance tables; an empty database
-    // without them is a genuine v21 one once its version says so.
-    v20_rewind::drop_v22_objects(&conn);
+    // v29 -> v30 is data-only (no DDL): an empty current-schema database is a
+    // genuine v29 one once its version says so.
     conn.pragma_update(None, "user_version", CURRENT_PRODUCTDB_VERSION - 1)
         .unwrap();
     drop(conn);

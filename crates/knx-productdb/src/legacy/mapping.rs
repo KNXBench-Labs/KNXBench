@@ -157,6 +157,10 @@ pub struct MappedEnumeration {
     pub value: String,
     pub text: Option<String>,
     pub display_order: i64,
+    /// Canonical standard Base64 of a `long enum` row's decoded `BINARY_VALUE`,
+    /// as `Enumeration/@BinaryValue` carries it; `None` when the row has none
+    /// or it is not exact (see `MappingDiagnostic::InvalidBinaryValues`).
+    pub binary_value: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -270,16 +274,25 @@ pub enum MappingDiagnostic {
         parameter_type: String,
         atomic_type: String,
     },
-    /// A `long enum` (atomic type 5) type's `BINARY_VALUE`s: ETS4 writes
-    /// them as `Enumeration/@BinaryValue`, which the product database does
-    /// not model. They stay in the stored payload. `inconsistent` counts
-    /// values that are not hex, or whose length disagrees with
-    /// `BINARY_VALUE_LENGTH` or the type's size.
+    /// Historical (v29 and earlier imports): binary values were counted but
+    /// not stored. Kept for API continuity; no current mapping emits it.
     BinaryValuesNotModeled {
         parameter_type: String,
         values: usize,
         inconsistent: usize,
     },
+    /// Rows of a `long enum` (atomic type 5) type whose `BINARY_VALUE` is not
+    /// nonempty even-length ASCII hex, or whose `BINARY_VALUE_LENGTH` or the
+    /// type's size disagrees with its byte count. They get no binary value.
+    InvalidBinaryValues {
+        parameter_type: String,
+        values: usize,
+        invalid: usize,
+    },
+    /// Rows of a plain enumeration (atomic type 4) with a nonempty
+    /// `BINARY_VALUE` or `BINARY_VALUE_LENGTH`. The meaning is unknown, so
+    /// the fields are never interpreted and stay in the stored payload.
+    UnmodeledBinaryFields { parameter_type: String, rows: usize },
     /// A value that should name a row of another table and names none.
     DanglingReference {
         table: String,
@@ -335,6 +348,8 @@ impl MappingDiagnostic {
             Self::UnknownAccessLevel { .. } => "unknown-access-level",
             Self::UnknownAtomicType { .. } => "unknown-atomic-type",
             Self::BinaryValuesNotModeled { .. } => "binary-values-not-modeled",
+            Self::InvalidBinaryValues { .. } => "binary-values-invalid",
+            Self::UnmodeledBinaryFields { .. } => "atomic4-binary-fields-unmodeled",
             Self::DanglingReference { .. } => "dangling-reference",
             Self::OverlappingMemory { .. } => "overlapping-memory",
             Self::ValueOnPageParent { .. } => "value-on-page-parent",
@@ -375,6 +390,18 @@ impl std::fmt::Display for MappingDiagnostic {
                 "parameter type {parameter_type}: {values} binary enumeration values \
                  ({inconsistent} inconsistent with their length or the type's size) are kept \
                  in the stored payload only; the product database does not model them"
+            ),
+            Self::InvalidBinaryValues { parameter_type, values, invalid } => write!(
+                f,
+                "parameter type {parameter_type}: {invalid} of {values} binary enumeration values are \
+                 not even-length hex with a matching BINARY_VALUE_LENGTH and type size; they have no \
+                 binary value and stay in the stored payload"
+            ),
+            Self::UnmodeledBinaryFields { parameter_type, rows } => write!(
+                f,
+                "parameter type {parameter_type}: {rows} enumeration rows carry BINARY_VALUE or \
+                 BINARY_VALUE_LENGTH whose meaning for a plain enumeration is unknown; not \
+                 interpreted, kept in the stored payload"
             ),
             Self::DanglingReference { table, column, value } => {
                 write!(f, "{table}.{column} = {value} names no row")

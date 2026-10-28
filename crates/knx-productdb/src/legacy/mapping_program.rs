@@ -4,6 +4,8 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
+use base64::Engine as _;
+
 use super::exim::ExImDocument;
 use super::mapping::{
     manufacturer_id, rows, skip, MappedComObject, MappedComObjectRef, MappedDynamicNode,
@@ -251,14 +253,27 @@ fn map_types(
         }
     }
     for (tid, (atomic, size)) in &types {
+        let list = values.get(tid).map(Vec::as_slice).unwrap_or_default();
         if atomic == "5" {
-            let list = values.get(tid).map(Vec::as_slice).unwrap_or_default();
-            let inconsistent = list.iter().filter(|r| !binary_value_fits(r, *size)).count();
-            diagnostics.push(MappingDiagnostic::BinaryValuesNotModeled {
-                parameter_type: tid.clone(),
-                values: list.len(),
-                inconsistent,
-            });
+            let invalid = list
+                .iter()
+                .filter(|r| decode_binary_value(r, *size).is_none())
+                .count();
+            if invalid > 0 {
+                diagnostics.push(MappingDiagnostic::InvalidBinaryValues {
+                    parameter_type: tid.clone(),
+                    values: list.len(),
+                    invalid,
+                });
+            }
+        } else if atomic == "4" {
+            let rows = list.iter().filter(|r| has_binary_fields(r)).count();
+            if rows > 0 {
+                diagnostics.push(MappingDiagnostic::UnmodeledBinaryFields {
+                    parameter_type: tid.clone(),
+                    rows,
+                });
+            }
         }
     }
     for (tid, mut list) in values {
@@ -289,24 +304,56 @@ fn map_types(
                 value,
                 text: r.get("DISPLAYED_VALUE"),
                 display_order: order as i64,
+                binary_value: if types.get(&tid).is_some_and(|(a, _)| a == "5") {
+                    decode_binary_value(r, types[&tid].1)
+                        .map(|bytes| base64::engine::general_purpose::STANDARD.encode(bytes))
+                } else {
+                    None
+                },
             });
         }
     }
     types
 }
 
-/// Whether a `long enum` row's `BINARY_VALUE` is hex whose length is its
-/// `BINARY_VALUE_LENGTH` and fills the type's size, as in all 87 measured
-/// values of the ETS4 oracle.
-fn binary_value_fits(r: &Row, size_in_bit: Option<i64>) -> bool {
-    let hex = r.get("BINARY_VALUE").unwrap_or_default();
-    let hex = hex.trim();
-    let octets = (hex.len() / 2) as i64;
-    !hex.is_empty()
-        && hex.len().is_multiple_of(2)
-        && hex.bytes().all(|b| b.is_ascii_hexdigit())
-        && r.int("BINARY_VALUE_LENGTH") == Some(octets)
-        && size_in_bit == Some(octets * 8)
+/// A `long enum` row's `BINARY_VALUE` hex, only when exact: nonempty
+/// even-length ASCII hex of either case (no prefix, no trimming, so a decoded
+/// escape such as a line feed refuses too), a `BINARY_VALUE_LENGTH` of ASCII
+/// decimal digits equal to the byte count, and a type size of exactly that
+/// many octets. Checked before anything is decoded.
+fn exact_binary_hex(r: &Row, size_in_bit: Option<i64>) -> Option<String> {
+    let hex = r.text("BINARY_VALUE")?;
+    if hex.is_empty() || !hex.len().is_multiple_of(2) || !hex.bytes().all(|b| b.is_ascii_hexdigit())
+    {
+        return None;
+    }
+    let length = r.text("BINARY_VALUE_LENGTH")?;
+    if length.is_empty() || !length.bytes().all(|b| b.is_ascii_digit()) {
+        return None;
+    }
+    let octets = hex.len() / 2;
+    let declared: usize = length.parse().ok()?;
+    let bits = i64::try_from(octets.checked_mul(8)?).ok()?;
+    (declared == octets && size_in_bit == Some(bits)).then_some(hex)
+}
+
+/// The decoded bytes of an exact `BINARY_VALUE`; leading zero bytes are kept.
+fn decode_binary_value(r: &Row, size_in_bit: Option<i64>) -> Option<Vec<u8>> {
+    let hex = exact_binary_hex(r, size_in_bit)?;
+    hex.as_bytes()
+        .chunks(2)
+        .map(|pair| {
+            let digit = |b: u8| (b as char).to_digit(16).map(|d| d as u8);
+            Some(digit(pair[0])? << 4 | digit(pair[1])?)
+        })
+        .collect()
+}
+
+/// Whether a plain enumeration row carries either binary field.
+fn has_binary_fields(r: &Row) -> bool {
+    ["BINARY_VALUE", "BINARY_VALUE_LENGTH"]
+        .iter()
+        .any(|c| r.text(c).is_some_and(|v| !v.is_empty()))
 }
 
 struct PlacedParameter {

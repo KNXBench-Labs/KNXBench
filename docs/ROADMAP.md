@@ -15,6 +15,16 @@ Publication is verified at immutable `a9ea32d72364478b25e158d0b95465af7a4702df`
 ([public verification record](evidence/release-alpha17-2026-10-26.json)).
 Work merged on main after `20ab2f7ea` belongs to the next alpha.
 
+## Legacy binary enumeration retention after Alpha 17
+
+[WP-03](open-work/WP-03-legacy-binary-enumerations.md) is implemented in source:
+validated legacy long-enum bytes reach the existing Base64 column; data-only
+productdb v30 backfills authenticated retained payloads without rewriting
+historical reports. Invalid/ambiguous inputs and ordinary-enum binary fields
+remain explicitly diagnosed. This closes the storage/backfill package, not
+legacy image/programming or all-file conversion equivalence. No Alpha 17 image,
+release, deployment or bus action follows.
+
 ## Experimental System-2 waits after Alpha 17
 
 Source builds select a [patient wait profile](contracts/system2-patient-waits.md)

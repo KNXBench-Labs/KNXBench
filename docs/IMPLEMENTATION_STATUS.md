@@ -12,6 +12,18 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Legacy long-enum binary storage and authenticated backfill (28 October 2026 source)
+
+WP-03 maps validated atomic-type-5 hex to exact bytes and canonical Base64 in
+`parameter_type_enum.binary_value`; productdb v30 fills historical NULL fields
+only after authenticating retained source and normalized identity. Whole-payload
+refusals are explicit; historical diagnostics/reports remain intact. Ordinary
+atomic-type-4 binary fields stay uninterpreted and diagnosed. Synthetic
+fresh/upgrade/reopen/re-ingest/refusal regressions cover the persistence contract.
+[Mapping evidence and limits](research/2026-10-28-legacy-enum-binary-mapping.md) ·
+[scope](open-work/WP-03-legacy-binary-enumerations.md).
+No legacy image, programming, hardware or broad conversion-equivalence claim.
+
 ## TypeDate lexical contract and evidence-safe promotion (28 October 2026 source)
 
 Published main-first `4beabe531` (code `b5dc92aa8`, documentation `c57ba4147`).

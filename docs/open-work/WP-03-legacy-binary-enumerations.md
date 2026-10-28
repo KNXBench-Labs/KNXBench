@@ -1,38 +1,45 @@
 # WP-03 — Legacy binary enumeration values
 
-**Status:** Blocked: evidence. Listed in [OPEN_WORK](../OPEN_WORK.md); per-ID status of record is the [ledger](../status/LEDGER.md).
+**Status:** Implemented in source (28 October 2026), bounded to validated
+long-enum storage and retained-source backfill. Broader KL-128 boundaries stay
+in the [ledger](../status/LEDGER.md).
 
-## Task
+## Delivered scope
 
-Store exact `binary_value`s for enumerations of legacy EX-IM product
-databases (`.vd3`–`.vd5`). The `.knxprod` half is stored since product DB v25
-([ADR-0141](../adr/0141-placements-and-enumeration-attributes-reach-columns.md)).
+Legacy EX-IM atomic type 5 now stores exact binary bytes as canonical Base64 in
+`parameter_type_enum.binary_value`, the column used by `.knxprod` since v25.
+Strict hex, byte-length and type-width checks preserve leading zeros;
+`REAL_VALUE`, identity, text and display order remain separate and unchanged.
+Invalid binary values remain NULL with a diagnostic and retained source.
 
-## Open
+Product database v30 also backfills existing v29 legacy data from authenticated
+retained payloads. It checks source hashes, namespace, program owners, type shape
+and enum keys/values/text/order before filling NULL columns. Ambiguity or a
+conflicting non-NULL value refuses the whole payload's backfill with an explicit
+finding, without changing historical reports or diagnostics. Fresh import,
+upgrade, reopen, skipped re-ingest, idempotence and refusal regressions are in
+`knx-productdb/tests/it/legacy_binary.rs`.
 
-Establish the EX-IM field mapping against a retained legacy witness and its
-independent conversion. Preserve binary lexemes and widths instead of coercing
-them to integers.
+The independently reviewed [mapping evidence](../research/2026-10-28-legacy-enum-binary-mapping.md)
+closes the former prerequisite for this bounded representation rule. It does
+not prove conversion equivalence for the seven unpaired types or all legacy
+files. Ordinary atomic type 4 binary/length fields remain uninterpreted and
+explicitly diagnosed, rather than copied into the XML-shaped column.
 
-## Prerequisite
+## Remaining boundaries (not a new programming permission)
 
-Mapping evidence. Alpha 16 left this conditional and shipped no mapping.
+- Missing, corrupt or ambiguous retained data is not reconstructed. A skipped
+  re-ingest does not retry a previously refused backfill.
+- Large-payload migration memory/time has not been benchmarked.
+- No live legacy download, PR/VD2 import, broad ETS-equivalence or hardware
+  acceptance is claimed. Existing source-bound image guards remain unchanged.
 
-## Already delivered (do not redo)
-
-The G16 diagnostic slice (`b13b0ff9`): the `MissingMaster` refusal names the
-missing master file and CLI usage names `.vd1` without claiming VD1 import.
-
-## Done when
-
-Fresh and re-ingested legacy enumerations expose exact binary values in the
-existing column, with regression and report tests, or the remaining mapping
-blocker is named explicitly. Not in scope: a live legacy download, PR/VD2
-import.
+The earlier G16 diagnostic slice (`b13b0ff9`) is unchanged: the `MissingMaster`
+refusal names the missing master and CLI usage names `.vd1` for inspection only.
 
 ## References
 
 [KL-128](../limitations/KL-128-legacy-product-import-boundaries.md) ·
 [ADR-0094](../adr/0094-legacy-exim-product-files.md) ·
-[VD4 import](../VD4_PRODUCT_DATABASE_IMPORT.md) ·
+[ADR-0141](../adr/0141-placements-and-enumeration-attributes-reach-columns.md) ·
 [history](../history/OPEN_WORK_2026-10-25.md#wp-03--legacy-binary-enumeration-values)

@@ -404,7 +404,9 @@ async fn run(
             Err(err) => failed(&err),
         }
     };
-    on_end(&status);
+    // The settler may save the native project (fsync) while the tunnel is
+    // still open: keep that step off the tunnel's runtime workers (S2-04).
+    crate::tunnel_workers::blocking_off_tunnel_workers(|| on_end(&status));
     *shared.status.lock().expect("programming status poisoned") = status;
     let _ = tunnel.disconnect().await;
 }

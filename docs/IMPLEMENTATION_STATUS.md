@@ -19,7 +19,10 @@ as verification mismatch, final read failure or final write failure, with a clos
 persisted in the journal (envelope version 3), reproduced on reopen and shown through status
 schema 4, report format 3 and the EN/DE panel. Older journals and unclassified stops show
 "unavailable"; the PID 7 diagnostic stays separate. Focused Net, App, server and web proof on
-simulators only; no package or integration gate has run for it, and #30/#22 stays unresolved.
+simulators and loopback only. Independent re-review approved with no open findings;
+feature and integrated 15-stage package gates passed, followed by the real-server smoke.
+Source is published as `309384726` after an exact docs-only upstream delta; #30/#22
+stays unresolved. [Acceptance and revision boundaries](status/2026-10-28-system2-final-step-failure.md#software-acceptance-and-source-delivery).
 [Contract](contracts/system2-download-result.md#final-step-failure).
 
 ## System-2 result and project-belief integration (28 October 2026 source)

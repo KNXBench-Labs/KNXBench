@@ -27,6 +27,8 @@ operation in flight; App journals it (envelope version 3, closed `final_step` re
 replay), reopen and the reports carry it, status schema 4 serves `finalStepFailures`, and
 the panel shows it in EN and DE with an explicit "unavailable" for older journals. Scope,
 grammar and limits: [contract](../contracts/system2-download-result.md#final-step-failure).
-Proven so far by focused Net, App, server and web runs on simulators and intercepted
-HTTP only; the package and integration gates have not been run for this change, and no
-hardware evidence exists.
+Proven by focused Net, App, server and web runs, both 15-stage package gates and the
+isolated built-server smoke. Source `96f41c7f1` is delivered main-first as `309384726`;
+the docs-only upstream delta carries the product acceptance from `8bdc42c7e`, not a new
+product run. [Acceptance and exact boundaries](../status/2026-10-28-system2-final-step-failure.md#software-acceptance-and-source-delivery).
+No hardware evidence exists.

@@ -1,7 +1,9 @@
 # System-2 final-step failure category: focused proof (28 October 2026 source)
 
 Scope and grammar: [contract](../contracts/system2-download-result.md#final-step-failure).
-This note records what ran for the change, and what did not.
+This note preserves the focused pre-gate checkpoints below, followed by the final
+revision-bound software acceptance and source delivery. The earlier full-crate counts
+belong to those focused source revisions, not to the final gated candidate.
 
 ## What ran
 
@@ -24,10 +26,10 @@ This note records what ran for the change, and what did not.
 - Clippy `-D warnings` on `knx-net`, `knx-app`, `knx-server`, `knx-cli`, plus `check-headers`,
   `check-layering` and `check-anchors`.
 
-## What did not run
+## Not run at the focused checkpoint
 
-No package gate, web gate or integration gate; no workspace-wide `cargo test`, no private
-corpus. The browser case was written after the implementation, so it has no recorded
+At this focused checkpoint, no package gate, web gate or integration gate had run;
+there was no workspace-wide `cargo test` or private-corpus run. The browser case was written after the implementation, so it has no recorded
 red run; the unit groups do. No real bus, device or ETS comparison: simulators and
 intercepted HTTP only. #30 and #22 stay unresolved.
 
@@ -58,5 +60,45 @@ Earlier attempts and gaps stay as recorded above; this round fixes the five revi
   including the pointer-observation write in the middle; a Net test covers it and a mutant
   that classifies it fails.
 - Limits: the browser join still uses the public pinned package behind the mounted tests and a
-  loopback simulator; no device, bus or private journal was involved. Package and branch gates
-  have not run.
+  loopback simulator; no device, bus or private journal was involved. Package and branch
+  gates were still pending at this correction checkpoint.
+
+## Software acceptance and source delivery
+
+Feature `96f41c7f16c6190a641fc92a9aaa76f201d5e56d` (reviewed tree `7a1b3831f`)
+is published on main-first delivery `309384726fa33dc39afe54da206122243cc063b1`.
+Independent whole-feature and correction re-review approved with zero open Critical,
+Important or Minor findings. The actual product acceptance remains bound to the feature
+and initial main-first integration `8bdc42c7edfddcff20db78c807fd43d32c569388`:
+
+| Execution | Maintained stages | Rust passed / ignored | Vitest | Default browser | Production devices | Selected corpus |
+| --- | --- | --- | --- | --- | --- | --- |
+| Feature `96f41c7f1` | 15/15 | 3530 / 143 | 4654 | 940 (873 functional / 67 exclusive) | 57 (56 functional / 1 exclusive) | 91/91 |
+| Integration `8bdc42c7e` | 15/15 | 3530 / 143 | 4654 | 940 (873 functional / 67 exclusive) | 57 (56 functional / 1 exclusive) | 91/91 |
+
+These are overlapping executions, not additive unique-test coverage. Each gate finished
+with frozen inputs and checked, unchanged user data. The tool stage registered 466 tests
+with six existing skips; the 143 ignored Rust tests are not claimed executed by
+the ordinary Rust stage. The separate maintained corpus selection passed 91/91.
+
+The source delivery carries the integrated product result through exactly one upstream
+documentation-only change (`8bbd8ea76`, README and community recognition files). A separate
+10-stage docs-delta gate passed on `309384726`. An alternate-index composition check,
+including a mismatching-tree rejection control, proved exact composition; runtime, test,
+build and gate sources stayed byte-identical to the accepted integration. No product run
+is relabelled as execution on the docs-only successor. Local, tracking and live publication
+refs matched after the push.
+
+A real `knx-server` built at `8bdc42c7e` passed isolated-loopback checks for `/healthz`,
+the built frontend, `/api/version` and the empty System-2 status; ordinary SIGTERM ended
+with exit 0 and no listener left. Its version is `0.1.0-alpha.17+g8bdc42c7e`, executable
+SHA-256 `854f8d452938956345a749a0307bc92db35308333bd4392908ff946a0e468c71`.
+The runtime-equivalent later docs merge does not change that artifact identity. This
+smoke is startup/serving/closure evidence, not another device operation or report-join
+proof; the captured-router UI/report join remains the separate correction evidence above.
+
+No release, container deployment, real bus/device trial, hardware recovery or ETS parity
+is claimed. The actual allocation mismatch and per-part source equivalence stay open.
+Retained evidence and the executable/frontend: `<profile>/evidence/alpha18-followups-20261028/`
+(`runtime-branch01`, `runtime-integration01`, `runtime-delta01`, private correction captures
+and `runtime-artifact`).

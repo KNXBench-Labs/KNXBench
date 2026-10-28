@@ -615,6 +615,7 @@ mod download_result {
             code: crate::property_validation::FailureCode::IdentityOrRecovery,
             local_diagnostic: "private text that must never decide anything".into(),
             pointer_failure: None,
+            final_step: None,
         }
     }
 

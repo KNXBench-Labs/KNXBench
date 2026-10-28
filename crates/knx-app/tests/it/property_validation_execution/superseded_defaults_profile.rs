@@ -147,6 +147,7 @@ async fn recovery_is_admitted(version: u32) {
             code: app::FailureCode::Executor,
             local_diagnostic: format!("synthetic existing v{version} operation"),
             pointer_failure: None,
+            final_step: None,
         })
         .unwrap();
     drop(store);

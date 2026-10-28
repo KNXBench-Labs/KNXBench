@@ -175,6 +175,8 @@ struct TestHardware {
     release_write: Notify,
     pid7_fault: Mutex<Option<Pid7Fault>>,
     pid7_reads: Mutex<std::collections::BTreeMap<u8, usize>>,
+    version_fault: Mutex<Option<usize>>,
+    version_reads: AtomicUsize,
     /// Blocks the executor thread once at the first mutation, like a slow
     /// durable checkpoint, and counts another runtime task's ticks meanwhile.
     mutation_stall: Mutex<Option<(Duration, Arc<AtomicUsize>)>>,
@@ -200,6 +202,8 @@ impl TestHardware {
             release_write: Notify::new(),
             pid7_fault: Mutex::new(None),
             pid7_reads: Mutex::default(),
+            version_fault: Mutex::new(None),
+            version_reads: AtomicUsize::new(0),
             mutation_stall: Mutex::new(None),
             stall_ticks: Mutex::new(None),
         })
@@ -208,6 +212,31 @@ impl TestHardware {
     fn arm_pid7(&self, object: u8, index: usize, elements: u8, data: &[u8]) {
         *self.pid7_fault.lock().unwrap() = Some((object, index, elements, data.to_vec()));
         self.pid7_reads.lock().unwrap().clear();
+    }
+    /// Replace every program-version answer of the application object from the `index`-th on
+    /// (counted from this call) with zeros; the prestate read before it stays honest.
+    fn arm_version_lie(&self, index: usize) {
+        *self.version_fault.lock().unwrap() = Some(index);
+        self.version_reads.store(0, Ordering::SeqCst);
+    }
+    fn rewrite_version(&self, service: &mut ApplicationService) {
+        if let ApplicationService::PropertyValueResponse {
+            object_index: 3,
+            property_id: 13,
+            data,
+            ..
+        } = service
+        {
+            let read = self.version_reads.fetch_add(1, Ordering::SeqCst);
+            if self
+                .version_fault
+                .lock()
+                .unwrap()
+                .is_some_and(|from| read >= from)
+            {
+                data.fill(0);
+            }
+        }
     }
     fn disarm_pid7(&self) {
         *self.pid7_fault.lock().unwrap() = None;
@@ -314,9 +343,15 @@ impl TestHardware {
         for index in 0..=sequence {
             let bytes = std::fs::read(journal.join(format!("checkpoint-{index:08}.json"))).unwrap();
             let envelope: Value = serde_json::from_slice(&bytes).unwrap();
-            // Version 2 marks exactly a populated typed failure record.
-            let typed = envelope["checkpoint"].get("pointer_failure").is_some();
-            assert_eq!(envelope["format"], if typed { 2 } else { 1 });
+            // Version 3 marks a populated final-step record, version 2 a PID 7 record.
+            let format = if envelope["checkpoint"].get("final_step").is_some() {
+                3
+            } else if envelope["checkpoint"].get("pointer_failure").is_some() {
+                2
+            } else {
+                1
+            };
+            assert_eq!(envelope["format"], format);
             assert_eq!(envelope["kind"], "knxbench-property-validation-protocol");
             assert_eq!(envelope["sequence"], index);
             assert_eq!(envelope["previous_sha256"], previous);
@@ -506,7 +541,9 @@ impl crate::BusTunnel for TestHardwareTunnel {
     }
     fn subscribe(&self) -> broadcast::Receiver<TunnelEvent> {
         let mut upstream = ManagementTransport::subscribe(self.0.device.as_ref());
-        if self.0.pid7_fault.lock().unwrap().is_none() {
+        if self.0.pid7_fault.lock().unwrap().is_none()
+            && self.0.version_fault.lock().unwrap().is_none()
+        {
             return upstream;
         }
         let (sender, receiver) = broadcast::channel(256);
@@ -516,6 +553,7 @@ impl crate::BusTunnel for TestHardwareTunnel {
                 match upstream.recv().await {
                     Ok(TunnelEvent::Telegram(mut frame)) => {
                         hardware.rewrite_pid7(&mut frame.service);
+                        hardware.rewrite_version(&mut frame.service);
                         if sender.send(TunnelEvent::Telegram(frame)).is_err() {
                             break;
                         }

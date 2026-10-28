@@ -124,6 +124,7 @@ fn property_validation_summary_is_an_allowlist_not_private_receipt_serialization
         [
             "completed_operations",
             "failure_diagnostics",
+            "final_step_failures",
             "format",
             "kind",
             "mutation_possible",
@@ -134,8 +135,9 @@ fn property_validation_summary_is_an_allowlist_not_private_receipt_serialization
     );
     assert_eq!(summary["support"], "STRONG HYPOTHESIS SIMULATOR TESTED");
     assert_eq!(summary["outcome"], "cancelled");
-    assert_eq!(summary["format"], 2);
+    assert_eq!(summary["format"], 3);
     assert_eq!(summary["failure_diagnostics"], serde_json::json!([]));
+    assert_eq!(summary["final_step_failures"], serde_json::json!([]));
 }
 #[test]
 fn property_validation_owner_only_files_and_no_invalid_finish() {

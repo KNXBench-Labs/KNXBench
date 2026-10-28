@@ -6,6 +6,14 @@ This dossier preserves the technical detail and dated history. Earlier
 headings, failures and lifting conditions are historical where later
 updates supersede them; they are not new work assignments.
 
+## 28 October 2026 — browser preparation follow-up
+
+The original 9742/1264 ms production observations below are dated, not a current
+performance guarantee. The [new bounded investigation](../research/2026-10-28-devices-browser-load-sensitivity.md)
+separates development from production and whole-case preparation from the table
+attachment. The unchanged expanded-explorer case is load-sensitive in the dev
+harness; no production regression, runtime fix or native acceptance is claimed.
+
 <!-- BEGIN retained catalogue record -->
 
 ## Devices navigation: local source, current-project links and bounded evidence (2026-10-08)

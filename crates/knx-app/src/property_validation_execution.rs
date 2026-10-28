@@ -4,7 +4,9 @@
 //! `restore_hardware`, which require a device- and operation-specific
 //! [`HardwareRelease`] consent (ADR-0152); the simulator entry is unchanged.
 use crate::{
-    property_validation::{Checkpoint, FailureCode, OperationStore, PointerFailureRecord},
+    property_validation::{
+        Checkpoint, FailureCode, FinalStepRecord, OperationStore, PointerFailureRecord,
+    },
     property_validation_bundle::{
         invalid, PointerObservationRecord, PreparedBundle, RecoveryRecord,
     },
@@ -276,6 +278,7 @@ pub async fn execute_simulated(
                     code: failure_code(&error.failure),
                     local_diagnostic: format!("{error:?}"),
                     pointer_failure: PointerFailureRecord::from_failure(&error.failure),
+                    final_step: FinalStepRecord::from_error(&error, failure_code(&error.failure)),
                 }
             };
             store.checkpoint(checkpoint)?;
@@ -325,6 +328,7 @@ pub async fn restore_simulated(
                 code: failure_code(&error.failure),
                 local_diagnostic: format!("{error:?}"),
                 pointer_failure: PointerFailureRecord::from_failure(&error.failure),
+                final_step: FinalStepRecord::from_error(&error, failure_code(&error.failure)),
             })?;
             Err(invalid(
                 "explicit restore failed; original recovery retained, no automatic retry",
@@ -412,6 +416,7 @@ pub(crate) async fn execute_hardware_inner<T: ManagementTransport>(
                     code: failure_code(&error.failure),
                     local_diagnostic: format!("{error:?}"),
                     pointer_failure: PointerFailureRecord::from_failure(&error.failure),
+                    final_step: FinalStepRecord::from_error(&error, failure_code(&error.failure)),
                 }
             };
             store.checkpoint(checkpoint)?;
@@ -508,6 +513,7 @@ pub(crate) async fn restore_hardware_inner<T: ManagementTransport>(
                 code: failure_code(&error.failure),
                 local_diagnostic: format!("{error:?}"),
                 pointer_failure: PointerFailureRecord::from_failure(&error.failure),
+                final_step: FinalStepRecord::from_error(&error, failure_code(&error.failure)),
             })?;
             Err(invalid(
                 "explicit restore failed; original recovery retained, no automatic retry",

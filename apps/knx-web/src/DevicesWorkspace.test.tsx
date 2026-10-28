@@ -275,7 +275,7 @@ tableColumnSmoke([["devices", 13]], async () => { await render(); return { host 
 // Issue #31: a retained System-2 run explains the pending marks without touching them.
 const bound: ProjectTree = { ...tree, project_incarnation: 4 };
 const failedRun = {
-  schemaVersion: 3, failureDiagnostics: [], downloadResult: "transferCompleteVerificationUnfinished", operationId: "a".repeat(32),
+  schemaVersion: 4, failureDiagnostics: [], finalStepFailures: [], downloadResult: "transferCompleteVerificationUnfinished", operationId: "a".repeat(32),
   binding: { serverIncarnation: "table-test", projectIncarnation: "4", projectRevision: "1", deviceId: 2 }, address: "1.1.2", deviceName: "Device 2",
   state: "failed", completedSteps: 26, totalSteps: 27, backupAvailable: true, recoveryPhrase: null, downloadPhrase: null, releasePhrase: null,
   message: null, refusal: null, mutationMayHaveStarted: true, prestateDiffers: false, pointerObservations: [], programVersionObservation: null,

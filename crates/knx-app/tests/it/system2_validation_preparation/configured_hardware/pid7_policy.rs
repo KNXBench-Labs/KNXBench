@@ -35,6 +35,10 @@ enum Fault {
     Memory,
     LoadState,
     ProgramVersion,
+    /// Silence instead of an answer: the final memory reads and the Verify Mode write
+    /// are swallowed, so the session times out.
+    MemorySilent,
+    ControlWriteSilent,
 }
 impl ManagementTransport for Rewriting<'_> {
     fn assigned_address(&self) -> IndividualAddress {
@@ -136,6 +140,26 @@ impl ManagementTransport for Rewriting<'_> {
             }
             _ => {}
         }
+        if self.final_phase.load(Ordering::SeqCst) {
+            let silent = matches!(
+                (&service, self.fault),
+                (
+                    ApplicationService::MemoryRead { .. }
+                        | ApplicationService::UserMemoryRead { .. },
+                    Some(Fault::MemorySilent)
+                ) | (
+                    ApplicationService::PropertyValueWrite {
+                        object_index: 0,
+                        property_id: 14,
+                        ..
+                    },
+                    Some(Fault::ControlWriteSilent)
+                )
+            );
+            if silent {
+                return Ok(());
+            }
+        }
         ManagementTransport::send_frame(self.device, destination, transport, service).await
     }
 }
@@ -234,6 +258,14 @@ impl Run {
             .to_string()
     }
     async fn restore(&self, rewrite: Option<Rewrite>) -> std::io::Result<()> {
+        self.restore_with_fault(rewrite, None).await
+    }
+    /// A restore whose final phase lies or goes silent, to fail the recovery's own final step.
+    async fn restore_with_fault(
+        &self,
+        rewrite: Option<Rewrite>,
+        fault: Option<Fault>,
+    ) -> std::io::Result<()> {
         let mut store = self.store();
         let phrase = self.bundle.restore_phrase();
         let download = required_confirmation_phrase(self.device.address(), WriteScope::Download);
@@ -245,7 +277,9 @@ impl Run {
             download: &download,
             risk: &release,
         };
-        let transport = rewriting(&self.device, &BTreeMap::new(), rewrite);
+        let mut transport = rewriting(&self.device, &BTreeMap::new(), rewrite);
+        transport.fault = fault;
+        transport.objects = self.totals.len();
         restore_project_hardware(
             &transport,
             &self.bundle,
@@ -1269,4 +1303,5 @@ async fn refusals_after_mutation_in_both_phases_stop_hard_with_the_original_back
     }
 }
 
+mod final_step_diagnostic;
 mod pid7_failure_diagnostic;

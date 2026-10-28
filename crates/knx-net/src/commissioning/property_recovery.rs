@@ -6,6 +6,7 @@
 
 use std::collections::BTreeMap;
 
+use super::final_step::{FinalStepError, FinalStepStage};
 use super::pointer_width::{
     PointerWidthAdmission, PointerWidthRefusal, PointerWidthRefusalReason, PropertyPointerValue,
 };
@@ -468,8 +469,11 @@ impl PropertyRecoverySnapshot {
         &self,
         session: &mut ManagementSession<'_, T>,
         executed_plan: &PropertyDownloadPlan,
-    ) -> Result<Vec<PropertyPointerObservation>, PropertySimulationFailure> {
-        let limit = session.write_limit(None).await?;
+    ) -> Result<Vec<PropertyPointerObservation>, FinalStepError> {
+        let limit = session
+            .write_limit(None)
+            .await
+            .map_err(FinalStepError::read(FinalStepStage::Limit))?;
         for (index, allocation) in self.allocations.iter().enumerate() {
             let mut expected = allocation.data.clone();
             let mut written = vec![false; expected.len()];
@@ -489,7 +493,9 @@ impl PropertyRecoverySnapshot {
                     }
                 }
             }
-            let actual = read_region(session, allocation.address, &expected, limit).await?;
+            let actual = read_region(session, allocation.address, &expected, limit)
+                .await
+                .map_err(FinalStepError::read(FinalStepStage::Allocation))?;
             let differs = if self.unreadable_allocations.contains(&index) {
                 // No captured prestate predicts the unwritten bytes; never guess them.
                 actual
@@ -501,7 +507,8 @@ impl PropertyRecoverySnapshot {
                 actual != expected
             };
             if differs {
-                return Err(invalid(
+                return Err(FinalStepError::mismatch(
+                    FinalStepStage::Allocation,
                     "full allocation verification differs, including preserved/unwritten bytes",
                 ));
             }
@@ -509,11 +516,19 @@ impl PropertyRecoverySnapshot {
         let mut observations = Vec::new();
         for expected in &self.preconditions.source_pointers {
             let object = ObjectIndex::new(expected.object);
-            if session.read_load_state(object).await? != LoadState::Loaded {
-                return Err(invalid("final resource state is not Loaded"));
+            let state = session
+                .read_load_state(object)
+                .await
+                .map_err(FinalStepError::read(FinalStepStage::LoadedState))?;
+            if state != LoadState::Loaded {
+                return Err(FinalStepError::mismatch(
+                    FinalStepStage::LoadedState,
+                    "final resource state is not Loaded",
+                ));
             }
-            let observed =
-                read_pointer(session, object, &self.preconditions.pointer_widths).await?;
+            let observed = read_pointer(session, object, &self.preconditions.pointer_widths)
+                .await
+                .map_err(FinalStepError::read(FinalStepStage::Pointer))?;
             if self.pointer_needs_observation(expected.object, &expected.value, observed) {
                 observations.push(PropertyPointerObservation {
                     object: expected.object,
@@ -526,13 +541,15 @@ impl PropertyRecoverySnapshot {
         // Interrupted current application identity may be absent at recovery start,
         // but a successful full replay must have reinstated the captured identity.
         // Do not seed/write a guessed identity outside the declared procedure.
-        if session
+        let version = session
             .read_property(ObjectIndex::new(3), PID_PROGRAM_VERSION, 1, 1)
-            .await?
-            .as_slice()
-            != self.preconditions.program_version
-        {
-            return Err(invalid("final application identity differs from captured program version; recovery remains unverified"));
+            .await
+            .map_err(FinalStepError::read(FinalStepStage::ProgramVersion))?;
+        if version.as_slice() != self.preconditions.program_version {
+            return Err(FinalStepError::mismatch(
+                FinalStepStage::ProgramVersion,
+                "final application identity differs from captured program version; recovery remains unverified",
+            ));
         }
         Ok(observations)
     }
@@ -542,10 +559,13 @@ impl PropertyRecoverySnapshot {
     pub(crate) async fn restore_verify_mode<T: ManagementTransport>(
         &self,
         session: &mut ManagementSession<'_, T>,
-    ) -> Result<(), PropertySimulationFailure> {
+    ) -> Result<(), FinalStepError> {
         // A bounded setup lifecycle, not an automatic recovery of load state or
         // memory on failure. Preserve unrelated *current* PID14 bits.
-        let current = session.read_device_control().await?;
+        let current = session
+            .read_device_control()
+            .await
+            .map_err(FinalStepError::read(FinalStepStage::VerifyModeRead))?;
         let wanted = knx_core::commissioning::properties::with_verify_mode(
             current,
             knx_core::commissioning::properties::verify_mode_active(self.old_device_control),
@@ -557,9 +577,17 @@ impl PropertyRecoverySnapshot {
                 vec![wanted],
                 knx_core::commissioning::mutation::WriteScope::Download,
             )
-            .await?;
-        if session.read_device_control().await? != wanted {
-            return Err(invalid("prior VerifyMode bit did not restore"));
+            .await
+            .map_err(FinalStepError::write(FinalStepStage::VerifyModeWrite))?;
+        let readback = session
+            .read_device_control()
+            .await
+            .map_err(FinalStepError::read(FinalStepStage::VerifyModeReadback))?;
+        if readback != wanted {
+            return Err(FinalStepError::mismatch(
+                FinalStepStage::VerifyModeReadback,
+                "prior VerifyMode bit did not restore",
+            ));
         }
         Ok(())
     }

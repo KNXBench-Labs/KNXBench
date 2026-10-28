@@ -1,8 +1,8 @@
 //! Typed PID 7 failure facts through the real worker, private journal, restart and status v3.
 use super::*;
 
-/// The complete status v3 key set: version 1 keys plus `failureDiagnostics`.
-const STATUS_KEYS: [&str; 25] = [
+/// The complete status v4 key set: version 1 keys plus the typed failure lists and the result.
+const STATUS_KEYS: [&str; 26] = [
     "schemaVersion",
     "operationId",
     "binding",
@@ -23,6 +23,7 @@ const STATUS_KEYS: [&str; 25] = [
     "pointerObservations",
     "programVersionObservation",
     "failureDiagnostics",
+    "finalStepFailures",
     "downloadResult",
     "restoreAttempted",
     "downloadCompletedSteps",
@@ -99,7 +100,7 @@ fn checked_raw(raw: &str, operation: &Path, raws: &[&str]) -> (Value, String) {
     let mut expected: Vec<_> = STATUS_KEYS.iter().map(|k| k.to_string()).collect();
     expected.sort();
     assert_eq!(keys, expected);
-    assert_eq!(status["schemaVersion"], 3);
+    assert_eq!(status["schemaVersion"], 4);
     (status, raw.to_owned())
 }
 /// Like `settled`, with a wider budget: a debug-build restore under load can outlast 10 s
@@ -223,7 +224,7 @@ async fn download_and_restore_refusals_reach_status_v2_across_restarts() {
     let preview = prepare(&router, device).await;
     let accepted_raw = raw_http(&router, "/api/device-system2/start", Some(start(&preview))).await;
     let accepted: Value = serde_json::from_str(&accepted_raw).unwrap();
-    assert_eq!(accepted["schemaVersion"], 3);
+    assert_eq!(accepted["schemaVersion"], 4);
     assert_eq!(
         accepted["failureDiagnostics"],
         json!([]),
@@ -399,4 +400,86 @@ async fn a_new_operation_and_selection_never_transfer_a_diagnosis() {
     assert_eq!(status["operationId"], a_id.as_str());
     assert_eq!(status["state"], "failed");
     assert_eq!(status["failureDiagnostics"], a_diagnosis);
+}
+
+#[tokio::test]
+#[ignore = "requires digest-pinned public package; set KNXBENCH_PUBLIC_UP258; no network or hardware"]
+async fn a_final_step_failure_reaches_status_report_and_reopen_per_run() {
+    let Fixture {
+        directory: temp,
+        hardware,
+        state,
+        router,
+        device,
+    } = fixture().await;
+    let (directory, hardware) = (temp.path(), &hardware);
+    // The download's final program-version read (the second one) disagrees with the plan.
+    let preview = prepare(&router, device).await;
+    hardware.arm_version_lie(1);
+    let accepted = http(
+        &router,
+        "/api/device-system2/start",
+        Some(start(&preview)),
+        200,
+    )
+    .await;
+    assert_eq!(
+        accepted["finalStepFailures"],
+        json!([]),
+        "a new operation starts empty"
+    );
+    let operation_id = accepted["operationId"].as_str().unwrap().to_owned();
+    let operation = operation_dir(directory, &operation_id);
+    settled_slow(&state, &router, "failed").await;
+    let download =
+        json!({"run":"download","category":"verificationMismatch","stage":"programVersion"});
+    let (failed, failed_raw) = checked_raw(&raw_status(&router).await, &operation, &[]);
+    capture("final-failed.json", &failed_raw);
+    assert_eq!(failed["finalStepFailures"], json!([download]));
+    assert_eq!(
+        failed["failureDiagnostics"],
+        json!([]),
+        "no pointer fact is invented"
+    );
+    assert_eq!(
+        failed["downloadResult"],
+        "transferCompleteVerificationUnfinished"
+    );
+    let journal = operation.join("journal");
+    let private = last_checkpoint(&journal);
+    assert_eq!(private["format"], 3);
+    assert_eq!(
+        private["checkpoint"]["final_step"],
+        json!({"category":"verificationMismatch","stage":"programVersion"})
+    );
+    // The shareable report route projects the same typed fact and leaks no private text.
+    let report_raw = raw_http(
+        &router,
+        &format!("/api/device-system2/report?operationId={operation_id}"),
+        None,
+    )
+    .await;
+    capture("final-report.json", &report_raw);
+    let report: Value = serde_json::from_str(&report_raw).unwrap();
+    assert_eq!(report["format"], 3);
+    assert_eq!(report["finalStepFailures"], json!([download]));
+    for forbidden in [
+        "local_diagnostic",
+        "final_step",
+        "Recovery(",
+        "application identity",
+        operation_id.as_str(),
+    ] {
+        assert!(!report_raw.contains(forbidden), "report leaks {forbidden}");
+    }
+    state.catalogue_jobs.close_admission_and_request_stop();
+    drop(router);
+    drop(state);
+    // A restart reads the same fact from the journal alone.
+    let fresh = self::state(directory, None, hardware);
+    let router = crate::app(fresh, None);
+    let (reopened, reopened_raw) = checked_raw(&raw_status(&router).await, &operation, &[]);
+    capture("final-reopened.json", &reopened_raw);
+    assert_eq!(reopened["state"], "failed");
+    assert_eq!(reopened["finalStepFailures"], json!([download]));
 }

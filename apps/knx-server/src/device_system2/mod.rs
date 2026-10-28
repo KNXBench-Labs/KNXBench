@@ -62,6 +62,7 @@ fn initial(outcome: LocalOutcome) -> OperationProgress {
         pointer_observations: Vec::new(),
         program_version_observation: None,
         failure_diagnostics: Vec::new(),
+        final_step_failures: Vec::new(),
         download: DownloadFacts {
             result: DownloadResult::InProgress,
             outcome,
@@ -197,6 +198,7 @@ impl Record {
                 },
             ),
             failure_diagnostics: p.failure_diagnostics,
+            final_step_failures: p.final_step_failures,
             download_result,
             restore_attempted: p.restore_attempted,
             download_completed_steps: p.download.completed_steps,

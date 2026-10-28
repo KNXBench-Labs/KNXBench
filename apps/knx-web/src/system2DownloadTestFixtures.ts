@@ -1,5 +1,5 @@
 /** Public, synthetic System-2 transport witnesses. */
-import type { System2FailureDiagnostic, System2Preview, System2Status, System2StatusWireV1 } from "./system2DownloadApi";
+import type { System2FailureDiagnostic, System2FinalStepFailure, System2Preview, System2Status, System2StatusWireV1 } from "./system2DownloadApi";
 export const preview: System2Preview = {
   schemaVersion: 1, preparationId: "a".repeat(32),
   binding: { serverIncarnation: "server", projectIncarnation: "1", projectRevision: "2", deviceId: 10 },
@@ -10,7 +10,7 @@ export const preview: System2Preview = {
   hypothesisPhrase: "Accept experimental hypothesis", downloadPhrase: "Download configured plan", releasePhrase: "Accept best effort",
 };
 export const status: System2Status = {
-  schemaVersion: 3, failureDiagnostics: [], downloadResult: "inProgress", restoreAttempted: false, downloadCompletedSteps: 0, downloadTotalSteps: null, projectSettlement: "notRecorded", operationId: "d".repeat(32), binding: preview.binding, address: preview.address, deviceName: preview.deviceName,
+  schemaVersion: 4, failureDiagnostics: [], finalStepFailures: [], downloadResult: "inProgress", restoreAttempted: false, downloadCompletedSteps: 0, downloadTotalSteps: null, projectSettlement: "notRecorded", operationId: "d".repeat(32), binding: preview.binding, address: preview.address, deviceName: preview.deviceName,
   state: "running", completedSteps: 0, totalSteps: null, backupAvailable: false, recoveryPhrase: null, downloadPhrase: null, releasePhrase: null, message: null, refusal: null,
   mutationMayHaveStarted: false, prestateDiffers: false, pointerObservations: [], programVersionObservation: null, prestateUnreadableAllocations: [],
 };
@@ -39,13 +39,18 @@ export const unreadableStatus: System2Status = {
 };
 /** The exact pre-diagnostic wire keyset: no `failureDiagnostics`, schema version 1. */
 export function wireV1(row: System2Status): System2StatusWireV1 {
-  const { failureDiagnostics: _omitted, downloadResult: _result, restoreAttempted: _r, downloadCompletedSteps: _c, downloadTotalSteps: _t, projectSettlement: _s, ...rest } = row;
+  const { failureDiagnostics: _omitted, finalStepFailures: _final, downloadResult: _result, restoreAttempted: _r, downloadCompletedSteps: _c, downloadTotalSteps: _t, projectSettlement: _s, ...rest } = row;
   return { ...rest, schemaVersion: 1 };
 }
 /** The exact version-2 wire keyset: diagnostics, no `downloadResult`. */
 export function wireV2(row: System2Status) {
-  const { downloadResult: _result, restoreAttempted: _r, downloadCompletedSteps: _c, downloadTotalSteps: _t, projectSettlement: _s, ...rest } = row;
+  const { downloadResult: _result, restoreAttempted: _r, downloadCompletedSteps: _c, downloadTotalSteps: _t, projectSettlement: _s, finalStepFailures: _f, ...rest } = row;
   return { ...rest, schemaVersion: 2 as const };
+}
+/** The exact version-3 wire keyset: result and settlement, no `finalStepFailures`. */
+export function wireV3(row: System2Status) {
+  const { finalStepFailures: _final, ...rest } = row;
+  return { ...rest, schemaVersion: 3 as const };
 }
 // Closed-reason, typed pointer-width observations (S2-01); one per run at most.
 export const downloadDiagnostic: System2FailureDiagnostic = { run: "download", reason: "unsupportedWidth", object: 3, propertyId: 7, elements: 1, octets: 3 };
@@ -56,4 +61,14 @@ export const downloadFailedStatus: System2Status = {
 };
 export const restoreFailedStatus: System2Status = {
   ...recoveryStatus, state: "restoreFailed", failureDiagnostics: [downloadDiagnostic, restoreDiagnostic],
+};
+// Closed final-step (Disconnect) failures: category and stage only, at most one per run.
+export const finalDownloadMismatch: System2FinalStepFailure = { run: "download", category: "verificationMismatch", stage: "allocation" };
+export const finalDownloadRead: System2FinalStepFailure = { run: "download", category: "readFailed", stage: "pointer" };
+export const finalDownloadWrite: System2FinalStepFailure = { run: "download", category: "writeFailed", stage: "verifyModeWrite" };
+export const finalRestoreRead: System2FinalStepFailure = { run: "restore", category: "readFailed", stage: "loadedState" };
+/** A transfer that completed and stopped inside the final step, as the v4 server reports it. */
+export const finalStepStatus: System2Status = {
+  ...status, state: "failed", completedSteps: 26, totalSteps: 27, mutationMayHaveStarted: true, downloadResult: "transferCompleteVerificationUnfinished",
+  downloadCompletedSteps: 26, downloadTotalSteps: 27, projectSettlement: "persisted", finalStepFailures: [finalDownloadMismatch],
 };

@@ -18,6 +18,12 @@ const active = (s: api.System2Status | null) => s?.state === "running" || s?.sta
 // Only the server's confirmed "no mutation could have started" earns the nothing-written text.
 const nothingWritten = (s: api.System2Status) => (s.state === "failed" || s.state === "cancelled") && !s.mutationMayHaveStarted;
 // Only a failed run without typed metadata earns "not available"; nothing is inferred from message or refusal.
+// The download's final-step cause belongs only to a transfer that stopped inside the final step;
+// a recovery's own cause is shown when present and never attributed to the download.
+const unfinishedVerification = (s: api.System2Status) => s.downloadResult === "transferCompleteVerificationUnfinished";
+const finalStep = (s: api.System2Status, run: "download" | "restore") =>
+  run === "download" && !unfinishedVerification(s) ? undefined : s.finalStepFailures.find((f) => f.run === run);
+const finalStepVisible = (s: api.System2Status) => unfinishedVerification(s) || finalStep(s, "restore") !== undefined;
 const unavailableRun = (s: api.System2Status): "download" | "restore" | null =>
   s.state === "failed" ? "download" : s.state === "restoreFailed" ? "restore" : null;
 function sameTarget(a: { binding: api.System2Binding; address: string }, b: { binding: api.System2Binding; address: string }) {
@@ -239,6 +245,17 @@ export default function System2DownloadPanel({ project, deviceId, gateway, enabl
       {!active(status) && <section data-system2-result aria-label={t("system2.result.heading")}>
         <p data-system2-result-text data-system2-download-result={status.downloadResult}><strong>{t("system2.result.heading")}:</strong> {t(`system2.result.${status.downloadResult === "inProgress" ? "unknown" : status.downloadResult}`)}</p>
         <p>{t("system2.result.note")}</p>
+        {finalStepVisible(status) && <section data-system2-final-steps aria-label={t("system2.finalStep.heading")}>
+          <h5>{t("system2.finalStep.heading")}</h5><p>{t("system2.finalStep.note")}</p>
+          <ul>
+            {(["download", "restore"] as const).map((run) => {
+              const f = finalStep(status, run);
+              if (f) return <li key={run} data-system2-final-step={run} data-system2-final-category={f.category} data-system2-final-stage={f.stage}>
+                {t(`system2.finalStep.${run}`, { category: t(`system2.finalStep.category.${f.category}`), stage: t(`system2.finalStep.stage.${f.stage}`) })}</li>;
+              return run === "download" && unfinishedVerification(status) ? <li key={run} data-system2-final-step-unavailable={run}>{t("system2.finalStep.unavailable")}</li> : null;
+            })}
+          </ul>
+        </section>}
         <p data-system2-settlement={status.projectSettlement}><strong>{t("system2.settlement.heading")}:</strong> {t(`system2.settlement.${status.projectSettlement}`)}</p>
         {status.restoreAttempted && <p data-system2-download-counts>{status.downloadTotalSteps === null ? t("system2.downloadCountsUnknown", { done: status.downloadCompletedSteps }) : t("system2.downloadCounts", { done: status.downloadCompletedSteps, total: status.downloadTotalSteps })}</p>}
         <button type="button" data-system2-report-save disabled={pending} onClick={() => void saveReport()}>{t("system2.report.save")}</button>

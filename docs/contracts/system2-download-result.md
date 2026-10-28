@@ -31,7 +31,8 @@ verification, the final Loaded-state and program-version reads, and the last wri
 (restoring Verify Mode). A failure while it is active is therefore **not** proof of a
 verification *mismatch*: a read timeout or the final write can end it the same way.
 The value claims exactly "transfer steps completed, final verification step did not
-finish". It never claims a loaded device. All steps finished without a `Finished`
+finish"; the [final-step failure](#final-step-failure) below says which of the step's own
+operations stopped, when Net could say so. It never claims a loaded device. All steps finished without a `Finished`
 checkpoint is `unknown`, never `verified`. The value is frozen when the download
 ends (or when a restore starts) so a later restore does not rewrite it, and it
 is recomputed identically when a journal is reopened. A journal that predates the
@@ -40,6 +41,59 @@ fields still replays; facts it cannot prove stay `unknown`.
 The server publishes `DownloadResult::settled`: `verified` only beside a finished
 outcome, never `nothingWritten` beside a possible write, and `inProgress` while a
 task is live whatever the journal already says.
+
+## Final-step failure
+
+Net classifies a stop at the place it arises, from the operation in flight, never from a
+message, a Debug string or a completed-step label. `PropertySimulationError.final_step`
+(`FinalStepFailure { kind, stage }`, closed, payload-free) is set only when the executor's
+last `Disconnect` step fails in its own verification or Verify Mode restore. Every other
+stop in that step (a durable-journal failure anywhere inside it, including the
+pointer-observation write between the verification and the Verify Mode write; cancellation
+before it starts) and every stop in an earlier step leaves it `None`.
+
+The step runs, in this order: maximum-APDU read, full-allocation memory reads and
+comparison, per object the Loaded-state read and compare and the table-reference read, the
+program-version read and compare, Device Control read, the Verify Mode write, the Device
+Control read-back. The stages and the only combinations Net produces:
+
+| Category (`category`) | Stages (`stage`) |
+|---|---|
+| `verificationMismatch` (a completed read disagreed) | `allocation`, `loadedState`, `programVersion`, `verifyModeReadback` |
+| `readFailed` (an operation that reads gave no usable answer: timeout, refusal, short answer, undecodable value, refused PID 7 width) | `limit`, `allocation`, `loadedState`, `pointer`, `programVersion`, `verifyModeRead`, `verifyModeReadback` |
+| `writeFailed` (the Verify Mode write, including its own acknowledged read-back, did not complete) | `verifyModeWrite` |
+
+The category is about the operation in flight, not about a cause: a `readFailed` does not
+say whether the device was silent or refused, and a `verificationMismatch` does not say why
+the device differs. It does not solve #30/#22, does not show that a device holds the
+requested configuration, and implies no hardware or ETS equivalence.
+
+Journal: `Failed` and `RestoreFailed` gain an optional `final_step` object (`category`,
+`stage`; closed keys, camelCase values), omitted when absent. Envelope version 3 marks
+exactly a populated record (version 2 stays a populated PID 7 record alone, version 1 the
+rest); a reader that knows only versions 1 and 2 refuses it instead of dropping it, and an
+explicit `null` is refused. Replay refuses: a stage that does not fit the category, a
+failure code that contradicts the category (mismatch needs `identity_or_recovery`, write
+needs `executor`, read either), a PID 7 record beside a final-step record unless it is the
+final `pointer` read, a record while the final step is not the started, last, uncompleted
+step of a plan ending in `Disconnect`, and a second record for the same run. Old journals
+carry no record and reopen with an empty list; nothing is backfilled from
+`local_diagnostic`.
+
+Projection: `OperationProgress.final_step_failures` lists at most one `{run, category,
+stage}` per run, download first. `run` comes from the checkpoint variant. The download
+entry is frozen with the download facts and survives a later restore; a restore adds its
+own and never relabels the download's. Status schema 4 adds `finalStepFailures` (status
+clients accept exact versions 1 to 4; 1 to 3 normalize to an empty list, a body of version
+3 or older that carries the key is refused, version 4 requires it). Report format 3 of
+`knxbench-system2-download-summary` and of `knxbench-property-validation-summary` adds the
+same list. A download with `transferCompleteVerificationUnfinished` and no entry shows
+"unavailable" in the panel: an older journal or an uncertain case, never a guessed cause.
+
+Tested on the Net executor with hardware-kind and simulator transports only: all three
+categories, every stage, a failed restore, and early errors that must stay unclassified;
+on the App journal with reopen and contradiction refusals; on the mounted server worker,
+route and restart with the public package; and in the browser ([focused proof and its limits](../status/2026-10-28-system2-final-step-failure.md)). No real bus or device was contacted.
 
 ## Download versus recovery
 
@@ -51,13 +105,13 @@ reopened journal reproduces both. Nothing shows the historical download as a cur
 success after any recovery attempt: the device then holds the recovery's outcome, never
 the requested configuration.
 
-## Status schema 3
+## Status schema 3 (schema 4 adds `finalStepFailures`)
 
 `GET /api/device-system2/status` (and every route returning the same view) moves to
 `schemaVersion: 3` and adds `downloadResult`, `restoreAttempted`,
 `downloadCompletedSteps`, `downloadTotalSteps` and `projectSettlement`. When
 `restoreAttempted` is true, `state`, `completedSteps` and `totalSteps` are the recovery's;
-the download keeps its own counters. The web client accepts exact versions 1, 2 and 3;
+the download keeps its own counters. The web client accepts exact versions 1, 2, 3 and 4 (4 requires `finalStepFailures`);
 older wires normalize to `downloadResult: "unknown"`, no recovery, `notRecorded`. A
 `downloadResult` key on a version-2 body is refused, and a failed or cancelled run
 claiming `verified` is refused. `projectSettlement` is `notRecorded`, `noMutation`,
@@ -112,11 +166,12 @@ absent; the retained journal remains the evidence.
 ## Report
 
 `GET /api/device-system2/report?operationId=<id>` returns the distinct kind
-`knxbench-system2-download-summary`, format 2: `format`, `kind`, `support`, `evidence`
+`knxbench-system2-download-summary`, format 3 (format 2 before the final-step list): `format`, `kind`, `support`, `evidence`
 (`local-journal-only`), `download` (`outcome`, `result`, `completedSteps`, `totalSteps`),
 `recovery` (`null`, or `outcome`, `completedSteps`, `totalSteps`), `mutationPossible`,
 `prestateDiffers`, `failureDiagnostics` (the typed list of the
-[safe failure diagnostic](system2-safe-failure-diagnostic.md)), `executionBuild` and
+[safe failure diagnostic](system2-safe-failure-diagnostic.md)), `finalStepFailures` (format 3),
+`executionBuild` and
 `exporterBuild`. The ordinary download report (`knxbench-download-report`) is
 not reused: its restart and per-block verification semantics differ. This endpoint
 is a distinct journal-fact summary, also separate from the existing
@@ -140,6 +195,9 @@ teardown that failed) does not lock the retained evidence away. Other refusals:
 evidence; no result is guessed). A malformed or missing id is HTTP 400. A retained
 operation with neither a journal nor an observed record cannot prove that nothing was
 written: it reports `mutationPossible: true` and result `unknown`.
+
+The web report decoder accepts exactly format 3 (it refuses format 2, as it refused format 1
+before); the list must be present.
 
 The panel saves the report as a local file and tells the user to review it and email
 it to issue@knxbench.com. The report is experimental evidence, not a compatibility claim.
@@ -175,8 +233,8 @@ broken by it, without changing what "pending only" means. The explorer dot is un
 - Retained operations from before a server restart carry another server incarnation: they
   show in the System-2 panel and report, not in the device table.
 - Only the currently selected operation feeds the table (one status read).
-- The mismatch/timeout split inside the final step needs a typed Net failure and a
-  journal field; not done. #30's actual allocation mismatch stays unresolved.
+- The final-step category names the operation that stopped, not its cause. #30's actual
+  allocation mismatch stays unresolved.
 - A verified run clears the memory beliefs only when the whole preparation is still equal;
   otherwise they stay pending (conservative, documented above).
 - No hardware evidence. Tests use journals built on the public synthetic fixture,

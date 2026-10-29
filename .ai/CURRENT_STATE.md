@@ -1,19 +1,24 @@
 # Restart snapshot
 
-## Alpha 18 release freeze (ACTIVE, observed 2026-10-29 00:19 CET)
-- Release owner: this WebUI; source cutoff `bb2d8e51efcbd029034c694ab4da9638f80961ee`.
-- Freeze `0b8d80278` is published; prerequisite delivery and local retirement verified.
-- Candidate branch `release/a18-prep-20261028`, tree `<sources>/knxbench-a18-release-20261028`;
-  app versions `0.1.0-alpha.18`; native/model16 unchanged, productdb28->30.
-- `main` stays release-frozen for code until the tag is published. Other packages stay local;
-  no branch/main pushes by other tracks. Later work belongs to the next release.
-- Reader/version review found one stale Docker pin and two disclosure/date defects; corrected.
-- Tooling/anchors preflight green; full acceptance has not run. No hardware/real-bus access.
-- Historical111-file restoration permission unanswered: no copy restored; two pinned opt-ins
-  NOT RUN. Other acceptance remains GO; do not call omissions a complete release gate.
-- Next: commit corrected candidate, full repository gate plus release extras, packaging dry runs.
-- STOP before tag, GitHub release or Docker publication: explicit owner GO still required.
-- Evidence `<profile>/evidence/a18-release-20261028/`; root/user data preserved.
+## Alpha 18 release (TAG/MAIN PUBLISHED, observed 2026-10-29 04:36 CET)
+- Release freeze: released by alpha18-release. `v0.1.0-alpha.18` and main were atomically
+  published at accepted `80386a154231f327d60ba0d89f1ba6fa2719f137`; prerelease/body read back.
+- Other tracks may publish again; later source belongs to the next alpha. Never move the tag.
+- Source cutoff `bb2d8e51e`; versions alpha18, native/model16, productdb28->30.
+- Accepted scope: package10/web89, Rust7196/238ignored, Vitest4654, fixture951, production567,
+  corpus155/155 in9targets; extras browser49/native-edit24/product15 (overlapping executions).
+- One private count-verifier refusal remains retained; exact inventory proof +bounded2-stage
+  continuation accepted unchanged source, not a replay or rewritten original full gate.
+- Both historical pinned opt-ins1/1 passed after owner permission; copy removed verifiably,
+  no manufacturer payloads or detailed corpus outputs committed/uploaded. No missing opt-ins.
+- Dry runs40787068737/40787068747 success with publish skipped. Real tag runs AppImage/MCP
+  40812340080 and Docker amd64+arm64 40812340107 are building/publishing; external verification
+  remains pending. Do not equate a visible release with complete artifact delivery.
+- Release owner GO: public download/hash/registry readback and isolated artifact smokes,
+  docs-only closeout and exact owned cleanup. Owner's running container must stay untouched.
+- Evidence `<profile>/evidence/a18-release-20261028/`; root/foreign work preserved.
+- Next: finish actual tag producers, verify public bytes/revisions and isolated migration,
+  publish sanitized final receipt and retire own work. No real bus or desktop takeover.
 
 ## Alpha 18 follow-ups 1 + 2 (DELIVERED, RETIRED; observed 2026-10-28 23:01 CET)
 - Owner's root checkpoint records final closeout; source delivery is verified on the cutoff.

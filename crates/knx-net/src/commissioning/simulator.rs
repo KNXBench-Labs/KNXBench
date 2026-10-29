@@ -831,6 +831,12 @@ pub enum Seen {
         /// (MP §3.7.1.2.2, p. 81).
         data: Vec<u8>,
     },
+    /// A description request; independent of property-value reads.
+    PropertyDescriptionRead {
+        object_index: u8,
+        property_id: u8,
+        property_index: u8,
+    },
     /// Anything else, by name.
     Other(&'static str),
 }
@@ -1020,6 +1026,7 @@ struct State {
     /// 7 stores and §7.4 compares.
     mcb: HashMap<u8, Vec<u8>>,
     properties: HashMap<(u8, u8), Vec<u8>>,
+    descriptions: HashMap<(u8, u8), (u8, [u8; 4])>,
     memory: HashMap<u32, u8>,
     seen: Vec<Seen>,
     /// Where [`SimulatorConfig::serial_number_holder`] currently stands.
@@ -1153,6 +1160,7 @@ impl SimulatedDevice {
             task_controls_2: HashMap::new(),
             allocation_attempts: HashMap::new(),
             mcb: HashMap::new(),
+            descriptions: HashMap::new(),
             properties,
             memory,
             seen: Vec::new(),
@@ -1214,6 +1222,19 @@ impl SimulatedDevice {
         self.lock()
             .properties
             .insert((object_index, property_id), data.to_vec());
+    }
+
+    /// Seeds independent description evidence, never metadata inferred from property values.
+    pub fn preset_property_description(
+        &self,
+        object_index: u8,
+        property_id: u8,
+        response_index: u8,
+        raw: [u8; 4],
+    ) {
+        self.lock()
+            .descriptions
+            .insert((object_index, property_id), (response_index, raw));
     }
 
     /// Puts a Memory Control Block in place for one object, so that a
@@ -2346,6 +2367,15 @@ impl SimulatedDevice {
                 restart_type: *restart_type,
                 data: data.clone(),
             },
+            ApplicationService::PropertyDescriptionRead {
+                object_index,
+                property_id,
+                property_index,
+            } => Seen::PropertyDescriptionRead {
+                object_index: *object_index,
+                property_id: *property_id,
+                property_index: *property_index,
+            },
             ApplicationService::NoApplicationPdu => return,
             other => Seen::Other(other.variant_name()),
         };
@@ -2410,6 +2440,25 @@ impl SimulatedDevice {
                 };
                 self.lock().level = level;
                 self.emit_answer(ApplicationService::AuthorizeResponse { level });
+            }
+            ApplicationService::PropertyDescriptionRead {
+                object_index,
+                property_id,
+                ..
+            } => {
+                let metadata = self
+                    .lock()
+                    .descriptions
+                    .get(&(object_index, property_id))
+                    .copied();
+                if let Some((property_index, raw)) = metadata {
+                    self.emit_answer(ApplicationService::PropertyDescriptionResponse {
+                        object_index,
+                        property_id,
+                        property_index,
+                        description: crate::cemi::PropertyDescription::from_raw(raw),
+                    });
+                }
             }
             ApplicationService::PropertyValueRead {
                 object_index,

@@ -32,7 +32,7 @@ use knx_core::commissioning::run_state::RunState;
 use knx_net::commissioning::post_download::{
     CandidateMismatch, IdentityMismatch, IdentityReading, LoadStateObservation, LoadStateVerdict,
     NotPerformed, ObservationOutcome, PostDownloadObservation, Reach, RunStateCause,
-    RunStateNotRead, RunStateObservation, RunStateStep, RUN_STATE_CANDIDATE,
+    RunStateNotQualified, RunStateNotRead, RunStateObservation, RunStateStep, RUN_STATE_CANDIDATE,
 };
 use serde::{Deserialize, Serialize};
 
@@ -156,6 +156,7 @@ impl From<RunStateObservation> for RunStateRecord {
                 step: match step {
                     RunStateStep::ObjectType => RunStateStepCode::ObjectType,
                     RunStateStep::Application => RunStateStepCode::Application,
+                    RunStateStep::Description => RunStateStepCode::Description,
                     RunStateStep::RunState => RunStateStepCode::RunState,
                 },
                 cause: match cause {
@@ -166,6 +167,23 @@ impl From<RunStateObservation> for RunStateRecord {
                     RunStateCause::ReadFailed => RunStateCauseCode::ReadFailed,
                 },
             },
+            RunStateObservation::NotQualified(reason) => {
+                let (reason, pdt) = match reason {
+                    RunStateNotQualified::UnqualifiedElements => {
+                        (QualificationReason::UnqualifiedElements, None)
+                    }
+                    RunStateNotQualified::DescriptionProblem => {
+                        (QualificationReason::DescriptionProblem, None)
+                    }
+                    RunStateNotQualified::IndeterminateMetadata => {
+                        (QualificationReason::IndeterminateMetadata, None)
+                    }
+                    RunStateNotQualified::UnsupportedDatatype { pdt } => {
+                        (QualificationReason::UnsupportedDatatype, Some(pdt))
+                    }
+                };
+                Self::NotQualified { reason, pdt }
+            }
             RunStateObservation::UndefinedValue => Self::UndefinedValue {},
             RunStateObservation::Observed(state) => Self::Observed {
                 object_index: RUN_STATE_CANDIDATE.octet(),
@@ -193,6 +211,16 @@ pub enum RunStateRecord {
     Unavailable {
         step: RunStateStepCode,
         cause: RunStateCauseCode,
+    },
+    /// The optional property was not qualified by independently read metadata.
+    NotQualified {
+        reason: QualificationReason,
+        #[serde(
+            default,
+            skip_serializing_if = "Option::is_none",
+            deserialize_with = "present"
+        )]
+        pdt: Option<u8>,
     },
     /// An octet outside the six defined values; the octet is not kept.
     UndefinedValue {},
@@ -225,7 +253,25 @@ pub enum CandidateMismatchKind {
 pub enum RunStateStepCode {
     ObjectType,
     Application,
+    Description,
     RunState,
+}
+
+/// Closed metadata outcomes, not claims of absence or current authorization.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum QualificationReason {
+    UnqualifiedElements,
+    DescriptionProblem,
+    IndeterminateMetadata,
+    UnsupportedDatatype,
+}
+
+/// Reported matching identity provenance, never inferred when reading legacy records.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum RunStateMask {
+    #[serde(rename = "0700")]
+    Exact0700,
 }
 
 /// Why a continuation read failed: a closed vocabulary, no transport text.
@@ -357,6 +403,9 @@ pub struct MatchedLoadStates {
     load_states: Vec<MachineReading>,
     /// The verdict on the load states against the plan, and only on those.
     plan_load_verdict: PlanLoadVerdict,
+    /// Reported mask provenance, absent for legacy and actual 0701/0705 records.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    run_state_mask: Option<RunStateMask>,
     /// The run-state continuation. Absent in records of older producers.
     #[serde(skip_serializing_if = "Option::is_none")]
     run_state: Option<RunStateRecord>,
@@ -368,6 +417,8 @@ struct MatchedWire {
     exemplar: ExemplarCheck,
     load_states: Vec<MachineReading>,
     plan_load_verdict: PlanLoadVerdict,
+    #[serde(default, deserialize_with = "present")]
+    run_state_mask: Option<RunStateMask>,
     #[serde(default, deserialize_with = "present")]
     run_state: Option<RunStateRecord>,
 }
@@ -601,9 +652,9 @@ impl PostDownloadCheck {
             (
                 _,
                 ObservationOutcome::Observed {
+                    identity,
                     load_states,
                     run_state,
-                    ..
                 },
             ) => reached(IdentityCheck::Match(MatchedLoadStates {
                 exemplar: ExemplarCheck::NotVerified,
@@ -624,6 +675,7 @@ impl PostDownloadCheck {
                     })
                     .collect(),
                 plan_load_verdict: observation.load_verdict().into(),
+                run_state_mask: (identity.mask.0 == 0x0700).then_some(RunStateMask::Exact0700),
                 run_state: Some((*run_state).into()),
             })),
             // `reach()` says reached exactly for the three outcomes above;
@@ -826,6 +878,52 @@ impl TryFrom<MatchedWire> for MatchedLoadStates {
             .load_states
             .iter()
             .all(|reading| matches!(reading.observed, MachineObservation::Observed { .. }));
+        if wire.run_state_mask.is_some()
+            && (wire.run_state.is_none()
+                || matches!(
+                    wire.run_state,
+                    Some(RunStateRecord::NotRead {
+                        reason: RunStateNotReadReason::UnsupportedMask
+                    })
+                ))
+        {
+            return Err("0700 provenance requires run-state evidence, not unsupportedMask");
+        }
+        if let Some(record) = wire.run_state {
+            if matches!(
+                record,
+                RunStateRecord::NotQualified { .. }
+                    | RunStateRecord::Unavailable {
+                        step: RunStateStepCode::Description,
+                        ..
+                    }
+            ) && wire.run_state_mask.is_none()
+            {
+                return Err("description evidence requires exact0700 provenance");
+            }
+            if let RunStateRecord::NotQualified { reason, pdt } = record {
+                if match (reason, pdt) {
+                    (QualificationReason::UnsupportedDatatype, Some(1..=63)) => false,
+                    (QualificationReason::UnsupportedDatatype, _) => true,
+                    (_, None) => false,
+                    (_, Some(_)) => true,
+                } {
+                    return Err("only unsupportedDatatype requires an integer PDT in 1..63");
+                }
+            }
+            if let RunStateRecord::Unavailable {
+                step: RunStateStepCode::Description,
+                cause,
+            } = record
+            {
+                if matches!(
+                    cause,
+                    RunStateCauseCode::Refused | RunStateCauseCode::Malformed
+                ) {
+                    return Err("description failures use session causes only");
+                }
+            }
+        }
         match wire.run_state {
             None => {}
             Some(RunStateRecord::NotRead {
@@ -855,6 +953,7 @@ impl TryFrom<MatchedWire> for MatchedLoadStates {
             exemplar: wire.exemplar,
             load_states: wire.load_states,
             plan_load_verdict: wire.plan_load_verdict,
+            run_state_mask: wire.run_state_mask,
             run_state: wire.run_state,
         })
     }
@@ -894,6 +993,19 @@ impl fmt::Display for RunStateRecord {
             Self::Unavailable { step, cause } => {
                 write!(f, "unavailable ({step} read: {cause})")
             }
+            Self::NotQualified { reason, pdt } => {
+                let reason = match reason {
+                    QualificationReason::UnqualifiedElements => "unqualified maximum elements",
+                    QualificationReason::DescriptionProblem => "unspecified description problem",
+                    QualificationReason::IndeterminateMetadata => "indeterminate metadata",
+                    QualificationReason::UnsupportedDatatype => "unsupported datatype",
+                };
+                write!(f, "optional run-state property not qualified ({reason}")?;
+                if let Some(pdt) = pdt {
+                    write!(f, ", PDT {pdt}")?;
+                }
+                f.write_str(")")
+            }
             Self::UndefinedValue {} => {
                 f.write_str("the device reported a value undefined in the specification")
             }
@@ -907,6 +1019,7 @@ impl fmt::Display for RunStateStepCode {
         f.write_str(match self {
             Self::ObjectType => "object type",
             Self::Application => "application identity",
+            Self::Description => "optional run-state description",
             Self::RunState => "run state",
         })
     }

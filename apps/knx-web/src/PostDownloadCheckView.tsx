@@ -47,9 +47,9 @@ export default function PostDownloadCheckView({ value }: { value: unknown }) {
       {readings.length > 0 && <p>{t("postDownloadCheck.exemplar")}</p>}
       {runStateFacts.map((line) => (
         <p key={line.key} className={line.warning ? "form-warning" : undefined} role={line.warning ? "status" : undefined}>
-          {line.values
+          {line.key === "postDownloadCheck.runState.unavailable" && line.values
             ? t(line.key, { step: t(`postDownloadCheck.runState.step.${line.values.step}` as MessageKey), cause: t(`postDownloadCheck.runState.cause.${line.values.cause}` as MessageKey) })
-            : t(line.key)}
+            : t(line.key, line.values)}
         </p>
       ))}
       {/* A run-state record without a defined state says so; no record (an older server) keeps the legacy wording. */}

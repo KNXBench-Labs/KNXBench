@@ -53,7 +53,7 @@ const report = {
 };
 
 /** What the intercepted server answers once the download ran; the default is an older server's. */
-interface Served { status: unknown; report: unknown; history?: unknown }
+interface Served { status: unknown; report: unknown; history?: unknown; plan?: typeof plan }
 
 async function open(page: Page, language: "en" | "de", served: Served = { status: finished, report }) {
   const m = language === "en" ? en : de;
@@ -72,7 +72,7 @@ async function open(page: Page, language: "en" | "de", served: Served = { status
     if (path === "/api/bus/discover") return json({ interfaces: [] });
     if (path === "/api/bus/activity" && method === "GET") return json({ serverIncarnation: "fixture", coverage: "partial", historyState: "disabled", sessions: [], oneShot: [], oneShotDropped: 0, busyLocks: [], untracked: [] });
     if (path === "/api/device-readiness" && method === "GET") return json({ devices: [], counts: {} });
-    if (path === "/api/device-download/plan" && method === "POST") return json(plan);
+    if (path === "/api/device-download/plan" && method === "POST") return json(served.plan ?? plan);
     if (path === "/api/device-download/start" && method === "POST") {
       const body = request.postDataJSON() as { acceptUntested?: string };
       if (body.acceptUntested !== plan.untestedAcknowledgement) return json({ error: "acknowledgement" }, 400);
@@ -199,6 +199,14 @@ const CHECKS: { fixture: CheckFixture; restart: "acknowledged" | "unconfirmed"; 
       "postDownloadCheck.runState.state.running", "postDownloadCheck.runState.scope"] },
   { fixture: "runStateUndefined", restart: "acknowledged",
     lines: ["postDownloadCheck.identity.match", "postDownloadCheck.runState.undefined"] },
+  { fixture: "exact0700Running", restart: "acknowledged",
+    lines: ["postDownloadCheck.identity.match", "postDownloadCheck.runState.state.running", "postDownloadCheck.runState.scope"] },
+  { fixture: "exact0700DescriptionProblem", restart: "acknowledged",
+    lines: ["postDownloadCheck.identity.match", "postDownloadCheck.runState.notQualified.descriptionProblem"] },
+  { fixture: "exact0700Indeterminate", restart: "acknowledged",
+    lines: ["postDownloadCheck.runState.notQualified.indeterminateMetadata"] },
+  { fixture: "exact0700Elements", restart: "acknowledged",
+    lines: ["postDownloadCheck.runState.notQualified.unqualifiedElements"] },
 ];
 
 function readingsOf(check: unknown): Reading[] {
@@ -228,6 +236,8 @@ async function expectUnknownRuntime(scope: Locator, m: Messages, check: { runtim
 
 for (const { fixture, restart, lines } of CHECKS) {
   const check = checkFixtures[fixture];
+  const exact0700 = fixture.startsWith("exact0700");
+  const observedPlan = exact0700 ? { ...plan, maskVersion: 0x0700 } : plan;
   const status = {
     ...finished,
     status: { state: "finished", written: "yes", restart,
@@ -237,7 +247,7 @@ for (const { fixture, restart, lines } of CHECKS) {
   };
   // The report field order the Rust serializer writes: the check after the outcome.
   const { parameterValues, ...head } = report.report;
-  const checked = { ...report, report: { ...head, outcome: { ...head.outcome, restart }, postDownloadCheck: check, parameterValues } };
+  const checked = { ...report, report: { ...head, program: { ...head.program, mask: exact0700 ? "0700" : head.program.mask }, outcome: { ...head.outcome, restart }, postDownloadCheck: check, parameterValues } };
   // An intercepted history page carrying the same check: a prepared API fixture, not a persisted
   // row. It exercises the real history UI consumer only; that the check survives a SQLite reopen
   // is established by the Rust CLI and server reopen tests, not by this browser lane.
@@ -257,7 +267,7 @@ for (const { fixture, restart, lines } of CHECKS) {
         const m = language === "en" ? en : de;
         expect(checked.report.outcome.restart, "status and saved report describe the same restart").toBe(status.status.restart);
         await page.setViewportSize({ width, height: 900 });
-        const state = await open(page, language, { status, report: checked, history });
+        const state = await open(page, language, { status, report: checked, history, plan: observedPlan });
         const panel = page.locator(".device-download-panel");
         await panel.locator("select[data-download-device]").selectOption({ label: "1.1.67 — Fictional actuator" });
         await panel.locator("input[data-download-gateway]").fill("192.0.2.10:3671");

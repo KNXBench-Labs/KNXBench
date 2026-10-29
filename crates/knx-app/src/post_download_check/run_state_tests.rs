@@ -46,6 +46,91 @@ fn read_loads() -> Vec<LoadStateObservation> {
     ]
 }
 
+#[test]
+fn exact0700_description_vocabulary_requires_provenance_and_strict_pdt() {
+    let base = json_of(&PostDownloadCheck::from_observation(&observation(
+        read_loads(),
+        RunStateObservation::UndefinedValue,
+    )));
+    let with = |record: Value, marker: Option<Value>| {
+        let mut value = base.clone();
+        let matched = value["observation"]["reach"]["identity"]
+            .as_object_mut()
+            .unwrap();
+        matched.insert("runState".into(), record);
+        if let Some(marker) = marker {
+            matched.insert("runStateMask".into(), marker);
+        }
+        value
+    };
+    let admit = |value: Value| {
+        let check: PostDownloadCheck = serde_json::from_value(value.clone()).unwrap();
+        assert_eq!(serde_json::to_value(check).unwrap(), value);
+    };
+    let refuse = |value: Value| {
+        assert!(
+            serde_json::from_value::<PostDownloadCheck>(value.clone()).is_err(),
+            "{value}"
+        );
+    };
+    for reason in [
+        "descriptionProblem",
+        "indeterminateMetadata",
+        "unqualifiedElements",
+    ] {
+        let record = json!({"status":"notQualified", "reason":reason});
+        refuse(with(record.clone(), None));
+        admit(with(record.clone(), Some(json!("0700"))));
+        for pdt in [json!(0), json!(1), json!(63), Value::Null] {
+            let mut extra = record.clone();
+            extra["pdt"] = pdt;
+            refuse(with(extra, Some(json!("0700"))));
+        }
+    }
+    for pdt in [1, 2, 63] {
+        admit(with(
+            json!({"status":"notQualified", "reason":"unsupportedDatatype", "pdt":pdt}),
+            Some(json!("0700")),
+        ));
+    }
+    for pdt in [
+        json!(0),
+        json!(64),
+        json!(1.5),
+        json!("2"),
+        Value::Null,
+        json!(-1),
+    ] {
+        refuse(with(
+            json!({"status":"notQualified", "reason":"unsupportedDatatype", "pdt":pdt}),
+            Some(json!("0700")),
+        ));
+    }
+    refuse(with(
+        json!({"status":"notQualified", "reason":"unsupportedDatatype"}),
+        Some(json!("0700")),
+    ));
+    for marker in [Value::Null, json!(700), json!("0701"), json!("700")] {
+        refuse(with(json!({"status":"undefinedValue"}), Some(marker)));
+    }
+    refuse(with(
+        json!({"status":"notRead", "reason":"unsupportedMask"}),
+        Some(json!("0700")),
+    ));
+    for cause in ["noCorrelatedAnswer", "connectionLost", "readFailed"] {
+        let record = json!({"status":"unavailable", "step":"description", "cause":cause});
+        refuse(with(record.clone(), None));
+        admit(with(record, Some(json!("0700"))));
+    }
+    // A parser cannot infer the originating fixture's mask from a legacy-shaped state.
+    let mut known = with(
+        json!({"status":"observed", "objectIndex":3, "state":"running"}),
+        Some(json!("0700")),
+    );
+    known["runtime"] = json!("running");
+    admit(known);
+}
+
 fn json_of(check: &PostDownloadCheck) -> Value {
     serde_json::to_value(check).unwrap()
 }

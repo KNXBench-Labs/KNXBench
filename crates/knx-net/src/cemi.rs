@@ -15,9 +15,18 @@ use knx_core::{GroupAddress, IndividualAddress};
 // itself now lives in `knx-core` (spec E4-D2).
 pub use knx_core::GroupValue;
 
+mod property_description;
+pub use property_description::PropertyDescription;
+#[cfg(test)]
+mod property_description_tests;
+
 pub const L_DATA_REQ: u8 = 0x11;
 pub const L_DATA_CON: u8 = 0x2E;
 pub const L_DATA_IND: u8 = 0x29;
+
+/// AL v02.01.01 §3.4.3.1, Figures 29/43: three/seven payload octets.
+pub const APCI_PROPERTY_DESCRIPTION_READ: u16 = 0x3d8;
+pub const APCI_PROPERTY_DESCRIPTION_RESPONSE: u16 = 0x3d9;
 
 /// The APCIs of the management services this module types, read from
 /// Application Layer v02.01.01 AS Table 1 (spec §6.6, `[D]`). They are
@@ -404,6 +413,19 @@ pub enum ApplicationService {
     /// *lower* number is more powerful (spec §10.1).
     AuthorizeResponse {
         level: u8,
+    },
+    /// Named or indexed description request (AL §3.4.3.1).
+    PropertyDescriptionRead {
+        object_index: u8,
+        property_id: u8,
+        property_index: u8,
+    },
+    /// Description identifiers and its four canonical raw metadata octets.
+    PropertyDescriptionResponse {
+        object_index: u8,
+        property_id: u8,
+        property_index: u8,
+        description: PropertyDescription,
     },
     /// `A_PropertyValue_Read-PDU` (spec §5.1, §7.3): object index,
     /// property id, then `nr_of_elem` (4 bits) and `start_index`
@@ -1243,6 +1265,23 @@ fn decode_management(apci: u16, extra: &[u8]) -> Option<ApplicationService> {
                 data: extra.get(3..).unwrap_or_default().to_vec(),
             })
         }
+        APCI_PROPERTY_DESCRIPTION_READ if extra.len() == 3 => {
+            Some(ApplicationService::PropertyDescriptionRead {
+                object_index: extra[0],
+                property_id: extra[1],
+                property_index: extra[2],
+            })
+        }
+        APCI_PROPERTY_DESCRIPTION_RESPONSE if extra.len() == 7 => {
+            Some(ApplicationService::PropertyDescriptionResponse {
+                object_index: extra[0],
+                property_id: extra[1],
+                property_index: extra[2],
+                description: PropertyDescription::from_raw([
+                    extra[3], extra[4], extra[5], extra[6],
+                ]),
+            })
+        }
         APCI_PROPERTY_VALUE_READ if extra.len() == 4 => {
             Some(ApplicationService::PropertyValueRead {
                 object_index: extra[0],
@@ -1493,6 +1532,8 @@ pub fn encode_l_data(frame: &LDataFrame) -> Result<Vec<u8>, CemiError> {
         | ApplicationService::Restart { .. }
         | ApplicationService::AuthorizeRequest { .. }
         | ApplicationService::AuthorizeResponse { .. }
+        | ApplicationService::PropertyDescriptionRead { .. }
+        | ApplicationService::PropertyDescriptionResponse { .. }
         | ApplicationService::PropertyValueRead { .. }
         | ApplicationService::PropertyValueResponse { .. }
         | ApplicationService::PropertyValueWrite { .. }) => {
@@ -1713,6 +1754,24 @@ fn encode_management(service: &ApplicationService) -> Result<Option<(u16, Vec<u8
             (APCI_AUTHORIZE_REQUEST, payload)
         }
         ApplicationService::AuthorizeResponse { level } => (APCI_AUTHORIZE_RESPONSE, vec![*level]),
+        ApplicationService::PropertyDescriptionRead {
+            object_index,
+            property_id,
+            property_index,
+        } => (
+            APCI_PROPERTY_DESCRIPTION_READ,
+            vec![*object_index, *property_id, *property_index],
+        ),
+        ApplicationService::PropertyDescriptionResponse {
+            object_index,
+            property_id,
+            property_index,
+            description,
+        } => {
+            let mut payload = vec![*object_index, *property_id, *property_index];
+            payload.extend_from_slice(&description.raw());
+            (APCI_PROPERTY_DESCRIPTION_RESPONSE, payload)
+        }
         ApplicationService::PropertyValueRead {
             object_index,
             property_id,
@@ -1967,6 +2026,8 @@ fn application_service_variant_name(service: &ApplicationService) -> &'static st
         ApplicationService::Restart { .. } => "Restart",
         ApplicationService::AuthorizeRequest { .. } => "AuthorizeRequest",
         ApplicationService::AuthorizeResponse { .. } => "AuthorizeResponse",
+        ApplicationService::PropertyDescriptionRead { .. } => "PropertyDescriptionRead",
+        ApplicationService::PropertyDescriptionResponse { .. } => "PropertyDescriptionResponse",
         ApplicationService::PropertyValueRead { .. } => "PropertyValueRead",
         ApplicationService::PropertyValueResponse { .. } => "PropertyValueResponse",
         ApplicationService::PropertyValueWrite { .. } => "PropertyValueWrite",

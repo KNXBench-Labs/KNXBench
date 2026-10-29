@@ -26,6 +26,8 @@ use knx_net::{ApplicationService, BusError, Destination, Tpci, TunnelEvent};
 use serde_json::{json, Value};
 
 use super::*;
+#[path = "device_download_check_0700_tests.rs"]
+mod exact0700;
 use MemoryLoadStateMachine::{AddressTable, ApplicationProgram, AssociationTable};
 
 const HARDWARE: [u8; 6] = [0, 0, 0, 0, 0x01, 0x27];
@@ -368,11 +370,13 @@ fn run_regular_in<T: ManagementTransport>(
         &mut activity,
         &mut out,
     ));
+    let mut template = report_template();
+    template.program.mask = format!("{:04X}", plan.mask.0);
     let exit = finish_regular_download(
         &outcome,
         true,
         activity,
-        Some((report_path.as_path(), &report_template())),
+        Some((report_path.as_path(), &template)),
         &mut out,
     );
     let report = std::fs::read_to_string(&report_path)
@@ -409,6 +413,11 @@ fn read_only_frame(seen: &Seen) -> bool {
         Seen::Connect
             | Seen::Disconnect
             | Seen::PropertyRead { .. }
+            | Seen::PropertyDescriptionRead {
+                object_index: 3,
+                property_id: 6,
+                property_index: 0
+            }
             | Seen::MemoryRead { .. }
             | Seen::Other("DeviceDescriptorRead")
     )
@@ -807,6 +816,50 @@ fn a_failed_run_reports_not_checked_and_exits_nonzero() {
         json["postDownloadCheck"],
         json!({ "observation": { "status": "notChecked" }, "runtime": "unknown" })
     );
+}
+
+#[test]
+fn exact_0700_qualified_descriptor_reports_running_after_real_transfer() {
+    let device = SimulatedDevice::with_config(SimulatorConfig {
+        mask_version: 0x0700,
+        ..SimulatorConfig::default()
+    });
+    device.preset_property(0, PID_MANUFACTURER_ID, &[0, 0x83]);
+    device.preset_property(0, PID_HARDWARE_TYPE, &HARDWARE);
+    device.preset_property(3, PID_PROGRAM_VERSION, &APPLICATION);
+    device.preset_property(3, 1, &[0, 3]);
+    device.preset_property(3, 6, &[1]);
+    device.preset_property_description(3, 6, 0x27, [0, 0, 1, 0]);
+    for machine in MemoryLoadStateMachine::ALL {
+        device.preset_load_state(ObjectIndex::new(machine.type_number()), LoadState::Unloaded);
+    }
+    let mut plan = plan();
+    plan.mask = MaskVersion(0x0700);
+    let run = run_regular(&device, device.address(), &plan);
+    // This assertion deliberately precedes marker/record assertions: original observer RED.
+    assert_eq!(
+        run.outcome.check.runtime,
+        knx_app::post_download_check::RuntimeState::Running
+    );
+    assert_eq!(run.exit, ExitCode::SUCCESS);
+    let check = check_json(&run);
+    assert_eq!(check["runtime"], "running");
+    let matched = &check["observation"]["reach"]["identity"];
+    assert_eq!(matched["runStateMask"], "0700");
+    assert_eq!(
+        matched["runState"],
+        json!({
+            "status": "observed", "objectIndex": 3, "state": "running"
+        })
+    );
+    assert_eq!(run.report.as_ref().unwrap()["postDownloadCheck"], check);
+    assert_eq!(
+        reopened(&run)["downloadEvidence"]["postDownloadCheck"],
+        check
+    );
+    assert!(run.out.contains("running"), "{}", run.out);
+    assert_eq!(restarts(&device), 1);
+    assert_check_read_only(&device);
 }
 
 /// Each fact `main.rs` needs for success, removed one at a time from a real run.

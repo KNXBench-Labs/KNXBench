@@ -56,7 +56,8 @@ empty workspace. It has four pages:
 3. **Where to start** — import an ETS project, start a new project, open a
    `.knxdb`, add product data, or watch the bus. Each button closes the
    introduction and runs the same command as the command palette.
-4. **Help and feedback** — where Help and the debug report are.
+4. **Help and feedback** — where Help and the debug report are (in source builds
+   after Alpha 18: **Report problem…**).
 
 ![The KNXBench introduction on its first page, titled "Welcome to KNXBench",
 step 1 of 4, naming the build's release stage as Alpha with a sentence on what

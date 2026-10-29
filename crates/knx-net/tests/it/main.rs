@@ -15,3 +15,4 @@ mod property_download;
 mod property_recovery;
 mod simulator_system2_state;
 mod support_diagnostics;
+mod system2_memory_boundary;

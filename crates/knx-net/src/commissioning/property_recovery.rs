@@ -14,7 +14,7 @@ use super::property_download::PropertySimulationFailure;
 use super::{ManagementSession, SessionError};
 use crate::management::ManagementTransport;
 use knx_core::commissioning::load_state::LoadState;
-use knx_core::commissioning::memory::{chunks, WriteLimit};
+use knx_core::commissioning::memory::{allocation_service, chunks, MemoryService, WriteLimit};
 use knx_core::commissioning::properties::{ObjectIndex, PID_PROGRAM_VERSION, PID_TABLE_REFERENCE};
 use knx_core::commissioning::property_download::{PropertyDownloadPlan, PropertyOperation};
 
@@ -836,6 +836,28 @@ pub(crate) async fn acquire<T: ManagementTransport>(
         unreadable_allocations,
         regions,
     })
+}
+
+/// Mask `0025h` has no "DMA on User Memory" (06 Profiles v02.01.01 §4.2, printed p37), and
+/// CP §3.5.2 (printed p43) names `A_Memory_*` only for base plus allocated size below
+/// `FFFFh`. So every absolute allocation must end below it, and then each write, prestate
+/// read and verification read inside it uses `A_Memory_*`. Checked before any frame.
+pub(crate) fn refuse_beyond_memory_service(
+    plan: &PropertyDownloadPlan,
+) -> Result<(), PropertySimulationFailure> {
+    for allocation in allocation_shapes(plan) {
+        let length = allocation.data.len();
+        if allocation_service(u32::from(allocation.address), length as u32)
+            != Some(MemoryService::Memory)
+        {
+            return Err(PropertySimulationFailure::MemoryServiceBoundary {
+                object: allocation.object,
+                address: allocation.address,
+                length,
+            });
+        }
+    }
+    Ok(())
 }
 
 fn allocation_shapes(plan: &PropertyDownloadPlan) -> Vec<PropertyRecoveryRegion> {

@@ -2,6 +2,20 @@
 
 # Implementation status
 
+## DIAG-03 local candidate — not released (29 October 2026)
+
+The unified bundle candidate can opt in to a copy of the **saved** native project,
+not unsaved edits. This uses the existing credential-removing/withholding helper;
+project inclusion stays off by default. It is not comprehensive anonymization.
+Twelve synthetic HTTP cases exercise review, export, real native reopen and
+refusal guards; this is not whole-package, browser or hardware acceptance.
+Private System-2 expected/readback bytes still need a credential-admission policy
+covering every overlapping archive copy. The CLI bundle option exists, but its
+shared typed private evidence attachment remains unfinished. Do not interpret
+this candidate as part of Alpha 18 or as complete raw-evidence delivery.
+[Work/status](../open-work/DIAG-03-unified-diagnostic-bundle.md) ·
+[Privacy boundary](../research/2026-10-29-system2-bundle-credential-boundary.md).
+
 <a id="source-implementation-after-alpha-17-system-2-results-and-reports"></a>
 
 ## Alpha 18 — current pre-release

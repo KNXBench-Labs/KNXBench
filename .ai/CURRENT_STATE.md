@@ -1,16 +1,19 @@
 # Restart snapshot
 
-## PRG-01 regular restore exemplar binding (GO; observed 2026-10-29 18:12 CET)
-- Owner: `feat/prg01-remaining-20261029`, `<sources>/knxbench-prg01-remaining-20261029`.
-- Base `91b15a209`; contract/reservation published/read back `f5427e629`; implementation uncommitted.
-- Original unsafe-replay RED, count-unit RED and actual durable-history cause-loss RED retained; focused GREEN.
-- First Opus feature review 0Critical/3Important proof gaps; CLI/HTTP/history/web + minor proofs now executed.
-- Narrow Rust/web phase-admission fix and neutral identity wording included; independent correction review NEXT.
-- No active source writer; freeze candidate for review, then committed branch and main-first17-stage gates.
-- Actual server build, isolated smoke, publication and durable evidence/cleanup remain OPEN; PRG-01 not complete.
-- Server production scope ONLY canonical backup helper; no DIAG-03 recorder/API edits or corpus repins.
-- Private evidence `<profile-scratch>/prg01-remaining-20261029/`; parent owns commits/publication.
-- Root/foreign tracks protected; no Secure/bus/device/VM/release/deployment; legacy1/2 inspect-only boundary explicit.
+## PRG-01 descriptor-qualified 0700 run state (GO; observed 2026-10-29 20:46 CET)
+- Owner: `feat/prg01-runtime0700-20261029`, `<sources>/knxbench-prg01-runtime0700-20261029`; fresh live/base `8d14de9ca`.
+- Existing observer returns Unknown/unsupportedMask for0700. Required witness: independent qualified CONTROL0 descriptor +PID6=01 reaches Running through real transfer/check and all consumers.
+- Corrected private design independently ADMITTED; public contract/research and claim NEXT, implementation not started. Parent owns docs/commits/merge/gates/push.
+- Scope: Net codec/session/simulator/post_download; App shared check; CLI/HTTP/report/history/Web consumers and tests. No generic object discovery or memory fallback.
+- Preserve071/705 traffic and serialized bytes; new optional/non-null0700 marker explicitly may fail old strict readers. No record rewrite or inferred provenance.
+- Payload7; connectedTPCI peer; explicit independent descriptor metadata; legacybit6 ignored/preserved; upper nibble unqualified; zero descriptor=descriptionProblem; unsupportedPDT1..63.
+- Semantic RED before GREEN, interface/setup/provider/verifier failures uncredited; no active writer/gate. New preparation `<profile-scratch>/prg01-runtime0700-20261029/`.
+- DIAG03 property_validation/private_projection App surfaces and all foreign tracks excluded. Re-read protected root-local coordination before shared edits/publication; do not infer live activity from old sections below.
+- Prior restore DELIVERED/RETIRED: published/readback `8d14de9ca`, runtime `0ddfe4953`, implementation `d12a79f1`, docs `a27efbe5`; review ACCEPT0.
+- Prior gates17/17 +17/17 +10/10 +10/10 and actual isolated build/frontend/status/SIGTERM0/closedlistener passed; no hardware claim or additive coverage total.
+- Prior durable `<profile>/evidence/prg01-restore-exemplar-20261029/`:5392 TAR members fully byte/hash/gzip-verified, source bundle +original artifact91files; own2trees/branch/claimref/task caches retired.
+- Protected root HEAD/index/dirty files and foreign paths unchanged; next24 preparation files preserved. Historic105 fixture/category provenance, parameter/Union/customer rules and whole recovery remain OPEN.
+- No Secure/DIAG03/bus/device/VM/deployment/release/vendor contact, new authority, retry/wait or gate weakening. PRG-01 is not complete.
 
 ## PRG-01 property run-state (SOFTWARE COMPLETE; observed 2026-10-29)
 - Bounded 0701/0705 property observation; runtime integration `161010078`, feature `51c309957`.

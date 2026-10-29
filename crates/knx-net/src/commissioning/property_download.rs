@@ -78,6 +78,14 @@ pub enum PropertySimulationFailure {
     PointerWidth(PointerWidthRefusal),
     /// The existing session refused or failed an operation.
     Session(SessionError),
+    /// An absolute allocation reaches `FFFFh`, where mask `0025h` has no memory service
+    /// (no "DMA on User Memory"; CP §3.5.2 leaves exactly `FFFFh` undefined). Refused
+    /// before any frame is sent.
+    MemoryServiceBoundary {
+        object: u8,
+        address: u16,
+        length: usize,
+    },
 }
 
 /// An incomplete simulation, not a successful download or recovered device.
@@ -498,6 +506,7 @@ async fn run_property_plan_inner<T: ManagementTransport>(
             found: authorization.target().address(),
         }));
     }
+    property_recovery::refuse_beyond_memory_service(plan).map_err(early)?;
     let mut session = ManagementSession::authorised(transport, key, timing, authorization)
         .map_err(|error| early(error.into()))?;
     session

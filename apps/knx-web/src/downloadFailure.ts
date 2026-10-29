@@ -118,8 +118,12 @@ export function admitDownloadFailure(value: unknown): DownloadFailure | null {
   if (phase === "beforeSteps" && step !== null) return null;
   if (code === "stopped" && readBackOctets !== 0) return null;
   // Each category's phases, as `DownloadFailure::is_consistent` in `knx-app`.
+  // The restore's own backup observes the exemplar serial before any change: only those two codes, nothing read back.
+  const exemplarBackup = phase === "backupBeforeStep" && readBackOctets === 0
+    && (code === "propertyMismatch" || code === "malformedProperty");
   const expectedPhase = category === "stopped" ? ["stoppedBeforeStep"]
-    : category === "backupFailed" ? ["backupBeforeStep"] : ["beforeSteps", "inStep"];
+    : category === "backupFailed" ? ["backupBeforeStep"]
+    : exemplarBackup ? ["backupBeforeStep"] : ["beforeSteps", "inStep"];
   if (!expectedPhase.includes(phase as string)) return null;
   // In or after the restart step the restart is never known to be unsent.
   if (restart === "notSent" && phase === "inStep" && step?.kind === "restart") return null;

@@ -1042,3 +1042,6 @@ fn the_read_only_allowlist_refuses_every_other_service() {
 
 #[path = "device_download_failure_tests.rs"]
 mod failure_tests;
+
+#[path = "device_download_exemplar_tests.rs"]
+mod exemplar_tests;

@@ -102,6 +102,7 @@ pub fn attempted_parts(
             Step::Connect
             | Step::CompareProperty { .. }
             | Step::RequireLoaded(_)
+            | Step::RequireExemplar(_)
             | Step::Restart
             | Step::Disconnect => {
                 active = None;

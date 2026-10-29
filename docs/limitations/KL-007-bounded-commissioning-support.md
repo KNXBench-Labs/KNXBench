@@ -10,8 +10,11 @@ updates supersede them; they are not new work assignments.
 
 The [regular restore contract](../contracts/regular-restore-exemplar-binding.md)
 requires replay to match a bindable serial captured before the original mutation.
-This is a necessary safety guard, not complete recovery or physical-identity
-proof. Software implementation and acceptance are pending in the PRG-01 track.
+The implementation candidate enforces it in core derivation and every regular
+memory executor, including the restore's own second backup observation. This is
+a necessary safety guard, not complete recovery or physical-identity proof.
+Maintained software acceptance and source publication are still pending; focused
+passing tests alone do not close PRG-01 or KL-007.
 
 The planned compatibility narrowing is explicit: format 1/2 backups remain
 readable but cannot restore, including the former partial-backup exception.

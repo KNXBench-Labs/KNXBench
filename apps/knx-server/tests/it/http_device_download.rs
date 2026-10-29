@@ -2031,6 +2031,12 @@ async fn a_verified_download_says_so_and_keeps_a_backup_first() {
     // is what the durable backup must record, not what the plan names.
     h.device
         .preset_property(3, PID_PROGRAM_VERSION, &[0x00, 0x83, 0x00, 0x27, 0x15]);
+    // The durable file records the Device Object serial the device reports, privately.
+    h.device.preset_property(
+        0,
+        knx_core::commissioning::properties::PID_SERIAL_NUMBER,
+        &[0x00, 0x83, 0x12, 0x34, 0x56, 0x78],
+    );
     let old: Vec<Option<u8>> = h.device.memory(0x4400, 394);
     let plan = plan(&h).await;
     assert_eq!(plan["support"]["level"], "verified", "{plan}");
@@ -2118,6 +2124,26 @@ async fn a_verified_download_says_so_and_keeps_a_backup_first() {
         ]),
         "the durable file holds the pre-write observation"
     );
+    assert_eq!(
+        stored.backup.exemplar_serial,
+        knx_core::commissioning::device_backup::ExemplarEvidence::Recorded(
+            knx_core::commissioning::memory_download::ExemplarSerial::new([
+                0x00, 0x83, 0x12, 0x34, 0x56, 0x78
+            ])
+        ),
+        "the durable file holds the pre-write serial"
+    );
+    let on_disk = std::fs::read_to_string(h.state.data_dir.join(&file)).unwrap();
+    assert!(
+        on_disk.contains("\"exemplar_serial\": \"008312345678\""),
+        "{on_disk}"
+    );
+    for shared in [status.to_string(), plan.to_string()] {
+        assert!(
+            !shared.contains("008312345678"),
+            "the serial reached an HTTP body"
+        );
+    }
     let region = stored
         .backup
         .regions

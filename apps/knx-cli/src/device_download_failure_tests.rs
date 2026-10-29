@@ -212,8 +212,9 @@ fn an_unanswered_connect_times_out_before_any_change() {
 
 #[test]
 fn a_transport_loss_after_the_writes_counts_what_was_read_back() {
+    // 72 frames: the same drop point as before, shifted by the backup's two serial-number frames.
     let device = simulated(SimulatorConfig {
-        drop_connection_after: Some(70),
+        drop_connection_after: Some(72),
         ..SimulatorConfig::default()
     });
     let run = run_regular(&device, device.address(), &plan());

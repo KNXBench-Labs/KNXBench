@@ -551,7 +551,29 @@ logic and persistence reviews approved the source; strengthened assertions pass.
 Published as `fa4c18213` after all 14 maintained integrated package stages passed
 ([acceptance](status/2026-10-25-download-source-freshness.md)). No hardware claim is made.
 
+## Regular restore exemplar binding (29 October 2026 candidate)
+
+The [contract](contracts/regular-restore-exemplar-binding.md) adds a strict
+pre-mutation Device Object PID 11 observation to regular backed-up downloads.
+Core restore derivation inserts a typed read-only precondition before the first
+mutation; the restore's own backup observation must match too. Format 3 requires
+nullable captured serial evidence. Formats 1/2 remain readable, but no longer
+restore, including the former partial-backup exemption. Unknown, all-zero or
+all-FF evidence never becomes a fabricated identity or bypass.
+
+Focused simulator/CLI/HTTP/persistence/web proofs are executed. Additional
+consumer tests exposed and reproduced a dropped backup-phase diagnostic; Rust
+and web now admit only its two legitimate zero-read-back code/phase pairs.
+Independent correction review, maintained gates, actual build/smoke and source
+publication remain separate, unfinished acceptance boundaries. PRG-01, broader
+identity/runtime, parameter rules and full effects/recovery remain open; there
+is no new hardware, physical-identity or whole-recovery claim.
+
 ## Backup application identity before restore (25 October 2026 source)
+
+**Later eligibility rule:** the 29 October exemplar contract above additionally
+requires captured bindable serial evidence. The historical partial-backup
+exception below does not permit format 1/2 replay under the new implementation.
 
 A backed-up regular memory download now records the pre-write application
 identity. Restore derivation refuses mismatching or unrecorded applications;

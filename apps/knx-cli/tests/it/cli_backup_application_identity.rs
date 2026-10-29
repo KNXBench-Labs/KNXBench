@@ -10,15 +10,30 @@ use std::time::Duration;
 
 use knx_app::device_backup::{write_backup, StoredBackup};
 use knx_core::commissioning::device_backup::{
-    written_regions, BackupRegion, DeviceBackup, PriorApplication,
+    written_regions, BackupRegion, DeviceBackup, ExemplarEvidence, PriorApplication,
 };
 use knx_core::commissioning::load_state::LoadState;
-use knx_core::commissioning::memory_download::machines;
+use knx_core::commissioning::memory_download::{machines, ExemplarSerial};
 use knx_core::commissioning::partial_memory_download::application_identity;
 use knx_testsupport::vendor_plugin::{program_xml, HARDWARE_XML, PROGRAM_ID, TARGET};
 
 /// A product database with the plain program, and a backup file taken with `prior`.
 fn backup_with(dir: &Path, prior: impl Fn([u8; 5]) -> PriorApplication) -> (PathBuf, PathBuf) {
+    backup_with_serial(
+        dir,
+        prior,
+        ExemplarEvidence::Recorded(ExemplarSerial::new(SERIAL)),
+    )
+}
+
+const SERIAL: [u8; 6] = [0, 0x83, 0x12, 0x34, 0x56, 0x78];
+
+/// [`backup_with`] holding the given serial evidence.
+fn backup_with_serial(
+    dir: &Path,
+    prior: impl Fn([u8; 5]) -> PriorApplication,
+    serial: ExemplarEvidence,
+) -> (PathBuf, PathBuf) {
     let products = dir.join("products.sqlite");
     let db = knx_productdb::open_and_migrate(&products).unwrap();
     knx_productdb::ingest_file(&db, "M-FFF6/A.xml", program_xml("").as_bytes()).unwrap();
@@ -42,6 +57,7 @@ fn backup_with(dir: &Path, prior: impl Fn([u8; 5]) -> PriorApplication) -> (Path
                 })
                 .collect(),
             prior_application: prior(identity),
+            exemplar_serial: serial,
         },
         application: PROGRAM_ID.into(),
         partial: None,
@@ -130,6 +146,49 @@ fn a_backup_of_another_or_no_recorded_application_is_refused_before_any_connecto
         assert!(!output.status.success(), "{name}: {shown}");
         assert!(shown.contains("no restore of"), "{name}: {shown}");
         assert!(shown.contains(wanted), "{name}: {shown}");
+        assert!(
+            peer.recv_from(&mut [0; 2048]).is_err(),
+            "{name}: the refused restore reached the connector: {shown}"
+        );
+    }
+}
+
+#[test]
+fn a_backup_without_a_bindable_serial_is_refused_before_any_connector() {
+    for (name, serial) in [
+        ("unrecorded", ExemplarEvidence::NotRecorded),
+        (
+            "all-zero",
+            ExemplarEvidence::Recorded(ExemplarSerial::new([0x00; 6])),
+        ),
+        (
+            "all-ff",
+            ExemplarEvidence::Recorded(ExemplarSerial::new([0xFF; 6])),
+        ),
+    ] {
+        let dir = tempfile::tempdir().unwrap();
+        let (file, products) = backup_with_serial(dir.path(), PriorApplication::Recorded, serial);
+        let peer = UdpSocket::bind("127.0.0.1:0").unwrap();
+        peer.set_read_timeout(Some(Duration::from_millis(250)))
+            .unwrap();
+        let gateway = peer.local_addr().unwrap().to_string();
+
+        let plan_only = text(&restore(dir.path(), &file, &products, None));
+        assert!(plan_only.contains("serial number"), "{name}: {plan_only}");
+        assert!(
+            !plan_only.contains("steps:"),
+            "{name}: no plan shown: {plan_only}"
+        );
+
+        let output = restore(dir.path(), &file, &products, Some(&gateway));
+        let shown = text(&output);
+        assert!(!output.status.success(), "{name}: {shown}");
+        assert!(shown.contains("no restore of"), "{name}: {shown}");
+        assert!(shown.contains("serial number"), "{name}: {shown}");
+        assert!(
+            !shown.contains("12345678"),
+            "{name}: the serial must not be printed: {shown}"
+        );
         assert!(
             peer.recv_from(&mut [0; 2048]).is_err(),
             "{name}: the refused restore reached the connector: {shown}"

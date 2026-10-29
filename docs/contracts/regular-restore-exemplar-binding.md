@@ -51,9 +51,14 @@ existing payload-free result vocabulary the new step maps to `compareProperty`;
 a differing serial maps to code `propertyMismatch` / category `identityMismatch`.
 Unavailable causes map to existing `propertyRefused`, `malformedProperty` or
 `noAnswer` codes as appropriate, with original session failures retaining their
-existing classification. No wire vocabulary extension or silently dropped step
-is permitted. Tests must exercise Rust serialization, web parsing, history/report
-composition and all raw-text presentation paths.
+existing classification. A second-observation mismatch keeps
+`propertyMismatch` / `identityMismatch` in phase `backupBeforeStep`; a malformed
+second-observation element count keeps `malformedProperty` / `malformedResponse`
+in that phase. These two additional code/phase pairs require zero read-back
+write octets. Rust persistence and web admission must agree; no unrelated code
+or phase is admitted by this extension. No wire vocabulary extension or silently
+dropped step is permitted. Tests must exercise Rust serialization, web parsing,
+durable history/report composition and the new types' raw-text presentation paths.
 
 If the restore's own backup makes a second serial observation, it must also
 match the required exemplar before `keep` or mutation; a differing or unavailable
@@ -87,7 +92,11 @@ step. Store and compare procedure identity through one explicit canonical helper
 that excludes only this typed precondition, never source `CompareProperty`
 checks. The serial is separately durable evidence. A backup made during a restore
 must itself remain restorable under the same procedure and new captured serial.
-Serial bytes stay in the private backup, not history, reports, HTTP DTOs or logs.
+Serial bytes are persisted only in the private backup field, not added to
+history, reports or HTTP DTOs. The new identity types, step/error formatting and
+progress text are serial-free. This is not a universal leak-proof claim for
+arbitrary existing memory payloads, their debug dumps or opt-in transport traces;
+those retain their existing private-data handling boundaries.
 
 ## Consumers and tests
 

@@ -16,6 +16,8 @@ mod diagnostic;
 mod final_step;
 #[path = "property_validation_lifecycle.rs"]
 mod lifecycle;
+#[path = "property_validation_private_projection.rs"]
+pub mod private_projection;
 #[path = "property_validation_result.rs"]
 mod result;
 pub use allocation_evidence::{

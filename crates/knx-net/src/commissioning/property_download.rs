@@ -77,8 +77,9 @@ pub enum PropertySimulationFailure {
     /// A PID 7 answer broke the one-element two-or-four-octet rule. The typed facts are
     /// non-raw; the raw octets sit only in the refusal's private diagnostic.
     PointerWidth(PointerWidthRefusal),
-    /// The existing session refused or failed an operation.
-    Session(SessionError),
+    /// The existing session refused or failed an operation. Box the largest failure
+    /// payload so carrying private allocation evidence needs no large-Result exceptions.
+    Session(Box<SessionError>),
     /// An absolute allocation reaches `FFFFh`, where mask `0025h` has no memory service
     /// (no "DMA on User Memory"; CP §3.5.2 leaves exactly `FFFFh` undefined). Refused
     /// before any frame is sent.
@@ -135,14 +136,14 @@ impl fmt::Display for PropertySimulationError {
 impl std::error::Error for PropertySimulationError {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         match &self.failure {
-            PropertySimulationFailure::Session(error) => Some(error),
+            PropertySimulationFailure::Session(error) => Some(error.as_ref()),
             _ => None,
         }
     }
 }
 impl From<SessionError> for PropertySimulationFailure {
     fn from(error: SessionError) -> Self {
-        Self::Session(error)
+        Self::Session(Box::new(error))
     }
 }
 
@@ -161,8 +162,6 @@ impl From<SessionError> for PropertySimulationFailure {
 /// }
 /// ```
 /// No XML step, source encoding or whole-mutation recovery is inferred here.
-// One boxed evidence pointer tips the error past clippy's 128 bytes; failure paths are cold.
-#[allow(clippy::result_large_err)]
 pub async fn run_simulated_property_plan(
     device: &SimulatedDevice,
     plan: &PropertyDownloadPlan,
@@ -312,8 +311,6 @@ pub struct ExperimentalPropertyReport {
 /// Net has no filesystem policy. Dropping this future is NOT explicit abort and
 /// has no asynchronous disconnect/restore guarantee. All returned errors attempt
 /// disconnect; no failure path automatically restores resources.
-// One boxed evidence pointer tips the error past clippy's 128 bytes; failure paths are cold.
-#[allow(clippy::result_large_err)]
 #[allow(clippy::too_many_arguments)]
 pub async fn run_experimental_property_plan<T: ManagementTransport>(
     transport: &T,
@@ -347,8 +344,6 @@ pub async fn run_experimental_property_plan<T: ManagementTransport>(
 /// ADR-0152. All other requirements — same-shape preconditions, target-specific
 /// Download authorization, durable journal, cooperative cancellation — are
 /// identical to [`run_experimental_property_plan`], which stays simulator-only.
-// One boxed evidence pointer tips the error past clippy's 128 bytes; failure paths are cold.
-#[allow(clippy::result_large_err)]
 #[allow(clippy::too_many_arguments)]
 pub async fn run_experimental_property_plan_on_hardware<T: ManagementTransport>(
     transport: &T,
@@ -381,8 +376,6 @@ pub async fn run_experimental_property_plan_on_hardware<T: ManagementTransport>(
 /// Validates persisted operation coverage before any connection and current exact
 /// identity before setup. Interrupted current load states are not mistaken for old
 /// command records. This remains experimental same-shape reinstallation only.
-// One boxed evidence pointer tips the error past clippy's 128 bytes; failure paths are cold.
-#[allow(clippy::result_large_err)]
 #[allow(clippy::too_many_arguments)]
 pub async fn restore_experimental_property_plan<T: ManagementTransport>(
     transport: &T,
@@ -426,8 +419,6 @@ pub async fn restore_experimental_property_plan<T: ManagementTransport>(
 /// [`restore_experimental_property_plan`] except that the hardware transport is
 /// admitted; unwritten (masked) bytes still rely on the captured pre-dump and
 /// best-effort recovery (ADR-0152).
-// One boxed evidence pointer tips the error past clippy's 128 bytes; failure paths are cold.
-#[allow(clippy::result_large_err)]
 #[allow(clippy::too_many_arguments)]
 pub async fn restore_experimental_property_plan_on_hardware<T: ManagementTransport>(
     transport: &T,
@@ -486,8 +477,6 @@ impl PropertyPlanExecution {
     }
 }
 
-// One boxed evidence pointer tips the error past clippy's 128 bytes; failure paths are cold.
-#[allow(clippy::result_large_err)]
 #[allow(clippy::too_many_arguments)]
 async fn run_property_plan_inner<T: ManagementTransport>(
     transport: &T,
@@ -719,3 +708,7 @@ async fn validate_hardware<T: ManagementTransport>(
     }
     Ok(())
 }
+
+#[cfg(test)]
+#[path = "property_download_tests.rs"]
+mod tests;

@@ -797,8 +797,12 @@ pub(crate) async fn acquire<T: ManagementTransport>(
         // keep zero placeholders, flag them and make recovery unavailable.
         match read_region(session, allocation.address, &allocation.data, limit).await {
             Ok(bytes) => allocation.data = bytes,
-            Err(PropertySimulationFailure::Session(SessionError::MemoryRefused { .. }))
-            | Err(PropertySimulationFailure::Recovery(_)) => unreadable_allocations.push(index),
+            Err(PropertySimulationFailure::Session(error))
+                if matches!(error.as_ref(), SessionError::MemoryRefused { .. }) =>
+            {
+                unreadable_allocations.push(index)
+            }
+            Err(PropertySimulationFailure::Recovery(_)) => unreadable_allocations.push(index),
             Err(error) => return Err(error),
         }
     }

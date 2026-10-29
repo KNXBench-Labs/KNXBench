@@ -172,9 +172,9 @@ pub(crate) fn present_record<'de, D: Deserializer<'de>>(
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum EvidenceUnavailableReason {
-    /// The failure checkpoint carries no evidence record: written before envelope format 4,
-    /// when the bytes were not kept. Never reconstructed from text or guessed.
-    OlderJournal,
+    /// The failure checkpoint carries no evidence record. Absence proves no writer age;
+    /// bytes are never reconstructed from text or guessed.
+    NotRecorded,
 }
 /// Whether the compared bytes of one allocation mismatch exist.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -224,7 +224,7 @@ pub(crate) fn entry(
         evidence: match record {
             Some(record) => AllocationEvidenceAvailability::Recorded(record.view()),
             None => AllocationEvidenceAvailability::Unavailable {
-                reason: EvidenceUnavailableReason::OlderJournal,
+                reason: EvidenceUnavailableReason::NotRecorded,
             },
         },
     }

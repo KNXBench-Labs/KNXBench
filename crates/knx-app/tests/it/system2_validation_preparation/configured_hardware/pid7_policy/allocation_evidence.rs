@@ -4,8 +4,7 @@ use super::pid7_failure_diagnostic::{checkpoints, rewrite_last};
 use super::*;
 use knx_app::property_validation::{
     AllocationEvidenceAvailability as Availability, AllocationMismatchEvidenceView,
-    DifferenceClassification, EvidenceUnavailableReason, ExecutionBuild, FailureDiagnosticRun as R,
-    System2Report,
+    DifferenceClassification, ExecutionBuild, FailureDiagnosticRun as R, System2Report,
 };
 use serde_json::{json, Value};
 
@@ -143,14 +142,8 @@ async fn an_older_journal_reopens_with_the_evidence_marked_unavailable() {
     let entries = store.allocation_mismatch_evidence();
     assert_eq!(entries.len(), 1);
     assert_eq!(
-        entries[0].evidence,
-        Availability::Unavailable {
-            reason: EvidenceUnavailableReason::OlderJournal
-        }
-    );
-    assert_eq!(
         serde_json::to_value(&entries[0]).unwrap(),
-        json!({"run": "download", "evidence": {"availability": "unavailable", "reason": "olderJournal"}})
+        json!({"run": "download", "evidence": {"availability": "unavailable", "reason": "notRecorded"}})
     );
 }
 
@@ -180,6 +173,16 @@ async fn malformed_or_inconsistent_evidence_is_refused_on_reopen() {
         ("control: identical record", |_| {}),
         ("explicit null", |v| *evidence(v) = Value::Null),
         ("record under version 3", |v| v["format"] = 3.into()),
+        ("missing entire evidence under version 4", |v| {
+            v["checkpoint"]
+                .as_object_mut()
+                .unwrap()
+                .remove("allocation_evidence");
+        }),
+        ("unknown difference class", |v| {
+            evidence(v)["differing"][0]["classification"] = "guessed".into();
+        }),
+        ("wrong address", |v| evidence(v)["address"] = 0.into()),
         ("unknown envelope version", |v| v["format"] = 5.into()),
         ("unknown record key", |v| evidence(v)["raw"] = "ab".into()),
         ("missing key", |v| {

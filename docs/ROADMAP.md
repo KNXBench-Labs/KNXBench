@@ -274,6 +274,12 @@ precondition or refuse restore. Independent reviews and all 16 selected
 integrated package stages passed; published as `08db292f3`
 ([acceptance](status/2026-10-25-backup-application-identity.md)). This necessary
 guard does not close complete mutation effects or whole-device recovery.
+The [29 October exemplar-binding candidate](contracts/regular-restore-exemplar-binding.md)
+adds an independently enforced captured-serial precondition and format 3. It
+supersedes the historical legacy-partial eligibility above: every format 1/2
+backup remains readable but cannot restore. Focused consumer proofs are run;
+maintained integrated acceptance and publication are still pending. This does
+not close broader target identity, parameter policy or whole-mutation recovery.
 
 The [source-freshness settlement guard](contracts/download-settlement-source-freshness.md)
 prevents a successful old plan from crediting current memory after product-source

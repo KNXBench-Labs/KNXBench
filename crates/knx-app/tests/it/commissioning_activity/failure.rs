@@ -242,3 +242,44 @@ fn a_refused_failure_leaves_the_row_open_for_a_plain_failed_result() {
     assert_eq!(document["state"], "failed");
     assert!(document["downloadEvidence"].get("failure").is_none());
 }
+
+/// The writer and the strict reader the server's history route also uses (`history_page`).
+#[test]
+fn exemplar_failures_in_the_backup_phase_are_recorded_and_read_back_with_their_cause() {
+    for (code, category) in [
+        (
+            FailureCode::PropertyMismatch,
+            FailureCategory::IdentityMismatch,
+        ),
+        (
+            FailureCode::MalformedProperty,
+            FailureCategory::MalformedResponse,
+        ),
+    ] {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("history.sqlite");
+        let log = log(&path);
+        let mut guard = log.start_download(7, "1.1.67".parse().unwrap()).unwrap();
+        let mut failure = base_failure();
+        failure.code = code;
+        failure.category = category;
+        failure.phase = FailurePhase::BackupBeforeStep;
+        guard
+            .record_failure(Written::No, &failure)
+            .expect("admitted");
+        let (rows, _) = log.history_page(0, 10).unwrap();
+        let row = serde_json::to_value(&rows[0]).unwrap();
+        assert_eq!(
+            row["downloadEvidence"]["failure"],
+            serde_json::to_value(&failure).unwrap()
+        );
+        // Anything read back before the first change, or any other code, stays refused.
+        let mut late = failure.clone();
+        late.read_back_octets = 1;
+        assert!(!late.is_consistent());
+        let mut other = failure.clone();
+        other.code = FailureCode::MaskMismatch;
+        other.category = FailureCategory::IdentityMismatch;
+        assert!(!other.is_consistent());
+    }
+}

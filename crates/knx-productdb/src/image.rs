@@ -2702,6 +2702,7 @@ mod tests {
                 .collect(),
             prior_application:
                 knx_core::commissioning::device_backup::PriorApplication::NotRecorded,
+            exemplar_serial: knx_core::commissioning::device_backup::ExemplarEvidence::NotRecorded,
         };
         let device_values = held
             .regions

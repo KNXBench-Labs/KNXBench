@@ -409,3 +409,136 @@ fn contradictory_stored_values_are_inconsistent() {
     accented.step.as_mut().unwrap().summary = "write mémoire".into();
     assert!(!accented.is_consistent(), "summaries are printable ASCII");
 }
+
+#[test]
+fn the_exemplar_guard_maps_to_the_existing_closed_vocabulary_without_the_serial() {
+    use knx_core::commissioning::memory_download::ExemplarSerial;
+    let mut guarded = plan(true);
+    guarded.steps.insert(
+        2,
+        MemoryDownloadStep::RequireExemplar(ExemplarSerial::new([
+            0x00, 0x83, 0x12, 0x34, 0x56, 0x78,
+        ])),
+    );
+    let live = MemoryDownloadError::ExemplarMismatch { index: 2 };
+    let live = DownloadFailure::from_error(&live, &guarded, Some(3), 0);
+    assert_eq!(live.code, FailureCode::PropertyMismatch);
+    assert_eq!(live.category, FailureCategory::IdentityMismatch);
+    assert_eq!(live.phase, FailurePhase::InStep);
+    let step = live.step.as_ref().unwrap();
+    assert_eq!((step.number, step.kind), (3, StepKind::CompareProperty));
+    let backup = MemoryDownloadError::BackupExemplarMismatch { index: 3 };
+    let backup = DownloadFailure::from_error(&backup, &guarded, Some(3), 0);
+    assert_eq!(backup.code, FailureCode::PropertyMismatch);
+    assert_eq!(backup.phase, FailurePhase::BackupBeforeStep);
+    assert_eq!(backup.step.as_ref().unwrap().number, 4);
+    assert!(serde_json::to_string(&live)
+        .unwrap()
+        .contains("compareProperty"));
+    // Wire shape unchanged: the same keys and tokens as any property mismatch.
+    for failure in [&live, &backup] {
+        let json = serde_json::to_string(failure).unwrap();
+        assert!(json.contains("\"propertyMismatch\""), "{json}");
+        assert!(!json.contains("1234") && !json.contains("0x"), "{json}");
+        assert!(!failure.line().to_uppercase().contains("12345678"));
+    }
+    // Unavailable causes keep their existing classification.
+    for (error, code) in [
+        (
+            SessionError::PropertyRefused {
+                object_index: knx_core::commissioning::properties::ObjectIndex::DEVICE,
+                property_id: 11,
+            },
+            FailureCode::PropertyRefused,
+        ),
+        (
+            SessionError::MalformedProperty {
+                object_index: knx_core::commissioning::properties::ObjectIndex::DEVICE,
+                property_id: 11,
+                expected: 6,
+                got: 5,
+            },
+            FailureCode::MalformedProperty,
+        ),
+        (no_answer(), FailureCode::NoAnswer),
+    ] {
+        let error = MemoryDownloadError::Session {
+            index: Some(2),
+            error,
+        };
+        let failure = DownloadFailure::from_error(&error, &guarded, Some(3), 0);
+        assert_eq!(failure.code, code);
+    }
+}
+
+#[test]
+fn a_wrong_serial_element_count_is_a_malformed_property_at_its_phase() {
+    let live = MemoryDownloadError::ExemplarElementCount {
+        index: 2,
+        in_backup: false,
+        got: 2,
+    };
+    let live = DownloadFailure::from_error(&live, &plan(true), Some(3), 0);
+    assert_eq!(live.code, FailureCode::MalformedProperty);
+    assert_eq!(live.phase, FailurePhase::InStep);
+    assert_eq!(live.step.as_ref().unwrap().number, 3);
+    let backup = MemoryDownloadError::ExemplarElementCount {
+        index: 2,
+        in_backup: true,
+        got: 2,
+    };
+    let backup = DownloadFailure::from_error(&backup, &plan(true), Some(2), 0);
+    assert_eq!(backup.code, FailureCode::MalformedProperty);
+    assert_eq!(backup.phase, FailurePhase::BackupBeforeStep);
+}
+
+#[test]
+fn live_exemplar_failures_are_consistent_persistable_records() {
+    let guarded = plan(true);
+    for error in [
+        MemoryDownloadError::ExemplarMismatch { index: 2 },
+        MemoryDownloadError::ExemplarElementCount {
+            index: 2,
+            in_backup: false,
+            got: 2,
+        },
+    ] {
+        let failure = DownloadFailure::from_error(&error, &guarded, Some(3), 0);
+        assert!(failure.is_consistent(), "{failure:?}");
+    }
+}
+
+#[test]
+fn backup_phase_exemplar_failures_are_consistent_persistable_records() {
+    let guarded = plan(true);
+    for error in [
+        MemoryDownloadError::BackupExemplarMismatch { index: 2 },
+        MemoryDownloadError::ExemplarElementCount {
+            index: 2,
+            in_backup: true,
+            got: 2,
+        },
+    ] {
+        let failure = DownloadFailure::from_error(&error, &guarded, Some(2), 0);
+        assert!(failure.is_consistent(), "{failure:?}");
+    }
+}
+
+#[test]
+fn a_refused_read_is_explained_as_a_request_not_a_write() {
+    for code in [FailureCode::PropertyRefused, FailureCode::MemoryRefused] {
+        assert_eq!(explanation(code), "the device refused the request");
+    }
+    // The exemplar mismatch keeps the existing identity vocabulary (specific cause: raw Display only).
+    assert!(!explanation(FailureCode::PropertyMismatch).is_empty());
+}
+
+#[test]
+fn an_identity_property_mismatch_is_explained_by_the_operations_requirements() {
+    let text = explanation(FailureCode::PropertyMismatch);
+    assert_eq!(
+        text,
+        "a device property does not match the operation's identity requirements"
+    );
+    assert!(!text.contains("product"));
+}

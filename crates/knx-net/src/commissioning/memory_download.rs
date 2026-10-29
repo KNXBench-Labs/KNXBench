@@ -45,17 +45,17 @@ use std::fmt;
 
 use knx_core::commissioning::authorisation::{Authorisation, AuthorisationPlan};
 use knx_core::commissioning::device_backup::{
-    download_changes, written_regions, BackupRegion, DeviceBackup, OctetChange, PriorApplication,
-    RestoreError,
+    download_changes, written_regions, BackupRegion, DeviceBackup, ExemplarEvidence, OctetChange,
+    PriorApplication, RestoreError,
 };
 use knx_core::commissioning::load_control_memory::{loads_through_memory, MemoryLoadStateMachine};
 use knx_core::commissioning::load_state::{LoadEvent, LoadState, MaskVersion};
 use knx_core::commissioning::memory::{service_for, WriteLimit};
 use knx_core::commissioning::memory_download::{
-    machines, resource_matches, MemoryDownloadPlan, MemoryDownloadStep,
+    machines, resource_matches, ExemplarSerial, MemoryDownloadPlan, MemoryDownloadStep,
 };
 use knx_core::commissioning::mutation::WriteScope;
-use knx_core::commissioning::properties::{ObjectIndex, PID_PROGRAM_VERSION};
+use knx_core::commissioning::properties::{ObjectIndex, PID_PROGRAM_VERSION, PID_SERIAL_NUMBER};
 
 use knx_core::ContactableAddress;
 
@@ -291,6 +291,28 @@ pub enum MemoryDownloadError {
         /// What the device answered.
         found: Vec<u8>,
     },
+    /// The live Device Object serial is not the one the restore's backup captured. Carries no
+    /// serial octets.
+    ExemplarMismatch {
+        /// The step.
+        index: usize,
+    },
+    /// The serial read answered an element count other than 1 (count 0 is a refusal, not this).
+    /// Reported as a count: no octet length is inferred from it.
+    ExemplarElementCount {
+        /// The step (live guard) or the step the backup preceded.
+        index: usize,
+        /// Whether the read was the restore's own backup observation.
+        in_backup: bool,
+        /// The element count the device answered.
+        got: u8,
+    },
+    /// The serial observed while taking this restore's own backup is not the captured one.
+    /// Nothing was written; carries no serial octets.
+    BackupExemplarMismatch {
+        /// The step the backup preceded.
+        index: usize,
+    },
     /// A partial download found a part that is not `Loaded`: it replaces
     /// parts of a loaded application and cannot stand in for a complete
     /// download.
@@ -401,6 +423,26 @@ impl fmt::Display for MemoryDownloadError {
             } => write!(
                 f,
                 "step {index}: property {object_index}/{property_id} is {found:02X?}, which the product does not accept"
+            ),
+            MemoryDownloadError::ExemplarMismatch { index } => write!(
+                f,
+                "step {index}: the device is not the exemplar this backup was taken from; \
+                 restore refused, nothing was written"
+            ),
+            MemoryDownloadError::ExemplarElementCount {
+                index,
+                in_backup,
+                got,
+            } => write!(
+                f,
+                "{} {index}: the serial number read answered element count {got} where 1 was \
+                 asked; restore refused, nothing was written",
+                if *in_backup { "before step" } else { "step" }
+            ),
+            MemoryDownloadError::BackupExemplarMismatch { index } => write!(
+                f,
+                "before step {index}: the device is not the exemplar this backup was taken \
+                 from; restore refused, nothing was written"
             ),
             MemoryDownloadError::NotLoaded {
                 index,
@@ -530,7 +572,9 @@ fn check_shape(plan: &MemoryDownloadPlan) -> Result<(), MemoryDownloadError> {
     let late_check = plan.steps.iter().enumerate().position(|(index, step)| {
         matches!(
             step,
-            MemoryDownloadStep::CompareProperty { .. } | MemoryDownloadStep::RequireLoaded(_)
+            MemoryDownloadStep::CompareProperty { .. }
+                | MemoryDownloadStep::RequireLoaded(_)
+                | MemoryDownloadStep::RequireExemplar(_)
         ) && first_write.is_some_and(|first| index > first)
     });
     match late_check {
@@ -1030,6 +1074,31 @@ async fn take_backup<T: ManagementTransport>(
     } else {
         PriorApplication::NotRecorded
     };
+    // A restore's own backup must see the serial its plan requires; any other
+    // backed-up run only records what it can.
+    let required = plan.steps.iter().find_map(|step| match step {
+        MemoryDownloadStep::RequireExemplar(serial) => Some(*serial),
+        _ => None,
+    });
+    let exemplar_serial = if record_prior {
+        if halt() {
+            return Err(stopped());
+        }
+        let read = read_exemplar(session).await;
+        match required {
+            Some(wanted) => {
+                let found = read.map_err(|e| e.at(index, true))?;
+                if found != wanted {
+                    return Err(MemoryDownloadError::BackupExemplarMismatch { index });
+                }
+                ExemplarEvidence::Recorded(found)
+            }
+            None => exemplar_from_read(read, session.connection().is_some())
+                .map_err(|e| e.at(index, true))?,
+        }
+    } else {
+        ExemplarEvidence::NotRecorded
+    };
     let mut load_states = Vec::new();
     for machine in machines(plan) {
         if halt() {
@@ -1065,7 +1134,95 @@ async fn take_backup<T: ManagementTransport>(
         load_states,
         regions,
         prior_application,
+        exemplar_serial,
     })
+}
+
+/// Why the strict serial read gave no serial. Carries no serial octets.
+enum ExemplarReadError {
+    /// Count 0: the device refuses the property.
+    Refused,
+    /// Count 1 with a width other than six octets.
+    Width(usize),
+    /// An element count other than 0 or 1.
+    ElementCount(u8),
+    /// The session failed; the original cause.
+    Session(SessionError),
+}
+
+impl ExemplarReadError {
+    /// The session error that stands for this refusal, when one already says it accurately.
+    fn into_session(self) -> Result<SessionError, u8> {
+        match self {
+            Self::Refused => Ok(SessionError::PropertyRefused {
+                object_index: ObjectIndex::DEVICE,
+                property_id: PID_SERIAL_NUMBER,
+            }),
+            Self::Width(got) => Ok(SessionError::MalformedProperty {
+                object_index: ObjectIndex::DEVICE,
+                property_id: PID_SERIAL_NUMBER,
+                expected: ExemplarSerial::OCTETS,
+                got,
+            }),
+            Self::Session(error) => Ok(error),
+            Self::ElementCount(count) => Err(count),
+        }
+    }
+
+    /// The executor error for this failure at `index` (`in_backup`: the restore's own backup read).
+    fn at(self, index: usize, in_backup: bool) -> MemoryDownloadError {
+        match self.into_session() {
+            Ok(error) if in_backup => MemoryDownloadError::BackupRead { index, error },
+            Ok(error) => MemoryDownloadError::Session {
+                index: Some(index),
+                error,
+            },
+            Err(got) => MemoryDownloadError::ExemplarElementCount {
+                index,
+                in_backup,
+                got,
+            },
+        }
+    }
+}
+
+/// One strict read of the Device Object serial: object 0, PID 11, start 1, count 1, answered with
+/// count 1 and exactly six octets. Anything else is an error that never carries the octets.
+async fn read_exemplar<T: ManagementTransport>(
+    session: &mut ManagementSession<'_, T>,
+) -> Result<ExemplarSerial, ExemplarReadError> {
+    match session
+        .read_property_raw(ObjectIndex::DEVICE, PID_SERIAL_NUMBER, 1, 1)
+        .await
+        .map_err(ExemplarReadError::Session)?
+    {
+        (0, _) => Err(ExemplarReadError::Refused),
+        (1, data) => <[u8; ExemplarSerial::OCTETS]>::try_from(data.as_slice())
+            .map(ExemplarSerial::new)
+            .map_err(|_| ExemplarReadError::Width(data.len())),
+        (count, _) => Err(ExemplarReadError::ElementCount(count)),
+    }
+}
+
+/// What the serial read means for a backup: only a strict answer is recorded; a refusal, a
+/// malformed answer or silence on a live connection is `NotRecorded` (the download stays possible,
+/// its backup never restores). Every other failure aborts. Never retried.
+fn exemplar_from_read(
+    read: Result<ExemplarSerial, ExemplarReadError>,
+    connected: bool,
+) -> Result<ExemplarEvidence, ExemplarReadError> {
+    match read {
+        Ok(serial) => Ok(ExemplarEvidence::Recorded(serial)),
+        Err(
+            ExemplarReadError::Refused
+            | ExemplarReadError::Width(_)
+            | ExemplarReadError::ElementCount(_),
+        ) => Ok(ExemplarEvidence::NotRecorded),
+        Err(ExemplarReadError::Session(SessionError::NoAnswer { .. })) if connected => {
+            Ok(ExemplarEvidence::NotRecorded)
+        }
+        Err(error) => Err(error),
+    }
 }
 
 /// One read of object index 3, PID 13, before the first change: the
@@ -1257,6 +1414,16 @@ async fn run_steps<T: ManagementTransport, K: FnMut(&DeviceBackup) -> Result<(),
                 }
                 Some(hex(&found))
             }
+            MemoryDownloadStep::RequireExemplar(wanted) => {
+                let found = read_exemplar(session)
+                    .await
+                    .map_err(|e| e.at(index, false))?;
+                if found != *wanted {
+                    session.disconnect().await;
+                    return Err(MemoryDownloadError::ExemplarMismatch { index });
+                }
+                Some("serial number matches the backed-up exemplar".to_owned())
+            }
             MemoryDownloadStep::RequireLoaded(machine) => {
                 let found = session.read_memory_load_state(*machine).await.map_err(at)?;
                 if found != LoadState::Loaded {
@@ -1378,7 +1545,7 @@ mod tests {
         derive_partial_plan, PartialDownloadParts,
     };
     use knx_core::commissioning::properties::{
-        PID_HARDWARE_TYPE, PID_MANUFACTURER_ID, PID_PROGRAM_VERSION,
+        PID_HARDWARE_TYPE, PID_MANUFACTURER_ID, PID_PROGRAM_VERSION, PID_SERIAL_NUMBER,
     };
 
     use super::*;
@@ -1389,6 +1556,8 @@ mod tests {
     const MANUFACTURER: u16 = 0x0083;
     const HARDWARE: [u8; 6] = [0, 0, 0, 0, 0x01, 0x27];
     const IDENTITY: [u8; 5] = [0x00, 0x83, 0x00, 0x27, 0x15];
+    /// The Device Object serial a restorable device reports.
+    const SERIAL: [u8; 6] = [0x00, 0x83, 0x12, 0x34, 0x56, 0x78];
 
     fn fast() -> SessionTiming {
         SessionTiming {
@@ -3007,6 +3176,7 @@ mod tests {
         use knx_core::commissioning::device_backup::restore_plan;
         let device = old_device();
         device.preset_property(3, PID_PROGRAM_VERSION, &IDENTITY);
+        device.preset_property(0, PID_SERIAL_NUMBER, &SERIAL);
         let before: Vec<Option<u8>> = device.memory(0x4000, 30);
         let mut kept = None;
         run_memory_download_with_backup(
@@ -3035,6 +3205,7 @@ mod tests {
         use knx_core::commissioning::device_backup::restore_plan;
         let device = old_device();
         device.preset_property(3, PID_PROGRAM_VERSION, &IDENTITY);
+        device.preset_property(0, PID_SERIAL_NUMBER, &SERIAL);
         device.preset_property(0, PID_HARDWARE_TYPE, &ZERO_TAIL);
         let mut kept = None;
         run_memory_download_with_backup(
@@ -3608,6 +3779,7 @@ mod tests {
     }
 
     mod backup_identity;
+    mod exemplar_binding;
     mod region_reads;
     mod stop;
 }

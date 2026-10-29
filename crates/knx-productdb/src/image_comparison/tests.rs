@@ -58,6 +58,7 @@ fn fixture() -> (DownloadImage, DeviceBackup, MemoryDownloadPlan) {
             },
         ],
         prior_application: PriorApplication::NotRecorded,
+        exemplar_serial: knx_core::commissioning::device_backup::ExemplarEvidence::NotRecorded,
     };
     let plan = MemoryDownloadPlan {
         mask: MaskVersion(0x0701),

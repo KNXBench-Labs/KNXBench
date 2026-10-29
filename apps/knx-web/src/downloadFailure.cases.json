@@ -468,6 +468,198 @@
       ],
       "remove": [],
       "admitted": false
+    },
+    {
+      "name": "an exemplar mismatch in the backup before the first change",
+      "set": [
+        [
+          "/downloadEvidence/failure/phase",
+          "backupBeforeStep"
+        ],
+        [
+          "/downloadEvidence/written",
+          "no"
+        ],
+        [
+          "/downloadEvidence/failure/code",
+          "propertyMismatch"
+        ],
+        [
+          "/downloadEvidence/failure/category",
+          "identityMismatch"
+        ]
+      ],
+      "remove": [],
+      "admitted": true
+    },
+    {
+      "name": "a malformed serial answer in the backup before the first change",
+      "set": [
+        [
+          "/downloadEvidence/failure/phase",
+          "backupBeforeStep"
+        ],
+        [
+          "/downloadEvidence/written",
+          "no"
+        ],
+        [
+          "/downloadEvidence/failure/code",
+          "malformedProperty"
+        ],
+        [
+          "/downloadEvidence/failure/category",
+          "malformedResponse"
+        ]
+      ],
+      "remove": [],
+      "admitted": true
+    },
+    {
+      "name": "an exemplar mismatch in the backup with read-back octets",
+      "set": [
+        [
+          "/downloadEvidence/failure/phase",
+          "backupBeforeStep"
+        ],
+        [
+          "/downloadEvidence/written",
+          "no"
+        ],
+        [
+          "/downloadEvidence/failure/code",
+          "propertyMismatch"
+        ],
+        [
+          "/downloadEvidence/failure/category",
+          "identityMismatch"
+        ],
+        [
+          "/downloadEvidence/failure/readBackOctets",
+          4
+        ]
+      ],
+      "remove": [],
+      "admitted": false
+    },
+    {
+      "name": "a malformed answer in the backup with read-back octets",
+      "set": [
+        [
+          "/downloadEvidence/failure/phase",
+          "backupBeforeStep"
+        ],
+        [
+          "/downloadEvidence/written",
+          "no"
+        ],
+        [
+          "/downloadEvidence/failure/code",
+          "malformedProperty"
+        ],
+        [
+          "/downloadEvidence/failure/category",
+          "malformedResponse"
+        ],
+        [
+          "/downloadEvidence/failure/readBackOctets",
+          1
+        ]
+      ],
+      "remove": [],
+      "admitted": false
+    },
+    {
+      "name": "a mask mismatch in the backup phase",
+      "set": [
+        [
+          "/downloadEvidence/failure/phase",
+          "backupBeforeStep"
+        ],
+        [
+          "/downloadEvidence/written",
+          "no"
+        ],
+        [
+          "/downloadEvidence/failure/code",
+          "maskMismatch"
+        ],
+        [
+          "/downloadEvidence/failure/category",
+          "identityMismatch"
+        ]
+      ],
+      "remove": [],
+      "admitted": false
+    },
+    {
+      "name": "a malformed descriptor in the backup phase",
+      "set": [
+        [
+          "/downloadEvidence/failure/phase",
+          "backupBeforeStep"
+        ],
+        [
+          "/downloadEvidence/written",
+          "no"
+        ],
+        [
+          "/downloadEvidence/failure/code",
+          "malformedDescriptor"
+        ],
+        [
+          "/downloadEvidence/failure/category",
+          "malformedResponse"
+        ]
+      ],
+      "remove": [],
+      "admitted": false
+    },
+    {
+      "name": "a refused property in the backup phase",
+      "set": [
+        [
+          "/downloadEvidence/failure/phase",
+          "backupBeforeStep"
+        ],
+        [
+          "/downloadEvidence/written",
+          "no"
+        ],
+        [
+          "/downloadEvidence/failure/code",
+          "propertyRefused"
+        ],
+        [
+          "/downloadEvidence/failure/category",
+          "deviceRefused"
+        ]
+      ],
+      "remove": [],
+      "admitted": false
+    },
+    {
+      "name": "an exemplar mismatch coded as a backup failure",
+      "set": [
+        [
+          "/downloadEvidence/failure/phase",
+          "backupBeforeStep"
+        ],
+        [
+          "/downloadEvidence/written",
+          "no"
+        ],
+        [
+          "/downloadEvidence/failure/code",
+          "propertyMismatch"
+        ],
+        [
+          "/downloadEvidence/failure/category",
+          "backupFailed"
+        ]
+      ],
+      "remove": [],
+      "admitted": false
     }
   ]
 }

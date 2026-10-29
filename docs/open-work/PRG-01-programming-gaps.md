@@ -12,7 +12,7 @@ The owner authorised (25 October 2026) closing existing non-Secure gaps in the
 regular download/restore path, one bounded increment at a time, without live
 bus or device operations.
 
-## Implemented increment, software acceptance pending — exact 0700 property state
+## Software-accepted bounded increment — descriptor-qualified exact 0700 property state
 
 The [admitted contract](../contracts/post-download-run-state-0700.md) and
 [original-source investigation](../research/2026-10-29-property-description-run-state-0700.md)
@@ -21,8 +21,9 @@ identity/load gates and strict candidate binding. Independent descriptor
 metadata must establish PDT_CONTROL before one PID 6 read; a one-byte value
 alone is not type evidence. Implementation `5f075cf99` has genuine original
 CLI transfer/check RED → GREEN and independent whole-feature static review
-with no open findings. The committed branch/main-first gates, integrated
-build/smoke and publication remain pending: **not yet software acceptance**.
+with no open findings. Both maintained 15-stage branch/main-first gates and
+actual isolated build/smoke passed on runtime `0af68438f`
+([software acceptance](../status/2026-10-30-descriptor-qualified-0700-run-state.md)).
 Historical baseline `8d14de9ca` returned unsupported mask. The existing
 0701/0705 path, other masks, family/authorisation gates, retries/waits and
 memory-refusal boundary stay unchanged. The package must include actual
@@ -184,7 +185,7 @@ there is no CLI end-to-end, new shutdown, recovery or hardware guarantee.
 
 - Broader target/exemplar identity and runtime-state observation beyond the
   bounded property contracts (`0701h`/`0705h`, plus descriptor-qualified exact
-  `0700h` whose integrated acceptance is pending above). Other object layouts,
+  `0700h` whose bounded software acceptance is recorded above). Other object layouts,
   memory encoding and physical function remain unproved.
 - Parameter policies: the defining inactive, `Union` and customer-write rules
   are unresolved.

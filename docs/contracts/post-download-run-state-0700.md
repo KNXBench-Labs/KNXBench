@@ -2,11 +2,12 @@
 
 ## Status and scope
 
-PRG-01 implementation `5f075cf99`, 29 October 2026. Independent whole-feature
-static review accepted the complete codec → session → observer → persisted/public
-consumer increment with no open findings. **Committed branch/main-first gates,
-integrated build/smoke and runtime publication remain pending; no software or
-hardware acceptance is claimed here.** Historical baseline `8d14de9ca` returned
+PRG-01 implementation `5f075cf99`, begun 29 October 2026; **software accepted
+30 October on main-first runtime `0af68438f`**. Independent whole-feature static
+review, both maintained 15-stage gates and actual isolated build/smoke passed.
+[Executed acceptance and limits](../status/2026-10-30-descriptor-qualified-0700-run-state.md)
+keep runtime execution separate from documentation-only delivery/publication.
+No hardware acceptance follows. Historical baseline `8d14de9ca` returned
 `notRead/unsupportedMask` for exact `0700h`.
 
 The [source investigation](../research/2026-10-29-property-description-run-state-0700.md)

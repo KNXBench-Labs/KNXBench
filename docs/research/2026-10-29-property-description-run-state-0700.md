@@ -3,8 +3,10 @@
 29 October 2026, PRG-01. This records design/source admission, not runtime or
 hardware acceptance. Historical baseline `8d14de9ca` supported run-state
 observation only for exact 0701/0705. The [contract](../contracts/post-download-run-state-0700.md)
-consolidates the independently reviewed corrected proposal and separates the
-implemented source `5f075cf99` from pending integrated software acceptance.
+consolidates the independently reviewed corrected proposal. Subsequent
+[software acceptance](../status/2026-10-30-descriptor-qualified-0700-run-state.md)
+on runtime `0af68438f` is separate from these defining source facts and from
+hardware/function acceptance.
 
 ## Original definitions inspected
 

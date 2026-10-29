@@ -66,48 +66,109 @@ pub(super) fn redact(
     base: &Base<'_>,
     findings: &mut Findings,
 ) -> Result<Option<Vec<u8>>, &'static str> {
+    if base.text.len() > super::budget::XML_PATH {
+        return Err("XML path budget exceeded");
+    }
+    findings.budget.output(input.len().saturating_mul(2))?;
+    let mut path = base.text.to_string();
     let mut reader = Reader::from_reader(input);
     let mut out: Vec<u8> = Vec::new();
     let mut copied = 0usize;
     let mut changed = false;
     // Element name, whether it is secret, whether its text was counted.
     let mut stack: Vec<(Vec<u8>, bool, bool)> = Vec::new();
+    let mut secrets: Vec<(usize, Vec<u8>)> = Vec::new();
     loop {
         let start = position(&reader)?;
         let event = reader.read_event().map_err(|_| "not well-formed XML")?;
         let end = position(&reader)?;
+        findings
+            .budget
+            .work(end.saturating_sub(start).saturating_add(1))?;
         match event {
             Event::Start(ref tag) | Event::Empty(ref tag) => {
-                let local = tag.local_name().as_ref().as_bytes().to_vec();
-                let path = element_path(base, &stack, &local);
+                if stack.len() >= super::budget::XML_DEPTH {
+                    return Err("XML depth budget exceeded");
+                }
+                let local_name = tag.local_name();
+                let local = local_name.as_ref().as_bytes();
+                let old_path = path.len();
+                if !(stack.is_empty() && base.root_in_base) {
+                    if path.len().saturating_add(1).saturating_add(local.len())
+                        > super::budget::XML_PATH
+                    {
+                        return Err("XML path budget exceeded");
+                    }
+                    path.push('/');
+                    path.push_str(std::str::from_utf8(local).map_err(|_| "invalid XML name")?);
+                }
                 let empty = matches!(event, Event::Empty(_));
-                if let Some(rebuilt) = redact_tag(tag, empty, &local, &path, findings)? {
+                if let Some(rebuilt) = redact_tag(tag, empty, local, &path, findings)? {
                     out.extend_from_slice(&input[copied..start]);
                     out.extend_from_slice(&rebuilt);
                     copied = end;
                     changed = true;
                 }
                 if matches!(event, Event::Start(_)) {
-                    let secret = is_secret_name(&local);
-                    stack.push((local, secret, false));
+                    let secret = is_secret_name(local);
+                    stack.push((local.to_vec(), secret, false));
+                    if secret {
+                        secrets.push((stack.len(), Vec::new()));
+                    }
+                } else {
+                    path.truncate(old_path);
                 }
             }
             Event::End(_) => {
-                stack.pop().ok_or("unmatched XML end tag")?;
-            }
-            Event::Text(_) | Event::CData(_) | Event::GeneralRef(_)
-                if stack.iter().any(|(_, secret, _)| *secret) =>
-            {
-                let raw = &input[start..end];
-                if raw.iter().all(u8::is_ascii_whitespace) {
-                    continue;
+                if secrets
+                    .last()
+                    .is_some_and(|(depth, _)| *depth == stack.len())
+                {
+                    let (_, value) = secrets.pop().ok_or("missing secret element")?;
+                    findings.remember(&value);
                 }
+                let (name, ..) = stack.pop().ok_or("unmatched XML end tag")?;
+                if !(stack.is_empty() && base.root_in_base) {
+                    path.truncate(path.len().saturating_sub(name.len() + 1));
+                }
+            }
+            Event::Text(_) | Event::CData(_) | Event::GeneralRef(_) if !secrets.is_empty() => {
+                if end.saturating_sub(start) > 1024 * 1024 {
+                    return Err("secret element exceeds decoded value budget");
+                }
+                let decoded = match &event {
+                    Event::Text(text) => text.xml_content(XmlVersion::Implicit1_0).into_owned(),
+                    Event::CData(text) => text.xml_content(XmlVersion::Implicit1_0).into_owned(),
+                    Event::GeneralRef(reference) => {
+                        if let Some(ch) = reference
+                            .resolve_char_ref()
+                            .map_err(|_| "invalid character reference")?
+                        {
+                            ch.to_string()
+                        } else {
+                            quick_xml::escape::resolve_predefined_entity(reference.as_ref())
+                                .ok_or("unresolved XML reference")?
+                                .to_string()
+                        }
+                    }
+                    _ => unreachable!(),
+                };
+                findings
+                    .budget
+                    .work(decoded.len().saturating_mul(secrets.len()))?;
+                for (_, value) in &mut secrets {
+                    if value.len().saturating_add(decoded.len()) > 1024 * 1024 {
+                        return Err("secret element exceeds decoded value budget");
+                    }
+                    value.extend_from_slice(decoded.as_bytes());
+                }
+                let raw = &input[start..end];
                 findings.remember(raw);
                 out.extend_from_slice(&input[copied..start]);
                 copied = end;
                 changed = true;
                 // Counted once per secret element, however its text is split.
-                if let Some(index) = stack.iter().rposition(|(_, secret, _)| *secret) {
+                if let Some(index) = secrets.last().map(|(depth, _)| depth - 1) {
                     if !stack[index].2 {
                         let path = element_path(base, &stack[..index], &stack[index].0);
                         let kind = String::from_utf8_lossy(&stack[index].0).into_owned();
@@ -130,6 +191,7 @@ pub(super) fn redact(
         return Ok(None);
     }
     out.extend_from_slice(&input[copied..]);
+    findings.budget.check()?;
     Ok(Some(out))
 }
 
@@ -161,17 +223,35 @@ fn redact_tag(
 ) -> Result<Option<Vec<u8>>, &'static str> {
     let mut attributes: Vec<(Vec<u8>, Vec<u8>)> = Vec::new();
     let mut changed = false;
-    for attribute in tag.attributes() {
-        let attribute = attribute.map_err(|_| "malformed or duplicate XML attribute")?;
-        let key = attribute.key.as_ref().as_bytes().to_vec();
+    // Avoid the parser's duplicate-name policy doing unmetered pairwise work.
+    for attribute in tag.attributes().with_checks(false) {
+        if attributes.len() >= 4096 {
+            return Err("XML attribute count budget exceeded");
+        }
+        let attribute = attribute.map_err(|_| "malformed XML attribute")?;
+        let key_bytes = attribute.key.as_ref().as_bytes();
+        if key_bytes.len() > super::budget::XML_PATH {
+            return Err("XML attribute name budget exceeded");
+        }
+        for (previous, _) in &attributes {
+            findings.budget.work(1)?;
+            if previous.len() == key_bytes.len() {
+                findings.budget.work(key_bytes.len())?;
+                if previous.as_slice() == key_bytes {
+                    return Err("duplicate XML attribute");
+                }
+            }
+        }
+        let key = key_bytes.to_vec();
         let local = attribute.key.local_name().as_ref().as_bytes().to_vec();
         let raw: &[u8] = attribute.value.as_bytes();
         let mut value = raw.to_vec();
         if is_secret_name(&local) && is_secret_value(&local, raw) {
             findings.remember(raw);
-            if let Ok(plain) = attribute.normalized_value(XmlVersion::Implicit1_0) {
-                findings.remember(plain.as_bytes());
-            }
+            let plain = attribute
+                .normalized_value(XmlVersion::Implicit1_0)
+                .map_err(|_| "undecodable secret attribute")?;
+            findings.remember(plain.as_bytes());
             let name = String::from_utf8_lossy(&local).into_owned();
             findings.redact(format!("{path}/@{name}"), name);
             value.clear();

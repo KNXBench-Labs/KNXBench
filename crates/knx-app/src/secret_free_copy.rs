@@ -15,15 +15,37 @@
 //! XML, UTF-16 text, a carried product file that names a secret) is withheld
 //! and listed, never copied unredacted. Every redaction is reported by
 //! location and kind only; no value, digest or length of a secret is ever
-//! written into a [`Redaction`], an error or `Debug` output.
+//! emitted in a [`Redaction`] or in error `Display`/`Debug` output.
 //!
 //! As a second net, every removed value of at least
 //! [`MIN_RESIDUAL_BYTES`] bytes is searched for in what is about to be
 //! copied: a member or retained row that still contains one is withheld,
 //! and a native copy whose final bytes still contain one is refused.
+//!
+//! This exports a quiescent **saved root**, not unsaved editor/recovery state.
+//! Native input is read once into a bounded private snapshot before any SQLite
+//! opener runs. WAL-mode and journal/sidecar-bearing sources are refused, not
+//! checkpointed or opened through a reader that could write shared-memory state.
+//! History
+//! omission is reported. Manufacturer identities are never forged: a withheld
+//! carried file can leave a manifest reference unavailable, visibly listed.
+//!
+//! Diagnostic-only ceilings (shared across discovery/enforcement and children):
+//! source ZIP 256 MiB; native snapshot 512 MiB and 262,144 retained rows;
+//! decoded expansion/output 1 GiB each; XML depth 256, path/name 8 KiB,
+//! 4,096 attributes per tag and 128 MiB of explicitly charged XML work;
+//! complete secret element value 1 MiB; learned values 16,384 / 8 MiB;
+//! findings 32,768 / 8 MiB; residual matching 16 MiB of input/comparison work.
+//! Budget exhaustion refuses the whole artifact, never means no secret matched.
+//! Reports additionally require bounded JSON objects (depth 64, conservative
+//! 16 MiB serialized-size allowance). Uninspectable encodings remain withheld.
+//! Residual matching is literal, not arbitrary encoding/decryption analysis;
+//! the short-value exception never exempts directly identified credential fields.
 
 mod archive;
+mod budget;
 mod native;
+mod report;
 #[cfg(test)]
 mod tests;
 mod xml;
@@ -107,9 +129,12 @@ pub struct Redaction {
     pub count: usize,
 }
 
-/// Why no copy was produced. Carries no secret value.
-#[derive(Debug)]
+/// Why no copy was produced. Display and Debug never echo untrusted error text.
 pub enum SecretFreeCopyError {
+    /// A source cannot be snapshotted without touching live journal state.
+    SourceUnavailable { reason: &'static str },
+    /// A bounded inspection cannot complete safely.
+    BudgetExceeded { resource: &'static str },
     /// Reading the source or the scratch copy failed.
     Io {
         stage: &'static str,
@@ -135,25 +160,32 @@ pub enum SecretFreeCopyError {
 impl fmt::Display for SecretFreeCopyError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            Self::SourceUnavailable { reason } => {
+                write!(f, "secret-free copy: source unavailable ({reason})")
+            }
+            Self::BudgetExceeded { resource } => write!(f, "secret-free copy refused: {resource}"),
             Self::Io { stage, kind } => write!(f, "secret-free copy: {stage} failed ({kind})"),
             Self::TooLarge { bytes, limit } => write!(
                 f,
                 "secret-free copy: the source has {bytes} bytes, more than the {limit}-byte limit"
             ),
-            Self::Store(error) => write!(f, "secret-free copy: {error}"),
-            Self::Sql(error) => write!(f, "secret-free copy: project storage: {error}"),
-            Self::Reopen(reason) => write!(
-                f,
-                "secret-free copy: the redacted project does not reopen: {reason}"
-            ),
-            Self::Archive(error) => write!(f, "secret-free copy: {error}"),
-            Self::Write(reason) => write!(f, "secret-free copy: writing the archive: {reason}"),
+            Self::Store(_) => f.write_str("secret-free copy: project store unavailable"),
+            Self::Sql(_) => f.write_str("secret-free copy: project storage refused"),
+            Self::Reopen(_) => f.write_str("secret-free copy: redacted project does not reopen"),
+            Self::Archive(_) => f.write_str("secret-free copy: archive unavailable"),
+            Self::Write(_) => f.write_str("secret-free copy: output refused"),
             Self::ResidualSecret { occurrences } => write!(
                 f,
                 "secret-free copy refused: {occurrences} removed secret value(s) still occur \
                  elsewhere in the project, so no copy is offered"
             ),
         }
+    }
+}
+
+impl fmt::Debug for SecretFreeCopyError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::Display::fmt(self, f)
     }
 }
 
@@ -197,14 +229,29 @@ pub fn import_source_without_secrets(source: &Path) -> Result<SecretFreeCopy, Se
     archive::copy(source)
 }
 
+/// Sanitized historical import report JSON; the caller's evidence is never changed.
+/// Row identities/counts stay intact. A secret-bearing identity makes the report
+/// unavailable instead of silently regrouping historical findings.
+pub fn import_report_without_secrets(
+    report: &serde_json::Value,
+) -> Result<SecretFreeCopy, SecretFreeCopyError> {
+    report::copy(report)
+}
+
 /// Whether `name` is one of [`SECRET_NAMES`], exactly.
 fn is_secret_name(name: &[u8]) -> bool {
+    let name = local_name(name);
     SECRET_NAMES.iter().any(|secret| secret.as_bytes() == name)
 }
 
 /// Whether a value under a secret name is secret material: non-empty, and
 /// not the `BCUKey` free-access sentinel.
+fn local_name(name: &[u8]) -> &[u8] {
+    name.rsplit(|byte| *byte == b':').next().unwrap_or(name)
+}
+
 fn is_secret_value(name: &[u8], value: &[u8]) -> bool {
+    let name = local_name(name);
     let trimmed = value.trim_ascii();
     !trimmed.is_empty() && !(name == b"BCUKey" && trimmed == FREE_ACCESS_KEY)
 }
@@ -213,24 +260,53 @@ fn is_secret_value(name: &[u8], value: &[u8]) -> bool {
 /// the removed values for the residual search. Deliberately not `Debug`.
 #[derive(Default)]
 struct Findings {
+    budget: budget::Budget,
     redactions: BTreeMap<(String, String), usize>,
     withheld: Vec<String>,
     values: BTreeSet<Vec<u8>>,
 }
 
 impl Findings {
+    fn child(&self) -> Self {
+        Self {
+            budget: self.budget.clone(),
+            ..Self::default()
+        }
+    }
+    fn ensure(&self) -> Result<(), SecretFreeCopyError> {
+        self.budget
+            .check()
+            .map_err(|resource| SecretFreeCopyError::BudgetExceeded { resource })
+    }
     fn redact(&mut self, location: String, kind: String) {
+        if self
+            .budget
+            .finding(location.len().saturating_add(kind.len()))
+            .is_err()
+        {
+            return;
+        }
         *self.redactions.entry((location, kind)).or_default() += 1;
     }
 
     fn remember(&mut self, value: &[u8]) {
         let value = value.trim_ascii();
-        if value.len() >= MIN_RESIDUAL_BYTES {
+        if value.len() >= MIN_RESIDUAL_BYTES && !self.values.contains(value) {
+            if self.budget.value(value.len()).is_err() {
+                return;
+            }
             self.values.insert(value.to_vec());
         }
     }
 
     fn withhold(&mut self, location: &str, reason: &str) {
+        if self
+            .budget
+            .finding(location.len().saturating_add(reason.len()))
+            .is_err()
+        {
+            return;
+        }
         self.withheld.push(format!("{location}: {reason}"));
     }
 
@@ -245,32 +321,56 @@ impl Findings {
 
     /// The residual search over every value remembered so far.
     fn needles(&self) -> Needles<'_> {
-        Needles::new(&self.values)
+        Needles::with_budget(&self.values, self.budget.clone())
     }
 
-    fn finish(self, bytes: Vec<u8>) -> SecretFreeCopy {
-        SecretFreeCopy {
+    fn finish(mut self, bytes: Vec<u8>) -> Result<SecretFreeCopy, SecretFreeCopyError> {
+        self.ensure()?;
+        let needles = Needles::with_budget(&self.values, self.budget.clone());
+        for text in &mut self.withheld {
+            if needles.any_in(text.as_bytes()) {
+                *text = "withheld entry: secret in metadata".into();
+            }
+        }
+        let copy = SecretFreeCopy {
             bytes,
             redactions: self
                 .redactions
                 .into_iter()
                 .map(|((location, kind), count)| Redaction {
-                    location,
-                    kind,
+                    location: if needles.any_in(location.as_bytes()) {
+                        "redacted location".into()
+                    } else {
+                        location
+                    },
+                    kind: if needles.any_in(kind.as_bytes()) {
+                        "redacted kind".into()
+                    } else {
+                        kind
+                    },
                     count,
                 })
                 .collect(),
             withheld: self.withheld,
+        };
+        let note = serde_json::to_vec(&copy)
+            .map_err(|_| SecretFreeCopyError::Write("copy metadata".into()))?;
+        let residual = needles.any_in(&note);
+        self.budget
+            .check()
+            .map_err(|resource| SecretFreeCopyError::BudgetExceeded { resource })?;
+        if residual {
+            return Err(SecretFreeCopyError::ResidualSecret { occurrences: 1 });
         }
+        Ok(copy)
     }
 }
 
-/// One linear pass finds any of many removed values: every value is at
-/// least [`MIN_RESIDUAL_BYTES`] long, so its first six bytes, packed into an
-/// integer, index it. A bit filter rejects almost every window before the
-/// map is asked, so a large project costs one cheap step per byte, not one
-/// comparison per byte and value.
+/// Prefix-indexed matching with a cumulative worst-case comparison budget.
+/// Every window and candidate comparison is charged before work. A sticky
+/// exhaustion error forbids publication, including after metadata scanning.
 struct Needles<'a> {
+    budget: budget::Budget,
     filter: Vec<u64>,
     by_prefix: std::collections::HashMap<u64, Vec<&'a [u8]>>,
 }
@@ -279,7 +379,12 @@ const PREFIX_MASK: u64 = (1 << (8 * MIN_RESIDUAL_BYTES)) - 1;
 const FILTER_BITS: u32 = 20;
 
 impl<'a> Needles<'a> {
+    #[cfg(test)]
     fn new(values: &'a BTreeSet<Vec<u8>>) -> Self {
+        Self::with_budget(values, budget::Budget::default())
+    }
+
+    fn with_budget(values: &'a BTreeSet<Vec<u8>>, budget: budget::Budget) -> Self {
         let mut filter = vec![0u64; (1usize << FILTER_BITS) / 64];
         let mut by_prefix = std::collections::HashMap::<u64, Vec<&[u8]>>::new();
         for value in values.iter().filter(|v| v.len() >= MIN_RESIDUAL_BYTES) {
@@ -290,7 +395,11 @@ impl<'a> Needles<'a> {
             filter[slot / 64] |= 1 << (slot % 64);
             by_prefix.entry(prefix).or_default().push(value);
         }
-        Self { filter, by_prefix }
+        Self {
+            filter,
+            by_prefix,
+            budget,
+        }
     }
 
     fn slot(prefix: u64) -> usize {
@@ -304,6 +413,11 @@ impl<'a> Needles<'a> {
         }
         let mut found = BTreeSet::new();
         let mut window = 0u64;
+        // Charge bytes once, and candidate comparison upper bounds before each
+        // comparison. Exhaustion is sticky and publication must return its error.
+        if self.budget.matching(haystack.len()).is_err() {
+            return 1;
+        }
         for (index, &byte) in haystack.iter().enumerate() {
             window = ((window << 8) | u64::from(byte)) & PREFIX_MASK;
             if index + 1 < MIN_RESIDUAL_BYTES {
@@ -315,6 +429,9 @@ impl<'a> Needles<'a> {
             }
             let start = index + 1 - MIN_RESIDUAL_BYTES;
             for value in self.by_prefix.get(&window).into_iter().flatten() {
+                if self.budget.matching(value.len()).is_err() {
+                    return 1;
+                }
                 if haystack[start..].starts_with(value)
                     && found.insert(*value)
                     && found.len() >= limit

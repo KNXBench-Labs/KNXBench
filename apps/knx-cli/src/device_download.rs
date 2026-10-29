@@ -930,7 +930,9 @@ async fn execute_inner<T: ManagementTransport>(
             application: backup.application.to_owned(),
             partial: backup.partial,
             taken: backup.taken.clone(),
-            plan_steps: plan.steps.iter().map(ToString::to_string).collect(),
+            plan_steps: knx_core::commissioning::memory_download::source_procedure_descriptions(
+                plan,
+            ),
         };
         let path = write_backup(backup.dir, &stored).map_err(|e| e.to_string())?;
         *kept_at.borrow_mut() = Some(path);
@@ -1478,6 +1480,12 @@ mod tests {
             knx_core::commissioning::partial_memory_download::application_identity(&prepared.plan)
                 .expect("the verified program names its application");
         device.preset_property(3, PID_PROGRAM_VERSION, &identity);
+        let serial = [0x00, 0x83, 0x12, 0x34, 0x56, 0x78];
+        device.preset_property(
+            0,
+            knx_core::commissioning::properties::PID_SERIAL_NUMBER,
+            &serial,
+        );
         // An older configuration: other octets than the plan writes.
         for segment in &prepared.image.segments {
             let old: Vec<u8> = (0..segment.octets.len())
@@ -1535,6 +1543,17 @@ mod tests {
             knx_core::commissioning::device_backup::PriorApplication::Recorded(identity),
             "the durable file holds the pre-write observation"
         );
+        assert_eq!(
+            stored.backup.exemplar_serial,
+            knx_core::commissioning::device_backup::ExemplarEvidence::Recorded(
+                knx_core::commissioning::memory_download::ExemplarSerial::new(serial)
+            ),
+            "the durable file holds the pre-write serial"
+        );
+        let mut unbound = stored.clone();
+        unbound.backup.exemplar_serial =
+            knx_core::commissioning::device_backup::ExemplarEvidence::NotRecorded;
+        assert!(knx_app::device_backup::prepare_restore(&products, &unbound).is_err());
         // Without that observation, or with another application's, the
         // complete plan's load procedure is not written around these octets.
         for (evidence, wanted) in [

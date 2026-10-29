@@ -6,14 +6,14 @@
 //! compared before the executor is allowed to write to the device: a
 //! backup that exists only in memory is no backup.
 //!
-//! Format 2, plain JSON so an operator can read it without KNXBench:
+//! Format 3, plain JSON so an operator can read it without KNXBench:
 //!
 //! ```json
-//! { "format": 2, "kind": "knxbench-device-backup",
+//! { "format": 3, "kind": "knxbench-device-backup",
 //!   "taken": "2026-09-29T14:10:00+02:00",
 //!   "device": "1.1.67", "mask": "0701", "manufacturer": "0083",
 //!   "application": "M-0083_A-0027-15-0BAC", "partial": null,
-//!   "prior_application": "0083002715",
+//!   "prior_application": "0083002715", "exemplar_serial": "008312345678",
 //!   "load_states": [{"machine": "address-table", "state": "Loaded"}],
 //!   "regions": [{"address": "4000", "octets": "05..."}] }
 //! ```
@@ -32,6 +32,13 @@
 //! format 1 refuse format 2 files: there is no downgrade path. A restore
 //! needs recorded evidence or the plan's own identity precondition
 //! ([`knx_core::commissioning::device_backup::restore_plan`]).
+//!
+//! `exemplar_serial` (format 3, required, nullable) is the twelve-hex-digit
+//! Device Object serial (PID 11) read before the first write. It is private
+//! evidence of this file only: it binds a restore to the same exemplar and
+//! never reaches history, reports or HTTP. New files write uppercase hex,
+//! reading accepts either case. Formats 1 and 2 read as "not recorded" and
+//! refuse the field; a backup without a bindable serial is never restorable.
 
 use std::fmt;
 use std::fs;
@@ -39,17 +46,21 @@ use std::io::Write;
 use std::path::{Path, PathBuf};
 
 use knx_core::commissioning::device_backup::{
-    restore_plan, BackupRegion, DeviceBackup, PriorApplication, RestoreError,
+    restore_plan, BackupRegion, DeviceBackup, ExemplarEvidence, PriorApplication, RestoreError,
 };
 use knx_core::commissioning::load_control_memory::MemoryLoadStateMachine;
 use knx_core::commissioning::load_state::{LoadState, MaskVersion};
-use knx_core::commissioning::memory_download::MemoryDownloadPlan;
+use knx_core::commissioning::memory_download::{
+    source_procedure_descriptions, ExemplarSerial, MemoryDownloadPlan,
+};
 use knx_core::commissioning::partial_memory_download::derive_partial_plan;
 use knx_core::commissioning::partial_memory_download::PartialDownloadParts;
 use knx_core::IndividualAddress;
 use serde::{Deserialize, Serialize};
 
-const FORMAT: u32 = 2;
+const FORMAT: u32 = 3;
+/// The last format without `exemplar_serial`; still read.
+const FORMAT_WITHOUT_EXEMPLAR: u32 = 2;
 /// The last format without `prior_application`; still read.
 const FORMAT_WITHOUT_PRIOR: u32 = 1;
 const KIND: &str = "knxbench-device-backup";
@@ -108,6 +119,9 @@ struct BackupFile {
     /// Absent (`None`) is not the same as `null` (`Some(None)`).
     #[serde(default, deserialize_with = "present")]
     prior_application: Option<Option<String>>,
+    /// Same present-versus-null distinction; required from format 3.
+    #[serde(default, deserialize_with = "present")]
+    exemplar_serial: Option<Option<String>>,
 }
 
 /// Keeps `null` apart from an absent field.
@@ -206,6 +220,18 @@ fn prior_from(text: &str) -> Result<[u8; 5], BackupFileError> {
     unhex(text)?.try_into().map_err(|_| malformed())
 }
 
+fn serial_from(text: &str) -> Result<ExemplarSerial, BackupFileError> {
+    // Never echo the text: it is the private serial or a damaged copy of it.
+    let malformed = || BackupFileError::Malformed("exemplar_serial".to_owned());
+    if text.len() != 2 * ExemplarSerial::OCTETS
+        || !text.bytes().all(|byte| byte.is_ascii_hexdigit())
+    {
+        return Err(malformed());
+    }
+    let octets: [u8; ExemplarSerial::OCTETS] = unhex(text)?.try_into().map_err(|_| malformed())?;
+    Ok(ExemplarSerial::new(octets))
+}
+
 fn hex16(text: &str, what: &str) -> Result<u16, BackupFileError> {
     if text.len() != 4 {
         return Err(BackupFileError::Malformed(format!("{what} {text:?}")));
@@ -250,6 +276,10 @@ pub fn to_json(stored: &StoredBackup) -> String {
             PriorApplication::Recorded(identity) => Some(hex(&identity)),
             PriorApplication::NotRecorded => None,
         }),
+        exemplar_serial: Some(match backup.exemplar_serial {
+            ExemplarEvidence::Recorded(serial) => Some(hex(&serial.octets())),
+            ExemplarEvidence::NotRecorded => None,
+        }),
     };
     serde_json::to_string_pretty(&file).expect("a backup serialises") + "\n"
 }
@@ -268,18 +298,37 @@ pub fn from_json(text: &str) -> Result<StoredBackup, BackupFileError> {
                 "format {FORMAT_WITHOUT_PRIOR} cannot carry prior_application"
             )))
         }
-        (FORMAT, None) => {
+        (FORMAT_WITHOUT_EXEMPLAR | FORMAT, None) => {
             return Err(BackupFileError::Malformed(format!(
-                "format {FORMAT} requires prior_application (null if not recorded)"
+                "format {} requires prior_application (null if not recorded)",
+                file.format
             )))
         }
-        (FORMAT, Some(None)) => PriorApplication::NotRecorded,
-        (FORMAT, Some(Some(text))) => PriorApplication::Recorded(prior_from(text)?),
+        (FORMAT_WITHOUT_EXEMPLAR | FORMAT, Some(None)) => PriorApplication::NotRecorded,
+        (FORMAT_WITHOUT_EXEMPLAR | FORMAT, Some(Some(text))) => {
+            PriorApplication::Recorded(prior_from(text)?)
+        }
         (other, _) => {
             return Err(BackupFileError::Malformed(format!(
-                "format {other}; this build reads {FORMAT_WITHOUT_PRIOR} and {FORMAT}"
+                "format {other}; this build reads {FORMAT_WITHOUT_PRIOR} to {FORMAT}"
             )))
         }
+    };
+    let exemplar_serial = match (file.format, &file.exemplar_serial) {
+        (FORMAT_WITHOUT_PRIOR | FORMAT_WITHOUT_EXEMPLAR, None) => ExemplarEvidence::NotRecorded,
+        (_, Some(_)) if file.format != FORMAT => {
+            return Err(BackupFileError::Malformed(format!(
+                "format {} cannot carry exemplar_serial",
+                file.format
+            )))
+        }
+        (_, None) => {
+            return Err(BackupFileError::Malformed(format!(
+                "format {FORMAT} requires exemplar_serial (null if not recorded)"
+            )))
+        }
+        (_, Some(None)) => ExemplarEvidence::NotRecorded,
+        (_, Some(Some(text))) => ExemplarEvidence::Recorded(serial_from(text)?),
     };
     let target: IndividualAddress = file
         .device
@@ -308,6 +357,7 @@ pub fn from_json(text: &str) -> Result<StoredBackup, BackupFileError> {
             load_states,
             regions,
             prior_application,
+            exemplar_serial,
         },
         application: file.application,
         partial: file.partial.map(|p| PartialDownloadParts {
@@ -370,13 +420,7 @@ pub fn prepare_restore(
                 .plan
         }
     };
-    if plan
-        .steps
-        .iter()
-        .map(ToString::to_string)
-        .collect::<Vec<_>>()
-        != stored.plan_steps
-    {
+    if source_procedure_descriptions(&plan) != stored.plan_steps {
         return Err(RestorePrepareError::DifferentProcedure);
     }
     restore_plan(&plan, stored.backup.target, &stored.backup).map_err(RestorePrepareError::Shape)
@@ -438,6 +482,9 @@ pub fn read_backup(path: &Path) -> Result<StoredBackup, BackupFileError> {
 mod tests {
     use super::*;
 
+    const SERIAL: [u8; 6] = [0x00, 0x83, 0x12, 0xAB, 0xCD, 0xEF];
+    const EXEMPLAR: &str = "\"exemplar_serial\": \"008312ABCDEF\"";
+
     fn stored() -> StoredBackup {
         StoredBackup {
             backup: DeviceBackup {
@@ -459,6 +506,7 @@ mod tests {
                     },
                 ],
                 prior_application: PriorApplication::Recorded([0x00, 0x83, 0x00, 0x27, 0x15]),
+                exemplar_serial: ExemplarEvidence::Recorded(ExemplarSerial::new(SERIAL)),
             },
             application: "M-0083_A-0027-15-0BAC".into(),
             partial: Some(PartialDownloadParts {
@@ -576,8 +624,8 @@ mod tests {
     fn a_foreign_or_damaged_file_is_refused() {
         let good = to_json(&stored());
         for bad in [
-            good.replace("\"format\": 2", "\"format\": 3"),
-            good.replace("\"format\": 2", "\"format\": 0"),
+            good.replace("\"format\": 3", "\"format\": 4"),
+            good.replace("\"format\": 3", "\"format\": 0"),
             good.replace(KIND, "something-else"),
             good.replace("\"00ABFF\"", "\"00ABF\""),
             good.replace("\"00ABFF\"", "\"00ABZZ\""),
@@ -598,16 +646,30 @@ mod tests {
 
     const PRIOR: &str = "\"prior_application\": \"0083002715\"";
 
-    fn without_prior(text: &str) -> String {
+    fn without(text: &str, field: &str) -> String {
         let mut value: serde_json::Value = serde_json::from_str(text).unwrap();
-        value.as_object_mut().unwrap().remove("prior_application");
+        value.as_object_mut().unwrap().remove(field);
         serde_json::to_string_pretty(&value).unwrap()
     }
 
+    fn without_prior(text: &str) -> String {
+        without(text, "prior_application")
+    }
+
+    /// `text` as a format-1 file: neither later field.
+    fn as_format_one(text: &str) -> String {
+        without(&without_prior(text), "exemplar_serial").replace("\"format\": 3", "\"format\": 1")
+    }
+
+    /// `text` as a format-2 file: no serial.
+    fn as_format_two(text: &str) -> String {
+        without(text, "exemplar_serial").replace("\"format\": 3", "\"format\": 2")
+    }
+
     #[test]
-    fn format_two_writes_the_prior_application_or_an_explicit_null() {
+    fn format_three_writes_the_prior_application_or_an_explicit_null() {
         let text = to_json(&stored());
-        assert!(text.contains("\"format\": 2"), "{text}");
+        assert!(text.contains("\"format\": 3"), "{text}");
         assert!(text.contains(PRIOR), "{text}");
         let mut unrecorded = stored();
         unrecorded.backup.prior_application = PriorApplication::NotRecorded;
@@ -618,7 +680,7 @@ mod tests {
 
     #[test]
     fn format_one_reads_as_not_recorded_and_is_never_rewritten() {
-        let old = without_prior(&to_json(&stored())).replace("\"format\": 2", "\"format\": 1");
+        let old = as_format_one(&to_json(&stored()));
         assert!(!old.contains("prior_application"), "{old}");
         let read = from_json(&old).unwrap();
         assert_eq!(read.backup.prior_application, PriorApplication::NotRecorded);
@@ -635,7 +697,7 @@ mod tests {
 
     #[test]
     fn format_one_cannot_carry_the_new_field() {
-        let good = to_json(&stored()).replace("\"format\": 2", "\"format\": 1");
+        let good = to_json(&stored()).replace("\"format\": 3", "\"format\": 1");
         for bad in [
             good.clone(),
             good.replace(PRIOR, "\"prior_application\": null"),
@@ -648,7 +710,7 @@ mod tests {
     }
 
     #[test]
-    fn format_two_refuses_a_missing_or_malformed_prior_application() {
+    fn format_three_refuses_a_missing_or_malformed_prior_application() {
         let good = to_json(&stored());
         for bad in [
             without_prior(&good),
@@ -677,6 +739,7 @@ mod tests {
         let mut legacy = stored();
         legacy.backup.load_states[1].1 = LoadState::Loaded;
         legacy.backup.prior_application = PriorApplication::NotRecorded;
+        legacy.backup.exemplar_serial = ExemplarEvidence::NotRecorded;
         // The plan does not derive from an empty product database, so the
         // identity refusal itself is covered in `knx-core`; here the file
         // still reads and reaches the plan step.
@@ -684,7 +747,113 @@ mod tests {
             prepare_restore(&products, &legacy),
             Err(RestorePrepareError::Plan(_))
         ));
-        let text = without_prior(&to_json(&legacy)).replace("\"format\": 2", "\"format\": 1");
+        let text = as_format_one(&to_json(&legacy));
         assert_eq!(from_json(&text).unwrap(), legacy);
+    }
+
+    #[test]
+    fn format_three_writes_the_serial_in_uppercase_or_an_explicit_null() {
+        let text = to_json(&stored());
+        assert!(text.contains(EXEMPLAR), "{text}");
+        assert_eq!(from_json(&text).unwrap(), stored());
+        let mut unrecorded = stored();
+        unrecorded.backup.exemplar_serial = ExemplarEvidence::NotRecorded;
+        let text = to_json(&unrecorded);
+        assert!(text.contains("\"exemplar_serial\": null"), "{text}");
+        assert_eq!(from_json(&text).unwrap(), unrecorded);
+        let lower = to_json(&stored()).replace("008312ABCDEF", "008312abcdef");
+        assert_eq!(
+            from_json(&lower).unwrap(),
+            stored(),
+            "reading accepts either case"
+        );
+    }
+
+    #[test]
+    fn format_three_refuses_a_missing_or_malformed_serial_without_echoing_it() {
+        let good = to_json(&stored());
+        for bad in [
+            without(&good, "exemplar_serial"),
+            good.replace(EXEMPLAR, "\"exemplar_serial\": \"008312ABCD\""),
+            good.replace(EXEMPLAR, "\"exemplar_serial\": \"008312ABCDEF00\""),
+            good.replace(EXEMPLAR, "\"exemplar_serial\": \"008312ABCDEZ\""),
+            good.replace(EXEMPLAR, "\"exemplar_serial\": \"+08312ABCDEF\""),
+            good.replace(EXEMPLAR, "\"exemplar_serial\": \"\""),
+            good.replace(EXEMPLAR, "\"exemplar_serial\": 8312"),
+            good.replace(EXEMPLAR, "\"exemplar_serial\": [0,131,18,171,205,239]"),
+            good.replace(EXEMPLAR, &format!("{EXEMPLAR}, {EXEMPLAR}")),
+            good.replace(EXEMPLAR, &format!("{EXEMPLAR}, \"serial\": 1")),
+        ] {
+            let error = from_json(&bad).expect_err(&bad);
+            assert!(matches!(error, BackupFileError::Malformed(_)), "{bad}");
+            assert!(!error.to_string().contains("ABCDEF"), "{error}");
+        }
+    }
+
+    #[test]
+    fn older_formats_read_without_a_serial_and_refuse_a_smuggled_one() {
+        for (old, name) in [
+            (as_format_one(&to_json(&stored())), 1),
+            (as_format_two(&to_json(&stored())), 2),
+        ] {
+            let read = from_json(&old).unwrap();
+            assert_eq!(
+                read.backup.exemplar_serial,
+                ExemplarEvidence::NotRecorded,
+                "format {name}"
+            );
+        }
+        let smuggled_two = to_json(&stored()).replace("\"format\": 3", "\"format\": 2");
+        let smuggled_null = as_format_two(&to_json(&stored())).replace(
+            "\"prior_application\"",
+            "\"exemplar_serial\": null, \"prior_application\"",
+        );
+        let smuggled_one = to_json(&stored()).replace("\"format\": 3", "\"format\": 1");
+        for bad in [smuggled_two, smuggled_null, smuggled_one] {
+            assert!(
+                matches!(from_json(&bad), Err(BackupFileError::Malformed(_))),
+                "{bad}"
+            );
+        }
+    }
+
+    #[test]
+    fn restore_never_leaks_the_serial_through_debug() {
+        let shown = format!("{:?}", stored());
+        assert!(!shown.to_uppercase().contains("ABCDEF"), "{shown}");
+    }
+
+    #[test]
+    fn a_non_ascii_serial_is_refused_without_a_panic_or_an_echo() {
+        let good = to_json(&stored());
+        // 12 bytes long but not 12 ASCII hex digits; and a 6-char multi-byte text.
+        for text in [
+            "00831234567\u{e4}",
+            "\u{e4}\u{e4}\u{e4}\u{e4}\u{e4}\u{e4}",
+            "0083\u{ff10}\u{ff11}2345",
+        ] {
+            let bad = good.replace("008312ABCDEF", text);
+            let error = from_json(&bad).expect_err(text);
+            assert!(matches!(error, BackupFileError::Malformed(_)), "{text}");
+            assert!(!error.to_string().contains(text), "{error}");
+        }
+    }
+
+    #[test]
+    fn a_format_one_file_carrying_only_the_serial_is_refused() {
+        // No prior_application (as format 1 requires) but a smuggled exemplar_serial.
+        let only_serial =
+            without_prior(&to_json(&stored())).replace("\"format\": 3", "\"format\": 1");
+        assert!(only_serial.contains("exemplar_serial"), "{only_serial}");
+        assert!(!only_serial.contains("prior_application"), "{only_serial}");
+        assert!(matches!(
+            from_json(&only_serial),
+            Err(BackupFileError::Malformed(_))
+        ));
+        let null_serial = only_serial.replace("\"008312ABCDEF\"", "null");
+        assert!(matches!(
+            from_json(&null_serial),
+            Err(BackupFileError::Malformed(_))
+        ));
     }
 }

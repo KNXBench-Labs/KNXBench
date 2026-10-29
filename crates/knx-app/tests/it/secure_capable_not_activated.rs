@@ -133,6 +133,7 @@ fn writes_an_access_key(step: &MemoryDownloadStep) -> bool {
         | MemoryDownloadStep::LoadRecord(_)
         | MemoryDownloadStep::WriteMemory { .. }
         | MemoryDownloadStep::RequireLoaded(_)
+        | MemoryDownloadStep::RequireExemplar(_)
         | MemoryDownloadStep::Restart
         | MemoryDownloadStep::Disconnect => false,
     }

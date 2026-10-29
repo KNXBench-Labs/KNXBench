@@ -7,6 +7,7 @@ use super::*;
 use knx_core::commissioning::device_backup::{restore_plan, PriorApplication};
 use knx_core::commissioning::mutation::TargetKind;
 use knx_core::commissioning::partial_memory_download::PartialDownloadParts;
+use knx_core::commissioning::properties::PID_SERIAL_NUMBER;
 use tokio::sync::broadcast;
 
 use crate::cemi::{ApplicationService, Destination, Tpci};
@@ -191,6 +192,7 @@ async fn a_backup_of_another_application_does_not_restore_under_this_plans_proce
 #[tokio::test]
 async fn the_same_application_restores_the_original_octets() {
     let device = device_holding(Some(&IDENTITY), SimulatorConfig::default());
+    device.preset_property(0, PID_SERIAL_NUMBER, &SERIAL);
     let before = device.memory(0x4000, 0x4408 - 0x4000);
     let plan = complete_with_application();
     let taken = backed_up(&mut session(&device, WriteScope::Download), &plan).await;
@@ -481,6 +483,7 @@ async fn a_legacy_partial_backup_restores_through_its_executed_identity_check() 
         group_addresses: true,
     };
     let device = device_holding(Some(&IDENTITY), SimulatorConfig::default());
+    device.preset_property(0, PID_SERIAL_NUMBER, &SERIAL);
     let plan = partial(parts);
     let taken = backed_up(&mut session(&device, WriteScope::Download), &plan).await;
     taken.result.expect("the partial download runs");

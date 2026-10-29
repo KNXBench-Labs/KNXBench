@@ -536,12 +536,10 @@ async fn run(
                         application: prepared.request.program_id.clone(),
                         partial: prepared.partial.as_ref().map(|(parts, _)| *parts),
                         taken: backups.taken.clone(),
-                        plan_steps: prepared
-                            .plan
-                            .steps
-                            .iter()
-                            .map(ToString::to_string)
-                            .collect(),
+                        plan_steps:
+                            knx_core::commissioning::memory_download::source_procedure_descriptions(
+                                &prepared.plan,
+                            ),
                     };
                     let path = write_backup(&backups.dir, &stored).map_err(|e| e.to_string())?;
                     *keeper.backup_file.lock().expect("download backup poisoned") = Some(path);

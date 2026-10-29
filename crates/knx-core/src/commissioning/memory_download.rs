@@ -34,6 +34,38 @@ use super::properties::{
     PROGRAM_VERSION_OCTETS,
 };
 
+/// A Device Object serial (PID 11, six octets) a restore is bound to. `Debug` hides the octets so
+/// no step, error or log line built from a plan can leak them.
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub struct ExemplarSerial([u8; ExemplarSerial::OCTETS]);
+
+impl ExemplarSerial {
+    /// `PDT_GENERIC_06`: six octets.
+    pub const OCTETS: usize = 6;
+
+    /// Wraps the six octets a device answered.
+    pub fn new(octets: [u8; Self::OCTETS]) -> Self {
+        Self(octets)
+    }
+
+    /// The raw octets: for the private backup file and the live comparison only.
+    pub fn octets(&self) -> [u8; Self::OCTETS] {
+        self.0
+    }
+
+    /// Whether the serial can bind a restore. Conservative project recovery policy: all-zero and
+    /// all-FF are refused as likely unprogrammed or bus-idle values (KNX reserves neither).
+    pub fn is_bindable(&self) -> bool {
+        self.0 != [0x00; Self::OCTETS] && self.0 != [0xFF; Self::OCTETS]
+    }
+}
+
+impl fmt::Debug for ExemplarSerial {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("ExemplarSerial(..)")
+    }
+}
+
 /// One step of a memory-mapped download.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum MemoryDownloadStep {
@@ -65,6 +97,10 @@ pub enum MemoryDownloadStep {
     /// ([`super::partial_memory_download`]) adds it, because it only
     /// replaces parts of an application already loaded.
     RequireLoaded(MemoryLoadStateMachine),
+    /// Read the Device Object serial strictly and stop unless it equals the one captured in the
+    /// backup this restore replays. Never in a product procedure: `restore_plan` adds it, right
+    /// before the first step that changes the device. Read-only; a necessary guard only.
+    RequireExemplar(ExemplarSerial),
     /// `LdCtrlRestart`: a Basic Restart.
     Restart,
     /// `LdCtrlDisconnect`.
@@ -222,6 +258,9 @@ impl fmt::Display for MemoryDownloadStep {
             MemoryDownloadStep::RequireLoaded(machine) => {
                 write!(f, "check that the {machine} is loaded")
             }
+            MemoryDownloadStep::RequireExemplar(_) => {
+                f.write_str("check that the device is the backed-up exemplar")
+            }
             MemoryDownloadStep::Restart => f.write_str("A_Restart (basic)"),
             MemoryDownloadStep::Disconnect => f.write_str("disconnect"),
         }
@@ -244,6 +283,17 @@ fn hex(octets: &[u8]) -> String {
         .map(|octet| format!("{octet:02X}"))
         .collect::<Vec<_>>()
         .join(" ")
+}
+
+/// The product procedure's steps as the operator reads them, for storing and comparing the
+/// procedure a backup belongs to. Drops only the synthetic [`MemoryDownloadStep::RequireExemplar`]
+/// guard, which is no manufacturer step; a source `CompareProperty` stays.
+pub fn source_procedure_descriptions(plan: &MemoryDownloadPlan) -> Vec<String> {
+    plan.steps
+        .iter()
+        .filter(|step| !matches!(step, MemoryDownloadStep::RequireExemplar(_)))
+        .map(ToString::to_string)
+        .collect()
 }
 
 /// The machines a plan addresses, for a caller that wants to read their

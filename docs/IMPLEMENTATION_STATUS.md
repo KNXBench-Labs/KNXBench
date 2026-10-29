@@ -551,7 +551,7 @@ logic and persistence reviews approved the source; strengthened assertions pass.
 Published as `fa4c18213` after all 14 maintained integrated package stages passed
 ([acceptance](status/2026-10-25-download-source-freshness.md)). No hardware claim is made.
 
-## Regular restore exemplar binding (29 October 2026 candidate)
+## Regular restore exemplar binding (29 October 2026 software acceptance)
 
 The [contract](contracts/regular-restore-exemplar-binding.md) adds a strict
 pre-mutation Device Object PID 11 observation to regular backed-up downloads.
@@ -564,10 +564,12 @@ all-FF evidence never becomes a fabricated identity or bypass.
 Focused simulator/CLI/HTTP/persistence/web proofs are executed. Additional
 consumer tests exposed and reproduced a dropped backup-phase diagnostic; Rust
 and web now admit only its two legitimate zero-read-back code/phase pairs.
-Independent correction review, maintained gates, actual build/smoke and source
-publication remain separate, unfinished acceptance boundaries. PRG-01, broader
-identity/runtime, parameter rules and full effects/recovery remain open; there
-is no new hardware, physical-identity or whole-recovery claim.
+Independent correction/whole-feature review accepted the candidate with no open
+findings; both maintained 17-stage gates and actual isolated server build/smoke
+passed on runtime integration `0ddfe4953`
+([software acceptance](status/2026-10-29-regular-restore-exemplar.md)). PRG-01,
+broader identity/runtime, parameter rules and full effects/recovery remain open;
+there is no new hardware, physical-identity or whole-recovery claim.
 
 ## Backup application identity before restore (25 October 2026 source)
 

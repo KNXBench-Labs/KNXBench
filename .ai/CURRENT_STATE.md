@@ -1,15 +1,15 @@
 # Restart snapshot
 
-## PRG-01 descriptor-qualified 0700 run state (GO; observed 2026-10-29 22:59 CET)
-- Owner `feat/prg01-runtime0700-20261029`, `<sources>/knxbench-prg01-runtime0700-20261029`; code `5f075cf99`, base published claim `2ff821ec5`.
-- Complete Net/App/CLI/HTTP/report/history/Web exact0700 packet implemented; independent whole-feature static ACCEPT0,3897 source identities unchanged. Not runtime/software/hardware accepted or published.
-- Genuine original CLI Running-vs-Unknown RED authenticated against unchanged baseline observer;41 worker attempts/raw hashes verified. Compiler/setup failures and first calibration-classifier refusal retained/uncredited.
-- Parent replay: CLI1,Net671+104+1doc/9ignored,actualHTTP/history1,Web102 and both fixture TSC projects PASS; populations overlap. Six selected guard mutants killed +two inert controls PASS in private copy; candidate unchanged.
-- NEXT committed15-stage branch gate, fresh main-first gate, real server build/isolated smoke, fresh coordination/push/readback; final factual acceptance docs/evidence/archive/owned cleanup after outcomes.
-- Docs now distinguish implemented/reviewed from pending integrated acceptance. No gate active yet; freeze consumed source before launch and do not edit during gates.
-- Preserve071/705 traffic/bytes, optional/non-null700 provenance and old-reader boundary; no inferred legacy facts, descriptor raw data persistence, generic discovery or memory fallback.
-- Existing family/authority/recovery/retry/wait gates unchanged. No Secure/DIAG03/bus/device/VM/deployment/release/vendor work; foreign reservations untouched.
-- Corpus105 scope/category provenance, defining inactive/Union/customer policies, wider identity/layouts/memory encoding and whole recovery remain OPEN; PRG-01 overall not complete.
+## PRG-01 descriptor-qualified 0700 run state (SOFTWARE ACCEPTED; observed 2026-10-30 00:13 CET)
+- Owner `feat/prg01-runtime0700-20261029`, `<sources>/knxbench-prg01-runtime0700-20261029`; code5f075cf99,implementation-doc74491c65d,main-first runtime0af68438f on published base2ff821ec5.
+- Complete exact700 optional-property packet; independent whole-feature ACCEPT0,source identities unchanged. Original real CLI Running-vs-Unknown RED authenticated; compiler/setup/private verifier failures separately retained/uncredited.
+- Branch15 +integrated15 COMPLETE/proof-valid/frozen/userdata checked/untouched. Each selectedRust3625/143ignored,Vitest4674,defaultbrowser897+67,productionfunctional71,selectedcorpus91/5targets; populations overlap, no historical105/opt-in claim.
+- Actual built server0.1.0-alpha.18+g0af68438f +90 frontend files retained/hash-verified; nonroot/lo-only/allcapszero health/version/static/empty-status/SIGTERM0/closedlistener PASS,source/userdata unchanged. No hardware acceptance.
+- Canonical runtime evidence/limits: docs/status/2026-10-30-descriptor-qualified-0700-run-state.md. Later docs-only delivery must not be relabelled as runtime execution.
+- Current work is factual result-doc review/gates and publication controller, no implementation writer. NEXT doc branch/main-first gates with code-input equality, fresh freeze/push+remote readback, durable archive/member verification, exact-owned cleanup, then next evidenced PRG package.
+- Preserve071/705 bytes/traffic,other masks/family/authority/recovery/retry/wait gates; strict optional/non-null700 provenance, no legacy rewrite, old strict readers may refuse new700. No generic layout/discovery or memory fallback.
+- No Secure/DIAG03/bus/device/VM/deployment/release/vendor work; foreign reservations untouched. Publication/cleanup follow the current controller's source-bound receipts, not this pre-delivery observation.
+- Wider identity/layouts/memory,defining inactive/Union/customer rules,whole effects/recovery and105fixture/category provenance OPEN; PRG-01 overall NOT COMPLETE.
 
 ## PRG-01 property run-state (SOFTWARE COMPLETE; observed 2026-10-29)
 - Bounded 0701/0705 property observation; runtime integration `161010078`, feature `51c309957`.

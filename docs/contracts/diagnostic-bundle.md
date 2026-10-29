@@ -67,8 +67,7 @@ monotonic) and `wall` (UTC RFC 3339 with milliseconds).
 | `tunnel` | connection events: connect refused, ACK timeout and repeat, heartbeat attempts, discarded frames (foreign channel, duplicate), close reason, socket errors |
 | `note` | operation-level facts: plan, step results, full error chains, results projected from typed reports |
 | `gap` | `lost_records` and `reason` when records could not be written |
-| `end` | last line: `outcome` (`succeeded`, `failed`, `cancelled`, or `abandoned` when the operation
-ended without reporting one), `error_chain`, `summary`, `records_written`, `records_dropped`, `failed_writes` |
+| `end` | last line: `outcome` (`succeeded`, `failed`, `cancelled`, or `abandoned` when the operation ended without reporting one), `error_chain`, `summary`, `records_written`, `records_dropped`, `failed_writes` |
 
 Older recordings are kept and exported unchanged after an update; readers use
 `format_version` and never backfill.
@@ -103,6 +102,60 @@ the problem type's defaults), `client` (browser state, at most 64 KiB) and
 `description` (at most 8000 characters). Recording ids are validated before any
 file access. A section the problem type does not offer is refused.
 
+### Reviewed-content binding (required before acceptance)
+
+The initial candidate's live re-collection is not sufficient for consent. The
+following wire contract is required by the review correction, before DIAG-03 can
+be accepted:
+
+- `ProjectContext` is `{serverIncarnation, projectIncarnation, revision}`. An
+  initial preview request may carry `context` when its choices came from a bound
+  project tree; a mismatching context is refused, not applied to current ids.
+- Each preview returns mandatory `review: {fingerprint, context}`. `fingerprint`
+  is lower-case SHA-256 over a deterministic description of the **effective**
+  problem type, resolved operation/result and device, selected-section
+  availability, metadata and exact file contents. It also binds the observed
+  server/project context. Manifest creation/consent timestamps and the user's
+  final description are not section contents and are excluded.
+- Section-text and consented export requests must carry that `review` object.
+  Missing review is `bundlePreviewRequired`; a changed context or fingerprint
+  is HTTP 409 `bundlePreviewChanged`. No ZIP or section text is returned on
+  refusal. No new access roles or automatic upload are introduced.
+- Collection must observe a stable context from start to end, and the bytes
+  compared with the review must be the very bytes rendered/exported. A matching
+  digest followed by another live read would not establish this guarantee.
+- The browser pins the returned `operationRecordingId` and `deviceId` for later
+  text/export requests. This is additional identity protection, not a substitute
+  for hashing mutable log, monitor, device, import or project contents.
+- The existing explicit operation references remain valid even without a
+  recording: retained diagnostic jobs, download results and System-2 journals
+  are independent evidence sources. Missing/expired results are reported, never
+  replaced by an unrelated latest run. `{selection: "none"}` explicitly selects
+  no operation for a pre-plan/refusal report; absence still means latest matching.
+- Ended-run shortcuts use their captured target, not the next preparation's
+  selection. Project-scoped device extracts require a proven matching source
+  context; unavailable attribution is disclosed instead of guessing by numeric id.
+- A substantive project/server/revision change withdraws browser consent and
+  invalidates pending results. An equal tree refresh does not. HTTP validation
+  remains necessary for changes made by another authenticated workbench.
+
+### Retained diagnostic results
+
+The `legacyReports` section must preserve existing structured diagnostic files:
+`report.json`, `properties.json`, and `memory.json` for the memory profile. A
+completed recording's typed summary is one source; the retained job/result is
+another when recording is disabled, unavailable or deleted. The recorder's
+unavailability must not conceal an acquired result that still exists. Exact
+operation references, partial-byte coverage and stop/refusal reasons remain
+bound to their own run. The same rule applies to a retained System-2 journal or
+download result without a recording. The projectless/manual-target identity
+acquisition remains separately consented and hands its result to the one wizard;
+centralised export does not remove acquisition.
+
+Browser-state payloads must stay within the server's 64 KiB serialized UTF-8
+limit, with visible truncation/omission metadata. Unchecking `clientState` omits
+`client` from all requests; it must remain possible to select the section again.
+
 ### Sections
 
 Defaults per problem type follow owner table O1 in the work package and are
@@ -130,9 +183,17 @@ unoffered sections and a bundle without the environment section.
 
 ### Hand-off
 
-The user saves the ZIP and may open a `mailto:issue@knxbench.com` draft whose
-subject names the version and operation id. The draft never carries bundle
-content and cannot attach the file; email is not encryption. Bundles above
+The user requests the ZIP download and verifies that the file was actually
+saved before opening a `mailto:issue@knxbench.com` draft whose subject names the
+version and operation id. Clicking a blob link alone proves only initiation,
+not a completed save: the desktop save dialog can still be cancelled or fail.
+Where no typed completion result exists, the UI must say "download requested"
+and require an explicit user acknowledgement of the saved file before enabling
+mail or claiming save-dependent success. A retry, refusal or context/content
+change withdraws that acknowledgement.
+
+The draft never carries bundle content and cannot attach the file; email is not
+encryption. Bundles above
 10 MiB get a hint about common mail limits; there is no splitting. Public
 GitHub issues keep using the minimised reports only.
 

@@ -999,20 +999,11 @@ async fn bus_monitor(state: &SharedState) -> Result<BundleSection, String> {
     Ok(section)
 }
 
-/// Placeholder until the secret-free project copy lands: refuses, never copies.
-fn secret_free_project(_path: &std::path::Path) -> Result<SecretFreeStub, String> {
-    Err("not yet available in this build".into())
-}
-
-struct SecretFreeStub {
-    bytes: Vec<u8>,
-    redactions: Vec<StubRedaction>,
-    withheld: Vec<String>,
-}
-
-struct StubRedaction {
-    kind: String,
-    location: String,
+/// The saved project file without secrets; the error text is the helper's sanitized `Display`.
+fn secret_free_project(
+    path: &std::path::Path,
+) -> Result<knx_app::secret_free_copy::SecretFreeCopy, String> {
+    knx_app::secret_free_copy::native_project_without_secrets(path).map_err(|e| e.to_string())
 }
 
 fn request(state: &SharedState, query: &BundleQuery) -> BundleRequest {

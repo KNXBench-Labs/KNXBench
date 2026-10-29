@@ -19,6 +19,10 @@ use std::sync::{
 };
 use std::time::{Duration, Instant};
 
+#[cfg(test)]
+#[path = "diagnostic_bundle_support_retention_tests.rs"]
+mod bundle_retention_tests;
+
 static NEXT: AtomicU64 = AtomicU64::new(1);
 #[derive(Clone)]
 struct Snapshot {

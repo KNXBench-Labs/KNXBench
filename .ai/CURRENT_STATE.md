@@ -28,15 +28,6 @@
 - Evidence `<profile>/evidence/alpha18-followups-20261028/`; no source/desktop reservation.
 - #30/#22 allocation cause, per-part equivalence and wider WP-11/KL-130 stay open.
 
-## DIAG-03 backend review corrections (LOCAL HANDOFF, observed 2026-10-29 08:31 CET)
-- Track: `fix/diag-03-bundle-review`; code `e5185f17`, journal witness `72e126ed`; no push.
-- I1/I2/I4/I7: reviewed owned bytes/context, retained result fallback, safe source attribution.
-- Original semantic REDs and independent fingerprint/context/fallback mutants were observed.
-- Default server1470/66ignored and app821/47ignored green; scoped clippy/static gates green.
-- No frontend, secret-free copy, import sanitizer, private System-2 or hardware ownership taken.
-- Parent owns combined integration, completed private System-2 acceptance and fresh re-review.
-- Handoff receipt: `<profile-scratch>/diag03/bundle-review-corrections.md`; no merge/push.
-
 ## Retained boundaries
 - Prior WP-03, issue31 and WP-08 delivery evidence stays in maintained docs/Git history;
   old checkpoint wording is not proof of current activity. Root coordination is preserved.

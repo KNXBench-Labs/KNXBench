@@ -23,6 +23,10 @@ use std::sync::{
 };
 use std::time::{Duration, Instant};
 
+#[cfg(test)]
+#[path = "diagnostic_bundle_retention_tests.rs"]
+mod bundle_retention_tests;
+
 /// Read-only bridge: forwards to the existing tunnel; simulation provenance
 /// cannot grant write authority (the collector always builds read_only/Skip).
 struct DiagnosticTransport<'a>(&'a dyn crate::bus::BusTunnel);

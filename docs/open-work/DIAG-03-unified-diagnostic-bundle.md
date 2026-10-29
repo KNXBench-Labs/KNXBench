@@ -1,7 +1,8 @@
 # DIAG-03 — One report button, full diagnostic bundle, operation recorder
 
-**Priority:** P1. **Status:** Open, owner decisions recorded 29 October 2026; ready to start
-in its own session. **Do not merge before the Alpha 18 tag is published** (`main` is
+**Priority:** P1. **Status:** Open; all owner decisions recorded 29 October 2026
+(rounds 1–2, O1/O2), ready to start in its own session without further questions.
+**Do not merge before the Alpha 18 tag is published** (`main` is
 release-frozen for code); develop on a local branch, deliver main-first afterwards.
 Origin: issue #30 report analysis, owner request 29 October 2026.
 
@@ -91,11 +92,11 @@ checkbox what goes into one ZIP that they may send by mail.
 18. **Who may export:** the same authenticated session as every other route; desktop and
     server alike; no new roles.
 
-### Open items for the implementing session (ask the owner first)
+### O1/O2 (29 October 2026, owner accepted both proposals)
 
-O1 and O2 depend on decision 16 and were not yet confirmed. The table is a proposal.
+The tables below are binding defaults for the implementation.
 
-**O1 — proposed defaults per problem type** (✓ preselected, ○ offered, – not offered):
+**O1 — defaults per problem type** (✓ preselected, ○ offered, – not offered):
 
 | Section | Programming | Reading/diag. | Import | Catalogue | UI/other |
 | --- | --- | --- | --- | --- | --- |
@@ -112,9 +113,9 @@ O1 and O2 depend on decision 16 and were not yet confirmed. The table is a propo
 | bus monitor last 10 min | ○ | ○ | – | – | ○ |
 | browser/client state (UI language, theme, viewport, recent errors) | – | – | – | – | ✓ |
 
-**O2 — proposed disposition of existing entry points:**
+**O2 — disposition of existing entry points:**
 
-| Today | Proposal |
+| Today | Decision |
 | --- | --- |
 | `DebugReportButton` (File menu) | Becomes the single "Report problem" entry that opens the wizard |
 | `UniversalSupportButton` | Shortcut: wizard, type programming/reading, device preselected |

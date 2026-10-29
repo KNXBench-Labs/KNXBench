@@ -24,6 +24,9 @@ use serde_json::{json, Value};
 use super::*;
 use MemoryLoadStateMachine::{AddressTable, ApplicationProgram, AssociationTable};
 
+#[path = "post_download_check/run_state_tests.rs"]
+mod run_state;
+
 const HARDWARE: [u8; 6] = [0, 0, 0, 0, 0x01, 0x27];
 const APPLICATION: [u8; 5] = [0x00, 0x83, 0x00, 0x27, 0x15];
 
@@ -162,6 +165,21 @@ fn matched(load_states: Vec<Value>, verdict: &str) -> Value {
     })
 }
 
+fn matched_with_run_state(load_states: Vec<Value>, verdict: &str, run_state: Value) -> Value {
+    let mut value = matched(load_states, verdict);
+    value["observation"]["reach"]["identity"]["runState"] = run_state;
+    value
+}
+
+/// [`matched`] as the producer writes it for a fixture device with no
+/// object-type property: the continuation's first read is refused.
+fn matched_without_object_type(load_states: Vec<Value>, verdict: &str) -> Value {
+    let mut value = matched(load_states, verdict);
+    value["observation"]["reach"]["identity"]["runState"] =
+        json!({ "status": "unavailable", "step": "objectType", "cause": "refused" });
+    value
+}
+
 fn reached(identity: Value) -> Value {
     json!({
         "observation": { "status": "attempted",
@@ -176,7 +194,7 @@ async fn a_complete_transfer_is_checked_with_expected_next_to_observed() {
     let value = transfer_then_check(&device, &plan()).await;
     assert_eq!(
         value,
-        matched(
+        matched_without_object_type(
             vec![
                 machine("addressTable", json!("loaded"), loaded()),
                 machine("associationTable", json!("unloaded"), unloaded()),
@@ -245,7 +263,7 @@ async fn a_later_failed_read_keeps_the_earlier_reading() {
     let value = serde_json::to_value(PostDownloadCheck::from_observation(&observation)).unwrap();
     assert_eq!(
         value,
-        matched(
+        matched_with_run_state(
             vec![
                 machine("addressTable", json!("loaded"), loaded()),
                 machine(
@@ -259,7 +277,8 @@ async fn a_later_failed_read_keeps_the_earlier_reading() {
                     json!({ "result": "notRead" })
                 ),
             ],
-            "unknown"
+            "unknown",
+            json!({ "status": "notRead", "reason": "loadReadFailed" })
         )
     );
 }

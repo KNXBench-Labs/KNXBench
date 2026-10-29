@@ -50,9 +50,13 @@
 //!   target has the plan's mask, manufacturer and application, and answers
 //!   every `CompareProperty` the plan declares (the hardware type only if
 //!   declared); it does not say it is the same physical exemplar.
-//! - Whether the application *runs* is not observed: no verified run-state
-//!   reader exists for this profile. `Loaded` is a load state, not a run
-//!   state, and this result carries no "running" claim of any kind.
+//! - Whether the application *runs* is observed only by the bounded
+//!   continuation: for masks `0701h`/`0705h`, after identity matched and every
+//!   load state was read, candidate object 3 is validated (type, then a strict
+//!   application reread) and its `PID_RUN_STATE_CONTROL` read once. That is
+//!   the reported property of that object, not device health, a unique
+//!   instance or download success. `Loaded` is a load state, not a run state;
+//!   any other mask or failure leaves the run state unobserved.
 //!
 //! [`derive_partial_plan`]: knx_core::commissioning::partial_memory_download::derive_partial_plan
 
@@ -65,7 +69,10 @@ use knx_core::commissioning::memory_download::{
     property_matches, MemoryDownloadPlan, MemoryDownloadStep,
 };
 use knx_core::commissioning::partial_memory_download::application_identity;
-use knx_core::commissioning::properties::{ObjectIndex, PID_HARDWARE_TYPE, PID_PROGRAM_VERSION};
+use knx_core::commissioning::properties::{
+    ObjectIndex, PID_HARDWARE_TYPE, PID_OBJECT_TYPE, PID_PROGRAM_VERSION, PID_RUN_STATE_CONTROL,
+};
+use knx_core::commissioning::run_state::RunState;
 use knx_core::{ContactableAddress, IndividualAddress};
 
 use super::{ManagementSession, SessionError, SessionTiming};
@@ -115,7 +122,72 @@ pub enum ObservationOutcome {
         /// One entry per machine the plan loads, unloads or requires
         /// `Loaded`, in machine order.
         load_states: Vec<LoadStateReading>,
+        /// The run-state property of the validated candidate application
+        /// object, read after the load states.
+        run_state: RunStateObservation,
     },
+}
+
+/// What the bounded run-state continuation found. It reads the reported
+/// `PID_RUN_STATE_CONTROL` of the candidate object [`RUN_STATE_CANDIDATE`]
+/// once its type and application identity are validated, and claims nothing
+/// about the device's health or the download's success.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RunStateObservation {
+    /// No run-state frame was sent.
+    NotRead(RunStateNotRead),
+    /// The candidate object is not the plan's application object.
+    CandidateMismatch(CandidateMismatch),
+    /// A step failed; no later step ran.
+    Unavailable {
+        step: RunStateStep,
+        cause: RunStateCause,
+    },
+    /// One octet outside the six defined values (Resources Table 95).
+    UndefinedValue,
+    /// The defined state the candidate object reports.
+    Observed(RunState),
+}
+
+/// Why no run-state frame was sent.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RunStateNotRead {
+    /// The mask is not `0701h` or `0705h`.
+    UnsupportedMask,
+    /// A load-state read before it failed or was skipped.
+    LoadReadFailed,
+}
+
+/// What the candidate object is not.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CandidateMismatch {
+    /// `PID_OBJECT_TYPE` is not Applicationprogram (`0003h`).
+    ObjectType,
+    /// `PID_PROGRAM_VERSION` is not the plan's application identity.
+    Application,
+}
+
+/// Which of the three continuation reads failed.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RunStateStep {
+    ObjectType,
+    Application,
+    RunState,
+}
+
+/// Why a continuation read failed. Closed: no transport text, no device bytes.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RunStateCause {
+    /// The device answered zero elements.
+    Refused,
+    /// A correlated answer of the wrong count or width.
+    Malformed,
+    /// Nothing matching the request's object, property and start arrived.
+    NoCorrelatedAnswer,
+    /// The connection was released or torn down.
+    ConnectionLost,
+    /// Any other read failure.
+    ReadFailed,
 }
 
 /// Why nothing was sent.
@@ -353,10 +425,15 @@ async fn observe<T: ManagementTransport>(
         return ObservationOutcome::Unreachable(error);
     }
     let outcome = match check_identity(&mut session, plan, application).await {
-        Ok(identity) => ObservationOutcome::Observed {
-            identity,
-            load_states: read_load_states(&mut session, plan).await,
-        },
+        Ok(identity) => {
+            let load_states = read_load_states(&mut session, plan).await;
+            let run_state = read_run_state(&mut session, plan, application, &load_states).await;
+            ObservationOutcome::Observed {
+                identity,
+                load_states,
+                run_state,
+            }
+        }
         Err(ObservationOutcome::IdentityUnavailable {
             reading: IdentityReading::Mask,
             error,
@@ -481,6 +558,78 @@ async fn check_identity<T: ManagementTransport>(
     })
 }
 
+/// The candidate application object the continuation validates and reads.
+/// Not a universal layout: no other index is tried.
+pub const RUN_STATE_CANDIDATE: ObjectIndex = ObjectIndex::APPLICATION_PROGRAM;
+
+/// Octets of `PID_OBJECT_TYPE` naming an Applicationprogram object.
+const APPLICATION_OBJECT_TYPE: [u8; 2] = [0x00, 0x03];
+
+/// Validates the candidate object and reads its run state, once the load
+/// states are all read. The first failure ends the sequence.
+async fn read_run_state<T: ManagementTransport>(
+    session: &mut ManagementSession<'_, T>,
+    plan: &MemoryDownloadPlan,
+    application: [u8; 5],
+    load_states: &[LoadStateReading],
+) -> RunStateObservation {
+    if !matches!(plan.mask.0, 0x0701 | 0x0705) {
+        return RunStateObservation::NotRead(RunStateNotRead::UnsupportedMask);
+    }
+    if load_states
+        .iter()
+        .any(|reading| !matches!(reading.state, LoadStateObservation::Observed(_)))
+    {
+        return RunStateObservation::NotRead(RunStateNotRead::LoadReadFailed);
+    }
+    let unavailable = |step| move |cause| RunStateObservation::Unavailable { step, cause };
+    let object_type = match read_candidate(session, PID_OBJECT_TYPE, 2).await {
+        Ok(object_type) => object_type,
+        Err(cause) => return unavailable(RunStateStep::ObjectType)(cause),
+    };
+    if object_type != APPLICATION_OBJECT_TYPE {
+        return RunStateObservation::CandidateMismatch(CandidateMismatch::ObjectType);
+    }
+    // A strict reread: the identity check's generic read does not require the
+    // start index echo or the element count this continuation relies on.
+    let found = match read_candidate(session, PID_PROGRAM_VERSION, 5).await {
+        Ok(found) => found,
+        Err(cause) => return unavailable(RunStateStep::Application)(cause),
+    };
+    if found != application {
+        return RunStateObservation::CandidateMismatch(CandidateMismatch::Application);
+    }
+    match read_candidate(session, PID_RUN_STATE_CONTROL, 1).await {
+        Ok(state) => match RunState::from_octet(state[0]) {
+            Ok(state) => RunStateObservation::Observed(state),
+            Err(_) => RunStateObservation::UndefinedValue,
+        },
+        Err(cause) => unavailable(RunStateStep::RunState)(cause),
+    }
+}
+
+/// One strict read of the candidate object at start 1, count 1: a correlated
+/// answer of exactly one element and `width` octets, or a closed cause.
+async fn read_candidate<T: ManagementTransport>(
+    session: &mut ManagementSession<'_, T>,
+    property_id: u8,
+    width: usize,
+) -> Result<Vec<u8>, RunStateCause> {
+    match session
+        .read_property_raw(RUN_STATE_CANDIDATE, property_id, 1, 1)
+        .await
+    {
+        Ok((0, _)) => Err(RunStateCause::Refused),
+        Ok((1, data)) if data.len() == width => Ok(data),
+        Ok(_) => Err(RunStateCause::Malformed),
+        Err(SessionError::NoAnswer { .. }) => Err(RunStateCause::NoCorrelatedAnswer),
+        Err(SessionError::ConnectionLost { .. } | SessionError::ConnectionReleased { .. }) => {
+            Err(RunStateCause::ConnectionLost)
+        }
+        Err(_) => Err(RunStateCause::ReadFailed),
+    }
+}
+
 fn is_application_identity(object_index: u8, property_id: u8) -> bool {
     object_index == ObjectIndex::APPLICATION_PROGRAM.octet() && property_id == PID_PROGRAM_VERSION
 }
@@ -578,6 +727,7 @@ impl fmt::Display for PostDownloadObservation {
             ObservationOutcome::Observed {
                 identity,
                 load_states,
+                run_state,
             } => {
                 write!(
                     f,
@@ -606,6 +756,15 @@ impl fmt::Display for PostDownloadObservation {
                     }
                     write!(f, ", observed {}", reading.state)?;
                 }
+                if let RunStateObservation::Observed(state) = run_state {
+                    return write!(
+                        f,
+                        "; candidate object 3 reports run state {state} (a property reading, \
+                         not device health or download success)"
+                    );
+                }
+                // A continuation record exists, but none of it is a defined state.
+                return f.write_str("; no defined run state observed");
             }
         }
         f.write_str("; whether the application runs was not observed")
@@ -710,6 +869,8 @@ mod tests {
         ObjectIndex, PID_HARDWARE_TYPE, PID_MANUFACTURER_ID, PID_PROGRAM_VERSION,
     };
     use tokio::sync::broadcast;
+
+    mod run_state;
 
     use super::*;
     use crate::cemi::{ApplicationService, Destination, Tpci};
@@ -1136,7 +1297,8 @@ mod tests {
         );
         assert_eq!(device.memory(0x4000, 0x500), memory_before);
         let text = observation.to_string();
-        assert!(text.contains("not observed"), "{text}");
+        // The device has no object 3 to read: a record exists, none of it a state.
+        assert!(text.contains("no defined run state observed"), "{text}");
         assert!(text.contains("no serial number"), "{text}");
         assert!(!text.contains("running"), "no run-state claim: {text}");
     }
@@ -1166,7 +1328,9 @@ mod tests {
         assert_expected_agrees_with(&observation, &report);
         assert_read_only_and_closed(&device, before);
         assert_eq!(memory_reads(&device.seen()[before..]), vec![0xB6EA, 0xB6EC]);
-        assert!(observation.to_string().contains("not observed"));
+        assert!(observation
+            .to_string()
+            .contains("no defined run state observed"));
     }
 
     #[tokio::test]

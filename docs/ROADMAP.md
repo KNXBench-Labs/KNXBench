@@ -256,9 +256,14 @@ inferred.
 The [read-only check after a regular download](contracts/post-download-check.md)
 is published as `8b5edad7f` after independent source reviews and maintained
 integrated software acceptance, including HTTP corpus and EN/DE browser tests
-([acceptance](status/2026-10-25-post-download-check.md)). It reports reach,
-identity and load states, never a running application or a physical-exemplar
-match. Hardware acceptance and the broader programming gaps remain open.
+([acceptance](status/2026-10-25-post-download-check.md)). That original increment
+reports reach, identity and load states, without a runtime or physical-exemplar
+match. The [29 October property run-state continuation](contracts/post-download-run-state.md)
+adds a separately evidenced observation of one validated plan-matching
+Applicationprogram object on exact `0701h` / `0705h` masks; it does not establish
+installation function, object uniqueness or physical-exemplar identity.
+Its acceptance remains separate from the original receipt. Hardware acceptance
+and the broader programming gaps remain open.
 
 The [backup application guard](contracts/backup-application-identity.md) records
 pre-write evidence and refuses a restore under another application's procedure.

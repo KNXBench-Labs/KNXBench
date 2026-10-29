@@ -307,8 +307,9 @@ impl DownloadReport {
             };
             let _ = writeln!(
                 out,
-                "Read-only check after the download: {}{exemplar}; application running: unknown",
-                check.line()
+                "Read-only check after the download: {}{exemplar}; {}",
+                check.line(),
+                check.runtime_summary()
             );
         }
         let _ = writeln!(out, "KNXBench: {}", self.knxbench_version);
@@ -571,6 +572,32 @@ mod tests {
         let unreached = report().with_check(check("notReached")).summary();
         assert!(!unreached.contains("physical device"), "{unreached}");
         assert!(unreached.contains("application running: unknown"));
+    }
+
+    /// A reported run state is stated with its scope, never as "unknown".
+    #[test]
+    fn a_reported_run_state_in_the_summary_names_its_scope() {
+        let fixtures: serde_json::Value = serde_json::from_str(include_str!(
+            "../../../apps/knx-web/src/postDownloadCheck.fixtures.json"
+        ))
+        .unwrap();
+        let check: PostDownloadCheck =
+            serde_json::from_value(fixtures["runStateRunning"].clone()).unwrap();
+        let summary = report().with_check(check).summary();
+        assert!(summary.contains("run state: running"), "{summary}");
+        assert!(summary.contains("Applicationprogram object 3"), "{summary}");
+        assert!(summary.contains("not device health"), "{summary}");
+        assert!(
+            !summary.contains("application running: unknown"),
+            "{summary}"
+        );
+        let undefined: PostDownloadCheck =
+            serde_json::from_value(fixtures["runStateUndefined"].clone()).unwrap();
+        let summary = report().with_check(undefined).summary();
+        assert!(
+            summary.contains("application running: unknown"),
+            "{summary}"
+        );
     }
 
     /// The link fills the issue form's fields by id: the form must have them.

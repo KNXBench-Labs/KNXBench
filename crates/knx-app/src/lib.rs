@@ -57,6 +57,7 @@ pub mod property_validation;
 pub mod property_validation_bundle;
 mod property_validation_execution;
 pub mod recorded_device_state;
+pub mod secret_free_copy;
 pub mod selective_import;
 pub mod serial_address_recovery;
 pub mod serial_number;

@@ -40,7 +40,20 @@ pub fn store(data_dir: &Path, disabled: bool) -> RecordingStore {
 }
 
 /// Starts the recording of one operation of this server incarnation.
-pub(crate) fn start(state: &AppState, start: OperationStart) -> OperationRecorder {
+pub(crate) fn start(state: &AppState, mut start: OperationStart) -> OperationRecorder {
+    // Some callers already hold project. Never deadlock or guess its provenance then.
+    // Those callers may supply their already-validated context explicitly.
+    if !start.related.contains_key("projectContext") {
+        if let Ok(_project) = state.project.try_lock() {
+            start = start.related(
+                "projectContext",
+                serde_json::to_string(&crate::diagnostic_bundle_context::ProjectContext::locked(
+                    state,
+                ))
+                .expect("project context serializes"),
+            );
+        }
+    }
     state
         .recordings
         .start(start.related("serverIncarnation", &state.server_incarnation))

@@ -12,20 +12,22 @@ The owner authorised (25 October 2026) closing existing non-Secure gaps in the
 regular download/restore path, one bounded increment at a time, without live
 bus or device operations.
 
-## Active next increment — regular restore exemplar binding
+## Software-accepted bounded increment — regular restore exemplar binding
 
 The [source-reviewed contract](../contracts/regular-restore-exemplar-binding.md)
 binds a regular restore to the pre-mutation captured serial, with a precondition
 embedded by the public core derivation rather than only a CLI check. Format 1/2
 backups remain readable but lose restore eligibility, including partial backups;
-no serial is fabricated and no bypass is added. This compatibility narrowing is
-recorded before implementation. The candidate now implements the core and
-executor guard, format 3 and closed consumer projections. Independent review
-required additional CLI/HTTP/history/web proofs; those tests exposed a
-backup-phase diagnostic-admission defect, whose original semantic RED is retained.
-Maintained branch/main-first gates, build, smoke and publication are still open;
-this is not software or hardware acceptance. All broader mutation/recovery
-requirements remain open.
+no serial is fabricated and no bypass is added. This compatibility narrowing was
+recorded before implementation. Runtime integration `0ddfe4953` implements the
+core/executor guard, format 3 and closed consumer projections. Additional
+CLI/HTTP/history/web proofs exposed a backup-phase diagnostic-admission defect;
+its original semantic RED and the targeted Rust/web correction are retained.
+Independent correction/whole-feature review accepted the candidate with no open
+findings. Both maintained 17-stage gates and the actual isolated server
+build/smoke passed ([software acceptance](../status/2026-10-29-regular-restore-exemplar.md)).
+This is not hardware acceptance, absolute physical-identity proof or complete
+mutation/recovery. The overall PRG-01 assignment remains open.
 
 ## Software-accepted bounded increment — 29 October 2026
 
@@ -176,6 +178,11 @@ there is no CLI end-to-end, new shutdown, recovery or hardware guarantee.
   unresolved, so pin maintenance is still blocked. Explain those inputs and
   evidence changes before any separately reviewed adjustment; no dynamic
   expectation derived from actual output, no silent repin in these increments.
+  A bounded archive-manifest follow-up on 29 October did not establish the
+  historical private 105-package fixture selection: three authenticated source
+  manifests contained no such selection evidence. That is not an exhaustive
+  negative finding about every retained artifact and supplies no category
+  attribution. Pins and opt-in expectations are unchanged.
 
 ## Boundaries
 

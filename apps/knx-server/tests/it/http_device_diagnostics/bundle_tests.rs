@@ -1,7 +1,7 @@
 //! Real acquisition-to-bundle readbacks for retained diagnostic result handoffs.
 
 use super::*;
-use std::io::Read;
+use std::{collections::BTreeMap, io::Read};
 
 pub(super) async fn bundle_readback(h: &Harness, token: &Value, expected: &Value) {
     let query = json!({"problemType":"deviceReading", "operation":{"relatedKey":"diagnosticsToken", "relatedValue":token}});
@@ -226,9 +226,332 @@ async fn an_old_run_retains_its_report_but_never_borrows_the_new_projects_device
         .unwrap();
     assert_eq!(device["selected"], true);
     assert_eq!(device["unavailable"], Value::Null);
-    let (status,body) = send(&h.app,"/api/diagnostics/bundle/preview",json!({"problemType":"deviceReading","operation":{"relatedKey":"diagnosticsToken","relatedValue":acquisition["token"]},"deviceId":8})).await;
-    assert_eq!(status, StatusCode::CONFLICT);
-    assert_eq!(body["error"], "bundleTargetMismatch");
+    // Numbers of an unproven namespace are never compared: no 409, only the own report.
+    plant_device_8(&h);
+    assert_own_report_only(&h, &acquisition["token"], 8, &result, "old run").await;
+}
+
+#[tokio::test]
+async fn a_replaced_project_never_refuses_or_borrows_by_device_number() {
+    for (case, incarnation, revision) in [
+        ("incarnation+revision", true, true),
+        ("incarnation", true, false),
+        ("revision", false, true),
+    ] {
+        for chosen in [7, 8] {
+            let h = harness("1.1.25");
+            let acquisition = diagnostic_preview(&h).await;
+            let result = start_and_finish(&h, &acquisition).await;
+            assert!(h
+                .state
+                .recordings
+                .wait_until_idle(std::time::Duration::from_secs(10)));
+            plant_device_8(&h);
+            plant_foreign_device_7(&h);
+            {
+                let _project = h.state.project.lock().unwrap();
+                if incarnation {
+                    h.state.project_incarnation.fetch_add(1, Ordering::SeqCst);
+                }
+                if revision {
+                    h.state.project_revision.fetch_add(1, Ordering::SeqCst);
+                }
+            }
+            let what = format!("replaced {case}, chosen {chosen}");
+            assert_own_report_only(&h, &acquisition["token"], chosen, &result, &what).await;
+        }
+    }
+}
+
+#[tokio::test]
+async fn missing_or_foreign_recorded_attribution_never_refuses_or_borrows_by_device_number() {
+    for case in ["missing", "server", "incarnation", "revision"] {
+        for chosen in [7, 8] {
+            let h = harness("1.1.25");
+            let acquisition = diagnostic_preview(&h).await;
+            let result = start_and_finish(&h, &acquisition).await;
+            assert!(h
+                .state
+                .recordings
+                .wait_until_idle(std::time::Duration::from_secs(10)));
+            profile_preview(&h, IDENTITY).await; // Evict the job: the recording is the source.
+            reattribute_recording(&h, case);
+            plant_device_8(&h);
+            plant_foreign_device_7(&h);
+            let what = format!("recorded {case}, chosen {chosen}");
+            assert_own_report_only(&h, &acquisition["token"], chosen, &result, &what).await;
+        }
+    }
+}
+
+#[tokio::test]
+async fn a_proven_current_run_refuses_another_device_and_exports_only_its_own() {
+    for evicted in [false, true] {
+        let h = harness("1.1.25");
+        let acquisition = diagnostic_preview(&h).await;
+        let result = start_and_finish(&h, &acquisition).await;
+        assert!(h
+            .state
+            .recordings
+            .wait_until_idle(std::time::Duration::from_secs(10)));
+        if evicted {
+            profile_preview(&h, IDENTITY).await;
+        }
+        plant_device_8(&h);
+        let reference =
+            json!({"relatedKey":"diagnosticsToken","relatedValue":acquisition["token"]});
+        let mut query = json!({"problemType":"deviceReading","operation":reference,"deviceId":8,
+            "sections":OFFERED});
+        let (status, body) = send(&h.app, PREVIEW, query.clone()).await;
+        assert_eq!(status, StatusCode::CONFLICT, "evicted {evicted}: {body}");
+        assert_eq!(body["error"], "bundleTargetMismatch");
+        assert_no_foreign(body.to_string().as_bytes(), "proven mismatch body");
+        query["deviceId"] = json!(7);
+        let (status, preview) = send(&h.app, PREVIEW, query.clone()).await;
+        assert_eq!(status, StatusCode::OK, "evicted {evicted}: {preview}");
+        for kind in ["device", "catalogue", "legacyReports", "operation"] {
+            let row = offer(&preview, kind);
+            assert_eq!(row["selected"], true, "evicted {evicted}: {kind}: {row}");
+            assert_eq!(row["unavailable"], Value::Null, "{kind}");
+        }
+        query["review"] = preview["review"].clone();
+        query["consent"] = json!(true);
+        let entries = zip_entries(&h, query).await;
+        let device: Value = serde_json::from_slice(&entries["device/7/device.json"]).unwrap();
+        assert!(device.to_string().contains("CUSTOMER_SECRET"), "{device}");
+        let catalogue: Value =
+            serde_json::from_slice(&entries["catalogue/catalogue.json"]).unwrap();
+        assert!(
+            catalogue["deviceProductIdentity"].is_object(),
+            "{catalogue}"
+        );
+        assert_eq!(report_entry(&entries, "report.json"), result["report"]);
+        assert_eq!(
+            report_entry(&entries, "properties.json"),
+            result["report"]["items"]
+        );
+        for (name, bytes) in &entries {
+            let text = String::from_utf8_lossy(bytes);
+            assert!(!text.contains("FOREIGN_DEVICE_8_SENTINEL"), "{name}");
+        }
+    }
+}
+
+const PREVIEW: &str = "/api/diagnostics/bundle/preview";
+const OFFERED: [&str; 5] = [
+    "device",
+    "catalogue",
+    "legacyReports",
+    "operation",
+    "environment",
+];
+const FOREIGN: [&str; 5] = [
+    "FOREIGN_PROJECT_SENTINEL",
+    "FOREIGN_DEVICE_7_SENTINEL",
+    "FOREIGN_DEVICE_8_SENTINEL",
+    "CUSTOMER_SECRET",
+    "PRIVATE_DESCRIPTION",
+];
+
+fn offer<'a>(preview: &'a Value, kind: &str) -> &'a Value {
+    preview["offers"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|row| row["kind"] == kind)
+        .unwrap()
+}
+
+fn assert_no_foreign(bytes: &[u8], what: &str) {
+    let text = String::from_utf8_lossy(bytes);
+    for sentinel in FOREIGN {
+        assert!(!text.contains(sentinel), "{what} leaks {sentinel}");
+    }
+}
+
+/// A second device of the current project; counters stay, so the context is unchanged.
+fn plant_device_8(h: &Harness) {
+    let mut project = h.state.project.lock().unwrap();
+    let devices = &mut project.as_mut().unwrap().devices;
+    let mut eight = devices.get_mut(DeviceId(7)).unwrap().clone();
+    eight.id = DeviceId(8);
+    eight.name = "FOREIGN_DEVICE_8_SENTINEL".into();
+    eight.description = Some("FOREIGN_DEVICE_8_SENTINEL".into());
+    eight.address = Some("1.1.26".parse().unwrap());
+    devices.insert(eight);
+}
+
+fn plant_foreign_device_7(h: &Harness) {
+    let mut project = h.state.project.lock().unwrap();
+    let seven = project
+        .as_mut()
+        .unwrap()
+        .devices
+        .get_mut(DeviceId(7))
+        .unwrap();
+    seven.name = "FOREIGN_DEVICE_7_SENTINEL".into();
+    seven.description = Some("FOREIGN_DEVICE_7_SENTINEL".into());
+}
+
+/// Rewrites the recording header's project attribution; the job must already be evicted.
+fn reattribute_recording(h: &Harness, case: &str) {
+    let recording = h
+        .state
+        .recordings
+        .list()
+        .unwrap()
+        .into_iter()
+        .next()
+        .unwrap();
+    let mut lines: Vec<Value> = h
+        .state
+        .recordings
+        .read(&recording.id)
+        .unwrap()
+        .split(|b| *b == b'\n')
+        .filter(|line| !line.is_empty())
+        .map(|line| serde_json::from_slice(line).unwrap())
+        .collect();
+    let related = lines[0]["related"].as_object_mut().unwrap();
+    let mut context: Value =
+        serde_json::from_str(related["projectContext"].as_str().unwrap()).unwrap();
+    match case {
+        "missing" => {
+            related.remove("projectContext");
+        }
+        "server" => context["serverIncarnation"] = json!("another-server-run"),
+        "incarnation" => {
+            context["projectIncarnation"] =
+                json!(context["projectIncarnation"].as_u64().unwrap() + 1)
+        }
+        "revision" => context["revision"] = json!(context["revision"].as_u64().unwrap() + 1),
+        _ => unreachable!("{case}"),
+    }
+    if case != "missing" {
+        related.insert("projectContext".into(), json!(context.to_string()));
+    }
+    let bytes: Vec<u8> = lines
+        .into_iter()
+        .flat_map(|line| (line.to_string() + "\n").into_bytes())
+        .collect();
+    std::fs::write(
+        h._dir
+            .path()
+            .join("diagnostics")
+            .join(format!("{}.jsonl", recording.id)),
+        bytes,
+    )
+    .unwrap();
+}
+
+async fn zip_entries(h: &Harness, query: Value) -> BTreeMap<String, Vec<u8>> {
+    let response = h
+        .app
+        .clone()
+        .oneshot(request("/api/diagnostics/bundle", query))
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::OK);
+    let bytes = to_bytes(response.into_body(), 8 * 1024 * 1024)
+        .await
+        .unwrap();
+    let mut archive = zip::ZipArchive::new(std::io::Cursor::new(bytes)).unwrap();
+    (0..archive.len())
+        .map(|index| {
+            let mut file = archive.by_index(index).unwrap();
+            let mut bytes = Vec::new();
+            file.read_to_end(&mut bytes).unwrap();
+            (file.name().to_string(), bytes)
+        })
+        .collect()
+}
+
+fn report_entry(entries: &BTreeMap<String, Vec<u8>>, name: &str) -> Value {
+    serde_json::from_slice(&entries[&format!("reports/{name}")]).unwrap()
+}
+
+/// With an unproven or foreign attribution the exact retained report stays downloadable
+/// whatever device number is chosen, while device and catalogue stay unavailable.
+async fn assert_own_report_only(
+    h: &Harness,
+    token: &Value,
+    chosen: u32,
+    expected: &Value,
+    what: &str,
+) {
+    let reference = json!({"relatedKey":"diagnosticsToken","relatedValue":token});
+    let mut query = json!({"problemType":"deviceReading","operation":reference,
+        "deviceId":chosen,"sections":OFFERED});
+    let (status, preview) = send(&h.app, PREVIEW, query.clone()).await;
+    assert_eq!(status, StatusCode::OK, "{what}: {preview}");
+    for kind in ["device", "catalogue"] {
+        let row = offer(&preview, kind);
+        assert_eq!(row["selected"], false, "{what}: {kind}: {row}");
+        assert!(row["unavailable"].is_string(), "{what}: {kind}: {row}");
+    }
+    for kind in ["legacyReports", "operation", "environment"] {
+        let row = offer(&preview, kind);
+        assert_eq!(row["selected"], true, "{what}: {kind}: {row}");
+        assert_eq!(row["unavailable"], Value::Null, "{what}: {kind}");
+    }
+    let sections = preview["sections"].as_array().unwrap();
+    assert!(sections
+        .iter()
+        .all(|s| s["kind"] != "device" && s["kind"] != "catalogue"));
+    assert!(sections.iter().any(|s| s["kind"] == "legacyReports"));
+    query["review"] = preview["review"].clone();
+    query["consent"] = json!(true);
+    let entries = zip_entries(h, query.clone()).await;
+    assert!(entries
+        .keys()
+        .all(|name| !name.starts_with("device/") && !name.starts_with("catalogue/")));
+    assert!(!expected["report"]["items"].as_array().unwrap().is_empty());
+    assert_eq!(
+        report_entry(&entries, "report.json"),
+        expected["report"],
+        "{what}"
+    );
+    assert_eq!(
+        report_entry(&entries, "properties.json"),
+        expected["report"]["items"],
+        "{what}"
+    );
+    for (name, bytes) in &entries {
+        assert_no_foreign(bytes, &format!("{what}: {name}"));
+    }
+    for section in sections {
+        let kind: knx_app::diagnostic_bundle::SectionKind =
+            serde_json::from_value(section["kind"].clone()).unwrap();
+        let directory = match section["label"].as_str() {
+            Some(label) => format!("{}/{label}", kind.directory()),
+            None => kind.directory().to_string(),
+        };
+        let mut text_query = query.clone();
+        text_query["key"] = section["key"].clone();
+        let (status, text) = send(&h.app, "/api/diagnostics/bundle/section", text_query).await;
+        assert_eq!(status, StatusCode::OK, "{what}: {text}");
+        let text = text["text"].as_str().unwrap();
+        for file in section["files"].as_array().unwrap() {
+            let path = format!("{directory}/{}", file.as_str().unwrap());
+            assert!(
+                text.contains(&format!("===== {path} =====\n")),
+                "{what}: {path}"
+            );
+        }
+        assert_no_foreign(text.as_bytes(), what);
+    }
+    for key in [format!("device:{chosen}"), "catalogue".to_string()] {
+        let mut text_query = query.clone();
+        text_query["key"] = json!(key);
+        let (status, body) = send(&h.app, "/api/diagnostics/bundle/section", text_query).await;
+        assert_ne!(status, StatusCode::OK, "{what}: {key}: {body}");
+        assert_no_foreign(body.to_string().as_bytes(), what);
+    }
+    assert_eq!(
+        h.calls.load(Ordering::SeqCst),
+        1,
+        "{what}: must not reacquire"
+    );
 }
 
 #[tokio::test]

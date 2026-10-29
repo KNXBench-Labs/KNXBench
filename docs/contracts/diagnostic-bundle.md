@@ -177,8 +177,11 @@ remains exportable unchanged.
 Without a recording, `downloadId` can project only this server's exact retained
 session; `operationId` can project its retained System-2 journal. A retained
 result without proven project attribution still exports its own report/status,
-but its device extract is unavailable. Explicit conflicting proven targets are
-HTTP 409 `bundleTargetMismatch`. Recorder unavailability is separate from result
+but its device and catalogue extracts are unavailable, whether the explicit
+device id equals the recorded one or not. Device ids are comparable only when
+the result's attribution equals the proven, unchanged current project context;
+only explicit conflicting targets in that context are HTTP 409
+`bundleTargetMismatch`. Recorder unavailability is separate from result
 unavailability. Diagnostic `report.json`, `properties.json`, optional `memory.json`
 and their existing README live under `reports/`; manual support preserves its
 existing `report.json` and README there too.

@@ -532,10 +532,12 @@ async fn collect(state: &SharedState, query: &BundleQuery) -> Result<Collected, 
         let device = devices.next()?.id.0;
         devices.next().is_none().then_some(device)
     });
-    if query
-        .device_id
-        .zip(run_device)
-        .is_some_and(|(chosen, target)| chosen != target)
+    // Device ids are comparable only inside the proven, unchanged source project.
+    if source.as_ref() == Some(&context)
+        && query
+            .device_id
+            .zip(run_device)
+            .is_some_and(|(chosen, target)| chosen != target)
     {
         return Err(ApiError::with_status(
             StatusCode::CONFLICT,
@@ -603,22 +605,19 @@ async fn collect(state: &SharedState, query: &BundleQuery) -> Result<Collected, 
         let wanted = offer == Offer::Fixed || selected.contains(&kind);
         let built = if kind == SectionKind::ClientState && !wanted && query.client.is_none() {
             Ok(Vec::new())
-        } else if kind == SectionKind::Device && device_unavailable.is_some() {
+        } else if matches!(kind, SectionKind::Device | SectionKind::Catalogue)
+            && device_unavailable.is_some()
+        {
             Err(device_unavailable
                 .expect("checked availability")
                 .to_string())
         } else {
-            let target = if kind == SectionKind::Catalogue && device_unavailable.is_some() {
-                None
-            } else {
-                device_id
-            };
             build_section(
                 state,
                 query,
                 kind,
                 operation.as_ref(),
-                target,
+                device_id,
                 evidence.as_ref().map_err(String::as_str),
                 &recordings,
             )

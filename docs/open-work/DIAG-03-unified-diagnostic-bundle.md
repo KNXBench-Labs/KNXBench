@@ -15,11 +15,16 @@ this is not a complete package/browser/hardware gate.
 **Raw System-2 evidence admission remains NOT READY:** classification of both
 expected/readback bytes (P1) and consistency across overlapping recording,
 range/error and archive copies (P2) are unproved. The separate static scout ran
-no runtime tests. A metadata-only withheld projection is a bounded possible next
-increment, not closure of the requested raw evidence. The
+no runtime tests. The separate closed App metadata increment `c8a686a5e`, locally
+integrated as `8342609ed`, has fifteen passing focused tests, including synthetic producer/replay cases,
+and a passing default App lane (917 passed, 47 ignored), plus App-only independent
+review. It uses one strict fresh store for progress and closed metadata; public
+DTOs/journals are unchanged. Empty/terminal states remain unclassified without a
+specific typed witness. Neither server hook nor CLI attaches it yet. This is not
+closure of the requested raw evidence or the fourteen-case whole-boundary matrix. The
 [source-grounded boundary](../research/2026-10-29-system2-bundle-credential-boundary.md)
-records the two server hooks, missing CLI typed attachment and fourteen future,
-unexecuted acceptance cases. Final integrated review/gate, main-first delivery
+records the two server hooks, missing CLI typed attachment and the open original
+fourteen-case acceptance matrix. Final integrated review/gate, main-first delivery
 and task-owned cleanup remain open.
 
 Origin: issue #30 report analysis, owner request 29 October 2026.

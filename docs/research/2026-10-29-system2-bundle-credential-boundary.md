@@ -1,8 +1,10 @@
 # System-2 comparison bytes: diagnostic-bundle admission boundary
 
-Date: 29 October 2026. **Static source findings, not runtime or hardware acceptance.**
-Source examined: `cada10a3cf89d4a66ad57041e5d6b0b958c637dd`; the subsequent
-saved-project adapter does not change the System-2 sources below.
+Date: 29 October 2026. **Raw-admission findings are static, not hardware acceptance.**
+The original boundary examines `cada10a3cf89d4a66ad57041e5d6b0b958c637dd`.
+The later saved-project adapter and closed App metadata increment leave the
+underlying comparison/persistence semantics unchanged. Bounded metadata execution
+below is separate from raw-admission or whole-archive acceptance.
 
 ## Decision
 
@@ -11,8 +13,8 @@ both sides of an allocation mismatch, but neither the expected nor returned
 memory has an established credential-free classification. Consent is not an
 exception to [ADR-0156](../adr/0156-operation-recorder-and-diagnostic-bundle.md)'s
 unconditional exclusion of keys/passwords. Do not enable raw serialization on
-that basis. A metadata-only projection with explicit withheld bytes is a possible
-bounded increment, not completion of DIAG-03's requested byte evidence.
+that basis. The closed metadata-only App projection described below is a bounded
+local increment, not completion of DIAG-03's requested byte evidence.
 
 ## Publicly auditable source evidence
 
@@ -65,18 +67,36 @@ progress/error entry, note or another selected file. Existing exposure is not
 authorization for another copy. A metadata-only new file does not certify the
 rest of the ZIP. Keep original evidence local; disclose exported loss explicitly.
 
-## Bounded next implementation, not an implemented API
+## Implemented App boundary; consumers still open
 
-Use one shared App-owned projection from the same successfully reopened store
-as progress. Preserve the minimized public report and persistence grammar.
-Explicitly distinguish recorded-but-withheld bytes, a typed mismatch with
-`notRecorded` bytes, unclassified historical outcomes and unavailable journals.
-Do not interpret an empty list as proven absence or infer restore stages from
-counter arithmetic. Both server hooks and the CLI must use the same owned bytes;
-normal target/version/context, review-fingerprint and consent guards still apply.
+The local App-only increment `c8a686a5e` (integration `8342609ed`) implements
+[`read_snapshot`](../../crates/knx-app/src/property_validation_private_projection.rs)
+with one strict fresh `OperationStore::open` against the expected Binding.
+Original minimized progress and separately owned closed metadata come from that
+same locked store. Public DTOs and persistence grammar are unchanged.
 
-A future positive raw variant is blocked by P1/P2. The following **14 acceptance
-cases are proposed and unexecuted**, not new passing tests:
+Only the closed projection serializes: typed comparisons with persisted bytes
+are `recordedBytesWithheld` with an explicit reason/loss; a typed mismatch without
+persisted comparison bytes is `notRecorded`, not a claim that no read occurred.
+Missing witnesses, empty lists and `Finished`/`Restored` remain `unclassified`.
+Open failures expose neither progress nor free error text. No payload bytes,
+lengths, hashes, masks or differing slices are exported; no additional journal
+size budget or authenticity guarantee is claimed.
+
+Fifteen focused tests pass, including synthetic producer/persistence/replay cases
+and independent controller execution; the default App lane passes 917 cases with 47 ignored.
+The independent review accepts only this App slice. Those tests do not execute
+the collectors, CLI or all-member ZIP boundary. The outer snapshot's Debug can
+still display private progress: future consumers must serialize only the closed
+projection, never a Debug dump or the existing raw evidence view.
+
+Both server hooks and the CLI still lack the attachment. They must consume one
+coherent snapshot and retain the same owned bytes through text/review/export;
+existing target/version/context, fingerprint and consent guards remain required.
+
+A future positive raw variant is blocked by P1/P2. The original **14-case matrix
+remains open**; the bounded metadata tests above do not constitute fourteen new
+passing acceptance cases. Server, CLI and cross-writer proposals remain unexecuted:
 
 | Scope | Proposed cases |
 | --- | --- |

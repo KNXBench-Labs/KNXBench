@@ -447,5 +447,278 @@
       }
     },
     "runtime": "unknown"
+  },
+  "exact0700Running": {
+    "observation": {
+      "status": "attempted",
+      "reach": {
+        "result": "reached",
+        "identity": {
+          "result": "match",
+          "exemplar": "notVerified",
+          "loadStates": [
+            {
+              "machine": "addressTable",
+              "expected": "loaded",
+              "observed": {
+                "result": "observed",
+                "loadState": "loaded"
+              }
+            },
+            {
+              "machine": "associationTable",
+              "expected": "unloaded",
+              "observed": {
+                "result": "observed",
+                "loadState": "unloaded"
+              }
+            },
+            {
+              "machine": "applicationProgram",
+              "expected": "loaded",
+              "observed": {
+                "result": "observed",
+                "loadState": "loaded"
+              }
+            }
+          ],
+          "planLoadVerdict": "matchesPlan",
+          "runState": {
+            "status": "observed",
+            "objectIndex": 3,
+            "state": "running"
+          },
+          "runStateMask": "0700"
+        }
+      }
+    },
+    "runtime": "running"
+  },
+  "exact0700DescriptionProblem": {
+    "observation": {
+      "status": "attempted",
+      "reach": {
+        "result": "reached",
+        "identity": {
+          "result": "match",
+          "exemplar": "notVerified",
+          "loadStates": [
+            {
+              "machine": "addressTable",
+              "expected": "loaded",
+              "observed": {
+                "result": "observed",
+                "loadState": "loaded"
+              }
+            },
+            {
+              "machine": "associationTable",
+              "expected": "unloaded",
+              "observed": {
+                "result": "observed",
+                "loadState": "unloaded"
+              }
+            },
+            {
+              "machine": "applicationProgram",
+              "expected": "loaded",
+              "observed": {
+                "result": "observed",
+                "loadState": "loaded"
+              }
+            }
+          ],
+          "planLoadVerdict": "matchesPlan",
+          "runState": {
+            "status": "notQualified",
+            "reason": "descriptionProblem"
+          },
+          "runStateMask": "0700"
+        }
+      }
+    },
+    "runtime": "unknown"
+  },
+  "exact0700Indeterminate": {
+    "observation": {
+      "status": "attempted",
+      "reach": {
+        "result": "reached",
+        "identity": {
+          "result": "match",
+          "exemplar": "notVerified",
+          "loadStates": [
+            {
+              "machine": "addressTable",
+              "expected": "loaded",
+              "observed": {
+                "result": "observed",
+                "loadState": "loaded"
+              }
+            },
+            {
+              "machine": "associationTable",
+              "expected": "unloaded",
+              "observed": {
+                "result": "observed",
+                "loadState": "unloaded"
+              }
+            },
+            {
+              "machine": "applicationProgram",
+              "expected": "loaded",
+              "observed": {
+                "result": "observed",
+                "loadState": "loaded"
+              }
+            }
+          ],
+          "planLoadVerdict": "matchesPlan",
+          "runState": {
+            "status": "notQualified",
+            "reason": "indeterminateMetadata"
+          },
+          "runStateMask": "0700"
+        }
+      }
+    },
+    "runtime": "unknown"
+  },
+  "exact0700Elements": {
+    "observation": {
+      "status": "attempted",
+      "reach": {
+        "result": "reached",
+        "identity": {
+          "result": "match",
+          "exemplar": "notVerified",
+          "loadStates": [
+            {
+              "machine": "addressTable",
+              "expected": "loaded",
+              "observed": {
+                "result": "observed",
+                "loadState": "loaded"
+              }
+            },
+            {
+              "machine": "associationTable",
+              "expected": "unloaded",
+              "observed": {
+                "result": "observed",
+                "loadState": "unloaded"
+              }
+            },
+            {
+              "machine": "applicationProgram",
+              "expected": "loaded",
+              "observed": {
+                "result": "observed",
+                "loadState": "loaded"
+              }
+            }
+          ],
+          "planLoadVerdict": "matchesPlan",
+          "runState": {
+            "status": "notQualified",
+            "reason": "unqualifiedElements"
+          },
+          "runStateMask": "0700"
+        }
+      }
+    },
+    "runtime": "unknown"
+  },
+  "exact0700Datatype": {
+    "observation": {
+      "status": "attempted",
+      "reach": {
+        "result": "reached",
+        "identity": {
+          "result": "match",
+          "exemplar": "notVerified",
+          "loadStates": [
+            {
+              "machine": "addressTable",
+              "expected": "loaded",
+              "observed": {
+                "result": "observed",
+                "loadState": "loaded"
+              }
+            },
+            {
+              "machine": "associationTable",
+              "expected": "unloaded",
+              "observed": {
+                "result": "observed",
+                "loadState": "unloaded"
+              }
+            },
+            {
+              "machine": "applicationProgram",
+              "expected": "loaded",
+              "observed": {
+                "result": "observed",
+                "loadState": "loaded"
+              }
+            }
+          ],
+          "planLoadVerdict": "matchesPlan",
+          "runState": {
+            "status": "notQualified",
+            "reason": "unsupportedDatatype",
+            "pdt": 2
+          },
+          "runStateMask": "0700"
+        }
+      }
+    },
+    "runtime": "unknown"
+  },
+  "exact0700DescriptionUnavailable": {
+    "observation": {
+      "status": "attempted",
+      "reach": {
+        "result": "reached",
+        "identity": {
+          "result": "match",
+          "exemplar": "notVerified",
+          "loadStates": [
+            {
+              "machine": "addressTable",
+              "expected": "loaded",
+              "observed": {
+                "result": "observed",
+                "loadState": "loaded"
+              }
+            },
+            {
+              "machine": "associationTable",
+              "expected": "unloaded",
+              "observed": {
+                "result": "observed",
+                "loadState": "unloaded"
+              }
+            },
+            {
+              "machine": "applicationProgram",
+              "expected": "loaded",
+              "observed": {
+                "result": "observed",
+                "loadState": "loaded"
+              }
+            }
+          ],
+          "planLoadVerdict": "matchesPlan",
+          "runState": {
+            "status": "unavailable",
+            "step": "description",
+            "cause": "noCorrelatedAnswer"
+          },
+          "runStateMask": "0700"
+        }
+      }
+    },
+    "runtime": "unknown"
   }
 }

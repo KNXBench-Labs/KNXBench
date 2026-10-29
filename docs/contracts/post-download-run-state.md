@@ -7,11 +7,12 @@ explicit candidate-location interpretation are in the
 [original-source review](../research/2026-10-29-property-run-state-observation.md).
 Executed acceptance and publication are separate from this contract.
 
-A separately [design-admitted exact-0700 increment](post-download-run-state-0700.md)
-adds descriptor qualification for an optional property. It is not implemented
-at source `8d14de9ca` and does not change this 0701/0705 path, its schedules,
-legacy datatype handling or serialized bytes. Its explicit 0700 scope-policy
-supersession must not be mistaken for already-executed acceptance here.
+A separately [implemented exact-0700 increment](post-download-run-state-0700.md)
+adds descriptor qualification for an optional property at source `5f075cf99`.
+It does not change this 0701/0705 path, its schedules, legacy datatype handling
+or serialized bytes. Its independent static review is complete; integrated
+software acceptance and publication remain pending. The original baseline
+`8d14de9ca` did not implement this optional continuation.
 
 ## Admission and read schedule
 

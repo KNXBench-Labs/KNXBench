@@ -2,10 +2,11 @@
 
 ## Status and sources
 
-PRG-01 implementation contract, 29 October 2026. This is an admitted software
-increment, not execution acceptance or proof of whole-device recovery. The
-[source review](../research/2026-10-29-regular-restore-exemplar.md) separates KNX
-resource facts from the conservative replay policy.
+PRG-01 implementation contract, 29 October 2026. The implemented increment has
+[bounded software acceptance](../status/2026-10-29-regular-restore-exemplar.md)
+on runtime integration `0ddfe4953`, not hardware or whole-device recovery proof.
+The [source review](../research/2026-10-29-regular-restore-exemplar.md) separates
+KNX resource facts from the conservative replay policy.
 
 ## Required behavior
 

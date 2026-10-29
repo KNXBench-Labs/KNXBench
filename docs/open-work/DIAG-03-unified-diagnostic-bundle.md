@@ -68,6 +68,63 @@ checkbox what goes into one ZIP that they may send by mail.
    mail buttons are removed or become shortcuts that open this wizard preselected
    (e.g. from a failed download panel: problem "download failed", that operation selected).
 
+### Round 2 (29 October 2026, all recommendations accepted)
+
+10. **Format:** JSONL, one file per operation, one event per line, each telegram raw hex
+    plus decoded. A pcap converter may follow later; not part of this package.
+11. **Location:** data directory `diagnostics/`, next to the operation journals, so Docker
+    keeps recordings on the mounted volume across restarts.
+12. **Old recordings after an update:** kept and exported unchanged; every file header
+    carries its format version and the writing KNXBench version. No backfill.
+13. **Switching off:** no UI toggle, only "Delete recordings". A documented environment
+    variable lets operators of shared/customer servers disable recording; the bundle and
+    the UI state plainly when recording is disabled.
+14. **Bus monitor:** extra checkbox "bus monitor, last 10 minutes", default off, only when
+    the monitor ran; uses its existing buffer.
+15. **Size:** live size per section and total in step 2; hint above 10 MB about common mail
+    limits; no splitting.
+16. **Problem types:** device programming; device reading/diagnostics; project import;
+    product catalogue/product installation; user interface/other. Each has its own
+    defaults (open item O1).
+17. **Preview:** per section size, entry count and content markers ("contains addresses",
+    "contains names", "contains parameter values"); one click shows the section as text.
+18. **Who may export:** the same authenticated session as every other route; desktop and
+    server alike; no new roles.
+
+### Open items for the implementing session (ask the owner first)
+
+O1 and O2 depend on decision 16 and were not yet confirmed. The table is a proposal.
+
+**O1 — proposed defaults per problem type** (✓ preselected, ○ offered, – not offered):
+
+| Section | Programming | Reading/diag. | Import | Catalogue | UI/other |
+| --- | --- | --- | --- | --- | --- |
+| manifest + environment (version, commit, OS, settings) | ✓ fixed | ✓ fixed | ✓ fixed | ✓ fixed | ✓ fixed |
+| session log | ✓ | ✓ | ✓ | ✓ | ✓ |
+| latest matching operation recording + typed result/journal projection | ✓ | ✓ | – | – | ○ |
+| earlier operations (picker) | ○ | ○ | – | – | ○ |
+| device extract (application, parameters, linked GAs) | ✓ | ✓ | – | ○ | ○ |
+| minimised legacy reports of that operation | ✓ | ✓ | – | – | – |
+| import report and import diagnostics | – | – | ✓ | – | ○ |
+| original import file (`.knxproj`) | – | – | ○ | – | – |
+| catalogue install report / product identity | ○ | ○ | – | ✓ | – |
+| whole project `.knxdb` | ○ | ○ | ○ | – | ○ |
+| bus monitor last 10 min | ○ | ○ | – | – | ○ |
+| browser/client state (UI language, theme, viewport, recent errors) | – | – | – | – | ✓ |
+
+**O2 — proposed disposition of existing entry points:**
+
+| Today | Proposal |
+| --- | --- |
+| `DebugReportButton` (File menu) | Becomes the single "Report problem" entry that opens the wizard |
+| `UniversalSupportButton` | Shortcut: wizard, type programming/reading, device preselected |
+| `DiagnosticExportButton` | Keeps the *live read* action (it performs the read-only acquisition); its ZIP export moves into the wizard |
+| Download "Help verify this device" | Shortcut: wizard, type programming, that run preselected; also used for successful runs (verification evidence) |
+| System-2 "Save report" | Shortcut: wizard, type programming, that operation preselected |
+| `DownloadSupportNotice` mail/issue links | Replaced by a wizard link |
+| `ContributionButton` | Unchanged: product contribution, separate address and contract, not a problem report |
+| `MonitoringExportButton`, `DocumentationExportButton` | Unchanged: exports, not diagnostics |
+
 ## Bounded outcome
 
 ### A. Operation recorder (core)
@@ -100,11 +157,9 @@ checkbox what goes into one ZIP that they may send by mail.
   `device/<id>.json` extract, optional `project.knxdb`, session log, existing minimised
   reports as they are today.
 - Web: one "Report problem" entry (File/Help menu and contextual shortcuts). Wizard steps:
-  1) problem type (device programming failed, device read/diagnostics failed, import
-  problem, UI/other); 2) operations and sections with preselected defaults for that type,
-  sizes shown; 3) preview of the manifest and of what is *not* redacted; 4) consent
-  checkbox, save ZIP, open mail draft. Defaults: the latest failed operation of the
-  matching kind, environment, log, device extract on; whole project off; bus monitor off.
+  1) problem type (decision 16); 2) operations and sections with the type's defaults
+  (O1), live sizes (decision 15); 3) preview per decision 17, including what is *not*
+  redacted; 4) consent checkbox, save ZIP, open mail draft.
 - CLI `--diagnostic-bundle <file>` for device commands, same builder.
 - Remove/redirect the old buttons in one sweep; keep their file formats readable as
   bundle sections. Public GitHub issue link offers only the minimised report.

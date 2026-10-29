@@ -33,6 +33,8 @@ import type { ProjectTree } from "./bindings/ProjectTree";
 import type { DeviceDownloadStatusResponse } from "./api";
 import checkFixtures from "./postDownloadCheck.fixtures.json";
 import { subscribeAchievementEvents, type AchievementEvent } from "./achievementEvents";
+import { ReportProblemProvider } from "./ReportProblemEntry";
+import type { ReportProblemRequest } from "./reportProblem";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -153,12 +155,17 @@ async function flush() {
   });
 }
 
+/** DIAG-03: the workbench's report host; shortcut requests are observed, the wizard is tested elsewhere. */
+const reportOpened = vi.fn<(request: ReportProblemRequest) => void>();
 async function render(tree: ProjectTree | null = project(), onProjectChanged?: (tree: ProjectTree) => void) {
   host = document.createElement("div");
   document.body.appendChild(host);
   root = createRoot(host);
+  reportOpened.mockReset();
   await act(async () => {
-    root!.render(<DeviceDownloadPanel project={tree} onProjectChanged={onProjectChanged} />);
+    root!.render(<ReportProblemProvider request={null} onOpen={reportOpened} onClose={() => {}} tree={null} notifications={[]}>
+      <DeviceDownloadPanel project={tree} onProjectChanged={onProjectChanged} />
+    </ReportProblemProvider>);
   });
   await flush();
 }
@@ -229,7 +236,11 @@ it("shows pre-plan refusal, actionable help and exact local detail without a rep
   expect(help.textContent).toContain(en["deviceDownload.readiness.reason.byteOrder"]);
   expect(help.querySelector("[data-next-action=requestSupport]")).not.toBeNull();
   expect(help.querySelector<HTMLTextAreaElement>("textarea")!.value).toContain("PRIVATE /home/customer 1.1.67");
-  expect(help.querySelectorAll("a")).toHaveLength(3);
+  // DIAG-03: instructions stay a link; mail and issue became the one report shortcut, the panel's own hides.
+  expect(help.querySelectorAll("a")).toHaveLength(1);
+  expect([...host!.querySelectorAll("[data-report-problem-open]")].map((b) => b.getAttribute("data-report-problem-open"))).toEqual(["support-notice"]);
+  await act(async () => help.querySelector<HTMLButtonElement>("[data-report-problem-open=support-notice]")!.click());
+  expect(reportOpened).toHaveBeenCalledExactlyOnceWith({ problemType: "deviceProgramming", deviceId: expect.any(Number), operation: null });
   expect(apiMock.planDeviceDownload).not.toHaveBeenCalled();
   expect(apiMock.getDeviceDownloadReport).not.toHaveBeenCalled();
   expect(apiMock.startDeviceDownload).not.toHaveBeenCalled();
@@ -854,7 +865,7 @@ it("offers no report while a download runs", async () => {
   expect(host!.querySelector(".device-download-verify")).toBeNull();
 });
 
-it("after a download, explains the steps and creates the report only on request, with a checklist and both ways to send it", async () => {
+it("after a download, explains the steps, creates the minimised report on request and offers the report wizard for mail", async () => {
   apiMock.pollDeviceDownload.mockReset().mockResolvedValue(
     response({ state: "finished", written: "yes", restart: "acknowledged", restartNote: null }, [], 0),
   );
@@ -881,7 +892,13 @@ it("after a download, explains the steps and creates the report only on request,
   expect(issue.getAttribute("href")).toBe(REPORT.issueUrl);
   expect(issue.getAttribute("target")).toBe("_blank");
   expect(issue.getAttribute("rel")).toBe("noopener noreferrer");
-  expect(verify.querySelector("a[data-verify-mail]")!.getAttribute("href")).toBe(REPORT.mailto);
+  // DIAG-03: the mail goes through the report wizard with this run preselected; no raw mailto here.
+  expect(verify.querySelector("a[data-verify-mail], a[href^='mailto:']")).toBeNull();
+  expect([...host!.querySelectorAll("[data-report-problem-open]")].map((b) => b.getAttribute("data-report-problem-open"))).toEqual(["verify"]);
+  await act(async () => verify.querySelector<HTMLButtonElement>("[data-report-problem-open=verify]")!.click());
+  // No device is chosen in this reattached panel; the wizard lets the user pick one.
+  expect(reportOpened).toHaveBeenCalledExactlyOnceWith({ problemType: "deviceProgramming", deviceId: null,
+    operation: { relatedKey: "downloadId", relatedValue: "7" } });
   expect(verify.querySelector(".device-download-verify-summary")!.textContent).toBe(REPORT.summary);
 
   await act(async () => button(en["deviceDownload.verify.save"], verify).click());

@@ -42,6 +42,7 @@ function ctx(): CommandContext {
     addDevice: record("addDevice"),
     openIntroduction: record("openIntroduction"),
     openAchievements: record("openAchievements"),
+    reportProblem: record("reportProblem"),
   };
 }
 

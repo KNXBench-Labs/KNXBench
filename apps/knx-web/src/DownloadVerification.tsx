@@ -1,19 +1,25 @@
 /** "Help verify this device": explains, checks and hands over a download report (ADR-0121). */
-// Shown once a download has ended. The report is built by the server; this
-// view only fetches it on request, offers the file, the issue form and a
-// mail. Nothing is sent automatically.
+// Shown once a download has ended. The minimised report is built by the
+// server; this view only fetches it on request and offers the file and the
+// public issue form. The full diagnostic bundle for mail comes from the
+// Report problem wizard, preselected with this run (DIAG-03). Nothing is
+// sent automatically.
 
 import { useState } from "react";
 import * as api from "./api";
 import { checkKey, checklist, runCompleted } from "./downloadVerification";
 import { useTranslate } from "./i18n";
 import { downloadLocalJson } from "./localJsonDownload";
+import type { ReportProblemRequest } from "./reportProblem";
+import { ReportProblemButton } from "./ReportProblemEntry";
 
 interface DownloadVerificationProps {
   /** The ended download the report is about. */
   downloadId: number;
   /** Whether that run completed with every block written. */
   completed: boolean;
+  /** The Report problem shortcut for this run. */
+  report: ReportProblemRequest;
 }
 
 type Loaded =
@@ -23,7 +29,7 @@ type Loaded =
   | { state: "failed"; error: string }
   | { state: "ready"; response: api.DeviceDownloadReportResponse };
 
-export default function DownloadVerification({ downloadId, completed }: DownloadVerificationProps) {
+export default function DownloadVerification({ downloadId, completed, report: reportRequest }: DownloadVerificationProps) {
   const t = useTranslate();
   const [loaded, setLoaded] = useState<Loaded>({ state: "idle" });
   const [ticked, setTicked] = useState<ReadonlySet<string>>(() => new Set());
@@ -64,6 +70,7 @@ export default function DownloadVerification({ downloadId, completed }: Download
           <button type="button" data-verify-create disabled={loaded.state === "loading"} onClick={() => void create()}>
             {t(loaded.state === "loading" ? "deviceDownload.verify.creating" : "deviceDownload.verify.create")}
           </button>
+          <ReportProblemButton from="verify" request={reportRequest} />
         </div>
       )}
       {loaded.state === "finishing" && <p className="form-warning" role="status">{t("deviceDownload.verify.stillFinishing")}</p>}
@@ -98,9 +105,7 @@ export default function DownloadVerification({ downloadId, completed }: Download
             <a className="device-download-verify-link" data-verify-issue href={response.issueUrl} target="_blank" rel="noopener noreferrer">
               {t("deviceDownload.verify.issue")}
             </a>
-            <a className="device-download-verify-link" data-verify-mail href={response.mailto}>
-              {t("deviceDownload.verify.mail")}
-            </a>
+            <ReportProblemButton from="verify" request={reportRequest} />
           </div>
           <ul className="device-download-verify-hints">
             <li>{t("deviceDownload.verify.issueHint")}</li>

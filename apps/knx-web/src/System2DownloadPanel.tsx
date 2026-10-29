@@ -4,7 +4,7 @@ import type { ProjectTree } from "./bindings/ProjectTree";
 import * as api from "./system2DownloadApi";
 import { useTranslate } from "./i18n";
 import { useProgrammingConsent } from "./useProgrammingConsent";
-import { downloadLocalJson } from "./localJsonDownload";
+import { ReportProblemButton } from "./ReportProblemEntry";
 import { getSystem2Snapshot, publishSystem2Status, publishSystem2Unavailable, refreshSystem2Status } from "./system2Status";
 import "./System2DownloadPanel.css";
 
@@ -47,8 +47,6 @@ export default function System2DownloadPanel({ project, deviceId, gateway, enabl
   const [preparing, setPreparing] = useState(false);
   const [error, setError] = useState(false); const [unknown, setUnknown] = useState<"start" | "cancel" | "recover" | null>(null);
   const [startRefusal, setStartRefusal] = useState<string | null>(null);
-  const [reportOutcome, setReportOutcome] = useState<{ id: string; kind: "saved" | "failed" } | null>(null);
-  const reportBusy = useRef(false);
   const mounted = useRef(false); const generation = useRef(0); const reads = useRef(0); const pollInFlight = useRef(false);
   const context = useRef({ project, deviceId, gateway, enabled }); context.current = { project, deviceId, gateway, enabled };
 
@@ -155,21 +153,6 @@ export default function System2DownloadPanel({ project, deviceId, gateway, enabl
     catch { if (mounted.current) setUnknown("cancel"); }
     finally { action.current = false; reads.current += 1; if (mounted.current) { setPending(false); void poll(); } }
   }
-  // Local save only: the server composes a bounded journal-fact summary, nothing is uploaded.
-  // An answer for an operation that is no longer the attached one is dropped.
-  async function saveReport() {
-    const original = statusRef.current;
-    if (original === null || active(original) || reportBusy.current) return;
-    reportBusy.current = true; setReportOutcome(null);
-    const current = () => mounted.current && statusRef.current?.operationId === original.operationId && !active(statusRef.current);
-    try {
-      const report = await api.getSystem2Report(original.operationId);
-      if (!current()) return;
-      downloadLocalJson(JSON.stringify(report, null, 2), "knxbench-system2-report.json");
-      setReportOutcome({ id: original.operationId, kind: "saved" });
-    } catch { if (current()) setReportOutcome({ id: original.operationId, kind: "failed" }); }
-    finally { reportBusy.current = false; }
-  }
   // Only the server's original-operation status can supply recovery terms, including
   // after reattachment or a lost start response. A later preview is never a fallback.
   const originalTerms = status !== null && status.downloadPhrase !== null && status.releasePhrase !== null ?
@@ -258,10 +241,10 @@ export default function System2DownloadPanel({ project, deviceId, gateway, enabl
         </section>}
         <p data-system2-settlement={status.projectSettlement}><strong>{t("system2.settlement.heading")}:</strong> {t(`system2.settlement.${status.projectSettlement}`)}</p>
         {status.restoreAttempted && <p data-system2-download-counts>{status.downloadTotalSteps === null ? t("system2.downloadCountsUnknown", { done: status.downloadCompletedSteps }) : t("system2.downloadCounts", { done: status.downloadCompletedSteps, total: status.downloadTotalSteps })}</p>}
-        <button type="button" data-system2-report-save disabled={pending} onClick={() => void saveReport()}>{t("system2.report.save")}</button>
-        <p data-system2-report-guidance>{t("system2.report.guidance")} <a href="mailto:issue@knxbench.com?subject=KNXBench%20System-2%20download%20report">issue@knxbench.com</a></p>
-        {reportOutcome?.id === status.operationId && reportOutcome.kind === "saved" && <p role="status" data-system2-report-saved>{t("system2.report.saved")}</p>}
-        {reportOutcome?.id === status.operationId && reportOutcome.kind === "failed" && <p role="alert" data-system2-report-failed className="form-warning">{t("system2.report.failed")}</p>}
+        {/* DIAG-03: the report wizard, preselected with this operation (its recording carries `operationId`). */}
+        <ReportProblemButton from="system2" disabled={pending}
+          request={{ problemType: "deviceProgramming", deviceId: status.binding.deviceId, operation: { relatedKey: "operationId", relatedValue: status.operationId } }} />
+        <p data-system2-report-guidance>{t("system2.report.guidance")}</p>
       </section>}
       {status.message && <p>{status.message}</p>}
       {status.refusal && <p data-system2-refusal>{t("system2.refusal", { reason: status.refusal })}</p>}

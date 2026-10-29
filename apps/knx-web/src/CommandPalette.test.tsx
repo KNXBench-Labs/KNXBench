@@ -61,6 +61,7 @@ function noopCtx(overrides: Partial<CommandContext> = {}): CommandContext {
     addDevice: () => {},
     openIntroduction: () => {},
     openAchievements: () => {},
+    reportProblem: () => {},
     ...overrides,
   };
 }

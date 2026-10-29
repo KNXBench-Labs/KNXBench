@@ -24,6 +24,8 @@ use serde_json::{json, Value};
 use super::*;
 use MemoryLoadStateMachine::{AddressTable, ApplicationProgram, AssociationTable};
 
+#[path = "post_download_check/exact0700_tests.rs"]
+mod exact0700;
 #[path = "post_download_check/run_state_tests.rs"]
 mod run_state;
 

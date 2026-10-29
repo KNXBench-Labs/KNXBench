@@ -1313,6 +1313,8 @@ impl TelegramBuffer {
             | ApplicationService::Restart { .. }
             | ApplicationService::AuthorizeRequest { .. }
             | ApplicationService::AuthorizeResponse { .. }
+            | ApplicationService::PropertyDescriptionRead { .. }
+            | ApplicationService::PropertyDescriptionResponse { .. }
             | ApplicationService::PropertyValueRead { .. }
             | ApplicationService::PropertyValueResponse { .. }
             | ApplicationService::PropertyValueWrite { .. }) => (

@@ -51,9 +51,10 @@
 //!   every `CompareProperty` the plan declares (the hardware type only if
 //!   declared); it does not say it is the same physical exemplar.
 //! - Whether the application *runs* is observed only by the bounded
-//!   continuation: for masks `0701h`/`0705h`, after identity matched and every
+//!   continuation: for masks `0700h`/`0701h`/`0705h`, after identity matched and every
 //!   load state was read, candidate object 3 is validated (type, then a strict
-//!   application reread) and its `PID_RUN_STATE_CONTROL` read once. That is
+//!   application reread) and its `PID_RUN_STATE_CONTROL` read once. Exact `0700h`
+//!   additionally requires independent qualifying description evidence first. That is
 //!   the reported property of that object, not device health, a unique
 //!   instance or download success. `Loaded` is a load state, not a run state;
 //!   any other mask or failure leaves the run state unobserved.
@@ -143,6 +144,8 @@ pub enum RunStateObservation {
         step: RunStateStep,
         cause: RunStateCause,
     },
+    /// Independent description evidence does not qualify the optional property.
+    NotQualified(RunStateNotQualified),
     /// One octet outside the six defined values (Resources Table 95).
     UndefinedValue,
     /// The defined state the candidate object reports.
@@ -152,7 +155,7 @@ pub enum RunStateObservation {
 /// Why no run-state frame was sent.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RunStateNotRead {
-    /// The mask is not `0701h` or `0705h`.
+    /// The mask is not exact `0700h`, `0701h` or `0705h`.
     UnsupportedMask,
     /// A load-state read before it failed or was skipped.
     LoadReadFailed,
@@ -167,12 +170,39 @@ pub enum CandidateMismatch {
     Application,
 }
 
-/// Which of the three continuation reads failed.
+/// Which continuation read failed, including exact0700's description exchange.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RunStateStep {
     ObjectType,
     Application,
+    Description,
     RunState,
+}
+
+/// Conservative exact-0700 descriptor qualification; no absence or access inference.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RunStateNotQualified {
+    UnqualifiedElements,
+    DescriptionProblem,
+    IndeterminateMetadata,
+    UnsupportedDatatype { pdt: u8 },
+}
+
+fn qualify_description(d: crate::cemi::PropertyDescription) -> Result<(), RunStateNotQualified> {
+    use RunStateNotQualified::*;
+    if d.upper_max_elements() != 0 {
+        Err(UnqualifiedElements)
+    } else if d.max_elements() == 0 {
+        if !d.write_enabled() && d.pdt() == 0 && d.raw()[3] == 0 {
+            Err(DescriptionProblem)
+        } else {
+            Err(IndeterminateMetadata)
+        }
+    } else if d.pdt() != 0 {
+        Err(UnsupportedDatatype { pdt: d.pdt() })
+    } else {
+        Ok(())
+    }
 }
 
 /// Why a continuation read failed. Closed: no transport text, no device bytes.
@@ -573,7 +603,7 @@ async fn read_run_state<T: ManagementTransport>(
     application: [u8; 5],
     load_states: &[LoadStateReading],
 ) -> RunStateObservation {
-    if !matches!(plan.mask.0, 0x0701 | 0x0705) {
+    if !matches!(plan.mask.0, 0x0700 | 0x0701 | 0x0705) {
         return RunStateObservation::NotRead(RunStateNotRead::UnsupportedMask);
     }
     if load_states
@@ -598,6 +628,21 @@ async fn read_run_state<T: ManagementTransport>(
     };
     if found != application {
         return RunStateObservation::CandidateMismatch(CandidateMismatch::Application);
+    }
+    if plan.mask.0 == 0x0700 {
+        let description = session
+            .read_property_description(
+                RUN_STATE_CANDIDATE,
+                std::num::NonZeroU8::new(PID_RUN_STATE_CONTROL).expect("PID 6 is nonzero"),
+            )
+            .await;
+        let description = match description {
+            Ok((_, description)) => description,
+            Err(error) => return unavailable(RunStateStep::Description)(read_failure(error)),
+        };
+        if let Err(reason) = qualify_description(description) {
+            return RunStateObservation::NotQualified(reason);
+        }
     }
     match read_candidate(session, PID_RUN_STATE_CONTROL, 1).await {
         Ok(state) => match RunState::from_octet(state[0]) {
@@ -627,6 +672,16 @@ async fn read_candidate<T: ManagementTransport>(
             Err(RunStateCause::ConnectionLost)
         }
         Err(_) => Err(RunStateCause::ReadFailed),
+    }
+}
+
+fn read_failure(error: SessionError) -> RunStateCause {
+    match error {
+        SessionError::NoAnswer { .. } => RunStateCause::NoCorrelatedAnswer,
+        SessionError::ConnectionLost { .. } | SessionError::ConnectionReleased { .. } => {
+            RunStateCause::ConnectionLost
+        }
+        _ => RunStateCause::ReadFailed,
     }
 }
 
@@ -763,11 +818,37 @@ impl fmt::Display for PostDownloadObservation {
                          not device health or download success)"
                     );
                 }
+                if let RunStateObservation::NotQualified(reason) = run_state {
+                    write!(f, "; optional run-state property not qualified ({reason})")?;
+                }
+                if let RunStateObservation::Unavailable {
+                    step: RunStateStep::Description,
+                    cause,
+                } = run_state
+                {
+                    let cause = match cause {
+                        RunStateCause::NoCorrelatedAnswer => "no correlated answer",
+                        RunStateCause::ConnectionLost => "connection lost",
+                        _ => "read failed",
+                    };
+                    write!(f, "; optional run-state description unavailable ({cause})")?;
+                }
                 // A continuation record exists, but none of it is a defined state.
                 return f.write_str("; no defined run state observed");
             }
         }
         f.write_str("; whether the application runs was not observed")
+    }
+}
+
+impl fmt::Display for RunStateNotQualified {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::UnqualifiedElements => f.write_str("unqualified maximum elements"),
+            Self::DescriptionProblem => f.write_str("unspecified description problem"),
+            Self::IndeterminateMetadata => f.write_str("indeterminate metadata"),
+            Self::UnsupportedDatatype { pdt } => write!(f, "unsupported datatype PDT {pdt}"),
+        }
     }
 }
 

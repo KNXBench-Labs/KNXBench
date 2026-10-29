@@ -1,6 +1,8 @@
 //! The server download worker's read-only check after a transfer, on one persistent simulator.
 
 use super::*;
+#[path = "device_download_check_0700_tests.rs"]
+mod exact0700;
 use std::future::Future;
 use std::pin::Pin;
 use std::time::Duration;
@@ -519,6 +521,11 @@ fn read_only_frame(seen: &Seen) -> bool {
         Seen::Connect
             | Seen::Disconnect
             | Seen::PropertyRead { .. }
+            | Seen::PropertyDescriptionRead {
+                object_index: 3,
+                property_id: 6,
+                property_index: 0
+            }
             | Seen::MemoryRead { .. }
             | Seen::Other("DeviceDescriptorRead")
     )

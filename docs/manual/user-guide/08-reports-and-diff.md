@@ -67,10 +67,32 @@ Several places open the same wizard with the right things already chosen:
 
 | Where | Opens with |
 | --- | --- |
-| **Report problem…** in a device's download panel, in its refusal help and in **Help verify this device** | *Programming a device*, that device, the ended download |
+| **Report problem…** in a device's preparation panel or refusal help | *Programming a device*, the current device, explicitly no earlier run |
+| **Report problem…** in **Help verify this device** | *Programming a device*, that exact ended download and its own target, not the next form selection |
 | **Report problem…** under a System-2 result | *Programming a device*, that System-2 operation |
-| **Report problem…** after **Export diagnostic data** has read a device | *Reading or diagnosing a device*, that device and that read |
+| **Report problem…** after **Export diagnostic data** has read a device | *Reading or diagnosing a device*, that device and that exact retained read |
+| **Report problem…** after **Read device identity…** | *Reading or diagnosing a device*, that exact retained identity result; a manual address is not guessed to be a project device |
 | **Report problem…** on a device's **Diagnostics** tab | *Reading or diagnosing a device*, that device |
+
+### Reading an identity without a project
+
+**File → Help & diagnostics → Read device identity…** (*Geräteidentität lesen…*)
+accepts a known individual address without an open project, or a manual address
+outside the current project. A project device can also be selected. Optional
+application and mask assertions help define the bounded identity profile.
+
+Opening this action and **Preview identity read offline** do not contact a device.
+Review the target, profile, exact queries and time limit. Enter the gateway and
+give the separate live-read consent before **Read identity now**. This only reads
+bounded identity data: no memory dump or device write. Ask the installation owner
+first and free the gateway tunnel. Closing hides late replies but cannot undo a
+read already sent. A project/server/revision change invalidates this view; an
+equal refresh keeps it.
+
+Once the read ends, **Report problem…** opens the same wizard described below.
+Read consent never grants sharing consent. There is no second save/mail dialog.
+The exact retained result remains usable without a recording while the server
+still retains it; expiry is reported, never replaced with an unrelated latest run.
 
 ### Step 1: what kind of problem
 
@@ -97,7 +119,16 @@ The wizard now asks KNXBench what it can collect and shows one checkbox per part
 
 Every included part shows its size, and the total is below the list. Above
 10 MiB the wizard warns that many mail services refuse attachments that large;
-KNXBench does not split the file.
+KNXBench does not split the file. Browser state is limited to 64 KiB of serialized
+UTF-8, including JSON escaping. The newest errors have priority; shortening and
+omission counts are shown. Unticking Browser state omits that payload entirely
+and you can select it again.
+
+The preview binds the resolved operation, target, project/server/revision and
+selected contents. Text and ZIP requests use that same review. Changed content
+or context refuses the request and withdraws consent: choose **Refresh and
+review**, then inspect it again. A substantive accepted project update closes
+the wizard, including pending replies; an equal tree refresh does not.
 
 ### Step 3: preview
 
@@ -120,8 +151,15 @@ preview and want to save this ZIP on this computer**, then press **Save ZIP**
 `knxbench-diagnostics-<version>-….zip` and is saved like any other KNXBench
 download (the desktop app asks where).
 
-After the file is saved, **Open mail draft** opens your mail program with a message
-to `issue@knxbench.com`, the KNXBench version and operation in the subject. The
+The wizard says **Download requested**: clicking a blob link does not prove a
+completed save, especially if a later desktop save dialog is cancelled or fails.
+Verify that this ZIP exists, retry the download if necessary, and explicitly tick
+**I have saved this ZIP and verified that the file exists**. Only then does
+**Open mail draft** become available. A retry, refusal or content/context change
+clears that acknowledgement; it is never automatic.
+
+**Open mail draft** opens your mail program with a message to `issue@knxbench.com`,
+the KNXBench version and operation in the subject. The
 draft has **no attachment**: attach the saved ZIP yourself. **Email is not
 encryption**: anyone who handles the mail on its way can read the file.
 

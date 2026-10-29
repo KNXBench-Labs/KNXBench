@@ -6,7 +6,7 @@ import { noteRefusal, request } from "./api";
 
 export * from "./diagnosticBundleShape";
 import {
-  SECTION_KINDS, type BundlePreview, type BundleQuery, type DeleteOutcome, type RecordingSummary, type SavedBundle, type SectionKind,
+  SECTION_KINDS, type BundlePreview, type BundleQuery, type DeleteOutcome, type RecordingSummary, type SavedBundle, type SectionKind, type ReviewedBundleQuery,
 } from "./diagnosticBundleShape";
 
 const isObject = (value: unknown): value is Record<string, unknown> =>
@@ -35,6 +35,11 @@ export function admitPreview(value: unknown): BundlePreview {
     || typeof value.mailDraft !== "string" || !value.mailDraft.startsWith("mailto:")
     || !(value.operationRecordingId === null || typeof value.operationRecordingId === "string")
     || !(value.deviceId === null || isCount(value.deviceId))
+    || !isObject(value.review) || typeof value.review.fingerprint !== "string"
+    || !/^[a-f0-9]{64}$/.test(value.review.fingerprint)
+    || !isObject(value.review.context) || typeof value.review.context.serverIncarnation !== "string"
+    || !value.review.context.serverIncarnation || !isCount(value.review.context.projectIncarnation)
+    || !isCount(value.review.context.revision)
     || !Array.isArray(value.offers) || !Array.isArray(value.sections) || !Array.isArray(value.recordings)) {
     throw invalid();
   }
@@ -66,12 +71,18 @@ export async function deleteRecordings(): Promise<DeleteOutcome> {
 }
 
 export async function previewBundle(query: BundleQuery): Promise<BundlePreview> {
-  return admitPreview(await request<unknown>("/api/diagnostics/bundle/preview", {
+  const preview = admitPreview(await request<unknown>("/api/diagnostics/bundle/preview", {
     method: "POST", body: JSON.stringify(query), cache: "no-store",
   }));
+  if (query.context && (query.context.serverIncarnation !== preview.review.context.serverIncarnation
+    || query.context.projectIncarnation !== preview.review.context.projectIncarnation
+    || query.context.revision !== preview.review.context.revision)) {
+    throw Object.assign(new Error("bundlePreviewChanged"), { status: 409 });
+  }
+  return preview;
 }
 
-export async function sectionText(query: BundleQuery, key: string): Promise<string> {
+export async function sectionText(query: ReviewedBundleQuery, key: string): Promise<string> {
   const value = await request<unknown>("/api/diagnostics/bundle/section", {
     method: "POST", body: JSON.stringify({ ...query, key }), cache: "no-store",
   });
@@ -91,7 +102,7 @@ export function dispositionFileName(header: string | null): string | null {
  * Builds the ZIP. Only ever called after the user ticked the consent box;
  * the server refuses a request without `consent: true` as well.
  */
-export async function exportBundle(query: BundleQuery, fallbackName: string): Promise<SavedBundle> {
+export async function exportBundle(query: ReviewedBundleQuery, fallbackName: string): Promise<SavedBundle> {
   const path = "/api/diagnostics/bundle";
   const response = await fetch(path, {
     method: "POST",

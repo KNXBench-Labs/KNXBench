@@ -17,12 +17,21 @@ type Messages = Record<keyof typeof en, string>;
 async function intercept(page: Page, language: Language) {
   const unexpected: string[] = [];
   const log: BundleLog = bundleLog();
+  const support: { path: string; body: Record<string, unknown> }[] = [];
+  const supportToken = "b".repeat(64);
   await page.route("**/api/**", async (route) => {
     const request = route.request();
     const path = new URL(request.url()).pathname;
     const method = request.method();
     const json = (body: unknown, status = 200) => route.fulfill({ status, contentType: "application/json", body: JSON.stringify(body) });
     if (await answerBundleRoute(route, log)) return;
+    if (["/api/support/preview", "/api/support/diagnose"].includes(path) && method === "POST") {
+      const body = request.postDataJSON() as Record<string, unknown>;
+      support.push({ path, body });
+      if (path.endsWith("diagnose") && (body.consent !== true || body.token !== supportToken)) return json({ error: "read refused" }, 400);
+      return json({ token: supportToken, digest: "c".repeat(64), report: { support: "unknown" }, summary: "Retained identity result",
+        localAddress: "1.1.67", mask: null, profile: "descriptor-only-v1", reads: ["DeviceDescriptorRead type 0"], deadlineSeconds: 30 });
+    }
     if (path === "/api/auth/status") return json({ required: false, authenticated: true });
     if (path === "/api/settings" && method === "GET") return json({ schemaVersion: 1, status: "ok", settings: {
       uiLanguage: language, theme: "porcelain", releaseChecksEnabled: false, motionLevel: "off", onboardingGuide: { seenStage: "alpha" } } });
@@ -39,7 +48,7 @@ async function intercept(page: Page, language: Language) {
     unexpected.push(`${method} ${path}`);
     return json({ error: "strict report-problem fixture" }, 404);
   });
-  return { unexpected, log };
+  return { unexpected, log, support };
 }
 
 async function openFromMenu(page: Page, m: Messages) {
@@ -150,13 +159,17 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
     expect((await readFile((await file.path())!)).subarray(0, 2).toString("latin1")).toBe("PK");
     expect(log.exports).toHaveLength(1);
     expect(log.exports[0]).toMatchObject({ problemType: "deviceProgramming", consent: true, earlierRecordingIds: [BUNDLE_OLDER.id] });
+    await expect(dialog.locator("button[data-report-mail]")).toBeDisabled();
+    await expect(dialog.locator("[data-report-file-confirm]")).not.toBeChecked();
+    await expect(dialog.locator("[data-report-requested]")).toContainText(BUNDLE_FILE_NAME);
+    await dialog.locator("[data-report-file-confirm]").check();
     const mail = dialog.locator("a[data-report-mail]");
     await expect(mail).toBeFocused();
     const href = (await mail.getAttribute("href"))!;
     expect(href).toBe(BUNDLE_MAIL_DRAFT);
     expect(href).not.toContain(SECTION_TEXT_MARKER);
     expect(href).not.toMatch(/attach(ment)?=/i);
-    await expect(dialog.locator("[data-report-saved]")).toContainText(BUNDLE_FILE_NAME);
+    await expect(dialog.locator("[data-report-requested]")).toContainText(BUNDLE_FILE_NAME);
     await expect(dialog.getByRole("alert")).toHaveCount(0);
     await expectFits(page, width);
     await dialog.getByRole("button", { name: m["reportProblem.close"], exact: true }).click();
@@ -205,10 +218,48 @@ for (const language of ["en", "de"] as const) {
     const download = page.waitForEvent("download");
     await page.keyboard.press("Enter");
     expect((await download).suggestedFilename()).toBe(BUNDLE_FILE_NAME);
+    await expect(dialog.locator("[data-report-file-confirm]")).toBeFocused();
+    await expect(dialog.locator("button[data-report-mail]")).toBeDisabled();
+    await page.keyboard.press("Space");
     await expect(dialog.locator("a[data-report-mail]")).toBeFocused();
     expect(log.exports.map((e) => [e.problemType, e.consent])).toEqual([["catalogue", true]]);
     await page.keyboard.press("Escape");
     await expect(dialog).toHaveCount(0);
+    expect(unexpected).toEqual([]);
+  });
+}
+
+for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
+  test(`${language} ${width}px: no-project manual acquisition has separate read and share consent`, async ({ page }) => {
+    const m: Messages = language === "de" ? de : en;
+    const { unexpected, log, support } = await intercept(page, language);
+    await page.setViewportSize({ width, height: 900 }); await page.goto("/");
+    await page.locator(".file-menu > summary").click(); await openFileSubmenu(page, "help");
+    await page.locator("[data-identity-read-open]").click();
+    const acquire = page.getByRole("dialog", { name: m["identityRead.title"], exact: true });
+    await expect(acquire).toBeVisible(); expect(support).toEqual([]); expect(log.previews).toEqual([]);
+    await acquire.locator("[data-support-local-address]").fill("16.1.67");
+    await expect(acquire.locator("[data-support-preview]")).toBeDisabled();
+    await acquire.locator("[data-support-local-address]").fill("1.1.67");
+    await acquire.locator("[data-support-preview]").click();
+    await expect(acquire.locator("[data-support-preview-content]")).toContainText("descriptor-only-v1");
+    expect(support).toEqual([{ path: "/api/support/preview", body: { input: { includeContext: false, contextRights: false, functionalCheck: "not-checked" }, deviceId: null, address: "1.1.67" } }]);
+    await expect(acquire.locator("[data-report-save], a[href^='mailto:']")).toHaveCount(0);
+    await acquire.locator("[data-support-gateway]").fill("192.0.2.10:3671");
+    await expect(acquire.locator("[data-support-read]")).toBeDisabled();
+    await acquire.locator("[data-support-live-consent]").check(); await acquire.locator("[data-support-read]").click();
+    const handoff = acquire.locator("[data-report-problem-open=support-read]");
+    await expect(handoff).toBeVisible();
+    expect(support[1]).toEqual({ path: "/api/support/diagnose", body: { token: "b".repeat(64), gateway: "192.0.2.10:3671", consent: true } });
+    await handoff.click(); await expect(acquire).toHaveCount(0);
+    const report = page.getByRole("dialog", { name: m["reportProblem.title"], exact: true });
+    await expect(report).toBeVisible();
+    await expect.poll(() => log.previews.at(-1)?.operation).toEqual({ relatedKey: "supportToken", relatedValue: "b".repeat(64) });
+    expect(log.previews.at(-1)!).not.toHaveProperty("deviceId");
+    await report.locator("[data-report-next]").click(); await report.locator("[data-report-next]").click();
+    await expect(report.locator("[data-report-consent]")).not.toBeChecked();
+    await expect(report.locator("[data-report-save]")).toBeDisabled();
+    await expectFits(page, width); expect(log.exports).toEqual([]); expect(support).toHaveLength(2);
     expect(unexpected).toEqual([]);
   });
 }

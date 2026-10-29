@@ -41,9 +41,10 @@ describe("buildIssueUrl", () => {
     expect(bodyOf(url).startsWith("yyy")).toBe(true);
   });
 
-  it("tells the user where the rest of the report is", () => {
+  it("keeps private diagnostic ZIPs out of the public truncation remedy", () => {
     const { url } = buildIssueUrl("t", "z".repeat(50_000));
-    expect(bodyOf(url)).toContain("debug-report zip");
+    expect(bodyOf(url)).not.toContain("debug-report zip");
+    expect(bodyOf(url)).toContain("do not attach a private diagnostic bundle");
     expect(bodyOf(url).endsWith(TRUNCATION_NOTICE)).toBe(true);
   });
 

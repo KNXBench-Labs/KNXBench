@@ -76,6 +76,7 @@ import { ReportProblemButton, ReportProblemProvider } from "./ReportProblemEntry
 import type { ReportProblemRequest } from "./reportProblem";
 import ContributionButton from "./ContributionButton";
 import DiagnosticExportButton from "./DiagnosticExportButton";
+import IdentityReadButton from "./IdentityReadButton";
 import ProjectDiffPanel from "./ProjectDiffPanel";
 import LoadProgressBanner from "./LoadProgressBanner";
 import { localFailure, ownsOperation } from "./loadProgress";
@@ -1542,6 +1543,7 @@ function AppBody({ manifestVersion = packageVersion, session, editorReturn = fal
       <FileSubmenu id="help" label={t("fileMenu.help")}>
       <ReportProblemButton from="menu" request={{}} />
       <ContributionButton />
+      <IdentityReadButton project={tree} />
       <DiagnosticExportButton project={tree} />
       <FileMenuItem onClick={guide.show}>{t("command.showIntroduction")}</FileMenuItem>
       {achievementsEnabled && <FileMenuItem onClick={() => setAchievementsOpen(true)}>{t("achievements.command")}</FileMenuItem>}

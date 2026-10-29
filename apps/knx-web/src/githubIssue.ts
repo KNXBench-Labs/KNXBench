@@ -5,7 +5,7 @@
 // no `POST`, no API client. The application never authenticates to GitHub
 // and cannot file an issue on the user's behalf — it opens a page with the
 // fields filled in, and the user reads it and decides whether to press the
-// button. Nothing leaves the machine before that.
+// button. Opening the link sends its prefilled fields to GitHub; it does not submit the issue.
 
 export const ISSUE_BASE_URL = "https://github.com/KNXBench-Labs/KNXBench/issues/new";
 
@@ -19,14 +19,12 @@ export const ISSUE_BASE_URL = "https://github.com/KNXBench-Labs/KNXBench/issues/
 export const MAX_ISSUE_URL_LENGTH = 8000;
 
 /**
- * What a truncated body ends with. It names the remedy rather than just
- * the fact — the full text is in the zip, and attaching it is one drag
- * away, so the user is never left with a half-report and no way to
- * complete it.
+ * A shortened public issue never invites attaching the private diagnostic ZIP.
+ * The user may add reviewed, non-sensitive details manually.
  */
 export const TRUNCATION_NOTICE =
-  "\n\n---\n\n*(This report was shortened to fit in a URL. The complete version is in the " +
-  "debug-report zip — please attach it to this issue.)*";
+  "\n\n---\n\n*(This text was shortened to fit in a URL. Review and add only non-sensitive details manually; " +
+  "do not attach a private diagnostic bundle to this public issue.)*";
 
 export interface IssueUrl {
   url: string;

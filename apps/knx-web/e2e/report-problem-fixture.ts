@@ -1,9 +1,11 @@
 /** Browser-test helper: answers the diagnostic bundle routes like the server, with O1 offers. */
-import type { Route } from "@playwright/test";
+import type { Page, Route } from "@playwright/test";
 import {
   SECTION_KINDS, type BundlePreview, type BundleQuery, type OfferView, type RecordingSummary, type SectionKind,
 } from "../src/diagnosticBundleShape";
 import { defaultOffer, defaultSelection } from "../src/reportProblem";
+
+export const BUNDLE_REVIEW = { fingerprint: "a".repeat(64), context: { serverIncarnation: "fixture", projectIncarnation: 0, revision: 0 } };
 
 export const BUNDLE_RECORDING: RecordingSummary = {
   id: "20261029T100000Z-download-0001", sizeBytes: 4096, formatVersion: 1, writerVersion: "0.1.0-alpha.18",
@@ -55,10 +57,15 @@ export function bundlePreview(query: BundleQuery): BundlePreview {
     }
   }
   return {
-    problemType: query.problemType, recordingEnabled: true, operationRecordingId: operation, deviceId: query.deviceId ?? null,
+    review: { ...BUNDLE_REVIEW, context: query.context ?? BUNDLE_REVIEW.context }, problemType: query.problemType, recordingEnabled: true, operationRecordingId: operation, deviceId: query.deviceId ?? null,
     offers, sections, totalBytes: sections.reduce((sum, s) => sum + s.bytes, 0), exceedsMailHint: false,
     fileName: BUNDLE_FILE_NAME, mailDraft: BUNDLE_MAIL_DRAFT, recordings: [BUNDLE_RECORDING, BUNDLE_OLDER],
   };
+}
+
+/** StrictMode replays initial effects only in the actual Vite development document. */
+export async function initialPreviewCount(page: Page): Promise<number> {
+  return await page.locator('script[src="/@vite/client"]').count() === 0 ? 1 : 2;
 }
 
 /** Answers `/api/diagnostics/*`; returns false for any other path. Export without consent is refused. */
@@ -75,12 +82,14 @@ export async function answerBundleRoute(route: Route, log: BundleLog): Promise<b
   if (path === "/api/diagnostics/bundle/section" && request.method() === "POST") {
     const { key, ...query } = request.postDataJSON() as BundleQuery & { key: string };
     log.sections.push({ query, key });
+    if (JSON.stringify(query.review) !== JSON.stringify({ ...BUNDLE_REVIEW, context: query.context ?? BUNDLE_REVIEW.context })) { await json({ error: "bundlePreviewRequired" }, 400); return true; }
     await json({ key, text: `===== ${key}/content.json =====\n{"${SECTION_TEXT_MARKER}": "${key}"}\n` });
     return true;
   }
   if (path === "/api/diagnostics/bundle" && request.method() === "POST") {
     const body = request.postDataJSON() as BundleQuery & { consent?: boolean };
     log.exports.push(body);
+    if (JSON.stringify(body.review) !== JSON.stringify({ ...BUNDLE_REVIEW, context: body.context ?? BUNDLE_REVIEW.context })) { await json({ error: "bundlePreviewRequired" }, 400); return true; }
     if (body.consent !== true) { await json({ error: "bundleConsentRequired" }, 400); return true; }
     await route.fulfill({ status: 200, contentType: "application/zip", body: Buffer.from("PK\u0005\u0006" + "\0".repeat(18), "binary"),
       headers: { "content-disposition": `attachment; filename="${BUNDLE_FILE_NAME}"`, "cache-control": "no-store" } });

@@ -240,7 +240,7 @@ it("shows pre-plan refusal, actionable help and exact local detail without a rep
   expect(help.querySelectorAll("a")).toHaveLength(1);
   expect([...host!.querySelectorAll("[data-report-problem-open]")].map((b) => b.getAttribute("data-report-problem-open"))).toEqual(["support-notice"]);
   await act(async () => help.querySelector<HTMLButtonElement>("[data-report-problem-open=support-notice]")!.click());
-  expect(reportOpened).toHaveBeenCalledExactlyOnceWith({ problemType: "deviceProgramming", deviceId: expect.any(Number), operation: null });
+  expect(reportOpened).toHaveBeenCalledExactlyOnceWith({ problemType: "deviceProgramming", deviceId: expect.any(Number), operation: { selection: "none" } });
   expect(apiMock.planDeviceDownload).not.toHaveBeenCalled();
   expect(apiMock.getDeviceDownloadReport).not.toHaveBeenCalled();
   expect(apiMock.startDeviceDownload).not.toHaveBeenCalled();
@@ -865,6 +865,18 @@ it("offers no report while a download runs", async () => {
   expect(host!.querySelector(".device-download-verify")).toBeNull();
 });
 
+it("keeps ended run A distinct from new device B and its preparation refusal", async () => {
+  apiMock.pollDeviceDownload.mockReset().mockResolvedValue(response({ state: "finished", written: "yes", restart: "acknowledged", restartNote: null }, [], 0));
+  apiMock.getDeviceReadiness.mockResolvedValue({ devices: [{ address: "1.1.3", name: "Actuator", programRef: "M-0001_A-0001-01-0000", readiness: "unsupported", category: "byte-order", detail: "cannot plan B", steps: null, octets: null }], counts: { unsupported: 1 } });
+  await render(); await choose("1.1.3");
+  expect(host!.querySelector(".device-download-verify")).not.toBeNull();
+  await act(async () => host!.querySelector<HTMLButtonElement>("[data-report-problem-open=verify]")!.click());
+  expect(reportOpened).toHaveBeenLastCalledWith({ problemType: "deviceProgramming", operation: { relatedKey: "downloadId", relatedValue: "7" } });
+  await act(async () => host!.querySelector<HTMLButtonElement>("[data-report-problem-open=support-notice]")!.click());
+  expect(reportOpened).toHaveBeenLastCalledWith({ problemType: "deviceProgramming", deviceId: 11, operation: { selection: "none" } });
+  expect(apiMock.startDeviceDownload).not.toHaveBeenCalled();
+});
+
 it("after a download, explains the steps, creates the minimised report on request and offers the report wizard for mail", async () => {
   apiMock.pollDeviceDownload.mockReset().mockResolvedValue(
     response({ state: "finished", written: "yes", restart: "acknowledged", restartNote: null }, [], 0),
@@ -896,8 +908,8 @@ it("after a download, explains the steps, creates the minimised report on reques
   expect(verify.querySelector("a[data-verify-mail], a[href^='mailto:']")).toBeNull();
   expect([...host!.querySelectorAll("[data-report-problem-open]")].map((b) => b.getAttribute("data-report-problem-open"))).toEqual(["verify"]);
   await act(async () => verify.querySelector<HTMLButtonElement>("[data-report-problem-open=verify]")!.click());
-  // No device is chosen in this reattached panel; the wizard lets the user pick one.
-  expect(reportOpened).toHaveBeenCalledExactlyOnceWith({ problemType: "deviceProgramming", deviceId: null,
+  // The exact run resolves its own target; never use the next form selection.
+  expect(reportOpened).toHaveBeenCalledExactlyOnceWith({ problemType: "deviceProgramming",
     operation: { relatedKey: "downloadId", relatedValue: "7" } });
   expect(verify.querySelector(".device-download-verify-summary")!.textContent).toBe(REPORT.summary);
 

@@ -215,13 +215,15 @@ export default function DeviceDownloadPanel({ project, handoff = null, onHandoff
 
   const running = status?.status.state === "running";
   const locked = planning || starting || running;
-  // DIAG-03: a report from this panel is about programming this device, and
-  // about the ended run when there is one (its recording carries `downloadId`).
   const runEnded = status !== null && !running;
+  // Preparation/refusal belongs to the current selection, never a previous run.
   const report: ReportProblemRequest = {
+    problemType: "deviceProgramming", deviceId, operation: { selection: "none" },
+  };
+  // Only the exact retained run can establish its target; do not guess from the form.
+  const endedReport: ReportProblemRequest = {
     problemType: "deviceProgramming",
-    deviceId,
-    operation: runEnded ? { relatedKey: "downloadId", relatedValue: String(status.downloadId) } : null,
+    operation: status ? { relatedKey: "downloadId", relatedValue: String(status.downloadId) } : { selection: "none" },
   };
 
   function dropPlan() {
@@ -793,7 +795,7 @@ export default function DeviceDownloadPanel({ project, handoff = null, onHandoff
         </section>
       )}
       {status && status.status.state !== "running" && (
-        <DownloadVerification key={status.downloadId} downloadId={status.downloadId} report={report}
+        <DownloadVerification key={status.downloadId} downloadId={status.downloadId} report={endedReport}
           completed={status.status.state === "finished" && status.status.written === "yes"} />
       )}
       {consent.dialog}

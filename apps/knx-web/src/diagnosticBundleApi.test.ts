@@ -2,7 +2,9 @@
 import { afterEach, expect, it, vi } from "vitest";
 import { admitPreview, deleteRecordings, dispositionFileName, exportBundle, previewBundle, sectionText } from "./diagnosticBundleApi";
 
+const REVIEW = { fingerprint: "a".repeat(64), context: { serverIncarnation: "server-a", projectIncarnation: 1, revision: 2 } };
 const PREVIEW = {
+  review: REVIEW,
   problemType: "deviceReading", recordingEnabled: true, operationRecordingId: null, deviceId: null,
   offers: [{ kind: "environment", offer: "fixed", selected: true, unavailable: null }],
   sections: [{ key: "environment", kind: "environment", label: null, bytes: 12, entries: 1,
@@ -19,6 +21,10 @@ function reply(status: number, body: unknown, headers: Record<string, string> = 
 it("admits the server's preview and refuses wrong shapes", async () => {
   expect(admitPreview(PREVIEW)).toBe(PREVIEW);
   for (const broken of [
+    { ...PREVIEW, review: undefined },
+    { ...PREVIEW, review: { ...REVIEW, fingerprint: "A".repeat(64) } },
+    { ...PREVIEW, review: { ...REVIEW, context: { ...REVIEW.context, revision: -1 } } },
+    { ...PREVIEW, review: { ...REVIEW, context: { projectIncarnation: 1, revision: 2 } } },
     { ...PREVIEW, mailDraft: "https://example.invalid" },
     { ...PREVIEW, offers: [{ kind: "unknownKind", offer: "fixed", selected: true, unavailable: null }] },
     { ...PREVIEW, offers: [{ kind: "device", offer: "notOffered", selected: false, unavailable: null }] },
@@ -34,12 +40,17 @@ it("admits the server's preview and refuses wrong shapes", async () => {
   expect(JSON.parse(init.body as string)).toEqual({ problemType: "deviceReading" });
 });
 
+it("refuses a preview that silently changes the supplied project context", async () => {
+  reply(200, { ...PREVIEW, review: { ...REVIEW, context: { ...REVIEW.context, revision: 3 } } });
+  await expect(previewBundle({ problemType: "deviceReading", context: REVIEW.context })).rejects.toMatchObject({ message: "bundlePreviewChanged", status: 409 });
+});
+
 it("asks for one section's text by key and checks the answer names it", async () => {
   reply(200, { key: "sessionLog", text: "===== session-log/session-log.json =====\n[]\n" });
-  await expect(sectionText({ problemType: "userInterface" }, "sessionLog")).resolves.toContain("session-log.json");
-  expect(JSON.parse((fetchMock.mock.calls[0][1] as RequestInit).body as string)).toEqual({ problemType: "userInterface", key: "sessionLog" });
+  await expect(sectionText({ problemType: "userInterface", review: REVIEW }, "sessionLog")).resolves.toContain("session-log.json");
+  expect(JSON.parse((fetchMock.mock.calls[0][1] as RequestInit).body as string)).toEqual({ problemType: "userInterface", review: REVIEW, key: "sessionLog" });
   reply(200, { key: "other", text: "" });
-  await expect(sectionText({ problemType: "userInterface" }, "sessionLog")).rejects.toThrow("diagnostic-bundle-response-invalid");
+  await expect(sectionText({ problemType: "userInterface", review: REVIEW }, "sessionLog")).rejects.toThrow("diagnostic-bundle-response-invalid");
 });
 
 it("deletes recordings and reports the kept active ones", async () => {
@@ -52,21 +63,21 @@ it("deletes recordings and reports the kept active ones", async () => {
 
 it("exports only with consent in the body and takes the server's plain file name", async () => {
   reply(200, new Blob(["PK"]), { "content-type": "application/zip", "content-disposition": 'attachment; filename="knxbench-diagnostics-0.1.0-op-1.zip"' });
-  const saved = await exportBundle({ problemType: "deviceProgramming", description: "it broke" }, "fallback.zip");
+  const saved = await exportBundle({ problemType: "deviceProgramming", review: REVIEW, description: "it broke" }, "fallback.zip");
   expect(saved.fileName).toBe("knxbench-diagnostics-0.1.0-op-1.zip");
   expect(await saved.blob.text()).toBe("PK");
   const [path, init] = fetchMock.mock.calls[0] as [string, RequestInit];
   expect(path).toBe("/api/diagnostics/bundle");
-  expect(JSON.parse(init.body as string)).toEqual({ problemType: "deviceProgramming", description: "it broke", consent: true });
+  expect(JSON.parse(init.body as string)).toEqual({ problemType: "deviceProgramming", review: REVIEW, description: "it broke", consent: true });
   reply(200, new Blob(["PK"]), { "content-type": "application/zip", "content-disposition": 'attachment; filename="../evil.zip"' });
-  expect((await exportBundle({ problemType: "catalogue" }, "fallback.zip")).fileName).toBe("fallback.zip");
+  expect((await exportBundle({ problemType: "catalogue", review: REVIEW }, "fallback.zip")).fileName).toBe("fallback.zip");
 });
 
 it("surfaces a refusal and rejects a body that is not a ZIP", async () => {
   reply(400, { error: "bundleConsentRequired" });
-  await expect(exportBundle({ problemType: "catalogue" }, "f.zip")).rejects.toMatchObject({ message: "bundleConsentRequired", status: 400 });
+  await expect(exportBundle({ problemType: "catalogue", review: REVIEW }, "f.zip")).rejects.toMatchObject({ message: "bundleConsentRequired", status: 400 });
   reply(200, { not: "zip" });
-  await expect(exportBundle({ problemType: "catalogue" }, "f.zip")).rejects.toThrow("diagnostic-bundle-export-invalid");
+  await expect(exportBundle({ problemType: "catalogue", review: REVIEW }, "f.zip")).rejects.toThrow("diagnostic-bundle-export-invalid");
 });
 
 it("reads only plain names from Content-Disposition", () => {

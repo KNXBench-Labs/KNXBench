@@ -58,7 +58,19 @@ export interface DeleteOutcome {
 /** Which operation the report is about: a recording, or an id the operation has elsewhere. */
 export type OperationRef =
   | { recordingId: string }
-  | { relatedKey: string; relatedValue: string };
+  | { relatedKey: string; relatedValue: string }
+  | { selection: "none" };
+
+export interface ProjectContext {
+  serverIncarnation: string;
+  projectIncarnation: number;
+  revision: number;
+}
+
+export interface BundleReview {
+  fingerprint: string;
+  context: ProjectContext;
+}
 
 export interface BundleQuery {
   problemType: ProblemType;
@@ -69,7 +81,11 @@ export interface BundleQuery {
   sections?: SectionKind[];
   client?: Record<string, unknown>;
   description?: string;
+  context?: ProjectContext;
+  review?: BundleReview;
 }
+
+export type ReviewedBundleQuery = BundleQuery & { review: BundleReview };
 
 export interface OfferView {
   kind: SectionKind;
@@ -98,6 +114,7 @@ export interface SectionPreview {
 }
 
 export interface BundlePreview {
+  review: BundleReview;
   problemType: ProblemType;
   recordingEnabled: boolean;
   operationRecordingId: string | null;

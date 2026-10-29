@@ -3645,6 +3645,8 @@ export const messages: Record<MessageKey, string> = {
   "reportProblem.button": "Problem melden…",
   "reportProblem.reviewChanged": "Die geprüften Inhalte oder das Projekt haben sich geändert. Lade sie neu und prüfe sie, bevor du erneut zustimmst.",
   "reportProblem.refresh": "Neu laden und prüfen",
+  "reportProblem.targetMismatch": "Der Vorgang gehört zu einem anderen Gerät als dem, das du gewählt hast, deshalb wurde nichts vorbereitet. Wähle das Gerät dieses Vorgangs oder fahre ohne aufgezeichneten Vorgang fort. Ohne deine erneute Prüfung und Zustimmung wird nichts gesendet.",
+  "reportProblem.withoutOperation": "Ohne aufgezeichneten Vorgang fortfahren",
   "reportProblem.clientTruncated": "Der Browserzustand ist auf 64 KiB begrenzt: {omitted} ältere Fehler ausgelassen, {shortened} Fehlereinträge gekürzt. Die neuesten Fehler haben Vorrang. Lange Metadaten werden ebenfalls gekürzt und im Browserabschnitt gekennzeichnet.",
   "reportProblem.downloadRequested": "Download angefordert: {file}. Prüfe, ob die ZIP-Datei vorhanden ist. Falls du das Speichern abgebrochen hast oder es fehlgeschlagen ist, fordere den Download erneut an.",
   "reportProblem.fileConfirm": "Ich habe diese ZIP gespeichert und geprüft, dass die Datei vorhanden ist.",

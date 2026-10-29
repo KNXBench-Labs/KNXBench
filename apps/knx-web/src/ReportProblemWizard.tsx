@@ -64,6 +64,8 @@ export default function ReportProblemWizard({ request, tree, notifications, onCl
   const [choice, setChoice] = useState<WizardChoice>(() => initialChoice(request));
   const [loaded, setLoaded] = useState<Loaded>({ status: "loading", preview: null });
   const [reload, setReload] = useState(0);
+  // The server refused the device for the adopted operation: only a changed query can cure it.
+  const [targetMismatch, setTargetMismatch] = useState(false);
   const [texts, setTexts] = useState<ReadonlyMap<string, SectionText>>(new Map());
   const [shown, setShown] = useState<ReadonlySet<string>>(new Set());
   const [consent, setConsent] = useState(false);
@@ -106,12 +108,13 @@ export default function ReportProblemWizard({ request, tree, notifications, onCl
     setFileConfirmed(false);
     setSaveError(null);
     setSaving(false);
+    setTargetMismatch(false);
     if (!collecting) return;
     previewBundle(query).then(
       (preview) => { if (id === epoch.current) setLoaded({ status: "ready", preview, query: reviewedQuery(query, preview) }); },
       (reason) => {
         if (id !== epoch.current) return;
-        if (stale(reason)) withdrawReview();
+        if (stale(reason)) withdrawReview(refusedTarget(reason));
         else setLoaded((previous) => ({ status: "failed", preview: previous.preview, error: errorMessage(reason) }));
       },
     );
@@ -148,11 +151,13 @@ export default function ReportProblemWizard({ request, tree, notifications, onCl
     return t("reportProblem.unavailable", { reason: key ? t(key) : text });
   }
 
-  function withdrawReview() {
+  // Any 409 ends the review: the epoch bump drops late answers, nothing reviewed stays usable.
+  function withdrawReview(targetRefused = false) {
     ++epoch.current;
     setConsent(false); setSaved(null); setFileConfirmed(false); setSaving(false);
     setTexts(new Map()); setShown(new Set());
-    setLoaded({ status: "failed", preview: null, error: t("reportProblem.reviewChanged") });
+    setTargetMismatch(targetRefused);
+    setLoaded({ status: "failed", preview: null, error: t(targetRefused ? "reportProblem.targetMismatch" : "reportProblem.reviewChanged") });
   }
 
   function close() {
@@ -161,6 +166,18 @@ export default function ReportProblemWizard({ request, tree, notifications, onCl
   }
 
   const stale = (error: unknown) => typeof error === "object" && error !== null && "status" in error && error.status === 409;
+  /** The typed refusal, exactly as the client decodes it: status 409 and `body.error`. */
+  const refusedTarget = (error: unknown) => stale(error) && typeof error === "object" && error !== null && "body" in error
+    && typeof error.body === "object" && error.body !== null && "error" in error.body && error.body.error === "bundleTargetMismatch";
+
+  const deviceChoice = deviceOffered && tree && <label className="settings-field">
+    <span className="settings-field-label">{t("reportProblem.device.label")}</span>
+    <select data-report-device value={choice.deviceId ?? ""}
+      onChange={(e) => { const value = e.target.value; setChoice((current) => ({ ...current, deviceId: value === "" ? null : Number(value) })); }}>
+      <option value="">{t("reportProblem.device.auto")}</option>
+      {devices.map((d) => <option key={d.id} value={d.id}>{d.address ?? "—"} · {d.name}</option>)}
+    </select>
+  </label>;
 
   async function showText(key: string) {
     if (loaded.status !== "ready") return;
@@ -178,7 +195,7 @@ export default function ReportProblemWizard({ request, tree, notifications, onCl
       if (id === epoch.current && mounted.current) setTexts((current) => new Map(current).set(key, { status: "ready", text }));
     } catch (e) {
       if (id === epoch.current && mounted.current) {
-        if (stale(e)) withdrawReview();
+        if (stale(e)) withdrawReview(refusedTarget(e));
         else setTexts((current) => new Map(current).set(key, { status: "failed", error: errorMessage(e) }));
       }
     }
@@ -199,7 +216,7 @@ export default function ReportProblemWizard({ request, tree, notifications, onCl
 
     } catch (e) {
       if (id === epoch.current && mounted.current) {
-        if (stale(e)) withdrawReview();
+        if (stale(e)) withdrawReview(refusedTarget(e));
         else setSaveError(errorMessage(e));
       }
     } finally {
@@ -313,8 +330,15 @@ export default function ReportProblemWizard({ request, tree, notifications, onCl
       {collecting && loaded.status === "loading" && (
         <p role="status" className="report-problem-loading"><span className="task-status-text">{t("reportProblem.loading")}</span></p>
       )}
-      {collecting && loaded.status === "failed" && (
-        <div><p role="alert" className="form-warning">{t("reportProblem.previewFailed", { error: loaded.error })}</p>
+      {collecting && loaded.status === "failed" && (targetMismatch
+        // A repeat would send the same refused query: offer the device choice and the explicit no-operation request.
+        ? <div className="report-problem-contents">
+          <p role="alert" className="form-warning" data-report-target-mismatch>{t("reportProblem.targetMismatch")}</p>
+          {deviceChoice}
+          <button type="button" data-report-without-operation
+            onClick={() => setChoice((current) => ({ ...current, operation: { selection: "none" } }))}>{t("reportProblem.withoutOperation")}</button>
+        </div>
+        : <div><p role="alert" className="form-warning">{t("reportProblem.previewFailed", { error: loaded.error })}</p>
           <button type="button" data-report-refresh onClick={() => setReload((n) => n + 1)}>{t("reportProblem.refresh")}</button></div>
       )}
 
@@ -323,22 +347,15 @@ export default function ReportProblemWizard({ request, tree, notifications, onCl
         {operationOffered && <label className="settings-field">
           <span className="settings-field-label">{t("reportProblem.operation.label")}</span>
           <select data-report-operation value={preview.operationRecordingId ?? ""}
-            onChange={(e) => { const id = e.target.value; if (id) setChoice((current) => ({ ...current, operation: { recordingId: id } })); }}>
-            {operation === null && <option value="" disabled>{t("reportProblem.operation.none")}</option>}
+            onChange={(e) => { const id = e.target.value; setChoice((current) => ({ ...current, operation: id ? { recordingId: id } : { selection: "none" } })); }}>
+            <option value="">{t("reportProblem.operation.none")}</option>
             {choosable.map((recording) => <option key={recording.id} value={recording.id}>{recordingLabel(recording)}</option>)}
           </select>
           {operation === null && choice.operation !== null && "relatedKey" in choice.operation && (
             <span className="settings-field-hint" data-report-operation-missing>{t("reportProblem.operation.notFound")}</span>
           )}
         </label>}
-        {deviceOffered && tree && <label className="settings-field">
-          <span className="settings-field-label">{t("reportProblem.device.label")}</span>
-          <select data-report-device value={choice.deviceId ?? ""}
-            onChange={(e) => { const value = e.target.value; setChoice((current) => ({ ...current, deviceId: value === "" ? null : Number(value) })); }}>
-            <option value="">{t("reportProblem.device.auto")}</option>
-            {devices.map((d) => <option key={d.id} value={d.id}>{d.address ?? "—"} · {d.name}</option>)}
-          </select>
-        </label>}
+        {deviceChoice}
         {choice.sections.has("clientState") && client.truncated && <p className="settings-field-hint" data-report-client-truncated>
           {t("reportProblem.clientTruncated", { omitted: client.omittedErrorCount, shortened: client.truncatedErrorCount })}</p>}
         <ul className="report-problem-offers">{preview.offers.map(offerRow)}</ul>

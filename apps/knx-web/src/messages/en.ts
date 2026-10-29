@@ -3818,6 +3818,8 @@ export const messages = {
   "reportProblem.button": "Report problem…",
   "reportProblem.reviewChanged": "The reviewed contents or project changed. Refresh and review them again before giving consent.",
   "reportProblem.refresh": "Refresh and review",
+  "reportProblem.targetMismatch": "The operation belongs to another device than the one you chose, so nothing was prepared. Choose the device of that operation, or continue without a recorded operation. Nothing is sent without your new review and consent.",
+  "reportProblem.withoutOperation": "Continue without a recorded operation",
   "reportProblem.clientTruncated": "Browser state is bounded to 64 KiB: {omitted} older errors omitted, {shortened} error entries shortened. The newest errors have priority. Long metadata is also shortened and marked in the client section.",
   "reportProblem.downloadRequested": "Download requested: {file}. Verify that the ZIP exists. If saving was cancelled or failed, request the download again.",
   "reportProblem.fileConfirm": "I have saved this ZIP and verified that the file exists.",

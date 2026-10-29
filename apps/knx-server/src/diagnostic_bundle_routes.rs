@@ -578,11 +578,21 @@ fn import_report(state: &SharedState) -> Result<BundleSection, String> {
     let opaque = state.opaque.lock().expect("state mutex poisoned");
     let evidence =
         knx_app::import_evidence::read(&opaque)?.ok_or("this project carries no import report")?;
+    let copy = knx_app::secret_free_copy::import_report_without_secrets(&evidence.report)
+        .map_err(|error| error.to_string())?;
     let mut section = BundleSection::new(SectionKind::ImportReport);
-    section.files.push(BundleFile::new(
-        "import-report.json",
-        evidence.report_json.into_bytes(),
-    ));
+    for redaction in &copy.redactions {
+        section.notes.push(format!(
+            "removed {} at {}",
+            redaction.kind, redaction.location
+        ));
+    }
+    for withheld in &copy.withheld {
+        section.notes.push(format!("left out: {withheld}"));
+    }
+    section
+        .files
+        .push(BundleFile::new("import-report.json", copy.bytes));
     section.entries = 1;
     section.markers = markers(true, true, false, false);
     Ok(section)

@@ -175,6 +175,15 @@ implemented once in `knx_app::diagnostic_bundle::default_offer`.
 | bus monitor | `bus-monitor/bus-monitor.json` | the running monitor's buffer, last ten minutes |
 | client state | `client/client.json` | what the browser sent (language, theme, viewport, zoom, shell, recent errors) |
 
+The import-report section uses the shared secret-free report projection on the
+admitted historical evidence. Identified secret samples and their digests are
+removed from the exported copy, and redaction/withholding notes are visible in
+the section metadata. Successful projections preserve interpreted row identity,
+count units and historical totals. If removing a learned value would change an
+interpreted identity, the report is visibly unavailable instead of being exported
+raw or with altered meaning. The stored historical evidence and input file are
+not rewritten by preview or export.
+
 `manifest.json` lists format (`knxbench-diagnostic-bundle`, version 1),
 `createdAt`, `consentAt`, writer, problem type, description, recording state,
 redaction policy (what is always removed and what is not), and per section its

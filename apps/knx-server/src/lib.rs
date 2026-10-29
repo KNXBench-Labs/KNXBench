@@ -77,6 +77,7 @@ pub use address_programming::{
 mod address_programming_routes;
 mod bus_activity_routes;
 mod debug_report_routes;
+mod diagnostic_bundle_routes;
 mod domain;
 mod import_evidence_routes;
 mod modeled_metadata_routes;
@@ -253,6 +254,7 @@ pub fn app_with_auth(state: SharedState, static_dir: Option<PathBuf>, auth: Auth
         .merge(serial_address_routes::serial_address_routes())
         .merge(service_control_routes::service_control_routes())
         .merge(debug_report_routes::debug_report_routes())
+        .merge(diagnostic_bundle_routes::routes())
         .merge(contribution_routes::contribution_routes())
         .merge(settings_routes::settings_routes())
         .merge(achievement_routes::achievement_routes())

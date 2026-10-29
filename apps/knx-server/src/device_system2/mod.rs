@@ -9,7 +9,7 @@ mod test_observation;
 #[cfg(test)]
 mod tests;
 mod worker;
-pub(crate) use routes::routes;
+pub(crate) use routes::{diagnostic_projection, routes};
 pub(crate) use storage::ROOT_NAME;
 
 use crate::{errors::ApiError, SharedState};

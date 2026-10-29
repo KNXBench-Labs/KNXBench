@@ -12,6 +12,16 @@ The owner authorised (25 October 2026) closing existing non-Secure gaps in the
 regular download/restore path, one bounded increment at a time, without live
 bus or device operations.
 
+## Active next increment — regular restore exemplar binding
+
+The [source-reviewed contract](../contracts/regular-restore-exemplar-binding.md)
+binds a regular restore to the pre-mutation captured serial, with a precondition
+embedded by the public core derivation rather than only a CLI check. Format 1/2
+backups remain readable but lose restore eligibility, including partial backups;
+no serial is fabricated and no bypass is added. This compatibility narrowing is
+recorded before implementation, not a claim of software or hardware acceptance.
+All broader mutation/recovery requirements remain open.
+
 ## Software-accepted bounded increment — 29 October 2026
 
 The [property run-state continuation](../contracts/post-download-run-state.md)

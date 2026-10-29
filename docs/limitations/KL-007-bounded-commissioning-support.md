@@ -6,6 +6,22 @@ This dossier preserves the technical detail and dated history. Earlier
 headings, failures and lifting conditions are historical where later
 updates supersede them; they are not new work assignments.
 
+## Regular restore exemplar binding — 29 October 2026 contract
+
+The [regular restore contract](../contracts/regular-restore-exemplar-binding.md)
+requires replay to match a bindable serial captured before the original mutation.
+This is a necessary safety guard, not complete recovery or physical-identity
+proof. Software implementation and acceptance are pending in the PRG-01 track.
+
+The planned compatibility narrowing is explicit: format 1/2 backups remain
+readable but cannot restore, including the former partial-backup exception.
+New format 3 also refuses restore when serial evidence is missing, all-zero or
+all-FF. No serial is inferred from a project, application or address, and no
+legacy bypass is introduced. New ordinary downloads record the observation;
+they do not require it to match desired project metadata. Existing application,
+product, procedure, loaded-state, authorization and family checks stay effective.
+No hardware or whole-mutation recovery acceptance follows from this contract.
+
 ## Experimental System-2 patient waits — source after Alpha 17
 
 The [patient wait profile](../contracts/system2-patient-waits.md) increases only

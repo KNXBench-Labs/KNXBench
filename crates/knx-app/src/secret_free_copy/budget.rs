@@ -105,6 +105,14 @@ impl Budget {
         )
     }
     #[cfg(test)]
+    pub(super) fn work_used(&self) -> usize {
+        self.0.work.get()
+    }
+    #[cfg(test)]
+    pub(super) fn output_used(&self) -> usize {
+        self.0.output.get()
+    }
+    #[cfg(test)]
     pub(super) fn matching_used(&self) -> usize {
         self.0.matching.get()
     }

@@ -8,8 +8,6 @@
 //! DTD (entities could carry a value outside any attribute) or is not
 //! UTF-8-compatible is refused, and the caller withholds it.
 
-use std::borrow::Cow;
-
 use quick_xml::events::{BytesStart, Event};
 use quick_xml::{Reader, XmlVersion};
 
@@ -295,8 +293,12 @@ fn redact_tag(
 const CREDENTIAL_PARTS: &[&str] = &["password", "key", "authenticationcode", "secret"];
 
 fn is_credential_part(name: &str) -> bool {
-    let lower = name.to_ascii_lowercase();
-    CREDENTIAL_PARTS.iter().any(|part| lower.contains(part))
+    // ASCII-only case folding, without an owned lowercase copy of untrusted text.
+    CREDENTIAL_PARTS.iter().any(|part| {
+        name.as_bytes()
+            .windows(part.len())
+            .any(|window| window.eq_ignore_ascii_case(part.as_bytes()))
+    })
 }
 
 /// `name=value` parts separated by `;`: credential values are emptied,
@@ -307,9 +309,19 @@ pub(super) fn redact_connection_string(
     location: &str,
     findings: &mut Findings,
 ) -> Option<String> {
-    let parts: Vec<&str> = text.split(';').collect();
-    let structured = parts
-        .iter()
+    // Reserve before even scanning separators or credential names. 64 work units
+    // per byte cover the two linear passes, trims/splits, and all ASCII keyword
+    // comparisons (keyword lengths sum to 35). Iterators retain O(1) borrowed
+    // slices, not one slot per delimiter; only changed output is ever owned.
+    if findings
+        .budget
+        .work(text.len().saturating_mul(64).saturating_add(1))
+        .is_err()
+    {
+        return None; // Sticky failure: every enclosing publication checks the budget.
+    }
+    let structured = text
+        .split(';')
         .filter(|part| !part.trim().is_empty())
         .all(|part| part.contains('='));
     if !structured {
@@ -320,21 +332,44 @@ pub(super) fn redact_connection_string(
         }
         return None;
     }
-    let mut changed = false;
-    let rebuilt: Vec<Cow<'_, str>> = parts
-        .iter()
-        .map(|part| match part.split_once('=') {
-            Some((name, value)) if is_credential_part(name) && !value.trim().is_empty() => {
-                findings.remember(value.as_bytes());
-                findings.redact(
-                    location.to_string(),
-                    format!("BusAccess/@Parameter:{}", name.trim()),
-                );
-                changed = true;
-                Cow::Owned(format!("{name}="))
+    // Lazily copy the prefix on the first redaction. Output never exceeds input.
+    let mut rebuilt: Option<String> = None;
+    let mut offset = 0;
+    for part in text.split(';') {
+        let secret = part
+            .split_once('=')
+            .filter(|(name, value)| is_credential_part(name) && !value.trim().is_empty());
+        if let Some((name, value)) = secret {
+            if rebuilt.is_none() {
+                if findings.budget.output(text.len()).is_err() {
+                    return None;
+                }
+                let mut output = String::with_capacity(text.len());
+                output.push_str(&text[..offset]);
+                rebuilt = Some(output);
             }
-            _ => Cow::Borrowed(*part),
-        })
-        .collect();
-    changed.then(|| rebuilt.join(";"))
+            findings.remember(value.as_bytes());
+            findings.redact(
+                location.to_string(),
+                format!("BusAccess/@Parameter:{}", name.trim()),
+            );
+            // Do not continue materializing output after any sticky refusal.
+            if findings.budget.check().is_err() {
+                return None;
+            }
+            let output = rebuilt.as_mut()?;
+            output.push_str(name);
+            output.push('=');
+        } else if let Some(output) = rebuilt.as_mut() {
+            output.push_str(part);
+        }
+        offset += part.len();
+        if offset < text.len() {
+            if let Some(output) = rebuilt.as_mut() {
+                output.push(';');
+            }
+            offset += 1;
+        }
+    }
+    rebuilt
 }

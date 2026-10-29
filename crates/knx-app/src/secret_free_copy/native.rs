@@ -48,6 +48,14 @@ pub(super) fn copy_observed(
     source: &Path,
     allocated: impl FnOnce(&Path),
 ) -> Result<SecretFreeCopy, SecretFreeCopyError> {
+    copy_with_budget(source, allocated, super::budget::Budget::default())
+}
+
+pub(super) fn copy_with_budget(
+    source: &Path,
+    allocated: impl FnOnce(&Path),
+    budget: super::budget::Budget,
+) -> Result<SecretFreeCopy, SecretFreeCopyError> {
     refuse_journals(source)?;
     let before = std::fs::metadata(source).map_err(io_error("reading source identity"))?;
     let modified = before
@@ -103,7 +111,10 @@ pub(super) fn copy_observed(
     let conn = knx_store::open_existing_and_migrate(&work)?;
     // Discover from the complete immutable scratch snapshot, then roll back
     // discovery edits before enforcing the global set on every logical surface.
-    let mut learned = Findings::default();
+    let mut learned = Findings {
+        budget,
+        ..Findings::default()
+    };
     let discovery = conn.unchecked_transaction()?;
     redact_rows(&discovery, &mut learned, None)?;
     withhold_carried_files(&discovery, &mut learned, None)?;

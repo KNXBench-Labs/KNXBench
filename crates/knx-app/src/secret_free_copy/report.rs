@@ -4,10 +4,20 @@ use super::{is_secret_name, Findings, SecretFreeCopy, SecretFreeCopyError, FREE_
 use serde_json::Value;
 
 pub(super) fn copy(report: &Value) -> Result<SecretFreeCopy, SecretFreeCopyError> {
+    copy_with_budget(report, super::budget::Budget::default())
+}
+
+pub(super) fn copy_with_budget(
+    report: &Value,
+    budget: super::budget::Budget,
+) -> Result<SecretFreeCopy, SecretFreeCopyError> {
     validate(report).map_err(|resource| SecretFreeCopyError::BudgetExceeded { resource })?;
     let bytes =
         serde_json::to_vec(report).map_err(|_| SecretFreeCopyError::Write("report JSON".into()))?;
-    let mut findings = Findings::default();
+    let mut findings = Findings {
+        budget,
+        ..Findings::default()
+    };
     let sanitized = match redact_evidence(&bytes, "import report", &mut findings, None) {
         Ok(sanitized) => sanitized.unwrap_or(bytes),
         Err(reason) => {
@@ -117,10 +127,27 @@ fn scrub_metadata(value: &mut Value, needles: &super::Needles<'_>) -> Result<boo
         }
         Value::Object(map) => {
             for (key, child) in map {
-                if matches!(key.as_str(), "source_path" | "xpath" | "kind" | "name")
-                    && child
-                        .as_str()
-                        .is_some_and(|text| needles.any_in(text.as_bytes()))
+                // These strings are interpreted by the historical reader/grouping rule,
+                // or identify the measured rows/source. Blanking one is not redaction of
+                // incidental prose: it can change totals, units or report admission.
+                if matches!(
+                    key.as_str(),
+                    "source_path"
+                        | "xpath"
+                        | "kind"
+                        | "name"
+                        | "what"
+                        | "consequence"
+                        | "severity"
+                        | "entity"
+                        | "stage"
+                        | "file_name"
+                        | "namespace"
+                        | "format"
+                        | "producer"
+                ) && child
+                    .as_str()
+                    .is_some_and(|text| needles.any_in(text.as_bytes()))
                 {
                     return Err("secret in historical report row identity; report unavailable");
                 }

@@ -16,11 +16,14 @@ Do not extend the exact-mask mandatory-support claim to all 070nh layouts.
 Neither a matching serial response nor read-only access proves physical identity
 against a misreporting or privilegedly modified device.
 
-## Existing gap and policy
+## Original gap and policy
 
-The regular backup records address, product, prior application, load states and
-written regions, but no captured serial. Its restore can therefore replay one
-device's memory onto a replacement with the same address/product/application.
+Before this increment, the regular backup recorded address, product, prior
+application, load states and written regions, but no captured serial. Its restore
+could therefore replay one device's memory onto a replacement with the same
+address/product/application. The [software-accepted implementation](../status/2026-10-29-regular-restore-exemplar.md)
+adds the bounded replay precondition; the source facts and policy distinction
+below remain unchanged.
 The existing property-recovery contract already binds replay to the captured
 serial and refuses unbindable all-zero/all-FF evidence
 ([configured recovery policy](../contracts/alpha16-system2-configured-download.md)).

@@ -6,17 +6,19 @@ This dossier preserves the technical detail and dated history. Earlier
 headings, failures and lifting conditions are historical where later
 updates supersede them; they are not new work assignments.
 
-## Regular restore exemplar binding — 29 October 2026 contract
+## Regular restore exemplar binding — 29 October 2026 software acceptance
 
 The [regular restore contract](../contracts/regular-restore-exemplar-binding.md)
 requires replay to match a bindable serial captured before the original mutation.
-The implementation candidate enforces it in core derivation and every regular
-memory executor, including the restore's own second backup observation. This is
+The implementation enforces it in core derivation and every regular memory
+executor, including the restore's own second backup observation. Independent
+correction/whole-feature review, both 17-stage package gates and actual isolated
+server build/smoke passed on runtime integration `0ddfe4953`
+([software acceptance](../status/2026-10-29-regular-restore-exemplar.md)). This is
 a necessary safety guard, not complete recovery or physical-identity proof.
-Maintained software acceptance and source publication are still pending; focused
-passing tests alone do not close PRG-01 or KL-007.
+Neither PRG-01 nor KL-007 is closed by this increment.
 
-The planned compatibility narrowing is explicit: format 1/2 backups remain
+The implemented compatibility narrowing is explicit: format 1/2 backups remain
 readable but cannot restore, including the former partial-backup exception.
 New format 3 also refuses restore when serial evidence is missing, all-zero or
 all-FF. No serial is inferred from a project, application or address, and no

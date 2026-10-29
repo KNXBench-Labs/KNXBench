@@ -46,15 +46,22 @@ not establish support for every import size or for ETS/device recovery.
    named versions independently of autosave. Versions include the normalized
    model, opaque passthrough bytes and manufacturer references, not a copy of
    the global product database. Embedded snapshots exclude history to prevent
-   recursive backups.
+   recursive backups. Save As to a **new** native file builds destination history
+   from the current project and active editor stack; it does not clone the source
+   file's saved-version archive. Keep a closed-file copy of the original when the
+   complete archive is needed. This is distinct from ordinary Save and from
+   overwriting an existing native destination, whose preceding saved state is
+   preserved there. [Alpha 18 artifact observations](evidence/release-alpha18-2026-10-29.json)
+   verify engineering preservation and record the inspected history properties;
+   they do not claim undo/redo execution or a complete archive-copy migration.
 4. Restore requires an explicit confirmation bound to project revision/server
    incarnation and history generation. It first preserves the complete current
    working project as a pre-restore version, then atomically installs the chosen
    version. Restore resets the edit stack; going back uses the preserved version.
 5. Snapshot envelopes are versioned and SHA-256 verified before decoding. Future,
    malformed, oversized, incomplete or cross-project journal data fail closed;
-   never partially load a stack or silently erase history. Old native stores
-   migrate forward with an empty history. Old builds refuse the new schema.
+   never partially load a stack or silently erase history. Stores predating the
+   native history schema migrate forward with empty history. Old builds refuse newer schemas.
 6. SQLite immediate transactions bind baseline, journal generation and writes;
    a stale second editor cannot overwrite a newer journal. On any write/commit
    failure the visible model, stack, clean baseline and durable rows stay intact.

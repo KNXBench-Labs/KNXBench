@@ -34,3 +34,25 @@ independent copies are still needed against file/disk loss. Older builds cannot
 open v11. Native WebKitGTK/Orca, physical power-loss and hardware/ETS recovery are
 not established by offline HTTP/Chromium tests. Publication/release is separate.
 <!-- END retained catalogue record -->
+
+## Save As archive boundary (Alpha 18 artifact verification, 29 October 2026)
+
+Saving As to a new native file constructs its history from the current normalized
+project and active editor stack, not from a copy of the original database. It does
+not clone the source file's saved-version archive. Keep the closed original as a
+separate full-history backup; ordinary Save and an explicitly overwritten native
+destination have different existing-file preservation paths.
+
+The published Alpha 18 amd64 image opened the authentic legacy schema-13 fixture
+present in the Alpha 17 Git tree, saved to a new schema-16 file, switched away and
+reopened it. The original and opened source copy stayed byte-identical; all 19
+common engineering tables and the projected content matched. The source had one
+saved version, one undo entry and no redo entries; the new file had no old saved
+versions and one re-encoded undo entry. No undo/redo was executed and the empty
+notes array does not demonstrate nonempty note migration. These are bounded
+observations, not complete history-migration acceptance.
+
+The application save-as implementation is unchanged from Alpha 17. Native/model16
+is unchanged between those releases; product database28->30 is a separate boundary.
+[Sanitized public receipt](../evidence/release-alpha18-2026-10-29.json) ·
+[Persistent-history contract](../PROJECT_HISTORY.md).

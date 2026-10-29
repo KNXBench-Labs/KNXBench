@@ -1,19 +1,28 @@
 # Restart snapshot
 
-## Alpha 18 release freeze (ACTIVE, observed 2026-10-29 00:19 CET)
-- Release owner: this WebUI; source cutoff `bb2d8e51efcbd029034c694ab4da9638f80961ee`.
-- Freeze `0b8d80278` is published; prerequisite delivery and local retirement verified.
-- Candidate branch `release/a18-prep-20261028`, tree `<sources>/knxbench-a18-release-20261028`;
-  app versions `0.1.0-alpha.18`; native/model16 unchanged, productdb28->30.
-- `main` stays release-frozen for code until the tag is published. Other packages stay local;
-  no branch/main pushes by other tracks. Later work belongs to the next release.
-- Reader/version review found one stale Docker pin and two disclosure/date defects; corrected.
-- Tooling/anchors preflight green; full acceptance has not run. No hardware/real-bus access.
-- Historical111-file restoration permission unanswered: no copy restored; two pinned opt-ins
-  NOT RUN. Other acceptance remains GO; do not call omissions a complete release gate.
-- Next: commit corrected candidate, full repository gate plus release extras, packaging dry runs.
-- STOP before tag, GitHub release or Docker publication: explicit owner GO still required.
-- Evidence `<profile>/evidence/a18-release-20261028/`; root/user data preserved.
+## Alpha 18 release (PUBLISHED, ARTIFACTS VERIFIED; observed 2026-10-29 05:30 CET)
+- Release freeze: released by alpha18-release. Immutable `v0.1.0-alpha.18` names
+  `80386a154231f327d60ba0d89f1ba6fa2719f137`; source cutoff `bb2d8e51e`.
+- Other tracks may publish; later source belongs to the next alpha. Never move the tag.
+- Source campaign: package10/web89; Rust7196/238ignored, Vitest4654, fixture951,
+  production567, corpus155/155 in9targets; extras browser49/native24/product15.
+- Both authorized historical opt-ins1/1 passed; exact copied selection removed.
+  Private manufacturer payloads and detailed corpus outputs were never published.
+- Original count/verifier refusals stay retained; unchanged-source continuations,
+  not green-product replays, close the required scope. Counts overlap.
+- Real tag producers40812340080/40812340107 succeeded. All3 public assets match
+  provider hashes; isolated MCP and AppImage/Broadway version/frontend passed.
+- Docker native amd64+arm64 configs bind the exact tag; version/latest index equal.
+  Isolated amd64 auth/create/protected-import/legacy13->16-save-as passed bounded checks.
+- Save As does not clone the source saved-version archive; original remained intact.
+  No undo/redo, ARM-runtime, FUSE/native-visual or physical-bus acceptance inferred.
+- Live site42 files +root alias match accepted unchanged-input build; old Pages
+  artifact unavailable, so no deployment-ZIP/TAR-payload proof is claimed.
+- Canonical public receipt: `docs/evidence/release-alpha18-2026-10-29.json`.
+- Release owner has no source/hardware reservation. Only reviewed docs publication,
+  durable private evidence and exact-owned retirement remain authorized; no new feature work.
+- Active receipts `<profile>/evidence/a18-release-20261028/`; final closeout target
+  `<profile>/release-closeouts/alpha18-20261029/`. Dirty root and owner container stay protected.
 
 ## Alpha 18 follow-ups 1 + 2 (DELIVERED, RETIRED; observed 2026-10-28 23:01 CET)
 - Owner's root checkpoint records final closeout; source delivery is verified on the cutoff.

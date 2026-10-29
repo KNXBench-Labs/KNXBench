@@ -58,11 +58,29 @@ async fn import_report_preview_and_zip_remove_secrets_without_changing_historica
     *state.project.lock().unwrap() = Some(imported.project);
     *state.opaque.lock().unwrap() = opaque;
 
+    // Obtain the real review for exactly the same selection before reading or exporting it.
+    let query = json!({ "problemType": "projectImport" });
+    let (status, preview, _) = call(
+        &state,
+        "POST",
+        "/api/diagnostics/bundle/preview",
+        Some(query.clone()),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{}", json_of(&preview));
+    let mut reviewed = query;
+    reviewed["review"] = json_of(&preview)["review"].clone();
+    assert!(reviewed["review"]["fingerprint"]
+        .as_str()
+        .is_some_and(|value| !value.is_empty()));
+    assert!(reviewed["review"]["context"].is_object());
+    let mut text_query = reviewed.clone();
+    text_query["key"] = json!("importReport");
     let (status, body, _) = call(
         &state,
         "POST",
         "/api/diagnostics/bundle/section",
-        Some(json!({"problemType": "projectImport", "key": "importReport"})),
+        Some(text_query),
     )
     .await;
     assert_eq!(status, StatusCode::OK);
@@ -89,11 +107,13 @@ async fn import_report_preview_and_zip_remove_secrets_without_changing_historica
         );
     }
 
+    let mut export_query = reviewed;
+    export_query["consent"] = json!(true);
     let (status, bytes, _) = call(
         &state,
         "POST",
         "/api/diagnostics/bundle",
-        Some(json!({"problemType": "projectImport", "consent": true})),
+        Some(export_query),
     )
     .await;
     assert_eq!(status, StatusCode::OK);
@@ -257,6 +277,7 @@ async fn import_report_identity_collision_is_visibly_unavailable_not_rewritten()
         .iter()
         .any(|section| section["kind"] == "importReport"));
     let mut text_query = query.clone();
+    text_query["review"] = preview["review"].clone();
     text_query["key"] = json!("importReport");
     let (status, body, _) = call(
         &state,
@@ -268,6 +289,7 @@ async fn import_report_identity_collision_is_visibly_unavailable_not_rewritten()
     assert_eq!(status, StatusCode::BAD_REQUEST);
     assert!(String::from_utf8_lossy(&body).contains("bundleSectionUnknown"));
     let mut export_query = query;
+    export_query["review"] = preview["review"].clone();
     export_query["consent"] = json!(true);
     let (status, body, _) = call(
         &state,

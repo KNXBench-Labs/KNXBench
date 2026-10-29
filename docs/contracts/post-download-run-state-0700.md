@@ -2,11 +2,12 @@
 
 ## Status and scope
 
-PRG-01 design-admitted contract, 29 October 2026. **Not yet implemented or
-software/hardware accepted.** Baseline `8d14de9ca` still returns
-`notRead/unsupportedMask` for exact `0700h`. The independently reviewed corrected
-proposal admits one complete codec → session → observer → persisted/public
-consumer increment, not an unused protocol foundation.
+PRG-01 implementation `5f075cf99`, 29 October 2026. Independent whole-feature
+static review accepted the complete codec → session → observer → persisted/public
+consumer increment with no open findings. **Committed branch/main-first gates,
+integrated build/smoke and runtime publication remain pending; no software or
+hardware acceptance is claimed here.** Historical baseline `8d14de9ca` returned
+`notRead/unsupportedMask` for exact `0700h`.
 
 The [source investigation](../research/2026-10-29-property-description-run-state-0700.md)
 separates original definitions, their unresolved upper-nibble conflict and

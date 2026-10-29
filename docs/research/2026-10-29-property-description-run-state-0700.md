@@ -1,9 +1,10 @@
 # Exact 0700 property run state: source admission and description layout
 
-29 October 2026, PRG-01. Design/source admission only; no new runtime or hardware
-acceptance. Source baseline `8d14de9ca` still supports run-state observation
-only for exact 0701/0705. The [contract](../contracts/post-download-run-state-0700.md)
-consolidates the independently reviewed corrected proposal.
+29 October 2026, PRG-01. This records design/source admission, not runtime or
+hardware acceptance. Historical baseline `8d14de9ca` supported run-state
+observation only for exact 0701/0705. The [contract](../contracts/post-download-run-state-0700.md)
+consolidates the independently reviewed corrected proposal and separates the
+implemented source `5f075cf99` from pending integrated software acceptance.
 
 ## Original definitions inspected
 
@@ -53,7 +54,7 @@ for an optional property, not a claim that every client must always do so. A
 one-byte value cannot establish its PDT. Simulator evidence is therefore
 explicitly independent of value width/presence and mask, not synthesized from it.
 
-The current shared matching record drops observed mask. The new optional,
+The pre-increment shared matching record dropped observed mask. The new optional,
 non-null 0700 marker is an explicit compatibility/provenance decision. Older
 strict readers may refuse new records; no old record is rewritten or inferred.
 

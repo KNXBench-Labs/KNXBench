@@ -601,6 +601,11 @@ The paragraph below records the original 25 October acceptance, not a claim
 that every later check must still return runtime unknown. The continuation's
 software acceptance is recorded [separately](status/2026-10-29-property-run-state-observation.md):
 independent reviews, both 17-stage package gates and isolated real-server smoke passed.
+The separately [implemented exact-0700 continuation](contracts/post-download-run-state-0700.md)
+adds independent optional-property description qualification at `5f075cf99`.
+Original semantic RED and independent whole-feature static review are retained;
+committed branch/main-first gates, integrated build/smoke and publication are
+still pending. No software/hardware acceptance of that increment is inferred.
 
 After a successful regular memory download (complete or partial, restart
 acknowledged, not in plan or unconfirmed) the CLI and the server worker run one

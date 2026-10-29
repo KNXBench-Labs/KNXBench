@@ -12,15 +12,18 @@ The owner authorised (25 October 2026) closing existing non-Secure gaps in the
 regular download/restore path, one bounded increment at a time, without live
 bus or device operations.
 
-## Active next increment — descriptor-qualified exact 0700 property state
+## Implemented increment, software acceptance pending — exact 0700 property state
 
 The [admitted contract](../contracts/post-download-run-state-0700.md) and
 [original-source investigation](../research/2026-10-29-property-description-run-state-0700.md)
 allow one optional-property observation on exact `0700h`, after the existing
 identity/load gates and strict candidate binding. Independent descriptor
 metadata must establish PDT_CONTROL before one PID 6 read; a one-byte value
-alone is not type evidence. Source `8d14de9ca` still returns unsupported mask;
-this claim is **not implementation or software acceptance**. The existing
+alone is not type evidence. Implementation `5f075cf99` has genuine original
+CLI transfer/check RED → GREEN and independent whole-feature static review
+with no open findings. The committed branch/main-first gates, integrated
+build/smoke and publication remain pending: **not yet software acceptance**.
+Historical baseline `8d14de9ca` returned unsupported mask. The existing
 0701/0705 path, other masks, family/authorisation gates, retries/waits and
 memory-refusal boundary stay unchanged. The package must include actual
 CLI/HTTP/history/report/web consumers and semantic RED before GREEN, not stop
@@ -180,8 +183,9 @@ there is no CLI end-to-end, new shutdown, recovery or hardware guarantee.
 ## Open
 
 - Broader target/exemplar identity and runtime-state observation beyond the
-  validated `0701h`/`0705h` property slice; other object layouts and physical
-  function remain unproved.
+  bounded property contracts (`0701h`/`0705h`, plus descriptor-qualified exact
+  `0700h` whose integrated acceptance is pending above). Other object layouts,
+  memory encoding and physical function remain unproved.
 - Parameter policies: the defining inactive, `Union` and customer-write rules
   are unresolved.
 - Complete mutation effects and whole-mutation recovery contracts.

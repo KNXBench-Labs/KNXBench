@@ -61,6 +61,7 @@ mod http_name_recipe;
 mod http_native_export_binding;
 mod http_note_disposition;
 mod http_opaque_payload_evidence;
+mod http_operation_recording;
 mod http_parameter_block_access;
 mod http_parameter_captions;
 mod http_parameter_editor_source;

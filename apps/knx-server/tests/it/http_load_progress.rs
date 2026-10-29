@@ -54,6 +54,7 @@ fn state() -> (Arc<knx_server::AppState>, tempfile::TempDir) {
         plugin_data_plan: Default::default(),
         device_download: Default::default(),
         device_system2: Arc::new(knx_server::System2Service::new(dir.path())),
+        recordings: Arc::new(knx_server::operation_recordings::store(dir.path(), true)),
         next_device_download_id: Default::default(),
         device_download_timing: Default::default(),
         system2_timing: Default::default(),

@@ -114,6 +114,7 @@ pub use catalogue_jobs::{
 };
 mod function_routes;
 mod one_shot_activity;
+pub mod operation_recordings;
 mod programming_state;
 pub use programming_state::address_programming_settler;
 mod parameter_editor_routes;

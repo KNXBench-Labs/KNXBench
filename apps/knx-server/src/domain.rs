@@ -245,6 +245,9 @@ pub struct AppState {
     pub catalogue_jobs: std::sync::Arc<crate::catalogue_jobs::CatalogueUpdateJobs>,
     /// Actual configured System-2 task, preparation, status and durable recovery owner.
     pub device_system2: std::sync::Arc<crate::System2Service>,
+    /// One JSONL recording per device operation under `data_dir/diagnostics`
+    /// (DIAG-03). Disabled in the test `Default` and by `KNX_DIAGNOSTIC_RECORDING=off`.
+    pub recordings: std::sync::Arc<knx_app::operation_recording::RecordingStore>,
 }
 
 impl AppState {
@@ -355,8 +358,10 @@ impl AppState {
     fn with_product_db(data_dir: PathBuf, product_db: Option<CatalogueOwner>) -> Self {
         let server_incarnation = new_server_incarnation();
         let device_system2 = std::sync::Arc::new(crate::System2Service::new(&data_dir));
+        let recordings = std::sync::Arc::new(crate::operation_recordings::store(&data_dir, false));
         Self {
             device_system2,
+            recordings,
             project: Mutex::new(None),
             clean_project: Mutex::new(None),
             last_saved_at: Mutex::new(None),
@@ -449,6 +454,11 @@ impl Default for AppState {
         let mut state = Self::with_product_db(std::env::temp_dir(), None);
         // Test conveniences never share a durable activity database.
         state.one_shot_activity = std::sync::Arc::default();
+        // Nor do they leave recordings in the shared temporary directory.
+        state.recordings = std::sync::Arc::new(crate::operation_recordings::store(
+            &std::env::temp_dir(),
+            true,
+        ));
         state
     }
 }

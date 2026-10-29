@@ -17,6 +17,7 @@ fn session(
         data_octets: 1,
         shared: Arc::new(Shared {
             stop: Arc::new(DownloadStop::already_committed()),
+            recorder: knx_app::operation_recording::OperationRecorder::disabled(),
             after_keep: Mutex::new(None),
             before_record_check: Mutex::new(None),
             status: Mutex::new(status),

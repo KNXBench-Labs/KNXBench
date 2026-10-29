@@ -105,6 +105,19 @@ async fn main() {
         );
         app_state.connector = Box::new(knx_server::RealConnector::new(return_path));
     }
+    let recording_env = std::env::var(knx_app::operation_recording::DISABLE_ENV).ok();
+    if knx_app::operation_recording::disabled_by_env_value(recording_env.as_deref()) {
+        eprintln!(
+            "knx-server: {}={}: device operations are not recorded; diagnostic bundles \
+             say so. Existing recordings stay readable and deletable.",
+            knx_app::operation_recording::DISABLE_ENV,
+            recording_env.as_deref().unwrap_or_default().trim()
+        );
+        app_state.recordings = Arc::new(knx_server::operation_recordings::store(
+            &app_state.data_dir,
+            true,
+        ));
+    }
     let state = Arc::new(app_state);
     // From the first signal on, no route opens a new tunnel.
     {

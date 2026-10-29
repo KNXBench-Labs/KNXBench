@@ -24,6 +24,7 @@ outside preserved historical blocks, or use the next free section number
 
 | Section | Where |
 | --- | --- |
+| [2026-10-29 — Property-based run-state observation](research/2026-10-29-property-run-state-observation.md) | Original Resources/Management/Profiles evidence for a validated-object PID 6 observation on 0701/0705; explicit candidate-location interpretation and unresolved memory encoding |
 | [2026-10-27 — Docker image signing design](research/2026-10-27-docker-image-signing-design.md) | Proposed exact workflow identity, final-index verification, promotion and recovery policy; primary documentation only, no signing or registry-write acceptance |
 | [2026-10-20 — Monitoring-export input layout](research/2026-10-20-monitor-export-input-layout.md) | SQLite primary header/WAL/recovery facts, quiescent standalone CLI admission and actual-binary source-preservation regressions; no concurrent-writer guarantee |
 | [2026-10-20 — Catalogue job transactions](research/2026-10-20-catalogue-job-transactions.md) | Inspected SQLite backup/transaction/interrupt/observer documentation; proposed WP-04.3 boundary, no runtime cancellation or resource acceptance |

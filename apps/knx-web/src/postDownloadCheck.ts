@@ -19,10 +19,20 @@ export interface MachineReading {
   observed: MachineObservation;
 }
 export type PlanLoadVerdict = "matchesPlan" | "differsFromPlan" | "unknown";
+export type RunStateCode = "halted" | "running" | "ready" | "terminated" | "starting" | "shuttingDown";
+export type RunStateStep = "objectType" | "application" | "runState";
+export type RunStateCause = "refused" | "malformed" | "noCorrelatedAnswer" | "connectionLost" | "readFailed";
+/** The run-state continuation inside an identity match; absent in records of older producers. */
+export type RunStateRecord =
+  | { status: "notRead"; reason: "unsupportedMask" | "loadReadFailed" }
+  | { status: "candidateMismatch"; kind: "objectType" | "application" }
+  | { status: "unavailable"; step: RunStateStep; cause: RunStateCause }
+  | { status: "undefinedValue" }
+  | { status: "observed"; objectIndex: 3; state: RunStateCode };
 export type IdentityCheck =
   | { result: "unavailable"; part: IdentityPart }
   | { result: "mismatch"; part: IdentityPart; kind: "differs" | "malformed" }
-  | { result: "match"; exemplar: "notVerified"; loadStates: MachineReading[]; planLoadVerdict: PlanLoadVerdict };
+  | { result: "match"; exemplar: "notVerified"; loadStates: MachineReading[]; planLoadVerdict: PlanLoadVerdict; runState?: RunStateRecord };
 export type ReachCheck =
   | { result: "notReached" }
   | { result: "unknown" }
@@ -35,13 +45,16 @@ export type Observation =
   | { status: "attempted"; reach: ReachCheck };
 export interface PostDownloadCheck {
   observation: Observation;
-  /** Never observed: no run-state reader exists. */
-  runtime: "unknown";
+  /** `unknown` unless matching `runState` evidence observed a defined state. */
+  runtime: "unknown" | RunStateCode;
 }
 
 export const NOT_CHECKED: PostDownloadCheck = { observation: { status: "notChecked" }, runtime: "unknown" };
 
 const MACHINES: readonly string[] = ["addressTable", "associationTable", "applicationProgram", "peiProgram"];
+const RUN_STATES: readonly string[] = ["halted", "running", "ready", "terminated", "starting", "shuttingDown"];
+const STEPS: readonly string[] = ["objectType", "application", "runState"];
+const CAUSES: readonly string[] = ["refused", "malformed", "noCorrelatedAnswer", "connectionLost", "readFailed"];
 const STATES: readonly string[] = ["unloaded", "loaded", "loading", "error", "unloading", "loadCompleting"];
 
 class CheckShapeError extends Error {}
@@ -97,6 +110,34 @@ function verdictAgrees(readings: MachineReading[], verdict: unknown): boolean {
   return false;
 }
 
+function admitRunState(value: unknown, readings: MachineReading[]): void {
+  const status = (value as { status?: unknown } | null)?.status;
+  const loadsRead = readings.every((reading) => reading.observed.result === "observed");
+  if (status === "notRead") {
+    const reason = shape(value, ["status", "reason"]).reason;
+    ensure(reason === "unsupportedMask" || (reason === "loadReadFailed" && !loadsRead));
+    return;
+  }
+  ensure(loadsRead);
+  if (status === "candidateMismatch") {
+    const kind = shape(value, ["status", "kind"]).kind;
+    ensure(kind === "objectType" || kind === "application");
+  } else if (status === "unavailable") {
+    const record = shape(value, ["status", "step", "cause"]);
+    ensure(STEPS.includes(record.step as string) && CAUSES.includes(record.cause as string));
+  } else if (status === "undefinedValue") {
+    shape(value, ["status"]);
+  } else {
+    const record = shape(value, ["status", "objectIndex", "state"]);
+    ensure(status === "observed" && record.objectIndex === 3 && RUN_STATES.includes(record.state as string));
+  }
+}
+
+/** The state the identity's run-state evidence observed, if any. */
+function observedState(identity: IdentityCheck | undefined): RunStateCode | null {
+  return identity?.result === "match" && identity.runState?.status === "observed" ? identity.runState.state : null;
+}
+
 function admitIdentity(value: unknown): void {
   const result = (value as { result?: unknown } | null)?.result;
   if (result === "unavailable") {
@@ -106,7 +147,8 @@ function admitIdentity(value: unknown): void {
     admitPart(identity.part);
     ensure(identity.kind === "differs" || identity.kind === "malformed");
   } else {
-    const identity = shape(value, ["result", "exemplar", "loadStates", "planLoadVerdict"]);
+    const hasRunState = typeof value === "object" && value !== null && Object.hasOwn(value, "runState");
+    const identity = shape(value, hasRunState ? ["result", "exemplar", "loadStates", "planLoadVerdict", "runState"] : ["result", "exemplar", "loadStates", "planLoadVerdict"]);
     ensure(result === "match" && identity.exemplar === "notVerified" && Array.isArray(identity.loadStates));
     const readings = (identity.loadStates as unknown[]).map(admitReading);
     let failed = false;
@@ -117,6 +159,7 @@ function admitIdentity(value: unknown): void {
     }
     ensure(readings.every((reading, i) => i === 0 || MACHINES.indexOf(readings[i - 1].machine) < MACHINES.indexOf(reading.machine)));
     ensure(verdictAgrees(readings, identity.planLoadVerdict));
+    if (hasRunState) admitRunState(identity.runState, readings);
   }
 }
 
@@ -129,7 +172,7 @@ export function admitPostDownloadCheck(value: unknown): PostDownloadCheck | null
   if (value === undefined) return NOT_CHECKED;
   try {
     const check = shape(value, ["observation", "runtime"]);
-    ensure(check.runtime === "unknown");
+    ensure(check.runtime === "unknown" || RUN_STATES.includes(check.runtime as string));
     const status = (check.observation as { status?: unknown } | null)?.status;
     switch (status) {
       case "unsupported": {
@@ -151,7 +194,12 @@ export function admitPostDownloadCheck(value: unknown): PostDownloadCheck | null
         shape(check.observation, ["status"]);
         ensure(status === "notChecked" || status === "notPerformed" || status === "interrupted");
     }
-    return value as PostDownloadCheck;
+    const admitted = value as PostDownloadCheck;
+    // The summary and the nested evidence must agree exactly.
+    const reach = admitted.observation.status === "attempted" ? admitted.observation.reach : undefined;
+    const identity = reach?.result === "reached" ? reach.identity : undefined;
+    ensure(admitted.runtime === (observedState(identity) ?? "unknown"));
+    return admitted;
   } catch (error) {
     if (error instanceof CheckShapeError) return null;
     throw error;
@@ -211,4 +259,20 @@ export function machineReadings(check: PostDownloadCheck): MachineReading[] {
   if (observation.status !== "attempted" || observation.reach.result !== "reached") return [];
   const identity = observation.reach.identity;
   return identity.result === "match" ? identity.loadStates : [];
+}
+
+/** The run-state facts of a matching identity, in reading order; none for a legacy record. */
+export function runStateLines(check: PostDownloadCheck): CheckLine[] {
+  const observation = check.observation;
+  if (observation.status !== "attempted" || observation.reach.result !== "reached") return [];
+  const identity = observation.reach.identity;
+  const record = identity.result === "match" ? identity.runState : undefined;
+  if (record === undefined) return [];
+  switch (record.status) {
+    case "observed": return [{ key: `postDownloadCheck.runState.state.${record.state}` }, { key: "postDownloadCheck.runState.scope" }];
+    case "undefinedValue": return [{ key: "postDownloadCheck.runState.undefined", warning: true }];
+    case "notRead": return [{ key: `postDownloadCheck.runState.notRead.${record.reason}` }];
+    case "candidateMismatch": return [{ key: `postDownloadCheck.runState.candidateMismatch.${record.kind}`, warning: true }];
+    case "unavailable": return [{ key: "postDownloadCheck.runState.unavailable", values: { step: record.step, cause: record.cause }, warning: true }];
+  }
 }

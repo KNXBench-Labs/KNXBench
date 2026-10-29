@@ -495,8 +495,15 @@ changes, the project does not. Saving or exporting a project file is something e
    the plan and, for each load state, what the plan expects next to what was read. A
    failed or unavailable reading stays unavailable; it never turns the download into a
    failure, and nothing is sent again. A matching identity does not prove it is the same
-   physical device, and whether the application runs is always shown as unknown. Older
-   results without this check read "Not checked". If the command is killed or the server
+   physical device. On exact masks `0701h` and `0705h`, the check can additionally
+   report the run-state property of Applicationprogram object 3, but only after
+   validating that object's type and exact plan application identity. Other layouts,
+   unavailable reads and undefined state values do not become a known run state.
+   Even **running** is a point-in-time report from that checked object, not proof of
+   device health, a unique program instance or installation function. See the
+   [bounded run-state check](../../contracts/post-download-run-state.md).
+   Older results without this check read "Not checked"; a check with no run-state
+   evidence keeps runtime unknown. If the command is killed or the server
    stops during the check, the download's own result stays and the check reads
    "interrupted" or "Not checked". Once a check is in the bus activity history, an older
    KNXBench version cannot read that history (it shows it as unavailable); keep using this

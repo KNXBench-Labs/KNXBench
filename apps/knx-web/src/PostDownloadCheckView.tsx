@@ -1,6 +1,6 @@
 /** Renders the read-only check after a download as separate facts; it never offers a resend. */
-import { useTranslate } from "./i18n";
-import { admitPostDownloadCheck, checkLines, machineReadings, type MachineReading } from "./postDownloadCheck";
+import { useTranslate, type MessageKey } from "./i18n";
+import { admitPostDownloadCheck, checkLines, machineReadings, runStateLines, type MachineReading } from "./postDownloadCheck";
 
 function observedKey(reading: MachineReading) {
   return reading.observed.result === "observed"
@@ -19,6 +19,7 @@ export default function PostDownloadCheckView({ value }: { value: unknown }) {
     </section>;
   }
   const readings = machineReadings(check);
+  const runStateFacts = runStateLines(check);
   const reach = check.observation.status === "attempted" ? check.observation.reach.result : "none";
   return (
     <section className="post-download-check" data-check={check.observation.status} data-reach={reach}>
@@ -44,7 +45,15 @@ export default function PostDownloadCheckView({ value }: { value: unknown }) {
         </table>
       )}
       {readings.length > 0 && <p>{t("postDownloadCheck.exemplar")}</p>}
-      <p>{t("postDownloadCheck.runtimeUnknown")}</p>
+      {runStateFacts.map((line) => (
+        <p key={line.key} className={line.warning ? "form-warning" : undefined} role={line.warning ? "status" : undefined}>
+          {line.values
+            ? t(line.key, { step: t(`postDownloadCheck.runState.step.${line.values.step}` as MessageKey), cause: t(`postDownloadCheck.runState.cause.${line.values.cause}` as MessageKey) })
+            : t(line.key)}
+        </p>
+      ))}
+      {/* A run-state record without a defined state says so; no record (an older server) keeps the legacy wording. */}
+      {check.runtime === "unknown" && <p>{t(runStateFacts.length > 0 ? "postDownloadCheck.runtimeUnknown.noDefinedState" : "postDownloadCheck.runtimeUnknown")}</p>}
     </section>
   );
 }

@@ -569,6 +569,14 @@ inferred.
 
 ## Read-only check after a regular download (25 October 2026 source)
 
+**Later contract, 29 October 2026:** the
+[property run-state continuation](contracts/post-download-run-state.md) extends
+the original always-unknown runtime vocabulary with independently evidenced
+states for a validated plan-matching object on exact `0701h` / `0705h` masks.
+The paragraph below records the original 25 October acceptance, not a claim
+that every later check must still return runtime unknown. The continuation's
+software acceptance and publication are recorded separately.
+
 After a successful regular memory download (complete or partial, restart
 acknowledged, not in plan or unconfirmed) the CLI and the server worker run one
 read-only check on the same tunnel: fresh connection, no key, no write or

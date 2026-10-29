@@ -12,7 +12,8 @@
 //! identity and every load state the plan settles, each expected next to
 //! observed. A matching identity is not the same physical exemplar (no
 //! serial number is read), `loaded` is a load state, not a run state, and
-//! [`RuntimeState`] is always `unknown`.
+//! [`RuntimeState`] is `unknown` unless the nested run-state evidence of the
+//! validated candidate object observed a defined state.
 //!
 //! **Payload-free.** No address, serial number, raw identity octets, key or
 //! free-text transport error: a mismatch names the part that differed, not
@@ -27,28 +28,215 @@ use std::fmt;
 use knx_core::commissioning::load_control_memory::MemoryLoadStateMachine;
 use knx_core::commissioning::load_state::LoadState;
 use knx_core::commissioning::properties::{ObjectIndex, PID_HARDWARE_TYPE};
+use knx_core::commissioning::run_state::RunState;
 use knx_net::commissioning::post_download::{
-    IdentityMismatch, IdentityReading, LoadStateObservation, LoadStateVerdict, NotPerformed,
-    ObservationOutcome, PostDownloadObservation, Reach,
+    CandidateMismatch, IdentityMismatch, IdentityReading, LoadStateObservation, LoadStateVerdict,
+    NotPerformed, ObservationOutcome, PostDownloadObservation, Reach, RunStateCause,
+    RunStateNotRead, RunStateObservation, RunStateStep, RUN_STATE_CANDIDATE,
 };
 use serde::{Deserialize, Serialize};
 
 /// What the read-only check after a download found, and what it never says.
+///
+/// Deserialisation refuses a summary its nested evidence contradicts: a known
+/// `runtime` needs the matching observed state, and `unknown` cannot hide one.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase", deny_unknown_fields)]
+#[serde(rename_all = "camelCase", try_from = "CheckWire")]
 pub struct PostDownloadCheck {
     /// How far the check got.
     pub observation: Observation,
-    /// Whether the application runs: never observed.
+    /// The observed run state, or `unknown`; see [`RuntimeState`].
     pub runtime: RuntimeState,
 }
 
-/// Whether the application runs. No verified run-state reader exists, so
-/// the only value is `unknown`.
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct CheckWire {
+    observation: Observation,
+    runtime: RuntimeState,
+}
+
+impl TryFrom<CheckWire> for PostDownloadCheck {
+    type Error = &'static str;
+
+    fn try_from(wire: CheckWire) -> Result<Self, Self::Error> {
+        let evidence = match &wire.observation {
+            Observation::Attempted {
+                reach:
+                    ReachCheck::Reached {
+                        identity: IdentityCheck::Match(matched),
+                    },
+            } => matched.observed_run_state(),
+            _ => None,
+        };
+        if wire.runtime != evidence.unwrap_or(RuntimeState::Unknown) {
+            return Err("the runtime summary disagrees with the run-state evidence");
+        }
+        Ok(Self {
+            observation: wire.observation,
+            runtime: wire.runtime,
+        })
+    }
+}
+
+/// The reported run-state property of the validated candidate object, or
+/// `unknown`. `unknown` is the legacy, absent and not-performed value; it never
+/// means the device works or fails. A known state appears only beside matching
+/// structured evidence in [`MatchedLoadStates`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum RuntimeState {
     Unknown,
+    Halted,
+    Running,
+    Ready,
+    Terminated,
+    Starting,
+    ShuttingDown,
+}
+
+/// The six defined property run states (Resources Table 95), as stable codes.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum RunStateCode {
+    Halted,
+    Running,
+    Ready,
+    Terminated,
+    Starting,
+    ShuttingDown,
+}
+
+impl From<RunStateCode> for RuntimeState {
+    fn from(state: RunStateCode) -> Self {
+        match state {
+            RunStateCode::Halted => Self::Halted,
+            RunStateCode::Running => Self::Running,
+            RunStateCode::Ready => Self::Ready,
+            RunStateCode::Terminated => Self::Terminated,
+            RunStateCode::Starting => Self::Starting,
+            RunStateCode::ShuttingDown => Self::ShuttingDown,
+        }
+    }
+}
+
+impl From<RunState> for RunStateCode {
+    fn from(state: RunState) -> Self {
+        match state {
+            RunState::Halted => Self::Halted,
+            RunState::Running => Self::Running,
+            RunState::Ready => Self::Ready,
+            RunState::Terminated => Self::Terminated,
+            RunState::Starting => Self::Starting,
+            RunState::ShuttingDown => Self::ShuttingDown,
+        }
+    }
+}
+
+impl From<RunStateObservation> for RunStateRecord {
+    fn from(found: RunStateObservation) -> Self {
+        match found {
+            RunStateObservation::NotRead(RunStateNotRead::UnsupportedMask) => Self::NotRead {
+                reason: RunStateNotReadReason::UnsupportedMask,
+            },
+            RunStateObservation::NotRead(RunStateNotRead::LoadReadFailed) => Self::NotRead {
+                reason: RunStateNotReadReason::LoadReadFailed,
+            },
+            RunStateObservation::CandidateMismatch(CandidateMismatch::ObjectType) => {
+                Self::CandidateMismatch {
+                    kind: CandidateMismatchKind::ObjectType,
+                }
+            }
+            RunStateObservation::CandidateMismatch(CandidateMismatch::Application) => {
+                Self::CandidateMismatch {
+                    kind: CandidateMismatchKind::Application,
+                }
+            }
+            RunStateObservation::Unavailable { step, cause } => Self::Unavailable {
+                step: match step {
+                    RunStateStep::ObjectType => RunStateStepCode::ObjectType,
+                    RunStateStep::Application => RunStateStepCode::Application,
+                    RunStateStep::RunState => RunStateStepCode::RunState,
+                },
+                cause: match cause {
+                    RunStateCause::Refused => RunStateCauseCode::Refused,
+                    RunStateCause::Malformed => RunStateCauseCode::Malformed,
+                    RunStateCause::NoCorrelatedAnswer => RunStateCauseCode::NoCorrelatedAnswer,
+                    RunStateCause::ConnectionLost => RunStateCauseCode::ConnectionLost,
+                    RunStateCause::ReadFailed => RunStateCauseCode::ReadFailed,
+                },
+            },
+            RunStateObservation::UndefinedValue => Self::UndefinedValue {},
+            RunStateObservation::Observed(state) => Self::Observed {
+                object_index: RUN_STATE_CANDIDATE.octet(),
+                state: state.into(),
+            },
+        }
+    }
+}
+
+/// What the run-state continuation recorded inside an identity match.
+/// Absent in a stored record means an older producer did not observe it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(
+    tag = "status",
+    rename_all = "camelCase",
+    rename_all_fields = "camelCase",
+    deny_unknown_fields
+)]
+pub enum RunStateRecord {
+    /// No run-state frame was sent.
+    NotRead { reason: RunStateNotReadReason },
+    /// The candidate object is not the plan's application object.
+    CandidateMismatch { kind: CandidateMismatchKind },
+    /// A step failed; no later step ran.
+    Unavailable {
+        step: RunStateStepCode,
+        cause: RunStateCauseCode,
+    },
+    /// An octet outside the six defined values; the octet is not kept.
+    UndefinedValue {},
+    /// The defined state the candidate object reports.
+    Observed {
+        object_index: u8,
+        state: RunStateCode,
+    },
+}
+
+/// Why no run-state frame was sent.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum RunStateNotReadReason {
+    UnsupportedMask,
+    LoadReadFailed,
+}
+
+/// What the candidate object is not.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum CandidateMismatchKind {
+    ObjectType,
+    Application,
+}
+
+/// Which continuation read failed.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum RunStateStepCode {
+    ObjectType,
+    Application,
+    RunState,
+}
+
+/// Why a continuation read failed: a closed vocabulary, no transport text.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum RunStateCauseCode {
+    Refused,
+    Malformed,
+    NoCorrelatedAnswer,
+    ConnectionLost,
+    ReadFailed,
 }
 
 /// How far the check got. Each level nests the next, so a record cannot say
@@ -169,6 +357,9 @@ pub struct MatchedLoadStates {
     load_states: Vec<MachineReading>,
     /// The verdict on the load states against the plan, and only on those.
     plan_load_verdict: PlanLoadVerdict,
+    /// The run-state continuation. Absent in records of older producers.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    run_state: Option<RunStateRecord>,
 }
 
 #[derive(Deserialize)]
@@ -177,6 +368,17 @@ struct MatchedWire {
     exemplar: ExemplarCheck,
     load_states: Vec<MachineReading>,
     plan_load_verdict: PlanLoadVerdict,
+    #[serde(default, deserialize_with = "present")]
+    run_state: Option<RunStateRecord>,
+}
+
+/// An optional field that may be absent but never `null`.
+fn present<'de, D, T>(deserializer: D) -> Result<Option<T>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+    T: Deserialize<'de>,
+{
+    T::deserialize(deserializer).map(Some)
 }
 
 /// Whether the device is the same physical exemplar the project means.
@@ -339,10 +541,22 @@ fn mismatch(mismatch: &IdentityMismatch) -> IdentityCheck {
 }
 
 impl PostDownloadCheck {
+    /// The record of `observation`, its summary derived from the nested evidence.
     fn new(observation: Observation) -> Self {
+        let runtime = match &observation {
+            Observation::Attempted {
+                reach:
+                    ReachCheck::Reached {
+                        identity: IdentityCheck::Match(matched),
+                    },
+            } => matched
+                .observed_run_state()
+                .unwrap_or(RuntimeState::Unknown),
+            _ => RuntimeState::Unknown,
+        };
         Self {
             observation,
-            runtime: RuntimeState::Unknown,
+            runtime,
         }
     }
 
@@ -384,30 +598,34 @@ impl PostDownloadCheck {
                 })
             }
             (_, ObservationOutcome::IdentityMismatch(found)) => reached(mismatch(found)),
-            (_, ObservationOutcome::Observed { load_states, .. }) => {
-                reached(IdentityCheck::Match(MatchedLoadStates {
-                    exemplar: ExemplarCheck::NotVerified,
-                    load_states: load_states
-                        .iter()
-                        .map(|reading| MachineReading {
-                            machine: reading.machine.into(),
-                            expected: reading.expected.map(Into::into),
-                            observed: match reading.state {
-                                LoadStateObservation::Observed(state) => {
-                                    MachineObservation::Observed {
-                                        load_state: state.into(),
-                                    }
-                                }
-                                LoadStateObservation::Unavailable(_) => {
-                                    MachineObservation::Unavailable {}
-                                }
-                                LoadStateObservation::NotRead => MachineObservation::NotRead {},
+            (
+                _,
+                ObservationOutcome::Observed {
+                    load_states,
+                    run_state,
+                    ..
+                },
+            ) => reached(IdentityCheck::Match(MatchedLoadStates {
+                exemplar: ExemplarCheck::NotVerified,
+                load_states: load_states
+                    .iter()
+                    .map(|reading| MachineReading {
+                        machine: reading.machine.into(),
+                        expected: reading.expected.map(Into::into),
+                        observed: match reading.state {
+                            LoadStateObservation::Observed(state) => MachineObservation::Observed {
+                                load_state: state.into(),
                             },
-                        })
-                        .collect(),
-                    plan_load_verdict: observation.load_verdict().into(),
-                }))
-            }
+                            LoadStateObservation::Unavailable(_) => {
+                                MachineObservation::Unavailable {}
+                            }
+                            LoadStateObservation::NotRead => MachineObservation::NotRead {},
+                        },
+                    })
+                    .collect(),
+                plan_load_verdict: observation.load_verdict().into(),
+                run_state: Some((*run_state).into()),
+            })),
             // `reach()` says reached exactly for the three outcomes above;
             // anything else is not a reading this record may invent.
             (
@@ -467,6 +685,17 @@ impl PostDownloadCheck {
         }
     }
 
+    /// The summary's run-state clause: `unknown`, or the reported state with its scope.
+    pub fn runtime_summary(&self) -> String {
+        match self.runtime {
+            RuntimeState::Unknown => "application running: unknown".into(),
+            known => format!(
+                "run state: {known} (reported property of the validated plan-matching \
+                 Applicationprogram object 3; not device health or download success)"
+            ),
+        }
+    }
+
     /// The lines the CLI prints after the transfer's own summary.
     pub fn lines(&self) -> Vec<String> {
         let mut lines = vec![format!("reached / identity: {}", self.line())];
@@ -487,7 +716,31 @@ impl PostDownloadCheck {
                 ));
             }
         }
-        lines.push("application running: unknown (not observed)".into());
+        match self.runtime {
+            RuntimeState::Unknown => {
+                let record = match self.identity() {
+                    Some(IdentityCheck::Match(matched)) => matched.run_state(),
+                    _ => None,
+                };
+                // A record means a run-state continuation was recorded, with
+                // no defined state in it; no record is the legacy shape.
+                lines.push(
+                    match record {
+                        Some(_) => "application running: unknown (no defined run state observed)",
+                        None => "application running: unknown (not observed)",
+                    }
+                    .into(),
+                );
+                if let Some(record) = record {
+                    lines.push(format!("  run-state read: {record}"));
+                }
+            }
+            known => lines.push(format!(
+                "run state: {known} (the reported run-state property of the validated \
+                 plan-matching Applicationprogram object 3; not device health, not a \
+                 successful download, not a unique program instance, not installation function)"
+            )),
+        }
         lines
     }
 }
@@ -496,6 +749,19 @@ impl MatchedLoadStates {
     /// Every machine read, in machine order.
     pub fn load_states(&self) -> &[MachineReading] {
         &self.load_states
+    }
+
+    /// The state a record's evidence observed, if it observed one.
+    fn observed_run_state(&self) -> Option<RuntimeState> {
+        match self.run_state {
+            Some(RunStateRecord::Observed { state, .. }) => Some(state.into()),
+            _ => None,
+        }
+    }
+
+    /// The run-state continuation, or `None` for a record without one.
+    pub fn run_state(&self) -> Option<&RunStateRecord> {
+        self.run_state.as_ref()
     }
 
     /// The observation's verdict on them.
@@ -556,10 +822,104 @@ impl TryFrom<MatchedWire> for MatchedLoadStates {
         if !consistent {
             return Err("the load-state verdict contradicts its machines");
         }
+        let loads_read = wire
+            .load_states
+            .iter()
+            .all(|reading| matches!(reading.observed, MachineObservation::Observed { .. }));
+        match wire.run_state {
+            None => {}
+            Some(RunStateRecord::NotRead {
+                reason: RunStateNotReadReason::UnsupportedMask,
+            }) => {}
+            Some(RunStateRecord::NotRead {
+                reason: RunStateNotReadReason::LoadReadFailed,
+            }) => {
+                if loads_read {
+                    return Err(
+                        "run state is not read for a load failure, but every load was read",
+                    );
+                }
+            }
+            Some(record) => {
+                if !loads_read {
+                    return Err("run-state evidence follows a failed or skipped load read");
+                }
+                if let RunStateRecord::Observed { object_index, .. } = record {
+                    if object_index != RUN_STATE_CANDIDATE.octet() {
+                        return Err("run state was read at another object than the candidate");
+                    }
+                }
+            }
+        }
         Ok(Self {
             exemplar: wire.exemplar,
             load_states: wire.load_states,
             plan_load_verdict: wire.plan_load_verdict,
+            run_state: wire.run_state,
+        })
+    }
+}
+
+impl fmt::Display for RuntimeState {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(match self {
+            Self::Unknown => "unknown",
+            Self::Halted => "halted",
+            Self::Running => "running",
+            Self::Ready => "ready",
+            Self::Terminated => "terminated",
+            Self::Starting => "starting",
+            Self::ShuttingDown => "shutting down",
+        })
+    }
+}
+
+impl fmt::Display for RunStateRecord {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::NotRead {
+                reason: RunStateNotReadReason::UnsupportedMask,
+            } => f.write_str("not read (the mask has no verified property run-state candidate)"),
+            Self::NotRead {
+                reason: RunStateNotReadReason::LoadReadFailed,
+            } => f.write_str("not read (a load-state read failed first)"),
+            Self::CandidateMismatch {
+                kind: CandidateMismatchKind::ObjectType,
+            } => f.write_str(
+                "object 3 is not an Applicationprogram object; no other object was searched",
+            ),
+            Self::CandidateMismatch {
+                kind: CandidateMismatchKind::Application,
+            } => f.write_str("object 3 names another application than the plan"),
+            Self::Unavailable { step, cause } => {
+                write!(f, "unavailable ({step} read: {cause})")
+            }
+            Self::UndefinedValue {} => {
+                f.write_str("the device reported a value undefined in the specification")
+            }
+            Self::Observed { state, .. } => write!(f, "{}", RuntimeState::from(*state)),
+        }
+    }
+}
+
+impl fmt::Display for RunStateStepCode {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(match self {
+            Self::ObjectType => "object type",
+            Self::Application => "application identity",
+            Self::RunState => "run state",
+        })
+    }
+}
+
+impl fmt::Display for RunStateCauseCode {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(match self {
+            Self::Refused => "refused",
+            Self::Malformed => "malformed answer",
+            Self::NoCorrelatedAnswer => "no correlated answer",
+            Self::ConnectionLost => "connection lost",
+            Self::ReadFailed => "read failed",
         })
     }
 }

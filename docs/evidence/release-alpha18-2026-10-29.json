@@ -1,0 +1,269 @@
+{
+  "schema": "knxbench-release-publication/1",
+  "tag": "v0.1.0-alpha.18",
+  "tag_object": "33931cf3698f70663bcf53496adc3fe0d491ea1d",
+  "candidate": "80386a154231f327d60ba0d89f1ba6fa2719f137",
+  "source_cutoff": "bb2d8e51e",
+  "published_date": "2026-10-29",
+  "observed_at": "2026-10-29T04:23:46.574877+00:00",
+  "release_url": "https://github.com/KNXBench-Labs/KNXBench/releases/tag/v0.1.0-alpha.18",
+  "prerelease": true,
+  "draft": false,
+  "source_acceptance": "../releases/alpha18.md#acceptance-and-public-verification",
+  "acceptance_boundary": {
+    "runtime_revision": "80386a154231f327d60ba0d89f1ba6fa2719f137",
+    "method": "One frozen source campaign; accepted original package/web receipts, independently reconciled extra-runner prefix and bounded continuation, then both authorized historical opt-ins. No green product suite replay for verifier repairs.",
+    "package_gate": {
+      "stages": 10,
+      "web_gate_stages": 89,
+      "rust": {
+        "passed": 7196,
+        "failed": 0,
+        "ignored": 238
+      },
+      "vitest": 4654,
+      "fixture_browser": 951,
+      "production_browser": 567,
+      "corpus": {
+        "passed": 155,
+        "selected": 155,
+        "targets": 9
+      },
+      "tooling": {
+        "registered": 466,
+        "optional_skips": 6
+      }
+    },
+    "release_extras": {
+      "browser": 49,
+      "real_server_specs": 24,
+      "product_corpus_executions": 15,
+      "historical_opt_ins_passed": 2,
+      "missing_required_opt_ins": []
+    },
+    "counts_are_overlapping_executions_not_unique_tests": true,
+    "inputs_frozen": true,
+    "user_data_unchanged": true,
+    "private_corpus_payloads_published": false
+  },
+  "packaging": {
+    "dry_runs": {
+      "appimage_mcp": 40787068737,
+      "docker": 40787068747,
+      "publish_jobs_skipped": true
+    },
+    "tag_runs": {
+      "appimage_mcp": 40812340080,
+      "docker": 40812340107,
+      "actual_publish_jobs_successful": true
+    }
+  },
+  "github_assets": [
+    {
+      "name": "knx-mcp-x86_64-linux",
+      "size": 14215936,
+      "sha256": "e6155616ec663195415b1f2a03274c18cb5ede6e01f05f403ac8d47d984bb54f",
+      "providerDigest": "sha256:e6155616ec663195415b1f2a03274c18cb5ede6e01f05f403ac8d47d984bb54f",
+      "assetId": "RA_kwDOVA_Ag84o9sNA"
+    },
+    {
+      "name": "KNXBench_0.1.0-alpha.18_amd64.AppImage",
+      "size": 92346872,
+      "sha256": "e239f464aca9b581ef395173facd5cd26b4c91e4d899cc72e7210eae3c36335b",
+      "providerDigest": "sha256:e239f464aca9b581ef395173facd5cd26b4c91e4d899cc72e7210eae3c36335b",
+      "assetId": "RA_kwDOVA_Ag84o9sM9"
+    },
+    {
+      "name": "SHA256SUMS",
+      "size": 194,
+      "sha256": "918660d45feb40d9fe9661a8b8106d1686437b7250cfcc3ee78b5d1da2db78eb",
+      "providerDigest": "sha256:918660d45feb40d9fe9661a8b8106d1686437b7250cfcc3ee78b5d1da2db78eb",
+      "assetId": "RA_kwDOVA_Ag84o9sM_"
+    }
+  ],
+  "published_checksums_verified": true,
+  "mcp": {
+    "version": "knx-mcp 0.1.0-alpha.18+g80386a1",
+    "build_suffix": "80386a1",
+    "suffix_matches_candidate": true,
+    "network": "loopback-only namespace"
+  },
+  "appimage": {
+    "extraction": true,
+    "host_library_positive_control": true,
+    "bundled_libwayland_client": 0,
+    "broadway_startup": {
+      "embeddedListener": true,
+      "frontendStatus": 200,
+      "version": {
+        "version": "0.1.0-alpha.18+g80386a1"
+      },
+      "appRunningAtProbe": true,
+      "eglBadOrAbortLines": 0,
+      "appTeardown": "term",
+      "broadwayTeardownExit": 143,
+      "scope": "Broadway embedded-server startup; not FUSE, Mesa EGL, native visual or accessibility acceptance"
+    },
+    "limitations": [
+      "Not FUSE launch acceptance",
+      "Not native visual, Mesa EGL or assistive-technology acceptance"
+    ]
+  },
+  "docker": {
+    "image": "knxbench/knxbench-server:0.1.0-alpha.18",
+    "index_digest": "sha256:ea6e38f0e2ae7658bdef5c4b1d1b0d557a481eaf4f1095a9519ab56bdecc7d17",
+    "latest_same_index": true,
+    "native_platforms": [
+      "linux/amd64",
+      "linux/arm64"
+    ],
+    "attestation_descriptors": 2,
+    "native": {
+      "arm64": {
+        "manifestDigest": "sha256:56c6e2d1ce70ad3dd2ee19d663f57526ebc8071dee0b980e086e5c144d05bee5",
+        "manifestSize": 1059,
+        "configDescriptor": {
+          "mediaType": "application/vnd.oci.image.config.v1+json",
+          "digest": "sha256:054579cbeefe3f5e43a73dc2e188e8b3a14e968ddd4ad78fe34bd0adfa94ab37",
+          "size": 3147
+        },
+        "configComputedDigest": "sha256:054579cbeefe3f5e43a73dc2e188e8b3a14e968ddd4ad78fe34bd0adfa94ab37",
+        "configBytes": 3147,
+        "architecture": "arm64",
+        "os": "linux",
+        "revision": "80386a154231f327d60ba0d89f1ba6fa2719f137",
+        "version": "v0.1.0-alpha.18"
+      },
+      "amd64": {
+        "manifestDigest": "sha256:8ceee7927d86e438efd7c1b4932b5a3705597b0fc95db4f3e35389ad2cd8cfb0",
+        "manifestSize": 1059,
+        "configDescriptor": {
+          "mediaType": "application/vnd.oci.image.config.v1+json",
+          "digest": "sha256:6420a5b3e1c9ca60429467cef7c7a30a6081d629b4acbf147fc93ddc9d63a34a",
+          "size": 3148
+        },
+        "configComputedDigest": "sha256:6420a5b3e1c9ca60429467cef7c7a30a6081d629b4acbf147fc93ddc9d63a34a",
+        "configBytes": 3148,
+        "architecture": "amd64",
+        "os": "linux",
+        "revision": "80386a154231f327d60ba0d89f1ba6fa2719f137",
+        "version": "v0.1.0-alpha.18"
+      }
+    },
+    "anonymous_version_pull": true,
+    "version": "knx-server 0.1.0-alpha.18+g80386a1",
+    "pulled_latest": false,
+    "arm64_runtime_exercised": false
+  },
+  "isolated_smoke": {
+    "artifact": "published linux/amd64 Docker image",
+    "network": "server --network none; client shares only the owned server namespace; no host listener",
+    "authentication": {
+      "health": 200,
+      "unauthenticated_api": 401,
+      "authenticated_api": 200,
+      "frontend": 200
+    },
+    "create_save_switch_reopen": {
+      "engineering_content_equal": true,
+      "saved_schema": 16,
+      "integrity_check": "ok"
+    },
+    "committed_synthetic_protected_import": {
+      "source": "crates/knx-testsupport/fixtures/zipcrypto-minimal.knxproj",
+      "without_password_status": 422,
+      "with_password_status": 200,
+      "errors": 0,
+      "warnings": 1,
+      "devices": 1,
+      "group_addresses": 1,
+      "links": 1,
+      "save_switch_reopen_engineering_content_equal": true,
+      "persisted_import_report_equal": true,
+      "retained_source_entry_hashes_match": true,
+      "original_archive_unchanged": true,
+      "encrypted_wrapper_limitation": "The nested encrypted transport wrapper is not copied into the native file; its decrypted entries and separate carried synthetic manufacturer entry are retained hash-equal.",
+      "saved_schema": 16,
+      "integrity_check": "ok"
+    },
+    "legacy_native_save_as": {
+      "source": "Authentic schema-13 fixture present in the public Alpha 17 Git tree; not an assertion that Alpha 17 wrote schema 13.",
+      "fixture": {
+        "sourceTag": "v0.1.0-alpha.17",
+        "sourcePath": "crates/knx-store/tests/fixtures/native13-before-notes-saved.sqlite",
+        "sourceCommit": "a9ea32d72364478b25e158d0b95465af7a4702df",
+        "sha256": "984eebeba174a2c2edd1e98743208ed54ab1c3b9c300d5f3f5cacf25cc8f7e29",
+        "bytes": 1290240,
+        "schema": 13
+      },
+      "original_schema": 13,
+      "saved_schema": 16,
+      "original_and_opened_source_copy_unchanged": true,
+      "engineering_tables_equal": 19,
+      "projected_engineering_content_equal": true,
+      "notes_count": 0,
+      "integrity_check": "ok",
+      "foreign_key_violations": 0,
+      "history": {
+        "opened": {
+          "generation": 3,
+          "undoSteps": 1,
+          "redoSteps": 0
+        },
+        "reopened": {
+          "generation": 1,
+          "undoSteps": 1,
+          "redoSteps": 0
+        },
+        "savedVersionsBefore": 1,
+        "savedVersionsAfter": 0,
+        "undoRedoExecuted": false,
+        "scope": "Save As to a new file, not in-place migration and not full history archival-copy proof."
+      },
+      "history_boundary": "Save As to a new native file does not clone the source file saved-version archive. The original retains its version; no undo/redo was executed. Ordinary Save and in-place migration were not this probe."
+    }
+  },
+  "website": {
+    "run": 40460034752,
+    "source_commit": "ecd1ddfbf36befa5fea7a6714971ab132a98b803",
+    "release_mode": true,
+    "consumed_site_story_workflow_inputs_unchanged": true,
+    "source_hashes_verified": 46,
+    "inventoried_files": 42,
+    "served_files_verified": 42,
+    "root_alias_verified": true,
+    "control_exclusions": [],
+    "build_manifest_sha256": "0450cf3342fd80f2c5f5a453e6925db14ea06ba167405b8895c56d4378f197c1",
+    "expected_bytes_source": "Retained accepted full-gate release build; its complete site/story/workflow inputs equal the successful Pages commit.",
+    "deployment_artifact_limitation": "The prior Pages artifact is no longer available in the run API. No deployment ZIP/TAR digest verification is claimed; public bytes were compared with the retained accepted deterministic build."
+  },
+  "evidence_reconciliation": {
+    "original_refusals_preserved": true,
+    "public_asset_reader": "A successful sha256sum command was followed by an overly strict ./-path parser refusal. Only the parser was corrected; remaining starts ran on the same downloaded bytes.",
+    "docker_readers": [
+      "10-registry-readback",
+      "33-client",
+      "50-analysis"
+    ],
+    "controller_reader": "JavaScript text.length is UTF-16 code units; the retained response-length reader was corrected and resumed at response 027.",
+    "artifact_reader_assertions": 192,
+    "artifact_assertions_are_not_product_tests": true,
+    "no_product_or_download_replay_for_reader_fixes": true
+  },
+  "protections": {
+    "existing_containers_unchanged": true,
+    "local_latest_alias_unchanged": true,
+    "own_probe_containers_removed": true,
+    "own_version_image_copy_removed": true,
+    "dirty_root_checkout_not_synchronized": true,
+    "no_physical_knx_access": true,
+    "no_owner_desktop_takeover": true
+  },
+  "scope_limits": [
+    "One tiny committed synthetic protected import, not blanket ETS compatibility.",
+    "ARM distribution/config identity, not local ARM runtime acceptance.",
+    "Native/model16 unchanged from Alpha17; the legacy fixture probe is13->16. Product database28->30 is a separate writable-open upgrade boundary.",
+    "Save As engineering preservation is not a full saved-version-archive copy or undo/redo execution proof.",
+    "Website bytes match the accepted deterministic build with unchanged inputs; no expired deployment-artifact payload verification is claimed."
+  ]
+}

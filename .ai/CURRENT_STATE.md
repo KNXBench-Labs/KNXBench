@@ -1,24 +1,28 @@
 # Restart snapshot
 
-## Alpha 18 release (TAG/MAIN PUBLISHED, observed 2026-10-29 04:36 CET)
-- Release freeze: released by alpha18-release. `v0.1.0-alpha.18` and main were atomically
-  published at accepted `80386a154231f327d60ba0d89f1ba6fa2719f137`; prerelease/body read back.
-- Other tracks may publish again; later source belongs to the next alpha. Never move the tag.
-- Source cutoff `bb2d8e51e`; versions alpha18, native/model16, productdb28->30.
-- Accepted scope: package10/web89, Rust7196/238ignored, Vitest4654, fixture951, production567,
-  corpus155/155 in9targets; extras browser49/native-edit24/product15 (overlapping executions).
-- One private count-verifier refusal remains retained; exact inventory proof +bounded2-stage
-  continuation accepted unchanged source, not a replay or rewritten original full gate.
-- Both historical pinned opt-ins1/1 passed after owner permission; copy removed verifiably,
-  no manufacturer payloads or detailed corpus outputs committed/uploaded. No missing opt-ins.
-- Dry runs40787068737/40787068747 success with publish skipped. Real tag runs AppImage/MCP
-  40812340080 and Docker amd64+arm64 40812340107 are building/publishing; external verification
-  remains pending. Do not equate a visible release with complete artifact delivery.
-- Release owner GO: public download/hash/registry readback and isolated artifact smokes,
-  docs-only closeout and exact owned cleanup. Owner's running container must stay untouched.
-- Evidence `<profile>/evidence/a18-release-20261028/`; root/foreign work preserved.
-- Next: finish actual tag producers, verify public bytes/revisions and isolated migration,
-  publish sanitized final receipt and retire own work. No real bus or desktop takeover.
+## Alpha 18 release (PUBLISHED, ARTIFACTS VERIFIED; observed 2026-10-29 05:30 CET)
+- Release freeze: released by alpha18-release. Immutable `v0.1.0-alpha.18` names
+  `80386a154231f327d60ba0d89f1ba6fa2719f137`; source cutoff `bb2d8e51e`.
+- Other tracks may publish; later source belongs to the next alpha. Never move the tag.
+- Source campaign: package10/web89; Rust7196/238ignored, Vitest4654, fixture951,
+  production567, corpus155/155 in9targets; extras browser49/native24/product15.
+- Both authorized historical opt-ins1/1 passed; exact copied selection removed.
+  Private manufacturer payloads and detailed corpus outputs were never published.
+- Original count/verifier refusals stay retained; unchanged-source continuations,
+  not green-product replays, close the required scope. Counts overlap.
+- Real tag producers40812340080/40812340107 succeeded. All3 public assets match
+  provider hashes; isolated MCP and AppImage/Broadway version/frontend passed.
+- Docker native amd64+arm64 configs bind the exact tag; version/latest index equal.
+  Isolated amd64 auth/create/protected-import/legacy13->16-save-as passed bounded checks.
+- Save As does not clone the source saved-version archive; original remained intact.
+  No undo/redo, ARM-runtime, FUSE/native-visual or physical-bus acceptance inferred.
+- Live site42 files +root alias match accepted unchanged-input build; old Pages
+  artifact unavailable, so no deployment-ZIP/TAR-payload proof is claimed.
+- Canonical public receipt: `docs/evidence/release-alpha18-2026-10-29.json`.
+- Release owner has no source/hardware reservation. Only reviewed docs publication,
+  durable private evidence and exact-owned retirement remain authorized; no new feature work.
+- Active receipts `<profile>/evidence/a18-release-20261028/`; final closeout target
+  `<profile>/release-closeouts/alpha18-20261029/`. Dirty root and owner container stay protected.
 
 ## Alpha 18 follow-ups 1 + 2 (DELIVERED, RETIRED; observed 2026-10-28 23:01 CET)
 - Owner's root checkpoint records final closeout; source delivery is verified on the cutoff.

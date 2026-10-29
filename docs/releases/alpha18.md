@@ -281,3 +281,42 @@ alphas. [Installation](../manual/getting-started/04-installation.md) ·
 - **951 fixture-browser**, **567 production-browser**, **49 extra-browser** and **24 real-server evidence/edit-spec executions** passed. These are different, partly overlapping suites, not a unique-test total.
 - **155/155 conventional corpus tests in 9 targets**, the additional product-corpus runs and **both historical pinned opt-ins** passed. Manufacturer inputs remain private and are not distributed. The tooling suite registered 466 tests with 6 existing optional skips.
 - **1 counting hiccup**, fixed without replaying green product suites: Cargo selected five tests where our extra verifier expected four. The original refusal, compiled-inventory proof and bounded continuation were retained separately. The product did not need remedial arithmetic; its counter did.
+
+## Acceptance and public verification
+
+Published on **29 October 2026** from immutable
+`80386a154231f327d60ba0d89f1ba6fa2719f137`, with the source cutoff and format
+boundaries above unchanged. The [sanitized public receipt](../evidence/release-alpha18-2026-10-29.json)
+separates the frozen source campaign, successful dry runs, actual tag publishers
+and checks of the final public bytes. Original verifier refusals and their
+bounded, read-only reconciliations remain retained; they are not relabelled as
+an uninterrupted green runner or as fresh product-test executions.
+
+- AppImage, MCP and checksum downloads match their published sizes and provider
+  SHA-256 digests. MCP reports the tag's build prefix. The unchanged AppRun starts
+  on an isolated Broadway display with the correct embedded-server version and
+  HTTP 200 frontend; this is not FUSE, native visual, Mesa EGL or Orca acceptance.
+- Both real tag publishers succeeded. Docker version and `latest` share one index;
+  both native platform configs carry the exact revision and version labels.
+  Local product execution was amd64 only; arm64 is distribution/identity proof.
+- The network-isolated published amd64 image passed authentication/frontend,
+  create/save/switch/reopen and a committed tiny password-protected synthetic
+  import/save/switch/reopen. Retained imported entries match the source; the
+  original archive remains unchanged. This is not blanket encrypted-ETS coverage.
+- An authentic legacy schema 13 fixture present in the Alpha 17 Git tree opened,
+  saved to a new schema 16 file and reopened with equal engineering content,
+  19 common tables and integrity-checked stores. It is not evidence that Alpha 17
+  wrote schema 13 or that current Alpha 17 native 16 files need a new format migration.
+- **History boundary:** Save As to a new file starts its own saved-version archive,
+  not a clone of the source file's archive. The tested original stayed unchanged;
+  one prior saved version stayed in that original, not the new file. The probe
+  checked history properties but did not execute undo/redo. Keep a closed-file
+  copy for full-history backup; see [project history](../PROJECT_HISTORY.md).
+- All 42 inventoried live website files, including `.nojekyll`, `CNAME` and the
+  build manifest, plus the root alias matched the accepted release build.
+  Website/story/workflow inputs equal the successful Pages revision. Its older
+  deployment artifact is no longer available, so no ZIP/TAR-provider-digest
+  verification is claimed; the public-byte comparison used the retained build.
+
+Verification used isolated fictional projects and loopback. It did not access a
+physical KNX installation or upgrade a running user deployment.

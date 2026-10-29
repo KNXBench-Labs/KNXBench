@@ -25,6 +25,14 @@ it; the allocation mismatch of #30/#22 stays unresolved and no hardware acceptan
 follows. Scope, upgrade notes and boundaries:
 [Alpha 18 release notes](releases/alpha18.md).
 
+Published on 29 October 2026 at immutable `80386a154231f327d60ba0d89f1ba6fa2719f137`.
+Both real tag publishers succeeded; downloaded AppImage/MCP/checksum bytes and the
+amd64/arm64 registry identities were checked separately from the source gate.
+Isolated amd64 auth/create/import/legacy-native-save-as probes and the unchanged
+live website passed their bounded checks. History/archive and ARM/native-visual
+limits remain explicit in the [public verification receipt](evidence/release-alpha18-2026-10-29.json).
+The later documentation-only closure does not move the tag or extend hardware acceptance.
+
 ## System-2 final-step failure category (28 October 2026 source)
 
 A failure inside the last System-2 `Disconnect` step is now classified by the Net executor

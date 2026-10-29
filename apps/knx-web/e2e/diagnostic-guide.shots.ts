@@ -75,17 +75,15 @@ test("step-by-step stills for the diagnostic export guide", async ({page}) => {
   await expect(dialog.locator("[data-diagnostics-start]")).toBeEnabled();
   await shot(dialog, "3-review-and-read");
 
-  // Step 4: result, save consent, save button.
+  // Step 4: result and the hand-over to the Report problem wizard (DIAG-03).
   await dialog.locator("[data-diagnostics-start]").click();
   await expect(dialog.locator("[data-diagnostics-result]")).toBeVisible();
   await expect(dialog.locator("[data-diagnostics-result]")).toContainText("hardware-type: Read");
   await expect(dialog.getByRole("alert")).toHaveCount(0);
-  await dialog.locator("[data-diagnostics-share-consent]").check();
-  await dialog.locator("[data-diagnostics-save]").scrollIntoViewIfNeeded();
-  await shot(dialog, "4-result-and-save");
+  await dialog.locator("[data-report-problem-open=diagnostics]").scrollIntoViewIfNeeded();
+  await shot(dialog, "4-result-and-report");
 
-  // The save is real too: the stills must not show a button that does not work.
-  const download = page.waitForEvent("download");
-  await dialog.locator("[data-diagnostics-save]").click();
-  expect((await download).suggestedFilename()).toMatch(/^knxbench-device-diagnostics-[a-f0-9]{12}\.zip$/);
+  // The hand-over is real too: the stills must not show a button that does not work.
+  await dialog.locator("[data-report-problem-open=diagnostics]").click();
+  await expect(page.getByRole("dialog", { name: "Report a problem", exact: true })).toBeVisible();
 });

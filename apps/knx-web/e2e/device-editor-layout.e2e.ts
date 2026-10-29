@@ -3,6 +3,7 @@ import { test, expect, type Page } from "@playwright/test";
 import { join } from "node:path";
 import { messages as en } from "../src/messages/en";
 import { messages as de } from "../src/messages/de";
+import { answerBundleRoute, bundleLog } from "./report-problem-fixture";
 
 const translations = {
   en: ["Read", "Write", "Transmit", "Update", "Communication", "Read on init"],
@@ -147,9 +148,10 @@ for (const language of ["en", "de"] as const) {
 
 // Diagnostics-tab entry (24 October 2026): plain buttons that open the existing dialogs with
 // this device preselected. Strict routing: opening either dialog must request nothing new.
-async function strictParameterRoutes(page: Page): Promise<string[]> {
+async function strictParameterRoutes(page: Page, bundle = bundleLog()): Promise<string[]> {
   const unexpected: string[] = [];
-  await page.route("**/api/**", (route) => {
+  await page.route("**/api/**", async (route) => {
+    if (await answerBundleRoute(route, bundle)) return;
     const request = route.request();
     const path = new URL(request.url()).pathname;
     if (request.method() === "GET" && path === "/api/device/42/parameters") {
@@ -166,7 +168,8 @@ for (const language of ["en", "de"] as const) {
     test(`${language} diagnostics tab opens analysis and report for this device at ${width}px (${theme})`, async ({ page }) => {
       const m = language === "de" ? de : en;
       await page.setViewportSize({ width, height: 800 });
-      const unexpected = await strictParameterRoutes(page);
+      const bundle = bundleLog();
+      const unexpected = await strictParameterRoutes(page, bundle);
       await page.goto(`/e2e/device-editor-fixture.html?lang=${language}&theme=${theme}`);
       await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
       await page.getByRole("tab", { name: m["parameters.diagnosticsTab"], exact: true }).click();
@@ -220,12 +223,21 @@ for (const language of ["en", "de"] as const) {
       expect(onReport).toMatchObject({ report: true, visible: true });
       expect(onReport.outline).not.toMatch(/^none|\b0px$/);
       await page.keyboard.press("Space");
-      const support = page.getByRole("dialog", { name: m["support.title"], exact: true });
-      await expect(support).toBeVisible();
-      await expect(support.locator("[data-support-device]")).toHaveValue("42");
+      // DIAG-03: the report button opens the one Report problem wizard for reading this device.
+      const wizard = page.getByRole("dialog", { name: m["reportProblem.title"], exact: true });
+      await expect(wizard).toBeVisible();
+      await expect(wizard.locator("[aria-current=step]")).toContainText(m["reportProblem.step.contents"]);
+      await expect.poll(() => bundle.previews.length).toBe(1);
+      expect(bundle.previews[0]).toMatchObject({ problemType: "deviceReading", deviceId: 42 });
+      await expect(wizard.locator("[data-report-device]")).toHaveValue("42");
+      const wizardBox = (await wizard.boundingBox())!;
+      expect(wizardBox.x).toBeGreaterThanOrEqual(0);
+      expect(wizardBox.x + wizardBox.width).toBeLessThanOrEqual(width + 1);
       if (capture) await page.screenshot({ path: join(capture, `report-${language}-${width}-${theme}.png`) });
-      await support.getByRole("button", { name: m["support.close"], exact: true }).click();
-      await expect(support).toHaveCount(0);
+      await wizard.getByRole("button", { name: m["reportProblem.close"], exact: true }).click();
+      await expect(wizard).toHaveCount(0);
+      expect(await focused()).toMatchObject({ report: true });
+      expect(bundle.exports).toEqual([]);
       expect(unexpected).toEqual([]);
     });
   }

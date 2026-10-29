@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { messages as en } from "../src/messages/en";
 import { messages as de } from "../src/messages/de";
 import { intercept, openProject, dismissToasts } from "./communication-fixture";
-import { answerBundleRoute, bundleLog } from "./report-problem-fixture";
+import { answerBundleRoute, bundleLog, initialPreviewCount } from "./report-problem-fixture";
 
 for (const language of ["en", "de"] as const) {
   for (const width of [1440, 400]) {
@@ -52,9 +52,11 @@ for (const language of ["en", "de"] as const) {
       await help.locator("[data-report-problem-open=support-notice]").click();
       const wizard = page.getByRole("dialog", { name: m["reportProblem.title"], exact: true });
       await expect(wizard.locator("[aria-current=step]")).toContainText(m["reportProblem.step.contents"]);
-      await expect.poll(() => bundle.previews.length).toBe(1);
+      await expect.poll(() => bundle.previews.length).toBe(await initialPreviewCount(page));
       expect(bundle.previews[0]).toMatchObject({ problemType: "deviceProgramming", deviceId: 1 });
-      expect(bundle.previews[0].operation).toBeUndefined();
+      for (const query of bundle.previews) {
+        expect(query).toMatchObject({ problemType: "deviceProgramming", deviceId: 1, operation: { selection: "none" } });
+      }
       expect(JSON.stringify(bundle.previews[0])).not.toContain("CUSTOMER_SECRET");
       expect(bundle.exports).toEqual([]);
       await page.keyboard.press("Escape");

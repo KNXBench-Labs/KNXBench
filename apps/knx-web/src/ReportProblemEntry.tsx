@@ -1,10 +1,10 @@
 /** The one Report problem entry: provider, opener hook and the shortcut button. */
-import { createContext, useContext, type ReactNode } from "react";
+import { createContext, useContext, useLayoutEffect, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import type { ProjectTree } from "./bindings/ProjectTree";
 import { useFileMenuItemProps } from "./FileMenu";
 import { useTranslate } from "./i18n";
-import type { ReportProblemRequest } from "./reportProblem";
+import { reportContext, type ReportProblemRequest } from "./reportProblem";
 import ReportProblemWizard from "./ReportProblemWizard";
 import type { ToastNotification } from "./toast";
 
@@ -25,10 +25,20 @@ export function ReportProblemProvider({ request, onOpen, onClose, tree, notifica
   notifications: readonly ToastNotification[];
   children: ReactNode;
 }) {
+  const binding = JSON.stringify(reportContext(tree)) + (tree === null ? "/closed" : "/open");
+  const [lifetime, setLifetime] = useState(binding);
+  // Suppress the old instance in the same render that accepts a new context.
+  // Layout cleanup invalidates its continuations before promises can resume.
+  useLayoutEffect(() => {
+    if (lifetime !== binding) {
+      onClose();
+      setLifetime(binding);
+    }
+  }, [binding, lifetime, onClose]);
   return <ReportProblem.Provider value={onOpen}>
     {children}
-    {request && createPortal(
-      <ReportProblemWizard request={request} tree={tree} notifications={notifications} onClose={onClose} />,
+    {request && lifetime === binding && createPortal(
+      <ReportProblemWizard key={JSON.stringify(request)} request={request} tree={tree} notifications={notifications} onClose={onClose} />,
       document.body,
     )}
   </ReportProblem.Provider>;

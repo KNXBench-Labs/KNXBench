@@ -7,7 +7,7 @@ import { messages as de } from "../src/messages/de";
 // Hand-written check records the Rust serializer admits and re-emits unchanged
 // (`the_web_fixtures_are_the_serializer_vocabulary`); synthetic, not live evidence.
 import checkFixtures from "../src/postDownloadCheck.fixtures.json" with { type: "json" };
-import { answerBundleRoute, bundleLog } from "./report-problem-fixture";
+import { answerBundleRoute, bundleLog, initialPreviewCount } from "./report-problem-fixture";
 
 const device = (id: number, address: string, name: string) => ({ id, name, address, description: null, com_object_count: 0 });
 const tree = {
@@ -161,8 +161,11 @@ for (const language of ["en", "de"] as const) {
       await verify.locator("[data-report-problem-open=verify]").click();
       const wizard = page.getByRole("dialog", { name: m["reportProblem.title"], exact: true });
       await expect(wizard.locator("[aria-current=step]")).toContainText(m["reportProblem.step.contents"]);
-      await expect.poll(() => state.bundle.previews.length).toBe(1);
-      expect(state.bundle.previews[0]).toMatchObject({ problemType: "deviceProgramming", operation: { relatedKey: "downloadId", relatedValue: "7" } });
+      await expect.poll(() => state.bundle.previews.length).toBe(await initialPreviewCount(page));
+      for (const query of state.bundle.previews) {
+        expect(query).toMatchObject({ problemType: "deviceProgramming", operation: { relatedKey: "downloadId", relatedValue: "7" } });
+        expect(query).not.toHaveProperty("deviceId");
+      }
       expect(state.bundle.exports).toEqual([]);
       await page.keyboard.press("Escape");
       await expect(wizard).toHaveCount(0);

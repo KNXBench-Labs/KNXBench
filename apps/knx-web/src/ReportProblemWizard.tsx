@@ -7,7 +7,7 @@ import { appUiScale } from "./appUiScale";
 import type { ProjectTree } from "./bindings/ProjectTree";
 import {
   deleteRecordings, exportBundle, previewBundle, sectionText, PROBLEM_TYPES,
-  type BundlePreview, type DeleteOutcome, type OfferView, type ProblemType, type RecordingSummary, type SectionKind,
+  type BundlePreview, type DeleteOutcome, type OfferView, type ProblemType, type RecordingSummary, type ReviewedBundleQuery, type SectionKind,
 } from "./diagnosticBundleApi";
 import { isTauri } from "./filePicker";
 import { buildIssueUrl } from "./githubIssue";
@@ -17,8 +17,8 @@ import type { MessageKey } from "./messages/en";
 import Overlay from "./Overlay";
 import {
   buildQuery, bytesByKind, defaultOffer, formatBytes, initialChoice, mailDraftFor, markerKeys, reasonKey,
-  recentErrors, resolvedRecording, toggleEarlier, toggleSection, withProblemType,
-  type ClientFacts, type ReportProblemRequest, type WizardChoice,
+  boundedClientFacts, operationKindKey, operationOutcomeKey, reportContext, reviewedQuery, resolvedRecording, toggleEarlier, toggleSection, withProblemType,
+  type ReportProblemRequest, type WizardChoice,
 } from "./reportProblem";
 import { useSavedThemeId } from "./theme";
 import type { ToastNotification } from "./toast";
@@ -37,7 +37,7 @@ const STEP_LABEL: Record<Step, MessageKey> = {
 
 type Loaded =
   | { status: "loading"; preview: BundlePreview | null }
-  | { status: "ready"; preview: BundlePreview }
+  | { status: "ready"; preview: BundlePreview; query: ReviewedBundleQuery }
   | { status: "failed"; preview: BundlePreview | null; error: string };
 
 type SectionText = { status: "loading" } | { status: "ready"; text: string } | { status: "failed"; error: string };
@@ -52,15 +52,14 @@ export default function ReportProblemWizard({ request, tree, notifications, onCl
   const [language] = useUiLanguage();
   const themeId = useSavedThemeId();
   // What the browser says about itself is taken once, when the wizard opens.
-  const [client] = useState<ClientFacts>(() => ({
+  const [client] = useState(() => boundedClientFacts({
     appVersion: packageVersion,
     shell: isTauri() ? "tauri" : "browser",
     uiLanguage: language,
     theme: themeId,
     viewport: { width: window.innerWidth, height: window.innerHeight },
     uiScale: appUiScale(),
-    recentErrors: recentErrors(notifications),
-  }));
+  }, notifications));
   const [step, setStep] = useState<Step>(request.problemType ? "contents" : "type");
   const [choice, setChoice] = useState<WizardChoice>(() => initialChoice(request));
   const [loaded, setLoaded] = useState<Loaded>({ status: "loading", preview: null });
@@ -70,7 +69,11 @@ export default function ReportProblemWizard({ request, tree, notifications, onCl
   const [consent, setConsent] = useState(false);
   const [description, setDescription] = useState("");
   const [saving, setSaving] = useState(false);
+  // A void blob click proves initiation only; the user confirms the actual file.
   const [saved, setSaved] = useState<string | null>(null);
+  const [fileConfirmed, setFileConfirmed] = useState(false);
+  const confirmationAwarded = useRef(false);
+  const fileConfirmRef = useRef<HTMLInputElement>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleted, setDeleted] = useState<{ outcome: DeleteOutcome } | { error: string } | null>(null);
@@ -81,7 +84,9 @@ export default function ReportProblemWizard({ request, tree, notifications, onCl
   const epoch = useRef(0);
   const mounted = useRef(true);
 
-  const query = useMemo(() => buildQuery(choice, client as unknown as Record<string, unknown>), [choice, client]);
+  const contextKey = JSON.stringify(reportContext(tree));
+  const query = useMemo(() => ({ ...buildQuery(choice, client as unknown as Record<string, unknown>),
+    ...(reportContext(tree) ? { context: reportContext(tree) } : {}) }), [choice, client, contextKey]);
   const queryKey = JSON.stringify(query);
   const collecting = step !== "type";
 
@@ -92,17 +97,23 @@ export default function ReportProblemWizard({ request, tree, notifications, onCl
   // Every change of the contents asks the server again; an older answer is dropped.
   // Consent and a saved file belong to the contents they were given for.
   useEffect(() => {
-    if (!collecting) return;
     const id = ++epoch.current;
-    setLoaded((previous) => ({ status: "loading", preview: previous.preview }));
+    setLoaded((previous) => ({ status: "loading", preview: collecting ? previous.preview : null }));
     setTexts(new Map());
     setShown(new Set());
     setConsent(false);
     setSaved(null);
+    setFileConfirmed(false);
     setSaveError(null);
+    setSaving(false);
+    if (!collecting) return;
     previewBundle(query).then(
-      (preview) => { if (id === epoch.current) setLoaded({ status: "ready", preview }); },
-      (reason) => { if (id === epoch.current) setLoaded((previous) => ({ status: "failed", preview: previous.preview, error: errorMessage(reason) })); },
+      (preview) => { if (id === epoch.current) setLoaded({ status: "ready", preview, query: reviewedQuery(query, preview) }); },
+      (reason) => {
+        if (id !== epoch.current) return;
+        if (stale(reason)) withdrawReview();
+        else setLoaded((previous) => ({ status: "failed", preview: previous.preview, error: errorMessage(reason) }));
+      },
     );
     // `query` is read through `queryKey`: an equal request is not asked twice.
   }, [collecting, queryKey, reload]);
@@ -126,8 +137,9 @@ export default function ReportProblemWizard({ request, tree, notifications, onCl
     } catch { /* an Intl-refused language tag keeps the raw timestamp */ }
     return t("reportProblem.operation.option", {
       started,
-      kind: recording.operationKind ?? "?",
-      outcome: recording.outcome ?? t("reportProblem.operation.unfinished"),
+      kind: recording.operationKind === null ? "?" : operationKindKey(recording.operationKind) ? t(operationKindKey(recording.operationKind)!) : recording.operationKind,
+      outcome: recording.outcome === null ? t("reportProblem.operation.unfinished")
+        : operationOutcomeKey(recording.outcome) ? t(operationOutcomeKey(recording.outcome)!) : recording.outcome,
     });
   }
 
@@ -136,7 +148,22 @@ export default function ReportProblemWizard({ request, tree, notifications, onCl
     return t("reportProblem.unavailable", { reason: key ? t(key) : text });
   }
 
+  function withdrawReview() {
+    ++epoch.current;
+    setConsent(false); setSaved(null); setFileConfirmed(false); setSaving(false);
+    setTexts(new Map()); setShown(new Set());
+    setLoaded({ status: "failed", preview: null, error: t("reportProblem.reviewChanged") });
+  }
+
+  function close() {
+    withdrawReview();
+    onClose();
+  }
+
+  const stale = (error: unknown) => typeof error === "object" && error !== null && "status" in error && error.status === 409;
+
   async function showText(key: string) {
+    if (loaded.status !== "ready") return;
     if (shown.has(key)) {
       setShown((current) => { const next = new Set(current); next.delete(key); return next; });
       return;
@@ -146,37 +173,48 @@ export default function ReportProblemWizard({ request, tree, notifications, onCl
     const id = epoch.current;
     setTexts((current) => new Map(current).set(key, { status: "loading" }));
     try {
-      const text = await sectionText(query, key);
+      if (loaded.status !== "ready") return;
+      const text = await sectionText(loaded.query, key);
       if (id === epoch.current && mounted.current) setTexts((current) => new Map(current).set(key, { status: "ready", text }));
     } catch (e) {
-      if (id === epoch.current && mounted.current) setTexts((current) => new Map(current).set(key, { status: "failed", error: errorMessage(e) }));
+      if (id === epoch.current && mounted.current) {
+        if (stale(e)) withdrawReview();
+        else setTexts((current) => new Map(current).set(key, { status: "failed", error: errorMessage(e) }));
+      }
     }
   }
 
   async function save() {
-    if (!consent || !ready || saving || !preview) return;
+    if (!consent || loaded.status !== "ready" || saving || !preview) return;
     const id = epoch.current;
     setSaving(true);
+    setSaved(null); setFileConfirmed(false); confirmationAwarded.current = false;
     setSaveError(null);
     try {
       const trimmed = description.trim();
-      const bundle = await exportBundle(trimmed ? { ...query, description: trimmed } : query, preview.fileName);
+      const bundle = await exportBundle(trimmed ? { ...loaded.query, description: trimmed } : loaded.query, preview.fileName);
       if (id !== epoch.current || !mounted.current) return;
       downloadLocalBlob(bundle.blob, bundle.fileName);
       setSaved(bundle.fileName);
-      emitAchievementEvent({ type: "debugReportCreated" });
+
     } catch (e) {
-      if (id === epoch.current && mounted.current) setSaveError(errorMessage(e));
+      if (id === epoch.current && mounted.current) {
+        if (stale(e)) withdrawReview();
+        else setSaveError(errorMessage(e));
+      }
     } finally {
-      if (mounted.current) setSaving(false);
+      if (id === epoch.current && mounted.current) setSaving(false);
     }
   }
 
   // The Save button disables itself while it runs; hand focus to the result.
   useEffect(() => {
-    if (saved !== null) mailRef.current?.focus();
+    if (saved !== null) {
+      if (fileConfirmed) mailRef.current?.focus();
+      else fileConfirmRef.current?.focus();
+    }
     else if (saveError !== null) saveErrorRef.current?.focus();
-  }, [saved, saveError]);
+  }, [saved, saveError, fileConfirmed]);
 
   async function removeRecordings() {
     setConfirmDelete(false);
@@ -190,9 +228,9 @@ export default function ReportProblemWizard({ request, tree, notifications, onCl
       if (mounted.current) setDeleted({ error: errorMessage(e) });
     }
   }
-  useEffect(() => { if (deleted !== null) deleteResultRef.current?.focus(); }, [deleted]);
+  useEffect(() => { if (deleted !== null) deleteResultRef.current?.focus(); }, [deleted, loaded.status]);
 
-  const mailDraft = preview && saved !== null ? mailDraftFor(preview.mailDraft, preview.fileName, saved) : null;
+  const mailDraft = preview && saved !== null && fileConfirmed ? mailDraftFor(preview.mailDraft, preview.fileName, saved) : null;
   const issue = buildIssueUrl(t("reportProblem.issueTitle"), t("reportProblem.issueBody", {
     version: packageVersion, problem: t(`reportProblem.type.${choice.problemType}`),
   }));
@@ -240,7 +278,7 @@ export default function ReportProblemWizard({ request, tree, notifications, onCl
 
   return (
     <Overlay labelledBy="report-problem-title" className="new-project-panel project-wizard report-problem"
-      initialFocusRef={headingRef} onClose={onClose}>
+      initialFocusRef={headingRef} onClose={close}>
       <h2 className="settings-panel-title" id="report-problem-title">{t("reportProblem.title")}</h2>
       <ol className="project-wizard-steps" aria-label={t("projectWizard.stepsLabel")}>
         {STEPS.map((which, index) => (
@@ -276,7 +314,8 @@ export default function ReportProblemWizard({ request, tree, notifications, onCl
         <p role="status" className="report-problem-loading"><span className="task-status-text">{t("reportProblem.loading")}</span></p>
       )}
       {collecting && loaded.status === "failed" && (
-        <p role="alert" className="form-warning">{t("reportProblem.previewFailed", { error: loaded.error })}</p>
+        <div><p role="alert" className="form-warning">{t("reportProblem.previewFailed", { error: loaded.error })}</p>
+          <button type="button" data-report-refresh onClick={() => setReload((n) => n + 1)}>{t("reportProblem.refresh")}</button></div>
       )}
 
       {step === "contents" && preview && <div className="report-problem-contents">
@@ -300,6 +339,8 @@ export default function ReportProblemWizard({ request, tree, notifications, onCl
             {devices.map((d) => <option key={d.id} value={d.id}>{d.address ?? "—"} · {d.name}</option>)}
           </select>
         </label>}
+        {choice.sections.has("clientState") && client.truncated && <p className="settings-field-hint" data-report-client-truncated>
+          {t("reportProblem.clientTruncated", { omitted: client.omittedErrorCount, shortened: client.truncatedErrorCount })}</p>}
         <ul className="report-problem-offers">{preview.offers.map(offerRow)}</ul>
         <p className="report-problem-total" data-report-total>{t("reportProblem.total", { size: formatBytes(preview.totalBytes, language) })}</p>
         {preview.exceedsMailHint && <p className="form-warning" data-report-mail-hint>{t("reportProblem.mailHint")}</p>}
@@ -360,12 +401,12 @@ export default function ReportProblemWizard({ request, tree, notifications, onCl
         <label className="settings-field">
           <span className="settings-field-label">{t("reportProblem.description.label")}</span>
           <textarea rows={4} maxLength={8000} value={description} data-report-description
-            onChange={(e) => setDescription(e.target.value)} />
+            onChange={(e) => { ++epoch.current; setDescription(e.target.value); setConsent(false); setSaved(null); setFileConfirmed(false); setSaving(false); }} />
           <span className="settings-field-hint">{t("reportProblem.description.hint")}</span>
         </label>
         <label className="report-problem-consent">
           <input type="checkbox" data-report-consent checked={consent} disabled={!ready || saving}
-            onChange={(e) => setConsent(e.target.checked)} />
+            onChange={(e) => { setConsent(e.target.checked); if (!e.target.checked) { setSaved(null); setFileConfirmed(false); } }} />
           {t("reportProblem.consent")}
         </label>
         <div className="report-problem-handoff">
@@ -376,7 +417,19 @@ export default function ReportProblemWizard({ request, tree, notifications, onCl
               ref={mailRef}>{t("reportProblem.mail")}</a>
             : <button type="button" data-report-mail disabled aria-describedby="report-problem-mail-after">{t("reportProblem.mail")}</button>}
         </div>
-        {saved !== null && <p role="status" data-report-saved>{t("reportProblem.saved", { file: saved })}</p>}
+        {saved !== null && <>
+          <p role="status" data-report-requested>{t("reportProblem.downloadRequested", { file: saved })}</p>
+          <label className="report-problem-consent">
+            <input type="checkbox" data-report-file-confirm checked={fileConfirmed} ref={fileConfirmRef}
+              onChange={(e) => {
+                setFileConfirmed(e.target.checked);
+                if (e.target.checked && !confirmationAwarded.current) {
+                  confirmationAwarded.current = true;
+                  emitAchievementEvent({ type: "debugReportCreated" });
+                }
+              }} />{t("reportProblem.fileConfirm")}
+          </label>
+        </>}
         {saveError !== null && <p role="alert" tabIndex={-1} className="form-warning" data-report-save-failed
           ref={saveErrorRef}>{t("reportProblem.saveFailed", { error: saveError })}</p>}
         {mailDraft === null && <p className="settings-field-hint" id="report-problem-mail-after">{t("reportProblem.mailAfterSave")}</p>}
@@ -388,7 +441,7 @@ export default function ReportProblemWizard({ request, tree, notifications, onCl
       </div>}
 
       <div className="new-project-actions report-problem-actions">
-        <button type="button" onClick={onClose}>{t("reportProblem.close")}</button>
+        <button type="button" onClick={close}>{t("reportProblem.close")}</button>
         <button type="button" disabled={stepIndex === 0} onClick={() => setStep(STEPS[stepIndex - 1])}>{t("projectWizard.back")}</button>
         {stepIndex < STEPS.length - 1 && (
           <button type="button" className="primary-action" data-report-next

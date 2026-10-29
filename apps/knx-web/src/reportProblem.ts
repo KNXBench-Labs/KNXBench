@@ -3,6 +3,8 @@ import type {
   BundleQuery, ContentMarkers, Offer, OperationRef, ProblemType, RecordingSummary, SectionKind, SectionPreview,
 } from "./diagnosticBundleShape";
 import { PROBLEM_TYPES, SECTION_KINDS } from "./diagnosticBundleShape";
+import type { BundlePreview, ProjectContext, ReviewedBundleQuery } from "./diagnosticBundleShape";
+import type { ProjectTree } from "./bindings/ProjectTree";
 import type { MessageKey } from "./messages/en";
 import type { ToastNotification } from "./toast";
 
@@ -107,8 +109,27 @@ export function buildQuery(choice: WizardChoice, client: Record<string, unknown>
   if (offered("operation") && choice.operation !== null) query.operation = choice.operation;
   if (offered("earlierOperation") && choice.earlier.length > 0) query.earlierRecordingIds = [...choice.earlier];
   if (choice.deviceId !== null) query.deviceId = choice.deviceId;
-  if (offered("clientState") && client !== null) query.client = client;
+  if (sections.includes("clientState") && client !== null) query.client = client;
   return query;
+}
+
+/** Bind numeric choices to their source project, including the current revision. */
+export function reportContext(tree: ProjectTree | null): ProjectContext | undefined {
+  return tree?.server_incarnation !== undefined && tree.project_incarnation !== undefined && tree.snapshot_revision !== undefined
+    ? { serverIncarnation: tree.server_incarnation, projectIncarnation: tree.project_incarnation, revision: tree.snapshot_revision }
+    : undefined;
+}
+
+/** Pin resolution separately from choices, so admission cannot cause a preview loop. */
+export function reviewedQuery(query: BundleQuery, preview: BundlePreview): ReviewedBundleQuery {
+  return {
+    ...query,
+    context: preview.review.context,
+    review: preview.review,
+    operation: preview.operationRecordingId !== null ? { recordingId: preview.operationRecordingId }
+      : query.operation ?? { selection: "none" },
+    ...(preview.deviceId !== null ? { deviceId: preview.deviceId } : {}),
+  };
 }
 
 /** Bytes in binary units, as the 10 MiB mail hint counts them. */
@@ -165,6 +186,30 @@ export function reasonKey(reason: string): MessageKey | null {
   return REASONS.find(([text]) => text === reason)?.[1] ?? null;
 }
 
+const OPERATION_LABELS: Record<string, MessageKey> = {
+  "device-diagnostics": "reportProblem.kind.device-diagnostics",
+  "device-read": "reportProblem.kind.device-read",
+  "download": "reportProblem.kind.download",
+  "system2-download": "reportProblem.kind.system2-download",
+  "system2-recovery": "reportProblem.kind.system2-recovery",
+  "compare": "reportProblem.kind.compare",
+  "individual-address-programming": "reportProblem.kind.individual-address-programming",
+  "serial-number-address": "reportProblem.kind.serial-number-address",
+  "individual-address-reset": "reportProblem.kind.individual-address-reset",
+  "service-control": "reportProblem.kind.service-control",
+  "line-scan": "reportProblem.kind.line-scan",
+  "support-read": "reportProblem.kind.support-read",
+  "byte-order-probe": "reportProblem.kind.byte-order-probe",
+};
+const OUTCOME_LABELS: Record<string, MessageKey> = {
+  "succeeded": "reportProblem.outcome.succeeded",
+  "failed": "reportProblem.outcome.failed",
+  "cancelled": "reportProblem.outcome.cancelled",
+  "abandoned": "reportProblem.outcome.abandoned",
+};
+export const operationKindKey = (kind: string): MessageKey | undefined => OPERATION_LABELS[kind];
+export const operationOutcomeKey = (outcome: string): MessageKey | undefined => OUTCOME_LABELS[outcome];
+
 /** The recording the preview resolved, from the list the same answer carries. */
 export function resolvedRecording(id: string | null, recordings: readonly RecordingSummary[]): RecordingSummary | null {
   return id === null ? null : recordings.find((recording) => recording.id === id) ?? null;
@@ -197,6 +242,38 @@ export interface ClientFacts {
   viewport: { width: number; height: number };
   uiScale: number;
   recentErrors: ClientError[];
+}
+
+/** Bound strings before serializing; budget the complete JSON including loss metadata. */
+export function boundedClientFacts(facts: Omit<ClientFacts, "recentErrors">, history: readonly ToastNotification[]): ClientFacts & {
+  truncated: boolean; metadataTruncated: boolean; omittedErrorCount: number; truncatedErrorCount: number;
+} {
+  const total = history.reduce((n, { entry }) => n + Number(entry.severity === "error" || entry.severity === "warning"), 0);
+  // Repair only bounded prefixes: never allocate a code-point array for a huge error.
+  const prefix = (value: string, limit: number) => value.slice(0, limit).replace(/[\uD800-\uDFFF]/gu, "\uFFFD");
+  const bounded = recentErrors(history).map((error) => {
+    const entry = {
+      timestamp: prefix(error.timestamp, 128), source: prefix(error.source, 256),
+      message: prefix(error.message, 2048), detail: error.detail === null ? null : prefix(error.detail, 2048),
+    };
+    return { ...entry, shortened: entry.timestamp !== error.timestamp || entry.source !== error.source
+      || entry.message !== error.message || entry.detail !== error.detail };
+  });
+  const appVersion = prefix(facts.appVersion, 128), uiLanguage = prefix(facts.uiLanguage, 128), theme = prefix(facts.theme, 128);
+  const metadataTruncated = appVersion !== facts.appVersion || uiLanguage !== facts.uiLanguage || theme !== facts.theme;
+  const result = { ...facts, appVersion, uiLanguage, theme, recentErrors: [] as ClientError[], truncated: total > 0 || metadataTruncated, metadataTruncated,
+    omittedErrorCount: total, truncatedErrorCount: 0 };
+  const encoder = new TextEncoder();
+  // Newest evidence wins. Only bounded strings participate in repeated serialization.
+  for (const { shortened, ...error } of bounded.reverse()) {
+    const candidate = { ...result, recentErrors: [error, ...result.recentErrors],
+      omittedErrorCount: result.omittedErrorCount - 1, truncatedErrorCount: result.truncatedErrorCount + Number(shortened) };
+    candidate.truncated = metadataTruncated || candidate.omittedErrorCount > 0 || candidate.truncatedErrorCount > 0;
+    if (encoder.encode(JSON.stringify(candidate)).byteLength > 64 * 1024) break;
+    Object.assign(result, candidate);
+  }
+  result.truncated = metadataTruncated || result.omittedErrorCount > 0 || result.truncatedErrorCount > 0;
+  return result;
 }
 
 /**

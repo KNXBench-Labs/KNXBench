@@ -2,7 +2,7 @@
 import { describe, expect, it } from "vitest";
 import { PROBLEM_TYPES, SECTION_KINDS, type SectionKind } from "./diagnosticBundleApi";
 import {
-  buildQuery, bytesByKind, defaultOffer, defaultSelection, formatBytes, initialChoice, mailDraftFor, markerKeys,
+  buildQuery, boundedClientFacts, bytesByKind, defaultOffer, defaultSelection, formatBytes, initialChoice, mailDraftFor, markerKeys,
   reasonKey, recentErrors, RECENT_ERROR_LIMIT, toggleEarlier, toggleSection, withProblemType,
 } from "./reportProblem";
 import type { ToastNotification } from "./toast";
@@ -105,6 +105,12 @@ describe("buildQuery", () => {
     expect(buildQuery(initialChoice({ problemType: "userInterface" }), null).client).toBeUndefined();
   });
 
+  it("omits client data when its checkbox is unchecked and permits reselecting", () => {
+    const choice = initialChoice({ problemType: "userInterface" });
+    expect(buildQuery(toggleSection(choice, "clientState", false), client).client).toBeUndefined();
+    expect(buildQuery(toggleSection(choice, "clientState", true), client).client).toBe(client);
+  });
+
   it("never sends a section the type does not offer", () => {
     for (const type of PROBLEM_TYPES) {
       let choice = initialChoice({ problemType: type });
@@ -158,6 +164,42 @@ describe("client state and mail draft", () => {
     expect(errors.at(-1)).toEqual({ timestamp: history[119].entry.timestamp, source: "ui:toast:error", message: "message 119", detail: null });
     expect(errors.every((e) => e.source === "ui:toast:error")).toBe(true);
     expect(recentErrors([note(1, "info")])).toEqual([]);
+  });
+
+  it("never emits lone UTF16 surrogates when bounding emoji or malformed error text", () => {
+    const facts = { appVersion: "0.1", shell: "browser" as const, uiLanguage: "en", theme: "x".repeat(127) + "🙂", viewport: { width: 400, height: 900 }, uiScale: 1 };
+    const history: ToastNotification[] = [{ id: 1, entry: { timestamp: "2026-10-29T10:00:00Z", severity: "error", source: "ui:toast:error", message: "e" + "🙂".repeat(2000), detail: "bad\ud800text", location: null } }];
+    const result = boundedClientFacts(facts, history);
+    // Unicode-mode matching ignores genuine surrogate pairs but catches unpaired units,
+    // which JSON.stringify escapes and the server's UTF8 JSON parser cannot admit.
+    for (const value of [result.theme, result.recentErrors[0].message, result.recentErrors[0].detail!]) expect(value).not.toMatch(/[\uD800-\uDFFF]/u);
+    expect(result).toMatchObject({ truncated: true, metadataTruncated: true, truncatedErrorCount: 1 });
+    expect(result.recentErrors[0].message).toMatch(/^e🙂/u);
+    expect(new TextEncoder().encode(JSON.stringify(result)).byteLength).toBeLessThanOrEqual(65536);
+  });
+
+  it("discloses shortened metadata even when there are no recent errors", () => {
+    const payload = boundedClientFacts({ appVersion: "v", shell: "browser", uiLanguage: "en", theme: "theme".repeat(1000), viewport: { width: 400, height: 900 }, uiScale: 1 }, []);
+    expect(payload).toMatchObject({ truncated: true, metadataTruncated: true, omittedErrorCount: 0 });
+    expect(new TextEncoder().encode(JSON.stringify(payload)).byteLength).toBeLessThanOrEqual(65536);
+  });
+
+  it("admits exactly 65536 serialized UTF8 bytes including escaping and omits the next byte", () => {
+    const facts = { appVersion: "0.1", shell: "browser" as const, uiLanguage: "de", theme: "porcelain", viewport: { width: 400, height: 900 }, uiScale: 1 };
+    const errors = Array.from({ length: 31 }, (_, i) => ({ timestamp: "2026-10-29T10:00:00Z", source: "ui:toast:error", message: i === 0 ? "" : "🙂\n\"" + "x".repeat(2041), detail: null }));
+    const expected = { ...facts, recentErrors: errors, truncated: false, metadataTruncated: false, omittedErrorCount: 0, truncatedErrorCount: 0 };
+    const bytes = (value: unknown) => new TextEncoder().encode(JSON.stringify(value)).byteLength;
+    const fill = 65536 - bytes(expected);
+    expect(fill).toBeGreaterThan(0); expect(fill).toBeLessThanOrEqual(2048);
+    errors[0].message = "x".repeat(fill);
+    const history = () => errors.map((entry, id): ToastNotification => ({ id, entry: { ...entry, severity: "error", location: null } }));
+    expect(bytes(expected)).toBe(65536);
+    expect(boundedClientFacts(facts, history())).toEqual(expected);
+    errors[0].message += "x";
+    expect(bytes(expected)).toBe(65537);
+    const bounded = boundedClientFacts(facts, history());
+    expect(bounded.omittedErrorCount).toBe(1); expect(bounded.recentErrors).toEqual(errors.slice(1));
+    expect(bytes(bounded)).toBeLessThanOrEqual(65536);
   });
 
   it("names the saved file in the mail draft and nothing else changes", () => {

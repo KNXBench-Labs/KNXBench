@@ -22,7 +22,7 @@ export default function DiagnosticExportButton({project,deviceId=null}:{project:
 /** The reviewed read dialog itself; the Diagnostics tab opens it for its device too.
  * The profile choice sits before Preview; changing it, the device or the gateway drops the review.
  * A finished read is reported through the one Report problem wizard (DIAG-03), which finds
- * this read's recording by its token. */
+ * this exact retained result by its token, even when no recording is available. */
 export function DiagnosticExportDialog({project,initialDevice,close}:{project:ProjectTree;initialDevice:number|null;close:()=>void}){
  const t=useTranslate();const devices=[...collectDevices(project).values()];const report=useReportProblem();
  const [device,setDevice]=useState<number|null>(initialDevice);const [gateway,setGateway]=useState(loadPreferredGateway);

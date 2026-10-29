@@ -1,24 +1,44 @@
 /** Real production UI → real HTTP handlers → regular KNX simulator → report-wizard ZIP download. */
 import {test,expect,type Download,type Page} from "@playwright/test";
 import {join} from "node:path";
+import {execFileSync} from "node:child_process";
+import type {DiagnosticView} from "../src/diagnosticApi";
+import type {BundlePreview} from "../src/diagnosticBundleShape";
 import {mkdirSync,readFileSync} from "node:fs";
 import {messages as en} from "../src/messages/en";
 import {messages as de} from "../src/messages/de";
 import { openFileSubmenu } from "./file-menu";
 const evidence=process.env.KNX_DIAG_EVIDENCE;
 /** DIAG-03: a finished read is reported through the one wizard; returns the saved bundle's bytes. */
-async function saveThroughWizard(page:Page,m:Record<keyof typeof en,string>,token:string|null):Promise<{name:string;bytes:Buffer;zip:Download}>{
+async function saveThroughWizard(page:Page,m:Record<keyof typeof en,string>,token:string):Promise<{name:string;bytes:Buffer;zip:Download}>{
+ const final:DiagnosticView=await(await page.request.get(`/api/device-diagnostics/${token}`)).json();
+ expect(final.phase).toBe("complete");
  const bundles:{operation?:unknown}[]=[];page.on("request",r=>{if(r.url().endsWith("/api/diagnostics/bundle/preview"))bundles.push(r.postDataJSON());});
+ const previewResponse=page.waitForResponse(r=>r.url().endsWith("/api/diagnostics/bundle/preview"));
  await page.locator("[data-report-problem-open=diagnostics]").click();
+ const reviewed:BundlePreview=await(await previewResponse).json();
+ expect(reviewed.review.fingerprint).toMatch(/^[a-f0-9]{64}$/);
  const wizard=page.getByRole("dialog",{name:m["reportProblem.title"],exact:true});await expect(wizard).toBeVisible();
- await expect(wizard.locator("[data-report-section=operation] input")).toBeChecked();
- if(token)expect(bundles[0]?.operation).toEqual({relatedKey:"diagnosticsToken",relatedValue:token});
+ await expect(wizard.locator("[data-report-section=legacyReports] input")).toBeChecked();
+ if(reviewed.operationRecordingId)await expect(wizard.locator("[data-report-section=operation] input")).toBeChecked();
+ else await expect(wizard.locator("[data-report-section=operation] input")).toBeDisabled();
+ expect(bundles[0]?.operation).toEqual({relatedKey:"diagnosticsToken",relatedValue:token});
  await wizard.locator("[data-report-next]").click();await wizard.locator("[data-report-next]").click();
  await expect(wizard.locator("[data-report-save]")).toBeDisabled();await wizard.locator("[data-report-consent]").check();
  const download=page.waitForEvent("download");await wizard.locator("[data-report-save]").click();const zip=await download;
  const bytes=readFileSync(await zip.path());
  // Central-directory names are stored uncompressed: the bundle carries the read's recording.
- for(const name of ["manifest.json","recording.jsonl","environment.json"])expect(bytes.includes(Buffer.from(name))).toBe(true);
+ for(const name of ["manifest.json","environment.json","report.json","properties.json",...(final.memory?["memory.json"]:[]),...(reviewed.operationRecordingId?["recording.jsonl"]:[])])expect(bytes.includes(Buffer.from(name))).toBe(true);
+ // Parse the browser-downloaded ZIP, not a fresh export or just central-directory names.
+ const members=JSON.parse(execFileSync("python3",["-c","import json,sys,zipfile; z=zipfile.ZipFile(sys.argv[1]); print(json.dumps({n:json.loads(z.read(n)) for n in z.namelist() if n.rsplit('/',1)[-1] in ('report.json','properties.json','memory.json')}))",await zip.path()],{encoding:"utf8"})) as Record<string,unknown>;
+ const member=(name:string)=>{const matches=Object.entries(members).filter(([p])=>p.split("/").at(-1)===name);expect(matches).toHaveLength(1);return matches[0][1];};
+ expect(member("report.json")).toEqual(final.report);
+ expect(member("properties.json")).toEqual(final.report.items);
+ if(final.memory)expect(member("memory.json")).toEqual(final.memory);
+ else expect(Object.keys(members).filter(n=>n.endsWith("memory.json"))).toEqual([]);
+ await expect(wizard.locator("button[data-report-mail]")).toBeDisabled();
+ await expect(wizard.locator("[data-report-file-confirm]")).not.toBeChecked();
+ await wizard.locator("[data-report-file-confirm]").check();
  await expect(wizard.locator("a[data-report-mail]")).toBeFocused();
  return {name:zip.suggestedFilename(),bytes,zip};
 }
@@ -33,7 +53,8 @@ for(const language of ["en","de"] as const)for(const width of [1440,400]){
   const dialog=page.getByRole("dialog",{name:m["diagnostics.title"],exact:true});await expect(dialog).toBeVisible();
   expect(diagnosticRequests).toEqual([]);
   await dialog.locator("[data-diagnostics-device]").selectOption("1");await dialog.locator("[data-diagnostics-gateway]").fill("192.0.2.10:3671");
-  await dialog.locator("[data-diagnostics-preview]").click();await expect(dialog.locator("[data-diagnostics-review]")).toContainText("1.1.25");
+  const readPreviewResponse=page.waitForResponse(r=>r.url().endsWith("/api/device-diagnostics/preview"));
+  await dialog.locator("[data-diagnostics-preview]").click();const readPreview:DiagnosticView=await(await readPreviewResponse).json();await expect(dialog.locator("[data-diagnostics-review]")).toContainText("1.1.25");
   expect(diagnosticRequests).toEqual(["/api/device-diagnostics/preview"]);await expect(dialog.locator("[data-diagnostics-start]")).toBeDisabled();
   if(evidence)await page.screenshot({path:join(evidence,`${language}-${width}-preview.png`)});
   await dialog.locator("[data-diagnostics-read-consent]").check();await dialog.locator("[data-diagnostics-start]").click();
@@ -42,7 +63,7 @@ for(const language of ["en","de"] as const)for(const width of [1440,400]){
   await expect(dialog.getByRole("alert")).toHaveCount(0);
   const box=await dialog.boundingBox();expect(box!.x).toBeGreaterThanOrEqual(0);expect(box!.x+box!.width).toBeLessThanOrEqual(width+1);
   if(evidence)await page.screenshot({path:join(evidence,`${language}-${width}-result.png`)});
-  const {name,zip}=await saveThroughWizard(page,m,null);
+  const {name,zip}=await saveThroughWizard(page,m,readPreview.token);
   expect(name).toMatch(/^knxbench-diagnostics-.+\.zip$/);
   if(evidence){mkdirSync(join(evidence,"exports"),{recursive:true});await zip.saveAs(join(evidence,"exports",`${language}-${width}.zip`));}
   expect(await page.evaluate(()=>document.documentElement.scrollWidth-innerWidth)).toBeLessThanOrEqual(1);
@@ -79,7 +100,8 @@ for(const [language,width] of [["en",1440],["de",400]] as const){
   await expect(dialog.locator("[data-diagnostics-error]")).toContainText(m["diagnostics.refusal.programMissing"]);
   await expect(dialog.locator("[data-diagnostics-review]")).toHaveCount(0);
   await dialog.locator("[data-diagnostics-device]").selectOption("2");await expect(dialog.locator("[data-diagnostics-error]")).toHaveCount(0);
-  await dialog.locator("[data-diagnostics-preview]").click();
+  const readPreviewResponse=page.waitForResponse(r=>r.url().endsWith("/api/device-diagnostics/preview"));
+  await dialog.locator("[data-diagnostics-preview]").click();const readPreview:DiagnosticView=await(await readPreviewResponse).json();
   const review=dialog.locator("[data-diagnostics-review]");await expect(review).toContainText("1.1.26");
   await expect(dialog.locator("[data-diagnostics-ranges] li")).toHaveText([/^0116h · 30 /,/^3C00h · 12 /]);
   await expect(dialog.locator("[data-diagnostics-total]")).toContainText("42");
@@ -96,7 +118,7 @@ for(const [language,width] of [["en",1440],["de",400]] as const){
   await expect(review).toContainText(m["diagnostics.simulated"]);
   const box=await dialog.boundingBox();expect(box!.x).toBeGreaterThanOrEqual(0);expect(box!.x+box!.width).toBeLessThanOrEqual(width+1);
   if(evidence){await result.scrollIntoViewIfNeeded();await page.screenshot({path:join(evidence,`memory-${language}-${width}-result.png`),fullPage:true});}
-  const {zip}=await saveThroughWizard(page,m,null);
+  const {zip}=await saveThroughWizard(page,m,readPreview.token);
   if(evidence){mkdirSync(join(evidence,"exports"),{recursive:true});await zip.saveAs(join(evidence,"exports",`memory-${language}-${width}.zip`));}
   expect(await page.evaluate(()=>document.documentElement.scrollWidth-innerWidth)).toBeLessThanOrEqual(1);
  });

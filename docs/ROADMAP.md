@@ -1,5 +1,15 @@
 # Roadmap
 
+## DIAG-03 local candidate after Alpha 18 (29 October 2026)
+
+Operation recording and the unified diagnostic bundle remain in progress, not
+released. The saved-project opt-in adapter is locally integrated (`f017dc248`),
+with saved-root/native-reopen and review/privacy refusal tests. Full private
+System-2 comparison export is blocked on credential classification of both byte
+sides and all overlapping archive copies; metadata-only withholding is not raw
+evidence delivery. Final integrated review/package acceptance and main-first
+publication remain open. [Work and evidence boundary](open-work/DIAG-03-unified-diagnostic-bundle.md).
+
 ## Alpha 18 pre-release (source cutoff 28 October 2026)
 
 `v0.1.0-alpha.18` is the current pre-release, cut from main at source cutoff

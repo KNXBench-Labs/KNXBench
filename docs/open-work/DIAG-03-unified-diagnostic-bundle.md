@@ -1,17 +1,37 @@
 # DIAG-03 — One report button, full diagnostic bundle, operation recorder
 
-**Priority:** P1. **Status:** Open; all owner decisions recorded 29 October 2026
-(rounds 1–2, O1/O2), ready to start in its own session without further questions.
-**Do not merge before the Alpha 18 tag is published** (`main` is
-release-frozen for code); develop on a local branch, deliver main-first afterwards.
+**Priority:** P1. **Status:** In progress, local candidate; not delivered.
+All original owner decisions remain recorded below (29 October 2026, rounds 1–2,
+O1/O2). The Alpha 18 tag prerequisite is met (`80386a154`); the tag stays immutable.
+Main-first delivery still requires final review, the integrated package gate and
+publication verification. No such acceptance or push is implied here.
+
+**29 October progress:** the opt-in saved-project adapter `aef35f4b1` is locally
+integrated as `f017dc248`: existing native-copy helper, saved rather than unsaved
+state, unchanged privacy/context/review/consent guards, twelve synthetic HTTP
+cases through native reopen. Owning server execution: 1,493 passed, 67 ignored;
+this is not a complete package/browser/hardware gate.
+
+**Raw System-2 evidence admission remains NOT READY:** classification of both
+expected/readback bytes (P1) and consistency across overlapping recording,
+range/error and archive copies (P2) are unproved. The separate static scout ran
+no runtime tests. A metadata-only withheld projection is a bounded possible next
+increment, not closure of the requested raw evidence. The
+[source-grounded boundary](../research/2026-10-29-system2-bundle-credential-boundary.md)
+records the two server hooks, missing CLI typed attachment and fourteen future,
+unexecuted acceptance cases. Final integrated review/gate, main-first delivery
+and task-owned cleanup remain open.
+
 Origin: issue #30 report analysis, owner request 29 October 2026.
 
 ## Why
 
 Every field failure so far needed another report extension and another device attempt
 (#30: pointer width, busy reason, tunnel cause, final-step category, now the allocation
-mismatch). The System-2 final verification still discards the actual readback, so the
-#30/#22 mismatch cannot be localised from any existing artifact. The owner's decision:
+mismatch). At the checked starting point below, System-2 final verification discarded
+actual readback, so the #30/#22 mismatch could not be localised from existing artifacts.
+Part B now persists the private comparison evidence through journal and fresh reopen;
+its credential-safe bundle/CLI attachment remains open under P1/P2. The owner's decision:
 for debugging, data minimisation is counterproductive. Record as much as possible for
 every device operation, always with the KNXBench version, and let the user decide by
 checkbox what goes into one ZIP that they may send by mail.

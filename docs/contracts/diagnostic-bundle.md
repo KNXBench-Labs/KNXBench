@@ -3,6 +3,31 @@
 Owner: DIAG-03 ([work package](../open-work/DIAG-03-unified-diagnostic-bundle.md),
 [ADR-0156](../adr/0156-operation-recorder-and-diagnostic-bundle.md)).
 
+## Candidate implementation and remaining privacy admission
+
+**29 October 2026, local candidate; not a release or whole-package acceptance.**
+The opt-in saved-project section now calls `native_project_without_secrets`
+(adapter `aef35f4b1`, local integration `f017dc248`). It exports the saved root,
+not unsaved working edits; default selection stays off. The helper omits history,
+removes its recognized credential fields and reports withheld/unsupported data.
+HTTP tests cover preview → review/consent → section/ZIP → actual native reopen,
+source/history immutability and review drift. WAL/sidecar refusal is exercised at
+the route; budget/oversize, symlink-sidecar and concurrent-writer boundaries have
+helper-level coverage only, not new route/browser/hardware acceptance.
+
+**Private System-2 comparison bytes remain unfinished.** Replay validates the
+recorded comparison, not credential freedom of arbitrary expected/readback
+memory. Consent cannot override unconditional key/password exclusion. Full raw
+export requires both byte-side classification and consistent handling of every
+overlapping recording/range/error/archive copy. The current APDU key redactor
+and project-copy helper do not establish that wider guarantee. A metadata-only
+withheld projection would be an explicitly incomplete increment; it must not be
+reported as raw-evidence delivery or as certifying the rest of the ZIP.
+[Source evidence, P1/P2 and proposed acceptance cases](../research/2026-10-29-system2-bundle-credential-boundary.md).
+
+The requirements below remain the target contract, not a claim that every part
+has already passed integrated acceptance.
+
 This contract describes two artefacts: the **operation recording**, a JSONL file
 written for every device operation that opens a KNXnet/IP tunnel, and the
 **diagnostic bundle**, a ZIP the user builds deliberately and sends by mail.

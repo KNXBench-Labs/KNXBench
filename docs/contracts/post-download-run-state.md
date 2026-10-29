@@ -10,9 +10,10 @@ Executed acceptance and publication are separate from this contract.
 A separately [implemented exact-0700 increment](post-download-run-state-0700.md)
 adds descriptor qualification for an optional property at source `5f075cf99`.
 It does not change this 0701/0705 path, its schedules, legacy datatype handling
-or serialized bytes. Its independent static review is complete; integrated
-software acceptance and publication remain pending. The original baseline
-`8d14de9ca` did not implement this optional continuation.
+or serialized bytes. Its [separate software acceptance](../status/2026-10-30-descriptor-qualified-0700-run-state.md)
+records independent review, both 15-stage gates and actual isolated build/smoke
+on `0af68438f`. No hardware/function or broader-layout acceptance follows. The
+original baseline `8d14de9ca` did not implement this optional continuation.
 
 ## Admission and read schedule
 

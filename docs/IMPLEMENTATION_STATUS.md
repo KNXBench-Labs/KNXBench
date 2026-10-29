@@ -604,8 +604,9 @@ independent reviews, both 17-stage package gates and isolated real-server smoke 
 The separately [implemented exact-0700 continuation](contracts/post-download-run-state-0700.md)
 adds independent optional-property description qualification at `5f075cf99`.
 Original semantic RED and independent whole-feature static review are retained;
-committed branch/main-first gates, integrated build/smoke and publication are
-still pending. No software/hardware acceptance of that increment is inferred.
+both maintained 15-stage gates and actual isolated build/smoke passed on runtime
+`0af68438f` ([software acceptance](status/2026-10-30-descriptor-qualified-0700-run-state.md)).
+This is not hardware/function acceptance or closure of PRG-01.
 
 After a successful regular memory download (complete or partial, restart
 acknowledged, not in plan or unconfirmed) the CLI and the server worker run one

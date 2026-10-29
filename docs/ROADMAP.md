@@ -267,9 +267,11 @@ records independent reviews, both 17-stage package gates and isolated real-serve
 smoke. Hardware acceptance and the broader programming gaps remain open.
 The [descriptor-qualified exact-0700 increment](contracts/post-download-run-state-0700.md)
 is implemented at `5f075cf99`, with original CLI RED → GREEN and independent
-static review complete. Integrated gates/build/smoke and publication remain
-pending. It preserves 0701/0705 traffic/records and does not promote other
-layouts, memory encodings or hardware/function claims.
+static review complete. Both maintained 15-stage gates and actual isolated
+build/smoke passed on `0af68438f`
+([software acceptance](status/2026-10-30-descriptor-qualified-0700-run-state.md)).
+It preserves 0701/0705 traffic/records and does not promote other layouts,
+memory encodings or hardware/function claims.
 
 The [backup application guard](contracts/backup-application-identity.md) records
 pre-write evidence and refuses a restore under another application's procedure.

@@ -6,7 +6,7 @@ This dossier preserves the technical detail and dated history. Earlier
 headings, failures and lifting conditions are historical where later
 updates supersede them; they are not new work assignments.
 
-## Optional exact-0700 run state — 29 October 2026 implementation checkpoint
+## Optional exact-0700 run state — 30 October 2026 software acceptance
 
 The [bounded contract](../contracts/post-download-run-state-0700.md) is implemented
 at `5f075cf99`: existing identity/load gates and strict candidate binding precede
@@ -15,9 +15,11 @@ value read. Missing descriptions and unqualified/unknown metadata remain explici
 no object scan, memory fallback, authorization, write or new retry is added.
 Actual 0701/0705 frames and record bytes remain unchanged. New optional, non-null
 0700 provenance is not inferred for old records; older strict readers may reject
-new 0700 records. Independent static review is complete, but committed integrated
-gates, build/smoke and runtime publication are pending. This is not software or
-hardware acceptance, physical function, whole recovery or closure of KL-007/PRG-01.
+new 0700 records. Independent static review, both maintained 15-stage gates and
+actual isolated build/smoke passed on runtime `0af68438f`
+([software acceptance](../status/2026-10-30-descriptor-qualified-0700-run-state.md)).
+This is not hardware acceptance, physical function, whole recovery or closure
+of KL-007/PRG-01.
 
 ## Regular restore exemplar binding — 29 October 2026 software acceptance
 

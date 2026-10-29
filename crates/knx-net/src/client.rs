@@ -468,6 +468,10 @@ struct TunnelState {
     stopped: AtomicBool,
     /// Observes datagrams and connection events; never alters them.
     tap: Option<WireTap>,
+    /// With a tap only: keeps "record, then send" of two senders (a request
+    /// and the receive loop's ACK) from interleaving, so the tape's order is
+    /// the socket's order. Held for one non-blocking UDP send.
+    tap_order: Mutex<()>,
 }
 
 impl TunnelState {
@@ -505,6 +509,7 @@ impl TunnelState {
             ack_wait,
             stopped: AtomicBool::new(false),
             tap: None,
+            tap_order: Mutex::new(()),
         }
     }
 
@@ -514,18 +519,25 @@ impl TunnelState {
         self
     }
 
-    /// Sends one datagram on the tunnel socket, then reports it to the tap.
-    /// The tap runs after the send, so it cannot delay the bytes.
+    /// Reports one datagram to the tap, then sends it on the tunnel socket.
+    ///
+    /// Recorded first: once the bytes are on the socket, the receive loop may
+    /// record the gateway's answer before this task runs again, and the tape
+    /// must keep cause before effect. The tap never blocks; a failed send
+    /// follows as a `SocketError` event.
     async fn send_datagram(&self, datagram: &[u8]) -> std::io::Result<usize> {
+        let Some(tap) = &self.tap else {
+            return self.socket.send(datagram).await;
+        };
+        let order = self.tap_order.lock().await;
+        tap.datagram(WireDirection::Sent, datagram);
         let result = self.socket.send(datagram).await;
-        if let Some(tap) = &self.tap {
-            match &result {
-                Ok(_) => tap.datagram(WireDirection::Sent, datagram),
-                Err(error) => tap.event(TunnelTapEvent::SocketError {
-                    operation: "send",
-                    reason: error.to_string(),
-                }),
-            }
+        drop(order);
+        if let Err(error) = &result {
+            tap.event(TunnelTapEvent::SocketError {
+                operation: "send",
+                reason: error.to_string(),
+            });
         }
         result
     }
@@ -678,10 +690,10 @@ impl TunnelClient {
         .encode();
         let body = services::encode_connect_request(control_hpai, control_hpai, &cri);
         let datagram = frame::encode_frame(services::CONNECT_REQUEST, &body);
-        socket.send(&datagram).await.map_err(BusError::Io)?;
         if let Some(tap) = &tap {
             tap.datagram(WireDirection::Sent, &datagram);
         }
+        socket.send(&datagram).await.map_err(BusError::Io)?;
 
         let mut buf = [0u8; 64];
         let n = tokio::time::timeout(Duration::from_secs(10), socket.recv(&mut buf))

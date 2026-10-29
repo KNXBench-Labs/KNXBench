@@ -1,13 +1,14 @@
 # Restart snapshot
 
-## PRG-01 run-state observation (TAKEN; observed 2026-10-29 07:51 CET)
-- Owner GO: implement non-Secure regular-path gaps, offline/simulator only.
+## PRG-01 run-state observation (CORRECTING; observed 2026-10-29 09:05 CET)
+- GO: non-Secure regular-path source work, offline/simulator only. No bus/release/deployment.
 - `feat/prg01-regular-safety-20261029` / `<sources>/knxbench-prg01-regular-safety-20261029`.
-- Reserved: core run-state decoder, regular post-download reader/record, CLI/server/web
-  consumers and tests; no DIAG-03/System-2 evidence, bundle, wizard or sanitizer changes.
-- Scope: property-only observation for 0701/0705 after validated application object/identity;
-  original source evidence found. No memory fallback, new writes or field acceptance.
-- No feature code yet. Next: semantic RED/GREEN, independent review and integrated gates.
+- Implemented bounded 0701/0705 property observation; own core/net/app/CLI/server/web and tests.
+- Initial focused source-bound checks PASS; actual isolated-server smoke PASS, not integrated acceptance.
+- Whole-feature Opus review REQUEST_CHANGES: 0 critical/1 important/6 minor; no runtime defect found.
+- Parent fixes manual/schema docs; `deleg_0f8a4ea8` owns narrow source/test corrections. No gate yet.
+- Evidence `<profile-scratch>/prg01-20261029/`; next: correction re-review, frozen branch+merged gates.
+- DIAG-03/System-2 evidence, bundle, wizard/sanitizers and every foreign track remain separate.
 
 ## Alpha 18 release (PUBLISHED, ARTIFACTS VERIFIED; observed 2026-10-29 05:30 CET)
 - Release freeze: released by alpha18-release. Immutable `v0.1.0-alpha.18` names

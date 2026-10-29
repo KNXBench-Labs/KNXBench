@@ -1,5 +1,5 @@
 /** ADR-0121 in a browser: plan warnings, then a finished download's check, report and hand-over. */
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { messages as en } from "../src/messages/en";
@@ -184,7 +184,7 @@ for (const language of ["en", "de"] as const) {
 }
 
 type CheckFixture = keyof typeof checkFixtures;
-type Messages = typeof en;
+type Messages = Readonly<Record<keyof typeof en, string>>;
 type Reading = { machine: string; expected: string | null; observed: { result: string; loadState?: string } };
 /** A finished download whose status carries the check, with the restart it reports. */
 const CHECKS: { fixture: CheckFixture; restart: "acknowledged" | "unconfirmed"; lines: (keyof Messages)[] }[] = [
@@ -194,11 +194,36 @@ const CHECKS: { fixture: CheckFixture; restart: "acknowledged" | "unconfirmed"; 
     lines: ["postDownloadCheck.reach.reached", "postDownloadCheck.identity.match", "postDownloadCheck.verdict.unknown"] },
   { fixture: "identityMismatch", restart: "unconfirmed",
     lines: ["postDownloadCheck.reach.reached", "postDownloadCheck.identity.mismatch.application"] },
+  { fixture: "runStateRunning", restart: "acknowledged",
+    lines: ["postDownloadCheck.reach.reached", "postDownloadCheck.identity.match", "postDownloadCheck.verdict.matchesPlan",
+      "postDownloadCheck.runState.state.running", "postDownloadCheck.runState.scope"] },
+  { fixture: "runStateUndefined", restart: "acknowledged",
+    lines: ["postDownloadCheck.identity.match", "postDownloadCheck.runState.undefined"] },
 ];
 
 function readingsOf(check: unknown): Reading[] {
   const reach = (check as { observation: { reach?: { identity?: { loadStates?: Reading[] } } } }).observation.reach;
   return reach?.identity?.loadStates ?? [];
+}
+
+/** Whether the fixture's own evidence carries a run-state record (a legacy record has none). */
+function hasRunStateRecord(check: unknown): boolean {
+  const reach = (check as { observation: { reach?: { identity?: { runState?: unknown } } } }).observation.reach;
+  return reach?.identity?.runState !== undefined;
+}
+
+/**
+ * The unknown-runtime paragraph a fixture's evidence calls for: none when a state is known, the
+ * "no defined run state observed" wording beside a run-state record, the legacy wording without one.
+ * Both wordings are read from the message catalogue, never from the view's own selection.
+ */
+async function expectUnknownRuntime(scope: Locator, m: Messages, check: { runtime: string }) {
+  const unknown = check.runtime === "unknown";
+  const recorded = hasRunStateRecord(check);
+  await expect(scope.locator("p", { hasText: m["postDownloadCheck.runtimeUnknown.noDefinedState"] }))
+    .toHaveCount(unknown && recorded ? 1 : 0);
+  await expect(scope.locator("p", { hasText: m["postDownloadCheck.runtimeUnknown"] }))
+    .toHaveCount(unknown && !recorded ? 1 : 0);
 }
 
 for (const { fixture, restart, lines } of CHECKS) {
@@ -213,13 +238,26 @@ for (const { fixture, restart, lines } of CHECKS) {
   // The report field order the Rust serializer writes: the check after the outcome.
   const { parameterValues, ...head } = report.report;
   const checked = { ...report, report: { ...head, outcome: { ...head.outcome, restart }, postDownloadCheck: check, parameterValues } };
+  // An intercepted history page carrying the same check: a prepared API fixture, not a persisted
+  // row. It exercises the real history UI consumer only; that the check survives a SQLite reopen
+  // is established by the Rust CLI and server reopen tests, not by this browser lane.
+  const history = {
+    format: 2, coverage: "partial", durability: "persistent", hasMore: false, nextCursor: 1,
+    untracked: ["deviceIdentify", "groupWrite", "serialAddress", "deviceDownload", "addressProgramming", "busMonitor", "lineScan"],
+    entries: [{
+      sequence: 1, serverIncarnation: "fixture", interrupted: false, id: 1, kind: "deviceDownload", address: "1.1.67",
+      state: "finished", startedAt: "2026-10-26T09:00:00.000Z", finishedAt: "2026-10-26T09:00:05.000Z",
+      writeEvidence: { backupRecorded: true, sendPossible: true },
+      downloadEvidence: { sessionId: 7, written: "yes", restart, cleanup: "returnedOk", postDownloadCheck: check },
+    }],
+  };
   for (const language of ["en", "de"] as const) {
     for (const width of [1440, 400]) {
       test(`${language} ${width}: the ${fixture} check stands apart from the transfer and travels in the report`, async ({ page }) => {
         const m = language === "en" ? en : de;
         expect(checked.report.outcome.restart, "status and saved report describe the same restart").toBe(status.status.restart);
         await page.setViewportSize({ width, height: 900 });
-        const state = await open(page, language, { status, report: checked });
+        const state = await open(page, language, { status, report: checked, history });
         const panel = page.locator(".device-download-panel");
         await panel.locator("select[data-download-device]").selectOption({ label: "1.1.67 — Fictional actuator" });
         await panel.locator("input[data-download-gateway]").fill("192.0.2.10:3671");
@@ -241,11 +279,11 @@ for (const { fixture, restart, lines } of CHECKS) {
         await expect(section).not.toContainText(writtenLine);
         await expect(section).not.toContainText(restartLine);
 
-        // The check: its own facts, runtime unknown, no proof of the exemplar.
+        // The check: its own facts; runtime unknown unless matching run-state evidence (worded by whether a run-state record exists), no proof of the exemplar.
         await expect(section.getByRole("heading", { name: m["postDownloadCheck.title"], exact: true })).toBeVisible();
         for (const key of lines) await expect(section).toContainText(m[key]);
         await expect(section).not.toContainText(m["postDownloadCheck.notChecked"]);
-        await expect(section.locator("p", { hasText: m["postDownloadCheck.runtimeUnknown"] })).toHaveCount(1);
+        await expectUnknownRuntime(section, m, check);
         const readings = readingsOf(check);
         await expect(section.locator("p", { hasText: m["postDownloadCheck.exemplar"] })).toHaveCount(readings.length > 0 ? 1 : 0);
         const rows = section.locator("tbody tr");
@@ -301,6 +339,17 @@ for (const { fixture, restart, lines } of CHECKS) {
         expect(geometry.right).toBeLessThanOrEqual(width);
         expect(geometry.inside, "the check stays inside its section").toBe(true);
         expect(geometry.overflow, "no horizontal scrolling").toBeLessThanOrEqual(1);
+        // The history parent shows the same facts from the intercepted history fixture's record.
+        await page.getByRole("button", { name: m["activityHistory.title"], exact: true }).click();
+        await expect(panel).toHaveCount(0);
+        const stored = page.locator(".activity-history-entry .post-download-check");
+        await expect(stored).toHaveAttribute("data-check", "attempted");
+        for (const key of lines) await expect(stored).toContainText(m[key]);
+        await expectUnknownRuntime(stored, m, check);
+        await expect(stored.locator("tbody tr")).toHaveCount(readings.length);
+        for (const [index, reading] of readings.entries()) {
+          await expect(stored.locator("tbody tr").nth(index)).toHaveAttribute("data-machine", reading.machine);
+        }
         expect(state.starts, "one start, no second download").toBe(1);
         expect(state.writes, "only the start was sent").toEqual([]);
       });
@@ -363,7 +412,7 @@ for (const language of ["en", "de"] as const) {
     };
     await expectFailure();
 
-    // Closing the panel: the history keeps the same cause from the durable record.
+    // Closing the panel: the intercepted history fixture's entry shows the same cause.
     await page.getByRole("button", { name: m["activityHistory.title"], exact: true }).click();
     await expect(panel).toHaveCount(0);
     const history = page.locator(".activity-history-entry .download-failure");

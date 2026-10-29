@@ -4,6 +4,10 @@ Outcome 3 of the [programming improvements goal](../goals/programming-improvemen
 published as `8b5edad7f` after independent source reviews and maintained integrated
 software acceptance, including HTTP corpus and EN/DE browser tests
 ([delivery](../status/2026-10-25-post-download-check.md)). No hardware acceptance.
+The [property run-state continuation](post-download-run-state.md) specifies a
+later bounded observation for exact masks `0701h` / `0705h`; its source facts,
+object-binding interpretation and acceptance boundaries remain separate from
+the original delivery receipt.
 
 ## When it runs
 
@@ -36,8 +40,9 @@ load-state verdict come from the helper's own `reach()`/`load_verdict()`.
     "identity": { "result": "match", "exemplar": "notVerified",
       "loadStates": [ { "machine": "addressTable", "expected": "loaded",
                         "observed": { "result": "observed", "loadState": "loaded" } } ],
-      "planLoadVerdict": "matchesPlan" } } },
-  "runtime": "unknown" }
+      "planLoadVerdict": "matchesPlan",
+      "runState": { "status": "observed", "objectIndex": 3, "state": "running" } } } },
+  "runtime": "running" }
 ```
 
 | Level | Values |
@@ -49,18 +54,22 @@ load-state verdict come from the helper's own `reach()`/`load_verdict()`.
 | machine | `addressTable`, `associationTable`, `applicationProgram`, `peiProgram`; `expected` is a load state or `null` (not settled by the plan) |
 | `observed.result` | `observed` (`loadState`), `unavailable` (the read failed), `notRead` (an earlier read failed) |
 | `planLoadVerdict` | `matchesPlan`, `differsFromPlan`, `unknown` |
-| `runtime` | always `unknown` |
+| `identity.runState` (optional on `match`) | `notRead`, `candidateMismatch`, `unavailable`, `undefinedValue` or `observed` (`objectIndex`: exactly `3`, one defined `state`); absence means not observed by that producer; explicit `null` is invalid ([complete fields](post-download-run-state.md#persisted-payload-free-record)) |
+| `runtime` | `unknown`, or one of the six property run-state names only with agreeing structured evidence ([continuation](post-download-run-state.md)) |
 
 - Nesting makes contradictions unrepresentable (no identity without reach, no
   load states without a matching identity). A stored verdict its machines
   contradict, a machine read after a failed one, unknown fields or a runtime
-  other than `unknown` are refused on read (Rust and web). Both readers run the
+  summary without agreeing, correctly nested evidence are refused on read
+  (Rust and web). Both readers run the
   same case table (`apps/knx-web/src/postDownloadCheck.cases.json`, each case a
   fixture with one edit). The fixtures are hand-written: the Rust test proves
   each is accepted and re-serialized unchanged, not that a live run produced it.
 - Earlier readings survive a later failed read (`unavailable`, then `notRead`).
 - `match` is not the same physical exemplar: no serial number is read
   (`exemplar: notVerified`). `loaded` is a load state, not a run state.
+  The later PID 6 observation, when admitted and successfully bound, reports
+  only the validated hosting object's property state, not installation function.
 - Payload-free: no address, serial number, raw identity octets, key or
   free-text error. A mismatch names the part, not what the device answered.
   The CLI additionally prints the helper's local detail line for the operator;
@@ -79,9 +88,16 @@ which only `deviceDownload` may carry; a `deviceCompare` (or any other kind)
 row with it is refused, as is a `failed` download or one with `written:
 partially` that carries one.
 
-**Report format stays 1.** The field is additive and optional; no existing
-field changes meaning (the `REPORT_FORMAT` rule). It identifies no
-installation, so the report privacy rule needs no ADR. The shareable summary
+**Report format stays 1.** The original check field was additive and optional.
+The 29 October continuation extends its evidence and `runtime` value vocabulary,
+not the field's meaning: it still summarizes an observed run state, never
+installation function or device health. That is why the `REPORT_FORMAT` semantic
+version rule does not require a bump. This is not a promise that an older
+strict format-1 reader accepts every new value: it may refuse the new nested
+field or known state. New readers preserve historical unknown/absent records;
+no report rewrite, seamless downgrade or forward-read compatibility is claimed.
+The evidence identifies no installation, so the report privacy rule needs no
+ADR. The shareable summary
 (issue body, mail) adds "not proven the same physical device" to a matching
 identity, as the CLI and the web view do.
 

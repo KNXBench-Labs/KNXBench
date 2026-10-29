@@ -382,6 +382,9 @@ pub struct SimulatorConfig {
     /// built on. A one-shot, like every other drop here, so that the
     /// recovery procedure has a device to recover.
     pub interrupt_at: Option<Interruption>,
+    /// Misanswer every read of one property, for readers that must refuse a
+    /// wrong echo, count or silence instead of trusting the bytes.
+    pub property_read_fault: Option<PropertyReadFault>,
     /// Object indices that are Application Program 1 or Application
     /// Program 2 — the only objects RES gives `PID_PROGRAM_VERSION`.
     ///
@@ -562,6 +565,57 @@ pub enum Interruption {
     ChecksumRead,
 }
 
+/// One property whose reads the simulated device answers wrongly.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct PropertyReadFault {
+    /// `ObjIdx` of the read that is misanswered.
+    pub object_index: u8,
+    /// `PropId` of the read that is misanswered.
+    pub property_id: u8,
+    /// The first arriving `PropertyValueRead` transmission of this property,
+    /// counting from one, that goes wrong; every later one does too.
+    ///
+    /// Counts transmissions, not distinct reads: the counter moves for every
+    /// matching arrival, repetitions of one request (TL repeats an
+    /// unacknowledged one) and arrivals the device then drops (`silent`,
+    /// `silent_for_first_numbered_data_frames`) or ignores (not connected)
+    /// included, before any of that dedup or drop handling. With such options combined the fault can
+    /// therefore strike earlier than the Nth distinct read.
+    pub from_read: u32,
+    /// What goes wrong.
+    pub fault: ReadFault,
+}
+
+/// How a misanswered property read goes wrong.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ReadFault {
+    /// The response claims this element count, whatever the data holds.
+    ElementCount(u8),
+    /// The response echoes another object index.
+    EchoObject(u8),
+    /// The response echoes another property id.
+    EchoProperty(u8),
+    /// The response echoes another start index.
+    EchoStart(u16),
+    /// Acknowledged at the Transport Layer, never answered.
+    Unanswered,
+    /// The connection is torn down instead of an answer.
+    Disconnect,
+    /// The response carries these octets instead of the property's value.
+    Data(&'static [u8]),
+}
+
+impl PropertyReadFault {
+    fn strikes(self, service: &ApplicationService, reads: u32) -> bool {
+        matches!(service, ApplicationService::PropertyValueRead { object_index, property_id, .. }
+            if self.addresses(*object_index, *property_id) && reads >= self.from_read)
+    }
+
+    fn addresses(self, object_index: u8, property_id: u8) -> bool {
+        self.object_index == object_index && self.property_id == property_id
+    }
+}
+
 impl Interruption {
     /// Every interruption point, so a test can walk all of them rather than
     /// list the ones somebody remembered.
@@ -681,6 +735,7 @@ impl Default for SimulatorConfig {
             mask_version: 0x07B0,
             allocation_fails_once_for: None,
             interrupt_at: None,
+            property_read_fault: None,
             application_program_objects: HashSet::new(),
             download_counter: None,
             drop_connection_on_download_counter_read: false,
@@ -920,6 +975,8 @@ struct State {
     dropped: bool,
     /// How many reads of `PID_LOAD_STATE_CONTROL` have arrived.
     load_state_reads: u32,
+    fault_reads: u32,
+    property_read_requests: Vec<(u8, u8, u8, u16)>,
     /// How many reads of `PID_DEVICE_CONTROL` have arrived, counted the same
     /// way: one per transmission, not one per connection.
     device_control_reads: u32,
@@ -1073,6 +1130,8 @@ impl SimulatedDevice {
             connected: false,
             dropped: false,
             load_state_reads: 0,
+            fault_reads: 0,
+            property_read_requests: Vec::new(),
             device_control_reads: 0,
             unanswered_restart_seqs: Vec::new(),
             master_resets: Vec::new(),
@@ -1409,6 +1468,12 @@ impl SimulatedDevice {
     /// Whether Verify Mode is on as far as the device is concerned.
     pub fn verify_mode(&self) -> bool {
         self.lock().verify_mode
+    }
+
+    /// Every `A_PropertyValue_Read` as `(ObjIdx, PropId, nr_of_elem, start_index)`,
+    /// in arrival order, so a test can pin the literal request.
+    pub fn property_read_requests(&self) -> Vec<(u8, u8, u8, u16)> {
+        self.lock().property_read_requests.clone()
     }
 
     /// How many `PID_LOAD_STATE_CONTROL` reads have arrived, so a test can
@@ -2087,11 +2152,31 @@ impl SimulatedDevice {
                 .config
                 .interrupt_at
                 .is_some_and(|step| step.strikes(&service));
+            if let (
+                Some(fault),
+                ApplicationService::PropertyValueRead {
+                    object_index,
+                    property_id,
+                    ..
+                },
+            ) = (self.config.property_read_fault, &service)
+            {
+                if fault.addresses(*object_index, *property_id) {
+                    // Per arriving transmission, before the dedup and drop
+                    // checks below: see `PropertyReadFault::from_read`.
+                    state.fault_reads += 1;
+                }
+            }
+            let fault_reads = state.fault_reads;
+            let by_read_fault = self.config.property_read_fault.is_some_and(|fault| {
+                fault.fault == ReadFault::Disconnect && fault.strikes(&service, fault_reads)
+            });
             if (by_count
                 || by_read
                 || by_device_control_read
                 || by_download_counter_read
-                || by_step)
+                || by_step
+                || by_read_fault)
                 && state.connected
                 && !state.dropped
             {
@@ -2106,6 +2191,10 @@ impl SimulatedDevice {
                     }
                 }
                 drop(state);
+                if by_read_fault {
+                    // The read arrived before the teardown: log it as sent.
+                    self.record(&service);
+                }
                 self.emit(Tpci::Disconnect, ApplicationService::NoApplicationPdu);
                 return;
             }
@@ -2204,11 +2293,20 @@ impl SimulatedDevice {
             ApplicationService::PropertyValueRead {
                 object_index,
                 property_id,
-                ..
-            } => Seen::PropertyRead {
-                object_index: *object_index,
-                property_id: *property_id,
-            },
+                nr_of_elem,
+                start_index,
+            } => {
+                self.lock().property_read_requests.push((
+                    *object_index,
+                    *property_id,
+                    *nr_of_elem,
+                    *start_index,
+                ));
+                Seen::PropertyRead {
+                    object_index: *object_index,
+                    property_id: *property_id,
+                }
+            }
             ApplicationService::PropertyValueWrite {
                 object_index,
                 property_id,
@@ -2288,6 +2386,12 @@ impl SimulatedDevice {
             // than gone.
             return;
         }
+        let fault_reads = self.lock().fault_reads;
+        if self.config.property_read_fault.is_some_and(|fault| {
+            fault.fault == ReadFault::Unanswered && fault.strikes(&service, fault_reads)
+        }) {
+            return;
+        }
         if self.device_control_read_in(&service, &self.config.unanswered_device_control_reads) {
             // Likewise acknowledged and unanswered, one property along. The
             // read is not performed either: a device that never answered did
@@ -2313,16 +2417,34 @@ impl SimulatedDevice {
                 nr_of_elem,
                 start_index,
             } => {
+                let fault_reads = self.lock().fault_reads;
                 let data = self.property_read(object_index, property_id);
                 let (nr_of_elem, data) = match data {
                     Some(data) => (nr_of_elem.max(1), data),
                     None => (0, Vec::new()),
                 };
+                let (mut echo_object, mut echo_property, mut echo_start) =
+                    (object_index, property_id, start_index);
+                let mut nr_of_elem = nr_of_elem;
+                let mut data = data;
+                if let Some(fault) = self.config.property_read_fault {
+                    if fault.addresses(object_index, property_id) && fault_reads >= fault.from_read
+                    {
+                        match fault.fault {
+                            ReadFault::Data(octets) => data = octets.to_vec(),
+                            ReadFault::ElementCount(count) => nr_of_elem = count,
+                            ReadFault::EchoObject(other) => echo_object = other,
+                            ReadFault::EchoProperty(other) => echo_property = other,
+                            ReadFault::EchoStart(other) => echo_start = other,
+                            ReadFault::Unanswered | ReadFault::Disconnect => {}
+                        }
+                    }
+                }
                 self.emit_answer(ApplicationService::PropertyValueResponse {
-                    object_index,
-                    property_id,
+                    object_index: echo_object,
+                    property_id: echo_property,
                     nr_of_elem,
-                    start_index,
+                    start_index: echo_start,
                     data,
                 });
             }

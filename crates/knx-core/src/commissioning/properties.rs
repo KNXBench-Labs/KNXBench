@@ -11,6 +11,12 @@
 
 use std::fmt;
 
+/// `PID_OBJECT_TYPE`: the hosting Interface Object's type, two octets.
+///
+/// Resources v01.10.01 §4.2.1, printed p. 30: mandatory and readable on every
+/// Interface Object. An Applicationprogram object names type `0003h`.
+pub const PID_OBJECT_TYPE: u8 = 1;
+
 /// `PID_LOAD_STATE_CONTROL`.
 ///
 /// `[D]` Spec §3.1 / RES §4.23; `03_07_03 Standardized Identifier Tables`
@@ -20,8 +26,8 @@ pub const PID_LOAD_STATE_CONTROL: u8 = 5;
 
 /// `PID_RUN_STATE_CONTROL`, named so it is not mistaken for the one above.
 ///
-/// `[D]` Spec §3.3. This project never reads or writes it; the constant
-/// exists so that a reader of a frame dump can recognise it.
+/// `[D]` Spec §3.3. A post-download observation reads it as a state
+/// (Resources Table 95); this project never writes it.
 pub const PID_RUN_STATE_CONTROL: u8 = 6;
 
 /// `PID_TABLE_REFERENCE` — the base address design spec §7.2 step 3 calls
@@ -274,6 +280,7 @@ mod tests {
     /// edit cannot quietly renumber a property.
     #[test]
     fn the_property_ids_are_the_ones_the_cited_clauses_print() {
+        assert_eq!(PID_OBJECT_TYPE, 1);
         assert_eq!(PID_LOAD_STATE_CONTROL, 5);
         assert_eq!(PID_RUN_STATE_CONTROL, 6);
         assert_eq!(PID_TABLE_REFERENCE, 7);

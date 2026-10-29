@@ -1,5 +1,15 @@
 # Restart snapshot
 
+## PRG-01 regular restore exemplar binding (GO; observed 2026-10-29 15:30 CET)
+- Owner: `feat/prg01-remaining-20261029`, `<sources>/knxbench-prg01-remaining-20261029`.
+- Base `91b15a209`; reserve regular core/net/app/CLI backup/restore implementation and tests.
+- Contract `docs/contracts/regular-restore-exemplar-binding.md`; independent design review active.
+- Source admission complete; no implementation/runtime acceptance claimed. Legacy backups remain
+  readable but need captured bindable serial evidence for restore; no new download identity gate.
+- Source/RED/GREEN/review/package/main-first/build/smoke/publication remain separate boundaries.
+- Private evidence `<profile-scratch>/prg01-remaining-20261029/`; parent owns commits/publication.
+- DIAG-03/foreign tracks/root protected; no Secure/bus/device/VM/release/deployment scope.
+
 ## PRG-01 property run-state (SOFTWARE COMPLETE; observed 2026-10-29)
 - Bounded 0701/0705 property observation; runtime integration `161010078`, feature `51c309957`.
 - Whole-feature/correction reviews APPROVE; both selected 17-stage package gates PASS,

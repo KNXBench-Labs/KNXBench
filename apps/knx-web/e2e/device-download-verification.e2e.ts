@@ -184,7 +184,7 @@ for (const language of ["en", "de"] as const) {
 }
 
 type CheckFixture = keyof typeof checkFixtures;
-type Messages = typeof en;
+type Messages = Readonly<Record<keyof typeof en, string>>;
 type Reading = { machine: string; expected: string | null; observed: { result: string; loadState?: string } };
 /** A finished download whose status carries the check, with the restart it reports. */
 const CHECKS: { fixture: CheckFixture; restart: "acknowledged" | "unconfirmed"; lines: (keyof Messages)[] }[] = [

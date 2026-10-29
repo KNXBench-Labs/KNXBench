@@ -20,9 +20,14 @@ recorded comparison, not credential freedom of arbitrary expected/readback
 memory. Consent cannot override unconditional key/password exclusion. Full raw
 export requires both byte-side classification and consistent handling of every
 overlapping recording/range/error/archive copy. The current APDU key redactor
-and project-copy helper do not establish that wider guarantee. A metadata-only
-withheld projection would be an explicitly incomplete increment; it must not be
-reported as raw-evidence delivery or as certifying the rest of the ZIP.
+and project-copy helper do not establish that wider guarantee. The local App-only
+metadata increment `c8a686a5e` (integration `8342609ed`) is implemented and narrowly
+reviewed: one strict fresh Store-open yields original progress plus separately
+owned closed metadata. It distinguishes recorded-but-withheld, missing persisted
+comparison data and unclassified states without serializing raw memory or the
+outer snapshot. Both server hooks and the CLI still lack this attachment.
+This remains explicitly incomplete: neither raw-evidence delivery nor
+credential-safety certification of the rest of the ZIP is implied.
 [Source evidence, P1/P2 and proposed acceptance cases](../research/2026-10-29-system2-bundle-credential-boundary.md).
 
 The requirements below remain the target contract, not a claim that every part

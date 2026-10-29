@@ -273,3 +273,11 @@ download with `sha256sum -c --ignore-missing SHA256SUMS`. Docker
 alphas. [Installation](../manual/getting-started/04-installation.md) ·
 [Docker update](../manual/user-guide/11-web-and-docker.md#updating-a-docker-hub-installation) ·
 [Known issues](../manual/known-issues.md).
+
+## By the numbers
+
+- **1 frozen release candidate**, **2 successful packaging dry runs** (AppImage/MCP and Docker amd64+arm64), and **0 publish jobs enabled in those dry runs**. We practised the brakes first.
+- **7,196 Rust tests passed** and **4,654 frontend unit tests passed**; the Rust run also reports **238 ignored tests**, not executed coverage.
+- **951 fixture-browser**, **567 production-browser**, **49 extra-browser** and **24 real-server evidence/edit-spec executions** passed. These are different, partly overlapping suites, not a unique-test total.
+- **155/155 conventional corpus tests in 9 targets**, the additional product-corpus runs and **both historical pinned opt-ins** passed. Manufacturer inputs remain private and are not distributed. The tooling suite registered 466 tests with 6 existing optional skips.
+- **1 counting hiccup**, fixed without replaying green product suites: Cargo selected five tests where our extra verifier expected four. The original refusal, compiled-inventory proof and bounded continuation were retained separately. The product did not need remedial arithmetic; its counter did.

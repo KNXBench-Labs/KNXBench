@@ -20,19 +20,21 @@ export interface MachineReading {
 }
 export type PlanLoadVerdict = "matchesPlan" | "differsFromPlan" | "unknown";
 export type RunStateCode = "halted" | "running" | "ready" | "terminated" | "starting" | "shuttingDown";
-export type RunStateStep = "objectType" | "application" | "runState";
+export type RunStateStep = "objectType" | "application" | "description" | "runState";
 export type RunStateCause = "refused" | "malformed" | "noCorrelatedAnswer" | "connectionLost" | "readFailed";
 /** The run-state continuation inside an identity match; absent in records of older producers. */
 export type RunStateRecord =
   | { status: "notRead"; reason: "unsupportedMask" | "loadReadFailed" }
   | { status: "candidateMismatch"; kind: "objectType" | "application" }
   | { status: "unavailable"; step: RunStateStep; cause: RunStateCause }
+  | { status: "notQualified"; reason: "descriptionProblem" | "indeterminateMetadata" | "unqualifiedElements" }
+  | { status: "notQualified"; reason: "unsupportedDatatype"; pdt: number }
   | { status: "undefinedValue" }
   | { status: "observed"; objectIndex: 3; state: RunStateCode };
 export type IdentityCheck =
   | { result: "unavailable"; part: IdentityPart }
   | { result: "mismatch"; part: IdentityPart; kind: "differs" | "malformed" }
-  | { result: "match"; exemplar: "notVerified"; loadStates: MachineReading[]; planLoadVerdict: PlanLoadVerdict; runState?: RunStateRecord };
+  | { result: "match"; exemplar: "notVerified"; loadStates: MachineReading[]; planLoadVerdict: PlanLoadVerdict; runStateMask?: "0700"; runState?: RunStateRecord };
 export type ReachCheck =
   | { result: "notReached" }
   | { result: "unknown" }
@@ -53,7 +55,7 @@ export const NOT_CHECKED: PostDownloadCheck = { observation: { status: "notCheck
 
 const MACHINES: readonly string[] = ["addressTable", "associationTable", "applicationProgram", "peiProgram"];
 const RUN_STATES: readonly string[] = ["halted", "running", "ready", "terminated", "starting", "shuttingDown"];
-const STEPS: readonly string[] = ["objectType", "application", "runState"];
+const STEPS: readonly string[] = ["objectType", "application", "description", "runState"];
 const CAUSES: readonly string[] = ["refused", "malformed", "noCorrelatedAnswer", "connectionLost", "readFailed"];
 const STATES: readonly string[] = ["unloaded", "loaded", "loading", "error", "unloading", "loadCompleting"];
 
@@ -110,12 +112,12 @@ function verdictAgrees(readings: MachineReading[], verdict: unknown): boolean {
   return false;
 }
 
-function admitRunState(value: unknown, readings: MachineReading[]): void {
+function admitRunState(value: unknown, readings: MachineReading[], exact0700: boolean): void {
   const status = (value as { status?: unknown } | null)?.status;
   const loadsRead = readings.every((reading) => reading.observed.result === "observed");
   if (status === "notRead") {
     const reason = shape(value, ["status", "reason"]).reason;
-    ensure(reason === "unsupportedMask" || (reason === "loadReadFailed" && !loadsRead));
+    ensure((reason === "unsupportedMask" && !exact0700) || (reason === "loadReadFailed" && !loadsRead));
     return;
   }
   ensure(loadsRead);
@@ -125,6 +127,17 @@ function admitRunState(value: unknown, readings: MachineReading[]): void {
   } else if (status === "unavailable") {
     const record = shape(value, ["status", "step", "cause"]);
     ensure(STEPS.includes(record.step as string) && CAUSES.includes(record.cause as string));
+    if (record.step === "description") ensure(exact0700 && record.cause !== "refused" && record.cause !== "malformed");
+  } else if (status === "notQualified") {
+    ensure(exact0700);
+    const reason = (value as { reason?: unknown }).reason;
+    if (reason === "unsupportedDatatype") {
+      const record = shape(value, ["status", "reason", "pdt"]);
+      ensure(typeof record.pdt === "number" && Number.isInteger(record.pdt) && record.pdt >= 1 && record.pdt <= 63);
+    } else {
+      shape(value, ["status", "reason"]);
+      ensure(reason === "descriptionProblem" || reason === "indeterminateMetadata" || reason === "unqualifiedElements");
+    }
   } else if (status === "undefinedValue") {
     shape(value, ["status"]);
   } else {
@@ -148,7 +161,9 @@ function admitIdentity(value: unknown): void {
     ensure(identity.kind === "differs" || identity.kind === "malformed");
   } else {
     const hasRunState = typeof value === "object" && value !== null && Object.hasOwn(value, "runState");
-    const identity = shape(value, hasRunState ? ["result", "exemplar", "loadStates", "planLoadVerdict", "runState"] : ["result", "exemplar", "loadStates", "planLoadVerdict"]);
+    const hasMask = typeof value === "object" && value !== null && Object.hasOwn(value, "runStateMask");
+    const identity = shape(value, ["result", "exemplar", "loadStates", "planLoadVerdict", ...(hasRunState ? ["runState"] : []), ...(hasMask ? ["runStateMask"] : [])]);
+    if (hasMask) ensure(identity.runStateMask === "0700" && hasRunState);
     ensure(result === "match" && identity.exemplar === "notVerified" && Array.isArray(identity.loadStates));
     const readings = (identity.loadStates as unknown[]).map(admitReading);
     let failed = false;
@@ -159,7 +174,7 @@ function admitIdentity(value: unknown): void {
     }
     ensure(readings.every((reading, i) => i === 0 || MACHINES.indexOf(readings[i - 1].machine) < MACHINES.indexOf(reading.machine)));
     ensure(verdictAgrees(readings, identity.planLoadVerdict));
-    if (hasRunState) admitRunState(identity.runState, readings);
+    if (hasRunState) admitRunState(identity.runState, readings, hasMask);
   }
 }
 
@@ -274,5 +289,6 @@ export function runStateLines(check: PostDownloadCheck): CheckLine[] {
     case "notRead": return [{ key: `postDownloadCheck.runState.notRead.${record.reason}` }];
     case "candidateMismatch": return [{ key: `postDownloadCheck.runState.candidateMismatch.${record.kind}`, warning: true }];
     case "unavailable": return [{ key: "postDownloadCheck.runState.unavailable", values: { step: record.step, cause: record.cause }, warning: true }];
+    case "notQualified": return [{ key: `postDownloadCheck.runState.notQualified.${record.reason}`, ...(record.reason === "unsupportedDatatype" ? { values: { pdt: record.pdt } } : {}), warning: true }];
   }
 }

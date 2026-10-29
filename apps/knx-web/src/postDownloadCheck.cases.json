@@ -250,6 +250,86 @@
           "differsFromPlan"
         ]
       ]
+    },
+    {
+      "name": "0700Marker_runStateRunning",
+      "fixture": "runStateRunning",
+      "set": [
+        [
+          "/observation/reach/identity/runStateMask",
+          "0700"
+        ]
+      ]
+    },
+    {
+      "name": "0700Marker_runStateUndefined",
+      "fixture": "runStateUndefined",
+      "set": [
+        [
+          "/observation/reach/identity/runStateMask",
+          "0700"
+        ]
+      ]
+    },
+    {
+      "name": "0700Marker_runStateCandidateMismatch",
+      "fixture": "runStateCandidateMismatch",
+      "set": [
+        [
+          "/observation/reach/identity/runStateMask",
+          "0700"
+        ]
+      ]
+    },
+    {
+      "name": "0700Marker_runStateLoadFailed",
+      "fixture": "runStateLoadFailed",
+      "set": [
+        [
+          "/observation/reach/identity/runStateMask",
+          "0700"
+        ]
+      ]
+    },
+    {
+      "name": "0700Pdt1",
+      "fixture": "exact0700Datatype",
+      "set": [
+        [
+          "/observation/reach/identity/runState/pdt",
+          1
+        ]
+      ]
+    },
+    {
+      "name": "0700Pdt63",
+      "fixture": "exact0700Datatype",
+      "set": [
+        [
+          "/observation/reach/identity/runState/pdt",
+          63
+        ]
+      ]
+    },
+    {
+      "name": "0700Description_connectionLost",
+      "fixture": "exact0700DescriptionUnavailable",
+      "set": [
+        [
+          "/observation/reach/identity/runState/cause",
+          "connectionLost"
+        ]
+      ]
+    },
+    {
+      "name": "0700Description_readFailed",
+      "fixture": "exact0700DescriptionUnavailable",
+      "set": [
+        [
+          "/observation/reach/identity/runState/cause",
+          "readFailed"
+        ]
+      ]
     }
   ],
   "refused": [
@@ -1195,6 +1275,548 @@
         [
           "/runtime",
           "halted"
+        ]
+      ]
+    },
+    {
+      "name": "0700InvalidMarker_None",
+      "fixture": "exact0700Running",
+      "set": [
+        [
+          "/observation/reach/identity/runStateMask",
+          null
+        ]
+      ]
+    },
+    {
+      "name": "0700InvalidMarker_700_int",
+      "fixture": "exact0700Running",
+      "set": [
+        [
+          "/observation/reach/identity/runStateMask",
+          700
+        ]
+      ]
+    },
+    {
+      "name": "0700InvalidMarker_0701",
+      "fixture": "exact0700Running",
+      "set": [
+        [
+          "/observation/reach/identity/runStateMask",
+          "0701"
+        ]
+      ]
+    },
+    {
+      "name": "0700InvalidMarker_700_str",
+      "fixture": "exact0700Running",
+      "set": [
+        [
+          "/observation/reach/identity/runStateMask",
+          "700"
+        ]
+      ]
+    },
+    {
+      "name": "0700InvalidMarker_True",
+      "fixture": "exact0700Running",
+      "set": [
+        [
+          "/observation/reach/identity/runStateMask",
+          true
+        ]
+      ]
+    },
+    {
+      "name": "0700MarkerWithoutState",
+      "fixture": "matched",
+      "set": [
+        [
+          "/observation/reach/identity/runStateMask",
+          "0700"
+        ]
+      ]
+    },
+    {
+      "name": "0700MarkerUnsupportedMask",
+      "fixture": "runStateUnsupportedMask",
+      "set": [
+        [
+          "/observation/reach/identity/runStateMask",
+          "0700"
+        ]
+      ]
+    },
+    {
+      "name": "0700MissingMarker_descriptionProblem",
+      "fixture": "runStateUndefined",
+      "set": [
+        [
+          "/observation/reach/identity/runState",
+          {
+            "status": "notQualified",
+            "reason": "descriptionProblem"
+          }
+        ]
+      ]
+    },
+    {
+      "name": "0700ExtraneousPdt_descriptionProblem_None",
+      "fixture": "exact0700DescriptionProblem",
+      "set": [
+        [
+          "/observation/reach/identity/runState",
+          {
+            "status": "notQualified",
+            "reason": "descriptionProblem",
+            "pdt": null
+          }
+        ]
+      ]
+    },
+    {
+      "name": "0700ExtraneousPdt_descriptionProblem_0",
+      "fixture": "exact0700DescriptionProblem",
+      "set": [
+        [
+          "/observation/reach/identity/runState",
+          {
+            "status": "notQualified",
+            "reason": "descriptionProblem",
+            "pdt": 0
+          }
+        ]
+      ]
+    },
+    {
+      "name": "0700ExtraneousPdt_descriptionProblem_1",
+      "fixture": "exact0700DescriptionProblem",
+      "set": [
+        [
+          "/observation/reach/identity/runState",
+          {
+            "status": "notQualified",
+            "reason": "descriptionProblem",
+            "pdt": 1
+          }
+        ]
+      ]
+    },
+    {
+      "name": "0700ExtraneousPdt_descriptionProblem_63",
+      "fixture": "exact0700DescriptionProblem",
+      "set": [
+        [
+          "/observation/reach/identity/runState",
+          {
+            "status": "notQualified",
+            "reason": "descriptionProblem",
+            "pdt": 63
+          }
+        ]
+      ]
+    },
+    {
+      "name": "0700MissingMarker_indeterminateMetadata",
+      "fixture": "runStateUndefined",
+      "set": [
+        [
+          "/observation/reach/identity/runState",
+          {
+            "status": "notQualified",
+            "reason": "indeterminateMetadata"
+          }
+        ]
+      ]
+    },
+    {
+      "name": "0700ExtraneousPdt_indeterminateMetadata_None",
+      "fixture": "exact0700DescriptionProblem",
+      "set": [
+        [
+          "/observation/reach/identity/runState",
+          {
+            "status": "notQualified",
+            "reason": "indeterminateMetadata",
+            "pdt": null
+          }
+        ]
+      ]
+    },
+    {
+      "name": "0700ExtraneousPdt_indeterminateMetadata_0",
+      "fixture": "exact0700DescriptionProblem",
+      "set": [
+        [
+          "/observation/reach/identity/runState",
+          {
+            "status": "notQualified",
+            "reason": "indeterminateMetadata",
+            "pdt": 0
+          }
+        ]
+      ]
+    },
+    {
+      "name": "0700ExtraneousPdt_indeterminateMetadata_1",
+      "fixture": "exact0700DescriptionProblem",
+      "set": [
+        [
+          "/observation/reach/identity/runState",
+          {
+            "status": "notQualified",
+            "reason": "indeterminateMetadata",
+            "pdt": 1
+          }
+        ]
+      ]
+    },
+    {
+      "name": "0700ExtraneousPdt_indeterminateMetadata_63",
+      "fixture": "exact0700DescriptionProblem",
+      "set": [
+        [
+          "/observation/reach/identity/runState",
+          {
+            "status": "notQualified",
+            "reason": "indeterminateMetadata",
+            "pdt": 63
+          }
+        ]
+      ]
+    },
+    {
+      "name": "0700MissingMarker_unqualifiedElements",
+      "fixture": "runStateUndefined",
+      "set": [
+        [
+          "/observation/reach/identity/runState",
+          {
+            "status": "notQualified",
+            "reason": "unqualifiedElements"
+          }
+        ]
+      ]
+    },
+    {
+      "name": "0700ExtraneousPdt_unqualifiedElements_None",
+      "fixture": "exact0700DescriptionProblem",
+      "set": [
+        [
+          "/observation/reach/identity/runState",
+          {
+            "status": "notQualified",
+            "reason": "unqualifiedElements",
+            "pdt": null
+          }
+        ]
+      ]
+    },
+    {
+      "name": "0700ExtraneousPdt_unqualifiedElements_0",
+      "fixture": "exact0700DescriptionProblem",
+      "set": [
+        [
+          "/observation/reach/identity/runState",
+          {
+            "status": "notQualified",
+            "reason": "unqualifiedElements",
+            "pdt": 0
+          }
+        ]
+      ]
+    },
+    {
+      "name": "0700ExtraneousPdt_unqualifiedElements_1",
+      "fixture": "exact0700DescriptionProblem",
+      "set": [
+        [
+          "/observation/reach/identity/runState",
+          {
+            "status": "notQualified",
+            "reason": "unqualifiedElements",
+            "pdt": 1
+          }
+        ]
+      ]
+    },
+    {
+      "name": "0700ExtraneousPdt_unqualifiedElements_63",
+      "fixture": "exact0700DescriptionProblem",
+      "set": [
+        [
+          "/observation/reach/identity/runState",
+          {
+            "status": "notQualified",
+            "reason": "unqualifiedElements",
+            "pdt": 63
+          }
+        ]
+      ]
+    },
+    {
+      "name": "0700MissingMarker_unsupportedDatatype",
+      "fixture": "runStateUndefined",
+      "set": [
+        [
+          "/observation/reach/identity/runState",
+          {
+            "status": "notQualified",
+            "reason": "unsupportedDatatype",
+            "pdt": 2
+          }
+        ]
+      ]
+    },
+    {
+      "name": "0700InvalidPdt_None",
+      "fixture": "exact0700Datatype",
+      "set": [
+        [
+          "/observation/reach/identity/runState/pdt",
+          null
+        ]
+      ]
+    },
+    {
+      "name": "0700InvalidPdt_0",
+      "fixture": "exact0700Datatype",
+      "set": [
+        [
+          "/observation/reach/identity/runState/pdt",
+          0
+        ]
+      ]
+    },
+    {
+      "name": "0700InvalidPdt_64",
+      "fixture": "exact0700Datatype",
+      "set": [
+        [
+          "/observation/reach/identity/runState/pdt",
+          64
+        ]
+      ]
+    },
+    {
+      "name": "0700InvalidPdt_-1",
+      "fixture": "exact0700Datatype",
+      "set": [
+        [
+          "/observation/reach/identity/runState/pdt",
+          -1
+        ]
+      ]
+    },
+    {
+      "name": "0700InvalidPdt_1.5",
+      "fixture": "exact0700Datatype",
+      "set": [
+        [
+          "/observation/reach/identity/runState/pdt",
+          1.5
+        ]
+      ]
+    },
+    {
+      "name": "0700InvalidPdt_2",
+      "fixture": "exact0700Datatype",
+      "set": [
+        [
+          "/observation/reach/identity/runState/pdt",
+          "2"
+        ]
+      ]
+    },
+    {
+      "name": "0700InvalidPdt_True",
+      "fixture": "exact0700Datatype",
+      "set": [
+        [
+          "/observation/reach/identity/runState/pdt",
+          true
+        ]
+      ]
+    },
+    {
+      "name": "0700MissingPdt",
+      "fixture": "exact0700Datatype",
+      "set": [
+        [
+          "/observation/reach/identity/runState",
+          {
+            "status": "notQualified",
+            "reason": "unsupportedDatatype"
+          }
+        ]
+      ]
+    },
+    {
+      "name": "0700MissingDescriptionMarker",
+      "fixture": "runStateUnavailable",
+      "set": [
+        [
+          "/observation/reach/identity/runState/step",
+          "description"
+        ]
+      ]
+    },
+    {
+      "name": "0700Extraneous_raw",
+      "fixture": "exact0700DescriptionProblem",
+      "set": [
+        [
+          "/observation/reach/identity/runState/raw",
+          [
+            0,
+            0,
+            1,
+            0
+          ]
+        ]
+      ]
+    },
+    {
+      "name": "0700Extraneous_access",
+      "fixture": "exact0700DescriptionProblem",
+      "set": [
+        [
+          "/observation/reach/identity/runState/access",
+          0
+        ]
+      ]
+    },
+    {
+      "name": "0700Extraneous_responseIndex",
+      "fixture": "exact0700DescriptionProblem",
+      "set": [
+        [
+          "/observation/reach/identity/runState/responseIndex",
+          7
+        ]
+      ]
+    },
+    {
+      "name": "0700Extraneous_writeEnabled",
+      "fixture": "exact0700DescriptionProblem",
+      "set": [
+        [
+          "/observation/reach/identity/runState/writeEnabled",
+          false
+        ]
+      ]
+    },
+    {
+      "name": "0700Extraneous_error",
+      "fixture": "exact0700DescriptionProblem",
+      "set": [
+        [
+          "/observation/reach/identity/runState/error",
+          "private"
+        ]
+      ]
+    },
+    {
+      "name": "0700DescriptionInvalidCause_refused",
+      "fixture": "exact0700DescriptionUnavailable",
+      "set": [
+        [
+          "/observation/reach/identity/runState/cause",
+          "refused"
+        ]
+      ]
+    },
+    {
+      "name": "0700DescriptionInvalidCause_malformed",
+      "fixture": "exact0700DescriptionUnavailable",
+      "set": [
+        [
+          "/observation/reach/identity/runState/cause",
+          "malformed"
+        ]
+      ]
+    },
+    {
+      "name": "0700KnownWithoutObserved_exact0700DescriptionProblem",
+      "fixture": "exact0700DescriptionProblem",
+      "set": [
+        [
+          "/runtime",
+          "running"
+        ]
+      ]
+    },
+    {
+      "name": "0700FailedLoads_exact0700DescriptionProblem",
+      "fixture": "partialReading",
+      "set": [
+        [
+          "/observation/reach/identity/runStateMask",
+          "0700"
+        ],
+        [
+          "/observation/reach/identity/runState",
+          {
+            "status": "notQualified",
+            "reason": "descriptionProblem"
+          }
+        ]
+      ]
+    },
+    {
+      "name": "0700KnownWithoutObserved_exact0700DescriptionUnavailable",
+      "fixture": "exact0700DescriptionUnavailable",
+      "set": [
+        [
+          "/runtime",
+          "running"
+        ]
+      ]
+    },
+    {
+      "name": "0700FailedLoads_exact0700DescriptionUnavailable",
+      "fixture": "partialReading",
+      "set": [
+        [
+          "/observation/reach/identity/runStateMask",
+          "0700"
+        ],
+        [
+          "/observation/reach/identity/runState",
+          {
+            "status": "unavailable",
+            "step": "description",
+            "cause": "noCorrelatedAnswer"
+          }
+        ]
+      ]
+    },
+    {
+      "name": "0700KnownWithoutObserved_exact0700Datatype",
+      "fixture": "exact0700Datatype",
+      "set": [
+        [
+          "/runtime",
+          "running"
+        ]
+      ]
+    },
+    {
+      "name": "0700FailedLoads_exact0700Datatype",
+      "fixture": "partialReading",
+      "set": [
+        [
+          "/observation/reach/identity/runStateMask",
+          "0700"
+        ],
+        [
+          "/observation/reach/identity/runState",
+          {
+            "status": "notQualified",
+            "reason": "unsupportedDatatype",
+            "pdt": 2
+          }
         ]
       ]
     }

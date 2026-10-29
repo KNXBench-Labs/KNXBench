@@ -2086,6 +2086,35 @@ impl<'t, T: ManagementTransport> ManagementSession<'t, T> {
 
     // --------------------------------------------------------------- reads
 
+    /// Reads a named property's description; response index is returned uninterpreted.
+    pub async fn read_property_description(
+        &mut self,
+        object_index: ObjectIndex,
+        property_id: std::num::NonZeroU8,
+    ) -> Result<(u8, crate::cemi::PropertyDescription), SessionError> {
+        self.exchange(
+            ApplicationService::PropertyDescriptionRead {
+                object_index: object_index.octet(),
+                property_id: property_id.get(),
+                // Deterministic named-request policy, not an AL requirement.
+                property_index: 0,
+            },
+            "A_PropertyDescription_Response",
+            |service| match service {
+                ApplicationService::PropertyDescriptionResponse {
+                    object_index: oi,
+                    property_id: pid,
+                    property_index,
+                    description,
+                } if *oi == object_index.octet() && *pid == property_id.get() => {
+                    Some((*property_index, *description))
+                }
+                _ => None,
+            },
+        )
+        .await
+    }
+
     /// `A_PropertyValue_Read`, with AL §3.4.4.2's `nr_of_elem = 0` refusal
     /// surfaced as an error rather than as empty data.
     pub async fn read_property(
@@ -3463,6 +3492,7 @@ pub async fn broadcast_serial_number_read<T: ManagementTransport>(
 
 #[cfg(test)]
 mod tests {
+    mod property_description;
     use super::simulator::{Seen, SimulatedDevice, SimulatorConfig};
     use super::*;
     use crate::cemi::LDataFrame;

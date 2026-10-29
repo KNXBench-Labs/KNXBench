@@ -9,6 +9,12 @@ already found lying in the grass.
 
 ## Programming evidence
 
+- **A one-byte property value is not datatype evidence.** Exact 0700 requires
+  independently configured/read description metadata before PID 6. CONTROL is
+  PDT 0; legacy bit 6 is preserved but ignored. The upper maximum-elements nibble
+  remains unqualified rather than guessed. New description vocabulary needs the
+  explicit non-null 0700 provenance marker; actual 0701/0705 producers must keep
+  their old bytes. [Contract](contracts/post-download-run-state-0700.md).
 - **A failure code can be old while its phase is new.** Exemplar checks during
   the restore's own backup emit `propertyMismatch` or `malformedProperty` in
   `backupBeforeStep`, with zero verified write octets. Both the Rust persistence

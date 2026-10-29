@@ -8,6 +8,8 @@
 use crate::property_validation_bundle::{
     digest, invalid, OperationRecord, PointerObservationRecord, PreparedBundle, RecoveryRecord,
 };
+#[path = "property_validation_allocation_evidence.rs"]
+mod allocation_evidence;
 #[path = "property_validation_diagnostic.rs"]
 mod diagnostic;
 #[path = "property_validation_final_step.rs"]
@@ -16,6 +18,11 @@ mod final_step;
 mod lifecycle;
 #[path = "property_validation_result.rs"]
 mod result;
+pub use allocation_evidence::{
+    AllocationEvidenceAvailability, AllocationEvidenceRecord, AllocationMismatchEvidenceEntry,
+    AllocationMismatchEvidenceView, DifferenceClassification, DifferingRangeRecord,
+    DifferingRangeView, EvidenceUnavailableReason, OffsetRange,
+};
 pub use diagnostic::{
     FailureDiagnostic, FailureDiagnosticRun, PointerFailureReason, PointerFailureRecord,
 };
@@ -181,6 +188,14 @@ pub enum Checkpoint {
             skip_serializing_if = "Option::is_none"
         )]
         final_step: Option<FinalStepRecord>,
+        /// Compared bytes of a final allocation mismatch, only beside that final-step
+        /// record. Absent in every journal before envelope format 4; never reconstructed.
+        #[serde(
+            default,
+            deserialize_with = "allocation_evidence::present_record",
+            skip_serializing_if = "Option::is_none"
+        )]
+        allocation_evidence: Option<AllocationEvidenceRecord>,
     },
     Cancelled,
     Finished,
@@ -202,14 +217,31 @@ pub enum Checkpoint {
             skip_serializing_if = "Option::is_none"
         )]
         final_step: Option<FinalStepRecord>,
+        /// Compared bytes of a final allocation mismatch, only beside that final-step
+        /// record. Absent in every journal before envelope format 4; never reconstructed.
+        #[serde(
+            default,
+            deserialize_with = "allocation_evidence::present_record",
+            skip_serializing_if = "Option::is_none"
+        )]
+        allocation_evidence: Option<AllocationEvidenceRecord>,
     },
     Restored,
 }
 impl Checkpoint {
-    /// Envelope version 3 marks a populated final-step record and version 2 a populated PID 7
-    /// record, so an older strict reader refuses either instead of dropping it; all else is 1.
+    /// Envelope version 4 marks a populated allocation-evidence record, 3 a populated
+    /// final-step record and 2 a populated PID 7 record, so an older strict reader refuses
+    /// each instead of dropping it; all else is 1.
     fn envelope_format(&self) -> u16 {
         match self {
+            Self::Failed {
+                allocation_evidence: Some(_),
+                ..
+            }
+            | Self::RestoreFailed {
+                allocation_evidence: Some(_),
+                ..
+            } => 4,
             Self::Failed {
                 final_step: Some(_),
                 ..
@@ -264,6 +296,8 @@ struct State {
     failure_diagnostics: Vec<FailureDiagnostic>,
     /// One typed final-step failure per run at most, in the same order.
     final_step_failures: Vec<FinalStepDiagnostic>,
+    /// Each typed final allocation mismatch with its replay-validated bytes, if journaled.
+    allocation_mismatches: Vec<(FailureDiagnosticRun, Option<AllocationEvidenceRecord>)>,
     /// Frozen when the download run ends (terminal checkpoint or restore start).
     download_end: Option<DownloadFacts>,
 }
@@ -282,6 +316,7 @@ impl State {
             in_procedure_observations: Vec::new(),
             failure_diagnostics: Vec::new(),
             final_step_failures: Vec::new(),
+            allocation_mismatches: Vec::new(),
             download_end: None,
         }
     }
@@ -486,6 +521,7 @@ impl State {
                     code,
                     pointer_failure,
                     final_step,
+                    allocation_evidence,
                     ..
                 } = event
                 {
@@ -493,6 +529,7 @@ impl State {
                         *code,
                         pointer_failure.as_ref(),
                         final_step.as_ref(),
+                        allocation_evidence.as_ref(),
                         FailureDiagnosticRun::Download,
                     )?;
                 }
@@ -529,6 +566,7 @@ impl State {
                 code,
                 pointer_failure,
                 final_step,
+                allocation_evidence,
                 ..
             } => {
                 if self.outcome != LocalOutcome::Restoring {
@@ -538,6 +576,7 @@ impl State {
                     *code,
                     pointer_failure.as_ref(),
                     final_step.as_ref(),
+                    allocation_evidence.as_ref(),
                     FailureDiagnosticRun::Restore,
                 )?;
                 self.outcome = LocalOutcome::RestoreFailed;
@@ -574,12 +613,14 @@ impl State {
             .then_some(last)
     }
     /// Typed records are valid only as Net produces them: a PID 7 record under the code its
-    /// width refusal maps to, a final-step record only while the final step is active.
+    /// width refusal maps to, a final-step record only while the final step is active, and
+    /// allocation evidence only beside an allocation mismatch, equal to its replay.
     fn record_failure(
         &mut self,
         code: FailureCode,
         pointer: Option<&PointerFailureRecord>,
         final_step: Option<&FinalStepRecord>,
+        evidence: Option<&AllocationEvidenceRecord>,
         run: FailureDiagnosticRun,
     ) -> io::Result<()> {
         if let Some(record) = pointer {
@@ -600,11 +641,29 @@ impl State {
                 ));
             }
         }
+        if let Some(record) = evidence {
+            if !final_step.is_some_and(allocation_evidence::is_allocation_mismatch) {
+                return Err(invalid(
+                    "allocation evidence without a final allocation mismatch",
+                ));
+            }
+            let snapshot = self.recovery_snapshot()?;
+            let executed = match run {
+                FailureDiagnosticRun::Download => snapshot.original_plan.clone(),
+                FailureDiagnosticRun::Restore => snapshot
+                    .recovery_plan(&snapshot.original_plan)
+                    .map_err(|_| invalid("allocation evidence of an unavailable restore"))?,
+            };
+            record.validate(&snapshot, &executed)?;
+        }
         if let Some(record) = pointer {
             self.failure_diagnostics.push(record.diagnostic(run));
         }
         if let Some(record) = final_step {
             self.final_step_failures.push(record.diagnostic(run));
+            if allocation_evidence::is_allocation_mismatch(record) {
+                self.allocation_mismatches.push((run, evidence.cloned()));
+            }
         }
         Ok(())
     }
@@ -1044,6 +1103,16 @@ impl OperationStore {
             failure_diagnostics: self.state.failure_diagnostics.clone(),
             final_step_failures: self.state.final_step_failures.clone(),
         }
+    }
+    /// Every typed final allocation mismatch of this operation, download before restore,
+    /// with its replay-validated bytes or why they are unavailable. Private evidence for a
+    /// diagnostic bundle: deliberately absent from progress, status and shareable reports.
+    pub fn allocation_mismatch_evidence(&self) -> Vec<AllocationMismatchEvidenceEntry> {
+        self.state
+            .allocation_mismatches
+            .iter()
+            .map(|(run, record)| allocation_evidence::entry(*run, record.as_ref()))
+            .collect()
     }
     pub fn write_shareable_report(&self, path: &Path) -> io::Result<()> {
         write_new_synced(path, &encode(&self.shareable_report())?)

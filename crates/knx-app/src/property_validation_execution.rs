@@ -5,7 +5,8 @@
 //! [`HardwareRelease`] consent (ADR-0152); the simulator entry is unchanged.
 use crate::{
     property_validation::{
-        Checkpoint, FailureCode, FinalStepRecord, OperationStore, PointerFailureRecord,
+        AllocationEvidenceRecord, Checkpoint, FailureCode, FinalStepRecord, OperationStore,
+        PointerFailureRecord,
     },
     property_validation_bundle::{
         invalid, PointerObservationRecord, PreparedBundle, RecoveryRecord,
@@ -21,7 +22,7 @@ use knx_net::commissioning::{
     property_download::{
         restore_experimental_property_plan, restore_experimental_property_plan_on_hardware,
         run_experimental_property_plan, run_experimental_property_plan_on_hardware,
-        PropertySimulationFailure,
+        PropertySimulationError, PropertySimulationFailure,
     },
     property_recovery::{ExperimentalPropertyPreconditions, PropertyJournalEvent},
     simulator::SimulatedDevice,
@@ -274,12 +275,7 @@ pub async fn execute_simulated(
             let checkpoint = if matches!(error.failure, PropertySimulationFailure::Cancelled) {
                 Checkpoint::Cancelled
             } else {
-                Checkpoint::Failed {
-                    code: failure_code(&error.failure),
-                    local_diagnostic: format!("{error:?}"),
-                    pointer_failure: PointerFailureRecord::from_failure(&error.failure),
-                    final_step: FinalStepRecord::from_error(&error, failure_code(&error.failure)),
-                }
+                failed_checkpoint(&error)
             };
             store.checkpoint(checkpoint)?;
             Err(io::Error::other(format!("property validation failed: {error}; private protocol retained, no automatic retry or restore")))
@@ -324,12 +320,7 @@ pub async fn restore_simulated(
     match result {
         Ok(_) => store.checkpoint(Checkpoint::Restored),
         Err(error) => {
-            store.checkpoint(Checkpoint::RestoreFailed {
-                code: failure_code(&error.failure),
-                local_diagnostic: format!("{error:?}"),
-                pointer_failure: PointerFailureRecord::from_failure(&error.failure),
-                final_step: FinalStepRecord::from_error(&error, failure_code(&error.failure)),
-            })?;
+            store.checkpoint(restore_failed_checkpoint(&error))?;
             Err(invalid(
                 "explicit restore failed; original recovery retained, no automatic retry",
             ))
@@ -412,12 +403,7 @@ pub(crate) async fn execute_hardware_inner<T: ManagementTransport>(
             let checkpoint = if matches!(error.failure, PropertySimulationFailure::Cancelled) {
                 Checkpoint::Cancelled
             } else {
-                Checkpoint::Failed {
-                    code: failure_code(&error.failure),
-                    local_diagnostic: format!("{error:?}"),
-                    pointer_failure: PointerFailureRecord::from_failure(&error.failure),
-                    final_step: FinalStepRecord::from_error(&error, failure_code(&error.failure)),
-                }
+                failed_checkpoint(&error)
             };
             store.checkpoint(checkpoint)?;
             Err(io::Error::other(format!(
@@ -509,16 +495,44 @@ pub(crate) async fn restore_hardware_inner<T: ManagementTransport>(
     match result {
         Ok(_) => store.checkpoint(Checkpoint::Restored),
         Err(error) => {
-            store.checkpoint(Checkpoint::RestoreFailed {
-                code: failure_code(&error.failure),
-                local_diagnostic: format!("{error:?}"),
-                pointer_failure: PointerFailureRecord::from_failure(&error.failure),
-                final_step: FinalStepRecord::from_error(&error, failure_code(&error.failure)),
-            })?;
+            store.checkpoint(restore_failed_checkpoint(&error))?;
             Err(invalid(
                 "explicit restore failed; original recovery retained, no automatic retry",
             ))
         }
+    }
+}
+/// The terminal record of a failed download: every typed fact Net attached, each only
+/// where its own validator admits it.
+fn failed_checkpoint(error: &PropertySimulationError) -> Checkpoint {
+    let code = failure_code(&error.failure);
+    let final_step = FinalStepRecord::from_error(error, code);
+    Checkpoint::Failed {
+        code,
+        local_diagnostic: format!("{error:?}"),
+        pointer_failure: PointerFailureRecord::from_failure(&error.failure),
+        allocation_evidence: AllocationEvidenceRecord::from_error(error, final_step.as_ref()),
+        final_step,
+    }
+}
+/// [`failed_checkpoint`] for the explicit restore run.
+fn restore_failed_checkpoint(error: &PropertySimulationError) -> Checkpoint {
+    let Checkpoint::Failed {
+        code,
+        local_diagnostic,
+        pointer_failure,
+        final_step,
+        allocation_evidence,
+    } = failed_checkpoint(error)
+    else {
+        unreachable!("failed_checkpoint builds Failed")
+    };
+    Checkpoint::RestoreFailed {
+        code,
+        local_diagnostic,
+        pointer_failure,
+        final_step,
+        allocation_evidence,
     }
 }
 fn failure_code(error: &PropertySimulationFailure) -> FailureCode {

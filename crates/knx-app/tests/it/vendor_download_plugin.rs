@@ -134,6 +134,11 @@ fn stored_backup(plan: &MemoryDownloadPlan) -> StoredBackup {
                     knx_core::commissioning::device_backup::PriorApplication::NotRecorded,
                     knx_core::commissioning::device_backup::PriorApplication::Recorded,
                 ),
+            exemplar_serial: knx_core::commissioning::device_backup::ExemplarEvidence::Recorded(
+                knx_core::commissioning::memory_download::ExemplarSerial::new([
+                    0, 0x83, 0x12, 0x34, 0x56, 0x78,
+                ]),
+            ),
         },
         application: PROGRAM_ID.into(),
         partial: None,

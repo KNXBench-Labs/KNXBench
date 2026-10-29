@@ -246,8 +246,9 @@ async fn a_silent_device_is_a_released_connection_not_an_invented_timeout() {
 
 #[tokio::test]
 async fn a_transport_loss_after_the_writes_is_partial_and_counts_what_was_read_back() {
+    // 72 frames: the same drop point as before, shifted by the backup's two serial-number frames.
     let device = simulated(SimulatorConfig {
-        drop_connection_after: Some(70),
+        drop_connection_after: Some(72),
         ..SimulatorConfig::default()
     });
     let started = run(&device, plan()).await;

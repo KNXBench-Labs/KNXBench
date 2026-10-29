@@ -7,6 +7,26 @@ How to run the gates themselves is in [Repository verification targets](VERIFICA
 this page only lists the traps around them. Think of it as the list of rakes
 already found lying in the grass.
 
+## Programming evidence
+
+- **A failure code can be old while its phase is new.** Exemplar checks during
+  the restore's own backup emit `propertyMismatch` or `malformedProperty` in
+  `backupBeforeStep`, with zero verified write octets. Both the Rust persistence
+  validator and the web reader must admit those exact pairs; otherwise a failed
+  history row can silently lose its optional cause. Test actual durable reopen,
+  not only serialization or terminal outcome. Other code/phase pairs stay refused.
+- **Runtime restore guards are not manufacturer procedure identity.** Use
+  `source_procedure_descriptions` at backup producers and restore comparison;
+  excluding a source `CompareProperty`, or retaining the synthetic exemplar
+  precondition, can corrupt the next restore's eligibility.
+- **Serial observation is not serial admission or universal redaction.** Missing
+  serial evidence can leave an ordinary download admitted but its backup not
+  restorable. Format 1/2 also cannot restore. Keep newly added identity types and
+  public projections serial-free; arbitrary existing memory/debug payloads are
+  outside that proof. See the [bounded contract](contracts/regular-restore-exemplar-binding.md).
+- **Property element count and octet width are different facts.** Preserve a
+  malformed element count as such; never print it as an invented octet length.
+
 ## Gates
 
 - **A test name is not the browser build mode.** The default

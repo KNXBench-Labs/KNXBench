@@ -28,7 +28,7 @@ pub const MAX_COUNT: usize = (1 << 53) - 1;
 pub enum FailureCategory {
     /// The plan, policy or authorisation refused before a device frame.
     PlanRefused,
-    /// The device is not the one the plan was made for.
+    /// The device does not meet the operation's identity requirements.
     IdentityMismatch,
     /// The backup before the first write could not be taken or kept.
     BackupFailed,
@@ -36,7 +36,7 @@ pub enum FailureCategory {
     Timeout,
     /// The connection to the device or gateway ended or was refused.
     ConnectionLost,
-    /// The device refused a write.
+    /// The device refused a request (a write, or a read such as the exemplar serial).
     DeviceRefused,
     /// A written value read back differently.
     ReadBackMismatch,
@@ -113,7 +113,10 @@ impl FailureCode {
             E::CheckAfterWrite { .. } => Self::CheckAfterWrite,
             E::MaskMismatch { .. } => Self::MaskMismatch,
             E::ManufacturerMismatch { .. } => Self::ManufacturerMismatch,
-            E::PropertyMismatch { .. } => Self::PropertyMismatch,
+            E::PropertyMismatch { .. }
+            | E::ExemplarMismatch { .. }
+            | E::BackupExemplarMismatch { .. } => Self::PropertyMismatch,
+            E::ExemplarElementCount { .. } => Self::MalformedProperty,
             E::NotLoaded { .. } => Self::NotLoaded,
             E::UnexpectedState { .. } => Self::UnexpectedLoadState,
             E::Session { error, .. } => Self::of_session(error),
@@ -391,7 +394,16 @@ impl DownloadFailure {
         let phase_fits = match self.category {
             C::Stopped => self.phase == FailurePhase::StoppedBeforeStep,
             C::BackupFailed => self.phase == FailurePhase::BackupBeforeStep,
-            _ => matches!(self.phase, FailurePhase::BeforeSteps | FailurePhase::InStep),
+            _ => {
+                matches!(self.phase, FailurePhase::BeforeSteps | FailurePhase::InStep)
+                    // The restore's own backup observes the exemplar serial before any change.
+                    || (self.phase == FailurePhase::BackupBeforeStep
+                        && self.read_back_octets == 0
+                        && matches!(
+                            self.code,
+                            FailureCode::PropertyMismatch | FailureCode::MalformedProperty
+                        ))
+            }
         };
         // A run that ended in or after its restart step never knows the restart was not sent.
         let restart_fits = !(self.restart == FailureRestart::NotSent
@@ -475,7 +487,9 @@ pub fn explanation(code: FailureCode) -> &'static str {
         }
         F::MaskMismatch => "the device reports another mask version",
         F::ManufacturerMismatch => "the device reports another manufacturer",
-        F::PropertyMismatch => "a device property does not match the product",
+        F::PropertyMismatch => {
+            "a device property does not match the operation's identity requirements"
+        }
         F::BackupRead | F::BackupShortRead => "the backup before the first write could not be read",
         F::BackupNotKept => "the backup before the first write could not be kept",
         F::NoAnswer => "the device did not answer in time",
@@ -484,7 +498,7 @@ pub fn explanation(code: FailureCode) -> &'static str {
         F::NotConnected => "the session was not connected",
         F::ConnectionLost | F::ConnectionReleased => "the connection to the device ended",
         F::ConnectRejected => "the connection to the device was rejected",
-        F::PropertyRefused | F::MemoryRefused => "the device refused a write",
+        F::PropertyRefused | F::MemoryRefused => "the device refused the request",
         F::ReadBackMismatch | F::PropertyReadBackMismatch => {
             "a written value read back differently"
         }
@@ -533,11 +547,23 @@ fn locate(
             index: Some(index), ..
         }
         | E::PropertyMismatch { index, .. }
+        | E::ExemplarMismatch { index }
+        | E::ExemplarElementCount {
+            index,
+            in_backup: false,
+            ..
+        }
         | E::NotLoaded { index, .. }
         | E::UnexpectedState { index, .. } => (P::InStep, Some(index + 1)),
         // Checked while connecting: the step that was running.
         E::MaskMismatch { .. } | E::ManufacturerMismatch { .. } => (P::InStep, last_started),
-        E::BackupRead { index, .. } => (P::BackupBeforeStep, Some(index + 1)),
+        E::BackupRead { index, .. }
+        | E::BackupExemplarMismatch { index }
+        | E::ExemplarElementCount {
+            index,
+            in_backup: true,
+            ..
+        } => (P::BackupBeforeStep, Some(index + 1)),
         E::BackupShortRead { .. } | E::BackupNotKept(..) => (P::BackupBeforeStep, first_change()),
         E::Stopped { before_step, .. } => (P::StoppedBeforeStep, Some(before_step + 1)),
     }
@@ -553,6 +579,11 @@ fn describe(step: &MemoryDownloadStep) -> (StepKind, String) {
         } => (
             StepKind::CompareProperty,
             format!("compare property {object_index}/{property_id}"),
+        ),
+        // Closed vocabulary: the exemplar guard is a compare to the result shapes.
+        MemoryDownloadStep::RequireExemplar(_) => (
+            StepKind::CompareProperty,
+            "check the device against the backed-up exemplar".into(),
         ),
         MemoryDownloadStep::LoadRecord(record) => (
             StepKind::LoadRecord,

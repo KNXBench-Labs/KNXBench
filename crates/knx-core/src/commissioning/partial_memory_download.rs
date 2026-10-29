@@ -182,6 +182,7 @@ pub fn derive_partial_plan(
             MemoryDownloadStep::Connect
             | MemoryDownloadStep::CompareProperty { .. }
             | MemoryDownloadStep::RequireLoaded(_)
+            | MemoryDownloadStep::RequireExemplar(_)
             | MemoryDownloadStep::Restart
             | MemoryDownloadStep::Disconnect => steps.push(step.clone()),
         }
@@ -609,6 +610,29 @@ mod tests {
                 }
             ),
             Err(PartialPlanError::NothingToWrite)
+        );
+    }
+
+    #[test]
+    fn a_partial_derivation_keeps_an_exemplar_guard_it_is_given() {
+        use crate::commissioning::memory_download::ExemplarSerial;
+        let mut guarded = complete();
+        let first_change = guarded
+            .steps
+            .iter()
+            .position(MemoryDownloadStep::changes_device)
+            .unwrap();
+        let guard = MemoryDownloadStep::RequireExemplar(ExemplarSerial::new([1, 2, 3, 4, 5, 6]));
+        guarded.steps.insert(first_change, guard.clone());
+        let partial = derive_partial_plan(&guarded, BOTH).expect("a partial plan");
+        assert_eq!(
+            partial
+                .plan
+                .steps
+                .iter()
+                .filter(|step| **step == guard)
+                .count(),
+            1
         );
     }
 }

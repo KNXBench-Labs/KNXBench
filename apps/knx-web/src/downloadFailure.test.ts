@@ -3,6 +3,8 @@ import { describe, expect, it } from "vitest";
 import cases from "./downloadFailure.cases.json";
 import { admitHistoryPage } from "./activityHistory";
 import { admitDownloadFailure, FAILURE_CODES, MAX_STEP_SUMMARY } from "./downloadFailure";
+import { messages as en } from "./messages/en";
+import { messages as de } from "./messages/de";
 
 type Json = Record<string, unknown>;
 
@@ -66,5 +68,44 @@ describe("admitDownloadFailure", () => {
   it("maps every code to one category, like the Rust reader", () => {
     expect(Object.keys(FAILURE_CODES)).toHaveLength(45);
     expect(new Set(Object.values(FAILURE_CODES)).size).toBe(12);
+  });
+});
+
+describe("exemplar-guard failures in the closed vocabulary", () => {
+  /** The shape knx-app serialises for a live ExemplarMismatch (download_failure/tests.rs). */
+  const exemplarMismatch = {
+    category: "identityMismatch", code: "propertyMismatch", phase: "inStep",
+    step: { number: 3, of: 8, kind: "compareProperty", summary: "check the device against the backed-up exemplar" },
+    restart: "notSent", readBackOctets: 0,
+  };
+  const refusedRead = {
+    category: "deviceRefused", code: "propertyRefused", phase: "inStep",
+    step: { number: 3, of: 8, kind: "compareProperty", summary: "check the device against the backed-up exemplar" },
+    restart: "notSent", readBackOctets: 0,
+  };
+  const malformed = { ...refusedRead, category: "malformedResponse", code: "malformedProperty" };
+
+  it("admits the Rust-shaped records unchanged, with no serial field anywhere", () => {
+    for (const record of [exemplarMismatch, refusedRead, malformed]) {
+      expect(admitDownloadFailure(record)).toEqual(record);
+      expect(JSON.stringify(admitDownloadFailure(record))).not.toMatch(/serial|exemplar_/i);
+    }
+  });
+
+  it("names a refused read neutrally in English and German, never as a write", () => {
+    expect(en["downloadFailure.category.deviceRefused"]).toBe("The device refused the request.");
+    expect(de["downloadFailure.category.deviceRefused"]).toBe("Das Gerät hat die Anfrage abgelehnt.");
+    expect(en["downloadFailure.category.deviceRefused"]).not.toMatch(/write/i);
+    expect(de["downloadFailure.category.deviceRefused"]).not.toMatch(/Schreib/);
+      });
+
+  it("describes an identity mismatch by the operation's requirements, not as a product or plan fact", () => {
+    // A same-product replacement with another serial is an identity mismatch too.
+    const en_ = en["downloadFailure.category.identityMismatch"];
+    const de_ = de["downloadFailure.category.identityMismatch"];
+    expect(en_).toMatch(/identity requirements of this operation/);
+    expect(en_).not.toMatch(/plan was made for|product/i);
+    expect(de_).toMatch(/Identitätsanforderungen dieses Vorgangs/);
+    expect(de_).not.toMatch(/Plan erstellt|Produkt/);
   });
 });

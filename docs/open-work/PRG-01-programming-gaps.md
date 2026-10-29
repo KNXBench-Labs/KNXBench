@@ -19,8 +19,13 @@ binds a regular restore to the pre-mutation captured serial, with a precondition
 embedded by the public core derivation rather than only a CLI check. Format 1/2
 backups remain readable but lose restore eligibility, including partial backups;
 no serial is fabricated and no bypass is added. This compatibility narrowing is
-recorded before implementation, not a claim of software or hardware acceptance.
-All broader mutation/recovery requirements remain open.
+recorded before implementation. The candidate now implements the core and
+executor guard, format 3 and closed consumer projections. Independent review
+required additional CLI/HTTP/history/web proofs; those tests exposed a
+backup-phase diagnostic-admission defect, whose original semantic RED is retained.
+Maintained branch/main-first gates, build, smoke and publication are still open;
+this is not software or hardware acceptance. All broader mutation/recovery
+requirements remain open.
 
 ## Software-accepted bounded increment — 29 October 2026
 

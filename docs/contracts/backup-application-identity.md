@@ -3,6 +3,15 @@
 Bounded source safety fix of 2026-10-25, on top of
 [partial-identity-comparison](partial-identity-comparison.md) and ADR-0049.
 
+**Additional replay rule, 29 October 2026 source candidate:** the
+[exemplar-binding contract](regular-restore-exemplar-binding.md) adds mandatory
+captured, bindable serial evidence and a live executor precondition. All format
+1/2 files therefore remain readable but cannot restore, including partial files.
+The application-identity rule below still applies independently; its partial-plan
+precondition is not an exemption from the additional exemplar guard. Format 3
+preserves required nullable `prior_application` and adds required nullable
+`exemplar_serial`; older format-2 readers reject it.
+
 ## Defect
 
 `restore_plan` swapped only the `WriteMemory` octets and kept every `LoadRecord` and task step of

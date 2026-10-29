@@ -36,7 +36,7 @@ use std::fmt;
 
 use super::load_control_memory::MemoryLoadStateMachine;
 use super::load_state::{LoadState, MaskVersion};
-use super::memory_download::{machines, MemoryDownloadPlan, MemoryDownloadStep};
+use super::memory_download::{machines, ExemplarSerial, MemoryDownloadPlan, MemoryDownloadStep};
 use super::partial_memory_download::application_identity;
 use super::properties::{ObjectIndex, PID_PROGRAM_VERSION, PROGRAM_VERSION_OCTETS};
 use crate::IndividualAddress;
@@ -49,6 +49,16 @@ pub enum PriorApplication {
     Recorded([u8; PROGRAM_VERSION_OCTETS]),
     /// No usable observation: not read (preview, unbacked run, older
     /// file), refused, unsupported, or not five octets. Never a guess.
+    NotRecorded,
+}
+
+/// The Device Object serial (PID 11) a device reported before the backup.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ExemplarEvidence {
+    /// Exactly six octets, answered with count 1 before any write.
+    Recorded(ExemplarSerial),
+    /// No usable observation: not read (preview, unbacked run, format 1/2 file), refused,
+    /// malformed or unanswered. Such a backup is never restorable.
     NotRecorded,
 }
 
@@ -76,6 +86,8 @@ pub struct DeviceBackup {
     pub regions: Vec<BackupRegion>,
     /// The application the device held when the backup was taken.
     pub prior_application: PriorApplication,
+    /// The serial the device reported when the backup was taken.
+    pub exemplar_serial: ExemplarEvidence,
 }
 
 impl DeviceBackup {
@@ -149,6 +161,14 @@ pub enum RestoreError {
         /// The backup's.
         backup: [u8; 5],
     },
+    /// The backup holds no serial observation, so no replacement can be told from the exemplar.
+    ExemplarNotRecorded,
+    /// The recorded serial is all-zero or all-FF: a placeholder that identifies nothing.
+    ExemplarNotBindable,
+    /// The plan already carries an exemplar precondition; a caller-supplied guard is not trusted.
+    PlanAlreadyGuarded,
+    /// The plan changes nothing, so there is no point to guard before.
+    PlanChangesNothing,
 }
 
 impl std::error::Error for RestoreError {}
@@ -190,6 +210,21 @@ impl fmt::Display for RestoreError {
                 f,
                 "the backup was taken from application {backup:02X?} but the plan loads \
                  {plan:02X?}; its octets do not fit that load procedure"
+            ),
+            Self::ExemplarNotRecorded => f.write_str(
+                "the backup does not record the device's serial number; restore refused. Backups \
+                 taken before this was recorded, or whose device did not answer it, cannot be \
+                 restored",
+            ),
+            Self::ExemplarNotBindable => f.write_str(
+                "the backup's recorded serial number is all-zero or all-FF and identifies no \
+                 device; restore refused",
+            ),
+            Self::PlanAlreadyGuarded => f.write_str(
+                "the plan already carries an exemplar check; restore derivation adds its own",
+            ),
+            Self::PlanChangesNothing => f.write_str(
+                "the plan changes nothing on the device, so there is nothing to restore",
             ),
         }
     }
@@ -341,8 +376,25 @@ pub fn restore_plan(
         });
     }
     check_prior_application(plan, backup)?;
+    let serial = match backup.exemplar_serial {
+        ExemplarEvidence::Recorded(serial) if serial.is_bindable() => serial,
+        ExemplarEvidence::Recorded(_) => return Err(RestoreError::ExemplarNotBindable),
+        ExemplarEvidence::NotRecorded => return Err(RestoreError::ExemplarNotRecorded),
+    };
+    if plan
+        .steps
+        .iter()
+        .any(|step| matches!(step, MemoryDownloadStep::RequireExemplar(_)))
+    {
+        return Err(RestoreError::PlanAlreadyGuarded);
+    }
+    let first_change = plan
+        .steps
+        .iter()
+        .position(MemoryDownloadStep::changes_device)
+        .ok_or(RestoreError::PlanChangesNothing)?;
     let mut regions = backup.regions.iter();
-    let steps = plan
+    let mut steps: Vec<MemoryDownloadStep> = plan
         .steps
         .iter()
         .map(|step| match step {
@@ -357,6 +409,7 @@ pub fn restore_plan(
             other => other.clone(),
         })
         .collect();
+    steps.insert(first_change, MemoryDownloadStep::RequireExemplar(serial));
     Ok(MemoryDownloadPlan {
         mask: plan.mask,
         manufacturer: plan.manufacturer,
@@ -369,8 +422,10 @@ mod tests {
     use super::*;
     use crate::commissioning::load_control_memory::{abs_task_segment, event_record, TaskSegment};
     use crate::commissioning::load_state::LoadEvent;
+    use crate::commissioning::memory_download::source_procedure_descriptions;
 
     const IDENTITY: [u8; 5] = [0x00, 0x83, 0x00, 0x27, 0x15];
+    const SERIAL: [u8; 6] = [0x00, 0x83, 0x12, 0x34, 0x56, 0x78];
 
     fn address(text: &str) -> IndividualAddress {
         text.parse().unwrap()
@@ -425,6 +480,7 @@ mod tests {
                 },
             ],
             prior_application: PriorApplication::Recorded(IDENTITY),
+            exemplar_serial: ExemplarEvidence::Recorded(ExemplarSerial::new(SERIAL)),
         }
     }
 
@@ -461,7 +517,7 @@ mod tests {
     #[test]
     fn a_restore_is_the_plan_with_the_old_octets() {
         let restored = restore_plan(&plan(), address("1.1.67"), &backup()).unwrap();
-        let expected: Vec<MemoryDownloadStep> = plan()
+        let mut expected: Vec<MemoryDownloadStep> = plan()
             .steps
             .into_iter()
             .map(|step| match step {
@@ -480,6 +536,11 @@ mod tests {
                 other => other,
             })
             .collect();
+        // The exemplar guard sits right before the first step that changes the device.
+        expected.insert(
+            2,
+            MemoryDownloadStep::RequireExemplar(ExemplarSerial::new(SERIAL)),
+        );
         assert_eq!(restored.steps, expected);
         assert_eq!(restored.data_octets(), plan().data_octets());
     }
@@ -755,5 +816,121 @@ mod tests {
             ),
             Err(RestoreError::OtherDevice { .. })
         ));
+    }
+
+    #[test]
+    fn a_restore_needs_a_bindable_recorded_serial() {
+        let mut missing = backup();
+        missing.exemplar_serial = ExemplarEvidence::NotRecorded;
+        assert_eq!(
+            restore_plan(&plan(), address("1.1.67"), &missing),
+            Err(RestoreError::ExemplarNotRecorded)
+        );
+        for placeholder in [[0x00; 6], [0xFF; 6]] {
+            let mut sentinel = backup();
+            sentinel.exemplar_serial = ExemplarEvidence::Recorded(ExemplarSerial::new(placeholder));
+            assert_eq!(
+                restore_plan(&plan(), address("1.1.67"), &sentinel),
+                Err(RestoreError::ExemplarNotBindable)
+            );
+        }
+    }
+
+    #[test]
+    fn existing_guards_still_come_before_the_serial() {
+        let mut other = backup();
+        other.exemplar_serial = ExemplarEvidence::NotRecorded;
+        assert!(matches!(
+            restore_plan(&plan(), address("1.1.68"), &other),
+            Err(RestoreError::OtherDevice { .. })
+        ));
+        other.prior_application = PriorApplication::Recorded([0, 0x83, 0, 0x27, 0x14]);
+        assert!(matches!(
+            restore_plan(&plan(), address("1.1.67"), &other),
+            Err(RestoreError::OtherApplication { .. })
+        ));
+    }
+
+    #[test]
+    fn a_plan_with_a_guard_or_without_a_change_is_refused() {
+        let restored = restore_plan(&plan(), address("1.1.67"), &backup()).unwrap();
+        assert_eq!(
+            restore_plan(&restored, address("1.1.67"), &backup()),
+            Err(RestoreError::PlanAlreadyGuarded)
+        );
+        let mut inert = plan();
+        inert.steps.retain(|step| {
+            !step.changes_device() && !matches!(step, MemoryDownloadStep::WriteMemory { .. })
+        });
+        let mut empty_backup = backup();
+        empty_backup.regions.clear();
+        empty_backup.load_states.clear();
+        assert_eq!(
+            restore_plan(&inert, address("1.1.67"), &empty_backup),
+            Err(RestoreError::PlanChangesNothing)
+        );
+    }
+
+    #[test]
+    fn the_guard_and_its_errors_never_show_the_serial() {
+        let restored = restore_plan(&plan(), address("1.1.67"), &backup()).unwrap();
+        let guard = restored.steps[2].clone();
+        let shown = format!("{guard} {guard:?} {:?} {:?}", backup(), restored);
+        assert!(
+            !shown.contains("12 34") && !shown.to_uppercase().contains("1234"),
+            "{shown}"
+        );
+        let mut text = String::new();
+        for error in [
+            RestoreError::ExemplarNotRecorded,
+            RestoreError::ExemplarNotBindable,
+            RestoreError::PlanAlreadyGuarded,
+            RestoreError::PlanChangesNothing,
+        ] {
+            text.push_str(&error.to_string());
+        }
+        assert!(!text.contains("1234"));
+    }
+
+    #[test]
+    fn the_source_procedure_drops_only_the_exemplar_guard() {
+        let source = source_procedure_descriptions(&plan());
+        assert_eq!(source.len(), plan().steps.len());
+        let restored = restore_plan(&plan(), address("1.1.67"), &backup()).unwrap();
+        assert_eq!(restored.steps.len(), plan().steps.len() + 1);
+        assert_eq!(source_procedure_descriptions(&restored), source);
+        assert!(source
+            .iter()
+            .any(|step| step.contains("compare property 3/13")));
+    }
+
+    #[test]
+    fn a_plan_that_only_changes_load_states_is_guarded_too() {
+        let mut task_only = plan();
+        task_only
+            .steps
+            .retain(|step| !matches!(step, MemoryDownloadStep::WriteMemory { .. }));
+        let mut held = backup();
+        held.regions.clear();
+        let restored = restore_plan(&task_only, address("1.1.67"), &held).unwrap();
+        let guard = restored
+            .steps
+            .iter()
+            .position(|step| matches!(step, MemoryDownloadStep::RequireExemplar(_)))
+            .expect("guarded");
+        let first_change = restored
+            .steps
+            .iter()
+            .position(MemoryDownloadStep::changes_device)
+            .unwrap();
+        assert_eq!(guard + 1, first_change, "right before the first change");
+        assert_eq!(
+            restored
+                .steps
+                .iter()
+                .filter(|step| matches!(step, MemoryDownloadStep::RequireExemplar(_)))
+                .count(),
+            1
+        );
     }
 }

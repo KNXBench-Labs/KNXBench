@@ -1,14 +1,16 @@
 # Restart snapshot
 
-## PRG-01 regular restore exemplar binding (GO; observed 2026-10-29 15:30 CET)
+## PRG-01 regular restore exemplar binding (GO; observed 2026-10-29 18:12 CET)
 - Owner: `feat/prg01-remaining-20261029`, `<sources>/knxbench-prg01-remaining-20261029`.
-- Base `91b15a209`; reserve regular core/net/app/CLI backup/restore implementation and tests.
-- Contract `docs/contracts/regular-restore-exemplar-binding.md`; independent design review active.
-- Source admission complete; no implementation/runtime acceptance claimed. Legacy backups remain
-  readable but need captured bindable serial evidence for restore; no new download identity gate.
-- Source/RED/GREEN/review/package/main-first/build/smoke/publication remain separate boundaries.
+- Base `91b15a209`; contract/reservation published/read back `f5427e629`; implementation uncommitted.
+- Original unsafe-replay RED, count-unit RED and actual durable-history cause-loss RED retained; focused GREEN.
+- First Opus feature review 0Critical/3Important proof gaps; CLI/HTTP/history/web + minor proofs now executed.
+- Narrow Rust/web phase-admission fix and neutral identity wording included; independent correction review NEXT.
+- No active source writer; freeze candidate for review, then committed branch and main-first17-stage gates.
+- Actual server build, isolated smoke, publication and durable evidence/cleanup remain OPEN; PRG-01 not complete.
+- Server production scope ONLY canonical backup helper; no DIAG-03 recorder/API edits or corpus repins.
 - Private evidence `<profile-scratch>/prg01-remaining-20261029/`; parent owns commits/publication.
-- DIAG-03/foreign tracks/root protected; no Secure/bus/device/VM/release/deployment scope.
+- Root/foreign tracks protected; no Secure/bus/device/VM/release/deployment; legacy1/2 inspect-only boundary explicit.
 
 ## PRG-01 property run-state (SOFTWARE COMPLETE; observed 2026-10-29)
 - Bounded 0701/0705 property observation; runtime integration `161010078`, feature `51c309957`.

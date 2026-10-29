@@ -442,6 +442,16 @@ complete download coverage. Server/Web System-2 operations do not write
 `system2Validation` rows; they record bounded `deviceDownload` rows through the
 download guard.
 
+Two server read kinds need a target address and never carry write or download
+evidence: `deviceDiagnostics` (the [diagnostic export](device-diagnostic-export.md#activity-history))
+and `supportDiagnostics` (the [support report live read](universal-device-support.md),
+`POST /api/support/diagnose`). Both are in the closed kind list of the storage
+validator and the Web admission, inside storage/wire format 2. A build that
+does not know a kind refuses the whole page that contains it. Until 29 October
+2026 the support live read recorded a kind the validator did not know: the
+start row was refused, history read as `unavailable` and every later write or
+download was refused until restart ([status note](../status/2026-10-29-support-diagnostics-activity-kind.md)).
+
 Read observations use `running`, `finished`, `failed`, `unknown`. Property
 writes use `running`, `verified`, `noChange`, `notSent`, `effectUnverified`,
 `unknown`. A write is `verified` only when its existing route witnesses its

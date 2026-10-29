@@ -3,6 +3,9 @@ import { afterEach, expect, it, vi } from "vitest";
 import * as api from "./api";
 import { subscribeSessionExpired } from "./session";
 import checkFixtures from "./postDownloadCheck.fixtures.json";
+import { HISTORY_KINDS } from "./activityHistory";
+import { messages as de } from "./messages/de";
+import { messages as en } from "./messages/en";
 
 export function historyFixture() {
   return {
@@ -81,7 +84,7 @@ it("rejects the whole page for unsupported versions, unknown fields and contradi
 });
 
 it("admits read and service-control lifecycles without inventing evidence or finish times", async () => {
-  for (const kind of ["deviceCompare", "serviceControlRead", "serialLookup", "deviceDiagnostics"]) {
+  for (const kind of ["deviceCompare", "serviceControlRead", "serialLookup", "deviceDiagnostics", "supportDiagnostics"]) {
     for (const state of ["running", "finished", "failed", "unknown"]) {
       const page = historyFixture(); const entry = page.entries[0];
       Reflect.deleteProperty(entry, "writeEvidence"); Reflect.deleteProperty(entry, "downloadEvidence");
@@ -112,6 +115,8 @@ it("rejects invalid metadata across every recorded kind without returning a vali
     (page: ReturnType<typeof historyFixture>) => { page.untracked.push("futureKind"); },
     (page: ReturnType<typeof historyFixture>) => { page.untracked.push(page.untracked[0]); },
     (page: ReturnType<typeof historyFixture>) => { page.entries[0].kind = "serialLookup"; },
+    (page: ReturnType<typeof historyFixture>) => { Object.assign(page.entries[0], { kind: "supportDiagnostics", address: null }); Reflect.deleteProperty(page.entries[0], "writeEvidence"); Reflect.deleteProperty(page.entries[0], "downloadEvidence"); },
+    (page: ReturnType<typeof historyFixture>) => { Object.assign(page.entries[0], { kind: "supportDiagnostics" }); },
     (page: ReturnType<typeof historyFixture>) => { page.entries[0].kind = "deviceCompare"; },
     (page: ReturnType<typeof historyFixture>) => { page.entries[0].state = "running"; },
     (page: ReturnType<typeof historyFixture>) => { page.entries[0].state = "unknown"; },
@@ -249,4 +254,12 @@ it("admits an interrupted check next to an unknown cleanup on the written transf
   expect(entry.state).toBe("finished");
   expect(entry.downloadEvidence).toEqual({ sessionId: 7, written: "yes", restart: "acknowledged", cleanup: "unknown",
     postDownloadCheck: { observation: { status: "interrupted" }, runtime: "unknown" } });
+});
+
+it("labels every recorded kind in English and German", () => {
+  expect(HISTORY_KINDS).toContain("supportDiagnostics");
+  for (const kind of HISTORY_KINDS) {
+    expect(en[`activityHistory.kind.${kind}` as keyof typeof en], kind).toBeTruthy();
+    expect(de[`activityHistory.kind.${kind}` as keyof typeof de], kind).toBeTruthy();
+  }
 });

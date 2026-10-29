@@ -77,6 +77,8 @@ pub use address_programming::{
 mod address_programming_routes;
 mod bus_activity_routes;
 mod debug_report_routes;
+mod diagnostic_bundle_context;
+mod diagnostic_bundle_results;
 mod diagnostic_bundle_routes;
 mod domain;
 mod import_evidence_routes;
@@ -248,8 +250,12 @@ pub fn app_with_auth(state: SharedState, static_dir: Option<PathBuf>, auth: Auth
         .merge(device_system2::routes())
         .merge(device_readiness_routes::device_readiness_routes())
         .merge(device_compare_routes::device_compare_routes())
-        .merge(support_routes::support_routes())
-        .merge(device_diagnostics_routes::routes())
+        .merge(support_routes::support_routes(
+            state.support_results.clone(),
+        ))
+        .merge(device_diagnostics_routes::routes(
+            state.diagnostic_results.clone(),
+        ))
         .merge(address_programming_routes::address_programming_routes())
         .merge(serial_address_routes::serial_address_routes())
         .merge(service_control_routes::service_control_routes())

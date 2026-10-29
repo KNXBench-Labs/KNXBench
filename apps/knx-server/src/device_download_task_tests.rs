@@ -1,6 +1,8 @@
 //! Offline regressions for the server download worker's lifecycle.
 
 use super::*;
+#[path = "diagnostic_bundle_download_tests.rs"]
+mod bundle_fallback;
 use std::time::Duration;
 use tokio::sync::Notify;
 

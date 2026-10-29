@@ -27,6 +27,8 @@ struct Snapshot {
     revision: u64,
     incarnation: u64,
     has_project: bool,
+    server_incarnation: String,
+    acquired: bool,
     device_id: Option<u32>,
     input: ReportInput,
     base: SupportReport,
@@ -36,7 +38,40 @@ struct Snapshot {
     mask: Option<u16>,
 }
 type Slot = Arc<Mutex<Option<Snapshot>>>;
-pub fn support_routes() -> Router<SharedState> {
+
+#[derive(Clone, Default)]
+pub struct Results(Slot);
+
+impl Results {
+    pub(crate) fn evidence(
+        &self,
+        token: &str,
+    ) -> Result<crate::diagnostic_bundle_results::Evidence, String> {
+        let result =
+            snapshot(&self.0, token).map_err(|_| "the retained support result is unavailable")?;
+        if result.created.elapsed() > Duration::from_secs(900) {
+            return Err("the retained support result has expired".into());
+        }
+        if !result.acquired {
+            return Err("the support result is not complete".into());
+        }
+        Ok(crate::diagnostic_bundle_results::Evidence {
+            identity: serde_json::json!({"supportReportSha256":hash(&result.report)}),
+            context: Some(crate::diagnostic_bundle_context::ProjectContext {
+                server_incarnation: result.server_incarnation,
+                project_incarnation: result.incarnation,
+                revision: result.revision,
+            }),
+            operation_files: Vec::new(),
+            device_id: result.device_id,
+            reports: crate::diagnostic_bundle_results::members(
+                result.report.bundle()?,
+                &["report.json", "README.txt"],
+            )?,
+        })
+    }
+}
+pub fn support_routes(results: Results) -> Router<SharedState> {
     Router::new()
         .route("/api/support/preview", post(preview))
         .route("/api/support/diagnose", post(diagnose))
@@ -51,7 +86,7 @@ pub fn support_routes() -> Router<SharedState> {
             },
         ))
         .layer(DefaultBodyLimit::max(8192))
-        .layer(Extension(Slot::default()))
+        .layer(Extension(results.0))
 }
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
@@ -272,6 +307,8 @@ async fn preview(
         revision,
         incarnation,
         has_project,
+        server_incarnation: state.server_incarnation.clone(),
+        acquired: false,
         device_id: b.device_id,
         input: b.input,
         base,
@@ -399,6 +436,18 @@ async fn diagnose(
         return Err(busy());
     }
     fresh(&state, &s)?;
+    {
+        let mut held = slot
+            .lock()
+            .map_err(|_| ApiError::internal("support busy"))?;
+        let current = held
+            .as_mut()
+            .filter(|current| current.token == s.token)
+            .ok_or_else(|| {
+                ApiError::with_status(StatusCode::CONFLICT, "support-preview-replaced")
+            })?;
+        current.acquired = false;
+    }
     let activity = state
         .one_shot_activity
         .start("supportDiagnostics", Some(target.to_string()));
@@ -412,6 +461,10 @@ async fn diagnose(
             "deviceId": s.device_id,
         }))
         .gateway(gateway)
+        .related("supportToken", &s.token)
+        .related("projectContext", serde_json::json!({
+            "serverIncarnation":s.server_incarnation, "projectIncarnation":s.incarnation, "revision":s.revision
+        }).to_string())
         .settings(crate::operation_recordings::tunnel_settings(
             knx_net::TunnelAckWait::Standard,
             &state.device_download_timing,
@@ -533,6 +586,7 @@ async fn diagnose(
             "support-preview-replaced",
         ));
     }
+    s.acquired = true;
     let result = view(&s);
     *guard = Some(s);
     Ok(Json(result))

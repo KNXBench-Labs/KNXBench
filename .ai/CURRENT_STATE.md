@@ -1,5 +1,14 @@
 # Restart snapshot
 
+## PRG-01 run-state observation (TAKEN; observed 2026-10-29 07:51 CET)
+- Owner GO: implement non-Secure regular-path gaps, offline/simulator only.
+- `feat/prg01-regular-safety-20261029` / `<sources>/knxbench-prg01-regular-safety-20261029`.
+- Reserved: core run-state decoder, regular post-download reader/record, CLI/server/web
+  consumers and tests; no DIAG-03/System-2 evidence, bundle, wizard or sanitizer changes.
+- Scope: property-only observation for 0701/0705 after validated application object/identity;
+  original source evidence found. No memory fallback, new writes or field acceptance.
+- No feature code yet. Next: semantic RED/GREEN, independent review and integrated gates.
+
 ## Alpha 18 release (PUBLISHED, ARTIFACTS VERIFIED; observed 2026-10-29 05:30 CET)
 - Release freeze: released by alpha18-release. Immutable `v0.1.0-alpha.18` names
   `80386a154231f327d60ba0d89f1ba6fa2719f137`; source cutoff `bb2d8e51e`.

@@ -43,9 +43,18 @@ before any plan or report exists. See
 Use **File → Export diagnostic data** (since Alpha 17 also
 **Analyse device** on the device's *Diagnostics* tab): pick the device and the
 interface, preview, read, save the ZIP and email it to `issue@knxbench.com`. The
-export only reads.
+export only reads. In source builds after Alpha 18 the result offers **Report
+problem…** instead, which saves one ZIP with the read's recording and prepares
+the mail ([report wizard](../user-guide/08-reports-and-diff.md#report-problem)).
 The [step-by-step guide](../user-guide/08-reports-and-diff.md#send-diagnostic-data)
 has screenshots and says which builds contain it.
+
+**How can I report a problem?**
+
+In source builds after Alpha 18: **File → Help & diagnostics → Report problem…**
+or the same command in the palette. The wizard shows everything before it saves
+one ZIP, then offers a mail draft without attachment; email is not encryption.
+See [reporting a problem](../user-guide/08-reports-and-diff.md#report-problem).
 
 **How can I report an unknown device before a download plan exists?**
 

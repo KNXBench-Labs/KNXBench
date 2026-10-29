@@ -50,6 +50,103 @@ editing and recovery. For headless use see
 [`knx monitor-export`](10-command-line.md#monitor-export).
 [Engineering boundaries](../../contracts/monitor-project-export.md).
 
+<a id="report-problem"></a>
+## Reporting a problem (source builds after Alpha 18)
+
+> **Which build has it?** Source builds after the Alpha 18 release only. Alpha 18
+> and older have the separate **Debug report…**, **Device support report** and
+> **Save report** buttons described further below.
+
+**File → Help & diagnostics → Report problem…** (*Datei → Hilfe & Diagnose →
+Problem melden…*) is the one place to report a problem. The command palette
+(Ctrl+Shift+P) has the same entry. It collects what helps find the cause into
+one ZIP file on your computer. Nothing is uploaded: you choose what goes in, look
+at it, save it and send it yourself.
+
+Several places open the same wizard with the right things already chosen:
+
+| Where | Opens with |
+| --- | --- |
+| **Report problem…** in a device's download panel, in its refusal help and in **Help verify this device** | *Programming a device*, that device, the ended download |
+| **Report problem…** under a System-2 result | *Programming a device*, that System-2 operation |
+| **Report problem…** after **Export diagnostic data** has read a device | *Reading or diagnosing a device*, that device and that read |
+| **Report problem…** on a device's **Diagnostics** tab | *Reading or diagnosing a device*, that device |
+
+### Step 1: what kind of problem
+
+Choose one of five kinds: **Programming a device**, **Reading or diagnosing a
+device**, **Importing a project**, **Product catalogue or product installation**,
+**User interface or something else**. Each kind ticks its own sensible contents in
+the next step. Nothing is collected yet.
+
+### Step 2: contents
+
+The wizard now asks KNXBench what it can collect and shows one checkbox per part:
+
+- **Version and environment** is always included and cannot be unticked.
+- **Recording of the operation**: the device operation the report is about. The
+  list preselects the latest one that fits, or the one you came from; you can
+  choose another. **Earlier operations** adds more recordings.
+- **Device extract** (application, parameter values, linked group addresses),
+  **Short reports of this operation**, **Session log**, **Import report**,
+  **Catalogue and product identity**, **Whole project (.knxdb)**, **Bus monitor,
+  last 10 minutes** and, for user-interface problems, **Browser state** (language,
+  theme, window size, zoom, the last error messages).
+- A part that cannot be included is greyed out with the reason, for example
+  *the bus monitor is not running*.
+
+Every included part shows its size, and the total is below the list. Above
+10 MiB the wizard warns that many mail services refuse attachments that large;
+KNXBench does not split the file.
+
+### Step 3: preview
+
+Each part lists its size, number of entries and what it contains: *contains
+addresses*, *contains names*, *contains parameter values*, *contains network
+addresses*. **Show content** displays the part as text, exactly as it goes into
+the ZIP.
+
+**Always removed, even with your consent:** device keys (BCU keys), KNX Secure keys
+and tool keys, tunnel and login passwords. Where they were, the file says what was
+removed and how long it was, never the value. **Not removed:** individual and
+group addresses, names, parameter values and the network addresses of gateways in
+the parts you chose. Review the preview before you share the file.
+
+### Step 4: save and send
+
+Optionally describe what happened (no passwords). Tick **I have looked at the
+preview and want to save this ZIP on this computer**, then press **Save ZIP**
+(*ZIP speichern*). Nothing is written before that. The file is called
+`knxbench-diagnostics-<version>-….zip` and is saved like any other KNXBench
+download (the desktop app asks where).
+
+After the file is saved, **Open mail draft** opens your mail program with a message
+to `issue@knxbench.com`, the KNXBench version and operation in the subject. The
+draft has **no attachment**: attach the saved ZIP yourself. **Email is not
+encryption**: anyone who handles the mail on its way can read the file.
+
+**Open a public GitHub issue** opens the issue form with only the KNXBench version
+and the kind of problem, never the ZIP or anything from it. Use it for problems
+you are happy to discuss in public; send the ZIP by mail.
+
+### Recordings: what is kept and how to delete it
+
+KNXBench records the device operations of this server (reading and analysing,
+compare, downloads, System-2 download and recovery, addressing by serial number,
+device service control, line scan): every telegram, timings and the outcome, with
+the KNXBench version. Keys and passwords are never recorded. The recordings live in
+the `diagnostics/` folder of the data directory (for Docker on the mounted
+volume). KNXBench keeps the last **100 operations or 512 MiB**, whichever comes
+first, and removes the oldest first; failed operations are kept longest.
+
+**Delete recordings…** in step 2 deletes all of them after a confirmation;
+recordings being written at that moment are kept and named.
+
+Operators of shared or customer servers can switch recording off by starting the
+server with **`KNX_DIAGNOSTIC_RECORDING=off`** (also `0`, `false` or
+`disabled`). There is no switch in the interface. The wizard and the ZIP then say
+plainly that recording is off; older recordings can still be included.
+
 <a id="send-diagnostic-data"></a>
 ## Sending diagnostic data from one device
 
@@ -134,6 +231,9 @@ Each read shows one of these results:
 | **Not read** | The run ended before this read. |
 
 Every outcome is useful, so send the file even if not everything says *Read*.
+In source builds after Alpha 18 the result offers **Report problem…** instead of the
+confirmation and save button below: it opens the [report wizard](#report-problem)
+with this read preselected. The rest of this step describes Alpha 18 and older.
 **Preview ZIP contents** shows exactly what goes into the file. Tick the
 confirmation and press **Save diagnostic ZIP** (*Diagnose-ZIP speichern*). The
 file is called `knxbench-device-diagnostics-….zip`; it is saved like any other
@@ -228,6 +328,11 @@ limits are in the [contract](../../contracts/device-diagnostic-export.md).
 <a id="universal-device-support-reporting-source-after-alpha-11"></a>
 
 ## Universal device-support reporting
+
+> **Source builds after Alpha 18** no longer show this dialog: the File menu entry,
+> the download panel's button and **Send report** on the **Diagnostics** tab open
+> the [report wizard](#report-problem) instead. The server route stays for older
+> clients. The rest of this section describes Alpha 12 to Alpha 18.
 
 This separate workflow needs **no open project**. Open **File → Device support report**, or use the same action in a device's download panel. Available since
 Alpha 12. Since Alpha 17, **Send report** on a device's

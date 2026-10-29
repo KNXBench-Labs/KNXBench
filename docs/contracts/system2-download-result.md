@@ -95,6 +95,27 @@ categories, every stage, a failed restore, and early errors that must stay uncla
 on the App journal with reopen and contradiction refusals; on the mounted server worker,
 route and restart with the public package; and in the browser ([focused proof and its limits](../status/2026-10-28-system2-final-step-failure.md)). No real bus or device was contacted.
 
+### Allocation mismatch evidence (private)
+
+For a `verificationMismatch` in stage `allocation`, Net also returns the compared bytes
+(`PropertySimulationError.final_step_evidence`, `AllocationMismatchEvidence`): allocation
+index, object, start address, whether its prestate was unreadable, the whole expected and
+actual allocation, the written mask and every differing run, split where its class changes:
+`written`, `unwritten` (a preserved byte) or, for an unreadable prestate, `unwrittenUnpredicted`
+(the expectation is a zero placeholder). The strict comparison, its message and the
+classification are unchanged; with an unreadable prestate only written bytes decide, as before.
+
+Journal: `Failed`/`RestoreFailed` gain an optional `allocation_evidence` object (closed keys,
+bytes as lowercase hex, `written` as offset runs) beside exactly that final-step record.
+Envelope version 4 marks a populated record, so a reader of versions 1 to 3 refuses it.
+Replay recomputes the comparison from the durable recovery snapshot and the run's executed
+plan (download: original plan; restore: recovery plan) and refuses any record that differs,
+including malformed hex, a wrong length, an explicit `null` or a record beside any other
+final-step record. `OperationStore::allocation_mismatch_evidence()` lists one entry per typed
+allocation mismatch, `recorded` or `unavailable` (`olderJournal`: written before version 4;
+never reconstructed). Progress, status, both reports and the web UI do not carry it; it is
+input for the private diagnostic bundle only (DIAG-03).
+
 ## Download versus recovery
 
 `OperationProgress.download` (`DownloadFacts`: result, outcome, completed steps, total
@@ -234,7 +255,8 @@ broken by it, without changing what "pending only" means. The explorer dot is un
   show in the System-2 panel and report, not in the device table.
 - Only the currently selected operation feeds the table (one status read).
 - The final-step category names the operation that stopped, not its cause. #30's actual
-  allocation mismatch stays unresolved.
+  allocation mismatch stays unresolved; new journals keep its bytes privately (above), but
+  no field run has produced them yet.
 - A verified run clears the memory beliefs only when the whole preparation is still equal;
   otherwise they stay pending (conservative, documented above).
 - No hardware evidence. Tests use journals built on the public synthetic fixture,

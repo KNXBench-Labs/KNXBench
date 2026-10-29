@@ -372,3 +372,51 @@ async fn excluded_target_can_report_offline_but_cannot_be_read() {
         assert_eq!(h.calls.load(Ordering::SeqCst), 0);
     }
 }
+
+async fn get(app: &axum::Router, uri: &str) -> (StatusCode, Value) {
+    let r = app
+        .clone()
+        .oneshot(Request::builder().uri(uri).body(Body::empty()).unwrap())
+        .await
+        .unwrap();
+    let status = r.status();
+    let bytes = to_bytes(r.into_body(), 1024 * 1024).await.unwrap();
+    (
+        status,
+        serde_json::from_slice(&bytes).unwrap_or(Value::Null),
+    )
+}
+
+#[tokio::test]
+async fn a_live_read_is_durable_history_and_never_blocks_later_writes() {
+    let h = harness("1.1.67");
+    let (status, p) = send(
+        &h.app,
+        "/api/support/preview",
+        json!({"deviceId":7,"context":context(&h.state),"input":{"mask":37}}),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{p}");
+    let (status, read) = send(
+        &h.app,
+        "/api/support/diagnose",
+        json!({"token":p["token"],"gateway":"192.0.2.10:3671","consent":true}),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{read}");
+    // The harness uses the production factory: history is persistent.
+    assert_eq!(h.state.one_shot_activity.history_state(), "configured");
+    assert!(h.state.one_shot_activity.ensure_write_available().is_ok());
+    let (status, page) = get(&h.app, "/api/bus/history").await;
+    assert_eq!(status, StatusCode::OK, "{page}");
+    let entries = page["entries"].as_array().unwrap();
+    assert_eq!(entries.len(), 1, "{page}");
+    assert_eq!(entries[0]["kind"], "supportDiagnostics");
+    assert_eq!(entries[0]["address"], "1.1.67");
+    assert_eq!(entries[0]["state"], "finished");
+    assert!(entries[0].get("writeEvidence").is_none());
+    let (status, live) = get(&h.app, "/api/bus/activity").await;
+    assert_eq!(status, StatusCode::OK, "{live}");
+    assert_eq!(live["historyState"], "configured");
+    assert_eq!(live["oneShot"][0]["kind"], "supportDiagnostics");
+}

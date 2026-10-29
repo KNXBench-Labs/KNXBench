@@ -181,6 +181,7 @@ impl OneShotActivity {
                 | "serialLookup"
                 | "deviceDownload"
                 | "deviceDiagnostics"
+                | "supportDiagnostics"
         );
         let valid_address = match &self.address {
             Some(address) => {
@@ -1556,6 +1557,36 @@ mod tests {
         assert!(log
             .start_write("serviceControlWrite", Some("1.1.67".into()))
             .is_err());
+    }
+
+    #[test]
+    fn a_support_live_read_is_recorded_without_latching_history_failure() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("activity.sqlite");
+        let log = Arc::new(OneShotLog::persistent(
+            path.clone(),
+            "AAAAAAAAAAAAAAAAAAAAAA".into(),
+        ));
+        log.start("supportDiagnostics", Some("1.1.5".into()))
+            .finish("finished");
+        assert_eq!(log.history_state(), "configured");
+        assert!(log.ensure_write_available().is_ok());
+        let (entries, more) = log.history_page(0, 100).unwrap();
+        assert!(!more);
+        assert_eq!(entries.len(), 1);
+        assert_eq!(entries[0].activity.kind, "supportDiagnostics");
+        assert_eq!(entries[0].activity.address.as_deref(), Some("1.1.5"));
+        assert_eq!(entries[0].activity.state, "finished");
+        // Read-only: never carries write or download evidence, and needs a target.
+        for document in [
+            serde_json::json!({"id": 2, "kind": "supportDiagnostics", "address": null, "state": "finished",
+                   "startedAt": "2026-10-29T10:00:00.000Z", "finishedAt": "2026-10-29T10:00:01.000Z"}),
+            serde_json::json!({"id": 2, "kind": "supportDiagnostics", "address": "1.1.5", "state": "verified",
+                   "startedAt": "2026-10-29T10:00:00.000Z", "finishedAt": "2026-10-29T10:00:01.000Z"}),
+        ] {
+            let entry: OneShotActivity = serde_json::from_value(document).unwrap();
+            assert!(entry.validate(2).is_err(), "{} {}", entry.kind, entry.state);
+        }
     }
 
     #[test]

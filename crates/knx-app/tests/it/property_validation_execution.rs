@@ -21,6 +21,8 @@ use knx_net::commissioning::{
 };
 use std::{sync::atomic::AtomicBool, time::Duration};
 
+mod allocation_evidence;
+mod missing_evidence;
 mod send_boundary;
 mod superseded_defaults_profile;
 

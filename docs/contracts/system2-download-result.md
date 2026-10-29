@@ -104,6 +104,9 @@ actual allocation, the written mask and every differing run, split where its cla
 `written`, `unwritten` (a preserved byte) or, for an unreadable prestate, `unwrittenUnpredicted`
 (the expectation is a zero placeholder). The strict comparison, its message and the
 classification are unchanged; with an unreadable prestate only written bytes decide, as before.
+The Rust `PropertySimulationFailure::Session` payload is `Box<SessionError>` to keep the
+executor error compact; `From<SessionError>`, typed cause, Debug/Display text and error-source
+identity are preserved. No public report or status schema changes with this indirection.
 
 Journal: `Failed`/`RestoreFailed` gain an optional `allocation_evidence` object (closed keys,
 bytes as lowercase hex, `written` as offset runs) beside exactly that final-step record.
@@ -112,9 +115,10 @@ Replay recomputes the comparison from the durable recovery snapshot and the run'
 plan (download: original plan; restore: recovery plan) and refuses any record that differs,
 including malformed hex, a wrong length, an explicit `null` or a record beside any other
 final-step record. `OperationStore::allocation_mismatch_evidence()` lists one entry per typed
-allocation mismatch, `recorded` or `unavailable` (`olderJournal`: written before version 4;
-never reconstructed). Progress, status, both reports and the web UI do not carry it; it is
-input for the private diagnostic bundle only (DIAG-03).
+allocation mismatch, `recorded` or `unavailable` (`notRecorded`: no evidence record;
+absence does not prove writer age, and bytes are never reconstructed). Progress, status,
+both reports and the web UI do not carry it; it is input for the private diagnostic bundle
+only (DIAG-03).
 
 ## Download versus recovery
 

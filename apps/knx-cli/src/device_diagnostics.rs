@@ -169,7 +169,7 @@ fn execute(args: &[String]) -> Result<(), String> {
         } else {
             use knx_net::BusConnection;
             let _lease=service::gateway_lease()?;
-            let tunnel=tokio::time::timeout(Duration::from_secs(10),knx_net::KnxNetIpClient::new().connect_tunnel(gateway.unwrap())).await.map_err(|_|"gateway timeout")?.map_err(|e|format!("gateway refused/unavailable: {e}"))?;
+            let tunnel=tokio::time::timeout(Duration::from_secs(10),crate::diagnostic_bundle_cli::tapped(knx_net::KnxNetIpClient::new(),knx_app::operation_recording::OperationKind::DeviceDiagnostics,gateway.unwrap()).connect_tunnel(gateway.unwrap())).await.map_err(|_|"gateway timeout")?.map_err(|e|format!("gateway refused/unavailable: {e}"))?;
             let mut export=acquire(&tunnel,&plan,&cancel).await;
             if !matches!(tokio::time::timeout(Duration::from_secs(3),tunnel.disconnect()).await,Ok(Ok(()))){export.report.stop_reason.get_or_insert(service::TUNNEL_DISCONNECT_UNCONFIRMED.into());}
             Ok::<_,String>(export)

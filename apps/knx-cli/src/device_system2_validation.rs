@@ -474,9 +474,16 @@ fn run_hardware(
     let executed = runtime.block_on(async {
         let tunnel = tokio::time::timeout(
             Duration::from_secs(10),
-            KnxNetIpClient::new()
-                .with_tunnel_ack_wait(TunnelAckWait::Patient)
-                .connect_tunnel(gateway),
+            crate::diagnostic_bundle_cli::tapped(
+                KnxNetIpClient::new().with_tunnel_ack_wait(TunnelAckWait::Patient),
+                if recover {
+                    knx_app::operation_recording::OperationKind::System2Recovery
+                } else {
+                    knx_app::operation_recording::OperationKind::System2Download
+                },
+                gateway,
+            )
+            .connect_tunnel(gateway),
         )
         .await
         .map_err(|_| "gateway timeout".to_string())?

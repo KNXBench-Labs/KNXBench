@@ -2079,6 +2079,7 @@ mod pointer_width_rule {
         assert_eq!(device.seen().len(), before);
     }
 
+    #[allow(clippy::result_large_err)] // the executor's own error type, returned as is
     async fn read_with(
         preconditions: &ExperimentalPropertyPreconditions,
         elements: u8,

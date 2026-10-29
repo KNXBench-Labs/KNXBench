@@ -7,6 +7,7 @@
 use std::collections::BTreeMap;
 
 use super::final_step::{FinalStepError, FinalStepStage};
+use super::final_step_evidence::AllocationMismatchEvidence;
 use super::pointer_width::{
     PointerWidthAdmission, PointerWidthRefusal, PointerWidthRefusalReason, PropertyPointerValue,
 };
@@ -475,42 +476,25 @@ impl PropertyRecoverySnapshot {
             .await
             .map_err(FinalStepError::read(FinalStepStage::Limit))?;
         for (index, allocation) in self.allocations.iter().enumerate() {
-            let mut expected = allocation.data.clone();
-            let mut written = vec![false; expected.len()];
-            for step in executed_plan.steps() {
-                if let PropertyOperation::WriteMemory {
-                    object,
-                    address,
-                    data,
-                } = &step.operation
-                {
-                    if *object == allocation.object && *address >= allocation.address {
-                        let offset = usize::from(*address - allocation.address);
-                        if let Some(bytes) = expected.get_mut(offset..offset + data.len()) {
-                            bytes.copy_from_slice(data);
-                            written[offset..offset + data.len()].fill(true);
-                        }
-                    }
-                }
-            }
+            let (expected, written) = expected_allocation(allocation, executed_plan);
             let actual = read_region(session, allocation.address, &expected, limit)
                 .await
                 .map_err(FinalStepError::read(FinalStepStage::Allocation))?;
-            let differs = if self.unreadable_allocations.contains(&index) {
-                // No captured prestate predicts the unwritten bytes; never guess them.
-                actual
-                    .iter()
-                    .zip(&expected)
-                    .zip(&written)
-                    .any(|((a, e), w)| *w && a != e)
-            } else {
-                actual != expected
-            };
-            if differs {
+            // No captured prestate predicts an unreadable allocation's unwritten bytes;
+            // `compare` never lets them decide, but records them once a written byte differs.
+            if let Some(evidence) = AllocationMismatchEvidence::compare(
+                index,
+                allocation,
+                self.unreadable_allocations.contains(&index),
+                expected,
+                written,
+                actual,
+            ) {
                 return Err(FinalStepError::mismatch(
                     FinalStepStage::Allocation,
                     "full allocation verification differs, including preserved/unwritten bytes",
-                ));
+                )
+                .with_evidence(evidence));
             }
         }
         let mut observations = Vec::new();
@@ -552,6 +536,31 @@ impl PropertyRecoverySnapshot {
             ));
         }
         Ok(observations)
+    }
+
+    /// Replays the final comparison of allocation `index` against recorded `actual` bytes:
+    /// `Some` exactly when verification of `executed_plan` fails there, with the evidence
+    /// Net records. Lets a journal reader prove a stored record instead of trusting it.
+    /// `None` for an unknown index or a length other than the allocation's.
+    pub fn allocation_mismatch(
+        &self,
+        index: usize,
+        executed_plan: &PropertyDownloadPlan,
+        actual: Vec<u8>,
+    ) -> Option<AllocationMismatchEvidence> {
+        let allocation = self.allocations.get(index)?;
+        if actual.len() != allocation.data.len() {
+            return None;
+        }
+        let (expected, written) = expected_allocation(allocation, executed_plan);
+        AllocationMismatchEvidence::compare(
+            index,
+            allocation,
+            self.unreadable_allocations.contains(&index),
+            expected,
+            written,
+            actual,
+        )
     }
 
     /// The only write after verification. The caller journals the verification's
@@ -836,6 +845,33 @@ pub(crate) async fn acquire<T: ManagementTransport>(
         unreadable_allocations,
         regions,
     })
+}
+
+/// One allocation's captured prestate overlaid with `executed_plan`'s writes, and which
+/// bytes those writes cover.
+fn expected_allocation(
+    allocation: &PropertyRecoveryRegion,
+    executed_plan: &PropertyDownloadPlan,
+) -> (Vec<u8>, Vec<bool>) {
+    let mut expected = allocation.data.clone();
+    let mut written = vec![false; expected.len()];
+    for step in executed_plan.steps() {
+        if let PropertyOperation::WriteMemory {
+            object,
+            address,
+            data,
+        } = &step.operation
+        {
+            if *object == allocation.object && *address >= allocation.address {
+                let offset = usize::from(*address - allocation.address);
+                if let Some(bytes) = expected.get_mut(offset..offset + data.len()) {
+                    bytes.copy_from_slice(data);
+                    written[offset..offset + data.len()].fill(true);
+                }
+            }
+        }
+    }
+    (expected, written)
 }
 
 /// Mask `0025h` has no "DMA on User Memory" (06 Profiles v02.01.01 §4.2, printed p37), and

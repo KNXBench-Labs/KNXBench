@@ -1,6 +1,9 @@
 /** Renders the real Inspector against static project data; no KNX server or device is involved. */
 import { createRoot } from "react-dom/client";
+import { useState, type ReactNode } from "react";
 import Inspector from "../src/Inspector";
+import { ReportProblemProvider } from "../src/ReportProblemEntry";
+import type { ReportProblemRequest } from "../src/reportProblem";
 import type { ProjectTree } from "../src/bindings/ProjectTree";
 import type { DeviceDetail } from "../src/bindings/DeviceDetail";
 import { setSetting } from "../src/settingsStore";
@@ -124,7 +127,16 @@ const channelDetail: DeviceDetail = {
   ],
 };
 
+/** The workbench's one report wizard, so the Diagnostics tab's report shortcut opens it for real. */
+function ReportHost({ children }: { children: ReactNode }) {
+  const [request, setRequest] = useState<ReportProblemRequest | null>(null);
+  return <ReportProblemProvider request={request} onOpen={setRequest} onClose={() => setRequest(null)} tree={tree} notifications={[]}>
+    {children}
+  </ReportProblemProvider>;
+}
+
 createRoot(document.getElementById("root")!).render(
+  <ReportHost>
   <main className="workbench issue09-browser-fixture">
     <Inspector
       selection={{ kind: "device", id: 42 }}
@@ -133,5 +145,6 @@ createRoot(document.getElementById("root")!).render(
       onApplied={() => {}}
       onDeleted={() => {}}
     />
-  </main>,
+  </main>
+  </ReportHost>,
 );

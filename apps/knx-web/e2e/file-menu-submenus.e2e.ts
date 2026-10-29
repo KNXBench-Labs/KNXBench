@@ -468,6 +468,8 @@ test.describe("File menu focus restoration", () => {
     { name: "About", submenu: "help", entry: en["toolbar.about"], title: en["about.title"], close: en["about.close"] },
     { name: "Project history", submenu: "history", entry: en["projectHistory.title"], title: en["projectHistory.title"], close: en["projectHistory.close"] },
     { name: "Diagnostic export", submenu: "help", entry: en["diagnostics.title"], title: en["diagnostics.title"], close: en["support.close"] },
+    // DIAG-03: opens at the problem type, which asks the server nothing.
+    { name: "Report problem", submenu: "help", entry: en["reportProblem.button"], title: en["reportProblem.title"], close: en["reportProblem.close"] },
   ] as const;
 
   for (const dialog of dialogs) for (const how of ["Escape", "close button"] as const) {

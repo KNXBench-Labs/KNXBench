@@ -1672,9 +1672,9 @@ describe("App — the File menu by keyboard alone", () => {
       ],
       ["Project history", "Compare with…"],
       [
-        "Debug report…",
+        // DIAG-03: the one report entry; the device support report became a shortcut into it.
+        "Report problem…",
         "Analyze support gaps…",
-        "Device support report",
         "Export diagnostic data",
         // ADR-0084: the first-run guide, reopened on request.
         "Show introduction…",
@@ -3028,23 +3028,23 @@ describe("App — the File menu's manners, the stacked splitters, Quit and About
     await act(async () => root.unmount());
   });
 
-  it("keeps the Debug report readable after its File menu closes and returns focus to File", async () => {
+  it("keeps the Report problem wizard readable after its File menu closes and returns focus to File", async () => {
     const root = await renderApp();
     const menu = await openMenu();
     const summary = menu.querySelector("summary")!;
     await act(async () => {
-      findButton("Debug report…").dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      findButton("Report problem…").dispatchEvent(new MouseEvent("click", { bubbles: true }));
     });
     expect(menu.open).toBe(false);
-    const panel = document.body.querySelector<HTMLElement>(".debug-report-panel")!;
+    const panel = document.body.querySelector<HTMLElement>(".report-problem")!;
     expect(panel).not.toBeNull();
     expect(panel.closest(".file-menu")).toBeNull();
-    expect(document.activeElement).toBe(panel.querySelector("textarea"));
+    expect(document.activeElement).toBe(panel.querySelector(".project-wizard-step-title"));
 
     const close = [...panel.querySelectorAll<HTMLButtonElement>("button")]
       .find((button) => button.textContent === "Close")!;
     await act(async () => close.dispatchEvent(new MouseEvent("click", { bubbles: true })));
-    expect(document.body.querySelector(".debug-report-panel")).toBeNull();
+    expect(document.body.querySelector(".report-problem")).toBeNull();
     expect(document.activeElement).toBe(summary);
     await act(async () => root.unmount());
   });

@@ -9,14 +9,16 @@ import { preview, status, recoveryStatus, restoreFailedStatus, downloadFailedSta
 import type { ProjectTree } from "../src/bindings/ProjectTree";
 import type { System2Status, System2StatusWireV1 } from "../src/system2DownloadApi";
 import { messages as en } from "../src/messages/en";
+import { answerBundleRoute, bundleLog } from "./report-problem-fixture";
 const tree: ProjectTree = { schema_version: 1, errors: 0, warnings: 0, can_undo: false, can_redo: false, is_modified: false,
   group_address_style: "ThreeLevel", server_incarnation: "server", project_incarnation: 1, snapshot_revision: 1,
   installations: [{ id: 1, name: "Installation", buildings: [], unassigned: [], group_addresses: [], group_ranges: [], topology: [{ id: 2, name: "Area", address: 1, lines: [{ id: 3, name: "Line", address: 1, devices: [{ id: 10, name: "Configured button", address: "1.1.67", description: null, com_object_count: 0 }] }] }] }] };
 
 async function interceptSystem2(page: Page, language: "en" | "de" = "en") {
   const unexpected: string[] = []; const commands: { path: string; body: unknown }[] = [];
-  const state = { projectOpen: false, operation: null as System2Status | System2StatusWireV1 | null, raw: null as string | null, reportRaw: null as string | null, busyLocks: [] as string[], report: null as unknown, reports: [] as string[] };
-  await page.route("**/api/**", (route) => {
+  const state = { projectOpen: false, operation: null as System2Status | System2StatusWireV1 | null, raw: null as string | null, reportRaw: null as string | null, busyLocks: [] as string[], report: null as unknown, reports: [] as string[], bundle: bundleLog() };
+  await page.route("**/api/**", async (route) => {
+    if (await answerBundleRoute(route, state.bundle)) return;
     const request = route.request(); const path = new URL(request.url()).pathname; const method = request.method();
     const json = (body: unknown, code = 200) => route.fulfill({ status: code, contentType: "application/json", body: JSON.stringify(body) });
     if (path === "/api/auth/status") return json({ required: false, authenticated: true });
@@ -54,6 +56,20 @@ async function interceptSystem2(page: Page, language: "en" | "de" = "en") {
     unexpected.push(`${method} ${path}`); return json({ error: "Unexpected fixture request" }, 404);
   });
   return { state, commands, unexpected };
+}
+
+/** The System-2 result's report shortcut opens the one wizard with this operation preselected. */
+async function expectSystem2Shortcut(page: Page, m: Record<keyof typeof en, string>, log: ReturnType<typeof bundleLog>, operationId: string) {
+  const previews = log.previews.length;
+  await page.locator("[data-report-problem-open=system2]").click();
+  const wizard = page.getByRole("dialog", { name: m["reportProblem.title"], exact: true });
+  await expect(wizard).toBeVisible();
+  await expect(wizard.locator("[aria-current=step]")).toContainText(m["reportProblem.step.contents"]);
+  await expect.poll(() => log.previews.length).toBeGreaterThan(previews);
+  expect(log.previews.at(-1)).toMatchObject({ problemType: "deviceProgramming", operation: { relatedKey: "operationId", relatedValue: operationId } });
+  expect(log.exports).toEqual([]);
+  await page.keyboard.press("Escape");
+  await expect(wizard).toHaveCount(0);
 }
 
 test("Download mode → configured preview → ordinary consent → status/cancel → explicit original recovery", async ({ page }) => {
@@ -232,11 +248,12 @@ if (capture) for (const language of ["en", "de"] as const) for (const width of [
 }
 
 // Opt-in join for the final-step cause: the router's own failed and reopened status bytes and its report,
-// served untouched, through the production decoder, the real panel and the local report save.
+// served untouched, through the production decoder and the real panel. The report bytes are no longer
+// saved by the panel (DIAG-03: the wizard bundles them); their decoder stays pinned in system2DownloadApi.test.ts.
 // Source run: the download's final program-version read disagrees with the plan, so no pointer fact exists.
 const FINAL_BODIES = ["final-failed.json", "final-reopened.json"] as const;
 if (capture) for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
-  test(`${language} backend-emitted final-step bodies and report render and save unchanged at ${width}px`, async ({ page }, testInfo) => {
+  test(`${language} backend-emitted final-step bodies render unchanged and the report shortcut names the run at ${width}px`, async ({ page }, testInfo) => {
     const m = language === "en" ? en : de;
     const { state, commands, unexpected } = await interceptSystem2(page, language);
     const reportRaw = readFileSync(join(capture!, "final-report.json"), "utf8");
@@ -271,32 +288,22 @@ if (capture) for (const language of ["en", "de"] as const) for (const width of [
         for (const raw of ["verificationMismatch", "programVersion", operationId, "/home/", "/tmp/", "/mnt/"]) expect(shown).not.toContain(raw);
       }
     }
-    const download = page.waitForEvent("download");
-    await page.locator("[data-system2-report-save]").click();
-    const file = await download;
-    expect(file.suggestedFilename()).toBe("knxbench-system2-report.json");
-    const { readFile } = await import("node:fs/promises");
-    const saved = await readFile((await file.path())!, "utf8");
-    // The saved file is the emitted report, decoded and written with the panel's own two-space layout.
-    expect(JSON.parse(saved)).toEqual(JSON.parse(reportRaw));
-    expect(saved).toBe(JSON.stringify(JSON.parse(reportRaw), null, 2));
-    expect(JSON.parse(saved).finalStepFailures).toEqual([{ run: "download", category: "verificationMismatch", stage: "programVersion" }]);
-    for (const forbidden of [operationId, "recoveryPhrase", "local_diagnostic", "192.0.2.1"]) expect(saved).not.toContain(forbidden);
-    await expect(page.locator("[data-system2-report-saved]")).toHaveText(m["system2.report.saved"]);
-    expect(state.reports).toEqual([`?operationId=${operationId}`]);
+    // DIAG-03: "Save report" became the report wizard, preselected with this operation.
+    await expectSystem2Shortcut(page, m, state.bundle, operationId);
+    expect(state.reports).toEqual([]);
     expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1);
     expect(commands).toEqual([]); expect(unexpected).toEqual([]);
   });
 }
 
-// Issue #31: the ended run's result is explained from the journal facts and its report is saved locally.
+// Issue #31: the ended run's result is explained from the journal facts; DIAG-03 reports it through the wizard.
 const unfinishedRun: System2Status = { ...downloadFailedStatus, failureDiagnostics: [], completedSteps: 26, totalSteps: 27, downloadResult: "transferCompleteVerificationUnfinished",
   downloadCompletedSteps: 26, downloadTotalSteps: 27, projectSettlement: "persisted" };
 const unfinishedReport = { format: 3, kind: "knxbench-system2-download-summary", support: "EXPERIMENTAL BEST-EFFORT; HARDWARE COMPATIBILITY AND RECOVERY UNVERIFIED",
   evidence: "local-journal-only", download: { outcome: "failed", result: "transferCompleteVerificationUnfinished", completedSteps: 26, totalSteps: 27 },
   recovery: null, mutationPossible: true, prestateDiffers: false, failureDiagnostics: [], finalStepFailures: [], executionBuild: { state: "unknown" }, exporterBuild: "0.1.0-alpha.1+g1234abcd" };
 for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
-  test(`${language} unverified System-2 result and local report save at ${width}px`, async ({ page }) => {
+  test(`${language} unverified System-2 result and its report shortcut at ${width}px`, async ({ page }) => {
     const m = language === "en" ? en : de;
     const { state, commands, unexpected } = await interceptSystem2(page, language);
     state.operation = unfinishedRun; state.report = unfinishedReport;
@@ -309,22 +316,14 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
     await page.locator("[data-download-mode]").selectOption("system2");
     const result = page.locator("[data-system2-result-text]");
     await expect(result).toContainText(m["system2.result.transferCompleteVerificationUnfinished"]);
-    await expect(page.locator("[data-system2-report-guidance]")).toContainText("issue@knxbench.com");
+    await expect(page.locator("[data-system2-report-guidance]")).toHaveText(m["system2.report.guidance"]);
     await expect(page.locator("[data-system2-settlement='persisted']")).toContainText(m["system2.settlement.persisted"]);
-    const download = page.waitForEvent("download");
-    await page.locator("[data-system2-report-save]").click();
-    const file = await download;
-    expect(file.suggestedFilename()).toBe("knxbench-system2-report.json");
-    const { readFile } = await import("node:fs/promises");
-    const text = await readFile((await file.path())!, "utf8");
-    expect(JSON.parse(text)).toEqual(unfinishedReport);
-    for (const forbidden of [unfinishedRun.address, unfinishedRun.deviceName, unfinishedRun.operationId, "recoveryPhrase", "192.0.2.1"]) expect(text).not.toContain(forbidden);
-    await expect(page.locator("[data-system2-report-saved]")).toHaveText(m["system2.report.saved"]);
-    expect(state.reports).toEqual([`?operationId=${unfinishedRun.operationId}`]);
+    await expectSystem2Shortcut(page, m, state.bundle, unfinishedRun.operationId);
+    expect(state.reports).toEqual([]);
     // A running operation offers neither result nor report.
     state.operation = { ...status, operationId: "f".repeat(32) }; await page.locator("[data-system2-refresh]").click();
     await expect(page.locator("[data-system2-result-text]")).toHaveCount(0);
-    await expect(page.locator("[data-system2-report-save]")).toHaveCount(0);
+    await expect(page.locator("[data-report-problem-open=system2]")).toHaveCount(0);
     expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1);
     expect(commands).toEqual([]); expect(unexpected).toEqual([]);
   });

@@ -7,6 +7,7 @@ import { messages as de } from "../src/messages/de";
 // Hand-written check records the Rust serializer admits and re-emits unchanged
 // (`the_web_fixtures_are_the_serializer_vocabulary`); synthetic, not live evidence.
 import checkFixtures from "../src/postDownloadCheck.fixtures.json" with { type: "json" };
+import { answerBundleRoute, bundleLog } from "./report-problem-fixture";
 
 const device = (id: number, address: string, name: string) => ({ id, name, address, description: null, com_object_count: 0 });
 const tree = {
@@ -57,14 +58,15 @@ interface Served { status: unknown; report: unknown; history?: unknown }
 
 async function open(page: Page, language: "en" | "de", served: Served = { status: finished, report }) {
   const m = language === "en" ? en : de;
-  const state = { started: false, starts: 0, writes: [] as string[], reportReads: 0 };
+  const state = { started: false, starts: 0, writes: [] as string[], reportReads: 0, bundle: bundleLog() };
   // Like the real server: no project until the test creates one (ADR-0127).
   let projectOpen = false;
-  await page.route("**/api/**", (route) => {
+  await page.route("**/api/**", async (route) => {
     const request = route.request();
     const path = new URL(request.url()).pathname;
     const method = request.method();
     const json = (body: unknown, status = 200) => route.fulfill({ status, contentType: "application/json", body: JSON.stringify(body) });
+    if (await answerBundleRoute(route, state.bundle)) return;
     if (path === "/api/auth/status") return json({ required: false, authenticated: true });
     if (path === "/api/settings" && method === "GET") return json({ schemaVersion: 1, status: "ok", settings: { uiLanguage: language } });
     if (path === "/api/project" && method === "GET") return projectOpen ? json(tree) : json({ error: "no project open" }, 400);
@@ -153,7 +155,17 @@ for (const language of ["en", "de"] as const) {
       await expect(verify.locator('[data-check="multiOctet"]')).toContainText(m["deviceDownload.verify.check.multiOctet"]);
       await expect(verify.locator("a[data-verify-issue]")).toHaveAttribute("href", report.issueUrl);
       await expect(verify.locator("a[data-verify-issue]")).toHaveAttribute("rel", "noopener noreferrer");
-      await expect(verify.locator("a[data-verify-mail]")).toHaveAttribute("href", report.mailto);
+      // DIAG-03: the mail goes through the report wizard, this run preselected; no raw mailto in the section.
+      await expect(verify.locator("a[data-verify-mail], a[href^='mailto:']")).toHaveCount(0);
+      await expect(panel.locator("[data-report-problem-open]")).toHaveCount(1);
+      await verify.locator("[data-report-problem-open=verify]").click();
+      const wizard = page.getByRole("dialog", { name: m["reportProblem.title"], exact: true });
+      await expect(wizard.locator("[aria-current=step]")).toContainText(m["reportProblem.step.contents"]);
+      await expect.poll(() => state.bundle.previews.length).toBe(1);
+      expect(state.bundle.previews[0]).toMatchObject({ problemType: "deviceProgramming", operation: { relatedKey: "downloadId", relatedValue: "7" } });
+      expect(state.bundle.exports).toEqual([]);
+      await page.keyboard.press("Escape");
+      await expect(wizard).toHaveCount(0);
 
       const download = page.waitForEvent("download");
       await verify.getByRole("button", { name: m["deviceDownload.verify.save"], exact: true }).click();

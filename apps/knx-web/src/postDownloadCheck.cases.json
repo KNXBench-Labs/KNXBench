@@ -78,6 +78,178 @@
           "unsupportedMask"
         ]
       ]
+    },
+    {
+      "name": "state_halted",
+      "fixture": "runStateRunning",
+      "set": [
+        [
+          "/observation/reach/identity/runState/state",
+          "halted"
+        ],
+        [
+          "/runtime",
+          "halted"
+        ]
+      ]
+    },
+    {
+      "name": "state_ready",
+      "fixture": "runStateRunning",
+      "set": [
+        [
+          "/observation/reach/identity/runState/state",
+          "ready"
+        ],
+        [
+          "/runtime",
+          "ready"
+        ]
+      ]
+    },
+    {
+      "name": "state_terminated",
+      "fixture": "runStateRunning",
+      "set": [
+        [
+          "/observation/reach/identity/runState/state",
+          "terminated"
+        ],
+        [
+          "/runtime",
+          "terminated"
+        ]
+      ]
+    },
+    {
+      "name": "state_starting",
+      "fixture": "runStateRunning",
+      "set": [
+        [
+          "/observation/reach/identity/runState/state",
+          "starting"
+        ],
+        [
+          "/runtime",
+          "starting"
+        ]
+      ]
+    },
+    {
+      "name": "state_shuttingDown",
+      "fixture": "runStateRunning",
+      "set": [
+        [
+          "/observation/reach/identity/runState/state",
+          "shuttingDown"
+        ],
+        [
+          "/runtime",
+          "shuttingDown"
+        ]
+      ]
+    },
+    {
+      "name": "cause_refused",
+      "fixture": "runStateUnavailable",
+      "set": [
+        [
+          "/observation/reach/identity/runState/cause",
+          "refused"
+        ]
+      ]
+    },
+    {
+      "name": "cause_malformed",
+      "fixture": "runStateUnavailable",
+      "set": [
+        [
+          "/observation/reach/identity/runState/cause",
+          "malformed"
+        ]
+      ]
+    },
+    {
+      "name": "cause_noCorrelatedAnswer",
+      "fixture": "runStateUnavailable",
+      "set": [
+        [
+          "/observation/reach/identity/runState/cause",
+          "noCorrelatedAnswer"
+        ]
+      ]
+    },
+    {
+      "name": "cause_connectionLost",
+      "fixture": "runStateUnavailable",
+      "set": [
+        [
+          "/observation/reach/identity/runState/cause",
+          "connectionLost"
+        ]
+      ]
+    },
+    {
+      "name": "cause_readFailed",
+      "fixture": "runStateUnavailable",
+      "set": [
+        [
+          "/observation/reach/identity/runState/cause",
+          "readFailed"
+        ]
+      ]
+    },
+    {
+      "name": "step_objectType",
+      "fixture": "runStateUnavailable",
+      "set": [
+        [
+          "/observation/reach/identity/runState/step",
+          "objectType"
+        ]
+      ]
+    },
+    {
+      "name": "step_application",
+      "fixture": "runStateUnavailable",
+      "set": [
+        [
+          "/observation/reach/identity/runState/step",
+          "application"
+        ]
+      ]
+    },
+    {
+      "name": "mismatchApplication",
+      "fixture": "runStateCandidateMismatch",
+      "set": [
+        [
+          "/observation/reach/identity/runState/kind",
+          "application"
+        ]
+      ]
+    },
+    {
+      "name": "legacyNoRunStateKeepsUnknown",
+      "fixture": "matched",
+      "set": []
+    },
+    {
+      "name": "differingLoadWithObservedState",
+      "fixture": "runStateRunning",
+      "set": [
+        [
+          "/observation/reach/identity/loadStates/2/observed",
+          {
+            "result": "observed",
+            "loadState": "unloaded"
+          }
+        ],
+        [
+          "/observation/reach/identity/planLoadVerdict",
+          "differsFromPlan"
+        ]
+      ]
     }
   ],
   "refused": [
@@ -578,6 +750,451 @@
               "kind": "mask"
             }
           }
+        ]
+      ]
+    },
+    {
+      "name": "runStateRunningWithoutEvidence",
+      "fixture": "matched",
+      "set": [
+        [
+          "/runtime",
+          "running"
+        ]
+      ]
+    },
+    {
+      "name": "unknownHidesObservedState",
+      "fixture": "runStateRunning",
+      "set": [
+        [
+          "/runtime",
+          "unknown"
+        ]
+      ]
+    },
+    {
+      "name": "summaryDisagreesWithEvidence",
+      "fixture": "runStateRunning",
+      "set": [
+        [
+          "/runtime",
+          "halted"
+        ]
+      ]
+    },
+    {
+      "name": "knownBesideUndefinedValue",
+      "fixture": "runStateUndefined",
+      "set": [
+        [
+          "/runtime",
+          "running"
+        ]
+      ]
+    },
+    {
+      "name": "knownBesideUnavailable",
+      "fixture": "runStateUnavailable",
+      "set": [
+        [
+          "/runtime",
+          "running"
+        ]
+      ]
+    },
+    {
+      "name": "knownBesideCandidateMismatch",
+      "fixture": "runStateCandidateMismatch",
+      "set": [
+        [
+          "/runtime",
+          "ready"
+        ]
+      ]
+    },
+    {
+      "name": "knownBesideNotRead",
+      "fixture": "runStateUnsupportedMask",
+      "set": [
+        [
+          "/runtime",
+          "running"
+        ]
+      ]
+    },
+    {
+      "name": "explicitNullRunState",
+      "fixture": "matched",
+      "set": [
+        [
+          "/observation/reach/identity/runState",
+          null
+        ]
+      ]
+    },
+    {
+      "name": "indexFour",
+      "fixture": "runStateRunning",
+      "set": [
+        [
+          "/observation/reach/identity/runState/objectIndex",
+          4
+        ]
+      ]
+    },
+    {
+      "name": "indexZero",
+      "fixture": "runStateRunning",
+      "set": [
+        [
+          "/observation/reach/identity/runState/objectIndex",
+          0
+        ]
+      ]
+    },
+    {
+      "name": "indexString",
+      "fixture": "runStateRunning",
+      "set": [
+        [
+          "/observation/reach/identity/runState/objectIndex",
+          "3"
+        ]
+      ]
+    },
+    {
+      "name": "stateUnknownString",
+      "fixture": "runStateRunning",
+      "set": [
+        [
+          "/observation/reach/identity/runState/state",
+          "unknown"
+        ],
+        [
+          "/runtime",
+          "unknown"
+        ]
+      ]
+    },
+    {
+      "name": "stateHealthy",
+      "fixture": "runStateRunning",
+      "set": [
+        [
+          "/observation/reach/identity/runState/state",
+          "healthy"
+        ]
+      ]
+    },
+    {
+      "name": "stateCapitalised",
+      "fixture": "runStateRunning",
+      "set": [
+        [
+          "/observation/reach/identity/runState/state",
+          "Running"
+        ]
+      ]
+    },
+    {
+      "name": "stateNull",
+      "fixture": "runStateRunning",
+      "set": [
+        [
+          "/observation/reach/identity/runState/state",
+          null
+        ]
+      ]
+    },
+    {
+      "name": "observedExtraOctet",
+      "fixture": "runStateRunning",
+      "set": [
+        [
+          "/observation/reach/identity/runState/octet",
+          1
+        ]
+      ]
+    },
+    {
+      "name": "observedMissingState",
+      "fixture": "runStateRunning",
+      "set": [
+        [
+          "/observation/reach/identity/runState",
+          {
+            "status": "observed",
+            "objectIndex": 3
+          }
+        ]
+      ]
+    },
+    {
+      "name": "observedMissingIndex",
+      "fixture": "runStateRunning",
+      "set": [
+        [
+          "/observation/reach/identity/runState",
+          {
+            "status": "observed",
+            "state": "running"
+          }
+        ]
+      ]
+    },
+    {
+      "name": "undefinedWithOctet",
+      "fixture": "runStateUndefined",
+      "set": [
+        [
+          "/observation/reach/identity/runState/octet",
+          129
+        ]
+      ]
+    },
+    {
+      "name": "notReadOtherReason",
+      "fixture": "runStateUnsupportedMask",
+      "set": [
+        [
+          "/observation/reach/identity/runState/reason",
+          "other"
+        ]
+      ]
+    },
+    {
+      "name": "notReadMissingReason",
+      "fixture": "runStateUnsupportedMask",
+      "set": [
+        [
+          "/observation/reach/identity/runState",
+          {
+            "status": "notRead"
+          }
+        ]
+      ]
+    },
+    {
+      "name": "mismatchOtherKind",
+      "fixture": "runStateCandidateMismatch",
+      "set": [
+        [
+          "/observation/reach/identity/runState/kind",
+          "index"
+        ]
+      ]
+    },
+    {
+      "name": "unavailableScanStep",
+      "fixture": "runStateUnavailable",
+      "set": [
+        [
+          "/observation/reach/identity/runState/step",
+          "scan"
+        ]
+      ]
+    },
+    {
+      "name": "unavailableTimeoutCause",
+      "fixture": "runStateUnavailable",
+      "set": [
+        [
+          "/observation/reach/identity/runState/cause",
+          "timeout"
+        ]
+      ]
+    },
+    {
+      "name": "unavailableMissingCause",
+      "fixture": "runStateUnavailable",
+      "set": [
+        [
+          "/observation/reach/identity/runState",
+          {
+            "status": "unavailable",
+            "step": "runState"
+          }
+        ]
+      ]
+    },
+    {
+      "name": "unavailableErrorText",
+      "fixture": "runStateUnavailable",
+      "set": [
+        [
+          "/observation/reach/identity/runState/error",
+          "timed out"
+        ]
+      ]
+    },
+    {
+      "name": "statusNotObserved",
+      "fixture": "runStateRunning",
+      "set": [
+        [
+          "/observation/reach/identity/runState",
+          {
+            "status": "notObserved"
+          }
+        ]
+      ]
+    },
+    {
+      "name": "runStateScalar",
+      "fixture": "runStateRunning",
+      "set": [
+        [
+          "/observation/reach/identity/runState",
+          "running"
+        ]
+      ]
+    },
+    {
+      "name": "runtimeCapitalised",
+      "fixture": "runStateRunning",
+      "set": [
+        [
+          "/runtime",
+          "Running"
+        ]
+      ]
+    },
+    {
+      "name": "runtimeHealthy",
+      "fixture": "runStateRunning",
+      "set": [
+        [
+          "/runtime",
+          "healthy"
+        ]
+      ]
+    },
+    {
+      "name": "evidenceAfterFailedLoad",
+      "fixture": "partialReading",
+      "set": [
+        [
+          "/observation/reach/identity/runState",
+          {
+            "status": "observed",
+            "objectIndex": 3,
+            "state": "running"
+          }
+        ],
+        [
+          "/runtime",
+          "running"
+        ]
+      ]
+    },
+    {
+      "name": "undefinedAfterFailedLoad",
+      "fixture": "partialReading",
+      "set": [
+        [
+          "/observation/reach/identity/runState",
+          {
+            "status": "undefinedValue"
+          }
+        ]
+      ]
+    },
+    {
+      "name": "unavailableAfterFailedLoad",
+      "fixture": "partialReading",
+      "set": [
+        [
+          "/observation/reach/identity/runState",
+          {
+            "status": "unavailable",
+            "step": "runState",
+            "cause": "refused"
+          }
+        ]
+      ]
+    },
+    {
+      "name": "mismatchAfterFailedLoad",
+      "fixture": "partialReading",
+      "set": [
+        [
+          "/observation/reach/identity/runState",
+          {
+            "status": "candidateMismatch",
+            "kind": "objectType"
+          }
+        ]
+      ]
+    },
+    {
+      "name": "loadReadFailedWithEveryLoadRead",
+      "fixture": "matched",
+      "set": [
+        [
+          "/observation/reach/identity/runState",
+          {
+            "status": "notRead",
+            "reason": "loadReadFailed"
+          }
+        ]
+      ]
+    },
+    {
+      "name": "knownRuntimeBesideIdentityMismatch",
+      "fixture": "identityMismatch",
+      "set": [
+        [
+          "/runtime",
+          "running"
+        ]
+      ]
+    },
+    {
+      "name": "runStateOnIdentityMismatch",
+      "fixture": "identityMismatch",
+      "set": [
+        [
+          "/observation/reach/identity/runState",
+          {
+            "status": "observed",
+            "objectIndex": 3,
+            "state": "running"
+          }
+        ]
+      ]
+    },
+    {
+      "name": "runStateOnUnavailableIdentity",
+      "fixture": "identityUnavailable",
+      "set": [
+        [
+          "/observation/reach/identity/runState",
+          {
+            "status": "observed",
+            "objectIndex": 3,
+            "state": "running"
+          }
+        ]
+      ]
+    },
+    {
+      "name": "knownRuntimeNotChecked",
+      "fixture": "notChecked",
+      "set": [
+        [
+          "/runtime",
+          "running"
+        ]
+      ]
+    },
+    {
+      "name": "knownRuntimeNotReached",
+      "fixture": "notReached",
+      "set": [
+        [
+          "/runtime",
+          "halted"
         ]
       ]
     }

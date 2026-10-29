@@ -184,5 +184,268 @@
       }
     },
     "runtime": "unknown"
+  },
+  "runStateRunning": {
+    "observation": {
+      "status": "attempted",
+      "reach": {
+        "result": "reached",
+        "identity": {
+          "result": "match",
+          "exemplar": "notVerified",
+          "loadStates": [
+            {
+              "machine": "addressTable",
+              "expected": "loaded",
+              "observed": {
+                "result": "observed",
+                "loadState": "loaded"
+              }
+            },
+            {
+              "machine": "associationTable",
+              "expected": "unloaded",
+              "observed": {
+                "result": "observed",
+                "loadState": "unloaded"
+              }
+            },
+            {
+              "machine": "applicationProgram",
+              "expected": "loaded",
+              "observed": {
+                "result": "observed",
+                "loadState": "loaded"
+              }
+            }
+          ],
+          "planLoadVerdict": "matchesPlan",
+          "runState": {
+            "status": "observed",
+            "objectIndex": 3,
+            "state": "running"
+          }
+        }
+      }
+    },
+    "runtime": "running"
+  },
+  "runStateUndefined": {
+    "observation": {
+      "status": "attempted",
+      "reach": {
+        "result": "reached",
+        "identity": {
+          "result": "match",
+          "exemplar": "notVerified",
+          "loadStates": [
+            {
+              "machine": "addressTable",
+              "expected": "loaded",
+              "observed": {
+                "result": "observed",
+                "loadState": "loaded"
+              }
+            },
+            {
+              "machine": "associationTable",
+              "expected": "unloaded",
+              "observed": {
+                "result": "observed",
+                "loadState": "unloaded"
+              }
+            },
+            {
+              "machine": "applicationProgram",
+              "expected": "loaded",
+              "observed": {
+                "result": "observed",
+                "loadState": "loaded"
+              }
+            }
+          ],
+          "planLoadVerdict": "matchesPlan",
+          "runState": {
+            "status": "undefinedValue"
+          }
+        }
+      }
+    },
+    "runtime": "unknown"
+  },
+  "runStateUnavailable": {
+    "observation": {
+      "status": "attempted",
+      "reach": {
+        "result": "reached",
+        "identity": {
+          "result": "match",
+          "exemplar": "notVerified",
+          "loadStates": [
+            {
+              "machine": "addressTable",
+              "expected": "loaded",
+              "observed": {
+                "result": "observed",
+                "loadState": "loaded"
+              }
+            },
+            {
+              "machine": "associationTable",
+              "expected": "unloaded",
+              "observed": {
+                "result": "observed",
+                "loadState": "unloaded"
+              }
+            },
+            {
+              "machine": "applicationProgram",
+              "expected": "loaded",
+              "observed": {
+                "result": "observed",
+                "loadState": "loaded"
+              }
+            }
+          ],
+          "planLoadVerdict": "matchesPlan",
+          "runState": {
+            "status": "unavailable",
+            "step": "runState",
+            "cause": "noCorrelatedAnswer"
+          }
+        }
+      }
+    },
+    "runtime": "unknown"
+  },
+  "runStateCandidateMismatch": {
+    "observation": {
+      "status": "attempted",
+      "reach": {
+        "result": "reached",
+        "identity": {
+          "result": "match",
+          "exemplar": "notVerified",
+          "loadStates": [
+            {
+              "machine": "addressTable",
+              "expected": "loaded",
+              "observed": {
+                "result": "observed",
+                "loadState": "loaded"
+              }
+            },
+            {
+              "machine": "associationTable",
+              "expected": "unloaded",
+              "observed": {
+                "result": "observed",
+                "loadState": "unloaded"
+              }
+            },
+            {
+              "machine": "applicationProgram",
+              "expected": "loaded",
+              "observed": {
+                "result": "observed",
+                "loadState": "loaded"
+              }
+            }
+          ],
+          "planLoadVerdict": "matchesPlan",
+          "runState": {
+            "status": "candidateMismatch",
+            "kind": "objectType"
+          }
+        }
+      }
+    },
+    "runtime": "unknown"
+  },
+  "runStateUnsupportedMask": {
+    "observation": {
+      "status": "attempted",
+      "reach": {
+        "result": "reached",
+        "identity": {
+          "result": "match",
+          "exemplar": "notVerified",
+          "loadStates": [
+            {
+              "machine": "addressTable",
+              "expected": "loaded",
+              "observed": {
+                "result": "observed",
+                "loadState": "loaded"
+              }
+            },
+            {
+              "machine": "associationTable",
+              "expected": "unloaded",
+              "observed": {
+                "result": "observed",
+                "loadState": "unloaded"
+              }
+            },
+            {
+              "machine": "applicationProgram",
+              "expected": "loaded",
+              "observed": {
+                "result": "observed",
+                "loadState": "loaded"
+              }
+            }
+          ],
+          "planLoadVerdict": "matchesPlan",
+          "runState": {
+            "status": "notRead",
+            "reason": "unsupportedMask"
+          }
+        }
+      }
+    },
+    "runtime": "unknown"
+  },
+  "runStateLoadFailed": {
+    "observation": {
+      "status": "attempted",
+      "reach": {
+        "result": "reached",
+        "identity": {
+          "result": "match",
+          "exemplar": "notVerified",
+          "loadStates": [
+            {
+              "machine": "addressTable",
+              "expected": "loaded",
+              "observed": {
+                "result": "observed",
+                "loadState": "loaded"
+              }
+            },
+            {
+              "machine": "associationTable",
+              "expected": "unloaded",
+              "observed": {
+                "result": "unavailable"
+              }
+            },
+            {
+              "machine": "applicationProgram",
+              "expected": "loaded",
+              "observed": {
+                "result": "notRead"
+              }
+            }
+          ],
+          "planLoadVerdict": "unknown",
+          "runState": {
+            "status": "notRead",
+            "reason": "loadReadFailed"
+          }
+        }
+      }
+    },
+    "runtime": "unknown"
   }
 }

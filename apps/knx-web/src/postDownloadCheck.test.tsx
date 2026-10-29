@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import fixtures from "./postDownloadCheck.fixtures.json";
 import cases from "./postDownloadCheck.cases.json";
 import PostDownloadCheckView from "./PostDownloadCheckView";
-import { admitPostDownloadCheck, checkLines, NOT_CHECKED, type PostDownloadCheck } from "./postDownloadCheck";
+import { admitPostDownloadCheck, checkLines, NOT_CHECKED, runStateLines, type PostDownloadCheck } from "./postDownloadCheck";
 import { messages as en } from "./messages/en";
 import { messages as de } from "./messages/de";
 import { resetUiLanguageForTests, saveUiLanguage } from "./uiLanguage";
@@ -191,5 +191,91 @@ describe("rendering", () => {
     expect(view.dataset.check ?? view.querySelector("section")!.dataset.check).toBe("notChecked");
     expect(view.textContent).toContain(de["postDownloadCheck.notChecked"]);
     expect(view.textContent).not.toContain("geladen");
+  });
+});
+
+describe("run-state presentation", () => {
+  it("names each reported state with its scope and no health or function claim in both languages", async () => {
+    for (const [language, messages, running, scope] of [
+      ["en", en, "Run state: running", "validated plan-matching Applicationprogram object 3"],
+      ["de", de, "Laufzustand: läuft", "validierten, zum Plan passenden Applikationsprogramm-Objekts 3"],
+    ] as const) {
+      const view = await show(FIXTURES.runStateRunning, language);
+      expect(view.textContent, language).toContain(running);
+      expect(view.textContent, language).toContain(scope);
+      expect(view.textContent, language).toContain(messages["postDownloadCheck.runState.scope"]);
+      expect(view.textContent, language).not.toContain(messages["postDownloadCheck.runtimeUnknown"]);
+      expect(view.querySelector("button")).toBeNull();
+      await act(async () => root!.unmount()); host!.remove(); root = undefined;
+    }
+    expect(en["postDownloadCheck.runState.scope"]).toMatch(/not device health.*not a successful download.*not a unique program instance.*not installation function/s);
+    expect(de["postDownloadCheck.runState.scope"]).toMatch(/keine Gerätegesundheit.*kein erfolgreicher Download.*keine eindeutige Programminstanz.*keine Anlagenfunktion/s);
+  });
+
+  it("keeps the load table independent of the run state", async () => {
+    const view = await show(FIXTURES.runStateRunning);
+    const rows = [...view.querySelectorAll("tbody tr")].map((row) => [...row.querySelectorAll("td")].map((cell) => cell.textContent));
+    expect(rows[2]).toEqual(["Application program", "loaded", "loaded"]);
+    expect(runStateLines(FIXTURES.runStateRunning).map((line) => line.key)).toEqual([
+      "postDownloadCheck.runState.state.running", "postDownloadCheck.runState.scope",
+    ]);
+  });
+
+  it("states every non-observed result as its own fact while the summary stays unknown", () => {
+    const keys = (name: string) => runStateLines(FIXTURES[name]).map((line) => [line.key, line.values ?? null]);
+    expect(keys("runStateUndefined")).toEqual([["postDownloadCheck.runState.undefined", null]]);
+    expect(keys("runStateUnsupportedMask")).toEqual([["postDownloadCheck.runState.notRead.unsupportedMask", null]]);
+    expect(keys("runStateLoadFailed")).toEqual([["postDownloadCheck.runState.notRead.loadReadFailed", null]]);
+    expect(keys("runStateCandidateMismatch")).toEqual([["postDownloadCheck.runState.candidateMismatch.objectType", null]]);
+    expect(keys("runStateUnavailable")).toEqual([["postDownloadCheck.runState.unavailable", { step: "runState", cause: "noCorrelatedAnswer" }]]);
+    expect(runStateLines(FIXTURES.matched)).toEqual([]);
+    expect(runStateLines(FIXTURES.notChecked)).toEqual([]);
+  });
+
+  it("renders a legacy unknown record with the legacy wording and an unavailable read with its own line", async () => {
+    let view = await show(FIXTURES.runStateUnavailable);
+    expect(view.textContent).toContain("Run state unavailable: the run state read failed (no correlated answer).");
+    expect(view.textContent).toContain("Whether the application runs: unknown (no defined run state observed).");
+    expect(view.textContent).not.toContain("unknown (not observed)");
+    await act(async () => root!.unmount()); host!.remove(); root = undefined;
+    view = await show(FIXTURES.matched, "de");
+    expect(view.textContent).toContain(de["postDownloadCheck.runtimeUnknown"]);
+    expect(view.textContent).toContain("unbekannt (nicht beobachtet)");
+    expect(view.textContent).not.toContain("kein definierter Laufzustand");
+    expect(view.textContent).not.toContain("Laufzustand");
+  });
+
+  it("says no defined run state was observed whenever a run-state record exists without one, in both languages", async () => {
+    for (const name of ["runStateUndefined", "runStateUnavailable", "runStateCandidateMismatch", "runStateUnsupportedMask", "runStateLoadFailed"]) {
+      for (const [language, present, legacy] of [
+        ["en", "unknown (no defined run state observed)", "unknown (not observed)"],
+        ["de", "unbekannt (kein definierter Laufzustand beobachtet)", "unbekannt (nicht beobachtet)"],
+      ] as const) {
+        const view = await show(FIXTURES[name], language);
+        expect(view.textContent, `${name} ${language}`).toContain(present);
+        expect(view.textContent, `${name} ${language}`).not.toContain(legacy);
+        // The load verdict and the load/transfer caveat stay their own facts.
+        expect(view.textContent, `${name} ${language}`).toContain(language === "en" ? "not proof that the installation works" : "kein Beweis, dass die Anlage funktioniert");
+        await act(async () => root!.unmount()); host!.remove(); root = undefined;
+      }
+    }
+  });
+
+  it("shows an observed state beside a differing machine: both facts, no unknown wording", async () => {
+    const entry = CASES.accepted.find((candidate) => candidate.name === "differingLoadWithObservedState")!;
+    expect(entry, "the shared table names the case").toBeDefined();
+    expect(entry.fixture).toBe("runStateRunning");
+    const value = edited(entry) as PostDownloadCheck;
+    expect(admitPostDownloadCheck(value)).toEqual(value);
+    expect(checkLines(value).at(-1)).toEqual({ key: "postDownloadCheck.verdict.differsFromPlan", warning: true });
+    expect(runStateLines(value).map((line) => line.key)).toEqual([
+      "postDownloadCheck.runState.state.running", "postDownloadCheck.runState.scope",
+    ]);
+    const view = await show(value);
+    const rows = [...view.querySelectorAll("tbody tr")].map((row) => [...row.querySelectorAll("td")].map((cell) => cell.textContent));
+    expect(rows[2]).toEqual(["Application program", "loaded", "unloaded"]);
+    expect(view.textContent).toContain("Run state: running");
+    expect(view.textContent).toContain(en["postDownloadCheck.verdict.differsFromPlan"]);
+    expect(view.textContent).not.toContain("Whether the application runs");
   });
 });

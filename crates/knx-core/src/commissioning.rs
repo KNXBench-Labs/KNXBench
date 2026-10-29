@@ -1,6 +1,4 @@
-//! Commissioning state: the delta between the planned project and the
-//! physical installation. Modelled as domain data, not import metadata,
-//! because that delta is engineering-critical (DATA_MODEL §7).
+//! Separates planned commissioning intent from observed physical-device state.
 
 pub mod absolute_load_control;
 pub mod authorisation;
@@ -30,6 +28,7 @@ pub mod programming_mode;
 pub mod properties;
 pub mod property_download;
 pub mod rf_configuration;
+pub mod run_state;
 pub mod scope_advice;
 pub mod serial_number;
 pub mod system300_group_tables;

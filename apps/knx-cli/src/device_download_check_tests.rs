@@ -515,10 +515,22 @@ fn a_complete_transfer_is_followed_by_one_read_only_check_on_the_same_device() {
         "  association table: expected unloaded, observed unloaded",
         "  application program: expected loaded, observed loaded",
         "not proven the same physical device",
-        "application running: unknown (not observed)",
+        // This fixture presets no object 3, so a run-state record exists (the
+        // type read is refused): no state defined, not "no read recorded".
+        "application running: unknown (no defined run state observed)",
+        "  run-state read: unavailable (object type read: refused)",
     ] {
         assert!(run.out.contains(line), "{line}\n{}", run.out);
     }
+    assert!(
+        !run.out.contains("unknown (not observed)"),
+        "the legacy wording is for records without a run state: {}",
+        run.out
+    );
+    assert_eq!(
+        identity["runState"],
+        json!({ "status": "unavailable", "step": "objectType", "cause": "refused" })
+    );
 
     let row = reopened(&run);
     assert_eq!(row["state"], "finished");
@@ -528,6 +540,41 @@ fn a_complete_transfer_is_followed_by_one_read_only_check_on_the_same_device() {
     assert_eq!(
         row["downloadEvidence"]["postDownloadCheck"],
         check_json(&run)
+    );
+}
+
+#[test]
+fn a_reported_run_state_is_printed_scoped_and_survives_the_history_reopen() {
+    let device = device(APPLICATION, SimulatorConfig::default());
+    device.preset_property(3, 1, &[0x00, 0x03]);
+    device.preset_property(3, 6, &[0x01]);
+    let run = run_regular(&device, device.address(), &plan());
+
+    assert_eq!(run.exit, ExitCode::SUCCESS);
+    assert_eq!(restarts(&device), 1, "no second restart");
+    assert_check_read_only(&device);
+    let json = check_json(&run);
+    assert_eq!(json["runtime"], "running");
+    assert_eq!(
+        json["observation"]["reach"]["identity"]["runState"],
+        json!({ "status": "observed", "objectIndex": 3, "state": "running" })
+    );
+    for part in [
+        "run state: running",
+        "validated plan-matching Applicationprogram object 3",
+        "not device health",
+        "not a successful download",
+    ] {
+        assert!(run.out.contains(part), "{part}\n{}", run.out);
+    }
+    assert!(
+        !run.out.contains("application running: unknown"),
+        "{}",
+        run.out
+    );
+    assert_eq!(
+        reopened(&run)["downloadEvidence"]["postDownloadCheck"],
+        json
     );
 }
 

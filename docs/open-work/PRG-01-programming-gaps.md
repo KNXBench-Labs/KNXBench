@@ -12,6 +12,17 @@ The owner authorised (25 October 2026) closing existing non-Secure gaps in the
 regular download/restore path, one bounded increment at a time, without live
 bus or device operations.
 
+## Current bounded increment — 29 October 2026
+
+The [property run-state continuation](../contracts/post-download-run-state.md)
+implements an independently specified observation for exact masks `0701h` and
+`0705h`, limited to one type-and-plan-identity-validated hosting object. The
+[original-source review](../research/2026-10-29-property-run-state-observation.md)
+separates the property contract from the still-unproved memory-state encoding.
+This is implementation scope, not a delivery or hardware-acceptance receipt.
+Physical-exemplar proof, other object layouts, parameter policies and complete
+mutation/recovery remain independent open requirements.
+
 ## Delivered so far
 
 - Hardware identity response width: Device Object PID 78 needs exactly six

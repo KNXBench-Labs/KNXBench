@@ -599,6 +599,31 @@ async fn the_worker_checks_after_the_transfer_and_every_reader_keeps_both_facts(
 }
 
 #[tokio::test]
+async fn the_worker_carries_a_reported_run_state_into_status_report_and_history() {
+    let device = device(APPLICATION, SimulatorConfig::default());
+    device.preset_property(3, 1, &[0x00, 0x03]);
+    device.preset_property(3, 6, &[0x02]);
+    let mut started = start(&device, plan(), AfterRestart::Pass);
+    started.session.join().await;
+
+    let (status, _, _) = started.session.snapshot_since(0);
+    let json = serde_json::to_value(&status).unwrap();
+    let check = &json["postDownloadCheck"];
+    assert_eq!(check["runtime"], "ready");
+    assert_eq!(
+        check["observation"]["reach"]["identity"]["runState"],
+        serde_json::json!({ "status": "observed", "objectIndex": 3, "state": "ready" })
+    );
+    assert_eq!(restarts(&device), 1, "no second restart");
+    assert_check_read_only(&device);
+    assert_eq!(device.authorize_requests(), 0);
+    let report = serde_json::to_value(started.session.report().unwrap()).unwrap();
+    assert_eq!(&report["postDownloadCheck"], check);
+    let row = reopened(&started.history);
+    assert_eq!(&row["downloadEvidence"]["postDownloadCheck"], check);
+}
+
+#[tokio::test]
 async fn an_unconfirmed_restart_is_checked_once_without_another_restart() {
     let device = device(
         APPLICATION,

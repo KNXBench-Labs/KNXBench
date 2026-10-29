@@ -16,6 +16,7 @@ use knx_core::commissioning::property_download::{PropertyDownloadPlan, PropertyO
 use knx_core::IndividualAddress;
 
 use super::final_step::FinalStepFailure;
+use super::final_step_evidence::AllocationMismatchEvidence;
 use super::hardware_release::HardwareRelease;
 use super::pointer_width::{PointerWidthAdmission, PointerWidthRefusal};
 use super::property_recovery::{
@@ -89,7 +90,6 @@ pub enum PropertySimulationFailure {
 }
 
 /// An incomplete simulation, not a successful download or recovered device.
-#[derive(Debug)]
 pub struct PropertySimulationError {
     /// None for a pre-connection authorization/target refusal.
     pub source_index: Option<usize>,
@@ -105,6 +105,23 @@ pub struct PropertySimulationError {
     /// Set only when the failure arose in the final step's own verification or Verify Mode
     /// restore; `None` for every other failure, including journal and cancellation stops there.
     pub final_step: Option<FinalStepFailure>,
+    /// The compared bytes, set exactly when `final_step` is an allocation verification
+    /// mismatch. Private evidence; never part of `Debug` (the journal's diagnostic text).
+    pub final_step_evidence: Option<Box<AllocationMismatchEvidence>>,
+}
+/// The derived form of every field but `final_step_evidence`, so diagnostic text stays as
+/// it was and never duplicates whole allocations.
+impl fmt::Debug for PropertySimulationError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("PropertySimulationError")
+            .field("source_index", &self.source_index)
+            .field("operation_index", &self.operation_index)
+            .field("mutation_may_have_started", &self.mutation_may_have_started)
+            .field("completed", &self.completed)
+            .field("failure", &self.failure)
+            .field("final_step", &self.final_step)
+            .finish()
+    }
 }
 impl fmt::Display for PropertySimulationError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -144,6 +161,8 @@ impl From<SessionError> for PropertySimulationFailure {
 /// }
 /// ```
 /// No XML step, source encoding or whole-mutation recovery is inferred here.
+// One boxed evidence pointer tips the error past clippy's 128 bytes; failure paths are cold.
+#[allow(clippy::result_large_err)]
 pub async fn run_simulated_property_plan(
     device: &SimulatedDevice,
     plan: &PropertyDownloadPlan,
@@ -158,6 +177,7 @@ pub async fn run_simulated_property_plan(
         completed: Vec::new(),
         failure,
         final_step: None,
+        final_step_evidence: None,
     };
     if device.address() != plan.target() {
         return Err(early(PropertySimulationFailure::TargetMismatch {
@@ -292,6 +312,8 @@ pub struct ExperimentalPropertyReport {
 /// Net has no filesystem policy. Dropping this future is NOT explicit abort and
 /// has no asynchronous disconnect/restore guarantee. All returned errors attempt
 /// disconnect; no failure path automatically restores resources.
+// One boxed evidence pointer tips the error past clippy's 128 bytes; failure paths are cold.
+#[allow(clippy::result_large_err)]
 #[allow(clippy::too_many_arguments)]
 pub async fn run_experimental_property_plan<T: ManagementTransport>(
     transport: &T,
@@ -325,6 +347,8 @@ pub async fn run_experimental_property_plan<T: ManagementTransport>(
 /// ADR-0152. All other requirements — same-shape preconditions, target-specific
 /// Download authorization, durable journal, cooperative cancellation — are
 /// identical to [`run_experimental_property_plan`], which stays simulator-only.
+// One boxed evidence pointer tips the error past clippy's 128 bytes; failure paths are cold.
+#[allow(clippy::result_large_err)]
 #[allow(clippy::too_many_arguments)]
 pub async fn run_experimental_property_plan_on_hardware<T: ManagementTransport>(
     transport: &T,
@@ -357,6 +381,8 @@ pub async fn run_experimental_property_plan_on_hardware<T: ManagementTransport>(
 /// Validates persisted operation coverage before any connection and current exact
 /// identity before setup. Interrupted current load states are not mistaken for old
 /// command records. This remains experimental same-shape reinstallation only.
+// One boxed evidence pointer tips the error past clippy's 128 bytes; failure paths are cold.
+#[allow(clippy::result_large_err)]
 #[allow(clippy::too_many_arguments)]
 pub async fn restore_experimental_property_plan<T: ManagementTransport>(
     transport: &T,
@@ -377,6 +403,7 @@ pub async fn restore_experimental_property_plan<T: ManagementTransport>(
             completed: Vec::new(),
             failure,
             final_step: None,
+            final_step_evidence: None,
         })?;
     let report = run_property_plan_inner(
         transport,
@@ -399,6 +426,8 @@ pub async fn restore_experimental_property_plan<T: ManagementTransport>(
 /// [`restore_experimental_property_plan`] except that the hardware transport is
 /// admitted; unwritten (masked) bytes still rely on the captured pre-dump and
 /// best-effort recovery (ADR-0152).
+// One boxed evidence pointer tips the error past clippy's 128 bytes; failure paths are cold.
+#[allow(clippy::result_large_err)]
 #[allow(clippy::too_many_arguments)]
 pub async fn restore_experimental_property_plan_on_hardware<T: ManagementTransport>(
     transport: &T,
@@ -420,6 +449,7 @@ pub async fn restore_experimental_property_plan_on_hardware<T: ManagementTranspo
             completed: Vec::new(),
             failure,
             final_step: None,
+            final_step_evidence: None,
         })?;
     let report = run_property_plan_inner(
         transport,
@@ -456,6 +486,8 @@ impl PropertyPlanExecution {
     }
 }
 
+// One boxed evidence pointer tips the error past clippy's 128 bytes; failure paths are cold.
+#[allow(clippy::result_large_err)]
 #[allow(clippy::too_many_arguments)]
 async fn run_property_plan_inner<T: ManagementTransport>(
     transport: &T,
@@ -476,6 +508,7 @@ async fn run_property_plan_inner<T: ManagementTransport>(
         completed: Vec::new(),
         failure,
         final_step: None,
+        final_step_evidence: None,
     };
     if let Some(preconditions) = preconditions {
         preconditions
@@ -520,6 +553,7 @@ async fn run_property_plan_inner<T: ManagementTransport>(
     let mut final_pointer_observations = Vec::new();
     let mut in_procedure_pointer_observations = Vec::new();
     let mut final_step = None;
+    let mut final_step_evidence = None;
     for (operation_index, step) in plan.steps().iter().enumerate() {
         let result: Result<(), PropertySimulationFailure> = async {
             if abort_requested() {
@@ -595,6 +629,7 @@ async fn run_property_plan_inner<T: ManagementTransport>(
                             .await
                             .map_err(|error| {
                                 final_step = Some(error.classified);
+                                final_step_evidence = error.evidence;
                                 error.failure
                             })?;
                         if !final_pointer_observations.is_empty() {
@@ -637,6 +672,7 @@ async fn run_property_plan_inner<T: ManagementTransport>(
                 completed,
                 failure,
                 final_step,
+                final_step_evidence,
             });
         }
     }

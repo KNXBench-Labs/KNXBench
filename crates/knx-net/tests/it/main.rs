@@ -2,6 +2,7 @@
 
 mod diagnostic_export;
 mod diagnostic_export_protocol;
+mod final_step_evidence;
 mod final_step_failure;
 mod hardware_write_gate;
 mod live_commissioning_readonly;

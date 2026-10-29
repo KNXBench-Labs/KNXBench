@@ -23,8 +23,10 @@ use knx_app::operation_recording::RecordingSummary;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 
+use crate::diagnostic_bundle_context::{ProjectContext, Review};
 use crate::errors::ApiError;
 use crate::SharedState;
+use sha2::{Digest, Sha256};
 
 /// The bus monitor rows a bundle may carry: the last ten minutes (decision 14).
 const BUS_MONITOR_WINDOW: chrono::Duration = chrono::Duration::minutes(10);
@@ -83,6 +85,8 @@ async fn delete_recordings(
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub(crate) struct OperationRef {
     #[serde(default)]
+    selection: Option<String>,
+    #[serde(default)]
     recording_id: Option<String>,
     #[serde(default)]
     related_key: Option<String>,
@@ -118,6 +122,10 @@ pub(crate) struct BundleQuery {
     /// Section text only: which section.
     #[serde(default)]
     key: Option<String>,
+    #[serde(default)]
+    review: Option<Value>,
+    #[serde(default)]
+    context: Option<ProjectContext>,
 }
 
 /// A section the problem type offers, ticked or not, and whether it exists.
@@ -134,6 +142,7 @@ struct OfferView {
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 struct PreviewView {
+    review: Review,
     problem_type: ProblemType,
     recording_enabled: bool,
     operation_recording_id: Option<String>,
@@ -150,6 +159,8 @@ struct PreviewView {
 
 /// Everything one wizard state resolves to.
 struct Collected {
+    context: ProjectContext,
+    result_identity: Value,
     operation: Option<RecordingSummary>,
     device_id: Option<u32>,
     offers: Vec<OfferView>,
@@ -159,6 +170,18 @@ struct Collected {
 }
 
 fn check_query(query: &BundleQuery) -> Result<(), ApiError> {
+    if let Some(reference) = &query.operation {
+        match (
+            &reference.selection,
+            &reference.recording_id,
+            &reference.related_key,
+            &reference.related_value,
+        ) {
+            (Some(selection), None, None, None) if selection == "none" => {}
+            (None, Some(_), None, None) | (None, None, Some(_), Some(_)) => {}
+            _ => return Err(ApiError::bad_request("bundleOperationReferenceRefused")),
+        }
+    }
     if let Some(description) = &query.description {
         if description.chars().count() > MAX_DESCRIPTION_CHARS {
             return Err(ApiError::bad_request("bundleDescriptionTooLong"));
@@ -178,6 +201,65 @@ fn check_query(query: &BundleQuery) -> Result<(), ApiError> {
         if !knx_app::operation_recording::is_operation_id(id) {
             return Err(ApiError::bad_request("bundleRecordingUnknown"));
         }
+    }
+    Ok(())
+}
+
+fn preview_changed() -> ApiError {
+    ApiError::with_status(StatusCode::CONFLICT, "bundlePreviewChanged")
+}
+
+fn parse_review(value: &Value) -> Result<Review, ApiError> {
+    let review: Review = serde_json::from_value(value.clone())
+        .map_err(|_| ApiError::bad_request("bundlePreviewRequired"))?;
+    if review.fingerprint.len() != 64
+        || !review
+            .fingerprint
+            .bytes()
+            .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
+    {
+        return Err(ApiError::bad_request("bundlePreviewRequired"));
+    }
+    Ok(review)
+}
+
+fn required_review(query: &BundleQuery) -> Result<Review, ApiError> {
+    parse_review(
+        query
+            .review
+            .as_ref()
+            .ok_or_else(|| ApiError::bad_request("bundlePreviewRequired"))?,
+    )
+}
+
+fn review_of(collected: &Collected, query: &BundleQuery) -> Review {
+    let sections: Vec<_> = collected.sections.iter().map(bundle::preview).collect();
+    let metadata = json!({
+        "context": collected.context,
+        "problemType": query.problem_type,
+        "operation": collected.operation,
+        "result": collected.result_identity,
+        "deviceId": collected.device_id,
+        "offers": collected.offers,
+        "sections": sections,
+    });
+    let mut hash = Sha256::new();
+    hash.update(serde_json::to_vec(&metadata).expect("bundle metadata serializes"));
+    for section in &collected.sections {
+        for file in &section.files {
+            hash.update((file.bytes.len() as u64).to_le_bytes());
+            hash.update(&file.bytes);
+        }
+    }
+    Review {
+        fingerprint: format!("{:x}", hash.finalize()),
+        context: collected.context.clone(),
+    }
+}
+
+fn verify_review(collected: &Collected, query: &BundleQuery) -> Result<(), ApiError> {
+    if required_review(query)? != review_of(collected, query) {
+        return Err(preview_changed());
     }
     Ok(())
 }
@@ -222,6 +304,9 @@ fn resolve_operation(
             .find(|r| !r.active && kind_fits(query.problem_type, r.operation_kind.as_deref()))
             .cloned());
     };
+    if reference.selection.as_deref() == Some("none") {
+        return Ok(None);
+    }
     let found = match (
         &reference.recording_id,
         &reference.related_key,
@@ -239,6 +324,138 @@ fn resolve_operation(
     Ok(found.cloned())
 }
 
+fn recording_context(operation: &RecordingSummary) -> Option<ProjectContext> {
+    if operation.format_version != Some(1) {
+        return None;
+    }
+    serde_json::from_str(operation.related["projectContext"].as_str()?).ok()
+}
+
+async fn resolve_evidence(
+    state: &SharedState,
+    query: &BundleQuery,
+    operation: Option<&RecordingSummary>,
+) -> Result<crate::diagnostic_bundle_results::Evidence, String> {
+    use crate::diagnostic_bundle_results::{diagnostic_files, Evidence};
+    let reference = query.operation.as_ref();
+    let related = |key: &str| -> Option<String> {
+        operation
+            .filter(|op| op.format_version == Some(1))
+            .and_then(|op| op.related[key].as_str())
+            .map(str::to_string)
+            .or_else(|| {
+                reference
+                    .filter(|r| r.related_key.as_deref() == Some(key))
+                    .and_then(|r| r.related_value.clone())
+            })
+    };
+    let context = operation.and_then(recording_context);
+    let device_id = operation
+        .and_then(|op| op.target["deviceId"].as_u64())
+        .and_then(|id| u32::try_from(id).ok());
+    if let Some(token) = related("diagnosticsToken") {
+        let retained = state.diagnostic_results.evidence(&token);
+        if retained.is_ok() {
+            return retained;
+        }
+        if let Some(operation) =
+            operation.filter(|op| op.operation_kind.as_deref() == Some("device-diagnostics"))
+        {
+            let store = state.recordings.clone();
+            let id = operation.id.clone();
+            let bytes = tokio::task::spawn_blocking(move || store.read(&id))
+                .await
+                .map_err(|_| "the diagnostic recording is unavailable")?
+                .map_err(|_| "the diagnostic recording is unavailable")?;
+            let mut lines = bytes.split(|b| *b == b'\n').filter(|line| !line.is_empty());
+            let header: Value = serde_json::from_slice(
+                lines
+                    .next()
+                    .ok_or("the diagnostic recording has no header")?,
+            )
+            .map_err(|_| "the diagnostic recording header is malformed")?;
+            if header["type"] != "header"
+                || header["format"] != "knxbench-operation-recording"
+                || header["format_version"] != 1
+            {
+                return Err("the diagnostic recording version is unsupported".into());
+            }
+            let end: Value = serde_json::from_slice(
+                lines
+                    .next_back()
+                    .ok_or("the diagnostic recording has no completed result")?,
+            )
+            .map_err(|_| "the diagnostic recording result is malformed")?;
+            if end["type"] != "end" {
+                return Err("the diagnostic recording has no completed result".into());
+            }
+            let result: crate::diagnostic_bundle_results::RecordedDiagnosticResult =
+                serde_json::from_value(end["summary"].clone())
+                    .map_err(|_| "the diagnostic recording result is malformed")?;
+            let export: knx_app::device_diagnostics::Export = result.into();
+            return Ok(Evidence {
+                identity: json!({"diagnosticsReference": export.report.project_reference}),
+                context,
+                device_id,
+                reports: diagnostic_files(&export)?,
+                operation_files: Vec::new(),
+            });
+        }
+        return retained;
+    }
+    if let Some(token) = related("supportToken") {
+        return state.support_results.evidence(&token);
+    }
+    if let Some(id) = related("operationId") {
+        let (progress, report) = crate::device_system2::diagnostic_projection(state, id.clone())
+            .await?
+            .ok_or("the retained System-2 journal is unavailable")?;
+        return Ok(Evidence {
+            identity: json!({"operationId":id}),
+            context,
+            device_id,
+            reports: vec![BundleFile::json("system2-report.json", &report)],
+            operation_files: vec![BundleFile::json("system2-progress.json", &progress)],
+        });
+    }
+    if let Some(id) = related("downloadId") {
+        let id: u64 = id
+            .parse()
+            .map_err(|_| "the retained download id is invalid")?;
+        if operation.is_some_and(|op| {
+            op.related["serverIncarnation"].as_str() != Some(&state.server_incarnation)
+        }) {
+            return Err("the download result belongs to another server run".into());
+        }
+        let guard = state
+            .device_download
+            .try_lock()
+            .map_err(|_| "the download result is busy")?;
+        let session = guard
+            .as_ref()
+            .filter(|session| session.id() == id)
+            .ok_or("the retained download result is unavailable")?;
+        let report = session
+            .report()
+            .ok_or("the download result is not complete")?;
+        return Ok(Evidence {
+            identity: json!({"downloadId":id,"serverIncarnation":state.server_incarnation}),
+            context,
+            device_id,
+            reports: vec![BundleFile::json(
+                "download-report.json",
+                &serde_json::to_value(report).map_err(|_| "download report encoding failed")?,
+            )],
+            operation_files: vec![BundleFile::json(
+                "download-status.json",
+                &serde_json::to_value(session.status())
+                    .map_err(|_| "download status encoding failed")?,
+            )],
+        });
+    }
+    Err("no retained structured result exists for this operation".into())
+}
+
 fn markers(addresses: bool, names: bool, parameter_values: bool, network: bool) -> ContentMarkers {
     ContentMarkers {
         addresses,
@@ -250,6 +467,19 @@ fn markers(addresses: bool, names: bool, parameter_values: bool, network: bool) 
 
 async fn collect(state: &SharedState, query: &BundleQuery) -> Result<Collected, ApiError> {
     check_query(query)?;
+    let context = ProjectContext::capture(state);
+    if query
+        .context
+        .as_ref()
+        .is_some_and(|expected| expected != &context)
+    {
+        return Err(preview_changed());
+    }
+    if let Some(review) = &query.review {
+        if parse_review(review)?.context != context {
+            return Err(preview_changed());
+        }
+    }
     let store = state.recordings.clone();
     let recordings = tokio::task::spawn_blocking(move || {
         // A recording still being written shows its last lines a moment later.
@@ -265,12 +495,88 @@ async fn collect(state: &SharedState, query: &BundleQuery) -> Result<Collected, 
     } else {
         resolve_operation(query, &recordings, &state.server_incarnation)?
     };
-    let device_id = query.device_id.or_else(|| {
-        operation
-            .as_ref()
-            .and_then(|op| op.target["deviceId"].as_u64())
-            .and_then(|id| u32::try_from(id).ok())
+    let evidence = resolve_evidence(state, query, operation.as_ref()).await;
+    let run_device = evidence
+        .as_ref()
+        .ok()
+        .and_then(|result| result.device_id)
+        .or_else(|| {
+            operation
+                .as_ref()
+                .and_then(|op| op.target["deviceId"].as_u64())
+                .and_then(|id| u32::try_from(id).ok())
+        });
+    let source = evidence
+        .as_ref()
+        .ok()
+        .and_then(|result| result.context.clone())
+        .or_else(|| operation.as_ref().and_then(recording_context));
+    // Address-to-id resolution is allowed only in the proven, unchanged source project.
+    let run_device = run_device.or_else(|| {
+        let address = operation.as_ref()?.target["individualAddress"]
+            .as_str()?
+            .parse::<knx_core::IndividualAddress>()
+            .ok()?;
+        if source.as_ref() != Some(&context) {
+            return None;
+        }
+        let project = state.project.lock().expect("state mutex poisoned");
+        if ProjectContext::locked(state) != context {
+            return None;
+        }
+        let mut devices = project
+            .as_ref()?
+            .devices
+            .iter()
+            .filter(|device| device.address == Some(address));
+        let device = devices.next()?.id.0;
+        devices.next().is_none().then_some(device)
     });
+    if query
+        .device_id
+        .zip(run_device)
+        .is_some_and(|(chosen, target)| chosen != target)
+    {
+        return Err(ApiError::with_status(
+            StatusCode::CONFLICT,
+            "bundleTargetMismatch",
+        ));
+    }
+    let has_operation = operation.is_some()
+        || query
+            .operation
+            .as_ref()
+            .is_some_and(|op| op.selection.as_deref() != Some("none"));
+    let device_unavailable =
+        if has_operation && (source.as_ref() != Some(&context) || run_device.is_none()) {
+            Some("the operation's originating device/project context is unavailable or has changed")
+        } else {
+            None
+        };
+    let device_id = query.device_id.or(run_device);
+    let result_identity = match &evidence {
+        Ok(result) => result.identity.clone(),
+        Err(_)
+            if operation.is_some()
+                || query
+                    .operation
+                    .as_ref()
+                    .is_some_and(|op| op.selection.as_deref() == Some("none")) =>
+        {
+            Value::Null
+        }
+        Err(_) => query
+            .operation
+            .as_ref()
+            .map(|reference| {
+                json!({
+                    "relatedKey": reference.related_key,
+                    "relatedValue": reference.related_value,
+                    "recordingId": reference.recording_id,
+                })
+            })
+            .unwrap_or(Value::Null),
+    };
     let selected: Vec<SectionKind> = match &query.sections {
         Some(chosen) => chosen.clone(),
         None => SectionKind::ALL
@@ -295,7 +601,29 @@ async fn collect(state: &SharedState, query: &BundleQuery) -> Result<Collected, 
             continue;
         }
         let wanted = offer == Offer::Fixed || selected.contains(&kind);
-        let built = build_section(state, query, kind, operation.as_ref(), device_id).await;
+        let built = if kind == SectionKind::ClientState && !wanted && query.client.is_none() {
+            Ok(Vec::new())
+        } else if kind == SectionKind::Device && device_unavailable.is_some() {
+            Err(device_unavailable
+                .expect("checked availability")
+                .to_string())
+        } else {
+            let target = if kind == SectionKind::Catalogue && device_unavailable.is_some() {
+                None
+            } else {
+                device_id
+            };
+            build_section(
+                state,
+                query,
+                kind,
+                operation.as_ref(),
+                target,
+                evidence.as_ref().map_err(String::as_str),
+                &recordings,
+            )
+            .await
+        };
         let unavailable = match built {
             Ok(built) => {
                 if wanted {
@@ -312,7 +640,12 @@ async fn collect(state: &SharedState, query: &BundleQuery) -> Result<Collected, 
             unavailable,
         });
     }
+    if ProjectContext::capture(state) != context {
+        return Err(preview_changed());
+    }
     Ok(Collected {
+        context,
+        result_identity,
         operation,
         device_id,
         offers,
@@ -329,13 +662,25 @@ async fn build_section(
     kind: SectionKind,
     operation: Option<&RecordingSummary>,
     device_id: Option<u32>,
+    evidence: Result<&crate::diagnostic_bundle_results::Evidence, &str>,
+    recordings: &[RecordingSummary],
 ) -> Result<Vec<BundleSection>, String> {
     match kind {
         SectionKind::Environment => Ok(vec![environment(state)]),
         SectionKind::SessionLog => Ok(vec![session_log(state)]),
         SectionKind::Operation => {
-            let operation = operation.ok_or("no recorded operation fits this problem")?;
-            Ok(vec![operation_section(state, operation, SectionKind::Operation).await?])
+            if let Some(operation) = operation {
+                return Ok(vec![operation_section(state, operation, SectionKind::Operation).await?]);
+            }
+            let evidence = evidence.map_err(str::to_string)?;
+            if evidence.operation_files.is_empty() {
+                return Err("the operation recording is unavailable; retained structured result is in legacy reports".into());
+            }
+            let mut section = BundleSection::new(SectionKind::Operation);
+            section.files = evidence.operation_files.clone();
+            section.entries = section.files.len();
+            section.notes.push("the operation recording is unavailable; this is the retained typed result".into());
+            Ok(vec![section])
         }
         SectionKind::EarlierOperation => {
             let mut out = Vec::new();
@@ -343,21 +688,22 @@ async fn build_section(
                 if operation.is_some_and(|op| &op.id == id) {
                     continue;
                 }
-                let summary = state
-                    .recordings
-                    .list()
-                    .map_err(|e| e.to_string())?
-                    .into_iter()
+                let summary = recordings
+                    .iter()
                     .find(|r| &r.id == id)
                     .ok_or("a chosen earlier recording no longer exists")?;
-                out.push(operation_section(state, &summary, SectionKind::EarlierOperation).await?);
+                out.push(operation_section(state, summary, SectionKind::EarlierOperation).await?);
             }
             Ok(out)
         }
         SectionKind::Device => Ok(vec![device_section(state, device_id)?]),
         SectionKind::LegacyReports => {
-            let operation = operation.ok_or("no recorded operation fits this problem")?;
-            Ok(vec![legacy_reports(state, operation).await?])
+            let evidence = evidence.map_err(str::to_string)?;
+            let mut section = BundleSection::new(SectionKind::LegacyReports);
+            section.files = evidence.reports.clone();
+            section.entries = section.files.len();
+            section.markers = markers(false, false, true, false);
+            Ok(vec![section])
         }
         SectionKind::ImportReport => Ok(vec![import_report(state)?]),
         SectionKind::ImportFile => Err(
@@ -507,35 +853,6 @@ async fn current_download<T>(
     let guard = state.device_download.try_lock().ok()?;
     let session = guard.as_ref().filter(|s| s.id() == id)?;
     Some(read(session))
-}
-
-async fn legacy_reports(
-    state: &SharedState,
-    operation: &RecordingSummary,
-) -> Result<BundleSection, String> {
-    let mut section = BundleSection::new(SectionKind::LegacyReports);
-    if let Some(Some(report)) = current_download(state, operation, |session| session.report()).await
-    {
-        section.files.push(BundleFile::json(
-            "download-report.json",
-            &serde_json::to_value(&report).unwrap_or_default(),
-        ));
-    }
-    if let Some(system2) = operation.related["operationId"].as_str() {
-        if let Ok(Some((_, report))) =
-            crate::device_system2::diagnostic_projection(state, system2.to_string()).await
-        {
-            section
-                .files
-                .push(BundleFile::json("system2-report.json", &report));
-        }
-    }
-    if section.files.is_empty() {
-        return Err("no minimised report exists for this operation".into());
-    }
-    section.entries = section.files.len();
-    section.markers = markers(false, false, true, false);
-    Ok(section)
 }
 
 fn device_section(state: &SharedState, device_id: Option<u32>) -> Result<BundleSection, String> {
@@ -715,6 +1032,7 @@ async fn preview(
     let (file_name, mail_draft) = names(&collected, &query);
     let total_bytes = collected.sections.iter().map(BundleSection::size).sum();
     Ok(Json(PreviewView {
+        review: review_of(&collected, &query),
         problem_type: query.problem_type,
         recording_enabled: state.recordings.is_enabled(),
         operation_recording_id: collected.operation.as_ref().map(|op| op.id.clone()),
@@ -740,11 +1058,13 @@ async fn section_text(
     State(state): State<SharedState>,
     Json(query): Json<BundleQuery>,
 ) -> Result<Json<SectionTextView>, ApiError> {
+    required_review(&query)?;
     let key = query
         .key
         .clone()
         .ok_or_else(|| ApiError::bad_request("bundleSectionUnknown"))?;
     let collected = collect(&state, &query).await?;
+    verify_review(&collected, &query)?;
     let section = collected
         .sections
         .iter()
@@ -763,7 +1083,9 @@ async fn export(
     if !query.consent {
         return Err(ApiError::bad_request("bundleConsentRequired"));
     }
+    required_review(&query)?;
     let collected = collect(&state, &query).await?;
+    verify_review(&collected, &query)?;
     let (file_name, _) = names(&collected, &query);
     let request = request(&state, &query);
     let created_at = collected.created_at.clone();
@@ -793,3 +1115,7 @@ async fn export(
 #[cfg(test)]
 #[path = "diagnostic_bundle_routes_tests.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "diagnostic_bundle_binding_tests.rs"]
+mod binding_tests;

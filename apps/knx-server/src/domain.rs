@@ -248,6 +248,10 @@ pub struct AppState {
     /// One JSONL recording per device operation under `data_dir/diagnostics`
     /// (DIAG-03). Disabled in the test `Default` and by `KNX_DIAGNOSTIC_RECORDING=off`.
     pub recordings: std::sync::Arc<knx_app::operation_recording::RecordingStore>,
+    #[doc(hidden)]
+    pub diagnostic_results: crate::device_diagnostics_routes::Results,
+    #[doc(hidden)]
+    pub support_results: crate::support_routes::Results,
 }
 
 impl AppState {
@@ -389,6 +393,8 @@ impl AppState {
             device_download_plan: Mutex::new(None),
             plugin_data_plan: Mutex::new(None),
             device_download: tokio::sync::Mutex::new(None),
+            diagnostic_results: Default::default(),
+            support_results: Default::default(),
             next_device_download_id: std::sync::atomic::AtomicU64::new(1),
             device_download_timing: knx_net::SessionTiming::default(),
             system2_timing: knx_net::SessionTiming::patient_system2(),

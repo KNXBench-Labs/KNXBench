@@ -11,6 +11,9 @@ use knx_net::wire_tap::WireDirection;
 use serde_json::{json, Value};
 use tower::ServiceExt;
 
+#[path = "diagnostic_bundle_import_tests.rs"]
+mod import_tests;
+
 const SENTINEL_KEY: [u8; 4] = [0xC0, 0xFF, 0xEE, 0x42];
 
 fn state(dir: &std::path::Path, enabled: bool) -> Arc<crate::AppState> {

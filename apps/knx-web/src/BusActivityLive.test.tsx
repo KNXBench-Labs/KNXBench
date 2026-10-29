@@ -92,6 +92,16 @@ it("admits and names the System-2 owner without inventing a session or idle proo
   expect(panel().querySelectorAll(".activity-live-session")).toHaveLength(0);
 });
 
+it("names a support live read instead of refusing the whole snapshot", async () => {
+  const oneShot = [{ id: 11, kind: "supportDiagnostics", address: "1.1.5", state: "finished",
+    startedAt: "2026-10-29T08:00:00Z", finishedAt: "2026-10-29T08:00:02Z" }];
+  vi.stubGlobal("fetch", vi.fn().mockResolvedValue(response(snapshot({ oneShot }))));
+  await open();
+  const row = panel().querySelector(".activity-live-oneshot")!.textContent!;
+  expect(row).toContain(`${en["activityHistory.kind.supportDiagnostics"]} — 1.1.5`);
+  expect(row).toContain(en["activityHistory.state.finished"]);
+});
+
 it("does not read an empty session list as an idle bus", async () => {
   vi.stubGlobal("fetch", vi.fn().mockResolvedValue(response(snapshot({ sessions: [], oneShot: [], oneShotDropped: 0, busyLocks: [] }))));
   await open();

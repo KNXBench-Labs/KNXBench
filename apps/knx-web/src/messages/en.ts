@@ -1482,6 +1482,7 @@ export const messages = {
   "activityHistory.kind.system2Validation": "System-2 validation download",
   "activityHistory.kind.serialLookup": "Serial lookup",
   "activityHistory.kind.deviceDiagnostics": "Diagnostic export (read only)",
+  "activityHistory.kind.supportDiagnostics": "Support report diagnostics (read only)",
   "activityHistory.kind.deviceDownload": "Device download",
   "activityHistory.kind.deviceIdentify": "Device identification",
   "activityHistory.kind.groupWrite": "Group write",

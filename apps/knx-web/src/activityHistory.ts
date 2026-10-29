@@ -3,7 +3,7 @@ import { admitReceipts, type DownloadPreparation, type DownloadSettlement } from
 import { admitDownloadFailure, type DownloadFailure } from "./downloadFailure";
 import { admitPostDownloadCheck, type PostDownloadCheck } from "./postDownloadCheck";
 
-export const HISTORY_KINDS = ["deviceCompare", "serviceControlRead", "serviceControlWrite", "system2Validation", "serialLookup", "deviceDownload", "deviceDiagnostics"] as const;
+export const HISTORY_KINDS = ["deviceCompare", "serviceControlRead", "serviceControlWrite", "system2Validation", "serialLookup", "deviceDownload", "deviceDiagnostics", "supportDiagnostics"] as const;
 export const UNTRACKED_KINDS = ["deviceIdentify", "groupWrite", "serialAddress", "deviceDownload", "addressProgramming", "busMonitor", "lineScan"] as const;
 export type HistoryKind = typeof HISTORY_KINDS[number];
 export type UntrackedKind = typeof UNTRACKED_KINDS[number];

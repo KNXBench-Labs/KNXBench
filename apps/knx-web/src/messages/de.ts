@@ -1461,6 +1461,7 @@ export const messages: Record<MessageKey, string> = {
   "activityHistory.kind.system2Validation": "System-2-Validierungsdownload",
   "activityHistory.kind.serialLookup": "Seriennummer suchen",
   "activityHistory.kind.deviceDiagnostics": "Diagnose-Export (nur lesend)",
+  "activityHistory.kind.supportDiagnostics": "Supportbericht-Diagnose (nur lesend)",
   "activityHistory.kind.deviceDownload": "Geräte-Download",
   "activityHistory.kind.deviceIdentify": "Geräteidentifikation",
   "activityHistory.kind.groupWrite": "Gruppenschreibvorgang",

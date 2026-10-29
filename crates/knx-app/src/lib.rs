@@ -22,6 +22,7 @@ mod contribution_structure;
 pub mod device_backup;
 pub mod device_diagnostics;
 pub mod device_download;
+pub mod diagnostic_bundle;
 pub mod documentation;
 pub mod download_failure;
 pub mod download_report;

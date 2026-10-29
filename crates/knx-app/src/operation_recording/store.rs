@@ -255,6 +255,7 @@ fn write_end(
 
 /// One recording as listed; read from its header and last line only.
 #[derive(Debug, Clone, Serialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
 pub struct RecordingSummary {
     pub id: String,
     pub size_bytes: u64,
@@ -380,6 +381,7 @@ fn last_line(file: &mut std::fs::File, size: u64) -> io::Result<(Option<String>,
 
 /// What a delete-all removed and what it had to keep.
 #[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
 pub struct DeleteOutcome {
     pub removed: usize,
     /// Recordings being written right now; deleted with a later request.

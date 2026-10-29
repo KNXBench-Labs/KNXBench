@@ -38,10 +38,12 @@ use knx_app::download_scope::{
 use knx_app::download_support::{
     download_level, shipped_evidence, untested_acknowledgement, SupportLevel,
 };
+use knx_app::operation_recording::{OperationKind, OperationStart};
 use knx_core::commissioning::mutation::{required_confirmation_phrase, WriteAuthorisation};
 use knx_core::commissioning::partial_memory_download::{PartialDownloadParts, PartialPlanError};
 use knx_core::commissioning::scope_advice::{AdvisedWrite, ScopeAdvice};
 use knx_core::{ContactableAddress, IndividualAddress, WriteScope};
+use knx_net::TunnelAckWait;
 use knx_productdb::image::ImageError;
 
 use crate::device_download::{
@@ -742,9 +744,33 @@ async fn start(
             "activity history unavailable; not sent",
         )
     })?;
-    let tunnel = match state.connector.connect_tunnel(gateway).await {
+    let recorder = crate::operation_recordings::start(
+        &state,
+        OperationStart::new(OperationKind::Download)
+            .target(serde_json::json!({
+                "individualAddress": target.to_string(),
+                "deviceName": prepared.device_name,
+                "programId": prepared.request.program_id,
+                "partial": partial.is_some(),
+            }))
+            .gateway(gateway)
+            .related("downloadId", body.plan_id)
+            .settings(crate::operation_recordings::tunnel_settings(
+                TunnelAckWait::Standard,
+                &state.device_download_timing,
+            )),
+    );
+    let tunnel = match crate::operation_recordings::connect(
+        &state,
+        gateway,
+        TunnelAckWait::Standard,
+        &recorder,
+    )
+    .await
+    {
         Ok(tunnel) => tunnel,
         Err(e) => {
+            crate::operation_recordings::finish_error(&recorder, &e, serde_json::Value::Null);
             // No tunnel, no telegram: say so in the history rather than
             // leaving it to the guard's drop, which records `unknown`
             // (AR18 review M6). If even that cannot be recorded, the drop
@@ -773,6 +799,7 @@ async fn start(
         settler,
         settlement,
         stop,
+        recorder,
     ));
     drop(scan);
     drop(monitor);

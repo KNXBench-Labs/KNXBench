@@ -402,14 +402,46 @@ async fn diagnose(
     let activity = state
         .one_shot_activity
         .start("supportDiagnostics", Some(target.to_string()));
+    let recorder = crate::operation_recordings::start(
+        &state,
+        knx_app::operation_recording::OperationStart::new(
+            knx_app::operation_recording::OperationKind::SupportRead,
+        )
+        .target(serde_json::json!({
+            "individualAddress": target.to_string(),
+            "deviceId": s.device_id,
+        }))
+        .gateway(gateway)
+        .settings(crate::operation_recordings::tunnel_settings(
+            knx_net::TunnelAckWait::Standard,
+            &state.device_download_timing,
+        )),
+    );
     let tunnel = match tokio::time::timeout(
         Duration::from_secs(10),
-        state.connector.connect_tunnel(gateway),
+        crate::operation_recordings::connect(
+            &state,
+            gateway,
+            knx_net::TunnelAckWait::Standard,
+            &recorder,
+        ),
     )
     .await
     {
         Ok(Ok(t)) => t,
-        _ => {
+        connected => {
+            match connected {
+                Ok(Err(error)) => crate::operation_recordings::finish_error(
+                    &recorder,
+                    &error,
+                    serde_json::Value::Null,
+                ),
+                _ => crate::operation_recordings::finish_failed(
+                    &recorder,
+                    "no tunnel within 10 s",
+                    serde_json::Value::Null,
+                ),
+            }
             activity.finish("failed");
             return Err(ApiError::with_status(
                 StatusCode::BAD_GATEWAY,
@@ -429,6 +461,18 @@ async fn diagnose(
     )
     .await;
     let _ = tokio::time::timeout(Duration::from_secs(3), tunnel.disconnect()).await;
+    match &result {
+        Ok(collected) => crate::operation_recordings::finish_result(
+            &recorder,
+            collected,
+            serde_json::json!({ "facts": collected.as_ref().ok().map(|d| d.facts.len()) }),
+        ),
+        Err(_) => crate::operation_recordings::finish_failed(
+            &recorder,
+            "the support read exceeded its 30 s deadline",
+            serde_json::Value::Null,
+        ),
+    }
     activity.finish("finished");
     drop(scan);
     drop(monitor);

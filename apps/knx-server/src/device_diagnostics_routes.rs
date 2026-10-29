@@ -346,19 +346,49 @@ async fn run_inner(state: &SharedState, slot: &Slot, job: &Job) -> Result<(), &'
         "deviceDiagnostics",
         Some(job.plan.base().target.address().to_string()),
     );
+    let recorder = crate::operation_recordings::start(
+        state,
+        knx_app::operation_recording::OperationStart::new(
+            knx_app::operation_recording::OperationKind::DeviceDiagnostics,
+        )
+        .target(serde_json::json!({
+            "individualAddress": job.plan.base().target.address().to_string(),
+            "profile": match &job.plan {
+                Plan::Identity(_) => "identity",
+                Plan::Memory(_) => "declaredMemory",
+            },
+        }))
+        .gateway(job.gateway)
+        .related("diagnosticsToken", &job.token)
+        .settings(crate::operation_recordings::tunnel_settings(
+            knx_net::TunnelAckWait::Standard,
+            &state.device_download_timing,
+        )),
+    );
     // A known connect failure is "failed"; only a dropped future is "unknown".
     let tunnel = match tokio::time::timeout(
         Duration::from_secs(10),
-        state.connector.connect_tunnel(job.gateway),
+        crate::operation_recordings::connect(
+            state,
+            job.gateway,
+            knx_net::TunnelAckWait::Standard,
+            &recorder,
+        ),
     )
     .await
     {
         Ok(Ok(tunnel)) => tunnel,
-        Ok(Err(_)) => {
+        Ok(Err(error)) => {
+            crate::operation_recordings::finish_error(&recorder, &error, serde_json::Value::Null);
             activity.finish("failed");
             return Err("gateway-connect-failed");
         }
         Err(_) => {
+            crate::operation_recordings::finish_failed(
+                &recorder,
+                "no tunnel within 10 s",
+                serde_json::Value::Null,
+            );
             activity.finish("failed");
             return Err("gateway-timeout");
         }
@@ -397,6 +427,19 @@ async fn run_inner(state: &SharedState, slot: &Slot, job: &Job) -> Result<(), &'
                 .stop_reason
                 .get_or_insert(service::TUNNEL_DISCONNECT_UNCONFIRMED.into());
         }
+    }
+    // The whole acquisition, every value read, for the recording.
+    let summary = serde_json::json!({
+        "report": serde_json::to_value(&export.report).unwrap_or_default(),
+        "memory": export.memory.as_ref().map(|m| serde_json::to_value(m).unwrap_or_default()),
+    });
+    match &export.report.stop_reason {
+        Some(reason) => {
+            crate::operation_recordings::finish_failed(&recorder, reason.clone(), summary)
+        }
+        None => recorder.finish(knx_app::operation_recording::RecordedOutcome::succeeded(
+            summary,
+        )),
     }
     activity.finish(if export.report.stop_reason.is_some() {
         "failed"

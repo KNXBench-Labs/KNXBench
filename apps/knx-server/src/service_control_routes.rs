@@ -31,6 +31,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use knx_app::access_key::project_access_key;
+use knx_app::operation_recording::{OperationKind, OperationStart};
 use knx_app::service_control_backup::write_backup;
 use knx_core::commissioning::authorisation::AuthorisationPlan;
 use knx_core::commissioning::mutation::{WriteAuthorisation, WriteScope};
@@ -38,6 +39,7 @@ use knx_core::{ContactableAddress, IndividualAddress};
 use knx_net::commissioning::service_control::{
     read_service_control, set_individual_address_write_enable, ServiceControl, ServiceControlError,
 };
+use knx_net::TunnelAckWait;
 
 use crate::device_download::TunnelTransport;
 use crate::errors::ApiError;
@@ -201,7 +203,17 @@ async fn read(
     let activity = state
         .one_shot_activity
         .start("serviceControlRead", Some(address.to_string()));
-    let connected = match state.connector.connect_tunnel(gateway).await {
+    let (recorder, connected) = crate::operation_recordings::open(
+        &state,
+        OperationStart::new(OperationKind::ServiceControl).target(
+            serde_json::json!({ "individualAddress": address.to_string(), "write": false }),
+        ),
+        gateway,
+        TunnelAckWait::Standard,
+        &state.address_programming_timing,
+    )
+    .await;
+    let connected = match connected {
         Ok(connected) => connected,
         Err(e) => {
             activity.finish("failed");
@@ -212,6 +224,11 @@ async fn read(
     let outcome =
         read_service_control(&tunnel, address, plan, state.address_programming_timing).await;
     let _ = connected.disconnect().await;
+    crate::operation_recordings::finish_result(
+        &recorder,
+        &outcome,
+        serde_json::json!({ "value": outcome.as_ref().ok().map(|v| format!("{v:?}")) }),
+    );
     activity.finish(if outcome.is_ok() {
         "finished"
     } else {
@@ -279,7 +296,19 @@ async fn write(
             "activity history unavailable; not sent",
         ));
     }
-    let connected = match state.connector.connect_tunnel(gateway).await {
+    let (recorder, connected) = crate::operation_recordings::open(
+        &state,
+        OperationStart::new(OperationKind::ServiceControl).target(serde_json::json!({
+            "individualAddress": address.to_string(),
+            "write": true,
+            "enable": body.enable,
+        })),
+        gateway,
+        TunnelAckWait::Standard,
+        &state.address_programming_timing,
+    )
+    .await;
+    let connected = match connected {
         Ok(connected) => connected,
         Err(e) => {
             activity.finish(WriteOutcome::NotSent);
@@ -330,6 +359,20 @@ async fn write(
         Err(_) if activity.send_possible() => WriteOutcome::EffectUnverified,
         Err(_) => WriteOutcome::NotSent,
     };
+    crate::operation_recordings::finish_result(
+        &recorder,
+        &outcome,
+        serde_json::json!({
+            "writeOutcome": match write_outcome {
+                WriteOutcome::Verified => "verified",
+                WriteOutcome::NoChange => "noChange",
+                WriteOutcome::EffectUnverified => "effectUnverified",
+                WriteOutcome::NotSent => "notSent",
+            },
+            "change": outcome.as_ref().ok().map(|c| format!("{c:?}")),
+            "backupRecorded": backup_path.is_some(),
+        }),
+    );
     activity.finish(write_outcome);
     match outcome {
         Ok(change) => Ok(Json(WriteResponse {

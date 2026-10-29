@@ -442,6 +442,7 @@ fn start_with(
             on_end,
             slot,
             stop,
+            knx_app::operation_recording::OperationRecorder::disabled(),
         )
     } else {
         DeviceDownloadSession::start_with_stop(

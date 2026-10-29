@@ -43,13 +43,30 @@ fn a_new_app_state_gives_system2_the_patient_profile_and_nothing_else() {
 fn the_worker_connects_patiently_and_runs_on_the_system2_timing() {
     let worker: String = include_str!("../worker.rs").split_whitespace().collect();
     let count = |needle: &str| worker.matches(needle).count();
+    // Both connections go through the operation recorder (DIAG-03), patiently.
     assert_eq!(
-        count("connector.connect_tunnel_with_ack_wait(gateway,TunnelAckWait::Patient)"),
+        count("operation_recordings::connect("),
+        2,
+        "two connections"
+    );
+    assert_eq!(
+        count("gateway,TunnelAckWait::Patient,&recorder,)"),
         2,
         "both connections are patient"
     );
     assert_eq!(count(".connect_tunnel("), 0, "no plain connection");
-    assert_eq!(count("state.system2_timing"), 3, "three session runs");
+    assert_eq!(
+        count("connect_tunnel_with_ack_wait("),
+        0,
+        "no unrecorded connection"
+    );
+    // Three session runs, plus the two recording headers naming that timing.
+    assert_eq!(
+        count("tunnel_settings(TunnelAckWait::Patient,&state.system2_timing,)"),
+        2,
+        "both recordings name the patient settings"
+    );
+    assert_eq!(count("state.system2_timing"), 5, "three session runs");
     assert_eq!(
         count("device_download_timing"),
         0,

@@ -27,10 +27,11 @@ use crate::errors::ApiError;
 use crate::tls_cert::TLS_DIR_NAME;
 
 /// The directory names no route may reach, even by absolute path.
-const RESERVED_DIR_NAMES: [&str; 3] = [
+const RESERVED_DIR_NAMES: [&str; 4] = [
     TLS_DIR_NAME,
     ARTIFACT_ROOT_NAME,
     crate::device_system2::ROOT_NAME,
+    knx_app::operation_recording::DIAGNOSTICS_DIR_NAME,
 ];
 
 /// Resolves `relative` against `data_dir` and confirms the result still

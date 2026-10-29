@@ -171,6 +171,295 @@ async fn run_target_cannot_be_replaced_with_an_explicit_foreign_device() {
     assert!(String::from_utf8_lossy(&body).contains("bundleTargetMismatch"));
 }
 
+/// How a recording's project attribution relates to the project the server holds now.
+#[derive(Clone, Copy, PartialEq, Debug)]
+enum Provenance {
+    Proven,
+    Missing,
+    ForeignServer,
+    OtherIncarnation,
+    OtherRevision,
+}
+
+const UNPROVEN: [Provenance; 4] = [
+    Provenance::Missing,
+    Provenance::ForeignServer,
+    Provenance::OtherIncarnation,
+    Provenance::OtherRevision,
+];
+
+/// Opens a project whose devices carry sentinel names; the counters stay untouched.
+fn open_project(state: &Arc<crate::AppState>, devices: &[(u32, &str)]) {
+    let mut project = knx_core::Project::new(knx_core::Language("en".into()));
+    for (id, address) in devices {
+        project.devices.insert(knx_core::DeviceInstance {
+            id: knx_core::DeviceId(*id),
+            source: knx_core::SourceRef {
+                path: "PRIVATE_PATH".into(),
+                ets_id: format!("PRIVATE_SOURCE_{id}"),
+            },
+            name: format!("FOREIGN_DEVICE_{id}_SENTINEL"),
+            description: Some(format!("FOREIGN_DEVICE_{id}_SENTINEL")),
+            address: Some(address.parse().unwrap()),
+            product_ref: "PRIVATE_PRODUCT".into(),
+            program_ref: "PRIVATE_PROGRAM".into(),
+            commissioning: Default::default(),
+            visibility_calculated: true,
+            com_objects: vec![],
+            binary_data: vec![],
+        });
+    }
+    *state.project.lock().unwrap() = Some(project);
+}
+
+/// Records a finished run with `target` and the project attribution `provenance` describes.
+fn recorded_target(state: &Arc<crate::AppState>, target: Value, provenance: Provenance) -> String {
+    use crate::diagnostic_bundle_context::ProjectContext;
+    let current = ProjectContext::capture(state);
+    let mut start =
+        knx_app::operation_recording::OperationStart::new(OperationKind::Download).target(target);
+    let stated = match provenance {
+        Provenance::Proven | Provenance::Missing => None,
+        Provenance::ForeignServer => Some(ProjectContext {
+            server_incarnation: "another-server-run".into(),
+            ..current
+        }),
+        Provenance::OtherIncarnation => Some(ProjectContext {
+            project_incarnation: current.project_incarnation + 1,
+            ..current
+        }),
+        Provenance::OtherRevision => Some(ProjectContext {
+            revision: current.revision + 1,
+            ..current
+        }),
+    };
+    if let Some(stated) = stated {
+        start = start.related("projectContext", serde_json::to_string(&stated).unwrap());
+    }
+    // A holder of the project lock cannot sample the context: the recording stays unattributed.
+    let held = (provenance == Provenance::Missing).then(|| state.project.lock().unwrap());
+    let recorder = crate::operation_recordings::start(state, start);
+    drop(held);
+    recorder.finish(knx_app::operation_recording::RecordedOutcome::succeeded(
+        Value::Null,
+    ));
+    assert!(state
+        .recordings
+        .wait_until_idle(std::time::Duration::from_secs(10)));
+    recorder.id().unwrap().to_string()
+}
+
+fn offer<'a>(view: &'a Value, kind: &str) -> &'a Value {
+    view["offers"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|row| row["kind"] == kind)
+        .unwrap()
+}
+
+/// Every ZIP entry of the reviewed export, as text.
+async fn exported_entries(
+    state: &Arc<crate::AppState>,
+    query: &Value,
+    preview: &Value,
+) -> std::collections::BTreeMap<String, String> {
+    let (status, bytes, _) = call(
+        state,
+        "POST",
+        "/api/diagnostics/bundle",
+        Some(reviewed(query, preview)),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{}", json_of(&bytes));
+    let mut archive = zip::ZipArchive::new(std::io::Cursor::new(bytes)).unwrap();
+    (0..archive.len())
+        .map(|index| {
+            let mut file = archive.by_index(index).unwrap();
+            let mut bytes = Vec::new();
+            file.read_to_end(&mut bytes).unwrap();
+            (
+                file.name().to_string(),
+                String::from_utf8_lossy(&bytes).into_owned(),
+            )
+        })
+        .collect()
+}
+
+/// The run is exported by itself, but neither device nor catalogue extract is offered.
+async fn assert_extracts_unavailable(
+    state: &Arc<crate::AppState>,
+    query: &Value,
+    id: &str,
+    what: &str,
+) {
+    let preview = preview_query(state, query).await;
+    assert_eq!(preview["operationRecordingId"], id, "{what}");
+    for kind in ["device", "catalogue"] {
+        let row = offer(&preview, kind);
+        assert_eq!(row["selected"], false, "{what}: {kind}: {row}");
+        assert!(row["unavailable"].is_string(), "{what}: {kind}: {row}");
+    }
+    assert!(preview["sections"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .all(|s| s["kind"] != "device" && s["kind"] != "catalogue"));
+    assert!(!preview.to_string().contains("FOREIGN_DEVICE_"), "{what}");
+    let entries = exported_entries(state, query, &preview).await;
+    assert!(
+        entries.keys().any(|name| name.starts_with("operations/")),
+        "{what}"
+    );
+    for (name, text) in &entries {
+        assert!(
+            !name.starts_with("device/") && !name.starts_with("catalogue/"),
+            "{what}: {name}"
+        );
+        assert!(!text.contains("FOREIGN_DEVICE_"), "{what}: {name}");
+    }
+}
+
+/// The device and the catalogue extract of `device` are offered, none of `other`'s bytes.
+async fn assert_extracts_of(
+    state: &Arc<crate::AppState>,
+    query: &Value,
+    device: u32,
+    other: u32,
+    what: &str,
+) {
+    let preview = preview_query(state, query).await;
+    for kind in ["device", "catalogue"] {
+        let row = offer(&preview, kind);
+        assert_eq!(row["selected"], true, "{what}: {kind}: {row}");
+        assert_eq!(row["unavailable"], Value::Null, "{what}: {kind}");
+    }
+    let entries = exported_entries(state, query, &preview).await;
+    assert!(entries[&format!("device/{device}/device.json")]
+        .contains(&format!("FOREIGN_DEVICE_{device}_SENTINEL")));
+    assert!(entries.contains_key("catalogue/catalogue.json"), "{what}");
+    for (name, text) in &entries {
+        assert!(
+            !text.contains(&format!("FOREIGN_DEVICE_{other}_SENTINEL")),
+            "{what}: {name}"
+        );
+    }
+}
+
+async fn assert_target_mismatch(state: &Arc<crate::AppState>, query: &Value, what: &str) {
+    let (status, body, _) = call(
+        state,
+        "POST",
+        "/api/diagnostics/bundle/preview",
+        Some(query.clone()),
+    )
+    .await;
+    assert_eq!(status, StatusCode::CONFLICT, "{what}: {}", json_of(&body));
+    assert!(
+        String::from_utf8_lossy(&body).contains("bundleTargetMismatch"),
+        "{what}"
+    );
+}
+
+fn extract_query(id: &str, explicit: bool, device: u32) -> Value {
+    let mut query = json!({"problemType":"deviceProgramming","deviceId":device,
+        "sections":["device","catalogue","operation"]});
+    if explicit {
+        query["operation"] = json!({"recordingId":id});
+    }
+    query
+}
+
+#[tokio::test]
+async fn unproven_run_targets_never_conflict_and_never_offer_device_or_catalogue() {
+    for provenance in UNPROVEN {
+        for chosen in [1, 2] {
+            for explicit in [true, false] {
+                let dir = tempfile::tempdir().unwrap();
+                let state = state(dir.path(), true);
+                open_project(&state, &[(1, "1.1.1"), (2, "1.1.2")]);
+                let target = json!({"deviceId":1, "individualAddress":"1.1.1"});
+                let id = recorded_target(&state, target, provenance);
+                let what = format!("{provenance:?}, chosen {chosen}, explicit {explicit}");
+                assert_extracts_unavailable(
+                    &state,
+                    &extract_query(&id, explicit, chosen),
+                    &id,
+                    &what,
+                )
+                .await;
+            }
+        }
+    }
+}
+
+#[tokio::test]
+async fn a_proven_run_target_refuses_another_device_and_exports_only_its_own() {
+    for explicit in [true, false] {
+        let dir = tempfile::tempdir().unwrap();
+        let state = state(dir.path(), true);
+        open_project(&state, &[(1, "1.1.1"), (2, "1.1.2")]);
+        let target = json!({"deviceId":1, "individualAddress":"1.1.1"});
+        let id = recorded_target(&state, target, Provenance::Proven);
+        let what = format!("explicit {explicit}");
+        assert_target_mismatch(&state, &extract_query(&id, explicit, 2), &what).await;
+        assert_extracts_of(&state, &extract_query(&id, explicit, 1), 1, 2, &what).await;
+    }
+}
+
+#[tokio::test]
+async fn address_only_targets_resolve_only_when_proven_and_unambiguous() {
+    for explicit in [true, false] {
+        let dir = tempfile::tempdir().unwrap();
+        let state = state(dir.path(), true);
+        open_project(&state, &[(1, "1.1.1"), (2, "1.1.2")]);
+        let target = json!({"individualAddress":"1.1.1"});
+        let id = recorded_target(&state, target.clone(), Provenance::Proven);
+        let what = format!("proven address, explicit {explicit}");
+        assert_target_mismatch(&state, &extract_query(&id, explicit, 2), &what).await;
+        assert_extracts_of(&state, &extract_query(&id, explicit, 1), 1, 2, &what).await;
+        for provenance in UNPROVEN {
+            for chosen in [1, 2] {
+                let dir = tempfile::tempdir().unwrap();
+                let state = super::tests::state(dir.path(), true);
+                open_project(&state, &[(1, "1.1.1"), (2, "1.1.2")]);
+                let id = recorded_target(&state, target.clone(), provenance);
+                let what = format!("{provenance:?} address, chosen {chosen}, explicit {explicit}");
+                assert_extracts_unavailable(
+                    &state,
+                    &extract_query(&id, explicit, chosen),
+                    &id,
+                    &what,
+                )
+                .await;
+            }
+        }
+        // Two devices share the address: nothing is guessed, in a proven context either.
+        for chosen in [1, 2] {
+            let dir = tempfile::tempdir().unwrap();
+            let state = super::tests::state(dir.path(), true);
+            open_project(&state, &[(1, "1.1.1"), (2, "1.1.1")]);
+            let id = recorded_target(&state, target.clone(), Provenance::Proven);
+            let what = format!("ambiguous address, chosen {chosen}, explicit {explicit}");
+            assert_extracts_unavailable(&state, &extract_query(&id, explicit, chosen), &id, &what)
+                .await;
+        }
+    }
+}
+
+#[tokio::test]
+async fn without_an_operation_the_chosen_current_device_is_unchanged() {
+    let dir = tempfile::tempdir().unwrap();
+    let state = state(dir.path(), true);
+    open_project(&state, &[(1, "1.1.1"), (2, "1.1.2")]);
+    let mut query = json!({"problemType":"deviceProgramming","deviceId":2,
+        "sections":["device","catalogue"]});
+    assert_extracts_of(&state, &query, 2, 1, "no recordings").await;
+    recorded_target(&state, json!({"deviceId":1}), Provenance::ForeignServer);
+    query["operation"] = json!({"selection":"none"});
+    assert_extracts_of(&state, &query, 2, 1, "operation none").await;
+}
+
 #[tokio::test]
 async fn session_log_and_recording_availability_changes_require_a_fresh_review() {
     let dir = tempfile::tempdir().unwrap();

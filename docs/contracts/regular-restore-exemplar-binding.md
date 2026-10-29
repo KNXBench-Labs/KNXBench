@@ -36,6 +36,30 @@ callback or load/memory writes. Transport failures retain their original cause.
 Stop/commit ordering, retry/wait policies and existing family/authorization gates
 are unchanged. Diagnostics and step descriptions must not expose serial bytes.
 
+An explicit `RequireExemplar` step is inserted immediately before the first
+`changes_device()` step, after existing identity/load preconditions. An input
+plan that already carries this synthetic step, or has no changing step, is
+refused by restore derivation. Executor shape validation rejects a manually
+placed late exemplar check as `CheckAfterWrite` before any traffic. All ordinary
+executor entry points enforce the returned precondition.
+
+The strict helper uses `read_property_raw`, not `read_serial_number` (the latter
+has different start/width classification). Never reuse generic `CompareProperty`
+or its payload-bearing `PropertyMismatch` for this runtime check. New step and
+error `Debug`, `Display`, progress and observed text are serial-free. In the
+existing payload-free result vocabulary the new step maps to `compareProperty`;
+a differing serial maps to code `propertyMismatch` / category `identityMismatch`.
+Unavailable causes map to existing `propertyRefused`, `malformedProperty` or
+`noAnswer` codes as appropriate, with original session failures retaining their
+existing classification. No wire vocabulary extension or silently dropped step
+is permitted. Tests must exercise Rust serialization, web parsing, history/report
+composition and all raw-text presentation paths.
+
+If the restore's own backup makes a second serial observation, it must also
+match the required exemplar before `keep` or mutation; a differing or unavailable
+second observation cannot be ignored. No absolute continuity guarantee between
+separate observations is claimed.
+
 Equal answers are a necessary replay guard, not proof of physical identity:
 a device can misreport and the profile's read-only designation is not absolute
 at every privileged access level. Matching does not prove function, complete
@@ -44,8 +68,10 @@ allocations, task effects or unbacked memory.
 
 ## Persistence and procedure identity
 
-Backup format 3 adds required nullable `exemplar_serial`: exactly twelve hex
-digits or null. New serialization uses uppercase hex. Formats 1 and 2 remain
+Backup format 3 is format 2 plus required nullable `exemplar_serial`: exactly
+twelve hex digits or null. `prior_application` remains required and nullable.
+New serialization uses uppercase hex; reading accepts upper- and lowercase
+hex, matching the prior-application convention. Formats 1 and 2 remain
 readable, without inventing serial evidence; they reject a smuggled new field.
 Format 3 rejects missing, duplicate, non-string, wrong-width or non-hex fields;
 unknown fields and versions remain refused. Existing create-new, owner-only,

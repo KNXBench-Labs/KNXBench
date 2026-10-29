@@ -23,6 +23,10 @@ use std::sync::{
 };
 use std::time::{Duration, Instant};
 
+#[cfg(test)]
+#[path = "diagnostic_bundle_retention_tests.rs"]
+mod bundle_retention_tests;
+
 /// Read-only bridge: forwards to the existing tunnel; simulation provenance
 /// cannot grant write authority (the collector always builds read_only/Skip).
 struct DiagnosticTransport<'a>(&'a dyn crate::bus::BusTunnel);
@@ -50,7 +54,7 @@ impl knx_net::ManagementTransport for DiagnosticTransport<'_> {
     }
 }
 
-#[derive(Clone, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 struct Binding {
     server_incarnation: String,
@@ -87,6 +91,7 @@ struct Job {
     plan: Plan,
     gateway: SocketAddrV4,
     binding: Binding,
+    device_id: u32,
     phase: &'static str,
     export: Export,
     /// Whether the finished export passed the archive writer's own check.
@@ -96,6 +101,39 @@ struct Job {
     cancel: Arc<AtomicBool>,
 }
 type Slot = Arc<Mutex<Option<Job>>>;
+
+#[derive(Clone, Default)]
+pub struct Results(Slot);
+
+impl Results {
+    pub(crate) fn evidence(
+        &self,
+        token: &str,
+    ) -> Result<crate::diagnostic_bundle_results::Evidence, String> {
+        let job = snapshot(&self.0, token)
+            .map_err(|_| "the retained diagnostic result is unavailable")?;
+        if job.created.elapsed() > Duration::from_secs(900) {
+            return Err("the retained diagnostic result has expired".into());
+        }
+        if job.phase != "complete" {
+            return Err("the diagnostic result is not complete".into());
+        }
+        if !job.exportable {
+            return Err("the diagnostic result is not exportable".into());
+        }
+        Ok(crate::diagnostic_bundle_results::Evidence {
+            identity: serde_json::json!({"diagnosticsReference": job.export.report.project_reference}),
+            context: Some(crate::diagnostic_bundle_context::ProjectContext {
+                server_incarnation: job.binding.server_incarnation,
+                project_incarnation: job.binding.project_incarnation,
+                revision: job.binding.revision,
+            }),
+            operation_files: Vec::new(),
+            device_id: Some(job.device_id),
+            reports: crate::diagnostic_bundle_results::diagnostic_files(&job.export)?,
+        })
+    }
+}
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 struct View {
@@ -142,7 +180,7 @@ fn snapshot(slot: &Slot, token: &str) -> Result<Job, ApiError> {
         .cloned()
         .ok_or_else(|| error("diagnostics-unknown-token"))
 }
-pub fn routes() -> Router<SharedState> {
+pub fn routes(results: Results) -> Router<SharedState> {
     Router::new()
         .route("/api/device-diagnostics/preview", post(preview))
         .route("/api/device-diagnostics/start", post(start))
@@ -150,7 +188,7 @@ pub fn routes() -> Router<SharedState> {
         .route("/api/device-diagnostics/{token}", get(status))
         .route("/api/device-diagnostics/{token}/cancel", post(cancel))
         .layer(DefaultBodyLimit::max(4096))
-        .layer(Extension(Slot::default()))
+        .layer(Extension(results.0))
         .layer(axum::middleware::map_response(
             |mut r: Response| async move {
                 r.headers_mut().insert(
@@ -227,6 +265,7 @@ async fn preview(
         plan,
         gateway,
         binding: body.context,
+        device_id: body.device_id,
         phase: "preview",
         cancel: Arc::new(AtomicBool::new(false)),
     };
@@ -353,6 +392,7 @@ async fn run_inner(state: &SharedState, slot: &Slot, job: &Job) -> Result<(), &'
         )
         .target(serde_json::json!({
             "individualAddress": job.plan.base().target.address().to_string(),
+            "deviceId": job.device_id,
             "profile": match &job.plan {
                 Plan::Identity(_) => "identity",
                 Plan::Memory(_) => "declaredMemory",
@@ -360,6 +400,10 @@ async fn run_inner(state: &SharedState, slot: &Slot, job: &Job) -> Result<(), &'
         }))
         .gateway(job.gateway)
         .related("diagnosticsToken", &job.token)
+        .related(
+            "projectContext",
+            serde_json::to_string(&job.binding).expect("binding serializes"),
+        )
         .settings(crate::operation_recordings::tunnel_settings(
             knx_net::TunnelAckWait::Standard,
             &state.device_download_timing,

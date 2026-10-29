@@ -1,4 +1,5 @@
 //! Unknown targets, privacy boundaries and diagnostic admission through real HTTP handlers.
+mod bundle_tests;
 #[path = "../common/system2_diagnostic_fixture.rs"]
 mod system2_fixture;
 use axum::{
@@ -132,6 +133,15 @@ fn harness_gated(
     products: Option<fn(&knx_productdb::Connection)>,
     gate: Option<Arc<Semaphore>>,
 ) -> Harness {
+    harness_gated_recording(address, products, gate, false)
+}
+
+fn harness_gated_recording(
+    address: &str,
+    products: Option<fn(&knx_productdb::Connection)>,
+    gate: Option<Arc<Semaphore>>,
+    disabled: bool,
+) -> Harness {
     let dir = tempfile::tempdir().unwrap();
     let d = Arc::new(SimulatedDevice::with_config_at(
         address.parse().unwrap(),
@@ -152,6 +162,19 @@ fn harness_gated(
         knx_server::CatalogueOwner::adopt_opened(db, path).unwrap()
     });
     let mapped = product_db.is_some();
+    let mut initial = knx_server::AppState::new(dir.path().into());
+    if disabled {
+        initial.recordings = Arc::new(knx_app::operation_recording::RecordingStore::new(
+            dir.path(),
+            knx_app::operation_recording::WriterIdentity {
+                program: "knx-server".into(),
+                version: "test".into(),
+                commit: None,
+                build_profile: "test".into(),
+            },
+            true,
+        ));
+    }
     let state = Arc::new(knx_server::AppState {
         product_db,
         connector: Box::new(Connector {
@@ -162,7 +185,7 @@ fn harness_gated(
         }),
         // Test-owned lease: never the user's real per-user runtime lease.
         diagnostic_lease_dir: Some(dir.path().join("lease")),
-        ..knx_server::AppState::new(dir.path().into())
+        ..initial
     });
     let mut p = Project::new(Language("en".into()));
     p.devices.insert(DeviceInstance {
@@ -703,6 +726,7 @@ async fn a_hardware_type_mismatch_sends_no_memory_read() {
         export.report.stop_reason.as_deref(),
         Some("identity-mismatch")
     );
+    bundle_tests::bundle_readback(&h, &p["token"], &result).await;
 }
 
 /// Format 2 admits no caller setup stop reason (ADR-0143); like the CLI,
@@ -897,6 +921,7 @@ async fn stopping_a_memory_run_keeps_the_chunks_read_so_far_and_exports_them() {
     let export = knx_app::device_diagnostics::read_export(&bytes).unwrap();
     assert_eq!(export.report.format, 2);
     assert_eq!(export.report.stop_reason.as_deref(), Some("cancelled"));
+    bundle_tests::bundle_readback(&h, &p["token"], &result).await;
     assert_eq!(
         serde_json::to_value(&export.memory).unwrap(),
         result["memory"]

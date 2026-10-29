@@ -156,6 +156,36 @@ Browser-state payloads must stay within the server's 64 KiB serialized UTF-8
 limit, with visible truncation/omission metadata. Unchecking `clientState` omits
 `client` from all requests; it must remain possible to select the section again.
 
+New server recordings add `related.projectContext`: a serialized
+`ProjectContext` captured at operation start (or the acquisition's validated
+binding). If the caller already holds the project lock and supplies no binding,
+provenance is left unavailable rather than guessed. Older recordings are never
+backfilled. A device identified only by individual address is resolved to a
+project device only with the same proven context and one unambiguous match.
+
+### Retained-result availability
+
+The bundle shares the existing bounded diagnostic and support result slots; it
+creates no snapshot cache and starts no read. `diagnosticsToken` and
+`supportToken` name exactly that retained acquisition. A replaced/missing,
+expired, unfinished or non-exportable job is visibly unavailable, not the latest
+unrelated job. A known version-1 diagnostic recording's strict typed end summary
+can supply its historical structured report after the job slot changes. Unknown
+recording versions and malformed summaries are not interpreted; the raw recording
+remains exportable unchanged.
+
+Without a recording, `downloadId` can project only this server's exact retained
+session; `operationId` can project its retained System-2 journal. A retained
+result without proven project attribution still exports its own report/status,
+but its device and catalogue extracts are unavailable, whether the explicit
+device id equals the recorded one or not. Device ids are comparable only when
+the result's attribution equals the proven, unchanged current project context;
+only explicit conflicting targets in that context are HTTP 409
+`bundleTargetMismatch`. Recorder unavailability is separate from result
+unavailability. Diagnostic `report.json`, `properties.json`, optional `memory.json`
+and their existing README live under `reports/`; manual support preserves its
+existing `report.json` and README there too.
+
 ### Sections
 
 Defaults per problem type follow owner table O1 in the work package and are

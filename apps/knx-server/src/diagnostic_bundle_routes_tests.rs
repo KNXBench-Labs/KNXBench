@@ -16,7 +16,7 @@ mod import_tests;
 
 const SENTINEL_KEY: [u8; 4] = [0xC0, 0xFF, 0xEE, 0x42];
 
-fn state(dir: &std::path::Path, enabled: bool) -> Arc<crate::AppState> {
+pub(super) fn state(dir: &std::path::Path, enabled: bool) -> Arc<crate::AppState> {
     Arc::new(crate::AppState {
         recordings: Arc::new(crate::operation_recordings::store(dir, !enabled)),
         data_dir: dir.to_path_buf(),
@@ -24,7 +24,7 @@ fn state(dir: &std::path::Path, enabled: bool) -> Arc<crate::AppState> {
     })
 }
 
-async fn call(
+pub(super) async fn call(
     state: &Arc<crate::AppState>,
     method: &str,
     uri: &str,
@@ -52,7 +52,7 @@ async fn call(
     (status, bytes, disposition)
 }
 
-fn json_of(bytes: &[u8]) -> Value {
+pub(super) fn json_of(bytes: &[u8]) -> Value {
     serde_json::from_slice(bytes)
         .unwrap_or_else(|_| Value::String(String::from_utf8_lossy(bytes).into()))
 }
@@ -80,7 +80,12 @@ fn authorize_datagram() -> Vec<u8> {
     )
 }
 
-fn record(state: &crate::AppState, kind: OperationKind, related: (&str, &str), ok: bool) -> String {
+pub(super) fn record(
+    state: &crate::AppState,
+    kind: OperationKind,
+    related: (&str, &str),
+    ok: bool,
+) -> String {
     let recorder = crate::operation_recordings::start(
         state,
         OperationStart::new(kind)
@@ -212,11 +217,19 @@ async fn the_exported_zip_carries_the_recording_without_any_key() {
         ("operationId", "00"),
         false,
     );
+    let (_, preview, _) = call(
+        &state,
+        "POST",
+        "/api/diagnostics/bundle/preview",
+        Some(json!({"problemType":"deviceProgramming", "operation":{"recordingId":id}})),
+    )
+    .await;
     let (status, body, disposition) = call(
         &state,
         "POST",
         "/api/diagnostics/bundle",
         Some(json!({
+            "review": json_of(&preview)["review"],
             "problemType": "deviceProgramming",
             "operation": { "recordingId": id },
             "consent": true,
@@ -295,11 +308,18 @@ async fn section_text_shows_one_section_and_unknown_ids_are_refused() {
     let dir = tempfile::tempdir().unwrap();
     let state = state(dir.path(), true);
     let id = record(&state, OperationKind::Compare, ("x", "1"), true);
+    let (_, preview, _) = call(
+        &state,
+        "POST",
+        "/api/diagnostics/bundle/preview",
+        Some(json!({"problemType":"deviceReading"})),
+    )
+    .await;
     let (status, body, _) = call(
         &state,
         "POST",
         "/api/diagnostics/bundle/section",
-        Some(json!({ "problemType": "deviceReading", "key": format!("operation:{id}") })),
+        Some(json!({ "problemType": "deviceReading", "key": format!("operation:{id}"), "review": json_of(&preview)["review"] })),
     )
     .await;
     assert_eq!(status, StatusCode::OK);
@@ -318,6 +338,22 @@ async fn section_text_shows_one_section_and_unknown_ids_are_refused() {
     )
     .await;
     assert_eq!(status, StatusCode::BAD_REQUEST);
+}
+
+#[tokio::test]
+async fn consented_export_requires_a_review_before_returning_any_zip() {
+    let dir = tempfile::tempdir().unwrap();
+    let state = state(dir.path(), true);
+    let (status, body, disposition) = call(
+        &state,
+        "POST",
+        "/api/diagnostics/bundle",
+        Some(json!({"problemType": "deviceProgramming", "consent": true})),
+    )
+    .await;
+    assert_eq!(status, StatusCode::BAD_REQUEST, "{}", json_of(&body));
+    assert!(String::from_utf8_lossy(&body).contains("bundlePreviewRequired"));
+    assert_eq!(disposition, None);
 }
 
 #[test]

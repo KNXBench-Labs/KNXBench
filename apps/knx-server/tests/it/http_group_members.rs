@@ -96,6 +96,8 @@ fn add_device(project: &mut Project, id: u32, links: Vec<GroupLink>) {
 fn fixture() -> (Arc<knx_server::AppState>, tempfile::TempDir) {
     let dir = tempfile::tempdir().unwrap();
     let state = knx_server::AppState {
+        diagnostic_results: Default::default(),
+        support_results: Default::default(),
         project: Default::default(),
         clean_project: Default::default(),
         last_saved_at: Default::default(),

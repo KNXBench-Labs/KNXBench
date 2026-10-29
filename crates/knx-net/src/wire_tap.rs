@@ -9,8 +9,10 @@
 //!
 //! - **It never changes the exchange.** [`WireSink::record`] must return at
 //!   once and must not block, await or fail into the caller; a sink that cannot
-//!   keep up drops records and accounts for the gap itself. The tunnel calls it
-//!   after the bytes are already on (or off) the socket.
+//!   keep up drops records and accounts for the gap itself. The tunnel records
+//!   an outgoing datagram just before handing it to the socket (so an answer
+//!   can never be recorded ahead of its request; a failed send follows as a
+//!   `SocketError` event) and an incoming one just after receiving it.
 //! - **Secrets never leave this crate.** A datagram carrying an
 //!   `A_Authorize_Request` or `A_Key_Write` key is redacted *before* the sink
 //!   sees it: the key octets are replaced by zero and a [`Redaction`] names

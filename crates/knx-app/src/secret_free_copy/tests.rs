@@ -7,6 +7,14 @@ use sha2::{Digest, Sha256};
 
 use super::*;
 
+mod review_archive;
+mod review_budget;
+mod review_integrity;
+mod review_logical;
+mod review_native;
+mod review_report;
+mod review_xml;
+
 const BCU_KEY: &str = "3141592653";
 const BACKBONE_KEY: &str = "SNTLbackboneKeyQUJDREVGR0g=";
 const GROUP_KEY: &str = "SNTLgroupKeyMDEyMzQ1Njc4OQ==";

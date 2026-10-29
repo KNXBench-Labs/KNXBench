@@ -13,48 +13,68 @@ use super::{io_error, Findings, Needles, SecretFreeCopy, SecretFreeCopyError};
 /// deeper is withheld rather than unpacked without end.
 const MAX_NESTING: usize = 3;
 
-/// The largest source accepted: one retained file (ADR-0142).
-const MAX_SOURCE_BYTES: u64 = knx_core::limits::MAX_RETAINED_BYTES;
+/// Diagnostic-only resident source ceiling; larger sources are visibly unavailable.
+const MAX_SOURCE_BYTES: u64 = super::budget::SOURCE_BYTES;
 
 pub(super) fn copy(source: &Path) -> Result<SecretFreeCopy, SecretFreeCopyError> {
-    // Pass 1 learns every value the redaction removes; pass 2 redacts
-    // again and withholds any member that still contains one. Reading the
-    // file twice keeps one copy of it in memory, not two.
-    let mut learned = Findings::default();
-    let first =
-        Container::open_outer(read_source(source)?).map_err(SecretFreeCopyError::Archive)?;
-    rewrite(first, "", 0, &mut learned, None)?;
-    let needles = learned.needles();
-
-    let original = read_source(source)?;
-    let container =
-        Container::open_outer(original.clone()).map_err(SecretFreeCopyError::Archive)?;
-    let mut findings = Findings::default();
-    let rewritten = rewrite(container, "", 0, &mut findings, Some(&needles))?;
-    let unchanged = findings.redactions.is_empty() && findings.withheld.is_empty();
-    Ok(findings.finish(if unchanged { original } else { rewritten }))
+    copy_between_passes(source, || {})
 }
 
-fn read_source(source: &Path) -> Result<Vec<u8>, SecretFreeCopyError> {
-    let file = std::fs::File::open(source).map_err(io_error("opening the import file"))?;
+pub(super) fn copy_between_passes(
+    source: &Path,
+    between: impl FnOnce(),
+) -> Result<SecretFreeCopy, SecretFreeCopyError> {
+    copy_with_budget(source, between, super::budget::Budget::default())
+}
+
+pub(super) fn copy_with_budget(
+    source: &Path,
+    between: impl FnOnce(),
+    budget: super::budget::Budget,
+) -> Result<SecretFreeCopy, SecretFreeCopyError> {
+    // Both passes consume the same owned bytes, including across source replacement.
+    let original = read_source_with_limit(source, MAX_SOURCE_BYTES)?;
+    let mut learned = Findings {
+        budget,
+        ..Findings::default()
+    };
+    let first = Container::open_outer(original.clone()).map_err(SecretFreeCopyError::Archive)?;
+    rewrite(first, "", 0, &mut learned, None)?;
+    let needles = learned.needles();
+    between();
+
+    let container =
+        Container::open_outer(original.clone()).map_err(SecretFreeCopyError::Archive)?;
+    let mut findings = learned.child();
+    let rewritten = rewrite(container, "", 0, &mut findings, Some(&needles))?;
+    let unchanged = findings.redactions.is_empty() && findings.withheld.is_empty();
+    findings.ensure()?;
+    findings.finish(if unchanged { original } else { rewritten })
+}
+
+pub(super) fn read_source_with_limit(
+    source: &Path,
+    limit: u64,
+) -> Result<Vec<u8>, SecretFreeCopyError> {
+    let file = std::fs::File::open(source).map_err(io_error("opening the source file"))?;
     let declared = file
         .metadata()
-        .map_err(io_error("reading the import file's size"))?
+        .map_err(io_error("reading the source file's size"))?
         .len();
-    if declared > MAX_SOURCE_BYTES {
+    if declared > limit {
         return Err(SecretFreeCopyError::TooLarge {
             bytes: declared,
-            limit: MAX_SOURCE_BYTES,
+            limit,
         });
     }
     let mut bytes = Vec::new();
-    file.take(MAX_SOURCE_BYTES + 1)
+    file.take(limit + 1)
         .read_to_end(&mut bytes)
-        .map_err(io_error("reading the import file"))?;
-    if bytes.len() as u64 > MAX_SOURCE_BYTES {
+        .map_err(io_error("reading the source file"))?;
+    if bytes.len() as u64 > limit {
         return Err(SecretFreeCopyError::TooLarge {
             bytes: bytes.len() as u64,
-            limit: MAX_SOURCE_BYTES,
+            limit,
         });
     }
     Ok(bytes)
@@ -71,13 +91,23 @@ fn rewrite(
 ) -> Result<Vec<u8>, SecretFreeCopyError> {
     let mut writer = zip::ZipWriter::new(Cursor::new(Vec::new()));
     let entries = container.entries().to_vec();
+    // Charge the complete declared expansion before reading any member. Container
+    // admission and reads bind those declarations to bounded actual decoding.
+    for entry in &entries {
+        let size = usize::try_from(entry.size).unwrap_or(usize::MAX);
+        findings
+            .budget
+            .decoded(size)
+            .map_err(|resource| SecretFreeCopyError::BudgetExceeded { resource })?;
+    }
     for entry in entries {
+        findings.ensure()?;
         let location = if prefix.is_empty() {
             entry.path.clone()
         } else {
             format!("{prefix}!{}", entry.path)
         };
-        let mut member = Findings::default();
+        let mut member = findings.child();
         let outcome = redact_member(
             &mut container,
             &entry.path,
@@ -88,6 +118,18 @@ fn rewrite(
         )?;
         match outcome {
             Ok(bytes) => {
+                findings
+                    .budget
+                    .output(bytes.len())
+                    .map_err(|resource| SecretFreeCopyError::BudgetExceeded { resource })?;
+                if residual.is_some_and(|needles| needles.any_in(entry.path.as_bytes())) {
+                    findings.absorb(member);
+                    findings.withhold(
+                        "archive member",
+                        "secret in member identity; member withheld",
+                    );
+                    continue;
+                }
                 findings.absorb(member);
                 let options = zip::write::SimpleFileOptions::default()
                     .compression_method(zip::CompressionMethod::Deflated)
@@ -178,7 +220,7 @@ pub(super) fn nested(
             "nested archive cannot be read (encrypted, password-protected or damaged)".into(),
         ));
     };
-    let mut inner = Findings::default();
+    let mut inner = findings.child();
     let rewritten = rewrite(container, location, depth, &mut inner, residual)?;
     let unchanged = inner.redactions.is_empty() && inner.withheld.is_empty();
     findings.absorb(inner);

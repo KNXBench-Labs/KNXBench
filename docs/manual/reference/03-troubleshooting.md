@@ -28,7 +28,8 @@ comparing it (`knx device compare`) stay available. See
 [§6 in the known limitations](../../KNOWN_LIMITATIONS.md#catalogue-kl-006).
 
 The **Instructions**, **Report support gap** and **Email draft** links are deliberate
-handoffs, not uploads. Review technical details before sharing them. Neither link
+handoffs, not uploads (source builds after Alpha 18: **Instructions** and
+**Report problem…**, the [report wizard](../user-guide/08-reports-and-diff.md#report-problem)). Review technical details before sharing them. Neither link
 needs an attachment or invents a post-run report. See
 [the download workflow](../user-guide/07-bus-and-interfaces.md#when-preparation-or-starting-is-refused)
 and the [intake guide](../../contribution-intake/README.md).

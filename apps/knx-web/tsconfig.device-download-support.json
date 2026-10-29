@@ -1,5 +1,5 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": { "noEmit": true },
-  "include": ["src", "e2e/device-download-support.e2e.ts", "e2e/device-download-verification.e2e.ts", "e2e/device-download-scope.e2e.ts", "e2e/ga-members-download.e2e.ts", "playwright.device-download-support.config.ts"]
+  "include": ["src", "e2e/device-download-support.e2e.ts", "e2e/device-download-verification.e2e.ts", "e2e/device-download-scope.e2e.ts", "e2e/ga-members-download.e2e.ts", "playwright.device-download-support.config.ts", "e2e/report-problem-fixture.ts"]
 }

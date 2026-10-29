@@ -14,7 +14,8 @@ import { themePackFixture } from "./themePackFixtures";
 import { canonicalJson } from "./canonicalJson";
 import { parseThemePackText } from "./themePack";
 import { useAppearance } from "./appearance";
-import DebugReportButton from "./DebugReportButton";
+import { ReportProblemButton, ReportProblemProvider } from "./ReportProblemEntry";
+import type { ReportProblemRequest } from "./reportProblem";
 import { messages as en } from "./messages/en";
 
 vi.mock("./settingsStore", async (importOriginal) => ({
@@ -28,13 +29,21 @@ let server: Record<string, unknown>;
 const fetchMock = vi.fn();
 let stopRefresh: () => void;
 
+/** The real Report problem wizard host; its wizard reads the saved theme for the client state. */
+function ReportHost() {
+  const [request, setRequest] = useState<ReportProblemRequest | null>(null);
+  return <ReportProblemProvider request={request} onOpen={setRequest} onClose={() => setRequest(null)} tree={null} notifications={[]}>
+    <ReportProblemButton from="test" request={{}} />
+  </ReportProblemProvider>;
+}
+
 function Harness({ includeDebug = false }: { includeDebug?: boolean }) {
   const [themeId, setThemeId] = useThemeId();
   const appearance = useAppearance();
   const [open, setOpen] = useState(true);
   return <>
     <span data-testid="stored-selection">{themeId}</span>
-    {includeDebug && <DebugReportButton onSummary={vi.fn()} onError={vi.fn()} onClearErrors={vi.fn()} />}
+    {includeDebug && <ReportHost />}
     {open && <SettingsPanel
       themes={getThemeDefinitions()} activeThemeId={themeId} onSelectTheme={setThemeId}
       manageThemes appearance={appearance}
@@ -515,14 +524,15 @@ describe("Appearance theme files through the actual parent/runtime", () => {
       expect(fetchMock).toHaveBeenCalledTimes(2);
     } finally { cache.mockRestore(); }
   });
-  it("keeps the painted pack intact when the actual debug report reads the saved theme", async () => {
+  it("keeps the painted pack intact when the actual report wizard reads the saved theme", async () => {
     const pack = themePackFixture();
     server = { ...server, theme: pack.id, uiThemePacks: { [pack.id]: pack } };
     await refresh();
     await act(async () => root.render(<Harness includeDebug />));
     expect(document.documentElement.dataset.theme).toBe(pack.id);
-    const report = buttonByText(en["debugReport.button"])!;
+    const report = buttonByText(en["reportProblem.button"])!;
     await act(async () => report.click());
+    expect(document.querySelector(".report-problem")).not.toBeNull();
     expect(document.documentElement.dataset.theme).toBe(pack.id);
     expect(document.documentElement.style.getPropertyValue("--knx-bg")).toBe(pack.tokens["--knx-bg"]);
     expect(methods()).toEqual(["GET", "GET"]);

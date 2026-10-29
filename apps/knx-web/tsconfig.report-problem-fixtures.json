@@ -1,0 +1,5 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": { "noEmit": true, "types": ["node"] },
+  "include": ["src", "e2e/report-problem.e2e.ts", "e2e/report-problem-fixture.ts", "e2e/achievements-fixture.ts", "e2e/file-menu.ts"]
+}

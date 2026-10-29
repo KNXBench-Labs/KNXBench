@@ -537,6 +537,11 @@ for the named correction; unsupported image/procedure/byte-order behavior offers
 a support-gap inquiry. A server/network failure asks for a deliberate retry and
 does not declare the device technically unsupported. Unknown codes remain visible.
 
+Source builds after Alpha 18 keep **Instructions** and replace the issue form
+and mail draft with **Report problem…**, which opens the
+[report wizard](08-reports-and-diff.md#report-problem) for this device. The paragraph below
+describes Alpha 18 and older.
+
 **Instructions**, **Report support gap** and **Email draft** lead to the
 [English guide](../../contribution-intake/README.md), a public GitHub support-gap
 form and an unsent draft to **issue@knxbench.com** respectively. The German UI
@@ -577,7 +582,9 @@ executable extensions. You can help with a supported device as follows:
 4. Send it: **Open issue form** opens GitHub with the program, version and outcome
    filled in (public; attach the file and answer two questions), or **Send by mail**
    opens your mail program addressed to **issue@knxbench.com** (not published; attach
-   the file yourself). Nothing is sent automatically.
+   the file yourself). Nothing is sent automatically. Source builds after Alpha 18
+   replace **Send by mail** with **Report problem…**, the
+   [report wizard](08-reports-and-diff.md#report-problem) with this run preselected; the issue form stays.
 5. We check every report. Once it is accepted, a later KNXBench version shows the
    program as verified ([how reports are reviewed](../../contracts/download-verification-reports.md)).
 

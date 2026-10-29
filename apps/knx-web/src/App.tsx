@@ -72,9 +72,11 @@ import SelectiveImportButton from "./SelectiveImportButton";
 import PluginDataDialog from "./PluginDataDialog";
 import DocumentationExportButton from "./DocumentationExportButton";
 import MonitoringExportButton from "./MonitoringExportButton";
-import DebugReportButton from "./DebugReportButton";
+import { ReportProblemButton, ReportProblemProvider } from "./ReportProblemEntry";
+import type { ReportProblemRequest } from "./reportProblem";
 import ContributionButton from "./ContributionButton";
-import UniversalSupportButton from "./UniversalSupportButton";
+import DiagnosticExportButton from "./DiagnosticExportButton";
+import IdentityReadButton from "./IdentityReadButton";
 import ProjectDiffPanel from "./ProjectDiffPanel";
 import LoadProgressBanner from "./LoadProgressBanner";
 import { localFailure, ownsOperation } from "./loadProgress";
@@ -255,6 +257,8 @@ function AppBody({ manifestVersion = packageVersion, session, editorReturn = fal
   const { toasts, pendingCount, queueDropped, notifications, notificationDroppedCount, pushUpdate, pushError, clearErrors, pushFun, pushAchievements, dismiss, finishExit, pause, resume } = useToasts();
   const updates = useReleaseUpdates(update => pushUpdate(t("updates.available", { version: update.version }), update.url));
   const [logTarget, setLogTarget] = useState<{ id: number } | null>(null);
+  // DIAG-03: the one Report problem wizard; every entry and shortcut opens it here.
+  const [reportRequest, setReportRequest] = useState<ReportProblemRequest | null>(null);
   // ADR-0089. Unlocks are announced in the language of the moment they
   // happen; the tracker itself never translates anything.
   const achievements = useAchievements((definitions) =>
@@ -1428,6 +1432,7 @@ function AppBody({ manifestVersion = packageVersion, session, editorReturn = fal
     addDevice: () => setDeviceWizard({ target: wizardTargetFor(selection) }),
     openIntroduction: guide.show,
     openAchievements: () => setAchievementsOpen(true),
+    reportProblem: () => setReportRequest({}),
   };
 
   // With no project, the welcome routes should precede the navigation in
@@ -1493,6 +1498,7 @@ function AppBody({ manifestVersion = packageVersion, session, editorReturn = fal
     <RenameWorkbench tree={tree} scope={loadKey} onApplied={handleTreeUpdate}>
     <DeviceNavigationProvider tree={tree} catalogue={navigationCatalogue} onOpen={(id) => void selectEntity({ kind: "device", id })} onList={openDevices}>
     <DownloadNavigationProvider onOpen={openDownload}>
+    <ReportProblemProvider request={reportRequest} onOpen={setReportRequest} onClose={() => setReportRequest(null)} tree={tree} notifications={notifications}>
     <main ref={workbenchRef} className={`workbench${stackInspector ? " workbench--stacked-inspector" : ""}${welcomeVisible ? " workbench--welcome" : ""}`}>
       <header className="workbench-toolbar">
         <CatalogueJobsRootNotice />
@@ -1535,9 +1541,10 @@ function AppBody({ manifestVersion = packageVersion, session, editorReturn = fal
       <ProjectDiffPanel tree={tree} onError={reportError} onClearErrors={clearErrors} />
       </FileSubmenu>
       <FileSubmenu id="help" label={t("fileMenu.help")}>
-      <DebugReportButton onSummary={pushFun} onError={reportError} onClearErrors={clearErrors} />
+      <ReportProblemButton from="menu" request={{}} />
       <ContributionButton />
-      <UniversalSupportButton project={tree} />
+      <IdentityReadButton project={tree} />
+      <DiagnosticExportButton project={tree} />
       <FileMenuItem onClick={guide.show}>{t("command.showIntroduction")}</FileMenuItem>
       {achievementsEnabled && <FileMenuItem onClick={() => setAchievementsOpen(true)}>{t("achievements.command")}</FileMenuItem>}
       <FileMenuItem onClick={() => setAboutOpen(true)}>{t("toolbar.about")}</FileMenuItem>
@@ -1738,6 +1745,7 @@ function AppBody({ manifestVersion = packageVersion, session, editorReturn = fal
         />
       )}
     </main>
+    </ReportProblemProvider>
     </DownloadNavigationProvider>
     </DeviceNavigationProvider>
     </RenameWorkbench>

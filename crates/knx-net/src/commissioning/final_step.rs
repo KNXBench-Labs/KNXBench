@@ -1,5 +1,6 @@
 //! Closed, payload-free classification of a failure inside the final System-2 Disconnect step.
 
+use super::final_step_evidence::AllocationMismatchEvidence;
 use super::property_download::PropertySimulationFailure;
 use super::property_recovery::invalid;
 
@@ -43,16 +44,19 @@ pub struct FinalStepFailure {
     pub stage: FinalStepStage,
 }
 
-/// A final-step stop that keeps the actual failure beside its classification.
+/// A final-step stop that keeps the actual failure beside its classification, and for an
+/// allocation mismatch the compared bytes (kept apart so the classification stays `Copy`).
 pub(crate) struct FinalStepError {
     pub(crate) failure: PropertySimulationFailure,
     pub(crate) classified: FinalStepFailure,
+    pub(crate) evidence: Option<Box<AllocationMismatchEvidence>>,
 }
 impl FinalStepError {
     fn new(failure: PropertySimulationFailure, kind: FinalStepKind, stage: FinalStepStage) -> Self {
         Self {
             failure,
             classified: FinalStepFailure { kind, stage },
+            evidence: None,
         }
     }
     /// An operation that reads: any error it returns, including a short or refused answer.
@@ -70,5 +74,10 @@ impl FinalStepError {
     /// A completed read whose value disagreed with the expectation.
     pub(crate) fn mismatch(stage: FinalStepStage, reason: &str) -> Self {
         Self::new(invalid(reason), FinalStepKind::VerificationMismatch, stage)
+    }
+    /// The same mismatch, carrying the bytes that decided it.
+    pub(crate) fn with_evidence(mut self, evidence: AllocationMismatchEvidence) -> Self {
+        self.evidence = Some(Box::new(evidence));
+        self
     }
 }

@@ -240,6 +240,20 @@ pub fn service_for(base: u32, length: u32) -> MemoryService {
     }
 }
 
+/// The service for one whole allocation, decided once from its base plus its *allocated*
+/// size, so its writes, prestate reads and verification reads all use the same one.
+///
+/// `[D]` CP v02.01.01 §3.5.2 (printed p43, repeated in §3.5.3): *lower* than `FFFFh` is
+/// `A_Memory_*`, *higher* is `A_UserMemory_*`; exactly `FFFFh` is not defined there, so
+/// `None` is returned for it instead of either guess. [`service_for`] keeps its historical
+/// answer for that case for read-only paths that are not allocations.
+pub fn allocation_service(base: u32, allocated: u32) -> Option<MemoryService> {
+    match base.saturating_add(allocated) {
+        MEMORY_SERVICE_LIMIT => None,
+        _ => Some(service_for(base, allocated)),
+    }
+}
+
 /// One write in a chunked region.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Chunk {
@@ -515,6 +529,28 @@ mod tests {
         // "lower than FFFFh" => Memory; anything reaching FFFFh => user.
         assert_eq!(service_for(0xFFFE, 0), MemoryService::Memory);
         assert_eq!(service_for(0xFFFE, 1), MemoryService::UserMemory);
+    }
+
+    /// CP §3.5.2 defines "lower" and "higher" than `FFFFh` only; an allocation whose base
+    /// plus allocated size equals it has no service, on both sides of which the rule holds.
+    #[test]
+    fn an_allocation_ending_exactly_at_ffff_has_no_defined_service() {
+        assert_eq!(
+            allocation_service(0xFF00, 0xFE),
+            Some(MemoryService::Memory)
+        );
+        assert_eq!(allocation_service(0xFF00, 0xFF), None);
+        assert_eq!(allocation_service(0xFFFE, 1), None);
+        assert_eq!(
+            allocation_service(0xFF00, 0x100),
+            Some(MemoryService::UserMemory)
+        );
+        // The decision quantity is the allocation, not a write inside it.
+        assert_eq!(service_for(0xFF00, 0x10), MemoryService::Memory);
+        assert_eq!(
+            allocation_service(0xFF00, 0x100),
+            Some(service_for(0xFF00, 0x100))
+        );
     }
 
     /// §14 item 9, the domain half: `PID_REFERENCE` = 0 never becomes an

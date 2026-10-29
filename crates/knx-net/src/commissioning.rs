@@ -26,6 +26,7 @@ pub mod diagnostic_export;
 pub mod domain_address;
 pub mod download;
 pub mod final_step;
+pub mod final_step_evidence;
 pub mod hardware_release;
 pub mod individual_address_reset;
 pub mod individual_address_write;

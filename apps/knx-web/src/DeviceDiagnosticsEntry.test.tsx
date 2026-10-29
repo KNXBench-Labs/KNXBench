@@ -92,7 +92,9 @@ it("Analyse device opens the existing diagnostic export dialog with this device 
 it("Send report opens the report wizard for reading this device", async () => {
   await act(async () => root.render(<Entry project={project} deviceId={10} />));
   await act(async () => report()!.click());
-  expect(opened).toHaveBeenCalledExactlyOnceWith({ problemType: "deviceReading", deviceId: 10 });
+  // Intentional contract: this button knows a device, not a run, so it names no operation instead of
+  // letting the server adopt the newest run of whatever device. Exact equality keeps nothing else out.
+  expect(opened).toHaveBeenCalledExactlyOnceWith({ problemType: "deviceReading", deviceId: 10, operation: { selection: "none" } });
   expect(diagnosticDialog()).toBeNull();
   noApiCalls();
 });

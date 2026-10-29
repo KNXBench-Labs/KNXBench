@@ -26,7 +26,7 @@ export default function DeviceDiagnosticsEntry({ project, deviceId }: { project:
     <div className="device-diagnostics-entry-actions">
       <button type="button" data-device-analyse disabled={!project} onClick={() => setAnalysing(true)}>{t("deviceDiagnostics.analyse")}</button>
       {report && <button type="button" data-device-report disabled={!project}
-        onClick={() => report({ problemType: "deviceReading", deviceId })}>{t("deviceDiagnostics.report")}</button>}
+        onClick={() => report({ problemType: "deviceReading", deviceId, operation: { selection: "none" } })}>{t("deviceDiagnostics.report")}</button>}
     </div>
     <p className="inspector-description">{t("deviceDiagnostics.hint", { analysis: t("diagnostics.title"), report: t("reportProblem.title") })}</p>
     {analysing && project && createPortal(<DiagnosticExportDialog project={project} initialDevice={deviceId} close={() => setAnalysing(false)} />, document.body)}

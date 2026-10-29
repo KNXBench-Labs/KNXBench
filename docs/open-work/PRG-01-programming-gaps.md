@@ -12,14 +12,17 @@ The owner authorised (25 October 2026) closing existing non-Secure gaps in the
 regular download/restore path, one bounded increment at a time, without live
 bus or device operations.
 
-## Current bounded increment — 29 October 2026
+## Software-accepted bounded increment — 29 October 2026
 
 The [property run-state continuation](../contracts/post-download-run-state.md)
 implements an independently specified observation for exact masks `0701h` and
 `0705h`, limited to one type-and-plan-identity-validated hosting object. The
 [original-source review](../research/2026-10-29-property-run-state-observation.md)
 separates the property contract from the still-unproved memory-state encoding.
-This is implementation scope, not a delivery or hardware-acceptance receipt.
+Independent reviews, both 17-stage package gates and isolated real-server smoke
+passed on runtime integration `161010078`
+([software acceptance](../status/2026-10-29-property-run-state-observation.md)).
+This is not hardware acceptance or closure of PRG-01.
 Physical-exemplar proof, other object layouts, parameter policies and complete
 mutation/recovery remain independent open requirements.
 
@@ -42,8 +45,9 @@ record the boundaries separately; these increments do not close PRG-01.
 - Post-download read-only observation and its CLI, server, web, report and
   history consumers, published as `8b5edad7f`
   ([acceptance](../status/2026-10-25-post-download-check.md),
-  [contract](../contracts/post-download-check.md)). Runtime state remains unknown
-  and physical-exemplar identity is not verified.
+  [contract](../contracts/post-download-check.md)). That original increment kept
+  runtime unknown; the 29 October property continuation above adds bounded
+  observations. Physical-exemplar identity is still not verified.
 
 - Backup prior-application identity: a backed-up run records the pre-write object 3/PID 13
   answer (backup format 2) and `restore_plan` refuses a plan of another or unrecorded
@@ -144,8 +148,9 @@ there is no CLI end-to-end, new shutdown, recovery or hardware guarantee.
 
 ## Open
 
-- Broader target/exemplar identity and independently verified runtime-state
-  observation; the delivered identity/load check does not prove either.
+- Broader target/exemplar identity and runtime-state observation beyond the
+  validated `0701h`/`0705h` property slice; other object layouts and physical
+  function remain unproved.
 - Parameter policies: the defining inactive, `Union` and customer-write rules
   are unresolved.
 - Complete mutation effects and whole-mutation recovery contracts.

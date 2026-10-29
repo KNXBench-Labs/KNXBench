@@ -575,7 +575,8 @@ the original always-unknown runtime vocabulary with independently evidenced
 states for a validated plan-matching object on exact `0701h` / `0705h` masks.
 The paragraph below records the original 25 October acceptance, not a claim
 that every later check must still return runtime unknown. The continuation's
-software acceptance and publication are recorded separately.
+software acceptance is recorded [separately](status/2026-10-29-property-run-state-observation.md):
+independent reviews, both 17-stage package gates and isolated real-server smoke passed.
 
 After a successful regular memory download (complete or partial, restart
 acknowledged, not in plan or unconfirmed) the CLI and the server worker run one

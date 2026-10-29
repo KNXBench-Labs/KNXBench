@@ -1,14 +1,13 @@
 # Restart snapshot
 
-## PRG-01 run-state observation (CORRECTING; observed 2026-10-29 09:05 CET)
-- GO: non-Secure regular-path source work, offline/simulator only. No bus/release/deployment.
-- `feat/prg01-regular-safety-20261029` / `<sources>/knxbench-prg01-regular-safety-20261029`.
-- Implemented bounded 0701/0705 property observation; own core/net/app/CLI/server/web and tests.
-- Initial focused source-bound checks PASS; actual isolated-server smoke PASS, not integrated acceptance.
-- Whole-feature Opus review REQUEST_CHANGES: 0 critical/1 important/6 minor; no runtime defect found.
-- Parent fixes manual/schema docs; `deleg_0f8a4ea8` owns narrow source/test corrections. No gate yet.
-- Evidence `<profile-scratch>/prg01-20261029/`; next: correction re-review, frozen branch+merged gates.
-- DIAG-03/System-2 evidence, bundle, wizard/sanitizers and every foreign track remain separate.
+## PRG-01 property run-state (SOFTWARE COMPLETE; observed 2026-10-29)
+- Bounded 0701/0705 property observation; runtime integration `161010078`, feature `51c309957`.
+- Whole-feature/correction reviews APPROVE; both selected 17-stage package gates PASS,
+  frozen inputs, checked/untouched user data. Original failures and mutant controls retained.
+- Actual integrated server build and isolated loopback startup/frontend/status/shutdown PASS.
+- Canonical result: `docs/status/2026-10-29-property-run-state-observation.md`.
+- No further implementation reserved. PRG-01 overall, hardware/function and recovery remain open.
+- Root/foreign DIAG-03/System-2 tracks stay separate; no bus/release/deployment authority.
 
 ## Alpha 18 release (PUBLISHED, ARTIFACTS VERIFIED; observed 2026-10-29 05:30 CET)
 - Release freeze: released by alpha18-release. Immutable `v0.1.0-alpha.18` names

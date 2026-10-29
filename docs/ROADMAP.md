@@ -262,8 +262,9 @@ match. The [29 October property run-state continuation](contracts/post-download-
 adds a separately evidenced observation of one validated plan-matching
 Applicationprogram object on exact `0701h` / `0705h` masks; it does not establish
 installation function, object uniqueness or physical-exemplar identity.
-Its acceptance remains separate from the original receipt. Hardware acceptance
-and the broader programming gaps remain open.
+Its [separate software acceptance](status/2026-10-29-property-run-state-observation.md)
+records independent reviews, both 17-stage package gates and isolated real-server
+smoke. Hardware acceptance and the broader programming gaps remain open.
 
 The [backup application guard](contracts/backup-application-identity.md) records
 pre-write evidence and refuses a restore under another application's procedure.

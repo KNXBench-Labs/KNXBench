@@ -9,6 +9,8 @@ use super::*;
 
 mod review_archive;
 mod review_budget;
+mod review_connection_budget;
+mod review_consumers;
 mod review_integrity;
 mod review_logical;
 mod review_native;

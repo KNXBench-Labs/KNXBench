@@ -1293,6 +1293,18 @@ what that data proves:
   it into a clock or duration.
 - **Number** fields the manufacturer marked as a slider get a slider next to the
   input. Moving it only changes your draft.
+- **IPAddress — source after Alpha 18, not in that release:** an exact
+  `HostAddress` declaration offers an address-text draft. Enter dotted IPv4
+  without leading zeroes, or IPv6 as eight groups of four hexadecimal digits.
+  The editor preserves spelling and hex case; it does not compress, trim,
+  convert or contact the address. Other source forms keep the plain-field
+  fallback. Missing, empty or malformed old values are not repaired on opening;
+  a malformed draft cannot be applied. If the single-line textbox hides raw line
+  breaks, select its whole displayed value and paste the complete replacement;
+  an ambiguous partial paste leaves your raw draft unchanged and explains why.
+  Only **Apply value** writes a changed
+  valid draft; opening, Enter and blur write nothing. There is no new device
+  or memory-image support.
 - **Colour** and **picture** values are shown unchanged with a note that their
   format is not verified. There is no colour picker, no image, and nothing is
   fetched.

@@ -315,6 +315,7 @@ records the tested commit separately from artifact publication verification.
 | [Notes when deleting](adr/0138-notes-get-an-explicit-decision-before-a-delete.md) | Keep, move or delete each affected note; one undo step with the delete | alpha.14 |
 | Installation instructions | Device tab; imported hints, review-first | alpha.10 |
 | Checked parameter editor | Time count, integer slider; source-checked | alpha.10 |
+| IP-address literal editor | Exact source-checked HostAddress text; IPv4/eight-group IPv6, explicit Apply, no network lookup or image codec | Main-only |
 | Catalogue update with preview | Every package uses review; backup before install, restore/delete listed backups (alpha.12) | alpha.10 |
 | [Vendor ZIP install](adr/0140-vendor-zips-of-product-packages-install-as-a-whole.md) | A manufacturer ZIP of `.knxprod` packages installs all inner packages together (CLI and web preview); other files listed, not stored; large inner packages via the CLI flag | alpha.14 |
 | [Catalogue cleanup](adr/0145-catalogue-cleanup-removes-placements-only.md) | Catalogue rows show application, version, section and source; selected entries removed after a preview and a full backup; products, programs and package files kept | alpha.15 |

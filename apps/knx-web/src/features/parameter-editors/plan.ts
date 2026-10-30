@@ -30,6 +30,7 @@ export interface ParameterEditorContext {
 }
 
 export type ParameterEditorPlan =
+  | { kind: "ip-address-literal" }
   | { kind: "time-count"; unit: string | null; min: string | null; max: string | null }
   | { kind: "integer-slider"; min: number; max: number; step: 1 }
   | { kind: "fallback"; reason: "missing-evidence" | "source-conflict" | "unsupported-codec" | "unsupported-hints" | "invalid-range" | "module-scope" };
@@ -50,7 +51,7 @@ export function chooseParameterEditor(
 ): ParameterEditorPlan {
   if (context.moduleScoped) return { kind: "fallback", reason: "module-scope" };
   if (!source) return { kind: "fallback", reason: "missing-evidence" };
-  if (!/^[0-9a-f]{64}$/.test(source.sourceSha256)
+  if (!/^[0-9a-f]{64}(?![\s\S])/.test(source.sourceSha256)
       || source.sourceSha256 !== context.sourceSha256 || source.programId !== context.programId
       || source.parameterRefId !== field.etsId || ![20, 21, 22, 23].includes(source.schema)
       || source.child !== `Type${field.kind}` || source.parentAttributes.Id !== source.parameterTypeId
@@ -58,9 +59,18 @@ export function chooseParameterEditor(
     return { kind: "fallback", reason: "source-conflict" };
   }
   if (field.kind === "Color" || field.kind === "Picture") return { kind: "fallback", reason: "unsupported-codec" };
+  const namespaceAttribute = (name: string) => name === "xmlns" || name.startsWith("xmlns:");
+  if (field.kind === "IPAddress") {
+    // One exact source role, not address usability, a memory codec or network policy.
+    if (field.min !== null || field.max !== null || source.attributes.AddressType !== "HostAddress"
+        || Object.keys(source.attributes).some(name => name !== "AddressType" && !namespaceAttribute(name))
+        || Object.keys(source.parentAttributes).some(name => name !== "Id" && name !== "Name" && !namespaceAttribute(name))) {
+      return { kind: "fallback", reason: "unsupported-hints" };
+    }
+    return { kind: "ip-address-literal" };
+  }
   const knownTypeAttributes = new Set(["SizeInBit", "Type", "minInclusive", "maxInclusive", "Unit", "UIHint"]);
   const knownParentAttributes = new Set(["Id", "Name", "UIHint"]);
-  const namespaceAttribute = (name: string) => name === "xmlns" || name.startsWith("xmlns:");
   if (Object.keys(source.attributes).some(name => !knownTypeAttributes.has(name) && !namespaceAttribute(name))
       || Object.keys(source.parentAttributes).some(name => !knownParentAttributes.has(name) && !namespaceAttribute(name))) {
     return { kind: "fallback", reason: "unsupported-hints" };
@@ -102,11 +112,21 @@ function decimalInteger(value: string | null): bigint | null {
   return value !== null && /^[+-]?[0-9]{1,64}$/.test(value) ? BigInt(value) : null;
 }
 
-export type ParameterDraftIssue = "integer" | "bounds" | "unsupported";
+/** Schema23 lexical preflight only; never returns a rewritten value or image bytes. */
+function ipAddressLiteral(value: string): boolean {
+  // A final newline must not exploit JavaScript's end-before-final-newline `$`.
+  if (/^(?:[0-9a-fA-F]{4}:){7}[0-9a-fA-F]{4}(?![\s\S])/.test(value)) return true;
+  const parts = value.split(".");
+  return parts.length === 4 && parts.every(part =>
+    /^(?:0|[1-9][0-9]{0,2})(?![\s\S])/.test(part) && Number(part) <= 255);
+}
+
+export type ParameterDraftIssue = "integer" | "bounds" | "unsupported" | "ip-address";
 
 /** UI preflight only; existing application validation remains authoritative. */
 export function parameterDraftIssue(plan: ParameterEditorPlan, value: string): ParameterDraftIssue | null {
   if (plan.kind === "fallback") return "unsupported";
+  if (plan.kind === "ip-address-literal") return ipAddressLiteral(value) ? null : "ip-address";
   const parsed = decimalInteger(value);
   if (parsed === null) return "integer";
   const minimum = decimalInteger(plan.min === null ? null : String(plan.min));

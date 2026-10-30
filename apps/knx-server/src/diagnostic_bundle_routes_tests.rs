@@ -17,6 +17,9 @@ mod import_tests;
 #[path = "diagnostic_bundle_project_tests.rs"]
 mod project_tests;
 
+#[path = "diagnostic_bundle_routes_tests/r4_review_binding.rs"]
+mod r4_review_binding;
+
 const SENTINEL_KEY: [u8; 4] = [0xC0, 0xFF, 0xEE, 0x42];
 
 pub(super) fn state(dir: &std::path::Path, enabled: bool) -> Arc<crate::AppState> {

@@ -21,8 +21,8 @@ use knx_productdb::byte_order_probe::{
 };
 use knx_productdb::code::load_program_code;
 use knx_productdb::download_plan::{
-    check_download_plugin, check_program_kind, plan_memory_download_with_inferences,
-    DownloadPlanError,
+    check_customer_adjustable, check_download_plugin, check_program_kind,
+    plan_memory_download_with_inferences, DownloadPlanError,
 };
 use knx_productdb::image::{build_download_image, DownloadImage, ImageError, ImageRequest};
 use knx_productdb::image_request::{image_request_for_device, DeviceRequestError};
@@ -136,7 +136,7 @@ impl fmt::Display for PrepareError {
 /// it: every download scope (complete or partial) and readiness start
 /// here. A program that declares an ETS download plug-in is refused
 /// (KL-006, [`check_download_plugin`]) right after the kind check, before
-/// any image is built.
+/// any image is built. The presence-only customer-adjustable refusal follows the plug-in check.
 pub fn prepare_device_download(
     conn: &Connection,
     project: &Project,
@@ -206,13 +206,15 @@ fn plan_request(
     // A program no download translates is refused for that reason, not for
     // whatever its image build would trip over first. Precedence is fixed:
     // the kind (mask, then procedure style) is the more fundamental refusal
-    // and comes first; a declared plug-in (KL-006) refuses what remains.
+    // and comes first; then a declared plug-in (KL-006), then uninterpreted
+    // customer-adjustable declarations refuse what remains, before image construction.
     if let Some(code) = load_program_code(conn, &request.program_id)
         .map_err(|e| PrepareError::Image(ImageError::Code(e)))?
     {
         check_program_kind(&code).map_err(PrepareError::Plan)?;
         if purpose == Purpose::Download {
             check_download_plugin(&code).map_err(PrepareError::Plan)?;
+            check_customer_adjustable(&code).map_err(PrepareError::Plan)?;
         }
     }
     let image = build_download_image(conn, request).map_err(PrepareError::Image)?;

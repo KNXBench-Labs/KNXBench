@@ -29,8 +29,8 @@ use knx_core::commissioning::partial_memory_download::PartialDownloadParts;
 use knx_core::IndividualAddress;
 use knx_productdb::code::load_program_code;
 use knx_productdb::download_plan::{
-    check_download_plugin, check_program_kind, plan_memory_download_with_inferences,
-    DownloadPlanError,
+    check_customer_adjustable, check_download_plugin, check_program_kind,
+    plan_memory_download_with_inferences, DownloadPlanError,
 };
 use knx_productdb::image::{build_download_image, ImageError, ImageRequest};
 use knx_productdb::inference::Inference;
@@ -159,6 +159,8 @@ pub enum UnsupportedCategory {
     /// (`Static/Extension/@EtsDownloadPlugin`): vendor code writes what the
     /// product data does not describe, so no scope is downloaded (KL-006).
     VendorDownloadPlugin,
+    /// Uninterpreted source declarations block every regular write scope.
+    CustomerAdjustableParameters,
 }
 
 impl UnsupportedCategory {
@@ -178,6 +180,7 @@ impl UnsupportedCategory {
             Self::ProductData => "product-data",
             Self::Configuration => "configuration",
             Self::VendorDownloadPlugin => "vendor-download-plugin",
+            Self::CustomerAdjustableParameters => "customer-adjustable-parameters",
         }
     }
 }
@@ -319,6 +322,9 @@ pub fn plan_category(error: &DownloadPlanError) -> UnsupportedCategory {
         | DownloadPlanError::MergeFragment { .. }
         | DownloadPlanError::DoesNotConnectFirst => UnsupportedCategory::ProcedureShape,
         DownloadPlanError::VendorDownloadPlugin(_) => UnsupportedCategory::VendorDownloadPlugin,
+        DownloadPlanError::CustomerAdjustableParameters(_) => {
+            UnsupportedCategory::CustomerAdjustableParameters
+        }
         _ => UnsupportedCategory::ProcedureContents,
     }
 }
@@ -355,7 +361,8 @@ pub fn offline_download(
 /// Refuses a program no download writes, before its image is built: one of
 /// a kind no download translates ([`check_program_kind`]: mask, then
 /// procedure style), then one that declares an ETS download plug-in
-/// ([`check_download_plugin`], KL-006). The order is the same as
+/// ([`check_download_plugin`], KL-006), then uninterpreted customer-adjustable declarations.
+/// The order is the same as
 /// [`crate::device_download::prepare_device_download`]'s: the more
 /// fundamental refusal is the one reported. A program the database lacks
 /// passes: its image build names that. Used by every offline plan
@@ -368,6 +375,7 @@ pub fn check_kind(
     match load_program_code(conn, program_id) {
         Ok(Some(code)) => check_program_kind(&code)
             .and_then(|_| check_download_plugin(&code))
+            .and_then(|_| check_customer_adjustable(&code))
             .map_err(|e| (plan_category(&e), format!("load procedure: {e}"))),
         Ok(None) => Ok(()),
         Err(e) => Err((

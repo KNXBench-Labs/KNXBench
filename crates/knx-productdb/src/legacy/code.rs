@@ -584,6 +584,8 @@ pub fn load_legacy_program_code(
         options: BTreeMap::new(),
         has_fixup_list: false, // Legacy projection has no XML FixupList declaration.
         has_legacy_patch_always: false, // Presence tracks the XML attribute only.
+        // This XML matcher is not an EX-IM rights/safety assessment.
+        customer_adjustable: Default::default(),
         // EX-IM `program_plugin` rows are not mapped (KL-006): not refused here.
         download_plugin: None,
         parameters,

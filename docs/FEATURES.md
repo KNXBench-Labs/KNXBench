@@ -1,4 +1,4 @@
-Last updated: 2026-10-29 (Alpha 18 pre-release; source cutoff 2026-10-28)
+Last updated: 2026-10-30 (Alpha 18 released baseline; newer main-only settings workspace)
 
 # KNXBench Features
 
@@ -10,6 +10,12 @@ Last updated: 2026-10-29 (Alpha 18 pre-release; source cutoff 2026-10-28)
 | Local-only | Unpublished; not accepted on main |
 | Scope | Listed boundaries; not universal compatibility |
 | Later scope | No delivery dates promised |
+
+## Main-only after Alpha 18
+
+| Feature | Scope | Availability |
+| --- | --- | --- |
+| [Settings workspace](contracts/settings-workspace.md) | All existing app settings on one continuous center page with top section jumps; sidebar, toolbar and palette entry; temporarily hides Properties without changing its preference; preserves selected project entity and unsaved note/instructions drafts | Main-only |
 
 ## New in Alpha 18
 

@@ -1,5 +1,12 @@
 # Restart snapshot
 
+## Settings center workspace (REVIEWED, DELIVERY GO; observed 2026-10-30 11:46 CET)
+- Owner this settings WebUI; branch `feat/settings-workspace-20261030`, `<sources>/knxbench-settings-workspace-20261030`, base `72db561a4`.
+- Continuous center page/all existing settings/top jump navigation; Properties temporarily hidden without changing its preference. Selection/drafts/immediate apply/projectless entry retained; no domain/storage/safety changes.
+- Whole-feature review plus correction audit preserved; originalSW-1 inert page closed. FinalR1 review `deleg_178ca9cd` APPROVE/no open findings; parent authenticated24source hashes, independentRED2/GREEN2/Overlay28. Actual semanticREDs/fixture failures retained distinctly.
+- Final targeted maintained33stagesPASS:4688Vitest/91browser(90+1), build/alltypes, complete/frozen/proofValid; parent exact24sourcehashes unchanged. Initial/correction frames viewed; Chromium/mock scope only. Evidence `<profile-scratch>/settings-workspace-20261030/`.
+- NEXT freeze/commit exact reviewed source+docs, run maintained branch/main-first package gates(all default browser specs; no Rust/corpus selected); guarded publication/readback via owned delivery state, then final documentation and exact-owned cleanup. Root/foreign worktrees preserved; no bus/hardware/release/deployment.
+
 ## PRG-01 customer-adjustable declarations (SOFTWARE ACCEPTED; observed 2026-10-30 04:59 CET)
 - Owner `feat/prg01-customer-adjustable-20261030`, `<sources>/knxbench-prg01-customer-adjustable-20261030`; code `d6918027b`, candidate `3af377a4b`, main-first runtime `e990fd956`, base `a2d606557`. Protected root/foreign tracks stay untouched.
 - Presence-only raw-key refusal in bounded root/Union/module contexts/both module anchors, no module-local Options; all values equally blocking, raw XML retained. Two regular App guards preserve kind/plugin precedence/read-only paths; counts/classes-only CLI/HTTP/Web EN/DE reason. Not ETS rights, calibration preservation or a global low-level barrier; no migration/repin.

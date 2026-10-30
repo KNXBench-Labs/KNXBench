@@ -98,6 +98,7 @@ async function fixture(page: Page, language: Language, theme: string, width: num
     if (path === "/api/project/load-progress") return ok(null);
     if (path === "/api/project/status-metrics" && method === "GET") return ok(statusMetricsFixtureBody(projectTree(f.revision)));
     if (path === "/api/log") return ok([]);
+    if (path === "/api/legacy-password" && method === "GET") return ok({ available: true, remembered: false, problem: null });
     if (path === "/api/fs/list") return ok([{ name: "other-fictional.knxproj", is_dir: false }]);
     if (path === "/api/bus/discover" && method === "POST") return ok({ interfaces: [] });
     if (["/api/product-languages", "/api/catalog/manufacturers", "/api/catalog/items"].includes(path)) return ok([]);
@@ -197,6 +198,18 @@ for (const language of ["en", "de"] as const) for (const theme of ["porcelain", 
     await editor.getByLabel(language === "de" ? "Titel" : "Title", { exact: true }).fill("Label the ceiling circuit");
     await editor.getByLabel(language === "de" ? "Notiztext" : "Note text", { exact: true }).fill("Use <b>tape</b>, not HTML.\nTwo lines.");
     await target.selectOption("comObject:401");
+    await editor.locator("textarea").first().evaluate((node) => node.setAttribute("data-settings-retained", "notes"));
+    await page.keyboard.press("Control+Shift+P");
+    await page.getByRole("combobox").fill(m["toolbar.settings"]);
+    await page.getByRole("combobox").press("Enter");
+    await expect(workspace).toBeHidden();
+    await page.getByRole("button", { name: m["settings.back"], exact: true }).click();
+    await expect(workspace).toBeVisible();
+    await expect(editor.locator("[data-settings-retained=notes]")).toHaveCount(1);
+    await expect(editor.getByLabel(language === "de" ? "Titel" : "Title", { exact: true })).toHaveValue("Label the ceiling circuit");
+    await expect(editor.getByLabel(language === "de" ? "Notiztext" : "Note text", { exact: true })).toHaveValue("Use <b>tape</b>, not HTML.\nTwo lines.");
+    await expect(target).toHaveValue("comObject:401");
+    expect(f.applied).toBe(0);
     const readsBefore = f.projectReads;
     await editor.getByRole("button", { name: language === "de" ? "Änderung prüfen" : "Preview change", exact: true }).click();
     const review = editor.getByRole("region", { name: language === "de" ? "Änderung prüfen" : "Review change" });

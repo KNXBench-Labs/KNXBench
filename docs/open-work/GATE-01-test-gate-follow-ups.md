@@ -98,6 +98,20 @@ results, not arbitrary-load stability or a historical timeout-cause claim.
 [Evidence, attribution and limits](../status/2026-10-28-document-language-fanout.md).
 GATE-01 remains open; no scheduler, timeout or coverage policy changed.
 
+## Crash-free timeout diagnostics — 30 October 2026
+
+The browser-wrapper test diagnostic helper previously sent SIGABRT to obtain
+Python faulthandler stacks. Its identity-safety regression exercised that helper
+on purpose, so even a successful tool-test run could generate a desktop crash
+report. It now captures kernel process state, wait channels, signal masks and
+existing stderr before SIGKILL cleanup through retained fixture pidfds. No
+system-wide crash configuration changes are needed. Python stack traces are no
+longer collected by this helper; the underlying timeout assertions and
+unrelated-process protection remain in place. Mocked regressions intercept all
+signals (including against the old implementation), and a real stuck wrapper
+and child verify cleanup without a crash-generating signal. The older timeout
+causes above remain unproven.
+
 ## Known boundary
 
 Killing the stage supervisor with SIGKILL can still orphan children; see the

@@ -15,20 +15,59 @@ source/history immutability and review drift. WAL/sidecar refusal is exercised a
 the route; budget/oversize, symlink-sidecar and concurrent-writer boundaries have
 helper-level coverage only, not new route/browser/hardware acceptance.
 
+The App source now also exposes bundle-only admission foundations for the saved
+native project and historical import report. `native_project_for_bundle` and
+`import_report_for_bundle` reuse the existing bounded sanitizers and return either
+private owned body/notes or one payload-free unavailable result. A private,
+non-serialized witness is set before recognized non-empty credential fields and
+`BusAccess` credential components are changed; an observed credential refuses the
+whole source instance before body or notes leave the helper. The documented free-
+access `BCUKey` sentinel alone is exempt. This is a narrow source-instance witness,
+not arbitrary opaque or encoded secrecy certification. Ordinary helper success is
+not bundle admission. Server, CLI and ZIP consumers have not adopted these APIs.
+
 **Private System-2 comparison bytes remain unfinished.** Replay validates the
 recorded comparison, not credential freedom of arbitrary expected/readback
 memory. Consent cannot override unconditional key/password exclusion. Full raw
 export requires both byte-side classification and consistent handling of every
 overlapping recording/range/error/archive copy. The current APDU key redactor
-and project-copy helper do not establish that wider guarantee. The local App-only
-metadata increment `c8a686a5e` (integration `8342609ed`) is implemented and narrowly
-reviewed: one strict fresh Store-open yields original progress plus separately
-owned closed metadata. It distinguishes recorded-but-withheld, missing persisted
-comparison data and unclassified states without serializing raw memory or the
-outer snapshot. Both server hooks and the CLI still lack this attachment.
+and project-copy helper do not establish that wider guarantee. The existing
+App-only metadata reader is now paired in source with `admit_snapshot`. It consumes
+one available snapshot, checks the fixed format/kind, exactly one Download plus an
+optional ordered Restore consistent with the same progress, and serializes the
+closed projection once with a 4 KiB maximum. It returns the original owned minimized
+progress unchanged beside private projection bytes; the admitted type implements
+neither `Serialize` nor `Debug`. Both server hooks and the CLI still lack this
+attachment.
 This remains explicitly incomplete: neither raw-evidence delivery nor
 credential-safety certification of the rest of the ZIP is implied.
 [Source evidence, P1/P2 and proposed acceptance cases](../research/2026-10-29-system2-bundle-credential-boundary.md).
+
+Bounded App-only verification completed on 30 October 2026. The unavailable
+scaffold ran 92 focused tests (81 passed and the 11 positive-admission cases failed
+as intended); the first implementation passed all 92. Nine added edge cases then
+produced the intended 94-pass/7-fail regression result, and the correction passed
+101/101. A single temporary C10 final-gate bypass produced 26 passes and 75 intended
+credential-refusal failures: all 24 `Password123` body/`source_path`/`xpath`
+witnesses across literal, hex, base64 and percent forms failed while all seven
+benign controls passed. Byte-exact production restoration was rebuilt and again
+passed 101/101.
+
+The default App run passed 431 library tests, 584 integration tests and nine
+doctests (1,024 total, without adding the overlapping focused run); 47 integration
+tests remained ignored. Six new trait-boundary compile-fail doctests produced
+`E0277` for the intended absence of `Serialize`/`Debug` on the actual newtypes.
+App all-target Clippy with `-D warnings` covered the library, library tests, example
+and integration target, and the formatting, header, layering, test-layout,
+documentation, local-info, anchor, diff, allowlist and guard checks passed without
+suppressions. Ignored, corpus and hardware cases were not executed. These results
+verify this App foundation only; they are not independent approval of consumers,
+release or the whole package.
+
+The parent-reported bounded R4 ambient-identity prerequisite is independently
+approved for the real preview/unselected-recording regression. That prerequisite
+result does not authorize export or close any consumer, raw-evidence or whole-goal
+acceptance.
 
 The requirements below remain the target contract, not a claim that every part
 has already passed integrated acceptance.

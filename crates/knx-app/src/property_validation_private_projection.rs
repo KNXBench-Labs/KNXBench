@@ -103,6 +103,71 @@ impl PrivateSnapshot {
     }
 }
 
+/// Owned projection bytes admitted for diagnostic-bundle consumers.
+///
+/// The boundary deliberately implements neither `Serialize` nor `Debug`:
+///
+/// ```compile_fail
+/// fn require_serialize<T: serde::Serialize>() {}
+/// require_serialize::<
+///     knx_app::property_validation::private_projection::AdmittedPrivateProjection,
+/// >();
+/// ```
+///
+/// ```compile_fail
+/// fn require_debug<T: std::fmt::Debug>() {}
+/// require_debug::<
+///     knx_app::property_validation::private_projection::AdmittedPrivateProjection,
+/// >();
+/// ```
+pub struct AdmittedPrivateProjection {
+    bytes: Vec<u8>,
+}
+impl AdmittedPrivateProjection {
+    /// The exact owned bytes admitted from the consumed snapshot.
+    pub fn bytes(&self) -> &[u8] {
+        &self.bytes
+    }
+}
+
+/// Consumes one available snapshot at the private diagnostic-bundle boundary.
+pub fn admit_snapshot(
+    snapshot: AvailableSnapshot,
+) -> Result<(OperationProgress, AdmittedPrivateProjection), Unavailable> {
+    let (progress, projection) = snapshot.into_parts();
+    if projection.format != PROJECTION_FORMAT || projection.kind != PROJECTION_KIND {
+        return Err(Unavailable);
+    }
+    let ordered = match projection.runs.as_slice() {
+        [download] => download.run == FailureDiagnosticRun::Download && !progress.restore_attempted,
+        [download, restore] => {
+            download.run == FailureDiagnosticRun::Download
+                && restore.run == FailureDiagnosticRun::Restore
+                && progress.restore_attempted
+        }
+        _ => false,
+    };
+    if !ordered
+        || !projection.runs.iter().all(|run| {
+            matches!(
+                run.allocation_mismatch,
+                AllocationMismatchClass::RecordedBytesWithheld {
+                    reason: WithheldReason::UnclassifiedMemory,
+                    loss: ExportedLoss::RecordedBytesNotExported,
+                } | AllocationMismatchClass::NotRecorded
+                    | AllocationMismatchClass::Unclassified
+            )
+        })
+    {
+        return Err(Unavailable);
+    }
+    let bytes = serde_json::to_vec(&projection).map_err(|_| Unavailable)?;
+    if bytes.len() > 4096 {
+        return Err(Unavailable);
+    }
+    Ok((progress, AdmittedPrivateProjection { bytes }))
+}
+
 /// Strictly reopen `directory` against `expected` and project it.
 ///
 /// Admission is exactly `OperationStore::open`: no preflight, so no source-size budget is
@@ -147,6 +212,9 @@ pub fn read_snapshot(directory: &Path, expected: &Binding) -> PrivateSnapshot {
     }))
 }
 
+#[cfg(test)]
+#[path = "property_validation_private_admission_tests.rs"]
+mod admission_tests;
 #[cfg(test)]
 #[path = "property_validation_private_projection_tests.rs"]
 mod tests;

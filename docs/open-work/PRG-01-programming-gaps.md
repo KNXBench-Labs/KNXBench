@@ -181,6 +181,24 @@ synchronous persistence. Published as `a8004cb2e`, independently reviewed APPROV
 separate native loopback ACK characterization from lexical call-site checks;
 there is no CLI end-to-end, new shutdown, recovery or hardware guarantee.
 
+## Source-admitted next increment — customer-adjustable write refusal
+
+The [bounded contract](../contracts/customer-adjustable-write-admission.md) and
+[primary-source investigation](../research/2026-10-30-customer-adjustable-write-admission.md)
+admit a stricter KNXBench refusal policy, **not yet implementation/software
+acceptance**. The current baseline `17e45dc62` does not consume the admitted
+unqualified markers before otherwise supported regular write preparation.
+
+Only uninterpreted presence in explicitly bounded root/Union/module contexts
+and the own root option may refuse, with kind/plugin precedence and unchanged
+read-only preparation. Module-local Options and other excluded contexts are
+named matcher limits, not claims of harmlessness or universal flag detection.
+The XML value domains and actual ETS calibration-preservation algorithm remain
+unproved here; no positive true/Sync classes, status bypass or per-byte skip.
+Original semantic RED, complete consumers, valid restore/source-freshness tests,
+independent review and normal integrated delivery remain required. This closes
+neither the broader parameter rules nor PRG-01.
+
 ## Open
 
 - Broader target/exemplar identity and runtime-state observation beyond the

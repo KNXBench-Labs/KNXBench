@@ -10,6 +10,8 @@
 //! Relative source segments are retained separately in `ProgramCode::relative_segments`;
 //! their offsets are never treated as absolute image addresses. The original
 //! source blob remains authoritative for unsupported structures.
+//! Write admission also retains bounded root/module customer-adjustable declarations;
+//! module executable data is not translated and all marker values stay uninterpreted.
 //!
 //! Load-procedure steps this module does not model are not dropped. A step
 //! with an unknown name, an unknown attribute, or any child element becomes
@@ -24,8 +26,13 @@
 //! ([`crate::legacy::legacy_program_code`]) and its parameter placements
 //! from the database, in the same types.
 
+mod customer_adjustable;
 mod relative;
 
+pub use customer_adjustable::{
+    CustomerAdjustableContext, CustomerAdjustableCounts, CustomerAdjustableDeclarations,
+};
+use customer_adjustable::{CustomerAdjustableContext as CustomerContext, Occurrence};
 pub use relative::RelativeSegment;
 
 use std::collections::{BTreeMap, BTreeSet};
@@ -246,6 +253,8 @@ pub struct ProgramCode {
     /// Presence of unqualified `LegacyPatchAlways` on a Static parameter or
     /// Union member, regardless of activation/value. Original XML is retained.
     pub has_legacy_patch_always: bool,
+    /// Ordered declarations in the bounded regular-write policy scope, with private raw evidence.
+    pub customer_adjustable: CustomerAdjustableDeclarations,
     /// `Static/Extension/@EtsDownloadPlugin`, the GUID of the vendor
     /// plug-in ETS runs for a download, when the program declares one. An
     /// empty attribute names no plug-in and stays `None`. KNXBench never
@@ -482,9 +491,13 @@ impl<'a> Parser<'a> {
         if program.empty {
             return Ok(code);
         }
+        let mut ordinal = 0;
         while let Some(child) = self.next_inside("ApplicationProgram")? {
+            ordinal += 1;
             if child.name == "Static" && !child.empty {
-                self.read_static(&mut code)?;
+                self.read_static(&mut code, &[Occurrence::Static(ordinal)])?;
+            } else if child.name == "ModuleDefs" {
+                self.read_customer_modules(&child, &mut code, &[Occurrence::ModuleDefs(ordinal)])?;
             } else {
                 self.skip(&child)?;
             }
@@ -492,8 +505,15 @@ impl<'a> Parser<'a> {
         Ok(code)
     }
 
-    fn read_static(&mut self, code: &mut ProgramCode) -> Result<(), CodeError> {
+    fn read_static(
+        &mut self,
+        code: &mut ProgramCode,
+        path: &[Occurrence],
+    ) -> Result<(), CodeError> {
+        let mut ordinal = 0;
         while let Some(child) = self.next_inside("Static")? {
+            ordinal += 1;
+            let mut child_path = path.to_vec();
             match child.name.as_str() {
                 "Code" if !child.empty => self.read_code(code)?,
                 "AddressTable" => {
@@ -509,6 +529,12 @@ impl<'a> Parser<'a> {
                     self.skip(&child)?;
                 }
                 "Options" => {
+                    child_path.push(Occurrence::Options(ordinal));
+                    code.customer_adjustable.observe(
+                        &child,
+                        CustomerContext::RootOptions,
+                        &child_path,
+                    );
                     code.options = verbatim(&child.attributes);
                     self.skip(&child)?;
                 }
@@ -528,7 +554,14 @@ impl<'a> Parser<'a> {
                     self.skip(&child)?;
                 }
                 "LoadProcedures" if !child.empty => self.read_procedures(code)?,
-                "Parameters" if !child.empty => self.read_parameters(code)?,
+                "Parameters" if !child.empty => {
+                    child_path.push(Occurrence::Parameters(ordinal));
+                    self.read_parameters(code, &child_path)?;
+                }
+                "ModuleDefs" => {
+                    child_path.push(Occurrence::ModuleDefs(ordinal));
+                    self.read_customer_modules(&child, code, &child_path)?;
+                }
                 _ => self.skip(&child)?,
             }
         }
@@ -681,10 +714,23 @@ impl<'a> Parser<'a> {
         })
     }
 
-    fn read_parameters(&mut self, code: &mut ProgramCode) -> Result<(), CodeError> {
+    fn read_parameters(
+        &mut self,
+        code: &mut ProgramCode,
+        path: &[Occurrence],
+    ) -> Result<(), CodeError> {
+        let mut ordinal = 0;
         while let Some(child) = self.next_inside("Parameters")? {
+            ordinal += 1;
+            let mut child_path = path.to_vec();
             match child.name.as_str() {
                 "Parameter" => {
+                    child_path.push(Occurrence::Parameter(ordinal));
+                    code.customer_adjustable.observe(
+                        &child,
+                        CustomerContext::RootParameter,
+                        &child_path,
+                    );
                     code.has_legacy_patch_always |= child
                         .attributes
                         .evidence_value("LegacyPatchAlways")
@@ -694,7 +740,10 @@ impl<'a> Parser<'a> {
                         code.parameters.insert(id, placement);
                     }
                 }
-                "Union" if !child.empty => self.read_union(code)?,
+                "Union" if !child.empty => {
+                    child_path.push(Occurrence::Union(ordinal));
+                    self.read_union(code, &child_path)?;
+                }
                 _ => self.skip(&child)?,
             }
         }
@@ -732,10 +781,12 @@ impl<'a> Parser<'a> {
     }
 
     /// A `Union`: its placement and its members, in either order.
-    fn read_union(&mut self, code: &mut ProgramCode) -> Result<(), CodeError> {
+    fn read_union(&mut self, code: &mut ProgramCode, path: &[Occurrence]) -> Result<(), CodeError> {
         let mut union: Option<Element> = None;
         let mut members: Vec<Element> = Vec::new();
+        let mut ordinal = 0;
         while let Some(child) = self.next_inside("Union")? {
+            ordinal += 1;
             match child.name.as_str() {
                 "Memory" | "Property" if union.is_none() => {
                     self.skip(&child)?;
@@ -746,6 +797,13 @@ impl<'a> Parser<'a> {
                         .attributes
                         .evidence_value("LegacyPatchAlways")
                         .is_some();
+                    let mut child_path = path.to_vec();
+                    child_path.push(Occurrence::Parameter(ordinal));
+                    code.customer_adjustable.observe(
+                        &child,
+                        CustomerContext::RootUnionParameter,
+                        &child_path,
+                    );
                     // A member's own children are not placements: its
                     // position is the union's plus its own attributes.
                     self.skip(&child)?;

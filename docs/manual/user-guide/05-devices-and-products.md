@@ -207,6 +207,24 @@ Adoption does not set Synced, send a bus write or reverse an earlier device writ
 it never submits comparison bytes as a write plan.
 [Exact scope](../../contracts/alpha16-comparison-adoption.md).
 
+## Customer-adjustable declarations (source builds after Alpha 18)
+
+The source implementation `d6918027b` refuses regular downloads when the selected
+application contains a customer-adjustable declaration in the
+[explicitly supported syntax contexts](../../contracts/customer-adjustable-write-admission.md).
+Its maintained software acceptance is still pending. The readiness reason is
+`customer-adjustable-parameters`; the EN/DE panel explains that preservation
+semantics are not implemented and offers **Request support**. Read-only compare
+and diagnostics keep their existing preparation path.
+
+This is deliberately stricter than ETS customer-write rights. Even empty,
+`false` or unknown values block every regular write scope; changing status or
+choosing a partial scope is not a bypass. KNXBench does not merge or preserve
+calibration bytes for this feature. Module-local Options and other excluded
+contexts are matcher limits: absence of this reason does not establish write
+safety, compatibility or hardware support. Experimental configured System-2 is
+outside this regular-write increment.
+
 <a id="experimental-system2-download-since-alpha-16"></a>
 
 ## Experimental configured System-2 download (Alpha 16)

@@ -7,6 +7,12 @@ function error(status?: number, body?: unknown): Error {
 }
 
 describe("support guidance", () => {
+  it("offers support for customer-adjustable refusal, never a status unlock or preservation workflow", () => {
+    expect(guidanceForMark({ kind: "unsupported", category: "customer-adjustable-parameters" }).action).toBe("requestSupport");
+    expect(guidanceForError(error(422, { kind: "downloadPreparationRefused", category: "customer-adjustable-parameters" }))).toMatchObject({
+      kind: "unsupported", category: "customer-adjustable-parameters", code: "downloadPreparationRefused", action: "requestSupport",
+    });
+  });
   it("offers installation, configuration and support-gap actions separately", () => {
     expect(guidanceForMark({ kind: "unsupported", category: "product-data", detail: "original" }).action).toBe("installData");
     expect(guidanceForMark({ kind: "unsupported", category: "configuration" }).action).toBe("fixConfiguration");

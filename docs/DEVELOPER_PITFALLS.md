@@ -9,6 +9,18 @@ already found lying in the grass.
 
 ## Programming evidence
 
+- **Raw-key admission must cover both parser entry points.** Customer-adjustable
+  evidence uses `Attrs::evidence_value`, not the local-name fallback in `get`, in
+  both root and module observation helpers. Presence is uninterpreted: empty and
+  `false` still refuse. Keep both attribute orders and both module anchors tested.
+  Module-local Options remain excluded, not declared harmless.
+- **Depth alone misses multiplicative path storage.** Many declarations under a
+  deep module must share a flat parent-indexed prefix arena, not copy the full path
+  per declaration or introduce recursive ownership. Measure actual retained
+  capacities with depth and marker count varied together; preserve the original
+  regression bound, tokens, occurrence order and complete path identity. This is
+  structural-resource evidence, not a universal memory-safety or hardware claim.
+
 - **A one-byte property value is not datatype evidence.** Exact 0700 requires
   independently configured/read description metadata before PID 6. CONTROL is
   PDT 0; legacy bit 6 is preserved but ignored. The upper maximum-elements nibble

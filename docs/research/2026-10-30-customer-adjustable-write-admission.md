@@ -1,7 +1,8 @@
 # Customer-adjustable declarations: bounded write-admission investigation
 
-Date: 30 October 2026. Baseline `17e45dc62`. **Source-admitted conservative
-refusal with binding amendments; no implementation or software acceptance.**
+Date: 30 October 2026. Investigation baseline `17e45dc62`. **Conservative
+refusal implemented at `d6918027b` and independently code-reviewed; maintained
+gates, built-server smoke and software acceptance remain pending.**
 The [write-admission contract](../contracts/customer-adjustable-write-admission.md)
 fixes the exact syntax contexts, uninterpreted presence-only policy, consumers
 and finite tests. This does not implement customer-write rights or declare
@@ -29,24 +30,28 @@ EX-IM representation. Different status terminology must not become a guessed
 precedence rule. No manufacturer or KNX Association correspondence is needed
 or requested; the evidence is public retrieval, not vendor approval.
 
-## Current code and missing admission
+## Historical missing admission and current implementation
 
-`knx-productdb::code::ProgramCode` keeps root `Static/Options` as raw attributes,
-parameter placements, source attributes and the download plug-in declaration.
-It does not currently project `Parameter/@CustomerAdjustable` into the code
-view. No current Rust consumer checks the customer-adjustable spellings.
+At investigation baseline `17e45dc62`, `ProgramCode` retained root Options and
+parameter/source attributes but had no customer-adjustable evidence projection.
+The regular writer and offline support path checked kind and vendor plug-in,
+then built the image/plan without consuming these markers. This is historical
+baseline behaviour, not the implementation at `d6918027b`.
 
-`device_download::plan_request` checks the program kind, then the vendor
-plug-in for `Purpose::Download`, before building the image and plan.
-`download_support::check_kind` performs the same two checks for offline plans
-and their support/restore consumers. The existing read-only comparison route
-intentionally does not inherit write-only plug-in refusal.
+On unchanged production, the supported synthetic `MV-0701` `ProductProcedure`
+compiled and failed both intended public-writer assertions: an unplaced
+parameter marker and a root option marker each still produced a writable
+12-octet image. The markerless control passed in the same run. These are the two
+original semantic REDs, not compiler/setup failures. There was no separate
+original offline-guard RED; its refusal is covered by later GREEN execution
+and the independently removed-offline-guard mutant.
 
-A candidate regression must use a supported synthetic `MV-0701`
-`ProductProcedure`, not an already unsupported kind or plug-in. It must prove
-that public write preparation currently succeeds despite a retained marker,
-then require the new named refusal. **That behavioural RED has not run yet.**
-A compile/setup failure or merely adding an unused parser field is not proof.
+Code `d6918027b` adds the private presence projection and two App admission
+checks, after existing kind/plug-in precedence and before image/plan generation.
+Read-only preparation remains unchanged. Focused consumers, valid source-bound
+restore/source freshness, retained-source/privacy checks, resource regression
+and independent correction review are complete; maintained package gates,
+built-server smoke, software acceptance and publication are still pending.
 
 ## Admitted policy, not recovered ETS semantics
 

@@ -23,6 +23,18 @@ async function render(guidance: SupportGuidance) {
 afterEach(async () => { if (root) await act(async () => root!.unmount()); host?.remove(); vi.unstubAllGlobals(); });
 
 for (const language of ["en", "de"]) {
+  it(`${language}: customer-adjustable refusal has its own explanation and only a support action`, async () => {
+    locale.value = language;
+    const detail = "customer-adjustable-parameters: 1 uninterpreted declaration (root parameters: 1); no regular download scope is offered";
+    const error = Object.assign(new Error(detail), { status: 422, body: { kind: "downloadPreparationRefused", category: "customer-adjustable-parameters" } });
+    await render(guidanceForError(error));
+    expect(host!.querySelector("[role=status]")!.textContent).toBe(translateFor(language, "deviceDownload.readiness.reason.customerAdjustableParameters"));
+    expect(host!.querySelector("[data-next-action=requestSupport]")!.textContent).toBe(translateFor(language, "deviceDownload.help.action.requestSupport"));
+    expect(host!.querySelectorAll("[data-next-action]")).toHaveLength(1);
+    expect(host!.querySelector("textarea")!.value).toBe(`downloadPreparationRefused\ncustomer-adjustable-parameters\n${detail}`);
+    for (const privateValue of ["privateSentinel", "P-991", "ModuleDef("]) expect(host!.innerHTML).not.toContain(privateValue);
+    expect([...host!.querySelectorAll<HTMLAnchorElement>("a")].map((link) => link.getAttribute("href"))).toEqual(Object.values(supportTargets(language)));
+  });
   it(`${language}: recognized invalid-address refusal names the concrete reason`, async () => {
     locale.value = language;
     const error = Object.assign(new Error("PRIVATE invalid target"), { status: 400, body: { kind: "downloadInvalidAddress" } });

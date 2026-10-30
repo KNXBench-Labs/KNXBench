@@ -41,6 +41,7 @@ const CATEGORY_REASON: Readonly<Record<string, TranslatableKey>> = {
   "product-data": "deviceDownload.readiness.reason.productData",
   configuration: "deviceDownload.readiness.reason.configuration",
   "vendor-download-plugin": "deviceDownload.readiness.reason.vendorDownloadPlugin",
+  "customer-adjustable-parameters": "deviceDownload.readiness.reason.customerAdjustableParameters",
 };
 
 export function readinessReason(mark: DownloadReadinessMark, t: Translate): string {

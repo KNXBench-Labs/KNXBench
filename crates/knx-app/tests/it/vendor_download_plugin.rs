@@ -31,6 +31,129 @@ use knx_testsupport::vendor_plugin::{
 
 const CATEGORY: &str = "vendor-download-plugin";
 
+mod customer_adjustable;
+
+#[test]
+fn customer_parameter_refuses_the_current_public_writer() {
+    let dir = tempfile::tempdir().unwrap();
+    let (products, project) = installed(
+        dir.path(),
+        r#"<Parameters><Parameter Id="M-FFF6_A-0001-01-0000_P-1" CustomerAdjustable="true" /></Parameters>"#,
+    );
+    match prepare_device_download(&products, &project, target()) {
+        Err(error) => assert_eq!(
+            prepare_category(&error).code(),
+            "customer-adjustable-parameters"
+        ),
+        Ok(prepared) => panic!(
+            "baseline prepared a writable image: {} octets",
+            prepared.plan.data_octets()
+        ),
+    }
+}
+
+#[test]
+fn customer_root_options_refuses_the_current_public_writer() {
+    let dir = tempfile::tempdir().unwrap();
+    let (products, project) = installed(
+        dir.path(),
+        r#"<Options CustomerAdjustableParameters="Sync" />"#,
+    );
+    match prepare_device_download(&products, &project, target()) {
+        Err(error) => assert_eq!(
+            prepare_category(&error).code(),
+            "customer-adjustable-parameters"
+        ),
+        Ok(prepared) => panic!(
+            "baseline prepared a writable image: {} octets",
+            prepared.plan.data_octets()
+        ),
+    }
+}
+
+#[test]
+fn customer_markerless_public_writer_keeps_literal_bytes_and_steps() {
+    let dir = tempfile::tempdir().unwrap();
+    let (products, project) = installed(dir.path(), "");
+    let prepared = prepare_device_download(&products, &project, target()).unwrap();
+    assert_eq!(prepared.plan.data_octets(), 12);
+    assert_eq!(
+        prepared
+            .image
+            .segments
+            .iter()
+            .map(|segment| (segment.address, segment.octets.clone()))
+            .collect::<Vec<_>>(),
+        vec![(0x4000, vec![0; 8]), (0x4400, vec![1, 2, 3, 4])]
+    );
+    use knx_core::commissioning::memory_download::MemoryDownloadStep as Step;
+    let kinds: Vec<_> = prepared
+        .plan
+        .steps
+        .iter()
+        .map(|step| match step {
+            Step::Connect => "connect",
+            Step::LoadRecord(_) => "record",
+            Step::WriteMemory { .. } => "write",
+            Step::Restart => "restart",
+            Step::Disconnect => "disconnect",
+            _ => "unexpected",
+        })
+        .collect();
+    let records: Vec<_> = prepared
+        .plan
+        .steps
+        .iter()
+        .filter_map(|step| match step {
+            Step::LoadRecord(record) => Some(record.to_string()),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(
+        records,
+        [
+            "14 00 00 00 00 00 00 00 00 00 00",
+            "34 00 00 00 00 00 00 00 00 00 00",
+            "11 00 00 00 00 00 00 00 00 00 00",
+            "13 00 00 40 00 00 08 FF 03 80 00",
+            "12 00 00 00 00 00 00 00 00 00 00",
+            "31 00 00 00 00 00 00 00 00 00 00",
+            "33 00 00 44 00 00 04 FF 03 80 00",
+            "33 02 00 44 00 00 FF F6 00 01 01",
+            "32 00 00 00 00 00 00 00 00 00 00",
+        ]
+    );
+    let writes: Vec<_> = prepared
+        .plan
+        .steps
+        .iter()
+        .filter_map(|step| match step {
+            Step::WriteMemory { address, octets } => Some((*address, octets.clone())),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(writes, [(0x4000, vec![0; 8]), (0x4400, vec![1, 2, 3, 4])]);
+    assert_eq!(
+        kinds,
+        [
+            "connect",
+            "record",
+            "record",
+            "record",
+            "record",
+            "write",
+            "record",
+            "record",
+            "record",
+            "write",
+            "record",
+            "record",
+            "restart",
+            "disconnect"
+        ]
+    );
+}
+
 /// A product database holding the program with `extension`, and a project
 /// with one device using it at `1.1.7`.
 fn installed(dir: &std::path::Path, extension: &str) -> (knx_productdb::Connection, Project) {

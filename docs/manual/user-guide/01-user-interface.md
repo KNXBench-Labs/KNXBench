@@ -166,13 +166,17 @@ category → Structure lines in the explorer**; the lines themselves stay. The
 screenshots in this manual still show the released explorer.
 
 **The diagnostics block**, at the bottom: **Bus monitor**, **Log**, **Diagnostics
-window** and **Settings**. The first two swap the center workspace for a panel; the
-third opens a second window (below); the fourth opens the Settings overlay.
+window** and **Settings**. The first two swap the center workspace for a panel;
+the third opens a second window (below). **Main-only, after Alpha 18:** Settings
+also opens in the center workspace, with all settings on a continuous page and
+jump navigation at the top. Project Properties is temporarily hidden; leaving
+Settings restores its previous visibility. In published Alpha 18 and earlier,
+Settings still opens a modal window. See [Settings](09-settings-and-appearance.md#opening-settings).
 Since Alpha 12 (issue #23), selecting an already-active **Bus
 monitor** or **Log** entry keeps that panel open and preserves its current tab,
 input or filter. To leave it, choose another view explicitly; clicking the active
-entry is no longer a close toggle. Settings and the separate diagnostics window
-keep their existing opening behaviour.
+entry is no longer a close toggle. The separate diagnostics window keeps its
+existing opening behaviour.
 
 ![The Overview of an imported project in three cards: Project contents with the counts of installations, areas, lines, devices, building parts, group addresses and communication objects, Import report with 0 errors and 2 warnings, and Technical details with schema version 16; the navigation blocks on the left are still folded](../../assets/screenshots/porcelain-dashboard.png)
 

@@ -31,7 +31,7 @@ export default function AchievementSettings(props: { tracker: AchievementTracker
 
   return (
     <section className="settings-section settings-section-achievements">
-      <h3>{t("settings.section.achievements")}</h3>
+      <h2 id="settings-achievements" tabIndex={-1}>{t("settings.section.achievements")}</h2>
       <label className="settings-field settings-field-checkbox">
         <input type="checkbox" checked={enabled} onChange={(e) => setEnabled(e.target.checked)} />
         <span className="settings-field-label">{t("settings.achievementsEnabled")}</span>

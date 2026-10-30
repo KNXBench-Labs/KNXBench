@@ -12,6 +12,42 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Settings center workspace (30 October 2026 source)
+
+Settings is a continuous center-workspace page with top section jumps, not a
+modal. Toolbar, sidebar and palette use the same projectless-capable view.
+Properties is hidden temporarily without changing its visibility preference;
+selected entities, real notes/instructions editor drafts and existing operation
+owners survive the detour. Existing immediate-apply, acknowledged-save and error
+feedback paths remain authoritative. This is newer than the published Alpha 18.
+[Behavior and verification boundary](contracts/settings-workspace.md).
+
+The corrected source-bound targeted web run passed all 33 declared stages,
+including the build/fixture typechecks, 4,688 Vitest tests and 91 mocked browser
+cases (90 functional, one exclusive; no browser skips, flakes or unexpected
+outcomes). Independent review first reproduced a hidden comparison's retained
+modal lease making Settings inert. Explicit foreground scopes now suspend that
+lease without unmounting the comparison; Back restores its draft, modal order,
+last focus and background isolation. Four additional EN/DE wide/narrow browser
+cases exercise real pointer/keyboard transitions and opener restoration. A
+finding-specific recheck exposed a disabled remembered Cancel control; focus
+now falls through remembered/explicit/ordinary targets until it actually lands,
+with the dialog panel as a final fallback. Its original mounted-App and primitive
+regressions fail before that correction and pass afterward; an independent final
+recheck approved it, including an all-controls-unavailable panel control. Four
+held-response browser cases retain a stopping comparison through Settings/Back,
+then settle its mocked request and restore the original opener.
+The first complete-default browser gate exposed the displaced global warning
+owner in two existing EN/DE cases. Restoring its original direct-center placement
+keeps stale programming-mark feedback outside the hidden content; the same tests
+now enter Settings, retry the global reload there and return. The corrected
+16-case programming-marks browser scope, build/typechecks and 4,688 unit tests
+passed with frozen inputs. These populations overlap the earlier focused runs.
+The original center-host regression failed before production edits; a separately
+reproduced 400px/150% section overflow was corrected without weakening its bound.
+Screenshots cover EN/DE wide/narrow and high-zoom language controls. These focused
+results are not a whole Rust/corpus, native desktop, hardware or release gate.
+
 ## Alpha 18 pre-release (source cutoff 28 October 2026)
 
 `v0.1.0-alpha.18` is the current pre-release, cut from main at source cutoff

@@ -11,6 +11,62 @@ import { messages as de } from "../src/messages/de";
 import { achievementsFixtureAnswer } from "./achievements-fixture";
 import { statusMetricsFixtureBody } from "./status-metrics-fixture";
 
+for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
+  test(`${language} stopping comparison resumes focus after Settings at ${width}px`, async ({ page }, testInfo) => {
+    const m = language === "de" ? de : en;
+    await page.setViewportSize({ width, height: 1000 });
+    const state = await intercept(page, language);
+    state.tree.comparison_revisions = { 1: 1, 2: 1, 3: 1 };
+    let finish!: () => void;
+    const held = new Promise<void>(resolve => { finish = resolve; });
+    let settled!: () => void;
+    const routeSettled = new Promise<void>(resolve => { settled = resolve; });
+    let compareRequests = 0;
+    await page.route("**/api/device-compare", async route => {
+      compareRequests++;
+      state.requests.push("POST /api/device-compare");
+      await held;
+      try {
+        await route.fulfill({ status: 503, contentType: "application/json", body: JSON.stringify({ error: "Fictional held comparison completed" }) });
+      } finally { settled(); }
+    });
+    try {
+      await openProject(page, language); await openList(page, language);
+      const opener = page.getByRole("button", { name: m["compare.all"], exact: true });
+      await opener.click();
+      const comparison = page.locator(".device-comparison-dialog");
+      await comparison.locator("input").fill("192.0.2.17:3671");
+      await comparison.getByRole("button", { name: m["compare.confirm"], exact: true }).click();
+      const cancel = comparison.getByRole("button", { name: m["deviceChecks.cancel"], exact: true });
+      await cancel.click();
+      await expect(cancel).toBeDisabled();
+      await comparison.evaluate(node => node.setAttribute("data-retained-stopping", "same"));
+      await page.keyboard.press("Control+Shift+P");
+      const palette = page.getByRole("dialog").getByRole("combobox");
+      await palette.fill(m["toolbar.settings"]); await palette.press("Enter");
+      await expect(page.locator("#settings-panel-title")).toBeFocused();
+      await page.getByRole("button", { name: m["settings.back"], exact: true }).click();
+      await expect(comparison).toBeVisible();
+      await expect(comparison).toHaveAttribute("data-retained-stopping", "same");
+      await expect(cancel).toBeDisabled();
+      expect(compareRequests).toBe(1);
+      expect(await comparison.evaluate(node => node.contains(document.activeElement)), "stopping comparison must resume focus inside its modal").toBe(true);
+      await page.keyboard.press("Tab");
+      expect(await comparison.evaluate(node => node.contains(document.activeElement))).toBe(true);
+      expect(await page.locator(".workbench-toolbar").evaluate(node => !!node.closest("[inert]"))).toBe(true);
+      await testInfo.attach("stopping-comparison-focus", { body: await page.screenshot(), contentType: "image/png" });
+      finish(); await routeSettled;
+      await comparison.getByRole("button", { name: m["compare.close"], exact: true }).click();
+      await expect(comparison).toHaveCount(0);
+      await expect(opener).toBeFocused();
+      expect(state.unexpected).toEqual([]);
+    } finally {
+      finish();
+      if (compareRequests > 0) await routeSettled;
+    }
+  });
+}
+
 const devices = (count: number): DeviceNode[] => Array.from({ length: count }, (_, index) => ({
   id: index + 1, name: `Actuator ${index + 1}`, address: index < 2 ? `1.1.${index === 0 ? 2 : 10}` : null,
   description: `Fictional device ${index + 1}`, com_object_count: 0,
@@ -371,7 +427,13 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
     await sidebar.getByRole("button", { name: m["toolbar.settings"], exact: true }).click();
     await expect(page.locator(".settings-panel")).toBeVisible();
     await page.keyboard.press("Escape");
+    await expect(page.locator(".settings-panel")).toBeVisible();
+    if (await page.getByRole("button", { name: m["workbench.navigation"], exact: true }).getAttribute("aria-expanded") === "false") await page.getByRole("button", { name: m["workbench.navigation"], exact: true }).click();
+    await openNavigationSections(page);
+    await expect(log).not.toHaveAttribute("aria-current", "page");
+    await page.getByRole("button", { name: m["settings.back"], exact: true }).click();
     await expect(page.locator(".settings-panel")).toHaveCount(0);
+    if (await page.getByRole("button", { name: m["workbench.navigation"], exact: true }).getAttribute("aria-expanded") === "false") await page.getByRole("button", { name: m["workbench.navigation"], exact: true }).click();
     await expect(log).toHaveAttribute("aria-current", "page");
     await expect(search).toHaveValue("keep my filter");
     if (process.env.KNX_ISSUE23_CAPTURE_DIR) await page.screenshot({ path: join(process.env.KNX_ISSUE23_CAPTURE_DIR, `log-${language}-${width}.png`) });
@@ -389,7 +451,14 @@ test("monitor source navigation keeps capture/polling alive with no reconnect, s
   const state = await intercept(page, "en"); await openProject(page, "en");
   await page.locator(".diagnostic-navigation").getByRole("button", { name: en["toolbar.busMonitor"], exact: true }).click();
   await expect(page.locator(".bus-monitor-table .device-link")).toHaveCount(1);
-  const polls = state.polls; const before = state.requests.length;
+  const before = state.requests.length;
+  const settingsPolls = state.polls;
+  await page.locator(".workbench-toolbar").getByRole("button", { name: en["toolbar.settings"], exact: true }).click();
+  await expect(page.locator(".bus-diagnostics-panel")).toBeHidden();
+  await expect.poll(() => state.polls).toBeGreaterThan(settingsPolls);
+  await page.getByRole("button", { name: en["settings.back"], exact: true }).click();
+  await expect(page.locator(".bus-monitor-table .device-link")).toHaveCount(1);
+  const polls = state.polls;
   await page.locator(".bus-monitor-table .device-link").click();
   await expect(page.locator(".device-workspace h2")).toHaveText("Actuator 1");
   await expect.poll(() => state.polls).toBeGreaterThan(polls);
@@ -435,3 +504,83 @@ test("measures a 5000-device production table and keeps the last device searchab
   expect(state.requests.filter((request) => request === "GET /api/devices")).toHaveLength(1);
   expect(state.unexpected).toEqual([]);
 });
+
+
+for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
+  test(`${language} retained comparison yields Settings and resumes modal ownership at ${width}px`, async ({ page }, testInfo) => {
+    const m = language === "de" ? de : en;
+    await page.setViewportSize({ width, height: 1000 });
+    const state = await intercept(page, language);
+    await openProject(page, language); await openList(page, language);
+    const opener = page.getByRole("button", { name: m["compare.all"], exact: true });
+    await opener.click();
+    const comparison = page.locator(".device-comparison-dialog");
+    const gateway = comparison.locator("input");
+    await gateway.fill("192.0.2.17:3671");
+    // This is the last real control used, not merely the dialog's default target.
+    await page.keyboard.press("Tab");
+    await expect(comparison.getByRole("button", { name: m["compare.confirm"], exact: true })).toBeFocused();
+    await comparison.evaluate(node => { node.setAttribute("data-retained-modal", "same"); });
+    async function settingsViaPalette() {
+      await page.keyboard.press("Control+Shift+P");
+      const palette = page.getByRole("dialog").getByRole("combobox");
+      await palette.fill(m["toolbar.settings"]); await palette.press("Enter");
+      await expect(page.locator("#settings-panel-title")).toBeFocused();
+    }
+    await settingsViaPalette();
+    const workspace = page.locator(".settings-workspace");
+    await expect(comparison).toBeHidden();
+    await expect(comparison).toHaveAttribute("data-retained-modal", "same");
+    await expect(gateway).toHaveValue("192.0.2.17:3671");
+    // Pointer activation and the following native Tab exercise the normal page,
+    // rather than inferring usability from the absence of an inert attribute.
+    await workspace.locator('a[href="#settings-autosave"]').click();
+    await expect(workspace.locator("#settings-autosave")).toBeFocused();
+    await page.keyboard.press("Tab");
+    await expect(workspace.getByRole("checkbox", { name: m["settings.autosaveEnabled"], exact: true })).toBeFocused();
+    await workspace.getByRole("button", { name: m["settings.back"], exact: true }).click();
+    await expect(comparison).toBeVisible();
+    await expect(comparison.getByRole("button", { name: m["compare.confirm"], exact: true })).toBeFocused();
+    await expect(gateway).toHaveValue("192.0.2.17:3671");
+    await page.keyboard.press("Tab");
+    await expect(comparison.getByRole("button", { name: m["deviceChecks.cancel"], exact: true })).toBeFocused();
+    await page.keyboard.press("Tab"); await expect(gateway).toBeFocused();
+    await page.keyboard.press("Shift+Tab");
+    await expect(comparison.getByRole("button", { name: m["deviceChecks.cancel"], exact: true })).toBeFocused();
+    // Resumed isolation must still block ordinary toolbar pointer actions.
+    const toolbarSettings = page.locator(".workbench-toolbar").getByRole("button", { name: m["toolbar.settings"], exact: true, includeHidden: true });
+    expect(await toolbarSettings.isVisible()).toBe(true);
+    await expect(toolbarSettings.click({ trial: true, timeout: 300 })).rejects.toThrow();
+    await settingsViaPalette();
+    await testInfo.attach("settings-paused-comparison", { body: await page.screenshot(), contentType: "image/png" });
+    // Left navigation is usable while the comparison stays mounted and paused.
+    await openNavigationSections(page);
+    await page.locator(".workbench-navigation").getByRole("button", { name: m["workbench.overview"], exact: true }).click();
+    await expect(workspace).toHaveCount(0);
+    await expect(page.locator(".dashboard")).toBeVisible();
+    await expect(comparison).toBeHidden();
+    await toolbarSettings.click();
+    await expect(page.locator("#settings-panel-title")).toBeFocused();
+    await workspace.getByRole("button", { name: m["settings.back"], exact: true }).click();
+    await expect(page.locator(".dashboard")).toBeVisible();
+    await expect(comparison).toBeHidden();
+    await openNavigationSections(page);
+    await page.locator(".workbench-navigation").getByRole("button", { name: m["workbench.devices"], exact: true }).click();
+    await expect(comparison).toHaveAttribute("data-retained-modal", "same");
+    await expect(gateway).toHaveValue("192.0.2.17:3671");
+    await expect(comparison.getByRole("button", { name: m["deviceChecks.cancel"], exact: true })).toBeFocused();
+    await testInfo.attach("comparison-resumed", { body: await page.screenshot(), contentType: "image/png" });
+    await page.keyboard.press("Escape");
+    await expect(comparison).toHaveCount(0);
+    await expect(opener).toBeFocused();
+    // Closing the resumed modal releases navigation, with its original trigger restored.
+    await page.keyboard.press("Tab");
+    await expect(page.locator(".settings-workspace")).toHaveCount(0);
+    await openNavigationSections(page);
+    await page.locator(".workbench-navigation").getByRole("button", { name: m["workbench.overview"], exact: true }).click();
+    await toolbarSettings.click();
+    await expect(page.locator("#settings-panel-title")).toBeFocused();
+    expect(state.requests.filter(request => /compare|device-read|device-write/.test(request))).toEqual([]);
+    expect(state.unexpected).toEqual([]);
+  });
+}

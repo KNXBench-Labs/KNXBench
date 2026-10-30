@@ -1,4 +1,4 @@
-/** Settings overlay for theme, motion, UI/product language, and language-pack management. */
+/** Continuous settings workspace with immediate controls and accessible section jumps. */
 import { emitAchievementEvent } from "./achievementEvents";
 import AchievementSettings from "./AchievementSettings";
 import UpdateSettings from "./UpdateSettings";
@@ -6,7 +6,7 @@ import MotionCategorySettings from "./MotionCategorySettings";
 import LegacyPasswordSettings, { type LegacyPasswordAccess } from "./LegacyPasswordSettings";
 import type { AchievementTracker } from "./achievementTracker";
 import { ACCENTS, DENSITIES, type useAppearance } from "./appearance";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { ThemeDef } from "./theme";
 import { getThemeAccentOptions, THEMES } from "./theme";
 import ThemePackManager from "./ThemePackManager";
@@ -18,7 +18,6 @@ import { useTranslate } from "./i18n";
 import { languageSelfName, productLanguageLabel } from "./languageSelfName";
 import { BUNDLED_LANGUAGE_PACKS } from "./bundledLanguagePacks";
 import type { Translate } from "./i18n";
-import Overlay from "./Overlay";
 import { usePreferredGateway } from "./gatewayPreference";
 import LineScanExclusionsEditor from "./LineScanExclusionsEditor";
 import ServiceControlDebugSetting from "./ServiceControlDebugSetting";
@@ -194,11 +193,8 @@ function ImportReport(props: { t: Translate; outcome: ImportOutcome }) {
  * registry-backed `<select>` that applies immediately — no Save button,
  * no reload.
  *
- * Built on the shared `Overlay` shell (T31), the same one `Search.tsx`
- * and `CommandPalette.tsx` use — dismissal by backdrop click and by
- * `Escape`, initial focus, a focus trap and focus restoration all come
- * from there now, closing the gap KNOWN_LIMITATIONS.md §20 used to
- * describe.
+ * An ordinary workspace page, not a modal: navigation stays usable and
+ * Escape does not dismiss it. App retains the previous workspace beneath it.
  *
  * Purely presentational (T26) for the first four fields: `App.tsx` owns
  * their state and fetches `productLanguages` itself; this component only
@@ -267,6 +263,9 @@ export default function SettingsPanel(props: {
     onClose,
   } = props;
 
+  const headingRef = useRef<HTMLHeadingElement>(null);
+  // Entry only: language changes and immediate setting edits must keep focus.
+  useEffect(() => { headingRef.current?.focus(); }, []);
   const [uiLanguage, setUiLanguage] = useUiLanguage();
   const t = useTranslate();
   const [preferredGateway, setPreferredGateway] = usePreferredGateway();
@@ -376,12 +375,32 @@ export default function SettingsPanel(props: {
   const selectablePacks = useAvailableLanguagePacks().filter((pack) => !isShadowedByBuiltIn(pack.tag));
 
   return (
-    <Overlay labelledBy="settings-panel-title" className="settings-panel" resizable={{ width: 860, height: 680 }} onClose={onClose}>
-      <h2 className="settings-panel-title" id="settings-panel-title">
-        {t("settings.title")}
-      </h2>
+    <section aria-labelledby="settings-panel-title" className="settings-panel settings-workspace">
+      <header className="settings-workspace-header">
+        <button type="button" onClick={onClose}>{t("settings.back")}</button>
+        <h1 ref={headingRef} tabIndex={-1} className="settings-panel-title" id="settings-panel-title">
+          {t("settings.title")}
+        </h1>
+      </header>
+      <nav className="settings-jump-nav" aria-label={t("settings.jumpNavigation")}>
+        {([
+          ["appearance", "settings.section.appearance"],
+          ["language-data", "settings.section.languageData"],
+          ["autosave", "settings.section.autosave"],
+          ["bus", "settings.section.busDiagnostics"],
+          ...(props.achievementTracker ? [["achievements", "settings.section.achievements"]] as const : []),
+          ...(props.legacyPassword ? [["legacy-password", "settings.section.legacyPassword"]] as const : []),
+          ["updates", "updates.section"],
+          ["debug", "settings.section.debug"],
+        ] as const).map(([id, key]) => <a key={id} href={`#settings-${id}`} onClick={(event) => {
+          event.preventDefault();
+          const heading = event.currentTarget.closest(".settings-workspace")?.querySelector<HTMLElement>(`#settings-${id}`);
+          heading?.focus({ preventScroll: true });
+          heading?.scrollIntoView({ block: "start", behavior: "instant" });
+        }}>{t(key)}</a>)}
+      </nav>
       <section className="settings-section">
-        <h3>{t("settings.section.appearance")}</h3>
+        <h2 id="settings-appearance" tabIndex={-1}>{t("settings.section.appearance")}</h2>
       <label className="settings-field">
         <span className="settings-field-label">{t("settings.theme")}</span>
         <select
@@ -464,7 +483,7 @@ export default function SettingsPanel(props: {
       <MotionCategorySettings />
       </section>
       <section className="settings-section">
-        <h3>{t("settings.section.languageData")}</h3>
+        <h2 id="settings-language-data" tabIndex={-1}>{t("settings.section.languageData")}</h2>
       <label className="settings-field">
         <span className="settings-field-label">{t("settings.productDataLanguage")}</span>
         {productLanguages.length === 0 ? (
@@ -566,7 +585,7 @@ export default function SettingsPanel(props: {
       </div>
       </section>
       <section className="settings-section settings-section-autosave">
-        <h3>{t("settings.section.autosave")}</h3>
+        <h2 id="settings-autosave" tabIndex={-1}>{t("settings.section.autosave")}</h2>
         <label className="settings-field settings-field-checkbox">
           <input
             type="checkbox"
@@ -592,7 +611,7 @@ export default function SettingsPanel(props: {
         </label>
       </section>
       <section className="settings-section settings-section-bus">
-        <h3>{t("settings.section.busDiagnostics")}</h3>
+        <h2 id="settings-bus" tabIndex={-1}>{t("settings.section.busDiagnostics")}</h2>
         <label className="settings-field">
           <span className="settings-field-label">{t("settings.preferredGateway")}</span>
           <input
@@ -630,6 +649,6 @@ export default function SettingsPanel(props: {
       {props.legacyPassword && <LegacyPasswordSettings access={props.legacyPassword} />}
       <UpdateSettings />
       <ServiceControlDebugSetting />
-    </Overlay>
+    </section>
   );
 }

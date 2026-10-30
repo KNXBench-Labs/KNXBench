@@ -1,5 +1,17 @@
 # Roadmap
 
+## Settings in the center workspace (30 October 2026 source, after Alpha 18)
+
+The existing app settings move from a modal window to a continuous center page,
+with section jumps at the top. The left navigation stays usable; Properties is
+hidden temporarily without changing its visibility preference. Project selection
+and unapplied note/device-instructions drafts survive the detour. The same
+settings and acknowledged persistence paths remain in use; there is no new Save
+action, storage migration, safety permission or bus operation. This is newer than
+the published Alpha 18 artifacts, not a release or deployment.
+[Contract](contracts/settings-workspace.md) ·
+[User guide](manual/user-guide/09-settings-and-appearance.md#opening-settings).
+
 ## Alpha 18 pre-release (source cutoff 28 October 2026)
 
 `v0.1.0-alpha.18` is the current pre-release, cut from main at source cutoff

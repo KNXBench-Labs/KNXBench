@@ -166,7 +166,7 @@ test("replacement Escape cancels and returns focus to the persistent import cont
   await expect(confirmation.getByRole("button", { name: "Cancel replacement", exact: true })).toBeFocused();
   await page.keyboard.press("Escape");
   await expect(confirmation).toHaveCount(0);
-  await expect(page.getByRole("dialog", { name: "Settings", exact: true })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Settings", exact: true })).toBeVisible();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "graphite");
   await expect(page.locator("#theme-pack-import")).toBeFocused();
   expect(writes).toEqual([]);
@@ -180,6 +180,8 @@ test("replacement confirmation traps keyboard focus and Enter on Cancel never wr
   const cancel = dialog.getByRole("button", { name: "Cancel replacement", exact: true });
   const confirm = dialog.getByRole("button", { name: "Replace and apply", exact: true });
   await expect(cancel).toBeFocused();
+  const back = page.getByRole("button", { name: "Back to previous view", exact: true, includeHidden: true });
+  await expect(back.click({ trial: true, timeout: 300 })).rejects.toThrow();
   await page.keyboard.press("Shift+Tab");
   await expect(confirm).toBeFocused();
   await page.keyboard.press("Tab");
@@ -187,6 +189,7 @@ test("replacement confirmation traps keyboard focus and Enter on Cancel never wr
   await page.keyboard.press("Enter");
   await expect(dialog).toHaveCount(0);
   await expect(page.locator("#theme-pack-import")).toBeFocused();
+  await back.click({ trial: true });
   expect(writes).toEqual([]);
   check();
 });
@@ -255,7 +258,7 @@ test("the theme file actions use the existing engineering tokens with wrapped ac
   check();
 });
 
-test("narrow Appearance remains scrollable and closing Settings restores its external opener", async ({ page }) => {
+test("narrow Appearance remains scrollable and leaves only through explicit navigation", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   const { writes, check } = await fixture(page);
   const hint = page.locator("[data-theme-storage]");
@@ -263,8 +266,9 @@ test("narrow Appearance remains scrollable and closing Settings restores its ext
   await expect(hint).toBeInViewport();
   expect(await page.locator("html").evaluate((root) => root.scrollWidth <= window.innerWidth)).toBe(true);
   await page.keyboard.press("Escape");
-  await expect(page.getByRole("dialog", { name: "Settings", exact: true })).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "Open settings", exact: true })).toBeFocused();
+  await expect(page.getByRole("region", { name: "Settings", exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Back to previous view", exact: true }).click();
+  await expect(page.getByRole("region", { name: "Settings", exact: true })).toHaveCount(0);
   await expect(page.locator("html")).toHaveAttribute("data-theme", "graphite");
   expect(writes).toEqual([]);
   check();

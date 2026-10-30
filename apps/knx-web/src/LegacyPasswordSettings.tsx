@@ -51,7 +51,7 @@ export default function LegacyPasswordSettings(props: { access: LegacyPasswordAc
 
   return (
     <section className="settings-section settings-section-legacy-password">
-      <h3>{t("settings.section.legacyPassword")}</h3>
+      <h2 id="settings-legacy-password" tabIndex={-1}>{t("settings.section.legacyPassword")}</h2>
       <span className="settings-field-hint">{t("settings.legacyPasswordHint")}</span>
       {status && (
         <p className="settings-diagnostic" role="status">

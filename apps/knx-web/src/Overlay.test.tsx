@@ -6,6 +6,7 @@ import type { ReactNode } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import Overlay from "./Overlay";
+import { ModalForeground } from "./ModalForeground";
 
 let host: HTMLDivElement | undefined;
 
@@ -503,4 +504,121 @@ describe("Overlay", () => {
     });
     expect(onClose).not.toHaveBeenCalled();
   });
+});
+
+
+describe("retained modal foreground", () => {
+  it("falls back when a remembered control becomes disabled while suspended", async () => {
+    function Retained({ active, disabled }: { active: boolean; disabled: boolean }) {
+      return <><main><button>Page</button></main><ModalForeground active={active}><div hidden={!active}>
+        <Overlay onClose={vi.fn()}><button disabled={disabled}>Remembered</button><button>Available</button></Overlay>
+      </div></ModalForeground></>;
+    }
+    const root = await mount(<Retained active disabled={false} />);
+    try {
+      expect(document.activeElement?.textContent).toBe("Remembered");
+      await act(async () => root.render(<Retained active={false} disabled />));
+      await act(async () => host!.querySelector<HTMLButtonElement>("main button")!.focus());
+      await act(async () => root.render(<Retained active disabled />));
+      expect(document.activeElement?.textContent).toBe("Available");
+      expect(host!.querySelector("main")!.closest("[inert]")).not.toBeNull();
+    } finally { await act(async () => root.unmount()); }
+  });
+
+  it("suspends a retained stack, preserves draft/focus/order, and restores its original opener", async () => {
+    const outside = document.createElement("button");
+    document.body.appendChild(outside);
+    outside.focus();
+    function Stack({ active, upper = true }: { active: boolean; upper?: boolean }) {
+      return <><main><button>Page</button></main><ModalForeground active={active}>
+        <div hidden={!active}>
+          <Overlay label="Lower" onClose={vi.fn()}><input aria-label="Lower draft" defaultValue="kept" /></Overlay>
+          {upper && <Overlay label="Upper" onClose={vi.fn()}><input aria-label="Upper draft" defaultValue="kept too" /><button>Last</button></Overlay>}
+        </div>
+      </ModalForeground></>;
+    }
+    const root = await mount(<Stack active />);
+    const globalHost = document.createElement("div");
+    const globalRoot = createRoot(globalHost);
+    try {
+      const lower = host!.querySelector<HTMLInputElement>('[aria-label="Lower draft"]')!;
+      const upper = host!.querySelector<HTMLInputElement>('[aria-label="Upper draft"]')!;
+      const last = host!.querySelector<HTMLButtonElement>('[aria-label="Upper"] button')!;
+      await act(async () => last.focus());
+      expect(document.activeElement).toBe(last);
+      await act(async () => root.render(<Stack active={false} />));
+      expect(host!.querySelector("main")!.closest("[inert]")).toBeNull();
+      expect(document.activeElement?.closest("[hidden]")).toBeNull();
+      expect(host!.querySelector('[aria-label="Upper draft"]')).toBe(upper);
+      // A normal global modal still isolates the foreground page while this stack is paused.
+      document.body.appendChild(globalHost);
+      await act(async () => globalRoot.render(<Overlay label="Global" onClose={vi.fn()}><button>Global control</button></Overlay>));
+      expect(host!.closest("[inert]")).not.toBeNull();
+      await act(async () => root.render(<Stack active />));
+      expect(document.activeElement).toBe(globalHost.querySelector("button"));
+      expect(last.closest("[inert]")).not.toBeNull();
+      await act(async () => globalRoot.unmount()); globalHost.remove();
+      expect(host!.closest("[inert]")).toBeNull();
+      expect(document.activeElement).toBe(last);
+      expect(host!.querySelector("main")!.closest("[inert]")).not.toBeNull();
+      expect(lower.closest("[inert]")).not.toBeNull();
+      expect(last.closest("[inert]")).toBeNull();
+      expect(upper.value).toBe("kept too"); expect(lower.value).toBe("kept");
+      await act(async () => last.dispatchEvent(new KeyboardEvent("keydown", { key: "Tab", bubbles: true })));
+      expect(document.activeElement).toBe(upper);
+      await act(async () => root.render(<Stack active upper={false} />));
+      expect(document.activeElement).toBe(lower);
+      expect(host!.querySelector("main")!.closest("[inert]")).not.toBeNull();
+      await act(async () => root.unmount());
+      expect(outside.closest("[inert]")).toBeNull();
+      expect(document.activeElement).toBe(outside);
+    } finally {
+      await act(async () => { globalRoot.unmount(); root.unmount(); });
+      globalHost.remove(); outside.remove();
+    }
+  });
+
+  it("keeps nested scopes inactive until both owners foreground them", async () => {
+    function Scopes({ outer, inner }: { outer: boolean; inner: boolean }) {
+      return <><main><button>Page</button></main><ModalForeground active={outer}>
+        <ModalForeground active={inner}><Overlay onClose={vi.fn()}><button>Dialog</button></Overlay></ModalForeground>
+      </ModalForeground></>;
+    }
+    const root = await mount(<Scopes outer={false} inner />);
+    try {
+      expect(host!.querySelector("main")!.closest("[inert]")).toBeNull();
+      await act(async () => root.render(<Scopes outer inner={false} />));
+      expect(host!.querySelector("main")!.closest("[inert]")).toBeNull();
+      await act(async () => root.render(<Scopes outer inner />));
+      expect(host!.querySelector("main")!.closest("[inert]")).not.toBeNull();
+      await act(async () => root.render(<Scopes outer={false} inner />));
+      expect(host!.querySelector("main")!.closest("[inert]")).toBeNull();
+    } finally { await act(async () => root.unmount()); }
+  });
+});
+
+
+it("resumes modal stack order by opening time rather than retained DOM order", async () => {
+  function Stack({ active, upper = false }: { active: boolean; upper?: boolean }) {
+    return <><main><button>Page</button></main><ModalForeground active={active}><div hidden={!active}>
+      {upper && <Overlay key="upper" label="Upper" onClose={vi.fn()}><button>Upper control</button></Overlay>}
+      <Overlay key="lower" label="Lower" onClose={vi.fn()}><button>Lower control</button></Overlay>
+    </div></ModalForeground></>;
+  }
+  const root = await mount(<Stack active />);
+  try {
+    await act(async () => root.render(<Stack active upper />));
+    const upper = host!.querySelector<HTMLElement>('[aria-label="Upper"] button')!;
+    expect(document.activeElement).toBe(upper);
+    await act(async () => root.render(<Stack active={false} upper />));
+    await act(async () => root.render(<Stack active upper />));
+    expect(document.activeElement).toBe(upper);
+    expect(upper.closest("[inert]")).toBeNull();
+    expect(host!.querySelector('[aria-label="Lower"]')!.closest("[inert]")).not.toBeNull();
+    // Removing a paused upper owner must leave the retained lower lease resumable.
+    await act(async () => root.render(<Stack active={false} />));
+    expect(host!.querySelector("main")!.closest("[inert]")).toBeNull();
+    await act(async () => root.render(<Stack active />));
+    expect(document.activeElement).toBe(host!.querySelector('[aria-label="Lower"] button'));
+  } finally { await act(async () => root.unmount()); }
 });

@@ -1,5 +1,12 @@
 # Restart snapshot
 
+## Settings center workspace (FINAL DELIVERY GO; observed 2026-10-30 12:38 CET)
+- Owner this settings WebUI; branch `feat/settings-workspace-20261030`, `<sources>/knxbench-settings-workspace-20261030`, base `72db561a4`; local feature `a6bcc0032` + approved global-owner fix `92007aaf9` + test-only nonmodal pin correction. Nothing pushed/integrated yet.
+- Continuous center page/all existing settings/top jumps; Properties preference, selection/drafts/immediate apply/projectless access retained. Whole-feature/SW-1/finalR1/global-owner approvals carry; no domain/storage/safety changes.
+- Failed packages retained: original global warning owner2cases corrected; delivery02 all9staticstages/tool472tests6skips/4688Vitest/932functionalPASS, exclusive65/69 due4obsoleteEscapeUXpins. Inputs frozen/checked user data untouched. No accepted full gate inferred from partials.
+- Corrected threeUXpin sites now assertEscape leaves page visible then useBack; no runtime changes/all old motion/toast checks retained. Exact26frontend hashes; targeted33stages/4688Vitest/4exclusivebrowserPASS. Prior global warning16case and feature91case proofs remain distinctly source-bound.
+- NEXT commit reviewed test-only delta, full unchanged selected branch/main-first package gates(all1001defaultbrowser cases), guarded publication/readback via `<profile-scratch>/settings-workspace-20261030/delivery-03/`; result-only docs and exact-owned cleanup last. Root/foreign worktrees preserved; no bus/hardware/release/deployment.
+
 ## PRG-01 customer-adjustable declarations (SOFTWARE ACCEPTED; observed 2026-10-30 04:59 CET)
 - Owner `feat/prg01-customer-adjustable-20261030`, `<sources>/knxbench-prg01-customer-adjustable-20261030`; code `d6918027b`, candidate `3af377a4b`, main-first runtime `e990fd956`, base `a2d606557`. Protected root/foreign tracks stay untouched.
 - Presence-only raw-key refusal in bounded root/Union/module contexts/both module anchors, no module-local Options; all values equally blocking, raw XML retained. Two regular App guards preserve kind/plugin precedence/read-only paths; counts/classes-only CLI/HTTP/Web EN/DE reason. Not ETS rights, calibration preservation or a global low-level barrier; no migration/repin.

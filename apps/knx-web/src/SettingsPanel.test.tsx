@@ -132,21 +132,22 @@ describe("SettingsPanel", () => {
     } finally { errors.mockRestore(); }
   });
 
-  it("uses a roomy shared resize shell with a two-column layout that stacks on narrow windows", async () => {
+  it("uses one continuous, width-constrained page instead of a resizable dialog", async () => {
     const { root } = await renderPanel();
     const panel = host!.querySelector<HTMLElement>(".settings-panel")!;
-    expect(panel.classList.contains("search-panel-resizable")).toBe(true);
-    expect(panel.style.width).toBe("860px");
-    expect(panel.style.height).toBe("680px");
-    expect(panel.querySelector(".overlay-resize-key")).not.toBeNull();
+    expect(panel.classList.contains("settings-workspace")).toBe(true);
+    expect(panel.classList.contains("search-panel-resizable")).toBe(false);
+    expect(panel.style.width).toBe("");
+    expect(panel.style.height).toBe("");
+    expect(panel.querySelector(".overlay-resize-key")).toBeNull();
     const css = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "styles.css"), "utf8");
-    const desktop = css.match(/\.settings-panel \{([^}]*)\}/)?.[1] ?? "";
-    expect(desktop).toMatch(/grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\)/);
-    expect(css).toMatch(/@media \(max-width: 48rem\) \{\s*\.settings-panel \{\s*grid-template-columns:\s*minmax\(0,\s*1fr\)/);
+    const layout = css.match(/\.settings-workspace \{([^}]*)\}/)?.[1] ?? "";
+    expect(layout).toMatch(/grid-template-columns:\s*minmax\(0,\s*1fr\)/);
+    expect(layout).toMatch(/width:\s*100%/);
     const input = css.match(/\.settings-field input:not\(\[type="checkbox"\]\) \{([^}]*)\}/)?.[1] ?? "";
     expect(input).toMatch(/width:\s*100%/);
     expect(input).toMatch(/box-sizing:\s*border-box/);
-    const checkbox = css.match(/\.search-panel input\[type="checkbox"\] \{([^}]*)\}/)?.[1] ?? "";
+    const checkbox = css.match(/\.settings-workspace input\[type="checkbox"\] \{([^}]*)\}/)?.[1] ?? "";
     expect(checkbox).toMatch(/width:\s*1rem/);
     expect(checkbox).toMatch(/min-height:\s*1rem/);
     expect(checkbox).toMatch(/padding:\s*0/);
@@ -155,7 +156,7 @@ describe("SettingsPanel", () => {
 
   it("groups appearance, language/data, and consumed bus preferences", async () => {
     const { root } = await renderPanel();
-    const headings = Array.from(host!.querySelectorAll(".settings-section > h3")).map(
+    const headings = Array.from(host!.querySelectorAll(".settings-section > h2")).map(
       (heading) => heading.textContent,
     );
     expect(headings).toEqual(["Appearance", "Language & data", "Autosave", "Bus & diagnostics", "Updates", "Debug · device control"]);
@@ -268,7 +269,7 @@ describe("SettingsPanel", () => {
   it("opens from the gear button (rendered by App.tsx) and shows its five labelled selects", async () => {
     const { root } = await renderPanel();
 
-    expect(host!.querySelector('[role="dialog"]')).not.toBeNull();
+    expect(host!.querySelector('[role="dialog"]')).toBeNull();
     expect(host!.querySelector('select[aria-label="Theme"]')).not.toBeNull();
     expect(host!.querySelector('select[aria-label="Group address notation"]')).toBeNull();
     expect(host!.querySelector('select[aria-label="Motion style"]')).not.toBeNull();
@@ -279,27 +280,33 @@ describe("SettingsPanel", () => {
     act(() => root.unmount());
   });
 
-  it("closes on Escape (the Overlay shell's handler, not a local one)", async () => {
+  it("focuses the page heading once and jumps to every section without changing the URL", async () => {
     const { root, onClose } = await renderPanel();
-
-    const panel = host!.querySelector('[role="dialog"]')!;
-    await act(async () => {
-      panel.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
-    });
-
-    expect(onClose).toHaveBeenCalledTimes(1);
+    const heading = host!.querySelector("h1");
+    expect(heading).not.toBeNull();
+    expect(document.activeElement).toBe(heading);
+    const links = [...host!.querySelectorAll<HTMLAnchorElement>(".settings-jump-nav a")];
+    expect(links).toHaveLength(6);
+    for (const link of links) {
+      const target = host!.querySelector<HTMLElement>(link.hash)!;
+      expect(target.tagName).toBe("H2");
+      await act(async () => link.click());
+      expect(document.activeElement).toBe(target);
+    }
+    expect(onClose).not.toHaveBeenCalled();
     act(() => root.unmount());
   });
 
-  it("closes on a click outside the panel", async () => {
+  it("does not dismiss on Escape or clicks outside a normal workspace page", async () => {
     const { root, onClose } = await renderPanel();
-
-    const overlay = host!.querySelector(".settings-panel")!.parentElement!;
     await act(async () => {
-      overlay.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      host!.querySelector(".settings-panel")!.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+      host!.click();
     });
-
-    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(onClose).not.toHaveBeenCalled();
+    const back = [...host!.querySelectorAll("button")].find((button) => button.textContent === "Back to previous view")!;
+    await act(async () => back.click());
+    expect(onClose).toHaveBeenCalledOnce();
     act(() => root.unmount());
   });
 

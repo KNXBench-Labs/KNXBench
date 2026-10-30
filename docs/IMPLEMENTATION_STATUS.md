@@ -14,6 +14,12 @@ fragment aliases and update this index. Do not rewrite previous results.
 
 ## Settings center workspace (30 October 2026 source)
 
+Published main-first as `fd1dfa0e4`. Independent reviews closed the retained-modal
+and unavailable-focus findings; the final branch and integrated package gates
+accepted 11/11 stages each, including 4,688 unit tests and all 1,001 default
+browser cases. Inputs stayed frozen and the named user-data guard was clean.
+[Definitive delivery record and boundaries](status/2026-10-30-settings-workspace-delivery.md).
+
 Settings is a continuous center-workspace page with top section jumps, not a
 modal. Toolbar, sidebar and palette use the same projectless-capable view.
 Properties is hidden temporarily without changing its visibility preference;

@@ -6,6 +6,20 @@ This dossier preserves the technical detail and dated history. Earlier
 headings, failures and lifting conditions are historical where later
 updates supersede them; they are not new work assignments.
 
+## Customer-adjustable write refusal — 30 October 2026 implementation
+
+The [presence-only contract](../contracts/customer-adjustable-write-admission.md)
+is implemented at `d6918027b` and independently code-reviewed; maintained gates,
+actual isolated build/smoke and software acceptance are still pending. Exact
+unqualified markers in the named root/Union/module contexts, including empty,
+`false` and unknown values, block regular write preparation and offline support
+checks. Existing kind/plug-in precedence and read-only preparation stay unchanged.
+Only counts/classes leave the parser through the typed unsupported reason.
+Module-local Options and other excluded contexts remain matcher limits; no match
+is not evidence of write safety. This is a stricter KNXBench refusal, not ETS
+customer-write rights, calibration preservation, new hardware support or closure
+of KL-007/PRG-01.
+
 ## Optional exact-0700 run state — 30 October 2026 software acceptance
 
 The [bounded contract](../contracts/post-download-run-state-0700.md) is implemented

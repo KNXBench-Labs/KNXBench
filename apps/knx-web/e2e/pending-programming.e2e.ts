@@ -48,6 +48,7 @@ async function intercept(page: Page, language: "en" | "de", theme = "porcelain")
     else if (path === "/api/project/status-metrics" && method === "GET") body = statusMetricsFixtureBody(state.tree);
     else if (path === "/api/bus/discover" && method === "POST") body = { interfaces: [] };
     else if (path === "/api/product-languages" && method === "GET") body = [];
+    else if (path === "/api/legacy-password" && method === "GET") body = { available: true, remembered: false, problem: null };
     else if (["/api/device-download/status", "/api/device-address/status"].includes(path) && method === "GET") { status = 404; body = { error: "no operation in this fixture" }; }
     else if (path === "/api/device-system2/status" && method === "GET") { state.system2Reads += 1; body = state.system2; }
     else if (path === "/api/devices" && method === "GET") {
@@ -221,8 +222,17 @@ for (const language of ["en", "de"] as const) {
     await expect(notice).toBeVisible();
     await expect(notice).toContainText(m["system2.belief.stale"]);
     await capture(page, `system2-root-stale-${language}`);
+    await page.keyboard.press("Control+Shift+P");
+    const palette = page.getByRole("dialog").getByRole("combobox");
+    await palette.fill(m["toolbar.settings"]); await palette.press("Enter");
+    await expect(page.locator("#settings-panel-title")).toBeFocused();
+    await expect(notice).toBeVisible();
+    await expect(notice).toContainText(m["system2.belief.stale"]);
     await notice.getByRole("button", { name: m["system2.belief.retry"], exact: true }).click();
     await expect(page.locator("[data-system2-belief]")).toHaveCount(0);
+    await expect(page.locator(".settings-workspace")).toBeVisible();
+    await page.getByRole("button", { name: m["settings.back"], exact: true }).click();
+    await expect(page.locator(".settings-workspace")).toHaveCount(0);
     await openList(page, language);
     await expect(page.locator(".devices-table tbody tr").filter({ hasText: "Dimmer kitchen" }).locator(".programming-chip")).toHaveCount(4);
     expect(state.unexpected).toEqual([]);

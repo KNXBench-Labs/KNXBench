@@ -35,8 +35,10 @@ A retained comparison or other workspace dialog must release its foreground
 isolation while its owner is hidden: it must not make Settings or navigation
 inert. Returning to that workspace resumes its existing modal order, draft,
 last dialog focus and background protection, rather than reopening or cancelling
-the operation. Ordinary dialogs, including settings-child confirmations, keep
-their modal focus and isolation behavior.
+the operation. Global operation-status notices stay outside the hidden workspace
+content: the stale programming-marks warning remains visible and its reload
+retry remains usable while Settings is open. Ordinary dialogs, including
+settings-child confirmations, keep their modal focus and isolation behavior.
 
 The existing setting-specific immediate-apply, acknowledged-persistence,
 validation and failure-feedback paths remain authoritative. This change adds no

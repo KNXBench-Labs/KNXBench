@@ -1451,6 +1451,7 @@ function AppBody({ manifestVersion = packageVersion, session, editorReturn = fal
   const welcomeVisible = !tree && !logOpen && !monitorOpen && view !== "catalog";
   const centerWorkspace = (
     <div className="workbench-center">
+      {tree && <System2Lifecycle onTreeUpdate={handleTreeUpdate} />}
       {settingsOpen && (
         <SettingsPanel
           appearance={appearance}
@@ -1478,7 +1479,6 @@ function AppBody({ manifestVersion = packageVersion, session, editorReturn = fal
       )}
       <ModalForeground active={!settingsOpen}>
       <div className="workbench-content" hidden={settingsOpen}>
-      {tree && <System2Lifecycle onTreeUpdate={handleTreeUpdate} />}
       {(monitorMounted || monitorOpen) && <ModalForeground active={monitorOpen}><div hidden={!monitorOpen}><BusDiagnosticsPanel active={!settingsOpen && monitorOpen} project={tree} onTreeUpdate={handleTreeUpdate} projectScope={flowProjectScope} onFlowNavigate={navigateFlow} downloadHandoff={downloadHandoff} /></div></ModalForeground>}
       {logOpen ? <LogPanel tree={tree} refreshKey={logVersion} notifications={notifications} notificationDroppedCount={notificationDroppedCount} notificationTarget={logTarget} onNotificationTargetHandled={() => setLogTarget(null)} importFocus={logImportFocus} onImportFocusHandled={() => setLogImportFocus(null)} /> : monitorOpen ? null : view === "catalog" ? null : tree ? (
         view === "device" ? <section className="device-editor-view" aria-label={t("workbench.device")}>

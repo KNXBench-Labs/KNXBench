@@ -37,6 +37,12 @@ regressions fail before that correction and pass afterward; an independent final
 recheck approved it, including an all-controls-unavailable panel control. Four
 held-response browser cases retain a stopping comparison through Settings/Back,
 then settle its mocked request and restore the original opener.
+The first complete-default browser gate exposed the displaced global warning
+owner in two existing EN/DE cases. Restoring its original direct-center placement
+keeps stale programming-mark feedback outside the hidden content; the same tests
+now enter Settings, retry the global reload there and return. The corrected
+16-case programming-marks browser scope, build/typechecks and 4,688 unit tests
+passed with frozen inputs. These populations overlap the earlier focused runs.
 The original center-host regression failed before production edits; a separately
 reproduced 400px/150% section overflow was corrected without weakening its bound.
 Screenshots cover EN/DE wide/narrow and high-zoom language controls. These focused

@@ -1,11 +1,11 @@
 # Restart snapshot
 
-## Settings center workspace (REVIEWED, DELIVERY GO; observed 2026-10-30 11:46 CET)
-- Owner this settings WebUI; branch `feat/settings-workspace-20261030`, `<sources>/knxbench-settings-workspace-20261030`, base `72db561a4`.
-- Continuous center page/all existing settings/top jump navigation; Properties temporarily hidden without changing its preference. Selection/drafts/immediate apply/projectless entry retained; no domain/storage/safety changes.
-- Whole-feature review plus correction audit preserved; originalSW-1 inert page closed. FinalR1 review `deleg_178ca9cd` APPROVE/no open findings; parent authenticated24source hashes, independentRED2/GREEN2/Overlay28. Actual semanticREDs/fixture failures retained distinctly.
-- Final targeted maintained33stagesPASS:4688Vitest/91browser(90+1), build/alltypes, complete/frozen/proofValid; parent exact24sourcehashes unchanged. Initial/correction frames viewed; Chromium/mock scope only. Evidence `<profile-scratch>/settings-workspace-20261030/`.
-- NEXT freeze/commit exact reviewed source+docs, run maintained branch/main-first package gates(all default browser specs; no Rust/corpus selected); guarded publication/readback via owned delivery state, then final documentation and exact-owned cleanup. Root/foreign worktrees preserved; no bus/hardware/release/deployment.
+## Settings center workspace (CORRECTION REVIEWED, DELIVERY GO; observed 2026-10-30 12:11 CET)
+- Owner this settings WebUI; branch `feat/settings-workspace-20261030`, `<sources>/knxbench-settings-workspace-20261030`, base `72db561a4`, initial feature `a6bcc0032` LOCAL ONLY plus reviewed global-owner correction.
+- Continuous center page/all existing settings/top jump navigation; Properties temporarily hidden without changing preference. Selection/drafts/immediate apply/projectless entry retained; no domain/storage/safety changes.
+- Whole-feature/SW-1/finalR1 approvals carry unchanged scope; original failures and corrected fixture evidence remain distinct. First branch package:9static stagesPASS/tool472tests6skips; web930/932functional,2global-root warning failures, frozen/checked user data untouched. Never integrated/pushed.
+- Direct-center System2Lifecycle restored unchanged outside hidden content; exactlyone stableglobalowner. Independent `deleg_0cdb1033` APPROVE; parent25frontend hashes exact. Corrected maintained33stages/4688Vitest/16pending-programming browsercasesPASS, EN/DESettings/retry/Back, allproofs/frozen. Earlier focused91cases retained separately.
+- NEXT commit reviewed correction, rerun full selected branch/main-first package gates(all default browser specs; no Rust/corpus), guarded publication/readback under `<profile-scratch>/settings-workspace-20261030/delivery-02/`, then result-only docs and exact-owned cleanup. Root/foreign worktrees preserved; no bus/hardware/release/deployment.
 
 ## PRG-01 customer-adjustable declarations (SOFTWARE ACCEPTED; observed 2026-10-30 04:59 CET)
 - Owner `feat/prg01-customer-adjustable-20261030`, `<sources>/knxbench-prg01-customer-adjustable-20261030`; code `d6918027b`, candidate `3af377a4b`, main-first runtime `e990fd956`, base `a2d606557`. Protected root/foreign tracks stay untouched.

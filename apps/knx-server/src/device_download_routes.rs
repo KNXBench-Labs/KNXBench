@@ -215,13 +215,7 @@ struct SupportDto {
 fn support_of(prepared: &PreparedDownload) -> Result<SupportLevel, ApiError> {
     let evidence = shipped_evidence()
         .map_err(|e| ApiError::with_status(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-    Ok(download_level(
-        &prepared.request.program_id,
-        prepared.partial.as_ref().map(|(parts, _)| *parts),
-        &prepared.plan,
-        &prepared.inferences,
-        &evidence,
-    ))
+    Ok(download_level(prepared, &evidence))
 }
 
 pub(crate) fn parse_target(address: &str) -> Result<IndividualAddress, ApiError> {

@@ -44,6 +44,84 @@ use crate::code::{CustomerAdjustableCounts, LoadStep, ProgramCode};
 use crate::image::DownloadImage;
 use crate::inference::Inference;
 
+/// Payload-free reasons why the bounded regular write-selection proof is unavailable.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum InactiveWriteSelectionError {
+    /// An excluded branch, placement, transformation or possible owner is not understood.
+    UnresolvedOwnership,
+    /// Transport cannot write disjoint active and inactive parts of a byte safely.
+    SharedActiveInactiveByte,
+    /// The current byte selection cannot be reconstructed from source defaults.
+    DifferentSourceDefaultTopology,
+}
+
+impl fmt::Display for InactiveWriteSelectionError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(match self {
+            Self::UnresolvedOwnership => "unresolved-ownership",
+            Self::SharedActiveInactiveByte => "shared-active-inactive-byte",
+            Self::DifferentSourceDefaultTopology => "different-source-default-topology",
+        })
+    }
+}
+
+/// Apply write-only proof to an already validated regular plan; source masks stay untouched.
+/// Callers must first run the existing image and complete-plan validation.
+pub fn select_inactive_whole_bytes(
+    conn: &crate::Connection,
+    request: &crate::image::ImageRequest,
+    image: &DownloadImage,
+    mut plan: MemoryDownloadPlan,
+) -> Result<MemoryDownloadPlan, DownloadPlanError> {
+    let selection = crate::image::inactive_selection::selection(conn, request, image)
+        .map_err(DownloadPlanError::InactiveWriteSelection)?;
+    let mut omitted = BTreeSet::new();
+    for (id, address, permissions) in &selection {
+        for (offset, permitted) in permissions.iter().enumerate() {
+            if !permitted {
+                let absolute = *address + offset as u32;
+                if image.segments.iter().any(|s| {
+                    s.id != *id
+                        && s.address <= absolute
+                        && absolute < s.address + s.octets.len() as u32
+                }) {
+                    return Err(DownloadPlanError::InactiveWriteSelection(
+                        InactiveWriteSelectionError::UnresolvedOwnership,
+                    ));
+                }
+                omitted.insert(absolute);
+            }
+        }
+    }
+    let mut steps = Vec::with_capacity(plan.steps.len());
+    for step in plan.steps {
+        match step {
+            MemoryDownloadStep::WriteMemory { address, octets } => {
+                let mut offset = 0;
+                while offset < octets.len() {
+                    if omitted.contains(&(u32::from(address) + offset as u32)) {
+                        offset += 1;
+                        continue;
+                    }
+                    let start = offset;
+                    while offset < octets.len()
+                        && !omitted.contains(&(u32::from(address) + offset as u32))
+                    {
+                        offset += 1;
+                    }
+                    steps.push(MemoryDownloadStep::WriteMemory {
+                        address: address + start as u16,
+                        octets: octets[start..offset].to_vec(),
+                    });
+                }
+            }
+            control => steps.push(control),
+        }
+    }
+    plan.steps = steps;
+    Ok(plan)
+}
+
 /// The `LoadProcedureStyle` this module translates.
 const PRODUCT_PROCEDURE: &str = "ProductProcedure";
 /// `SegType` of an absolute data segment and of a stack segment.
@@ -56,6 +134,8 @@ const SEGMENT_FLAG_CHECKSUM: u8 = 0x80;
 /// Why a plan was not built.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum DownloadPlanError {
+    /// Write-only ownership proof failed after existing image and plan validation.
+    InactiveWriteSelection(InactiveWriteSelectionError),
     /// The program's `LoadProcedureStyle` is not `ProductProcedure`.
     NotAProductProcedure(Option<String>),
     /// The program's mask does not load through memory (MP §3.31.2).
@@ -133,6 +213,7 @@ impl std::error::Error for DownloadPlanError {}
 impl fmt::Display for DownloadPlanError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            DownloadPlanError::InactiveWriteSelection(reason) => write!(f, "inactive-write-selection: {reason}"),
             DownloadPlanError::NotAProductProcedure(style) => write!(
                 f,
                 "LoadProcedureStyle {style:?} is not {PRODUCT_PROCEDURE}; no other style is translated"

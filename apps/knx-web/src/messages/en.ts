@@ -4085,6 +4085,7 @@ export const messages = {
   "deviceDownload.readiness.reason.productData": "the product database lacks its application program or cannot read it",
   "deviceDownload.readiness.reason.configuration": "its configuration in the project is incomplete or contradictory, for example without an application program",
   "deviceDownload.readiness.reason.vendorDownloadPlugin": "its application program declares a manufacturer download plug-in for ETS, which writes data KNXBench cannot reproduce (KL-006)",
+  "deviceDownload.readiness.reason.inactiveWriteSelection": "its inactive parameter bytes cannot be selected safely or reproduced from source defaults; no regular download scope is available. Read-only compare and diagnostics remain available",
   "deviceDownload.readiness.reason.customerAdjustableParameters": "its application program contains uninterpreted customer-adjustable declarations; KNXBench refuses all regular download scopes because preservation semantics are not implemented. Read-only compare and diagnostics remain available",
   "deviceDownload.readiness.reason.excluded": "it is excluded from downloads in this project",
   "deviceDownload.readiness.reason.none": "no reason was reported",

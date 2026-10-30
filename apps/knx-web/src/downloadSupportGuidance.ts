@@ -20,6 +20,7 @@ const ACTIONS: Readonly<Record<string, SupportAction>> = {
   "procedure-contents": "requestSupport", modules: "requestSupport",
   "image-structure": "requestSupport", "byte-order": "requestSupport",
   "vendor-download-plugin": "useVendorTool",
+  "inactive-write-selection": "requestSupport",
   "customer-adjustable-parameters": "requestSupport",
 };
 

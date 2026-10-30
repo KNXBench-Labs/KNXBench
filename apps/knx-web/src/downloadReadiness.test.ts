@@ -61,7 +61,7 @@ describe("readinessReason", () => {
   it("has a plain reason for every category the server grades with", () => {
     const categories = ["not-memory-mapped", "procedure-style", "unmodelled-step", "procedure-shape", "procedure-contents",
       "parameter-evaluation", "modules", "parameter-value", "image-structure", "byte-order", "product-data", "configuration",
-      "vendor-download-plugin", "customer-adjustable-parameters"];
+      "vendor-download-plugin", "customer-adjustable-parameters", "inactive-write-selection"];
     for (const category of categories) {
       for (const t of [en, de]) {
         const reason = readinessReason({ kind: "unsupported", category }, t);

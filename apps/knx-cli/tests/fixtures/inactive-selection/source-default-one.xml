@@ -1,0 +1,48 @@
+<!-- Exercise the regular inactive whole-byte writer using synthetic product data. -->
+<KNX xmlns="http://knx.org/xml/project/20"><ManufacturerData><Manufacturer RefId="M-FFF6"><ApplicationPrograms>
+<ApplicationProgram Id="M-FFF6_A-0001-01-0000" Name="Synthetic inactive-byte writer" ApplicationNumber="1" ApplicationVersion="1" PeiType="0"
+  MaskVersion="MV-0701" LoadProcedureStyle="ProductProcedure"><Static>
+<Code>
+  <AbsoluteSegment Id="M-FFF6_A-0001-01-0000_AS-4000" Address="16384" Size="8"><Data>AAAAAAAAAAA=</Data></AbsoluteSegment>
+  <AbsoluteSegment Id="M-FFF6_A-0001-01-0000_AS-4400" Address="17408" Size="6"><Data>AZrHRG0i</Data><Mask>/////wD/</Mask></AbsoluteSegment>
+</Code>
+<AddressTable CodeSegment="M-FFF6_A-0001-01-0000_AS-4000" Offset="0" MaxEntries="2" />
+<ParameterTypes>
+  <ParameterType Id="M-FFF6_A-0001-01-0000_PT-Mode" Name="Mode"><TypeNumber SizeInBit="8" Type="unsignedInt" minInclusive="0" maxInclusive="1" /></ParameterType>
+  <ParameterType Id="M-FFF6_A-0001-01-0000_PT-Octet" Name="Octet"><TypeNumber SizeInBit="8" Type="unsignedInt" minInclusive="0" maxInclusive="255" /></ParameterType>
+</ParameterTypes>
+<Parameters>
+  <Parameter Id="M-FFF6_A-0001-01-0000_P-Mode" Name="Mode" ParameterType="M-FFF6_A-0001-01-0000_PT-Mode" Value="1"><Memory CodeSegment="M-FFF6_A-0001-01-0000_AS-4400" Offset="0" BitOffset="0" /></Parameter>
+  <Parameter Id="M-FFF6_A-0001-01-0000_P-I" Name="Exclusive mode zero" ParameterType="M-FFF6_A-0001-01-0000_PT-Octet" Value="226"><Memory CodeSegment="M-FFF6_A-0001-01-0000_AS-4400" Offset="1" BitOffset="0" /></Parameter>
+  <Union SizeInBit="8"><Memory CodeSegment="M-FFF6_A-0001-01-0000_AS-4400" Offset="3" BitOffset="0" />
+    <Parameter Id="M-FFF6_A-0001-01-0000_P-U0" Name="Union zero" ParameterType="M-FFF6_A-0001-01-0000_PT-Octet" Value="166" Offset="0" BitOffset="0" />
+    <Parameter Id="M-FFF6_A-0001-01-0000_P-U1" Name="Union one" ParameterType="M-FFF6_A-0001-01-0000_PT-Octet" Value="83" Offset="0" BitOffset="0" />
+  </Union>
+  <Parameter Id="M-FFF6_A-0001-01-0000_P-Tail" Name="Tail" ParameterType="M-FFF6_A-0001-01-0000_PT-Octet" Value="104"><Memory CodeSegment="M-FFF6_A-0001-01-0000_AS-4400" Offset="5" BitOffset="0" /></Parameter>
+</Parameters>
+<ParameterRefs>
+  <ParameterRef Id="M-FFF6_A-0001-01-0000_P-Mode_R-Mode" RefId="M-FFF6_A-0001-01-0000_P-Mode" />
+  <ParameterRef Id="M-FFF6_A-0001-01-0000_P-I_R-I" RefId="M-FFF6_A-0001-01-0000_P-I" />
+  <ParameterRef Id="M-FFF6_A-0001-01-0000_P-U0_R-U0" RefId="M-FFF6_A-0001-01-0000_P-U0" />
+  <ParameterRef Id="M-FFF6_A-0001-01-0000_P-U1_R-U1" RefId="M-FFF6_A-0001-01-0000_P-U1" />
+  <ParameterRef Id="M-FFF6_A-0001-01-0000_P-Tail_R-Tail" RefId="M-FFF6_A-0001-01-0000_P-Tail" />
+</ParameterRefs>
+<LoadProcedures><LoadProcedure>
+  <LdCtrlConnect /><LdCtrlUnload LsmIdx="1" /><LdCtrlUnload LsmIdx="3" />
+  <LdCtrlLoad LsmIdx="1" />
+  <LdCtrlAbsSegment LsmIdx="1" SegType="0" Address="16384" Size="8" Access="255" MemType="3" SegFlags="128" />
+  <LdCtrlLoadCompleted LsmIdx="1" />
+  <LdCtrlLoad LsmIdx="3" />
+  <LdCtrlAbsSegment LsmIdx="3" SegType="0" Address="17408" Size="6" Access="255" MemType="3" SegFlags="128" />
+  <LdCtrlTaskSegment LsmIdx="3" Address="17408" />
+  <LdCtrlLoadCompleted LsmIdx="3" />
+  <LdCtrlRestart /><LdCtrlDisconnect />
+</LoadProcedure></LoadProcedures>
+</Static><Dynamic><Channel Id="M-FFF6_A-0001-01-0000_CH-1" Text="Synthetic"><ParameterBlock Id="M-FFF6_A-0001-01-0000_PB-1" Text="Selection">
+  <ParameterRefRef RefId="M-FFF6_A-0001-01-0000_P-Mode_R-Mode" />
+  <choose ParamRefId="M-FFF6_A-0001-01-0000_P-Mode_R-Mode">
+    <when test="0"><ParameterRefRef RefId="M-FFF6_A-0001-01-0000_P-I_R-I" /><ParameterRefRef RefId="M-FFF6_A-0001-01-0000_P-U0_R-U0" /></when>
+    <when test="1"><ParameterRefRef RefId="M-FFF6_A-0001-01-0000_P-U1_R-U1" /></when>
+  </choose>
+  <ParameterRefRef RefId="M-FFF6_A-0001-01-0000_P-Tail_R-Tail" />
+</ParameterBlock></Channel></Dynamic></ApplicationProgram></ApplicationPrograms></Manufacturer></ManufacturerData></KNX>

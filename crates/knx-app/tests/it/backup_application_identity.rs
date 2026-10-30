@@ -30,6 +30,7 @@ fn stored(
     prior: PriorApplication,
 ) -> StoredBackup {
     StoredBackup {
+        write_selection: knx_app::device_backup::WriteSelection::SourceMaskOnlyV1,
         backup: DeviceBackup {
             target: TARGET.parse().unwrap(),
             mask: plan.mask,

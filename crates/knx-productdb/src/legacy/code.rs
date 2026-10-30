@@ -582,6 +582,7 @@ pub fn load_legacy_program_code(
         com_object_table: code.com_object_table,
         load_procedures: code.load_procedure.into_iter().collect(),
         options: BTreeMap::new(),
+        has_download_invisible_parameters: false,
         has_fixup_list: false, // Legacy projection has no XML FixupList declaration.
         has_legacy_patch_always: false, // Presence tracks the XML attribute only.
         // This XML matcher is not an EX-IM rights/safety assessment.

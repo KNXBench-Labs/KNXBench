@@ -11,7 +11,7 @@
 use std::fmt;
 
 use knx_core::commissioning::byte_order_evidence::{OctetOrder, Verdict};
-use knx_core::commissioning::memory_download::{unmasked_runs, MemoryDownloadPlan};
+use knx_core::commissioning::memory_download::{MemoryDownloadPlan, MemoryDownloadStep};
 use knx_core::commissioning::partial_memory_download::{
     derive_partial_plan, PartialDownloadParts, PartialPlanError,
 };
@@ -32,6 +32,8 @@ use knx_productdb::Connection;
 /// Everything a download to one device needs, built and checked offline.
 #[derive(Debug)]
 pub struct PreparedDownload {
+    /// Versioned producer bound to this actual preparation.
+    pub write_selection: crate::device_backup::WriteSelection,
     /// The project device.
     pub device: DeviceId,
     /// Its name in the project.
@@ -40,7 +42,7 @@ pub struct PreparedDownload {
     pub target: IndividualAddress,
     /// The configuration read from the project.
     pub request: ImageRequest,
-    /// The memory the device should hold afterwards.
+    /// The literal source-based image; omitted bytes are not an expected post-write state.
     pub image: DownloadImage,
     /// The steps that put it there.
     pub plan: MemoryDownloadPlan,
@@ -70,16 +72,27 @@ impl PreparedDownload {
         Ok(self)
     }
 
-    /// Octets the plan writes to the device, per segment: masked octets
-    /// (the device keeps its own) are not counted.
+    /// Actual scoped WriteMemory payload octets per source segment.
+    /// Source-protected and selection-omitted bytes are not counted; the image stays unchanged.
     pub fn octets_to_write(&self) -> Vec<(String, u32, usize, usize)> {
         self.image
             .segments
             .iter()
             .map(|segment| {
-                let written = unmasked_runs(&segment.octets, segment.mask.as_deref())
+                let start = u64::from(segment.address);
+                let end = start + segment.octets.len() as u64;
+                let written = self
+                    .plan
+                    .steps
                     .iter()
-                    .map(|(_, run)| run.len())
+                    .filter_map(|step| match step {
+                        MemoryDownloadStep::WriteMemory { address, octets } => {
+                            let from = u64::from(*address);
+                            let to = from + octets.len() as u64;
+                            Some(to.min(end).saturating_sub(from.max(start)) as usize)
+                        }
+                        _ => None,
+                    })
                     .sum();
                 (
                     segment.id.clone(),
@@ -181,6 +194,11 @@ fn prepare(
         .ok()
         .flatten();
     Ok(PreparedDownload {
+        write_selection: if purpose == Purpose::Download {
+            crate::device_backup::WriteSelection::SourceDefaultInactiveWholeBytesV1
+        } else {
+            crate::device_backup::WriteSelection::SourceMaskOnlyV1
+        },
         device: device.id,
         device_name: device.name.clone(),
         target,
@@ -220,6 +238,12 @@ fn plan_request(
     let image = build_download_image(conn, request).map_err(PrepareError::Image)?;
     let (plan, inferences) =
         plan_memory_download_with_inferences(&image).map_err(PrepareError::Plan)?;
+    let plan = if purpose == Purpose::Download {
+        knx_productdb::download_plan::select_inactive_whole_bytes(conn, request, &image, plan)
+            .map_err(PrepareError::Plan)?
+    } else {
+        plan
+    };
     Ok((image, plan, inferences))
 }
 

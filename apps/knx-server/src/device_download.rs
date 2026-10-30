@@ -532,6 +532,7 @@ async fn run(
                 let keeper = Arc::clone(&shared);
                 let mut keep = |backup: &DeviceBackup| {
                     let stored = StoredBackup {
+                        write_selection: prepared.write_selection,
                         backup: backup.clone(),
                         application: prepared.request.program_id.clone(),
                         partial: prepared.partial.as_ref().map(|(parts, _)| *parts),

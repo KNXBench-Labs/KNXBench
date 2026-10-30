@@ -237,6 +237,7 @@ fn assert_kl_006(category: &str, detail: &str) {
 /// the declaring program cannot prepare it for restoration.
 fn stored_backup(plan: &MemoryDownloadPlan) -> StoredBackup {
     StoredBackup {
+        write_selection: knx_app::device_backup::WriteSelection::SourceMaskOnlyV1,
         backup: DeviceBackup {
             target: target(),
             mask: plan.mask,

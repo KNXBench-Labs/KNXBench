@@ -141,7 +141,7 @@ fn rewrite(
                     .map_err(|error| SecretFreeCopyError::Write(error.to_string()))?;
             }
             Err(reason) => {
-                findings.values.append(&mut member.values);
+                findings.retain_private(&mut member);
                 findings.withhold(&location, &reason);
             }
         }

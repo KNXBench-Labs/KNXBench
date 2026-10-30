@@ -31,7 +31,8 @@ use knx_store::Connection;
 use super::archive;
 use super::xml::{self, Base, Content};
 use super::{
-    io_error, is_secret_name, is_secret_value, Findings, SecretFreeCopy, SecretFreeCopyError,
+    io_error, is_secret_name, is_secret_value, Findings, ObservedCopy, SecretFreeCopy,
+    SecretFreeCopyError,
 };
 
 const RETAINED_ATTRIBUTE: &str = "RetainedAttribute";
@@ -56,6 +57,18 @@ pub(super) fn copy_with_budget(
     allocated: impl FnOnce(&Path),
     budget: super::budget::Budget,
 ) -> Result<SecretFreeCopy, SecretFreeCopyError> {
+    copy_observed_with_budget(source, allocated, budget).map(|observed| observed.copy)
+}
+
+pub(super) fn copy_for_bundle(source: &Path) -> Result<ObservedCopy, SecretFreeCopyError> {
+    copy_observed_with_budget(source, |_| {}, super::budget::Budget::default())
+}
+
+fn copy_observed_with_budget(
+    source: &Path,
+    allocated: impl FnOnce(&Path),
+    budget: super::budget::Budget,
+) -> Result<ObservedCopy, SecretFreeCopyError> {
     refuse_journals(source)?;
     let before = std::fs::metadata(source).map_err(io_error("reading source identity"))?;
     let modified = before
@@ -150,7 +163,7 @@ pub(super) fn copy_with_budget(
     if occurrences > 0 {
         return Err(SecretFreeCopyError::ResidualSecret { occurrences });
     }
-    findings.finish(bytes)
+    findings.finish_observed(bytes)
 }
 
 fn refuse_journals(source: &Path) -> Result<(), SecretFreeCopyError> {
@@ -235,7 +248,7 @@ fn redact_rows(
             }
             Row::Withhold(reason) => {
                 tx.execute("DELETE FROM opaque_entry WHERE id = ?1", [id])?;
-                findings.values.append(&mut row.values);
+                findings.retain_private(&mut row);
                 findings.withhold(&format!("retained {location}"), &reason);
             }
         }
@@ -290,7 +303,7 @@ fn redact_row(
                         })
                     }
                     Err(reason) => {
-                        findings.values.append(&mut inner.values);
+                        findings.retain_private(&mut inner);
                         Ok(Row::Withhold(reason))
                     }
                 }
@@ -317,7 +330,11 @@ fn redact_attribute(
     value: &[u8],
     findings: &mut Findings,
 ) -> Row {
-    if is_secret_name(name.as_bytes()) && is_secret_value(name.as_bytes(), value) {
+    let secret_name = is_secret_name(name.as_bytes());
+    if secret_name {
+        findings.observe_credential(name.as_bytes(), value);
+    }
+    if secret_name && is_secret_value(name.as_bytes(), value) {
         findings.remember(value);
         findings.redact(format!("{location}/@{name}"), name.to_string());
         return Row::Replace(Vec::new());
@@ -375,7 +392,7 @@ fn withhold_carried_files(
             Err(_) => (sha256.clone(), "cannot be decoded".to_string()),
         };
         tx.execute("DELETE FROM manufacturer_file WHERE sha256 = ?1", [&sha256])?;
-        findings.values.append(&mut part.values);
+        findings.retain_private(&mut part);
         findings.withhold(&format!("carried product file {location}"), &reason);
     }
     Ok(())

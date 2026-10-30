@@ -67,9 +67,9 @@ progress/error entry, note or another selected file. Existing exposure is not
 authorization for another copy. A metadata-only new file does not certify the
 rest of the ZIP. Keep original evidence local; disclose exported loss explicitly.
 
-## Implemented App boundary; consumers still open
+## App admission foundations; consumers still open
 
-The local App-only increment `c8a686a5e` (integration `8342609ed`) implements
+The earlier App-only increment implements
 [`read_snapshot`](../../crates/knx-app/src/property_validation_private_projection.rs)
 with one strict fresh `OperationStore::open` against the expected Binding.
 Original minimized progress and separately owned closed metadata come from that
@@ -81,18 +81,53 @@ persisted comparison bytes is `notRecorded`, not a claim that no read occurred.
 Missing witnesses, empty lists and `Finished`/`Restored` remain `unclassified`.
 Open failures expose neither progress nor free error text. No payload bytes,
 lengths, hashes, masks or differing slices are exported; no additional journal
-size budget or authenticity guarantee is claimed.
+size budget or authenticity guarantee is claimed. The current App source adds
+`admit_snapshot`: it consumes the available snapshot once, validates the fixed
+format/kind and Download/optional-Restore ordering against the same progress,
+serializes the closed projection once at no more than 4 KiB, and returns the
+original owned progress with private admitted bytes. The admitted type implements
+neither `Serialize` nor `Debug`.
 
-Fifteen focused tests pass, including synthetic producer/persistence/replay cases
-and independent controller execution; the default App lane passes 917 cases with 47 ignored.
-The independent review accepts only this App slice. Those tests do not execute
-the collectors, CLI or all-member ZIP boundary. The outer snapshot's Debug can
-still display private progress: future consumers must serialize only the closed
-projection, never a Debug dump or the existing raw evidence view.
+The same source increment adds bundle-only admission for historical import reports
+and saved native projects. Both entry points reuse the existing parser/sanitizer;
+the native path retains its one bounded immutable source snapshot. An internal,
+non-serialized observation flag is propagated through discovery, enforcement,
+children and withheld/discarded branches. Recognized non-empty credential fields,
+report credential digests without the free-access witness, and `BusAccess`
+credential components set it before mutation. Any observation yields one generic
+unavailable result before owned body or notes escape. Only the documented free-
+access `BCUKey` sentinel is exempt. This is a narrow instance witness: ordinary
+sanitizer success does not admit a bundle source and does not certify arbitrary
+opaque, encoded or encrypted material.
+
+Bounded App-only verification completed on 30 October 2026. The unavailable
+scaffold ran 92 focused tests (81 passed, with 11 intended positive-admission
+failures); the first implementation passed 92/92. Nine edge regressions then gave
+the intended 94-pass/7-fail result, and the corrected source passed 101/101. Under
+one temporary C10 final-gate bypass, 75 credential-refusal expectations failed as
+intended while 26 tests passed: this included all 24 `Password123`
+body/`source_path`/`xpath` witnesses in literal, hex, base64 and percent forms, and
+all seven benign controls remained green. The exact production bytes were restored,
+rebuilt and passed the restored 101/101 run.
+
+The default App run passed 431 library tests, 584 integration tests and nine
+doctests (1,024 total without adding focused/default overlap), with 47 integration
+tests ignored. Six new compile-fail doctests emitted `E0277` for the intended lack
+of `Serialize`/`Debug` on the actual newtypes. App all-target Clippy with
+`-D warnings` covered library, library-test, example and integration targets; the
+formatting, header, layering, test-layout, documentation, local-info, anchor, diff,
+allowlist and guard checks passed without suppression. Ignored, corpus and hardware
+cases were not executed. This verifies only the App foundation, not consumer or
+whole-archive acceptance.
 
 Both server hooks and the CLI still lack the attachment. They must consume one
 coherent snapshot and retain the same owned bytes through text/review/export;
 existing target/version/context, fingerprint and consent guards remain required.
+
+The parent reports the bounded R4 ambient-identity prerequisite independently
+approved for the real preview/unselected-recording regression. R4 is prerequisite
+closure only; it does not authorize export. Raw P1/P2, the original fourteen-case
+matrix, consumer integration and whole-goal acceptance remain open.
 
 A future positive raw variant is blocked by P1/P2. The original **14-case matrix
 remains open**; the bounded metadata tests above do not constitute fourteen new

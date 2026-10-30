@@ -15,17 +15,48 @@ this is not a complete package/browser/hardware gate.
 **Raw System-2 evidence admission remains NOT READY:** classification of both
 expected/readback bytes (P1) and consistency across overlapping recording,
 range/error and archive copies (P2) are unproved. The separate static scout ran
-no runtime tests. The separate closed App metadata increment `c8a686a5e`, locally
-integrated as `8342609ed`, has fifteen passing focused tests, including synthetic producer/replay cases,
-and a passing default App lane (917 passed, 47 ignored), plus App-only independent
-review. It uses one strict fresh store for progress and closed metadata; public
-DTOs/journals are unchanged. Empty/terminal states remain unclassified without a
-specific typed witness. Neither server hook nor CLI attaches it yet. This is not
-closure of the requested raw evidence or the fourteen-case whole-boundary matrix. The
+no runtime tests. The current App source adds a bounded admission layer around the
+closed metadata reader: one consumed snapshot, fixed format/kind, one Download and
+optional ordered Restore consistent with the same original progress, and one
+deterministic serialization capped at 4 KiB. It also adds narrow bundle-only
+admission entry points for historical import reports and saved native projects.
+Those entry points reuse the existing bounded sanitizer, refuse the whole source
+instance generically when recognized credential material was observed before
+mutation, and exempt only the documented free-access `BCUKey` sentinel. Ordinary
+helper success is not bundle admission, and the short-credential witness is not
+arbitrary opaque/encoded secrecy certification.
+
+Bounded App-only verification completed on 30 October 2026. The unavailable
+scaffold ran 92 focused tests (81 passed and 11 intended positive-admission cases
+failed), the first implementation passed 92/92, the nine added edge cases produced
+the intended 94-pass/7-fail result, and corrected source passed 101/101. A single
+temporary C10 final-gate bypass produced 26 passes and 75 intended
+credential-refusal failures: all 24 `Password123` body/`source_path`/`xpath`
+literal, hex, base64 and percent witnesses failed, while all seven benign controls
+passed. Byte-exact production restoration was rebuilt and passed 101/101 again.
+
+The default App run passed 431 library tests, 584 integration tests and nine
+doctests (1,024 total without adding focused/default overlap); 47 integration tests
+remained ignored. Six new compile-fail doctests emitted `E0277` for the intended
+absence of `Serialize`/`Debug` on the actual newtypes. App all-target Clippy with
+`-D warnings` covered library, library-test, example and integration targets, and
+formatting, header, layering, test-layout, documentation, local-info, anchor, diff,
+allowlist and guard checks passed without suppressions. Ignored, corpus and hardware
+cases were not executed. This verifies the bounded App foundation only and is not
+independent approval of consumers, release or publication.
+
+Public DTOs/journals are unchanged; neither server hook nor CLI attaches it yet.
+This is not closure of the requested raw evidence or the fourteen-case
+whole-boundary matrix. The
 [source-grounded boundary](../research/2026-10-29-system2-bundle-credential-boundary.md)
 records the two server hooks, missing CLI typed attachment and the open original
 fourteen-case acceptance matrix. Final integrated review/gate, main-first delivery
 and task-owned cleanup remain open.
+
+The parent-reported bounded R4 ambient-identity prerequisite is independently
+approved for the real preview/unselected-recording regression. It is prerequisite
+closure only and does not authorize export. Consumers, raw P1/P2, Original14 and
+the whole DIAG-03 goal remain open.
 
 Origin: issue #30 report analysis, owner request 29 October 2026.
 

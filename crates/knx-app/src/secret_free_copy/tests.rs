@@ -7,6 +7,7 @@ use sha2::{Digest, Sha256};
 
 use super::*;
 
+mod bundle_admission;
 mod review_archive;
 mod review_budget;
 mod review_connection_budget;

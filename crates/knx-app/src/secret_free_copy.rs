@@ -238,22 +238,104 @@ pub fn import_report_without_secrets(
     report::copy(report)
 }
 
+/// Owned body and notes admitted for one diagnostic-bundle source instance.
+///
+/// The boundary deliberately implements neither `Serialize` nor `Debug`:
+///
+/// ```compile_fail
+/// fn require_serialize<T: serde::Serialize>() {}
+/// require_serialize::<knx_app::secret_free_copy::BundleAdmittedCopy>();
+/// ```
+///
+/// ```compile_fail
+/// fn require_debug<T: std::fmt::Debug>() {}
+/// require_debug::<knx_app::secret_free_copy::BundleAdmittedCopy>();
+/// ```
+pub struct BundleAdmittedCopy {
+    bytes: Vec<u8>,
+    notes: Vec<String>,
+}
+impl BundleAdmittedCopy {
+    /// Consumes the admitted instance without exposing an outer serializable wrapper.
+    pub fn into_parts(self) -> (Vec<u8>, Vec<String>) {
+        (self.bytes, self.notes)
+    }
+}
+
+/// One generic bundle-copy refusal with no source-derived payload.
+///
+/// The refusal deliberately implements neither `Serialize` nor `Debug`:
+///
+/// ```compile_fail
+/// fn require_serialize<T: serde::Serialize>() {}
+/// require_serialize::<knx_app::secret_free_copy::BundleCopyUnavailable>();
+/// ```
+///
+/// ```compile_fail
+/// fn require_debug<T: std::fmt::Debug>() {}
+/// require_debug::<knx_app::secret_free_copy::BundleCopyUnavailable>();
+/// ```
+pub struct BundleCopyUnavailable;
+
+/// Admits one historical import-report instance for diagnostic-bundle use.
+pub fn import_report_for_bundle(
+    report: &serde_json::Value,
+) -> Result<BundleAdmittedCopy, BundleCopyUnavailable> {
+    admit_bundle_copy(report::copy_for_bundle(report))
+}
+
+/// Admits one saved native-project instance for diagnostic-bundle use.
+pub fn native_project_for_bundle(
+    source: &Path,
+) -> Result<BundleAdmittedCopy, BundleCopyUnavailable> {
+    admit_bundle_copy(native::copy_for_bundle(source))
+}
+
+fn admit_bundle_copy(
+    result: Result<ObservedCopy, SecretFreeCopyError>,
+) -> Result<BundleAdmittedCopy, BundleCopyUnavailable> {
+    let observed = result.map_err(|_| BundleCopyUnavailable)?;
+    if observed.credential_material_observed {
+        return Err(BundleCopyUnavailable);
+    }
+    let SecretFreeCopy {
+        bytes,
+        redactions,
+        withheld,
+    } = observed.copy;
+    let mut notes = Vec::with_capacity(redactions.len().saturating_add(withheld.len()));
+    for redaction in redactions {
+        notes.push(format!(
+            "removed {} at {}",
+            redaction.kind, redaction.location
+        ));
+    }
+    for withheld in withheld {
+        notes.push(format!("left out: {withheld}"));
+    }
+    Ok(BundleAdmittedCopy { bytes, notes })
+}
+
 /// Whether `name` is one of [`SECRET_NAMES`], exactly.
 fn is_secret_name(name: &[u8]) -> bool {
     let name = local_name(name);
     SECRET_NAMES.iter().any(|secret| secret.as_bytes() == name)
 }
 
-/// Whether a value under a secret name is secret material: non-empty, and
-/// not the `BCUKey` free-access sentinel.
+/// The namespace-local part of an XML name.
 fn local_name(name: &[u8]) -> &[u8] {
     name.rsplit(|byte| *byte == b':').next().unwrap_or(name)
 }
 
+/// Whether decoded bytes are exactly the documented free-access sentinel.
+fn is_free_access_key(name: &[u8], value: &[u8]) -> bool {
+    local_name(name) == b"BCUKey" && value == FREE_ACCESS_KEY
+}
+
+/// The historical ordinary-copy redaction rule, including ASCII trimming.
 fn is_secret_value(name: &[u8], value: &[u8]) -> bool {
-    let name = local_name(name);
     let trimmed = value.trim_ascii();
-    !trimmed.is_empty() && !(name == b"BCUKey" && trimmed == FREE_ACCESS_KEY)
+    !trimmed.is_empty() && !is_free_access_key(name, trimmed)
 }
 
 /// What one copy found: redactions, withheld locations and, in memory only,
@@ -264,12 +346,22 @@ struct Findings {
     redactions: BTreeMap<(String, String), usize>,
     withheld: Vec<String>,
     values: BTreeSet<Vec<u8>>,
+    credential_material_observed: bool,
+    credential_observation_epoch: u64,
+}
+
+/// One completed copy plus its private source-instance admission witness.
+struct ObservedCopy {
+    copy: SecretFreeCopy,
+    credential_material_observed: bool,
 }
 
 impl Findings {
     fn child(&self) -> Self {
         Self {
             budget: self.budget.clone(),
+            credential_material_observed: self.credential_material_observed,
+            credential_observation_epoch: self.credential_observation_epoch,
             ..Self::default()
         }
     }
@@ -299,6 +391,40 @@ impl Findings {
         }
     }
 
+    fn observe_credential(&mut self, name: &[u8], value: &[u8]) {
+        if !value.is_empty() && !is_free_access_key(name, value) {
+            self.observe_credential_material();
+        }
+    }
+
+    fn observe_credential_material(&mut self) {
+        self.credential_material_observed = true;
+        self.credential_observation_epoch = self.credential_observation_epoch.wrapping_add(1);
+    }
+
+    fn begin_tentative_credential_observation(&mut self) -> (bool, u64) {
+        let prior = (
+            self.credential_material_observed,
+            self.credential_observation_epoch,
+        );
+        self.credential_material_observed = true;
+        prior
+    }
+
+    fn resolve_tentative_credential_observation(
+        &mut self,
+        prior: (bool, u64),
+        free_access_sentinel: bool,
+    ) {
+        if free_access_sentinel {
+            if self.credential_observation_epoch == prior.1 {
+                self.credential_material_observed = prior.0;
+            }
+        } else {
+            self.observe_credential_material();
+        }
+    }
+
     fn withhold(&mut self, location: &str, reason: &str) {
         if self
             .budget
@@ -312,10 +438,18 @@ impl Findings {
 
     /// Takes over a part's findings (a member or row that is kept).
     fn absorb(&mut self, mut part: Findings) {
+        self.retain_private(&mut part);
         for (key, count) in part.redactions {
             *self.redactions.entry(key).or_default() += count;
         }
         self.withheld.append(&mut part.withheld);
+    }
+
+    /// Retains source-instance observations when a child itself is withheld.
+    fn retain_private(&mut self, part: &mut Findings) {
+        if part.credential_material_observed {
+            self.observe_credential_material();
+        }
         self.values.append(&mut part.values);
     }
 
@@ -363,6 +497,15 @@ impl Findings {
             return Err(SecretFreeCopyError::ResidualSecret { occurrences: 1 });
         }
         Ok(copy)
+    }
+
+    fn finish_observed(self, bytes: Vec<u8>) -> Result<ObservedCopy, SecretFreeCopyError> {
+        let credential_material_observed = self.credential_material_observed;
+        let copy = self.finish(bytes)?;
+        Ok(ObservedCopy {
+            copy,
+            credential_material_observed,
+        })
     }
 }
 

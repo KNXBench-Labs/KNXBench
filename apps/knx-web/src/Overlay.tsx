@@ -2,7 +2,8 @@
 import { useEffect, useRef, useState } from "react";
 import type { KeyboardEvent, ReactNode, RefObject } from "react";
 import { useTranslate } from "./i18n";
-import { isolateModalBackground } from "./modalIsolation";
+import { canRestoreModalFocus, isolateModalBackground } from "./modalIsolation";
+import { useModalForeground } from "./ModalForeground";
 
 const VIEWPORT_PADDING = 16;
 const RESIZE_STEP = 24;
@@ -78,21 +79,37 @@ export default function Overlay(props: {
   const t = useTranslate();
   const [size, setSize] = useState(() => ({ width: resizable?.width ?? 0, height: resizable?.height ?? 0 }));
 
-  // Initial focus on mount, restoration on unmount. The dependency list is
-  // deliberately empty: this runs once per open, and re-running it on a
-  // prop change would yank focus out from under whatever the user is
-  // typing into.
+  const foreground = useModalForeground();
+  const leaseRef = useRef<ReturnType<typeof isolateModalBackground> | null>(null);
+  const lastFocusRef = useRef<HTMLElement | null>(null);
+
+  // Keep the original opener and stack position for the whole retained lifetime.
+  // Foreground changes suspend isolation, not the dialog or its draft/operation.
   useEffect(() => {
     const previous = document.activeElement as HTMLElement | null;
     const panel = panelRef.current;
-    const target = initialFocusRef?.current ?? (panel ? (focusableIn(panel)[0] ?? panel) : null);
-    const restoreBackground = panel ? isolateModalBackground(panel, () => target?.focus()) : () => true;
+    const focus = () => {
+      if (!panel) return;
+      const candidates = [lastFocusRef.current, initialFocusRef?.current, ...focusableIn(panel), panel];
+      for (const target of candidates) {
+        if (!target || !panel.contains(target) || !canRestoreModalFocus(target) || !isTabbable(target, panel)) continue;
+        target.focus();
+        // A remembered or explicit target can become disabled or unfocusable.
+        // Keep trying until focus really lands; the panel is the final fallback.
+        if (document.activeElement === target) return;
+      }
+    };
+    const lease = panel ? isolateModalBackground(panel, focus, foreground) : null;
+    leaseRef.current = lease;
     return () => {
-      if (!restoreBackground()) return;
+      leaseRef.current = null;
+      if (!lease?.release()) return;
       const target = previous?.isConnected ? previous : props.restoreFocusRef?.current;
-      if (target?.isConnected && !target.closest("[inert]")) target.focus();
+      if (canRestoreModalFocus(target)) target.focus();
     };
   }, []);
+
+  useEffect(() => { leaseRef.current?.setActive(foreground); }, [foreground]);
 
   function resizeFromKeyboard(e: KeyboardEvent<HTMLButtonElement>) {
     const delta = {
@@ -168,6 +185,7 @@ export default function Overlay(props: {
         aria-label={label}
         tabIndex={-1}
         onClick={(e) => e.stopPropagation()}
+        onFocusCapture={(e) => { if (e.target instanceof HTMLElement) lastFocusRef.current = e.target; }}
         onKeyDown={handleKeyDown}
       >
         {children}

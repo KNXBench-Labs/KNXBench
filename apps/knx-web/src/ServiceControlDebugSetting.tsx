@@ -61,7 +61,7 @@ export default function ServiceControlDebugSetting() {
   }
 
   return <section className="settings-section settings-section-debug">
-    <h3>{t("settings.section.debug")}</h3>
+    <h2 id="settings-debug" tabIndex={-1}>{t("settings.section.debug")}</h2>
     <p className="settings-debug-warning">{t("settings.debugServiceControlWarning")}</p>
     <label className="settings-field settings-field-checkbox">
       <input type="checkbox" checked={enabled} disabled={status !== "ready"}

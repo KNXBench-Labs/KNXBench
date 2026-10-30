@@ -35,6 +35,7 @@ import CommandPalette from "./CommandPalette";
 import { StoredBusAccessDialog } from "./StoredBusAccess";
 import type { CommandContext } from "./commandRegistry";
 import SettingsPanel from "./SettingsPanel";
+import { ModalForeground } from "./ModalForeground";
 import { serverLegacyPassword } from "./LegacyPasswordSettings";
 import Dashboard from "./Dashboard";
 import ImportDiagnosticsNotice from "./ImportDiagnosticsNotice";
@@ -341,7 +342,13 @@ function AppBody({ manifestVersion = packageVersion, session, editorReturn = fal
   const [downloadHandoff, setDownloadHandoff] = useState<DownloadHandoff | null>(null);
   const downloadNonceRef = useRef(0);
   useEffect(() => { if (monitorOpen) setMonitorMounted(true); }, [monitorOpen]);
+  // A visibility override, not a project view: keep the real editor owners
+  // mounted beneath Settings so unapplied notes and instructions survive.
   const [settingsOpen, setSettingsOpen] = useState(false);
+  function openSettings() {
+    setSettingsOpen(true);
+    if (window.innerWidth <= 650) setNavigationOpen(false);
+  }
   const [historyOpen, setHistoryOpen] = useState(false);
   const [pluginDataOpen, setPluginDataOpen] = useState(false);
   const [storedBusAccessOpen, setStoredBusAccessOpen] = useState(false);
@@ -432,7 +439,7 @@ function AppBody({ manifestVersion = packageVersion, session, editorReturn = fal
   const uiScale = boundedPreference(getSetting("uiScale"), UI_SCALE.defaultValue, UI_SCALE.min, UI_SCALE.max);
   const navigationWidth = boundedPreference(getSetting("navigationPaneWidth"), NAVIGATION_PANE.defaultWidth, NAVIGATION_PANE.min, NAVIGATION_PANE.max);
   const inspectorWidth = boundedPreference(getSetting("inspectorPaneWidth"), INSPECTOR_PANE.defaultWidth, INSPECTOR_PANE.min, INSPECTOR_PANE.max);
-  const inspectorVisible = inspectorOpen && !logOpen && !monitorOpen;
+  const inspectorVisible = inspectorOpen && !settingsOpen && !logOpen && !monitorOpen;
   const stackInspector = inspectorVisible && viewportWidth > INSPECTOR_STACK_BREAKPOINT_PX
     && (navigationOpen ? navigationWidth : 0) + inspectorWidth + WORKBENCH_CENTER_MIN_PX > viewportWidth / uiScale;
   useEffect(() => {
@@ -661,6 +668,7 @@ function AppBody({ manifestVersion = packageVersion, session, editorReturn = fal
   }
 
   async function selectEntity(sel: Selection) {
+    setSettingsOpen(false);
     if (sel.kind === "device") {
       if (view !== "device" || logOpen || monitorOpen) {
         deviceOriginRef.current = { view, log: logOpen, monitor: monitorOpen, selection: selectionRef.current };
@@ -722,6 +730,7 @@ function AppBody({ manifestVersion = packageVersion, session, editorReturn = fal
   }
 
   function openDownload(deviceId: number) {
+    setSettingsOpen(false);
     const current = treeRef.current;
     if (!current) return;
     setDownloadHandoff(buildDownloadHandoff(current, deviceId, ++downloadNonceRef.current));
@@ -729,11 +738,13 @@ function AppBody({ manifestVersion = packageVersion, session, editorReturn = fal
   }
 
   function openDevices() {
+    setSettingsOpen(false);
     setView("devices"); setLogOpen(false); setMonitorOpen(false);
     if (window.innerWidth <= 650) setNavigationOpen(false);
   }
 
   function backFromDevice() {
+    setSettingsOpen(false);
     const origin = deviceOriginRef.current;
     if (!origin) { openDevices(); return; }
     deviceOriginRef.current = null;
@@ -747,6 +758,7 @@ function AppBody({ manifestVersion = packageVersion, session, editorReturn = fal
   }
 
   function openCatalog(lineId: number | null) {
+    setSettingsOpen(false);
     setCatalogTarget({ lineId });
     setView("catalog");
     setLogOpen(false);
@@ -917,6 +929,7 @@ function AppBody({ manifestVersion = packageVersion, session, editorReturn = fal
   }
 
   function openNotes() {
+    setSettingsOpen(false);
     if (!tree) return;
     setView("notes");
     setLogOpen(false);
@@ -930,6 +943,7 @@ function AppBody({ manifestVersion = packageVersion, session, editorReturn = fal
   // over whatever file the previous one came from. The backend clears its
   // own `store_path` for exactly the same reason (`new_project_impl`).
   function newProjectCreated(newTree: ProjectTree) {
+    setSettingsOpen(false);
     if (!resetTree(newTree)) return;
     emitAchievementEvent({ type: "projectCreated" });
     setCatalogTarget(null); // Never carry a former project's target line into this one.
@@ -1314,6 +1328,7 @@ function AppBody({ manifestVersion = packageVersion, session, editorReturn = fal
   // The Overview's import counters open the existing session log, narrowed
   // to the matching import-report entries of the project on screen.
   function openImportFindings(severity: ImportFindingSeverity) {
+    setSettingsOpen(false);
     if (!tree) return;
     setMonitorOpen(false);
     setLogImportFocus({ severity });
@@ -1414,9 +1429,9 @@ function AppBody({ manifestVersion = packageVersion, session, editorReturn = fal
     undo,
     redo,
     openSearch: () => setSearchOpen(true),
-    openLog: () => { setMonitorOpen(false); setLogOpen(true); },
-    openBusMonitor: () => { setLogOpen(false); setMonitorOpen(true); },
-    openSettings: () => setSettingsOpen(true),
+    openLog: () => { setSettingsOpen(false); setMonitorOpen(false); setLogOpen(true); },
+    openBusMonitor: () => { setSettingsOpen(false); setLogOpen(false); setMonitorOpen(true); },
+    openSettings,
     openCompanion: () => void openCompanion(),
     openHelp: () => requestHelpTopic(DEFAULT_HELP_TOPIC_ID),
     openCatalog: () => openCatalog(null),
@@ -1437,7 +1452,34 @@ function AppBody({ manifestVersion = packageVersion, session, editorReturn = fal
   const centerWorkspace = (
     <div className="workbench-center">
       {tree && <System2Lifecycle onTreeUpdate={handleTreeUpdate} />}
-      {(monitorMounted || monitorOpen) && <div hidden={!monitorOpen}><BusDiagnosticsPanel active={monitorOpen} project={tree} onTreeUpdate={handleTreeUpdate} projectScope={flowProjectScope} onFlowNavigate={navigateFlow} downloadHandoff={downloadHandoff} /></div>}
+      {settingsOpen && (
+        <SettingsPanel
+          appearance={appearance}
+          themes={getThemeDefinitions()}
+          activeThemeId={themeId}
+          onSelectTheme={setThemeId}
+          manageThemes
+          motionStyles={MOTION_STYLES}
+          activeMotionStyle={motionStyle}
+          onSelectMotionStyle={setMotionStyle}
+          motionLevels={MOTION_LEVELS}
+          activeMotionLevel={motionLevel}
+          onSelectMotionLevel={setMotionLevel}
+          productLanguages={productLanguages}
+          activeProductLanguage={productLanguage}
+          onSelectProductLanguage={setProductLanguage}
+          autosaveEnabled={autosaveSettings.enabled}
+          onSelectAutosaveEnabled={autosaveSettings.setEnabled}
+          autosaveIntervalMinutes={autosaveSettings.intervalMinutes}
+          onSelectAutosaveIntervalMinutes={autosaveSettings.setIntervalMinutes}
+          achievementTracker={achievements.tracker}
+          legacyPassword={serverLegacyPassword}
+          onClose={() => setSettingsOpen(false)}
+        />
+      )}
+      <ModalForeground active={!settingsOpen}>
+      <div className="workbench-content" hidden={settingsOpen}>
+      {(monitorMounted || monitorOpen) && <ModalForeground active={monitorOpen}><div hidden={!monitorOpen}><BusDiagnosticsPanel active={!settingsOpen && monitorOpen} project={tree} onTreeUpdate={handleTreeUpdate} projectScope={flowProjectScope} onFlowNavigate={navigateFlow} downloadHandoff={downloadHandoff} /></div></ModalForeground>}
       {logOpen ? <LogPanel tree={tree} refreshKey={logVersion} notifications={notifications} notificationDroppedCount={notificationDroppedCount} notificationTarget={logTarget} onNotificationTargetHandled={() => setLogTarget(null)} importFocus={logImportFocus} onImportFocusHandled={() => setLogImportFocus(null)} /> : monitorOpen ? null : view === "catalog" ? null : tree ? (
         view === "device" ? <section className="device-editor-view" aria-label={t("workbench.device")}>
           <nav className="device-editor-navigation" aria-label={t("workbench.devices")}>
@@ -1475,17 +1517,19 @@ function AppBody({ manifestVersion = packageVersion, session, editorReturn = fal
           </div>
         </section>
       )}
-      {catalogTarget && <CatalogBrowser lineId={catalogTarget.lineId} active={!logOpen && !monitorOpen && view === "catalog"}
+      {catalogTarget && <ModalForeground active={!logOpen && !monitorOpen && view === "catalog"}><CatalogBrowser lineId={catalogTarget.lineId} active={!settingsOpen && !logOpen && !monitorOpen && view === "catalog"}
         serverIncarnation={tree?.server_incarnation} installations={tree?.installations ?? []} onCreated={handleTreeUpdate} onClose={() => { setCatalogTarget(null); setView("overview"); }}
-        onWizard={tree ? (item) => setDeviceWizard({ target: { lineId: catalogTarget.lineId }, product: item }) : undefined} />}
-      {tree && <div hidden={logOpen || monitorOpen || view !== "devices"}>
-        <DevicesWorkspace key={loadKey} tree={tree} active={!logOpen && !monitorOpen && view === "devices"}
+        onWizard={tree ? (item) => setDeviceWizard({ target: { lineId: catalogTarget.lineId }, product: item }) : undefined} /></ModalForeground>}
+      {tree && <ModalForeground active={!logOpen && !monitorOpen && view === "devices"}><div hidden={logOpen || monitorOpen || view !== "devices"}>
+        <DevicesWorkspace key={loadKey} tree={tree} active={!settingsOpen && !logOpen && !monitorOpen && view === "devices"}
           selection={selection} multiSelection={multiSelection} onItemClick={onItemClick} onCatalogue={setNavigationCatalogue} onTreeUpdate={handleTreeUpdate} />
-      </div>}
+      </div></ModalForeground>}
       {tree && notesIdentity !== null && (view === "notes" || notesMountedFor === notesIdentity) && (
-        <NotesWorkspace key={notesIdentity} tree={tree} active={!logOpen && !monitorOpen && view === "notes"}
-          onTreeUpdate={handleTreeUpdate} onDirtyChange={(dirty) => { draftsRef.current.notes = dirty; }} />
+        <ModalForeground active={!logOpen && !monitorOpen && view === "notes"}><NotesWorkspace key={notesIdentity} tree={tree} active={!settingsOpen && !logOpen && !monitorOpen && view === "notes"}
+          onTreeUpdate={handleTreeUpdate} onDirtyChange={(dirty) => { draftsRef.current.notes = dirty; }} /></ModalForeground>
       )}
+      </div>
+      </ModalForeground>
     </div>
   );
 
@@ -1497,7 +1541,7 @@ function AppBody({ manifestVersion = packageVersion, session, editorReturn = fal
       <header className="workbench-toolbar">
         <CatalogueJobsRootNotice />
         {catalogueRefreshFailed && <span role="alert">{t("catalogJob.refreshDirty")} <button type="button" onClick={() => setCatalogueReadAttempt(n => n + 1)}>{t("catalogJob.retryRefresh")}</button></span>}
-        <a className="workbench-brand" href="#" onClick={(e) => { e.preventDefault(); setView("overview"); setLogOpen(false); setMonitorOpen(false); }}><img className="workbench-logo" src={brandMark} width="44" height="34" alt="" draggable={false} /><strong>KNXBench</strong></a>
+        <a className="workbench-brand" href="#" onClick={(e) => { e.preventDefault(); setSettingsOpen(false); setView("overview"); setLogOpen(false); setMonitorOpen(false); }}><img className="workbench-logo" src={brandMark} width="44" height="34" alt="" draggable={false} /><strong>KNXBench</strong></a>
         <details ref={fileMenuRef} className="file-menu" onKeyDown={(e) => { if (e.key === "Escape") { e.currentTarget.open = false; e.currentTarget.querySelector("summary")?.focus(); } }}>
           <FileMenuSummary>{t("workbench.file")} <span aria-hidden="true">⌄</span></FileMenuSummary>
           <FileMenuContent onClick={handleFileMenuActivation}>
@@ -1567,7 +1611,7 @@ function AppBody({ manifestVersion = packageVersion, session, editorReturn = fal
         <button className="command-entry" onClick={() => setPaletteOpen(true)}>{t("toolbar.commands")}</button>
         <button ref={saveButtonRef} data-crt-surface="save" className="primary-action" onClick={saveProject} disabled={!tree}>{t("toolbar.save")}</button>
         <button onClick={() => requestHelpTopic(DEFAULT_HELP_TOPIC_ID)} title={t("toolbar.help")} aria-label={t("toolbar.help")}><QuestionIcon /></button>
-        <button onClick={() => setSettingsOpen(true)} title={t("toolbar.settings")} aria-label={t("toolbar.settings")}><GearIcon /></button>
+        <button onClick={openSettings} title={t("toolbar.settings")} aria-label={t("toolbar.settings")}><GearIcon /></button>
       </header>
       <div className="workbench-panel-controls">
         <button aria-expanded={navigationOpen} onClick={toggleNavigation}><WorkbenchIcon name="panel" />{t("workbench.navigation")}</button>
@@ -1579,9 +1623,9 @@ function AppBody({ manifestVersion = packageVersion, session, editorReturn = fal
             onDone={clearMultiSelection}
           />
         )}
-        {tree && <ImportDiagnosticsNotice available={tree.import_report_available} compact onOpen={() => { setView("overview"); setLogOpen(false); setMonitorOpen(false); }} />}
-        {tree && (tree.errors > 0 || tree.warnings > 0) && <button className="import-notice" onClick={() => { setView("overview"); setLogOpen(false); setMonitorOpen(false); }}>{t("workbench.importNotices", { errors: tree.errors, warnings: tree.warnings })}</button>}
-        <button aria-expanded={inspectorOpen} onClick={() => setInspectorOpen(!inspectorOpen)}>{t("workbench.properties")}<WorkbenchIcon name="panel" /></button>
+        {tree && <ImportDiagnosticsNotice available={tree.import_report_available} compact onOpen={() => { setSettingsOpen(false); setView("overview"); setLogOpen(false); setMonitorOpen(false); }} />}
+        {tree && (tree.errors > 0 || tree.warnings > 0) && <button className="import-notice" onClick={() => { setSettingsOpen(false); setView("overview"); setLogOpen(false); setMonitorOpen(false); }}>{t("workbench.importNotices", { errors: tree.errors, warnings: tree.warnings })}</button>}
+        <button disabled={settingsOpen} aria-expanded={inspectorOpen} onClick={() => setInspectorOpen(!inspectorOpen)}>{t("workbench.properties")}<WorkbenchIcon name="panel" /></button>
       </div>
       {loadSource && <LoadProgressBanner key={loadKey} source={loadSource} snapshot={loadSnapshot} />}
       <div className="workspace workbench-body">
@@ -1591,10 +1635,10 @@ function AppBody({ manifestVersion = packageVersion, session, editorReturn = fal
           <nav ref={navBlockRef} className="workbench-navigation" aria-label={t("workbench.navigation")} style={{ height: navHeight ?? undefined }}>
             {(["overview", "buildings", "topology", "devices", "addresses", "notes"] as const).map((item) => <button key={item}
               disabled={(item === "devices" || item === "notes") && !tree}
-              aria-current={!logOpen && !monitorOpen && (view === item || item === "devices" && view === "device") ? "page" : undefined}
-              onClick={() => { if (item === "devices") openDevices(); else if (item === "notes") openNotes(); else { setView(item); setLogOpen(false); setMonitorOpen(false); } }}>
+              aria-current={!settingsOpen && !logOpen && !monitorOpen && (view === item || item === "devices" && view === "device") ? "page" : undefined}
+              onClick={() => { setSettingsOpen(false); if (item === "devices") openDevices(); else if (item === "notes") openNotes(); else { setView(item); setLogOpen(false); setMonitorOpen(false); } }}>
               <WorkbenchIcon name={item} />{t(`workbench.${item}`)}</button>)}
-            <button aria-current={!logOpen && !monitorOpen && view === "catalog" ? "page" : undefined}
+            <button aria-current={!settingsOpen && !logOpen && !monitorOpen && view === "catalog" ? "page" : undefined}
               onClick={() => openCatalog(selection?.kind === "line" ? selection.id : null)}><WorkbenchIcon name="catalog" />{t("workbench.catalog")}</button>
           </nav>
           </NavigationSection>
@@ -1609,15 +1653,15 @@ function AppBody({ manifestVersion = packageVersion, session, editorReturn = fal
           {tree && <PaneSplitter label={t("workbench.resizeDiagnostics")} target={diagnosticsBlockRef} resizes="below" value={diagnosticsHeight} onChange={setDiagnosticsHeight} min={STACK_BLOCK_MIN_PX} max={STACK_BLOCK_MAX_PX} />}
           <NavigationSection title={t("workbench.diagnostics")}>
           <nav ref={diagnosticsBlockRef} className="workbench-navigation diagnostic-navigation" aria-label={t("toolbar.busMonitor")} style={{ height: diagnosticsHeight ?? undefined }}>
-            <button aria-current={monitorOpen ? "page" : undefined} onClick={() => { setLogOpen(false); setMonitorOpen(true); }}><WorkbenchIcon name="monitor" />{t("toolbar.busMonitor")}</button>
-            <button aria-current={logOpen ? "page" : undefined} onClick={() => { setMonitorOpen(false); setLogOpen(true); }}><WorkbenchIcon name="log" />{t("toolbar.log")}</button>
+            <button aria-current={!settingsOpen && monitorOpen ? "page" : undefined} onClick={() => { setSettingsOpen(false); setLogOpen(false); setMonitorOpen(true); }}><WorkbenchIcon name="monitor" />{t("toolbar.busMonitor")}</button>
+            <button aria-current={!settingsOpen && logOpen ? "page" : undefined} onClick={() => { setSettingsOpen(false); setMonitorOpen(false); setLogOpen(true); }}><WorkbenchIcon name="log" />{t("toolbar.log")}</button>
             <button className="companion-open" onClick={() => void openCompanion()}><WorkbenchIcon name="panel" />{t("companion.open")}</button>
-            <button onClick={() => setSettingsOpen(true)}><GearIcon />{t("toolbar.settings")}</button>
+            <button aria-current={settingsOpen ? "page" : undefined} onClick={openSettings}><GearIcon />{t("toolbar.settings")}</button>
           </nav>
           </NavigationSection>
         </ResizablePane>}
         {!welcomeVisible && centerWorkspace}
-        {inspectorOpen && !logOpen && !monitorOpen && <ResizablePane label={t("workbench.properties")} side="right" initialWidth={inspectorWidth} min={INSPECTOR_PANE.min} max={INSPECTOR_PANE.max} onWidthCommit={(width) => setSetting("inspectorPaneWidth", width)}>
+        {inspectorVisible && <ResizablePane label={t("workbench.properties")} side="right" initialWidth={inspectorWidth} min={INSPECTOR_PANE.min} max={INSPECTOR_PANE.max} onWidthCommit={(width) => setSetting("inspectorPaneWidth", width)}>
           <header className="inspector-heading">{t("workbench.properties")}</header>
           {tree && selection ? <Inspector propertiesOnly key={`${selection.kind}-${selection.id}`} selection={selection} tree={tree} deviceDetail={deviceDetail} onApplied={handleTreeUpdate} onDeleted={resetTree} /> : <p className="inspector-empty">{t("workbench.noSelection")}</p>}
         </ResizablePane>}
@@ -1635,7 +1679,7 @@ function AppBody({ manifestVersion = packageVersion, session, editorReturn = fal
       </footer>
       <ToastStack toasts={toasts} onDismiss={dismiss} onExited={finishExit} onPause={pause} onResume={resume}
         pendingCount={pendingCount} queueDropped={queueDropped} onOpen={(id) => {
-        setLogTarget({ id }); setLogOpen(true); setMonitorOpen(false); dismiss(id);
+        setSettingsOpen(false); setLogTarget({ id }); setLogOpen(true); setMonitorOpen(false); dismiss(id);
       }} />
       {autosave.secondsRemaining !== null && (
         <div className="autosave-countdown" role="status">
@@ -1711,31 +1755,6 @@ function AppBody({ manifestVersion = packageVersion, session, editorReturn = fal
           keepLabel={t("quit.cancel")} discardLabel={t("quit.discard")}
           saveLabel={t("quit.save")} savingLabel={t("quit.saving")} saving={quitSaving}
           onKeep={dismissQuitConfirm} onDiscard={() => void quitApp()} onSave={() => void saveAndQuit()} />
-      )}
-      {settingsOpen && (
-        <SettingsPanel
-          appearance={appearance}
-          themes={getThemeDefinitions()}
-          activeThemeId={themeId}
-          onSelectTheme={setThemeId}
-          manageThemes
-          motionStyles={MOTION_STYLES}
-          activeMotionStyle={motionStyle}
-          onSelectMotionStyle={setMotionStyle}
-          motionLevels={MOTION_LEVELS}
-          activeMotionLevel={motionLevel}
-          onSelectMotionLevel={setMotionLevel}
-          productLanguages={productLanguages}
-          activeProductLanguage={productLanguage}
-          onSelectProductLanguage={setProductLanguage}
-          autosaveEnabled={autosaveSettings.enabled}
-          onSelectAutosaveEnabled={autosaveSettings.setEnabled}
-          autosaveIntervalMinutes={autosaveSettings.intervalMinutes}
-          onSelectAutosaveIntervalMinutes={autosaveSettings.setIntervalMinutes}
-          achievementTracker={achievements.tracker}
-          legacyPassword={serverLegacyPassword}
-          onClose={() => setSettingsOpen(false)}
-        />
       )}
     </main>
     </DownloadNavigationProvider>

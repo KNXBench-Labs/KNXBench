@@ -2685,6 +2685,8 @@ export const messages: Record<MessageKey, string> = {
   "command.shortcutHint.search": "Strg+K",
 
   "settings.title": "Einstellungen",
+  "settings.back": "Zurück zur vorherigen Ansicht",
+  "settings.jumpNavigation": "Einstellungsbereiche",
   "settings.section.appearance": "Darstellung",
   "settings.section.languageData": "Sprache & Daten",
   "settings.section.busDiagnostics": "Bus & Diagnose",

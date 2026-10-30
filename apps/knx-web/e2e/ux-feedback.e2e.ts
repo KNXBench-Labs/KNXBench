@@ -70,6 +70,8 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
     await expect.poll(() => settings.motionAchievements).toBe("subtle");
     await expect.poll(() => settings.motionFlow).toBe("off");
     await page.locator('[data-motion-category="flow"]').focus(); await page.keyboard.press("Escape");
+    await expect(page.locator(".settings-panel")).toBeVisible();
+    await page.getByRole("button", { name: m["settings.back"], exact: true }).click();
     await expect(page.locator(".settings-panel")).toHaveCount(0);
     await page.reload();
     await expect(page.locator("html")).toHaveAttribute("data-motion-toasts", "off");
@@ -87,6 +89,8 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
       await page.screenshot({ path: `${SHOTS}/motion-${language}-${width}.png` });
     }
     await globalMotion.focus(); await page.keyboard.press("Escape");
+    await expect(page.locator(".settings-panel")).toBeVisible();
+    await page.getByRole("button", { name: m["settings.back"], exact: true }).click();
     await expect(page.locator(".settings-panel")).toHaveCount(0);
     async function importProject() {
       await page.keyboard.press("Control+Shift+P");
@@ -118,6 +122,8 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
     await page.locator('[data-motion-category="toasts"]').selectOption("subtle");
     await expect.poll(() => settings.motionToasts).toBe("subtle");
     await page.locator('[data-motion-category="toasts"]').focus(); await page.keyboard.press("Escape");
+    await expect(page.locator(".settings-panel")).toBeVisible();
+    await page.getByRole("button", { name: m["settings.back"], exact: true }).click();
     await expect(page.locator(".settings-panel")).toHaveCount(0);
 
     // Two refusals: the second card no longer replaces the first. Like a user, retry only

@@ -5,7 +5,7 @@ import { UPDATE_CHECK_SETTING, releaseChecksEnabled } from "./releaseUpdatePrefe
 export default function UpdateSettings() {
   const t = useTranslate(); useSettingsRevision();
   return <section className="settings-section settings-section-updates">
-    <h3>{t("updates.section")}</h3>
+    <h2 id="settings-updates" tabIndex={-1}>{t("updates.section")}</h2>
     <label className="settings-field settings-field-checkbox">
       <input type="checkbox" checked={releaseChecksEnabled(getSetting(UPDATE_CHECK_SETTING))} onChange={event => setSetting(UPDATE_CHECK_SETTING, event.target.checked)} />
       <span className="settings-field-label">{t("updates.enabled")}</span>

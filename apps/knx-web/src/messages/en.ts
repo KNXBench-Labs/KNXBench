@@ -2754,6 +2754,8 @@ export const messages = {
   // `SettingsPanel.tsx`. `settings.uiLanguage`/`language.*` already existed
   // (task 2); the rest of the panel's field labels are this task's.
   "settings.title": "Settings",
+  "settings.back": "Back to previous view",
+  "settings.jumpNavigation": "Settings sections",
   "settings.section.appearance": "Appearance",
   "settings.section.languageData": "Language & data",
   "settings.section.busDiagnostics": "Bus & diagnostics",

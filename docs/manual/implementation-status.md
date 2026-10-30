@@ -2,6 +2,18 @@
 
 # Implementation status
 
+## Main-only after Alpha 18: settings workspace
+
+App settings use one continuous center-workspace page, with top section jumps,
+normal navigation and no modal Escape behavior. Settings remains available
+without a project. Properties is temporarily hidden without changing its prior
+visibility preference; project selection and real notes/instructions editor
+drafts remain intact. Existing immediate-apply, acknowledged-save and failure
+feedback paths are unchanged. Published Alpha 18 still has the older modal.
+[Settings contract](../contracts/settings-workspace.md) ·
+[Opening Settings](user-guide/09-settings-and-appearance.md#opening-settings).
+Browser verification is not native WebKitGTK/Tauri or hardware acceptance.
+
 <a id="source-implementation-after-alpha-17-system-2-results-and-reports"></a>
 
 ## Alpha 18 — current pre-release

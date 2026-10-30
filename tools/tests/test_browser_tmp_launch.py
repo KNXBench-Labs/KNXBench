@@ -115,9 +115,9 @@ def diagnose_stuck_wrapper(
         wrapper_identity: OwnedProcessIdentity | None = None) -> str:
     """Describe a wrapper that did not finish after SIGTERM, then end it.
 
-    Records the wrapper and every process carrying its temp directory (the
-    child group), aborts them so PYTHONFAULTHANDLER prints their Python
-    stacks, and returns all of it as the failure message.
+    Records kernel process state and existing stderr before bounded cleanup.
+    Diagnostics never deliberately crash a fixture: SIGABRT would generate
+    system crash reports even when the signal-handling test behaves correctly.
     """
     group = fixture_processes(directory)
     try:
@@ -128,20 +128,13 @@ def diagnose_stuck_wrapper(
         states = [f'load={os.getloadavg()}', f'wrapper exit={wrapper.returncode}',
                   process_state(wrapper.pid),
                   *(process_state(process.pid) for process in group)]
-        # One at a time, so the stacks do not interleave on the shared stderr pipe.
-        for process in running_owned_processes(diagnostic_processes):
-            signal_owned_processes([process], signal.SIGABRT)
-            select.select([process.pidfd], [], [], 3)
-        try:
-            _, stderr = wrapper.communicate(timeout=10)
-        except subprocess.TimeoutExpired:
-            remaining = running_owned_processes(diagnostic_processes)
-            signal_owned_processes(remaining, signal.SIGKILL)
-            _, stderr = wrapper.communicate(timeout=10)
-        stacks = [line for line in stderr.splitlines()
-                  if not line.lstrip().startswith('Binary file')]
-        return ('wrapper pipes still open 10 s after SIGTERM\n' + '\n'.join(states) + '\n'
-                + '\n'.join(stacks)[-6000:])
+        # Capture evidence first, then end only retained fixture identities.
+        remaining = running_owned_processes(diagnostic_processes)
+        signal_owned_processes(remaining, signal.SIGKILL)
+        _, stderr = wrapper.communicate(timeout=10)
+        wait_for_owned_processes(remaining)
+        return ('wrapper pipes still open 10 s after SIGTERM\n' + '\n'.join(states)
+                + '\ncaptured stderr:\n' + stderr[-6000:])
     finally:
         close_owned_processes(group)
 
@@ -503,12 +496,11 @@ class BrowserTempLaunch(unittest.TestCase):
             # handler after a keyword call, so the sleep blocked for a minute.
             receipt = work / 'signal-received.json'
             release = work / 'release-child'
-            # PYTHONFAULTHANDLER only acts on fatal signals: on a timeout the
-            # diagnosis aborts both processes and gets their Python stacks.
+            # A timeout records kernel state and existing stderr, not a core dump.
             child = subprocess.Popen(
                 [sys.executable, str(ROOT / 'tools/browser_tmp.py'), '--base', str(work),
                  '--run', sys.executable, '-c', SIGTERM_CHILD],
-                env={**self.clean_environment(), 'PYTHONFAULTHANDLER': '1',
+                env={**self.clean_environment(),
                      'KNXBENCH_SIGTERM_RECEIPT': str(receipt),
                      'KNXBENCH_SIGTERM_RELEASE': str(release)},
                 stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
@@ -664,7 +656,7 @@ class BrowserTempLaunch(unittest.TestCase):
                 'env=os.environ.copy());'
                 'print(child.pid,flush=True);'
                 'time.sleep(120)')
-            env = {**self.clean_environment(), 'PYTHONFAULTHANDLER': '1',
+            env = {**self.clean_environment(),
                    'KNXBENCH_BROWSER_TMP_DIR': marker}
             wrapper = subprocess.Popen(
                 [sys.executable, '-c', program], env=env,

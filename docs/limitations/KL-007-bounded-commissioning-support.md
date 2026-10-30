@@ -6,11 +6,16 @@ This dossier preserves the technical detail and dated history. Earlier
 headings, failures and lifting conditions are historical where later
 updates supersede them; they are not new work assignments.
 
-## Customer-adjustable write refusal — 30 October 2026 implementation
+<a id="customer-adjustable-write-refusal--30-october-2026-implementation"></a>
+
+## Customer-adjustable write refusal — 30 October 2026 software acceptance
 
 The [presence-only contract](../contracts/customer-adjustable-write-admission.md)
-is implemented at `d6918027b` and independently code-reviewed; maintained gates,
-actual isolated build/smoke and software acceptance are still pending. Exact
+is implemented at `d6918027b` and independently code-reviewed. Both maintained
+branch/main-first gates passed 15/15 stages; actual isolated server build/smoke
+passed on runtime `e990fd956`
+([bounded software acceptance](../status/2026-10-30-customer-adjustable-write-admission.md)).
+Runtime acceptance is separate from publication/readback. Exact
 unqualified markers in the named root/Union/module contexts, including empty,
 `false` and unknown values, block regular write preparation and offline support
 checks. Existing kind/plug-in precedence and read-only preparation stay unchanged.

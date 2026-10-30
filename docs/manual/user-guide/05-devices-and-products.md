@@ -212,8 +212,11 @@ it never submits comparison bytes as a write plan.
 The source implementation `d6918027b` refuses regular downloads when the selected
 application contains a customer-adjustable declaration in the
 [explicitly supported syntax contexts](../../contracts/customer-adjustable-write-admission.md).
-Its maintained software acceptance is still pending. The readiness reason is
-`customer-adjustable-parameters`; the EN/DE panel explains that preservation
+Its [bounded software acceptance](../../status/2026-10-30-customer-adjustable-write-admission.md)
+records both maintained 15/15-stage gates and the actual isolated runtime
+`e990fd956` build/smoke, not a change to immutable Alpha 18 artifacts or hardware
+acceptance. The readiness reason is `customer-adjustable-parameters`; the EN/DE
+panel explains that preservation
 semantics are not implemented and offers **Request support**. Read-only compare
 and diagnostics keep their existing preparation path.
 

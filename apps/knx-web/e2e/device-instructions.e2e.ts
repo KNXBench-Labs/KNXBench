@@ -1,5 +1,5 @@
 /** Built device editor: instructions tab, identity, apply refresh, refusals. */
-import { openExplorerBranches } from "./disclosure-fixture";
+import { openExplorerBranches, openNavigationSections } from "./disclosure-fixture";
 import { expect, test, type Page } from "@playwright/test";
 import { join } from "node:path";
 import type { ProjectTree } from "../src/bindings/ProjectTree";
@@ -76,6 +76,7 @@ async function fixture(page: Page, language: Language, theme: string, width: num
     if (path === "/api/project/load-progress") return ok(null);
     if (path === "/api/project/status-metrics" && method === "GET") return ok(statusMetricsFixtureBody(projectTree(f)));
     if (path === "/api/log") return ok([]);
+    if (path === "/api/legacy-password" && method === "GET") return ok({ available: true, remembered: false, problem: null });
     if (path === "/api/bus/discover" && method === "POST") return ok({ interfaces: [] });
     if (["/api/product-languages", "/api/catalog/manufacturers", "/api/catalog/items"].includes(path)) return ok([]);
     if (["/api/device-download/status", "/api/device-address/status"].includes(path)) return refuse(404, "none", "no fixture operation");
@@ -149,6 +150,22 @@ for (const language of ["en", "de"] as const) for (const theme of ["porcelain", 
     await capture(page, `${tag}-1-open`);
 
     await text.fill("Mount the actuator only on a DIN rail.\nKeep <script> away.\nLabel the cable.");
+    await text.evaluate((node) => node.setAttribute("data-settings-retained", "instructions"));
+    await page.keyboard.press("Control+Shift+P");
+    await page.getByRole("combobox").fill(m["toolbar.settings"]);
+    await page.getByRole("combobox").press("Enter");
+    await expect(panel).toBeHidden();
+    await page.keyboard.press("Escape");
+    await expect(page.locator(".settings-workspace")).toBeVisible();
+    await page.getByRole("button", { name: m["settings.back"], exact: true }).click();
+    await expect(panel).toBeVisible();
+    await expect(panel.locator("[data-settings-retained=instructions]")).toHaveValue("Mount the actuator only on a DIN rail.\nKeep <script> away.\nLabel the cable.");
+    if (await page.getByRole("button", { name: m["workbench.navigation"], exact: true }).getAttribute("aria-expanded") === "false") await page.getByRole("button", { name: m["workbench.navigation"], exact: true }).click();
+    await openNavigationSections(page);
+    await openExplorerBranches(page);
+    await expect(page.locator(".project-explorer .selected")).toContainText(DEVICE.name);
+    if (width === 400) await page.getByRole("button", { name: m["workbench.navigation"], exact: true }).click();
+    expect(f.applied).toBe(0);
     const readsBefore = f.projectReads;
     await panel.getByRole("button", { name: language === "de" ? "Änderung prüfen" : "Preview change", exact: true }).click();
     const change = panel.getByRole("region", { name: language === "de" ? "Änderungsvorschau" : "Change preview" });

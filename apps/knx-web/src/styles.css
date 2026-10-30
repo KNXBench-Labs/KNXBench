@@ -953,7 +953,8 @@ main {
   padding: 0.4rem;
   margin-bottom: 0.5rem;
 }
-.search-panel input[type="checkbox"] {
+.search-panel input[type="checkbox"],
+.settings-workspace input[type="checkbox"] {
   width: 1rem;
   height: 1rem;
   min-height: 1rem;
@@ -1003,15 +1004,31 @@ main {
   margin-bottom: 0.5rem;
 }
 
-.settings-panel {
-  width: min(54rem, calc(100vw - 2rem));
+.workbench-content:not([hidden]) { display: contents; }
+.settings-workspace {
+  width: 100%;
+  min-width: 0;
+  max-width: 64rem;
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.75rem 1.25rem;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1.25rem;
   align-content: start;
+  overflow-wrap: anywhere;
 }
-.settings-panel > .settings-panel-title { grid-column: 1 / -1; }
-.settings-panel > .settings-section {
+/* Nested section grids must not inherit native file inputs' intrinsic width at high zoom. */
+.settings-workspace > .settings-section {
+  min-width: 0;
+  grid-template-columns: minmax(0, 1fr);
+  margin-top: 0;
+}
+.settings-workspace-header { display: grid; gap: 0.75rem; justify-items: start; }
+.settings-workspace .settings-panel-title { margin: 0; font-size: 1.5rem; }
+.settings-jump-nav { display: flex; flex-wrap: wrap; gap: 0.5rem 1rem; }
+.settings-jump-nav a { color: var(--knx-accent); text-underline-offset: 0.2em; }
+.settings-workspace h2 { scroll-margin-block: 1rem; }
+.settings-workspace :is(h1, h2):focus { outline: 2px solid var(--knx-accent); outline-offset: 3px; }
+
+.settings-section {
   min-width: 0;
   margin-top: 0;
   align-content: start;
@@ -1033,7 +1050,7 @@ main {
   border-top: 1px solid var(--knx-border);
 }
 
-.settings-section h3 {
+.settings-section :is(h2, h3) {
   margin: 0;
   font-size: 0.9rem;
 }

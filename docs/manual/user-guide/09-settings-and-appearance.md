@@ -17,14 +17,23 @@ shown as enabled only after the server persists and reads it back.
 
 ## Opening Settings
 
-Click the gear button at the right end of the toolbar, or open the command palette with
-`Ctrl+Shift+P` and run **Settings**. The panel opens over the workspace; Escape closes
-it and returns focus to the control that opened it. On a wide window the groups use
-two columns; on a narrow window they stack, with the remaining controls reachable by
-scrolling inside the panel. Drag the panel's lower-right corner to resize it, or focus
-the labelled resize button at its top right and press the arrow keys (24 layout-
-pixel steps, scaled by application zoom). The panel stays within the current
-window. Its size is not saved between openings.
+**Main-only, after Alpha 18:** click **Settings** in the left navigation's
+Diagnostics section, or open the command palette with `Ctrl+Shift+P` and run
+**Settings**. All app settings appear in the center workspace as one continuous
+page. Use the compact jump navigation at the top to reach a section; the other
+sections remain on the same page. The left navigation stays usable and the
+project Properties pane is temporarily hidden. When you leave Settings, its
+previous visibility preference returns. Project selection and unsaved notes or
+device-instructions drafts are retained. Settings also works without an open
+project. It is a normal page: no backdrop, focus trap or Escape-to-close action.
+Existing settings still apply through their usual immediate-apply and
+acknowledged-save paths; there is no new global Save button.
+[Navigation and state contract](../../contracts/settings-workspace.md).
+
+**Published Alpha 18 and earlier:** Settings opens a resizable window over the
+workspace. Escape closes it and returns focus to the opener; the window's resize
+handle changes its size for that opening only. The released screenshots in this
+manual retain that older presentation.
 
 The first group contains theme, accent, density and motion. Language & data
 contains product-data language, UI language and the language-pack manager. Bus &

@@ -1,11 +1,12 @@
 # Restart snapshot
 
-## Settings center workspace (FINAL DELIVERY GO; observed 2026-10-30 12:38 CET)
-- Owner this settings WebUI; branch `feat/settings-workspace-20261030`, `<sources>/knxbench-settings-workspace-20261030`, base `72db561a4`; local feature `a6bcc0032` + approved global-owner fix `92007aaf9` + test-only nonmodal pin correction. Nothing pushed/integrated yet.
-- Continuous center page/all existing settings/top jumps; Properties preference, selection/drafts/immediate apply/projectless access retained. Whole-feature/SW-1/finalR1/global-owner approvals carry; no domain/storage/safety changes.
-- Failed packages retained: original global warning owner2cases corrected; delivery02 all9staticstages/tool472tests6skips/4688Vitest/932functionalPASS, exclusive65/69 due4obsoleteEscapeUXpins. Inputs frozen/checked user data untouched. No accepted full gate inferred from partials.
-- Corrected threeUXpin sites now assertEscape leaves page visible then useBack; no runtime changes/all old motion/toast checks retained. Exact26frontend hashes; targeted33stages/4688Vitest/4exclusivebrowserPASS. Prior global warning16case and feature91case proofs remain distinctly source-bound.
-- NEXT commit reviewed test-only delta, full unchanged selected branch/main-first package gates(all1001defaultbrowser cases), guarded publication/readback via `<profile-scratch>/settings-workspace-20261030/delivery-03/`; result-only docs and exact-owned cleanup last. Root/foreign worktrees preserved; no bus/hardware/release/deployment.
+## Settings center workspace (DELIVERED SOURCE; observed 2026-10-30 13:24 CET)
+- PUBLISHED/read back main-first runtime `fd1dfa0e41175b9ad792d53fcdc09de779a25e91`; feature `a6bcc0032`, root-owner fix `92007aaf9`, nonmodalUXpins `24d612320`. Local integration/tracking/live remote matched; protected root/foreign worktrees unchanged.
+- All existing settings now continuous center page/top jumps; Properties preference, selection/actual notes+instructions drafts/immediate apply/projectless entry preserved. Retained modal foreground/focus and global warning retry verified; no domain/storage/backend/hardware permission change.
+- Independent full-feature and SW-1/R1/global-owner scopes approved. Original semanticREDs, fixture corrections and two rejected full gates retained, not relabelled as accepted. Final branch11/11 + actual merged11/11 PASS: each nested33webstages/4688Vitest/1001browser(932functional+69exclusive), no browser skip/flake/retry;472tool tests6skips. Populations overlap.
+- Frozen inputs/proofs valid; named user-data touched/unchecked lists empty. Source26frontend hashes exact; built frontend accepted. No applicationRust runtime/privatecorpus/nativeDesktop/release-config/hardware acceptance, bus, deployment or tag change. Alpha18 immutable.
+- Canonical result `docs/status/2026-10-30-settings-workspace-delivery.md`. Runtime work COMPLETE; only result-documentation/evidence retention and exact-owned retirement closeout. Private closeout receipt owns volatile local-resource state; no further feature scope or foreign ownership transfer.
+- Evidence `<profile-scratch>/settings-workspace-20261030/`, durable target `<profile>/evidence/settings-workspace-20261030/`. Own tree `<sources>/knxbench-settings-workspace-20261030` is cleanup-only after closeout publication; root remains intentionally unsynchronized.
 
 ## PRG-01 customer-adjustable declarations (SOFTWARE ACCEPTED; observed 2026-10-30 04:59 CET)
 - Owner `feat/prg01-customer-adjustable-20261030`, `<sources>/knxbench-prg01-customer-adjustable-20261030`; code `d6918027b`, candidate `3af377a4b`, main-first runtime `e990fd956`, base `a2d606557`. Protected root/foreign tracks stay untouched.

@@ -1,6 +1,8 @@
 //! Sanitizes primary and selective import reports with one shared semantic policy.
 
-use super::{is_secret_name, Findings, SecretFreeCopy, SecretFreeCopyError, FREE_ACCESS_KEY};
+use super::{
+    is_secret_name, Findings, ObservedCopy, SecretFreeCopy, SecretFreeCopyError, FREE_ACCESS_KEY,
+};
 use serde_json::Value;
 
 pub(super) fn copy(report: &Value) -> Result<SecretFreeCopy, SecretFreeCopyError> {
@@ -11,6 +13,17 @@ pub(super) fn copy_with_budget(
     report: &Value,
     budget: super::budget::Budget,
 ) -> Result<SecretFreeCopy, SecretFreeCopyError> {
+    copy_observed_with_budget(report, budget).map(|observed| observed.copy)
+}
+
+pub(super) fn copy_for_bundle(report: &Value) -> Result<ObservedCopy, SecretFreeCopyError> {
+    copy_observed_with_budget(report, super::budget::Budget::default())
+}
+
+fn copy_observed_with_budget(
+    report: &Value,
+    budget: super::budget::Budget,
+) -> Result<ObservedCopy, SecretFreeCopyError> {
     validate(report).map_err(|resource| SecretFreeCopyError::BudgetExceeded { resource })?;
     let bytes =
         serde_json::to_vec(report).map_err(|_| SecretFreeCopyError::Write("report JSON".into()))?;
@@ -26,7 +39,7 @@ pub(super) fn copy_with_budget(
         }
     };
     findings.ensure()?;
-    findings.finish(sanitized)
+    findings.finish_observed(sanitized)
 }
 
 /// The import evidence envelope embeds the import report as a JSON string.
@@ -195,12 +208,15 @@ fn redact_json(value: &mut Value, location: &str, findings: &mut Findings) -> bo
                                 *slot = Value::String(clean);
                                 changed = true;
                             }
+                        } else if !slot.is_null() {
+                            findings.observe_credential_material();
                         }
                     }
                 }
                 // Digest-only rows cannot prove their connection string was credential-free.
                 if let Some(slot) = map.get_mut("sha256") {
                     if slot.as_str().is_some_and(|s| !s.is_empty()) {
+                        findings.observe_credential_material();
                         *slot = Value::String(String::new());
                         findings.redact(location.into(), "BusAccess/@Parameter digest".into());
                         changed = true;
@@ -235,10 +251,15 @@ fn redact_json(value: &mut Value, location: &str, findings: &mut Findings) -> bo
                     {
                         continue;
                     }
-                    if field != "sha256" {
-                        if let Some(plain) = slot.as_str() {
+                    if field == "sha256" {
+                        findings.observe_credential_material();
+                    } else if let Some(plain) = slot.as_str() {
+                        findings.observe_credential(name.as_bytes(), plain.as_bytes());
+                        if !plain.is_empty() {
                             findings.remember(plain.as_bytes());
                         }
+                    } else {
+                        findings.observe_credential_material();
                     }
                     *slot = if field == "raw_text_preview" {
                         Value::Null

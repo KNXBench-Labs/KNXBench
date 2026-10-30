@@ -11,7 +11,7 @@
 use quick_xml::events::{BytesStart, Event};
 use quick_xml::{Reader, XmlVersion};
 
-use super::{is_secret_name, is_secret_value, Findings};
+use super::{is_free_access_key, is_secret_name, is_secret_value, Findings};
 
 /// What a payload looks like, by its first bytes only.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -58,6 +58,26 @@ pub(super) struct Base<'a> {
     pub root_in_base: bool,
 }
 
+struct SecretText {
+    depth: usize,
+    name: Vec<u8>,
+    value: Vec<u8>,
+    saw_nonempty: bool,
+    tentative_observation: Option<(bool, u64)>,
+}
+
+fn observe_secret_text(secret: &mut SecretText, findings: &mut Findings) {
+    if secret.saw_nonempty {
+        return;
+    }
+    secret.saw_nonempty = true;
+    if secret.name.as_slice() == b"BCUKey" {
+        secret.tentative_observation = Some(findings.begin_tentative_credential_observation());
+    } else {
+        findings.observe_credential_material();
+    }
+}
+
 /// The redacted bytes, or `None` when nothing secret was found.
 pub(super) fn redact(
     input: &[u8],
@@ -75,7 +95,7 @@ pub(super) fn redact(
     let mut changed = false;
     // Element name, whether it is secret, whether its text was counted.
     let mut stack: Vec<(Vec<u8>, bool, bool)> = Vec::new();
-    let mut secrets: Vec<(usize, Vec<u8>)> = Vec::new();
+    let mut secrets: Vec<SecretText> = Vec::new();
     loop {
         let start = position(&reader)?;
         let event = reader.read_event().map_err(|_| "not well-formed XML")?;
@@ -111,7 +131,13 @@ pub(super) fn redact(
                     let secret = is_secret_name(local);
                     stack.push((local.to_vec(), secret, false));
                     if secret {
-                        secrets.push((stack.len(), Vec::new()));
+                        secrets.push(SecretText {
+                            depth: stack.len(),
+                            name: local.to_vec(),
+                            value: Vec::new(),
+                            saw_nonempty: false,
+                            tentative_observation: None,
+                        });
                     }
                 } else {
                     path.truncate(old_path);
@@ -120,10 +146,16 @@ pub(super) fn redact(
             Event::End(_) => {
                 if secrets
                     .last()
-                    .is_some_and(|(depth, _)| *depth == stack.len())
+                    .is_some_and(|secret| secret.depth == stack.len())
                 {
-                    let (_, value) = secrets.pop().ok_or("missing secret element")?;
-                    findings.remember(&value);
+                    let secret = secrets.pop().ok_or("missing secret element")?;
+                    if let Some(prior) = secret.tentative_observation {
+                        findings.resolve_tentative_credential_observation(
+                            prior,
+                            is_free_access_key(&secret.name, &secret.value),
+                        );
+                    }
+                    findings.remember(&secret.value);
                 }
                 let (name, ..) = stack.pop().ok_or("unmatched XML end tag")?;
                 if !(stack.is_empty() && base.root_in_base) {
@@ -133,6 +165,11 @@ pub(super) fn redact(
             Event::Text(_) | Event::CData(_) | Event::GeneralRef(_) if !secrets.is_empty() => {
                 if end.saturating_sub(start) > 1024 * 1024 {
                     return Err("secret element exceeds decoded value budget");
+                }
+                if matches!(event, Event::GeneralRef(_)) {
+                    for secret in &mut secrets {
+                        observe_secret_text(secret, findings);
+                    }
                 }
                 let decoded = match &event {
                     Event::Text(text) => text.xml_content(XmlVersion::Implicit1_0).into_owned(),
@@ -154,11 +191,14 @@ pub(super) fn redact(
                 findings
                     .budget
                     .work(decoded.len().saturating_mul(secrets.len()))?;
-                for (_, value) in &mut secrets {
-                    if value.len().saturating_add(decoded.len()) > 1024 * 1024 {
+                for secret in &mut secrets {
+                    if !decoded.is_empty() {
+                        observe_secret_text(secret, findings);
+                    }
+                    if secret.value.len().saturating_add(decoded.len()) > 1024 * 1024 {
                         return Err("secret element exceeds decoded value budget");
                     }
-                    value.extend_from_slice(decoded.as_bytes());
+                    secret.value.extend_from_slice(decoded.as_bytes());
                 }
                 let raw = &input[start..end];
                 findings.remember(raw);
@@ -166,7 +206,7 @@ pub(super) fn redact(
                 copied = end;
                 changed = true;
                 // Counted once per secret element, however its text is split.
-                if let Some(index) = secrets.last().map(|(depth, _)| depth - 1) {
+                if let Some(index) = secrets.last().map(|secret| secret.depth - 1) {
                     if !stack[index].2 {
                         let path = element_path(base, &stack[..index], &stack[index].0);
                         let kind = String::from_utf8_lossy(&stack[index].0).into_owned();
@@ -244,11 +284,27 @@ fn redact_tag(
         let local = attribute.key.local_name().as_ref().as_bytes().to_vec();
         let raw: &[u8] = attribute.value.as_bytes();
         let mut value = raw.to_vec();
-        if is_secret_name(&local) && is_secret_value(&local, raw) {
+        let secret_name = is_secret_name(&local);
+        let secret_value = secret_name && is_secret_value(&local, raw);
+        let tentative_observation = if secret_value && local.as_slice() == b"BCUKey" {
+            Some(findings.begin_tentative_credential_observation())
+        } else {
+            if secret_name {
+                findings.observe_credential(&local, raw);
+            }
+            None
+        };
+        if secret_value {
             findings.remember(raw);
             let plain = attribute
                 .normalized_value(XmlVersion::Implicit1_0)
                 .map_err(|_| "undecodable secret attribute")?;
+            if let Some(prior) = tentative_observation {
+                findings.resolve_tentative_credential_observation(
+                    prior,
+                    is_free_access_key(&local, plain.as_bytes()),
+                );
+            }
             findings.remember(plain.as_bytes());
             let name = String::from_utf8_lossy(&local).into_owned();
             findings.redact(format!("{path}/@{name}"), name);
@@ -325,7 +381,11 @@ pub(super) fn redact_connection_string(
         .filter(|part| !part.trim().is_empty())
         .all(|part| part.contains('='));
     if !structured {
-        if is_credential_part(text) && !text.trim().is_empty() {
+        let credential = is_credential_part(text);
+        if credential && !text.is_empty() {
+            findings.observe_credential_material();
+        }
+        if credential && !text.trim().is_empty() {
             findings.remember(text.as_bytes());
             findings.redact(location.to_string(), "BusAccess/@Parameter".into());
             return Some(String::new());
@@ -336,9 +396,13 @@ pub(super) fn redact_connection_string(
     let mut rebuilt: Option<String> = None;
     let mut offset = 0;
     for part in text.split(';') {
-        let secret = part
+        let credential = part
             .split_once('=')
-            .filter(|(name, value)| is_credential_part(name) && !value.trim().is_empty());
+            .filter(|(name, _)| is_credential_part(name));
+        if credential.is_some_and(|(_, value)| !value.is_empty()) {
+            findings.observe_credential_material();
+        }
+        let secret = credential.filter(|(_, value)| !value.trim().is_empty());
         if let Some((name, value)) = secret {
             if rebuilt.is_none() {
                 if findings.budget.output(text.len()).is_err() {

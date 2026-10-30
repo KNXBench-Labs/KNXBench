@@ -399,6 +399,7 @@ describe("one editing workspace", () => {
       "LogEntryDetails.tsx",
       "LogExportDialog.tsx",
       "LogPanel.tsx",
+      "ModalForeground.tsx", // React-only foreground context; default modal behavior is unchanged.
       "Overlay.tsx",
       "ResizableTable.tsx", // Browser-local presentation only; checked for API/fetch above.
       "TelegramFlowView.tsx",

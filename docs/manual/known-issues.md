@@ -8,6 +8,16 @@ Historical titles do not mean that their old defect is still present. The
 [source/test audit](../status/2026-10-08-known-issues-status-audit.md) records
 the reconciliation; formal task dispositions remain in the engineering ledger.
 
+## Settings center page — source newer than Alpha 18
+
+The [settings workspace](../contracts/settings-workspace.md) is tested with
+mocked Chromium APIs in EN/DE at wide/narrow sizes and supported zoom bounds.
+This does not establish native WebKitGTK/Tauri rendering or hardware acceptance.
+At 400px and 150% zoom a native single-line select may abbreviate its option
+text; its accessible label and control remain reachable. Published Alpha 18
+retains the older modal Settings window; released screenshots are not replaced
+by current-source captures.
+
 ## Monitoring export profile (source delivered, 21 October 2026)
 
 The [monitoring ZIP](user-guide/08-reports-and-diff.md#monitoring-export) is a

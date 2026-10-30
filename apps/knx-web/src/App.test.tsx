@@ -26,6 +26,7 @@ import { resetUiLanguageForTests, saveUiLanguage } from "./uiLanguage";
 
 const apiMock = vi.hoisted(() => ({
   importProject: vi.fn(),
+  compareDevice: vi.fn(),
   projectHistory: vi.fn(),
   restoreProjectVersion: vi.fn(),
   // ADR-0094 (L3): Settings asks whether a legacy password is remembered.
@@ -1066,11 +1067,69 @@ describe("App — diagnostic panels survive a collapsed navigation pane", () => 
   it("reaches Settings from the command palette", async () => {
     const root = await renderApp();
     await collapseNavigationAndOpen("Settings");
-    expect(host!.querySelector(".settings-panel")).not.toBeNull();
+    expect(host!.querySelector(".workbench-center .settings-panel")).not.toBeNull();
+    expect(host!.querySelector('[role="dialog"][aria-labelledby="settings-panel-title"]')).toBeNull();
     // ADR-0094 (L3): the real app wires the remembered legacy password in.
     expect(host!.querySelector(".settings-section-legacy-password")).not.toBeNull();
     expect(apiMock.legacyPasswordStatus).toHaveBeenCalled();
     root.unmount();
+  });
+});
+
+describe("App — settings workspace", () => {
+  function gear() { return host!.querySelector<HTMLButtonElement>('[aria-label="Settings"]')!; }
+  function settings() { return host!.querySelector<HTMLElement>(".workbench-center .settings-panel"); }
+
+  for (const collapsed of [false, true]) it(`hides Properties temporarily and restores its ${collapsed ? "collapsed" : "open"} state`, async () => {
+    apiMock.currentProject.mockResolvedValue(baseTree());
+    const root = await renderApp();
+    try {
+      if (collapsed) await act(async () => findButton("Properties").click());
+      await act(async () => gear().click());
+      expect(settings()).not.toBeNull();
+      expect(host!.querySelector(".workbench-pane-right")).toBeNull();
+      expect(findButton("Properties").getAttribute("aria-expanded")).toBe(String(!collapsed));
+      expect(findButton("Properties").disabled).toBe(true);
+      expect(host!.querySelector('.workbench-navigation [aria-current="page"]')?.textContent).toBe("Settings");
+      await act(async () => gear().click());
+      expect(host!.querySelectorAll(".settings-panel")).toHaveLength(1);
+      await act(async () => findButton("Back to previous view").click());
+      expect(settings()).toBeNull();
+      expect(host!.querySelector(".workbench-pane-right") !== null).toBe(!collapsed);
+      expect(host!.querySelector(".dashboard")).not.toBeNull();
+    } finally { await act(async () => root.unmount()); }
+  });
+
+  it("leaves settings when selecting a project device in the explorer", async () => {
+    apiMock.currentProject.mockResolvedValue(treeWithDevice());
+    apiMock.deviceDetail.mockResolvedValue(deviceDetailFixture());
+    const root = await renderApp();
+    try {
+      await expandExplorer();
+      await act(async () => gear().click());
+      await act(async () => treeLabel("Device D").click());
+      expect(settings()).toBeNull();
+      expect(host!.querySelector(".device-workspace")).not.toBeNull();
+      expect(host!.querySelector(".project-explorer .selected")?.textContent).toContain("Device D");
+    } finally { await act(async () => root.unmount()); }
+  });
+
+  it("leaves settings through workspace, diagnostics and brand navigation without Escape dismissal", async () => {
+    const root = await renderApp();
+    try {
+      for (const target of ["Overview", "Product catalog", "Log", "Bus monitor"]) {
+        await act(async () => gear().click());
+        expect(settings()).not.toBeNull();
+        await act(async () => window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true })));
+        expect(settings()).not.toBeNull();
+        await act(async () => findButton(target).click());
+        expect(settings()).toBeNull();
+      }
+      await act(async () => gear().click());
+      await act(async () => host!.querySelector<HTMLAnchorElement>(".workbench-brand")!.click());
+      expect(settings()).toBeNull();
+      expect(host!.querySelector(".welcome-workspace")?.closest("[hidden]")).toBeNull();
+    } finally { await act(async () => root.unmount()); }
   });
 });
 
@@ -2750,7 +2809,7 @@ describe("App — in-application help (T23)", () => {
   // `.search-overlay` is `position: fixed; z-index: 10`, the loser is not
   // merely stacked — it is buried under an opaque full-viewport backdrop
   // with the keyboard focus inside it.
-  it("replaces the settings dialog rather than stacking help on top of it", async () => {
+  it("opens help from settings without stacking settings modals", async () => {
     const root = await renderApp();
 
     const gear = Array.from(host!.querySelectorAll("button")).find(
@@ -4523,6 +4582,12 @@ describe("App — project notes workspace", () => {
     expect(findButton(enMessages["workbench.notes"]).getAttribute("aria-current")).toBe("page");
     expect(titleValues()).toContain("Commissioning");
     await typeTitle("Commissioning, round two");
+    const editor = host!.querySelector(".notes-workspace textarea");
+    await act(async () => host!.querySelector<HTMLButtonElement>('[aria-label="Settings"]')!.click());
+    expect(host!.querySelector<HTMLElement>(".notes-workspace")!.hidden).toBe(true);
+    await act(async () => findButton("Back to previous view").click());
+    expect(host!.querySelector(".notes-workspace textarea")).toBe(editor);
+    expect(titleValues()).toContain("Commissioning, round two");
     await act(async () => findButton(enMessages["workbench.overview"]).click());
     expect(host!.querySelector<HTMLElement>(".notes-workspace")!.hidden).toBe(true);
     await act(async () => findButton(enMessages["workbench.notes"]).click());
@@ -4676,6 +4741,16 @@ describe("App — unapplied installation-instructions draft", () => {
         Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value")!.set!.call(field, "Hint, revised");
         field.dispatchEvent(new Event("input", { bubbles: true }));
       });
+      await act(async () => host!.querySelector<HTMLButtonElement>('[aria-label="Settings"]')!.click());
+      expect(host!.querySelector(".device-instructions textarea")).toBe(field);
+      expect(field.closest<HTMLElement>(".workbench-content")!.hidden).toBe(true);
+      await act(async () => host!.querySelector<HTMLButtonElement>('[aria-label="Settings"]')!.click());
+      await act(async () => findButton("Back to previous view").click());
+      expect(host!.querySelector(".device-instructions textarea")).toBe(field);
+      expect(field.value).toBe("Hint, revised");
+      expect(instructionClientMock.read).toHaveBeenCalledOnce();
+      expect(instructionClientMock.apply).not.toHaveBeenCalled();
+      expect(host!.querySelector(".project-explorer .selected")?.textContent).toContain("Device D");
       apiMock.importProject.mockClear();
       await act(async () => findButton("Open project…").click());
       await act(async () => {});
@@ -4689,5 +4764,75 @@ describe("App — unapplied installation-instructions draft", () => {
       await act(async () => root.unmount());
       instructionClientMock.read.mockImplementation(() => new Promise(() => {}));
     }
+  });
+});
+
+
+describe("pending comparison focus", () => {
+  it("restores usable dialog focus when the pending cancel control is disabled", async () => {
+    const tree = { ...treeWithDevice(), server_incarnation: "fictional-focus", project_incarnation: 1, snapshot_revision: 1, comparison_revisions: { 42: 1 } };
+    tree.installations[0].unassigned[0].address = "1.1.42";
+    apiMock.currentProject.mockResolvedValue(tree);
+    let rejectComparison!: (reason: Error) => void;
+    apiMock.compareDevice.mockImplementation(() => new Promise((_, reject) => { rejectComparison = reject; }));
+    settingsStorage.setItem("preferredGateway", "192.0.2.17:3671");
+    const root = await renderApp();
+    try {
+      await act(async () => findButton("Devices").click());
+      await act(async () => findButton("Compare all shown").click());
+      await act(async () => findButton("Confirm read-only comparison").click());
+      expect(apiMock.compareDevice).toHaveBeenCalledTimes(1);
+      const dialog = host!.querySelector<HTMLElement>('[aria-labelledby="comparison-title"]')!;
+      const cancel = [...dialog.querySelectorAll("button")].find(button => button.textContent === "Cancel")!;
+      expect(cancel).not.toBeUndefined();
+      await act(async () => { cancel.focus(); cancel.click(); });
+      expect(cancel.disabled).toBe(true);
+      await act(async () => window.dispatchEvent(new KeyboardEvent("keydown", { key: "p", ctrlKey: true, shiftKey: true, bubbles: true })));
+      const settingsCommand = [...host!.querySelectorAll<HTMLElement>('li[role="option"]')].find(node => node.textContent === "Settings")!;
+      await act(async () => settingsCommand.click());
+      expect(document.activeElement).toBe(host!.querySelector("#settings-panel-title"));
+      await act(async () => findButton("Back to previous view").click());
+      expect(host!.querySelector('[aria-labelledby="comparison-title"]')).toBe(dialog);
+      expect(dialog.contains(document.activeElement), "resuming a still-stopping comparison must put focus inside its modal").toBe(true);
+      expect(host!.querySelector(".workbench-pane-left")!.closest("[inert]")).not.toBeNull();
+    } finally {
+      if (rejectComparison) await act(async () => rejectComparison(new Error("fictional completion")));
+      await act(async () => root.unmount());
+      apiMock.compareDevice.mockReset();
+    }
+  });
+});
+
+describe("independent review retained-modal witness", () => {
+  it("keeps Settings interactive after entering through the palette above a comparison dialog", async () => {
+    apiMock.currentProject.mockResolvedValue(treeWithDevice());
+    const root = await renderApp();
+    try {
+      await act(async () => findButton("Devices").click());
+      const opener = findButton("Compare all shown");
+      await act(async () => { opener.focus(); opener.click(); });
+      const retained = host!.querySelector<HTMLElement>('[role="dialog"][aria-labelledby="comparison-title"]')!;
+      expect(retained).not.toBeNull();
+      const gateway = retained.querySelector<HTMLInputElement>("input")!;
+      await act(async () => gateway.focus());
+      await act(async () => window.dispatchEvent(new KeyboardEvent("keydown", { key: "p", ctrlKey: true, shiftKey: true, bubbles: true })));
+      const settingsCommand = [...host!.querySelectorAll<HTMLElement>('li[role="option"]')].find(node => node.textContent === "Settings");
+      expect(settingsCommand).not.toBeUndefined();
+      await act(async () => settingsCommand!.click());
+      await act(async () => {});
+      const panel = host!.querySelector('.settings-panel');
+      expect(panel).not.toBeNull();
+      expect(panel!.closest('[inert], [aria-hidden="true"]'), "Settings must not be isolated by a retained hidden modal").toBeNull();
+      expect(document.activeElement).toBe(host!.querySelector("#settings-panel-title"));
+      expect(host!.querySelector(".workbench-pane-left")!.closest("[inert]")).toBeNull();
+      await act(async () => findButton("Back to previous view").click());
+      expect(host!.querySelector('[aria-labelledby="comparison-title"]')).toBe(retained);
+      expect(document.activeElement).toBe(gateway);
+      expect(host!.querySelector(".workbench-pane-left")!.closest("[inert]")).not.toBeNull();
+      await act(async () => gateway.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true })));
+      expect(host!.querySelector('[aria-labelledby="comparison-title"]')).toBeNull();
+      expect(document.activeElement).toBe(opener);
+      expect(host!.querySelector(".workbench-pane-left")!.closest("[inert]")).toBeNull();
+    } finally { await act(async () => root.unmount()); }
   });
 });

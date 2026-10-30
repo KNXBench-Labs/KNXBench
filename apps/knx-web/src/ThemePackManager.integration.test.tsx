@@ -142,8 +142,7 @@ describe("Appearance theme files through the actual parent/runtime", () => {
   it("ignores a late file result after the Settings owner has closed", async () => {
     const { file, finish } = delayedFile(themePackFixture(), "delayed.knx-theme.json");
     await choose(file);
-    const dialog = host.querySelector<HTMLElement>('[role="dialog"]')!;
-    await act(async () => dialog.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true })));
+    await act(async () => [...host.querySelectorAll("button")].find((button) => button.textContent === "Back to previous view")!.click());
     await finish();
     expect(host.querySelector('[role="dialog"]')).toBeNull();
     expect(document.documentElement.dataset.theme).toBe("graphite");
@@ -477,8 +476,7 @@ describe("Appearance theme files through the actual parent/runtime", () => {
     let finish!: (response: Response) => void;
     fetchMock.mockImplementationOnce(() => new Promise<Response>((resolve) => { finish = resolve; }));
     await choose(packFile(pack));
-    const dialog = host.querySelector<HTMLElement>('[role="dialog"]')!;
-    await act(async () => dialog.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true })));
+    await act(async () => [...host.querySelectorAll("button")].find((button) => button.textContent === "Back to previous view")!.click());
     expect(host.querySelector('[role="dialog"]')).toBeNull();
     expect(document.documentElement.dataset.theme).toBe("graphite");
     server = { ...server, theme: pack.id, uiThemePacks: { [pack.id]: pack } };

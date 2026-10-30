@@ -47,6 +47,14 @@ already found lying in the grass.
 
 ## Gates
 
+- **Test diagnostics must not manufacture crash reports.** The browser-wrapper
+  timeout helper captures `/proc` state, wait channels, signal masks and existing
+  stderr, then uses retained pidfds for bounded SIGKILL cleanup. Do not send
+  SIGABRT just to obtain Python stacks: even a passing diagnostic regression
+  would generate a system crash report. This path no longer collects Python
+  stack traces. Keep the no-crash signal assertions and real owned-process test;
+  do not suppress system-wide crash reporting to hide a test side effect.
+
 - **A test name is not the browser build mode.** The default
   `playwright.config.ts` serves Vite development fixtures;
   `playwright.devices.config.ts` previews the production bundle. Building `dist`

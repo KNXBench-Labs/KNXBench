@@ -10,7 +10,10 @@ captured, bindable serial evidence and a live executor precondition. All format
 The application-identity rule below still applies independently; its partial-plan
 precondition is not an exemption from the additional exemplar guard. Format 3
 preserves required nullable `prior_application` and adds required nullable
-`exemplar_serial`; older format-2 readers reject it.
+`exemplar_serial`; older format-2 readers reject it. The current format-4 producer
+retains both rules and adds explicit write-generator identity; see
+[inactive whole-byte selection](inactive-byte-write-selection.md). Legacy formats
+keep their historical generator and do not gain an exemplar exemption.
 
 ## Defect
 

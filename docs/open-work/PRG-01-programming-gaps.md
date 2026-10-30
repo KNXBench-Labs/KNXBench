@@ -211,14 +211,38 @@ failed their intended assertions, two inert controls passed, and the copied
 static review nor calibration replaces integrated delivery. This closes neither
 the broader parameter rules nor PRG-01.
 
+## Implemented, package acceptance pending — inactive whole-byte write selection
+
+The [bounded contract](../contracts/inactive-byte-write-selection.md) now has a
+positive regular-App-to-executor implementation, not merely a declaration guard.
+It omits only proved exclusive inactive whole bytes with source-default topology,
+retains source Mask/literals/active Union winners and read-only behavior, and binds
+new format-4 backups to an explicit typed restore generator. Historical restores
+keep their exact captured shape and existing application/exemplar checks.
+
+Original real-writer RED → GREEN, genuine old-backup and reopened-catalogue
+consumer proof, 412 distinct passing regression bodies and final independent
+source review with no open findings are recorded in the
+[focused result](../status/2026-10-30-inactive-byte-write-selection.md). The
+[research](../research/2026-10-30-inactive-byte-write-selection.md) separates raw
+option/opaque-attribute/expanded-namespace provenance and actual scoped-plan
+historical evidence reuse. Maintained branch/main-first package gates, actual
+server/Web build/smoke and publication remain pending; this is not delivered
+software/package acceptance or new hardware support.
+
+`regular-070n-exclusive-inactive-storage-survival` stays OPEN: omitted transfers
+do not prove retention through Unload, allocation, task control or Restart.
+Broader inactive/default/Union/customer-write rules and PRG-01 remain open.
+
 ## Open
 
 - Broader target/exemplar identity and runtime-state observation beyond the
   bounded property contracts (`0701h`/`0705h`, plus descriptor-qualified exact
   `0700h` whose bounded software acceptance is recorded above). Other object layouts,
   memory encoding and physical function remain unproved.
-- Parameter policies: the defining inactive, `Union` and customer-write rules
-  are unresolved.
+- Parameter policies beyond the bounded whole-byte transfer contract: physical
+  inactive-byte survival, broader inactive/default semantics, editable Dynamic,
+  `Union` and customer-write rules remain unresolved.
 - Complete mutation effects and whole-mutation recovery contracts.
 - Existing full-product opt-in coverage pin debt (see
   [KL-006](../limitations/KL-006-devices-dependent-on-vendor-plug-ins.md)):

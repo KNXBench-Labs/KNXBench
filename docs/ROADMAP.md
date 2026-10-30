@@ -219,6 +219,18 @@ existing bounded drain. Per-step effects, mid-procedure stop and recovery remain
 
 ## Regular programming correctness — 25 October 2026 source
 
+**30 October bounded continuation, package acceptance pending:**
+[inactive whole-byte write selection](contracts/inactive-byte-write-selection.md)
+is implemented with original positive-writer/correction proof and final
+independent source review ([focused result](status/2026-10-30-inactive-byte-write-selection.md)).
+It is not another declaration-only guard: actual regular plans omit only proved
+exclusive inactive bytes under identical source-default topology, with explicit
+format-4 generator binding preserving legitimate historical restores. Maintained
+branch/main-first gates, actual server/Web build/smoke and publication remain
+pending. Physical inactive-byte survival through Unload/allocation/tasks/Restart,
+broader Dynamic/Union/customer-write rules, identity/runtime layouts and whole
+recovery stay open; PRG-01/KL-007 are not closed and Alpha 18 artifacts are unchanged.
+
 The [memory transfer budget](contracts/memory-transfer-budget.md) composes a
 conservative default hardware-route cap with service-specific header arithmetic.
 At a standard frame it sends 12 ordinary or 11 user-memory data octets; real

@@ -74,6 +74,12 @@ allocations, task effects or unbacked memory.
 
 ## Persistence and procedure identity
 
+The current producer is format 4, adding the required non-null versioned
+`write_selection` identity described by
+[inactive whole-byte selection](inactive-byte-write-selection.md). Formats 1–3
+must not carry that field and explicitly select the historical generator; their
+files are never rewritten. Format 4 keeps the format-3 prior/exemplar rules below.
+
 Backup format 3 is format 2 plus required nullable `exemplar_serial`: exactly
 twelve hex digits or null. `prior_application` remains required and nullable.
 New serialization uses uppercase hex; reading accepts upper- and lowercase
@@ -101,8 +107,8 @@ those retain their existing private-data handling boundaries.
 
 ## Consumers and tests
 
-CLI restore uses the guarded plan; CLI and HTTP downloads produce format 3 through
-the shared executor/persistence path. HTTP has no restore route. Web, history and
+CLI restore uses the guarded plan; CLI and HTTP downloads produce format 4 through
+the shared executor/persistence path, retaining the actual prepared generator. HTTP has no restore route. Web, history and
 reports retain their existing closed result shapes; no new exemplar-success
 claim is added to the post-download check. Validate real consumers, not only
 lexical source assertions; typecheck affected fixture configs if they change.

@@ -1,8 +1,11 @@
 # Customer-adjustable declarations: bounded write-admission investigation
 
 Date: 30 October 2026. Investigation baseline `17e45dc62`. **Conservative
-refusal implemented at `d6918027b` and independently code-reviewed; maintained
-gates, built-server smoke and software acceptance remain pending.**
+refusal implemented at `d6918027b`, independently code-reviewed and software-accepted
+on runtime `e990fd956`: branch/main-first maintained gates each 15/15 and actual
+isolated server build/smoke passed.**
+[Source-bound acceptance](../status/2026-10-30-customer-adjustable-write-admission.md)
+is not publication, release or hardware acceptance.
 The [write-admission contract](../contracts/customer-adjustable-write-admission.md)
 fixes the exact syntax contexts, uninterpreted presence-only policy, consumers
 and finite tests. This does not implement customer-write rights or declare
@@ -50,8 +53,11 @@ Code `d6918027b` adds the private presence projection and two App admission
 checks, after existing kind/plug-in precedence and before image/plan generation.
 Read-only preparation remains unchanged. Focused consumers, valid source-bound
 restore/source freshness, retained-source/privacy checks, resource regression
-and independent correction review are complete; maintained package gates,
-built-server smoke, software acceptance and publication are still pending.
+and independent correction review are complete. Maintained branch/main-first
+package gates each passed 15/15 stages and the actual isolated server build/smoke
+passed on `e990fd956`; see the
+[bounded software result](../status/2026-10-30-customer-adjustable-write-admission.md).
+Publication/readback is a separate delivery operation, not runtime evidence.
 
 ## Admitted policy, not recovered ETS semantics
 

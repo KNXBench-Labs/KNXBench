@@ -181,13 +181,18 @@ synchronous persistence. Published as `a8004cb2e`, independently reviewed APPROV
 separate native loopback ACK characterization from lexical call-site checks;
 there is no CLI end-to-end, new shutdown, recovery or hardware guarantee.
 
-## Implemented, software acceptance pending — customer-adjustable write refusal
+<a id="implemented-software-acceptance-pending--customer-adjustable-write-refusal"></a>
+
+## Software-accepted bounded increment — customer-adjustable write refusal
 
 The [bounded contract](../contracts/customer-adjustable-write-admission.md) and
 [primary-source investigation](../research/2026-10-30-customer-adjustable-write-admission.md)
 admit a stricter KNXBench refusal policy, implemented at `d6918027b` with
-independent corrected whole-feature review and no open findings. **Maintained
-branch/main-first gates, actual build/smoke and software acceptance remain pending.**
+independent corrected whole-feature review and no open findings. Maintained
+branch/main-first gates each passed 15/15 stages; actual isolated server build/smoke
+passed on runtime `e990fd956`
+([software acceptance and limits](../status/2026-10-30-customer-adjustable-write-admission.md)).
+Runtime acceptance is separate from publication/readback.
 The historical baseline `17e45dc62` did not consume the admitted unqualified
 markers before otherwise supported regular write preparation.
 

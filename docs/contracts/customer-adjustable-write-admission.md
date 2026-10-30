@@ -1,8 +1,10 @@
 # Customer-adjustable source declarations: regular-write admission
 
-Status: **implemented and independently code-reviewed; maintained gates and
-software acceptance pending**, 30 October 2026. Code `d6918027b`; source-admission
-baseline `17e45dc62`. Source rationale:
+Status: **bounded software acceptance complete**, 30 October 2026. Code
+`d6918027b`; source-admission baseline `17e45dc62`. Branch and main-first
+maintained gates each passed 15/15 stages; actual isolated server build/smoke
+passed on runtime `e990fd956`. [Source-bound results and limits](../status/2026-10-30-customer-adjustable-write-admission.md)
+keep publication and hardware acceptance separate. Source rationale:
 [primary-source investigation](../research/2026-10-30-customer-adjustable-write-admission.md).
 This contract implements neither ETS customer-write rights nor preservation
 of calibration bytes. It adds no device/family or hardware compatibility claim.
@@ -155,10 +157,12 @@ maintained package-gate or hardware result. The required coverage is:
   narrow to positive-only values and use an inert control; require the intended
   assertions and restore byte-exact. These are calibration, not original RED.
 - Independent corrected whole-feature review is complete with no open findings.
-  Maintained branch/main-first gates, an actual built-server isolated smoke,
-  source-bound runtime acceptance and publication/readback remain pending.
-  Tests use non-root loopback-only/caps-zero namespaces and process-scoped XDG;
-  no real bus/device/VM, Secure, DIAG-03, deployment or release.
+  Maintained branch/main-first gates each passed 15/15 stages and the actual
+  isolated built-server smoke passed on runtime `e990fd956`; see the
+  [source-bound result](../status/2026-10-30-customer-adjustable-write-admission.md).
+  Runtime acceptance does not substitute for review/gates of subsequent
+  result-document edits or publication/readback. Tests use non-root loopback-only/caps-zero namespaces and process-scoped
+  XDG; no real bus/device/VM, Secure, DIAG-03, deployment or release.
 
 The broader customer-write/inactive/Union rules, calibration-preserving image
 algorithm, other identity/runtime layouts, complete mutation/recovery and

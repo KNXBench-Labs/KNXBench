@@ -1,7 +1,8 @@
 # Customer-adjustable source declarations: regular-write admission
 
-Status: **source-admitted conservative policy; implementation and software
-acceptance pending**, 30 October 2026. Baseline `17e45dc62`. Source rationale:
+Status: **implemented and independently code-reviewed; maintained gates and
+software acceptance pending**, 30 October 2026. Code `d6918027b`; source-admission
+baseline `17e45dc62`. Source rationale:
 [primary-source investigation](../research/2026-10-30-customer-adjustable-write-admission.md).
 This contract implements neither ETS customer-write rights nor preservation
 of calibration bytes. It adds no device/family or hardware compatibility claim.
@@ -23,6 +24,13 @@ of customer-adjustable semantics nor general programmability. Present `false`,
 equally. There are no positive token classes, Boolean conversion, trimming,
 status exemptions or inferred rights. Attribute values are retained after the
 existing XML attribute normalisation; the original XML remains retained too.
+
+The implementation stores a private flat parent-indexed occurrence arena and a
+leaf index per declaration. Deep module prefixes are shared rather than copied
+for every marker; traversal, comparison and test reconstruction are iterative.
+Raw tokens, repetitions, document order and full paths remain internal. A
+compiled regression measures retained structural capacity with depth and marker
+count varied together; it is not a universal memory-safety or hardware claim.
 
 ## Exact observation scope
 
@@ -111,16 +119,24 @@ change, permission unlock or preservation workflow. Existing History/report
 shapes remain unless an affected existing consumer requires a tested change;
 no new persisted schema is invented for a preflight refusal.
 
-## Executable acceptance — not yet performed
+## Executable evidence and remaining acceptance
 
-- First required execution on untouched production: demonstrate that the
-  existing public API returns `Ok`/a writable plan for the supported synthetic
-  MV-0701/ProductProcedure plus an unplaced parameter marker while the test
-  requires the new refusal category. This expected baseline outcome is
-  statically supported but **has not yet been executed**. Preserve that original
-  semantic RED, then repeat for a root option marker. Current APIs must compile
-  first; compiler/setup/ingest errors and unrelated kind/plug-in refusals are
-  uncredited.
+Original execution on untouched production compiled the supported synthetic
+MV-0701/ProductProcedure public-writer tests: an unplaced parameter marker and
+a root option marker each wrongly produced a writable 12-octet image. Both
+intended assertions failed; the markerless control passed. This is the original
+semantic RED, not a compile/setup failure or unrelated kind/plug-in refusal.
+No separate original offline RED is claimed; later GREEN execution and its
+independent guard-removal mutant establish that consumer.
+
+On the final corrected code, parent replays passed parser 12, App 22, CLI 2,
+HTTP 2 and Web 128 tests in seven files, plus both owning fixture tsconfigs and
+static checks. A distinct original resource RED failed on multiplied deep paths;
+the byte-identical regression passes with shared prefixes. Nine semantic mutants
+failed their intended assertions, two inert control runs passed, and the copied
+3,905-file set was restored exactly. These populations overlap and are not a
+maintained package-gate or hardware result. The required coverage is:
+
 - Test root/Union/both module anchors/nested admitted modules/root Options;
   all token spellings, empty values, repeated IDs/Options and structural order;
   foreign-prefix and excluded-context negatives; no module translation.
@@ -138,8 +154,9 @@ no new persisted schema is invented for a preflight refusal.
 - Independently remove each App check, substitute local-name attribute lookup,
   narrow to positive-only values and use an inert control; require the intended
   assertions and restore byte-exact. These are calibration, not original RED.
-- Independent whole-feature review, maintained branch/main-first gates, an actual
-  built-server isolated smoke, source-bound evidence and publication/readback.
+- Independent corrected whole-feature review is complete with no open findings.
+  Maintained branch/main-first gates, an actual built-server isolated smoke,
+  source-bound runtime acceptance and publication/readback remain pending.
   Tests use non-root loopback-only/caps-zero namespaces and process-scoped XDG;
   no real bus/device/VM, Secure, DIAG-03, deployment or release.
 

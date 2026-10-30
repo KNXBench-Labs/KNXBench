@@ -16,20 +16,21 @@ use knx_testsupport::vendor_plugin::{
     PRODUCT_REF, PROGRAM_ID, TARGET,
 };
 
+mod customer_adjustable;
+
 /// `(project.knxdb, products.sqlite)` with one device at `1.1.7`.
 fn inputs(dir: &Path, plugin: bool) -> (PathBuf, PathBuf) {
+    inputs_with_static(dir, &if plugin { declaration() } else { String::new() })
+}
+
+fn inputs_with_static(dir: &Path, contents: &str) -> (PathBuf, PathBuf) {
     use knx_core::{
         CompletionStatus, DeviceId, DeviceInstance, Installation, InstallationId, Language,
         Project, SourceRef, Topology,
     };
     let products = dir.join("products.sqlite");
     let db = knx_productdb::open_and_migrate(&products).unwrap();
-    knx_productdb::ingest_file(
-        &db,
-        "M-FFF6/A.xml",
-        program_xml(&if plugin { declaration() } else { String::new() }).as_bytes(),
-    )
-    .unwrap();
+    knx_productdb::ingest_file(&db, "M-FFF6/A.xml", program_xml(contents).as_bytes()).unwrap();
     knx_productdb::ingest_file(&db, "M-FFF6/Hardware.xml", HARDWARE_XML.as_bytes()).unwrap();
     let mut project = Project::new(Language("en".into()));
     project.installations.push(Installation {

@@ -40,7 +40,7 @@ use knx_core::commissioning::memory_download::{
     unmasked_runs, MemoryDownloadPlan, MemoryDownloadStep,
 };
 
-use crate::code::{LoadStep, ProgramCode};
+use crate::code::{CustomerAdjustableCounts, LoadStep, ProgramCode};
 use crate::image::DownloadImage;
 use crate::inference::Inference;
 
@@ -124,6 +124,8 @@ pub enum DownloadPlanError {
     /// The program declares an ETS download plug-in (its GUID): the vendor
     /// code writes what the product data does not describe (KL-006).
     VendorDownloadPlugin(String),
+    /// Presence-only conservative regular-write refusal; no source payload is exposed.
+    CustomerAdjustableParameters(CustomerAdjustableCounts),
 }
 
 impl std::error::Error for DownloadPlanError {}
@@ -188,6 +190,16 @@ impl fmt::Display for DownloadPlanError {
                 "segments {first} and {second} both have data at {address:04X}h; \
                  the plan cannot tell which one the allocation takes"
             ),
+            DownloadPlanError::CustomerAdjustableParameters(counts) => write!(
+                f,
+                "customer-adjustable-parameters: {} uninterpreted declarations \
+                 (root parameters: {}, root Union members: {}, module parameters: {}, \
+                 module Union members: {}, root Options: {}); no regular download scope is \
+                 offered because preservation semantics are not implemented. Read-only \
+                 compare and diagnostics stay available",
+                counts.total(), counts.root_parameters, counts.root_union_parameters,
+                counts.module_parameters, counts.module_union_parameters, counts.root_options
+            ),
             DownloadPlanError::VendorDownloadPlugin(plugin) => write!(
                 f,
                 "the application program declares the ETS download plug-in {plugin}, which writes \
@@ -247,6 +259,18 @@ pub fn check_download_plugin(code: &ProgramCode) -> Result<(), DownloadPlanError
     match &code.download_plugin {
         Some(plugin) => Err(DownloadPlanError::VendorDownloadPlugin(plugin.clone())),
         None => Ok(()),
+    }
+}
+
+/// Refuses every present declaration in the bounded customer-adjustable source policy.
+/// Values are uniformly uninterpreted. This checker is write admission, not plan translation;
+/// a read-only plan is not proof of write permission. Absence is not general safety evidence.
+pub fn check_customer_adjustable(code: &ProgramCode) -> Result<(), DownloadPlanError> {
+    let counts = code.customer_adjustable.counts();
+    if counts.total() == 0 {
+        Ok(())
+    } else {
+        Err(DownloadPlanError::CustomerAdjustableParameters(counts))
     }
 }
 

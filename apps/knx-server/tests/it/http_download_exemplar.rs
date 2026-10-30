@@ -38,6 +38,8 @@ use tower::ServiceExt;
 
 const SERIAL: [u8; 6] = [0x00, 0x83, 0xAB, 0xCD, 0xEF, 0x12];
 
+mod customer_adjustable;
+
 struct Tunnel(Arc<SimulatedDevice>);
 
 impl BusTunnel for Tunnel {

@@ -20,6 +20,7 @@ const ACTIONS: Readonly<Record<string, SupportAction>> = {
   "procedure-contents": "requestSupport", modules: "requestSupport",
   "image-structure": "requestSupport", "byte-order": "requestSupport",
   "vendor-download-plugin": "useVendorTool",
+  "customer-adjustable-parameters": "requestSupport",
 };
 
 export function guidanceForMark(mark: DownloadReadinessMark & { detail?: string | null }): SupportGuidance {

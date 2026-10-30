@@ -161,6 +161,8 @@ pub enum UnsupportedCategory {
     VendorDownloadPlugin,
     /// Uninterpreted source declarations block every regular write scope.
     CustomerAdjustableParameters,
+    /// The bounded write-only inactive ownership/topology proof is unavailable.
+    InactiveWriteSelection,
 }
 
 impl UnsupportedCategory {
@@ -180,6 +182,7 @@ impl UnsupportedCategory {
             Self::ProductData => "product-data",
             Self::Configuration => "configuration",
             Self::VendorDownloadPlugin => "vendor-download-plugin",
+            Self::InactiveWriteSelection => "inactive-write-selection",
             Self::CustomerAdjustableParameters => "customer-adjustable-parameters",
         }
     }
@@ -315,6 +318,7 @@ pub fn image_category(error: &ImageError) -> UnsupportedCategory {
 /// The category of a plan refusal.
 pub fn plan_category(error: &DownloadPlanError) -> UnsupportedCategory {
     match error {
+        DownloadPlanError::InactiveWriteSelection(_) => UnsupportedCategory::InactiveWriteSelection,
         DownloadPlanError::NotMemoryMapped(_) => UnsupportedCategory::NotMemoryMapped,
         DownloadPlanError::NotAProductProcedure(_) => UnsupportedCategory::ProcedureStyle,
         DownloadPlanError::Unmodelled(_) => UnsupportedCategory::UnmodelledStep,
@@ -342,6 +346,26 @@ pub fn offline_download(
     conn: &Connection,
     program_id: &str,
 ) -> Result<(MemoryDownloadPlan, Vec<Inference>), (UnsupportedCategory, String)> {
+    offline_download_selected(
+        conn,
+        program_id,
+        crate::device_backup::WriteSelection::SourceDefaultInactiveWholeBytesV1,
+    )
+}
+
+pub(crate) fn offline_restore_plan(
+    conn: &Connection,
+    program_id: &str,
+    selection: crate::device_backup::WriteSelection,
+) -> Result<MemoryDownloadPlan, (UnsupportedCategory, String)> {
+    offline_download_selected(conn, program_id, selection).map(|(plan, _)| plan)
+}
+
+fn offline_download_selected(
+    conn: &Connection,
+    program_id: &str,
+    selection: crate::device_backup::WriteSelection,
+) -> Result<(MemoryDownloadPlan, Vec<Inference>), (UnsupportedCategory, String)> {
     check_kind(conn, program_id)?;
     let request = ImageRequest {
         program_id: program_id.to_owned(),
@@ -354,8 +378,16 @@ pub fn offline_download(
     };
     let image = build_download_image(conn, &request)
         .map_err(|e| (image_category(&e), format!("memory image: {e}")))?;
-    plan_memory_download_with_inferences(&image)
-        .map_err(|e| (plan_category(&e), format!("load procedure: {e}")))
+    let (plan, inferences) = plan_memory_download_with_inferences(&image)
+        .map_err(|e| (plan_category(&e), format!("load procedure: {e}")))?;
+    let plan =
+        if selection == crate::device_backup::WriteSelection::SourceDefaultInactiveWholeBytesV1 {
+            knx_productdb::download_plan::select_inactive_whole_bytes(conn, &request, &image, plan)
+                .map_err(|e| (plan_category(&e), format!("load procedure: {e}")))?
+        } else {
+            plan
+        };
+    Ok((plan, inferences))
 }
 
 /// Refuses a program no download writes, before its image is built: one of
@@ -396,7 +428,20 @@ pub fn support_level(
         Ok((plan, inferences)) => (Ok(plan), inferences.as_slice()),
         Err(refusal) => (Err(refusal.clone()), &[][..]),
     };
-    SupportLevel::from_outcome(plan, evidence.get(program_id), inferences)
+    // Format-1 evidence predates inactive-byte selection. Reuse it only when
+    // the complete ordered plan is identical to the historical generator.
+    let matching = evidence.get(program_id).filter(|e| {
+        e.scopes.iter().any(|s| s == "complete")
+            && plan.as_ref().is_ok_and(|current| {
+                offline_restore_plan(
+                    conn,
+                    program_id,
+                    crate::device_backup::WriteSelection::SourceMaskOnlyV1,
+                )
+                .is_ok_and(|historical| **current == historical)
+            })
+    });
+    SupportLevel::from_outcome(plan, matching, inferences)
 }
 
 /// The evidence-file name of a download's scope: `complete`,
@@ -410,11 +455,73 @@ pub fn scope_code(partial: Option<PartialDownloadParts>) -> &'static str {
     }
 }
 
-/// The level of one prepared download: its plan built, so it is
-/// `Verified` when the evidence names this program *and this scope* and the
-/// plan rests on no inference, and `Untested` otherwise. A partial download
-/// of a program verified only complete is untested: it runs other steps.
+/// Grade a prepared download against historical program/scope evidence.
+/// Reuse requires exact equality with the source-mask-only plan, after the
+/// same Partial derivation. A changed selection is Untested, not an inference;
+/// equal scoped plans retain their evidence (including group-address-only).
 pub fn download_level(
+    prepared: &crate::device_download::PreparedDownload,
+    evidence: &BTreeMap<String, VerifiedEvidence>,
+) -> SupportLevel {
+    let partial = prepared.partial.as_ref().map(|(parts, _)| *parts);
+    let unchanged = plan_memory_download_with_inferences(&prepared.image)
+        .ok()
+        .and_then(|(plan, _)| scoped_plan(plan, partial))
+        .is_some_and(|historical| historical == prepared.plan);
+    let no_evidence = BTreeMap::new();
+    scoped_level(
+        &prepared.request.program_id,
+        partial,
+        &prepared.plan,
+        &prepared.inferences,
+        if unchanged { evidence } else { &no_evidence },
+    )
+}
+
+/// Grades an already validated restore without transferring historical evidence
+/// to a changed selection. Compare source plans before substituting captured octets.
+pub fn restore_level(
+    conn: &Connection,
+    stored: &crate::device_backup::StoredBackup,
+    plan: &MemoryDownloadPlan,
+    evidence: &BTreeMap<String, VerifiedEvidence>,
+) -> SupportLevel {
+    use crate::device_backup::WriteSelection;
+    let unchanged = stored.write_selection == WriteSelection::SourceMaskOnlyV1
+        || offline_restore_plan(conn, &stored.application, stored.write_selection)
+            .ok()
+            .and_then(|plan| scoped_plan(plan, stored.partial))
+            .zip(
+                offline_restore_plan(conn, &stored.application, WriteSelection::SourceMaskOnlyV1)
+                    .ok()
+                    .and_then(|plan| scoped_plan(plan, stored.partial)),
+            )
+            .is_some_and(|(selected, historical)| selected == historical);
+    let no_evidence = BTreeMap::new();
+    scoped_level(
+        &stored.application,
+        stored.partial,
+        plan,
+        &[],
+        if unchanged { evidence } else { &no_evidence },
+    )
+}
+
+fn scoped_plan(
+    complete: MemoryDownloadPlan,
+    partial: Option<PartialDownloadParts>,
+) -> Option<MemoryDownloadPlan> {
+    match partial {
+        None => Some(complete),
+        Some(parts) => {
+            knx_core::commissioning::partial_memory_download::derive_partial_plan(&complete, parts)
+                .ok()
+                .map(|partial| partial.plan)
+        }
+    }
+}
+
+fn scoped_level(
     program_id: &str,
     partial: Option<PartialDownloadParts>,
     plan: &MemoryDownloadPlan,
@@ -787,22 +894,22 @@ mod tests {
             })
         };
         assert_eq!(
-            download_level("P", None, &plan, &[], &evidence).code(),
+            scoped_level("P", None, &plan, &[], &evidence).code(),
             "verified"
         );
         assert_eq!(
-            download_level("P", parts(true, false), &plan, &[], &evidence).code(),
+            scoped_level("P", parts(true, false), &plan, &[], &evidence).code(),
             "verified"
         );
         for untested in [parts(false, true), parts(true, true)] {
             assert_eq!(
-                download_level("P", untested, &plan, &[], &evidence).code(),
+                scoped_level("P", untested, &plan, &[], &evidence).code(),
                 "untested",
                 "{untested:?}"
             );
         }
         assert_eq!(
-            download_level("Q", None, &plan, &[], &evidence).code(),
+            scoped_level("Q", None, &plan, &[], &evidence).code(),
             "untested"
         );
         assert_eq!(

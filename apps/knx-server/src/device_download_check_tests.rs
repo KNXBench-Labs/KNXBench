@@ -137,6 +137,7 @@ fn loaded_plan() -> MemoryDownloadPlan {
 
 fn prepared(target: IndividualAddress, plan: MemoryDownloadPlan) -> PreparedDownload {
     PreparedDownload {
+        write_selection: knx_app::device_backup::WriteSelection::SourceDefaultInactiveWholeBytesV1,
         device: knx_core::DeviceId(1),
         device_name: "synthetic device".into(),
         target,

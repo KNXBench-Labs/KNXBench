@@ -6,10 +6,11 @@
 //! compared before the executor is allowed to write to the device: a
 //! backup that exists only in memory is no backup.
 //!
-//! Format 3, plain JSON so an operator can read it without KNXBench:
+//! Format 4, plain JSON so an operator can read it without KNXBench:
 //!
 //! ```json
-//! { "format": 3, "kind": "knxbench-device-backup",
+//! { "format": 4, "kind": "knxbench-device-backup",
+//!   "write_selection": "source-default-inactive-whole-bytes-v1",
 //!   "taken": "2026-09-29T14:10:00+02:00",
 //!   "device": "1.1.67", "mask": "0701", "manufacturer": "0083",
 //!   "application": "M-0083_A-0027-15-0BAC", "partial": null,
@@ -33,12 +34,17 @@
 //! needs recorded evidence or the plan's own identity precondition
 //! ([`knx_core::commissioning::device_backup::restore_plan`]).
 //!
-//! `exemplar_serial` (format 3, required, nullable) is the twelve-hex-digit
+//! `exemplar_serial` (formats 3/4, required, nullable) is the twelve-hex-digit
 //! Device Object serial (PID 11) read before the first write. It is private
 //! evidence of this file only: it binds a restore to the same exemplar and
 //! never reaches history, reports or HTTP. New files write uppercase hex,
 //! reading accepts either case. Formats 1 and 2 read as "not recorded" and
 //! refuse the field; a backup without a bindable serial is never restorable.
+
+//! Format 4 additionally requires a non-null `write_selection` string. It binds
+//! the exact new or historical generator; formats 1–3 reject that field and
+//! explicitly select the historical generator only for restore. Reading never
+//! rewrites legacy files. See `docs/contracts/inactive-byte-write-selection.md`.
 
 use std::fmt;
 use std::fs;
@@ -58,7 +64,28 @@ use knx_core::commissioning::partial_memory_download::PartialDownloadParts;
 use knx_core::IndividualAddress;
 use serde::{Deserialize, Serialize};
 
-const FORMAT: u32 = 3;
+const FORMAT: u32 = 4;
+const FORMAT_WITHOUT_SELECTION: u32 = 3;
+
+/// The versioned producer that must reconstruct a captured write shape.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum WriteSelection {
+    /// Historical source-mask-only plans, admitted only for explicit restore.
+    SourceMaskOnlyV1,
+    /// The regular source-default-topological whole-byte writer.
+    SourceDefaultInactiveWholeBytesV1,
+}
+
+impl WriteSelection {
+    /// Stable non-null format-4 identity; never inferred from captured regions.
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::SourceMaskOnlyV1 => "source-mask-only-v1",
+            Self::SourceDefaultInactiveWholeBytesV1 => "source-default-inactive-whole-bytes-v1",
+        }
+    }
+}
+
 /// The last format without `exemplar_serial`; still read.
 const FORMAT_WITHOUT_EXEMPLAR: u32 = 2;
 /// The last format without `prior_application`; still read.
@@ -68,6 +95,8 @@ const KIND: &str = "knxbench-device-backup";
 /// A backup with what it was taken for.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct StoredBackup {
+    /// The exact versioned generator of the captured operation.
+    pub write_selection: WriteSelection,
     /// The backup.
     pub backup: DeviceBackup,
     /// The application program the plan was built for.
@@ -106,6 +135,8 @@ struct FilePartial {
 #[serde(deny_unknown_fields)]
 struct BackupFile {
     format: u32,
+    #[serde(default, deserialize_with = "present")]
+    write_selection: Option<Option<String>>,
     kind: String,
     taken: String,
     device: String,
@@ -245,6 +276,7 @@ pub fn to_json(stored: &StoredBackup) -> String {
     let backup = &stored.backup;
     let file = BackupFile {
         format: FORMAT,
+        write_selection: Some(Some(stored.write_selection.as_str().to_owned())),
         kind: KIND.to_owned(),
         taken: stored.taken.clone(),
         device: backup.target.to_string(),
@@ -291,6 +323,20 @@ pub fn from_json(text: &str) -> Result<StoredBackup, BackupFileError> {
     if file.kind != KIND {
         return Err(BackupFileError::Malformed(format!("kind {:?}", file.kind)));
     }
+    let write_selection = match (file.format, &file.write_selection) {
+        (1..=3, None) => WriteSelection::SourceMaskOnlyV1,
+        (FORMAT, Some(Some(value))) if value == "source-mask-only-v1" => {
+            WriteSelection::SourceMaskOnlyV1
+        }
+        (FORMAT, Some(Some(value))) if value == "source-default-inactive-whole-bytes-v1" => {
+            WriteSelection::SourceDefaultInactiveWholeBytesV1
+        }
+        _ => {
+            return Err(BackupFileError::Malformed(
+                "format/write_selection".to_owned(),
+            ))
+        }
+    };
     let prior_application = match (file.format, &file.prior_application) {
         (FORMAT_WITHOUT_PRIOR, None) => PriorApplication::NotRecorded,
         (FORMAT_WITHOUT_PRIOR, Some(_)) => {
@@ -298,14 +344,16 @@ pub fn from_json(text: &str) -> Result<StoredBackup, BackupFileError> {
                 "format {FORMAT_WITHOUT_PRIOR} cannot carry prior_application"
             )))
         }
-        (FORMAT_WITHOUT_EXEMPLAR | FORMAT, None) => {
+        (FORMAT_WITHOUT_EXEMPLAR | FORMAT_WITHOUT_SELECTION | FORMAT, None) => {
             return Err(BackupFileError::Malformed(format!(
                 "format {} requires prior_application (null if not recorded)",
                 file.format
             )))
         }
-        (FORMAT_WITHOUT_EXEMPLAR | FORMAT, Some(None)) => PriorApplication::NotRecorded,
-        (FORMAT_WITHOUT_EXEMPLAR | FORMAT, Some(Some(text))) => {
+        (FORMAT_WITHOUT_EXEMPLAR | FORMAT_WITHOUT_SELECTION | FORMAT, Some(None)) => {
+            PriorApplication::NotRecorded
+        }
+        (FORMAT_WITHOUT_EXEMPLAR | FORMAT_WITHOUT_SELECTION | FORMAT, Some(Some(text))) => {
             PriorApplication::Recorded(prior_from(text)?)
         }
         (other, _) => {
@@ -316,7 +364,7 @@ pub fn from_json(text: &str) -> Result<StoredBackup, BackupFileError> {
     };
     let exemplar_serial = match (file.format, &file.exemplar_serial) {
         (FORMAT_WITHOUT_PRIOR | FORMAT_WITHOUT_EXEMPLAR, None) => ExemplarEvidence::NotRecorded,
-        (_, Some(_)) if file.format != FORMAT => {
+        (_, Some(_)) if !matches!(file.format, FORMAT_WITHOUT_SELECTION | FORMAT) => {
             return Err(BackupFileError::Malformed(format!(
                 "format {} cannot carry exemplar_serial",
                 file.format
@@ -350,6 +398,7 @@ pub fn from_json(text: &str) -> Result<StoredBackup, BackupFileError> {
         })
         .collect::<Result<_, BackupFileError>>()?;
     Ok(StoredBackup {
+        write_selection,
         backup: DeviceBackup {
             target,
             mask: MaskVersion(hex16(&file.mask, "mask")?),
@@ -410,8 +459,12 @@ pub fn prepare_restore(
     if !stored.backup.was_loaded() {
         return Err(RestorePrepareError::NotLoaded);
     }
-    let complete = crate::download_support::offline_plan(conn, &stored.application)
-        .map_err(|(_, detail)| RestorePrepareError::Plan(detail))?;
+    let complete = crate::download_support::offline_restore_plan(
+        conn,
+        &stored.application,
+        stored.write_selection,
+    )
+    .map_err(|(_, detail)| RestorePrepareError::Plan(detail))?;
     let plan = match stored.partial {
         None => complete,
         Some(parts) => {
@@ -487,6 +540,7 @@ mod tests {
 
     fn stored() -> StoredBackup {
         StoredBackup {
+            write_selection: WriteSelection::SourceMaskOnlyV1,
             backup: DeviceBackup {
                 target: "1.1.67".parse().unwrap(),
                 mask: MaskVersion(0x0701),
@@ -624,8 +678,8 @@ mod tests {
     fn a_foreign_or_damaged_file_is_refused() {
         let good = to_json(&stored());
         for bad in [
-            good.replace("\"format\": 3", "\"format\": 4"),
-            good.replace("\"format\": 3", "\"format\": 0"),
+            good.replace("\"format\": 4", "\"format\": 5"),
+            good.replace("\"format\": 4", "\"format\": 0"),
             good.replace(KIND, "something-else"),
             good.replace("\"00ABFF\"", "\"00ABF\""),
             good.replace("\"00ABFF\"", "\"00ABZZ\""),
@@ -656,20 +710,26 @@ mod tests {
         without(text, "prior_application")
     }
 
+    // Synthetic parser fixtures only; real legacy capture bytes live in the CLI fixtures.
+    fn format_three(text: &str) -> String {
+        without(text, "write_selection").replace("\"format\": 4", "\"format\": 3")
+    }
+
     /// `text` as a format-1 file: neither later field.
     fn as_format_one(text: &str) -> String {
-        without(&without_prior(text), "exemplar_serial").replace("\"format\": 3", "\"format\": 1")
+        without(&without_prior(&format_three(text)), "exemplar_serial")
+            .replace("\"format\": 3", "\"format\": 1")
     }
 
     /// `text` as a format-2 file: no serial.
     fn as_format_two(text: &str) -> String {
-        without(text, "exemplar_serial").replace("\"format\": 3", "\"format\": 2")
+        without(&format_three(text), "exemplar_serial").replace("\"format\": 3", "\"format\": 2")
     }
 
     #[test]
-    fn format_three_writes_the_prior_application_or_an_explicit_null() {
+    fn format_four_writes_the_prior_application_or_an_explicit_null() {
         let text = to_json(&stored());
-        assert!(text.contains("\"format\": 3"), "{text}");
+        assert!(text.contains("\"format\": 4"), "{text}");
         assert!(text.contains(PRIOR), "{text}");
         let mut unrecorded = stored();
         unrecorded.backup.prior_application = PriorApplication::NotRecorded;
@@ -697,7 +757,7 @@ mod tests {
 
     #[test]
     fn format_one_cannot_carry_the_new_field() {
-        let good = to_json(&stored()).replace("\"format\": 3", "\"format\": 1");
+        let good = format_three(&to_json(&stored())).replace("\"format\": 3", "\"format\": 1");
         for bad in [
             good.clone(),
             good.replace(PRIOR, "\"prior_application\": null"),
@@ -710,7 +770,7 @@ mod tests {
     }
 
     #[test]
-    fn format_three_refuses_a_missing_or_malformed_prior_application() {
+    fn current_format_refuses_a_missing_or_malformed_prior_application() {
         let good = to_json(&stored());
         for bad in [
             without_prior(&good),
@@ -752,7 +812,7 @@ mod tests {
     }
 
     #[test]
-    fn format_three_writes_the_serial_in_uppercase_or_an_explicit_null() {
+    fn format_four_writes_the_serial_in_uppercase_or_an_explicit_null() {
         let text = to_json(&stored());
         assert!(text.contains(EXEMPLAR), "{text}");
         assert_eq!(from_json(&text).unwrap(), stored());
@@ -770,7 +830,7 @@ mod tests {
     }
 
     #[test]
-    fn format_three_refuses_a_missing_or_malformed_serial_without_echoing_it() {
+    fn current_format_refuses_a_missing_or_malformed_serial_without_echoing_it() {
         let good = to_json(&stored());
         for bad in [
             without(&good, "exemplar_serial"),
@@ -803,17 +863,91 @@ mod tests {
                 "format {name}"
             );
         }
-        let smuggled_two = to_json(&stored()).replace("\"format\": 3", "\"format\": 2");
+        let smuggled_two =
+            format_three(&to_json(&stored())).replace("\"format\": 3", "\"format\": 2");
         let smuggled_null = as_format_two(&to_json(&stored())).replace(
             "\"prior_application\"",
             "\"exemplar_serial\": null, \"prior_application\"",
         );
-        let smuggled_one = to_json(&stored()).replace("\"format\": 3", "\"format\": 1");
+        let smuggled_one =
+            format_three(&to_json(&stored())).replace("\"format\": 3", "\"format\": 1");
         for bad in [smuggled_two, smuggled_null, smuggled_one] {
             assert!(
                 matches!(from_json(&bad), Err(BackupFileError::Malformed(_))),
                 "{bad}"
             );
+        }
+    }
+
+    #[test]
+    fn explicit_versioned_selection_admits_only_the_declared_generator() {
+        let text = to_json(&stored());
+        let selection = "\"write_selection\": \"source-mask-only-v1\"";
+        assert_eq!(
+            from_json(&text).unwrap().write_selection,
+            WriteSelection::SourceMaskOnlyV1
+        );
+        let new = text.replace(
+            "source-mask-only-v1",
+            "source-default-inactive-whole-bytes-v1",
+        );
+        assert_eq!(
+            from_json(&new).unwrap().write_selection,
+            WriteSelection::SourceDefaultInactiveWholeBytesV1
+        );
+        for old in [
+            as_format_one(&text),
+            as_format_two(&text),
+            format_three(&text),
+        ] {
+            assert_eq!(
+                from_json(&old).unwrap().write_selection,
+                WriteSelection::SourceMaskOnlyV1
+            );
+            for token in [
+                "null",
+                "\"source-mask-only-v1\"",
+                "\"source-default-inactive-whole-bytes-v1\"",
+            ] {
+                let smuggled = old.replacen('{', &format!("{{\"write_selection\": {token},"), 1);
+                assert!(matches!(
+                    from_json(&smuggled),
+                    Err(BackupFileError::Malformed(_))
+                ));
+            }
+        }
+        for malformed in [
+            without(&text, "write_selection"),
+            text.replace(selection, "\"write_selection\": null"),
+            text.replace(selection, "\"write_selection\": 1"),
+            text.replace(selection, "\"write_selection\": true"),
+            text.replace(selection, "\"write_selection\": []"),
+            text.replace(selection, "\"write_selection\": {}"),
+            text.replace(selection, "\"write_selection\": \"unknown\""),
+            text.replace(selection, &format!("{selection}, {selection}")),
+            text.replace(
+                selection,
+                &format!("\"write_selection\": null, {selection}"),
+            ),
+            text.replace("\"format\": 4", "\"format\": 5"),
+            text.replace("\"format\": 4", "\"format\": 4, \"format\": 3"),
+        ] {
+            assert!(
+                matches!(from_json(&malformed), Err(BackupFileError::Malformed(_))),
+                "{malformed}"
+            );
+        }
+        // Both current generators retain format-3 prior/exemplar presence and width rules.
+        for current in [&text, &new] {
+            for field in ["prior_application", "exemplar_serial"] {
+                assert!(from_json(&without(current, field)).is_err());
+            }
+            let nulls = current
+                .replace("\"0083002715\"", "null")
+                .replace("\"008312ABCDEF\"", "null");
+            let read = from_json(&nulls).unwrap();
+            assert_eq!(read.backup.prior_application, PriorApplication::NotRecorded);
+            assert_eq!(read.backup.exemplar_serial, ExemplarEvidence::NotRecorded);
         }
     }
 
@@ -842,8 +976,8 @@ mod tests {
     #[test]
     fn a_format_one_file_carrying_only_the_serial_is_refused() {
         // No prior_application (as format 1 requires) but a smuggled exemplar_serial.
-        let only_serial =
-            without_prior(&to_json(&stored())).replace("\"format\": 3", "\"format\": 1");
+        let only_serial = without_prior(&format_three(&to_json(&stored())))
+            .replace("\"format\": 3", "\"format\": 1");
         assert!(only_serial.contains("exemplar_serial"), "{only_serial}");
         assert!(!only_serial.contains("prior_application"), "{only_serial}");
         assert!(matches!(

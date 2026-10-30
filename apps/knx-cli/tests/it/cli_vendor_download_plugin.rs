@@ -17,6 +17,7 @@ use knx_testsupport::vendor_plugin::{
 };
 
 mod customer_adjustable;
+mod inactive_selection;
 
 /// `(project.knxdb, products.sqlite)` with one device at `1.1.7`.
 fn inputs(dir: &Path, plugin: bool) -> (PathBuf, PathBuf) {
@@ -80,6 +81,7 @@ fn stored_backup(dir: &Path) -> knx_app::device_backup::StoredBackup {
     knx_productdb::ingest_file(&products, "M-FFF6/A.xml", program_xml("").as_bytes()).unwrap();
     let plan = knx_app::download_support::offline_plan(&products, PROGRAM_ID).unwrap();
     let stored = knx_app::device_backup::StoredBackup {
+        write_selection: knx_app::device_backup::WriteSelection::SourceMaskOnlyV1,
         backup: DeviceBackup {
             target: TARGET.parse().unwrap(),
             mask: plan.mask,

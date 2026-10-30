@@ -17,7 +17,7 @@ describe("support guidance", () => {
     expect(guidanceForMark({ kind: "unsupported", category: "product-data", detail: "original" }).action).toBe("installData");
     expect(guidanceForMark({ kind: "unsupported", category: "configuration" }).action).toBe("fixConfiguration");
     expect(guidanceForMark({ kind: "excluded" }).action).toBe("respectExclusion");
-    for (const category of ["byte-order", "modules", "not-memory-mapped", "procedure-style", "unmodelled-step", "procedure-shape", "procedure-contents", "image-structure"]) {
+    for (const category of ["byte-order", "modules", "not-memory-mapped", "procedure-style", "unmodelled-step", "procedure-shape", "procedure-contents", "image-structure", "inactive-write-selection"]) {
       expect(guidanceForMark({ kind: "unsupported", category }).action).toBe("requestSupport");
     }
     for (const category of ["parameter-value", "parameter-evaluation"]) {

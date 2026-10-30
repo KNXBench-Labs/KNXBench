@@ -3911,6 +3911,7 @@ export const messages: Record<MessageKey, string> = {
   "deviceDownload.readiness.reason.productData": "der Produktdatenbank fehlt sein Applikationsprogramm, oder sie kann es nicht lesen",
   "deviceDownload.readiness.reason.configuration": "seine Konfiguration im Projekt ist unvollständig oder widersprüchlich, zum Beispiel ohne Applikationsprogramm",
   "deviceDownload.readiness.reason.vendorDownloadPlugin": "sein Applikationsprogramm deklariert ein Download-Plug-in des Herstellers für die ETS, das Daten schreibt, die KNXBench nicht nachbilden kann (KL-006)",
+  "deviceDownload.readiness.reason.inactiveWriteSelection": "seine inaktiven Parameterbytes lassen sich nicht sicher auswählen oder aus den Quelldefaults reproduzieren; kein regulärer Download-Umfang ist verfügbar. Nur lesender Vergleich und Diagnose bleiben verfügbar",
   "deviceDownload.readiness.reason.customerAdjustableParameters": "sein Applikationsprogramm enthält nicht interpretierte Customer-adjustable-Deklarationen; KNXBench verweigert alle regulären Download-Umfänge, da die Erhaltungssemantik nicht implementiert ist. Nur lesender Vergleich und Diagnose bleiben verfügbar",
   "deviceDownload.readiness.reason.excluded": "es ist in diesem Projekt von Downloads ausgeschlossen",
   "deviceDownload.readiness.reason.none": "es wurde kein Grund gemeldet",

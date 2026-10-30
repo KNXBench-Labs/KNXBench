@@ -39,6 +39,7 @@ use tower::ServiceExt;
 const SERIAL: [u8; 6] = [0x00, 0x83, 0xAB, 0xCD, 0xEF, 0x12];
 
 mod customer_adjustable;
+mod inactive_selection;
 
 struct Tunnel(Arc<SimulatedDevice>);
 
@@ -274,7 +275,7 @@ async fn an_http_download_keeps_the_serial_in_the_private_backup_and_in_no_body(
     }
     assert_eq!(last["state"], "finished", "{last}");
 
-    // The durable private file: format 3, uppercase hex, the observed serial.
+    // The durable private file: format 4, uppercase hex, the observed serial.
     let (_, now, status_now) = call(&app, get("/api/device-download/status")).await;
     let file = now["backupFile"]
         .as_str()
@@ -282,7 +283,7 @@ async fn an_http_download_keeps_the_serial_in_the_private_backup_and_in_no_body(
         .to_owned();
     let path = dir.path().join(&file);
     let on_disk = std::fs::read_to_string(&path).unwrap();
-    assert!(on_disk.contains("\"format\": 3"), "{on_disk}");
+    assert!(on_disk.contains("\"format\": 4"), "{on_disk}");
     assert!(
         on_disk.contains("\"exemplar_serial\": \"0083ABCDEF12\""),
         "{on_disk}"

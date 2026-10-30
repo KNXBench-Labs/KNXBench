@@ -323,6 +323,7 @@ fn start(dir: &tempfile::TempDir, target: IndividualAddress) -> DownloadGuard {
 
 fn backup(dir: &std::path::Path) -> BackupTarget<'_> {
     BackupTarget {
+        write_selection: knx_app::device_backup::WriteSelection::SourceDefaultInactiveWholeBytesV1,
         dir,
         application: "synthetic-application",
         partial: None,

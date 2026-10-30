@@ -228,6 +228,36 @@ contexts are matcher limits: absence of this reason does not establish write
 safety, compatibility or hardware support. Experimental configured System-2 is
 outside this regular-write increment.
 
+## Inactive parameter bytes (implementation candidate after Alpha 18)
+
+The candidate source implements a bounded regular-memory download policy:
+KNXBench does not insert inactive parameter values or directly send whole bytes
+proved to belong exclusively to an inactive supported branch. Stored inactive
+values remain in the project; necessary source literals, active Union values and
+source-protected bytes keep their existing rules. This is not “skip everything
+hidden in the editor”.
+
+If ownership cannot be proved, disjoint active and inactive bits share a writable
+byte, or the project changes the selection topology from source defaults,
+preparation refuses with `inactive-write-selection`. The EN/DE guidance explains
+the unsupported selection and offers **Request support**; it does not connect or write merely
+because the panel was opened. Read-only compare and diagnostics keep their
+existing behavior. A changed write plan can be **Untested** even if the same
+application had historical hardware evidence; the usual explicit acknowledgement
+is still required. An identical scoped plan can retain its applicable evidence.
+
+New regular backups use format 4 with an explicit write-selection identity.
+Historical restores keep the recorded generator and exact shape; do not edit a
+backup to force another selection. Older builds may reject format 4. Keep the
+original backups and an independent copy before changing builds.
+
+[Focused software proof and source review](../../status/2026-10-30-inactive-byte-write-selection.md)
+are verified; maintained package gates, actual server/Web build/smoke and
+publication are pending. This is not part of immutable Alpha 18 artifacts or
+hardware acceptance. Omitting a direct write does not prove that the device
+retains those bytes through unloading, allocation or restart. Broader parameter
+rules and recovery remain open; [exact scope](../../contracts/inactive-byte-write-selection.md).
+
 <a id="experimental-system2-download-since-alpha-16"></a>
 
 ## Experimental configured System-2 download (Alpha 16)

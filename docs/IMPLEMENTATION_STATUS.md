@@ -12,6 +12,20 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Inactive whole-byte write selection (30 October 2026; package acceptance pending)
+
+The [bounded regular-write contract](contracts/inactive-byte-write-selection.md)
+is implemented through App preparation, actual executor frames, CLI/HTTP
+consumers and explicit format-4 backup/restore generator binding. Source-default
+selection topology, source Mask, active Union/literal data and read-only behavior
+remain bounded; historical support credit requires an identical actual scoped
+plan. Original real-writer/correction failures, genuine old-file consumer proof,
+412 distinct passing regression bodies and final independent source review with
+no open findings are recorded in the [focused result](status/2026-10-30-inactive-byte-write-selection.md).
+Maintained branch/main-first package gates, actual server/Web build/smoke and
+publication are pending. This is not a delivery entry for main or Alpha 18;
+physical inactive-byte survival, PRG-01 and KL-007 remain open.
+
 ## Alpha 18 pre-release (source cutoff 28 October 2026)
 
 `v0.1.0-alpha.18` is the current pre-release, cut from main at source cutoff

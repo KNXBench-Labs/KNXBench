@@ -12,6 +12,34 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Read-only manufacturer distribution inspection (31 October 2026 source)
+
+`knx products inspect-distribution <source.xml|source.zip>` reports what a
+manufacturer XML or distribution ZIP (for example an OpenKNX release) declares,
+without installing anything. Report format 2 keeps one source map per document
+and byte-exact references for every row, plus a resolver for them. Typed facts come from
+the existing catalogue, hardware, program and Dynamic readers. Unknown
+constructs are inventoried, including inside Dynamic. `complete` is always
+false, and every limitation is listed
+([contract](contracts/distribution-inspection.md), [KL-187](KNOWN_LIMITATIONS.md#catalogue-kl-187)).
+
+- **Installation unchanged.** Installation still refuses these sources. The
+  more lenient Windows-name policy applies to inspection only, and a native
+  regression test pins that.
+- **Real input.** A release build over 37 public OpenKNX releases returned 37
+  partial reports. Peak RSS was 1.1 GiB, the slowest took 9 s, and the largest
+  report was 174 MiB. Installing the same 37 archives into a fresh in-memory
+  database was still refused (28 `MissingMaster`, 9 `UnsafeMember`).
+- **Tests.**
+  - Distribution 36 and grid 7 in knx-productdb; CLI 5; native ZIP
+    regressions 13.
+  - Clippy, headers, test layout and local-info checks green.
+  - Five mutants of the review fixes were each caught.
+- **Review.** Two independent reviews: the first blocked (1 critical,
+  5 important); the second approved after the fixes.
+- **Boundaries.** Not ETS or KNX compatibility. A BOM-related byte offset in
+  the native master provenance reader is a separate follow-up.
+
 ## Alpha 18 pre-release (source cutoff 28 October 2026)
 
 `v0.1.0-alpha.18` is the current pre-release, cut from main at source cutoff

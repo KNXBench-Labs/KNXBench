@@ -866,10 +866,7 @@ async fn all_outward_surfaces_use_only_admitted_values() {
         ("sessionLog", withheld),
         ("device", "no device is chosen"),
         ("busMonitor", withheld),
-        (
-            "legacyReports",
-            "the selected diagnostic source is unavailable",
-        ),
+        ("legacyReports", "no operation is chosen"),
     ] {
         let offer = view["offers"]
             .as_array()

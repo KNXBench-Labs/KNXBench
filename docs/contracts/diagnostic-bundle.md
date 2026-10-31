@@ -117,8 +117,8 @@ tunnel opens (individual-address programming today) leave no recording.
 
 CLI: only with `--diagnostic-bundle <new.zip>`, see [CLI](#cli).
 
-The free-running bus monitor is not recorded. Its last ten minutes are an
-optional bundle section.
+The free-running bus monitor is not recorded. Its last-ten-minutes section is
+offered but withheld until its content is admitted as credential-free.
 
 ### Location, switching off, retention
 
@@ -342,12 +342,16 @@ Every offer that cannot be delivered carries one fixed English reason; the web
 translates each by exact text and a server test fails when a reason or fixed
 note has no web translation. Reasons that do not depend on what a source holds
 are specific: a section withheld until admitted ("this section is withheld until
-its content is admitted as free of credentials"), an unsaved project, no chosen
-device, an operation whose proven context names no project device, the original
-import file the server does not keep, and the retained-result causes. A refusal
-that could hint at content (a credential observed in a project or import report,
-an unsafe or unadmitted recording, a failed secret-free copy) keeps the generic
-"the selected diagnostic source is unavailable".
+its content is admitted as free of credentials"), no fitting or no chosen
+operation, a recording without a retained typed report, no open project, no
+stored import report, an unsaved project, no chosen device, an operation whose
+proven context identifies no single project device (none, or an address shared
+by several devices), the original import file the server does not keep, and the
+retained-result causes. The generic "the selected diagnostic source is
+unavailable" remains where a named source is gone or rejected, and wherever a
+reason could hint at content (a credential observed in a project or import
+report, an unreadable stored report, an unsafe or unadmitted recording, a failed
+secret-free copy).
 
 The import-report section uses the shared secret-free report projection on the
 admitted historical evidence. Identified secret samples and their digests are
@@ -395,8 +399,11 @@ ZIP exactly as recorded (keys redacted at capture), as
 operation, older ones of the same invocation are earlier operations. No
 recording of a `system2-*` subcommand leaves raw, whatever its kind; the
 System-2 command contributes only its admitted private projection and report.
-A recording that is unreadable or larger than 64 MiB is left out with a note in
-the environment section. Checked on 31 October 2026 against an installed
+Every recording left out (unreadable header, System-2 kind, unreadable or larger
+than 64 MiB, or any recording of a `system2-*` command) is named in a note in the
+environment section. Only the newest recording can be the operation section. The
+help text and the success message say that the ZIP may contain device
+configuration and passwords and must be kept private. Checked on 31 October 2026 against an installed
 release build on loopback: without the flag nothing is written and no hidden
 directory appears; a doubled flag (also `--diagnostic-bundle=` mixed with the
 spaced form, same or different file), a flag without a file name and a flag

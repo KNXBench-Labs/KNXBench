@@ -20,11 +20,14 @@ undeliverable bundle section said "the selected diagnostic source is
 unavailable", German showed that reason and the keep-private note in English,
 and `--diagnostic-bundle` dropped every non-System-2 recording. Now: specific,
 content-independent reasons (withheld session log/bus monitor/client state,
-unsaved project, no device chosen, an operation naming no project device,
-import file not kept), generic only where a reason could hint at content; the
-web translates every fixed reason and note (pinned by a server test); the CLI
-bundles each non-System-2 recording exactly as recorded with the keep-private
-note and never a raw recording of a `system2-*` command. See the
+no fitting or chosen operation, no short report, no project or import report,
+unsaved project, no device chosen, no single device named by the operation,
+import file not kept); generic where a named source is gone or a reason could
+hint at content. The web translates every fixed reason and note (pinned by a
+server test). The CLI bundles each non-System-2 recording exactly as recorded
+with the keep-private note, names every recording it leaves out, never ships a
+raw recording of a `system2-*` command, and its consent text no longer promises
+"never included". See the
 [contract](contracts/diagnostic-bundle.md) and
 [DIAG-03](open-work/DIAG-03-unified-diagnostic-bundle.md). Toasts covering the
 wizard remain open.

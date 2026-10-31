@@ -148,13 +148,13 @@ describe("sizes and markers", () => {
 
   it("translates only the server's known reasons", () => {
     expect(reasonKey("no device is chosen")).toBe("reportProblem.reason.noDevice");
-    expect(reasonKey("the bus monitor is not running")).toBe("reportProblem.reason.busMonitorOff");
+    expect(reasonKey("this section is withheld until its content is admitted as free of credentials")).toBe("reportProblem.reason.withheld");
     expect(reasonKey("a secret-free copy of the project could not be made: disk")).toBeNull();
   });
 
   it("translates the withheld, no-device and keep-private texts into German", () => {
     const withheld = "this section is withheld until its content is admitted as free of credentials";
-    const noDevice = "the selected operation names no device of this project";
+    const noDevice = "the selected operation identifies no single device of this project";
     const privateRaw = "contains device configuration, possibly passwords; recognised KNX keys are redacted; keep private";
     const keys = [reasonKey(withheld), reasonKey(noDevice), reasonKey("the selected diagnostic source is unavailable"), noteKey(privateRaw)];
     expect(keys).toEqual(["reportProblem.reason.withheld", "reportProblem.reason.sourceNamesNoDevice",

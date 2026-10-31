@@ -50,7 +50,7 @@ export function bundlePreview(query: BundleQuery): BundlePreview {
   for (const kind of SECTION_KINDS) {
     const offer = defaultOffer(query.problemType, kind);
     if (offer === "notOffered") continue;
-    const unavailable = kind === "busMonitor" ? "the bus monitor is not running"
+    const unavailable = kind === "busMonitor" ? "this section is withheld until its content is admitted as free of credentials"
       : kind === "device" && query.deviceId === undefined ? "no device is chosen" : null;
     const selected = (offer === "fixed" || wanted.has(kind)) && unavailable === null;
     offers.push({ kind, offer, selected, unavailable });

@@ -405,15 +405,7 @@ fn every_fixed_reason_and_note_has_a_web_translation() {
             "untranslated reason: {message}"
         );
     }
-    for note in [
-        knx_app::diagnostic_bundle::PRIVATE_RAW_NOTE,
-        "the raw operation recording is withheld; this is the admitted private projection",
-        "the raw operation recording is withheld; this is the retained typed result",
-        "the operation recording is unavailable; this is the admitted private projection",
-        "the operation recording is unavailable; this is the retained typed result",
-        "the recording's last line is incomplete (interrupted write)",
-        "the last saved state of the project; unsaved changes are not included",
-    ] {
+    for note in super::FIXED_NOTES {
         assert!(web.contains(&quoted(note)), "untranslated note: {note}");
     }
 }

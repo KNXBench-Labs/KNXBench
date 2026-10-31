@@ -90,6 +90,12 @@ fn a_find_serial_run_cleans_up_and_exports_its_recording_byte_exactly() {
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(output.status.success(), "{stderr}");
     assert!(stderr.contains("diagnostic bundle written to"), "{stderr}");
+    // The consent text must not promise less than the ZIP holds.
+    assert!(
+        stderr.contains("may contain device configuration and passwords: keep it private"),
+        "{stderr}"
+    );
+    assert!(!stderr.contains("never included"), "{stderr}");
 
     // Only the bundle remains beside it; the recording directory is gone.
     let left: Vec<_> = std::fs::read_dir(bundle.parent().unwrap())

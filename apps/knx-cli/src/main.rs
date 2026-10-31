@@ -238,8 +238,10 @@ const USAGE: &str = "usage: knx import <file.knxproj> [--store <path.knxdb> [--r
      \x20   any `knx device ...` or `knx bus ...` command also takes\n\
      \x20     --diagnostic-bundle <new.zip>\n\
      \x20         (records every device connection of this command byte for byte and writes\n\
-     \x20         one diagnostic bundle ZIP afterwards; keys and passwords are never recorded.\n\
-     \x20         The file must not exist yet. Email is not encrypted: send it knowingly)\n\
+     \x20         one diagnostic bundle ZIP afterwards. Recognised KNX keys are redacted, but\n\
+     \x20         the recordings contain device configuration and possibly passwords: keep the\n\
+     \x20         file private. System-2 commands never include raw recordings. The file must\n\
+     \x20         not exist yet. Email is not encrypted: send it knowingly)\n\
      exit codes: 0 = success (for import/ga-import, warnings are still success),\n\
      1 = failure (bad arguments, I/O, a transport problem, or no usable data);\n\
      2 = import/ga-import only: a project was produced but the report contains\n\
@@ -281,8 +283,9 @@ fn main() -> ExitCode {
     match diagnostic_bundle_cli::finish(code == ExitCode::SUCCESS) {
         Some(Ok(path)) => {
             eprintln!(
-                "diagnostic bundle written to {} (keys and passwords are never included; \
-                 email is not encrypted)",
+                "diagnostic bundle written to {} (recognised KNX keys are redacted; it may \
+                 contain device configuration and passwords: keep it private; email is not \
+                 encrypted)",
                 path.display()
             );
             code

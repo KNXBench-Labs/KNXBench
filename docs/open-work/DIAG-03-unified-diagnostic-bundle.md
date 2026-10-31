@@ -164,7 +164,7 @@ Every field failure so far needed another report extension and another device at
 mismatch). At the checked starting point below, System-2 final verification discarded
 actual readback, so the #30/#22 mismatch could not be localised from existing artifacts.
 Part B now persists the private comparison evidence through journal and fresh reopen;
-its credential-safe bundle/CLI attachment remains open under P1/P2. The owner's decision:
+bundle and CLI attach its closed projection, and P1/P2 gate only a raw export. The owner's decision:
 for debugging, data minimisation is counterproductive. Record as much as possible for
 every device operation, always with the KNXBench version, and let the user decide by
 checkbox what goes into one ZIP that they may send by mail.

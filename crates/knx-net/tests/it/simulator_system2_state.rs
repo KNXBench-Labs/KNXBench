@@ -460,3 +460,34 @@ async fn zero_task_pointer_and_zero_control_words_are_declared_state_not_absence
         })
     );
 }
+
+#[tokio::test]
+async fn memory_changes_only_when_an_object_completes_loading() {
+    let device = SimulatedDevice::with_config(SimulatorConfig {
+        mask_version: 0x0025,
+        memory_after_load_completed: Some((0x3c00, vec![0xd7, 0x3e])),
+        ..SimulatorConfig::default()
+    });
+    device.preset_memory(0x3c00, &[0xa5, 0xa5]);
+    let event = |octet| {
+        let mut data = [0u8; 10];
+        data[0] = octet;
+        data
+    };
+    let memory = |device: &SimulatedDevice| device.memory(0x3c00, 2);
+    // Unload and StartLoading leave memory alone.
+    control(&device, 3, event(4)).await;
+    control(&device, 3, event(1)).await;
+    assert_eq!(memory(&device), [Some(0xa5), Some(0xa5)]);
+    assert_eq!(
+        device.load_state(knx_core::commissioning::properties::ObjectIndex::new(3)),
+        LoadState::Loading
+    );
+    // Loading → Loaded applies the change.
+    control(&device, 3, event(2)).await;
+    assert_eq!(memory(&device), [Some(0xd7), Some(0x3e)]);
+    // A LoadCompleted outside Loading is an Error transition, not a completion.
+    device.preset_memory(0x3c00, &[0xa5, 0xa5]);
+    control(&device, 3, event(2)).await;
+    assert_eq!(memory(&device), [Some(0xa5), Some(0xa5)]);
+}

@@ -285,6 +285,12 @@ pub struct SimulatorConfig {
     /// one: it proves that a reader refuses a short answer instead of
     /// comparing or classifying fewer octets than it asked for.
     pub short_memory_answers: bool,
+    /// Overwrite memory at this address with these octets whenever an object
+    /// completes loading (Loading → Loaded). Not a documented device behaviour
+    /// and not claimed to be one: every write readback before it still holds,
+    /// so only a final whole-allocation verification can notice, which is what
+    /// it exists to prove (and that its evidence stays out of shared records).
+    pub memory_after_load_completed: Option<(u32, Vec<u8>)>,
     /// Explicit experimental counter-hypothesis: accepted Unload removes bytes in
     /// this owner's modeled absolute extents. False preserves historical simulator
     /// behavior. Neither setting asserts what real System-2 firmware does.
@@ -725,6 +731,7 @@ impl Default for SimulatorConfig {
             protected_memory: None,
             corrupt_memory_writes: false,
             short_memory_answers: false,
+            memory_after_load_completed: None,
             experimental_destroy_allocation_memory_on_unload: false,
             programming_mode: false,
             other_programming_mode_devices: Vec::new(),
@@ -1748,6 +1755,13 @@ impl SimulatedDevice {
         };
         let mut state = self.lock();
         state.load.insert(object_index, after);
+        if (before, after) == (LoadState::Loading, LoadState::Loaded) {
+            if let Some((address, octets)) = &self.config.memory_after_load_completed {
+                for (offset, octet) in octets.iter().enumerate() {
+                    state.memory.insert(address + offset as u32, *octet);
+                }
+            }
+        }
         if after == LoadState::Unloaded {
             // Release the reference. Owned extents below are software-model
             // state; byte retention/destruction is an explicit fixture choice.

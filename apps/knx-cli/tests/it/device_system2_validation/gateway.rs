@@ -28,6 +28,9 @@ use serde_json::{json, Value};
 
 use super::{bundle, bundle_version, cli};
 
+#[path = "../../../../../crates/knx-app/src/sentinel_forms_tests.rs"]
+mod sentinel_forms;
+
 /// The synthetic bundle's device: 3C00h..3C03h allocated on the application object.
 fn device(bundle: &PreparedBundle, hardware: [u8; 6], config: SimulatorConfig) -> SimulatedDevice {
     let b = &bundle.binding;
@@ -373,4 +376,92 @@ fn superseded_recovery_restores(version: u32) {
     );
     let row = journal(dir.path());
     assert_eq!(row["state"], "verified", "profile v{version}: {row}");
+}
+
+/// What the device holds after LoadCompleted instead of the written `01 02 03 04`:
+/// only the actual side of the final verification can carry it.
+const LIE: [u8; 4] = [0xd7, 0x3e, 0x9c, 0x6b];
+
+/// DIAG-03 Original14 C1: the built command against the loopback gateway fails its
+/// final allocation verification, keeps the failure, and its diagnostic bundle holds
+/// the typed failure and the closed projection but neither byte side and no recording.
+#[test]
+fn a_final_mismatch_is_bundled_with_neither_byte_side() {
+    let dir = tempfile::tempdir().unwrap();
+    let (path, bundle) = bundle(dir.path());
+    let config = SimulatorConfig {
+        memory_after_load_completed: Some((0x3c00, LIE.to_vec())),
+        ..Default::default()
+    };
+    let gateway = gateway(device(&bundle, [1; 6], config));
+    let zip = dir.path().join("bundle.zip");
+    let out = download_with(
+        dir.path(),
+        &path,
+        &gateway,
+        &["--diagnostic-bundle", zip.to_str().unwrap()],
+    );
+    let stderr = String::from_utf8_lossy(&out.stderr);
+    assert_eq!(out.status.code(), Some(1), "{stderr}");
+    assert!(stderr.contains("diagnostic bundle written to"), "{stderr}");
+
+    // Preconditions: the failure is the final mismatch and the journal keeps both sides.
+    let store = store(dir.path(), &bundle);
+    assert_eq!(store.outcome(), LocalOutcome::Failed);
+    let progress = serde_json::to_value(store.progress()).unwrap();
+    assert_eq!(
+        progress["final_step_failures"],
+        json!([{"run": "download", "category": "verificationMismatch", "stage": "allocation"}])
+    );
+    let evidence = store.allocation_mismatch_evidence();
+    assert_eq!(evidence.len(), 1);
+    let evidence = serde_json::to_value(&evidence[0]).unwrap().to_string();
+    for side in [
+        sentinel_forms::hex(&LIE),
+        sentinel_forms::hex(&[1, 2, 3, 4]),
+    ] {
+        assert!(
+            evidence.contains(&side),
+            "precondition: the journal holds {side}"
+        );
+    }
+    assert_eq!(journal(dir.path())["state"], "effectUnverified");
+
+    let mut archive = zip::ZipArchive::new(std::fs::File::open(&zip).unwrap()).unwrap();
+    let mut names = Vec::new();
+    for index in 0..archive.len() {
+        let mut entry = archive.by_index(index).unwrap();
+        let name = entry.name().to_owned();
+        let mut content = Vec::new();
+        std::io::Read::read_to_end(&mut entry, &mut content).unwrap();
+        sentinel_forms::assert_no_sentinel_bytes(
+            &format!("entry {name}"),
+            &content,
+            &[&LIE, &[1, 2, 3, 4]],
+        );
+        sentinel_forms::assert_no_sentinel_bytes(
+            &format!("entry name {name}"),
+            name.as_bytes(),
+            &[&LIE, &[1, 2, 3, 4]],
+        );
+        assert!(!name.ends_with("recording.jsonl"), "{name}");
+        if name == "operations/system2-private.json" {
+            let private: Value = serde_json::from_slice(&content).unwrap();
+            assert_eq!(
+                private["runs"][0]["allocationMismatch"]["classification"], "recordedBytesWithheld",
+                "{private}"
+            );
+        }
+        if name == "reports/system2-report.json" {
+            let report: Value = serde_json::from_slice(&content).unwrap();
+            assert_eq!(report["finalStepFailures"], progress["final_step_failures"]);
+        }
+        names.push(name);
+    }
+    for required in [
+        "operations/system2-private.json",
+        "reports/system2-report.json",
+    ] {
+        assert!(names.iter().any(|name| name == required), "{names:?}");
+    }
 }

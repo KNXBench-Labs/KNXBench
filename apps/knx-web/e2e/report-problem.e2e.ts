@@ -334,8 +334,10 @@ for (const width of [1440, 400]) {
       if (clip.width < 1 || clip.height < 1) continue;
       overlaps += 1;
       const shown = await page.screenshot({ clip, animations: "disabled" });
-      // The toast lives nine real seconds; an expired one would make both shots equal.
+      // The toast lives nine real seconds; an expiring one fades to opacity 0 (still
+      // "visible" to Playwright) and would make both shots equal.
       await expect(toast).toBeVisible();
+      await expect(toast).not.toHaveClass(/toast--leaving/);
       await page.locator(".toast-stack").evaluate((el) => { (el as HTMLElement).style.visibility = "hidden"; });
       const hidden = await page.screenshot({ clip, animations: "disabled" });
       await page.locator(".toast-stack").evaluate((el) => { (el as HTMLElement).style.visibility = ""; });

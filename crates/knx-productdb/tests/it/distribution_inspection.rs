@@ -66,7 +66,7 @@ fn combined_source_exposes_typed_catalogue_hardware_and_dynamic_fallback_without
     let report = result.unwrap();
 
     assert_eq!(original, COMBINED);
-    assert_eq!(report.format_version, 2);
+    assert_eq!(report.format_version, 3);
     assert_eq!(report.source_kind, DistributionSourceKind::ManufacturerXml);
     assert_eq!(report.source.name, "independently-authored.data");
     assert_eq!(report.source.size, COMBINED.len() as u64);
@@ -145,7 +145,7 @@ fn combined_source_exposes_typed_catalogue_hardware_and_dynamic_fallback_without
     }
 
     let json = serde_json::to_value(&report).unwrap();
-    assert_eq!(json["formatVersion"], 2);
+    assert_eq!(json["formatVersion"], 3);
     assert_eq!(json["sourceKind"], "manufacturerXml");
     assert_eq!(
         json["applications"][0]["parameterFallbacks"][0]["origin"],

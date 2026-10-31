@@ -137,6 +137,11 @@ impl DistributionInspection {
     pub fn serialized_size(&self) -> Result<usize> {
         json_size(self, usize::MAX)
     }
+
+    /// The row count charged against `DistributionLimits::max_output_records`.
+    pub fn output_record_count(&self) -> usize {
+        super::readers::output_count(self)
+    }
 }
 
 struct Counter {

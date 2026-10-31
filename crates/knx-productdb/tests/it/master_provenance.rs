@@ -93,6 +93,350 @@ fn all_families_same_and_cross_source_first_winners_have_exact_positions() {
 }
 
 #[test]
+fn utf8_bom_keeps_declaration_ranges_on_the_original_bytes() {
+    let (_dir, conn) = db();
+    let mut bytes = b"\xef\xbb\xbf".to_vec();
+    bytes.extend_from_slice(FIRST.as_bytes());
+    ingest_master_data(&conn, &bytes).unwrap();
+    let sha = sha256_hex(&bytes);
+    let ranges = conn
+        .prepare("SELECT element,byte_start,byte_end FROM master_declaration WHERE source_sha256=?1 ORDER BY ordinal")
+        .unwrap()
+        .query_map([&sha], |r| Ok((r.get::<_, String>(0)?, r.get::<_, u32>(1)?, r.get::<_, u32>(2)?)))
+        .unwrap()
+        .collect::<Result<Vec<_>, _>>()
+        .unwrap();
+    assert_eq!(ranges.len(), 9);
+    for (element, start, end) in ranges {
+        let original = &bytes[start as usize..end as usize];
+        assert!(
+            original.starts_with(format!("<{element}").as_bytes()) && original.ends_with(b">"),
+            "{element} at {start}..{end}: {:?}",
+            String::from_utf8_lossy(original)
+        );
+    }
+    assert_eq!(
+        knx_productdb::load_source_file(&conn, &sha)
+            .unwrap()
+            .unwrap(),
+        bytes
+    );
+}
+
+/// The UTF-8 byte-order mark the pre-v31 parser left out of every stored range.
+const BOM: &[u8] = b"\xef\xbb\xbf";
+
+fn with_bom(xml: &str) -> Vec<u8> {
+    [BOM, xml.as_bytes()].concat()
+}
+
+/// `(ordinal, byte_start, byte_end, observed_write)` of one source.
+fn ranges(conn: &Connection, sha: &str) -> Vec<(i64, i64, i64, Option<bool>)> {
+    conn.prepare("SELECT ordinal,byte_start,byte_end,observed_write FROM master_declaration WHERE source_sha256=?1 ORDER BY ordinal")
+        .unwrap()
+        .query_map([sha], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?)))
+        .unwrap()
+        .collect::<Result<Vec<_>, _>>()
+        .unwrap()
+}
+
+/// What the pre-v31 parser stored for a BOM source: every range, in the rows and in the install
+/// diagnostics quoting them, three bytes early.
+pub(crate) fn rewind_bom_ranges(conn: &Connection, sha: &str) {
+    conn.execute(
+        "UPDATE master_declaration SET byte_start=byte_start-3, byte_end=byte_end-3 WHERE source_sha256=?1",
+        [sha],
+    )
+    .unwrap();
+    let marker = format!("; source {sha} declaration ");
+    let rows: Vec<(String, i64, String)> = conn
+        .prepare("SELECT package_sha256, ordinal, detail FROM package_install_diagnostic")
+        .unwrap()
+        .query_map([], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)))
+        .unwrap()
+        .collect::<Result<_, _>>()
+        .unwrap();
+    for (package, ordinal, detail) in rows {
+        let Some(at) = detail.find(&marker) else {
+            continue;
+        };
+        let open = at + detail[at..].find(" bytes [").unwrap() + " bytes [".len();
+        let close = open + detail[open..].find(')').unwrap();
+        let (start, end) = detail[open..close].split_once("..").unwrap();
+        let (start, end): (i64, i64) = (start.parse().unwrap(), end.parse().unwrap());
+        let moved = format!(
+            "{}{}..{}{}",
+            &detail[..open],
+            start - 3,
+            end - 3,
+            &detail[close..]
+        );
+        conn.execute(
+            "UPDATE package_install_diagnostic SET detail=?3 WHERE package_sha256=?1 AND ordinal=?2",
+            rusqlite::params![package, ordinal, moved],
+        )
+        .unwrap();
+    }
+}
+
+/// A namespaced `FIRST` plus two malformed declarations: four collisions and two malformed
+/// declaration diagnostics per install.
+fn diagnosed_master() -> String {
+    FIRST
+        .replace("<KNX>", r#"<KNX xmlns="http://knx.org/xml/project/11">"#)
+        .replace(
+            "</MasterData>",
+            "<SpaceUsage/><FunctionPoint/></MasterData>",
+        )
+}
+
+#[test]
+fn v31_moves_only_authenticated_bom_ranges_and_the_diagnostics_quoting_them() {
+    use knx_productdb::master_provenance::master_source_report;
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("products.sqlite");
+    let bom = with_bom(&diagnosed_master());
+    let damaged = with_bom(SECOND);
+    let archive = package(&bom, HARDWARE);
+    let (bom_sha, damaged_sha) = (sha256_hex(&bom), sha256_hex(&damaged));
+    let plain_sha = sha256_hex(FIRST.as_bytes());
+    let others = [
+        "master_source",
+        "master_winner",
+        "source_file",
+        "datapoint_type",
+        "function_type",
+        "package",
+        "package_install_report",
+        "package_install_count",
+    ];
+    let (facts, correct, diagnostics, before) = {
+        let conn = open_and_migrate(&path).unwrap();
+        let facts = knx_productdb::install_package(&conn, "bom.knxprod", &archive)
+            .unwrap()
+            .facts
+            .unwrap();
+        ingest_master_data(&conn, &damaged).unwrap();
+        ingest_master_data(&conn, FIRST.as_bytes()).unwrap();
+        let correct = ranges(&conn, &bom_sha);
+        let diagnostics = table_values(&conn, &["package_install_diagnostic"]);
+        let quoting = diagnostics[0]
+            .iter()
+            .filter(
+                |row| matches!(&row[5], rusqlite::types::Value::Text(t) if t.contains(" bytes [")),
+            )
+            .count();
+        assert_eq!(
+            quoting, 6,
+            "four collisions and two malformed declarations quote ranges"
+        );
+        rewind_bom_ranges(&conn, &bom_sha);
+        rewind_bom_ranges(&conn, &damaged_sha);
+        assert_ne!(
+            table_values(&conn, &["package_install_diagnostic"]),
+            diagnostics
+        );
+        // A retained source whose length no longer authenticates must not be "repaired".
+        conn.execute(
+            "UPDATE source_file SET len=len+1 WHERE sha256=?1",
+            [&damaged_sha],
+        )
+        .unwrap();
+        conn.pragma_update(None, "user_version", 30).unwrap();
+        assert!(
+            master_source_report(&conn, &bom_sha).is_err(),
+            "the current reader re-parses retained bytes and refuses shifted ranges"
+        );
+        let before = (
+            ranges(&conn, &damaged_sha),
+            ranges(&conn, &plain_sha),
+            table_values(&conn, &others),
+        );
+        (facts, correct, diagnostics, before)
+    };
+    let conn = open_and_migrate(&path).unwrap();
+    let version: i64 = conn
+        .query_row("PRAGMA user_version", [], |r| r.get(0))
+        .unwrap();
+    assert_eq!(version, 31);
+    assert_eq!(ranges(&conn, &bom_sha), correct);
+    assert_eq!(
+        table_values(&conn, &["package_install_diagnostic"]),
+        diagnostics
+    );
+    assert_eq!(
+        (
+            ranges(&conn, &damaged_sha),
+            ranges(&conn, &plain_sha),
+            table_values(&conn, &others)
+        ),
+        before,
+        "damaged and plain sources and every other row stay exactly as they were"
+    );
+    let report = master_source_report(&conn, &bom_sha).unwrap().unwrap();
+    assert_eq!(report.declarations.len(), 11);
+    assert!(report.retained_source_available);
+    // The exact retry reads the stored report, which validates every moved diagnostic.
+    assert_eq!(
+        knx_productdb::install_package(&conn, "retry.knxprod", &archive)
+            .unwrap()
+            .facts,
+        Some(facts)
+    );
+}
+
+#[test]
+fn v31_keeps_diagnostic_rows_it_does_not_recognise_and_moves_the_rest() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("products.sqlite");
+    let bom = with_bom(&diagnosed_master());
+    let sha = sha256_hex(&bom);
+    let rows = |conn: &Connection| -> Vec<(i64, String, String)> {
+        conn.prepare(
+            "SELECT ordinal, kind, detail FROM package_install_diagnostic ORDER BY ordinal",
+        )
+        .unwrap()
+        .query_map([], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)))
+        .unwrap()
+        .collect::<Result<_, _>>()
+        .unwrap()
+    };
+    let first = |conn: &Connection, kind: &str| -> i64 {
+        conn.query_row(
+            "SELECT min(ordinal) FROM package_install_diagnostic WHERE kind=?1",
+            [kind],
+            |r| r.get(0),
+        )
+        .unwrap()
+    };
+    let (fresh, foreign) = {
+        let conn = open_and_migrate(&path).unwrap();
+        knx_productdb::install_package(&conn, "bom.knxprod", &package(&bom, HARDWARE)).unwrap();
+        let fresh = rows(&conn);
+        rewind_bom_ranges(&conn, &sha);
+        // A collision text with a trailing addition the writer never produces.
+        let edited = first(&conn, "master-identity-collision");
+        conn.execute(
+            "UPDATE package_install_diagnostic SET detail=detail || '; edited elsewhere' WHERE ordinal=?1",
+            [edited],
+        )
+        .unwrap();
+        // A malformed-declaration text filed under the collision kind.
+        let relabelled = first(&conn, "malformed-master-declaration");
+        conn.execute(
+            "UPDATE package_install_diagnostic SET kind='master-identity-collision' WHERE ordinal=?1",
+            [relabelled],
+        )
+        .unwrap();
+        conn.pragma_update(None, "user_version", 30).unwrap();
+        let foreign: Vec<_> = rows(&conn)
+            .into_iter()
+            .filter(|r| r.0 == edited || r.0 == relabelled)
+            .collect();
+        assert_eq!(foreign.len(), 2);
+        (fresh, foreign)
+    };
+    let conn = open_and_migrate(&path).unwrap();
+    let after = rows(&conn);
+    assert_eq!(after.len(), fresh.len());
+    for (now, fresh) in after.iter().zip(&fresh) {
+        match foreign.iter().find(|f| f.0 == now.0) {
+            Some(kept) => assert_eq!(now, kept, "an unrecognised row keeps its old range"),
+            None => assert_eq!(now, fresh, "a recognised row moves onto the original bytes"),
+        }
+    }
+}
+
+#[test]
+fn v31_leaves_every_bom_source_it_cannot_prove_shifted_untouched() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("products.sqlite");
+    // Trailing newlines keep the bytes, and so the source identities, apart.
+    let source = |n: usize| with_bom(&format!("{FIRST}{}", "\n".repeat(n)));
+    let [correct, other_field, missing_row, out_of_range, start_only] = [1, 2, 3, 4, 5].map(source);
+    let all = [
+        &correct,
+        &other_field,
+        &missing_row,
+        &out_of_range,
+        &start_only,
+    ];
+    let shas = all.map(|b| sha256_hex(b));
+    // Authenticated retained bytes that no longer parse (mismatched end tag), carrying
+    // copied shifted rows.
+    let broken = with_bom("<KNX><MasterData><DatapointType Id=\"D\" Number=\"7\"></KNX>");
+    let broken_sha = sha256_hex(&broken);
+    let snapshot = {
+        let conn = open_and_migrate(&path).unwrap();
+        for bytes in all {
+            ingest_master_data(&conn, bytes).unwrap();
+        }
+        for sha in &shas[1..] {
+            rewind_bom_ranges(&conn, sha);
+        }
+        conn.execute(
+            "UPDATE master_declaration SET logical_id='X' WHERE source_sha256=?1 AND ordinal=1",
+            [&shas[1]],
+        )
+        .unwrap();
+        conn.execute(
+            "DELETE FROM master_declaration WHERE source_sha256=?1 AND ordinal=9",
+            [&shas[2]],
+        )
+        .unwrap();
+        conn.execute(
+            "UPDATE master_declaration SET byte_end=4294967296 WHERE source_sha256=?1 AND ordinal=9",
+            [&shas[3]],
+        )
+        .unwrap();
+        // Only the end moved: not the three-byte BOM shift of a whole range.
+        conn.execute(
+            "UPDATE master_declaration SET byte_start=byte_start+3 WHERE source_sha256=?1 AND ordinal=2",
+            [&shas[4]],
+        )
+        .unwrap();
+        conn.execute(
+            "INSERT INTO source_file(sha256,source_path,manufacturer_id,len,bytes) VALUES(?1,'broken.xml',NULL,?2,?3)",
+            rusqlite::params![broken_sha, broken.len() as i64, broken],
+        )
+        .unwrap();
+        conn.execute(
+            "INSERT INTO master_source SELECT ?1,definition_version,history,status,reason FROM master_source WHERE source_sha256=?2",
+            [&broken_sha, &shas[1]],
+        )
+        .unwrap();
+        conn.execute(
+            "INSERT INTO master_declaration SELECT ?1,ordinal,family,element,logical_id,xml_path,byte_start,byte_end,main_number,function_type_id,missing_id,orphan_parent,observed_write FROM master_declaration WHERE source_sha256=?2",
+            [&broken_sha, &shas[0]],
+        )
+        .unwrap();
+        conn.execute(
+            "UPDATE master_declaration SET byte_start=byte_start-3, byte_end=byte_end-3 WHERE source_sha256=?1",
+            [&broken_sha],
+        )
+        .unwrap();
+        conn.pragma_update(None, "user_version", 30).unwrap();
+        table_values(
+            &conn,
+            &["master_declaration", "master_source", "master_winner"],
+        )
+    };
+    let conn = open_and_migrate(&path).unwrap();
+    let version: i64 = conn
+        .query_row("PRAGMA user_version", [], |r| r.get(0))
+        .unwrap();
+    assert_eq!(version, 31);
+    assert_eq!(
+        table_values(
+            &conn,
+            &["master_declaration", "master_source", "master_winner"]
+        ),
+        snapshot,
+        "already-correct, diverging, incomplete, unreadable, half-shifted and unparsable sources stay as stored"
+    );
+}
+
+#[test]
 fn missing_id_orphan_and_empty_id_are_not_conflated() {
     let (_dir, conn) = db();
     let xml = r#"<KNX><MasterData><DatapointType><DatapointSubtype Id="child"/></DatapointType><DatapointSubtype/><FunctionType><FunctionPoint Id="orphan"/><FunctionPoint/></FunctionType><SpaceUsage/><SpaceUsage Id=""/><FunctionType Id=""><FunctionPoint Id=""/></FunctionType></MasterData></KNX>"#;

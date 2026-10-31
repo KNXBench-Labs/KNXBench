@@ -275,7 +275,14 @@ pub(crate) fn parse_master_with_budget(
     } else {
         Vec::new()
     };
-    let mut reader = Reader::from_reader(bytes);
+    // quick-xml drops a leading UTF-8 BOM without counting it in `buffer_position`.
+    // Declaration ranges must address the retained original bytes, so add it back.
+    let bom = if bytes.starts_with(b"\xEF\xBB\xBF") {
+        3
+    } else {
+        0
+    };
+    let mut reader = Reader::from_reader(&bytes[bom..]);
     let mut buf = Vec::new();
     let mut unknown = UnknownCollector::default();
     let mut current_main: Option<i64> = None;
@@ -289,14 +296,14 @@ pub(crate) fn parse_master_with_budget(
     loop {
         cancellation.checkpoint()?;
         buf.clear();
-        let byte_start = reader.buffer_position();
+        let byte_start = bom as u64 + reader.buffer_position();
         let event = reader
             .read_event_into(&mut buf)
             .map_err(|e| ProductDbError::Xml {
                 source_path: source_path.to_string(),
                 cause: e.to_string(),
             })?;
-        let byte_end = reader.buffer_position();
+        let byte_end = bom as u64 + reader.buffer_position();
         // Self-closing elements fire no matching `Event::End`, so any
         // "current" scope opened for one must be closed again before the
         // match arm below returns — nothing downstream gets a second

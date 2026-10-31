@@ -54,6 +54,24 @@ fn declaration(row: &rusqlite::Row<'_>) -> Result<MasterDeclaration, rusqlite::E
     }
     Ok(d)
 }
+/// Stored rows in ordinal order; `None` when any row fails the reader's own invariants.
+pub(super) fn stored_declarations(
+    conn: &Connection,
+    sha: &str,
+) -> Result<Option<Vec<MasterDeclaration>>, ProductDbError> {
+    let mut stmt = conn.prepare(&format!(
+        "SELECT {COLUMNS} FROM master_declaration WHERE source_sha256=?1 ORDER BY ordinal"
+    ))?;
+    let rows = stmt
+        .query_map([sha], declaration)?
+        .collect::<Result<Vec<_>, _>>();
+    match rows {
+        Ok(rows) => Ok(Some(rows)),
+        Err(e @ rusqlite::Error::SqliteFailure(..)) => Err(e.into()),
+        // Out-of-range or mistyped values the reader would refuse as well.
+        Err(_) => Ok(None),
+    }
+}
 const COLUMNS:&str="source_sha256,ordinal,family,element,logical_id,xml_path,byte_start,byte_end,main_number,function_type_id,missing_id,orphan_parent,observed_write";
 pub fn master_source_report(
     conn: &Connection,
@@ -234,7 +252,10 @@ pub fn master_identity(
     })
 }
 
-fn verified_source(conn: &Connection, sha: &str) -> Result<Option<Vec<u8>>, ProductDbError> {
+pub(super) fn verified_source(
+    conn: &Connection,
+    sha: &str,
+) -> Result<Option<Vec<u8>>, ProductDbError> {
     let header: Option<(i64, i64)> = conn
         .query_row(
             "SELECT len,length(bytes) FROM source_file WHERE sha256=?1",

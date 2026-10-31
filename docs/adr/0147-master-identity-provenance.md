@@ -192,3 +192,30 @@ are retained outside Git.
 
 No new winner policy, master schema/ETS compatibility claim, data download,
 live bus operation, or WP-02 historical column-promotion repair is included.
+
+## Amendment: UTF-8 BOM byte ranges (product database 30 → 31, 31 October 2026)
+
+quick-xml strips a leading UTF-8 byte-order mark but does not count it in
+`buffer_position`. Master sources with a BOM therefore got every
+`[byte_start, byte_end)` three bytes too early. That contradicted "in the
+retained bytes". 92 of 142 `knx_master.xml` files in the private corpus start
+with a BOM. The parser now adds the stripped prefix back.
+
+The data-only v31 step changes two things. It moves `byte_start`/`byte_end`.
+It also rewrites the collision and malformed-declaration install diagnostics
+whose text quotes exactly the old range. Writer, reader and migration share one
+text builder. The step touches authenticated BOM sources only, and only when the
+corrected parser reproduces every stored declaration with a range exactly three
+bytes later. Everything else stays untouched, so the authoritative reader keeps
+reporting it rather than the migration guessing a repair. That covers damaged,
+diverging, incomplete, unreadable, unparsable or already-correct sources.
+
+- **Why the step is needed.** Without it, that reader would refuse the shifted
+  rows, because it re-parses the retained bytes.
+- **Why it also runs early.** The v27 → v28 and v28 → v29 steps reload install
+  reports through that reader. The same idempotent step therefore runs first
+  when a v27–v29 catalogue is opened. Otherwise those steps would downgrade
+  every report of a BOM master.
+- **Rejected alternative.** A full provenance replay was rejected: it also
+  writes status rows for unrelated damaged sources.
+- **Older builds.** They refuse product31 by their version check.

@@ -11,6 +11,7 @@ mod corpus_support;
 mod date_kind;
 mod device_evaluation;
 mod distribution_archive;
+mod distribution_dependencies;
 mod distribution_dynamic_budget;
 mod distribution_grammar;
 mod distribution_inspection;

@@ -148,9 +148,11 @@ the ZIP.
 
 **Always removed, even with your consent:** device keys (BCU keys), KNX Secure keys
 and tool keys, tunnel and login passwords. Where they were, the file says what was
-removed and how long it was, never the value. **Not removed:** individual and
-group addresses, names, parameter values and the network addresses of gateways in
-the parts you chose. Review the preview before you share the file.
+removed and how long it was, never the value. **Not removed** (in the parts you
+chose): individual and group addresses, names, parameter values, the network
+addresses of gateways and, in raw recordings and device memory, device
+configuration that may contain passwords. Keep the file private and review the
+preview before you share it.
 
 ### Step 4: save and send
 

@@ -268,6 +268,7 @@ fn validation_declared_not_run_for_two_ordinary_values() {
             "endpoints",
             "functionResolution",
             "graphCycle",
+            "graphCycleAnchor",
             "impactScope",
             "kind",
             "manufacturerSource",
@@ -386,6 +387,9 @@ fn declared_graph_cycle_and_unresolved_endpoints_are_not_runtime_effects() {
         .collect::<HashSet<_>>();
     let (ra, rb) = (parameter_refs(&r, "R-A"), parameter_refs(&r, "R-B"));
     assert_eq!(edges, HashSet::from([(ra.clone(), rb.clone()), (rb, ra)]));
+    let anchors = a.iter().map(|e| e.graph_cycle_anchor).collect::<Vec<_>>();
+    let first = Some(a[0].source);
+    assert_eq!(anchors, [first, first, None, first, None, None]);
     assert_eq!(attr(a[0], "Value"), (Presence::Absent, None));
     assert_eq!(attr(a[2], "Value"), (Presence::PresentEmpty, Some("")));
     assert_eq!(attr(a[2], "SourceParamRefRef"), (Presence::Absent, None));
@@ -418,6 +422,7 @@ fn declared_graph_cycle_and_unresolved_endpoints_are_not_runtime_effects() {
         [(Some("R-A".into()), Some(State::Ambiguous), candidates)]
     );
     assert_eq!(a[0].graph_cycle, Cycle::NotApplicable);
+    assert_eq!(a[0].graph_cycle_anchor, None);
     assert_eq!(
         r.applications[0].dynamic_state,
         DistributionPassState::NotAttempted
@@ -743,5 +748,88 @@ fn format_two_report_without_dependency_evidence_is_refused_not_read_as_empty() 
     assert!(
         serde_json::from_value::<DistributionInspection>(json).is_err(),
         "a report without the pass must not read as a source without declarations"
+    );
+}
+
+/// Authored application: four plain refs plus `extra_refs`, then the given Dynamic body.
+fn assign_app(extra_refs: &str, dynamic: &str) -> Vec<u8> {
+    format!(
+        "<KNX xmlns=\"http://knx.org/xml/project/20\"><ManufacturerData><Manufacturer RefId=\"M-1234\">\
+         <ApplicationPrograms><ApplicationProgram Id=\"APP-A\" Name=\"Authored\" ApplicationNumber=\"7\" \
+         ApplicationVersion=\"1\" MaskVersion=\"MV-0701\"><Static><ParameterTypes><ParameterType Id=\"T\">\
+         <TypeNumber SizeInBit=\"8\" Type=\"unsignedInt\" minInclusive=\"1\" maxInclusive=\"64\"/>\
+         </ParameterType></ParameterTypes><Parameters><Parameter Id=\"P-A\" ParameterType=\"T\" Value=\"1\"/>\
+         </Parameters><ParameterRefs><ParameterRef Id=\"R-A\" RefId=\"P-A\"/><ParameterRef Id=\"R-B\" RefId=\"P-A\"/>\
+         <ParameterRef Id=\"R-C\" RefId=\"P-A\"/><ParameterRef Id=\"R-D\" RefId=\"P-A\"/>{extra_refs}</ParameterRefs>\
+         </Static><Dynamic>{dynamic}</Dynamic></ApplicationProgram></ApplicationPrograms></Manufacturer>\
+         </ManufacturerData></KNX>"
+    )
+    .into_bytes()
+}
+
+#[test]
+fn self_loops_and_longer_declared_cycles_share_one_anchor() {
+    let xml = assign_app(
+        "",
+        "<Assign TargetParamRefRef=\"R-D\" SourceParamRefRef=\"R-D\"/>\
+         <Assign TargetParamRefRef=\"R-B\" SourceParamRefRef=\"R-A\"/>\
+         <Assign TargetParamRefRef=\"R-C\" SourceParamRefRef=\"R-B\"/>\
+         <Assign TargetParamRefRef=\"R-A\" SourceParamRefRef=\"R-C\"/>\
+         <Assign TargetParamRefRef=\"R-D\" SourceParamRefRef=\"R-C\"/>",
+    );
+    let r = inspect(&xml);
+    let a = rows(&r, Kind::Assign);
+    assert_eq!(
+        a.iter().map(|e| e.graph_cycle).collect::<Vec<_>>(),
+        [
+            Cycle::DeclaredGraphCycle,
+            Cycle::DeclaredGraphCycle,
+            Cycle::DeclaredGraphCycle,
+            Cycle::DeclaredGraphCycle,
+            Cycle::NoDeclaredCycle
+        ]
+    );
+    assert_eq!(
+        a.iter().map(|e| e.graph_cycle_anchor).collect::<Vec<_>>(),
+        [
+            Some(a[0].source),
+            Some(a[1].source),
+            Some(a[1].source),
+            Some(a[1].source),
+            None
+        ],
+        "the self-loop is its own cycle; the three-edge cycle is anchored at its first Assign"
+    );
+}
+
+#[test]
+fn ambiguous_endpoints_never_certify_that_no_cycle_was_declared() {
+    // R-C is declared twice: the loop R-A -> R-B -> R-C -> R-A may or may not be one cycle.
+    let xml = assign_app(
+        "<ParameterRef Id=\"R-C\" RefId=\"P-A\"/>",
+        "<Assign TargetParamRefRef=\"R-B\" SourceParamRefRef=\"R-A\"/>\
+         <Assign TargetParamRefRef=\"R-C\" SourceParamRefRef=\"R-B\"/>\
+         <Assign TargetParamRefRef=\"R-A\" SourceParamRefRef=\"R-C\"/>\
+         <Assign TargetParamRefRef=\"R-D\" SourceParamRefRef=\"R-A\"/>\
+         <Assign TargetParamRefRef=\"R-A\" SourceParamRefRef=\"R-C\" Value=\"3\"/>",
+    );
+    let r = inspect(&xml);
+    let a = rows(&r, Kind::Assign);
+    assert_eq!(parameter_refs(&r, "R-C").len(), 2);
+    assert_eq!(
+        a.iter().map(|e| e.graph_cycle).collect::<Vec<_>>(),
+        [
+            Cycle::CycleNotDetermined,
+            Cycle::CycleNotDetermined,
+            Cycle::CycleNotDetermined,
+            Cycle::NoDeclaredCycle,
+            Cycle::CycleNotDetermined
+        ],
+        "an ambiguous edge on a possible loop leaves every Assign on it undetermined"
+    );
+    let first = Some(a[0].source);
+    assert_eq!(
+        a.iter().map(|e| e.graph_cycle_anchor).collect::<Vec<_>>(),
+        [first, first, first, None, first]
     );
 }

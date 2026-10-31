@@ -148,22 +148,24 @@ for it; they stay the prerequisites of any future raw System-2 export.
 
 ## Original fourteen-case matrix (executed 31 October 2026)
 
-All fourteen cases now have a test with real producers, replay, collectors and ZIP
-writers on synthetic data; no private corpus, real installation, manufacturer
-contact or hardware. A sentinel surviving in any entry fails the test. Each new
-case was also run against a deliberately broken production path and failed.
+All fourteen cases now have a test on synthetic data with real producers and
+replay; no private corpus, real installation, manufacturer contact or hardware.
+The App cases end at the closed projection; the Server, CLI and cross-writer
+cases go through the real collectors and ZIP writers, where a sentinel surviving
+in any entry, entry name, preview or section text fails the test. Each new case
+was also run against a deliberately broken production path and failed.
 
 | Case | Test (file::name) | Proof |
 | --- | --- | --- |
 | A1–A6 | `knx-app/src/property_validation_private_projection_tests{,_more}.rs`, `property_validation_private_admission_tests.rs`, `tests/it/property_validation_execution/allocation_evidence.rs` | Unwritten/written/unreadable-prestate/restore mismatches, unclassified and refused replay, closed 4 KiB schema with explicit loss; projection scanned in every encoding. |
 | S1 | `knx-server/src/device_system2/tests/diagnostic_bundle_mismatch.rs::a_real_mismatch_without_a_recording_exports_neither_byte_side` | Real App executor on the configured synthetic project, OLD simulator, lying final read; the journal holds template, lie and prestate; preview, section text, download name and every ZIP entry hold none. |
 | S2 | same file `::real_mismatch_recordings_and_history_export_neither_byte_side` | The exact exchange as current and earlier System-2 recordings (sentinels present there as a precondition); no raw recording leaves. Mutants: journal shipped as a report, recording in a note. |
-| S3 | same file `::a_system2_review_is_bound_to_the_journal_state_it_read`, `::a_system2_run_refuses_a_foreign_device_and_never_projects_one`; source/version: `diagnostic_bundle_fallback.rs` | A real restore after the preview refuses export and section text; a foreign device is refused in the run's own project and never projected after a restart. |
+| S3 | same file `::a_system2_review_is_bound_to_the_journal_state_it_read`, `::a_system2_run_refuses_a_foreign_device_and_never_projects_one`; source conflict and build fields: `diagnostic_bundle_fallback.rs` | The review exports, also after a recovery claim alone; a real restore after the preview refuses export and section text. A foreign device is refused in the run's own unchanged context; after a real restart, with a project open in which that device is projectable, it is still not projected and no device file leaves. |
 | S4 | same file `::a_real_mismatch_keeps_status_and_report_public_and_unchanged_by_export` | After a restart, status/report carry only the typed failure, export changes neither, the bundled report equals the public one except the unadmitted execution build. |
-| C1 | `knx-cli/tests/it/device_system2_validation/gateway.rs::a_final_mismatch_is_bundled_with_neither_byte_side` | Built CLI against the loopback gateway; simulator knob `memory_after_load_completed`; exit 1, journal keeps both sides, ZIP holds projection and report only. Mutant: the CLI System-2 guard lifted leaks the lie. |
+| C1 | `knx-cli/tests/it/device_system2_validation/gateway.rs::a_final_mismatch_is_bundled_with_neither_byte_side` | Built CLI against the loopback gateway; simulator knob `memory_after_load_completed` (property and memory-mapped load control, pinned in `knx-net/tests/it/simulator_system2_state.rs`); exit 1, journal keeps both sides, ZIP holds projection and report only. Mutant: the CLI System-2 guard lifted leaks the lie. |
 | C2 | same file `::without_the_flag_a_failed_run_writes_no_bundle_and_no_recording`, `::a_doubled_bundle_flag_is_refused_before_any_datagram`; unit tests in `diagnostic_bundle_cli.rs` | No flag writes nothing; doubled or repeated destinations are refused with zero gateway datagrams. The process-global Duplicate slot is unit-covered only. |
-| X1 | `knx-server/tests/it/http_bundle_key_redaction.rs` | The service-control read sends the project BCU key over a real tunnel; `A_Authorize`/`A_Key_Write`, sent and received, through the production tap; both raw recordings exported and every entry scanned. Mutants: tap names but does not zero; tap spares only the routed key. |
-| X2 | S1/S2 tests | Both byte sides and every overlapping copy (journal, recordings, projection, report, notes). |
+| X1 | `knx-server/tests/it/http_bundle_key_redaction.rs` | The service-control read sends the project BCU key over a real tunnel; `A_Authorize`/`A_Key_Write`, sent and received, through the production tap; both raw recordings exported and every entry scanned, octet-wise in both byte orders and as whole numbers. Mutants: tap names but does not zero; tap spares only the routed key. |
+| X2 | S1/S2 tests | Both byte sides, the expected side's differing slice on its own, and every overlapping copy (journal, recordings, projection, report, notes, every section text). |
 
 **Scanner limit:** the sentinel scanner finds contiguous runs. A recording stores
 memory in the pieces the device answered (12 octets here), so a sentinel spanning

@@ -490,4 +490,61 @@ async fn memory_changes_only_when_an_object_completes_loading() {
     device.preset_memory(0x3c00, &[0xa5, 0xa5]);
     control(&device, 3, event(2)).await;
     assert_eq!(memory(&device), [Some(0xa5), Some(0xa5)]);
+    // Unloaded + LoadCompleted (Error too) and Loading + AdditionalLoadControls
+    // (stays Loading) do not apply it either; a second completion does.
+    control(&device, 3, event(4)).await;
+    control(&device, 3, event(2)).await;
+    assert_eq!(memory(&device), [Some(0xa5), Some(0xa5)]);
+    control(&device, 3, event(4)).await;
+    control(&device, 3, event(1)).await;
+    let mut additional = event(3);
+    additional[1] = 0x0b;
+    control(&device, 3, additional).await;
+    assert_eq!(memory(&device), [Some(0xa5), Some(0xa5)]);
+    control(&device, 3, event(2)).await;
+    assert_eq!(memory(&device), [Some(0xd7), Some(0x3e)]);
+}
+
+#[tokio::test]
+async fn the_memory_mapped_load_control_completes_the_same_way() {
+    use knx_core::commissioning::load_control_memory::{
+        MemoryLoadStateMachine, MANAGEMENT_CONTROL_ADDRESS, MEMORY_LOAD_RECORD_OCTETS,
+    };
+    let device = SimulatedDevice::with_config(SimulatorConfig {
+        mask_version: 0x0701,
+        memory_after_load_completed: Some((0x4000, vec![0xd7])),
+        ..SimulatorConfig::default()
+    });
+    device.preset_memory(0x4000, &[0xa5]);
+    let record = |event: u8| {
+        let mut data = vec![0u8; MEMORY_LOAD_RECORD_OCTETS];
+        data[0] = (MemoryLoadStateMachine::ApplicationProgram.type_number() << 4) | event;
+        data
+    };
+    for event in [4, 1] {
+        device
+            .send_frame(
+                Destination::Individual(device.address()),
+                Tpci::UnnumberedData,
+                ApplicationService::MemoryWrite {
+                    address: MANAGEMENT_CONTROL_ADDRESS,
+                    data: record(event),
+                },
+            )
+            .await
+            .unwrap();
+    }
+    assert_eq!(device.memory(0x4000, 1), [Some(0xa5)]);
+    device
+        .send_frame(
+            Destination::Individual(device.address()),
+            Tpci::UnnumberedData,
+            ApplicationService::MemoryWrite {
+                address: MANAGEMENT_CONTROL_ADDRESS,
+                data: record(2),
+            },
+        )
+        .await
+        .unwrap();
+    assert_eq!(device.memory(0x4000, 1), [Some(0xd7)]);
 }

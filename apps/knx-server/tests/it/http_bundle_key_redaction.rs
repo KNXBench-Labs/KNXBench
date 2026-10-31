@@ -95,6 +95,25 @@ fn contains(haystack: &[u8], needle: &[u8]) -> bool {
     haystack.windows(needle.len()).any(|w| w == needle)
 }
 
+/// Panics if `bytes` carries any key octet-wise (every scanner encoding, both byte
+/// orders) or as a whole number (decimal and hex of the big- and little-endian u32).
+fn assert_no_key(label: &str, bytes: &[u8], keys: &[[u8; 4]]) {
+    for key in keys {
+        let mut reversed = *key;
+        reversed.reverse();
+        sentinel_forms::assert_no_sentinel_bytes(label, bytes, &[key, &reversed]);
+        for value in [u32::from_be_bytes(*key), u32::from_le_bytes(*key)] {
+            for form in [
+                value.to_string(),
+                format!("{value:x}"),
+                format!("{value:X}"),
+            ] {
+                assert!(!contains(bytes, form.as_bytes()), "{label}: leaked {form}");
+            }
+        }
+    }
+}
+
 fn bcu_key_entry() -> knx_store::StoredOpaqueEntry {
     let bytes = PROJECT_KEY.to_string().into_bytes();
     knx_store::StoredOpaqueEntry {
@@ -215,9 +234,9 @@ async fn keys_sent_and_received_through_the_real_tap_never_reach_a_bundle_entry(
     )
     .await;
     assert_eq!(status, StatusCode::OK, "{}", json_of(&preview));
-    let mut keys: Vec<&[u8]> = TAP_KEYS.iter().map(|key| key.as_slice()).collect();
-    keys.push(&project_key);
-    sentinel_forms::assert_no_sentinel_bytes("preview", &preview, &keys);
+    let mut keys = TAP_KEYS.to_vec();
+    keys.push(project_key);
+    assert_no_key("preview", &preview, &keys);
     query["review"] = json_of(&preview)["review"].clone();
     query["consent"] = json!(true);
     let (status, zip_bytes) = call(&app, "POST", "/api/diagnostics/bundle", Some(query)).await;
@@ -238,7 +257,7 @@ async fn keys_sent_and_received_through_the_real_tap_never_reach_a_bundle_entry(
                 "{name} is the recorder's own file"
             );
         }
-        sentinel_forms::assert_no_sentinel_bytes(&format!("entry {name}"), &content, &keys);
+        assert_no_key(&format!("entry {name}"), &content, &keys);
     }
     assert_eq!(
         raw_recordings, 2,

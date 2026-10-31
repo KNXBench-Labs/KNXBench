@@ -375,9 +375,14 @@ pub(super) fn inspect(
                 DistributionSectionKind::Baggages => {}
             }
             // Reader reuse must not enter generic ingest's authority/completeness path.
-            for table in ["package", "source_parse_evidence"] {
+            for query in [
+                "SELECT count(*) FROM package",
+                "SELECT count(*) FROM source_parse_evidence",
+                "SELECT count(*) FROM parameter_calculation_ref",
+                "SELECT count(*) FROM application_program WHERE write_authority_recorded <> 0",
+            ] {
                 let count: i64 = conn
-                    .query_row(&format!("SELECT count(*) FROM {table}"), [], |r| r.get(0))
+                    .query_row(query, [], |r| r.get(0))
                     .map_err(|e| DistributionInspectionError::Reader(e.to_string()))?;
                 if count != 0 {
                     return Err(DistributionInspectionError::Reader(
@@ -760,21 +765,25 @@ fn target_kind(node: &str, attr: &str) -> Option<&'static str> {
         ("ApplicationProgramRef", "RefId") => Some("ApplicationProgram"),
         ("ParameterRef", "RefId") => Some("Parameter"),
         (_, "ParameterType") => Some("ParameterType"),
-        ("ParameterRefRef", "RefId") | (_, "ParamRefId" | "TextParameterRefId") => {
-            Some("ParameterRef")
-        }
+        ("ParameterRefRef", "RefId")
+        | ("Assign", "TargetParamRefRef" | "SourceParamRefRef")
+        | (_, "ParamRefId" | "TextParameterRefId") => Some("ParameterRef"),
         ("ComObjectRef", "RefId") => Some("ComObject"),
         ("ComObjectRefRef", "RefId") => Some("ComObjectRef"),
         ("Module", "RefId") => Some("ModuleDef"),
         _ => None,
     }
 }
+/// Declarations keyed by manufacturer, nearest entity scope, element kind and declared identity.
+pub(super) type ReferenceIndex =
+    HashMap<(Option<usize>, Option<usize>, String, String), Vec<usize>>;
+
 fn references(
     doc: &Document<'_>,
     limits: &DistributionLimits,
     report: &mut DistributionInspection,
 ) -> Result<()> {
-    let mut index = HashMap::<(Option<usize>, Option<usize>, String, String), Vec<usize>>::new();
+    let mut index = ReferenceIndex::new();
     for (i, n) in doc.nodes.iter().enumerate() {
         if n.ns.as_ref() != doc.namespace {
             continue;
@@ -838,7 +847,8 @@ fn references(
         let Some(manufacturer) = doc.manufacturer(i) else {
             continue;
         };
-        if !doc.semantic_node(i) {
+        // Calculation/validation memberships are exact Static paths outside the reader views.
+        if !doc.semantic_node(i) && super::dependencies::membership(doc, i).is_none() {
             continue;
         }
         for a in &n.attrs {
@@ -924,7 +934,7 @@ fn references(
             }
         }
     }
-    Ok(())
+    super::dependencies::inspect(doc, &index, &mut reference_count, limits, report)
 }
 
 pub(super) fn output_limit(
@@ -986,5 +996,19 @@ pub(super) fn output_count(report: &DistributionInspection) -> usize {
             .references
             .iter()
             .map(|r| r.candidates.len())
+            .sum::<usize>()
+        + report
+            .dependency_evidence
+            .iter()
+            .map(|e| {
+                1 + e.attributes.len()
+                    + e.member_lists.len()
+                    + e.endpoints.len()
+                    + e.endpoints
+                        .iter()
+                        .map(|p| p.candidates.len())
+                        .sum::<usize>()
+                    + e.condition_context.conditions.len()
+            })
             .sum::<usize>()
 }

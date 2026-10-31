@@ -1,10 +1,14 @@
-# Manufacturer distribution inspection (report format 2)
+# Manufacturer distribution inspection (report format 3)
 
 Contract for `knx products inspect-distribution` and
 `knx_productdb::distribution::inspect_distribution`. Added for OpenKNX-style
 manufacturer distributions: plain manufacturer XML, or a ZIP release holding
-such XML next to scripts, help and baggage files. Format 2 has not been in a
-release yet. Format 1 never left a feature branch and is not accepted or emitted.
+such XML next to scripts, help and baggage files. Format 3 is format 2 plus
+`dependencyEvidence` and the `dependenciesNotExecuted` limitation. Neither
+format has been in a release yet; only format 3 is emitted. A format-2 report
+lacks the required `dependencyEvidence` field and fails to deserialize, rather
+than reading as a source without declarations. Format 1 never left a feature
+branch and is not accepted or emitted.
 
 ## What it is and is not
 
@@ -21,7 +25,9 @@ release yet. Format 1 never left a feature branch and is not accepted or emitted
   initialization, master dependencies, translations, baggage association and
   registration.
 - **No code runs.** Scripts, CDATA and text are preserved as SHA-256 and byte
-  range only (`preservedContent`), never echoed or executed.
+  range only (`preservedContent`), never echoed or executed. Declared scripts,
+  calculations, validations, button handlers and Assign are listed in
+  `dependencyEvidence`; none is run, resolved to a function or applied.
 
 ## Accepted input
 
@@ -88,8 +94,10 @@ All field names are camelCase. A source reference is a JSON pair
   - `externalUnperformed`: mask, medium and DPT references, which are not
     resolved.
 
-  Only the attributes listed in `target_kind` are followed; others, such as
-  Argument, Assign, Rename and BinaryData references, are not.
+  Only the attributes listed in `target_kind` are followed: among others
+  `Assign` `TargetParamRefRef`/`SourceParamRefRef` and the `ParameterRefRef`
+  members of calculation sides and validations (exact `Static` paths only).
+  Others, such as Argument, Rename and BinaryData references, are not.
 - `unknowns[]`: every element and attribute that this build does not model, by
   source reference. Dynamic verdicts reuse the Dynamic parser's grammar
   (`spec_for`, `attribute_is_known`) and the evaluator's container kinds. A
@@ -103,6 +111,76 @@ All field names are camelCase. A source reference is a JSON pair
   derived size and the transformation name `knx-expanded-role-view-v1`.
 - `declaredMetadata[]`: `CreatedBy`, `ToolVersion`, version and identity
   attributes as asserted by the source, never verified.
+- `dependencyEvidence[]`: declared dependency facts in member and element
+  order (see below).
+
+## Dependency evidence
+
+Each row has a `kind`, its own `source`, `applicationSource`,
+`manufacturerSource` and, inside a ModuleDef, `moduleDefinitionSource`. Only
+elements in the document namespace on these exact paths become rows; anything
+else, such as an `Assign` in a foreign namespace, stays in `unknowns[]`.
+Static declarations that become rows (Script, calculations, validations and
+their member wrappers) are still listed in `unknowns[]` too, because no typed
+reader models them; a row there is an inventory entry, not a missed fact.
+
+| Kind | Source | Kept |
+| --- | --- | --- |
+| `script` | `Static/Script` of an application or ModuleDef | `content`: byte range, size and SHA-256 of the raw text between the tags (CDATA delimiters and comments included). Not the per-token `preservedContent` hashes. A self-closing `<Script/>` has a zero-length range at the end of its tag. |
+| `parameterCalculation` | `Static/ParameterCalculations/ParameterCalculation` | `Id`, `LRTransformationFunc`, `RLTransformationFunc`; `LParameters`/`RParameters` members as `calculationLeft`/`calculationRight` endpoints |
+| `parameterValidation` | `Static/ParameterValidations/ParameterValidation` | `Id`, `ValidationFunc`; `Parameters/ParameterRefRef` members as `validationMember` endpoints |
+| `buttonHandler` | every Dynamic `Button` | `Id`, `Text`, `EventHandler`, `EventHandlerOnline` |
+| `assign` | every Dynamic `Assign` | `TargetParamRefRef`, `SourceParamRefRef`, `Value`, `assignmentForm` |
+
+Fields:
+
+- `attributes[]`: the fixed names of the kind, each with `presence`
+  (`absent`, `presentEmpty`, `presentValue`; whitespace is a value) and the
+  XML-decoded value.
+- `memberLists[]`: each calculation side or validation wrapper occurrence;
+  `presentEmpty` when it holds no member, `absent` (no source) when there is
+  none.
+- `endpoints[]`: role, owning element, attribute, presence, raw reference,
+  `referenceState` and candidates, resolved exactly like `references[]` in the
+  manufacturer, application and nearest ModuleDef scope. Duplicates stay
+  `ambiguous` with every candidate. An absent attribute has no state, an empty
+  one is `dangling`. Nothing is borrowed from another ZIP member.
+- `assignmentForm`: `sourceReference`, `literalValue`,
+  `conflictingDeclarations` (source and `Value` both declared; no precedence
+  is chosen) or `missingSourceAndValue`. A literal `Value` is not a write.
+  The form follows attribute presence: an empty `SourceParamRefRef` still
+  counts as a source reference, and its endpoint is `dangling`.
+- `functionResolution`: `notAttempted` for calculations, validations and
+  handlers. Function names stay verbatim strings.
+- `graphCycle` (Assign only; never a runtime loop). Each Assign is a graph
+  node between every candidate of its source and of its target:
+  - `declaredGraphCycle`: source and target resolve uniquely and the Assign
+    lies on a cycle of such unique edges. A self-assignment counts.
+  - `cycleNotDetermined`: the Assign lies on a cycle only when ambiguous
+    candidates are included. Which duplicate is meant is not decided, so no
+    cycle is claimed and none is ruled out.
+  - `noDeclaredCycle`: source and target resolve uniquely and no Assign edge,
+    ambiguous ones included, can close a loop through it.
+  - `notApplicable`: other rows, Assigns with an absent or dangling source or
+    target, and ambiguous Assigns on no possible cycle.
+- `graphCycleAnchor`: for `declaredGraphCycle` and `cycleNotDetermined`, the
+  first Assign in element order of the same strongly connected component, so
+  rows of one cycle share it. Otherwise absent.
+- `disposition`: always `retainedNotExecuted`.
+- `impactScope`: `declaredEndpointsOnly` for Assign;
+  `applicationImpactUnknown` for scripts, calculations, validations and
+  handlers, whose code may read or change any parameter. Neither says that
+  other parameters are unaffected.
+- `conditionContext`: `applicability` is `notEvaluated`; for Assign and
+  Button it lists the enclosing `choose`/`when` occurrences, outermost first.
+  `activeParameterRefs` holds no Assign or Button, so a nearby active
+  reference says nothing about whether they are reachable.
+
+Calculation sides are labels, not input/output directions, triggers or an
+order, and L×R pairs are not expanded. `EventHandlerOnline` (for example
+`ConnectionOriented`) is an online-mode declaration, not a second function or
+a connection. Validations are declared, not run: there is no valid/invalid
+result. The native write-authority recorder is not called.
 
 ## Limits
 
@@ -123,6 +201,9 @@ value (`bounded()` takes the minimum), and every limit is inclusive.
 | serialized report | 256 MiB | exact compact JSON bytes |
 | Dynamic copy work | 256 MiB | scalar copies during evaluation |
 
+- Dependency rows and their attributes, member lists, endpoints, candidates
+  and conditions count as output rows. Each endpoint and each of its
+  candidates also counts against the reference ceiling.
 - The XML working set and the serialized report are charged separately, and
   both are charged while the report is built. A ZIP keeps an exact running
   report size instead of re-serializing it after every member. The final
@@ -134,8 +215,9 @@ value (`bounded()` takes the minimum), and every limit is inclusive.
 
 - Library tests cover combined and split sources, modules, BOM coordinates,
   malformed and refused inputs, inclusive limits, the source-map resolver,
-  Dynamic unknowns, lexical type scope, fallback origins and exact ZIP report
-  bytes. CLI tests compare the CLI output byte for byte with the library and
+  Dynamic unknowns, lexical type scope, fallback origins, exact ZIP report
+  bytes and dependency evidence (presence, scope, ambiguity, cycles, record
+  and reference budgets). CLI tests compare the CLI output byte for byte with the library and
   check that the profile is unchanged. Native package regressions show that
   installation still refuses distributions.
 - Real input: 37 public OpenKNX release ZIPs, each inspected with a release
@@ -148,6 +230,7 @@ value (`bounded()` takes the minimum), and every limit is inclusive.
   `Row`/`Column` `Name`, `Inline`, `Icon` and `Button` handlers. Installing
   the same 37 archives in a fresh in-memory product database is still refused:
   28 with `MissingMaster`, 9 with `UnsafeMember`. The archives themselves are
-  not part of the repository.
+  not part of the repository. These figures are from format 2; the run was
+  not repeated with dependency evidence.
 
 Related: [KL-187](../limitations/KL-187-distribution-inspection.md).

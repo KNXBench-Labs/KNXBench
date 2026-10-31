@@ -43,6 +43,8 @@ pub(super) struct Node<'a> {
     pub end: usize,
     pub first_token: usize,
     pub last_token: usize,
+    /// Half-open raw bytes between start and end tag; empty for an empty-element tag.
+    pub content: (usize, usize),
     sibling: usize,
     declarations: BTreeMap<String, Rc<str>>,
 }
@@ -356,6 +358,7 @@ impl<'a> Document<'a> {
                         end,
                         first_token,
                         last_token: first_token + 2,
+                        content: (end, end),
                         sibling: *sibling,
                         declarations,
                     });
@@ -373,6 +376,7 @@ impl<'a> Document<'a> {
                         .pop()
                         .ok_or_else(|| malformed("end tag outside root"))?;
                     doc.nodes[id].end = end;
+                    doc.nodes[id].content.1 = start;
                     doc.nodes[id].end_node = doc.nodes.len();
                     doc.token(Token::Close(id))?;
                     doc.nodes[id].last_token = doc.tokens.len();

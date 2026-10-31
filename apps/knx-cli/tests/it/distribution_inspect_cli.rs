@@ -61,7 +61,7 @@ fn real_cli_emits_useful_json_without_source_sidecar_profile_or_authority_mutati
         String::from_utf8_lossy(&out.stderr)
     );
     let r: serde_json::Value = serde_json::from_slice(&out.stdout).unwrap();
-    assert_eq!(r["formatVersion"], 2);
+    assert_eq!(r["formatVersion"], 3);
     assert_eq!(r["sourceKind"], "manufacturerXml");
     assert_eq!(r["sections"].as_array().unwrap().len(), 4);
     assert_eq!(r["applications"][0]["activeParameterRefIds"][0], "R");
@@ -117,7 +117,7 @@ fn real_cli_windows_zip_keeps_raw_member_names_and_profile_untouched() {
 }
 
 #[test]
-fn real_cli_format_two_resolves_compact_coordinates_and_matches_library_json() {
+fn real_cli_format_three_resolves_compact_coordinates_and_matches_library_json() {
     let home = home();
     let source = home.path().join("format2.xml");
     std::fs::write(&source, SOURCE).unwrap();
@@ -130,7 +130,7 @@ fn real_cli_format_two_resolves_compact_coordinates_and_matches_library_json() {
     );
     let report: knx_productdb::distribution::DistributionInspection =
         serde_json::from_slice(&output.stdout).unwrap();
-    assert_eq!(report.format_version, 2);
+    assert_eq!(report.format_version, 3);
     let expected =
         knx_productdb::distribution::inspect_distribution("format2.xml", SOURCE).unwrap();
     assert_eq!(report, expected);
@@ -140,6 +140,65 @@ fn real_cli_format_two_resolves_compact_coordinates_and_matches_library_json() {
         assert!(coordinate.path.starts_with("/KNX[1]/"));
         assert!(SOURCE[coordinate.start_byte as usize..].starts_with(b"<"));
     }
+    assert_eq!(snapshot(home.path()), before);
+}
+
+#[test]
+fn real_cli_reports_dependency_evidence_exactly_like_the_library() {
+    // Independently authored; the Script, handler and functions are inert test text.
+    const DECLARATIONS: &[u8] = include_bytes!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../../crates/knx-productdb/tests/it/distribution_dependencies/declarations.xml"
+    ));
+    let home = home();
+    let source = home.path().join("declarations.xml");
+    std::fs::write(&source, DECLARATIONS).unwrap();
+    let before = snapshot(home.path());
+    let out = run(home.path(), &[source.to_str().unwrap()]);
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    assert_eq!(out.stderr, b"");
+    let json: serde_json::Value = serde_json::from_slice(&out.stdout).unwrap();
+    let rows = json["dependencyEvidence"].as_array().unwrap();
+    assert_eq!(
+        rows.iter().map(|r| r["kind"].clone()).collect::<Vec<_>>(),
+        [
+            "parameterCalculation",
+            "parameterValidation",
+            "script",
+            "assign",
+            "buttonHandler"
+        ]
+    );
+    assert_eq!(json["formatVersion"], 3);
+    assert!(rows
+        .iter()
+        .all(|r| r["disposition"] == "retainedNotExecuted"));
+    let online = rows[4]["attributes"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|a| a["name"] == "EventHandlerOnline")
+        .unwrap();
+    assert_eq!(online["presence"], "presentValue");
+    assert_eq!(online["value"], "ConnectionOriented");
+    assert_eq!(rows[3]["assignmentForm"], "sourceReference");
+    assert_eq!(rows[3]["endpoints"][0]["referenceState"], "resolved");
+    assert!(json["limitations"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .any(|v| v == "dependenciesNotExecuted"));
+    assert!(!String::from_utf8_lossy(&out.stdout).contains("return 999"));
+    let report: knx_productdb::distribution::DistributionInspection =
+        serde_json::from_slice(&out.stdout).unwrap();
+    let expected =
+        knx_productdb::distribution::inspect_distribution("declarations.xml", DECLARATIONS)
+            .unwrap();
+    assert_eq!(report, expected);
     assert_eq!(snapshot(home.path()), before);
 }
 

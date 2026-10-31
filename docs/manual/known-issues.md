@@ -8,6 +8,15 @@ Historical titles do not mean that their old defect is still present. The
 [source/test audit](../status/2026-10-08-known-issues-status-audit.md) records
 the reconciliation; formal task dispositions remain in the engineering ledger.
 
+## Product database 31 — source newer than Alpha 18
+
+Current source moves the product database from 30 to 31 the first time it opens
+it for writing. The step only rewrites master-data byte ranges (for files that
+start with a byte-order mark); products, programs and parameters stay as they
+are. Alpha 18 then refuses that catalogue as newer than it supports, so keep a
+copy of the catalogue file before you try a newer build. Readers migrate an
+in-memory copy and leave the file at its own version.
+
 ## Settings center page — source newer than Alpha 18
 
 The [settings workspace](../contracts/settings-workspace.md) is tested with

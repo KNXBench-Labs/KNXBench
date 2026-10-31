@@ -15,7 +15,7 @@ use crate::parse::translation::{ingest_translations, TranslationScope};
 use crate::report::{insert_unknown, UnknownKind};
 
 /// The product-database schema version this build writes.
-pub const CURRENT_PRODUCTDB_VERSION: i64 = 30;
+pub const CURRENT_PRODUCTDB_VERSION: i64 = 31;
 
 #[derive(Debug)]
 pub enum ProductDbError {
@@ -337,6 +337,7 @@ fn migrations() -> Vec<Migration> {
         crate::promotion_repair::repair,
         crate::date_kind_backfill::migrate_v28_to_v29,
         crate::legacy::migrate_v29_to_v30,
+        crate::master_provenance::migrate_v30_to_v31,
     ]
 }
 
@@ -3359,6 +3360,13 @@ pub fn open_and_migrate(path: &Path) -> Result<Connection, ProductDbError> {
 fn migrate_from(conn: &Connection, found: i64) -> Result<(), ProductDbError> {
     conn.execute_batch("BEGIN IMMEDIATE")?;
     let result = (|| {
+        // The v27 -> v28 and v28 -> v29 steps reload install reports through the
+        // master reader, which re-parses retained masters with the current parser.
+        // BOM-prefixed ranges stored by v27..v29 must move before that (ADR-0147);
+        // the v31 slot runs the same idempotent step for v30 databases.
+        if (27..30).contains(&found) {
+            crate::master_provenance::correct_bom_ranges(conn)?;
+        }
         for migration in &migrations()[found as usize..CURRENT_PRODUCTDB_VERSION as usize] {
             migration(conn)?;
         }

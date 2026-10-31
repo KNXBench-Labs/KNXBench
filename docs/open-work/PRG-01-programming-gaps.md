@@ -221,7 +221,7 @@ new format-4 backups to an explicit typed restore generator. Historical restores
 keep their exact captured shape and existing application/exemplar checks.
 Since the 31 October byte-precise fallback (owner decision) a failed proof never
 refuses: unproved bytes are written as before and program-wide failures keep the
-regular plan; the amendment awaits independent review before merge.
+regular plan; the amendment passed a second independent review.
 
 Original real-writer RED → GREEN, genuine old-backup and reopened-catalogue
 consumer proof, 412 distinct passing regression bodies and final independent

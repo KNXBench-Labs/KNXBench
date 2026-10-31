@@ -66,8 +66,9 @@ unplannable while nothing was omitted. Real catalogues commonly set
 `DownloadInvisibleParameters`, whose semantics remain unverified; such programs
 currently omit nothing. The `inactive-write-selection` category and its reasons
 are removed without replacement. Falling back to the regular plan is not a claim
-about what ETS writes for these programs. An independent review of this amendment
-is required before merge.
+about what ETS writes for these programs. A first independent review found the
+restore-binding gap fixed above; a second independent review accepted the
+amendment with no critical or important findings.
 
 ## Positive selection
 

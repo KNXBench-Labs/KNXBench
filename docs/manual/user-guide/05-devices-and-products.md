@@ -418,6 +418,9 @@ configuration, does not diagnose the allocation mismatch reported in issues #30 
 **Save report** writes a small local JSON file (counts and closed facts, no address,
 name, parameters, backup bytes or paths). Check it, then email it to issue@knxbench.com
 or attach it to an issue. It is experimental evidence, not a compatibility claim.
+Source builds after Alpha 18 show **Report problem…** instead: it opens the
+[report wizard](08-reports-and-diff.md#report-problem) with this operation preselected, and the summary
+travels inside its ZIP.
 [Contract](../../contracts/system2-download-result.md).
 
 <a id="more-patient-experimental-waits-source-builds-after-alpha-17"></a>
@@ -1361,7 +1364,9 @@ shown device:
 - **Analyse device** (*Gerät analysieren*) opens the existing **Export diagnostic
   data** dialog ([guide](08-reports-and-diff.md#send-diagnostic-data)).
 - **Send report** (*Bericht senden*) opens the existing **Device support report**
-  dialog ([guide](08-reports-and-diff.md#universal-device-support-reporting)).
+  dialog ([guide](08-reports-and-diff.md#universal-device-support-reporting)). In
+  source builds after Alpha 18 this button is **Report problem…** (*Problem
+  melden…*) and opens the [report wizard](08-reports-and-diff.md#report-problem) for reading this device.
 
 Both open with this device already selected; you can still pick another one in
 the dialog. Nothing else changes: the dialogs keep their preview, their separate

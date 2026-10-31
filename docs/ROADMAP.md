@@ -12,6 +12,18 @@ the published Alpha 18 artifacts, not a release or deployment.
 [Contract](contracts/settings-workspace.md) ·
 [User guide](manual/user-guide/09-settings-and-appearance.md#opening-settings).
 
+## DIAG-03 local candidate after Alpha 18 (31 October 2026)
+
+Operation recording and the unified diagnostic bundle remain in progress, not
+released. Retained read-diagnostics and support results now reach the bundle by
+exact token, with specific missing/expired/unfinished causes, bounded history
+reads and device/catalogue extracts only for a proven current context. By owner
+decision, declared memory and raw non-System-2 recordings leave only after
+consent, with a "possibly passwords; keep private" note; System-2 never exports
+raw bodies. Still open: integrated package acceptance, the real router/built-web
+join, CLI installed-binary boundaries, raw System-2 P1/P2, Original14 and
+publication. [Work and evidence boundary](open-work/DIAG-03-unified-diagnostic-bundle.md).
+
 ## Alpha 18 pre-release (source cutoff 28 October 2026)
 
 `v0.1.0-alpha.18` is the current pre-release, cut from main at source cutoff
@@ -239,7 +251,7 @@ It is not another declaration-only guard: actual regular plans omit only proved
 exclusive inactive bytes under identical source-default topology, with explicit
 format-4 generator binding preserving legitimate historical restores. Since the
 31 October byte-precise fallback a failed proof keeps the regular write instead of
-refusing; that amendment awaits independent review. Maintained
+refusing; that amendment passed a second independent review. Maintained
 branch/main-first gates, actual server/Web build/smoke and publication remain
 pending. Physical inactive-byte survival through Unload/allocation/tasks/Restart,
 broader Dynamic/Union/customer-write rules, identity/runtime layouts and whole

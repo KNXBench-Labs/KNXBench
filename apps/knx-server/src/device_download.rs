@@ -131,6 +131,8 @@ pub enum DownloadStatus {
 struct Shared {
     /// This run's one stop token, owned from before the worker spawns.
     stop: Arc<DownloadStop>,
+    /// This run's operation recording (DIAG-03); finished after cleanup.
+    recorder: knx_app::operation_recording::OperationRecorder,
     /// Test-only: runs once when the backup is durable, before the commit.
     #[cfg(test)]
     after_keep: Mutex<Option<Box<dyn FnOnce() + Send>>>,
@@ -205,6 +207,7 @@ impl DeviceDownloadSession {
             report,
             (on_end, None),
             stop,
+            knx_app::operation_recording::OperationRecorder::disabled(),
         )
     }
 
@@ -225,6 +228,7 @@ impl DeviceDownloadSession {
         on_end: OnDownloadEnd,
         settlement: SettlementSlot,
         stop: Arc<DownloadStop>,
+        recorder: knx_app::operation_recording::OperationRecorder,
     ) -> Self {
         Self::start_inner(
             id,
@@ -238,6 +242,7 @@ impl DeviceDownloadSession {
             report,
             (on_end, Some(settlement)),
             stop,
+            recorder,
         )
     }
 
@@ -254,9 +259,20 @@ impl DeviceDownloadSession {
         report: DownloadReport,
         (on_end, settlement): (OnDownloadEnd, Option<SettlementSlot>),
         stop: Arc<DownloadStop>,
+        recorder: knx_app::operation_recording::OperationRecorder,
     ) -> Self {
+        recorder.note(
+            "plan",
+            serde_json::json!({
+                "target": prepared.target.to_string(),
+                "steps": prepared.plan.steps.iter().map(ToString::to_string).collect::<Vec<_>>(),
+                "dataOctets": prepared.plan.data_octets(),
+                "timing": format!("{timing:?}"),
+            }),
+        );
         let shared = Arc::new(Shared {
             stop,
+            recorder,
             #[cfg(test)]
             after_keep: Mutex::new(None),
             #[cfg(test)]
@@ -576,6 +592,11 @@ async fn run(
                         }
                     }
                     Err(e) => {
+                        // The full error, readback bytes included, for the recording only.
+                        shared.recorder.note(
+                            "downloadError",
+                            serde_json::json!({ "display": e.to_string(), "debug": format!("{e:?}") }),
+                        );
                         let stopped = *shared
                             .last_started
                             .lock()
@@ -702,9 +723,32 @@ async fn run(
     } else {
         status
     };
+    let recorded_status = serde_json::to_value(&status).unwrap_or_default();
+    let failed = matches!(status, DownloadStatus::Failed { .. });
+    let error = match &status {
+        DownloadStatus::Failed { error, .. } => Some(error.clone()),
+        _ => None,
+    };
     *shared.status.lock().expect("download status poisoned") = status;
     let cleanup = tunnel.disconnect().await;
     let _ = activity.record_cleanup(cleanup.is_ok());
+    let summary = serde_json::json!({
+        "status": recorded_status,
+        "cleanup": cleanup.as_ref().map(|()| "ok".to_string()).unwrap_or_else(|e| e.to_string()),
+    });
+    if failed {
+        crate::operation_recordings::finish_failed(
+            &shared.recorder,
+            error.unwrap_or_default(),
+            summary,
+        );
+    } else {
+        shared
+            .recorder
+            .finish(knx_app::operation_recording::RecordedOutcome::succeeded(
+                summary,
+            ));
+    }
 }
 
 /// `status` with its check; any other state is returned as it is.
@@ -822,6 +866,7 @@ impl DeviceDownloadSession {
                 // The stand-in's write is under way: committed, so a stop is
                 // too late, as for a real run past its first change.
                 stop: Arc::new(DownloadStop::already_committed()),
+                recorder: knx_app::operation_recording::OperationRecorder::disabled(),
                 after_keep: Mutex::new(None),
                 #[cfg(test)]
                 before_record_check: Mutex::new(None),

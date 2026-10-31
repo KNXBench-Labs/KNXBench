@@ -12,6 +12,8 @@ use tower::ServiceExt;
 fn fixture() -> (Arc<knx_server::AppState>, tempfile::TempDir) {
     let dir = tempfile::tempdir().unwrap();
     let state = knx_server::AppState {
+        diagnostic_results: Default::default(),
+        support_results: Default::default(),
         project: Default::default(),
         clean_project: Default::default(),
         last_saved_at: Default::default(),
@@ -34,6 +36,7 @@ fn fixture() -> (Arc<knx_server::AppState>, tempfile::TempDir) {
         product_db_unavailable: None,
         session_log: Default::default(),
         connector: Box::new(knx_server::fake::FakeConnector::discovering(Vec::new())),
+        tunnel_return_path: Default::default(),
         bus_session: Default::default(),
         group_address_style_publication: Default::default(),
         next_bus_session_id: Default::default(),
@@ -43,6 +46,7 @@ fn fixture() -> (Arc<knx_server::AppState>, tempfile::TempDir) {
         plugin_data_plan: Default::default(),
         device_download: Default::default(),
         device_system2: Arc::new(knx_server::System2Service::new(dir.path())),
+        recordings: Arc::new(knx_server::operation_recordings::store(dir.path(), true)),
         next_device_download_id: Default::default(),
         device_download_timing: Default::default(),
         system2_timing: Default::default(),

@@ -18,6 +18,19 @@ text; its accessible label and control remain reachable. Published Alpha 18
 retains the older modal Settings window; released screenshots are not replaced
 by current-source captures.
 
+## DIAG-03 candidate — private comparison export is incomplete
+
+The local diagnostic-bundle candidate is not a release or full-package approval.
+The saved-project opt-in copy removes recognized credential fields and reports
+withheld data, but is not anonymous. The existing wire redactor handles named
+APDU key services; it does not prove arbitrary memory or every recording entry
+credential-free. Therefore declared memory and raw non-System-2 recordings are
+exported only after explicit consent and carry a "possibly passwords; keep
+private" note; recognized keys stay redacted at capture. Raw System-2
+expected/readback bytes are still never exported.
+[Source-grounded limits](../research/2026-10-29-system2-bundle-credential-boundary.md) ·
+[Current work](../open-work/DIAG-03-unified-diagnostic-bundle.md).
+
 ## Monitoring export profile (source delivered, 21 October 2026)
 
 The [monitoring ZIP](user-guide/08-reports-and-diff.md#monitoring-export) is a

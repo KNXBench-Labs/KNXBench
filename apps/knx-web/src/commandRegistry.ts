@@ -30,6 +30,8 @@ export interface CommandContext {
   addDevice: () => void;
   openIntroduction: () => void;
   openAchievements: () => void;
+  /** DIAG-03: the Report problem wizard, from step 1 (problem type). */
+  reportProblem: () => void;
 }
 
 /**
@@ -200,6 +202,14 @@ export const COMMANDS: PaletteCommand[] = [
     labelKey: "command.addDevice",
     isEnabled: (ctx) => ctx.tree !== null,
     run: (ctx) => ctx.addDevice(),
+  },
+  // DIAG-03: the same wizard as File → Help & diagnostics → Report problem…;
+  // enabled with nothing loaded, since import problems happen before a project exists.
+  {
+    id: "report-problem",
+    labelKey: "reportProblem.button",
+    isEnabled: () => true,
+    run: (ctx) => ctx.reportProblem(),
   },
   // The first-run guide opens by itself once per release stage; this row
   // (and the File menu's twin) is how it is read again (ADR-0084).

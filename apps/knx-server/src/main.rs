@@ -96,7 +96,10 @@ async fn main() {
     }
 
     let mut app_state = knx_server::AppState::with_user_product_db(data_dir);
-    let return_path = tunnel_return_path(std::env::var("KNX_TUNNEL_ROUTE_BACK").ok().as_deref());
+    let return_path = knx_server::tunnel_return_path_from_flag(
+        std::env::var("KNX_TUNNEL_ROUTE_BACK").ok().as_deref(),
+    );
+    app_state.tunnel_return_path = return_path;
     if return_path == knx_net::TunnelReturnPath::RouteBack {
         eprintln!(
             "knx-server: KNX_TUNNEL_ROUTE_BACK is set: tunnels ask the gateway to answer the \
@@ -104,6 +107,19 @@ async fn main() {
              still needs --network host."
         );
         app_state.connector = Box::new(knx_server::RealConnector::new(return_path));
+    }
+    let recording_env = std::env::var(knx_app::operation_recording::DISABLE_ENV).ok();
+    if knx_app::operation_recording::disabled_by_env_value(recording_env.as_deref()) {
+        eprintln!(
+            "knx-server: {}={}: device operations are not recorded; diagnostic bundles \
+             say so. Existing recordings stay readable and deletable.",
+            knx_app::operation_recording::DISABLE_ENV,
+            recording_env.as_deref().unwrap_or_default().trim()
+        );
+        app_state.recordings = Arc::new(knx_server::operation_recordings::store(
+            &app_state.data_dir,
+            true,
+        ));
     }
     let state = Arc::new(app_state);
     // From the first signal on, no route opens a new tunnel.
@@ -333,15 +349,6 @@ fn hash_password_from_stdin() {
     }
 }
 
-/// `KNX_TUNNEL_ROUTE_BACK` read as a flag (KNOWN_LIMITATIONS §155).
-fn tunnel_return_path(value: Option<&str>) -> knx_net::TunnelReturnPath {
-    if flag_from_value(value) {
-        knx_net::TunnelReturnPath::RouteBack
-    } else {
-        knx_net::TunnelReturnPath::LocalAddress
-    }
-}
-
 /// An environment variable read as a flag.
 fn env_flag(name: &str) -> bool {
     flag_from_value(std::env::var(name).ok().as_deref())
@@ -362,7 +369,7 @@ fn flag_from_value(value: Option<&str>) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::{flag_from_value, listening_port, tunnel_return_path};
+    use super::{flag_from_value, listening_port};
 
     #[test]
     fn standalone_listener_defaults_to_8484() {
@@ -394,7 +401,11 @@ mod tests {
             (Some("1"), RouteBack),
             (Some("yes"), RouteBack),
         ] {
-            assert_eq!(tunnel_return_path(value), expected, "{value:?}");
+            assert_eq!(
+                knx_server::tunnel_return_path_from_flag(value),
+                expected,
+                "{value:?}"
+            );
         }
     }
 

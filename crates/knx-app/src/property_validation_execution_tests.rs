@@ -616,6 +616,7 @@ mod download_result {
             local_diagnostic: "private text that must never decide anything".into(),
             pointer_failure: None,
             final_step: None,
+            allocation_evidence: None,
         }
     }
 

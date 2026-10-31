@@ -27,6 +27,7 @@ use crate::core::services;
 use crate::discovery;
 use crate::frame;
 use crate::tunnelling;
+use crate::wire_tap::{TunnelTapEvent, WireDirection, WireTap};
 
 /// Local bound for the final control-channel response. Core §5.5 requires
 /// `DISCONNECT_RESPONSE` but defines no separate timeout; ten seconds matches
@@ -215,6 +216,8 @@ pub enum TunnelReturnPath {
 pub struct KnxNetIpClient {
     tunnel_return_path: TunnelReturnPath,
     tunnel_ack_wait: TunnelAckWait,
+    /// Records every tunnel datagram and connection event (DIAG-03).
+    wire_tap: Option<WireTap>,
 }
 
 impl KnxNetIpClient {
@@ -228,6 +231,7 @@ impl KnxNetIpClient {
         Self {
             tunnel_return_path: path,
             tunnel_ack_wait: TunnelAckWait::default(),
+            wire_tap: None,
         }
     }
 
@@ -235,6 +239,14 @@ impl KnxNetIpClient {
     /// for each `TUNNELLING_ACK`. Discovery and routing are unaffected.
     pub fn with_tunnel_ack_wait(mut self, wait: TunnelAckWait) -> Self {
         self.tunnel_ack_wait = wait;
+        self
+    }
+
+    /// The same client whose tunnels report every datagram and connection
+    /// event to `tap` (DIAG-03). The tap observes; it never changes the
+    /// exchange. Discovery and routing are unaffected.
+    pub fn with_wire_tap(mut self, tap: WireTap) -> Self {
+        self.wire_tap = Some(tap);
         self
     }
 }
@@ -365,7 +377,13 @@ impl BusConnection for KnxNetIpClient {
     }
 
     async fn connect_tunnel(&self, gateway: SocketAddrV4) -> Result<TunnelClient, BusError> {
-        TunnelClient::connect(gateway, self.tunnel_return_path, self.tunnel_ack_wait).await
+        TunnelClient::connect(
+            gateway,
+            self.tunnel_return_path,
+            self.tunnel_ack_wait,
+            self.wire_tap.clone(),
+        )
+        .await
     }
 
     async fn connect_routing(
@@ -448,6 +466,12 @@ struct TunnelState {
     /// Set before `shutdown` is notified, so a loop that was busy when
     /// `notify_waiters` fired still stops at its next iteration.
     stopped: AtomicBool,
+    /// Observes datagrams and connection events; never alters them.
+    tap: Option<WireTap>,
+    /// With a tap only: keeps "record, then send" of two senders (a request
+    /// and the receive loop's ACK) from interleaving, so the tape's order is
+    /// the socket's order. Held for one non-blocking UDP send.
+    tap_order: Mutex<()>,
 }
 
 impl TunnelState {
@@ -484,6 +508,43 @@ impl TunnelState {
             heartbeat,
             ack_wait,
             stopped: AtomicBool::new(false),
+            tap: None,
+            tap_order: Mutex::new(()),
+        }
+    }
+
+    /// The same state, reporting to `tap`.
+    fn with_tap(mut self, tap: Option<WireTap>) -> Self {
+        self.tap = tap;
+        self
+    }
+
+    /// Reports one datagram to the tap, then sends it on the tunnel socket.
+    ///
+    /// Recorded first: once the bytes are on the socket, the receive loop may
+    /// record the gateway's answer before this task runs again, and the tape
+    /// must keep cause before effect. The tap never blocks; a failed send
+    /// follows as a `SocketError` event.
+    async fn send_datagram(&self, datagram: &[u8]) -> std::io::Result<usize> {
+        let Some(tap) = &self.tap else {
+            return self.socket.send(datagram).await;
+        };
+        let order = self.tap_order.lock().await;
+        tap.datagram(WireDirection::Sent, datagram);
+        let result = self.socket.send(datagram).await;
+        drop(order);
+        if let Err(error) = &result {
+            tap.event(TunnelTapEvent::SocketError {
+                operation: "send",
+                reason: error.to_string(),
+            });
+        }
+        result
+    }
+
+    fn tap_event(&self, event: TunnelTapEvent) {
+        if let Some(tap) = &self.tap {
+            tap.event(event);
         }
     }
 
@@ -505,6 +566,7 @@ impl TunnelState {
             Some(kept) => (kept, false),
             None => {
                 *slot = Some(cause);
+                self.tap_event(TunnelTapEvent::Closed(cause));
                 (cause, true)
             }
         }
@@ -536,7 +598,7 @@ impl TunnelState {
         }
         let body = services::encode_disconnect_request(self.channel_id, self.control_hpai);
         let datagram = frame::encode_frame(services::DISCONNECT_REQUEST, &body);
-        if let Err(error) = self.socket.send(&datagram).await {
+        if let Err(error) = self.send_datagram(&datagram).await {
             self.disconnect_requested.store(false, Ordering::SeqCst);
             return Err(BusError::Io(error));
         }
@@ -573,16 +635,50 @@ impl TunnelClient {
         gateway: SocketAddrV4,
         return_path: TunnelReturnPath,
         ack_wait: TunnelAckWait,
+        tap: Option<WireTap>,
     ) -> Result<Self, BusError> {
-        Self::connect_timed(gateway, return_path, HEARTBEAT, ack_wait).await
+        Self::connect_tapped(gateway, return_path, HEARTBEAT, ack_wait, tap).await
     }
 
     /// [`Self::connect`] with an explicit heartbeat timing; tests shorten it.
+    #[cfg(test)]
     async fn connect_timed(
         gateway: SocketAddrV4,
         return_path: TunnelReturnPath,
         heartbeat: HeartbeatTiming,
         ack_wait: TunnelAckWait,
+    ) -> Result<Self, BusError> {
+        Self::connect_tapped(gateway, return_path, heartbeat, ack_wait, None).await
+    }
+
+    /// The connect handshake; a failure before a channel exists is reported
+    /// to `tap` too, so a recording of a refused connection is not empty.
+    async fn connect_tapped(
+        gateway: SocketAddrV4,
+        return_path: TunnelReturnPath,
+        heartbeat: HeartbeatTiming,
+        ack_wait: TunnelAckWait,
+        tap: Option<WireTap>,
+    ) -> Result<Self, BusError> {
+        if let Some(tap) = &tap {
+            tap.event(TunnelTapEvent::Connecting { gateway });
+        }
+        let result =
+            Self::connect_handshake(gateway, return_path, heartbeat, ack_wait, tap.clone()).await;
+        if let (Some(tap), Err(error)) = (&tap, &result) {
+            tap.event(TunnelTapEvent::ConnectFailed {
+                reason: error.to_string(),
+            });
+        }
+        result
+    }
+
+    async fn connect_handshake(
+        gateway: SocketAddrV4,
+        return_path: TunnelReturnPath,
+        heartbeat: HeartbeatTiming,
+        ack_wait: TunnelAckWait,
+        tap: Option<WireTap>,
     ) -> Result<Self, BusError> {
         let socket = UdpSocket::bind("0.0.0.0:0").await.map_err(BusError::Io)?;
         socket.connect(gateway).await.map_err(BusError::Io)?;
@@ -594,6 +690,9 @@ impl TunnelClient {
         .encode();
         let body = services::encode_connect_request(control_hpai, control_hpai, &cri);
         let datagram = frame::encode_frame(services::CONNECT_REQUEST, &body);
+        if let Some(tap) = &tap {
+            tap.datagram(WireDirection::Sent, &datagram);
+        }
         socket.send(&datagram).await.map_err(BusError::Io)?;
 
         let mut buf = [0u8; 64];
@@ -601,6 +700,9 @@ impl TunnelClient {
             .await
             .map_err(|_| BusError::Timeout)?
             .map_err(BusError::Io)?;
+        if let Some(tap) = &tap {
+            tap.datagram(WireDirection::Received, &buf[..n]);
+        }
         let (header, resp_body) =
             frame::decode_frame(&buf[..n]).map_err(|e| BusError::Protocol(e.to_string()))?;
         if header.service_type != services::CONNECT_RESPONSE {
@@ -617,16 +719,25 @@ impl TunnelClient {
         let crd = tunnelling::TunnelCrd::decode(&response.crd)
             .map_err(|e| BusError::Protocol(e.to_string()))?;
 
+        if let Some(tap) = &tap {
+            tap.event(TunnelTapEvent::Connected {
+                channel_id: response.channel_id,
+                assigned_address: crd.individual_address,
+            });
+        }
         let (tx, _rx) = broadcast::channel(64);
-        let state = Arc::new(TunnelState::new(
-            socket,
-            control_hpai,
-            response.channel_id,
-            crd.individual_address,
-            tx,
-            heartbeat,
-            ack_wait,
-        ));
+        let state = Arc::new(
+            TunnelState::new(
+                socket,
+                control_hpai,
+                response.channel_id,
+                crd.individual_address,
+                tx,
+                heartbeat,
+                ack_wait,
+            )
+            .with_tap(tap),
+        );
 
         tokio::spawn(receive_loop(state.clone()));
         tokio::spawn(heartbeat_loop(state.clone()));
@@ -716,11 +827,14 @@ impl TunnelClient {
         );
 
         let mut last_status = None;
-        for _attempt in 0..2 {
+        for attempt in 1..=2u8 {
             *self.state.ack_reply.lock().await = None;
+            self.state.tap_event(TunnelTapEvent::RequestAttempt {
+                sequence: seq,
+                attempt,
+            });
             self.state
-                .socket
-                .send(&datagram)
+                .send_datagram(&datagram)
                 .await
                 .map_err(BusError::Io)?;
             let deadline = tokio::time::Instant::now() + self.state.ack_wait.timeout();
@@ -738,7 +852,10 @@ impl TunnelClient {
                     return Ok(());
                 }
                 Some((_, status)) => last_status = Some(status),
-                None => {}
+                None => self.state.tap_event(TunnelTapEvent::AckTimeout {
+                    sequence: seq,
+                    attempt,
+                }),
             }
             if let Some(cause) = self.state.closure() {
                 return Err(BusError::TunnelClosed(cause));
@@ -1242,7 +1359,11 @@ async fn receive_loop(state: Arc<TunnelState>) {
             _ = shutdown => break,
             result = state.socket.recv(&mut buf) => match result {
                 Ok(n) => n,
-                Err(_) => {
+                Err(error) => {
+                    state.tap_event(TunnelTapEvent::SocketError {
+                        operation: "receive",
+                        reason: error.to_string(),
+                    });
                     // Socket gone; nothing more to receive.
                     state.close(TunnelClosure::SocketFailed);
                     state.socket_failed.store(true, Ordering::SeqCst);
@@ -1250,6 +1371,9 @@ async fn receive_loop(state: Arc<TunnelState>) {
                 }
             },
         };
+        if let Some(tap) = &state.tap {
+            tap.datagram(WireDirection::Received, &buf[..n]);
+        }
         let Ok((header, body)) = frame::decode_frame(&buf[..n]) else {
             continue; // malformed datagram: ignore it (Core v01.06.02 AS §6.2/§6.3), don't crash
         };
@@ -1259,6 +1383,10 @@ async fn receive_loop(state: Arc<TunnelState>) {
                     continue;
                 };
                 if req.channel_id != state.channel_id {
+                    state.tap_event(TunnelTapEvent::ReceiveDiscarded {
+                        sequence: req.sequence_counter,
+                        reason: "foreign channel",
+                    });
                     continue;
                 }
                 if req.sequence_counter == recv_seq {
@@ -1272,6 +1400,11 @@ async fn receive_loop(state: Arc<TunnelState>) {
                         .unwrap_or_else(std::sync::PoisonError::into_inner);
                     if closure.is_some() {
                         // Still acknowledged, but `Closed` was the last event.
+                        drop(closure);
+                        state.tap_event(TunnelTapEvent::ReceiveDiscarded {
+                            sequence: req.sequence_counter,
+                            reason: "tunnel already closed",
+                        });
                         continue;
                     }
                     match cemi::decode_l_data(req.cemi) {
@@ -1279,6 +1412,9 @@ async fn receive_loop(state: Arc<TunnelState>) {
                             let _ = state.tx.send(TunnelEvent::Telegram(telegram));
                         }
                         Err(e) => {
+                            state.tap_event(TunnelTapEvent::CemiDecodeFailed {
+                                reason: e.to_string(),
+                            });
                             if state.decode_failures.fetch_add(1, Ordering::Relaxed) == 0 {
                                 eprintln!(
                                     "TUNNELLING_REQUEST: cEMI frame failed to decode: {e} \
@@ -1293,8 +1429,17 @@ async fn receive_loop(state: Arc<TunnelState>) {
                     // was presumably lost) — ack again, discard (Tunnelling
                     // v01.07.01 AS §2.6.1).
                     send_ack(&state, req.sequence_counter, tunnelling::E_NO_ERROR).await;
+                    state.tap_event(TunnelTapEvent::ReceiveDiscarded {
+                        sequence: req.sequence_counter,
+                        reason: "repeated sequence, acknowledged again",
+                    });
+                } else {
+                    // Any other sequence number: no ack, discard (§2.6.1).
+                    state.tap_event(TunnelTapEvent::ReceiveDiscarded {
+                        sequence: req.sequence_counter,
+                        reason: "unexpected sequence, not acknowledged",
+                    });
                 }
-                // Any other sequence number: no ack, discard (§2.6.1).
             }
             tunnelling::TUNNELLING_ACK => {
                 if let Ok(ack) = tunnelling::decode_tunnelling_ack(body) {
@@ -1333,7 +1478,7 @@ async fn receive_loop(state: Arc<TunnelState>) {
                 let body =
                     services::encode_disconnect_response(state.channel_id, services::E_NO_ERROR);
                 let datagram = frame::encode_frame(services::DISCONNECT_RESPONSE, &body);
-                let _ = state.socket.send(&datagram).await; // best-effort, we're tearing down anyway
+                let _ = state.send_datagram(&datagram).await; // best-effort, we're tearing down anyway
                 break;
             }
             _ => {} // unsupported/unknown service type: ignore (§6.2/§6.3)
@@ -1356,7 +1501,7 @@ async fn send_ack(state: &TunnelState, sequence_counter: u8, status: u8) {
     let datagram = frame::encode_frame(tunnelling::TUNNELLING_ACK, &body);
     // Best-effort: a lost ACK makes the peer retry the TUNNELLING_REQUEST
     // (Tunnelling v01.07.01 AS §2.6.1), which this loop will then see again.
-    let _ = state.socket.send(&datagram).await;
+    let _ = state.send_datagram(&datagram).await;
 }
 
 /// Core v01.06.02 AS §5.4: a `CONNECTIONSTATE_REQUEST` every 60 seconds;
@@ -1383,7 +1528,7 @@ async fn heartbeat_loop(state: Arc<TunnelState>) {
 }
 
 async fn send_heartbeat_with_retries(state: &Arc<TunnelState>) -> bool {
-    for _attempt in 0..4 {
+    for attempt in 1..=4u8 {
         if state.closure().is_some() {
             // Closed for another cause; `terminate` then keeps that cause.
             return false;
@@ -1391,7 +1536,8 @@ async fn send_heartbeat_with_retries(state: &Arc<TunnelState>) -> bool {
         let body = services::encode_connectionstate_request(state.channel_id, state.control_hpai);
         let datagram = frame::encode_frame(services::CONNECTIONSTATE_REQUEST, &body);
         *state.heartbeat_reply.lock().await = None;
-        if state.socket.send(&datagram).await.is_err() {
+        state.tap_event(TunnelTapEvent::HeartbeatAttempt { attempt });
+        if state.send_datagram(&datagram).await.is_err() {
             return false;
         }
         let deadline = tokio::time::Instant::now() + state.heartbeat.response_timeout;
@@ -2883,3 +3029,7 @@ mod tests {
 #[cfg(test)]
 #[path = "client_closure_tests.rs"]
 mod closure_tests;
+
+#[cfg(test)]
+#[path = "client_tap_tests.rs"]
+mod tap_tests;

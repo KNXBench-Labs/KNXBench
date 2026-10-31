@@ -237,11 +237,12 @@ values remain in the project; necessary source literals, active Union values and
 source-protected bytes keep their existing rules. This is not “skip everything
 hidden in the editor”.
 
-If ownership cannot be proved, disjoint active and inactive bits share a writable
-byte, or the project changes the selection topology from source defaults,
-preparation refuses with `inactive-write-selection`. The EN/DE guidance explains
-the unsupported selection and offers **Request support**; it does not connect or write merely
-because the panel was opened. Read-only compare and diagnostics keep their
+A failed proof never refuses the download. Where it fails for one byte (unknown
+ownership, or active and inactive bits sharing the byte), that byte is written as
+before. Where it fails for the whole program, for example because the product sets
+`DownloadInvisibleParameters` or the project changes the selection topology from
+source defaults, nothing is omitted and the download is the same as without this
+policy. Read-only compare and diagnostics keep their
 existing behavior. A changed write plan can be **Untested** even if the same
 application had historical hardware evidence; the usual explicit acknowledgement
 is still required. An identical scoped plan can retain its applicable evidence.

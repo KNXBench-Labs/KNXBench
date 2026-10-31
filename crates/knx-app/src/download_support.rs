@@ -161,8 +161,6 @@ pub enum UnsupportedCategory {
     VendorDownloadPlugin,
     /// Uninterpreted source declarations block every regular write scope.
     CustomerAdjustableParameters,
-    /// The bounded write-only inactive ownership/topology proof is unavailable.
-    InactiveWriteSelection,
 }
 
 impl UnsupportedCategory {
@@ -182,7 +180,6 @@ impl UnsupportedCategory {
             Self::ProductData => "product-data",
             Self::Configuration => "configuration",
             Self::VendorDownloadPlugin => "vendor-download-plugin",
-            Self::InactiveWriteSelection => "inactive-write-selection",
             Self::CustomerAdjustableParameters => "customer-adjustable-parameters",
         }
     }
@@ -318,7 +315,6 @@ pub fn image_category(error: &ImageError) -> UnsupportedCategory {
 /// The category of a plan refusal.
 pub fn plan_category(error: &DownloadPlanError) -> UnsupportedCategory {
     match error {
-        DownloadPlanError::InactiveWriteSelection(_) => UnsupportedCategory::InactiveWriteSelection,
         DownloadPlanError::NotMemoryMapped(_) => UnsupportedCategory::NotMemoryMapped,
         DownloadPlanError::NotAProductProcedure(_) => UnsupportedCategory::ProcedureStyle,
         DownloadPlanError::Unmodelled(_) => UnsupportedCategory::UnmodelledStep,
@@ -383,7 +379,6 @@ fn offline_download_selected(
     let plan =
         if selection == crate::device_backup::WriteSelection::SourceDefaultInactiveWholeBytesV1 {
             knx_productdb::download_plan::select_inactive_whole_bytes(conn, &request, &image, plan)
-                .map_err(|e| (plan_category(&e), format!("load procedure: {e}")))?
         } else {
             plan
         };

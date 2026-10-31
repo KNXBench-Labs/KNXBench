@@ -22,7 +22,10 @@ remain bounded; historical support credit requires an identical actual scoped
 plan. Original real-writer/correction failures, genuine old-file consumer proof,
 412 distinct passing regression bodies and final independent source review with
 no open findings are recorded in the [focused result](status/2026-10-30-inactive-byte-write-selection.md).
-Maintained branch/main-first package gates, actual server/Web build/smoke and
+Since 31 October a failed proof never refuses (byte-precise fallback, owner
+decision): unproved bytes are written as before, program-wide failures keep the
+regular plan and the `inactive-write-selection` category is removed; that
+amendment awaits independent review. Maintained branch/main-first package gates, actual server/Web build/smoke and
 publication are pending. This is not a delivery entry for main or Alpha 18;
 physical inactive-byte survival, PRG-01 and KL-007 remain open.
 

@@ -1,6 +1,5 @@
-//! Prove exclusive inactive bytes without changing source images, values or byte permissions.
+//! Prove exclusive inactive bytes; any unproved byte or program keeps the regular write.
 use super::*;
-use crate::download_plan::InactiveWriteSelectionError as Refusal;
 use crate::dynamic::{load_tree, ControlKind, Test, MAX_EVALUATION_WORK};
 
 mod namespace;
@@ -8,23 +7,47 @@ mod namespace;
 /// Ordered source segment identity and per-byte selection (not a replacement source mask).
 pub(crate) type Selection = Vec<(String, u32, Vec<bool>)>;
 
+/// The program-wide proof failed: nothing is omitted and the regular plan stands.
+struct Unproved;
+
+/// Per-byte write permission. Never refuses: a byte is omitted only when its proof holds,
+/// and a program-wide proof failure (or a topology differing from source defaults) omits
+/// nothing, leaving the regular pre-selection plan byte-identical.
 pub(crate) fn selection(
     conn: &Connection,
     request: &ImageRequest,
     image: &DownloadImage,
-) -> Result<Selection, Refusal> {
-    let types = ParameterTypes::load(conn, &request.program_id, &image.code)
-        .map_err(|_| Refusal::UnresolvedOwnership)?;
+) -> Selection {
+    proved(conn, request, image).unwrap_or_else(|Unproved| permit_all(image))
+}
+
+fn permit_all(image: &DownloadImage) -> Selection {
+    image
+        .segments
+        .iter()
+        .map(|s| (s.id.clone(), s.address, vec![true; s.octets.len()]))
+        .collect()
+}
+
+fn proved(
+    conn: &Connection,
+    request: &ImageRequest,
+    image: &DownloadImage,
+) -> Result<Selection, Unproved> {
+    let types =
+        ParameterTypes::load(conn, &request.program_id, &image.code).map_err(|_| Unproved)?;
     let current = permissions(conn, request, image, &types)?;
     let mut defaults = request.clone();
     defaults.values.clear();
     defaults.links.clear();
     defaults.flag_overrides.clear();
-    let default_image =
-        build_download_image(conn, &defaults).map_err(|_| Refusal::UnresolvedOwnership)?;
+    let default_image = build_download_image(conn, &defaults).map_err(|_| Unproved)?;
     let source = permissions(conn, &defaults, &default_image, &types)?;
+    // Restore regenerates from source defaults: only an identical topology may omit. The other
+    // direction (a fallback plan whose defaults would omit) is handled by binding the historical
+    // generator to any download that omitted nothing (knx-app `plan_request`).
     if current != source {
-        return Err(Refusal::DifferentSourceDefaultTopology);
+        return Err(Unproved);
     }
     Ok(current)
 }
@@ -34,15 +57,11 @@ fn permissions(
     request: &ImageRequest,
     image: &DownloadImage,
     types: &ParameterTypes,
-) -> Result<Selection, Refusal> {
-    let unresolved = || Refusal::UnresolvedOwnership;
+) -> Result<Selection, Unproved> {
+    let unresolved = || Unproved;
     let tree = load_tree(conn, &request.program_id, "").map_err(|_| unresolved())?;
     let nodes: BTreeMap<_, _> = tree.structural_nodes().map(|n| (n.node_id, n)).collect();
-    let mut permission: Selection = image
-        .segments
-        .iter()
-        .map(|s| (s.id.clone(), s.address, vec![true; s.octets.len()]))
-        .collect();
+    let mut permission = permit_all(image);
     // Only a ParameterRefRef below a `when` can become inactive. Without one nothing can be
     // omitted, so no provenance is needed and the regular plan stands unchanged.
     // A dangling or cyclic ancestry counts as conditional, so it still needs the full proof.
@@ -231,23 +250,18 @@ fn permissions(
                 || object_span.as_ref().is_some_and(|(id, start, end)| {
                     id == segment_id && *start <= offset && offset < *end
                 });
-            if a == 0xFF || required {
+            // Each byte is proved on its own: any active bit (shared or whole), a partial
+            // inactive owner, another owner or no aligned octet owner keeps it written.
+            if a != 0 || required || i != 0xFF || other[segment_id][offset] != 0 {
                 continue;
-            }
-            if a != 0 {
-                return Err(Refusal::SharedActiveInactiveByte);
-            }
-            if i != 0xFF || other[segment_id][offset] != 0 {
-                return Err(unresolved());
             }
             // The first admitted omission is an aligned eight-bit field, not a multibyte inference.
             let has_octet_owner = octet_owners
                 .get(segment_id.as_str())
                 .is_some_and(|owners| owners.contains(&offset));
-            if !has_octet_owner {
-                return Err(unresolved());
+            if has_octet_owner {
+                *selected = false;
             }
-            *selected = false;
         }
     }
     Ok(permission)
@@ -257,11 +271,11 @@ fn mark(
     bits: &mut BTreeMap<String, Vec<u8>>,
     segment: &str,
     field: ParameterField,
-) -> Result<(), Refusal> {
-    let octets = bits.get_mut(segment).ok_or(Refusal::UnresolvedOwnership)?;
+) -> Result<(), Unproved> {
+    let octets = bits.get_mut(segment).ok_or(Unproved)?;
     let (start, end) = bit_span(field);
     if end > octets.len() as u64 * 8 {
-        return Err(Refusal::UnresolvedOwnership);
+        return Err(Unproved);
     }
     for bit in start..end {
         octets[bit as usize / 8] |= 1 << (7 - bit % 8);

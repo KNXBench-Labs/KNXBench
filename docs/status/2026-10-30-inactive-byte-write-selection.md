@@ -31,13 +31,15 @@ are unchanged.
   CLI and HTTP Plan/Start/source-freshness consumers share the selection boundary.
   No-pending Changes still prepares nothing. Counts reflect actual plan data
   writes after scope derivation, not the original image's writable size.
-- Unsupported ownership, shared active/inactive bytes or different default
-  topology produce the payload-free `inactive-write-selection` category and
-  closed reasons. New refusals precede connector/frame activity; EN/DE guidance
-  explains the limitation without exposing XML, identifiers, values or paths.
-- Format 4 requires a typed, known, non-null `write_selection`. New regular
-  captures bind `source-default-inactive-whole-bytes-v1`; historical restore uses
-  `source-mask-only-v1`. Formats 1–3 require that field to be absent and select the
+- *Superseded on 31 October 2026 (see the gate correction below):* unsupported
+  ownership, shared active/inactive bytes or different default topology
+  originally produced the payload-free `inactive-write-selection` category.
+  Failed proofs now keep the regular write; the category and its Web guidance
+  are removed.
+- Format 4 requires a typed, known, non-null `write_selection`. A new regular
+  capture binds `source-default-inactive-whole-bytes-v1` only when its plan
+  omitted a byte; a regular capture that omitted nothing and a historical restore
+  bind `source-mask-only-v1`. Formats 1–3 require that field to be absent and select the
   historical generator by version. Reading format 1/2 does not grant restore
   eligibility: existing application/exemplar guards still apply. Exact ordered
   region/identity/shape checks remain, without cropping, padding or trying both
@@ -146,6 +148,34 @@ no provenance and omits nothing) failed with `unresolved-ownership` before the
 fix and pass after it. The legacy VD consumer now expects the documented
 fail-closed refusal instead of an untested plan. The gate is re-run on the
 corrected head; this record credits no stage of that rerun in advance.
+
+**Byte-precise fallback (31 October 2026).** The private-corpus stage then found
+real programs refusing: on a real installation project 13 previously plannable
+devices became unplannable while nothing was omitted. Every real conditional
+program tripped a program-wide check (ParameterBlock `Name`/`ParamRefId` in the
+opaque `extra` field, ordinary unscoped `NoBranchMatched` evaluator diagnostics,
+the `DownloadInvisibleParameters` option, `LegacyPatchAlways`) and per-byte checks
+(partially inactive bytes, other owners, shared active/inactive bits, a
+default/current topology mismatch). The owner chose a byte-precise fallback: only
+bytes proved exclusively inactive are omitted, every byte whose proof fails is
+written as before and no device is refused, also when `DownloadInvisibleParameters`
+is set. The [contract](../contracts/inactive-byte-write-selection.md#byte-precise-fallback-31-october-2026-owner-decision)
+records the amended semantics. The `inactive-write-selection` category, its reasons
+and Web guidance are removed; the legacy VD consumer again expects its original
+untested 23-step plan. The rewritten focused CLI, App and HTTP tests failed against
+the unchanged refusal production and pass after the change. No maintained gate,
+corpus stage or independent review of the amendment is credited in advance; the
+owner decision requires an independent review before merge.
+
+The first independent review rejected the amendment with one critical finding: a
+fallback download still captured `source-default-inactive-whole-bytes-v1`, so its
+own backup regenerated the omitting source-default plan and restore refused it as
+a different procedure. A new capture-reopen-restore test for a Mode 0 fallback
+reproduced `DifferentProcedure` before the fix. A download now binds the new
+generator only when it actually omitted a byte; otherwise it binds
+`source-mask-only-v1`. The review's minor findings (two loose assertions, a
+half-stated invariant comment, an undocumented partly omitted multibyte inactive
+field) are addressed in tests, code comment and contract.
 
 ## Remaining acceptance and open work
 

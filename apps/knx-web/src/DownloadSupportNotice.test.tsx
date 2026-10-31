@@ -35,16 +35,6 @@ for (const language of ["en", "de"]) {
     for (const privateValue of ["privateSentinel", "P-991", "ModuleDef("]) expect(host!.innerHTML).not.toContain(privateValue);
     expect([...host!.querySelectorAll<HTMLAnchorElement>("a")].map((link) => link.getAttribute("href"))).toEqual(Object.values(supportTargets(language)));
   });
-  it(`${language}: inactive selection refusal explains the bounded write policy without offering a bypass`, async () => {
-    locale.value = language;
-    const detail = "inactive-write-selection: unresolved-ownership";
-    const error = Object.assign(new Error(detail), { status: 422, body: { kind: "downloadPreparationRefused", category: "inactive-write-selection" } });
-    await render(guidanceForError(error));
-    expect(host!.querySelector("[role=status]")!.textContent).toBe(translateFor(language, "deviceDownload.readiness.reason.inactiveWriteSelection"));
-    expect(host!.querySelectorAll("[data-next-action]")).toHaveLength(1);
-    expect(host!.querySelector("[data-next-action=requestSupport]")).not.toBeNull();
-    expect(host!.querySelector("textarea")!.value).toBe(`downloadPreparationRefused\ninactive-write-selection\n${detail}`);
-  });
   it(`${language}: recognized invalid-address refusal names the concrete reason`, async () => {
     locale.value = language;
     const error = Object.assign(new Error("PRIVATE invalid target"), { status: 400, body: { kind: "downloadInvalidAddress" } });

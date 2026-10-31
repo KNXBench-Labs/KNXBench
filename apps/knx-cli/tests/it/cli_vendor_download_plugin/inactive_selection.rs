@@ -1,4 +1,4 @@
-//! Verify real CLI writes, restore identity, freshness and persisted inactive values.
+//! Verify real CLI writes, regular-plan fallback, restore identity and persisted inactive values.
 use super::*;
 use knx_core::commissioning::load_control_memory::MemoryLoadStateMachine;
 use knx_core::commissioning::load_state::LoadState;
@@ -176,8 +176,39 @@ fn real_cli_all_concrete_scopes_write_exact_selected_application_frames_and_new_
     }
 }
 
+/// The regular (pre-selection) parameter writes the current inputs plan, in frame form.
+fn regular_frames(project: &Path, products: &Path) -> Vec<(u32, Vec<u8>)> {
+    let conn = knx_productdb::open_and_migrate(products).unwrap();
+    let store = knx_store::open_and_migrate(project).unwrap();
+    let project = knx_store::load_project(&store).unwrap();
+    knx_app::device_download::prepare_device_download_for_reading(
+        &conn,
+        &project,
+        TARGET.parse().unwrap(),
+    )
+    .unwrap()
+    .plan
+    .steps
+    .into_iter()
+    .filter_map(|step| match step {
+        knx_core::commissioning::memory_download::MemoryDownloadStep::WriteMemory {
+            address,
+            octets,
+        } if address >= 0x4400 => Some((u32::from(address), octets)),
+        _ => None,
+    })
+    .collect()
+}
+
+/// Whether some frame writes `address`.
+fn covers(frames: &[(u32, Vec<u8>)], address: u32) -> bool {
+    frames
+        .iter()
+        .any(|(a, d)| *a <= address && address < *a + d.len() as u32)
+}
+
 #[test]
-fn confirmed_cli_reprepares_mode_and_source_changes_and_emits_no_datagram() {
+fn confirmed_cli_reprepares_mode_and_source_changes_into_the_regular_fallback_plan() {
     for change_mode in [false, true] {
         for partial in [
             None,
@@ -213,33 +244,24 @@ fn confirmed_cli_reprepares_mode_and_source_changes_and_emits_no_datagram() {
                 )
                 .unwrap();
             }
-            let peer = UdpSocket::bind("127.0.0.1:0").unwrap();
-            peer.set_nonblocking(true).unwrap();
-            let output = write(
-                &args,
-                &project,
-                &products,
-                &peer.local_addr().unwrap().to_string(),
-                dir.path(),
-            );
-            assert!(!output.status.success());
+            let regular = regular_frames(&project, &products);
+            assert!(covers(&regular, 0x4401), "{regular:?}");
+            let device = device();
+            let gateway = gateway(device.clone());
+            let output = write(&args, &project, &products, &gateway.address, dir.path());
             let shown = text(&output);
-            assert!(shown.contains("inactive-write-selection"), "{shown}");
-            assert!(
-                shown.contains(if change_mode {
-                    "different-source-default-topology"
-                } else {
-                    "unresolved-ownership"
-                }),
-                "{shown}"
-            );
-            assert!(shown.contains("written to the device: no"));
-            assert!(!shown.contains(PROGRAM_ID));
+            assert!(output.status.success(), "{shown}");
+            assert!(!shown.contains("inactive-write-selection"), "{shown}");
+            drop(gateway);
             assert_eq!(
-                peer.recv_from(&mut [0; 2048]).unwrap_err().kind(),
-                std::io::ErrorKind::WouldBlock
+                parameter_writes(&device),
+                if partial == Some("group-addresses") {
+                    vec![]
+                } else {
+                    regular
+                },
+                "change_mode={change_mode} partial={partial:?}"
             );
-            assert!(!dir.path().join("backups").exists());
         }
     }
 }
@@ -503,31 +525,29 @@ fn f2_real_cli_identical_historical_plan_control_remains_verified() {
 include!("../../fixtures/inactive-selection/namespaces.rs");
 
 #[test]
-fn f3_namespace_real_cli_refuses_before_datagram() {
+fn f3_namespace_real_cli_falls_back_to_the_regular_plan() {
     for (case, xml) in namespace_cases(XML) {
         let dir = tempfile::tempdir().unwrap();
         let (project, products) = correction_inputs(dir.path(), &xml, false);
-        let peer = UdpSocket::bind("127.0.0.1:0").unwrap();
-        peer.set_nonblocking(true).unwrap();
+        let device = device();
+        let gateway = gateway(device.clone());
         let output = write(
             &["device", "download", TARGET],
             &project,
             &products,
-            &peer.local_addr().unwrap().to_string(),
+            &gateway.address,
             dir.path(),
         );
         let shown = text(&output);
-        assert!(
-            !output.status.success()
-                && shown.contains("inactive-write-selection: unresolved-ownership"),
-            "{case}: {shown}"
-        );
-        for private in ["urn:synthetic", "e:Parameter", "M-FFF6", "A.xml"] {
+        assert!(output.status.success(), "{case}: {shown}");
+        for private in ["urn:synthetic", "e:Parameter"] {
             assert!(!shown.contains(private), "{shown}");
         }
+        drop(gateway);
         assert_eq!(
-            peer.recv_from(&mut [0; 256]).unwrap_err().kind(),
-            std::io::ErrorKind::WouldBlock
+            parameter_writes(&device),
+            vec![(0x4400, vec![1, 0x9A, 0xC7, 0x53]), (0x4405, vec![0x68])],
+            "{case}"
         );
     }
 }
@@ -570,7 +590,7 @@ fn f3_namespace_real_cli_knx_prefix_positive_writes_exact_frames() {
 
 #[test]
 #[ignore = "requires a genuine retained pre-namespace CLI-produced catalogue"]
-fn f3_namespace_genuine_old_database_reopens_app_offline_and_built_cli() {
+fn f3_namespace_genuine_old_database_falls_back_in_app_offline_and_built_cli() {
     let original = PathBuf::from(
         std::env::var_os("KNX_NAMESPACE_PRE_DB").expect("retained producer database"),
     );
@@ -597,48 +617,32 @@ fn f3_namespace_genuine_old_database_reopens_app_offline_and_built_cli() {
         6
     );
     let app =
-        knx_app::device_download::prepare_device_download(&conn, &project, TARGET.parse().unwrap());
-    assert!(
-        matches!(
-            app,
-            Err(knx_app::device_download::PrepareError::Plan(
-                knx_productdb::download_plan::DownloadPlanError::InactiveWriteSelection(
-                    knx_productdb::download_plan::InactiveWriteSelectionError::UnresolvedOwnership
-                )
-            ))
-        ),
-        "{app:?}"
-    );
+        knx_app::device_download::prepare_device_download(&conn, &project, TARGET.parse().unwrap())
+            .unwrap();
     assert_eq!(
-        knx_app::download_support::offline_plan(&conn, PROGRAM_ID)
-            .unwrap_err()
-            .0,
-        knx_app::download_support::UnsupportedCategory::InactiveWriteSelection
+        app.plan, reading.plan,
+        "unprovable provenance omits nothing"
     );
+    knx_app::download_support::offline_plan(&conn, PROGRAM_ID).unwrap();
     drop(conn);
-    let peer = UdpSocket::bind("127.0.0.1:0").unwrap();
-    peer.set_nonblocking(true).unwrap();
+    let regular = regular_frames(&project_path, &products);
+    let device = device();
+    let gateway = gateway(device.clone());
     let output = write(
         &["device", "download", TARGET],
         &project_path,
         &products,
-        &peer.local_addr().unwrap().to_string(),
+        &gateway.address,
         dir.path(),
     );
-    assert!(
-        text(&output).contains("inactive-write-selection: unresolved-ownership"),
-        "{}",
-        text(&output)
-    );
-    assert_eq!(
-        peer.recv_from(&mut [0; 256]).unwrap_err().kind(),
-        std::io::ErrorKind::WouldBlock
-    );
+    assert!(output.status.success(), "{}", text(&output));
+    drop(gateway);
+    assert_eq!(parameter_writes(&device), regular);
     assert_eq!(std::fs::read(&original).unwrap(), before);
 }
 
 #[test]
-fn f3_real_cli_opaque_dynamic_attributes_refuse_before_any_datagram() {
+fn f3_real_cli_opaque_dynamic_attributes_fall_back_to_the_regular_plan_in_every_scope() {
     for xml in [
         XML.replace(&format!("<ParameterRefRef RefId=\"{PROGRAM_ID}_P-I_R-I\" />"),
           &format!("<choose Opaque=\"\" ParamRefId=\"{PROGRAM_ID}_P-Mode_R-Mode\"><when test=\"0\"><ParameterRefRef RefId=\"{PROGRAM_ID}_P-I_R-I\" /></when></choose>")),
@@ -660,35 +664,26 @@ fn f3_real_cli_opaque_dynamic_attributes_refuse_before_any_datagram() {
             Some("group-addresses"),
             Some("both"),
         ] {
-            let peer = UdpSocket::bind("127.0.0.1:0").unwrap();
-            peer.set_nonblocking(true).unwrap();
             let mut args = vec!["device", "download", TARGET];
             if let Some(partial) = partial {
                 args.extend(["--partial", partial]);
             }
-            let output = write(
-                &args,
-                &project,
-                &products,
-                &peer.local_addr().unwrap().to_string(),
-                dir.path(),
-            );
+            let device = device();
+            let gateway = gateway(device.clone());
+            let output = write(&args, &project, &products, &gateway.address, dir.path());
             let shown = text(&output);
-            assert!(
-                shown.contains("inactive-write-selection: unresolved-ownership"),
-                "{shown}"
-            );
-            assert!(!output.status.success());
-            assert!(shown.contains("written to the device: no"));
-            assert!(
-                !shown.contains("Opaque") && !shown.contains(PROGRAM_ID),
-                "{shown}"
-            );
+            assert!(output.status.success(), "{shown}");
+            assert!(!shown.contains("Opaque"), "{shown}");
+            drop(gateway);
             assert_eq!(
-                peer.recv_from(&mut [0; 2048]).unwrap_err().kind(),
-                std::io::ErrorKind::WouldBlock
+                parameter_writes(&device),
+                if partial == Some("group-addresses") {
+                    vec![]
+                } else {
+                    vec![(0x4400, vec![1, 0x9A, 0xC7, 0x53]), (0x4405, vec![0x68])]
+                },
+                "{partial:?}"
             );
-            assert!(!dir.path().join("backups").exists());
         }
     }
 }

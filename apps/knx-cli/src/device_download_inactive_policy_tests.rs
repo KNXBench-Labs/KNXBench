@@ -1,12 +1,12 @@
-//! Discriminate write-only inactive ownership, source-default topology and read-only retention.
+//! Pin byte-precise inactive omission, its regular-plan fallback and read-only retention.
 use super::*;
 use knx_app::device_download::{
     prepare_device_download, prepare_device_download_for_reading, PrepareError,
 };
-use knx_app::download_support::{offline_plan, UnsupportedCategory};
+use knx_app::download_support::offline_plan;
 use knx_core::commissioning::memory_download::MemoryDownloadStep;
 use knx_core::commissioning::partial_memory_download::PartialDownloadParts;
-use knx_productdb::download_plan::{DownloadPlanError, InactiveWriteSelectionError as Reason};
+use knx_productdb::download_plan::DownloadPlanError;
 use knx_productdb::image::ImageRequest;
 use std::collections::BTreeMap;
 
@@ -45,31 +45,43 @@ fn set_parameter(project: &mut Project, reference: &str, raw: &str) {
         });
 }
 
-fn refusal(xml: &str, expected: Reason) {
+/// Whether some planned write covers `address`.
+fn covers(writes: &[(u16, Vec<u8>)], address: u16) -> bool {
+    writes
+        .iter()
+        .any(|(a, d)| *a <= address && usize::from(address - a) < d.len())
+}
+
+/// A failed proof omits nothing: write preparation and offline plan stay the regular plan.
+fn falls_back(xml: &str) {
     let (_dir, conn) = catalogue(xml);
-    let before = knx_productdb::image::build_download_image(
-        &conn,
-        &ImageRequest {
-            program_id: PROGRAM_ID.into(),
-            individual_address: TARGET.parse().unwrap(),
-            values: Default::default(),
-            links: vec![],
-            flag_overrides: Default::default(),
-        },
-    )
-    .unwrap();
-    let error = prepare_device_download(&conn, &project(), TARGET.parse().unwrap()).unwrap_err();
+    let request = ImageRequest {
+        program_id: PROGRAM_ID.into(),
+        individual_address: TARGET.parse().unwrap(),
+        values: Default::default(),
+        links: vec![],
+        flag_overrides: Default::default(),
+    };
+    let before = knx_productdb::image::build_download_image(&conn, &request).unwrap();
+    let regular = knx_productdb::download_plan::plan_memory_download_with_inferences(&before)
+        .unwrap()
+        .0;
+    let prepared = prepare_device_download(&conn, &project(), TARGET.parse().unwrap())
+        .unwrap_or_else(|e| panic!("a failed proof must not refuse the device: {e}"));
+    assert_eq!(prepared.plan, regular, "a failed proof omits nothing");
+    assert_eq!(
+        prepared.write_selection,
+        knx_app::device_backup::WriteSelection::SourceMaskOnlyV1,
+        "a plan that omits nothing binds the generator that rebuilds it"
+    );
     assert!(
-        matches!(error, PrepareError::Plan(DownloadPlanError::InactiveWriteSelection(reason)) if reason == expected),
-        "{error}"
+        covers(&writes(&prepared.plan), 0x4401),
+        "{:?}",
+        writes(&prepared.plan)
     );
     assert_eq!(
-        format!("{error}"),
-        format!("load procedure: inactive-write-selection: {expected}")
-    );
-    assert_eq!(
-        offline_plan(&conn, PROGRAM_ID).unwrap_err().0,
-        UnsupportedCategory::InactiveWriteSelection
+        writes(&offline_plan(&conn, PROGRAM_ID).unwrap()),
+        writes(&regular)
     );
     let reading =
         prepare_device_download_for_reading(&conn, &project(), TARGET.parse().unwrap()).unwrap();
@@ -77,6 +89,7 @@ fn refusal(xml: &str, expected: Reason) {
         reading.image, before,
         "new write-only proof never alters the read-only image"
     );
+    assert_eq!(reading.plan, prepared.plan);
 }
 
 #[test]
@@ -156,45 +169,28 @@ fn offline_producer_all_partial_scopes_and_changes_use_selected_plan_counts() {
 }
 
 #[test]
-fn inactive_unknown_branch_and_placement_fail_only_on_write_preparation() {
+fn unknown_branch_placement_and_invisible_parameter_options_fall_back_to_the_regular_plan() {
     let xml = source(1);
-    refusal(
-        &xml.replace("<when test=\"0\">", "<when test=\"0\"><UnknownTransform />"),
-        Reason::UnresolvedOwnership,
-    );
-    refusal(
-        &xml.replace(
-            &format!(
-                "<Memory CodeSegment=\"{PROGRAM_ID}_AS-4400\" Offset=\"1\" BitOffset=\"0\" />"
-            ),
-            "<Property ObjectIndex=\"3\" PropertyId=\"99\" />",
-        ),
-        Reason::UnresolvedOwnership,
-    );
-    refusal(
-        &xml.replace(
-            "<Static>",
-            "<Static><Options DownloadInvisibleParameters=\"None\" />",
-        ),
-        Reason::UnresolvedOwnership,
-    );
+    falls_back(&xml.replace("<when test=\"0\">", "<when test=\"0\"><UnknownTransform />"));
+    falls_back(&xml.replace(
+        &format!("<Memory CodeSegment=\"{PROGRAM_ID}_AS-4400\" Offset=\"1\" BitOffset=\"0\" />"),
+        "<Property ObjectIndex=\"3\" PropertyId=\"99\" />",
+    ));
+    falls_back(&xml.replace(
+        "<Static>",
+        "<Static><Options DownloadInvisibleParameters=\"None\" />",
+    ));
     for value in ["", "None", "Background", "DefaultValue", "private-marker"] {
         for later in ["<Options />", "<Options Other=\"opaque\" />"] {
             let declared =
                 format!("<Static><Options DownloadInvisibleParameters=\"{value}\" />{later}");
-            refusal(
-                &xml.replace("<Static>", &declared),
-                Reason::UnresolvedOwnership,
-            );
+            falls_back(&xml.replace("<Static>", &declared));
         }
     }
-    refusal(
-        &xml.replace(
-            "</choose>",
-            "<when test=\"unknown-private-token\" /></choose>",
-        ),
-        Reason::UnresolvedOwnership,
-    );
+    falls_back(&xml.replace(
+        "</choose>",
+        "<when test=\"unknown-private-token\" /></choose>",
+    ));
 }
 
 #[test]
@@ -202,7 +198,7 @@ fn an_excluded_unmodelled_type_does_not_acquire_inactive_storage_semantics() {
     let xml = source(1)
         .replace("<ParameterTypes>", &format!("<ParameterTypes><ParameterType Id=\"{PROGRAM_ID}_PT-Unknown\"><TypeNumber SizeInBit=\"8\" Type=\"opaqueInt\" /></ParameterType>"))
         .replace(&format!("Name=\"Exclusive mode zero\" ParameterType=\"{PROGRAM_ID}_PT-Octet\""), &format!("Name=\"Exclusive mode zero\" ParameterType=\"{PROGRAM_ID}_PT-Unknown\""));
-    refusal(&xml, Reason::UnresolvedOwnership);
+    falls_back(&xml);
 }
 
 #[test]
@@ -236,18 +232,22 @@ fn source_protected_non_ff_bytes_are_not_reinterpreted_as_transport_bits() {
 }
 
 #[test]
-fn different_default_topology_is_refused_and_the_preserved_value_can_be_written_by_its_source() {
+fn different_default_topology_omits_nothing_and_writes_the_preserved_value() {
     let (_dir, conn) = catalogue(&source(1));
     let mut project = project();
     set_parameter(&mut project, "Mode", "0");
     set_parameter(&mut project, "I", "226");
-    let error = prepare_device_download(&conn, &project, TARGET.parse().unwrap()).unwrap_err();
-    assert!(matches!(
-        error,
-        PrepareError::Plan(DownloadPlanError::InactiveWriteSelection(
-            Reason::DifferentSourceDefaultTopology
-        ))
-    ));
+    let prepared = prepare_device_download(&conn, &project, TARGET.parse().unwrap()).unwrap();
+    let reading =
+        prepare_device_download_for_reading(&conn, &project, TARGET.parse().unwrap()).unwrap();
+    assert_eq!(
+        prepared.plan, reading.plan,
+        "restore regenerates from defaults"
+    );
+    assert_eq!(
+        writes(&prepared.plan),
+        vec![(0x4400, vec![0, 0xE2, 0xC7, 0xA6]), (0x4405, vec![0x68])]
+    );
     let (_dir, sibling) = catalogue(&source(0));
     assert_eq!(
         writes(
@@ -260,7 +260,7 @@ fn different_default_topology_is_refused_and_the_preserved_value_can_be_written_
 }
 
 #[test]
-fn equal_omission_counts_at_different_addresses_are_not_the_same_topology() {
+fn equal_omission_counts_at_different_addresses_are_not_the_same_topology_and_omit_nothing() {
     let xml=source(1)
         .replace("</Parameters>",&format!("<Parameter Id=\"{PROGRAM_ID}_P-J\" ParameterType=\"{PROGRAM_ID}_PT-Octet\" Value=\"199\"><Memory CodeSegment=\"{PROGRAM_ID}_AS-4400\" Offset=\"2\" BitOffset=\"0\" /></Parameter></Parameters>"))
         .replace("</ParameterRefs>",&format!("<ParameterRef Id=\"{PROGRAM_ID}_P-J_R-J\" RefId=\"{PROGRAM_ID}_P-J\" /></ParameterRefs>"))
@@ -268,17 +268,19 @@ fn equal_omission_counts_at_different_addresses_are_not_the_same_topology() {
     let (_dir, conn) = catalogue(&xml);
     let mut project = project();
     set_parameter(&mut project, "Mode", "0");
-    let error = prepare_device_download(&conn, &project, TARGET.parse().unwrap()).unwrap_err();
-    assert!(matches!(
-        error,
-        PrepareError::Plan(DownloadPlanError::InactiveWriteSelection(
-            Reason::DifferentSourceDefaultTopology
-        ))
-    ));
+    let prepared = prepare_device_download(&conn, &project, TARGET.parse().unwrap()).unwrap();
+    let reading =
+        prepare_device_download_for_reading(&conn, &project, TARGET.parse().unwrap()).unwrap();
+    assert_eq!(
+        prepared.plan, reading.plan,
+        "a moved omission omits nothing"
+    );
+    assert!(covers(&writes(&prepared.plan), 0x4401));
+    assert!(covers(&writes(&prepared.plan), 0x4402));
 }
 
 #[test]
-fn unreferenced_storage_is_not_inactive_and_unknown_overlapping_owners_prevent_omission() {
+fn unreferenced_storage_is_not_inactive_and_an_overlapping_owner_keeps_its_byte_written() {
     let xml = source(1).replace(
         &format!("<ParameterRefRef RefId=\"{PROGRAM_ID}_P-I_R-I\" />"),
         "",
@@ -291,7 +293,7 @@ fn unreferenced_storage_is_not_inactive_and_unknown_overlapping_owners_prevent_o
     let xml=source(1)
         .replace("</Parameters>",&format!("<Parameter Id=\"{PROGRAM_ID}_P-Other\" ParameterType=\"{PROGRAM_ID}_PT-Octet\" Value=\"154\"><Memory CodeSegment=\"{PROGRAM_ID}_AS-4400\" Offset=\"1\" BitOffset=\"0\" /></Parameter></Parameters>"))
         .replace("</ParameterRefs>",&format!("<ParameterRef Id=\"{PROGRAM_ID}_P-Other_R-Other\" RefId=\"{PROGRAM_ID}_P-Other\" /></ParameterRefs>"));
-    refusal(&xml, Reason::UnresolvedOwnership);
+    falls_back(&xml);
 }
 
 #[test]
@@ -310,14 +312,55 @@ fn existing_image_and_complete_plan_errors_precede_new_ownership_errors() {
 }
 
 #[test]
-fn disjoint_active_inactive_bits_are_unsupported_not_a_whole_byte_skip() {
+fn disjoint_active_inactive_bits_keep_their_byte_written_not_a_whole_byte_skip() {
     let xml = source(1)
         .replace("<ParameterTypes>", &format!("<ParameterTypes><ParameterType Id=\"{PROGRAM_ID}_PT-Nibble\"><TypeNumber SizeInBit=\"4\" Type=\"unsignedInt\" minInclusive=\"0\" maxInclusive=\"15\" /></ParameterType>"))
         .replace(&format!("Name=\"Exclusive mode zero\" ParameterType=\"{PROGRAM_ID}_PT-Octet\" Value=\"226\""), &format!("Name=\"Exclusive mode zero\" ParameterType=\"{PROGRAM_ID}_PT-Nibble\" Value=\"14\""))
         .replace("</Parameters>", &format!("<Parameter Id=\"{PROGRAM_ID}_P-N\" ParameterType=\"{PROGRAM_ID}_PT-Nibble\" Value=\"10\"><Memory CodeSegment=\"{PROGRAM_ID}_AS-4400\" Offset=\"1\" BitOffset=\"4\" /></Parameter></Parameters>"))
         .replace("</ParameterRefs>", &format!("<ParameterRef Id=\"{PROGRAM_ID}_P-N_R-N\" RefId=\"{PROGRAM_ID}_P-N\" /></ParameterRefs>"))
         .replace("</ParameterBlock>", &format!("<ParameterRefRef RefId=\"{PROGRAM_ID}_P-N_R-N\" /></ParameterBlock>"));
-    refusal(&xml, Reason::SharedActiveInactiveByte);
+    falls_back(&xml);
+}
+
+#[test]
+fn a_shared_byte_stays_written_while_an_independently_proved_byte_is_still_omitted() {
+    let inactive = format!("<ParameterRefRef RefId=\"{PROGRAM_ID}_P-I_R-I\" />");
+    let xml = source(1)
+        .replace("<ParameterTypes>", &format!("<ParameterTypes><ParameterType Id=\"{PROGRAM_ID}_PT-Nibble\"><TypeNumber SizeInBit=\"4\" Type=\"unsignedInt\" minInclusive=\"0\" maxInclusive=\"15\" /></ParameterType>"))
+        .replace("</Parameters>", &format!("<Parameter Id=\"{PROGRAM_ID}_P-K\" ParameterType=\"{PROGRAM_ID}_PT-Nibble\" Value=\"5\"><Memory CodeSegment=\"{PROGRAM_ID}_AS-4400\" Offset=\"2\" BitOffset=\"0\" /></Parameter><Parameter Id=\"{PROGRAM_ID}_P-N\" ParameterType=\"{PROGRAM_ID}_PT-Nibble\" Value=\"10\"><Memory CodeSegment=\"{PROGRAM_ID}_AS-4400\" Offset=\"2\" BitOffset=\"4\" /></Parameter></Parameters>"))
+        .replace("</ParameterRefs>", &format!("<ParameterRef Id=\"{PROGRAM_ID}_P-K_R-K\" RefId=\"{PROGRAM_ID}_P-K\" /><ParameterRef Id=\"{PROGRAM_ID}_P-N_R-N\" RefId=\"{PROGRAM_ID}_P-N\" /></ParameterRefs>"))
+        .replace(&inactive, &format!("{inactive}<ParameterRefRef RefId=\"{PROGRAM_ID}_P-K_R-K\" />"))
+        .replace("</ParameterBlock>", &format!("<ParameterRefRef RefId=\"{PROGRAM_ID}_P-N_R-N\" /></ParameterBlock>"));
+    assert!(xml.contains(&format!(
+        "{inactive}<ParameterRefRef RefId=\"{PROGRAM_ID}_P-K_R-K\" />"
+    )));
+    assert!(xml.contains(&format!(
+        "<ParameterRefRef RefId=\"{PROGRAM_ID}_P-N_R-N\" /></ParameterBlock>"
+    )));
+    let (_dir, conn) = catalogue(&xml);
+    let regular = writes(
+        &prepare_device_download_for_reading(&conn, &project(), TARGET.parse().unwrap())
+            .unwrap()
+            .plan,
+    );
+    let [(0x4400, ref octets), (0x4405, _)] = regular[..] else {
+        panic!("{regular:?}")
+    };
+    let shared = octets[2];
+    let prepared = prepare_device_download(&conn, &project(), TARGET.parse().unwrap())
+        .unwrap_or_else(|e| panic!("a shared byte must not refuse the device: {e}"));
+    assert_eq!(
+        writes(&prepared.plan),
+        vec![
+            (0x4400, vec![1]),
+            (0x4402, vec![shared, 0x53]),
+            (0x4405, vec![0x68])
+        ]
+    );
+    assert_eq!(
+        writes(&offline_plan(&conn, PROGRAM_ID).unwrap()),
+        writes(&prepared.plan)
+    );
 }
 
 #[test]
@@ -364,7 +407,7 @@ fn f2_historical_evidence_requires_plan_equality_in_offline_and_project_consumer
 include!("../tests/fixtures/inactive-selection/namespaces.rs");
 
 #[test]
-fn f3_namespace_app_refuses_foreign_expanded_names_after_reopen_without_data_loss() {
+fn f3_namespace_app_falls_back_on_foreign_expanded_names_after_reopen_without_data_loss() {
     for (case, xml) in namespace_cases(&source(1)) {
         let (dir, conn) = catalogue(&xml);
         drop(conn);
@@ -382,16 +425,10 @@ fn f3_namespace_app_refuses_foreign_expanded_names_after_reopen_without_data_los
             .unwrap();
         assert_eq!(raw, xml.as_bytes(), "{case}");
         assert_eq!(reading.request.values.values().next().unwrap(), "231");
-        let result = prepare_device_download(&conn, &project, TARGET.parse().unwrap());
-        assert!(
-            matches!(
-                result,
-                Err(PrepareError::Plan(
-                    DownloadPlanError::InactiveWriteSelection(Reason::UnresolvedOwnership)
-                ))
-            ),
-            "{case}: {result:?}"
-        );
+        let prepared = prepare_device_download(&conn, &project, TARGET.parse().unwrap())
+            .unwrap_or_else(|e| panic!("{case}: {e}"));
+        assert_eq!(prepared.plan, reading.plan, "{case}: nothing is omitted");
+        assert!(covers(&writes(&prepared.plan), 0x4401), "{case}");
         assert_eq!(
             prepare_device_download_for_reading(&conn, &project, TARGET.parse().unwrap())
                 .unwrap()
@@ -402,43 +439,30 @@ fn f3_namespace_app_refuses_foreign_expanded_names_after_reopen_without_data_los
 }
 
 #[test]
-fn f3_namespace_offline_refuses_foreign_context_in_readiness_and_report() {
+fn f3_namespace_offline_plan_falls_back_on_foreign_context() {
     for (case, xml) in namespace_cases(&source(1)) {
         let (_dir, conn) = catalogue(&xml);
-        let result = offline_plan(&conn, PROGRAM_ID);
-        assert!(
-            matches!(
-                result,
-                Err((UnsupportedCategory::InactiveWriteSelection, _))
-            ),
-            "{case}: {result:?}"
+        let plan = offline_plan(&conn, PROGRAM_ID).unwrap_or_else(|e| panic!("{case}: {e:?}"));
+        assert_eq!(
+            writes(&plan),
+            vec![(0x4400, vec![1, 0x9A, 0xC7, 0x53]), (0x4405, vec![0x68])],
+            "{case}"
         );
     }
 }
 
 #[test]
-fn f3_namespace_readiness_refuses_foreign_context() {
+fn f3_namespace_readiness_grades_the_fallback_plan_untested() {
     for (case, xml) in namespace_cases(&source(1)) {
         let (_dir, conn) = catalogue(&xml);
         let rows =
             knx_app::project_readiness::project_readiness(&conn, &project(), &BTreeMap::new());
-        assert!(
-            matches!(
-                rows[0].readiness,
-                knx_app::project_readiness::DeviceReadiness::Graded(
-                    knx_app::download_support::SupportLevel::Unsupported {
-                        category: UnsupportedCategory::InactiveWriteSelection,
-                        ..
-                    }
-                )
-            ),
-            "{case}: {rows:?}"
-        );
+        assert_eq!(rows[0].readiness.code(), "untested", "{case}: {rows:?}");
     }
 }
 
 #[test]
-fn f3_namespace_report_refuses_foreign_context() {
+fn f3_namespace_report_does_not_refuse_foreign_context() {
     for (case, xml) in namespace_cases(&source(1)) {
         let (_dir, conn) = catalogue(&xml);
         for selected in [false, true] {
@@ -454,13 +478,12 @@ fn f3_namespace_report_refuses_foreign_context() {
                 &input,
                 "test",
             );
-            assert_eq!(report.support, "unsupported", "{case}: {report:?}");
+            assert_eq!(report.support, "untested", "{case}: {report:?}");
             assert!(
-                report
+                !report
                     .facts
                     .iter()
-                    .any(|fact| fact.field == "refusalCategory"
-                        && fact.value.as_deref() == Some("inactive-write-selection")),
+                    .any(|fact| fact.field == "refusalCategory"),
                 "{report:?}"
             );
             assert!(!report.written);
@@ -491,7 +514,7 @@ fn f3_namespace_actual_knx_prefixes_keep_exact_positive_writer() {
 }
 
 #[test]
-fn f3_opaque_dynamic_attributes_refuse_app_and_offline_but_preserve_evidence_and_values() {
+fn f3_opaque_dynamic_attributes_fall_back_in_app_and_offline_and_preserve_evidence_and_values() {
     let variants: [(&str, &str); 5] = [
         (&format!("<ParameterRefRef RefId=\"{PROGRAM_ID}_P-I_R-I\" />"),
          &format!("<choose Opaque=\"\" ParamRefId=\"{PROGRAM_ID}_P-Mode_R-Mode\"><when test=\"0\"><ParameterRefRef RefId=\"{PROGRAM_ID}_P-I_R-I\" /></when></choose>")),
@@ -548,7 +571,7 @@ fn f3_opaque_dynamic_attributes_refuse_app_and_offline_but_preserve_evidence_and
         let again =
             prepare_device_download_for_reading(&conn, &project, TARGET.parse().unwrap()).unwrap();
         assert_eq!(again.image, reading.image);
-        refusal(&xml, Reason::UnresolvedOwnership);
+        falls_back(&xml);
     }
 }
 

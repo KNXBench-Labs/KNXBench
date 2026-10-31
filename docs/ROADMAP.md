@@ -237,7 +237,9 @@ is implemented with original positive-writer/correction proof and final
 independent source review ([focused result](status/2026-10-30-inactive-byte-write-selection.md)).
 It is not another declaration-only guard: actual regular plans omit only proved
 exclusive inactive bytes under identical source-default topology, with explicit
-format-4 generator binding preserving legitimate historical restores. Maintained
+format-4 generator binding preserving legitimate historical restores. Since the
+31 October byte-precise fallback a failed proof keeps the regular write instead of
+refusing; that amendment awaits independent review. Maintained
 branch/main-first gates, actual server/Web build/smoke and publication remain
 pending. Physical inactive-byte survival through Unload/allocation/tasks/Restart,
 broader Dynamic/Union/customer-write rules, identity/runtime layouts and whole

@@ -12,15 +12,17 @@ the published Alpha 18 artifacts, not a release or deployment.
 [Contract](contracts/settings-workspace.md) ·
 [User guide](manual/user-guide/09-settings-and-appearance.md#opening-settings).
 
-## DIAG-03 local candidate after Alpha 18 (29 October 2026)
+## DIAG-03 local candidate after Alpha 18 (31 October 2026)
 
 Operation recording and the unified diagnostic bundle remain in progress, not
-released. The saved-project opt-in adapter is locally integrated (`f017dc248`),
-with saved-root/native-reopen and review/privacy refusal tests. Full private
-System-2 comparison export is blocked on credential classification of both byte
-sides and all overlapping archive copies; metadata-only withholding is not raw
-evidence delivery. Final integrated review/package acceptance and main-first
-publication remain open. [Work and evidence boundary](open-work/DIAG-03-unified-diagnostic-bundle.md).
+released. Retained read-diagnostics and support results now reach the bundle by
+exact token, with specific missing/expired/unfinished causes, bounded history
+reads and device/catalogue extracts only for a proven current context. By owner
+decision, declared memory and raw non-System-2 recordings leave only after
+consent, with a "possibly passwords; keep private" note; System-2 never exports
+raw bodies. Still open: integrated package acceptance, the real router/built-web
+join, CLI installed-binary boundaries, raw System-2 P1/P2, Original14 and
+publication. [Work and evidence boundary](open-work/DIAG-03-unified-diagnostic-bundle.md).
 
 ## Alpha 18 pre-release (source cutoff 28 October 2026)
 

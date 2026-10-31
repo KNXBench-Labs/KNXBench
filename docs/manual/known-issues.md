@@ -23,10 +23,11 @@ by current-source captures.
 The local diagnostic-bundle candidate is not a release or full-package approval.
 The saved-project opt-in copy removes recognized credential fields and reports
 withheld data, but is not anonymous. The existing wire redactor handles named
-APDU key services; it does not prove arbitrary expected/readback memory or every
-overlapping recording/error entry credential-free. Full private System-2 byte
-export is not ready; consent does not waive key/password exclusion. A future
-metadata-only withheld file would not certify the rest of the ZIP.
+APDU key services; it does not prove arbitrary memory or every recording entry
+credential-free. Therefore declared memory and raw non-System-2 recordings are
+exported only after explicit consent and carry a "possibly passwords; keep
+private" note; recognized keys stay redacted at capture. Raw System-2
+expected/readback bytes are still never exported.
 [Source-grounded limits](../research/2026-10-29-system2-bundle-credential-boundary.md) ·
 [Current work](../open-work/DIAG-03-unified-diagnostic-bundle.md).
 

@@ -306,3 +306,40 @@ test("Delete recordings asks first and runs once", async ({ page }) => {
   expect(log.deletes).toBe(1);
   expect(unexpected).toEqual([]);
 });
+
+// The toast stack is inert behind a modal, so hit tests skip it even where it is
+// painted. Compare pixels instead: the overlap must look the same without toasts.
+for (const width of [1440, 400]) {
+  test(`${width}px: a toast never covers the wizard's own buttons`, async ({ page }) => {
+    const { unexpected } = await intercept(page, "en");
+    // A failed resume read is a real startup error toast (ADR-0127 path).
+    await page.route("**/api/project", (route) => route.fulfill({ status: 500, contentType: "application/json",
+      body: JSON.stringify({ error: "synthetic resume failure" }) }));
+    // Short enough that the wizard's footer reaches the toast corner.
+    await page.setViewportSize({ width, height: 560 });
+    await page.goto("/");
+    const toast = page.locator(".toast--error");
+    await expect(toast).toHaveCount(1);
+    if (width === 1440) await openFromMenu(page, en); else await openFromPalette(page, en);
+    const dialog = page.getByRole("dialog", { name: en["reportProblem.title"], exact: true });
+    await dialog.locator("[data-report-type=deviceReading]").check();
+    await expect(toast).toHaveCount(1);
+    const buttons = [dialog.locator("[data-report-next]"), dialog.getByRole("button", { name: en["reportProblem.close"], exact: true })];
+    const card = (await toast.boundingBox())!;
+    let overlaps = 0;
+    for (const button of buttons) {
+      const box = (await button.boundingBox())!;
+      const x = Math.max(box.x, card.x), y = Math.max(box.y, card.y);
+      const clip = { x, y, width: Math.min(box.x + box.width, card.x + card.width) - x, height: Math.min(box.y + box.height, card.y + card.height) - y };
+      if (clip.width < 1 || clip.height < 1) continue;
+      overlaps += 1;
+      const shown = await page.screenshot({ clip, animations: "disabled" });
+      await page.locator(".toast-stack").evaluate((el) => { (el as HTMLElement).style.visibility = "hidden"; });
+      const hidden = await page.screenshot({ clip, animations: "disabled" });
+      await page.locator(".toast-stack").evaluate((el) => { (el as HTMLElement).style.visibility = ""; });
+      expect.soft(shown.equals(hidden), `${await button.textContent()} is painted over by a toast`).toBe(true);
+    }
+    expect(overlaps, "the toast shares pixels with a wizard button").toBeGreaterThan(0);
+    expect(unexpected).toEqual([]);
+  });
+}

@@ -129,8 +129,9 @@ diagnostic source is unavailable" (also for the withheld session log, bus
 monitor and client state, an unsaved project, or a lookup that names no device);
 German showed that reason and the keep-private note in English; and the CLI
 bundle dropped every non-System-2 recording despite the 31 October decision,
-adding a misleading System-2 note. Toasts can still cover the wizard's buttons
-(minor, open). The installed CLI's flag boundaries passed: no flag writes
+adding a misleading System-2 note. A toast no longer paints over the wizard's
+buttons: the wizard sits above the toast stack, which is inert behind it anyway
+(pixel comparison at 1440/400 px, since hit tests skip inert elements). The installed CLI's flag boundaries passed: no flag writes
 nothing, doubled/empty/misplaced flags and a repeated invocation are refused
 before any datagram.
 

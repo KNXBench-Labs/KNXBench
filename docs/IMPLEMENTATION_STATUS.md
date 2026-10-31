@@ -29,8 +29,8 @@ with the keep-private note, names every recording it leaves out, never ships a
 raw recording of a `system2-*` command, and its consent text no longer promises
 "never included". See the
 [contract](contracts/diagnostic-bundle.md) and
-[DIAG-03](open-work/DIAG-03-unified-diagnostic-bundle.md). Toasts covering the
-wizard remain open.
+[DIAG-03](open-work/DIAG-03-unified-diagnostic-bundle.md). The wizard now sits
+above the toast stack, so a startup error toast no longer hides Next or Close.
 
 ## Inactive whole-byte write selection (30 October 2026; package acceptance pending)
 

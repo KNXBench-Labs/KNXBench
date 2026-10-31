@@ -4884,8 +4884,12 @@ html[data-motion-level="off"] .flow-camera,
 html[data-motion-flow="off"] .flow-camera,
 .flow-dragging .flow-camera { --knx-transition-duration: 0s; }
 
-/* The achievements overview stays above its own unlock popup. */
-.search-overlay:has(> .achievements-dialog) { z-index: 110; }
+/* Dialogs whose footer actions the toast stack must not paint over. The stack is
+   inert behind any modal, so it is background there; these dialogs say so visually.
+   The achievements overview stays above its own unlock popup, the report wizard
+   above whatever error made the user report a problem. */
+.search-overlay:has(> .achievements-dialog),
+.search-overlay:has(> .report-problem) { z-index: 110; }
 
 .bus-discovery-search[aria-busy="true"] { animation-name: none; }
 

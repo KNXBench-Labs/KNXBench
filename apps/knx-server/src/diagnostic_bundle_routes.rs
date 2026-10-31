@@ -305,8 +305,14 @@ enum BundleUnavailableCode {
     ProjectUnsaved,
     ImportFileNotKept,
     NoDevice,
-    /// The operation's own context is proven, but it identifies no project device.
+    /// The operation's own context is proven, but it identifies no single project device.
     SourceNamesNoDevice,
+    NoOperation,
+    NoOperationChosen,
+    /// The recording exists but carries no retained typed result to report from.
+    NoLegacyReport,
+    NoProject,
+    NoImportReport,
 }
 
 impl BundleUnavailableCode {
@@ -331,7 +337,14 @@ impl BundleUnavailableCode {
                 "this server session does not keep the original import file; attach it yourself if needed"
             }
             Self::NoDevice => "no device is chosen",
-            Self::SourceNamesNoDevice => "the selected operation names no device of this project",
+            Self::SourceNamesNoDevice => {
+                "the selected operation identifies no single device of this project"
+            }
+            Self::NoOperation => "no recorded operation fits this problem",
+            Self::NoOperationChosen => "no operation is chosen",
+            Self::NoLegacyReport => "no minimised report exists for this operation",
+            Self::NoProject => "no project is open",
+            Self::NoImportReport => "this project carries no import report",
         }
     }
 }
@@ -357,6 +370,11 @@ impl BundleUnavailableCode {
             Self::ImportFileNotKept,
             Self::NoDevice,
             Self::SourceNamesNoDevice,
+            Self::NoOperation,
+            Self::NoOperationChosen,
+            Self::NoLegacyReport,
+            Self::NoProject,
+            Self::NoImportReport,
         ];
         for code in &all {
             match code {
@@ -375,7 +393,12 @@ impl BundleUnavailableCode {
                 | Self::ProjectUnsaved
                 | Self::ImportFileNotKept
                 | Self::NoDevice
-                | Self::SourceNamesNoDevice => {}
+                | Self::SourceNamesNoDevice
+                | Self::NoOperation
+                | Self::NoOperationChosen
+                | Self::NoLegacyReport
+                | Self::NoProject
+                | Self::NoImportReport => {}
             }
         }
         all
@@ -852,7 +875,15 @@ async fn resolve_evidence(
         validate_retained_provenance(operation, "supportToken", &token, &mut evidence)?;
         return Ok(evidence);
     }
-    Err(SourceFailure::unavailable())
+    // Only metadata decides these reasons: whether a recording was resolved and
+    // whether the request named a source. A named source that is gone stays generic.
+    let code = match (operation, reference) {
+        (Some(_), _) => BundleUnavailableCode::NoLegacyReport,
+        (None, None) => BundleUnavailableCode::NoOperation,
+        (None, Some(_)) if no_source_selected(query) => BundleUnavailableCode::NoOperationChosen,
+        (None, Some(_)) => BundleUnavailableCode::Source,
+    };
+    Err(SourceFailure::Unavailable(code))
 }
 
 fn markers(addresses: bool, names: bool, parameter_values: bool, network: bool) -> ContentMarkers {
@@ -1081,16 +1112,14 @@ async fn build_section(
                         section.label = Some(operation.id.clone());
                         section.files = std::mem::take(&mut evidence.operation_files);
                         section.entries = section.files.len();
-                        section.notes.push(if matches!(
-                            &evidence.identity,
-                            AdmittedResultIdentity::System2 { .. }
-                        ) {
-                            "the raw operation recording is withheld; this is the admitted private projection"
-                                .into()
-                        } else {
-                            "the raw operation recording is withheld; this is the retained typed result"
-                                .into()
-                        });
+                        section.notes.push(
+                            if matches!(&evidence.identity, AdmittedResultIdentity::System2 { .. })
+                            {
+                                NOTE_RAW_WITHHELD_PROJECTION.into()
+                            } else {
+                                NOTE_RAW_WITHHELD_RESULT.into()
+                            },
+                        );
                         return Ok(vec![section]);
                     }
                 }
@@ -1106,15 +1135,13 @@ async fn build_section(
             let mut section = BundleSection::new(SectionKind::Operation);
             section.files = std::mem::take(&mut evidence.operation_files);
             section.entries = section.files.len();
-            section.notes.push(if matches!(
-                &evidence.identity,
-                AdmittedResultIdentity::System2 { .. }
-            ) {
-                "the operation recording is unavailable; this is the admitted private projection"
-                    .into()
-            } else {
-                "the operation recording is unavailable; this is the retained typed result".into()
-            });
+            section.notes.push(
+                if matches!(&evidence.identity, AdmittedResultIdentity::System2 { .. }) {
+                    NOTE_RECORDING_MISSING_PROJECTION.into()
+                } else {
+                    NOTE_RECORDING_MISSING_RESULT.into()
+                },
+            );
             Ok(vec![section])
         }
         SectionKind::EarlierOperation => {
@@ -1228,9 +1255,7 @@ fn device_section(state: &SharedState, id: u32) -> Result<BundleSection, SourceF
                 .files
                 .push(BundleFile::json("parameters.json", &value));
         }
-        None => section
-            .notes
-            .push("the parameter values could not be projected for this device".into()),
+        None => section.notes.push(NOTE_NO_PARAMETERS.into()),
     }
     section.markers = markers(true, true, true, false);
     Ok(section)
@@ -1343,9 +1368,7 @@ async fn operation_section(
     let mut section = BundleSection::new(kind);
     section.label = Some(operation.id.clone());
     section.entries = 1;
-    section.notes.push(
-        "the raw operation recording is withheld; this is the admitted private projection".into(),
-    );
+    section.notes.push(NOTE_RAW_WITHHELD_PROJECTION.into());
     section.files.push(BundleFile::new(
         "system2-private.json",
         admitted.projection_bytes().to_vec(),
@@ -1355,6 +1378,32 @@ async fn operation_section(
 
 // Shown wherever declared memory or a raw recording leaves after consent.
 use knx_app::diagnostic_bundle::PRIVATE_RAW_NOTE;
+
+const NOTE_RAW_WITHHELD_PROJECTION: &str =
+    "the raw operation recording is withheld; this is the admitted private projection";
+const NOTE_RAW_WITHHELD_RESULT: &str =
+    "the raw operation recording is withheld; this is the retained typed result";
+const NOTE_RECORDING_MISSING_PROJECTION: &str =
+    "the operation recording is unavailable; this is the admitted private projection";
+const NOTE_RECORDING_MISSING_RESULT: &str =
+    "the operation recording is unavailable; this is the retained typed result";
+const NOTE_TORN_TAIL: &str = "the recording's last line is incomplete (interrupted write)";
+const NOTE_SAVED_ROOT: &str =
+    "the last saved state of the project; unsaved changes are not included";
+const NOTE_NO_PARAMETERS: &str = "the parameter values could not be projected for this device";
+
+/// Every fixed English note this module writes; the web translates each by exact text.
+#[cfg(test)]
+pub(super) const FIXED_NOTES: [&str; 8] = [
+    PRIVATE_RAW_NOTE,
+    NOTE_RAW_WITHHELD_PROJECTION,
+    NOTE_RAW_WITHHELD_RESULT,
+    NOTE_RECORDING_MISSING_PROJECTION,
+    NOTE_RECORDING_MISSING_RESULT,
+    NOTE_TORN_TAIL,
+    NOTE_SAVED_ROOT,
+    NOTE_NO_PARAMETERS,
+];
 
 /// The consent warning for retained reports that carry declared memory.
 fn report_notes(files: &[BundleFile]) -> Option<String> {
@@ -1389,9 +1438,7 @@ async fn raw_recording_section(
     section.markers = markers(true, true, true, true);
     section.notes.push(PRIVATE_RAW_NOTE.into());
     if operation.torn_tail {
-        section
-            .notes
-            .push("the recording's last line is incomplete (interrupted write)".into());
+        section.notes.push(NOTE_TORN_TAIL.into());
     }
     section
         .files
@@ -1401,11 +1448,16 @@ async fn raw_recording_section(
 
 fn import_report(state: &SharedState) -> Result<BundleSection, SourceFailure> {
     let project = state.project.lock().expect("state mutex poisoned");
-    project.as_ref().ok_or_else(SourceFailure::unavailable)?;
+    project
+        .as_ref()
+        .ok_or(SourceFailure::Unavailable(BundleUnavailableCode::NoProject))?;
     let opaque = state.opaque.lock().expect("state mutex poisoned");
+    // A stored report that cannot be read stays generic: its failure may reflect content.
     let evidence = knx_app::import_evidence::read(&opaque)
         .map_err(|_| SourceFailure::unavailable())?
-        .ok_or_else(SourceFailure::unavailable)?;
+        .ok_or(SourceFailure::Unavailable(
+            BundleUnavailableCode::NoImportReport,
+        ))?;
     let copy = knx_app::secret_free_copy::import_report_for_bundle(&evidence.report)
         .map_err(|_| SourceFailure::unavailable())?;
     let (bytes, notes) = copy.into_parts();
@@ -1438,9 +1490,7 @@ async fn project_section(state: &SharedState) -> Result<BundleSection, SourceFai
     let mut section = BundleSection::new(SectionKind::Project);
     section.entries = 1;
     section.markers = markers(true, true, true, true);
-    section
-        .notes
-        .push("the last saved state of the project; unsaved changes are not included".into());
+    section.notes.push(NOTE_SAVED_ROOT.into());
     section.notes.extend(notes);
     section.files.push(BundleFile::new("project.knxdb", bytes));
     Ok(section)

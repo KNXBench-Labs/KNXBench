@@ -598,8 +598,14 @@ async fn address_only_targets_resolve_only_when_proven_and_unambiguous() {
             open_project(&state, &[(1, "1.1.1"), (2, "1.1.1")]);
             let id = recorded_target(&state, target.clone(), Provenance::Proven);
             let what = format!("ambiguous address, chosen {chosen}, explicit {explicit}");
-            assert_extracts_unavailable(&state, &extract_query(&id, explicit, chosen), &id, &what)
-                .await;
+            let query = extract_query(&id, explicit, chosen);
+            let preview = preview_query(&state, &query).await;
+            assert_eq!(
+                offer(&preview, "device")["unavailable"],
+                "the selected operation identifies no single device of this project",
+                "{what}"
+            );
+            assert_extracts_unavailable(&state, &query, &id, &what).await;
         }
     }
 }
@@ -621,7 +627,7 @@ async fn a_proven_run_that_names_no_device_says_so_and_never_projects_the_chosen
             for kind in ["device", "catalogue"] {
                 assert_eq!(
                     offer(&preview, kind)["unavailable"],
-                    "the selected operation names no device of this project",
+                    "the selected operation identifies no single device of this project",
                     "{what}: {kind}"
                 );
             }

@@ -122,7 +122,7 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
       await expect(dialog.locator("[data-report-section=environment] input")).toBeDisabled();
       if (type !== "projectImport" && type !== "catalogue") {
         const reason = dialog.locator("[data-report-section=busMonitor] [data-report-unavailable]");
-        await expect(reason).toHaveText(m["reportProblem.unavailable"].replace("{reason}", m["reportProblem.reason.busMonitorOff"]));
+        await expect(reason).toHaveText(m["reportProblem.unavailable"].replace("{reason}", m["reportProblem.reason.withheld"]));
         await expect(dialog.locator("[data-report-section=busMonitor] input")).toBeDisabled();
       }
       await expectFits(page, width);

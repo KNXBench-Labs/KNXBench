@@ -337,7 +337,7 @@ fn write(session: &Session) -> Result<PathBuf, String> {
             return Err(format!("{FLAG}: diagnostic evidence was already consumed"));
         }
     }
-    let raw = raw_recording_sections(session, &mut sections[0]);
+    let raw = raw_recording_sections(&session.command, &session.store, &mut sections[0]);
     sections.extend(raw);
     let request = BundleRequest {
         problem,
@@ -361,21 +361,16 @@ fn write(session: &Session) -> Result<PathBuf, String> {
 /// redacted at capture). The flag is the user's consent for this one bundle;
 /// owner decision 31 October 2026 lets such raw recordings leave after consent
 /// with the keep-private note. System-2 recordings never leave raw: their
-/// admitted projection above is the only System-2 evidence, and no recording
-/// of a `system2-*` subcommand leaves raw whatever its kind. The newest
-/// recording is the operation, older ones of the same invocation are earlier
-/// operations. Anything unreadable or oversized is left out with a note.
+/// admitted projection is the only System-2 evidence, and no recording of a
+/// `system2-*` subcommand leaves raw whatever its kind. Only the newest
+/// recording can be the operation; older ones are earlier operations. Every
+/// recording left out is named in a note on `environment`, never dropped silently.
 fn raw_recording_sections(
-    session: &Session,
+    command: &str,
+    store: &RecordingStore,
     environment: &mut BundleSection,
 ) -> Vec<BundleSection> {
-    if session.command.starts_with("system2-") {
-        environment
-            .notes
-            .push("raw recordings of System-2 commands are never included".into());
-        return Vec::new();
-    }
-    let recordings = match session.store.list() {
+    let recordings = match store.list() {
         Ok(recordings) => recordings,
         Err(_) => {
             environment
@@ -384,27 +379,41 @@ fn raw_recording_sections(
             return Vec::new();
         }
     };
+    if command.starts_with("system2-") {
+        if !recordings.is_empty() {
+            environment.notes.push(format!(
+                "{} recording(s) of this System-2 command left out: \
+                 raw recordings of System-2 commands are never included",
+                recordings.len()
+            ));
+        }
+        return Vec::new();
+    }
     let mut sections = Vec::new();
-    for summary in recordings {
-        let raw_allowed = summary.format_version == Some(1)
-            && summary
-                .operation_kind
-                .as_deref()
-                .is_some_and(|kind| !kind.starts_with("system2-"));
-        if !raw_allowed {
+    for (index, summary) in recordings.into_iter().enumerate() {
+        let kind = summary.operation_kind.as_deref();
+        if summary.format_version != Some(1) || kind.is_none() {
+            environment.notes.push(format!(
+                "recording {} was left out: its header could not be read",
+                summary.id
+            ));
             continue;
         }
-        let Ok(bytes) = session
-            .store
-            .read_bounded(&summary.id, MAX_RAW_RECORDING_BYTES)
-        else {
+        if kind.is_some_and(|kind| kind.starts_with("system2-")) {
+            environment.notes.push(format!(
+                "recording {} was left out: raw System-2 recordings are never included",
+                summary.id
+            ));
+            continue;
+        }
+        let Ok(bytes) = store.read_bounded(&summary.id, MAX_RAW_RECORDING_BYTES) else {
             environment.notes.push(format!(
                 "recording {} was left out: unreadable or larger than 64 MiB",
                 summary.id
             ));
             continue;
         };
-        let kind = if sections.is_empty() {
+        let kind = if index == 0 {
             SectionKind::Operation
         } else {
             SectionKind::EarlierOperation
@@ -435,6 +444,92 @@ fn raw_recording_sections(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn store(dir: &Path) -> RecordingStore {
+        RecordingStore::with_options(
+            dir.to_path_buf(),
+            writer_identity(),
+            false,
+            RetentionLimits::default(),
+            std::sync::Arc::new(|path: &Path| {
+                let file = std::fs::OpenOptions::new()
+                    .create_new(true)
+                    .append(true)
+                    .open(path)?;
+                Ok(Box::new(file) as Box<dyn std::io::Write + Send>)
+            }),
+        )
+    }
+
+    fn record(store: &RecordingStore, kind: OperationKind) -> String {
+        let recorder = store.start(OperationStart::new(kind));
+        recorder.finish(RecordedOutcome::succeeded(json!({})));
+        assert!(store.wait_until_idle(Duration::from_secs(10)));
+        // Distinct, ordered ids: the id carries milliseconds.
+        std::thread::sleep(Duration::from_millis(3));
+        recorder.id().unwrap().to_string()
+    }
+
+    fn raw(command: &str, store: &RecordingStore) -> (Vec<BundleSection>, Vec<String>) {
+        let mut environment = BundleSection::new(SectionKind::Environment);
+        let sections = raw_recording_sections(command, store, &mut environment);
+        (sections, environment.notes)
+    }
+
+    #[test]
+    fn a_system2_command_never_ships_a_raw_recording_whatever_its_kind() {
+        let dir = tempfile::tempdir().unwrap();
+        let store = store(dir.path());
+        // `system2-project` taps a plain device read.
+        record(&store, OperationKind::DeviceRead);
+        let (sections, notes) = raw("system2-project", &store);
+        assert!(sections.is_empty());
+        assert_eq!(
+            notes,
+            ["1 recording(s) of this System-2 command left out: \
+              raw recordings of System-2 commands are never included"]
+        );
+        // A System-2 command that never connected says nothing about recordings.
+        let empty = tempfile::tempdir().unwrap();
+        let (sections, notes) = raw("system2-prepare", &self::store(empty.path()));
+        assert!(sections.is_empty() && notes.is_empty(), "{notes:?}");
+    }
+
+    #[test]
+    fn system2_kinds_are_left_out_with_a_note_and_the_newest_alone_is_the_operation() {
+        let dir = tempfile::tempdir().unwrap();
+        let store = store(dir.path());
+        let older = record(&store, OperationKind::DeviceRead);
+        let system2 = record(&store, OperationKind::System2Download);
+        let (sections, notes) = raw("compare", &store);
+        // The newest listed recording (System-2) is left out, so no section is the operation.
+        let kinds: Vec<_> = sections.iter().map(|s| (s.kind, s.label.clone())).collect();
+        assert_eq!(kinds, [(SectionKind::EarlierOperation, Some(older))]);
+        assert_eq!(
+            notes,
+            [format!(
+                "recording {system2} was left out: raw System-2 recordings are never included"
+            )]
+        );
+        assert_eq!(sections[0].notes, [PRIVATE_RAW_NOTE]);
+        assert_eq!(sections[0].files[0].name, "recording.jsonl");
+    }
+
+    #[test]
+    fn a_recording_without_a_readable_header_is_named_not_dropped() {
+        let dir = tempfile::tempdir().unwrap();
+        let store = store(dir.path());
+        let id = "op-20261031T120000000Z-0000abcd";
+        std::fs::write(dir.path().join(format!("{id}.jsonl")), b"not json\n").unwrap();
+        let (sections, notes) = raw("compare", &store);
+        assert!(sections.is_empty());
+        assert_eq!(
+            notes,
+            [format!(
+                "recording {id} was left out: its header could not be read"
+            )]
+        );
+    }
 
     fn args(list: &[&str]) -> Vec<String> {
         list.iter().map(|s| s.to_string()).collect()

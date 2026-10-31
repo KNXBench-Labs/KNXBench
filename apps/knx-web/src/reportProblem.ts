@@ -171,17 +171,15 @@ export function markerKeys(markers: ContentMarkers): MessageKey[] {
 /** The server's fixed English reasons we translate; anything else is shown as sent. */
 const REASONS: ReadonlyArray<[string, MessageKey]> = [
   ["no recorded operation fits this problem", "reportProblem.reason.noOperation"],
-  ["a chosen earlier recording no longer exists", "reportProblem.reason.earlierGone"],
+  ["no operation is chosen", "reportProblem.reason.noOperationChosen"],
   ["no device is chosen", "reportProblem.reason.noDevice"],
   ["no minimised report exists for this operation", "reportProblem.reason.noLegacyReport"],
   ["this server session does not keep the original import file; attach it yourself if needed", "reportProblem.reason.importFile"],
   ["the project has not been saved as a KNXBench project file yet", "reportProblem.reason.projectUnsaved"],
-  ["the bus monitor is not running", "reportProblem.reason.busMonitorOff"],
-  ["the browser did not describe itself", "reportProblem.reason.noClient"],
   ["no project is open", "reportProblem.reason.noProject"],
   ["this project carries no import report", "reportProblem.reason.noImportReport"],
   ["this section is withheld until its content is admitted as free of credentials", "reportProblem.reason.withheld"],
-  ["the selected operation names no device of this project", "reportProblem.reason.sourceNamesNoDevice"],
+  ["the selected operation identifies no single device of this project", "reportProblem.reason.sourceNamesNoDevice"],
   ["the selected diagnostic source is unavailable", "reportProblem.reason.source"],
   ["the originating device source is unavailable", "reportProblem.reason.originatingDevice"],
   ["the retained diagnostic result is unavailable", "reportProblem.reason.retainedMissing"],
@@ -208,6 +206,7 @@ const NOTES: ReadonlyArray<[string, MessageKey]> = [
   ["the operation recording is unavailable; this is the retained typed result", "reportProblem.note.recordingMissingResult"],
   ["the recording's last line is incomplete (interrupted write)", "reportProblem.note.tornTail"],
   ["the last saved state of the project; unsaved changes are not included", "reportProblem.note.savedRoot"],
+  ["the parameter values could not be projected for this device", "reportProblem.note.noParameters"],
 ];
 
 export function noteKey(note: string): MessageKey | null {

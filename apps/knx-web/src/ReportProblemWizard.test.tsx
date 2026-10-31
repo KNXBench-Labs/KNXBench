@@ -33,7 +33,7 @@ function answer(query: BundleQuery, extra: Partial<BundlePreview> = {}): BundleP
     "catalogue", "project", "busMonitor", "clientState"] as SectionKind[]) {
     const offer = defaultOffer(query.problemType, kind);
     if (offer === "notOffered") continue;
-    const unavailable = kind === "busMonitor" ? "the bus monitor is not running" : kind === "importFile" ? "some new server reason" : null;
+    const unavailable = kind === "busMonitor" ? "this section is withheld until its content is admitted as free of credentials" : kind === "importFile" ? "some new server reason" : null;
     const selected = (offer === "fixed" || wanted.has(kind)) && unavailable === null;
     offers.push({ kind, offer, selected, unavailable });
     if (selected) sections.push({ key: kind, kind, label: null, bytes: 1000 + offers.length, entries: offers.length,
@@ -104,7 +104,7 @@ it("shows unavailable sections disabled with the reason, translated when known",
   expect(box("busMonitor").disabled).toBe(true);
   expect(box("busMonitor").checked).toBe(false);
   const reason = $("[data-report-section=busMonitor] [data-report-unavailable]")!;
-  expect(reason.textContent).toBe(en["reportProblem.unavailable"].replace("{reason}", en["reportProblem.reason.busMonitorOff"]));
+  expect(reason.textContent).toBe(en["reportProblem.unavailable"].replace("{reason}", en["reportProblem.reason.withheld"]));
   expect(box("busMonitor").getAttribute("aria-describedby")).toBe(reason.id);
   await render({ problemType: "projectImport" });
   expect($("[data-report-section=importFile] [data-report-unavailable]")!.textContent).toContain("some new server reason");

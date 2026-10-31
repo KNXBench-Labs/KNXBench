@@ -120,6 +120,12 @@ pub(super) fn inspect(
                         b,
                         cap,
                     )?;
+                    append_counted(
+                        &mut report.dependency_evidence,
+                        part.dependency_evidence,
+                        b,
+                        cap,
+                    )?;
                 }
                 Err(e @ DistributionInspectionError::ResourceLimit(_)) => return Err(e),
                 Err(e) => {

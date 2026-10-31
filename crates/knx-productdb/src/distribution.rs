@@ -4,6 +4,8 @@
 
 #[path = "distribution_bounds.rs"]
 mod bounds;
+#[path = "distribution_dependencies.rs"]
+mod dependencies;
 #[path = "distribution_links.rs"]
 mod links;
 #[path = "distribution_source.rs"]
@@ -14,6 +16,13 @@ mod readers;
 mod xml;
 #[path = "distribution_zip.rs"]
 mod zip;
+pub use dependencies::{
+    DistributionAssignmentForm, DistributionConditionApplicability, DistributionConditionContext,
+    DistributionDeclaredAttribute, DistributionDependencyDisposition,
+    DistributionDependencyEndpoint, DistributionDependencyEvidence, DistributionDependencyKind,
+    DistributionEndpointRole, DistributionFunctionResolution, DistributionGraphCycle,
+    DistributionImpactScope, DistributionMemberList, DistributionPresence, DistributionRawContent,
+};
 pub use provenance::{DistributionLocation, DistributionSourceName, DistributionSourceRef};
 
 use serde::{Deserialize, Serialize};
@@ -40,6 +49,8 @@ pub struct DistributionInspection {
     pub complete: bool,
     pub declared_metadata: Vec<DistributionDeclaredMetadata>,
     pub preserved_content: Vec<DistributionContent>,
+    /// Declared dependency facts in member, element order; never executed or applied.
+    pub dependency_evidence: Vec<DistributionDependencyEvidence>,
 }
 
 /// Values asserted by the source, never verified registration, version or producer identity.
@@ -220,6 +231,8 @@ pub enum DistributionLimitation {
     TranslationsNotPerformed,
     BaggageAssociationNotPerformed,
     RegistrationNotVerified,
+    /// Scripts, calculations, validations, handlers and Assign are inventoried, never run.
+    DependenciesNotExecuted,
 }
 
 /// Identities and references are lookup keys, not payload; longer values are refused.
@@ -422,7 +435,7 @@ pub(super) fn limit(name: &str) -> DistributionInspectionError {
 impl DistributionInspection {
     fn empty(name: &str, bytes: &[u8], kind: DistributionSourceKind) -> Self {
         Self {
-            format_version: 2,
+            format_version: 3,
             source_kind: kind,
             source: DistributionSource {
                 name: name.into(),
@@ -444,7 +457,7 @@ impl DistributionInspection {
             complete: false,
             declared_metadata: Vec::new(),
             preserved_content: Vec::new(),
-
+            dependency_evidence: Vec::new(),
             limitations: vec![
                 DistributionLimitation::MissingMaster,
                 DistributionLimitation::XsdNotPerformed,
@@ -455,6 +468,7 @@ impl DistributionInspection {
                 DistributionLimitation::TranslationsNotPerformed,
                 DistributionLimitation::BaggageAssociationNotPerformed,
                 DistributionLimitation::RegistrationNotVerified,
+                DistributionLimitation::DependenciesNotExecuted,
             ],
         }
     }

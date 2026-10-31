@@ -16,6 +16,8 @@ quick-xml.workspace = true
 sha2.workspace = true
 # Local procedure-resolution reports use the existing workspace serialization contract.
 serde.workspace = true
+# Canonical format-2 report accounting uses the same serializer as the CLI.
+serde_json.workspace = true
 zip.workspace = true
 crc32fast.workspace = true
 # Decodes `AbsoluteSegment/Data` and `/Mask` (xs:base64Binary) in `code`.
@@ -32,7 +34,6 @@ rustix.workspace = true
 [dev-dependencies]
 # Linux wait4 ABI for the opt-in measurement supervisor; already locked transitively.
 libc = "=0.2.189"
-serde_json.workspace = true
 tempfile.workspace = true
 knx-testsupport.workspace = true
 

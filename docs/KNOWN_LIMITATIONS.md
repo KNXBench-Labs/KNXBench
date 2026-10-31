@@ -471,6 +471,13 @@ Measured facts require encounter-ledger evidence; older installs are unavailable
 Unsupported layouts, calculations, activation and encodings remain named limits. Grid declarations can render as lists; retained values do not prove editable semantics.
 [Details and history](limitations/parameter-and-dynamic-coverage.md)
 
+<a id="catalogue-kl-187"></a>
+### 187. Manufacturer distribution inspection is partial and read-only
+
+**Ledger status:** `ACCEPTED_BOUNDARY` ([KL-187](status/LEDGER.md#post-snapshot-ids)).
+`knx products inspect-distribution` (31 October 2026) reports what a manufacturer XML or distribution ZIP declares, with byte-exact source references. It installs nothing and gives no write or initialization authority; Dynamic and reference coverage are documented subsets, comments are not inventoried, and any resource limit refuses the whole source. A positive report is not ETS or KNX compatibility.
+[Details and history](limitations/KL-187-distribution-inspection.md)
+
 ## Project model and storage
 
 <a id="catalogue-kl-009"></a>

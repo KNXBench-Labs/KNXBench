@@ -2813,6 +2813,31 @@ pub(crate) fn open_checked_archive<'a>(
     limits: PackageLimits,
     cancellation: Cancellation<'_>,
 ) -> Result<CheckedArchive<'a>, PackageError> {
+    open_checked_archive_with_names(bytes, limits, cancellation, MemberNames::Native)
+}
+
+/// Distribution-only logical-name view; native installation never selects this policy.
+/// All structure, metadata/parser binding, encryption, budgets and codecs are shared.
+pub(crate) fn open_distribution_archive<'a>(
+    bytes: &'a [u8],
+    limits: PackageLimits,
+    cancellation: Cancellation<'_>,
+) -> Result<CheckedArchive<'a>, PackageError> {
+    open_checked_archive_with_names(bytes, limits, cancellation, MemberNames::Distribution)
+}
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum MemberNames {
+    Native,
+    Distribution,
+}
+
+fn open_checked_archive_with_names<'a>(
+    bytes: &'a [u8],
+    limits: PackageLimits,
+    cancellation: Cancellation<'_>,
+    names: MemberNames,
+) -> Result<CheckedArchive<'a>, PackageError> {
     let PackageLimits {
         max_member_size,
         max_expanded_size,
@@ -2924,14 +2949,32 @@ pub(crate) fn open_checked_archive<'a>(
             .ok_or_else(|| PackageError::SizeLimit {
                 path: "decoded member paths".into(),
             })?;
+        // Raw/decoded names are never rewritten in the archive. Only this collision tree
+        // sees Windows separators as logical '/', under an inspection-only policy.
+        let logical;
+        let path = if names == MemberNames::Distribution {
+            logical = path.replace('\\', "/");
+            logical.as_str()
+        } else {
+            path
+        };
         let normalized = path.strip_suffix('/').unwrap_or(path);
-        let is_directory = file.is_dir();
+        let is_directory =
+            file.is_dir() || (names == MemberNames::Distribution && path.ends_with('/'));
         if normalized.is_empty()
             || path.contains(['\\', ':', '\0'])
+            || (names == MemberNames::Distribution && path.contains('%'))
             || normalized
                 .split('/')
                 .any(|part| matches!(part, "" | "." | ".."))
             || file.unix_mode().is_some_and(|m| m & 0o170000 == 0o120000)
+            || (names == MemberNames::Distribution
+                && file.unix_mode().is_some_and(|m| {
+                    let kind = m & 0o170000;
+                    !matches!(kind, 0 | 0o100000 | 0o040000)
+                        || (kind == 0o040000 && !is_directory)
+                        || (kind == 0o100000 && is_directory)
+                }))
         {
             return Err(PackageError::UnsafeMember { path: path.into() });
         }

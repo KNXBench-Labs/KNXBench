@@ -3757,7 +3757,7 @@ export const messages: Record<MessageKey, string> = {
   "reportProblem.recordingOff":
     "Der Betreiber dieser Installation hat die Aufzeichnung von Gerätevorgängen abgeschaltet (KNX_DIAGNOSTIC_RECORDING). Es entstehen keine neuen Aufzeichnungen; ältere können weiterhin enthalten sein.",
   "reportProblem.retention":
-    "KNXBench zeichnet jeden Gerätevorgang auf dieser Installation auf und behält die letzten 100 Vorgänge oder 512 MiB, je nachdem, was zuerst erreicht ist; fehlgeschlagene Vorgänge bleiben am längsten. Geräteschlüssel, die zum Autorisieren oder Schlüsselschreiben gesendet werden, werden unkenntlich gemacht; KNXBench nutzt nur ungesichertes KNXnet/IP, daher werden weder Tunnelpasswörter noch KNX-Secure-Schlüssel übertragen. Gerätekonfiguration, die Passwörter enthalten kann, wird so aufgezeichnet, wie sie übertragen wurde: Aufzeichnungen und Bundles vertraulich behandeln.",
+    "KNXBench zeichnet jeden Gerätevorgang auf dieser Installation auf und behält die letzten 100 Vorgänge oder 512 MiB, je nachdem, was zuerst erreicht ist; fehlgeschlagene Vorgänge bleiben am längsten. Geräteschlüssel, die zum Autorisieren oder zum Schreiben von Schlüsseln gesendet werden, macht KNXBench unkenntlich; KNXBench nutzt nur ungesichertes KNXnet/IP, daher werden weder Tunnelpasswörter noch KNX-Secure-Schlüssel übertragen. Gerätekonfiguration, die Passwörter enthalten kann, wird so aufgezeichnet, wie sie übertragen wurde: Aufzeichnungen und Bundles vertraulich behandeln.",
   "reportProblem.operation.label": "Vorgang",
   "reportProblem.operation.none": "Kein aufgezeichneter Vorgang",
   "reportProblem.operation.option": "{started} · {kind} · {outcome}",

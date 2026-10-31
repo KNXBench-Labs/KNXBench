@@ -175,7 +175,7 @@ Older recordings are kept and exported unchanged after an update; readers use
 Always applied, also with the user's consent, before a record reaches the
 writer: the 4 key octets of `A_Authorize_Request` and `A_Key_Write` are zeroed
 in `raw` and named by `"redacted": {"kind": "authorize-key" | "key-write-key",
-"offset": n, "octets": 4}`. KNXBench implements only unsecured KNXnet/IP tunnelling,
+"offset": n, "octets": 4}`. KNXBench implements only unsecured KNXnet/IP,
 so no tunnel password or KNX Secure session key is on the wire; project copies in the bundle are made
 secret-free separately (see [Project](#sections)).
 

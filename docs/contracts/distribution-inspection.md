@@ -120,10 +120,13 @@ Each row has a `kind`, its own `source`, `applicationSource`,
 `manufacturerSource` and, inside a ModuleDef, `moduleDefinitionSource`. Only
 elements in the document namespace on these exact paths become rows; anything
 else, such as an `Assign` in a foreign namespace, stays in `unknowns[]`.
+Static declarations that become rows (Script, calculations, validations and
+their member wrappers) are still listed in `unknowns[]` too, because no typed
+reader models them; a row there is an inventory entry, not a missed fact.
 
 | Kind | Source | Kept |
 | --- | --- | --- |
-| `script` | `Static/Script` of an application or ModuleDef | `content`: byte range, size and SHA-256 of the raw text between the tags (CDATA delimiters and comments included). Not the per-token `preservedContent` hashes. |
+| `script` | `Static/Script` of an application or ModuleDef | `content`: byte range, size and SHA-256 of the raw text between the tags (CDATA delimiters and comments included). Not the per-token `preservedContent` hashes. A self-closing `<Script/>` has a zero-length range at the end of its tag. |
 | `parameterCalculation` | `Static/ParameterCalculations/ParameterCalculation` | `Id`, `LRTransformationFunc`, `RLTransformationFunc`; `LParameters`/`RParameters` members as `calculationLeft`/`calculationRight` endpoints |
 | `parameterValidation` | `Static/ParameterValidations/ParameterValidation` | `Id`, `ValidationFunc`; `Parameters/ParameterRefRef` members as `validationMember` endpoints |
 | `buttonHandler` | every Dynamic `Button` | `Id`, `Text`, `EventHandler`, `EventHandlerOnline` |
@@ -145,12 +148,24 @@ Fields:
 - `assignmentForm`: `sourceReference`, `literalValue`,
   `conflictingDeclarations` (source and `Value` both declared; no precedence
   is chosen) or `missingSourceAndValue`. A literal `Value` is not a write.
+  The form follows attribute presence: an empty `SourceParamRefRef` still
+  counts as a source reference, and its endpoint is `dangling`.
 - `functionResolution`: `notAttempted` for calculations, validations and
   handlers. Function names stay verbatim strings.
-- `graphCycle`: for an Assign whose source and target each resolve uniquely,
-  `declaredGraphCycle` when that source-to-target edge lies on a cycle of such
-  edges, else `noDeclaredCycle`; `notApplicable` otherwise. It is not a
-  runtime loop.
+- `graphCycle` (Assign only; never a runtime loop). Each Assign is a graph
+  node between every candidate of its source and of its target:
+  - `declaredGraphCycle`: source and target resolve uniquely and the Assign
+    lies on a cycle of such unique edges. A self-assignment counts.
+  - `cycleNotDetermined`: the Assign lies on a cycle only when ambiguous
+    candidates are included. Which duplicate is meant is not decided, so no
+    cycle is claimed and none is ruled out.
+  - `noDeclaredCycle`: source and target resolve uniquely and no Assign edge,
+    ambiguous ones included, can close a loop through it.
+  - `notApplicable`: other rows, Assigns with an absent or dangling source or
+    target, and ambiguous Assigns on no possible cycle.
+- `graphCycleAnchor`: for `declaredGraphCycle` and `cycleNotDetermined`, the
+  first Assign in element order of the same strongly connected component, so
+  rows of one cycle share it. Otherwise absent.
 - `disposition`: always `retainedNotExecuted`.
 - `impactScope`: `declaredEndpointsOnly` for Assign;
   `applicationImpactUnknown` for scripts, calculations, validations and

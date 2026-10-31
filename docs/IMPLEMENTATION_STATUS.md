@@ -46,7 +46,8 @@ false, and every limitation is listed
   button handlers and Assign are listed with presence-exact attributes,
   scoped endpoints, declared Assign cycles and condition context. Nothing is
   run, resolved to a function or applied; `dependenciesNotExecuted` says so.
-  Independent review of this addition is pending.
+  Ambiguous references make a possible loop `cycleNotDetermined`, never
+  `noDeclaredCycle`. Independent review found that gap; it is fixed and tested.
 - **Installation unchanged.** Installation still refuses these sources. The
   more lenient Windows-name policy applies to inspection only, and a native
   regression test pins that.
@@ -55,7 +56,7 @@ false, and every limitation is listed
   report was 174 MiB. Installing the same 37 archives into a fresh in-memory
   database was still refused (28 `MissingMaster`, 9 `UnsafeMember`).
 - **Tests.**
-  - Distribution 46 (10 for dependency evidence) and grid 7 in
+  - Distribution 48 (12 for dependency evidence) and grid 7 in
     knx-productdb; CLI 6; native ZIP
     regressions 13.
   - Clippy, headers, test layout and local-info checks green.

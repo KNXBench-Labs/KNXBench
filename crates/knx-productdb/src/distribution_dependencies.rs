@@ -23,6 +23,8 @@ pub struct DistributionDependencyEvidence {
     pub assignment_form: Option<DistributionAssignmentForm>,
     pub function_resolution: Option<DistributionFunctionResolution>,
     pub graph_cycle: DistributionGraphCycle,
+    /// First Assign (element order) of the same declared or possible cycle; `None` without one.
+    pub graph_cycle_anchor: Option<DistributionSourceRef>,
     pub disposition: DistributionDependencyDisposition,
     pub impact_scope: DistributionImpactScope,
     pub condition_context: DistributionConditionContext,
@@ -120,10 +122,14 @@ pub enum DistributionFunctionResolution {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum DistributionGraphCycle {
-    /// Not an Assign, or an Assign without a uniquely resolved source and target.
+    /// Not an Assign, or an ambiguous/unresolved Assign on no possible cycle.
     NotApplicable,
+    /// Uniquely resolved, and no Assign edge (ambiguous ones included) can close a loop with it.
     NoDeclaredCycle,
+    /// A cycle through uniquely resolved edges only.
     DeclaredGraphCycle,
+    /// A loop exists only if ambiguous candidates are the declarations meant; never resolved here.
+    CycleNotDetermined,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -303,36 +309,100 @@ impl Endpoints<'_, '_> {
     }
 }
 
-/// Uniquely resolved Assign source-to-target edges, keyed by the Assign element.
-fn assign_edges(doc: &Document<'_>, index: &ReferenceIndex) -> BTreeMap<usize, (usize, usize)> {
+/// Assign source/target candidate declarations, keyed by the Assign element.
+///
+/// Each Assign becomes its own graph node between its candidates, so ambiguous references stay
+/// linear (sources + targets) instead of multiplying into every source/target pair.
+type AssignEdges = BTreeMap<usize, (Vec<usize>, Vec<usize>)>;
+
+fn assign_edges(doc: &Document<'_>, index: &ReferenceIndex) -> AssignEdges {
     let mut edges = BTreeMap::new();
     for id in 0..doc.nodes.len() {
         if !matches!(declared_kind(doc, id), Some((Kind::Assign, _))) {
             continue;
         }
-        let unique = |attribute: &str| match doc.nodes[id].attr(attribute) {
-            Some(v) => match candidates(doc, index, id, &v) {
-                [one] => Some(*one),
-                _ => None,
-            },
-            None => None,
+        let found = |attribute: &str| match doc.nodes[id].attr(attribute) {
+            Some(v) => candidates(doc, index, id, &v).to_vec(),
+            None => Vec::new(),
         };
-        if let (Some(source), Some(target)) =
-            (unique("SourceParamRefRef"), unique("TargetParamRefRef"))
-        {
-            edges.insert(id, (source, target));
+        let (sources, targets) = (found("SourceParamRefRef"), found("TargetParamRefRef"));
+        if !sources.is_empty() && !targets.is_empty() {
+            edges.insert(id, (sources, targets));
         }
     }
     edges
 }
 
-/// Strongly connected components (iterative Tarjan); no recursion over source-controlled depth.
-fn components(edges: &BTreeMap<usize, (usize, usize)>) -> HashMap<usize, usize> {
-    let mut graph = BTreeMap::<usize, Vec<usize>>::new();
-    for &(source, target) in edges.values() {
-        graph.entry(source).or_default().push(target);
-        graph.entry(target).or_default();
+/// Graph node for Assign `id`; declaration nodes keep their element index.
+fn assign_node(doc: &Document<'_>, id: usize) -> usize {
+    doc.nodes.len() + id
+}
+
+/// Cycle state and first-Assign anchor per Assign, from unique edges and from all candidate edges.
+fn assign_cycles(
+    doc: &Document<'_>,
+    edges: &AssignEdges,
+) -> BTreeMap<usize, (DistributionGraphCycle, Option<usize>)> {
+    let unique = |(s, t): &(Vec<usize>, Vec<usize>)| s.len() == 1 && t.len() == 1;
+    let graph = |only_unique: bool| {
+        let mut graph = BTreeMap::<usize, Vec<usize>>::new();
+        for (&id, edge) in edges.iter().filter(|(_, e)| !only_unique || unique(e)) {
+            let node = assign_node(doc, id);
+            for &source in &edge.0 {
+                graph.entry(source).or_default().push(node);
+            }
+            for &target in &edge.1 {
+                graph.entry(node).or_default().push(target);
+                graph.entry(target).or_default();
+            }
+        }
+        components(&graph)
+    };
+    let (declared, possible) = (
+        cycle_anchors(doc, &graph(true)),
+        cycle_anchors(doc, &graph(false)),
+    );
+    let mut states = BTreeMap::new();
+    for (&id, edge) in edges {
+        let state = if let Some(anchor) = unique(edge).then(|| declared.get(&id).copied()).flatten()
+        {
+            (DistributionGraphCycle::DeclaredGraphCycle, Some(anchor))
+        } else if let Some(&anchor) = possible.get(&id) {
+            (DistributionGraphCycle::CycleNotDetermined, Some(anchor))
+        } else if unique(edge) {
+            (DistributionGraphCycle::NoDeclaredCycle, None)
+        } else {
+            continue;
+        };
+        states.insert(id, state);
     }
+    states
+}
+
+/// First Assign (element order) of each Assign's cycle; Assigns on no cycle are absent.
+///
+/// Assign nodes have no self-edge, so a component holding another node is a cycle.
+fn cycle_anchors(doc: &Document<'_>, component: &HashMap<usize, usize>) -> HashMap<usize, usize> {
+    let mut size = HashMap::<usize, usize>::new();
+    let mut first = HashMap::<usize, usize>::new();
+    for (&node, &c) in component {
+        *size.entry(c).or_default() += 1;
+        if let Some(id) = node.checked_sub(doc.nodes.len()) {
+            let anchor = first.entry(c).or_insert(id);
+            *anchor = (*anchor).min(id);
+        }
+    }
+    component
+        .iter()
+        .filter_map(|(&node, c)| {
+            let id = node.checked_sub(doc.nodes.len())?;
+            (size[c] > 1).then(|| (id, first[c]))
+        })
+        .collect()
+}
+
+/// Strongly connected components (iterative Tarjan); no recursion over source-controlled depth.
+fn components(graph: &BTreeMap<usize, Vec<usize>>) -> HashMap<usize, usize> {
     let (mut order, mut low, mut component) = (HashMap::new(), HashMap::new(), HashMap::new());
     let (mut stack, mut on_stack, mut next, mut count) = (Vec::new(), HashSet::new(), 0usize, 0);
     for &root in graph.keys() {
@@ -392,8 +462,7 @@ pub(super) fn inspect(
     limits: &DistributionLimits,
     report: &mut DistributionInspection,
 ) -> Result<()> {
-    let edges = assign_edges(doc, index);
-    let component = components(&edges);
+    let cycles = assign_cycles(doc, &assign_edges(doc, index));
     let mut endpoints = Endpoints {
         doc,
         index,
@@ -458,6 +527,7 @@ pub(super) fn inspect(
         }
         let mut assignment_form = None;
         let mut graph_cycle = DistributionGraphCycle::NotApplicable;
+        let mut graph_cycle_anchor = None;
         if kind == Kind::Assign {
             for (role, attribute) in [
                 (Role::AssignTarget, "TargetParamRefRef"),
@@ -478,13 +548,9 @@ pub(super) fn inspect(
                     (false, false) => DistributionAssignmentForm::MissingSourceAndValue,
                 },
             );
-            if let Some(&(source, target)) = edges.get(&id) {
-                graph_cycle =
-                    if source == target || component.get(&source) == component.get(&target) {
-                        DistributionGraphCycle::DeclaredGraphCycle
-                    } else {
-                        DistributionGraphCycle::NoDeclaredCycle
-                    };
+            if let Some(&(state, anchor)) = cycles.get(&id) {
+                graph_cycle = state;
+                graph_cycle_anchor = anchor.map(|a| doc.coordinate(a)).transpose()?;
             }
         }
         let content = (kind == Kind::Script).then(|| {
@@ -526,6 +592,7 @@ pub(super) fn inspect(
             )
             .then_some(DistributionFunctionResolution::NotAttempted),
             graph_cycle,
+            graph_cycle_anchor,
             disposition: DistributionDependencyDisposition::RetainedNotExecuted,
             impact_scope: if kind == Kind::Assign {
                 DistributionImpactScope::DeclaredEndpointsOnly

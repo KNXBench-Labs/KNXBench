@@ -76,7 +76,7 @@ false, and every limitation is listed
   report was 174 MiB. Installing the same 37 archives into a fresh in-memory
   database was still refused (28 `MissingMaster`, 9 `UnsafeMember`).
 - **Tests.**
-  - Distribution 48 (12 for dependency evidence) and grid 7 in
+  - Distribution 50 (14 for dependency evidence) and grid 7 in
     knx-productdb; CLI 6; native ZIP
     regressions 13.
   - Clippy, headers, test layout and local-info checks green.

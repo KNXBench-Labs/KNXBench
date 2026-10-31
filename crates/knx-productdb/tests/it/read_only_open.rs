@@ -43,8 +43,8 @@ fn an_older_database_is_migrated_in_memory_only() {
     let dir = tempfile::tempdir().unwrap();
     let path = dir.path().join("products.sqlite");
     let conn = open_and_migrate(&path).unwrap();
-    // v29 -> v30 is data-only (no DDL): an empty current-schema database is a
-    // genuine v29 one once its version says so.
+    // The last step (v30 -> v31) is data-only (no DDL): an empty current-schema
+    // database is a genuine v30 one once its version says so.
     conn.pragma_update(None, "user_version", CURRENT_PRODUCTDB_VERSION - 1)
         .unwrap();
     drop(conn);

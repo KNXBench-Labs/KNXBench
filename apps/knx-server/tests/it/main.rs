@@ -14,6 +14,7 @@ mod http_activity_history;
 mod http_address_programming;
 mod http_auth;
 mod http_batch_routes;
+mod http_bundle_key_redaction;
 mod http_bus_activity;
 mod http_bus_discover;
 mod http_bus_flow;

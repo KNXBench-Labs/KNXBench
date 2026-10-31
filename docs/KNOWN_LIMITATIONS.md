@@ -1428,7 +1428,7 @@ Development builds name a commit, not uncommitted state, and have no dirty marke
 ### 106. Debug-report privacy limits
 
 **Ledger status:** `ACCEPTED_BOUNDARY` ([KL-106](status/LEDGER.md#snapshot-ids)).
-Redaction covers named patterns only; reports/native exports are not comprehensive anonymization. Source/XML/endpoints can identify projects. DIAG-03's local candidate adds an opt-in saved-project copy, but full private System-2 byte export remains unaccepted pending classification of both byte sides and overlapping archive copies; consent is no exception.
+Redaction covers named patterns only; reports/native exports are not comprehensive anonymization. Source/XML/endpoints can identify projects. DIAG-03 adds an opt-in saved-project copy; System-2 memory bytes never leave raw (owner decision 31 October 2026), the bundle carries a closed metadata projection, and consent is no exception. A raw System-2 export would first need classification of both byte sides and overlapping archive copies.
 [Details and history](limitations/KL-106-debug-report-privacy-limits.md)
 
 <a id="catalogue-kl-130-gate"></a>

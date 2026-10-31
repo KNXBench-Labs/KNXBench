@@ -178,8 +178,8 @@ async fn a_legacy_device_is_placed_parameterised_and_linked() {
     let (_, detail) = call(&app, "GET", &format!("/api/device/{id}"), None).await;
     assert!(detail.to_string().contains("1/1/1"), "{detail}");
 
-    // L4: with an address, its download plans from the program's own
-    // `s19_block` procedure. Never run on hardware, so untested.
+    // L4: with an address, readiness evaluates the program's own `s19_block`
+    // procedure. Neither mode below yields a plan; nothing runs on hardware.
     let (status, tree) = call(
         &app,
         "POST",
@@ -204,8 +204,16 @@ async fn a_legacy_device_is_placed_parameterised_and_linked() {
     )
     .await;
     assert_eq!(status, StatusCode::OK, "{panel}");
+    // Mode 1 deactivates conditional parameters. A legacy database retains no
+    // product XML, so their exclusive ownership is unprovable: refused, never
+    // planned with or without the inactive bytes (inactive-byte write selection).
     let (_, readiness) = call(&app, "GET", "/api/device-readiness", None).await;
     let row = &readiness["devices"][0];
-    assert_eq!(row["readiness"], "untested", "{readiness}");
-    assert_eq!(row["steps"], 23, "{readiness}");
+    assert_eq!(row["readiness"], "unsupported", "{readiness}");
+    assert_eq!(row["category"], "inactive-write-selection", "{readiness}");
+    assert_eq!(
+        row["detail"], "load procedure: inactive-write-selection: unresolved-ownership",
+        "{readiness}"
+    );
+    assert_eq!(row["steps"], Value::Null, "{readiness}");
 }

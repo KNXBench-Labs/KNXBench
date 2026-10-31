@@ -39,6 +39,11 @@ An active Union alternative remains writable at the same address; existing
 Union winner/conflict rules are neither replaced nor newly standardized.
 Necessary source-literal bytes without parameter ownership remain present.
 
+The proof is needed only when a `ParameterRefRef` lies below a `when`; without
+one no parameter can become inactive, nothing is omitted and the regular plan
+stands unchanged with no provenance requirement. `ChannelIndependentBlock` is a
+plain container like `Channel`, matching the existing evaluator.
+
 The omission proof also needs trustworthy structural provenance. Presence of
 opaque Dynamic attributes in the retained SQL `extra` field blocks proof,
 including empty or delimiter-containing values; do not parse audit text to
@@ -49,7 +54,8 @@ own Dynamic elements, and agreement with the ordered stored local-kind inventory
 Inherited namespaces, default resets, unbound prefixes and prefix rebinding must
 be resolved in their actual ancestor context. A local name or NULL `extra` alone
 cannot prove namespace ownership. Missing, foreign or inconsistent provenance
-returns `unresolved-ownership` before omission or connector activity. Genuine
+returns `unresolved-ownership` before omission or connector activity. A legacy
+VD program retains no product XML, so a conditional legacy tree is refused. Genuine
 prefixes bound to the admitted KNX namespace remain supported. This is a
 write-selection proof, not a global prefix ban, catalogue migration, read-only
 restriction or rejection of historical restore generators.

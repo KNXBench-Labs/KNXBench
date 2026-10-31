@@ -17,7 +17,9 @@ not delivered package acceptance, new device support or closure of KL-007/PRG-01
 
 Only exclusively inactive whole bytes proved under the same source-default
 selection topology are omitted. Unknown ownership, disjoint active/inactive bits
-sharing a writable byte and topology changes refuse before connection. Stored
+sharing a writable byte and topology changes refuse before connection. Legacy
+VD programs with deactivated conditional parameters refuse the same way: they
+retain no product XML for the provenance proof (open follow-up). Stored
 values, original source Data/Mask, active Union winners, required literals and
 read-only behavior remain.
 Format 4 binds new captures to an explicit generator; legitimate historical

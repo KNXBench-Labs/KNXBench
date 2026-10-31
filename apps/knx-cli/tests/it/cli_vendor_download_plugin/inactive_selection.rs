@@ -692,3 +692,93 @@ fn f3_real_cli_opaque_dynamic_attributes_refuse_before_any_datagram() {
         }
     }
 }
+
+/// Memory writes at or above the parameter segment, in frame order.
+fn parameter_writes(device: &SimulatedDevice) -> Vec<(u32, Vec<u8>)> {
+    device
+        .seen()
+        .into_iter()
+        .filter_map(|s| match s {
+            Seen::MemoryWrite { address, data, .. } if address >= 0x4400 => Some((address, data)),
+            _ => None,
+        })
+        .collect()
+}
+
+#[test]
+fn channel_independent_block_is_a_plain_container_for_the_selection_proof() {
+    let xml = XML
+        .replace(
+            "<Channel Id=\"M-FFF6_A-0001-01-0000_CH-1\" Text=\"Synthetic\">",
+            "<ChannelIndependentBlock>",
+        )
+        .replace("</Channel>", "</ChannelIndependentBlock>");
+    let dir = tempfile::tempdir().unwrap();
+    let (project, products) = correction_inputs(dir.path(), &xml, false);
+    let device = device();
+    let gateway = gateway(device.clone());
+    let output = write(
+        &["device", "download", TARGET],
+        &project,
+        &products,
+        &gateway.address,
+        dir.path(),
+    );
+    assert!(output.status.success(), "{}", text(&output));
+    drop(gateway);
+    assert_eq!(
+        parameter_writes(&device),
+        vec![
+            (0x4400, vec![1]),
+            (0x4402, vec![0xC7, 0x53]),
+            (0x4405, vec![0x68])
+        ]
+    );
+}
+
+#[test]
+fn choose_without_conditional_parameters_needs_no_provenance_and_omits_nothing() {
+    // Unprovable foreign wrapper, but no parameter can be inactive: the regular plan stands.
+    let xml = XML
+        .replace(
+            "<KNX xmlns=",
+            "<KNX xmlns:e=\"urn:synthetic:foreign\" xmlns=",
+        )
+        .replace("<ParameterBlock ", "<e:ParameterBlock ")
+        .replace("</ParameterBlock>", "</e:ParameterBlock>")
+        .replace(
+            "<when test=\"0\"><ParameterRefRef RefId=\"M-FFF6_A-0001-01-0000_P-I_R-I\" /><ParameterRefRef RefId=\"M-FFF6_A-0001-01-0000_P-U0_R-U0\" /></when>",
+            "<when test=\"0\"></when>",
+        )
+        .replace(
+            "<when test=\"1\"><ParameterRefRef RefId=\"M-FFF6_A-0001-01-0000_P-U1_R-U1\" /></when>",
+            "<when test=\"1\"></when>",
+        );
+    assert!(
+        xml.contains("<when test=\"0\"></when>") && xml.contains("<when test=\"1\"></when>"),
+        "fixture edit must apply"
+    );
+    let dir = tempfile::tempdir().unwrap();
+    let (project, products) = correction_inputs(dir.path(), &xml, false);
+    let device = device();
+    let gateway = gateway(device.clone());
+    let output = write(
+        &["device", "download", TARGET],
+        &project,
+        &products,
+        &gateway.address,
+        dir.path(),
+    );
+    let shown = text(&output);
+    assert!(output.status.success(), "{shown}");
+    assert!(!shown.contains("inactive-write-selection"), "{shown}");
+    drop(gateway);
+    let writes = parameter_writes(&device);
+    // The byte a proved-inactive P-I would own is still written: nothing was omitted.
+    assert!(
+        writes
+            .iter()
+            .any(|(a, d)| *a <= 0x4401 && 0x4401 < *a + d.len() as u32),
+        "{writes:?}"
+    );
+}

@@ -495,7 +495,12 @@ is the remaining copy defect.
   catalog placement, supported parameters, visibility and object links, and
   since 2026-10-09 download plans built from the file's own load procedure.
 - **Remaining:** no legacy download has run on a real device yet, so
-  readiness shows these devices as untested. For the Eibmarkt presence
+  readiness shows these devices as untested. Since the inactive-byte write
+  selection, a legacy program whose current settings deactivate conditional
+  parameters is refused (`inactive-write-selection: unresolved-ownership`):
+  a legacy file keeps no product XML from which exclusive ownership of the
+  inactive bytes could be proved. Programs without such parameters keep their
+  unchanged plan. For the Eibmarkt presence
   detector N000520 the legacy program writes one hidden threshold
   (`4196h`) as `0` where ETS writes nothing and the device keeps `1000`.
   Siemens `07B0h` programs (merged procedures) stay refused. No mapped

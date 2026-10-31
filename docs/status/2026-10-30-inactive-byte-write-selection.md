@@ -131,6 +131,22 @@ capabilities, a denied raw-socket control and no touched or unchecked user-data
 entries. Raw source, original binaries/databases and detailed receipts remain
 private; no licensed payload or local machine identity is published here.
 
+## Maintained branch gate correction
+
+The first maintained change-scoped branch gate passed fmt, documentation,
+browser lanes, the five xtask checks, tool tests, the Web gate (990 browser
+tests) and Clippy, but its Rust tests failed two knx-server consumers. The
+proof refused programs where nothing can be omitted: `ChannelIndependentBlock`
+was missing from the structural whitelist although the evaluator treats it as
+a container, and provenance ran for any `choose`, even without a conditional
+`ParameterRefRef`. Both server failures reproduced before the fix; two new
+real-CLI tests (a `ChannelIndependentBlock` positive oracle with the unchanged
+exact frames, and a conditional-parameter-free tree whose foreign wrapper needs
+no provenance and omits nothing) failed with `unresolved-ownership` before the
+fix and pass after it. The legacy VD consumer now expects the documented
+fail-closed refusal instead of an untested plan. The gate is re-run on the
+corrected head; this record credits no stage of that rerun in advance.
+
 ## Remaining acceptance and open work
 
 Still pending for the parent delivery owner: maintained routine branch and

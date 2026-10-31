@@ -138,7 +138,11 @@ group addresses (`apps/knx-server/tests/http_legacy_device.rs`).
 - ~~**No download.**~~ **Planned since 2026-10-09** (ADR-0094, *Amendment:
   L4*): `load_program_code` reads the program's `s19_block` rows from the
   stored payload. **Still limited:** no legacy download has run on a device,
-  so readiness grades it untested. N000520's legacy tree writes P-5008's
+  so readiness grades it untested. A legacy program whose current values
+  deactivate conditional parameters is refused by the
+  [inactive-byte write selection](../contracts/inactive-byte-write-selection.md)
+  with `unresolved-ownership`: no retained product XML can prove namespace and
+  ownership provenance. A legacy provenance proof is open follow-up work. N000520's legacy tree writes P-5008's
   default 0 at `4196h` where ETS's conversion keeps the base `03E8h` (L2
   deviation 3). Merged procedures (`07B0h`, `MERGE_ID`/`PROC_MASK`), control
   code `05h` and procedures of a file without `Record` column (the `.vd3`'s

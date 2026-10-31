@@ -43,7 +43,26 @@ fn permissions(
         .iter()
         .map(|s| (s.id.clone(), s.address, vec![true; s.octets.len()]))
         .collect();
-    if !nodes.values().any(|n| n.kind == "choose") {
+    // Only a ParameterRefRef below a `when` can become inactive. Without one nothing can be
+    // omitted, so no provenance is needed and the regular plan stands unchanged.
+    // A dangling or cyclic ancestry counts as conditional, so it still needs the full proof.
+    let below_when = |mut parent: Option<i64>| {
+        for _ in 0..=nodes.len() {
+            let Some(id) = parent else { return false };
+            let Some(node) = nodes.get(&id) else {
+                return true;
+            };
+            if node.kind == "when" {
+                return true;
+            }
+            parent = node.parent_id;
+        }
+        true
+    };
+    if !nodes
+        .values()
+        .any(|n| n.kind == "ParameterRefRef" && below_when(n.parent_id))
+    {
         return Ok(permission);
     }
     namespace::prove(
@@ -80,7 +99,11 @@ fn permissions(
         let node = nodes.get(&id).ok_or_else(unresolved)?;
         let child_ids = children.get(&Some(id)).map(Vec::as_slice).unwrap_or(&[]);
         match node.kind.as_str() {
-            "Dynamic" | "Channel" | "ParameterBlock" | "ParameterSeparator" => {}
+            "Dynamic"
+            | "ChannelIndependentBlock"
+            | "Channel"
+            | "ParameterBlock"
+            | "ParameterSeparator" => {}
             "choose" => {
                 if node.control_kind != Some(ControlKind::Comparable)
                     || node.ref_id.is_none()

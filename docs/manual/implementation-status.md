@@ -961,6 +961,7 @@ source-bound browser/unit/build evidence; this does not expand KNX compatibility
 | `knx ga-export`, `knx ga-import` (with `--dry-run`) | ✅ Implemented | — |
 | `knx doc-export`, `knx diff` | ✅ Implemented | — |
 | `knx products list / ingest / show / verify` | ✅ Implemented | `ingest` accepts a `.knxproj` or a `.knxprod`; a `.vd2` argument is listed but always refused |
+| `knx products inspect-distribution` | 🟡 Partial or experimental | Read-only JSON report of a manufacturer XML or distribution ZIP (e.g. OpenKNX releases); installs nothing — [contract](../contracts/distribution-inspection.md), [KL-187](../KNOWN_LIMITATIONS.md#catalogue-kl-187) |
 | `knx bus discover / monitor / write / route-monitor / route-send / scan` | ✅ Implemented | Some with the limitations under *KNXnet/IP and the bus* |
 | Command-specific exit codes | ✅ Implemented | Import/GA-import use `2` for report errors; `diff --exit-code` uses 0 equal / 1 different / 2 failure. Read the command's contract, not one global meaning for `2` |
 | Creating a project from the command line | ❌ Not implemented | No command exists; create one in the application |

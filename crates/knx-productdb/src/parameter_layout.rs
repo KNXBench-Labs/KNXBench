@@ -5,6 +5,7 @@ use rusqlite::{Connection, OptionalExtension};
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 
 mod grid;
+pub(crate) use grid::{layout_attribute_is_known, layout_element_is_known};
 pub use grid::{BlockGrid, Cell, GridAxis, GridIssue, GridIssueKind, GridStatus, MAX_GRID_EVENTS};
 
 /// Exact program ownership shared by every presentation reader of the source.

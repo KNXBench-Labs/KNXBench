@@ -1,5 +1,7 @@
-//! Product database: manufacturer, hardware, application program and version
-//! data in a separate SQLite file shared across projects (ADR-0005).
+//! Stores shared product data and exposes read-only source inspection independently of projects.
+//!
+//! Manufacturer, hardware, application program and version data live in a
+//! separate SQLite file shared across projects (ADR-0005).
 //!
 //! Every ingested file is kept twice: verbatim as a blob keyed by its
 //! SHA-256, and as parsed rows. The blob is the integrity guarantee — the
@@ -18,6 +20,7 @@ pub mod code;
 mod date_kind_backfill;
 pub mod declared_segments;
 pub mod device_evaluation;
+pub mod distribution;
 pub mod download_plan;
 pub mod dynamic;
 pub mod enrich;

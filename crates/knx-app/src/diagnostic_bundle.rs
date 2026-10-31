@@ -513,6 +513,12 @@ fn percent_encode(text: &str) -> String {
     out
 }
 
+/// The consent note on every section that carries declared memory or a raw
+/// non-System-2 recording (owner decision 31 October 2026). Server and CLI
+/// emit exactly this text; the web translates it by exact match.
+pub const PRIVATE_RAW_NOTE: &str = "contains device configuration, possibly passwords; \
+     recognised KNX keys are redacted; keep private";
+
 /// A prefilled mail draft (decision 6): subject with version and operation
 /// id, a body asking to attach the saved ZIP. It never carries the bundle,
 /// a section or any value from it.

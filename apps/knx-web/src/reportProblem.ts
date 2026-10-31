@@ -180,10 +180,38 @@ const REASONS: ReadonlyArray<[string, MessageKey]> = [
   ["the browser did not describe itself", "reportProblem.reason.noClient"],
   ["no project is open", "reportProblem.reason.noProject"],
   ["this project carries no import report", "reportProblem.reason.noImportReport"],
+  ["this section is withheld until its content is admitted as free of credentials", "reportProblem.reason.withheld"],
+  ["the selected operation names no device of this project", "reportProblem.reason.sourceNamesNoDevice"],
+  ["the selected diagnostic source is unavailable", "reportProblem.reason.source"],
+  ["the originating device source is unavailable", "reportProblem.reason.originatingDevice"],
+  ["the retained diagnostic result is unavailable", "reportProblem.reason.retainedMissing"],
+  ["the retained diagnostic result has expired", "reportProblem.reason.retainedExpired"],
+  ["the diagnostic result is not complete", "reportProblem.reason.retainedUnfinished"],
+  ["the diagnostic result is not exportable", "reportProblem.reason.retainedNonExportable"],
+  ["the retained support result is unavailable", "reportProblem.reason.supportMissing"],
+  ["the retained support result has expired", "reportProblem.reason.supportExpired"],
+  ["the support result is not complete", "reportProblem.reason.supportUnfinished"],
+  ["the diagnostic recording version is unsupported", "reportProblem.reason.recordingVersion"],
+  ["the diagnostic recording result is malformed", "reportProblem.reason.recordingResult"],
 ];
 
 export function reasonKey(reason: string): MessageKey | null {
   return REASONS.find(([text]) => text === reason)?.[1] ?? null;
+}
+
+/** The server's fixed English section notes we translate; other notes are shown as sent. */
+const NOTES: ReadonlyArray<[string, MessageKey]> = [
+  ["contains device configuration, possibly passwords; recognised KNX keys are redacted; keep private", "reportProblem.note.privateRaw"],
+  ["the raw operation recording is withheld; this is the admitted private projection", "reportProblem.note.rawWithheldProjection"],
+  ["the raw operation recording is withheld; this is the retained typed result", "reportProblem.note.rawWithheldResult"],
+  ["the operation recording is unavailable; this is the admitted private projection", "reportProblem.note.recordingMissingProjection"],
+  ["the operation recording is unavailable; this is the retained typed result", "reportProblem.note.recordingMissingResult"],
+  ["the recording's last line is incomplete (interrupted write)", "reportProblem.note.tornTail"],
+  ["the last saved state of the project; unsaved changes are not included", "reportProblem.note.savedRoot"],
+];
+
+export function noteKey(note: string): MessageKey | null {
+  return NOTES.find(([text]) => text === note)?.[1] ?? null;
 }
 
 const OPERATION_LABELS: Record<string, MessageKey> = {

@@ -15,6 +15,7 @@ use std::time::Duration;
 
 use knx_app::diagnostic_bundle::{
     self as bundle, BundleFile, BundleRequest, BundleSection, ProblemType, SectionKind,
+    PRIVATE_RAW_NOTE,
 };
 use knx_app::operation_recording::{
     OperationKind, OperationRecorder, OperationStart, RecordedOutcome, RecordingStore,
@@ -31,6 +32,12 @@ use serde_json::json;
 
 /// The flag, as it appears anywhere on the command line.
 pub const FLAG: &str = "--diagnostic-bundle";
+
+/// The System-2 subcommand; only it produces (or misses) System-2 evidence.
+const SYSTEM2_COMMAND: &str = "system2-validation";
+
+/// Largest raw recording copied into a bundle, as on the server.
+const MAX_RAW_RECORDING_BYTES: u64 = 64 * 1024 * 1024;
 
 struct Session {
     store: RecordingStore,
@@ -314,15 +321,24 @@ fn write(session: &Session) -> Result<PathBuf, String> {
                 "{FLAG}: System-2 evidence was captured more than once"
             ));
         }
-        CliSystem2Slot::Empty | CliSystem2Slot::Missing | CliSystem2Slot::Unavailable => {
+        CliSystem2Slot::Unavailable => {
             sections[0]
                 .notes
                 .push("System-2 evidence was unavailable for this invocation".into());
+        }
+        CliSystem2Slot::Empty | CliSystem2Slot::Missing => {
+            if session.command == SYSTEM2_COMMAND {
+                sections[0]
+                    .notes
+                    .push("System-2 evidence was unavailable for this invocation".into());
+            }
         }
         CliSystem2Slot::Consumed => {
             return Err(format!("{FLAG}: diagnostic evidence was already consumed"));
         }
     }
+    let raw = raw_recording_sections(session, &mut sections[0]);
+    sections.extend(raw);
     let request = BundleRequest {
         problem,
         writer: writer_identity(),
@@ -339,6 +355,81 @@ fn write(session: &Session) -> Result<PathBuf, String> {
     std::io::Write::write_all(&mut file, &zip).map_err(|e| e.to_string())?;
     file.sync_all().map_err(|e| e.to_string())?;
     Ok(session.bundle.clone())
+}
+
+/// This invocation's non-System-2 recordings, exactly as recorded (keys are
+/// redacted at capture). The flag is the user's consent for this one bundle;
+/// owner decision 31 October 2026 lets such raw recordings leave after consent
+/// with the keep-private note. System-2 recordings never leave raw: their
+/// admitted projection above is the only System-2 evidence, and no recording
+/// of a `system2-*` subcommand leaves raw whatever its kind. The newest
+/// recording is the operation, older ones of the same invocation are earlier
+/// operations. Anything unreadable or oversized is left out with a note.
+fn raw_recording_sections(
+    session: &Session,
+    environment: &mut BundleSection,
+) -> Vec<BundleSection> {
+    if session.command.starts_with("system2-") {
+        environment
+            .notes
+            .push("raw recordings of System-2 commands are never included".into());
+        return Vec::new();
+    }
+    let recordings = match session.store.list() {
+        Ok(recordings) => recordings,
+        Err(_) => {
+            environment
+                .notes
+                .push("the recordings of this invocation could not be listed".into());
+            return Vec::new();
+        }
+    };
+    let mut sections = Vec::new();
+    for summary in recordings {
+        let raw_allowed = summary.format_version == Some(1)
+            && summary
+                .operation_kind
+                .as_deref()
+                .is_some_and(|kind| !kind.starts_with("system2-"));
+        if !raw_allowed {
+            continue;
+        }
+        let Ok(bytes) = session
+            .store
+            .read_bounded(&summary.id, MAX_RAW_RECORDING_BYTES)
+        else {
+            environment.notes.push(format!(
+                "recording {} was left out: unreadable or larger than 64 MiB",
+                summary.id
+            ));
+            continue;
+        };
+        let kind = if sections.is_empty() {
+            SectionKind::Operation
+        } else {
+            SectionKind::EarlierOperation
+        };
+        let mut section = BundleSection::new(kind);
+        section.label = Some(summary.id.clone());
+        section.entries = bytes.iter().filter(|byte| **byte == b'\n').count();
+        section.markers = bundle::ContentMarkers {
+            addresses: true,
+            names: true,
+            parameter_values: true,
+            network_addresses: true,
+        };
+        section.notes.push(PRIVATE_RAW_NOTE.into());
+        if summary.torn_tail {
+            section
+                .notes
+                .push("the recording's last line is incomplete (interrupted write)".into());
+        }
+        section
+            .files
+            .push(BundleFile::new("recording.jsonl", bytes));
+        sections.push(section);
+    }
+    sections
 }
 
 #[cfg(test)]

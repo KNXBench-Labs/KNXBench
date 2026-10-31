@@ -2,9 +2,10 @@
 //!
 //! The built `knx` binary runs `device find-serial` against
 //! `knx_net::commissioning::simulator_gateway` on 127.0.0.1. The bundle's
-//! recording must hold exactly the datagrams the gateway saw, per direction;
-//! the temporary recording directory must be gone afterwards. No real
-//! gateway, bus or device is involved.
+//! recording must hold exactly the datagrams the gateway saw, per direction,
+//! with the keep-private note (owner decision 31 October 2026: the flag is the
+//! consent for this one bundle); the temporary recording directory must be
+//! gone afterwards. No real gateway, bus or device is involved.
 
 use std::collections::BTreeMap;
 use std::io::Read;
@@ -69,7 +70,7 @@ fn knx(dir: &std::path::Path) -> Command {
 }
 
 #[test]
-fn a_find_serial_run_cleans_up_and_never_exports_its_raw_tunnel() {
+fn a_find_serial_run_cleans_up_and_exports_its_recording_byte_exactly() {
     let dir = tempfile::tempdir().unwrap();
     let (endpoint, seen) = gateway();
     let bundle = dir.path().join("out").join("report.zip");
@@ -111,10 +112,59 @@ fn a_find_serial_run_cleans_up_and_never_exports_its_raw_tunnel() {
     assert!(seen.iter().any(|(from_tool, _)| *from_tool));
     assert!(seen.iter().any(|(from_tool, _)| !*from_tool));
     assert!(!archive.file_names().any(|name| {
-        name.ends_with("recording.jsonl")
-            || name.ends_with("system2-private.json")
-            || name.ends_with("system2-report.json")
+        name.ends_with("system2-private.json") || name.ends_with("system2-report.json")
     }));
+
+    // Exactly one operation section: the raw recording, as the wire saw it.
+    let sections = manifest["sections"].as_array().unwrap();
+    let kinds: Vec<&str> = sections
+        .iter()
+        .map(|s| s["kind"].as_str().unwrap())
+        .collect();
+    assert_eq!(kinds, ["environment", "operation"]);
+    assert!(
+        sections[0]["notes"].as_array().unwrap().is_empty(),
+        "{}",
+        sections[0]
+    );
+    let operation = &sections[1];
+    assert_eq!(
+        operation["notes"],
+        serde_json::json!([knx_app::diagnostic_bundle::PRIVATE_RAW_NOTE])
+    );
+    let id = operation["label"].as_str().unwrap();
+    let mut text = String::new();
+    archive
+        .by_name(&format!("operations/{id}/recording.jsonl"))
+        .unwrap()
+        .read_to_string(&mut text)
+        .unwrap();
+    let lines: Vec<Value> = text
+        .lines()
+        .map(|l| serde_json::from_str(l).unwrap())
+        .collect();
+    assert_eq!(lines[0]["operation_kind"], "serial-number-address");
+    assert_eq!(lines[0]["writer"]["program"], "knx-cli");
+    assert_eq!(lines[0]["gateway"], endpoint);
+    let hex = |bytes: &[u8]| -> String { bytes.iter().map(|b| format!("{b:02x}")).collect() };
+    for (dir, from_tool) in [("sent", true), ("received", false)] {
+        let recorded: Vec<&str> = lines
+            .iter()
+            .filter(|l| l["type"] == "datagram" && l["dir"] == dir)
+            .map(|l| l["raw"].as_str().unwrap())
+            .collect();
+        let wire: Vec<String> = seen
+            .iter()
+            .filter(|(from, _)| *from == from_tool)
+            .map(|(_, bytes)| hex(bytes))
+            .collect();
+        assert!(!recorded.is_empty());
+        assert_eq!(recorded, wire, "{dir}");
+    }
+    let end = lines.last().unwrap();
+    assert_eq!(end["type"], "end");
+    assert_eq!(end["outcome"], "succeeded");
+    assert_eq!(end["records_dropped"], 0);
 }
 
 #[test]

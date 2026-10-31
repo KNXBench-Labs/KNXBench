@@ -3,8 +3,10 @@ import { describe, expect, it } from "vitest";
 import { PROBLEM_TYPES, SECTION_KINDS, type SectionKind } from "./diagnosticBundleApi";
 import {
   buildQuery, boundedClientFacts, bytesByKind, defaultOffer, defaultSelection, formatBytes, initialChoice, mailDraftFor, markerKeys,
-  reasonKey, recentErrors, RECENT_ERROR_LIMIT, toggleEarlier, toggleSection, withProblemType,
+  noteKey, reasonKey, recentErrors, RECENT_ERROR_LIMIT, toggleEarlier, toggleSection, withProblemType,
 } from "./reportProblem";
+import { messages as de } from "./messages/de";
+import { messages as en } from "./messages/en";
 import type { ToastNotification } from "./toast";
 
 // Owner table O1 of docs/open-work/DIAG-03, transcribed independently of the module:
@@ -148,6 +150,22 @@ describe("sizes and markers", () => {
     expect(reasonKey("no device is chosen")).toBe("reportProblem.reason.noDevice");
     expect(reasonKey("the bus monitor is not running")).toBe("reportProblem.reason.busMonitorOff");
     expect(reasonKey("a secret-free copy of the project could not be made: disk")).toBeNull();
+  });
+
+  it("translates the withheld, no-device and keep-private texts into German", () => {
+    const withheld = "this section is withheld until its content is admitted as free of credentials";
+    const noDevice = "the selected operation names no device of this project";
+    const privateRaw = "contains device configuration, possibly passwords; recognised KNX keys are redacted; keep private";
+    const keys = [reasonKey(withheld), reasonKey(noDevice), reasonKey("the selected diagnostic source is unavailable"), noteKey(privateRaw)];
+    expect(keys).toEqual(["reportProblem.reason.withheld", "reportProblem.reason.sourceNamesNoDevice",
+      "reportProblem.reason.source", "reportProblem.note.privateRaw"]);
+    for (const key of keys) {
+      expect(en[key!]).toBeTruthy();
+      expect(de[key!]).toBeTruthy();
+      expect(de[key!]).not.toBe(en[key!]);
+    }
+    expect(de["reportProblem.note.privateRaw"]).toMatch(/Passwörter/);
+    expect(noteKey("removed BCU key at device 1.1.1")).toBeNull();
   });
 });
 

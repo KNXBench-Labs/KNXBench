@@ -276,7 +276,7 @@ async fn unadmitted_client_bytes_are_noninterfering_and_description_is_withheld(
     assert_eq!(client["selected"], false);
     assert_eq!(
         client["unavailable"],
-        "the selected diagnostic source is unavailable"
+        "this section is withheld until its content is admitted as free of credentials"
     );
     let mut altered = reviewed(&query, &preview);
     altered["client"]["recentErrors"] = json!(["unreviewed"]);
@@ -605,6 +605,44 @@ async fn address_only_targets_resolve_only_when_proven_and_unambiguous() {
 }
 
 #[tokio::test]
+async fn a_proven_run_that_names_no_device_says_so_and_never_projects_the_chosen_one() {
+    // A serial-number lookup records no project device: the explicit choice is
+    // never projected next to it, and the reason says why, not "source unavailable".
+    let target = json!({"serialNumber":"0083:12345678","write":false});
+    for explicit in [true, false] {
+        for chosen in [1, 2] {
+            let dir = tempfile::tempdir().unwrap();
+            let state = state(dir.path(), true);
+            open_project(&state, &[(1, "1.1.1"), (2, "1.1.2")]);
+            let id = recorded_target(&state, target.clone(), Provenance::Proven);
+            let what = format!("no device, chosen {chosen}, explicit {explicit}");
+            let query = extract_query(&id, explicit, chosen);
+            let preview = preview_query(&state, &query).await;
+            for kind in ["device", "catalogue"] {
+                assert_eq!(
+                    offer(&preview, kind)["unavailable"],
+                    "the selected operation names no device of this project",
+                    "{what}: {kind}"
+                );
+            }
+            assert_extracts_unavailable(&state, &query, &id, &what).await;
+        }
+    }
+    for provenance in UNPROVEN {
+        let dir = tempfile::tempdir().unwrap();
+        let state = state(dir.path(), true);
+        open_project(&state, &[(1, "1.1.1"), (2, "1.1.2")]);
+        let id = recorded_target(&state, target.clone(), provenance);
+        let preview = preview_query(&state, &extract_query(&id, true, 1)).await;
+        assert_eq!(
+            offer(&preview, "device")["unavailable"],
+            "the originating device source is unavailable",
+            "{provenance:?}"
+        );
+    }
+}
+
+#[tokio::test]
 async fn without_an_operation_the_chosen_current_device_is_unchanged() {
     let dir = tempfile::tempdir().unwrap();
     let state = state(dir.path(), true);
@@ -705,7 +743,7 @@ async fn explicit_none_never_selects_a_previous_run_and_client_can_be_selected_a
         .unwrap();
     assert_eq!(
         client["unavailable"],
-        "the selected diagnostic source is unavailable"
+        "this section is withheld until its content is admitted as free of credentials"
     );
     assert_eq!(client["selected"], false);
     for reference in [

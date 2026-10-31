@@ -402,9 +402,12 @@ System-2 command contributes only its admitted private projection and report.
 Every recording left out (unreadable header, System-2 kind, unreadable or larger
 than 64 MiB, or any recording of a `system2-*` command) is named in a note in the
 environment section. The help text, the success message, the web mail draft,
-the recordings note and the manifest's `notRemoved` say that the ZIP may contain
-device configuration and passwords and must be kept private; a recording header's
-redaction policy names exactly what is redacted at capture. Checked on 31 October 2026 against an installed
+the recordings note, the wizard's "not removed" text and the manifest's
+`notRemoved` say that the ZIP may contain device configuration and passwords and
+must be kept private. A new recording header's redaction policy states only what
+capture does (authorize and key-write keys zeroed, see [Redaction](#redaction))
+and that no tunnel password or KNX Secure key is exchanged; older headers keep
+their original text. Checked on 31 October 2026 against an installed
 release build on loopback: without the flag nothing is written and no hidden
 directory appears; a doubled flag (also `--diagnostic-bundle=` mixed with the
 spaced form, same or different file), a flag without a file name and a flag

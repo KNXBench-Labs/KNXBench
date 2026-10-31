@@ -3757,7 +3757,7 @@ export const messages: Record<MessageKey, string> = {
   "reportProblem.recordingOff":
     "Der Betreiber dieser Installation hat die Aufzeichnung von Gerätevorgängen abgeschaltet (KNX_DIAGNOSTIC_RECORDING). Es entstehen keine neuen Aufzeichnungen; ältere können weiterhin enthalten sein.",
   "reportProblem.retention":
-    "KNXBench zeichnet jeden Gerätevorgang auf dieser Installation auf und behält die letzten 100 Vorgänge oder 512 MiB, je nachdem, was zuerst erreicht ist; fehlgeschlagene Vorgänge bleiben am längsten. Erkannte KNX-Schlüssel und Tunnelpasswörter werden unkenntlich gemacht; Gerätekonfiguration, die Passwörter enthalten kann, wird so aufgezeichnet, wie sie übertragen wurde.",
+    "KNXBench zeichnet jeden Gerätevorgang auf dieser Installation auf und behält die letzten 100 Vorgänge oder 512 MiB, je nachdem, was zuerst erreicht ist; fehlgeschlagene Vorgänge bleiben am längsten. Geräteschlüssel, die zum Autorisieren oder Schlüsselschreiben gesendet werden, werden unkenntlich gemacht; KNXBench nutzt nur ungesichertes KNXnet/IP, daher werden weder Tunnelpasswörter noch KNX-Secure-Schlüssel übertragen. Gerätekonfiguration, die Passwörter enthalten kann, wird so aufgezeichnet, wie sie übertragen wurde: Aufzeichnungen und Bundles vertraulich behandeln.",
   "reportProblem.operation.label": "Vorgang",
   "reportProblem.operation.none": "Kein aufgezeichneter Vorgang",
   "reportProblem.operation.option": "{started} · {kind} · {outcome}",
@@ -3799,7 +3799,7 @@ export const messages: Record<MessageKey, string> = {
   "reportProblem.removed":
     "Immer entfernt, auch mit deiner Zustimmung: Geräteschlüssel (BCU-Schlüssel), KNX-Secure- und Tool-Schlüssel, Tunnel- und Anmeldepasswörter. An ihrer Stelle steht, was entfernt wurde und wie lang es war, nie der Wert.",
   "reportProblem.notRemoved":
-    "Nicht entfernt: physikalische und Gruppenadressen, Namen, Parameterwerte, die Netzwerkadressen von Gateways sowie in Rohaufzeichnungen und Gerätespeicher die Gerätekonfiguration, die Passwörter enthalten kann, in den gewählten Abschnitten.",
+    "Nicht entfernt (in den gewählten Abschnitten): physikalische und Gruppenadressen, Namen, Parameterwerte, die Netzwerkadressen von Gateways sowie in Rohaufzeichnungen und im Gerätespeicher die Gerätekonfiguration, die Passwörter enthalten kann. Datei vertraulich behandeln.",
   "reportProblem.description.label": "Was ist passiert? (optional)",
   "reportProblem.description.hint": "Kommt in deinen eigenen Worten in das Manifest der ZIP-Datei. Tippe keine Passwörter ein.",
   "reportProblem.consent": "Ich habe mir die Vorschau angesehen und möchte diese ZIP-Datei auf diesem Rechner speichern.",

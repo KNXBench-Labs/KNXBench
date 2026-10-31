@@ -179,8 +179,10 @@ you are happy to discuss in public; send the ZIP by mail.
 ### Recordings: what is kept and how to delete it
 
 KNXBench retains bounded operation recordings for supported server operations,
-including timing and outcome information. Keys and passwords are never intended
-recording content. For System-2 operations the unified bundle uses only the closed
+including timing and outcome information. Device keys sent to authorize or to
+write keys are made unrecognisable at capture; KNXBench uses only unsecured
+KNXnet/IP, so no tunnel password or KNX Secure key is exchanged. Device
+configuration, which may contain passwords, is recorded as exchanged. For System-2 operations the unified bundle uses only the closed
 recording summary and a private projection; for other operations it copies
 `recording.jsonl` unchanged into the ZIP after your consent, marked "possibly
 passwords; keep private". Read-diagnostics memory (`memory.json`) is included

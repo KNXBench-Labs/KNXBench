@@ -16,11 +16,16 @@ Limits:
 - **Not installable.** Installation still refuses these sources. Inspection
   gives no write, programming or initialization authority.
 - **Dynamic is a subset.** Only what the existing evaluator activates from raw
-  source fallbacks. Assign, calculations, validation and handlers are not
-  applied. Dynamic is not attempted for ambiguous or unparsed applications.
+  source fallbacks. Dynamic is not attempted for ambiguous or unparsed
+  applications.
+- **Dependencies are declarations only.** Scripts, calculations, validations,
+  button handlers and Assign are listed with their declared endpoints
+  (`dependencyEvidence`, report format 3) but never run, resolved to functions
+  or applied. Their conditions are not evaluated, and impact beyond declared
+  Assign endpoints is unknown.
 - **Reference coverage is a subset.** Mask, medium and DPT references are
-  external and unresolved. Argument, Assign, Rename and BinaryData references
-  are not followed.
+  external and unresolved. Argument, Rename and BinaryData references are not
+  followed.
 - **Not inventoried.** Comments and processing instructions are covered only
   by the document hash.
 - **Whole-source refusal.** Any resource limit, including a structural one in

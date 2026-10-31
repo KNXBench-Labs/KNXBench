@@ -247,6 +247,9 @@ pub struct ProgramCode {
     pub load_procedures: Vec<LoadProcedure>,
     /// `Static/Options` attributes, verbatim.
     pub options: BTreeMap<String, String>,
+    /// Presence in any own Static/Options, retained before last-map replacement.
+    /// Values remain opaque in the original XML.
+    pub has_download_invisible_parameters: bool,
     /// Presence of source `Static/FixupList`, even an empty declaration.
     /// Contents remain in the original XML; no fixup semantics are inferred.
     pub has_fixup_list: bool,
@@ -535,6 +538,10 @@ impl<'a> Parser<'a> {
                         CustomerContext::RootOptions,
                         &child_path,
                     );
+                    code.has_download_invisible_parameters |= child
+                        .attributes
+                        .evidence_value("DownloadInvisibleParameters")
+                        .is_some();
                     code.options = verbatim(&child.attributes);
                     self.skip(&child)?;
                 }
@@ -1151,6 +1158,24 @@ mod tests {
                 .map(String::as_str),
             Some("true")
         );
+    }
+
+    #[test]
+    fn invisible_declaration_presence_survives_later_empty_root_options() {
+        for value in ["", "None", "Background", "DefaultValue", "private-marker"] {
+            let code = parsed(&format!(
+                r#"<Options DownloadInvisibleParameters="{value}" /><Options />"#
+            ));
+            assert!(code.has_download_invisible_parameters);
+            assert!(
+                code.options.is_empty(),
+                "the verbatim map keeps its existing semantics"
+            );
+        }
+        let qualified = parsed(
+            r#"<Options xmlns:q="urn:synthetic" q:DownloadInvisibleParameters="None" /><Options />"#,
+        );
+        assert!(!qualified.has_download_invisible_parameters);
     }
 
     #[test]

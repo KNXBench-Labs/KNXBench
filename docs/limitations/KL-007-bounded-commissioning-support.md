@@ -6,6 +6,39 @@ This dossier preserves the technical detail and dated history. Earlier
 headings, failures and lifting conditions are historical where later
 updates supersede them; they are not new work assignments.
 
+## Inactive whole-byte write selection — 30 October 2026 focused result
+
+The [regular-route contract](../contracts/inactive-byte-write-selection.md) is
+implemented with positive executor-frame proof and independently reviewed source;
+[focused results](../status/2026-10-30-inactive-byte-write-selection.md) record the
+actual regression and original consumer failures separately. Maintained package
+gates, actual server/Web build/smoke and publication are still pending. This is
+not delivered package acceptance, new device support or closure of KL-007/PRG-01.
+
+Only exclusively inactive whole bytes proved under the same source-default
+selection topology are omitted. Since the byte-precise fallback (31 October 2026,
+owner decision) a failed proof never refuses: a byte with unknown ownership or
+disjoint active/inactive bits is written as before, and a program-wide proof
+failure or a topology change omits nothing, leaving the regular plan unchanged.
+Real catalogues commonly set `DownloadInvisibleParameters`, whose semantics are
+unverified, so such programs currently omit nothing. Legacy VD programs retain no
+product XML for the provenance proof and keep their unchanged plan (a legacy
+provenance proof is open follow-up). Stored
+values, original source Data/Mask, active Union winners, required literals and
+read-only behavior remain.
+Format 4 binds new captures to an explicit generator; legitimate historical
+restores retain their unfiltered shape and strict application/exemplar checks.
+Old hardware evidence transfers only to an identical ordered plan after the same
+concrete Partial derivation, not merely because the application was once tested.
+
+`regular-070n-exclusive-inactive-storage-survival` remains **OPEN**. The absence
+of a direct inactive-byte write does not prove retention through Unload,
+allocation, task control, LoadCompleted or Restart. Neither a retain-style
+simulator nor the bounded plan-region backup proves that physical outcome.
+Broader inactive/default-token, Dynamic/Union and customer-write semantics and
+whole recovery
+remain unresolved ([source and specification limits](../research/2026-10-30-inactive-byte-write-selection.md)).
+
 <a id="customer-adjustable-write-refusal--30-october-2026-implementation"></a>
 
 ## Customer-adjustable write refusal — 30 October 2026 software acceptance

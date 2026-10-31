@@ -260,6 +260,8 @@ pub fn check_acknowledgement(
 
 /// What a backup is kept as, besides its octets.
 pub struct BackupTarget<'a> {
+    /// Generator of the actual prepared download or read restore record.
+    pub write_selection: knx_app::device_backup::WriteSelection,
     /// The directory.
     pub dir: &'a std::path::Path,
     /// The application program.
@@ -926,6 +928,7 @@ async fn execute_inner<T: ManagementTransport>(
     let kept_at = std::cell::RefCell::new(None);
     let mut keep = |taken: &DeviceBackup| {
         let stored = StoredBackup {
+            write_selection: backup.write_selection,
             backup: taken.clone(),
             application: backup.application.to_owned(),
             partial: backup.partial,
@@ -1287,6 +1290,8 @@ mod tests {
         let mut activity = log.start_download(1, device.address()).unwrap();
         let backups = dir.path().join("backups");
         let backup = BackupTarget {
+            write_selection:
+                knx_app::device_backup::WriteSelection::SourceDefaultInactiveWholeBytesV1,
             dir: &backups,
             application: "synthetic-application",
             partial: None,
@@ -1353,6 +1358,8 @@ mod tests {
         std::fs::write(&history, original).unwrap();
         let backups = dir.path().join("backups");
         let backup = BackupTarget {
+            write_selection:
+                knx_app::device_backup::WriteSelection::SourceDefaultInactiveWholeBytesV1,
             dir: &backups,
             application: "synthetic-application",
             partial: None,
@@ -1444,6 +1451,7 @@ mod tests {
                 &BackupTarget {
                     dir: backups,
                     application: &prepared.request.program_id,
+                    write_selection: prepared.write_selection,
                     partial: prepared.partial.as_ref().map(|(parts, _)| *parts),
                     taken: "2026-09-29T15:00:00+02:00".into(),
                 },
@@ -1595,6 +1603,7 @@ mod tests {
                 &BackupTarget {
                     dir: &backups,
                     application: &stored.application,
+                    write_selection: stored.write_selection,
                     partial: None,
                     taken: "2026-09-29T15:05:00+02:00".into(),
                 },
@@ -2103,3 +2112,11 @@ mod tests {
 #[cfg(test)]
 #[path = "device_download_check_tests.rs"]
 mod check_tests;
+
+#[cfg(test)]
+#[path = "device_download_inactive_selection_tests.rs"]
+mod inactive_selection_tests;
+
+#[cfg(test)]
+#[path = "device_download_inactive_acceptance_tests.rs"]
+mod inactive_selection_acceptance_tests;

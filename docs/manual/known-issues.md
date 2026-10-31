@@ -508,7 +508,8 @@ is the remaining copy defect.
   catalog placement, supported parameters, visibility and object links, and
   since 2026-10-09 download plans built from the file's own load procedure.
 - **Remaining:** no legacy download has run on a real device yet, so
-  readiness shows these devices as untested. For the Eibmarkt presence
+  readiness shows these devices as untested. Legacy programs keep their
+  unchanged plan under the inactive-byte write selection. For the Eibmarkt presence
   detector N000520 the legacy program writes one hidden threshold
   (`4196h`) as `0` where ETS writes nothing and the device keeps `1000`.
   Siemens `07B0h` programs (merged procedures) stay refused. No mapped

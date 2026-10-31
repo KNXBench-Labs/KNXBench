@@ -1,0 +1,43 @@
+{
+  "format": 3,
+  "kind": "knxbench-device-backup",
+  "taken": "2026-10-30T06:00:00Z",
+  "device": "1.1.7",
+  "mask": "0701",
+  "manufacturer": "FFF6",
+  "application": "M-FFF6_A-0001-01-0000",
+  "partial": {
+    "parameters": true,
+    "group_addresses": false
+  },
+  "plan_steps": [
+    "connect; check mask and manufacturer",
+    "compare property 3/13 with FF F6 00 01 01",
+    "check that the address table is loaded",
+    "check that the application program is loaded",
+    "A_Memory_Write 0104h: 31 00 00 00 00 00 00 00 00 00 00 (load application program)",
+    "A_Memory_Write 4400h..4403h, 4 octets",
+    "A_Memory_Write 4405h..4405h, 1 octets",
+    "A_Memory_Write 0104h: 32 00 00 00 00 00 00 00 00 00 00 (load completed application program)",
+    "A_Restart (basic)",
+    "disconnect"
+  ],
+  "load_states": [
+    {
+      "machine": "application-program",
+      "state": "Loaded"
+    }
+  ],
+  "regions": [
+    {
+      "address": "4400",
+      "octets": "01D4D5D6"
+    },
+    {
+      "address": "4405",
+      "octets": "D8"
+    }
+  ],
+  "prior_application": "FFF6000101",
+  "exemplar_serial": "FFF612345678"
+}

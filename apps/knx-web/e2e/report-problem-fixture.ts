@@ -1,21 +1,31 @@
 /** Browser-test helper: answers the diagnostic bundle routes like the server, with O1 offers. */
 import type { Page, Route } from "@playwright/test";
 import {
-  SECTION_KINDS, type BundlePreview, type BundleQuery, type OfferView, type RecordingSummary, type SectionKind,
+  SECTION_KINDS, type BundlePreview, type BundleQuery, type BundleRecordingSummary, type OfferView, type SectionKind,
 } from "../src/diagnosticBundleShape";
 import { defaultOffer, defaultSelection } from "../src/reportProblem";
 
 export const BUNDLE_REVIEW = { fingerprint: "a".repeat(64), context: { serverIncarnation: "fixture", projectIncarnation: 0, revision: 0 } };
 
-export const BUNDLE_RECORDING: RecordingSummary = {
-  id: "20261029T100000Z-download-0001", sizeBytes: 4096, formatVersion: 1, writerVersion: "0.1.0-alpha.18",
-  operationKind: "download", startedAt: "2026-10-29T10:00:00Z", target: { individualAddress: "1.1.67" },
-  gateway: "203.0.113.250:3671", related: { downloadId: "7" }, outcome: "failed", active: false, tornTail: false,
+export const BUNDLE_RECORDING: BundleRecordingSummary = {
+  id: "20261029T100000Z-download-0001", sizeBytes: 4096, formatVersion: 1,
+  active: false, tornTail: false, end: { state: "known", outcome: "failed" },
 };
-export const BUNDLE_OLDER: RecordingSummary = {
-  ...BUNDLE_RECORDING, id: "20261028T090000Z-device-diagnostics-0002", operationKind: "device-diagnostics",
-  startedAt: "2026-10-28T09:00:00Z", related: { diagnosticsToken: "a".repeat(64) }, outcome: "succeeded",
+export const BUNDLE_OLDER: BundleRecordingSummary = {
+  id: "20261028T090000Z-device-diagnostics-0002", sizeBytes: 2048, formatVersion: 1,
+  active: true, tornTail: false, end: { state: "missing" },
 };
+export const BUNDLE_INACTIVE_MISSING: BundleRecordingSummary = {
+  id: "20261027T080000Z-download-0003", sizeBytes: 3072, formatVersion: 1,
+  active: false, tornTail: false, end: { state: "missing" },
+};
+export const BUNDLE_WITHHELD: BundleRecordingSummary = {
+  id: "20261026T070000Z-download-0004", sizeBytes: 1024, formatVersion: 1,
+  active: false, tornTail: false, end: { state: "withheld" },
+};
+export const BUNDLE_RECORDINGS = [
+  BUNDLE_RECORDING, BUNDLE_OLDER, BUNDLE_INACTIVE_MISSING, BUNDLE_WITHHELD,
+] satisfies BundleRecordingSummary[];
 /** Section text the preview shows; the mail draft must never carry it. */
 export const SECTION_TEXT_MARKER = "SECTION-TEXT-NEVER-IN-MAIL";
 export const BUNDLE_FILE_NAME = "knxbench-diagnostics-0.1.0-alpha.18-20261029T100000Z-download-0001.zip";
@@ -59,7 +69,7 @@ export function bundlePreview(query: BundleQuery): BundlePreview {
   return {
     review: { ...BUNDLE_REVIEW, context: query.context ?? BUNDLE_REVIEW.context }, problemType: query.problemType, recordingEnabled: true, operationRecordingId: operation, deviceId: query.deviceId ?? null,
     offers, sections, totalBytes: sections.reduce((sum, s) => sum + s.bytes, 0), exceedsMailHint: false,
-    fileName: BUNDLE_FILE_NAME, mailDraft: BUNDLE_MAIL_DRAFT, recordings: [BUNDLE_RECORDING, BUNDLE_OLDER],
+    fileName: BUNDLE_FILE_NAME, mailDraft: BUNDLE_MAIL_DRAFT, recordings: BUNDLE_RECORDINGS,
   };
 }
 

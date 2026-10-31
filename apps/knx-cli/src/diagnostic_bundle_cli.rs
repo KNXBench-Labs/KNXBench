@@ -20,6 +20,12 @@ use knx_app::operation_recording::{
     OperationKind, OperationRecorder, OperationStart, RecordedOutcome, RecordingStore,
     RetentionLimits, WriterIdentity,
 };
+use knx_app::property_validation::{
+    private_projection::{
+        admit_snapshot, read_snapshot, AdmittedPrivateProjection, PrivateSnapshot,
+    },
+    Binding, ExecutionBuild, OperationProgress, System2Report,
+};
 use knx_net::KnxNetIpClient;
 use serde_json::json;
 
@@ -34,6 +40,19 @@ struct Session {
     /// The recordings' directory; statics are never dropped, so [`finish`]
     /// takes and removes it explicitly.
     scratch: Mutex<Option<tempfile::TempDir>>,
+    system2: Mutex<CliSystem2Slot>,
+}
+
+enum CliSystem2Slot {
+    Empty,
+    Captured {
+        progress: Box<OperationProgress>,
+        projection: AdmittedPrivateProjection,
+    },
+    Missing,
+    Unavailable,
+    Duplicate,
+    Consumed,
 }
 
 static SESSION: OnceLock<Session> = OnceLock::new();
@@ -119,8 +138,41 @@ pub fn begin(bundle: &Path, command: &str) -> Result<(), String> {
             command: command.to_string(),
             recorders: Mutex::new(Vec::new()),
             scratch: Mutex::new(Some(scratch)),
+            system2: Mutex::new(CliSystem2Slot::Empty),
         })
         .map_err(|_| format!("{FLAG}: a session already exists"))
+}
+
+/// Captures one closed System-2 projection after its writer released the store.
+/// Without a bundle session this returns before inspecting either path or binding.
+pub fn capture_system2(operation: &Path, binding: &Binding) -> Result<(), String> {
+    let Some(session) = SESSION.get() else {
+        return Ok(());
+    };
+    let mut slot = session
+        .system2
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner);
+    if !matches!(*slot, CliSystem2Slot::Empty) {
+        *slot = CliSystem2Slot::Duplicate;
+        return Err(format!(
+            "{FLAG}: System-2 evidence was captured more than once"
+        ));
+    }
+    *slot = match read_snapshot(operation, binding) {
+        PrivateSnapshot::Available(snapshot) => match admit_snapshot(*snapshot) {
+            Ok((progress, projection)) => CliSystem2Slot::Captured {
+                progress: Box::new(progress),
+                projection,
+            },
+            Err(_) => CliSystem2Slot::Unavailable,
+        },
+        PrivateSnapshot::Unavailable(_) => CliSystem2Slot::Unavailable,
+    };
+    match *slot {
+        CliSystem2Slot::Captured { .. } => Ok(()),
+        _ => Err(format!("{FLAG}: System-2 evidence is unavailable")),
+    }
 }
 
 /// `client`, tapped into a new recording when a bundle was requested;
@@ -203,7 +255,6 @@ fn write(session: &Session) -> Result<PathBuf, String> {
     if !session.store.wait_until_idle(Duration::from_secs(30)) {
         return Err(format!("{FLAG}: the recordings did not finish writing"));
     }
-    let recordings = session.store.list().map_err(|e| e.to_string())?;
     let created_at = chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true);
     let problem = problem_for(&session.command);
     let mut environment = BundleSection::new(SectionKind::Environment);
@@ -217,43 +268,67 @@ fn write(session: &Session) -> Result<PathBuf, String> {
                 "family": std::env::consts::FAMILY,
                 "arch": std::env::consts::ARCH,
             },
-            "command": session.command,
-            "recordings": recordings.len(),
+            "commandClass": problem,
         }),
     ));
     let mut sections = vec![environment];
-    // Oldest first: the first operation is "the" operation, the rest earlier ones.
-    for (index, summary) in recordings.iter().rev().enumerate() {
-        let kind = if index == 0 {
-            SectionKind::Operation
-        } else {
-            SectionKind::EarlierOperation
-        };
-        let mut section = BundleSection::new(kind);
-        let bytes = session.store.read(&summary.id).map_err(|e| e.to_string())?;
-        section.label = Some(summary.id.clone());
-        section.entries = bytes.iter().filter(|b| **b == b'\n').count();
-        section.markers.addresses = true;
-        section.markers.network_addresses = true;
-        section
-            .files
-            .push(BundleFile::new("recording.jsonl", bytes));
-        sections.push(section);
-    }
-    if recordings.is_empty() {
-        sections[0]
-            .notes
-            .push("the command opened no device connection, so nothing was recorded".into());
+    let captured = {
+        let mut slot = session
+            .system2
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
+        if matches!(*slot, CliSystem2Slot::Empty) {
+            *slot = CliSystem2Slot::Missing;
+        }
+        std::mem::replace(&mut *slot, CliSystem2Slot::Consumed)
+    };
+    match captured {
+        CliSystem2Slot::Captured {
+            progress,
+            projection,
+        } => {
+            let report = System2Report::from_progress(
+                &progress,
+                ExecutionBuild::Unknown,
+                &crate::version_string(),
+            )
+            .ok_or_else(|| format!("{FLAG}: System-2 report is unavailable"))?;
+            let mut operation = BundleSection::new(SectionKind::Operation);
+            operation.entries = 1;
+            operation.files.push(BundleFile::new(
+                "system2-private.json",
+                projection.bytes().to_vec(),
+            ));
+            sections.push(operation);
+            let mut reports = BundleSection::new(SectionKind::LegacyReports);
+            reports.entries = 1;
+            reports.files.push(BundleFile::json(
+                "system2-report.json",
+                &serde_json::to_value(report)
+                    .map_err(|_| format!("{FLAG}: System-2 report is unavailable"))?,
+            ));
+            sections.push(reports);
+        }
+        CliSystem2Slot::Duplicate => {
+            return Err(format!(
+                "{FLAG}: System-2 evidence was captured more than once"
+            ));
+        }
+        CliSystem2Slot::Empty | CliSystem2Slot::Missing | CliSystem2Slot::Unavailable => {
+            sections[0]
+                .notes
+                .push("System-2 evidence was unavailable for this invocation".into());
+        }
+        CliSystem2Slot::Consumed => {
+            return Err(format!("{FLAG}: diagnostic evidence was already consumed"));
+        }
     }
     let request = BundleRequest {
         problem,
         writer: writer_identity(),
         recording_enabled: true,
         consent_at: created_at.clone(),
-        description: Some(format!(
-            "written by `knx device {}` with {FLAG}",
-            session.command
-        )),
+        description: Some("User description withheld from diagnostic bundle.".into()),
     };
     let zip = bundle::build_zip(&request, &sections, &created_at).map_err(|e| e.to_string())?;
     let mut file = std::fs::OpenOptions::new()
@@ -321,5 +396,27 @@ mod tests {
         let gateway = "203.0.113.250:3671".parse().unwrap();
         let _client = tapped(KnxNetIpClient::new(), OperationKind::Compare, gateway);
         assert!(finish(true).is_none());
+    }
+
+    #[test]
+    fn without_the_flag_system2_capture_performs_zero_path_io() {
+        let binding = Binding {
+            target: "1.1.25".into(),
+            mask: 0x0025,
+            manufacturer: 2,
+            serial: [0, 2, 1, 2, 3, 4],
+            hardware: [1; 6],
+            application: [0, 2, 0x12, 0x34, 1],
+            profile_id: "zero-io-control".into(),
+            profile_version: 3,
+            profile_sha256: "a".repeat(64),
+            source_sha256: "b".repeat(64),
+            plan_sha256: "c".repeat(64),
+            simulated: true,
+            project_preparation_sha256: None,
+        };
+        let unreachable = Path::new("/path-that-must-not-be-inspected/operation");
+        assert_eq!(capture_system2(unreachable, &binding), Ok(()));
+        assert!(finish(false).is_none());
     }
 }

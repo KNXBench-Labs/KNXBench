@@ -165,6 +165,7 @@ pub(super) fn pinned_projection(preview: &Value, fixture: &PinnedFixture) -> Pin
         preview["sections"].as_array().unwrap().len(),
         sections.len()
     );
+    // Owner decision 2026-10-31: the redacted raw recordings leave after consent.
     for (section, id, bytes) in [
         (&sections[1], fixture.a_id.as_str(), &fixture.a_bytes),
         (&sections[2], fixture.c_id.as_str(), &fixture.c_bytes),
@@ -180,15 +181,13 @@ pub(super) fn pinned_projection(preview: &Value, fixture: &PinnedFixture) -> Pin
         .collect::<Vec<_>>();
     for (summary, bytes) in summaries.iter().zip([&fixture.a_bytes, &fixture.c_bytes]) {
         assert_eq!(summary["active"], false);
-        assert_eq!(summary["outcome"], "succeeded");
+        assert_eq!(
+            summary["end"],
+            json!({"state":"known","outcome":"succeeded"})
+        );
         assert_eq!(summary["sizeBytes"], bytes.len() as u64);
         assert_eq!(summary["formatVersion"], 1);
-        assert_eq!(summary["operationKind"], "compare");
-        assert_eq!(summary["target"]["individualAddress"], "1.1.5");
-        assert_eq!(summary["gateway"], "203.0.113.250:3671");
-        let context: Value =
-            serde_json::from_str(summary["related"]["projectContext"].as_str().unwrap()).unwrap();
-        assert_eq!(context, preview["review"]["context"]);
+        assert_eq!(summary.as_object().unwrap().len(), 6);
     }
     let selected_offers = ["environment", "operation", "earlierOperation"]
         .into_iter()

@@ -52,18 +52,75 @@ same source tree. Existing source-bound App execution is retained without a
 cosmetic replay. This closes only the C05+C10 foundation review, not the consumer,
 Raw P1/P2, original matrix, integrated package or publication gates.
 
-Public DTOs/journals are unchanged; neither server hook nor CLI attaches it yet.
-This is not closure of the requested raw evidence or the fourteen-case
-whole-boundary matrix. The
+Public DTOs and journal grammar remain unchanged. A bounded local consumer
+candidate now attaches the admitted closed projection at both server hooks and in
+the System-2 CLI simulator path, and uses admitted saved-project/import-report
+copies in text, review and ZIP output. It also adds a strict Web decoder and
+English/German lifecycle labels. This is not closure of the requested raw evidence
+or the fourteen-case whole-boundary matrix. The
 [source-grounded boundary](../research/2026-10-29-system2-bundle-credential-boundary.md)
-records the two server hooks, missing CLI typed attachment and the open original
-fourteen-case acceptance matrix. Final integrated review/gate, main-first delivery
-and task-owned cleanup remain open.
+records the still-open Raw P1/P2 and original fourteen-case acceptance matrix.
+Retained earlier-source execution includes the history RED, focused/server-library
+and CLI suites, Clippy/format/statics, Web Vitest/type/build and an intercepted-API
+Playwright feature lane. Those receipts do not prove the current complete server
+default target set green.
+
+**30 October full-target result:** four manual integration-test `AppState`
+initializers were missing `tunnel_return_path`; precisely those four enum-field
+additions repaired the compile failure without production or assertion changes.
+Their fresh independent source review returned **SOURCE_APPROVE, 0/0/0**.
+The ensuing full server default run compiled and passed 740 library tests,
+five binary tests and 763 integration tests, but failed nine integration tests;
+15 library and 52 integration cases remained ignored. The M01 route regression
+passed in this same current-source default run. Formatting passed. No subsequent
+CLI default, owning Clippy or static stage was executed after the first failing
+command. These results are not a green verification chain.
+
+The nine failures expose the remaining retained read-diagnostics/support evidence
+admission gap: the collector deliberately withholds the unadmitted reports/device
+source, while the target still requires retained results without a recording,
+correct originating-device attribution and exact report/property/memory content.
+They must not be dismissed as stale fixtures or made green by releasing
+unclassified raw bytes or weakening assertions. Next is bounded positive
+admission under the unchanged credential-exclusion contract. Raw P1/P2 and
+Original14 remain open, as do the real-router/built-bundle captured join and
+screenshots, final independent review/package gate, main-first delivery and
+publication.
+
+**30 October retained-result candidate:** source now contains a narrow admission
+for the generic identity profile and projectless/manual universal-support reports.
+Actual focused policy execution produced the intended two App privacy failures and
+six Server history/availability failures while 16 controls passed. The corrected
+source now refuses unclassified partial/refusal payload bytes and arbitrary format-1
+reason text before writer materialisation, uses the diagnostic writer's own strict
+readback once, validates support before one writer invocation, and moves each owned
+file vector once into preview/text/review/ZIP sections. Historical typed results use
+a bounded single-snapshot read and bind copied header, token, target and optional
+context. Missing or unproven attribution retains only the independently admitted
+report; it never enables device or catalogue projection. Direct counted reader
+controls for exact limits, truncation, growth overflow and path rejection are
+authored but not yet executed. Focused GREEN, defaults, Clippy and static gates
+have not yet run on these corrected bytes. **31 October owner decision and follow-up:** declared memory and raw
+non-System-2 recordings now leave after consent with a "possibly passwords; keep
+private" note (recognised keys stay redacted at capture); they remain
+unclassified. Device/catalogue extracts are restored for proven-current-context
+results and for an explicitly chosen device without any source. Support lookups
+report support-specific causes. Executed on the final candidate source
+(31 October, isolated loopback/synthetic, single job): App default 1,045 passed /
+47 ignored; Server default 1,538 passed / 67 ignored, **including all nine
+original target tests**; CLI default 437 passed / 21 ignored; fmt, owning Clippy
+`-D warnings`, layering/headers/anchors/ledger, documentation and local-info
+checks green. Fresh independent read-only reviews went from CHANGES_REQUIRED
+(0 critical / 5 important / 5 minor) through two correction rounds to APPROVE
+0/0/0. Still open before delivery: the integrated main-first package gate, the
+real router/built-web join with screenshots, CLI installed-binary boundaries,
+raw System-2 P1/P2, Original14 and publication.
 
 The parent-reported bounded R4 ambient-identity prerequisite is independently
 approved for the real preview/unselected-recording regression. It is prerequisite
-closure only and does not authorize export. Consumers, raw P1/P2, Original14 and
-the whole DIAG-03 goal remain open.
+closure only and does not authorize raw export. Consumer source is a local
+candidate; Raw P1/P2, Original14, independent integration/publication and the whole
+DIAG-03 goal remain open.
 
 Origin: issue #30 report analysis, owner request 29 October 2026.
 

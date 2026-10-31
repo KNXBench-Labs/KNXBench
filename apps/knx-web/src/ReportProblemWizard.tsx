@@ -7,7 +7,7 @@ import { appUiScale } from "./appUiScale";
 import type { ProjectTree } from "./bindings/ProjectTree";
 import {
   deleteRecordings, exportBundle, previewBundle, sectionText, PROBLEM_TYPES,
-  type BundlePreview, type DeleteOutcome, type OfferView, type ProblemType, type RecordingSummary, type ReviewedBundleQuery, type SectionKind,
+  type BundlePreview, type BundleRecordingSummary, type DeleteOutcome, type OfferView, type ProblemType, type ReviewedBundleQuery, type SectionKind,
 } from "./diagnosticBundleApi";
 import { isTauri } from "./filePicker";
 import { buildIssueUrl } from "./githubIssue";
@@ -17,7 +17,7 @@ import type { MessageKey } from "./messages/en";
 import Overlay from "./Overlay";
 import {
   buildQuery, bytesByKind, defaultOffer, formatBytes, initialChoice, mailDraftFor, markerKeys, reasonKey,
-  boundedClientFacts, operationKindKey, operationOutcomeKey, reportContext, reviewedQuery, resolvedRecording, toggleEarlier, toggleSection, withProblemType,
+  boundedClientFacts, operationOutcomeKey, reportContext, reviewedQuery, resolvedRecording, toggleEarlier, toggleSection, withProblemType,
   type ReportProblemRequest, type WizardChoice,
 } from "./reportProblem";
 import { useSavedThemeId } from "./theme";
@@ -131,18 +131,21 @@ export default function ReportProblemWizard({ request, tree, notifications, onCl
   const deviceOffered = defaultOffer(choice.problemType, "device") !== "notOffered"
     || defaultOffer(choice.problemType, "catalogue") !== "notOffered";
   const operation = preview ? resolvedRecording(preview.operationRecordingId, preview.recordings) : null;
-  const choosable = preview ? preview.recordings.filter((r) => !r.active) : [];
+  const choosable = preview ? preview.recordings : [];
 
-  function recordingLabel(recording: RecordingSummary): string {
-    let started = recording.startedAt ?? recording.id;
-    try {
-      if (recording.startedAt) started = new Date(recording.startedAt).toLocaleString(language);
-    } catch { /* an Intl-refused language tag keeps the raw timestamp */ }
-    return t("reportProblem.operation.option", {
-      started,
-      kind: recording.operationKind === null ? "?" : operationKindKey(recording.operationKind) ? t(operationKindKey(recording.operationKind)!) : recording.operationKind,
-      outcome: recording.outcome === null ? t("reportProblem.operation.unfinished")
-        : operationOutcomeKey(recording.outcome) ? t(operationOutcomeKey(recording.outcome)!) : recording.outcome,
+  function recordingLabel(recording: BundleRecordingSummary): string {
+    const outcome = recording.end.state === "known"
+      ? t(operationOutcomeKey(recording.end.outcome)!)
+      : recording.end.state === "withheld"
+        ? t("reportProblem.operation.outcomeWithheld")
+        : recording.active
+          ? t("reportProblem.operation.unfinished")
+          : t("reportProblem.operation.endUnavailable");
+    return t("reportProblem.operation.privateOption", {
+      id: recording.id,
+      recorded: t("reportProblem.operation.recorded"),
+      outcome,
+      size: formatBytes(recording.sizeBytes, language),
     });
   }
 

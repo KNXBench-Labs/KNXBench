@@ -7,12 +7,18 @@
 The unified bundle candidate can opt in to a copy of the **saved** native project,
 not unsaved edits. This uses the existing credential-removing/withholding helper;
 project inclusion stays off by default. It is not comprehensive anonymization.
-Twelve synthetic HTTP cases exercise review, export, real native reopen and
-refusal guards; this is not whole-package, browser or hardware acceptance.
-Private System-2 expected/readback bytes still need a credential-admission policy
-covering every overlapping archive copy. The CLI bundle option exists, but its
-shared typed private evidence attachment remains unfinished. Do not interpret
-this candidate as part of Alpha 18 or as complete raw-evidence delivery.
+Focused synthetic HTTP cases exercise review, export, native reopen and refusal
+guards; this is not whole-package, browser or hardware acceptance. The candidate
+admits a closed private System-2 projection and report through one validated
+retained source, while raw System-2 recording bodies and unadmitted
+expected/readback sources remain withheld. By owner decision, declared memory and
+non-System-2 raw recordings leave after consent with a "possibly passwords; keep
+private" note; they are not credential-classified. The CLI bundle option now attaches the same typed
+private evidence after device teardown, store release and activity-guard
+settlement. This does not establish the actual installed CLI boundary, full raw
+P1/P2 or Original14 delivery, real HTTP plus built-Web acceptance, or the whole
+O1 goal. Do not interpret the candidate as part of Alpha 18 or as complete
+raw-evidence delivery.
 [Work/status](../open-work/DIAG-03-unified-diagnostic-bundle.md) ·
 [Privacy boundary](../research/2026-10-29-system2-bundle-credential-boundary.md).
 

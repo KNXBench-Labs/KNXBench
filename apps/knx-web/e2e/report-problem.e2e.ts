@@ -8,7 +8,8 @@ import { defaultSelection } from "../src/reportProblem";
 import { achievementsFixtureAnswer } from "./achievements-fixture";
 import { openFileSubmenu } from "./file-menu";
 import {
-  answerBundleRoute, BUNDLE_FILE_NAME, BUNDLE_MAIL_DRAFT, BUNDLE_OLDER, bundleLog, bundlePreview, SECTION_TEXT_MARKER, ticked, type BundleLog,
+  answerBundleRoute, BUNDLE_FILE_NAME, BUNDLE_INACTIVE_MISSING, BUNDLE_MAIL_DRAFT, BUNDLE_OLDER,
+  BUNDLE_RECORDING, BUNDLE_WITHHELD, bundleLog, bundlePreview, SECTION_TEXT_MARKER, ticked, type BundleLog,
 } from "./report-problem-fixture";
 
 type Language = "en" | "de";
@@ -130,7 +131,32 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
 
     await dialog.locator("[data-report-type=deviceProgramming]").check();
     await next.click();
-    await expect(dialog.locator("[data-report-operation]")).toBeVisible();
+    const operationSelect = dialog.locator("[data-report-operation]");
+    await expect(operationSelect).toBeVisible();
+    await expect(operationSelect.locator("option")).toHaveCount(5);
+    const lifecycle = language === "de"
+      ? [
+        [BUNDLE_RECORDING.id, "fehlgeschlagen", "4 KiB"],
+        [BUNDLE_OLDER.id, "nicht abgeschlossen", "2 KiB"],
+        [BUNDLE_INACTIVE_MISSING.id, "aufgezeichnetes Ende nicht verfügbar", "3 KiB"],
+        [BUNDLE_WITHHELD.id, "Ergebnis zurückgehalten", "1 KiB"],
+      ] as const
+      : [
+        [BUNDLE_RECORDING.id, "failed", "4 KiB"],
+        [BUNDLE_OLDER.id, "unfinished", "2 KiB"],
+        [BUNDLE_INACTIVE_MISSING.id, "recorded end unavailable", "3 KiB"],
+        [BUNDLE_WITHHELD.id, "outcome withheld", "1 KiB"],
+      ] as const;
+    for (const [id, outcome, size] of lifecycle) {
+      const option = operationSelect.locator(`option[value="${id}"]`);
+      await expect(option, `${id} must remain reachable`).toHaveCount(1);
+      await expect(option).toContainText(id);
+      await expect(option).toContainText(m["reportProblem.operation.recorded"]);
+      await expect(option).toContainText(outcome);
+      await expect(option).toContainText(size);
+    }
+    await expect(operationSelect.locator(`option[value="${BUNDLE_WITHHELD.id}"]`))
+      .not.toContainText(language === "de" ? "nicht abgeschlossen" : "unfinished");
     await dialog.locator(`[data-report-earlier="${BUNDLE_OLDER.id}"]`).check();
     await expect.poll(() => log.previews.at(-1)?.earlierRecordingIds).toEqual([BUNDLE_OLDER.id]);
     await next.click();

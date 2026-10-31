@@ -103,7 +103,16 @@ the next step. Nothing is collected yet.
 
 ### Step 2: contents
 
-The wizard now asks KNXBench what it can collect and shows one checkbox per part:
+The wizard now asks KNXBench what it can collect and shows one checkbox per part.
+The current source candidate admits the environment plus a closed private
+System-2 projection and its short report when their retained identity and
+provenance validate. For other operations it includes the
+recording as written, with recognised KNX keys already removed by the recorder;
+it is marked "contains device configuration, possibly passwords; keep private"
+and leaves only after your consent. Other sources that have not passed this private
+admission remain greyed out with the same fixed unavailable explanation.
+
+The intended complete workflow is:
 
 - **Version and environment** is always included and cannot be unticked.
 - **Recording of the operation**: the device operation the report is about. The
@@ -114,8 +123,8 @@ The wizard now asks KNXBench what it can collect and shows one checkbox per part
   **Catalogue and product identity**, **Whole project (.knxdb)**, **Bus monitor,
   last 10 minutes** and, for user-interface problems, **Browser state** (language,
   theme, window size, zoom, the last error messages).
-- A part that cannot be included is greyed out with the reason, for example
-  *the bus monitor is not running*.
+- A part that cannot be included is greyed out with a reviewed, non-sensitive
+  reason.
 
 Every included part shows its size, and the total is below the list. Above
 10 MiB the wizard warns that many mail services refuse attachments that large;
@@ -132,7 +141,7 @@ the wizard, including pending replies; an equal tree refresh does not.
 
 ### Step 3: preview
 
-Each part lists its size, number of entries and what it contains: *contains
+Each admitted part lists its size, number of entries and what it contains: *contains
 addresses*, *contains names*, *contains parameter values*, *contains network
 addresses*. **Show content** displays the part as text, exactly as it goes into
 the ZIP.
@@ -169,13 +178,20 @@ you are happy to discuss in public; send the ZIP by mail.
 
 ### Recordings: what is kept and how to delete it
 
-KNXBench records the device operations of this server (reading and analysing,
-compare, downloads, System-2 download and recovery, addressing by serial number,
-device service control, line scan): every telegram, timings and the outcome, with
-the KNXBench version. Keys and passwords are never recorded. The recordings live in
-the `diagnostics/` folder of the data directory (for Docker on the mounted
-volume). KNXBench keeps the last **100 operations or 512 MiB**, whichever comes
-first, and removes the oldest first; failed operations are kept longest.
+KNXBench retains bounded operation recordings for supported server operations,
+including timing and outcome information. Keys and passwords are never intended
+recording content. For System-2 operations the unified bundle uses only the closed
+recording summary and a private projection; for other operations it copies
+`recording.jsonl` unchanged into the ZIP after your consent, marked "possibly
+passwords; keep private". Read-diagnostics memory (`memory.json`) is included
+the same way. Neither is checked value by value for passwords. The recordings live in the `diagnostics/` folder
+of the data directory (for Docker on the mounted volume). KNXBench keeps the last
+**100 operations or 512 MiB**, whichever comes first, and removes the oldest
+first; failed operations are kept longest.
+
+Full relevant diagnostic data except secrets remains the O1 target. It is not a
+claim about the current admitted slice, and raw System-2 P1/P2 data and the full
+original-data set remain outside this candidate's acceptance.
 
 **Delete recordings…** in step 2 deletes all of them after a confirmation;
 recordings being written at that moment are kept and named.

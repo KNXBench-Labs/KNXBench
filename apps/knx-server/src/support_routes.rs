@@ -12,6 +12,7 @@ use knx_core::{ContactableAddress, DeviceId, IndividualAddress};
 use knx_net::commissioning::support_diagnostics::{collect, profile, profile_id};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
+use std::io::{self, Write};
 use std::net::SocketAddrV4;
 use std::sync::{
     atomic::{AtomicU64, Ordering},
@@ -46,33 +47,107 @@ type Slot = Arc<Mutex<Option<Snapshot>>>;
 #[derive(Clone, Default)]
 pub struct Results(Slot);
 
+#[cfg(test)]
+#[derive(Clone, Copy)]
+pub(crate) enum BundleTestRetention {
+    Complete,
+    Expired,
+    Unacquired,
+}
+
 impl Results {
     pub(crate) fn evidence(
         &self,
         token: &str,
-    ) -> Result<crate::diagnostic_bundle_results::Evidence, String> {
-        let result =
-            snapshot(&self.0, token).map_err(|_| "the retained support result is unavailable")?;
+    ) -> Result<
+        crate::diagnostic_bundle_results::Evidence,
+        crate::diagnostic_bundle_results::EvidenceLookup,
+    > {
+        let result = self
+            .0
+            .lock()
+            .map_err(|_| crate::diagnostic_bundle_results::EvidenceLookup::Unavailable)?
+            .as_ref()
+            .filter(|result| result.token == token)
+            .cloned()
+            .ok_or(crate::diagnostic_bundle_results::EvidenceLookup::Missing)?;
         if result.created.elapsed() > Duration::from_secs(900) {
-            return Err("the retained support result has expired".into());
+            return Err(crate::diagnostic_bundle_results::EvidenceLookup::Expired);
         }
         if !result.acquired {
-            return Err("the support result is not complete".into());
+            return Err(crate::diagnostic_bundle_results::EvidenceLookup::Unfinished);
         }
+        let reports = knx_app::diagnostic_bundle::admit_retained_support(
+            &result.report,
+            &crate::version_string(),
+        )
+        .map_err(|_| crate::diagnostic_bundle_results::EvidenceLookup::Unavailable)?
+        .into_files();
+        let identity = serde_json::json!({"supportReportSha256":hash(&result.report)});
+        let context =
+            result
+                .has_project
+                .then_some(crate::diagnostic_bundle_context::ProjectContext {
+                    server_incarnation: result.server_incarnation.clone(),
+                    project_incarnation: result.incarnation,
+                    revision: result.revision,
+                });
         Ok(crate::diagnostic_bundle_results::Evidence {
-            identity: serde_json::json!({"supportReportSha256":hash(&result.report)}),
-            context: Some(crate::diagnostic_bundle_context::ProjectContext {
-                server_incarnation: result.server_incarnation,
-                project_incarnation: result.incarnation,
-                revision: result.revision,
-            }),
-            operation_files: Vec::new(),
+            identity: identity.clone(),
+            context,
+            operation_files: vec![crate::diagnostic_bundle_results::retained_identity_file(
+                "support-result.json",
+                &identity,
+            )],
             device_id: result.device_id,
-            reports: crate::diagnostic_bundle_results::members(
-                result.report.bundle()?,
-                &["report.json", "README.txt"],
-            )?,
+            reports,
         })
+    }
+
+    #[cfg(test)]
+    pub(crate) fn retain_for_bundle_test(
+        &self,
+        token: &str,
+        report: SupportReport,
+        context: Option<crate::diagnostic_bundle_context::ProjectContext>,
+    ) {
+        self.retain_for_bundle_test_as(token, report, context, BundleTestRetention::Complete);
+    }
+
+    #[cfg(test)]
+    pub(crate) fn retain_for_bundle_test_as(
+        &self,
+        token: &str,
+        report: SupportReport,
+        context: Option<crate::diagnostic_bundle_context::ProjectContext>,
+        retention: BundleTestRetention,
+    ) {
+        let context = context.unwrap_or(crate::diagnostic_bundle_context::ProjectContext {
+            server_incarnation: String::new(),
+            project_incarnation: 0,
+            revision: 0,
+        });
+        *self.0.lock().expect("support results mutex") = Some(Snapshot {
+            token: token.into(),
+            created: Instant::now()
+                - Duration::from_secs(if matches!(retention, BundleTestRetention::Expired) {
+                    901
+                } else {
+                    0
+                }),
+            revision: context.revision,
+            incarnation: context.project_incarnation,
+            has_project: !context.server_incarnation.is_empty(),
+            server_incarnation: context.server_incarnation,
+            acquired: !matches!(retention, BundleTestRetention::Unacquired),
+            device_id: None,
+            input: ReportInput::default(),
+            base: report.clone(),
+            report,
+            address: None,
+            manual_address: None,
+            mask: None,
+        });
     }
 }
 pub fn support_routes(results: Results) -> Router<SharedState> {
@@ -122,11 +197,24 @@ struct Preview {
     reads: Vec<String>,
     deadline_seconds: u8,
 }
-fn hash(r: &SupportReport) -> String {
-    format!(
-        "{:x}",
-        Sha256::digest(serde_json::to_vec(r).expect("report serializes"))
-    )
+struct DigestWriter<'a>(&'a mut Sha256);
+
+impl Write for DigestWriter<'_> {
+    fn write(&mut self, bytes: &[u8]) -> io::Result<usize> {
+        self.0.update(bytes);
+        Ok(bytes.len())
+    }
+
+    fn flush(&mut self) -> io::Result<()> {
+        Ok(())
+    }
+}
+
+fn hash(report: &SupportReport) -> String {
+    let mut digest = Sha256::new();
+    serde_json::to_writer(DigestWriter(&mut digest), report).expect("report serializes");
+    let digest = digest.finalize();
+    format!("{digest:x}")
 }
 fn view(s: &Snapshot) -> Preview {
     let mut reads =

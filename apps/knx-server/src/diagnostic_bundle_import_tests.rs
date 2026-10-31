@@ -2,7 +2,7 @@
 
 use super::{call, json_of, state};
 use axum::http::StatusCode;
-use serde_json::{json, Value};
+use serde_json::json;
 use sha2::{Digest, Sha256};
 use std::io::Read;
 
@@ -58,8 +58,7 @@ async fn import_report_preview_and_zip_remove_secrets_without_changing_historica
     *state.project.lock().unwrap() = Some(imported.project);
     *state.opaque.lock().unwrap() = opaque;
 
-    // Obtain the real review for exactly the same selection before reading or exporting it.
-    let query = json!({ "problemType": "projectImport" });
+    let query = json!({ "problemType": "projectImport", "sections": ["importReport"] });
     let (status, preview, _) = call(
         &state,
         "POST",
@@ -68,13 +67,26 @@ async fn import_report_preview_and_zip_remove_secrets_without_changing_historica
     )
     .await;
     assert_eq!(status, StatusCode::OK, "{}", json_of(&preview));
-    let mut reviewed = query;
-    reviewed["review"] = json_of(&preview)["review"].clone();
-    assert!(reviewed["review"]["fingerprint"]
-        .as_str()
-        .is_some_and(|value| !value.is_empty()));
-    assert!(reviewed["review"]["context"].is_object());
-    let mut text_query = reviewed.clone();
+    let preview = json_of(&preview);
+    let offer = preview["offers"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|offer| offer["kind"] == "importReport")
+        .unwrap();
+    assert_eq!(offer["selected"], false);
+    assert_eq!(
+        offer["unavailable"],
+        "the selected diagnostic source is unavailable"
+    );
+    assert!(!preview["sections"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .any(|section| section["kind"] == "importReport"));
+
+    let mut text_query = query.clone();
+    text_query["review"] = preview["review"].clone();
     text_query["key"] = json!("importReport");
     let (status, body, _) = call(
         &state,
@@ -83,31 +95,19 @@ async fn import_report_preview_and_zip_remove_secrets_without_changing_historica
         Some(text_query),
     )
     .await;
-    assert_eq!(status, StatusCode::OK);
-    let view = json_of(&body);
-    let text = view["text"].as_str().unwrap();
+    assert_eq!(status, StatusCode::BAD_REQUEST);
+    assert!(String::from_utf8_lossy(&body).contains("bundleSectionUnknown"));
     let evidence_after = knx_app::import_evidence::read(&state.opaque.lock().unwrap())
         .unwrap()
         .unwrap()
         .report_json;
     assert_eq!(
         evidence_after, evidence_before,
-        "export cannot rewrite history"
+        "refusal cannot rewrite history"
     );
     assert_eq!(std::fs::read(&source).unwrap(), original);
-    for secret in [
-        BCU_KEY.to_string(),
-        BACKBONE_KEY.to_string(),
-        key_digest,
-        digest(BACKBONE_KEY),
-    ] {
-        assert!(
-            !text.contains(&secret),
-            "secret sample or digest leaked into section text"
-        );
-    }
-
-    let mut export_query = reviewed;
+    let mut export_query = query;
+    export_query["review"] = preview["review"].clone();
     export_query["consent"] = json!(true);
     let (status, bytes, _) = call(
         &state,
@@ -118,58 +118,7 @@ async fn import_report_preview_and_zip_remove_secrets_without_changing_historica
     .await;
     assert_eq!(status, StatusCode::OK);
     let mut archive = zip::ZipArchive::new(std::io::Cursor::new(bytes)).unwrap();
-    let mut report = String::new();
-    archive
-        .by_name("import/import-report.json")
-        .unwrap()
-        .read_to_string(&mut report)
-        .unwrap();
-    let exported: Value = serde_json::from_str(&report).unwrap();
-    assert_eq!(exported["counts"], original_report["counts"]);
-    assert_eq!(
-        exported["unknown"].as_array().unwrap().len(),
-        original_report["unknown"].as_array().unwrap().len()
-    );
-    assert!(
-        report.contains("safe sample"),
-        "unrelated diagnostic values remain useful"
-    );
-    let mut replay = knx_app::import_evidence::encode(&imported.report).unwrap();
-    let original_counts = knx_app::import_evidence::read(std::slice::from_ref(&replay))
-        .unwrap()
-        .unwrap()
-        .counts();
-    let mut envelope: Value = serde_json::from_slice(&replay.bytes).unwrap();
-    envelope["report_json"] = json!(report);
-    replay.bytes = serde_json::to_vec(&envelope).unwrap();
-    replay.sha256 = knx_store::project_history::image_hash(&replay.bytes);
-    assert_eq!(
-        knx_app::import_evidence::read(&[replay])
-            .unwrap()
-            .unwrap()
-            .counts(),
-        original_counts,
-        "the actual historical reader must derive identical error/warning totals"
-    );
-    let mut manifest = String::new();
-    archive
-        .by_name("manifest.json")
-        .unwrap()
-        .read_to_string(&mut manifest)
-        .unwrap();
-    let manifest: Value = serde_json::from_str(&manifest).unwrap();
-    let section = manifest["sections"]
-        .as_array()
-        .unwrap()
-        .iter()
-        .find(|section| section["kind"] == "importReport")
-        .unwrap();
-    assert!(
-        section["notes"].as_array().unwrap().iter().any(|note| note
-            .as_str()
-            .is_some_and(|note| note.contains("IPRoutingBackboneKey"))),
-        "the exported manifest must disclose the known-key redaction"
-    );
+    assert!(archive.by_name("import/import-report.json").is_err());
     for index in 0..archive.len() {
         let mut payload = Vec::new();
         archive
@@ -181,7 +130,7 @@ async fn import_report_preview_and_zip_remove_secrets_without_changing_historica
         for secret in [
             BCU_KEY.to_string(),
             BACKBONE_KEY.to_string(),
-            digest(BCU_KEY),
+            key_digest.clone(),
             digest(BACKBONE_KEY),
         ] {
             assert!(
@@ -265,10 +214,8 @@ async fn import_report_identity_collision_is_visibly_unavailable_not_rewritten()
         .iter()
         .find(|offer| offer["kind"] == "importReport")
         .unwrap();
-    assert!(
-        offer["unavailable"]
-            .as_str()
-            .is_some_and(|reason| reason.contains("report unavailable")),
+    assert_eq!(
+        offer["unavailable"], "the selected diagnostic source is unavailable",
         "the real HTTP preview must visibly refuse a meaning-changing report projection"
     );
     assert!(!preview["sections"]

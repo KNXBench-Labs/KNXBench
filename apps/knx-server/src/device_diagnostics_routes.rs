@@ -105,33 +105,119 @@ type Slot = Arc<Mutex<Option<Job>>>;
 #[derive(Clone, Default)]
 pub struct Results(Slot);
 
+#[cfg(test)]
+#[derive(Clone, Copy)]
+pub(crate) enum BundleTestRetention {
+    Complete,
+    Expired,
+    Unfinished,
+    NonExportable,
+}
+
 impl Results {
     pub(crate) fn evidence(
         &self,
         token: &str,
-    ) -> Result<crate::diagnostic_bundle_results::Evidence, String> {
-        let job = snapshot(&self.0, token)
-            .map_err(|_| "the retained diagnostic result is unavailable")?;
+    ) -> Result<
+        crate::diagnostic_bundle_results::Evidence,
+        crate::diagnostic_bundle_results::EvidenceLookup,
+    > {
+        let job = self
+            .0
+            .lock()
+            .map_err(|_| crate::diagnostic_bundle_results::EvidenceLookup::Unavailable)?
+            .as_ref()
+            .filter(|job| job.token == token)
+            .cloned()
+            .ok_or(crate::diagnostic_bundle_results::EvidenceLookup::Missing)?;
         if job.created.elapsed() > Duration::from_secs(900) {
-            return Err("the retained diagnostic result has expired".into());
+            return Err(crate::diagnostic_bundle_results::EvidenceLookup::Expired);
         }
         if job.phase != "complete" {
-            return Err("the diagnostic result is not complete".into());
+            return Err(crate::diagnostic_bundle_results::EvidenceLookup::Unfinished);
         }
         if !job.exportable {
-            return Err("the diagnostic result is not exportable".into());
+            return Err(crate::diagnostic_bundle_results::EvidenceLookup::NonExportable);
         }
+        let identity = serde_json::json!({
+            "diagnosticsReference": job.export.report.project_reference.clone()
+        });
+        let reports = knx_app::diagnostic_bundle::admit_retained_diagnostics(
+            &job.export,
+            &crate::version_string(),
+        )
+        .map_err(|_| crate::diagnostic_bundle_results::EvidenceLookup::Unavailable)?
+        .into_files();
         Ok(crate::diagnostic_bundle_results::Evidence {
-            identity: serde_json::json!({"diagnosticsReference": job.export.report.project_reference}),
+            identity: identity.clone(),
             context: Some(crate::diagnostic_bundle_context::ProjectContext {
                 server_incarnation: job.binding.server_incarnation,
                 project_incarnation: job.binding.project_incarnation,
                 revision: job.binding.revision,
             }),
-            operation_files: Vec::new(),
+            operation_files: vec![crate::diagnostic_bundle_results::retained_identity_file(
+                "diagnostic-result.json",
+                &identity,
+            )],
             device_id: Some(job.device_id),
-            reports: crate::diagnostic_bundle_results::diagnostic_files(&job.export)?,
+            reports,
         })
+    }
+
+    #[cfg(test)]
+    pub(crate) fn retain_for_bundle_test(
+        &self,
+        token: &str,
+        export: Export,
+        binding: crate::diagnostic_bundle_context::ProjectContext,
+        device_id: u32,
+    ) {
+        self.retain_for_bundle_test_as(
+            token,
+            export,
+            binding,
+            device_id,
+            BundleTestRetention::Complete,
+        );
+    }
+
+    #[cfg(test)]
+    pub(crate) fn retain_for_bundle_test_as(
+        &self,
+        token: &str,
+        export: Export,
+        binding: crate::diagnostic_bundle_context::ProjectContext,
+        device_id: u32,
+        retention: BundleTestRetention,
+    ) {
+        let plan = Plan::Identity(Prepared {
+            target: knx_core::ContactableAddress::new("1.1.25".parse().expect("test address"))
+                .expect("contactable test address"),
+            expected: Default::default(),
+            reference: export.report.project_reference.clone(),
+        });
+        *self.0.lock().expect("diagnostic results mutex") = Some(Job {
+            token: token.into(),
+            created: match retention {
+                BundleTestRetention::Expired => Instant::now() - Duration::from_secs(901),
+                _ => Instant::now(),
+            },
+            plan,
+            gateway: "203.0.113.250:3671".parse().expect("test gateway"),
+            binding: Binding {
+                server_incarnation: binding.server_incarnation,
+                project_incarnation: binding.project_incarnation,
+                revision: binding.revision,
+            },
+            device_id,
+            phase: match retention {
+                BundleTestRetention::Unfinished => "reading",
+                _ => "complete",
+            },
+            export,
+            exportable: !matches!(retention, BundleTestRetention::NonExportable),
+            cancel: Arc::new(AtomicBool::new(false)),
+        });
     }
 }
 #[derive(Serialize)]

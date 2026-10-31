@@ -7,7 +7,8 @@
 //! `POST /api/diagnostics/bundle` writes the ZIP only with `consent: true`.
 //! Every route is read-only towards devices: nothing here opens a tunnel.
 
-use std::sync::atomic::Ordering;
+use std::collections::HashMap;
+use std::sync::{atomic::Ordering, Arc};
 use std::time::Duration;
 
 use axum::extract::State;
@@ -28,14 +29,29 @@ use crate::errors::ApiError;
 use crate::SharedState;
 use sha2::{Digest, Sha256};
 
-/// The bus monitor rows a bundle may carry: the last ten minutes (decision 14).
-const BUS_MONITOR_WINDOW: chrono::Duration = chrono::Duration::minutes(10);
+#[path = "diagnostic_bundle_retained.rs"]
+mod retained;
+
 /// The client may describe itself; anything larger is refused.
 const MAX_CLIENT_STATE_BYTES: usize = 64 * 1024;
 /// The user's own words; anything longer is refused.
 const MAX_DESCRIPTION_CHARS: usize = 8000;
 
 pub(crate) fn routes() -> Router<SharedState> {
+    // Keep retained-result producer APIs type-checked while their raw payloads remain
+    // deliberately unadmitted by this bundle consumer.
+    let _ = crate::device_diagnostics_routes::Results::evidence;
+    let _ = crate::support_routes::Results::evidence;
+    let _ = |evidence: crate::diagnostic_bundle_results::Evidence| {
+        let crate::diagnostic_bundle_results::Evidence {
+            identity,
+            context,
+            device_id,
+            reports,
+            operation_files,
+        } = evidence;
+        drop((identity, context, device_id, reports, operation_files));
+    };
     Router::new()
         .route(
             "/api/diagnostics/recordings",
@@ -126,6 +142,35 @@ pub(crate) struct BundleQuery {
     review: Option<Value>,
     #[serde(default)]
     context: Option<ProjectContext>,
+    /// Request-local summary substitution for route regressions. Production
+    /// builds reject this field through `deny_unknown_fields` above.
+    #[cfg(test)]
+    #[serde(default)]
+    test_recording_summary_supplier: Option<TestRecordingSummarySupplier>,
+}
+
+#[cfg(test)]
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct TestRecordingSummarySupplier {
+    recording_id: String,
+    size_bytes: u64,
+}
+
+#[cfg(test)]
+fn supply_test_recording_summary(
+    mut recordings: Vec<RecordingSummary>,
+    supplier: Option<&TestRecordingSummarySupplier>,
+) -> Vec<RecordingSummary> {
+    if let Some(supplier) = supplier {
+        if let Some(summary) = recordings
+            .iter_mut()
+            .find(|summary| summary.id == supplier.recording_id)
+        {
+            summary.size_bytes = supplier.size_bytes;
+        }
+    }
+    recordings
 }
 
 /// A section the problem type offers, ticked or not, and whether it exists.
@@ -154,19 +199,353 @@ struct PreviewView {
     exceeds_mail_hint: bool,
     file_name: String,
     mail_draft: String,
-    recordings: Vec<RecordingSummary>,
+    recordings: Vec<BundleRecordingSummary>,
 }
 
 /// Everything one wizard state resolves to.
 struct Collected {
     context: ProjectContext,
-    result_identity: Value,
-    operation: Option<RecordingSummary>,
+    result_identity: AdmittedResultIdentity,
+    operation: Option<BundleRecordingSummary>,
     device_id: Option<u32>,
     offers: Vec<OfferView>,
     sections: Vec<BundleSection>,
-    recordings: Vec<RecordingSummary>,
+    recordings: Vec<BundleRecordingSummary>,
     created_at: String,
+}
+
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct BundleRecordingSummary {
+    id: String,
+    size_bytes: u64,
+    format_version: u64,
+    active: bool,
+    torn_tail: bool,
+    end: BundleRecordingEnd,
+}
+
+#[derive(Clone, Serialize)]
+#[serde(tag = "state", rename_all = "camelCase")]
+enum BundleRecordingEnd {
+    Missing,
+    Withheld,
+    Known { outcome: BundleRecordingOutcome },
+}
+
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "kebab-case")]
+enum BundleRecordingOutcome {
+    Succeeded,
+    Failed,
+    Cancelled,
+    Abandoned,
+}
+
+fn admit_bundle_recording(summary: &RecordingSummary) -> Option<BundleRecordingSummary> {
+    const MAX_SAFE_INTEGER: u64 = 9_007_199_254_740_991;
+    if !knx_app::operation_recording::is_operation_id(&summary.id)
+        || summary.format_version != Some(1)
+        || summary.size_bytes > MAX_SAFE_INTEGER
+    {
+        return None;
+    }
+    let end = match summary.outcome.as_deref() {
+        None => BundleRecordingEnd::Missing,
+        Some("succeeded") => BundleRecordingEnd::Known {
+            outcome: BundleRecordingOutcome::Succeeded,
+        },
+        Some("failed") => BundleRecordingEnd::Known {
+            outcome: BundleRecordingOutcome::Failed,
+        },
+        Some("cancelled") => BundleRecordingEnd::Known {
+            outcome: BundleRecordingOutcome::Cancelled,
+        },
+        Some("abandoned") => BundleRecordingEnd::Known {
+            outcome: BundleRecordingOutcome::Abandoned,
+        },
+        Some(_) => BundleRecordingEnd::Withheld,
+    };
+    Some(BundleRecordingSummary {
+        id: summary.id.clone(),
+        size_bytes: summary.size_bytes,
+        format_version: 1,
+        active: summary.active,
+        torn_tail: summary.torn_tail,
+        end,
+    })
+}
+
+#[derive(Clone, Serialize)]
+#[serde(tag = "state", rename_all = "camelCase")]
+enum AdmittedResultIdentity {
+    None,
+    System2 { operation_id: String },
+    Diagnostics { reference: String },
+    Support { sha256: String },
+    Unavailable,
+}
+
+#[derive(Clone, Copy)]
+enum BundleUnavailableCode {
+    Source,
+    OriginatingDevice,
+    RetainedMissing,
+    RetainedExpired,
+    RetainedUnfinished,
+    RetainedNonExportable,
+    SupportMissing,
+    SupportExpired,
+    SupportUnfinished,
+    RecordingVersion,
+    RecordingResult,
+}
+
+impl BundleUnavailableCode {
+    fn message(self) -> &'static str {
+        match self {
+            Self::Source => "the selected diagnostic source is unavailable",
+            Self::OriginatingDevice => "the originating device source is unavailable",
+            Self::RetainedMissing => "the retained diagnostic result is unavailable",
+            Self::RetainedExpired => "the retained diagnostic result has expired",
+            Self::RetainedUnfinished => "the diagnostic result is not complete",
+            Self::RetainedNonExportable => "the diagnostic result is not exportable",
+            Self::SupportMissing => "the retained support result is unavailable",
+            Self::SupportExpired => "the retained support result has expired",
+            Self::SupportUnfinished => "the support result is not complete",
+            Self::RecordingVersion => "the diagnostic recording version is unsupported",
+            Self::RecordingResult => "the diagnostic recording result is malformed",
+        }
+    }
+}
+
+#[derive(Clone, Copy)]
+enum SourceFailure {
+    Unavailable(BundleUnavailableCode),
+    Conflict,
+}
+
+impl SourceFailure {
+    fn unavailable() -> Self {
+        Self::Unavailable(BundleUnavailableCode::Source)
+    }
+
+    fn message(self) -> &'static str {
+        match self {
+            Self::Unavailable(code) => code.message(),
+            Self::Conflict => "the selected diagnostic source conflicts with its recording",
+        }
+    }
+}
+
+fn source_failure(error: SourceFailure) -> ApiError {
+    match error {
+        SourceFailure::Conflict => {
+            ApiError::with_status(StatusCode::CONFLICT, "bundleSourceConflict")
+        }
+        SourceFailure::Unavailable(_) => ApiError::bad_request("bundleSourceUnavailable"),
+    }
+}
+
+fn retained_lookup_failure(
+    error: crate::diagnostic_bundle_results::EvidenceLookup,
+) -> SourceFailure {
+    let code = match error {
+        crate::diagnostic_bundle_results::EvidenceLookup::Missing => {
+            BundleUnavailableCode::RetainedMissing
+        }
+        crate::diagnostic_bundle_results::EvidenceLookup::Expired => {
+            BundleUnavailableCode::RetainedExpired
+        }
+        crate::diagnostic_bundle_results::EvidenceLookup::Unfinished => {
+            BundleUnavailableCode::RetainedUnfinished
+        }
+        crate::diagnostic_bundle_results::EvidenceLookup::NonExportable => {
+            BundleUnavailableCode::RetainedNonExportable
+        }
+        crate::diagnostic_bundle_results::EvidenceLookup::Unavailable => {
+            BundleUnavailableCode::Source
+        }
+    };
+    SourceFailure::Unavailable(code)
+}
+
+fn support_lookup_failure(
+    error: crate::diagnostic_bundle_results::EvidenceLookup,
+) -> SourceFailure {
+    use crate::diagnostic_bundle_results::EvidenceLookup;
+    SourceFailure::Unavailable(match error {
+        EvidenceLookup::Missing => BundleUnavailableCode::SupportMissing,
+        EvidenceLookup::Expired => BundleUnavailableCode::SupportExpired,
+        EvidenceLookup::Unfinished => BundleUnavailableCode::SupportUnfinished,
+        EvidenceLookup::NonExportable | EvidenceLookup::Unavailable => {
+            BundleUnavailableCode::Source
+        }
+    })
+}
+
+struct AdmittedEvidence {
+    identity: AdmittedResultIdentity,
+    context: Option<ProjectContext>,
+    device_id: Option<u32>,
+    reports: Vec<BundleFile>,
+    operation_files: Vec<BundleFile>,
+}
+
+fn admit_retained_evidence(
+    evidence: crate::diagnostic_bundle_results::Evidence,
+) -> Result<AdmittedEvidence, SourceFailure> {
+    let crate::diagnostic_bundle_results::Evidence {
+        identity,
+        context,
+        device_id,
+        reports,
+        operation_files,
+    } = evidence;
+    let object = identity
+        .as_object()
+        .ok_or_else(SourceFailure::unavailable)?;
+    let admitted_identity = if object.len() == 1 {
+        if let Some(reference) = object.get("diagnosticsReference").and_then(Value::as_str) {
+            if reference.len() != 64 || !reference.bytes().all(|byte| byte.is_ascii_hexdigit()) {
+                return Err(SourceFailure::unavailable());
+            }
+            AdmittedResultIdentity::Diagnostics {
+                reference: reference.to_string(),
+            }
+        } else if let Some(sha256) = object.get("supportReportSha256").and_then(Value::as_str) {
+            if sha256.len() != 64 || !sha256.bytes().all(|byte| byte.is_ascii_hexdigit()) {
+                return Err(SourceFailure::unavailable());
+            }
+            AdmittedResultIdentity::Support {
+                sha256: sha256.to_string(),
+            }
+        } else {
+            return Err(SourceFailure::unavailable());
+        }
+    } else {
+        return Err(SourceFailure::unavailable());
+    };
+    if reports.is_empty() || operation_files.len() != 1 {
+        return Err(SourceFailure::unavailable());
+    }
+    Ok(AdmittedEvidence {
+        identity: admitted_identity,
+        context,
+        device_id,
+        reports,
+        operation_files,
+    })
+}
+
+fn validate_retained_provenance(
+    operation: Option<&RecordingSummary>,
+    related_key: &str,
+    token: &str,
+    evidence: &mut AdmittedEvidence,
+) -> Result<(), SourceFailure> {
+    let Some(operation) = operation else {
+        return Ok(());
+    };
+    if operation.format_version != Some(1) || operation.related[related_key].as_str() != Some(token)
+    {
+        return Err(SourceFailure::unavailable());
+    }
+    let recorded_context = recording_context(operation);
+    if recorded_context.as_ref() != evidence.context.as_ref() {
+        evidence.context = None;
+        return Ok(());
+    }
+    let recorded_device = operation.target["deviceId"]
+        .as_u64()
+        .and_then(|value| u32::try_from(value).ok());
+    if recorded_device != evidence.device_id {
+        return Err(SourceFailure::Conflict);
+    }
+    Ok(())
+}
+
+#[derive(Default)]
+struct System2Cache {
+    entries: HashMap<
+        String,
+        Result<Arc<crate::device_system2::DiagnosticBundleAdmission>, BundleUnavailableCode>,
+    >,
+}
+
+impl System2Cache {
+    async fn get(
+        &mut self,
+        state: &SharedState,
+        id: &str,
+    ) -> Result<Arc<crate::device_system2::DiagnosticBundleAdmission>, SourceFailure> {
+        if !self.entries.contains_key(id) {
+            let admitted = state
+                .device_system2
+                .diagnostic_bundle_admission(state, id.to_string())
+                .await
+                .ok()
+                .flatten()
+                .map(Arc::new)
+                .ok_or(BundleUnavailableCode::Source);
+            self.entries.insert(id.to_string(), admitted);
+        }
+        match self.entries.get(id).expect("inserted System-2 admission") {
+            Ok(admitted) => Ok(admitted.clone()),
+            Err(code) => Err(SourceFailure::Unavailable(*code)),
+        }
+    }
+}
+
+struct System2Provenance {
+    context: ProjectContext,
+    device_id: u32,
+    address: knx_core::IndividualAddress,
+}
+
+impl System2Provenance {
+    fn read(operation: &RecordingSummary, operation_id: &str) -> Result<Self, SourceFailure> {
+        if operation.format_version != Some(1)
+            || !matches!(
+                operation.operation_kind.as_deref(),
+                Some("system2-download" | "system2-recovery")
+            )
+            || operation.related["operationId"].as_str() != Some(operation_id)
+        {
+            return Err(SourceFailure::unavailable());
+        }
+        let context = recording_context(operation).ok_or_else(SourceFailure::unavailable)?;
+        let device_id = operation.target["deviceId"]
+            .as_u64()
+            .and_then(|value| u32::try_from(value).ok())
+            .ok_or_else(SourceFailure::unavailable)?;
+        let address = operation.target["individualAddress"]
+            .as_str()
+            .and_then(|value| value.parse().ok())
+            .ok_or_else(SourceFailure::unavailable)?;
+        Ok(Self {
+            context,
+            device_id,
+            address,
+        })
+    }
+
+    fn validate(
+        self,
+        admitted: &crate::device_system2::DiagnosticBundleAdmission,
+    ) -> Result<(), SourceFailure> {
+        let admitted_address = admitted
+            .address()
+            .parse::<knx_core::IndividualAddress>()
+            .map_err(|_| SourceFailure::unavailable())?;
+        if self.context != admitted.project_context()
+            || self.device_id != admitted.device_id()
+            || self.address != admitted_address
+        {
+            return Err(SourceFailure::Conflict);
+        }
+        Ok(())
+    }
 }
 
 fn check_query(query: &BundleQuery) -> Result<(), ApiError> {
@@ -301,7 +680,11 @@ fn resolve_operation(
     let Some(reference) = &query.operation else {
         return Ok(recordings
             .iter()
-            .find(|r| !r.active && kind_fits(query.problem_type, r.operation_kind.as_deref()))
+            .find(|r| {
+                !r.active
+                    && kind_fits(query.problem_type, r.operation_kind.as_deref())
+                    && admit_bundle_recording(r).is_some()
+            })
             .cloned());
     };
     if reference.selection.as_deref() == Some("none") {
@@ -312,12 +695,16 @@ fn resolve_operation(
         &reference.related_key,
         &reference.related_value,
     ) {
-        (Some(id), None, None) => recordings.iter().find(|r| &r.id == id),
+        (Some(id), None, None) => recordings
+            .iter()
+            .find(|r| &r.id == id && admit_bundle_recording(r).is_some()),
         (None, Some(key), Some(value)) => recordings.iter().find(|r| {
             r.related[key.as_str()].as_str() == Some(value.as_str())
                 // Download ids restart with every server run.
                 && (key != "downloadId"
                     || r.related["serverIncarnation"].as_str() == Some(server_incarnation))
+                && (admit_bundle_recording(r).is_some()
+                    || matches!(key.as_str(), "diagnosticsToken" | "supportToken"))
         }),
         _ => return Err(ApiError::bad_request("bundleOperationReferenceRefused")),
     };
@@ -335,8 +722,8 @@ async fn resolve_evidence(
     state: &SharedState,
     query: &BundleQuery,
     operation: Option<&RecordingSummary>,
-) -> Result<crate::diagnostic_bundle_results::Evidence, String> {
-    use crate::diagnostic_bundle_results::{diagnostic_files, Evidence};
+    cache: &mut System2Cache,
+) -> Result<AdmittedEvidence, SourceFailure> {
     let reference = query.operation.as_ref();
     let related = |key: &str| -> Option<String> {
         operation
@@ -349,111 +736,60 @@ async fn resolve_evidence(
                     .and_then(|r| r.related_value.clone())
             })
     };
-    let context = operation.and_then(recording_context);
-    let device_id = operation
-        .and_then(|op| op.target["deviceId"].as_u64())
-        .and_then(|id| u32::try_from(id).ok());
+    if let Some(id) = related("operationId") {
+        let provenance = operation
+            .map(|summary| System2Provenance::read(summary, &id))
+            .transpose()?;
+        let admitted = cache.get(state, &id).await?;
+        if let Some(provenance) = provenance {
+            provenance.validate(&admitted)?;
+        }
+        let report = admitted.report().ok_or_else(SourceFailure::unavailable)?;
+        let report = serde_json::to_value(report).map_err(|_| SourceFailure::unavailable())?;
+        return Ok(AdmittedEvidence {
+            identity: AdmittedResultIdentity::System2 { operation_id: id },
+            context: Some(admitted.project_context()),
+            device_id: Some(admitted.device_id()),
+            reports: vec![BundleFile::json("system2-report.json", &report)],
+            operation_files: vec![BundleFile::new(
+                "system2-private.json",
+                admitted.projection_bytes().to_vec(),
+            )],
+        });
+    }
     if let Some(token) = related("diagnosticsToken") {
-        let retained = state.diagnostic_results.evidence(&token);
-        if retained.is_ok() {
-            return retained;
-        }
-        if let Some(operation) =
-            operation.filter(|op| op.operation_kind.as_deref() == Some("device-diagnostics"))
-        {
-            let store = state.recordings.clone();
-            let id = operation.id.clone();
-            let bytes = tokio::task::spawn_blocking(move || store.read(&id))
-                .await
-                .map_err(|_| "the diagnostic recording is unavailable")?
-                .map_err(|_| "the diagnostic recording is unavailable")?;
-            let mut lines = bytes.split(|b| *b == b'\n').filter(|line| !line.is_empty());
-            let header: Value = serde_json::from_slice(
-                lines
-                    .next()
-                    .ok_or("the diagnostic recording has no header")?,
-            )
-            .map_err(|_| "the diagnostic recording header is malformed")?;
-            if header["type"] != "header"
-                || header["format"] != "knxbench-operation-recording"
-                || header["format_version"] != 1
+        let mut evidence = match state.diagnostic_results.evidence(&token) {
+            Ok(evidence) => admit_retained_evidence(evidence)?,
+            Err(crate::diagnostic_bundle_results::EvidenceLookup::Missing)
+                if operation.is_some() =>
             {
-                return Err("the diagnostic recording version is unsupported".into());
+                retained::diagnostic_recording(state, operation, &token)?
             }
-            let end: Value = serde_json::from_slice(
-                lines
-                    .next_back()
-                    .ok_or("the diagnostic recording has no completed result")?,
-            )
-            .map_err(|_| "the diagnostic recording result is malformed")?;
-            if end["type"] != "end" {
-                return Err("the diagnostic recording has no completed result".into());
-            }
-            let result: crate::diagnostic_bundle_results::RecordedDiagnosticResult =
-                serde_json::from_value(end["summary"].clone())
-                    .map_err(|_| "the diagnostic recording result is malformed")?;
-            let export: knx_app::device_diagnostics::Export = result.into();
-            return Ok(Evidence {
-                identity: json!({"diagnosticsReference": export.report.project_reference}),
-                context,
-                device_id,
-                reports: diagnostic_files(&export)?,
-                operation_files: Vec::new(),
-            });
+            Err(error) => return Err(retained_lookup_failure(error)),
+        };
+        if !matches!(
+            &evidence.identity,
+            AdmittedResultIdentity::Diagnostics { .. }
+        ) {
+            return Err(SourceFailure::unavailable());
         }
-        return retained;
+        validate_retained_provenance(operation, "diagnosticsToken", &token, &mut evidence)?;
+        return Ok(evidence);
     }
     if let Some(token) = related("supportToken") {
-        return state.support_results.evidence(&token);
-    }
-    if let Some(id) = related("operationId") {
-        let (progress, report) = crate::device_system2::diagnostic_projection(state, id.clone())
-            .await?
-            .ok_or("the retained System-2 journal is unavailable")?;
-        return Ok(Evidence {
-            identity: json!({"operationId":id}),
-            context,
-            device_id,
-            reports: vec![BundleFile::json("system2-report.json", &report)],
-            operation_files: vec![BundleFile::json("system2-progress.json", &progress)],
-        });
-    }
-    if let Some(id) = related("downloadId") {
-        let id: u64 = id
-            .parse()
-            .map_err(|_| "the retained download id is invalid")?;
-        if operation.is_some_and(|op| {
-            op.related["serverIncarnation"].as_str() != Some(&state.server_incarnation)
-        }) {
-            return Err("the download result belongs to another server run".into());
+        let mut evidence = admit_retained_evidence(
+            state
+                .support_results
+                .evidence(&token)
+                .map_err(support_lookup_failure)?,
+        )?;
+        if !matches!(&evidence.identity, AdmittedResultIdentity::Support { .. }) {
+            return Err(SourceFailure::unavailable());
         }
-        let guard = state
-            .device_download
-            .try_lock()
-            .map_err(|_| "the download result is busy")?;
-        let session = guard
-            .as_ref()
-            .filter(|session| session.id() == id)
-            .ok_or("the retained download result is unavailable")?;
-        let report = session
-            .report()
-            .ok_or("the download result is not complete")?;
-        return Ok(Evidence {
-            identity: json!({"downloadId":id,"serverIncarnation":state.server_incarnation}),
-            context,
-            device_id,
-            reports: vec![BundleFile::json(
-                "download-report.json",
-                &serde_json::to_value(report).map_err(|_| "download report encoding failed")?,
-            )],
-            operation_files: vec![BundleFile::json(
-                "download-status.json",
-                &serde_json::to_value(session.status())
-                    .map_err(|_| "download status encoding failed")?,
-            )],
-        });
+        validate_retained_provenance(operation, "supportToken", &token, &mut evidence)?;
+        return Ok(evidence);
     }
-    Err("no retained structured result exists for this operation".into())
+    Err(SourceFailure::unavailable())
 }
 
 fn markers(addresses: bool, names: bool, parameter_values: bool, network: bool) -> ContentMarkers {
@@ -489,13 +825,25 @@ async fn collect(state: &SharedState, query: &BundleQuery) -> Result<Collected, 
     .await
     .map_err(|e| ApiError::internal(e.to_string()))?
     .map_err(|e| ApiError::internal(format!("recordings cannot be listed: {e}")))?;
+    #[cfg(test)]
+    let recordings =
+        supply_test_recording_summary(recordings, query.test_recording_summary_supplier.as_ref());
     let problem = query.problem_type;
     let operation = if bundle::default_offer(problem, SectionKind::Operation) == Offer::NotOffered {
         None
     } else {
         resolve_operation(query, &recordings, &state.server_incarnation)?
     };
-    let evidence = resolve_evidence(state, query, operation.as_ref()).await;
+    let operation_view = operation.as_ref().and_then(admit_bundle_recording);
+    let recording_views = recordings
+        .iter()
+        .filter_map(admit_bundle_recording)
+        .collect();
+    let mut system2_cache = System2Cache::default();
+    let mut evidence = resolve_evidence(state, query, operation.as_ref(), &mut system2_cache).await;
+    if matches!(evidence, Err(SourceFailure::Conflict)) {
+        return Err(source_failure(SourceFailure::Conflict));
+    }
     let run_device = evidence
         .as_ref()
         .ok()
@@ -506,11 +854,13 @@ async fn collect(state: &SharedState, query: &BundleQuery) -> Result<Collected, 
                 .and_then(|op| op.target["deviceId"].as_u64())
                 .and_then(|id| u32::try_from(id).ok())
         });
-    let source = evidence
-        .as_ref()
-        .ok()
-        .and_then(|result| result.context.clone())
-        .or_else(|| operation.as_ref().and_then(recording_context));
+    // An admitted result speaks only for its own context; one whose context was
+    // cleared as contradicting its recording speaks for none, so its ids are never
+    // compared or projected.
+    let source = match &evidence {
+        Ok(result) => result.context.clone(),
+        Err(_) => operation.as_ref().and_then(recording_context),
+    };
     // Address-to-id resolution is allowed only in the proven, unchanged source project.
     let run_device = run_device.or_else(|| {
         let address = operation.as_ref()?.target["individualAddress"]
@@ -544,18 +894,15 @@ async fn collect(state: &SharedState, query: &BundleQuery) -> Result<Collected, 
             "bundleTargetMismatch",
         ));
     }
-    let has_operation = operation.is_some()
-        || query
-            .operation
-            .as_ref()
-            .is_some_and(|op| op.selection.as_deref() != Some("none"));
-    let device_unavailable =
-        if has_operation && (source.as_ref() != Some(&context) || run_device.is_none()) {
-            Some("the operation's originating device/project context is unavailable or has changed")
-        } else {
-            None
-        };
-    let device_id = query.device_id.or(run_device);
+    let device_id = evidence.as_ref().ok().and_then(|result| result.device_id);
+    let projectable = projectable_device(
+        query,
+        operation.as_ref(),
+        evidence.as_ref(),
+        source.as_ref(),
+        run_device,
+        &context,
+    );
     let result_identity = match &evidence {
         Ok(result) => result.identity.clone(),
         Err(_)
@@ -565,19 +912,9 @@ async fn collect(state: &SharedState, query: &BundleQuery) -> Result<Collected, 
                     .as_ref()
                     .is_some_and(|op| op.selection.as_deref() == Some("none")) =>
         {
-            Value::Null
+            AdmittedResultIdentity::None
         }
-        Err(_) => query
-            .operation
-            .as_ref()
-            .map(|reference| {
-                json!({
-                    "relatedKey": reference.related_key,
-                    "relatedValue": reference.related_value,
-                    "recordingId": reference.recording_id,
-                })
-            })
-            .unwrap_or(Value::Null),
+        Err(_) => AdmittedResultIdentity::Unavailable,
     };
     let selected: Vec<SectionKind> = match &query.sections {
         Some(chosen) => chosen.clone(),
@@ -603,26 +940,19 @@ async fn collect(state: &SharedState, query: &BundleQuery) -> Result<Collected, 
             continue;
         }
         let wanted = offer == Offer::Fixed || selected.contains(&kind);
-        let built = if kind == SectionKind::ClientState && !wanted && query.client.is_none() {
-            Ok(Vec::new())
-        } else if matches!(kind, SectionKind::Device | SectionKind::Catalogue)
-            && device_unavailable.is_some()
-        {
-            Err(device_unavailable
-                .expect("checked availability")
-                .to_string())
-        } else {
-            build_section(
-                state,
-                query,
-                kind,
-                operation.as_ref(),
-                device_id,
-                evidence.as_ref().map_err(String::as_str),
-                &recordings,
-            )
-            .await
-        };
+        let built = build_section(
+            state,
+            query,
+            kind,
+            operation.as_ref(),
+            evidence.as_mut().map_err(|error| *error),
+            SectionScope {
+                recordings: &recordings,
+                projectable,
+            },
+            &mut system2_cache,
+        )
+        .await;
         let unavailable = match built {
             Ok(built) => {
                 if wanted {
@@ -630,7 +960,8 @@ async fn collect(state: &SharedState, query: &BundleQuery) -> Result<Collected, 
                 }
                 None
             }
-            Err(reason) => Some(reason),
+            Err(SourceFailure::Conflict) => return Err(source_failure(SourceFailure::Conflict)),
+            Err(reason) => Some(reason.message().to_string()),
         };
         offers.push(OfferView {
             kind,
@@ -645,13 +976,21 @@ async fn collect(state: &SharedState, query: &BundleQuery) -> Result<Collected, 
     Ok(Collected {
         context,
         result_identity,
-        operation,
+        operation: operation_view,
         device_id,
         offers,
         sections,
-        recordings,
+        recordings: recording_views,
         created_at,
     })
+}
+
+/// What `collect` decided once per request for every section kind.
+struct SectionScope<'a> {
+    /// The admitted recording listing earlier operations are chosen from.
+    recordings: &'a [RecordingSummary],
+    /// See [`projectable_device`].
+    projectable: Result<Option<u32>, SourceFailure>,
 }
 
 /// Builds the sections of `kind`, or says why there are none.
@@ -660,69 +999,203 @@ async fn build_section(
     query: &BundleQuery,
     kind: SectionKind,
     operation: Option<&RecordingSummary>,
-    device_id: Option<u32>,
-    evidence: Result<&crate::diagnostic_bundle_results::Evidence, &str>,
-    recordings: &[RecordingSummary],
-) -> Result<Vec<BundleSection>, String> {
+    evidence: Result<&mut AdmittedEvidence, SourceFailure>,
+    scope: SectionScope<'_>,
+    system2_cache: &mut System2Cache,
+) -> Result<Vec<BundleSection>, SourceFailure> {
+    let SectionScope {
+        recordings,
+        projectable,
+    } = scope;
     match kind {
         SectionKind::Environment => Ok(vec![environment(state)]),
-        SectionKind::SessionLog => Ok(vec![session_log(state)]),
+        SectionKind::SessionLog => Err(SourceFailure::unavailable()),
         SectionKind::Operation => {
             if let Some(operation) = operation {
-                return Ok(vec![operation_section(state, operation, SectionKind::Operation).await?]);
+                if let Ok(evidence) = evidence {
+                    if !evidence.operation_files.is_empty() {
+                        let mut section = BundleSection::new(SectionKind::Operation);
+                        section.label = Some(operation.id.clone());
+                        section.files = std::mem::take(&mut evidence.operation_files);
+                        section.entries = section.files.len();
+                        section.notes.push(if matches!(
+                            &evidence.identity,
+                            AdmittedResultIdentity::System2 { .. }
+                        ) {
+                            "the raw operation recording is withheld; this is the admitted private projection"
+                                .into()
+                        } else {
+                            "the raw operation recording is withheld; this is the retained typed result"
+                                .into()
+                        });
+                        return Ok(vec![section]);
+                    }
+                }
+                return Ok(vec![
+                    operation_section(state, operation, SectionKind::Operation, system2_cache)
+                        .await?,
+                ]);
             }
-            let evidence = evidence.map_err(str::to_string)?;
+            let evidence = evidence?;
             if evidence.operation_files.is_empty() {
-                return Err("the operation recording is unavailable; retained structured result is in legacy reports".into());
+                return Err(SourceFailure::unavailable());
             }
             let mut section = BundleSection::new(SectionKind::Operation);
-            section.files = evidence.operation_files.clone();
+            section.files = std::mem::take(&mut evidence.operation_files);
             section.entries = section.files.len();
-            section.notes.push("the operation recording is unavailable; this is the retained typed result".into());
+            section.notes.push(if matches!(
+                &evidence.identity,
+                AdmittedResultIdentity::System2 { .. }
+            ) {
+                "the operation recording is unavailable; this is the admitted private projection"
+                    .into()
+            } else {
+                "the operation recording is unavailable; this is the retained typed result".into()
+            });
             Ok(vec![section])
         }
         SectionKind::EarlierOperation => {
             let mut out = Vec::new();
+            // Each listed recording is read once; with retention this bounds the total.
+            let mut seen = std::collections::BTreeSet::new();
             for id in &query.earlier_recording_ids {
-                if operation.is_some_and(|op| &op.id == id) {
+                if operation.is_some_and(|op| &op.id == id) || !seen.insert(id.as_str()) {
                     continue;
                 }
                 let summary = recordings
                     .iter()
                     .find(|r| &r.id == id)
-                    .ok_or("a chosen earlier recording no longer exists")?;
-                out.push(operation_section(state, summary, SectionKind::EarlierOperation).await?);
+                    .filter(|summary| admit_bundle_recording(summary).is_some())
+                    .ok_or_else(SourceFailure::unavailable)?;
+                out.push(
+                    operation_section(state, summary, SectionKind::EarlierOperation, system2_cache)
+                        .await?,
+                );
             }
             Ok(out)
         }
-        SectionKind::Device => Ok(vec![device_section(state, device_id)?]),
+        SectionKind::Device => {
+            let device = projectable?.ok_or_else(SourceFailure::unavailable)?;
+            Ok(vec![device_section(state, device)?])
+        }
         SectionKind::LegacyReports => {
-            let evidence = evidence.map_err(str::to_string)?;
+            let evidence = evidence?;
             let mut section = BundleSection::new(SectionKind::LegacyReports);
-            section.files = evidence.reports.clone();
+            section.files = std::mem::take(&mut evidence.reports);
             section.entries = section.files.len();
             section.markers = markers(false, false, true, false);
+            section.notes.extend(report_notes(&section.files));
             Ok(vec![section])
         }
         SectionKind::ImportReport => Ok(vec![import_report(state)?]),
-        SectionKind::ImportFile => Err(
-            "this server session does not keep the original import file; attach it yourself if needed"
-                .into(),
-        ),
-        SectionKind::Catalogue => Ok(vec![catalogue(state, device_id)]),
+        SectionKind::ImportFile => Err(SourceFailure::unavailable()),
+        SectionKind::Catalogue => Ok(vec![catalogue(state, projectable?)]),
         SectionKind::Project => Ok(vec![project_section(state).await?]),
-        SectionKind::BusMonitor => Ok(vec![bus_monitor(state).await?]),
-        SectionKind::ClientState => {
-            let client = query
-                .client
-                .as_ref()
-                .ok_or("the browser did not describe itself")?;
-            let mut section = BundleSection::new(SectionKind::ClientState);
-            section.files.push(BundleFile::json("client.json", client));
-            section.entries = client["recentErrors"].as_array().map_or(0, Vec::len);
-            Ok(vec![section])
-        }
+        SectionKind::BusMonitor | SectionKind::ClientState => Err(SourceFailure::unavailable()),
     }
+}
+
+/// Which current-project device the device and catalogue extracts may project.
+///
+/// Decided once per request from what `collect` proved: a source (retained result
+/// or recording) names its device only inside its own project context, which must
+/// equal the request's unchanged current context; `run_device` is then that
+/// source's own device (by id, or by an unambiguous address). A retained result
+/// whose context was cleared as contradicting its recording never lends its device.
+/// Without any selected source only the user's explicit choice is projected;
+/// `Ok(None)` is a device-free catalogue. A named source that failed without any
+/// recording projects nothing; a resolved recording may still prove its own device.
+fn projectable_device(
+    query: &BundleQuery,
+    operation: Option<&RecordingSummary>,
+    evidence: Result<&AdmittedEvidence, &SourceFailure>,
+    source: Option<&ProjectContext>,
+    run_device: Option<u32>,
+    context: &ProjectContext,
+) -> Result<Option<u32>, SourceFailure> {
+    if evidence.is_err() && operation.is_none() {
+        return if no_source_selected(query) {
+            Ok(query.device_id)
+        } else {
+            Err(SourceFailure::unavailable())
+        };
+    }
+    if source != Some(context) {
+        return Err(SourceFailure::Unavailable(
+            BundleUnavailableCode::OriginatingDevice,
+        ));
+    }
+    // A differing chosen id in this context was already refused as
+    // `bundleTargetMismatch` by `collect`.
+    run_device.map(Some).ok_or_else(SourceFailure::unavailable)
+}
+
+/// True only when the request explicitly or implicitly names no operation source.
+fn no_source_selected(query: &BundleQuery) -> bool {
+    query.operation.as_ref().is_none_or(|op| {
+        op.selection.as_deref() == Some("none")
+            && op.recording_id.is_none()
+            && op.related_key.is_none()
+            && op.related_value.is_none()
+    })
+}
+
+fn device_section(state: &SharedState, id: u32) -> Result<BundleSection, SourceFailure> {
+    let detail =
+        crate::domain::device_detail(state, id, None).map_err(|_| SourceFailure::unavailable())?;
+    let parameters = crate::domain::parameter_panel_impl(state, id, None).ok();
+    let mut section = BundleSection::new(SectionKind::Device);
+    section.label = Some(id.to_string());
+    section.files.push(BundleFile::json(
+        "device.json",
+        &serde_json::to_value(&detail).unwrap_or_default(),
+    ));
+    match parameters {
+        Some(parameters) => {
+            let value = serde_json::to_value(&parameters).unwrap_or_default();
+            section.entries = count_leaves(&value);
+            section
+                .files
+                .push(BundleFile::json("parameters.json", &value));
+        }
+        None => section
+            .notes
+            .push("the parameter values could not be projected for this device".into()),
+    }
+    section.markers = markers(true, true, true, false);
+    Ok(section)
+}
+
+fn count_leaves(value: &Value) -> usize {
+    match value {
+        Value::Array(items) => items.iter().map(count_leaves).sum(),
+        Value::Object(map) => map.values().map(count_leaves).sum(),
+        _ => 1,
+    }
+}
+
+fn catalogue(state: &SharedState, device_id: Option<u32>) -> BundleSection {
+    let product = device_id
+        .and_then(|id| crate::domain::device_detail(state, id, None).ok())
+        .map(|detail| serde_json::to_value(&detail).unwrap_or_default())
+        .map(|detail| {
+            json!({
+                "application": detail.get("application").cloned().unwrap_or(Value::Null),
+                "product": detail.get("product").cloned().unwrap_or(Value::Null),
+                "manufacturer": detail.get("manufacturer").cloned().unwrap_or(Value::Null),
+            })
+        });
+    let mut section = BundleSection::new(SectionKind::Catalogue);
+    section.files.push(BundleFile::json(
+        "catalogue.json",
+        &json!({
+            // Availability only: the raw startup reason can hold local paths.
+            "productDatabase": {"availability": state.product_database_availability().as_str()},
+            "deviceProductIdentity": product,
+        }),
+    ));
+    section.entries = 1;
+    section
 }
 
 fn environment(state: &SharedState) -> BundleSection {
@@ -757,11 +1230,10 @@ fn environment(state: &SharedState) -> BundleSection {
             "deviceDownloadTiming": format!("{:?}", state.device_download_timing),
             "system2Timing": format!("{:?}", state.system2_timing),
             "addressProgrammingTiming": format!("{:?}", state.address_programming_timing),
-            "tunnelRouteBack": std::env::var("KNX_TUNNEL_ROUTE_BACK").ok(),
+            "tunnelRouteBack": state.tunnel_return_path == knx_net::TunnelReturnPath::RouteBack,
         },
         "productDatabase": {
-            "open": state.product_db.is_some(),
-            "unavailableReason": state.product_db_unavailable,
+            "availability": state.product_database_availability().as_str(),
         },
         "project": {
             "open": project_open,
@@ -778,33 +1250,75 @@ fn environment(state: &SharedState) -> BundleSection {
     section
 }
 
-fn session_log(state: &SharedState) -> BundleSection {
-    let log = state.session_log.lock().expect("state mutex poisoned");
-    let entries = log.entries();
-    let mut section = BundleSection::new(SectionKind::SessionLog);
-    section.entries = entries.len();
-    section
-        .files
-        .push(BundleFile::json("session-log.json", &json!(entries)));
-    section.markers = markers(true, true, false, true);
-    section
-}
-
 async fn operation_section(
     state: &SharedState,
     operation: &RecordingSummary,
     kind: SectionKind,
-) -> Result<BundleSection, String> {
-    let store = state.recordings.clone();
-    let id = operation.id.clone();
-    let bytes = tokio::task::spawn_blocking(move || store.read(&id))
-        .await
-        .map_err(|e| e.to_string())?
-        .map_err(|e| format!("the recording cannot be read: {e}"))?;
+    cache: &mut System2Cache,
+) -> Result<BundleSection, SourceFailure> {
+    let Some(operation_id) = operation.related["operationId"].as_str() else {
+        // A System-2 recording without its journal id stays unavailable, never raw.
+        if operation
+            .operation_kind
+            .as_deref()
+            .is_some_and(|kind| kind.starts_with("system2-"))
+        {
+            return Err(SourceFailure::unavailable());
+        }
+        return raw_recording_section(state, operation, kind).await;
+    };
+    let provenance = System2Provenance::read(operation, operation_id)?;
+    let admitted = cache.get(state, operation_id).await?;
+    provenance.validate(&admitted)?;
     let mut section = BundleSection::new(kind);
     section.label = Some(operation.id.clone());
-    section.entries = bytes.iter().filter(|b| **b == b'\n').count();
+    section.entries = 1;
+    section.notes.push(
+        "the raw operation recording is withheld; this is the admitted private projection".into(),
+    );
+    section.files.push(BundleFile::new(
+        "system2-private.json",
+        admitted.projection_bytes().to_vec(),
+    ));
+    Ok(section)
+}
+
+/// Shown wherever declared memory or a raw recording leaves after consent.
+const PRIVATE_RAW_NOTE: &str = "contains device configuration, possibly passwords; \
+     recognised KNX keys are redacted; keep private";
+
+/// The consent warning for retained reports that carry declared memory.
+fn report_notes(files: &[BundleFile]) -> Option<String> {
+    files
+        .iter()
+        .any(|file| file.name == "memory.json")
+        .then(|| PRIVATE_RAW_NOTE.to_string())
+}
+
+/// Largest raw recording copied into a bundle; a larger one stays unavailable.
+const MAX_RAW_RECORDING_BYTES: u64 = 64 * 1024 * 1024;
+
+/// A non-System-2 recording exactly as the recorder wrote it (keys redacted at capture).
+///
+/// Owner decision 2026-10-31: the redacted raw recording may leave after consent;
+/// historical, unknown or malformed recordings are never backfilled or rewritten.
+async fn raw_recording_section(
+    state: &SharedState,
+    operation: &RecordingSummary,
+    kind: SectionKind,
+) -> Result<BundleSection, SourceFailure> {
+    let store = state.recordings.clone();
+    let id = operation.id.clone();
+    let bytes =
+        tokio::task::spawn_blocking(move || store.read_bounded(&id, MAX_RAW_RECORDING_BYTES))
+            .await
+            .map_err(|_| SourceFailure::unavailable())?
+            .map_err(|_| SourceFailure::unavailable())?;
+    let mut section = BundleSection::new(kind);
+    section.label = Some(operation.id.clone());
+    section.entries = bytes.iter().filter(|byte| **byte == b'\n').count();
     section.markers = markers(true, true, true, true);
+    section.notes.push(PRIVATE_RAW_NOTE.into());
     if operation.torn_tail {
         section
             .notes
@@ -813,197 +1327,52 @@ async fn operation_section(
     section
         .files
         .push(BundleFile::new("recording.jsonl", bytes));
-    if let Some(system2) = operation.related["operationId"].as_str() {
-        match crate::device_system2::diagnostic_projection(state, system2.to_string()).await {
-            Ok(Some((progress, _report))) => section
-                .files
-                .push(BundleFile::json("system2-progress.json", &progress)),
-            Ok(None) => section
-                .notes
-                .push("the System-2 journal of this operation no longer exists".into()),
-            Err(reason) => section
-                .notes
-                .push(format!("System-2 journal unavailable: {reason}")),
-        }
-    }
-    if let Some(status) = current_download(state, operation, |session| {
-        serde_json::to_value(session.status()).unwrap_or_default()
-    })
-    .await
-    {
-        section
-            .files
-            .push(BundleFile::json("download-status.json", &status));
-    }
     Ok(section)
 }
 
-/// `read` applied to the server's download session when it is this
-/// recording's run (same id, same server incarnation).
-async fn current_download<T>(
-    state: &SharedState,
-    operation: &RecordingSummary,
-    read: impl FnOnce(&crate::DeviceDownloadSession) -> T,
-) -> Option<T> {
-    let id: u64 = operation.related["downloadId"].as_str()?.parse().ok()?;
-    if operation.related["serverIncarnation"].as_str() != Some(state.server_incarnation.as_str()) {
-        return None;
-    }
-    let guard = state.device_download.try_lock().ok()?;
-    let session = guard.as_ref().filter(|s| s.id() == id)?;
-    Some(read(session))
-}
-
-fn device_section(state: &SharedState, device_id: Option<u32>) -> Result<BundleSection, String> {
-    let id = device_id.ok_or("no device is chosen")?;
-    let detail = crate::domain::device_detail(state, id, None)?;
-    let parameters = crate::domain::parameter_panel_impl(state, id, None).ok();
-    let mut section = BundleSection::new(SectionKind::Device);
-    section.label = Some(id.to_string());
-    section.files.push(BundleFile::json(
-        "device.json",
-        &serde_json::to_value(&detail).unwrap_or_default(),
-    ));
-    match parameters {
-        Some(parameters) => {
-            let value = serde_json::to_value(&parameters).unwrap_or_default();
-            section.entries = count_leaves(&value);
-            section
-                .files
-                .push(BundleFile::json("parameters.json", &value));
-        }
-        None => section
-            .notes
-            .push("the parameter values could not be projected for this device".into()),
-    }
-    section.markers = markers(true, true, true, false);
-    Ok(section)
-}
-
-fn count_leaves(value: &Value) -> usize {
-    match value {
-        Value::Array(items) => items.iter().map(count_leaves).sum(),
-        Value::Object(map) => map.values().map(count_leaves).sum(),
-        _ => 1,
-    }
-}
-
-fn import_report(state: &SharedState) -> Result<BundleSection, String> {
+fn import_report(state: &SharedState) -> Result<BundleSection, SourceFailure> {
     let project = state.project.lock().expect("state mutex poisoned");
-    project.as_ref().ok_or("no project is open")?;
+    project.as_ref().ok_or_else(SourceFailure::unavailable)?;
     let opaque = state.opaque.lock().expect("state mutex poisoned");
-    let evidence =
-        knx_app::import_evidence::read(&opaque)?.ok_or("this project carries no import report")?;
-    let copy = knx_app::secret_free_copy::import_report_without_secrets(&evidence.report)
-        .map_err(|error| error.to_string())?;
+    let evidence = knx_app::import_evidence::read(&opaque)
+        .map_err(|_| SourceFailure::unavailable())?
+        .ok_or_else(SourceFailure::unavailable)?;
+    let copy = knx_app::secret_free_copy::import_report_for_bundle(&evidence.report)
+        .map_err(|_| SourceFailure::unavailable())?;
+    let (bytes, notes) = copy.into_parts();
     let mut section = BundleSection::new(SectionKind::ImportReport);
-    for redaction in &copy.redactions {
-        section.notes.push(format!(
-            "removed {} at {}",
-            redaction.kind, redaction.location
-        ));
-    }
-    for withheld in &copy.withheld {
-        section.notes.push(format!("left out: {withheld}"));
-    }
+    section.notes = notes;
     section
         .files
-        .push(BundleFile::new("import-report.json", copy.bytes));
+        .push(BundleFile::new("import-report.json", bytes));
     section.entries = 1;
     section.markers = markers(true, true, false, false);
     Ok(section)
 }
 
-fn catalogue(state: &SharedState, device_id: Option<u32>) -> BundleSection {
-    let product = device_id
-        .and_then(|id| crate::domain::device_detail(state, id, None).ok())
-        .map(|detail| serde_json::to_value(&detail).unwrap_or_default())
-        .map(|detail| {
-            json!({
-                "application": detail.get("application").cloned().unwrap_or(Value::Null),
-                "product": detail.get("product").cloned().unwrap_or(Value::Null),
-                "manufacturer": detail.get("manufacturer").cloned().unwrap_or(Value::Null),
-            })
-        });
-    let mut section = BundleSection::new(SectionKind::Catalogue);
-    section.files.push(BundleFile::json(
-        "catalogue.json",
-        &json!({
-            "productDatabaseOpen": state.product_db.is_some(),
-            "unavailableReason": state.product_db_unavailable,
-            "deviceProductIdentity": product,
-        }),
-    ));
-    section.entries = 1;
-    section
-}
-
-async fn project_section(state: &SharedState) -> Result<BundleSection, String> {
+async fn project_section(state: &SharedState) -> Result<BundleSection, SourceFailure> {
     let path = state
         .store_path
         .lock()
         .expect("state mutex poisoned")
         .clone()
-        .ok_or("the project has not been saved as a KNXBench project file yet")?;
+        .ok_or_else(SourceFailure::unavailable)?;
     let copy = tokio::task::spawn_blocking(move || {
-        crate::diagnostic_bundle_routes::secret_free_project(&path)
+        knx_app::secret_free_copy::native_project_for_bundle(&path)
     })
     .await
-    .map_err(|e| e.to_string())?
-    .map_err(|e| format!("a secret-free copy of the project could not be made: {e}"))?;
+    .map_err(|_| SourceFailure::unavailable())?
+    .map_err(|_| SourceFailure::unavailable())?;
+    let (bytes, notes) = copy.into_parts();
     let mut section = BundleSection::new(SectionKind::Project);
     section.entries = 1;
     section.markers = markers(true, true, true, true);
     section
         .notes
         .push("the last saved state of the project; unsaved changes are not included".into());
-    for redaction in &copy.redactions {
-        section.notes.push(format!(
-            "removed {} at {}",
-            redaction.kind, redaction.location
-        ));
-    }
-    for withheld in &copy.withheld {
-        section.notes.push(format!("left out: {withheld}"));
-    }
-    section
-        .files
-        .push(BundleFile::new("project.knxdb", copy.bytes));
+    section.notes.extend(notes);
+    section.files.push(BundleFile::new("project.knxdb", bytes));
     Ok(section)
-}
-
-async fn bus_monitor(state: &SharedState) -> Result<BundleSection, String> {
-    let guard = state.bus_session.lock().await;
-    let session = guard.as_ref().ok_or("the bus monitor is not running")?;
-    let since = chrono::Utc::now() - BUS_MONITOR_WINDOW;
-    let rows: Vec<Value> = {
-        let buffer = session.buffer();
-        let buffer = buffer.lock().expect("bus session buffer poisoned");
-        buffer
-            .telegrams_since(0)
-            .iter()
-            .filter(|row| {
-                chrono::DateTime::parse_from_rfc3339(&row.timestamp)
-                    .map(|at| at >= since)
-                    .unwrap_or(true)
-            })
-            .map(crate::debug_report_routes::telegram_json)
-            .collect()
-    };
-    let mut section = BundleSection::new(SectionKind::BusMonitor);
-    section.entries = rows.len();
-    section
-        .files
-        .push(BundleFile::json("bus-monitor.json", &json!(rows)));
-    section.markers = markers(true, false, false, false);
-    Ok(section)
-}
-
-/// The saved project file without secrets; the error text is the helper's sanitized `Display`.
-fn secret_free_project(
-    path: &std::path::Path,
-) -> Result<knx_app::secret_free_copy::SecretFreeCopy, String> {
-    knx_app::secret_free_copy::native_project_without_secrets(path).map_err(|e| e.to_string())
 }
 
 fn request(state: &SharedState, query: &BundleQuery) -> BundleRequest {
@@ -1012,7 +1381,10 @@ fn request(state: &SharedState, query: &BundleQuery) -> BundleRequest {
         writer: crate::operation_recordings::writer_identity(),
         recording_enabled: state.recordings.is_enabled(),
         consent_at: chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
-        description: query.description.clone(),
+        description: query
+            .description
+            .as_ref()
+            .map(|_| "User description withheld from diagnostic bundle.".to_string()),
     }
 }
 

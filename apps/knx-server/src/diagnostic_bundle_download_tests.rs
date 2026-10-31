@@ -6,7 +6,6 @@ use axum::{
     http::Request,
 };
 use serde_json::{json, Value};
-use std::io::Read;
 use tower::ServiceExt;
 
 async fn post(state: &crate::SharedState, body: Value, uri: &str) -> axum::response::Response {
@@ -59,17 +58,23 @@ async fn exact_retained_download_result_without_recording_keeps_its_original_sta
         .await
         .unwrap();
     let mut zip = zip::ZipArchive::new(std::io::Cursor::new(bytes)).unwrap();
-    for (path, expected) in [
-        ("reports/download-report.json", expected_report),
-        ("operations/download-status.json", expected_status),
-    ] {
-        let mut bytes = Vec::new();
-        zip.by_name(path).unwrap().read_to_end(&mut bytes).unwrap();
-        assert_eq!(serde_json::from_slice::<Value>(&bytes).unwrap(), expected);
-    }
+    assert!(zip.by_name("reports/download-report.json").is_err());
+    assert!(zip.by_name("operations/download-status.json").is_err());
     assert!(!zip
         .file_names()
         .any(|name| name.starts_with("device/") || name.ends_with("recording.jsonl")));
+    {
+        let retained = state.device_download.lock().await;
+        let retained = retained.as_ref().unwrap();
+        assert_eq!(
+            serde_json::to_value(retained.status()).unwrap(),
+            expected_status
+        );
+        assert_eq!(
+            serde_json::to_value(retained.report().unwrap()).unwrap(),
+            expected_report
+        );
+    }
     let response = post(&state,json!({"problemType":"deviceProgramming","operation":{"relatedKey":"downloadId","relatedValue":"2"}}),"/api/diagnostics/bundle/preview").await;
     let preview: Value =
         serde_json::from_slice(&to_bytes(response.into_body(), 1024 * 1024).await.unwrap())
@@ -82,6 +87,6 @@ async fn exact_retained_download_result_without_recording_keeps_its_original_sta
         .unwrap();
     assert_eq!(
         reports["unavailable"],
-        "the retained download result is unavailable"
+        "the selected diagnostic source is unavailable"
     );
 }

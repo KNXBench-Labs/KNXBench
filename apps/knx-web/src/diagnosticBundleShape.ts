@@ -49,6 +49,22 @@ export interface RecordingSummary {
   tornTail: boolean;
 }
 
+export type BundleRecordingOutcome = "succeeded" | "failed" | "cancelled" | "abandoned";
+export type BundleRecordingEnd =
+  | { state: "missing" }
+  | { state: "withheld" }
+  | { state: "known"; outcome: BundleRecordingOutcome };
+
+/** Closed recording view admitted specifically for bundle review and export. */
+export interface BundleRecordingSummary {
+  id: string;
+  sizeBytes: number;
+  formatVersion: 1;
+  active: boolean;
+  tornTail: boolean;
+  end: BundleRecordingEnd;
+}
+
 export interface DeleteOutcome {
   removed: number;
   /** Recordings being written right now; a later request deletes them. */
@@ -125,7 +141,7 @@ export interface BundlePreview {
   exceedsMailHint: boolean;
   fileName: string;
   mailDraft: string;
-  recordings: RecordingSummary[];
+  recordings: BundleRecordingSummary[];
 }
 
 export interface SavedBundle {

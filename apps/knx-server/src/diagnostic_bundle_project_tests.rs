@@ -14,6 +14,7 @@ const BCU_KEY: &str = "2718281828";
 const TOOL_KEY: &str = "SNTLtoolKeyProjectBundle01";
 const TUNNEL_PASSWORD: &str = "SNTLtunnelPwProjectBundle02";
 const SECRETS: [&str; 3] = [BCU_KEY, TOOL_KEY, TUNNEL_PASSWORD];
+const FREE_ACCESS_KEY: &str = "4294967295";
 
 const SAVED_NAME: &str = "Saved root project, edited";
 const WORKING_NAME: &str = "Unsaved working project name";
@@ -23,22 +24,22 @@ const WORKING_DEVICE: &str = "Unsaved working actuator";
 const MEMBER: &str = "project/project.knxdb";
 const SAVED_ROOT_NOTE: &str =
     "the last saved state of the project; unsaved changes are not included";
-const UNAVAILABLE_PREFIX: &str = "a secret-free copy of the project could not be made:";
+const UNAVAILABLE_PREFIX: &str = "the selected diagnostic source is unavailable";
 
 fn topology() -> String {
     format!(
         r#"<?xml version="1.0" encoding="utf-8"?>
 <KNX xmlns="http://knx.org/xml/project/21">
   <Project Id="P-0001"><Installations>
-    <Installation InstallationId="0" Name="Main" BCUKey="{BCU_KEY}" DiagnosticWitness="safe neighbour">
+    <Installation InstallationId="0" Name="Main" BCUKey="{FREE_ACCESS_KEY}" DiagnosticWitness="safe neighbour">
       <Topology><Area Id="P-0001-0_A-1" Address="1">
         <Line Id="P-0001-0_L-2" Address="1">
           <Segment Id="P-0001-0_L-2_S-1" Number="0" MediumTypeRefId="MT-0">
             <BusAccess Name="Synthetic interface" Edi="synthetic"
-                Parameter="Target=203.0.113.250;UserPassword={TUNNEL_PASSWORD};Port=3671"/>
+                Parameter="Target=203.0.113.250;Port=3671"/>
             <DeviceInstance Id="P-0001-0_DI-1" Name="{SAVED_DEVICE}" Address="1"
                 ProductRefId="M-TEST_H-1_P-1" Hardware2ProgramRefId="M-TEST_H-1_HP-1">
-              <Security ToolKey="{TOOL_KEY}" SequenceNumber="7"/>
+              <Security SequenceNumber="7"/>
             </DeviceInstance>
           </Segment>
         </Line>
@@ -289,14 +290,7 @@ async fn explicit_project_export_carries_a_reopenable_secret_free_project() {
             .any(|note| note.starts_with("left out: project history:")),
         "history omission stays visible: {notes:?}"
     );
-    for kind in ["BCUKey", "ToolKey", "BusAccess/@Parameter:UserPassword"] {
-        assert!(
-            notes
-                .iter()
-                .any(|note| note.starts_with("removed ") && note.contains(kind)),
-            "no removal note for {kind}: {notes:?}"
-        );
-    }
+    assert!(notes.iter().all(|note| !note.starts_with("removed ")));
     assert_eq!(
         manifest["markers"],
         json!({
@@ -355,15 +349,45 @@ async fn explicit_project_export_carries_a_reopenable_secret_free_project() {
             );
         }
     }
-    // The fixture really carried the secrets that the copy had to remove.
-    for secret in SECRETS {
-        assert!(
-            f.saved_opaque
-                .iter()
-                .any(|row| contains(&row.bytes, secret)),
-            "fixture lacks {secret}"
-        );
+}
+
+#[tokio::test]
+async fn project_import_producer_preview_text_review_zip_reopen() {
+    let f = fixture();
+    let source_before = std::fs::read(&f.path).unwrap();
+    let query = json!({
+        "problemType": "projectImport",
+        "sections": ["project", "importReport"],
+    });
+    let (preview, reviewed) = reviewed(&f.state, &query).await;
+    for kind in ["project", "importReport"] {
+        let offer = offer(&preview, kind);
+        assert_eq!(offer["selected"], true, "{offer}");
+        assert_eq!(offer["unavailable"], Value::Null, "{offer}");
+        let section = preview["sections"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|section| section["kind"] == kind)
+            .unwrap();
+        let (status, text) =
+            section_text(&f.state, &reviewed, section["key"].as_str().unwrap()).await;
+        assert_eq!(status, StatusCode::OK);
+        assert!(!text["text"].as_str().unwrap().is_empty());
     }
+
+    let (status, zip) = export(&f.state, &reviewed).await;
+    assert_eq!(status, StatusCode::OK);
+    let archive = members(&zip);
+    let project = archive.get(MEMBER).expect("admitted native project");
+    let report = archive
+        .get("import/import-report.json")
+        .expect("admitted import report");
+    let _: Value = serde_json::from_slice(report).unwrap();
+    let reopened = reopen(project);
+    assert_eq!(reopened.project, f.saved);
+    assert_eq!(reopened.opaque, f.saved_opaque);
+    assert_eq!(std::fs::read(&f.path).unwrap(), source_before);
 }
 
 #[tokio::test]
@@ -542,12 +566,12 @@ async fn a_project_review_is_bound_to_its_selection_consent_and_saved_bytes() {
 }
 
 /// Asserts the project is visibly unavailable over HTTP, with a sanitized reason.
-async fn assert_refused(f: &Fixture, reason: &str) {
+async fn assert_refused(f: &Fixture, _reason: &str) {
     let (preview, query) = reviewed(&f.state, &project_query()).await;
     let project = offer(&preview, "project");
     assert_eq!(project["selected"], false, "{project}");
     let message = project["unavailable"].as_str().expect("visible refusal");
-    assert!(message.contains(reason), "{message}");
+    assert_eq!(message, UNAVAILABLE_PREFIX);
     assert!(project_preview(&preview).is_none());
     let everything = format!("{preview}");
     for secret in SECRETS {

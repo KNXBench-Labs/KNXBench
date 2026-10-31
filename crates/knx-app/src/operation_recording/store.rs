@@ -292,6 +292,25 @@ pub(super) fn path_for(root: &Path, id: &str) -> io::Result<PathBuf> {
     Ok(root.join(format!("{id}.jsonl")))
 }
 
+pub(super) fn read_bounded(root: &Path, id: &str, max_bytes: u64) -> io::Result<Vec<u8>> {
+    let mut file = std::fs::File::open(path_for(root, id)?)?;
+    read_to_limit(&mut file, max_bytes)
+}
+
+fn read_to_limit<R: Read>(reader: &mut R, max_bytes: u64) -> io::Result<Vec<u8>> {
+    let mut bytes = Vec::new();
+    Read::by_ref(reader)
+        .take(max_bytes.saturating_add(1))
+        .read_to_end(&mut bytes)?;
+    if bytes.len() as u64 > max_bytes {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidData,
+            "recording exceeds bounded read",
+        ));
+    }
+    Ok(bytes)
+}
+
 pub(super) fn list(shared: &Shared) -> io::Result<Vec<RecordingSummary>> {
     let entries = match std::fs::read_dir(&shared.root) {
         Ok(entries) => entries,
@@ -317,10 +336,19 @@ pub(super) fn list(shared: &Shared) -> io::Result<Vec<RecordingSummary>> {
 fn summarize(path: &Path, id: &str, active: bool) -> io::Result<RecordingSummary> {
     let mut file = std::fs::File::open(path)?;
     let size_bytes = file.metadata()?.len();
-    let header = first_line(&mut file)?
+    summarize_reader(&mut file, id, active, size_bytes)
+}
+
+fn summarize_reader<R: Read + Seek>(
+    file: &mut R,
+    id: &str,
+    active: bool,
+    size_bytes: u64,
+) -> io::Result<RecordingSummary> {
+    let header = first_line(file, size_bytes)?
         .and_then(|line| serde_json::from_str::<Value>(&line).ok())
         .unwrap_or(Value::Null);
-    let (last, torn_tail) = last_line(&mut file, size_bytes)?;
+    let (last, torn_tail) = last_line(file, size_bytes)?;
     let end = last
         .and_then(|line| serde_json::from_str::<Value>(&line).ok())
         .filter(|value| value["type"] == "end");
@@ -342,10 +370,11 @@ fn summarize(path: &Path, id: &str, active: bool) -> io::Result<RecordingSummary
 }
 
 /// The first line, read at most 1 MiB deep.
-fn first_line(file: &mut std::fs::File) -> io::Result<Option<String>> {
+fn first_line<R: Read + Seek>(file: &mut R, snapshot_size: u64) -> io::Result<Option<String>> {
     file.seek(SeekFrom::Start(0))?;
     let mut buffer = Vec::new();
-    file.take(1024 * 1024).read_to_end(&mut buffer)?;
+    file.take(snapshot_size.min(1024 * 1024))
+        .read_to_end(&mut buffer)?;
     let line = match buffer.iter().position(|b| *b == b'\n') {
         Some(end) => &buffer[..end],
         None => return Ok(None),
@@ -354,12 +383,12 @@ fn first_line(file: &mut std::fs::File) -> io::Result<Option<String>> {
 }
 
 /// The last complete line, and whether bytes after it lack a newline.
-fn last_line(file: &mut std::fs::File, size: u64) -> io::Result<(Option<String>, bool)> {
+fn last_line<R: Read + Seek>(file: &mut R, size: u64) -> io::Result<(Option<String>, bool)> {
     const TAIL: u64 = 64 * 1024;
     let start = size.saturating_sub(TAIL);
     file.seek(SeekFrom::Start(start))?;
     let mut buffer = Vec::new();
-    file.read_to_end(&mut buffer)?;
+    file.take(size - start).read_to_end(&mut buffer)?;
     let torn = !buffer.is_empty() && buffer.last() != Some(&b'\n');
     let complete = match buffer.iter().rposition(|b| *b == b'\n') {
         Some(end) => &buffer[..end],
@@ -377,6 +406,214 @@ fn last_line(file: &mut std::fs::File, size: u64) -> io::Result<(Option<String>,
         Some(String::from_utf8_lossy(&complete[begin..]).into_owned()),
         torn,
     ))
+}
+
+#[cfg(test)]
+mod snapshot_reader_tests {
+    use std::io::{Cursor, Read, Seek, SeekFrom};
+
+    use super::{first_line, last_line, read_bounded, read_to_limit, summarize_reader};
+
+    struct GrowingReader {
+        inner: Cursor<Vec<u8>>,
+        reads: Vec<(u64, usize, usize)>,
+        seeks: Vec<u64>,
+    }
+
+    impl GrowingReader {
+        fn new(snapshot: &[u8], future: &[u8]) -> Self {
+            let mut bytes = snapshot.to_vec();
+            bytes.extend_from_slice(future);
+            Self {
+                inner: Cursor::new(bytes),
+                reads: Vec::new(),
+                seeks: Vec::new(),
+            }
+        }
+
+        fn returned_bytes(&self) -> usize {
+            self.reads.iter().map(|(_, _, returned)| returned).sum()
+        }
+
+        fn assert_reads_end_at_or_before(&self, snapshot_size: u64) {
+            for (offset, requested, returned) in &self.reads {
+                assert!(
+                    offset + *returned as u64 <= snapshot_size,
+                    "read beyond snapshot: offset={offset}, requested={requested}, returned={returned}, snapshot={snapshot_size}"
+                );
+            }
+        }
+    }
+
+    impl Read for GrowingReader {
+        fn read(&mut self, buffer: &mut [u8]) -> std::io::Result<usize> {
+            let offset = self.inner.position();
+            let requested = buffer.len();
+            let returned = self.inner.read(buffer)?;
+            self.reads.push((offset, requested, returned));
+            Ok(returned)
+        }
+    }
+
+    impl Seek for GrowingReader {
+        fn seek(&mut self, position: SeekFrom) -> std::io::Result<u64> {
+            let offset = self.inner.seek(position)?;
+            self.seeks.push(offset);
+            Ok(offset)
+        }
+    }
+
+    #[test]
+    fn prefix_read_stops_at_the_short_metadata_snapshot() {
+        let snapshot = br#"{"format_version":"#;
+        let future = b"1}\n";
+        let size = snapshot.len() as u64;
+        let mut reader = GrowingReader::new(snapshot, future);
+
+        let line = first_line(&mut reader, size).unwrap();
+
+        assert_eq!(line, None, "a future newline must not complete the header");
+        assert_eq!(reader.returned_bytes(), snapshot.len());
+        assert_eq!(reader.seeks, [0]);
+        reader.assert_reads_end_at_or_before(size);
+    }
+
+    #[test]
+    fn prefix_and_tail_windows_have_counted_hard_caps() {
+        const PREFIX: usize = 1024 * 1024;
+        const TAIL: usize = 64 * 1024;
+        let mut snapshot = vec![b'h'; PREFIX + TAIL + 17];
+        snapshot.push(b'\n');
+        let size = snapshot.len() as u64;
+        let mut reader = GrowingReader::new(&snapshot, b"future");
+
+        assert_eq!(first_line(&mut reader, size).unwrap(), None);
+        assert_eq!(reader.returned_bytes(), PREFIX);
+        assert_eq!(reader.seeks, [0]);
+        reader.assert_reads_end_at_or_before(size);
+
+        reader.reads.clear();
+        reader.seeks.clear();
+        let (line, torn) = last_line(&mut reader, size).unwrap();
+        assert_eq!(line, None, "the line starts before the tail window");
+        assert!(!torn);
+        assert_eq!(reader.returned_bytes(), TAIL);
+        assert_eq!(reader.seeks, [size - TAIL as u64]);
+        reader.assert_reads_end_at_or_before(size);
+    }
+
+    #[test]
+    fn empty_and_small_static_windows_report_their_actual_reads() {
+        let mut empty = GrowingReader::new(b"", b"");
+        assert_eq!(first_line(&mut empty, 0).unwrap(), None);
+        assert_eq!(last_line(&mut empty, 0).unwrap(), (None, false));
+        assert_eq!(empty.returned_bytes(), 0);
+        assert_eq!(empty.seeks, [0, 0]);
+
+        let small = b"header\n{\"type\":\"end\",\"outcome\":\"failed\"}\n";
+        let mut static_reader = GrowingReader::new(small, b"");
+        assert_eq!(
+            first_line(&mut static_reader, small.len() as u64).unwrap(),
+            Some("header".into())
+        );
+        assert_eq!(
+            last_line(&mut static_reader, small.len() as u64).unwrap(),
+            (
+                Some("{\"type\":\"end\",\"outcome\":\"failed\"}".into()),
+                false
+            )
+        );
+        assert_eq!(static_reader.returned_bytes(), small.len() * 2);
+        assert_eq!(static_reader.seeks, [0, 0]);
+        static_reader.assert_reads_end_at_or_before(small.len() as u64);
+    }
+
+    #[test]
+    fn summary_tail_stops_at_the_metadata_snapshot() {
+        const TAIL: usize = 64 * 1024;
+        let header = concat!(
+            r#"{"format_version":1,"writer":{"version":"test"},"operation_kind":"download","started_at":"2026-10-30T00:00:00Z","target":null,"gateway":null,"related":{}}"#,
+            "\n"
+        );
+        let mut snapshot = header.as_bytes().to_vec();
+        snapshot.extend_from_slice(br#"{"type":"note","padding":"#);
+        snapshot.extend(std::iter::repeat_n(b'x', TAIL + 32));
+        snapshot.extend_from_slice(b"\"}\n{\"type\":\"note\"}\n");
+        let future = b"{\"type\":\"end\",\"outcome\":\"succeeded\"}\n";
+        let size = snapshot.len() as u64;
+        let tail_start = size - TAIL as u64;
+        let mut reader = GrowingReader::new(&snapshot, future);
+
+        let summary = summarize_reader(&mut reader, "op-snapshot", false, size).unwrap();
+
+        assert_eq!(summary.size_bytes, size, "physical snapshot size is stable");
+        assert_eq!(summary.format_version, Some(1));
+        assert_eq!(
+            summary.outcome, None,
+            "a future end must not affect the snapshot"
+        );
+        assert_eq!(reader.seeks, [0, tail_start]);
+        assert_eq!(reader.returned_bytes(), snapshot.len() + TAIL);
+        reader.assert_reads_end_at_or_before(size);
+    }
+
+    #[test]
+    fn bounded_read_returns_an_exact_limit_without_extra_consumption() {
+        let exact = b"12345678";
+        let mut reader = GrowingReader::new(exact, b"");
+
+        let bytes = read_to_limit(&mut reader, exact.len() as u64).unwrap();
+
+        assert_eq!(bytes, exact);
+        assert_eq!(reader.returned_bytes(), exact.len());
+    }
+
+    #[test]
+    fn bounded_read_refuses_growth_after_one_counted_overflow_byte() {
+        let snapshot = b"12345678";
+        let mut reader = GrowingReader::new(snapshot, b"future bytes must stay unread");
+
+        let error = read_to_limit(&mut reader, snapshot.len() as u64).unwrap_err();
+
+        assert_eq!(error.kind(), std::io::ErrorKind::InvalidData);
+        assert_eq!(reader.returned_bytes(), snapshot.len() + 1);
+    }
+
+    #[test]
+    fn bounded_read_returns_a_truncated_source_without_padding() {
+        let truncated = b"short";
+        let mut reader = GrowingReader::new(truncated, b"");
+
+        let bytes = read_to_limit(&mut reader, 32).unwrap();
+
+        assert_eq!(bytes, truncated);
+        assert_eq!(reader.returned_bytes(), truncated.len());
+    }
+
+    #[test]
+    fn bounded_recording_read_reuses_the_operation_id_path_guard() {
+        let dir = tempfile::tempdir().unwrap();
+        let id = "op-20261029T120000000Z-01234567";
+        let bytes = b"exact";
+        std::fs::write(dir.path().join(format!("{id}.jsonl")), bytes).unwrap();
+
+        assert_eq!(
+            read_bounded(dir.path(), id, bytes.len() as u64).unwrap(),
+            bytes
+        );
+        assert_eq!(
+            read_bounded(dir.path(), id, bytes.len() as u64 - 1)
+                .unwrap_err()
+                .kind(),
+            std::io::ErrorKind::InvalidData
+        );
+        assert_eq!(
+            read_bounded(dir.path(), "../outside", bytes.len() as u64)
+                .unwrap_err()
+                .kind(),
+            std::io::ErrorKind::InvalidInput
+        );
+    }
 }
 
 /// What a delete-all removed and what it had to keep.

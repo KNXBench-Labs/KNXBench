@@ -11,6 +11,14 @@ const PREVIEW = {
     markers: { addresses: false, names: false, parameterValues: false, networkAddresses: false }, notes: [], files: ["environment.json"] }],
   totalBytes: 12, exceedsMailHint: false, fileName: "knxbench-diagnostics-1.zip", mailDraft: "mailto:issue@knxbench.com?subject=x", recordings: [],
 };
+const BUNDLE_RECORDING = {
+  id: "op-20261030T010203000Z-aabbccdd",
+  sizeBytes: 4096,
+  formatVersion: 1,
+  active: false,
+  tornTail: false,
+  end: { state: "known", outcome: "failed" },
+};
 const fetchMock = vi.fn();
 afterEach(() => { vi.unstubAllGlobals(); fetchMock.mockReset(); });
 function reply(status: number, body: unknown, headers: Record<string, string> = { "content-type": "application/json" }) {
@@ -38,6 +46,51 @@ it("admits the server's preview and refuses wrong shapes", async () => {
   expect(path).toBe("/api/diagnostics/bundle/preview");
   expect(init.method).toBe("POST");
   expect(JSON.parse(init.body as string)).toEqual({ problemType: "deviceReading" });
+});
+
+it("admits only the exact bundle-private recording lifecycle union", () => {
+  for (const recording of [
+    BUNDLE_RECORDING,
+    { ...BUNDLE_RECORDING, active: true, end: { state: "missing" } },
+    { ...BUNDLE_RECORDING, end: { state: "missing" } },
+    { ...BUNDLE_RECORDING, end: { state: "withheld" } },
+    { ...BUNDLE_RECORDING, end: { state: "known", outcome: "succeeded" } },
+    { ...BUNDLE_RECORDING, end: { state: "known", outcome: "cancelled" } },
+    { ...BUNDLE_RECORDING, end: { state: "known", outcome: "abandoned" } },
+  ]) {
+    const value = { ...PREVIEW, recordings: [recording] };
+    expect(admitPreview(value)).toBe(value);
+  }
+
+  const oldPublicRecording = {
+    id: BUNDLE_RECORDING.id,
+    sizeBytes: 4096,
+    formatVersion: 1,
+    writerVersion: "persisted-writer",
+    operationKind: "system2-download",
+    startedAt: "2026-10-30T01:02:03Z",
+    target: {},
+    gateway: "203.0.113.250:3671",
+    related: {},
+    outcome: "failed",
+    active: false,
+    tornTail: false,
+  };
+  for (const recording of [
+    oldPublicRecording,
+    { ...BUNDLE_RECORDING, end: undefined },
+    { ...BUNDLE_RECORDING, formatVersion: 2 },
+    { ...BUNDLE_RECORDING, sizeBytes: Number.MAX_SAFE_INTEGER + 1 },
+    { ...BUNDLE_RECORDING, end: { state: "future" } },
+    { ...BUNDLE_RECORDING, end: { state: "known", outcome: "future" } },
+    { ...BUNDLE_RECORDING, end: { state: "missing", outcome: "failed" } },
+    { ...BUNDLE_RECORDING, end: { state: "withheld", raw: "future-outcome" } },
+    { ...BUNDLE_RECORDING, writerVersion: "must-not-be-present" },
+  ]) {
+    expect(() => admitPreview({ ...PREVIEW, recordings: [recording] })).toThrow(
+      "diagnostic-bundle-response-invalid",
+    );
+  }
 });
 
 it("refuses a preview that silently changes the supplied project context", async () => {

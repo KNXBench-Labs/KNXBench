@@ -47,6 +47,7 @@ fn state() -> (Arc<knx_server::AppState>, tempfile::TempDir) {
         product_db_unavailable: None,
         session_log: Default::default(),
         connector: Box::new(knx_server::fake::FakeConnector::discovering(Vec::new())),
+        tunnel_return_path: Default::default(),
         bus_session: Default::default(),
         group_address_style_publication: Default::default(),
         next_bus_session_id: Default::default(),

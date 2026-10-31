@@ -24,7 +24,11 @@ non-serialized witness is set before recognized non-empty credential fields and
 whole source instance before body or notes leave the helper. The documented free-
 access `BCUKey` sentinel alone is exempt. This is a narrow source-instance witness,
 not arbitrary opaque or encoded secrecy certification. Ordinary helper success is
-not bundle admission. Server, CLI and ZIP consumers have not adopted these APIs.
+not bundle admission. A bounded 30 October consumer candidate now adopts these
+APIs in the server and CLI: the helper-owned copy is moved once into the collector,
+and the same admitted bytes feed text, review and ZIP output. This is local source
+and execution evidence, not independent review, integration acceptance or
+publication.
 
 **Private System-2 comparison bytes remain unfinished.** Replay validates the
 recorded comparison, not credential freedom of arbitrary expected/readback
@@ -37,8 +41,10 @@ one available snapshot, checks the fixed format/kind, exactly one Download plus 
 optional ordered Restore consistent with the same progress, and serializes the
 closed projection once with a 4 KiB maximum. It returns the original owned minimized
 progress unchanged beside private projection bytes; the admitted type implements
-neither `Serialize` nor `Debug`. Both server hooks and the CLI still lack this
-attachment.
+neither `Serialize` nor `Debug`. The bounded consumer candidate attaches this
+closed projection at both server hooks and in the System-2 CLI simulator path.
+Raw comparison arrays, recording bodies and arbitrary report fields remain
+unadmitted and unavailable.
 This remains explicitly incomplete: neither raw-evidence delivery nor
 credential-safety certification of the rest of the ZIP is implied.
 [Source evidence, P1/P2 and proposed acceptance cases](../research/2026-10-29-system2-bundle-credential-boundary.md).
@@ -68,6 +74,29 @@ The parent-reported bounded R4 ambient-identity prerequisite is independently
 approved for the real preview/unselected-recording regression. That prerequisite
 result does not authorize export or close any consumer, raw-evidence or whole-goal
 acceptance.
+
+Earlier consumer receipts cover focused/server-library and CLI runs, strict
+Clippy/format/static checks, Web Vitest/type/build and an intercepted-API
+Playwright feature lane. They are earlier-source evidence, not acceptance of the
+current complete server target set. The Web decoder accepts only the closed
+six-field recording summary and known, active-missing, inactive-missing and
+withheld ends in English and German.
+
+**30 October full-target recheck: not green.** After four initializer-only test
+fixture repairs, formatting passed and the full server default run compiled. Its
+library target passed 740 tests (15 ignored), the binary target passed five, and
+the integration target passed 763 but failed nine (52 ignored). The current M01
+route regression passed in that same default run. All nine failures concern
+retained read-diagnostics/support evidence and its originating-device/report
+handoff. The collector deliberately withholds those still-unadmitted sources;
+the positive retained-result requirements below remain unfulfilled, not obsolete.
+Neither unsafe raw-export restoration nor assertion weakening is an acceptance
+route. The four initializer additions have an independent source-only approval
+with no findings; that approval is not a runtime or whole-package approval.
+CLI default, owning Clippy and later static checks were not executed after this
+first failing command. Counts overlap earlier selections. Hardware and private
+corpus were not accessed. Raw P1/P2, Original14, the real-router/built-Web join,
+independent integrated package acceptance and publication remain open.
 
 The requirements below remain the target contract, not a claim that every part
 has already passed integrated acceptance.
@@ -240,20 +269,53 @@ creates no snapshot cache and starts no read. `diagnosticsToken` and
 expired, unfinished or non-exportable job is visibly unavailable, not the latest
 unrelated job. A known version-1 diagnostic recording's strict typed end summary
 can supply its historical structured report after the job slot changes. Unknown
-recording versions and malformed summaries are not interpreted; the raw recording
-remains exportable unchanged.
+recording versions and malformed summaries are not interpreted. When such a
+recording is reached through its `diagnosticsToken`/`supportToken` lookup, the
+operation section carries its raw `recording.jsonl` exactly as written (never
+backfilled or rewritten), because the owner decided on 31 October 2026 that
+redacted raw recordings may leave after consent (see below). Explicit
+`recordingId`, implicit selection and earlier operations still pass the summary
+admission first. The historical consumer reads at most its fixed limit plus one
+overflow byte, then validates header and end from that single owned snapshot against
+the listed id, size, format, writer, operation kind, token, target and source context.
 
 Without a recording, `downloadId` can project only this server's exact retained
 session; `operationId` can project its retained System-2 journal. A retained
 result without proven project attribution still exports its own report/status,
 but its device and catalogue extracts are unavailable, whether the explicit
-device id equals the recorded one or not. Device ids are comparable only when
+device id equals the recorded one or not. With proven attribution equal to the
+unchanged current context, the device and catalogue extracts project exactly the
+result's own device; with no operation source selected at all, they project only
+the device the user explicitly chose. Device ids are comparable only when
 the result's attribution equals the proven, unchanged current project context;
 only explicit conflicting targets in that context are HTTP 409
 `bundleTargetMismatch`. Recorder unavailability is separate from result
 unavailability. Diagnostic `report.json`, `properties.json`, optional `memory.json`
 and their existing README live under `reports/`; manual support preserves its
 existing `report.json` and README there too.
+
+The consumer boundary is profile-specific, not an archive-wide trust decision.
+The generic identity producer can be admitted only after its existing closed
+service/length grammar, archive writer and independent reader agree byte for
+byte. Format-1 admission additionally requires the producer's fixed public
+memory-reason sentence and refuses captured bytes from partial or
+ambiguous-refusal replies before archive construction; those writer-valid bytes
+are not credential-classified. Universal-support evidence additionally needs a
+closed whitelist for every
+field, origin, status and value shape before its fixed report and README are
+materialised. Declared-memory bytes and raw
+recordings are **not** credential-classified. By owner decision of 31 October 2026
+they may nevertheless leave, but only through the bundle's explicit consent and
+with the visible note "contains device configuration, possibly passwords;
+recognised KNX keys are redacted; keep private". Recognised keys (authorize and
+key-write payloads) are redacted by the recorder at capture time; no other value
+is claimed safe. Declared memory keeps the producer's own `memory.json` and README
+bytes. A non-System-2 recording larger than 64 MiB stays unavailable rather than
+truncated; repeated earlier-recording ids are read once, so retention (512 MiB)
+bounds the total. System-2 recordings, including one whose journal id is missing,
+keep their admitted private projection or stay unavailable and never export the
+raw recording. A chosen device without any operation source is projected from the
+current project, as before.
 
 ### Sections
 
@@ -264,12 +326,12 @@ implemented once in `knx_app::diagnostic_bundle::default_offer`.
 | --- | --- | --- |
 | environment (fixed) | `environment/environment.json` | writer identity, platform, server incarnation, effective timings, product database and project state |
 | session log | `session-log/session-log.json` | the server's session log |
-| operation / earlier operations | `operations/<id>/recording.jsonl` (+ `system2-progress.json`, `download-status.json`) | recording; System-2 journal projection; this run's download status |
+| operation / earlier operations | `operations/<id>/recording.jsonl`, or `system2-private.json` / a retained typed result file | non-System-2: the recorder-redacted raw recording after consent; System-2: the admitted private projection only |
 | minimised legacy reports | `reports/...` | the existing download and System-2 reports of that operation |
 | device extract | `device/<id>/device.json`, `parameters.json` | device detail and parameter panel projection |
 | import report | `import/import-report.json` | the project's stored import evidence |
 | original import file | `import/...` | not kept by the server; the section says so |
-| catalogue | `catalogue/catalogue.json` | product database state and the device's product identity |
+| catalogue | `catalogue/catalogue.json` | product database availability (enum only, never the startup reason) and the device's product identity |
 | whole project | `project/project.knxdb` | last saved native project, secret-free copy; unsaved changes are not included |
 | bus monitor | `bus-monitor/bus-monitor.json` | the running monitor's buffer, last ten minutes |
 | client state | `client/client.json` | what the browser sent (language, theme, viewport, zoom, shell, recent errors) |

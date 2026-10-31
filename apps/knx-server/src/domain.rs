@@ -129,6 +129,8 @@ pub struct AppState {
     /// stateless/`Sync` (it only ever opens tunnels; each open tunnel's own
     /// state lives in `bus_session` below).
     pub connector: Box<dyn GatewayConnector>,
+    /// Effective tunnel endpoint mode selected at process startup.
+    pub tunnel_return_path: knx_net::TunnelReturnPath,
     /// At most one open monitor session (T15, design spec §4.1: "a monitor
     /// session is ... `AppState.bus_session: Mutex<Option<BusSession>>`
     /// holds at most one"). `tokio::sync::Mutex`, not `std::sync::Mutex`
@@ -348,6 +350,16 @@ impl AppState {
             .unwrap_or_else(|| generic.to_string())
     }
 
+    pub(crate) fn product_database_availability(&self) -> ProductDatabaseAvailability {
+        if self.product_db.is_some() {
+            ProductDatabaseAvailability::Open
+        } else if self.product_db_unavailable.is_some() {
+            ProductDatabaseAvailability::Unavailable
+        } else {
+            ProductDatabaseAvailability::NotConfigured
+        }
+    }
+
     /// State rooted at `data_dir` with **no** product database: nothing
     /// outside `data_dir` is opened, created or migrated, so a test built on
     /// it never depends on, or changes, the developer's own product
@@ -385,6 +397,7 @@ impl AppState {
             product_db_unavailable: None,
             session_log: Mutex::new(SessionLog::default()),
             connector: Box::new(RealConnector::default()),
+            tunnel_return_path: knx_net::TunnelReturnPath::default(),
             bus_session: tokio::sync::Mutex::new(None),
             group_address_style_publication: tokio::sync::Mutex::new(()),
             next_bus_session_id: std::sync::atomic::AtomicU64::new(1),
@@ -420,6 +433,38 @@ impl AppState {
             catalogue_jobs: std::sync::Arc::new(crate::catalogue_jobs::CatalogueUpdateJobs::new(
                 crate::catalogue_jobs::Incarnation::mint(),
             )),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum ProductDatabaseAvailability {
+    Open,
+    Unavailable,
+    NotConfigured,
+}
+
+/// Converts the process flag value into the effective tunnel response mode.
+pub fn tunnel_return_path_from_flag(value: Option<&str>) -> knx_net::TunnelReturnPath {
+    let enabled = value.is_some_and(|value| {
+        !matches!(
+            value.trim().to_ascii_lowercase().as_str(),
+            "" | "0" | "false" | "no" | "off"
+        )
+    });
+    if enabled {
+        knx_net::TunnelReturnPath::RouteBack
+    } else {
+        knx_net::TunnelReturnPath::LocalAddress
+    }
+}
+
+impl ProductDatabaseAvailability {
+    pub(crate) fn as_str(self) -> &'static str {
+        match self {
+            Self::Open => "open",
+            Self::Unavailable => "unavailable",
+            Self::NotConfigured => "notConfigured",
         }
     }
 }

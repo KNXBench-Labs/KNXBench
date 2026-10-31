@@ -20,9 +20,10 @@ exact token, with specific missing/expired/unfinished causes, bounded history
 reads and device/catalogue extracts only for a proven current context. By owner
 decision, declared memory and raw non-System-2 recordings leave only after
 consent, with a "possibly passwords; keep private" note; System-2 never exports
-raw bodies. Still open: integrated package acceptance, the real router/built-web
-join, CLI installed-binary boundaries, raw System-2 P1/P2, Original14 and
-publication. [Work and evidence boundary](open-work/DIAG-03-unified-diagnostic-bundle.md).
+raw bodies. The real router/built-web join, the installed CLI boundaries and the
+original fourteen-case matrix ran on 31 October 2026. Still open: publication;
+raw System-2 P1/P2 apply only to a future raw export.
+[Work and evidence boundary](open-work/DIAG-03-unified-diagnostic-bundle.md).
 
 ## Alpha 18 pre-release (source cutoff 28 October 2026)
 

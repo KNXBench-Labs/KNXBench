@@ -6,7 +6,7 @@ import { messages as de } from "../src/messages/de";
 import { intercept, openProject, dismissToasts, openList } from "./communication-fixture";
 import { answerBundleRoute, bundleLog, initialPreviewCount, BUNDLE_RECORDING, bundlePreview, type BundleLog } from "./report-problem-fixture";
 
-import type { BundlePreview, BundleQuery, RecordingSummary } from "../src/diagnosticBundleShape";
+import type { BundlePreview, BundleQuery, BundleRecordingSummary } from "../src/diagnosticBundleShape";
 import { openFileSubmenu } from "./file-menu";
 
 for (const language of ["en", "de"] as const) {
@@ -95,9 +95,8 @@ type Language = "en" | "de";
 const DEVICE_A = 1;
 const DEVICE_B = 2;
 const CONTEXT = { serverIncarnation: "devices-browser", projectIncarnation: 1, revision: 1 };
-/** The newest finished run targets A in the same proven source context as the open project. */
-const RUN_A: RecordingSummary = { ...BUNDLE_RECORDING, operationKind: "device-diagnostics", target: { deviceId: DEVICE_A },
-  related: {}, outcome: "succeeded" };
+/** The newest finished run; the guard below proves it targets A, the closed preview view carries no target. */
+const RUN_A: BundleRecordingSummary = { ...BUNDLE_RECORDING, end: { state: "known", outcome: "succeeded" } };
 
 /** The server's answer for `query`: the newest run is adopted unless none is named, and a foreign device is refused. */
 function guardedPreview(query: BundleQuery): BundlePreview | "bundleTargetMismatch" {

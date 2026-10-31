@@ -12,6 +12,31 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Master byte ranges with a UTF-8 BOM, product database 31 (31 October 2026 source)
+
+Master provenance (ADR-0147) stored every declaration range three bytes too early
+when `knx_master.xml` starts with a UTF-8 byte-order mark. quick-xml strips the
+mark without counting it. 92 of 142 masters in the private corpus have one. The
+parser now adds the prefix back. A data-only product-database step 30 → 31
+moves the stored ranges by exactly three bytes, together with the install
+diagnostics that quote them. It does so only for authenticated BOM sources
+whose re-parse matches every other field. Without it, the authoritative reader
+would refuse shifted rows and their reports.
+
+- **Runs before report reloads.** For v27–v29 catalogues the same idempotent
+  step runs first, so the report reloads of v28 and v29 keep install reports
+  measured.
+- **Data kept.** Every other column and table stays the same. That includes
+  observed writes, winners and sources without a BOM.
+- **Left untouched.** Damaged, diverging, unreadable or already-correct
+  sources, which the reader keeps reporting.
+- **Contract.** Product-database admission now pins version 31
+  ([schema admission](contracts/catalogue-jobs/schema-admission.md#amendment-data-only-product-database-v31-31-october-2026)).
+- **Not covered.** No other parser change, no new winner policy.
+- **Downgrade.** Alpha 18 refuses product31 by its version check
+  ([known issue](manual/known-issues.md#product-database-31--source-newer-than-alpha-18),
+  [ADR-0147 amendment](adr/0147-master-identity-provenance.md#amendment-utf-8-bom-byte-ranges-product-database-30--31-31-october-2026)).
+
 ## Diagnostic bundle: honest reasons, German notes, CLI recordings (31 October 2026)
 
 A real loopback join (simulator gateway → server → production web → ZIP, 36

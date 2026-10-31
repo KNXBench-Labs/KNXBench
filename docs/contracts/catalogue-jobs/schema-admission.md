@@ -175,10 +175,23 @@ witness is persisted across a migration. The oracle file keeps its observed
 
 Product database v30 (WP-03) fills legacy enum binary columns and appends
 backfill findings; it adds no DDL. The same independently pinned v28
-fresh-chain schema descriptors remain authoritative. Admission now requires
-`ADMITTED_VERSION = 30`, still compile-time-bound to
-`CURRENT_PRODUCTDB_VERSION`; v29 and v31 are refused. The witness retains the
-observed version, not a normalized v28 value. Neither the oracle's recorded
+fresh-chain schema descriptors remain authoritative.
+**Amendment below supersedes the version requirement:** admission at v30
+required `ADMITTED_VERSION = 30`, still compile-time-bound to
+`CURRENT_PRODUCTDB_VERSION`; at that stage v29 and v31 were refused. The
+witness retains the observed version, not a normalized v28 value. Neither the oracle's recorded
 version nor historical descriptor evidence is rewritten, and no persisted
 witness is carried across the migration. See the
 [bounded migration contract](../../research/2026-10-28-legacy-enum-binary-mapping.md#persistence-and-migration-boundary).
+
+## Amendment: data-only product database v31 (31 October 2026)
+
+Product database v31 moves the stored byte ranges of BOM-prefixed master
+declarations onto the retained original bytes. It changes those ranges and the
+collision or malformed-declaration diagnostic texts that quote them. It adds no
+DDL ([ADR-0147](../../adr/0147-master-identity-provenance.md)). The same
+independently pinned v28 fresh-chain schema descriptors remain authoritative.
+Admission now requires `ADMITTED_VERSION = 31`, still compile-time-bound to
+`CURRENT_PRODUCTDB_VERSION`; v30 and v32 are refused. The witness retains the
+observed version, the oracle's recorded version is not rewritten, and no
+persisted witness is carried across the migration.

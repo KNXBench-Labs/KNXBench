@@ -97,6 +97,8 @@ All field names are camelCase. A source reference is a JSON pair
   Only the attributes listed in `target_kind` are followed: among others
   `Assign` `TargetParamRefRef`/`SourceParamRefRef` and the `ParameterRefRef`
   members of calculation sides and validations (exact `Static` paths only).
+  On those member nodes every allowlisted attribute is followed, not only
+  `RefId`, exactly as on other modelled nodes.
   Others, such as Argument, Rename and BinaryData references, are not.
 - `unknowns[]`: every element and attribute that this build does not model, by
   source reference. Dynamic verdicts reuse the Dynamic parser's grammar
@@ -163,9 +165,16 @@ Fields:
     ambiguous ones included, can close a loop through it.
   - `notApplicable`: other rows, Assigns with an absent or dangling source or
     target, and ambiguous Assigns on no possible cycle.
-- `graphCycleAnchor`: for `declaredGraphCycle` and `cycleNotDetermined`, the
-  first Assign in element order of the same strongly connected component, so
-  rows of one cycle share it. Otherwise absent.
+- `graphCycleAnchor`: the first Assign in element order of the strongly
+  connected component that decided the state, so rows of one cycle share it.
+  For `declaredGraphCycle` that component is taken from unique edges only, for
+  `cycleNotDetermined` from all candidate edges. A declared cycle nested inside
+  a larger possible loop therefore keeps its own anchor, distinct from the
+  anchor of the undetermined rows around it. `null` for other states.
+- Cycle bookkeeping holds every Assign source and target candidate twice (once
+  per graph). It stays bounded because the references pass charges the same
+  candidates against the reference ceiling (see Limits) before the graph is
+  built.
 - `disposition`: always `retainedNotExecuted`.
 - `impactScope`: `declaredEndpointsOnly` for Assign;
   `applicationImpactUnknown` for scripts, calculations, validations and

@@ -833,3 +833,85 @@ fn ambiguous_endpoints_never_certify_that_no_cycle_was_declared() {
         [first, first, first, None, first]
     );
 }
+
+#[test]
+fn declared_cycle_inside_a_possible_loop_keeps_its_own_anchor() {
+    // R-B <-> R-C is a unique cycle; R-A (declared twice) may close a larger loop around it.
+    let xml = assign_app(
+        "<ParameterRef Id=\"R-A\" RefId=\"P-A\"/>",
+        "<Assign TargetParamRefRef=\"R-B\" SourceParamRefRef=\"R-A\"/>\
+         <Assign TargetParamRefRef=\"R-C\" SourceParamRefRef=\"R-B\"/>\
+         <Assign TargetParamRefRef=\"R-B\" SourceParamRefRef=\"R-C\"/>\
+         <Assign TargetParamRefRef=\"R-A\" SourceParamRefRef=\"R-C\"/>",
+    );
+    let r = inspect(&xml);
+    let a = rows(&r, Kind::Assign);
+    assert_eq!(
+        a.iter().map(|e| e.graph_cycle).collect::<Vec<_>>(),
+        [
+            Cycle::CycleNotDetermined,
+            Cycle::DeclaredGraphCycle,
+            Cycle::DeclaredGraphCycle,
+            Cycle::CycleNotDetermined
+        ]
+    );
+    assert_eq!(
+        a.iter().map(|e| e.graph_cycle_anchor).collect::<Vec<_>>(),
+        [
+            Some(a[0].source),
+            Some(a[1].source),
+            Some(a[1].source),
+            Some(a[0].source)
+        ],
+        "declared rows anchor in the unique-edge cycle, undetermined rows in the possible loop"
+    );
+    let edge = serde_json::to_value(inspect(EDGE)).unwrap();
+    let without = edge["dependencyEvidence"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|row| row["graphCycle"] == "notApplicable")
+        .collect::<Vec<_>>();
+    assert!(!without.is_empty());
+    for row in without {
+        let anchor = row.as_object().unwrap().get("graphCycleAnchor");
+        assert_eq!(
+            anchor,
+            Some(&serde_json::Value::Null),
+            "an absent anchor is serialized as null"
+        );
+    }
+}
+
+#[test]
+fn zip_members_charge_dependency_rows_against_the_shared_budget() {
+    let zip = raw_zip(&[
+        RawMember::stored(b"a/edge.xml", EDGE),
+        RawMember::stored(b"b/declarations.xml", DECLARATIONS),
+    ]);
+    let r = inspect(&zip);
+    let members: BTreeSet<_> = r
+        .dependency_evidence
+        .iter()
+        .map(|e| e.source.member_ordinal)
+        .collect();
+    assert_eq!(members, BTreeSet::from([Some(0), Some(1)]));
+    let count = r.output_record_count();
+    let mut without = r.clone();
+    without.dependency_evidence.clear();
+    assert!(count > without.output_record_count());
+    for (cap, positive) in [(count - 1, false), (count, true)] {
+        let result = inspect_distribution_with_limits(
+            "authored.zip",
+            &zip,
+            L {
+                max_output_records: cap,
+                ..L::default()
+            },
+        );
+        assert_eq!(result.is_ok(), positive, "records cap={cap} count={count}");
+        if !positive {
+            assert!(matches!(result, Err(E::ResourceLimit(_))));
+        }
+    }
+}

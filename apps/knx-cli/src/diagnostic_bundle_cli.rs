@@ -15,7 +15,7 @@ use std::time::Duration;
 
 use knx_app::diagnostic_bundle::{
     self as bundle, BundleFile, BundleRequest, BundleSection, ProblemType, SectionKind,
-    PRIVATE_RAW_NOTE,
+    MAX_RAW_RECORDING_BYTES, PRIVATE_RAW_NOTE, TORN_TAIL_NOTE,
 };
 use knx_app::operation_recording::{
     OperationKind, OperationRecorder, OperationStart, RecordedOutcome, RecordingStore,
@@ -35,9 +35,6 @@ pub const FLAG: &str = "--diagnostic-bundle";
 
 /// The System-2 subcommand; only it produces (or misses) System-2 evidence.
 const SYSTEM2_COMMAND: &str = "system2-validation";
-
-/// Largest raw recording copied into a bundle, as on the server.
-const MAX_RAW_RECORDING_BYTES: u64 = 64 * 1024 * 1024;
 
 struct Session {
     store: RecordingStore,
@@ -321,17 +318,10 @@ fn write(session: &Session) -> Result<PathBuf, String> {
                 "{FLAG}: System-2 evidence was captured more than once"
             ));
         }
-        CliSystem2Slot::Unavailable => {
+        slot @ (CliSystem2Slot::Unavailable | CliSystem2Slot::Empty | CliSystem2Slot::Missing) => {
             sections[0]
                 .notes
-                .push("System-2 evidence was unavailable for this invocation".into());
-        }
-        CliSystem2Slot::Empty | CliSystem2Slot::Missing => {
-            if session.command == SYSTEM2_COMMAND {
-                sections[0]
-                    .notes
-                    .push("System-2 evidence was unavailable for this invocation".into());
-            }
+                .extend(system2_note(&session.command, &slot).map(str::to_string));
         }
         CliSystem2Slot::Consumed => {
             return Err(format!("{FLAG}: diagnostic evidence was already consumed"));
@@ -355,6 +345,18 @@ fn write(session: &Session) -> Result<PathBuf, String> {
     std::io::Write::write_all(&mut file, &zip).map_err(|e| e.to_string())?;
     file.sync_all().map_err(|e| e.to_string())?;
     Ok(session.bundle.clone())
+}
+
+/// The environment note for a System-2 slot without evidence. Only the
+/// System-2 validation command, or a capture that failed, has System-2
+/// evidence to miss; every other command, `system2-*` or not, says nothing.
+fn system2_note(command: &str, slot: &CliSystem2Slot) -> Option<&'static str> {
+    const NOTE: &str = "System-2 evidence was unavailable for this invocation";
+    match slot {
+        CliSystem2Slot::Unavailable => Some(NOTE),
+        CliSystem2Slot::Empty | CliSystem2Slot::Missing if command == SYSTEM2_COMMAND => Some(NOTE),
+        _ => None,
+    }
 }
 
 /// This invocation's non-System-2 recordings, exactly as recorded (keys are
@@ -429,9 +431,7 @@ fn raw_recording_sections(
         };
         section.notes.push(PRIVATE_RAW_NOTE.into());
         if summary.torn_tail {
-            section
-                .notes
-                .push("the recording's last line is incomplete (interrupted write)".into());
+            section.notes.push(TORN_TAIL_NOTE.into());
         }
         section
             .files
@@ -513,6 +513,42 @@ mod tests {
         );
         assert_eq!(sections[0].notes, [PRIVATE_RAW_NOTE]);
         assert_eq!(sections[0].files[0].name, "recording.jsonl");
+    }
+
+    #[test]
+    fn only_the_validation_command_or_a_failed_capture_misses_system2_evidence() {
+        let note = Some("System-2 evidence was unavailable for this invocation");
+        for command in [
+            "system2-prepare",
+            "system2-project",
+            "find-serial",
+            "compare",
+        ] {
+            assert_eq!(
+                system2_note(command, &CliSystem2Slot::Missing),
+                None,
+                "{command}"
+            );
+            assert_eq!(
+                system2_note(command, &CliSystem2Slot::Empty),
+                None,
+                "{command}"
+            );
+            assert_eq!(
+                system2_note(command, &CliSystem2Slot::Unavailable),
+                note,
+                "{command}"
+            );
+        }
+        assert_eq!(
+            system2_note(SYSTEM2_COMMAND, &CliSystem2Slot::Missing),
+            note
+        );
+        assert_eq!(system2_note(SYSTEM2_COMMAND, &CliSystem2Slot::Empty), note);
+        assert_eq!(
+            system2_note(SYSTEM2_COMMAND, &CliSystem2Slot::Duplicate),
+            None
+        );
     }
 
     #[test]

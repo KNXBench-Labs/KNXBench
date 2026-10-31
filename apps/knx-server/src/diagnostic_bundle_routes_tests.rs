@@ -409,3 +409,86 @@ fn every_fixed_reason_and_note_has_a_web_translation() {
         assert!(web.contains(&quoted(note)), "untranslated note: {note}");
     }
 }
+
+/// The offer of `kind` in a fresh preview of `query`; the preview must succeed.
+async fn reason_of(state: &Arc<crate::AppState>, query: Value, kind: &str) -> Value {
+    let (status, body, _) = call(
+        state,
+        "POST",
+        "/api/diagnostics/bundle/preview",
+        Some(query),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{}", json_of(&body));
+    let view = json_of(&body);
+    let offer = view["offers"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|o| o["kind"] == kind)
+        .cloned()
+        .unwrap();
+    assert_eq!(offer["selected"], false, "{offer}");
+    offer["unavailable"].clone()
+}
+
+#[tokio::test]
+async fn metadata_only_reasons_name_exactly_what_is_missing() {
+    let dir = tempfile::tempdir().unwrap();
+    let state = state(dir.path(), true);
+    let programming = json!({ "problemType": "deviceProgramming" });
+    // No recording at all.
+    for kind in ["operation", "legacyReports"] {
+        assert_eq!(
+            reason_of(&state, programming.clone(), kind).await,
+            "no recorded operation fits this problem",
+            "{kind}"
+        );
+    }
+    // A fitting recording that fails admission is indistinguishable from none.
+    let diagnostics = dir
+        .path()
+        .join(knx_app::operation_recording::DIAGNOSTICS_DIR_NAME);
+    std::fs::create_dir_all(&diagnostics).unwrap();
+    std::fs::write(
+        diagnostics.join("op-20261031T120000000Z-0000abcd.jsonl"),
+        b"{\"format_version\":99,\"operation_kind\":\"download\"}\n",
+    )
+    .unwrap();
+    assert_eq!(
+        reason_of(&state, programming.clone(), "operation").await,
+        "no recorded operation fits this problem"
+    );
+    // Explicitly none.
+    assert_eq!(
+        reason_of(
+            &state,
+            json!({ "problemType": "deviceProgramming", "operation": {"selection": "none"} }),
+            "legacyReports"
+        )
+        .await,
+        "no operation is chosen"
+    );
+    // An admitted recording without a retained typed result.
+    record(&state, OperationKind::Compare, ("x", "1"), true);
+    assert_eq!(
+        reason_of(
+            &state,
+            json!({ "problemType": "deviceReading" }),
+            "legacyReports"
+        )
+        .await,
+        "no minimised report exists for this operation"
+    );
+    // Import problems: no project, then a project without stored import evidence.
+    let import = json!({ "problemType": "projectImport" });
+    assert_eq!(
+        reason_of(&state, import.clone(), "importReport").await,
+        "no project is open"
+    );
+    *state.project.lock().unwrap() = Some(knx_core::Project::new(knx_core::Language("en".into())));
+    assert_eq!(
+        reason_of(&state, import, "importReport").await,
+        "this project carries no import report"
+    );
+}

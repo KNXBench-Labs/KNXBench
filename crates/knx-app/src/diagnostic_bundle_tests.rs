@@ -240,6 +240,10 @@ fn the_mail_draft_names_version_and_operation_and_carries_no_content() {
     assert!(draft.contains("0.1.0-alpha.18%2Bg80386a154"));
     assert!(draft.contains("op-20261029T100000000Z-0a1b2c3d"));
     assert!(draft.contains("not%20encrypted"));
+    // The draft must not promise less than a bundle with raw recordings holds.
+    assert!(draft.contains("possible%20passwords"));
+    assert!(draft.contains("Keep%20it%20private"));
+    assert!(!draft.contains("never%20included"));
     assert!(!draft.contains("attachment="));
     // Nothing but unreserved characters and escapes after the scheme.
     assert!(draft["mailto:".len()..]

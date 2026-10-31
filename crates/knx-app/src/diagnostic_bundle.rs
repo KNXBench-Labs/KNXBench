@@ -440,7 +440,7 @@ pub fn manifest(request: &BundleRequest, sections: &[BundleSection], created_at:
                 "tunnel and login passwords",
             ],
             "marker": "removed octets are zero and named by a `redacted` object; removed values are blank",
-            "notRemoved": "individual and group addresses, names, parameter values and gateway endpoints are included as selected",
+            "notRemoved": "individual and group addresses, names, parameter values, gateway endpoints and, in raw recordings and declared memory, device configuration that may contain passwords are included as selected",
         },
         "totalBytes": sections.iter().map(BundleSection::size).sum::<u64>(),
         "sections": listed,
@@ -519,6 +519,12 @@ fn percent_encode(text: &str) -> String {
 pub const PRIVATE_RAW_NOTE: &str = "contains device configuration, possibly passwords; \
      recognised KNX keys are redacted; keep private";
 
+/// The note on a raw recording whose last line was cut off by an interrupted write.
+pub const TORN_TAIL_NOTE: &str = "the recording's last line is incomplete (interrupted write)";
+
+/// Largest raw recording copied into a bundle by server or CLI; a larger one is left out.
+pub const MAX_RAW_RECORDING_BYTES: u64 = 64 * 1024 * 1024;
+
 /// A prefilled mail draft (decision 6): subject with version and operation
 /// id, a body asking to attach the saved ZIP. It never carries the bundle,
 /// a section or any value from it.
@@ -541,8 +547,9 @@ pub fn mail_draft(
     let body = format!(
         "Please attach the saved file {file_name} to this mail.\n\n\
          What happened (optional):\n\n\n\
-         Note: email is not encrypted. The bundle may contain addresses, names \
-         and parameter values; keys and passwords are never included."
+         Note: email is not encrypted. The bundle may contain addresses, names, \
+         parameter values and device configuration with possible passwords; \
+         recognised KNX keys are redacted. Keep it private."
     );
     format!(
         "mailto:{REPORT_MAILBOX}?subject={}&body={}",

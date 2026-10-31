@@ -3741,9 +3741,9 @@ export const messages: Record<MessageKey, string> = {
   "reportProblem.reason.recordingVersion": "die Version der Diagnoseaufzeichnung wird nicht unterstützt",
   "reportProblem.reason.recordingResult": "das Ergebnis der Diagnoseaufzeichnung ist fehlerhaft",
   "reportProblem.note.privateRaw": "enthält Gerätekonfiguration, möglicherweise Passwörter; erkannte KNX-Schlüssel wurden unkenntlich gemacht; vertraulich behandeln",
-  "reportProblem.note.rawWithheldProjection": "die Rohaufzeichnung des Vorgangs bleibt zurückgehalten; dies ist die zugelassene private Projektion",
-  "reportProblem.note.rawWithheldResult": "die Rohaufzeichnung des Vorgangs bleibt zurückgehalten; dies ist das aufbewahrte typisierte Ergebnis",
-  "reportProblem.note.recordingMissingProjection": "die Aufzeichnung des Vorgangs ist nicht verfügbar; dies ist die zugelassene private Projektion",
+  "reportProblem.note.rawWithheldProjection": "die Rohaufzeichnung des Vorgangs wird zurückgehalten; dies ist die freigegebene private Projektion",
+  "reportProblem.note.rawWithheldResult": "die Rohaufzeichnung des Vorgangs wird zurückgehalten; dies ist das aufbewahrte typisierte Ergebnis",
+  "reportProblem.note.recordingMissingProjection": "die Aufzeichnung des Vorgangs ist nicht verfügbar; dies ist die freigegebene private Projektion",
   "reportProblem.note.recordingMissingResult": "die Aufzeichnung des Vorgangs ist nicht verfügbar; dies ist das aufbewahrte typisierte Ergebnis",
   "reportProblem.note.tornTail": "die letzte Zeile der Aufzeichnung ist unvollständig (Schreibvorgang unterbrochen)",
   "reportProblem.note.savedRoot": "der zuletzt gespeicherte Stand des Projekts; ungespeicherte Änderungen sind nicht enthalten",
@@ -3757,7 +3757,7 @@ export const messages: Record<MessageKey, string> = {
   "reportProblem.recordingOff":
     "Der Betreiber dieser Installation hat die Aufzeichnung von Gerätevorgängen abgeschaltet (KNX_DIAGNOSTIC_RECORDING). Es entstehen keine neuen Aufzeichnungen; ältere können weiterhin enthalten sein.",
   "reportProblem.retention":
-    "KNXBench zeichnet jeden Gerätevorgang auf dieser Installation auf und behält die letzten 100 Vorgänge oder 512 MiB, je nachdem, was zuerst erreicht ist; fehlgeschlagene Vorgänge bleiben am längsten. Schlüssel und Passwörter werden nie aufgezeichnet.",
+    "KNXBench zeichnet jeden Gerätevorgang auf dieser Installation auf und behält die letzten 100 Vorgänge oder 512 MiB, je nachdem, was zuerst erreicht ist; fehlgeschlagene Vorgänge bleiben am längsten. Erkannte KNX-Schlüssel und Tunnelpasswörter werden unkenntlich gemacht; Gerätekonfiguration, die Passwörter enthalten kann, wird so aufgezeichnet, wie sie übertragen wurde.",
   "reportProblem.operation.label": "Vorgang",
   "reportProblem.operation.none": "Kein aufgezeichneter Vorgang",
   "reportProblem.operation.option": "{started} · {kind} · {outcome}",
@@ -3799,7 +3799,7 @@ export const messages: Record<MessageKey, string> = {
   "reportProblem.removed":
     "Immer entfernt, auch mit deiner Zustimmung: Geräteschlüssel (BCU-Schlüssel), KNX-Secure- und Tool-Schlüssel, Tunnel- und Anmeldepasswörter. An ihrer Stelle steht, was entfernt wurde und wie lang es war, nie der Wert.",
   "reportProblem.notRemoved":
-    "Nicht entfernt: physikalische und Gruppenadressen, Namen, Parameterwerte und die Netzwerkadressen von Gateways in den gewählten Abschnitten.",
+    "Nicht entfernt: physikalische und Gruppenadressen, Namen, Parameterwerte, die Netzwerkadressen von Gateways sowie in Rohaufzeichnungen und Gerätespeicher die Gerätekonfiguration, die Passwörter enthalten kann, in den gewählten Abschnitten.",
   "reportProblem.description.label": "Was ist passiert? (optional)",
   "reportProblem.description.hint": "Kommt in deinen eigenen Worten in das Manifest der ZIP-Datei. Tippe keine Passwörter ein.",
   "reportProblem.consent": "Ich habe mir die Vorschau angesehen und möchte diese ZIP-Datei auf diesem Rechner speichern.",

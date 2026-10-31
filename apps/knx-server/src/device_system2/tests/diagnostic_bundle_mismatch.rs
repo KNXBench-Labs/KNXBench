@@ -216,6 +216,9 @@ async fn real_mismatch(recordings_enabled: bool) -> Mismatch {
     metadata.address = bundle.binding.target.clone();
     let root = state.device_system2.root(&state).unwrap();
     root.create(&metadata).unwrap();
+    // As the worker does before any write: the build that executes this run.
+    root.record_execution_build(&metadata.operation_id, &crate::version_string())
+        .unwrap();
     let mut store = root.observed(&metadata.operation_id, &bundle).unwrap();
     let (operation, hypothesis) = (bundle.consent_phrase(), bundle.acceptance_phrase());
     let download = required_confirmation_phrase(device.address(), WriteScope::Download);
@@ -452,4 +455,98 @@ async fn real_mismatch_recordings_and_history_export_neither_byte_side() {
         );
     }
     assert_typed_mismatch(&mut archive);
+}
+
+async fn get_raw(state: &crate::SharedState, uri: &str) -> Vec<u8> {
+    use tower::ServiceExt;
+    let response = crate::app(state.clone(), None)
+        .oneshot(
+            axum::http::Request::get(uri)
+                .body(axum::body::Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(response.status(), 200, "{uri}");
+    to_bytes(response.into_body(), 1024 * 1024)
+        .await
+        .unwrap()
+        .to_vec()
+}
+
+/// Original14 S4: the public status and report say only the typed failure, and a
+/// preview plus export changes neither by one byte. The bundle's report is that
+/// public report, except the execution build the bundle does not admit.
+#[tokio::test]
+async fn a_real_mismatch_keeps_status_and_report_public_and_unchanged_by_export() {
+    // A restart: the fresh server reads the failed run from the journal alone.
+    let Mismatch {
+        _dir,
+        state,
+        operation_id,
+        private_bytes,
+        recordings,
+    } = real_mismatch(false).await;
+    drop(state);
+    let state = Arc::new(crate::AppState {
+        recordings: Arc::new(crate::operation_recordings::store(_dir.path(), true)),
+        ..crate::AppState::new(_dir.path().into())
+    });
+    let fixture = Mismatch {
+        _dir,
+        state,
+        operation_id,
+        private_bytes,
+        recordings,
+    };
+    let report_uri = format!(
+        "/api/device-system2/report?operationId={}",
+        fixture.operation_id
+    );
+    let status_before = get_raw(&fixture.state, "/api/device-system2/status").await;
+    let report_before = get_raw(&fixture.state, &report_uri).await;
+    for (label, bytes) in [("status", &status_before), ("report", &report_before)] {
+        assert_clean(label, bytes);
+        let text = String::from_utf8_lossy(bytes);
+        for private in [
+            "allocation_evidence",
+            "allocationEvidence",
+            "differing",
+            "\"expected\"",
+            "\"actual\"",
+        ] {
+            assert!(!text.contains(private), "{label} names {private}");
+        }
+    }
+    let status: Value = serde_json::from_slice(&status_before).unwrap();
+    assert_eq!(status["state"], "failed");
+    assert_eq!(
+        status["finalStepFailures"],
+        json!([{"run": "download", "category": "verificationMismatch", "stage": "allocation"}])
+    );
+    let public: Value = serde_json::from_slice(&report_before).unwrap();
+    assert_eq!(public["executionBuild"]["state"], "recorded");
+
+    let query = json!({
+        "problemType": "deviceProgramming",
+        "operation": {"relatedKey": "operationId", "relatedValue": fixture.operation_id},
+        "sections": ["operation", "legacyReports"],
+    });
+    let mut archive = export_clean(&fixture, query, &[("operation", None)]).await;
+    let mut bundled: Value =
+        serde_json::from_slice(&entry(&mut archive, "reports/system2-report.json")).unwrap();
+    assert_eq!(bundled["executionBuild"], json!({"state": "unknown"}));
+    bundled["executionBuild"] = public["executionBuild"].clone();
+    assert_eq!(bundled, public, "the bundle's report is the public one");
+
+    assert_eq!(
+        get_raw(&fixture.state, "/api/device-system2/status").await,
+        status_before,
+        "export changed the status"
+    );
+    assert_eq!(
+        get_raw(&fixture.state, &report_uri).await,
+        report_before,
+        "export changed the report"
+    );
 }

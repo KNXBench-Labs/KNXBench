@@ -187,6 +187,11 @@ fn spec_for(kind: &str) -> ElementSpec {
     }
 }
 
+/// Whether this build's Dynamic grammar models `kind` at all (not merely keeps it as a node).
+pub(crate) fn kind_is_modelled(kind: &str) -> bool {
+    !spec_for(kind).known.is_empty()
+}
+
 pub(crate) fn attribute_is_known(kind: &str, name: &str, value: Option<&str>) -> bool {
     let spec = spec_for(kind);
     spec.known.contains(&name) && (Some(name) != spec.default_attr || value == Some("true"))

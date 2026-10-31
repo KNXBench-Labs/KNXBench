@@ -311,6 +311,25 @@ a `.knxproj` it prints:
 > legacy `.vd2` product data is not supported, and the installer says so rather than
 > half-importing it. See [Known issues](../known-issues.md).
 
+### `knx products inspect-distribution` — read a manufacturer distribution without installing it
+
+Some manufacturers, such as OpenKNX, publish product XML or a release ZIP
+instead of a signed `.knxprod`. Such a file cannot be installed, but you can see
+what it declares:
+
+```bash
+knx products inspect-distribution RaumController-Release-5.5.1.zip > report.json
+```
+
+The command takes exactly one file and no options. It prints one JSON report on
+stdout and changes nothing: no product database, no files, no scripts run. The
+report lists sections, catalogue items, hardware, applications, the raw
+fallback value of every parameter reference, unknown elements and attributes,
+and an exact source reference for each row. It always says `"complete": false`
+and lists what was not checked. A source that cannot be inspected gives a JSON
+error with a `reason` on stderr; a wrong invocation prints the usage text. Both
+exit non-zero. See the [contract](../../contracts/distribution-inspection.md).
+
 ### `knx products update` — check a newer product file before installing it
 
 Got a newer `.knxprod` from a manufacturer's download page? Preview first:

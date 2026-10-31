@@ -23,6 +23,7 @@ mod device_service_control;
 mod device_system2_prepare;
 mod device_system2_project;
 mod device_system2_validation;
+mod distribution_inspect;
 mod legacy_import;
 mod legacy_inspect;
 mod legacy_password;
@@ -57,6 +58,8 @@ const USAGE: &str = "usage: knx import <file.knxproj> [--store <path.knxdb> [--r
      \x20     knx contribution preview <file> --options <options.json>\n\
      \x20     knx contribution export <file> <out.zip> --options <options.json>\n\
      \x20         (offline evidence, no installation or upload; export never overwrites)\n\
+     \x20     knx products inspect-distribution <source.xml|source.zip>\n\
+     \x20         (read-only JSON; no installation, code execution or write authority)\n\
      \x20     knx products list [--manufacturer M-xxxx] [--product-db <path>]\n\
      \x20     knx products ingest <file.knxproj|file.knxprod|file.zip|file.vd2> [--product-db <path>] [--allow-large-package]\n\
      \x20     knx products update <file.knxprod|file.zip> [--product-db <path>] [--allow-large-package] [--confirm <token>]\n\
@@ -1511,6 +1514,7 @@ fn run_products(args: &[String]) -> ExitCode {
         Some("order-number") => run_products_order_number(&args[1..]),
         Some("coverage") => run_products_coverage(&args[1..]),
         Some("inspect-legacy") => legacy_inspect::run(&args[1..]),
+        Some("inspect-distribution") => distribution_inspect::run(&args[1..]),
         Some("import-legacy") => legacy_import::run(&args[1..]),
         Some("legacy-password") => legacy_password::run(&args[1..]),
         _ => {

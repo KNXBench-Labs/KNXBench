@@ -276,6 +276,24 @@ fn read_grids_within(bytes: &[u8], program: &str, budget: usize) -> Option<Sourc
     None
 }
 
+/// Whether this reader interprets `kind` below `parent` (the axes of a block grid).
+pub(crate) fn layout_element_is_known(parent: &str, kind: &str) -> bool {
+    matches!((parent, kind), ("Rows", "Row") | ("Columns", "Column"))
+}
+
+/// Whether this reader interprets attribute `name` on `kind`; `in_block` means a
+/// `ParameterBlock` with `@Id` encloses the element, so it can own a grid.
+pub(crate) fn layout_attribute_is_known(kind: &str, name: &str, in_block: bool) -> bool {
+    match (kind, name) {
+        ("Row" | "Column", "Id" | "Text" | "TextParameterRefId" | "Width" | "CollapseIfEmpty") => {
+            true
+        }
+        ("ParameterBlock", "Layout") => true,
+        ("ParameterRefRef", "IndentLevel") | (_, "Cell") => in_block,
+        _ => false,
+    }
+}
+
 fn axis(attr: &crate::xml::Attrs) -> Option<GridAxis> {
     let value = |name: &str| attr.evidence_value(name).map(str::to_owned);
     Some(GridAxis {

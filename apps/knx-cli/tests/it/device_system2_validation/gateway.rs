@@ -1,4 +1,4 @@
-//! Built command through the in-process simulator gateway: the journal send boundary is exact.
+//! Built command through the in-process simulator gateway: send boundary and bundle are exact.
 use std::{
     collections::BTreeMap,
     net::{SocketAddr, UdpSocket as StdSocket},
@@ -548,11 +548,9 @@ fn a_doubled_bundle_flag_is_refused_before_any_datagram() {
         ],
     ] {
         let out = download_with(dir.path(), &path, &gateway, &extra);
-        assert!(
-            !out.status.success(),
-            "{}",
-            String::from_utf8_lossy(&out.stderr)
-        );
+        let stderr = String::from_utf8_lossy(&out.stderr);
+        assert!(!out.status.success(), "{stderr}");
+        assert!(stderr.contains("given twice"), "{stderr}");
         assert!(!one.exists() && !two.exists());
         assert_eq!(datagrams.load(std::sync::atomic::Ordering::SeqCst), 0);
         assert!(!dir.path().join("operation").exists());

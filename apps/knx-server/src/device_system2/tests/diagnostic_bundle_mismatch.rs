@@ -52,7 +52,10 @@ const PRESTATE: [u8; 4] = [0x5a, 0xc3, 0x91, 0x7e];
 const PRESTATE_OFFSET: u16 = 8;
 /// What the final read answers at offsets 0..4: only the actual side holds it.
 const READBACK: [u8; 4] = [0xd7, 0x3e, 0x9c, 0x6b];
-const SENTINELS: [&[u8]; 3] = [&TEMPLATE, &PRESTATE, &READBACK];
+/// The expected side's differing run (offsets 0..4): a strict part of `TEMPLATE`, so a
+/// leak of only the differing slice must be caught on its own.
+const EXPECTED_DIFFERING: [u8; 4] = [0x03, 0x12, 0x34, 0x10];
+const SENTINELS: [&[u8]; 4] = [&TEMPLATE, &EXPECTED_DIFFERING, &PRESTATE, &READBACK];
 
 /// Hardware-kind transport over the simulator that keeps every exchanged frame as a
 /// tunnel datagram and, after the plan's last LoadCompleted, lies on memory reads.
@@ -250,7 +253,6 @@ async fn real_mismatch(recordings_enabled: bool) -> Mismatch {
         .join(&metadata.operation_id)
         .join("journal");
     let evidence = allocation_evidence(&journal);
-    eprintln!("[fixture] error={error} evidence={evidence}");
     assert_eq!(
         evidence["address"], ALLOCATION,
         "fixture: the address table must fail"
@@ -262,13 +264,21 @@ async fn real_mismatch(recordings_enabled: bool) -> Mismatch {
     let hex = sentinel_forms::hex;
     assert!(expected.contains(&hex(&TEMPLATE)) && !actual.contains(&hex(&TEMPLATE)));
     assert!(actual.contains(&hex(&READBACK)) && !expected.contains(&hex(&READBACK)));
+    assert!(
+        expected.starts_with(&hex(&EXPECTED_DIFFERING))
+            && !actual.contains(&hex(&EXPECTED_DIFFERING))
+    );
+    assert_eq!(
+        evidence["differing"],
+        json!([{"offset": 0, "length": 4, "classification": "written"}]),
+        "fixture: the differing run is exactly EXPECTED_DIFFERING against READBACK"
+    );
     assert!(expected.contains(&hex(&PRESTATE)) && actual.contains(&hex(&PRESTATE)));
     let admitted = root
         .bundle_admission(&metadata.operation_id)
         .unwrap()
         .unwrap();
     let progress = serde_json::to_value(&admitted.progress).unwrap();
-    eprintln!("[fixture] error={error} progress={progress}");
     assert_eq!(
         progress["final_step_failures"],
         json!([{"run": "download", "category": "verificationMismatch", "stage": "allocation"}]),
@@ -359,8 +369,14 @@ async fn export_clean(
         let selected = section(&shown, kind, label);
         assert_eq!(selected["files"], json!(["system2-private.json"]), "{kind}");
         assert_eq!(selected["bytes"], fixture.private_bytes.len() as u64);
-        let text = section_text(&fixture.state, &query, selected["key"].as_str().unwrap()).await;
-        assert_clean(&format!("section text {kind}"), text.to_string().as_bytes());
+    }
+    // Every offered section's text, not only the operation ones.
+    for listed in shown["sections"].as_array().unwrap() {
+        let text = section_text(&fixture.state, &query, listed["key"].as_str().unwrap()).await;
+        assert_clean(
+            &format!("section text {}", listed["kind"]),
+            text.to_string().as_bytes(),
+        );
     }
     query["consent"] = json!(true);
     let response = post(&fixture.state, "/api/diagnostics/bundle", query).await;
@@ -586,8 +602,19 @@ async fn a_system2_review_is_bound_to_the_journal_state_it_read() {
     let key = section(&shown, "operation", None)["key"].clone();
     query["review"] = shown["review"].clone();
     query["consent"] = json!(true);
-
+    // Controls: the review exports as it stands, and a recovery claim alone changes
+    // neither report nor projection, so it still does.
     let root = fixture.state.device_system2.root(&fixture.state).unwrap();
+    for claim in [false, true] {
+        if claim {
+            root.claim_recovery(&fixture.operation_id).unwrap();
+        }
+        let (status, body) =
+            post_status(&fixture.state, "/api/diagnostics/bundle", query.clone()).await;
+        assert_eq!(status, 200, "claim={claim}");
+        assert!(body.starts_with(b"PK"));
+    }
+
     let (bundle, mut store) = root.reopen(&fixture.operation_id).unwrap();
     assert_eq!(bundle, fixture.bundle);
     let transport = Lying::new(&fixture.device, usize::MAX);
@@ -634,13 +661,17 @@ async fn a_system2_review_is_bound_to_the_journal_state_it_read() {
     assert_eq!(report["recovery"]["outcome"], "restored", "{report}");
 }
 
-/// Original14 S3 (target): inside its own unchanged project a System-2 run refuses an
-/// explicitly chosen foreign device; after a restart ids are not comparable, and the
-/// chosen device is still never projected in place of the run's.
+/// Original14 S3 (target): inside its own unchanged context a System-2 run refuses an
+/// explicitly chosen foreign device. After a restart ids are not comparable: a project
+/// whose foreign device is projectable is open, and that device is still not projected.
 #[tokio::test]
 async fn a_system2_run_refuses_a_foreign_device_and_never_projects_one() {
     let fixture = real_mismatch(false).await;
     let run_device = super::super::metadata().binding.device_id;
+    let (_inputs, _products, project, _profile) = fixture::configured_inputs();
+    // A device of the configured project that is not the run's own.
+    let foreign = project.devices.iter().next().unwrap().id.0;
+    assert_ne!(foreign, run_device);
     let query = |device: u32| {
         json!({
             "problemType": "deviceProgramming",
@@ -651,7 +682,7 @@ async fn a_system2_run_refuses_a_foreign_device_and_never_projects_one() {
     let (status, body) = post_status(
         &fixture.state,
         "/api/diagnostics/bundle/preview",
-        query(run_device + 1),
+        query(foreign),
     )
     .await;
     assert_eq!(status, 409, "{}", String::from_utf8_lossy(&body));
@@ -664,38 +695,72 @@ async fn a_system2_run_refuses_a_foreign_device_and_never_projects_one() {
     .await;
     assert_eq!(status, 200, "{}", String::from_utf8_lossy(&body));
 
+    // A real restart: the first server, which holds the System-2 storage, is gone.
+    let Mismatch {
+        _dir: dir,
+        state,
+        operation_id,
+        ..
+    } = fixture;
+    drop(state);
     let restarted = Arc::new(crate::AppState {
-        recordings: Arc::new(crate::operation_recordings::store(
-            fixture._dir.path(),
-            true,
-        )),
-        ..crate::AppState::new(fixture._dir.path().into())
+        recordings: Arc::new(crate::operation_recordings::store(dir.path(), true)),
+        ..crate::AppState::new(dir.path().into())
     });
-    let (status, body) = post_status(
-        &restarted,
-        "/api/diagnostics/bundle/preview",
-        query(run_device + 1),
-    )
-    .await;
-    assert_eq!(status, 200, "{}", String::from_utf8_lossy(&body));
-    let shown: Value = serde_json::from_slice(&body).unwrap();
-    eprintln!(
-        "[s3] restarted preview deviceId={} device offer={}",
-        shown["deviceId"],
+    *restarted.project.lock().unwrap() = Some(project);
+    let query = |device: u32| {
+        json!({
+            "problemType": "deviceProgramming",
+            "deviceId": device,
+            "operation": {"relatedKey": "operationId", "relatedValue": operation_id},
+        })
+    };
+    let device_offer = |shown: &Value| {
         shown["offers"]
             .as_array()
             .unwrap()
             .iter()
-            .find(|o| o["kind"] == "device")
-            .cloned()
-            .unwrap_or_default()
+            .find(|offer| offer["kind"] == "device")
+            .unwrap()
+            .clone()
+    };
+    // Control: without an operation the foreign device is projectable here.
+    let control = preview(
+        &restarted,
+        &json!({"problemType": "deviceReading", "deviceId": foreign}),
+    )
+    .await;
+    let offer = device_offer(&control);
+    assert!(offer["unavailable"].is_null(), "{offer}");
+    assert_eq!(
+        section(&control, "device", Some(&foreign.to_string()))["files"][0],
+        "device.json"
     );
-    assert_ne!(shown["deviceId"], json!(run_device + 1));
-    let device = shown["offers"]
-        .as_array()
-        .unwrap()
-        .iter()
-        .find(|offer| offer["kind"] == "device")
-        .unwrap();
-    assert!(!device["unavailable"].is_null(), "{device}");
+
+    let mut chosen = query(foreign);
+    chosen["sections"] = json!(["device", "operation"]);
+    let shown = preview(&restarted, &chosen).await;
+    assert_eq!(
+        section(&shown, "operation", None)["files"],
+        json!(["system2-private.json"]),
+        "precondition: the restarted server reads the run"
+    );
+    // The run's own id is reported, never the chosen one; neither is projected.
+    assert_eq!(shown["deviceId"], json!(run_device), "{shown}");
+    assert_eq!(
+        device_offer(&shown)["unavailable"],
+        "the originating device source is unavailable"
+    );
+    chosen["review"] = shown["review"].clone();
+    chosen["consent"] = json!(true);
+    let (status, body) = post_status(&restarted, "/api/diagnostics/bundle", chosen).await;
+    assert_eq!(status, 200);
+    let archive = zip::ZipArchive::new(std::io::Cursor::new(body)).unwrap();
+    assert!(
+        !archive
+            .file_names()
+            .any(|name| name.ends_with("device.json")),
+        "{:?}",
+        archive.file_names().collect::<Vec<_>>()
+    );
 }

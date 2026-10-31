@@ -20,8 +20,20 @@ are not proof of that wider guarantee. Metadata-only withheld output would be a
 bounded incomplete increment, not raw-evidence delivery or ZIP-wide certification.
 [Public source evidence and future acceptance](../research/2026-10-29-system2-bundle-credential-boundary.md)
 records these open P1/P2 requirements. The fourteen proposed acceptance cases
-have not run. This update changes no historical ledger disposition and gives
+had not run then. This update changes no historical ledger disposition and gives
 no main-first/package/browser/hardware or release acceptance.
+
+## Owner decision and executed matrix (31 October 2026)
+
+The owner decided that System-2 bytes never leave raw: the bundle carries the
+closed metadata projection and the typed report, consent is no exception, and
+P1/P2 remain prerequisites of a future raw System-2 export only. The fourteen
+acceptance cases now run on synthetic data with real producers (App cases up to
+the projection; Server, CLI and cross-writer cases up to every ZIP entry); the
+matrix with test names is in the
+[boundary note](../research/2026-10-29-system2-bundle-credential-boundary.md#original-fourteen-case-matrix-executed-31-october-2026).
+The sentinel scanner finds contiguous runs only, which suffices while System-2
+recordings never leave raw.
 
 <!-- BEGIN retained catalogue record -->
 

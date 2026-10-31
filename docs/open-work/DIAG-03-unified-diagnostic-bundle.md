@@ -58,10 +58,11 @@ Public DTOs and journal grammar remain unchanged. A bounded local consumer
 candidate now attaches the admitted closed projection at both server hooks and in
 the System-2 CLI simulator path, and uses admitted saved-project/import-report
 copies in text, review and ZIP output. It also adds a strict Web decoder and
-English/German lifecycle labels. This is not closure of the requested raw evidence
-or the fourteen-case whole-boundary matrix. The
+English/German lifecycle labels. This was not yet closure of the raw evidence or
+the fourteen-case whole-boundary matrix; both are superseded by the 31 October
+owner decision and the executed matrix below. The
 [source-grounded boundary](../research/2026-10-29-system2-bundle-credential-boundary.md)
-records the still-open Raw P1/P2 and original fourteen-case acceptance matrix.
+records P1/P2 and the matrix.
 Retained earlier-source execution includes the history RED, focused/server-library
 and CLI suites, Clippy/format/statics, Web Vitest/type/build and an intercepted-API
 Playwright feature lane. Those receipts do not prove the current complete server

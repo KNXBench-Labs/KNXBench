@@ -2336,7 +2336,7 @@
       "number": 106,
       "title": "Debug-report privacy limits",
       "topic": "Platform, deployment and security",
-      "summary": "Redaction covers named patterns only; reports/native exports are not comprehensive anonymization. Source/XML/endpoints can identify projects. DIAG-03 adds an opt-in saved-project copy; System-2 memory bytes never leave raw (owner decision 31 October 2026), the bundle carries a closed metadata projection, and consent is no exception. A raw System-2 export would first need classification of both byte sides and overlapping archive copies.",
+      "summary": "Redaction covers named patterns only; reports/native exports are not comprehensive anonymization. Source/XML/endpoints can identify projects. DIAG-03 adds an opt-in saved-project copy; System-2 bytes never leave raw (owner decision 31 October 2026), the bundle carries a closed metadata projection, and consent is no exception. A raw System-2 export would first need classification of both byte sides and overlapping archive copies.",
       "file": "KL-106-debug-report-privacy-limits.md",
       "ledger_ids": [
         "KL-106"

@@ -286,7 +286,8 @@ pub struct SimulatorConfig {
     /// comparing or classifying fewer octets than it asked for.
     pub short_memory_answers: bool,
     /// Overwrite memory at this address with these octets whenever an object
-    /// completes loading (Loading → Loaded). Not a documented device behaviour
+    /// completes loading (Loading → Loaded), through the property or the
+    /// memory-mapped load control alike. Not a documented device behaviour
     /// and not claimed to be one: every write readback before it still holds,
     /// so only a final whole-allocation verification can notice, which is what
     /// it exists to prove (and that its evidence stays out of shared records).
@@ -1758,7 +1759,13 @@ impl SimulatedDevice {
         if (before, after) == (LoadState::Loading, LoadState::Loaded) {
             if let Some((address, octets)) = &self.config.memory_after_load_completed {
                 for (offset, octet) in octets.iter().enumerate() {
-                    state.memory.insert(address + offset as u32, *octet);
+                    let Some(at) = u32::try_from(offset)
+                        .ok()
+                        .and_then(|offset| address.checked_add(offset))
+                    else {
+                        break;
+                    };
+                    state.memory.insert(at, *octet);
                 }
             }
         }

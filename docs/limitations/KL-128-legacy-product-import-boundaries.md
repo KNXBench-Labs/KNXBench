@@ -9,12 +9,12 @@ updates supersede them; they are not new work assignments.
 
 ## Inactive-byte write selection (30 October 2026)
 
-A legacy program whose current values deactivate conditional parameters is
-refused by the [inactive-byte write selection](../contracts/inactive-byte-write-selection.md)
-with `unresolved-ownership`: a legacy database retains no product XML, so the
-namespace and ownership provenance of the inactive bytes cannot be proved.
-Programs without parameters below a `when` keep their unchanged plan. A legacy
-provenance proof is open follow-up work.
+Legacy programs keep their unchanged plan under the
+[inactive-byte write selection](../contracts/inactive-byte-write-selection.md): a
+legacy database retains no product XML, so the namespace and ownership provenance
+of inactive bytes is unprovable, and since the byte-precise fallback (31 October
+2026) an unprovable program omits nothing instead of being refused. No byte of a
+legacy program is omitted. A legacy provenance proof is open follow-up work.
 
 ## WP-03 binary retention and backfill (28 October 2026 source)
 

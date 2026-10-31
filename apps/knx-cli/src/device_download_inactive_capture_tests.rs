@@ -292,6 +292,66 @@ fn new_capture_requires_format_four_and_explicit_generator() {
 }
 
 #[test]
+fn fallback_capture_binds_the_historical_generator_and_restores() {
+    // Mode 0 against a source default of 1 changes the topology: the proof falls back to the
+    // regular plan, so the capture must name the generator that rebuilds exactly that plan.
+    for scope in [
+        ScopeRequest::Complete,
+        ScopeRequest::Partial(PartialDownloadParts {
+            parameters: true,
+            group_addresses: false,
+        }),
+    ] {
+        let dir = tempfile::tempdir().unwrap();
+        let conn = products(dir.path());
+        let mut project = project();
+        project.installations[0]
+            .parameters
+            .push(knx_core::ParameterInstance {
+                id: knx_core::ParameterInstanceId(1),
+                device: DeviceId(1),
+                source: SourceRef {
+                    path: "synthetic".into(),
+                    ets_id: format!("{PROGRAM_ID}_P-Mode_R-Mode"),
+                },
+                raw: "0".into(),
+            });
+        let prepared = prepare_scoped_download(&conn, &project, TARGET.parse().unwrap(), scope)
+            .unwrap()
+            .prepared
+            .unwrap();
+        let partial = prepared.partial.as_ref().map(|(p, _)| *p);
+        let device = device();
+        let (stored, path) = execute(
+            &device,
+            &prepared.plan,
+            prepared.write_selection,
+            partial,
+            dir.path(),
+        );
+        let written: Vec<_> = application_writes(&device);
+        assert!(
+            written
+                .iter()
+                .any(|(a, d)| *a <= 0x4401 && 0x4401 < *a + d.len() as u32),
+            "the fallback writes the regular plan: {written:?}"
+        );
+        let restored = prepare_restore(&conn, &read_backup(&path).unwrap())
+            .expect("a fallback download's own backup restores");
+        assert_eq!(
+            app_writes(&restored),
+            vec![(0x4400, OLD[..4].to_vec()), (0x4405, vec![OLD[5]])]
+        );
+        assert_eq!(
+            (prepared.write_selection, stored.write_selection),
+            (LEGACY, LEGACY),
+            "nothing omitted, nothing to bind"
+        );
+        assert_restore_guards(&conn, &stored);
+    }
+}
+
+#[test]
 fn genuine_format_three_full_and_partial_restore_and_recapture_keep_legacy_identity() {
     for fixture in [
         include_str!("../tests/fixtures/inactive-selection/legacy-complete.backup.json"),

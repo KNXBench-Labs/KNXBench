@@ -41,7 +41,6 @@ const CATEGORY_REASON: Readonly<Record<string, TranslatableKey>> = {
   "product-data": "deviceDownload.readiness.reason.productData",
   configuration: "deviceDownload.readiness.reason.configuration",
   "vendor-download-plugin": "deviceDownload.readiness.reason.vendorDownloadPlugin",
-  "inactive-write-selection": "deviceDownload.readiness.reason.inactiveWriteSelection",
   "customer-adjustable-parameters": "deviceDownload.readiness.reason.customerAdjustableParameters",
 };
 

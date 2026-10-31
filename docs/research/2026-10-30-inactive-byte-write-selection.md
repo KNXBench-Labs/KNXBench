@@ -67,8 +67,9 @@ Dynamic language:
    inherited foreign default, default reset or prefix rebinding cannot become
    proof merely by retaining a familiar local name.
 
-Unprovable provenance returns the existing payload-free `UnresolvedOwnership`
-reason before omission or connector activity. Known prefixes actually bound to
+Unprovable provenance omits nothing: the program keeps its regular plan
+(byte-precise fallback, 31 October 2026; it originally returned the payload-free
+`UnresolvedOwnership` refusal before connector activity). Known prefixes actually bound to
 the admitted KNX namespace remain positive, including declarations at KNX and
 ApplicationProgram ancestors. There is no database migration, global prefix ban,
 new old-row default, global old-format ban, second Choose evaluator or read-only
@@ -99,8 +100,9 @@ regions disagree with the new filtered shape. Trying both generators, cropping o
 padding regions would weaken integrity rather than solve provenance.
 
 Format 4 therefore requires one typed, known, non-null `write_selection`:
-`source-default-inactive-whole-bytes-v1` for new regular captures or
-`source-mask-only-v1` for an explicitly historical restore capture. Formats 1–3
+`source-default-inactive-whole-bytes-v1` for a new regular capture that omitted a
+byte, or `source-mask-only-v1` for a regular capture that omitted nothing and for an
+explicitly historical restore capture. Formats 1–3
 must omit the field, including null; their version selects the historical
 generator without rewriting the original. Existing format-3 strict fields,
 application/exemplar checks, exact ordered regions and durable owner-only
@@ -126,7 +128,8 @@ Original source/binary/database identities were retained rather than simulating
 old rows with current code. The independently fixed positive schedule remains
 `4400h: 01`, `4402h: C7 53`, `4405h: 68`, with no direct data write at `4401h`;
 `4404h` stays source-protected. Actual App, built CLI and HTTP consumers exercise
-positive and refused paths.
+positive and, since the 31 October byte-precise fallback, regular-plan fallback
+paths where they originally exercised refusals.
 
 Only reached original assertions earn RED credit. Later table rows and later
 checks in a compound test are not retroactive failures; later semantic mutants

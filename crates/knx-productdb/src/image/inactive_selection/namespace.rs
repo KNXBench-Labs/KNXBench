@@ -4,7 +4,7 @@ use quick_xml::name::ResolveResult;
 use quick_xml::NsReader;
 use rusqlite::Connection;
 
-use super::Refusal;
+use super::Unproved;
 
 #[derive(Clone, Copy, Default)]
 struct Context {
@@ -20,8 +20,8 @@ pub(super) fn prove<'a>(
     conn: &Connection,
     program_id: &str,
     kinds: impl Iterator<Item = &'a str>,
-) -> Result<(), Refusal> {
-    let unresolved = || Refusal::UnresolvedOwnership;
+) -> Result<(), Unproved> {
+    let unresolved = || Unproved;
     let (sha, bytes): (String, Vec<u8>) = conn
         .query_row(
             "SELECT s.sha256, s.bytes FROM application_program a

@@ -70,7 +70,7 @@ const FORMAT_WITHOUT_SELECTION: u32 = 3;
 /// The versioned producer that must reconstruct a captured write shape.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum WriteSelection {
-    /// Historical source-mask-only plans, admitted only for explicit restore.
+    /// Source-mask-only plans: historical restores and any regular write that omitted nothing.
     SourceMaskOnlyV1,
     /// The regular source-default-topological whole-byte writer.
     SourceDefaultInactiveWholeBytesV1,

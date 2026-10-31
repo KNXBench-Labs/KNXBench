@@ -1,4 +1,4 @@
-//! Verify selected HTTP frames, capture identity and pre-connector freshness refusals.
+//! Verify selected HTTP frames, capture identity, freshness and the regular-plan fallback.
 use super::*;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
@@ -83,6 +83,46 @@ async fn finished(app: &axum::Router) -> Value {
         tokio::time::sleep(Duration::from_millis(5)).await;
     }
     panic!("download failed to settle");
+}
+
+/// Memory writes at or above the parameter segment, in frame order.
+fn parameter_writes(device: &SimulatedDevice) -> Vec<(u32, Vec<u8>)> {
+    device
+        .seen()
+        .into_iter()
+        .filter_map(|s| match s {
+            Seen::MemoryWrite { address, data, .. } if address >= 0x4400 => Some((address, data)),
+            _ => None,
+        })
+        .collect()
+}
+
+/// The regular (pre-selection) parameter writes of the state's current project and catalogue.
+fn regular_writes(dir: &std::path::Path, state: &knx_server::AppState) -> Vec<(u32, Vec<u8>)> {
+    let conn = knx_productdb::open_and_migrate(&dir.join("products.sqlite")).unwrap();
+    let project = state.project.lock().unwrap().clone().unwrap();
+    knx_app::device_download::prepare_device_download_for_reading(
+        &conn,
+        &project,
+        TARGET.parse().unwrap(),
+    )
+    .unwrap()
+    .plan
+    .steps
+    .into_iter()
+    .filter_map(|step| match step {
+        knx_core::commissioning::memory_download::MemoryDownloadStep::WriteMemory {
+            address,
+            octets,
+        } if address >= 0x4400 => Some((u32::from(address), octets)),
+        _ => None,
+    })
+    .collect()
+}
+
+/// The regular plan of the unchanged fixture: 0x4401 keeps its literal, 0x4404 stays protected.
+fn regular_fixture_writes() -> Vec<(u32, Vec<u8>)> {
+    vec![(0x4400, vec![1, 0x9A, 0xC7, 0x53]), (0x4405, vec![0x68])]
 }
 
 #[tokio::test]
@@ -171,13 +211,16 @@ async fn http_all_scopes_execute_the_selected_frames_and_capture_the_actual_gene
 }
 
 #[tokio::test]
-async fn http_start_reprepares_after_mode_or_source_changes_and_opens_no_connector() {
+async fn http_start_reprepares_after_mode_or_source_changes_into_the_regular_fallback_plan() {
     for change_mode in [false, true] {
         for partial in scopes() {
             let dir = tempfile::tempdir().unwrap();
             let (app, state, device, calls) = app(dir.path());
-            let (status, shown, _) =
-                call(&app, post("/api/device-download/plan", request(partial))).await;
+            let (status, shown, _) = call(
+                &app,
+                post("/api/device-download/plan", request(partial.clone())),
+            )
+            .await;
             assert_eq!(status, StatusCode::OK, "{shown}");
             if change_mode {
                 state
@@ -218,22 +261,42 @@ async fn http_start_reprepares_after_mode_or_source_changes_and_opens_no_connect
                 )
                 .unwrap();
             }
-            let (status, refusal, text) = call(&app, start(&shown)).await;
-            assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "{refusal}");
-            assert_eq!(refusal["kind"], "downloadPreparationRefused");
-            assert_eq!(refusal["category"], "inactive-write-selection");
-            assert!(refusal["error"].as_str().unwrap().contains(if change_mode {
-                "different-source-default-topology"
+            let regular = regular_writes(dir.path(), &state);
+            assert!(
+                regular
+                    .iter()
+                    .any(|(a, d)| *a <= 0x4401 && 0x4401 < *a + d.len() as u32),
+                "{regular:?}"
+            );
+            let parameters = !partial.is_object() || partial["parameters"] == true;
+            let (status, body, text) = call(&app, start(&shown)).await;
+            if parameters {
+                // The changed inputs plan more bytes than were shown: refused as stale.
+                assert_eq!(status, StatusCode::CONFLICT, "{body}");
+                assert_eq!(body["kind"], "downloadPlanStale", "{body}");
+                assert!(!text.contains(PROGRAM_ID));
+                assert_eq!(calls.load(Ordering::SeqCst), 0);
+                assert!(device.seen().is_empty());
+                assert!(state.device_download.lock().await.is_none());
             } else {
-                "unresolved-ownership"
-            }));
-            assert!(!text.contains(PROGRAM_ID));
-            assert_eq!(calls.load(Ordering::SeqCst), 0);
-            assert!(device.seen().is_empty());
-            assert!(state.device_download.lock().await.is_none());
+                // A group-address-only plan is unchanged and runs once, writing no parameter byte.
+                assert_eq!(status, StatusCode::OK, "{body}");
+                finished(&app).await;
+                assert!(parameter_writes(&device).is_empty());
+            }
             let (status, ready, _) = call(&app, get("/api/device-readiness")).await;
             assert_eq!(status, StatusCode::OK);
-            assert_eq!(ready["devices"][0]["category"], "inactive-write-selection");
+            assert_eq!(ready["devices"][0]["readiness"], "untested", "{ready}");
+            assert_eq!(ready["devices"][0]["category"], Value::Null, "{ready}");
+            if parameters {
+                let (status, shown, _) =
+                    call(&app, post("/api/device-download/plan", request(partial))).await;
+                assert_eq!(status, StatusCode::OK, "{shown}");
+                let (status, body, _) = call(&app, start(&shown)).await;
+                assert_eq!(status, StatusCode::OK, "{body}");
+                finished(&app).await;
+                assert_eq!(parameter_writes(&device), regular);
+            }
         }
     }
 }
@@ -434,51 +497,39 @@ fn namespace_replace_catalogue(dir: &std::path::Path, xml: &str) {
         .unwrap();
 }
 
-async fn namespace_refused(
+/// A namespace case plans and executes the regular plan: nothing is omitted, nothing refused.
+async fn namespace_falls_back(
     app: &axum::Router,
-    req: Request<Body>,
     calls: &AtomicUsize,
     device: &SimulatedDevice,
     case: &str,
 ) {
-    let (status, body, text) = call(app, req).await;
-    assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "{case}: {body}");
-    assert_eq!(
-        body["category"], "inactive-write-selection",
-        "{case}: {body}"
-    );
-    assert!(
-        body["error"]
-            .as_str()
-            .unwrap()
-            .contains("unresolved-ownership"),
-        "{body}"
-    );
-    for private in ["urn:synthetic", "e:Parameter", "M-FFF6", "A.xml"] {
+    let before = calls.load(Ordering::SeqCst);
+    let (status, shown, text) =
+        call(app, post("/api/device-download/plan", request(Value::Null))).await;
+    assert_eq!(status, StatusCode::OK, "{case}: {shown}");
+    assert_eq!(shown["dataOctets"], 13, "{case}: {shown}");
+    for private in ["urn:synthetic", "e:Parameter"] {
         assert!(!text.contains(private), "{text}");
     }
-    assert_eq!(calls.load(Ordering::SeqCst), 0);
-    assert!(device.seen().is_empty());
+    let (status, body, _) = call(app, start(&shown)).await;
+    assert_eq!(status, StatusCode::OK, "{case}: {body}");
+    finished(app).await;
+    assert_eq!(calls.load(Ordering::SeqCst), before + 1);
+    assert_eq!(parameter_writes(device), regular_fixture_writes(), "{case}");
 }
 
 #[tokio::test]
-async fn f3_namespace_http_plan_refuses_before_connector() {
+async fn f3_namespace_http_plan_falls_back_to_the_regular_plan() {
     for (case, xml) in namespace_cases(XML) {
         let dir = tempfile::tempdir().unwrap();
         let (app, _, device, calls) = correction_app(dir.path(), &xml, false);
-        namespace_refused(
-            &app,
-            post("/api/device-download/plan", request(Value::Null)),
-            &calls,
-            &device,
-            case,
-        )
-        .await;
+        namespace_falls_back(&app, &calls, &device, case).await;
     }
 }
 
 #[tokio::test]
-async fn f3_namespace_http_start_rechecks_retained_context_before_connector() {
+async fn f3_namespace_http_start_rechecks_retained_context_and_refuses_the_stale_selection() {
     for (case, xml) in namespace_cases(XML) {
         let dir = tempfile::tempdir().unwrap();
         let (app, _, device, calls) = app(dir.path());
@@ -489,7 +540,15 @@ async fn f3_namespace_http_start_rechecks_retained_context_before_connector() {
         .await;
         assert_eq!(status, StatusCode::OK, "{shown}");
         namespace_replace_catalogue(dir.path(), &xml);
-        namespace_refused(&app, start(&shown), &calls, &device, case).await;
+        let (status, body, text) = call(&app, start(&shown)).await;
+        assert_eq!(status, StatusCode::CONFLICT, "{case}: {body}");
+        assert_eq!(body["kind"], "downloadPlanStale", "{case}: {body}");
+        for private in ["urn:synthetic", "e:Parameter", "M-FFF6", "A.xml"] {
+            assert!(!text.contains(private), "{text}");
+        }
+        assert_eq!(calls.load(Ordering::SeqCst), 0);
+        assert!(device.seen().is_empty());
+        namespace_falls_back(&app, &calls, &device, case).await;
     }
 }
 
@@ -530,7 +589,7 @@ async fn f3_namespace_http_actual_knx_prefix_positive_executes_exact_frames() {
 
 #[test]
 #[ignore = "requires a genuine retained pre-namespace CLI-produced catalogue"]
-fn f3_namespace_genuine_old_database_http_plan_refuses_before_connector() {
+fn f3_namespace_genuine_old_database_http_plan_falls_back_to_the_regular_plan() {
     let original = std::path::PathBuf::from(
         std::env::var_os("KNX_NAMESPACE_PRE_DB").expect("retained producer database"),
     );
@@ -558,9 +617,8 @@ fn f3_namespace_genuine_old_database_http_plan_refuses_before_connector() {
         .enable_all()
         .build()
         .unwrap()
-        .block_on(namespace_refused(
+        .block_on(namespace_falls_back(
             &app,
-            post("/api/device-download/plan", request(Value::Null)),
             &calls,
             &device,
             "genuine old database",
@@ -569,7 +627,7 @@ fn f3_namespace_genuine_old_database_http_plan_refuses_before_connector() {
 }
 
 #[tokio::test]
-async fn f3_http_opaque_dynamic_attributes_refuse_plan_and_start_before_connector() {
+async fn f3_http_opaque_dynamic_attributes_fall_back_in_plan_and_start() {
     for xml in [
         XML.replace(&format!("<ParameterRefRef RefId=\"{PROGRAM_ID}_P-I_R-I\" />"),
           &format!("<choose Opaque=\"\" ParamRefId=\"{PROGRAM_ID}_P-Mode_R-Mode\"><when test=\"0\"><ParameterRefRef RefId=\"{PROGRAM_ID}_P-I_R-I\" /></when></choose>")),
@@ -626,20 +684,12 @@ async fn f3_http_opaque_dynamic_attributes_refuse_plan_and_start_before_connecto
                 .unwrap();
             drop(target);
             drop(conn);
-            for req in [
-                start(&shown),
-                post("/api/device-download/plan", request(partial)),
-            ] {
-                let (status, body, text) = call(&app, req).await;
-                assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "{body}");
-                assert_eq!(body["category"], "inactive-write-selection", "{body}");
-                assert!(
-                    body["error"]
-                        .as_str()
-                        .unwrap()
-                        .contains("unresolved-ownership"),
-                    "{body}"
-                );
+            let parameters = !partial.is_object() || partial["parameters"] == true;
+            let (status, body, text) = call(&app, start(&shown)).await;
+            if parameters {
+                // The fallback writes 0x4401 too, so the shown selection is stale.
+                assert_eq!(status, StatusCode::CONFLICT, "{body}");
+                assert_eq!(body["kind"], "downloadPlanStale", "{body}");
                 assert!(
                     !text.contains("Opaque") && !text.contains(PROGRAM_ID),
                     "{text}"
@@ -647,7 +697,20 @@ async fn f3_http_opaque_dynamic_attributes_refuse_plan_and_start_before_connecto
                 assert_eq!(calls.load(Ordering::SeqCst), 0);
                 assert!(device.seen().is_empty());
                 assert!(state.device_download.lock().await.is_none());
+            } else {
+                // A group-address-only plan is unchanged and runs once, writing no parameter byte.
+                assert_eq!(status, StatusCode::OK, "{body}");
+                finished(&app).await;
+                assert!(parameter_writes(&device).is_empty());
+                continue;
             }
+            let (status, shown, _) =
+                call(&app, post("/api/device-download/plan", request(partial))).await;
+            assert_eq!(status, StatusCode::OK, "{shown}");
+            let (status, body, _) = call(&app, start(&shown)).await;
+            assert_eq!(status, StatusCode::OK, "{body}");
+            finished(&app).await;
+            assert_eq!(parameter_writes(&device), regular_fixture_writes());
         }
     }
 }

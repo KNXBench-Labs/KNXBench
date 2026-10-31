@@ -219,6 +219,9 @@ It omits only proved exclusive inactive whole bytes with source-default topology
 retains source Mask/literals/active Union winners and read-only behavior, and binds
 new format-4 backups to an explicit typed restore generator. Historical restores
 keep their exact captured shape and existing application/exemplar checks.
+Since the 31 October byte-precise fallback (owner decision) a failed proof never
+refuses: unproved bytes are written as before and program-wide failures keep the
+regular plan; the amendment awaits independent review before merge.
 
 Original real-writer RED → GREEN, genuine old-backup and reopened-catalogue
 consumer proof, 412 distinct passing regression bodies and final independent

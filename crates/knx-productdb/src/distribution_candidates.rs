@@ -1082,6 +1082,13 @@ pub(super) fn inspect(
     };
     let no_refs = Vec::new();
     for id in 0..doc.nodes.len() {
+        // The name filter runs first, so ancestor walks are paid only by candidate elements.
+        if !["Union", "Parameter", "ParameterRef"]
+            .iter()
+            .any(|&local| named(doc, id, local))
+        {
+            continue;
+        }
         let (Some(app), Some(manufacturer)) = (doc.application(id), doc.manufacturer(id)) else {
             continue;
         };

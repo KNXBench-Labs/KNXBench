@@ -15,13 +15,25 @@ use tower::ServiceExt;
 const HARDWARE: &str = r#"<KNX xmlns="http://knx.org/xml/project/20"><ManufacturerData><Manufacturer RefId="M-0001"><Hardware><Hardware Id="H-1" Name="Synthetic" SerialNumber="S" VersionNumber="1"><Products><Product Id="M-0001_P-1"/></Products><Hardware2Programs><Hardware2Program Id="HP-1" MediumTypes="MT-0"><ApplicationProgramRef RefId="A-1"/></Hardware2Program></Hardware2Programs></Hardware></Hardware></Manufacturer></ManufacturerData></KNX>"#;
 const PROGRAM: &str = r#"<KNX xmlns="http://knx.org/xml/project/20"><ManufacturerData><Manufacturer RefId="M-0001"><ApplicationPrograms><ApplicationProgram Id="A-1" Name="Synthetic" ApplicationVersion="1" MaskVersion="MV-0701"><Static><ParameterTypes><ParameterType Id="PT" Name="Time"><TypeTime SizeInBit="16" minInclusive="0" maxInclusive="3600" Unit="Seconds"/></ParameterType></ParameterTypes><Parameters><Parameter Id="P" Name="Delay" Text="Delay" Access="ReadWrite" ParameterType="PT" Value="0010"/></Parameters><ParameterRefs><ParameterRef Id="PR" RefId="P"/></ParameterRefs></Static><Dynamic><ParameterRefRef RefId="PR"/></Dynamic></ApplicationProgram></ApplicationPrograms></Manufacturer></ManufacturerData></KNX>"#;
 fn fixture() -> (tempfile::TempDir, Arc<knx_server::AppState>, axum::Router) {
+    fixture_with_source(PROGRAM, HARDWARE, "M-0001_P-1", "HP-1")
+}
+fn fixture_with_source(
+    program: &str,
+    hardware: &str,
+    product_ref: &str,
+    program_ref: &str,
+) -> (tempfile::TempDir, Arc<knx_server::AppState>, axum::Router) {
     let dir = tempfile::tempdir().unwrap();
     let products = knx_productdb::open_and_migrate(&dir.path().join("products.sqlite")).unwrap();
+    let manufacturer = product_ref.split('_').next().unwrap();
     super::native_source_fixture::install(
         &products,
         20,
-        ("M-0001/Hardware.xml", HARDWARE.as_bytes()),
-        ("M-0001/Application.xml", PROGRAM.as_bytes()),
+        (&format!("{manufacturer}/Hardware.xml"), hardware.as_bytes()),
+        (
+            &format!("{manufacturer}/Application.xml"),
+            program.as_bytes(),
+        ),
     );
     let state = knx_server::AppState {
         product_db: Some(
@@ -39,8 +51,8 @@ fn fixture() -> (tempfile::TempDir, Arc<knx_server::AppState>, axum::Router) {
         name: "Synthetic".into(),
         description: None,
         address: None,
-        product_ref: "M-0001_P-1".into(),
-        program_ref: "HP-1".into(),
+        product_ref: product_ref.into(),
+        program_ref: program_ref.into(),
         commissioning: CommissioningState::default(),
         visibility_calculated: true,
         com_objects: vec![],
@@ -68,6 +80,261 @@ fn fixture() -> (tempfile::TempDir, Arc<knx_server::AppState>, axum::Router) {
     let app = knx_server::app(state.clone(), None);
     (dir, state, app)
 }
+const IP_PROGRAM: &str =
+    include_str!("../../../../crates/knx-productdb/tests/fixtures/ip-address-literal.xml");
+const IP_HARDWARE: &str =
+    include_str!("../../../../crates/knx-productdb/tests/fixtures/ip-address-hardware.xml");
+const IP_VECTORS: &str =
+    include_str!("../../../../crates/knx-productdb/tests/fixtures/ip-address-literal.json");
+const IP_PARAMETERS: &str = "/api/device/1/parameters";
+
+async fn ip_bound(app: &axum::Router, raw: &str) -> Value {
+    let (status, panel) = request(app, "GET", IP_PARAMETERS, Value::Null).await;
+    assert_eq!(status, StatusCode::OK, "{panel}");
+    let (status, tree) = request(app, "GET", "/api/project", Value::Null).await;
+    assert_eq!(status, StatusCode::OK);
+    let field = &panel["sections"][0]["fields"][0];
+    assert_eq!(field["etsId"], "PR-Address");
+    assert_eq!(field["kind"], "IPAddress");
+    assert_eq!(field["editable"], true);
+    assert_eq!(field["writeEtsId"], "PR-Address");
+    assert!(field["min"].is_null() && field["max"].is_null());
+    json!({"etsId":field["writeEtsId"], "raw":raw, "expectedValue":field["value"],
+        "serverIncarnation":tree["server_incarnation"], "projectIncarnation":tree["project_incarnation"],
+        "snapshotRevision":tree["snapshot_revision"]})
+}
+
+#[tokio::test]
+async fn okx06_real_bound_http_vectors_undo_redo_and_native_reopen_keep_exact_ip_lexemes() {
+    let (dir, state, app) =
+        fixture_with_source(IP_PROGRAM, IP_HARDWARE, "M-00FA_P-Literal", "HP-Literal");
+    let native = dir.path().join("literal.knxdb");
+    assert_eq!(
+        request(&app, "POST", "/api/project/save-as", json!({"path":native}))
+            .await
+            .0,
+        StatusCode::OK
+    );
+    super::native_source_fixture::assert_carried(&state, &native);
+    let source_path = "/api/device/1/parameter-editor-source?etsId=PR-Address";
+    let before_source = state.project.lock().unwrap().clone();
+    let (status, source) = request(&app, "GET", source_path, Value::Null).await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(source["parameterRefId"], "PR-Address");
+    let evidence = &source["evidence"];
+    assert_eq!(evidence["status"], "declared");
+    assert_eq!(evidence["source"]["programId"], "A-FictionalIP");
+    assert_eq!(evidence["source"]["parameterTypeId"], "PT-Address");
+    assert_eq!(evidence["source"]["child"], "TypeIPAddress");
+    assert_eq!(
+        evidence["source"]["attributes"],
+        json!({"AddressType":"HostAddress"})
+    );
+    assert_eq!(
+        evidence["source"]["sourceSha256"],
+        knx_productdb::sha256_hex(IP_PROGRAM.as_bytes())
+    );
+    assert!(source.get("editable").is_none());
+    assert_eq!(*state.project.lock().unwrap(), before_source);
+    let binding = ip_bound(&app, "0.0.0.0").await;
+    assert_eq!(source["serverIncarnation"], binding["serverIncarnation"]);
+    assert_eq!(source["projectIncarnation"], binding["projectIncarnation"]);
+    assert_eq!(source["snapshotRevision"], binding["snapshotRevision"]);
+    let vectors: Value = serde_json::from_str(IP_VECTORS).unwrap();
+    let mut previous = "203.0.113.19".to_string();
+    let mut accepted = 0;
+    for vector in vectors["cases"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|v| v["accepted"] == true)
+    {
+        let raw = vector["raw"].as_str().unwrap();
+        let payload = ip_bound(&app, raw).await;
+        let (status, panel) = request(&app, "POST", IP_PARAMETERS, payload.clone()).await;
+        assert_eq!(status, StatusCode::OK, "{raw:?}: {panel}");
+        assert_eq!(panel["sections"][0]["fields"][0]["value"], raw);
+        assert!(panel["tree"].is_object());
+        accepted += 1;
+        assert_eq!(
+            request(&app, "GET", "/api/project/history", Value::Null)
+                .await
+                .1["undoSteps"],
+            accepted
+        );
+        let before_stale = state.project.lock().unwrap().clone();
+        let stale_history = state.command_stack.lock().unwrap().history_lengths();
+        let (status, conflict) = request(&app, "POST", IP_PARAMETERS, payload).await;
+        assert_eq!(status, StatusCode::CONFLICT);
+        assert_eq!(conflict["kind"], "parameterWriteConflict");
+        assert_eq!(*state.project.lock().unwrap(), before_stale);
+        assert_eq!(
+            state.command_stack.lock().unwrap().history_lengths(),
+            stale_history
+        );
+        assert_eq!(
+            request(&app, "POST", "/api/undo", json!({})).await.0,
+            StatusCode::OK
+        );
+        assert_eq!(
+            request(&app, "GET", IP_PARAMETERS, Value::Null).await.1["sections"][0]["fields"][0]
+                ["value"],
+            previous
+        );
+        assert_eq!(
+            request(&app, "POST", "/api/redo", json!({})).await.0,
+            StatusCode::OK
+        );
+        assert_eq!(
+            request(&app, "GET", IP_PARAMETERS, Value::Null).await.1["sections"][0]["fields"][0]
+                ["value"],
+            raw
+        );
+        assert_eq!(
+            request(&app, "POST", "/api/project/save", json!({}))
+                .await
+                .0,
+            StatusCode::OK
+        );
+        let saved = std::fs::read(&native).unwrap();
+        assert_eq!(
+            request(
+                &app,
+                "POST",
+                "/api/project/open",
+                json!({"path":native,"clientToken":format!("literal-{accepted}")})
+            )
+            .await
+            .0,
+            StatusCode::OK
+        );
+        assert_eq!(
+            request(&app, "GET", IP_PARAMETERS, Value::Null).await.1["sections"][0]["fields"][0]
+                ["value"],
+            raw
+        );
+        assert_eq!(
+            request(&app, "GET", source_path, Value::Null).await.1["evidence"],
+            *evidence
+        );
+        assert_eq!(std::fs::read(&native).unwrap(), saved);
+        previous = raw.to_string();
+    }
+    assert_eq!(accepted, 9);
+    let mut refused = 0;
+    for vector in vectors["cases"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|v| v["accepted"] == false)
+    {
+        let raw = vector["raw"].as_str().unwrap();
+        let payload = ip_bound(&app, raw).await;
+        let tree = request(&app, "GET", "/api/project", Value::Null).await.1;
+        let model = state.project.lock().unwrap().clone();
+        let history = request(&app, "GET", "/api/project/history", Value::Null)
+            .await
+            .1;
+        let bytes = std::fs::read(&native).unwrap();
+        let (status, error) = request(&app, "POST", IP_PARAMETERS, payload).await;
+        assert_eq!(status, StatusCode::BAD_REQUEST, "{raw:?}: {error}");
+        assert_eq!(
+            error.as_object().unwrap().keys().collect::<Vec<_>>(),
+            ["error"]
+        );
+        assert!(error["error"].as_str().is_some_and(|s| !s.is_empty()));
+        assert_eq!(*state.project.lock().unwrap(), model);
+        assert_eq!(
+            request(&app, "GET", "/api/project", Value::Null).await.1,
+            tree
+        );
+        assert_eq!(
+            request(&app, "GET", "/api/project/history", Value::Null)
+                .await
+                .1,
+            history
+        );
+        assert_eq!(std::fs::read(&native).unwrap(), bytes);
+        refused += 1;
+    }
+    assert_eq!(refused, 22);
+    state
+        .product_db
+        .as_ref()
+        .unwrap()
+        .with_read(|conn| {
+            assert_eq!(
+                knx_productdb::load_source_file(
+                    conn,
+                    &knx_productdb::sha256_hex(IP_PROGRAM.as_bytes())
+                )
+                .unwrap()
+                .unwrap(),
+                IP_PROGRAM.as_bytes()
+            );
+            Ok::<(), std::convert::Infallible>(())
+        })
+        .unwrap()
+        .unwrap();
+}
+
+#[tokio::test]
+async fn okx06_ip_source_is_not_a_rights_or_authentication_override() {
+    let restricted = IP_PROGRAM.replace("Access=\"ReadWrite\"", "Access=\"Read\"");
+    let (_dir, state, app) =
+        fixture_with_source(&restricted, IP_HARDWARE, "M-00FA_P-Literal", "HP-Literal");
+    assert_eq!(
+        request(
+            &app,
+            "GET",
+            "/api/device/1/parameter-editor-source?etsId=PR-Address",
+            Value::Null
+        )
+        .await
+        .1["evidence"]["status"],
+        "declared"
+    );
+    let panel = request(&app, "GET", IP_PARAMETERS, Value::Null).await.1;
+    assert_eq!(panel["sections"][0]["fields"][0]["editable"], false);
+    let before = state.project.lock().unwrap().clone();
+    assert_eq!(
+        request(
+            &app,
+            "POST",
+            IP_PARAMETERS,
+            json!({"etsId":"PR-Address","raw":"198.51.100.254"})
+        )
+        .await
+        .0,
+        StatusCode::BAD_REQUEST
+    );
+    assert_eq!(*state.project.lock().unwrap(), before);
+    let auth = knx_server::AuthConfig::from_plaintext_password("synthetic-test-only").unwrap();
+    let protected = knx_server::app_with_auth(state, None, auth);
+    assert_eq!(
+        request(
+            &protected,
+            "GET",
+            "/api/device/1/parameter-editor-source?etsId=PR-Address",
+            Value::Null
+        )
+        .await
+        .0,
+        StatusCode::UNAUTHORIZED
+    );
+    assert_eq!(
+        request(
+            &protected,
+            "POST",
+            IP_PARAMETERS,
+            json!({"etsId":"PR-Address","raw":"198.51.100.254"})
+        )
+        .await
+        .0,
+        StatusCode::UNAUTHORIZED
+    );
+}
+
 async fn request(
     app: &axum::Router,
     method: &str,

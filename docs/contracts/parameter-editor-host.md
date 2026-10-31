@@ -82,10 +82,27 @@ package does not introduce an unmeasured cache or bulk-query abstraction.
   `unsignedInt`/`signedInt`, declared bounds and current value are valid safe
   integers, unit step only. No Increment, unknown transformations, rounding or
   automatic clamping. Editing the slider changes a draft, not a project value.
-- Narrow child attribute admission: `SizeInBit`, `Type`, `minInclusive`,
+- IPAddress (OKX-06, source after Alpha 18): one exact direct-Static form,
+  `TypeIPAddress AddressType="HostAddress"`, with absent bounds/width and parent
+  `Id` plus optional `Name`. It offers a raw text draft for dotted IPv4 without
+  leading zeroes or IPv6 as exactly eight four-hex-digit groups. This reuses the
+  existing server lexical domain; it is not address usability, a network lookup,
+  an image codec or a new validation policy. Both address families and original
+  hex case remain unchanged. Other role tokens, absent/unknown/qualified hints,
+  extra width/encoding and module scopes keep the specialized fallback; the
+  existing plain field is not newly prohibited. Null, empty and malformed old
+  values are shown without automatic repair. Pasted newlines remain visible as
+  invalid raw drafts rather than being silently stripped into a different value.
+  A complete textbox selection replaces the entire raw draft. While raw line
+  breaks make DOM and draft offsets differ, partial paste leaves the draft
+  unchanged and asks for an explicit complete replacement; it never splices
+  sanitized offsets into a different raw value.
+- Time/Number child attribute admission: `SizeInBit`, `Type`, `minInclusive`,
   `maxInclusive`, `Unit`, `UIHint`; parent `Id`, `Name`, `UIHint` and XML namespace
-  declarations. Other attributes cause a visible unsupported fallback.
-  Qualified vendor hints are not promoted to unqualified KNX hints.
+  declarations. IPAddress instead admits only child `AddressType="HostAddress"`
+  and parent `Id`/optional `Name`, plus namespace declarations. Other attributes
+  cause a visible specialized fallback. Qualified vendor hints are never
+  promoted to unqualified KNX hints.
 - Colour/Picture: visible unsupported-codec original-value view. No HTML/image
   execution, URLs/resource fetches, colour conversion or file upload. The host
   may keep its existing generic editor; it must not label this fallback a colour
@@ -115,7 +132,8 @@ certify a changed assembled candidate.
 ## Workbench host (12 October 2026)
 
 The device editor's **Parameters** tab offers a **Checked editor** button under
-Time/Number/Color/Picture rows when the tree carries a complete identity
+Time/Number/Color/Picture rows (and IPAddress rows in source after Alpha 18) when
+the tree carries a complete identity
 (`snapshotContextFromTree`) and the panel has a program; not in
 **Manufacturer fields** or **Diagnostics**. `ParameterSourceEditor.tsx` replaces the
 row (never nesting controls in its `<label>`), reads the source per opened field,

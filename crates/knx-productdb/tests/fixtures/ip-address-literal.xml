@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Independently authored contract witness, not manufacturer payload or an XSD-valid package claim. -->
+<KNX xmlns="http://knx.org/xml/project/20">
+  <ManufacturerData>
+    <Manufacturer RefId="M-00FA">
+      <ApplicationPrograms>
+        <ApplicationProgram Id="A-FictionalIP" Name="Fictional literal address" ApplicationNumber="27" ApplicationVersion="1" ProgramType="ApplicationProgram" MaskVersion="MV-0701" PeiType="0" DefaultLanguage="en-US">
+          <Static>
+            <ParameterTypes>
+              <ParameterType Id="PT-Address" Name="Fictional endpoint">
+                <TypeIPAddress AddressType="HostAddress"/>
+              </ParameterType>
+            </ParameterTypes>
+            <Parameters>
+              <Parameter Id="P-Address" Name="Endpoint" Text="Endpoint" Access="ReadWrite" ParameterType="PT-Address" Value="203.0.113.19"/>
+            </Parameters>
+            <ParameterRefs><ParameterRef Id="PR-Address" RefId="P-Address"/></ParameterRefs>
+          </Static>
+          <Dynamic>
+            <ChannelIndependentBlock>
+              <ParameterBlock Id="PB-Address" Text="Fictional endpoint">
+                <ParameterRefRef RefId="PR-Address"/>
+              </ParameterBlock>
+            </ChannelIndependentBlock>
+          </Dynamic>
+        </ApplicationProgram>
+      </ApplicationPrograms>
+    </Manufacturer>
+  </ManufacturerData>
+</KNX>

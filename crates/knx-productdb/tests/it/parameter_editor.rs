@@ -9,6 +9,137 @@ use rusqlite::Connection;
 
 const A: &str = "M-00FA_A-0009-10-ABCD";
 const B: &str = "M-00FA_A-000A-10-ABCE";
+const IP_PROGRAM: &str = include_str!("../fixtures/ip-address-literal.xml");
+const IP_HARDWARE: &str = include_str!("../fixtures/ip-address-hardware.xml");
+
+#[test]
+fn okx06_installed_ip_source_preserves_exact_owner_null_width_and_read_only_reopen() {
+    let d = tempfile::tempdir().unwrap();
+    let path = d.path().join("products.sqlite");
+    let c = open_and_migrate(&path).unwrap();
+    let package = knx_testsupport::zip_with_entries(&[
+        (
+            "knx_master.xml",
+            br#"<KNX xmlns="http://knx.org/xml/project/20"><MasterData/></KNX>"#,
+        ),
+        ("M-00FA/Hardware.xml", IP_HARDWARE.as_bytes()),
+        ("M-00FA/Application.xml", IP_PROGRAM.as_bytes()),
+    ]);
+    assert!(
+        !knx_productdb::package::install_package(&c, "literal.knxprod", &package)
+            .unwrap()
+            .skipped
+    );
+    assert_eq!(
+        knx_productdb::query::resolve_program(&c, "HP-Literal")
+            .unwrap()
+            .as_deref(),
+        Some("A-FictionalIP")
+    );
+    let row: (String, Option<i64>, Option<String>, Option<String>) = c.query_row(
+        "SELECT kind,size_in_bit,min_inclusive,max_inclusive FROM parameter_type WHERE program_id='A-FictionalIP' AND id='PT-Address'", [],
+        |r| Ok((r.get(0)?,r.get(1)?,r.get(2)?,r.get(3)?)),
+    ).unwrap();
+    assert_eq!(row, ("IPAddress".into(), None, None, None));
+    let changes = c.total_changes();
+    c.execute_batch("PRAGMA query_only=ON").unwrap();
+    let expected = parameter_editor_evidence(&c, "A-FictionalIP", "PR-Address").unwrap();
+    let Evidence::Declared(ref v) = expected else {
+        panic!("installed exact IP evidence required")
+    };
+    assert_eq!(v.source_sha256, sha256_hex(IP_PROGRAM.as_bytes()));
+    assert_eq!(v.program_id, "A-FictionalIP");
+    assert_eq!(v.parameter_type_id, "PT-Address");
+    assert_eq!(v.schema, 20);
+    assert_eq!(v.child, "TypeIPAddress");
+    assert_eq!(
+        v.attributes.get("AddressType").map(String::as_str),
+        Some("HostAddress")
+    );
+    assert!(!v.attributes.contains_key("SizeInBit"));
+    assert_eq!(v.parameter_type_attributes["Id"], "PT-Address");
+    assert_eq!(c.total_changes(), changes);
+    assert_eq!(
+        knx_productdb::load_source_file(&c, &v.source_sha256)
+            .unwrap()
+            .unwrap(),
+        IP_PROGRAM.as_bytes()
+    );
+    drop(c);
+    let before = std::fs::read(&path).unwrap();
+    let reopened = knx_productdb::open_read_only(&path).unwrap();
+    assert_eq!(
+        parameter_editor_evidence(&reopened.conn, "A-FictionalIP", "PR-Address").unwrap(),
+        expected
+    );
+    assert_eq!(reopened.conn.total_changes(), 0);
+    drop(reopened);
+    assert_eq!(std::fs::read(&path).unwrap(), before);
+}
+
+#[test]
+fn okx06_ip_evidence_keeps_existing_identity_refusals_and_raw_role_hints() {
+    let base = xml(&app(A, r#"TypeIPAddress AddressType="HostAddress""#));
+    let variants = [
+        (base.replace(A, B), Issue::MissingDeclaration),
+        (xml(&(app(A, r#"TypeIPAddress AddressType="HostAddress""#) + &app(A, r#"TypeIPAddress AddressType="HostAddress""#))), Issue::AmbiguousDefinition),
+        (base.replace("</ParameterTypes>", r#"<ParameterType Id="PT"><TypeIPAddress AddressType="HostAddress"/></ParameterType></ParameterTypes>"#), Issue::AmbiguousDefinition),
+        (base.replace("</ParameterRefs>", r#"<ParameterRef Id="PR" RefId="P"/></ParameterRefs>"#), Issue::AmbiguousDefinition),
+        (base.replace(r#"RefId="P""#, r#"RefId="foreign""#), Issue::ModelMismatch),
+        (base.replace("TypeIPAddress", "TypeColor"), Issue::ModelMismatch),
+        (base.replace("<TypeIPAddress ", r#"<TypeIPAddress xmlns="urn:foreign" "#), Issue::MissingDeclaration),
+        (base.replace("<TypeIPAddress ", r#"<TypeIPAddress SizeInBit="32" "#), Issue::ModelMismatch),
+    ];
+    for (changed, issue) in variants {
+        let (_d, c) = db(&base);
+        rebind(&c, &changed);
+        let before = c.total_changes();
+        assert_eq!(read(&c), Evidence::Unavailable(issue));
+        assert_eq!(c.total_changes(), before);
+        assert_eq!(
+            knx_productdb::load_source_file(&c, &sha256_hex(changed.as_bytes()))
+                .unwrap()
+                .unwrap(),
+            changed.as_bytes()
+        );
+    }
+    for role in ["", "SubnetMask", "GatewayAddress", "Unknown"] {
+        let raw = base.replace("HostAddress", role).replace(
+            "<TypeIPAddress ",
+            r#"<TypeIPAddress xmlns:v="urn:vendor" v:UIHint="Literal" "#,
+        );
+        let (_d, c) = db(&raw);
+        let Evidence::Declared(v) = read(&c) else {
+            panic!("raw role is evidence, not write authority")
+        };
+        assert_eq!(v.attributes["AddressType"], role);
+        assert_eq!(v.attributes["v:UIHint"], "Literal");
+    }
+}
+
+#[test]
+fn okx06_placed_ip_literals_still_have_no_image_codec() {
+    use knx_productdb::image::{build_download_image, ImageError, ImageRequest};
+    let source = IP_PROGRAM.replace("<ParameterTypes>", r#"<Code><AbsoluteSegment Id="S" Address="15360" Size="4"><Data>AAAAAA==</Data></AbsoluteSegment></Code><ParameterTypes>"#)
+        .replace(r#"Value="203.0.113.19"/>"#, r#"Value="203.0.113.19"><Memory CodeSegment="S" Offset="0" BitOffset="0"/></Parameter>"#);
+    let (_d, c) = db(&source);
+    let changes = c.total_changes();
+    for raw in ["203.0.113.19", "2001:0DB8:0012:0345:0067:0089:00AB:CDEF"] {
+        let request = ImageRequest {
+            program_id: "A-FictionalIP".into(),
+            individual_address: knx_core::IndividualAddress::from_raw(0x1234),
+            values: [("PR-Address".into(), raw.into())].into(),
+            links: vec![],
+            flag_overrides: Default::default(),
+        };
+        let error = build_download_image(&c, &request).unwrap_err();
+        assert!(
+            matches!(error, ImageError::Unsupported { ref what } if what == "P-Address: parameter type Some(\"IPAddress\") (base None, number type None)"),
+            "{error:?}"
+        );
+    }
+    assert_eq!(c.total_changes(), changes);
+}
 
 fn app(id: &str, child: &str) -> String {
     format!(

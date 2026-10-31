@@ -1,6 +1,10 @@
 /** Provides local EN/DE copy for isolated evidence-bound parameter controls. */
 export const parameterEditorCopy = {
   en: {
+    ipPasteComplete: "Select the entire displayed value and paste its complete replacement. Partial replacement is ambiguous while raw line breaks are hidden.",
+    ipFormat: "IPv4 dotted decimal (no leading zeros), or IPv6 with exactly eight groups of four hexadecimal digits. No conversion or network lookup.",
+    "ip-address": "Enter a dotted IPv4 address or eight groups of four hexadecimal IPv6 digits, without whitespace, compression or a prefix.",
+    empty: "The stored value is explicitly empty.", draft: "Unchanged invalid draft",
     count: "Decimal count; no time conversion. Declared unit (uninterpreted):",
     unspecified: "not declared", apply: "Apply value", busy: "Applying…", reset: "Discard draft and reload",
     stale: "The project view changed. Your draft is retained; reload before applying.",
@@ -20,6 +24,10 @@ export const parameterEditorCopy = {
     settled: "Applied. The field shows the project's value.",
   },
   de: {
+    ipPasteComplete: "Markiere den gesamten angezeigten Wert und füge den vollständigen Ersatz ein. Bei ausgeblendeten Zeilenumbrüchen ist teilweises Einfügen nicht eindeutig.",
+    ipFormat: "IPv4 in dezimaler Punktschreibweise (ohne führende Nullen) oder IPv6 mit genau acht Gruppen zu je vier Hexadezimalstellen. Keine Umwandlung oder Netzwerkabfrage.",
+    "ip-address": "Gib eine IPv4-Adresse in Punktschreibweise oder acht Gruppen zu je vier IPv6-Hexadezimalstellen ein, ohne Leerraum, Komprimierung oder Präfix.",
+    empty: "Der gespeicherte Wert ist ausdrücklich leer.", draft: "Unveränderter ungültiger Entwurf",
     count: "Dezimaler Zähler; keine Zeitumrechnung. Deklarierte Einheit (uninterpretiert):",
     unspecified: "nicht deklariert", apply: "Wert übernehmen", busy: "Wird übernommen…", reset: "Entwurf verwerfen und neu laden",
     stale: "Die Projektansicht hat sich geändert. Dein Entwurf bleibt erhalten; lade vor dem Übernehmen neu.",

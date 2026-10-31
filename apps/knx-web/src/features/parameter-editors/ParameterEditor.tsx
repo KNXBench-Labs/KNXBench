@@ -105,9 +105,33 @@ function ParameterDraft<T>(props: ParameterEditorProps<T>) {
   return <section className={styles.panel} aria-label={props.label}>
     <label htmlFor={id} className={styles.label}>{props.label}</label>
     {plan.kind === "time-count" && <p id={`${id}-count`} className={styles.caption}>{copy.count} <span>{plan.unit ?? copy.unspecified}</span></p>}
-    {withSuffix(<input id={id} type="text" inputMode="numeric" className={styles.input} value={draft}
+    {plan.kind === "ip-address-literal" && <>
+      <p id={`${id}-format`} className={styles.caption}>{copy.ipFormat}</p>
+      {field.value === null ? <p className={styles.notice}>{copy.absent}</p>
+        : field.value === "" ? <p className={styles.notice}>{copy.empty}</p>
+        : parameterDraftIssue(plan, field.value) !== null && <div className={styles.raw} aria-label={copy.original}>{field.value}</div>}
+    </>}
+    {withSuffix(<input id={id} type="text" inputMode={plan.kind === "ip-address-literal" ? "text" : "numeric"} className={styles.input} value={draft}
       disabled={restricted || pending || accepted} aria-invalid={!unchanged && issue !== null}
-      aria-describedby={`${id}-status`} onChange={event => { setDraft(event.target.value); setFailure(null); setSettled(false); }} />)}
+      aria-describedby={plan.kind === "ip-address-literal" ? `${id}-format ${id}-status` : `${id}-status`}
+      onPaste={plan.kind !== "ip-address-literal" ? undefined : event => {
+        // Native single-line inputs strip pasted newlines. Keep the exact draft so
+        // malformed input is refused visibly instead of becoming a different value.
+        event.preventDefault();
+        const input = event.currentTarget;
+        const start = input.selectionStart ?? input.value.length;
+        const end = input.selectionEnd ?? start;
+        const wholeValue = start === 0 && end === input.value.length;
+        // Selection offsets index the sanitized DOM value, not a raw multiline draft.
+        // Only an explicit complete replacement is unambiguous when they differ.
+        if (!wholeValue && draft !== input.value) {
+          setFailure(copy.ipPasteComplete); setSettled(false);
+          return;
+        }
+        const pasted = event.clipboardData.getData("text/plain");
+        setDraft(wholeValue ? pasted : draft.slice(0, start) + pasted + draft.slice(end));
+        setFailure(null); setSettled(false);
+      }} onChange={event => { setDraft(event.target.value); setFailure(null); setSettled(false); }} />)}
     {plan.kind === "integer-slider" && <input type="range" className={styles.slider} aria-label={`${props.label}: ${copy.slider}`}
       min={plan.min} max={plan.max} step={plan.step} value={issue === null ? Number(draft) : Number(field.value)}
       disabled={restricted || pending || accepted || stale || issue !== null}
@@ -116,6 +140,7 @@ function ParameterDraft<T>(props: ParameterEditorProps<T>) {
       {restricted && <p className={styles.notice}>{copy.restricted}</p>}
       {stale && <p role="status" className={styles.notice}>{copy.stale}</p>}
       {!unchanged && issue !== null && <p role="alert" className={styles.error}>{copy[issue]}</p>}
+      {plan.kind === "ip-address-literal" && !unchanged && issue !== null && <div className={styles.raw} aria-label={copy.draft}>{draft}</div>}
       {failure !== null && <p role="alert" className={styles.error}>{failure}</p>}
       {accepted && <p role="status">{copy.applied}</p>}
       {settled && <p role="status">{copy.settled}</p>}

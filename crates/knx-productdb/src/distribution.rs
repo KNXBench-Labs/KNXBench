@@ -4,6 +4,8 @@
 
 #[path = "distribution_bounds.rs"]
 mod bounds;
+#[path = "distribution_candidates.rs"]
+mod candidates;
 #[path = "distribution_dependencies.rs"]
 mod dependencies;
 #[path = "distribution_links.rs"]
@@ -16,6 +18,18 @@ mod readers;
 mod xml;
 #[path = "distribution_zip.rs"]
 mod zip;
+pub use candidates::{
+    DistributionActivityInput, DistributionActivityObservation, DistributionActivityReason,
+    DistributionActivityState, DistributionArithmeticModel, DistributionBitInterval,
+    DistributionCandidateActivity, DistributionCandidateDependencies,
+    DistributionCandidateDependency, DistributionCandidateInitialization,
+    DistributionCandidateKind, DistributionCandidateSeverity, DistributionCandidateTarget,
+    DistributionDecimalClass, DistributionDecimalField, DistributionDistinctInterval,
+    DistributionIntegerClass, DistributionIntegerField, DistributionIntervalCheck,
+    DistributionIntervalComparison, DistributionIntervalPair, DistributionSideComparison,
+    DistributionSourceCandidate, DistributionTypeShape, DistributionUnionSummary,
+    DistributionValueCheck, DistributionValueComparison,
+};
 pub use dependencies::{
     DistributionAssignmentForm, DistributionConditionApplicability, DistributionConditionContext,
     DistributionDeclaredAttribute, DistributionDependencyDisposition,
@@ -51,6 +65,8 @@ pub struct DistributionInspection {
     pub preserved_content: Vec<DistributionContent>,
     /// Declared dependency facts in member, element order; never executed or applied.
     pub dependency_evidence: Vec<DistributionDependencyEvidence>,
+    /// TypeNumber value and Union interval candidates in member, element order; never repaired.
+    pub source_candidates: Vec<DistributionSourceCandidate>,
 }
 
 /// Values asserted by the source, never verified registration, version or producer identity.
@@ -435,7 +451,7 @@ pub(super) fn limit(name: &str) -> DistributionInspectionError {
 impl DistributionInspection {
     fn empty(name: &str, bytes: &[u8], kind: DistributionSourceKind) -> Self {
         Self {
-            format_version: 3,
+            format_version: 4,
             source_kind: kind,
             source: DistributionSource {
                 name: name.into(),
@@ -458,6 +474,7 @@ impl DistributionInspection {
             declared_metadata: Vec::new(),
             preserved_content: Vec::new(),
             dependency_evidence: Vec::new(),
+            source_candidates: Vec::new(),
             limitations: vec![
                 DistributionLimitation::MissingMaster,
                 DistributionLimitation::XsdNotPerformed,

@@ -61,7 +61,7 @@ fn real_cli_emits_useful_json_without_source_sidecar_profile_or_authority_mutati
         String::from_utf8_lossy(&out.stderr)
     );
     let r: serde_json::Value = serde_json::from_slice(&out.stdout).unwrap();
-    assert_eq!(r["formatVersion"], 3);
+    assert_eq!(r["formatVersion"], 4);
     assert_eq!(r["sourceKind"], "manufacturerXml");
     assert_eq!(r["sections"].as_array().unwrap().len(), 4);
     assert_eq!(r["applications"][0]["activeParameterRefIds"][0], "R");
@@ -117,7 +117,7 @@ fn real_cli_windows_zip_keeps_raw_member_names_and_profile_untouched() {
 }
 
 #[test]
-fn real_cli_format_three_resolves_compact_coordinates_and_matches_library_json() {
+fn real_cli_format_four_resolves_compact_coordinates_and_matches_library_json() {
     let home = home();
     let source = home.path().join("format2.xml");
     std::fs::write(&source, SOURCE).unwrap();
@@ -130,7 +130,7 @@ fn real_cli_format_three_resolves_compact_coordinates_and_matches_library_json()
     );
     let report: knx_productdb::distribution::DistributionInspection =
         serde_json::from_slice(&output.stdout).unwrap();
-    assert_eq!(report.format_version, 3);
+    assert_eq!(report.format_version, 4);
     let expected =
         knx_productdb::distribution::inspect_distribution("format2.xml", SOURCE).unwrap();
     assert_eq!(report, expected);
@@ -173,7 +173,7 @@ fn real_cli_reports_dependency_evidence_exactly_like_the_library() {
             "buttonHandler"
         ]
     );
-    assert_eq!(json["formatVersion"], 3);
+    assert_eq!(json["formatVersion"], 4);
     assert!(rows
         .iter()
         .all(|r| r["disposition"] == "retainedNotExecuted"));
@@ -199,6 +199,101 @@ fn real_cli_reports_dependency_evidence_exactly_like_the_library() {
         knx_productdb::distribution::inspect_distribution("declarations.xml", DECLARATIONS)
             .unwrap();
     assert_eq!(report, expected);
+    assert_eq!(snapshot(home.path()), before);
+}
+
+#[test]
+fn real_cli_reports_source_candidates_exactly_like_the_library() {
+    // Independently authored; byte-identical to the readiness packet fixtures.
+    const VALUES: &[u8] = include_bytes!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../../crates/knx-productdb/tests/it/distribution_candidates/values.xml"
+    ));
+    const UNION: &[u8] = include_bytes!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../../crates/knx-productdb/tests/it/distribution_candidates/union-alternatives.xml"
+    ));
+    let home = home();
+    for (name, bytes) in [("values.xml", VALUES), ("union.xml", UNION)] {
+        let source = home.path().join(name);
+        std::fs::write(&source, bytes).unwrap();
+    }
+    let before = snapshot(home.path());
+    let values = run(
+        home.path(),
+        &[home.path().join("values.xml").to_str().unwrap()],
+    );
+    let union = run(
+        home.path(),
+        &[home.path().join("union.xml").to_str().unwrap()],
+    );
+    for out in [&values, &union] {
+        assert!(
+            out.status.success(),
+            "{}",
+            String::from_utf8_lossy(&out.stderr)
+        );
+        assert_eq!(out.stderr, b"");
+    }
+    let json: serde_json::Value = serde_json::from_slice(&values.stdout).unwrap();
+    assert_eq!(json["formatVersion"], 4);
+    let rows = json["sourceCandidates"].as_array().unwrap();
+    assert_eq!(
+        rows.iter()
+            .map(|r| (r["kind"].clone(), r["valueCheck"]["comparison"].clone()))
+            .collect::<Vec<_>>(),
+        [
+            ("parameterValue", "valueAbsent"),
+            ("parameterValue", "valueEmpty"),
+            ("parameterValue", "below"),
+            ("parameterValue", "within"),
+            ("parameterValue", "within"),
+            ("parameterValue", "above"),
+            ("parameterValue", "within"),
+            ("parameterRefValue", "valueEmpty"),
+            ("parameterRefValue", "within"),
+        ]
+        .map(|(k, c)| (serde_json::Value::from(k), serde_json::Value::from(c)))
+    );
+    assert_eq!(rows[6]["valueCheck"]["value"]["value"], "0002");
+    assert_eq!(rows[6]["valueCheck"]["value"]["normalized"], "2e0");
+    for row in rows {
+        assert_eq!(row["severity"], "sourceCandidate");
+        assert_eq!(row["initialization"], "notPerformed");
+        assert_eq!(row["activity"]["state"], "unavailable");
+    }
+    let union_json: serde_json::Value = serde_json::from_slice(&union.stdout).unwrap();
+    let members = union_json["sourceCandidates"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|r| r["kind"] == "unionMemberInterval")
+        .map(|r| {
+            (
+                r["intervalCheck"]["comparison"].clone(),
+                r["activity"]["state"].clone(),
+            )
+        })
+        .collect::<Vec<_>>();
+    assert_eq!(
+        members,
+        [
+            ("withinExtent", "observedInEvaluatedSubset"),
+            ("withinExtent", "unavailable"),
+            ("outsideExtent", "unavailable"),
+            ("offsetAbsent", "unavailable"),
+        ]
+        .map(|(c, a)| (serde_json::Value::from(c), serde_json::Value::from(a)))
+    );
+    for (out, name, bytes) in [
+        (&values, "values.xml", VALUES),
+        (&union, "union.xml", UNION),
+    ] {
+        let report: knx_productdb::distribution::DistributionInspection =
+            serde_json::from_slice(&out.stdout).unwrap();
+        let expected = knx_productdb::distribution::inspect_distribution(name, bytes).unwrap();
+        assert_eq!(report, expected);
+    }
     assert_eq!(snapshot(home.path()), before);
 }
 

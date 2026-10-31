@@ -934,7 +934,8 @@ fn references(
             }
         }
     }
-    super::dependencies::inspect(doc, &index, &mut reference_count, limits, report)
+    super::dependencies::inspect(doc, &index, &mut reference_count, limits, report)?;
+    super::candidates::inspect(doc, &index, &mut reference_count, limits, report)
 }
 
 pub(super) fn output_limit(
@@ -1009,6 +1010,30 @@ pub(super) fn output_count(report: &DistributionInspection) -> usize {
                         .map(|p| p.candidates.len())
                         .sum::<usize>()
                     + e.condition_context.conditions.len()
+            })
+            .sum::<usize>()
+        + report
+            .source_candidates
+            .iter()
+            .map(|c| {
+                1 + c.parameter.as_ref().map_or(0, |t| t.candidates.len())
+                    + c.parameter_type.as_ref().map_or(0, |t| t.candidates.len())
+                    + c.value_check
+                        .as_ref()
+                        .map_or(0, |v| v.type_attributes.len())
+                    + c.interval_check
+                        .as_ref()
+                        .map_or(0, |i| i.union_placement.len())
+                    + c.union_summary
+                        .as_ref()
+                        .map_or(0, |s| s.distinct_intervals.len() + s.overlap_samples.len())
+                    + c.activity.observations.len()
+                    + c.activity
+                        .observations
+                        .iter()
+                        .map(|o| o.module_scope.len())
+                        .sum::<usize>()
+                    + c.dependency_context.declarations.len()
             })
             .sum::<usize>()
 }

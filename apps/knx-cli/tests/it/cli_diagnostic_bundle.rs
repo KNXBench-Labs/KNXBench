@@ -1,4 +1,4 @@
-//! DIAG-03: `--diagnostic-bundle` records a real CLI tunnel byte for byte into one ZIP.
+//! DIAG-03: built CLI bundle lifetime and raw-tunnel withholding on loopback.
 //!
 //! The built `knx` binary runs `device find-serial` against
 //! `knx_net::commissioning::simulator_gateway` on 127.0.0.1. The bundle's
@@ -59,10 +59,6 @@ fn gateway() -> (String, Seen) {
     (address.to_string(), seen)
 }
 
-fn hex(bytes: &[u8]) -> String {
-    bytes.iter().map(|b| format!("{b:02x}")).collect()
-}
-
 fn knx(dir: &std::path::Path) -> Command {
     let mut command = Command::new(env!("CARGO_BIN_EXE_knx"));
     command
@@ -73,7 +69,7 @@ fn knx(dir: &std::path::Path) -> Command {
 }
 
 #[test]
-fn a_find_serial_run_leaves_one_bundle_with_the_exact_tunnel() {
+fn a_find_serial_run_cleans_up_and_never_exports_its_raw_tunnel() {
     let dir = tempfile::tempdir().unwrap();
     let (endpoint, seen) = gateway();
     let bundle = dir.path().join("out").join("report.zip");
@@ -111,40 +107,14 @@ fn a_find_serial_run_leaves_one_bundle_with_the_exact_tunnel() {
     let manifest: Value = serde_json::from_str(&manifest).unwrap();
     assert_eq!(manifest["problemType"], "deviceReading");
     assert_eq!(manifest["writer"]["program"], "knx-cli");
-    let recording_name = (0..archive.len())
-        .map(|i| archive.by_index(i).unwrap().name().to_string())
-        .find(|name| name.ends_with("/recording.jsonl"))
-        .expect("a recording in the bundle");
-    let mut recording = String::new();
-    archive
-        .by_name(&recording_name)
-        .unwrap()
-        .read_to_string(&mut recording)
-        .unwrap();
-    let lines: Vec<Value> = recording
-        .lines()
-        .map(|line| serde_json::from_str(line).unwrap())
-        .collect();
-    assert_eq!(lines.first().unwrap()["type"], "header");
-    assert_eq!(lines.last().unwrap()["type"], "end");
-    let recorded = |direction: &str| -> Vec<String> {
-        lines
-            .iter()
-            .filter(|l| l["type"] == "datagram" && l["dir"] == direction)
-            .map(|l| l["raw"].as_str().unwrap().to_string())
-            .collect()
-    };
     let seen = seen.lock().unwrap().clone();
-    let observed = |from_tool: bool| -> Vec<String> {
-        seen.iter()
-            .filter(|(tool, _)| *tool == from_tool)
-            .map(|(_, bytes)| hex(bytes))
-            .collect()
-    };
-    assert!(!observed(true).is_empty());
-    assert_eq!(recorded("sent"), observed(true), "tool → gateway");
-    assert_eq!(recorded("received"), observed(false), "gateway → tool");
-    assert_eq!(lines.last().unwrap()["records_dropped"], 0);
+    assert!(seen.iter().any(|(from_tool, _)| *from_tool));
+    assert!(seen.iter().any(|(from_tool, _)| !*from_tool));
+    assert!(!archive.file_names().any(|name| {
+        name.ends_with("recording.jsonl")
+            || name.ends_with("system2-private.json")
+            || name.ends_with("system2-report.json")
+    }));
 }
 
 #[test]

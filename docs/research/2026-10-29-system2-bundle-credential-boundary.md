@@ -43,12 +43,12 @@ local increment, not completion of DIAG-03's requested byte evidence.
   returns progress and a minimized report. The
   [bundle collector](../../apps/knx-server/src/diagnostic_bundle_routes.rs) has
   **two** relevant paths: retained-operation resolution and recording-related
-  operation sections. Neither currently attaches the typed comparison file.
-- [CLI collection](../../apps/knx-cli/src/diagnostic_bundle_cli.rs) exports
-  environment/recordings, but does not obtain typed mismatch evidence.
-  [CLI System-2 execution](../../apps/knx-cli/src/device_system2_validation.rs)
-  owns the store and writes the minimized report separately. General CLI bundle
-  support exists; the missing part is shared typed private evidence attachment.
+  operation sections. The bounded consumer candidate now feeds both from one
+  admitted snapshot and request-local cache, without adding raw recording files.
+- [CLI collection](../../apps/knx-cli/src/diagnostic_bundle_cli.rs) now owns an
+  invocation-local admitted capture slot. The System-2 simulator path supplies the
+  closed projection after releasing the operation store; raw mismatch evidence is
+  still not admitted.
 - The [native project-copy helper](../../crates/knx-app/src/secret_free_copy.rs)
   is a separate boundary. It does not sanitize allocator-memory evidence.
 
@@ -67,7 +67,7 @@ progress/error entry, note or another selected file. Existing exposure is not
 authorization for another copy. A metadata-only new file does not certify the
 rest of the ZIP. Keep original evidence local; disclose exported loss explicitly.
 
-## App admission foundations; consumers still open
+## App admission foundations and bounded consumer candidate
 
 The earlier App-only increment implements
 [`read_snapshot`](../../crates/knx-app/src/property_validation_private_projection.rs)
@@ -120,9 +120,23 @@ allowlist and guard checks passed without suppression. Ignored, corpus and hardw
 cases were not executed. This verifies only the App foundation, not consumer or
 whole-archive acceptance.
 
-Both server hooks and the CLI still lack the attachment. They must consume one
-coherent snapshot and retain the same owned bytes through text/review/export;
-existing target/version/context, fingerprint and consent guards remain required.
+The bounded consumer candidate uses one coherent reopened snapshot and retains the
+same owned bytes through text, review and export. Each direct/current/history edge
+validates provenance before request-cache reuse; source disagreement is distinct
+from target mismatch. Project/import copies are moved from their helper-owned
+admission result and the collector keeps raw recording bodies and all other raw
+sources fixed unavailable. The CLI slot has explicit empty/captured/missing/
+unavailable/duplicate/consumed states and refuses an existing destination before
+loopback contact.
+
+Local execution includes one real semantic history RED, 60 focused server tests,
+the default server and CLI suites, owning all-target Clippy, formatting and static
+gates, full Web Vitest/type/build, and 11 intercepted-API Playwright feature cases.
+That browser lane verifies all four private lifecycle cells in English and German
+at wide and narrow widths, but is not the still-open captured real-router response
+mounted through the production build. The large-recording test characterizes
+bounded private output but does not instrument exact reader-call/byte counts; that
+R3 proof remains open.
 
 The parent reports the bounded R4 ambient-identity prerequisite independently
 approved for the real preview/unselected-recording regression. R4 is prerequisite

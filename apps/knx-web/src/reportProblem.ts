@@ -1,6 +1,6 @@
 /** Pure rules of the Report problem wizard: O1 defaults, requests, sizes, client state. */
 import type {
-  BundleQuery, ContentMarkers, Offer, OperationRef, ProblemType, RecordingSummary, SectionKind, SectionPreview,
+  BundleQuery, BundleRecordingSummary, ContentMarkers, Offer, OperationRef, ProblemType, SectionKind, SectionPreview,
 } from "./diagnosticBundleShape";
 import { PROBLEM_TYPES, SECTION_KINDS } from "./diagnosticBundleShape";
 import type { BundlePreview, ProjectContext, ReviewedBundleQuery } from "./diagnosticBundleShape";
@@ -211,7 +211,10 @@ export const operationKindKey = (kind: string): MessageKey | undefined => OPERAT
 export const operationOutcomeKey = (outcome: string): MessageKey | undefined => OUTCOME_LABELS[outcome];
 
 /** The recording the preview resolved, from the list the same answer carries. */
-export function resolvedRecording(id: string | null, recordings: readonly RecordingSummary[]): RecordingSummary | null {
+export function resolvedRecording(
+  id: string | null,
+  recordings: readonly BundleRecordingSummary[],
+): BundleRecordingSummary | null {
   return id === null ? null : recordings.find((recording) => recording.id === id) ?? null;
 }
 

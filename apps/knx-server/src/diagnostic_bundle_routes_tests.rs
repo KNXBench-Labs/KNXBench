@@ -20,6 +20,12 @@ mod project_tests;
 #[path = "diagnostic_bundle_routes_tests/r4_review_binding.rs"]
 mod r4_review_binding;
 
+#[path = "diagnostic_bundle_routes_tests/admitted_consumers.rs"]
+mod admitted_consumers;
+
+#[path = "diagnostic_bundle_routes_tests/retained_admission.rs"]
+mod retained_admission;
+
 const SENTINEL_KEY: [u8; 4] = [0xC0, 0xFF, 0xEE, 0x42];
 
 pub(super) fn state(dir: &std::path::Path, enabled: bool) -> Arc<crate::AppState> {
@@ -154,11 +160,9 @@ async fn preview_preselects_the_latest_fitting_operation_and_the_o1_defaults() {
         .iter()
         .map(|s| s["key"].as_str().unwrap())
         .collect();
-    assert_eq!(
-        keys,
-        ["environment", "sessionLog", &format!("operation:{compare}")]
-    );
-    // Device and legacy reports are preselected but unavailable here, and say why.
+    // Owner decision 2026-10-31: the redacted raw recording leaves after consent.
+    assert_eq!(keys, ["environment", &format!("operation:{compare}")]);
+    // Unadmitted sources remain visible as fixed unavailable offers.
     let offer = |kind: &str| {
         view["offers"]
             .as_array()
@@ -170,6 +174,11 @@ async fn preview_preselects_the_latest_fitting_operation_and_the_o1_defaults() {
     };
     assert_eq!(offer("device")["offer"], "preselected");
     assert!(offer("device")["unavailable"].is_string());
+    assert_eq!(offer("sessionLog")["selected"], false);
+    assert_eq!(
+        offer("sessionLog")["unavailable"],
+        "the selected diagnostic source is unavailable"
+    );
     assert_eq!(offer("project")["offer"], "offered");
     assert_eq!(offer("project")["selected"], false);
     assert!(view["offers"]
@@ -214,7 +223,7 @@ async fn a_section_the_problem_type_does_not_offer_is_refused() {
 }
 
 #[tokio::test]
-async fn the_exported_zip_carries_the_recording_without_any_key() {
+async fn the_exported_zip_withholds_the_unadmitted_recording_and_description() {
     let dir = tempfile::tempdir().unwrap();
     let state = state(dir.path(), true);
     let id = record(
@@ -247,14 +256,9 @@ async fn the_exported_zip_carries_the_recording_without_any_key() {
     assert!(disposition.unwrap().contains(&id));
     assert!(!body.windows(4).any(|w| w == SENTINEL_KEY));
     let mut archive = zip::ZipArchive::new(std::io::Cursor::new(body)).unwrap();
-    let mut recording = String::new();
-    archive
-        .by_name(&format!("operations/{id}/recording.jsonl"))
-        .unwrap()
-        .read_to_string(&mut recording)
-        .unwrap();
-    assert!(recording.contains("\"redacted\":{\"kind\":\"authorize-key\""));
-    assert!(!recording.to_ascii_lowercase().contains("c0ffee42"));
+    assert!(archive
+        .file_names()
+        .all(|name| !name.ends_with("recording.jsonl")));
     let mut manifest = String::new();
     archive
         .by_name("manifest.json")
@@ -262,7 +266,10 @@ async fn the_exported_zip_carries_the_recording_without_any_key() {
         .read_to_string(&mut manifest)
         .unwrap();
     let manifest: Value = serde_json::from_str(&manifest).unwrap();
-    assert_eq!(manifest["description"], "it stopped at the end");
+    assert_eq!(
+        manifest["description"],
+        "User description withheld from diagnostic bundle."
+    );
     assert_eq!(manifest["writer"]["version"], crate::version_string());
     for index in 0..archive.len() {
         let mut bytes = Vec::new();
@@ -306,14 +313,25 @@ async fn a_disabled_recorder_is_said_plainly_and_old_recordings_stay_deletable()
         .as_array()
         .unwrap()
         .iter()
-        .any(|s| s["key"] == "clientState"));
+        .all(|s| s["key"] != "clientState"));
+    let client = view["offers"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|offer| offer["kind"] == "clientState")
+        .unwrap();
+    assert_eq!(client["selected"], false);
+    assert_eq!(
+        client["unavailable"],
+        "the selected diagnostic source is unavailable"
+    );
 }
 
 #[tokio::test]
 async fn section_text_shows_one_section_and_unknown_ids_are_refused() {
     let dir = tempfile::tempdir().unwrap();
     let state = state(dir.path(), true);
-    let id = record(&state, OperationKind::Compare, ("x", "1"), true);
+    record(&state, OperationKind::Compare, ("x", "1"), true);
     let (_, preview, _) = call(
         &state,
         "POST",
@@ -325,14 +343,14 @@ async fn section_text_shows_one_section_and_unknown_ids_are_refused() {
         &state,
         "POST",
         "/api/diagnostics/bundle/section",
-        Some(json!({ "problemType": "deviceReading", "key": format!("operation:{id}"), "review": json_of(&preview)["review"] })),
+        Some(json!({ "problemType": "deviceReading", "key": "environment", "review": json_of(&preview)["review"] })),
     )
     .await;
     assert_eq!(status, StatusCode::OK);
     assert!(json_of(&body)["text"]
         .as_str()
         .unwrap()
-        .contains("\"type\":\"header\""));
+        .contains("environment/environment.json"));
     let (status, _, _) = call(
         &state,
         "POST",

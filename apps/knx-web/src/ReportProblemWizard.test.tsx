@@ -19,9 +19,10 @@ import type { ToastNotification } from "./toast";
 
 const REVIEW = { fingerprint: "a".repeat(64), context: { serverIncarnation: "server-a", projectIncarnation: 1, revision: 2 } };
 const MARKERS = { addresses: true, names: true, parameterValues: false, networkAddresses: true };
-const RECORDING = { id: "20261029T100000Z-download-aa", sizeBytes: 4096, formatVersion: 1, writerVersion: "0.1.0", operationKind: "download",
-  startedAt: "2026-10-29T10:00:00Z", target: {}, gateway: "203.0.113.250:3671", related: { downloadId: "7" }, outcome: "failed", active: false, tornTail: false };
-const OLDER = { ...RECORDING, id: "20261028T100000Z-download-bb", startedAt: "2026-10-28T10:00:00Z", outcome: "succeeded" };
+const RECORDING = { id: "20261029T100000Z-download-aa", sizeBytes: 4096, formatVersion: 1 as const,
+  active: false, tornTail: false, end: { state: "known" as const, outcome: "failed" as const } };
+const OLDER = { ...RECORDING, id: "20261028T100000Z-download-bb",
+  end: { state: "known" as const, outcome: "succeeded" as const } };
 
 /** The server's answer for `query`: offers per O1, selected ones built, one marked unavailable. */
 function answer(query: BundleQuery, extra: Partial<BundlePreview> = {}): BundlePreview {
@@ -359,21 +360,76 @@ for (const [count, message] of [[1, "x".repeat(200_000)], [60, "medium".repeat(2
   });
 }
 
-it("renders German operation kinds and outcomes in the chooser and earlier rows", async () => {
-  saveUiLanguage(settingsStorage, "de"); resetUiLanguageForTests();
-  bundle.previewBundle.mockImplementation(async (q: BundleQuery) => answer(q, { recordings: [RECORDING, OLDER,
-    { ...OLDER, id: "incomplete", operationKind: "device-diagnostics", outcome: null },
-    { ...OLDER, id: "future", operationKind: "future-kind", outcome: "future-outcome" }] }));
-  try {
-    await render({ problemType: "deviceReading" });
-    const options = $<HTMLSelectElement>("[data-report-operation]")!.textContent!;
-    expect(options).toContain("Gerät programmieren · fehlgeschlagen");
-    expect(options).toContain("Gerät programmieren · erfolgreich");
-    expect(options).toContain("Gerätediagnose · nicht abgeschlossen");
-    expect(options).toContain("future-kind · future-outcome");
-    expect($("[data-report-section=earlierOperation]")!.textContent).toContain("Gerätediagnose · nicht abgeschlossen");
-  } finally { saveUiLanguage(settingsStorage, "en"); resetUiLanguageForTests(); }
-});
+type BundleRecordingFixture = {
+  id: string;
+  sizeBytes: number;
+  formatVersion: 1;
+  active: boolean;
+  tornTail: boolean;
+  end: { state: "missing" } | { state: "withheld" }
+    | { state: "known"; outcome: "succeeded" | "failed" | "cancelled" | "abandoned" };
+};
+
+for (const [language, copy] of [
+  ["en", {
+    recorded: "recorded operation",
+    known: "failed",
+    activeMissing: "unfinished",
+    inactiveMissing: "recorded end unavailable",
+    withheld: "outcome withheld",
+  }],
+  ["de", {
+    recorded: "aufgezeichneter Vorgang",
+    known: "fehlgeschlagen",
+    activeMissing: "nicht abgeschlossen",
+    inactiveMissing: "aufgezeichnetes Ende nicht verfügbar",
+    withheld: "Ergebnis zurückgehalten",
+  }],
+] as const) {
+  it(`renders truthful private recording lifecycle labels and sizes in ${language}`, async () => {
+    saveUiLanguage(settingsStorage, language); resetUiLanguageForTests();
+    const recordings = [
+      { id: "op-20261030T010203000Z-aabbcc01", sizeBytes: 1024, formatVersion: 1, active: false, tornTail: false,
+        end: { state: "known", outcome: "failed" } },
+      { id: "op-20261030T010203000Z-aabbcc02", sizeBytes: 2048, formatVersion: 1, active: true, tornTail: false,
+        end: { state: "missing" } },
+      { id: "op-20261030T010203000Z-aabbcc03", sizeBytes: 3072, formatVersion: 1, active: false, tornTail: false,
+        end: { state: "missing" } },
+      { id: "op-20261030T010203000Z-aabbcc04", sizeBytes: 4096, formatVersion: 1, active: false, tornTail: false,
+        end: { state: "withheld" } },
+    ] satisfies BundleRecordingFixture[];
+    bundle.previewBundle.mockImplementation(async (query: BundleQuery) => ({
+      ...answer(query),
+      operationRecordingId: "op-20261030T010203000Z-aabbcc01",
+      recordings,
+    }));
+    try {
+      await render({ problemType: "deviceReading" });
+      const options = [...$<HTMLSelectElement>("[data-report-operation]")!.options];
+      for (const [id, outcome, size] of [
+        ["op-20261030T010203000Z-aabbcc01", copy.known, "1 KiB"],
+        ["op-20261030T010203000Z-aabbcc02", copy.activeMissing, "2 KiB"],
+        ["op-20261030T010203000Z-aabbcc03", copy.inactiveMissing, "3 KiB"],
+        ["op-20261030T010203000Z-aabbcc04", copy.withheld, "4 KiB"],
+      ]) {
+        const text = options.find((option) => option.value === id)?.textContent;
+        expect(text, `${id} must remain reachable`).toBeDefined();
+        expect(text).toContain(id);
+        expect(text).toContain(copy.recorded);
+        expect(text).toContain(outcome);
+        expect(text).toContain(size);
+      }
+      expect(options.find((option) => option.value === "op-20261030T010203000Z-aabbcc04")!.textContent)
+        .not.toContain(copy.activeMissing);
+    } finally {
+      await act(async () => {
+        saveUiLanguage(settingsStorage, "en");
+        resetUiLanguageForTests();
+      });
+      await flush();
+    }
+  });
+}
 
 it("closes through the Close button without exporting", async () => {
   await render({ problemType: "deviceProgramming" });

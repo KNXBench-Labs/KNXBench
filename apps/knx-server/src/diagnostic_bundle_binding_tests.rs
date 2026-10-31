@@ -4,8 +4,103 @@ use super::tests::*;
 use axum::http::StatusCode;
 use knx_app::operation_recording::OperationKind;
 use serde_json::{json, Value};
-use sha2::{Digest, Sha256};
 use std::{io::Read, sync::Arc};
+
+struct EnvironmentConsumers {
+    fingerprint: String,
+    preview: Value,
+    section: Value,
+    text: String,
+    json: Value,
+    zip_entries: Vec<(String, Vec<u8>)>,
+}
+
+fn environment_state(
+    dir: &std::path::Path,
+    incarnation: &str,
+    return_path: knx_net::TunnelReturnPath,
+    unavailable_reason: &str,
+) -> Arc<crate::AppState> {
+    let mut state = crate::AppState {
+        recordings: Arc::new(crate::operation_recordings::store(dir, false)),
+        data_dir: dir.to_path_buf(),
+        tunnel_return_path: return_path,
+        product_db_unavailable: Some(unavailable_reason.to_string()),
+        ..Default::default()
+    };
+    state.server_incarnation = incarnation.to_string();
+    Arc::new(state)
+}
+
+async fn environment_consumers(state: &Arc<crate::AppState>) -> EnvironmentConsumers {
+    let query = json!({"problemType":"userInterface", "sections":["environment"]});
+    let preview = preview_query(state, &query).await;
+    let fingerprint = preview["review"]["fingerprint"]
+        .as_str()
+        .unwrap()
+        .to_string();
+    let mut section_query = reviewed(&query, &preview);
+    section_query["key"] = json!("environment");
+    let (status, section, _) = call(
+        state,
+        "POST",
+        "/api/diagnostics/bundle/section",
+        Some(section_query),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{}", json_of(&section));
+    let section = json_of(&section);
+    let text = section["text"].as_str().unwrap().to_string();
+    let (status, bundle, _) = call(
+        state,
+        "POST",
+        "/api/diagnostics/bundle",
+        Some(reviewed(&query, &preview)),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{}", json_of(&bundle));
+    let mut archive = zip::ZipArchive::new(std::io::Cursor::new(bundle)).unwrap();
+    let mut zip_entries = Vec::new();
+    for index in 0..archive.len() {
+        let mut entry = archive.by_index(index).unwrap();
+        let name = entry.name().to_string();
+        let mut bytes = Vec::new();
+        entry.read_to_end(&mut bytes).unwrap();
+        zip_entries.push((name, bytes));
+    }
+    let raw = zip_entries
+        .iter()
+        .find(|(name, _)| name == "environment/environment.json")
+        .map(|(_, bytes)| bytes)
+        .unwrap();
+    EnvironmentConsumers {
+        fingerprint,
+        preview,
+        section,
+        text,
+        json: serde_json::from_slice(raw).unwrap(),
+        zip_entries,
+    }
+}
+
+fn assert_environment_sentinels_absent(consumers: &EnvironmentConsumers, sentinels: &[&str]) {
+    let public_responses = format!(
+        "{}\n{}\n{}",
+        consumers.preview, consumers.section, consumers.text
+    );
+    for sentinel in sentinels {
+        assert!(
+            !public_responses.contains(sentinel),
+            "response leaked {sentinel}"
+        );
+        for (name, bytes) in &consumers.zip_entries {
+            assert!(
+                !String::from_utf8_lossy(bytes).contains(sentinel),
+                "ZIP entry {name} leaked {sentinel}"
+            );
+        }
+    }
+}
 
 async fn preview_query(state: &Arc<crate::AppState>, query: &Value) -> Value {
     let (status, body, _) = call(
@@ -51,6 +146,93 @@ async fn changed(state: &Arc<crate::AppState>, query: Value) {
     }
 }
 
+async fn unchanged(state: &Arc<crate::AppState>, query: Value) {
+    let (status, bytes, _) = call(
+        state,
+        "POST",
+        "/api/diagnostics/bundle",
+        Some(query.clone()),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{}", json_of(&bytes));
+    assert!(bytes.starts_with(b"PK"));
+    let mut section = query;
+    section["key"] = json!("environment");
+    let (status, _, _) = call(
+        state,
+        "POST",
+        "/api/diagnostics/bundle/section",
+        Some(section),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+}
+
+#[tokio::test]
+async fn product_database_failure_text_is_noninterfering_across_environment_consumers() {
+    const RAW_FLAG_ONE: &str = "false PRIVATE_ROUTE_FLAG=/home/alice/private-one";
+    const RAW_FLAG_TWO: &str = "off PRIVATE_ROUTE_FLAG=/home/alice/private-two";
+    const DB_ONE: &str = "PRIVATE_DB_REASON=/home/alice/catalogue-one.sqlite";
+    const DB_TWO: &str = "PRIVATE_DB_REASON=/home/alice/catalogue-two.sqlite";
+    let one_dir = tempfile::tempdir().unwrap();
+    let two_dir = tempfile::tempdir().unwrap();
+    let one = environment_state(
+        one_dir.path(),
+        "environment-contract",
+        crate::tunnel_return_path_from_flag(Some(RAW_FLAG_ONE)),
+        DB_ONE,
+    );
+    let two = environment_state(
+        two_dir.path(),
+        "environment-contract",
+        crate::tunnel_return_path_from_flag(Some(RAW_FLAG_TWO)),
+        DB_TWO,
+    );
+
+    let one = environment_consumers(&one).await;
+    let two = environment_consumers(&two).await;
+
+    assert_eq!(one.fingerprint, two.fingerprint);
+    assert_eq!(one.text, two.text);
+    assert_eq!(one.json, two.json);
+    assert_eq!(
+        one.json["productDatabase"],
+        json!({"availability":"unavailable"})
+    );
+    assert_environment_sentinels_absent(&one, &[RAW_FLAG_ONE, DB_ONE, DB_TWO]);
+    assert_environment_sentinels_absent(&two, &[RAW_FLAG_TWO, DB_ONE, DB_TWO]);
+    assert!(!one.json.to_string().contains("unavailableReason"));
+}
+
+#[tokio::test]
+async fn effective_route_back_changes_preview_text_fingerprint_and_zip() {
+    const RAW_ROUTE_FLAG: &str = "PRIVATE_ROUTE_BACK=/home/alice/route-back";
+    let local_dir = tempfile::tempdir().unwrap();
+    let route_dir = tempfile::tempdir().unwrap();
+    let local = environment_state(
+        local_dir.path(),
+        "environment-contract",
+        crate::tunnel_return_path_from_flag(None),
+        "same unavailable fact",
+    );
+    let route = environment_state(
+        route_dir.path(),
+        "environment-contract",
+        crate::tunnel_return_path_from_flag(Some(RAW_ROUTE_FLAG)),
+        "same unavailable fact",
+    );
+
+    let local = environment_consumers(&local).await;
+    let route = environment_consumers(&route).await;
+
+    assert_ne!(local.fingerprint, route.fingerprint);
+    assert_ne!(local.text, route.text);
+    assert_ne!(local.json, route.json);
+    assert_eq!(local.json["settings"]["tunnelRouteBack"], false);
+    assert_eq!(route.json["settings"]["tunnelRouteBack"], true);
+    assert_environment_sentinels_absent(&route, &[RAW_ROUTE_FLAG]);
+}
+
 #[tokio::test]
 async fn newer_matching_operation_cannot_replace_the_reviewed_run() {
     let dir = tempfile::tempdir().unwrap();
@@ -85,61 +267,35 @@ async fn project_revision_and_replacement_invalidate_review_before_device_lookup
 }
 
 #[tokio::test]
-async fn mutable_selected_client_bytes_are_bound_but_final_description_is_not() {
+async fn unadmitted_client_bytes_are_noninterfering_and_description_is_withheld() {
     let dir = tempfile::tempdir().unwrap();
     let state = state(dir.path(), true);
     let query = json!({"problemType":"userInterface", "client":{"recentErrors":["reviewed"]}});
     let preview = preview_query(&state, &query).await;
+    let client = offer(&preview, "clientState");
+    assert_eq!(client["selected"], false);
+    assert_eq!(
+        client["unavailable"],
+        "the selected diagnostic source is unavailable"
+    );
     let mut altered = reviewed(&query, &preview);
     altered["client"]["recentErrors"] = json!(["unreviewed"]);
-    changed(&state, altered).await;
+    unchanged(&state, altered).await;
     let mut query = reviewed(&query, &preview);
     query["description"] = json!("entered only after review");
     let (status, bytes, _) = call(&state, "POST", "/api/diagnostics/bundle", Some(query)).await;
     assert_eq!(status, StatusCode::OK, "{}", json_of(&bytes));
     let mut zip = zip::ZipArchive::new(std::io::Cursor::new(bytes)).unwrap();
-    for section in preview["sections"].as_array().unwrap() {
-        for file in section["files"].as_array().unwrap() {
-            let mut bytes = Vec::new();
-            let name = file.as_str().unwrap();
-            let directory = match section["kind"].as_str().unwrap() {
-                "environment" => "environment",
-                "sessionLog" => "session-log",
-                "clientState" => "client",
-                _ => panic!("unexpected section"),
-            };
-            zip.by_name(&format!("{directory}/{name}"))
-                .unwrap()
-                .read_to_end(&mut bytes)
-                .unwrap();
-            let mut text_query = reviewed(
-                &json!({"problemType":"userInterface", "client":{"recentErrors":["reviewed"]}}),
-                &preview,
-            );
-            text_query["key"] = section["key"].clone();
-            let (status, text, _) = call(
-                &state,
-                "POST",
-                "/api/diagnostics/bundle/section",
-                Some(text_query),
-            )
-            .await;
-            assert_eq!(status, StatusCode::OK);
-            let text = json_of(&text);
-            let prefix = format!("===== {directory}/{name} =====\n");
-            assert!(text["text"].as_str().unwrap().starts_with(&prefix));
-            let rendered = text["text"]
-                .as_str()
-                .unwrap()
-                .strip_prefix(&prefix)
-                .unwrap()
-                .trim_end_matches('\n');
-            assert_eq!(
-                format!("{:x}", Sha256::digest(&bytes)),
-                format!("{:x}", Sha256::digest(rendered.as_bytes()))
-            );
-        }
-    }
+    assert!(zip.by_name("client/client.json").is_err());
+    let mut manifest = String::new();
+    zip.by_name("manifest.json")
+        .unwrap()
+        .read_to_string(&mut manifest)
+        .unwrap();
+    assert!(manifest.contains("User description withheld from diagnostic bundle."));
+    assert!(!manifest.contains("entered only after review"));
+    assert!(!manifest.contains("reviewed"));
+    assert!(!manifest.contains("unreviewed"));
 }
 
 #[tokio::test]
@@ -307,6 +463,7 @@ async fn assert_extracts_unavailable(
         .all(|s| s["kind"] != "device" && s["kind"] != "catalogue"));
     assert!(!preview.to_string().contains("FOREIGN_DEVICE_"), "{what}");
     let entries = exported_entries(state, query, &preview).await;
+    // Owner decision 2026-10-31: the run's redacted raw recording is exported by itself.
     assert!(
         entries.keys().any(|name| name.starts_with("operations/")),
         "{what}"
@@ -461,7 +618,7 @@ async fn without_an_operation_the_chosen_current_device_is_unchanged() {
 }
 
 #[tokio::test]
-async fn session_log_and_recording_availability_changes_require_a_fresh_review() {
+async fn unadmitted_session_log_is_noninterfering_but_selected_recording_deletion_is_bound() {
     let dir = tempfile::tempdir().unwrap();
     let state = state(dir.path(), true);
     let query = json!({"problemType":"deviceReading"});
@@ -479,7 +636,7 @@ async fn session_log_and_recording_availability_changes_require_a_fresh_review()
             detail: None,
             diagnostic: None,
         });
-    changed(&state, reviewed(&query, &preview)).await;
+    unchanged(&state, reviewed(&query, &preview)).await;
     let id = record(&state, OperationKind::Compare, ("x", "1"), true);
     let query = json!({"problemType":"deviceReading","operation":{"recordingId":id}});
     let preview = preview_query(&state, &query).await;
@@ -546,7 +703,10 @@ async fn explicit_none_never_selects_a_previous_run_and_client_can_be_selected_a
         .iter()
         .find(|row| row["kind"] == "clientState")
         .unwrap();
-    assert_eq!(client["unavailable"], Value::Null);
+    assert_eq!(
+        client["unavailable"],
+        "the selected diagnostic source is unavailable"
+    );
     assert_eq!(client["selected"], false);
     for reference in [
         json!({"selection":"none","recordingId":id}),
@@ -565,12 +725,12 @@ async fn explicit_none_never_selects_a_previous_run_and_client_can_be_selected_a
 }
 
 #[tokio::test]
-async fn bus_monitor_availability_changes_require_repreview() {
+async fn unadmitted_bus_monitor_availability_is_noninterfering() {
     monitor_changes(false).await;
 }
 
 #[tokio::test]
-async fn bus_monitor_content_changes_require_repreview() {
+async fn unadmitted_bus_monitor_content_is_noninterfering() {
     monitor_changes(true).await;
 }
 
@@ -599,7 +759,7 @@ async fn monitor_changes(change_contents: bool) {
     let buffer = session.buffer();
     *state.bus_session.lock().await = Some(session);
     if !change_contents {
-        changed(&state, reviewed(&query, &absent)).await;
+        unchanged(&state, reviewed(&query, &absent)).await;
         let session = state.bus_session.lock().await.take().unwrap();
         session.stop().await;
         assert!(handle.disconnected());
@@ -627,7 +787,7 @@ async fn monitor_changes(change_contents: bool) {
     })
     .await
     .unwrap();
-    changed(&state, reviewed(&query, &empty)).await;
+    unchanged(&state, reviewed(&query, &empty)).await;
     state.bus_session.lock().await.take().unwrap().stop().await;
     assert!(handle.disconnected());
 }

@@ -17,6 +17,12 @@ use sha2::{Digest, Sha256};
 
 use crate::operation_recording::WriterIdentity;
 
+mod retained_admission;
+pub use retained_admission::{
+    admit_retained_diagnostics, admit_retained_support, RetainedAdmissionUnavailable,
+    RetainedBundleFiles,
+};
+
 /// Value of the manifest's `format` field.
 pub const BUNDLE_FORMAT: &str = "knxbench-diagnostic-bundle";
 /// Version of the bundle layout this build writes.
@@ -542,3 +548,7 @@ pub fn mail_draft(
 #[cfg(test)]
 #[path = "diagnostic_bundle_tests.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "diagnostic_bundle/retained_admission_tests.rs"]
+mod retained_admission_tests;

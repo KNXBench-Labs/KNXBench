@@ -34,9 +34,8 @@ const REVIEW = { fingerprint: "a".repeat(64), context: CONTEXT };
 const MARKERS = { addresses: true, names: true, parameterValues: false, networkAddresses: true };
 const FILE_NAME = "knxbench-diagnostics-0.1.0-20261029100000.zip";
 /** The latest finished diagnostic run; it read device A, in the same server, project and revision as the tree. */
-const RUN_A = { id: "20261029T100000Z-device-diagnostics-aa", sizeBytes: 2048, formatVersion: 1, writerVersion: "0.1.0",
-  operationKind: "device-diagnostics", startedAt: "2026-10-29T10:00:00Z", target: { deviceId: DEVICE_A }, gateway: "203.0.113.250:3671",
-  related: {}, outcome: "succeeded", active: false, tornTail: false };
+const RUN_A = { id: "20261029T100000Z-device-diagnostics-aa", sizeBytes: 2048, formatVersion: 1 as const,
+  active: false, tornTail: false, end: { state: "known" as const, outcome: "succeeded" as const } };
 
 const device = (id: number, address: string) => ({ id, name: `Synthetic device ${id}`, address, description: null, com_object_count: 0 });
 /** One server, one project, one revision; two devices, so only the chosen device differs between requests. */
@@ -263,7 +262,7 @@ describe("the device Diagnostics report button", () => {
 });
 
 describe("an explicit older reference", () => {
-  const older = { ...RUN_A, id: "20261029T090000Z-device-diagnostics-bb", startedAt: "2026-10-29T09:00:00Z" };
+  const older = { ...RUN_A, id: "20261029T090000Z-device-diagnostics-bb" };
   const references = [
     { recordingId: older.id },
     { relatedKey: "diagnosticsToken", relatedValue: "synthetic-older-retained-result" },

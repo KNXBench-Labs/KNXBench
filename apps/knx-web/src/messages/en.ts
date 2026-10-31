@@ -3912,7 +3912,11 @@ export const messages = {
   "reportProblem.operation.label": "Operation",
   "reportProblem.operation.none": "No recorded operation",
   "reportProblem.operation.option": "{started} · {kind} · {outcome}",
+  "reportProblem.operation.privateOption": "{id} · {recorded} · {outcome} · {size}",
+  "reportProblem.operation.recorded": "recorded operation",
   "reportProblem.operation.unfinished": "unfinished",
+  "reportProblem.operation.endUnavailable": "recorded end unavailable",
+  "reportProblem.operation.outcomeWithheld": "outcome withheld",
   "reportProblem.operation.notFound":
     "The operation you came from has no recording. It may have been deleted, or it ran before KNXBench recorded operations. You can choose another one.",
   "reportProblem.device.label": "Device",

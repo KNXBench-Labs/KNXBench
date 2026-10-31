@@ -6,25 +6,40 @@ import { noteRefusal, request } from "./api";
 
 export * from "./diagnosticBundleShape";
 import {
-  SECTION_KINDS, type BundlePreview, type BundleQuery, type DeleteOutcome, type RecordingSummary, type SavedBundle, type SectionKind, type ReviewedBundleQuery,
+  SECTION_KINDS, type BundlePreview, type BundleQuery, type BundleRecordingEnd, type DeleteOutcome, type SavedBundle, type SectionKind, type ReviewedBundleQuery,
 } from "./diagnosticBundleShape";
 
 const isObject = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 const isCount = (value: unknown): value is number =>
   typeof value === "number" && Number.isInteger(value) && value >= 0;
+const isSafeCount = (value: unknown): value is number =>
+  isCount(value) && Number.isSafeInteger(value);
 const isKind = (value: unknown): value is SectionKind =>
   typeof value === "string" && (SECTION_KINDS as readonly string[]).includes(value);
+const exactKeys = (value: Record<string, unknown>, expected: readonly string[]) => {
+  const keys = Object.keys(value).sort();
+  return keys.length === expected.length && keys.every((key, index) => key === [...expected].sort()[index]);
+};
 
-function admitRecording(value: unknown): RecordingSummary {
-  if (!isObject(value) || typeof value.id !== "string" || !isCount(value.sizeBytes)
-    || typeof value.active !== "boolean" || typeof value.tornTail !== "boolean"
-    || !(value.operationKind === null || typeof value.operationKind === "string")
-    || !(value.startedAt === null || typeof value.startedAt === "string")
-    || !(value.outcome === null || typeof value.outcome === "string")) {
+function admitRecordingEnd(value: unknown): value is BundleRecordingEnd {
+  if (!isObject(value) || typeof value.state !== "string") return false;
+  if (value.state === "missing" || value.state === "withheld") {
+    return exactKeys(value, ["state"]);
+  }
+  return value.state === "known" && exactKeys(value, ["outcome", "state"])
+    && typeof value.outcome === "string"
+    && ["succeeded", "failed", "cancelled", "abandoned"].includes(value.outcome);
+}
+
+function admitRecording(value: unknown): void {
+  if (!isObject(value)
+    || !exactKeys(value, ["active", "end", "formatVersion", "id", "sizeBytes", "tornTail"])
+    || typeof value.id !== "string" || !isSafeCount(value.sizeBytes)
+    || value.formatVersion !== 1 || typeof value.active !== "boolean"
+    || typeof value.tornTail !== "boolean" || !admitRecordingEnd(value.end)) {
     throw new Error("diagnostic-bundle-response-invalid");
   }
-  return value as unknown as RecordingSummary;
 }
 
 /** Strict enough that a wrong shape fails here, not as a blank wizard. */

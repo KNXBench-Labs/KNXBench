@@ -1,5 +1,5 @@
 //! Regression assertions reserved for the single final integrated candidate.
-mod diagnostic_bundle_fallback;
+pub(crate) mod diagnostic_bundle_fallback;
 mod mounted_hardware;
 mod patient_wiring;
 mod settlement;

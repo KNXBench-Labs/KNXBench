@@ -333,6 +333,14 @@ impl RecordingStore {
         std::fs::read(path)
     }
 
+    /// Reads at most `max_bytes`, plus one byte used only to detect overflow.
+    ///
+    /// The operation-id path rules are identical to [`Self::read`]. An
+    /// oversized source is refused without materialising the rest of the file.
+    pub fn read_bounded(&self, id: &str, max_bytes: u64) -> io::Result<Vec<u8>> {
+        store::read_bounded(&self.shared.root, id, max_bytes)
+    }
+
     /// Deletes every recording that is not being written right now.
     pub fn delete_all(&self) -> io::Result<DeleteOutcome> {
         store::delete_all(&self.shared)

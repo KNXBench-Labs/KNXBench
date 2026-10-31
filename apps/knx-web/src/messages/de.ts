@@ -3739,7 +3739,11 @@ export const messages: Record<MessageKey, string> = {
   "reportProblem.operation.label": "Vorgang",
   "reportProblem.operation.none": "Kein aufgezeichneter Vorgang",
   "reportProblem.operation.option": "{started} · {kind} · {outcome}",
+  "reportProblem.operation.privateOption": "{id} · {recorded} · {outcome} · {size}",
+  "reportProblem.operation.recorded": "aufgezeichneter Vorgang",
   "reportProblem.operation.unfinished": "nicht abgeschlossen",
+  "reportProblem.operation.endUnavailable": "aufgezeichnetes Ende nicht verfügbar",
+  "reportProblem.operation.outcomeWithheld": "Ergebnis zurückgehalten",
   "reportProblem.operation.notFound":
     "Zu dem Vorgang, von dem du kommst, gibt es keine Aufzeichnung. Vielleicht wurde sie gelöscht, oder er lief, bevor KNXBench Vorgänge aufgezeichnet hat. Du kannst einen anderen wählen.",
   "reportProblem.device.label": "Gerät",

@@ -31,6 +31,10 @@ raw recording of a `system2-*` command, and its consent text no longer promises
 [contract](contracts/diagnostic-bundle.md) and
 [DIAG-03](open-work/DIAG-03-unified-diagnostic-bundle.md). The wizard now sits
 above the toast stack, so a startup error toast no longer hides Next or Close.
+The original fourteen-case System-2 bundle matrix now runs end to end on
+synthetic data (real App executor, real tunnel tap, built CLI against the
+loopback gateway); see the
+[boundary note](research/2026-10-29-system2-bundle-credential-boundary.md#original-fourteen-case-matrix-executed-31-october-2026).
 
 ## Inactive whole-byte write selection (30 October 2026; package acceptance pending)
 

@@ -140,21 +140,33 @@ R3 proof remains open.
 
 The parent reports the bounded R4 ambient-identity prerequisite independently
 approved for the real preview/unselected-recording regression. R4 is prerequisite
-closure only; it does not authorize export. Raw P1/P2, the original fourteen-case
-matrix, consumer integration and whole-goal acceptance remain open.
+closure only; it does not authorize export.
 
-A future positive raw variant is blocked by P1/P2. The original **14-case matrix
-remains open**; the bounded metadata tests above do not constitute fourteen new
-passing acceptance cases. Server, CLI and cross-writer proposals remain unexecuted:
+**31 October 2026 owner decision:** System-2 bytes never leave raw. The bundle
+carries the closed projection and the typed report only, so P1/P2 are not needed
+for it; they stay the prerequisites of any future raw System-2 export.
 
-| Scope | Proposed cases |
-| --- | --- |
-| App (6) | Unwritten mismatch; unreadable-prestate classes; separate restore expectation; known empty versus unclassified; replay admission/refusal; deterministic closed schema and explicit exported loss. |
-| Server (4) | Synthetic executor mismatch through reopened journal to ZIP without recording; the same with recording/history; source/version/target/review admission; unchanged public/minimized reports. |
-| CLI (2) | Real built CLI against a loopback synthetic gateway with mismatch and retained failure outcome; no-recording/refusal/no-flag/duplicate-attachment behavior. |
-| Cross-writer (2) | All-entry recognized-key sentinels through the real tap; unclassified memory/error sentinels on both byte sides and every overlapping copy. |
+## Original fourteen-case matrix (executed 31 October 2026)
 
-Use synthetic fixtures and actual producers, replay, collectors and ZIP writers.
-A surviving sentinel is a failure, not an accepted legacy leak. No private
-corpus, real installation access, manufacturer contact or hardware inference is
-needed or authorized by this static result.
+All fourteen cases now have a test with real producers, replay, collectors and ZIP
+writers on synthetic data; no private corpus, real installation, manufacturer
+contact or hardware. A sentinel surviving in any entry fails the test. Each new
+case was also run against a deliberately broken production path and failed.
+
+| Case | Test (file::name) | Proof |
+| --- | --- | --- |
+| A1–A6 | `knx-app/src/property_validation_private_projection_tests{,_more}.rs`, `property_validation_private_admission_tests.rs`, `tests/it/property_validation_execution/allocation_evidence.rs` | Unwritten/written/unreadable-prestate/restore mismatches, unclassified and refused replay, closed 4 KiB schema with explicit loss; projection scanned in every encoding. |
+| S1 | `knx-server/src/device_system2/tests/diagnostic_bundle_mismatch.rs::a_real_mismatch_without_a_recording_exports_neither_byte_side` | Real App executor on the configured synthetic project, OLD simulator, lying final read; the journal holds template, lie and prestate; preview, section text, download name and every ZIP entry hold none. |
+| S2 | same file `::real_mismatch_recordings_and_history_export_neither_byte_side` | The exact exchange as current and earlier System-2 recordings (sentinels present there as a precondition); no raw recording leaves. Mutants: journal shipped as a report, recording in a note. |
+| S3 | same file `::a_system2_review_is_bound_to_the_journal_state_it_read`, `::a_system2_run_refuses_a_foreign_device_and_never_projects_one`; source/version: `diagnostic_bundle_fallback.rs` | A real restore after the preview refuses export and section text; a foreign device is refused in the run's own project and never projected after a restart. |
+| S4 | same file `::a_real_mismatch_keeps_status_and_report_public_and_unchanged_by_export` | After a restart, status/report carry only the typed failure, export changes neither, the bundled report equals the public one except the unadmitted execution build. |
+| C1 | `knx-cli/tests/it/device_system2_validation/gateway.rs::a_final_mismatch_is_bundled_with_neither_byte_side` | Built CLI against the loopback gateway; simulator knob `memory_after_load_completed`; exit 1, journal keeps both sides, ZIP holds projection and report only. Mutant: the CLI System-2 guard lifted leaks the lie. |
+| C2 | same file `::without_the_flag_a_failed_run_writes_no_bundle_and_no_recording`, `::a_doubled_bundle_flag_is_refused_before_any_datagram`; unit tests in `diagnostic_bundle_cli.rs` | No flag writes nothing; doubled or repeated destinations are refused with zero gateway datagrams. The process-global Duplicate slot is unit-covered only. |
+| X1 | `knx-server/tests/it/http_bundle_key_redaction.rs` | The service-control read sends the project BCU key over a real tunnel; `A_Authorize`/`A_Key_Write`, sent and received, through the production tap; both raw recordings exported and every entry scanned. Mutants: tap names but does not zero; tap spares only the routed key. |
+| X2 | S1/S2 tests | Both byte sides and every overlapping copy (journal, recordings, projection, report, notes). |
+
+**Scanner limit:** the sentinel scanner finds contiguous runs. A recording stores
+memory in the pieces the device answered (12 octets here), so a sentinel spanning
+two responses would not appear contiguously. The fixtures keep every sentinel inside
+one response. That is enough while System-2 recordings never leave raw; a future
+raw export would need a scanner over reassembled memory.

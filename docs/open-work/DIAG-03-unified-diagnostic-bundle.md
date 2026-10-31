@@ -12,9 +12,11 @@ state, unchanged privacy/context/review/consent guards, twelve synthetic HTTP
 cases through native reopen. Owning server execution: 1,493 passed, 67 ignored;
 this is not a complete package/browser/hardware gate.
 
-**Raw System-2 evidence admission remains NOT READY:** classification of both
-expected/readback bytes (P1) and consistency across overlapping recording,
-range/error and archive copies (P2) are unproved. The separate static scout ran
+**Raw System-2 evidence admission is not pursued:** the owner decided on
+31 October 2026 that System-2 bytes never leave raw, so the bundle carries the
+closed projection only. Classification of both expected/readback bytes (P1) and
+consistency across overlapping copies (P2) stay unproved and remain the
+prerequisites of any future raw System-2 export. The separate static scout ran
 no runtime tests. The current App source adds a bounded admission layer around the
 closed metadata reader: one consumed snapshot, fixed format/kind, one Download and
 optional ordered Restore consistent with the same original progress, and one
@@ -142,9 +144,15 @@ are refused before any datagram.
 
 The parent-reported bounded R4 ambient-identity prerequisite is independently
 approved for the real preview/unselected-recording regression. It is prerequisite
-closure only and does not authorize raw export. Consumer source is a local
-candidate; Raw P1/P2, Original14, independent integration/publication and the whole
-DIAG-03 goal remain open.
+closure only and does not authorize raw export.
+
+**31 October Original14:** all fourteen acceptance cases now run on synthetic
+data with real producers and writers, each new one also against a deliberately
+broken production path. The matrix with test names is in the
+[boundary note](../research/2026-10-29-system2-bundle-credential-boundary.md#original-fourteen-case-matrix-executed-31-october-2026).
+The CLI case needed one simulator test knob, `memory_after_load_completed`.
+Still open: release publication (owner decision), and the desktop quit
+confirmation under an open wizard noted above.
 
 Origin: issue #30 report analysis, owner request 29 October 2026.
 
@@ -334,8 +342,10 @@ The tables below are binding defaults for the implementation.
   telegram sequence equals the transport-level frames sent/received (byte-exact), with
   header version = `GET /api/version`.
 - Injected System-2 final allocation mismatch (written byte and unwritten byte variants)
-  yields the exact offsets and both byte values in journal, reopen and bundle; strict
-  failure outcome unchanged. Old journals reopen with the evidence marked unavailable.
+  yields the exact offsets and both byte values in journal and reopen; the bundle
+  carries the closed projection and neither byte side (owner decision 31 October
+  2026); strict failure outcome unchanged. Old journals reopen with the evidence
+  marked unavailable.
 - Secret sentinel: authorize/key-write/Secure/password test values never appear in any
   file, ZIP, mail URL or log; the redaction marker does.
 - Recorder fault injection (disk full, slow fsync) does not change the device operation's

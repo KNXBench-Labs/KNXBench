@@ -131,9 +131,14 @@ German showed that reason and the keep-private note in English; and the CLI
 bundle dropped every non-System-2 recording despite the 31 October decision,
 adding a misleading System-2 note. A toast no longer paints over the wizard's
 buttons: the wizard sits above the toast stack, which is inert behind it anyway
-(pixel comparison at 1440/400 px, since hit tests skip inert elements). The installed CLI's flag boundaries passed: no flag writes
-nothing, doubled/empty/misplaced flags and a repeated invocation are refused
-before any datagram.
+(pixel comparison at 1440/400 px, since hit tests skip inert elements). The
+trade-off: toasts and the autosave countdown that appear while the wizard is
+open sit dimmed behind it and their timers keep running; errors stay in the
+notification log. Still open, and older than this fix: in the desktop shell,
+closing the window with unsaved changes while the wizard is open opens the quit
+confirmation underneath the wizard. The installed CLI's flag boundaries passed:
+no flag writes nothing, doubled/empty/misplaced flags and a repeated invocation
+are refused before any datagram.
 
 The parent-reported bounded R4 ambient-identity prerequisite is independently
 approved for the real preview/unselected-recording regression. It is prerequisite

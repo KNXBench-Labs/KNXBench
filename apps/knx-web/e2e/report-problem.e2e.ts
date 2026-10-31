@@ -334,12 +334,19 @@ for (const width of [1440, 400]) {
       if (clip.width < 1 || clip.height < 1) continue;
       overlaps += 1;
       const shown = await page.screenshot({ clip, animations: "disabled" });
+      // The toast lives nine real seconds; an expired one would make both shots equal.
+      await expect(toast).toBeVisible();
       await page.locator(".toast-stack").evaluate((el) => { (el as HTMLElement).style.visibility = "hidden"; });
       const hidden = await page.screenshot({ clip, animations: "disabled" });
       await page.locator(".toast-stack").evaluate((el) => { (el as HTMLElement).style.visibility = ""; });
       expect.soft(shown.equals(hidden), `${await button.textContent()} is painted over by a toast`).toBe(true);
     }
     expect(overlaps, "the toast shares pixels with a wizard button").toBeGreaterThan(0);
+    const layers = await dialog.evaluate((panel) => ({
+      wizard: Number(getComputedStyle(panel.parentElement!).zIndex),
+      toasts: Number(getComputedStyle(document.querySelector(".toast-stack")!).zIndex),
+    }));
+    expect(layers.wizard, "the wizard stays above the toast stack").toBeGreaterThan(layers.toasts);
     expect(unexpected).toEqual([]);
   });
 }

@@ -48,6 +48,12 @@ fn container() -> Value {
     }
 }
 
+/// What a recording header states about redaction. Headers are never rewritten,
+/// so every word must stay true for the recording it is written into.
+pub(super) const REDACTION_POLICY: &str = "authorize and key-write keys are redacted at capture; \
+     KNXBench uses only unsecured KNXnet/IP, so no tunnel password or KNX Secure key is \
+     exchanged; other device data, which may contain passwords, is recorded as exchanged";
+
 pub(super) fn header(
     id: &str,
     start: &OperationStart,
@@ -68,7 +74,7 @@ pub(super) fn header(
         "related": start.related,
         "settings": start.settings,
         "redaction": {
-            "policy": "authorize and key-write keys, KNX Secure keys and tunnel/login passwords are redacted at capture; other device data, which may contain passwords, is recorded as exchanged",
+            "policy": REDACTION_POLICY,
             "marker": "redacted octets are zero and named by a `redacted` object",
         },
     })

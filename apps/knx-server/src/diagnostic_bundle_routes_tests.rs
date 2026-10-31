@@ -459,6 +459,31 @@ async fn metadata_only_reasons_name_exactly_what_is_missing() {
         reason_of(&state, programming.clone(), "operation").await,
         "no recorded operation fits this problem"
     );
+    // Positive control: the same file as format 1 is listed and chosen, so the
+    // case above failed on the version alone.
+    let control = tempfile::tempdir().unwrap();
+    let control_state = super::tests::state(control.path(), true);
+    let control_dir = control
+        .path()
+        .join(knx_app::operation_recording::DIAGNOSTICS_DIR_NAME);
+    std::fs::create_dir_all(&control_dir).unwrap();
+    std::fs::write(
+        control_dir.join("op-20261031T120000000Z-0000abcd.jsonl"),
+        b"{\"format_version\":1,\"operation_kind\":\"download\"}\n",
+    )
+    .unwrap();
+    let (status, body, _) = call(
+        &control_state,
+        "POST",
+        "/api/diagnostics/bundle/preview",
+        Some(programming.clone()),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{}", json_of(&body));
+    assert_eq!(
+        json_of(&body)["operationRecordingId"],
+        "op-20261031T120000000Z-0000abcd"
+    );
     // Explicitly none.
     assert_eq!(
         reason_of(

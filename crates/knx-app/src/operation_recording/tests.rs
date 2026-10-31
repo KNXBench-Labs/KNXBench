@@ -123,6 +123,14 @@ fn a_recording_has_a_header_its_datagrams_notes_and_an_end() {
     );
     assert_eq!(summary.format_version, Some(1));
     assert!(!summary.torn_tail && !summary.active);
+    // The header states only what capture really does (A_Authorize/A_Key_Write
+    // keys zeroed) and why no tunnel password or Secure key can appear.
+    assert_eq!(
+        lines[0]["redaction"]["policy"],
+        "authorize and key-write keys are redacted at capture; KNXBench uses only \
+         unsecured KNXnet/IP, so no tunnel password or KNX Secure key is exchanged; \
+         other device data, which may contain passwords, is recorded as exchanged"
+    );
 
     let header = &lines[0];
     assert_eq!(header["type"], "header");

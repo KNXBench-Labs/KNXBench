@@ -440,7 +440,7 @@ pub fn manifest(request: &BundleRequest, sections: &[BundleSection], created_at:
                 "tunnel and login passwords",
             ],
             "marker": "removed octets are zero and named by a `redacted` object; removed values are blank",
-            "notRemoved": "individual and group addresses, names, parameter values, gateway endpoints and, in raw recordings and declared memory, device configuration that may contain passwords are included as selected",
+            "notRemoved": "individual and group addresses, names, parameter values, gateway endpoints and, in raw recordings and declared memory, device configuration that may contain passwords are included as selected; keep the file private",
         },
         "totalBytes": sections.iter().map(BundleSection::size).sum::<u64>(),
         "sections": listed,

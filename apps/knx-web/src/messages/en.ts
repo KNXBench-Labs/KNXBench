@@ -3930,7 +3930,7 @@ export const messages = {
   "reportProblem.recordingOff":
     "The operator of this installation switched off the recording of device operations (KNX_DIAGNOSTIC_RECORDING). No new recordings are made; older ones can still be included.",
   "reportProblem.retention":
-    "KNXBench records every device operation on this installation and keeps the last 100 operations or 512 MiB, whichever comes first; failed operations are kept longest. Recognised KNX keys and tunnel passwords are redacted; device configuration, which may contain passwords, is recorded as exchanged.",
+    "KNXBench records every device operation on this installation and keeps the last 100 operations or 512 MiB, whichever comes first; failed operations are kept longest. Device keys sent to authorize or to write keys are made unrecognisable; KNXBench uses only unsecured KNXnet/IP, so no tunnel password or KNX Secure key is exchanged. Device configuration, which may contain passwords, is recorded as exchanged: keep recordings and bundles private.",
   "reportProblem.operation.label": "Operation",
   "reportProblem.operation.none": "No recorded operation",
   "reportProblem.operation.option": "{started} · {kind} · {outcome}",
@@ -3972,7 +3972,7 @@ export const messages = {
   "reportProblem.removed":
     "Always removed, even with your consent: device keys (BCU keys), KNX Secure keys and tool keys, tunnel and login passwords. Where they were, the file says what was removed and how long it was, never the value.",
   "reportProblem.notRemoved":
-    "Not removed: individual and group addresses, names, parameter values, the network addresses of gateways and, in raw recordings and device memory, device configuration that may contain passwords, in the sections you chose.",
+    "Not removed (in the sections you chose): individual and group addresses, names, parameter values, the network addresses of gateways and, in raw recordings and device memory, device configuration that may contain passwords. Keep the file private.",
   "reportProblem.description.label": "What happened? (optional)",
   "reportProblem.description.hint": "Goes into the ZIP's manifest in your own words. Do not type passwords.",
   "reportProblem.consent": "I have looked at the preview and want to save this ZIP on this computer.",

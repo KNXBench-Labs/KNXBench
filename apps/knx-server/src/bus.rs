@@ -83,6 +83,22 @@ pub trait GatewayConnector: Send + Sync {
         self.connect_tunnel(gateway)
     }
 
+    /// [`Self::connect_tunnel_with_ack_wait`] whose tunnel reports every
+    /// datagram and connection event to `tap` (DIAG-03 operation recorder).
+    /// A connector without real datagrams, such as an injected fake, ignores
+    /// the tap and opens its ordinary tunnel; only `RealConnector` taps.
+    #[allow(clippy::type_complexity)]
+    fn connect_tunnel_recorded(
+        &self,
+        gateway: SocketAddrV4,
+        wait: TunnelAckWait,
+        tap: Option<knx_net::wire_tap::WireTap>,
+    ) -> Pin<Box<dyn Future<Output = Result<Box<dyn BusTunnel>, BusSessionError>> + Send + '_>>
+    {
+        let _ = tap;
+        self.connect_tunnel_with_ack_wait(gateway, wait)
+    }
+
     /// One multicast `SEARCH_REQUEST` and whatever `SEARCH_RESPONSE`s come
     /// back inside `knx-net`'s search window (Core v01.06.02 AS §4.2 /
     /// §7.4.1). Read-only in the strongest sense this codebase has: it
@@ -235,6 +251,28 @@ impl GatewayConnector for RealConnector {
         Box::pin(async move {
             let tunnel = KnxNetIpClient::with_tunnel_return_path(self.return_path)
                 .with_tunnel_ack_wait(wait)
+                .connect_tunnel(gateway)
+                .await
+                .map_err(BusSessionError::Transport)?;
+            Ok(Box::new(RealTunnel(tunnel)) as Box<dyn BusTunnel>)
+        })
+    }
+
+    #[allow(clippy::type_complexity)]
+    fn connect_tunnel_recorded(
+        &self,
+        gateway: SocketAddrV4,
+        wait: TunnelAckWait,
+        tap: Option<knx_net::wire_tap::WireTap>,
+    ) -> Pin<Box<dyn Future<Output = Result<Box<dyn BusTunnel>, BusSessionError>> + Send + '_>>
+    {
+        Box::pin(async move {
+            let mut client = KnxNetIpClient::with_tunnel_return_path(self.return_path)
+                .with_tunnel_ack_wait(wait);
+            if let Some(tap) = tap {
+                client = client.with_wire_tap(tap);
+            }
+            let tunnel = client
                 .connect_tunnel(gateway)
                 .await
                 .map_err(BusSessionError::Transport)?;

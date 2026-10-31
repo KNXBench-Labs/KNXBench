@@ -35,7 +35,9 @@ import { currentGuideStep, downloadGuide, type GuideMissing, type GuideStepId } 
 import HelpTip from "./HelpTip";
 import { useTranslate, type MessageKey } from "./i18n";
 import { collectDevices, projectContextKey } from "./treeUtils";
-import UniversalSupportButton from "./UniversalSupportButton";
+import DiagnosticExportButton from "./DiagnosticExportButton";
+import { ReportProblemButton } from "./ReportProblemEntry";
+import type { ReportProblemRequest } from "./reportProblem";
 import { useProgrammingConsent } from "./useProgrammingConsent";
 import type { ProjectTree } from "./bindings/ProjectTree";
 
@@ -213,6 +215,16 @@ export default function DeviceDownloadPanel({ project, handoff = null, onHandoff
 
   const running = status?.status.state === "running";
   const locked = planning || starting || running;
+  const runEnded = status !== null && !running;
+  // Preparation/refusal belongs to the current selection, never a previous run.
+  const report: ReportProblemRequest = {
+    problemType: "deviceProgramming", deviceId, operation: { selection: "none" },
+  };
+  // Only the exact retained run can establish its target; do not guess from the form.
+  const endedReport: ReportProblemRequest = {
+    problemType: "deviceProgramming",
+    operation: status ? { relatedKey: "downloadId", relatedValue: String(status.downloadId) } : { selection: "none" },
+  };
 
   function dropPlan() {
     setPlan(null);
@@ -515,8 +527,10 @@ export default function DeviceDownloadPanel({ project, handoff = null, onHandoff
           {ordinaryMode && currentReadiness?.checking && <p className="device-download-readiness-loading" role="status" data-readiness-loading>
             <span className="task-status-text">{t("deviceDownload.readiness.loading")}</span></p>}
           {shownGuidance && <DownloadSupportNotice key={`${deviceId}-${scope}-${shownGuidance.code}-${shownGuidance.detail}`}
-            guidance={shownGuidance} failedRequest={selectedRefusal !== null} />}
-          <UniversalSupportButton project={project} deviceId={deviceId} downloadId={status && (status.status.state === "failed" || status.status.state === "finished") ? status.downloadId : undefined} />
+            guidance={shownGuidance} failedRequest={selectedRefusal !== null} report={report} />}
+          {/* DIAG-03: one report shortcut per panel state; the notice and the ended run's section carry their own. */}
+          {!shownGuidance && !runEnded && <ReportProblemButton from="download" request={report} />}
+          <DiagnosticExportButton project={project} deviceId={deviceId} />
           {ordinaryMode && currentReadiness?.error && !currentReadiness.checking && <button type="button" data-readiness-retry
             onClick={() => setReadinessAttempt((n) => n + 1)}>{t("deviceDownload.readiness.retry")}</button>}
           {handoffOutcome && (
@@ -781,7 +795,7 @@ export default function DeviceDownloadPanel({ project, handoff = null, onHandoff
         </section>
       )}
       {status && status.status.state !== "running" && (
-        <DownloadVerification key={status.downloadId} downloadId={status.downloadId}
+        <DownloadVerification key={status.downloadId} downloadId={status.downloadId} report={endedReport}
           completed={status.status.state === "finished" && status.status.written === "yes"} />
       )}
       {consent.dialog}

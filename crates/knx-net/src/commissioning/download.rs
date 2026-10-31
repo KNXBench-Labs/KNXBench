@@ -45,7 +45,7 @@ use knx_core::commissioning::load_control::{
 };
 use knx_core::commissioning::load_state::{LoadEvent, LoadState, MaskVersion};
 use knx_core::commissioning::mcb::MemoryControlBlock;
-use knx_core::commissioning::memory::WriteLimit;
+use knx_core::commissioning::memory::{allocation_service, WriteLimit};
 use knx_core::commissioning::mutation::{TargetKind, WriteScope};
 use knx_core::commissioning::partial_download_variant::PartialDownloadVariant;
 use knx_core::commissioning::procedure::ProcedureKind;
@@ -786,6 +786,17 @@ pub enum DownloadError {
         /// The device the session was built for.
         target: IndividualAddress,
     },
+    /// The device placed a part so that its base address plus allocated length is exactly
+    /// `FFFFh`, the one case CP §3.5.2 (p. 43) gives no memory service for. Refused after
+    /// the allocation and its base read-back, before the first memory write of the part.
+    UndefinedMemoryService {
+        /// Which part.
+        object_index: ObjectIndex,
+        /// The base address the device answered.
+        base: u32,
+        /// The allocated length.
+        length: usize,
+    },
 }
 
 impl std::error::Error for DownloadError {}
@@ -852,6 +863,15 @@ impl fmt::Display for DownloadError {
                 f,
                 "refusing the property-path download to {target}: it has never run against a \
                  real device, so it runs against the simulator only; nothing was sent"
+            ),
+            DownloadError::UndefinedMemoryService {
+                object_index,
+                base,
+                length,
+            } => write!(
+                f,
+                "{object_index} was allocated at {base:#06x} with {length} octets, ending exactly \
+                 at FFFFh where CP §3.5.2 defines no memory service; no data was written"
             ),
         }
     }
@@ -1421,6 +1441,20 @@ async fn load_one_part<T: ManagementTransport>(
 
     record(report, kind, 3, "read back the base address");
     let base_address = session.read_table_reference(object_index).await?;
+    // One service per allocation, from base plus allocated length; the write below and its
+    // read-backs chunk exactly this region, so they inherit the same answer.
+    if allocation_service(
+        base_address,
+        u32::try_from(part.data.len()).unwrap_or(u32::MAX),
+    )
+    .is_none()
+    {
+        return Err(DownloadError::UndefinedMemoryService {
+            object_index,
+            base: base_address,
+            length: part.data.len(),
+        });
+    }
 
     let mut crc = CrcComparison::NotCompared;
     if compare_crc {
@@ -3429,6 +3463,80 @@ mod tests {
                 }) if object_index == ObjectIndex::new(3)
             ),
             "got {error}"
+        );
+    }
+
+    use knx_core::commissioning::memory::MemoryService;
+
+    /// Object 11 is placed at `F000h` by the simulator's relative allocator, so the part's
+    /// length alone moves base plus allocated length across CP §3.5.2's `FFFFh` boundary.
+    async fn boundary_download(
+        length: usize,
+    ) -> (SimulatedDevice, Result<DownloadReport, DownloadError>) {
+        let device = ap2_device();
+        let mut session = writer(&device, WriteScope::Download);
+        let parts = vec![table_part_with_no_version(
+            11,
+            "Boundary Table",
+            length,
+            PartKind::GroupAddressTable,
+        )];
+        let result = Downloader::new(&mut session, plan(parts))
+            .complete_download()
+            .await;
+        (device, result)
+    }
+
+    fn memory_services(device: &SimulatedDevice) -> (Vec<MemoryService>, usize) {
+        let mut services = Vec::new();
+        let mut writes = 0;
+        for entry in device.seen() {
+            match entry {
+                Seen::MemoryWrite { service, .. } => {
+                    writes += 1;
+                    services.push(service);
+                }
+                Seen::MemoryRead { service, .. } => services.push(service),
+                _ => {}
+            }
+        }
+        services.dedup();
+        (services, writes)
+    }
+
+    #[tokio::test]
+    async fn one_allocation_keeps_one_service_on_both_sides_of_ffffh_and_refuses_it_exactly() {
+        // FFFEh: below the boundary, every write and read-back is A_Memory_*.
+        let (device, result) = boundary_download(0xFFE).await;
+        let report = result.expect("an allocation ending below FFFFh downloads");
+        assert_eq!(report.parts[0].base_address, 0xF000);
+        let (services, writes) = memory_services(&device);
+        assert!(writes > 0);
+        assert_eq!(services, [MemoryService::Memory]);
+        // 10000h: above it, the whole allocation is A_UserMemory_*, never split.
+        let (device, result) = boundary_download(0x1000).await;
+        result.expect("the existing path already writes above FFFFh");
+        let (services, writes) = memory_services(&device);
+        assert!(writes > 0);
+        assert_eq!(services, [MemoryService::UserMemory]);
+        // FFFFh exactly: no service is defined, so no memory frame is sent at all.
+        let (device, result) = boundary_download(0xFFF).await;
+        let error = result.expect_err("FFFFh is refused");
+        assert!(
+            matches!(
+                error,
+                DownloadError::UndefinedMemoryService {
+                    base: 0xF000,
+                    length: 0xFFF,
+                    ..
+                }
+            ),
+            "{error}"
+        );
+        assert_eq!(
+            memory_services(&device),
+            (Vec::new(), 0),
+            "nothing written or read"
         );
     }
 }

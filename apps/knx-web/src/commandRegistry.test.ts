@@ -51,6 +51,7 @@ function noopCtx(overrides: Partial<CommandContext> = {}): CommandContext {
     addDevice: () => {},
     openIntroduction: () => {},
     openAchievements: () => {},
+    reportProblem: () => {},
     ...overrides,
   };
 }
@@ -158,7 +159,7 @@ describe("command enablement", () => {
     expect(COMMANDS.map((c) => c.id)).toEqual([
       "new-project", "open-project", "open-native", "save", "save-as", "undo", "redo", "project-history", "adopt-plugin-data", "search",
       "open-log", "open-bus-monitor", "open-settings", "open-diagnostics-window",
-      "open-catalog", "open-devices", "open-notes", "stored-bus-access", "add-device", "show-introduction", "open-achievements", "open-help",
+      "open-catalog", "open-devices", "open-notes", "stored-bus-access", "add-device", "report-problem", "show-introduction", "open-achievements", "open-help",
     ]);
     expect(COMMANDS[0].isEnabled(noopCtx({ tree: null }))).toBe(true);
   });
@@ -250,5 +251,16 @@ describe("command enablement", () => {
     expect(cmd.isEnabled(ctx)).toBe(true);
     cmd.run(ctx);
     expect(opened).toBe(true);
+  });
+
+  // DIAG-03: the one report wizard; import problems happen before a project exists.
+  it("keeps Report problem runnable with no project open and opens the wizard", () => {
+    let opened = 0;
+    const ctx = noopCtx({ tree: null, reportProblem: () => { opened += 1; } });
+    const cmd = COMMANDS.find((c) => c.id === "report-problem")!;
+    expect(cmd.labelKey).toBe("reportProblem.button");
+    expect(cmd.isEnabled(ctx)).toBe(true);
+    cmd.run(ctx);
+    expect(opened).toBe(1);
   });
 });

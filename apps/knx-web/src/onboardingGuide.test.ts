@@ -130,6 +130,7 @@ describe("ONBOARDING_TASKS", () => {
       addDevice: record("addDevice"),
       openIntroduction: record("openIntroduction"),
       openAchievements: record("openAchievements"),
+      reportProblem: record("reportProblem"),
     };
     for (const task of ONBOARDING_TASKS) {
       const command = COMMANDS.find((entry) => entry.id === task.commandId);

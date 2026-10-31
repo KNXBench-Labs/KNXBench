@@ -26,6 +26,8 @@ import type { BusDiscoveredInterface } from "./api";
 import { resetBusDiscoveryForTests } from "./busDiscovery";
 import { resetSettingsForTests } from "./settingsStore";
 import { resetSystem2StatusForTests } from "./system2Status";
+import { ReportProblemProvider } from "./ReportProblemEntry";
+import type { ReportProblemRequest } from "./reportProblem";
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 const project: ProjectTree = { schema_version: 1, errors: 0, warnings: 0, can_undo: false, can_redo: false, is_modified: false, group_address_style: "ThreeLevel", server_incarnation: "server", project_incarnation: 1,
   installations: [{ id: 0, name: "Test", buildings: [], group_addresses: [], group_ranges: [], unassigned: [], topology: [{ id: 1, name: "Area", address: 1, lines: [{ id: 2, name: "Line", address: 1, devices: [{id: 10, name: "Configured button", address: "1.1.67", description: null, com_object_count: 0 }] }] }] }] };
@@ -36,8 +38,12 @@ async function input(selector: string, value: string) {
   const node = host.querySelector<HTMLInputElement>(selector)!; expect(node).not.toBeNull();
   await act(async () => { Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value")!.set!.call(node, value); node.dispatchEvent(new Event("input", {bubbles:true})); });
 }
+/** The workbench's report host; the shortcut's request is observed, the wizard is tested elsewhere. */
+const opened = vi.hoisted(() => vi.fn<(request: ReportProblemRequest) => void>());
 async function render(deviceId = 10, tree = project) {
-  await act(async () => root.render(<System2DownloadPanel project={tree} deviceId={deviceId} gateway="192.0.2.1:3671" enabled ordinaryBusy={false} />)); await flush();
+  await act(async () => root.render(<ReportProblemProvider request={null} onOpen={opened} onClose={() => {}} tree={null} notifications={[]}>
+    <System2DownloadPanel project={tree} deviceId={deviceId} gateway="192.0.2.1:3671" enabled ordinaryBusy={false} />
+  </ReportProblemProvider>)); await flush();
 }
 async function prepare() { await click("[data-system2-prepare]"); }
 async function confirmations() {
@@ -343,11 +349,8 @@ it("renders diagnostics without enabling retry or changing recovery", async () =
   expect(host.querySelectorAll("[data-system2-recovery]")).toHaveLength(3); expect(host.querySelector<HTMLButtonElement>("[data-system2-recover]")!.disabled).toBe(true);
 });
 
-// Issue #31: an ended run is explained from the journal facts and its report can be saved.
+// Issue #31: an ended run is explained from the journal facts; DIAG-03 reports it through the wizard.
 const unfinished = { ...recoveryStatus, state: "failed" as const, completedSteps: 26, totalSteps: 27, downloadResult: "transferCompleteVerificationUnfinished" as const };
-const reportBody = { format: 1, kind: "knxbench-system2-download-summary", support: "EXPERIMENTAL BEST-EFFORT; HARDWARE COMPATIBILITY AND RECOVERY UNVERIFIED",
-  evidence: "local-journal-only", outcome: "failed", downloadResult: "transferCompleteVerificationUnfinished", mutationPossible: true,
-  completedSteps: 26, totalSteps: 27, prestateDiffers: false, failureDiagnostics: [] };
 it("explains transfer-complete-but-unverified runs without claiming a loaded device", async () => {
   mock.getSystem2Status.mockResolvedValue(unfinished); await render();
   const text = host.querySelector("[data-system2-result-text]")!.textContent!;
@@ -356,31 +359,28 @@ it("explains transfer-complete-but-unverified runs without claiming a loaded dev
 });
 it("shows no result and no report while the operation is running", async () => {
   mock.getSystem2Status.mockResolvedValue(status); await render();
-  expect(host.querySelector("[data-system2-result-text]")).toBeNull(); expect(host.querySelector("[data-system2-report-save]")).toBeNull();
+  expect(host.querySelector("[data-system2-result-text]")).toBeNull(); expect(host.querySelector("[data-report-problem-open=system2]")).toBeNull();
 });
-it("saves the privacy-bounded report locally and points to the support address", async () => {
-  mock.getSystem2Status.mockResolvedValue(unfinished); mock.getSystem2Report.mockResolvedValue(reportBody); await render();
-  expect(host.querySelector("[data-system2-report-guidance]")!.textContent).toContain("issue@knxbench.com");
-  await click("[data-system2-report-save]");
-  expect(mock.getSystem2Report).toHaveBeenCalledExactlyOnceWith(unfinished.operationId);
-  expect(saved).toHaveBeenCalledExactlyOnceWith(JSON.stringify(reportBody, null, 2), "knxbench-system2-report.json");
-  const written = String(saved.mock.calls[0][0]);
-  for (const forbidden of [unfinished.address, unfinished.deviceName, unfinished.operationId, "Recover original", "192.0.2.1"]) expect(written).not.toContain(forbidden);
-  expect(host.querySelector("[data-system2-report-saved]")).not.toBeNull();
-});
-it("keeps a failed report request visible and saves nothing", async () => {
-  mock.getSystem2Status.mockResolvedValue(unfinished); mock.getSystem2Report.mockRejectedValue(new Error("refused"));
-  await render(); await click("[data-system2-report-save]");
-  expect(saved).not.toHaveBeenCalled(); expect(host.querySelector("[data-system2-report-failed]")).not.toBeNull();
-});
-it("drops a report that arrives after another operation was attached", async () => {
-  mock.getSystem2Status.mockResolvedValue(unfinished);
-  let release!: (value: unknown) => void; mock.getSystem2Report.mockReturnValue(new Promise((resolve) => { release = resolve; }));
-  await render(); await click("[data-system2-report-save]");
-  mock.getSystem2Status.mockResolvedValue({ ...unfinished, operationId: "e".repeat(32) });
-  await click("[data-system2-refresh]");
-  await act(async () => { release(reportBody); await Promise.resolve(); });
+it("opens the report wizard preselected with the ended operation, and fetches no report itself", async () => {
+  opened.mockReset();
+  mock.getSystem2Status.mockResolvedValue(unfinished); await render();
+  const guidance = host.querySelector("[data-system2-report-guidance]")!.textContent!;
+  expect(guidance).not.toContain("issue@knxbench.com");
+  expect(host.querySelector("[data-system2-report-guidance] a, [data-system2-report-save]")).toBeNull();
+  await click("[data-report-problem-open=system2]");
+  expect(opened).toHaveBeenCalledExactlyOnceWith({ problemType: "deviceProgramming", deviceId: unfinished.binding.deviceId,
+    operation: { relatedKey: "operationId", relatedValue: unfinished.operationId } });
+  expect(mock.getSystem2Report).not.toHaveBeenCalled();
   expect(saved).not.toHaveBeenCalled();
+});
+it("a shortcut after another operation was attached names that operation", async () => {
+  opened.mockReset();
+  mock.getSystem2Status.mockResolvedValue(unfinished); await render();
+  const other = { ...unfinished, operationId: "e".repeat(32) };
+  mock.getSystem2Status.mockResolvedValue(other);
+  await click("[data-system2-refresh]");
+  await click("[data-report-problem-open=system2]");
+  expect(opened).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ operation: { relatedKey: "operationId", relatedValue: other.operationId } }));
 });
 
 it("hands a settled terminal status to the shared lifecycle as a pending belief refresh, once", async () => {

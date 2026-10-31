@@ -483,6 +483,8 @@ Four more items are covered elsewhere. All of them live in File's submenus (see
   read it before you attach it to anything public. The larger dialog scrolls inside
   its window; drag its lower-right corner or focus the top-right resize button and
   press the arrow keys to make room for the contents and privacy notice.
+  Source builds after Alpha 18 replace it with **Report problem…**, the
+  [report wizard](08-reports-and-diff.md#report-problem).
 - **Show introduction…** reopens the four-page introduction that appears on the
   first start — [First start](../getting-started/06-first-start.md#the-introduction).
 

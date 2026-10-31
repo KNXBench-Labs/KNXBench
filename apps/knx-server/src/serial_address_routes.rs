@@ -166,11 +166,18 @@ async fn write(
             "a line scan is running: the gateway serves one tunnel",
         ));
     }
-    let tunnel = state
-        .connector
-        .connect_tunnel(gateway)
-        .await
-        .map_err(|e| crate::tunnel_holder::gateway_connect_failed(gateway, &e))?;
+    let (recorder, tunnel) = crate::operation_recordings::open(
+        &state,
+        knx_app::operation_recording::OperationStart::new(
+            knx_app::operation_recording::OperationKind::SerialNumberAddress,
+        )
+        .target(serde_json::json!({ "serialNumber": serial.to_string(), "write": true })),
+        gateway,
+        knx_net::TunnelAckWait::Standard,
+        &state.address_programming_timing,
+    )
+    .await;
+    let tunnel = tunnel.map_err(|e| crate::tunnel_holder::gateway_connect_failed(gateway, &e))?;
     let outcome = serial_number_write(
         &TunnelTransport(tunnel.as_ref()),
         state.address_programming_timing,
@@ -178,6 +185,7 @@ async fn write(
         authorisation,
     )
     .await;
+    crate::operation_recordings::finish_result(&recorder, &outcome, serde_json::Value::Null);
     let _ = tunnel.disconnect().await;
     drop(scan);
     drop(monitor);
@@ -278,7 +286,18 @@ async fn find(
     // No physical address is known yet: never substitute a serial number or
     // guessed address in the activity record. A dropped future is unknown.
     let activity = state.one_shot_activity.start("serialLookup", None);
-    let tunnel = match state.connector.connect_tunnel(gateway).await {
+    let (recorder, tunnel) = crate::operation_recordings::open(
+        &state,
+        knx_app::operation_recording::OperationStart::new(
+            knx_app::operation_recording::OperationKind::SerialNumberAddress,
+        )
+        .target(serde_json::json!({ "serialNumber": serial.to_string(), "write": false })),
+        gateway,
+        knx_net::TunnelAckWait::Standard,
+        &state.address_programming_timing,
+    )
+    .await;
+    let tunnel = match tunnel {
         Ok(tunnel) => tunnel,
         Err(e) => {
             activity.finish("failed");
@@ -292,6 +311,13 @@ async fn find(
     )
     .await;
     let _ = tunnel.disconnect().await;
+    crate::operation_recordings::finish_result(
+        &recorder,
+        &found,
+        serde_json::json!({
+            "address": found.as_ref().ok().and_then(|a| a.map(|a| a.to_string())),
+        }),
+    );
     activity.finish(if found.is_ok() { "finished" } else { "failed" });
     drop(scan);
     drop(monitor);

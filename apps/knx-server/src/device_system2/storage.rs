@@ -1,6 +1,7 @@
 //! Private immutable operation evidence and explicit restart selection.
 use super::dto::{valid_id, Metadata};
 use knx_app::property_validation::{
+    private_projection::{admit_snapshot, read_snapshot, PrivateSnapshot},
     read_bundle, write_prepared_bundle, ExecutionBuild, OperationProgress, OperationStore,
 };
 use knx_app::property_validation_bundle::PreparedBundle;
@@ -9,6 +10,42 @@ use std::{
     io::{self, Read, Write},
     path::{Path, PathBuf},
 };
+
+#[cfg(test)]
+#[derive(Default)]
+pub(super) struct AdmissionReadCounts {
+    metadata: std::sync::atomic::AtomicUsize,
+    observed: std::sync::atomic::AtomicUsize,
+    snapshot: std::sync::atomic::AtomicUsize,
+}
+
+#[cfg(test)]
+impl AdmissionReadCounts {
+    fn record(&self, read: AdmissionRead) {
+        use std::sync::atomic::Ordering;
+        match read {
+            AdmissionRead::Metadata => self.metadata.fetch_add(1, Ordering::Relaxed),
+            AdmissionRead::Observed => self.observed.fetch_add(1, Ordering::Relaxed),
+            AdmissionRead::Snapshot => self.snapshot.fetch_add(1, Ordering::Relaxed),
+        };
+    }
+
+    pub(super) fn values(&self) -> (usize, usize, usize) {
+        use std::sync::atomic::Ordering;
+        (
+            self.metadata.load(Ordering::Relaxed),
+            self.observed.load(Ordering::Relaxed),
+            self.snapshot.load(Ordering::Relaxed),
+        )
+    }
+}
+
+#[derive(Clone, Copy)]
+enum AdmissionRead {
+    Metadata,
+    Observed,
+    Snapshot,
+}
 
 pub(crate) const ROOT_NAME: &str = ".knxbench-system2";
 const MAX_OPERATIONS: usize = 128;
@@ -82,6 +119,20 @@ pub(super) struct Storage {
     root: PathBuf,
     _lease: File,
 }
+
+pub(super) struct BundleAdmission {
+    pub metadata: Metadata,
+    pub progress: OperationProgress,
+    pub projection: knx_app::property_validation::private_projection::AdmittedPrivateProjection,
+}
+
+struct ReopenAdmission {
+    path: PathBuf,
+    metadata: Metadata,
+    bundle: PreparedBundle,
+    journal: PathBuf,
+}
+
 impl Storage {
     pub fn open(data_dir: &Path, create: bool) -> io::Result<Option<Self>> {
         let root = data_dir.join(ROOT_NAME);
@@ -215,10 +266,9 @@ impl Storage {
         };
         read_record().unwrap_or(ExecutionBuild::Unknown)
     }
-    pub fn metadata(&self, id: &str) -> io::Result<Metadata> {
-        let meta: Metadata =
-            serde_json::from_slice(&read(&self.path(id)?.join("metadata.json"), 8192)?)
-                .map_err(|_| invalid())?;
+    fn metadata_at(path: &Path, id: &str) -> io::Result<Metadata> {
+        let meta: Metadata = serde_json::from_slice(&read(&path.join("metadata.json"), 8192)?)
+            .map_err(|_| invalid())?;
         let canonical_u64 = |s: &str| s.parse::<u64>().is_ok_and(|v| v.to_string() == s);
         if meta.schema_version != 1
             || meta.operation_id != id
@@ -233,9 +283,14 @@ impl Storage {
         }
         Ok(meta)
     }
+
+    pub fn metadata(&self, id: &str) -> io::Result<Metadata> {
+        Self::metadata_at(&self.path(id)?, id)
+    }
     pub fn observed(&self, id: &str, bundle: &PreparedBundle) -> io::Result<OperationStore> {
         let path = self.path(id)?;
-        self.check_bundle(id, bundle)?;
+        let metadata = self.metadata(id)?;
+        Self::check_bundle(id, bundle, &metadata)?;
         write_prepared_bundle(&path.join("observed.json"), bundle)?;
         private(&path.join("observed.json"), false)?;
         let check = read_bundle(&path.join("observed.json"))?;
@@ -244,14 +299,14 @@ impl Storage {
         }
         OperationStore::create(&path.join("journal"), bundle.binding.clone())
     }
-    fn check_bundle(&self, id: &str, bundle: &PreparedBundle) -> io::Result<()> {
+    fn check_bundle(id: &str, bundle: &PreparedBundle, metadata: &Metadata) -> io::Result<()> {
         if bundle.format != 3
             || bundle.binding.simulated
             || bundle
                 .hardware_preparation
                 .as_ref()
                 .is_none_or(|p| p.operation != id)
-            || bundle.binding.target != self.metadata(id)?.address
+            || bundle.binding.target != metadata.address
         {
             return Err(invalid());
         }
@@ -270,12 +325,29 @@ impl Storage {
         self.require_unclaimed_recovery(id)?;
         write_new(&self.path(id)?.join("recovery-command"), id.as_bytes())
     }
-    pub fn reopen(&self, id: &str) -> io::Result<(PreparedBundle, OperationStore)> {
+    fn reopen_admission_with(
+        &self,
+        id: &str,
+        observe: &mut impl FnMut(AdmissionRead),
+    ) -> io::Result<Option<ReopenAdmission>> {
         let path = self.path(id)?;
-        private(&path.join("observed.json"), false)?;
-        let bundle = read_bundle(&path.join("observed.json"))?;
-        self.check_bundle(id, &bundle)?;
+        let observed = path.join("observed.json");
         let journal = path.join("journal");
+        let observed_exists = observed.try_exists()?;
+        let journal_exists = journal.try_exists()?;
+        if !observed_exists && !journal_exists {
+            return Ok(None);
+        }
+        if !observed_exists || !journal_exists {
+            return Err(invalid());
+        }
+
+        observe(AdmissionRead::Metadata);
+        let metadata = Self::metadata_at(&path, id)?;
+        private(&observed, false)?;
+        observe(AdmissionRead::Observed);
+        let bundle = read_bundle(&observed)?;
+        Self::check_bundle(id, &bundle, &metadata)?;
         private(&journal, true)?;
         // Bound restart admission before the shared opener collects/replays its
         // exact chain. Unknown names still reach its strict identity grammar.
@@ -292,8 +364,69 @@ impl Storage {
                 return Err(invalid());
             }
         }
-        let store = OperationStore::open(&journal, &bundle.binding)?;
-        Ok((bundle, store))
+        Ok(Some(ReopenAdmission {
+            path,
+            metadata,
+            bundle,
+            journal,
+        }))
+    }
+
+    pub fn reopen(&self, id: &str) -> io::Result<(PreparedBundle, OperationStore)> {
+        let admission = self
+            .reopen_admission_with(id, &mut |_| {})?
+            .ok_or_else(invalid)?;
+        let store = OperationStore::open(&admission.journal, &admission.bundle.binding)?;
+        Ok((admission.bundle, store))
+    }
+
+    pub fn bundle_admission(&self, id: &str) -> io::Result<Option<BundleAdmission>> {
+        self.bundle_admission_with(id, |_| {})
+    }
+
+    #[cfg(test)]
+    pub(super) fn bundle_admission_counted(
+        &self,
+        id: &str,
+        counts: &AdmissionReadCounts,
+    ) -> io::Result<Option<BundleAdmission>> {
+        self.bundle_admission_with(id, |read| counts.record(read))
+    }
+
+    fn bundle_admission_with(
+        &self,
+        id: &str,
+        mut observe: impl FnMut(AdmissionRead),
+    ) -> io::Result<Option<BundleAdmission>> {
+        let Some(admission) = self.reopen_admission_with(id, &mut observe)? else {
+            return Ok(None);
+        };
+        observe(AdmissionRead::Snapshot);
+        let snapshot = match read_snapshot(&admission.journal, &admission.bundle.binding) {
+            PrivateSnapshot::Available(snapshot) => *snapshot,
+            PrivateSnapshot::Unavailable(_) => return Err(invalid()),
+        };
+        let (mut progress, projection) = admit_snapshot(snapshot).map_err(|_| invalid())?;
+        match read(&admission.path.join("recovery-command"), 32) {
+            Ok(bytes) if bytes == id.as_bytes() => {
+                progress.restore_available = false;
+                progress.recovery_phrases = None;
+                if !matches!(
+                    progress.outcome,
+                    knx_app::property_validation::LocalOutcome::Restored
+                        | knx_app::property_validation::LocalOutcome::RestoreFailed
+                ) {
+                    progress.outcome = knx_app::property_validation::LocalOutcome::Interrupted;
+                }
+            }
+            Err(error) if error.kind() == io::ErrorKind::NotFound => {}
+            _ => return Err(invalid()),
+        }
+        Ok(Some(BundleAdmission {
+            metadata: admission.metadata,
+            progress,
+            projection,
+        }))
     }
     pub fn progress(&self, id: &str) -> io::Result<Option<OperationProgress>> {
         let path = self.path(id)?;

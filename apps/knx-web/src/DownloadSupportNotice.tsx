@@ -3,6 +3,8 @@ import { useRef, useState } from "react";
 import { readinessReason } from "./downloadReadiness";
 import type { SupportGuidance } from "./downloadSupportGuidance";
 import { useTranslate } from "./i18n";
+import type { ReportProblemRequest } from "./reportProblem";
+import { ReportProblemButton } from "./ReportProblemEntry";
 import { useUiLanguage } from "./uiLanguage";
 import "./DownloadSupportNotice.css";
 
@@ -10,12 +12,15 @@ import "./DownloadSupportNotice.css";
 export function supportTargets(language: string) {
   return {
     instructions: `https://github.com/KNXBench-Labs/KNXBench/blob/main/docs/contribution-intake/${language === "de" ? "DEUTSCH" : "README"}.md`,
-    issue: "https://github.com/KNXBench-Labs/KNXBench/issues/new?template=analysis.yml",
-    mail: "mailto:issue@knxbench.com?subject=KNXBench%20device%20programming%20support%20gap",
   };
 }
 
-export default function DownloadSupportNotice({ guidance, failedRequest = false }: { guidance: SupportGuidance; failedRequest?: boolean }) {
+/** `report`: how the Report problem shortcut opens the wizard (DIAG-03, replaces mail and issue links). */
+export default function DownloadSupportNotice({ guidance, failedRequest = false, report }: {
+  guidance: SupportGuidance;
+  failedRequest?: boolean;
+  report: ReportProblemRequest;
+}) {
   const t = useTranslate();
   const [language] = useUiLanguage();
   const targets = supportTargets(language);
@@ -53,8 +58,7 @@ export default function DownloadSupportNotice({ guidance, failedRequest = false 
     <p>{t("deviceDownload.help.noBypass")}</p>
     <div className="download-support-actions">
       <a data-support-instructions href={targets.instructions} target="_blank" rel="noopener noreferrer">{t("deviceDownload.help.instructions")}</a>
-      <a data-support-issue href={targets.issue} target="_blank" rel="noopener noreferrer">{t("deviceDownload.help.issue")}</a>
-      <a data-support-mail href={targets.mail}>{t("deviceDownload.help.mail")}</a>
+      <ReportProblemButton from="support-notice" request={report} />
     </div>
     <p className="download-support-note">{t("deviceDownload.help.privacy")}</p>
     <details>

@@ -66,8 +66,10 @@ async function fixture(page: Page, language: Language, theme: string, width: num
   const f: Fixture = { unexpected: [], revision: 1, writes: [], bindings: [], refuseWrites: false, identity, history: [], future: [], sourceFault: "none",
     values: { [`${PROGRAM}_P-1_R-1`]: "0010", [`${PROGRAM}_P-2_R-1`]: "40", [`${PROGRAM}_P-3_R-1`]: "#00FF00", [`${PROGRAM}_P-4_R-1`]: "203.0.113.19" } };
   await page.setViewportSize({ width, height: 900 });
+  // The same file runs against the preview (parameters lane) and the dev server (functional lane).
+  const appOrigin = new URL(String(test.info().project.use.baseURL)).origin;
   page.on("request", request => {
-    if (new URL(request.url()).origin !== "http://127.0.0.1:4833") f.unexpected.push(request.url());
+    if (new URL(request.url()).origin !== appOrigin) f.unexpected.push(request.url());
   });
   await page.route("https://api.github.com/**", (route) => { f.unexpected.push(route.request().url()); return route.abort(); });
   await page.route("**/api/**", (route) => {

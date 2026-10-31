@@ -13,7 +13,8 @@ use axum::body::to_bytes;
 use knx_app::operation_recording::{OperationKind, OperationStart, RecordedOutcome};
 use knx_app::system2_validation_preparation::{
     admit_current_project_hardware, execute_project_hardware, observe_project_hardware,
-    prepare_retained_project_hardware_source, HardwareConfirmations, RecoveryTrack,
+    prepare_retained_project_hardware_source, restore_project_hardware, HardwareConfirmations,
+    HardwareRecoveryConfirmations, RecoveryTrack,
 };
 use knx_core::commissioning::mutation::{required_confirmation_phrase, TargetKind, WriteScope};
 use knx_core::IndividualAddress;
@@ -162,6 +163,8 @@ struct Mismatch {
     operation_id: String,
     private_bytes: Vec<u8>,
     recordings: Vec<String>,
+    device: simulator::SimulatedDevice,
+    bundle: knx_app::property_validation_bundle::PreparedBundle,
 }
 
 /// One real failed download on disk under the server's System-2 root, plus (when
@@ -309,12 +312,15 @@ async fn real_mismatch(recordings_enabled: bool) -> Mismatch {
             recordings.push(id);
         }
     }
+    drop(transport);
     Mismatch {
         _dir: dir,
         state,
         operation_id: metadata.operation_id,
         private_bytes,
         recordings,
+        device,
+        bundle,
     }
 }
 
@@ -486,6 +492,8 @@ async fn a_real_mismatch_keeps_status_and_report_public_and_unchanged_by_export(
         operation_id,
         private_bytes,
         recordings,
+        device,
+        bundle,
     } = real_mismatch(false).await;
     drop(state);
     let state = Arc::new(crate::AppState {
@@ -498,6 +506,8 @@ async fn a_real_mismatch_keeps_status_and_report_public_and_unchanged_by_export(
         operation_id,
         private_bytes,
         recordings,
+        device,
+        bundle,
     };
     let report_uri = format!(
         "/api/device-system2/report?operationId={}",
@@ -549,4 +559,143 @@ async fn a_real_mismatch_keeps_status_and_report_public_and_unchanged_by_export(
         report_before,
         "export changed the report"
     );
+}
+
+async fn post_status(state: &crate::SharedState, uri: &str, body: Value) -> (u16, Vec<u8>) {
+    let response = post(state, uri, body).await;
+    let status = response.status().as_u16();
+    let bytes = to_bytes(response.into_body(), 8 * 1024 * 1024)
+        .await
+        .unwrap()
+        .to_vec();
+    (status, bytes)
+}
+
+/// Original14 S3 (review): a reviewed System-2 bundle is bound to the journal it read.
+/// The operator restores the failed run after the preview: the journal, report and
+/// projection now say more, so export and section text refuse the stale review.
+#[tokio::test]
+async fn a_system2_review_is_bound_to_the_journal_state_it_read() {
+    let fixture = real_mismatch(false).await;
+    let mut query = json!({
+        "problemType": "deviceProgramming",
+        "operation": {"relatedKey": "operationId", "relatedValue": fixture.operation_id},
+        "sections": ["operation", "legacyReports"],
+    });
+    let shown = preview(&fixture.state, &query).await;
+    let key = section(&shown, "operation", None)["key"].clone();
+    query["review"] = shown["review"].clone();
+    query["consent"] = json!(true);
+
+    let root = fixture.state.device_system2.root(&fixture.state).unwrap();
+    let (bundle, mut store) = root.reopen(&fixture.operation_id).unwrap();
+    assert_eq!(bundle, fixture.bundle);
+    let transport = Lying::new(&fixture.device, usize::MAX);
+    let recovery = bundle.restore_phrase();
+    let download = required_confirmation_phrase(fixture.device.address(), WriteScope::Download);
+    let risk = required_release_phrase(fixture.device.address());
+    restore_project_hardware(
+        &transport,
+        &bundle,
+        &mut store,
+        timing(),
+        &HardwareRecoveryConfirmations {
+            recovery: &recovery,
+            download: &download,
+            risk: &risk,
+        },
+        &AtomicBool::new(false),
+    )
+    .await
+    .expect("precondition: the explicit restore succeeds");
+    drop(store);
+
+    for uri in ["/api/diagnostics/bundle", "/api/diagnostics/bundle/section"] {
+        let mut query = query.clone();
+        query["key"] = key.clone();
+        let (status, body) = post_status(&fixture.state, uri, query).await;
+        assert_eq!(
+            status,
+            409,
+            "{uri}: {}",
+            String::from_utf8_lossy(&body[..body.len().min(200)])
+        );
+        assert!(String::from_utf8_lossy(&body).contains("bundlePreviewChanged"));
+        assert!(!body.starts_with(b"PK"));
+    }
+    // A fresh review shows the restore and exports again.
+    let mut fresh = query.clone();
+    fresh["review"] = preview(&fixture.state, &query).await["review"].clone();
+    let (status, body) = post_status(&fixture.state, "/api/diagnostics/bundle", fresh).await;
+    assert_eq!(status, 200);
+    let mut archive = zip::ZipArchive::new(std::io::Cursor::new(body)).unwrap();
+    let report: Value =
+        serde_json::from_slice(&entry(&mut archive, "reports/system2-report.json")).unwrap();
+    assert_eq!(report["recovery"]["outcome"], "restored", "{report}");
+}
+
+/// Original14 S3 (target): inside its own unchanged project a System-2 run refuses an
+/// explicitly chosen foreign device; after a restart ids are not comparable, and the
+/// chosen device is still never projected in place of the run's.
+#[tokio::test]
+async fn a_system2_run_refuses_a_foreign_device_and_never_projects_one() {
+    let fixture = real_mismatch(false).await;
+    let run_device = super::super::metadata().binding.device_id;
+    let query = |device: u32| {
+        json!({
+            "problemType": "deviceProgramming",
+            "deviceId": device,
+            "operation": {"relatedKey": "operationId", "relatedValue": fixture.operation_id},
+        })
+    };
+    let (status, body) = post_status(
+        &fixture.state,
+        "/api/diagnostics/bundle/preview",
+        query(run_device + 1),
+    )
+    .await;
+    assert_eq!(status, 409, "{}", String::from_utf8_lossy(&body));
+    assert!(String::from_utf8_lossy(&body).contains("bundleTargetMismatch"));
+    let (status, body) = post_status(
+        &fixture.state,
+        "/api/diagnostics/bundle/preview",
+        query(run_device),
+    )
+    .await;
+    assert_eq!(status, 200, "{}", String::from_utf8_lossy(&body));
+
+    let restarted = Arc::new(crate::AppState {
+        recordings: Arc::new(crate::operation_recordings::store(
+            fixture._dir.path(),
+            true,
+        )),
+        ..crate::AppState::new(fixture._dir.path().into())
+    });
+    let (status, body) = post_status(
+        &restarted,
+        "/api/diagnostics/bundle/preview",
+        query(run_device + 1),
+    )
+    .await;
+    assert_eq!(status, 200, "{}", String::from_utf8_lossy(&body));
+    let shown: Value = serde_json::from_slice(&body).unwrap();
+    eprintln!(
+        "[s3] restarted preview deviceId={} device offer={}",
+        shown["deviceId"],
+        shown["offers"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|o| o["kind"] == "device")
+            .cloned()
+            .unwrap_or_default()
+    );
+    assert_ne!(shown["deviceId"], json!(run_device + 1));
+    let device = shown["offers"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|offer| offer["kind"] == "device")
+        .unwrap();
+    assert!(!device["unavailable"].is_null(), "{device}");
 }

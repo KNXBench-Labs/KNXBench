@@ -56,28 +56,7 @@ fn old_device_with_config(
     let mut source = project_candidate(conn, project, profile).bundle;
     source.binding.serial = [0, 1, 2, 3, 4, 5];
     let device = synthetic_old_device(&source, config);
-    device.preset_property(
-        0,
-        knx_core::commissioning::properties::PID_MANUFACTURER_ID,
-        &[0, 1],
-    );
-    device.preset_property(0, PID_HARDWARE_TYPE, &[0, 1, 0, 0, 0, 91]);
-    device.preset_property(3, PID_PROGRAM_VERSION, &[0, 1, 146, 5, 4]);
-    for (object, mut state) in [
-        SimulatedSystem2Object::AddressTable,
-        SimulatedSystem2Object::AssociationTable,
-        SimulatedSystem2Object::Application,
-    ]
-    .into_iter()
-    .zip(device.system2_snapshot().objects)
-    {
-        if let Some(task) = state.task_segment.as_mut() {
-            task.manufacturer = 1;
-            task.application = 0x9205;
-            task.version = 4;
-        }
-        device.preset_system2_object(object, state);
-    }
+    super::old_device::configure_old_device(&device);
     device
 }
 

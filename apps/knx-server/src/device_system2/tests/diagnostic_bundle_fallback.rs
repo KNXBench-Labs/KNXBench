@@ -11,6 +11,8 @@ use tower::ServiceExt;
 
 #[path = "../../../../../crates/knx-app/tests/it/system2_validation_preparation/fixture.rs"]
 pub(crate) mod fixture;
+#[path = "diagnostic_bundle_mismatch.rs"]
+mod mismatch;
 
 #[tokio::test]
 async fn a_terminal_retained_system2_journal_is_reopened_and_exported_without_a_recording() {

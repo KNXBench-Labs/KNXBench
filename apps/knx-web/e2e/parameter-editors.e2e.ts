@@ -2,6 +2,8 @@
 import { openExplorerBranches, openParameterSections } from "./disclosure-fixture";
 import { expect, test, type Page } from "@playwright/test";
 import { join } from "node:path";
+import type { ParameterField, ParameterPanel } from "../src/api";
+import { parameterEditorCopy } from "../src/features/parameter-editors/copy";
 import type { ProjectTree } from "../src/bindings/ProjectTree";
 import { messages as en } from "../src/messages/en";
 import { messages as de } from "../src/messages/de";
@@ -24,11 +26,14 @@ interface Fixture {
   bindings: { serverIncarnation?: string; projectIncarnation?: number; snapshotRevision?: number; expectedValue?: string | null }[];
   refuseWrites: boolean;
   identity: boolean;
+  history: Record<string, string>[];
+  future: Record<string, string>[];
+  sourceFault: "none" | "sha" | "ref" | "program" | "snapshot" | "missing";
 }
 
 function projectTree(f: Fixture): ProjectTree {
   return {
-    schema_version: 13, errors: 0, warnings: 0, can_undo: f.writes.length > 0, can_redo: false, is_modified: f.writes.length > 0,
+    schema_version: 13, errors: 0, warnings: 0, can_undo: f.history.length > 0, can_redo: f.future.length > 0, is_modified: f.writes.length > 0,
     ...(f.identity ? { server_incarnation: "parameters-fixture", project_incarnation: 3, snapshot_revision: f.revision } : {}),
     group_address_style: "ThreeLevel",
     installations: [{ id: 0, name: "Fictional flat",
@@ -37,28 +42,35 @@ function projectTree(f: Fixture): ProjectTree {
   };
 }
 
-function field(etsId: string, text: string, kind: string, f: Fixture, min: string | null, max: string | null) {
+function field(etsId: string, text: string, kind: string, f: Fixture, min: string | null, max: string | null): ParameterField {
   return { etsId, name: text, nameLanguage: null, text, textLanguage: null, kind, value: f.values[etsId], valueSource: "Stored",
     editable: true, min, max, enumOptions: [], displayOrder: null, access: "ReadWrite", writeEtsId: etsId };
 }
-function panelOf(f: Fixture, withTree: boolean) {
+function panelOf(f: Fixture, withTree: boolean): ParameterPanel {
   return { programId: PROGRAM, sourceLanguage: null, stale: [], diagnostics: [], tree: withTree ? projectTree(f) : null,
     sections: [{ scope: null, fields: [
       field(`${PROGRAM}_P-1_R-1`, "Switch-off delay", "Time", f, "0", "3600"),
       field(`${PROGRAM}_P-2_R-1`, "Basic brightness", "Number", f, "0", "100"),
       field(`${PROGRAM}_P-3_R-1`, "Status LED colour", "Color", f, null, null),
+      field(`${PROGRAM}_P-4_R-1`, "Endpoint", "IPAddress", f, null, null),
     ] }] };
 }
 const SOURCES: Record<string, { child: string; type: string; attributes: Record<string, string> }> = {
   [`${PROGRAM}_P-1_R-1`]: { child: "TypeTime", type: "PT-Delay", attributes: { SizeInBit: "16", minInclusive: "0", maxInclusive: "3600", Unit: "Seconds" } },
   [`${PROGRAM}_P-2_R-1`]: { child: "TypeNumber", type: "PT-Brightness", attributes: { SizeInBit: "8", Type: "unsignedInt", minInclusive: "0", maxInclusive: "100", UIHint: "Slider" } },
   [`${PROGRAM}_P-3_R-1`]: { child: "TypeColor", type: "PT-Colour", attributes: {} },
+  [`${PROGRAM}_P-4_R-1`]: { child: "TypeIPAddress", type: "PT-Address", attributes: { AddressType: "HostAddress" } },
 };
 
 async function fixture(page: Page, language: Language, theme: string, width: number, identity = true): Promise<Fixture> {
-  const f: Fixture = { unexpected: [], revision: 1, writes: [], bindings: [], refuseWrites: false, identity,
-    values: { [`${PROGRAM}_P-1_R-1`]: "0010", [`${PROGRAM}_P-2_R-1`]: "40", [`${PROGRAM}_P-3_R-1`]: "#00FF00" } };
+  const f: Fixture = { unexpected: [], revision: 1, writes: [], bindings: [], refuseWrites: false, identity, history: [], future: [], sourceFault: "none",
+    values: { [`${PROGRAM}_P-1_R-1`]: "0010", [`${PROGRAM}_P-2_R-1`]: "40", [`${PROGRAM}_P-3_R-1`]: "#00FF00", [`${PROGRAM}_P-4_R-1`]: "203.0.113.19" } };
   await page.setViewportSize({ width, height: 900 });
+  // The same file runs against the preview (parameters lane) and the dev server (functional lane).
+  const appOrigin = new URL(String(test.info().project.use.baseURL)).origin;
+  page.on("request", request => {
+    if (new URL(request.url()).origin !== appOrigin) f.unexpected.push(request.url());
+  });
   await page.route("https://api.github.com/**", (route) => { f.unexpected.push(route.request().url()); return route.abort(); });
   await page.route("**/api/**", (route) => {
     const url = new URL(route.request().url());
@@ -75,6 +87,14 @@ async function fixture(page: Page, language: Language, theme: string, width: num
     if (path === "/api/settings" && method === "PUT") return ok({ conditionalPatchVersion: 1, schemaVersion: 1, status: "ok", settings: route.request().postDataJSON().settings });
     if (path === "/api/version") return ok({ version: "0.1.0-alpha.9+parameters-fixture" });
     if (path === "/api/project" && method === "GET") return ok(projectTree(f));
+    if ((path === "/api/undo" || path === "/api/redo") && method === "POST") {
+      const from = path === "/api/undo" ? f.history : f.future;
+      const to = path === "/api/undo" ? f.future : f.history;
+      const values = from.pop();
+      if (!values) return refuse(400, "emptyHistory", "No fixture history");
+      to.push({ ...f.values }); f.values = values; f.revision += 1;
+      return ok(projectTree(f));
+    }
     if (path === "/api/project/load-progress") return ok(null);
     if (path === "/api/project/status-metrics" && method === "GET") return ok(statusMetricsFixtureBody(projectTree(f)));
     if (path === "/api/log") return ok([]);
@@ -95,16 +115,18 @@ async function fixture(page: Page, language: Language, theme: string, width: num
         return refuse(409, "parameterWriteConflict", "parameter value or project changed since it was shown");
       }
       if (f.refuseWrites) return refuse(400, "invalidParameterValue", "Value 3601 is outside the parameter's range 0..3600");
+      f.history.push({ ...f.values }); f.future = [];
       f.writes.push({ etsId, raw }); f.values[etsId] = raw; f.revision += 1;
       return ok(panelOf(f, true));
     }
     if (path === "/api/device/41/parameter-editor-source" && method === "GET") {
       const etsId = url.searchParams.get("etsId") ?? "";
       const source = SOURCES[etsId];
-      const head = { device: 41, parameterRefId: etsId, serverIncarnation: "parameters-fixture", projectIncarnation: 3, snapshotRevision: f.revision };
+      const head = { device: 41, parameterRefId: f.sourceFault === "ref" ? "foreign-ref" : etsId, serverIncarnation: "parameters-fixture", projectIncarnation: 3, snapshotRevision: f.sourceFault === "snapshot" ? f.revision + 1 : f.revision };
+      if (f.sourceFault === "missing") return ok({ ...head, evidence: { status: "unavailable", reason: "missingSource" } });
       if (!source) return ok({ ...head, evidence: { status: "unavailable", reason: "missingReference" } });
       const typeId = `${PROGRAM}_${source.type}`;
-      return ok({ ...head, evidence: { status: "declared", source: { sourceSha256: SHA, programId: PROGRAM, parameterTypeId: typeId, schema: 21,
+      return ok({ ...head, evidence: { status: "declared", source: { sourceSha256: f.sourceFault === "sha" ? "g".repeat(64) : SHA, programId: f.sourceFault === "program" ? "foreign-program" : PROGRAM, parameterTypeId: typeId, schema: 21,
         child: source.child, attributes: source.attributes, parentAttributes: { Id: typeId, Name: source.type } } } });
     }
     f.unexpected.push(`${method} ${path}`);
@@ -220,6 +242,163 @@ test("en 1440: without a complete project identity no checked editor and no writ
   expect(f.bindings).toEqual([]);
   expect(f.unexpected).toEqual([]);
 });
+
+test("OKX06 original shell offers the checked IP literal editor", async ({ page }) => {
+  const f = await fixture(page, "en", "graphite", 1440);
+  const panel = await openParameters(page, en);
+  await expect(opener(panel, `${PROGRAM}_P-4_R-1`)).toBeVisible();
+  expect(f.writes).toEqual([]);
+  expect(f.unexpected).toEqual([]);
+});
+
+for (const [language, theme, width] of [["en", "graphite", 1440], ["de", "porcelain", 400]] as const) {
+  test(`OKX06 ${language} ${width}: keyboard literal Apply and authoritative Undo/Redo`, async ({ page }) => {
+    const m: Catalogue = language === "de" ? de : en;
+    const copy = parameterEditorCopy[language];
+    const errors: string[] = []; page.on("pageerror", error => errors.push(error.message));
+    const f = await fixture(page, language, theme, width);
+    const panel = await openParameters(page, m);
+    const id = `${PROGRAM}_P-4_R-1`;
+    await opener(panel, id).focus(); await page.keyboard.press("Enter");
+    const editor = panel.locator(`[data-ets-id="${id}"]`);
+    const input = editor.getByRole("textbox", { name: "Endpoint", exact: true });
+    await expect(input).toHaveAttribute("type", "text");
+    await expect(input).toHaveAttribute("inputmode", "text");
+    await expect(input).toHaveValue("203.0.113.19");
+    await expect(editor).toContainText(copy.ipFormat);
+    const apply = editor.getByRole("button", { name: copy.apply, exact: true });
+    await expect(apply).toBeDisabled(); expect(f.bindings).toEqual([]);
+    await input.focus(); await input.press("ControlOrMeta+A");
+    const raw = "2001:0DB8:0012:0345:0067:0089:00Ab:CDEF";
+    await page.keyboard.type(raw); await input.press("Enter"); await input.press("Tab");
+    expect(f.bindings).toEqual([]);
+    await expect(apply).toBeEnabled(); await apply.focus(); await apply.press("Enter");
+    await expect(input).toHaveValue(raw); await expect(editor).toContainText(copy.settled);
+    expect(f.writes).toEqual([{ etsId: id, raw }]);
+    expect(f.bindings).toEqual([{ serverIncarnation: "parameters-fixture", projectIncarnation: 3, snapshotRevision: 1, expectedValue: "203.0.113.19" }]);
+    await editor.scrollIntoViewIfNeeded(); await noHorizontalOverflow(page);
+    if (CAPTURE) await editor.screenshot({ path: join(CAPTURE, `ip-${language}-${width}-applied.png`) });
+    const reset = editor.getByRole("button", { name: copy.reset, exact: true });
+    await reset.focus(); await page.keyboard.press("ControlOrMeta+z");
+    await expect(input).toHaveValue("203.0.113.19");
+    await reset.focus(); await page.keyboard.press("ControlOrMeta+Shift+z");
+    await expect(input).toHaveValue(raw); expect(f.writes).toHaveLength(1);
+    await input.focus(); await input.press("ControlOrMeta+A"); await page.keyboard.type("2001:db8::1"); await input.press("Tab");
+    await expect(editor.getByRole("alert")).toHaveText(copy["ip-address"]); await expect(apply).toBeDisabled();
+    expect(f.bindings).toHaveLength(1);
+    if (CAPTURE) await editor.screenshot({ path: join(CAPTURE, `ip-${language}-${width}-invalid.png`) });
+    await reset.focus(); await reset.press("Enter"); await expect(input).toHaveValue(raw);
+    expect(f.bindings).toHaveLength(1); expect(f.unexpected).toEqual([]); expect(errors).toEqual([]);
+  });
+}
+
+test("OKX06 conflict keeps IP draft and needs explicit reset and fresh Apply", async ({ page }) => {
+  const f = await fixture(page, "en", "graphite", 1440);
+  const panel = await openParameters(page, en); const id = `${PROGRAM}_P-4_R-1`;
+  await opener(panel, id).click();
+  const editor = panel.locator(`[data-ets-id="${id}"]`);
+  const input = editor.getByRole("textbox", { name: "Endpoint", exact: true });
+  await input.fill("198.51.100.254");
+  f.values[id] = "0.0.0.0"; f.revision += 1;
+  await editor.getByRole("button", { name: "Apply value", exact: true }).click();
+  await expect(editor).toContainText(parameterEditorCopy.en.stale);
+  await expect(input).toHaveValue("198.51.100.254");
+  expect(f.writes).toEqual([]); expect(f.bindings).toHaveLength(1);
+  await input.focus(); await input.press("Tab"); expect(f.bindings).toHaveLength(1);
+  await editor.getByRole("button", { name: parameterEditorCopy.en.reset, exact: true }).click();
+  await expect(input).toHaveValue("0.0.0.0");
+  await input.fill("198.51.100.254"); await editor.getByRole("button", { name: "Apply value", exact: true }).click();
+  await expect(editor).toContainText(parameterEditorCopy.en.settled);
+  expect(f.writes).toEqual([{ etsId: id, raw: "198.51.100.254" }]);
+  expect(f.bindings).toEqual([
+    { serverIncarnation: "parameters-fixture", projectIncarnation: 3, snapshotRevision: 1, expectedValue: "203.0.113.19" },
+    { serverIncarnation: "parameters-fixture", projectIncarnation: 3, snapshotRevision: 2, expectedValue: "0.0.0.0" },
+  ]);
+  expect(f.unexpected).toEqual([]);
+});
+
+test("OKX06 pasted final newline remains an invalid raw draft, never a normalized write", async ({ page }) => {
+  const f = await fixture(page, "en", "graphite", 1440); const panel = await openParameters(page, en);
+  await opener(panel, `${PROGRAM}_P-4_R-1`).click();
+  const editor = panel.locator(`[data-ets-id="${PROGRAM}_P-4_R-1"]`);
+  const input = editor.getByRole("textbox", { name: "Endpoint", exact: true });
+  await input.focus(); await input.press("ControlOrMeta+A");
+  await input.evaluate(node => {
+    const clipboardData = new DataTransfer(); clipboardData.setData("text/plain", "198.51.100.254\n");
+    node.dispatchEvent(new ClipboardEvent("paste", { bubbles: true, cancelable: true, clipboardData }));
+  });
+  await expect(editor.getByRole("alert")).toHaveText(parameterEditorCopy.en["ip-address"]);
+  await expect(editor.getByLabel(parameterEditorCopy.en.draft)).toHaveText("198.51.100.254\n", { useInnerText: false });
+  await expect(editor.getByRole("button", { name: "Apply value", exact: true })).toBeDisabled();
+  expect(f.bindings).toEqual([]); expect(f.values[`${PROGRAM}_P-4_R-1`]).toBe("203.0.113.19"); expect(f.unexpected).toEqual([]);
+  await input.focus(); await input.press("ControlOrMeta+A");
+  await input.evaluate(node => {
+    const clipboardData = new DataTransfer(); clipboardData.setData("text/plain", "203.0.113.20");
+    node.dispatchEvent(new ClipboardEvent("paste", { bubbles: true, cancelable: true, clipboardData }));
+  });
+  await editor.getByRole("button", { name: "Apply value", exact: true }).click();
+  await expect(editor).toContainText(parameterEditorCopy.en.settled);
+  expect(f.writes).toEqual([{ etsId: `${PROGRAM}_P-4_R-1`, raw: "203.0.113.20" }]);
+  expect(f.bindings).toEqual([{ serverIncarnation: "parameters-fixture", projectIncarnation: 3, snapshotRevision: 1, expectedValue: "203.0.113.19" }]);
+  expect(f.unexpected).toEqual([]);
+});
+
+for (const mode of [
+  { language: "en", width: 1440, theme: "graphite", newline: "\n" },
+  { language: "de", width: 400, theme: "porcelain", newline: "\r\n" },
+] as const) {
+  test(`OKX06 R1 ${mode.language} ${mode.width}: hidden raw line breaks never splice a different address`, async ({ page }) => {
+    const m: Catalogue = mode.language === "de" ? de : en;
+    const copy = parameterEditorCopy[mode.language];
+    const f = await fixture(page, mode.language, mode.theme, mode.width);
+    const id = `${PROGRAM}_P-4_R-1`;
+    const original = `203.0.113.${mode.newline}19`;
+    f.values[id] = original;
+    const panel = await openParameters(page, m); await opener(panel, id).click();
+    const editor = panel.locator(`[data-ets-id="${id}"]`);
+    const input = editor.getByRole("textbox", { name: "Endpoint", exact: true });
+    await expect(input).toHaveValue("203.0.113.19");
+    await expect(editor.getByLabel(copy.original)).toHaveJSProperty("textContent", original);
+    await input.evaluate(node => {
+      if (!(node instanceof HTMLInputElement)) throw new Error("Expected the actual address textbox");
+      node.focus(); node.setSelectionRange(node.value.lastIndexOf(".") + 1, node.value.length);
+      const clipboardData = new DataTransfer(); clipboardData.setData("text/plain", "20");
+      node.dispatchEvent(new ClipboardEvent("paste", { bubbles: true, cancelable: true, clipboardData }));
+    });
+    await expect(editor.getByRole("alert")).toHaveText(copy.ipPasteComplete);
+    await expect(input).toHaveValue("203.0.113.19");
+    await expect(editor.getByRole("button", { name: copy.apply, exact: true })).toBeDisabled();
+    expect(f.writes).toEqual([]); expect(f.bindings).toEqual([]); expect(f.values[id]).toBe(original);
+    await noHorizontalOverflow(page); await capture(page, `ip-r1-${mode.language}-${mode.width}-partial`);
+    await input.focus(); await input.press("ControlOrMeta+A");
+    await input.evaluate(node => {
+      const clipboardData = new DataTransfer(); clipboardData.setData("text/plain", "203.0.113.20");
+      node.dispatchEvent(new ClipboardEvent("paste", { bubbles: true, cancelable: true, clipboardData }));
+    });
+    await expect(input).toHaveValue("203.0.113.20");
+    await editor.getByRole("button", { name: copy.apply, exact: true }).click();
+    await expect(editor).toContainText(copy.settled);
+    expect(f.writes).toEqual([{ etsId: id, raw: "203.0.113.20" }]);
+    expect(f.bindings).toEqual([{ serverIncarnation: "parameters-fixture", projectIncarnation: 3, snapshotRevision: 1, expectedValue: original }]);
+    expect(f.unexpected).toEqual([]);
+  });
+}
+
+for (const sourceFault of ["sha", "ref", "program", "snapshot", "missing"] as const) {
+  test(`OKX06 ${sourceFault} source never admits a checked IP input`, async ({ page }) => {
+    const f = await fixture(page, "en", "graphite", 1440); f.sourceFault = sourceFault;
+    const panel = await openParameters(page, en); const id = `${PROGRAM}_P-4_R-1`;
+    await opener(panel, id).click();
+    const editor = panel.locator(`[data-ets-id="${id}"]`);
+    await expect(editor.getByRole("button", { name: en["parameters.checked.close"], exact: true })).toBeVisible();
+    await expect(editor).toContainText(sourceFault === "sha" ? parameterEditorCopy.en.fallback["source-conflict"] : parameterEditorCopy.en.fallback["missing-evidence"]);
+    await expect(editor.getByRole("textbox")).toHaveCount(0);
+    expect(f.bindings).toEqual([]);
+    await editor.getByRole("button", { name: en["parameters.checked.close"], exact: true }).click();
+    await expect(panel.locator(`[data-ets-id="${id}"] input`)).toHaveValue("203.0.113.19");
+    expect(f.unexpected).toEqual([]);
+  });
+}
 
 // Goal B1: another client changed the value after this panel was shown.
 for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {

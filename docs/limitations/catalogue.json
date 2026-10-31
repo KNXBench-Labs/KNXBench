@@ -720,7 +720,7 @@
       "number": null,
       "title": "Checked parameter editors",
       "topic": "Manufacturer data and parameters",
-      "summary": "Checked controls are opt-in and bounded; modules fall back, Colour/Picture remain unconverted originals. Writes are revision-bound end to end since Goal B1a.",
+      "summary": "Checked controls are opt-in and bounded; modules fall back, Colour/Picture remain unconverted originals. The post-Alpha-18 IPAddress editor admits only an exact HostAddress literal source form; no address lookup, usability policy or memory codec. Writes are revision-bound end to end since Goal B1a.",
       "file": "checked-parameter-editors.md",
       "ledger_ids": [
         "PDB-04"

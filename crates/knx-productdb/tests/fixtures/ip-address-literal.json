@@ -1,0 +1,43 @@
+{
+  "purpose": "Independently expected TypeIPAddress textual-editor vectors; no octet/image expectations",
+  "source": "Project Schema23 v01.00.00, section 1.1.3.19 and 1.1.3.21, printed page 31; current server lexical policy is unchanged",
+  "cases": [
+    {"raw":"0.0.0.0", "accepted":true, "family":"ipv4"},
+    {"raw":"255.255.255.255", "accepted":true, "family":"ipv4"},
+    {"raw":"203.0.113.19", "accepted":true, "family":"ipv4"},
+    {"raw":"198.51.100.254", "accepted":true, "family":"ipv4"},
+    {"raw":"0.9.10.255", "accepted":true, "family":"ipv4"},
+    {"raw":"2001:0db8:0012:0345:0067:0089:00ab:cdef", "accepted":true, "family":"ipv6"},
+    {"raw":"2001:0DB8:0012:0345:0067:0089:00AB:CDEF", "accepted":true, "family":"ipv6"},
+    {"raw":"0000:0000:0000:0000:0000:0000:0000:0000", "accepted":true, "family":"ipv6"},
+    {"raw":"ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff", "accepted":true, "family":"ipv6"},
+    {"raw":"", "accepted":false},
+    {"raw":"203.0.113.019", "accepted":false},
+    {"raw":"256.0.113.19", "accepted":false},
+    {"raw":"203.0.113", "accepted":false},
+    {"raw":"203.0.113.19.7", "accepted":false},
+    {"raw":"+203.0.113.19", "accepted":false},
+    {"raw":"203.0.-1.19", "accepted":false},
+    {"raw":"203.0.113.1e1", "accepted":false},
+    {"raw":" 203.0.113.19", "accepted":false},
+    {"raw":"203.0.113.19\n", "accepted":false},
+    {"raw":"２０３.0.113.19", "accepted":false},
+    {"raw":"https://203.0.113.19", "accepted":false},
+    {"raw":"example.invalid", "accepted":false},
+    {"raw":"2001:db8::19", "accepted":false},
+    {"raw":"2001:0db8:0012:0345:0067:0089:00ab", "accepted":false},
+    {"raw":"2001:0db8:0012:0345:0067:0089:00ab:cdef:0001", "accepted":false},
+    {"raw":"2001:0db8:0012:0345:0067:0089:00ab:cdeg", "accepted":false},
+    {"raw":"2001:0db8:0012:0345:0067:0089:0ab:cdef", "accepted":false},
+    {"raw":"2001:0db8:0012:0345:0067:0089:000ab:cdef", "accepted":false},
+    {"raw":"2001:0db8:0012:0345:0067:0089:00ab:cdef%eth0", "accepted":false},
+    {"raw":"[2001:0db8:0012:0345:0067:0089:00ab:cdef]", "accepted":false},
+    {"raw":"2001:0db8:0012:0345:0067:0089:00ab:cdef/64", "accepted":false}
+  ],
+  "preservation": [
+    {"before":"2001:0DB8:0012:0345:0067:0089:00AB:CDEF", "action":"open-render-noop", "after":"2001:0DB8:0012:0345:0067:0089:00AB:CDEF", "writes":0},
+    {"before":"203.0.113.19", "draft":"2001:0DB8:0012:0345:0067:0089:00AB:CDEF", "action":"explicit-apply", "sentRaw":"2001:0DB8:0012:0345:0067:0089:00AB:CDEF", "successfulWrites":1, "undoSteps":1},
+    {"before":null, "action":"open-render", "after":null, "writes":0},
+    {"before":"", "action":"open-render", "after":"", "writes":0}
+  ]
+}

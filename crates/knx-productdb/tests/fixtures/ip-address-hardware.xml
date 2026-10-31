@@ -1,0 +1,3 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Independently authored synthetic package join; no original manufacturer payload. -->
+<KNX xmlns="http://knx.org/xml/project/20"><ManufacturerData><Manufacturer RefId="M-00FA"><Hardware><Hardware Id="H-Literal" Name="Fictional endpoint" SerialNumber="Synthetic" VersionNumber="1"><Products><Product Id="M-00FA_P-Literal"/></Products><Hardware2Programs><Hardware2Program Id="HP-Literal" MediumTypes="MT-0"><ApplicationProgramRef RefId="A-FictionalIP"/></Hardware2Program></Hardware2Programs></Hardware></Hardware></Manufacturer></ManufacturerData></KNX>

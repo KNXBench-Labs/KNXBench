@@ -233,12 +233,8 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
       expect.soft(text!.width, "narrow description retains a readable column").toBeGreaterThanOrEqual(180);
       expect.soft(meta!.y, "date/tier move below description on narrow screens").toBeGreaterThanOrEqual(text!.y + text!.height - 1);
     }
-    const closeButton = dialog.getByRole("button", { name: m["achievements.close"], exact: true });
-    const closeHit = await closeButton.evaluate(button => {
-      const box = button.getBoundingClientRect();
-      return button.contains(document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2));
-    });
-    expect.soft(closeHit, "achievement popup does not cover overview Close").toBe(true);
+    // elementFromPoint skips the inert toast stack even where it is painted, so a hit
+    // test cannot see the popup; the computed layers below are the real check.
     const layers = await dialog.evaluate(panel => ({
       overview: Number(getComputedStyle(panel.parentElement!).zIndex),
       popup: Number(getComputedStyle(document.querySelector(".toast-stack")!).zIndex),

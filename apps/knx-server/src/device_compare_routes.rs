@@ -35,6 +35,9 @@ use knx_net::SessionError;
 
 use crate::device_download::TunnelTransport;
 use crate::device_download_routes::{parse_target, PartialDto};
+use knx_app::operation_recording::{OperationKind, OperationStart};
+use knx_net::TunnelAckWait;
+
 use crate::errors::ApiError;
 use crate::SharedState;
 
@@ -240,9 +243,27 @@ async fn compare(
     let activity = state
         .one_shot_activity
         .start("deviceCompare", Some(target.to_string()));
-    let tunnel = match state.connector.connect_tunnel(gateway).await {
+    let recorder = crate::operation_recordings::start(
+        &state,
+        OperationStart::new(OperationKind::Compare)
+            .target(serde_json::json!({ "individualAddress": target.to_string() }))
+            .gateway(gateway)
+            .settings(crate::operation_recordings::tunnel_settings(
+                TunnelAckWait::Standard,
+                &state.device_download_timing,
+            )),
+    );
+    let tunnel = match crate::operation_recordings::connect(
+        &state,
+        gateway,
+        TunnelAckWait::Standard,
+        &recorder,
+    )
+    .await
+    {
         Ok(tunnel) => tunnel,
         Err(e) => {
+            crate::operation_recordings::finish_error(&recorder, &e, serde_json::Value::Null);
             activity.finish("failed");
             return Err(crate::tunnel_holder::gateway_connect_failed(gateway, &e));
         }
@@ -254,6 +275,13 @@ async fn compare(
         )
         .await;
     let _ = tunnel.disconnect().await;
+    if let Err(error) = &compared {
+        crate::operation_recordings::finish_failed(
+            &recorder,
+            format!("{error:?}"),
+            serde_json::Value::Null,
+        );
+    }
     activity.finish(if compared.is_ok() {
         "finished"
     } else {
@@ -311,6 +339,14 @@ async fn compare(
         observation_token: None,
         observation_expires_in_seconds: None,
     };
+    // Every compared octet, device and project side, for the recording.
+    recorder.note(
+        "comparison",
+        serde_json::to_value(&response).unwrap_or_default(),
+    );
+    recorder.finish(knx_app::operation_recording::RecordedOutcome::succeeded(
+        serde_json::json!({ "same": response.same, "differingOctets": response.differing_octets }),
+    ));
     // Retain only genuine full reads, under current project ownership. A late
     // result cannot evict the new project's evidence or acquire a fresh token.
     if let read::Observation::Full(observation) = observed {

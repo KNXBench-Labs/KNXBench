@@ -7,7 +7,7 @@ mod storage;
 #[cfg(test)]
 mod test_observation;
 #[cfg(test)]
-mod tests;
+pub(crate) mod tests;
 mod worker;
 pub(crate) use routes::routes;
 pub(crate) use storage::ROOT_NAME;
@@ -16,8 +16,10 @@ use crate::{errors::ApiError, SharedState};
 use dto::{refuse, Binding, Metadata, Status};
 use knx_app::{
     property_validation::{
-        DownloadFacts, DownloadResult, LocalOutcome, OperationProgress, PointerObservationPhase,
-        PointerObservationRun, System2DrainOutcome, System2OperationControl, System2Settlement,
+        private_projection::AdmittedPrivateProjection, DownloadFacts, DownloadResult,
+        ExecutionBuild, LocalOutcome, OperationProgress, PointerObservationPhase,
+        PointerObservationRun, System2DrainOutcome, System2OperationControl, System2Report,
+        System2Settlement,
     },
     system2_validation_preparation::ProjectHardwareSource,
 };
@@ -216,12 +218,61 @@ struct Inner {
 pub struct System2Service {
     #[cfg(test)]
     observation: Option<Arc<test_observation::Observation>>,
+    #[cfg(test)]
+    admission_reads: Mutex<Option<Arc<storage::AdmissionReadCounts>>>,
     pub control: System2OperationControl,
     command: tokio::sync::Mutex<()>,
     inner: Mutex<Inner>,
     storage: Mutex<Option<Arc<storage::Storage>>>,
     storage_unavailable: bool,
 }
+
+pub(crate) struct DiagnosticBundleAdmission {
+    metadata: Metadata,
+    progress: OperationProgress,
+    projection: AdmittedPrivateProjection,
+}
+
+impl DiagnosticBundleAdmission {
+    pub(crate) fn project_context(&self) -> crate::diagnostic_bundle_context::ProjectContext {
+        crate::diagnostic_bundle_context::ProjectContext {
+            server_incarnation: self.metadata.binding.server_incarnation.clone(),
+            project_incarnation: self
+                .metadata
+                .binding
+                .project_incarnation
+                .parse()
+                .expect("validated project incarnation"),
+            revision: self
+                .metadata
+                .binding
+                .project_revision
+                .parse()
+                .expect("validated project revision"),
+        }
+    }
+
+    pub(crate) fn device_id(&self) -> u32 {
+        self.metadata.binding.device_id
+    }
+
+    pub(crate) fn address(&self) -> &str {
+        &self.metadata.address
+    }
+
+    pub(crate) fn projection_bytes(&self) -> &[u8] {
+        self.projection.bytes()
+    }
+
+    pub(crate) fn report(&self) -> Option<System2Report> {
+        System2Report::from_progress(
+            &self.progress,
+            ExecutionBuild::Unknown,
+            &crate::version_string(),
+        )
+    }
+}
+
 impl System2Service {
     /// Reattach the durable selected operation locally. Never opens a socket or
     /// resumes a download; an unfinished intact journal reopens as Interrupted.
@@ -246,12 +297,22 @@ impl System2Service {
         Self {
             #[cfg(test)]
             observation: None,
+            #[cfg(test)]
+            admission_reads: Mutex::new(None),
             control: System2OperationControl::new(),
             command: tokio::sync::Mutex::new(()),
             inner: Mutex::new(inner),
             storage: Mutex::new(storage),
             storage_unavailable,
         }
+    }
+
+    #[cfg(test)]
+    fn observe_bundle_admission(&self, counts: Arc<storage::AdmissionReadCounts>) {
+        *self
+            .admission_reads
+            .lock()
+            .expect("admission observer lock") = Some(counts);
     }
     fn root(&self, state: &crate::AppState) -> Result<Arc<storage::Storage>, ApiError> {
         if self.storage_unavailable {
@@ -268,6 +329,42 @@ impl System2Service {
         }
         root.clone()
             .ok_or_else(|| refuse("system2EvidenceUnavailable"))
+    }
+
+    pub(crate) async fn diagnostic_bundle_admission(
+        &self,
+        state: &crate::AppState,
+        id: String,
+    ) -> Result<Option<DiagnosticBundleAdmission>, ()> {
+        if !dto::valid_id(&id) {
+            return Ok(None);
+        }
+        let _command = self.command.try_lock().map_err(|_| ())?;
+        self.no_live_task().map_err(|_| ())?;
+        let root = self.root(state).map_err(|_| ())?;
+        #[cfg(test)]
+        let admission_reads = self.admission_reads.lock().map_err(|_| ())?.clone();
+        tokio::task::spawn_blocking(move || {
+            if !root.ids().map_err(|_| ())?.contains(&id) {
+                return Ok(None);
+            }
+            #[cfg(test)]
+            let admission = match admission_reads {
+                Some(counts) => root.bundle_admission_counted(&id, &counts),
+                None => root.bundle_admission(&id),
+            };
+            #[cfg(not(test))]
+            let admission = root.bundle_admission(&id);
+            Ok(admission
+                .map_err(|_| ())?
+                .map(|admission| DiagnosticBundleAdmission {
+                    metadata: admission.metadata,
+                    progress: admission.progress,
+                    projection: admission.projection,
+                }))
+        })
+        .await
+        .map_err(|_| ())?
     }
     fn idle(&self) -> Result<(), ApiError> {
         if !self.control.snapshot().accepting {

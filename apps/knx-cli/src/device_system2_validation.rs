@@ -2,6 +2,9 @@
 //!
 //! The real-write path (ADR-0152) reads the device serial, rebinds the bundle
 //! and requires the download plus release confirmations before any frame.
+#[path = "device_system2_diagnostic_finalize.rs"]
+mod diagnostic_finalize;
+
 use knx_app::{
     commissioning_activity::{OneShotLog, WriteOutcome},
     property_validation::{self as service, OperationStore},
@@ -338,13 +341,26 @@ fn execute(args: &[String]) -> Result<(), String> {
         signal.abort();
         result
     });
-    if let Some(path) = report {
+    let reported = report.map_or(Ok(()), |path| {
         store
             .write_shareable_report(&path)
-            .map_err(|e| e.to_string())?;
-    }
+            .map_err(|e| e.to_string())
+    });
     println!("SIMULATED outcome: {:?}; mutation possible: {}. Private recovery and local protocol retained. Review shareable report before sending; no upload occurred.", store.outcome(), store.mutation_possible());
-    result.map_err(|e| e.to_string())
+    let result = result.map_err(|e| e.to_string());
+    drop(store);
+    let captured = crate::diagnostic_bundle_cli::capture_system2(&operation, &bundle.binding);
+    if let Err(error) = result {
+        if let Err(report) = reported {
+            eprintln!("shareable report not written: {report}");
+        }
+        if let Err(capture) = captured {
+            eprintln!("diagnostic evidence not captured: {capture}");
+        }
+        return Err(error);
+    }
+    reported?;
+    captured
 }
 fn simulator(bundle: &PreparedBundle) -> Result<SimulatedDevice, String> {
     let plan = bundle.plan().map_err(|e| e.to_string())?;
@@ -469,14 +485,22 @@ fn run_hardware(
     let guard = log
         .start_write("system2Validation", Some(target.to_string()))
         .map_err(|e| e.to_string())?;
+    let device_succeeded = std::cell::Cell::new(None);
     // Durable checkpoints run between frames; keep the tunnel serviced.
     let runtime = crate::tunnel_runtime::tunnel_runtime().map_err(|e| e.to_string())?;
     let executed = runtime.block_on(async {
         let tunnel = tokio::time::timeout(
             Duration::from_secs(10),
-            KnxNetIpClient::new()
-                .with_tunnel_ack_wait(TunnelAckWait::Patient)
-                .connect_tunnel(gateway),
+            crate::diagnostic_bundle_cli::tapped(
+                KnxNetIpClient::new().with_tunnel_ack_wait(TunnelAckWait::Patient),
+                if recover {
+                    knx_app::operation_recording::OperationKind::System2Recovery
+                } else {
+                    knx_app::operation_recording::OperationKind::System2Download
+                },
+                gateway,
+            )
+            .connect_tunnel(gateway),
         )
         .await
         .map_err(|_| "gateway timeout".to_string())?
@@ -568,29 +592,50 @@ fn run_hardware(
         };
         signal.abort();
         let result = result.map_err(|e| e.to_string());
+        device_succeeded.set(Some(result.is_ok()));
         // A report failure is reported, but never replaces the device result.
         let reported = report.as_ref().map_or(Ok(()), |path| {
             store.write_shareable_report(path).map_err(|e| e.to_string())
         });
-        let _ = tokio::time::timeout(Duration::from_secs(3), tunnel.disconnect()).await;
         println!(
             "HARDWARE outcome: {:?}; mutation possible: {}. Private recovery and local protocol retained; no upload occurred.",
             store.outcome(),
             store.mutation_possible()
         );
-        if let (Err(_), Err(report)) = (&result, &reported) {
-            eprintln!("shareable report not written: {report}");
-        }
-        result.map(|()| reported)
+        let released = diagnostic_finalize::release(
+            || async {
+                let _ = tokio::time::timeout(Duration::from_secs(3), tunnel.disconnect()).await;
+            },
+            store,
+            result,
+            reported,
+            (operation.clone(), rebound.binding),
+            |_| {},
+        )
+        .await;
+        Ok(released)
     });
     // A refusal before the recorded send boundary witnessed no device write.
-    let outcome = match &executed {
-        Ok(_) => WriteOutcome::Verified,
-        Err(_) if guard.send_possible() => WriteOutcome::EffectUnverified,
-        Err(_) => WriteOutcome::NotSent,
+    let outcome = match device_succeeded.get() {
+        Some(true) => WriteOutcome::Verified,
+        Some(false) if guard.send_possible() => WriteOutcome::EffectUnverified,
+        Some(false) | None => WriteOutcome::NotSent,
     };
-    guard.finish(outcome);
-    executed.and_then(|reported| reported)
+    match executed {
+        Err(error) => {
+            guard.finish(outcome);
+            Err(error)
+        }
+        Ok(released) => diagnostic_finalize::finish(
+            guard,
+            outcome,
+            released,
+            |_| {},
+            |(operation, binding)| {
+                crate::diagnostic_bundle_cli::capture_system2(&operation, &binding)
+            },
+        ),
+    }
 }
 
 #[cfg(test)]

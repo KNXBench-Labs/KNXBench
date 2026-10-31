@@ -538,13 +538,30 @@ async fn download_inner(
         return Err(refuse("system2Cancelled"));
     }
     observe!(state, phase("connector"));
-    let tunnel = match state
-        .connector
-        .connect_tunnel_with_ack_wait(gateway, TunnelAckWait::Patient)
-        .await
+    let recorder = crate::operation_recordings::start(
+        state,
+        knx_app::operation_recording::OperationStart::new(
+            knx_app::operation_recording::OperationKind::System2Download,
+        )
+        .target(recorded_target(&preparation.metadata))
+        .gateway(gateway)
+        .related("operationId", &preparation.metadata.operation_id)
+        .settings(crate::operation_recordings::tunnel_settings(
+            TunnelAckWait::Patient,
+            &state.system2_timing,
+        )),
+    );
+    let tunnel = match crate::operation_recordings::connect(
+        state,
+        gateway,
+        TunnelAckWait::Patient,
+        &recorder,
+    )
+    .await
     {
         Ok(t) => t,
         Err(_error) => {
+            crate::operation_recordings::finish_error(&recorder, &_error, serde_json::Value::Null);
             observe!(state, session_failure("connector", &_error));
             finish_activity(activity, false, false);
             return Err(refuse("system2ConnectFailed"));
@@ -653,6 +670,9 @@ async fn download_inner(
         if let Err(error) = &result {
             observe!(state, failure("executor", "io", Some(error.kind())));
         }
+        if let Err(error) = &result {
+            recorder.note("executorError", executor_error(error));
+        }
         Ok::<_, ApiError>(result.is_ok())
     }
     .await;
@@ -670,7 +690,7 @@ async fn download_inner(
     if result.is_err() {
         observe!(state, failure("worker-result", "api-refused", None));
     }
-    let verified = result.unwrap_or(false);
+    let verified = *result.as_ref().unwrap_or(&false);
     let outcome = retained_store.as_ref().map(terminal).unwrap_or_else(|| {
         if cancel.load(Ordering::SeqCst) {
             LocalOutcome::Cancelled
@@ -682,6 +702,14 @@ async fn download_inner(
         .as_ref()
         .zip(retained_admission.as_ref())
         .map(|(store, admission)| (store.progress(), admission.bundle().clone()));
+    finish_recording(
+        &recorder,
+        verified,
+        &outcome,
+        clean,
+        result.as_ref().err(),
+        evidence.as_ref().map(|(progress, _)| progress),
+    );
     finish_activity(activity, verified, clean);
     Ok((outcome, clean, evidence))
 }
@@ -756,13 +784,34 @@ pub(super) async fn recover(
             return Err(refuse("system2Cancelled"));
         }
         observe!(state, phase("connector"));
-        let tunnel = match state
-            .connector
-            .connect_tunnel_with_ack_wait(gateway, TunnelAckWait::Patient)
-            .await
+        let recorder = crate::operation_recordings::start(
+            &state,
+            knx_app::operation_recording::OperationStart::new(
+                knx_app::operation_recording::OperationKind::System2Recovery,
+            )
+            .target(serde_json::json!({ "individualAddress": bundle.binding.target.to_string() }))
+            .gateway(gateway)
+            .related("operationId", &id)
+            .settings(crate::operation_recordings::tunnel_settings(
+                TunnelAckWait::Patient,
+                &state.system2_timing,
+            )),
+        );
+        let tunnel = match crate::operation_recordings::connect(
+            &state,
+            gateway,
+            TunnelAckWait::Patient,
+            &recorder,
+        )
+        .await
         {
             Ok(t) => t,
             Err(_error) => {
+                crate::operation_recordings::finish_error(
+                    &recorder,
+                    &_error,
+                    serde_json::Value::Null,
+                );
                 observe!(state, session_failure("connector", &_error));
                 observe!(state, phase("activity-finish"));
                 finish_activity(activity, false, false);
@@ -809,6 +858,19 @@ pub(super) async fn recover(
                 observe!(state, session_failure("disconnect", _error));
             })
             .is_ok();
+        if let Err(error) = &result {
+            recorder.note("executorError", executor_error(error));
+        }
+        let outcome = terminal(&store);
+        let progress = store.progress();
+        finish_recording(
+            &recorder,
+            result.is_ok(),
+            &outcome,
+            clean,
+            None,
+            Some(&progress),
+        );
         observe!(state, phase("activity-finish"));
         finish_activity(activity, result.is_ok(), clean);
         Ok::<_, ApiError>(clean)
@@ -847,4 +909,51 @@ pub(super) async fn recover(
         });
     }
     observe!(state, terminal(outcome, matches!(result, Ok(true))));
+}
+
+/// The device a System-2 recording addresses, as the preparation bound it.
+fn recorded_target(metadata: &dto::Metadata) -> serde_json::Value {
+    serde_json::json!({
+        "deviceId": metadata.binding.device_id,
+        "individualAddress": metadata.address,
+        "deviceName": metadata.device_name,
+        "projectRevision": metadata.binding.project_revision,
+    })
+}
+
+/// The executor's whole error for the recording; the journal keeps its own typed facts.
+fn executor_error(error: &std::io::Error) -> serde_json::Value {
+    serde_json::json!({
+        "kind": format!("{:?}", error.kind()),
+        "display": error.to_string(),
+        "debug": format!("{error:?}"),
+    })
+}
+
+/// Ends a System-2 recording with the run's local outcome and journal progress.
+fn finish_recording(
+    recorder: &knx_app::operation_recording::OperationRecorder,
+    verified: bool,
+    outcome: &LocalOutcome,
+    clean: bool,
+    refusal: Option<&ApiError>,
+    progress: Option<&OperationProgress>,
+) {
+    let summary = serde_json::json!({
+        "localOutcome": format!("{outcome:?}"),
+        "verified": verified,
+        "disconnectConfirmed": clean,
+        "progress": progress.map(|p| serde_json::to_value(p).unwrap_or_default()),
+    });
+    if verified {
+        recorder.finish(knx_app::operation_recording::RecordedOutcome::succeeded(
+            summary,
+        ));
+    } else {
+        let reason = match refusal {
+            Some(refusal) => format!("refused: {refusal:?}"),
+            None => format!("System-2 run ended {outcome:?}"),
+        };
+        crate::operation_recordings::finish_failed(recorder, reason, summary);
+    }
 }

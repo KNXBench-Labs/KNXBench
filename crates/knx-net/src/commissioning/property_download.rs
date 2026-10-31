@@ -16,6 +16,7 @@ use knx_core::commissioning::property_download::{PropertyDownloadPlan, PropertyO
 use knx_core::IndividualAddress;
 
 use super::final_step::FinalStepFailure;
+use super::final_step_evidence::AllocationMismatchEvidence;
 use super::hardware_release::HardwareRelease;
 use super::pointer_width::{PointerWidthAdmission, PointerWidthRefusal};
 use super::property_recovery::{
@@ -76,12 +77,20 @@ pub enum PropertySimulationFailure {
     /// A PID 7 answer broke the one-element two-or-four-octet rule. The typed facts are
     /// non-raw; the raw octets sit only in the refusal's private diagnostic.
     PointerWidth(PointerWidthRefusal),
-    /// The existing session refused or failed an operation.
-    Session(SessionError),
+    /// The existing session refused or failed an operation. Box the largest failure
+    /// payload so carrying private allocation evidence needs no large-Result exceptions.
+    Session(Box<SessionError>),
+    /// An absolute allocation reaches `FFFFh`, where mask `0025h` has no memory service
+    /// (no "DMA on User Memory"; CP §3.5.2 leaves exactly `FFFFh` undefined). Refused
+    /// before any frame is sent.
+    MemoryServiceBoundary {
+        object: u8,
+        address: u16,
+        length: usize,
+    },
 }
 
 /// An incomplete simulation, not a successful download or recovered device.
-#[derive(Debug)]
 pub struct PropertySimulationError {
     /// None for a pre-connection authorization/target refusal.
     pub source_index: Option<usize>,
@@ -97,6 +106,23 @@ pub struct PropertySimulationError {
     /// Set only when the failure arose in the final step's own verification or Verify Mode
     /// restore; `None` for every other failure, including journal and cancellation stops there.
     pub final_step: Option<FinalStepFailure>,
+    /// The compared bytes, set exactly when `final_step` is an allocation verification
+    /// mismatch. Private evidence; never part of `Debug` (the journal's diagnostic text).
+    pub final_step_evidence: Option<Box<AllocationMismatchEvidence>>,
+}
+/// The derived form of every field but `final_step_evidence`, so diagnostic text stays as
+/// it was and never duplicates whole allocations.
+impl fmt::Debug for PropertySimulationError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("PropertySimulationError")
+            .field("source_index", &self.source_index)
+            .field("operation_index", &self.operation_index)
+            .field("mutation_may_have_started", &self.mutation_may_have_started)
+            .field("completed", &self.completed)
+            .field("failure", &self.failure)
+            .field("final_step", &self.final_step)
+            .finish()
+    }
 }
 impl fmt::Display for PropertySimulationError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -110,14 +136,14 @@ impl fmt::Display for PropertySimulationError {
 impl std::error::Error for PropertySimulationError {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         match &self.failure {
-            PropertySimulationFailure::Session(error) => Some(error),
+            PropertySimulationFailure::Session(error) => Some(error.as_ref()),
             _ => None,
         }
     }
 }
 impl From<SessionError> for PropertySimulationFailure {
     fn from(error: SessionError) -> Self {
-        Self::Session(error)
+        Self::Session(Box::new(error))
     }
 }
 
@@ -150,6 +176,7 @@ pub async fn run_simulated_property_plan(
         completed: Vec::new(),
         failure,
         final_step: None,
+        final_step_evidence: None,
     };
     if device.address() != plan.target() {
         return Err(early(PropertySimulationFailure::TargetMismatch {
@@ -369,6 +396,7 @@ pub async fn restore_experimental_property_plan<T: ManagementTransport>(
             completed: Vec::new(),
             failure,
             final_step: None,
+            final_step_evidence: None,
         })?;
     let report = run_property_plan_inner(
         transport,
@@ -412,6 +440,7 @@ pub async fn restore_experimental_property_plan_on_hardware<T: ManagementTranspo
             completed: Vec::new(),
             failure,
             final_step: None,
+            final_step_evidence: None,
         })?;
     let report = run_property_plan_inner(
         transport,
@@ -468,6 +497,7 @@ async fn run_property_plan_inner<T: ManagementTransport>(
         completed: Vec::new(),
         failure,
         final_step: None,
+        final_step_evidence: None,
     };
     if let Some(preconditions) = preconditions {
         preconditions
@@ -498,6 +528,7 @@ async fn run_property_plan_inner<T: ManagementTransport>(
             found: authorization.target().address(),
         }));
     }
+    property_recovery::refuse_beyond_memory_service(plan).map_err(early)?;
     let mut session = ManagementSession::authorised(transport, key, timing, authorization)
         .map_err(|error| early(error.into()))?;
     session
@@ -511,6 +542,7 @@ async fn run_property_plan_inner<T: ManagementTransport>(
     let mut final_pointer_observations = Vec::new();
     let mut in_procedure_pointer_observations = Vec::new();
     let mut final_step = None;
+    let mut final_step_evidence = None;
     for (operation_index, step) in plan.steps().iter().enumerate() {
         let result: Result<(), PropertySimulationFailure> = async {
             if abort_requested() {
@@ -586,6 +618,7 @@ async fn run_property_plan_inner<T: ManagementTransport>(
                             .await
                             .map_err(|error| {
                                 final_step = Some(error.classified);
+                                final_step_evidence = error.evidence;
                                 error.failure
                             })?;
                         if !final_pointer_observations.is_empty() {
@@ -628,6 +661,7 @@ async fn run_property_plan_inner<T: ManagementTransport>(
                 completed,
                 failure,
                 final_step,
+                final_step_evidence,
             });
         }
     }
@@ -674,3 +708,7 @@ async fn validate_hardware<T: ManagementTransport>(
     }
     Ok(())
 }
+
+#[cfg(test)]
+#[path = "property_download_tests.rs"]
+mod tests;

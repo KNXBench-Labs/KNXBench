@@ -14,6 +14,26 @@ feedback paths are unchanged. Published Alpha 18 still has the older modal.
 [Opening Settings](user-guide/09-settings-and-appearance.md#opening-settings).
 Browser verification is not native WebKitGTK/Tauri or hardware acceptance.
 
+## DIAG-03 local candidate — not released (29 October 2026)
+
+The unified bundle candidate can opt in to a copy of the **saved** native project,
+not unsaved edits. This uses the existing credential-removing/withholding helper;
+project inclusion stays off by default. It is not comprehensive anonymization.
+Focused synthetic HTTP cases exercise review, export, native reopen and refusal
+guards; this is not whole-package, browser or hardware acceptance. The candidate
+admits a closed private System-2 projection and report through one validated
+retained source, while raw System-2 recording bodies and unadmitted
+expected/readback sources remain withheld. By owner decision, declared memory and
+non-System-2 raw recordings leave after consent with a "possibly passwords; keep
+private" note; they are not credential-classified. The CLI bundle option now attaches the same typed
+private evidence after device teardown, store release and activity-guard
+settlement. This does not establish the actual installed CLI boundary, full raw
+P1/P2 or Original14 delivery, real HTTP plus built-Web acceptance, or the whole
+O1 goal. Do not interpret the candidate as part of Alpha 18 or as complete
+raw-evidence delivery.
+[Work/status](../open-work/DIAG-03-unified-diagnostic-bundle.md) ·
+[Privacy boundary](../research/2026-10-29-system2-bundle-credential-boundary.md).
+
 <a id="source-implementation-after-alpha-17-system-2-results-and-reports"></a>
 
 ## Alpha 18 — current pre-release
@@ -961,6 +981,7 @@ source-bound browser/unit/build evidence; this does not expand KNX compatibility
 | `knx ga-export`, `knx ga-import` (with `--dry-run`) | ✅ Implemented | — |
 | `knx doc-export`, `knx diff` | ✅ Implemented | — |
 | `knx products list / ingest / show / verify` | ✅ Implemented | `ingest` accepts a `.knxproj` or a `.knxprod`; a `.vd2` argument is listed but always refused |
+| `knx products inspect-distribution` | 🟡 Partial or experimental | Read-only JSON report of a manufacturer XML or distribution ZIP (e.g. OpenKNX releases); installs nothing — [contract](../contracts/distribution-inspection.md), [KL-187](../KNOWN_LIMITATIONS.md#catalogue-kl-187) |
 | `knx bus discover / monitor / write / route-monitor / route-send / scan` | ✅ Implemented | Some with the limitations under *KNXnet/IP and the bus* |
 | Command-specific exit codes | ✅ Implemented | Import/GA-import use `2` for report errors; `diff --exit-code` uses 0 equal / 1 different / 2 failure. Read the command's contract, not one global meaning for `2` |
 | Creating a project from the command line | ❌ Not implemented | No command exists; create one in the application |

@@ -19,6 +19,7 @@ the former dated sections are in the [archive](history/OPEN_WORK_2026-10-25.md).
 | WP-11 | Native Linux acceptance | In progress: bounded native separator re-check recorded 28 Oct at 80/100/150%; Properties pane and broader matrix remain open | [WP-11](open-work/WP-11-native-linux-acceptance.md) |
 | WP-12 | Field evidence and owner acceptance (incl. issue #22) | Blocked: consent | [WP-12](open-work/WP-12-field-evidence-and-owner-acceptance.md) |
 | WP-14 | Complete offline family outcomes (System 1/B/300) | Blocked: evidence | [WP-14](open-work/WP-14-offline-family-outcomes.md) |
+| DIAG-03 | One report button, full diagnostic bundle and operation recorder (#30) | P1: open, owner decisions recorded; merge only after the Alpha 18 tag | [DIAG-03](open-work/DIAG-03-unified-diagnostic-bundle.md) |
 | GATE-01 | Test-gate speed and stability follow-ups | Open: root-language fanout corrected; residual load and historical failures remain | [GATE-01](open-work/GATE-01-test-gate-follow-ups.md) |
 | OWN-01 | Recorded owner decisions, deferred items and remaining review | Decisions recorded; evidence/owner review pending | [OWN-01](open-work/OWN-01-owner-decisions.md) |
 | LS-01 | Automation and agent writes beyond the rename recipe | Later scope | [LS-01](open-work/LS-01-automation.md) |

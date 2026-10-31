@@ -1303,5 +1303,6 @@ async fn refusals_after_mutation_in_both_phases_stop_hard_with_the_original_back
     }
 }
 
+mod allocation_evidence;
 mod final_step_diagnostic;
 mod pid7_failure_diagnostic;

@@ -1,7 +1,8 @@
 /** One application service over same-origin HTTP; no external submission. */
 // Strict admission of both profiles: identity (format 1) and declared memory (format 2).
 import {noteRefusal} from "./api";
-import type {SupportBinding} from "./supportApi";
+/** The project snapshot a preview is bound to; a changed one refuses the read. */
+export interface SupportBinding {serverIncarnation:string;projectIncarnation:number;revision:number}
 export interface DiagnosticReading {
  order:number;query:string;objectIndex:number|null;propertyId:number|null;startIndex:number|null;requestedElements:number|null;expectedBytes:number;
  status:"read"|"partial"|"refused-ambiguous"|"error"|"not-read";receivedBytes:number;returnedElements:number|null;bytes:number[];

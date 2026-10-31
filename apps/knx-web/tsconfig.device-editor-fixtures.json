@@ -1,5 +1,5 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": { "types": ["node"] },
-  "include": ["src", "e2e/device-editor-layout.e2e.ts", "e2e/device-editor-fixture.tsx"]
+  "include": ["src", "e2e/device-editor-layout.e2e.ts", "e2e/device-editor-fixture.tsx", "e2e/report-problem-fixture.ts"]
 }

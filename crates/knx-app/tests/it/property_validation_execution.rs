@@ -21,6 +21,8 @@ use knx_net::commissioning::{
 };
 use std::{sync::atomic::AtomicBool, time::Duration};
 
+mod allocation_evidence;
+mod missing_evidence;
 mod send_boundary;
 mod superseded_defaults_profile;
 
@@ -642,6 +644,7 @@ async fn property_validation_different_prior_program_version_record_blocks_origi
             local_diagnostic: "synthetic".into(),
             pointer_failure: None,
             final_step: None,
+            allocation_evidence: None,
         })
         .unwrap();
     drop(store);
@@ -834,6 +837,7 @@ async fn property_validation_download_and_restore_observations_are_both_kept() {
             local_diagnostic: "synthetic".into(),
             pointer_failure: None,
             final_step: None,
+            allocation_evidence: None,
         })
         .unwrap();
     drop(store);

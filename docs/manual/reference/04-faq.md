@@ -43,9 +43,25 @@ before any plan or report exists. See
 Use **File → Export diagnostic data** (since Alpha 17 also
 **Analyse device** on the device's *Diagnostics* tab): pick the device and the
 interface, preview, read, save the ZIP and email it to `issue@knxbench.com`. The
-export only reads.
+export only reads. In source builds after Alpha 18 the result offers **Report
+problem…** instead. The current unified-bundle candidate includes only sources
+that pass its private admission; for System-2 that is a closed private projection
+and short report, not the raw recording body. Read-diagnostics results include
+their report and, for a memory read, `memory.json`; other recordings are included
+as written with recognised keys removed. Memory and recordings may contain
+passwords: they leave only after your consent and are marked "keep private". The wizard saves the admitted ZIP and prepares the mail
+([report wizard](../user-guide/08-reports-and-diff.md#report-problem)).
 The [step-by-step guide](../user-guide/08-reports-and-diff.md#send-diagnostic-data)
 has screenshots and says which builds contain it.
+
+**How can I report a problem?**
+
+In source builds after Alpha 18: **File → Help & diagnostics → Report problem…**
+or the same command in the palette. The wizard shows everything before it saves
+one admitted-only ZIP, then offers a mail draft without attachment; email is not
+encryption. Full relevant data except secrets remains a target, not current
+whole-workflow acceptance.
+See [reporting a problem](../user-guide/08-reports-and-diff.md#report-problem).
 
 **How can I report an unknown device before a download plan exists?**
 

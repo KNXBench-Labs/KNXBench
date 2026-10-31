@@ -25,6 +25,7 @@ pub mod management;
 pub mod routing;
 pub mod scan;
 pub mod tunnelling;
+pub mod wire_tap;
 
 pub use cemi::{
     ApplicationService, CemiError, Destination, FrameControl, LDataFrame, LDataMessageKind, Tpci,

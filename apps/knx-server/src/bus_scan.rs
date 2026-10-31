@@ -53,8 +53,33 @@ impl LineScanSession {
         connector: &dyn GatewayConnector,
         plan: ScanPlan,
         policy: ProbePolicy,
+        recorder: knx_app::operation_recording::OperationRecorder,
     ) -> Result<Self, BusSessionError> {
-        let tunnel = connector.connect_tunnel(gateway).await?;
+        recorder.note(
+            "plan",
+            serde_json::json!({
+                "addresses": plan.addresses().iter().map(ToString::to_string).collect::<Vec<_>>(),
+                "policy": format!("{policy:?}"),
+            }),
+        );
+        let tunnel = match connector
+            .connect_tunnel_recorded(
+                gateway,
+                knx_net::TunnelAckWait::Standard,
+                recorder.wire_tap(),
+            )
+            .await
+        {
+            Ok(tunnel) => tunnel,
+            Err(error) => {
+                crate::operation_recordings::finish_error(
+                    &recorder,
+                    &error,
+                    serde_json::Value::Null,
+                );
+                return Err(error);
+            }
+        };
         let total_count = plan.addresses().len();
         let omitted = plan.omitted().to_vec();
         let mut excluded: Vec<_> = plan.excluded().iter().copied().collect();
@@ -66,7 +91,7 @@ impl LineScanSession {
         let task_shared = Arc::clone(&shared);
         let (cancel_tx, cancel_rx) = oneshot::channel();
         let task = tokio::spawn(async move {
-            run_scan(tunnel, plan, policy, cancel_rx, task_shared).await;
+            run_scan(tunnel, plan, policy, cancel_rx, task_shared, recorder).await;
         });
         Ok(Self {
             id,
@@ -173,6 +198,7 @@ async fn run_scan(
     policy: ProbePolicy,
     cancel: oneshot::Receiver<()>,
     shared: Arc<SharedScan>,
+    recorder: knx_app::operation_recording::OperationRecorder,
 ) {
     let result = {
         let transport = TunnelScanTransport(tunnel.as_ref());
@@ -199,8 +225,27 @@ async fn run_scan(
             LineScanStatus::Failed(source.to_string())
         }
     };
+    let results: Vec<String> = shared
+        .results
+        .lock()
+        .expect("scan results poisoned")
+        .iter()
+        .map(|result| format!("{} {:?}", result.address, result.outcome))
+        .collect();
+    let summary = serde_json::json!({ "status": format!("{status:?}"), "results": results });
+    let failure = match &status {
+        LineScanStatus::Failed(reason) => Some(reason.clone()),
+        _ => None,
+    };
     *shared.status.lock().expect("scan status poisoned") = status;
-    let _ = tunnel.disconnect().await;
+    let cleanup = tunnel.disconnect().await;
+    let summary = serde_json::json!({ "scan": summary, "disconnectConfirmed": cleanup.is_ok() });
+    match failure {
+        Some(reason) => crate::operation_recordings::finish_failed(&recorder, reason, summary),
+        None => recorder.finish(knx_app::operation_recording::RecordedOutcome::succeeded(
+            summary,
+        )),
+    }
 }
 
 #[cfg(test)]

@@ -236,7 +236,7 @@ fn project_summary(
 /// the bus HTTP layer's wire shape to the bundle's file format, so that
 /// changing one silently changed the other. The overlap is four lines of
 /// field names; the coupling would be permanent.
-fn telegram_json(row: &crate::bus::TelegramRow) -> Value {
+pub(crate) fn telegram_json(row: &crate::bus::TelegramRow) -> Value {
     json!({
         "seq": row.seq,
         "timestamp": row.timestamp,

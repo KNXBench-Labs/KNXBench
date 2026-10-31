@@ -202,10 +202,30 @@ async fn start_scan(
     let id = state
         .next_line_scan_session_id
         .fetch_add(1, std::sync::atomic::Ordering::SeqCst);
-    let session =
-        LineScanSession::start(id, range, gateway, state.connector.as_ref(), plan, policy)
-            .await
-            .map_err(|e| connect_error_to_api_error(gateway, e))?;
+    let session = LineScanSession::start(
+        id,
+        range,
+        gateway,
+        state.connector.as_ref(),
+        plan,
+        policy,
+        crate::operation_recordings::start(
+            &state,
+            knx_app::operation_recording::OperationStart::new(
+                knx_app::operation_recording::OperationKind::LineScan,
+            )
+            .target(serde_json::json!({
+                "area": range.area,
+                "line": range.line,
+                "firstDevice": range.first_device,
+                "lastDevice": range.last_device,
+            }))
+            .gateway(gateway)
+            .related("lineScanSessionId", id),
+        ),
+    )
+    .await
+    .map_err(|e| connect_error_to_api_error(gateway, e))?;
     *guard = Some(session);
     Ok(Json(ScanStartResponse {
         session_id: id,

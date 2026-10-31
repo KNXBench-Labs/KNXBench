@@ -355,6 +355,7 @@ fn superseded_recovery_restores(version: u32) {
             local_diagnostic: format!("synthetic existing v{version} operation"),
             pointer_failure: None,
             final_step: None,
+            allocation_evidence: None,
         })
         .unwrap();
     drop(existing);

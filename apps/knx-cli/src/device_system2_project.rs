@@ -156,7 +156,12 @@ fn execute(args: &[String]) -> Result<(), String> {
     let result = runtime.block_on(async {
         let tunnel = tokio::time::timeout(
             Duration::from_secs(10),
-            KnxNetIpClient::new().connect_tunnel(gateway),
+            crate::diagnostic_bundle_cli::tapped(
+                KnxNetIpClient::new(),
+                knx_app::operation_recording::OperationKind::DeviceRead,
+                gateway,
+            )
+            .connect_tunnel(gateway),
         )
         .await
         .map_err(|_| "gateway timeout".to_string())?

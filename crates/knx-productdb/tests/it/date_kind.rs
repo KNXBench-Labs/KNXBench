@@ -51,11 +51,15 @@ fn archive(entries: &[(&str, &[u8])]) -> Vec<u8> {
 /// A package around `PROGRAM`; `hardware` tells two packages apart while
 /// they share the one program blob.
 fn package(hardware: &str) -> Vec<u8> {
+    package_with(MASTER, hardware)
+}
+
+fn package_with(master: &[u8], hardware: &str) -> Vec<u8> {
     let hardware = format!(
         r#"<KNX xmlns="http://knx.org/xml/project/14"><ManufacturerData><Manufacturer RefId="M-0001"><Hardware><Hardware Id="H-1" Name="{hardware}"/></Hardware></Manufacturer></ManufacturerData></KNX>"#
     );
     archive(&[
-        ("knx_master.xml", MASTER),
+        ("knx_master.xml", master),
         ("M-0001/Hardware.xml", hardware.as_bytes()),
         ("M-0001/M-0001_A-1.xml", PROGRAM),
     ])
@@ -288,6 +292,73 @@ fn v28_to_v29_reproduces_a_fresh_install() {
     assert_eq!(snapshot(&conn), fresh);
     let retry = install_package(&conn, "sample.knxprod", &package("Example")).unwrap();
     assert!(retry.skipped);
+}
+
+/// A BOM master whose declarations collide or are malformed quotes byte ranges in the
+/// install report. The v29 backfill reloads that report with the fixed parser, so the
+/// pre-v31 ranges must move first; otherwise the report would be downgraded.
+#[test]
+fn v28_to_v29_keeps_the_report_of_a_bom_master_whose_ranges_move() {
+    bom_master_report_survives_from(28);
+}
+
+/// v27 additionally runs the v27 -> v28 promotion repair, which reloads the report first.
+#[test]
+fn v27_to_v28_keeps_the_report_of_a_bom_master_whose_ranges_move() {
+    bom_master_report_survives_from(27);
+}
+
+fn bom_master_report_survives_from(version: i64) {
+    let master = [
+        b"\xef\xbb\xbf".as_slice(),
+        br#"<KNX xmlns="http://knx.org/xml/project/14"><MasterData><Manufacturers><Manufacturer Id="M-0001" Name="Example"/></Manufacturers><DatapointType Id="D" Number="7"/><DatapointType Id="D" Number="8"/><SpaceUsage/></MasterData></KNX>"#,
+    ]
+    .concat();
+    let archive = package_with(&master, "Example");
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("products.sqlite");
+    let diagnostics = |conn: &Connection| -> Vec<(String, String)> {
+        conn.prepare("SELECT kind, detail FROM package_install_diagnostic ORDER BY ordinal")
+            .unwrap()
+            .query_map([], |r| Ok((r.get(0)?, r.get(1)?)))
+            .unwrap()
+            .collect::<Result<_, _>>()
+            .unwrap()
+    };
+    let (fresh, fresh_diagnostics, facts) = {
+        let conn = open_and_migrate(&path).unwrap();
+        let facts = install_package(&conn, "sample.knxprod", &archive)
+            .unwrap()
+            .facts
+            .unwrap();
+        let fresh_diagnostics = diagnostics(&conn);
+        assert_eq!(
+            fresh_diagnostics
+                .iter()
+                .filter(|(_, detail)| detail.contains(" bytes ["))
+                .count(),
+            2,
+            "one collision and one malformed declaration quote ranges"
+        );
+        let fresh = snapshot(&conn);
+        super::master_provenance::rewind_bom_ranges(&conn, &sha256_hex(&master));
+        assert_ne!(diagnostics(&conn), fresh_diagnostics);
+        rewind_to_v28(&conn);
+        conn.pragma_update(None, "user_version", version).unwrap();
+        (fresh, fresh_diagnostics, facts)
+    };
+    let conn = open_and_migrate(&path).unwrap();
+    let status: String = conn
+        .query_row("SELECT status FROM package_install_report", [], |r| {
+            r.get(0)
+        })
+        .unwrap();
+    assert_eq!(status, "measured");
+    assert_eq!(diagnostics(&conn), fresh_diagnostics);
+    assert_eq!(snapshot(&conn), fresh);
+    let retry = install_package(&conn, "sample.knxprod", &archive).unwrap();
+    assert!(retry.skipped);
+    assert_eq!(retry.facts, Some(facts));
 }
 
 /// One program blob in two packages: the blob is re-derived once, and each

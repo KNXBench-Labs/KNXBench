@@ -1,7 +1,9 @@
 //! Master declaration addresses and observed winners, separate from product identity.
 //!
 //! See ADR-0147. Replay never writes normalized values or historical reports.
+mod bom_ranges;
 pub(crate) mod budget;
+pub(crate) use bom_ranges::{correct_bom_ranges, migrate_v30_to_v31};
 mod reconcile;
 use budget::EvidenceBudget;
 pub use budget::MAX_MASTER_EVIDENCE_BYTES;
@@ -264,12 +266,6 @@ pub(crate) fn diagnostics(
         } else {
             crate::InstallDiagnosticKind::MasterIdentityCollision
         };
-        let reason = match (d.missing_id, d.orphan_parent) {
-            (true, true) => "missing Id; orphan parent",
-            (true, false) => "missing Id",
-            (false, true) => "orphan parent",
-            _ => "identity collision",
-        };
         let kept = if malformed {
             String::new()
         } else {
@@ -291,20 +287,31 @@ pub(crate) fn diagnostics(
         out.push(MasterDiagnostic {
             kind,
             xml_path: format!("{}[@master-ordinal={}]", d.xml_path, d.ordinal),
-            detail: format!(
-                "{} {:?}: {}; source {} declaration {} bytes [{}..{}){}",
-                d.family.as_str(),
-                d.logical_id,
-                reason,
-                d.source_sha256,
-                d.ordinal,
-                d.byte_start,
-                d.byte_end,
-                kept
-            ),
+            detail: format!("{}{kept}", diagnostic_prefix(d)),
         });
     }
     Ok(out)
+}
+
+/// The declaration part of a collision or malformed-declaration diagnostic, range included.
+/// Writer, reader and the v31 range move share it so the three can never drift apart.
+pub(crate) fn diagnostic_prefix(d: &MasterDeclaration) -> String {
+    let reason = match (d.missing_id, d.orphan_parent) {
+        (true, true) => "missing Id; orphan parent",
+        (true, false) => "missing Id",
+        (false, true) => "orphan parent",
+        _ => "identity collision",
+    };
+    format!(
+        "{} {:?}: {}; source {} declaration {} bytes [{}..{})",
+        d.family.as_str(),
+        d.logical_id,
+        reason,
+        d.source_sha256,
+        d.ordinal,
+        d.byte_start,
+        d.byte_end
+    )
 }
 
 pub use reader::{master_identity, master_source_report};

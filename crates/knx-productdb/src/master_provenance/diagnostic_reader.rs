@@ -53,25 +53,10 @@ pub(crate) fn validate_diagnostic(
     if (kind == crate::InstallDiagnosticKind::MalformedMasterDeclaration) != malformed {
         return Err(invalid());
     }
-    let reason = match (d.missing_id, d.orphan_parent) {
-        (true, true) => "missing Id; orphan parent",
-        (true, false) => "missing Id",
-        (false, true) => "orphan parent",
-        _ => "identity collision",
-    };
     let id_len = d.logical_id.as_ref().map_or(0, String::len);
     cache.budget.prefix(id_len)?;
     let d = cache.declaration(sha, ordinal)?;
-    let prefix = format!(
-        "{} {:?}: {}; source {} declaration {} bytes [{}..{})",
-        d.family.as_str(),
-        d.logical_id,
-        reason,
-        d.source_sha256,
-        d.ordinal,
-        d.byte_start,
-        d.byte_end
-    );
+    let prefix = diagnostic_prefix(d);
     if malformed {
         return if detail == prefix {
             Ok(())
@@ -80,17 +65,10 @@ pub(crate) fn validate_diagnostic(
         };
     }
     let suffix = detail.strip_prefix(&prefix).ok_or_else(invalid)?;
-    if suffix == "; kept winner historical-unavailable" {
-        return Ok(());
-    }
-    let (kept, n) = suffix
-        .strip_prefix("; kept source ")
-        .and_then(|s| s.split_once(" declaration "))
-        .ok_or_else(invalid)?;
-    let n: u32 = n.parse().map_err(|_| invalid())?;
-    if !valid_sha(kept) || n == 0 {
-        return Err(invalid());
-    }
+    let (kept, n) = match kept_suffix(suffix).ok_or_else(invalid)? {
+        Kept::Historical => return Ok(()),
+        Kept::Observed(kept, n) => (kept, n),
+    };
     cache.load(conn, kept)?;
     let d = cache.declaration(sha, ordinal)?;
     let winner = cache.declaration(kept, n)?;
@@ -101,6 +79,24 @@ pub(crate) fn validate_diagnostic(
         return Err(invalid());
     }
     Ok(())
+}
+
+/// The winner a collision diagnostic names after its declaration prefix.
+pub(super) enum Kept<'a> {
+    Historical,
+    Observed(&'a str, u32),
+}
+
+/// The only collision suffixes the writer produces; anything else is not a diagnostic text.
+pub(super) fn kept_suffix(suffix: &str) -> Option<Kept<'_>> {
+    if suffix == "; kept winner historical-unavailable" {
+        return Some(Kept::Historical);
+    }
+    let (kept, n) = suffix
+        .strip_prefix("; kept source ")?
+        .split_once(" declaration ")?;
+    let n: u32 = n.parse().ok()?;
+    (valid_sha(kept) && n != 0).then_some(Kept::Observed(kept, n))
 }
 
 #[cfg(test)]

@@ -574,7 +574,8 @@ fn a_v29_database_is_upgraded_to_exactly_the_fresh_values() {
         .query_row("PRAGMA user_version", [], |r| r.get(0))
         .unwrap();
     assert_eq!(version, CURRENT_PRODUCTDB_VERSION);
-    assert_eq!(CURRENT_PRODUCTDB_VERSION, 30);
+    // v31 only moves BOM-prefixed master ranges; every other table must stay equal.
+    assert_eq!(CURRENT_PRODUCTDB_VERSION, 31);
     assert_eq!(enum_columns(&conn), fresh_enums);
     assert_eq!(dump(&conn, "SELECT * FROM parameter_type"), fresh_types);
     // Only binary_value differs from the pre-upgrade rows.

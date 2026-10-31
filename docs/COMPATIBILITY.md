@@ -66,6 +66,12 @@ Alpha 18 keeps native-model16 and moves to product30 through data-only migration
 (v29 `TypeDate` re-kinding, v30 legacy long-enum binary backfill); Alpha 17 refuses
 product30 by its version check, which is source-established and not an executed
 downgrade test ([Alpha 18 upgrade notes](releases/alpha18.md#upgrade)).
+Current source after Alpha 18 moves to product31 through one data-only step: it
+moves the master declaration byte ranges of BOM-prefixed masters, and the
+install diagnostics quoting them, onto the retained bytes
+([ADR-0147 amendment](adr/0147-master-identity-provenance.md#amendment-utf-8-bom-byte-ranges-product-database-30--31-31-october-2026)).
+Alpha 18 refuses product31 by its version check (source-established, not an
+executed downgrade test).
 Alpha 15 supports product26, and the preceding master-provenance source
 supports product27; builds with either older maximum refuse product28 by
 their version check. This is source-established refusal, not an executed

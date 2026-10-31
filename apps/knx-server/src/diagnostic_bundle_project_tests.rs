@@ -565,13 +565,13 @@ async fn a_project_review_is_bound_to_its_selection_consent_and_saved_bytes() {
     );
 }
 
-/// Asserts the project is visibly unavailable over HTTP, with a sanitized reason.
-async fn assert_refused(f: &Fixture, _reason: &str) {
+/// Asserts the project is visibly unavailable over HTTP, with exactly `reason`.
+async fn assert_refused(f: &Fixture, reason: &str) {
     let (preview, query) = reviewed(&f.state, &project_query()).await;
     let project = offer(&preview, "project");
     assert_eq!(project["selected"], false, "{project}");
     let message = project["unavailable"].as_str().expect("visible refusal");
-    assert_eq!(message, UNAVAILABLE_PREFIX);
+    assert_eq!(message, reason);
     assert!(project_preview(&preview).is_none());
     let everything = format!("{preview}");
     for secret in SECRETS {
@@ -606,7 +606,11 @@ async fn assert_refused(f: &Fixture, _reason: &str) {
 async fn an_unsaved_project_is_visibly_unavailable() {
     let f = fixture();
     *f.state.store_path.lock().unwrap() = None;
-    assert_refused(&f, "has not been saved").await;
+    assert_refused(
+        &f,
+        "the project has not been saved as a KNXBench project file yet",
+    )
+    .await;
 }
 
 #[tokio::test]
@@ -644,7 +648,7 @@ async fn a_wal_mode_project_file_is_visibly_unavailable_and_unchanged() {
     }
     let before = std::fs::read(&f.path).unwrap();
     assert!(before[18..20].contains(&2), "fixture must be WAL-mode");
-    assert_refused(&f, "WAL").await;
+    assert_refused(&f, UNAVAILABLE_PREFIX).await;
     assert_eq!(std::fs::read(&f.path).unwrap(), before);
 }
 
@@ -658,7 +662,7 @@ async fn each_journal_sidecar_makes_the_project_visibly_unavailable_and_stays_un
         let content = format!("synthetic sidecar {suffix}").into_bytes();
         std::fs::write(&sidecar, &content).unwrap();
         let root = std::fs::read(&f.path).unwrap();
-        assert_refused(&f, "sidecar").await;
+        assert_refused(&f, UNAVAILABLE_PREFIX).await;
         assert_eq!(std::fs::read(&f.path).unwrap(), root, "{suffix} root");
         assert_eq!(
             std::fs::read(&sidecar).unwrap(),

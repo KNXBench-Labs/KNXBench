@@ -16,7 +16,7 @@ import { downloadLocalBlob } from "./localJsonDownload";
 import type { MessageKey } from "./messages/en";
 import Overlay from "./Overlay";
 import {
-  buildQuery, bytesByKind, defaultOffer, formatBytes, initialChoice, mailDraftFor, markerKeys, reasonKey,
+  buildQuery, bytesByKind, defaultOffer, formatBytes, initialChoice, mailDraftFor, markerKeys, noteKey, reasonKey,
   boundedClientFacts, operationOutcomeKey, reportContext, reviewedQuery, resolvedRecording, toggleEarlier, toggleSection, withProblemType,
   type ReportProblemRequest, type WizardChoice,
 } from "./reportProblem";
@@ -403,7 +403,7 @@ export default function ReportProblemWizard({ request, tree, notifications, onCl
             </ul>
             {section.files.length > 0 && <p className="settings-field-hint">{t("reportProblem.preview.files", { files: section.files.join(", ") })}</p>}
             {section.notes.length > 0 && <div className="report-problem-notes"><span className="settings-field-hint">{t("reportProblem.preview.notes")}</span>
-              <ul>{section.notes.map((note, i) => <li key={i}>{note}</li>)}</ul></div>}
+              <ul>{section.notes.map((note, i) => { const key = noteKey(note); return <li key={i}>{key ? t(key) : note}</li>; })}</ul></div>}
             <button type="button" data-report-show={section.key} aria-expanded={open} aria-controls={open ? textId : undefined}
               onClick={() => void showText(section.key)}>{t(open ? "reportProblem.preview.hide" : "reportProblem.preview.show")}</button>
             {open && (text === undefined || text.status === "loading"

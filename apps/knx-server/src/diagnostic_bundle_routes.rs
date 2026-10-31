@@ -299,6 +299,14 @@ enum BundleUnavailableCode {
     SupportUnfinished,
     RecordingVersion,
     RecordingResult,
+    /// Withheld for every request until its content is admitted as credential-free;
+    /// says nothing about what the source holds.
+    Withheld,
+    ProjectUnsaved,
+    ImportFileNotKept,
+    NoDevice,
+    /// The operation's own context is proven, but it identifies no project device.
+    SourceNamesNoDevice,
 }
 
 impl BundleUnavailableCode {
@@ -315,7 +323,62 @@ impl BundleUnavailableCode {
             Self::SupportUnfinished => "the support result is not complete",
             Self::RecordingVersion => "the diagnostic recording version is unsupported",
             Self::RecordingResult => "the diagnostic recording result is malformed",
+            Self::Withheld => {
+                "this section is withheld until its content is admitted as free of credentials"
+            }
+            Self::ProjectUnsaved => "the project has not been saved as a KNXBench project file yet",
+            Self::ImportFileNotKept => {
+                "this server session does not keep the original import file; attach it yourself if needed"
+            }
+            Self::NoDevice => "no device is chosen",
+            Self::SourceNamesNoDevice => "the selected operation names no device of this project",
         }
+    }
+}
+
+#[cfg(test)]
+impl BundleUnavailableCode {
+    /// Every code; the `match` makes a new variant a compile error here.
+    pub(super) fn all() -> Vec<Self> {
+        let all = vec![
+            Self::Source,
+            Self::OriginatingDevice,
+            Self::RetainedMissing,
+            Self::RetainedExpired,
+            Self::RetainedUnfinished,
+            Self::RetainedNonExportable,
+            Self::SupportMissing,
+            Self::SupportExpired,
+            Self::SupportUnfinished,
+            Self::RecordingVersion,
+            Self::RecordingResult,
+            Self::Withheld,
+            Self::ProjectUnsaved,
+            Self::ImportFileNotKept,
+            Self::NoDevice,
+            Self::SourceNamesNoDevice,
+        ];
+        for code in &all {
+            match code {
+                Self::Source
+                | Self::OriginatingDevice
+                | Self::RetainedMissing
+                | Self::RetainedExpired
+                | Self::RetainedUnfinished
+                | Self::RetainedNonExportable
+                | Self::SupportMissing
+                | Self::SupportExpired
+                | Self::SupportUnfinished
+                | Self::RecordingVersion
+                | Self::RecordingResult
+                | Self::Withheld
+                | Self::ProjectUnsaved
+                | Self::ImportFileNotKept
+                | Self::NoDevice
+                | Self::SourceNamesNoDevice => {}
+            }
+        }
+        all
     }
 }
 
@@ -1009,7 +1072,7 @@ async fn build_section(
     } = scope;
     match kind {
         SectionKind::Environment => Ok(vec![environment(state)]),
-        SectionKind::SessionLog => Err(SourceFailure::unavailable()),
+        SectionKind::SessionLog => Err(SourceFailure::Unavailable(BundleUnavailableCode::Withheld)),
         SectionKind::Operation => {
             if let Some(operation) = operation {
                 if let Ok(evidence) = evidence {
@@ -1075,7 +1138,8 @@ async fn build_section(
             Ok(out)
         }
         SectionKind::Device => {
-            let device = projectable?.ok_or_else(SourceFailure::unavailable)?;
+            let device =
+                projectable?.ok_or(SourceFailure::Unavailable(BundleUnavailableCode::NoDevice))?;
             Ok(vec![device_section(state, device)?])
         }
         SectionKind::LegacyReports => {
@@ -1088,10 +1152,14 @@ async fn build_section(
             Ok(vec![section])
         }
         SectionKind::ImportReport => Ok(vec![import_report(state)?]),
-        SectionKind::ImportFile => Err(SourceFailure::unavailable()),
+        SectionKind::ImportFile => Err(SourceFailure::Unavailable(
+            BundleUnavailableCode::ImportFileNotKept,
+        )),
         SectionKind::Catalogue => Ok(vec![catalogue(state, projectable?)]),
         SectionKind::Project => Ok(vec![project_section(state).await?]),
-        SectionKind::BusMonitor | SectionKind::ClientState => Err(SourceFailure::unavailable()),
+        SectionKind::BusMonitor | SectionKind::ClientState => {
+            Err(SourceFailure::Unavailable(BundleUnavailableCode::Withheld))
+        }
     }
 }
 
@@ -1127,7 +1195,9 @@ fn projectable_device(
     }
     // A differing chosen id in this context was already refused as
     // `bundleTargetMismatch` by `collect`.
-    run_device.map(Some).ok_or_else(SourceFailure::unavailable)
+    run_device.map(Some).ok_or(SourceFailure::Unavailable(
+        BundleUnavailableCode::SourceNamesNoDevice,
+    ))
 }
 
 /// True only when the request explicitly or implicitly names no operation source.
@@ -1283,9 +1353,8 @@ async fn operation_section(
     Ok(section)
 }
 
-/// Shown wherever declared memory or a raw recording leaves after consent.
-const PRIVATE_RAW_NOTE: &str = "contains device configuration, possibly passwords; \
-     recognised KNX keys are redacted; keep private";
+// Shown wherever declared memory or a raw recording leaves after consent.
+use knx_app::diagnostic_bundle::PRIVATE_RAW_NOTE;
 
 /// The consent warning for retained reports that carry declared memory.
 fn report_notes(files: &[BundleFile]) -> Option<String> {
@@ -1356,7 +1425,9 @@ async fn project_section(state: &SharedState) -> Result<BundleSection, SourceFai
         .lock()
         .expect("state mutex poisoned")
         .clone()
-        .ok_or_else(SourceFailure::unavailable)?;
+        .ok_or(SourceFailure::Unavailable(
+            BundleUnavailableCode::ProjectUnsaved,
+        ))?;
     let copy = tokio::task::spawn_blocking(move || {
         knx_app::secret_free_copy::native_project_for_bundle(&path)
     })

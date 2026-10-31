@@ -12,6 +12,23 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Diagnostic bundle: honest reasons, German notes, CLI recordings (31 October 2026)
+
+A real loopback join (simulator gateway → server → production web → ZIP, 36
+screenshots) and installed-CLI flag checks on `2bec7dd8a` found that every
+undeliverable bundle section said "the selected diagnostic source is
+unavailable", German showed that reason and the keep-private note in English,
+and `--diagnostic-bundle` dropped every non-System-2 recording. Now: specific,
+content-independent reasons (withheld session log/bus monitor/client state,
+unsaved project, no device chosen, an operation naming no project device,
+import file not kept), generic only where a reason could hint at content; the
+web translates every fixed reason and note (pinned by a server test); the CLI
+bundles each non-System-2 recording exactly as recorded with the keep-private
+note and never a raw recording of a `system2-*` command. See the
+[contract](contracts/diagnostic-bundle.md) and
+[DIAG-03](open-work/DIAG-03-unified-diagnostic-bundle.md). Toasts covering the
+wizard remain open.
+
 ## Inactive whole-byte write selection (30 October 2026; package acceptance pending)
 
 The [bounded regular-write contract](contracts/inactive-byte-write-selection.md)

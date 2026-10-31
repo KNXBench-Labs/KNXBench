@@ -177,7 +177,7 @@ async fn preview_preselects_the_latest_fitting_operation_and_the_o1_defaults() {
     assert_eq!(offer("sessionLog")["selected"], false);
     assert_eq!(
         offer("sessionLog")["unavailable"],
-        "the selected diagnostic source is unavailable"
+        "this section is withheld until its content is admitted as free of credentials"
     );
     assert_eq!(offer("project")["offer"], "offered");
     assert_eq!(offer("project")["selected"], false);
@@ -323,7 +323,7 @@ async fn a_disabled_recorder_is_said_plainly_and_old_recordings_stay_deletable()
     assert_eq!(client["selected"], false);
     assert_eq!(
         client["unavailable"],
-        "the selected diagnostic source is unavailable"
+        "this section is withheld until its content is admitted as free of credentials"
     );
 }
 
@@ -385,4 +385,35 @@ fn the_diagnostics_directory_is_reserved() {
     let dir = tempfile::tempdir().unwrap();
     std::fs::create_dir_all(dir.path().join("diagnostics")).unwrap();
     assert!(crate::paths::resolve_in_data_dir(dir.path(), "diagnostics").is_err());
+}
+
+/// The web translates the server's fixed reasons and notes by exact text
+/// (`reportProblem.ts`); a reworded or new server text must not silently
+/// fall back to untranslated English in another UI language.
+#[test]
+fn every_fixed_reason_and_note_has_a_web_translation() {
+    let web = std::fs::read_to_string(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../knx-web/src/reportProblem.ts"
+    ))
+    .unwrap();
+    let quoted = |text: &str| format!("[\"{}\", \"reportProblem.", text.replace('"', "\\\""));
+    for code in super::BundleUnavailableCode::all() {
+        let message = code.message();
+        assert!(
+            web.contains(&quoted(message)),
+            "untranslated reason: {message}"
+        );
+    }
+    for note in [
+        knx_app::diagnostic_bundle::PRIVATE_RAW_NOTE,
+        "the raw operation recording is withheld; this is the admitted private projection",
+        "the raw operation recording is withheld; this is the retained typed result",
+        "the operation recording is unavailable; this is the admitted private projection",
+        "the operation recording is unavailable; this is the retained typed result",
+        "the recording's last line is incomplete (interrupted write)",
+        "the last saved state of the project; unsaved changes are not included",
+    ] {
+        assert!(web.contains(&quoted(note)), "untranslated note: {note}");
+    }
 }

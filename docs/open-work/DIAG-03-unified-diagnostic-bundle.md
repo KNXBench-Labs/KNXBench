@@ -116,6 +116,24 @@ checks green. Fresh independent read-only reviews went from CHANGES_REQUIRED
 real router/built-web join with screenshots, CLI installed-binary boundaries,
 raw System-2 P1/P2, Original14 and publication.
 
+**31 October real join and installed CLI:** on `origin/main` `2bec7dd8a` a
+private loopback namespace ran a simulator gateway, the real server and the
+production web build. A real serial-number lookup was recorded; the wizard
+(problem type programming) picked it by default and exported a ZIP whose
+`recording.jsonl` was byte-identical to the server's file, with sent/received
+datagrams equal to the simulator's capture and the header version equal to
+`GET /api/version`. The mail draft was checked but not launched. English 1440 px
+and German 400 px passes left 36 screenshots. The run exposed three defects,
+fixed in the follow-up: every undeliverable section said "the selected
+diagnostic source is unavailable" (also for the withheld session log, bus
+monitor and client state, an unsaved project, or a lookup that names no device);
+German showed that reason and the keep-private note in English; and the CLI
+bundle dropped every non-System-2 recording despite the 31 October decision,
+adding a misleading System-2 note. Toasts can still cover the wizard's buttons
+(minor, open). The installed CLI's flag boundaries passed: no flag writes
+nothing, doubled/empty/misplaced flags and a repeated invocation are refused
+before any datagram.
+
 The parent-reported bounded R4 ambient-identity prerequisite is independently
 approved for the real preview/unselected-recording regression. It is prerequisite
 closure only and does not authorize raw export. Consumer source is a local

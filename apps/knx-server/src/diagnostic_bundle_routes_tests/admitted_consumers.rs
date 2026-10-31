@@ -861,7 +861,16 @@ async fn all_outward_surfaces_use_only_admitted_values() {
         .unwrap();
     assert_eq!(catalogue["selected"], true, "{catalogue}");
     assert_eq!(catalogue["unavailable"], Value::Null);
-    for kind in ["sessionLog", "device", "busMonitor", "legacyReports"] {
+    let withheld = "this section is withheld until its content is admitted as free of credentials";
+    for (kind, reason) in [
+        ("sessionLog", withheld),
+        ("device", "no device is chosen"),
+        ("busMonitor", withheld),
+        (
+            "legacyReports",
+            "the selected diagnostic source is unavailable",
+        ),
+    ] {
         let offer = view["offers"]
             .as_array()
             .unwrap()
@@ -869,10 +878,7 @@ async fn all_outward_surfaces_use_only_admitted_values() {
             .find(|offer| offer["kind"] == kind)
             .unwrap();
         assert_eq!(offer["selected"], false, "{offer}");
-        assert_eq!(
-            offer["unavailable"],
-            "the selected diagnostic source is unavailable"
-        );
+        assert_eq!(offer["unavailable"], reason, "{kind}");
         assert!(view["sections"]
             .as_array()
             .unwrap()
@@ -914,7 +920,7 @@ async fn all_outward_surfaces_use_only_admitted_values() {
     assert_eq!(offer["selected"], false);
     assert_eq!(
         offer["unavailable"],
-        "the selected diagnostic source is unavailable"
+        "this section is withheld until its content is admitted as free of credentials"
     );
     assert!(!client.to_string().contains("PRIVATE_CLIENT_SENTINEL"));
 }

@@ -325,7 +325,7 @@ implemented once in `knx_app::diagnostic_bundle::default_offer`.
 | Section | ZIP path | Source |
 | --- | --- | --- |
 | environment (fixed) | `environment/environment.json` | writer identity, platform, server incarnation, effective timings, product database and project state |
-| session log | `session-log/session-log.json` | the server's session log |
+| session log | `session-log/session-log.json` | withheld: not yet admitted as credential-free, always unavailable with the "withheld" reason |
 | operation / earlier operations | `operations/<id>/recording.jsonl`, or `system2-private.json` / a retained typed result file | non-System-2: the recorder-redacted raw recording after consent; System-2: the admitted private projection only |
 | minimised legacy reports | `reports/...` | the existing download and System-2 reports of that operation |
 | device extract | `device/<id>/device.json`, `parameters.json` | device detail and parameter panel projection |
@@ -333,8 +333,21 @@ implemented once in `knx_app::diagnostic_bundle::default_offer`.
 | original import file | `import/...` | not kept by the server; the section says so |
 | catalogue | `catalogue/catalogue.json` | product database availability (enum only, never the startup reason) and the device's product identity |
 | whole project | `project/project.knxdb` | last saved native project, secret-free copy; unsaved changes are not included |
-| bus monitor | `bus-monitor/bus-monitor.json` | the running monitor's buffer, last ten minutes |
-| client state | `client/client.json` | what the browser sent (language, theme, viewport, zoom, shell, recent errors) |
+| bus monitor | `bus-monitor/bus-monitor.json` | withheld: not yet admitted as credential-free, always unavailable with the "withheld" reason |
+| client state | `client/client.json` | withheld: not yet admitted as credential-free, always unavailable with the "withheld" reason; the browser's facts are still bounded and validated |
+
+### Unavailability reasons
+
+Every offer that cannot be delivered carries one fixed English reason; the web
+translates each by exact text and a server test fails when a reason or fixed
+note has no web translation. Reasons that do not depend on what a source holds
+are specific: a section withheld until admitted ("this section is withheld until
+its content is admitted as free of credentials"), an unsaved project, no chosen
+device, an operation whose proven context names no project device, the original
+import file the server does not keep, and the retained-result causes. A refusal
+that could hint at content (a credential observed in a project or import report,
+an unsafe or unadmitted recording, a failed secret-free copy) keeps the generic
+"the selected diagnostic source is unavailable".
 
 The import-report section uses the shared secret-free report projection on the
 admitted historical evidence. Identified secret samples and their digests are
@@ -374,3 +387,19 @@ GitHub issues keep using the minimised reports only.
 is checked before any device contact. Recordings of the invocation are written
 to a hidden directory beside the bundle and removed after the ZIP is written
 (also when writing fails). Without the flag the CLI records nothing.
+
+The flag is the user's consent for that one bundle. Following the 31 October
+2026 owner decision, each non-System-2 recording of the invocation goes into the
+ZIP exactly as recorded (keys redacted at capture), as
+`operations/<id>/recording.jsonl` with the keep-private note; the newest is the
+operation, older ones of the same invocation are earlier operations. No
+recording of a `system2-*` subcommand leaves raw, whatever its kind; the
+System-2 command contributes only its admitted private projection and report.
+A recording that is unreadable or larger than 64 MiB is left out with a note in
+the environment section. Checked on 31 October 2026 against an installed
+release build on loopback: without the flag nothing is written and no hidden
+directory appears; a doubled flag (also `--diagnostic-bundle=` mixed with the
+spaced form, same or different file), a flag without a file name and a flag
+outside `device`/`bus` are refused before any datagram; a repeated invocation
+with the same bundle path is refused before any datagram and leaves the first
+ZIP unchanged.

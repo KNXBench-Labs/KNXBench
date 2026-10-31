@@ -508,7 +508,12 @@ count with their declared unit, sliders where the manufacturer declared one, and
 colour/picture values unchanged with a note
 ([how to use it](user-guide/05-devices-and-products.md#checked-editor-since-alpha-10),
 [limits](../KNOWN_LIMITATIONS.md#checked-parameter-editors-in-the-device-editor-2026-10-12)).
-Included in Alpha.10.
+Included in Alpha.10. Source after Alpha 18 additionally offers a checked
+IPAddress literal editor for an exact `HostAddress` source declaration. It keeps
+IPv4/eight-group IPv6 spelling through explicit Apply, without address lookup,
+automatic repair or a memory codec. Other source forms retain the existing plain
+field. This addition is Main-only, not included in Alpha 18; broader specialised
+codecs and module mapping remain open.
 
 ## Notes follow-ups (12 October 2026 source)
 

@@ -8,6 +8,12 @@ const context: ParameterEditorContext = { programId: "A", sourceSha256: sha, mod
 const source: ParameterEditorSource = { sourceSha256: sha, programId: "A", parameterRefId: "PR", parameterTypeId: "PT", schema: 20, child: "TypeTime", attributes: { SizeInBit: "16", minInclusive: "0", maxInclusive: "3600", Unit: "Seconds", UIHint: "Duration_hhmmss" }, parentAttributes: { Id: "PT" } };
 
 describe("parameter editor admission", () => {
+  it("OKX06 admits exact HostAddress source as a lossless IP literal editor", () => {
+    expect(chooseParameterEditor(
+      { ...field, kind: "IPAddress", min: null, max: null, value: "203.0.113.19" },
+      { ...source, child: "TypeIPAddress", attributes: { AddressType: "HostAddress" } }, context,
+    )).toEqual({ kind: "ip-address-literal" });
+  });
   it("does not silently disregard unknown transformation metadata", () => {
     const metadata = { ...source, attributes: { ...source.attributes, DisplayFactor: "10" } };
     expect(chooseParameterEditor(field, metadata, context)).toEqual({ kind: "fallback", reason: "unsupported-hints" });

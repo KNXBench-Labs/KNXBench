@@ -2604,13 +2604,7 @@ fn run_device_download(args: &[String]) -> ExitCode {
         }
     };
     let partial_parts = prepared.partial.as_ref().map(|(parts, _)| *parts);
-    let level = knx_app::download_support::download_level(
-        &prepared.request.program_id,
-        partial_parts,
-        &prepared.plan,
-        &prepared.inferences,
-        &evidence,
-    );
+    let level = knx_app::download_support::download_level(&prepared, &evidence);
     print!(
         "{}",
         device_download::format_support(&level, target.address())
@@ -2743,6 +2737,7 @@ fn run_device_download(args: &[String]) -> ExitCode {
                 backup: &device_download::BackupTarget {
                     dir: &backup_dir,
                     application: &prepared.request.program_id,
+                    write_selection: prepared.write_selection,
                     partial: partial_parts,
                     taken: chrono::Local::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, false),
                 },
@@ -3261,13 +3256,7 @@ fn run_device_restore(args: &[String]) -> ExitCode {
     };
     // A restore writes the backup's own octets; the product image and its
     // inferences play no part in what is sent.
-    let level = knx_app::download_support::download_level(
-        &stored.application,
-        stored.partial,
-        &plan,
-        &[],
-        &evidence,
-    );
+    let level = knx_app::download_support::restore_level(&products, &stored, &plan, &evidence);
     let operator_key = match key_file.as_deref() {
         None => None,
         Some(path) => match std::fs::read_to_string(path)
@@ -3378,6 +3367,7 @@ fn run_device_restore(args: &[String]) -> ExitCode {
                 backup: &device_download::BackupTarget {
                     dir: &backup_dir,
                     application: &stored.application,
+                    write_selection: stored.write_selection,
                     partial: stored.partial,
                     taken: chrono::Local::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, false),
                 },

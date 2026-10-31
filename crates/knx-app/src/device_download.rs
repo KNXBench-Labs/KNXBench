@@ -11,7 +11,7 @@
 use std::fmt;
 
 use knx_core::commissioning::byte_order_evidence::{OctetOrder, Verdict};
-use knx_core::commissioning::memory_download::{unmasked_runs, MemoryDownloadPlan};
+use knx_core::commissioning::memory_download::{MemoryDownloadPlan, MemoryDownloadStep};
 use knx_core::commissioning::partial_memory_download::{
     derive_partial_plan, PartialDownloadParts, PartialPlanError,
 };
@@ -32,6 +32,8 @@ use knx_productdb::Connection;
 /// Everything a download to one device needs, built and checked offline.
 #[derive(Debug)]
 pub struct PreparedDownload {
+    /// Versioned producer bound to this actual preparation.
+    pub write_selection: crate::device_backup::WriteSelection,
     /// The project device.
     pub device: DeviceId,
     /// Its name in the project.
@@ -40,7 +42,7 @@ pub struct PreparedDownload {
     pub target: IndividualAddress,
     /// The configuration read from the project.
     pub request: ImageRequest,
-    /// The memory the device should hold afterwards.
+    /// The literal source-based image; omitted bytes are not an expected post-write state.
     pub image: DownloadImage,
     /// The steps that put it there.
     pub plan: MemoryDownloadPlan,
@@ -70,16 +72,27 @@ impl PreparedDownload {
         Ok(self)
     }
 
-    /// Octets the plan writes to the device, per segment: masked octets
-    /// (the device keeps its own) are not counted.
+    /// Actual scoped WriteMemory payload octets per source segment.
+    /// Source-protected and selection-omitted bytes are not counted; the image stays unchanged.
     pub fn octets_to_write(&self) -> Vec<(String, u32, usize, usize)> {
         self.image
             .segments
             .iter()
             .map(|segment| {
-                let written = unmasked_runs(&segment.octets, segment.mask.as_deref())
+                let start = u64::from(segment.address);
+                let end = start + segment.octets.len() as u64;
+                let written = self
+                    .plan
+                    .steps
                     .iter()
-                    .map(|(_, run)| run.len())
+                    .filter_map(|step| match step {
+                        MemoryDownloadStep::WriteMemory { address, octets } => {
+                            let from = u64::from(*address);
+                            let to = from + octets.len() as u64;
+                            Some(to.min(end).saturating_sub(from.max(start)) as usize)
+                        }
+                        _ => None,
+                    })
                     .sum();
                 (
                     segment.id.clone(),
@@ -175,12 +188,13 @@ fn prepare(
     let device = device_at(project, target)?;
     let request =
         image_request_for_device(conn, project, device.id).map_err(PrepareError::Request)?;
-    let (image, plan, inferences) = plan_request(conn, &request, purpose)?;
+    let (image, plan, inferences, write_selection) = plan_request(conn, &request, purpose)?;
     let warnings = byte_order_warnings(conn, &request);
     let program = knx_productdb::query::program_identity(conn, &request.program_id)
         .ok()
         .flatten();
     Ok(PreparedDownload {
+        write_selection,
         device: device.id,
         device_name: device.name.clone(),
         target,
@@ -197,12 +211,22 @@ fn prepare(
 /// The image and plan `request` yields from the catalogue behind `conn`,
 /// with every refusal a download of it meets. The one place that turns a
 /// request into a plan, shared by preparing a download and by checking
-/// later that its source still plans the same bytes.
+/// later that its source still plans the same bytes. Also returns the restore generator
+/// that rebuilds exactly this plan: the inactive selection only when it omitted a byte,
+/// since restore regenerates from source defaults and a fallback plan omits nothing.
 fn plan_request(
     conn: &Connection,
     request: &ImageRequest,
     purpose: Purpose,
-) -> Result<(DownloadImage, MemoryDownloadPlan, Vec<Inference>), PrepareError> {
+) -> Result<
+    (
+        DownloadImage,
+        MemoryDownloadPlan,
+        Vec<Inference>,
+        crate::device_backup::WriteSelection,
+    ),
+    PrepareError,
+> {
     // A program no download translates is refused for that reason, not for
     // whatever its image build would trip over first. Precedence is fixed:
     // the kind (mask, then procedure style) is the more fundamental refusal
@@ -220,7 +244,25 @@ fn plan_request(
     let image = build_download_image(conn, request).map_err(PrepareError::Image)?;
     let (plan, inferences) =
         plan_memory_download_with_inferences(&image).map_err(PrepareError::Plan)?;
-    Ok((image, plan, inferences))
+    let (plan, write_selection) = if purpose == Purpose::Download {
+        let selected = knx_productdb::download_plan::select_inactive_whole_bytes(
+            conn,
+            request,
+            &image,
+            plan.clone(),
+        );
+        if selected == plan {
+            (plan, crate::device_backup::WriteSelection::SourceMaskOnlyV1)
+        } else {
+            (
+                selected,
+                crate::device_backup::WriteSelection::SourceDefaultInactiveWholeBytesV1,
+            )
+        }
+    } else {
+        (plan, crate::device_backup::WriteSelection::SourceMaskOnlyV1)
+    };
+    Ok((image, plan, inferences, write_selection))
 }
 
 /// Whether `written`, planned again from the catalogue behind `conn` now,
@@ -236,7 +278,7 @@ pub fn source_still_plans(
     partial: Option<PartialDownloadParts>,
     ran: &MemoryDownloadPlan,
 ) -> bool {
-    let Ok((_, complete, _)) = plan_request(conn, written, Purpose::Download) else {
+    let Ok((_, complete, _, _)) = plan_request(conn, written, Purpose::Download) else {
         return false;
     };
     match partial {

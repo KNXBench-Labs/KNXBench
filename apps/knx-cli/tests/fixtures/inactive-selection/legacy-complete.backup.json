@@ -1,0 +1,53 @@
+{
+  "format": 3,
+  "kind": "knxbench-device-backup",
+  "taken": "2026-10-30T06:00:00Z",
+  "device": "1.1.7",
+  "mask": "0701",
+  "manufacturer": "FFF6",
+  "application": "M-FFF6_A-0001-01-0000",
+  "partial": null,
+  "plan_steps": [
+    "connect; check mask and manufacturer",
+    "A_Memory_Write 0104h: 14 00 00 00 00 00 00 00 00 00 00 (unload address table)",
+    "A_Memory_Write 0104h: 34 00 00 00 00 00 00 00 00 00 00 (unload application program)",
+    "A_Memory_Write 0104h: 11 00 00 00 00 00 00 00 00 00 00 (load address table)",
+    "A_Memory_Write 0104h: 13 00 00 40 00 00 08 FF 03 80 00 (segment address table)",
+    "A_Memory_Write 4000h..4007h, 8 octets",
+    "A_Memory_Write 0104h: 12 00 00 00 00 00 00 00 00 00 00 (load completed address table)",
+    "A_Memory_Write 0104h: 31 00 00 00 00 00 00 00 00 00 00 (load application program)",
+    "A_Memory_Write 0104h: 33 00 00 44 00 00 06 FF 03 80 00 (segment application program)",
+    "A_Memory_Write 4400h..4403h, 4 octets",
+    "A_Memory_Write 4405h..4405h, 1 octets",
+    "A_Memory_Write 0104h: 33 02 00 44 00 00 FF F6 00 01 01 (segment application program)",
+    "A_Memory_Write 0104h: 32 00 00 00 00 00 00 00 00 00 00 (load completed application program)",
+    "A_Restart (basic)",
+    "disconnect"
+  ],
+  "load_states": [
+    {
+      "machine": "address-table",
+      "state": "Loaded"
+    },
+    {
+      "machine": "application-program",
+      "state": "Loaded"
+    }
+  ],
+  "regions": [
+    {
+      "address": "4000",
+      "octets": "B4B4B4B4B4B4B4B4"
+    },
+    {
+      "address": "4400",
+      "octets": "01D4D5D6"
+    },
+    {
+      "address": "4405",
+      "octets": "D8"
+    }
+  ],
+  "prior_application": "FFF6000101",
+  "exemplar_serial": "FFF612345678"
+}

@@ -34,6 +34,8 @@ fn run_with(dir: tempfile::TempDir, transport: &SimulatedDevice, plan: &MemoryDo
         DownloadRun {
             plan,
             backup: &BackupTarget {
+                write_selection:
+                    knx_app::device_backup::WriteSelection::SourceDefaultInactiveWholeBytesV1,
                 dir: &backups,
                 application: PROGRAM,
                 partial: None,
@@ -145,7 +147,7 @@ fn a_restore_onto_the_same_serial_runs_and_leaves_a_backup_that_restores_again()
     assert_eq!(files.len(), 1, "{files:?}");
     let second = knx_app::device_backup::read_backup(&files[0]).unwrap();
     let text = std::fs::read_to_string(&files[0]).unwrap();
-    assert!(text.contains("\"format\": 3"), "{text}");
+    assert!(text.contains("\"format\": 4"), "{text}");
     assert!(
         text.contains("\"exemplar_serial\": \"008312345678\""),
         "{text}"

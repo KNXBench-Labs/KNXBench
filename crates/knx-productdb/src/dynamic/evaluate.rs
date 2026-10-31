@@ -356,6 +356,8 @@ pub struct DynamicTree {
     /// one. Kept beside the nodes rather than in [`DynamicNode`], which
     /// hand-built trees spell out field by field.
     access: HashMap<i64, Rc<str>>,
+    // Presence only: the human audit trail is never loaded or reparsed as semantics.
+    has_unmodelled_attributes: bool,
 }
 
 impl DynamicTree {
@@ -369,6 +371,7 @@ impl DynamicTree {
             nodes,
             children,
             access: HashMap::new(),
+            has_unmodelled_attributes: false,
         }
     }
 
@@ -381,6 +384,16 @@ impl DynamicTree {
                 .map(|(id, access)| (id, Rc::from(access))),
         );
         self
+    }
+
+    /// Whether any row retains attributes outside the normalized model, including excluded nodes.
+    pub(crate) fn has_unmodelled_attributes(&self) -> bool {
+        self.has_unmodelled_attributes
+    }
+
+    /// Structural inventory for write-only ownership proof; never evaluates a second branch policy.
+    pub(crate) fn structural_nodes(&self) -> impl Iterator<Item = &DynamicNode> {
+        self.nodes.values()
     }
 
     fn node(&self, id: i64) -> Option<&DynamicNode> {
@@ -409,7 +422,7 @@ pub fn load_tree(
 ) -> Result<DynamicTree, ProductDbError> {
     let mut stmt = conn.prepare(
         "SELECT node_id, parent_id, kind, element_id, ref_id, test, is_default,
-                text, value, name, number, access
+                text, value, name, number, access, extra IS NOT NULL
          FROM dynamic_node
          WHERE program_id = ?1 AND module_def_id = ?2
          ORDER BY node_id",
@@ -417,7 +430,7 @@ pub fn load_tree(
     // `control_kind` is resolved below, per `choose` row, once the
     // statement is done.
     let mut access: Vec<(i64, String)> = Vec::new();
-    let rows: Vec<(DynamicNode, Option<String>)> = stmt
+    let rows: Vec<(DynamicNode, Option<String>, bool)> = stmt
         .query_map(params![program_id, module_def_id], |r| {
             Ok((
                 DynamicNode {
@@ -435,13 +448,16 @@ pub fn load_tree(
                     control_kind: None,
                 },
                 r.get(11)?,
+                r.get(12)?,
             ))
         })?
         .collect::<Result<_, _>>()?;
     drop(stmt);
 
     let mut nodes = Vec::with_capacity(rows.len());
-    for (mut node, declared) in rows {
+    let mut has_unmodelled_attributes = false;
+    for (mut node, declared, opaque) in rows {
+        has_unmodelled_attributes |= opaque;
         if let Some(declared) = declared {
             access.push((node.node_id, declared));
         }
@@ -452,8 +468,10 @@ pub fn load_tree(
         }
         nodes.push(node);
     }
-    Ok(DynamicTree::from_nodes(nodes)
-        .with_access(access.iter().map(|(id, token)| (*id, token.as_str()))))
+    let mut tree = DynamicTree::from_nodes(nodes)
+        .with_access(access.iter().map(|(id, token)| (*id, token.as_str())));
+    tree.has_unmodelled_attributes = has_unmodelled_attributes;
+    Ok(tree)
 }
 
 /// The full set of `Dynamic` trees one program's evaluation can reach:

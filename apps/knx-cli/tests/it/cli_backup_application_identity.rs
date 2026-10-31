@@ -41,6 +41,7 @@ fn backup_with_serial(
     let plan = knx_app::download_support::offline_plan(&db, PROGRAM_ID).unwrap();
     let identity = application_identity(&plan).expect("the program names its application");
     let stored = StoredBackup {
+        write_selection: knx_app::device_backup::WriteSelection::SourceMaskOnlyV1,
         backup: DeviceBackup {
             target: TARGET.parse().unwrap(),
             mask: plan.mask,

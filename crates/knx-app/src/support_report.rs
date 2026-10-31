@@ -376,15 +376,10 @@ pub fn build_report(
                             match crate::device_download::prepare_device_download(c, p, address) {
                                 Ok(prepared) => {
                                     if let Ok(e) = crate::download_support::shipped_evidence() {
-                                        out.support = crate::download_support::download_level(
-                                            &prepared.request.program_id,
-                                            None,
-                                            &prepared.plan,
-                                            &prepared.inferences,
-                                            &e,
-                                        )
-                                        .code()
-                                        .into();
+                                        out.support =
+                                            crate::download_support::download_level(&prepared, &e)
+                                                .code()
+                                                .into();
                                     }
                                 }
                                 Err(e) => {

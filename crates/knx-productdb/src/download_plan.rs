@@ -44,6 +44,58 @@ use crate::code::{CustomerAdjustableCounts, LoadStep, ProgramCode};
 use crate::image::DownloadImage;
 use crate::inference::Inference;
 
+/// Apply write-only proof to an already validated regular plan; source masks stay untouched.
+/// Callers must first run the existing image and complete-plan validation. Never refuses:
+/// only bytes proved exclusively inactive are omitted; every other byte is written as before.
+pub fn select_inactive_whole_bytes(
+    conn: &crate::Connection,
+    request: &crate::image::ImageRequest,
+    image: &DownloadImage,
+    mut plan: MemoryDownloadPlan,
+) -> MemoryDownloadPlan {
+    let selection = crate::image::inactive_selection::selection(conn, request, image);
+    let mut omitted = BTreeSet::new();
+    for (id, address, permissions) in &selection {
+        for (offset, permitted) in permissions.iter().enumerate() {
+            let absolute = *address + offset as u32;
+            // A byte inside another segment has another possible owner: written as before.
+            let shared = image.segments.iter().any(|s| {
+                s.id != *id && s.address <= absolute && absolute < s.address + s.octets.len() as u32
+            });
+            if !permitted && !shared {
+                omitted.insert(absolute);
+            }
+        }
+    }
+    let mut steps = Vec::with_capacity(plan.steps.len());
+    for step in plan.steps {
+        match step {
+            MemoryDownloadStep::WriteMemory { address, octets } => {
+                let mut offset = 0;
+                while offset < octets.len() {
+                    if omitted.contains(&(u32::from(address) + offset as u32)) {
+                        offset += 1;
+                        continue;
+                    }
+                    let start = offset;
+                    while offset < octets.len()
+                        && !omitted.contains(&(u32::from(address) + offset as u32))
+                    {
+                        offset += 1;
+                    }
+                    steps.push(MemoryDownloadStep::WriteMemory {
+                        address: address + start as u16,
+                        octets: octets[start..offset].to_vec(),
+                    });
+                }
+            }
+            control => steps.push(control),
+        }
+    }
+    plan.steps = steps;
+    plan
+}
+
 /// The `LoadProcedureStyle` this module translates.
 const PRODUCT_PROCEDURE: &str = "ProductProcedure";
 /// `SegType` of an absolute data segment and of a stack segment.

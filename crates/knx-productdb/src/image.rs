@@ -82,6 +82,7 @@
 //!   refused.
 
 mod experimental;
+pub(crate) mod inactive_selection;
 mod legacy_source;
 mod system1;
 

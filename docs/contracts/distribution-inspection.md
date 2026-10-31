@@ -1,14 +1,16 @@
-# Manufacturer distribution inspection (report format 3)
+# Manufacturer distribution inspection (report format 4)
 
 Contract for `knx products inspect-distribution` and
 `knx_productdb::distribution::inspect_distribution`. Added for OpenKNX-style
 manufacturer distributions: plain manufacturer XML, or a ZIP release holding
-such XML next to scripts, help and baggage files. Format 3 is format 2 plus
-`dependencyEvidence` and the `dependenciesNotExecuted` limitation. Neither
-format has been in a release yet; only format 3 is emitted. A format-2 report
-lacks the required `dependencyEvidence` field and fails to deserialize, rather
-than reading as a source without declarations. Format 1 never left a feature
-branch and is not accepted or emitted.
+such XML next to scripts, help and baggage files. Format 4 is format 3 plus
+`sourceCandidates`; format 3 is format 2 plus `dependencyEvidence` and the
+`dependenciesNotExecuted` limitation. None of them has been in a release yet;
+only format 4 is emitted. A format-3 report lacks the required
+`sourceCandidates` field (a format-2 report also `dependencyEvidence`) and
+fails to deserialize, rather than reading as a source without candidates or
+declarations. Format 1 never left a feature branch and is not accepted or
+emitted.
 
 ## What it is and is not
 
@@ -28,6 +30,9 @@ branch and is not accepted or emitted.
   range only (`preservedContent`), never echoed or executed. Declared scripts,
   calculations, validations, button handlers and Assign are listed in
   `dependencyEvidence`; none is run, resolved to a function or applied.
+- **No repair.** `sourceCandidates` compares declared TypeNumber values and
+  Union member intervals arithmetically. Nothing is corrected, initialized,
+  chosen or written, and a candidate is not a schema, ETS or device verdict.
 
 ## Accepted input
 
@@ -115,6 +120,8 @@ All field names are camelCase. A source reference is a JSON pair
   attributes as asserted by the source, never verified.
 - `dependencyEvidence[]`: declared dependency facts in member and element
   order (see below).
+- `sourceCandidates[]`: TypeNumber value and Union interval candidates in
+  member and element order (see below).
 
 ## Dependency evidence
 
@@ -191,6 +198,131 @@ order, and L×R pairs are not expanded. `EventHandlerOnline` (for example
 a connection. Validations are declared, not run: there is no valid/invalid
 result. The native write-authority recorder is not called.
 
+## Source candidates
+
+Each row has a `kind`, `severity` (always `sourceCandidate`), its own
+`source`, `applicationSource`, `manufacturerSource`, inside a ModuleDef
+`moduleDefinitionSource`, `initialization` (always `notPerformed`),
+`activity` and `dependencyContext`. A row describes declarations under a
+named KNXBench model. It is not a runtime error, and nothing is corrected.
+
+| Kind | Source | Check |
+| --- | --- | --- |
+| `parameterValue` | each `Parameter` whose type is a `TypeNumber` or cannot be determined | `valueCheck` of its `Value` |
+| `parameterRefValue` | each `ParameterRef` that declares `Value` | `valueCheck` of that override, against the type of the uniquely resolved Parameter |
+| `unionMemberInterval` | each `Parameter` directly in `Static/Parameters/Union`, of any type kind | `intervalCheck` |
+| `unionIntervalSummary` | each such `Union` with at least one member | `unionSummary` |
+
+- A ParameterRef without `Value` gets no row: it is not an override
+  occurrence. The value it inherits stays in `parameterFallbacks`, whose
+  `source` is the ref; a `parameterValue` row's `source` is the Parameter
+  that owns the `Value`.
+- A Parameter whose type resolves uniquely to another kind (`TypeFloat`,
+  `TypeTime`, `TypeRestriction`, `TypeText`, ...) gets no value row. It is
+  neither checked nor counted as TypeNumber.
+- `parameter` (`ParameterRef/@RefId`) and `parameterType`
+  (`Parameter/@ParameterType`) are resolved like `references[]`: in the
+  nearest ModuleDef or the application, a ModuleDef type also in the
+  enclosing application (`basis`), duplicates `ambiguous` with every
+  candidate.
+
+### Value check (`finite-decimal-comparison-v1`)
+
+- `typeShape`: `typeNumber`; `parameterUnavailable` (the ref's Parameter is
+  missing or ambiguous); `typeReferenceUnavailable` (type attribute absent,
+  dangling or ambiguous); `noTypeElement` or `multipleTypeElements` (the
+  ParameterType has no or several `Type*` children). Only `typeNumber` is
+  compared; every other shape gives `typeUnavailable`.
+- `value`, `minimum`, `maximum`: the row source's `Value` and the
+  TypeNumber's `minInclusive`/`maxInclusive`. Each keeps the attribute name,
+  presence and XML-decoded value (not the byte-exact spelling; the element's
+  byte range is the raw source), a `class` and a `normalized` reading.
+  Classes: `absent`, `empty`, `finiteDecimal`, `notFiniteDecimal`,
+  `exceedsLexicalLimit`.
+- Grammar: optional sign, digits with an optional fraction (`1.` and `.5`
+  are accepted), optional exponent (`e` or `E`, optional sign, digits).
+  Surrounding XML whitespace is ignored, as for `xs:decimal`. Anything else,
+  including `NaN`, `INF` and inner spaces, is `notFiniteDecimal`. A value
+  longer than 128 bytes or with an exponent beyond ±1,000,000 is
+  `exceedsLexicalLimit`: refused work, not a source error.
+- `normalized` is `[-]<digits>e<exponent>` without leading or trailing zeros
+  (`0002` gives `2e0`, `5.000E+002` gives `5e2`), or `0`.
+- The comparison is exact: no binary floating point and no narrowing to 64
+  bits. Bounds are closed. `belowMinimum` and `aboveMaximum` are `outside`,
+  `notOutside`, `unboundedOnThatSide` (bound absent) or `unavailable` (value
+  or bound not a finite decimal, reversed range, or no TypeNumber).
+- `comparison`, first match wins: `typeUnavailable`; from the value
+  `valueAbsent`, `valueEmpty`, `notFiniteDecimal`, `lexicalResourceLimit`;
+  `invalidDeclaredRange` (both bounds valid, minimum above maximum, so no
+  inside or outside claim); `below`; `above`; `lexicalResourceLimit` or
+  `boundInvalid` (a present bound is unusable and its side is not compared,
+  which is not the same as unbounded); `unbounded` (no bound declared, so
+  there is no range assurance); `within`.
+- `typeAttributes`: the TypeNumber's `Type` and `SizeInBit`, as declared. No
+  unit, factor, DPT, enumeration, script transform or width encodability is
+  applied or checked.
+
+### Interval check (`union-member-relative-bits-v1`)
+
+- `startBit = 8 * Offset + BitOffset` and `endBit = startBit + width`,
+  compared as the half-open `[startBit, endBit)` with `[0, extent)`. `width`
+  is the `SizeInBit` of the member type's unique `Type*` element, `extent`
+  is `Union/@SizeInBit`. The row is `outsideExtent` when `startBit < 0` or
+  `endBit > extent`, otherwise `withinExtent`.
+- **Strict-explicit.** An omitted `Offset` or `BitOffset` gives no interval
+  (`offsetAbsent`, `bitOffsetAbsent`); no zero is substituted. An explicit
+  `0` participates. A missing width is `widthUnknown`, never zero, and no DPT
+  or native width is inferred. An explicit width `0` is a known empty
+  interval with `zeroWidthDeclared`, not an encoding assurance.
+- Integers are parsed exactly (optional sign and digits, surrounding XML
+  whitespace ignored) into signed 64 bits. Class `absent`, `empty`,
+  `integer`, `notInteger` or `exceedsLimit` (over 128 bytes or 64 bits). A
+  negative width or extent is invalid (`widthInvalid`, `extentInvalid`); a
+  negative offset is a valid input that lands outside. Overflow is
+  `arithmeticLimit`. With an unknown or invalid extent the interval is still
+  reported (`extentUnknown`, `extentInvalid`). Non-byte-aligned placements
+  are inputs, not errors. The checks run in this order: offset, bit offset,
+  width, arithmetic, extent.
+- `unionPlacement` lists the Union's `Memory`/`Property` children as context.
+  Their offsets are never added: the interval is member-relative, not an
+  address. No alternative is chosen, and nothing is padded, relocated or
+  written.
+
+The formula is a KNXBench diagnostic model, not an official schema binding.
+Bit numbering, the physical origin and runtime effects remain unverified.
+
+### Union summary
+
+- `memberDeclarations`, `knownIntervals`, `unavailableIntervals`,
+  `unknownWidthMembers` and `outsideMembers` count member declarations.
+- `distinctIntervals`, sorted by start and end, give each distinct known
+  interval once with the number of members sharing it.
+- `overlappingDistinctPairs` is the exact number of overlapping pairs of
+  distinct non-empty intervals. At most 16 `overlapSamples` (index pairs into
+  `distinctIntervals`) are listed, with `overlapSamplesTruncated`. No pair
+  matrix is built.
+- Union members are alternatives. Overlap is a relation between
+  declarations, not a simultaneous write and not an error.
+
+### Activity and dependency context
+
+- `activity.state` is `notEvaluated` (reason `dynamicNotAttempted`),
+  `observedInEvaluatedSubset` or `unavailable`. There is no known-inactive
+  state.
+- Observations come from the same application's `activeParameterRefs`: the
+  declaring ParameterRef (the row's own ref, or each ref that resolves
+  uniquely to the Parameter), its module-instance scope chain and
+  `input: sourceFallbacks`. A ModuleDef definition stays one row; each
+  instance is one observation.
+- `unavailable` reasons: `notObservedInEvaluatedSubset` (the subset is
+  incomplete, so this says nothing about activity), `noUniqueParameterRef`
+  and `summaryRow`.
+- `dependencyContext.declarations` lists dependency-evidence endpoints that
+  name the row's ParameterRefs (kind, role, declaring element and ref). No
+  value is calculated. `impactScope` is `applicationImpactUnknown` when the
+  application declares any script, calculation, validation or handler, and
+  `declaredEndpointsOnly` otherwise; neither is a non-impact guarantee.
+
 ## Limits
 
 `DistributionLimits::default()` is the ceiling. Callers may only lower each
@@ -213,6 +345,11 @@ value (`bounded()` takes the minimum), and every limit is inclusive.
 - Dependency rows and their attributes, member lists, endpoints, candidates
   and conditions count as output rows. Each endpoint and each of its
   candidates also counts against the reference ceiling.
+- Source-candidate rows and their reference candidates, type attributes,
+  Union placements, distinct intervals, overlap samples, activity
+  observations with their scope chains and dependency declarations count as
+  output rows. Each `parameter` and `parameterType` reference and its
+  candidates also counts against the reference ceiling.
 - The XML working set and the serialized report are charged separately, and
   both are charged while the report is built. A ZIP keeps an exact running
   report size instead of re-serializing it after every member. The final
@@ -225,8 +362,10 @@ value (`bounded()` takes the minimum), and every limit is inclusive.
 - Library tests cover combined and split sources, modules, BOM coordinates,
   malformed and refused inputs, inclusive limits, the source-map resolver,
   Dynamic unknowns, lexical type scope, fallback origins, exact ZIP report
-  bytes and dependency evidence (presence, scope, ambiguity, cycles, record
-  and reference budgets). CLI tests compare the CLI output byte for byte with the library and
+  bytes, dependency evidence (presence, scope, ambiguity, cycles, record
+  and reference budgets) and source candidates (the readiness vectors, exact
+  decimal edges, lexical caps, strict intervals, Union summaries, activity,
+  ZIP members and budgets). CLI tests compare the CLI output byte for byte with the library and
   check that the profile is unchanged. Native package regressions show that
   installation still refuses distributions.
 - Real input: 37 public OpenKNX release ZIPs, each inspected with a release
@@ -240,6 +379,6 @@ value (`bounded()` takes the minimum), and every limit is inclusive.
   the same 37 archives in a fresh in-memory product database is still refused:
   28 with `MissingMaster`, 9 with `UnsafeMember`. The archives themselves are
   not part of the repository. These figures are from format 2; the run was
-  not repeated with dependency evidence.
+  not repeated with dependency evidence or source candidates.
 
 Related: [KL-187](../limitations/KL-187-distribution-inspection.md).

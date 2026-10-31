@@ -23,6 +23,13 @@ Limits:
   (`dependencyEvidence`, report format 3) but never run, resolved to functions
   or applied. Their conditions are not evaluated, and impact beyond declared
   Assign endpoints is unknown.
+- **Source candidates are arithmetic, not validity.** `sourceCandidates`
+  (report format 4) compares TypeNumber values with their declared bounds
+  and Union member intervals with the Union size, under named KNXBench
+  models. A candidate is not a schema, ETS or device error. An omitted
+  Offset or BitOffset, or a missing width, gives no interval. Nothing is
+  initialized, corrected or chosen; official schema defaults, bit numbering
+  and runtime effects stay unverified. Other type kinds are not checked.
 - **Reference coverage is a subset.** Mask, medium and DPT references are
   external and unresolved. Argument, Rename and BinaryData references are not
   followed.

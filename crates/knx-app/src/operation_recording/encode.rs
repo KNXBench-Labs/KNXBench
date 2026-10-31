@@ -68,7 +68,7 @@ pub(super) fn header(
         "related": start.related,
         "settings": start.settings,
         "redaction": {
-            "policy": "authorize and key-write keys, KNX Secure keys and passwords are never recorded",
+            "policy": "authorize and key-write keys, KNX Secure keys and tunnel/login passwords are redacted at capture; other device data, which may contain passwords, is recorded as exchanged",
             "marker": "redacted octets are zero and named by a `redacted` object",
         },
     })

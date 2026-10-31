@@ -1387,7 +1387,7 @@ const NOTE_RECORDING_MISSING_PROJECTION: &str =
     "the operation recording is unavailable; this is the admitted private projection";
 const NOTE_RECORDING_MISSING_RESULT: &str =
     "the operation recording is unavailable; this is the retained typed result";
-const NOTE_TORN_TAIL: &str = "the recording's last line is incomplete (interrupted write)";
+use knx_app::diagnostic_bundle::TORN_TAIL_NOTE as NOTE_TORN_TAIL;
 const NOTE_SAVED_ROOT: &str =
     "the last saved state of the project; unsaved changes are not included";
 const NOTE_NO_PARAMETERS: &str = "the parameter values could not be projected for this device";
@@ -1413,8 +1413,7 @@ fn report_notes(files: &[BundleFile]) -> Option<String> {
         .then(|| PRIVATE_RAW_NOTE.to_string())
 }
 
-/// Largest raw recording copied into a bundle; a larger one stays unavailable.
-const MAX_RAW_RECORDING_BYTES: u64 = 64 * 1024 * 1024;
+use knx_app::diagnostic_bundle::MAX_RAW_RECORDING_BYTES;
 
 /// A non-System-2 recording exactly as the recorder wrote it (keys redacted at capture).
 ///

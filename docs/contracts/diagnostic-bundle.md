@@ -395,15 +395,16 @@ to a hidden directory beside the bundle and removed after the ZIP is written
 The flag is the user's consent for that one bundle. Following the 31 October
 2026 owner decision, each non-System-2 recording of the invocation goes into the
 ZIP exactly as recorded (keys redacted at capture), as
-`operations/<id>/recording.jsonl` with the keep-private note; the newest is the
-operation, older ones of the same invocation are earlier operations. No
+`operations/<id>/recording.jsonl` with the keep-private note; only the newest
+listed recording can be the operation, the others are earlier operations. No
 recording of a `system2-*` subcommand leaves raw, whatever its kind; the
 System-2 command contributes only its admitted private projection and report.
 Every recording left out (unreadable header, System-2 kind, unreadable or larger
 than 64 MiB, or any recording of a `system2-*` command) is named in a note in the
-environment section. Only the newest recording can be the operation section. The
-help text and the success message say that the ZIP may contain device
-configuration and passwords and must be kept private. Checked on 31 October 2026 against an installed
+environment section. The help text, the success message, the web mail draft,
+the recordings note and the manifest's `notRemoved` say that the ZIP may contain
+device configuration and passwords and must be kept private; a recording header's
+redaction policy names exactly what is redacted at capture. Checked on 31 October 2026 against an installed
 release build on loopback: without the flag nothing is written and no hidden
 directory appears; a doubled flag (also `--diagnostic-bundle=` mixed with the
 spaced form, same or different file), a flag without a file name and a flag

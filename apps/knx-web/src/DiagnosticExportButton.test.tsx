@@ -1,4 +1,4 @@
-/** Tests the diagnostic dialog: profile choice, preview, read consent and save consent. */
+/** Tests the diagnostic dialog: profile choice, preview, read consent and report handoff. */
 // @vitest-environment happy-dom
 import {act} from "react";
 import {createRoot,type Root} from "react-dom/client";
@@ -10,16 +10,27 @@ vi.mock("./diagnosticApi",()=>({IDENTITY_PROFILE:"generic-identity-v1",MEMORY_PR
 // Parameters are echoed so counts and addresses stay assertable without a catalogue.
 vi.mock("./i18n",()=>({useTranslate:()=>((key:string,params?:object)=>params?`${key} ${JSON.stringify(params)}`:key)}));
 vi.mock("./Overlay",()=>({default:({children}:{children:React.ReactNode})=><div role="dialog">{children}</div>}));
+const opened=vi.hoisted(()=>vi.fn());
+vi.mock("./ReportProblemEntry",()=>({useReportProblem:()=>opened}));
 vi.mock("./treeUtils",()=>({collectDevices:()=>new Map([[7,{id:7,address:"1.1.25",name:"Synthetic device"}]]),projectContextKey:()=>"synthetic-context"}));
 import DiagnosticExportButton from "./DiagnosticExportButton";
 let host:HTMLDivElement,root:Root;
 const report={profile:"generic-identity-v1",simulated:true,written:false,complete:false,projectReference:"a".repeat(64),memoryStatus:"not-requested",memoryReason:"no safe memory profile",items:[{query:"descriptor-type-0",status:"not-read",bytes:[],expectedBytes:2,receivedBytes:0,completedAt:null}],stopReason:null};
 const preview={token:"a".repeat(64),target:"1.1.25",gateway:"192.0.2.10:3671",phase:"preview",cancelRequested:false,report,memory:null,exportable:false};
-beforeEach(()=>{host=document.createElement("div");document.body.append(host);root=createRoot(host);for(const mock of Object.values(calls))mock.mockReset();calls.preview.mockResolvedValue(preview);});
+beforeEach(()=>{host=document.createElement("div");document.body.append(host);root=createRoot(host);for(const mock of Object.values(calls))mock.mockReset();opened.mockReset();calls.preview.mockResolvedValue(preview);});
+/** DIAG-03: the finished read is handed to the report wizard by its token; nothing is saved here. */
+async function handOff(){
+ expect(document.querySelector("[data-diagnostics-save],[data-diagnostics-share-consent]")).toBeNull();
+ expect(opened).not.toHaveBeenCalled();
+ await click("[data-report-problem-open=diagnostics]");
+ expect(opened).toHaveBeenCalledExactlyOnceWith({problemType:"deviceReading",deviceId:7,operation:{relatedKey:"diagnosticsToken",relatedValue:preview.token}});
+ expect(document.querySelector("[data-diagnostics-result]")).toBeNull();
+ expect(calls.save).not.toHaveBeenCalled();
+}
 afterEach(async()=>{await act(()=>root.unmount());host.remove();document.body.innerHTML="";});
 async function click(attr:string){await act(async()=>{document.querySelector<HTMLButtonElement>(attr)!.click();});}
 async function open(){await act(()=>root.render(<DiagnosticExportButton project={{server_incarnation:"synthetic",project_incarnation:1,snapshot_revision:2} as ProjectTree} deviceId={7}/>));await click("[data-diagnostics-open]");const input=document.querySelector<HTMLInputElement>("[data-diagnostics-gateway]")!;await act(()=>{Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,"value")!.set!.call(input,"192.0.2.10:3671");input.dispatchEvent(new Event("input",{bubbles:true}));});}
-it("previews one selected target without acquisition and demands separate read/share consent",async()=>{
+it("previews one selected target without acquisition, demands read consent and hands the result to the report",async()=>{
  await open();expect(calls.preview).not.toHaveBeenCalled();expect(calls.start).not.toHaveBeenCalled();
  await click("[data-diagnostics-preview]");expect(calls.preview).toHaveBeenCalledExactlyOnceWith(7,"192.0.2.10:3671","generic-identity-v1",{serverIncarnation:"synthetic",projectIncarnation:1,revision:2});
  expect(document.querySelector("[data-diagnostics-review]")!.textContent).toContain("1.1.25");
@@ -29,16 +40,16 @@ it("previews one selected target without acquisition and demands separate read/s
  expect(calls.start).toHaveBeenCalledExactlyOnceWith(preview.token);
  await act(async()=>{await new Promise(resolve=>setTimeout(resolve,350));});
  expect(document.querySelector("[data-diagnostics-result]")!.textContent).toContain("7");
- expect(document.querySelector<HTMLButtonElement>("[data-diagnostics-save]")!.disabled).toBe(true);
- await click("[data-diagnostics-share-consent]");await click("[data-diagnostics-save]");expect(calls.save).toHaveBeenCalledExactlyOnceWith(preview.token);
+ expect(document.querySelector("[data-diagnostics-handoff]")!.textContent).toBe("diagnostics.handoff");
+ await handOff();
 });
-it("sends cooperative cancellation and retains partial data for download",async()=>{
+it("sends cooperative cancellation and retains partial data for the report",async()=>{
  await open();await click("[data-diagnostics-preview]");calls.start.mockResolvedValue({...preview,phase:"running"});calls.poll.mockResolvedValue({...preview,phase:"running"});calls.cancel.mockResolvedValue({...preview,phase:"running",cancelRequested:true});
  await click("[data-diagnostics-read-consent]");await click("[data-diagnostics-start]");await click("[data-diagnostics-cancel]");expect(calls.cancel).toHaveBeenCalledExactlyOnceWith(preview.token);
  calls.poll.mockResolvedValue({...preview,phase:"complete",exportable:true,report:{...report,complete:true,stopReason:"cancelled",items:[{...report.items[0],status:"read",bytes:[7,1],receivedBytes:2,completedAt:"2026-10-17T06:00:00Z"}]}});
  await act(async()=>{await new Promise(resolve=>setTimeout(resolve,350));});expect(document.querySelector("[data-diagnostics-result]")!.textContent).toContain("cancelled");
  expect(document.querySelector("[data-diagnostics-stop-reason]")!.textContent).toBe('diagnostics.stopReason {"label":"diagnostics.stopReason.cancelled"} cancelled');
- await click("[data-diagnostics-share-consent]");await click("[data-diagnostics-save]");expect(calls.save).toHaveBeenCalledExactlyOnceWith(preview.token);
+ await handOff();
 });
 const range=(order:number,address:number,length:number,read:number)=>({order,address,length,procedurePosition:order+1,coverage:{read,refusedAmbiguous:0,partial:0,error:0,notRead:length-read}});
 const chunk=(order:number,range:number,address:number,requestedOctets:number,done:boolean)=>({order,range,address,requestedOctets,status:done?"read":"not-read",receivedOctets:done?requestedOctets:0,bytes:done?"ee".repeat(requestedOctets):"",attemptedAt:done?"2026-10-17T06:00:00Z":null,completedAt:done?"2026-10-17T06:00:01Z":null,error:null});
@@ -91,22 +102,19 @@ it("counts memory chunks while reading and shows coverage per declared range",as
  const coverage=[...document.querySelectorAll("[data-diagnostics-coverage] li")].map(li=>JSON.parse(li.textContent!.replace("diagnostics.coverage ","")));
  expect(coverage).toEqual([{address:"0116h",length:30,read:30,refused:0,partial:0,error:0,notRead:0},{address:"3C00h",length:12,read:12,refused:0,partial:0,error:0,notRead:0}]);
  expect(document.querySelector("[data-diagnostics-result] pre[aria-label='memory.json']")).not.toBeNull();
- expect(document.querySelector<HTMLButtonElement>("[data-diagnostics-save]")!.disabled).toBe(true);
- await click("[data-diagnostics-share-consent]");await click("[data-diagnostics-save]");expect(calls.save).toHaveBeenCalledExactlyOnceWith(preview.token);
+ await handOff();
 });
-it("offers no save when the server says the finished run has no archive",async()=>{
+it("a finished run without the old archive still goes to the report wizard",async()=>{
  await open();await select("[data-diagnostics-profile]","system2-declared-segments-v1");
  calls.preview.mockResolvedValue(memoryPreview);await click("[data-diagnostics-preview]");
  calls.start.mockResolvedValue({...memoryPreview,phase:"running"});
  calls.poll.mockResolvedValue({...memoryPreview,phase:"complete",exportable:false,report:{...memoryReport,complete:true,stopReason:"gateway-busy"}});
  await click("[data-diagnostics-read-consent]");await click("[data-diagnostics-start]");
  await act(async()=>{await new Promise(resolve=>setTimeout(resolve,350));});
- // Copy for any refused archive; the reason is a translated label first, the raw token second.
- expect(document.querySelector("[data-diagnostics-not-exportable]")!.textContent).toBe("diagnostics.notExportable");
+ // The stop reason is a translated label first, the raw token second.
  expect(document.querySelector("[data-diagnostics-stop-reason]")!.textContent).toBe('diagnostics.stopReason {"label":"diagnostics.stopReason.gatewayBusy"} gateway-busy');
  expect(document.querySelector("[data-diagnostics-stop-reason] code")!.textContent).toBe("gateway-busy");
- expect(document.querySelector("[data-diagnostics-save]")).toBeNull();
- expect(document.querySelector("[data-diagnostics-share-consent]")).toBeNull();
+ await handOff();
 });
 it("explains a known preview refusal and keeps the server's detail",async()=>{
  await open();await select("[data-diagnostics-profile]","system2-declared-segments-v1");

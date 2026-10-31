@@ -24,6 +24,12 @@ import { messages as deMessages } from "./messages/de";
 import { PRODUCT_LANGUAGE_STORAGE_KEY, resetProductLanguageForTests, useProductLanguage } from "./productLanguage";
 import { resetUiLanguageForTests, saveUiLanguage } from "./uiLanguage";
 
+import type { BundlePreview, BundleQuery } from "./diagnosticBundleShape";
+const reportApi = vi.hoisted(() => ({ previewBundle: vi.fn(), sectionText: vi.fn(), exportBundle: vi.fn(), deleteRecordings: vi.fn() }));
+vi.mock("./diagnosticBundleApi", async (original) => ({ ...(await original<typeof import("./diagnosticBundleApi")>()), ...reportApi }));
+const reportDownload = vi.hoisted(() => vi.fn());
+vi.mock("./localJsonDownload", () => ({ downloadLocalBlob: reportDownload }));
+
 const apiMock = vi.hoisted(() => ({
   importProject: vi.fn(),
   compareDevice: vi.fn(),
@@ -385,6 +391,112 @@ async function renderAppOnFreshServer(): Promise<Root> {
 function noProjectOpen(): Error {
   return Object.assign(new Error("no project open"), { status: 400 });
 }
+
+describe("DIAG-03 actual App report lifetime", () => {
+  beforeEach(() => { (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true; });
+  afterEach(() => { (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = false; });
+  const bound = (): ProjectTree => ({ ...baseTree(), can_undo: true, server_incarnation: "report-server", project_incarnation: 1, snapshot_revision: 1 });
+  const response = (query: BundleQuery): BundlePreview => ({
+    review: { fingerprint: "a".repeat(64), context: { serverIncarnation: "report-server", projectIncarnation: 1, revision: 1 } },
+    problemType: query.problemType, recordingEnabled: false, operationRecordingId: null, deviceId: null,
+    offers: [], sections: [{ key: "environment", kind: "environment", label: null, bytes: 2, entries: 1,
+      markers: { addresses: false, names: false, parameterValues: false, networkAddresses: false }, notes: [], files: ["environment.json"] }],
+    totalBytes: 2, exceedsMailHint: false, fileName: "report.zip", mailDraft: "mailto:issue@knxbench.com", recordings: [],
+  });
+  const reportClick = async (selector: string) => {
+    const target = document.querySelector<HTMLElement>(selector); expect(target).not.toBeNull();
+    await act(async () => target!.click());
+  };
+  async function openReport() {
+    apiMock.currentProject.mockResolvedValue(bound());
+    reportApi.previewBundle.mockImplementation(async (q: BundleQuery) => response(q));
+    reportDownload.mockReset();
+    const root = await renderApp();
+    await reportClick("[data-report-problem-open=menu]");
+    await reportClick("[data-report-next]");
+    return root;
+  }
+  for (const change of ["revision", "project", "server"] as const) for (const pending of ["preview", "text", "zip"] as const) {
+    it(`${change} withdraws the real App wizard and rejects late ${pending}`, async () => {
+      let release!: (v: never) => void;
+      const promise = new Promise((resolve) => { release = resolve; });
+      const root = await openReport();
+      try {
+        if (pending === "preview") {
+          reportApi.previewBundle.mockReturnValueOnce(promise);
+          await reportClick(".project-wizard-step-link");
+          await reportClick("[data-report-next]");
+        } else if (pending === "text") {
+          reportApi.sectionText.mockReturnValueOnce(promise);
+          await reportClick("[data-report-next]"); await reportClick("[data-report-show=environment]");
+        } else {
+          reportApi.exportBundle.mockReturnValueOnce(promise);
+          await reportClick("[data-report-next]"); await reportClick("[data-report-next]");
+          await reportClick("[data-report-consent]"); await reportClick("[data-report-save]");
+        }
+        const next = { ...bound(), ...(change === "revision" ? { snapshot_revision: 2 }
+          : change === "project" ? { project_incarnation: 2, snapshot_revision: 2 } : { server_incarnation: "report-restarted", snapshot_revision: 2 }) };
+        apiMock.undo.mockResolvedValueOnce(next);
+        await act(async () => findButton(enMessages["toolbar.undo"]).click());
+        expect(document.querySelector(".report-problem")).toBeNull();
+        await act(async () => release((pending === "preview" ? response({ problemType: "userInterface" })
+          : pending === "text" ? "foreign old text" : { blob: new Blob(["PK"]), fileName: "old.zip" }) as never));
+        expect(reportDownload).not.toHaveBeenCalled();
+        expect(document.querySelector("[data-report-mail]")).toBeNull();
+      } finally { await act(async () => root.unmount()); }
+    });
+  }
+  for (const language of ["en", "de"] as const) it(`${language}: projectless manual identity read hands off once with separate report consent`, async () => {
+    setSetting("uiLanguage", language); resetUiLanguageForTests();
+    const calls: { path: string; body: Record<string, unknown> }[] = [];
+    const support = { token: "b".repeat(64), digest: "c".repeat(64), report: { support: "unknown" }, summary: "Bounded identity result", localAddress: "1.1.67", mask: null, profile: "descriptor-only-v1", reads: ["DeviceDescriptorRead type 0"], deadlineSeconds: 30 };
+    vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const path = String(input);
+      if (path.startsWith("/api/support/")) { calls.push({ path, body: JSON.parse(String(init?.body)) }); return new Response(JSON.stringify(support), { status: 200, headers: { "content-type": "application/json" } }); }
+      if (!EXPECTED_SELF_FETCHES.some((p) => path.includes(p))) unexpectedFetches.push(path);
+      throw new Error("mocked only");
+    }));
+    reportApi.previewBundle.mockImplementation(async (q: BundleQuery) => response(q));
+    const root = await renderApp();
+    try {
+      const entry = document.querySelector<HTMLButtonElement>("[data-identity-read-open]"); expect(entry).not.toBeNull();
+      await act(async () => entry!.click());
+      expect(calls).toEqual([]);
+      const input = async (selector: string, value: string) => act(async () => {
+        const field = document.querySelector<HTMLInputElement>(selector)!;
+        Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!.call(field, value);
+        field.dispatchEvent(new Event("input", { bubbles: true }));
+      });
+      await input("[data-support-local-address]", "16.1.67");
+      expect(document.querySelector<HTMLButtonElement>("[data-support-preview]")!.disabled).toBe(true);
+      await input("[data-support-local-address]", "1.1.67"); await reportClick("[data-support-preview]");
+      expect(calls).toEqual([{ path: "/api/support/preview", body: { input: { includeContext: false, contextRights: false, functionalCheck: "not-checked" }, deviceId: null, address: "1.1.67" } }]);
+      expect(document.querySelector("[data-report-save]")).toBeNull();
+      await input("[data-support-gateway]", "192.0.2.10:3671");
+      expect(document.querySelector<HTMLButtonElement>("[data-support-read]")!.disabled).toBe(true);
+      await reportClick("[data-support-live-consent]"); await reportClick("[data-support-read]");
+      expect(calls[1]).toEqual({ path: "/api/support/diagnose", body: { token: support.token, gateway: "192.0.2.10:3671", consent: true } });
+      await reportClick("[data-report-problem-open=support-read]");
+      expect(document.querySelector("[data-identity-read-dialog]")).toBeNull();
+      expect(reportApi.previewBundle).toHaveBeenLastCalledWith(expect.objectContaining({ problemType: "deviceReading", operation: { relatedKey: "supportToken", relatedValue: support.token } }));
+      expect(reportApi.previewBundle.mock.calls.at(-1)![0]).not.toHaveProperty("deviceId");
+      await reportClick("[data-report-next]"); await reportClick("[data-report-next]");
+      expect(document.querySelector<HTMLInputElement>("[data-report-consent]")!.checked).toBe(false);
+      expect(document.querySelector<HTMLButtonElement>("[data-report-save]")!.disabled).toBe(true);
+      expect(calls.map((c) => c.path)).toEqual(["/api/support/preview", "/api/support/diagnose"]);
+    } finally { await act(async () => root.unmount()); }
+  });
+
+  it("an equal accepted App tree refresh preserves preview and consent", async () => {
+    const root = await openReport();
+    try {
+      await reportClick("[data-report-next]"); await reportClick("[data-report-next]"); await reportClick("[data-report-consent]");
+      apiMock.undo.mockResolvedValueOnce({ ...bound() });
+      await act(async () => findButton(enMessages["toolbar.undo"]).click());
+      expect(document.querySelector<HTMLInputElement>("[data-report-consent]")?.checked).toBe(true);
+    } finally { await act(async () => root.unmount()); }
+  });
+});
 
 describe("every editor mount resumes the server project (ADR-0127)", () => {
   it("resumes after a reload and says so, without reopening or importing", async () => {
@@ -1731,9 +1843,10 @@ describe("App — the File menu by keyboard alone", () => {
       ],
       ["Project history", "Compare with…"],
       [
-        "Debug report…",
+        // DIAG-03: the one report entry; the device support report became a shortcut into it.
+        "Report problem…",
         "Analyze support gaps…",
-        "Device support report",
+        "Read device identity…",
         "Export diagnostic data",
         // ADR-0084: the first-run guide, reopened on request.
         "Show introduction…",
@@ -3087,23 +3200,23 @@ describe("App — the File menu's manners, the stacked splitters, Quit and About
     await act(async () => root.unmount());
   });
 
-  it("keeps the Debug report readable after its File menu closes and returns focus to File", async () => {
+  it("keeps the Report problem wizard readable after its File menu closes and returns focus to File", async () => {
     const root = await renderApp();
     const menu = await openMenu();
     const summary = menu.querySelector("summary")!;
     await act(async () => {
-      findButton("Debug report…").dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      findButton("Report problem…").dispatchEvent(new MouseEvent("click", { bubbles: true }));
     });
     expect(menu.open).toBe(false);
-    const panel = document.body.querySelector<HTMLElement>(".debug-report-panel")!;
+    const panel = document.body.querySelector<HTMLElement>(".report-problem")!;
     expect(panel).not.toBeNull();
     expect(panel.closest(".file-menu")).toBeNull();
-    expect(document.activeElement).toBe(panel.querySelector("textarea"));
+    expect(document.activeElement).toBe(panel.querySelector(".project-wizard-step-title"));
 
     const close = [...panel.querySelectorAll<HTMLButtonElement>("button")]
       .find((button) => button.textContent === "Close")!;
     await act(async () => close.dispatchEvent(new MouseEvent("click", { bubbles: true })));
-    expect(document.body.querySelector(".debug-report-panel")).toBeNull();
+    expect(document.body.querySelector(".report-problem")).toBeNull();
     expect(document.activeElement).toBe(summary);
     await act(async () => root.unmount());
   });

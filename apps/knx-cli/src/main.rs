@@ -23,6 +23,7 @@ mod device_service_control;
 mod device_system2_prepare;
 mod device_system2_project;
 mod device_system2_validation;
+mod diagnostic_bundle_cli;
 mod distribution_inspect;
 mod legacy_import;
 mod legacy_inspect;
@@ -234,6 +235,11 @@ const USAGE: &str = "usage: knx import <file.knxproj> [--store <path.knxdb> [--r
      \x20         --enable/--disable changes only that bit after a durable property backup in\n\
      \x20         ./device-backups/ by default. Without --confirm no connection opens)\n\
      \x20     knx --version\n\
+     \x20   any `knx device ...` or `knx bus ...` command also takes\n\
+     \x20     --diagnostic-bundle <new.zip>\n\
+     \x20         (records every device connection of this command byte for byte and writes\n\
+     \x20         one diagnostic bundle ZIP afterwards; keys and passwords are never recorded.\n\
+     \x20         The file must not exist yet. Email is not encrypted: send it knowingly)\n\
      exit codes: 0 = success (for import/ga-import, warnings are still success),\n\
      1 = failure (bad arguments, I/O, a transport problem, or no usable data);\n\
      2 = import/ga-import only: a project was produced but the report contains\n\
@@ -250,6 +256,47 @@ const EXIT_IMPORTED_WITH_ERRORS: u8 = 2;
 
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
+    let (args, bundle) = match diagnostic_bundle_cli::take_flag(args) {
+        Ok(taken) => taken,
+        Err(error) => {
+            eprintln!("{error}");
+            return ExitCode::FAILURE;
+        }
+    };
+    if let Some(bundle) = &bundle {
+        if !matches!(args.first().map(String::as_str), Some("device" | "bus")) {
+            eprintln!(
+                "{} applies to `knx device ...` and `knx bus ...` commands only",
+                diagnostic_bundle_cli::FLAG
+            );
+            return ExitCode::FAILURE;
+        }
+        let command = args.get(1).cloned().unwrap_or_default();
+        if let Err(error) = diagnostic_bundle_cli::begin(bundle, &command) {
+            eprintln!("{error}");
+            return ExitCode::FAILURE;
+        }
+    }
+    let code = dispatch(&args);
+    match diagnostic_bundle_cli::finish(code == ExitCode::SUCCESS) {
+        Some(Ok(path)) => {
+            eprintln!(
+                "diagnostic bundle written to {} (keys and passwords are never included; \
+                 email is not encrypted)",
+                path.display()
+            );
+            code
+        }
+        Some(Err(error)) => {
+            eprintln!("{error}");
+            ExitCode::FAILURE
+        }
+        None => code,
+    }
+}
+
+/// Runs one subcommand.
+fn dispatch(args: &[String]) -> ExitCode {
     match args.first().map(String::as_str) {
         Some("import") => run_import(&args[1..]),
         Some("import-selection") => selective_import::run(&args[1..]),
@@ -2667,7 +2714,14 @@ fn run_device_download(args: &[String]) -> ExitCode {
     };
     runtime.block_on(async {
         use knx_net::BusConnection;
-        let tunnel = match knx_net::KnxNetIpClient::new().connect_tunnel(gateway).await {
+        let tunnel = match crate::diagnostic_bundle_cli::tapped(
+            knx_net::KnxNetIpClient::new(),
+            knx_app::operation_recording::OperationKind::Download,
+            gateway,
+        )
+        .connect_tunnel(gateway)
+        .await
+        {
             Ok(tunnel) => tunnel,
             Err(e) => {
                 eprintln!("could not connect to {gateway}: {e}");
@@ -2859,7 +2913,14 @@ fn run_device_byte_order_probe(args: &[String]) -> ExitCode {
         .expect("non-preview probe requires a gateway");
     runtime.block_on(async {
         use knx_net::BusConnection;
-        let tunnel = match knx_net::KnxNetIpClient::new().connect_tunnel(gateway).await {
+        let tunnel = match crate::diagnostic_bundle_cli::tapped(
+            knx_net::KnxNetIpClient::new(),
+            knx_app::operation_recording::OperationKind::ByteOrderProbe,
+            gateway,
+        )
+        .connect_tunnel(gateway)
+        .await
+        {
             Ok(tunnel) => tunnel,
             Err(e) => {
                 eprintln!("could not connect to {gateway}: {e}");
@@ -2997,7 +3058,14 @@ fn run_device_compare(args: &[String]) -> ExitCode {
     let gateway = parsed.gateway;
     runtime.block_on(async {
         use knx_net::BusConnection;
-        let tunnel = match knx_net::KnxNetIpClient::new().connect_tunnel(gateway).await {
+        let tunnel = match crate::diagnostic_bundle_cli::tapped(
+            knx_net::KnxNetIpClient::new(),
+            knx_app::operation_recording::OperationKind::Compare,
+            gateway,
+        )
+        .connect_tunnel(gateway)
+        .await
+        {
             Ok(tunnel) => tunnel,
             Err(e) => {
                 if let Some(guard) = activity.take() {
@@ -3288,7 +3356,7 @@ fn run_device_restore(args: &[String]) -> ExitCode {
     };
     runtime.block_on(async {
         use knx_net::BusConnection;
-        let tunnel = match knx_net::KnxNetIpClient::new().connect_tunnel(gateway).await {
+        let tunnel = match crate::diagnostic_bundle_cli::tapped(knx_net::KnxNetIpClient::new(), knx_app::operation_recording::OperationKind::Download, gateway).connect_tunnel(gateway).await {
             Ok(tunnel) => tunnel,
             Err(e) => {
                 eprintln!("could not connect to {gateway}: {e}");
@@ -3387,7 +3455,14 @@ fn run_device_program_address(args: &[String]) -> ExitCode {
     };
     runtime.block_on(async {
         use knx_net::BusConnection;
-        let tunnel = match knx_net::KnxNetIpClient::new().connect_tunnel(gateway).await {
+        let tunnel = match crate::diagnostic_bundle_cli::tapped(
+            knx_net::KnxNetIpClient::new(),
+            knx_app::operation_recording::OperationKind::IndividualAddressProgramming,
+            gateway,
+        )
+        .connect_tunnel(gateway)
+        .await
+        {
             Ok(tunnel) => tunnel,
             Err(e) => {
                 eprintln!("could not connect to {gateway}: {e}");
@@ -3465,7 +3540,14 @@ fn run_device_reset_address(args: &[String]) -> ExitCode {
     };
     runtime.block_on(async {
         use knx_net::BusConnection;
-        let tunnel = match knx_net::KnxNetIpClient::new().connect_tunnel(gateway).await {
+        let tunnel = match crate::diagnostic_bundle_cli::tapped(
+            knx_net::KnxNetIpClient::new(),
+            knx_app::operation_recording::OperationKind::IndividualAddressReset,
+            gateway,
+        )
+        .connect_tunnel(gateway)
+        .await
+        {
             Ok(tunnel) => tunnel,
             Err(e) => {
                 eprintln!("could not connect to {gateway}: {e}");
@@ -3543,7 +3625,14 @@ fn run_device_address_by_serial(args: &[String]) -> ExitCode {
     };
     runtime.block_on(async {
         use knx_net::BusConnection;
-        let tunnel = match knx_net::KnxNetIpClient::new().connect_tunnel(gateway).await {
+        let tunnel = match crate::diagnostic_bundle_cli::tapped(
+            knx_net::KnxNetIpClient::new(),
+            knx_app::operation_recording::OperationKind::SerialNumberAddress,
+            gateway,
+        )
+        .connect_tunnel(gateway)
+        .await
+        {
             Ok(tunnel) => tunnel,
             Err(e) => {
                 eprintln!("could not connect to {gateway}: {e}");
@@ -3629,7 +3718,14 @@ fn run_device_find_serial(args: &[String]) -> ExitCode {
     }
     runtime.block_on(async {
         use knx_net::BusConnection;
-        let tunnel = match knx_net::KnxNetIpClient::new().connect_tunnel(gateway).await {
+        let tunnel = match crate::diagnostic_bundle_cli::tapped(
+            knx_net::KnxNetIpClient::new(),
+            knx_app::operation_recording::OperationKind::SerialNumberAddress,
+            gateway,
+        )
+        .connect_tunnel(gateway)
+        .await
+        {
             Ok(tunnel) => tunnel,
             Err(e) => {
                 if let Some(guard) = activity.take() {
@@ -3796,7 +3892,14 @@ fn run_device_service_control(args: &[String]) -> ExitCode {
     };
     runtime.block_on(async {
         use knx_net::BusConnection;
-        let tunnel = match knx_net::KnxNetIpClient::new().connect_tunnel(gateway).await {
+        let tunnel = match crate::diagnostic_bundle_cli::tapped(
+            knx_net::KnxNetIpClient::new(),
+            knx_app::operation_recording::OperationKind::ServiceControl,
+            gateway,
+        )
+        .connect_tunnel(gateway)
+        .await
+        {
             Ok(tunnel) => tunnel,
             Err(e) => {
                 if let Some(guard) = write_activity.take() {
@@ -4720,7 +4823,11 @@ async fn run_bus_scan_async(
     project_addresses: Option<Vec<knx_core::IndividualAddress>>,
 ) -> ExitCode {
     use knx_net::BusConnection;
-    let client = knx_net::KnxNetIpClient::new();
+    let client = crate::diagnostic_bundle_cli::tapped(
+        knx_net::KnxNetIpClient::new(),
+        knx_app::operation_recording::OperationKind::LineScan,
+        gateway,
+    );
     let tunnel = match client.connect_tunnel(gateway).await {
         Ok(t) => t,
         Err(e) => {

@@ -121,7 +121,9 @@ for (const language of ["en", "de"] as const) {
           const guidance = panel.locator("[data-support-guidance=unsupported]");
           await expect(guidance.getByRole("status")).toHaveText(messages["deviceDownload.readiness.reason.byteOrder"]);
           await expect(guidance.locator("[data-next-action=requestSupport]")).toHaveText(messages["deviceDownload.help.action.requestSupport"]);
-          await expect(guidance.locator("a")).toHaveCount(3);
+          // DIAG-03: instructions stay a link; issue and mail became one report-wizard shortcut.
+          await expect(guidance.locator("a")).toHaveCount(1);
+          await expect(guidance.locator("[data-report-problem-open=support-notice]")).toHaveText(messages["reportProblem.button"]);
           await expect(panel.getByRole("button", { name: messages["deviceDownload.preparePlan"], exact: true })).toBeVisible();
           await expect(panel.locator(".device-download-actions-note")).toHaveText(messages["deviceDownload.preparePlanNote"]);
           if (process.env.KNX_REFUSAL_CAPTURE_DIR) {

@@ -129,6 +129,8 @@ pub struct AppState {
     /// stateless/`Sync` (it only ever opens tunnels; each open tunnel's own
     /// state lives in `bus_session` below).
     pub connector: Box<dyn GatewayConnector>,
+    /// Effective tunnel endpoint mode selected at process startup.
+    pub tunnel_return_path: knx_net::TunnelReturnPath,
     /// At most one open monitor session (T15, design spec §4.1: "a monitor
     /// session is ... `AppState.bus_session: Mutex<Option<BusSession>>`
     /// holds at most one"). `tokio::sync::Mutex`, not `std::sync::Mutex`
@@ -245,6 +247,13 @@ pub struct AppState {
     pub catalogue_jobs: std::sync::Arc<crate::catalogue_jobs::CatalogueUpdateJobs>,
     /// Actual configured System-2 task, preparation, status and durable recovery owner.
     pub device_system2: std::sync::Arc<crate::System2Service>,
+    /// One JSONL recording per device operation under `data_dir/diagnostics`
+    /// (DIAG-03). Disabled in the test `Default` and by `KNX_DIAGNOSTIC_RECORDING=off`.
+    pub recordings: std::sync::Arc<knx_app::operation_recording::RecordingStore>,
+    #[doc(hidden)]
+    pub diagnostic_results: crate::device_diagnostics_routes::Results,
+    #[doc(hidden)]
+    pub support_results: crate::support_routes::Results,
 }
 
 impl AppState {
@@ -341,6 +350,16 @@ impl AppState {
             .unwrap_or_else(|| generic.to_string())
     }
 
+    pub(crate) fn product_database_availability(&self) -> ProductDatabaseAvailability {
+        if self.product_db.is_some() {
+            ProductDatabaseAvailability::Open
+        } else if self.product_db_unavailable.is_some() {
+            ProductDatabaseAvailability::Unavailable
+        } else {
+            ProductDatabaseAvailability::NotConfigured
+        }
+    }
+
     /// State rooted at `data_dir` with **no** product database: nothing
     /// outside `data_dir` is opened, created or migrated, so a test built on
     /// it never depends on, or changes, the developer's own product
@@ -355,8 +374,10 @@ impl AppState {
     fn with_product_db(data_dir: PathBuf, product_db: Option<CatalogueOwner>) -> Self {
         let server_incarnation = new_server_incarnation();
         let device_system2 = std::sync::Arc::new(crate::System2Service::new(&data_dir));
+        let recordings = std::sync::Arc::new(crate::operation_recordings::store(&data_dir, false));
         Self {
             device_system2,
+            recordings,
             project: Mutex::new(None),
             clean_project: Mutex::new(None),
             last_saved_at: Mutex::new(None),
@@ -376,6 +397,7 @@ impl AppState {
             product_db_unavailable: None,
             session_log: Mutex::new(SessionLog::default()),
             connector: Box::new(RealConnector::default()),
+            tunnel_return_path: knx_net::TunnelReturnPath::default(),
             bus_session: tokio::sync::Mutex::new(None),
             group_address_style_publication: tokio::sync::Mutex::new(()),
             next_bus_session_id: std::sync::atomic::AtomicU64::new(1),
@@ -384,6 +406,8 @@ impl AppState {
             device_download_plan: Mutex::new(None),
             plugin_data_plan: Mutex::new(None),
             device_download: tokio::sync::Mutex::new(None),
+            diagnostic_results: Default::default(),
+            support_results: Default::default(),
             next_device_download_id: std::sync::atomic::AtomicU64::new(1),
             device_download_timing: knx_net::SessionTiming::default(),
             system2_timing: knx_net::SessionTiming::patient_system2(),
@@ -409,6 +433,38 @@ impl AppState {
             catalogue_jobs: std::sync::Arc::new(crate::catalogue_jobs::CatalogueUpdateJobs::new(
                 crate::catalogue_jobs::Incarnation::mint(),
             )),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum ProductDatabaseAvailability {
+    Open,
+    Unavailable,
+    NotConfigured,
+}
+
+/// Converts the process flag value into the effective tunnel response mode.
+pub fn tunnel_return_path_from_flag(value: Option<&str>) -> knx_net::TunnelReturnPath {
+    let enabled = value.is_some_and(|value| {
+        !matches!(
+            value.trim().to_ascii_lowercase().as_str(),
+            "" | "0" | "false" | "no" | "off"
+        )
+    });
+    if enabled {
+        knx_net::TunnelReturnPath::RouteBack
+    } else {
+        knx_net::TunnelReturnPath::LocalAddress
+    }
+}
+
+impl ProductDatabaseAvailability {
+    pub(crate) fn as_str(self) -> &'static str {
+        match self {
+            Self::Open => "open",
+            Self::Unavailable => "unavailable",
+            Self::NotConfigured => "notConfigured",
         }
     }
 }
@@ -449,6 +505,11 @@ impl Default for AppState {
         let mut state = Self::with_product_db(std::env::temp_dir(), None);
         // Test conveniences never share a durable activity database.
         state.one_shot_activity = std::sync::Arc::default();
+        // Nor do they leave recordings in the shared temporary directory.
+        state.recordings = std::sync::Arc::new(crate::operation_recordings::store(
+            &std::env::temp_dir(),
+            true,
+        ));
         state
     }
 }

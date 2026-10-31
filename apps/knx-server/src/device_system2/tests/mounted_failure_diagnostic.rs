@@ -483,3 +483,87 @@ async fn a_final_step_failure_reaches_status_report_and_reopen_per_run() {
     assert_eq!(reopened["state"], "failed");
     assert_eq!(reopened["finalStepFailures"], json!([download]));
 }
+
+#[tokio::test]
+#[ignore = "requires digest-pinned public package; set KNXBENCH_PUBLIC_UP258; no network or hardware"]
+async fn a_final_allocation_mismatch_keeps_its_bytes_privately_across_restart() {
+    let Fixture {
+        directory: temp,
+        hardware,
+        state,
+        router,
+        device,
+    } = fixture().await;
+    let (directory, hardware) = (temp.path(), &hardware);
+    // The final verification's read of the PIR byte (its second read, after the prestate)
+    // answers the inverted octet; the write and its Verify Mode response stay honest.
+    let preview = prepare(&router, device).await;
+    hardware.arm_memory_lie(PIR_ADDRESS, 1);
+    let accepted = http(
+        &router,
+        "/api/device-system2/start",
+        Some(start(&preview)),
+        200,
+    )
+    .await;
+    let operation_id = accepted["operationId"].as_str().unwrap().to_owned();
+    let operation = operation_dir(directory, &operation_id);
+    settled_slow(&state, &router, "failed").await;
+    let download = json!({"run":"download","category":"verificationMismatch","stage":"allocation"});
+    let private_keys = ["allocation_evidence", "allocationEvidence", "differing"];
+    // Status keeps its exact v4 key set and carries only the typed category.
+    let (failed, _) = checked_raw(&raw_status(&router).await, &operation, &private_keys);
+    assert_eq!(failed["finalStepFailures"], json!([download]));
+    let journal = operation.join("journal");
+    let private = last_checkpoint(&journal);
+    assert_eq!(private["format"], 4);
+    let record = &private["checkpoint"]["allocation_evidence"];
+    // The PIR segment is the fourth allocation (15360, 256 octets); byte 250 holds the 4.
+    assert_eq!(record["allocation_index"], 3);
+    assert_eq!(record["address"], 15360);
+    assert_eq!(record["length"], 256);
+    assert_eq!(
+        record["differing"],
+        json!([{"offset": 250, "length": 1, "classification": "written"}])
+    );
+    assert_eq!(&record["expected"].as_str().unwrap()[500..502], "04");
+    assert_eq!(&record["actual"].as_str().unwrap()[500..502], "fb");
+    let report_raw = raw_http(
+        &router,
+        &format!("/api/device-system2/report?operationId={operation_id}"),
+        None,
+    )
+    .await;
+    let report: Value = serde_json::from_str(&report_raw).unwrap();
+    assert_eq!(report["format"], 3);
+    assert_eq!(report["finalStepFailures"], json!([download]));
+    for forbidden in private_keys {
+        assert!(!report_raw.contains(forbidden), "report leaks {forbidden}");
+    }
+    state.catalogue_jobs.close_admission_and_request_stop();
+    drop(router);
+    drop(state);
+    // A restart reads the same status from the journal alone.
+    let fresh = self::state(directory, None, hardware);
+    let router = crate::app(fresh.clone(), None);
+    let (reopened, _) = checked_raw(&raw_status(&router).await, &operation, &private_keys);
+    assert_eq!(reopened["finalStepFailures"], json!([download]));
+    fresh.catalogue_jobs.close_admission_and_request_stop();
+    drop(router);
+    drop(fresh);
+    // The bytes reopen typed from the durable journal under its strict replay.
+    let binding = read_bundle(&operation.join("observed.json"))
+        .unwrap()
+        .binding;
+    let store = OperationStore::open(&journal, &binding).unwrap();
+    let entries = store.allocation_mismatch_evidence();
+    assert_eq!(entries.len(), 1);
+    let bundle_form = serde_json::to_value(&entries[0]).unwrap();
+    assert_eq!(bundle_form["run"], "download");
+    assert_eq!(bundle_form["evidence"]["availability"], "recorded");
+    assert_eq!(
+        bundle_form["evidence"]["differingRanges"],
+        json!([{"offset": 250, "length": 1, "classification": "written",
+            "expected": "04", "actual": "fb"}])
+    );
+}

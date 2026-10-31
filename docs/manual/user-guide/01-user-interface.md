@@ -52,7 +52,7 @@ Everything else is in three submenus under them:
 | --- | --- |
 | **Import & export** (*Import & Export*) | selective import, group-address CSV export and import, documentation export, and in the web build **Export project…** |
 | **History & comparison** (*Verlauf & Vergleich*) | **Project history** and **Compare with…** |
-| **Help & diagnostics** (*Hilfe & Diagnose*) | debug report, support-gap analysis, device support report, diagnostic export, **Show introduction…**, **Achievements…** and **About KNXBench…** |
+| **Help & diagnostics** (*Hilfe & Diagnose*) | debug report and device support report (source builds after Alpha 18: one **Report problem…** entry, see [reporting a problem](08-reports-and-diff.md#report-problem)), support-gap analysis, diagnostic export, **Show introduction…**, **Achievements…** and **About KNXBench…** |
 
 A row with a **›** opens its submenu to the right (below the row on a narrow
 window, where there is no room beside it). Point at a row for a moment, or click it,

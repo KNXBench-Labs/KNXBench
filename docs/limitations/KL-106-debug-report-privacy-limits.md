@@ -6,6 +6,23 @@ This dossier preserves the technical detail and dated history. Earlier
 headings, failures and lifting conditions are historical where later
 updates supersede them; they are not new work assignments.
 
+## DIAG-03 candidate boundary (29 October 2026; not released)
+
+The local unified-bundle candidate adds an opt-in **saved** native-project copy
+through the existing credential-removing/withholding helper. It is not a claim
+of comprehensive anonymization or a sanitizer for arbitrary allocator memory.
+
+Full private System-2 expected/readback export remains **NOT READY**. The sources
+do not establish credential classification of both byte sides, nor consistent
+handling across duplicate differing slices, memory recordings, errors and other
+selected ZIP entries. Named APDU key redaction, consent and a successful replay
+are not proof of that wider guarantee. Metadata-only withheld output would be a
+bounded incomplete increment, not raw-evidence delivery or ZIP-wide certification.
+[Public source evidence and future acceptance](../research/2026-10-29-system2-bundle-credential-boundary.md)
+records these open P1/P2 requirements. The fourteen proposed acceptance cases
+have not run. This update changes no historical ledger disposition and gives
+no main-first/package/browser/hardware or release acceptance.
+
 <!-- BEGIN retained catalogue record -->
 
 ## 106. The debug report redacts five pattern classes, and nothing else

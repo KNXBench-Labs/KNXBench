@@ -10,6 +10,7 @@ use knx_core::commissioning::{
     load_state::{LoadEvent, MaskVersion},
     property_download::{PropertyDownloadPlan, PropertyDownloadStep, PropertyOperation as Op},
 };
+use std::io::Read;
 use std::{fs, net::UdpSocket, process::Command, time::Duration};
 
 mod gateway;
@@ -251,6 +252,76 @@ fn system2_validation_cli_simulator_writes_private_protocol_then_fresh_process_r
     for version in [1, 2, 3] {
         simulator_writes_then_fresh_process_restore(version);
     }
+}
+
+#[test]
+fn system2_simulator_bundle_owns_only_the_admitted_projection_and_unknown_build_report() {
+    let dir = tempfile::tempdir().unwrap();
+    let (path, prepared) = bundle(dir.path());
+    let operation = dir.path().join("operation");
+    let output_dir = dir.path().join("output");
+    fs::create_dir(&output_dir).unwrap();
+    let diagnostic = output_dir.join("diagnostic.zip");
+    let out = cli()
+        .args([
+            "--bundle",
+            path.to_str().unwrap(),
+            "--simulate",
+            "--operation",
+            operation.to_str().unwrap(),
+            "--confirm",
+            &prepared.consent_phrase(),
+            "--accept-hypothesis",
+            &prepared.acceptance_phrase(),
+            "--diagnostic-bundle",
+            diagnostic.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    let stderr = String::from_utf8_lossy(&out.stderr);
+    assert!(out.status.success(), "{stderr}");
+    assert!(stderr.contains("diagnostic bundle written to"));
+    assert_eq!(
+        fs::read_dir(&output_dir)
+            .unwrap()
+            .map(|entry| entry.unwrap().file_name())
+            .collect::<Vec<_>>(),
+        [std::ffi::OsString::from("diagnostic.zip")]
+    );
+
+    let mut archive = zip::ZipArchive::new(fs::File::open(&diagnostic).unwrap()).unwrap();
+    let names: Vec<_> = archive.file_names().map(str::to_string).collect();
+    assert!(names
+        .iter()
+        .any(|name| name == "operations/system2-private.json"));
+    assert!(names
+        .iter()
+        .any(|name| name == "reports/system2-report.json"));
+    assert!(!names.iter().any(|name| name.ends_with("recording.jsonl")));
+    let mut private = String::new();
+    archive
+        .by_name("operations/system2-private.json")
+        .unwrap()
+        .read_to_string(&mut private)
+        .unwrap();
+    let private: serde_json::Value = serde_json::from_str(&private).unwrap();
+    assert_eq!(private["format"], 1);
+    assert_eq!(private["kind"], "knxbench-system2-private-projection");
+    let mut report = String::new();
+    archive
+        .by_name("reports/system2-report.json")
+        .unwrap()
+        .read_to_string(&mut report)
+        .unwrap();
+    let report: serde_json::Value = serde_json::from_str(&report).unwrap();
+    assert_eq!(
+        report["executionBuild"],
+        serde_json::json!({"state":"unknown"})
+    );
+    assert!(report["exporterBuild"]
+        .as_str()
+        .is_some_and(|value| !value.is_empty()));
+    knx_app::property_validation::OperationStore::open(&operation, &prepared.binding).unwrap();
 }
 fn simulator_writes_then_fresh_process_restore(profile_version: u32) {
     let dir = tempfile::tempdir().unwrap();

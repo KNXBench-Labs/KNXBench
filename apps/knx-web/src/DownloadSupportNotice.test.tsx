@@ -1,4 +1,4 @@
-/** Verifies EN/DE refusal notices, deliberate links and private local-copy boundaries. */
+/** Verifies EN/DE refusal notices, the report shortcut, fixed links and local-copy boundaries. */
 // @vitest-environment happy-dom
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
@@ -12,13 +12,23 @@ vi.mock("./i18n", async (importOriginal) => {
 import DownloadSupportNotice, { supportTargets } from "./DownloadSupportNotice";
 import { guidanceForError, guidanceForMark, type SupportGuidance } from "./downloadSupportGuidance";
 import { translateFor } from "./i18n";
+import { ReportProblemProvider } from "./ReportProblemEntry";
+import type { ReportProblemRequest } from "./reportProblem";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 let root: Root | undefined;
 let host: HTMLDivElement | undefined;
+const REPORT: ReportProblemRequest = { problemType: "deviceProgramming", deviceId: 42, operation: null };
+const opened = vi.fn();
+function notice(guidance: SupportGuidance) {
+  return <ReportProblemProvider request={null} onOpen={opened} onClose={() => {}} tree={null} notifications={[]}>
+    <DownloadSupportNotice guidance={guidance} report={REPORT} />
+  </ReportProblemProvider>;
+}
 async function render(guidance: SupportGuidance) {
+  opened.mockReset();
   host = document.createElement("div"); document.body.append(host); root = createRoot(host);
-  await act(async () => root!.render(<DownloadSupportNotice guidance={guidance} />));
+  await act(async () => root!.render(notice(guidance)));
 }
 afterEach(async () => { if (root) await act(async () => root!.unmount()); host?.remove(); vi.unstubAllGlobals(); });
 
@@ -53,7 +63,7 @@ for (const language of ["en", "de"]) {
       Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText: vi.fn(() => pending) } });
       await render(guidanceForMark({ kind: "unsupported", category: "modules", detail: "FIRST" }));
       await act(async () => host!.querySelector<HTMLButtonElement>("[data-copy-technical]")!.click());
-      await act(async () => root!.render(<DownloadSupportNotice guidance={guidanceForMark({ kind: "unsupported", category: "modules", detail: "SECOND" })} />));
+      await act(async () => root!.render(notice(guidanceForMark({ kind: "unsupported", category: "modules", detail: "SECOND" }))));
       const field = host!.querySelector<HTMLTextAreaElement>("textarea")!;
       field.setSelectionRange(1, 2);
       await act(async () => outcome === "copied" ? resolve() : reject(new Error("clipboard blocked")));
@@ -62,15 +72,21 @@ for (const language of ["en", "de"]) {
     });
   }
 
-  it(`${language}: instructions, unsent issue and email stay fixed despite private or malicious details`, async () => {
+  it(`${language}: instructions stay fixed and the report shortcut opens the wizard, despite private details`, async () => {
     locale.value = language;
     const privateText = "CUSTOMER_SECRET 1.1.42 /home/private token=secret <img src='https://evil.test/pixel'>";
     await render(guidanceForMark({ kind: "unsupported", category: "modules", detail: privateText }));
     expect(host!.querySelector("[data-next-action=requestSupport]")!.textContent).toBe(translateFor(language, "deviceDownload.help.action.requestSupport"));
     const links = [...host!.querySelectorAll<HTMLAnchorElement>("a")];
     expect(links.map((link) => link.getAttribute("href"))).toEqual(Object.values(supportTargets(language)));
-    expect(new URL(links[1].href).searchParams.get("template")).toBe("analysis.yml");
-    expect(links[2].href).toBe("mailto:issue@knxbench.com?subject=KNXBench%20device%20programming%20support%20gap");
+    // DIAG-03: the mail and issue links became one shortcut into the report wizard.
+    expect(host!.innerHTML).not.toContain("mailto:");
+    const shortcut = host!.querySelector<HTMLButtonElement>("[data-report-problem-open=support-notice]")!;
+    expect(shortcut.textContent).toBe(translateFor(language, "reportProblem.button"));
+    expect(opened).not.toHaveBeenCalled();
+    await act(async () => shortcut.click());
+    expect(opened).toHaveBeenCalledExactlyOnceWith(REPORT);
+    expect(document.querySelector(".report-problem")).toBeNull();
     for (const link of links) {
       expect(link.href).not.toContain("CUSTOMER_SECRET");
       expect(link.href).not.toContain("1.1.42");
@@ -78,7 +94,6 @@ for (const language of ["en", "de"]) {
       expect(link.href).not.toContain("secret");
     }
     expect(links[0].rel).toBe("noopener noreferrer");
-    expect(links[1].rel).toBe("noopener noreferrer");
     expect(host!.querySelector("img")).toBeNull();
     expect(host!.querySelector<HTMLTextAreaElement>("textarea")!.value).toContain(privateText);
     expect(host!.textContent).toContain(translateFor(language, "deviceDownload.help.privacy"));

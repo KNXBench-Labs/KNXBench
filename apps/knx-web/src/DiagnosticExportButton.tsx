@@ -1,4 +1,4 @@
-/** Reviewed read-only acquisition, cooperative stop and local verified ZIP. */
+/** Reviewed read-only acquisition and cooperative stop; the report goes through the wizard. */
 import {useEffect,useRef,useState} from "react";
 import {createPortal} from "react-dom";
 import Overlay from "./Overlay";
@@ -11,6 +11,7 @@ import * as api from "./diagnosticApi";
 import {diagnosticProgress,hexWord,memoryPlan,refusalMessage,stopReasonMessage} from "./diagnosticMemory";
 import type {MessageKey} from "./messages/en";
 import {useFileMenuItemProps} from "./FileMenu";
+import {useReportProblem} from "./ReportProblemEntry";
 import "./universalSupport.css";
 import "./diagnosticExport.css";
 
@@ -18,14 +19,16 @@ export default function DiagnosticExportButton({project,deviceId=null}:{project:
  const t=useTranslate();const entry=useFileMenuItemProps();const [open,setOpen]=useState(false);
  return <><button type="button" {...entry} data-diagnostics-open disabled={!project} onClick={()=>setOpen(true)}>{t("diagnostics.title")}</button>{open&&createPortal(<DiagnosticExportDialog project={project!} initialDevice={deviceId} close={()=>setOpen(false)}/>,document.body)}</>;
 }
-/** The reviewed export dialog itself; the Diagnostics tab opens it for its device too.
- * The profile choice sits before Preview; changing it, the device or the gateway drops the review. */
+/** The reviewed read dialog itself; the Diagnostics tab opens it for its device too.
+ * The profile choice sits before Preview; changing it, the device or the gateway drops the review.
+ * A finished read is reported through the one Report problem wizard (DIAG-03), which finds
+ * this exact retained result by its token, even when no recording is available. */
 export function DiagnosticExportDialog({project,initialDevice,close}:{project:ProjectTree;initialDevice:number|null;close:()=>void}){
- const t=useTranslate();const devices=[...collectDevices(project).values()];
+ const t=useTranslate();const devices=[...collectDevices(project).values()];const report=useReportProblem();
  const [device,setDevice]=useState<number|null>(initialDevice);const [gateway,setGateway]=useState(loadPreferredGateway);
- const [view,setView]=useState<api.DiagnosticView|null>(null);const [readConsent,setReadConsent]=useState(false);const [shareConsent,setShareConsent]=useState(false);
+ const [view,setView]=useState<api.DiagnosticView|null>(null);const [readConsent,setReadConsent]=useState(false);
  const [profile,setProfile]=useState<api.DiagnosticProfile>(api.IDENTITY_PROFILE);
- const [busy,setBusy]=useState(false);const [error,setError]=useState<false|{key:MessageKey|null;detail:string|null}>(false);const [saved,setSaved]=useState(false);
+ const [busy,setBusy]=useState(false);const [error,setError]=useState<false|{key:MessageKey|null;detail:string|null}>(false);
  const epoch=useRef(0);const running=useRef<string|null>(null);const mounted=useRef(true);
  // Own response tokens synchronously: unmount may precede the queued view's React commit.
  function updateView(next:api.DiagnosticView|null){running.current=next?.phase==="running"?next.token:null;setView(next);}
@@ -40,24 +43,22 @@ export function DiagnosticExportDialog({project,initialDevice,close}:{project:Pr
   timer=setTimeout(()=>void poll(),250);return()=>{active=false;clearTimeout(timer);};
  },[view?.token,view?.phase]);
  const acquiring=view?.phase==="running";const memory=view?.memory??null;const progress=view?diagnosticProgress(view):null;
- function invalidate(){++epoch.current;updateView(null);setReadConsent(false);setShareConsent(false);setError(false);setSaved(false);setReviewContext(null);}
- async function perform(kind:"preview"|"start"|"cancel"|"save"){
+ function invalidate(){++epoch.current;updateView(null);setReadConsent(false);setError(false);setReviewContext(null);}
+ async function perform(kind:"preview"|"start"|"cancel"){
   if(busy)return;const version=++epoch.current;setBusy(true);setError(false);
   try{
    if(kind==="preview"){
     if(device===null||project.server_incarnation===undefined||project.project_incarnation===undefined||project.snapshot_revision===undefined)throw new Error("unbound project");
     const checked=validateGatewayFields(splitGatewayEndpoint(gateway));if(!checked.ok)throw new Error("invalid gateway");
     const next=await api.previewDiagnostics(device,checked.endpoint,profile,{serverIncarnation:project.server_incarnation,projectIncarnation:project.project_incarnation,revision:project.snapshot_revision});
-    if(mounted.current&&epoch.current===version){updateView(next);setReviewContext(contextKey);setReadConsent(false);setShareConsent(false);setSaved(false);}
+    if(mounted.current&&epoch.current===version){updateView(next);setReviewContext(contextKey);setReadConsent(false);}
    }else if(kind==="start"){
     if(!view||!readConsent||stale)return;const next=await api.startDiagnostics(view.token);
-    if(mounted.current&&epoch.current===version){updateView(next);setReadConsent(false);setShareConsent(false);}
+    if(mounted.current&&epoch.current===version){updateView(next);setReadConsent(false);}
     // Cleanup may run before Start returns, while the displayed view is still a preview.
     else if(next.phase==="running")void api.cancelDiagnostics(next.token).catch(()=>{});
-   }else if(kind==="cancel"){
-    if(!view)return;const next=await api.cancelDiagnostics(view.token);if(mounted.current&&epoch.current===version)updateView(next);
    }else{
-    if(!view||!shareConsent||view.phase!=="complete")return;await api.saveDiagnostics(view.token);if(mounted.current&&epoch.current===version)setSaved(true);
+    if(!view)return;const next=await api.cancelDiagnostics(view.token);if(mounted.current&&epoch.current===version)updateView(next);
    }
   }catch(e){
    // Only a preview refusal names why: its code is the server's fixed token (product data, identity, target).
@@ -93,12 +94,10 @@ export function DiagnosticExportDialog({project,initialDevice,close}:{project:Pr
      <h3>{t("diagnostics.result")}</h3>{view.report.stopReason&&<p role="status" data-diagnostics-stop-reason>{t("diagnostics.stopReason",{label:t(stopReasonMessage(view.report.stopReason))})} <code>{view.report.stopReason}</code></p>}
      <ul>{view.report.items.map(i=><li key={i.query}>{i.query}: {t(`diagnostics.status.${i.status}`)} · {i.receivedBytes}/{i.expectedBytes} bytes</li>)}</ul>
      {memory&&<><h4>{t("diagnostics.coverageHeading")}</h4><ul data-diagnostics-coverage>{memory.ranges.map(r=><li key={r.order}>{t("diagnostics.coverage",{address:hexWord(r.address),length:r.length,read:r.coverage.read,refused:r.coverage.refusedAmbiguous,partial:r.coverage.partial,error:r.coverage.error,notRead:r.coverage.notRead})}</li>)}</ul></>}
-     {view.exportable?<>
-      <details><summary>{t(memory?"diagnostics.sharePreviewMemory":"diagnostics.sharePreview")}</summary><pre aria-label="report.json">{JSON.stringify(view.report,null,2)}</pre>{memory&&<pre aria-label="memory.json">{JSON.stringify(memory,null,2)}</pre>}</details>
-      <label className="support-check"><input type="checkbox" data-diagnostics-share-consent checked={shareConsent} disabled={busy} onChange={e=>setShareConsent(e.target.checked)}/>{t("diagnostics.shareConsent")}</label>
-      <button type="button" data-diagnostics-save disabled={busy||!shareConsent} onClick={()=>void perform("save")}>{t("diagnostics.save")}</button>
-      {saved&&<p role="status">{t("support.saved")}</p>}<p>{t("diagnostics.handoff")}</p>
-     </>:<p data-diagnostics-not-exportable>{t("diagnostics.notExportable")}</p>}
+     <details><summary>{t(memory?"diagnostics.sharePreviewMemory":"diagnostics.sharePreview")}</summary><pre aria-label="report.json">{JSON.stringify(view.report,null,2)}</pre>{memory&&<pre aria-label="memory.json">{JSON.stringify(memory,null,2)}</pre>}</details>
+     {report&&<><p data-diagnostics-handoff>{t("diagnostics.handoff")}</p>
+      <button type="button" data-report-problem-open="diagnostics" disabled={busy}
+       onClick={()=>{close();report({problemType:"deviceReading",deviceId:device,operation:{relatedKey:"diagnosticsToken",relatedValue:view.token}});}}>{t("reportProblem.button")}</button></>}
     </section>}
    </>}
   </div>

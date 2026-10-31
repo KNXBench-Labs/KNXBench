@@ -177,6 +177,12 @@ struct TestHardware {
     pid7_reads: Mutex<std::collections::BTreeMap<u8, usize>>,
     version_fault: Mutex<Option<usize>>,
     version_reads: AtomicUsize,
+    /// (address, read index from which on its octet is inverted in memory read answers).
+    memory_fault: Mutex<Option<(u16, usize)>>,
+    memory_reads: AtomicUsize,
+    /// The last memory request was a read, so the next memory response answers a read
+    /// (an active-Verify write answers with the same response service).
+    memory_read_pending: AtomicBool,
     /// Blocks the executor thread once at the first mutation, like a slow
     /// durable checkpoint, and counts another runtime task's ticks meanwhile.
     mutation_stall: Mutex<Option<(Duration, Arc<AtomicUsize>)>>,
@@ -204,6 +210,9 @@ impl TestHardware {
             pid7_reads: Mutex::default(),
             version_fault: Mutex::new(None),
             version_reads: AtomicUsize::new(0),
+            memory_fault: Mutex::new(None),
+            memory_reads: AtomicUsize::new(0),
+            memory_read_pending: AtomicBool::new(false),
             mutation_stall: Mutex::new(None),
             stall_ticks: Mutex::new(None),
         })
@@ -236,6 +245,29 @@ impl TestHardware {
             {
                 data.fill(0);
             }
+        }
+    }
+    /// Invert the octet at `address` in every memory read answer covering it from the
+    /// `index`-th such read on (counted from this call); writes and earlier reads stay honest.
+    fn arm_memory_lie(&self, address: u16, index: usize) {
+        *self.memory_fault.lock().unwrap() = Some((address, index));
+        self.memory_reads.store(0, Ordering::SeqCst);
+    }
+    fn rewrite_memory(&self, service: &mut ApplicationService) {
+        let ApplicationService::MemoryResponse { address, data } = service else {
+            return;
+        };
+        if !self.memory_read_pending.swap(false, Ordering::SeqCst) {
+            return;
+        }
+        let Some((lie, from)) = *self.memory_fault.lock().unwrap() else {
+            return;
+        };
+        let Some(offset) = lie.checked_sub(*address).map(usize::from) else {
+            return;
+        };
+        if offset < data.len() && self.memory_reads.fetch_add(1, Ordering::SeqCst) >= from {
+            data[offset] ^= 0xFF;
         }
     }
     fn disarm_pid7(&self) {
@@ -343,8 +375,10 @@ impl TestHardware {
         for index in 0..=sequence {
             let bytes = std::fs::read(journal.join(format!("checkpoint-{index:08}.json"))).unwrap();
             let envelope: Value = serde_json::from_slice(&bytes).unwrap();
-            // Version 3 marks a populated final-step record, version 2 a PID 7 record.
-            let format = if envelope["checkpoint"].get("final_step").is_some() {
+            // Version 4 marks allocation evidence, 3 a final-step record, 2 a PID 7 record.
+            let format = if envelope["checkpoint"].get("allocation_evidence").is_some() {
+                4
+            } else if envelope["checkpoint"].get("final_step").is_some() {
                 3
             } else if envelope["checkpoint"].get("pointer_failure").is_some() {
                 2
@@ -543,6 +577,7 @@ impl crate::BusTunnel for TestHardwareTunnel {
         let mut upstream = ManagementTransport::subscribe(self.0.device.as_ref());
         if self.0.pid7_fault.lock().unwrap().is_none()
             && self.0.version_fault.lock().unwrap().is_none()
+            && self.0.memory_fault.lock().unwrap().is_none()
         {
             return upstream;
         }
@@ -554,6 +589,7 @@ impl crate::BusTunnel for TestHardwareTunnel {
                     Ok(TunnelEvent::Telegram(mut frame)) => {
                         hardware.rewrite_pid7(&mut frame.service);
                         hardware.rewrite_version(&mut frame.service);
+                        hardware.rewrite_memory(&mut frame.service);
                         if sender.send(TunnelEvent::Telegram(frame)).is_err() {
                             break;
                         }
@@ -584,6 +620,15 @@ impl crate::BusTunnel for TestHardwareTunnel {
     ) -> Pin<Box<dyn Future<Output = Result<(), BusError>> + Send + '_>> {
         Box::pin(async move {
             self.0.transport_entered(destination, transport, &service);
+            match &service {
+                ApplicationService::MemoryRead { .. } => {
+                    self.0.memory_read_pending.store(true, Ordering::SeqCst)
+                }
+                ApplicationService::MemoryWrite { .. } => {
+                    self.0.memory_read_pending.store(false, Ordering::SeqCst)
+                }
+                _ => {}
+            }
             let mutation = matches!(
                 &service,
                 ApplicationService::MemoryWrite { .. }

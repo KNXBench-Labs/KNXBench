@@ -16,7 +16,7 @@ fn final_diag(run: R, category: Cat, stage: Stage) -> FinalStepDiagnostic {
         stage,
     }
 }
-async fn failing(fault: Fault) -> Run {
+pub(super) async fn failing(fault: Fault) -> Run {
     let run = execute_with(
         Policy::Width,
         Setup {
@@ -94,7 +94,18 @@ async fn each_final_step_category_reaches_the_reopened_progress_journal_and_both
         assert!(earlier
             .iter()
             .all(|(format, c)| *format == 1 && c.get("final_step").is_none()));
-        assert_eq!(final_checkpoint.0, 3, "{text:?}");
+        // An allocation mismatch also carries its bytes, which marks envelope version 4.
+        let allocation = (category, stage) == (Cat::VerificationMismatch, Stage::Allocation);
+        assert_eq!(
+            final_checkpoint.0,
+            if allocation { 4 } else { 3 },
+            "{text:?}"
+        );
+        assert_eq!(
+            final_checkpoint.1.get("allocation_evidence").is_some(),
+            allocation,
+            "{text:?}"
+        );
         assert_eq!(
             final_checkpoint.1["final_step"],
             json!({"category": text.0, "stage": text.1})
@@ -251,10 +262,9 @@ async fn a_journal_without_the_final_step_record_replays_as_unavailable_not_gues
     let run = failing(Fault::Memory).await;
     rewrite_last(&run, |v| {
         v["format"] = 1.into();
-        v["checkpoint"]
-            .as_object_mut()
-            .unwrap()
-            .remove("final_step");
+        let checkpoint = v["checkpoint"].as_object_mut().unwrap();
+        checkpoint.remove("final_step");
+        checkpoint.remove("allocation_evidence");
     });
     let progress = run.store().progress();
     assert!(progress.final_step_failures.is_empty());
@@ -328,7 +338,7 @@ async fn contradictory_or_malformed_final_step_checkpoints_are_refused_on_reopen
                 .unwrap()
                 .remove("final_step");
         }),
-        ("unknown envelope version", |v| v["format"] = 4.into()),
+        ("unknown envelope version", |v| v["format"] = 5.into()),
         ("unknown category", |v| {
             v["checkpoint"]["final_step"]["category"] = "rawText".into()
         }),

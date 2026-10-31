@@ -67,6 +67,13 @@ fn device(bundle: &PreparedBundle, hardware: [u8; 6], config: SimulatorConfig) -
 
 /// Serves `device` on a loopback port for the rest of the test process.
 fn gateway(device: SimulatedDevice) -> String {
+    gateway_counted(device).0
+}
+
+/// [`gateway`], also counting every datagram the gateway receives from a tool.
+fn gateway_counted(device: SimulatedDevice) -> (String, Arc<std::sync::atomic::AtomicUsize>) {
+    let datagrams = Arc::new(std::sync::atomic::AtomicUsize::new(0));
+    let counter = Arc::clone(&datagrams);
     let probe = StdSocket::bind("127.0.0.1:0").unwrap();
     let address = probe.local_addr().unwrap();
     let SocketAddr::V4(advertised) = address else {
@@ -87,12 +94,21 @@ fn gateway(device: SimulatedDevice) -> String {
                 ((0, 1, 56), vec![0x00, 0xfe]),
                 ((0, 1, 83), vec![0x09, 0x1a]),
             ]);
+            config.observer = Some(Arc::new(move |event| {
+                if let knx_net::commissioning::simulator_gateway::GatewayEvent::Datagram {
+                    from_tool: true,
+                    ..
+                } = event
+                {
+                    counter.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+                }
+            }));
             ready.send(()).unwrap();
             let _ = serve(Arc::new(device), socket, config).await;
         });
     });
     started.recv().unwrap();
-    address.to_string()
+    (address.to_string(), datagrams)
 }
 
 fn download(dir: &Path, path: &Path, gateway: &str) -> Output {
@@ -464,4 +480,95 @@ fn a_final_mismatch_is_bundled_with_neither_byte_side() {
     ] {
         assert!(names.iter().any(|name| name == required), "{names:?}");
     }
+}
+
+/// Every file below `root`, relative, sorted.
+fn files_below(root: &Path) -> Vec<String> {
+    let mut out = Vec::new();
+    let mut pending = vec![root.to_path_buf()];
+    while let Some(dir) = pending.pop() {
+        for entry in std::fs::read_dir(&dir).unwrap() {
+            let path = entry.unwrap().path();
+            if path.is_dir() {
+                pending.push(path);
+            } else {
+                out.push(path.strip_prefix(root).unwrap().display().to_string());
+            }
+        }
+    }
+    out.sort();
+    out
+}
+
+/// DIAG-03 Original14 C2 (no flag): a real failed System-2 run without
+/// `--diagnostic-bundle` writes no bundle and no recording anywhere.
+#[test]
+fn without_the_flag_a_failed_run_writes_no_bundle_and_no_recording() {
+    let dir = tempfile::tempdir().unwrap();
+    let (path, bundle) = bundle(dir.path());
+    let config = SimulatorConfig {
+        memory_after_load_completed: Some((0x3c00, LIE.to_vec())),
+        ..Default::default()
+    };
+    let gateway = gateway(device(&bundle, [1; 6], config));
+    let out = download(dir.path(), &path, &gateway);
+    let stderr = String::from_utf8_lossy(&out.stderr);
+    assert_eq!(out.status.code(), Some(1), "{stderr}");
+    assert!(!stderr.contains("diagnostic bundle"), "{stderr}");
+    assert_eq!(store(dir.path(), &bundle).outcome(), LocalOutcome::Failed);
+    let files = files_below(dir.path());
+    assert!(
+        files.iter().all(|file| !file.ends_with(".zip")
+            && !file.ends_with(".jsonl")
+            && !file.contains(".knxbench-recordings-")),
+        "{files:#?}"
+    );
+}
+
+/// DIAG-03 Original14 C2 (duplicate attachment): two bundle destinations, or the
+/// same one twice, are refused before a single datagram reaches the gateway.
+#[test]
+fn a_doubled_bundle_flag_is_refused_before_any_datagram() {
+    let dir = tempfile::tempdir().unwrap();
+    let (path, bundle) = bundle(dir.path());
+    let (gateway, datagrams) = gateway_counted(device(&bundle, [1; 6], SimulatorConfig::default()));
+    let (one, two) = (dir.path().join("one.zip"), dir.path().join("two.zip"));
+    for extra in [
+        [
+            "--diagnostic-bundle",
+            one.to_str().unwrap(),
+            "--diagnostic-bundle",
+            two.to_str().unwrap(),
+        ],
+        [
+            "--diagnostic-bundle",
+            one.to_str().unwrap(),
+            "--diagnostic-bundle",
+            one.to_str().unwrap(),
+        ],
+    ] {
+        let out = download_with(dir.path(), &path, &gateway, &extra);
+        assert!(
+            !out.status.success(),
+            "{}",
+            String::from_utf8_lossy(&out.stderr)
+        );
+        assert!(!one.exists() && !two.exists());
+        assert_eq!(datagrams.load(std::sync::atomic::Ordering::SeqCst), 0);
+        assert!(!dir.path().join("operation").exists());
+    }
+    // Control: the same gateway is reachable, so zero above means refused, not unreachable.
+    let out = download_with(
+        dir.path(),
+        &path,
+        &gateway,
+        &["--diagnostic-bundle", one.to_str().unwrap()],
+    );
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    assert!(datagrams.load(std::sync::atomic::Ordering::SeqCst) > 0);
+    assert!(one.exists());
 }

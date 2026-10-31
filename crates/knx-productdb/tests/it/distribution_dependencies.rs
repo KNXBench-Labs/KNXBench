@@ -154,8 +154,8 @@ fn declaration_inventory_does_not_apply_assign_or_calculation() {
     ] {
         assert!(r.limitations.contains(&limitation), "{limitation:?}");
     }
-    assert_eq!(r.format_version, 3);
-    assert_eq!(serde_json::to_value(&r).unwrap()["formatVersion"], 3);
+    assert_eq!(r.format_version, 4);
+    assert_eq!(serde_json::to_value(&r).unwrap()["formatVersion"], 4);
 }
 
 #[test]
@@ -720,6 +720,11 @@ fn additive_reports_bounded_deterministic_and_read_only() {
             .iter()
             .flat_map(|e| &e.endpoints)
             .map(|p| 1 + p.candidates.len())
+            .sum::<usize>()
+        + r.source_candidates
+            .iter()
+            .flat_map(|c| c.parameter.iter().chain(c.parameter_type.iter()))
+            .map(|t| 1 + t.candidates.len())
             .sum::<usize>();
     for (cap, positive) in [(references - 1, false), (references, true)] {
         let result = limited(L {

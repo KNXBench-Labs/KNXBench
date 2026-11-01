@@ -1,9 +1,9 @@
-# Alpha 19 release acceptance plan
+# Alpha 19 release acceptance log
 
-Observed 2026-11-01 13:31 CET. Source cutoff `858b0a24d7028281397b65cd53548bd8e56e60f3`,
-coordination freeze `264f57e616b998285432701301ebdf8a973d98df`, release branch
-`release/alpha19-20261101` (version bump `58838c74f` plus the reader-docs pass on top).
-Candidate identity comes from the branch HEAD and revision-bound receipts.
+Source cutoff `858b0a24d7028281397b65cd53548bd8e56e60f3`, coordination freeze
+`264f57e616b998285432701301ebdf8a973d98df`, release branch `release/alpha19-20261101`
+(version bump `58838c74f`, reader docs, fix `0695115ac`). Candidate identity comes from
+the branch HEAD and revision-bound receipts; private receipts live under `<profile>`.
 
 ## Scope
 
@@ -13,24 +13,35 @@ Candidate identity comes from the branch HEAD and revision-bound receipts.
   PRG-01 increments (run state, exact-0700 qualification, customer-adjustable refusal,
   byte-precise inactive selection, exemplar-bound restore), settings workspace,
   security dependencies (`zip` 9, `rustls` 0.23.46), product database 30->31.
-- Project/store and core model16 unchanged; product database31 is data-only. Alpha 18
-  refuses product31, backup formats 3/4, `supportDiagnostics` history pages and
+- Project/store and core model 16 unchanged; product database 31 is data-only. Alpha 18
+  refuses product 31, backup formats 3/4, `supportDiagnostics` history pages and
   System-2 checkpoint envelope 4; format-1/2 backups no longer restore. Disclosed.
 - #30/#22 allocation mismatch unresolved; no hardware acceptance follows.
-- No release tag, GitHub release or registry push is authorized before the owner's GO.
 
-## Not yet run (no results exist)
+## Owner decisions for this release
 
-- Complete maintained `tools/run_package_gate.py --full` and the release extras
-  (browser configs, native evidence/naming specs, whole-corpus product modules).
-- Same-candidate AppImage/MCP and amd64+arm64 Docker workflow dry runs; publish jobs
-  must stay skipped.
-- Pinned product-corpus opt-ins need a per-release private restoration permission.
-- `docs/releases/alpha19.md` keeps two `RELEASE-GATE-PENDING` placeholders for the
-  release owner to fill from actual receipts.
+- Start autonomously once DIAG-03 is delivered; publish autonomously after a fully green
+  gate and clean dry runs on the same candidate.
+- Pinned product corpus: a representative 28-file cross-section of the archived
+  111-file selection instead of all of it. The legacy member-name test runs unchanged
+  on it. The pinned 115-instance compatibility matrix cannot run on a subset and is
+  replaced by a disclosed per-file isolated ingest differential, Alpha 18 CLI vs
+  candidate CLI, on the same 28 files. No test was repinned.
 
-## Evidence and boundaries
+## Candidate 1 (`b73c467a7`): rejected
 
-Private evidence belongs under `<profile>/evidence/`; checkouts under `<sources>`.
-Final results are recorded only after actual execution. No fabricated acceptance or
-silent skips. Dirty root and user installation data stay protected.
+- Release gate 29/30 green, inputs frozen. Red: the release-only device-diagnostics
+  browser config, 8/8. After a simulated read the bundle carried the retained typed
+  result instead of the token-reached raw recording, contradicting the diagnostic-bundle
+  contract. Unreleased DIAG-03 source; no published artifact affected.
+- Its AppImage and Docker dry runs were clean but do not carry over to candidate 2.
+- Fix `0695115ac`: raw recording first for non-System-2, typed result only when the
+  recording cannot be read (note "unavailable"), conflicts propagate, System-2 unchanged.
+  Three route tests; on the pre-fix source the two raw-export tests fail, the System-2
+  token test passes. Independent review approved; its test gap and minors are included.
+- A separate full server-suite probe hung because its network namespace had no
+  loopback; it is a harness error, not counted. The candidate-2 gate runs the suite.
+
+## Candidate 2
+
+Results are recorded here only after actual execution.

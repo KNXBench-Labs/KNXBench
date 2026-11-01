@@ -161,12 +161,16 @@ does not start another device read (`72a2eeddf`, `5cc4caf66`,
   the wizard and its consent, and a failed save never approves the close. Tested
   in Chromium with a test-only Tauri IPC bridge, not in a native WebKitGTK/Tauri
   window.
-- **An omitted operation no longer derails the review** (`35348e0f5`, merge
-  `f5144897a`). A preview without a chosen operation no longer makes the text or
-  ZIP export refuse with `bundlePreviewChanged`; context, content, byte and
-  consent guards are unchanged. The real server/production-Web run found this before the
-  release. `7443e2ea6` adapts the ZIP-name test to `zip` 9. System-2 still leaves
-  only as its closed projection and short report, never raw.
+- **Unreleased-source corrections before the cut.** The real server/production-Web
+  run found that a preview without a chosen operation made text or ZIP export
+  refuse with `bundlePreviewChanged` (`35348e0f5`, merge `f5144897a`); the
+  release-only simulator browser run found that a retained read or support
+  result shadowed the token-reached recording, so the ZIP held only the typed
+  result (`0695115ac`). Both are fixed; context, content, byte and consent guards
+  are unchanged, and a recording that cannot be read is reported as unavailable,
+  not withheld. Neither affected a published release. `7443e2ea6` adapts the
+  ZIP-name test to `zip` 9. System-2 still leaves only as its closed projection
+  and short report, never raw.
   [Closeout record](../status/2026-11-01-diag03-closeout.md) ·
   [Reviewed monitor window](../contracts/diagnostic-bundle.md#reviewed-monitor-window).
 

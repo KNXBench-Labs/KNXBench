@@ -23,7 +23,7 @@ and resource/integrity limits below are unchanged.
 | Missing language/translation | Existing exact match, otherwise locale-prefix tie-break, otherwise source fallback | Reused without introducing another language resolver. |
 | Module-local captions | Existing evaluated node scope and validated stored/default text-parameter authority | Reused; no label-based instance matching. |
 | Declared row/column `TextParameterRefId` | Retained metadata is not a dynamic-node host in the existing positional resolver | Remains explicit unsupported fallback; do not borrow a neighbouring host's text value. |
-| Table versus Grid, inline/nested/CollapseIfEmpty and in-cell buttons | Existing retained declarations do not alone establish every activation/layout rule | No blanket expansion. Existing delivered grids, access, separators and indentation remain unchanged. |
+| Table versus Grid, inline/nested/CollapseIfEmpty and in-cell buttons | Existing retained declarations do not alone establish every activation/layout rule | No blanket expansion. Existing delivered grids, access, separators and indentation remain unchanged. Main-only since 31 October 2026: the literal text of an in-cell `Button` is shown as passive text ([below](#passive-source-button-labels-button-literal-passive-v1)); its action is not. |
 
 ## Integrity and resource contract
 
@@ -56,3 +56,66 @@ whole-server, browser, corpus or release gate.
 The existing browser renderer consumes the same caption fields; no UI codec or
 new mutation route is added. Actual integrated browser/release verification
 belongs to the one final candidate campaign.
+
+## Passive source Button labels (`button-literal-passive-v1`)
+
+Main-only since 31 October 2026. This is KNXBench presentation policy, not ETS
+Button behaviour, handler support or Table/Grid visual equivalence.
+
+- **Admission.** Only a program-owned (not `ModuleDef`) exact-namespace
+  `Dynamic` `Button` leaf below traversable containers, whose nearest
+  `ParameterBlock` has an `@Id` and a valid `Table`/`Grid`. It declares exactly
+  unqualified `Id`, `Text` and `Cell`, plus optionally `EventHandler`,
+  `EventHandlerOnline` and `EventHandlerParameters` as inert source data that
+  is never parsed or reported. `Text` must be non-blank, not `#` and free of
+  `{{`/`}}`; it stays XML-decoded and otherwise verbatim (no trim, translation,
+  substitution or `Name`/`Id` fallback). `Cell` is the existing 1-based
+  `row,column` parser. Anything else (local `Access`, `TextParameterRefId`,
+  other or qualified attributes, child elements, non-whitespace text, CDATA or
+  entity content, malformed or out-of-range cells, list/invalid/nested-list
+  blocks) shows no label; the grid's existing `unshownContent` issue for the
+  `Button` stays.
+- **Activation.** The single existing walker records each `Button` it reaches
+  (`ActiveButton`: scope, node, inherited block access) and keeps its
+  `UnrecognizedNode`/skipped-child diagnostics; it never descends a `Button`.
+  Inactive branches, `Repeat` and module scopes yield no label.
+- **Source binding.** Stored `Button` rows keep `element_id`/`text` null, so no
+  migration or reimport is needed. The presentation reader reopens the
+  hash- and length-checked source and rebuilds the program's `Dynamic` tree as
+  the stored-tree parser numbered it, counting every element of any namespace.
+  It binds labels only when every stored `(node, kind, parent, position)`
+  matches and the nearest stored block is the same node with the same `@Id`.
+  Drift, a second program root, a duplicate program `Button/@Id`, an unreadable
+  source, a non-unique owner or the existing event/depth budget refuses every
+  label of the program, never a subset. Programs without stored `Button` rows
+  skip this read.
+- **Wire shape.** `ParameterSection.passiveLabels` (always present, possibly
+  empty): `{kind:"buttonLiteral", elementId, text, cell:{row,column},
+  group:{key,label}, blockAccess}`. No field, separator, value, `writeEtsId`,
+  editor or handler data. A section and its grid group are seeded from admitted
+  labels too, so a Button-only block is an area with `fields=[]`. Copies charge
+  the existing caption/copy budget; exhaustion refuses the whole panel (GET or
+  write) with `device text projection budget exhausted`, as before.
+- **Browser.** Only the normal Parameters view keeps passive labels, filtered by
+  the separators' known-token block predicate (`Read`/`None`); restricted and
+  Functions views show none. A passive-only group opens a navigation area after
+  existing groups (count 0). In a selected matrix, a cell stacks separator
+  captions, then passive labels in source order, then fields. The label is a
+  plain `span` with the cue “Source button label – action unsupported” (German
+  translated): no button role, tab stop, handler or request. Search lists fields
+  only; labels return when search clears. The server keeps the `unshownContent`
+  issue; where the selected grid shows that `Button`'s label, the client words it
+  “Button {Id}: label shown; its action is not supported” and does not count it
+  among declarations that could not be placed. Other `Button` issues keep the
+  “not shown here” wording.
+- **Limits.** A refused binding (drift, duplicate `Button/@Id`, unavailable
+  source) is not surfaced as its own diagnostic: the panel then shows no label
+  and only the generic `unshownContent` issue remains. The extra source read on
+  every panel of a program with stored `Button` rows is bounded by the event and
+  depth budgets but not yet measured on the largest retained program.
+
+Evidence: `parameter_layout::passive_buttons` (ProductDB binding and walker),
+`parameter_layout::button` unit tests, `http_parameter_grid::passive_labels`
+(real in-process HTTP, writes and refusals), Vitest workspace/matrix/panel
+tests and `e2e/parameter-matrix.e2e.ts` with intercepted fictional data. The
+fixtures are self-authored (`crates/knx-productdb/tests/fixtures/passive-button-*`).

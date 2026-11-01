@@ -271,7 +271,9 @@ Missing grouping stays visible under Other parameters; unsupported value/script
 semantics still have their existing diagnostic/refusal behavior. Rows declared as
 indented are indented; since Alpha 15 declared `SuffixText` units appear after
 the value and supported caption placeholders resolve with readable fallbacks.
-Inline sections and object folders are not shown yet. Alpha 13 and older binaries do not contain this layout.
+Inline sections and object folders are not shown yet. On main, a `Button` in a
+declared grid shows only its literal source text as a passive label; its action
+(callbacks, online transfer) is not supported and nothing can be triggered. Alpha 13 and older binaries do not contain this layout.
 
 ## Read these before your first serious project
 

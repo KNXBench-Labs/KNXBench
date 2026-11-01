@@ -236,7 +236,7 @@ Adopting a plug-in's stored bytes between two projects of one lineage exists in 
 ### 3. Parameter evaluation and editing boundaries
 
 **Ledger status:** `ACCEPTED_BOUNDARY` ([KL-3](status/LEDGER.md#snapshot-ids)).
-Supported top-level and single-authoritative module fields are editable. Declared Table/Grid blocks render as matrices; supported positional block/separator captions are filled with provenance. Calculations, repeated expansion and unsupported controls/encodings remain limited, as do Table/Grid visual variants, collapse rules, parameter-driven row/column captions and in-cell buttons/nested blocks.
+Supported top-level and single-authoritative module fields are editable. Declared Table/Grid blocks render as matrices; supported positional block/separator captions are filled with provenance. Calculations, repeated expansion and unsupported controls/encodings remain limited, as do Table/Grid visual variants, collapse rules, parameter-driven row/column captions and in-cell buttons/nested blocks. On main, an in-cell `Button` shows only its literal source text as a passive label; its action is not supported ([contract](contracts/alpha16-parameter-layout.md#passive-source-button-labels-button-literal-passive-v1)).
 [Details and history](limitations/KL-003-parameter-evaluation-and-editing-boundaries.md)
 
 <a id="catalogue-kl-006"></a>

@@ -76,6 +76,11 @@
 .parameter-matrix-caption { min-width: 0; padding: 8px 4px; font-size: 12px; line-height: 1.4; overflow-wrap: anywhere; color: var(--knx-foreground); font-weight: 600; }
 .parameter-matrix-caption[data-caption="column"] { align-self: end; color: var(--knx-muted); border-bottom: 1px solid var(--knx-border); }
 .parameter-matrix-caption[data-caption="row"] { padding-left: 8px; border-left: 2px solid var(--knx-border); }
+/* button-literal-passive-v1: plain source text with a compact cue; deliberately no action affordance. */
+.parameter-matrix-passive { display: flex; flex-direction: column; gap: 2px; font-weight: 400; cursor: default; }
+.parameter-matrix-passive-text { font-weight: 600; white-space: pre-wrap; }
+.parameter-matrix-passive-note { margin: -4px 0 10px; max-width: 72ch; font-size: 12px; line-height: 1.5; color: var(--knx-muted); overflow-wrap: anywhere; }
+.parameter-matrix-passive-cue { color: var(--knx-muted); font-size: 11px; font-weight: 400; }
 .parameter-matrix-unplaced { margin: 14px 0 0; padding: 8px 4px 0; border-top: 1px solid var(--knx-border); font-size: 12px; font-weight: 600; color: var(--knx-muted); }
 @container (min-width: 1040px) {
   .parameter-workspace-layout { grid-template-columns: 11rem minmax(0, 1fr) 14rem; }

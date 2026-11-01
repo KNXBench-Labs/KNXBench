@@ -1,5 +1,7 @@
 //! Declared parameter grids reach the HTTP parameter panel as versioned geometry.
 
+mod passive_labels;
+
 use std::sync::Arc;
 
 use axum::body::Body;

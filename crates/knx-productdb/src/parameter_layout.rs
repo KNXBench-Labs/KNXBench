@@ -4,7 +4,9 @@ use quick_xml::{events::Event, name::ResolveResult, NsReader};
 use rusqlite::{Connection, OptionalExtension};
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 
+mod button;
 mod grid;
+pub use button::{ButtonBinding, ButtonLiteral};
 pub(crate) use grid::{layout_attribute_is_known, layout_element_is_known};
 pub use grid::{BlockGrid, Cell, GridAxis, GridIssue, GridIssueKind, GridStatus, MAX_GRID_EVENTS};
 
@@ -80,8 +82,22 @@ pub struct ParameterLayout {
     grids: HashMap<(String, i64), BlockGrid>,
     separators: HashMap<(String, i64), SeparatorPlacement>,
     declarations: HashMap<(String, i64), SeparatorDeclaration>,
+    buttons: HashMap<i64, ButtonLiteral>,
+    button_binding: ButtonBinding,
 }
 impl ParameterLayout {
+    /// `button-literal-passive-v1`: the admitted literal of the program-owned
+    /// `Button` at `node`; module definitions never have one.
+    pub fn button(&self, definition: &str, node: i64) -> Option<&ButtonLiteral> {
+        if !definition.is_empty() {
+            return None;
+        }
+        self.buttons.get(&node)
+    }
+    /// Whether the program's `Button` literals could be bound to stored nodes at all.
+    pub fn button_binding(&self) -> ButtonBinding {
+        self.button_binding
+    }
     pub fn field(&self, definition: &str, reference: &str) -> FieldLayout {
         self.fields
             .get(&(definition.to_owned(), reference.to_owned()))
@@ -107,6 +123,8 @@ impl ParameterLayout {
 #[derive(Debug)]
 struct Node {
     parent: Option<i64>,
+    /// Sibling position below `parent`, as the parser numbered it.
+    position: i64,
     kind: String,
     reference: Option<String>,
     id: Option<String>,
@@ -127,13 +145,14 @@ pub fn load(conn: &Connection, program: &str) -> Result<ParameterLayout, Product
     let grids = source
         .as_deref()
         .and_then(|bytes| grid::read_grids(bytes, program));
-    let mut stmt = conn.prepare("SELECT module_def_id,node_id,parent_id,kind,ref_id,element_id,text,access,ui_hint FROM dynamic_node WHERE program_id=?1 ORDER BY module_def_id,node_id")?;
+    let mut stmt = conn.prepare("SELECT module_def_id,node_id,parent_id,kind,ref_id,element_id,text,access,ui_hint,position FROM dynamic_node WHERE program_id=?1 ORDER BY module_def_id,node_id")?;
     let rows = stmt.query_map([program], |r| {
         Ok((
             r.get::<_, String>(0)?,
             r.get::<_, i64>(1)?,
             Node {
                 parent: r.get(2)?,
+                position: r.get(9)?,
                 kind: r.get(3)?,
                 reference: r.get(4)?,
                 id: r.get(5)?,
@@ -148,7 +167,10 @@ pub fn load(conn: &Connection, program: &str) -> Result<ParameterLayout, Product
         let (scope, id, node) = row?;
         trees.entry(scope).or_default().insert(id, node);
     }
-    let mut result = ParameterLayout::default();
+    let mut result = ParameterLayout {
+        button_binding: ButtonBinding::Bound,
+        ..ParameterLayout::default()
+    };
     for (scope, nodes) in trees {
         let mut structural = BTreeSet::new();
         for node in nodes.values() {
@@ -322,6 +344,18 @@ pub fn load(conn: &Connection, program: &str) -> Result<ParameterLayout, Product
                     indent_level,
                 },
             );
+        }
+        if scope.is_empty() {
+            // button-literal-passive-v1: program-owned Buttons only.
+            let (binding, buttons) = button::bind(
+                source.as_deref(),
+                program,
+                Some(&nodes),
+                &scope_grids,
+                &captions,
+            );
+            result.button_binding = binding;
+            result.buttons = buttons;
         }
         for (id, grid) in scope_grids {
             result.grids.insert((scope.clone(), id), grid);

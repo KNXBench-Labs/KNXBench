@@ -1235,6 +1235,18 @@ pub struct ActiveSeparator {
     pub parameter_refs_before: usize,
 }
 
+/// One `Button` this walk reached (`button-literal-passive-v1`), in document
+/// order. Only the visit is recorded: its action stays unrecognized and its
+/// children are never descended. Bounded by the work budget like a separator.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ActiveButton {
+    pub scope: Option<Rc<ModuleScope>>,
+    /// `dynamic_node.node_id` within the tree named by `scope`.
+    pub node_id: i64,
+    /// As [`ActiveRef::block_access`], for the path that reached it.
+    pub block_access: Option<String>,
+}
+
 /// The channel element that owns an activated ref (ISSUE-08).
 ///
 /// Structural, not heuristic: it is the nearest enclosing `Channel`/
@@ -1319,6 +1331,8 @@ pub struct Activation {
     /// Activated `ParameterSeparator`s in document order (ADR-0139). Bounded
     /// by the work budget: each costs the visit that found it.
     pub separators: Vec<ActiveSeparator>,
+    /// Reached `Button`s in document order; never an activation or a label.
+    pub buttons: Vec<ActiveButton>,
     pub diagnostics: Vec<ScopedDiagnostic>,
     /// How many [`Diagnostic::RefBelowSkippedNode`]s were emitted. Counted
     /// against [`MAX_MODULE_ACTIVATIONS`] like a ref or a label (ADR-0041):
@@ -1905,6 +1919,15 @@ fn walk(
             }
         }
         other => {
+            // button-literal-passive-v1: the reached leaf is recorded for
+            // presentation; its action stays unrecognized and undescended.
+            if other == "Button" {
+                activation.buttons.push(ActiveButton {
+                    scope: scope.cloned(),
+                    node_id,
+                    block_access: path.block_access.map(|access| access.to_string()),
+                });
+            }
             activation.diagnose(
                 scope,
                 Diagnostic::UnrecognizedNode {

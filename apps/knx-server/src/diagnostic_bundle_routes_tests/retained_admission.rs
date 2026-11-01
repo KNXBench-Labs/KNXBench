@@ -378,6 +378,201 @@ async fn exact_retained_identity_reaches_preview_text_and_zip_without_a_recordin
         .all(|name| !name.ends_with("recording.jsonl")));
 }
 
+/// Contract: a recording reached through its `diagnosticsToken` carries its raw
+/// `recording.jsonl` after consent, even while the typed result is still retained.
+#[tokio::test]
+async fn retained_token_with_a_recording_exports_the_raw_recording_after_consent() {
+    let dir = tempfile::tempdir().unwrap();
+    let state = state(dir.path(), true);
+    *state.project.lock().unwrap() = Some(project());
+    let context = crate::diagnostic_bundle_context::ProjectContext::capture(&state);
+    let export = identity_export().await;
+    let expected = serde_json::to_value(&export.report).unwrap();
+    state
+        .diagnostic_results
+        .retain_for_bundle_test("diagnostic-token-r", export, context, 7);
+    let recorder = crate::operation_recordings::start(
+        &state,
+        OperationStart::new(OperationKind::DeviceDiagnostics)
+            .target(json!({ "deviceId": 7, "individualAddress": "1.1.25" }))
+            .related("diagnosticsToken", "diagnostic-token-r"),
+    );
+    recorder.finish(RecordedOutcome::succeeded(Value::Null));
+    assert!(state
+        .recordings
+        .wait_until_idle(std::time::Duration::from_secs(10)));
+    let id = recorder.id().unwrap().to_string();
+    let mut query = json!({
+        "problemType": "deviceReading",
+        "operation": {"relatedKey":"diagnosticsToken","relatedValue":"diagnostic-token-r"},
+        "sections": ["operation", "legacyReports"]
+    });
+    let (status, body, _) = call(
+        &state,
+        "POST",
+        "/api/diagnostics/bundle/preview",
+        Some(query.clone()),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{}", json_of(&body));
+    let preview = json_of(&body);
+    assert_eq!(preview["operationRecordingId"], json!(id));
+    let section = preview["sections"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|section| section["kind"] == "operation")
+        .expect("operation section");
+    assert_eq!(section["files"], json!(["recording.jsonl"]), "{section}");
+    assert!(section["notes"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .any(|note| note.as_str().unwrap().contains("possibly passwords")));
+    query["review"] = preview["review"].clone();
+    query["consent"] = json!(true);
+    let (status, bytes, _) = call(&state, "POST", "/api/diagnostics/bundle", Some(query)).await;
+    assert_eq!(status, StatusCode::OK, "{}", json_of(&bytes));
+    let mut archive = zip::ZipArchive::new(std::io::Cursor::new(bytes)).unwrap();
+    let mut recording = Vec::new();
+    archive
+        .by_name(&format!("operations/{id}/recording.jsonl"))
+        .unwrap()
+        .read_to_end(&mut recording)
+        .unwrap();
+    assert_eq!(recording, state.recordings.read(&id).unwrap());
+    let mut report = Vec::new();
+    archive
+        .by_name("reports/report.json")
+        .unwrap()
+        .read_to_end(&mut report)
+        .unwrap();
+    assert_eq!(serde_json::from_slice::<Value>(&report).unwrap(), expected);
+}
+
+/// A System-2-kind recording without its journal id never leaves raw, even through a token.
+#[tokio::test]
+async fn a_system2_recording_behind_a_retained_token_keeps_only_the_typed_result() {
+    let dir = tempfile::tempdir().unwrap();
+    let state = state(dir.path(), true);
+    *state.project.lock().unwrap() = Some(project());
+    let context = crate::diagnostic_bundle_context::ProjectContext::capture(&state);
+    state.diagnostic_results.retain_for_bundle_test(
+        "diagnostic-token-s",
+        identity_export().await,
+        context,
+        7,
+    );
+    let recorder = crate::operation_recordings::start(
+        &state,
+        OperationStart::new(OperationKind::System2Download)
+            .target(json!({ "deviceId": 7, "individualAddress": "1.1.25" }))
+            .related("diagnosticsToken", "diagnostic-token-s"),
+    );
+    recorder.finish(RecordedOutcome::succeeded(Value::Null));
+    assert!(state
+        .recordings
+        .wait_until_idle(std::time::Duration::from_secs(10)));
+    let mut query = json!({
+        "problemType": "deviceReading",
+        "operation": {"relatedKey":"diagnosticsToken","relatedValue":"diagnostic-token-s"},
+        "sections": ["operation"]
+    });
+    let (status, body, _) = call(
+        &state,
+        "POST",
+        "/api/diagnostics/bundle/preview",
+        Some(query.clone()),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{}", json_of(&body));
+    let preview = json_of(&body);
+    let section = preview["sections"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|section| section["kind"] == "operation")
+        .expect("operation section");
+    assert_eq!(
+        section["files"],
+        json!(["diagnostic-result.json"]),
+        "{section}"
+    );
+    assert_eq!(
+        section["notes"],
+        json!(["the raw operation recording is withheld; this is the retained typed result"])
+    );
+    query["review"] = preview["review"].clone();
+    query["consent"] = json!(true);
+    let (status, bytes, _) = call(&state, "POST", "/api/diagnostics/bundle", Some(query)).await;
+    assert_eq!(status, StatusCode::OK, "{}", json_of(&bytes));
+    let archive = zip::ZipArchive::new(std::io::Cursor::new(bytes)).unwrap();
+    assert!(archive
+        .file_names()
+        .map(Result::unwrap)
+        .all(|name| !name.ends_with("recording.jsonl")));
+}
+
+/// The support-token path carries its raw recording after consent, like diagnostics.
+#[tokio::test]
+async fn a_retained_support_token_with_a_recording_exports_the_raw_recording() {
+    let dir = tempfile::tempdir().unwrap();
+    let state = state(dir.path(), true);
+    let report = build_report(
+        None,
+        None,
+        None,
+        &ReportInput {
+            program_id: Some("M-0001_A-0001-01-0001".into()),
+            mask: Some(0x0025),
+            ..Default::default()
+        },
+        &crate::version_string(),
+    );
+    state
+        .support_results
+        .retain_for_bundle_test("support-token-r", report, None);
+    let recorder = crate::operation_recordings::start(
+        &state,
+        OperationStart::new(OperationKind::SupportRead)
+            .target(json!({ "individualAddress": "1.1.25" }))
+            .related("supportToken", "support-token-r"),
+    );
+    recorder.finish(RecordedOutcome::succeeded(Value::Null));
+    assert!(state
+        .recordings
+        .wait_until_idle(std::time::Duration::from_secs(10)));
+    let id = recorder.id().unwrap().to_string();
+    let mut query = json!({
+        "problemType": "deviceReading",
+        "operation": {"relatedKey":"supportToken","relatedValue":"support-token-r"},
+        "sections": ["operation", "legacyReports"]
+    });
+    let (status, body, _) = call(
+        &state,
+        "POST",
+        "/api/diagnostics/bundle/preview",
+        Some(query.clone()),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{}", json_of(&body));
+    let preview = json_of(&body);
+    assert_eq!(preview["operationRecordingId"], json!(id));
+    query["review"] = preview["review"].clone();
+    query["consent"] = json!(true);
+    let (status, bytes, _) = call(&state, "POST", "/api/diagnostics/bundle", Some(query)).await;
+    assert_eq!(status, StatusCode::OK, "{}", json_of(&bytes));
+    let mut archive = zip::ZipArchive::new(std::io::Cursor::new(bytes)).unwrap();
+    let mut recording = Vec::new();
+    archive
+        .by_name(&format!("operations/{id}/recording.jsonl"))
+        .unwrap()
+        .read_to_end(&mut recording)
+        .unwrap();
+    assert_eq!(recording, state.recordings.read(&id).unwrap());
+    assert!(archive.by_name("reports/report.json").is_ok());
+}
+
 #[tokio::test]
 async fn projectless_retained_support_keeps_its_exact_result_namespace() {
     let dir = tempfile::tempdir().unwrap();

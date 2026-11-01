@@ -221,6 +221,12 @@ already found lying in the grass.
   identities retained by pidfds, then reap them after bounded TERM/KILL
   escalation; never replace that ownership proof with `pkill -f` or command
   substring matching.
+- **`Popen` returning does not mean `/proc/<pid>/environ` shows the child.**
+  Right after `Popen` returned, an environment-marker lookup was observed to see
+  an empty or still the parent's environment; under load this failed about a
+  fifth of the SIGTERM pidfd test executions. Pin a marker identity only after
+  the process itself announced it is running from the new image (for example by
+  printing its own PID), as `spawn_announced` in the tool tests does.
 - **Cleanup must not itself be cancellable.** Defer handled signals across
   TERM/KILL/reap on both runner and supervisor, including normal-completion
   leftovers; restore the caller's mask afterwards so interruption still fails

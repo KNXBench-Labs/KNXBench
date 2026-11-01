@@ -108,7 +108,7 @@ physical inactive-byte survival, PRG-01 and KL-007 remain open.
 
 `knx products inspect-distribution <source.xml|source.zip>` reports what a
 manufacturer XML or distribution ZIP (for example an OpenKNX release) declares,
-without installing anything. Report format 3 keeps one source map per document
+without installing anything. Report format 4 keeps one source map per document
 and byte-exact references for every row, plus a resolver for them. Typed facts come from
 the existing catalogue, hardware, program and Dynamic readers. Unknown
 constructs are inventoried, including inside Dynamic. `complete` is always
@@ -121,6 +121,14 @@ false, and every limitation is listed
   run, resolved to a function or applied; `dependenciesNotExecuted` says so.
   Ambiguous references make a possible loop `cycleNotDetermined`, never
   `noDeclaredCycle`. Independent review found that gap; it is fixed and tested.
+- **Source candidates (format 4).** TypeNumber values and ParameterRef
+  overrides are compared exactly with their closed bounds, and Union members
+  get strict-explicit member-relative bit intervals with a bounded overlap
+  summary. Rows are `sourceCandidate` severity, never initialized or
+  repaired; an omitted Offset gives no interval. Only findings get rows;
+  values and intervals inside their bounds are counted in
+  `sourceCandidateTotals` (listing all of them made six of 37 real releases
+  exceed the report ceiling).
 - **Installation unchanged.** Installation still refuses these sources. The
   more lenient Windows-name policy applies to inspection only, and a native
   regression test pins that.

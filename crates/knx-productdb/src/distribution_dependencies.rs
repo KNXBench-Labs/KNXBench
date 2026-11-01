@@ -163,7 +163,7 @@ pub struct DistributionConditionContext {
 use DistributionDependencyKind as Kind;
 use DistributionEndpointRole as Role;
 
-fn named(doc: &Document<'_>, id: usize, local: &str) -> bool {
+pub(super) fn named(doc: &Document<'_>, id: usize, local: &str) -> bool {
     let n = &doc.nodes[id];
     n.ns.as_ref() == doc.namespace && n.local == local
 }
@@ -231,7 +231,7 @@ fn list_role(doc: &Document<'_>, owner: usize, list: usize) -> Option<Role> {
     }
 }
 
-fn presence(value: &Option<String>) -> DistributionPresence {
+pub(super) fn presence(value: &Option<String>) -> DistributionPresence {
     match value.as_deref() {
         None => DistributionPresence::Absent,
         Some("") => DistributionPresence::PresentEmpty,

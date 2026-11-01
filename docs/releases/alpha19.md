@@ -58,7 +58,8 @@ fix for `.knxproj` import. The authentic ETS 5.7 schema-20 evidence gap remains
   from loops whose ambiguous references prevent a decision. Nothing is run,
   resolved to a function, applied or declared valid.
 - **Source candidates, not automatic repairs** (`457295909`, `4c149d5e9`,
-  merge `afb28da1f`). Report format 4 compares TypeNumber values and overrides
+  merge `afb28da1f`). Source-candidate rows (introduced with report format 4,
+  carried on in format 5) compare TypeNumber values and overrides
   exactly with declared bounds, and Union member bit intervals with declared
   extents. Findings get rows; all checked occurrences contribute to totals.
   Missing offsets or widths are not guessed. Overlap between alternatives is
@@ -76,7 +77,18 @@ fix for `.knxproj` import. The authentic ETS 5.7 schema-20 evidence gap remains
 [KL-187](../limitations/KL-187-distribution-inspection.md) ·
 [OKX-07 capability reconciliation](../status/2026-11-01-openknx-capability-reconciliation.md).
 
-OKX04-PENDING (ships only if on main at cutoff)
+- **Baggage finds its owners, PNGs keep their manners** (`ccfe4c610`, merge
+  `8fbe945e8`). Report format 5 joins each manufacturer `Baggages/Baggage`
+  declaration to its exact consumers (context help, icons, extension baggage)
+  in the original namespace and manufacturer scope. Unique PNGs are decoded under
+  separate byte, pixel and work budgets and re-encoded without source metadata;
+  original and derived hashes are both reported. Help and other ZIP payloads stay
+  metadata only, never extracted or rendered; animated PNGs and unsafe paths are
+  named refusals. `--output-format html` is an explicit opt-in offline view on
+  stdout: escaped text and derived PNG images only, no scripts, links or
+  downloads. JSON stays the default. Native package baggage installation is not
+  performed by inspection.
+  [Resources and previews](../contracts/distribution-inspection.md#distribution-resources-and-passive-png-presentation).
 
 ## Diagnostics and support bundle
 
@@ -227,6 +239,15 @@ Keep private journals, memory dumps and full bundles out of public issues.
 - **Diagnostic wizard controls stay above toasts** (`e8943dc37`). Notifications
   no longer cover Next/Close. Toasts and autosave countdowns remain dimmed behind
   the wizard and their timers keep running; errors remain in the notification log.
+
+## Security updates
+
+- **Dependency alerts closed** (`df503e2a4`, merge `be12e246e`). `zip` 8.6 → 9.2.1
+  and `rustls` 0.23.45 → 0.23.46 address the open Dependabot advisories;
+  `rustls-webpki` 0.103.16 and `tokio` 1.54.1 follow RustSec advisories. With
+  `zip` 9 a member name that does not decode is now a visible import refusal
+  instead of a trusted string. Unflagged UTF-8 names and their CP437 twins still
+  collide as before; no real package identity in the private corpus changed.
 
 ## Changed defaults
 

@@ -430,6 +430,33 @@ pub(crate) struct ParameterSectionDto {
     /// order. Always present (possibly empty), so a client can tell "no grid
     /// declared" from a server that does not report layouts.
     pub(crate) group_layouts: Vec<ParameterGroupLayoutDto>,
+    /// `button-literal-passive-v1`: activated source `Button` literals placed
+    /// in their nearest grid block, in document order. Always present.
+    pub(crate) passive_labels: Vec<ParameterPassiveLabelDto>,
+}
+
+/// The one passive-label kind this build reports. Known kind means only this
+/// presentation policy, never handler support.
+#[derive(serde::Serialize, Debug, Clone, Copy, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub(crate) enum ParameterPassiveLabelKindDto {
+    ButtonLiteral,
+}
+
+/// An activated `Button`'s XML-decoded `@Text` at its declared `@Cell`, display
+/// only. Its handler attributes are inert source data and never reported.
+#[derive(serde::Serialize, Debug, Clone, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct ParameterPassiveLabelDto {
+    pub(crate) kind: ParameterPassiveLabelKindDto,
+    /// `Button/@Id`, verbatim.
+    pub(crate) element_id: String,
+    pub(crate) text: String,
+    pub(crate) cell: ParameterGridCellDto,
+    /// The nearest enclosing grid block, keyed like the fields' `group`.
+    pub(crate) group: ParameterGroupDto,
+    /// As `ParameterFieldDto.blockAccess`.
+    pub(crate) block_access: Option<String>,
 }
 
 /// ADR-0137 wire version of [`ParameterGroupLayoutDto`]. A client renders

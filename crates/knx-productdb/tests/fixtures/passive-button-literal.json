@@ -1,0 +1,32 @@
+{
+  "purpose": "Independently expected button-literal-passive-v1 DTO entries and geometry for the passive-button fixtures; KNXBench presentation policy, not ETS behaviour",
+  "selector": "PR-MODE=1",
+  "passiveLabels": {
+    "en": [
+      {"kind":"buttonLiteral","elementId":"B-ONLY","text":"Fictional source label","cell":{"row":1,"column":2},"group":{"key":"PB-ONLY","label":null},"blockAccess":null},
+      {"kind":"buttonLiteral","elementId":"B-MIX","text":"Fictional mixed label","cell":{"row":1,"column":2},"group":{"key":"PB-MIX","label":"Fictional mixed grid"},"blockAccess":null}
+    ],
+    "de": [
+      {"kind":"buttonLiteral","elementId":"B-ONLY","text":"Fiktive Quellbeschriftung","cell":{"row":1,"column":2},"group":{"key":"PB-ONLY","label":null},"blockAccess":null},
+      {"kind":"buttonLiteral","elementId":"B-MIX","text":"Fiktive gemischte Beschriftung","cell":{"row":1,"column":2},"group":{"key":"PB-MIX","label":"Fictional mixed grid"},"blockAccess":null}
+    ]
+  },
+  "unchangedFields": [
+    {"etsId":"PR-MODE","writeEtsId":"PR-MODE","value":"1","groupKey":"PB-CONTROL","cell":null},
+    {"etsId":"PR-EDIT","writeEtsId":"PR-EDIT","value":"17","groupKey":"PB-MIX","cell":{"row":1,"column":2}},
+    {"etsId":"PR-OTHER","writeEtsId":"PR-OTHER","value":"23","groupKey":"PB-MIX","cell":{"row":2,"column":1}}
+  ],
+  "geometry": {
+    "PB-ONLY": {
+      "templateColumns": "minmax(8rem, 46fr) minmax(8rem, 53fr)",
+      "button": {"gridRow": "1 / span 1", "gridColumn": "2 / span 1"}
+    },
+    "PB-MIX": {
+      "templateColumns": "minmax(5rem, max-content) minmax(8rem, 40fr) minmax(8rem, 60fr)",
+      "separator": {"gridRow": "2 / span 1", "gridColumn": "3 / span 1"},
+      "button": {"gridRow": "3 / span 1", "gridColumn": "3 / span 1"},
+      "PR-EDIT": {"gridRow": "4 / span 1", "gridColumn": "3 / span 1"},
+      "PR-OTHER": {"gridRow": "5 / span 1", "gridColumn": "2 / span 1"}
+    }
+  }
+}

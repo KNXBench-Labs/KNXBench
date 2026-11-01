@@ -18,7 +18,7 @@ export default function ParameterWorkspace({ sections, renderField }: Props) {
   const [active, setActive] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<string | null>(null);
-  const { rows, groups, items } = indexParameterWorkspace(sections);
+  const { rows, groups, items, passiveLabels } = indexParameterWorkspace(sections);
   // Closed by default: no area opens until chosen; a vanished choice closes again.
   const activeKey = groups.some(group => group.key === active) ? active : null;
   const searching = query.trim() !== "";
@@ -39,7 +39,16 @@ export default function ParameterWorkspace({ sections, renderField }: Props) {
   // ADR-0137: a matrix only for a chosen area with a declared grid, never while searching.
   const layoutView: GroupLayoutView | null = !searching && current ? current.layout : null;
   const matrix = layoutView?.kind === "matrix" ? planParameterMatrix(layoutView.layout,
-    rows.filter(row => row.groupKey === current!.key).map(row => ({ key: row.key, cell: row.field.cell }))) : null;
+    rows.filter(row => row.groupKey === current!.key).map(row => ({ key: row.key, cell: row.field.cell })),
+    passiveLabels.filter(entry => entry.groupKey === current!.key)
+      .map(entry => ({ key: `passive:${entry.key}`, text: entry.label.text, cell: entry.label.cell }))) : null;
+  const passiveIds = new Map(passiveLabels.map(entry => [`passive:${entry.key}`, entry.label.elementId]));
+  const passiveCells = new Map(passiveLabels.map(entry =>
+    [`passive:${entry.key}`, `${entry.label.cell.row},${entry.label.cell.column}`]));
+  // Button id and source cell of every literal this grid actually shows: such an issue is no
+  // unplaced declaration. The cell matters: the grid reader names an Id-less Button by its RefId.
+  const shownButtons = new Set(matrix?.labels.flatMap(caption => caption.passive
+    ? [shownButtonKey(passiveIds.get(caption.key)!, passiveCells.get(caption.key)!)] : []) ?? []);
   const resultCounts = new Map<string, number>();
   for (const row of rows) if (!searching || visible.has(row.key)) resultCounts.set(row.groupKey, (resultCounts.get(row.groupKey) ?? 0) + 1);
 
@@ -74,7 +83,7 @@ export default function ParameterWorkspace({ sections, renderField }: Props) {
               <h4 title={current && !searching ? caption(current).title : undefined}>{searching ? t("parameters.workspace.results") : current && groupLabel(current)}</h4></div>
             <span>{t("parameters.workspace.sourceGroups")}</span>
           </header>
-          {layoutView && <LayoutNote view={layoutView} />}
+          {layoutView && <LayoutNote view={layoutView} shownButtons={shownButtons} />}
           {visible.size > 0 && !matrix && <div className="parameter-workspace-columns" aria-hidden="true">
             <span>{t("parameters.workspace.parameter")}</span><span>{t("parameters.workspace.value")}</span>
           </div>}
@@ -104,8 +113,14 @@ export default function ParameterWorkspace({ sections, renderField }: Props) {
               aria-controls={`${id}-context`} onClick={() => setSelected(row.key)}><span aria-hidden="true">i</span></button>}
           </div>)(item.row))}
           {/* Captions are siblings after the rows, so they never shift editor identity. */}
-          {matrix && [...matrix.columnHeaders, ...matrix.rowHeaders, ...matrix.labels].map(caption =>
-            <span key={caption.key} className="parameter-matrix-caption" data-caption={caption.key.split(":")[0]}
+          {matrix && [...matrix.columnHeaders, ...matrix.rowHeaders, ...matrix.labels].map(caption => caption.passive
+            // button-literal-passive-v1: the literal is plain text; no role, focus stop or handler.
+            ? <span key={caption.key} className="parameter-matrix-caption parameter-matrix-passive" data-caption="passive"
+              data-passive-label={passiveIds.get(caption.key)} style={matrixStyle(caption.area)}>
+              <span className="parameter-matrix-passive-text">{caption.text}</span>
+              <span className="parameter-matrix-passive-cue">{t("parameters.matrix.passiveButton")}</span>
+            </span>
+            : <span key={caption.key} className="parameter-matrix-caption" data-caption={caption.key.split(":")[0]}
               title={parameterCaption({ label: caption.text, labelFill: caption.textFill }, t("parameters.caption.text"), t).title}
               style={matrixStyle(caption.area)}>{parameterCaption({ label: caption.text, labelFill: caption.textFill }, t("parameters.caption.text"), t).label}</span>)}
           {matrix?.unplacedHeading && <h5 key="matrix:unplaced" className="parameter-matrix-unplaced"
@@ -169,8 +184,17 @@ const ISSUE_KEYS = {
   unshownContent: "parameters.matrix.issue.unshownContent",
 } as const;
 
-/** Says why an area is or is not a matrix; reasons and issue kinds stay visible. */
-function LayoutNote({ view }: { view: GroupLayoutView }) {
+/** One shown Button: its source reference and its declared `row,column` cell. */
+function shownButtonKey(reference: string, cell: string): string {
+  return JSON.stringify([reference, cell]);
+}
+
+/**
+ * Says why an area is or is not a matrix; reasons and issue kinds stay visible.
+ * A functional `Button` whose passive label this grid shows keeps its own note
+ * (action unsupported) and is not counted as a declaration that was not placed.
+ */
+function LayoutNote({ view, shownButtons }: { view: GroupLayoutView; shownButtons: ReadonlySet<string> }) {
   const t = useTranslate();
   if (view.kind === "rows") {
     return <p className="parameter-workspace-layout-note">
@@ -182,12 +206,18 @@ function LayoutNote({ view }: { view: GroupLayoutView }) {
     const key = Object.hasOwn(ISSUE_KEYS, issue.kind) ? ISSUE_KEYS[issue.kind as keyof typeof ISSUE_KEYS] : "parameters.matrix.issue.unknown";
     return t(key, values);
   };
+  const labelShown = (issue: typeof layout.issues[number]) => issue.kind === "unshownContent" && issue.element === "Button"
+    && issue.reference !== null && issue.cell !== null && shownButtons.has(shownButtonKey(issue.reference, issue.cell));
+  const shown = layout.issues.filter(labelShown);
+  const unplaced = layout.issues.filter(issue => !labelShown(issue));
   return <>
     <p className="parameter-workspace-layout-note">{t("parameters.matrix.declared",
       { layout: layout.declaredLayout ?? "", rows: layout.rows.length, columns: layout.columns.length })}</p>
-    {layout.issues.length > 0 && <details className="parameter-matrix-issues">
-      <summary>{t("parameters.matrix.issues", { count: layout.issues.length })}</summary>
-      <ul>{layout.issues.map((issue, index) => <li key={index}>{issueText(issue)}</li>)}</ul>
+    {shown.map((issue, index) => <p key={index} className="parameter-matrix-passive-note" data-passive-note={issue.reference!}>
+      {t("parameters.matrix.issue.buttonLabelShown", { element: issue.element, reference: issue.reference! })}</p>)}
+    {unplaced.length > 0 && <details className="parameter-matrix-issues">
+      <summary>{t("parameters.matrix.issues", { count: unplaced.length })}</summary>
+      <ul>{unplaced.map((issue, index) => <li key={index}>{issueText(issue)}</li>)}</ul>
     </details>}
   </>;
 }

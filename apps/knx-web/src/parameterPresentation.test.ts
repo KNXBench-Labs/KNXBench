@@ -1,8 +1,8 @@
 /** Regression tests for lossless diagnostic grouping and manufacturer access partitioning. */
 import { describe, expect, it } from "vitest";
-import type { ParameterDiagnostic, ParameterField, ParameterSection, ParameterSeparator } from "./api";
-import { filterParameterSection, groupParameterDiagnostics, isManufacturerRestricted, isSeparatorRestricted,
-  restrictingAccess } from "./parameterPresentation";
+import type { ParameterDiagnostic, ParameterField, ParameterPassiveLabel, ParameterSection, ParameterSeparator } from "./api";
+import { filterParameterSection, groupParameterDiagnostics, isManufacturerRestricted, isPassiveLabelRestricted,
+  isSeparatorRestricted, restrictingAccess } from "./parameterPresentation";
 
 const diagnostic: ParameterDiagnostic = {
   scope: null, kind: "noBranchMatched", severity: "info", message: "No branch",
@@ -124,5 +124,29 @@ describe("parameter presentation", () => {
     expect(kept.separators!.map(item => [item.elementId, item.position])).toEqual([["S0", 0], ["S2", 1], ["S4", 2], ["S99", 2]]);
     expect(JSON.stringify(section)).toBe(before);
     expect(filterParameterSection({ scope: null, fields }, () => true, () => true).separators).toEqual([]);
+  });
+
+  // button-literal-passive-v1: the same known-token block predicate as separators.
+  const passive = (elementId: string, blockAccess: string | null, kind = "buttonLiteral"): ParameterPassiveLabel => ({
+    kind, elementId, text: elementId, cell: { row: 1, column: 1 }, group: { key: "g", label: null }, blockAccess });
+
+  it("restricts a passive label by its block's known Access tokens only", () => {
+    expect(isPassiveLabelRestricted(passive("B", null))).toBe(false);
+    expect(isPassiveLabelRestricted(passive("B", "Read"))).toBe(true);
+    expect(isPassiveLabelRestricted(passive("B", "None"))).toBe(true);
+    expect(isPassiveLabelRestricted(passive("B", "Sometimes"))).toBe(false);
+    expect(isPassiveLabelRestricted(passive("B", "ReadWrite"))).toBe(false);
+  });
+
+  it("keeps only chosen passive labels and none unless asked", () => {
+    const section: ParameterSection = { scope: null, fields: [],
+      passiveLabels: [passive("B-OPEN", null), passive("B-READ", "Read"), passive("B-NEW", null, "futureKind")] };
+    const before = JSON.stringify(section);
+    const kept = filterParameterSection(section, () => true, () => true,
+      label => label.kind === "buttonLiteral" && !isPassiveLabelRestricted(label));
+    expect(kept.passiveLabels!.map(label => label.elementId)).toEqual(["B-OPEN"]);
+    expect(filterParameterSection(section, () => true, () => true).passiveLabels).toEqual([]);
+    expect(filterParameterSection({ scope: null, fields: [] }, () => true, () => true, () => true).passiveLabels).toEqual([]);
+    expect(JSON.stringify(section)).toBe(before);
   });
 });

@@ -2487,6 +2487,24 @@ export interface ParameterSection {
   separators?: ParameterSeparator[];
   /** ADR-0137: absent on servers that do not report layouts. */
   groupLayouts?: ParameterGroupLayout[];
+  /** `button-literal-passive-v1`: absent on older servers. Display only. */
+  passiveLabels?: ParameterPassiveLabel[];
+}
+
+/**
+ * `button-literal-passive-v1`: an activated source `Button`'s literal text at
+ * its declared cell, shown as plain text. Never an action, editor or write
+ * target; handler data is not part of the wire shape. Unknown `kind`s are newer.
+ */
+export interface ParameterPassiveLabel {
+  kind: "buttonLiteral" | (string & {});
+  elementId: string;
+  text: string;
+  cell: ParameterGridCell;
+  /** The nearest grid block; the server always sends it, so there is no ungrouped label. */
+  group: { key: string; label: string | null; labelFill?: import("./bindings/TextFill").TextFill | null };
+  /** As `ParameterField.blockAccess`. */
+  blockAccess: string | null;
 }
 
 export interface StaleParameter {

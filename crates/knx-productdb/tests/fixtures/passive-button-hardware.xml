@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Independently authored test-only catalogue join; no device, bus or image authority. -->
+<KNX xmlns="http://knx.org/xml/project/20"><ManufacturerData><Manufacturer RefId="M-FIX"><Hardware>
+  <Hardware Id="H-FIX" Name="Fictional hardware" SerialNumber="FIX" VersionNumber="1">
+    <Products><Product Id="M-FIX_P-1"/></Products>
+    <Hardware2Programs><Hardware2Program Id="H-FIX_HP-1" MediumTypes="MT-0"><ApplicationProgramRef RefId="A-FIX"/></Hardware2Program></Hardware2Programs>
+  </Hardware>
+</Hardware></Manufacturer></ManufacturerData></KNX>

@@ -2074,6 +2074,7 @@ export const messages: Record<MessageKey, string> = {
   "parameters.matrix.declared": "Raster laut Produktdaten ({layout}): {rows} × {columns}. Die Positionen stammen aus der Quelle, nie aus Beschriftungen.",
   "parameters.matrix.position": "Zeile {row}, Spalte {column}",
   "parameters.matrix.unplaced": "Nicht im deklarierten Raster platziert",
+  "parameters.matrix.passiveButton": "Beschriftung einer Quell-Schaltfläche – Aktion nicht unterstützt",
   "parameters.matrix.issues.one": "{count} Angabe ließ sich nicht platzieren",
   "parameters.matrix.issues.other": "{count} Angaben ließen sich nicht platzieren",
   "parameters.matrix.issue.cellMalformed": "{element} {reference}: Zelle „{cell}“ ist fehlerhaft",
@@ -2082,6 +2083,7 @@ export const messages: Record<MessageKey, string> = {
   "parameters.matrix.issue.ambiguousCell": "{element} {reference}: in mehreren verschiedenen Zellen deklariert",
   "parameters.matrix.issue.unshownContent": "{element} {reference}: in Zelle „{cell}“ platziert, hier aber nicht angezeigt",
   "parameters.matrix.issue.unknown": "{element} {reference}: {kind}",
+  "parameters.matrix.issue.buttonLabelShown": "{element} {reference}: Beschriftung angezeigt; ihre Aktion wird nicht unterstützt",
   "parameters.loading": "Parameter werden geladen…",
   "parameters.noProgram":
     "Für dieses Gerät lässt sich kein Anwendungsprogramm auflösen; Parameter können nicht angezeigt werden.",

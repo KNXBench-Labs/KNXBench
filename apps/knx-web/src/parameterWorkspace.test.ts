@@ -1,6 +1,6 @@
 /** Source-bound parameter workspace indexing and search contracts. */
 import { describe, expect, it } from "vitest";
-import type { ParameterField, ParameterSection, ParameterSeparator } from "./api";
+import type { ParameterField, ParameterGroupLayout, ParameterPassiveLabel, ParameterSection, ParameterSeparator } from "./api";
 import { indexParameterWorkspace, matchesParameterSearch, parameterSectionKeys } from "./parameterWorkspace";
 
 const field = (etsId: string, group?: ParameterField["group"]): ParameterField => ({
@@ -39,7 +39,7 @@ describe("parameter workspace index", () => {
     expect(new Set(index.rows.map(row => row.key)).size).toBe(3);
     expect(index.groups).toHaveLength(2);
     expect(index.groups[1].label).toBe("");
-    expect(indexParameterWorkspace([])).toEqual({ rows: [], groups: [], items: [] });
+    expect(indexParameterWorkspace([])).toEqual({ rows: [], groups: [], items: [], passiveLabels: [] });
   });
 
   // WP-15 / ADR-0063: two nameless nested instances of one definition share
@@ -108,5 +108,41 @@ describe("parameter workspace search", () => {
     const notes = index.items[4];
     expect(notes.kind === "separator" && notes.separator.groupKey).toBe(index.groups[1].key);
     expect(new Set(index.items.map(item => item.kind === "field" ? item.row.key : item.separator.key)).size).toBe(5);
+  });
+});
+
+// button-literal-passive-v1: a passive label may open its declared group, never a row.
+describe("passive source labels", () => {
+  const passive = (elementId: string, group: ParameterPassiveLabel["group"], row = 1, column = 2): ParameterPassiveLabel => ({
+    kind: "buttonLiteral", elementId, text: `Literal ${elementId}`, cell: { row, column }, group, blockAccess: null });
+  const grid = (groupKey: string): ParameterGroupLayout => ({ groupKey, version: 1, declaredLayout: "Grid", status: "grid",
+    rows: [{ id: "R", text: null, textParameterRefId: null, collapseIfEmpty: null }],
+    columns: [{ id: "C1", text: null, textParameterRefId: null, width: "46%" }, { id: "C2", text: null, textParameterRefId: null, width: "53%" }],
+    labels: [], issues: [] });
+
+  it("appends passive-only groups after field and separator groups in label order, adding no rows", () => {
+    const sections: ParameterSection[] = [{ scope: null, fields: [field("A", { key: "g", label: "Page" })],
+      groupLayouts: [grid("g"), grid("only-2"), grid("only-1")],
+      passiveLabels: [passive("B-2", { key: "only-2", label: null }), passive("B-G", { key: "g", label: "Page" }),
+        passive("B-1", { key: "only-1", label: null })] }];
+    const before = JSON.stringify(sections);
+    const index = indexParameterWorkspace(sections);
+    expect(index.rows.map(row => row.field.etsId)).toEqual(["A"]);
+    expect(index.items).toHaveLength(1);
+    expect(index.groups.map(group => [group.label, group.number, group.layout.kind])).toEqual([
+      ["Page", 1, "matrix"], [null, 2, "matrix"], [null, 3, "matrix"]]);
+    expect(index.passiveLabels.map(label => [label.label.elementId, index.groups.findIndex(group => group.key === label.groupKey)]))
+      .toEqual([["B-2", 1], ["B-G", 0], ["B-1", 2]]);
+    expect(new Set(index.passiveLabels.map(label => label.key)).size).toBe(3);
+    // Existing field keys stay what they were without passive labels.
+    expect(index.rows[0].key).toBe(indexParameterWorkspace([{ ...sections[0], passiveLabels: [] }]).rows[0].key);
+    expect(index.groups[0].key).toBe(indexParameterWorkspace([{ ...sections[0], passiveLabels: [] }]).groups[0].key);
+    expect(JSON.stringify(sections)).toBe(before);
+  });
+
+  it("a passive label is never a search result", () => {
+    const index = indexParameterWorkspace([{ scope: null, fields: [field("A", { key: "g", label: "Page" })],
+      passiveLabels: [passive("B-1", { key: "g", label: "Page" })] }]);
+    expect(index.rows.filter(row => matchesParameterSearch(row, "Literal"))).toEqual([]);
   });
 });

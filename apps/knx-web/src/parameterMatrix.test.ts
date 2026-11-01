@@ -1,7 +1,7 @@
 /** Declared-grid placement is computed only from server-reported cells. */
 import { describe, expect, it } from "vitest";
 import type { ParameterGroupLayout } from "./api";
-import { classifyGroupLayout, planParameterMatrix } from "./parameterMatrix";
+import { classifyGroupLayout, matrixStyle, planParameterMatrix } from "./parameterMatrix";
 
 const layout = (patch: Partial<ParameterGroupLayout> = {}): ParameterGroupLayout => ({
   groupKey: "PB-G", version: 1, declaredLayout: "Table", status: "grid",
@@ -68,5 +68,43 @@ describe("matrix plan", () => {
     expect(plan.columnHeaders).toEqual([]);
     expect(plan.rowHeaders).toEqual([]);
     expect(plan.fields.get("a")).toEqual({ row: 1, rowSpan: 1, column: 1, columnSpan: 1 });
+  });
+});
+
+describe("passive source labels (button-literal-passive-v1)", () => {
+  const mixed = layout({ groupKey: "PB-MIX",
+    rows: [{ id: "MIX-R1", text: "Fictional row", textParameterRefId: null, collapseIfEmpty: null },
+      { id: "MIX-R2", text: null, textParameterRefId: null, collapseIfEmpty: null }],
+    columns: [{ id: "MIX-C1", text: null, textParameterRefId: null, width: "40%" },
+      { id: "MIX-C2", text: "Fictional column", textParameterRefId: null, width: "60%" }],
+    labels: [{ row: 1, column: 2, text: "Fictional separator" }] });
+
+  it("stacks separator captions first, passive labels next and fields last without moving source cells", () => {
+    const plan = planParameterMatrix(mixed, [{ key: "PR-EDIT", cell: { row: 1, column: 2 } }, { key: "PR-OTHER", cell: { row: 2, column: 1 } }],
+      [{ key: "passive:B-MIX", text: "Fictional mixed label", cell: { row: 1, column: 2 } }]);
+    expect(plan.templateColumns).toBe("minmax(5rem, max-content) minmax(8rem, 40fr) minmax(8rem, 60fr)");
+    expect(plan.labels.map(label => [label.key, label.text, label.passive ?? false, matrixStyle(label.area)])).toEqual([
+      ["label:0", "Fictional separator", false, { gridRow: "2 / span 1", gridColumn: "3 / span 1" }],
+      ["passive:B-MIX", "Fictional mixed label", true, { gridRow: "3 / span 1", gridColumn: "3 / span 1" }],
+    ]);
+    expect(matrixStyle(plan.fields.get("PR-EDIT")!)).toEqual({ gridRow: "4 / span 1", gridColumn: "3 / span 1" });
+    expect(matrixStyle(plan.fields.get("PR-OTHER")!)).toEqual({ gridRow: "5 / span 1", gridColumn: "2 / span 1" });
+    expect(plan.rowHeaders).toEqual([{ key: "row:MIX-R1", text: "Fictional row", area: { row: 2, rowSpan: 3, column: 1, columnSpan: 1 } }]);
+    expect(plan.columnHeaders.map(header => matrixStyle(header.area))).toEqual([{ gridRow: "1 / span 1", gridColumn: "3 / span 1" }]);
+  });
+
+  it("places a passive-only grid with no axis text and never invents a field or an unplaced area", () => {
+    const only = layout({ groupKey: "PB-ONLY", rows: [{ id: "ONLY-R1", text: null, textParameterRefId: null, collapseIfEmpty: null }],
+      columns: [{ id: "ONLY-C1", text: null, textParameterRefId: null, width: "46%" }, { id: "ONLY-C2", text: null, textParameterRefId: null, width: "53%" }],
+      labels: [] });
+    const plan = planParameterMatrix(only, [], [{ key: "passive:B-ONLY", text: "Fictional source label", cell: { row: 1, column: 2 } },
+      { key: "passive:far", text: "Outside", cell: { row: 2, column: 1 } }]);
+    expect(plan.templateColumns).toBe("minmax(8rem, 46fr) minmax(8rem, 53fr)");
+    expect(plan.labels.map(label => [label.key, matrixStyle(label.area)])).toEqual([
+      ["passive:B-ONLY", { gridRow: "1 / span 1", gridColumn: "2 / span 1" }]]);
+    expect(plan.fields.size).toBe(0);
+    expect(plan.unplacedHeading).toBeNull();
+    expect(plan.columnHeaders).toEqual([]);
+    expect(plan.rowHeaders).toEqual([]);
   });
 });

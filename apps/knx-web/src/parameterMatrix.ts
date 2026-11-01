@@ -28,7 +28,10 @@ export function classifyGroupLayout(layouts: readonly ParameterGroupLayout[] | u
 
 /** CSS grid lines, 1-based; `columnSpan: -1` spans every track. */
 export interface MatrixArea { row: number; rowSpan: number; column: number; columnSpan: number }
-export interface MatrixText { key: string; text: string; textFill?: TextFill | null; area: MatrixArea }
+/** `passive`: a `button-literal-passive-v1` source label, plain text with no action. */
+export interface MatrixText { key: string; text: string; textFill?: TextFill | null; passive?: true; area: MatrixArea }
+/** A passive source label to place; `key` is unique within the plan. */
+export interface MatrixPassiveLabel { key: string; text: string; cell: ParameterGridCell }
 export interface ParameterMatrixPlan {
   templateColumns: string;
   columnHeaders: MatrixText[];
@@ -56,12 +59,14 @@ const captioned = (text: string | null | undefined) => (text ?? "").trim() !== "
 
 /**
  * Places each item at its declared cell. Several active items in one cell
- * stack in order (separator captions first, then fields in source order),
- * growing only that declared row. Fields without a valid cell are never
- * auto-placed: they follow the grid at full width.
+ * stack in order (separator captions first, then passive source labels, then
+ * fields, each in source order), growing only that declared row. Fields
+ * without a valid cell are never auto-placed: they follow the grid at full
+ * width; a passive label without a valid cell is not shown.
  */
 export function planParameterMatrix(layout: ParameterGroupLayout,
-  rows: readonly { key: string; cell: ParameterGridCell | null | undefined }[]): ParameterMatrixPlan {
+  rows: readonly { key: string; cell: ParameterGridCell | null | undefined }[],
+  passive: readonly MatrixPassiveLabel[] = []): ParameterMatrixPlan {
   const rowCount = layout.rows.length;
   const columnCount = layout.columns.length;
   const valid = (cell: ParameterGridCell | null | undefined): cell is ParameterGridCell => !!cell
@@ -72,16 +77,18 @@ export function planParameterMatrix(layout: ParameterGroupLayout,
   const firstColumn = rowHeaderTrack ? 2 : 1;
   const firstRow = columnHeaderTrack ? 2 : 1;
 
-  // Per-cell stacking order: captions first, then fields.
-  const cells = new Map<string, { kind: "label" | "field"; key: string; text?: string; textFill?: TextFill | null }[]>();
-  const push = (cell: ParameterGridCell, item: { kind: "label" | "field"; key: string; text?: string; textFill?: TextFill | null }) => {
+  // Per-cell stacking order: captions first, passive labels next, then fields.
+  type Item = { kind: "label" | "passive" | "field"; key: string; order: number; text?: string; textFill?: TextFill | null };
+  const cells = new Map<string, Item[]>();
+  const push = (cell: ParameterGridCell, item: Item) => {
     const id = `${cell.row},${cell.column}`;
     cells.set(id, [...(cells.get(id) ?? []), item]);
   };
-  layout.labels.forEach((label, index) => { if (valid(label)) push(label, { kind: "label", key: `label:${index}`, text: label.text, textFill: label.textFill }); });
+  layout.labels.forEach((label, index) => { if (valid(label)) push(label, { kind: "label", key: `label:${index}`, order: index, text: label.text, textFill: label.textFill }); });
+  passive.forEach((label, index) => { if (valid(label.cell)) push(label.cell, { kind: "passive", key: label.key, order: layout.labels.length + index, text: label.text }); });
   const unplaced: string[] = [];
   for (const row of rows) {
-    if (valid(row.cell)) push(row.cell, { kind: "field", key: row.key });
+    if (valid(row.cell)) push(row.cell, { kind: "field", key: row.key, order: 0 });
     else unplaced.push(row.key);
   }
   const depth = layout.rows.map((_, index) => {
@@ -94,16 +101,17 @@ export function planParameterMatrix(layout: ParameterGroupLayout,
   for (const rowDepth of depth) { starts.push(line); line += rowDepth; }
 
   const fields = new Map<string, MatrixArea>();
-  const labels: MatrixText[] = [];
+  const placed: { order: number; text: MatrixText }[] = [];
   for (const [id, items] of cells) {
     const [row, column] = id.split(",").map(Number);
     items.forEach((item, offset) => {
       const at = area(starts[row - 1] + offset, firstColumn + column - 1);
       if (item.kind === "field") fields.set(item.key, at);
-      else labels.push({ key: item.key, text: item.text ?? "", ...(item.textFill ? { textFill: item.textFill } : {}), area: at });
+      else placed.push({ order: item.order, text: { key: item.key, text: item.text ?? "",
+        ...(item.textFill ? { textFill: item.textFill } : {}), ...(item.kind === "passive" ? { passive: true as const } : {}), area: at } });
     });
   }
-  labels.sort((a, b) => Number(a.key.slice(6)) - Number(b.key.slice(6)));
+  const labels = placed.sort((a, b) => a.order - b.order).map(entry => entry.text);
   const unplacedHeading = unplaced.length > 0 ? area(line, 1, 1, -1) : null;
   unplaced.forEach((key, index) => fields.set(key, area(line + 1 + index, 1, 1, -1)));
 

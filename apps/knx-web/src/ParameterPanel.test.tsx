@@ -1104,4 +1104,58 @@ describe("ParameterPanel", () => {
       "1 field is not fully translated into de; it shows the program's own text (en-US).");
     root.unmount();
   });
+
+  // button-literal-passive-v1: the panel's view filter owns passive labels like separators.
+  describe("passive source labels", () => {
+    const gridLayout = (groupKey: string) => ({ groupKey, version: 1, declaredLayout: "Grid", status: "grid",
+      rows: [{ id: "R-1", text: null, textParameterRefId: null, collapseIfEmpty: null }, { id: "R-2", text: null, textParameterRefId: null, collapseIfEmpty: null }],
+      columns: [{ id: "C-1", text: null, textParameterRefId: null, width: "50%" }, { id: "C-2", text: null, textParameterRefId: null, width: "50%" }],
+      labels: [], issues: [] });
+    const label = (elementId: string, key: string, blockAccess: string | null, row = 1, column = 2) => ({
+      kind: "buttonLiteral", elementId, text: `Literal ${elementId}`, cell: { row, column }, group: { key, label: null }, blockAccess });
+    const grid = { ...fixture.sections[0].fields[0], etsId: "P-grid", writeEtsId: "P-grid", cell: { row: 2, column: 2 },
+      group: { key: "PB-MIX", label: "Mixed" } };
+    const hidden = { ...grid, etsId: "P-hidden", writeEtsId: null, editable: false, cell: { row: 2, column: 1 }, blockAccess: "Read" };
+
+    it("keeps a restricted passive label out of every view, even in a merged grid", async () => {
+      const panel: ParameterPanelDto = { ...fixture, sections: [{ scope: null, fields: [grid, hidden],
+        groupLayouts: [gridLayout("PB-MIX"), gridLayout("PB-ONLY"), gridLayout("PB-SECRET")],
+        passiveLabels: [label("B-MIX", "PB-MIX", null), label("B-READ", "PB-MIX", "Read", 1, 1),
+          label("B-ONLY", "PB-ONLY", null), label("B-SECRET", "PB-SECRET", "None"), { ...label("B-NEW", "PB-MIX", null, 2, 1), kind: "futureKind" }] }] };
+      apiMock.deviceParameters.mockResolvedValue(panel);
+      const root = await renderPanel();
+      const areas = () => [...host!.querySelectorAll<HTMLButtonElement>(".parameter-workspace-nav button")];
+      expect(areas().map(area => area.textContent)).toEqual(["Mixed1", "Parameter group 20"]);
+      await act(async () => areas()[0].click());
+      const shown = () => [...host!.querySelectorAll("[data-passive-label]")].map(node => node.getAttribute("data-passive-label"));
+      expect(shown()).toEqual(["B-MIX"]);
+      await act(async () => areas()[1].click());
+      expect(shown()).toEqual(["B-ONLY"]);
+      expect(host!.textContent).not.toContain("Literal B-READ");
+      for (const view of ["restricted", "functions"] as const) {
+        await act(async () => root.render(<ParameterPanel deviceId={1} view={view} refreshKey={shownTree} onValueApplied={() => {}} />));
+        expect(host!.querySelectorAll("[data-passive-label]"), view).toHaveLength(0);
+        expect(host!.textContent, view).not.toContain("Literal");
+      }
+      expect(apiMock.setParameterValue).not.toHaveBeenCalled();
+      root.unmount();
+    });
+
+    it("opens a Button-only section instead of dropping it, and drops one whose only label is restricted", async () => {
+      const only: ParameterPanelDto = { ...fixture, sections: [{ scope: null, fields: [], separators: [],
+        groupLayouts: [gridLayout("PB-ONLY")], passiveLabels: [label("B-ONLY", "PB-ONLY", null)] }] };
+      apiMock.deviceParameters.mockResolvedValue(only);
+      const root = await renderPanel();
+      const area = host!.querySelector<HTMLButtonElement>(".parameter-workspace-nav button")!;
+      await act(async () => area.click());
+      expect(host!.querySelector('[data-passive-label="B-ONLY"]')!.textContent).toContain("Literal B-ONLY");
+      root.unmount();
+      host!.remove();
+      apiMock.deviceParameters.mockResolvedValue({ ...only, sections: [{ ...only.sections[0], passiveLabels: [label("B-ONLY", "PB-ONLY", "None")] }] });
+      const again = await renderPanel();
+      expect(host!.querySelector(".parameter-workspace")).toBeNull();
+      expect(host!.textContent).toContain("No user-accessible fields");
+      again.unmount();
+    });
+  });
 });

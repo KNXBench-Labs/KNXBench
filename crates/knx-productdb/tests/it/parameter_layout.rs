@@ -1,6 +1,8 @@
 //! Public synthetic regressions for structural parameter grouping; no vendor source.
 use knx_productdb::{ingest_file, open_and_migrate, parameter_layout::load};
 
+mod passive_buttons;
+
 fn source(dynamic: &str) -> String {
     format!(
         r#"<KNX xmlns="http://knx.org/xml/project/11"><ManufacturerData><Manufacturer RefId="M-1"><ApplicationPrograms><ApplicationProgram Id="A-1" Name="Synthetic" ApplicationVersion="1" MaskVersion="MV-0701"><Static>

@@ -124,9 +124,9 @@ does not start another device read (`72a2eeddf`, `5cc4caf66`,
   current-project attribution; a manual address is not guessed into a project.
 - **Availability is explicit** (`c37437183`, `9ba431da2`). Specific,
   content-independent unavailability reasons and fixed notes are translated in
-  English and German; content-sensitive refusals stay generic. At this source
-  boundary, session log, bus monitor and client state remain withheld, not empty
-  successful exports.
+  English and German; content-sensitive refusals stay generic. A section that
+  cannot be delivered is shown as unavailable, never as an empty successful
+  export.
 - **Save first, mail second.** After **Download requested**, check that the ZIP
   exists and acknowledge the saved file before opening the mail draft. It has no
   attachment; attach the ZIP yourself. There is no upload service, email is not
@@ -137,8 +137,38 @@ does not start another device read (`72a2eeddf`, `5cc4caf66`,
   missing filename or use outside device/bus refuses before device contact.
   Non-System-2 recordings are included as recorded with capture-time key
   redaction; `system2-*` commands never contribute raw recordings.
+- **Session log, bus monitor and browser state are real sections** (`e30fc9b02`,
+  merge `301c88d92`). Each is a reduced, typed view with visible omission counts,
+  not a raw dump:
+  - **Session log:** ordered time and severity, known sources, fixed messages and
+    undo/redo/import counts. Paths and free error or detail text are withheld per
+    field and counted; an omitted message is not proof that no error happened.
+  - **Bus monitor:** only the existing buffer; collection never starts or
+    restarts a session. The preview pins an inclusive ten-minute window by session
+    and sequence, so later traffic cannot substitute what you reviewed; a replaced
+    session or an evicted pinned row refuses with `bundlePreviewChanged` instead.
+    Text and access-code DPTs, undecoded, conflicting or failed decodes and
+    management payloads are withheld at any length; only admitted typed group
+    values carry raw octets. Without a project or a resolved DPT, rows carry
+    transport metadata only.
+  - **Browser state:** closed, bounded fields and reduced recent errors; unknown
+    names are counted, not echoed.
 
-DIAG03-CLOSEOUT-PENDING
+  Known group values and project labels can still identify an installation; no
+  section is certified free of secrets in arbitrary text.
+- **Quit asks above the wizard** (`94e1b1c5d`, merge `301c88d92`). The desktop
+  close confirmation now appears above an open report wizard; cancelling keeps
+  the wizard and its consent, and a failed save never approves the close. Tested
+  in Chromium with a test-only Tauri IPC bridge, not in a native WebKitGTK/Tauri
+  window.
+- **An omitted operation no longer derails the review** (`35348e0f5`, merge
+  `f5144897a`). A preview without a chosen operation no longer makes the text or
+  ZIP export refuse with `bundlePreviewChanged`; context, content, byte and
+  consent guards are unchanged. The real server/production-Web run found this before the
+  release. `7443e2ea6` adapts the ZIP-name test to `zip` 9. System-2 still leaves
+  only as its closed projection and short report, never raw.
+  [Closeout record](../status/2026-11-01-diag03-closeout.md) ·
+  [Reviewed monitor window](../contracts/diagnostic-bundle.md#reviewed-monitor-window).
 
 Recorded acceptance uses synthetic producers, simulator/loopback, a real
 server/production-web join and installed-CLI flag checks, not physical KNX hardware.
@@ -280,7 +310,7 @@ Writable product-database opens migrate in place, including normal server startu
 read-only readers migrate an in-memory copy. **Alpha 18 refuses v31 with
 `FutureVersion` and the server starts without products.** Going back means
 restoring the closed pre-upgrade catalogue/data copy, not just the older binary.
-[Catalogue rollback warning](../manual/known-issues.md#product-database-31--source-newer-than-alpha-18).
+[Catalogue rollback warning](../manual/known-issues.md#product-database-31-since-alpha-19).
 
 Other downgrade boundaries are separate from project schema 16:
 

@@ -1,25 +1,46 @@
 # Roadmap
 
-## Distribution resources and offline inspection view (1 November 2026)
+## Alpha 19 pre-release (source cutoff 1 November 2026)
 
-OKX-04 now has source-bound canonical baggage/consumer joins, real bounded PNG
+`v0.1.0-alpha.19` is the current pre-release, cut from main at source cutoff
+`858b0a24d`. It ships every delivery merged after Alpha 18 up to that cutoff,
+including read-only OpenKNX/manufacturer distribution inspection (OKX-01 to OKX-07,
+including baggage owners and the opt-in offline HTML view), the DIAG-03 operation
+recorder and consented diagnostic bundle with its reduced session-log, bus-monitor
+and browser sections, the PRG-01 increments (post-download run state, exact-`0700h`
+qualification, customer-adjustable write refusal, byte-precise inactive selection,
+exemplar-bound restore), Settings in the center workspace, passive Button labels,
+the checked IP-address literal editor, the support-read activity-history fix, the
+`zip` 9/`rustls` security updates and product database 31 (data-only). Native/model
+16 is unchanged. No hardware support, recovery guarantee or ETS equivalence follows;
+the allocation mismatch of issues #30/#22 is unresolved and both stay open.
+[Release scope and boundaries](releases/alpha19.md).
+Work merged on main after `858b0a24d` belongs to the next alpha.
+
+<a id="distribution-resources-and-offline-inspection-view-1-november-2026"></a>
+
+## Distribution resources and offline inspection view in Alpha 19
+
+OKX-04 has source-bound canonical baggage/consumer joins, real bounded PNG
 preview decoding and explicit stdout-only `--output-format html`; JSON remains
 the default. Help archives are metadata only, all code stays inert, and native
 installation and writer policy are unchanged. Independent review, real-browser
 proof and a 37/37 release measurement are accepted. This is not a
-product-parameter Picture editor/codec.
+product-parameter Picture editor/codec. Ships in Alpha 19.
 [Contract](contracts/distribution-inspection.md#distribution-resources-and-passive-png-presentation) ·
 [Remaining boundaries](limitations/KL-187-distribution-inspection.md).
 
-## Settings in the center workspace (30 October 2026 source, after Alpha 18)
+<a id="settings-in-the-center-workspace-30-october-2026-source-after-alpha-18"></a>
+
+## Settings in the center workspace in Alpha 19
 
 The existing app settings move from a modal window to a continuous center page,
 with section jumps at the top. The left navigation stays usable; Properties is
 hidden temporarily without changing its visibility preference. Project selection
 and unapplied note/device-instructions drafts survive the detour. The same
 settings and acknowledged persistence paths remain in use; there is no new Save
-action, storage migration, safety permission or bus operation. This is newer than
-the published Alpha 18 artifacts, not a release or deployment.
+action, storage migration, safety permission or bus operation. Ships in Alpha 19;
+Alpha 18 keeps the modal window.
 [Contract](contracts/settings-workspace.md) ·
 [User guide](manual/user-guide/09-settings-and-appearance.md#opening-settings).
 
@@ -27,7 +48,9 @@ the published Alpha 18 artifacts, not a release or deployment.
 
 <a id="diag-03-source-on-main-after-alpha-18-31-october-2026"></a>
 
-## DIAG-03 source closeout after Alpha 18 (1 November 2026)
+<a id="diag-03-source-closeout-after-alpha-18-1-november-2026"></a>
+
+## DIAG-03 closeout in Alpha 19
 
 The operation recorder, shared Web/CLI bundle workflow and O1 supplementary sections are source-complete through `7443e2ea6`. Reduced chronology/browser facts and a pinned existing monitor window are usable; the desktop quit prompt no longer paints underneath the wizard. The actual no-source Web/server review mismatch is corrected, with later-source and changed-content refusals retained.
 
@@ -35,13 +58,13 @@ The final ZIP-9-compatible runtime `7443e2ea6` passed 15/15 maintained change-sc
 
 The actual server built from `7443e2ea6` and its production Web bundle passed the no-API-fixture EN/1440 px and DE/400 px wizard run: reduced log and client sections available, rendered text identical to native HTTP responses and ZIP bodies, consent required, downloaded bytes identical to the response, exact ZIP inventory and manifest hashes valid. Both screenshots were inspected; the source stayed unchanged and the server settled with exit 0. No real installation, native WebKitGTK/Tauri save dialog, hardware or new release acceptance is implied.
 
-System-2 still exports only the admitted closed projection and report, never raw comparison arrays or recordings. P1/P2 concern only a separately authorized future raw System-2 export. Declared memory and raw non-System-2 recordings require explicit consent and the keep-private/password warning; arbitrary memory, free log text and every installation value are not certified secret-free or anonymous. Alpha 18 artifacts remain immutable; source delivery is separate from a versioned release.
+System-2 still exports only the admitted closed projection and report, never raw comparison arrays or recordings. P1/P2 concern only a separately authorized future raw System-2 export. Declared memory and raw non-System-2 recordings require explicit consent and the keep-private/password warning; arbitrary memory, free log text and every installation value are not certified secret-free or anonymous. Ships in Alpha 19; Alpha 18 has no report wizard.
 [Delivery scope and evidence](status/2026-11-01-diag03-closeout.md).
 
 ## Alpha 18 pre-release (source cutoff 28 October 2026)
 
-`v0.1.0-alpha.18` is the current pre-release, cut from main at source cutoff
-`bb2d8e51e`. It ships the deliveries in the "in Alpha 18" sections below: the issue
+`v0.1.0-alpha.18` is the previous pre-release, cut from main at source cutoff
+`bb2d8e51e`. It shipped the deliveries in the "in Alpha 18" sections below: the issue
 #31 result/report/settlement work with the System-2 final-step failure category,
 the issue #30 tunnel-cause, persistence and patient-wait follow-ups, S2-03
 defaults profile v3, group-address CSV profiles, German CLI reports, the explicit
@@ -50,7 +73,7 @@ database 28 → 30, data-only), and the desktop separator fix. Native/model 16 i
 unchanged. No hardware support, recovery guarantee or ETS equivalence follows; the
 allocation mismatch of issues #30/#22 is unresolved and both stay open.
 [Release scope and boundaries](releases/alpha18.md).
-Work merged on main after `bb2d8e51e` belongs to the next alpha.
+Deliveries after `bb2d8e51e` through `858b0a24d` ship in Alpha 19.
 
 ## Alpha 17 published pre-release (26 October 2026)
 
@@ -257,7 +280,7 @@ existing bounded drain. Per-step effects, mid-procedure stop and recovery remain
 
 ## Regular programming correctness — 25 October 2026 source
 
-**30 October bounded continuation, package acceptance pending:**
+**30 October bounded continuation, in Alpha 19:**
 [inactive whole-byte write selection](contracts/inactive-byte-write-selection.md)
 is implemented with original positive-writer/correction proof and final
 independent source review ([focused result](status/2026-10-30-inactive-byte-write-selection.md)).
@@ -265,11 +288,10 @@ It is not another declaration-only guard: actual regular plans omit only proved
 exclusive inactive bytes under identical source-default topology, with explicit
 format-4 generator binding preserving legitimate historical restores. Since the
 31 October byte-precise fallback a failed proof keeps the regular write instead of
-refusing; that amendment passed a second independent review. Maintained
-branch/main-first gates, actual server/Web build/smoke and publication remain
-pending. Physical inactive-byte survival through Unload/allocation/tasks/Restart,
+refusing; that amendment passed a second independent review. It ships in Alpha 19
+(merge `2bec7dd8a`). Physical inactive-byte survival through Unload/allocation/tasks/Restart,
 broader Dynamic/Union/customer-write rules, identity/runtime layouts and whole
-recovery stay open; PRG-01/KL-007 are not closed and Alpha 18 artifacts are unchanged.
+recovery stay open; PRG-01/KL-007 are not closed.
 
 The [memory transfer budget](contracts/memory-transfer-budget.md) composes a
 conservative default hardware-route cap with service-specific header arithmetic.

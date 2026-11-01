@@ -12,6 +12,20 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Alpha 19 pre-release (source cutoff 1 November 2026)
+
+`v0.1.0-alpha.19` is the current pre-release, cut from main at source cutoff
+`858b0a24d`. Application versions are aligned at `0.1.0-alpha.19`; native/store and
+core model stay at 16, the product database moves 30 → 31 through one data-only
+migration (Alpha 18 refuses v31). Every dated delivery entry from 29 October to
+1 November 2026 below whose commits are ancestors of the cutoff ships in Alpha 19; their
+"source" and "pending" labels record the state on their delivery date, not a missing
+release. That includes distribution inspection (OKX-01 to OKX-07), the DIAG-03
+diagnostic bundle and its closeout, the PRG-01 increments, the Settings workspace and
+the `zip` 9/`rustls` security updates. No hardware acceptance follows; the
+allocation mismatch of #30/#22 stays unresolved. Scope, upgrade notes and
+boundaries: [Alpha 19 release notes](releases/alpha19.md).
+
 <a id="diag-03-closeout-candidate-1-november-2026"></a>
 
 ## DIAG-03 source closeout (1 November 2026)
@@ -73,7 +87,7 @@ would refuse shifted rows and their reports.
   ([schema admission](contracts/catalogue-jobs/schema-admission.md#amendment-data-only-product-database-v31-31-october-2026)).
 - **Not covered.** No other parser change, no new winner policy.
 - **Downgrade.** Alpha 18 refuses product31 by its version check
-  ([known issue](manual/known-issues.md#product-database-31--source-newer-than-alpha-18),
+  ([known issue](manual/known-issues.md#product-database-31-since-alpha-19),
   [ADR-0147 amendment](adr/0147-master-identity-provenance.md#amendment-utf-8-bom-byte-ranges-product-database-30--31-31-october-2026)).
 
 ## Diagnostic bundle: honest reasons, German notes, CLI recordings (31 October 2026)
@@ -234,7 +248,7 @@ results are not a whole Rust/corpus, native desktop, hardware or release gate.
 
 ## Alpha 18 pre-release (source cutoff 28 October 2026)
 
-`v0.1.0-alpha.18` is the current pre-release, cut from main at source cutoff
+`v0.1.0-alpha.18` is the previous pre-release, cut from main at source cutoff
 `bb2d8e51e`. Application versions are aligned at `0.1.0-alpha.18`; native/store and
 core model stay at 16, the product database moves 28 → 30 through two data-only
 migrations (Alpha 17 refuses v30). Every dated delivery entry from 26–28 October

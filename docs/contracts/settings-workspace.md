@@ -4,8 +4,8 @@
 
 Settings is a normal center-workspace page, not a modal or an additional
 window. The sidebar and command-palette Settings actions use the same page,
-including when no project is open. This source change is newer than Alpha 18;
-the published Alpha 18 settings window is unchanged.
+including when no project is open. This ships in Alpha 19; Alpha 18 and earlier
+keep the modal settings window.
 
 ## Presentation and navigation
 

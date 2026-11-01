@@ -17,7 +17,7 @@ shown as enabled only after the server persists and reads it back.
 
 ## Opening Settings
 
-**Main-only, after Alpha 18:** click **Settings** in the left navigation's
+**Since Alpha 19:** click **Settings** in the left navigation's
 Diagnostics section, or open the command palette with `Ctrl+Shift+P` and run
 **Settings**. All app settings appear in the center workspace as one continuous
 page. Use the compact jump navigation at the top to reach a section; the other
@@ -30,7 +30,7 @@ Existing settings still apply through their usual immediate-apply and
 acknowledged-save paths; there is no new global Save button.
 [Navigation and state contract](../../contracts/settings-workspace.md).
 
-**Published Alpha 18 and earlier:** Settings opens a resizable window over the
+**Alpha 18 and earlier:** Settings opens a resizable window over the
 workspace. Escape closes it and returns focus to the opener; the window's resize
 handle changes its size for that opening only. The released screenshots in this
 manual retain that older presentation.

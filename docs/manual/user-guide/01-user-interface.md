@@ -52,7 +52,7 @@ Everything else is in three submenus under them:
 | --- | --- |
 | **Import & export** (*Import & Export*) | selective import, group-address CSV export and import, documentation export, and in the web build **Export project…** |
 | **History & comparison** (*Verlauf & Vergleich*) | **Project history** and **Compare with…** |
-| **Help & diagnostics** (*Hilfe & Diagnose*) | debug report and device support report (source builds after Alpha 18: one **Report problem…** entry, see [reporting a problem](08-reports-and-diff.md#report-problem)), support-gap analysis, diagnostic export, **Show introduction…**, **Achievements…** and **About KNXBench…** |
+| **Help & diagnostics** (*Hilfe & Diagnose*) | debug report and device support report (since Alpha 19: one **Report problem…** entry, see [reporting a problem](08-reports-and-diff.md#report-problem)), support-gap analysis, diagnostic export, **Show introduction…**, **Achievements…** and **About KNXBench…** |
 
 A row with a **›** opens its submenu to the right (below the row on a narrow
 window, where there is no room beside it). Point at a row for a moment, or click it,
@@ -167,11 +167,11 @@ screenshots in this manual still show the released explorer.
 
 **The diagnostics block**, at the bottom: **Bus monitor**, **Log**, **Diagnostics
 window** and **Settings**. The first two swap the center workspace for a panel;
-the third opens a second window (below). **Main-only, after Alpha 18:** Settings
+the third opens a second window (below). **Since Alpha 19:** Settings
 also opens in the center workspace, with all settings on a continuous page and
 jump navigation at the top. Project Properties is temporarily hidden; leaving
-Settings restores its previous visibility. In published Alpha 18 and earlier,
-Settings still opens a modal window. See [Settings](09-settings-and-appearance.md#opening-settings).
+Settings restores its previous visibility. In Alpha 18 and earlier,
+Settings opens a modal window. See [Settings](09-settings-and-appearance.md#opening-settings).
 Since Alpha 12 (issue #23), selecting an already-active **Bus
 monitor** or **Log** entry keeps that panel open and preserves its current tab,
 input or filter. To leave it, choose another view explicitly; clicking the active

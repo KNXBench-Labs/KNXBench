@@ -43,8 +43,8 @@ before any plan or report exists. See
 Use **File → Export diagnostic data** (since Alpha 17 also
 **Analyse device** on the device's *Diagnostics* tab): pick the device and the
 interface, preview, read, save the ZIP and email it to `issue@knxbench.com`. The
-export only reads. In source builds after Alpha 18 the result offers **Report
-problem…** instead. The current unified-bundle candidate includes only sources
+export only reads. Since Alpha 19 the result offers **Report
+problem…** instead. The unified bundle includes only sources
 that pass its private admission; for System-2 that is a closed private projection
 and short report, not the raw recording body. Read-diagnostics results include
 their report and, for a memory read, `memory.json`; other recordings are included
@@ -56,7 +56,7 @@ has screenshots and says which builds contain it.
 
 **How can I report a problem?**
 
-In source builds after Alpha 18: **File → Help & diagnostics → Report problem…**
+Since Alpha 19: **File → Help & diagnostics → Report problem…**
 or the same command in the palette. The wizard shows everything before it saves
 one admitted-only ZIP, then offers a mail draft without attachment; email is not
 encryption. Full relevant data except secrets remains a target, not current
@@ -77,9 +77,22 @@ ZIP excludes parameter values; the older ended-download verification report is
 separate and can contain them. See the
 [reporting guide](../user-guide/08-reports-and-diff.md#universal-device-support-reporting).
 
-**What changes when I upgrade to Alpha 18?**
+**What changes when I upgrade to Alpha 19?**
 
-Native/store and model 16 are unchanged. The product database moves from 28 to 30
+Native/store and model 16 are unchanged. The product database moves from 30 to 31
+through one data-only migration on writable open, including server, desktop and
+Docker startup and catalogue-writing CLI commands. Read-only readers migrate only in
+memory. Alpha 18 refuses product31 and starts without products. It also refuses
+regular device backups of format 3/4, activity-history pages with the new
+`supportDiagnostics` kind and System-2 journals with an allocation-comparison
+record. Format-1/2 backups no longer restore in Alpha 19. Opening Alpha 19 files in
+Alpha 18 is not tested. Close KNXBench and keep independent
+project/catalogue/device-backup/Docker-data backups first.
+[Release scope](../../releases/alpha19.md#upgrade).
+
+**What changed when upgrading to Alpha 18?**
+
+Native/store and model 16 were unchanged. The product database moved from 28 to 30
 through data-only migrations on writable open, including server, desktop and Docker
 startup and catalogue-writing CLI commands. Read-only CLI readers migrate only in memory. Alpha 17 refuses product30 and
 starts without products, and also refuses defaults-profile-v3 bundles and System-2
@@ -179,7 +192,7 @@ exists," not certification by the KNX Association.
 
 **What does "alpha" mean for this project specifically?**
 
-The `0.1.0-alpha` series is at `v0.1.0-alpha.18`. Concretely: `docs/KNOWN_LIMITATIONS.md` lists
+The `0.1.0-alpha` series is at `v0.1.0-alpha.19`. Concretely: `docs/KNOWN_LIMITATIONS.md` lists
 known limitations, several classified critical, and writing to a real device is verified
 only for narrowly recorded device/application cases. See
 [Project status](../getting-started/03-project-status.md) for the evidence boundaries and what

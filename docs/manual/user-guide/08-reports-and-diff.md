@@ -51,9 +51,10 @@ editing and recovery. For headless use see
 [Engineering boundaries](../../contracts/monitor-project-export.md).
 
 <a id="report-problem"></a>
-## Reporting a problem (source builds after Alpha 18)
+<a id="reporting-a-problem-source-builds-after-alpha-18"></a>
+## Reporting a problem (since Alpha 19)
 
-> **Which build has it?** Source builds after the Alpha 18 release only. Alpha 18
+> **Which build has it?** Alpha 19 and later. Alpha 18
 > and older have the separate **Debug report…**, **Device support report** and
 > **Save report** buttons described further below.
 
@@ -307,7 +308,7 @@ Each read shows one of these results:
 | **Not read** | The run ended before this read. |
 
 Every outcome is useful, so send the file even if not everything says *Read*.
-In source builds after Alpha 18 the result offers **Report problem…** instead of the
+Since Alpha 19 the result offers **Report problem…** instead of the
 confirmation and save button below: it opens the [report wizard](#report-problem)
 with this read preselected. The rest of this step describes Alpha 18 and older.
 **Preview ZIP contents** shows exactly what goes into the file. Tick the
@@ -405,7 +406,7 @@ limits are in the [contract](../../contracts/device-diagnostic-export.md).
 
 ## Universal device-support reporting
 
-> **Source builds after Alpha 18** no longer show this dialog: the File menu entry,
+> **Alpha 19 and later** no longer show this dialog: the File menu entry,
 > the download panel's button and **Send report** on the **Diagnostics** tab open
 > the [report wizard](#report-problem) instead. The server route stays for older
 > clients. The rest of this section describes Alpha 12 to Alpha 18.

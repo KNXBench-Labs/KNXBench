@@ -19,11 +19,11 @@ manufacturer publishes, not something KNXBench invents. See
 This chapter covers the catalog, adding a device, and the device panel's objects,
 parameters, product data, diagnostics and inspection-only manufacturer fields.
 
-> Section labels such as *since Alpha 17* or *since Alpha 18* name the first
-> pre-release that carries the behaviour. Alpha 18 (source cutoff 28 October 2026) is the
-> current pre-release; its [release scope](../../releases/alpha18.md)
-> keeps the exact boundaries together. [Alpha 17](../../releases/alpha17.md) was
-> published on 26 October 2026.
+> Section labels such as *since Alpha 18* or *since Alpha 19* name the first
+> pre-release that carries the behaviour. Alpha 19 (source cutoff 1 November 2026) is the
+> current pre-release; its [release scope](../../releases/alpha19.md)
+> keeps the exact boundaries together. [Alpha 18](../../releases/alpha18.md) was
+> published on 29 October 2026.
 
 ## The Devices view
 
@@ -207,15 +207,16 @@ Adoption does not set Synced, send a bus write or reverse an earlier device writ
 it never submits comparison bytes as a write plan.
 [Exact scope](../../contracts/alpha16-comparison-adoption.md).
 
-## Customer-adjustable declarations (source builds after Alpha 18)
+<a id="customer-adjustable-declarations-source-builds-after-alpha-18"></a>
 
-The source implementation `d6918027b` refuses regular downloads when the selected
+## Customer-adjustable declarations (since Alpha 19)
+
+Since Alpha 19 (`d6918027b`) KNXBench refuses regular downloads when the selected
 application contains a customer-adjustable declaration in the
 [explicitly supported syntax contexts](../../contracts/customer-adjustable-write-admission.md).
 Its [bounded software acceptance](../../status/2026-10-30-customer-adjustable-write-admission.md)
 records both maintained 15/15-stage gates and the actual isolated runtime
-`e990fd956` build/smoke, not a change to immutable Alpha 18 artifacts or hardware
-acceptance. The readiness reason is `customer-adjustable-parameters`; the EN/DE
+`e990fd956` build/smoke, not hardware acceptance. The readiness reason is `customer-adjustable-parameters`; the EN/DE
 panel explains that preservation
 semantics are not implemented and offers **Request support**. Read-only compare
 and diagnostics keep their existing preparation path.
@@ -228,9 +229,11 @@ contexts are matcher limits: absence of this reason does not establish write
 safety, compatibility or hardware support. Experimental configured System-2 is
 outside this regular-write increment.
 
-## Inactive parameter bytes (implementation candidate after Alpha 18)
+<a id="inactive-parameter-bytes-implementation-candidate-after-alpha-18"></a>
 
-The candidate source implements a bounded regular-memory download policy:
+## Inactive parameter bytes (since Alpha 19)
+
+Alpha 19 implements a bounded regular-memory download policy:
 KNXBench does not insert inactive parameter values or directly send whole bytes
 proved to belong exclusively to an inactive supported branch. Stored inactive
 values remain in the project; necessary source literals, active Union values and
@@ -249,12 +252,11 @@ is still required. An identical scoped plan can retain its applicable evidence.
 
 New regular backups use format 4 with an explicit write-selection identity.
 Historical restores keep the recorded generator and exact shape; do not edit a
-backup to force another selection. Older builds may reject format 4. Keep the
+backup to force another selection. Alpha 18 and older reject format 4. Keep the
 original backups and an independent copy before changing builds.
 
-[Focused software proof and source review](../../status/2026-10-30-inactive-byte-write-selection.md)
-are verified; maintained package gates, actual server/Web build/smoke and
-publication are pending. This is not part of immutable Alpha 18 artifacts or
+The evidence is a [focused software proof and independent source
+reviews](../../status/2026-10-30-inactive-byte-write-selection.md), not
 hardware acceptance. Omitting a direct write does not prove that the device
 retains those bytes through unloading, allocation or restart. Broader parameter
 rules and recovery remain open; [exact scope](../../contracts/inactive-byte-write-selection.md).
@@ -418,7 +420,7 @@ configuration, does not diagnose the allocation mismatch reported in issues #30 
 **Save report** writes a small local JSON file (counts and closed facts, no address,
 name, parameters, backup bytes or paths). Check it, then email it to issue@knxbench.com
 or attach it to an issue. It is experimental evidence, not a compatibility claim.
-Source builds after Alpha 18 show **Report problem…** instead: it opens the
+Since Alpha 19 it shows **Report problem…** instead: it opens the
 [report wizard](08-reports-and-diff.md#report-problem) with this operation preselected, and the summary
 travels inside its ZIP.
 [Contract](../../contracts/system2-download-result.md).
@@ -1331,7 +1333,7 @@ what that data proves:
   it into a clock or duration.
 - **Number** fields the manufacturer marked as a slider get a slider next to the
   input. Moving it only changes your draft.
-- **IPAddress — source after Alpha 18, not in that release:** an exact
+- **IPAddress (since Alpha 19):** an exact
   `HostAddress` declaration offers an address-text draft. Enter dotted IPv4
   without leading zeroes, or IPv6 as eight groups of four hexadecimal digits.
   The editor preserves spelling and hex case; it does not compress, trim,
@@ -1380,8 +1382,8 @@ shown device:
 - **Analyse device** (*Gerät analysieren*) opens the existing **Export diagnostic
   data** dialog ([guide](08-reports-and-diff.md#send-diagnostic-data)).
 - **Send report** (*Bericht senden*) opens the existing **Device support report**
-  dialog ([guide](08-reports-and-diff.md#universal-device-support-reporting)). In
-  source builds after Alpha 18 this button is **Report problem…** (*Problem
+  dialog ([guide](08-reports-and-diff.md#universal-device-support-reporting)).
+  Since Alpha 19 this button is **Report problem…** (*Problem
   melden…*) and opens the [report wizard](08-reports-and-diff.md#report-problem) for reading this device.
 
 Both open with this device already selected; you can still pick another one in

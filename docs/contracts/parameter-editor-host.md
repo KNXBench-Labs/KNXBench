@@ -82,7 +82,7 @@ package does not introduce an unmeasured cache or bulk-query abstraction.
   `unsignedInt`/`signedInt`, declared bounds and current value are valid safe
   integers, unit step only. No Increment, unknown transformations, rounding or
   automatic clamping. Editing the slider changes a draft, not a project value.
-- IPAddress (OKX-06, source after Alpha 18): one exact direct-Static form,
+- IPAddress (OKX-06, since Alpha 19): one exact direct-Static form,
   `TypeIPAddress AddressType="HostAddress"`, with absent bounds/width and parent
   `Id` plus optional `Name`. It offers a raw text draft for dotted IPv4 without
   leading zeroes or IPv6 as exactly eight four-hex-digit groups. This reuses the
@@ -132,7 +132,7 @@ certify a changed assembled candidate.
 ## Workbench host (12 October 2026)
 
 The device editor's **Parameters** tab offers a **Checked editor** button under
-Time/Number/Color/Picture rows (and IPAddress rows in source after Alpha 18) when
+Time/Number/Color/Picture rows (and IPAddress rows since Alpha 19) when
 the tree carries a complete identity
 (`snapshotContextFromTree`) and the panel has a program; not in
 **Manufacturer fields** or **Diagnostics**. `ParameterSourceEditor.tsx` replaces the

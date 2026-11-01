@@ -86,8 +86,10 @@ is unchanged.
   55/55. A new Chromium case shows that a typed value beside a passive label is
   written when focus leaves it, and that its editor and the label survive area
   and search changes (a characterization of existing behaviour, not a fix).
-- **Not covered.** The extra source read is still not measured on the largest
-  retained real program; the cue wording still awaits owner acceptance.
+- **Measured afterwards.** The extra source read costs about 70 ms on the
+  largest retained real program (26.6 MB source, 240 ms load) and about 14 ms
+  at 5 MB; all 8 real programs with Buttons bind, 12 of 34 Buttons are admitted.
+- **Not covered.** The cue wording still awaits owner acceptance.
   [Contract](contracts/alpha16-parameter-layout.md#passive-source-button-labels-button-literal-passive-v1).
 
 <a id="diag-03-closeout-candidate-1-november-2026"></a>

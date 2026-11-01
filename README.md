@@ -153,7 +153,7 @@ no actual building was switched on and off for this clip.</sub></p>
   </tr>
 </table>
 
-<p align="center"><sub>Stills and workflow clips: the published Alpha 14 server and frontend, fictional Sample house, no live bus.</sub></p>
+<p align="center"><sub>Stills and workflow clips: the published Alpha 19 server and frontend, fictional Sample house, no live bus.</sub></p>
 
 ## Getting started
 

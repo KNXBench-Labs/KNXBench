@@ -12,6 +12,25 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Manual screenshots after Alpha 19 (1 November 2026)
+
+Docs and media only, no application change. The manual's 46 stills, the four
+group-address views and the three workflow GIFs were recaptured from the server
+and frontend extracted from the published `knxbench/knxbench-server:0.1.0-alpha.19`
+image (tagged commit `0b827abee`), in a loopback-only namespace with the fictional
+Sample house. New: five **Report problem…** stills (File menu entry and the four
+wizard steps) in the [manual](manual/user-guide/08-reports-and-diff.md#report-problem),
+the Settings page in the center workspace, and refreshed diagnostic-export stills;
+those come from the tag's regular KNX simulator with a real read, wizard preview
+and ZIP download whose `recording.jsonl` is asserted. The capture specs follow
+Settings as a page, the sortable catalogue table, the version timeline, the wider
+matrix columns and the release version; their browser clock starts on a neutral
+weekday so no date-dependent startup joke reaches a still. Two complete runs of all
+three specs passed; byte/pixel reproducibility is in the
+[media manifest](assets/media-manifest.json). Captions and "screenshots predate"
+notes now describe Alpha 19. The stills honestly show one released display defect:
+project history prints its 1 GB limits as `953.67431640625 MiB`.
+
 ## Alpha 19 pre-release (source cutoff 1 November 2026)
 
 `v0.1.0-alpha.19` is the current pre-release, cut from main at source cutoff

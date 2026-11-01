@@ -407,7 +407,7 @@ that file after a server/app restart restores the working project and both stack
 Changes can therefore recover while still marked unsaved: Save/autosave controls
 the clean baseline. Closing without saving does not erase the recovery journal.
 
-![Alpha 14 in Graphite: project history with the named version Before the kitchen redesign, one undo step, one project version, the history storage used and explicit storage and backup limits](../../assets/screenshots/graphite-project-history.png)
+![Alpha 19 in Graphite: project history with the named version Before the kitchen redesign on the version timeline, one undo step, one project version, the history storage used and explicit storage and backup limits](../../assets/screenshots/graphite-project-history.png)
 
 *The fictional Sample house has already been saved to a native file. A version is
 a way back from an edit, not a second copy of that file.*
@@ -430,7 +430,7 @@ separate **Restore version…** action and confirmation to change the project.
 The plain **Project versions** list remains available as a collapsed alternative.
 Filtering keeps the selected version, but Restore/Delete are disabled while it is
 hidden; clear the filter to review it first. Cancelling a confirmation returns to
-the selected checkpoint. The Alpha 14 screenshot above predates this presentation.
+the selected checkpoint.
 
 Deleting a version or clearing undo/redo requires confirmation. Nothing is
 silently trimmed when a limit is reached; a failure is reported and the project

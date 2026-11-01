@@ -25,8 +25,8 @@ device answers with the serial number captured in the backup. Settings opens as 
 center page. None of this is new hardware support, and the allocation mismatch
 behind issues #30 and #22 is unresolved. [Release notes](../../releases/alpha19.md)
 keep the exact boundaries together.
-The manual and README screenshots still show the published Alpha 14 server and
-frontend; media was not refreshed for this release.
+The manual and README screenshots show the published Alpha 19 server and
+frontend, including step-by-step pictures of the new **Report problem…** wizard.
 
 **Before upgrading:** close the app and independently back up `.knxdb` files and
 all Docker data, including the product database and device backups. Native/store

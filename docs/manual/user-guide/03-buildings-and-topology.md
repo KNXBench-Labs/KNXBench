@@ -43,8 +43,7 @@ device to that line. In source builds after Alpha 14 (issue #25), empty lines an
 areas without devices are hidden in this diagram. They are **not deleted**: select
 or edit them in the project explorer, or use it to add the first device. A line and
 its area appear as soon as a device is added; devices without a line remain in the
-unassigned card. Alpha 14 still draws empty lines. (The screenshot above predates
-the written-out label.)
+unassigned card. Alpha 14 still draws empty lines.
 
 ![The Buildings view with the building "Sample house", its Ground floor and First
 floor cards, and rooms such as Living room, Kitchen and Hall holding their devices;

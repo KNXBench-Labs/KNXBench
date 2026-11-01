@@ -1,5 +1,11 @@
 # Restart snapshot
 
+## Manual screenshots after Alpha 19 (DELIVERING; owner WebUI; observed 2026-11-01 19:55 CET)
+- Branch `docs/alpha19-screenshots-20261101`, worktree `<sources>/knxbench-docshots-20261101`: capture specs + 59 stills/3 GIFs
+  from the published alpha.19 image (diag/report stills: tag-built simulator), manual captions, media manifest.
+- Two full runs of all three capture specs green; package gate change-scoped before push. Next: fix the released
+  project-history MiB display (`953.67431640625 MiB`) as its own package with a regression test.
+
 ## Alpha 19 release (PUBLISHED; owner tag claude-release-alpha19; observed 2026-11-01 18:45 CET)
 - Release freeze: released by claude-release-alpha19. `main` is open again; later work ships in the next alpha.
 - Immutable `v0.1.0-alpha.19` names `0b827abee222c459ce068cbce83a941691a16805` (cutoff `858b0a24d`). Never move the tag.

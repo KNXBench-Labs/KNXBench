@@ -64,6 +64,8 @@ Problem melden…*) is the one place to report a problem. The command palette
 one ZIP file on your computer. Nothing is uploaded: you choose what goes in, look
 at it, save it and send it yourself.
 
+![The File menu with its Help & diagnostics submenu open and Report problem… at the top](../../assets/screenshots/porcelain-report-problem-0-file-menu.png)
+
 Several places open the same wizard with the right things already chosen:
 
 | Where | Opens with |
@@ -102,6 +104,12 @@ device**, **Importing a project**, **Product catalogue or product installation**
 **User interface or something else**. Each kind ticks its own sensible contents in
 the next step. Nothing is collected yet.
 
+![Step 1 of the Report a problem wizard with Reading or diagnosing a device selected](../../assets/screenshots/porcelain-report-problem-1-problem.png)
+
+The pictures in this section were taken with KNXBench's built-in simulator and
+a fictional device, after **Export diagnostic data** had read it; that is why the
+wizard already knows the operation and the device.
+
 ### Step 2: contents
 
 The wizard now asks KNXBench what it can collect and shows one checkbox per part.
@@ -126,6 +134,8 @@ The available parts depend on the problem type:
   theme, window size, zoom and reduced recent-error metadata).
 - A part that cannot be included is greyed out with a reviewed, non-sensitive
   reason.
+
+![Step 2 with the recorded operation, the device and the ticked parts, two unavailable parts with their reasons and the total size](../../assets/screenshots/porcelain-report-problem-2-contents.png)
 
 Every included part shows its size, and the total is below the list. Above
 10 MiB the wizard warns that many mail services refuse attachments that large;
@@ -164,6 +174,8 @@ addresses*, *contains names*, *contains parameter values*, *contains network
 addresses*. **Show content** displays the part as text, exactly as it goes into
 the ZIP.
 
+![Step 3 listing each part with its size, its markers such as contains addresses, its files and a Show content button](../../assets/screenshots/porcelain-report-problem-3-preview.png)
+
 **Always removed, even with your consent:** device keys (BCU keys), KNX Secure keys
 and tool keys, tunnel and login passwords. Where they were, the file says what was
 removed and how long it was, never the value. **Not removed** (in the parts you
@@ -195,6 +207,8 @@ encryption**: anyone who handles the mail on its way can read the file.
 **Open a public GitHub issue** opens the issue form with only the KNXBench version
 and the kind of problem, never the ZIP or anything from it. Use it for problems
 you are happy to discuss in public; send the ZIP by mail.
+
+![Step 4 after saving: a short description, both confirmations ticked, the Download requested notice, the Open mail draft link and the public issue link](../../assets/screenshots/porcelain-report-problem-4-save-and-send.png)
 
 ### Recordings: what is kept and how to delete it
 
@@ -257,15 +271,14 @@ The whole run takes about a minute, most of it spent reading this page.
 
 Open **File**, open the *Help & diagnostics* submenu and choose **Export diagnostic
 data**. In the German interface this is **Datei → Hilfe & Diagnose →
-Diagnosedaten exportieren**. (The screenshot below predates the submenus and shows
-the entry in the older grouped list; the entry is the same.)
+Diagnosedaten exportieren**.
 
 Since Alpha 17 you can also select the device
 and press **Analyse device** on its **Diagnostics** tab: the same dialog opens
 with that device already chosen
 ([device panel](05-devices-and-products.md#device-analysis-and-support)).
 
-![The File menu with the Export diagnostic data entry in the Help & diagnostics group](../../assets/screenshots/porcelain-diagnostic-export-1-file-menu.png)
+![The File menu with its Help & diagnostics submenu open and Export diagnostic data highlighted](../../assets/screenshots/porcelain-diagnostic-export-1-file-menu.png)
 
 ### Step 2: choose the device and the interface
 
@@ -310,13 +323,14 @@ Each read shows one of these results:
 Every outcome is useful, so send the file even if not everything says *Read*.
 Since Alpha 19 the result offers **Report problem…** instead of the
 confirmation and save button below: it opens the [report wizard](#report-problem)
-with this read preselected. The rest of this step describes Alpha 18 and older.
-**Preview ZIP contents** shows exactly what goes into the file. Tick the
-confirmation and press **Save diagnostic ZIP** (*Diagnose-ZIP speichern*). The
-file is called `knxbench-device-diagnostics-….zip`; it is saved like any other
-KNXBench download.
+with this read preselected.
 
-![The result with all three reads, the save confirmation ticked and the Save diagnostic ZIP button](../../assets/screenshots/porcelain-diagnostic-export-4-result-and-save.png)
+![The result with all three reads, the SIMULATED label and the Report problem… button](../../assets/screenshots/porcelain-diagnostic-export-4-result-and-report.png)
+
+**Alpha 18 and older** show no **Report problem…** here. Instead, **Preview ZIP
+contents** shows exactly what goes into the file. Tick the confirmation and press
+**Save diagnostic ZIP** (*Diagnose-ZIP speichern*). The file is called
+`knxbench-device-diagnostics-….zip`; it is saved like any other KNXBench download.
 
 These pictures were taken with KNXBench's built-in simulator and a fictional
 device, which is why they show *SIMULATED — not a physical device capture*.
@@ -324,7 +338,8 @@ A run against a real device does not show that line.
 
 ### Step 5: email the ZIP
 
-Send the ZIP to **`issue@knxbench.com`**:
+Since Alpha 19 the wizard's **Open mail draft** prepares this mail for you; the
+ZIP still has to be attached by hand. Send the ZIP to **`issue@knxbench.com`**:
 
 - **Subject:** the issue number and the device, for example
   `Issue #42: diagnostic data for <device model>`.

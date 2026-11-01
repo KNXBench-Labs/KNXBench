@@ -1,5 +1,5 @@
 /** Report problem wizard at the real shell with every API call intercepted (DIAG-03). */
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 import { messages as en } from "../src/messages/en";
 import { messages as de } from "../src/messages/de";
@@ -7,6 +7,10 @@ import { PROBLEM_TYPES } from "../src/diagnosticBundleShape";
 import { defaultSelection } from "../src/reportProblem";
 import { achievementsFixtureAnswer } from "./achievements-fixture";
 import { openFileSubmenu } from "./file-menu";
+import { statusMetricsFixtureBody } from "./status-metrics-fixture";
+import { HISTORY_FIXTURE } from "../src/projectHistory.fixture";
+import { admitProjectHistory } from "../src/projectHistory";
+import type { ProjectTree } from "../src/bindings/ProjectTree";
 import {
   answerBundleRoute, BUNDLE_FILE_NAME, BUNDLE_INACTIVE_MISSING, BUNDLE_MAIL_DRAFT, BUNDLE_OLDER,
   BUNDLE_RECORDING, BUNDLE_WITHHELD, bundleLog, bundlePreview, SECTION_TEXT_MARKER, ticked, type BundleLog,
@@ -15,7 +19,9 @@ import {
 type Language = "en" | "de";
 type Messages = Record<keyof typeof en, string>;
 
-async function intercept(page: Page, language: Language) {
+interface OpenProject { tree: ProjectTree & { has_store_path: boolean }; saveStatus: number; saves: number }
+
+async function intercept(page: Page, language: Language, project?: OpenProject) {
   const unexpected: string[] = [];
   const log: BundleLog = bundleLog();
   const support: { path: string; body: Record<string, unknown> }[] = [];
@@ -36,7 +42,12 @@ async function intercept(page: Page, language: Language) {
     if (path === "/api/auth/status") return json({ required: false, authenticated: true });
     if (path === "/api/settings" && method === "GET") return json({ schemaVersion: 1, status: "ok", settings: {
       uiLanguage: language, theme: "porcelain", releaseChecksEnabled: false, motionLevel: "off", onboardingGuide: { seenStage: "alpha" } } });
-    if (path === "/api/project") return json({ error: "no project open" }, 400);
+    if (path === "/api/project") return project ? json(project.tree) : json({ error: "no project open" }, 400);
+    if (project && path === "/api/project/save" && method === "POST") {
+      project.saves += 1;
+      return json(project.saveStatus === 200 ? { ...project.tree, is_modified: false } : { error: "synthetic save failure" }, project.saveStatus);
+    }
+    if (project && path === "/api/project/status-metrics") return json(statusMetricsFixtureBody(project.tree));
     if (path === "/api/project/load-progress") return json(null);
     if (path === "/api/log") return json([]);
     if (path === "/api/legacy-password") return json({ available: true, remembered: false, problem: null });
@@ -349,6 +360,170 @@ for (const width of [1440, 400]) {
       toasts: Number(getComputedStyle(document.querySelector(".toast-stack")!).zIndex),
     }));
     expect(layers.wizard, "the wizard stays above the toast stack").toBeGreaterThan(layers.toasts);
+    expect(unexpected).toEqual([]);
+  });
+}
+
+/** The desktop shell's IPC as @tauri-apps/api speaks it: listen registers a callback id, close raises close-requested, destroy ends the window. */
+async function installTauriStub(page: Page) {
+  await page.addInitScript(() => {
+    const callbacks = new Map<number, (event: unknown) => unknown>();
+    const listeners = new Map<string, Map<number, number>>();
+    const calls: string[] = [];
+    let nextId = 1;
+    const emitClose = async () => {
+      for (const [eventId, callbackId] of listeners.get("tauri://close-requested") ?? []) {
+        await callbacks.get(callbackId)?.({ event: "tauri://close-requested", id: eventId, payload: null });
+      }
+    };
+    const w = window as unknown as Record<string, unknown>;
+    w.__TAURI__ = {};
+    w.__TAURI_EVENT_PLUGIN_INTERNALS__ = { unregisterListener: () => undefined };
+    w.__TAURI_INTERNALS__ = {
+      metadata: { currentWindow: { label: "main" }, currentWebview: { windowLabel: "main", label: "main" } },
+      transformCallback: (callback: (event: unknown) => unknown) => { const id = nextId++; callbacks.set(id, callback); return id; },
+      unregisterCallback: (id: number) => callbacks.delete(id),
+      invoke: async (command: string, args: { event?: string; handler?: number; eventId?: number }) => {
+        calls.push(command);
+        if (command === "plugin:event|listen") {
+          const eventId = nextId++;
+          const handlers = listeners.get(args.event!) ?? new Map<number, number>();
+          handlers.set(eventId, args.handler!);
+          listeners.set(args.event!, handlers);
+          return eventId;
+        }
+        if (command === "plugin:event|unlisten") { listeners.get(args.event!)?.delete(args.eventId!); return null; }
+        if (command === "plugin:window|close") { void emitClose(); return null; }
+        return null;
+      },
+    };
+    w.__tauriStub = { calls, emitClose, closeListenerCount: () => listeners.get("tauri://close-requested")?.size ?? 0 };
+  });
+}
+const tauriCalls = (page: Page) => page.evaluate(() => (window as unknown as { __tauriStub: { calls: string[] } }).__tauriStub.calls);
+const nativeClose = async (page: Page) => {
+  // StrictMode's disposed listener must be gone, and the live close guard registered.
+  await expect.poll(() => page.evaluate(() => (window as unknown as {
+    __tauriStub: { closeListenerCount(): number };
+  }).__tauriStub.closeListenerCount())).toBe(1);
+  await page.evaluate(() => (window as unknown as { __tauriStub: { emitClose(): Promise<void> } }).__tauriStub.emitClose());
+};
+
+/**
+ * Whether `other` paints over any control of `target`. Hit tests skip inert layers, so lift the inert
+ * mark for one synchronous probe (mutation observers only run afterwards) and read the real paint order.
+ */
+async function isPaintedOver(target: Locator, other: Locator): Promise<boolean> {
+  const overlay = await other.evaluateHandle((el) => el.closest(".search-overlay")!);
+  return target.evaluate((panel, wizard) => {
+    // Lifting `inert` must not change the layers: pin each overlay's current z-index while it is lifted.
+    const marked = [...document.querySelectorAll("[inert]")];
+    const overlays = [...document.querySelectorAll<HTMLElement>(".search-overlay")];
+    const pinned = overlays.map((el) => [el, el.style.zIndex] as const);
+    overlays.forEach((el) => { el.style.zIndex = getComputedStyle(el).zIndex; });
+    marked.forEach((el) => el.removeAttribute("inert"));
+    try {
+      return [panel, ...panel.querySelectorAll("button")].some((el) => {
+        const r = el.getBoundingClientRect();
+        const hit = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2);
+        return hit !== null && wizard.contains(hit);
+      });
+    } finally {
+      marked.forEach((el) => el.setAttribute("inert", ""));
+      pinned.forEach(([el, z]) => { el.style.zIndex = z; });
+    }
+  }, overlay);
+}
+
+/** Hit-tests the centre of `target` and each of its buttons: the point must resolve inside `target`. */
+async function ownsHits(target: Locator) {
+  return target.evaluate((panel) => {
+    const points = [panel, ...panel.querySelectorAll("button")].map((el) => {
+      const r = el.getBoundingClientRect();
+      return document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2);
+    });
+    return points.every((hit) => hit !== null && panel.contains(hit));
+  });
+}
+
+for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
+  test(`${language} ${width}px: native close under the report wizard asks first and hands back the same wizard`, async ({ page }) => {
+    const m: Messages = language === "de" ? de : en;
+    const open = (): OpenProject => ({ tree: { ...admitProjectHistory(structuredClone(HISTORY_FIXTURE)).project, is_modified: true, has_store_path: true }, saveStatus: 200, saves: 0 });
+    const project = open();
+    const { unexpected, log } = await intercept(page, language, project);
+    await installTauriStub(page);
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto("/");
+    if (width === 1440) await openFromMenu(page, m); else await openFromPalette(page, m);
+    await expect(page.getByRole("dialog", { name: m["reportProblem.title"], exact: true })).toBeVisible();
+    // By class: role queries skip the wizard while it is inert behind the prompt.
+    const wizard = page.locator(".report-problem");
+    await wizard.locator("[data-report-type=catalogue]").check();
+    await wizard.locator("[data-report-next]").click();
+    await wizard.locator("[data-report-next]").click();
+    await wizard.locator("[data-report-next]").click();
+    await wizard.locator("[data-report-consent]").check();
+    const quit = page.getByRole("dialog", { name: m["quit.title"], exact: true });
+
+    await nativeClose(page);
+    await expect(quit).toBeVisible();
+    expect(await wizard.evaluate((el) => el.closest("[inert]") !== null), "the wizard is inert behind the prompt").toBe(true);
+    await expect(quit.getByRole("button", { name: m["quit.cancel"], exact: true })).toBeFocused();
+    expect(await ownsHits(quit), "the quit prompt owns every hit inside it").toBe(true);
+    expect(await isPaintedOver(quit, wizard), "the report wizard paints over the quit prompt").toBe(false);
+    expect(await quit.evaluate((el) => document.elementFromPoint(el.getBoundingClientRect().x + 4, el.getBoundingClientRect().y + 4)?.closest(".quit-confirm") != null)).toBe(true);
+    if (process.env.KNX_DIAG03_SHOTS) await page.screenshot({ path: `${process.env.KNX_DIAG03_SHOTS}/quit-over-wizard-${language}-${width}.png` });
+    // Keyboard: Tab stays inside the prompt.
+    for (let i = 0; i < 4; i += 1) {
+      await page.keyboard.press("Tab");
+      expect(await page.evaluate(() => document.activeElement?.closest(".quit-confirm") != null)).toBe(true);
+    }
+
+    for (const leave of ["escape", "keep"] as const) {
+      if (leave === "escape") await page.keyboard.press("Escape");
+      else await quit.getByRole("button", { name: m["quit.cancel"], exact: true }).click();
+      await expect(quit).toHaveCount(0);
+      await expect(wizard).toBeVisible();
+      expect(await wizard.evaluate((el) => el.closest("[inert]") !== null)).toBe(false);
+      await expect(wizard.locator("[data-report-consent]")).toBeChecked();
+      await expect(wizard.locator("[data-report-save]")).toBeEnabled();
+      expect(await ownsHits(wizard)).toBe(true);
+      expect(await tauriCalls(page)).not.toContain("plugin:window|destroy");
+      expect(await tauriCalls(page)).not.toContain("plugin:window|close");
+      expect(log.exports).toEqual([]);
+      if (leave === "escape" && process.env.KNX_DIAG03_SHOTS) await page.screenshot({ path: `${process.env.KNX_DIAG03_SHOTS}/wizard-restored-${language}-${width}.png` });
+      if (leave === "escape") { await nativeClose(page); await expect(quit).toBeVisible(); }
+    }
+
+    // A failed save keeps the prompt, the project and the window.
+    project.saveStatus = 500;
+    await nativeClose(page);
+    await quit.getByRole("button", { name: m["quit.save"], exact: true }).click();
+    await expect.poll(() => project.saves).toBe(1);
+    await expect(quit).toBeVisible();
+    expect(await tauriCalls(page)).not.toContain("plugin:window|close");
+    expect(await tauriCalls(page)).not.toContain("plugin:window|destroy");
+
+    // Only the explicit discard closes the window.
+    await quit.getByRole("button", { name: m["quit.discard"], exact: true }).click();
+    await expect.poll(() => tauriCalls(page)).toContain("plugin:window|destroy");
+    expect(log.exports).toEqual([]);
+    expect(unexpected).toEqual([]);
+  });
+
+  test(`${language} ${width}px: native close on a clean project under the wizard closes without a prompt`, async ({ page }) => {
+    const m: Messages = language === "de" ? de : en;
+    const project: OpenProject = { tree: { ...admitProjectHistory(structuredClone(HISTORY_FIXTURE)).project, is_modified: false, has_store_path: true }, saveStatus: 200, saves: 0 };
+    const { unexpected } = await intercept(page, language, project);
+    await installTauriStub(page);
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto("/");
+    if (width === 1440) await openFromMenu(page, m); else await openFromPalette(page, m);
+    await expect(page.getByRole("dialog", { name: m["reportProblem.title"], exact: true })).toBeVisible();
+    await nativeClose(page);
+    await expect.poll(() => tauriCalls(page)).toContain("plugin:window|destroy");
+    await expect(page.getByRole("dialog", { name: m["quit.title"], exact: true })).toHaveCount(0);
     expect(unexpected).toEqual([]);
   });
 }

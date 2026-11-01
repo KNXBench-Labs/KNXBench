@@ -151,9 +151,9 @@ async fn flow_between(
         let mut file = archive.by_index(index).unwrap();
         let mut bytes = Vec::new();
         file.read_to_end(&mut bytes).unwrap();
-        exposed.push_str(file.name());
+        exposed.push_str(file.name().unwrap().as_ref());
         exposed.push_str(&String::from_utf8_lossy(&bytes));
-        zip.push((file.name().to_string(), bytes));
+        zip.push((file.name().unwrap().into_owned(), bytes));
     }
     Flow {
         preview,
@@ -402,7 +402,7 @@ async fn explicit_none_never_adopts_a_recording_the_automatic_review_did_not_bin
     assert_eq!(status, StatusCode::OK);
     let mut archive = zip::ZipArchive::new(std::io::Cursor::new(body)).unwrap();
     let names: Vec<_> = (0..archive.len())
-        .map(|i| archive.by_index(i).unwrap().name().to_string())
+        .map(|i| archive.by_index(i).unwrap().name().unwrap().into_owned())
         .collect();
     assert!(
         !names.iter().any(|n| n.starts_with("operations/")),

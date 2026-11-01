@@ -132,6 +132,12 @@ pub(super) fn inspect(
                         b,
                         cap,
                     )?;
+                    append_counted(
+                        &mut report.source_candidate_totals,
+                        part.source_candidate_totals,
+                        b,
+                        cap,
+                    )?;
                 }
                 Err(e @ DistributionInspectionError::ResourceLimit(_)) => return Err(e),
                 Err(e) => {

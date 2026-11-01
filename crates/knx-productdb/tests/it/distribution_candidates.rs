@@ -6,7 +6,7 @@ use knx_productdb::distribution::{
     inspect_distribution_with_limits, DistributionActivityInput, DistributionActivityReason,
     DistributionActivityState as Activity, DistributionArithmeticModel as Model,
     DistributionBitInterval, DistributionCandidateInitialization,
-    DistributionCandidateKind as Kind, DistributionCandidateSeverity,
+    DistributionCandidateKind as Kind, DistributionCandidateRows, DistributionCandidateSeverity,
     DistributionDecimalClass as Decimal, DistributionDependencyKind, DistributionDistinctInterval,
     DistributionEndpointRole, DistributionImpactScope, DistributionInspection,
     DistributionInspectionError as E, DistributionIntegerClass as Integer,
@@ -21,8 +21,15 @@ use std::collections::BTreeSet;
 const VALUES: &[u8] = include_bytes!("distribution_candidates/values.xml");
 const UNION: &[u8] = include_bytes!("distribution_candidates/union-alternatives.xml");
 
+/// Lists every checked occurrence, so exact arithmetic is asserted on `within` rows too.
 fn inspect(bytes: &[u8]) -> DistributionInspection {
-    inspect_distribution("authored.xml", bytes).unwrap()
+    inspect_distribution_with_limits("authored.xml", bytes, all_rows()).unwrap()
+}
+fn all_rows() -> L {
+    L {
+        candidate_rows: DistributionCandidateRows::All,
+        ..L::default()
+    }
 }
 fn rows(r: &DistributionInspection, kind: Kind) -> Vec<&DistributionSourceCandidate> {
     r.source_candidates
@@ -1106,7 +1113,7 @@ fn additive_candidate_rows_are_bounded_deterministic_and_read_only() {
     for (cap, positive) in [(count - 1, false), (count, true)] {
         let result = limited(L {
             max_output_records: cap,
-            ..L::default()
+            ..all_rows()
         });
         assert_eq!(result.is_ok(), positive, "records cap={cap} count={count}");
         if !positive {
@@ -1117,7 +1124,7 @@ fn additive_candidate_rows_are_bounded_deterministic_and_read_only() {
     for (cap, positive) in [(size - 1, false), (size, true)] {
         let result = limited(L {
             max_report_bytes: cap,
-            ..L::default()
+            ..all_rows()
         });
         assert_eq!(result.is_ok(), positive, "bytes cap={cap} size={size}");
     }
@@ -1142,7 +1149,7 @@ fn additive_candidate_rows_are_bounded_deterministic_and_read_only() {
     for (cap, positive) in [(references - 1, false), (references, true)] {
         let result = limited(L {
             max_references: cap,
-            ..L::default()
+            ..all_rows()
         });
         assert_eq!(
             result.is_ok(),
@@ -1192,7 +1199,7 @@ fn zip_members_charge_candidate_rows_against_the_shared_budget() {
             &zip,
             L {
                 max_output_records: cap,
-                ..L::default()
+                ..all_rows()
             },
         );
         assert_eq!(result.is_ok(), positive, "records cap={cap} count={count}");
@@ -1233,4 +1240,102 @@ fn format_four_pins_candidates_and_refuses_a_format_three_report() {
         "union-member-relative-bits-v1"
     );
     assert_eq!(member["intervalCheck"]["interval"]["startBit"], 3);
+}
+
+#[test]
+fn default_lists_findings_and_counts_every_checked_occurrence() {
+    let full = inspect(VALUES);
+    let default = inspect_distribution("authored.xml", VALUES).unwrap();
+    let listed = |r: &DistributionInspection| {
+        r.source_candidates
+            .iter()
+            .map(|c| (c.kind, c.value_check.as_ref().map(|v| v.comparison)))
+            .collect::<Vec<_>>()
+    };
+    let findings = listed(&full)
+        .into_iter()
+        .filter(|(_, c)| *c != Some(Cmp::Within))
+        .collect::<Vec<_>>();
+    assert_eq!(
+        listed(&default),
+        findings,
+        "rows outside `within` keep their order"
+    );
+    let full_rows = full
+        .source_candidates
+        .iter()
+        .filter(|c| c.value_check.as_ref().unwrap().comparison != Cmp::Within)
+        .cloned()
+        .collect::<Vec<_>>();
+    assert_eq!(
+        default.source_candidates, full_rows,
+        "finding rows are byte-identical"
+    );
+    assert_eq!(
+        default
+            .source_candidate_totals
+            .iter()
+            .map(|t| (t.kind, t.value_comparison, t.occurrences))
+            .collect::<Vec<_>>(),
+        full.source_candidate_totals
+            .iter()
+            .map(|t| (t.kind, t.value_comparison, t.occurrences))
+            .collect::<Vec<_>>(),
+        "totals do not depend on row detail"
+    );
+    let within = |r: &DistributionInspection, kind: Kind| {
+        r.source_candidate_totals
+            .iter()
+            .find(|t| t.kind == kind && t.value_comparison == Some(Cmp::Within))
+            .map(|t| (t.occurrences, t.rows))
+    };
+    assert_eq!(within(&default, Kind::ParameterValue), Some((3, 0)));
+    assert_eq!(within(&full, Kind::ParameterValue), Some((3, 3)));
+    assert_eq!(within(&default, Kind::ParameterRefValue), Some((1, 0)));
+    for r in [&default, &full] {
+        let occurrences: u64 = r
+            .source_candidate_totals
+            .iter()
+            .map(|t| t.occurrences)
+            .sum();
+        assert_eq!(
+            occurrences,
+            full.source_candidates.len() as u64,
+            "nothing is dropped"
+        );
+        let rows: u64 = r.source_candidate_totals.iter().map(|t| t.rows).sum();
+        assert_eq!(
+            rows,
+            r.source_candidates.len() as u64,
+            "rows count exactly the listed rows"
+        );
+        for t in &r.source_candidate_totals {
+            assert_eq!(t.application_source, r.applications[0].source);
+        }
+    }
+
+    let union_full = inspect(UNION);
+    let union_default = inspect_distribution("authored.xml", UNION).unwrap();
+    let members = |r: &DistributionInspection| {
+        r.source_candidates
+            .iter()
+            .filter_map(|c| c.interval_check.as_ref().map(|i| i.comparison))
+            .collect::<Vec<_>>()
+    };
+    assert!(members(&union_full).contains(&Interval::WithinExtent));
+    assert!(!members(&union_default).contains(&Interval::WithinExtent));
+    assert_eq!(
+        members(&union_default),
+        members(&union_full)
+            .into_iter()
+            .filter(|c| *c != Interval::WithinExtent)
+            .collect::<Vec<_>>()
+    );
+    assert_eq!(
+        rows(&union_default, Kind::UnionIntervalSummary),
+        rows(&union_full, Kind::UnionIntervalSummary),
+        "Union summaries are always listed"
+    );
+    let json = serde_json::to_value(&default).unwrap();
+    assert!(json["sourceCandidateTotals"].is_array());
 }

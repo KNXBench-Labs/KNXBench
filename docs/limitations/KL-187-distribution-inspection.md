@@ -30,6 +30,8 @@ Limits:
   Offset or BitOffset, or a missing width, gives no interval. Nothing is
   initialized, corrected or chosen; official schema defaults, bit numbering
   and runtime effects stay unverified. Other type kinds are not checked.
+  The CLI lists findings only; occurrences inside their bounds appear as
+  counts in `sourceCandidateTotals`, not as rows.
 - **Reference coverage is a subset.** Mask, medium and DPT references are
   external and unresolved. Argument, Rename and BinaryData references are not
   followed.

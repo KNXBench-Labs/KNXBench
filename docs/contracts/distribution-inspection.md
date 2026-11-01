@@ -122,6 +122,8 @@ All field names are camelCase. A source reference is a JSON pair
   order (see below).
 - `sourceCandidates[]`: TypeNumber value and Union interval candidates in
   member and element order (see below).
+- `sourceCandidateTotals[]`: every checked occurrence counted by application,
+  kind and outcome, with how many of them have their own row.
 
 ## Dependency evidence
 
@@ -205,6 +207,19 @@ Each row has a `kind`, `severity` (always `sourceCandidate`), its own
 `moduleDefinitionSource`, `initialization` (always `notPerformed`),
 `activity` and `dependencyContext`. A row describes declarations under a
 named KNXBench model. It is not a runtime error, and nothing is corrected.
+
+**Rows and totals.** By default (`candidateRows: findings`) a value check whose
+`comparison` is `within` and an interval check whose `comparison` is
+`withinExtent` get no row; every other outcome and every Union summary does.
+`sourceCandidateTotals` counts every checked occurrence either way: one entry
+per application, `kind` and outcome (`valueComparison` for value kinds,
+`intervalComparison` for members), with `occurrences` and `rows` (how many are
+listed). Nothing is checked less; only the listing is shorter. Library callers
+may set `DistributionLimits::candidate_rows` to `all` to list every
+occurrence. The default exists because real OpenKNX releases declare up to
+about 88,000 such occurrences, about 94 % of them inside their bounds, and
+listing all of them pushed six of 37 releases over the serialized-report
+ceiling, which refuses the whole inspection.
 
 | Kind | Source | Check |
 | --- | --- | --- |

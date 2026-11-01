@@ -13,6 +13,31 @@ const MAX_DECIMAL_EXPONENT: i64 = 1_000_000;
 /// Overlap pairs listed per Union; the exact pair count is always reported.
 const MAX_OVERLAP_SAMPLES: usize = 16;
 
+/// Which checked occurrences get their own `sourceCandidates` row.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum DistributionCandidateRows {
+    /// Every outcome except `within`/`withinExtent`, plus every Union summary.
+    Findings,
+    /// Every checked occurrence, including values and intervals inside their bounds.
+    All,
+}
+
+/// How many occurrences of one kind and outcome an application has, and how many got a row.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DistributionCandidateTotal {
+    pub application_source: DistributionSourceRef,
+    pub kind: DistributionCandidateKind,
+    /// Set for value kinds.
+    pub value_comparison: Option<DistributionValueComparison>,
+    /// Set for `unionMemberInterval`.
+    pub interval_comparison: Option<DistributionIntervalComparison>,
+    pub occurrences: u64,
+    /// Occurrences listed in `sourceCandidates`; the rest are counted only.
+    pub rows: u64,
+}
+
 /// One source-candidate diagnostic: a declaration fact, never a runtime error or correction.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -37,7 +62,7 @@ pub struct DistributionSourceCandidate {
     pub dependency_context: DistributionCandidateDependencies,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum DistributionCandidateKind {
     /// `Parameter/@Value` (or its absence) of a TypeNumber-or-unknown-type Parameter.
@@ -119,7 +144,7 @@ pub enum DistributionSideComparison {
     Unavailable,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum DistributionValueComparison {
     /// No unique TypeNumber: missing, dangling or ambiguous type or Parameter, or no single Type*.
@@ -199,7 +224,7 @@ pub struct DistributionBitInterval {
     pub end_bit: i64,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum DistributionIntervalComparison {
     WithinExtent,
@@ -615,17 +640,36 @@ fn lookup(
     (raw, found, DistributionResolutionBasis::OriginalScope)
 }
 
+/// Totals key: application element, kind and outcome; element order keeps totals deterministic.
+type TotalKey = (
+    usize,
+    Kind,
+    Option<DistributionValueComparison>,
+    Option<DistributionIntervalComparison>,
+);
+
 /// The resolved type of a Parameter: the unique ParameterType and its unique `Type*`, if any.
+#[derive(Clone)]
 struct ParameterTyping {
     raw: Option<String>,
     candidates: Vec<usize>,
     basis: DistributionResolutionBasis,
     element: std::result::Result<usize, DistributionTypeShape>,
 }
-fn typing(doc: &Document<'_>, index: &ReferenceIndex, parameter: usize) -> ParameterTyping {
+/// `Type*` element per ParameterType, resolved once however many Parameters share the type.
+type TypeElements = HashMap<usize, std::result::Result<usize, DistributionTypeShape>>;
+
+fn typing(
+    doc: &Document<'_>,
+    index: &ReferenceIndex,
+    elements: &mut TypeElements,
+    parameter: usize,
+) -> ParameterTyping {
     let (raw, candidates, basis) = lookup(doc, index, parameter, "ParameterType", "ParameterType");
     let element = match candidates.as_slice() {
-        [one] => type_element(doc, *one),
+        [one] => *elements
+            .entry(*one)
+            .or_insert_with(|| type_element(doc, *one)),
         _ => Err(DistributionTypeShape::TypeReferenceUnavailable),
     };
     ParameterTyping {
@@ -883,6 +927,7 @@ fn union_of(doc: &Document<'_>, member: usize) -> Option<usize> {
 fn interval_check(
     doc: &Document<'_>,
     union: usize,
+    placement: &[DistributionSourceRef],
     member: usize,
     typing: &ParameterTyping,
 ) -> Result<DistributionIntervalCheck> {
@@ -943,11 +988,7 @@ fn interval_check(
     Ok(DistributionIntervalCheck {
         model: DistributionArithmeticModel::UnionMemberRelativeBitsV1,
         union_source: doc.coordinate(union)?,
-        union_placement: doc
-            .children(union)
-            .filter(|&c| named(doc, c, "Memory") || named(doc, c, "Property"))
-            .map(|c| doc.coordinate(c))
-            .collect::<Result<_>>()?,
+        union_placement: placement.to_vec(),
         type_source: element.map(|e| doc.coordinate(e)).transpose()?,
         zero_width_declared: width.class == C::Integer && width.parsed == Some(0),
         offset,
@@ -1080,6 +1121,11 @@ pub(super) fn inspect(
         dependencies,
         opaque,
     };
+    let all = limits.candidate_rows == DistributionCandidateRows::All;
+    let mut elements = TypeElements::new();
+    // Member checks are made once per Union (placement scanned once) and reused by member rows.
+    let mut member_checks = HashMap::<usize, (ParameterTyping, DistributionIntervalCheck)>::new();
+    let mut totals = BTreeMap::<TotalKey, (DistributionSourceRef, u64, u64)>::new();
     let no_refs = Vec::new();
     for id in 0..doc.nodes.len() {
         // The name filter runs first, so ancestor walks are paid only by candidate elements.
@@ -1113,13 +1159,25 @@ pub(super) fn inspect(
                     dependency_context: pass.dependency_context(app_source, refs)?,
                 })
             };
+        let mut count = |key: TotalKey, listed: bool| {
+            let entry = totals.entry(key).or_insert((app_source, 0, 0));
+            entry.1 += 1;
+            entry.2 += u64::from(listed);
+        };
         let mut rows = Vec::new();
         if named(doc, id, "Union") && doc.semantic_node(id) {
-            let members = doc
+            let placement = doc
                 .children(id)
-                .filter(|&m| union_of(doc, m) == Some(id))
-                .map(|m| interval_check(doc, id, m, &typing(doc, index, m)))
+                .filter(|&c| named(doc, c, "Memory") || named(doc, c, "Property"))
+                .map(|c| doc.coordinate(c))
                 .collect::<Result<Vec<_>>>()?;
+            let mut members = Vec::new();
+            for m in doc.children(id).filter(|&m| union_of(doc, m) == Some(id)) {
+                let typing = typing(doc, index, &mut elements, m);
+                let check = interval_check(doc, id, &placement, m, &typing)?;
+                members.push(check.clone());
+                member_checks.insert(m, (typing, check));
+            }
             if !members.is_empty() {
                 let mut summary = row(Kind::UnionIntervalSummary, &pass, &[])?;
                 summary.activity = DistributionCandidateActivity {
@@ -1128,22 +1186,43 @@ pub(super) fn inspect(
                     observations: Vec::new(),
                 };
                 summary.union_summary = Some(union_summary(doc, id, &members));
+                count((app, Kind::UnionIntervalSummary, None, None), true);
                 rows.push(summary);
             }
         } else if named(doc, id, "Parameter") && doc.declaration(id) {
-            let typing = typing(doc, index, id);
+            let member = member_checks.remove(&id);
+            let typing = match &member {
+                Some((typing, _)) => typing.clone(),
+                None => typing(doc, index, &mut elements, id),
+            };
             let refs = pass.refs_by_parameter.get(&id).unwrap_or(&no_refs).clone();
             if typing.eligible(doc) {
-                let mut value = row(Kind::ParameterValue, &pass, &refs)?;
-                value.parameter_type = Some(pass.type_target(&typing)?);
-                value.value_check = Some(pass.value_check(id, typing.element));
-                rows.push(value);
+                let check = pass.value_check(id, typing.element);
+                let listed = all || check.comparison != DistributionValueComparison::Within;
+                count(
+                    (app, Kind::ParameterValue, Some(check.comparison), None),
+                    listed,
+                );
+                if listed {
+                    let mut value = row(Kind::ParameterValue, &pass, &refs)?;
+                    value.parameter_type = Some(pass.type_target(&typing)?);
+                    value.value_check = Some(check);
+                    rows.push(value);
+                }
             }
-            if let Some(union) = union_of(doc, id) {
-                let mut member = row(Kind::UnionMemberInterval, &pass, &refs)?;
-                member.parameter_type = Some(pass.type_target(&typing)?);
-                member.interval_check = Some(interval_check(doc, union, id, &typing)?);
-                rows.push(member);
+            if let Some((_, check)) = member {
+                let listed =
+                    all || check.comparison != DistributionIntervalComparison::WithinExtent;
+                count(
+                    (app, Kind::UnionMemberInterval, None, Some(check.comparison)),
+                    listed,
+                );
+                if listed {
+                    let mut member = row(Kind::UnionMemberInterval, &pass, &refs)?;
+                    member.parameter_type = Some(pass.type_target(&typing)?);
+                    member.interval_check = Some(check);
+                    rows.push(member);
+                }
             }
         } else if named(doc, id, "ParameterRef")
             && doc.declaration(id)
@@ -1151,21 +1230,29 @@ pub(super) fn inspect(
         {
             let (raw, parameters, basis) = lookup(doc, index, id, "RefId", "Parameter");
             let typing = match parameters.as_slice() {
-                [one] => Some(typing(doc, index, *one)),
+                [one] => Some(typing(doc, index, &mut elements, *one)),
                 _ => None,
             };
             if typing.as_ref().is_none_or(|t| t.eligible(doc)) {
-                let mut value = row(Kind::ParameterRefValue, &pass, &[id])?;
-                value.parameter = Some(pass.target("RefId", (raw, &parameters, basis))?);
                 let shape = match &typing {
-                    Some(t) => {
-                        value.parameter_type = Some(pass.type_target(t)?);
-                        t.element
-                    }
+                    Some(t) => t.element,
                     None => Err(DistributionTypeShape::ParameterUnavailable),
                 };
-                value.value_check = Some(pass.value_check(id, shape));
-                rows.push(value);
+                let check = pass.value_check(id, shape);
+                let listed = all || check.comparison != DistributionValueComparison::Within;
+                count(
+                    (app, Kind::ParameterRefValue, Some(check.comparison), None),
+                    listed,
+                );
+                if listed {
+                    let mut value = row(Kind::ParameterRefValue, &pass, &[id])?;
+                    value.parameter = Some(pass.target("RefId", (raw, &parameters, basis))?);
+                    if let Some(t) = &typing {
+                        value.parameter_type = Some(pass.type_target(t)?);
+                    }
+                    value.value_check = Some(check);
+                    rows.push(value);
+                }
             }
         }
         for row in rows {
@@ -1173,6 +1260,21 @@ pub(super) fn inspect(
             if report.source_candidates.len() > limits.max_output_records {
                 return Err(limit("output records"));
             }
+        }
+    }
+    for ((_, kind, value_comparison, interval_comparison), (application_source, n, rows)) in totals
+    {
+        let total = DistributionCandidateTotal {
+            application_source,
+            kind,
+            value_comparison,
+            interval_comparison,
+            occurrences: n,
+            rows,
+        };
+        doc.push(&mut report.source_candidate_totals, total)?;
+        if report.source_candidate_totals.len() > limits.max_output_records {
+            return Err(limit("output records"));
         }
     }
     Ok(())

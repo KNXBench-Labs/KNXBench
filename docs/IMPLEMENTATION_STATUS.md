@@ -97,7 +97,10 @@ false, and every limitation is listed
   overrides are compared exactly with their closed bounds, and Union members
   get strict-explicit member-relative bit intervals with a bounded overlap
   summary. Rows are `sourceCandidate` severity, never initialized or
-  repaired; an omitted Offset gives no interval.
+  repaired; an omitted Offset gives no interval. Only findings get rows;
+  values and intervals inside their bounds are counted in
+  `sourceCandidateTotals` (listing all of them made six of 37 real releases
+  exceed the report ceiling).
 - **Installation unchanged.** Installation still refuses these sources. The
   more lenient Windows-name policy applies to inspection only, and a native
   regression test pins that.

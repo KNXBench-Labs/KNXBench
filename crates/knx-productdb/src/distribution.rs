@@ -23,12 +23,13 @@ pub use candidates::{
     DistributionActivityState, DistributionArithmeticModel, DistributionBitInterval,
     DistributionCandidateActivity, DistributionCandidateDependencies,
     DistributionCandidateDependency, DistributionCandidateInitialization,
-    DistributionCandidateKind, DistributionCandidateSeverity, DistributionCandidateTarget,
-    DistributionDecimalClass, DistributionDecimalField, DistributionDistinctInterval,
-    DistributionIntegerClass, DistributionIntegerField, DistributionIntervalCheck,
-    DistributionIntervalComparison, DistributionIntervalPair, DistributionSideComparison,
-    DistributionSourceCandidate, DistributionTypeShape, DistributionUnionSummary,
-    DistributionValueCheck, DistributionValueComparison,
+    DistributionCandidateKind, DistributionCandidateRows, DistributionCandidateSeverity,
+    DistributionCandidateTarget, DistributionCandidateTotal, DistributionDecimalClass,
+    DistributionDecimalField, DistributionDistinctInterval, DistributionIntegerClass,
+    DistributionIntegerField, DistributionIntervalCheck, DistributionIntervalComparison,
+    DistributionIntervalPair, DistributionSideComparison, DistributionSourceCandidate,
+    DistributionTypeShape, DistributionUnionSummary, DistributionValueCheck,
+    DistributionValueComparison,
 };
 pub use dependencies::{
     DistributionAssignmentForm, DistributionConditionApplicability, DistributionConditionContext,
@@ -67,6 +68,8 @@ pub struct DistributionInspection {
     pub dependency_evidence: Vec<DistributionDependencyEvidence>,
     /// TypeNumber value and Union interval candidates in member, element order; never repaired.
     pub source_candidates: Vec<DistributionSourceCandidate>,
+    /// Every checked occurrence by application, kind and outcome, with or without its own row.
+    pub source_candidate_totals: Vec<DistributionCandidateTotal>,
 }
 
 /// Values asserted by the source, never verified registration, version or producer identity.
@@ -281,6 +284,8 @@ pub struct DistributionLimits {
     pub max_xml_working_bytes: usize,
     /// Conservative Dynamic scalar-copy/work admission, independent of report serialization.
     pub max_dynamic_work_bytes: usize,
+    /// Row detail for source candidates, not a ceiling; totals are reported either way.
+    pub candidate_rows: DistributionCandidateRows,
 }
 impl DistributionLimits {
     fn bounded(self) -> Self {
@@ -306,6 +311,7 @@ impl DistributionLimits {
             max_dynamic_work_bytes: self
                 .max_dynamic_work_bytes
                 .min(standard.max_dynamic_work_bytes),
+            candidate_rows: self.candidate_rows,
         }
     }
 }
@@ -329,6 +335,7 @@ impl Default for DistributionLimits {
             max_report_bytes: 256 * 1024 * 1024,
             max_xml_working_bytes: 256 * 1024 * 1024,
             max_dynamic_work_bytes: 256 * 1024 * 1024,
+            candidate_rows: DistributionCandidateRows::Findings,
         }
     }
 }
@@ -475,6 +482,7 @@ impl DistributionInspection {
             preserved_content: Vec::new(),
             dependency_evidence: Vec::new(),
             source_candidates: Vec::new(),
+            source_candidate_totals: Vec::new(),
             limitations: vec![
                 DistributionLimitation::MissingMaster,
                 DistributionLimitation::XsdNotPerformed,

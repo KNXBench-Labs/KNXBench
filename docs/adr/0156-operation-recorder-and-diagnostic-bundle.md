@@ -66,6 +66,26 @@ The formats are specified in [diagnostic-bundle.md](../contracts/diagnostic-bund
 - **A UI toggle for recording.** Rejected by the owner: recordings are only
   useful when they exist before the problem; deletion is available instead.
 
+## Supplementary-section implementation boundary (1 November 2026)
+
+Session log, bus monitor and browser state must be usable sections; making their
+unconditional unavailability message more accurate did not satisfy O1. They now
+use bounded typed projections with explicit field/record omission counts rather
+than trying to certify arbitrary text as secret-free. Known chronology, sources,
+fixed messages and import counts survive. Arbitrary log details and unclassified
+payloads do not become exportable merely because the user ticked consent.
+
+The optional monitor section binds the existing session identity and exact
+last-ten-minutes sequence interval in `review.monitor`. Later traffic does not
+change that reviewed body; a missing/replaced source or evicted reviewed row
+refuses rather than substituting another window. No new server snapshot cache
+or bus contact is introduced. Access-data DPT 15 is a recognizable credential
+class and is withheld with text DPTs; short byte length is not a credential
+classification. Raw payload requires a successful admitted typed group-value
+decode. These are implementation constraints of the existing secret-exclusion
+rule, not permission for raw System-2 export or comprehensive secret detection.
+See the [current contract](../contracts/diagnostic-bundle.md#reviewed-monitor-window).
+
 ## Consequences
 
 - Tunnel code must keep calling the tap for every datagram it sends or receives;

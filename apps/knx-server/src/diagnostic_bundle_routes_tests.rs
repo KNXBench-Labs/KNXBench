@@ -26,6 +26,9 @@ mod admitted_consumers;
 #[path = "diagnostic_bundle_routes_tests/retained_admission.rs"]
 mod retained_admission;
 
+#[path = "diagnostic_bundle_routes_tests/sections.rs"]
+mod sections;
+
 const SENTINEL_KEY: [u8; 4] = [0xC0, 0xFF, 0xEE, 0x42];
 
 pub(super) fn state(dir: &std::path::Path, enabled: bool) -> Arc<crate::AppState> {
@@ -161,7 +164,10 @@ async fn preview_preselects_the_latest_fitting_operation_and_the_o1_defaults() {
         .map(|s| s["key"].as_str().unwrap())
         .collect();
     // Owner decision 2026-10-31: the redacted raw recording leaves after consent.
-    assert_eq!(keys, ["environment", &format!("operation:{compare}")]);
+    assert_eq!(
+        keys,
+        ["environment", "sessionLog", &format!("operation:{compare}")]
+    );
     // Unadmitted sources remain visible as fixed unavailable offers.
     let offer = |kind: &str| {
         view["offers"]
@@ -174,11 +180,8 @@ async fn preview_preselects_the_latest_fitting_operation_and_the_o1_defaults() {
     };
     assert_eq!(offer("device")["offer"], "preselected");
     assert!(offer("device")["unavailable"].is_string());
-    assert_eq!(offer("sessionLog")["selected"], false);
-    assert_eq!(
-        offer("sessionLog")["unavailable"],
-        "this section is withheld until its content is admitted as free of credentials"
-    );
+    assert_eq!(offer("sessionLog")["selected"], true);
+    assert_eq!(offer("sessionLog")["unavailable"], Value::Null);
     assert_eq!(offer("project")["offer"], "offered");
     assert_eq!(offer("project")["selected"], false);
     assert!(view["offers"]
@@ -314,18 +317,15 @@ async fn a_disabled_recorder_is_said_plainly_and_old_recordings_stay_deletable()
         .as_array()
         .unwrap()
         .iter()
-        .all(|s| s["key"] != "clientState"));
+        .any(|s| s["key"] == "clientState"));
     let client = view["offers"]
         .as_array()
         .unwrap()
         .iter()
         .find(|offer| offer["kind"] == "clientState")
         .unwrap();
-    assert_eq!(client["selected"], false);
-    assert_eq!(
-        client["unavailable"],
-        "this section is withheld until its content is admitted as free of credentials"
-    );
+    assert_eq!(client["selected"], true);
+    assert_eq!(client["unavailable"], Value::Null);
 }
 
 #[tokio::test]

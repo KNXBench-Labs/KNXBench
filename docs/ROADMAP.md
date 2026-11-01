@@ -23,17 +23,22 @@ the published Alpha 18 artifacts, not a release or deployment.
 [Contract](contracts/settings-workspace.md) ·
 [User guide](manual/user-guide/09-settings-and-appearance.md#opening-settings).
 
-## DIAG-03 local candidate after Alpha 18 (31 October 2026)
+<a id="diag-03-local-candidate-after-alpha-18-31-october-2026"></a>
 
-Operation recording and the unified diagnostic bundle remain in progress, not
-released. Retained read-diagnostics and support results now reach the bundle by
+## DIAG-03 source on main after Alpha 18 (31 October 2026)
+
+Operation recording and the unified diagnostic bundle are implemented on main
+through `bc77abdb2`, newer than the published Alpha 18 artifacts. Retained
+read-diagnostics and support results now reach the bundle by
 exact token, with specific missing/expired/unfinished causes, bounded history
 reads and device/catalogue extracts only for a proven current context. By owner
 decision, declared memory and raw non-System-2 recordings leave only after
 consent, with a "possibly passwords; keep private" note; System-2 never exports
 raw bodies. The real router/built-web join, the installed CLI boundaries and the
-original fourteen-case matrix ran on 31 October 2026. Still open: publication;
-raw System-2 P1/P2 apply only to a future raw export.
+original fourteen-case matrix ran on 31 October 2026. Still open: usable admitted
+session-log/bus-monitor/client-state sections (currently always withheld despite
+O1) and desktop quit-confirmation layering. Source closeout is separate from
+release publication; raw System-2 P1/P2 apply only to a future raw export.
 [Work and evidence boundary](open-work/DIAG-03-unified-diagnostic-bundle.md).
 
 ## Alpha 18 pre-release (source cutoff 28 October 2026)

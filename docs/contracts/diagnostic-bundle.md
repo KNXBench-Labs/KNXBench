@@ -3,7 +3,29 @@
 Owner: DIAG-03 ([work package](../open-work/DIAG-03-unified-diagnostic-bundle.md),
 [ADR-0156](../adr/0156-operation-recorder-and-diagnostic-bundle.md)).
 
-## Candidate implementation and remaining privacy admission
+<a id="candidate-implementation-and-remaining-privacy-admission"></a>
+
+## Current source and historical validation
+
+The recorder, shared bundle builder, retained-result admission, Web wizard and
+CLI export are published on `main` through `bc77abdb2` (31 October 2026), newer
+than the immutable Alpha 18 release. The real simulator/server/production-Web/ZIP
+join, installed-CLI flag boundaries and original fourteen-case matrix are recorded
+in the [work package](../open-work/DIAG-03-unified-diagnostic-bundle.md).
+System-2 exports only its closed projection, never raw comparison or recording
+bytes. P1/P2 are prerequisites only for a separately commissioned future raw export.
+The three supplementary sections use typed, reduced projections rather than
+arbitrary raw text: session-log chronology with known messages, a reviewed
+last-ten-minutes monitor window, and bounded browser facts. Each section reports
+its withheld/truncated field counts. Their exact scope is in [Sections](#sections).
+They are not comprehensive secret detection or an export of every free error
+string.
+
+### Historical foundation checks (29–30 October 2026)
+
+The following dated paragraphs preserve earlier failures and bounded evidence;
+their then-open integration/matrix/publication steps are not current status.
+Current source status belongs to the linked work package.
 
 **29 October 2026, local candidate; not a release or whole-package acceptance.**
 The opt-in saved-project section now calls `native_project_without_secrets`
@@ -117,8 +139,9 @@ tunnel opens (individual-address programming today) leave no recording.
 
 CLI: only with `--diagnostic-bundle <new.zip>`, see [CLI](#cli).
 
-The free-running bus monitor is not recorded. Its last-ten-minutes section is
-offered but withheld until its content is admitted as credential-free.
+The free-running bus monitor is not an operation recording. Its optional
+last-ten-minutes section reads the existing buffer without starting a session or
+contacting the bus; see the [reviewed monitor window](#reviewed-monitor-window).
 
 ### Location, switching off, retention
 
@@ -200,11 +223,12 @@ the problem type's defaults), `client` (browser state, at most 64 KiB) and
 `description` (at most 8000 characters). Recording ids are validated before any
 file access. A section the problem type does not offer is refused.
 
-### Reviewed-content binding (required before acceptance)
+<a id="reviewed-content-binding-required-before-acceptance"></a>
 
-The initial candidate's live re-collection is not sufficient for consent. The
-following wire contract is required by the review correction, before DIAG-03 can
-be accepted:
+### Reviewed-content binding
+
+Preview, section text and export enforce the following binding; consent is not
+permission to recollect different contents silently:
 
 - `ProjectContext` is `{serverIncarnation, projectIncarnation, revision}`. An
   initial preview request may carry `context` when its choices came from a bound
@@ -216,6 +240,9 @@ be accepted:
   server/project context. Manifest creation/consent timestamps and the user's
   final description are not section contents and are excluded.
 - Section-text and consented export requests must carry that `review` object.
+  The fingerprint is an unkeyed content/integrity binding, not authentication,
+  authorization or proof that a person read the preview. Existing authenticated
+  session checks remain in force.
   Missing review is `bundlePreviewRequired`; a changed context or fingerprint
   is HTTP 409 `bundlePreviewChanged`. No ZIP or section text is returned on
   refusal. No new access roles or automatic upload are introduced.
@@ -325,7 +352,7 @@ implemented once in `knx_app::diagnostic_bundle::default_offer`.
 | Section | ZIP path | Source |
 | --- | --- | --- |
 | environment (fixed) | `environment/environment.json` | writer identity, platform, server incarnation, effective timings, product database and project state |
-| session log | `session-log/session-log.json` | withheld: not yet admitted as credential-free, always unavailable with the "withheld" reason |
+| session log | `session-log/session-log.json` | ordered typed chronology, known sources/messages, withheld-field counts; no arbitrary location/detail text |
 | operation / earlier operations | `operations/<id>/recording.jsonl`, or `system2-private.json` / a retained typed result file | non-System-2: the recorder-redacted raw recording after consent; System-2: the admitted private projection only |
 | minimised legacy reports | `reports/...` | the existing download and System-2 reports of that operation |
 | device extract | `device/<id>/device.json`, `parameters.json` | device detail and parameter panel projection |
@@ -333,16 +360,72 @@ implemented once in `knx_app::diagnostic_bundle::default_offer`.
 | original import file | `import/...` | not kept by the server; the section says so |
 | catalogue | `catalogue/catalogue.json` | product database availability (enum only, never the startup reason) and the device's product identity |
 | whole project | `project/project.knxdb` | last saved native project, secret-free copy; unsaved changes are not included |
-| bus monitor | `bus-monitor/bus-monitor.json` | withheld: not yet admitted as credential-free, always unavailable with the "withheld" reason |
-| client state | `client/client.json` | withheld: not yet admitted as credential-free, always unavailable with the "withheld" reason; the browser's facts are still bounded and validated |
+| bus monitor | `bus-monitor/bus-monitor.json` | pinned last-ten-minutes window from the existing session; typed group values only, reductions counted |
+| client state | `client/client.json` | closed-schema browser facts and reduced recent-error metadata, at most 64 KiB on input; unknown fields counted, not echoed |
+
+### Reduced log and browser facts
+
+The log projection preserves every entry's order, canonical timestamp and severity.
+Known server/command sources and fixed messages with bounded integer placeholders
+survive, including undo/redo and import counts. Path-bearing success messages keep
+the action and withhold the path. Arbitrary messages, locations, details and
+quarantine paths are omitted per field and counted in `withheld`; an omitted
+message is `null`, not an empty string or a claim that the operation had no error.
+The live log is not rewritten. This is a useful chronology, not a full free-text
+error-chain export.
+
+Client facts admit known version/shell/language/theme forms, bounded viewport and
+zoom, truncation counters and at most 50 reduced recent errors. Unknown names are
+counted without echoing them; imported language/theme identities become `other`.
+Malformed known values are counted as invalid. Recent-error details and arbitrary
+message text follow the same withholding rules as the log. Deselecting client
+state excludes its body from text and ZIP. These projections make no claim that
+arbitrary text can be certified credential-free.
+
+### Reviewed monitor window
+
+A selected, available bus-monitor section adds optional `review.monitor`:
+`{sessionId, firstSeq, endSeq, droppedBefore, statusAtReview, capturedAt}`. Its
+fields are closed; counters are nonnegative safe integers, `firstSeq <= endSeq`,
+the interval has at most 5000 rows, status is `active` or `closed`, and capture
+time is canonical UTC RFC 3339 with milliseconds. A malformed binding is HTTP 400
+`bundlePreviewRequired`. No monitor selection requires no binding.
+
+A fresh preview picks the existing session's rows at most 600 seconds old,
+including the boundary, and binds the exact `[firstSeq, endSeq)` interval and
+session identity. The window can be empty. Text and ZIP requests carry that
+review unchanged and project only those rows, even after new traffic arrives or
+the rows age past ten minutes. Counters, status and capture time in the body are
+those at review, not new live observations. Gateway closure can retain the same
+window; explicit stop removes the session and hence the source. A missing or
+replaced session, eviction, a missing/duplicate/out-of-order pinned row or a
+changed/dropped/unasked binding refuses with HTTP 409 `bundlePreviewChanged` and
+no ZIP. There is no server snapshot cache or invented retention guarantee; other
+selected sections still use strict current-content review.
+
+The monitor file carries format/version, session identity, `statusAtReview`,
+`capturedAt`, window seconds, interval, `droppedBeforeAtReview`, projected rows and
+withheld counts. Broadcast/retention losses after preview are not observations
+of that pinned body. No monitor is started or restarted by collection.
+
+Rows retain safe typed transport metadata and capped project group-address
+labels (128 characters, truncation counted). Only a successful typed group-value
+decode may export payload octets. Character/text DPTs 4/16/24/28 and access-data
+DPT 15 export neither their decoded value nor raw payload. Undecoded, unresolved,
+conflicting or failed decodes never export raw bytes, regardless of length.
+Management services, including memory/key services, are metadata only; they
+cannot provide a second copy of raw System-2 comparison data. Without a project
+or a resolved DPT, the monitor exports transport metadata only, no values or
+octets. Project labels and other admitted typed group values remain installation
+content, not comprehensive secret detection. Scope notes and counted omissions
+make the reduced views explicit; unknown browser identities are labeled `other`.
 
 ### Unavailability reasons
 
 Every offer that cannot be delivered carries one fixed English reason; the web
 translates each by exact text and a server test fails when a reason or fixed
 note has no web translation. Reasons that do not depend on what a source holds
-are specific: a section withheld until admitted ("this section is withheld until
-its content is admitted as free of credentials"), no fitting or no chosen
+are specific: no monitor session in this server, no browser facts supplied, no fitting or no chosen
 operation, a recording without a retained typed report, no open project, no
 stored import report, an unsaved project, no chosen device, an operation whose
 proven context identifies no single project device (none, or an address shared

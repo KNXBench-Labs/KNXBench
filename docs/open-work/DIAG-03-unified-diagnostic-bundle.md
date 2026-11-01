@@ -1,10 +1,21 @@
 # DIAG-03 — One report button, full diagnostic bundle, operation recorder
 
-**Priority:** P1. **Status:** In progress, local candidate; not delivered.
+**Priority:** P1. **Status:** Implemented on `main` through `bc77abdb2` (31 October
+2026); final closeout in progress. Not part of the published Alpha 18 artifacts.
 All original owner decisions remain recorded below (29 October 2026, rounds 1–2,
 O1/O2). The Alpha 18 tag prerequisite is met (`80386a154`); the tag stays immutable.
-Main-first delivery still requires final review, the integrated package gate and
-publication verification. No such acceptance or push is implied here.
+The current closeout covers the desktop quit-confirmation layering defect,
+real session-log/bus-monitor/client-state sections (the current implementation
+always withholds them despite O1), and status reconciliation, with independent
+review and maintained package gates. The unconditional three-section omission
+is not an owner-accepted scope reduction and prevents whole-goal completion.
+Release publication is separate; no new tag or deployment follows from source delivery.
+
+## Historical implementation and verification (29–31 October 2026)
+
+Dated candidate/failure paragraphs below retain the evidence as it happened. Their
+then-open review, integration, join and matrix steps were superseded by the later
+31 October results; they are not a fresh queue of unfinished implementation.
 
 **29 October progress:** the opt-in saved-project adapter `aef35f4b1` is locally
 integrated as `f017dc248`: existing native-copy helper, saved rather than unsaved

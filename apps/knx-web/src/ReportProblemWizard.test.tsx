@@ -287,6 +287,22 @@ it("pins resolved identities and review for text and ZIP without another preview
   expect(bundle.previewBundle).toHaveBeenCalledTimes(1);
 });
 
+it("carries the reviewed bus-monitor window to text and ZIP unchanged", async () => {
+  const monitor = { sessionId: 2, firstSeq: 5, endSeq: 9, droppedBefore: 0, statusAtReview: "active" as const, capturedAt: "2026-11-01T09:00:00.000Z" };
+  const review = { ...REVIEW, monitor };
+  bundle.previewBundle.mockImplementation(async (query: BundleQuery) => answer(query, { review }));
+  bundle.sectionText.mockResolvedValue("reviewed text");
+  bundle.exportBundle.mockResolvedValue({ blob: new Blob(["PK"]), fileName: "result.zip" });
+  await render({ problemType: "deviceReading" });
+  await next();
+  await click($("[data-report-show=sessionLog]"));
+  expect(bundle.sectionText.mock.calls[0][0].review).toEqual(review);
+  await next(); await click($("[data-report-consent]")); await click($("[data-report-save]"));
+  expect(bundle.exportBundle.mock.calls[0][0].review).toEqual(review);
+  // Every preview request itself is fresh: no earlier window rides along.
+  for (const [query] of bundle.previewBundle.mock.calls) expect((query as BundleQuery).review).toBeUndefined();
+});
+
 it("retains an exact result ref when the recording is unavailable", async () => {
   bundle.previewBundle.mockImplementation(async (query: BundleQuery) => answer(query, { operationRecordingId: null }));
   bundle.sectionText.mockResolvedValue("retained report");

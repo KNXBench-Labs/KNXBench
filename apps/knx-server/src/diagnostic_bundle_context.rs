@@ -32,4 +32,7 @@ impl ProjectContext {
 pub(crate) struct Review {
     pub fingerprint: String,
     pub context: ProjectContext,
+    /// The reviewed bus-monitor window, present exactly when that section was reviewed.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub monitor: Option<crate::diagnostic_bundle_routes::MonitorBinding>,
 }

@@ -83,9 +83,23 @@ export interface ProjectContext {
   revision: number;
 }
 
+/** The bus-monitor window a preview reviewed; text and export project exactly these rows. */
+export interface MonitorBinding {
+  sessionId: number;
+  firstSeq: number;
+  /** One past the last row; equal to `firstSeq` for an empty window. */
+  endSeq: number;
+  droppedBefore: number;
+  statusAtReview: "active" | "closed";
+  /** UTC RFC 3339 with milliseconds. */
+  capturedAt: string;
+}
+
 export interface BundleReview {
   fingerprint: string;
   context: ProjectContext;
+  /** Present exactly when the bus-monitor section was reviewed; sent back unchanged. */
+  monitor?: MonitorBinding;
 }
 
 export interface BundleQuery {

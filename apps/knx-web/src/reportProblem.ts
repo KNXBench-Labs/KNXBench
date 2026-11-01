@@ -191,6 +191,8 @@ const REASONS: ReadonlyArray<[string, MessageKey]> = [
   ["the support result is not complete", "reportProblem.reason.supportUnfinished"],
   ["the diagnostic recording version is unsupported", "reportProblem.reason.recordingVersion"],
   ["the diagnostic recording result is malformed", "reportProblem.reason.recordingResult"],
+  ["the bus monitor is not running in this server session", "reportProblem.reason.monitorNotRunning"],
+  ["the browser sent no client state", "reportProblem.reason.noClientState"],
 ];
 
 export function reasonKey(reason: string): MessageKey | null {
@@ -207,6 +209,10 @@ const NOTES: ReadonlyArray<[string, MessageKey]> = [
   ["the recording's last line is incomplete (interrupted write)", "reportProblem.note.tornTail"],
   ["the last saved state of the project; unsaved changes are not included", "reportProblem.note.savedRoot"],
   ["the parameter values could not be projected for this device", "reportProblem.note.noParameters"],
+  ["values that could not be classified are withheld; the section counts them", "reportProblem.note.reduced"],
+  ["the session log keeps time, severity and known sources and messages only", "reportProblem.note.sessionLog"],
+  ["group telegrams of the last 10 minutes from the bus monitor's existing buffer", "reportProblem.note.monitor"],
+  ["only the known browser facts are kept; other fields are counted, never shown", "reportProblem.note.client"],
 ];
 
 export function noteKey(note: string): MessageKey | null {

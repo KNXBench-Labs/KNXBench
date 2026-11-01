@@ -53,9 +53,13 @@ test("manual screenshots of the four group-address presentations", async ({ page
   const failures: string[] = [];
   page.on("pageerror", (error) => failures.push(String(error)));
 
+  // The startup joke (holidays, late night) is picked once on mount: start on a neutral
+  // weekday morning, then return to the real time for everything that follows.
+  await page.clock.install({ time: new Date("2026-11-04T10:30:00") });
   await page.goto("/");
   const guide = page.getByRole("dialog", { name: "Welcome to KNXBench" });
   await expect(guide).toBeVisible();
+  await page.clock.setSystemTime(new Date());
   await page.keyboard.press("Escape");
   await expect(guide).toBeHidden();
   await page.getByRole("button", { name: /Import ETS project/ }).first().click();
@@ -119,7 +123,12 @@ test("manual screenshots of the four group-address presentations", async ({ page
   // Fold the column chooser again so the grid itself is in frame.
   await picker.locator("summary").click();
   await expect(picker).not.toHaveAttribute("open", "");
+  // Since Alpha 16 object columns are wider; hide Properties so all three columns fit.
+  const properties = page.getByRole("button", { name: "Properties", exact: true });
+  await properties.click();
+  await expect(workspace.locator(".ga-matrix-table thead th").filter({ has: page.locator("[data-ga-unlinked]") })).toBeInViewport({ ratio: 1 });
   await shot(page, "ga-view-matrix");
+  await properties.click();
 
   await view(page, "tree");
   expect(failures).toEqual([]);

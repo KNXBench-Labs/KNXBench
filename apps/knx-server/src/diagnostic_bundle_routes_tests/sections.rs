@@ -91,6 +91,9 @@ impl Flow {
 fn reviewed(query: &Value, preview: &Value) -> Value {
     let mut query = query.clone();
     query["review"] = preview["review"].clone();
+    if query.get("context").is_none() {
+        query["context"] = preview["review"]["context"].clone();
+    }
     query
 }
 
@@ -107,7 +110,17 @@ async fn preview(state: &Arc<crate::AppState>, query: &Value) -> Value {
 }
 
 async fn flow(state: &Arc<crate::AppState>, query: Value) -> Flow {
-    let preview = preview(state, &query).await;
+    flow_between(state, query.clone(), query).await
+}
+
+/// Previews with `preview_query`, then asks for texts and ZIP with `review_query`, as the UI does.
+async fn flow_between(
+    state: &Arc<crate::AppState>,
+    preview_query: Value,
+    review_query: Value,
+) -> Flow {
+    let query = review_query;
+    let preview = preview(state, &preview_query).await;
     let mut exposed = preview.to_string();
     let mut texts = Vec::new();
     for section in preview["sections"].as_array().unwrap() {
@@ -291,6 +304,123 @@ async fn a_log_change_after_review_refuses_text_and_zip() {
     assert_eq!(status, StatusCode::CONFLICT);
     assert!(String::from_utf8_lossy(&body).contains("bundlePreviewChanged"));
     assert_eq!(disposition, None);
+}
+
+/// The browser's wire pair: an automatic-selector preview, then reviewed requests with explicit none.
+fn automatic_and_none(sections: &[&str]) -> (Value, Value) {
+    let automatic = json!({"problemType": "userInterface", "sections": sections,
+                           "client": client_facts()});
+    let mut none = automatic.clone();
+    none["operation"] = json!({"selection": "none"});
+    (automatic, none)
+}
+
+#[tokio::test]
+async fn automatic_selector_review_without_recording_serves_explicit_none_texts_and_zip() {
+    let dir = tempfile::tempdir().unwrap();
+    let state = state(dir.path(), true);
+    seed_log(&state);
+    let (automatic, none) = automatic_and_none(&["environment", "sessionLog", "clientState"]);
+    let flow = flow_between(&state, automatic, none).await;
+    assert_eq!(flow.preview["operationRecordingId"], Value::Null);
+    assert_bound(&flow, "sessionLog", "session-log/session-log.json");
+    assert_bound(&flow, "clientState", "client/client.json");
+    flow.assert_clean();
+}
+
+#[tokio::test]
+async fn automatic_selector_review_refuses_changed_bytes_and_a_tampered_review_under_none() {
+    let dir = tempfile::tempdir().unwrap();
+    let state = state(dir.path(), true);
+    seed_log(&state);
+    let (automatic, none) = automatic_and_none(&["environment", "sessionLog", "clientState"]);
+    let reviewed_preview = preview(&state, &automatic).await;
+    let refused = |request: Value, path: &'static str| {
+        let state = state.clone();
+        async move {
+            let (status, body, _) = call(&state, "POST", path, Some(request)).await;
+            assert_eq!(status, StatusCode::CONFLICT, "{}", json_of(&body));
+            assert!(String::from_utf8_lossy(&body).contains("bundlePreviewChanged"));
+        }
+    };
+    let section = "/api/diagnostics/bundle/section";
+    let mut baseline = reviewed(&none, &reviewed_preview);
+    baseline["key"] = json!("sessionLog");
+    let (status, body, _) = call(&state, "POST", section, Some(baseline)).await;
+    assert_eq!(status, StatusCode::OK, "{}", json_of(&body));
+    let mut tampered = reviewed(&none, &reviewed_preview);
+    tampered["key"] = json!("sessionLog");
+    tampered["review"]["fingerprint"] = json!("0".repeat(64));
+    refused(tampered, section).await;
+
+    let mut changed_client = reviewed(&none, &reviewed_preview);
+    changed_client["key"] = json!("clientState");
+    changed_client["client"]["theme"] = json!("porcelain");
+    refused(changed_client, section).await;
+
+    state
+        .session_log
+        .lock()
+        .unwrap()
+        .push(entry(Severity::Info, "save", "saved"));
+    let mut changed_log = reviewed(&none, &reviewed_preview);
+    changed_log["key"] = json!("sessionLog");
+    refused(changed_log, section).await;
+    let mut export = reviewed(&none, &reviewed_preview);
+    export["consent"] = json!(true);
+    refused(export, "/api/diagnostics/bundle").await;
+}
+
+#[tokio::test]
+async fn explicit_none_never_adopts_a_recording_the_automatic_review_did_not_bind() {
+    let dir = tempfile::tempdir().unwrap();
+    let state = state(dir.path(), true);
+    let (automatic, none) =
+        automatic_and_none(&["environment", "sessionLog", "clientState", "operation"]);
+    // Review taken without any recording; a recording appears afterwards.
+    let early = preview(&state, &automatic).await;
+    super::record(
+        &state,
+        knx_app::operation_recording::OperationKind::Compare,
+        ("role", "late"),
+        true,
+    );
+    let mut request = reviewed(&none, &early);
+    request["key"] = json!("sessionLog");
+    let (status, _, _) = call(
+        &state,
+        "POST",
+        "/api/diagnostics/bundle/section",
+        Some(request),
+    )
+    .await;
+    // `none` still binds to the none-state the review described, not to the new recording.
+    assert_eq!(status, StatusCode::OK);
+    let mut export = reviewed(&none, &early);
+    export["consent"] = json!(true);
+    let (status, body, _) = call(&state, "POST", "/api/diagnostics/bundle", Some(export)).await;
+    assert_eq!(status, StatusCode::OK);
+    let mut archive = zip::ZipArchive::new(std::io::Cursor::new(body)).unwrap();
+    let names: Vec<_> = (0..archive.len())
+        .map(|i| archive.by_index(i).unwrap().name().to_string())
+        .collect();
+    assert!(
+        !names.iter().any(|n| n.starts_with("operations/")),
+        "recording attached: {names:?}"
+    );
+    // An automatic review taken WITH the recording must not serve explicit none.
+    let with_recording = preview(&state, &automatic).await;
+    assert_ne!(with_recording["operationRecordingId"], Value::Null);
+    let mut request = reviewed(&none, &with_recording);
+    request["key"] = json!("sessionLog");
+    let (status, _, _) = call(
+        &state,
+        "POST",
+        "/api/diagnostics/bundle/section",
+        Some(request),
+    )
+    .await;
+    assert_eq!(status, StatusCode::CONFLICT);
 }
 
 fn client_facts() -> Value {

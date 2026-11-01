@@ -187,6 +187,20 @@ struct OfferView {
     selected: bool,
     /// `None`: available. Otherwise why it cannot be included.
     unavailable: Option<String>,
+    /// What the review binds for `unavailable`; the wording the user sees may differ.
+    #[serde(skip)]
+    bound: Option<&'static str>,
+}
+
+impl OfferView {
+    fn bound(&self) -> Value {
+        json!({
+            "kind": self.kind,
+            "offer": self.offer,
+            "selected": self.selected,
+            "unavailable": self.bound.map(str::to_string).or_else(|| self.unavailable.clone()),
+        })
+    }
 }
 
 #[derive(Serialize)]
@@ -324,6 +338,15 @@ enum BundleUnavailableCode {
 }
 
 impl BundleUnavailableCode {
+    /// The reason a review binds: an automatic choice that found no recording and an explicit
+    /// "none" describe the same state, so they bind the same words.
+    fn bound_message(self) -> &'static str {
+        match self {
+            Self::NoOperation => Self::NoOperationChosen.message(),
+            other => other.message(),
+        }
+    }
+
     fn message(self) -> &'static str {
         match self {
             Self::Source => "the selected diagnostic source is unavailable",
@@ -423,6 +446,13 @@ enum SourceFailure {
 impl SourceFailure {
     fn unavailable() -> Self {
         Self::Unavailable(BundleUnavailableCode::Source)
+    }
+
+    fn bound_message(self) -> &'static str {
+        match self {
+            Self::Unavailable(code) => code.bound_message(),
+            Self::Conflict => self.message(),
+        }
     }
 
     fn message(self) -> &'static str {
@@ -721,7 +751,7 @@ fn review_of(collected: &Collected, query: &BundleQuery) -> Review {
         "operation": collected.operation,
         "result": collected.result_identity,
         "deviceId": collected.device_id,
-        "offers": collected.offers,
+        "offers": collected.offers.iter().map(OfferView::bound).collect::<Vec<_>>(),
         "sections": sections,
         "monitor": collected.monitor,
     });
@@ -1029,15 +1059,8 @@ async fn collect(
     );
     let result_identity = match &evidence {
         Ok(result) => result.identity.clone(),
-        Err(_)
-            if operation.is_some()
-                || query
-                    .operation
-                    .as_ref()
-                    .is_some_and(|op| op.selection.as_deref() == Some("none")) =>
-        {
-            AdmittedResultIdentity::None
-        }
+        // No source named and none found (automatic) is the state explicit "none" names.
+        Err(_) if operation.is_some() || no_source_selected(query) => AdmittedResultIdentity::None,
         Err(_) => AdmittedResultIdentity::Unavailable,
     };
     let selected: Vec<SectionKind> = match &query.sections {
@@ -1087,7 +1110,7 @@ async fn collect(
                 None
             }
             Err(SourceFailure::Conflict) => return Err(source_failure(SourceFailure::Conflict)),
-            Err(reason) => Some(reason.message().to_string()),
+            Err(reason) => Some(reason),
         };
         if kind == SectionKind::BusMonitor && !(wanted && unavailable.is_none()) {
             monitor = None;
@@ -1096,7 +1119,8 @@ async fn collect(
             kind,
             offer,
             selected: wanted && unavailable.is_none(),
-            unavailable,
+            unavailable: unavailable.map(|reason| reason.message().to_string()),
+            bound: unavailable.map(|reason| reason.bound_message()),
         });
     }
     if ProjectContext::capture(state) != context {

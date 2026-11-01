@@ -14,8 +14,20 @@ mod links;
 mod provenance;
 #[path = "distribution_readers.rs"]
 mod readers;
+#[path = "distribution_resource_links.rs"]
+mod resource_links;
 #[path = "distribution_xml.rs"]
 mod xml;
+pub use resource_links::DistributionResourceConsumer;
+#[path = "distribution_preview.rs"]
+mod preview;
+pub use preview::{DistributionResourceLimits, DistributionResourcePreview};
+#[path = "distribution_resources.rs"]
+mod resources;
+pub use resources::{
+    DistributionPassivePresentation, DistributionResourceDeclaration, DistributionResourceFileInfo,
+    DistributionResourceMedia, DistributionResourcePass,
+};
 #[path = "distribution_zip.rs"]
 mod zip;
 pub use candidates::{
@@ -70,6 +82,10 @@ pub struct DistributionInspection {
     pub source_candidates: Vec<DistributionSourceCandidate>,
     /// Every checked occurrence by application, kind and outcome, with or without its own row.
     pub source_candidate_totals: Vec<DistributionCandidateTotal>,
+    pub resource_declarations: Vec<DistributionResourceDeclaration>,
+    pub resource_passes: Vec<DistributionResourcePass>,
+    pub resource_consumers: Vec<DistributionResourceConsumer>,
+    pub resource_previews: Vec<DistributionResourcePreview>,
 }
 
 /// Values asserted by the source, never verified registration, version or producer identity.
@@ -249,6 +265,7 @@ pub enum DistributionLimitation {
     MasterDependenciesNotResolved,
     TranslationsNotPerformed,
     BaggageAssociationNotPerformed,
+    NativePackageBaggageNotPerformed,
     RegistrationNotVerified,
     /// Scripts, calculations, validations, handlers and Assign are inventoried, never run.
     DependenciesNotExecuted,
@@ -286,6 +303,7 @@ pub struct DistributionLimits {
     pub max_dynamic_work_bytes: usize,
     /// Row detail for source candidates, not a ceiling; totals are reported either way.
     pub candidate_rows: DistributionCandidateRows,
+    pub resource: DistributionResourceLimits,
 }
 impl DistributionLimits {
     fn bounded(self) -> Self {
@@ -312,6 +330,7 @@ impl DistributionLimits {
                 .max_dynamic_work_bytes
                 .min(standard.max_dynamic_work_bytes),
             candidate_rows: self.candidate_rows,
+            resource: self.resource.bounded(),
         }
     }
 }
@@ -336,6 +355,7 @@ impl Default for DistributionLimits {
             max_xml_working_bytes: 256 * 1024 * 1024,
             max_dynamic_work_bytes: 256 * 1024 * 1024,
             candidate_rows: DistributionCandidateRows::Findings,
+            resource: DistributionResourceLimits::default(),
         }
     }
 }
@@ -458,7 +478,7 @@ pub(super) fn limit(name: &str) -> DistributionInspectionError {
 impl DistributionInspection {
     fn empty(name: &str, bytes: &[u8], kind: DistributionSourceKind) -> Self {
         Self {
-            format_version: 4,
+            format_version: 5,
             source_kind: kind,
             source: DistributionSource {
                 name: name.into(),
@@ -483,6 +503,10 @@ impl DistributionInspection {
             dependency_evidence: Vec::new(),
             source_candidates: Vec::new(),
             source_candidate_totals: Vec::new(),
+            resource_declarations: Vec::new(),
+            resource_passes: Vec::new(),
+            resource_consumers: Vec::new(),
+            resource_previews: Vec::new(),
             limitations: vec![
                 DistributionLimitation::MissingMaster,
                 DistributionLimitation::XsdNotPerformed,
@@ -521,6 +545,8 @@ pub fn inspect_distribution_with_limits(
     } else {
         xml::inspect(bytes, None, &limits, &mut report)?;
     }
+    resource_links::resolve(&mut report, &limits)?;
+    resources::finish(&mut report);
     readers::output_limit(&report, &limits)?;
     provenance::json_size(&report, limits.max_report_bytes)?;
     Ok(report)

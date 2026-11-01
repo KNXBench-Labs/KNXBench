@@ -108,13 +108,31 @@ physical inactive-byte survival, PRG-01 and KL-007 remain open.
 
 `knx products inspect-distribution <source.xml|source.zip>` reports what a
 manufacturer XML or distribution ZIP (for example an OpenKNX release) declares,
-without installing anything. Report format 4 keeps one source map per document
+without installing anything. Report format 5 keeps one source map per document
 and byte-exact references for every row, plus a resolver for them. Typed facts come from
 the existing catalogue, hardware, program and Dynamic readers. Unknown
 constructs are inventoried, including inside Dynamic. `complete` is always
 false, and every limitation is listed
 ([contract](contracts/distribution-inspection.md), [KL-187](KNOWN_LIMITATIONS.md#catalogue-kl-187)).
 
+- **Distribution resources (format 5; OKX-04, 1 November).**
+  Canonical baggage declarations and exact consumers retain original namespace,
+  manufacturer and source coordinates. Literal adjacent-XML-stem paths resolve
+  checked member ordinals; duplicate IDs remain ambiguous. ZIP help stays
+  directory metadata only. Unique PNGs are actually decoded under independent
+  byte/pixel/internal/work budgets and re-encoded without source metadata, with
+  original and derived hashes. Explicit `--output-format html` displays only
+  owned offline markup and derived PNGs, escapes source text, labels bounded
+  sampling and displays named fallbacks. JSON remains the complete default.
+  Owning regressions cover joins, hostile inputs, decoder limits and real CLI
+  output. Independent review (12/12 mutants killed) found that resource
+  consumers restarted the shared reference count; consumers now charge on top
+  of references, dependency endpoints and candidate targets, with exact ceiling
+  tests. Real headless Chromium in an offline namespace decodes both derived
+  PNGs, shows four named fallbacks and makes no external request or script run.
+  Release measurement over all 37 OpenKNX releases passes 37/37; the largest
+  report grows by 451,125 bytes to 79.05% of the 256 MiB cap. No native
+  installation, product database, bus or package-completeness claim is added.
 - **Dependency evidence (format 3).** Scripts, calculations, validations,
   button handlers and Assign are listed with presence-exact attributes,
   scoped endpoints, declared Assign cycles and condition context. Nothing is

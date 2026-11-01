@@ -2135,6 +2135,7 @@ dependencies = [
  "knx-core",
  "knx-testsupport",
  "libc",
+ "png 0.18.1",
  "quick-xml 0.42.0",
  "rusqlite",
  "rustix",

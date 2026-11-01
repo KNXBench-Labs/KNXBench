@@ -49,6 +49,151 @@ fn home() -> tempfile::TempDir {
     home
 }
 #[test]
+fn explicit_html_is_offline_passive_and_json_remains_the_default() {
+    use std::io::Write;
+    let home = home();
+    let xml = br#"<KNX xmlns="http://knx.org/xml/project/20"><ManufacturerData><Manufacturer RefId="M-1"><ApplicationPrograms><ApplicationProgram Id="A" Name="&lt;img src=x onerror=alert(1)&gt; &lt;script&gt;TEXT&lt;/script&gt;" ContextHelpFile="H"><Static><Script><![CDATA[VENDOR_SCRIPT_MUST_NOT_APPEAR]]></Script></Static></ApplicationProgram></ApplicationPrograms><Baggages><Baggage Id="P" Name="pixel.png" TargetPath=""/><Baggage Id="B" Name="broken.png" TargetPath=""/><Baggage Id="H" Name="help.zip" TargetPath=""/></Baggages></Manufacturer></ManufacturerData></KNX>"#;
+    fn chunk(out: &mut Vec<u8>, kind: &[u8; 4], data: &[u8]) {
+        out.extend_from_slice(&(data.len() as u32).to_be_bytes());
+        out.extend_from_slice(kind);
+        out.extend_from_slice(data);
+        // Standard PNG CRC, implemented here so this synthetic CLI fixture needs no new dependency.
+        let mut crc = 0xffff_ffffu32;
+        for b in kind.iter().chain(data) {
+            crc ^= u32::from(*b);
+            for _ in 0..8 {
+                crc = (crc >> 1) ^ if crc & 1 != 0 { 0xedb8_8320 } else { 0 };
+            }
+        }
+        out.extend_from_slice(&(!crc).to_be_bytes());
+    }
+    let mut png = b"\x89PNG\r\n\x1a\n".to_vec();
+    chunk(&mut png, b"IHDR", &[0, 0, 0, 1, 0, 0, 0, 1, 8, 6, 0, 0, 0]);
+    let pixel = [0u8, 255, 0, 0, 255];
+    let (mut a, mut b) = (1u32, 0u32);
+    for p in pixel {
+        a = (a + u32::from(p)) % 65521;
+        b = (b + a) % 65521;
+    }
+    let mut z = vec![0x78, 0x01, 0x01, 0x05, 0x00, 0xfa, 0xff];
+    z.extend_from_slice(&pixel);
+    z.extend_from_slice(&((b << 16) | a).to_be_bytes());
+    chunk(&mut png, b"IDAT", &z);
+    chunk(&mut png, b"IEND", &[]);
+    let mut help = zip::ZipWriter::new(std::io::Cursor::new(Vec::new()));
+    help.start_file("help.html", zip::write::SimpleFileOptions::default())
+        .unwrap();
+    help.write_all(b"<script>HELP_MUST_NOT_APPEAR</script>")
+        .unwrap();
+    let help = help.finish().unwrap().into_inner();
+    let mut zip = zip::ZipWriter::new(std::io::Cursor::new(Vec::new()));
+    for (name, bytes) in [
+        ("product.xml", xml.as_slice()),
+        ("product.baggages/pixel.png", png.as_slice()),
+        (
+            "product.baggages/broken.png",
+            b"\x89PNG\r\n\x1a\n".as_slice(),
+        ),
+        ("product.baggages/help.zip", help.as_slice()),
+    ] {
+        zip.start_file(name, zip::write::SimpleFileOptions::default())
+            .unwrap();
+        zip.write_all(bytes).unwrap();
+    }
+    let source = home.path().join("hostile.zip");
+    std::fs::write(&source, zip.finish().unwrap().into_inner()).unwrap();
+    let before = snapshot(home.path());
+    let default = run(home.path(), &[source.to_str().unwrap()]);
+    assert!(
+        default.status.success(),
+        "{}",
+        String::from_utf8_lossy(&default.stderr)
+    );
+    let json = run(
+        home.path(),
+        &[source.to_str().unwrap(), "--output-format", "json"],
+    );
+    assert!(
+        json.status.success(),
+        "{}",
+        String::from_utf8_lossy(&json.stderr)
+    );
+    assert_eq!(json.stdout, default.stdout);
+    let html = run(
+        home.path(),
+        &[source.to_str().unwrap(), "--output-format", "html"],
+    );
+    assert!(
+        html.status.success(),
+        "{}",
+        String::from_utf8_lossy(&html.stderr)
+    );
+    assert!(html.stderr.is_empty());
+    let text = String::from_utf8(html.stdout).unwrap();
+    assert!(text.starts_with("<!doctype html>"));
+    assert!(
+        text.contains("data-resource-preview"),
+        "must display a decoded PNG, not metadata alone"
+    );
+    assert!(text.contains("src=\"data:image/png;base64,"));
+    assert!(text.contains("data-resource-fallback"));
+    assert!(text.contains("pngDecodeFailed"));
+    assert!(text.contains("helpArchiveAvailable"));
+    assert!(text.contains("&lt;img src=x onerror=alert(1)&gt;"));
+    for forbidden in [
+        "<script",
+        "<img src=x",
+        "VENDOR_SCRIPT_MUST_NOT_APPEAR",
+        "HELP_MUST_NOT_APPEAR",
+        "<iframe",
+        "<object",
+        "<form",
+    ] {
+        assert!(!text.contains(forbidden), "{forbidden}");
+    }
+    for directive in [
+        "script-src 'none'",
+        "connect-src 'none'",
+        "base-uri 'none'",
+        "form-action 'none'",
+        "default-src 'none'",
+    ] {
+        assert!(text.contains(directive), "{directive}");
+    }
+    assert_eq!(snapshot(home.path()), before);
+}
+
+#[test]
+fn html_sampling_is_visible_and_does_not_remove_json_facts() {
+    let home = home();
+    let name = "n".repeat(400);
+    let bags = (0..205)
+        .map(|i| format!(r#"<Baggage Id="B{i}" Name="x" TargetPath=""/>"#))
+        .collect::<String>();
+    let xml = format!(
+        r#"<KNX xmlns="http://knx.org/xml/project/20"><ManufacturerData><Manufacturer RefId="M"><ApplicationPrograms><ApplicationProgram Id="A" Name="{name}"/></ApplicationPrograms><Baggages>{bags}</Baggages></Manufacturer></ManufacturerData></KNX>"#
+    );
+    let source = home.path().join("sample.xml");
+    std::fs::write(&source, xml).unwrap();
+    let before = snapshot(home.path());
+    let json = run(home.path(), &[source.to_str().unwrap()]);
+    assert!(json.status.success());
+    let j: serde_json::Value = serde_json::from_slice(&json.stdout).unwrap();
+    assert_eq!(j["resourceDeclarations"].as_array().unwrap().len(), 205);
+    assert_eq!(j["applications"][0]["name"], name);
+    let html = run(
+        home.path(),
+        &["--output-format", "html", source.to_str().unwrap()],
+    );
+    assert!(html.status.success());
+    let text = String::from_utf8(html.stdout).unwrap();
+    assert!(text.contains("200 of 205 rows shown"));
+    assert_eq!(text.matches("<article ").count(), 200);
+    assert!(text.contains("[text sampled]"));
+    assert_eq!(snapshot(home.path()), before);
+}
+
+#[test]
 fn real_cli_emits_useful_json_without_source_sidecar_profile_or_authority_mutation() {
     let home = home();
     let source = home.path().join("authored.data");
@@ -61,7 +206,7 @@ fn real_cli_emits_useful_json_without_source_sidecar_profile_or_authority_mutati
         String::from_utf8_lossy(&out.stderr)
     );
     let r: serde_json::Value = serde_json::from_slice(&out.stdout).unwrap();
-    assert_eq!(r["formatVersion"], 4);
+    assert_eq!(r["formatVersion"], 5);
     assert_eq!(r["sourceKind"], "manufacturerXml");
     assert_eq!(r["sections"].as_array().unwrap().len(), 4);
     assert_eq!(r["applications"][0]["activeParameterRefIds"][0], "R");
@@ -117,7 +262,7 @@ fn real_cli_windows_zip_keeps_raw_member_names_and_profile_untouched() {
 }
 
 #[test]
-fn real_cli_format_four_resolves_compact_coordinates_and_matches_library_json() {
+fn real_cli_format_five_resolves_compact_coordinates_and_matches_library_json() {
     let home = home();
     let source = home.path().join("format2.xml");
     std::fs::write(&source, SOURCE).unwrap();
@@ -130,7 +275,7 @@ fn real_cli_format_four_resolves_compact_coordinates_and_matches_library_json() 
     );
     let report: knx_productdb::distribution::DistributionInspection =
         serde_json::from_slice(&output.stdout).unwrap();
-    assert_eq!(report.format_version, 4);
+    assert_eq!(report.format_version, 5);
     let expected =
         knx_productdb::distribution::inspect_distribution("format2.xml", SOURCE).unwrap();
     assert_eq!(report, expected);
@@ -173,7 +318,7 @@ fn real_cli_reports_dependency_evidence_exactly_like_the_library() {
             "buttonHandler"
         ]
     );
-    assert_eq!(json["formatVersion"], 4);
+    assert_eq!(json["formatVersion"], 5);
     assert!(rows
         .iter()
         .all(|r| r["disposition"] == "retainedNotExecuted"));
@@ -236,7 +381,7 @@ fn real_cli_reports_source_candidates_exactly_like_the_library() {
         assert_eq!(out.stderr, b"");
     }
     let json: serde_json::Value = serde_json::from_slice(&values.stdout).unwrap();
-    assert_eq!(json["formatVersion"], 4);
+    assert_eq!(json["formatVersion"], 5);
     let rows = json["sourceCandidates"].as_array().unwrap();
     assert_eq!(
         rows.iter()
@@ -328,6 +473,15 @@ fn argument_refusal_precedes_reads_and_never_accepts_db_or_output_authority() {
         vec!["--download"],
         vec!["--install"],
         vec!["does-not-exist", "--output", "report.json"],
+        vec!["does-not-exist", "--output-format", "svg"],
+        vec!["does-not-exist", "--output-format"],
+        vec![
+            "does-not-exist",
+            "--output-format",
+            "html",
+            "--output-format",
+            "json",
+        ],
     ] {
         let out = run(home.path(), &args);
         assert!(!out.status.success());

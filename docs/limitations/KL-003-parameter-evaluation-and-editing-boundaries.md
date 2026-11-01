@@ -11,7 +11,10 @@ text resolver and one request-wide budget; the workspace shows the result with
 its template/fallback provenance. Row/column `TextParameterRefId` values remain
 raw metadata: those axis captions are not resolved by this path. `Table` versus
 `Grid` visual variants, collapse rules, in-cell buttons and nested cell blocks
-remain separate boundaries.
+remain separate boundaries. Since 31 October 2026 (main only) the literal
+`Text` of an admitted in-cell `Button` is shown as a passive label; its
+handler/action is not supported and nothing is triggered
+([contract](../contracts/alpha16-parameter-layout.md#passive-source-button-labels-button-literal-passive-v1)).
 
 `SuffixText` is also no longer a missing column/display feature: product DB
 v26 stores it on the parameter and reference, and the existing row/checked

@@ -1256,7 +1256,11 @@ works exactly as in the row view, and switching areas keeps your drafts. Areas
 without a declared grid stay in rows with a short note saying so; an unknown or
 unreadable layout description also falls back to rows and names the reason.
 Search results are always rows. Wide grids scroll sideways inside the area on
-narrow windows. Row/column captions retain their declared text; the
+narrow windows. On main, a button the product data places in a grid cell shows
+only its literal text, marked **Source button label – action unsupported**: it
+is plain text, cannot be clicked or focused, and its action is not supported.
+The note above such a grid says the label is shown but its action is not
+supported, instead of listing it as not placed. Row/column captions retain their declared text; the
 block/separator language overlay above does not add row/column text-parameter
 resolution.
 See the [workspace contract](../../contracts/parameter-workspace.md).

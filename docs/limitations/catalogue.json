@@ -339,7 +339,7 @@
       "number": 3,
       "title": "Parameter evaluation and editing boundaries",
       "topic": "Manufacturer data and parameters",
-      "summary": "Supported top-level and single-authoritative module fields are editable. Declared Table/Grid blocks render as matrices; supported positional block/separator captions are filled with provenance. Calculations, repeated expansion and unsupported controls/encodings remain limited, as do Table/Grid visual variants, collapse rules, parameter-driven row/column captions and in-cell buttons/nested blocks.",
+      "summary": "Supported top-level and single-authoritative module fields are editable. Declared Table/Grid blocks render as matrices; supported positional block/separator captions are filled with provenance. Calculations, repeated expansion and unsupported controls/encodings remain limited, as do Table/Grid visual variants, collapse rules, parameter-driven row/column captions and in-cell buttons/nested blocks. On main, an in-cell `Button` shows only its literal source text as a passive label; its action is not supported ([contract](contracts/alpha16-parameter-layout.md#passive-source-button-labels-button-literal-passive-v1)).",
       "file": "KL-003-parameter-evaluation-and-editing-boundaries.md",
       "ledger_ids": [
         "KL-3"

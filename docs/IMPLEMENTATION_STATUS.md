@@ -12,6 +12,30 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Passive source Button labels in parameter grids (31 October 2026 source)
+
+OKX-05 `button-literal-passive-v1`: an activated program-owned `Button` leaf in
+a valid `Table`/`Grid` block now shows its literal XML-decoded `@Text` at its
+declared `@Cell` as passive text. This is KNXBench presentation policy, not ETS
+Button behaviour; handler attributes stay inert and unreported.
+
+- **Walker.** The existing single walker records reached Buttons
+  (`Activation::buttons`) and keeps its unrecognized/skipped-child diagnostics.
+- **Source binding.** No migration or reimport: the layout reader rebuilds the
+  program's `Dynamic` tree from the hash-checked source as the parser numbered
+  it and binds labels only on complete structural agreement. Drift, duplicate
+  roots or `Button/@Id`s and budget or source failures bind none.
+- **HTTP.** Additive `ParameterSection.passiveLabels`; sections and grid groups
+  are seeded for Button-only blocks. Copies use the existing caption budget.
+  A Button `@Id` is refused by the existing write path (400, nothing written).
+- **Browser.** Normal Parameters view only, with the separators' block-access
+  filter. Matrix cells stack separators, passive labels, then fields. Plain
+  text with an EN/DE cue, no role, focus stop or request.
+- **Verified before the package gate.** Full `knx-productdb` (lib 799, it 952)
+  and `knx-server` (lib 766, it 795) suites; Vitest 314 files, 4868 tests;
+  Chromium `e2e/parameter-matrix.e2e.ts` 4/4 (EN/DE at 1440/400 px,
+  intercepted fiction). Two independent reviews; 7 wrong-branch controls fail. [Contract](contracts/alpha16-parameter-layout.md#passive-source-button-labels-button-literal-passive-v1).
+
 ## Master byte ranges with a UTF-8 BOM, product database 31 (31 October 2026 source)
 
 Master provenance (ADR-0147) stored every declaration range three bytes too early

@@ -1,7 +1,7 @@
 /** Declared parameter grids in the Parameters tab, with strictly intercepted fictional data. */
 import { expect, test, type Page } from "@playwright/test";
 import { join } from "node:path";
-import type { ParameterField, ParameterGroupLayout, ParameterPanel } from "../src/api";
+import type { ParameterField, ParameterGroupLayout, ParameterPanel, ParameterPassiveLabel } from "../src/api";
 import type { DeviceNode } from "../src/bindings/DeviceNode";
 import type { ProjectTree } from "../src/bindings/ProjectTree";
 import { messages as de } from "../src/messages/de";
@@ -33,11 +33,27 @@ const pairs: ParameterGroupLayout = { groupKey: "pairs", version: 1, declaredLay
   labels: [{ row: 1, column: 1, text: "Operation" }, { row: 2, column: 1, text: "Operation" }],
   issues: [{ kind: "unshownContent", element: "Button", reference: "B-1", cell: "1,1" }] };
 const legacy: ParameterGroupLayout = { ...pairs, groupKey: "legacy", status: "unknownLayout", declaredLayout: "Carousel", labels: [], issues: [] };
+// button-literal-passive-v1: a Button-only nearest grid without axis text, as the server reports it.
+const only: ParameterGroupLayout = { groupKey: "only", version: 1, declaredLayout: "Grid", status: "grid",
+  rows: [{ id: "ONLY-R1", text: null, textParameterRefId: null, collapseIfEmpty: null }],
+  columns: [{ id: "ONLY-C1", text: null, textParameterRefId: null, width: "46%" }, { id: "ONLY-C2", text: null, textParameterRefId: null, width: "53%" }],
+  labels: [], issues: [{ kind: "unshownContent", element: "Button", reference: "B-ONLY", cell: "1,2" }] };
+const passive = (elementId: string, text: string, group: { key: string; label: string | null }, row: number, column: number,
+  blockAccess: string | null = null): ParameterPassiveLabel => ({ kind: "buttonLiteral", elementId, text, cell: { row, column }, group, blockAccess });
+const passiveLabels: ParameterPassiveLabel[] = [
+  passive("B-PAIR", "Fictional pair label", { key: "pairs", label: "Fictional pairs" }, 1, 1),
+  passive("B-READ", "Fictional restricted label", { key: "pairs", label: "Fictional pairs" }, 2, 1, "Read"),
+  passive("B-ONLY", "Fictional source label", { key: "only", label: null }, 1, 2),
+  passive("B-HTML", "<b>Fictional</b> & note", { key: "only", label: null }, 1, 1),
+];
 
 async function intercept(page: Page, language: "en" | "de") {
-  const state = { unexpected: [] as string[], posts: [] as { etsId: string; raw: string }[], projectOpen: false, aLeft: "0" };
+  const state = { unexpected: [] as string[], posts: [] as { etsId: string; raw: string }[], envelopes: [] as Record<string, unknown>[],
+    projectOpen: false, aLeft: "0", revision: 1 };
+  // The authoritative snapshot a bound write names; a write moves it on.
+  const current = (): ProjectTree => ({ ...tree, snapshot_revision: state.revision, can_undo: state.revision > 1, is_modified: state.revision > 1 });
   const panel = (): ParameterPanel => ({ programId: "A-FICTIONAL", sourceLanguage: "en", tree: null, stale: [], diagnostics: [],
-    sections: [{ scope: null, groupLayouts: [pairs, legacy], fields: [
+    sections: [{ scope: null, groupLayouts: [pairs, legacy, only], passiveLabels, fields: [
       choice("A-left", state.aLeft, 1, 2), choice("A-right", "0", 1, 3),
       { ...base("B-left", "pairs", "Fictional pairs"), cell: { row: 2, column: 2 } },
       { ...base("B-right", "pairs", "Fictional pairs"), cell: { row: 2, column: 3 } },
@@ -50,10 +66,10 @@ async function intercept(page: Page, language: "en" | "de") {
     let body: unknown; let status = 200;
     if (path === "/api/auth/status" && method === "GET") body = { required: false, authenticated: true };
     else if (path === "/api/settings" && method === "GET") body = { schemaVersion: 1, status: "ok", settings: { uiLanguage: language, theme: "porcelain" } };
-    else if (path === "/api/project" && method === "GET") { if (state.projectOpen) body = tree; else { status = 400; body = { error: "no project open" }; } }
-    else if (path === "/api/project/new" && method === "POST") { state.projectOpen = true; body = tree; }
+    else if (path === "/api/project" && method === "GET") { if (state.projectOpen) body = current(); else { status = 400; body = { error: "no project open" }; } }
+    else if (path === "/api/project/new" && method === "POST") { state.projectOpen = true; body = current(); }
     else if (path === "/api/project/load-progress" && method === "GET") body = null;
-    else if (path === "/api/project/status-metrics" && method === "GET") body = statusMetricsFixtureBody(tree);
+    else if (path === "/api/project/status-metrics" && method === "GET") body = statusMetricsFixtureBody(current());
     else if (path === "/api/log" && method === "GET") body = [];
     else if (path === "/api/legacy-password" && method === "GET") body = { available: true, remembered: false, problem: null };
     else if (path === "/api/bus/discover" && method === "POST") body = { interfaces: [] };
@@ -67,10 +83,15 @@ async function intercept(page: Page, language: "en" | "de") {
     else if (path === "/api/device/1" && method === "GET") body = { ...device, com_objects: [], product: { resolution: "NoReference", product_ref: null, program_ref: null, catalog: null } };
     else if (path === "/api/device/1/parameters" && method === "GET") body = panel();
     else if (path === "/api/device/1/parameters" && method === "POST") {
-      const write = route.request().postDataJSON() as { etsId: string; raw: string };
+      const write = route.request().postDataJSON() as { etsId: string; raw: string } & Record<string, unknown>;
       state.posts.push({ etsId: write.etsId, raw: write.raw });
-      if (write.etsId === "A-left") state.aLeft = write.raw;
-      body = { ...panel(), tree: { ...tree, snapshot_revision: 2, can_undo: true, is_modified: true } };
+      state.envelopes.push(write);
+      if (write.snapshotRevision !== state.revision) { status = 409; body = { error: "stale fixture snapshot", code: "snapshotStale" }; }
+      else {
+        if (write.etsId === "A-left") state.aLeft = write.raw;
+        state.revision += 1;
+        body = { ...panel(), tree: current() };
+      }
     } else if (path === "/api/bus/monitor/telegrams" && method === "GET") body = { sessionId: 1, serverIncarnation: "matrix-browser", contextStatus: "current",
       projectOpen: true, status: "active", nextSince: 0, droppedBefore: 0, telegrams: [] };
     else if (path === "/api/device-readiness" && method === "GET") body = { devices: [], counts: {} };
@@ -106,7 +127,7 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
     const area = (label: string) => workspace.locator(".parameter-workspace-nav button").filter({ hasText: label });
     const matrix = workspace.locator('.parameter-workspace-rows[data-layout="matrix"]');
     const note = workspace.locator(".parameter-workspace-layout-note");
-    await expect(workspace.locator(".parameter-workspace-nav button")).toHaveCount(3);
+    await expect(workspace.locator(".parameter-workspace-nav button")).toHaveCount(4);
     await expect(workspace.locator('.parameter-workspace-nav [aria-current="page"]')).toHaveCount(0);
     await expect(matrix).toHaveCount(0);
 
@@ -118,6 +139,8 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
     }
     await expect(matrix.locator(".parameter-matrix-unplaced")).toHaveText(m["parameters.matrix.unplaced"]);
     await expect(workspace.locator(".parameter-matrix-issues")).not.toHaveAttribute("open", "");
+    // B-1 has no shown label here: it stays a declaration that is not shown.
+    await expect(workspace.locator(".parameter-matrix-passive-note")).toHaveCount(0);
     const box = async (etsId: string) => (await matrix.locator(`[data-parameter-row="${etsId}"]`).boundingBox())!;
     const [aLeft, aRight, bLeft, loose] = [await box("A-left"), await box("A-right"), await box("B-left"), await box("Loose")];
     expect(Math.abs(aLeft.y - aRight.y)).toBeLessThanOrEqual(1);
@@ -139,8 +162,71 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
     await area("Fictional pairs").click();
     await expect(select).toHaveAttribute("data-retained-editor", "yes");
     expect(state.posts).toEqual([]);
+
+    // button-literal-passive-v1: source Button text is plain grid content, never an action.
+    const passiveCue = m["parameters.matrix.passiveButton"];
+    const pairLabel = matrix.locator('[data-passive-label="B-PAIR"]');
+    await expect(pairLabel.locator(".parameter-matrix-passive-text")).toHaveText("Fictional pair label");
+    await expect(pairLabel.locator(".parameter-matrix-passive-cue")).toHaveText(passiveCue);
+    await expect(pairLabel).toHaveCSS("grid-row-start", "3");
+    expect(await pairLabel.evaluate(node => [(node as HTMLElement).style.gridRow, (node as HTMLElement).style.gridColumn]))
+      .toEqual(["3 / span 1", "2 / span 1"]);
+    const operation = (await matrix.locator('.parameter-matrix-caption[data-caption="label"]').filter({ hasText: "Operation" }).first().boundingBox())!;
+    const pairBox = (await pairLabel.boundingBox())!;
+    expect(pairBox.y).toBeGreaterThan(operation.y);
+    expect(Math.abs(pairBox.x - operation.x)).toBeLessThanOrEqual(1);
+    await expect(matrix.locator('[data-passive-label="B-READ"]')).toHaveCount(0);
+    await expect(page.getByText("Fictional restricted label")).toHaveCount(0);
+
+    await area(m["parameters.groupNumber"].replace("{number}", "4")).click();
+    await expect(matrix).toBeVisible();
+    expect(await matrix.evaluate(node => (node as HTMLElement).style.gridTemplateColumns)).toBe("minmax(8rem, 46fr) minmax(8rem, 53fr)");
+    const sourceLabel = matrix.locator('[data-passive-label="B-ONLY"]');
+    const htmlLabel = matrix.locator('[data-passive-label="B-HTML"]');
+    expect(await sourceLabel.evaluate(node => [(node as HTMLElement).style.gridRow, (node as HTMLElement).style.gridColumn]))
+      .toEqual(["1 / span 1", "2 / span 1"]);
+    await expect(matrix.getByText("Fictional source label", { exact: true })).toHaveCount(1);
+    await expect(htmlLabel.locator(".parameter-matrix-passive-text")).toHaveText("<b>Fictional</b> & note");
+    await expect(htmlLabel.locator("b")).toHaveCount(0);
+    // The shown label's Button is worded as shown with an unsupported action, not as unplaced.
+    await expect(workspace.locator(".parameter-matrix-passive-note")).toHaveText(
+      m["parameters.matrix.issue.buttonLabelShown"].replace("{element}", "Button").replace("{reference}", "B-ONLY"));
+    await expect(workspace.locator(".parameter-matrix-issues")).toHaveCount(0);
+    const [htmlBox, sourceBox] = [(await htmlLabel.boundingBox())!, (await sourceLabel.boundingBox())!];
+    expect(Math.abs(htmlBox.y - sourceBox.y)).toBeLessThanOrEqual(1);
+    expect(sourceBox.x).toBeGreaterThan(htmlBox.x);
+    await expect(page.getByRole("button", { name: /Fictional source label|Fictional pair label/ })).toHaveCount(0);
+    for (const label of [sourceLabel, htmlLabel]) {
+      expect(await label.evaluate(node => ({ role: node.getAttribute("role"), tab: (node as HTMLElement).tabIndex,
+        focusable: node.querySelectorAll("[tabindex], button, a, input").length }))).toEqual({ role: null, tab: -1, focusable: 0 });
+    }
+    // Keyboard traversal never stops on a passive label; hovering or clicking it requests nothing.
+    await workspace.locator('input[type="search"]').focus();
+    for (let step = 0; step < 12; step++) {
+      await page.keyboard.press("Tab");
+      expect(await page.evaluate(() => document.activeElement?.closest("[data-passive-label]") === null)).toBe(true);
+    }
+    await sourceLabel.hover();
+    await sourceLabel.click();
+    await expect(workspace.locator(".parameter-workspace-count")).toContainText("0");
+    await workspace.locator('input[type="search"]').fill("Fictional");
+    await expect(matrix).toHaveCount(0);
+    await expect(workspace.locator("[data-passive-label]")).toHaveCount(0);
+    await workspace.locator(".parameter-workspace-toolbar button").click();
+    await area(m["parameters.groupNumber"].replace("{number}", "4")).click();
+    await expect(sourceLabel).toBeVisible();
+    expect(state.posts).toEqual([]);
+    const container = await matrix.evaluate(node => { const rect = node.getBoundingClientRect(); return { left: rect.left, right: rect.right }; });
+    expect(container.left).toBeGreaterThanOrEqual(0);
+    expect(container.right).toBeLessThanOrEqual(width + 1);
+    if (process.env.KNX_MATRIX_CAPTURE_DIR) await matrix.screenshot({ path: join(process.env.KNX_MATRIX_CAPTURE_DIR, `parameter-matrix-passive-${language}-${width}.png`) });
+
+    await area("Fictional pairs").click();
+    await expect(select).toHaveAttribute("data-retained-editor", "yes");
     await select.selectOption("1");
     await expect.poll(() => state.posts).toEqual([{ etsId: "A-left", raw: "1" }]);
+    expect(state.envelopes[0]).toMatchObject({ etsId: "A-left", raw: "1", serverIncarnation: "matrix-browser",
+      projectIncarnation: 1, snapshotRevision: 1, expectedValue: "0" });
     await expect(select).toHaveValue("1");
     await expect(select).toHaveAttribute("data-retained-editor", "yes");
 

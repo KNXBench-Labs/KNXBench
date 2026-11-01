@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Independently authored structural fixture; no manufacturer payload or XSD-validity claim. -->
+<KNX xmlns="http://knx.org/xml/project/20">
+  <ManufacturerData><Manufacturer RefId="M-FIX"><ApplicationPrograms>
+    <ApplicationProgram Id="A-FIX" Name="Fictional passive label fixture" ApplicationVersion="1" MaskVersion="MV-091A" DefaultLanguage="en-US">
+      <Static>
+        <ParameterTypes>
+          <ParameterType Id="PT-MODE"><TypeRestriction SizeInBit="8" Base="Value"><Enumeration Id="E-0" Value="0" Text="Off"/><Enumeration Id="E-1" Value="1" Text="On"/></TypeRestriction></ParameterType>
+          <ParameterType Id="PT-NUMBER"><TypeNumber SizeInBit="8" Type="unsignedInt" minInclusive="0" maxInclusive="100"/></ParameterType>
+        </ParameterTypes>
+        <Parameters>
+          <Parameter Id="P-MODE" Text="Fictional selector" ParameterType="PT-MODE" Value="1" Access="ReadWrite"/>
+          <Parameter Id="P-EDIT" Text="Fictional editable value" ParameterType="PT-NUMBER" Value="17" Access="ReadWrite"/>
+          <Parameter Id="P-OTHER" Text="Fictional second value" ParameterType="PT-NUMBER" Value="23" Access="ReadWrite"/>
+        </Parameters>
+        <ParameterRefs><ParameterRef Id="PR-MODE" RefId="P-MODE"/><ParameterRef Id="PR-EDIT" RefId="P-EDIT"/><ParameterRef Id="PR-OTHER" RefId="P-OTHER"/></ParameterRefs>
+      </Static>
+      <Dynamic>
+        <ParameterBlock Id="PB-CONTROL" Text="Fictional control"><ParameterRefRef RefId="PR-MODE"/></ParameterBlock>
+        <choose ParamRefId="PR-MODE"><when test="1">
+          <ParameterBlock Id="PB-OUTER" Text="Fictional outer page">
+            <ParameterBlock Id="PB-ONLY" Name="Not a label" Inline="true" Layout="Grid">
+              <Rows><Row Id="ONLY-R1"/></Rows><Columns><Column Id="ONLY-C1" Width="46%"/><Column Id="ONLY-C2" Width="53%"/></Columns>
+              <Button Id="B-ONLY" Text="Fictional source label" EventHandlerOnline="ConnectionOriented" EventHandler="fictionalCallback" EventHandlerParameters="{ &quot;fixture&quot;: 7 }" Cell="1,2"/>
+            </ParameterBlock>
+          </ParameterBlock>
+        </when></choose>
+        <ParameterBlock Id="PB-MIX" Text="Fictional mixed grid" Layout="Table">
+          <Rows><Row Id="MIX-R1" Text="Fictional row"/><Row Id="MIX-R2"/></Rows>
+          <Columns><Column Id="MIX-C1" Width="40%"/><Column Id="MIX-C2" Width="60%" Text="Fictional column"/></Columns>
+          <ParameterSeparator Id="S-MIX" Text="Fictional separator" Cell="1,2"/>
+          <Button Id="B-MIX" Text="Fictional mixed label" EventHandlerOnline="ConnectionOriented" EventHandler="fictionalCallback" EventHandlerParameters="{ &quot;fixture&quot;: 7 }" Cell="1,2"/>
+          <ParameterRefRef RefId="PR-EDIT" Cell="1,2"/>
+          <ParameterRefRef RefId="PR-OTHER" Cell="2,1"/>
+        </ParameterBlock>
+      </Dynamic>
+    </ApplicationProgram>
+  </ApplicationPrograms></Manufacturer></ManufacturerData>
+</KNX>

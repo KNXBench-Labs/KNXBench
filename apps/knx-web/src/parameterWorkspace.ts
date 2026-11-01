@@ -1,5 +1,5 @@
 /** Read-only parameter navigation derived exclusively from declared scopes and groups. */
-import type { ModuleScope, ParameterField, ParameterSection, ParameterSeparator } from "./api";
+import type { ModuleScope, ParameterField, ParameterPassiveLabel, ParameterSection, ParameterSeparator } from "./api";
 import type { TextFill } from "./bindings/TextFill";
 import { classifyGroupLayout, type GroupLayoutView } from "./parameterMatrix";
 import { moduleScopeIdentity } from "./moduleScope";
@@ -30,6 +30,13 @@ export interface ParameterWorkspaceSeparator {
   separator: ParameterSeparator;
   scope: ModuleScope | null;
 }
+/** `button-literal-passive-v1`: a source label shown only in its group's declared grid. */
+export interface ParameterWorkspacePassiveLabel {
+  key: string;
+  groupKey: string;
+  label: ParameterPassiveLabel;
+  scope: ModuleScope | null;
+}
 /** Fields and separators in source order, the order the workspace renders. */
 export type ParameterWorkspaceItem =
   | { kind: "field"; row: ParameterWorkspaceRow }
@@ -53,13 +60,14 @@ export function indexParameterWorkspace(sections: readonly ParameterSection[]) {
   const rows: ParameterWorkspaceRow[] = [];
   const groups: ParameterWorkspaceGroup[] = [];
   const items: ParameterWorkspaceItem[] = [];
+  const passiveLabels: ParameterWorkspacePassiveLabel[] = [];
   const sectionKeys = parameterSectionKeys(sections);
   for (const [sectionIndex, section] of sections.entries()) {
     const scope = section.scope;
     const sectionKey = sectionKeys[sectionIndex];
     const declared = new Map<string, ParameterWorkspaceGroup>();
-    // A group is opened by whichever comes first, field or separator, so a
-    // block holding only text is an area of its own (ADR-0139).
+    // A group is opened by whichever comes first, field, separator or passive
+    // label, so a block holding only text is an area of its own (ADR-0139).
     const groupFor = (group: ParameterField["group"]) => {
       const groupIdentity = JSON.stringify(group == null ? ["ungrouped"] : ["group", group.key]);
       let found = declared.get(groupIdentity);
@@ -94,8 +102,13 @@ export function indexParameterWorkspace(sections: readonly ParameterSection[]) {
       items.push({ kind: "field", row });
     });
     separatorsBefore(Number.POSITIVE_INFINITY);
+    // Passive labels come last, so field and separator groups keep their
+    // order and numbers; a group holding only passive labels is appended.
+    (section.passiveLabels ?? []).forEach((label, index) => {
+      passiveLabels.push({ key: JSON.stringify([sectionKey, "passive", index]), groupKey: groupFor(label.group).key, label, scope });
+    });
   }
-  return { rows, groups, items };
+  return { rows, groups, items, passiveLabels };
 }
 
 /** All terms must match; labels/options are searchable but never parsed for identity. */

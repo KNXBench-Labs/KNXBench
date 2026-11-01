@@ -2097,6 +2097,7 @@ export const messages = {
   "parameters.matrix.declared": "Grid as declared in the product data ({layout}): {rows} × {columns}. Positions come from the source, never from labels.",
   "parameters.matrix.position": "Row {row}, column {column}",
   "parameters.matrix.unplaced": "Not placed in the declared grid",
+  "parameters.matrix.passiveButton": "Source button label – action unsupported",
   "parameters.matrix.issues.one": "{count} declaration could not be placed",
   "parameters.matrix.issues.other": "{count} declarations could not be placed",
   "parameters.matrix.issue.cellMalformed": "{element} {reference}: cell “{cell}” is malformed",
@@ -2105,6 +2106,7 @@ export const messages = {
   "parameters.matrix.issue.ambiguousCell": "{element} {reference}: declared in several different cells",
   "parameters.matrix.issue.unshownContent": "{element} {reference}: placed in cell “{cell}” but not shown here",
   "parameters.matrix.issue.unknown": "{element} {reference}: {kind}",
+  "parameters.matrix.issue.buttonLabelShown": "{element} {reference}: label shown; its action is not supported",
   "parameters.loading": "Loading parameters…",
   "parameters.noProgram":
     "This device has no resolvable application program; parameters cannot be shown.",

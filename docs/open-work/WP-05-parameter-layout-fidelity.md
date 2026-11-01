@@ -12,15 +12,19 @@ feature at a time, never inferred manufacturer behaviour.
 - Parameter-driven row/column captions (`TextParameterRefId`) and `Rename`.
 - Translated row/column captions.
 - Inline sections, nested blocks and `CollapseIfEmpty`.
-- Buttons inside grid cells.
+- Button actions inside grid cells (`EventHandler*`, online callbacks, own
+  `Access`, translated or text-parameter Button text, module-scoped Buttons).
+  The literal text alone is delivered as passive labels.
 - `Table` versus `Grid` visual rules (needs the referenced schema rules
   document) and remaining control hints.
 
 ## Already delivered (do not redo)
 
 Area register, matrix placement, separators, block access, indentation, the
-#26 section-caption resolver (reuse it) and the Alpha 16 block/separator
-`Text` language overlays (A16-07, `cde8d89a3`).
+#26 section-caption resolver (reuse it), the Alpha 16 block/separator
+`Text` language overlays (A16-07, `cde8d89a3`) and, main-only, passive literal
+Button labels in grid cells
+([`button-literal-passive-v1`](../contracts/alpha16-parameter-layout.md#passive-source-button-labels-button-literal-passive-v1)).
 
 ## Done when (per admitted feature)
 

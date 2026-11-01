@@ -275,6 +275,15 @@ unreadable declaration). Drafts, write checks and closed areas are unchanged.
 [Operating instructions](user-guide/05-devices-and-products.md#parameters),
 [ADR-0137](../adr/0137-declared-parameter-grids-reach-the-workspace.md).
 
+## Source Button labels in parameter grids (main-only)
+
+A declared grid shows the literal text of an activated program-owned `Button`
+at its declared cell as plain text with the cue "Source button label – action
+unsupported". It never runs, writes or requests anything; restricted blocks,
+search results and module-scoped Buttons show none. A block holding only such
+a Button is now an area of its own. Not an ETS Button implementation.
+[Contract](../contracts/alpha16-parameter-layout.md#passive-source-button-labels-button-literal-passive-v1).
+
 ## KNX Functions in comparisons, the desktop and MCP (Alpha 14)
 
 A project comparison lists KNX Functions one by one (added, removed, changed,

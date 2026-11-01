@@ -13,7 +13,8 @@ use std::collections::{HashMap, HashSet};
 /// exceeding it reports the source as unavailable rather than claiming that
 /// no grid exists.
 pub const MAX_GRID_EVENTS: usize = crate::parameter_editor::MAX_EDITOR_SOURCE_BYTES;
-const MAX_DEPTH: usize = 64;
+/// Deepest open-element stack any retained-source presentation reader walks.
+pub(super) const MAX_DEPTH: usize = 64;
 /// Deepest `ParameterRefRef/@IndentLevel` shown. The collection declares 1 to 5
 /// (census P4); a larger or malformed value indents nothing.
 pub const MAX_INDENT_LEVEL: u8 = 8;
@@ -336,7 +337,7 @@ fn place(frames: &mut [Frame], owner: Option<usize>, kind: &str, attr: &crate::x
         .push((kind.to_owned(), reference, cell));
 }
 
-fn parse_cell(raw: &str, rows: usize, columns: usize) -> Result<Cell, GridIssueKind> {
+pub(super) fn parse_cell(raw: &str, rows: usize, columns: usize) -> Result<Cell, GridIssueKind> {
     let (row, column) = raw.split_once(',').ok_or(GridIssueKind::CellMalformed)?;
     let digits = |s: &str| !s.is_empty() && s.bytes().all(|b| b.is_ascii_digit());
     if !digits(row) || !digits(column) {

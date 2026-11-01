@@ -1179,18 +1179,44 @@ async fn build_section(
             if let Some(operation) = operation {
                 if let Ok(evidence) = evidence {
                     if !evidence.operation_files.is_empty() {
+                        let system2 =
+                            matches!(&evidence.identity, AdmittedResultIdentity::System2 { .. });
+                        // Contract: a non-System-2 recording reached through its token leaves raw
+                        // after consent; the retained typed result stands in only when it cannot.
+                        let mut note = if system2 {
+                            NOTE_RAW_WITHHELD_PROJECTION
+                        } else {
+                            NOTE_RAW_WITHHELD_RESULT
+                        };
+                        let system2_kind = operation
+                            .operation_kind
+                            .as_deref()
+                            .is_some_and(|kind| kind.starts_with("system2-"));
+                        if !system2 {
+                            match operation_section(
+                                state,
+                                operation,
+                                SectionKind::Operation,
+                                system2_cache,
+                            )
+                            .await
+                            {
+                                Ok(section) => return Ok(vec![section]),
+                                Err(SourceFailure::Conflict) => {
+                                    return Err(SourceFailure::Conflict)
+                                }
+                                // Policy withholds System-2 raw; anything else just could not be read.
+                                Err(SourceFailure::Unavailable(_)) if !system2_kind => {
+                                    note = NOTE_RECORDING_MISSING_RESULT;
+                                }
+                                Err(SourceFailure::Unavailable(_)) => {}
+                            }
+                        }
                         let mut section = BundleSection::new(SectionKind::Operation);
                         section.label = Some(operation.id.clone());
                         section.files = std::mem::take(&mut evidence.operation_files);
                         section.entries = section.files.len();
-                        section.notes.push(
-                            if matches!(&evidence.identity, AdmittedResultIdentity::System2 { .. })
-                            {
-                                NOTE_RAW_WITHHELD_PROJECTION.into()
-                            } else {
-                                NOTE_RAW_WITHHELD_RESULT.into()
-                            },
-                        );
+                        section.notes.push(note.into());
                         return Ok(vec![section]);
                     }
                 }

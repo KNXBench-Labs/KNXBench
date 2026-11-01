@@ -35,6 +35,11 @@ async function shot(page: Page, name: string, theme = "porcelain"): Promise<void
   }
 }
 
+// The app picks its one date-dependent startup joke (holidays, late night) on mount.
+// Start on a neutral weekday morning so none is chosen, then return to the real time
+// so browser and server timestamps in the stills agree.
+const NEUTRAL_START = new Date("2026-11-04T10:30:00");
+
 async function dismissToasts(page: Page): Promise<void> {
   const buttons = page.getByRole("button", { name: "Dismiss" });
   // Wait for the clicked node, not a queue count: another real notification
@@ -84,15 +89,18 @@ async function openParameterArea(page: Page, field: string): Promise<void> {
   throw new Error(`no parameter area shows ${field}`);
 }
 
+// Since Alpha 19 Settings is a page in the center workspace, left with its Back button.
+function settingsPage(page: Page) {
+  return page.getByRole("region", { name: "Settings", exact: true });
+}
+
 async function setTheme(page: Page, theme: string): Promise<void> {
   await page.getByRole("button", { name: "Settings", exact: true }).first().click();
-  const settings = page.getByRole("dialog");
+  const settings = settingsPage(page);
   await settings.getByLabel("Theme", { exact: true }).selectOption(theme);
   await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
   await expect(settings.getByRole("status").filter({ hasText: "Theme saved." })).toBeVisible();
-  await settings.focus();
-  await expect(settings).toBeFocused();
-  await page.keyboard.press("Escape");
+  await settings.getByRole("button", { name: "Back to previous view", exact: true }).click();
   await expect(settings).toBeHidden();
   // The next workflow recording must not begin halfway through the old palette.
   await page.waitForTimeout(400);
@@ -110,7 +118,8 @@ async function captureReleaseDetails(page: Page): Promise<void> {
   const panel = page.getByRole("dialog", { name: "Project history", exact: true });
   await panel.getByLabel("Version name", { exact: true }).fill("Before the kitchen redesign");
   await panel.getByRole("button", { name: "Create version", exact: true }).click();
-  await expect(panel.getByText("Before the kitchen redesign", { exact: true })).toBeVisible();
+  // The version appears as a card in the timeline (the "Project versions" list starts folded).
+  await expect(panel.getByRole("button", { name: /^Before the kitchen redesign/ })).toBeVisible();
   await shot(page, "project-history");
   await panel.getByRole("button", { name: "Close", exact: true }).click();
   await dismissToasts(page);
@@ -146,7 +155,8 @@ async function captureReleaseDetails(page: Page): Promise<void> {
   await shot(page, "device-parameters", "graphite");
 
   await history(page);
-  await expect(panel.getByText("Before the kitchen redesign", { exact: true })).toBeVisible();
+  // The version appears as a card in the timeline (the "Project versions" list starts folded).
+  await expect(panel.getByRole("button", { name: /^Before the kitchen redesign/ })).toBeVisible();
   await shot(page, "project-history", "graphite");
   await panel.getByRole("button", { name: "Close", exact: true }).click();
   await page.getByRole("button", { name: "Log", exact: true }).click();
@@ -182,12 +192,14 @@ test("manual screenshots of the finished application", async ({ page }) => {
   const failures: string[] = [];
   page.on("pageerror", (error) => failures.push(String(error)));
 
+  await page.clock.install({ time: NEUTRAL_START });
   await page.goto("/");
   // ADR-0084: a fresh data directory is a first start, so the guide opens
   // over the welcome page. Photograph it, then close it as a user would;
   // every later screenshot is taken with it seen.
   const guide = page.getByRole("dialog", { name: "Welcome to KNXBench" });
   await expect(guide).toBeVisible();
+  await page.clock.setSystemTime(new Date());
   await shot(page, "onboarding-guide");
   await page.keyboard.press("Escape");
   await expect(guide).toBeHidden();
@@ -278,7 +290,9 @@ test("manual screenshots of the finished application", async ({ page }) => {
   await shot(page, "devices");
 
   await nav(page, "Product catalog");
-  await expect(page.getByText("Switch actuator 4-fold, DIN rail (1)")).toBeVisible();
+  // Since Alpha 16 the catalogue is a sortable table: name and order number are separate cells.
+  const results = page.getByRole("region", { name: "Catalogue results", exact: true });
+  await expect(results.getByRole("row", { name: /^Switch actuator 4-fold, DIN rail / })).toBeVisible();
   await shot(page, "product-catalog");
 
   // The explorer's Add device action opens the wizard; the topology + opens the catalog.
@@ -348,9 +362,13 @@ test("manual screenshots of the finished application", async ({ page }) => {
   await page.keyboard.press("Escape");
 
   await page.locator(".workbench-navigation, aside").getByRole("button", { name: "Settings", exact: true }).first().click();
-  await expect(page.getByRole("dialog")).toBeVisible();
+  const settings = settingsPage(page);
+  await expect(settings.getByRole("heading", { name: "Settings", level: 1 })).toBeVisible();
+  // Opening moves focus to the heading; a reader does not see that focus ring.
+  await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
   await shot(page, "settings");
-  await page.keyboard.press("Escape");
+  await settings.getByRole("button", { name: "Back to previous view", exact: true }).click();
+  await expect(settings).toBeHidden();
 
   // Exercise the first-project tutorial through real UI save/open operations.
   await page.getByRole("button", { name: "Save", exact: true }).first().click();
@@ -404,7 +422,7 @@ test("manual screenshot of the sign-in page", async ({ page }) => {
   await page.reload();
   await expect(page.getByLabel(/Password/i)).toBeVisible();
   // The release being photographed; a stale frontend would show its own version.
-  const version = process.env.MANUAL_EXPECTED_VERSION ?? "0.1.0-alpha.14";
+  const version = process.env.MANUAL_EXPECTED_VERSION ?? "0.1.0-alpha.19";
   await expect(page.getByText(version, { exact: false })).toBeVisible();
   await shot(page, "login", "graphite");
 });

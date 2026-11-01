@@ -392,16 +392,18 @@ value (`bounded()` takes the minimum), and every limit is inclusive.
   check that the profile is unchanged. Native package regressions show that
   installation still refuses distributions.
 - Real input: 37 public OpenKNX release ZIPs, each inspected with a release
-  build in an isolated, loopback-only namespace. All 37 return a partial
-  report: 37 catalogue, application and hardware sections, and 35 baggage
-  sections (the other two releases declare no baggage). Peak RSS was about
-  1.1 GiB, the slowest took 9 s, and the largest report was 174 MiB, about
-  68 % of the report cap. Together they list 3,474,618 unknown occurrences.
-  About 2.94 million of these are inside Dynamic, mostly `HelpContext`,
-  `Row`/`Column` `Name`, `Inline`, `Icon` and `Button` handlers. Installing
-  the same 37 archives in a fresh in-memory product database is still refused:
-  28 with `MissingMaster`, 9 with `UnsafeMember`. The archives themselves are
-  not part of the repository. These figures are from format 2; the run was
-  not repeated with dependency evidence or source candidates.
+  build in an isolated, loopback-only namespace. With format 4 (dependency
+  evidence and source candidates, findings-only rows) all 37 return a partial
+  report. Peak RSS was about 1.6 GiB, the slowest took 9 s, and the largest
+  report was 202 MiB (NeoPixel 0.3), about 79 % of the report cap; together
+  they list 132,020 source-candidate rows. Listing every checked occurrence
+  instead had refused six of them at the report cap, and one release briefly
+  failed the XML working-set ceiling until the Script content range moved out
+  of every node (see Rows and totals). The format-2 run listed 3,474,618
+  unknown occurrences, about 2.94 million of them inside Dynamic, mostly
+  `HelpContext`, `Row`/`Column` `Name`, `Inline`, `Icon` and `Button`
+  handlers. Installing the same 37 archives in a fresh in-memory product
+  database is still refused: 28 with `MissingMaster`, 9 with `UnsafeMember`.
+  The archives themselves are not part of the repository.
 
 Related: [KL-187](../limitations/KL-187-distribution-inspection.md).

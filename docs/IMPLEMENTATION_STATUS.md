@@ -140,6 +140,8 @@ false, and every limitation is listed
   every XML node had grown by a Script content range. That range now lives in
   a side table for `Script` elements only, a unit test pins the node size, and
   the 37 releases again give 37 reports (largest 189 MiB, slowest 13 s).
+  With source candidates (format 4) the 37 releases still give 37 reports:
+  largest 202 MiB, slowest 9 s, peak RSS about 1.6 GiB.
 - **Tests.**
   - Distribution 50 (14 for dependency evidence) and grid 7 in
     knx-productdb; CLI 6; native ZIP

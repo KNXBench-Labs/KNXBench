@@ -63,7 +63,7 @@ async fn environment_consumers(state: &Arc<crate::AppState>) -> EnvironmentConsu
     let mut zip_entries = Vec::new();
     for index in 0..archive.len() {
         let mut entry = archive.by_index(index).unwrap();
-        let name = entry.name().to_string();
+        let name = entry.name().unwrap().to_string();
         let mut bytes = Vec::new();
         entry.read_to_end(&mut bytes).unwrap();
         zip_entries.push((name, bytes));
@@ -435,7 +435,7 @@ async fn exported_entries(
             let mut bytes = Vec::new();
             file.read_to_end(&mut bytes).unwrap();
             (
-                file.name().to_string(),
+                file.name().unwrap().to_string(),
                 String::from_utf8_lossy(&bytes).into_owned(),
             )
         })

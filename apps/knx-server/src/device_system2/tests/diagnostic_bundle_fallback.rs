@@ -545,7 +545,7 @@ async fn retained_operation_without_a_journal_or_recording_is_fixed_unavailable(
         .await
         .unwrap();
     let zip = zip::ZipArchive::new(std::io::Cursor::new(bytes)).unwrap();
-    assert!(!zip.file_names().any(|name| {
+    assert!(!zip.file_names().map(Result::unwrap).any(|name| {
         name == "reports/system2-report.json" || name == "operations/system2-private.json"
     }));
 }

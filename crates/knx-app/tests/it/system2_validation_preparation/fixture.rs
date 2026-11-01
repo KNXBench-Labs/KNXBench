@@ -232,7 +232,7 @@ pub(crate) fn configured_inputs() -> (
     let mut source = Vec::new();
     for i in 0..zip.len() {
         let mut member = zip.by_index(i).unwrap();
-        let name = convert(member.name());
+        let name = convert(&member.name().unwrap());
         let mut text = String::new();
         member.read_to_string(&mut text).unwrap();
         let bytes = convert(&text).into_bytes();

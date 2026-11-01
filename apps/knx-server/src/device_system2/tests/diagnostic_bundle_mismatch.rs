@@ -395,7 +395,7 @@ async fn export_clean(
     assert!(archive.len() > 2, "the bundle holds its sections");
     for index in 0..archive.len() {
         let mut entry = archive.by_index(index).unwrap();
-        let name = entry.name().to_owned();
+        let name = entry.name().unwrap().into_owned();
         assert!(
             !name.ends_with("recording.jsonl"),
             "{name} is a raw recording"
@@ -759,8 +759,9 @@ async fn a_system2_run_refuses_a_foreign_device_and_never_projects_one() {
     assert!(
         !archive
             .file_names()
+            .map(Result::unwrap)
             .any(|name| name.ends_with("device.json")),
         "{:?}",
-        archive.file_names().collect::<Vec<_>>()
+        archive.file_names().map(Result::unwrap).collect::<Vec<_>>()
     );
 }

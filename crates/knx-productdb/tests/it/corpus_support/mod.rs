@@ -392,7 +392,7 @@ fn discover_in_archive(
         if member.is_dir() {
             continue;
         }
-        let name = member.name().to_string();
+        let name = member.name().unwrap().into_owned();
         let lower = name.to_ascii_lowercase();
         if lower.ends_with(".knxprod") || lower.ends_with(".zip") {
             candidates.push((name, index, lower.ends_with(".knxprod")));

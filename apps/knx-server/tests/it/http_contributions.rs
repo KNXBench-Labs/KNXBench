@@ -211,7 +211,10 @@ async fn public_bundle_is_reduced_and_contains_no_source_values_or_original() {
         .await
         .unwrap();
     let mut archive = zip::ZipArchive::new(Cursor::new(raw)).unwrap();
-    let names: Vec<_> = archive.file_names().map(str::to_owned).collect();
+    let names: Vec<_> = archive
+        .file_names()
+        .map(|name| name.unwrap().into_owned())
+        .collect();
     assert_eq!(names, vec!["manifest.json", "findings.json", "README.md"]);
     let mut findings = String::new();
     std::io::Read::read_to_string(

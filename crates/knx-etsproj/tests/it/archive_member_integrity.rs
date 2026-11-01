@@ -193,8 +193,10 @@ fn a_member_that_inflates_past_its_declared_size_is_refused() {
     match import_knxproj_bytes(bytes, "bomb.knxproj") {
         Err(ImportFailure::Container(ContainerError::Read { path, cause })) => {
             assert_eq!(path, "P-0001/BinaryData/bomb.dat");
+            // zip 9 stops the read itself; `read_declared` stays the backstop.
             assert!(
-                cause.contains("more than the declared 100 bytes"),
+                cause.contains("more than the declared 100 bytes")
+                    || cause.contains("larger than its declared uncompressed size"),
                 "{cause}"
             );
         }

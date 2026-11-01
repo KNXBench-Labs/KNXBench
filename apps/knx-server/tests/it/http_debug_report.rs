@@ -98,7 +98,7 @@ fn zip_entry_names(path: &std::path::Path) -> Vec<String> {
     let file = std::fs::File::open(path).unwrap();
     let mut archive = zip::ZipArchive::new(file).unwrap();
     let mut names: Vec<String> = (0..archive.len())
-        .map(|i| archive.by_index(i).unwrap().name().to_string())
+        .map(|i| archive.by_index(i).unwrap().name().unwrap().to_string())
         .collect();
     names.sort();
     names

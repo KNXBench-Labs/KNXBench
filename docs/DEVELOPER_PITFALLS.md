@@ -324,6 +324,19 @@ already found lying in the grass.
   reason is honest; a test that silently returns early is not. `check-corpus-gates`
   looks for such silent gates.
 
+## ZIP dependency
+
+- **`zip` 9 changed behaviour that tests and preflights relied on (8.6 → 9.2).**
+  `ZipFile::name()` and `ZipArchive::file_names()` return `ZipResult<Cow<str>>`;
+  propagate the error in production code. `name()` ignores the UTF-8 flag
+  (UTF-8 first, then CP437; KL-159). `add_extra_field(.., false)` now
+  writes the field into *both* headers (zip 8: local only), so a fixture that
+  also adds it with `central_only = true` gets a duplicate central field. An
+  unsupported compression method opens and fails on the first `read`. Reads
+  past the declared size fail inside `zip`; keep the importer's own
+  `take(declared + 1)` bound anyway. Without `aes-crypto`, `zip` ignores 0x9901
+  fields, so the WP-16 AES consistency checks are the only refusal.
+
 ## Schema and storage
 
 - **Use the version constants, not literals.** `CURRENT_SCHEMA_VERSION` exists

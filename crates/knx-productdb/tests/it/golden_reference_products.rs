@@ -18,7 +18,7 @@ fn manufacturer_files() -> Vec<(String, Vec<u8>)> {
     let mut out = Vec::new();
     for i in 0..archive.len() {
         let mut entry = archive.by_index(i).unwrap();
-        let name = entry.name().to_string();
+        let name = entry.name().unwrap().into_owned();
         if name.starts_with("M-") && !name.ends_with(".signature") {
             let mut bytes = Vec::new();
             std::io::copy(&mut entry, &mut bytes).unwrap();

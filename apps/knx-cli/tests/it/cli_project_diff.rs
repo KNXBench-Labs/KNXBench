@@ -168,7 +168,7 @@ fn write_knxproj_with_recoverable_duplicate_id(dir: &Path) -> std::path::PathBuf
 
     for index in 0..archive.len() {
         let mut entry = archive.by_index(index).unwrap();
-        let name = entry.name().to_string();
+        let name = entry.name().unwrap().to_string();
         let mut bytes = Vec::new();
         entry.read_to_end(&mut bytes).unwrap();
         if name == "P-0001/0.xml" {

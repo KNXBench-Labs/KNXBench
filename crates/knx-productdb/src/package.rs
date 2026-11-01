@@ -1149,9 +1149,9 @@ fn aes_fields(archive: &[u8], range: std::ops::Range<usize>) -> Vec<&[u8]> {
 
 /// Why WinZip AE-x metadata contradicts itself (WP-16): method 99, bit 0 and
 /// exactly one equal 0x9901 field in both headers go together. `zip` takes a
-/// field's method for any record, so a plaintext record could be decoded
-/// differently from its raw method. A consistent record stays unsupported
-/// encryption; malformed field contents are `zip`'s to refuse.
+/// field's method for any record (zip 8; zip 9 ignores the field without
+/// `aes-crypto`), so a plaintext record could be decoded differently from its
+/// raw method. A consistent record stays unsupported encryption.
 fn aes_conflict(
     flags: u16,
     method: u16,
@@ -2941,7 +2941,7 @@ fn open_checked_archive_with_names<'a>(
     for (i, checked) in checked_entries.iter().enumerate() {
         cancellation.checkpoint()?;
         let file = archive.by_index_raw(i).map_err(zip_error)?;
-        let path = file.name().to_string();
+        let path = file.name().map_err(zip_error)?.into_owned();
         let path = path.as_str();
         decoded_path_size = decoded_path_size
             .checked_add(path.len())
@@ -3043,7 +3043,8 @@ pub(crate) fn read_checked_member(
         .by_index_raw(index)
         .map_err(zip_error)?
         .name()
-        .to_string();
+        .map_err(zip_error)?
+        .into_owned();
     let member_error = |error: &dyn fmt::Display| zip_error(format!("{path}: {error}"));
     let mut file = archive
         .by_index(index)

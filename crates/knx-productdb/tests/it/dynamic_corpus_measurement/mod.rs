@@ -47,7 +47,7 @@ fn expected_standard_refusal(name: &str, bytes: &[u8]) -> Option<String> {
         let entry = zip.by_index_raw(i).ok()?;
         total = total.checked_add(entry.size())?;
         if entry.size() > limits.max_member_size || total > limits.max_expanded_size {
-            return Some(entry.name().to_owned());
+            return Some(entry.name().ok()?.into_owned());
         }
     }
     None

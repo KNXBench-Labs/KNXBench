@@ -90,6 +90,13 @@ work is separately bounded and does not follow from successful import.
   https://pkware.cachefly.net/webdocs/casestudies/APPNOTE.TXT
 - Dependency source for pinned `zip` 8.6.0: `SharedBuilder::build`,
   `index_for_name` and `central_header_to_zip_file_inner`; its index keys are
-  raw bytes while displayed names are decoded.
+  raw bytes while displayed names are decoded. Re-checked for `zip` 9.2.1:
+  the index is still keyed by raw name bytes, `ZipFile::name()` now decodes on
+  demand and returns a `Result`, and `index_for_name` falls back to a linear
+  scan over decoded names, so the importer keeps its own validated-identity map.
+  `name()` tries UTF-8 before CP437 regardless of the UTF-8 flag: unflagged
+  names that are valid UTF-8 now decode as UTF-8 (zip 8: CP437). Measured on
+  the private corpus (279 archives, 25,615 members): all 763 unflagged non-ASCII
+  names are invalid UTF-8 and keep their CP437 decoding.
 
 These are documentation/source inspections, not XSD validation or certification.

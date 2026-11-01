@@ -93,6 +93,12 @@ pub(super) fn bind(
     if !stored.is_some_and(|nodes| nodes.values().any(|node| node.kind == "Button")) {
         return (ButtonBinding::Bound, HashMap::new());
     }
+    // Nor when no stored `Button`'s nearest block can render a grid: such a
+    // `Button` never shows a label, so a refused read would hide nothing.
+    // A block whose grid source is unreadable may still be one, so it reads.
+    if stored.is_some_and(|nodes| !any_button_may_have_a_grid(nodes, grids)) {
+        return (ButtonBinding::Bound, HashMap::new());
+    }
     let Some(bytes) = bytes else {
         return (ButtonBinding::SourceUnavailable, HashMap::new());
     };
@@ -102,6 +108,36 @@ pub(super) fn bind(
         Ok(literals) => (ButtonBinding::Bound, literals),
         Err(refusal) => (refusal, HashMap::new()),
     }
+}
+
+/// Whether some stored `Button`'s nearest `ParameterBlock` is a grid or a
+/// grid whose source could not be read; the same walk `bind_source` binds by.
+fn any_button_may_have_a_grid(
+    stored: &BTreeMap<i64, Node>,
+    grids: &HashMap<i64, BlockGrid>,
+) -> bool {
+    stored
+        .iter()
+        .filter(|(_, node)| node.kind == "Button")
+        .any(|(_, button)| {
+            let mut seen = HashSet::new();
+            let mut parent = button.parent;
+            while let Some(at) = parent {
+                let Some(ancestor) = stored.get(&at).filter(|_| seen.insert(at)) else {
+                    return false;
+                };
+                if ancestor.kind == "ParameterBlock" {
+                    return grids.get(&at).is_some_and(|grid| {
+                        matches!(
+                            grid.status,
+                            GridStatus::Grid | GridStatus::SourceUnavailable
+                        )
+                    });
+                }
+                parent = ancestor.parent;
+            }
+            false
+        })
 }
 
 fn bind_source(

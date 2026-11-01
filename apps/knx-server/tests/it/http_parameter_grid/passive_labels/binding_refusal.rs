@@ -120,3 +120,17 @@ async fn reached_module_buttons_are_neither_counted_nor_reported() {
     let closed = refused(&with_module(&single.replace(OPEN, CLOSED)), Some(CORRUPT)).await;
     assert_eq!(unbound(&closed), Vec::<&Value>::new(), "{closed}");
 }
+
+#[tokio::test]
+async fn a_gridless_button_hides_no_label_so_a_refusal_stays_silent() {
+    let grid = r#"<ParameterBlock Id="PB-ONLY" Name="Not a label" Inline="true" Layout="Grid">
+          <Rows><Row Id="ONLY-R1"/></Rows><Columns><Column Id="ONLY-C1" Width="46%"/><Column Id="ONLY-C2" Width="53%"/></Columns>"#;
+    assert!(ONLY.contains(grid));
+    let gridless = ONLY.replace(
+        grid,
+        r#"<ParameterBlock Id="PB-ONLY" Text="Fictional plain page">"#,
+    );
+    let dto = refused(&gridless, Some(CORRUPT)).await;
+    assert_eq!(unbound(&dto), Vec::<&Value>::new(), "{dto}");
+    assert_eq!(passive_ids(&dto), Vec::<String>::new());
+}

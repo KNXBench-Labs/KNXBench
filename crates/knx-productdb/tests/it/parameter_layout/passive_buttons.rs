@@ -452,3 +452,59 @@ fn a_button_is_no_container_for_the_walk() {
         Diagnostic::RefBelowSkippedNode { ref_id: Some(id), .. } if id == "PR-OTHER"
     )));
 }
+
+/// `ONLY` with its grid block stripped to a plain block, as some real products declare.
+fn gridless() -> String {
+    let grid = r#"<ParameterBlock Id="PB-ONLY" Name="Not a label" Inline="true" Layout="Grid">
+          <Rows><Row Id="ONLY-R1"/></Rows><Columns><Column Id="ONLY-C1" Width="46%"/><Column Id="ONLY-C2" Width="53%"/></Columns>"#;
+    assert!(ONLY.contains(grid));
+    ONLY.replace(
+        grid,
+        r#"<ParameterBlock Id="PB-ONLY" Text="Fictional plain page">"#,
+    )
+}
+
+const DRIFT: &str = "UPDATE dynamic_node SET position=position+100 WHERE program_id='A-FIX' AND module_def_id='' AND kind='Button'";
+const CORRUPT: &str = "UPDATE source_file SET bytes=CAST(replace(CAST(bytes AS TEXT),'Fictional source label','Fictional source lab3l') AS BLOB)";
+
+fn binding_after(xml: &str, mutation: &str) -> ButtonBinding {
+    let fixture = ingest(xml);
+    assert!(
+        fixture.conn.execute(mutation, []).unwrap() > 0,
+        "{mutation}"
+    );
+    let layout = load(&fixture.conn, "A-FIX").unwrap();
+    assert_eq!(labels(&layout, &buttons(&fixture.conn, "A-FIX")), []);
+    layout.button_binding()
+}
+
+#[test]
+fn buttons_without_a_grid_block_skip_the_source_read() {
+    // No label could exist, so neither drift nor an unreadable source is read or reported.
+    assert_eq!(binding_after(&gridless(), DRIFT), ButtonBinding::Bound);
+    assert_eq!(binding_after(&gridless(), CORRUPT), ButtonBinding::Bound);
+    // The same refusals still apply to a grid Button, also when its grid source is unreadable.
+    assert_eq!(binding_after(ONLY, DRIFT), ButtonBinding::StructuralDrift);
+    assert_eq!(
+        binding_after(ONLY, CORRUPT),
+        ButtonBinding::SourceUnavailable
+    );
+}
+
+#[test]
+fn one_grid_button_among_gridless_ones_keeps_the_read() {
+    let mixed = gridless().replace(
+        "</Dynamic>",
+        r#"<ParameterBlock Id="PB-GRID" Layout="Grid"><Rows><Row Id="G-R1"/></Rows><Columns><Column Id="G-C1" Width="50%"/></Columns><Button Id="B-GRID" Text="Fictional grid label" Cell="1,1"/></ParameterBlock></Dynamic>"#,
+    );
+    let fixture = ingest(&mixed);
+    let nodes = buttons(&fixture.conn, "A-FIX");
+    let layout = load(&fixture.conn, "A-FIX").unwrap();
+    assert_eq!(layout.button_binding(), ButtonBinding::Bound);
+    let shown: Vec<String> = labels(&layout, &nodes)
+        .into_iter()
+        .map(|label| label.1)
+        .collect();
+    assert_eq!(shown, ["Fictional grid label"]);
+    assert_eq!(binding_after(&mixed, DRIFT), ButtonBinding::StructuralDrift);
+}

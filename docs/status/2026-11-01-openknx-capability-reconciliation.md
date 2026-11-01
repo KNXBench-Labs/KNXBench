@@ -152,8 +152,9 @@ tooling.
     Chromium case in `apps/knx-web/e2e/parameter-matrix.e2e.ts` now shows the
     real-browser behaviour: the typed value is written when focus leaves it,
     and the same editor and the label survive area and search changes.
-  - The owner has not accepted the cue wording ("Source button label – action
-    unsupported"). No maintained document on main records that acceptance.
+  - The owner had not accepted the cue wording ("Source button label – action
+    unsupported"). Accepted on 1 November 2026 after this record
+    ([Button labels][btn], Browser).
 - **Limitation references:** [KL-187][kl187] (distribution inspection),
   KL-003 (layout and editing boundaries), KL-068 (repeated module
   activation), [KL-171][kl171] (UTF-8 text encoding), KL-172 (stored

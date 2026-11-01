@@ -314,14 +314,15 @@ a `.knxproj` it prints:
 ### `knx products inspect-distribution` — read a manufacturer distribution without installing it
 
 Some manufacturers, such as OpenKNX, publish product XML or a release ZIP
-instead of a signed `.knxprod`. Such a file cannot be installed, but you can see
-what it declares:
+instead of a signed `.knxprod`. Such a file cannot be installed, but since Alpha 19
+you can see what it declares:
 
 ```bash
 knx products inspect-distribution RaumController-Release-5.5.1.zip > report.json
 ```
 
-The command takes exactly one file and no options. It prints one JSON report on
+The command takes exactly one file and an optional `--output-format json|html`
+(before or after the file; JSON is the default). It prints one report on
 stdout and changes nothing: no product database, no files, no scripts run. The
 report lists sections, catalogue items, hardware, applications, the raw
 fallback value of every parameter reference, declared scripts, calculations,
@@ -334,7 +335,9 @@ candidates, never corrected), unknown elements and attributes, and an
 exact source reference for each row. It always says `"complete": false`
 and lists what was not checked. A source that cannot be inspected gives a JSON
 error with a `reason` on stderr; a wrong invocation prints the usage text. Both
-exit non-zero. See the [contract](../../contracts/distribution-inspection.md).
+exit non-zero. `--output-format html` writes an offline view of the same report
+to stdout: bounded rows of escaped text and derived PNG previews only, no
+scripts, links or downloads. See the [contract](../../contracts/distribution-inspection.md).
 
 ### `knx products update` — check a newer product file before installing it
 
@@ -764,7 +767,7 @@ rules (plan first, a device-specific phrase, a backup before any write):
 | `knx device compare` | Read only: reads what a download would write and lists every difference from the project |
 | `knx device diagnostics` | Read only: exports descriptor, manufacturer ID and hardware type of one project device (`--device <area.line.device>`, or the internal `--device-id`) to a new local ZIP; previews unless `--confirm-read`; `--simulate` needs no interface; `--profile system2-declared-segments-v1` adds the memory ranges the application declares (see below; [contract](../../contracts/device-diagnostic-export.md)) |
 | `knx device byte-order-probe` | Read only: for a device ETS programmed, says whether it holds its multi-octet parameter values high or low octet first (see below) |
-| `knx device restore` | Plans by default; confirmed execution writes the backed-up regions through the same load procedure, after backing up the current state. Source builds after Alpha 18 additionally require a bindable six-octet serial captured before the original mutation and matching live answers before any write, including the restore's own backup observation. Formats 1/2 remain readable but cannot restore, including partial backups. Format 3 with unavailable, all-zero or all-FF serial evidence also refuses. Existing application/procedure/load-state gates remain; no serial is inferred and there is no bypass. This is bounded memory replay, not whole-device recovery or physical-identity proof ([compatibility and limits](../../contracts/regular-restore-exemplar-binding.md)) |
+| `knx device restore` | Plans by default; confirmed execution writes the backed-up regions through the same load procedure, after backing up the current state. Since Alpha 19 it additionally requires a bindable six-octet serial captured before the original mutation and matching live answers before any write, including the restore's own backup observation. Formats 1/2 remain readable but cannot restore, including partial backups. Format 3 with unavailable, all-zero or all-FF serial evidence also refuses. Existing application/procedure/load-state gates remain; no serial is inferred and there is no bypass. This is bounded memory replay, not whole-device recovery or physical-identity proof ([compatibility and limits](../../contracts/regular-restore-exemplar-binding.md)) |
 | `knx device find-serial` | Read only: which address has a serial number, or which serial number a device has |
 | `knx device service-control` | Reads, and after a backup changes, the Individual Address Write Enable bit |
 | `knx device reset-address`, `knx device address-by-serial` | Plan only today: confirmed writes are refused before a tunnel opens, like `program-address` below |

@@ -1,22 +1,40 @@
-Last updated: 2026-11-01 (Alpha 18 released baseline; newer main-only source features)
+Last updated: 2026-11-01 (Alpha 19 pre-release; source cutoff 2026-11-01)
 
 # KNXBench Features
 
 | Reference | Value |
 | --- | --- |
-| Source snapshot | `v0.1.0-alpha.18` (cutoff `bb2d8e51e`) |
-| Released baseline | `v0.1.0-alpha.18` |
+| Source snapshot | `v0.1.0-alpha.19` (cutoff `858b0a24d`) |
+| Released baseline | `v0.1.0-alpha.19` |
 | Main-only | Newer than released baseline |
 | Local-only | Unpublished; not accepted on main |
 | Scope | Listed boundaries; not universal compatibility |
 | Later scope | No delivery dates promised |
 
-## Main-only after Alpha 18
+## New in Alpha 19
+
+The [release scope](releases/alpha19.md) covers changes after Alpha 18 up to
+cutoff `858b0a24d`. Native/store and model 16 are unchanged; the product database
+moves 30 → 31 through one data-only migration, which Alpha 18 refuses. Regular
+backups of format 3/4, activity-history pages with the `supportDiagnostics` kind and
+System-2 journals with an allocation-comparison record are refused by Alpha 18 as
+well; format-1/2 backups no longer restore. Opening Alpha 19 files in Alpha 18 is
+not tested. Nothing below adds hardware support; programming, restore and
+diagnostic behaviour is tested with simulated or loopback transports only, and
+issues #30 and #22 stay open.
 
 | Feature | Scope | Availability |
 | --- | --- | --- |
-| [Unified diagnostic bundle](contracts/diagnostic-bundle.md) | Operation recorder, one report wizard and consented local ZIP/CLI export; exact retained results, reduced log/monitor/browser views and optional saved-project copy; System-2 closed projection only, omissions disclosed | Main-only |
-| [Settings workspace](contracts/settings-workspace.md) | All existing app settings on one continuous center page with top section jumps; sidebar, toolbar and palette entry; temporarily hides Properties without changing its preference; preserves selected project entity and unsaved note/instructions drafts | Main-only |
+| [Distribution inspection](contracts/distribution-inspection.md) | `knx products inspect-distribution` reads a manufacturer XML or distribution ZIP offline and prints JSON (or an opt-in `--output-format html` view); declared dependencies, source candidates and baggage owners are reported, never executed, repaired or installed; `complete` is always `false` | alpha.19 |
+| [Unified diagnostic bundle](contracts/diagnostic-bundle.md) | Operation recorder, one report wizard and consented local ZIP/CLI export; exact retained results, reduced session-log/bus-monitor/browser sections and optional saved-project copy; System-2 closed projection only, omissions disclosed | alpha.19 |
+| [Post-download run state](contracts/post-download-run-state.md) | Read-only PID 6 observation on exact masks `0701h`/`0705h`, and on `0700h` only after a qualified property description ([0700 contract](contracts/post-download-run-state-0700.md)); property state, not device health | alpha.19 |
+| [Customer-adjustable write refusal](contracts/customer-adjustable-write-admission.md) | Regular preparation and restore refuse when `CustomerAdjustable` declarations are present; no ETS customer-rights semantics | alpha.19 |
+| [Inactive-byte write selection](contracts/inactive-byte-write-selection.md) | Regular Easy3/070n route omits only whole bytes proved exclusive to inactive branches; a failed proof omits nothing; no survival proof | alpha.19 |
+| [Restore exemplar binding](contracts/regular-restore-exemplar-binding.md) | Restore needs captured serial evidence equal to the live answer before any write; format-1/2 backups no longer restore; new backups use format 4 | alpha.19 |
+| [Settings workspace](contracts/settings-workspace.md) | All existing app settings on one continuous center page with top section jumps; sidebar, toolbar and palette entry; temporarily hides Properties without changing its preference; preserves selected project entity and unsaved note/instructions drafts | alpha.19 |
+| [Passive Button labels](contracts/alpha16-parameter-layout.md#passive-source-button-labels-button-literal-passive-v1) | Source-bound grid Button text shown as plain text, marked action unsupported; no Button actions | alpha.19 |
+| [Support live read history](status/2026-10-29-support-diagnostics-activity-kind.md) | The `supportDiagnostics` activity kind is admitted, so a support live read no longer latches activity history unavailable | alpha.19 |
+| Product database 31 | Data-only UTF-8 BOM coordinate correction for `knx_master.xml` declaration ranges; no DDL or product rewrite | alpha.19 |
 
 ## New in Alpha 18
 
@@ -322,7 +340,7 @@ records the tested commit separately from artifact publication verification.
 | [Notes when deleting](adr/0138-notes-get-an-explicit-decision-before-a-delete.md) | Keep, move or delete each affected note; one undo step with the delete | alpha.14 |
 | Installation instructions | Device tab; imported hints, review-first | alpha.10 |
 | Checked parameter editor | Time count, integer slider; source-checked | alpha.10 |
-| IP-address literal editor | Exact source-checked HostAddress text; IPv4/eight-group IPv6, explicit Apply, no network lookup or image codec | Main-only |
+| IP-address literal editor | Exact source-checked HostAddress text; IPv4/eight-group IPv6, explicit Apply, no network lookup or image codec | alpha.19 |
 | Catalogue update with preview | Every package uses review; backup before install, restore/delete listed backups (alpha.12) | alpha.10 |
 | [Vendor ZIP install](adr/0140-vendor-zips-of-product-packages-install-as-a-whole.md) | A manufacturer ZIP of `.knxprod` packages installs all inner packages together (CLI and web preview); other files listed, not stored; large inner packages via the CLI flag | alpha.14 |
 | [Catalogue cleanup](adr/0145-catalogue-cleanup-removes-placements-only.md) | Catalogue rows show application, version, section and source; selected entries removed after a preview and a full backup; products, programs and package files kept | alpha.15 |

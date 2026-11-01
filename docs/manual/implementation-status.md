@@ -2,21 +2,48 @@
 
 # Implementation status
 
-## Main-only after Alpha 18: settings workspace
+## Alpha 19 — current pre-release
+
+Alpha 19 (`v0.1.0-alpha.19`, source cutoff `858b0a24d`) adds read-only
+manufacturer-distribution inspection, the consented diagnostic bundle and narrower
+regular-programming and restore rules. None of it is new hardware support;
+programming, restore and diagnostic behaviour is tested with simulated or loopback
+transports only, and the allocation mismatch of issues #30/#22 is unresolved.
+[Release scope, upgrade notes and boundaries](../releases/alpha19.md).
+
+| Capability | Boundary |
+| --- | --- |
+| Distribution inspection | `knx products inspect-distribution <source.xml\|source.zip>` prints JSON (or opt-in `--output-format html`) about catalogue, hardware, application, dependency, source-candidate and baggage facts. It installs nothing, runs no scripts, uses no network and always reports `complete: false`. [Contract](../contracts/distribution-inspection.md). |
+| Diagnostic bundle | **Report problem…** builds one reviewed, consented local ZIP; on device/bus CLI commands `--diagnostic-bundle <new.zip>` is consent for that invocation. See the sections below. System-2 leaves only as its closed projection and short report. |
+| Post-download run state | The read-only check after a regular download can report PID 6 of the application program object on exact masks `0701h`/`0705h`, and on `0700h` only after a qualified property description. It is the property's state, not device health. [Contract](../contracts/post-download-run-state.md). |
+| Write and restore rules | `CustomerAdjustable` declarations refuse regular preparation and restore; the Easy3/070n route omits only whole bytes proved inactive; restore needs captured serial evidence that matches the live answer, so format-1/2 backups no longer restore. New backups use format 4. [Inactive bytes](../contracts/inactive-byte-write-selection.md) · [restore binding](../contracts/regular-restore-exemplar-binding.md). |
+| Workbench | Settings as a center page, passive source Button labels, a checked IP-address literal editor and the support-read activity-history fix. |
+
+Native/store and model **16** are unchanged; the product database moves **30 → 31**
+through one data-only migration on a writable open. Alpha 18 refuses product31,
+format-3/4 device backups, activity-history pages with the `supportDiagnostics`
+kind and System-2 journals with an allocation-comparison record. Opening Alpha 19
+files in Alpha 18 is not tested. Keep independent backups before upgrading.
+
+<a id="main-only-after-alpha-18-settings-workspace"></a>
+
+## Settings workspace (since Alpha 19)
 
 App settings use one continuous center-workspace page, with top section jumps,
 normal navigation and no modal Escape behavior. Settings remains available
 without a project. Properties is temporarily hidden without changing its prior
 visibility preference; project selection and real notes/instructions editor
 drafts remain intact. Existing immediate-apply, acknowledged-save and failure
-feedback paths are unchanged. Published Alpha 18 still has the older modal.
+feedback paths are unchanged. Alpha 18 and earlier have the older modal.
 [Settings contract](../contracts/settings-workspace.md) ·
 [Opening Settings](user-guide/09-settings-and-appearance.md#opening-settings).
 Browser verification is not native WebKitGTK/Tauri or hardware acceptance.
 
 <a id="diag-03-local-candidate--not-released-29-october-2026"></a>
 
-## DIAG-03 main-only — not in Alpha 18 (31 October 2026)
+<a id="diag-03-main-only--not-in-alpha-18-31-october-2026"></a>
+
+## DIAG-03 diagnostic bundle (since Alpha 19)
 
 The recorder/bundle foundation reached main through `bc77abdb2`; the supplementary-section, quit-layering and no-source review closeout is delivered through `7443e2ea6`. The latest [source acceptance](../status/2026-11-01-diag03-closeout.md) includes actual EN/DE production-Web downloads, not only API fixtures. The
 server records tunnel-opening device operations; the Web wizard and CLI share
@@ -24,7 +51,7 @@ previewed, explicitly consented local ZIP export. A real simulator → server �
 production-Web → ZIP run checked byte-identical recordings, EN/DE layouts and
 installed-CLI flag boundaries. All fourteen original System-2 boundary cases ran
 on synthetic data with real producers and writers. These are source-bound
-software checks, not physical-hardware acceptance or a new release.
+software checks, not physical-hardware acceptance.
 
 The optional whole-project section copies the **saved** native project, not
 unsaved edits; it stays off by default and is not comprehensive anonymization.
@@ -43,7 +70,9 @@ System-2 export.
 
 <a id="source-implementation-after-alpha-17-system-2-results-and-reports"></a>
 
-## Alpha 18 — current pre-release
+<a id="alpha-18--current-pre-release"></a>
+
+## Alpha 18 — previous pre-release (history)
 
 Alpha 18 (`v0.1.0-alpha.18`, source cutoff `bb2d8e51e`) answers issue #31 and
 follows up on issue #30. None of it is new hardware support; System-2, tunnel and
@@ -282,7 +311,9 @@ unreadable declaration). Drafts, write checks and closed areas are unchanged.
 [Operating instructions](user-guide/05-devices-and-products.md#parameters),
 [ADR-0137](../adr/0137-declared-parameter-grids-reach-the-workspace.md).
 
-## Source Button labels in parameter grids (main-only)
+<a id="source-button-labels-in-parameter-grids-main-only"></a>
+
+## Source Button labels in parameter grids (since Alpha 19)
 
 A declared grid shows the literal text of an activated program-owned `Button`
 at its declared cell as plain text with the cue "Source button label – action
@@ -524,11 +555,11 @@ count with their declared unit, sliders where the manufacturer declared one, and
 colour/picture values unchanged with a note
 ([how to use it](user-guide/05-devices-and-products.md#checked-editor-since-alpha-10),
 [limits](../KNOWN_LIMITATIONS.md#checked-parameter-editors-in-the-device-editor-2026-10-12)).
-Included in Alpha.10. Source after Alpha 18 additionally offers a checked
+Included in Alpha.10. Since Alpha 19 it additionally offers a checked
 IPAddress literal editor for an exact `HostAddress` source declaration. It keeps
 IPv4/eight-group IPv6 spelling through explicit Apply, without address lookup,
 automatic repair or a memory codec. Other source forms retain the existing plain
-field. This addition is Main-only, not included in Alpha 18; broader specialised
+field. Alpha 18 and earlier do not have this addition; broader specialised
 codecs and module mapping remain open.
 
 ## Notes follow-ups (12 October 2026 source)

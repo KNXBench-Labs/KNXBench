@@ -29,7 +29,12 @@ similar) can look things up in a project instead of guessing:
 > file. It never reaches the KNX bus: the program is not even linked against
 > the bus code. The tool names and answers may still change during the alpha.
 
-**Alpha 18 upgrade:** update `knx-mcp` with the application. Native/model16 is
+**Alpha 19 upgrade:** update `knx-mcp` with the application. Native/model16 is
+unchanged; the product database moves 30 → 31 and Alpha 18 refuses it, so keep the
+reader and the application on the same release. The MCP tools are unchanged.
+[Release scope](../../releases/alpha19.md#upgrade).
+
+**Earlier Alpha 18 upgrade:** update `knx-mcp` with the application. Native/model16 is
 unchanged; the product database moves 28 → 30 and Alpha 17 refuses it, so keep the
 reader and the application on the same release. No MCP tool changes beyond the
 shared CSV import path that `validate_ga_csv` validates (it never applies).

@@ -99,8 +99,8 @@ warning. The quick-start plaintext password is visible in the container environm
 and may enter shell history; use [Setting a password](#setting-a-password) for a
 hashed credential in a lasting setup.
 
-- **Tags:** the release version without its `v` (`0.1.0-alpha.18` for the tag
-  `v0.1.0-alpha.18`) and `latest`. While KNXBench is in alpha, `latest` moves
+- **Tags:** the release version without its `v` (`0.1.0-alpha.19` for the tag
+  `v0.1.0-alpha.19`) and `latest`. While KNXBench is in alpha, `latest` moves
   with every pre-release; pin a version tag if an update should be your own
   decision.
 - **Availability:** from `v0.1.0-alpha.6` (9 October 2026) on; `v0.1.0-alpha.5`
@@ -165,7 +165,26 @@ those devices' **Parameters** tab and choose **Restore from original .knxproj…
 project byte for byte are installed; save the project afterwards so its file carries
 them from then on.
 
-### Alpha 18 upgrade boundary
+### Alpha 19 upgrade boundary
+
+Close KNXBench and independently back up the entire mounted data directory,
+including `products.sqlite`, `device-backups/` and `activity-history.sqlite`, before
+replacing the container. Native/store and model 16 are unchanged. The server
+migrates the product database 30 → 31 in place at startup through one data-only
+migration. Catalogue-writing CLI commands also migrate on writable open. An Alpha 18
+image refuses product31 as newer than it supports and starts without a catalogue;
+there is no downgrade path, so going back means restoring the pre-upgrade copies.
+Alpha 18 also refuses format-3/4 device backups, activity-history pages with the new
+`supportDiagnostics` kind and System-2 journals with an allocation-comparison
+record. Format-1/2 backups no longer restore. Opening Alpha 19 data in an Alpha 18
+image is not tested. Operation recordings are written to the data directory's
+`diagnostics/` folder by default; `-e KNX_DIAGNOSTIC_RECORDING=off` disables them at
+startup. Port 8484 and host-network exposure are unchanged.
+[Release scope](../../releases/alpha19.md#upgrade).
+
+<a id="alpha-18-upgrade-boundary"></a>
+
+### Alpha 18 upgrade boundary (historical)
 
 Close KNXBench and independently back up the entire mounted data directory,
 including `products.sqlite`, `device-backups/` and `activity-history.sqlite`, before
@@ -387,7 +406,7 @@ stopping fails, the service remains stopped until you correct it; this is not an
 automatic rollback.
 
 To choose a fixed release, replace `latest` in **both** image references with a
-published version such as `0.1.0-alpha.18`. The Linux default keeps
+published version such as `0.1.0-alpha.19`. The Linux default keeps
 `--network host` and `-e KNX_PORT=8484` (or your chosen port), as explained in
 [Networking](#networking). If migrating an older bridge deployment to host mode,
 review the firewall first: the authenticated listener becomes reachable on all

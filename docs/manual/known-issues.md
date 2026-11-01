@@ -8,31 +8,37 @@ Historical titles do not mean that their old defect is still present. The
 [source/test audit](../status/2026-10-08-known-issues-status-audit.md) records
 the reconciliation; formal task dispositions remain in the engineering ledger.
 
-## Product database 31 — source newer than Alpha 18
+<a id="product-database-31--source-newer-than-alpha-18"></a>
 
-Current source moves the product database from 30 to 31 the first time it opens
+## Product database 31 (since Alpha 19)
+
+Alpha 19 moves the product database from 30 to 31 the first time it opens
 it for writing. The step only rewrites master-data byte ranges (for files that
 start with a byte-order mark); products, programs and parameters stay as they
-are. Alpha 18 then refuses that catalogue as newer than it supports, so keep a
-copy of the catalogue file before you try a newer build. Readers migrate an
+are. Alpha 18 then refuses that catalogue as newer than it supports and starts
+without products, so keep a copy of the catalogue file before you upgrade. Readers migrate an
 in-memory copy and leave the file at its own version.
 
-## Settings center page — source newer than Alpha 18
+<a id="settings-center-page--source-newer-than-alpha-18"></a>
+
+## Settings center page (since Alpha 19)
 
 The [settings workspace](../contracts/settings-workspace.md) is tested with
 mocked Chromium APIs in EN/DE at wide/narrow sizes and supported zoom bounds.
 This does not establish native WebKitGTK/Tauri rendering or hardware acceptance.
 At 400px and 150% zoom a native single-line select may abbreviate its option
-text; its accessible label and control remain reachable. Published Alpha 18
-retains the older modal Settings window; released screenshots are not replaced
-by current-source captures.
+text; its accessible label and control remain reachable. Alpha 18 and earlier
+retain the older modal Settings window; the published screenshots were not
+replaced for this release.
 
 <a id="diag-03-candidate--private-comparison-export-is-incomplete"></a>
 
-## DIAG-03 main-only — diagnostic bundle privacy boundaries
+<a id="diag-03-main-only--diagnostic-bundle-privacy-boundaries"></a>
 
-The unified diagnostic bundle foundation reached main through `bc77abdb2`; its supplementary/quit/review closeout is delivered through `7443e2ea6`, not
-in the immutable Alpha 18 artifacts. [Source acceptance](../status/2026-11-01-diag03-closeout.md) remains distinct from release, native-shell and hardware qualification. The saved-project opt-in copy removes recognized credential fields and reports
+## Diagnostic bundle privacy boundaries (since Alpha 19)
+
+The unified diagnostic bundle foundation reached main through `bc77abdb2`; its supplementary/quit/review closeout is delivered through `7443e2ea6`. Both ship
+in Alpha 19; Alpha 18 has no bundle. [Source acceptance](../status/2026-11-01-diag03-closeout.md) remains distinct from release, native-shell and hardware qualification. The saved-project opt-in copy removes recognized credential fields and reports
 withheld data, but is not anonymous. The existing wire redactor handles named
 APDU key services; it does not prove arbitrary memory or every recording entry
 credential-free. Therefore declared memory and raw non-System-2 recordings are
@@ -62,7 +68,27 @@ sidecars to bypass the refusal; see [CLI input handling](user-guide/10-command-l
 Source delivery and internal runtime checks are complete on `4eee65d8`; a new
 release is not implied. No receiver/bus compatibility is claimed.
 
-## Alpha 18 — pre-release scope and evidence limits
+## Alpha 19 — pre-release scope and evidence limits
+
+Alpha 19 (`v0.1.0-alpha.19`) is a pre-release with source cutoff `858b0a24d`
+(1 November 2026). Its programming, restore and diagnostic behaviour is tested with
+simulated or loopback transports, intercepted browsers and source review only: no
+physical-hardware certification, recovery guarantee or ETS equivalence follows.
+The customer-adjustable refusal is conservative and does not implement ETS customer
+rights; omitting inactive bytes does not prove that they survive unload, allocation
+or restart; a matching serial number is a necessary restore guard, not absolute
+device identity. Distribution inspection is read-only and partial, with no XSD or
+authenticity check and no installation authority. The diagnostic bundle is private,
+not anonymous. Settings evidence is mocked Chromium, not native WebKitGTK/Tauri.
+System-2 stays experimental and limited to UP 258D12; the allocation mismatch
+behind issues #30 and #22 is unresolved and both stay open. PRG-01/KL-007 stay open.
+The product database moves 30 → 31 and Alpha 18 refuses it; opening Alpha 19 files in
+Alpha 18 is not tested and there is no downgrade path.
+[Release scope and boundaries](../releases/alpha19.md#boundaries).
+
+<a id="alpha-18--pre-release-scope-and-evidence-limits"></a>
+
+## Alpha 18 — previous pre-release scope and evidence limits
 
 Alpha 18 (`v0.1.0-alpha.18`) is a pre-release with source cutoff `bb2d8e51e`
 (28 October 2026). Its System-2, tunnel and report behaviour is tested with simulated or

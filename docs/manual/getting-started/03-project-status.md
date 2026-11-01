@@ -9,34 +9,38 @@ Read this chapter before you trust KNXBench with a project you care about.
 Every part of KNXBench carries its own version
 ([ADR-0018](../../adr/0018-program-versions-and-file-headers.md)). Since the
 `v0.1.0-alpha.6` release (9 October 2026), application versions have been aligned.
-Alpha 18 is a pre-release with source cutoff 28 October 2026 and aligns the CLI, desktop,
-web frontend, server and `knx-mcp` at `0.1.0-alpha.18`; library crates keep their
-own numbers. Its [release scope](../../releases/alpha18.md) uses source cutoff
-`bb2d8e51e`. [Installation](04-installation.md) names the Alpha 18 artifacts.
+Alpha 19 is a pre-release with source cutoff 1 November 2026 and aligns the CLI, desktop,
+web frontend, server and `knx-mcp` at `0.1.0-alpha.19`; library crates keep their
+own numbers. Its [release scope](../../releases/alpha19.md) uses source cutoff
+`858b0a24d`. [Installation](04-installation.md) names the Alpha 19 artifacts.
 
-Alpha 18 answers issue #31: after an experimental UP 258D12 System-2 run the panel
-shows what the journal proves (nothing written, transfer incomplete, transfer
-complete with final verification unfinished, verified, unknown), which operation of
-the last step stopped when that could be classified, a neutral **S2** chip in the
-device list and a saveable report. For issue #30 the tunnel names why it closed and
-experimental waits are longer. It also adds group-address CSV column profiles,
-German CLI reports and an explicit installation choice for catalogue devices. None
-of this is new hardware support, and the allocation mismatch behind issues #30 and
-#22 is unresolved. [Release notes](../../releases/alpha18.md) keep the exact
-boundaries together.
+Alpha 19 adds `knx products inspect-distribution`, a read-only offline report on
+OpenKNX and other manufacturer distributions that installs nothing and runs no
+scripts. **Report problem…** opens one wizard that builds a reviewed, consented
+diagnostic ZIP from operation recordings, reduced session-log, bus-monitor and
+browser sections and other evidence; nothing is uploaded. Regular programming
+refuses customer-adjustable declarations, omits only bytes proved inactive, can
+report the run state after a download on exact masks and restores only when the
+device answers with the serial number captured in the backup. Settings opens as a
+center page. None of this is new hardware support, and the allocation mismatch
+behind issues #30 and #22 is unresolved. [Release notes](../../releases/alpha19.md)
+keep the exact boundaries together.
 The manual and README screenshots still show the published Alpha 14 server and
 frontend; media was not refreshed for this release.
 
 **Before upgrading:** close the app and independently back up `.knxdb` files and
 all Docker data, including the product database and device backups. Native/store
-and core model **16** are unchanged; the product database moves **28 → 30** on a
-writable open, and Alpha 17 refuses it. Opening Alpha 18 files in Alpha 17 is
-**not tested**. Alpha 17 also refuses defaults-profile-v3 bundles and System-2
-journals with a final-step record. Alpha 15 refuses product28; Alpha 11 and
-earlier refuse native16. Returning means restoring independent copies, not
-pressing Undo. Update `knx-mcp` with the application.
+and core model **16** are unchanged; the product database moves **30 → 31** on a
+writable open, and Alpha 18 refuses it. Opening Alpha 19 files in Alpha 18 is
+**not tested**. Alpha 18 also refuses device backups of format 3/4, activity-history
+pages with the new support-read kind and System-2 journals with an
+allocation-comparison record. Backups of format 1/2 no longer restore. Alpha 17
+refuses product30; Alpha 11 and earlier refuse native16. Returning means restoring
+independent copies, not pressing Undo. Update `knx-mcp` with the application.
 
-**Earlier releases:** [Alpha 17](../../releases/alpha17.md) added the
+**Earlier releases:** [Alpha 18](../../releases/alpha18.md) added the System-2
+run result, final-step category, S2 chip and report, group-address CSV profiles and
+German CLI reports. [Alpha 17](../../releases/alpha17.md) added the
 UP 258D12 prestate observations and the regular-download checks. [Alpha 16](../../releases/alpha16.md) added cancellable
 catalogue jobs, confirmed comparison-to-project adoption, carried original
 packages and migrated product26 → 28. [Alpha 15](../../releases/alpha15.md) moved

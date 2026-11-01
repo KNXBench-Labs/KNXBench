@@ -27,16 +27,24 @@ text; its accessible label and control remain reachable. Published Alpha 18
 retains the older modal Settings window; released screenshots are not replaced
 by current-source captures.
 
-## DIAG-03 candidate — private comparison export is incomplete
+<a id="diag-03-candidate--private-comparison-export-is-incomplete"></a>
 
-The local diagnostic-bundle candidate is not a release or full-package approval.
-The saved-project opt-in copy removes recognized credential fields and reports
+## DIAG-03 main-only — diagnostic bundle privacy boundaries
+
+The unified diagnostic bundle is implemented on main through `bc77abdb2`, not
+in the published Alpha 18 artifacts. The saved-project opt-in copy removes recognized credential fields and reports
 withheld data, but is not anonymous. The existing wire redactor handles named
 APDU key services; it does not prove arbitrary memory or every recording entry
 credential-free. Therefore declared memory and raw non-System-2 recordings are
 exported only after explicit consent and carry a "possibly passwords; keep
 private" note; recognized keys stay redacted at capture. Raw System-2
-expected/readback bytes are still never exported.
+expected/readback bytes are still never exported. The supplementary log and
+browser sections are reduced typed views: omitted messages/details/paths are
+counted, not silently reported as empty. The monitor keeps an explicitly reviewed
+window and excludes access/text, unclassified and management payloads. Known
+typed group values and project labels can still identify an installation; no
+comprehensive secret detection is claimed. See the
+[section rules](../contracts/diagnostic-bundle.md#reduced-log-and-browser-facts).
 [Source-grounded limits](../research/2026-10-29-system2-bundle-credential-boundary.md) ·
 [Current work](../open-work/DIAG-03-unified-diagnostic-bundle.md).
 

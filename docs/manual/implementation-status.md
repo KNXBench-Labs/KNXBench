@@ -14,23 +14,30 @@ feedback paths are unchanged. Published Alpha 18 still has the older modal.
 [Opening Settings](user-guide/09-settings-and-appearance.md#opening-settings).
 Browser verification is not native WebKitGTK/Tauri or hardware acceptance.
 
-## DIAG-03 local candidate — not released (29 October 2026)
+<a id="diag-03-local-candidate--not-released-29-october-2026"></a>
 
-The unified bundle candidate can opt in to a copy of the **saved** native project,
-not unsaved edits. This uses the existing credential-removing/withholding helper;
-project inclusion stays off by default. It is not comprehensive anonymization.
-Focused synthetic HTTP cases exercise review, export, native reopen and refusal
-guards; this is not whole-package, browser or hardware acceptance. The candidate
-admits a closed private System-2 projection and report through one validated
-retained source, while raw System-2 recording bodies and unadmitted
-expected/readback sources remain withheld. By owner decision, declared memory and
-non-System-2 raw recordings leave after consent with a "possibly passwords; keep
-private" note; they are not credential-classified. The CLI bundle option now attaches the same typed
-private evidence after device teardown, store release and activity-guard
-settlement. This does not establish the actual installed CLI boundary, full raw
-P1/P2 or Original14 delivery, real HTTP plus built-Web acceptance, or the whole
-O1 goal. Do not interpret the candidate as part of Alpha 18 or as complete
-raw-evidence delivery.
+## DIAG-03 main-only — not in Alpha 18 (31 October 2026)
+
+The unified diagnostic bundle is implemented on main through `bc77abdb2`. The
+server records tunnel-opening device operations; the Web wizard and CLI share
+previewed, explicitly consented local ZIP export. A real simulator → server →
+production-Web → ZIP run checked byte-identical recordings, EN/DE layouts and
+installed-CLI flag boundaries. All fourteen original System-2 boundary cases ran
+on synthetic data with real producers and writers. These are source-bound
+software checks, not physical-hardware acceptance or a new release.
+
+The optional whole-project section copies the **saved** native project, not
+unsaved edits; it stays off by default and is not comprehensive anonymization.
+System-2 exports only an admitted closed projection and report, never raw
+expected/readback bytes or recordings. Declared memory and raw non-System-2
+recordings require consent and carry a "possibly passwords; keep private" note;
+recognized keys stay redacted at capture, but arbitrary memory is not classified
+as credential-free. Session log and browser state now carry reduced typed facts
+with explicit omitted-field counts, not arbitrary free error text. The optional
+monitor section pins the existing session's reviewed ten-minute window so new
+traffic does not change what was reviewed; access/text and unclassified payloads
+are withheld. P1/P2 would apply only to a separately authorized future raw
+System-2 export.
 [Work/status](../open-work/DIAG-03-unified-diagnostic-bundle.md) ·
 [Privacy boundary](../research/2026-10-29-system2-bundle-credential-boundary.md).
 

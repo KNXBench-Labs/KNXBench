@@ -553,16 +553,18 @@ pub(super) fn inspect(
                 graph_cycle_anchor = anchor.map(|a| doc.coordinate(a)).transpose()?;
             }
         }
-        let content = (kind == Kind::Script).then(|| {
-            let (start, end) = node.content;
-            let bytes = &doc.bytes[start..end];
-            DistributionRawContent {
-                start_byte: start as u64,
-                end_byte: end as u64,
-                size: bytes.len() as u64,
-                sha256: crate::sha256_hex(bytes),
-            }
-        });
+        let content = (kind == Kind::Script)
+            .then(|| doc.script_content(id))
+            .flatten()
+            .map(|(start, end)| {
+                let bytes = &doc.bytes[start..end];
+                DistributionRawContent {
+                    start_byte: start as u64,
+                    end_byte: end as u64,
+                    size: bytes.len() as u64,
+                    sha256: crate::sha256_hex(bytes),
+                }
+            });
         let mut conditions = Vec::new();
         if matches!(kind, Kind::Assign | Kind::ButtonHandler) {
             let mut next = node.parent;

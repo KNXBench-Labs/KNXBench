@@ -104,15 +104,15 @@ the next step. Nothing is collected yet.
 ### Step 2: contents
 
 The wizard now asks KNXBench what it can collect and shows one checkbox per part.
-The current source candidate admits the environment plus a closed private
-System-2 projection and its short report when their retained identity and
-provenance validate. For other operations it includes the
-recording as written, with recognised KNX keys already removed by the recorder;
-it is marked "contains device configuration, possibly passwords; keep private"
-and leaves only after your consent. Other sources that have not passed this private
-admission remain greyed out with the same fixed unavailable explanation.
+The environment is always included. A retained System-2 operation contributes
+only its closed private projection and short report when identity/provenance
+validate; raw System-2 bytes never leave. For other operations the recording is
+included as written, with recognised KNX keys already removed by the recorder.
+It is marked "contains device configuration, possibly passwords; keep private"
+and leaves only after your consent. Unavailable sources are greyed out with a
+specific, non-sensitive explanation.
 
-The intended complete workflow is:
+The available parts depend on the problem type:
 
 - **Version and environment** is always included and cannot be unticked.
 - **Recording of the operation**: the device operation the report is about. The
@@ -122,7 +122,7 @@ The intended complete workflow is:
   **Short reports of this operation**, **Session log**, **Import report**,
   **Catalogue and product identity**, **Whole project (.knxdb)**, **Bus monitor,
   last 10 minutes** and, for user-interface problems, **Browser state** (language,
-  theme, window size, zoom, the last error messages).
+  theme, window size, zoom and reduced recent-error metadata).
 - A part that cannot be included is greyed out with a reviewed, non-sensitive
   reason.
 
@@ -132,6 +132,23 @@ KNXBench does not split the file. Browser state is limited to 64 KiB of serializ
 UTF-8, including JSON escaping. The newest errors have priority; shortening and
 omission counts are shown. Unticking Browser state omits that payload entirely
 and you can select it again.
+
+**Session log and Browser state are reduced views, not raw error dumps.** They
+keep chronology, known operation sources and fixed messages; arbitrary messages,
+paths and details are withheld per field and counted. An omitted error message
+is not evidence that no error happened. Unknown browser fields are counted, not
+copied, and imported theme/language identities may appear as **other**.
+
+**Bus monitor** uses only its existing buffer and never starts a connection.
+The preview pins that session's last-ten-minutes window; later telegrams are not
+silently added while you inspect it. Known typed group values can be included;
+access codes, text values, unclassified payloads and management payloads are
+withheld with counts. Without an open project or a resolved data-point type,
+monitor rows contain transport metadata only, not values or octets. If no monitor
+session exists, the checkbox explains why
+there is no source. An empty retained window is shown as empty, not unavailable.
+Stopping/replacing the session or eviction of a reviewed row requires a fresh
+preview; ordinary new traffic does not.
 
 The preview binds the resolved operation, target, project/server/revision and
 selected contents. Text and ZIP requests use that same review. Changed content
@@ -193,9 +210,10 @@ of the data directory (for Docker on the mounted volume). KNXBench keeps the las
 **100 operations or 512 MiB**, whichever comes first, and removes the oldest
 first; failed operations are kept longest.
 
-Full relevant diagnostic data except secrets remains the O1 target. It is not a
-claim about the current admitted slice, and raw System-2 P1/P2 data and the full
-original-data set remain outside this candidate's acceptance.
+The original fourteen-case System-2 bundle matrix was executed on synthetic
+data with real producers and writers. That does not authorize a raw System-2
+export, certify arbitrary memory as secret-free or resolve the physical
+allocation mismatch behind issues #30/#22.
 
 **Delete recordings…** in step 2 deletes all of them after a confirmation;
 recordings being written at that moment are kept and named.

@@ -1211,8 +1211,10 @@ pub(super) fn inspect(
                 }
             }
             if let Some((_, check)) = member {
-                let listed =
-                    all || check.comparison != DistributionIntervalComparison::WithinExtent;
+                // An explicit zero width stays visible: `zeroWidthDeclared` is its own observation.
+                let listed = all
+                    || check.zero_width_declared
+                    || check.comparison != DistributionIntervalComparison::WithinExtent;
                 count(
                     (app, Kind::UnionMemberInterval, None, Some(check.comparison)),
                     listed,

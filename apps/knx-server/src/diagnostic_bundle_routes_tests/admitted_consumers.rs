@@ -403,6 +403,8 @@ async fn explicit_unsafe_recording_is_fixed_unavailable_before_any_section_file(
         super::super::SectionScope {
             recordings: std::slice::from_ref(&summary),
             projectable: Err(super::super::SourceFailure::unavailable()),
+            pinned_monitor: None,
+            monitor: &mut None,
         },
         &mut cache,
     )
@@ -861,11 +863,12 @@ async fn all_outward_surfaces_use_only_admitted_values() {
         .unwrap();
     assert_eq!(catalogue["selected"], true, "{catalogue}");
     assert_eq!(catalogue["unavailable"], Value::Null);
-    let withheld = "this section is withheld until its content is admitted as free of credentials";
     for (kind, reason) in [
-        ("sessionLog", withheld),
         ("device", "no device is chosen"),
-        ("busMonitor", withheld),
+        (
+            "busMonitor",
+            "the bus monitor is not running in this server session",
+        ),
         ("legacyReports", "no operation is chosen"),
     ] {
         let offer = view["offers"]
@@ -894,6 +897,7 @@ async fn all_outward_surfaces_use_only_admitted_values() {
         [
             "manifest.json",
             "environment/environment.json",
+            "session-log/session-log.json",
             "catalogue/catalogue.json"
         ]
     );
@@ -914,11 +918,9 @@ async fn all_outward_surfaces_use_only_admitted_values() {
         .iter()
         .find(|offer| offer["kind"] == "clientState")
         .unwrap();
-    assert_eq!(offer["selected"], false);
-    assert_eq!(
-        offer["unavailable"],
-        "this section is withheld until its content is admitted as free of credentials"
-    );
+    // The wrong-typed error is withheld and counted, never echoed.
+    assert_eq!(offer["selected"], true);
+    assert_eq!(offer["unavailable"], Value::Null);
     assert!(!client.to_string().contains("PRIVATE_CLIENT_SENTINEL"));
 }
 

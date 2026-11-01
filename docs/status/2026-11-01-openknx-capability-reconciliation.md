@@ -142,13 +142,15 @@ tooling.
     effect contracts, with their own oracle and recovery gates
     ([WP-14][wp14]).
 - **Deferred from OKX-05:**
-  - A refused label binding has no diagnostic of its own; only the generic
-    `unshownContent` issue remains ([Button labels][btn], Limits).
+  - A refused label binding had no diagnostic of its own. Delivered on
+    1 November 2026 after this record: one `passiveLabelsUnbound` warning
+    names the cause ([Button labels][btn], Refused binding).
   - The extra source read per panel is not measured on the largest retained
     real program.
-  - Draft retention next to passive labels is covered in Vitest
-    (`web/ParameterWorkspace.test.tsx`) but not in Chromium:
-    `apps/knx-web/e2e/parameter-matrix.e2e.ts` has no draft case.
+  - Draft retention next to passive labels was covered in Vitest only. A
+    Chromium case in `apps/knx-web/e2e/parameter-matrix.e2e.ts` now shows the
+    real-browser behaviour: the typed value is written when focus leaves it,
+    and the same editor and the label survive area and search changes.
   - The owner has not accepted the cue wording ("Source button label – action
     unsupported"). No maintained document on main records that acceptance.
 - **Limitation references:** [KL-187][kl187] (distribution inspection),

@@ -36,6 +36,27 @@ full pinned compatibility matrix was not run (owner-approved 28-file cross-secti
 instead). Limits are explicit in the
 [public verification receipt](evidence/release-alpha19-2026-11-01.json).
 
+## Refused passive-label binding gets its own diagnostic (1 November 2026 source)
+
+OKX-05 follow-up. When the retained source cannot be bound to the stored
+`Dynamic` tree and at least one reached program `Button` therefore shows no
+label, the parameter panel now carries one program-level
+`passiveLabelsUnbound` warning. Its detail names the cause
+(`sourceUnavailable`, `structuralDrift`, `duplicateButtonId`) and the number of
+affected Buttons; the Diagnostics tab translates it (EN/DE). A refusal without
+a reached Button stays silent. Labels remain all-or-nothing and the grid issue
+is unchanged.
+
+- **Verified.** Server: four new HTTP cases failed first (no diagnostic), then
+  18/18 `http_parameter_grid` passed; removing the reached-Button guard is
+  caught. Vitest: the translation case failed first, then `ParameterPanel`
+  55/55. A new Chromium case shows that a typed value beside a passive label is
+  written when focus leaves it, and that its editor and the label survive area
+  and search changes (a characterization of existing behaviour, not a fix).
+- **Not covered.** The extra source read is still not measured on the largest
+  retained real program; the cue wording still awaits owner acceptance.
+  [Contract](contracts/alpha16-parameter-layout.md#passive-source-button-labels-button-literal-passive-v1).
+
 <a id="diag-03-closeout-candidate-1-november-2026"></a>
 
 ## DIAG-03 source closeout (1 November 2026)

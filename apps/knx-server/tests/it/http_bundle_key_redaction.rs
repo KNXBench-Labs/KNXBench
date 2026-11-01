@@ -245,7 +245,7 @@ async fn keys_sent_and_received_through_the_real_tap_never_reach_a_bundle_entry(
     let mut raw_recordings = 0;
     for index in 0..archive.len() {
         let mut entry = archive.by_index(index).unwrap();
-        let name = entry.name().to_owned();
+        let name = entry.name().unwrap().into_owned();
         let mut content = Vec::new();
         entry.read_to_end(&mut content).unwrap();
         if name.ends_with("recording.jsonl") {

@@ -171,7 +171,7 @@ mod tests {
         assert_eq!(directory.entries.len(), zip.len());
         for (i, entry) in directory.entries.iter().enumerate() {
             let file = zip.by_index(i).unwrap();
-            assert_eq!(entry.name, file.name().as_bytes());
+            assert_eq!(entry.name, file.name().unwrap().as_bytes());
             assert_eq!(entry.central_offset, file.central_header_start());
             assert_eq!(entry.local_offset, file.header_start());
         }

@@ -186,21 +186,18 @@ fn consistent_aes_keeps_the_unsupported_encryption_refusal() {
 }
 
 #[test]
-fn method99_without_any_field_keeps_the_reader_refusal() {
-    let mut m = encrypted_aes(&[]);
-    m.extra.clear();
-    let cause = "invalid Zip archive: AES encryption without AES extra data field";
-    let outer = open(false, m).err();
-    assert_eq!(outer, Some(ContainerError::NotAZip(cause.into())));
-    let mut m = encrypted_aes(&[]);
-    m.extra.clear();
-    assert_eq!(
-        open(true, m).err(),
-        Some(ContainerError::Read {
-            path: "P-0001.zip".into(),
-            cause: cause.into()
-        })
-    );
+fn method99_without_any_field_is_refused_by_the_structural_check() {
+    // zip 8 refused this record while opening the archive; zip 9 opens it,
+    // so the preflight's own all-or-nothing AES rule names it on both layers.
+    let refusal = Some(ContainerError::InconsistentRecord {
+        path: "P-0001/BinaryData/chiffré.bin".into(),
+        reason: "compression method 99 (WinZip AES) requires exactly one WinZip AES field (0x9901)",
+    });
+    for nested in [false, true] {
+        let mut m = encrypted_aes(&[]);
+        m.extra.clear();
+        assert_eq!(open(nested, m).err(), refusal, "nested: {nested}");
+    }
 }
 
 #[test]

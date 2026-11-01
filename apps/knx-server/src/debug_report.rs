@@ -1307,7 +1307,7 @@ mod tests {
         let file = std::fs::File::open(&path).unwrap();
         let mut archive = zip::ZipArchive::new(file).unwrap();
         let mut found: Vec<String> = (0..archive.len())
-            .map(|i| archive.by_index(i).unwrap().name().to_string())
+            .map(|i| archive.by_index(i).unwrap().name().unwrap().to_string())
             .collect();
         found.sort();
         let mut expected = vec![

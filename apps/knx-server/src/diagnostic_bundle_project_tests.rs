@@ -177,7 +177,7 @@ fn members(zip: &[u8]) -> BTreeMap<String, Vec<u8>> {
             let mut file = archive.by_index(index).unwrap();
             let mut bytes = Vec::new();
             file.read_to_end(&mut bytes).unwrap();
-            (file.name().to_string(), bytes)
+            (file.name().unwrap().to_string(), bytes)
         })
         .collect()
 }

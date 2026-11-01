@@ -153,7 +153,7 @@ pub(super) fn unpack(bytes: &[u8]) -> (Value, ExportReport, String) {
         .enumerate()
     {
         let mut f = z.by_index(index).unwrap();
-        assert_eq!(f.name(), *name);
+        assert_eq!(f.name().unwrap(), *name);
         let mut s = String::new();
         f.read_to_string(&mut s).unwrap();
         contents.push(s);

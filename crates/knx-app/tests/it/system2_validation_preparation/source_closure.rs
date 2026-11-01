@@ -25,7 +25,10 @@ fn imported_sources(
         let mut bytes = Vec::new();
         member.read_to_end(&mut bytes).unwrap();
         writer
-            .start_file(member.name(), zip::write::SimpleFileOptions::default())
+            .start_file(
+                member.name().unwrap(),
+                zip::write::SimpleFileOptions::default(),
+            )
             .unwrap();
         writer.write_all(&bytes).unwrap();
     }

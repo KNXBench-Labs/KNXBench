@@ -262,7 +262,7 @@ fn source_with_installation_key_and_serial() -> Source {
     let mut entries = Vec::new();
     for index in 0..zip.len() {
         let mut file = zip.by_index(index).unwrap();
-        let name = file.name().to_owned();
+        let name = file.name().unwrap().into_owned();
         let mut bytes = vec![];
         file.read_to_end(&mut bytes).unwrap();
         if name.ends_with(".xml") {

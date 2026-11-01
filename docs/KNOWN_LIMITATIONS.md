@@ -163,7 +163,7 @@ A second independent schema-23 project meets the original lifting condition. Res
 ### 159. Project archive budgets and duplicate names
 
 **Ledger status:** Not separately tracked.
-Expanded project payloads are capped at 4 GiB total and 1,000,000,000 bytes per member. Excess inflation, duplicate/case-colliding names and inconsistent records are refused; empty directories require CRC 0 and, when compressed, a complete empty stream. These bounds do not cap peak process memory.
+Expanded project payloads are capped at 4 GiB total and 1,000,000,000 bytes per member. Excess inflation, duplicate/case-colliding names and inconsistent records are refused; empty directories require CRC 0 and, when compressed, a complete empty stream. These bounds do not cap peak process memory. Since `zip` 9 an unflagged member name that is valid UTF-8 decodes as UTF-8, not CP437 (APPNOTE default); such a name and its CP437 twin are refused as a collision. The private corpus has no such name (0 of 25,615 members).
 [Details and history](limitations/KL-159-project-archive-budgets-and-duplicate-names.md)
 
 <a id="catalogue-kl-173"></a>

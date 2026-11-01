@@ -258,6 +258,7 @@ async fn the_exported_zip_withholds_the_unadmitted_recording_and_description() {
     let mut archive = zip::ZipArchive::new(std::io::Cursor::new(body)).unwrap();
     assert!(archive
         .file_names()
+        .map(Result::unwrap)
         .all(|name| !name.ends_with("recording.jsonl")));
     let mut manifest = String::new();
     archive

@@ -62,6 +62,7 @@ async fn exact_retained_download_result_without_recording_keeps_its_original_sta
     assert!(zip.by_name("operations/download-status.json").is_err());
     assert!(!zip
         .file_names()
+        .map(Result::unwrap)
         .any(|name| name.starts_with("device/") || name.ends_with("recording.jsonl")));
     {
         let retained = state.device_download.lock().await;

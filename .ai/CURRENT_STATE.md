@@ -1,5 +1,15 @@
 # Restart snapshot
 
+## Alpha 19 release plan (PLANNED, NOT FROZEN; owner tag claude-release-alpha19; observed 2026-11-01 08:32 CET)
+- Owner approved planning `v0.1.0-alpha.19` (WebUI, Claude). `main` is NOT frozen: other packages continue normally.
+- Cutoff condition: DIAG-03 closeout (B1 admitted sections + quit-under-wizard) merged main-first with a green gate.
+  OKX-04 (baggage) ships if it is on `main` at cutoff, otherwise in the next alpha; nobody waits for it.
+- Delivery signal, as a standalone line in your own section -> `Alpha 19 prerequisite delivered: DIAG-03`
+  (OKX-04 may write the same with `OKX-04`). The release owner verifies merge commits itself; the line is only a trigger.
+- At cutoff the freeze is posted here as its own line; anything merged after the cutoff ships in the next alpha.
+- Known upgrade note: product DB 30 -> 31 (Alpha 18 refuses v31 with FutureVersion); project schema stays 16.
+- Release-notes draft held local in `release-notes/alpha19-draft-20261101` (not pushed). No tag, freeze or publication yet.
+
 ## PRG-01 inactive whole-byte selection (SOFTWARE REVIEWED; DELIVERY GO; observed 2026-10-30 14:16 CET)
 - Owner `feat/prg01-inactive-selection-20261030`, `<sources>/knxbench-prg01-inactive-selection-20261030`; local runtime commit `b84db2ad37f9a3e21bde5d5b9d79be05504a66f1` (41 runtime/test/Web paths). No publication or hardware authority; protected shared root/index and foreign tracks untouched.
 - Binding contract `docs/contracts/inactive-byte-write-selection.md`: positive default-topological regular writer, required format-4 typed selection and faithful old1..3 restore-only generator. Original writer RED, genuine pre-change captures and F1/F2/F3 REDs remain sealed, not replaced by later calibration.

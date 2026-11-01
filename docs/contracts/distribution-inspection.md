@@ -406,4 +406,5 @@ value (`bounded()` takes the minimum), and every limit is inclusive.
   database is still refused: 28 with `MissingMaster`, 9 with `UnsafeMember`.
   The archives themselves are not part of the repository.
 
-Related: [KL-187](../limitations/KL-187-distribution-inspection.md).
+Related: [KL-187](../limitations/KL-187-distribution-inspection.md) ·
+[OpenKNX capability reconciliation](../status/2026-11-01-openknx-capability-reconciliation.md).

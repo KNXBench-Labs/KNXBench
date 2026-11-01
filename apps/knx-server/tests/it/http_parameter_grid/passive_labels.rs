@@ -31,12 +31,25 @@ fn oracle() -> Value {
     serde_json::from_str(ORACLE).unwrap()
 }
 
-#[allow(clippy::field_reassign_with_default)]
+mod binding_refusal;
+
 fn state(program: &str) -> (tempfile::TempDir, Arc<knx_server::AppState>) {
+    state_with(program, None)
+}
+
+/// As [`state`], with one SQL `mutation` applied to the catalogue after ingest.
+#[allow(clippy::field_reassign_with_default)]
+fn state_with(
+    program: &str,
+    mutation: Option<&str>,
+) -> (tempfile::TempDir, Arc<knx_server::AppState>) {
     let dir = tempfile::tempdir().unwrap();
     let products = knx_productdb::open_and_migrate(&dir.path().join("products.sqlite")).unwrap();
     knx_productdb::ingest_file(&products, "M-FIX/Hardware.xml", HARDWARE.as_bytes()).unwrap();
     knx_productdb::ingest_file(&products, "M-FIX/A-FIX.xml", program.as_bytes()).unwrap();
+    if let Some(mutation) = mutation {
+        assert!(products.execute(mutation, []).unwrap() > 0, "{mutation}");
+    }
     let mut project = Project::new(Language("en".into()));
     project.devices.insert(DeviceInstance {
         id: DeviceId(1),

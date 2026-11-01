@@ -2554,7 +2554,9 @@ export type ParameterDiagnosticKind =
   | "manufacturerCalculation"
   | "writeAuthorityUnavailable"
   // ADR-0139: an enclosing block's `Access` refuses the write.
-  | "parameterBlockAccessRestricted";
+  | "parameterBlockAccessRestricted"
+  // button-literal-passive-v1: the program's source labels could not be bound.
+  | "passiveLabelsUnbound";
 
 export interface ParameterDiagnostic {
   scope: ModuleScope | null;

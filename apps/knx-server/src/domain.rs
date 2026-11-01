@@ -6161,6 +6161,11 @@ fn assemble_parameter_panel_for_project(
     }
     let layout =
         knx_productdb::parameter_layout::load(products, &program_id).map_err(|e| e.to_string())?;
+    diagnostics.extend(passive_label_binding_diagnostic(
+        layout.button_binding(),
+        activation.buttons.iter().filter(|b| b.scope.is_none()).count(),
+        &program_id,
+    ));
     let mut section_order: Vec<Option<Vec<i64>>> = Vec::new();
     let mut sections_by_key: HashMap<Option<Vec<i64>>, SectionBuild> = HashMap::new();
     for (index, active) in activation.parameter_refs.iter().enumerate() {
@@ -6665,6 +6670,38 @@ fn write_refusal(
         return Some(WriteRefusal::ManufacturerCalculation);
     }
     None
+}
+
+/// `button-literal-passive-v1`: one program-level warning when a refused
+/// source binding hides the label of at least one reached program `Button`.
+/// A refusal no reached `Button` would show stays silent.
+fn passive_label_binding_diagnostic(
+    binding: knx_productdb::parameter_layout::ButtonBinding,
+    reached: usize,
+    program_id: &str,
+) -> Option<crate::routes::ParameterDiagnosticDto> {
+    use knx_productdb::parameter_layout::ButtonBinding;
+    let cause = match binding {
+        ButtonBinding::Bound => return None,
+        ButtonBinding::SourceUnavailable => {
+            "sourceUnavailable: no hash-checked retained source, no unique program owner, or the read budget ran out"
+        }
+        ButtonBinding::StructuralDrift => {
+            "structuralDrift: the stored Dynamic nodes and the retained source structure differ"
+        }
+        ButtonBinding::DuplicateButtonId => {
+            "duplicateButtonId: two program-owned Buttons declare the same Id"
+        }
+    };
+    (reached > 0).then(|| crate::routes::ParameterDiagnosticDto {
+        scope: None,
+        kind: crate::routes::ParameterDiagnosticKindDto::PassiveLabelsUnbound,
+        severity: crate::routes::ParameterDiagnosticSeverityDto::Warning,
+        message: "Source button labels of this program are not shown because they could not be bound to its stored product source.".to_string(),
+        detail: format!(
+            "{cause}; {reached} reached Button(s) show no label (program '{program_id}')."
+        ),
+    })
 }
 
 /// One warning per section and reason, naming every affected field in

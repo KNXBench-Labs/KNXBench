@@ -204,6 +204,34 @@ ORPHAN_EXIT = ('import os,sys,time\n'
 RELEASE_EXIT = ('import os,sys,time\n'
                 'end=time.monotonic()+120\n'
                 'while not os.path.exists(sys.argv[1]) and time.monotonic()<end: time.sleep(0.05)\n')
+# Prefix for fixture code that announces its own PID once the new image runs. Right after
+# Popen returned, /proc/<pid>/environ was observed empty or still the parent's; under load
+# that failed identity pinning (GATE-01, 1 November 2026). A line from the new image proves
+# exec finished, whatever the exact kernel ordering is.
+ANNOUNCE_PID = 'import os;print(os.getpid(),flush=True)\n'
+# A sentinel that announces itself and stays until it is killed; 120 s only bounds a leak.
+SENTINEL = ANNOUNCE_PID + 'import time;time.sleep(120)\n'
+
+
+def spawn_announced(args: list[str], env: dict[str, str]) -> subprocess.Popen:
+    """Start fixture code prefixed with ANNOUNCE_PID and return once that process ran it."""
+    process = subprocess.Popen(args, env=env, stdout=subprocess.PIPE, text=True)
+    try:
+        assert process.stdout is not None
+        if not select.select([process.stdout], [], [], 10)[0]:
+            raise AssertionError('fixture process did not announce itself')
+        line = process.stdout.readline()
+        if not line.strip().isdigit():
+            raise AssertionError(f'fixture process exited before announcing itself: {line!r}')
+        if int(line) != process.pid:
+            raise AssertionError(f'fixture announced {int(line)}, not {process.pid}')
+        return process
+    except BaseException:
+        process.kill()
+        process.wait()
+        if process.stdout is not None:
+            process.stdout.close()
+        raise
 
 
 def open_owned_process(pid: int, marker: bytes) -> OwnedProcessIdentity | None:
@@ -582,7 +610,7 @@ class BrowserTempLaunch(unittest.TestCase):
             env = {**self.clean_environment(), 'KNXBENCH_SIGTERM_RELEASE': str(release)}
             # The fixture ignores the release and lives until the fallback is reached, so the
             # timeout branch is exercised by an event instead of by outliving a 3 s clock.
-            fixture = subprocess.Popen([sys.executable, '-c', RELEASE_EXIT, str(proceed)], env=env)
+            fixture = spawn_announced([sys.executable, '-c', ANNOUNCE_PID + RELEASE_EXIT, str(proceed)], env)
             sentinel_marker = f'KNXBENCH_SIGTERM_SENTINEL={release}'.encode()
             real_pidfd_open = os.pidfd_open
             sentinel = None
@@ -590,9 +618,9 @@ class BrowserTempLaunch(unittest.TestCase):
             sentinel_identity = None
             scanned_pidfds = []
             try:
-                sentinel = subprocess.Popen(
-                    [sys.executable, '-c', 'import time; time.sleep(120)'],
-                    env={**self.clean_environment(), 'KNXBENCH_SIGTERM_SENTINEL': str(release)})
+                sentinel = spawn_announced(
+                    [sys.executable, '-c', SENTINEL],
+                    {**self.clean_environment(), 'KNXBENCH_SIGTERM_SENTINEL': str(release)})
                 fixture_identity = open_owned_process(
                     fixture.pid, f'KNXBENCH_SIGTERM_RELEASE={release}'.encode())
                 sentinel_identity = open_owned_process(sentinel.pid, sentinel_marker)
@@ -637,10 +665,18 @@ class BrowserTempLaunch(unittest.TestCase):
                 wait_for_owned_processes(identities)
                 # Unreaped direct children: Popen.kill cannot hit a reused PID here.
                 fixture.kill()
-                fixture.wait(timeout=10)
+                try:
+                    fixture.wait(timeout=10)
+                finally:
+                    if fixture.stdout is not None:
+                        fixture.stdout.close()
                 if sentinel is not None:
                     sentinel.kill()
-                    sentinel.wait(timeout=10)
+                    try:
+                        sentinel.wait(timeout=10)
+                    finally:
+                        if sentinel.stdout is not None:
+                            sentinel.stdout.close()
                 close_owned_processes(identities)
 
     def test_sigterm_diagnostics_reject_mismatched_scanned_identity(self) -> None:
@@ -652,9 +688,8 @@ class BrowserTempLaunch(unittest.TestCase):
             # its identity was pinned. The child leaves once diagnostics end its wrapper.
             program = (
                 'import os,subprocess,sys,time;'
-                f'child=subprocess.Popen([sys.executable,"-c",{ORPHAN_EXIT!r},str(os.getpid())],'
-                'env=os.environ.copy());'
-                'print(child.pid,flush=True);'
+                f'child=subprocess.Popen([sys.executable,"-c",{ANNOUNCE_PID + ORPHAN_EXIT!r},'
+                'str(os.getpid())],env=os.environ.copy());'
                 'time.sleep(120)')
             env = {**self.clean_environment(),
                    'KNXBENCH_BROWSER_TMP_DIR': marker}
@@ -672,9 +707,9 @@ class BrowserTempLaunch(unittest.TestCase):
                                 'diagnostic fixture child did not start')
                 child_pid = int(wrapper.stdout.readline())
                 sentinel_marker = f'KNXBENCH_SIGTERM_SENTINEL={directory}'.encode()
-                sentinel = subprocess.Popen(
-                    [sys.executable, '-c', 'import time; time.sleep(120)'],
-                    env={**self.clean_environment(), 'KNXBENCH_SIGTERM_SENTINEL': marker})
+                sentinel = spawn_announced(
+                    [sys.executable, '-c', SENTINEL],
+                    {**self.clean_environment(), 'KNXBENCH_SIGTERM_SENTINEL': marker})
                 fixture_marker = f'KNXBENCH_BROWSER_TMP_DIR={directory}'.encode()
                 wrapper_identity = open_owned_process(wrapper.pid, fixture_marker)
                 child_identity = open_owned_process(child_pid, fixture_marker)
@@ -713,7 +748,11 @@ class BrowserTempLaunch(unittest.TestCase):
                 wrapper.wait(timeout=10)
                 if sentinel is not None:
                     sentinel.kill()
-                    sentinel.wait(timeout=10)
+                    try:
+                        sentinel.wait(timeout=10)
+                    finally:
+                        if sentinel.stdout is not None:
+                            sentinel.stdout.close()
                 close_owned_processes(identities)
 
     def test_multibyte_and_whitespace_paths_use_byte_budget_and_json(self) -> None:

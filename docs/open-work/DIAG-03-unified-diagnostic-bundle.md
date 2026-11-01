@@ -1,15 +1,18 @@
 # DIAG-03 — One report button, full diagnostic bundle, operation recorder
 
-**Priority:** P1. **Status:** Implemented on `main` through `bc77abdb2` (31 October
-2026); final closeout in progress. Not part of the published Alpha 18 artifacts.
-All original owner decisions remain recorded below (29 October 2026, rounds 1–2,
-O1/O2). The Alpha 18 tag prerequisite is met (`80386a154`); the tag stays immutable.
-The current closeout covers the desktop quit-confirmation layering defect,
-real session-log/bus-monitor/client-state sections (the current implementation
-always withholds them despite O1), and status reconciliation, with independent
-review and maintained package gates. The unconditional three-section omission
-is not an owner-accepted scope reduction and prevents whole-goal completion.
-Release publication is separate; no new tag or deployment follows from source delivery.
+**Priority:** P1. **Status:** Source-complete and delivered through `7443e2ea6` (1 November 2026); release publication is a separate track. The work-package requirements and dated failures below remain as scope/history, not a current implementation queue.
+
+The unified bundle's supplementary sections now deliver reduced typed session-log chronology, an explicitly reviewed existing monitor interval and bounded browser facts, with omission/truncation counts. Access/text DPTs (including DPT 15), unclassified and management payloads never supply raw monitor bytes. Session identity/sequence binding refuses missing, replaced, evicted or tampered reviewed data; ordinary new traffic cannot replace the window. No new bus contact, server content cache or TTL is introduced.
+
+The quit confirmation is painted above the logically inactive report wizard and restores the wizard on cancellation. The real browser/server join also exposed and corrected automatic-no-source versus explicit-none review identity/wording: the same absent source now binds equivalently, without adopting a later recording or weakening context, source, byte or consent checks.
+
+The final ZIP-9-compatible runtime `7443e2ea6` passed 15/15 maintained change-scoped package stages, 4,875 Web unit tests, 969 functional plus 69 exclusive browser cases, and 1,636 Rust tests (68 default-ignored; 7 harnesses). Every planned stage has a valid zero-exit proof, frozen inputs and completed plan; checked real user-data touched/unchecked lists are empty. The selected corpus stage passed in loopback isolation. These populations overlap and are not summed into a unique overall test total. This is routine selected-package acceptance, not a release-full or blanket workspace gate.
+
+The actual server built from `7443e2ea6` and its production Web bundle passed the no-API-fixture EN/1440 px and DE/400 px wizard run: reduced log and client sections available, rendered text identical to native HTTP responses and ZIP bodies, consent required, downloaded bytes identical to the response, exact ZIP inventory and manifest hashes valid. Both screenshots were inspected; the source stayed unchanged and the server settled with exit 0. No real installation, native WebKitGTK/Tauri save dialog, hardware or new release acceptance is implied.
+
+System-2 still exports only the admitted closed projection and report, never raw comparison arrays or recordings. P1/P2 concern only a separately authorized future raw System-2 export. Declared memory and raw non-System-2 recordings require explicit consent and the keep-private/password warning; arbitrary memory, free log text and every installation value are not certified secret-free or anonymous. Alpha 18 artifacts remain immutable; source delivery is separate from a versioned release.
+
+[Final source acceptance and limitations](../status/2026-11-01-diag03-closeout.md).
 
 ## Historical implementation and verification (29–31 October 2026)
 

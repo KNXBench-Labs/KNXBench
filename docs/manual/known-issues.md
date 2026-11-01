@@ -31,8 +31,8 @@ by current-source captures.
 
 ## DIAG-03 main-only — diagnostic bundle privacy boundaries
 
-The unified diagnostic bundle is implemented on main through `bc77abdb2`, not
-in the published Alpha 18 artifacts. The saved-project opt-in copy removes recognized credential fields and reports
+The unified diagnostic bundle foundation reached main through `bc77abdb2`; its supplementary/quit/review closeout is delivered through `7443e2ea6`, not
+in the immutable Alpha 18 artifacts. [Source acceptance](../status/2026-11-01-diag03-closeout.md) remains distinct from release, native-shell and hardware qualification. The saved-project opt-in copy removes recognized credential fields and reports
 withheld data, but is not anonymous. The existing wire redactor handles named
 APDU key services; it does not prove arbitrary memory or every recording entry
 credential-free. Therefore declared memory and raw non-System-2 recordings are

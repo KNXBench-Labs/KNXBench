@@ -10,6 +10,12 @@
 - Known upgrade note: product DB 30 -> 31 (Alpha 18 refuses v31 with FutureVersion); project schema stays 16.
 - Release-notes draft held local in `release-notes/alpha19-draft-20261101` (not pushed). No tag, freeze or publication yet.
 
+## DIAG-03 source closeout (DELIVERED; observed 2026-11-01 CET)
+- Main-first source `7443e2ea6` includes B1 admitted reduced log/monitor/browser sections, quit-over-wizard and canonical absent-source review; security ZIP9/TLS main retained. Final maintained 15/15 PASS/frozen/planCompleted, checked user-data touched/unchecked empty; software scope in `docs/status/2026-11-01-diag03-closeout.md`.
+- Actual built-server/production-Web no-fixture EN1440/DE400 text/consent/native-ZIP equality, exact inventory/manifest hashes, source unchanged/SIGTERM0. Original REDs and rejected/cache-observer attempts retained privately; no hardware/native WebKit/Tauri save-dialog or release claim.
+- Runtime/source complete; no further feature work reserved. Result-documentation-only successor and exact-owned archival/cleanup complete this package; shared-root coordination owns volatile local resource state. Prior private sealed scopes/foreign tracks remain held by their owners.
+Alpha 19 prerequisite delivered: DIAG-03
+
 ## Dependency security fix (DELIVERED; observed 2026-11-01 CET)
 - Dependabot alerts 14-22 + RustSec 2026-0382/0386: zip 8.6 -> 9.2.1, rustls 0.23.46, rustls-webpki 0.103.16, tokio 1.54.1.
   Feature `df503e2a4`, main-first merge `be12e246e` (tree equal to the gated head). `cargo deny check` advisories ok.

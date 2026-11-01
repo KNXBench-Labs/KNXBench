@@ -25,21 +25,18 @@ the published Alpha 18 artifacts, not a release or deployment.
 
 <a id="diag-03-local-candidate-after-alpha-18-31-october-2026"></a>
 
-## DIAG-03 source on main after Alpha 18 (31 October 2026)
+<a id="diag-03-source-on-main-after-alpha-18-31-october-2026"></a>
 
-Operation recording and the unified diagnostic bundle are implemented on main
-through `bc77abdb2`, newer than the published Alpha 18 artifacts. Retained
-read-diagnostics and support results now reach the bundle by
-exact token, with specific missing/expired/unfinished causes, bounded history
-reads and device/catalogue extracts only for a proven current context. By owner
-decision, declared memory and raw non-System-2 recordings leave only after
-consent, with a "possibly passwords; keep private" note; System-2 never exports
-raw bodies. The real router/built-web join, the installed CLI boundaries and the
-original fourteen-case matrix ran on 31 October 2026. Still open: usable admitted
-session-log/bus-monitor/client-state sections (currently always withheld despite
-O1) and desktop quit-confirmation layering. Source closeout is separate from
-release publication; raw System-2 P1/P2 apply only to a future raw export.
-[Work and evidence boundary](open-work/DIAG-03-unified-diagnostic-bundle.md).
+## DIAG-03 source closeout after Alpha 18 (1 November 2026)
+
+The operation recorder, shared Web/CLI bundle workflow and O1 supplementary sections are source-complete through `7443e2ea6`. Reduced chronology/browser facts and a pinned existing monitor window are usable; the desktop quit prompt no longer paints underneath the wizard. The actual no-source Web/server review mismatch is corrected, with later-source and changed-content refusals retained.
+
+The final ZIP-9-compatible runtime `7443e2ea6` passed 15/15 maintained change-scoped package stages, 4,875 Web unit tests, 969 functional plus 69 exclusive browser cases, and 1,636 Rust tests (68 default-ignored; 7 harnesses). Every planned stage has a valid zero-exit proof, frozen inputs and completed plan; checked real user-data touched/unchecked lists are empty. The selected corpus stage passed in loopback isolation. These populations overlap and are not summed into a unique overall test total. This is routine selected-package acceptance, not a release-full or blanket workspace gate.
+
+The actual server built from `7443e2ea6` and its production Web bundle passed the no-API-fixture EN/1440 px and DE/400 px wizard run: reduced log and client sections available, rendered text identical to native HTTP responses and ZIP bodies, consent required, downloaded bytes identical to the response, exact ZIP inventory and manifest hashes valid. Both screenshots were inspected; the source stayed unchanged and the server settled with exit 0. No real installation, native WebKitGTK/Tauri save dialog, hardware or new release acceptance is implied.
+
+System-2 still exports only the admitted closed projection and report, never raw comparison arrays or recordings. P1/P2 concern only a separately authorized future raw System-2 export. Declared memory and raw non-System-2 recordings require explicit consent and the keep-private/password warning; arbitrary memory, free log text and every installation value are not certified secret-free or anonymous. Alpha 18 artifacts remain immutable; source delivery is separate from a versioned release.
+[Delivery scope and evidence](status/2026-11-01-diag03-closeout.md).
 
 ## Alpha 18 pre-release (source cutoff 28 October 2026)
 

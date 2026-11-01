@@ -12,23 +12,20 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
-## DIAG-03 closeout candidate (1 November 2026)
+<a id="diag-03-closeout-candidate-1-november-2026"></a>
 
-The source candidate adds actual reduced session-log, monitor and browser-state
-sections and fixes the quit prompt painting under the wizard. Monitor review now
-pins a session/sequence interval; new traffic cannot change reviewed bytes,
-while missing/replaced/evicted data refuses. Text/access and unclassified payloads
-stay withheld. Known log chronology/messages survive; arbitrary free error text
-is still omitted with counts, not certified secret-free.
+## DIAG-03 source closeout (1 November 2026)
 
-Independent corrected-source review has no critical/important findings, including
-run-backed DPT-15 and monitor-window mutation controls. Focused server library
-796 passed / 15 ignored; bundle filter 119 and integration selection 9 passed
-(overlap, not summed). Four Web suites 89 passed; hardened wizard browser 21
-passed after original paint RED4/clean4 controls. Fixture types/build, formatting
-and owning all-target Clippy passed. Branch/merged package gates and publication
-are pending, not implied by these focused results. Alpha 18 is unchanged.
-[Closeout scope and limits](status/2026-11-01-diag03-closeout.md).
+The unified bundle's supplementary sections now deliver reduced typed session-log chronology, an explicitly reviewed existing monitor interval and bounded browser facts, with omission/truncation counts. Access/text DPTs (including DPT 15), unclassified and management payloads never supply raw monitor bytes. Session identity/sequence binding refuses missing, replaced, evicted or tampered reviewed data; ordinary new traffic cannot replace the window. No new bus contact, server content cache or TTL is introduced.
+
+The quit confirmation is painted above the logically inactive report wizard and restores the wizard on cancellation. The real browser/server join also exposed and corrected automatic-no-source versus explicit-none review identity/wording: the same absent source now binds equivalently, without adopting a later recording or weakening context, source, byte or consent checks.
+
+The final ZIP-9-compatible runtime `7443e2ea6` passed 15/15 maintained change-scoped package stages, 4,875 Web unit tests, 969 functional plus 69 exclusive browser cases, and 1,636 Rust tests (68 default-ignored; 7 harnesses). Every planned stage has a valid zero-exit proof, frozen inputs and completed plan; checked real user-data touched/unchecked lists are empty. The selected corpus stage passed in loopback isolation. These populations overlap and are not summed into a unique overall test total. This is routine selected-package acceptance, not a release-full or blanket workspace gate.
+
+The actual server built from `7443e2ea6` and its production Web bundle passed the no-API-fixture EN/1440 px and DE/400 px wizard run: reduced log and client sections available, rendered text identical to native HTTP responses and ZIP bodies, consent required, downloaded bytes identical to the response, exact ZIP inventory and manifest hashes valid. Both screenshots were inspected; the source stayed unchanged and the server settled with exit 0. No real installation, native WebKitGTK/Tauri save dialog, hardware or new release acceptance is implied.
+
+System-2 still exports only the admitted closed projection and report, never raw comparison arrays or recordings. P1/P2 concern only a separately authorized future raw System-2 export. Declared memory and raw non-System-2 recordings require explicit consent and the keep-private/password warning; arbitrary memory, free log text and every installation value are not certified secret-free or anonymous. Alpha 18 artifacts remain immutable; source delivery is separate from a versioned release.
+[Scope, corrections and evidence](status/2026-11-01-diag03-closeout.md).
 
 ## Passive source Button labels in parameter grids (31 October 2026 source)
 
@@ -97,7 +94,7 @@ raw recording of a `system2-*` command, and its consent text no longer promises
 "never included". See the
 [contract](contracts/diagnostic-bundle.md) and
 [DIAG-03](open-work/DIAG-03-unified-diagnostic-bundle.md). The unavailable-section
-wording above is historical: the 1 November closeout candidate supplies reduced
+wording above is historical: the 1 November source closeout supplies reduced
 session-log, monitor and browser-state sections; see the
 [current contract](contracts/diagnostic-bundle.md#reduced-log-and-browser-facts).
 The wizard now sits

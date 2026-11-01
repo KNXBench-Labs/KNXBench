@@ -13,7 +13,8 @@ import type {
 import type { ProjectTree } from "./bindings/ProjectTree";
 import { useProductLanguage } from "./productLanguage";
 import { LanguageFallbackBadge } from "./languageFallback";
-import { filterParameterSection, groupParameterDiagnostics, isManufacturerRestricted, isSeparatorRestricted, restrictingAccess } from "./parameterPresentation";
+import { filterParameterSection, groupParameterDiagnostics, isManufacturerRestricted, isPassiveLabelRestricted, isSeparatorRestricted,
+  restrictingAccess } from "./parameterPresentation";
 import { parameterCaption } from "./parameterCaption";
 import { useTranslate, type Translate, type TranslatableKey } from "./i18n";
 import { snapshotContextFromTree, type SnapshotContext } from "./snapshotIdentity";
@@ -631,11 +632,14 @@ export function ParameterPanelContent(props: ParameterPanelProps & {
 
   // ADR-0139: separators are shown only between the editable fields; an
   // area holding nothing but manufacturer text still counts as content.
+  // button-literal-passive-v1: passive source labels follow the same rule.
   const sections = panel.sections.map((section) => filterParameterSection(section,
     (field) => isManufacturerRestricted(field) === (view === "restricted")
       && (view !== "functions" || field.controlsComObjects === true && field.kind === "Restriction"),
     (separator) => view === "parameters" && !isSeparatorRestricted(separator),
-  )).filter((section) => section.fields.length > 0 || (section.separators?.length ?? 0) > 0);
+    (label) => view === "parameters" && label.kind === "buttonLiteral" && !isPassiveLabelRestricted(label),
+  )).filter((section) => section.fields.length > 0 || (section.separators?.length ?? 0) > 0
+    || (section.passiveLabels?.length ?? 0) > 0);
 
   // WP-15: a section view keeps its own scope's state when a sibling vanishes.
   const sectionKeys = parameterSectionKeys(sections);

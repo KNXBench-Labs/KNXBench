@@ -3,7 +3,7 @@
 import { act, useState } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, describe, expect, it } from "vitest";
-import type { ParameterField, ParameterGroupLayout, ParameterSection, ParameterSeparator } from "./api";
+import type { ParameterField, ParameterGroupLayout, ParameterPassiveLabel, ParameterSection, ParameterSeparator } from "./api";
 import ParameterWorkspace from "./ParameterWorkspace";
 import { resetUiLanguageForTests, saveUiLanguage } from "./uiLanguage";
 import { resetSettingsForTests, settingsStorage } from "./settingsStore";
@@ -348,5 +348,131 @@ describe("ParameterWorkspace declared grids", () => {
     const search = host.querySelector<HTMLInputElement>('input[type="search"]')!;
     await act(async () => setInput(search, "Delay"));
     expect(host.querySelector('[data-parameter-row="Delay"]')!.hasAttribute("data-indent")).toBe(false);
+  });
+
+  // button-literal-passive-v1: source Button text as passive matrix content, never an action.
+  const passiveGrid = (groupKey: string, patch: Partial<ParameterGroupLayout>): ParameterGroupLayout => ({ groupKey, version: 1,
+    declaredLayout: "Grid", status: "grid", rows: [], columns: [], labels: [], issues: [], ...patch });
+  const passive = (elementId: string, text: string, key: string, label: string | null, row = 1, column = 2, blockAccess: string | null = null): ParameterPassiveLabel => ({
+    kind: "buttonLiteral", elementId, text, cell: { row, column }, group: { key, label }, blockAccess });
+  const passiveSections = (): ParameterSection[] => [{ scope: null,
+    fields: [{ ...field("PR-MODE", "PB-CONTROL"), group: { key: "PB-CONTROL", label: "Fictional control" } },
+      { ...field("PR-EDIT"), value: "17", cell: { row: 1, column: 2 }, group: { key: "PB-MIX", label: "Fictional mixed grid" } },
+      { ...field("PR-OTHER"), value: "23", cell: { row: 2, column: 1 }, group: { key: "PB-MIX", label: "Fictional mixed grid" } }],
+    separators: [{ position: 1, group: { key: "PB-MIX", label: "Fictional mixed grid" }, elementId: "S-MIX", text: "Fictional separator",
+      uiHint: null, access: null, blockAccess: null }],
+    groupLayouts: [passiveGrid("PB-ONLY", { rows: [{ id: "ONLY-R1", text: null, textParameterRefId: null, collapseIfEmpty: null }],
+      columns: [{ id: "ONLY-C1", text: null, textParameterRefId: null, width: "46%" }, { id: "ONLY-C2", text: null, textParameterRefId: null, width: "53%" }],
+      issues: [{ kind: "unshownContent", element: "Button", reference: "B-ONLY", cell: "1,2" }] }),
+    passiveGrid("PB-MIX", { declaredLayout: "Table", rows: [{ id: "MIX-R1", text: "Fictional row", textParameterRefId: null, collapseIfEmpty: null },
+      { id: "MIX-R2", text: null, textParameterRefId: null, collapseIfEmpty: null }],
+    columns: [{ id: "MIX-C1", text: null, textParameterRefId: null, width: "40%" }, { id: "MIX-C2", text: "Fictional column", textParameterRefId: null, width: "60%" }],
+    labels: [{ row: 1, column: 2, text: "Fictional separator" }] })],
+    passiveLabels: [passive("B-ONLY", "Fictional source label", "PB-ONLY", null),
+      passive("B-MIX", "Fictional mixed label", "PB-MIX", "Fictional mixed grid"),
+      passive("B-HTML", "<b>Fictional</b> & note", "PB-ONLY", null, 1, 1)] }];
+  const passiveSpan = (id: string) => host.querySelector<HTMLElement>(`[data-passive-label="${id}"]`);
+  const placement = (node: HTMLElement | null) => node && { gridRow: node.style.gridRow, gridColumn: node.style.gridColumn };
+
+  it.each([["en", "Parameter group 3", "Source button label – action unsupported", "Button B-ONLY: label shown; its action is not supported"],
+    ["de", "Parametergruppe 3", "Beschriftung einer Quell-Schaltfläche – Aktion nicht unterstützt",
+      "Button B-ONLY: Beschriftung angezeigt; ihre Aktion wird nicht unterstützt"]] as const)(
+    "%s opens a passive-only grid and shows literal Button text as plain non-interactive cells", async (language, fallback, cue, shownNote) => {
+      saveUiLanguage(settingsStorage, language); resetUiLanguageForTests();
+      const data = passiveSections();
+      const before = structuredClone(data);
+      await mount(data);
+      const buttons = [...host.querySelectorAll<HTMLButtonElement>(".parameter-workspace-nav button")];
+      expect(buttons.map(button => button.textContent)).toEqual(["Fictional control1", "Fictional mixed grid2", `${fallback}0`]);
+      expect(host.querySelector("[data-passive-label]")).toBeNull();
+      await act(async () => nav(fallback).click());
+      const matrix = host.querySelector<HTMLElement>('[data-layout="matrix"]')!;
+      expect(matrix.style.gridTemplateColumns).toBe("minmax(8rem, 46fr) minmax(8rem, 53fr)");
+      const only = passiveSpan("B-ONLY")!;
+      expect(placement(only)).toEqual({ gridRow: "1 / span 1", gridColumn: "2 / span 1" });
+      expect(only.tagName).toBe("SPAN");
+      expect(only.querySelector(".parameter-matrix-passive-text")!.textContent).toBe("Fictional source label");
+      expect(only.querySelector(".parameter-matrix-passive-cue")!.textContent).toBe(cue);
+      expect(matrix.textContent!.split("Fictional source label")).toHaveLength(2);
+      const html = passiveSpan("B-HTML")!;
+      expect(html.querySelector(".parameter-matrix-passive-text")!.textContent).toBe("<b>Fictional</b> & note");
+      expect(html.querySelector("b")).toBeNull();
+      for (const node of [only, html, ...only.querySelectorAll<HTMLElement>("*")]) {
+        expect(node.getAttribute("role")).toBeNull();
+        expect(node.hasAttribute("tabindex")).toBe(false);
+        expect(node.onclick).toBeNull();
+      }
+      // Nothing focusable is shown in a Button-only area; hidden rows of other areas stay mounted.
+      expect([...matrix.querySelectorAll("button, a, input, select, [tabindex]")].filter(node => !node.closest("[hidden]"))).toEqual([]);
+      expect(host.querySelector(".parameter-workspace-count")!.textContent).toMatch(/0\D+3/u);
+      // The shown label's Button is no unplaced declaration; its action stays unsupported.
+      expect(host.querySelector(".parameter-matrix-issues")).toBeNull();
+      expect([...host.querySelectorAll(".parameter-matrix-passive-note")].map(node => node.textContent)).toEqual([shownNote]);
+      expect(data).toEqual(before);
+    });
+
+  it.each([["en", "Button B-ONLY: label shown; its action is not supported",
+    "3 declarations could not be placed", "Button B-GONE: placed in cell “1,1” but not shown here"],
+  ["de", "Button B-ONLY: Beschriftung angezeigt; ihre Aktion wird nicht unterstützt",
+    "3 Angaben ließen sich nicht platzieren", "Button B-GONE: in Zelle „1,1“ platziert, hier aber nicht angezeigt"]] as const)(
+    "%s words a shown Button label apart from content that is really not shown", async (language, shownNote, summary, unshown) => {
+      saveUiLanguage(settingsStorage, language); resetUiLanguageForTests();
+      const data = passiveSections();
+      const only = data[0].groupLayouts![0];
+      only.issues = [...only.issues, { kind: "unshownContent", element: "Button", reference: "B-GONE", cell: "1,1" },
+        { kind: "unshownContent", element: "Button", reference: "B-OUTSIDE", cell: "1,3" },
+        // An Id-less Button named by a RefId equal to the shown label's Id, in another cell.
+        { kind: "unshownContent", element: "Button", reference: "B-ONLY", cell: "1,1" }];
+      // A label for B-OUTSIDE exists, but its cell lies outside the grid: not shown, old wording.
+      data[0].passiveLabels = [...data[0].passiveLabels!, passive("B-OUTSIDE", "Fictional outside", "PB-ONLY", null, 1, 3)];
+      await mount(data);
+      await act(async () => nav(language === "de" ? "Parametergruppe 3" : "Parameter group 3").click());
+      expect(passiveSpan("B-OUTSIDE")).toBeNull();
+      expect([...host.querySelectorAll(".parameter-matrix-passive-note")].map(node => node.textContent)).toEqual([shownNote]);
+      const details = host.querySelector<HTMLDetailsElement>(".parameter-matrix-issues")!;
+      expect(details.querySelector("summary")!.textContent).toBe(summary);
+      const items = [...details.querySelectorAll("li")].map(node => node.textContent);
+      expect(items).toHaveLength(3);
+      expect(items[0]).toBe(unshown);
+      expect(items[1]).toContain("B-OUTSIDE");
+      expect(items[2]).toContain("B-ONLY");
+      expect(items[2]).toContain("1,1");
+    });
+
+  it("keeps the old wording for a Button whose label is shown only in another grid", async () => {
+    const data = passiveSections();
+    const mixed = data[0].groupLayouts![1];
+    // Same reference as the label shown in PB-ONLY, but reported for PB-MIX: not shown here.
+    mixed.issues = [{ kind: "unshownContent", element: "Button", reference: "B-ONLY", cell: "1,1" }];
+    await mount(data);
+    await act(async () => nav("Fictional mixed grid").click());
+    expect(host.querySelector(".parameter-matrix-passive-note")).toBeNull();
+    expect(host.querySelector(".parameter-matrix-issues summary")!.textContent).toBe("1 declaration could not be placed");
+  });
+
+  it("stacks separator, passive label and field in one cell and keeps drafts across area and search changes", async () => {
+    await mount(passiveSections());
+    await act(async () => nav("Fictional mixed grid").click());
+    const matrix = host.querySelector<HTMLElement>('[data-layout="matrix"]')!;
+    expect(matrix.style.gridTemplateColumns).toBe("minmax(5rem, max-content) minmax(8rem, 40fr) minmax(8rem, 60fr)");
+    const separatorCaption = [...matrix.querySelectorAll<HTMLElement>('[data-caption="label"]')].find(node => node.textContent === "Fictional separator")!;
+    expect(placement(separatorCaption)).toEqual({ gridRow: "2 / span 1", gridColumn: "3 / span 1" });
+    expect(placement(passiveSpan("B-MIX"))).toEqual({ gridRow: "3 / span 1", gridColumn: "3 / span 1" });
+    const edit = host.querySelector<HTMLElement>('[data-parameter-row="PR-EDIT"]')!;
+    expect(placement(edit)).toEqual({ gridRow: "4 / span 1", gridColumn: "3 / span 1" });
+    expect(placement(host.querySelector<HTMLElement>('[data-parameter-row="PR-OTHER"]'))).toEqual({ gridRow: "5 / span 1", gridColumn: "2 / span 1" });
+    expect(passiveSpan("B-ONLY")).toBeNull();
+    const input = edit.querySelector<HTMLInputElement>("input")!;
+    await act(async () => setInput(input, "19"));
+    await act(async () => nav("Parameter group 3").click());
+    expect(passiveSpan("B-MIX")).toBeNull();
+    const search = host.querySelector<HTMLInputElement>('input[type="search"]')!;
+    await act(async () => setInput(search, "Fictional"));
+    expect(host.querySelector("[data-passive-label]")).toBeNull();
+    await act(async () => setInput(search, ""));
+    await act(async () => nav("Fictional mixed grid").click());
+    expect(host.querySelector<HTMLInputElement>('[data-parameter-row="PR-EDIT"] input')).toBe(input);
+    expect(input.value).toBe("19");
+    expect(passiveSpan("B-MIX")).not.toBeNull();
   });
 });

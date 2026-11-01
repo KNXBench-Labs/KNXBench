@@ -6156,7 +6156,11 @@ fn assemble_parameter_panel_for_project(
         activated: Vec<(usize, Option<String>)>,
         /// ADR-0139: the separators activated in this scope.
         separators: Vec<&'a knx_productdb::dynamic::ActiveSeparator>,
+        /// button-literal-passive-v1: reached Buttons with an admitted literal.
+        buttons: Vec<&'a knx_productdb::dynamic::ActiveButton>,
     }
+    let layout =
+        knx_productdb::parameter_layout::load(products, &program_id).map_err(|e| e.to_string())?;
     let mut section_order: Vec<Option<Vec<i64>>> = Vec::new();
     let mut sections_by_key: HashMap<Option<Vec<i64>>, SectionBuild> = HashMap::new();
     for (index, active) in activation.parameter_refs.iter().enumerate() {
@@ -6168,6 +6172,7 @@ fn assemble_parameter_panel_for_project(
                 ref_ids: Vec::new(),
                 activated: Vec::new(),
                 separators: Vec::new(),
+                buttons: Vec::new(),
             }
         });
         section.ref_ids.push(active.ref_id.clone());
@@ -6186,10 +6191,37 @@ fn assemble_parameter_panel_for_project(
                     ref_ids: Vec::new(),
                     activated: Vec::new(),
                     separators: Vec::new(),
+                    buttons: Vec::new(),
                 }
             })
             .separators
             .push(separator);
+    }
+    // button-literal-passive-v1: an admitted literal seeds its section too, so
+    // a block holding only a source Button label is still an area of its own.
+    for button in &activation.buttons {
+        let definition = button
+            .scope
+            .as_ref()
+            .map_or("", |scope| scope.module_def_id.as_str());
+        if layout.button(definition, button.node_id).is_none() {
+            continue;
+        }
+        let key = button.scope.as_ref().map(|s| s.node_chain());
+        sections_by_key
+            .entry(key.clone())
+            .or_insert_with(|| {
+                section_order.push(key.clone());
+                SectionBuild {
+                    scope: button.scope.clone(),
+                    ref_ids: Vec::new(),
+                    activated: Vec::new(),
+                    separators: Vec::new(),
+                    buttons: Vec::new(),
+                }
+            })
+            .buttons
+            .push(button);
     }
     // ADR-0139: an activated separator's text is its label.
     let separator_texts: HashMap<(Option<Vec<i64>>, i64), &str> = activation
@@ -6221,8 +6253,6 @@ fn assemble_parameter_panel_for_project(
             acc
         });
 
-    let layout =
-        knx_productdb::parameter_layout::load(products, &program_id).map_err(|e| e.to_string())?;
     let mut sections = Vec::with_capacity(section_order.len());
     for key in section_order {
         let section = sections_by_key.remove(&key).expect("just inserted above");
@@ -6499,6 +6529,29 @@ fn assemble_parameter_panel_for_project(
                 })
             })
             .collect::<Result<Vec<_>, String>>()?;
+        // button-literal-passive-v1: literal text and cell only, charged to the
+        // same copy budget; no handler data, field, value or write target.
+        let passive_labels = section
+            .buttons
+            .iter()
+            .filter_map(|button| {
+                layout
+                    .button(definition, button.node_id)
+                    .map(|literal| (button, literal))
+            })
+            .map(|(button, literal)| {
+                Ok(crate::routes::ParameterPassiveLabelDto {
+                    kind: crate::routes::ParameterPassiveLabelKindDto::ButtonLiteral,
+                    element_id: literal.element_id.clone(),
+                    text: caption_fills
+                        .copy_text(Some(&literal.text))?
+                        .expect("present literal"),
+                    cell: crate::parameter_grid::cell_dto(literal.cell),
+                    group: group_dto(literal.group.clone(), &mut caption_fills)?,
+                    block_access: button.block_access.clone(),
+                })
+            })
+            .collect::<Result<Vec<_>, String>>()?;
         push_write_refusals(
             &mut diagnostics,
             section.scope.as_ref().map(|s| module_scope_dto(s)),
@@ -6528,6 +6581,7 @@ fn assemble_parameter_panel_for_project(
             fields,
             separators,
             group_layouts,
+            passive_labels,
         });
     }
 

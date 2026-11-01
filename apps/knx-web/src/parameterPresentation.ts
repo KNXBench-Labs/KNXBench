@@ -1,5 +1,5 @@
 /** Pure presentation grouping; all source diagnostics and access metadata stay intact. */
-import type { ParameterDiagnostic, ParameterField, ParameterSection, ParameterSeparator } from "./api";
+import type { ParameterDiagnostic, ParameterField, ParameterPassiveLabel, ParameterSection, ParameterSeparator } from "./api";
 import { moduleScopeIdentity } from "./moduleScope";
 
 const restricting = (access: string | null | undefined) => access === "None" || access === "Read";
@@ -21,12 +21,19 @@ export function isSeparatorRestricted(separator: ParameterSeparator): boolean {
   return restricting(separator.access) || restricting(separator.blockAccess);
 }
 
+/** `button-literal-passive-v1`: a passive label inside a block the manufacturer restricts. */
+export function isPassiveLabelRestricted(label: ParameterPassiveLabel): boolean {
+  return restricting(label.blockAccess);
+}
+
 /**
- * Keeps the chosen fields and separators of a section; each kept separator's
- * `position` is renumbered to stand before the same kept field as before.
+ * Keeps the chosen fields, separators and passive labels of a section (none
+ * of the latter unless asked); each kept separator's `position` is renumbered
+ * to stand before the same kept field as before.
  */
 export function filterParameterSection(section: ParameterSection, keepField: (field: ParameterField) => boolean,
-  keepSeparator: (separator: ParameterSeparator) => boolean): ParameterSection {
+  keepSeparator: (separator: ParameterSeparator) => boolean,
+  keepPassiveLabel: (label: ParameterPassiveLabel) => boolean = () => false): ParameterSection {
   const keptBefore: number[] = [0];
   const fields: ParameterField[] = [];
   for (const field of section.fields) {
@@ -37,7 +44,7 @@ export function filterParameterSection(section: ParameterSection, keepField: (fi
     ...separator,
     position: keptBefore[Math.min(Math.max(separator.position, 0), section.fields.length)],
   }));
-  return { ...section, fields, separators };
+  return { ...section, fields, separators, passiveLabels: (section.passiveLabels ?? []).filter(keepPassiveLabel) };
 }
 
 export function groupParameterDiagnostics(diagnostics: readonly ParameterDiagnostic[]) {

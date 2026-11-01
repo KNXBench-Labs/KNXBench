@@ -475,7 +475,7 @@ Unsupported layouts, calculations, activation and encodings remain named limits.
 ### 187. Manufacturer distribution inspection is partial and read-only
 
 **Ledger status:** `ACCEPTED_BOUNDARY` ([KL-187](status/LEDGER.md#post-snapshot-ids)).
-`knx products inspect-distribution` (31 October 2026) reports what a manufacturer XML or distribution ZIP declares, with byte-exact source references. It installs nothing and gives no write or initialization authority; Dynamic and reference coverage are documented subsets, comments are not inventoried, and any resource limit refuses the whole source. A positive report is not ETS or KNX compatibility.
+`knx products inspect-distribution` (31 October 2026) reports what a manufacturer XML or distribution ZIP declares, with byte-exact source references. It installs nothing and gives no write or initialization authority; Dynamic and reference coverage are documented subsets, comments are not inventoried, and any resource limit refuses the whole source. TypeNumber-bound and Union-interval source candidates are arithmetic observations, not validity verdicts. A positive report is not ETS or KNX compatibility.
 [Details and history](limitations/KL-187-distribution-inspection.md)
 
 ## Project model and storage

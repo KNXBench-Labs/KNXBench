@@ -6,20 +6,24 @@ Local implementation, 2026-10-11; source integration and deployment are separate
 
 - Retained source bytes and manufacturer references are not removed to make an
   import fit the application Save/Edit path.
-- Model/stack/version images remain limited to **64 MiB stored**. The single
-  shared source-context image has its own **256 MiB stored** budget. Each decoded
-  image is bounded to **512 MiB**. Total physical history payload remains
-  **512 MiB**, with at most 256 stack states and 256 named/save versions. A
-  separate **512 MiB cumulative decoded** budget counts every physical model
-  image and each shared context once. Fixed-size header preflight runs before
-  inflating blobs; many small compressed images cannot bypass it. SQLite may
+- Since [ADR-0142](../adr/0142-file-size-limits-follow-the-storage-ceiling.md)
+  (18 October 2026) the limits follow the storage ceiling: model/stack/version
+  images are limited to **1,000,000,000 bytes stored** (about 953.7 MiB). The
+  single shared source-context image has its own budget of the same size. Each
+  decoded image is bounded to **4 GiB**. Total physical history payload is at most
+  **4 GiB**, with at most 256 stack states and 256 named/save versions. A
+  separate **4 GiB cumulative decoded** budget counts every physical model image
+  and each shared context once. (The original 2026-10-11 values were 64 MiB per
+  stored image, 256 MiB context, 512 MiB per decoded image and 512 MiB total.)
+  Fixed-size header preflight runs before inflating blobs; many small compressed
+  images cannot bypass it. SQLite may
   materialize a stored blob internally for `substr`; the preceding stored-image
   and physical-total caps still apply. This is not a 16-byte heap/RSS guarantee.
-- Images at or below the legacy 64-MiB threshold remain plain native SQLite.
-  Larger images use the independently versioned envelope in
-  [ADR-0111](../adr/0111-bounded-large-history-images.md). A large poorly
-  compressible shared context can use its separate storage budget, without
-  increasing the per-model limit or being duplicated for ordinary edits.
+- Images at or below the stored-image limit remain plain native SQLite. Larger
+  decoded images use the independently versioned envelope in
+  [ADR-0111](../adr/0111-bounded-large-history-images.md) and must compress into
+  that limit. The shared context uses its own budget and is not duplicated for
+  ordinary edits.
 - Stored-byte SHA-256 and semantic native identity are separate. Changing the
   image representation does not change the semantic identity algorithm.
 - Decode requires the exact declared length, a complete single zlib stream and

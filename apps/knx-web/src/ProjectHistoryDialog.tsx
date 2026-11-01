@@ -11,6 +11,9 @@ import { filterProjectVersions, validVersionLabel, type ProjectHistory, type Pro
 
 type Confirmation = { kind: "restore" | "delete" | "clear"; view: ProjectHistory; version?: ProjectVersion };
 const mib = (bytes: number) => (bytes / (1024 * 1024)).toFixed(1);
+/** Limits may be decimal byte counts (1 000 000 000): at most one decimal, de/en separator. */
+const limitMib = (bytes: number, language: string) =>
+  (bytes / (1024 * 1024)).toLocaleString(language === "de" ? "de" : "en", { maximumFractionDigits: 1, useGrouping: false });
 
 export default function ProjectHistoryDialog(props: {
   tree: ProjectTree; onTreeUpdate: (tree: ProjectTree, restored: boolean) => void; onClose: () => void;
@@ -161,10 +164,10 @@ export default function ProjectHistoryDialog(props: {
       </div>
       {nearingLimit && <p className="project-history-notice" role="status">{t("projectHistory.nearLimit")}</p>}
       <p className="project-history-limit-note">{t("projectHistory.limits", { steps: view.limits.maxStackStates, versions: view.limits.maxVersions,
-        image: view.limits.maxImageBytes / (1024 * 1024), total: view.limits.maxHistoryBytes / (1024 * 1024) })}</p>
-      {view.limits.maxContextBytes !== undefined && <p className="project-history-limit-note" data-history-limit="context">{t("projectHistory.contextLimit", {context: view.limits.maxContextBytes / (1024 * 1024)})}</p>}
-      {view.limits.maxDecodedImageBytes !== undefined && <p className="project-history-limit-note" data-history-limit="decoded">{t("projectHistory.decodedLimit", {decoded: view.limits.maxDecodedImageBytes / (1024 * 1024)})}</p>}
-      {view.limits.maxDecodedHistoryBytes !== undefined && <p className="project-history-limit-note" data-history-limit="total-decoded">{t("projectHistory.decodedHistoryLimit", {decoded: view.limits.maxDecodedHistoryBytes / (1024 * 1024)})}</p>}
+        image: limitMib(view.limits.maxImageBytes, language), total: limitMib(view.limits.maxHistoryBytes, language) })}</p>
+      {view.limits.maxContextBytes !== undefined && <p className="project-history-limit-note" data-history-limit="context">{t("projectHistory.contextLimit", {context: limitMib(view.limits.maxContextBytes, language)})}</p>}
+      {view.limits.maxDecodedImageBytes !== undefined && <p className="project-history-limit-note" data-history-limit="decoded">{t("projectHistory.decodedLimit", {decoded: limitMib(view.limits.maxDecodedImageBytes, language)})}</p>}
+      {view.limits.maxDecodedHistoryBytes !== undefined && <p className="project-history-limit-note" data-history-limit="total-decoded">{t("projectHistory.decodedHistoryLimit", {decoded: limitMib(view.limits.maxDecodedHistoryBytes, language)})}</p>}
       <p className="project-history-caveat">{t("projectHistory.backupCaveat")}</p>
     </>}
     <footer className="project-history-footer"><button type="button" disabled={busy || loading} onClick={() => void refresh()}>{t("projectHistory.refresh")}</button></footer>

@@ -1,10 +1,14 @@
 # Restart snapshot
 
-## Manual screenshots after Alpha 19 (DELIVERING; owner WebUI; observed 2026-11-01 19:55 CET)
-- Branch `docs/alpha19-screenshots-20261101`, worktree `<sources>/knxbench-docshots-20261101`: capture specs + 59 stills/3 GIFs
-  from the published alpha.19 image (diag/report stills: tag-built simulator), manual captions, media manifest.
-- Two full runs of all three capture specs green; package gate change-scoped before push. Next: fix the released
-  project-history MiB display (`953.67431640625 MiB`) as its own package with a regression test.
+## Manual screenshots after Alpha 19 (PUBLISHED; observed 2026-11-01 20:30 CET)
+- On main `a66697ba2`: capture specs + 59 stills/3 GIFs from the published alpha.19 image, Report problem guide,
+  media manifest. Change-scoped package gate 11/11 green, inputs frozen.
+
+## Project history MiB display fix (DELIVERED; observed 2026-11-01 20:55 CET)
+- On main with this commit: history limits round to one decimal in the UI language (953.7 / 953,7 MiB). Dialog test
+  RED on old code, GREEN on fix; contract now states ADR-0142 limits; limitation page adds a current-limits section
+  outside its hash-pinned record. Change-scoped gate 11/11 green (821 browser cases). Ships with the next alpha.
+- Worktrees, branches, scratch and the local alpha.19 image extract of both packages retired.
 
 ## Alpha 19 release (PUBLISHED; owner tag claude-release-alpha19; observed 2026-11-01 18:45 CET)
 - Release freeze: released by claude-release-alpha19. `main` is open again; later work ships in the next alpha.

@@ -12,6 +12,17 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Project history limits in readable MiB (1 November 2026)
+
+Display fix, no storage or limit change. Since ADR-0142 the stored-image and
+source-context limits are 1,000,000,000 bytes, and project history printed them
+unrounded as `953.67431640625 MiB` (visible in the Alpha 19 manual stills). The
+limit lines now round to at most one decimal with the UI language's separator
+(`953.7 MiB`, German `953,7 MiB`; whole values stay `4096 MiB`). A dialog test
+with the real decimal limit failed on the old code and passes now. The history
+contract still listed the pre-ADR-0142 64/256/512 MiB values and now states the
+current limits; the limitation page keeps its hash-pinned retained record and adds
+a current-limits section after it.
 ## Manual screenshots after Alpha 19 (1 November 2026)
 
 Docs and media only, no application change. The manual's 46 stills, the four
@@ -29,7 +40,8 @@ weekday so no date-dependent startup joke reaches a still. Two complete runs of 
 three specs passed; byte/pixel reproducibility is in the
 [media manifest](assets/media-manifest.json). Captions and "screenshots predate"
 notes now describe Alpha 19. The stills honestly show one released display defect:
-project history prints its 1 GB limits as `953.67431640625 MiB`.
+project history prints its 1 GB limits as `953.67431640625 MiB` (fixed above for the
+next release; the Alpha 19 stills stay as released).
 
 ## Alpha 19 pre-release (source cutoff 1 November 2026)
 

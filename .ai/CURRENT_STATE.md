@@ -1,11 +1,12 @@
 # Restart snapshot
 
-## Alpha 19 release (FROZEN; owner tag claude-release-alpha19; observed 2026-11-01 13:30 CET)
-- Release freeze: taken by claude-release-alpha19. Cutoff `858b0a24d` (DIAG-03 delivered, OKX-04 + security deps included).
-- `main` stays release-frozen for code until the tag `v0.1.0-alpha.19` is published: no merges/pushes to `main` from other
-  packages; local work, rebases and gates are fine. Anything merged after the tag ships in the next alpha.
-- Candidate on branch `release/alpha19-20261101` (version bump + release docs); full release gate and packaging dry runs follow.
-- Resume when this section says `Release freeze: released by claude-release-alpha19` (also posted on abort, with reason).
+## Alpha 19 release (PUBLISHED; owner tag claude-release-alpha19; observed 2026-11-01 18:45 CET)
+- Release freeze: released by claude-release-alpha19. `main` is open again; later work ships in the next alpha.
+- Immutable `v0.1.0-alpha.19` names `0b827abee222c459ce068cbce83a941691a16805` (cutoff `858b0a24d`). Never move the tag.
+- Published pre-release: AppImage, MCP, SHA256SUMS; Docker amd64+arm64, version/latest same index. Tag publishers
+  41330363960/41330363961 succeeded. Candidate 1 `b73c467a7` rejected (29/30), candidate 2 gated 30/30.
+- Public receipt `docs/evidence/release-alpha19-2026-11-01.json`; notes `docs/releases/alpha19.md`.
+- Pinned matrix NOT run (owner-approved 28-file cross-section; legacy opt-in + A18-vs-A19 ingest differential instead).
 
 ## DIAG-03 source closeout (DELIVERED; observed 2026-11-01 CET)
 - Main-first source `7443e2ea6` includes B1 admitted reduced log/monitor/browser sections, quit-over-wizard and canonical absent-source review; security ZIP9/TLS main retained. Final maintained 15/15 PASS/frozen/planCompleted, checked user-data touched/unchecked empty; software scope in `docs/status/2026-11-01-diag03-closeout.md`.

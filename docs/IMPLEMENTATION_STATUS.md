@@ -26,6 +26,16 @@ the `zip` 9/`rustls` security updates. No hardware acceptance follows; the
 allocation mismatch of #30/#22 stays unresolved. Scope, upgrade notes and
 boundaries: [Alpha 19 release notes](releases/alpha19.md).
 
+Published on 1 November 2026 at immutable `0b827abee222c459ce068cbce83a941691a16805`
+after a rejected first candidate (its release-only device-diagnostics browser run caught
+the bundle withholding a token-reached raw recording; fixed in `0695115ac`). Both real
+tag publishers succeeded; downloaded AppImage/MCP/checksum bytes, the AppImage
+host-library check and Broadway startup, the amd64/arm64 registry identities and an
+isolated amd64 authenticated smoke were checked separately from the source gate. The
+full pinned compatibility matrix was not run (owner-approved 28-file cross-section
+instead). Limits are explicit in the
+[public verification receipt](evidence/release-alpha19-2026-11-01.json).
+
 <a id="diag-03-closeout-candidate-1-november-2026"></a>
 
 ## DIAG-03 source closeout (1 November 2026)

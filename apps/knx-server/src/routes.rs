@@ -741,6 +741,9 @@ pub(crate) enum ParameterDiagnosticKindDto {
     /// ADR-0080: the product database holds no recorded write authority for
     /// this program (a failed v20 backfill); every field is read-only.
     WriteAuthorityUnavailable,
+    /// `button-literal-passive-v1`: the retained source could not be bound to
+    /// the stored `Dynamic` tree, so no reached program `Button` shows a label.
+    PassiveLabelsUnbound,
 }
 
 #[derive(serde::Serialize, Debug, Clone, PartialEq)]

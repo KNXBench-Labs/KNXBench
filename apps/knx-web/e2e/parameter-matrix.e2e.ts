@@ -49,13 +49,13 @@ const passiveLabels: ParameterPassiveLabel[] = [
 
 async function intercept(page: Page, language: "en" | "de") {
   const state = { unexpected: [] as string[], posts: [] as { etsId: string; raw: string }[], envelopes: [] as Record<string, unknown>[],
-    projectOpen: false, aLeft: "0", revision: 1 };
+    projectOpen: false, aLeft: "0", bLeft: "1", revision: 1 };
   // The authoritative snapshot a bound write names; a write moves it on.
   const current = (): ProjectTree => ({ ...tree, snapshot_revision: state.revision, can_undo: state.revision > 1, is_modified: state.revision > 1 });
   const panel = (): ParameterPanel => ({ programId: "A-FICTIONAL", sourceLanguage: "en", tree: null, stale: [], diagnostics: [],
     sections: [{ scope: null, groupLayouts: [pairs, legacy, only], passiveLabels, fields: [
       choice("A-left", state.aLeft, 1, 2), choice("A-right", "0", 1, 3),
-      { ...base("B-left", "pairs", "Fictional pairs"), cell: { row: 2, column: 2 } },
+      { ...base("B-left", "pairs", "Fictional pairs"), value: state.bLeft, cell: { row: 2, column: 2 } },
       { ...base("B-right", "pairs", "Fictional pairs"), cell: { row: 2, column: 3 } },
       { ...base("Loose", "pairs", "Fictional pairs"), kind: "Text", value: "Fictional note" },
       base("Delay", "timing", "Fictional timing"),
@@ -89,6 +89,7 @@ async function intercept(page: Page, language: "en" | "de") {
       if (write.snapshotRevision !== state.revision) { status = 409; body = { error: "stale fixture snapshot", code: "snapshotStale" }; }
       else {
         if (write.etsId === "A-left") state.aLeft = write.raw;
+        if (write.etsId === "B-left") state.bLeft = write.raw;
         state.revision += 1;
         body = { ...panel(), tree: current() };
       }
@@ -239,3 +240,36 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
     expect(state.unexpected).toEqual([]);
   });
 }
+
+// A browser commits a typed value when focus leaves it; next to a passive label that is
+// the existing row's one bound write, and the same editor survives area and search changes.
+test("a typed value beside a passive label is written on leaving and its editor survives navigation", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  const state = await intercept(page, "en");
+  await openParameters(page, "en");
+  const workspace = page.locator(".parameter-workspace");
+  const area = (label: string) => workspace.locator(".parameter-workspace-nav button").filter({ hasText: label });
+  const matrix = workspace.locator('.parameter-workspace-rows[data-layout="matrix"]');
+  const pairLabel = matrix.locator('[data-passive-label="B-PAIR"]');
+  await area("Fictional pairs").click();
+  await expect(pairLabel).toBeVisible();
+  const input = matrix.locator('[data-parameter-row="B-left"] input');
+  await input.evaluate(node => node.setAttribute("data-retained-editor", "yes"));
+  await input.fill("42");
+  await expect(input).toBeFocused();
+  expect(state.posts).toEqual([]);
+
+  await area("Fictional timing").click();
+  await expect.poll(() => state.posts).toEqual([{ etsId: "B-left", raw: "42" }]);
+  expect(state.envelopes[0]).toMatchObject({ etsId: "B-left", raw: "42", snapshotRevision: 1, expectedValue: "1" });
+  await expect(matrix).toHaveCount(0);
+  await workspace.locator('input[type="search"]').fill("Fictional");
+  await expect(workspace.locator("[data-passive-label]")).toHaveCount(0);
+  await workspace.locator(".parameter-workspace-toolbar button").click();
+  await area("Fictional pairs").click();
+  await expect(input).toHaveAttribute("data-retained-editor", "yes");
+  await expect(input).toHaveValue("42");
+  await expect(pairLabel).toBeVisible();
+  expect(state.posts).toHaveLength(1);
+  expect(state.unexpected).toEqual([]);
+});

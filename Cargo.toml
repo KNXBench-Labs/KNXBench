@@ -57,7 +57,7 @@ tauri-plugin-dialog = "2.7"
 # at this exact version through `wry`, so depending on it directly adds an
 # edge, not a crate. Linux-only in the one crate that uses it.
 webkit2gtk = "2.0"
-zip = { version = "8.6", default-features = false, features = ["deflate-flate2-zlib-rs"] }
+zip = { version = "9.0", default-features = false, features = ["deflate-flate2-zlib-rs"] }
 crc32fast = "1"
 # Decompresses a ZipCrypto entry's compressed data once knx-secure has
 # stripped its encryption layer (Container::open_with_password): the zip

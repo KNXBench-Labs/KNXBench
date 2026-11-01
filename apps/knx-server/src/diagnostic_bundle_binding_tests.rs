@@ -267,26 +267,35 @@ async fn project_revision_and_replacement_invalidate_review_before_device_lookup
 }
 
 #[tokio::test]
-async fn unadmitted_client_bytes_are_noninterfering_and_description_is_withheld() {
+async fn withheld_client_bytes_are_noninterfering_and_description_is_withheld() {
     let dir = tempfile::tempdir().unwrap();
     let state = state(dir.path(), true);
     let query = json!({"problemType":"userInterface", "client":{"recentErrors":["reviewed"]}});
     let preview = preview_query(&state, &query).await;
     let client = offer(&preview, "clientState");
-    assert_eq!(client["selected"], false);
-    assert_eq!(
-        client["unavailable"],
-        "this section is withheld until its content is admitted as free of credentials"
-    );
+    assert_eq!(client["selected"], true);
+    assert_eq!(client["unavailable"], Value::Null);
+    // A wrong-typed error is withheld, never echoed, so other withheld bytes are no drift.
     let mut altered = reviewed(&query, &preview);
     altered["client"]["recentErrors"] = json!(["unreviewed"]);
     unchanged(&state, altered).await;
+    // A value that does leave is bound: changing it after review is drift.
+    let mut theme = reviewed(&query, &preview);
+    theme["client"]["theme"] = json!("graphite");
+    changed(&state, theme).await;
     let mut query = reviewed(&query, &preview);
     query["description"] = json!("entered only after review");
     let (status, bytes, _) = call(&state, "POST", "/api/diagnostics/bundle", Some(query)).await;
     assert_eq!(status, StatusCode::OK, "{}", json_of(&bytes));
     let mut zip = zip::ZipArchive::new(std::io::Cursor::new(bytes)).unwrap();
-    assert!(zip.by_name("client/client.json").is_err());
+    let mut client = String::new();
+    zip.by_name("client/client.json")
+        .unwrap()
+        .read_to_string(&mut client)
+        .unwrap();
+    let projected: Value = serde_json::from_str(&client).unwrap();
+    assert_eq!(projected["withheld"]["invalidFields"], 1, "{client}");
+    assert!(!client.contains("reviewed"));
     let mut manifest = String::new();
     zip.by_name("manifest.json")
         .unwrap()
@@ -662,24 +671,31 @@ async fn without_an_operation_the_chosen_current_device_is_unchanged() {
 }
 
 #[tokio::test]
-async fn unadmitted_session_log_is_noninterfering_but_selected_recording_deletion_is_bound() {
+async fn a_selected_session_log_is_bound_and_a_deselected_one_is_noninterfering() {
     let dir = tempfile::tempdir().unwrap();
     let state = state(dir.path(), true);
+    let push = |state: &crate::AppState| {
+        state
+            .session_log
+            .lock()
+            .unwrap()
+            .push(crate::session_log::LogEntry {
+                timestamp: crate::session_log::now(),
+                severity: crate::session_log::Severity::Error,
+                source: "test".into(),
+                message: "UNREVIEWED_LOG_SENTINEL".into(),
+                location: None,
+                detail: None,
+                diagnostic: None,
+            })
+    };
     let query = json!({"problemType":"deviceReading"});
     let preview = preview_query(&state, &query).await;
-    state
-        .session_log
-        .lock()
-        .unwrap()
-        .push(crate::session_log::LogEntry {
-            timestamp: crate::session_log::now(),
-            severity: crate::session_log::Severity::Error,
-            source: "test".into(),
-            message: "UNREVIEWED_LOG_SENTINEL".into(),
-            location: None,
-            detail: None,
-            diagnostic: None,
-        });
+    push(&state);
+    changed(&state, reviewed(&query, &preview)).await;
+    let query = json!({"problemType":"deviceReading","sections":["environment"]});
+    let preview = preview_query(&state, &query).await;
+    push(&state);
     unchanged(&state, reviewed(&query, &preview)).await;
     let id = record(&state, OperationKind::Compare, ("x", "1"), true);
     let query = json!({"problemType":"deviceReading","operation":{"recordingId":id}});
@@ -747,10 +763,7 @@ async fn explicit_none_never_selects_a_previous_run_and_client_can_be_selected_a
         .iter()
         .find(|row| row["kind"] == "clientState")
         .unwrap();
-    assert_eq!(
-        client["unavailable"],
-        "this section is withheld until its content is admitted as free of credentials"
-    );
+    assert_eq!(client["unavailable"], "the browser sent no client state");
     assert_eq!(client["selected"], false);
     for reference in [
         json!({"selection":"none","recordingId":id}),
@@ -769,12 +782,12 @@ async fn explicit_none_never_selects_a_previous_run_and_client_can_be_selected_a
 }
 
 #[tokio::test]
-async fn unadmitted_bus_monitor_availability_is_noninterfering() {
+async fn bus_monitor_availability_is_bound() {
     monitor_changes(false).await;
 }
 
 #[tokio::test]
-async fn unadmitted_bus_monitor_content_is_noninterfering() {
+async fn new_bus_monitor_traffic_after_review_keeps_the_pinned_window() {
     monitor_changes(true).await;
 }
 
@@ -803,13 +816,15 @@ async fn monitor_changes(change_contents: bool) {
     let buffer = session.buffer();
     *state.bus_session.lock().await = Some(session);
     if !change_contents {
-        unchanged(&state, reviewed(&query, &absent)).await;
+        changed(&state, reviewed(&query, &absent)).await;
         let session = state.bus_session.lock().await.take().unwrap();
         session.stop().await;
         assert!(handle.disconnected());
         return;
     }
     let empty = preview_query(&state, &query).await;
+    let deselected = json!({"problemType":"deviceReading","sections":["environment"]});
+    let deselected_preview = preview_query(&state, &deselected).await;
     handle
         .sender()
         .send(TunnelEvent::Telegram(LDataFrame {
@@ -831,7 +846,9 @@ async fn monitor_changes(change_contents: bool) {
     })
     .await
     .unwrap();
+    // The reviewed window is pinned; later telegrams are not part of it.
     unchanged(&state, reviewed(&query, &empty)).await;
+    unchanged(&state, reviewed(&deselected, &deselected_preview)).await;
     state.bus_session.lock().await.take().unwrap().stop().await;
     assert!(handle.disconnected());
 }

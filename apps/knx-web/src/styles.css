@@ -4890,6 +4890,11 @@ html[data-motion-flow="off"] .flow-camera,
    above whatever error made the user report a problem. */
 .search-overlay:has(> .achievements-dialog),
 .search-overlay:has(> .report-problem) { z-index: 110; }
+/* The wizard's body portal comes after the app in the DOM and sits above the default modal layer (10),
+   so it would still paint over a prompt the app raises on top of it (native window close). Modal
+   isolation marks it inert while that prompt is the foreground: step one below the default layer, so
+   the active modal, not the stale wizard, owns the paint. */
+.search-overlay[inert]:has(> .report-problem) { z-index: 9; }
 
 .bus-discovery-search[aria-busy="true"] { animation-name: none; }
 

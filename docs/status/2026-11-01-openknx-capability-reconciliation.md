@@ -1,6 +1,11 @@
 # OpenKNX capability reconciliation (OKX-07)
 
-Observed: 1 November 2026, against main at `f22ef1b04`.
+Observed baseline: 1 November 2026, against main at `f22ef1b04`.
+
+OKX-04 update: canonical baggage joins, bounded PNG decoding and explicit
+offline HTML are delivered with owning API/CLI tests, independent review,
+real-browser proof and a 37/37 release measurement. Other rows
+retain the baseline observations below; no new execution is inferred for them.
 
 ## Purpose and scope
 
@@ -41,6 +46,7 @@ Delivering commits, by package:
   `128233100`, merged by `2f5814441`. Script-range hotfix `61e730abf`.
 - **OKX-03:** `457295909`, `504b3ad5b`, `95262e8ff`, `4c149d5e9` and
   `a5a1b912b`, merged by `afb28da1f`. Measurement docs in `0e3d9677b`.
+- **OKX-04:** the OKX-04 package merge of 1 November (see `git log`).
 - **OKX-05:** `2a4e43db9`, merged by `6c731be2d`.
 - **OKX-06:** `e7a175ae4` and `fe6bc8af4`, merged by `484e946a8`. Follow-up
   `8a597c648`, merged by `2e88d9b12`.
@@ -52,7 +58,7 @@ inspection-side reporting from those packages (their tests are listed beside
 the baseline tests), and OKX-06 tightened the shared source-hash guard that
 C08's editor host relies on.
 
-| Row | Capability | Audit | Now on main | Commit(s) | Owner | Tests on main |
+| Row | Capability | Audit | Current source status | Commit(s) | Owner | Baseline / owning tests |
 | --- | --- | --- | --- | --- | --- | --- |
 | C01 | Native package and container admission | missing | delivered (OKX-01) | OKX-01 | [contract][di] | `pdb/distribution_archive.rs::windows_distribution_is_positive_without_weakening_native_package_rejection`; `cli/distribution_inspect_cli.rs::real_cli_emits_useful_json_without_source_sidecar_profile_or_authority_mutation`; `pdb/standalone_packages.rs::malformed_and_unsupported_packages_leave_no_rows` |
 | C02 | Single-file dispatch, monolithic manufacturer XML | missing | delivered (OKX-01) | OKX-01 | [contract][di] | `pdb/distribution_matrix.rs::split_oracle_order_and_repeat_keep_typed_facts`; `pdb/distribution_inspection.rs::combined_source_exposes_typed_catalogue_hardware_and_dynamic_fallback_without_installing`; `pdb/distribution_split.rs::split_archive_links_declared_manufacturer_sources_with_exact_candidate_coordinates`; `pdb/distribution_matrix.rs::foreign_names_and_qualified_attributes_cannot_escape_scope` |
@@ -77,7 +83,7 @@ C08's editor host relies on.
 | C21 | Language overlays, suffixes, positional text | blocked | still blocked | — | [WP-05][wp05] | `pdb/suffix_text.rs::a_translated_suffix_follows_the_layer_that_supplies_it`; `srv/http_parameter_captions.rs::requested_language_overlays_caption_templates_before_positional_fill`; `srv/http_parameter_grid/passive_labels.rs::alternate_sources_keep_their_literal_and_a_product_language_translates_nothing` |
 | C22 | Communication objects: DPT, layered flags and size | unrelated | unrelated | — | [WP-06][wp06] | `srv/http_parameter_panel.rs::newly_created_objects_report_unresolved_dpt_without_guessing`; `pdb-src/image.rs::product_defaults_write_parameters_objects_and_tables` |
 | C23 | Parameter edits, object reconciliation | reuse | reuse-unchanged | — | [object refresh][por] | `srv/http_parameter_panel.rs::parameter_enable_adds_missing_objects_in_one_persistable_undo_step`; `srv/http_parameter_panel.rs::missing_active_module_object_refuses_the_entire_parameter_edit` |
-| C24 | Baggage resources, payload isolation | missing | open-other-owner (OKX-04) | — | [KL-187][kl187] | `pdb/baggage_inventory.rs::declarations_are_typed_resolved_exactly_and_payloads_classified_by_content` (native packages only) |
+| C24 | Baggage resources, payload isolation | missing | delivered (OKX-04) | OKX-04 | [contract][di], [KL-187][kl187] | `pdb/distribution_baggage.rs::archive_maps_literal_adjacent_stem_and_exact_member_identity`; `pdb/distribution_baggage.rs::png_preview_is_decoded_reencoded_and_bound_to_original_and_derived_hashes`; `pdb/distribution_baggage_bounds.rs` and `pdb/distribution_baggage_paths.rs`; `cli/distribution_inspect_cli.rs::explicit_html_is_offline_passive_and_json_remains_the_default`; native inventory regression retained |
 | C25 | On-demand code and load source model | reuse | reuse-unchanged | — | [PRG-01][prg01] | `pdb-src/code.rs::table_placements_and_options_are_read`; `srv/http_download_support_guidance.rs::a_declared_download_plugin_is_refused_for_every_scope_and_readiness_agrees` |
 | C26 | Ordinary offline image, load plan | unrelated | unrelated | — | [PRG-01][prg01] | `pdb-src/image.rs::product_defaults_write_parameters_objects_and_tables`; `app/vendor_download_plugin.rs::customer_markerless_public_writer_keeps_literal_bytes_and_steps` |
 | C27 | System 1 and System 2 strict and experimental images | unrelated | unrelated | — | [System-2 image][s2img] | `pdb/system2_image.rs::real_product_evaluator_builds_parameter_and_legacy_table_images_without_admitting_a_download`; `pdb/experimental_system2_image.rs::project_experimental_union_overlay_retains_template_not_default_union_base` |
@@ -87,8 +93,8 @@ C08's editor host relies on.
 | C31 | Resource budgets, fail-closed projections | reuse | reuse-unchanged | consumed by OKX-01 | [limits][di-lim] | `pdb/distribution_resources.rs::callers_cannot_raise_default_security_profile_or_disable_report_work_bound`; `pdb/distribution_dynamic_budget.rs::dynamic_scalar_copy_budget_refuses_before_evaluation_instead_of_expanding_raw_values`; `pdb/dynamic_tree.rs::a_wide_non_cyclic_fan_out_trips_the_expansion_budget_before_full_expansion` |
 | C32 | Catalogue, hardware and application joins; master boundary | missing | delivered (OKX-01) | OKX-01 | [contract][di] | `pdb/distribution_matrix.rs::multi_manufacturer_application_duplicate_and_dangling_scopes_are_explicit`; `pdb/distribution_split.rs::repeated_declared_manufacturer_ids_stay_separate_in_one_original_document`; `pdb-src/query.rs::catalog_item_program_reports_a_missing_relation` (native baseline, not inspection) |
 
-Counts: delivered 7, partially delivered 3, reuse-unchanged 11, still
-blocked 6, unrelated 4, open-other-owner 1 (32 rows). The audit's own counts
+Counts: delivered 8, partially delivered 3, reuse-unchanged 11, still
+blocked 6, unrelated 4 (32 rows). The audit's own counts
 were missing 8, reuse 11, blocked 9, unrelated 4.
 
 Each delivered row is delivered within the audit's needed change, which was
@@ -106,9 +112,9 @@ tooling.
 
 ## Still open
 
-- **OKX-04: distribution baggage mapping and passive display (C24).** Owned
-  by another session and not on main. Inspection still lists
-  `baggageAssociationNotPerformed` ([KL-187][kl187]).
+- **Baggage beyond inspection (C24).** `nativePackageBaggageNotPerformed`
+  still excludes native baggage installation; help archives remain metadata
+  only and no Picture editor exists ([KL-187][kl187]).
 - **Blocked rows and the evidence each one still lacks:**
   - C06: independent product-parameter Float vectors for encoding, width,
     byte order and sentinels. A bus float codec is not that evidence.
@@ -159,9 +165,10 @@ tooling.
   is not rewritten; for current figures, main now has 67 `#[test]` functions
   in `pdb/distribution_*.rs` (17 of them in `distribution_candidates.rs`) and
   7 in `cli/distribution_inspect_cli.rs`.
-- C24: `baggageAssociationNotPerformed` is emitted by
-  `pdb-src/distribution.rs`, but no test on main asserts it. That limitation
-  is stated, not test-backed.
+- C24 baseline: `baggageAssociationNotPerformed` was stated but not directly
+  test-backed on the observed main revision. The format-5 candidate replaces it
+  only for the performed distribution association pass and tests the separate
+  `nativePackageBaggageNotPerformed` qualification; installation is unchanged.
 - C01: when an archive contains `knx_master.xml`, `pdb-src/distribution_zip.rs`
   emits `masterMemberPresentNotInspected` and reports `MasterNotInspected`
   instead of `MissingMaster`. No test on main asserts that branch, and there

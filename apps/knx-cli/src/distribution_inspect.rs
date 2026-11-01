@@ -1,4 +1,7 @@
-//! Emits read-only distribution-inspection JSON without opening a product database or output file.
+//! Emits read-only JSON or owned offline HTML without opening a product database or output file.
+
+#[path = "distribution_html.rs"]
+mod html;
 
 use knx_productdb::distribution::{inspect_distribution, DistributionLimits};
 use std::fs::File;
@@ -6,21 +9,37 @@ use std::io::{Read, Write};
 use std::path::Path;
 use std::process::ExitCode;
 
-const USAGE:&str="usage: knx products inspect-distribution <source.xml|source.zip>\nRead-only JSON source inspection; no installation, code execution or write authority.";
+const USAGE:&str="usage: knx products inspect-distribution <source.xml|source.zip> [--output-format json|html]\nRead-only offline source inspection; no installation, code execution or write authority.";
+
+fn arguments(args: &[String]) -> Option<(&str, &str)> {
+    let (path, format) = match args {
+        [path] => (path.as_str(), "json"),
+        [path, flag, format] if flag == "--output-format" => (path.as_str(), format.as_str()),
+        [flag, format, path] if flag == "--output-format" => (path.as_str(), format.as_str()),
+        _ => return None,
+    };
+    (!path.is_empty() && !path.starts_with('-') && matches!(format, "json" | "html"))
+        .then_some((path, format))
+}
 
 pub(crate) fn run(args: &[String]) -> ExitCode {
     // Validate the complete invocation before opening any path. No DB/output/execution flags.
-    if args.len() != 1 || args[0].starts_with('-') || args[0].is_empty() {
+    let Some((path, format)) = arguments(args) else {
         eprintln!("{USAGE}");
         return ExitCode::FAILURE;
-    }
-    match inspect_file(Path::new(&args[0])) {
+    };
+    match inspect_file(Path::new(path)) {
         Ok(report) => {
             let stdout = std::io::stdout();
             let mut out = stdout.lock();
-            if let Err(e) = serde_json::to_writer(&mut out, &report)
-                .and_then(|()| out.write_all(b"\n").map_err(serde_json::Error::io))
-            {
+            let result = if format == "html" {
+                out.write_all(html::render(&report).as_bytes())
+                    .map_err(serde_json::Error::io)
+            } else {
+                serde_json::to_writer(&mut out, &report)
+                    .and_then(|()| out.write_all(b"\n").map_err(serde_json::Error::io))
+            };
+            if let Err(e) = result {
                 eprintln!(
                     "{}",
                     serde_json::json!({"error":{"reason":"output","detail":e.to_string()}})

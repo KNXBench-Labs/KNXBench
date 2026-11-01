@@ -154,8 +154,8 @@ fn declaration_inventory_does_not_apply_assign_or_calculation() {
     ] {
         assert!(r.limitations.contains(&limitation), "{limitation:?}");
     }
-    assert_eq!(r.format_version, 4);
-    assert_eq!(serde_json::to_value(&r).unwrap()["formatVersion"], 4);
+    assert_eq!(r.format_version, 5);
+    assert_eq!(serde_json::to_value(&r).unwrap()["formatVersion"], 5);
 }
 
 #[test]

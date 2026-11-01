@@ -1209,9 +1209,9 @@ fn zip_members_charge_candidate_rows_against_the_shared_budget() {
 #[test]
 fn format_four_pins_candidates_and_refuses_a_format_three_report() {
     let r = inspect(VALUES);
-    assert_eq!(r.format_version, 4);
+    assert_eq!(r.format_version, 5);
     let mut json = serde_json::to_value(&r).unwrap();
-    assert_eq!(json["formatVersion"], 4);
+    assert_eq!(json["formatVersion"], 5);
     assert_eq!(json["sourceCandidates"][0]["severity"], "sourceCandidate");
     assert_eq!(
         json["sourceCandidates"][0]["initialization"],

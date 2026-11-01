@@ -48,3 +48,25 @@ Lifted when: a source-backed installation route for distributions exists
 (master data and authority), or the listed subsets are extended with tests.
 
 <!-- END retained catalogue record -->
+
+## Source extension: distribution resources (1 November 2026)
+
+The format-5 inspector now associates canonical declarations with literal
+adjacent-XML-stem payload paths and joins exact consumers in original namespace
+and manufacturer scopes. It produces bounded decoded/re-encoded PNG previews
+and a stdout-only offline HTML view behind `--output-format html`; JSON remains
+the default. The [contract](../contracts/distribution-inspection.md) specifies
+source provenance, serialization, budgets and exact fallback reasons.
+
+This extends the historical "no baggage association" statement above only for
+distribution inspection. `nativePackageBaggageNotPerformed` remains explicit;
+no native package, persistence, installation or writer policy changes. ZIP help
+and IconFile archives remain directory metadata, never extracted or rendered.
+Only single-frame PNG is previewed; other media, malformed PNGs, animations and
+budget refusals have named fallbacks. Structural/report limits still refuse the
+whole inspection; optional media limits instead retain a per-resource fallback.
+HTML sampling is visible and does not delete JSON facts.
+
+Owning API/CLI tests exercise the positive image path and hostile/failure
+controls; independent review and an offline real-browser proof are accepted.
+Release-build measurement over all 37 OpenKNX releases (offline, read-only originals) passes 37/37 with 116 declarations and 229 consumers; the largest report grows by 451,125 bytes to 212,187,100 bytes (79.05% of the unchanged 256 MiB cap). ETS rendering parity is not claimed.

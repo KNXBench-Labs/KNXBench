@@ -132,7 +132,7 @@ fn private_original_unknown_report_is_backed_by_exact_retained_sources() {
         let mut entry = zip
             .by_index(index)
             .unwrap_or_else(|_| panic!("private member cannot be read"));
-        if !entry.name().to_ascii_lowercase().ends_with(".xml") {
+        if !entry.name().unwrap().to_ascii_lowercase().ends_with(".xml") {
             continue;
         }
         assert!(entry.size() <= LIMIT, "private XML exceeds member budget");
@@ -142,7 +142,7 @@ fn private_original_unknown_report_is_backed_by_exact_retained_sources() {
                 .is_some_and(|n| n <= 2 * LIMIT),
             "private XML exceeds cumulative budget"
         );
-        let name = entry.name().to_ascii_lowercase();
+        let name = entry.name().unwrap().to_ascii_lowercase();
         let mut bytes = Vec::new();
         (&mut entry)
             .take(LIMIT + 1)

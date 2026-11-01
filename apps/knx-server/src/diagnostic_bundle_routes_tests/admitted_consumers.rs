@@ -348,7 +348,10 @@ async fn earlier_operation_route_requires_summary_admission_before_private_zip()
     .await;
     assert_eq!(status, StatusCode::OK, "{}", json_of(&body));
     let archive = zip::ZipArchive::new(std::io::Cursor::new(body)).unwrap();
-    assert!(!archive.file_names().any(|name| name == private_path));
+    assert!(!archive
+        .file_names()
+        .map(Result::unwrap)
+        .any(|name| name == private_path));
     assert_eq!(
         fs::metadata(
             fixture
@@ -888,7 +891,10 @@ async fn all_outward_surfaces_use_only_admitted_values() {
     let (status, bytes, _) = call(&state, "POST", "/api/diagnostics/bundle", Some(reviewed)).await;
     assert_eq!(status, StatusCode::OK);
     let archive = zip::ZipArchive::new(std::io::Cursor::new(bytes)).unwrap();
-    let names: Vec<_> = archive.file_names().map(str::to_string).collect();
+    let names: Vec<_> = archive
+        .file_names()
+        .map(|n| n.unwrap().into_owned())
+        .collect();
     assert_eq!(
         names,
         [

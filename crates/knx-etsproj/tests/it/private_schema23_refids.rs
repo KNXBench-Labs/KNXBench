@@ -119,7 +119,11 @@ fn read_members(path: &str) -> Vec<(Member, Vec<u8>)> {
         let mut entry = archive
             .by_index(index)
             .expect("a private archive entry is unreadable");
-        let Some(kind) = member_kind(entry.name()) else {
+        let Some(kind) = member_kind(
+            &entry
+                .name()
+                .expect("a private archive entry name is undecodable"),
+        ) else {
             continue;
         };
         assert!(

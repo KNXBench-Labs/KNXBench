@@ -46,7 +46,10 @@ pub(super) fn inspect(
             .archive
             .by_index_raw(index)
             .map_err(|e| DistributionInspectionError::Archive(e.to_string()))?;
-        let decoded_name = file.name().to_string();
+        let decoded_name = file
+            .name()
+            .map_err(|e| DistributionInspectionError::Archive(e.to_string()))?
+            .into_owned();
         let raw_name = file.name_raw().to_vec();
         let size = file.size();
         let compressed_size = file.compressed_size();

@@ -51,7 +51,7 @@ fn with_directory(
     let mut zip = zip::ZipArchive::new(Cursor::new(&bytes)).unwrap();
     let directory_index = zip.len() - 1;
     let entry = zip.by_index_raw(directory_index).unwrap();
-    assert_eq!(entry.name(), DIRECTORY);
+    assert_eq!(entry.name().unwrap(), DIRECTORY);
     assert!(entry.is_dir());
     assert_eq!(entry.compressed_size(), payload.len() as u64);
     let local = entry.header_start() as usize;
@@ -118,13 +118,13 @@ fn project(layer: Layer, shape: Shape, flags: u16, aes: bool) -> Vec<u8> {
         let mut file = template.by_index(index).unwrap();
         let mut plain = Vec::new();
         file.read_to_end(&mut plain).unwrap();
-        if matches!(layer, Layer::DirectInner) && file.name().starts_with("P-0001/") {
+        if matches!(layer, Layer::DirectInner) && file.name().unwrap().starts_with("P-0001/") {
             inner.push(stream::stored(
-                file.name().strip_prefix("P-0001/").unwrap(),
+                file.name().unwrap().strip_prefix("P-0001/").unwrap(),
                 &plain,
             ));
         } else {
-            outer.push(stream::stored(file.name(), &plain));
+            outer.push(stream::stored(&file.name().unwrap(), &plain));
         }
     }
     // New source identity even in an already populated product database; the

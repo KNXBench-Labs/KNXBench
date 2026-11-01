@@ -397,7 +397,7 @@ fn minimal_with_directory(damage: Damage) -> Vec<u8> {
         let mut entry = template.by_index(i).unwrap();
         let mut bytes = Vec::new();
         entry.read_to_end(&mut bytes).unwrap();
-        writer.start_file(entry.name(), stored).unwrap();
+        writer.start_file(entry.name().unwrap(), stored).unwrap();
         writer.write_all(&bytes).unwrap();
     }
     writer

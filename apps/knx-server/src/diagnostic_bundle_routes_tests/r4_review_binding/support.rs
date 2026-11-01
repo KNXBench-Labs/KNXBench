@@ -304,7 +304,7 @@ pub(super) fn exported_snapshot(
     let mut entries = BTreeMap::new();
     for index in 0..archive.len() {
         let mut file = archive.by_index(index).unwrap();
-        let name = file.name().to_string();
+        let name = file.name().unwrap().to_string();
         let mut bytes = Vec::new();
         file.read_to_end(&mut bytes).unwrap();
         assert!(entries.insert(name, bytes).is_none());

@@ -179,11 +179,11 @@ fn project_with_damage(
         let mut file = template.by_index(index).unwrap();
         let mut plain = Vec::new();
         file.read_to_end(&mut plain).unwrap();
-        let name = file.name();
+        let name = file.name().unwrap().into_owned();
         if !matches!(layer, Layer::Outer) && name.starts_with("P-0001/") {
             inner.push(stored(name.strip_prefix("P-0001/").unwrap(), &plain));
         } else {
-            outer.push(stored(name, &plain));
+            outer.push(stored(&name, &plain));
         }
     }
     outer.push(stored(EARLY, &manufacturer("early-new")));

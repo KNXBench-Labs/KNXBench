@@ -36,6 +36,7 @@ pub(super) async fn bundle_readback(h: &Harness, token: &Value, expected: &Value
     {
         assert!(archive
             .file_names()
+            .map(Result::unwrap)
             .all(|name| !name.starts_with("device/")));
     }
     for section in preview["sections"].as_array().unwrap() {
@@ -461,7 +462,7 @@ async fn zip_entries(h: &Harness, query: Value) -> BTreeMap<String, Vec<u8>> {
             let mut file = archive.by_index(index).unwrap();
             let mut bytes = Vec::new();
             file.read_to_end(&mut bytes).unwrap();
-            (file.name().to_string(), bytes)
+            (file.name().unwrap().to_string(), bytes)
         })
         .collect()
 }
@@ -637,7 +638,10 @@ async fn unknown_recording_versions_and_malformed_typed_results_are_not_guessed(
             raw, bytes,
             "never backfill or rewrite historical raw recordings"
         );
-        assert!(!zip.file_names().any(|name| name.starts_with("reports/")));
+        assert!(!zip
+            .file_names()
+            .map(Result::unwrap)
+            .any(|name| name.starts_with("reports/")));
     }
 }
 

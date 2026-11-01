@@ -15,7 +15,7 @@ Last updated: 2026-11-01 (Alpha 18 released baseline; newer main-only source fea
 
 | Feature | Scope | Availability |
 | --- | --- | --- |
-| [Unified diagnostic bundle](contracts/diagnostic-bundle.md) | Operation recorder, one report wizard and consented local ZIP/CLI export; exact retained results and optional saved-project copy; System-2 closed projection only, privacy-withheld sections disclosed | Main-only |
+| [Unified diagnostic bundle](contracts/diagnostic-bundle.md) | Operation recorder, one report wizard and consented local ZIP/CLI export; exact retained results, reduced log/monitor/browser views and optional saved-project copy; System-2 closed projection only, omissions disclosed | Main-only |
 | [Settings workspace](contracts/settings-workspace.md) | All existing app settings on one continuous center page with top section jumps; sidebar, toolbar and palette entry; temporarily hides Properties without changing its preference; preserves selected project entity and unsaved note/instructions drafts | Main-only |
 
 ## New in Alpha 18

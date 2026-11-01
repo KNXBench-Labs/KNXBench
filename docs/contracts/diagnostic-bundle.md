@@ -14,6 +14,9 @@ join, installed-CLI flag boundaries and original fourteen-case matrix are record
 in the [work package](../open-work/DIAG-03-unified-diagnostic-bundle.md).
 System-2 exports only its closed projection, never raw comparison or recording
 bytes. P1/P2 are prerequisites only for a separately commissioned future raw export.
+The supplementary/quit/source-review closeout is delivered through `7443e2ea6`;
+[final software scope](../status/2026-11-01-diag03-closeout.md) distinguishes source delivery from release and hardware acceptance. An automatic selector that finds no source and explicit `none` bind the same absent identity and unavailability meaning, while named/admitted sources and all changed contents remain discriminated.
+
 The three supplementary sections use typed, reduced projections rather than
 arbitrary raw text: session-log chronology with known messages, a reviewed
 last-ten-minutes monitor window, and bounded browser facts. Each section reports

@@ -18,7 +18,7 @@ Browser verification is not native WebKitGTK/Tauri or hardware acceptance.
 
 ## DIAG-03 main-only — not in Alpha 18 (31 October 2026)
 
-The unified diagnostic bundle is implemented on main through `bc77abdb2`. The
+The recorder/bundle foundation reached main through `bc77abdb2`; the supplementary-section, quit-layering and no-source review closeout is delivered through `7443e2ea6`. The latest [source acceptance](../status/2026-11-01-diag03-closeout.md) includes actual EN/DE production-Web downloads, not only API fixtures. The
 server records tunnel-opening device operations; the Web wizard and CLI share
 previewed, explicitly consented local ZIP export. A real simulator → server →
 production-Web → ZIP run checked byte-identical recordings, EN/DE layouts and

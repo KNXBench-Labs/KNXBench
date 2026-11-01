@@ -108,14 +108,26 @@ Button behaviour, handler support or Table/Grid visual equivalence.
   “Button {Id}: label shown; its action is not supported” and does not count it
   among declarations that could not be placed. Other `Button` issues keep the
   “not shown here” wording.
-- **Limits.** A refused binding (drift, duplicate `Button/@Id`, unavailable
-  source) is not surfaced as its own diagnostic: the panel then shows no label
-  and only the generic `unshownContent` issue remains. The extra source read on
+- **Refused binding.** Since 1 November 2026 (main only) a refused binding
+  that hides at least one reached program `Button` adds one program-level
+  `passiveLabelsUnbound` warning to the panel's `diagnostics` (scope `null`,
+  EN/DE translated in the Diagnostics tab). Its `detail` names the cause
+  (`sourceUnavailable`, `structuralDrift` or `duplicateButtonId`) and the
+  number of reached Buttons without a label. A refusal that no reached
+  `Button` would show stays silent. Labels stay all-or-nothing; the grid's
+  generic `unshownContent` issue is unchanged, and a Button-only block, which
+  was an area only through its label, has none.
+- **Limits.** The extra source read on
   every panel of a program with stored `Button` rows is bounded by the event and
   depth budgets but not yet measured on the largest retained program.
 
 Evidence: `parameter_layout::passive_buttons` (ProductDB binding and walker),
 `parameter_layout::button` unit tests, `http_parameter_grid::passive_labels`
-(real in-process HTTP, writes and refusals), Vitest workspace/matrix/panel
-tests and `e2e/parameter-matrix.e2e.ts` with intercepted fictional data. The
+(real in-process HTTP, writes and refusals) and its `binding_refusal` module
+(one diagnostic per cause, silent without a reached Button), Vitest
+workspace/matrix/panel tests and `e2e/parameter-matrix.e2e.ts` with
+intercepted fictional data. In Chromium a typed value beside a passive label
+is written by the existing row when focus leaves it (a real browser has no
+draft that outlives the focus change); the same editor and the label survive
+area and search changes. The
 fixtures are self-authored (`crates/knx-productdb/tests/fixtures/passive-button-*`).

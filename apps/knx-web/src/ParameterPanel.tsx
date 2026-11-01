@@ -385,6 +385,7 @@ const PARAMETER_DIAGNOSTIC_MESSAGE_KEYS: Record<ParameterDiagnosticKind, Transla
   manufacturerCalculation: "parameters.diagnostic.manufacturerCalculation",
   writeAuthorityUnavailable: "parameters.diagnostic.writeAuthorityUnavailable",
   parameterBlockAccessRestricted: "parameters.diagnostic.parameterBlockAccessRestricted",
+  passiveLabelsUnbound: "parameters.diagnostic.passiveLabelsUnbound",
 };
 
 function describeParameterDiagnosticMessage(t: Translate, diagnostic: ParameterDiagnostic): string {

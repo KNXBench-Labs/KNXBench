@@ -1262,7 +1262,9 @@ narrow windows. On main, a button the product data places in a grid cell shows
 only its literal text, marked **Source button label – action unsupported**: it
 is plain text, cannot be clicked or focused, and its action is not supported.
 The note above such a grid says the label is shown but its action is not
-supported, instead of listing it as not placed. Row/column captions retain their declared text; the
+supported, instead of listing it as not placed. If the stored product source no
+longer matches the installed catalogue, no such label is shown and the
+**Diagnostics** tab says why. Row/column captions retain their declared text; the
 block/separator language overlay above does not add row/column text-parameter
 resolution.
 See the [workspace contract](../../contracts/parameter-workspace.md).

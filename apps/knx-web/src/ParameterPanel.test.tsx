@@ -883,6 +883,7 @@ describe("ParameterPanel", () => {
     ["unsupportedControlKind", "Der steuernde Parameter einer Auswahl hat einen nicht unterstützten Typ; ihre Zweige wurden nicht ausgewertet."],
     ["evaluationWorkBudgetExhausted", "Dieses Programm hat die Auswertungsgrenze überschritten; seine unvollständige Parameteransicht ist schreibgeschützt."],
     ["parameterBlockAccessRestricted", "Einige Felder liegen in einer Parametergruppe, die der Hersteller schreibgeschützt oder verborgen hat (Access); sie sind nicht beschreibbar."],
+    ["passiveLabelsUnbound", "Beschriftungen der Quell-Schaltflächen dieses Programms werden nicht angezeigt: Die gespeicherte Produktquelle passt nicht zum installierten Katalog."],
   ])("translates the %s reason instead of showing the server's English", async (kind, german) => {
     setSetting(UI_LANGUAGE_STORAGE_KEY, "de");
     apiMock.deviceParameters.mockResolvedValue(authorityPanel([field("A", "ReadWrite")], [kind]));

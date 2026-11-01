@@ -2052,6 +2052,7 @@ export const messages = {
   "parameters.diagnostic.parameterBlockAccessRestricted": "Some fields sit in a parameter group the manufacturer declared read-only or hidden (Access); they are not writable.",
   "parameters.diagnostic.manufacturerCalculation": "Some fields are inputs or results of a manufacturer calculation that KNXBench does not run; they are read-only.",
   "parameters.diagnostic.writeAuthorityUnavailable": "The product database has no recorded write authority for this program; its fields are read-only. Reinstall the product to record it.",
+  "parameters.diagnostic.passiveLabelsUnbound": "Source button labels of this program are not shown: the retained product source could not be matched to the installed catalogue.",
   "parameters.noAccess.show.one": "Show {count} field without user access (Access None)",
   "parameters.noAccess.show.other": "Show {count} fields without user access (Access None)",
   "parameters.noAccess.hide.one": "Hide {count} field without user access (Access None)",

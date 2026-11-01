@@ -2029,6 +2029,7 @@ export const messages: Record<MessageKey, string> = {
   "parameters.diagnostic.parameterBlockAccessRestricted": "Einige Felder liegen in einer Parametergruppe, die der Hersteller schreibgeschützt oder verborgen hat (Access); sie sind nicht beschreibbar.",
   "parameters.diagnostic.manufacturerCalculation": "Einige Felder sind Ein- oder Ausgaben einer Herstellerberechnung, die KNXBench nicht ausführt; sie sind schreibgeschützt.",
   "parameters.diagnostic.writeAuthorityUnavailable": "Die Produktdatenbank hat für dieses Programm keine Schreibberechtigung erfasst; seine Felder sind schreibgeschützt. Installiere das Produkt neu, um sie zu erfassen.",
+  "parameters.diagnostic.passiveLabelsUnbound": "Beschriftungen der Quell-Schaltflächen dieses Programms werden nicht angezeigt: Die gespeicherte Produktquelle passt nicht zum installierten Katalog.",
   "parameters.noAccess.show.one": "{count} Feld ohne Benutzerzugriff anzeigen (Access None)",
   "parameters.noAccess.show.other": "{count} Felder ohne Benutzerzugriff anzeigen (Access None)",
   "parameters.noAccess.hide.one": "{count} Feld ohne Benutzerzugriff ausblenden (Access None)",

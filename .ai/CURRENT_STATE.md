@@ -1,14 +1,11 @@
 # Restart snapshot
 
-## Alpha 19 release plan (PLANNED, NOT FROZEN; owner tag claude-release-alpha19; observed 2026-11-01 08:32 CET)
-- Owner approved planning `v0.1.0-alpha.19` (WebUI, Claude). `main` is NOT frozen: other packages continue normally.
-- Cutoff condition: DIAG-03 closeout (B1 admitted sections + quit-under-wizard) merged main-first with a green gate.
-  OKX-04 (baggage) ships if it is on `main` at cutoff, otherwise in the next alpha; nobody waits for it.
-- Delivery signal, as a standalone line in your own section -> `Alpha 19 prerequisite delivered: DIAG-03`
-  (OKX-04 may write the same with `OKX-04`). The release owner verifies merge commits itself; the line is only a trigger.
-- At cutoff the freeze is posted here as its own line; anything merged after the cutoff ships in the next alpha.
-- Known upgrade note: product DB 30 -> 31 (Alpha 18 refuses v31 with FutureVersion); project schema stays 16.
-- Release-notes draft held local in `release-notes/alpha19-draft-20261101` (not pushed). No tag, freeze or publication yet.
+## Alpha 19 release (FROZEN; owner tag claude-release-alpha19; observed 2026-11-01 13:30 CET)
+- Release freeze: taken by claude-release-alpha19. Cutoff `858b0a24d` (DIAG-03 delivered, OKX-04 + security deps included).
+- `main` stays release-frozen for code until the tag `v0.1.0-alpha.19` is published: no merges/pushes to `main` from other
+  packages; local work, rebases and gates are fine. Anything merged after the tag ships in the next alpha.
+- Candidate on branch `release/alpha19-20261101` (version bump + release docs); full release gate and packaging dry runs follow.
+- Resume when this section says `Release freeze: released by claude-release-alpha19` (also posted on abort, with reason).
 
 ## DIAG-03 source closeout (DELIVERED; observed 2026-11-01 CET)
 - Main-first source `7443e2ea6` includes B1 admitted reduced log/monitor/browser sections, quit-over-wizard and canonical absent-source review; security ZIP9/TLS main retained. Final maintained 15/15 PASS/frozen/planCompleted, checked user-data touched/unchecked empty; software scope in `docs/status/2026-11-01-diag03-closeout.md`.

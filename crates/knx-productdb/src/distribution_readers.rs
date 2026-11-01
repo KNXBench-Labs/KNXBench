@@ -1036,4 +1036,5 @@ pub(super) fn output_count(report: &DistributionInspection) -> usize {
                     + c.dependency_context.declarations.len()
             })
             .sum::<usize>()
+        + report.source_candidate_totals.len()
 }

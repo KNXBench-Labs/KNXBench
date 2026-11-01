@@ -246,17 +246,39 @@ fn real_cli_reports_source_candidates_exactly_like_the_library() {
             ("parameterValue", "valueAbsent"),
             ("parameterValue", "valueEmpty"),
             ("parameterValue", "below"),
-            ("parameterValue", "within"),
-            ("parameterValue", "within"),
             ("parameterValue", "above"),
-            ("parameterValue", "within"),
             ("parameterRefValue", "valueEmpty"),
-            ("parameterRefValue", "within"),
         ]
-        .map(|(k, c)| (serde_json::Value::from(k), serde_json::Value::from(c)))
+        .map(|(k, c)| (serde_json::Value::from(k), serde_json::Value::from(c))),
+        "the default lists findings; values inside their bounds are counted, not listed"
     );
-    assert_eq!(rows[6]["valueCheck"]["value"]["value"], "0002");
-    assert_eq!(rows[6]["valueCheck"]["value"]["normalized"], "2e0");
+    let totals = json["sourceCandidateTotals"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|t| {
+            (
+                t["kind"].as_str().unwrap().to_string(),
+                t["valueComparison"].as_str().unwrap().to_string(),
+                t["occurrences"].as_u64().unwrap(),
+                t["rows"].as_u64().unwrap(),
+            )
+        })
+        .collect::<Vec<_>>();
+    let total = |kind: &str, comparison: &str| {
+        totals
+            .iter()
+            .find(|t| t.0 == kind && t.1 == comparison)
+            .map(|t| (t.2, t.3))
+    };
+    assert_eq!(total("parameterValue", "within"), Some((3, 0)));
+    assert_eq!(total("parameterRefValue", "within"), Some((1, 0)));
+    assert_eq!(total("parameterValue", "below"), Some((1, 1)));
+    assert_eq!(
+        totals.iter().map(|t| t.2).sum::<u64>(),
+        9,
+        "every checked occurrence is counted"
+    );
     for row in rows {
         assert_eq!(row["severity"], "sourceCandidate");
         assert_eq!(row["initialization"], "notPerformed");
@@ -278,8 +300,6 @@ fn real_cli_reports_source_candidates_exactly_like_the_library() {
     assert_eq!(
         members,
         [
-            ("withinExtent", "observedInEvaluatedSubset"),
-            ("withinExtent", "unavailable"),
             ("outsideExtent", "unavailable"),
             ("offsetAbsent", "unavailable"),
         ]

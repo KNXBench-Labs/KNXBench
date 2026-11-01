@@ -43,13 +43,15 @@ OKX-05 follow-up. When the retained source cannot be bound to the stored
 label, the parameter panel now carries one program-level
 `passiveLabelsUnbound` warning. Its detail names the cause
 (`sourceUnavailable`, `structuralDrift`, `duplicateButtonId`) and the number of
-affected Buttons; the Diagnostics tab translates it (EN/DE). A refusal without
-a reached Button stays silent. Labels remain all-or-nothing and the grid issue
+reached program Buttons, an upper bound of the hidden labels; the Diagnostics
+tab translates it (EN/DE). A refusal without a reached program Button stays
+silent; module Buttons never count. Labels remain all-or-nothing and the grid issue
 is unchanged.
 
 - **Verified.** Server: four new HTTP cases failed first (no diagnostic), then
-  18/18 `http_parameter_grid` passed; removing the reached-Button guard is
-  caught. Vitest: the translation case failed first, then `ParameterPanel`
+  19/19 `http_parameter_grid` passed. An independent review (APPROVE, minors
+  fixed) ran seven mutants; the one survivor, counting module Buttons, is now
+  caught by a module case. Vitest: the translation case failed first, then `ParameterPanel`
   55/55. A new Chromium case shows that a typed value beside a passive label is
   written when focus leaves it, and that its editor and the label survive area
   and search changes (a characterization of existing behaviour, not a fix).

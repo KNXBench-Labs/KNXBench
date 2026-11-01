@@ -277,7 +277,7 @@ per second, smaller the longer it runs; **Cancel** stops it and nothing is saved
 the computer is too busy to take the frames on time, KNXBench refuses the clip
 rather than skip frames; try a shorter one. The camera glides between views unless
 Flow motion is off ([Motion by category](09-settings-and-appearance.md#motion-style-and-motion-level)).
-The screenshots in this manual still show Alpha.10.
+The manual's screenshots do not show the Flow toolbar.
 
 ### Space, windows and project links
 
@@ -342,7 +342,7 @@ same name-first labels. [Scope and preservation](../../contracts/dpt-selection.m
 The **Log** entry in the sidebar opens the session log: everything KNXBench did this
 session, filtered by Error, Warning and Info.
 
-![The KNXBench session log with Error, Warning and Info filters, a search field and an export button; the first info entry records the imported sample project and its counts, followed by entries for manufacturer files preserved in the product database](../../assets/screenshots/porcelain-log.png)
+![The KNXBench session log with Error, Warning and Info filters, a search field and an export button; the newest entries on top: two achievement notifications and the loaded sample project from this browser session, the catalogue batch that created a device, then the import of the sample project with its counts and entries for manufacturer files preserved in the product database](../../assets/screenshots/porcelain-log.png)
 
 Log entries are the server's own text and stay in English even when the interface is
 translated — a deliberate choice, so an error message you paste into a bug report

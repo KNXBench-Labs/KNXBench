@@ -61,8 +61,8 @@ empty workspace. It has four pages:
 
 ![The KNXBench introduction on its first page, titled "Welcome to KNXBench",
 step 1 of 4, naming the build's release stage as Alpha with a sentence on what
-that means, a backup reminder and an English/Deutsch language
-switch](../../assets/screenshots/porcelain-onboarding-guide.png)
+that means, a backup reminder and the language switch English, Deutsch, Boarisch and
+Klingonisch/Klingon](../../assets/screenshots/porcelain-onboarding-guide.png)
 
 Nothing in it is required. **Skip introduction**, `Escape` or a click outside
 closes it, and closing it in any way counts as having seen it. It does not

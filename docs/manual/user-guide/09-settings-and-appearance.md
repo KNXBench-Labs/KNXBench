@@ -30,10 +30,11 @@ Existing settings still apply through their usual immediate-apply and
 acknowledged-save paths; there is no new global Save button.
 [Navigation and state contract](../../contracts/settings-workspace.md).
 
+![Alpha 19 in Porcelain: Settings as a page in the center workspace, with Back to previous view, the section jump links and the Appearance section; the left navigation stays visible](../../assets/screenshots/porcelain-settings.png)
+
 **Alpha 18 and earlier:** Settings opens a resizable window over the
 workspace. Escape closes it and returns focus to the opener; the window's resize
-handle changes its size for that opening only. The released screenshots in this
-manual retain that older presentation.
+handle changes its size for that opening only.
 
 The first group contains theme, accent, density and motion. Language & data
 contains product-data language, UI language and the language-pack manager. Bus &
@@ -73,7 +74,7 @@ The **Theme** menu is the one place to choose a theme. It lists:
 
 A choice is saved immediately; to go back, pick the previous entry.
 
-![The published Alpha 14 workbench in Graphite, showing the fictional Sample house’s open group-address ranges and Kitchen light properties](../../assets/screenshots/graphite-group-addresses.png)
+![The published Alpha 19 workbench in Graphite, showing the fictional Sample house’s open group-address ranges and Kitchen light properties](../../assets/screenshots/graphite-group-addresses.png)
 
 *Graphite is the ordinary dark workbench, not a different application. The light
 Porcelain views elsewhere in this manual use the same project and controls.*

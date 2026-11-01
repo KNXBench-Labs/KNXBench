@@ -96,7 +96,7 @@ grouping, free-text log parsing or project-diff links. The separate diagnostic
 companion does not become another editing window. See the
 [contract and evidence](../../DEVICE_NAVIGATION.md).
 
-![Alpha 14 in Graphite: the Devices overview with 9 of 9 devices, a filter field, Pending only, Refresh product data and Compare all shown, Adr/App/Par/GA programming chips per device and the selected device’s properties](../../assets/screenshots/graphite-devices.png)
+![Alpha 19 in Graphite: the Devices overview with 9 of 9 devices, a filter field, Pending only, Refresh product data and Compare all shown, Adr/App/Par/GA programming chips per device and the selected device’s properties](../../assets/screenshots/graphite-devices.png)
 
 The Devices view first shipped with Alpha 6 and remains in every later release. The older
 Alpha 5 AppImage does not include it.
@@ -106,9 +106,9 @@ Alpha 5 AppImage does not include it.
 ## Comparing the project with devices (P4, since Alpha 12)
 
 **Included in Alpha 12:** both table and named-parameter comparison packages.
-Most earlier manual screenshots retain their stated capture version. The new
-website/README stills show the Alpha 12 candidate. This adds no new physical-device
-verification; [source acceptance](../../evidence/p4-device-comparison-parameters-2026-10-15.json)
+The manual and README stills show Alpha 19 but not the comparison itself. This adds
+no new physical-device verification;
+[source acceptance](../../evidence/p4-device-comparison-parameters-2026-10-15.json)
 remains separate from release acceptance.
 
 In **Devices**, use **Compare** on a row or **Compare all shown**. The latter
@@ -548,9 +548,10 @@ line in the Topology view. Both open the same centre workspace; only the target 
 differs. The `+ Add device` rows in the project explorer open the
 [add-device wizard](#the-add-device-wizard) instead.
 
-![Alpha 14’s Device catalog in the main workspace: an install file picker,
-a closed Catalogue backups section, manufacturer filter and search, and four fictional
-products. The first list row is highlighted, but no creation form or address preview is open](../../assets/screenshots/porcelain-product-catalog.png)
+![Alpha 19’s Device catalog in the main workspace: an install file picker,
+a closed Catalogue backups section, the clean-up action, manufacturer filter and search,
+and a sortable table of four fictional products with manufacturer, order number and
+application. The first row is highlighted, but no creation form or address preview is open](../../assets/screenshots/porcelain-product-catalog.png)
 
 **Installation choice (since Alpha 18).** Creating a catalogue device without a
 target line in a project with several installations requires an explicit
@@ -585,7 +586,6 @@ is not creating. After reordering, the highlighted and selected products stay
 bound to their catalogue ids, never to a row number. Search-arrow movement has
 a polite status announcement of the highlighted product and its current position.
 The native table scrolls locally on narrow screens; there is no column resizing.
-The Alpha 14 screenshot above predates this table presentation.
 
 ### Installing a product database
 
@@ -1054,10 +1054,11 @@ description) to see it. The information itself is unchanged in the project and i
 not establish device or codec support.
 [Scope and evidence](../../contracts/dpt-selection.md).
 
-![Alpha 9 in Graphite: the communication-object editor’s named 1.001 – Switch choice, application-source badge and exact stored DPST-1-1 reference](../../assets/screenshots/graphite-dpt-selection.png)
+![Alpha 19 in Graphite: the communication-object editor’s DPT choice Switch (1.001) with its Source: application program badge; the Technical reference with the exact stored DPST-1-1 is folded below it](../../assets/screenshots/graphite-dpt-selection.png)
 
-*The name helps you choose. The stored reference and source badge explain what is
-actually in the project; a friendly label is not a new codec.*
+*The name helps you choose. The stored reference (under **Technical reference**) and
+the source badge explain what is actually in the project; a friendly label is not a new
+codec.*
 
 **Also available in Alpha 9:** the object
 panel now has aligned **No., Name, Function, DPT, Group addresses, Status** headings,
@@ -1101,9 +1102,9 @@ existing blur-save described above.
 The table scrolls locally, keeping all columns reachable on narrow displays.
 [Full contract and evidence](../../COMMUNICATION_OBJECT_TABLE.md). The
 [earlier source screenshot](../../evidence/communication-objects/real-demo-editor.png)
-remains historical evidence; the workbench views shown here are Alpha 14.
+remains historical evidence; the workbench views shown here are Alpha 19.
 
-![Alpha 14 in Porcelain: device 1.1.1 with Communication objects selected,
+![Alpha 19 in Porcelain: device 1.1.1 with Communication objects selected,
 Channel A open and object 0 expanded. The row names its size, 1 Bit; the DPT selector
 shows Switch (1.001) with an application-source badge, the technical reference is
 folded, and the sample program offers no function choice for this object. Table

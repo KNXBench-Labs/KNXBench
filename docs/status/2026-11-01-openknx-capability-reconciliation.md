@@ -145,8 +145,9 @@ tooling.
   - A refused label binding had no diagnostic of its own. Delivered on
     1 November 2026 after this record: one `passiveLabelsUnbound` warning
     names the cause ([Button labels][btn], Refused binding).
-  - The extra source read per panel is not measured on the largest retained
-    real program.
+  - The extra source read per panel was not measured on the largest retained
+    real program. Measured on 1 November 2026 after this record: about 70 ms
+    on the largest (26.6 MB) program ([Button labels][btn], Limits).
   - Draft retention next to passive labels was covered in Vitest only. A
     Chromium case in `apps/knx-web/e2e/parameter-matrix.e2e.ts` now shows the
     real-browser behaviour: the typed value is written when focus leaves it,

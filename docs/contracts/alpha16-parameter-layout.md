@@ -123,7 +123,18 @@ Button behaviour, handler support or Table/Grid visual equivalence.
   was an area only through its label, has none.
 - **Limits.** The extra source read on
   every panel of a program with stored `Button` rows is bounded by the event and
-  depth budgets but not yet measured on the largest retained program.
+  depth budgets. Measured on 1 November 2026 (release build on the dev machine,
+  median of 7 `parameter_layout::load` calls with and without the program's
+  stored `Button` rows) over every retained real program with stored `Button`
+  rows: 8 programs from three manufacturers' public product packages and one
+  private project. The largest program (26.6 MB source) costs 69.9 ms extra on
+  a 239.7 ms load (22.3 MB: 60.4 ms); 5.2 MB programs cost about 14 ms, a
+  2.8 MB one 7.5 ms. Programs with module `Button`s only skip the read (at most
+  2 ms difference). Peak RSS of the whole run was 86 MiB. All 8 programs bound
+  (no `passiveLabelsUnbound`), but only 12 of their 34 program `Button`s were
+  admitted: the other 22 sit in blocks without a `Table`/`Grid` layout, so the
+  read is paid there without a label. Skipping it for programs without a grid
+  block is a possible optimization, not implemented.
 
 Evidence: `parameter_layout::passive_buttons` (ProductDB binding and walker),
 `parameter_layout::button` unit tests, `http_parameter_grid::passive_labels`

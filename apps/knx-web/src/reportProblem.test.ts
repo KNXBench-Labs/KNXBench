@@ -3,8 +3,9 @@ import { describe, expect, it } from "vitest";
 import { PROBLEM_TYPES, SECTION_KINDS, type SectionKind } from "./diagnosticBundleApi";
 import {
   buildQuery, boundedClientFacts, bytesByKind, defaultOffer, defaultSelection, formatBytes, initialChoice, mailDraftFor, markerKeys,
-  noteKey, reasonKey, recentErrors, RECENT_ERROR_LIMIT, toggleEarlier, toggleSection, withProblemType,
+  noteKey, reasonKey, recentErrors, RECENT_ERROR_LIMIT, reviewedQuery, toggleEarlier, toggleSection, withProblemType,
 } from "./reportProblem";
+import type { BundlePreview } from "./diagnosticBundleShape";
 import { messages as de } from "./messages/de";
 import { messages as en } from "./messages/en";
 import type { ToastNotification } from "./toast";
@@ -225,5 +226,22 @@ describe("client state and mail draft", () => {
     expect(mailDraftFor(draft, "knxbench-diagnostics-1-20261029100000.zip", "knxbench-diagnostics-1-20261029100000.zip")).toBe(draft);
     expect(mailDraftFor(draft, "knxbench-diagnostics-1-20261029100000.zip", "knxbench-diagnostics-1-20261029100005.zip"))
       .toBe(draft.replace("100000.zip", "100005.zip"));
+  });
+});
+
+describe("reviewed bus-monitor window", () => {
+  const monitor = { sessionId: 1, firstSeq: 0, endSeq: 2, droppedBefore: 0, statusAtReview: "active" as const, capturedAt: "2026-11-01T09:00:00.000Z" };
+  const preview = {
+    review: { fingerprint: "a".repeat(64), context: { serverIncarnation: "s", projectIncarnation: 1, revision: 1 }, monitor },
+    operationRecordingId: null, deviceId: null,
+  } as unknown as BundlePreview;
+  it("rides along with every reviewed request and never with a fresh preview", () => {
+    const query = buildQuery(toggleSection(initialChoice({ problemType: "deviceReading" }), "busMonitor", true), null);
+    expect(query.sections).toContain("busMonitor");
+    // A fresh preview (also after a context reset) carries no earlier review or window.
+    expect(query.review).toBeUndefined();
+    const reviewed = reviewedQuery(query, preview);
+    expect(reviewed.review.monitor).toEqual(monitor);
+    expect(JSON.parse(JSON.stringify(reviewed)).review.monitor).toEqual(monitor);
   });
 });

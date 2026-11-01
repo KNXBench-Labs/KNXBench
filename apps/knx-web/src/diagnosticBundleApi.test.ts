@@ -138,3 +138,37 @@ it("reads only plain names from Content-Disposition", () => {
   expect(dispositionFileName('attachment; filename="a/b.zip"')).toBeNull();
   expect(dispositionFileName(null)).toBeNull();
 });
+
+const MONITOR = { sessionId: 3, firstSeq: 4, endSeq: 9, droppedBefore: 0, statusAtReview: "active" as const, capturedAt: "2026-11-01T09:00:00.000Z" };
+
+it.each([
+  "2026-02-30T09:00:00.000Z",
+  "2026-02-29T09:00:00.000Z",
+  "2026-13-01T09:00:00.000Z",
+  "2026-11-01T09:00:00.000Z\n",
+])("rejects a noncanonical monitor capture date: %j", (capturedAt) => {
+  expect(() => admitPreview({ ...PREVIEW, review: { ...REVIEW, monitor: { ...MONITOR, capturedAt } } }))
+    .toThrow("diagnostic-bundle-response-invalid");
+});
+
+it("admits the reviewed bus-monitor window closed-schema and sends it back unchanged", async () => {
+  const withMonitor = { ...PREVIEW, review: { ...REVIEW, monitor: MONITOR } };
+  expect(admitPreview(withMonitor)).toBe(withMonitor);
+  for (const monitor of [
+    { ...MONITOR, extra: 1 },
+    { ...MONITOR, firstSeq: 10 },
+    { ...MONITOR, firstSeq: 1.5 },
+    { ...MONITOR, sessionId: -1 },
+    { ...MONITOR, endSeq: 6000, firstSeq: 0 },
+    { ...MONITOR, statusAtReview: "gone" },
+    { ...MONITOR, capturedAt: "yesterday" },
+    { ...MONITOR, capturedAt: undefined },
+    null,
+  ]) {
+    expect(() => admitPreview({ ...PREVIEW, review: { ...REVIEW, monitor } })).toThrow("diagnostic-bundle-response-invalid");
+  }
+  reply(200, { key: "busMonitor", text: "t" });
+  await sectionText({ problemType: "deviceReading", review: { ...REVIEW, monitor: MONITOR } }, "busMonitor");
+  const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+  expect(JSON.parse(init.body as string).review.monitor).toEqual(MONITOR);
+});

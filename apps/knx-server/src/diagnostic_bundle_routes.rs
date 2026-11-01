@@ -32,6 +32,11 @@ use sha2::{Digest, Sha256};
 #[path = "diagnostic_bundle_retained.rs"]
 mod retained;
 
+#[path = "diagnostic_bundle_sections.rs"]
+mod sections;
+
+pub(crate) use sections::MonitorBinding;
+
 /// The client may describe itself; anything larger is refused.
 const MAX_CLIENT_STATE_BYTES: usize = 64 * 1024;
 /// The user's own words; anything longer is refused.
@@ -212,6 +217,8 @@ struct Collected {
     sections: Vec<BundleSection>,
     recordings: Vec<BundleRecordingSummary>,
     created_at: String,
+    /// The bus-monitor window the sections were projected from, when that section is in.
+    monitor: Option<MonitorBinding>,
 }
 
 #[derive(Clone, Serialize)]
@@ -299,9 +306,10 @@ enum BundleUnavailableCode {
     SupportUnfinished,
     RecordingVersion,
     RecordingResult,
-    /// Withheld for every request until its content is admitted as credential-free;
-    /// says nothing about what the source holds.
-    Withheld,
+    /// No bus monitor session exists, so there is no buffer to read.
+    MonitorNotRunning,
+    /// The request carries no browser facts.
+    NoClientState,
     ProjectUnsaved,
     ImportFileNotKept,
     NoDevice,
@@ -329,9 +337,8 @@ impl BundleUnavailableCode {
             Self::SupportUnfinished => "the support result is not complete",
             Self::RecordingVersion => "the diagnostic recording version is unsupported",
             Self::RecordingResult => "the diagnostic recording result is malformed",
-            Self::Withheld => {
-                "this section is withheld until its content is admitted as free of credentials"
-            }
+            Self::MonitorNotRunning => "the bus monitor is not running in this server session",
+            Self::NoClientState => "the browser sent no client state",
             Self::ProjectUnsaved => "the project has not been saved as a KNXBench project file yet",
             Self::ImportFileNotKept => {
                 "this server session does not keep the original import file; attach it yourself if needed"
@@ -365,7 +372,8 @@ impl BundleUnavailableCode {
             Self::SupportUnfinished,
             Self::RecordingVersion,
             Self::RecordingResult,
-            Self::Withheld,
+            Self::MonitorNotRunning,
+            Self::NoClientState,
             Self::ProjectUnsaved,
             Self::ImportFileNotKept,
             Self::NoDevice,
@@ -389,7 +397,8 @@ impl BundleUnavailableCode {
                 | Self::SupportUnfinished
                 | Self::RecordingVersion
                 | Self::RecordingResult
-                | Self::Withheld
+                | Self::MonitorNotRunning
+                | Self::NoClientState
                 | Self::ProjectUnsaved
                 | Self::ImportFileNotKept
                 | Self::NoDevice
@@ -685,6 +694,13 @@ fn parse_review(value: &Value) -> Result<Review, ApiError> {
     {
         return Err(ApiError::bad_request("bundlePreviewRequired"));
     }
+    if review
+        .monitor
+        .as_ref()
+        .is_some_and(|monitor| !monitor.is_well_formed())
+    {
+        return Err(ApiError::bad_request("bundlePreviewRequired"));
+    }
     Ok(review)
 }
 
@@ -707,6 +723,7 @@ fn review_of(collected: &Collected, query: &BundleQuery) -> Review {
         "deviceId": collected.device_id,
         "offers": collected.offers,
         "sections": sections,
+        "monitor": collected.monitor,
     });
     let mut hash = Sha256::new();
     hash.update(serde_json::to_vec(&metadata).expect("bundle metadata serializes"));
@@ -719,6 +736,7 @@ fn review_of(collected: &Collected, query: &BundleQuery) -> Review {
     Review {
         fingerprint: format!("{:x}", hash.finalize()),
         context: collected.context.clone(),
+        monitor: collected.monitor.clone(),
     }
 }
 
@@ -895,7 +913,13 @@ fn markers(addresses: bool, names: bool, parameter_values: bool, network: bool) 
     }
 }
 
-async fn collect(state: &SharedState, query: &BundleQuery) -> Result<Collected, ApiError> {
+/// `reviewed`: a text or export request, which projects the reviewed monitor window
+/// instead of choosing a new one; a preview always chooses afresh.
+async fn collect(
+    state: &SharedState,
+    query: &BundleQuery,
+    reviewed: bool,
+) -> Result<Collected, ApiError> {
     check_query(query)?;
     let context = ProjectContext::capture(state);
     if query
@@ -905,11 +929,17 @@ async fn collect(state: &SharedState, query: &BundleQuery) -> Result<Collected, 
     {
         return Err(preview_changed());
     }
+    let mut pinned_monitor = None;
     if let Some(review) = &query.review {
-        if parse_review(review)?.context != context {
+        let review = parse_review(review)?;
+        if review.context != context {
             return Err(preview_changed());
         }
+        if reviewed {
+            pinned_monitor = review.monitor;
+        }
     }
+    let mut monitor = None;
     let store = state.recordings.clone();
     let recordings = tokio::task::spawn_blocking(move || {
         // A recording still being written shows its last lines a moment later.
@@ -1043,6 +1073,8 @@ async fn collect(state: &SharedState, query: &BundleQuery) -> Result<Collected, 
             SectionScope {
                 recordings: &recordings,
                 projectable,
+                pinned_monitor: pinned_monitor.as_ref(),
+                monitor: &mut monitor,
             },
             &mut system2_cache,
         )
@@ -1057,6 +1089,9 @@ async fn collect(state: &SharedState, query: &BundleQuery) -> Result<Collected, 
             Err(SourceFailure::Conflict) => return Err(source_failure(SourceFailure::Conflict)),
             Err(reason) => Some(reason.message().to_string()),
         };
+        if kind == SectionKind::BusMonitor && !(wanted && unavailable.is_none()) {
+            monitor = None;
+        }
         offers.push(OfferView {
             kind,
             offer,
@@ -1076,6 +1111,7 @@ async fn collect(state: &SharedState, query: &BundleQuery) -> Result<Collected, 
         sections,
         recordings: recording_views,
         created_at,
+        monitor,
     })
 }
 
@@ -1085,6 +1121,10 @@ struct SectionScope<'a> {
     recordings: &'a [RecordingSummary],
     /// See [`projectable_device`].
     projectable: Result<Option<u32>, SourceFailure>,
+    /// The reviewed monitor window of a text or export request.
+    pinned_monitor: Option<&'a MonitorBinding>,
+    /// Receives the window the monitor section was projected from.
+    monitor: &'a mut Option<MonitorBinding>,
 }
 
 /// Builds the sections of `kind`, or says why there are none.
@@ -1100,10 +1140,17 @@ async fn build_section(
     let SectionScope {
         recordings,
         projectable,
+        pinned_monitor,
+        monitor,
     } = scope;
     match kind {
         SectionKind::Environment => Ok(vec![environment(state)]),
-        SectionKind::SessionLog => Err(SourceFailure::Unavailable(BundleUnavailableCode::Withheld)),
+        SectionKind::SessionLog => {
+            // Projected under the log's lock, without cloning entry details; the live log
+            // is never changed.
+            let log = state.session_log.lock().expect("state mutex poisoned");
+            Ok(vec![sections::session_log(log.entries())])
+        }
         SectionKind::Operation => {
             if let Some(operation) = operation {
                 if let Ok(evidence) = evidence {
@@ -1184,9 +1231,31 @@ async fn build_section(
         )),
         SectionKind::Catalogue => Ok(vec![catalogue(state, projectable?)]),
         SectionKind::Project => Ok(vec![project_section(state).await?]),
-        SectionKind::BusMonitor | SectionKind::ClientState => {
-            Err(SourceFailure::Unavailable(BundleUnavailableCode::Withheld))
+        SectionKind::BusMonitor => {
+            let snapshot =
+                sections::monitor_snapshot(state)
+                    .await
+                    .ok_or(SourceFailure::Unavailable(
+                        BundleUnavailableCode::MonitorNotRunning,
+                    ))?;
+            // A reviewed window is projected exactly; a missing pinned row or another
+            // session leaves it unavailable, so the review no longer matches (409).
+            let binding = pinned_monitor
+                .cloned()
+                .unwrap_or_else(|| sections::monitor_window(&snapshot));
+            let section = sections::bus_monitor(&snapshot, &binding)
+                .ok_or_else(SourceFailure::unavailable)?;
+            *monitor = Some(binding);
+            Ok(vec![section])
         }
+        SectionKind::ClientState => query
+            .client
+            .as_ref()
+            .and_then(Value::as_object)
+            .map(|client| vec![sections::client_state(client)])
+            .ok_or(SourceFailure::Unavailable(
+                BundleUnavailableCode::NoClientState,
+            )),
     }
 }
 
@@ -1394,7 +1463,11 @@ const NOTE_NO_PARAMETERS: &str = "the parameter values could not be projected fo
 
 /// Every fixed English note this module writes; the web translates each by exact text.
 #[cfg(test)]
-pub(super) const FIXED_NOTES: [&str; 8] = [
+pub(super) const FIXED_NOTES: [&str; 12] = [
+    sections::NOTE_REDUCED,
+    sections::NOTE_SESSION_LOG,
+    sections::NOTE_MONITOR,
+    sections::NOTE_CLIENT,
     PRIVATE_RAW_NOTE,
     NOTE_RAW_WITHHELD_PROJECTION,
     NOTE_RAW_WITHHELD_RESULT,
@@ -1520,7 +1593,7 @@ async fn preview(
     State(state): State<SharedState>,
     Json(query): Json<BundleQuery>,
 ) -> Result<Json<PreviewView>, ApiError> {
-    let collected = collect(&state, &query).await?;
+    let collected = collect(&state, &query, false).await?;
     let (file_name, mail_draft) = names(&collected, &query);
     let total_bytes = collected.sections.iter().map(BundleSection::size).sum();
     Ok(Json(PreviewView {
@@ -1555,7 +1628,7 @@ async fn section_text(
         .key
         .clone()
         .ok_or_else(|| ApiError::bad_request("bundleSectionUnknown"))?;
-    let collected = collect(&state, &query).await?;
+    let collected = collect(&state, &query, true).await?;
     verify_review(&collected, &query)?;
     let section = collected
         .sections
@@ -1576,7 +1649,7 @@ async fn export(
         return Err(ApiError::bad_request("bundleConsentRequired"));
     }
     required_review(&query)?;
-    let collected = collect(&state, &query).await?;
+    let collected = collect(&state, &query, true).await?;
     verify_review(&collected, &query)?;
     let (file_name, _) = names(&collected, &query);
     let request = request(&state, &query);

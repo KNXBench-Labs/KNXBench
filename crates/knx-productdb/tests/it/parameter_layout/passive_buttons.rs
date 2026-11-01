@@ -508,3 +508,18 @@ fn one_grid_button_among_gridless_ones_keeps_the_read() {
     assert_eq!(shown, ["Fictional grid label"]);
     assert_eq!(binding_after(&mixed, DRIFT), ButtonBinding::StructuralDrift);
 }
+
+#[test]
+fn a_grid_button_below_a_choice_still_reads_and_binds() {
+    // The read skip looks through choose/when exactly as admission does.
+    let nested = ONLY.replace(
+        B_ONLY,
+        &format!(r#"<choose ParamRefId="PR-MODE"><when test="1">{B_ONLY}</when></choose>"#),
+    );
+    assert_ne!(nested, ONLY);
+    assert_eq!(bound(&nested).len(), 1);
+    assert_eq!(
+        binding_after(&nested, DRIFT),
+        ButtonBinding::StructuralDrift
+    );
+}

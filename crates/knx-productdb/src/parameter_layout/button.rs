@@ -110,8 +110,23 @@ pub(super) fn bind(
     }
 }
 
+/// The nearest stored `ParameterBlock` above `node`, stopping at a cycle or
+/// a missing ancestor. Admission and the read skip share this one walk.
+fn nearest_block(stored: &BTreeMap<i64, Node>, node: i64) -> Option<(i64, &Node)> {
+    let mut seen = HashSet::new();
+    let mut parent = stored.get(&node).and_then(|node| node.parent);
+    while let Some(at) = parent {
+        let ancestor = stored.get(&at).filter(|_| seen.insert(at))?;
+        if ancestor.kind == "ParameterBlock" {
+            return Some((at, ancestor));
+        }
+        parent = ancestor.parent;
+    }
+    None
+}
+
 /// Whether some stored `Button`'s nearest `ParameterBlock` is a grid or a
-/// grid whose source could not be read; the same walk `bind_source` binds by.
+/// grid whose source could not be read.
 fn any_button_may_have_a_grid(
     stored: &BTreeMap<i64, Node>,
     grids: &HashMap<i64, BlockGrid>,
@@ -119,24 +134,14 @@ fn any_button_may_have_a_grid(
     stored
         .iter()
         .filter(|(_, node)| node.kind == "Button")
-        .any(|(_, button)| {
-            let mut seen = HashSet::new();
-            let mut parent = button.parent;
-            while let Some(at) = parent {
-                let Some(ancestor) = stored.get(&at).filter(|_| seen.insert(at)) else {
-                    return false;
-                };
-                if ancestor.kind == "ParameterBlock" {
-                    return grids.get(&at).is_some_and(|grid| {
-                        matches!(
-                            grid.status,
-                            GridStatus::Grid | GridStatus::SourceUnavailable
-                        )
-                    });
-                }
-                parent = ancestor.parent;
-            }
-            false
+        .filter_map(|(id, _)| nearest_block(stored, *id))
+        .any(|(block, _)| {
+            grids.get(&block).is_some_and(|grid| {
+                matches!(
+                    grid.status,
+                    GridStatus::Grid | GridStatus::SourceUnavailable
+                )
+            })
         })
 }
 
@@ -164,20 +169,7 @@ fn bind_source(
     let mut literals = HashMap::new();
     for candidate in source.candidates.into_iter().filter(|c| c.leaf) {
         // The nearest stored block must be the same node with the same `@Id`.
-        let mut seen = HashSet::new();
-        let mut parent = stored.get(&candidate.node).and_then(|node| node.parent);
-        let mut nearest = None;
-        while let Some(at) = parent {
-            let Some(ancestor) = stored.get(&at).filter(|_| seen.insert(at)) else {
-                break;
-            };
-            if ancestor.kind == "ParameterBlock" {
-                nearest = Some((at, ancestor));
-                break;
-            }
-            parent = ancestor.parent;
-        }
-        let Some((block_node, block)) = nearest else {
+        let Some((block_node, block)) = nearest_block(stored, candidate.node) else {
             continue;
         };
         if block_node != candidate.block_node || block.id.as_deref() != Some(&candidate.block_id) {

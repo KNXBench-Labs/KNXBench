@@ -42,6 +42,14 @@ the branch HEAD and revision-bound receipts; private receipts live under `<profi
 - A separate full server-suite probe hung because its network namespace had no
   loopback; it is a harness error, not counted. The candidate-2 gate runs the suite.
 
-## Candidate 2
+## Candidate 2 (`0b827abee`): accepted and published
 
-Results are recorded here only after actual execution.
+- Release gate 30/30 green, inputs frozen; package gate complete. Rust 7,978 passed /
+  0 failed / 241 ignored; Vitest 4,875; fixture browser 969 + 69; production browser 625;
+  extras 45 + 8 device-diagnostics; native 12 + 12; corpus 155/155 in 9 targets; product
+  modules 15; legacy opt-in 1/1; ingest differential 28/28 identical.
+- Dry runs 41324979516 (AppImage/MCP) and 41324981775 (Docker), publish jobs skipped.
+- Tagged and published 1 November 2026; tag publishers 41330363960/41330363961
+  succeeded. Public downloads, checksums, MCP version, AppImage host-library check and
+  Broadway startup, Docker index/labels and an isolated amd64 smoke passed. The owner's
+  container was unchanged. Receipt: `docs/evidence/release-alpha19-2026-11-01.json`.

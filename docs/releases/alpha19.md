@@ -369,7 +369,36 @@ Release channels retain the Alpha 18 layout: GitHub pre-release
 [Known issues](../manual/known-issues.md).
 
 ## By the numbers
-RELEASE-GATE-PENDING
+- **2 release candidates**: the first went 29/30 and the last stage caught the diagnostic bundle quietly swapping the raw recording for its typed summary. The second went **30/30** after a three-test fix. Unreleased code, caught before any tag; the gate earned its keep.
+- **4 packaging dry runs** (AppImage/MCP and Docker amd64+arm64, two per candidate), **0 publish jobs enabled in them**, then **2 real tag publishers**, both successful.
+- **7,978 Rust tests passed** in 56 harnesses, **0 failed**; **241 ignored** are reported, not counted as coverage. **4,875 frontend unit tests** passed.
+- **969 functional + 69 exclusive fixture-browser**, **625 production-browser**, **45 extra-browser** and **12 native-evidence + 12 native edit-spec** executions passed, with no retries or flakes. These are different, partly overlapping suites, not a unique-test total.
+- **155/155 corpus tests in 9 targets**, the four whole-corpus product modules (15 tests) and the legacy member-name opt-in passed. The tooling suite ran 472 tests with 6 existing optional skips.
+- **28 files, 1 cross-section:** instead of restoring all 111 historical pinned product files, a representative 28-file selection ran the legacy member-name test unchanged. Every one of the 28 ingested identically with Alpha 18 and Alpha 19 (27 install, the same 1 does not in both). The 115-instance compatibility matrix needs the full set and **was not run** for this release; that ingest comparison replaces it and is not the same check.
 
 ## Acceptance and public verification
-RELEASE-GATE-PENDING
+Published on **1 November 2026** from immutable
+`0b827abee222c459ce068cbce83a941691a16805` (branch `release/alpha19-20261101`,
+source cutoff `858b0a24d`). The [sanitized public receipt](../evidence/release-alpha19-2026-11-01.json)
+records both candidates, the source campaign, the dry runs, the actual tag
+publishers and the checks of the final public bytes.
+
+- **Source campaign:** the complete maintained package gate (complete, plan
+  completed, inputs frozen, no user data touched) plus the release-only browser,
+  native, product-corpus and differential stages, 30/30 green with the
+  candidate's tree unchanged from start to end. Candidate 1 is retained as
+  rejected, not relabelled.
+- **Downloads:** AppImage, MCP and `SHA256SUMS` match their published sizes and
+  provider SHA-256 digests. MCP reports `0.1.0-alpha.19+g0b827ab`. The
+  repository's host-library check passes on the downloaded AppImage (no bundled
+  `libwayland-client`). The unchanged AppRun starts on an isolated Broadway
+  display with the correct embedded-server version and an HTTP 200 frontend; this
+  is not FUSE, native visual, Mesa EGL or Orca acceptance.
+- **Docker:** version and `latest` share one index; both native platform configs
+  carry the exact revision and version labels. The version tag was pulled
+  anonymously and run network-isolated on amd64: authentication, health,
+  create/save-as/replace/reopen passed. arm64 is distribution and identity proof
+  only. The owner's own container was not touched.
+- **Not verified:** physical KNX hardware, native WebKitGTK/Tauri windows, ARM
+  runtime execution, FUSE AppImage launch and the full pinned compatibility
+  matrix.

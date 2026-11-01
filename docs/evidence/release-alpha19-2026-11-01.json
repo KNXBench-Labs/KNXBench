@@ -1,0 +1,171 @@
+{
+  "schema": "knxbench-release-publication/1",
+  "tag": "v0.1.0-alpha.19",
+  "tag_object": "37de9485e8a515c39ebbc65591b7888570701076",
+  "candidate": "0b827abee222c459ce068cbce83a941691a16805",
+  "source_cutoff": "858b0a24d",
+  "published_date": "2026-11-01",
+  "published_at": "2026-11-01T17:13:33Z",
+  "release_url": "https://github.com/KNXBench-Labs/KNXBench/releases/tag/v0.1.0-alpha.19",
+  "prerelease": true,
+  "draft": false,
+  "source_acceptance": "../releases/alpha19.md#acceptance-and-public-verification",
+  "candidates": [
+    {
+      "revision": "b73c467a7d9603306c491930ae757701a53a4edf",
+      "verdict": "rejected",
+      "stages": 30,
+      "green": 29,
+      "red": "release-only device-diagnostics browser config 8/8: retained typed result shadowed the token-reached raw recording (unreleased source)",
+      "dry_runs": {
+        "appimage_mcp": 41307187026,
+        "docker": 41307189095,
+        "publish_jobs_skipped": true,
+        "inherited": false
+      }
+    },
+    {
+      "revision": "0b827abee222c459ce068cbce83a941691a16805",
+      "verdict": "accepted",
+      "stages": 30,
+      "green": 30
+    }
+  ],
+  "acceptance_boundary": {
+    "runtime_revision": "0b827abee222c459ce068cbce83a941691a16805",
+    "method": "One frozen candidate per gate; complete maintained package gate plus release-only extras on the final candidate. Candidate 1 rejected and retained; candidate 2 gated in full, not inherited.",
+    "package_gate": {
+      "mode": "complete",
+      "requested_full": true,
+      "plan_completed": true,
+      "inputs_frozen": true,
+      "user_data_touched": [],
+      "user_data_unchecked": [],
+      "rust": {
+        "passed": 7978,
+        "failed": 0,
+        "ignored": 241,
+        "harnesses": 56
+      },
+      "vitest": 4875,
+      "fixture_browser": {
+        "functional": 969,
+        "exclusive": 69,
+        "flaky": 0,
+        "skipped": 0
+      },
+      "production_browser": 625,
+      "corpus": {
+        "passed": 155,
+        "selected": 155,
+        "targets": 9
+      },
+      "tooling": {
+        "ran": 472,
+        "optional_skips": 6
+      }
+    },
+    "release_extras": {
+      "browser": 45,
+      "device_diagnostics_browser": 8,
+      "native_evidence": 12,
+      "native_edit_specs": 12,
+      "product_corpus_executions": 15,
+      "legacy_member_names_opt_in": "1/1 on owner-approved 28-file cross-section",
+      "pinned_compatibility_matrix": "not run: needs the full 115-instance pinned set; owner approved a cross-section instead",
+      "matrix_replacement": {
+        "kind": "per-file isolated product ingest, Alpha 18 CLI vs candidate CLI",
+        "files": 28,
+        "identical": 28,
+        "installed_both": 27
+      }
+    },
+    "counts_are_overlapping_executions_not_unique_tests": true,
+    "inputs_frozen": true,
+    "private_corpus_payloads_published": false
+  },
+  "packaging": {
+    "dry_runs": {
+      "appimage_mcp": 41324979516,
+      "docker": 41324981775,
+      "publish_jobs_skipped": true
+    },
+    "tag_runs": {
+      "appimage_mcp": 41330363960,
+      "docker": 41330363961,
+      "actual_publish_jobs_successful": true
+    }
+  },
+  "github_assets": [
+    {
+      "name": "knx-mcp-x86_64-linux",
+      "size": 14458064,
+      "sha256": "0f38f54575a3ddb0c6ab0c4d40c8f6bd5317f20ff454084b170fddef332b8006"
+    },
+    {
+      "name": "KNXBench_0.1.0-alpha.19_amd64.AppImage",
+      "size": 97008120,
+      "sha256": "3c35ba25cbbf569352cf13106bed626f3ed4b7443d7dc34d85b661ad72b6d5df"
+    },
+    {
+      "name": "SHA256SUMS",
+      "size": 194,
+      "sha256": "65913b7f9a0575eed2ffc6df7a567a0202de4eaef2a0e29a2a0be8d2515a2902"
+    }
+  ],
+  "published_checksums_verified": true,
+  "mcp": {
+    "version": "knx-mcp 0.1.0-alpha.19+g0b827ab",
+    "suffix_matches_candidate": true,
+    "network": "no-network namespace"
+  },
+  "appimage": {
+    "extraction": true,
+    "host_library_check": "tools/appimage/check-host-libraries.sh passed on the public download (no libwayland-client.so*)",
+    "broadway_startup": {
+      "embeddedListener": true,
+      "frontendStatus": 200,
+      "version": "0.1.0-alpha.19+g0b827ab",
+      "eglBadOrAbortLines": 0,
+      "appTeardown": "term",
+      "broadwayTeardownExit": 143,
+      "scope": "Broadway embedded-server startup; not FUSE, Mesa EGL, native visual or accessibility acceptance"
+    }
+  },
+  "docker": {
+    "image": "knxbench/knxbench-server:0.1.0-alpha.19",
+    "index_digest": "sha256:a8c48252786f029518096fa77fe4518987685bce73d5a832e950bc5a544f01ba",
+    "latest_same_index": true,
+    "native_platforms": [
+      "linux/amd64",
+      "linux/arm64"
+    ],
+    "attestation_descriptors": 2,
+    "native": {
+      "linux/arm64": {
+        "manifest": "sha256:5cc2db4a6a2d77b994de4854936550bc470e40c2521d6108c5c0252a4ed853ce",
+        "config": "sha256:a0f0d49e1bbf3709d628403999f6c6985445b39656cba0d637c1b6fe35db9723",
+        "size": 3146
+      },
+      "linux/amd64": {
+        "manifest": "sha256:d788d8d83908c4fe17755a9e093be3e120a5ca64ae70b362aafff2d1c606b12b",
+        "config": "sha256:8407bf216d6eb4d25d1d5e617e68cbb37993a2ba0898b01eff1b3b425ce4e386",
+        "size": 3147
+      }
+    },
+    "labels_both_platforms": {
+      "revision": "0b827abee222c459ce068cbce83a941691a16805",
+      "version": "v0.1.0-alpha.19"
+    },
+    "amd64_probe": "anonymous version-tag pull; --version; isolated --network none server with authenticated HTTPS smoke: health, 401/200, create/save-as/replace/reopen; version image removed afterwards",
+    "arm64": "distribution and identity proof only; not executed"
+  },
+  "owner_container_unchanged": true,
+  "not_verified": [
+    "physical KNX hardware",
+    "native WebKitGTK/Tauri window",
+    "ARM runtime execution",
+    "FUSE AppImage launch",
+    "full pinned compatibility matrix"
+  ]
+}

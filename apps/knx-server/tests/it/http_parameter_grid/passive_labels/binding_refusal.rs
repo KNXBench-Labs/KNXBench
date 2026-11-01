@@ -11,6 +11,14 @@ const CORRUPT: &str = "UPDATE source_file SET bytes=CAST(replace(CAST(bytes AS T
 const OPEN: &str = r#"Text="Fictional selector" ParameterType="PT-MODE" Value="1""#;
 const CLOSED: &str = r#"Text="Fictional selector" ParameterType="PT-MODE" Value="0""#;
 
+/// Adds a module whose grid holds a Button; module Buttons never get a label.
+const MODULE: &str = r#"<ModuleDefs><ModuleDef Id="MD-1" Name="Fictional module"><Static/><Dynamic><ParameterBlock Id="MD-1_PB" Layout="Grid"><Rows><Row Id="MD-R"/></Rows><Columns><Column Id="MD-C1" Width="50%"/><Column Id="MD-C2" Width="50%"/></Columns><Button Id="MD-1_B" Text="Module label" Cell="1,2"/></ParameterBlock></Dynamic></ModuleDef></ModuleDefs><Dynamic><Module Id="MOD-1_M-1" RefId="MD-1"/>"#;
+
+fn with_module(program: &str) -> String {
+    assert_eq!(program.matches("<Dynamic>").count(), 1);
+    program.replacen("<Dynamic>", MODULE, 1)
+}
+
 fn unbound(dto: &Value) -> Vec<&Value> {
     dto["diagnostics"]
         .as_array()
@@ -34,7 +42,7 @@ fn assert_one(dto: &Value, cause: &str, reached: usize) {
     assert_eq!(diagnostic["severity"], "warning");
     assert_eq!(
         diagnostic["message"],
-        "Source button labels of this program are not shown: the retained product source could not be matched to the installed catalogue."
+        "Source button labels of this program are not shown because they could not be bound to its stored product source."
     );
     let detail = diagnostic["detail"].as_str().unwrap();
     assert!(detail.starts_with(&format!("{cause}: ")), "{detail}");
@@ -93,5 +101,22 @@ async fn a_refusal_without_a_reached_button_stays_silent() {
         1,
     );
     let closed = refused(&single.replace(OPEN, CLOSED), Some(CORRUPT)).await;
+    assert_eq!(unbound(&closed), Vec::<&Value>::new(), "{closed}");
+}
+
+#[tokio::test]
+async fn reached_module_buttons_are_neither_counted_nor_reported() {
+    // The program's own B-ONLY counts; the module's reached Button does not.
+    assert_one(
+        &refused(&with_module(ONLY), Some(CORRUPT)).await,
+        "sourceUnavailable",
+        1,
+    );
+    // With the program's only Button closed off, a reached module Button alone stays silent.
+    let single = EN.replace(
+        r#"<Button Id="B-MIX" Text="Fictional mixed label" EventHandlerOnline="ConnectionOriented" EventHandler="fictionalCallback" EventHandlerParameters="{ &quot;fixture&quot;: 7 }" Cell="1,2"/>"#,
+        "",
+    );
+    let closed = refused(&with_module(&single.replace(OPEN, CLOSED)), Some(CORRUPT)).await;
     assert_eq!(unbound(&closed), Vec::<&Value>::new(), "{closed}");
 }

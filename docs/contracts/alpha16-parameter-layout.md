@@ -113,8 +113,12 @@ Button behaviour, handler support or Table/Grid visual equivalence.
   `passiveLabelsUnbound` warning to the panel's `diagnostics` (scope `null`,
   EN/DE translated in the Diagnostics tab). Its `detail` names the cause
   (`sourceUnavailable`, `structuralDrift` or `duplicateButtonId`) and the
-  number of reached Buttons without a label. A refusal that no reached
-  `Button` would show stays silent. Labels stay all-or-nothing; the grid's
+  number of reached program `Button`s. That number is an upper bound of the
+  hidden labels: a refused binding cannot tell which of them would have been
+  admitted (a non-grid block or a non-literal `Text` shows no label even when
+  bound). Module `Button`s never count. A refusal while no program `Button`
+  is reached stays silent; a resource-limited activation can undercount or
+  stay silent too. Labels stay all-or-nothing; the grid's
   generic `unshownContent` issue is unchanged, and a Button-only block, which
   was an area only through its label, has none.
 - **Limits.** The extra source read on

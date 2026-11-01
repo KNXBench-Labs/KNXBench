@@ -6697,7 +6697,7 @@ fn passive_label_binding_diagnostic(
         scope: None,
         kind: crate::routes::ParameterDiagnosticKindDto::PassiveLabelsUnbound,
         severity: crate::routes::ParameterDiagnosticSeverityDto::Warning,
-        message: "Source button labels of this program are not shown: the retained product source could not be matched to the installed catalogue.".to_string(),
+        message: "Source button labels of this program are not shown because they could not be bound to its stored product source.".to_string(),
         detail: format!(
             "{cause}; {reached} reached Button(s) show no label (program '{program_id}')."
         ),

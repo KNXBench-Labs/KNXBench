@@ -89,10 +89,10 @@ is unchanged.
 - **Measured afterwards.** The extra source read costs about 70 ms on the
   largest retained real program (26.6 MB source, 240 ms load) and about 14 ms
   at 5 MB; all 8 real programs with Buttons bind, 12 of 34 Buttons are admitted.
-- **Owner accepted** the cue wording on 1 November 2026. Programs whose
-  Buttons all sit outside grid blocks now skip the source read entirely
-  (largest program 239.7 → 161.9 ms, same 12 labels). Productdb RED 1 → 24/24,
-  server RED 1 → 20/20; any→all and unreadable-grid mutants caught.
+- **Owner accepted** the cue wording on 1 November 2026. Programs in which
+  no Button's nearest block is a grid now skip the source read entirely
+  (largest program 239.7 → 161.9 ms, same 12 labels). Productdb RED 1 → 25/25,
+  server RED 1 → 20/20; reviewed mutants caught, including a shallow walk.
   [Contract](contracts/alpha16-parameter-layout.md#passive-source-button-labels-button-literal-passive-v1).
 
 <a id="diag-03-closeout-candidate-1-november-2026"></a>

@@ -2,6 +2,16 @@
 
 **Status:** Decisions recorded; remaining evidence and owner review pending. Listed in [OPEN_WORK](../OPEN_WORK.md); per-ID status of record is the [ledger](../status/LEDGER.md).
 
+## Decisions recorded — 1 November 2026
+
+- OKX-05 passive Button labels: the cue wording "Source button label – action
+  unsupported" (German "Beschriftung einer Quell-Schaltfläche – Aktion nicht
+  unterstützt") is accepted, and skipping the source read for programs whose
+  Buttons cannot show a label is approved
+  ([contract](../contracts/alpha16-parameter-layout.md#passive-source-button-labels-button-literal-passive-v1)).
+  A blanket "approve everything" reply is not a consent for bus or device
+  writes, releases or deployments; those still need their own named go.
+
 ## Decisions recorded — 27 October 2026
 
 These decisions are not delivery evidence or blanket execution authority.

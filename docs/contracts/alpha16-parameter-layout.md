@@ -102,7 +102,8 @@ Button behaviour, handler support or Table/Grid visual equivalence.
   existing groups (count 0). In a selected matrix, a cell stacks separator
   captions, then passive labels in source order, then fields. The label is a
   plain `span` with the cue “Source button label – action unsupported” (German
-  translated): no button role, tab stop, handler or request. Search lists fields
+  translated; wording accepted by the owner on 1 November 2026): no button
+  role, tab stop, handler or request. Search lists fields
   only; labels return when search clears. The server keeps the `unshownContent`
   issue; where the selected grid shows that `Button`'s label, the client words it
   “Button {Id}: label shown; its action is not supported” and does not count it
@@ -133,8 +134,14 @@ Button behaviour, handler support or Table/Grid visual equivalence.
   2 ms difference). Peak RSS of the whole run was 86 MiB. All 8 programs bound
   (no `passiveLabelsUnbound`), but only 12 of their 34 program `Button`s were
   admitted: the other 22 sit in blocks without a `Table`/`Grid` layout, so the
-  read is paid there without a label. Skipping it for programs without a grid
-  block is a possible optimization, not implemented.
+  read was paid there without a label. Since the same day (main only) the read
+  is skipped when no stored program `Button`'s nearest block is a grid or a grid
+  whose source is unreadable: then no label can exist, binding reports `Bound`
+  and nothing is warned. A program with at least one such `Button` still reads
+  and still reports every refusal. Remeasured the same way: the largest
+  program's load drops from 239.7 to 161.9 ms and the 2.8 MB one from 40.9 to
+  33.2 ms; both 5.2 MB programs with grid labels still read (+13 ms), and the
+  same 12 labels are admitted.
 
 Evidence: `parameter_layout::passive_buttons` (ProductDB binding and walker),
 `parameter_layout::button` unit tests, `http_parameter_grid::passive_labels`

@@ -35,6 +35,27 @@ matrix with test names is in the
 The sentinel scanner finds contiguous runs only, which suffices while System-2
 recordings never leave raw.
 
+## Reduced supplementary sections (1 November 2026 source)
+
+The unified bundle's session log, monitor and browser facts are actual sections,
+not unconditional unavailable offers. They are deliberately reduced projections:
+free log/error details and paths are not exported; known chronology, sources,
+fixed messages and import counts are retained, and omissions are counted. This
+is not arbitrary-text credential detection or full raw log delivery.
+
+The optional monitor section pins the existing session's reviewed ten-minute
+sequence interval. New traffic cannot change the reviewed bytes; missing,
+replaced or evicted pinned data requires a new preview. Text/access DPTs
+(including DPT 15) and undecoded/conflicting/failed/management payloads never
+supply raw bytes. Known typed group values and capped project labels remain
+installation content, not an anonymity guarantee. Client facts use a closed,
+bounded schema; unknown fields are counted without echoing them. No section
+starts a bus session. The
+[contract](../contracts/diagnostic-bundle.md#reduced-log-and-browser-facts)
+records formats and exact loss/binding rules. This update changes no retained
+catalogue record or historical ledger disposition and implies no hardware or
+release acceptance.
+
 <!-- BEGIN retained catalogue record -->
 
 ## 106. The debug report redacts five pattern classes, and nothing else

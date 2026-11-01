@@ -42,6 +42,22 @@ function admitRecording(value: unknown): void {
   }
 }
 
+/** The server's monitor-window limit (`MAX_TELEGRAMS`). */
+const MONITOR_WINDOW_ROWS = 5000;
+const MONITOR_KEYS = ["sessionId", "firstSeq", "endSeq", "droppedBefore", "statusAtReview", "capturedAt"] as const;
+
+/** Closed schema of the reviewed monitor window; the server re-checks every field. */
+function isMonitorBinding(value: unknown): boolean {
+  return isObject(value)
+    && exactKeys(value, MONITOR_KEYS)
+    && isSafeCount(value.sessionId) && isSafeCount(value.firstSeq) && isSafeCount(value.endSeq) && isSafeCount(value.droppedBefore)
+    && value.firstSeq <= value.endSeq && value.endSeq - value.firstSeq <= MONITOR_WINDOW_ROWS
+    && (value.statusAtReview === "active" || value.statusAtReview === "closed")
+    && typeof value.capturedAt === "string" && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(value.capturedAt)
+    && Number.isFinite(Date.parse(value.capturedAt))
+    && new Date(value.capturedAt).toISOString() === value.capturedAt;
+}
+
 /** Strict enough that a wrong shape fails here, not as a blank wizard. */
 export function admitPreview(value: unknown): BundlePreview {
   const invalid = () => new Error("diagnostic-bundle-response-invalid");
@@ -55,6 +71,7 @@ export function admitPreview(value: unknown): BundlePreview {
     || !isObject(value.review.context) || typeof value.review.context.serverIncarnation !== "string"
     || !value.review.context.serverIncarnation || !isCount(value.review.context.projectIncarnation)
     || !isCount(value.review.context.revision)
+    || ("monitor" in value.review && !isMonitorBinding(value.review.monitor))
     || !Array.isArray(value.offers) || !Array.isArray(value.sections) || !Array.isArray(value.recordings)) {
     throw invalid();
   }

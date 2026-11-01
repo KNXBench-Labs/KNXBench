@@ -4,10 +4,11 @@ Contract for `knx products inspect-distribution` and
 `knx_productdb::distribution::inspect_distribution`. Added for OpenKNX-style
 manufacturer distributions: plain manufacturer XML, or a ZIP release holding
 such XML next to scripts, help and baggage files. Format 4 is format 3 plus
-`sourceCandidates`; format 3 is format 2 plus `dependencyEvidence` and the
-`dependenciesNotExecuted` limitation. None of them has been in a release yet;
-only format 4 is emitted. A format-3 report lacks the required
-`sourceCandidates` field (a format-2 report also `dependencyEvidence`) and
+`sourceCandidates` and `sourceCandidateTotals`; format 3 is format 2 plus
+`dependencyEvidence` and the `dependenciesNotExecuted` limitation. None of them
+has been in a release yet; only format 4 is emitted. A format-3 report lacks the
+required `sourceCandidates` and `sourceCandidateTotals` fields (a format-2 report
+also `dependencyEvidence`) and
 fails to deserialize, rather than reading as a source without candidates or
 declarations. Format 1 never left a feature branch and is not accepted or
 emitted.
@@ -123,7 +124,9 @@ All field names are camelCase. A source reference is a JSON pair
 - `sourceCandidates[]`: TypeNumber value and Union interval candidates in
   member and element order (see below).
 - `sourceCandidateTotals[]`: every checked occurrence counted by application,
-  kind and outcome, with how many of them have their own row.
+  kind and outcome, with how many of them have their own row; in member order,
+  then application element order, then kind and outcome in their declared
+  enumeration order.
 
 ## Dependency evidence
 
@@ -208,9 +211,14 @@ Each row has a `kind`, `severity` (always `sourceCandidate`), its own
 `activity` and `dependencyContext`. A row describes declarations under a
 named KNXBench model. It is not a runtime error, and nothing is corrected.
 
-**Rows and totals.** By default (`candidateRows: findings`) a value check whose
-`comparison` is `within` and an interval check whose `comparison` is
-`withinExtent` get no row; every other outcome and every Union summary does.
+**Rows and totals.** The report does not carry a row-detail field; the detail
+is chosen by the caller. By default (`DistributionLimits::candidate_rows` is
+`Findings`, the only mode of the CLI) a value check whose `comparison` is
+`within` and an interval check whose `comparison` is `withinExtent` get no row,
+unless the member declares an explicit zero width (`zeroWidthDeclared`), which
+is always listed. Every other outcome is listed, including absent, empty,
+invalid, type-unavailable, unbounded and resource-limit outcomes, and so is
+every Union summary.
 `sourceCandidateTotals` counts every checked occurrence either way: one entry
 per application, `kind` and outcome (`valueComparison` for value kinds,
 `intervalComparison` for members), with `occurrences` and `rows` (how many are

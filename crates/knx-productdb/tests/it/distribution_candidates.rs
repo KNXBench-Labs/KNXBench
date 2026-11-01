@@ -1339,3 +1339,211 @@ fn default_lists_findings_and_counts_every_checked_occurrence() {
     let json = serde_json::to_value(&default).unwrap();
     assert!(json["sourceCandidateTotals"].is_array());
 }
+
+/// Totals as comparable tuples, without the application coordinate.
+type TotalRow = (Kind, Option<Cmp>, Option<Interval>, u64, u64);
+fn totals(r: &DistributionInspection) -> Vec<TotalRow> {
+    r.source_candidate_totals
+        .iter()
+        .map(|t| {
+            (
+                t.kind,
+                t.value_comparison,
+                t.interval_comparison,
+                t.occurrences,
+                t.rows,
+            )
+        })
+        .collect()
+}
+/// Totals key including the application, so ZIP members with several applications stay apart.
+type TotalKey = ((Option<u32>, u32), Kind, Option<Cmp>, Option<Interval>, u64);
+/// Occurrences per (application, kind, outcome) taken from an All-mode report's own rows.
+fn occurrences_from_rows(r: &DistributionInspection) -> BTreeSet<TotalKey> {
+    let mut counted = std::collections::BTreeMap::<_, u64>::new();
+    for c in &r.source_candidates {
+        let key = (
+            (
+                c.application_source.member_ordinal,
+                c.application_source.location,
+            ),
+            c.kind,
+            c.value_check.as_ref().map(|v| v.comparison),
+            c.interval_check.as_ref().map(|i| i.comparison),
+        );
+        *counted.entry(key).or_default() += 1;
+    }
+    counted
+        .into_iter()
+        .map(|((app, k, v, i), n)| (app, k, v, i, n))
+        .collect()
+}
+fn check_totals_against_rows(r_all: &DistributionInspection, r_default: &DistributionInspection) {
+    let from_totals = |r: &DistributionInspection| {
+        r.source_candidate_totals
+            .iter()
+            .map(|t| {
+                (
+                    (
+                        t.application_source.member_ordinal,
+                        t.application_source.location,
+                    ),
+                    t.kind,
+                    t.value_comparison,
+                    t.interval_comparison,
+                    t.occurrences,
+                )
+            })
+            .collect::<BTreeSet<_>>()
+    };
+    assert_eq!(
+        from_totals(r_all),
+        occurrences_from_rows(r_all),
+        "every kind is counted"
+    );
+    assert_eq!(
+        from_totals(r_default),
+        from_totals(r_all),
+        "totals ignore row detail"
+    );
+    for r in [r_all, r_default] {
+        let rows: u64 = r.source_candidate_totals.iter().map(|t| t.rows).sum();
+        assert_eq!(rows, r.source_candidates.len() as u64);
+    }
+}
+
+#[test]
+fn union_and_zip_totals_count_every_kind_exactly() {
+    let all = inspect(UNION);
+    let default = inspect_distribution("authored.xml", UNION).unwrap();
+    check_totals_against_rows(&all, &default);
+    let member = |r: &DistributionInspection, outcome: Interval| {
+        totals(r)
+            .into_iter()
+            .find(|t| t.0 == Kind::UnionMemberInterval && t.2 == Some(outcome))
+            .map(|t| (t.3, t.4))
+    };
+    assert_eq!(member(&default, Interval::WithinExtent), Some((2, 0)));
+    assert_eq!(member(&default, Interval::OutsideExtent), Some((1, 1)));
+    assert_eq!(member(&default, Interval::OffsetAbsent), Some((1, 1)));
+    assert_eq!(member(&all, Interval::WithinExtent), Some((2, 2)));
+    assert_eq!(
+        totals(&default)
+            .into_iter()
+            .find(|t| t.0 == Kind::UnionIntervalSummary)
+            .map(|t| (t.3, t.4)),
+        Some((1, 1))
+    );
+
+    let cases: Vec<IntervalCase<'_>> = vec![
+        ("in", Some("0"), Some("3"), Some("5"), Some("8")),
+        ("out", Some("1"), Some("0"), Some("1"), Some("8")),
+        ("no-offset", None, Some("1"), Some("2"), Some("8")),
+        ("no-width", Some("0"), Some("0"), None, Some("8")),
+    ];
+    let bytes = interval_app(&cases);
+    check_totals_against_rows(
+        &inspect(&bytes),
+        &inspect_distribution("authored.xml", &bytes).unwrap(),
+    );
+
+    let zip = raw_zip(&[
+        RawMember::stored(b"a/values.xml", VALUES),
+        RawMember::stored(b"b/union.xml", UNION),
+    ]);
+    let zip_default = inspect_distribution("authored.zip", &zip).unwrap();
+    check_totals_against_rows(&inspect(&zip), &zip_default);
+    let expected = [
+        totals(&inspect_distribution("authored.xml", VALUES).unwrap()),
+        totals(&default),
+    ]
+    .concat();
+    assert_eq!(
+        totals(&zip_default),
+        expected,
+        "ZIP members keep their own totals, in member order"
+    );
+    let members: Vec<_> = zip_default
+        .source_candidate_totals
+        .iter()
+        .map(|t| t.application_source.member_ordinal)
+        .collect();
+    assert!(members.windows(2).all(|w| w[0] <= w[1]));
+    assert_eq!(
+        members.iter().collect::<BTreeSet<_>>(),
+        BTreeSet::from([&Some(0), &Some(1)])
+    );
+}
+
+#[test]
+fn totals_are_charged_as_output_rows() {
+    for bytes in [VALUES, UNION] {
+        let r = inspect_distribution("authored.xml", bytes).unwrap();
+        assert!(!r.source_candidate_totals.is_empty());
+        let mut without = r.clone();
+        without.source_candidate_totals.clear();
+        assert_eq!(
+            r.output_record_count(),
+            without.output_record_count() + r.source_candidate_totals.len(),
+            "each totals entry is one output row"
+        );
+    }
+}
+
+#[test]
+fn each_union_keeps_its_own_placement() {
+    let types = "<ParameterType Id=\"W\"><TypeNumber SizeInBit=\"4\"/></ParameterType>";
+    let parameters = "<Union SizeInBit=\"8\"><Memory CodeSegment=\"SEG-1\" Offset=\"10\" BitOffset=\"0\"/>\
+         <Parameter Id=\"U-1\" ParameterType=\"W\" Offset=\"0\" BitOffset=\"0\"/></Union>\
+         <Union SizeInBit=\"8\"><Property ObjectIndex=\"2\" PropertyId=\"7\" Offset=\"20\" BitOffset=\"1\"/>\
+         <Parameter Id=\"U-2\" ParameterType=\"W\" Offset=\"0\" BitOffset=\"4\"/></Union>";
+    let bytes = app(types, parameters, "", "");
+    let r = inspect(&bytes);
+    let placement = |id: &str| {
+        by_id(&r, &bytes, Kind::UnionMemberInterval, id)
+            .interval_check
+            .as_ref()
+            .unwrap()
+            .union_placement
+            .iter()
+            .map(|s| String::from_utf8(original(&r, &bytes, *s).to_vec()).unwrap())
+            .collect::<Vec<_>>()
+    };
+    let first = placement("U-1");
+    let second = placement("U-2");
+    assert_eq!(first.len(), 1);
+    assert_eq!(second.len(), 1);
+    assert!(
+        first[0].starts_with("<Memory CodeSegment=\"SEG-1\""),
+        "{first:?}"
+    );
+    assert!(
+        second[0].starts_with("<Property ObjectIndex=\"2\""),
+        "{second:?}"
+    );
+}
+
+#[test]
+fn explicit_zero_width_inside_the_extent_is_still_listed() {
+    let cases: Vec<IntervalCase<'_>> = vec![
+        ("zero", Some("1"), Some("0"), Some("0"), Some("8")),
+        ("plain", Some("0"), Some("0"), Some("8"), Some("8")),
+    ];
+    let bytes = interval_app(&cases);
+    let r = inspect_distribution("authored.xml", &bytes).unwrap();
+    let members = rows(&r, Kind::UnionMemberInterval);
+    assert_eq!(members.len(), 1, "only the zero-width member is a finding");
+    let check = members[0].interval_check.as_ref().unwrap();
+    assert!(check.zero_width_declared);
+    assert_eq!(check.comparison, Interval::WithinExtent);
+    assert_eq!(check.interval, interval(8, 8));
+    assert_eq!(id_of(&r, &bytes, members[0].source), "U-zero");
+    assert_eq!(
+        totals(&r)
+            .into_iter()
+            .find(|t| t.0 == Kind::UnionMemberInterval && t.2 == Some(Interval::WithinExtent))
+            .map(|t| (t.3, t.4)),
+        Some((2, 1)),
+        "the listed zero-width member is counted as a row of its outcome"
+    );
+}

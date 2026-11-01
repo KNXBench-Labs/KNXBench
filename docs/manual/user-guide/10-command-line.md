@@ -326,8 +326,11 @@ stdout and changes nothing: no product database, no files, no scripts run. The
 report lists sections, catalogue items, hardware, applications, the raw
 fallback value of every parameter reference, declared scripts, calculations,
 validations, button handlers and Assign (listed, never run), number values
-outside their declared range and Union members outside their Union (listed
-as candidates, never corrected), unknown elements and attributes, and an
+and Union members that are not plainly inside their declared bounds (outside,
+missing, empty, invalid, unbounded, unresolved type or too long to check; a
+Union member also when its width is explicitly zero), every Union summary, and
+counts of all checked values per application, kind and outcome (listed as
+candidates, never corrected), unknown elements and attributes, and an
 exact source reference for each row. It always says `"complete": false`
 and lists what was not checked. A source that cannot be inspected gives a JSON
 error with a `reason` on stderr; a wrong invocation prints the usage text. Both

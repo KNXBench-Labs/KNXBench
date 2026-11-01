@@ -12,6 +12,24 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## DIAG-03 closeout candidate (1 November 2026)
+
+The source candidate adds actual reduced session-log, monitor and browser-state
+sections and fixes the quit prompt painting under the wizard. Monitor review now
+pins a session/sequence interval; new traffic cannot change reviewed bytes,
+while missing/replaced/evicted data refuses. Text/access and unclassified payloads
+stay withheld. Known log chronology/messages survive; arbitrary free error text
+is still omitted with counts, not certified secret-free.
+
+Independent corrected-source review has no critical/important findings, including
+run-backed DPT-15 and monitor-window mutation controls. Focused server library
+796 passed / 15 ignored; bundle filter 119 and integration selection 9 passed
+(overlap, not summed). Four Web suites 89 passed; hardened wizard browser 21
+passed after original paint RED4/clean4 controls. Fixture types/build, formatting
+and owning all-target Clippy passed. Branch/merged package gates and publication
+are pending, not implied by these focused results. Alpha 18 is unchanged.
+[Closeout scope and limits](status/2026-11-01-diag03-closeout.md).
+
 ## Passive source Button labels in parameter grids (31 October 2026 source)
 
 OKX-05 `button-literal-passive-v1`: an activated program-owned `Button` leaf in
@@ -78,7 +96,11 @@ with the keep-private note, names every recording it leaves out, never ships a
 raw recording of a `system2-*` command, and its consent text no longer promises
 "never included". See the
 [contract](contracts/diagnostic-bundle.md) and
-[DIAG-03](open-work/DIAG-03-unified-diagnostic-bundle.md). The wizard now sits
+[DIAG-03](open-work/DIAG-03-unified-diagnostic-bundle.md). The unavailable-section
+wording above is historical: the 1 November closeout candidate supplies reduced
+session-log, monitor and browser-state sections; see the
+[current contract](contracts/diagnostic-bundle.md#reduced-log-and-browser-facts).
+The wizard now sits
 above the toast stack, so a startup error toast no longer hides Next or Close.
 The original fourteen-case System-2 bundle matrix now runs end to end on
 synthetic data (real App executor, real tunnel tap, built CLI against the

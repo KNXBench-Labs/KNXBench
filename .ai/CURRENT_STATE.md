@@ -10,6 +10,13 @@
 - Known upgrade note: product DB 30 -> 31 (Alpha 18 refuses v31 with FutureVersion); project schema stays 16.
 - Release-notes draft held local in `release-notes/alpha19-draft-20261101` (not pushed). No tag, freeze or publication yet.
 
+## Dependency security fix (DELIVERED; observed 2026-11-01 CET)
+- Dependabot alerts 14-22 + RustSec 2026-0382/0386: zip 8.6 -> 9.2.1, rustls 0.23.46, rustls-webpki 0.103.16, tokio 1.54.1.
+  Feature `df503e2a4`, main-first merge `be12e246e` (tree equal to the gated head). `cargo deny check` advisories ok.
+- Gate change-scoped 16/16 PASS, inputsFrozen: Rust 56 binaries 7947/0/241 ignored, corpus 155/155, tool-tests 472 OK.
+- zip 9 drift for the release notes: unflagged UTF-8 names now decode as UTF-8 (corpus: 0 affected; KL-159),
+  fallible `name()`, writer/reader fixture changes (DEVELOPER_PITFALLS "ZIP dependency"). Branch/worktree retired.
+
 ## PRG-01 inactive whole-byte selection (SOFTWARE REVIEWED; DELIVERY GO; observed 2026-10-30 14:16 CET)
 - Owner `feat/prg01-inactive-selection-20261030`, `<sources>/knxbench-prg01-inactive-selection-20261030`; local runtime commit `b84db2ad37f9a3e21bde5d5b9d79be05504a66f1` (41 runtime/test/Web paths). No publication or hardware authority; protected shared root/index and foreign tracks untouched.
 - Binding contract `docs/contracts/inactive-byte-write-selection.md`: positive default-topological regular writer, required format-4 typed selection and faithful old1..3 restore-only generator. Original writer RED, genuine pre-change captures and F1/F2/F3 REDs remain sealed, not replaced by later calibration.

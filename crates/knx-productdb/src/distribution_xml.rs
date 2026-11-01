@@ -864,6 +864,8 @@ pub(super) fn inspect(
 ) -> Result<usize> {
     let doc = Document::parse(bytes, member, limits)?;
     super::readers::inspect(&doc, limits, report)?;
+    super::resources::collect(&doc, report)?;
+    super::resource_links::collect(&doc, report)?;
     doc.source_map(report)?;
     super::readers::output_limit(report, limits)?;
     Ok(doc.work_bytes.get())

@@ -98,6 +98,18 @@ pub(super) fn inspect(
                     recognized = true;
                     member.state = DistributionPassState::Parsed;
                     let b = &mut bytes;
+                    append_counted(
+                        &mut report.resource_consumers,
+                        part.resource_consumers,
+                        b,
+                        cap,
+                    )?;
+                    append_counted(
+                        &mut report.resource_declarations,
+                        part.resource_declarations,
+                        b,
+                        cap,
+                    )?;
                     append_counted(&mut report.sections, part.sections, b, cap)?;
                     append_counted(&mut report.documents, part.documents, b, cap)?;
                     append_counted(&mut report.catalog_items, part.catalog_items, b, cap)?;
@@ -155,5 +167,94 @@ pub(super) fn inspect(
         return Err(DistributionInspectionError::UnrecognizedSource);
     }
     super::links::resolve_archive(report, limits)?;
+    super::resources::associate(report);
+    let selected = report
+        .resource_declarations
+        .iter()
+        .flat_map(|d| d.member_candidates.iter().copied())
+        .collect::<std::collections::BTreeSet<_>>();
+    let mut work = 0usize;
+    let mut resource_bytes = super::provenance::json_size(report, limits.max_report_bytes)?;
+    for ordinal in selected {
+        let (_, data) = read_checked_member(
+            &mut checked.archive,
+            ordinal as usize,
+            limits.max_member_bytes,
+            Cancellation::Quiet,
+        )
+        .map_err(archive_error)?;
+        let data = data.unwrap_or_default();
+        work = work.saturating_add(data.len());
+        let member = &report.members[ordinal as usize];
+        let media = (data.len() <= limits.resource.max_metadata_bytes
+            && work <= limits.resource.max_work_bytes)
+            .then(|| {
+                super::resources::measure(member.logical_path.clone(), member.sha256.clone(), &data)
+            });
+        let decoded = if media.as_ref().is_some_and(|m| m.content_class == "png") {
+            Some(super::preview::decode(
+                &data,
+                ordinal,
+                &member.sha256,
+                limits,
+                &mut work,
+            ))
+        } else {
+            None
+        };
+        if let Some(Ok(preview)) = &decoded {
+            append_counted(
+                &mut report.resource_previews,
+                vec![preview.clone()],
+                &mut resource_bytes,
+                limits.max_report_bytes,
+            )?;
+        }
+        for d in &mut report.resource_declarations {
+            if d.member_candidates.as_slice() != [ordinal] {
+                continue;
+            }
+            let old = super::provenance::json_size(d, limits.max_report_bytes)?;
+            d.media = media.clone();
+            let (state, reason) = match media.as_ref() {
+                None if work > limits.resource.max_work_bytes => {
+                    ("unavailable", "resourceLimitWorkBytes")
+                }
+                None => ("unavailable", "resourceLimitMetadataBytes"),
+                Some(m)
+                    if m.content_class == "zip"
+                        && m.archive_metadata == "directoryMetadataOnly" =>
+                {
+                    ("metadataOnly", "helpArchiveAvailable")
+                }
+                Some(m) if m.content_class == "zip" => {
+                    ("metadataOnly", "archiveMetadataUnreadable")
+                }
+                Some(_) => ("unsupportedMedia", "unsupportedMedia"),
+            };
+            let (state, reason) = match decoded.as_ref() {
+                Some(Ok(_)) => ("decodedPreview", "decodedPassivePng"),
+                Some(Err(reason)) if reason.starts_with("resourceLimit") => {
+                    ("unavailable", *reason)
+                }
+                Some(Err("animatedPngUnsupported")) => {
+                    ("unsupportedMedia", "animatedPngUnsupported")
+                }
+                Some(Err(reason)) => ("decodeFailed", *reason),
+                None => (state, reason),
+            };
+            d.passive_presentation = DistributionPassivePresentation {
+                state: state.into(),
+                reason: reason.into(),
+                preview_member_ordinal: matches!(decoded, Some(Ok(_))).then_some(ordinal),
+            };
+            let new = super::provenance::json_size(d, limits.max_report_bytes)?;
+            resource_bytes = resource_bytes
+                .saturating_sub(old)
+                .checked_add(new)
+                .filter(|&n| n <= limits.max_report_bytes)
+                .ok_or_else(|| limit("serialized report bytes"))?;
+        }
+    }
     Ok(())
 }

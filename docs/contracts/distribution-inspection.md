@@ -1,22 +1,46 @@
-# Manufacturer distribution inspection (report format 4)
+# Manufacturer distribution inspection (report format 5)
+
+## Format-5 resource and presentation contract
+
+Format 5 adds required `resourceDeclarations`, `resourceConsumers` and
+`resourcePasses` and `resourcePreviews` arrays. Format 4 lacks these facts and is not accepted as a
+format-5 report. Resources retain element/manufacturer source references and
+XML-decoded attributes (the element byte range, not these strings, retains raw
+lexemes). The mapping profile is `adjacent-xml-stem-baggages-v1`:
+`dir/stem.xml` maps literally to `dir/stem.baggages/TargetPath/Name`.
+An explicitly empty TargetPath means the baggage root; an absent one is unsafe.
+Names are single basenames; no decoding, case folding or suffix searches occur.
+Loose XML reports `noArchiveEnvelope`.
+
+The CLI accepts `--output-format json|html`; JSON is the default. Both write
+only stdout, without an output file or database. HTML is an owned offline
+inspection view, not contained help rendering. It escapes source strings and
+never includes Script bodies. Only owned styles and bounded, decoded and
+re-encoded PNG data images are permitted. Failed images display a named
+fallback. HTML visibly samples bounded rows without changing JSON facts.
+
+Resource resolution and passive presentation are separate. A `decodedPreview`
+contains original SHA-256, derived SHA-256, dimensions and base64 PNG bytes,
+transformed as `decoded-pixels-to-png-v1`; PNG magic alone never proves decode.
+ZIP resources expose directory metadata only, never extraction or help content.
+The report remains incomplete; native package baggage handling is not performed.
 
 Contract for `knx products inspect-distribution` and
 `knx_productdb::distribution::inspect_distribution`. Added for OpenKNX-style
 manufacturer distributions: plain manufacturer XML, or a ZIP release holding
-such XML next to scripts, help and baggage files. Format 4 is format 3 plus
-`sourceCandidates` and `sourceCandidateTotals`; format 3 is format 2 plus
-`dependencyEvidence` and the `dependenciesNotExecuted` limitation. None of them
-has been in a release yet; only format 4 is emitted. A format-3 report lacks the
-required `sourceCandidates` and `sourceCandidateTotals` fields (a format-2 report
-also `dependencyEvidence`) and
-fails to deserialize, rather than reading as a source without candidates or
-declarations. Format 1 never left a feature branch and is not accepted or
-emitted.
+such XML next to scripts, help and baggage files. Format 5 adds source-bound
+resources and derived PNG previews to format 4's `sourceCandidates` and
+`sourceCandidateTotals`. Format 3 added `dependencyEvidence` and the
+`dependenciesNotExecuted` limitation. Only format 5 is emitted by this source;
+these inspection formats have not been released. The new resource arrays are
+required: an older report fails to deserialize rather than appearing to have no
+resource declarations. Format 1 never left a feature branch.
 
 ## What it is and is not
 
 - **Read-only source inspection.** The command reads one regular file, writes
-  JSON to stdout and errors to stderr, and touches nothing else: no product
+  JSON (default) or explicit `--output-format html` to stdout and errors to
+  stderr, and touches nothing else: no product
   database, no output file, no network. Existing typed readers run against a
   derived view in a private in-memory SQLite database that is checked to be
   in memory and dropped afterwards.
@@ -25,8 +49,9 @@ emitted.
   (`MissingMaster`, `UnsafeMember`); inspection does not change that path.
 - **Not complete.** `complete` is always `false`. `limitations` lists what was
   not performed: master data, XSD validation, authenticity, write authority,
-  initialization, master dependencies, translations, baggage association and
-  registration.
+  initialization, master dependencies, translations, native-package baggage
+  processing and registration. Distribution association is a separate performed
+  source pass, not native baggage installation.
 - **No code runs.** Scripts, CDATA and text are preserved as SHA-256 and byte
   range only (`preservedContent`), never echoed or executed. Declared scripts,
   calculations, validations, button handlers and Assign are listed in
@@ -346,6 +371,85 @@ Bit numbering, the physical origin and runtime effects remain unverified.
   application declares any script, calculation, validation or handler, and
   `declaredEndpointsOnly` otherwise; neither is a non-impact guarantee.
 
+## Distribution resources and passive PNG presentation
+
+`resourceDeclarations` contains each canonical manufacturer `Baggages/Baggage`
+occurrence, including missing/empty identities. `idPresence`, optional `name`,
+`targetPath` and `installOnImport` distinguish absent from explicit empty values.
+Direct same-namespace `FileInfo` occurrences retain source coordinates and
+XML-decoded attribute rows. Raw attribute spelling is retained by the original
+element byte range, not claimed for the decoded strings.
+
+Declarations carry original manufacturer coordinates, namespace and declared
+manufacturer ID. `resourceConsumers` covers only application `ContextHelpFile`
+and `IconFile`, canonical Static ParameterType `TypePicture/@RefId` (including
+admitted ModuleDefs), and application `Static/Extension/Baggage/@RefId`.
+Arbitrary lookalike hosts and foreign namespace paths remain unknown. Consumers
+resolve by original manufacturer occurrence locally, or by exact namespace and
+nonempty declared manufacturer ID across ZIP members. Duplicate declarations
+retain every candidate; repeated cross-member manufacturer scopes are ambiguous,
+not an identity proof. Missing and explicit-empty references remain distinct.
+Candidate order is member then original element order; no ID is decoded.
+
+`expectedLogicalPath` is derived from the declaration-owning XML member, not an
+application ID or a suffix search. `memberCandidates` uses checked ZIP ordinals;
+the member's raw name, logical name, size and hash remain in `members`. ZIP
+admission still refuses duplicate/normalized-colliding names rather than selecting
+one. The inspector reads selected ordinals once more after XML composition, never
+reopens by filename or rereads the whole archive for each declaration. Shared
+payloads are measured/decoded once, with one `resourcePreviews` row per member.
+
+`media` reuses native `sniff_media` and `BaggagePayload::measure` for content
+class, extension agreement, hash/size and checked nested-directory counts. Nested
+entries are not decompressed; archive-named entries are names, not inspected
+inner archives. ZIP help/IconFile payloads stay `metadataOnly`, with
+`helpArchiveAvailable` or `archiveMetadataUnreadable`; they are never images or
+contained-help navigation. `InstallOnImport` grants no permission.
+
+PNG previews use `png` 0.18.1 with text/ICC expansion disabled. A constant-memory
+chunk/CRC preflight rejects animations, malformed extents and trailing data.
+IHDR dimensions and pixel/decoded budgets are checked before output allocation;
+the decoder has a separate internal budget. Both frame decode and `finish` must
+succeed. Expanded, 16-bit-stripped pixels are re-encoded as an owned PNG with no
+source metadata, with `decoded-pixels-to-png-v1`, original/derived hashes and
+base64 bytes. The HTML displays these derived bytes only, not the original file.
+
+| Optional resource ceiling | Default |
+| --- | --- |
+| metadata input / encoded PNG | 8 MiB each |
+| width / height | 4096 each |
+| pixels | 4 × 1024² |
+| decoded output / decoder internal buffers | 16 MiB each |
+| derived PNG | 8 MiB, also bounded by `max_derived_bytes` |
+| cumulative resource work | 128 MiB |
+| PNG chunks | 4096 |
+
+All are inclusive and caller-lowerable through `DistributionLimits::resource`.
+Work charges metadata bytes for selected members and, for each decoded PNG,
+twice encoded bytes plus four times the conservative RGBA8 output bound. This
+is conservative work admission, not a wall-time guarantee. Exact compact JSON
+and output-record accounting include all new rows, FileInfo attributes, member
+and declaration candidates, passes and previews. Individual media refusals retain
+`resourceLimitMetadataBytes`, `resourceLimitEncodedBytes`,
+`resourceLimitDimensions`, `resourceLimitPixels`, `resourceLimitDecodedBytes`,
+`resourceLimitDecoderBytes`, `resourceLimitPreviewBytes`, `resourceLimitWorkBytes`
+or `resourceLimitPngChunks`. Corruption gives `decodeFailed/pngDecodeFailed`;
+APNG gives `unsupportedMedia/animatedPngUnsupported`. Unsafe/missing/unmapped
+paths remain separately named. Loose XML retains `noArchiveEnvelope`.
+
+`resourcePasses` reports distribution association separately from
+`nativePackageBaggageNotPerformed` and unperformed help rendering. The native
+strict `<manufacturer>/Baggages/…` policy, installation and persistence do not
+change. `complete` stays false.
+
+HTML bounds each table to 200 rows and each source text to 256 characters, labels
+sampling visibly, and embeds each decoded member at most once with a cumulative
+16 MiB base64-text ceiling. A view-only refusal says `htmlViewPreviewBudget`;
+JSON keeps every decoded preview and underlying fact. The CSP disables script,
+external/network sources, objects, frames, workers, base URLs and form actions.
+Only owned inline styles and derived PNG data images are emitted. There are no
+contained help, downloads, links, callbacks or Script bodies in the HTML.
+
 ## Limits
 
 `DistributionLimits::default()` is the ceiling. Callers may only lower each
@@ -373,12 +477,18 @@ value (`bounded()` takes the minimum), and every limit is inclusive.
   observations with their scope chains and dependency declarations count as
   output rows. Each `parameter` and `parameterType` reference and its
   candidates also counts against the reference ceiling.
+- Each resource consumer reference and each of its declaration candidates
+  counts against the same reference ceiling, on top of every ordinary
+  reference, dependency endpoint and source-candidate target already in the
+  report; resource resolution never restarts the count.
 - The XML working set and the serialized report are charged separately, and
   both are charged while the report is built. A ZIP keeps an exact running
   report size instead of re-serializing it after every member. The final
   report is measured again.
-- Any `resourceLimit` refuses the whole inspection. A structural limit in one
-  ZIP member therefore refuses the ZIP, not just that member.
+- Structural, reference, output-record and report-byte `resourceLimit` errors
+  refuse the whole inspection, including a structural limit in one ZIP member.
+  Optional media budgets instead retain the declaration with a named fallback;
+  they never turn an undecoded image into `decodedPreview`.
 
 ## Verified behaviour
 

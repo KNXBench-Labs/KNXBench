@@ -1,5 +1,16 @@
 # Roadmap
 
+## Distribution resources and offline inspection view (1 November 2026)
+
+OKX-04 now has source-bound canonical baggage/consumer joins, real bounded PNG
+preview decoding and explicit stdout-only `--output-format html`; JSON remains
+the default. Help archives are metadata only, all code stays inert, and native
+installation and writer policy are unchanged. Independent review, real-browser
+proof and a 37/37 release measurement are accepted. This is not a
+product-parameter Picture editor/codec.
+[Contract](contracts/distribution-inspection.md#distribution-resources-and-passive-png-presentation) ·
+[Remaining boundaries](limitations/KL-187-distribution-inspection.md).
+
 ## Settings in the center workspace (30 October 2026 source, after Alpha 18)
 
 The existing app settings move from a modal window to a continuous center page,

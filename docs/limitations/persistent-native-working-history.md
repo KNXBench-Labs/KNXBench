@@ -35,6 +35,16 @@ open v11. Native WebKitGTK/Orca, physical power-loss and hardware/ETS recovery a
 not established by offline HTTP/Chromium tests. Publication/release is separate.
 <!-- END retained catalogue record -->
 
+## Current history limits (since ADR-0142, 18 October 2026)
+
+The 64/256/512 MiB figures in the retained record above are the original
+values. Since [ADR-0142](../adr/0142-file-size-limits-follow-the-storage-ceiling.md)
+a stored model/stack/version image and the shared source context may each reach
+1,000,000,000 bytes (about 953.7 MiB); a decoded image, the total stored history
+payload and the cumulative decoded budget are each bounded to 4 GiB. The
+256-state and 256-version limits are unchanged, and admission still refuses
+rather than trims ([contract](../contracts/large-history-images.md)).
+
 ## Save As archive boundary (Alpha 18 artifact verification, 29 October 2026)
 
 Saving As to a new native file constructs its history from the current normalized

@@ -7,6 +7,8 @@ import ProjectHistoryDialog from "./ProjectHistoryDialog";
 import { admitProjectHistory, type ProjectHistory } from "./projectHistory";
 import { HISTORY_FIXTURE } from "./projectHistory.fixture";
 import { messages as en } from "./messages/en";
+import { resetUiLanguageForTests, saveUiLanguage } from "./uiLanguage";
+import { resetSettingsForTests, settingsStorage } from "./settingsStore";
 
 const api = vi.hoisted(() => ({ projectHistory: vi.fn(), createProjectVersion: vi.fn(), restoreProjectVersion: vi.fn(), deleteProjectVersion: vi.fn(), clearProjectUndo: vi.fn() }));
 vi.mock("./api", () => api);
@@ -46,6 +48,23 @@ async function label(text: string) {
 }
 
 describe("ProjectHistoryDialog", () => {
+  it("rounds decimal byte limits to a readable MiB figure in the UI language", async () => {
+    // The store's retained-image limit is 1 000 000 000 bytes, not a binary multiple.
+    const limits = {...view().limits, maxImageBytes: 1_000_000_000, maxHistoryBytes: 4_294_967_296, maxContextBytes: 1_000_000_000};
+    api.projectHistory.mockResolvedValue({...view(), limits});
+    let dialog = await render();
+    expect(dialog.querySelector(".project-history-limit-note")?.textContent)
+      .toBe("Limits: 256 undo/redo states, 256 versions, 953.7 MiB per stored model image and 4096 MiB total. Nothing is automatically trimmed.");
+    expect(dialog.querySelector('[data-history-limit="context"]')?.textContent).toBe("Shared source-context limit: 953.7 MiB stored.");
+    act(() => root?.unmount()); host?.remove(); host = undefined;
+    saveUiLanguage(settingsStorage, "de"); resetUiLanguageForTests();
+    try {
+      dialog = await render();
+      expect(dialog.querySelector('[data-history-limit="context"]')?.textContent).toBe("Grenze für geteilten Quellkontext: 953,7 MiB gespeichert.");
+    } finally {
+      resetSettingsForTests(); resetUiLanguageForTests();
+    }
+  });
   it("shows reported source-context and decoded budgets without guessing legacy limits", async () => {
     let dialog = await render();
     expect(dialog.querySelector('[data-history-limit="context"]')).toBeNull();

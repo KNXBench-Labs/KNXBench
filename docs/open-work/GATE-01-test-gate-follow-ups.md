@@ -60,6 +60,25 @@ Local, tracking and live `main` matched after publication. Original failed
 attempts, stall probes, fallback mutation and accepted receipts remain in
 `<profile>/evidence/gate01-sigterm-flake-20261027/`.
 
+## SIGTERM fixture pinning before exec finished — 1 November 2026
+
+The event-bound lifetimes above did not close the "identities changed before
+pidfd retention" failure: it recurred in the OKX-05 package gate at load ~14.
+Instrumented runs showed the missing identity is a process pinned right after
+`subprocess.Popen`: the sentinel in all 22 failing runs, once also the
+wrapper-reported child. Its `/proc/<pid>/environ` still lacked the marker or
+still showed the parent's environment and command line, and was correct
+shortly after. That much is observed; the exact kernel/CPython ordering behind
+it is not proven. Pinned processes now
+announce their own PID from the new image first (`spawn_announced`,
+`ANNOUNCE_PID`); the wrapper's child reports itself instead of the wrapper
+reporting it. Same load (12 parallel copies, 8 rounds, both SIGTERM identity
+tests): the original fails 33 of 96 runs (41 of 192 test executions), the
+corrected tests pass 96/96 with ResourceWarnings as errors. Removing the
+pidfd PID check from `open_owned_process` still fails both tests, so they keep
+proving the mismatched-identity rejection. This closes this pinning race only, not the older
+SIGTERM timeout causes above.
+
 ## Spawn-record reader correction — 27 October 2026
 
 A separate integrated package gate exposed a SIGHUP fixture `IndexError` while

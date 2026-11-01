@@ -1037,4 +1037,22 @@ pub(super) fn output_count(report: &DistributionInspection) -> usize {
             })
             .sum::<usize>()
         + report.source_candidate_totals.len()
+        + report
+            .resource_declarations
+            .iter()
+            .map(|d| {
+                1 + d.member_candidates.len()
+                    + d.file_info
+                        .iter()
+                        .map(|f| 1 + f.attributes.len())
+                        .sum::<usize>()
+            })
+            .sum::<usize>()
+        + report.resource_passes.len()
+        + report.resource_previews.len()
+        + report
+            .resource_consumers
+            .iter()
+            .map(|c| 1 + c.declaration_candidates.len())
+            .sum::<usize>()
 }

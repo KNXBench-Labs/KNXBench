@@ -30,6 +30,8 @@ flate2.workspace = true
 getrandom.workspace = true
 # Typed no-clobber recovery publication; already locked in this workspace.
 rustix.workspace = true
+# PNG-only passive preview decoding; already locked transitively in the workspace.
+png = "=0.18.1"
 
 [dev-dependencies]
 # Linux wait4 ABI for the opt-in measurement supervisor; already locked transitively.

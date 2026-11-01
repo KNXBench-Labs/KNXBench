@@ -2746,7 +2746,7 @@
       "number": 187,
       "title": "Manufacturer distribution inspection is partial and read-only",
       "topic": "Manufacturer data and parameters",
-      "summary": "`knx products inspect-distribution` (31 October 2026) reports what a manufacturer XML or distribution ZIP declares, with byte-exact source references. It installs nothing and gives no write or initialization authority; Dynamic and reference coverage are documented subsets, comments are not inventoried, and any resource limit refuses the whole source. TypeNumber-bound and Union-interval source candidates are arithmetic observations, not validity verdicts. A positive report is not ETS or KNX compatibility.",
+      "summary": "`knx products inspect-distribution` reports manufacturer source facts with byte-exact references, without installation or write/initialization authority. Format 5 adds canonical distribution baggage joins, bounded single-frame PNG decoding and opt-in offline HTML; JSON remains the default. Help/ZIP content stays metadata only, native package policy is unchanged, and Dynamic/reference coverage remains a subset. Structural/report limits refuse the source; optional media limits retain named fallbacks. Arithmetic candidates are not validity verdicts. No ETS or KNX compatibility is claimed.",
       "file": "KL-187-distribution-inspection.md",
       "ledger_ids": [
         "KL-187"

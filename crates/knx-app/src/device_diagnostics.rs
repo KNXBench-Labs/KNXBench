@@ -706,7 +706,10 @@ pub fn read_export(bytes: &[u8]) -> Result<Export, String> {
         if f.central_header_start() != raw.central_offset || f.header_start() != raw.local_offset {
             return Err("diagnostics-invalid-zip".into());
         }
-        let name = f.name().to_string();
+        let name = f
+            .name()
+            .map_err(|_| "diagnostics-invalid-member")?
+            .into_owned();
         if name.as_bytes() != raw.name {
             return Err("diagnostics-invalid-member".into());
         }

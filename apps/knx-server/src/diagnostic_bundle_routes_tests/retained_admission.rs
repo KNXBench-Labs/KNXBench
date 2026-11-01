@@ -374,6 +374,7 @@ async fn exact_retained_identity_reaches_preview_text_and_zip_without_a_recordin
     assert_eq!(serde_json::from_slice::<Value>(&report).unwrap(), expected);
     assert!(archive
         .file_names()
+        .map(Result::unwrap)
         .all(|name| !name.ends_with("recording.jsonl")));
 }
 

@@ -117,7 +117,7 @@ fn a_find_serial_run_cleans_up_and_exports_its_recording_byte_exactly() {
     let seen = seen.lock().unwrap().clone();
     assert!(seen.iter().any(|(from_tool, _)| *from_tool));
     assert!(seen.iter().any(|(from_tool, _)| !*from_tool));
-    assert!(!archive.file_names().any(|name| {
+    assert!(!archive.file_names().map(Result::unwrap).any(|name| {
         name.ends_with("system2-private.json") || name.ends_with("system2-report.json")
     }));
 

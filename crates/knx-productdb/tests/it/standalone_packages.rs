@@ -378,9 +378,9 @@ fn archive_with_unicode_path(
     payload.extend_from_slice(&crc32.to_le_bytes());
     payload.extend_from_slice(unicode_name);
     let mut options = FullFileOptions::default();
+    // zip 9 writes a non-central-only field into both headers (zip 8: local only).
     for _ in 0..=usize::from(duplicate) {
-        options.add_extra_data(0xA11E, &payload, false).unwrap();
-        options.add_extra_data(0xA11E, &payload, true).unwrap();
+        options.add_extra_field(0xA11E, &payload, false).unwrap();
     }
     zip.start_file(raw_name, options).unwrap();
     zip.write_all(b"unicode path").unwrap();
@@ -393,6 +393,12 @@ fn archive_with_unicode_path(
     bytes
 }
 
+/// zip 9 without `aes-crypto` ignores 0x9901, so the WP-16 preflight names the
+/// record. Only the selected final directory holds `extra.bin`; a fallback
+/// EOCD would select a one-record directory without it.
+const MALFORMED_AES_CAUSE: &str =
+    "M-0001/Baggages/extra.bin: a WinZip AES field (0x9901) requires compression method 99";
+
 fn archive_with_malformed_aes_extra() -> Vec<u8> {
     let mut zip = zip::ZipWriter::new(Cursor::new(Vec::new()));
     for (name, bytes) in [
@@ -403,8 +409,8 @@ fn archive_with_malformed_aes_extra() -> Vec<u8> {
         zip.write_all(bytes).unwrap();
     }
     let mut options = FullFileOptions::default();
-    options.add_extra_data(0xA11E, [1], false).unwrap();
-    options.add_extra_data(0xA11E, [1], true).unwrap();
+    // One field, written into both headers by zip 9.
+    options.add_extra_field(0xA11E, [1], false).unwrap();
     zip.start_file("M-0001/Baggages/extra.bin", options)
         .unwrap();
     zip.write_all(b"payload").unwrap();
@@ -898,11 +904,14 @@ fn zip_parser_cannot_backtrack_to_an_unchecked_earlier_directory() {
     let (_dir, conn) = db();
 
     let error = install_package(&conn, "two-directories.knxprod", &bytes).unwrap_err();
-    assert!(matches!(
-        error,
-        PackageError::InvalidZip { ref cause }
-            if cause == "unsupported Zip archive: AES extra data field has an unsupported length"
-    ));
+    assert!(
+        matches!(
+            error,
+            PackageError::InvalidZip { ref cause }
+                if cause == MALFORMED_AES_CAUSE
+        ),
+        "{error:?}"
+    );
     assert_eq!(counts(&conn), vec![0; 9]);
 }
 
@@ -912,11 +921,14 @@ fn zip_parser_cannot_fall_back_to_an_eocd_inside_a_central_comment() {
     let (_dir, conn) = db();
 
     let error = install_package(&conn, "comment-eocd.knxprod", &bytes).unwrap_err();
-    assert!(matches!(
-        error,
-        PackageError::InvalidZip { ref cause }
-            if cause == "unsupported Zip archive: AES extra data field has an unsupported length"
-    ));
+    assert!(
+        matches!(
+            error,
+            PackageError::InvalidZip { ref cause }
+                if cause == MALFORMED_AES_CAUSE
+        ),
+        "{error:?}"
+    );
     assert_eq!(counts(&conn), vec![0; 9]);
 }
 
@@ -926,11 +938,14 @@ fn zip_parser_cannot_select_an_eocd_inside_the_final_comment() {
     let (_dir, conn) = db();
 
     let error = install_package(&conn, "final-comment-eocd.knxprod", &bytes).unwrap_err();
-    assert!(matches!(
-        error,
-        PackageError::InvalidZip { ref cause }
-            if cause == "unsupported Zip archive: AES extra data field has an unsupported length"
-    ));
+    assert!(
+        matches!(
+            error,
+            PackageError::InvalidZip { ref cause }
+                if cause == MALFORMED_AES_CAUSE
+        ),
+        "{error:?}"
+    );
     assert_eq!(counts(&conn), vec![0; 9]);
 }
 
@@ -1354,7 +1369,14 @@ pub(super) mod wp16 {
     fn zero_declared_directory_with_one_byte_output_names_the_leaf() {
         refused_member(
             RawMember::directory(DIRECTORY, b"\x01\x01\x00\xfe\xffx"),
-            &["output", "data", "crc", "checksum"],
+            // zip 9 itself refuses the read past the declared size.
+            &[
+                "output",
+                "data",
+                "crc",
+                "checksum",
+                "declared uncompressed size",
+            ],
         );
     }
 
@@ -1435,13 +1457,20 @@ pub(super) mod wp16 {
         // This does not impose leaf context on earlier archive-level errors.
         let mut parsed = zip::ZipArchive::new(Cursor::new(&bytes)).unwrap();
         assert_eq!(
-            parsed.by_index_raw(2).unwrap().name(),
+            parsed.by_index_raw(2).unwrap().name().unwrap(),
             "M-0001/Baggages/Grüsse-codec.bin"
         );
+        // zip 9 opens the member and refuses the codec on its first read.
         match parsed.by_index(2) {
             Err(zip::result::ZipError::CompressionMethodNotSupported(12)) => {}
             Err(other) => panic!("expected codec refusal at member open, got {other}"),
-            Ok(_) => panic!("unsupported codec must refuse at member open"),
+            Ok(mut member) => {
+                let error = member.read(&mut [0; 1]).unwrap_err();
+                assert!(
+                    error.to_string().contains("not supported: 12"),
+                    "expected codec refusal at first read, got {error}"
+                );
+            }
         }
         let error = preserved_refusal(seed, |conn| install_package(conn, "codec.knxprod", &bytes));
         named_open_error(error, "M-0001/Baggages/Grüsse-codec.bin");
@@ -2155,7 +2184,7 @@ fn installs_the_readable_corpus() {
             member_count += 1;
             let mut raw = Vec::new();
             member.read_to_end(&mut raw).unwrap();
-            let (sha, size): (String, i64) = conn.query_row("SELECT source_sha256, size FROM package_member WHERE package_sha256 = ?1 AND path = ?2", [&report.sha256, member.name()], |r| Ok((r.get(0)?, r.get(1)?))).unwrap();
+            let (sha, size): (String, i64) = conn.query_row("SELECT source_sha256, size FROM package_member WHERE package_sha256 = ?1 AND path = ?2", [&report.sha256, &member.name().unwrap().into_owned()], |r| Ok((r.get(0)?, r.get(1)?))).unwrap();
             assert_eq!(size as usize, raw.len());
             assert_eq!(
                 knx_productdb::load_source_file(&conn, &sha)

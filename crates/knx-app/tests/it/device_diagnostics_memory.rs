@@ -95,7 +95,7 @@ fn rewrite(original: &[u8], mut edit: impl FnMut(&str, Vec<u8>) -> Option<Vec<u8
     let mut output = zip::ZipWriter::new(Cursor::new(vec![]));
     for i in 0..input.len() {
         let mut f = input.by_index(i).unwrap();
-        let name = f.name().to_string();
+        let name = f.name().unwrap().to_string();
         let mut data = vec![];
         f.read_to_end(&mut data).unwrap();
         if let Some(data) = edit(&name, data) {
@@ -159,7 +159,7 @@ async fn a_format_2_export_round_trips_with_memory_evidence_and_coverage() {
     let names: Vec<String> = zip::ZipArchive::new(Cursor::new(&bytes))
         .unwrap()
         .file_names()
-        .map(str::to_string)
+        .map(|name| name.unwrap().into_owned())
         .collect();
     assert_eq!(names.len(), 5);
     assert!(names.iter().any(|n| n == "memory.json"));
@@ -1033,7 +1033,7 @@ fn duplicated(original: &[u8], name: &str, decoy: &str, content: &[u8]) -> Vec<u
     output.write_all(content).unwrap();
     for i in 0..input.len() {
         let mut f = input.by_index(i).unwrap();
-        let member = f.name().to_string();
+        let member = f.name().unwrap().to_string();
         let mut data = vec![];
         f.read_to_end(&mut data).unwrap();
         output

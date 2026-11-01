@@ -257,10 +257,10 @@ fn the_ets6_project_reports_no_malformed_com_object_ref_ids() {
         let mut compared = false;
         for index in 0..archive.len() {
             let mut entry = archive.by_index(index).unwrap();
-            if !entry.name().to_ascii_lowercase().ends_with(suffix) {
+            let path = entry.name().unwrap().into_owned();
+            if !path.to_ascii_lowercase().ends_with(suffix) {
                 continue;
             }
-            let path = entry.name().to_string();
             let mut bytes = Vec::new();
             std::io::Read::read_to_end(&mut entry, &mut bytes).unwrap();
             assert!(

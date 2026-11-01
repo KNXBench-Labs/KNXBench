@@ -146,10 +146,10 @@ fn reduced_bundle_withholds_retained_network_and_user_values() {
             assert!(
                 !text.contains(planted),
                 "{planted} leaked into {}",
-                file.name()
+                file.name().unwrap()
             );
         }
-        if file.name() == "README.md" {
+        if file.name().unwrap() == "README.md" {
             readme = text;
         }
     }

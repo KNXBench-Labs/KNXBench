@@ -142,7 +142,7 @@ async fn archive_rejects_corrupt_members_extra_paths_and_unknown_format() {
         let mut output = zip::ZipWriter::new(Cursor::new(vec![]));
         for i in 0..input.len() {
             let mut f = input.by_index(i).unwrap();
-            let name = f.name().to_string();
+            let name = f.name().unwrap().to_string();
             let mut data = vec![];
             f.read_to_end(&mut data).unwrap();
             if mode == "missing-properties" && name == "properties.json" {

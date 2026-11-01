@@ -112,7 +112,7 @@ pub struct EntryInfo {
 pub struct Container {
     archive: ZipArchive<Cursor<Vec<u8>>>,
     entries: Vec<EntryInfo>,
-    // Validated decoded identity -> physical member. zip 8 keys raw name bytes,
+    // Validated decoded identity -> physical member. zip keys raw name bytes,
     // so by_name(name()) is not reversible for CP437 names.
     archive_indices: BTreeMap<String, usize>,
     decrypted: BTreeMap<String, Vec<u8>>,
@@ -369,8 +369,12 @@ impl Container {
                 cause: e.to_string(),
             })?;
             if !entry.is_dir() {
+                let name = entry.name().map_err(|e| ContainerError::Read {
+                    path: nested_info.path.clone(),
+                    cause: e.to_string(),
+                })?;
                 declared.push(EntryInfo {
-                    path: rooted_nested_name(&project_part, entry.name()),
+                    path: rooted_nested_name(&project_part, &name),
                     size: entry.size(),
                 });
             }
@@ -401,7 +405,11 @@ impl Container {
             // unprotected project uses, so everything downstream reads one
             // layout. A name that is already rooted (`P-0001/0.xml`, the
             // shape of the synthetic Info-ZIP fixture) is kept as is.
-            let entry_path = rooted_nested_name(&project_part, entry.name());
+            let name = entry.name().map_err(|e| ContainerError::Read {
+                path: nested_info.path.clone(),
+                cause: e.to_string(),
+            })?;
+            let entry_path = rooted_nested_name(&project_part, &name);
 
             if container.find(&entry_path).is_some() {
                 return Err(ContainerError::DuplicateEntry { path: entry_path });
@@ -594,9 +602,13 @@ impl Container {
             if entry.is_dir() {
                 continue;
             }
-            archive_indices.insert(entry.name().to_string(), i);
+            let name = entry
+                .name()
+                .map_err(|e| ContainerError::NotAZip(e.to_string()))?
+                .into_owned();
+            archive_indices.insert(name.clone(), i);
             entries.push(EntryInfo {
-                path: entry.name().to_string(),
+                path: name,
                 size: entry.size(),
             });
         }
@@ -755,8 +767,8 @@ impl Container {
 }
 
 /// Reads one member, never more than its `declared` uncompressed size (AR18
-/// review F3). The `zip` reader checks a deflated member's CRC-32 but not
-/// its length, so a member whose headers declare 100 bytes could otherwise
+/// review F3). zip 9 also stops a read past the declaration, but this bound
+/// does not rely on it: a member whose headers declare 100 bytes must never
 /// inflate to gigabytes; one byte past the declaration is read only to
 /// tell "exactly as declared" from "more".
 fn read_declared(
@@ -952,7 +964,10 @@ fn check_decoded_names<R: Read + std::io::Seek>(
         let entry = archive
             .by_index_raw(i)
             .map_err(|e| ContainerError::NotAZip(e.to_string()))?;
-        let name = entry.name().to_string();
+        let name = entry
+            .name()
+            .map_err(|e| ContainerError::NotAZip(e.to_string()))?
+            .into_owned();
         let central = local_record::Central {
             name: &record.name,
             flags: record.flags,

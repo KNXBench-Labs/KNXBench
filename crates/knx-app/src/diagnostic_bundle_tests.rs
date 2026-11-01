@@ -120,7 +120,10 @@ fn the_zip_holds_a_manifest_with_every_file_hash_and_the_files() {
     )
     .unwrap();
     let mut archive = zip::ZipArchive::new(std::io::Cursor::new(bytes)).unwrap();
-    let names: Vec<String> = archive.file_names().map(str::to_string).collect();
+    let names: Vec<String> = archive
+        .file_names()
+        .map(|name| name.unwrap().into_owned())
+        .collect();
     assert_eq!(
         names,
         [

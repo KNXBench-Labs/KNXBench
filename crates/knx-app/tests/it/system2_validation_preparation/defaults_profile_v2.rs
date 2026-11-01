@@ -84,7 +84,7 @@ fn tailed_package() -> (Vec<u8>, Vec<u8>) {
     let mut source = Vec::new();
     for index in 0..reader.len() {
         let mut member = reader.by_index(index).unwrap();
-        let name = member.name().to_owned();
+        let name = member.name().unwrap().into_owned();
         let mut text = String::new();
         member.read_to_string(&mut text).unwrap();
         if name.ends_with("Application.xml") {

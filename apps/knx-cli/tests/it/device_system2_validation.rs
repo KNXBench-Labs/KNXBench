@@ -290,7 +290,10 @@ fn system2_simulator_bundle_owns_only_the_admitted_projection_and_unknown_build_
     );
 
     let mut archive = zip::ZipArchive::new(fs::File::open(&diagnostic).unwrap()).unwrap();
-    let names: Vec<_> = archive.file_names().map(str::to_string).collect();
+    let names: Vec<_> = archive
+        .file_names()
+        .map(|n| n.unwrap().into_owned())
+        .collect();
     assert!(names
         .iter()
         .any(|name| name == "operations/system2-private.json"));

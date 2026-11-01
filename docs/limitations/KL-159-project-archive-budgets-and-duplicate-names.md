@@ -11,6 +11,12 @@ the project reader to **4 GiB expanded payload in total** and
 Nested payload accounting and declared-size/inflation checks still apply;
 these are payload admission limits, not a peak-process-memory guarantee.
 Duplicate/case-colliding names and inconsistent ZIP records remain refused.
+Since the `zip` 9 upgrade (1 November 2026), an unflagged member name that is
+valid UTF-8 decodes as UTF-8 instead of the APPNOTE CP437 default; it and its
+CP437 twin are refused as a collision
+(`an_unflagged_utf8_name_and_its_cp437_twin_are_refused`). The private corpus
+has no such name: all 763 unflagged non-ASCII names in 25,615 members are
+invalid UTF-8 and keep their CP437 decoding.
 The empty-directory CRC/complete-stream, ordinary-file exact-stream and bit-0
 encrypted-directory repairs described below are delivered. The 24 October
 bit-6-only consistency amendment is delivered as `daef61b74`, independently reviewed

@@ -413,6 +413,23 @@ fn a_cp437_name_and_its_utf8_twin_are_refused() {
     ));
 }
 
+/// zip 9 decodes an unflagged name that is valid UTF-8 as UTF-8 (APPNOTE
+/// says CP437), so `\xC3\xA9` and the CP437 `\x82` both become `é`. The
+/// twins must then collide instead of aliasing one validated identity.
+#[test]
+fn an_unflagged_utf8_name_and_its_cp437_twin_are_refused() {
+    let cp437 = Member {
+        name: b"P-0001/BinaryData/\x82.dat".to_vec(),
+        ..member("", b"cp437-bytes")
+    };
+    let unflagged_utf8 = member("P-0001/BinaryData/\u{e9}.dat", b"utf8-bytes");
+    assert_eq!(unflagged_utf8.flags & UTF8_FLAG, 0);
+    refused_for_identity(import_knxproj_bytes(
+        project_with(vec![cp437, unflagged_utf8]),
+        "fixture.knxproj",
+    ));
+}
+
 #[test]
 fn invalid_declared_utf8_is_refused_before_extraction() {
     let invalid = Member {
@@ -1472,7 +1489,7 @@ mod ordinary_file_stream_characterization {
             );
             drop(encrypted);
             let mut raw = inner.by_index_raw(2).unwrap();
-            assert_eq!(raw.name(), PATH);
+            assert_eq!(raw.name().unwrap(), PATH);
             let check = knx_secure::zipcrypto::CheckBytes {
                 crc32_high_byte: (raw.crc32() >> 24) as u8,
                 dos_time_high_byte: 0,

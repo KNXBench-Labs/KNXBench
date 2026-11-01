@@ -234,7 +234,7 @@
       "number": 159,
       "title": "Project archive budgets and duplicate names",
       "topic": "Import and export",
-      "summary": "Expanded project payloads are capped at 4 GiB total and 1,000,000,000 bytes per member. Excess inflation, duplicate/case-colliding names and inconsistent records are refused; empty directories require CRC 0 and, when compressed, a complete empty stream. These bounds do not cap peak process memory.",
+      "summary": "Expanded project payloads are capped at 4 GiB total and 1,000,000,000 bytes per member. Excess inflation, duplicate/case-colliding names and inconsistent records are refused; empty directories require CRC 0 and, when compressed, a complete empty stream. These bounds do not cap peak process memory. Since `zip` 9 an unflagged member name that is valid UTF-8 decodes as UTF-8, not CP437 (APPNOTE default); such a name and its CP437 twin are refused as a collision. The private corpus has no such name (0 of 25,615 members).",
       "file": "KL-159-project-archive-budgets-and-duplicate-names.md",
       "ledger_ids": [],
       "anchors": [

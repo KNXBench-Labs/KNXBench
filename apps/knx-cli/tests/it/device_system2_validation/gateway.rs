@@ -447,7 +447,7 @@ fn a_final_mismatch_is_bundled_with_neither_byte_side() {
     let mut names = Vec::new();
     for index in 0..archive.len() {
         let mut entry = archive.by_index(index).unwrap();
-        let name = entry.name().to_owned();
+        let name = entry.name().unwrap().into_owned();
         let mut content = Vec::new();
         std::io::Read::read_to_end(&mut entry, &mut content).unwrap();
         sentinel_forms::assert_no_sentinel_bytes(

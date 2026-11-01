@@ -44,8 +44,9 @@ fn plugin_entries(path: &Path) -> Vec<String> {
     let archive = zip::ZipArchive::new(file).expect("pair file is a ZIP");
     archive
         .file_names()
+        .map(Result::unwrap)
         .filter(|n| !n.ends_with('/') && (n.contains("/BinaryData/") || n.contains("/ExtraData/")))
-        .map(str::to_owned)
+        .map(|n| n.into_owned())
         .collect()
 }
 

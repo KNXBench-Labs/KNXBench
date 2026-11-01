@@ -43,8 +43,6 @@ pub(super) struct Node<'a> {
     pub end: usize,
     pub first_token: usize,
     pub last_token: usize,
-    /// Half-open raw bytes between start and end tag; empty for an empty-element tag.
-    pub content: (usize, usize),
     sibling: usize,
     declarations: BTreeMap<String, Rc<str>>,
 }
@@ -70,6 +68,8 @@ pub(super) struct Document<'a> {
     pub namespace: String,
     pub member: Option<u32>,
     projection_scopes: Vec<Option<usize>>,
+    /// Raw content range of `Script` elements only, so other nodes pay nothing for it.
+    script_content: BTreeMap<usize, (usize, usize)>,
     work_bytes: Cell<usize>,
     xml_bytes: Cell<usize>,
     max_xml_bytes: usize,
@@ -187,6 +187,7 @@ impl<'a> Document<'a> {
             namespace: String::new(),
             member,
             projection_scopes: Vec::new(),
+            script_content: BTreeMap::new(),
             work_bytes: Cell::new(0),
             xml_bytes: Cell::new(0),
             max_xml_bytes: limits.max_xml_working_bytes,
@@ -358,10 +359,13 @@ impl<'a> Document<'a> {
                         end,
                         first_token,
                         last_token: first_token + 2,
-                        content: (end, end),
                         sibling: *sibling,
                         declarations,
                     });
+                    if local == "Script" {
+                        doc.xml_charge(size_of::<(usize, (usize, usize))>())?;
+                        doc.script_content.insert(id, (end, end));
+                    }
                     doc.token(Token::Open(id))?;
                     if matches!(event, Event::Empty(_)) {
                         doc.token(Token::Close(id))?;
@@ -376,7 +380,9 @@ impl<'a> Document<'a> {
                         .pop()
                         .ok_or_else(|| malformed("end tag outside root"))?;
                     doc.nodes[id].end = end;
-                    doc.nodes[id].content.1 = start;
+                    if let Some(content) = doc.script_content.get_mut(&id) {
+                        content.1 = start;
+                    }
                     doc.nodes[id].end_node = doc.nodes.len();
                     doc.token(Token::Close(id))?;
                     doc.nodes[id].last_token = doc.tokens.len();
@@ -521,6 +527,10 @@ impl<'a> Document<'a> {
             }
         }
         false
+    }
+    /// Half-open raw bytes between the tags of a `Script` element; empty for `<Script/>`.
+    pub fn script_content(&self, id: usize) -> Option<(usize, usize)> {
+        self.script_content.get(&id).copied()
     }
     pub fn children(&self, id: usize) -> impl Iterator<Item = usize> + '_ {
         (id + 1..self.nodes[id].end_node).filter(move |&i| self.nodes[i].parent == Some(id))
@@ -861,7 +871,15 @@ pub(super) fn inspect(
 
 #[cfg(test)]
 mod tests {
-    use super::escape_attribute;
+    use super::{escape_attribute, Node};
+
+    /// `max_xml_working_bytes` charges node capacity times this footprint and was measured on
+    /// the largest OpenKNX member; growing it needs a fresh corpus measurement, not a quiet edit.
+    #[cfg(target_pointer_width = "64")]
+    #[test]
+    fn node_footprint_stays_at_its_measured_working_set_unit() {
+        assert_eq!(std::mem::size_of::<Node<'_>>(), 152);
+    }
 
     #[test]
     fn derived_view_escaping_survives_attribute_value_normalization() {

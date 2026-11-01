@@ -104,6 +104,10 @@ false, and every limitation is listed
   partial reports. Peak RSS was 1.1 GiB, the slowest took 9 s, and the largest
   report was 174 MiB. Installing the same 37 archives into a fresh in-memory
   database was still refused (28 `MissingMaster`, 9 `UnsafeMember`).
+  Format 3 briefly refused one of them (NeoPixel 0.3, `XML working bytes`):
+  every XML node had grown by a Script content range. That range now lives in
+  a side table for `Script` elements only, a unit test pins the node size, and
+  the 37 releases again give 37 reports (largest 189 MiB, slowest 13 s).
 - **Tests.**
   - Distribution 50 (14 for dependency evidence) and grid 7 in
     knx-productdb; CLI 6; native ZIP

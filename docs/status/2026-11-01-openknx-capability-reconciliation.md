@@ -9,7 +9,8 @@ retain the baseline observations below; no new execution is inferred for them.
 
 ## Purpose and scope
 
-The OpenKNX product-data analysis of 30 October 2026 ended in a 32-row
+The [OpenKNX product-data analysis of 30 October 2026](../research/2026-10-30-openknx-distribution-analysis.md)
+ended in a 32-row
 capability audit (C01–C32) pinned to `72db561a4`. It mapped each row to the
 OKX-01…OKX-07 work packages and gave it one of four dispositions: `missing`,
 `reuse`, `blocked` or `unrelated`. This record says where each row stands on
@@ -157,9 +158,11 @@ tooling.
 
 ## Discrepancies found while checking
 
-- The 30 October 2026 analysis note is not tracked on main, so this record
-  does not link to it. The record is linked from the
-  [distribution inspection contract][di] instead.
+- The 30 October 2026 analysis note was not tracked on main when this record
+  was written, so the [distribution inspection contract][di] linked the
+  record instead. Its public English edition is now the
+  [analysis note](../research/2026-10-30-openknx-distribution-analysis.md);
+  the private German original and its evidence stay untracked.
 - [IMPLEMENTATION_STATUS](../IMPLEMENTATION_STATUS.md#read-only-manufacturer-distribution-inspection-31-october-2026-source)
   gives the delivery-time test counts "Distribution 50 … CLI 6". That history
   is not rewritten; for current figures, main now has 67 `#[test]` functions

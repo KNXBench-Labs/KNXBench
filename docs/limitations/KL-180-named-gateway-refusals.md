@@ -93,9 +93,13 @@ session record published meanwhile, any session the activity view named even if
 a later read failed, or a session the monitor panel adopted), change nothing (no
 achievement, record, panel reset or forget) and are never followed by a
 compensating stop; the message then says the window's state changed and asks to
-check the status, without claiming a newer connection. A monitor poll answer
-that crossed a context change is not acted on, and a monitor or controller
-forget only clears the record of its own session. Policy: a valid answer from a
+check the status, without claiming a newer connection. A monitor's stale absence
+or different-session reply that crossed a context change is not acted on;
+ordinary same-session capture delivery may continue. A monitor or controller
+forget only clears the record of its own session. Reattaching the exact session
+created by a pending start does not make that start foreign: its completion
+publishes the record and assigned address without resetting captured rows,
+cursor or flow state. Policy: a valid answer from a
 new server lifetime that arrives before any read of that lifetime is not
 adopted either (conservative; the status read shows the truth).
 An admitted System-2 run outranks a retained monitor in the status bar, and a

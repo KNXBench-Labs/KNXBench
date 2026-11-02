@@ -24,7 +24,9 @@ the footer and the bus monitor panel use it, the legacy stop is unchanged. One
 web controller shares the activity-derived view and a single action token
 between the footer and the panel. Details and limits:
 [KL-180](limitations/KL-180-named-gateway-refusals.md#session-bound-stop-and-status-bar-connection-2-november-2026-source).
-Software-tested only (fake connectors, Vitest, intercepted Chromium).
+Software-tested only (fake connectors, Vitest, intercepted Chromium). Main-first
+source `7ea7ff6dd` is published after independent review and the selected 15-stage
+package gate. [Acceptance and remaining boundaries](status/2026-11-02-wp26-status-bar-connection.md).
 
 ## Monitor start refuses a held tunnel reservation at once (2 November 2026, source; WP-26 backend prerequisite)
 

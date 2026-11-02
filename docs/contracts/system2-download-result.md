@@ -132,7 +132,9 @@ before any mutation.
 
 A declaration binds the download plan it was validated against. Only final verification of
 exactly that plan tolerates; a recovery (restore) plan that differs from it is verified strictly,
-and so is its journal replay, so a restore claims the captured prestate byte for byte. Within the
+and so is its journal replay, so such a restore claims the captured prestate byte for byte. When
+the prestate already held every written value, the recovery plan equals the download plan: that
+restore is the same operation and tolerates and reports like the download. Within the
 download an octet is tolerated only when it is declared, lies in a verified allocation, was
 written, differs from the written value and holds one of its accepted values. A tolerated octet
 neither fails nor appears in `differing`; `actual` keeps the real byte, and every other byte,

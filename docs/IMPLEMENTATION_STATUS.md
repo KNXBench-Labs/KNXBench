@@ -336,6 +336,16 @@ live website passed their bounded checks. History/archive and ARM/native-visual
 limits remain explicit in the [public verification receipt](evidence/release-alpha18-2026-10-29.json).
 The later documentation-only closure does not move the tag or extend hardware acceptance.
 
+## System-2 declared post-load octets (1 November 2026 source, Net only)
+
+Net final verification can accept a declared post-load value at a declared written octet,
+for firmware that rewrites a flag after load, and reports each such octet as an observation
+before the final write; strict comparison stays the default and every other byte stays strict.
+Simulator proof only. No shipped profile declares an octet and App refuses the observation,
+so behaviour on `main` is unchanged until the UP258 hypothesis is corroborated.
+[Contract](contracts/system2-download-result.md#declared-post-load-octets),
+[research](research/2026-11-01-up258-post-load-flag-octet.md).
+
 ## System-2 final-step failure category (28 October 2026 source)
 
 A failure inside the last System-2 `Disconnect` step is now classified by the Net executor

@@ -11,6 +11,7 @@ use super::final_step_evidence::AllocationMismatchEvidence;
 use super::pointer_width::{
     PointerWidthAdmission, PointerWidthRefusal, PointerWidthRefusalReason, PropertyPointerValue,
 };
+use super::post_load_octets::{PostLoadOctetAdmission, PostLoadOctetObservation};
 use super::property_download::PropertySimulationFailure;
 use super::{ManagementSession, SessionError};
 use crate::management::ManagementTransport;
@@ -50,6 +51,10 @@ pub struct ExperimentalPropertyPreconditions {
     /// Which PID 7 answer widths the reads accept. `same_application_reinstallation`
     /// is always `Legacy`; a wider rule is an explicit, validated opt-in.
     pub pointer_widths: PointerWidthAdmission,
+    /// Written octets final verification may find changed by the device's firmware.
+    /// `same_application_reinstallation` is always `Legacy`; a declaration is an
+    /// explicit, validated opt-in bound to this plan's written octets.
+    pub post_load_octets: PostLoadOctetAdmission,
 }
 impl ExperimentalPropertyPreconditions {
     /// Acknowledge strong-hypothesis same-shape reinstallation, not compatibility.
@@ -66,7 +71,17 @@ impl ExperimentalPropertyPreconditions {
             program_version,
             source_pointers: source_pointers(plan)?,
             pointer_widths: PointerWidthAdmission::Legacy,
+            post_load_octets: PostLoadOctetAdmission::Legacy,
         })
+    }
+    /// Replace the post-load rule with a declaration checked against this plan's writes.
+    pub fn with_post_load_octet_admission(
+        mut self,
+        admission: PostLoadOctetAdmission,
+    ) -> Result<Self, PropertySimulationFailure> {
+        admission.validate(&self.original_plan)?;
+        self.post_load_octets = admission;
+        Ok(self)
     }
     /// Replace the width rule with a checked one bound to this plan's touched objects.
     pub fn with_pointer_width_admission(
@@ -117,7 +132,8 @@ impl ExperimentalPropertyPreconditions {
                 "experimental preconditions do not bind this exact source plan",
             ));
         }
-        self.pointer_widths.validate(&self.source_pointers)
+        self.pointer_widths.validate(&self.source_pointers)?;
+        self.post_load_octets.validate(plan)
     }
 }
 
@@ -465,12 +481,14 @@ impl PropertyRecoverySnapshot {
     /// Read-only. Memory, final Loaded state and program version are verification;
     /// a final PID_TABLE_REFERENCE that differs from the source model is returned
     /// as an observation, because that model is itself unverified. Allocations whose
-    /// prestate was unreadable are verified on their written bytes only.
+    /// prestate was unreadable are verified on their written bytes only. A written octet
+    /// holding one of its declared post-load values is tolerated and observed, never silent.
     pub(crate) async fn verify_outcome<T: ManagementTransport>(
         &self,
         session: &mut ManagementSession<'_, T>,
         executed_plan: &PropertyDownloadPlan,
-    ) -> Result<Vec<PropertyPointerObservation>, FinalStepError> {
+    ) -> Result<VerifiedOutcome, FinalStepError> {
+        let mut post_load_octets = Vec::new();
         let limit = session
             .write_limit(None)
             .await
@@ -480,6 +498,10 @@ impl PropertyRecoverySnapshot {
             let actual = read_region(session, allocation.address, &expected, limit)
                 .await
                 .map_err(FinalStepError::read(FinalStepStage::Allocation))?;
+            let (tolerated, observed) = self
+                .preconditions
+                .post_load_octets
+                .tolerated(allocation, &expected, &written, &actual);
             // No captured prestate predicts an unreadable allocation's unwritten bytes;
             // `compare` never lets them decide, but records them once a written byte differs.
             if let Some(evidence) = AllocationMismatchEvidence::compare(
@@ -489,6 +511,7 @@ impl PropertyRecoverySnapshot {
                 expected,
                 written,
                 actual,
+                &tolerated,
             ) {
                 return Err(FinalStepError::mismatch(
                     FinalStepStage::Allocation,
@@ -496,6 +519,7 @@ impl PropertyRecoverySnapshot {
                 )
                 .with_evidence(evidence));
             }
+            post_load_octets.extend(observed);
         }
         let mut observations = Vec::new();
         for expected in &self.preconditions.source_pointers {
@@ -535,7 +559,10 @@ impl PropertyRecoverySnapshot {
                 "final application identity differs from captured program version; recovery remains unverified",
             ));
         }
-        Ok(observations)
+        Ok(VerifiedOutcome {
+            pointers: observations,
+            post_load_octets,
+        })
     }
 
     /// Replays the final comparison of allocation `index` against recorded `actual` bytes:
@@ -553,6 +580,10 @@ impl PropertyRecoverySnapshot {
             return None;
         }
         let (expected, written) = expected_allocation(allocation, executed_plan);
+        let (tolerated, _) = self
+            .preconditions
+            .post_load_octets
+            .tolerated(allocation, &expected, &written, &actual);
         AllocationMismatchEvidence::compare(
             index,
             allocation,
@@ -560,6 +591,7 @@ impl PropertyRecoverySnapshot {
             expected,
             written,
             actual,
+            &tolerated,
         )
     }
 
@@ -623,6 +655,16 @@ pub enum PropertyJournalEvent<'a> {
     /// An allocation/task read-back that differed from its record; sent before
     /// this operation completes, so before the next mutation.
     InProcedurePointerObservation(&'a PropertyInProcedurePointerObservation),
+    /// Written octets that read back as a declared post-load value; sent only when
+    /// non-empty, after verification and before the final VerifyMode write.
+    PostLoadOctetObservations(&'a [PostLoadOctetObservation]),
+}
+
+/// What an otherwise verified final step observed without failing.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub(crate) struct VerifiedOutcome {
+    pub(crate) pointers: Vec<PropertyPointerObservation>,
+    pub(crate) post_load_octets: Vec<PostLoadOctetObservation>,
 }
 
 pub(crate) fn invalid(reason: &str) -> PropertySimulationFailure {

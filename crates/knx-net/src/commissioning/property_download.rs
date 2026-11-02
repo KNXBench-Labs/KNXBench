@@ -19,6 +19,7 @@ use super::final_step::FinalStepFailure;
 use super::final_step_evidence::AllocationMismatchEvidence;
 use super::hardware_release::HardwareRelease;
 use super::pointer_width::{PointerWidthAdmission, PointerWidthRefusal};
+use super::post_load_octets::PostLoadOctetObservation;
 use super::property_recovery::{
     self, ExperimentalPropertyPreconditions, PropertyInProcedurePointerObservation,
     PropertyJournalEvent, PropertyPointerObservation, PropertyRecoverySnapshot,
@@ -298,6 +299,8 @@ pub struct ExperimentalPropertyReport {
     pub final_pointer_observations: Vec<PropertyPointerObservation>,
     /// Allocation/task pointer read-backs that differed from their record.
     pub in_procedure_pointer_observations: Vec<PropertyInProcedurePointerObservation>,
+    /// Written octets that read back as a declared post-load value; observations only.
+    pub post_load_octet_observations: Vec<PostLoadOctetObservation>,
 }
 
 /// Explicit opt-in experimental execution; all hardware-kind transports refuse.
@@ -463,6 +466,7 @@ struct PropertyPlanExecution {
     recovery: Option<PropertyRecoverySnapshot>,
     final_pointer_observations: Vec<PropertyPointerObservation>,
     in_procedure_pointer_observations: Vec<PropertyInProcedurePointerObservation>,
+    post_load_octet_observations: Vec<PostLoadOctetObservation>,
 }
 impl PropertyPlanExecution {
     fn experimental(self) -> ExperimentalPropertyReport {
@@ -473,6 +477,7 @@ impl PropertyPlanExecution {
                 .expect("experimental validated hardware guard captured recovery"),
             final_pointer_observations: self.final_pointer_observations,
             in_procedure_pointer_observations: self.in_procedure_pointer_observations,
+            post_load_octet_observations: self.post_load_octet_observations,
         }
     }
 }
@@ -541,6 +546,7 @@ async fn run_property_plan_inner<T: ManagementTransport>(
     let mut recovery = None;
     let mut final_pointer_observations = Vec::new();
     let mut in_procedure_pointer_observations = Vec::new();
+    let mut post_load_octet_observations = Vec::new();
     let mut final_step = None;
     let mut final_step_evidence = None;
     for (operation_index, step) in plan.steps().iter().enumerate() {
@@ -613,14 +619,23 @@ async fn run_property_plan_inner<T: ManagementTransport>(
                 PropertyOperation::ToolMetadata { .. } => {}
                 PropertyOperation::Disconnect => {
                     if let Some(snapshot) = &recovery {
-                        final_pointer_observations = snapshot
-                            .verify_outcome(&mut session, plan)
-                            .await
-                            .map_err(|error| {
-                                final_step = Some(error.classified);
-                                final_step_evidence = error.evidence;
-                                error.failure
-                            })?;
+                        let verified =
+                            snapshot
+                                .verify_outcome(&mut session, plan)
+                                .await
+                                .map_err(|error| {
+                                    final_step = Some(error.classified);
+                                    final_step_evidence = error.evidence;
+                                    error.failure
+                                })?;
+                        final_pointer_observations = verified.pointers;
+                        post_load_octet_observations = verified.post_load_octets;
+                        if !post_load_octet_observations.is_empty() {
+                            journal(PropertyJournalEvent::PostLoadOctetObservations(
+                                &post_load_octet_observations,
+                            ))
+                            .map_err(PropertySimulationFailure::Persistence)?;
+                        }
                         if !final_pointer_observations.is_empty() {
                             journal(PropertyJournalEvent::FinalPointerObservations(
                                 &final_pointer_observations,
@@ -673,6 +688,7 @@ async fn run_property_plan_inner<T: ManagementTransport>(
         recovery,
         final_pointer_observations,
         in_procedure_pointer_observations,
+        post_load_octet_observations,
     })
 }
 

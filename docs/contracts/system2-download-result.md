@@ -120,6 +120,29 @@ absence does not prove writer age, and bytes are never reconstructed). Progress,
 both reports and the web UI do not carry it; it is input for the private diagnostic bundle
 only (DIAG-03).
 
+### Declared post-load octets
+
+Some firmware rewrites an octet it was just given, for example a hidden download flag
+([UP258 research](../research/2026-11-01-up258-post-load-flag-octet.md)). Net
+`ExperimentalPropertyPreconditions::post_load_octets` is `Legacy` (strict) by default and from
+every existing constructor. `with_post_load_octet_admission(Declared(..))` is an explicit
+opt-in validated against the plan: each entry names a distinct octet the plan writes for that
+object and distinct accepted values, none equal to the written value; anything else is refused
+before any mutation.
+
+During final verification an octet is tolerated only when it is declared, written, differs from
+the written value and holds one of its accepted values. A tolerated octet neither fails nor
+appears in `differing`; `actual` keeps the real byte, and every other byte, including another
+value at a declared octet, is compared as before. The journal replay applies the same rule.
+Each tolerated octet becomes a `PostLoadOctetObservation` (object, address, written, observed):
+sent once as `PropertyJournalEvent::PostLoadOctetObservations` after verification and before
+the final VerifyMode write — a refused journal stops before that write — and listed in
+`ExperimentalPropertyReport::post_load_octet_observations`.
+
+App does not yet declare or journal post-load octets: no prepared bundle sets a declaration, and
+the App journal refuses the event instead of dropping it. No shipped profile declares an octet;
+status, reports and the web UI are unchanged.
+
 ## Download versus recovery
 
 `OperationProgress.download` (`DownloadFacts`: result, outcome, completed steps, total

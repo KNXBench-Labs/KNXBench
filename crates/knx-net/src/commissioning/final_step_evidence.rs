@@ -63,20 +63,24 @@ impl AllocationMismatchEvidence {
         expected: Vec<u8>,
         written: Vec<bool>,
         actual: Vec<u8>,
+        tolerated: &[bool],
     ) -> Option<Self> {
-        let differs = if prestate_unreadable {
+        // A tolerated offset holds a declared post-load value of a written octet: it
+        // neither fails nor appears as a difference; `actual` still keeps its real value.
+        let differs =
             actual
                 .iter()
                 .zip(&expected)
                 .zip(&written)
-                .any(|((a, e), w)| *w && a != e)
-        } else {
-            actual != expected
-        };
+                .enumerate()
+                .any(|(offset, ((a, e), w))| {
+                    a != e && !tolerated[offset] && (*w || !prestate_unreadable)
+                });
         if !differs {
             return None;
         }
-        let differing = differing_ranges(&expected, &actual, &written, prestate_unreadable);
+        let differing =
+            differing_ranges(&expected, &actual, &written, prestate_unreadable, tolerated);
         Some(Self {
             allocation_index,
             object: allocation.object,
@@ -95,10 +99,11 @@ fn differing_ranges(
     actual: &[u8],
     written: &[bool],
     prestate_unreadable: bool,
+    tolerated: &[bool],
 ) -> Vec<DifferingRange> {
     let mut ranges: Vec<DifferingRange> = Vec::new();
     for (offset, ((e, a), w)) in expected.iter().zip(actual).zip(written).enumerate() {
-        if e == a {
+        if e == a || tolerated[offset] {
             continue;
         }
         let class = match (*w, prestate_unreadable) {
@@ -155,6 +160,7 @@ mod tests {
             expected,
             written.to_vec(),
             actual,
+            &[false; 8],
         )
         .unwrap();
         assert_eq!(
@@ -181,7 +187,8 @@ mod tests {
                 true,
                 vec![0, 1, 2, 0],
                 written.clone(),
-                vec![7, 1, 2, 7]
+                vec![7, 1, 2, 7],
+                &[false; 4],
             ),
             None,
             "placeholders never fail verification"
@@ -193,6 +200,7 @@ mod tests {
             vec![0, 1, 2, 0],
             written,
             vec![7, 1, 9, 7],
+            &[false; 4],
         )
         .unwrap();
         assert_eq!(
@@ -214,9 +222,41 @@ mod tests {
                 false,
                 vec![1, 2],
                 vec![true, false],
-                vec![1, 2]
+                vec![1, 2],
+                &[false; 2],
             ),
             None
         );
+    }
+
+    #[test]
+    fn a_tolerated_offset_neither_fails_nor_appears_but_keeps_its_real_value() {
+        let written = vec![true, true, false];
+        let tolerated = [false, true, false];
+        assert_eq!(
+            AllocationMismatchEvidence::compare(
+                0,
+                &region(3),
+                false,
+                vec![1, 1, 5],
+                written.clone(),
+                vec![1, 0, 5],
+                &tolerated,
+            ),
+            None,
+            "only the tolerated octet differs"
+        );
+        let evidence = AllocationMismatchEvidence::compare(
+            0,
+            &region(3),
+            false,
+            vec![1, 1, 5],
+            written,
+            vec![9, 0, 5],
+            &tolerated,
+        )
+        .unwrap();
+        assert_eq!(evidence.differing, [range(0, 1, Written)]);
+        assert_eq!(evidence.actual, [9, 0, 5], "the real readback is kept");
     }
 }

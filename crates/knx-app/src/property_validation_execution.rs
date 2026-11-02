@@ -236,6 +236,15 @@ fn event(
                     .collect(),
             })
         }
+        // No App preparation declares post-load octets yet, so an App bundle never
+        // produces this. Refuse instead of dropping it: the run then fails before the
+        // final VerifyMode write rather than finishing without a durable record.
+        PropertyJournalEvent::PostLoadOctetObservations(_) => {
+            return Err(
+                "post-load octet observations are not journaled by this build; refused before the final write"
+                    .into(),
+            )
+        }
     };
     result.map_err(|e| e.to_string())
 }

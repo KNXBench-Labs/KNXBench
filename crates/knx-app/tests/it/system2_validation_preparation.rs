@@ -1037,6 +1037,7 @@ async fn project_cancellation_and_crash_checkpoint_boundaries_restore_from_disk(
                     }
                     PropertyJournalEvent::FinalPointerObservations(_) => Err(std::io::Error::other("unexpected final pointer observation")),
                     PropertyJournalEvent::InProcedurePointerObservation(_) => Err(std::io::Error::other("unexpected in-procedure pointer observation")),
+                    PropertyJournalEvent::PostLoadOctetObservations(_) => Err(std::io::Error::other("unexpected post-load octet observation")),
                 }.map_err(|e|e.to_string())
             },&||cancel.load(Ordering::SeqCst)).await;
         assert!(result.is_err(), "source {cut_source} must stop");
@@ -1694,6 +1695,7 @@ async fn exact_public_cancellation_and_crash_checkpoint_boundaries_restore_from_
                     }
                     PropertyJournalEvent::FinalPointerObservations(_) => Err(std::io::Error::other("unexpected final pointer observation")),
                     PropertyJournalEvent::InProcedurePointerObservation(_) => Err(std::io::Error::other("unexpected in-procedure pointer observation")),
+                    PropertyJournalEvent::PostLoadOctetObservations(_) => Err(std::io::Error::other("unexpected post-load octet observation")),
                 }.map_err(|e|e.to_string())
             },&||cancel.load(Ordering::SeqCst)).await;
         assert!(result.is_err(), "source {cut_source} must stop");

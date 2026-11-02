@@ -1,22 +1,20 @@
 # Restart snapshot
 
-## WP-25 import findings after reopening (ACTIVE; observed 2026-11-02 11:07 CET)
-- Owner Go: 2 November 2026; branch `fix/wp25-import-findings`, isolated sibling worktree.
-- Whole-feature review and focused guard-fix re-review APPROVE, no blockers;
-  16 independent server controls pass, three targeted mutants fail as intended.
-- Initial base `ec9d9bd7f`; first branch gate on `b36060577` failed two Web guard
-  inventories. Corrected only the exact read-only graph/query-hook inventories;
-  companion no-report/no-mutation runtime assertions retained. Full Vitest 4897 green.
-- Current source unchanged by review; EN/DE production/dev 1440/400 proofs green.
-- NEXT: rebase unpublished branch onto current main, recreate main-first merge;
-  require identical feature/integration trees, then one complete scoped gate for both.
-  Prior failed attempt is superseded, never credited to the corrected tree.
-- No bus operations, release, deployment or manufacturer contact.
+## Current coordination (STANDING; observed 2026-11-02 12:55 CET)
+- Owner Go: 2 November 2026. Main-first source `3455fdb9c` pushed and read back
+  local/tracking/live equal; feature `e91d232df`, guard correction `cbc480864`.
+- Independent review/re-review APPROVE; final identical feature/integration tree
+  passed all 15 selected package stages, frozen inputs, checked user data untouched.
+- Maintained outcome/limits: `docs/status/2026-11-02-wp25-import-findings.md`.
+- First local gate's two Web guard failures remain superseded evidence, not green.
+- No active WP-25 implementation track; documentation-only closeout changes no
+  tested runtime. Task-owned temporary worktrees/caches are final housekeeping.
+- NEXT: await the next owner task. No bus action, release or deployment authorized.
 
-## Retained boundaries (STANDING; observed 2026-11-02 10:48 CET)
-- Root remains stale/dirty and protected; no root index or user-data edits authorized.
+## Retained boundaries (STANDING; observed 2026-11-02 12:55 CET)
+- Root remains intentionally stale/dirty; no root index or user-data edits authorized.
 - Prior WP-03, issue31 and WP-08 evidence stays in maintained docs/Git history.
 - Foreign parked/release trees remain untouched. Alpha16 belongs to another track.
-- Private hardware-research remains parked; private evidence/bytes stay private.
-  Further hardware work requires its own authorization; no automatic scope expansion.
+- Private hardware-research is not owned by WP-25; private evidence/bytes stay private.
+  Root's private-track notes remain authoritative for its separate owner/consent.
 - WP-11 Properties pane/wider native matrix and KL-130 stay open.

@@ -598,6 +598,13 @@ export default function BusMonitorPanel({ projectOpen, project, projectScope, on
     // session record; this panel's resets and `sessionRef` run synchronously
     // in `beforePublish`, after the achievement and before the record.
     function beforePublish(started: BusMonitorStartResponse) {
+      const current = sessionRef.current;
+      // Reattach may already have captured A while its start response was pending.
+      // Complete A's publication without clearing its cursor, rows or flow state.
+      if (current?.sessionId === started.sessionId && current.serverIncarnation === started.serverIncarnation) {
+        sessionRef.current = { ...current, assignedAddress: started.assignedAddress };
+        return;
+      }
       sinceRef.current = 0;
       setCapture({ rows: [], pruned: 0 });
       flowFeed.reset();
@@ -625,9 +632,13 @@ export default function BusMonitorPanel({ projectOpen, project, projectScope, on
       // and fire a reattach request against the session just started.
       sessionRef.current = attached;
     }
-    // Adopting a session (e.g. through a reattach) while the start ran means
-    // its answer is no longer this panel's to publish.
-    const result = await connectBusSession(validation.endpoint, { beforePublish, stillOwned: () => sessionRef.current === null });
+    // Adopting foreign B vetoes A; reattaching our own A still allows its completion.
+    function stillOwned(started: BusMonitorStartResponse) {
+      const current = sessionRef.current;
+      return current === null || (current.sessionId === started.sessionId
+        && current.serverIncarnation === started.serverIncarnation);
+    }
+    const result = await connectBusSession(validation.endpoint, { beforePublish, stillOwned });
     if (!result.ok) {
       if (result.reason === "failed") setConnectError(api.errorMessage(result.error));
       else if (result.reason === "stale") setConnectError(t("busConnection.error.stale"));

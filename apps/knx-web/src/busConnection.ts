@@ -262,7 +262,7 @@ function supersededDuringStop(identity: BoundBusSession): boolean {
  */
 export async function connectBusSession(
   endpoint: string,
-  hooks: { beforePublish?: (started: BusMonitorStartResponse) => void; stillOwned?: () => boolean } = {},
+  hooks: { beforePublish?: (started: BusMonitorStartResponse) => void; stillOwned?: (started: BusMonitorStartResponse) => boolean } = {},
 ): Promise<BusActionResult<BusMonitorStartResponse>> {
   const token = takeToken("connecting");
   if (token === null) return { ok: false, reason: "inFlight" };
@@ -277,7 +277,7 @@ export async function connectBusSession(
       return { ok: false, reason: "failed", error: new Error("The server answered with a malformed bus session identity.") };
     }
     if (token !== epoch || !ofObservedLifetime(started) || otherSessionAppeared(started)
-      || hooks.stillOwned?.() === false) {
+      || hooks.stillOwned?.(started) === false) {
       return { ok: false, reason: "stale" };
     }
     emitAchievementEvent({ type: "busMonitorStarted" });

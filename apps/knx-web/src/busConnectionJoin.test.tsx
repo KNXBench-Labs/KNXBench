@@ -257,6 +257,33 @@ describe("re-review R6-R8 in the mounted join", () => {
     expect(readSessionContext(localStorage)).toEqual(recordC);
   });
 
+  it.each([0, 2])("R9: settling its own reattached A preserves its %i captured rows", async (rowCount) => {
+    await mount();
+    const start = deferred<BusMonitorStartResponse>();
+    apiMock.startBusMonitor.mockReturnValueOnce(start.promise);
+    await typeGatewayAndConnect();
+    // Reattach can observe our own server-published A before its start response arrives.
+    // Every later poll stays pending: it cannot repopulate rows after an accidental reset.
+    apiMock.pollBusTelegrams.mockReset();
+    apiMock.pollBusTelegrams.mockResolvedValueOnce(telegrams(1, 3, rowCount ? [row(1), row(2)] : []))
+      .mockImplementation(() => new Promise(() => {}));
+    await act(async () => { window.dispatchEvent(new Event("focus")); });
+    await flush();
+    const beforeRows = [...host.querySelectorAll(".bus-monitor-panel tbody tr")].map((entry) => entry.outerHTML);
+    expect(beforeRows).toHaveLength(rowCount);
+    expect(readSessionContext(localStorage)).toBeNull();
+    await act(async () => { start.resolve({ sessionId: 1, serverIncarnation: "process-a", assignedAddress: "1.1.5" }); });
+    await flush();
+    expect(panelError()).toBe("");
+    expect(achievements).toEqual(["busMonitorStarted"]);
+    expect(readSessionContext(localStorage)).toMatchObject({ sessionId: 1, serverIncarnation: "process-a" });
+    expect([...host.querySelectorAll(".bus-monitor-panel tbody tr")].map((entry) => entry.outerHTML)).toEqual(beforeRows);
+    expect(host.querySelector(".bus-monitor-panel")!.textContent).toContain("1.1.5");
+    expect(apiMock.startBusMonitor).toHaveBeenCalledTimes(1);
+    expect(apiMock.stopBoundBusMonitor).not.toHaveBeenCalled();
+    expect(apiMock.stopBusMonitor).not.toHaveBeenCalled();
+  });
+
   it("R7: the panel adopting B by itself (no record, no activity) fences the delayed start A", async () => {
     await mount();
     const start = deferred<BusMonitorStartResponse>();

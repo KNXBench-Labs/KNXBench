@@ -186,6 +186,74 @@
   --knx-backdrop-mask: none;
 }
 
+/* Rail — a modern distribution board in daylight: signal white, laser-sharp
+   hairlines, square corners and the green of the KNX bus cable as the one
+   accent. Success is turquoise so it never reads as selection. The square
+   geometry and motion belong to the built-in presentation (ADR-0157). */
+:root[data-theme="rail"] {
+  color-scheme: light;
+  --knx-bg: #edf1ee;
+  --knx-surface: #ffffff;
+  --knx-foreground: #14201b;
+  --knx-muted: #4f5d56;
+  --knx-border: #c3cdc8;
+  --knx-border-hover: #14201b;
+  --knx-accent: #0b7a3e;
+  --knx-on-accent: #ffffff;
+  --knx-accent-tertiary: #14201b;
+  --knx-gradient-primary: linear-gradient(var(--knx-accent), var(--knx-accent));
+  --knx-gradient-display: linear-gradient(var(--knx-foreground), var(--knx-foreground));
+  --knx-error-color: #c0262d;
+  --knx-warning-color: #8a5900;
+  --knx-success-color: #00777c;
+  --knx-overlay-backdrop: #14201b52;
+  --knx-overlay-shadow: #14201b29;
+  --knx-shadow-raised: 0 1px 0 #14201b14;
+  --knx-shadow-hover: 0 2px 0 #14201b24;
+  --knx-font-heading: "Geist", sans-serif;
+  --knx-font-body: "Geist", sans-serif;
+  --knx-font-mono: "Geist Mono", monospace;
+  --knx-radius-card: 0;
+  --knx-radius-button: 0;
+  --knx-radius-input: 0;
+  --knx-backdrop-image: none;
+  --knx-backdrop-size: auto;
+  --knx-backdrop-mask: none;
+}
+
+/* Rail Dark — the same board after hours: anthracite steel, a brighter
+   cable green, identical geometry. */
+:root[data-theme="rail-dark"] {
+  color-scheme: dark;
+  --knx-bg: #11171a;
+  --knx-surface: #192024;
+  --knx-foreground: #e7eeea;
+  --knx-muted: #9aa8a1;
+  --knx-border: #33403b;
+  --knx-border-hover: #e7eeea;
+  --knx-accent: #3fcb7a;
+  --knx-on-accent: #04210f;
+  --knx-accent-tertiary: #e7eeea;
+  --knx-gradient-primary: linear-gradient(var(--knx-accent), var(--knx-accent));
+  --knx-gradient-display: linear-gradient(var(--knx-foreground), var(--knx-foreground));
+  --knx-error-color: #ff8b8b;
+  --knx-warning-color: #eabf68;
+  --knx-success-color: #45d0cf;
+  --knx-overlay-backdrop: #05080acc;
+  --knx-overlay-shadow: #00000066;
+  --knx-shadow-raised: 0 1px 0 #00000059;
+  --knx-shadow-hover: 0 2px 0 #00000080;
+  --knx-font-heading: "Geist", sans-serif;
+  --knx-font-body: "Geist", sans-serif;
+  --knx-font-mono: "Geist Mono", monospace;
+  --knx-radius-card: 0;
+  --knx-radius-button: 0;
+  --knx-radius-input: 0;
+  --knx-backdrop-image: none;
+  --knx-backdrop-size: auto;
+  --knx-backdrop-mask: none;
+}
+
 /* Accent variations — opt-in, per theme, never by negation. Porcelain and
    Graphite treat the accent as the user's choice; Cupertino treats it as
    part of its identity and declares nothing here. "violet" is these
@@ -4838,6 +4906,211 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
 @media (max-width: 700px) {
   :root[data-presentation="lcars"] .workbench-toolbar { border-inline-start-width: 0; }
   :root[data-presentation="lcars"] .workbench-pane-left { border-inline-start-width: 0; }
+}
+
+/* ADR-0157: Rail — trusted built-in presentation for the `rail` and
+   `rail-dark` palettes, orthogonal to palette tokens and never selectable by
+   an imported pack. Square geometry, a measuring rail under the toolbar and
+   a few effects that answer the user's own actions. Everything motion-related
+   is motion-free here and enabled only further down, behind the OS
+   preference and the `theme` motion category. Pseudo-elements are inert. */
+:root[data-presentation="rail"] h1,
+:root[data-presentation="rail"] h2 {
+  letter-spacing: -0.035em;
+}
+:root[data-presentation="rail"] .workbench-brand strong {
+  font-weight: 600;
+  letter-spacing: -0.03em;
+}
+/* The rail: a hairline with a 18px module pitch and a major tick every five
+   modules, like the DIN rail the installation's devices sit on. */
+:root[data-presentation="rail"] .workbench-toolbar {
+  position: relative;
+  border-bottom: 0;
+  padding-bottom: 19px;
+}
+:root[data-presentation="rail"] .workbench-toolbar::after {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  bottom: 0;
+  height: 7px;
+  pointer-events: none;
+  animation-name: none;
+  background:
+    linear-gradient(var(--knx-foreground), var(--knx-foreground)) left bottom / 100% 1px no-repeat,
+    repeating-linear-gradient(to right, var(--knx-foreground) 0 1px, transparent 1px 90px) left bottom / 100% 7px no-repeat,
+    repeating-linear-gradient(to right, color-mix(in srgb, var(--knx-foreground) 38%, transparent) 0 1px, transparent 1px 18px) left bottom / 100% 4px no-repeat;
+}
+:root[data-presentation="rail"] .workbench-status {
+  border-top-color: var(--knx-foreground);
+}
+/* Navigation: the current workspace carries a 2px cable-green bar; moving
+   between workspaces hands the bar over (see the motion block below). */
+:root[data-presentation="rail"] .workbench-navigation button {
+  position: relative;
+  border-radius: 0;
+}
+:root[data-presentation="rail"] .workbench-navigation button::before {
+  content: "";
+  position: absolute;
+  inset-block: 3px;
+  inset-inline-start: 0;
+  width: 2px;
+  background: var(--knx-accent);
+  transform: scaleY(0);
+  pointer-events: none;
+  transition-property: none;
+}
+:root[data-presentation="rail"] .workbench-navigation button[aria-current="page"] {
+  color: var(--knx-foreground) !important;
+  background: color-mix(in srgb, var(--knx-accent) 10%, transparent);
+}
+:root[data-presentation="rail"] .workbench-navigation button[aria-current="page"]::before {
+  transform: none;
+}
+/* Selection reads as an edge, not a blob. */
+:root[data-presentation="rail"] .tree-label.selected {
+  border-radius: 0;
+  box-shadow: inset 2px 0 0 var(--knx-accent);
+}
+/* Secondary controls sharpen their edge to ink on hover, and every ordinary
+   control gains a 2px base line in its role colour (accent, or error ink). */
+:root[data-presentation="rail"] :is(button, .secondary-action):not(.primary-action, .danger-action, .quiet-action) {
+  --button-hover-edge: var(--knx-border-hover);
+}
+:root[data-presentation="rail"] :is(button, .secondary-action) {
+  --rail-line: var(--knx-accent);
+}
+:root[data-presentation="rail"] .danger-action {
+  --rail-line: var(--knx-error-color);
+}
+:root[data-presentation="rail"] :is(button, .secondary-action):hover:not(:disabled, [data-crt-surface], .toast-open, .primary-action) {
+  background-image: linear-gradient(var(--rail-line), var(--rail-line));
+  background-repeat: no-repeat;
+  background-position: left bottom;
+  background-size: 100% 2px;
+}
+:root[data-presentation="rail"] .primary-action {
+  box-shadow: none;
+}
+:root[data-presentation="rail"] .primary-action:hover:not(:disabled) {
+  box-shadow: none;
+  /* Theme ink darkens Rail light and lightens Rail Dark, preserving text contrast. */
+  --button-veil: color-mix(in srgb, var(--knx-foreground) 14%, transparent);
+}
+:root[data-presentation="rail"] .primary-action:active:not(:disabled) {
+  --button-veil: color-mix(in srgb, var(--knx-foreground) 26%, transparent);
+}
+/* Fields: a square box whose base line thickens to accent on focus. */
+:root[data-presentation="rail"] :is(input, select, textarea):focus-visible {
+  outline: none;
+  border-color: var(--knx-accent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--knx-accent) 25%, transparent), inset 0 -2px 0 var(--knx-accent);
+}
+/* Table headers end in an ink rule; figures line up. */
+:root[data-presentation="rail"] th {
+  color: var(--knx-foreground);
+  font-weight: 600;
+}
+:root[data-presentation="rail"] thead th {
+  box-shadow: inset 0 -1px 0 var(--knx-foreground);
+}
+:root[data-presentation="rail"] td {
+  font-variant-numeric: tabular-nums;
+}
+/* Hard-coded corners elsewhere in this stylesheet: square them too. */
+:root[data-presentation="rail"] :is(.search-panel, .file-menu-content, .structure-new-menu > summary,
+  .rename-context-menu, .toast, .toast-queue-note, .workspace-table-wrap, .device-workspace,
+  .monitor-table-scroll, .telegram-details, .bus-compose-form, .topology-line, .building-diagram-node,
+  .diagram-device, .functions-item > details, .new-project-conflict, .project-wizard-discard,
+  .project-wizard .project-wizard-step-link, .device-wizard .device-wizard-result,
+  .device-workspace .com-object-list, .resolution-badge, .com-object-status, .workbench .tree-toggle,
+  .load-progress-track, .structure-create .tree-fixed-kind, .project-wizard-step-number) {
+  border-radius: 0;
+}
+:root[data-presentation="rail"] .search-panel {
+  border-color: color-mix(in srgb, var(--knx-foreground) 35%, var(--knx-border));
+  box-shadow: 0 18px 40px -12px var(--knx-overlay-shadow);
+  animation-name: none;
+}
+:root[data-presentation="rail"] :is(.file-menu-content, .rename-context-menu) {
+  animation-name: none;
+}
+:root[data-presentation="rail"] .welcome-workspace h1 {
+  font-weight: 600;
+}
+
+/* Rail motion: the OS must allow motion and the `theme` category must be
+   Standard or Subtle (it inherits the global level, which can only lower
+   it). Off, OS reduction or leaving the theme cancel to the static paint
+   above. Durations are multiples of the motion setting's own token. */
+@media (prefers-reduced-motion: no-preference) {
+  /* One orchestrated moment: the rail draws itself in once at start-up. */
+  :root[data-presentation="rail"][data-motion-theme="standard"] .workbench-toolbar::after {
+    animation: rail-draw calc(var(--knx-transition-duration) * 5) var(--knx-motion-easing) 1 backwards;
+  }
+  :root[data-presentation="rail"][data-motion-theme="subtle"] .workbench-toolbar::after {
+    animation: rail-fade calc(var(--knx-transition-duration) * 3) ease-out 1 backwards;
+  }
+  /* The current-workspace bar grows from its centre and hands over. */
+  :root[data-presentation="rail"][data-motion-theme="standard"] .workbench-navigation button::before {
+    transition: transform calc(var(--knx-transition-duration) * 1.5) var(--knx-motion-easing);
+  }
+  /* Hover answers with the base line running in from the leading edge;
+     a primary action's lighter veil sweeps across the whole face instead. */
+  :root[data-presentation="rail"][data-motion-theme="standard"] :is(button, .secondary-action):hover:not(:disabled, [data-crt-surface], .toast-open, .primary-action) {
+    animation: rail-sweep calc(var(--knx-transition-duration) * 1.5) var(--knx-motion-easing) 1 backwards;
+  }
+  :root[data-presentation="rail"][data-motion-theme="standard"] .primary-action:hover:not(:disabled) {
+    background-size: 100% 100%, auto;
+    background-repeat: no-repeat, repeat;
+    animation: rail-sweep-primary calc(var(--knx-transition-duration) * 1.5) var(--knx-motion-easing) 1 backwards;
+  }
+  /* Dialogs settle into place; menus unroll from their trigger. */
+  :root[data-presentation="rail"][data-motion-theme="standard"] .search-panel {
+    animation: rail-panel-in calc(var(--knx-transition-duration) * 1.5) var(--knx-motion-easing) 1 backwards;
+  }
+  :root[data-presentation="rail"][data-motion-theme="subtle"] .search-panel {
+    animation: rail-fade var(--knx-transition-duration) ease-out 1 backwards;
+  }
+  /* A closed <details> keeps its content styled, so the menu animates only
+     while open: every opening restarts it instead of replaying a stale one. */
+  :root[data-presentation="rail"][data-motion-theme="standard"] :is(.file-menu[open] .file-menu-content, .rename-context-menu) {
+    animation: rail-unroll calc(var(--knx-transition-duration) * 1.25) var(--knx-motion-easing) 1 backwards;
+  }
+  :root[data-presentation="rail"][data-motion-theme="subtle"] :is(.file-menu[open] .file-menu-content, .rename-context-menu) {
+    animation: rail-fade var(--knx-transition-duration) ease-out 1 backwards;
+  }
+  /* Focus and edges glide rather than jump. */
+  :root[data-presentation="rail"]:is([data-motion-theme="standard"], [data-motion-theme="subtle"]) :is(input, select, textarea) {
+    transition: border-color var(--knx-transition-duration) var(--knx-motion-easing),
+      box-shadow var(--knx-transition-duration) var(--knx-motion-easing);
+  }
+}
+@keyframes rail-draw {
+  from { clip-path: inset(0 100% 0 0); }
+  to { clip-path: inset(0 0 0 0); }
+}
+@keyframes rail-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes rail-sweep {
+  from { background-size: 0% 2px; }
+  to { background-size: 100% 2px; }
+}
+@keyframes rail-sweep-primary {
+  from { background-size: 0% 100%, auto; }
+  to { background-size: 100% 100%, auto; }
+}
+@keyframes rail-panel-in {
+  from { opacity: 0; transform: translateY(10px); clip-path: inset(0 0 14% 0); }
+  to { opacity: 1; transform: none; clip-path: inset(0 0 0 0); }
+}
+@keyframes rail-unroll {
+  from { opacity: 0; clip-path: inset(0 0 100% 0); }
+  to { opacity: 1; clip-path: inset(0 0 0 0); }
 }
 
 /* Notes: the target catalogue could not be loaded; the editor stays usable. */

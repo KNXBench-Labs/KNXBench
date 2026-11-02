@@ -162,3 +162,4 @@ the old one gets `Status: Superseded by ADR-NNNN`.
 | [0154](0154-production-browser-suites-use-tag-lanes.md) | Production browser suites use the tag lanes | Accepted | 2026-10-26 |
 | [0155](0155-production-functional-case-parallelism.md) | Production functional cases may run in parallel within one file | Accepted | 2026-10-27 |
 | [0156](0156-operation-recorder-and-diagnostic-bundle.md) | Record every device operation; report problems through one consented bundle | Accepted | 2026-10-29 |
+| [0157](0157-rail-built-in-presentation.md) | Rail is a built-in light/dark pair with a controlled presentation | Accepted | 2026-11-02 |

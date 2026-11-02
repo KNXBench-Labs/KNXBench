@@ -337,6 +337,7 @@ fn shipped_language_packs_and_bundled_themes_are_known() {
             "user-modern-retro-green-crt",
         ),
         ("tlh", "user-imported-pack", "other"),
+        ("de", "rail-dark", "rail-dark"),
     ] {
         let client = json!({"uiLanguage": language, "theme": theme});
         let body = body(&client_state(client.as_object().unwrap()));

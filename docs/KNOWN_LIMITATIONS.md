@@ -1365,6 +1365,14 @@ Unnamed installations are readable and renameable through the snapshot/name-boun
 Built-in framing is not executable imported geometry or lossless v1 export. Native WebKitGTK, Orca and complete WCAG/browser acceptance remain unverified.
 [Details and history](limitations/lcars-presentation.md)
 
+<a id="catalogue-rail-presentation"></a>
+<a id="rail-presentation-is-chromium-verified-not-an-executable-imported-pack"></a>
+### Rail presentation
+
+**Ledger status:** Not separately tracked.
+Rail and Rail Dark are built-in Chromium-verified presentations, not imported geometry or lossless v1 export. Native WebKitGTK, Orca, Firefox and complete WCAG acceptance remain unverified.
+[Details and history](limitations/rail-presentation.md)
+
 <a id="catalogue-ported-ux-feedback-limits"></a>
 <a id="ported-ux-feedback-2026-10-13"></a>
 ### Ported UX feedback limits

@@ -2206,6 +2206,7 @@ export const messages = {
   "logPanel.importScope.match": "Showing {findings}, as counted in the project status.",
   "logPanel.importScope.mismatch": "The project status counts {findings}; this session log holds {entries}.",
   "logPanel.importScope.none": "The project status counts {findings}, but the session log of this server run holds none of them.",
+  "logPanel.importScope.historical": "Restored from this project's stored import report when it was opened, not freshly imported. The times show the opening, not the original import. Informational notes are only in the full report.",
   "logPanel.importScope.showAll": "Show all log entries",
   "logPanel.severity.error": "Error",
   "logPanel.severity.warning": "Warning",

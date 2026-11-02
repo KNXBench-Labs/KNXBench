@@ -996,6 +996,18 @@ pub fn open_native_project(
                 return Err(failure);
             }
         };
+    // Bound to the loaded (recovered) working image that is about to be published:
+    // `load_native` admitted its envelope and derived `loaded_tree`'s counters from it.
+    // Computed before publication, appended only after the replacement succeeded.
+    let stored_findings = knx_app::import_evidence::read(&opaque)
+        .ok()
+        .flatten()
+        .map(|evidence| {
+            crate::historical_import_log::project(
+                &evidence.report,
+                (loaded_tree.errors, loaded_tree.warnings),
+            )
+        });
     let tree = replace_unless_unsaved_with_history(
         state,
         project,
@@ -1019,6 +1031,38 @@ pub fn open_native_project(
         diagnostic: None,
         detail: None,
     });
+    match stored_findings {
+        Some(Ok(findings)) if !findings.is_empty() => {
+            log.push(LogEntry {
+                timestamp: session_log::now(),
+                severity: Severity::Info,
+                source: "open".to_string(),
+                message: format!(
+                    "restored {} import finding(s) from the stored import report; \
+                     their times are those of this opening, not of the import",
+                    findings.len()
+                ),
+                location: None,
+                diagnostic: None,
+                detail: None,
+            });
+            for entry in findings {
+                log.push(entry);
+            }
+        }
+        Some(Err(mismatch)) => log.push(LogEntry {
+            timestamp: session_log::now(),
+            severity: Severity::Warning,
+            source: "open".to_string(),
+            message: "the stored import findings could not be listed; the counters and the \
+                      full stored import report remain authoritative"
+                .to_string(),
+            location: None,
+            diagnostic: None,
+            detail: Some(mismatch),
+        }),
+        _ => {}
+    }
     if let Some(repair) = &allocator_repair {
         log.push(allocator_repair_log_entry(repair));
     }

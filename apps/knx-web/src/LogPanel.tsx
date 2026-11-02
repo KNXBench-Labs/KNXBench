@@ -12,6 +12,7 @@ import { useTranslate } from "./i18n";
 import type { MessageKey } from "./messages/en";
 import { formatSettingsDiagnostic } from "./settingsDiagnostic";
 import { droppedCount, saveSessionLog } from "./sessionLogExport";
+import ImportEvidencePanel from "./ImportEvidencePanel";
 import { countImportFindings, isImportFinding, type ImportFindingSeverity } from "./importFindings";
 import type { LogExportScope } from "./sessionLogExport";
 import { LOG_RENDER_STEP, detailPreview, formatLogTime, newestFirst, notificationRows, serverRows } from "./logRows";
@@ -236,6 +237,8 @@ export default function LogPanel(props: {
         {/* #13: one small button; the scope is chosen in its dialog. */}
         <button type="button" className="log-panel-export" onClick={() => setExportOpen(true)} disabled={loading || error !== null}>{t("logPanel.export")}</button>
       </div>
+      {!scopedToImport && props.tree?.import_report_historical === true && entries.some(isImportFinding) &&
+        <p className="log-panel-import-provenance">{t("logPanel.importScope.historical")}</p>}
       {exportOpen && <LogExportDialog filteredCount={visibleServerEntries.length} allCount={entries.length}
         disabled={loading || error !== null} onExport={exportLog} onClose={() => setExportOpen(false)} />}
       <p className="log-panel-hint">{t("logPanel.retention", { count: droppedCount(entries) ?? t("logPanel.unknownCount") })}</p>
@@ -247,6 +250,8 @@ export default function LogPanel(props: {
             <strong id={importScopeTitleId}>{t("logPanel.importScope.title")}</strong>
             {/* A failed fetch is reported below; it is not "none in the log". */}
             <p role="status"><span className={loading ? "task-status-text" : undefined}>{loading ? t("logPanel.loading") : error ? "" : importScopeMessage(importScope, props.tree)}</span></p>
+            {props.tree.import_report_historical === true && <p className="log-panel-import-provenance">{t("logPanel.importScope.historical")}</p>}
+            <ImportEvidencePanel tree={props.tree} />
           </div>
           <button type="button" className="log-panel-import-scope-clear" onClick={clearImportScope}>{t("logPanel.importScope.showAll")}</button>
         </div>

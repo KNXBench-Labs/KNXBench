@@ -1,3 +1,4 @@
+/** Tests paged session logs, export scopes and restored import findings. */
 // @vitest-environment happy-dom
 import { act } from "react";
 import { createRoot } from "react-dom/client";
@@ -5,9 +6,13 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ProjectTree } from "./bindings/ProjectTree";
 import type { LogEntry } from "./api";
 import { messages as enMessages } from "./messages/en";
+import { messages as deMessages } from "./messages/de";
+import { resetUiLanguageForTests, saveUiLanguage } from "./uiLanguage";
+import { resetSettingsForTests, settingsStorage } from "./settingsStore";
 
 const apiMock = vi.hoisted(() => ({
   getSessionLog: vi.fn().mockResolvedValue([]),
+  getImportEvidence: vi.fn(),
 }));
 const exportMock = vi.hoisted(() => ({ saveSessionLog: vi.fn().mockResolvedValue(true) }));
 
@@ -586,6 +591,70 @@ describe("LogPanel — import findings opened from the project status", () => {
     expect(note()).toBeNull();
     expect(listed()).toHaveLength(6);
     expect([...host!.querySelectorAll<HTMLInputElement>(".log-panel-filter input")].map((i) => i.checked)).toEqual([true, true, true]);
+    await act(async () => root.unmount());
+  });
+});
+
+// WP-25: provenance and the full report stay in the focused log itself, because the
+// info line announcing a restoration is filtered out of (and may be evicted from) it.
+describe("LogPanel — restored import findings", () => {
+  const restored = (extra: Partial<ProjectTree> = {}): ProjectTree =>
+    ({ ...baseTree(), warnings: 2, import_report_available: true, import_report_historical: true, server_incarnation: "s", project_incarnation: 1, ...extra });
+  const restoredLog = () => [
+    entry({ severity: "warning", source: "import:unknown", message: "restored A" }),
+    entry({ severity: "warning", source: "import:conflict", message: "restored B" }),
+  ];
+  const scope = () => host!.querySelector<HTMLElement>(".log-panel-import-scope")!;
+  const focus = async (tree: ProjectTree) => {
+    apiMock.getSessionLog.mockResolvedValue(restoredLog());
+    const root = await renderPanel(tree);
+    await act(async () => root.render(<LogPanel tree={tree} refreshKey={0} importFocus={{ severity: "warning" }} />));
+    return root;
+  };
+  afterEach(() => { resetUiLanguageForTests(); resetSettingsForTests(); });
+
+  for (const [language, m] of [["en", enMessages], ["de", deMessages]] as const) {
+    it(`${language}: says the findings are restored history with opening-time semantics`, async () => {
+      saveUiLanguage(settingsStorage, language);
+      const root = await focus(restored());
+      const note = scope().querySelector(".log-panel-import-provenance");
+      expect(note).not.toBeNull();
+      expect(m["logPanel.importScope.historical"]).toBeTruthy();
+      expect(note!.textContent).toBe(m["logPanel.importScope.historical"]);
+      await act(async () => root.unmount());
+    });
+
+    it(`${language}: reaches the full stored report from the focused log, also on a count mismatch`, async () => {
+      saveUiLanguage(settingsStorage, language);
+      const root = await focus(restored({ warnings: 9 }));
+      expect(scope().querySelector('[role="status"]')?.textContent).toContain(m["logPanel.importScope.warnings.other"].replace("{count}", "9"));
+      const show = [...scope().querySelectorAll("button")].find((b) => b.textContent === m["importEvidence.show"]);
+      expect(show).toBeTruthy();
+      apiMock.getImportEvidence.mockRejectedValue(new Error("fixture stop"));
+      await act(async () => show!.click());
+      expect(apiMock.getImportEvidence).toHaveBeenCalledTimes(1);
+      await act(async () => root.unmount());
+    });
+  }
+
+  it("keeps historical provenance visible in the general log after clearing the scope", async () => {
+    const root = await focus(restored());
+    const showAll = [...scope().querySelectorAll("button")].find((button) => button.textContent === enMessages["logPanel.importScope.showAll"]);
+    await act(async () => showAll!.click());
+    expect(host!.querySelector(".log-panel-import-scope")).toBeNull();
+    expect(host!.querySelector(".log-panel-import-provenance")?.textContent).toBe(enMessages["logPanel.importScope.historical"]);
+    await act(async () => root.unmount());
+  });
+
+  it("does not call a fresh import's findings restored", async () => {
+    const root = await focus(restored({ import_report_historical: false }));
+    expect(scope().querySelector(".log-panel-import-provenance")).toBeNull();
+    await act(async () => root.unmount());
+  });
+
+  it("offers no report action when no report is stored", async () => {
+    const root = await focus(restored({ import_report_available: false, import_report_historical: false }));
+    expect([...scope().querySelectorAll("button")].map((b) => b.textContent)).toEqual([enMessages["logPanel.importScope.showAll"]]);
     await act(async () => root.unmount());
   });
 });

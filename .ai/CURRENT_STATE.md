@@ -11,14 +11,18 @@
 - Next queue candidates: WP-27 / WP-28 under a newly bounded claim; no hardware,
   USB, automatic reconnect/retry, release or deployment authority from this delivery.
 
-## Rail theme pair (ACTIVE; other owner; observed 2026-11-02 20:45 CET)
-- Owner-reported coordination snapshot; execution was not independently polled.
-- Branch/worktree `feat/rail-theme-20261102`, base6527feeb3;33-file candidate frozen.
-- Contrast RED proven; first GREEN found forbidden data-theme component selectors.
-- Presentation-only ink veils for both palettes have source-review approval.
-- Second focused GREEN queued; no Rail source edits before its runner settles.
-- NEXT: that owner verifies, commits, gates and integrates; no Rail publication
-  or UI acceptance is implied by the WP-26 receipt. Preserve this separate track.
+## Rail acceptance reference (STANDING; owner WebUI; observed 2026-11-02 22:13 CET)
+- Main-first `ed01e2bd3` published; local/tracking/live equal, reviews closed.
+- All15 planned stages complete/frozen, checked user data untouched; source acceptance:
+  `docs/status/2026-11-02-rail-themes.md`. No release/deployment/native/bus claim.
+- NEXT: docs-only closeout, private evidence archive and owned cleanup.
+
+## Proportionate future gates (ACTIVE; same owner; observed 2026-11-02 22:13 CET)
+- User Go: `feat/proportionate-gates-20261102`, base249036fde; author `sa-0-419a08ee`.
+- Own planner/runner/fact helper, Python tests, ADR0144 and verification docs only.
+- CLI author was service-refused without edits; replacement owns bounded TDD.
+- NEXT source-bound handoff, independent review and acceptance; no publication yet.
+- Evidence `<profile-scratch>/proportionate-gates-20261102/`; broad fallback retained.
 
 ## Retained boundaries (STANDING; observed 2026-11-02 20:47 CET)
 - System-2 acceptance: `docs/status/2026-11-02-system2-selective-settlement.md`.

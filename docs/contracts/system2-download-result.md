@@ -151,8 +151,35 @@ program-version check fails, the run fails with that cause and no observation is
 A prestate equal to the observed value means the read-back cannot tell a firmware change from a
 write that never took effect; the observation carries the prestate so that case stays visible.
 
-App cannot set a declaration yet: no prepared bundle or profile has a field for one, and the App
-journal refuses the event instead of dropping it. Status, reports and the web UI are unchanged.
+#### UP258 declaration (revision-3 hardware record)
+
+App declares exactly one octet, and only for a configured physical preparation whose observed
+hardware record is revision 3. That record carries the append-only policy id
+`up258-mv0025-object3-3cf4h-download-flag-firmware-cleared-00h-v1` beside the PID 7 width
+policy; both are hashed into the binding, so a changed, missing or `null` id, revision 3 without
+it, or revision 1/2 carrying it refuses the bundle before any traffic. Revision 1 and 2 records,
+every simulator bundle and every format-1/2 bundle keep `Legacy`. New observations write
+revision 3. The policy names object 3 octet `3CF4h`, accepted value `00h`: the hidden
+`Download_Flag` of the exact UP258 application `M-0001_A-9205-04-9270` (Access None, default 1,
+AS-3C00 offset 244). It applies only when the plan writes that octet with another value;
+otherwise the bundle stays `Legacy`. An opt-in test binds it to the pinned public package: its
+plan writes `01h` there. The source and observed previews state the tolerated octet before
+consent; a revision-2 preview does not.
+
+The App journal records the Net event as checkpoint `PostLoadOctetObservations` (envelope
+format 5, so an older strict reader refuses it): `object`, `address`, `written`, `observed`,
+`prestate` (`null` when unreadable). Live and on replay the store admits it only inside the
+run's final (Disconnect) step, after the durable recovery, once per run, as a non-empty list of
+distinct octets, and only when Net recomputes exactly that record from the durable prestate and
+the executed plan (`PropertyRecoverySnapshot::post_load_observation_is_genuine`): the download
+plan for the download run, the recovery plan for a restore. A record the declaration would not
+produce fails the run before its final VerifyMode write. `OperationProgress.post_load_octets`
+lists the records with their run, download first.
+
+Tested on hardware-kind simulated devices whose firmware clears the octet at Load Completed:
+the revision-3 download verifies and journals the observation, reopen reproduces it; the same
+clear fails a revision-1/2 record, another value or another octet fails verification, and a
+restore writing the old prestate stays strict. No physical device has run this build.
 
 ## Download versus recovery
 
@@ -164,13 +191,16 @@ reopened journal reproduces both. Nothing shows the historical download as a cur
 success after any recovery attempt: the device then holds the recovery's outcome, never
 the requested configuration.
 
-## Status schema 3 (schema 4 adds `finalStepFailures`)
+## Status schema 3 (schema 4 adds `finalStepFailures`, schema 5 `postLoadOctets`)
 
 `GET /api/device-system2/status` (and every route returning the same view) moves to
 `schemaVersion: 3` and adds `downloadResult`, `restoreAttempted`,
 `downloadCompletedSteps`, `downloadTotalSteps` and `projectSettlement`. When
 `restoreAttempted` is true, `state`, `completedSteps` and `totalSteps` are the recovery's;
-the download keeps its own counters. The web client accepts exact versions 1, 2, 3 and 4 (4 requires `finalStepFailures`);
+the download keeps its own counters. The web client accepts exact versions 1 to 5 (4 requires `finalStepFailures`,
+5 also `postLoadOctets`: `{run, object, address, written, observed, prestate}`, lower-case hex, an observed value
+different from the written one, download entries first, a restore entry only with `restoreAttempted`; 1 to 4
+normalize to an empty list and refuse the key);
 older wires normalize to `downloadResult: "unknown"`, no recovery, `notRecorded`. A
 `downloadResult` key on a version-2 body is refused, and a failed or cancelled run
 claiming `verified` is refused. `projectSettlement` is `notRecorded`, `noMutation`,
@@ -225,11 +255,13 @@ absent; the retained journal remains the evidence.
 ## Report
 
 `GET /api/device-system2/report?operationId=<id>` returns the distinct kind
-`knxbench-system2-download-summary`, format 3 (format 2 before the final-step list): `format`, `kind`, `support`, `evidence`
+`knxbench-system2-download-summary`, format 4 (format 2 before the final-step list, 3 before the post-load list): `format`, `kind`, `support`, `evidence`
 (`local-journal-only`), `download` (`outcome`, `result`, `completedSteps`, `totalSteps`),
 `recovery` (`null`, or `outcome`, `completedSteps`, `totalSteps`), `mutationPossible`,
 `prestateDiffers`, `failureDiagnostics` (the typed list of the
 [safe failure diagnostic](system2-safe-failure-diagnostic.md)), `finalStepFailures` (format 3),
+`postLoadOctets` (format 4: `{run, object}` per tolerated octet; its address and octets stay in
+the local status and journal),
 `executionBuild` and
 `exporterBuild`. The ordinary download report (`knxbench-download-report`) is
 not reused: its restart and per-block verification semantics differ. This endpoint

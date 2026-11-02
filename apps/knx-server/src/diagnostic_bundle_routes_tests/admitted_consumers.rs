@@ -120,6 +120,7 @@ fn earlier_operation_fixture() -> EarlierOperationFixture {
     bundle.binding.serial = [0, 1, 2, 3, 4, 5];
     let hardware = ProjectHardwareRecord {
         pointer_width_policy: None,
+        post_load_octet_policy: None,
         revision: 1,
         operation: operation_id.into(),
         recovery_track: RecoveryTrack::KnxBenchBestEffort,

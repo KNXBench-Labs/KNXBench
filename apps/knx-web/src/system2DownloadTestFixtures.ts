@@ -10,7 +10,7 @@ export const preview: System2Preview = {
   hypothesisPhrase: "Accept experimental hypothesis", downloadPhrase: "Download configured plan", releasePhrase: "Accept best effort",
 };
 export const status: System2Status = {
-  schemaVersion: 4, failureDiagnostics: [], finalStepFailures: [], downloadResult: "inProgress", restoreAttempted: false, downloadCompletedSteps: 0, downloadTotalSteps: null, projectSettlement: "notRecorded", operationId: "d".repeat(32), binding: preview.binding, address: preview.address, deviceName: preview.deviceName,
+  schemaVersion: 5, postLoadOctets: [], failureDiagnostics: [], finalStepFailures: [], downloadResult: "inProgress", restoreAttempted: false, downloadCompletedSteps: 0, downloadTotalSteps: null, projectSettlement: "notRecorded", operationId: "d".repeat(32), binding: preview.binding, address: preview.address, deviceName: preview.deviceName,
   state: "running", completedSteps: 0, totalSteps: null, backupAvailable: false, recoveryPhrase: null, downloadPhrase: null, releasePhrase: null, message: null, refusal: null,
   mutationMayHaveStarted: false, prestateDiffers: false, pointerObservations: [], programVersionObservation: null, prestateUnreadableAllocations: [],
 };
@@ -39,19 +39,30 @@ export const unreadableStatus: System2Status = {
 };
 /** The exact pre-diagnostic wire keyset: no `failureDiagnostics`, schema version 1. */
 export function wireV1(row: System2Status): System2StatusWireV1 {
-  const { failureDiagnostics: _omitted, finalStepFailures: _final, downloadResult: _result, restoreAttempted: _r, downloadCompletedSteps: _c, downloadTotalSteps: _t, projectSettlement: _s, ...rest } = row;
+  const { failureDiagnostics: _omitted, finalStepFailures: _final, downloadResult: _result, restoreAttempted: _r, downloadCompletedSteps: _c, downloadTotalSteps: _t, projectSettlement: _s, postLoadOctets: _p, ...rest } = row;
   return { ...rest, schemaVersion: 1 };
 }
 /** The exact version-2 wire keyset: diagnostics, no `downloadResult`. */
 export function wireV2(row: System2Status) {
-  const { downloadResult: _result, restoreAttempted: _r, downloadCompletedSteps: _c, downloadTotalSteps: _t, projectSettlement: _s, finalStepFailures: _f, ...rest } = row;
+  const { downloadResult: _result, restoreAttempted: _r, downloadCompletedSteps: _c, downloadTotalSteps: _t, projectSettlement: _s, finalStepFailures: _f, postLoadOctets: _p, ...rest } = row;
   return { ...rest, schemaVersion: 2 as const };
 }
 /** The exact version-3 wire keyset: result and settlement, no `finalStepFailures`. */
 export function wireV3(row: System2Status) {
-  const { finalStepFailures: _final, ...rest } = row;
+  const { finalStepFailures: _final, postLoadOctets: _p, ...rest } = row;
   return { ...rest, schemaVersion: 3 as const };
 }
+/** The exact version-4 wire keyset: final-step list, no `postLoadOctets`. */
+export function wireV4(row: System2Status) {
+  const { postLoadOctets: _p, ...rest } = row;
+  return { ...rest, schemaVersion: 4 as const };
+}
+// Issue #30: the UP258 firmware clears its hidden download flag; a verified download tolerates it.
+export const postLoadStatus: System2Status = {
+  ...status, state: "finished", completedSteps: 27, totalSteps: 27, backupAvailable: true, mutationMayHaveStarted: true,
+  downloadResult: "verified", downloadCompletedSteps: 27, downloadTotalSteps: 27,
+  postLoadOctets: [{ run: "download", object: 3, address: "3cf4", written: "01", observed: "00", prestate: "00" }],
+};
 // Closed-reason, typed pointer-width observations (S2-01); one per run at most.
 export const downloadDiagnostic: System2FailureDiagnostic = { run: "download", reason: "unsupportedWidth", object: 3, propertyId: 7, elements: 1, octets: 3 };
 export const restoreDiagnostic: System2FailureDiagnostic = { run: "restore", reason: "elementCount", object: 3, propertyId: 7, elements: 2, octets: 8 };

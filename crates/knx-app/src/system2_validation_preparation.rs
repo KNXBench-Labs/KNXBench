@@ -2,6 +2,7 @@
 
 mod configured_hardware_preview;
 mod hardware;
+pub use hardware::post_load_octet_admission;
 mod project;
 pub use configured_hardware_preview::{configured_hardware_preview, ConfiguredHardwarePreview};
 pub use hardware::{

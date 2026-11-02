@@ -300,9 +300,23 @@ impl PreparedBundle {
             .collect();
         let admission = PointerWidthAdmission::one_element_two_or_four(touched)
             .map_err(|_| invalid("pointer width policy covers no object of this plan"))?;
-        premise
+        let premise = premise
             .with_pointer_width_admission(admission)
-            .map_err(|_| invalid("pointer width policy does not bind this plan"))
+            .map_err(|_| invalid("pointer width policy does not bind this plan"))?;
+        // Revision 3 also admits the declared post-load octets its plan writes; every
+        // earlier record, and every octet the plan does not write, stays strict.
+        if !self
+            .hardware_preparation
+            .as_ref()
+            .is_some_and(|h| h.admits_post_load_octets())
+        {
+            return Ok(premise);
+        }
+        premise
+            .with_post_load_octet_admission(
+                crate::system2_validation_preparation::post_load_octet_admission(plan),
+            )
+            .map_err(|_| invalid("post-load octet policy does not bind this plan"))
     }
     /// Rebind a simulated-prepared candidate to a physical device identity.
     ///

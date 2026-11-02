@@ -5,6 +5,7 @@ mod failures;
 mod pid7_policy;
 mod pid7_two_octet;
 mod pid7_width;
+mod post_load_policy;
 use knx_app::system2_validation_preparation::{
     admit_current_project_hardware, execute_project_hardware, observe_project_hardware,
     restore_project_hardware, HardwareConfirmations, HardwareRecoveryConfirmations,

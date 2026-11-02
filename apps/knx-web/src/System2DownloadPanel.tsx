@@ -251,11 +251,12 @@ export default function System2DownloadPanel({ project, deviceId, gateway, enabl
       {status.prestateUnreadableAllocations.length > 0 ? <p data-system2-prestate-unreadable className="form-warning">
         {t("system2.prestateUnreadable", { allocations: status.prestateUnreadableAllocations.map((a) => t("system2.prestateUnreadableAllocation", { object: a.object, address: a.address, length: a.length })).join("; ") })}
       </p> : <p>{t(status.backupAvailable ? "system2.backupAvailable" : "system2.backupUnavailable")}</p>}
-      {(status.pointerObservations.length > 0 || status.programVersionObservation !== null) && <section data-system2-observations aria-label={t("system2.observations")}>
+      {(status.pointerObservations.length > 0 || status.postLoadOctets.length > 0 || status.programVersionObservation !== null) && <section data-system2-observations aria-label={t("system2.observations")}>
         <h4>{t("system2.observations")}</h4><p>{t("system2.observationsNote")}</p>
         <ul>
           {status.programVersionObservation && <li>{t("system2.observation.programVersion", { expected: status.programVersionObservation.expected, observed: status.programVersionObservation.observed || t("system2.observation.refused") })}</li>}
           {status.pointerObservations.map((o, i) => <li key={i}>{o.run === "restore" && `${t("system2.observation.restoreRun")} `}{t(`system2.observation.${o.phase}`, { object: o.object, step: o.operationIndex ?? "", expected: o.expected, observed: o.observed === "refused" ? t("system2.observation.refused") : o.observed, state: o.loadState })}</li>)}
+          {status.postLoadOctets.map((o, i) => <li key={`post-load-${i}`} data-system2-post-load-octet={o.run}>{o.run === "restore" && `${t("system2.observation.restoreRun")} `}{t("system2.observation.postLoad", { object: o.object, address: o.address.toUpperCase(), written: o.written.toUpperCase(), observed: o.observed.toUpperCase() })} {o.prestate === null ? t("system2.observation.postLoadPrestateUnreadable") : t("system2.observation.postLoadPrestate", { prestate: o.prestate.toUpperCase() })}</li>)}
         </ul>
       </section>}
       {(status.failureDiagnostics.length > 0 || unavailableRun(status) !== null) && <section data-system2-diagnostics aria-label={t("system2.diagnostics")}>

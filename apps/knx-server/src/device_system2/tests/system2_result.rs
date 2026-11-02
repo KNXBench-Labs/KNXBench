@@ -50,7 +50,7 @@ fn status_projects_the_journal_derived_result_in_camel_case() {
             LocalOutcome::Failed
         };
         let s = status_of(progress(outcome, true, result));
-        assert_eq!(s["schemaVersion"], 4);
+        assert_eq!(s["schemaVersion"], 5);
         assert_eq!(s["finalStepFailures"], serde_json::json!([]));
         assert_eq!(s["downloadResult"], text);
     }
@@ -155,7 +155,7 @@ async fn report_of_an_operation_without_evidence_is_unknown_not_nothing_written_
         ]
     );
     assert_eq!(body["kind"], "knxbench-system2-download-summary");
-    assert_eq!(body["format"], 3);
+    assert_eq!(body["format"], 4);
     assert_eq!(body["finalStepFailures"], serde_json::json!([]));
     // Missing journal and observed record cannot prove that nothing was written.
     assert_eq!(body["download"]["result"], "unknown");

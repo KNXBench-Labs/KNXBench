@@ -3,6 +3,7 @@ import { expect, test, type Locator, type Page } from "@playwright/test";
 import { messages as en } from "../src/messages/en";
 import { messages as de } from "../src/messages/de";
 import { achievementsFixtureAnswer } from "./achievements-fixture";
+import { busActivityFixtureAnswer } from "./bus-activity-fixture";
 import { dismissToasts, intercept, openList, openProject as openCommunicationProject } from "./communication-fixture";
 import { separatorLine } from "./control-roles";
 import { statusMetricsFixtureBody } from "./status-metrics-fixture";
@@ -34,6 +35,8 @@ async function serve(page: Page, { theme = "porcelain", motionLevel = "standard"
     const ok = (body: unknown) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(body) });
     const achievements = achievementsFixtureAnswer(method, path);
     if (achievements !== undefined) return ok(achievements);
+    const busActivity = busActivityFixtureAnswer(method, path);
+    if (busActivity !== undefined) return ok(busActivity);
     if (path === "/api/auth/status") return ok({ required: false, authenticated: true });
     if (path === "/api/settings" && method === "GET") return ok({ schemaVersion: 1, status: "ok", settings: {
       uiLanguage: language, theme, motionLevel, releaseChecksEnabled: false, achievementsEnabled: "false",

@@ -5,6 +5,7 @@ import type { ProjectTree } from "../src/bindings/ProjectTree";
 import { messages as en } from "../src/messages/en";
 import { messages as de } from "../src/messages/de";
 import { achievementsFixtureAnswer } from "./achievements-fixture";
+import { busActivityFixtureAnswer } from "./bus-activity-fixture";
 import { statusMetricsFixtureBody } from "./status-metrics-fixture";
 
 const LONG_NAME = "Bedroom north wall dimming actuator with sixteen channels and a very long label";
@@ -58,6 +59,7 @@ async function openTopology(page: Page, language: "en" | "de", width: number, th
     else if (path === "/api/project/stored-bus-access" && method === "GET") body = { records: [] };
     else if (method === "GET" && ["/api/product-languages", "/api/catalog/manufacturers", "/api/catalog/items"].includes(path)) body = [];
     else if (achievementsFixtureAnswer(method, path) !== undefined) body = achievementsFixtureAnswer(method, path);
+    else if (busActivityFixtureAnswer(method, path) !== undefined) body = busActivityFixtureAnswer(method, path);
     else {
       unexpected.push(`${method} ${path}`);
       return route.fulfill({ status: 404, contentType: "application/json", body: '{"error":"strict offline topology fixture"}' });

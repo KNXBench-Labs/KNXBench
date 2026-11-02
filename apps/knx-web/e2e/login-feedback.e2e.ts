@@ -6,6 +6,7 @@ import { messages as de } from "../src/messages/de";
 import manifest from "../package.json" with { type: "json" };
 const { version } = manifest;
 import { achievementsFixtureAnswer } from "./achievements-fixture";
+import { busActivityFixtureAnswer } from "./bus-activity-fixture";
 import { fulfillNoProjectOpen } from "./server-project-fixture";
 
 test.use({ timezoneId: "UTC" });
@@ -28,6 +29,8 @@ async function fixture(page: Page, language: "en" | "de", theme: "graphite" | "p
     if (!locked) {
       const achievement = achievementsFixtureAnswer(method, path);
       if (achievement !== undefined) return ok(achievement);
+      const busActivity = busActivityFixtureAnswer(method, path);
+      if (busActivity !== undefined) return ok(busActivity);
       if (path === "/api/settings" && method === "GET") return ok({ schemaVersion: 1, status: "ok", settings });
       if (path === "/api/version") return ok({ version });
       if (path === "/api/bus/discover") return ok({ interfaces: [] });

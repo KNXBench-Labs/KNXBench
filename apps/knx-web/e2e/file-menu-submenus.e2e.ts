@@ -3,6 +3,7 @@ import { expect, test, type Locator, type Page } from "@playwright/test";
 import { messages as en } from "../src/messages/en";
 import { messages as de } from "../src/messages/de";
 import { achievementsFixtureAnswer } from "./achievements-fixture";
+import { busActivityFixtureAnswer } from "./bus-activity-fixture";
 import { openFileSubmenu } from "./file-menu";
 import { statusMetricsFixtureBody } from "./status-metrics-fixture";
 import { HISTORY_FIXTURE } from "../src/projectHistory.fixture";
@@ -22,6 +23,8 @@ async function serve(page: Page, { theme = "porcelain", motionLevel = "standard"
     const ok = (body: unknown) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(body) });
     const achievements = achievementsFixtureAnswer(method, path);
     if (achievements !== undefined) return ok(achievements);
+    const busActivity = busActivityFixtureAnswer(method, path);
+    if (busActivity !== undefined) return ok(busActivity);
     if (path === "/api/auth/status") return ok({ required: sessionRequired, authenticated: true });
     if (path === "/api/settings" && method === "GET") return ok({ schemaVersion: 1, status: "ok", settings: {
       uiLanguage: language, theme, motionLevel, releaseChecksEnabled: false, achievementsEnabled: "false",
@@ -324,6 +327,8 @@ async function serveProject(page: Page, { compareAdded = 0, knxproj = false }: {
     const ok = (body: unknown) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(body) });
     const achievements = achievementsFixtureAnswer(method, path);
     if (achievements !== undefined) return ok(achievements);
+    const busActivity = busActivityFixtureAnswer(method, path);
+    if (busActivity !== undefined) return ok(busActivity);
     if (path === "/api/auth/status") return ok({ required: false, authenticated: true });
     if (path === "/api/settings" && method === "GET") return ok({ conditionalPatchVersion: 1, schemaVersion: 1, status: "ok", settings: {
       uiLanguage: "en", theme: "porcelain", motionLevel: "off", releaseChecksEnabled: false, achievementsEnabled: "false",

@@ -3,6 +3,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { messages as en } from "../src/messages/en";
 import { messages as de } from "../src/messages/de";
 import { achievementsFixtureAnswer } from "./achievements-fixture";
+import { busActivityFixtureAnswer } from "./bus-activity-fixture";
 import { fulfillNoProjectOpen } from "./server-project-fixture";
 import { openFileSubmenu } from "./file-menu";
 
@@ -23,6 +24,7 @@ async function fixture(page: Page, language: "en" | "de", width: number, theme: 
     const ok = (body: unknown) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(body) });
     if (path === "/api/auth/status") return ok({ required: false, authenticated: true });
     const achievement = achievementsFixtureAnswer(method, path); if (achievement !== undefined) return ok(achievement);
+    const busActivity = busActivityFixtureAnswer(method, path); if (busActivity !== undefined) return ok(busActivity);
     if (path === "/api/settings") return ok({ conditionalPatchVersion: 1, schemaVersion: 1, status: "ok", settings });
     if (path === "/api/version") return ok({ version: "0.1.0-alpha.11+g1234567" });
     if (path === "/api/bus/discover") return ok({ interfaces: [] });

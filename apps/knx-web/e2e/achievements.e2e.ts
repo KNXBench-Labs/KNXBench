@@ -6,6 +6,7 @@ import { messages as en } from "../src/messages/en";
 import { messages as de } from "../src/messages/de";
 import { fulfillNoProjectOpen } from "./server-project-fixture";
 import { openFileSubmenu } from "./file-menu";
+import { busActivityFixtureAnswer } from "./bus-activity-fixture";
 
 interface Fixture {
   settings: Record<string, unknown>;
@@ -53,6 +54,8 @@ async function serve(page: Page, fixture: Fixture) {
         fixture.applied.push(delta.requestId);
       }
       body = record();
+    } else if (busActivityFixtureAnswer(method, path) !== undefined) {
+      body = busActivityFixtureAnswer(method, path);
     } else if (path === "/api/bus/discover" && method === "POST") {
       body = { interfaces: [] };
     } else if (path === "/api/project" && method === "GET") {

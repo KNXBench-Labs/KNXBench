@@ -5,6 +5,7 @@ import type { ProjectTree } from "../src/bindings/ProjectTree";
 import { messages as en } from "../src/messages/en";
 import { messages as de } from "../src/messages/de";
 import { achievementsFixtureAnswer } from "./achievements-fixture";
+import { busActivityFixtureAnswer } from "./bus-activity-fixture";
 import { join } from "node:path";
 import { statusMetricsFixtureBody } from "./status-metrics-fixture";
 
@@ -60,6 +61,7 @@ async function serve(page: Page, language: "en" | "de", theme: string) {
         installations: current.installations.map((installation) => installation.id === 2 ? { ...installation, name: undo ? "" : "Annex 🛠" } : installation) };
       body = current;
     } else if (achievementsFixtureAnswer(method, path) !== undefined) body = achievementsFixtureAnswer(method, path);
+    else if (busActivityFixtureAnswer(method, path) !== undefined) body = busActivityFixtureAnswer(method, path);
     else {
       unexpected.push(`${method} ${path}`);
       return route.fulfill({ status: 404, contentType: "application/json", body: '{"error":"offline fixture only"}' });

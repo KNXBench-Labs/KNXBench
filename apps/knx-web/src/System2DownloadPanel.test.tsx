@@ -270,6 +270,29 @@ it("labels in-procedure and refused pointer observations", async () => {
   expect(text).toContain("not reported (read refused)");
   expect(text).toContain("Recovery run:");
 });
+it("explains a tolerated firmware-maintained octet in English and German, with its prestate (issue #30)", async () => {
+  const { setSetting } = await import("./settingsStore"); const { postLoadStatus } = await import("./system2DownloadTestFixtures");
+  mock.getSystem2Status.mockResolvedValue(postLoadStatus);
+  await render();
+  const line = () => host.querySelector("[data-system2-post-load-octet=download]")?.textContent ?? "";
+  expect(line()).toContain("object 3 octet 3CF4h: KNXBench wrote 01h and the device now holds 00h");
+  expect(line()).toContain("firmware maintains this octet"); expect(line()).toContain("every other octet was verified as written");
+  expect(line()).toContain("Before the download it held 00h.");
+  expect(host.querySelector("[data-system2-diagnostics]")).toBeNull();
+  await act(async () => setSetting("uiLanguage", "de"));
+  expect(line()).toContain("Objekt 3 Oktett 3CF4h: KNXBench schrieb 01h, das Gerät hält jetzt 00h");
+  expect(line()).toContain("Vor dem Download stand dort 00h.");
+  await act(async () => setSetting("uiLanguage", "en"));
+});
+it("labels a restore run's post-load octet and an unreadable prestate", async () => {
+  const { postLoadStatus } = await import("./system2DownloadTestFixtures");
+  const [d] = postLoadStatus.postLoadOctets;
+  mock.getSystem2Status.mockResolvedValue({ ...postLoadStatus, state: "restored", restoreAttempted: true, postLoadOctets: [{ ...d, prestate: null }, { ...d, run: "restore", prestate: "01" }] });
+  await render();
+  const restore = host.querySelector("[data-system2-post-load-octet=restore]")!.textContent!;
+  expect(restore).toContain("Recovery run: After loading"); expect(restore).toContain("Before the download it held 01h.");
+  expect(host.querySelector("[data-system2-post-load-octet=download]")!.textContent).toContain("Its value before the download could not be read.");
+});
 it("never calls zero placeholders a backup when prior memory was unreadable", async () => {
   const { unreadableStatus } = await import("./system2DownloadTestFixtures");
   mock.getSystem2Status.mockResolvedValue(unreadableStatus);
@@ -317,7 +340,7 @@ it.each([["failed", "download"], ["restoreFailed", "restore"]] as const)("shows 
 });
 it("shows no diagnostics block for an old-wire status or a healthy run", async () => {
   const { wireV1 } = await import("./system2DownloadTestFixtures");
-  mock.getSystem2Status.mockResolvedValue({ ...wireV1(status), failureDiagnostics: [], finalStepFailures: [], state: "finished" }); await render();
+  mock.getSystem2Status.mockResolvedValue({ ...wireV1(status), failureDiagnostics: [], finalStepFailures: [], postLoadOctets: [], state: "finished" }); await render();
   expect(host.querySelector("[data-system2-diagnostics]")).toBeNull();
 });
 it("renders the diagnosis fully in German", async () => {
@@ -452,7 +475,7 @@ it("names each final-step category and stage in plain words for an unverified do
 });
 it("says the download's final-step cause is unavailable instead of guessing one", async () => {
   const { finalStepStatus, wireV3 } = await import("./system2DownloadTestFixtures");
-  for (const row of [{ ...finalStepStatus, finalStepFailures: [] }, { ...wireV3(finalStepStatus), finalStepFailures: [] }]) {
+  for (const row of [{ ...finalStepStatus, finalStepFailures: [] }, { ...wireV3(finalStepStatus), finalStepFailures: [], postLoadOctets: [] }]) {
     mock.getSystem2Status.mockResolvedValue(row); await render(); await click("[data-system2-refresh]");
     const line = host.querySelector("[data-system2-final-step-unavailable='download']")?.textContent ?? "";
     expect(line).toContain("no typed cause is available"); expect(line).toContain("No cause is inferred");

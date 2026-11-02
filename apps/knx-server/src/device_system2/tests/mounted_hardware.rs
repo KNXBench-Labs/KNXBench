@@ -178,7 +178,8 @@ struct TestHardware {
     version_fault: Mutex<Option<usize>>,
     version_reads: AtomicUsize,
     /// (address, read index from which on its octet is inverted in memory read answers).
-    memory_fault: Mutex<Option<(u16, usize)>>,
+    /// Octet, first affected read and the value it answers (`None`: the inverted octet).
+    memory_fault: Mutex<Option<(u16, usize, Option<u8>)>>,
     memory_reads: AtomicUsize,
     /// The last memory request was a read, so the next memory response answers a read
     /// (an active-Verify write answers with the same response service).
@@ -250,7 +251,12 @@ impl TestHardware {
     /// Invert the octet at `address` in every memory read answer covering it from the
     /// `index`-th such read on (counted from this call); writes and earlier reads stay honest.
     fn arm_memory_lie(&self, address: u16, index: usize) {
-        *self.memory_fault.lock().unwrap() = Some((address, index));
+        *self.memory_fault.lock().unwrap() = Some((address, index, None));
+        self.memory_reads.store(0, Ordering::SeqCst);
+    }
+    /// From read `index` on, the octet answers `value`, as firmware that changed it would.
+    fn arm_memory_value(&self, address: u16, index: usize, value: u8) {
+        *self.memory_fault.lock().unwrap() = Some((address, index, Some(value)));
         self.memory_reads.store(0, Ordering::SeqCst);
     }
     fn rewrite_memory(&self, service: &mut ApplicationService) {
@@ -260,14 +266,14 @@ impl TestHardware {
         if !self.memory_read_pending.swap(false, Ordering::SeqCst) {
             return;
         }
-        let Some((lie, from)) = *self.memory_fault.lock().unwrap() else {
+        let Some((lie, from, value)) = *self.memory_fault.lock().unwrap() else {
             return;
         };
         let Some(offset) = lie.checked_sub(*address).map(usize::from) else {
             return;
         };
         if offset < data.len() && self.memory_reads.fetch_add(1, Ordering::SeqCst) >= from {
-            data[offset] ^= 0xFF;
+            data[offset] = value.unwrap_or(data[offset] ^ 0xFF);
         }
     }
     fn disarm_pid7(&self) {

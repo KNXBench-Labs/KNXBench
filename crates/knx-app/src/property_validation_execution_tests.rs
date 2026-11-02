@@ -24,6 +24,7 @@ fn bundle() -> PreparedBundle {
     bundle.binding.serial = [0, 1, 2, 3, 4, 5];
     bundle.hardware_preparation = Some(Box::new(ProjectHardwareRecord {
         pointer_width_policy: None,
+        post_load_octet_policy: None,
         revision: 1,
         operation: "reuse-operation".into(),
         recovery_track: RecoveryTrack::KnxBenchBestEffort,
@@ -606,7 +607,7 @@ fn genuine_pointer_observations_reuse_the_validated_original_snapshot() {
 }
 
 #[test]
-fn post_load_octet_observations_are_refused_and_leave_the_journal_untouched() {
+fn post_load_octet_observations_outside_a_final_step_are_refused_and_leave_the_journal_untouched() {
     use knx_net::commissioning::post_load_octets::PostLoadOctetObservation;
     let bundle = bundle();
     let dir = tempfile::tempdir().unwrap();
@@ -628,8 +629,10 @@ fn post_load_octet_observations_are_refused_and_leave_the_journal_untouched() {
             restoring,
         )
         .unwrap_err();
+        // No durable recovery and no active final step: the store refuses before the
+        // event could become durable, so the run fails before its final VerifyMode write.
         assert!(
-            refused.contains("refused before the final write"),
+            refused.contains("outside its run's final step"),
             "{refused}"
         );
     }

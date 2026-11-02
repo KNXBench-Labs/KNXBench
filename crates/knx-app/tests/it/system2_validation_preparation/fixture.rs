@@ -218,12 +218,43 @@ pub(crate) fn configured_inputs() -> (
     knx_core::Project,
     Vec<u8>,
 ) {
+    configured_inputs_with(str::to_owned)
+}
+/// The exact-identity fixture with a 256-octet parameter segment like the real UP258
+/// application: template octet 01h at 3CF4h (its hidden download flag), all written.
+#[allow(dead_code)]
+pub(crate) fn configured_flag_inputs() -> (
+    tempfile::TempDir,
+    knx_productdb::Connection,
+    knx_core::Project,
+    Vec<u8>,
+) {
+    configured_inputs_with(|s| {
+        s.replace(
+            r#"<AbsoluteSegment Id="PAR" Address="15360" Size="8"><Data>AAAAAAAAAAA=</Data><Mask>//8A//////8=</Mask></AbsoluteSegment>"#,
+            r#"<AbsoluteSegment Id="PAR" Address="15360" Size="256"><Data>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAA==</Data><Mask>//8A/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////w==</Mask></AbsoluteSegment>"#,
+        )
+        .replace(
+            r#"LsmIdx="3" SegType="0" Address="15360" Size="8""#,
+            r#"LsmIdx="3" SegType="0" Address="15360" Size="256""#,
+        )
+    })
+}
+fn configured_inputs_with(
+    layout: impl Fn(&str) -> String,
+) -> (
+    tempfile::TempDir,
+    knx_productdb::Connection,
+    knx_core::Project,
+    Vec<u8>,
+) {
     use std::io::{Cursor, Read, Write};
     let (old_package, _) = synthetic_package(20);
     let mut zip = zip::ZipArchive::new(Cursor::new(old_package)).unwrap();
     let mut out = zip::ZipWriter::new(Cursor::new(Vec::new()));
     let convert = |s: &str| {
-        s.replace(SYN_ID, PROGRAM)
+        layout(s)
+            .replace(SYN_ID, PROGRAM)
             .replace("M-0000", "M-0001")
             .replace("ApplicationNumber=\"1\"", "ApplicationNumber=\"37381\"")
             .replace("ApplicationVersion=\"1\"", "ApplicationVersion=\"4\"")

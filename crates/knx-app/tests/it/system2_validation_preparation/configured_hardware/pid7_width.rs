@@ -6,6 +6,7 @@ pub(super) fn revision1(mut bundle: PreparedBundle) -> PreparedBundle {
     let record = bundle.hardware_preparation.as_mut().unwrap();
     record.revision = 1;
     record.pointer_width_policy = None;
+    record.post_load_octet_policy = None;
     bundle.binding.project_preparation_sha256 = Some(record.sha256().unwrap());
     bundle
 }

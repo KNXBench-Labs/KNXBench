@@ -31,6 +31,27 @@ pub struct ConfiguredHardwarePreview {
 }
 /// Shown for every source preview and every revision-2 observed record.
 pub(crate) const PID7_WIDTH_WARNING: &str = "PID 7 width, experimental and limited to this exact UP258 profile: one element of two or four octets is accepted on objects 1, 2 and 3. A two-octet object 1 reply was observed on one device; objects 2 and 3 rely on the public package declaration only and are unverified. The standard defines four octets. This makes no claim about masks or firmware.";
+/// One line per declared post-load octet the plan writes; empty when it writes none.
+fn post_load_warnings(
+    plan: &knx_core::commissioning::property_download::PropertyDownloadPlan,
+) -> Vec<String> {
+    use knx_net::commissioning::post_load_octets::PostLoadOctetAdmission;
+    let PostLoadOctetAdmission::Declared(octets) = super::post_load_octet_admission(plan) else {
+        return Vec::new();
+    };
+    octets
+        .iter()
+        .map(|o| {
+            let accepted: Vec<_> = o.accepted.iter().map(|v| format!("{v:02X}h")).collect();
+            format!(
+                "Firmware-maintained octet, limited to this exact UP258 profile: final verification accepts {} at object {} octet {:04X}h instead of the written value, because the device firmware clears this hidden download flag after load (observed on one device). Every other octet stays strictly verified; each tolerated octet is recorded as an observation.",
+                accepted.join(" or "),
+                o.object,
+                o.address
+            )
+        })
+        .collect()
+}
 /// Project-source preview is offline. Observed hardware records use the same source-bound
 /// confirmation; observation and chosen recovery track gain their own journal binding.
 pub(crate) fn project_hardware_preview(
@@ -73,6 +94,17 @@ pub(crate) fn project_hardware_preview(
         .hardware_preparation
         .as_ref()
         .is_none_or(|h| h.pointer_width_objects().is_some());
+    // Likewise a fresh observation admits the post-load octets its plan writes; an
+    // observed record does only from revision 3.
+    let post_load = if bundle
+        .hardware_preparation
+        .as_ref()
+        .is_none_or(|h| h.admits_post_load_octets())
+    {
+        post_load_warnings(&plan)
+    } else {
+        Vec::new()
+    };
     let preview = ConfiguredHardwarePreview {
         address: bundle.binding.target.clone(), program_id: profile.program_id,
         profile_id: bundle.binding.profile_id.clone(),
@@ -81,7 +113,7 @@ pub(crate) fn project_hardware_preview(
         parameter_values: source.request.values.len(), group_links: source.request.links.len(), flag_overrides: source.request.flag_overrides.len(),
         steps, data_octets, allocation_octets,
         not_written_octets: allocation_octets.checked_sub(data_octets).ok_or_else(|| invalid("configured preview coverage overflow"))?,
-        warnings: width_policy.then(|| PID7_WIDTH_WARNING.to_string()).into_iter().chain([
+        warnings: width_policy.then(|| PID7_WIDTH_WARNING.to_string()).into_iter().chain(post_load).chain([
             "EXPERIMENTAL: software-tested, hardware compatibility and functional outcome unverified; not ETS equivalence.".into(),
             "Masked bytes and unused table capacity are NOT written. Unload/reallocation byte survival and indirect firmware effects are unresolved; recovery is best-effort, never guaranteed.".into(),
             "Requires the same installed application, Loaded resources and matching source-applicable pointers. Historical allocator/task shape is NOT observable or certified by those reads; it remains an explicit experimental premise.".into(),

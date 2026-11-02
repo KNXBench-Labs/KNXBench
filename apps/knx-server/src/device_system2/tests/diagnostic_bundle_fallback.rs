@@ -44,6 +44,7 @@ async fn a_terminal_retained_system2_journal_is_reopened_and_exported_without_a_
     bundle.binding.serial = [0, 1, 2, 3, 4, 5];
     let hardware = ProjectHardwareRecord {
         pointer_width_policy: None,
+        post_load_octet_policy: None,
         revision: 1,
         operation: metadata.operation_id.clone(),
         recovery_track: RecoveryTrack::KnxBenchBestEffort,
@@ -174,6 +175,7 @@ fn persisted_cancelled_fixture(recordings_enabled: bool) -> AdmittedFixture {
     bundle.binding.serial = [0, 1, 2, 3, 4, 5];
     let hardware = ProjectHardwareRecord {
         pointer_width_policy: None,
+        post_load_octet_policy: None,
         revision: 1,
         operation: metadata.operation_id.clone(),
         recovery_track: RecoveryTrack::KnxBenchBestEffort,

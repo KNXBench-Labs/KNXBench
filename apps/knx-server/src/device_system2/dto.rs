@@ -49,8 +49,8 @@ pub(super) struct Preview {
 }
 /// Status output version; the private `Metadata` file and `Preview` stay at version 1.
 /// Version 2 added `failureDiagnostics`, version 3 `downloadResult`, version 4
-/// `finalStepFailures`; older exact-version clients refuse it.
-pub(super) const STATUS_SCHEMA_VERSION: u8 = 4;
+/// `finalStepFailures`, version 5 `postLoadOctets`; older exact-version clients refuse it.
+pub(super) const STATUS_SCHEMA_VERSION: u8 = 5;
 /// The operation identity the status shows, without the private file's schema version, so
 /// the flattened status carries exactly one `schemaVersion` key.
 #[derive(Clone, Serialize)]
@@ -98,6 +98,9 @@ pub(super) struct Status {
     /// backup exists for them (their stored bytes are zero placeholders).
     pub prestate_unreadable_allocations: Vec<UnreadableAllocation>,
     pub pointer_observations: Vec<PointerObservation>,
+    /// Written octets a verified final step found at their declared post-load value,
+    /// download before restore. Tolerated, never a failure.
+    pub post_load_octets: Vec<PostLoadOctet>,
     pub program_version_observation: Option<ProgramVersionObservation>,
     /// Typed, non-raw failure facts: at most one per run, download before restore.
     /// Never the private journal text; empty when none was recorded or it is unknown.
@@ -131,6 +134,18 @@ pub(super) struct PointerObservation {
     pub expected: String,
     pub observed: String,
     pub load_state: String,
+}
+/// A tolerated post-load octet: four lower-case hex digit address, two-digit octets; the
+/// prestate is null when its allocation prestate was unreadable.
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(super) struct PostLoadOctet {
+    pub run: &'static str,
+    pub object: u8,
+    pub address: String,
+    pub written: String,
+    pub observed: String,
+    pub prestate: Option<String>,
 }
 /// Object, four lower-case hex digit start address and length of one allocation.
 #[derive(Clone, Serialize)]

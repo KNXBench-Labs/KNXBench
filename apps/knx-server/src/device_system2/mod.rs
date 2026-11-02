@@ -62,6 +62,7 @@ fn initial(outcome: LocalOutcome) -> OperationProgress {
         prestate_differs: false,
         prestate_unreadable_allocations: Vec::new(),
         pointer_observations: Vec::new(),
+        post_load_octets: Vec::new(),
         program_version_observation: None,
         failure_diagnostics: Vec::new(),
         final_step_failures: Vec::new(),
@@ -191,6 +192,21 @@ impl Record {
                     load_state: LoadState::from_octet(o.record.state)
                         .map(|s| s.to_string())
                         .unwrap_or_else(|_| "Unknown".into()),
+                })
+                .collect(),
+            post_load_octets: p
+                .post_load_octets
+                .iter()
+                .map(|o| dto::PostLoadOctet {
+                    run: match o.run {
+                        PointerObservationRun::Download => "download",
+                        PointerObservationRun::Restore => "restore",
+                    },
+                    object: o.record.object,
+                    address: format!("{:04x}", o.record.address),
+                    written: dto::hex(&[o.record.written]),
+                    observed: dto::hex(&[o.record.observed]),
+                    prestate: o.record.prestate.map(|p| dto::hex(&[p])),
                 })
                 .collect(),
             program_version_observation: p.program_version_observation.as_ref().map(

@@ -142,7 +142,7 @@ it("rejects a diagnosis key on v1 and a missing or non-list diagnosis on v2", as
   const { failureDiagnostics: _omitted, ...missing } = status;
   for (const value of [
     { ...wireV1(status), failureDiagnostics: [] }, { ...wireV1(status), failureDiagnostics: [downloadDiagnostic] },
-    missing, { ...status, failureDiagnostics: null }, { ...status, failureDiagnostics: {} }, { ...status, schemaVersion: 5 }, { ...status, schemaVersion: 0 },
+    missing, { ...status, failureDiagnostics: null }, { ...status, failureDiagnostics: {} }, { ...status, schemaVersion: 6 }, { ...status, schemaVersion: 0 },
   ]) { reply(value); await expect(system2.getSystem2Status()).rejects.toThrow("System-2"); }
 });
 it("admits closed, count-consistent failure diagnostics in order, once per run", async () => {
@@ -321,6 +321,50 @@ it("reads report format 3 with the same closed final-step list and refuses a con
   const { finalStepFailures: _omitted, ...missing } = reportBody;
   for (const value of [missing, { ...both, format: 2 }, { ...reportBody, finalStepFailures: [{ ...finalDownloadMismatch, stage: "pointer" }] },
     { ...reportBody, finalStepFailures: [finalRestoreRead, finalDownloadMismatch] }, { ...reportBody, finalStepFailures: [{ ...finalDownloadMismatch, detail: "x" }] }]) {
+    reply(value); await expect(system2.getSystem2Report(status.operationId)).rejects.toThrow("System-2");
+  }
+});
+
+// Declared post-load octets (status v5, report format 4): a firmware-maintained flag, never bytes in the report.
+it("admits exact v5 post-load octets, download before restore, and normalizes v1 to v4 to none", async () => {
+  const { postLoadStatus, wireV3, wireV4 } = await import("./system2DownloadTestFixtures");
+  const emitted = JSON.parse(JSON.stringify(postLoadStatus));
+  reply(emitted); expect(await system2.getSystem2Status()).toEqual(postLoadStatus);
+  const [download] = postLoadStatus.postLoadOctets;
+  const both = { ...postLoadStatus, state: "restored", restoreAttempted: true, postLoadOctets: [{ ...download, prestate: null }, { ...download, run: "restore", prestate: "01" }] };
+  reply(both); expect(await system2.getSystem2Status()).toEqual(both);
+  expect(Object.keys(wireV4(postLoadStatus))).not.toContain("postLoadOctets");
+  reply(wireV4(postLoadStatus)); expect(await system2.getSystem2Status()).toEqual({ ...postLoadStatus, schemaVersion: 4, postLoadOctets: [] });
+  reply(wireV3(postLoadStatus)); expect((await system2.getSystem2Status())!.postLoadOctets).toEqual([]);
+  for (const wire of [wireV3, wireV4]) { reply({ ...wire(postLoadStatus), postLoadOctets: [] }); await expect(system2.getSystem2Status()).rejects.toThrow("System-2"); }
+});
+it("refuses malformed, extended, unchanged, misordered or restore-less v5 post-load octets", async () => {
+  const { postLoadStatus: row } = await import("./system2DownloadTestFixtures");
+  const [d] = row.postLoadOctets;
+  const r = { ...d, run: "restore" };
+  const { postLoadOctets: _omitted, ...missing } = row;
+  for (const value of [missing, { ...row, postLoadOctets: null }, { ...row, postLoadOctets: d }]) {
+    reply(value); await expect(system2.getSystem2Status()).rejects.toThrow("System-2");
+  }
+  for (const postLoadOctets of [
+    [{ ...d, observed: "01" }], [{ ...d, address: "3CF4" }], [{ ...d, address: "3cf" }], [{ ...d, written: "1" }], [{ ...d, observed: "000" }],
+    [{ ...d, prestate: "zz" }], [{ ...d, prestate: undefined }], [{ ...d, object: 256 }], [{ ...d, run: "retry" }], [{ ...d, raw: "x" }],
+    [{ run: d.run, object: d.object, address: d.address, written: d.written, observed: d.observed }], [r, d], 42, [null],
+  ]) { reply({ ...row, restoreAttempted: true, state: "restored", postLoadOctets }); await expect(system2.getSystem2Status()).rejects.toThrow("System-2"); }
+  reply({ ...row, postLoadOctets: [d, r] }); await expect(system2.getSystem2Status()).rejects.toThrow("System-2");
+  // Once per run and octet; a restore refuses unreadable allocations, so its prestate is never null.
+  for (const postLoadOctets of [[d, d], [d, r, r], [d, { ...r, prestate: null }]]) {
+    reply({ ...row, restoreAttempted: true, state: "restored", postLoadOctets }); await expect(system2.getSystem2Status()).rejects.toThrow("System-2");
+  }
+});
+it("reads report format 4 with run and object only and refuses bytes or a restore entry without recovery", async () => {
+  const withFlag = { ...reportBody, format: 4, download: { outcome: "finished", result: "verified", completedSteps: 27, totalSteps: 27 }, finalStepFailures: [], postLoadOctets: [{ run: "download", object: 3 }] };
+  reply(withFlag); expect(await system2.getSystem2Report(status.operationId)).toEqual(withFlag);
+  const none = { ...reportBody, format: 4, postLoadOctets: [] }; reply(none); expect(await system2.getSystem2Report(status.operationId)).toEqual(none);
+  const { postLoadOctets: _omitted, ...missing } = withFlag;
+  for (const value of [missing, { ...reportBody, postLoadOctets: [] }, { ...withFlag, postLoadOctets: [{ run: "download", object: 3, address: "3cf4" }] },
+    { ...withFlag, postLoadOctets: [{ run: "download", object: 3, written: "01" }] }, { ...withFlag, postLoadOctets: [{ run: "restore", object: 3 }] },
+    { ...withFlag, postLoadOctets: null }, { ...withFlag, format: 5 }]) {
     reply(value); await expect(system2.getSystem2Report(status.operationId)).rejects.toThrow("System-2");
   }
 });

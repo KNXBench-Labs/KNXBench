@@ -42,7 +42,7 @@ pub(crate) fn synthetic_old_device(
         ),
         (
             SimulatedSystem2Object::Application,
-            vec![(1024, 8), (15360, 8)],
+            vec![(1024, 8), (15360, parameter_segment_length(bundle))],
             0,
             true,
         ),
@@ -84,6 +84,26 @@ pub(crate) fn synthetic_old_device(
         );
     }
     device
+}
+
+/// Length of the bundle's parameter-segment allocation at 3C00h (8 in the default fixture).
+fn parameter_segment_length(bundle: &PreparedBundle) -> u16 {
+    use knx_app::property_validation_bundle::OperationRecord;
+    bundle
+        .normalized_plan
+        .steps
+        .iter()
+        .find_map(|step| match &step.operation {
+            OperationRecord::LoadControl { object: 3, octets }
+                if octets[0] == 3
+                    && octets[1] <= 1
+                    && u16::from_be_bytes([octets[2], octets[3]]) == 15360 =>
+            {
+                Some(u16::from_be_bytes([octets[4], octets[5]]))
+            }
+            _ => None,
+        })
+        .expect("fixture plan allocates the parameter segment")
 }
 
 /// The configured fixture's identity (manufacturer 1, application 9205h v4) on that OLD state.

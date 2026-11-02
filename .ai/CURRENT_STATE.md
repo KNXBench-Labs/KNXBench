@@ -1,24 +1,24 @@
 # Restart snapshot
 
-## WP-26 connection start (ACTIVE; owner WebUI task queue; observed 2026-11-02 16:35 CET)
-- WP-26: taken by WebUI on `feat/wp26-bus-connection-20261102`; own topic worktree.
-- Backend candidate: fail-fast monitor-start admission; System-2 priority and
-  existing named download/management holders, no queued late connection.
-- Independent review and holder-correction re-review APPROVE. Original RED4/
-  control1, holder RED2, final GREEN7; wait/System-2/validation/holder mutants
-  rejected. Catalogue block equalbase (14 tests green); Clippy clean.
-- Evidence `<profile-scratch>/wp26-bus-connection-20261102/`: raw attempts,
-  candidate/review bindings and review controls. NEXT: freeze and run selected
-  14-stage package gate (`gate-a1/`), then main-first gate/publication.
-- Queued next: shared web connection controller and status-bar drop-up, reusing
-  the existing session/discovery/preference; details in the WP-26 task file.
-- Selection never connects; no automatic retry/reconnect, USB or new consent
-  dialog. Brief concurrent readers may cause a manual-retry busy refusal.
-  No real bus/hardware/release/deployment Go. No gate accepted yet.
+## WP-26 controller/footer (ACTIVE; owner WebUI task queue; observed 2026-11-02 17:03 CET)
+- WP-26 controller/footer: taken by WebUI, planned branch/worktree
+  `feat/wp26-controller-footer-20261102` after this claim is published.
+- Backend A published `038845ef8`; review/re-review APPROVE, both14-stage gates
+  accepted (Rust1673/72ignored, corpus51/51, frozen inputs, user data untouched).
+  Acceptance: `docs/status/2026-11-02-wp26-nonqueueing-start.md`.
+- Current branch only closes backend docs and claims next scope; no UI worker yet.
+  NEXT: docs gate/publication, then create the next worktree and implement one
+  end-to-end bound-stop/controller/footer package, review and gate its actual join.
+- Decisions: `docs/open-work/WP-26-status-bar-bus-connection.md`. Shared session,
+  strict id+server-bound nonqueueing stop for new callers; legacy stop separate.
+  Preserve panel publication ordering; no stale connected state or implicit starts.
+- Active backend evidence `<profile-scratch>/wp26-bus-connection-20261102/`;
+  next contract `<profile-scratch>/wp26-controller-footer-20261102/admitted-contract.md`.
+- Pure selection; no auto retry/reconnect, USB, extra consent or real bus Go.
+  No release/deployment. Retire only owned backend trees/caches after archiving.
 
-## Retained boundaries (STANDING; observed 2026-11-02 16:35 CET)
+## Retained boundaries (STANDING; observed 2026-11-02 17:03 CET)
 - System-2 acceptance: `docs/status/2026-11-02-system2-selective-settlement.md`.
-  Its software/docs are published; own prior trees/caches retired, receipts private.
 - Root intentionally stale/dirty: preserve private/untracked files and other edits.
 - Foreign simulator-control-records worktree remains untouched; Alpha16 belongs
   to another track. Prior WP-03, issue31 and WP-08 evidence remains in docs/Git.

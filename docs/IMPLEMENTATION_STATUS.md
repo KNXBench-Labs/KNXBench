@@ -20,10 +20,12 @@ System-2 run. A held lock, or an admitted running System-2 operation, answers an
 immediate `409 gatewayBusy` before any connector call. The existing known download
 or management holder is preserved; an unknown held session uses
 `connecting: busMonitorOrGroupWrite`, and System-2 uses `system2Operation`.
-Existing guards, shutdown and malformed-gateway answers are unchanged. Seven mounted
-simulated-connector cases; no hardware. This is the backend prerequisite only:
-the connection controller and status-bar drop-up are not delivered
-([WP-26](open-work/WP-26-status-bar-bus-connection.md)).
+Existing guards, shutdown and malformed-gateway answers are unchanged. Main-first
+`038845ef8` passed independent review/re-review and both selected 14-stage package
+gates (1,673 Rust tests and 51/51 selected corpus cases per run). Seven mounted
+simulated-connector regressions cover the admission contract; no hardware,
+release or deployment acceptance. The controller/footer remain open.
+[Acceptance and boundaries](status/2026-11-02-wp26-nonqueueing-start.md).
 
 ## Selective System-2 settlement on an unchanged source (2 November 2026, source)
 

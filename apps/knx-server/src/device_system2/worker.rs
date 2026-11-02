@@ -7,6 +7,7 @@ use knx_app::{
     property_validation_bundle::PreparedBundle,
     system2_validation_preparation::{self as app, CurrentProjectHardware},
 };
+use knx_core::commissioning::pending::ProgrammingParts;
 use knx_net::{
     ApplicationService, BusError, Destination, ManagementTransport, Tpci, TunnelAckWait,
 };
@@ -284,20 +285,23 @@ async fn settle_off_runtime(
     let meta = meta.clone();
     tokio::task::spawn_blocking(move || {
         settlement::settle(&copy, &meta, &progress, run, |project, device| {
-            bundle.as_ref().is_some_and(|bundle| {
-                copy.product_db.as_ref().is_some_and(|owner| {
+            // Any refusal (source changed, missing, ambiguous, unreadable) credits nothing.
+            bundle
+                .as_ref()
+                .zip(copy.product_db.as_ref())
+                .and_then(|(bundle, owner)| {
                     owner
                         .with_read(|conn| {
                             Ok::<_, std::convert::Infallible>(
-                                app::admit_current_project_hardware(conn, project, device, bundle)
-                                    .is_ok(),
+                                app::current_project_hardware_parts(conn, project, device, bundle)
+                                    .ok(),
                             )
                         })
                         .ok()
                         .and_then(Result::ok)
-                        .unwrap_or(false)
+                        .flatten()
                 })
-            })
+                .unwrap_or(ProgrammingParts::NONE)
         })
     })
     .await
@@ -399,7 +403,9 @@ async fn unexpected_end(
             // Neither journal nor observed record can prove that nothing was written.
             Err(_) => journalless(),
         };
-        settlement::settle(&copy, &metadata, &progress, run, |_, _| false)
+        settlement::settle(&copy, &metadata, &progress, run, |_, _| {
+            ProgrammingParts::NONE
+        })
     })
     .await
     .unwrap_or(Receipt::Unavailable);

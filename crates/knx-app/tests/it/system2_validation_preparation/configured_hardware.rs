@@ -2,6 +2,7 @@
 use super::*;
 mod admission;
 mod failures;
+mod per_part;
 mod pid7_policy;
 mod pid7_two_octet;
 mod pid7_width;

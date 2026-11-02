@@ -1,7 +1,9 @@
 //! Source/profile-bound experimental preparation, with separate observed-target hardware admission.
 
 mod configured_hardware_preview;
+mod current_parts;
 mod hardware;
+pub use current_parts::current_project_hardware_parts;
 pub use hardware::post_load_octet_admission;
 mod project;
 pub use configured_hardware_preview::{configured_hardware_preview, ConfiguredHardwarePreview};

@@ -50,3 +50,16 @@ updates supersede them; they are not new work assignments.
 No real gateway or device was contacted for this package; Chromium only, the
 native WebKitGTK window was not exercised. Ledger `KL-180`.
 <!-- END retained catalogue record -->
+
+## Current monitor-start admission (2 November 2026, source)
+
+`POST /api/bus/monitor/start` takes the bus-session lock with `try_lock`.
+An admitted running System-2 operation is named `system2Operation`, including
+when its shared locks are not held. Otherwise known download and management
+holders are checked without waiting; only an unknown held session lock uses
+`connecting: busMonitorOrGroupWrite`. Each refusal is `409 gatewayBusy` before
+any connector call and never stops a run or clears a lease. Malformed gateway,
+shutdown and the lock-then-check download/programming guards (ADR-0045 §4) are
+unchanged. Other routes retain their existing admission behavior. This is the
+WP-26 backend prerequisite, not the status-bar controller or footer, and is
+software-tested only.

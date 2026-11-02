@@ -36,6 +36,7 @@ const OWNED_PREFIXES = ["log-", "bus-", "monitor-", "telegram-"];
  */
 const UNSTYLED_BY_DESIGN = new Set([
   "log-entry-message", // test hook; the entry's own card supplies the look
+  "log-panel-import-provenance", // query hook; normal paragraph/scope styling supplies the look
   "bus-compose-destination", // inputs, styled as inputs by the shell
   "bus-compose-dpt",
   "bus-compose-value",

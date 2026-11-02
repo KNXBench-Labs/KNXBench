@@ -20,6 +20,7 @@ const apiMock = vi.hoisted(() => ({
   pollBusTelegrams: vi.fn(),
   writeBusValue: vi.fn(),
   getSessionLog: vi.fn(),
+  getImportEvidence: vi.fn(),
   discoverBusInterfaces: vi.fn().mockResolvedValue({ interfaces: [] }),
   undo: vi.fn(),
   redo: vi.fn(),
@@ -354,7 +355,9 @@ describe("one editing workspace", () => {
     expect(mutatingFetchesIn(dptGraph)).toEqual([]);
     expect(dptGraph.get("dptLabels.ts")).not.toMatch(/\b(?:fetch|XMLHttpRequest|WebSocket|EventSource)\s*\(/);
     // Import-evidence admission/export serialization is pure through api.ts.
-    // Its Dashboard panel and explicit report request never enter this window.
+    // WP-25 adds the full-report panel to LogPanel's import graph. Its explicit
+    // read is unreachable here: the companion passes tree=null and no importFocus.
+    // The runtime log-tab test below pins that no report action/request appears.
     const importEvidenceGraph = valueImportGraph("importEvidence.ts");
     expect([...importEvidenceGraph.keys()]).toEqual(["importEvidence.ts"]);
     expect(apiCallsIn(importEvidenceGraph)).toEqual([]);
@@ -395,6 +398,7 @@ describe("one editing workspace", () => {
       "FlowImageExportDialog.tsx",
       "FsPicker.tsx",
       "HelpTip.tsx",
+      "ImportEvidencePanel.tsx", // Explicit read only; unreachable with the companion's null tree.
       // Raw details add clipboard/UI-only work, not an API or project mutation.
       "LogEntryDetails.tsx",
       "LogExportDialog.tsx",
@@ -487,6 +491,7 @@ describe("one editing workspace", () => {
       "errorMessage",
       "errorStatus",
       "fetchFlowSnapshot",
+      "getImportEvidence", // Authenticated GET only, never a project mutation.
       "getSessionLog",
       "pollBusTelegrams",
       "startBusMonitor",
@@ -528,6 +533,8 @@ describe("one editing workspace", () => {
     expect(labels).not.toContain("Save");
     expect(labels).not.toContain("Undo");
     expect(labels).not.toContain("Redo");
+    expect(host!.querySelector(".import-report-panel")).toBeNull();
+    expect(apiMock.getImportEvidence).not.toHaveBeenCalled();
   });
 });
 

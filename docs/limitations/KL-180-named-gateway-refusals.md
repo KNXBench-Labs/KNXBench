@@ -87,10 +87,17 @@ which is shown as "no session-bound disconnect" and never falls back to the
 global stop. The download page's holder notice still uses the legacy stop.
 
 The client publishes an action's side effects only while it still owns them:
-a start answer from a server lifetime other than the one observed last, and a
-stop answer for a session after a newer one appeared in the window's session
-record, the activity view or the monitor panel, change nothing (no achievement,
-record, panel reset or forget) and are never followed by a compensating stop.
+a start answer from a server lifetime other than the one observed last, a start
+or stop answer for a session after another one appeared during the request (a
+session record published meanwhile, any session the activity view named even if
+a later read failed, or a session the monitor panel adopted), change nothing (no
+achievement, record, panel reset or forget) and are never followed by a
+compensating stop; the message then says the window's state changed and asks to
+check the status, without claiming a newer connection. A monitor poll answer
+that crossed a context change is not acted on, and a monitor or controller
+forget only clears the record of its own session. Policy: a valid answer from a
+new server lifetime that arrives before any read of that lifetime is not
+adopted either (conservative; the status read shows the truth).
 An admitted System-2 run outranks a retained monitor in the status bar, and a
 monitor identity the bound stop could not name is shown as unknown. Toasts and
 the autosave countdown are anchored above the measured status bar.

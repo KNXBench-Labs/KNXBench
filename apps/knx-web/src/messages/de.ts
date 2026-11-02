@@ -4521,6 +4521,6 @@ export const messages: Record<MessageKey, string> = {
   "busConnection.error.connect": "Die Verbindung konnte nicht geöffnet werden.",
   "busConnection.error.disconnect": "Die Verbindung konnte nicht getrennt werden.",
   "busConnection.error.unsupported": "Dieser Server bietet kein sitzungsgebundenes Trennen. Nichts wurde getrennt.",
-  "busConnection.error.stale": "Der Server wurde während der Anfrage neu gestartet. Nichts wurde übernommen; prüfe den Status.",
-  "busConnection.error.staleStop": "Die Trennung ist erfolgt, aber eine neuere Verbindung besteht; sie blieb unverändert.",
+  "busConnection.error.stale": "Der Server hat das Verbinden beantwortet, aber der Verbindungsstand dieses Fensters hat sich inzwischen geändert; die Antwort wurde nicht übernommen. Prüfe den Status.",
+  "busConnection.error.staleStop": "Der Server hat die Trennung bestätigt, aber der Verbindungsstand dieses Fensters hat sich inzwischen geändert und wurde nicht aktualisiert. Prüfe den Status.",
 };

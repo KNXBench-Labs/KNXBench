@@ -91,6 +91,10 @@ let reading: Promise<void> | null = null;
 let readAgain = false;
 let pollers = 0;
 let stopPolling: (() => void) | null = null;
+/** Sessions the activity view named while this window's action ran; kept through later unknown reads. */
+let seenDuringAction: BoundBusSession[] = [];
+/** The session record as it was when the action started (another window may publish one meanwhile). */
+let recordAtActionStart: ReturnType<typeof readSessionContext> = null;
 
 function publish(next: Partial<BusConnectionState>): void {
   state = { ...state, ...next };
@@ -129,6 +133,9 @@ async function readOnce(): Promise<void> {
     lastIncarnation = incarnation;
   }
   publish({ view, restarted });
+  if (state.action !== null && (view.phase === "connected" || view.phase === "lost")) {
+    seenDuringAction.push({ sessionId: view.sessionId, serverIncarnation: view.serverIncarnation });
+  }
 }
 
 /**
@@ -191,6 +198,8 @@ export function acquireBusConnectionPolling(): () => void {
 function takeToken(action: "connecting" | "disconnecting"): number | null {
   if (state.action !== null) return null;
   readGeneration += 1;
+  seenDuringAction = [];
+  recordAtActionStart = readRecord();
   publish({ action });
   return epoch;
 }
@@ -210,8 +219,26 @@ function ofObservedLifetime(identity: BoundBusSession): boolean {
   return lastIncarnation === null || lastIncarnation === identity.serverIncarnation;
 }
 
-const sameSession = (a: BoundBusSession, b: { sessionId: number; serverIncarnation?: string }) =>
+type SessionIdentity = { sessionId: number; serverIncarnation?: string };
+const sameSession = (a: SessionIdentity, b: SessionIdentity) =>
   a.sessionId === b.sessionId && a.serverIncarnation === b.serverIncarnation;
+
+function readRecord() {
+  return typeof window === "undefined" ? null : readSessionContext(window.localStorage);
+}
+
+/**
+ * Whether another session than `identity` became known while the action
+ * ran: a session record published meanwhile (one already there before the
+ * request is not evidence), or any session the activity view named, even if
+ * a later read failed or the window was hidden. A larger id alone means nothing.
+ */
+function otherSessionAppeared(identity: BoundBusSession): boolean {
+  const record = readRecord();
+  const published = record !== null && !sameSession(identity, record)
+    && (recordAtActionStart === null || !sameSession(record, recordAtActionStart) || record.at !== recordAtActionStart.at);
+  return published || seenDuringAction.some((seen) => !sameSession(identity, seen));
+}
 
 /**
  * Whether anything newer than `identity` was seen while its stop ran: the
@@ -219,10 +246,11 @@ const sameSession = (a: BoundBusSession, b: { sessionId: number; serverIncarnati
  * another one. The same process alone is not ownership.
  */
 function supersededDuringStop(identity: BoundBusSession): boolean {
-  const record = typeof window === "undefined" ? null : readSessionContext(window.localStorage);
+  const record = readRecord();
   if (record !== null && !sameSession(identity, record)) return true;
   const { view } = state;
-  return (view.phase === "connected" || view.phase === "lost") && !sameSession(identity, view);
+  return ((view.phase === "connected" || view.phase === "lost") && !sameSession(identity, view))
+    || otherSessionAppeared(identity);
 }
 
 /**
@@ -234,7 +262,7 @@ function supersededDuringStop(identity: BoundBusSession): boolean {
  */
 export async function connectBusSession(
   endpoint: string,
-  hooks: { beforePublish?: (started: BusMonitorStartResponse) => void } = {},
+  hooks: { beforePublish?: (started: BusMonitorStartResponse) => void; stillOwned?: () => boolean } = {},
 ): Promise<BusActionResult<BusMonitorStartResponse>> {
   const token = takeToken("connecting");
   if (token === null) return { ok: false, reason: "inFlight" };
@@ -248,7 +276,10 @@ export async function connectBusSession(
     if (!api.isBoundBusSession(started)) {
       return { ok: false, reason: "failed", error: new Error("The server answered with a malformed bus session identity.") };
     }
-    if (token !== epoch || !ofObservedLifetime(started)) return { ok: false, reason: "stale" };
+    if (token !== epoch || !ofObservedLifetime(started) || otherSessionAppeared(started)
+      || hooks.stillOwned?.() === false) {
+      return { ok: false, reason: "stale" };
+    }
     emitAchievementEvent({ type: "busMonitorStarted" });
     hooks.beforePublish?.(started);
     recordSessionContext(started.sessionId, started.serverIncarnation);
@@ -287,7 +318,9 @@ export async function disconnectBusSession(
       return { ok: false, reason: "stale" };
     }
     hooks.afterStop?.(summary);
-    forgetSessionContext();
+    // Only A's record (or none) is cleared; never one published meanwhile.
+    const record = readRecord();
+    if (record === null || sameSession(identity, record)) forgetSessionContext();
     return { ok: true, value: summary };
   } finally {
     releaseToken();
@@ -312,6 +345,8 @@ export function resetBusConnectionForTests(): void {
   readGeneration += 1;
   epoch += 1;
   lastIncarnation = null;
+  seenDuringAction = [];
+  recordAtActionStart = null;
   reading = null;
   readAgain = false;
 }

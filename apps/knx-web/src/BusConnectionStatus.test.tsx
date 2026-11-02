@@ -266,3 +266,24 @@ describe("R3: System-2 outranks a retained monitor in the footer", () => {
     expect(apiMock.stopBoundBusMonitor).not.toHaveBeenCalled();
   });
 });
+
+describe("R8: a suppressed stop publication never invents a newer connection", () => {
+  it("words a server restart with no session as changed state, in English and German", async () => {
+    apiMock.busActivity.mockResolvedValue(snapshot({ sessions: [monitor("active")] }));
+    await render();
+    let finish!: (value: BusMonitorStopResponse) => void;
+    apiMock.stopBoundBusMonitor.mockReturnValueOnce(new Promise((resolve) => { finish = resolve; }));
+    await act(async () => action().click());
+    apiMock.busActivity.mockResolvedValue(snapshot({ serverIncarnation: "process-b" }));
+    await act(async () => window.dispatchEvent(new Event("focus")));
+    await flush();
+    await act(async () => finish(summary));
+    await flush();
+    const text = q(".bus-connection-error")!.textContent!;
+    expect(text).toBe(en["busConnection.error.staleStop"]);
+    expect(text).not.toMatch(/newer/i);
+    expect(de["busConnection.error.staleStop"]).not.toMatch(/neuere/i);
+    expect(stateText()).toContain(en["busConnection.state.disconnected"]);
+    expect(apiMock.stopBusMonitor).not.toHaveBeenCalled();
+  });
+});

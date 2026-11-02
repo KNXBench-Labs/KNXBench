@@ -3,7 +3,7 @@
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { BusMonitorStartResponse, BusMonitorStopResponse, BusMonitorTelegramsResponse } from "./api";
+import type { BusMonitorStartResponse, BusMonitorStopResponse, BusMonitorTelegramsResponse, BusTelegramRow } from "./api";
 import type { ActivitySnapshot, SessionActivity } from "./liveActivity";
 
 const apiMock = vi.hoisted(() => ({
@@ -34,15 +34,20 @@ const snapshot = (serverIncarnation: string, sessions: SessionActivity[] = []) =
   busyLocks: [], untracked: [],
 }) satisfies ActivitySnapshot;
 const monitor = (id: number): SessionActivity => ({ kind: "busMonitor", id, gateway: "192.0.2.1:3671", state: "active" });
-const telegrams = (sessionId: number, nextSince = 1): BusMonitorTelegramsResponse => ({
+const telegrams = (sessionId: number, nextSince = 1, rows: BusTelegramRow[] = []): BusMonitorTelegramsResponse => ({
   sessionId, serverIncarnation: "process-a", contextStatus: "current", projectOpen: true, status: "active",
-  nextSince, droppedBefore: 0, telegrams: [],
+  nextSince, droppedBefore: 0, telegrams: rows,
+});
+const row = (seq: number): BusTelegramRow => ({
+  seq, timestamp: "2026-11-02T12:00:00Z", source: "1.1.9", destination: "1/2/3", destinationName: null,
+  service: "GroupValueWrite", rawPayload: "0x01 (6-bit)", decoded: { kind: "value", dpt: "DPST-1-1", text: "On" },
 });
 const notFound = () => Object.assign(new Error("no active bus session"), { status: 404 });
 function deferred<T>() {
   let resolve!: (value: T) => void;
-  const promise = new Promise<T>((done) => { resolve = done; });
-  return { promise, resolve };
+  let reject!: (reason: unknown) => void;
+  const promise = new Promise<T>((done, fail) => { resolve = done; reject = fail; });
+  return { promise, resolve, reject };
 }
 
 let host: HTMLDivElement;
@@ -174,5 +179,140 @@ describe("mounted footer + monitor panel", () => {
     expect(reattachPolls()).toBe(3);
     expect(readSessionContext(localStorage)).toBeNull();
     expect(panelButton("Connect")).toBeDefined();
+  });
+});
+
+describe("re-review R6-R8 in the mounted join", () => {
+  const stopA = { sessionId: 1, serverIncarnation: "process-a", telegramCount: 0, droppedCount: 0 } satisfies BusMonitorStopResponse;
+  const capturedRows = () => host.querySelectorAll(".bus-monitor-panel tbody tr").length;
+  const panelError = () => host.querySelector(".bus-monitor-panel span.field-error")?.textContent ?? "";
+
+  async function attachedToA() {
+    await mount();
+    apiMock.startBusMonitor.mockResolvedValueOnce({ sessionId: 1, serverIncarnation: "process-a", assignedAddress: "1.1.5" });
+    apiMock.pollBusTelegrams.mockResolvedValue(telegrams(1));
+    await typeGatewayAndConnect();
+    await flush();
+    expect(panelButton("Disconnect")).toBeDefined();
+    achievements.length = 0;
+  }
+
+  it("R6: an old 404 from the stop window cannot erase B's record published meanwhile", async () => {
+    await attachedToA();
+    const old404 = deferred<BusMonitorTelegramsResponse>();
+    apiMock.pollBusTelegrams.mockReset();
+    apiMock.pollBusTelegrams.mockReturnValueOnce(old404.promise).mockImplementation(() => new Promise(() => {}));
+    await act(async () => { await vi.advanceTimersByTimeAsync(1000); });
+    const stop = deferred<BusMonitorStopResponse>();
+    apiMock.stopBoundBusMonitor.mockReturnValueOnce(stop.promise);
+    await act(async () => panelButton("Disconnect")!.click());
+    recordSessionContext(2, "process-a");
+    const recordB = readSessionContext(localStorage);
+    expect(recordB).toMatchObject({ sessionId: 2, serverIncarnation: "process-a" });
+    await act(async () => { old404.reject(notFound()); });
+    await flush();
+    expect(readSessionContext(localStorage)).toEqual(recordB);
+    // No false detach either: the stale absence is not acted on.
+    expect(host.textContent).not.toContain("ended elsewhere");
+    await act(async () => { stop.resolve(stopA); });
+    await flush();
+    expect(readSessionContext(localStorage)).toEqual(recordB);
+    expect(apiMock.stopBusMonitor).not.toHaveBeenCalled();
+    expect(apiMock.startBusMonitor).toHaveBeenCalledTimes(1);
+  });
+
+  it("R6 control: a fresh 404 for the owned A with nothing newer still ends it and forgets A", async () => {
+    await attachedToA();
+    apiMock.pollBusTelegrams.mockRejectedValue(notFound());
+    await act(async () => { await vi.advanceTimersByTimeAsync(1000); });
+    await flush();
+    expect(readSessionContext(localStorage)).toBeNull();
+    expect(panelButton("Connect")).toBeDefined();
+    expect(host.textContent).toContain("ended");
+  });
+
+  it("R6: a fresh 404 for A ends A but never clears a record naming another session", async () => {
+    await attachedToA();
+    recordSessionContext(2, "process-a");
+    const recordB = readSessionContext(localStorage);
+    apiMock.pollBusTelegrams.mockRejectedValue(notFound());
+    await act(async () => { await vi.advanceTimersByTimeAsync(1000); });
+    await flush();
+    expect(panelButton("Connect")).toBeDefined();
+    expect(readSessionContext(localStorage)).toEqual(recordB);
+  });
+
+  it("R6: a successful poll answer that crossed a context change does not adopt its outdated session", async () => {
+    await attachedToA();
+    const old = deferred<BusMonitorTelegramsResponse>();
+    apiMock.pollBusTelegrams.mockReset();
+    apiMock.pollBusTelegrams.mockReturnValueOnce(old.promise).mockImplementation(() => new Promise(() => {}));
+    await act(async () => { await vi.advanceTimersByTimeAsync(1000); });
+    recordSessionContext(3, "process-a");
+    const recordC = readSessionContext(localStorage);
+    await act(async () => { old.resolve(telegrams(2, 1, [row(1)])); });
+    await flush();
+    expect(host.querySelector(".bus-monitor-replaced-notice")).toBeNull();
+    expect(capturedRows()).toBe(0);
+    expect(readSessionContext(localStorage)).toEqual(recordC);
+  });
+
+  it("R7: the panel adopting B by itself (no record, no activity) fences the delayed start A", async () => {
+    await mount();
+    const start = deferred<BusMonitorStartResponse>();
+    apiMock.startBusMonitor.mockReturnValueOnce(start.promise);
+    await typeGatewayAndConnect();
+    apiMock.pollBusTelegrams.mockImplementation(async (since: number) =>
+      telegrams(2, 3, since === 0 ? [row(1), row(2)] : []));
+    await act(async () => { window.dispatchEvent(new Event("focus")); });
+    await flush();
+    expect(capturedRows()).toBe(2);
+    expect(readSessionContext(localStorage)).toBeNull();
+    await act(async () => { start.resolve({ sessionId: 1, serverIncarnation: "process-a", assignedAddress: "1.1.5" }); });
+    await flush();
+    expect({ achievements, record: readSessionContext(localStorage), rows: capturedRows() })
+      .toEqual({ achievements: [], record: null, rows: 2 });
+    expect(apiMock.stopBoundBusMonitor).not.toHaveBeenCalled();
+  });
+
+  it("R7: a delayed start A keeps the panel's adopted B, its rows and its exact record", async () => {
+    await mount();
+    const start = deferred<BusMonitorStartResponse>();
+    apiMock.startBusMonitor.mockReturnValueOnce(start.promise);
+    await typeGatewayAndConnect();
+    // Another window stopped A and started B in the same process, and recorded B.
+    apiMock.pollBusTelegrams.mockImplementation(async (since: number) =>
+      telegrams(2, 3, since === 0 ? [row(1), row(2)] : []));
+    apiMock.busActivity.mockResolvedValue(snapshot("process-a", [monitor(2)]));
+    recordSessionContext(2, "process-a");
+    await flush();
+    await act(async () => { await vi.advanceTimersByTimeAsync(2000); });
+    const recordB = readSessionContext(localStorage);
+    expect(capturedRows()).toBe(2);
+    expect(panelButton("Disconnect")).toBeDefined();
+    await act(async () => { start.resolve({ sessionId: 1, serverIncarnation: "process-a", assignedAddress: "1.1.5" }); });
+    await flush();
+    expect({ achievements, record: readSessionContext(localStorage), rows: capturedRows() })
+      .toEqual({ achievements: [], record: recordB, rows: 2 });
+    expect(panelButton("Disconnect")).toBeDefined();
+    expect(apiMock.startBusMonitor).toHaveBeenCalledTimes(1);
+    expect(apiMock.stopBoundBusMonitor).not.toHaveBeenCalled();
+    expect(apiMock.stopBusMonitor).not.toHaveBeenCalled();
+  });
+
+  it("R8: an ordinary stop whose panel already saw the end claims no newer connection", async () => {
+    await attachedToA();
+    const stop = deferred<BusMonitorStopResponse>();
+    apiMock.stopBoundBusMonitor.mockReturnValueOnce(stop.promise);
+    await act(async () => panelButton("Disconnect")!.click());
+    apiMock.pollBusTelegrams.mockRejectedValue(notFound());
+    await act(async () => { await vi.advanceTimersByTimeAsync(1000); });
+    await flush();
+    expect(readSessionContext(localStorage)).toBeNull();
+    await act(async () => { stop.resolve(stopA); });
+    await flush();
+    expect(panelError()).not.toMatch(/newer/i);
+    expect(readSessionContext(localStorage)).toBeNull();
+    expect(apiMock.stopBusMonitor).not.toHaveBeenCalled();
   });
 });

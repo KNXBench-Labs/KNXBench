@@ -174,3 +174,101 @@ describe("R3/R4: the view is green only for an admissible bound identity without
     expect(connectionFromActivity(older)).toEqual({ phase: "connected", sessionId: 5, serverIncarnation: "process-a" });
   });
 });
+
+describe("R7: a start answer for A never owns a same-process B seen during the request", () => {
+  async function startAWhile(during: () => Promise<void>, hooks: { stillOwned?: () => boolean } = {}) {
+    apiMock.busActivity.mockResolvedValue(snapshot("process-a"));
+    await refreshBusConnection();
+    const start = deferred<BusMonitorStartResponse>();
+    apiMock.startBusMonitor.mockReturnValueOnce(start.promise);
+    const hook = vi.fn();
+    const action = connectBusSession("192.0.2.10:3671", { beforePublish: hook, ...hooks });
+    await during();
+    const before = readSessionContext(localStorage);
+    start.resolve(startedA);
+    return { result: await action, hook, before };
+  }
+  const staleWithoutEffects = (outcome: { result: unknown; hook: { mock: { calls: unknown[] } }; before: unknown }) => {
+    expect(outcome.result).toEqual({ ok: false, reason: "stale" });
+    expect(outcome.hook.mock.calls.length).toBe(0);
+    expect(achievements).toEqual([]);
+    expect(readSessionContext(localStorage)).toEqual(outcome.before);
+    expect(apiMock.startBusMonitor).toHaveBeenCalledTimes(1);
+    expect(apiMock.stopBoundBusMonitor).not.toHaveBeenCalled();
+    expect(apiMock.stopBusMonitor).not.toHaveBeenCalled();
+    expect(readBusConnectionForTests().action).toBeNull();
+  };
+
+  it("keeps B's exact record published by another window during the request", async () => {
+    const outcome = await startAWhile(async () => { recordSessionContext(6, "process-a"); });
+    expect(outcome.before).toMatchObject({ sessionId: 6, serverIncarnation: "process-a" });
+    staleWithoutEffects(outcome);
+  });
+
+  it("refuses when only the activity snapshot showed B during the request", async () => {
+    const outcome = await startAWhile(async () => {
+      apiMock.busActivity.mockResolvedValue(snapshot("process-a", [monitor(6)]));
+      await refreshBusConnection();
+    });
+    staleWithoutEffects(outcome);
+  });
+
+  it.each([
+    ["a failed read", async () => {
+      apiMock.busActivity.mockRejectedValueOnce(Object.assign(new Error("down"), { status: 503 }));
+      await refreshBusConnection();
+    }],
+    ["a hidden window", async () => {
+      vi.spyOn(document, "visibilityState", "get").mockReturnValue("hidden");
+      await refreshBusConnection();
+    }],
+  ])("remembers B seen during the request after %s", async (_name, then) => {
+    const outcome = await startAWhile(async () => {
+      apiMock.busActivity.mockResolvedValueOnce(snapshot("process-a", [monitor(6)]));
+      await refreshBusConnection();
+      await then();
+      expect(readBusConnectionForTests().view.phase).toBe("unknown");
+    });
+    staleWithoutEffects(outcome);
+  });
+
+  it("refuses when the caller adopted another session meanwhile", async () => {
+    const outcome = await startAWhile(async () => {}, { stillOwned: () => false });
+    staleWithoutEffects(outcome);
+  });
+
+  it("publishes over a record that was already there before the request, and over its own A", async () => {
+    recordSessionContext(3, "process-a");
+    const outcome = await startAWhile(async () => {
+      apiMock.busActivity.mockResolvedValue(snapshot("process-a", [monitor(5)]));
+      await refreshBusConnection();
+    });
+    expect(outcome.result).toEqual({ ok: true, value: startedA });
+    expect(outcome.hook).toHaveBeenCalledTimes(1);
+    expect(achievements).toEqual(["busMonitorStarted"]);
+    expect(readSessionContext(localStorage)).toMatchObject({ sessionId: 5, serverIncarnation: "process-a" });
+  });
+
+  it("pins the conservative policy: a valid B answer after the last read named A is not adopted", async () => {
+    apiMock.busActivity.mockResolvedValue(snapshot("process-a"));
+    await refreshBusConnection();
+    apiMock.startBusMonitor.mockResolvedValueOnce({ ...startedA, serverIncarnation: "process-b" });
+    await expect(connectBusSession("192.0.2.10:3671")).resolves.toEqual({ ok: false, reason: "stale" });
+    expect({ achievements, record: readSessionContext(localStorage) }).toEqual({ achievements: [], record: null });
+    expect(apiMock.startBusMonitor).toHaveBeenCalledTimes(1);
+    expect(apiMock.stopBoundBusMonitor).not.toHaveBeenCalled();
+  });
+});
+
+describe("R2 hook boundary: the forget never clears a record published by the hook itself", () => {
+  it("keeps B when afterStop publishes it", async () => {
+    apiMock.stopBoundBusMonitor.mockResolvedValueOnce(stoppedA);
+    recordSessionContext(5, "process-a");
+    let recordB: unknown;
+    const result = await disconnectBusSession({ sessionId: 5, serverIncarnation: "process-a" }, {
+      afterStop: () => { recordSessionContext(6, "process-a"); recordB = readSessionContext(localStorage); },
+    });
+    expect(result).toEqual({ ok: true, value: stoppedA });
+    expect(readSessionContext(localStorage)).toEqual(recordB);
+  });
+});

@@ -605,6 +605,40 @@ fn genuine_pointer_observations_reuse_the_validated_original_snapshot() {
     assert_eq!(reopened.progress().pointer_observations.len(), 4);
 }
 
+#[test]
+fn post_load_octet_observations_are_refused_and_leave_the_journal_untouched() {
+    use knx_net::commissioning::post_load_octets::PostLoadOctetObservation;
+    let bundle = bundle();
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("store");
+    let mut store = OperationStore::create(&path, bundle.binding.clone()).unwrap();
+    let before = journal_bytes(&path);
+    let observed = [PostLoadOctetObservation {
+        object: 3,
+        address: 0x3CF4,
+        written: 1,
+        observed: 0,
+    }];
+    for restoring in [false, true] {
+        let refused = event(
+            &mut store,
+            &bundle,
+            PropertyJournalEvent::PostLoadOctetObservations(&observed),
+            restoring,
+        )
+        .unwrap_err();
+        assert!(
+            refused.contains("refused before the final write"),
+            "{refused}"
+        );
+    }
+    assert_eq!(
+        journal_bytes(&path),
+        before,
+        "nothing recorded, nothing dropped silently"
+    );
+}
+
 // Journal-only derivation of the download result: no message, count or free text is read.
 mod download_result {
     use super::*;

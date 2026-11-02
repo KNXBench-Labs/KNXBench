@@ -34,6 +34,7 @@ pub mod master_reset;
 pub mod memory_download;
 pub mod pointer_width;
 pub mod post_download;
+pub mod post_load_octets;
 pub mod programming_button_wait;
 pub mod property_download;
 pub mod property_recovery;

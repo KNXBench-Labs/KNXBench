@@ -11,6 +11,7 @@ mod live_identify;
 mod live_individual_address_write;
 mod live_memory_readonly;
 mod live_programming_mode;
+mod post_load_octets;
 mod private_telegram_log;
 mod property_download;
 mod property_recovery;

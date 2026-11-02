@@ -1041,6 +1041,9 @@ async fn successful_execution_restores_prior_verify_bit_and_journals_every_norma
                 PropertyJournalEvent::InProcedurePointerObservation(observation) => {
                     panic!("matching shape produced observation {observation:?}")
                 }
+                PropertyJournalEvent::PostLoadOctetObservations(observations) => {
+                    panic!("legacy admission produced post-load octets {observations:?}")
+                }
             }
             Ok(())
         },
@@ -1772,6 +1775,7 @@ async fn final_pointer_observations_are_durable_before_the_verify_mode_restore_w
             PropertyJournalEvent::OperationCompleted { .. } => Ok(()),
             PropertyJournalEvent::RecoveryAcquired(_) => Ok(()),
             PropertyJournalEvent::InProcedurePointerObservation(_) => Ok(()),
+            PropertyJournalEvent::PostLoadOctetObservations(_) => Ok(()),
             PropertyJournalEvent::FinalPointerObservations(_) => {
                 Err("durable store failed".to_string())
             }

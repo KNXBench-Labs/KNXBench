@@ -12,6 +12,17 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Import findings remain reachable after reopening (2 November 2026, main-only)
+
+WP-25 reprojects the stored primary report's counted findings into the session
+log on native open, with historical/opening-time provenance and direct explicit
+full-report access. Missing legacy evidence and capped/mismatching lists remain
+explained; original JSON is not rewritten. Main-first source `3455fdb9c` passed
+independent review/re-review and all 15 selected package stages (Vitest 4,897,
+Rust 1,662, selected corpus 51/51). EN/DE production/dev downloads and narrow
+layouts are checked; no release or hardware acceptance.
+[Acceptance and remaining boundaries](status/2026-11-02-wp25-import-findings.md).
+
 ## Project history limits in readable MiB (1 November 2026)
 
 Display fix, no storage or limit change. Since ADR-0142 the stored-image and

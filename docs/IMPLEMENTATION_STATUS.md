@@ -22,11 +22,11 @@ rail under the toolbar. Both share one trusted presentation
 request it. Effects (start-up rail draw, hover base line, dialog settle, File
 menu unroll, workspace-bar hand-over) sit in the new reduction-only motion
 category **Theme effects (Rail)** and stop under Off or OS reduced motion.
-Focused evidence: web unit suite 315 files / 4,918 tests, Chromium theme
-matrices (theme state, control roles/focus, separators, dialogs) with both
-palettes, real-browser animation probes and the Rust diagnostic-bundle theme
-test. Chromium with intercepted synthetic replies only; native WebKitGTK/Orca
-and Firefox remain unverified ([limits](KNOWN_LIMITATIONS.md#catalogue-rail-presentation)).
+Main-first source `ed01e2bd3` is published after independent review/closure and
+all 15 selected package stages, with unchanged inputs and checked user data
+untouched. [Acceptance and measured coverage](status/2026-11-02-rail-themes.md).
+Chromium uses intercepted synthetic replies; native WebKitGTK/Orca and Firefox
+remain unverified ([limits](KNOWN_LIMITATIONS.md#catalogue-rail-presentation)).
 
 ## Status-bar bus connection with a session-bound stop (2 November 2026, source; WP-26)
 

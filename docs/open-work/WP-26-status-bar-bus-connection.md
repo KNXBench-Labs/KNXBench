@@ -17,6 +17,16 @@ Go, with System-2 work first. Active scope and owner: `.ai/CURRENT_STATE.md`.
 3. Add the footer drop-up, separate explicit connect/disconnect action and bus
    settings link. Gateway selection while connected never switches the session.
 
+Progress, 2 November 2026: step 1 (backend prerequisite) is implemented in source
+and awaits review and gates; it is not delivered UI. A monitor start now uses
+`try_lock` on the bus-session lock and refuses a held lock or an admitted running
+System-2 operation with the existing `gatewayBusy` before any connector call.
+Known download/management holders are retained, System-2 is named
+`system2Operation`, and only an unknown lock uses `busMonitorOrGroupWrite`;
+seven mounted FakeConnector cases cover it. Brief concurrent session readers can
+also cause a busy refusal: retry must remain explicit, never automatic. Steps 2
+and 3 (controller, footer) remain open.
+
 Only the backend prerequisite is claimed for active implementation initially;
 controller and footer follow after its reviewed delivery. Test using simulated
 connectors and intercepted HTTP only, never the real installation.

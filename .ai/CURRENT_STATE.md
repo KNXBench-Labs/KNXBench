@@ -1,18 +1,22 @@
 # Restart snapshot
 
-## WP-26 connection start (ACTIVE; owner WebUI task queue; observed 2026-11-02 16:02 CET)
+## WP-26 connection start (ACTIVE; owner WebUI task queue; observed 2026-11-02 16:35 CET)
 - WP-26: taken by WebUI on `feat/wp26-bus-connection-20261102`; own topic worktree.
-- Current scope: fail-fast server monitor-start admission under held bus/session
-  locks and admitted System-2 ownership, with structured refusal and zero connects.
-- Queued after reviewed backend delivery: shared web connection controller and
-  status-bar drop-up, reusing the existing bus session/discovery/preference.
-- Decisions and exact order: `docs/open-work/WP-26-status-bar-bus-connection.md`.
-  Selection never connects; no auto-reconnect, USB support or new consent dialog.
-- Source `897f33d40`; evidence `<profile-scratch>/wp26-bus-connection-20261102/`.
-  NEXT: regression RED/GREEN, independent review, scoped gate and main-first delivery.
-  No active gate yet. No real bus/hardware/release/deployment Go.
+- Backend candidate: fail-fast monitor-start admission; System-2 priority and
+  existing named download/management holders, no queued late connection.
+- Independent review and holder-correction re-review APPROVE. Original RED4/
+  control1, holder RED2, final GREEN7; wait/System-2/validation/holder mutants
+  rejected. Catalogue block equalbase (14 tests green); Clippy clean.
+- Evidence `<profile-scratch>/wp26-bus-connection-20261102/`: raw attempts,
+  candidate/review bindings and review controls. NEXT: freeze and run selected
+  14-stage package gate (`gate-a1/`), then main-first gate/publication.
+- Queued next: shared web connection controller and status-bar drop-up, reusing
+  the existing session/discovery/preference; details in the WP-26 task file.
+- Selection never connects; no automatic retry/reconnect, USB or new consent
+  dialog. Brief concurrent readers may cause a manual-retry busy refusal.
+  No real bus/hardware/release/deployment Go. No gate accepted yet.
 
-## Retained boundaries (STANDING; observed 2026-11-02 16:02 CET)
+## Retained boundaries (STANDING; observed 2026-11-02 16:35 CET)
 - System-2 acceptance: `docs/status/2026-11-02-system2-selective-settlement.md`.
   Its software/docs are published; own prior trees/caches retired, receipts private.
 - Root intentionally stale/dirty: preserve private/untracked files and other edits.

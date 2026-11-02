@@ -97,8 +97,10 @@ export default function GroupAddressTable(props: {
   const externalScope = rangeScope !== null && externalGroups.length === 1 ? externalGroups[0].key : null;
   const baseResult = selectGroupAddressRows(index, { query, filter, scope: externalScope }, dpt => dptDisplay(dpt, language));
   const baseRows = baseResult.rows;
-  const allowed = new Set(baseRows.map(row => row.key));
-  const rows = selectGroupAddressRows(index, { query, filter, scope: validScope }, dpt => dptDisplay(dpt, language)).rows.filter(row => allowed.has(row.key));
+  // Explorer scope is the initial view; an offered range navigation replaces it.
+  // Intersecting two independent scopes hides addresses in a nonempty sibling.
+  const rows = validScope === null ? baseRows
+    : selectGroupAddressRows(index, { query, filter, scope: validScope }, dpt => dptDisplay(dpt, language)).rows;
   const selectedRows = index.rows.filter(row => selection?.kind === "group_address" && row.node.id === selection.id);
   const selected = selectedRows.length === 1 ? selectedRows[0].node : null;
   const shared: GroupAddressWorkspaceViewProps = { installation, index, rows, baseRows, scope: validScope,

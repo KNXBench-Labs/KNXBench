@@ -21,9 +21,10 @@ Contract: [system2-download-result](../contracts/system2-download-result.md).
   tolerated value; every other byte stays strict. Open: a field run of a build that contains it
   (not requested), and the exact clear time (Load Completed or restart).
 - Per-part source equivalence stays open: a source that changed in any part still credits
-  nothing. Since 2 November 2026 (source, focused proof) a verified run on a proven
-  unchanged source credits the parts the current project still states as written
-  ([contract](../contracts/system2-download-result.md#settlement)); no hardware run.
+  nothing. Since main-first `0d6299187` (2 November 2026) a verified run on a proven
+  unchanged source credits the parts the current project still states as written.
+  Independent re-review and both selected 14-stage package gates passed
+  ([acceptance](../status/2026-11-02-system2-selective-settlement.md)); no hardware run.
 - Field verification by the reporter is not requested; no hardware retry is needed
   for the software change.
 

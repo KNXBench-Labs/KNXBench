@@ -6,7 +6,7 @@ the former dated sections are in the [archive](history/OPEN_WORK_2026-10-25.md).
 
 | ID | Task | Status | Details |
 | --- | --- | --- | --- |
-| WP-26 | Bus-connection drop-up with connect button in the status bar | Backend admission delivered; session-bound stop and shared controller/footer in progress; USB needs a transport first | [WP-26](open-work/WP-26-status-bar-bus-connection.md) |
+| WP-26 | Bus-connection drop-up with connect button in the status bar | IP connection controller, bound stop and footer delivered on main; USB still needs its own transport package | [WP-26](open-work/WP-26-status-bar-bus-connection.md) |
 | WP-27 | Compare button in the device editor | Planned: awaiting implementation Go | [WP-27](open-work/WP-27-device-editor-compare.md) |
 | WP-28 | Group-address Columns and Atlas views show no addresses for a sub-range | Reported: cause unverified, awaiting implementation Go | [WP-28](open-work/WP-28-ga-columns-atlas-empty-table.md) |
 | S2-02 | System-2: own-run busy hint and missing refusal reason (#30) | P1: diagnostic shipped in Alpha 17, reporter re-test can be requested; actual failure unresolved | [S2-02](open-work/S2-02-gateway-busy-after-failed-runs.md) |

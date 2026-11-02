@@ -17,20 +17,23 @@ Go, with System-2 work first. Active scope and owner: `.ai/CURRENT_STATE.md`.
 3. Add the footer drop-up, separate explicit connect/disconnect action and bus
    settings link. Gateway selection while connected never switches the session.
 
-Progress, 2 November 2026: step 1 is delivered main-first as `038845ef8`, with
+Historical backend-only checkpoint, 2 November 2026: step 1 was delivered main-first as `038845ef8`, with
 independent review/re-review and both selected 14-stage package gates passed.
 [Acceptance and boundaries](../status/2026-11-02-wp26-nonqueueing-start.md).
-This does not deliver the controller or footer. Their active next package adds
+That checkpoint did not include the controller or footer. The package below adds
 session-and-server-bound non-queueing stop, then the shared controller and menu.
 Known download/management holders and System-2 priority are retained; brief
 session readers may cause busy refusal, with explicit manual retry only.
 
-Progress, 2 November 2026 (implementation branch, pending independent review
-and gates): the session-bound stop route, the shared web controller
-(`busConnection.ts`) and the status-bar control (`BusConnectionStatus.tsx`) are
-implemented together; the monitor panel connects and disconnects through the
-controller and stops only its own session. The download page's holder notice
-remains on the legacy global stop as a documented boundary. Limits:
+Delivered on main, 2 November 2026, as `7ea7ff6dd`: session-bound stop, the shared
+web controller (`busConnection.ts`) and the status-bar control
+(`BusConnectionStatus.tsx`) are implemented together; the monitor panel connects
+and disconnects through that controller and stops only its own session. All nine
+runtime review findings and the browser-fixture review are closed. The selected
+15-stage main-first gate passed with frozen inputs and checked, untouched user
+data. [Acceptance and remaining boundaries](../status/2026-11-02-wp26-status-bar-connection.md).
+The download page's holder notice remains on the legacy global stop. USB is still
+open, so WP-26 is not a claim of complete transport coverage. Limits:
 [KL-180](../limitations/KL-180-named-gateway-refusals.md#session-bound-stop-and-status-bar-connection-2-november-2026-source).
 
 ## Controller/footer admission decisions (2 November 2026)
@@ -58,10 +61,10 @@ remains on the legacy global stop as a documented boundary. Limits:
   actual panel/footer join, strict HTTP refusals and EN/DE wide/narrow browser
   fixtures with discovery intercepted. No real installation access.
 
-The backend prerequisite claim is released. The shared-controller/footer package
-is taken by the same WebUI task queue in its next owned worktree; its exact branch
-and current execution state are in `.ai/CURRENT_STATE.md`. Test using simulated
-connectors and intercepted HTTP only, never the real installation.
+The backend and IP controller/footer claims are released. Any further WP-26
+source work needs a newly bounded assignment; the USB transport gap below is not
+covered by this delivery. Tests used simulated connectors and intercepted HTTP
+only, never the real installation.
 
 ## Requested outcome
 

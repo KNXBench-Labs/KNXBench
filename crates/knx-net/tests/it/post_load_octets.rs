@@ -378,6 +378,45 @@ async fn a_recovery_replay_stays_strict_at_a_declared_octet() {
 }
 
 #[tokio::test]
+async fn a_restore_identical_to_the_download_tolerates_and_reports_like_it() {
+    // The prestate already held every written value, so the recovery plan is the download.
+    let (device, plan, preconditions) = established().await;
+    device.preset_memory(u32::from(START) + 2, &WRITE);
+    let preconditions = flag_may_clear(preconditions);
+    let download = run(&device, &plan, &preconditions, &[]).await;
+    let snapshot = download.snapshot.unwrap();
+    assert!(download
+        .result
+        .unwrap()
+        .post_load_octet_observations
+        .is_empty());
+    let recovery = snapshot.recovery_plan(&plan).unwrap();
+    assert_eq!(recovery, plan);
+    let change: [(u16, &[u8]); 1] = [(FLAG, &[0])];
+    let mut unused = None;
+    let mut journaled = Vec::new();
+    let report = restore_experimental_property_plan(
+        &device,
+        &plan,
+        &snapshot,
+        auth(&device),
+        AuthorisationPlan::Skip,
+        timing(),
+        &mut journal(&device, &change, false, &mut unused, &mut journaled),
+        &|| false,
+    )
+    .await
+    .unwrap();
+    let observed = cleared(Some(WRITE[1]));
+    assert_eq!(report.post_load_octet_observations, [observed]);
+    assert_eq!(journaled.len(), 1, "journaled, never silent");
+    let mut actual = PRESTATE.to_vec();
+    actual[2..6].copy_from_slice(&WRITE);
+    actual[OFFSET] = 0;
+    assert_eq!(snapshot.allocation_mismatch(0, &recovery, actual), None);
+}
+
+#[tokio::test]
 async fn an_undeclared_octet_set_on_the_struct_is_refused_before_any_frame() {
     let (device, plan, mut preconditions) = established().await;
     preconditions.post_load_octets = declared(vec![PostLoadOctet {

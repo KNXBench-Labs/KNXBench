@@ -390,6 +390,11 @@ describe("one editing workspace", () => {
     // #13 adds `LogExportDialog.tsx`: the Log's one Export… button opens it.
     // It holds the scope choice and calls the Log's existing local-file export
     // (`sessionLogExport.ts`, already here); no fetch, no project state.
+    //
+    // WP-26 adds `busConnection.ts`: the monitor's Connect/Disconnect go
+    // through the shared controller (one action token, bound stop). It reads
+    // the activity snapshot and calls the same start and a session-bound stop;
+    // it holds no project state.
     expect([...graph.keys()].sort()).toEqual([
       "BusComposeForm.tsx",
       "BusMonitorPanel.tsx",
@@ -412,6 +417,7 @@ describe("one editing workspace", () => {
       "api.ts",
       "appUiScale.ts", // Root computed style only; no API or project mutation.
       "bundledLanguagePacks.ts",
+      "busConnection.ts",
       "busContext.ts",
       "busDiscovery.ts",
       "busMonitorCapture.ts",
@@ -486,16 +492,23 @@ describe("one editing workspace", () => {
     // of which issue a mutating request:
     //   grep -cE '^export (async )?function ' api.ts
     //   grep -cE 'method: "(POST|PUT|DELETE|PATCH)"' api.ts
+    //
+    // WP-26: the monitor's disconnect is the session-bound stop now (still a
+    // bus-side POST after a deliberate click, never the project), the shared
+    // controller reads the activity snapshot (GET), and `isBoundBusSession`
+    // is a pure identity check.
     expect(apiCallsIn(graph).sort()).toEqual([
+      "busActivity", // Read-only snapshot; never waits on a bus lock.
       "discoverBusInterfaces",
       "errorMessage",
       "errorStatus",
       "fetchFlowSnapshot",
       "getImportEvidence", // Authenticated GET only, never a project mutation.
       "getSessionLog",
+      "isBoundBusSession", // Pure identity validation, no request.
       "pollBusTelegrams",
       "startBusMonitor",
-      "stopBusMonitor",
+      "stopBoundBusMonitor",
       "writeBusValue",
     ]);
 

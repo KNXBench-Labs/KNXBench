@@ -60,7 +60,8 @@ for (const language of ["en", "de"] as const) {
         await page.getByRole("combobox").press("Enter");
         await page.getByLabel(messages["busMonitor.gatewayHost"]).fill("192.0.2.10");
         await page.getByLabel(messages["busMonitor.gatewayPort"]).fill("3671");
-        await page.getByRole("button", { name: messages["busMonitor.connect"], exact: true }).click();
+        // The status bar has its own Connect (WP-26); this case is the panel's.
+        await page.locator(".bus-monitor-panel").getByRole("button", { name: messages["busMonitor.connect"], exact: true }).click();
 
         const error = page.locator(".bus-monitor-panel .field-error").filter({ hasText: refusal.expected(messages) });
         await expect(error).toHaveText(refusal.expected(messages));

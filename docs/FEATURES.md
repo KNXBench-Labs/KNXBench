@@ -363,6 +363,7 @@ records the tested commit separately from artifact publication verification.
 | Persistent server data | Projects/catalog/settings | alpha.6 |
 | Gateway discovery | KNXnet/IP interfaces | alpha.6 |
 | Bus monitor | Tunnelling; telegram decoding; since alpha.15 distinct no-project, unknown-address, missing-type, cleared-default and codec outcomes ([contract](contracts/dpt-selection.md#monitor-resolution-reasons-ui-01-18-october-2026)) | alpha.6 |
+| Status-bar bus connection | State of the shared bus session, IP interface selection that only saves the preferred gateway, separate Connect/Disconnect stopping only its own session (WP-26, software-tested) | unreleased |
 | Telegram Flow | Read-only; session-local graph | alpha.6 |
 | Separate Flow window | Source-bound; shared monitor | alpha.6 |
 | Flow images | PNG or 1–30 s GIF of the viewport, with consent | alpha.11 |

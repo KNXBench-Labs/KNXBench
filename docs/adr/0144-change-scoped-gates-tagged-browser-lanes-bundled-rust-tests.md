@@ -104,6 +104,39 @@ are implemented.
    Development builds keep line tables only and build third-party
    dependencies optimised without debug information.
 
+## Owner-authorized amendment: bounded data-only inputs (2026-11-02)
+
+Routine selection distinguishes four audited data facts without a generic bypass:
+existing app-shell HTML selects all default browser specs plus the `dialogs`
+production smoke; a proven font-only npm manifest/lock delta does the same; the
+unchanged-version AppImage reader and the always-checked limitations ledger read
+do not spuriously select xtask while both reader revisions match their audited
+SHA-256 pins; literal shipped-theme registry data (and optional added literal test
+tuples) selects the complete diagnostic section unit-test prefix instead of the
+server's reverse dependents and corpus. The exact policy and command are in
+[Verification](../VERIFICATION.md#bounded-data-only-routine-selections).
+
+Proof comes from actual merge-base blobs and final working bytes, never HEAD as
+an assumed baseline. Root dependency maps must agree before and after, and closed
+font records cannot introduce scripts, executable/transitive dependencies or
+non-font package changes. Both audited reader source hashes must remain unchanged;
+additional readers retain their ordinary dependency edges. Diagnostic source and
+test bytes outside the exact data regions must match the base; tests-only edits,
+duplicates, nonliteral entries or assertion edits do not qualify. A normal Rust
+change affecting the server supersedes the narrow stage. The narrow stage uses
+the existing workspace lease, isolated homes, hardware-variable scrubbing and
+direct exit checks, and additionally refuses zero/ignored-only or wrong-prefix
+test inventories. Its reason and executed inventory appear in the plan/receipt.
+
+The helper itself is complete-gate infrastructure. Missing/deleted or ambiguous
+comparison evidence, changed readers, changed manifest version, build/launch
+inputs, unknown paths and ordinary Rust changes retain conservative selection.
+All Web unit/type/build checks and default browser coverage remain for shell and
+font changes; shared CSS/typography still uses the conservative browser graph.
+Changed production specs/helpers add their owning suites even with a global
+default lane. `--full` is unchanged. This decision claims no measured speedup;
+Python fixture/mutation evidence does not replace actual Rust or product gates.
+
 ## Alternatives considered
 
 - **Keep the hash admission and automate re-admission.** Re-admission still

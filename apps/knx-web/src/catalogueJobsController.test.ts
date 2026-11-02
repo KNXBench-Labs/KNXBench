@@ -142,7 +142,9 @@ describe("App-owned catalogue controller", () => {
    await c.start(new File(["x"], "x.knxprod"), "large", true, "two");
    if (typeof callback === "function") callback();
    await vi.advanceTimersByTimeAsync(0); expect(api.status).not.toHaveBeenCalled();
-   await vi.advanceTimersByTimeAsync(750); expect(api.status).toHaveBeenCalledTimes(1);
+   await c.refresh(); expect(api.status).toHaveBeenCalledTimes(1);
+   expect(vi.getTimerCount()).toBe(1);
+   await vi.advanceTimersByTimeAsync(750); expect(api.status).toHaveBeenCalledTimes(2);
    expect(c.getSnapshot().status).toEqual(next);
    expect(vi.getTimerCount()).toBe(1);
   } finally { disconnect(); }

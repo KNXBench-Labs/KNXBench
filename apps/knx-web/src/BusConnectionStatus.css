@@ -1,0 +1,40 @@
+/* Status-bar bus connection: reuses the shell tokens; static indicator, no motion. */
+.workbench-status { position: relative; flex-wrap: wrap; row-gap: 4px; align-items: center; }
+.bus-connection { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; min-width: 0; }
+.bus-connection-state { display: inline-flex; align-items: center; gap: 6px; min-width: 0; overflow-wrap: anywhere; }
+.bus-connection-indicator { width: 8px; height: 8px; flex: none; border-radius: 50%; border: 1px solid var(--knx-muted); background: transparent; }
+.bus-connection-indicator[data-tone="connected"] { background: var(--knx-success-color); border-color: var(--knx-success-color); }
+.bus-connection-indicator[data-tone="warning"] { background: var(--knx-warning-color); border-color: var(--knx-warning-color); }
+.bus-connection-indicator[data-tone="pending"] { border-color: var(--knx-accent); background: color-mix(in srgb, var(--knx-accent) 40%, transparent); }
+.bus-connection-trigger, .bus-connection-action, .bus-connection-tools button {
+  font: inherit; color: var(--knx-foreground); background: transparent; border: 1px solid var(--knx-border);
+  border-radius: var(--knx-radius-button); padding: 2px 8px; cursor: pointer; min-width: 0; max-width: 100%; overflow-wrap: anywhere; text-align: left;
+}
+.bus-connection-trigger:hover, .bus-connection-action:hover:not(:disabled), .bus-connection-tools button:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--knx-accent) 8%, var(--knx-surface));
+}
+.bus-connection button:disabled { cursor: not-allowed; opacity: 0.6; }
+.bus-connection button:focus-visible { outline: 2px solid var(--knx-accent); outline-offset: 1px; }
+.bus-connection-error { color: var(--knx-error-color); overflow-wrap: anywhere; }
+/* Anchored to the status bar, not the trigger: it always fits the bar's width. */
+.bus-connection-panel {
+  position: absolute; bottom: calc(100% + 4px); right: 12px; z-index: 40;
+  width: min(26rem, calc(100% - 24px)); max-height: max(8rem, calc(100dvh / var(--app-ui-scale, 1) - 160px)); overflow: auto;
+  box-sizing: border-box; padding: 10px; display: flex; flex-direction: column; gap: 6px;
+  color: var(--knx-foreground); background: var(--knx-surface); border: 1px solid var(--knx-border);
+  border-radius: var(--knx-radius-card); box-shadow: var(--knx-overlay-shadow); font-size: 12px;
+}
+.bus-connection-detail { margin: 0; color: var(--knx-muted); overflow-wrap: anywhere; }
+.bus-connection-heading { margin: 4px 0 0; font-weight: 600; }
+.bus-connection-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.bus-connection-list .bus-discovery-option { width: 100%; display: flex; flex-wrap: wrap; gap: 2px 8px; text-align: left; overflow-wrap: anywhere; }
+.bus-connection-reason { color: var(--knx-muted); font-style: italic; }
+.bus-connection-tools { display: flex; flex-wrap: wrap; gap: 6px; }
+/* Toasts and the autosave countdown keep their corner, but above the measured
+   (possibly wrapped) status bar, so they never cover its controls. Scoped to the
+   workbench; App.tsx measures --workbench-footer-clearance in layout pixels. */
+.workbench > .toast-stack {
+  bottom: var(--workbench-footer-clearance, 0px);
+  max-height: calc(100dvh / var(--app-ui-scale, 1) - var(--workbench-footer-clearance, 0px) - 2rem);
+}
+.workbench > .autosave-countdown { bottom: calc(4.5rem + var(--workbench-footer-clearance, 0px)); }

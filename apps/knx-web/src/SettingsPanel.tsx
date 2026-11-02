@@ -215,7 +215,16 @@ function ImportReport(props: { t: Translate; outcome: ImportOutcome }) {
  * copy after every import/remove — the shared store already notifies
  * every mounted reader, itself included.
  */
+/** Focuses and scrolls to one section heading of the settings workspace holding `from`. */
+function focusSettingsSection(from: Element | null, id: string): void {
+  const heading = from?.closest(".settings-workspace")?.querySelector<HTMLElement>(`#settings-${id}`);
+  heading?.focus({ preventScroll: true });
+  heading?.scrollIntoView({ block: "start", behavior: "instant" });
+}
+
 export default function SettingsPanel(props: {
+  /** WP-26: focus a section once per nonce, after the entry focus on the title. */
+  jumpTo?: { section: "bus"; nonce: number };
   appearance?: ReturnType<typeof useAppearance>;
   themes: readonly ThemeDef[];
   activeThemeId: string;
@@ -266,6 +275,14 @@ export default function SettingsPanel(props: {
   const headingRef = useRef<HTMLHeadingElement>(null);
   // Entry only: language changes and immediate setting edits must keep focus.
   useEffect(() => { headingRef.current?.focus(); }, []);
+  // Declared after the entry focus so a jump on first open wins; a new
+  // nonce repeats it while Settings is already open.
+  const jumpNonce = props.jumpTo?.nonce;
+  const jumpSection = props.jumpTo?.section;
+  useEffect(() => {
+    if (jumpSection === undefined) return;
+    focusSettingsSection(headingRef.current, jumpSection);
+  }, [jumpSection, jumpNonce]);
   const [uiLanguage, setUiLanguage] = useUiLanguage();
   const t = useTranslate();
   const [preferredGateway, setPreferredGateway] = usePreferredGateway();
@@ -394,9 +411,7 @@ export default function SettingsPanel(props: {
           ["debug", "settings.section.debug"],
         ] as const).map(([id, key]) => <a key={id} href={`#settings-${id}`} onClick={(event) => {
           event.preventDefault();
-          const heading = event.currentTarget.closest(".settings-workspace")?.querySelector<HTMLElement>(`#settings-${id}`);
-          heading?.focus({ preventScroll: true });
-          heading?.scrollIntoView({ block: "start", behavior: "instant" });
+          focusSettingsSection(event.currentTarget, id);
         }}>{t(key)}</a>)}
       </nav>
       <section className="settings-section">

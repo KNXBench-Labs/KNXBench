@@ -99,6 +99,14 @@ const apiMock = vi.hoisted(() => ({
   // installation on its network, and it keeps the search out of every
   // test here that is about something else.
   discoverBusInterfaces: vi.fn().mockResolvedValue({ interfaces: [] }),
+  // WP-26: the status bar reads the activity snapshot; it never starts or stops on its own.
+  busActivity: vi.fn().mockResolvedValue({
+    serverIncarnation: "process-a", coverage: "partial", historyState: "disabled", sessions: [], oneShot: [],
+    oneShotDropped: 0, busyLocks: [], untracked: ["groupWrite", "serialAddress"],
+  }),
+  startBusMonitor: vi.fn(),
+  stopBusMonitor: vi.fn(),
+  stopBoundBusMonitor: vi.fn(),
   moveDeviceToLine: vi.fn(),
   moveDeviceToBuildingPart: vi.fn(),
   setDeviceDescription: vi.fn(),
@@ -5026,5 +5034,45 @@ describe("independent review retained-modal witness", () => {
       expect(document.activeElement).toBe(opener);
       expect(host!.querySelector(".workbench-pane-left")!.closest("[inert]")).toBeNull();
     } finally { await act(async () => root.unmount()); }
+  });
+});
+
+describe("App — WP-26 status-bar bus connection", () => {
+  it("sits before the version, starts nothing on mount or focus, and keeps the version last", async () => {
+    const root = await renderApp("98.76.54-test");
+    await act(async () => { window.dispatchEvent(new Event("focus")); });
+    const footer = host!.querySelector(".workbench-status")!;
+    expect(footer.querySelector(".bus-connection")).not.toBeNull();
+    expect(footer.querySelector(":scope > span:last-child")?.textContent).toBe("v98.76.54-test");
+    expect(footer.lastElementChild?.previousElementSibling?.classList.contains("bus-connection")).toBe(true);
+    expect(apiMock.busActivity).toHaveBeenCalled();
+    expect(apiMock.startBusMonitor).not.toHaveBeenCalled();
+    expect(apiMock.stopBusMonitor).not.toHaveBeenCalled();
+    expect(apiMock.stopBoundBusMonitor).not.toHaveBeenCalled();
+    await act(async () => root.unmount());
+  });
+
+  it("opens Settings at the bus section after the title focus, and again on a repeat", async () => {
+    const root = await renderApp();
+    const openBusSettings = async () => {
+      await act(async () => host!.querySelector<HTMLButtonElement>(".bus-connection-trigger")!.click());
+      const link = [...host!.querySelectorAll<HTMLButtonElement>(".bus-connection-tools button")]
+        .find((button) => button.textContent === enMessages["busConnection.settings"])!;
+      await act(async () => link.click());
+    };
+    await openBusSettings();
+    expect(document.activeElement?.id).toBe("settings-bus");
+    (document.activeElement as HTMLElement).blur();
+    await openBusSettings();
+    expect(document.activeElement?.id).toBe("settings-bus");
+    await act(async () => root.unmount());
+  });
+
+  it("keeps the toolbar Settings button on the page title", async () => {
+    const root = await renderApp();
+    await act(async () => host!.querySelector<HTMLButtonElement>(`button[aria-label="${enMessages["toolbar.settings"]}"]`)!.click());
+    expect(document.activeElement?.id).not.toBe("settings-bus");
+    expect(document.activeElement?.tagName).toBe("H1");
+    await act(async () => root.unmount());
   });
 });

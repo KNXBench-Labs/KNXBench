@@ -12,6 +12,20 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Status-bar bus connection with a session-bound stop (2 November 2026, source; WP-26)
+
+The status bar shows the shared bus session's state (connected, lost, gateway
+busy, unclear, unknown, not connected) with a static indicator and text, a
+drop-up of discovered IP interfaces and the saved gateway, and a separate
+Connect/Disconnect button. Choosing an interface only saves the preferred
+gateway; Connect uses it, and a running connection is never switched. The new
+`POST /api/bus/monitor/stop-bound` stops only the named session and never waits;
+the footer and the bus monitor panel use it, the legacy stop is unchanged. One
+web controller shares the activity-derived view and a single action token
+between the footer and the panel. Details and limits:
+[KL-180](limitations/KL-180-named-gateway-refusals.md#session-bound-stop-and-status-bar-connection-2-november-2026-source).
+Software-tested only (fake connectors, Vitest, intercepted Chromium).
+
 ## Monitor start refuses a held tunnel reservation at once (2 November 2026, source; WP-26 backend prerequisite)
 
 `POST /api/bus/monitor/start` no longer queues behind the bus-session lock, so a

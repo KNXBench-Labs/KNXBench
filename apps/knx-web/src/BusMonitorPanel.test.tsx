@@ -16,6 +16,7 @@ import type {
 const apiMock = vi.hoisted(() => ({
   startBusMonitor: vi.fn(),
   stopBusMonitor: vi.fn(),
+  stopBoundBusMonitor: vi.fn(),
   pollBusTelegrams: vi.fn(),
   writeBusValue: vi.fn(),
   // T25: the panel searches for interfaces on mount, so every test in
@@ -25,8 +26,9 @@ const apiMock = vi.hoisted(() => ({
   fetchFlowSnapshot: vi.fn(),
 }));
 
-vi.mock("./api", () => ({
+vi.mock("./api", async (importOriginal) => ({
   ...apiMock,
+  isBoundBusSession: (await importOriginal<typeof import("./api")>()).isBoundBusSession,
   errorMessage: (error: unknown) => (error instanceof Error ? error.message : String(error)),
   // Duck-typed, mirroring `api.ts`'s real `errorStatus` — a mocked
   // rejection just needs a `.status` number property, no class export to
@@ -56,6 +58,7 @@ import { publishProjectContext, recordSessionContext } from "./busContext";
 // `resetBusDiscoveryForTests`'s own comment on why module state outlives
 // a component.
 import { resetBusDiscoveryForTests } from "./busDiscovery";
+import { connectBusSession, disconnectBusSession, resetBusConnectionForTests } from "./busConnection";
 import { splitGatewayEndpoint } from "./gatewayEndpoint";
 import { savePreferredGateway } from "./gatewayPreference";
 import { getSetting, initSettings, resetSettingsForTests, setSetting } from "./settingsStore";
@@ -282,7 +285,7 @@ beforeEach(() => {
   // only thing every other test in this file has to look at.
   resetBusDiscoveryForTests();
   apiMock.discoverBusInterfaces.mockResolvedValue({ interfaces: [] });
-  apiMock.stopBusMonitor.mockResolvedValue({
+  apiMock.stopBoundBusMonitor.mockResolvedValue({
     sessionId: 1,
     serverIncarnation: "process-a",
     telegramCount: 0,
@@ -292,6 +295,7 @@ beforeEach(() => {
 
 afterEach(() => {
   resetBusDiscoveryForTests();
+  resetBusConnectionForTests();
   host?.remove();
   host = undefined;
   vi.clearAllMocks();
@@ -525,7 +529,7 @@ describe("BusMonitorPanel", () => {
         clickButton("Disconnect");
         await vi.advanceTimersByTimeAsync(0);
       });
-      expect(apiMock.stopBusMonitor).toHaveBeenCalledTimes(1);
+      expect(apiMock.stopBoundBusMonitor).toHaveBeenCalledTimes(1);
       expect(host!.textContent).toContain("Stopped session");
     });
 
@@ -898,7 +902,7 @@ describe("BusMonitorPanel", () => {
   });
 
   it("surfaces a stop-time drain-task warning instead of swallowing it", async () => {
-    apiMock.stopBusMonitor.mockResolvedValue({
+    apiMock.stopBoundBusMonitor.mockResolvedValue({
       sessionId: 1,
       serverIncarnation: "process-a",
       telegramCount: 12,
@@ -1006,7 +1010,8 @@ describe("BusMonitorPanel and the shared session's context", () => {
       await tick();
       expect(apiMock.pollBusTelegrams.mock.calls.slice(count)).toEqual([[1, true], [1, true], [1, true]]);
       expect(host!.querySelectorAll("tbody tr")).toHaveLength(1);
-      expect(apiMock.stopBusMonitor).not.toHaveBeenCalled();
+      expect(apiMock.stopBoundBusMonitor).not.toHaveBeenCalled();
+    expect(apiMock.stopBusMonitor).not.toHaveBeenCalled();
 
       apiMock.pollBusTelegrams.mockResolvedValueOnce(telegramsResponse({
         nextSince: 5,
@@ -1054,7 +1059,7 @@ describe("BusMonitorPanel and the shared session's context", () => {
       const pollsWhilePaused = apiMock.pollBusTelegrams.mock.calls.length;
       apiMock.pollBusTelegrams.mockRejectedValue(notFoundError());
       await act(async () => { clickButton("Disconnect"); await vi.advanceTimersByTimeAsync(0); });
-      expect(apiMock.stopBusMonitor).toHaveBeenCalledTimes(1);
+      expect(apiMock.stopBoundBusMonitor).toHaveBeenCalledTimes(1);
       await tick();
       expect(apiMock.pollBusTelegrams.mock.calls.length).toBe(pollsWhilePaused + 1); // reattach check only
       apiMock.startBusMonitor.mockResolvedValueOnce({ sessionId: 2, serverIncarnation: "process-a", assignedAddress: "1.1.5" });
@@ -1317,6 +1322,7 @@ describe("BusMonitorPanel and the shared session's context", () => {
     expect(notice.textContent).toContain("ended elsewhere");
     expect(host!.querySelector(".bus-monitor-connect")).not.toBeNull();
     // And it did not try to clean up a session that is already gone.
+    expect(apiMock.stopBoundBusMonitor).not.toHaveBeenCalled();
     expect(apiMock.stopBusMonitor).not.toHaveBeenCalled();
   });
   // T25: the interface search. Every address here is RFC 5737
@@ -1639,7 +1645,7 @@ describe("BusMonitorPanel telegram flow", () => {
     const root = await connectWith([flowRow(1)]);
     await act(async () => tab("Flow").click());
     expect(flowNode("Switch")).not.toBeNull();
-    apiMock.stopBusMonitor.mockImplementation(async () => {
+    apiMock.stopBoundBusMonitor.mockImplementation(async () => {
       server.connected = false;
       return { sessionId: 1, serverIncarnation: "process-a", telegramCount: 1, droppedCount: 0 };
     });
@@ -1726,4 +1732,85 @@ tableColumnSmoke([["bus-monitor", 8]], async () => {
   apiMock.pollBusTelegrams.mockResolvedValue(telegramsResponse({ telegrams: [row({ seq: 1 })] }));
   const root = await renderPanel(); await flushReattach();
   return { host: host!, cleanup: async () => { await act(async () => root.unmount()); } };
+});
+
+describe("WP-26 shared controller join", () => {
+  it("disconnects exactly its own session on the bound route, never the legacy stop", async () => {
+    apiMock.pollBusTelegrams.mockRejectedValueOnce(notFoundError());
+    apiMock.pollBusTelegrams.mockResolvedValue(telegramsResponse({ nextSince: 0 }));
+    await renderPanel();
+    await flushReattach();
+    await connect();
+    await act(async () => { clickButton("Disconnect"); await vi.advanceTimersByTimeAsync(0); });
+    expect(apiMock.stopBoundBusMonitor).toHaveBeenCalledWith({ sessionId: 1, serverIncarnation: "process-a" });
+    expect(apiMock.stopBusMonitor).not.toHaveBeenCalled();
+    expect(host!.textContent).toContain("Stopped session");
+  });
+
+  it("publishes its session only after adopting it, so its own record triggers no reattach poll", async () => {
+    await renderPanel();
+    await flushReattach();
+    const before = apiMock.pollBusTelegrams.mock.calls.filter(([since]) => since === 0).length;
+    const seen: (string | null)[] = [];
+    const onContext = () => seen.push(host!.querySelector(".bus-monitor-host")?.getAttribute("disabled") ?? null);
+    window.addEventListener("knx-desktop:context-changed", onContext);
+    apiMock.pollBusTelegrams.mockResolvedValue(telegramsResponse({ nextSince: 0 }));
+    await connect();
+    window.removeEventListener("knx-desktop:context-changed", onContext);
+    expect(apiMock.startBusMonitor).toHaveBeenCalledTimes(1);
+    // Every poll after Connect is the session's own (since 0 first poll), not a reattach on top.
+    const after = apiMock.pollBusTelegrams.mock.calls.filter(([since]) => since === 0).length;
+    expect(after - before).toBeLessThanOrEqual(1);
+    expect(seen.length).toBeGreaterThan(0);
+  });
+
+  it("adopts a footer connect through its own reattach and starts nothing itself", async () => {
+    await renderPanel();
+    await flushReattach();
+    apiMock.pollBusTelegrams.mockResolvedValue(telegramsResponse({ nextSince: 0 }));
+    await act(async () => {
+      await connectBusSession("192.0.2.1:3671");
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(apiMock.startBusMonitor).toHaveBeenCalledTimes(1);
+    expect(host!.querySelector<HTMLInputElement>(".bus-monitor-host")!.disabled).toBe(true);
+    expect([...host!.querySelectorAll("button")].some((b) => b.textContent === "Disconnect")).toBe(true);
+  });
+
+  it("disables its own Connect and Disconnect while a footer action is in flight", async () => {
+    await renderPanel();
+    await flushReattach();
+    let finish!: (value: BusMonitorStartResponse) => void;
+    apiMock.startBusMonitor.mockReturnValueOnce(new Promise((resolve) => { finish = resolve; }));
+    let pending!: Promise<unknown>;
+    await act(async () => { pending = connectBusSession("192.0.2.1:3671"); });
+    const connectButton = [...host!.querySelectorAll<HTMLButtonElement>("button")].find((b) => b.textContent === "Connect")!;
+    expect(connectButton.disabled).toBe(true);
+    apiMock.pollBusTelegrams.mockResolvedValue(telegramsResponse({ nextSince: 0 }));
+    await act(async () => { finish({ sessionId: 1, serverIncarnation: "process-a", assignedAddress: "1.1.5" }); await pending; });
+    await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+    let stop!: (value: BusMonitorStopResponse) => void;
+    apiMock.stopBoundBusMonitor.mockReturnValueOnce(new Promise((resolve) => { stop = resolve; }));
+    let stopping!: Promise<unknown>;
+    await act(async () => { stopping = disconnectBusSession({ sessionId: 1, serverIncarnation: "process-a" }); });
+    const disconnectButton = [...host!.querySelectorAll<HTMLButtonElement>("button")].find((b) => b.textContent === "Disconnect")!;
+    expect(disconnectButton.disabled).toBe(true);
+    await act(async () => { stop({ sessionId: 1, serverIncarnation: "process-a", telegramCount: 0, droppedCount: 0 }); await stopping; });
+  });
+
+  it("keeps its session and record when the bound stop is refused as changed", async () => {
+    apiMock.pollBusTelegrams.mockRejectedValueOnce(notFoundError());
+    apiMock.pollBusTelegrams.mockResolvedValue(telegramsResponse({ nextSince: 0 }));
+    await renderPanel();
+    await flushReattach();
+    await connect();
+    const record = window.localStorage.length;
+    apiMock.stopBoundBusMonitor.mockRejectedValueOnce(
+      Object.assign(new Error("changed"), { status: 409, body: { error: "changed", kind: "busSessionChanged" } }),
+    );
+    await act(async () => { clickButton("Disconnect"); await vi.advanceTimersByTimeAsync(0); });
+    expect(apiMock.stopBusMonitor).not.toHaveBeenCalled();
+    expect(window.localStorage.length).toBe(record);
+    expect([...host!.querySelectorAll("button")].some((b) => b.textContent === "Disconnect")).toBe(true);
+  });
 });

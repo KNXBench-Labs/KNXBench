@@ -90,7 +90,7 @@ export const messages: Record<MessageKey, string> = {
   "system2.observation.inProcedure": "Während des Downloads (Schritt {step}), Objekt {object}: erwarteter Zeiger {expected} nach der Zuordnung, Gerät meldete {observed} (Ladezustand {state}). Der Speicher wird am Ende verifiziert.",
   "system2.observation.programVersion": "Vor dem Download meldete das Gerät die Programmversion {observed}; der Plan schreibt {expected}.",
   "system2.observation.refused": "nicht gemeldet (Lesen abgelehnt)",
-  "system2.observation.postLoad": "Nach dem Download, Objekt {object} Oktett {address}h: KNXBench schrieb {written}h, das Gerät hält jetzt {observed}h. Dieses exakte Profil deklariert, dass die Gerätefirmware dieses Oktett selbst pflegt (ein verstecktes Download-Flag, das sie nach dem Laden löscht); die Prüfung hat es daher akzeptiert, alle anderen Oktette wurden wie geschrieben verifiziert.",
+  "system2.observation.postLoad": "Nach dem Laden, Objekt {object} Oktett {address}h: KNXBench schrieb {written}h, das Gerät hält jetzt {observed}h. Dieses exakte Profil deklariert, dass die Gerätefirmware dieses Oktett selbst pflegt (ein verstecktes Download-Flag, das sie nach dem Laden löscht); die Prüfung hat es daher akzeptiert, alle anderen Oktette wurden wie geschrieben verifiziert.",
   "system2.observation.postLoadPrestate": "Vor dem Download stand dort {prestate}h.",
   "system2.observation.postLoadPrestateUnreadable": "Sein Wert vor dem Download war nicht lesbar.",
   "system2.diagnostics": "Aufgezeichnete Zeiger-Lesebeobachtungen",

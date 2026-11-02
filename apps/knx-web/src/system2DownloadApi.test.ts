@@ -331,7 +331,7 @@ it("admits exact v5 post-load octets, download before restore, and normalizes v1
   const emitted = JSON.parse(JSON.stringify(postLoadStatus));
   reply(emitted); expect(await system2.getSystem2Status()).toEqual(postLoadStatus);
   const [download] = postLoadStatus.postLoadOctets;
-  const both = { ...postLoadStatus, state: "restored", restoreAttempted: true, postLoadOctets: [download, { ...download, run: "restore", prestate: null }] };
+  const both = { ...postLoadStatus, state: "restored", restoreAttempted: true, postLoadOctets: [{ ...download, prestate: null }, { ...download, run: "restore", prestate: "01" }] };
   reply(both); expect(await system2.getSystem2Status()).toEqual(both);
   expect(Object.keys(wireV4(postLoadStatus))).not.toContain("postLoadOctets");
   reply(wireV4(postLoadStatus)); expect(await system2.getSystem2Status()).toEqual({ ...postLoadStatus, schemaVersion: 4, postLoadOctets: [] });
@@ -352,6 +352,10 @@ it("refuses malformed, extended, unchanged, misordered or restore-less v5 post-l
     [{ run: d.run, object: d.object, address: d.address, written: d.written, observed: d.observed }], [r, d], 42, [null],
   ]) { reply({ ...row, restoreAttempted: true, state: "restored", postLoadOctets }); await expect(system2.getSystem2Status()).rejects.toThrow("System-2"); }
   reply({ ...row, postLoadOctets: [d, r] }); await expect(system2.getSystem2Status()).rejects.toThrow("System-2");
+  // Once per run and octet; a restore refuses unreadable allocations, so its prestate is never null.
+  for (const postLoadOctets of [[d, d], [d, r, r], [d, { ...r, prestate: null }]]) {
+    reply({ ...row, restoreAttempted: true, state: "restored", postLoadOctets }); await expect(system2.getSystem2Status()).rejects.toThrow("System-2");
+  }
 });
 it("reads report format 4 with run and object only and refuses bytes or a restore entry without recovery", async () => {
   const withFlag = { ...reportBody, format: 4, download: { outcome: "finished", result: "verified", completedSteps: 27, totalSteps: 27 }, finalStepFailures: [], postLoadOctets: [{ run: "download", object: 3 }] };

@@ -20,7 +20,9 @@ pub struct PostLoadOctetRecord {
     pub address: u16,
     pub written: u8,
     pub observed: u8,
-    /// The octet before the download; `None` when its allocation prestate was unreadable.
+    /// The octet before the download; `null` when its allocation prestate was unreadable.
+    /// The key is required, so each record has exactly one encoding.
+    #[serde(deserialize_with = "Option::deserialize")]
     pub prestate: Option<u8>,
 }
 impl From<&PostLoadOctetObservation> for PostLoadOctetRecord {

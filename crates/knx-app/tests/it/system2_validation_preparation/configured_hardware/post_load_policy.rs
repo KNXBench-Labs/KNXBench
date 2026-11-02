@@ -340,6 +340,56 @@ async fn tampered_policy_records_refuse_before_traffic() {
     assert!(load(v).is_err(), "null policy is not absence");
 }
 
+/// Each tampered grammar is re-hashed into the binding, so only the grammar can refuse it.
+#[tokio::test]
+async fn rehashed_record_grammar_violations_still_refuse() {
+    let prepared = prepare(true).await;
+    let tamper =
+        |edit: &dyn Fn(&mut knx_app::system2_validation_preparation::ProjectHardwareRecord)| {
+            let mut bundle = prepared.bundle.clone();
+            let record = bundle.hardware_preparation.as_mut().unwrap();
+            edit(record);
+            bundle.binding.project_preparation_sha256 = Some(record.sha256().unwrap());
+            bundle
+        };
+    assert!(
+        tamper(&|_| {}).plan().is_ok(),
+        "control: an untouched re-hash is admitted"
+    );
+    assert!(
+        revision2(prepared.bundle.clone()).plan().is_ok(),
+        "control: revision 2"
+    );
+    let wrong = "up258-mv0025-object3-3cf4h-download-flag-firmware-cleared-any-v1";
+    for (name, bundle) in [
+        (
+            "revision 2 with the post-load policy",
+            tamper(&|r| r.revision = 2),
+        ),
+        (
+            "revision 1 with the post-load policy",
+            tamper(&|r| {
+                r.revision = 1;
+                r.pointer_width_policy = None;
+            }),
+        ),
+        (
+            "revision 3 without it",
+            tamper(&|r| r.post_load_octet_policy = None),
+        ),
+        (
+            "revision 3 with a wrong id",
+            tamper(&|r| r.post_load_octet_policy = Some(wrong.into())),
+        ),
+        (
+            "revision 3 without the width policy",
+            tamper(&|r| r.pointer_width_policy = None),
+        ),
+    ] {
+        assert!(bundle.plan().is_err(), "{name}");
+    }
+}
+
 /// Replays the finished operation's checkpoints into a new store up to its final step, so
 /// a single post-load checkpoint can be offered at exactly that position.
 async fn store_in_final_step(prepared: &Prepared) -> (tempfile::TempDir, OperationStore) {
@@ -526,4 +576,130 @@ async fn a_restore_that_writes_the_old_bytes_stays_strict() {
     assert!(progress.final_step_failures.iter().any(|f| f.run
         == knx_app::property_validation::FailureDiagnosticRun::Restore
         && f.category == FinalStepCategory::VerificationMismatch));
+}
+
+async fn restore(
+    prepared: &Prepared,
+    transport: &FirmwareChanges<'_>,
+    store: &mut OperationStore,
+) -> std::io::Result<()> {
+    let recovery = prepared.bundle.restore_phrase();
+    let download = required_confirmation_phrase(prepared.device.address(), WriteScope::Download);
+    let release = knx_net::commissioning::hardware_release::required_release_phrase(
+        prepared.device.address(),
+    );
+    restore_project_hardware(
+        transport,
+        &prepared.bundle,
+        store,
+        integrated_timing(),
+        &HardwareRecoveryConfirmations {
+            recovery: &recovery,
+            download: &download,
+            risk: &release,
+        },
+        &AtomicBool::new(false),
+    )
+    .await
+}
+
+#[tokio::test]
+async fn a_restore_that_is_the_download_tolerates_and_journals_its_own_record() {
+    let prepared = prepare(true).await;
+    let dir = tempfile::tempdir().unwrap();
+    // First download with firmware that keeps the flag: the device then holds every written
+    // value, 01h at the flag included, so the next operation's recovery plan is the download.
+    let keeps = FirmwareChanges {
+        device: &prepared.device,
+        octet: FLAG,
+        value: 1,
+    };
+    let (_, first) = download(
+        &prepared,
+        &prepared.bundle,
+        &keeps,
+        &dir.path().join("first"),
+    )
+    .await;
+    first.unwrap();
+    let clears = FirmwareChanges {
+        device: &prepared.device,
+        octet: FLAG,
+        value: 0,
+    };
+    let operation = dir.path().join("second");
+    let (store, second) = download(&prepared, &prepared.bundle, &clears, &operation).await;
+    second.unwrap();
+    let download_record = PostLoadOctetProgress {
+        run: PointerObservationRun::Download,
+        record: flag_record(Some(1)),
+    };
+    assert_eq!(store.progress().post_load_octets, [download_record]);
+    drop(store);
+    let mut reopened = OperationStore::open(&operation, &prepared.bundle.binding).unwrap();
+    restore(&prepared, &clears, &mut reopened).await.unwrap();
+    assert_eq!(reopened.outcome(), LocalOutcome::Restored);
+    let expected = vec![
+        download_record,
+        PostLoadOctetProgress {
+            run: PointerObservationRun::Restore,
+            record: flag_record(Some(1)),
+        },
+    ];
+    assert_eq!(reopened.progress().post_load_octets, expected);
+    drop(reopened);
+    let again = OperationStore::open(&operation, &prepared.bundle.binding).unwrap();
+    assert_eq!(again.progress().post_load_octets, expected);
+}
+
+#[tokio::test]
+async fn a_restore_with_a_differing_plan_refuses_the_download_record() {
+    let prepared = prepare(true).await;
+    let transport = FirmwareChanges {
+        device: &prepared.device,
+        octet: FLAG,
+        value: 0,
+    };
+    let dir = tempfile::tempdir().unwrap();
+    let operation = dir.path().join("operation");
+    let (store, result) = download(&prepared, &prepared.bundle, &transport, &operation).await;
+    result.unwrap();
+    drop(store);
+    // The prestate held A5h at the flag, so the recovery plan differs from the download.
+    let mut reopened = OperationStore::open(&operation, &prepared.bundle.binding).unwrap();
+    reopened.checkpoint(Checkpoint::RestoreStarted).unwrap();
+    let last = prepared.bundle.normalized_plan.steps.len() - 1;
+    for index in 0..last {
+        reopened
+            .checkpoint(Checkpoint::StepStarted {
+                index,
+                mutation: true,
+            })
+            .unwrap();
+        reopened
+            .checkpoint(Checkpoint::StepFinished { index })
+            .unwrap();
+    }
+    reopened
+        .checkpoint(Checkpoint::StepStarted {
+            index: last,
+            mutation: true,
+        })
+        .unwrap();
+    for record in [
+        flag_record(Some(0xa5)),
+        PostLoadOctetRecord {
+            written: 0xa5,
+            ..flag_record(Some(0xa5))
+        },
+    ] {
+        assert!(
+            reopened
+                .checkpoint(Checkpoint::PostLoadOctetObservations {
+                    observations: vec![record],
+                })
+                .is_err(),
+            "{record:?}"
+        );
+    }
 }

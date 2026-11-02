@@ -129,9 +129,11 @@ const statusV3 = object({ ...v3Fields, schemaVersion: (v: unknown) => v === 3 })
 const statusV4 = object({ ...v3Fields, schemaVersion: (v: unknown) => v === 4, finalStepFailures: finalFailures });
 const hex2: Check = (v) => typeof v === "string" && /^[0-9a-f]{2}$/.test(v);
 const postLoadOctet = object({ run: (v) => v === "download" || v === "restore", object: u8, address: hex4, written: hex2, observed: hex2, prestate: nullable(hex2) });
-// A tolerated octet differs from what was written; download entries precede restore entries.
+// A tolerated octet differs from what was written, appears once per run and, in a restore (which refuses
+// unreadable allocations), has a prestate; download entries precede restore entries.
 const postLoadOctets: Check = (v) => Array.isArray(v) && v.length <= 256 &&
-  v.every((o: System2PostLoadOctet) => postLoadOctet(o) && o.observed !== o.written) &&
+  v.every((o: System2PostLoadOctet) => postLoadOctet(o) && o.observed !== o.written && (o.run === "download" || o.prestate !== null)) &&
+  new Set(v.map((o: System2PostLoadOctet) => `${o.run}/${o.object}/${o.address}`)).size === v.length &&
   v.every((o: System2PostLoadOctet, i: number) => i === 0 || o.run === "restore" || v[i - 1].run === "download");
 // v5 adds the post-load octet list; v1-v4 may not carry it.
 const statusV5 = object({ ...v3Fields, schemaVersion: (v: unknown) => v === 5, finalStepFailures: finalFailures, postLoadOctets });

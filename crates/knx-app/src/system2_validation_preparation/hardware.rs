@@ -198,7 +198,8 @@ pub fn post_load_octet_admission(
     let octets: Vec<_> = POST_LOAD_OCTET_POLICY_OCTETS
         .iter()
         .filter(|(object, address, accepted)| {
-            last_written(plan, *object, *address).is_some_and(|written| written != *accepted)
+            knx_net::commissioning::post_load_octets::written_value(plan, *object, *address)
+                .is_some_and(|written| written != *accepted)
         })
         .map(|&(object, address, accepted)| PostLoadOctet {
             object,
@@ -211,27 +212,6 @@ pub fn post_load_octet_admission(
     } else {
         PostLoadOctetAdmission::Declared(octets)
     }
-}
-/// The last value `plan` writes to `address` of `object`, if it writes it at all.
-fn last_written(
-    plan: &knx_core::commissioning::property_download::PropertyDownloadPlan,
-    object: u8,
-    address: u16,
-) -> Option<u8> {
-    use knx_core::commissioning::property_download::PropertyOperation;
-    plan.steps()
-        .iter()
-        .rev()
-        .find_map(|step| match &step.operation {
-            PropertyOperation::WriteMemory {
-                object: written,
-                address: start,
-                data,
-            } if *written == object && address >= *start => {
-                data.get(usize::from(address - *start)).copied()
-            }
-            _ => None,
-        })
 }
 fn valid_operation(operation: &str) -> io::Result<()> {
     if operation.is_empty()

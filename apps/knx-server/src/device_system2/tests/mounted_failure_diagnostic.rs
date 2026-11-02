@@ -1,8 +1,8 @@
 //! Typed PID 7 failure facts through the real worker, private journal, restart and status v3.
 use super::*;
 
-/// The complete status v4 key set: version 1 keys plus the typed failure lists and the result.
-const STATUS_KEYS: [&str; 26] = [
+/// The complete status v5 key set: version 1 keys plus the typed lists and the result.
+const STATUS_KEYS: [&str; 27] = [
     "schemaVersion",
     "operationId",
     "binding",
@@ -21,6 +21,7 @@ const STATUS_KEYS: [&str; 26] = [
     "prestateDiffers",
     "prestateUnreadableAllocations",
     "pointerObservations",
+    "postLoadOctets",
     "programVersionObservation",
     "failureDiagnostics",
     "finalStepFailures",
@@ -566,4 +567,83 @@ async fn a_final_allocation_mismatch_keeps_its_bytes_privately_across_restart() 
         json!([{"offset": 250, "length": 1, "classification": "written",
             "expected": "04", "actual": "fb"}])
     );
+}
+
+#[tokio::test]
+#[ignore = "requires digest-pinned public package; set KNXBENCH_PUBLIC_UP258; no network or hardware"]
+async fn a_firmware_cleared_download_flag_is_tolerated_shown_and_kept_out_of_the_report() {
+    let Fixture {
+        directory: temp,
+        hardware,
+        state,
+        router,
+        device,
+    } = fixture().await;
+    let (directory, hardware) = (temp.path(), &hardware);
+    // The real plan writes 01h at 3CF4h; from the final verification read on, the device
+    // answers 00h there, as the #30 reporter's UP258 firmware did.
+    let preview = prepare(&router, device).await;
+    assert!(preview["warnings"].as_array().unwrap().iter().any(|w| w
+        .as_str()
+        .unwrap()
+        .contains("accepts 00h at object 3 octet 3CF4h")));
+    hardware.arm_memory_value(0x3CF4, 1, 0x00);
+    let accepted = http(
+        &router,
+        "/api/device-system2/start",
+        Some(start(&preview)),
+        200,
+    )
+    .await;
+    assert_eq!(accepted["postLoadOctets"], json!([]));
+    let operation_id = accepted["operationId"].as_str().unwrap().to_owned();
+    let operation = operation_dir(directory, &operation_id);
+    settled_slow(&state, &router, "finished").await;
+    let (finished, _) = checked_raw(&raw_status(&router).await, &operation, &[]);
+    assert_eq!(finished["downloadResult"], "verified");
+    assert_eq!(finished["finalStepFailures"], json!([]));
+    let flag = json!([{"run":"download","object":3,"address":"3cf4","written":"01","observed":"00",
+        "prestate": finished["postLoadOctets"][0]["prestate"].clone()}]);
+    assert_eq!(finished["postLoadOctets"], flag);
+    assert!(finished["postLoadOctets"][0]["prestate"].is_string());
+    let journal = operation.join("journal");
+    let checkpoints: Vec<Value> = std::fs::read_dir(&journal)
+        .unwrap()
+        .filter_map(|e| std::fs::read(e.unwrap().path()).ok())
+        .filter_map(|b| serde_json::from_slice::<Value>(&b).ok())
+        .filter(|v| v["checkpoint"]["event"] == "post_load_octet_observations")
+        .collect();
+    assert_eq!(checkpoints.len(), 1, "one durable post-load record");
+    assert_eq!(checkpoints[0]["format"], 5);
+    let report_raw = raw_http(
+        &router,
+        &format!("/api/device-system2/report?operationId={operation_id}"),
+        None,
+    )
+    .await;
+    let report: Value = serde_json::from_str(&report_raw).unwrap();
+    assert_eq!(report["format"], 4);
+    assert_eq!(
+        report["postLoadOctets"],
+        json!([{"run":"download","object":3}])
+    );
+    for forbidden in [
+        "3cf4",
+        "3CF4",
+        "\"address\"",
+        "\"written\"",
+        "\"observed\"",
+        "\"prestate\"",
+    ] {
+        assert!(!report_raw.contains(forbidden), "report leaks {forbidden}");
+    }
+    state.catalogue_jobs.close_admission_and_request_stop();
+    drop(router);
+    drop(state);
+    // A restart reads the same record from the journal alone.
+    let fresh = self::state(directory, None, hardware);
+    let router = crate::app(fresh, None);
+    let (reopened, _) = checked_raw(&raw_status(&router).await, &operation, &[]);
+    assert_eq!(reopened["state"], "finished");
+    assert_eq!(reopened["postLoadOctets"], flag);
 }

@@ -168,7 +168,7 @@ consent; a revision-2 preview does not.
 
 The App journal records the Net event as checkpoint `PostLoadOctetObservations` (envelope
 format 5, so an older strict reader refuses it): `object`, `address`, `written`, `observed`,
-`prestate` (`null` when unreadable). Live and on replay the store admits it only inside the
+`prestate` (`null` when unreadable; the key is required). Live and on replay the store admits it only inside the
 run's final (Disconnect) step, after the durable recovery, once per run, as a non-empty list of
 distinct octets, and only when Net recomputes exactly that record from the durable prestate and
 the executed plan (`PropertyRecoverySnapshot::post_load_observation_is_genuine`): the download
@@ -178,8 +178,12 @@ lists the records with their run, download first.
 
 Tested on hardware-kind simulated devices whose firmware clears the octet at Load Completed:
 the revision-3 download verifies and journals the observation, reopen reproduces it; the same
-clear fails a revision-1/2 record, another value or another octet fails verification, and a
-restore writing the old prestate stays strict. No physical device has run this build.
+clear fails a revision-1/2 record, another value or another octet fails verification, a restore
+writing the old prestate stays strict and its journal refuses the download's record, and a
+restore whose plan equals the download tolerates and journals its own record. Re-hashed record
+grammar violations refuse. On the mounted server with the pinned public package, the status
+carries the exact entry, the report only `{run, object}`, and a restart reproduces both. No
+physical device has run this build.
 
 ## Download versus recovery
 

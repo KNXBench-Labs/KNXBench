@@ -12,6 +12,23 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Selective System-2 settlement on an unchanged source (2 November 2026, source)
+
+A verified configured System-2 run no longer loses every memory credit to an
+unrelated edit. At its end the original retained project must still pass the
+unchanged start admission against the current catalogue; only then is the current
+request compared with the written one through the regular download's per-part mask.
+A rename or other-device edit keeps all four parts, links or flags leave Group
+addresses pending, a parameter edit also Parameters; a changed, missing or refused
+source and a product/program reference switch credit nothing. Start admission, Net,
+journal, bundle, status schema and UI are unchanged. Focused App, server settlement
+and three mounted worker tests (rename, parameter edit, refused source) only. An
+independent review found one test gap (the worker's refusal mapping) and three smaller
+ones; the corrected tests and their executed mutation controls passed independent
+re-review (APPROVE). The added debug-build cost on a large synthetic project is
+measured and disclosed. Package acceptance and hardware remain unclaimed
+([contract](contracts/system2-download-result.md#settlement)).
+
 ## Import findings remain reachable after reopening (2 November 2026, main-only)
 
 WP-25 reprojects the stored primary report's counted findings into the session

@@ -43,26 +43,35 @@ pub(super) enum Run {
     Recovery,
 }
 
-/// The pure belief decision. Only a verified, current download earns "programmed"; any
-/// possible mutation otherwise invalidates the memory parts; nothing else is touched.
-pub(super) fn decide(run: Run, progress: &OperationProgress, current: bool) -> Option<Settlement> {
+/// The pure belief decision. Only a verified download earns "programmed", and only for the
+/// `current` parts (still equal to what it wrote, on a proven unchanged source); its other
+/// memory parts, and every memory part after any other possible mutation, become pending.
+pub(super) fn decide(
+    run: Run,
+    progress: &OperationProgress,
+    current: ProgrammingParts,
+) -> Option<Settlement> {
     let mutated =
         progress.mutation_possible && (run == Run::Download || progress.restore_attempted);
     if !mutated {
         return None;
     }
     let verified = run == Run::Download
-        && current
         && !progress.restore_attempted
         && progress.outcome == LocalOutcome::Finished
         && progress.download.outcome == LocalOutcome::Finished
         && progress.download.result == DownloadResult::Verified;
-    Some(if verified {
+    Some(if verified && !current.is_empty() {
         // The device answered at the project's address for the whole run.
         Settlement {
-            programmed: ProgrammingParts::ALL,
-            pending: ProgrammingParts::NONE,
-            touched: ProgrammingParts::ALL,
+            programmed: current,
+            pending: ProgrammingParts {
+                address: false,
+                application: !current.application,
+                parameters: !current.parameters,
+                group_addresses: !current.group_addresses,
+            },
+            touched: MEMORY.union(current),
         }
     } else {
         Settlement {
@@ -75,15 +84,16 @@ pub(super) fn decide(run: Run, progress: &OperationProgress, current: bool) -> O
 
 /// Applies the settlement once to the project the run was bound to. `current` is evaluated
 /// under the project lock against the model that will be changed: the exact bound device,
-/// at the recorded address, and (download only) the current retained-source plan.
+/// at the recorded address, and (download only) the parts the current project still states
+/// as written, after the retained source was proven unchanged.
 pub(super) fn settle(
     state: &AppState,
     meta: &Metadata,
     progress: &OperationProgress,
     run: Run,
-    current: impl FnOnce(&Project, DeviceId) -> bool,
+    current: impl FnOnce(&Project, DeviceId) -> ProgrammingParts,
 ) -> Receipt {
-    if decide(run, progress, false).is_none() {
+    if decide(run, progress, ProgrammingParts::NONE).is_none() {
         return Receipt::NoMutation;
     }
     // A historical operation (recovery after a restart) may act on its own acknowledged
@@ -103,9 +113,14 @@ pub(super) fn settle(
             }
             let label = device_label(instance);
             // The costly source re-check runs only for a run that could earn "programmed".
-            let earns = decide(run, progress, true).is_some_and(|s| !s.programmed.is_empty());
-            let is_current = earns && current(project, device);
-            let settlement = decide(run, progress, is_current)?;
+            let earns = decide(run, progress, ProgrammingParts::ALL)
+                .is_some_and(|s| !s.programmed.is_empty());
+            let parts = if earns {
+                current(project, device)
+            } else {
+                ProgrammingParts::NONE
+            };
+            let settlement = decide(run, progress, parts)?;
             let at = chrono::Utc::now();
             apply_settlement(project, stack, device, &settlement, Some(at));
             let subject = match run {

@@ -33,7 +33,11 @@ export class CatalogueJobsController {
  connect = () => { this.#connected = true; if (this.#transport.signal.aborted) this.#transport = new AbortController(); if (this.#op?.owner) this.#op.owner.signal = this.#transport.signal; this.#schedule(); return () => { this.#connected = false; this.#transport.abort(); if (this.#timer !== null) clearTimeout(this.#timer); this.#timer = null; }; };
  #schedule() {
   if (!this.#connected || this.#timer !== null || !this.#op?.owner || this.#state.status?.state !== "running" || this.#state.unavailable || this.#state.error === "unauthenticated" || this.#state.error === "protocol") return;
-  this.#timer = setTimeout(() => { this.#timer = null; void this.refresh(); },750);
+  const op = this.#op;
+  this.#timer = setTimeout(() => {
+   this.#timer = null;
+   if (this.#connected && this.#op === op && this.#state.status?.state === "running" && !this.#state.unavailable && this.#state.error !== "unauthenticated" && this.#state.error !== "protocol") void this.refresh();
+  },750);
  }
  #error(error: unknown) {
   const kind = error instanceof CatalogueJobRefusal ? error.kind : error instanceof CatalogueProtocolError ? "protocol" : "transport";
@@ -53,7 +57,10 @@ export class CatalogueJobsController {
   if (s.apply.acceptedCommandId !== null && s.apply.acceptedCommandId !== op.apply?.commandId) throw new CatalogueProtocolError();
   op.owner ??= {handle:s.handle,capability:op.capability,signal:this.#transport.signal};
   const legacyAvailable = s.state === "failed" && s.failure?.kind === "legacyProductDatabase" && s.commit.outcome === "notCommitted" && s.cleanup.disposition === "complete" && op.file !== null;
-  if (s.state !== "running" && !legacyAvailable) op.file = null;
+  if (s.state !== "running") {
+   if (!legacyAvailable) op.file = null;
+   if (this.#timer !== null) clearTimeout(this.#timer); this.#timer = null;
+  }
   const committed = s.commit.outcome === "committed";
   const notify = committed && !op.notified; if (notify) op.notified = true;
   this.#patch({status:s, selecting:false,error:null,uncertain:false,legacyAvailable,applyUncertain:this.#state.applyUncertain && s.apply.acceptedCommandId === null && s.state === "running",committed:this.#state.committed || committed,
@@ -92,7 +99,7 @@ export class CatalogueJobsController {
  async refresh() {
   const op = this.#op; if (!op?.owner || this.#refreshing || this.#state.unavailable) return;
   this.#refreshing = true;
-  try { this.#accept(await this.api.status(op.owner),op); } catch (error) { this.#error(error); } finally { this.#refreshing = false; this.#schedule(); }
+  try { this.#accept(await this.api.status(op.owner),op); } catch (error) { if (this.#op === op) this.#error(error); } finally { this.#refreshing = false; this.#schedule(); }
  }
  async apply(shown: Preview) {
   const op = this.#op; const s = this.#state.status;

@@ -2,6 +2,7 @@
 
 import { expect, test, type Page } from "@playwright/test";
 import { achievementsFixtureAnswer } from "./achievements-fixture";
+import { busActivityFixtureAnswer } from "./bus-activity-fixture";
 import { fulfillNoProjectOpen } from "./server-project-fixture";
 import { openFileSubmenu } from "./file-menu";
 
@@ -45,6 +46,8 @@ async function serve(page: Page, fixture: Fixture, version = "0.1.0-alpha.2+gfix
       body = [];
     } else if (achievementsFixtureAnswer(method, path) !== undefined) {
       body = achievementsFixtureAnswer(method, path);
+    } else if (busActivityFixtureAnswer(method, path) !== undefined) {
+      body = busActivityFixtureAnswer(method, path);
     } else {
       fixture.unexpected.push(`${method} ${path}`);
       await route.fulfill({ status: 404, contentType: "application/json", body: '{"error":"local fixture only"}' });

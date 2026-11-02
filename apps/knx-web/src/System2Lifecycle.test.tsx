@@ -8,7 +8,7 @@ const s2 = vi.hoisted(() => ({ getSystem2Status: vi.fn() }));
 vi.mock("./api", () => ({ ...api, errorMessage: (e: unknown) => String(e) }));
 vi.mock("./system2DownloadApi", async (importOriginal) => ({ ...await importOriginal<typeof import("./system2DownloadApi")>(), ...s2 }));
 vi.mock("./useProgrammingConsent", () => ({ useProgrammingConsent: () => ({ request: vi.fn(), dialog: null }) }));
-import DevicesWorkspace from "./DevicesWorkspace";
+import { DevicesWorkspace } from "./deviceComparisons.fixture";
 import System2DownloadPanel from "./System2DownloadPanel";
 import System2Lifecycle from "./System2Lifecycle";
 import type { ProjectTree } from "./bindings/ProjectTree";

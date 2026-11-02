@@ -42,6 +42,8 @@ import { serverLegacyPassword } from "./LegacyPasswordSettings";
 import Dashboard from "./Dashboard";
 import ImportDiagnosticsNotice from "./ImportDiagnosticsNotice";
 import DevicesWorkspace from "./DevicesWorkspace";
+import { useDeviceComparisons } from "./useDeviceComparisons";
+import DeviceComparisonDialog from "./DeviceComparisonDialog";
 import type { DeviceCatalog } from "./deviceList";
 import { DeviceNavigationProvider } from "./DeviceLink";
 import LogPanel, { type LogImportFocus } from "./LogPanel";
@@ -226,6 +228,7 @@ function AppBody({ manifestVersion = packageVersion, session, editorReturn = fal
   const etsProjectFilter = [{ name: t("app.filterName.etsProject"), extensions: ["knxproj"] }];
   const knxdbFilter = [{ name: t("app.filterName.knxDesktopProject"), extensions: ["knxdb"] }];
   const [tree, setTree] = useState<ProjectTree | null>(null);
+  const comparisons = useDeviceComparisons(tree);
   const treeRef = useRef(tree); treeRef.current = tree;
   const [flowProjectScope, setFlowProjectScope] = useState(() => createFlowScope());
   const flowScopeRef = useRef(flowProjectScope); flowScopeRef.current = flowProjectScope;
@@ -1488,6 +1491,7 @@ function AppBody({ manifestVersion = packageVersion, session, editorReturn = fal
   // DOM/Tab order. At wide widths the explorer still sits visually left;
   // at narrow widths the welcome stays above its tall diagnostics block.
   const welcomeVisible = !tree && !logOpen && !monitorOpen && view !== "catalog";
+  const comparisonForeground = !settingsOpen && !logOpen && !monitorOpen && (view === "devices" || view === "device");
   const centerWorkspace = (
     <div className="workbench-center">
       {tree && <System2Lifecycle onTreeUpdate={handleTreeUpdate} />}
@@ -1527,7 +1531,7 @@ function AppBody({ manifestVersion = packageVersion, session, editorReturn = fal
             <button type="button" onClick={openDevices}>{t("devices.all")}</button>
           </nav>
           {selection?.kind === "device" && deviceDetail?.id === selection.id
-            ? <DeviceWorkspace key={`${loadKey}:${deviceDetail.id}`} detail={deviceDetail} tree={tree} onApplied={handleTreeUpdate}
+            ? <DeviceWorkspace key={`${loadKey}:${deviceDetail.id}`} detail={deviceDetail} tree={tree} onApplied={handleTreeUpdate} comparisons={comparisons}
               onOpenHistory={openProjectHistory}
               onInstructionDraftChange={(dirty) => { draftsRef.current.instructions = dirty; }} />
             : <div><p role="status"><span className={deviceDetailLoading ? "task-status-text" : undefined}>{t(deviceDetailLoading ? "devices.loadingEditor" : "devices.editorUnavailable")}</span></p>
@@ -1562,8 +1566,11 @@ function AppBody({ manifestVersion = packageVersion, session, editorReturn = fal
         onWizard={tree ? (item) => setDeviceWizard({ target: { lineId: catalogTarget.lineId }, product: item }) : undefined} /></ModalForeground>}
       {tree && <ModalForeground active={!logOpen && !monitorOpen && view === "devices"}><div hidden={logOpen || monitorOpen || view !== "devices"}>
         <DevicesWorkspace key={loadKey} tree={tree} active={!settingsOpen && !logOpen && !monitorOpen && view === "devices"}
-          selection={selection} multiSelection={multiSelection} onItemClick={onItemClick} onCatalogue={setNavigationCatalogue} onTreeUpdate={handleTreeUpdate} />
+          selection={selection} multiSelection={multiSelection} onItemClick={onItemClick} onCatalogue={setNavigationCatalogue} comparisons={comparisons} />
       </div></ModalForeground>}
+      <ModalForeground active={comparisonForeground}><div hidden={!comparisonForeground}>
+        <DeviceComparisonDialog controller={comparisons} onTreeUpdate={handleTreeUpdate} snapshotRevision={tree?.snapshot_revision} />
+      </div></ModalForeground>
       {tree && notesIdentity !== null && (view === "notes" || notesMountedFor === notesIdentity) && (
         <ModalForeground active={!logOpen && !monitorOpen && view === "notes"}><NotesWorkspace key={notesIdentity} tree={tree} active={!settingsOpen && !logOpen && !monitorOpen && view === "notes"}
           onTreeUpdate={handleTreeUpdate} onDirtyChange={(dirty) => { draftsRef.current.notes = dirty; }} /></ModalForeground>

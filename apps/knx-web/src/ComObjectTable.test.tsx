@@ -17,7 +17,7 @@ beforeEach(() => vi.clearAllMocks());
 const api = vi.hoisted(() => ({ deviceParameters: vi.fn().mockResolvedValue({ programId: null, sections: [], stale: [], diagnostics: [] }),
   setComObjectDpt: vi.fn(), setComObjectDescription: vi.fn(), setComObjectFlag: vi.fn(), unlinkComObject: vi.fn(), linkComObject: vi.fn() }));
 vi.mock("./api", () => ({ ...api, errorMessage: String }));
-import { DeviceWorkspace } from "./Inspector";
+import { DeviceWorkspace } from "./deviceComparisons.fixture";
 const tree: ProjectTree = { schema_version: 11, installations: [], group_address_style: "ThreeLevel", errors: 0, warnings: 0, can_undo: false, can_redo: false, is_modified: false };
 function detail(objects: ComObjectNode[], id = 9): DeviceDetail { return { id, name: "Example", address: null, description: null, com_objects: objects,
   product: { resolution: "NoReference", product_ref: null, program_ref: null, catalog: null } }; }

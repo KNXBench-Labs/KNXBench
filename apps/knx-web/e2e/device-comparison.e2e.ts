@@ -3,6 +3,8 @@ import { expect, test, type Locator, type Page } from "@playwright/test";
 import { join } from "node:path";
 import type { ProjectTree } from "../src/bindings/ProjectTree";
 import type { DeviceNode } from "../src/bindings/DeviceNode";
+import type { DeviceDetail } from "../src/bindings/DeviceDetail";
+import type { ParameterPanel } from "../src/api";
 import type { ComparisonBinding, BoundDeviceComparison } from "../src/deviceComparisons";
 import { messages as en } from "../src/messages/en";
 import { messages as de } from "../src/messages/de";
@@ -55,7 +57,7 @@ const linkPreview = (rows: unknown) => ({ previewToken: "p".repeat(64), selected
 ] });
 async function intercept(page: Page, language: "en" | "de", mode: "normal" | "busy" | "held" | "adopt" = "normal") {
   const state = { tree: tree(), unexpected: [] as string[], requests: [] as { address: string; gateway: string; binding: ComparisonBinding }[],
-    previews: [] as unknown[], release: () => {} };
+    previews: [] as unknown[], applies: [] as unknown[], release: () => {} };
   let opened = false;
   await page.route("**/api/**", async (route) => {
     const path = new URL(route.request().url()).pathname; const method = route.request().method();
@@ -67,12 +69,19 @@ async function intercept(page: Page, language: "en" | "de", mode: "normal" | "bu
     else if (path === "/api/project/load-progress" && method === "GET") body = null;
     else if (path === "/api/project/status-metrics" && method === "GET") body = statusMetricsFixtureBody(state.tree);
     else if (path === "/api/bus/discover" && method === "POST") body = { interfaces: [] };
+    else if (path === "/api/legacy-password" && method === "GET") body = { available: true, remembered: false, problem: null };
     else if (path === "/api/product-languages" && method === "GET") body = [];
     else if (["/api/device-download/status", "/api/device-address/status"].includes(path) && method === "GET") { status = 404; body = { error: "no active operation" }; }
     else if (path === "/api/device-system2/status" && method === "GET") body = null;
     else if (path === "/api/devices" && method === "GET") body = { schemaVersion: 1, serverIncarnation: "comparison-browser",
       snapshotRevision: state.tree.snapshot_revision, devices: [] };
-    else if (path === "/api/undo" && method === "POST") {
+    else if (/^\/api\/device\/[1-7]$/.test(path) && method === "GET") {
+      const id = Number(path.split("/").at(-1));
+      body = { id, name: id === 7 ? "Outside filter" : `Fictional device ${id}`, address: id === 6 ? null : id === 7 ? "1.2.7" : `1.1.${id}`,
+        description: null, com_objects: [], product: { product_ref: null, program_ref: null, catalog: null, resolution: "NoReference" } } satisfies DeviceDetail;
+    } else if (/^\/api\/device\/[1-7]\/parameters$/.test(path) && method === "GET") {
+      body = { programId: null, sourceLanguage: null, sections: [], stale: [], diagnostics: [], tree: null } satisfies ParameterPanel;
+    } else if (path === "/api/undo" && method === "POST") {
       state.tree = { ...state.tree, snapshot_revision: 2, comparison_revisions: { ...state.tree.comparison_revisions, 1: 8 } };
       body = state.tree;
     } else if (path === "/api/device-compare" && method === "POST") {
@@ -86,6 +95,11 @@ async function intercept(page: Page, language: "en" | "de", mode: "normal" | "bu
     } else if (path === "/api/device-compare/preview" && method === "POST" && mode === "adopt") {
       state.previews.push(route.request().postDataJSON());
       body = linkPreview(adoptable(result(state.requests.at(-1)!.binding, state.requests.at(-1)!.address)).decoded);
+    } else if (path === "/api/device-compare/apply" && method === "POST" && mode === "adopt") {
+      state.applies.push(route.request().postDataJSON());
+      state.tree = { ...state.tree, snapshot_revision: (state.tree.snapshot_revision ?? 0) + 1, is_modified: true,
+        comparison_revisions: { ...state.tree.comparison_revisions, 2: 8 } };
+      body = { changed: true, tree: state.tree };
     } else if (achievementsFixtureAnswer(method, path) !== undefined) body = achievementsFixtureAnswer(method, path);
     else if (busActivityFixtureAnswer(method, path) !== undefined) body = busActivityFixtureAnswer(method, path);
     else { state.unexpected.push(`${method} ${path}`); status = 404; body = { error: "strict comparison fixture" }; }
@@ -227,6 +241,86 @@ test("a busy bus monitor refuses the run clearly without marking any device", as
   // is retained, but no live device acquires a comparison tag on gateway refusal.
   await expect(dialog.locator(".comparison-tag")).toHaveCount(1);
   await expect(dialog.locator(".comparison-results li").filter({ hasText: "Fictional device 1" }).locator(".comparison-tag")).toHaveCount(0);
+  expect(state.requests).toHaveLength(1); expect(state.unexpected).toEqual([]);
+});
+
+/** Uses the real global command path even while a comparison owns the modal foreground. */
+async function navigate(page: Page, label: string) {
+  await page.keyboard.press("Control+Shift+P");
+  await page.getByRole("combobox").fill(label);
+  await page.getByRole("combobox").press("Enter");
+}
+for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
+  const m = language === "en" ? en : de;
+  test(`${language} WP-27 editor shares one retained comparison and gateway draft at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 });
+    const state = await intercept(page, language); await open(page, language);
+    const row = page.locator(".devices-table tbody tr").filter({ hasText: "Fictional device 2" });
+    await row.locator(".table-select").first().click();
+    const editor = page.locator(".device-workspace");
+    const compare = editor.locator(".workspace-heading-actions").getByRole("button", { name: m["compare.one"], exact: true });
+    await expect(compare).toBeVisible();
+    await compare.click();
+    const dialog = page.getByRole("dialog", { name: m["compare.title"], exact: true });
+    await expect(dialog.locator(".comparison-targets li")).toHaveText(["1.1.2 — Fictional device 2"]);
+    expect(state.requests).toEqual([]);
+    const input = dialog.locator(".comparison-gateway");
+    for (const invalid of ["", "192.0.2.10:65536"]) {
+      await input.fill(invalid);
+      await dialog.getByRole("button", { name: m["compare.confirm"], exact: true }).click();
+      await expect(dialog.getByRole("alert")).toBeVisible();
+      expect(state.requests).toEqual([]);
+    }
+    await input.fill(gateway); await input.focus();
+    await navigate(page, m["toolbar.settings"]);
+    await expect(page.locator(".settings-panel")).toBeVisible();
+    await expect(dialog).toBeHidden();
+    await expect(page.locator(".device-comparison-dialog")).toHaveCount(1);
+    await page.getByRole("button", { name: m["settings.back"], exact: true }).click();
+    await expect(input).toHaveValue(gateway);
+    await expect(input).toBeFocused();
+    await dialog.getByRole("button", { name: m["deviceChecks.cancel"], exact: true }).click();
+    expect(state.requests).toEqual([]);
+    await compare.click(); await expect(input).toHaveValue(gateway);
+    await dialog.getByRole("button", { name: m["compare.confirm"], exact: true }).click();
+    await expect(dialog.getByRole("button", { name: m["compare.close"], exact: true })).toBeVisible();
+    expect(state.requests).toEqual([{ address: "1.1.2", gateway,
+      binding: { serverIncarnation: "comparison-browser", projectIncarnation: 3, deviceId: 2, comparisonRevision: 7 } }]);
+    await navigate(page, m["workbench.devices"]);
+    await expect(dialog).toBeVisible();
+    await expect(page.locator(".device-comparison-dialog")).toHaveCount(1);
+    await dialog.getByRole("button", { name: m["compare.close"], exact: true }).click();
+    await expect(row.locator(".comparison-tag")).toHaveText(m["compare.tag.different"]);
+    await row.locator(".table-select").first().click();
+    await expect(compare).toBeVisible();
+    const box = await compare.boundingBox();
+    expect(box!.x).toBeGreaterThanOrEqual(0); expect(box!.x + box!.width).toBeLessThanOrEqual(width + 1);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(1);
+    await capture(page, `editor-${language}-${width}`);
+    expect(state.requests).toHaveLength(1); expect(state.applies).toEqual([]); expect(state.unexpected).toEqual([]);
+  });
+}
+
+test("WP-27 editor adoption reaches the root and invalidates the shared table result", async ({ page }) => {
+  const state = await intercept(page, "en", "adopt"); await open(page, "en");
+  const row = page.locator(".devices-table tbody tr").filter({ hasText: "Fictional device 2" });
+  await row.locator(".table-select").first().click();
+  await page.locator(".device-workspace .workspace-heading-actions").getByRole("button", { name: en["compare.one"], exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: en["compare.title"], exact: true });
+  await dialog.locator(".comparison-gateway").fill(gateway);
+  await dialog.getByRole("button", { name: en["compare.confirm"], exact: true }).click();
+  const panel = dialog.getByRole("region", { name: en["compare.adoption.title"], exact: true });
+  await panel.locator(".comparison-decoded input[type=checkbox]").check();
+  await panel.getByRole("button", { name: en["compare.adoption.preview"], exact: true }).click();
+  const apply = panel.getByRole("button", { name: en["compare.adoption.apply"], exact: true });
+  await expect(apply).toBeDisabled(); expect(state.applies).toEqual([]);
+  await panel.getByRole("checkbox", { name: en["compare.adoption.confirm"], exact: true }).check();
+  await apply.click();
+  await expect(dialog.locator(".comparison-results .comparison-tag")).toHaveText(en["compare.tag.outdated"]);
+  expect(state.applies).toEqual([{ previewToken: "p".repeat(64), confirmation: "AdoptDeviceComparison" }]);
+  await dialog.getByRole("button", { name: en["compare.close"], exact: true }).click();
+  await navigate(page, en["workbench.devices"]);
+  await expect(row.locator(".comparison-tag")).toHaveText(en["compare.tag.outdated"]);
   expect(state.requests).toHaveLength(1); expect(state.unexpected).toEqual([]);
 });
 

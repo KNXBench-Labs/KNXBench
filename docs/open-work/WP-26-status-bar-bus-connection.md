@@ -1,6 +1,25 @@
 # WP-26 — Bus-connection drop-up in the status bar
 
-Owner request: 2 November 2026. Recorded only; not claimed, no implementation Go.
+Owner request: 2 November 2026. Implementation authorized by the current task-queue
+Go, with System-2 work first. Active scope and owner: `.ai/CURRENT_STATE.md`.
+
+## Admitted implementation order (2 November 2026)
+
+1. Backend prerequisite: monitor connection starts must refuse held tunnel/session
+   reservations immediately with the existing structured `gatewayBusy` response,
+   including an admitted System-2 operation; no queued late connection. Preserve
+   the existing lock-then-check download/programming checks and shutdown refusal.
+2. Reuse the existing shared bus session (monitor and group-write transport),
+   activity snapshot, discovery and preferred-gateway state in one shared web
+   connection controller. No new tunnel service, implicit reconnect or duplicated
+   selection state. State wording must disclose that connecting also buffers bus
+   telegrams; an unknown or lost session is never shown as connected.
+3. Add the footer drop-up, separate explicit connect/disconnect action and bus
+   settings link. Gateway selection while connected never switches the session.
+
+Only the backend prerequisite is claimed for active implementation initially;
+controller and footer follow after its reviewed delivery. Test using simulated
+connectors and intercepted HTTP only, never the real installation.
 
 ## Requested outcome
 

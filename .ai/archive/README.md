@@ -20,6 +20,18 @@ re-acquire them automatically.
 - [Published snapshot, 13 October 2026](CURRENT_STATE_main_2026-10-13.md): full
   journal from main `4c0bea47`, with only reversible link-destination relocation.
 - Existing earlier archives stay at their own paths and are not duplicated.
+- Monthly track archives `CURRENT_STATE_YYYY-MM.md` (from 2 November 2026): finished
+  tracks moved byte-exact by `tools/compact_current_state.py --publish`, grouped by
+  their observed month, each batch marked with an `archived` comment. Append-only.
+  Without `--publish` the script writes to the ignored `local/` directory, which is
+  the right target for root-local snapshots with private content.
+
+`tools/check_documentation.py` enforces the snapshot shape: at most 50 lines and every
+track a `## <title> (<STATUS>; …; observed YYYY-MM-DD HH:MM)` section. Open statuses:
+`ACTIVE`, `IN PROGRESS`, `RUNNING`, `RESUMED`, `PAUSED`, `BLOCKED`, `WAITING`, `PARKED`,
+`CLAIMED`, `STANDING`. Finished statuses, which must leave the snapshot: `DONE`,
+`DELIVERED`, `PUBLISHED`, `RETIRED`, `CLOSED`, `COMPLETE`, `ABANDONED`, `SUPERSEDED`.
+The script never removes an open track; it warns when one has not been observed for 72 h.
 
 When archiving another legacy journal, capture the complete original and archive
 it before shortening anything; reconcile tracks against the latest owner records.

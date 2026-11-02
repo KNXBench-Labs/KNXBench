@@ -143,6 +143,8 @@ def check(root: Path) -> tuple[dict, list[str]]:
     if (root / 'docs/evidence/documentation-reorganization-2026-10-13.json').is_file():
         from documentation_history import check as check_history
         errors.extend(check_history(root))
+    from compact_current_state import check as check_snapshot
+    errors.extend(check_snapshot(root))
     if (root / '.git').exists():
         from check_local_info import check as check_local_info
         errors.extend(f"local machine detail: {finding}" for finding in check_local_info(root))

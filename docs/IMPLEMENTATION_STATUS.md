@@ -21,13 +21,13 @@ request compared with the written one through the regular download's per-part ma
 A rename or other-device edit keeps all four parts, links or flags leave Group
 addresses pending, a parameter edit also Parameters; a changed, missing or refused
 source and a product/program reference switch credit nothing. Start admission, Net,
-journal, bundle, status schema and UI are unchanged. Focused App, server settlement
-and three mounted worker tests (rename, parameter edit, refused source) only. An
-independent review found one test gap (the worker's refusal mapping) and three smaller
-ones; the corrected tests and their executed mutation controls passed independent
-re-review (APPROVE). The added debug-build cost on a large synthetic project is
-measured and disclosed. Package acceptance and hardware remain unclaimed
-([contract](contracts/system2-download-result.md#settlement)).
+journal, bundle, status schema and UI are unchanged. Main-first source `0d6299187`
+passed independent review/re-review and both selected 14-stage package gates:
+3,382 Rust tests and 91/91 selected corpus tests per run, frozen inputs and checked
+user data untouched. Three mounted simulated-worker cases cover rename, parameter
+edit and refused source; no hardware/release/deployment acceptance. The added
+debug-build cost on a large synthetic project is measured and disclosed.
+[Acceptance and remaining boundaries](status/2026-11-02-system2-selective-settlement.md).
 
 ## Import findings remain reachable after reopening (2 November 2026, main-only)
 

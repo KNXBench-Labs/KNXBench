@@ -94,7 +94,12 @@ class ProportionateGates(unittest.TestCase):
         self.git('commit', '-qm', 'diagnostic base')
         self.git('update-ref', 'refs/remotes/origin/main', 'HEAD')
         path = self.root / 'apps/knx-server/src/diagnostic_bundle_sections.rs'
-        path.write_text(path.read_text().replace('    "porcelain",', '    "rail",\n    "porcelain",'))
+        original = path.read_text()
+        self.assertNotIn('"fixture-added-theme"', original)
+        self.assertEqual(original.count('    "porcelain",'), 1)
+        changed = original.replace('    "porcelain",', '    "fixture-added-theme",\n    "porcelain",')
+        self.assertIn('    "fixture-added-theme",\n    "porcelain",', changed)
+        path.write_text(changed)
 
     def test_registry_data_selects_no_whole_crate_or_corpus(self):
         self.diagnostic()
@@ -271,10 +276,90 @@ class ProportionateGates(unittest.TestCase):
         self.assertIn('knx-core', self.plan().rust_packages)
         self.assertNotIn('xtask', self.plan().rust_packages)
 
+    def test_font_non_utf8_manifests_and_locks_keep_broad_selection(self):
+        self.readers()
+        self.font()
+        for name in ('package.json', 'package-lock.json'):
+            path = self.root / WEB / name
+            original = path.read_bytes()
+            for encoding in ('utf-16', 'utf-32', 'utf-8-sig'):
+                with self.subTest(name=name, encoding=encoding):
+                    try:
+                        path.write_bytes(original.decode('utf-8').encode(encoding))
+                        result = self.plan()
+                        self.assertEqual(result.production_configs, list(gate_scope.PRODUCTION_CONFIGS))
+                        if name == 'package.json':
+                            self.assertIn('xtask', result.rust_packages)
+                    finally:
+                        path.write_bytes(original)
+
+    def test_encoding_only_manifest_changes_preserve_the_actual_reader(self):
+        self.readers()
+        path = self.root / WEB / 'package.json'
+        original = path.read_bytes()
+        for encoding in ('utf-16', 'utf-32', 'utf-8-sig'):
+            with self.subTest(encoding=encoding):
+                try:
+                    path.write_bytes(original.decode('utf-8').encode(encoding))
+                    self.assertIn('xtask', self.plan().rust_packages)
+                finally:
+                    path.write_bytes(original)
+
+    def test_non_utf8_baseline_does_not_prove_a_reader_projection(self):
+        self.readers()
+        normal_base = self.git('rev-parse', 'HEAD')
+        manifest, lock = copy.deepcopy(self.manifest), copy.deepcopy(self.lock)
+        original = (self.root / WEB / 'package.json').read_bytes()
+        for encoding in ('utf-16', 'utf-32', 'utf-8-sig'):
+            with self.subTest(encoding=encoding):
+                self.git('reset', '--hard', normal_base)
+                self.manifest, self.lock = copy.deepcopy(manifest), copy.deepcopy(lock)
+                (self.root / WEB / 'package.json').write_bytes(original.decode('utf-8').encode(encoding))
+                self.git('add', '.')
+                self.git('commit', '-qm', 'encoded baseline fixture')
+                self.git('update-ref', 'refs/remotes/origin/main', 'HEAD')
+                self.font()
+                result = self.plan()
+                self.assertEqual(result.production_configs, list(gate_scope.PRODUCTION_CONFIGS))
+                self.assertIn('xtask', result.rust_packages)
+
+    def test_reader_projection_refuses_unsupported_json_values_on_both_revisions(self):
+        self.readers()
+        normal_base = self.git('rev-parse', 'HEAD')
+        original = (self.root / WEB / 'package.json').read_text()
+        values = ('1e400', '1' + '0' * 400, r'"\ud800"', '[' * 40 + '0' + ']' * 40)
+        for revision in ('old', 'new'):
+            for value in values:
+                with self.subTest(revision=revision, value=value[:20]):
+                    self.git('reset', '--hard', normal_base)
+                    self.git('update-ref', 'refs/remotes/origin/main', normal_base)
+                    self.write(WEB + 'package.json', original[:-1] + ', "readerProbe":' + value + '}')
+                    if revision == 'old':
+                        self.git('add', '.')
+                        self.git('commit', '-qm', 'unsupported baseline fixture')
+                        self.git('update-ref', 'refs/remotes/origin/main', 'HEAD')
+                        self.write(WEB + 'package.json', original)
+                    self.assertIn('xtask', self.plan().rust_packages)
+
+    def test_reader_projection_requires_regular_base_blobs(self):
+        self.readers()
+        name = '{"version":"1.0.0"}'
+        directory = self.root / WEB
+        (directory / name).write_text(json.dumps({**self.manifest, 'version': '9.0.0'}))
+        manifest = directory / 'package.json'
+        manifest.unlink()
+        manifest.symlink_to(name)
+        self.git('add', '.')
+        self.git('commit', '-qm', 'symlink baseline fixture')
+        self.git('update-ref', 'refs/remotes/origin/main', 'HEAD')
+        manifest.unlink()
+        self.write_json()
+        self.assertIn('xtask', self.plan().rust_packages)
+
     def test_registry_with_new_literal_cases_is_admitted_committed_or_uncommitted(self):
         self.diagnostic()
         path = self.root / 'apps/knx-server/src/diagnostic_bundle_sections_tests.rs'
-        path.write_text(path.read_text().replace('        ("tlh",', '        ("bar", "rail", "rail"),\n        ("tlh",'))
+        path.write_text(path.read_text().replace('        ("tlh",', '        ("bar", "fixture-added-theme", "fixture-added-theme"),\n        ("tlh",'))
         self.assertTrue(self.plan().diagnostic_sections)
         self.git('add', '.')
         self.git('commit', '-qm', 'metadata')
@@ -291,8 +376,8 @@ class ProportionateGates(unittest.TestCase):
         path = self.root / 'apps/knx-server/src/diagnostic_bundle_sections.rs'
         original = path.read_text()
         for text in (original + '\nfn side_effect() {}\n',
-                     original.replace('"rail",', '"porcelain",'),
-                     original.replace('"rail",', 'concat!("r", "ail"),'),
+                     original.replace('"fixture-added-theme",', '"porcelain",'),
+                     original.replace('"fixture-added-theme",', 'concat!("r", "ail"),'),
                      original.replace('const SHIPPED_THEMES', 'const OTHER_THEMES'),
                      original.replace('const UI_LANGUAGES', 'const OTHER_LANGUAGES')):
             with self.subTest(text=text[-30:]):
@@ -312,13 +397,13 @@ class ProportionateGates(unittest.TestCase):
         original = tests.read_text()
         for data in (original.replace('        ("tlh", "user-imported-pack", "other"),\n', ''),
                      original.replace('        ("tlh",', '        ("tlh", "user-imported-pack", "other"),\n        ("tlh",'),
-                     original.replace('        ("tlh",', '        ("bar", function(), "rail"),\n        ("tlh",'),
+                     original.replace('        ("tlh",', '        ("bar", function(), "fixture-added-theme"),\n        ("tlh",'),
                      original + '\nfn unrelated() {}\n'):
             with self.subTest(data=data[-30:]):
                 tests.write_text(data)
                 self.broad_diagnostic()
-        tests.write_text(original.replace('        ("tlh",', '        ("bar", "rail", "rail"),\n        ("tlh",'))
-        source.write_text(changed.replace('    "rail",\n', ''))
+        tests.write_text(original.replace('        ("tlh",', '        ("bar", "fixture-added-theme", "fixture-added-theme"),\n        ("tlh",'))
+        source.write_text(changed.replace('    "fixture-added-theme",\n', ''))
         self.broad_diagnostic()
 
     def test_registry_normal_rust_change_and_core_reverse_dependency_win(self):

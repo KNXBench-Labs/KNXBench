@@ -77,6 +77,12 @@ deleted, malformed or ambiguous comparison inputs retain ordinary selection.
 `tools/gate_data_facts.py` is gate infrastructure: changing it selects the complete gate.
 These are closed data checks, not execution of changed JavaScript or a general parser:
 
+Comparison bases must contain regular blobs, not symlink payloads. JSON evidence
+uses UTF-8 without BOM, finite numbers, valid UTF-8 strings, integers from
+`-2^63` through `2^64-1`, and at most 32 nested value levels. This deliberately
+conservative metadata subset is not a general JSON-reader equivalence claim;
+anything outside it retains ordinary gates on either comparison revision.
+
 - Existing app-shell `index.html` keeps **all default browser specs**, Web build,
   typechecks and Vitest, but selects the `dialogs` built-bundle boot/appearance
   smoke rather than every production configuration. Changed production specs

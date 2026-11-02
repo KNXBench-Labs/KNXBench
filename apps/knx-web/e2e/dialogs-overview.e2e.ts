@@ -2,6 +2,7 @@
 import { openNavigationSections } from "./disclosure-fixture";
 import { expect, test, type Page } from "@playwright/test";
 import { join } from "node:path";
+import { Buffer } from "node:buffer";
 import { HISTORY_FIXTURE } from "../src/projectHistory.fixture";
 import { admitProjectHistory } from "../src/projectHistory";
 import type { ProjectTree } from "../src/bindings/ProjectTree";
@@ -20,7 +21,7 @@ const PALETTES = ["porcelain", "graphite", "cupertino", "lcars", "user-modern-re
 interface Fixture { unexpected: string[]; logRequests: number }
 
 /** A modified, imported fictional project; every other request is refused and recorded. */
-async function fixture(page: Page, language: Language, theme: string, width: number, counts: Partial<ProjectTree> = {}, releaseChecks = true): Promise<Fixture> {
+async function fixture(page: Page, language: Language, theme: string, width: number, counts: Partial<ProjectTree> = {}, releaseChecks = true, logOverride?: unknown[]): Promise<Fixture> {
   const tree = { ...admitProjectHistory(structuredClone(HISTORY_FIXTURE)).project, schema_version: 13,
     errors: 2, warnings: 7, import_report_available: true, is_modified: true, ...counts };
   const log = [
@@ -51,7 +52,7 @@ async function fixture(page: Page, language: Language, theme: string, width: num
     if (path === "/api/project" && method === "GET") return ok(tree);
     if (path === "/api/project/load-progress") return ok(null);
     if (path === "/api/project/status-metrics" && method === "GET") return ok(statusMetricsFixtureBody(tree));
-    if (path === "/api/log") { f.logRequests += 1; return ok(log); }
+    if (path === "/api/log") { f.logRequests += 1; return ok(logOverride ?? log); }
     if (path === "/api/fs/list") return ok([{ name: "other-fictional.knxproj", is_dir: false }]);
     // The server refuses to replace unsaved edits; nothing is created.
     if (path === "/api/project/new" && method === "POST") return route.fulfill({ status: 409, contentType: "application/json",
@@ -300,6 +301,65 @@ for (const [language, theme, width] of [["en", "porcelain", 1440], ["de", "graph
     expect(await save.evaluate((node) => { const r = node.getBoundingClientRect(); return document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2) === node; })).toBe(true);
     await noHorizontalOverflow(page);
     if (CAPTURE) await page.screenshot({ path: join(CAPTURE, `new-project-conflict-${language}-${theme}-${width}.png`) });
+    expect(f.unexpected).toEqual([]);
+  });
+}
+
+// WP-25: a reopened native project lists its restored findings; a legacy one has no empty counter.
+for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
+  const open = (timestamp: string, message: string) => ({ timestamp, severity: "info", source: "open", message, location: null, detail: null });
+  const finding = (i: number, severity: string, source: string, message: string) => ({ timestamp: `2026-10-12T08:03:0${i}Z`, severity, source, message, location: null, detail: null });
+  test(`${language} ${width}: a reopened project's counters lead to its restored findings`, async ({ page }) => {
+    const m: Catalogue = language === "de" ? de : en;
+    const errors: string[] = [];
+    page.on("pageerror", (error) => errors.push(error.message));
+    const log = [open("2026-10-12T08:03:00Z", "opened fictional.knxdb"), open("2026-10-12T08:03:01Z", "restored 3 import finding(s) from the stored import report; their times are those of this opening, not of the import"),
+      finding(2, "error", "import:validate", "fictional restored error"), finding(3, "warning", "import:unknown", "fictional restored warning 1"), finding(4, "warning", "import:conflict", "fictional restored warning 2")];
+    const f = await fixture(page, language, "porcelain", width, { errors: 1, warnings: 2, import_report_historical: true, server_incarnation: "wp25-fixture", project_incarnation: 25 }, false, log);
+    const reportJson = JSON.stringify({ source: { file_name: "fictional.knxproj" }, counts: { rows: [] }, errors: [], unknown: [{ name: "retained finding" }], opaque: [], inferred: [], conflicts: [], unsupported: [], future_field: "preserve me" });
+    let reportRequests = 0;
+    await page.route("**/api/project/import-report", (route) => {
+      reportRequests += 1;
+      return route.fulfill({ contentType: "application/json", body: JSON.stringify({ available: true, historical: true, server_incarnation: "wp25-fixture", project_incarnation: 25, report_json: reportJson }) });
+    });
+    await openNavigationSections(page);
+    await page.locator(".workbench-navigation").getByRole("button", { name: m["workbench.overview"], exact: true }).click();
+    await page.locator(".dashboard-finding-link--warning").click();
+    const scope = page.locator(".log-panel-import-scope");
+    await expect(scope.getByRole("status")).toHaveText(m["logPanel.importScope.match"].replace("{findings}", m["logPanel.importScope.warnings.other"].replace("{count}", "2")));
+    await expect(page.locator(".log-entry-message")).toHaveText(["fictional restored warning 2", "fictional restored warning 1"]);
+    // Provenance and the full report live in the scope itself, not in the filtered-out info line.
+    await expect(scope.locator(".log-panel-import-provenance")).toHaveText(m["logPanel.importScope.historical"]);
+    const showReport = scope.getByRole("button", { name: m["importEvidence.show"], exact: true });
+    await expect(showReport).toBeVisible();
+    expect(reportRequests).toBe(0);
+    await showReport.click();
+    const download = scope.getByRole("button", { name: m["importEvidence.download"], exact: true });
+    await expect(download).toBeVisible();
+    expect(reportRequests).toBe(1);
+    const downloaded = page.waitForEvent("download");
+    await download.click();
+    const artifact = await downloaded;
+    expect(artifact.suggestedFilename()).toBe("import-report.json");
+    const stream = await artifact.createReadStream();
+    const chunks: Buffer[] = [];
+    for await (const chunk of stream!) chunks.push(Buffer.from(chunk));
+    const exported = Buffer.concat(chunks).toString("utf8");
+    expect(exported).toContain(reportJson);
+    expect(JSON.parse(exported).report.future_field).toBe("preserve me");
+    if (CAPTURE) await scope.screenshot({ path: join(CAPTURE, `wp25-${language}-${width}.png`) });
+    await noHorizontalOverflow(page);
+    expect(f.unexpected).toEqual([]);
+    expect(errors).toEqual([]);
+  });
+
+  test(`${language} ${width}: a legacy project without a stored report offers no empty counter link`, async ({ page }) => {
+    const m: Catalogue = language === "de" ? de : en;
+    const f = await fixture(page, language, "porcelain", width, { errors: 0, warnings: 0, import_report_available: false, import_report_historical: false }, true, [open("2026-10-12T08:03:00Z", "opened legacy.knxdb")]);
+    await openNavigationSections(page);
+    await page.locator(".workbench-navigation").getByRole("button", { name: m["workbench.overview"], exact: true }).click();
+    await expect(page.locator(".dashboard-import-state")).toHaveText(m["dashboard.importState.unavailable"]);
+    await expect(page.locator(".dashboard-finding-link--warning, .dashboard-finding-link--error")).toHaveCount(0);
     expect(f.unexpected).toEqual([]);
   });
 }

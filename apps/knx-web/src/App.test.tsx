@@ -880,6 +880,85 @@ describe("App — unread errors and Explorer import counts", () => {
   });
 });
 
+// WP-25: a native reopen restores the stored import findings into the log
+// server-side (`session_log::from_historical_report`); the counters must lead
+// to exactly those entries, and a legacy project must offer no empty list.
+describe("App — import findings after reopening a native project (WP-25)", () => {
+  const restoredLog = () => [
+    entry({ severity: "info", source: "open", message: "opened /p.knxdb" }),
+    entry({ severity: "info", source: "open", message: "restored 3 import finding(s) from the stored import report; their times are those of this opening, not of the import" }),
+    entry({ severity: "error", source: "import:validate", message: "restored error" }),
+    entry({ severity: "warning", source: "import:unknown", message: "restored warning one" }),
+    entry({ severity: "warning", source: "import:conflict", message: "restored warning two" }),
+  ];
+  const reopen = async (tree: ProjectTree, log: LogEntry[]) => {
+    apiMock.openProject.mockResolvedValueOnce(tree);
+    apiMock.getSessionLog.mockResolvedValue(log);
+    const root = await renderAppOnFreshServer();
+    await act(async () => {
+      host!.querySelector<HTMLButtonElement>('[aria-labelledby="welcome-native-title"]')!
+        .dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    await act(async () => {});
+    return root;
+  };
+  const listed = () => [...host!.querySelectorAll(".log-entry-message")].map((n) => n.textContent).filter((t) => !/^Loaded|^Geladen/.test(t ?? "")).sort();
+
+  for (const language of ["en", "de"] as const) {
+    const m = language === "de" ? deMessages : enMessages;
+    it(`${language}: the warning counter of a reopened project lists its restored findings once`, async () => {
+      saveUiLanguage(settingsStorage, language);
+      filePickerMock.pickOpenPath.mockResolvedValue("/p.knxdb");
+      const root = await reopen({ ...baseTree(), errors: 1, warnings: 2, import_report_available: true, import_report_historical: true }, restoredLog());
+      const link = host!.querySelector<HTMLButtonElement>(".dashboard .dashboard-finding-link--warning")!;
+      expect(link.textContent).toBe(`${m["dashboard.showInLog"]}2`);
+      await act(async () => link.click());
+      await act(async () => {});
+      const expectedCount = m["logPanel.importScope.warnings.other"].replace("{count}", "2");
+      expect(host!.querySelector(".log-panel-import-scope [role=status]")?.textContent).toBe(m["logPanel.importScope.match"].replace("{findings}", expectedCount));
+      expect(listed()).toEqual(["restored warning one", "restored warning two"]);
+      await act(async () => root.unmount());
+    });
+
+    it(`${language}: severity filters narrow the restored list without breaking the explanation`, async () => {
+      saveUiLanguage(settingsStorage, language);
+      filePickerMock.pickOpenPath.mockResolvedValue("/p.knxdb");
+      const root = await reopen({ ...baseTree(), errors: 1, warnings: 2, import_report_available: true, import_report_historical: true }, restoredLog());
+      await act(async () => host!.querySelector<HTMLButtonElement>(".dashboard .dashboard-finding-link--error")!.click());
+      await act(async () => {});
+      expect(listed()).toEqual(["restored error"]);
+      // Unticking errors empties the list; the scope note still says what is counted and found.
+      const errorBox = host!.querySelectorAll<HTMLInputElement>(".log-panel-filter input")[0];
+      await act(async () => errorBox.click());
+      expect(listed()).toEqual([]);
+      expect(host!.querySelector(".log-panel-import-scope [role=status]")?.textContent).toBe(m["logPanel.importScope.match"].replace("{findings}", m["logPanel.importScope.errors.one"].replace("{count}", "1")));
+      await act(async () => root.unmount());
+    });
+
+    it(`${language}: a capped log that holds fewer findings than counted says so`, async () => {
+      saveUiLanguage(settingsStorage, language);
+      filePickerMock.pickOpenPath.mockResolvedValue("/p.knxdb");
+      const root = await reopen({ ...baseTree(), errors: 0, warnings: 9, import_report_available: true, import_report_historical: true }, restoredLog());
+      await act(async () => host!.querySelector<HTMLButtonElement>(".dashboard .dashboard-finding-link--warning")!.click());
+      await act(async () => {});
+      const findings = m["logPanel.importScope.warnings.other"].replace("{count}", "9");
+      const entries = m["logPanel.importScope.entries.other"].replace("{count}", "2");
+      expect(host!.querySelector(".log-panel-import-scope [role=status]")?.textContent).toBe(m["logPanel.importScope.mismatch"].replace("{findings}", findings).replace("{entries}", entries));
+      await act(async () => root.unmount());
+    });
+
+    it(`${language}: a legacy project without a stored report has no counter link and says why`, async () => {
+      saveUiLanguage(settingsStorage, language);
+      filePickerMock.pickOpenPath.mockResolvedValue("/p.knxdb");
+      const root = await reopen({ ...baseTree(), errors: 0, warnings: 0, import_report_available: false, import_report_historical: false }, [entry({ severity: "info", source: "open", message: "opened /p.knxdb" })]);
+      expect(host!.querySelector(".dashboard .dashboard-finding-link--warning")).toBeNull();
+      expect(host!.querySelector(".dashboard .dashboard-finding-link--error")).toBeNull();
+      expect(host!.querySelector(".dashboard-import-state")?.textContent).toBe(m["dashboard.importState.unavailable"]);
+      await act(async () => root.unmount());
+    });
+  }
+});
+
 describe("App — Log tab reachability (KNOWN_LIMITATIONS.md #36, part A)", () => {
   it("opens the matching import warnings from the project status, then the whole log again", async () => {
     filePickerMock.pickOpenPath.mockResolvedValue("/tmp/project.knxproj");

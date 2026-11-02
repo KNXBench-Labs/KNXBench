@@ -2,6 +2,15 @@
 
 # Implementation status
 
+## Main-only after Alpha 19: import findings after reopening
+
+Opening a native project reprojects the stored primary report's counted errors
+and warnings into the session log. The log explains historical/opening-time
+provenance and provides the full original report on explicit request, including
+when its 16,000-entry cap leaves fewer findings than the counters. No reimport,
+new compatibility assessment or recovery of missing legacy evidence is implied.
+[Scope and verification](../open-work/WP-25-import-findings-after-reopen.md).
+
 ## Alpha 19 — current pre-release
 
 Alpha 19 (`v0.1.0-alpha.19`, source cutoff `858b0a24d`) adds read-only

@@ -120,6 +120,9 @@ mod one_shot_activity;
 pub mod operation_recordings;
 mod programming_state;
 pub use programming_state::address_programming_settler;
+mod historical_import_log;
+#[cfg(test)]
+mod import_restore_tests;
 mod parameter_editor_routes;
 mod paths;
 mod project_history;

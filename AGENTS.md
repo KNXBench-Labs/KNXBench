@@ -74,7 +74,8 @@ Work is complete when relevant tests pass, the build works, implementation statu
 
 ## Restart Snapshot and Coordination
 
-- `.ai/CURRENT_STATE.md` is an overwrite-in-place, model-independent restart snapshot, not an append-only journal. Aim for at most 50 lines.
+- `.ai/CURRENT_STATE.md` is an overwrite-in-place, model-independent restart snapshot, not an append-only journal. At most 50 lines; `tools/check_documentation.py` enforces it.
+- Each track is a `## <title> (<STATUS>; …; observed YYYY-MM-DD HH:MM)` section using the status vocabulary in `.ai/archive/README.md`. `python3 tools/compact_current_state.py` moves finished tracks byte-exact into the monthly archive and never removes open ones.
 - Keep only the current assignment and explicit stop/go per track, ownership and branch/worktree, unfinished changes, running gates with evidence pointers, blockers and the concrete next step. Record observation time; do not infer current activity from an old entry.
 - Update at meaningful operational changes and before pausing, handing off or finishing non-trivial project work. Read-only questions and trivial tasks do not require an update when the operational state is unchanged.
 - Before writing, re-read the snapshot and preserve other sessions' active or parked tracks. Coordinate shared edits; an isolated worktree does not grant ownership of another session's files or frozen gate inputs.

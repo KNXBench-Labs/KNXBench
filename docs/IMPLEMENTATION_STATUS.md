@@ -12,6 +12,19 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Monitor start refuses a held tunnel reservation at once (2 November 2026, source; WP-26 backend prerequisite)
+
+`POST /api/bus/monitor/start` no longer queues behind the bus-session lock, so a
+status-bar connect cannot become a late connection behind a long management or
+System-2 run. A held lock, or an admitted running System-2 operation, answers an
+immediate `409 gatewayBusy` before any connector call. The existing known download
+or management holder is preserved; an unknown held session uses
+`connecting: busMonitorOrGroupWrite`, and System-2 uses `system2Operation`.
+Existing guards, shutdown and malformed-gateway answers are unchanged. Seven mounted
+simulated-connector cases; no hardware. This is the backend prerequisite only:
+the connection controller and status-bar drop-up are not delivered
+([WP-26](open-work/WP-26-status-bar-bus-connection.md)).
+
 ## Selective System-2 settlement on an unchanged source (2 November 2026, source)
 
 A verified configured System-2 run no longer loses every memory credit to an

@@ -12,6 +12,22 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Rail and Rail Dark themes (2 November 2026, source)
+
+Two new built-in themes on owner request: **Rail** (light) and **Rail Dark**.
+Square buttons, fields and panels, Geist/Geist Mono type, a deepened KNX
+bus-cable green as fixed accent with turquoise success, and an inert measuring
+rail under the toolbar. Both share one trusted presentation
+([ADR-0157](adr/0157-rail-built-in-presentation.md)); imported packs cannot
+request it. Effects (start-up rail draw, hover base line, dialog settle, File
+menu unroll, workspace-bar hand-over) sit in the new reduction-only motion
+category **Theme effects (Rail)** and stop under Off or OS reduced motion.
+Focused evidence: web unit suite 315 files / 4,918 tests, Chromium theme
+matrices (theme state, control roles/focus, separators, dialogs) with both
+palettes, real-browser animation probes and the Rust diagnostic-bundle theme
+test. Chromium with intercepted synthetic replies only; native WebKitGTK/Orca
+and Firefox remain unverified ([limits](KNOWN_LIMITATIONS.md#catalogue-rail-presentation)).
+
 ## Status-bar bus connection with a session-bound stop (2 November 2026, source; WP-26)
 
 The status bar shows the shared bus session's state (connected, lost, gateway

@@ -69,6 +69,7 @@ The **Theme** menu is the one place to choose a theme. It lists:
 | Graphite | Dark |
 | Cupertino | A light theme with its own fixed accent |
 | LCARS | Dark orange/lavender palette with recognizable framing and rounded navigation; quiet engineering surfaces |
+| Rail / Rail Dark | A light and a dark sharp theme: square controls, Geist type, a measuring rail under the toolbar and KNX-cable green as its fixed accent |
 | Modern Retro Green CRT | Shipped with KNXBench: a dark phosphor-green theme with its own fixed accent |
 | *your imported themes* | Every theme file you imported, by its name |
 
@@ -101,6 +102,22 @@ Set **Motion level → Off** to stop all of them immediately; OS reduced motion
 also cancels running LCARS effects. No sound or light variant. LCARS cannot be
 exported or removed through Theme files.
 
+### Rail and Rail Dark
+
+**Rail** (light) and **Rail Dark** are built in like LCARS (2 November 2026
+source, main-only; it needs a source build after Alpha 19). Buttons, fields and
+panels have square corners, text uses Geist and Geist Mono, and a thin measuring
+rail with a tick every 18 pixels runs under the toolbar. The green accent is
+fixed; success messages use turquoise so they never look like a selection.
+The rail is decoration, not a bus or save indicator.
+
+With motion allowed, the rail draws itself in once at start-up, a 2-pixel line
+runs in under a control you hover, dialogs settle into place, the File menu
+unrolls and the current-workspace bar hands over when you switch workspace.
+Subtle keeps only short fades. The category **Theme effects (Rail)** under
+**Motion by category** turns these off without touching any other motion;
+Motion level Off and OS reduced motion stop them as well.
+
 ## Theme files
 
 Below the menu, **Theme files** handles `.knx-theme.json` files:
@@ -128,7 +145,7 @@ The accent tints interactive elements only. Status colors — the red of an erro
 amber of a warning — never depend on it, because a color that means something must not
 change meaning when you pick a nicer purple.
 
-Cupertino, LCARS and Modern Retro Green CRT carry their own accent as part of their
+Cupertino, LCARS, Rail, Rail Dark and Modern Retro Green CRT carry their own accent as part of their
 identity (as can an imported theme), and under those the control is disabled with the reason spelled out on screen: *"This theme keeps its own
 accent; the accent setting has no effect here."*
 
@@ -166,7 +183,8 @@ a since Alpha 12; the existing screenshots show the released UI.
 notifications, achievement popups and the telegram Flow separately. Since Alpha 12
 there is also **Structure lines in the explorer**: *Inherit* lets the lines grow
 when a branch opens and pulse about every twelve seconds, *At most subtle* only lets
-them grow, *Off* draws them still. The pulse also pauses while the tab is hidden. Each starts at
+them grow, *Off* draws them still. The pulse also pauses while the tab is hidden.
+**Theme effects (Rail)** (main-only) covers the Rail themes' own effects. Each starts at
 *Inherit* (follow the motion level) and can only go down: *At most subtle* or *Off*.
 A category never brings back motion that the level, or your desktop, turned off;
 switch the level back on and each category returns to its own choice.

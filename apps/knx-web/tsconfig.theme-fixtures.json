@@ -6,6 +6,7 @@
     "e2e/theme-state-fixture.tsx",
     "e2e/theme-state-data.ts",
     "e2e/theme-state.e2e.ts",
+    "e2e/rail-theme.e2e.ts",
     "e2e/theme-manager.e2e.ts"
   ]
 }

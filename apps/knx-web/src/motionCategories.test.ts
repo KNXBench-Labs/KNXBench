@@ -4,7 +4,7 @@ import * as motion from "./motion";
 
 it("inherits the old global preference when a category has never been stored", () => {
   const storage = { getItem: vi.fn(() => null), setItem: vi.fn() };
-  for (const category of ["toasts", "achievements", "flow", "lines"] as const) {
+  for (const category of ["toasts", "achievements", "flow", "lines", "theme"] as const) {
     expect(motion.loadMotionCategory(storage, category)).toBe("inherit");
     expect(motion.effectiveMotionLevel("subtle", "inherit", false)).toBe("subtle");
   }
@@ -41,4 +41,14 @@ it("round-trips choices independently and keeps unknown stored preferences untou
   expect(motion.loadMotionCategory(storage, "achievements")).toBe("subtle");
   expect(motion.loadMotionCategory(storage, "flow")).toBe("off");
   expect(values.motionToasts).toBe("future");
+});
+
+it("theme presentation effects are a category of their own, stored under motionTheme (ADR-0157)", () => {
+  expect(motion.MOTION_CATEGORIES).toContain("theme");
+  const values: Record<string, string> = {};
+  const storage = { getItem: (key: string) => values[key] ?? null, setItem: (key: string, value: string) => { values[key] = value; } };
+  motion.saveMotionCategory(storage, "theme", "off");
+  expect(values).toEqual({ motionTheme: "off" });
+  expect(motion.loadMotionCategory(storage, "theme")).toBe("off");
+  expect(motion.loadMotionCategory(storage, "lines")).toBe("inherit");
 });

@@ -2752,6 +2752,7 @@ export const messages: Record<MessageKey, string> = {
   "settings.motionCategory.achievements": "Achievement-Meldungen",
   "settings.motionCategory.flow": "Telegramfluss",
   "settings.motionCategory.lines": "Strukturlinien im Explorer",
+  "settings.motionCategory.theme": "Theme-Effekte (Rail)",
   "settings.categoryMotion.inherit": "Globale Einstellung erben",
   "settings.categoryMotion.subtle": "Höchstens dezent",
   "settings.categoryMotion.off": "Aus",

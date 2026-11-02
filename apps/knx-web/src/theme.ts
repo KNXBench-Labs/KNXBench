@@ -23,7 +23,15 @@ const PALETTE_THEMES: readonly ThemeDef[] = [
   { id: "graphite", name: "Graphite", hasAccentVariations: true },
   { id: "cupertino", name: "Cupertino", hasAccentVariations: false },
   { id: "lcars", name: "LCARS", hasAccentVariations: false },
+  { id: "rail", name: "Rail", hasAccentVariations: false },
+  { id: "rail-dark", name: "Rail Dark", hasAccentVariations: false },
 ];
+/** Built-in palettes that also carry a trusted presentation (ADR-0092, ADR-0157). */
+const BUILT_IN_PRESENTATIONS: Readonly<Record<string, string>> = { lcars: "lcars", rail: "rail", "rail-dark": "rail" };
+/** The presentation marker a resolved built-in id (never a pack) puts on the document. */
+export function builtInPresentation(id: string): string | undefined {
+  return Object.hasOwn(BUILT_IN_PRESENTATIONS, id) ? BUILT_IN_PRESENTATIONS[id] : undefined;
+}
 
 /**
  * `system` is not a palette — it is whichever palette `resolveThemeId`
@@ -128,7 +136,8 @@ export function useThemeId(): [string, (id: string) => void] {
       root.dataset.theme = resolveThemeId(appliedId, query.matches);
       // Built-in presentation only (ADR-0092): imported v1 packs cannot
       // request geometry or executable effects through metadata/tokens.
-      if (appliedId === "lcars" && !pack) root.dataset.presentation = "lcars";
+      const presentation = pack ? undefined : builtInPresentation(appliedId);
+      if (presentation) root.dataset.presentation = presentation;
       else root.removeAttribute("data-presentation");
     };
     apply();

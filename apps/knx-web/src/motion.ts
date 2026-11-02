@@ -111,12 +111,13 @@ export function useMotion(): {
   return { level, setLevel, style, setStyle };
 }
 
-export type MotionCategory = "toasts" | "achievements" | "flow" | "lines";
+export type MotionCategory = "toasts" | "achievements" | "flow" | "lines" | "theme";
 export type CategoryMotion = "inherit" | "off" | "subtle";
 // `lines`: the project explorer's structure lines (owner feedback P2):
 // standard grows and pulses them, subtle only grows them, off draws them still.
-export const MOTION_CATEGORIES = ["toasts", "achievements", "flow", "lines"] as const;
-const CATEGORY_KEYS: Record<MotionCategory, string> = { toasts: "motionToasts", achievements: "motionAchievements", flow: "motionFlow", lines: "motionLines" };
+// `theme`: a built-in presentation's own effects (the Rail sweeps and reveals).
+export const MOTION_CATEGORIES = ["toasts", "achievements", "flow", "lines", "theme"] as const;
+const CATEGORY_KEYS: Record<MotionCategory, string> = { toasts: "motionToasts", achievements: "motionAchievements", flow: "motionFlow", lines: "motionLines", theme: "motionTheme" };
 export function loadMotionCategory(storage: Pick<Storage, "getItem">, category: MotionCategory): CategoryMotion {
   const raw = storage.getItem(CATEGORY_KEYS[category]);
   return raw === "off" || raw === "subtle" ? raw : "inherit";

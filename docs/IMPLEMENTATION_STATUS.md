@@ -12,6 +12,16 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Catalogue poll and disposed-owner lifetime (3 November 2026, source)
+
+Main-first `5296e56c5` stops queued automatic reads after valid terminal status,
+keeps replacement timers and operation snapshots isolated from old callbacks,
+and models the existing typed 410 response for disposed fixture owners without
+relaxing request guards. Manual terminal refresh remains available. Independent
+review and both selected 11-stage gates passed; this is a prerequisite fix,
+not WP-27 delivery or native-server/hardware acceptance.
+[Measured coverage and boundaries](status/2026-11-03-catalogue-poll-lifetime.md).
+
 ## Rail and Rail Dark themes (2 November 2026, source)
 
 Two new built-in themes on owner request: **Rail** (light) and **Rail Dark**.

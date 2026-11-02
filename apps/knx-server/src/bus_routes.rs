@@ -25,7 +25,7 @@
 use std::net::SocketAddrV4;
 use std::time::Duration;
 
-use axum::extract::{Query, State};
+use axum::extract::{Query, RawQuery, State};
 use axum::http::StatusCode;
 use axum::routing::{get, post};
 use axum::{Json, Router};
@@ -52,6 +52,7 @@ pub fn bus_routes() -> Router<SharedState> {
     Router::new()
         .route("/api/bus/monitor/start", post(start_monitor))
         .route("/api/bus/monitor/stop", post(stop_monitor))
+        .route("/api/bus/monitor/stop-bound", post(stop_bound_monitor))
         .route("/api/bus/monitor/telegrams", get(poll_telegrams))
         .route("/api/bus/monitor/flow-snapshot", get(flow_snapshot))
         .route("/api/bus/write", post(write_value))
@@ -534,6 +535,35 @@ fn session_error_to_api_error(error: BusSessionError) -> ApiError {
 // POST /api/bus/monitor/start
 // ---------------------------------------------------------------------------
 
+/// Whether an admitted System-2 operation owns the tunnel right now.
+fn system2_running(state: &SharedState) -> bool {
+    matches!(
+        state.device_system2.control.snapshot().settlement,
+        System2Settlement::Running { .. }
+    )
+}
+
+/// The `gatewayBusy` answer for a held (or System-2 owned) session lock.
+/// System-2 is named first; the other helpers never wait either and keep a
+/// known download or management holder before an unnamed session lock.
+fn session_lock_busy(state: &SharedState, system2_running: bool) -> ApiError {
+    let holder = if system2_running {
+        crate::tunnel_holder::TunnelHolder::Connecting {
+            session: "system2Operation",
+        }
+    } else {
+        crate::tunnel_holder::download_holder(state)
+            .or_else(|| crate::tunnel_holder::programming_holder(state))
+            .unwrap_or(crate::tunnel_holder::TunnelHolder::Connecting {
+                session: "busMonitorOrGroupWrite",
+            })
+    };
+    crate::tunnel_holder::gateway_busy(
+        holder,
+        "the gateway's tunnel is reserved right now: the gateway serves one tunnel",
+    )
+}
+
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct StartRequest {
@@ -565,33 +595,11 @@ async fn start_monitor(
     // the `try_lock` so an operation admitted before it holds its locks is
     // still seen; an unknown holder of the lock stays unnamed.
     let held = state.bus_session.try_lock();
-    let system2_running = matches!(
-        state.device_system2.control.snapshot().settlement,
-        System2Settlement::Running { .. }
-    );
-    let busy = || {
-        let holder = if system2_running {
-            crate::tunnel_holder::TunnelHolder::Connecting {
-                session: "system2Operation",
-            }
-        } else {
-            // These helpers never wait either; preserve a known download or
-            // management holder before falling back to an unnamed session lock.
-            crate::tunnel_holder::download_holder(&state)
-                .or_else(|| crate::tunnel_holder::programming_holder(&state))
-                .unwrap_or(crate::tunnel_holder::TunnelHolder::Connecting {
-                    session: "busMonitorOrGroupWrite",
-                })
-        };
-        crate::tunnel_holder::gateway_busy(
-            holder,
-            "the gateway's tunnel is reserved right now: the gateway serves one tunnel",
-        )
-    };
+    let system2_running = system2_running(&state);
     if system2_running {
-        return Err(busy());
+        return Err(session_lock_busy(&state, system2_running));
     }
-    let mut guard = held.map_err(|_| busy())?;
+    let mut guard = held.map_err(|_| session_lock_busy(&state, system2_running))?;
     // Checked while holding this session's lock, never before it: a
     // download start holds its own lock and then waits for this one, so
     // this `try_lock` sees it (ADR-0045 §4).
@@ -689,6 +697,109 @@ async fn stop_monitor(State(state): State<SharedState>) -> Result<Json<StopRespo
     let summary = session.stop().await;
     Ok(Json(StopResponse {
         session_id,
+        server_incarnation: state.server_incarnation.clone(),
+        telegram_count: summary.telegram_count,
+        dropped_count: summary.dropped_count,
+        warning: summary.drain_panic,
+    }))
+}
+
+// ---------------------------------------------------------------------------
+// POST /api/bus/monitor/stop-bound?sessionId=<id>&serverIncarnation=<token>
+// ---------------------------------------------------------------------------
+
+/// `kind` of the `409` when the named session is not the one held (WP-26).
+const BUS_SESSION_CHANGED: &str = "busSessionChanged";
+
+/// The session a bound stop names: both fields, each exactly once, nothing
+/// else, the id in canonical decimal. Nothing is defaulted or normalised.
+#[derive(Debug, PartialEq, Eq)]
+struct BoundSession {
+    session_id: u64,
+    server_incarnation: String,
+}
+
+fn parse_bound_session(query: Option<&str>) -> Result<BoundSession, ApiError> {
+    let refuse = |why: &str| ApiError::bad_request(format!("bound stop refused: {why}"));
+    let mut session_id = None;
+    let mut incarnation = None;
+    for pair in query
+        .unwrap_or("")
+        .split('&')
+        .filter(|pair| !pair.is_empty())
+    {
+        let (name, value) = pair
+            .split_once('=')
+            .ok_or_else(|| refuse("a field has no value"))?;
+        let slot = match name {
+            "sessionId" => &mut session_id,
+            "serverIncarnation" => &mut incarnation,
+            _ => return Err(refuse("unknown query field")),
+        };
+        if slot.replace(value).is_some() {
+            return Err(refuse("a field is repeated"));
+        }
+    }
+    let (Some(id), Some(incarnation)) = (session_id, incarnation) else {
+        return Err(refuse("sessionId and serverIncarnation are both required"));
+    };
+    let canonical = id == "0" || (!id.starts_with('0') && !id.is_empty());
+    if !canonical || !id.bytes().all(|b| b.is_ascii_digit()) {
+        return Err(refuse("sessionId must be a canonical decimal integer"));
+    }
+    let session_id = id
+        .parse::<u64>()
+        .map_err(|_| refuse("sessionId is out of range"))?;
+    // The incarnation is unpadded base64url: no byte needs percent-encoding,
+    // so an encoded or empty value cannot be one this server ever issued.
+    let url_safe = |b: u8| b.is_ascii_alphanumeric() || b == b'-' || b == b'_';
+    if incarnation.is_empty() || !incarnation.bytes().all(url_safe) {
+        return Err(refuse("serverIncarnation is malformed"));
+    }
+    Ok(BoundSession {
+        session_id,
+        server_incarnation: incarnation.to_owned(),
+    })
+}
+
+/// Stops only the named session, and never waits for the session lock.
+///
+/// Order: the identity is decoded first, so a malformed request has no
+/// effect and never looks at a lock. Then, like `/start`, System-2 and a
+/// held lock answer `gatewayBusy` at once (no late stop after a queue).
+/// Only under the lock is the held session compared; a mismatch or an
+/// empty slot is `409 busSessionChanged` and the slot stays as it is. Stop
+/// admission is not consulted: it refuses new bus jobs, while releasing a
+/// tunnel is what the orderly shutdown does itself, as the legacy stop does.
+async fn stop_bound_monitor(
+    State(state): State<SharedState>,
+    RawQuery(query): RawQuery,
+) -> Result<Json<StopResponse>, ApiError> {
+    let bound = parse_bound_session(query.as_deref())?;
+    let held = state.bus_session.try_lock();
+    let system2_running = system2_running(&state);
+    if system2_running {
+        return Err(session_lock_busy(&state, system2_running));
+    }
+    let mut guard = held.map_err(|_| session_lock_busy(&state, system2_running))?;
+    let matches = bound.server_incarnation == state.server_incarnation
+        && guard
+            .as_ref()
+            .is_some_and(|session| session.id() == bound.session_id);
+    if !matches {
+        return Err(ApiError::conflict(
+            BUS_SESSION_CHANGED,
+            format!(
+                "monitor session {} of the named server is not the session held now; nothing was stopped",
+                bound.session_id
+            ),
+        ));
+    }
+    let session = guard.take().expect("matched a held session");
+    drop(guard);
+    let summary = session.stop().await;
+    Ok(Json(StopResponse {
+        session_id: bound.session_id,
         server_incarnation: state.server_incarnation.clone(),
         telegram_count: summary.telegram_count,
         dropped_count: summary.dropped_count,

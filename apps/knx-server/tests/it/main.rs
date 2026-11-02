@@ -19,6 +19,7 @@ mod http_bus_activity;
 mod http_bus_discover;
 mod http_bus_flow;
 mod http_bus_monitor;
+mod http_bus_monitor_admission;
 mod http_bus_scan;
 mod http_bus_write;
 mod http_catalog_to_device;

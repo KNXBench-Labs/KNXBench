@@ -15,12 +15,12 @@
 //! choice.
 //!
 //! `AppState.bus_session` is a `tokio::sync::Mutex`, not a `std::sync::
-//! Mutex` (see `domain.rs`'s doc comment on that field for why) — every
-//! handler below locks it with `.lock().await` and, for `/start` and
-//! `/write`, holds the guard across `BusSession::start`/`BusSession::send`'s
+//! Mutex` (see `domain.rs`'s doc comment on that field for why) — `/start`
+//! and `/write` hold the guard across `BusSession::start`/`BusSession::send`'s
 //! own `.await` on purpose: at most one session exists, so serializing
 //! concurrent attempts through this one lock is correct, not a cost to
-//! avoid.
+//! avoid. `/start` alone takes it with `try_lock` and refuses `gatewayBusy`
+//! when it is held (WP-26) instead of queueing behind another holder.
 
 use std::net::SocketAddrV4;
 use std::time::Duration;
@@ -31,6 +31,7 @@ use axum::routing::{get, post};
 use axum::{Json, Router};
 use serde::{Deserialize, Serialize};
 
+use knx_app::property_validation::System2Settlement;
 use knx_core::scan::{ScanPlan, ScanPlanBuilder};
 use knx_core::{GroupAddress, GroupAddressDpt, GroupAddressStyle, IndividualAddress};
 use knx_net::{
@@ -558,7 +559,39 @@ async fn start_monitor(
         .parse()
         .map_err(|_| ApiError::bad_request(format!("not a gateway address: {:?}", body.gateway)))?;
 
-    let mut guard = state.bus_session.lock().await;
+    // WP-26: a start never queues behind a held reservation (a long management
+    // or System-2 run would turn it into a late, surprising connect). It is
+    // refused at once, before any connector call. The System-2 check follows
+    // the `try_lock` so an operation admitted before it holds its locks is
+    // still seen; an unknown holder of the lock stays unnamed.
+    let held = state.bus_session.try_lock();
+    let system2_running = matches!(
+        state.device_system2.control.snapshot().settlement,
+        System2Settlement::Running { .. }
+    );
+    let busy = || {
+        let holder = if system2_running {
+            crate::tunnel_holder::TunnelHolder::Connecting {
+                session: "system2Operation",
+            }
+        } else {
+            // These helpers never wait either; preserve a known download or
+            // management holder before falling back to an unnamed session lock.
+            crate::tunnel_holder::download_holder(&state)
+                .or_else(|| crate::tunnel_holder::programming_holder(&state))
+                .unwrap_or(crate::tunnel_holder::TunnelHolder::Connecting {
+                    session: "busMonitorOrGroupWrite",
+                })
+        };
+        crate::tunnel_holder::gateway_busy(
+            holder,
+            "the gateway's tunnel is reserved right now: the gateway serves one tunnel",
+        )
+    };
+    if system2_running {
+        return Err(busy());
+    }
+    let mut guard = held.map_err(|_| busy())?;
     // Checked while holding this session's lock, never before it: a
     // download start holds its own lock and then waits for this one, so
     // this `try_lock` sees it (ADR-0045 §4).

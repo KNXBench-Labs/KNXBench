@@ -2,6 +2,7 @@
 import { expect, test, type BrowserContext } from "@playwright/test";
 import type { ProjectTree } from "../src/bindings/ProjectTree";
 import { achievementsFixtureAnswer } from "./achievements-fixture";
+import { busActivityFixtureAnswer } from "./bus-activity-fixture";
 import { statusMetricsFixtureBody } from "./status-metrics-fixture";
 
 async function interceptApi(context: BrowserContext, language = "en") {
@@ -25,6 +26,7 @@ async function interceptApi(context: BrowserContext, language = "en") {
     else if (method === "GET" && path === "/api/bus/monitor/telegrams") {
       return route.fulfill({ status: 404, contentType: "application/json", body: '{"error":"no bus session"}' });
     } else if (achievementsFixtureAnswer(method, path) !== undefined) body = achievementsFixtureAnswer(method, path);
+    else if (busActivityFixtureAnswer(method, path) !== undefined) body = busActivityFixtureAnswer(method, path);
     else {
       unexpected.push(`${method} ${path}`);
       return route.fulfill({ status: 404, contentType: "application/json", body: '{"error":"local fixture only"}' });

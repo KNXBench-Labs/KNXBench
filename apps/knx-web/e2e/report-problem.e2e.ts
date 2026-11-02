@@ -6,6 +6,7 @@ import { messages as de } from "../src/messages/de";
 import { PROBLEM_TYPES } from "../src/diagnosticBundleShape";
 import { defaultSelection } from "../src/reportProblem";
 import { achievementsFixtureAnswer } from "./achievements-fixture";
+import { busActivityFixtureAnswer } from "./bus-activity-fixture";
 import { openFileSubmenu } from "./file-menu";
 import { statusMetricsFixtureBody } from "./status-metrics-fixture";
 import { HISTORY_FIXTURE } from "../src/projectHistory.fixture";
@@ -57,6 +58,8 @@ async function intercept(page: Page, language: Language, project?: OpenProject) 
     if (["/api/device-download/status", "/api/device-address/status", "/api/device-system2/status"].includes(path)) return json({ error: "no operation" }, 404);
     const achievement = achievementsFixtureAnswer(method, path);
     if (achievement !== undefined) return json(achievement);
+    const busActivity = busActivityFixtureAnswer(method, path);
+    if (busActivity !== undefined) return json(busActivity);
     unexpected.push(`${method} ${path}`);
     return json({ error: "strict report-problem fixture" }, 404);
   });
@@ -336,6 +339,15 @@ for (const width of [1440, 400]) {
     await dialog.locator("[data-report-type=deviceReading]").check();
     await expect(toast).toHaveCount(1);
     const buttons = [dialog.locator("[data-report-next]"), dialog.getByRole("button", { name: en["reportProblem.close"], exact: true })];
+    // Since WP-26 the toast stack sits above the status bar, so on this short screen it clears the
+    // wizard's buttons. This test exists to prove the wizard is painted above a toast that DOES cover
+    // them, so the fixture slides the stack down, by the measured gap plus half a button height. Only
+    // the stack's offset moves: its z-index, the wizard's and the assertions below stay the product's.
+    const row = (await Promise.all(buttons.map((button) => button.boundingBox()))).map((box) => box!);
+    const rowTop = Math.min(...row.map((box) => box.y)), rowHeight = Math.max(...row.map((box) => box.height));
+    const bottom = (await toast.boundingBox())!;
+    const slide = rowTop + rowHeight / 2 - (bottom.y + bottom.height);
+    if (slide > 0) await page.locator(".toast-stack").evaluate((el, dy) => { (el as HTMLElement).style.transform = `translateY(${dy}px)`; }, slide);
     const card = (await toast.boundingBox())!;
     let overlaps = 0;
     for (const button of buttons) {

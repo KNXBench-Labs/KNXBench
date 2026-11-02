@@ -11,6 +11,7 @@ import type { ComObjectNode } from "../src/bindings/ComObjectNode";
 import { messages as en } from "../src/messages/en";
 import { messages as de } from "../src/messages/de";
 import { achievementsFixtureAnswer } from "./achievements-fixture";
+import { busActivityFixtureAnswer } from "./bus-activity-fixture";
 import { statusMetricsFixtureBody } from "./status-metrics-fixture";
 import { wordsIntact, scrollsLocally } from "./table-word-assertions";
 
@@ -88,6 +89,7 @@ async function intercept(page: Page, language: Language, theme: string, initial:
       else { status = 500; body = { error: `fictional device ${id} read failed` }; }
     }
     else if (achievementsFixtureAnswer(method, path) !== undefined) body = achievementsFixtureAnswer(method, path);
+    else if (busActivityFixtureAnswer(method, path) !== undefined) body = busActivityFixtureAnswer(method, path);
     else { state.unexpected.push(`${method} ${path}`); status = 404; body = { error: "strict group-address fixture only" }; }
     return route.fulfill({ status, contentType: "application/json", body: JSON.stringify(body) });
   });

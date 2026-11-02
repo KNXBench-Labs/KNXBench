@@ -2,6 +2,7 @@
 import { openNavigationSections } from "./disclosure-fixture";
 import { expect, test, type Locator, type Page } from "@playwright/test";
 import { achievementsFixtureAnswer } from "./achievements-fixture";
+import { busActivityFixtureAnswer } from "./bus-activity-fixture";
 import { statusMetricsFixtureBody } from "./status-metrics-fixture";
 
 // Forty installations: an explorer much taller than the column, as in a real project.
@@ -36,6 +37,7 @@ async function openProject(page: Page, stored?: Record<string, unknown>) {
     else if (path === "/api/bus/discover" && method === "POST") body = { interfaces: [] };
     else if (method === "GET" && ["/api/product-languages", "/api/catalog/manufacturers", "/api/catalog/items"].includes(path)) body = [];
     else if (achievementsFixtureAnswer(method, path) !== undefined) body = achievementsFixtureAnswer(method, path);
+    else if (busActivityFixtureAnswer(method, path) !== undefined) body = busActivityFixtureAnswer(method, path);
     else {
       unexpected.push(`${method} ${path}`);
       return route.fulfill({ status: 404, contentType: "application/json", body: '{"error":"local fixture only"}' });

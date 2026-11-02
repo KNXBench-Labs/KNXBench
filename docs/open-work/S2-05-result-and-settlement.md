@@ -20,8 +20,10 @@ Contract: [system2-download-result](../contracts/system2-download-result.md).
   2 November 2026: a revision-3 UP258 preparation declares that octet, journals and shows each
   tolerated value; every other byte stays strict. Open: a field run of a build that contains it
   (not requested), and the exact clear time (Load Completed or restart).
-- Per-part source equivalence: a verified run today clears memory beliefs only while the
-  whole preparation is unchanged.
+- Per-part source equivalence stays open: a source that changed in any part still credits
+  nothing. Since 2 November 2026 (source, focused proof) a verified run on a proven
+  unchanged source credits the parts the current project still states as written
+  ([contract](../contracts/system2-download-result.md#settlement)); no hardware run.
 - Field verification by the reporter is not requested; no hardware retry is needed
   for the software change.
 

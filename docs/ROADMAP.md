@@ -122,6 +122,8 @@ ownership and a global stale-mark notice survive navigation. Reports of ended
 retained operations require no new bus contact. [Scope and software acceptance](status/2026-10-28-system2-result-integration.md).
 The allocation mismatch in #30/#22, per-part source equivalence and physical
 acceptance remain separate; no device retry is implied. Ships in Alpha 18.
+Since 2 November 2026 (source) a verified run on a proven unchanged source credits
+the parts the current project still states as written instead of all-or-nothing.
 
 <a id="legacy-binary-enumeration-retention-after-alpha-17"></a>
 

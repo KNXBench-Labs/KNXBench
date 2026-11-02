@@ -1665,5 +1665,7 @@ async fn worker_activity_refusal_reaches_status_without_touching_the_bus() {
 
 #[path = "mounted_failure_diagnostic.rs"]
 mod failure_diagnostic;
+#[path = "mounted_per_part.rs"]
+mod per_part;
 #[path = "mounted_tunnel_liveness.rs"]
 mod tunnel_liveness;

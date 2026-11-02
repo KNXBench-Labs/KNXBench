@@ -17,18 +17,39 @@ Go, with System-2 work first. Active scope and owner: `.ai/CURRENT_STATE.md`.
 3. Add the footer drop-up, separate explicit connect/disconnect action and bus
    settings link. Gateway selection while connected never switches the session.
 
-Progress, 2 November 2026: step 1 (backend prerequisite) is implemented in source
-and awaits review and gates; it is not delivered UI. A monitor start now uses
-`try_lock` on the bus-session lock and refuses a held lock or an admitted running
-System-2 operation with the existing `gatewayBusy` before any connector call.
-Known download/management holders are retained, System-2 is named
-`system2Operation`, and only an unknown lock uses `busMonitorOrGroupWrite`;
-seven mounted FakeConnector cases cover it. Brief concurrent session readers can
-also cause a busy refusal: retry must remain explicit, never automatic. Steps 2
-and 3 (controller, footer) remain open.
+Progress, 2 November 2026: step 1 is delivered main-first as `038845ef8`, with
+independent review/re-review and both selected 14-stage package gates passed.
+[Acceptance and boundaries](../status/2026-11-02-wp26-nonqueueing-start.md).
+This does not deliver the controller or footer. Their active next package adds
+session-and-server-bound non-queueing stop, then the shared controller and menu.
+Known download/management holders and System-2 priority are retained; brief
+session readers may cause busy refusal, with explicit manual retry only.
 
-Only the backend prerequisite is claimed for active implementation initially;
-controller and footer follow after its reviewed delivery. Test using simulated
+## Controller/footer admission decisions (2 November 2026)
+
+- Extend stop with a strict optional query binding (`sessionId` and
+  `serverIncarnation`): both absent retain legacy behavior; both present use
+  non-queueing exact-identity admission. Partial, duplicate, malformed or unknown
+  fields must refuse, never silently fall back to an unbound stop. A mismatch
+  leaves the current session untouched. Footer and migrated monitor panel use
+  bound stop; other legacy callers remain a documented boundary.
+- Share one web action token and activity-derived connection view. Preserve the
+  monitor panel's local-session-before-context-publication ordering. Reject stale
+  responses after restart or action generation changes; never infer connected
+  from an unknown/failed activity read. Poll every two seconds while visible,
+  coalescing refreshes. Passive events only read; no automatic connect or retry.
+- Unknown, indeterminate and occupied states do not offer Connect. Selection of
+  a different gateway never switches an existing connection; show both values.
+  Disable known non-tunnelling discovery entries with an explanation. Reuse the
+  existing preference, discovery and theme tokens; a static status indicator
+  suffices. No new settings schema or end-user consent dialog is needed.
+- Implement the binding and UI as one end-to-end package, tested through the
+  actual panel/footer join, strict HTTP refusals and EN/DE wide/narrow browser
+  fixtures with discovery intercepted. No real installation access.
+
+The backend prerequisite claim is released. The shared-controller/footer package
+is taken by the same WebUI task queue in its next owned worktree; its exact branch
+and current execution state are in `.ai/CURRENT_STATE.md`. Test using simulated
 connectors and intercepted HTTP only, never the real installation.
 
 ## Requested outcome

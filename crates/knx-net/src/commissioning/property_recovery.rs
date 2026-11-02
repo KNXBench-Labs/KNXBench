@@ -626,6 +626,45 @@ impl PropertyRecoverySnapshot {
         )
     }
 
+    /// Replays final verification of `executed_plan` for one recorded post-load octet:
+    /// true exactly when a read-back holding `observation.observed` there (and the expected
+    /// value everywhere else) is tolerated and observed as recorded, prestate included.
+    /// Lets a journal reader prove a stored observation instead of trusting it.
+    pub fn post_load_observation_is_genuine(
+        &self,
+        executed_plan: &PropertyDownloadPlan,
+        observation: &PostLoadOctetObservation,
+    ) -> bool {
+        self.allocations
+            .iter()
+            .enumerate()
+            .any(|(index, allocation)| {
+                let Some(offset) = observation
+                    .address
+                    .checked_sub(allocation.address)
+                    .map(usize::from)
+                    .filter(|offset| *offset < allocation.data.len())
+                else {
+                    return false;
+                };
+                if allocation.object != observation.object {
+                    return false;
+                }
+                let (expected, written) = expected_allocation(allocation, executed_plan);
+                let mut actual = expected.clone();
+                actual[offset] = observation.observed;
+                let (_, observed) = self.post_load_tolerance(
+                    index,
+                    allocation,
+                    executed_plan,
+                    &expected,
+                    &written,
+                    &actual,
+                );
+                observed.as_slice() == std::slice::from_ref(observation)
+            })
+    }
+
     /// The only write after verification. The caller journals the verification's
     /// observations first, so they are durable before this device write.
     pub(crate) async fn restore_verify_mode<T: ManagementTransport>(

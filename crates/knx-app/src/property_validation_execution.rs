@@ -236,14 +236,13 @@ fn event(
                     .collect(),
             })
         }
-        // No App preparation declares post-load octets yet, so an App bundle never
-        // produces this. Refuse instead of dropping it: the run then fails before the
-        // final VerifyMode write rather than finishing without a durable record.
-        PropertyJournalEvent::PostLoadOctetObservations(_) => {
-            return Err(
-                "post-load octet observations are not journaled by this build; refused before the final write"
-                    .into(),
-            )
+        // Only a revision-3 hardware record declares post-load octets. The store replays
+        // each record against the durable prestate before it becomes durable, so a record
+        // the declaration would not produce fails the run before the final VerifyMode write.
+        PropertyJournalEvent::PostLoadOctetObservations(observations) => {
+            store.checkpoint(Checkpoint::PostLoadOctetObservations {
+                observations: observations.iter().map(Into::into).collect(),
+            })
         }
     };
     result.map_err(|e| e.to_string())

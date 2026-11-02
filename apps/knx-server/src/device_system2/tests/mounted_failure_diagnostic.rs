@@ -100,7 +100,7 @@ fn checked_raw(raw: &str, operation: &Path, raws: &[&str]) -> (Value, String) {
     let mut expected: Vec<_> = STATUS_KEYS.iter().map(|k| k.to_string()).collect();
     expected.sort();
     assert_eq!(keys, expected);
-    assert_eq!(status["schemaVersion"], 4);
+    assert_eq!(status["schemaVersion"], 5);
     (status, raw.to_owned())
 }
 /// Like `settled`, with a wider budget: a debug-build restore under load can outlast 10 s
@@ -224,7 +224,7 @@ async fn download_and_restore_refusals_reach_status_v2_across_restarts() {
     let preview = prepare(&router, device).await;
     let accepted_raw = raw_http(&router, "/api/device-system2/start", Some(start(&preview))).await;
     let accepted: Value = serde_json::from_str(&accepted_raw).unwrap();
-    assert_eq!(accepted["schemaVersion"], 4);
+    assert_eq!(accepted["schemaVersion"], 5);
     assert_eq!(
         accepted["failureDiagnostics"],
         json!([]),
@@ -461,7 +461,7 @@ async fn a_final_step_failure_reaches_status_report_and_reopen_per_run() {
     .await;
     capture("final-report.json", &report_raw);
     let report: Value = serde_json::from_str(&report_raw).unwrap();
-    assert_eq!(report["format"], 3);
+    assert_eq!(report["format"], 4);
     assert_eq!(report["finalStepFailures"], json!([download]));
     for forbidden in [
         "local_diagnostic",
@@ -535,7 +535,7 @@ async fn a_final_allocation_mismatch_keeps_its_bytes_privately_across_restart() 
     )
     .await;
     let report: Value = serde_json::from_str(&report_raw).unwrap();
-    assert_eq!(report["format"], 3);
+    assert_eq!(report["format"], 4);
     assert_eq!(report["finalStepFailures"], json!([download]));
     for forbidden in private_keys {
         assert!(!report_raw.contains(forbidden), "report leaks {forbidden}");

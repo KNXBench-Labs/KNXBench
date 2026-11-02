@@ -16,6 +16,8 @@ mod diagnostic;
 mod final_step;
 #[path = "property_validation_lifecycle.rs"]
 mod lifecycle;
+#[path = "property_validation_post_load.rs"]
+mod post_load;
 #[path = "property_validation_private_projection.rs"]
 pub mod private_projection;
 #[path = "property_validation_result.rs"]
@@ -35,6 +37,7 @@ pub use lifecycle::{
     System2ControlError, System2ControlSnapshot, System2DrainOutcome, System2OperationControl,
     System2OperationLease, System2Settlement,
 };
+pub use post_load::{PostLoadOctetProgress, PostLoadOctetRecord};
 pub use result::{is_build_version, DownloadFacts, DownloadResult, ExecutionBuild, System2Report};
 use serde::{Deserialize, Serialize};
 use std::{
@@ -171,6 +174,12 @@ pub enum Checkpoint {
         operation_index: usize,
         observation: PointerObservationRecord,
     },
+    /// Written octets that read back as their declared post-load value in an otherwise
+    /// verified final step, persisted before its VerifyMode write. Envelope format 5;
+    /// absent from every older journal.
+    PostLoadOctetObservations {
+        observations: Vec<PostLoadOctetRecord>,
+    },
     Failed {
         code: FailureCode,
         local_diagnostic: String,
@@ -231,11 +240,12 @@ pub enum Checkpoint {
     Restored,
 }
 impl Checkpoint {
-    /// Envelope version 4 marks a populated allocation-evidence record, 3 a populated
-    /// final-step record and 2 a populated PID 7 record, so an older strict reader refuses
-    /// each instead of dropping it; all else is 1.
+    /// Envelope version 5 marks a post-load octet observation, 4 a populated
+    /// allocation-evidence record, 3 a populated final-step record and 2 a populated PID 7
+    /// record, so an older strict reader refuses each instead of dropping it; all else is 1.
     fn envelope_format(&self) -> u16 {
         match self {
+            Self::PostLoadOctetObservations { .. } => 5,
             Self::Failed {
                 allocation_evidence: Some(_),
                 ..
@@ -294,6 +304,8 @@ struct State {
     restore_attempted: bool,
     final_observations: Vec<(PointerObservationRun, PointerObservationRecord)>,
     in_procedure_observations: Vec<(PointerObservationRun, usize, PointerObservationRecord)>,
+    /// Tolerated declared post-load octets; at most one journaled list per run.
+    post_load_octets: Vec<PostLoadOctetProgress>,
     /// One typed failure per run at most: `Failed` and `RestoreFailed` each end their run.
     failure_diagnostics: Vec<FailureDiagnostic>,
     /// One typed final-step failure per run at most, in the same order.
@@ -316,6 +328,7 @@ impl State {
             restore_attempted: false,
             final_observations: Vec::new(),
             in_procedure_observations: Vec::new(),
+            post_load_octets: Vec::new(),
             failure_diagnostics: Vec::new(),
             final_step_failures: Vec::new(),
             allocation_mismatches: Vec::new(),
@@ -459,6 +472,40 @@ impl State {
                 let run = self.run();
                 self.final_observations
                     .extend(observations.iter().map(|o| (run, o.clone())));
+            }
+            Checkpoint::PostLoadOctetObservations { observations } => {
+                let last = self
+                    .recovery
+                    .as_ref()
+                    .and_then(|r| r.original_bundle.normalized_plan.steps.len().checked_sub(1));
+                let run = self.run();
+                if last.is_none()
+                    || self.active != last
+                    || !matches!(
+                        self.outcome,
+                        LocalOutcome::Running | LocalOutcome::Restoring
+                    )
+                    || self.post_load_octets.iter().any(|o| o.run == run)
+                {
+                    return Err(invalid(
+                        "post-load octet observation outside its run's final step",
+                    ));
+                }
+                let snapshot = self.recovery_snapshot()?;
+                let executed = match run {
+                    PointerObservationRun::Download => snapshot.original_plan.clone(),
+                    PointerObservationRun::Restore => snapshot
+                        .recovery_plan(&snapshot.original_plan)
+                        .map_err(|_| {
+                            invalid("post-load octet observation without a recovery plan")
+                        })?,
+                };
+                post_load::check_genuine(&snapshot, &executed, observations)?;
+                self.post_load_octets.extend(
+                    observations
+                        .iter()
+                        .map(|&record| PostLoadOctetProgress { run, record }),
+                );
             }
             Checkpoint::InProcedurePointerObservation {
                 operation_index,
@@ -699,6 +746,9 @@ pub struct OperationProgress {
     /// original-state recovery is unavailable for this operation.
     pub prestate_differs: bool,
     pub pointer_observations: Vec<PointerObservationProgress>,
+    /// Written octets the device holds at a declared post-load value, download before
+    /// restore. Tolerated by a verified final step; never a failure, never silent.
+    pub post_load_octets: Vec<PostLoadOctetProgress>,
     /// Plan application versus the device's prior PID_PROGRAM_VERSION (empty:
     /// refused), when they differed.
     pub program_version_observation: Option<([u8; 5], Vec<u8>)>,
@@ -977,6 +1027,7 @@ impl OperationStore {
                     },
                 )
                 .collect(),
+            post_load_octets: self.state.post_load_octets.clone(),
             failure_diagnostics: self.state.failure_diagnostics.clone(),
             final_step_failures: self.state.final_step_failures.clone(),
             download: match (self.state.download_end, self.outcome()) {

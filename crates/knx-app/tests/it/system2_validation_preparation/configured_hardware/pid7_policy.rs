@@ -711,7 +711,7 @@ async fn t16_tampered_policy_and_pointer_records_refuse_before_traffic() {
         .as_object_mut()
         .unwrap()
         .remove("pointer_width_policy");
-    assert!(refuses(v), "revision 2 without its policy");
+    assert!(refuses(v), "revision 3 without its width policy");
     let mut v = bundle.clone();
     *v.pointer_mut(policy).unwrap() =
         "up258-object1-pid7-one-two-octet-element-field-observed-v1".into();
@@ -720,7 +720,7 @@ async fn t16_tampered_policy_and_pointer_records_refuse_before_traffic() {
     *v.pointer_mut(revision).unwrap() = 1.into();
     assert!(refuses(v), "revision 1 carrying a policy id");
     let mut v = bundle.clone();
-    *v.pointer_mut(revision).unwrap() = 3.into();
+    *v.pointer_mut(revision).unwrap() = 4.into();
     assert!(refuses(v), "unknown revision");
     let mut v = bundle.clone();
     *v.pointer_mut(policy).unwrap() = serde_json::Value::Null;
@@ -789,6 +789,7 @@ fn legacy_hardware_record_bytes_and_digest_stay_golden() {
         },
         source_preparation_sha256: "0".repeat(64),
         pointer_width_policy: None,
+        post_load_octet_policy: None,
     };
     // The pre-width grammar, written out by hand: no key, same order, same hash domain.
     let text = format!(

@@ -14,11 +14,12 @@ Contract: [system2-download-result](../contracts/system2-download-result.md).
 
 - Splitting "final step did not finish" into verification mismatch, read failure and final
   write failure is implemented in source (see the dated note below); which cause lies behind
-  the allocation mismatch in #30/#22 stays unproven on hardware. Strong hypothesis from the
-  reporter's data (1 November 2026): the firmware clears the hidden `Download_Flag` octet after
-  load ([research](../research/2026-11-01-up258-post-load-flag-octet.md)). Net supports a
-  declared post-load octet; the UP258 profile declaration, its App journal record and report
-  wording wait for a corroborating snapshot from the reporter.
+  the allocation mismatch in #30/#22 was not observed directly. The reporter's snapshots after
+  the KNXBench download (2 November 2026) show the firmware clearing the hidden `Download_Flag`
+  octet itself ([research](../research/2026-11-01-up258-post-load-flag-octet.md)). Source since
+  2 November 2026: a revision-3 UP258 preparation declares that octet, journals and shows each
+  tolerated value; every other byte stays strict. Open: a field run of a build that contains it
+  (not requested), and the exact clear time (Load Completed or restart).
 - Per-part source equivalence: a verified run today clears memory beliefs only while the
   whole preparation is unchanged.
 - Field verification by the reporter is not requested; no hardware retry is needed

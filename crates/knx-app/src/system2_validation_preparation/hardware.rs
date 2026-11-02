@@ -30,6 +30,14 @@ pub(crate) const POINTER_WIDTH_POLICY_V1: &str =
     "up258-mv0025-pid7-objects123-one-element-two-or-four-octet-source-declared-v1";
 /// Objects the policy names; a bundle admits the subset its plan touches.
 const POINTER_WIDTH_POLICY_OBJECTS: [u8; 3] = [1, 2, 3];
+/// Append-only id of the post-load octet rule of revision-3 records; never reinterpreted.
+/// Source-bound to the exact UP258 application: hidden parameter `Download_Flag`
+/// (Access None, default 1) at AS-3C00 offset 244 of object 3. The firmware clears it to
+/// 00h after load (reporter snapshot after a verified Verify Mode write, issue #30).
+pub(crate) const POST_LOAD_OCTET_POLICY_V1: &str =
+    "up258-mv0025-object3-3cf4h-download-flag-firmware-cleared-00h-v1";
+/// (object, octet, value the firmware may leave there instead of the written one).
+const POST_LOAD_OCTET_POLICY_OCTETS: [(u8, u16, u8); 1] = [(3, 0x3CF4, 0x00)];
 const BASIS: &str = "experimental-same-application-source-shape-not-observed-allocator-history-v1";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -77,7 +85,7 @@ pub struct ProjectHardwareRecord {
     pub recovery_basis: String,
     pub observation: HardwareObservation,
     pub source_preparation_sha256: String,
-    /// Revision 2 only: the exact policy id. Absent on revision 1, whose bytes and
+    /// Revision 2 and 3: the exact policy id. Absent on revision 1, whose bytes and
     /// digest stay as they were; `null` is refused rather than read as absent.
     #[serde(
         default,
@@ -85,6 +93,14 @@ pub struct ProjectHardwareRecord {
         skip_serializing_if = "Option::is_none"
     )]
     pub pointer_width_policy: Option<String>,
+    /// Revision 3 only: the exact post-load octet policy id. Absent on revisions 1 and 2,
+    /// whose bytes, digests and strict final verification stay as they were.
+    #[serde(
+        default,
+        deserialize_with = "some_policy",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub post_load_octet_policy: Option<String>,
 }
 fn some_policy<'de, D: serde::Deserializer<'de>>(d: D) -> Result<Option<String>, D::Error> {
     String::deserialize(d).map(Some)
@@ -95,6 +111,10 @@ impl ProjectHardwareRecord {
     pub(crate) fn pointer_width_objects(&self) -> Option<&'static [u8]> {
         (self.pointer_width_policy.as_deref() == Some(POINTER_WIDTH_POLICY_V1))
             .then_some(&POINTER_WIDTH_POLICY_OBJECTS[..])
+    }
+    /// Whether this record admits the post-load octet policy; false before revision 3.
+    pub(crate) fn admits_post_load_octets(&self) -> bool {
+        self.post_load_octet_policy.as_deref() == Some(POST_LOAD_OCTET_POLICY_V1)
     }
     pub fn sha256(&self) -> io::Result<String> {
         Ok(digest(
@@ -111,8 +131,15 @@ impl ProjectHardwareRecord {
         valid_operation(&self.operation)?;
         exact_profile(&source.profile_bytes)?;
         let policy_grammar = match self.revision {
-            1 => self.pointer_width_policy.is_none(),
-            2 => self.pointer_width_policy.as_deref() == Some(POINTER_WIDTH_POLICY_V1),
+            1 => self.pointer_width_policy.is_none() && self.post_load_octet_policy.is_none(),
+            2 => {
+                self.pointer_width_policy.as_deref() == Some(POINTER_WIDTH_POLICY_V1)
+                    && self.post_load_octet_policy.is_none()
+            }
+            3 => {
+                self.pointer_width_policy.as_deref() == Some(POINTER_WIDTH_POLICY_V1)
+                    && self.admits_post_load_octets()
+            }
             _ => false,
         };
         if !policy_grammar
@@ -160,6 +187,51 @@ fn observation_for(
         application: binding.application,
         observed_application,
     }
+}
+/// The declared octets of the post-load policy that `plan` writes with another value;
+/// `Legacy` (strict everywhere) when it writes none of them. Pure and offline; only a
+/// revision-3 hardware record applies it, and Net validates it against the plan again.
+pub fn post_load_octet_admission(
+    plan: &knx_core::commissioning::property_download::PropertyDownloadPlan,
+) -> knx_net::commissioning::post_load_octets::PostLoadOctetAdmission {
+    use knx_net::commissioning::post_load_octets::{PostLoadOctet, PostLoadOctetAdmission};
+    let octets: Vec<_> = POST_LOAD_OCTET_POLICY_OCTETS
+        .iter()
+        .filter(|(object, address, accepted)| {
+            last_written(plan, *object, *address).is_some_and(|written| written != *accepted)
+        })
+        .map(|&(object, address, accepted)| PostLoadOctet {
+            object,
+            address,
+            accepted: vec![accepted],
+        })
+        .collect();
+    if octets.is_empty() {
+        PostLoadOctetAdmission::Legacy
+    } else {
+        PostLoadOctetAdmission::Declared(octets)
+    }
+}
+/// The last value `plan` writes to `address` of `object`, if it writes it at all.
+fn last_written(
+    plan: &knx_core::commissioning::property_download::PropertyDownloadPlan,
+    object: u8,
+    address: u16,
+) -> Option<u8> {
+    use knx_core::commissioning::property_download::PropertyOperation;
+    plan.steps()
+        .iter()
+        .rev()
+        .find_map(|step| match &step.operation {
+            PropertyOperation::WriteMemory {
+                object: written,
+                address: start,
+                data,
+            } if *written == object && address >= *start => {
+                data.get(usize::from(address - *start)).copied()
+            }
+            _ => None,
+        })
 }
 fn valid_operation(operation: &str) -> io::Result<()> {
     if operation.is_empty()
@@ -407,7 +479,7 @@ pub async fn observe_project_hardware<T: ManagementTransport>(
         (application.as_slice() != bundle.binding.application).then_some(application);
     bundle.binding.simulated = false;
     let record = ProjectHardwareRecord {
-        revision: 2,
+        revision: 3,
         operation: source.operation,
         recovery_track: source.recovery,
         recovery_basis: BASIS.into(),
@@ -418,6 +490,7 @@ pub async fn observe_project_hardware<T: ManagementTransport>(
             .ok_or_else(|| invalid("missing project source"))?
             .sha256()?,
         pointer_width_policy: Some(POINTER_WIDTH_POLICY_V1.into()),
+        post_load_octet_policy: Some(POST_LOAD_OCTET_POLICY_V1.into()),
     };
     bundle.binding.project_preparation_sha256 = Some(record.sha256()?);
     bundle.hardware_preparation = Some(Box::new(record));

@@ -1,4 +1,4 @@
-# UP258 allocation mismatch: a firmware-maintained flag octet (strong hypothesis)
+# UP258 allocation mismatch: a firmware-maintained flag octet
 
 1 November 2026. Target: UP 258D12, application `M-0001_A-9205-04-9270`, mask `0025h`
 (System 2), the allocation mismatch reported in GitHub issues #30 and #22. Offline analysis
@@ -39,17 +39,40 @@ whether it can hold any other value, and whether other UP258 firmware revisions 
 snapshot of the same device after any successful download that shows `00h` at `3CF4h` would
 corroborate it; that was requested from the reporter in #30.
 
+## Corroboration (2 November 2026)
+
+The reporter sent two further read-only `system2-declared-segments-v1` snapshots, taken with
+Alpha 19 about three minutes apart, of the same device while it still held the earlier KNXBench
+Alpha 17 download (no ETS download since). No bus access by us; the bytes stay private.
+
+1. Both snapshots are identical: no ongoing self-modification in the declared segments.
+2. Against KNXBench's plan for the same project, every written octet matches except two: one
+   parameter octet the reporter had changed in KNXBench himself, and `3CF4h`, where the plan
+   writes `01h` and the device holds `00h`. Every unwritten octet still holds its prior value.
+3. Alpha 17 wrote with Verify Mode and checked each memory chunk on write, and the run passed the
+   step that writes segment `3C00h`. The octet therefore held `01h` right after the write; the
+   device cleared it itself.
+
+This settles the open question above: the download took effect, and the firmware clears
+`Download_Flag` afterwards. Still not observed: whether it clears at Load Completed or at the
+following restart (only a read-back between the write and Load Completed would show it), and
+whether other UP258 firmware revisions behave alike.
+
 ## Consequence for KNXBench
 
-The strict comparison stays the default. Net can now accept a *declared* post-load value at a
+The strict comparison stays the default. Net can accept a *declared* post-load value at a
 *declared* written octet of the download and report each such octet with its prestate as an
 observation. Every other byte stays strict, as does every restore that writes other bytes than
 the download (as here, where the prestate differs at `3CF4h`)
-([contract](../contracts/system2-download-result.md#declared-post-load-octets)). App cannot set a
-declaration yet. The UP258 declaration waits for the corroborating snapshot, so no verification is
-relaxed on a single unconfirmed observation.
+([contract](../contracts/system2-download-result.md#declared-post-load-octets)).
 
-Known limit for this device: the prestate at `3CF4h` already is `00h`, the value the declaration
-would accept. A tolerated `00h` there therefore cannot tell a firmware clear from a write that
-never took effect; the observation shows the prestate, but only an independent read-back between
-the memory write and Load Completed, or the reporter's post-download snapshot, separates the two.
+Since 2 November 2026 a configured UP258 preparation observed with that build (hardware record
+revision 3) declares exactly this octet: object 3, `3CF4h`, accepted `00h`, only when the plan
+writes it with another value. Older records stay strict. The preview names the octet before
+consent; the journal, status and panel record each tolerated value with its prestate, the
+shareable report only that an octet of object 3 was tolerated. An opt-in test confirms on the
+pinned public package that its plan writes `01h` at exactly that octet.
+
+The prestate caveat of the first analysis no longer decides anything: the reporter's device held
+`00h` there before the download too, but the per-chunk Verify Mode check proves the write itself,
+so a tolerated `00h` after load is the firmware's own value, not a lost write.

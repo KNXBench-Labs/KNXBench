@@ -21,6 +21,7 @@ export function catalogueJobsFixture(options: Options = {}) {
   const uploads: Buffer[] = [];
   const applies: ApplyCommand[] = [];
   const disposes: Handle[] = [];
+  const retired: { handle: Handle; capability: string }[] = [];
   let current: Status | null = null;
   let capability: string | null = null;
   const artifacts = new Map<string, { artifact: Artifact; records: PublicRecord[] }>();
@@ -83,6 +84,18 @@ export function catalogueJobsFixture(options: Options = {}) {
         cleanup: { disposition: "pending", failureKind: null }, backup: { state: "none", name: null, identity: null, publication: "none" },
       };
       return statusReply(route, 201);
+    }
+    const old = retired.find(owner => path === `${BASE}/${owner.handle.jobId}`);
+    if (old) {
+      if (method !== "GET") return null;
+      expect(request.url()).toBe(`${url.origin}${path}`);
+      expect(request.postData()).toBeNull();
+      expect(request.headers()["x-knx-catalogue-capability"]).toBe(old.capability);
+      expect(request.headers()["x-knx-catalogue-incarnation"]).toBe(old.handle.serverIncarnation);
+      expect(request.headers()["x-knx-catalogue-serial"]).toBe(old.handle.admissionSerial);
+      const body = { schemaVersion: 1, kind: "outcomeUnavailable", context: null };
+      parseCatalogueMessage("Error", JSON.stringify(body));
+      return reply(route, body, 410);
     }
     if (!current || !path.startsWith(`${BASE}/${current.handle.jobId}`)) return null;
     // Never handle another job or an unexpected action as a generic successful API request.
@@ -158,6 +171,7 @@ export function catalogueJobsFixture(options: Options = {}) {
       expect(current.cleanup.disposition).toBe("complete");
       const body = { schemaVersion: 1, handle: current.handle, disposition: "disposed" };
       parseCatalogueMessage("DisposeReply", JSON.stringify(body));
+      retired.push({ handle: current.handle, capability: capability! });
       disposes.push(current.handle); current = null; capability = null;
       return reply(route, body);
     }

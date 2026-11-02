@@ -6,7 +6,7 @@ the former dated sections are in the [archive](history/OPEN_WORK_2026-10-25.md).
 
 | ID | Task | Status | Details |
 | --- | --- | --- | --- |
-| WP-25 | Import findings missing from the session log after reopening | Reported: cause unverified, awaiting implementation Go | [WP-25](open-work/WP-25-import-findings-after-reopen.md) |
+| WP-25 | Import findings missing from the session log after reopening | Implemented in worktree (owner Go 2026-11-02): stored findings restored into the log on native open; independent review and package gate pending | [WP-25](open-work/WP-25-import-findings-after-reopen.md) |
 | WP-26 | Bus-connection drop-up with connect button in the status bar | Planned: awaiting implementation Go; USB needs a transport first | [WP-26](open-work/WP-26-status-bar-bus-connection.md) |
 | WP-27 | Compare button in the device editor | Planned: awaiting implementation Go | [WP-27](open-work/WP-27-device-editor-compare.md) |
 | WP-28 | Group-address Columns and Atlas views show no addresses for a sub-range | Reported: cause unverified, awaiting implementation Go | [WP-28](open-work/WP-28-ga-columns-atlas-empty-table.md) |

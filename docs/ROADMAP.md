@@ -1,5 +1,13 @@
 # Roadmap
 
+## Main-only after Alpha 19: import findings after reopening
+
+WP-25 restores the stored primary report's counted findings into the session log
+at native open. It reuses the existing filtered list and explicit full-report
+reader; no new findings store, schema migration or bus operation. Historical
+provenance, missing legacy evidence and log-cap mismatch remain explicit.
+[Scope and verification](open-work/WP-25-import-findings-after-reopen.md).
+
 ## Alpha 19 pre-release (source cutoff 1 November 2026)
 
 `v0.1.0-alpha.19` is the current pre-release, cut from main at source cutoff

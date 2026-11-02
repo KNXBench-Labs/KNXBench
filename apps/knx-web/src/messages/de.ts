@@ -2168,6 +2168,7 @@ export const messages: Record<MessageKey, string> = {
   "logPanel.importScope.match": "Angezeigt: {findings}, wie im Projektstatus gezählt.",
   "logPanel.importScope.mismatch": "Der Projektstatus zählt {findings}; dieses Sitzungsprotokoll enthält {entries}.",
   "logPanel.importScope.none": "Der Projektstatus zählt {findings}, aber das Sitzungsprotokoll dieses Serverlaufs enthält keine davon.",
+  "logPanel.importScope.historical": "Beim Öffnen aus dem gespeicherten Importbericht des Projekts wiederhergestellt, nicht frisch importiert. Die Zeiten zeigen das Öffnen, nicht den ursprünglichen Import. Hinweise ohne Befund stehen nur im vollständigen Bericht.",
   "logPanel.importScope.showAll": "Alle Protokolleinträge zeigen",
   "logPanel.severity.error": "Fehler",
   "logPanel.severity.warning": "Warnung",

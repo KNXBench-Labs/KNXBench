@@ -470,7 +470,7 @@ fn payload_label(unsupported: &knx_etsproj::report::UnsupportedFeature) -> Optio
 }
 
 /// Groups `items` by `key`, groups and members both in first-seen order.
-fn grouped<'a, T, K: Ord + Copy>(
+pub(crate) fn grouped<'a, T, K: Ord + Copy>(
     items: impl Iterator<Item = &'a T>,
     key: impl Fn(&'a T) -> K,
 ) -> Vec<(K, Vec<&'a T>)> {
@@ -488,7 +488,7 @@ fn grouped<'a, T, K: Ord + Copy>(
 }
 
 /// One member per line, in report order — the grouped entry's lossless part.
-fn member_list(members: impl Iterator<Item = String>) -> String {
+pub(crate) fn member_list(members: impl Iterator<Item = String>) -> String {
     members.collect::<Vec<_>>().join("\n")
 }
 

@@ -226,14 +226,30 @@ and reopen never settle.
   memory parts Application, Parameters and Group addresses become pending. Address is
   not touched.
 - **Verified download** (`Finished`, final verification finished, no recovery): under
-  the project lock, `admit_current_project_hardware` rebuilds the retained-source plan
-  from the current project and requires the same normalized plan and full source
-  preparation hash. Only then are all four parts marked programmed (the device
-  answered at the project's address for the whole run) and the download time recorded.
-  This comparison is on the full snapshot: **any** edit that changes the preparation,
-  even to an unrelated parameter, leaves the memory parts pending. That is the
-  documented conservative boundary; there is no per-part equivalence and no hash alone is
-  used as per-part proof.
+  the project lock and one catalogue read, `current_project_hardware_parts` settles in
+  two separate steps, like the [regular download](download-settlement-source-freshness.md):
+  1. **Source proof.** The original project is decoded from the validated, start-admitted
+     bundle and passed through the unchanged start admission
+     (`admit_current_project_hardware`) against the current catalogue winners: the same
+     normalized plan and the same full source-preparation hash. A changed, missing,
+     ambiguous or refused source, a bundle that does not validate, a simulator bundle and
+     another device id are refused: no part is credited, the memory parts become pending
+     and the address is not touched.
+  2. **Current request.** The device's product and program references must be the ones the
+     run was prepared with; a switch is refused even when it resolves to the same program
+     id. The current project must itself pass the same configured preparation; its request
+     is then compared with the written one through the regular download's dependency mask
+     (`programming_state::still_current`): Application needs the same program, Parameters
+     also the same values, Group addresses also the same individual address, links and
+     flag overrides.
+  The parts still equal are marked programmed (Address included: the device answered at
+  the project's address for the whole run) and the download time recorded; the other
+  memory parts become pending. So a rename or an edit elsewhere in the project keeps all
+  four, a link or flag edit leaves Group addresses pending, a parameter edit leaves
+  Parameters and Group addresses pending. The start admission itself is unchanged and
+  still requires the whole preparation. This is a comparison of the current project's
+  request on an unchanged source, not a per-part source equivalence: a source that
+  changed in any part credits nothing, and no hash alone is used as per-part proof.
 - **Recovery** that started: memory parts pending, never programmed, whatever its
   verification said.
 - The operation's server incarnation must equal the running server's; a historical operation
@@ -331,8 +347,25 @@ broken by it, without changing what "pending only" means. The explorer dot is un
 - The final-step category names the operation that stopped, not its cause. #30's actual
   allocation mismatch stays unresolved; new journals keep its bytes privately (above), but
   no field run has produced them yet.
-- A verified run clears the memory beliefs only when the whole preparation is still equal;
-  otherwise they stay pending (conservative, documented above).
+- A verified run credits only the parts whose current request still equals the written
+  one, and only after the original source is proven unchanged; a changed source in any
+  part credits nothing (documented above). A snapshot at settlement, not a subscription,
+  not a device read.
 - No hardware evidence. Tests use journals built on the public synthetic fixture,
   mounted hardware-kind simulator workers with the digest-pinned public package, and
-  intercepted HTTP.
+  intercepted HTTP. The per-part matrix (unchanged, rename and unrelated edits, links,
+  flags, a parameter, a changed or missing source, a reference switch, a tampered,
+  simulator or other-device bundle, a forged source-preparation hash or plan) runs on the
+  synthetic exact-identity App fixture. The mounted worker with the public package proves
+  three cells end to end, each after a verified run edited while its first data write is
+  paused: a rename (all four parts), a parameter edit (Address and Application only) and a
+  switched product reference, which the App helper refuses (memory pending, address
+  untouched, every part marked beforehand so a wrong "credit all" shows). The other
+  cells (links, flags, changed source) are not mounted.
+- Settlement revalidates both the original and current project while holding the
+  project lock and one catalogue lease, once per verified run. The opt-in synthetic
+  debug measurement `s2_per_part_large_project_measurement` uses 5,001 devices and an
+  856,064-byte retained snapshot: three samples took 1.27–1.30 s for the previous
+  strict admission alone and 2.49–2.50 s for selective settlement. This approximately
+  doubled check cost is retained to keep the source proof explicit; it is not a
+  release-build measurement or a bound for real projects with objects and links.

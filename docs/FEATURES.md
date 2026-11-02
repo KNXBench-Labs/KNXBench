@@ -11,6 +11,12 @@ Last updated: 2026-11-01 (Alpha 19 pre-release; source cutoff 2026-11-01)
 | Scope | Listed boundaries; not universal compatibility |
 | Later scope | No delivery dates promised |
 
+## Main-only after Alpha 19
+
+| Feature | Scope | Availability |
+| --- | --- | --- |
+| [Import findings after reopening](open-work/WP-25-import-findings-after-reopen.md) | Reprojects stored primary error/warning findings into the bounded session log; historical/open-time provenance and explicit full-report access; missing legacy evidence is not a clean assessment | Main-only |
+
 ## New in Alpha 19
 
 The [release scope](releases/alpha19.md) covers changes after Alpha 18 up to

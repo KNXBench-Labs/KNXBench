@@ -68,6 +68,25 @@ value. The **full local download** is not truncated. Original source names,
 attributes, hashes or other private data can occur in a report; the UI warns before
 sharing. No automatic external transmission or anonymization is provided.
 
+## Session-log projection on native open (WP-25; main-only after Alpha 19)
+
+Successful native open reprojects counted primary error/warning findings from the
+admitted recovered working image, before publication and only appended after
+replacement succeeds. Shared manufacturer/retained-payload grouping must match
+the admitted counters before log eviction; disagreement is explicitly reported,
+not silently presented as complete. Missing display fields remain not recorded,
+and occurrence totals are withheld on missing values or arithmetic overflow.
+The original report text is never rewritten from this presentation.
+
+Restored entries have opening-time timestamps, not invented original import
+times. The filtered and general log explain their historical provenance; the
+filtered log also offers the same explicit full-report reader. The session log
+is still capped at 16,000 entries and is not a complete historical audit. A
+counter/list mismatch is explained and the original full download stays available.
+Informational opaque/source-observation notes are not replayed. Native files
+without original evidence get no invented findings, and a repeated successful
+open resets rather than duplicates restored rows.
+
 ## Retained selective-source report catalogue
 
 Existing selective import already stores the raw original source report at

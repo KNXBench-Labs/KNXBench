@@ -1,12 +1,11 @@
 /** Pure rules linking project-status import counts to session-log entries. */
 // The server counts a project's import findings in `ProjectTree.errors` /
-// `ProjectTree.warnings` (`domain.rs`, `apply_report_counts`) and writes the
-// same import report into the session log, one entry per finding (retained
-// per-file notices grouped, counted once per group by the same rule), under an
-// `import:*` source (`session_log.rs`, `from_import_report`): genuine
-// errors at severity `error`; warning-severity items, unknown constructs,
+// `ProjectTree.warnings` (`domain.rs`, `apply_report_counts`). Fresh imports and
+// native opens project counted findings into the session log under an `import:*`
+// source (`session_log.rs` / `historical_import_log.rs`), with the same grouping:
+// genuine errors at severity `error`; warning-severity items, unknown constructs,
 // DPT conflicts and unsupported capabilities at severity `warning`.
-// Opaque/observation notes are `info` and are counted by neither number.
+// Opaque/observation notes are uncounted `info`, emitted only on fresh import.
 //
 // Nothing here assumes the two always agree: the log is capped and lives
 // only for this server run, so callers compare and say so when they differ.

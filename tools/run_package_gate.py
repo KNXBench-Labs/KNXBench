@@ -36,6 +36,7 @@ from tools.web_gate_support import MeasuredRun, source_fingerprint
 WORKSPACE_LOCK = 'knx-workspace-gates.lock'
 XTASK_CHECKS = ('check-layering', 'check-headers', 'check-anchors', 'check-ledger', 'check-corpus-gates')
 RUST_RESULT = re.compile(r'^test result: \w+\. (\d+) passed; (\d+) failed; (\d+) ignored', re.M)
+DIAGNOSTIC_PREFIX = 'diagnostic_bundle_routes::sections::tests::'
 CORPUS_SUMMARY = re.compile(r'^corpus tests: (\d+) of (\d+) passed', re.M)
 # Stages that run the branch's tests get scratch data and config homes: a
 # spawned `knx`, server or desktop binary otherwise resolves the developer's
@@ -44,7 +45,8 @@ CORPUS_SUMMARY = re.compile(r'^corpus tests: (\d+) of (\d+) passed', re.M)
 # gate that runs an older branch's tests. The web gate keeps the real values:
 # fontconfig reads its fonts and configuration through them and browser specs
 # pin pixel widths.
-ISOLATED_STAGES = frozenset({'tool-tests', 'rust-tests', 'bindings', 'corpus', 'website-tests', 'story-tests'})
+ISOLATED_STAGES = frozenset({'tool-tests', 'rust-tests', 'diagnostic-sections-tests', 'bindings',
+                             'corpus', 'website-tests', 'story-tests'})
 
 
 def rust_selection(result: gate_scope.Plan, full: bool) -> list[str]:
@@ -68,6 +70,8 @@ def stage_plan(result: gate_scope.Plan, full: bool) -> list[str]:
         plan += ['clippy', 'rust-tests']
     if full or result.bindings:
         plan += ['bindings', 'bindings-diff']
+    if not full and result.diagnostic_sections and 'knx-server' not in result.rust_packages:
+        plan.append('diagnostic-sections-tests')
     if full or result.corpus_packages:
         plan.append('corpus')
     if full or result.website_tests:
@@ -115,6 +119,19 @@ def corpus_counts(log: Path) -> dict:
     if passed != selected or selected == 0:
         raise ValueError(f'corpus: {passed} of {selected} passed')
     return {'passed': passed, 'selected': selected}
+
+
+def diagnostic_counts(log: Path) -> dict:
+    """Require a nonempty successful inventory from the complete diagnostic section prefix."""
+    counts = rust_counts(log)
+    text = log.read_text(errors='replace')
+    rows = re.findall(r'^test (\S+) \.\.\. (ok|FAILED|ignored[^\n]*)$', text, re.M)
+    inventory = [name for name, status in rows if status == 'ok']
+    if counts['passed'] == 0 or counts['binaries'] != 1 or len(inventory) != counts['passed'] \
+            or len(set(inventory)) != len(inventory) \
+            or any(not name.startswith(DIAGNOSTIC_PREFIX) for name, _ in rows):
+        raise ValueError('missing, empty or unexpected diagnostic section test inventory')
+    return {**counts, 'prefix': DIAGNOSTIC_PREFIX, 'tests': inventory}
 
 
 def web_receipt(path: Path) -> dict:
@@ -212,7 +229,7 @@ def main(argv: list[str] | None = None) -> int:
                       text=True).stdout.strip() != str(root):
         parser.error('--root must select the actual KNXBench Git workspace')
     changed = gate_scope.changed_paths(root, args.base)
-    result = gate_scope.plan(root, changed)
+    result = gate_scope.plan(root, changed, comparison_base=args.base)
     full = args.full or result.full
     stages = stage_plan(result, full)
     print(gate_scope.describe(result))
@@ -264,9 +281,14 @@ def main(argv: list[str] | None = None) -> int:
                         f'--production={",".join(result.production_configs)}']
             check(run, 'web-gate', web, root, envs, lambda: web_receipt(output / 'web/receipt.json'))
         rust = rust_selection(result, full)
-        needs_lease = any(s in stages for s in ('clippy', 'bindings', 'corpus'))
+        needs_lease = any(s in stages for s in ('clippy', 'bindings', 'corpus', 'diagnostic-sections-tests'))
         if needs_lease:
             with workspace_lease(root, run, args.lease_timeout):
+                if 'diagnostic-sections-tests' in stages:
+                    check(run, 'diagnostic-sections-tests',
+                          ['cargo', 'test', '--offline', '--locked', '-p', 'knx-server', '--lib',
+                           DIAGNOSTIC_PREFIX], root, envs,
+                          lambda: diagnostic_counts(output / 'diagnostic-sections-tests.log'))
                 if 'clippy' in stages:
                     if 'clean-desktop' in stages:
                         if not (app / 'dist/index.html').is_file():

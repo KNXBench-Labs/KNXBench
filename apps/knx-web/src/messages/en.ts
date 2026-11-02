@@ -4700,8 +4700,8 @@ export const messages = {
   "busConnection.error.connect": "The connection could not be opened.",
   "busConnection.error.disconnect": "The connection could not be closed.",
   "busConnection.error.unsupported": "This server offers no session-bound disconnect. Nothing was disconnected.",
-  "busConnection.error.stale": "The server restarted while the request ran. Nothing was taken over; check the status.",
-  "busConnection.error.staleStop": "The disconnect finished, but a newer connection is in place; it was left untouched.",
+  "busConnection.error.stale": "The server answered the connect, but this window's connection state changed meanwhile, so the answer was not taken over. Check the status.",
+  "busConnection.error.staleStop": "The server confirmed the disconnect, but this window's connection state changed meanwhile and was not updated. Check the status.",
 } as const;
 
 export type Messages = typeof messages;

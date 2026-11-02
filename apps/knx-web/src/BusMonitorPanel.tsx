@@ -20,6 +20,7 @@ import {
   type ContextLock,
   forgetSessionContext,
   readContextLock,
+  readSessionContext,
   subscribeContextChanges,
 } from "./busContext";
 import { connectBusSession, disconnectBusSession, useBusConnection } from "./busConnection";
@@ -507,6 +508,9 @@ export default function BusMonitorPanel({ projectOpen, project, projectScope, on
           response.sessionId !== attached.sessionId ||
           response.serverIncarnation !== attached.serverIncarnation
         ) {
+          // WP-26: an answer that crossed a context change is not acted on;
+          // the next poll asks again under the current generation.
+          if (generation !== contextGenerationRef.current) return;
           sinceRef.current = 0;
           setCapture({ rows: [], pruned: 0 });
           flowFeed.reset();
@@ -547,6 +551,10 @@ export default function BusMonitorPanel({ projectOpen, project, projectScope, on
       } catch (e) {
         if (cancelled) return;
         if (api.errorStatus(e) === 404) {
+          // WP-26: an absence observed before a context change (e.g. in the
+          // window between another stop and a new session's record) proves
+          // nothing now; the next poll asks again under the current generation.
+          if (generation !== contextGenerationRef.current) return;
           // The session was stopped somewhere else — the other window's
           // Disconnect, or another client's. That is an ordinary end, not
           // a failure, so this returns to the Connect form and says what
@@ -556,7 +564,10 @@ export default function BusMonitorPanel({ projectOpen, project, projectScope, on
           setEndedElsewhere(true);
           setPollError(null);
           setContextLock("synced");
-          forgetSessionContext();
+          // Only this session's record (or none) is cleared, never a newer one.
+          const record = readSessionContext(window.localStorage);
+          if (record === null || (record.sessionId === attached.sessionId
+            && record.serverIncarnation === attached.serverIncarnation)) forgetSessionContext();
           return;
         }
         setPollError(api.errorMessage(e));
@@ -614,7 +625,9 @@ export default function BusMonitorPanel({ projectOpen, project, projectScope, on
       // and fire a reattach request against the session just started.
       sessionRef.current = attached;
     }
-    const result = await connectBusSession(validation.endpoint, { beforePublish });
+    // Adopting a session (e.g. through a reattach) while the start ran means
+    // its answer is no longer this panel's to publish.
+    const result = await connectBusSession(validation.endpoint, { beforePublish, stillOwned: () => sessionRef.current === null });
     if (!result.ok) {
       if (result.reason === "failed") setConnectError(api.errorMessage(result.error));
       else if (result.reason === "stale") setConnectError(t("busConnection.error.stale"));

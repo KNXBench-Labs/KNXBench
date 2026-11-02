@@ -618,6 +618,7 @@ fn post_load_octet_observations_are_refused_and_leave_the_journal_untouched() {
         address: 0x3CF4,
         written: 1,
         observed: 0,
+        prestate: Some(0),
     }];
     for restoring in [false, true] {
         let refused = event(

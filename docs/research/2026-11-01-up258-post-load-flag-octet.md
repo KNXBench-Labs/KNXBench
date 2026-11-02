@@ -42,7 +42,13 @@ corroborate it; that was requested from the reporter in #30.
 ## Consequence for KNXBench
 
 The strict comparison stays the default. Net can now accept a *declared* post-load value at a
-*declared* written octet, report each such octet as an observation and keep every other byte
-strict ([contract](../contracts/system2-download-result.md#declared-post-load-octets)). No
-shipped profile declares an octet yet. The UP258 declaration waits for the corroborating
-snapshot, so no verification is relaxed on a single unconfirmed observation.
+*declared* written octet of the download, report each such octet with its prestate as an
+observation and keep every other byte, and every restore, strict
+([contract](../contracts/system2-download-result.md#declared-post-load-octets)). App cannot set a
+declaration yet. The UP258 declaration waits for the corroborating snapshot, so no verification is
+relaxed on a single unconfirmed observation.
+
+Known limit for this device: the prestate at `3CF4h` already is `00h`, the value the declaration
+would accept. A tolerated `00h` there therefore cannot tell a firmware clear from a write that
+never took effect; the observation shows the prestate, but only an independent read-back between
+the memory write and Load Completed, or the reporter's post-download snapshot, separates the two.

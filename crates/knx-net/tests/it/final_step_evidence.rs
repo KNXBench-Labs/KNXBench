@@ -25,14 +25,14 @@ use knx_net::management::ManagementTransport;
 use std::sync::atomic::{AtomicBool, Ordering};
 use tokio::sync::broadcast;
 
-const FINAL_STEP: usize = 7;
+pub(super) const FINAL_STEP: usize = 7;
 /// Allocation `3C00h`, eight octets; the plan writes four of them from `3C02h`.
-const START: u16 = 0x3C00;
-const PRESTATE: [u8; 8] = [9, 8, 7, 6, 5, 4, 3, 2];
-const WRITE: [u8; 4] = [1, 2, 3, 4];
+pub(super) const START: u16 = 0x3C00;
+pub(super) const PRESTATE: [u8; 8] = [9, 8, 7, 6, 5, 4, 3, 2];
+pub(super) const WRITE: [u8; 4] = [1, 2, 3, 4];
 
 /// The source allocation shape, then the prestate bytes the recovery captures.
-async fn established() -> (
+pub(super) async fn established() -> (
     SimulatedDevice,
     PropertyDownloadPlan,
     ExperimentalPropertyPreconditions,
@@ -54,9 +54,9 @@ async fn established() -> (
 
 /// Short-answers memory reads before the first property write, so the prestate is
 /// unreadable while the final verification reads normally.
-struct PrestateShortRead<'a> {
-    device: &'a SimulatedDevice,
-    written: AtomicBool,
+pub(super) struct PrestateShortRead<'a> {
+    pub(super) device: &'a SimulatedDevice,
+    pub(super) written: AtomicBool,
 }
 impl ManagementTransport for PrestateShortRead<'_> {
     fn assigned_address(&self) -> IndividualAddress {

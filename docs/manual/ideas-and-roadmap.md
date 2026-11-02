@@ -81,7 +81,7 @@ messages and toasts.
 
 | Original idea | Available now | Real remainder |
 | --- | --- | --- |
-| Small animations | Motion level/style settings, reduced-motion handling, and per-category settings for toasts, achievements and Flow | Categories for other surfaces; broader native/accessibility evidence |
+| Small animations | Motion level/style settings, reduced-motion handling, and per-category settings for toasts, achievements, Flow, structure lines and theme effects | Categories for other surfaces; broader native/accessibility evidence |
 | MCP | Experimental read-only saved-project tools (nine since Alpha 14, incl. KNX Functions), agent skill, and one opt-in edit: literal prefix/suffix renames of group addresses | No other agent edits, chatbox or bus control |
 | Device discovery | Gateway search, one-line occupancy scan, explicit reconciliation | No product identity from a scan or coupler traversal |
 | Repetitive-task automation | One named recipe: literal prefix/suffix renames of selected group addresses, previewed and undone in one step (CLI, **Rename…**, MCP opt-in) | No further templates, recorder or scheduler |
@@ -91,7 +91,7 @@ messages and toasts.
 | Animated GA/device connections | Flow view, values, readable layout and a separate window | Session-local only; inferred recipients are not receipt/effect proof |
 | Mobile app | Browser workbench is a separate existing option | No dedicated mobile application |
 | Other operating systems | Other OSes can reach a running server through a browser | No native Windows/macOS build |
-| Themes | Built-ins, System, bundled/importable packs and LCARS | No arbitrary CSS/code plug-ins; native accessibility stays bounded |
+| Themes | Built-ins, System, bundled/importable packs, LCARS and Rail | No arbitrary CSS/code plug-ins; native accessibility stays bounded |
 | Schema 21/23 import | Project import, exact product/master admission and native save/reopen | Missing independent module-using schema-23 evidence; no ETS project export |
 
 For maintainers, the [source/test audit](../status/2026-10-08-ideas-roadmap-audit.md)

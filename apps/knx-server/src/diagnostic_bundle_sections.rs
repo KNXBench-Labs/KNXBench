@@ -752,6 +752,8 @@ const SHIPPED_THEMES: &[&str] = &[
     "graphite",
     "cupertino",
     "lcars",
+    "rail",
+    "rail-dark",
     "system",
     "user-modern-retro-green-crt",
 ];

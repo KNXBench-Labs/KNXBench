@@ -16,6 +16,15 @@ lossless declarative pack, requested by imported metadata or enabled by imported
 CSS. The v1 envelope, token/value/contrast admission and imported `user-`
 identity boundary are unchanged. See [ADR-0092](adr/0092-lcars-built-in-presentation.md).
 
+## Built-in Rail presentation (2026-11-02)
+
+Rail and Rail Dark are two built-in CSS palettes sharing one trusted
+presentation (`data-presentation="rail"`), not v1 packs. Selecting either
+stores only `theme: "rail"` or `theme: "rail-dark"`. Square geometry, the
+toolbar rail and the theme motion category cannot be requested by imported
+metadata or CSS; Geist is not part of the pack font allow-list. See
+[ADR-0157](adr/0157-rail-built-in-presentation.md).
+
 ## Runtime implementation boundary
 
 `themePack.ts` admits original JSON text through byte, duplicate, depth and node

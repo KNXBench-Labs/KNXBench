@@ -2235,6 +2235,18 @@
       ]
     },
     {
+      "key": "rail-presentation",
+      "number": null,
+      "title": "Rail presentation",
+      "topic": "UI and accessibility",
+      "summary": "Rail and Rail Dark are built-in Chromium-verified presentations, not imported geometry or lossless v1 export. Native WebKitGTK, Orca, Firefox and complete WCAG acceptance remain unverified.",
+      "file": "rail-presentation.md",
+      "ledger_ids": [],
+      "anchors": [
+        "rail-presentation-is-chromium-verified-not-an-executable-imported-pack"
+      ]
+    },
+    {
       "key": "ported-ux-feedback-limits",
       "number": null,
       "title": "Ported UX feedback limits",

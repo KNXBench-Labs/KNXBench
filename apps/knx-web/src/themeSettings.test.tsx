@@ -116,7 +116,7 @@ afterEach(() => {
 describe("Appearance theme choice", () => {
   it("offers the shipped CRT theme in the dropdown, drops Neon Grid and Bitcoin DeFi, and shows no preview cards", async () => {
     await mount({ theme: "graphite" });
-    expect(optionNames()).toEqual(["System", "Porcelain", "Graphite", "Cupertino", "LCARS", "Modern Retro Green CRT"]);
+    expect(optionNames()).toEqual(["System", "Porcelain", "Graphite", "Cupertino", "LCARS", "Rail", "Rail Dark", "Modern Retro Green CRT"]);
     expect(host.textContent).not.toMatch(/Preview|Neon Grid|Bitcoin DeFi|Included with the application/);
     expect(host.querySelector(".theme-manager-list")).toBeNull();
   });
@@ -178,6 +178,30 @@ describe("LCARS presentation", () => {
     await mount({ theme: "lcars" });
     expect(themeSelect().value).toBe("lcars");
     expect(document.documentElement.dataset.presentation).toBe("lcars");
+    expect(writes).toEqual([]);
+  });
+});
+
+describe("Rail presentation", () => {
+  it("marks both Rail palettes with the one Rail presentation and hands over to LCARS or none", async () => {
+    await mount({ theme: "graphite", motionLevel: "subtle", motionTheme: "off", foreign: "preserved" });
+    await choose("rail");
+    expect(writes).toEqual([{ theme: "rail" }]);
+    expect(document.documentElement.dataset).toMatchObject({ theme: "rail", presentation: "rail" });
+    await choose("rail-dark");
+    expect(document.documentElement.dataset).toMatchObject({ theme: "rail-dark", presentation: "rail" });
+    expect(host.querySelector<HTMLSelectElement>('select[aria-label="Accent color"]')!.disabled).toBe(true);
+    await choose("lcars");
+    expect(document.documentElement.dataset.presentation).toBe("lcars");
+    await choose("porcelain");
+    expect(document.documentElement.hasAttribute("data-presentation")).toBe(false);
+    expect(server).toMatchObject({ motionLevel: "subtle", motionTheme: "off", foreign: "preserved" });
+  });
+
+  it("restores saved Rail Dark on mount without writing settings", async () => {
+    await mount({ theme: "rail-dark" });
+    expect(themeSelect().value).toBe("rail-dark");
+    expect(document.documentElement.dataset.presentation).toBe("rail");
     expect(writes).toEqual([]);
   });
 });

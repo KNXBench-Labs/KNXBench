@@ -80,3 +80,89 @@ pub(super) fn check_genuine(
     }
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::super::{
+        DownloadFacts, DownloadResult, ExecutionBuild, LocalOutcome, OperationProgress,
+        System2Report,
+    };
+    use super::*;
+
+    const FLAG: PostLoadOctetRecord = PostLoadOctetRecord {
+        object: 3,
+        address: 0x3CF4,
+        written: 1,
+        observed: 0,
+        prestate: Some(0xA5),
+    };
+
+    #[test]
+    fn a_record_without_its_prestate_key_is_refused() {
+        let complete = serde_json::to_value(FLAG).unwrap();
+        assert_eq!(complete["prestate"], 0xA5);
+        let mut missing = complete.clone();
+        missing.as_object_mut().unwrap().remove("prestate");
+        assert!(serde_json::from_value::<PostLoadOctetRecord>(missing).is_err());
+        let unreadable = PostLoadOctetRecord {
+            prestate: None,
+            ..FLAG
+        };
+        let null = serde_json::to_value(unreadable).unwrap();
+        assert!(null["prestate"].is_null(), "null is written, never omitted");
+        assert_eq!(
+            serde_json::from_value::<PostLoadOctetRecord>(null).unwrap(),
+            unreadable
+        );
+    }
+
+    #[test]
+    fn the_shareable_report_names_run_and_object_only() {
+        let facts = DownloadFacts {
+            result: DownloadResult::Verified,
+            outcome: LocalOutcome::Finished,
+            completed_steps: 27,
+            total_steps: Some(27),
+        };
+        let progress = OperationProgress {
+            outcome: LocalOutcome::Finished,
+            completed_steps: 27,
+            total_steps: Some(27),
+            backup_available: true,
+            restore_available: true,
+            mutation_possible: true,
+            recovery_phrases: None,
+            prestate_differs: false,
+            pointer_observations: Vec::new(),
+            post_load_octets: vec![PostLoadOctetProgress {
+                run: PointerObservationRun::Download,
+                record: FLAG,
+            }],
+            program_version_observation: None,
+            prestate_unreadable_allocations: Vec::new(),
+            failure_diagnostics: Vec::new(),
+            final_step_failures: Vec::new(),
+            download: facts,
+            restore_attempted: false,
+        };
+        let report = serde_json::to_value(
+            System2Report::from_progress(&progress, ExecutionBuild::Unknown, "0.1.0").unwrap(),
+        )
+        .unwrap();
+        assert_eq!(report["format"], 4);
+        assert_eq!(
+            report["postLoadOctets"],
+            serde_json::json!([{"run": "download", "object": 3}])
+        );
+        let text = report.to_string();
+        for leak in [
+            "\"address\"",
+            "\"written\"",
+            "\"observed\"",
+            "\"prestate\"",
+            "15604",
+        ] {
+            assert!(!text.contains(leak), "report leaks {leak}");
+        }
+    }
+}

@@ -1,15 +1,16 @@
 # Restart snapshot
 
-## WP-25 import findings after reopening (ACTIVE; observed 2026-11-02 10:56 CET)
+## WP-25 import findings after reopening (ACTIVE; observed 2026-11-02 11:07 CET)
 - Owner Go: 2 November 2026; branch `fix/wp25-import-findings`, isolated sibling worktree.
-- Implementation and independent whole-feature review settled: APPROVE, no blockers;
+- Whole-feature review and focused guard-fix re-review APPROVE, no blockers;
   16 independent server controls pass, three targeted mutants fail as intended.
-- Base `ec9d9bd7f`; RED: stored counters (1,4), log findings absent; re-projection chosen.
-- Sparse-history/overflow/grouping/count/cap/recovery/refusal controls green;
-  EN/DE 1440/400 browser proofs pass in production/dev, full download exercised.
-- Candidate frozen for scoped branch gate; no running gate claimed by this snapshot.
-- NEXT: launch branch gate, main-first integration and scoped merged gate, then
-  publication/docs closeout and owned cleanup. No new Owner Go needed.
+- Initial base `ec9d9bd7f`; first branch gate on `b36060577` failed two Web guard
+  inventories. Corrected only the exact read-only graph/query-hook inventories;
+  companion no-report/no-mutation runtime assertions retained. Full Vitest 4897 green.
+- Current source unchanged by review; EN/DE production/dev 1440/400 proofs green.
+- NEXT: rebase unpublished branch onto current main, recreate main-first merge;
+  require identical feature/integration trees, then one complete scoped gate for both.
+  Prior failed attempt is superseded, never credited to the corrected tree.
 - No bus operations, release, deployment or manufacturer contact.
 
 ## Retained boundaries (STANDING; observed 2026-11-02 10:48 CET)

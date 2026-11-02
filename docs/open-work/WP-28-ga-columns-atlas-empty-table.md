@@ -1,7 +1,7 @@
 # WP-28 — Group-address Columns and Atlas views show no addresses for a sub-range
 
-Owner report: 2 November 2026. Implementation candidate; parent review and
-integration acceptance remain pending.
+Owner report: 2 November 2026. Implementation and independent source review
+complete; browser and integration acceptance remain pending.
 
 ## Observed
 
@@ -29,8 +29,10 @@ table nor Atlas's direct-membership comparison caused this reproduction.
 
 The controller now uses the Explorer range until the user explicitly navigates
 locally. The chosen local range then determines the rows instead of intersecting
-two independent scopes. Changing the Explorer range still resets local
-navigation. Query and filter apply on both routes; stored membership, input
+two independent scopes. Every subsequent Explorer range activation resets local
+navigation, including a fresh activation of the same range ID. This follows the
+existing range-selection event; selecting an address does not reset local scope.
+Query and filter apply on both routes; stored membership, input
 order, tree traversal, selection and renderer windowing are unchanged. Atlas
 continues to show direct members, not all descendants of a selected parent.
 
@@ -52,8 +54,13 @@ controller change passes it. Separate controls cover:
 - shared single/Shift selection and visible row order across view changes;
 - query and typed/untyped filtering without inventing membership;
 - bounded 500-row windows, explicit extension and subsequent filtering;
-- initial Explorer scoping and reset after the Explorer range changes.
+- initial Explorer scoping and reset after the Explorer range changes;
+- same-ID Explorer reactivation, both with a range selected and after selecting
+  an address in the locally navigated range (two assertion-based review REDs).
 
-Only focused unit/component checks and the web build are child-owned. Browser
-reproduction, independent review and the full default/selected acceptance lanes
-remain parent-owned; no hardware or live server verification is claimed.
+The focused suite passes 66 tests across eight files. Independent source review
+accepted the correction after the same-ID navigation finding was reproduced and
+fixed. Full-App Chromium cases cover both views, English/German, 400/1440 pixels,
+forward navigation, search, genuine emptiness and return through the real Explorer.
+Their execution and the full default/selected integration gates remain pending;
+no original private-project, hardware or live-server verification is claimed.

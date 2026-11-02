@@ -91,6 +91,8 @@ export default function GroupAddressTable(props: {
     setOpen(previous => pruneGroups(previous, index));
   }, [index, scope, validScope]);
   useEffect(() => { setScope(null); }, [rangeScope]);
+  // Explorer activations carry a fresh selection even when the range ID is unchanged.
+  useEffect(() => { if (selection?.kind === "group_range") setScope(null); }, [selection]);
   // A new result set starts from a bounded window again; selection is unaffected.
   useEffect(() => { setLimit(GROUP_ADDRESS_WINDOW); }, [query, filter, scope, rangeScope, view]);
   const externalGroups = [...index.groups.values()].filter(group => group.range?.id === rangeScope);

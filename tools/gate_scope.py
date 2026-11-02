@@ -23,6 +23,7 @@ import sys
 if __package__ in (None, ''):
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from tools.run_web_gate import PRODUCTION_CONFIGS  # one list: the web gate's own
+from tools.gate_data_facts import Comparison, diagnostic_metadata, font_only, guarded_readers
 
 WEB = 'apps/knx-web/'
 # Web inputs that every browser case consumes (server, build, runner or launch).
@@ -42,7 +43,7 @@ PRODUCTION_INPUTS = re.compile(
 RUST_GLOBAL = re.compile(r'(Cargo\.toml|Cargo\.lock|rust-toolchain\.toml|\.cargo/.*)$')
 DOCS = re.compile(r'(docs/.*|\.ai/.*|[^/]+\.md|LICENSE|ideas\.md|DREAMS\.md|devices\.md)$')
 # The planner, its runner and the proof checks every runner stage relies on.
-GATE_TOOLS = re.compile(r'tools/(gate_scope|run_package_gate|web_gate_support)\.py$')
+GATE_TOOLS = re.compile(r'tools/(gate_scope|gate_data_facts|run_package_gate|web_gate_support)\.py$')
 TOOLS = re.compile(r'(tools/.*|\.github/.*)$')
 REPOSITORY_TOPS = ('apps', 'crates', 'xtask', 'docs', 'design', 'tools', 'website', 'story', 'demos',
                    'integrations', '.github')
@@ -61,6 +62,7 @@ class Plan:
     changed: list[str] = field(default_factory=list)
     rust_all: bool = False
     rust_packages: list[str] = field(default_factory=list)
+    diagnostic_sections: bool = False
     bindings: bool = False
     corpus_packages: list[str] = field(default_factory=list)
     web: bool = False
@@ -107,7 +109,8 @@ def owning_member(members: dict[str, dict], path: str) -> str | None:
     return max(owners)[1] if owners else None
 
 
-def repository_reads(root: Path, members: dict[str, dict]) -> dict[str, dict[str, bool]]:
+def repository_reads(root: Path, members: dict[str, dict],
+                     ignored: set[tuple[str, str]] | None = None) -> dict[str, dict[str, bool]]:
     """Members whose sources name another repository path (docs, fixtures, web files).
 
     Every string literal that looks like a relative path is resolved against
@@ -139,6 +142,9 @@ def repository_reads(root: Path, members: dict[str, dict]) -> dict[str, dict[str
                     candidate = (base / text).resolve()
                     if candidate.is_relative_to(root) and not candidate.is_relative_to(crate) \
                             and candidate != root:
+                        if name == 'xtask' and (file.relative_to(root).as_posix(),
+                                               candidate.relative_to(root).as_posix()) in (ignored or set()):
+                            continue
                         readers = reads.setdefault(candidate.relative_to(root).as_posix(), {})
                         readers[name] = readers.get(name, False) or library
     return reads
@@ -323,19 +329,29 @@ def select_production(app: Path, changed_e2e: list[Path]) -> dict[str, str]:
 
 # ---------------------------------------------------------------- planning
 
-def plan(root: Path, changed: list[str], members: dict[str, dict] | None = None) -> Plan:
+def plan(root: Path, changed: list[str], members: dict[str, dict] | None = None,
+         comparison_base: str = 'origin/main') -> Plan:
     result = Plan(changed=sorted(set(changed)))
     if not result.changed:
         result.reasons['static checks'] = ['no changed path']
         return result
     members = cargo_members(root) if members is None else members
-    reads = repository_reads(root, members)
+    comparison = Comparison(root, comparison_base)
+    fonts = font_only(comparison) if any(p in result.changed for p in
+                                        (WEB + 'package.json', WEB + 'package-lock.json')) else False
+    metadata = diagnostic_metadata(comparison) if any(p.startswith('apps/knx-server/')
+                                                     for p in result.changed) else set()
+    ignored = guarded_readers(comparison)
+    reads = repository_reads(root, members, ignored)
     readers_in_web = web_reads(root)
     seeds: set[str] = set()  # members whose library changed: reverse dependents re-run
     direct: set[str] = set()  # members whose own tests or test inputs changed
     web_changed: list[str] = []
     web_global = False
     for path in result.changed:
+        for reader, target in sorted(ignored):
+            if path == target:
+                result.because(f'guarded reader: {reader} (unchanged audited projection)', path)
         # Code that reads this file from elsewhere re-runs wherever the file lives.
         for prefix in ancestors(path):
             for reader, library in sorted(reads.get(prefix, {}).items()):
@@ -364,12 +380,24 @@ def plan(root: Path, changed: list[str], members: dict[str, dict] | None = None)
             else:
                 web_changed.append(path)
             if PRODUCTION_INPUTS.match(path):
-                configs = ([path.split('.')[1]] if path.split('/')[-1].startswith('playwright.')
+                html = False
+                if path == WEB + 'index.html':
+                    try:
+                        comparison.pair(path)
+                        html = True
+                    except (OSError, ValueError, subprocess.SubprocessError):
+                        pass
+                configs = (['dialogs'] if html or fonts and path in (WEB + 'package.json', WEB + 'package-lock.json')
+                           else [path.split('.')[1]] if path.split('/')[-1].startswith('playwright.')
                            and path.split('.')[1] in PRODUCTION_CONFIGS else list(PRODUCTION_CONFIGS))
                 for config in configs:
                     if config not in result.production_configs:
                         result.production_configs.append(config)
                 result.because('web: production bundle suites', path)
+                if fonts and path in (WEB + 'package.json', WEB + 'package-lock.json'):
+                    result.because('web: font-only dependencies; dialogs production smoke', path)
+                if html:
+                    result.because('web: app-shell HTML; dialogs production smoke', path)
             continue
         if GATE_TOOLS.match(path):
             result.full = True
@@ -389,6 +417,10 @@ def plan(root: Path, changed: list[str], members: dict[str, dict] | None = None)
             continue
         owner = owning_member(members, path)
         if owner is not None:
+            if owner == 'knx-server' and path in metadata:
+                result.diagnostic_sections = True
+                result.because('diagnostic-sections-tests: verified shipped-theme data only', path)
+                continue
             if library_input(members[owner]['dir'], path):
                 seeds.add(owner)
                 result.because(f'rust: {owner} and its dependents', path)
@@ -416,6 +448,9 @@ def plan(root: Path, changed: list[str], members: dict[str, dict] | None = None)
     names = set(members)
     affected = names if result.rust_all else reverse_closure(members, seeds) | direct
     result.rust_packages = sorted(affected)
+    if 'knx-server' in affected:
+        result.diagnostic_sections = False  # normal crate selection supersedes the narrow stage
+        result.reasons.pop('diagnostic-sections-tests: verified shipped-theme data only', None)
     result.bindings = result.bindings or 'knx-projection' in affected
     if result.corpus_packages != ['*']:
         result.corpus_packages = sorted(affected)
@@ -432,12 +467,13 @@ def plan(root: Path, changed: list[str], members: dict[str, dict] | None = None)
             result.browser_specs = specs
             for spec, cause in why.items():
                 result.because(f'browser: {spec}', cause)
-            e2e_changed = [p for p in changed_web if p.startswith(WEB + 'e2e/')]
-            e2e = [root / p for p in e2e_changed if (root / p).exists()]
-            for config, cause in (select_production(app, e2e) if e2e_changed else {}).items():
-                if config not in result.production_configs:
-                    result.production_configs.append(config)
-                result.because(f'web: production suite {config}', cause)
+        # Production owners are unioned even beside a global default browser lane.
+        e2e_changed = sorted({p for p in [*web_changed, *result.changed] if p.startswith(WEB + 'e2e/')})
+        e2e = [root / p for p in e2e_changed if (root / p).exists()]
+        for config, cause in (select_production(app, e2e) if e2e_changed else {}).items():
+            if config not in result.production_configs:
+                result.production_configs.append(config)
+            result.because(f'web: production suite {config}', cause)
     return result
 
 
@@ -462,6 +498,7 @@ def describe(result: Plan) -> str:
         browser = ('none' if not result.web else 'all default specs' if result.browser_specs is None
                    else f'{len(result.browser_specs)} spec file(s)')
         lines += [f'rust packages: {rust}', f'bindings: {result.bindings}',
+                  f'diagnostic-sections-tests: {result.diagnostic_sections}',
                   f'corpus packages: {", ".join(result.corpus_packages) or "none"}',
                   f'web: {result.web}; browser: {browser}; production configs: '
                   f'{", ".join(result.production_configs) or "none (release gate)"}',
@@ -477,7 +514,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument('--base', default='origin/main')
     parser.add_argument('--json', action='store_true')
     args = parser.parse_args(argv)
-    result = plan(args.root, changed_paths(args.root, args.base))
+    result = plan(args.root, changed_paths(args.root, args.base), comparison_base=args.base)
     print(json.dumps(asdict(result), indent=2) if args.json else describe(result))
     return 0
 

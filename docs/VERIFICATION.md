@@ -69,6 +69,64 @@ changes that its bindings stage would restore. It takes the usual leases (browse
 the web gate, Rust and corpus stages under `knx-workspace-gates.lock`) and
 links the private corpus from the main checkout only for the corpus stage.
 
+### Bounded data-only routine selections
+
+The planner reads old blobs from the actual merge base of `--base` and final
+worktree bytes (including committed, staged and unstaged changes); unavailable,
+deleted, malformed or ambiguous comparison inputs retain ordinary selection.
+`tools/gate_data_facts.py` is gate infrastructure: changing it selects the complete gate.
+These are closed data checks, not execution of changed JavaScript or a general parser:
+
+Comparison bases must contain regular blobs, not symlink payloads. JSON evidence
+uses UTF-8 without BOM, finite numbers, valid UTF-8 strings, integers from
+`-2^63` through `2^64-1`, and at most 32 nested value levels. This deliberately
+conservative metadata subset is not a general JSON-reader equivalence claim;
+anything outside it retains ordinary gates on either comparison revision.
+
+- Existing app-shell `index.html` keeps **all default browser specs**, Web build,
+  typechecks and Vitest, but selects the `dialogs` built-bundle boot/appearance
+  smoke rather than every production configuration. Changed production specs
+  and helpers still add their owning suites. Missing HTML, build tools, launch
+  configuration and other production inputs remain conservative.
+- A manifest/lock pair may use the same production smoke only when both sides
+  prove exclusively `@fontsource/*` or `@fontsource-variable/*` dependency deltas.
+  All default browser coverage and all Web checks remain. Dependency maps must
+  agree with their lock roots before and after; only npm lock format 3, simple
+  pinned/caret/tilde semantic versions and closed registry font records are admitted.
+  Scripts, engines, non-font records, executable/transitive dependency fields,
+  unknown fields, duplicate JSON keys or missing evidence select the broad suites.
+- Audited metadata readers are source-hash guarded, **not** globally ignored paths.
+  Only `xtask/src/appimage.rs` reading an unchanged manifest `version` and
+  `xtask/src/ledger.rs` reading `docs/KNOWN_LIMITATIONS.md` (already covered by the
+  always-on `check-ledger`) avoid a spurious xtask/corpus selection. Both old and
+  final reader hashes must match the pins in `tools/gate_data_facts.py`. Any changed
+  reader, changed version, additional reader or unknown input uses ordinary rules.
+- A verified change confined byte-for-byte to `SHIPPED_THEMES` in
+  `apps/knx-server/src/diagnostic_bundle_sections.rs` may additionally add literal
+  input tuples to the existing `shipped_language_packs_and_bundled_themes_are_known`
+  test. Assertions, language constants and every byte outside those regions stay
+  unchanged; duplicates, expressions, tests-only edits and missing evidence refuse
+  the exception. The explicit `diagnostic-sections-tests` stage runs the entire
+  section module, not a handpicked theme case:
+
+  ```sh
+  cargo test --offline --locked -p knx-server --lib diagnostic_bundle_routes::sections::tests::
+  ```
+
+  The runner retains its exact argv, direct exit, nonempty executed prefix
+  inventory and count. Zero/ignored-only or unexpected-prefix output is invalid
+  proof. It uses the workspace lease, scratch XDG homes (forced Cargo home
+  overrides preserved) and `KNX_*` scrubbing. Normal Rust selection affecting
+  `knx-server` wins and removes this redundant narrow stage, including changes
+  propagated from core dependencies. No whole-server, desktop or corpus stage
+  is selected solely by the admitted metadata edit.
+
+The dry run and receipt name the narrow selection and its reason. This policy
+does not narrow shared CSS/typography browser closures, unknown files, normal
+Rust/protocol/storage changes or explicit `--full`. Unit orchestration fixtures
+with simulated Cargo output are not real Rust acceptance; verify the actual
+nonempty section inventory on the immutable candidate before accepting delivery.
+
 ## Rust workspace gate
 
 The web bundle comes first, also in a fresh worktree:

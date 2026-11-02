@@ -8,6 +8,7 @@ import type { ProjectTree } from "../src/bindings/ProjectTree";
 import { messages as en } from "../src/messages/en";
 import { messages as de } from "../src/messages/de";
 import { achievementsFixtureAnswer } from "./achievements-fixture";
+import { busActivityFixtureAnswer } from "./bus-activity-fixture";
 import { statusMetricsFixtureBody } from "./status-metrics-fixture";
 
 for (const language of ["en", "de"] as const) for (const width of [400,1440]) for (const available of [false,true]) {
@@ -31,6 +32,7 @@ for (const language of ["en", "de"] as const) for (const width of [400,1440]) fo
       else if(path==="/api/bus/discover" && method==="POST") body={interfaces:[]};
       else if(["/api/device-download/status","/api/device-address/status"].includes(path) && method==="GET") {status=404;body={error:"no fixture operation"};}
       else if(achievementsFixtureAnswer(method,path)!==undefined) body=achievementsFixtureAnswer(method,path);
+      else if(busActivityFixtureAnswer(method,path)!==undefined) body=busActivityFixtureAnswer(method,path);
       else {unexpected.push(`${method} ${path}`);status=404;body={error:"strict offline diagnostics fixture"};}
       return route.fulfill({status,contentType:"application/json",body:JSON.stringify(body)});
     });

@@ -4,6 +4,7 @@ import type { ProjectTree } from "../src/bindings/ProjectTree";
 import { messages as en } from "../src/messages/en";
 import { messages as de } from "../src/messages/de";
 import { achievementsFixtureAnswer } from "./achievements-fixture";
+import { busActivityFixtureAnswer } from "./bus-activity-fixture";
 import { statusMetricsFixtureBody } from "./status-metrics-fixture";
 import { openNavigationSections } from "./disclosure-fixture";
 
@@ -32,6 +33,8 @@ async function fixture(page: Page, language: Language, loaded: boolean, uiScale 
     const refuse = (status: number) => route.fulfill({ status, json: { error: "fictional refusal" } });
     const achievements = achievementsFixtureAnswer(method, path);
     if (achievements !== undefined) return ok(achievements);
+    const busActivity = busActivityFixtureAnswer(method, path);
+    if (busActivity !== undefined) return ok(busActivity);
     if (path === "/api/auth/status" && method === "GET") return ok({ required: false, authenticated: true });
     if (path === "/api/settings" && ["GET", "PUT"].includes(method)) {
       if (method === "PUT") {

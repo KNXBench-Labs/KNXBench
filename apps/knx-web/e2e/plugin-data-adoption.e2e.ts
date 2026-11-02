@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { messages as en } from "../src/messages/en";
 import { messages as de } from "../src/messages/de";
 import { achievementsFixtureAnswer } from "./achievements-fixture";
+import { busActivityFixtureAnswer } from "./bus-activity-fixture";
 import { statusMetricsFixtureBody } from "./status-metrics-fixture";
 
 // Strictly fictional: devices, digests and the archive name are made up here.
@@ -65,6 +66,7 @@ async function intercept(page: Page, language: "en" | "de") {
       else { state.unexpected.push(`${method} ${path}`); status = 404; body = { error: "unknown plug-in route" }; }
     }
     else if (achievementsFixtureAnswer(method, path) !== undefined) body = achievementsFixtureAnswer(method, path);
+    else if (busActivityFixtureAnswer(method, path) !== undefined) body = busActivityFixtureAnswer(method, path);
     else { state.unexpected.push(`${method} ${path}`); status = 404; body = { error: "strict plug-in data fixture only" }; }
     return route.fulfill({ status, contentType: "application/json", body: JSON.stringify(body) });
   });

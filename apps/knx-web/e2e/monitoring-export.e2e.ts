@@ -5,6 +5,7 @@ import {tree,preview,request} from "../src/monitorExport.test-fixtures";
 import {messages as en} from "../src/messages/en";
 import {messages as de} from "../src/messages/de";
 import {achievementsFixtureAnswer} from "./achievements-fixture";
+import { busActivityFixtureAnswer } from "./bus-activity-fixture";
 import {statusMetricsFixtureBody} from "./status-metrics-fixture";
 import {openFileSubmenu} from "./file-menu";
 const CAPTURE=process.env.KNX_MONITOR_EXPORT_CAPTURE_DIR;
@@ -15,6 +16,7 @@ async function serve(page:Page,language:"en"|"de") {
     const path=new URL(route.request().url()).pathname;const method=route.request().method();
     const ok=(body:unknown)=>route.fulfill({status:200,contentType:"application/json",body:JSON.stringify(body)});
     const achievement=achievementsFixtureAnswer(method,path);if(achievement!==undefined)return ok(achievement);
+    const busActivity=busActivityFixtureAnswer(method,path);if(busActivity!==undefined)return ok(busActivity);
     if(path==="/api/auth/status"&&method==="GET")return ok({required:false,authenticated:true});
     if(path==="/api/settings"&&method==="GET")return ok({schemaVersion:1,status:"ok",settings:{uiLanguage:language,theme:"porcelain",motionLevel:"off",releaseChecksEnabled:false,achievementsEnabled:"false",onboardingGuide:{seenStage:"alpha",version:"0.1.0-alpha.14"}}});
     if(path==="/api/settings"&&method==="PUT")return ok({schemaVersion:1,status:"ok",settings:route.request().postDataJSON().settings});

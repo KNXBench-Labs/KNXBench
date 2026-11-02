@@ -8,6 +8,7 @@ import { messages as en } from "../src/messages/en";
 import { messages as de } from "../src/messages/de";
 import { TOAST_EXIT_FALLBACK_MS, TOAST_MS } from "../src/toast";
 import { achievementsFixtureAnswer } from "./achievements-fixture";
+import { busActivityFixtureAnswer } from "./bus-activity-fixture";
 import { statusMetricsFixtureBody } from "./status-metrics-fixture";
 
 const SHOTS = process.env.UX_FEEDBACK_SHOTS;
@@ -29,6 +30,8 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
       const ok = (body: unknown) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(body) });
       const achievement = achievementsFixtureAnswer(method, path);
       if (achievement !== undefined) return ok(achievement);
+      const busActivity = busActivityFixtureAnswer(method, path);
+      if (busActivity !== undefined) return ok(busActivity);
       if (path === "/api/auth/status") return ok({ required: false, authenticated: true });
       if (path === "/api/settings") {
         if (method === "PUT") Object.assign(settings, req.postDataJSON().settings);

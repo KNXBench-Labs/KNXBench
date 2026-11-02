@@ -258,5 +258,31 @@ mod tests {
         .unwrap();
         assert_eq!(evidence.differing, [range(0, 1, Written)]);
         assert_eq!(evidence.actual, [9, 0, 5], "the real readback is kept");
+        // Unreadable prestate: only written octets decide, a tolerated one included.
+        let unpredicted = AllocationMismatchEvidence::compare(
+            0,
+            &region(3),
+            true,
+            vec![0, 1, 0],
+            vec![false, true, false],
+            vec![7, 0, 7],
+            &[false, true, false],
+        );
+        assert_eq!(unpredicted, None);
+        let evidence = AllocationMismatchEvidence::compare(
+            0,
+            &region(3),
+            true,
+            vec![0, 1, 0],
+            vec![false, true, false],
+            vec![7, 0x7F, 7],
+            &[false; 3],
+        )
+        .unwrap();
+        assert_eq!(
+            evidence.differing.len(),
+            3,
+            "untolerated written octet decides"
+        );
     }
 }

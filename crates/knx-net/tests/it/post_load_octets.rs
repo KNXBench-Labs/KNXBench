@@ -1,69 +1,71 @@
 //! A firmware-changed written octet passes final verification only where declared, and is seen.
 
+use super::final_step_evidence::{
+    established, PrestateShortRead, FINAL_STEP, PRESTATE, START, WRITE,
+};
 use super::property_recovery::{auth, timing};
-use super::system2_memory_boundary::{one_allocation_plan, system2_device};
 use knx_core::commissioning::authorisation::AuthorisationPlan;
 use knx_core::commissioning::property_download::PropertyDownloadPlan;
 use knx_net::commissioning::final_step::{FinalStepFailure, FinalStepKind, FinalStepStage};
-use knx_net::commissioning::final_step_evidence::{DifferenceClass, DifferingRange};
+use knx_net::commissioning::final_step_evidence::{
+    AllocationMismatchEvidence, DifferenceClass, DifferingRange,
+};
 use knx_net::commissioning::post_load_octets::{
     PostLoadOctet, PostLoadOctetAdmission, PostLoadOctetObservation,
 };
 use knx_net::commissioning::property_download::{
-    run_experimental_property_plan, run_simulated_property_plan, ExperimentalPropertyReport,
+    restore_experimental_property_plan, run_experimental_property_plan, ExperimentalPropertyReport,
     PropertySimulationError, PropertySimulationFailure,
 };
 use knx_net::commissioning::property_recovery::{
     ExperimentalPropertyPreconditions, PropertyJournalEvent, PropertyRecoverySnapshot,
 };
 use knx_net::commissioning::simulator::{Seen, SimulatedDevice};
+use knx_net::management::ManagementTransport;
+use std::sync::atomic::AtomicBool;
 
-const FINAL_STEP: usize = 7;
-/// Allocation `3C00h`, eight octets; the plan writes `01 02 03 04` from `3C02h`.
-const START: u16 = 0x3C00;
-const PRESTATE: [u8; 8] = [9, 8, 7, 6, 5, 4, 3, 2];
-const WRITE: [u8; 4] = [1, 2, 3, 4];
-/// The plan writes `02h` here; the simulated firmware clears it after load.
-const FLAG: u16 = 0x3C03;
+/// The plan writes `WRITE[1]` = `02h` here (offset 3); the simulated firmware clears it.
+const OFFSET: usize = 3;
+const FLAG: u16 = START + OFFSET as u16;
 
-async fn established() -> (
-    SimulatedDevice,
-    PropertyDownloadPlan,
-    ExperimentalPropertyPreconditions,
-) {
-    let device = system2_device();
-    let (plan, preconditions) = one_allocation_plan(&device, START, 8, START + 2, WRITE.to_vec());
-    run_simulated_property_plan(
-        &device,
-        &plan,
-        auth(&device),
-        AuthorisationPlan::Skip,
-        timing(),
-    )
-    .await
-    .unwrap();
-    device.preset_memory(u32::from(START), &PRESTATE);
-    (device, plan, preconditions)
+type Journaled = Vec<(Vec<PostLoadOctetObservation>, usize)>;
+
+fn declared(octets: Vec<PostLoadOctet>) -> PostLoadOctetAdmission {
+    PostLoadOctetAdmission::Declared(octets)
+}
+
+fn flag(accepted: &[u8]) -> PostLoadOctet {
+    PostLoadOctet {
+        object: 3,
+        address: FLAG,
+        accepted: accepted.to_vec(),
+    }
 }
 
 fn flag_may_clear(
     preconditions: ExperimentalPropertyPreconditions,
 ) -> ExperimentalPropertyPreconditions {
     preconditions
-        .with_post_load_octet_admission(PostLoadOctetAdmission::Declared(vec![PostLoadOctet {
-            object: 3,
-            address: FLAG,
-            accepted: vec![0],
-        }]))
+        .with_post_load_octet_admission(declared(vec![flag(&[0])]))
         .unwrap()
+}
+
+fn cleared(prestate: Option<u8>) -> PostLoadOctetObservation {
+    PostLoadOctetObservation {
+        object: 3,
+        address: FLAG,
+        written: WRITE[1],
+        observed: 0,
+        prestate,
+    }
 }
 
 struct Run {
     result: Result<ExperimentalPropertyReport, PropertySimulationError>,
-    snapshot: PropertyRecoverySnapshot,
+    snapshot: Option<PropertyRecoverySnapshot>,
     /// Post-load observations the journal received, and how many device-control
     /// writes the device had seen by then.
-    journaled: Vec<(Vec<PostLoadOctetObservation>, usize)>,
+    journaled: Journaled,
 }
 
 fn control_writes(device: &SimulatedDevice) -> usize {
@@ -83,59 +85,81 @@ fn control_writes(device: &SimulatedDevice) -> usize {
         .count()
 }
 
-/// Runs the plan, letting "firmware" change `change` after load, just before the final step.
-async fn run(
+/// Journals like Net's caller; lets "firmware" change `change` just before the final step.
+fn journal<'a>(
+    device: &'a SimulatedDevice,
+    change: &'a [(u16, &'a [u8])],
+    refuse_post_load: bool,
+    snapshot: &'a mut Option<PropertyRecoverySnapshot>,
+    journaled: &'a mut Journaled,
+) -> impl FnMut(PropertyJournalEvent<'_>) -> Result<(), String> + 'a {
+    move |event| {
+        match event {
+            PropertyJournalEvent::RecoveryAcquired(captured) => *snapshot = Some(captured.clone()),
+            PropertyJournalEvent::OperationStarting {
+                operation_index: FINAL_STEP,
+                ..
+            } => {
+                for (address, bytes) in change {
+                    device.preset_memory(u32::from(*address), bytes);
+                }
+            }
+            PropertyJournalEvent::PostLoadOctetObservations(observations) => {
+                journaled.push((observations.to_vec(), control_writes(device)));
+                if refuse_post_load {
+                    return Err("durable store failed".to_string());
+                }
+            }
+            _ => {}
+        }
+        Ok(())
+    }
+}
+
+async fn run_on(
+    transport: &impl ManagementTransport,
     device: &SimulatedDevice,
     plan: &PropertyDownloadPlan,
     preconditions: &ExperimentalPropertyPreconditions,
     change: &[(u16, &[u8])],
-    refuse_post_load_journal: bool,
+    refuse_post_load: bool,
 ) -> Run {
     let mut snapshot = None;
     let mut journaled = Vec::new();
     let result = run_experimental_property_plan(
-        device,
+        transport,
         plan,
         auth(device),
         AuthorisationPlan::Skip,
         timing(),
         preconditions,
-        &mut |event| {
-            match event {
-                PropertyJournalEvent::RecoveryAcquired(captured) => {
-                    snapshot = Some(captured.clone())
-                }
-                PropertyJournalEvent::OperationStarting {
-                    operation_index: FINAL_STEP,
-                    ..
-                } => {
-                    for (address, bytes) in change {
-                        device.preset_memory(u32::from(*address), bytes);
-                    }
-                }
-                PropertyJournalEvent::PostLoadOctetObservations(observations) => {
-                    journaled.push((observations.to_vec(), control_writes(device)));
-                    if refuse_post_load_journal {
-                        return Err("durable store failed".to_string());
-                    }
-                }
-                _ => {}
-            }
-            Ok(())
-        },
+        &mut journal(
+            device,
+            change,
+            refuse_post_load,
+            &mut snapshot,
+            &mut journaled,
+        ),
         &|| false,
     )
     .await;
     Run {
         result,
-        snapshot: snapshot.expect("recovery acquired before any write"),
+        snapshot,
         journaled,
     }
 }
 
-fn mismatch(
-    error: PropertySimulationError,
-) -> knx_net::commissioning::final_step_evidence::AllocationMismatchEvidence {
+async fn run(
+    device: &SimulatedDevice,
+    plan: &PropertyDownloadPlan,
+    preconditions: &ExperimentalPropertyPreconditions,
+    change: &[(u16, &[u8])],
+) -> Run {
+    run_on(device, device, plan, preconditions, change, false).await
+}
+
+fn mismatch(error: PropertySimulationError) -> AllocationMismatchEvidence {
     assert_eq!(error.operation_index, Some(FINAL_STEP));
     assert_eq!(
         error.final_step,
@@ -157,20 +181,13 @@ fn written(offset: usize) -> DifferingRange {
     }
 }
 
-const CLEARED: PostLoadOctetObservation = PostLoadOctetObservation {
-    object: 3,
-    address: FLAG,
-    written: 2,
-    observed: 0,
-};
-
 #[tokio::test]
 async fn without_a_declaration_a_firmware_cleared_written_octet_fails_verification() {
     let (device, plan, preconditions) = established().await;
-    let run = run(&device, &plan, &preconditions, &[(FLAG, &[0])], false).await;
+    let run = run(&device, &plan, &preconditions, &[(FLAG, &[0])]).await;
     let evidence = mismatch(run.result.unwrap_err());
-    assert_eq!(evidence.differing, [written(3)]);
-    assert_eq!(evidence.actual[3], 0);
+    assert_eq!(evidence.differing, [written(OFFSET)]);
+    assert_eq!(evidence.actual[OFFSET], 0);
     assert!(run.journaled.is_empty());
 }
 
@@ -179,16 +196,62 @@ async fn a_declared_post_load_value_verifies_and_is_journaled_before_the_final_w
     let (device, plan, preconditions) = established().await;
     let preconditions = flag_may_clear(preconditions);
     let before = control_writes(&device);
-    let run = run(&device, &plan, &preconditions, &[(FLAG, &[0])], false).await;
+    let run = run(&device, &plan, &preconditions, &[(FLAG, &[0])]).await;
     let report = run.result.expect("the declared value is tolerated");
-    assert_eq!(report.post_load_octet_observations, [CLEARED]);
+    let observed = cleared(Some(PRESTATE[OFFSET]));
+    assert_eq!(report.post_load_octet_observations, [observed]);
     // Durable before the only remaining write, the VerifyMode restore.
-    assert_eq!(run.journaled, [(vec![CLEARED], before + 1)]);
+    assert_eq!(run.journaled, [(vec![observed], before + 1)]);
     assert_eq!(control_writes(&device), before + 2);
     assert_eq!(
-        CLEARED.to_string(),
-        "object 3 octet 3C03h: wrote 02h, device holds declared post-load value 00h"
+        observed.to_string(),
+        "object 3 octet 3C03h: wrote 02h, device holds declared post-load value 00h \
+         (held 06h before the download)"
     );
+}
+
+#[tokio::test]
+async fn a_prestate_equal_to_the_observed_value_is_reported_not_hidden() {
+    // A write that never took effect looks like a firmware change; the prestate shows it.
+    let (device, plan, preconditions) = established().await;
+    device.preset_memory(u32::from(FLAG), &[0]);
+    let preconditions = flag_may_clear(preconditions);
+    let run = run(&device, &plan, &preconditions, &[(FLAG, &[0])]).await;
+    assert_eq!(
+        run.result.unwrap().post_load_octet_observations,
+        [cleared(Some(0))]
+    );
+}
+
+#[tokio::test]
+async fn an_unreadable_prestate_still_tolerates_only_the_declared_value() {
+    for (value, verified) in [(0u8, true), (0x7F, false)] {
+        let (device, plan, preconditions) = established().await;
+        let preconditions = flag_may_clear(preconditions);
+        let transport = PrestateShortRead {
+            device: &device,
+            written: AtomicBool::new(false),
+        };
+        let change: [(u16, &[u8]); 1] = [(FLAG, std::slice::from_ref(&value))];
+        let run = run_on(&transport, &device, &plan, &preconditions, &change, false).await;
+        assert_eq!(run.snapshot.unwrap().unreadable_allocations, [0]);
+        if verified {
+            assert_eq!(
+                run.result.unwrap().post_load_octet_observations,
+                [cleared(None)]
+            );
+            assert_eq!(
+                cleared(None).to_string(),
+                "object 3 octet 3C03h: wrote 02h, device holds declared post-load value 00h \
+                 (prestate unreadable)"
+            );
+        } else {
+            assert!(mismatch(run.result.unwrap_err())
+                .differing
+                .contains(&written(OFFSET)));
+            assert!(run.journaled.is_empty());
+        }
+    }
 }
 
 #[tokio::test]
@@ -196,7 +259,15 @@ async fn a_refused_post_load_journal_stops_before_the_final_write() {
     let (device, plan, preconditions) = established().await;
     let preconditions = flag_may_clear(preconditions);
     let before = control_writes(&device);
-    let run = run(&device, &plan, &preconditions, &[(FLAG, &[0])], true).await;
+    let run = run_on(
+        &device,
+        &device,
+        &plan,
+        &preconditions,
+        &[(FLAG, &[0])],
+        true,
+    )
+    .await;
     let error = run.result.unwrap_err();
     assert!(matches!(
         error.failure,
@@ -209,10 +280,10 @@ async fn a_refused_post_load_journal_stops_before_the_final_write() {
 async fn an_undeclared_value_at_a_declared_octet_still_fails_with_its_real_byte() {
     let (device, plan, preconditions) = established().await;
     let preconditions = flag_may_clear(preconditions);
-    let run = run(&device, &plan, &preconditions, &[(FLAG, &[0x7F])], false).await;
+    let run = run(&device, &plan, &preconditions, &[(FLAG, &[0x7F])]).await;
     let evidence = mismatch(run.result.unwrap_err());
-    assert_eq!(evidence.differing, [written(3)]);
-    assert_eq!(evidence.actual[3], 0x7F);
+    assert_eq!(evidence.differing, [written(OFFSET)]);
+    assert_eq!(evidence.actual[OFFSET], 0x7F);
     assert!(run.journaled.is_empty());
 }
 
@@ -220,9 +291,8 @@ async fn an_undeclared_value_at_a_declared_octet_still_fails_with_its_real_byte(
 async fn an_unchanged_declared_octet_is_neither_tolerated_nor_observed() {
     let (device, plan, preconditions) = established().await;
     let preconditions = flag_may_clear(preconditions);
-    let run = run(&device, &plan, &preconditions, &[], false).await;
-    let report = run.result.unwrap();
-    assert!(report.post_load_octet_observations.is_empty());
+    let run = run(&device, &plan, &preconditions, &[]).await;
+    assert!(run.result.unwrap().post_load_octet_observations.is_empty());
     assert!(run.journaled.is_empty());
 }
 
@@ -230,11 +300,12 @@ async fn an_unchanged_declared_octet_is_neither_tolerated_nor_observed() {
 async fn any_other_difference_still_fails_and_the_replay_agrees() {
     let (device, plan, preconditions) = established().await;
     let preconditions = flag_may_clear(preconditions);
-    let run = run(&device, &plan, &preconditions, &[(FLAG, &[0, 0xEE])], false).await;
+    let run = run(&device, &plan, &preconditions, &[(FLAG, &[0, 0xEE])]).await;
+    let snapshot = run.snapshot.unwrap();
     let evidence = mismatch(run.result.unwrap_err());
     assert_eq!(
         evidence.differing,
-        [written(4)],
+        [written(OFFSET + 1)],
         "the tolerated octet is no difference"
     );
     assert_eq!(
@@ -243,20 +314,89 @@ async fn any_other_difference_still_fails_and_the_replay_agrees() {
         "real readback kept"
     );
     assert_eq!(
-        run.snapshot
-            .allocation_mismatch(0, &plan, evidence.actual.clone()),
+        snapshot.allocation_mismatch(0, &plan, evidence.actual.clone()),
         Some(evidence)
     );
     // The journal replay tolerates exactly what the live verification tolerated.
     assert_eq!(
-        run.snapshot
-            .allocation_mismatch(0, &plan, vec![9, 8, 1, 0, 3, 4, 3, 2]),
+        snapshot.allocation_mismatch(0, &plan, vec![9, 8, 1, 0, 3, 4, 3, 2]),
         None
     );
-    assert!(run
-        .snapshot
+    assert!(snapshot
         .allocation_mismatch(0, &plan, vec![9, 8, 1, 0x7F, 3, 4, 3, 2])
         .is_some());
+}
+
+#[tokio::test]
+async fn a_recovery_replay_stays_strict_at_a_declared_octet() {
+    let (device, plan, preconditions) = established().await;
+    let preconditions = flag_may_clear(preconditions);
+    let download = run(&device, &plan, &preconditions, &[(FLAG, &[0])]).await;
+    let snapshot = download.snapshot.unwrap();
+    download.result.unwrap();
+    let recovery = snapshot.recovery_plan(&plan).unwrap();
+    for (label, at_flag) in [
+        ("firmware clears the restored octet", Some(0u8)),
+        ("the download value is left behind", Some(WRITE[1])),
+        ("the prestate is restored", None),
+    ] {
+        let change: Vec<(u16, &[u8])> = at_flag
+            .as_ref()
+            .map(|value| (FLAG, std::slice::from_ref(value)))
+            .into_iter()
+            .collect();
+        let mut unused = None;
+        let mut journaled = Vec::new();
+        let result = restore_experimental_property_plan(
+            &device,
+            &plan,
+            &snapshot,
+            auth(&device),
+            AuthorisationPlan::Skip,
+            timing(),
+            &mut journal(&device, &change, false, &mut unused, &mut journaled),
+            &|| false,
+        )
+        .await;
+        assert!(journaled.is_empty(), "{label}");
+        let Some(value) = at_flag else {
+            let report = result.expect(label);
+            assert!(report.post_load_octet_observations.is_empty(), "{label}");
+            continue;
+        };
+        let evidence = mismatch(result.unwrap_err());
+        assert_eq!(evidence.differing, [written(OFFSET)], "{label}");
+        let mut actual = PRESTATE.to_vec();
+        actual[OFFSET] = value;
+        assert_eq!(evidence.actual, actual, "{label}");
+        assert_eq!(
+            snapshot.allocation_mismatch(0, &recovery, actual),
+            Some(evidence),
+            "{label}: the replay of the recovery plan is strict too"
+        );
+    }
+}
+
+#[tokio::test]
+async fn an_undeclared_octet_set_on_the_struct_is_refused_before_any_frame() {
+    let (device, plan, mut preconditions) = established().await;
+    preconditions.post_load_octets = declared(vec![PostLoadOctet {
+        object: 3,
+        address: START,
+        accepted: vec![0],
+    }]);
+    let before = device.seen().len();
+    let error = run(&device, &plan, &preconditions, &[])
+        .await
+        .result
+        .unwrap_err();
+    assert_eq!(error.operation_index, None);
+    assert!(matches!(
+        error.failure,
+        PropertySimulationFailure::Recovery(ref reason)
+            if reason == "post-load octet is not written by this plan"
+    ));
+    assert_eq!(device.seen().len(), before, "no frame at all");
 }
 
 #[tokio::test]
@@ -264,7 +404,7 @@ async fn a_declaration_must_name_distinct_written_octets_and_new_values() {
     let (_device, _plan, preconditions) = established().await;
     let refused = |octets: Vec<PostLoadOctet>| match preconditions
         .clone()
-        .with_post_load_octet_admission(PostLoadOctetAdmission::Declared(octets))
+        .with_post_load_octet_admission(declared(octets))
     {
         Err(PropertySimulationFailure::Recovery(reason)) => reason,
         other => panic!("accepted or wrong failure: {other:?}"),
@@ -289,17 +429,17 @@ async fn a_declaration_must_name_distinct_written_octets_and_new_values() {
         "another object"
     );
     assert_eq!(
-        refused(vec![octet(3, FLAG, &[])]),
+        refused(vec![flag(&[])]),
         "post-load octet accepts no other value"
     );
-    for accepted in [&[2u8][..], &[0, 0]] {
+    for accepted in [&[WRITE[1]][..], &[0, 0]] {
         assert_eq!(
-            refused(vec![octet(3, FLAG, accepted)]),
+            refused(vec![flag(accepted)]),
             "post-load values must be distinct and differ from the written value"
         );
     }
     assert_eq!(
-        refused(vec![octet(3, FLAG, &[0]), octet(3, FLAG, &[1])]),
+        refused(vec![flag(&[0]), flag(&[1])]),
         "post-load octet declared twice"
     );
     assert_eq!(

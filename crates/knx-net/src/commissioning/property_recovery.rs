@@ -478,6 +478,29 @@ impl PropertyRecoverySnapshot {
             .map_err(|_| invalid("old memory payloads change procedure shape"))
     }
 
+    /// Declared post-load octets bind the download plan they were validated against, so
+    /// only its execution tolerates them; a recovery plan that differs stays strict.
+    fn post_load_tolerance(
+        &self,
+        index: usize,
+        allocation: &PropertyRecoveryRegion,
+        executed_plan: &PropertyDownloadPlan,
+        expected: &[u8],
+        written: &[bool],
+        actual: &[u8],
+    ) -> (Vec<bool>, Vec<PostLoadOctetObservation>) {
+        if *executed_plan != self.original_plan {
+            return (vec![false; actual.len()], Vec::new());
+        }
+        self.preconditions.post_load_octets.tolerated(
+            allocation,
+            self.unreadable_allocations.contains(&index),
+            expected,
+            written,
+            actual,
+        )
+    }
+
     /// Read-only. Memory, final Loaded state and program version are verification;
     /// a final PID_TABLE_REFERENCE that differs from the source model is returned
     /// as an observation, because that model is itself unverified. Allocations whose
@@ -498,10 +521,14 @@ impl PropertyRecoverySnapshot {
             let actual = read_region(session, allocation.address, &expected, limit)
                 .await
                 .map_err(FinalStepError::read(FinalStepStage::Allocation))?;
-            let (tolerated, observed) = self
-                .preconditions
-                .post_load_octets
-                .tolerated(allocation, &expected, &written, &actual);
+            let (tolerated, observed) = self.post_load_tolerance(
+                index,
+                allocation,
+                executed_plan,
+                &expected,
+                &written,
+                &actual,
+            );
             // No captured prestate predicts an unreadable allocation's unwritten bytes;
             // `compare` never lets them decide, but records them once a written byte differs.
             if let Some(evidence) = AllocationMismatchEvidence::compare(
@@ -580,10 +607,14 @@ impl PropertyRecoverySnapshot {
             return None;
         }
         let (expected, written) = expected_allocation(allocation, executed_plan);
-        let (tolerated, _) = self
-            .preconditions
-            .post_load_octets
-            .tolerated(allocation, &expected, &written, &actual);
+        let (tolerated, _) = self.post_load_tolerance(
+            index,
+            allocation,
+            executed_plan,
+            &expected,
+            &written,
+            &actual,
+        );
         AllocationMismatchEvidence::compare(
             index,
             allocation,

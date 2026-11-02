@@ -4,7 +4,7 @@ import { tableColumnSmoke } from "./tableColumnSmoke.fixture";
 import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import DevicesWorkspace from "./DevicesWorkspace";
+import { DevicesWorkspace } from "./deviceComparisons.fixture";
 import type { ProjectTree } from "./bindings/ProjectTree";
 import type { DeviceCatalog } from "./deviceList";
 import { resetSettingsForTests, setSetting } from "./settingsStore";

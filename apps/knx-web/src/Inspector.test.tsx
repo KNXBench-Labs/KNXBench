@@ -42,7 +42,7 @@ vi.mock("./api", () => ({
   errorMessage: (error: unknown) => (error instanceof Error ? error.message : String(error)),
 }));
 
-import Inspector from "./Inspector";
+import { Inspector } from "./deviceComparisons.fixture";
 import { UI_LANGUAGE_STORAGE_KEY, resetUiLanguageForTests } from "./uiLanguage";
 import { resetSettingsForTests, setSetting } from "./settingsStore";
 import { PRODUCT_LANGUAGE_STORAGE_KEY, resetProductLanguageForTests } from "./productLanguage";

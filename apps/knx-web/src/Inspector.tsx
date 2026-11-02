@@ -35,6 +35,7 @@ import { BuildingPartFunctions, GroupAddressFunctions } from "./features/functio
 import { linkableGroupAddresses } from "./groupAddressMembers";
 import GroupAddressLinks from "./GroupAddressLinks";
 import OpenDownloadButton from "./OpenDownloadButton";
+import type { DeviceComparisons } from "./useDeviceComparisons";
 import { useTranslate, type MessageKey, type Translate } from "./i18n";
 import { useProductLanguage } from "./productLanguage";
 import DeviceInstructionsPanel from "./DeviceInstructionsPanel";
@@ -888,6 +889,7 @@ function ComObjectEditor(props: { com: ComObjectNode; groupAddresses: GroupAddre
 
 export function DeviceWorkspace(props: {
   detail: DeviceDetail; tree: ProjectTree; onApplied: (tree: ProjectTree) => void;
+  comparisons: DeviceComparisons;
   /** An unapplied installation-instructions draft exists (or no longer does). */
   onInstructionDraftChange?: (dirty: boolean) => void;
   /** Opens Project history, where the way back from a plug-in data adoption lives. */
@@ -912,6 +914,7 @@ export function DeviceWorkspace(props: {
   return <section className="device-workspace">
     <header className="workspace-heading"><div><h2>{detail.name}</h2><span className="mono">{detail.address ?? t("workbench.unassigned")}</span></div>
       <div className="workspace-heading-actions"><OpenDownloadButton deviceId={detail.id} address={detail.address} />
+        <button type="button" disabled={props.comparisons.running} onClick={() => props.comparisons.open([detail])}>{t("compare.one")}</button>
         <PluginDataButton tree={tree} deviceId={detail.id} onTreeUpdate={onApplied} onOpenHistory={props.onOpenHistory} /></div></header>
     <RenameNameField tree={tree} target={{ kind: "device", id: detail.id, name: detail.name }} onApplied={onApplied} />
     <div className="device-tabs" role="tablist" aria-label={detail.name} onKeyDown={(e) => {
@@ -1072,8 +1075,10 @@ function LineOwnerRepair(props: { tree: ProjectTree; lineId: number; onApplied: 
   );
 }
 
+type InspectorMode = { propertiesOnly: true; comparisons?: never }
+  | { propertiesOnly?: false; comparisons: DeviceComparisons };
+
 function DeviceInspector(props: {
-  propertiesOnly?: boolean;
   detail: DeviceDetail;
   tree: ProjectTree;
   // Delete is offered for a device placed in the topology of exactly one
@@ -1082,7 +1087,7 @@ function DeviceInspector(props: {
   canDelete: boolean;
   onApplied: (tree: ProjectTree) => void;
   onDeleted: (tree: ProjectTree) => void;
-}) {
+} & InspectorMode) {
   const { detail, tree, canDelete, onApplied, onDeleted } = props;
   const t = useTranslate();
   const [error, setError] = useState<string | null>(null);
@@ -1118,7 +1123,7 @@ function DeviceInspector(props: {
       <BuildingPartMoveField detail={detail} tree={tree} onApplied={onApplied} />
       <DeviceDescriptionField detail={detail} onApplied={onApplied} />
       <RecordedDeviceStatePanel tree={tree} deviceId={detail.id} />
-      {!props.propertiesOnly && <DeviceWorkspace detail={detail} tree={tree} onApplied={onApplied} />}
+      {!props.propertiesOnly && <DeviceWorkspace detail={detail} tree={tree} onApplied={onApplied} comparisons={props.comparisons} />}
     </div>
   );
 }
@@ -1790,13 +1795,12 @@ function BuildingPartInspector(props: {
 // no such gap: both resolve synchronously from `tree`, which is always
 // already loaded by the time Inspector can render at all.
 export default function Inspector(props: {
-  propertiesOnly?: boolean;
   selection: Selection;
   tree: ProjectTree;
   deviceDetail: DeviceDetail | null;
   onApplied: (tree: ProjectTree) => void;
   onDeleted: (tree: ProjectTree) => void;
-}) {
+} & InspectorMode) {
   const { selection, tree, deviceDetail, onApplied, onDeleted } = props;
   const t = useTranslate();
 
@@ -1822,7 +1826,7 @@ export default function Inspector(props: {
     const canDelete = deviceInstallation(tree, deviceDetail.id) !== undefined;
     return (
       <DeviceInspector
-        propertiesOnly={props.propertiesOnly}
+        {...(props.propertiesOnly ? { propertiesOnly: true as const } : { comparisons: props.comparisons })}
         detail={deviceDetail}
         tree={tree}
         canDelete={canDelete}

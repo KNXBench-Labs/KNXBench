@@ -19,6 +19,9 @@ import type { ProjectTree } from "./bindings/ProjectTree";
 import type { DeviceNode } from "./bindings/DeviceNode";
 import type { DeviceDetail } from "./bindings/DeviceDetail";
 import type { LogEntry } from "./api";
+import type { BoundDeviceComparison } from "./deviceComparisons";
+const comparisonAdoption = vi.hoisted(() => ({ previewComparisonAdoption: vi.fn(), applyComparisonAdoption: vi.fn() }));
+vi.mock("./comparisonAdoptionApi", async (original) => ({ ...await original<typeof import("./comparisonAdoptionApi")>(), ...comparisonAdoption }));
 import { messages as enMessages } from "./messages/en";
 import { messages as deMessages } from "./messages/de";
 import { PRODUCT_LANGUAGE_STORAGE_KEY, resetProductLanguageForTests, useProductLanguage } from "./productLanguage";
@@ -4590,6 +4593,179 @@ describe("App — achievement events from loading a project", () => {
   });
 });
 
+
+describe("App — WP-27 editor comparison", () => {
+  function project(): ProjectTree {
+    const base = treeWithDevice();
+    return { ...base, server_incarnation: "editor-compare", project_incarnation: 7,
+      snapshot_revision: 1, comparison_revisions: { 42: 3, 43: 1 }, installations: base.installations.map((installation) => ({
+        ...installation, unassigned: [...installation.unassigned.map((device) => ({ ...device, address: "1.1.42" })),
+          { id: 43, name: "Other device", address: "1.1.43", description: null, com_object_count: 0 }],
+      })) };
+  }
+  function result(): BoundDeviceComparison {
+    return { serverIncarnation: "editor-compare", projectIncarnation: 7, deviceId: 42, comparisonRevision: 3,
+      address: "1.1.42", deviceName: "Device D", programId: "A", written: false, partial: false, mask: 0x0701,
+      manufacturer: 0x83, same: true, octets: 1, differingOctets: 0, changes: [],
+      loadStates: [{ machine: "Application", state: "Loaded" }], outdated: false,
+      decoded: [{ kind: "raw", label: "", address: 0x4000, project: "21", device: "21", reason: null }] };
+  }
+  async function openEditor() {
+    apiMock.currentProject.mockResolvedValue(project());
+    apiMock.deviceDetail.mockResolvedValue({ ...deviceDetailFixture(), address: "1.1.42" });
+    apiMock.deviceCatalog.mockResolvedValue({ schemaVersion: 1, serverIncarnation: "editor-compare", snapshotRevision: 1, devices: [] });
+    const root = await renderApp();
+    await act(async () => findButton("Devices").click());
+    await act(async () => host!.querySelectorAll<HTMLInputElement>(".devices-table tbody input[type=checkbox]")[1].click());
+    const filter = host!.querySelector<HTMLInputElement>(".devices-toolbar input[type=search]")!;
+    await act(async () => { Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!.call(filter, "Device D");
+      filter.dispatchEvent(new Event("input", { bubbles: true })); });
+    await act(async () => host!.querySelector<HTMLButtonElement>(".devices-table tbody .table-select")!.click());
+    return root;
+  }
+  function compare() { return [...host!.querySelectorAll<HTMLButtonElement>(".device-workspace .workspace-heading-actions button")]
+    .find((button) => button.textContent === "Compare")!; }
+  function dialogButton(text: string) { return [...document.querySelectorAll<HTMLButtonElement>(".device-comparison-dialog button")]
+    .find((button) => button.textContent === text)!; }
+  async function gateway(value: string) {
+    const input = document.querySelector<HTMLInputElement>(".comparison-gateway")!;
+    await act(async () => { Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!.call(input, value);
+      input.dispatchEvent(new Event("input", { bubbles: true })); });
+    return input;
+  }
+  beforeEach(() => apiMock.compareDevice.mockReset());
+  afterEach(() => apiMock.deviceCatalog.mockResolvedValue({ schemaVersion: 1, serverIncarnation: null, snapshotRevision: null, devices: [] }));
+
+  it("retains gateway draft and modal identity while Settings, Log, Monitor and unrelated views own foreground", async () => {
+    const root = await openEditor();
+    try {
+      await act(async () => compare().click());
+      const dialog = document.querySelector(".device-comparison-dialog")!;
+      const input = await gateway("192.0.2.42:3671");
+      await act(async () => input.focus());
+      await act(async () => host!.querySelector<HTMLButtonElement>('[aria-label="Settings"]')!.click());
+      expect(dialog.closest("[hidden]")).not.toBeNull();
+      const back = findButton("Back to previous view");
+      expect(back.closest("[inert]")).toBeNull();
+      await act(async () => back.focus()); expect(document.activeElement).toBe(back);
+      await act(async () => back.click());
+      expect(document.querySelector(".device-comparison-dialog")).toBe(dialog);
+      expect(input.value).toBe("192.0.2.42:3671"); expect(document.activeElement).toBe(input);
+      for (const view of ["Log", "Bus monitor", "Overview"]) {
+        await act(async () => findButton(view).click());
+        expect(dialog.closest("[hidden]")).not.toBeNull();
+        expect(findButton("Devices").closest("[inert]")).toBeNull();
+        await act(async () => findButton("Devices").click());
+        expect(document.querySelector(".device-comparison-dialog")).toBe(dialog);
+        expect(dialog.closest("[hidden]")).toBeNull(); expect(input.value).toBe("192.0.2.42:3671");
+        expect(document.activeElement).toBe(input);
+      }
+      expect(document.querySelectorAll("#comparison-title")).toHaveLength(1);
+      expect(apiMock.compareDevice).not.toHaveBeenCalled();
+    } finally { await act(async () => root.unmount()); }
+  });
+
+  it("validates gateway and shares a retained running read, Stop and result between editor and table", async () => {
+    let settle!: (value: ReturnType<typeof result>) => void;
+    apiMock.compareDevice.mockReturnValue(new Promise<ReturnType<typeof result>>((resolve) => { settle = resolve; }));
+    const root = await openEditor();
+    try {
+      await act(async () => compare().click());
+      for (const invalid of ["", "192.0.2.10:65536"]) {
+        await gateway(invalid);
+        await act(async () => dialogButton("Confirm read-only comparison").click());
+        expect(document.querySelector(".device-comparison-dialog [role=alert]")).not.toBeNull();
+        expect(apiMock.compareDevice).not.toHaveBeenCalled();
+      }
+      await gateway("192.0.2.10:3671");
+      await act(async () => dialogButton("Confirm read-only comparison").click());
+      expect(apiMock.compareDevice).toHaveBeenCalledExactlyOnceWith("1.1.42", "192.0.2.10:3671",
+        { serverIncarnation: "editor-compare", projectIncarnation: 7, deviceId: 42, comparisonRevision: 3 });
+      expect(compare().disabled).toBe(true);
+      const dialog = document.querySelector(".device-comparison-dialog");
+      await act(async () => findButton("Devices").click());
+      expect(document.querySelector(".device-comparison-dialog")).toBe(dialog);
+      expect([...host!.querySelectorAll<HTMLButtonElement>(".device-comparison-actions button")].every((button) => button.disabled)).toBe(true);
+      await act(async () => dialogButton("Cancel").click());
+      expect(dialog?.textContent).toContain(enMessages["compare.stopping"]);
+      await act(async () => host!.querySelector<HTMLButtonElement>(".devices-table .table-select")!.click());
+      expect(compare().disabled).toBe(true); expect(apiMock.compareDevice).toHaveBeenCalledTimes(1);
+      await act(async () => settle(result()));
+      expect(compare().disabled).toBe(false);
+      expect(dialog?.querySelector(".comparison-tag")?.textContent).toBe("Synced");
+      await act(async () => dialogButton("Close").click());
+      await act(async () => findButton("Devices").click());
+      expect(host!.querySelector(".devices-table .comparison-tag")?.textContent).toBe("Synced");
+      await act(async () => host!.querySelector<HTMLButtonElement>(".devices-table .comparison-tag")!.click());
+      expect(document.querySelectorAll(".device-comparison-dialog")).toHaveLength(1);
+      expect(document.querySelector(".comparison-decoded")).not.toBeNull();
+      expect(apiMock.compareDevice).toHaveBeenCalledTimes(1);
+    } finally { await act(async () => { settle(result()); }); await act(async () => root.unmount()); }
+  });
+
+  it("requires separate adoption confirmation and publishes the acknowledged tree to editor and table", async () => {
+    const observed: BoundDeviceComparison = { ...result(), observationToken: "o".repeat(64), same: false, differingOctets: 1,
+      changes: [{ address: 0x4000, segment: null, project: [0x21], device: [0x22] }],
+      decoded: [{ index: 0, adoptable: true, kind: "parameter", label: "Delay", address: 0x4000,
+        project: "21", device: "22", reason: null }, { ...result().decoded[0], device: "22" }] };
+    apiMock.compareDevice.mockResolvedValue(observed);
+    comparisonAdoption.previewComparisonAdoption.mockResolvedValue({ previewToken: "p".repeat(64),
+      selected: [0], changed: true, rows: observed.decoded, linkChanges: [], expiresInSeconds: 120 });
+    const adopted = { ...project(), snapshot_revision: 2, can_undo: true, is_modified: true, comparison_revisions: { 42: 4 } };
+    comparisonAdoption.applyComparisonAdoption.mockResolvedValue({ changed: true, tree: adopted });
+    apiMock.undo.mockResolvedValue({ ...adopted, snapshot_revision: 3, can_redo: true, comparison_revisions: { 42: 5 } });
+    const root = await openEditor();
+    try {
+      await act(async () => compare().click()); await gateway("192.0.2.10:3671");
+      await act(async () => dialogButton("Confirm read-only comparison").click());
+      const panel = document.querySelector(".comparison-adoption")!;
+      await act(async () => panel.querySelector<HTMLInputElement>(".comparison-decoded input")!.click());
+      await act(async () => dialogButton(enMessages["compare.adoption.preview"]).click());
+      expect(comparisonAdoption.previewComparisonAdoption).toHaveBeenCalledExactlyOnceWith("o".repeat(64), [0]);
+      const apply = dialogButton(enMessages["compare.adoption.apply"]);
+      expect(apply.disabled).toBe(true); expect(comparisonAdoption.applyComparisonAdoption).not.toHaveBeenCalled();
+      await act(async () => panel.querySelector<HTMLInputElement>(".comparison-adoption-review input")!.click());
+      await act(async () => apply.click());
+      expect(comparisonAdoption.applyComparisonAdoption).toHaveBeenCalledExactlyOnceWith("p".repeat(64));
+      expect(document.querySelector(".comparison-results .comparison-tag")?.textContent).toBe("Outdated");
+      expect(apiMock.deviceDetail).toHaveBeenCalledTimes(2);
+      expect(host!.querySelector(".device-workspace h2")?.textContent).toBe("Device D");
+      await act(async () => dialogButton("Close").click());
+      await act(async () => findButton("Devices").click());
+      expect(host!.querySelector(".devices-table .comparison-tag")?.textContent).toBe("Outdated");
+      await act(async () => host!.querySelector<HTMLButtonElement>('[aria-label="Undo"]')!.click());
+      expect(apiMock.undo).toHaveBeenCalledTimes(1);
+      expect(host!.querySelector(".devices-table .comparison-tag")?.textContent).toBe("Outdated");
+      expect(apiMock.compareDevice).toHaveBeenCalledTimes(1);
+    } finally { await act(async () => root.unmount()); }
+  });
+
+  it.each(["en", "de"] as const)("%s opens a frozen one-device review beside Download without reading the bus", async (language) => {
+    const m = language === "en" ? enMessages : deMessages;
+    await act(async () => setSetting("uiLanguage", language));
+    const project = { ...treeWithDevice(), server_incarnation: "editor-compare", project_incarnation: 7,
+      snapshot_revision: 1, comparison_revisions: { 42: 3 } };
+    apiMock.currentProject.mockResolvedValue(project);
+    apiMock.deviceDetail.mockResolvedValue({ ...deviceDetailFixture(), address: "1.1.42" });
+    const root = await renderApp();
+    try {
+      await act(async () => findButton(m["workbench.devices"]).click());
+      await act(async () => host!.querySelector<HTMLButtonElement>(".devices-table tbody .table-select")!.click());
+      const actions = host!.querySelector(".device-workspace .workspace-heading-actions")!;
+      const compare = [...actions.querySelectorAll("button")].find((button) => button.textContent === m["compare.one"]);
+      expect(compare, "the real editor must offer Compare next to Download").toBeTruthy();
+      expect(apiMock.compareDevice).not.toHaveBeenCalled();
+      await act(async () => compare!.click());
+      expect(document.querySelectorAll(".device-comparison-dialog")).toHaveLength(1);
+      expect([...document.querySelectorAll(".comparison-targets li")].map((item) => item.textContent)).toEqual(["1.1.42 — Device D"]);
+      expect(apiMock.compareDevice).not.toHaveBeenCalled();
+      await act(async () => [...document.querySelectorAll<HTMLButtonElement>(".device-comparison-dialog button")]
+        .find((button) => button.textContent === m["deviceChecks.cancel"])!.click());
+      expect(document.querySelector(".device-comparison-dialog")).toBeNull();
+      expect(apiMock.compareDevice).not.toHaveBeenCalled();
+    } finally { await act(async () => root.unmount()); }
+  });
+});
 
 describe("App — Devices navigation", () => {
   it("removes stale editable details when a snapshot refresh cannot find the selected device", async () => {

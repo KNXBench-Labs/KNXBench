@@ -27,12 +27,15 @@ session readers may cause busy refusal, with explicit manual retry only.
 
 ## Controller/footer admission decisions (2 November 2026)
 
-- Extend stop with a strict optional query binding (`sessionId` and
-  `serverIncarnation`): both absent retain legacy behavior; both present use
-  non-queueing exact-identity admission. Partial, duplicate, malformed or unknown
-  fields must refuse, never silently fall back to an unbound stop. A mismatch
-  leaves the current session untouched. Footer and migrated monitor panel use
-  bound stop; other legacy callers remain a documented boundary.
+- Add `POST /api/bus/monitor/stop-bound` with mandatory `sessionId` and
+  `serverIncarnation` query fields: strict decoding and non-queueing exact-identity
+  admission. Missing, partial, duplicate, malformed or unknown fields refuse
+  before taking a session. A mismatch leaves the current session untouched.
+  The existing global `/stop` route and its callers remain unchanged. A dedicated
+  route is required because an older server could silently ignore extra query
+  fields on the legacy route. New callers must never fall back to global stop
+  if the bound route is unavailable. Footer and migrated monitor panel use the
+  bound route; other legacy callers remain a documented boundary.
 - Share one web action token and activity-derived connection view. Preserve the
   monitor panel's local-session-before-context-publication ordering. Reject stale
   responses after restart or action generation changes; never infer connected

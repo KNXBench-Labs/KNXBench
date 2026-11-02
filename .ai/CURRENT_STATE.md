@@ -1,6 +1,15 @@
 # Restart snapshot
 
-## Current coordination (STANDING; observed 2026-11-02 12:55 CET)
+## S2-05 selective settlement (ACTIVE; observed 2026-11-02 13:27 CET)
+- S2-05: taken by WebUI System-2 priority track on
+  `feat/s2-source-equivalence-20261102`; own worktree of the same topic.
+- Scope: terminal per-part project comparison only after strict retained-source
+  reconstruction. Start admission, Net verification and recovery stay unchanged.
+- Source: `1e08788d8`; no active gate yet. NEXT: regression RED, implementation,
+  independent review, package gate and main-first delivery. No hardware/release Go.
+- Foreign simulator-control-records worktree and dirty root remain untouched.
+
+## Previous coordination (STANDING; observed 2026-11-02 12:55 CET)
 - Owner Go: 2 November 2026. Main-first source `3455fdb9c` pushed and read back
   local/tracking/live equal; feature `e91d232df`, guard correction `cbc480864`.
 - Independent review/re-review APPROVE; final identical feature/integration tree

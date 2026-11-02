@@ -474,13 +474,8 @@ impl State {
                     .extend(observations.iter().map(|o| (run, o.clone())));
             }
             Checkpoint::PostLoadOctetObservations { observations } => {
-                let last = self
-                    .recovery
-                    .as_ref()
-                    .and_then(|r| r.original_bundle.normalized_plan.steps.len().checked_sub(1));
                 let run = self.run();
-                if last.is_none()
-                    || self.active != last
+                if self.active_final_step().is_none()
                     || !matches!(
                         self.outcome,
                         LocalOutcome::Running | LocalOutcome::Restoring

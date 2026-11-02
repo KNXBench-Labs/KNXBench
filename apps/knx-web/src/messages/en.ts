@@ -110,7 +110,7 @@ export const messages = {
   "system2.observation.inProcedure": "During the download (step {step}), object {object}: expected pointer {expected} after allocation, device reported {observed} (load state {state}). Memory is verified at the end.",
   "system2.observation.programVersion": "Before the download, the device's program version was {observed}; the plan writes {expected}.",
   "system2.observation.refused": "not reported (read refused)",
-  "system2.observation.postLoad": "After the download, object {object} octet {address}h: KNXBench wrote {written}h and the device now holds {observed}h. This exact profile declares that the device firmware maintains this octet (a hidden download flag it clears after loading), so verification accepted it; every other octet was verified as written.",
+  "system2.observation.postLoad": "After loading, object {object} octet {address}h: KNXBench wrote {written}h and the device now holds {observed}h. This exact profile declares that the device firmware maintains this octet (a hidden download flag it clears after loading), so verification accepted it; every other octet was verified as written.",
   "system2.observation.postLoadPrestate": "Before the download it held {prestate}h.",
   "system2.observation.postLoadPrestateUnreadable": "Its value before the download could not be read.",
   "system2.diagnostics": "Recorded pointer-read observations",

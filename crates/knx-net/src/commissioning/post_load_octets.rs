@@ -136,7 +136,7 @@ impl PostLoadOctetAdmission {
 }
 
 /// The last value `plan` writes to `address` of `object`, if it writes it at all.
-fn written_value(plan: &PropertyDownloadPlan, object: u8, address: u16) -> Option<u8> {
+pub fn written_value(plan: &PropertyDownloadPlan, object: u8, address: u16) -> Option<u8> {
     plan.steps()
         .iter()
         .rev()

@@ -287,10 +287,11 @@ it("explains a tolerated firmware-maintained octet in English and German, with i
 it("labels a restore run's post-load octet and an unreadable prestate", async () => {
   const { postLoadStatus } = await import("./system2DownloadTestFixtures");
   const [d] = postLoadStatus.postLoadOctets;
-  mock.getSystem2Status.mockResolvedValue({ ...postLoadStatus, state: "restored", restoreAttempted: true, postLoadOctets: [d, { ...d, run: "restore", prestate: null }] });
+  mock.getSystem2Status.mockResolvedValue({ ...postLoadStatus, state: "restored", restoreAttempted: true, postLoadOctets: [{ ...d, prestate: null }, { ...d, run: "restore", prestate: "01" }] });
   await render();
   const restore = host.querySelector("[data-system2-post-load-octet=restore]")!.textContent!;
-  expect(restore).toContain("Recovery run:"); expect(restore).toContain("Its value before the download could not be read.");
+  expect(restore).toContain("Recovery run: After loading"); expect(restore).toContain("Before the download it held 01h.");
+  expect(host.querySelector("[data-system2-post-load-octet=download]")!.textContent).toContain("Its value before the download could not be read.");
 });
 it("never calls zero placeholders a backup when prior memory was unreadable", async () => {
   const { unreadableStatus } = await import("./system2DownloadTestFixtures");

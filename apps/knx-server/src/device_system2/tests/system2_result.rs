@@ -149,6 +149,7 @@ async fn report_of_an_operation_without_evidence_is_unknown_not_nothing_written_
             "format",
             "kind",
             "mutationPossible",
+            "postLoadOctets",
             "prestateDiffers",
             "recovery",
             "support",

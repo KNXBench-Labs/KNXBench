@@ -1,4 +1,4 @@
-//! Typed PID 7 failure facts through the real worker, private journal, restart and status v3.
+//! Typed run facts through the real worker, private journal, restart, status v5 and the report.
 use super::*;
 
 /// The complete status v5 key set: version 1 keys plus the typed lists and the result.

@@ -2821,6 +2821,7 @@ export const messages = {
   "settings.motionCategory.achievements": "Achievement notifications",
   "settings.motionCategory.flow": "Telegram flow",
   "settings.motionCategory.lines": "Structure lines in the explorer",
+  "settings.motionCategory.theme": "Theme effects (Rail)",
   "settings.categoryMotion.inherit": "Inherit global setting",
   "settings.categoryMotion.subtle": "At most subtle",
   "settings.categoryMotion.off": "Off",

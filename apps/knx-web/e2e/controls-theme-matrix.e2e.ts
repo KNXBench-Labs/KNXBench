@@ -5,8 +5,8 @@ import { messages as en } from "../src/messages/en";
 import { intercept, openList } from "./communication-fixture";
 import { controlPaint, separatorLine, type ControlRole } from "./control-roles";
 
-// Every theme the app ships: the four built-ins and the bundled CRT pack.
-const THEMES = ["porcelain", "graphite", "cupertino", "lcars", "user-modern-retro-green-crt"] as const;
+// Every theme the app ships: the six built-ins and the bundled CRT pack.
+const THEMES = ["porcelain", "graphite", "cupertino", "lcars", "rail", "rail-dark", "user-modern-retro-green-crt"] as const;
 // Narrow is below the 650px breakpoint (splitters hidden, panes stacked); wide is a desktop.
 const WIDTHS = [600, 1440] as const;
 // docs/contracts/controls-and-separators.md: no interactive control below 24px.

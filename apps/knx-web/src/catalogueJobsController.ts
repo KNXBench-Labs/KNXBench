@@ -34,10 +34,12 @@ export class CatalogueJobsController {
  #schedule() {
   if (!this.#connected || this.#timer !== null || !this.#op?.owner || this.#state.status?.state !== "running" || this.#state.unavailable || this.#state.error === "unauthenticated" || this.#state.error === "protocol") return;
   const op = this.#op;
-  this.#timer = setTimeout(() => {
+  const timer = setTimeout(() => {
+   if (this.#timer !== timer) return;
    this.#timer = null;
    if (this.#connected && this.#op === op && this.#state.status?.state === "running" && !this.#state.unavailable && this.#state.error !== "unauthenticated" && this.#state.error !== "protocol") void this.refresh();
   },750);
+  this.#timer = timer;
  }
  #error(error: unknown) {
   const kind = error instanceof CatalogueJobRefusal ? error.kind : error instanceof CatalogueProtocolError ? "protocol" : "transport";

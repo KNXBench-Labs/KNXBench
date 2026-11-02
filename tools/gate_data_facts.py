@@ -13,6 +13,11 @@ FONT = re.compile(r'@fontsource(?:-variable)?/[a-z0-9][a-z0-9-]*\Z')
 FONT_VERSION = re.compile(r'[~^]?\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?\Z')
 
 
+MAX_JSON_DEPTH = 32
+MIN_JSON_INTEGER = -(1 << 63)
+MAX_JSON_INTEGER = (1 << 64) - 1
+
+
 class Comparison:
     """Missing Git or file evidence denies exceptions; never execute project code."""
 
@@ -27,6 +32,10 @@ class Comparison:
     def pair(self, path: str) -> tuple[bytes, bytes]:
         if not self.base:
             raise ValueError('missing comparison base')
+        entry = subprocess.run(['git', 'ls-tree', self.base, '--', path], cwd=self.root,
+                               check=True, capture_output=True).stdout
+        if not entry.startswith((b'100644 blob ', b'100755 blob ')):
+            raise ValueError('comparison base is not a regular blob')
         old = subprocess.run(['git', 'show', f'{self.base}:{path}'], cwd=self.root,
                              check=True, capture_output=True).stdout
         file = self.root / path
@@ -43,10 +52,21 @@ def closed_json(data: bytes) -> dict:
                 raise ValueError('duplicate JSON key')
             result[key] = value
         return result
-    result = json.loads(data, object_pairs_hook=pairs,
+    result = json.loads(data.decode('utf-8'), object_pairs_hook=pairs,
                         parse_constant=lambda value: (_ for _ in ()).throw(ValueError(value)))
     if not isinstance(result, dict):
         raise ValueError('expected JSON object')
+    stack = [(result, 0)]
+    while stack:
+        value, depth = stack.pop()
+        if depth > MAX_JSON_DEPTH or (type(value) is int and
+                not MIN_JSON_INTEGER <= value <= MAX_JSON_INTEGER):
+            raise ValueError('JSON value outside bounded metadata subset')
+        if isinstance(value, dict):
+            stack.extend((child, depth + 1) for child in value.values())
+        elif isinstance(value, list):
+            stack.extend((child, depth + 1) for child in value)
+    json.dumps(result, ensure_ascii=False, allow_nan=False).encode('utf-8')
     return result
 
 

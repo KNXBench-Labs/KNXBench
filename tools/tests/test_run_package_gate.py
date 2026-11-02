@@ -1,4 +1,4 @@
-"""Package gate runner: refusals before any stage runs."""
+"""Check gate admission, stage order, diagnostic proof and environment isolation."""
 from __future__ import annotations
 
 from contextlib import redirect_stdout
@@ -116,27 +116,29 @@ class DiagnosticProof(unittest.TestCase):
                     runner.diagnostic_counts(self.log)
 
     def test_narrow_stage_uses_lease_exact_filter_scratch_scrubbing_and_receipt(self):
+        self._assert_narrow_orchestration()
+
+    def test_narrow_mixed_independent_rust_stages_finish_in_planned_order(self):
+        self._assert_narrow_orchestration(["xtask"])
+
+    def _assert_narrow_orchestration(self, rust_packages=()):
         git(self.root, 'init', '-q')
         (self.root / 'README.md').write_text('# fixture')
         (self.root / '.gitignore').write_text('private-output\n')
         git(self.root, 'add', '.')
         git(self.root, 'commit', '-qm', 'base')
         result = gate_scope.Plan(changed=['apps/knx-server/src/diagnostic_bundle_sections.rs'],
-                                 diagnostic_sections=True)
+                                 diagnostic_sections=True, rust_packages=list(rust_packages),
+                                 corpus_packages=list(rust_packages))
         events = []
         instances = []
         output = self.root / 'private-output'
 
-        class FakeRun:
-            # This is orchestration evidence, never a real Rust execution.
+        class FakeRun(runner.MeasuredRun):
+            # Commands are simulated; receipt completion uses the real finalizer.
             def __init__(self, path, stages):
-                self.output = path
-                path.mkdir()
-                self.receipt = {'stages': []}
+                super().__init__(path, stages)
                 instances.append(self)
-
-            def save(self):
-                pass
 
             def step(self, name, command, cwd, env, verify):
                 evidence = None
@@ -151,9 +153,12 @@ class DiagnosticProof(unittest.TestCase):
                 self.receipt['stages'].append({'name': name, 'command': command, **stage})
                 return stage
 
-            def finish(self, before, after):
-                self.receipt['inputsFrozen'] = before == after
-                return True
+        real_subprocess_run = subprocess.run
+
+        def subprocess_run(command, *args, **kwargs):
+            if command[:2] == ["python3", "tools/run_corpus_tests.py"] and "--list" in command:
+                return subprocess.CompletedProcess(command, 0, "0 corpus tests\n", "")
+            return real_subprocess_run(command, *args, **kwargs)
 
         @contextmanager
         def lease(*args):
@@ -166,6 +171,7 @@ class DiagnosticProof(unittest.TestCase):
              patch.object(runner, 'preflight', return_value=[]), \
              patch.object(runner, 'MeasuredRun', FakeRun), \
              patch.object(runner, 'workspace_lease', lease), \
+             patch.object(runner.subprocess, 'run', side_effect=subprocess_run), \
              patch.object(runner, 'source_fingerprint', return_value='frozen'), \
              patch.object(runner, 'user_knx_dirs', return_value=[]), \
              patch.dict(os.environ, {'KNX_FORBIDDEN_HARDWARE': 'never'}), \
@@ -186,6 +192,8 @@ class DiagnosticProof(unittest.TestCase):
         self.assertEqual((stage['exit'], stage['evidence']['passed']), (0, 1))
         self.assertTrue(run.receipt['plan']['diagnostic_sections'])
         self.assertTrue(run.receipt['success'])
+        self.assertTrue(run.receipt['complete'])
+        self.assertEqual([stage['name'] for stage in run.receipt['stages']], run.expected)
 
     def test_real_python_child_exit_and_zero_inventory_fail_proof(self):
         good = ('test diagnostic_bundle_routes::sections::tests::privacy ... ok\n'

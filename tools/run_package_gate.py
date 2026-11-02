@@ -284,11 +284,6 @@ def main(argv: list[str] | None = None) -> int:
         needs_lease = any(s in stages for s in ('clippy', 'bindings', 'corpus', 'diagnostic-sections-tests'))
         if needs_lease:
             with workspace_lease(root, run, args.lease_timeout):
-                if 'diagnostic-sections-tests' in stages:
-                    check(run, 'diagnostic-sections-tests',
-                          ['cargo', 'test', '--offline', '--locked', '-p', 'knx-server', '--lib',
-                           DIAGNOSTIC_PREFIX], root, envs,
-                          lambda: diagnostic_counts(output / 'diagnostic-sections-tests.log'))
                 if 'clippy' in stages:
                     if 'clean-desktop' in stages:
                         if not (app / 'dist/index.html').is_file():
@@ -309,6 +304,11 @@ def main(argv: list[str] | None = None) -> int:
                     finally:
                         subprocess.run(['git', 'restore', '--source=HEAD', '--', 'apps/knx-web/src/bindings'],
                                        cwd=root, check=False)
+                if 'diagnostic-sections-tests' in stages:
+                    check(run, 'diagnostic-sections-tests',
+                          ['cargo', 'test', '--offline', '--locked', '-p', 'knx-server', '--lib',
+                           DIAGNOSTIC_PREFIX], root, envs,
+                          lambda: diagnostic_counts(output / 'diagnostic-sections-tests.log'))
                 if 'corpus' in stages:
                     packages = [] if full or result.corpus_packages == ['*'] else result.corpus_packages
                     selection = [arg for name in packages for arg in ('--package', name)]

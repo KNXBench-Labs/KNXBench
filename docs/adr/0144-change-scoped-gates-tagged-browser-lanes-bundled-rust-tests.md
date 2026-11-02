@@ -128,6 +128,10 @@ the existing workspace lease, isolated homes, hardware-variable scrubbing and
 direct exit checks, and additionally refuses zero/ignored-only or wrong-prefix
 test inventories. Its reason and executed inventory appear in the plan/receipt.
 
+Evidence additionally requires regular base blobs and the bounded UTF-8 JSON
+subset documented in Verification; symlink payloads, BOM/encoding mismatches,
+unsupported scalar values or excessive nesting do not prove reader equivalence.
+
 The helper itself is complete-gate infrastructure. Missing/deleted or ambiguous
 comparison evidence, changed readers, changed manifest version, build/launch
 inputs, unknown paths and ordinary Rust changes retain conservative selection.

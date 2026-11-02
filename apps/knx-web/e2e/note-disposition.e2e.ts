@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { messages as en } from "../src/messages/en";
 import { messages as de } from "../src/messages/de";
 import { achievementsFixtureAnswer } from "./achievements-fixture";
+import { busActivityFixtureAnswer } from "./bus-activity-fixture";
 import { openExplorerBranches } from "./disclosure-fixture";
 import { statusMetricsFixtureBody } from "./status-metrics-fixture";
 import { controlPaint } from "./control-roles";
@@ -62,6 +63,7 @@ async function intercept(page: Page, language: "en" | "de") {
       else { state.revision += 1; state.deleted = true; body = tree(state.revision, true); }
     }
     else if (achievementsFixtureAnswer(method, path) !== undefined) body = achievementsFixtureAnswer(method, path);
+    else if (busActivityFixtureAnswer(method, path) !== undefined) body = busActivityFixtureAnswer(method, path);
     else { state.unexpected.push(`${method} ${path}`); status = 404; body = { error: "strict note disposition fixture only" }; }
     return route.fulfill({ status, contentType: "application/json", body: JSON.stringify(body) });
   });

@@ -6,6 +6,7 @@ import { messages as de } from "../src/messages/de";
 import { HISTORY_FIXTURE } from "../src/projectHistory.fixture";
 import { admitProjectHistory } from "../src/projectHistory";
 import { achievementsFixtureAnswer } from "./achievements-fixture";
+import { busActivityFixtureAnswer } from "./bus-activity-fixture";
 import { statusMetricsFixtureBody } from "./status-metrics-fixture";
 import { controlPaint } from "./control-roles";
 
@@ -55,6 +56,7 @@ async function intercept(page: Page, language: "en" | "de", session = false, man
       }
     } else if (["/api/device-download/status", "/api/device-address/status"].includes(path) && method === "GET") { status = 404; body = { error: "no operation in this fixture" }; }
     else if (achievementsFixtureAnswer(method, path) !== undefined) body = achievementsFixtureAnswer(method, path);
+    else if (busActivityFixtureAnswer(method, path) !== undefined) body = busActivityFixtureAnswer(method, path);
     else { state.unexpected.push(`${method} ${path}`); status = 404; body = { error: "strict history fixture only" }; }
     return route.fulfill({ status, contentType: "application/json", body: JSON.stringify(body) });
   });

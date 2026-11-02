@@ -5,6 +5,7 @@ import type { ProjectTree } from "../src/bindings/ProjectTree";
 import { messages as en } from "../src/messages/en";
 import { messages as de } from "../src/messages/de";
 import { achievementsFixtureAnswer } from "./achievements-fixture";
+import { busActivityFixtureAnswer } from "./bus-activity-fixture";
 import { fulfillNoProjectOpen } from "./server-project-fixture";
 import { statusMetricsFixtureBody } from "./status-metrics-fixture";
 
@@ -40,6 +41,8 @@ async function serve(page: Page, language: "en" | "de", lines: Lines, extra = 0)
     const ok = (body: unknown) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(body) });
     const achievements = achievementsFixtureAnswer(method, path);
     if (achievements !== undefined) return ok(achievements);
+    const busActivity = busActivityFixtureAnswer(method, path);
+    if (busActivity !== undefined) return ok(busActivity);
     if (path === "/api/auth/status") return ok({ required: false, authenticated: true });
     if (path === "/api/settings" && method === "GET") return ok({ schemaVersion: 1, status: "ok", settings: {
       uiLanguage: language, theme: "porcelain", motionLevel: "standard", motionLines: lines, releaseChecksEnabled: false,

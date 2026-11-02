@@ -3,6 +3,7 @@ import { openNavigationSections } from "./disclosure-fixture";
 import { expect, test, type BrowserContext, type Page } from "@playwright/test";
 import { snapshot, telegram, node } from "./telegram-flow-server";
 import { achievementsFixtureAnswer } from "./achievements-fixture";
+import { busActivityFixtureAnswer } from "./bus-activity-fixture";
 import { statusMetricsFixtureBody } from "./status-metrics-fixture";
 
 function project(revision = 1) {
@@ -43,6 +44,8 @@ async function editor(page: Page, context: BrowserContext) {
     if (path === "/api/device/2/parameters" && method === "GET") return json({ programId: null, sections: [], stale: [], diagnostics: [] });
     const achievements = achievementsFixtureAnswer(method, path);
     if (achievements !== undefined) return json(achievements);
+    const busActivity = busActivityFixtureAnswer(method, path);
+    if (busActivity !== undefined) return json(busActivity);
     state.unexpected.push(`${method} ${path}`); return json({ error: "offline fixture only" }, 404);
   });
   await page.setViewportSize({ width: 1500, height: 1000 });

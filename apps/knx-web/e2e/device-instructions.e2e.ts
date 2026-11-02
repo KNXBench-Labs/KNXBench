@@ -7,6 +7,7 @@ import type { Document } from "../src/features/rtf/document";
 import { messages as en } from "../src/messages/en";
 import { messages as de } from "../src/messages/de";
 import { achievementsFixtureAnswer } from "./achievements-fixture";
+import { busActivityFixtureAnswer } from "./bus-activity-fixture";
 import { statusMetricsFixtureBody } from "./status-metrics-fixture";
 import { controlPaint } from "./control-roles";
 
@@ -66,6 +67,8 @@ async function fixture(page: Page, language: Language, theme: string, width: num
     const refuse = (status: number, kind: string, error: string) => route.fulfill({ status, contentType: "application/json", body: JSON.stringify({ error, kind }) });
     const achievements = achievementsFixtureAnswer(method, path);
     if (achievements !== undefined) return ok(achievements);
+    const busActivity = busActivityFixtureAnswer(method, path);
+    if (busActivity !== undefined) return ok(busActivity);
     if (path === "/api/auth/status") return ok({ required: false, authenticated: true });
     if (path === "/api/settings" && method === "GET") return ok({ conditionalPatchVersion: 1, schemaVersion: 1, status: "ok", settings: {
       uiLanguage: language, theme, motionLevel: "off", releaseChecksEnabled: false,

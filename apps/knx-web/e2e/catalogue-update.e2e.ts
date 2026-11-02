@@ -7,6 +7,7 @@ import type { CatalogCleanupItem, CatalogInstallReport, CatalogItem, CatalogueUp
 import { messages as en } from "../src/messages/en";
 import { messages as de } from "../src/messages/de";
 import { achievementsFixtureAnswer } from "./achievements-fixture";
+import { busActivityFixtureAnswer } from "./bus-activity-fixture";
 import { statusMetricsFixtureBody } from "./status-metrics-fixture";
 import { catalogueJobsFixture } from "./catalogue-jobs-fixture";
 import type { Artifact, PublicRecord } from "../src/catalogueJobsTypes";
@@ -126,6 +127,8 @@ async function fixture(page: Page, language: Language, theme: string, width: num
     if (jobReply) return jobReply;
     const achievements = achievementsFixtureAnswer(method, path);
     if (achievements !== undefined) return ok(achievements);
+    const busActivity = busActivityFixtureAnswer(method, path);
+    if (busActivity !== undefined) return ok(busActivity);
     if (path === "/api/auth/status") return ok({ required: false, authenticated: true });
     if (path === "/api/settings" && method === "GET") return ok({ conditionalPatchVersion: 1, schemaVersion: 1, status: "ok", settings: {
       uiLanguage: language, theme, motionLevel: "off", releaseChecksEnabled: false,

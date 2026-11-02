@@ -8,6 +8,7 @@ import type { PendingProgramming } from "../src/bindings/PendingProgramming";
 import { messages as en } from "../src/messages/en";
 import { messages as de } from "../src/messages/de";
 import { achievementsFixtureAnswer } from "./achievements-fixture";
+import { busActivityFixtureAnswer } from "./bus-activity-fixture";
 import { fulfillNoProjectOpen } from "./server-project-fixture";
 import { statusMetricsFixtureBody } from "./status-metrics-fixture";
 
@@ -69,6 +70,7 @@ async function intercept(page: Page, language: "en" | "de", theme = "porcelain")
       if (request.snapshotRevision !== state.tree.snapshot_revision) { status = 409; body = { error: "stale", kind: "programmingStale" }; }
       else { state.tree = fixtureTree(request.programmed ? CLEAN : pending(true, true, true, true), state.tree.snapshot_revision + 1); body = state.tree; }
     } else if (achievementsFixtureAnswer(method, path) !== undefined) body = achievementsFixtureAnswer(method, path);
+    else if (busActivityFixtureAnswer(method, path) !== undefined) body = busActivityFixtureAnswer(method, path);
     else { state.unexpected.push(`${method} ${path}`); status = 404; body = { error: "strict pending-programming fixture only" }; }
     return route.fulfill({ status, contentType: "application/json", body: JSON.stringify(body) });
   });

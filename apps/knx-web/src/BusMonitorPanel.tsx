@@ -5,7 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import * as api from "./api";
 import DeviceLink from "./DeviceLink";
 import { emitAchievementEvent } from "./achievementEvents";
-import type { BusMonitorStopResponse, BusTelegramRow } from "./api";
+import type { BusMonitorStartResponse, BusMonitorStopResponse, BusTelegramRow } from "./api";
 import { CAPTURE_CAPACITY, appendCapturedRows, saveBusCapture } from "./busMonitorCapture";
 import { calculateBusMonitorStatistics } from "./busMonitorStatistics";
 import BusComposeForm, { type ComposeResolution } from "./BusComposeForm";
@@ -20,9 +20,9 @@ import {
   type ContextLock,
   forgetSessionContext,
   readContextLock,
-  recordSessionContext,
   subscribeContextChanges,
 } from "./busContext";
+import { connectBusSession, disconnectBusSession, useBusConnection } from "./busConnection";
 import { ensureBusDiscovery, searchBusInterfaces, useBusDiscovery } from "./busDiscovery";
 import { useTranslate, type Translate } from "./i18n";
 import { groupAddressMatches, useGroupAddressFormat } from "./gaNotation";
@@ -354,6 +354,8 @@ export default function BusMonitorPanel({ projectOpen, project, projectScope, on
   // effect-updated mirror would still read `null` there and fire a
   // redundant reattach request against the session just started.
   const sessionRef = useRef<AttachedSession | null>(null);
+  // WP-26: one action at a time in this window, shared with the status bar.
+  const sharedAction = useBusConnection().action;
 
   useEffect(() => {
     if (settingsState.hydration !== "hydrated" || gatewaySeedResolvedRef.current) return;
@@ -581,9 +583,10 @@ export default function BusMonitorPanel({ projectOpen, project, projectScope, on
     setConnectError(null);
     const validation = validateGatewayFields(gatewayFields);
     if (!validation.ok) return;
-    try {
-      const started = await api.startBusMonitor(validation.endpoint);
-      emitAchievementEvent({ type: "busMonitorStarted" });
+    // WP-26: the shared controller owns the request, the achievement and the
+    // session record; this panel's resets and `sessionRef` run synchronously
+    // in `beforePublish`, after the achievement and before the record.
+    function beforePublish(started: BusMonitorStartResponse) {
       sinceRef.current = 0;
       setCapture({ rows: [], pruned: 0 });
       flowFeed.reset();
@@ -610,18 +613,25 @@ export default function BusMonitorPanel({ projectOpen, project, projectScope, on
       // still read `null` here would conclude this panel holds no session
       // and fire a reattach request against the session just started.
       sessionRef.current = attached;
-      recordSessionContext(started.sessionId, started.serverIncarnation);
-      setContextLock("unverified");
-      setServerProjectOpen(null);
-      attachTo(attached);
-    } catch (e) {
-      setConnectError(api.errorMessage(e));
     }
+    const result = await connectBusSession(validation.endpoint, { beforePublish });
+    if (!result.ok) {
+      if (result.reason === "failed") setConnectError(api.errorMessage(result.error));
+      else if (result.reason === "stale") setConnectError(t("busConnection.error.stale"));
+      return;
+    }
+    setContextLock("unverified");
+    setServerProjectOpen(null);
+    const { sessionId, serverIncarnation, assignedAddress } = result.value;
+    attachTo({ sessionId, serverIncarnation, assignedAddress });
   }
 
   async function disconnect() {
-    try {
-      const summary = await api.stopBusMonitor();
+    const current = sessionRef.current;
+    if (current === null) return;
+    // WP-26: stops exactly this panel's session on the bound route. Local
+    // state detaches in `afterStop`, before the controller forgets the record.
+    function afterStop(summary: BusMonitorStopResponse) {
       attachTo(null);
       setPaused(false);
       setStatus(null);
@@ -629,13 +639,21 @@ export default function BusMonitorPanel({ projectOpen, project, projectScope, on
       setReplacedBy(null);
       setEndedElsewhere(false);
       setContextLock("synced");
-      // The session is gone; the record describing it must go too, or the
-      // next session would briefly look verified against its predecessor's
-      // fingerprint.
-      forgetSessionContext();
-    } catch (e) {
-      setConnectError(api.errorMessage(e));
+      // The session is gone; the controller forgets its record right after
+      // this, or the next session would briefly look verified against its
+      // predecessor's fingerprint.
     }
+    // A newer session this panel adopted meanwhile is not the stopped one.
+    const stillOwned = () => sessionRef.current?.sessionId === current.sessionId
+      && sessionRef.current.serverIncarnation === current.serverIncarnation;
+    const result = await disconnectBusSession(
+      { sessionId: current.sessionId, serverIncarnation: current.serverIncarnation },
+      { afterStop, stillOwned },
+    );
+    if (result.ok || result.reason === "inFlight") return;
+    if (result.reason === "failed") setConnectError(api.errorMessage(result.error));
+    else if (result.reason === "stale") setConnectError(t("busConnection.error.staleStop"));
+    else setConnectError(t("busConnection.error.disconnect"));
   }
 
   // ADR-0089: a minute of an open session, and the flow view on screen.
@@ -780,12 +798,12 @@ export default function BusMonitorPanel({ projectOpen, project, projectScope, on
             </label>
           </div>
           {session ? (
-            <button onClick={disconnect}>{t("busMonitor.disconnect")}</button>
+            <button onClick={disconnect} disabled={sharedAction !== null}>{t("busMonitor.disconnect")}</button>
           ) : (
             <>
               <button
                 onClick={connect}
-                disabled={!gatewayValidation.ok}
+                disabled={!gatewayValidation.ok || sharedAction !== null}
                 title={gatewayValidationHint}
               >
                 {t("busMonitor.connect")}

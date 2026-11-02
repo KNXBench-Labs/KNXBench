@@ -25,6 +25,14 @@ session-and-server-bound non-queueing stop, then the shared controller and menu.
 Known download/management holders and System-2 priority are retained; brief
 session readers may cause busy refusal, with explicit manual retry only.
 
+Progress, 2 November 2026 (implementation branch, pending independent review
+and gates): the session-bound stop route, the shared web controller
+(`busConnection.ts`) and the status-bar control (`BusConnectionStatus.tsx`) are
+implemented together; the monitor panel connects and disconnects through the
+controller and stops only its own session. The download page's holder notice
+remains on the legacy global stop as a documented boundary. Limits:
+[KL-180](../limitations/KL-180-named-gateway-refusals.md#session-bound-stop-and-status-bar-connection-2-november-2026-source).
+
 ## Controller/footer admission decisions (2 November 2026)
 
 - Add `POST /api/bus/monitor/stop-bound` with mandatory `sessionId` and

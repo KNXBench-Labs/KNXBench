@@ -1918,6 +1918,33 @@ export function stopBusMonitor(): Promise<BusMonitorStopResponse> {
   return request("/api/bus/monitor/stop", { method: "POST" });
 }
 
+/** WP-26: the session a bound stop names. Ids restart per process, hence the incarnation. */
+export interface BoundBusSession {
+  sessionId: number;
+  serverIncarnation: string;
+}
+
+/** A safe positive id and an unpadded base64url incarnation, exactly as the server issues them. */
+export function isBoundBusSession(value: unknown): value is BoundBusSession {
+  if (value === null || typeof value !== "object") return false;
+  const { sessionId, serverIncarnation } = value as Record<string, unknown>;
+  return Number.isSafeInteger(sessionId) && (sessionId as number) >= 1
+    && typeof serverIncarnation === "string" && /^[A-Za-z0-9_-]{1,256}$/.test(serverIncarnation);
+}
+
+// A separate route, never the legacy `/stop` with a query: an older server
+// ignores the query there and would stop whatever session it holds. Without
+// the route the request fails (404/405); nothing falls back to `/stop`.
+export async function stopBoundBusMonitor(identity: BoundBusSession): Promise<BusMonitorStopResponse> {
+  if (!isBoundBusSession(identity)) throw new Error("The bus session identity is malformed; nothing was sent.");
+  const query = `sessionId=${identity.sessionId}&serverIncarnation=${encodeURIComponent(identity.serverIncarnation)}`;
+  const stopped = await request<BusMonitorStopResponse>(`/api/bus/monitor/stop-bound?${query}`, { method: "POST" });
+  if (stopped?.sessionId !== identity.sessionId || stopped.serverIncarnation !== identity.serverIncarnation) {
+    throw new Error("The bound stop answered for another bus session.");
+  }
+  return stopped;
+}
+
 // `since` defaults to `0` server-side too (`TelegramsQuery.since:
 // Option<u64>`) — always sent explicitly here so a caller never has to
 // remember that omitting it means "from the start."

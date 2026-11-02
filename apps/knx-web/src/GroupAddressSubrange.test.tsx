@@ -51,6 +51,7 @@ function Harness({ installation = input, rangeScope = 20 }: {
   return <><GroupAddressTable installation={installation} tree={tree} selection={selection}
     multiSelection={shared.multiSelection} onItemClick={shared.onItemClick}
     onTreeUpdate={() => {}} rangeScope={rangeScope} />
+    <button data-explorer-range onClick={() => setSelection({ kind: "group_range", id: rangeScope ?? 20 })}>Select Explorer range</button>
     <output data-selection>{selection?.id ?? "none"}</output>
     <output data-multi>{[...(shared.multiSelection?.ids ?? [])].join(",")}</output></>;
 }
@@ -153,6 +154,21 @@ it("keeps explorer scope until explicit navigation and resets it on an explorer 
   expect(host.querySelector("[data-ga-current-scope]")!.textContent).toBe("All ranges");
   await chooseView("tree");
   expect(ids()).toEqual([100]);
+});
+
+it.each(["columns", "atlas"])("%s lets the same Explorer range reclaim local navigation", async view => {
+  await act(async () => root.render(<Harness />));
+  await click("[data-explorer-range]");
+  await chooseView(view);
+  for (const selectAddress of [false, true]) {
+    await scope(40); await scope(41);
+    expect(ids()).toEqual([203, 201]);
+    if (selectAddress) await click('[data-ga-select="203"]');
+    await click("[data-explorer-range]");
+    // Columns shows the initial Explorer projection; Atlas remains an overview.
+    expect(ids()).toEqual(view === "columns" ? [100] : []);
+    expect(host.querySelector("[data-ga-current-scope]")!.textContent).toBe("All ranges");
+  }
 });
 
 it.each(["columns", "atlas"])("%s retains a bounded ordered sub-range window and filter", async view => {

@@ -3,10 +3,15 @@ import { expect, test, type Page } from "@playwright/test";
 import { join } from "node:path";
 import { messages as en } from "../src/messages/en";
 import { messages as de } from "../src/messages/de";
-import { dismissToasts, intercept, openProject } from "./communication-fixture";
+import { dismissToasts as dismissReadyToasts, intercept, openProject } from "./communication-fixture";
 
 const CONNECTED = "192.0.2.10:3671";
 const HALL = "192.0.2.20:3671";
+// Settings can change the initial English chrome after a late-night toast appears.
+async function dismissToasts(page: Page, language: "en" | "de") {
+  await expect(page.locator("html")).toHaveAttribute("lang", language);
+  await dismissReadyToasts(page, language);
+}
 const fill = (template: string, params: Record<string, string | number>) =>
   template.replace(/\{(\w+)\}/g, (_, key: string) => String(params[key]));
 

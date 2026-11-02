@@ -1,5 +1,5 @@
 /** Root component wiring project state, panels, and toolbars into the KNX Web UI shell. */
-import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
 import { version as packageVersion } from "../package.json";
 import brandMark from "./assets/knxbench-mark.png";
 import { isTauri, pickOpenPath, pickSavePath } from "./filePicker";
@@ -34,6 +34,8 @@ import Search from "./Search";
 import CommandPalette from "./CommandPalette";
 import { StoredBusAccessDialog } from "./StoredBusAccess";
 import type { CommandContext } from "./commandRegistry";
+import { appUiScale } from "./appUiScale";
+import BusConnectionStatus from "./BusConnectionStatus";
 import SettingsPanel from "./SettingsPanel";
 import { ModalForeground } from "./ModalForeground";
 import { serverLegacyPassword } from "./LegacyPasswordSettings";
@@ -349,9 +351,19 @@ function AppBody({ manifestVersion = packageVersion, session, editorReturn = fal
   // A visibility override, not a project view: keep the real editor owners
   // mounted beneath Settings so unapplied notes and instructions survive.
   const [settingsOpen, setSettingsOpen] = useState(false);
+  // WP-26: a section jump only from the status bar's own callback; the bare
+  // `onClick={openSettings}` buttons pass a MouseEvent and stay on the title.
+  const [settingsJump, setSettingsJump] = useState<{ section: "bus"; nonce: number } | null>(null);
   function openSettings() {
     setSettingsOpen(true);
+    setSettingsJump(null);
     if (window.innerWidth <= 650) setNavigationOpen(false);
+  }
+  const settingsJumpCount = useRef(0);
+  function openBusSettings() {
+    openSettings();
+    settingsJumpCount.current += 1;
+    setSettingsJump({ section: "bus", nonce: settingsJumpCount.current });
   }
   const [historyOpen, setHistoryOpen] = useState(false);
   const [pluginDataOpen, setPluginDataOpen] = useState(false);
@@ -450,6 +462,28 @@ function AppBody({ manifestVersion = packageVersion, session, editorReturn = fal
     document.documentElement.style.setProperty("--app-ui-scale", String(uiScale));
     return () => { document.documentElement.style.removeProperty("--app-ui-scale"); };
   }, [uiScale]);
+  // WP-26: the status bar wraps (narrow window, language, zoom, bus state or
+  // error text), so toasts and the autosave countdown are anchored above its
+  // measured top instead of the viewport bottom. DOMRects are visual pixels
+  // under the root zoom; CSS lengths are layout pixels, hence the division.
+  const footerRef = useRef<HTMLElement>(null);
+  useLayoutEffect(() => {
+    const footer = footerRef.current;
+    const workbench = workbenchRef.current;
+    if (!footer || !workbench) return;
+    function measure() {
+      const clearance = (workbench!.getBoundingClientRect().bottom - footer!.getBoundingClientRect().top) / appUiScale();
+      workbench!.style.setProperty("--workbench-footer-clearance", `${Math.max(0, Math.ceil(clearance))}px`);
+    }
+    measure();
+    const observer = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(measure);
+    observer?.observe(footer);
+    window.addEventListener("resize", measure);
+    return () => {
+      observer?.disconnect();
+      window.removeEventListener("resize", measure);
+    };
+  }, [uiScale, uiLanguage]);
   // `[]` both before the fetch resolves and if it fails — SettingsPanel
   // already renders that state honestly (a disabled select explaining "no
   // product database installed"), so a failed fetch needs no separate
@@ -1459,6 +1493,7 @@ function AppBody({ manifestVersion = packageVersion, session, editorReturn = fal
       {tree && <System2Lifecycle onTreeUpdate={handleTreeUpdate} />}
       {settingsOpen && (
         <SettingsPanel
+          jumpTo={settingsJump ?? undefined}
           appearance={appearance}
           themes={getThemeDefinitions()}
           activeThemeId={themeId}
@@ -1673,7 +1708,7 @@ function AppBody({ manifestVersion = packageVersion, session, editorReturn = fal
           {tree && selection ? <Inspector propertiesOnly key={`${selection.kind}-${selection.id}`} selection={selection} tree={tree} deviceDetail={deviceDetail} onApplied={handleTreeUpdate} onDeleted={resetTree} /> : <p className="inspector-empty">{t("workbench.noSelection")}</p>}
         </ResizablePane>}
       </div>
-      <footer className="workbench-status">
+      <footer ref={footerRef} className="workbench-status">
         <span>{tree ? tree.installations.map((i) => i.name).join(" / ") : "KNXBench"}</span>
         {tree && (
           <span className="workbench-status-saved">
@@ -1682,6 +1717,7 @@ function AppBody({ manifestVersion = packageVersion, session, editorReturn = fal
               : t("statusBar.neverSaved")}
           </span>
         )}
+        <BusConnectionStatus onOpenBusSettings={openBusSettings} />
         <span>v{manifestVersion}</span>
       </footer>
       <ToastStack toasts={toasts} onDismiss={dismiss} onExited={finishExit} onPause={pause} onResume={resume}

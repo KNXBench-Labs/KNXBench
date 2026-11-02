@@ -765,4 +765,22 @@ For the longer catalogue of what is missing and why, see
 [Supported and unsupported KNX/ETS functionality](../reference/02-supported-and-unsupported.md)
 and the project's own [known limitations](../../KNOWN_LIMITATIONS.md).
 
+## Bus connection in the status bar
+
+The status bar at the bottom shows the state of KNXBench's one bus connection:
+connected (with the gateway), connection lost, gateway busy (for example a
+download or System-2 operation), unclear, unknown, or not connected. "Not
+connected" means KNXBench saw no own connection; it does not prove the bus is
+idle. Connecting opens the gateway's tunnel and buffers bus telegrams for the
+bus monitor.
+
+The **Gateway** button opens a list of discovered IP interfaces and your saved
+gateway. Choosing one only saves it as the preferred gateway; it never connects
+and never switches a running connection. Interfaces without tunnelling are
+shown but cannot be chosen. **Connect** and **Disconnect** are a separate
+button. Connect is available only when the state is known and the gateway is
+free; after a busy answer, try again yourself. Disconnect ends exactly the
+connection shown, never another one. **Check status**, **Search again** and
+**Bus settings…** are in the same list. USB interfaces are not supported.
+
 [Manual index](../README.md) · Next: [Documentation export and project comparison](08-reports-and-diff.md) →

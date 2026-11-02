@@ -24,6 +24,44 @@ function mockFetchOnce(body: unknown, ok = true, status = 200) {
   );
 }
 
+describe("api.stopBoundBusMonitor (WP-26)", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("posts the exact identity to the bound route and leaves the legacy stop untouched", async () => {
+    mockFetchOnce({ sessionId: 5, serverIncarnation: "Ab-_9", telegramCount: 1, droppedCount: 0 });
+    await api.stopBoundBusMonitor({ sessionId: 5, serverIncarnation: "Ab-_9" });
+    const [path, options] = vi.mocked(fetch).mock.calls[0] as [string, RequestInit];
+    expect(path).toBe("/api/bus/monitor/stop-bound?sessionId=5&serverIncarnation=Ab-_9");
+    expect(options).toEqual({ headers: undefined, method: "POST" });
+    mockFetchOnce({ sessionId: 5, serverIncarnation: "Ab-_9", telegramCount: 1, droppedCount: 0 });
+    await api.stopBusMonitor();
+    expect(vi.mocked(fetch).mock.calls[0]).toEqual(["/api/bus/monitor/stop", { headers: undefined, method: "POST" }]);
+  });
+
+  it("sends nothing for an unsafe or malformed identity", async () => {
+    mockFetchOnce({});
+    for (const identity of [
+      { sessionId: 2 ** 53, serverIncarnation: "a" }, { sessionId: 0, serverIncarnation: "a" },
+      { sessionId: 1, serverIncarnation: "a&b" }, { sessionId: 1, serverIncarnation: "" },
+    ]) {
+      await expect(api.stopBoundBusMonitor(identity)).rejects.toThrow("malformed");
+    }
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("fails on a server without the route and never falls back to the global stop", async () => {
+    mockFetchOnce(null, false, 404);
+    await expect(api.stopBoundBusMonitor({ sessionId: 5, serverIncarnation: "a" })).rejects.toMatchObject({ status: 404 });
+    expect(fetch).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(fetch).mock.calls[0][0]).toBe("/api/bus/monitor/stop-bound?sessionId=5&serverIncarnation=a");
+  });
+
+  it("refuses an answer for another session", async () => {
+    mockFetchOnce({ sessionId: 6, serverIncarnation: "a", telegramCount: 0, droppedCount: 0 });
+    await expect(api.stopBoundBusMonitor({ sessionId: 5, serverIncarnation: "a" })).rejects.toThrow("another bus session");
+  });
+});
+
 describe("api", () => {
   it("binds an explicit device comparison to the reviewed project content without write authority", async () => {
     mockFetchOnce({ written: false });

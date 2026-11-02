@@ -1,4 +1,4 @@
-/** Issue #10: words the structured gateway refusals; unknown shapes keep the server text. */
+/** Issue #10/WP-26: words structured gateway refusals; unknown shapes keep the server text. */
 import { translate, type Translate, type TranslatableKey } from "./i18n";
 import { BUSY_LOCKS, type ActivitySnapshot, type BusyLock } from "./liveActivity";
 
@@ -23,7 +23,9 @@ export type GatewayRefusal =
   | { kind: "gatewayTimeout"; gateway: string }
   | { kind: "unsupportedByteOrder"; address: string; order: string }
   /** Goal A3 (KL-163): stop admission refused a new tunnel; nothing was sent. */
-  | { kind: "serverStopping" };
+  | { kind: "serverStopping" }
+  /** WP-26: a bound stop named a session that is not the one held; nothing was stopped. */
+  | { kind: "busSessionChanged" };
 
 type Fields = Record<string, unknown>;
 
@@ -93,6 +95,8 @@ export function admitGatewayRefusal(error: unknown): GatewayRefusal | null {
       return b && status === 502 && endpoint(b.gateway) ? { kind, gateway: b.gateway as string } : null;
     case "serverStopping":
       return exactly(body, ["error", "kind"]) && status === 503 ? { kind } : null;
+    case "busSessionChanged":
+      return exactly(body, ["error", "kind"]) && status === 409 ? { kind } : null;
     case "unsupportedByteOrder":
       b = exactly(body, ["error", "kind", "address", "order"]);
       return b && status === 422 && individualAddress(b.address) && text(b.order)
@@ -191,6 +195,8 @@ export function describeGatewayRefusal(refusal: GatewayRefusal, t: Translate): s
       return t("gatewayRefusal.timeout", { gateway: refusal.gateway });
     case "serverStopping":
       return t("gatewayRefusal.serverStopping");
+    case "busSessionChanged":
+      return t("gatewayRefusal.busSessionChanged");
     case "unsupportedByteOrder":
       return t("gatewayRefusal.byteOrder", { address: refusal.address, order: refusal.order });
   }

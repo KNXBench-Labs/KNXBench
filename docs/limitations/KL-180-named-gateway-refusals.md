@@ -63,3 +63,50 @@ shutdown and the lock-then-check download/programming guards (ADR-0045 §4) are
 unchanged. Other routes retain their existing admission behavior. This is the
 WP-26 backend prerequisite, not the status-bar controller or footer, and is
 software-tested only.
+
+## Session-bound stop and status-bar connection (2 November 2026, source)
+
+`POST /api/bus/monitor/stop-bound?sessionId=…&serverIncarnation=…` stops only
+the named monitor session. Both fields are required exactly once, the id in
+canonical decimal and the incarnation as issued (unpadded base64url); missing,
+partial, repeated, unknown or malformed fields answer `400` before any lock is
+looked at, with nothing defaulted or normalised. Like the start, it never waits:
+an admitted running System-2 operation or a held session lock answers `409
+gatewayBusy` at once with the same holder naming. Under the lock, an id or
+incarnation that is not the held session (or an empty slot) answers `409
+busSessionChanged` and leaves the slot untouched; a match releases an active or
+closed session with the legacy `StopResponse`. Stop admission is not consulted:
+it refuses new bus jobs, and releasing a tunnel is what the orderly shutdown does
+itself. The legacy `POST /api/bus/monitor/stop` is unchanged and still ignores
+any query, which is why the bound stop is a separate route.
+
+The web client words `busSessionChanged` in English and German through the
+existing strict refusal admission. The status bar and the bus monitor panel
+disconnect through this route only; a server without it answers `404`/`405`,
+which is shown as "no session-bound disconnect" and never falls back to the
+global stop. The download page's holder notice still uses the legacy stop.
+
+The client publishes an action's side effects only while it still owns them:
+a start answer from a server lifetime other than the one observed last, a start
+or stop answer for a session after another one appeared during the request (a
+session record published meanwhile, any session the activity view named even if
+a later read failed, or a session the monitor panel adopted), change nothing (no
+achievement, record, panel reset or forget) and are never followed by a
+compensating stop; the message then says the window's state changed and asks to
+check the status, without claiming a newer connection. A monitor poll answer
+that crossed a context change is not acted on, and a monitor or controller
+forget only clears the record of its own session. Policy: a valid answer from a
+new server lifetime that arrives before any read of that lifetime is not
+adopted either (conservative; the status read shows the truth).
+An admitted System-2 run outranks a retained monitor in the status bar, and a
+monitor identity the bound stop could not name is shown as unknown. Toasts and
+the autosave countdown are anchored above the measured status bar.
+
+Remaining limits: a short reader of the session lock (a telegram poll or a
+group write) can make a bound stop or a start answer busy; retry is manual. A
+closed session keeps the gateway's slot until it is disconnected. "Not
+connected" means no KNXBench session or reservation was seen in the partial
+activity snapshot, not that the bus is idle. The monitor panel's gateway field
+does not follow a later status-bar selection. There is no USB transport.
+Software-tested with fake connectors and intercepted browser HTTP only; no
+gateway, device or real installation was contacted.

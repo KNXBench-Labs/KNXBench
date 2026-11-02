@@ -189,3 +189,21 @@ describe("serverStopping (Goal A3, KL-163)", () => {
     expect(gatewayRefusalMessage(stopping(500))).toBeNull();
   });
 });
+
+describe("busSessionChanged (WP-26 bound stop)", () => {
+  it("admits only the exact 409 shape and words it in English and German", () => {
+    const changed = refusal(409, { error: "monitor session 5 is not the session held now", kind: "busSessionChanged" });
+    expect(admitGatewayRefusal(changed)).toEqual({ kind: "busSessionChanged" });
+    expect(describeGatewayRefusal({ kind: "busSessionChanged" }, en)).toBe(en("gatewayRefusal.busSessionChanged"));
+    expect(describeGatewayRefusal({ kind: "busSessionChanged" }, de)).toBe(de("gatewayRefusal.busSessionChanged"));
+    expect(en("gatewayRefusal.busSessionChanged")).not.toBe(de("gatewayRefusal.busSessionChanged"));
+    expect(gatewayRefusalMessage(changed)).toBe(en("gatewayRefusal.busSessionChanged"));
+  });
+
+  it("does not guess from a wrong status, extra fields or a plain conflict", () => {
+    expect(admitGatewayRefusal(refusal(400, { error: "x", kind: "busSessionChanged" }))).toBeNull();
+    expect(admitGatewayRefusal(refusal(409, { error: "x", kind: "busSessionChanged", sessionId: 5 }))).toBeNull();
+    expect(admitGatewayRefusal(refusal(409, { kind: "busSessionChanged" }))).toBeNull();
+    expect(admitGatewayRefusal(refusal(409, { error: "no active monitor session" }))).toBeNull();
+  });
+});

@@ -135,6 +135,14 @@ struct RecoverySection {
     total_steps: Option<usize>,
 }
 
+/// A tolerated post-load octet in the shareable report: which run and object, no bytes.
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ReportPostLoadOctet {
+    run: super::PointerObservationRun,
+    object: u8,
+}
+
 /// Shareable summary of an ended System-2 run. Facts come from the validated journal only:
 /// no address, name, parameter, backup byte, path, phrase or raw text. The download keeps
 /// its own frozen outcome and counters; a recovery has its own section.
@@ -154,6 +162,9 @@ pub struct System2Report {
     /// Format 3: the typed final-step failure per run; empty when none was recorded or it is
     /// unknown (older journal), never guessed.
     final_step_failures: Vec<FinalStepDiagnostic>,
+    /// Format 4: one entry per tolerated declared post-load octet, run and object only;
+    /// its memory address and octets stay in the local status and journal.
+    post_load_octets: Vec<ReportPostLoadOctet>,
     /// Build that executed the run, when it was recorded; unknown for older operations.
     execution_build: ExecutionBuild,
     /// Build that wrote this report; never a claim about the execution.
@@ -181,7 +192,7 @@ impl System2Report {
             total_steps: progress.total_steps,
         });
         Some(Self {
-            format: 3,
+            format: 4,
             kind: "knxbench-system2-download-summary",
             support: "EXPERIMENTAL BEST-EFFORT; HARDWARE COMPATIBILITY AND RECOVERY UNVERIFIED",
             evidence: "local-journal-only",
@@ -200,6 +211,14 @@ impl System2Report {
             prestate_differs: progress.prestate_differs,
             failure_diagnostics: progress.failure_diagnostics.clone(),
             final_step_failures: progress.final_step_failures.clone(),
+            post_load_octets: progress
+                .post_load_octets
+                .iter()
+                .map(|o| ReportPostLoadOctet {
+                    run: o.run,
+                    object: o.record.object,
+                })
+                .collect(),
             execution_build,
             exporter_build: exporter_build
                 .chars()

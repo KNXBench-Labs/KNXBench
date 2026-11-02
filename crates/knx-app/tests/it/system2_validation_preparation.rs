@@ -1466,6 +1466,23 @@ fn prepared_public() -> PreparedBundle {
         .bundle
 }
 
+#[test]
+#[ignore = "requires pinned public UP258 package; set KNXBENCH_PUBLIC_UP258"]
+fn exact_public_plan_writes_the_declared_download_flag_octet() {
+    use knx_net::commissioning::post_load_octets::{PostLoadOctet, PostLoadOctetAdmission};
+    // Binds the revision-3 policy constant to the real application: its plan writes 01h
+    // at object 3 octet 3CF4h (`Download_Flag`), so exactly that octet is declared.
+    let plan = prepared_public().plan().unwrap();
+    assert_eq!(
+        knx_app::system2_validation_preparation::post_load_octet_admission(&plan),
+        PostLoadOctetAdmission::Declared(vec![PostLoadOctet {
+            object: 3,
+            address: 0x3CF4,
+            accepted: vec![0],
+        }])
+    );
+}
+
 fn exact_old_device(bundle: &PreparedBundle, mut config: SimulatorConfig) -> SimulatedDevice {
     // Independent OLD fixture: source-declared extents and identity, NOT an execution
     // of the proposed NEW plan. Unknown real firmware history remains a hypothesis.

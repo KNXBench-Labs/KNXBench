@@ -336,13 +336,18 @@ live website passed their bounded checks. History/archive and ARM/native-visual
 limits remain explicit in the [public verification receipt](evidence/release-alpha18-2026-10-29.json).
 The later documentation-only closure does not move the tag or extend hardware acceptance.
 
-## System-2 declared post-load octets (1 November 2026 source, Net only)
+## System-2 declared post-load octets (1 November 2026 Net, 2 November 2026 UP258 declaration)
 
 Net final verification of a download can accept a declared post-load value at a declared
 written octet, for firmware that rewrites a flag after load, and reports each such octet with
 its prestate before the final write; strict comparison stays the default, every other byte and
-every restore that writes other bytes than the download stay strict. Simulator proof only. App cannot set a declaration yet and refuses
-the observation, so behaviour on `main` is unchanged until the UP258 hypothesis is corroborated.
+every restore that writes other bytes than the download stay strict. Since 2 November 2026 a
+configured UP258 preparation observed with this build (hardware record revision 3) declares the
+hidden `Download_Flag` octet `3CF4h` (object 3, accepted `00h`), after the #30 reporter's
+snapshot showed the firmware clearing it. App journals each tolerated octet (envelope format 5,
+replay-proven against Net), the status (schema 5) and the EN/DE panel show it, the shareable
+report (format 4) lists run and object only. Older records stay strict. Simulator proof only;
+no physical device has run this build.
 [Contract](contracts/system2-download-result.md#declared-post-load-octets),
 [research](research/2026-11-01-up258-post-load-flag-octet.md).
 

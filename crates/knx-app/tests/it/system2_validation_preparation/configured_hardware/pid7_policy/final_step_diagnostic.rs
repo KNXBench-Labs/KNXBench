@@ -124,7 +124,8 @@ async fn each_final_step_category_reaches_the_reopened_progress_journal_and_both
         assert_eq!(summary["format"], 3);
         assert_eq!(summary["final_step_failures"], json!([entry]));
         let route = report(&run);
-        assert_eq!(route["format"], 3);
+        assert_eq!(route["format"], 4);
+        assert_eq!(route["postLoadOctets"], json!([]));
         assert_eq!(route["finalStepFailures"], json!([entry]));
         assert_eq!(
             route["download"]["result"],

@@ -336,6 +336,7 @@ fn journal_view(operation: &Path, expected: &JournalBinding) -> io::Result<Value
             }
             Checkpoint::FinalPointerObservations { .. } => "final-pointer-observations",
             Checkpoint::InProcedurePointerObservation { .. } => "in-procedure-pointer-observation",
+            Checkpoint::PostLoadOctetObservations { .. } => "post-load-octet-observations",
             Checkpoint::Failed { code, .. } => {
                 failure = Some(code);
                 "failed"

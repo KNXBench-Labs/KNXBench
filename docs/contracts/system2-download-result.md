@@ -214,10 +214,12 @@ claiming `verified` is refused. `projectSettlement` is `notRecorded`, `noMutatio
 
 ## Settlement
 
-**Candidate extension, not accepted production activation:** the explicitly
-software-authorized [caption-only implementation](../status/2026-11-03-s2-caption-settlement-candidate.md)
-adds the narrow fallback below. Independent review and parent gates remain pending;
-all caller, persistence, start and recovery boundaries are unchanged.
+**Bounded software extension accepted:** source `d77f77be9`, main-first `288bd8005`,
+adds only the [caption-only fallback](../status/2026-11-03-s2-caption-settlement-candidate.md)
+below after independent review and both complete selected 14-stage package gates.
+Caller, persistence, start and recovery boundaries are unchanged. This is not a
+release, deployment, physical activation, general source-equivalence permission
+or overall S2-05 closure.
 
 The worker settles once, on a blocking thread, before the terminal status is published,
 through `domain::settle_programming` (ADR-0129): outside undo, invalidating older
@@ -238,7 +240,7 @@ and reopen never settle.
      (`admit_current_project_hardware`) against the current catalogue winners: the same
      normalized plan and the same full source-preparation hash. Strict success never
      performs new package discovery, and a later current-request refusal is terminal.
-     Only a typed source-binding phase can enter the candidate's narrow changed-caption
+     Only a typed source-binding phase can enter the accepted narrow changed-caption
      comparison: immutable original validation, exact bytes outside one selected literal
      caption, actual measured same-family new pins, full original-request preparation,
      exact policy/coverage/plan and derived-field comparisons, then current preparation.
@@ -260,7 +262,7 @@ and reopen never settle.
   Parameters and Group addresses pending. The start admission itself is unchanged and
   still requires the whole preparation. This is a comparison of the current project's
   request after original-source proof, not general per-part source equivalence.
-  Outside the candidate's sole literal-caption class, changed source credits nothing;
+  Outside the accepted sole literal-caption class, changed source credits nothing;
   no hash or equal normalized plan alone supplies proof.
 - **Recovery** that started: memory parts pending, never programmed, whatever its
   verification said.
@@ -360,7 +362,7 @@ broken by it, without changing what "pending only" means. The explorer dot is un
   allocation mismatch stays unresolved; new journals keep its bytes privately (above), but
   no field run has produced them yet.
 - A verified run credits only parts whose current request still equals the written
-  one after strict original-source proof or the narrowly specified candidate caption
+  one after strict original-source proof or the narrowly specified accepted caption
   proof above. General changed-source equivalence remains unsupported. This is a
   snapshot at settlement, not a subscription or a device read.
 - No hardware evidence. Tests use journals built on the public synthetic fixture,
@@ -368,12 +370,18 @@ broken by it, without changing what "pending only" means. The explorer dot is un
   intercepted HTTP. The per-part matrix (unchanged, rename and unrelated edits, links,
   flags, a parameter, a changed or missing source, a reference switch, a tampered,
   simulator or other-device bundle, a forged source-preparation hash or plan) runs on the
-  synthetic exact-identity App fixture. The mounted worker with the public package proves
-  three cells end to end, each after a verified run edited while its first data write is
-  paused: a rename (all four parts), a parameter edit (Address and Application only) and a
-  switched product reference, which the App helper refuses (memory pending, address
-  untouched, every part marked beforehand so a wrong "credit all" shows). The other
-  cells (links, flags, changed source) are not mounted.
+  synthetic exact-identity App fixture. The older mounted worker population with the
+  public package proves three cells end to end, each after a verified run edited while
+  its first data write is paused: a rename (all four parts), a parameter edit (Address
+  and Application only) and a switched product reference, which the App helper refuses
+  (memory pending, address untouched, every part marked beforehand so a wrong "credit all"
+  shows). Separately, the accepted synthetic caption-source population runs seven mounted
+  cases, including positive caption-only persistence/reopen/history and link, flag,
+  nonclass, quarantined-owner and changed-address refusals with source replacement after
+  the first actual write. See the [bounded acceptance record](../status/2026-11-03-s2-caption-settlement-candidate.md).
+  These are different populations, not every selector/namespace/current-edit combination.
+  Actual changed-source restore and injected changed-source mounted persistence failure
+  remain unexercised; neither population proves physical hardware behavior.
 - Settlement revalidates both the original and current project while holding the
   project lock and one catalogue lease, once per verified run. The opt-in synthetic
   debug measurement `s2_per_part_large_project_measurement` uses 5,001 devices and an

@@ -1,11 +1,12 @@
 # Roadmap
 
-## Candidate awaiting acceptance: narrow System-2 caption settlement
+## Main-only after Alpha 19: narrow System-2 caption settlement
 
-The software-authorized S2-05 candidate implements only the finite selected-caption
-comparison, not general source equivalence. Independent review and parent gates
-are pending; no release, production activation, start/recovery authority or physical
-verification follows. [Candidate and limits](status/2026-11-03-s2-caption-settlement-candidate.md).
+S2-05 now has the accepted finite selected-caption software rule (`288bd8005`),
+with independent review and both complete selected 14-stage package gates. General
+source equivalence, wider adversarial/race/limit measurements and S2-05 remain open.
+No release, deployment, new start/recovery authority or physical verification follows.
+[Acceptance and limits](status/2026-11-03-s2-caption-settlement-candidate.md).
 
 ## Main-only after Alpha 19: bounded Color/Time data repair
 

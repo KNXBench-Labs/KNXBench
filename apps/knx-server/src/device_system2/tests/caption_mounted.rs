@@ -7,6 +7,9 @@ use crate::device_system2::tests::diagnostic_bundle_fallback::fixture;
 use knx_app::system2_validation_preparation::{prepare_project_hardware_source, RecoveryTrack};
 use knx_core::commissioning::pending::{ProgrammingChange, ProgrammingParts};
 
+#[path = "caption_mounted/persistence.rs"]
+mod persistence;
+
 struct Hardware {
     device: Arc<SimulatedDevice>,
     paused: AtomicBool,

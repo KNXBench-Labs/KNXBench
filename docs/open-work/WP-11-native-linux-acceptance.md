@@ -109,6 +109,30 @@ test and missing per-zoom image-control matrix remain disclosed. This is not
 current-source, AppImage/GPU, Orca/Firefox or whole-WP-11 acceptance; ledger status
 is unchanged.
 
+## Current-source navigation-height counterpart — 3 November 2026
+
+The separate [height record](../status/2026-11-03-wp11-current-native-height.md)
+and [measurement](../evidence/wp11-current-height-native-2026-11-03.json) record
+six cells/18 real vertical legs at 80/100/150%, three real text preselections,
+36 before/after native trees and 17 verified seat restores. All recorded height
+step observables match the historical receipt. The authenticated retained
+Properties-run binary/frontend are reused: actual build source `6ecb69427`,
+admission `a5e42a8f0`, complete delta only docs/restart metadata, tracked runtime
+code/build/locks/assets equal. No new build or future docs-HEAD runtime claim.
+
+The first zoom setup refused a collapsed target announced 72 before separator
+input and remains failed/not accepted. Source/native observation explains the
+fresh-profile collapsed default, not a product regression. Only the observed
+Workspaces disclosure was expanded; actual 252 was then observed without seeds,
+settings changes or oracle reduction. The first selected 100% inverse pair passed
+252 → 312 → 252 before the other five cells. Ordinary close and owned teardown
+are verified. Height is component-only, with no preference/restart/save claim.
+Software-render/session-bus exceptions remain. No full-tree/pixel/focus-policy,
+AppImage/GPU/X11/XWayland/Orca/Firefox, other sizes/themes/clamping, or wider
+WP-11/KL-130 acceptance follows. Properties/navigation-width/diagnostics/menu and
+earlier native records are not upgraded. No production code or ledger status
+changed; historical and current Properties records remain distinct.
+
 ## Current-source Properties counterpart — 3 November 2026
 
 The separate [current-source record](../status/2026-11-03-wp11-current-native-properties.md)

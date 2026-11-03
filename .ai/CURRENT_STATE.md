@@ -1,11 +1,11 @@
 # Restart snapshot
 
-## WP-11 native Properties reference (STANDING; observed 2026-11-03)
-- Historical source1a4f5a970 and current-at-admission6ecb69427 each pass6 cells/18 separator drags/3 real text preselections at80/100/150; recorded step observables match, not whole-app/pixel parity.
-- Current executable563b9b03/frontend494f2a8d/147 files authenticated; unchanged fictional input, one size/theme and explicit software-render profile. No AppImage/GPU claim.
-- All14 current seat receipts verified; ordinary launcher exit0, no owned processes/windows; task rules and identity-checked IPC retired.
-- Current record: `docs/status/2026-11-03-wp11-current-native-properties.md`; historical record retained. Current raw evidence: `<profile>/evidence/2026-11-03-wp11-current-native-properties/`.
-- Wider WP-11/KL-130, restart/other-size and unavailable-environment cells remain open; host session D-Bus/AT-SPI is an explicit exception, no full host-service/WebKit-sandbox attestation. No bus/real-project/release/deploy authority.
+## WP-11 native splitter reference (STANDING; observed 2026-11-03)
+- Latest navigation-height subset:6 cells/18 vertical legs/3 text preselections,36 native trees/17 verified seat restores at80/100/150; recorded historical height-step observables match, not whole-app/pixel/tree parity.
+- Actual reused build6ecb69427/binary563b9b03/frontend494f2a8d/147; admissiona5e42a8f0 changes only docs/checkpoint, tracked code/build/lock/assets equal. No new-build claim.
+- Collapsed initial72 setup refused before separator input; observed Workspaces native disclosure restored baseline252, no settings/oracle change. Normal launcher/close/cleanup0; own processes/windows/rules/identity-checked IPC retired.
+- Height record: `docs/status/2026-11-03-wp11-current-native-height.md`; evidence `<profile>/evidence/2026-11-03-wp11-current-native-height/`. Previous Properties/historical records remain separate.
+- Wider WP-11/KL-130, persistence/restart/other-size/unavailable environments remain open; explicit software profile and unfiltered host session D-Bus/AT-SPI exception, no full host-service/WebKit-sandbox attestation. No bus/real-project/release/deploy authority.
 
 ## Queue and acceptance boundaries (STANDING; observed 2026-11-02 20:47 CET)
 - Runtime source published on main `7ea7ff6dd`; all R1–R9 and fixture review closed.

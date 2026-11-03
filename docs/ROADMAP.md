@@ -233,6 +233,13 @@ now reproduces that six-cell/18-leg behavior on freshly built pinned source
 That bounded counterpart does not establish pixel/tree parity, upgrade the
 historical non-Properties cells, or accept AppImage/GPU and restart/save-roundtrip
 coverage; the software-render and session-bus boundaries remain explicit.
+The separate [current-source height counterpart](status/2026-11-03-wp11-current-native-height.md)
+adds six navigation-height cells/18 vertical legs using the authenticated reused
+`6ecb69427` artifacts, not a new admission/docs-HEAD build. A collapsed-target
+setup refusal remains excluded; observed native Workspaces expansion restored
+the unchanged 252 baseline. Component-only height has no settings/restart claim.
+Its historical step-observable match is not full-tree/pixel or focus-policy
+parity; the software-render/session-bus and wider acceptance exclusions remain.
 WP-11 stays open for other controls/imported-original instructions,
 virtual-key replacement attribution, remaining keyboard/layout/pointer cells
 and unavailable environments; no code, hardware or release capability is added.

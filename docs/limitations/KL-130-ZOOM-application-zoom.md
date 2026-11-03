@@ -198,3 +198,27 @@ Orca/Firefox, other sizes/themes or clamping acceptance follows. This does not
 rerun Properties, navigation width, diagnostics or menu cells, or upgrade earlier
 native records. No production code changed; wider WP-11/KL-130 and ledger status
 remain unchanged.
+
+## Update 3 November 2026: authenticated current-source Navigation width
+
+The separate [width record](../status/2026-11-03-wp11-current-native-navigation.md)
+and [measurement](../evidence/wp11-current-navigation-native-2026-11-03.json) add
+six cells/24 pointer legs at 80/100/150%, three real text preselections, 48 native
+before/after trees, 24 raw settings captures and 16 verified seat restores.
+Recorded historical Navigation step observables match, not whole trees/pixels.
+The one named 150% clean short-leg cursor exception is retained, without widened
+tolerance. Left-side positive delta/zoom, JavaScript whole-width rounding and
+200–480 bounds govern persisted `navigationPaneWidth`; this is not unrounded
+height or negative-sign Properties behavior.
+
+Authenticated source `6ecb69427` artifacts are reused; admission `90b85c2fd` is
+not a new native build. Default 250, current native End/ten-Left setup to 320,
+and the unknown historical preparation method remain distinct. Initial hidden
+project identity refused setup before keys; expanding only observed native
+Project explorer restored visibility without seed/guard changes. A private
+logging/release defect was rejected before live input, fixed and independently
+approved; no product code changed. Ordinary teardown is verified. Explicit
+software rendering and the host session-D-Bus/AT-SPI exception remain, with no
+restart/save-roundtrip, full-tree/pixel/focus-policy, new Properties/height,
+other-size/theme or wider native acceptance. WP-11/KL-130 stay open; the retained
+catalogue block, previous records and ledger status are unchanged.

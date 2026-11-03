@@ -666,6 +666,22 @@ refusal preservation and one server Undo step. No schema, external export,
 ESF/OPC, hierarchy/security roundtrip or general application compatibility claim.
 [Supported contract](contracts/group-address-csv-profiles.md).
 
+## WP-11 bounded current-source native Navigation width (3 November 2026)
+
+The [Navigation-width counterpart](status/2026-11-03-wp11-current-native-navigation.md)
+adds six cells/24 real pointer legs at 80/100/150%, three real text preselections,
+48 native before/after trees, 24 persisted-width captures and 16 verified seat
+restores. All recorded historical width-step observables match; one named
+150% short-leg cursor quantization exception remains explicit. The authenticated
+`6ecb69427` binary/frontend are reused, not rebuilt at admission `90b85c2fd` or
+a later docs HEAD. Native keyboard preparation from default 250 to 320 and a
+collapsed-identity setup refusal are separate from the pointer matrix. A private
+logging/release fault was blocked before live input and independently re-reviewed
+after correction; no product code changed. Ordinary teardown is verified;
+software-render/session-bus boundaries and wider WP-11/KL-130 exclusions remain.
+No restart/save-roundtrip, full-tree/pixel/focus-policy or new Properties/height
+acceptance is claimed; ledger status is unchanged.
+
 ## WP-11 bounded current-source native navigation height (3 November 2026)
 
 The [height counterpart](status/2026-11-03-wp11-current-native-height.md) records

@@ -1,6 +1,6 @@
 # WP-11 — Native Linux acceptance
 
-**Status:** In progress: bounded native editor, capture and real-pointer cells recorded; Properties has historical and pinned current-source six-cell pointer counterparts at 80/100/150% (3 November), with an explicit software-render profile. Broader current-source parity and the wider matrix remain open. Listed in [OPEN_WORK](../OPEN_WORK.md); per-ID status of record is the [ledger](../status/LEDGER.md).
+**Status:** In progress: bounded native editor, capture and real-pointer cells recorded; Properties has historical and pinned current-source six-cell pointer counterparts; separate current Navigation height and width counterparts are recorded at 80/100/150% (3 November), with an explicit software-render profile. Broader current-source parity and the wider matrix remain open. Listed in [OPEN_WORK](../OPEN_WORK.md); per-ID status of record is the [ledger](../status/LEDGER.md).
 
 ## Task
 
@@ -153,6 +153,29 @@ Orca/Firefox, other sizes/themes, boundary clamping, Properties restart or
 save-roundtrip acceptance. Earlier non-Properties cells are not promoted to this
 source; broader current-source/native coverage and WP-11/KL-130 remain open.
 Ledger status is unchanged.
+
+## Current-source Navigation-width counterpart — 3 November 2026
+
+The separate [width record](../status/2026-11-03-wp11-current-native-navigation.md)
+and [measurement](../evidence/wp11-current-navigation-native-2026-11-03.json) add
+six cells/24 real pointer legs, three real text preselections, 48 before/after
+native trees, 24 actual persisted-width captures and 16 verified seat restores.
+All recorded historical width-step observables match. One named 150% clean
+short-leg cursor quantization exception remains explicit, not a widened tolerance.
+The first selected 100% pair passed 320 → 420 → 320 before the other five cells.
+
+Authenticated source `6ecb69427` artifacts were reused, not rebuilt at admission
+`90b85c2fd` or a future docs HEAD. Default 250 and native End/ten-Left preparation
+to 320 are separate from this pointer matrix; historical preparation is unknown.
+An initially collapsed Project explorer hid the guarded fictional identity and
+caused refusal before setup keys. Only that observed native disclosure was then
+expanded; no identity guard, settings seed or oracle changed. The refusal remains
+failed/unaccepted, not a product bug. A private logging/release fault was blocked
+before live input, corrected and independently approved; product code did not
+change. Ordinary close/owned teardown are verified. Software-render/session-bus,
+no restart/save-roundtrip, no full-tree/pixel/focus-policy and wider native
+exclusions remain. Earlier Properties/height/historical evidence is not upgraded;
+WP-11/KL-130 and ledger status remain unchanged.
 
 ## Done when
 

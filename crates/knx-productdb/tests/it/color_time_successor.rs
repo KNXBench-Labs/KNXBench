@@ -482,3 +482,141 @@ fn successor_refusal_reader_admits_only_the_named_error_shape_without_inventing_
         }
     }
 }
+
+#[test]
+fn orphan_does_not_invalidate_unrelated_type_free_unmeasured_source() {
+    for orphan in [false, true] {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("products.sqlite");
+        let conn = knx_productdb::open_and_migrate(&path).unwrap();
+        let target = fixture("A");
+        let target_sha = knx_productdb::sha256_hex(target.as_bytes());
+        knx_productdb::install_package(&conn, "fictional.knxprod", &package(&target)).unwrap();
+        let other = format!(
+            r#"<KNX xmlns="http://knx.org/xml/project/14"><ManufacturerData><Manufacturer RefId="M-00FA"><ApplicationPrograms>{}</ApplicationPrograms></Manufacturer></ManufacturerData></KNX>"#,
+            program("B", "")
+        );
+        let other_sha = knx_productdb::sha256_hex(other.as_bytes());
+        knx_productdb::ingest_file(&conn, "M-00FA/unrelated.xml", other.as_bytes()).unwrap();
+        assert!(query(&conn, "SELECT * FROM parameter_type WHERE program_id='B'").is_empty());
+        let changed = other.replace("Name=\"winner\"", "Name=\"edited\"");
+        assert_ne!(changed, other);
+        assert_eq!(changed.len(), other.len());
+        conn.execute(
+            "UPDATE source_file SET bytes=?1 WHERE sha256=?2",
+            rusqlite::params![changed.as_bytes(), other_sha],
+        )
+        .unwrap();
+        conn.execute(
+            "DELETE FROM source_parse_evidence WHERE sha256=?1",
+            [&other_sha],
+        )
+        .unwrap();
+        assert!(matches!(
+            knx_productdb::source_diagnostics(&conn, &other_sha),
+            Ok(None)
+        ));
+        contaminate(&conn);
+        if orphan {
+            conn.pragma_update(None, "foreign_keys", false).unwrap();
+            conn.execute("DELETE FROM application_program WHERE id='A'", [])
+                .unwrap();
+        }
+        let history = untouched(&conn);
+        drop(conn);
+        let conn = knx_productdb::open_and_migrate(&path).unwrap();
+        let public = knx_productdb::source_diagnostics(&conn, &other_sha);
+        assert!(matches!(public, Ok(None)), "orphan={orphan}: unrelated type-free unmeasured source must not gain a migration error; actual={public:?}");
+        assert_eq!(untouched(&conn), history);
+        let refused_sources = query(
+            &conn,
+            "SELECT source_sha256 FROM ingest_unknown WHERE name='repair_color_time_kinds'",
+        );
+        let expected = if orphan {
+            vec![vec![Value::Text(target_sha)]]
+        } else {
+            vec![]
+        };
+        assert_eq!(
+            refused_sources, expected,
+            "the attributable orphan must still get exactly its own refusal"
+        );
+    }
+}
+
+#[test]
+fn ambiguous_or_unmeasured_orphan_declarations_do_not_invent_source_ownership() {
+    for ambiguity in ["multiple-sources", "unmeasured-scan"] {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("products.sqlite");
+        let conn = knx_productdb::open_and_migrate(&path).unwrap();
+        let target = fixture("A");
+        let target_sha = knx_productdb::sha256_hex(target.as_bytes());
+        knx_productdb::install_package(&conn, "fictional.knxprod", &package(&target)).unwrap();
+        if ambiguity == "multiple-sources" {
+            let other = target.replace(
+                "</ApplicationPrograms>",
+                &format!("{}</ApplicationPrograms>", program("B", "")),
+            );
+            assert_ne!(other, target);
+            knx_productdb::ingest_file(&conn, "M-00FA/other-declaration.xml", other.as_bytes())
+                .unwrap();
+            assert_eq!(query(&conn, "SELECT DISTINCT source_sha256 FROM source_identity WHERE table_name='application_program' AND logical_id='A'").len(), 2);
+        } else {
+            conn.execute("UPDATE source_identity_scan SET status='unavailable',reason='authored missing measurement' WHERE source_sha256=?1", [&target_sha]).unwrap();
+        }
+        contaminate(&conn);
+        conn.pragma_update(None, "foreign_keys", false).unwrap();
+        conn.execute("DELETE FROM application_program WHERE id='A'", [])
+            .unwrap();
+        let types = rows(&conn);
+        let history = untouched(&conn);
+        let unknown = query(&conn, "SELECT * FROM ingest_unknown ORDER BY id");
+        drop(conn);
+        let conn = knx_productdb::open_and_migrate(&path).unwrap();
+        assert_eq!(rows(&conn), types, "{ambiguity}: no orphan adoption");
+        assert_eq!(untouched(&conn), history);
+        assert_eq!(
+            query(&conn, "SELECT * FROM ingest_unknown ORDER BY id"),
+            unknown,
+            "{ambiguity}: no unproven source-specific refusal"
+        );
+    }
+}
+
+#[test]
+fn native_diagnostic_insert_failure_rolls_back_complete_migration() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("products.sqlite");
+    let conn = knx_productdb::open_and_migrate(&path).unwrap();
+    let bad = fixture("A");
+    knx_productdb::ingest_file(&conn, "M-00FA/bad.xml", bad.as_bytes()).unwrap();
+    knx_productdb::ingest_file(&conn, "M-00FA/good.xml", fixture("B").as_bytes()).unwrap();
+    contaminate(&conn);
+    conn.execute(
+        "UPDATE source_file SET len=len+1 WHERE sha256=?1",
+        [knx_productdb::sha256_hex(bad.as_bytes())],
+    )
+    .unwrap();
+    conn.execute_batch("CREATE TRIGGER refuse_diagnostic BEFORE INSERT ON ingest_unknown WHEN NEW.name='repair_color_time_kinds' BEGIN SELECT RAISE(ABORT,'diagnostic storage refused'); END").unwrap();
+    let before = rows(&conn);
+    let history = untouched(&conn);
+    let unknown = query(&conn, "SELECT * FROM ingest_unknown ORDER BY id");
+    drop(conn);
+    let error = knx_productdb::open_and_migrate(&path).unwrap_err();
+    assert!(
+        matches!(error, knx_productdb::ProductDbError::Sqlite(_)),
+        "{error:?}"
+    );
+    let conn = Connection::open(&path).unwrap();
+    assert_eq!(rows(&conn), before);
+    assert_eq!(untouched(&conn), history);
+    assert_eq!(
+        query(&conn, "SELECT * FROM ingest_unknown ORDER BY id"),
+        unknown
+    );
+    let version: i64 = conn
+        .query_row("PRAGMA user_version", [], |r| r.get(0))
+        .unwrap();
+    assert_eq!(version, 31);
+}

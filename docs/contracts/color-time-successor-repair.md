@@ -19,10 +19,15 @@ still execute normally on older databases; this successor changes none of
 their released bodies or the shared Color/Time helper.
 
 Candidate sources come from normalized program owners and retained
-`ApplicationProgram` package members. Sources without owned or orphan
-Color/Time rows are outside this repair. Legacy payload sources remain outside
-this XML proof. An orphan without an attributable retained program source is
-not adopted or reconstructed. This is not a general catalogue rebuild.
+`ApplicationProgram` package members. Sources without owned Color/Time rows
+are considered for an orphan refusal only when their measured declaration
+identity index names that orphan program and no other retained source names
+it. This bounds candidate discovery; it does not recover the missing owner.
+The source must still pass authentication and authoritative parsing, and the
+missing owner is refused rather than adopted. Unmeasured or ambiguous orphan
+associations remain untouched, without inventing source-specific diagnostics
+on unrelated sources. Legacy payloads remain outside this XML proof. This is
+not a general catalogue rebuild.
 
 ## Authentication and proof
 
@@ -73,8 +78,14 @@ v32 and witnesses retain the actual version.
 
 ## Candidate verification and remaining acceptance
 
-The registered `color_time_successor` module has seven leaf tests, including a
+The registered `color_time_successor` module now has ten leaf tests, including a
 13-variant refusal table and ten measured/unmeasured diagnostic-shape controls.
+The original seven-test candidate's independent review found a global orphan
+candidate bug; corrected-candidate regressions preserve an unrelated unmeasured
+reader, retain an attributable orphan's refusal, and leave ambiguous/unmeasured
+orphan associations untouched. A native diagnostic-INSERT failure also proves
+complete migration rollback. The correction has its own original-source semantic
+RED and focused GREEN, separate from the earlier successful artifact runs.
 The original-source semantic RED asserts wrong persisted winner rows before
 checking schema version. Coverage includes Other and Date winners, NULL Time
 restoration, legitimate and unique Color/Time, mixed own/foreign programs,

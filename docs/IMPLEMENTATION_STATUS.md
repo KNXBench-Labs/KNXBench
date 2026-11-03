@@ -17,10 +17,11 @@ fragment aliases and update this index. Do not rewrite previous results.
 The bounded v32 candidate repairs authenticated, exact released-v15 loser
 promotions in four existing type columns, including wrong non-NULL values.
 Original install history/counters/unknown evidence and released migrations are
-not rewritten. Original-source semantic RED, seven registered focused regressions
-and owning ProductDB lib/default integration checks are candidate evidence.
-Independent review, mutation calibration, selected gates, integration and
-publication are not yet accepted. No codec or broader WP-08 closure follows.
+not rewritten. Original-source semantic RED and ten registered focused regressions
+include the review-found orphan isolation correction. Earlier owning ProductDB
+checks remain bound to their original candidate; corrected-source package and
+independent correction-review acceptance are pending. Selected gates, integration
+and publication are not yet accepted. No codec or broader WP-08 closure follows.
 [Contract and retained-artifact boundaries](contracts/color-time-successor-repair.md).
 
 ## Proportionate gate selection (3 November 2026, source)

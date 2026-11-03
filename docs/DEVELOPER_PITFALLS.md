@@ -114,6 +114,15 @@ already found lying in the grass.
   Offline guard/mutation checks are not additional native cells. The
   [current Properties counterpart](status/2026-11-03-wp11-current-native-properties.md)
   pins source `6ecb69427` and keeps the software-render/session-bus boundaries.
+- **A collapsed navigation target is not an admitted height baseline.** A fresh
+  `NavigationSection` without `revealKey` starts collapsed: the first current
+  height setup refused announced 72 before any separator input. Keep that failed
+  stage, inspect the actual owned view/native disclosure, and expand only the
+  observed Workspaces control; do not seed settings or lower the 252 oracle.
+  The [height counterpart](status/2026-11-03-wp11-current-native-height.md) then
+  observed 252 and passed the first selected inverse pair. Its authenticated
+  reused executable is still built from `6ecb69427`, not admission/docs HEAD.
+  Height is component-only state; it has no settings/restart acceptance here.
 - **`knx-net`'s loopback-join test reads the host's `/proc/net/igmp`.** When that
   table does not fit one `read(2)` (many interfaces or groups at that moment),
   `the_loopback_join_lands_on_lo_and_nowhere_else` refuses the truncated snapshot

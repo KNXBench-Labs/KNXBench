@@ -666,6 +666,23 @@ refusal preservation and one server Undo step. No schema, external export,
 ESF/OPC, hierarchy/security roundtrip or general application compatibility claim.
 [Supported contract](contracts/group-address-csv-profiles.md).
 
+## WP-11 bounded current-source native navigation height (3 November 2026)
+
+The [height counterpart](status/2026-11-03-wp11-current-native-height.md) records
+six cells/18 real-cursor vertical legs at 80/100/150%, three text preselections,
+36 before/after native trees and 17 verified seat restores. All recorded height
+step observables match the historical receipt. The authenticated Properties-run
+executable/frontend are reused, built from `6ecb69427`; admission `a5e42a8f0`
+differs only in docs/restart metadata, not tracked runtime code/build/locks/assets.
+No new build or later docs-HEAD runtime claim follows. A collapsed-target setup
+refusal at 72 remains failed/not accepted; only the observed native Workspaces
+disclosure was expanded, restoring observed 252 without seeds/oracle changes.
+The first selected 100% pair then passed 252 → 312 → 252 before the other cells.
+Ordinary teardown is verified. Height is component-only: no settings/restart/save,
+pixel/tree/focus-policy, AppImage/GPU or broader WP-11/KL-130 acceptance follows.
+Software-render/session-bus boundaries, historical/Properties records and ledger
+status remain unchanged. No production code changed.
+
 ## WP-11 bounded native Properties continuation (3 November 2026)
 
 The separate [current-source counterpart](status/2026-11-03-wp11-current-native-properties.md)

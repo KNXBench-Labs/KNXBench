@@ -172,3 +172,29 @@ their source identity remain intact, and a later docs HEAD is not tested source.
 Broader current-source evidence, Properties restart/save-roundtrip, boundary
 clamping, other sizes/themes, AppImage/GPU, Orca/Firefox and the wider lifting
 conditions remain open. Ledger status is unchanged.
+
+## Update 3 November 2026: authenticated current-source navigation height
+
+The separate [height record](../status/2026-11-03-wp11-current-native-height.md)
+and [measurement](../evidence/wp11-current-height-native-2026-11-03.json) add six
+navigation-height cells/18 vertical legs at 80/100/150%, three real text
+preselections and 36 before/after native trees. Recorded step observables match
+the historical height receipt, not full trees/pixels or focus appearance policy.
+The authenticated current Properties executable/147-file frontend are reused from
+their original archive: actual build source remains `6ecb69427`; admission
+`a5e42a8f0` differs only in docs/restart metadata, with tracked runtime
+code/build/locks/assets equal. No new build or later docs-HEAD runtime is claimed.
+
+Fresh-profile setup first refused a collapsed target announced as 72 before any
+separator input. That stage remains failed/not accepted, not a product regression.
+Source/native observation explains the collapsed default; only the observed
+Workspaces disclosure was expanded, yielding 252 without seeds or oracle changes.
+The 100% selected pair passed 252 → 312 → 252 before the other five cells.
+All 17 seat restores and ordinary owned teardown are verified. Height is
+component-only state, not a committed preference: no settings/restart/project-save
+acceptance follows. Software-render/session-D-Bus exceptions remain; no full
+host-service/internal-WebKit-sandbox attestation, AppImage/GPU, X11/XWayland,
+Orca/Firefox, other sizes/themes or clamping acceptance follows. This does not
+rerun Properties, navigation width, diagnostics or menu cells, or upgrade earlier
+native records. No production code changed; wider WP-11/KL-130 and ledger status
+remain unchanged.

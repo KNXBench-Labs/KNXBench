@@ -96,7 +96,8 @@ class DiagnosticProof(unittest.TestCase):
     def setUp(self):
         directory = tempfile.TemporaryDirectory()
         self.addCleanup(directory.cleanup)
-        self.root = Path(directory.name)
+        # The CLI canonicalizes --root, including symlinked temporary parents.
+        self.root = Path(directory.name).resolve()
         self.log = self.root / 'diagnostic.log'
 
     def test_inventory_requires_nonzero_expected_prefix_and_summary_agreement(self):
@@ -120,6 +121,23 @@ class DiagnosticProof(unittest.TestCase):
 
     def test_narrow_mixed_independent_rust_stages_finish_in_planned_order(self):
         self._assert_narrow_orchestration(["xtask"])
+
+    @unittest.skipUnless(os.name == 'posix', 'POSIX temporary-directory symlink fixture')
+    def test_narrow_orchestration_with_a_symlinked_temporary_directory(self):
+        with tempfile.TemporaryDirectory() as parent:
+            base = Path(parent).resolve()
+            target = base / 'actual'
+            target.mkdir()
+            alias = base / 'alias'
+            alias.symlink_to(target, target_is_directory=True)
+            # Force the fixture to encounter a symlink even with a canonical TMPDIR.
+            with patch.object(tempfile, 'tempdir', str(alias)):
+                case = DiagnosticProof('test_narrow_stage_uses_lease_exact_filter_scratch_scrubbing_and_receipt')
+                case.setUp()
+                try:
+                    case._assert_narrow_orchestration()
+                finally:
+                    case.doCleanups()
 
     def _assert_narrow_orchestration(self, rust_packages=()):
         git(self.root, 'init', '-q')

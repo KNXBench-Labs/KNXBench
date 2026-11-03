@@ -1,4 +1,4 @@
-//! Reviewer adversaries exercise old policy grammars, current-request refusal and immutable evidence.
+//! Tests old policy grammars, current-request refusals and immutable evidence.
 use super::super::caption_fixture as f;
 use super::per_part::{observed, parameter, parts};
 use super::*;

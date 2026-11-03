@@ -1,11 +1,11 @@
 # Restart snapshot
-
+## S2-05 persistence cross (ACTIVE; owner queue-next; observed 2026-11-03 22:25 CET)
+- Taken by queue-next: `test/s2-caption-persistence-20261103` / `knxbench-s2-caption-persistence-20261103`; E15 changed-caption mounted persistence failure for both selector families, exact flags/history/revision/file preservation plus successful controls. Test/fixture and factual docs only unless a separately reviewed defect requires repair. No hardware/native/recovery/release/deploy; foreign tracks preserved. NEXT implement after claim publication, independent review, selected gates, main-first delivery.
 ## S2-05 caption-only settlement reference (STANDING; observed 2026-11-03)
 - Source d77f77be9/main-first288bd8005 software-accepted: independent review/archive R2 closure, complete14+14 gates proved/frozen/userdata untouched; strict-success preserved, no new start/recovery/general-equivalence/hardware/release authority. Wider E1-E17/S2-05 open. Record `docs/status/2026-11-03-s2-caption-settlement-candidate.md`; evidence `<profile>/evidence/2026-11-03-s2-caption-settlement/`. NEXT separate docs gate/publication and owned retention/cleanup; other owners/root/private files preserved.
 
 ## WP-08 Color/Time successor reference (STANDING; observed 2026-11-03)
-- Corrected source9ed8fca6a published main-first5c405bfde; feature/integrated14-stage gates complete/proved/frozen, checked user data untouched. Source trees equal; source acceptance `docs/status/2026-11-03-wp08-color-time-successor.md`.
-- Initial F1 global-orphan candidate leak and F2comment closed; correction RED8/2 then GREEN10/10, independent R2APPROVE/10 compiled semantic mutant kills. Corrected real14/31/fresh32/reopens preserve45other tables/history/original hashes. Old epochs are not rebound.
+- Corrected source9ed8fca6a published main-first5c405bfde; feature/integrated14-stage gates complete/proved/frozen, checked user data untouched. Source trees equal; source acceptance `docs/status/2026-11-03-wp08-color-time-successor.md`. Initial F1 global-orphan candidate leak and F2comment closed; correction RED8/2 then GREEN10/10, independent R2APPROVE/10 compiled semantic mutant kills. Corrected real14/31/fresh32/reopens preserve45other tables/history/original hashes. Old epochs are not rebound.
 - Evidence `<profile>/evidence/2026-11-03-wp08-color-time-successor/`; source bundle/raw receipts/reviews/binaries retained, first author RED executable unavailable explicitly. Documentation-only successors require exact runtime-input equality; no active source repair claim.
 - Wider WP08 codecs/checked editors and S2-05 remain separate/open; no bus/VM/native/release/deploy authority. Other tracks preserved.
 

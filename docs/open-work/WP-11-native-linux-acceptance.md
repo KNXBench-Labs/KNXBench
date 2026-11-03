@@ -1,6 +1,6 @@
 # WP-11 — Native Linux acceptance
 
-**Status:** In progress: bounded native editor, capture and real-pointer cells recorded; the pane-drag selection fix now has a positive source-bound native re-check at 80/100/150%; remaining cells open. Listed in [OPEN_WORK](../OPEN_WORK.md); per-ID status of record is the [ledger](../status/LEDGER.md).
+**Status:** In progress: bounded native editor, capture and real-pointer cells recorded; Properties now adds six historical-source pointer cells at 80/100/150% (3 November), with an explicit software-render profile. Current-source parity and the wider matrix remain open. Listed in [OPEN_WORK](../OPEN_WORK.md); per-ID status of record is the [ledger](../status/LEDGER.md).
 
 ## Task
 
@@ -93,8 +93,21 @@ observed appearance, not a keyboard-only ring policy assertion. The historical
 pre-fix defect remains recorded; the bounded drag-after-selection trigger check
 passes. This sequence is not a replay of the exact original +100 then −5
 sequence with a live selection before the small return drag.
-Properties-pane drags, other sizes/themes and the wider native matrix remain
-untested; no ledger row is closed.
+At that 28 October cutoff, Properties-pane drags, other sizes/themes and the
+wider native matrix were still untested; no ledger row was newly closed.
+
+## Properties pointer continuation — 3 November 2026
+
+The [bounded Properties record](../status/2026-11-03-wp11-native-properties.md)
+adds six actual Wayland/WebKitGTK cells and 18 separator drags on retained source
+`1a4f5a970`, with unchanged executable/frontend/fictional input bytes. At each
+80/100/150% scale, repeated drags and a real preselected-text case commit exact
+widths to `inspectorPaneWidth`; inverse legs restore 360 and post-drag selections
+are empty. All 14 final-run seat receipts and ordinary teardown are verified.
+The explicit software-render profile, historical artifact, no Properties restart
+test and missing per-zoom image-control matrix remain disclosed. This is not
+current-source, AppImage/GPU, Orca/Firefox or whole-WP-11 acceptance; ledger status
+is unchanged.
 
 ## Done when
 

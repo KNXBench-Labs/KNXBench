@@ -92,6 +92,21 @@ already found lying in the grass.
   builds (chosen over a placeholder bundle on 17 October 2026: a placeholder
   would have to rewrite two Tauri config keys and could let a build succeed
   without the real UI). [Rust workspace gate](VERIFICATION.md#rust-workspace-gate).
+- **Calibrate a copied native artifact before building its full driver.** A binary
+  and frontend hash do not prove resource lookup or painted output. The pinned
+  Tauri-utils 2.9.3 resolver recognises a Cargo output directory through its
+  neighbouring `.cargo-lock`; omitting it can redirect lookup and yield HTTP 404.
+  Preserve layout metadata, identify an intentionally created private marker
+  honestly, and verify actual embedded HTML/hash plus an owned native crop/tree.
+  Never substitute another frontend/server for a failed startup.
+- **Private native accessibility needs reachable peer sockets.** A masked runtime
+  can advertise AT-SPI paths the host observer cannot reach. Share only a short,
+  exclusively created task runtime at the same host/guest pathname, check its
+  UID/mode/device/inode, and retire it after ordinary exit and identity checks.
+  A session-bus exception is not full host-service confinement. A software-render
+  test profile must stay explicit and is not GPU/package acceptance; never
+  disable WebKit's sandbox to obtain a passing image.
+  [Measured setup and boundaries](status/2026-11-03-wp11-native-properties.md).
 - **`knx-net`'s loopback-join test reads the host's `/proc/net/igmp`.** When that
   table does not fit one `read(2)` (many interfaces or groups at that moment),
   `the_loopback_join_lands_on_lo_and_nowhere_else` refuses the truncated snapshot

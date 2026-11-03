@@ -137,3 +137,17 @@ now records repeated and drag-after-selection navigation/height cells at
 80/100/150%, with focus appearance and width-settings readback. The ledger status
 is unchanged. Properties-pane drag, further window sizes and themes, and
 screen-reader output remain unverified.
+
+## Update 3 November 2026: bounded native Properties pointer cells
+
+The [Properties continuation](../status/2026-11-03-wp11-native-properties.md)
+adds six historical-source Wayland/WebKitGTK cells at 80/100/150%, with 18 exact
+60-device-pixel separator drags, three real text preselections, announced/actual
+settings equality and inverse return to 360. The final owned 150% project view
+was visually inspected; AT-SPI focus is not a focus-ring policy assertion.
+Executable, 90 frontend files and fictional input remain bound to `1a4f5a970`,
+not current main or a newly packaged AppImage. The accepted run explicitly uses
+a software-render diagnostic profile and retains the session-D-Bus confinement
+exception. Properties restart survival, end-stop clamping, other sizes/themes,
+current-source parity, Orca/Firefox and vendor GPU evidence remain outside it.
+The broader lifting conditions and ledger status are unchanged.

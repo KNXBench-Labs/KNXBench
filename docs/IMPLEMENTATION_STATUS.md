@@ -666,6 +666,18 @@ refusal preservation and one server Undo step. No schema, external export,
 ESF/OPC, hierarchy/security roundtrip or general application compatibility claim.
 [Supported contract](contracts/group-address-csv-profiles.md).
 
+## WP-11 bounded native Properties continuation (3 November 2026)
+
+Six actual Wayland/WebKitGTK Properties cells and 18 separator drags pass at
+80/100/150%, including three real text preselections. Pointer edges, announced
+widths and actual `inspectorPaneWidth` captures agree; inverse legs return to 360.
+All 14 final-run seat restorations and ordinary process/window/rule/IPC teardown
+are verified. The unchanged executable/frontend/fictional input are bound to
+historical source `1a4f5a970` and an explicit software-render diagnostic profile,
+not current main, a newly packaged AppImage or vendor GPU acceptance.
+No product runtime changed; wider WP-11/KL-130 and Properties restart/other-size
+coverage remain open. [Record and exclusions](status/2026-11-03-wp11-native-properties.md).
+
 ## WP-11 bounded native Alpha 17 acceptance (27 October 2026)
 
 Published as `cc9d8fab2` after independent review/re-review APPROVE and the

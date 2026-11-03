@@ -1,5 +1,12 @@
 # Restart snapshot
 
+## WP-11 native Properties reference (STANDING; observed 2026-11-03 03:17)
+- Six cells/18 separator drags/3 real text preselections pass at80/100/150 on retained source1a4f5a970.
+- Historical executable/frontend/fictional input unchanged; explicit software-render profile, not current-source/AppImage/GPU parity.
+- All14 final-run seat receipts verified; ordinary launcher exit0, no owned processes/windows; task rules and identity-checked IPC retired.
+- Record: `docs/status/2026-11-03-wp11-native-properties.md`; raw evidence private under `<profile>/evidence/2026-11-03-wp11-properties-native/`.
+- Wider WP-11/KL-130, restart/other-size and unavailable-environment cells remain open; no bus/real-project/release/deploy authority.
+
 ## Queue and acceptance boundaries (STANDING; observed 2026-11-02 20:47 CET)
 - Runtime source published on main `7ea7ff6dd`; all R1–R9 and fixture review closed.
 - Main-first selected15-stage gate complete/frozen, checked user data untouched;
@@ -31,4 +38,4 @@
 - Foreign simulator-control-records worktree and Alpha16 belong to other tracks.
 - Private hardware-research is not owned here; root's parked private-track notes
   remain authoritative for its separate owner/consent. Private bytes stay private.
-- WP-11 Properties pane/wider native matrix and KL-130 remain open.
+- WP-11 historical-source Properties pointer evidence is recorded; current-source parity, wider native matrix and KL-130 remain open.

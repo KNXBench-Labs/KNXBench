@@ -1,6 +1,8 @@
 //! Synthetic exact-identity fixtures exercise software admission, never a real device.
 use super::*;
 mod admission;
+mod caption_review;
+mod caption_settlement;
 mod failures;
 mod per_part;
 mod pid7_policy;

@@ -23,6 +23,7 @@ const LIMIT: usize = 16 * 1024 * 1024;
 
 mod profile;
 mod retained_bytes;
+pub(super) mod settlement;
 mod source;
 pub use profile::{ProjectProductSelector, ProjectValidationProfile};
 pub use source::{
@@ -361,7 +362,12 @@ fn build(
     ContactableAddress::new(request.individual_address)
         .map_err(|_| invalid("excluded candidate target"))?;
     let built = build_project_experimental_system2_image(conn, &request, &profile.policy())
-        .map_err(|e| invalid(e.to_string()))?;
+        .map_err(|e| match e {
+            knx_productdb::image::ImageError::SourceBindingChanged => super::source_phase::changed(
+                "not supported for a download: source ownership binding mismatch",
+            ),
+            other => invalid(other.to_string()),
+        })?;
     let plan = plan_system2_candidate(
         &built.image,
         request.individual_address,
@@ -477,7 +483,7 @@ pub fn prepare_project_simulated_candidate(
             let (descriptor, member_bytes) =
                 source::collect(&tx, project, device, &profile.schema_namespace)?;
             if descriptor.sha256()? != *closure_sha256 {
-                return Err(invalid(
+                return Err(super::source_phase::changed(
                     "caller-pinned source closure differs from winning-source snapshot",
                 ));
             }

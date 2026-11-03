@@ -288,6 +288,9 @@ impl DownloadImage {
 /// Why no image was built. Every variant names what it refused.
 #[derive(Debug)]
 pub enum ImageError {
+    /// A valid explicit application-source pin differs from the live winning row.
+    /// A phase fact only: missing/invalid bytes and ownership still require admission.
+    SourceBindingChanged,
     /// The database failed.
     Database(ProductDbError),
     /// The program's code could not be read.
@@ -386,6 +389,7 @@ impl std::error::Error for ImageError {}
 impl fmt::Display for ImageError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            ImageError::SourceBindingChanged => write!(f, "not supported for a download: source ownership binding mismatch"),
             ImageError::Database(error) => write!(f, "{error}"),
             ImageError::Code(error) => write!(f, "{error}"),
             ImageError::UnknownProgram(id) => write!(f, "{id}: not in the product database"),

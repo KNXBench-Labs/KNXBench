@@ -65,6 +65,13 @@ addresses, the same search, filter and range scope, and the same selection: sele
 an address in one view, switch, and it is still selected. Editing always happens in
 the properties pane and the existing commands; no view edits on its own.
 
+**Main-only after Alpha 19:** selecting a range in Columns or Atlas takes over
+from the initial Explorer range, so a populated sibling sub-range keeps its
+addresses. Activating a range in the Explorer takes navigation back, even when
+you activate the same range again. Selecting an address does not reset the local
+range. Atlas still lists direct members rather than all descendants; its initial
+all-ranges page remains an overview. [Verification](../../status/2026-11-03-wp28-group-address-subranges.md).
+
 | Presentation | Best for |
 | --- | --- |
 | **Tree table** (default) | The table above, grouped by the stored group ranges. Click a range heading to collapse it; Shift+click selects only rows you can see. |

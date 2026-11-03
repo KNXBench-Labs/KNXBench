@@ -1,5 +1,4 @@
 //! Both selector families settle one caption change without lending start or recovery authority.
-#[path = "caption_archive_review.rs"]
 mod review;
 use super::super::caption_fixture as f;
 use super::per_part::{observed, parameter, parts, ADR_APP, ADR_APP_PAR};

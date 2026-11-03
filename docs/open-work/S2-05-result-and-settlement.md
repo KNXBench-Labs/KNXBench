@@ -25,6 +25,10 @@ Contract: [system2-download-result](../contracts/system2-download-result.md).
   unchanged source credits the parts the current project still states as written.
   Independent re-review and both selected 14-stage package gates passed
   ([acceptance](../status/2026-11-02-system2-selective-settlement.md)); no hardware run.
+  The [3 November caption-only witness](../research/2026-11-03-s2-caption-source-equivalence.md)
+  distinguishes old pinned-profile refusal before plan comparison from equal plans
+  with an explicitly new source-and-package-pinned profile. No settlement-only
+  re-pinning contract or production equivalence policy is implemented by that evidence.
 - Field verification by the reporter is not requested; no hardware retry is needed
   for the software change.
 

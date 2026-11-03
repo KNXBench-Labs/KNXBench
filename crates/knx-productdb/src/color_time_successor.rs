@@ -222,12 +222,33 @@ pub(crate) fn repair(conn: &Connection) -> Result<(), ProductDbError> {
             break;
         };
         last = Some(sha.clone());
-        // Do not diagnose or rederive unrelated migrations' damaged sources.
-        // Orphan Color/Time rows still require a package-owned source proof;
-        // parsing below must identify the missing program instead of adopting it.
+        // An orphan has no owner SHA. A unique measured declaration anchors
+        // only its source-local refusal candidate, never recovered ownership.
+        // Ambiguous or unmeasured declarations cannot justify diagnostics on
+        // every unrelated source; leave those unattributable orphans intact.
         let candidate: bool = conn.query_row(
-            "SELECT EXISTS(SELECT 1 FROM parameter_type t LEFT JOIN application_program a ON a.id=t.program_id WHERE t.kind IN ('Color','Time') AND (a.source_sha256=?1 OR a.id IS NULL))",
-            [&sha], |r| r.get(0))?;
+            "SELECT EXISTS (
+                SELECT 1 FROM parameter_type t
+                LEFT JOIN application_program a ON a.id=t.program_id
+                WHERE t.kind IN ('Color','Time') AND (
+                    a.source_sha256=?1 OR (
+                        a.id IS NULL AND EXISTS (
+                            SELECT 1 FROM source_identity i
+                            JOIN source_identity_scan s ON s.source_sha256=i.source_sha256
+                            WHERE i.table_name='application_program'
+                              AND i.logical_id=t.program_id AND i.source_sha256=?1
+                              AND s.status='measured'
+                        ) AND NOT EXISTS (
+                            SELECT 1 FROM source_identity i
+                            WHERE i.table_name='application_program'
+                              AND i.logical_id=t.program_id AND i.source_sha256<>?1
+                        )
+                    )
+                )
+            )",
+            [&sha],
+            |r| r.get(0),
+        )?;
         if !candidate {
             continue;
         }

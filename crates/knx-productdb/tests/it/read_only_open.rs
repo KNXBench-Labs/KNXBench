@@ -44,7 +44,7 @@ fn an_older_database_is_migrated_in_memory_only() {
     let path = dir.path().join("products.sqlite");
     let conn = open_and_migrate(&path).unwrap();
     // The last step (v31 -> v32) is data-only (no DDL): an empty current-schema
-    // database is a genuine v30 one once its version says so.
+    // database has the v31 state once its version says so.
     conn.pragma_update(None, "user_version", CURRENT_PRODUCTDB_VERSION - 1)
         .unwrap();
     drop(conn);

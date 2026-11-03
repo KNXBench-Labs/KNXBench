@@ -24,10 +24,12 @@ specialized Color/Picture editor is delivered; the workbench mount came later
 (section *Checked parameter editors* above).
 <!-- END retained catalogue record -->
 
-## Color/Time data-repair candidate (3 November 2026)
+## Color/Time data repair delivered on main (3 November 2026)
 
 The [bounded v32 successor](../contracts/color-time-successor-repair.md)
 corrects only source-proven historical Color/Time winner-row contamination.
-Independent acceptance and publication remain pending; older v31-capped builds
-refuse its database version. This establishes no new Colour/Picture, packed
+It was independently accepted and published as `5c405bfde`; the
+[acceptance record](../status/2026-11-03-wp08-color-time-successor.md) preserves
+the selected coverage and exclusions. Older v31-capped builds refuse its
+database version. This establishes no new Colour/Picture, packed
 Time or Date image codec and changes no recorded codec limitation.

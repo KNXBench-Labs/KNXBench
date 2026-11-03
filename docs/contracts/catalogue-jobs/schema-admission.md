@@ -208,5 +208,6 @@ schema descriptors and recorded oracle remain unchanged.
 Admission now requires `ADMITTED_VERSION = 32`, compile-time-bound to
 `CURRENT_PRODUCTDB_VERSION`; v31 and v33 are refused. Witnesses retain the
 observed version, and no witness survives a migration. This explicit version
-update does not admit historical schema variants or replace the remaining
-independent review, mutation and selected-gate acceptance of the candidate.
+update does not admit historical schema variants. The bounded repair has its
+own [independent review, mutation and selected-gate acceptance](../../status/2026-11-03-wp08-color-time-successor.md);
+that acceptance does not broaden this schema admission contract.

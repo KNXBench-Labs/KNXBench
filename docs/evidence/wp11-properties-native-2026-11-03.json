@@ -1,0 +1,324 @@
+{
+  "formatVersion": 1,
+  "observedDate": "2026-11-03",
+  "scope": "Bounded native Properties-pane pointer continuation; not whole WP-11/KL-130 closure",
+  "sourceRevision": "1a4f5a9708532977375c461d3fc3f23add21c15b",
+  "nativeExecutableSha256": "bf51ea26b2fcecd4cb8325edf50e7de1793d888a9e925265824381bcd955042e",
+  "executedNativeExecutableSha256": "bf51ea26b2fcecd4cb8325edf50e7de1793d888a9e925265824381bcd955042e",
+  "frontendManifestSha256": "4050577689ef8179a75a4d3f7f330b81f7d94cb78c59980ad9214520b18e2c2a",
+  "frontendFileCount": 90,
+  "fictionalFixtureSha256": "ddda4fd55e077f00bc34d5b0ca02dcd3c6d2d54da52f836ac7eea7e4f244dc2a",
+  "driverManifestSha256": "09a4b32dd79295ad98eb4492f0c1a6e5eb6d0bc2890cf3c8e98a545d2c5d9352",
+  "currentSourceParityClaimed": false,
+  "productRuntimeSourceChanged": false,
+  "execution": {
+    "toolkit": "native Wayland/WebKitGTK",
+    "xWayland": false,
+    "network": "separate loopback-only namespace",
+    "data": "isolated fictional office demo",
+    "outputScale": 1.25,
+    "windowLogicalSize": [
+      2024,
+      1098
+    ],
+    "renderEnvironment": {
+      "WEBKIT_DISABLE_DMABUF_RENDERER": "1",
+      "WEBKIT_DISABLE_COMPOSITING_MODE": "1"
+    },
+    "environmentEvidence": "recorded launch argv",
+    "sandboxDisableEnvironmentFlagSupplied": false,
+    "internalWebKitSandboxIndependentlyAttested": false,
+    "fullHostServiceConfinementAttested": false,
+    "sessionBusException": "Unfiltered host session D-Bus/AT-SPI access remains an explicit capability exception"
+  },
+  "units": {
+    "requestedDevicePixelsPerSeparatorLeg": 60,
+    "measuredLogicalPixelsPerSeparatorLeg": 48,
+    "sourceWidthBounds": [
+      280,
+      700
+    ],
+    "initialLayoutWidth": 360,
+    "persistedSetting": "inspectorPaneWidth"
+  },
+  "acceptedCells": 6,
+  "separatorDrags": 18,
+  "selectionDrags": 3,
+  "cells": [
+    {
+      "label": "properties-80-clean",
+      "zoom": 0.8,
+      "mode": "clean",
+      "selectionTexts": [],
+      "steps": [
+        {
+          "index": 0,
+          "dxLogical": -48,
+          "dxDevice": -60.0,
+          "before": 360.0,
+          "after": 420,
+          "persisted": 420,
+          "focused": true,
+          "postSelections": 0
+        },
+        {
+          "index": 1,
+          "dxLogical": 48,
+          "dxDevice": 60.0,
+          "before": 420.0,
+          "after": 360,
+          "persisted": 360,
+          "focused": true,
+          "postSelections": 0
+        },
+        {
+          "index": 2,
+          "dxLogical": -48,
+          "dxDevice": -60.0,
+          "before": 360.0,
+          "after": 420,
+          "persisted": 420,
+          "focused": true,
+          "postSelections": 0
+        },
+        {
+          "index": 3,
+          "dxLogical": 48,
+          "dxDevice": 60.0,
+          "before": 420.0,
+          "after": 360,
+          "persisted": 360,
+          "focused": true,
+          "postSelections": 0
+        }
+      ],
+      "seatRestored": true
+    },
+    {
+      "label": "properties-80-selected",
+      "zoom": 0.8,
+      "mode": "selected",
+      "selectionTexts": [
+        "Project statu"
+      ],
+      "steps": [
+        {
+          "index": 0,
+          "dxLogical": -48,
+          "dxDevice": -60.0,
+          "before": 360.0,
+          "after": 420,
+          "persisted": 420,
+          "focused": true,
+          "postSelections": 0
+        },
+        {
+          "index": 1,
+          "dxLogical": 48,
+          "dxDevice": 60.0,
+          "before": 420.0,
+          "after": 360,
+          "persisted": 360,
+          "focused": true,
+          "postSelections": 0
+        }
+      ],
+      "seatRestored": true
+    },
+    {
+      "label": "properties-100-clean",
+      "zoom": 1.0,
+      "mode": "clean",
+      "selectionTexts": [],
+      "steps": [
+        {
+          "index": 0,
+          "dxLogical": -48,
+          "dxDevice": -60.0,
+          "before": 360.0,
+          "after": 408,
+          "persisted": 408,
+          "focused": true,
+          "postSelections": 0
+        },
+        {
+          "index": 1,
+          "dxLogical": 48,
+          "dxDevice": 60.0,
+          "before": 408.0,
+          "after": 360,
+          "persisted": 360,
+          "focused": true,
+          "postSelections": 0
+        },
+        {
+          "index": 2,
+          "dxLogical": -48,
+          "dxDevice": -60.0,
+          "before": 360.0,
+          "after": 408,
+          "persisted": 408,
+          "focused": true,
+          "postSelections": 0
+        },
+        {
+          "index": 3,
+          "dxLogical": 48,
+          "dxDevice": 60.0,
+          "before": 408.0,
+          "after": 360,
+          "persisted": 360,
+          "focused": true,
+          "postSelections": 0
+        }
+      ],
+      "seatRestored": true
+    },
+    {
+      "label": "properties-100-selected",
+      "zoom": 1.0,
+      "mode": "selected",
+      "selectionTexts": [
+        "Project statu"
+      ],
+      "steps": [
+        {
+          "index": 0,
+          "dxLogical": -48,
+          "dxDevice": -60.0,
+          "before": 360.0,
+          "after": 408,
+          "persisted": 408,
+          "focused": true,
+          "postSelections": 0
+        },
+        {
+          "index": 1,
+          "dxLogical": 48,
+          "dxDevice": 60.0,
+          "before": 408.0,
+          "after": 360,
+          "persisted": 360,
+          "focused": true,
+          "postSelections": 0
+        }
+      ],
+      "seatRestored": true
+    },
+    {
+      "label": "properties-150-clean",
+      "zoom": 1.5,
+      "mode": "clean",
+      "selectionTexts": [],
+      "steps": [
+        {
+          "index": 0,
+          "dxLogical": -48,
+          "dxDevice": -60.0,
+          "before": 360.0,
+          "after": 392,
+          "persisted": 392,
+          "focused": true,
+          "postSelections": 0
+        },
+        {
+          "index": 1,
+          "dxLogical": 48,
+          "dxDevice": 60.0,
+          "before": 392.0,
+          "after": 360,
+          "persisted": 360,
+          "focused": true,
+          "postSelections": 0
+        },
+        {
+          "index": 2,
+          "dxLogical": -48,
+          "dxDevice": -60.0,
+          "before": 360.0,
+          "after": 392,
+          "persisted": 392,
+          "focused": true,
+          "postSelections": 0
+        },
+        {
+          "index": 3,
+          "dxLogical": 48,
+          "dxDevice": 60.0,
+          "before": 392.0,
+          "after": 360,
+          "persisted": 360,
+          "focused": true,
+          "postSelections": 0
+        }
+      ],
+      "seatRestored": true
+    },
+    {
+      "label": "properties-150-selected",
+      "zoom": 1.5,
+      "mode": "selected",
+      "selectionTexts": [
+        "Project statu"
+      ],
+      "steps": [
+        {
+          "index": 0,
+          "dxLogical": -48,
+          "dxDevice": -60.0,
+          "before": 360.0,
+          "after": 392,
+          "persisted": 392,
+          "focused": true,
+          "postSelections": 0
+        },
+        {
+          "index": 1,
+          "dxLogical": 48,
+          "dxDevice": 60.0,
+          "before": 392.0,
+          "after": 360,
+          "persisted": 360,
+          "focused": true,
+          "postSelections": 0
+        }
+      ],
+      "seatRestored": true
+    }
+  ],
+  "restoration": {
+    "verifiedReceipts": 14,
+    "allVerified": true,
+    "inputGesturesPressed": 21,
+    "inputGesturesReleased": 21
+  },
+  "teardown": {
+    "ordinaryNativeClose": true,
+    "launcherExit": 0,
+    "emergencyTermination": false,
+    "ownedWindowsRemaining": 0,
+    "ownedProcessesRemaining": 0,
+    "taskRulesDisabledVerified": true,
+    "identityCheckedPrivateRuntimeRemoved": true
+  },
+  "harnessOfflineChecks": {
+    "guardTests": 22,
+    "protocolTests": 3,
+    "privateRuntimeTests": 2,
+    "total": 27,
+    "nativeCells": false
+  },
+  "visuallyInspectedOwnedImages": {
+    "a11y-diagnostic-owned-window.png": "a250e15c510d7e232b99a097a8ec024ca2552f16e94e5bebbf819c06780f7b3b",
+    "properties-final-150-owned-window.png": "839dc824e912dcd21df7230a3fb629517ae21b274a65a202ce5eb6ab1e2a52d0"
+  },
+  "exclusions": [
+    "Not the published Alpha 17 AppImage or a new packaged-artifact test",
+    "No current-source native parity",
+    "No individual full-resolution image inspection at each zoom or keyboard-only focus-ring policy claim",
+    "No Properties restart-survival or project-save/roundtrip test",
+    "No boundary-clamping, other sizes/themes, Orca, Firefox or vendor GPU acceptance",
+    "No real project or KNX installation operation; wider WP-11/KL-130 stays open"
+  ],
+  "privateEvidenceLocator": "<profile>/evidence/2026-11-03-wp11-properties-native/"
+}

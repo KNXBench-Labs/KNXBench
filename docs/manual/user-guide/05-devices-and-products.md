@@ -118,6 +118,14 @@ filter after opening review does not change the reviewed list. Choose a
 gateway and confirm the **read-only** operation once for the whole list.
 Opening the review alone contacts no device.
 
+**Main-only after Alpha 19:** the opened device editor also has **Compare**
+beside **Download to device…**. It reviews exactly that device, regardless of
+the table filter or checkboxes, and uses the same gateway confirmation, running
+operation and session results as the table. Settings/Back retains the review's
+gateway draft and focus. Changing projects invalidates old results; stopping
+still waits for the current bounded read rather than starting another queue.
+[Delivery scope](../../status/2026-11-03-wp27-device-editor-compare.md).
+
 The dialog shows completed/total and the current device. A device error is
 reported and the next device is tried. **Cancel** waits for the current
 bounded read to disconnect and then stops; it does not contact the remaining

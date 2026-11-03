@@ -12,6 +12,17 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Device-editor comparison shares the existing owner (3 November 2026, main-only; WP-27)
+
+The device editor now offers **Compare** beside Download. It opens the existing
+explicit read-only review for exactly that device and shares one retained
+controller/dialog with the device table; it does not start an automatic read or
+create a second queue. Main-first `080f2723d` is published after independent
+review, a complete 11-stage runtime gate and an exact 10-stage documentation
+delta acceptance. The runtime-tested source is `51d8f417f`; results are not
+relabeled as a second full run. [Coverage and boundaries](status/2026-11-03-wp27-device-editor-compare.md).
+No new device-family, native-shell, hardware or release acceptance follows.
+
 ## Group-address sub-range navigation keeps its rows (3 November 2026, main-only; WP-28)
 
 Explicit Columns/Atlas navigation replaces the initial Explorer scope rather

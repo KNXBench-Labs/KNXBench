@@ -258,7 +258,7 @@ fn v31_moves_only_authenticated_bom_ranges_and_the_diagnostics_quoting_them() {
     let version: i64 = conn
         .query_row("PRAGMA user_version", [], |r| r.get(0))
         .unwrap();
-    assert_eq!(version, 31);
+    assert_eq!(version, knx_productdb::CURRENT_PRODUCTDB_VERSION);
     assert_eq!(ranges(&conn, &bom_sha), correct);
     assert_eq!(
         table_values(&conn, &["package_install_diagnostic"]),
@@ -425,7 +425,7 @@ fn v31_leaves_every_bom_source_it_cannot_prove_shifted_untouched() {
     let version: i64 = conn
         .query_row("PRAGMA user_version", [], |r| r.get(0))
         .unwrap();
-    assert_eq!(version, 31);
+    assert_eq!(version, knx_productdb::CURRENT_PRODUCTDB_VERSION);
     assert_eq!(
         table_values(
             &conn,

@@ -420,7 +420,7 @@ Previously unreported attributes are now retained/reported at scoped ingestion. 
 ### AP3 bounded parameter controls
 
 **Ledger status:** `LATER` ([PDB-04](status/LEDGER.md#snapshot-ids)).
-Time retains counts; sliders need bounded integer evidence. Colour/Picture stay unsupported-codec originals; modules need separate mapping contracts.
+Time retains counts; sliders need bounded integer evidence. Colour/Picture stay unsupported-codec originals; modules need separate mapping contracts. A bounded v32 Color/Time data-repair candidate adds no codec evidence.
 [Details and history](limitations/ap3-bounded-parameter-controls.md)
 
 <a id="catalogue-catalogue-batch-creation"></a>

@@ -6,6 +6,7 @@ mod baggage_inventory;
 mod catalog_metadata;
 mod catalog_update;
 mod channel_name_number;
+mod color_time_successor;
 mod corpus_compatibility_matrix;
 mod corpus_support;
 mod date_kind;

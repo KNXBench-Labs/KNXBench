@@ -52,7 +52,7 @@ B1 alone cannot certify continuous schema identity or grant installation consent
 
 ### Complete inspection and explicit refusal
 
-- Require main user_version 30 and UTF-8 (see the data-only amendments below); reject attachments and application TEMP
+- Require main user_version 32 and UTF-8 (see the data-only amendments below); reject attachments and application TEMP
   objects, permitting SQLite's implicit empty temp schema. Do not copy/retain
   filesystem paths from database_list or open/repair any database.
 - Enumerate every stored main.sqlite_schema row without sqlite-prefix filtering.
@@ -191,7 +191,22 @@ declarations onto the retained original bytes. It changes those ranges and the
 collision or malformed-declaration diagnostic texts that quote them. It adds no
 DDL ([ADR-0147](../../adr/0147-master-identity-provenance.md)). The same
 independently pinned v28 fresh-chain schema descriptors remain authoritative.
-Admission now requires `ADMITTED_VERSION = 31`, still compile-time-bound to
-`CURRENT_PRODUCTDB_VERSION`; v30 and v32 are refused. The witness retains the
+**Amendment below supersedes the version requirement:** admission at v31
+required `ADMITTED_VERSION = 31`, still compile-time-bound to
+`CURRENT_PRODUCTDB_VERSION`; at that stage v30 and v32 were refused. The witness retains the
 observed version, the oracle's recorded version is not rewritten, and no
 persisted witness is carried across the migration.
+
+## Amendment: data-only product database v32 (3 November 2026)
+
+The [bounded Color/Time successor](../color-time-successor-repair.md) changes
+only four existing type columns for authenticated, exact released-promotion
+bad tuples and can append a named source refusal through the existing unknown
+ledger convention. It adds no DDL; the independently pinned v28 fresh-chain
+schema descriptors and recorded oracle remain unchanged.
+
+Admission now requires `ADMITTED_VERSION = 32`, compile-time-bound to
+`CURRENT_PRODUCTDB_VERSION`; v31 and v33 are refused. Witnesses retain the
+observed version, and no witness survives a migration. This explicit version
+update does not admit historical schema variants or replace the remaining
+independent review, mutation and selected-gate acceptance of the candidate.

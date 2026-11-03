@@ -23,3 +23,11 @@ checks are distinct from actual HTTP/native persistence witnesses. No full
 specialized Color/Picture editor is delivered; the workbench mount came later
 (section *Checked parameter editors* above).
 <!-- END retained catalogue record -->
+
+## Color/Time data-repair candidate (3 November 2026)
+
+The [bounded v32 successor](../contracts/color-time-successor-repair.md)
+corrects only source-proven historical Color/Time winner-row contamination.
+Independent acceptance and publication remain pending; older v31-capped builds
+refuse its database version. This establishes no new Colour/Picture, packed
+Time or Date image codec and changes no recorded codec limitation.

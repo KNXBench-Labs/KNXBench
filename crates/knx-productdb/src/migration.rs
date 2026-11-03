@@ -15,7 +15,7 @@ use crate::parse::translation::{ingest_translations, TranslationScope};
 use crate::report::{insert_unknown, UnknownKind};
 
 /// The product-database schema version this build writes.
-pub const CURRENT_PRODUCTDB_VERSION: i64 = 31;
+pub const CURRENT_PRODUCTDB_VERSION: i64 = 32;
 
 #[derive(Debug)]
 pub enum ProductDbError {
@@ -338,6 +338,7 @@ fn migrations() -> Vec<Migration> {
         crate::date_kind_backfill::migrate_v28_to_v29,
         crate::legacy::migrate_v29_to_v30,
         crate::master_provenance::migrate_v30_to_v31,
+        crate::color_time_successor::repair,
     ]
 }
 

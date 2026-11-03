@@ -17,6 +17,7 @@ pub mod catalogue_sources;
 mod catalogue_schema;
 pub mod cleanup;
 pub mod code;
+mod color_time_successor;
 mod date_kind_backfill;
 pub mod declared_segments;
 pub mod device_evaluation;

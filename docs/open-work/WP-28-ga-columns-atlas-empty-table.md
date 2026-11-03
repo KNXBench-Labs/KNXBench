@@ -1,6 +1,7 @@
 # WP-28 — Group-address Columns and Atlas views show no addresses for a sub-range
 
-Owner report: 2 November 2026. Recorded only; not claimed, no implementation Go.
+Owner report: 2 November 2026. Implementation and independent source review
+complete; browser and integration acceptance remain pending.
 
 ## Observed
 
@@ -8,21 +9,58 @@ In the Group Addresses workspace, the Columns view shows nothing in the table
 below once a range and then a sub-range are selected. The Atlas view behaves
 the same way.
 
-## Suspected cause (unverified)
+## Confirmed reproduction and cause
 
-Both views derive their address list from the selected scope:
+The rendered workspace reproduces both empty results when an Explorer range
+is already active and the user follows the offered range/sub-range controls
+into a different stored range:
 
-- [`GroupAddressColumns.tsx`](../../apps/knx-web/src/GroupAddressColumns.tsx)
-  renders `GroupAddressTreeTable` with `flat` and `includeEmpty={false}`.
-- [`GroupAddressAtlas.tsx`](../../apps/knx-web/src/GroupAddressAtlas.tsx)
-  keeps only rows whose `groupKey` equals the scope exactly.
+1. Open Explorer range A, which supplies `rangeScope` to the workspace.
+2. In Columns or Atlas, select another offered main range B, then its nonempty
+   child B1.
+3. The breadcrumb says B1, but no addresses render.
 
-Whether the rows passed in are already scoped to a different key, or the
-sub-range key does not match the rows' `groupKey`, is not yet checked.
+[`GroupAddressTable.tsx`](../../apps/knx-web/src/GroupAddressTable.tsx) previously
+selected rows independently for the Explorer scope and the local navigation
+scope, then intersected their address keys. A row stored in B1 cannot also
+belong to A, so the intersection was empty before either renderer received it.
+The stored range IDs and presentation keys match; neither the flat Columns
+table nor Atlas's direct-membership comparison caused this reproduction.
 
-## Requested outcome
+The controller now uses the Explorer range until the user explicitly navigates
+locally. The chosen local range then determines the rows instead of intersecting
+two independent scopes. Every subsequent Explorer range activation resets local
+navigation, including a fresh activation of the same range ID. This follows the
+existing range-selection event; selecting an address does not reset local scope.
+Query and filter apply on both routes; stored membership, input
+order, tree traversal, selection and renderer windowing are unchanged. Atlas
+continues to show direct members, not all descendants of a selected parent.
 
-Reproduce with a project whose sub-ranges hold addresses, confirm the cause,
-and show the sub-range's addresses in both views. An empty result must only
-appear when the sub-range really holds no addresses, with the existing
-empty-state hint. Add a regression test per view.
+This is a source-bound reproduction of the reported symptom, not verification
+of the original owner's project or every possible empty-result route. In
+particular, Atlas's existing all-ranges overview remains an overview: it does
+not render address cards until a local range is selected.
+
+## Focused regression evidence
+
+[`GroupAddressSubrange.test.tsx`](../../apps/knx-web/src/GroupAddressSubrange.test.tsx)
+mounts the actual controller and follows the offered navigation buttons in both
+views. The original production source failed the nonempty-child assertion in
+both views (`[]` instead of the two expected stored address IDs); the minimal
+controller change passes it. Separate controls cover:
+
+- genuinely empty children and their existing view-specific hints;
+- sibling, parent and unassigned-address isolation, even inside numeric bounds;
+- shared single/Shift selection and visible row order across view changes;
+- query and typed/untyped filtering without inventing membership;
+- bounded 500-row windows, explicit extension and subsequent filtering;
+- initial Explorer scoping and reset after the Explorer range changes;
+- same-ID Explorer reactivation, both with a range selected and after selecting
+  an address in the locally navigated range (two assertion-based review REDs).
+
+The focused suite passes 66 tests across eight files. Independent source review
+accepted the correction after the same-ID navigation finding was reproduced and
+fixed. Full-App Chromium cases cover both views, English/German, 400/1440 pixels,
+forward navigation, search, genuine emptiness and return through the real Explorer.
+Their execution and the full default/selected integration gates remain pending;
+no original private-project, hardware or live-server verification is claimed.

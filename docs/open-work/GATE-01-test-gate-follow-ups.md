@@ -131,6 +131,24 @@ signals (including against the old implementation), and a real stuck wrapper
 and child verify cleanup without a crash-generating signal. The older timeout
 causes above remain unproven.
 
+## Proportionate input selection — 3 November 2026
+
+Published main-first `703ec2904` refines ADR-0144 with evidence-bound font and
+reader projections, representative production dialogs for font/app-shell HTML
+changes, and an explicit nonzero diagnostic Rust stage for bounded theme
+metadata. Complete web/default-browser checks and conservative full/unknown
+fallbacks remain. The actual Rail plan changes from15 to12 package stages but
+keeps16 production suites because of its shared dialog-test delta; no wall-time
+speedup or retroactive coverage reduction is claimed.
+
+Independent review and regression/mutation controls closed stage-order and
+JSON-reader proof findings. A separately reviewed symlink-root fixture correction
+keeps strict orchestration assertions. Full source490 acceptance and exact
+composition plus successor703 delta acceptance retain separate runtime identities.
+[Acceptance and boundaries](../status/2026-11-03-proportionate-gates.md).
+This closes that bounded selection work only; the scheduler and historical
+failure investigations above remain open under GATE-01.
+
 ## Known boundary
 
 Killing the stage supervisor with SIGKILL can still orphan children; see the

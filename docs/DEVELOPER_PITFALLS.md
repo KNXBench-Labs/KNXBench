@@ -123,6 +123,22 @@ already found lying in the grass.
   observed 252 and passed the first selected inverse pair. Its authenticated
   reused executable is still built from `6ecb69427`, not admission/docs HEAD.
   Height is component-only state; it has no settings/restart acceptance here.
+- **Navigation-width setup and private trace observers have separate safety boundaries.**
+  The [current native width record](status/2026-11-03-wp11-current-native-navigation.md)
+  retains a hidden-identity refusal before Tab/width keys: inspect the actual
+  Project explorer disclosure and expand only that observed group, never seed
+  settings or weaken identity guards. Default 250 is not prepared 320; native
+  End/ten-Left preparation is not pointer/keyboard-matrix or clamping acceptance,
+  and historical setup is unknown. Width rounds positive left-side delta/zoom
+  before persisting; do not reuse unrounded height or negative Properties rules.
+  A protocol observer must not throw before release/close: retain sticky logging
+  failures, forward actual sends unchanged, attempt cleanup, then refuse the
+  incomplete evidence. R1 was blocked before live input; corrected R2 was
+  independently approved, with fake-wire regression evidence separate from
+  native acceptance. Compare payloads without observer-only timestamps, keeping
+  fractional requests, integer wire motions and the one named cursor exception
+  distinct; never silently broaden tolerance or rerun native input for an
+  auditor-only projection correction.
 - **`knx-net`'s loopback-join test reads the host's `/proc/net/igmp`.** When that
   table does not fit one `read(2)` (many interfaces or groups at that moment),
   `the_loopback_join_lands_on_lo_and_nowhere_else` refuses the truncated snapshot

@@ -1274,7 +1274,7 @@ Visible windows refresh periodically/on focus. Bounded synchronization is not us
 ### 130. Application zoom
 
 **Ledger status:** `ACCEPTED_BOUNDARY` ([KL-130-ZOOM](status/LEDGER.md#snapshot-ids)).
-Zoom is bounded to 80–150% in 10% steps. Historical native evidence is retained; separate six-cell Properties and navigation-height pointer subsets pass on pinned source `6ecb69427`, with authenticated artifact reuse for height. Height is component-only; no settings/restart claim. Broader current-source, full-layout and screen-reader parity remain open.
+Zoom is bounded to 80–150% in 10% steps. Historical native evidence is retained; separate six-cell Properties, navigation-height and Navigation-width pointer subsets pass on pinned source `6ecb69427`, with authenticated artifact reuse for height/width. Width setup and one named cursor exception remain explicit; height is component-only. No new width build or width/height restart/save-roundtrip claim. Broader current-source, full-layout and screen-reader parity remain open.
 [Details and history](limitations/KL-130-ZOOM-application-zoom.md)
 
 <a id="catalogue-kl-160"></a>

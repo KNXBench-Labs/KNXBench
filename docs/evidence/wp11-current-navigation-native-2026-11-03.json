@@ -1,0 +1,447 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-11-03",
+  "scope": "Six source-bound native Navigation-width cells, not whole WP-11/KL-130 acceptance",
+  "sourceRevision": "6ecb69427b34a5e6e2fd630424a953199d362566",
+  "admissionRevision": "90b85c2fdc717c6d9dc99b5aa580796bf9df7e65",
+  "newNativeBuildPerformed": false,
+  "trackedCodeBuildLocksAssetsEqualAtAdmission": true,
+  "nativeExecutableSha256": "563b9b03cd345d24eb739a6431436a99e3fca0b4d0625d7ba69d79a9281864b6",
+  "frontendManifestSha256": "494f2a8dad39f56c2dff8d51328dc658edfcfa2610d4f8c7d41a96b3026da5e7",
+  "frontendFileCount": 147,
+  "fixtureSha256": "ddda4fd55e077f00bc34d5b0ca02dcd3c6d2d54da52f836ac7eea7e4f244dc2a",
+  "driverManifestSha256": "8dd033bacd4659489d32194a5d196cf21d4d70d59ed4c70e49f85a6029f8931d",
+  "cellCount": 6,
+  "dragCount": 24,
+  "textSelectionGestures": 3,
+  "beforeAfterTrees": 48,
+  "verifiedSeatRestores": 16,
+  "sourceBounds": [
+    200,
+    480
+  ],
+  "naturalSourceDefault": 250,
+  "preparedBaseline": 320,
+  "keyboardSetup": {
+    "tabTraversalKeys": 8,
+    "widthActions": 11,
+    "method": "Native End then ten Left keys, each announced and genuinely committed",
+    "observedWidths": [
+      480,
+      464,
+      448,
+      432,
+      416,
+      400,
+      384,
+      368,
+      352,
+      336,
+      320
+    ],
+    "historicalSetupMethodParityClaimed": false
+  },
+  "setupRefusal": {
+    "pinnedProjectIdentityInitiallyHidden": true,
+    "stoppedBeforeAnySetupKey": true,
+    "observedNativeProjectExplorerDisclosure": true,
+    "identityGuardOrSettingsSeedChanged": false,
+    "failedAttemptPreservedUnaccepted": true
+  },
+  "outputScale": 1.25,
+  "windowLogicalSize": [
+    2024,
+    1098
+  ],
+  "largeLogicalLeg": 100,
+  "largeDeviceLeg": 125,
+  "shortLogicalLeg": 5,
+  "shortDeviceLeg": 6.25,
+  "cells": [
+    {
+      "label": "nav-80-clean",
+      "zoom": 0.8,
+      "mode": "clean",
+      "selectionTexts": [],
+      "steps": [
+        {
+          "requestedPointerDelta": 100,
+          "actualPointerDelta": 100,
+          "edgeDelta": 100,
+          "valueBefore": 320.0,
+          "valueAfter": 445.0,
+          "storedNavigationWidth": 445,
+          "selectionAliasesAfter": 0,
+          "focused": true,
+          "deviceDelta": 125.0
+        },
+        {
+          "requestedPointerDelta": -100,
+          "actualPointerDelta": -100,
+          "edgeDelta": -100,
+          "valueBefore": 445.0,
+          "valueAfter": 320.0,
+          "storedNavigationWidth": 320,
+          "selectionAliasesAfter": 0,
+          "focused": true,
+          "deviceDelta": -125.0
+        },
+        {
+          "requestedPointerDelta": 100,
+          "actualPointerDelta": 100,
+          "edgeDelta": 100,
+          "valueBefore": 320.0,
+          "valueAfter": 445.0,
+          "storedNavigationWidth": 445,
+          "selectionAliasesAfter": 0,
+          "focused": true,
+          "deviceDelta": 125.0
+        },
+        {
+          "requestedPointerDelta": -100,
+          "actualPointerDelta": -100,
+          "edgeDelta": -100,
+          "valueBefore": 445.0,
+          "valueAfter": 320.0,
+          "storedNavigationWidth": 320,
+          "selectionAliasesAfter": 0,
+          "focused": true,
+          "deviceDelta": -125.0
+        },
+        {
+          "requestedPointerDelta": -5,
+          "actualPointerDelta": -5,
+          "edgeDelta": -5,
+          "valueBefore": 320.0,
+          "valueAfter": 314.0,
+          "storedNavigationWidth": 314,
+          "selectionAliasesAfter": 0,
+          "focused": true,
+          "deviceDelta": -6.25
+        },
+        {
+          "requestedPointerDelta": 5,
+          "actualPointerDelta": 5,
+          "edgeDelta": 5,
+          "valueBefore": 314.0,
+          "valueAfter": 320.0,
+          "storedNavigationWidth": 320,
+          "selectionAliasesAfter": 0,
+          "focused": true,
+          "deviceDelta": 6.25
+        }
+      ]
+    },
+    {
+      "label": "nav-80-selected",
+      "zoom": 0.8,
+      "mode": "selected",
+      "selectionTexts": [
+        "Project statu"
+      ],
+      "steps": [
+        {
+          "requestedPointerDelta": 100,
+          "actualPointerDelta": 100,
+          "edgeDelta": 100,
+          "valueBefore": 320.0,
+          "valueAfter": 445.0,
+          "storedNavigationWidth": 445,
+          "selectionAliasesAfter": 0,
+          "focused": true,
+          "deviceDelta": 125.0
+        },
+        {
+          "requestedPointerDelta": -100,
+          "actualPointerDelta": -100,
+          "edgeDelta": -100,
+          "valueBefore": 445.0,
+          "valueAfter": 320.0,
+          "storedNavigationWidth": 320,
+          "selectionAliasesAfter": 0,
+          "focused": true,
+          "deviceDelta": -125.0
+        }
+      ]
+    },
+    {
+      "label": "nav-100-clean",
+      "zoom": 1.0,
+      "mode": "clean",
+      "selectionTexts": [],
+      "steps": [
+        {
+          "requestedPointerDelta": 100,
+          "actualPointerDelta": 100,
+          "edgeDelta": 100,
+          "valueBefore": 320.0,
+          "valueAfter": 420.0,
+          "storedNavigationWidth": 420,
+          "selectionAliasesAfter": 0,
+          "focused": true,
+          "deviceDelta": 125.0
+        },
+        {
+          "requestedPointerDelta": -100,
+          "actualPointerDelta": -100,
+          "edgeDelta": -100,
+          "valueBefore": 420.0,
+          "valueAfter": 320.0,
+          "storedNavigationWidth": 320,
+          "selectionAliasesAfter": 0,
+          "focused": true,
+          "deviceDelta": -125.0
+        },
+        {
+          "requestedPointerDelta": 100,
+          "actualPointerDelta": 100,
+          "edgeDelta": 100,
+          "valueBefore": 320.0,
+          "valueAfter": 420.0,
+          "storedNavigationWidth": 420,
+          "selectionAliasesAfter": 0,
+          "focused": true,
+          "deviceDelta": 125.0
+        },
+        {
+          "requestedPointerDelta": -100,
+          "actualPointerDelta": -100,
+          "edgeDelta": -100,
+          "valueBefore": 420.0,
+          "valueAfter": 320.0,
+          "storedNavigationWidth": 320,
+          "selectionAliasesAfter": 0,
+          "focused": true,
+          "deviceDelta": -125.0
+        },
+        {
+          "requestedPointerDelta": -5,
+          "actualPointerDelta": -5,
+          "edgeDelta": -5,
+          "valueBefore": 320.0,
+          "valueAfter": 315.0,
+          "storedNavigationWidth": 315,
+          "selectionAliasesAfter": 0,
+          "focused": true,
+          "deviceDelta": -6.25
+        },
+        {
+          "requestedPointerDelta": 5,
+          "actualPointerDelta": 5,
+          "edgeDelta": 5,
+          "valueBefore": 315.0,
+          "valueAfter": 320.0,
+          "storedNavigationWidth": 320,
+          "selectionAliasesAfter": 0,
+          "focused": true,
+          "deviceDelta": 6.25
+        }
+      ]
+    },
+    {
+      "label": "nav-100-selected",
+      "zoom": 1.0,
+      "mode": "selected",
+      "selectionTexts": [
+        "Project statu"
+      ],
+      "steps": [
+        {
+          "requestedPointerDelta": 100,
+          "actualPointerDelta": 100,
+          "edgeDelta": 100,
+          "valueBefore": 320.0,
+          "valueAfter": 420.0,
+          "storedNavigationWidth": 420,
+          "selectionAliasesAfter": 0,
+          "focused": true,
+          "deviceDelta": 125.0
+        },
+        {
+          "requestedPointerDelta": -100,
+          "actualPointerDelta": -100,
+          "edgeDelta": -100,
+          "valueBefore": 420.0,
+          "valueAfter": 320.0,
+          "storedNavigationWidth": 320,
+          "selectionAliasesAfter": 0,
+          "focused": true,
+          "deviceDelta": -125.0
+        }
+      ]
+    },
+    {
+      "label": "nav-150-clean",
+      "zoom": 1.5,
+      "mode": "clean",
+      "selectionTexts": [],
+      "steps": [
+        {
+          "requestedPointerDelta": 100,
+          "actualPointerDelta": 100,
+          "edgeDelta": 100,
+          "valueBefore": 320.0,
+          "valueAfter": 387.0,
+          "storedNavigationWidth": 387,
+          "selectionAliasesAfter": 0,
+          "focused": true,
+          "deviceDelta": 125.0
+        },
+        {
+          "requestedPointerDelta": -100,
+          "actualPointerDelta": -100,
+          "edgeDelta": -100,
+          "valueBefore": 387.0,
+          "valueAfter": 320.0,
+          "storedNavigationWidth": 320,
+          "selectionAliasesAfter": 0,
+          "focused": true,
+          "deviceDelta": -125.0
+        },
+        {
+          "requestedPointerDelta": 100,
+          "actualPointerDelta": 100,
+          "edgeDelta": 100,
+          "valueBefore": 320.0,
+          "valueAfter": 387.0,
+          "storedNavigationWidth": 387,
+          "selectionAliasesAfter": 0,
+          "focused": true,
+          "deviceDelta": 125.0
+        },
+        {
+          "requestedPointerDelta": -100,
+          "actualPointerDelta": -100,
+          "edgeDelta": -100,
+          "valueBefore": 387.0,
+          "valueAfter": 320.0,
+          "storedNavigationWidth": 320,
+          "selectionAliasesAfter": 0,
+          "focused": true,
+          "deviceDelta": -125.0
+        },
+        {
+          "requestedPointerDelta": -5,
+          "actualPointerDelta": -4,
+          "edgeDelta": -5,
+          "valueBefore": 320.0,
+          "valueAfter": 317.0,
+          "storedNavigationWidth": 317,
+          "selectionAliasesAfter": 0,
+          "focused": true,
+          "deviceDelta": -6.25
+        },
+        {
+          "requestedPointerDelta": 5,
+          "actualPointerDelta": 5,
+          "edgeDelta": 5,
+          "valueBefore": 317.0,
+          "valueAfter": 320.0,
+          "storedNavigationWidth": 320,
+          "selectionAliasesAfter": 0,
+          "focused": true,
+          "deviceDelta": 6.25
+        }
+      ]
+    },
+    {
+      "label": "nav-150-selected",
+      "zoom": 1.5,
+      "mode": "selected",
+      "selectionTexts": [
+        "Project statu"
+      ],
+      "steps": [
+        {
+          "requestedPointerDelta": 100,
+          "actualPointerDelta": 100,
+          "edgeDelta": 100,
+          "valueBefore": 320.0,
+          "valueAfter": 387.0,
+          "storedNavigationWidth": 387,
+          "selectionAliasesAfter": 0,
+          "focused": true,
+          "deviceDelta": 125.0
+        },
+        {
+          "requestedPointerDelta": -100,
+          "actualPointerDelta": -100,
+          "edgeDelta": -100,
+          "valueBefore": 387.0,
+          "valueAfter": 320.0,
+          "storedNavigationWidth": 320,
+          "selectionAliasesAfter": 0,
+          "focused": true,
+          "deviceDelta": -125.0
+        }
+      ]
+    }
+  ],
+  "historicalStepObservablesMatch": true,
+  "cursorReadbackExceptions": [
+    {
+      "label": "nav-150-clean",
+      "index": 4,
+      "requested": -5,
+      "cursor": -4,
+      "edge": -5,
+      "before": 320.0,
+      "after": 317.0
+    }
+  ],
+  "protocolObservation": {
+    "allAttemptRecordsMatchedSent": true,
+    "integerWireMotionPayloadsIndependentlyDecoded": true,
+    "fractionalRequestedEndpointsNotClaimedAsFractionalWire": true,
+    "buttonPairsForSeparatorLegsVerified": 24
+  },
+  "offlineGuards": {
+    "originalTests": 22,
+    "r1ExtendedTests": 34,
+    "r2ExtendedTests": 36,
+    "r2RegressionRed": {
+      "tests": 2,
+      "assertionFailures": 2,
+      "errors": 0
+    },
+    "r2RegressionGreen": 2,
+    "r2MutantsDiscriminated": 9,
+    "earlyNarrowExceptionMutantSurvivorUncredited": true,
+    "r1LoggingReleaseBlockedAndRejected": true,
+    "noProductRuntimeCodeChanged": true
+  },
+  "embeddedHttp": {
+    "status": 200,
+    "indexSha256": "84d5bb9d4d97bfcd9478c09acf1d278d32602288129e1e6853c0c8b425cd86c8",
+    "copiedIndexMatched": true
+  },
+  "teardown": {
+    "ordinaryCloseExit": 0,
+    "launcherExit": 0,
+    "remainingOwnedProcesses": 0,
+    "remainingOwnedWindows": 0,
+    "ownRulesDisabledReadback": true,
+    "privateIPCIdentityVerifiedAndRemoved": true
+  },
+  "renderEnvironment": {
+    "GDK_BACKEND": "wayland",
+    "WEBKIT_DISABLE_DMABUF_RENDERER": "1",
+    "WEBKIT_DISABLE_COMPOSITING_MODE": "1",
+    "noGpuDeviceGrant": true,
+    "noWebKitSandboxDisableFlag": true
+  },
+  "capabilityBoundary": "Unfiltered host session D-Bus/AT-SPI is an explicit exception; no full host-service/internal WebKit sandbox attestation",
+  "visuallyInspectedOwnedImages": {
+    "a11y-diagnostic-owned-window.png": "5ed37504852869a3095d29bafc48314da42b9d0d3d54dc2599638f306e644df0",
+    "navigation-final-150-owned-window.png": "bfa7bf84d0728b9f7b092562a7bf53dc58f149a4b5beb705241893ef41374a99"
+  },
+  "exclusions": [
+    "No new build from admission/future documentation HEAD",
+    "No historical initialization-method or pixel/full-tree parity",
+    "No keyboard-only focus appearance policy, restart or project-save/roundtrip claim",
+    "No new Properties/navigation-height/diagnostics/menu or boundary-clamping matrix acceptance",
+    "No AppImage/GPU/X11/XWayland/Orca/Firefox/other size/theme/full native acceptance",
+    "No real project/catalogue/bus/VM/release/deployment; wider WP-11/KL-130 remains open"
+  ],
+  "privateEvidenceLocator": "<profile>/evidence/2026-11-03-wp11-current-native-width/"
+}

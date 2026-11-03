@@ -32,7 +32,10 @@ pub fn source_diagnostics(
             [sha256],|r|Ok((r.get(0)?,r.get(1)?,r.get(2)?,r.get(3)?))).optional()?;
         if let Some((path, name, count, sample)) = failure {
             if path.is_empty()
-                || name != "promotion_repair"
+                || !matches!(
+                    name.as_str(),
+                    "promotion_repair" | "repair_color_time_kinds"
+                )
                 || count != 1
                 || sample.as_deref().is_none_or(str::is_empty)
             {
@@ -82,7 +85,10 @@ pub fn source_diagnostics(
         if occurrences == 0
             || (kind == "PromotionRepairError"
                 && (occurrences != 1
-                    || name != "promotion_repair"
+                    || !matches!(
+                        name.as_str(),
+                        "promotion_repair" | "repair_color_time_kinds"
+                    )
                     || xpath.is_empty()
                     || sample.as_deref().is_none_or(str::is_empty)))
         {

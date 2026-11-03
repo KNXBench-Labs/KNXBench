@@ -16,6 +16,7 @@ pub mod catalogue_sources;
 #[allow(dead_code)]
 mod catalogue_schema;
 pub mod cleanup;
+mod color_time_successor;
 pub mod code;
 mod date_kind_backfill;
 pub mod declared_segments;

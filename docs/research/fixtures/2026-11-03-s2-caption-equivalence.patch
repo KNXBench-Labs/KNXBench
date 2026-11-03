@@ -1,0 +1,399 @@
+diff --git i/crates/knx-app/tests/it/system2_validation_preparation/configured_hardware/per_part.rs w/crates/knx-app/tests/it/system2_validation_preparation/configured_hardware/per_part.rs
+index d8e85c851..af8f05f13 100644
+--- i/crates/knx-app/tests/it/system2_validation_preparation/configured_hardware/per_part.rs
++++ w/crates/knx-app/tests/it/system2_validation_preparation/configured_hardware/per_part.rs
+@@ -277,3 +277,394 @@ async fn s2_per_part_large_project_measurement() {
+         );
+     }
+ }
++
++// Temporary S2-05 witness: public catalogue replacement, no execution or settlement worker.
++struct CaptionWitness {
++    _dir: tempfile::TempDir,
++    conn: knx_productdb::Connection,
++    project: knx_core::Project,
++    original: PreparedBundle,
++    pinned_refusal: String,
++    start_refusal: String,
++    parts_refusal: String,
++}
++
++fn caption_members(package: &[u8]) -> std::collections::BTreeMap<String, Vec<u8>> {
++    use std::io::{Cursor, Read};
++    let mut archive = zip::ZipArchive::new(Cursor::new(package)).unwrap();
++    let mut members = std::collections::BTreeMap::new();
++    for index in 0..archive.len() {
++        let mut member = archive.by_index(index).unwrap();
++        let name = member.name().unwrap().into_owned();
++        let mut bytes = Vec::new();
++        member.read_to_end(&mut bytes).unwrap();
++        assert!(members.insert(name, bytes).is_none());
++    }
++    members
++}
++
++fn caption_package(members: &std::collections::BTreeMap<String, Vec<u8>>) -> Vec<u8> {
++    use std::io::{Cursor, Write};
++    let mut writer = zip::ZipWriter::new(Cursor::new(Vec::new()));
++    for (name, bytes) in members {
++        writer
++            .start_file(name, zip::write::SimpleFileOptions::default())
++            .unwrap();
++        writer.write_all(bytes).unwrap();
++    }
++    writer.finish().unwrap().into_inner()
++}
++
++fn caption_winner(conn: &knx_productdb::Connection) -> (String, String, Vec<u8>) {
++    let (sha, name): (String, String) = conn
++        .query_row(
++            "SELECT source_sha256, name FROM application_program WHERE id=?1",
++            [super::super::fixture::PROGRAM],
++            |row| Ok((row.get(0)?, row.get(1)?)),
++        )
++        .unwrap();
++    let bytes = knx_productdb::load_source_file(conn, &sha)
++        .unwrap()
++        .unwrap();
++    assert_eq!(knx_productdb::sha256_hex(&bytes), sha);
++    (sha, name, bytes)
++}
++
++async fn caption_witness(case: &str) -> CaptionWitness {
++    use knx_app::system2_validation_preparation::{
++        describe_project_source_closure, ProjectProductInput, ProjectProductSelector,
++        ProjectValidationProfile,
++    };
++    const MEMBER: &str = "M-0001/Application.xml";
++    const OLD: &str = "Name=\"Synthetic\"";
++    const NEW: &str = "Name=\"Synthetic caption revised\"";
++    let (dir, conn, project, profile_bytes) = inputs();
++    let original = observed(&conn, &project, &profile_bytes).await;
++    original.plan().unwrap();
++    original.preconditions().unwrap();
++    assert_eq!(original.format, 3);
++    assert!(!original.binding.simulated);
++    let frozen_original = serde_json::to_vec(&original).unwrap();
++    let retained = original.project_preparation.as_ref().unwrap();
++    assert_eq!(retained.profile_bytes, profile_bytes);
++    assert_eq!(retained.decoded_project().unwrap(), project);
++    let hardware = original.hardware_preparation.as_ref().unwrap();
++    assert_eq!(
++        hardware.source_preparation_sha256,
++        retained.sha256().unwrap()
++    );
++    assert_eq!(
++        original.binding.project_preparation_sha256,
++        Some(hardware.sha256().unwrap())
++    );
++    admit_current_project_hardware(&conn, &project, DEVICE, &original).unwrap();
++    assert_eq!(
++        current_project_hardware_parts(&conn, &project, DEVICE, &original).unwrap(),
++        ProgrammingParts::ALL
++    );
++    let old_profile = ProjectValidationProfile::from_json(&profile_bytes).unwrap();
++    let (old_package, old_source) = match &retained.product_input {
++        ProjectProductInput::StandalonePackage {
++            source_member,
++            source_bytes,
++            package_bytes,
++            package_sha256,
++        } => {
++            assert_eq!(source_member, MEMBER);
++            assert_eq!(knx_productdb::sha256_hex(package_bytes), *package_sha256);
++            (package_bytes.clone(), source_bytes.clone())
++        }
++        _ => panic!("witness requires the authored fixture's original standalone package"),
++    };
++    let before = caption_winner(&conn);
++    assert_eq!(before.0, old_profile.source_sha256);
++    assert_eq!(before.1, "Synthetic");
++    assert_eq!(before.2, old_source);
++    let before_closure =
++        describe_project_source_closure(&conn, &project, DEVICE, &old_profile.schema_namespace)
++            .unwrap();
++    let old_members = caption_members(&old_package);
++    assert_eq!(old_members[MEMBER], old_source);
++    let text = std::str::from_utf8(&old_source).unwrap();
++    assert_eq!(text.matches(OLD).count(), 1);
++    assert_eq!(text.matches(NEW).count(), 0);
++    assert!(text.contains(&format!(
++        "<ApplicationProgram Id=\"{}\" {OLD}",
++        super::super::fixture::PROGRAM
++    )));
++    let changed_text = text.replacen(OLD, NEW, 1);
++    assert_eq!(changed_text.matches(NEW).count(), 1);
++    assert_eq!(changed_text.matches(OLD).count(), 0);
++    assert!(changed_text.contains(&format!(
++        "<ApplicationProgram Id=\"{}\" {NEW}",
++        super::super::fixture::PROGRAM
++    )));
++    assert_eq!(changed_text.replacen(NEW, OLD, 1), text);
++    let mut changed_members = old_members.clone();
++    changed_members.insert(MEMBER.into(), changed_text.as_bytes().to_vec());
++    let changed_package = caption_package(&changed_members);
++    let actual_members = caption_members(&changed_package);
++    assert_eq!(actual_members, changed_members);
++    assert_eq!(
++        old_members.keys().collect::<Vec<_>>(),
++        actual_members.keys().collect::<Vec<_>>()
++    );
++    let changed_names: Vec<_> = old_members
++        .iter()
++        .filter(|(name, bytes)| actual_members[*name] != **bytes)
++        .map(|(name, _)| name.as_str())
++        .collect();
++    assert_eq!(changed_names, [MEMBER]);
++
++    // Install into a fresh catalogue, then replace the original via its public backup API.
++    // Keep the old package retained as a losing install: old-profile refusal must not be
++    // caused merely by missing retained source/package rows after replacement.
++    let replacement_path = dir.path().join("caption-replacement.sqlite");
++    let replacement = knx_productdb::open_and_migrate(&replacement_path).unwrap();
++    let installed =
++        knx_productdb::install_package(&replacement, "caption-current.knxprod", &changed_package)
++            .unwrap();
++    assert_eq!(
++        installed.sha256,
++        knx_productdb::sha256_hex(&changed_package)
++    );
++    knx_productdb::install_package(
++        &replacement,
++        "caption-original-retained.knxprod",
++        &old_package,
++    )
++    .unwrap();
++    assert_eq!(caption_winner(&replacement).1, "Synthetic caption revised");
++    drop(replacement);
++    drop(conn);
++    let db_path = dir.path().join("products.sqlite");
++    knx_productdb::restore_product_db_backup(&db_path, &replacement_path).unwrap();
++    let conn = knx_productdb::open_and_migrate(&db_path).unwrap();
++    let after = caption_winner(&conn);
++    assert_ne!(before.0, after.0);
++    assert_eq!(after.0, knx_productdb::sha256_hex(changed_text.as_bytes()));
++    assert_eq!(after.1, "Synthetic caption revised");
++    assert_eq!(after.2, changed_text.as_bytes());
++    assert_eq!(
++        knx_productdb::load_source_file(&conn, &before.0)
++            .unwrap()
++            .unwrap(),
++        old_source
++    );
++    let after_closure =
++        describe_project_source_closure(&conn, &project, DEVICE, &old_profile.schema_namespace)
++            .unwrap();
++    assert_eq!(before_closure.program_ref, after_closure.program_ref);
++    assert_eq!(before_closure.program_id, after_closure.program_id);
++    assert_eq!(before_closure.members[0], after_closure.members[0]);
++    assert_eq!(
++        before_closure.members[1].source_path,
++        after_closure.members[1].source_path
++    );
++    assert_eq!(
++        before_closure.members[1].schema_namespace,
++        after_closure.members[1].schema_namespace
++    );
++    assert_eq!(
++        before_closure.members[1].owner.logical_id,
++        after_closure.members[1].owner.logical_id
++    );
++    assert_eq!(
++        before_closure.members[1].owner.kind,
++        after_closure.members[1].owner.kind
++    );
++    assert_eq!(
++        before_closure.members[1].owner.occurrence,
++        after_closure.members[1].owner.occurrence
++    );
++
++    let prepare = |bytes: &[u8]| {
++        prepare_project_hardware_source(
++            &conn,
++            &project,
++            DEVICE,
++            bytes,
++            &hardware.operation,
++            hardware.recovery_track,
++        )
++    };
++    let pinned_refusal = prepare(&profile_bytes)
++        .err()
++        .expect("unchanged original profile must fail its source ownership pin")
++        .to_string();
++    assert!(
++        pinned_refusal.contains("source ownership binding mismatch"),
++        "actual early refusal: {pinned_refusal}"
++    );
++
++    // Explicitly NEW authored current profiles, never rewriting the retained old profile.
++    // A source-only refresh still fails the old package-membership pin.
++    let mut source_only_profile = old_profile.clone();
++    source_only_profile.source_sha256 = after.0.clone();
++    let source_only_bytes = serde_json::to_vec(&source_only_profile).unwrap();
++    let source_only_refusal = prepare(&source_only_bytes)
++        .err()
++        .expect("source-only refresh cannot relabel the old package")
++        .to_string();
++    let old_package_sha = knx_productdb::sha256_hex(&old_package);
++    let current_in_old_package: i64 = conn
++        .query_row(
++            "SELECT count(*) FROM package_member WHERE package_sha256=?1 AND source_sha256=?2",
++            [&old_package_sha, &after.0],
++            |row| row.get(0),
++        )
++        .unwrap();
++    assert_eq!(current_in_old_package, 0);
++    // prepare_project_simulated_candidate resolves this package-member pair before
++    // image building; a stale selector is an earlier lookup refusal, not plan inequality.
++    assert_eq!(source_only_refusal, "Query returned no rows");
++    let mut current_profile = source_only_profile;
++    current_profile.product_input = ProjectProductSelector::StandalonePackage {
++        package_sha256: installed.sha256.clone(),
++    };
++    let current_profile_bytes = serde_json::to_vec(&current_profile).unwrap();
++    let parsed_current = ProjectValidationProfile::from_json(&current_profile_bytes).unwrap();
++    let mut policy_identity_comparison = parsed_current.clone();
++    policy_identity_comparison.source_sha256 = old_profile.source_sha256.clone();
++    policy_identity_comparison.product_input = old_profile.product_input.clone();
++    assert_eq!(
++        policy_identity_comparison, old_profile,
++        "all parsed non-provenance policy and identity fields must remain exact"
++    );
++    let fresh_source = prepare(&current_profile_bytes)
++        .expect("explicit new source+package-pinned profile must fully prepare");
++    let fresh = fresh_source.preview();
++    fresh.plan().unwrap();
++    let fresh_record = fresh.project_preparation.as_ref().unwrap();
++    assert_eq!(fresh_record.source_sha256, after.0);
++    assert_ne!(fresh_record.sha256().unwrap(), retained.sha256().unwrap());
++    assert_eq!(fresh_record.request, retained.request);
++    assert_eq!(fresh_record.coverage, retained.coverage);
++    assert_eq!(
++        fresh_record.configuration_policy,
++        retained.configuration_policy
++    );
++    assert_eq!(fresh_record.project_snapshot, retained.project_snapshot);
++    assert_eq!(
++        fresh_record.project_semantic_sha256,
++        retained.project_semantic_sha256
++    );
++    assert_eq!(fresh_record.device_id, retained.device_id);
++    assert_eq!(fresh_record.device_source_path, retained.device_source_path);
++    assert_eq!(fresh_record.device_source_id, retained.device_source_id);
++    assert_eq!(fresh_record.scope, retained.scope);
++    assert_eq!(fresh_record.revision, retained.revision);
++    assert_eq!(fresh_record.schema_namespace, retained.schema_namespace);
++    assert_eq!(fresh.binding.target, original.binding.target);
++    assert_eq!(fresh.binding.mask, original.binding.mask);
++    assert_eq!(fresh.binding.manufacturer, original.binding.manufacturer);
++    assert_eq!(fresh.binding.hardware, original.binding.hardware);
++    assert_eq!(fresh.binding.application, original.binding.application);
++    assert_eq!(fresh.normalized_plan, original.normalized_plan);
++    let old_plan_bytes = serde_json::to_vec(&original.normalized_plan).unwrap();
++    let fresh_plan_bytes = serde_json::to_vec(&fresh.normalized_plan).unwrap();
++    assert_eq!(
++        old_plan_bytes, fresh_plan_bytes,
++        "not only plan hashes: exact normalized executable bytes"
++    );
++    assert_eq!(fresh_record.plan_sha256, retained.plan_sha256);
++    let start_refusal = admit_current_project_hardware(&conn, &project, DEVICE, &original)
++        .err()
++        .expect("old start must stay refused")
++        .to_string();
++    let parts_refusal = current_project_hardware_parts(&conn, &project, DEVICE, &original)
++        .err()
++        .expect("public helper must refuse all credit")
++        .to_string();
++    assert_eq!(start_refusal, pinned_refusal);
++    assert_eq!(parts_refusal, pinned_refusal);
++    original.plan().unwrap();
++    original.preconditions().unwrap();
++    assert_eq!(
++        serde_json::to_vec(&original).unwrap(),
++        frozen_original,
++        "original admitted evidence stays byte-exact"
++    );
++    let summary = serde_json::json!({
++        "case": case, "originalStartAdmittedBeforeReplacement": true,
++        "unchangedSourceParts": "ALL", "changedArchiveMembers": changed_names,
++        "sourceBefore": before.0, "sourceAfter": after.0,
++        "packageBefore": knx_productdb::sha256_hex(&old_package), "packageAfter": installed.sha256,
++        "sourcePreparationBefore": retained.sha256().unwrap(), "sourcePreparationAfter": fresh_record.sha256().unwrap(),
++        "planBefore": retained.plan_sha256, "planAfter": fresh_record.plan_sha256,
++        "normalizedPlanBytesEqual": true, "normalizedPlanByteLength": old_plan_bytes.len(),
++        "normalizedPlanSteps": original.normalized_plan.steps.len(),
++        "parsedNonProvenanceProfileExact": true, "requestCoverageAndProjectExact": true,
++        "pinnedOriginalProfilePreparation": {"admitted": false, "refusal": pinned_refusal},
++        "sourceOnlyNewProfilePreparation": {"admitted": false, "refusal": source_only_refusal},
++        "explicitNewCurrentProfilePreparation": {"admitted": true, "refreshedPins": ["source_sha256", "product_input.package_sha256"]},
++        "oldStartRefusal": start_refusal, "currentPartsRefusal": parts_refusal,
++        "originalBundleUnchangedAndValid": true,
++        "downloadExecuted": false, "workerSettlementExecuted": false
++    });
++    println!(
++        "caption-witness {}",
++        serde_json::to_string(&summary).unwrap()
++    );
++    if let Some(root) = std::env::var_os("KNXBENCH_CAPTION_WITNESS_DIR") {
++        let root = std::path::PathBuf::from(root).join(case);
++        std::fs::create_dir_all(&root).unwrap();
++        for (name, bytes) in [
++            ("original-bundle.json", frozen_original),
++            ("original-profile.json", profile_bytes),
++            ("source-only-new-profile.json", source_only_bytes),
++            ("explicit-current-profile.json", current_profile_bytes),
++            (
++                "fresh-source-preview.json",
++                serde_json::to_vec(fresh).unwrap(),
++            ),
++            ("original-plan.json", old_plan_bytes),
++            ("current-plan.json", fresh_plan_bytes),
++            ("original-source.xml", old_source),
++            ("current-source.xml", after.2),
++            ("original.knxprod", old_package),
++            ("current.knxprod", changed_package),
++            (
++                "observations.json",
++                serde_json::to_vec_pretty(&summary).unwrap(),
++            ),
++        ] {
++            std::fs::write(root.join(name), bytes).unwrap();
++        }
++    }
++    CaptionWitness {
++        _dir: dir,
++        conn,
++        project,
++        original,
++        pinned_refusal,
++        start_refusal,
++        parts_refusal,
++    }
++}
++
++#[tokio::test]
++async fn s2_caption_original_pinned_profile_refuses_before_plan_comparison() {
++    let witness = caption_witness("original-pinned-profile").await;
++    assert_eq!(witness.start_refusal, witness.pinned_refusal);
++    assert_eq!(witness.parts_refusal, witness.pinned_refusal);
++}
++
++#[tokio::test]
++async fn s2_caption_explicit_current_profile_equal_plan_still_refuses_original_credit() {
++    let witness = caption_witness("explicit-current-profile").await;
++    let result =
++        current_project_hardware_parts(&witness.conn, &witness.project, DEVICE, &witness.original);
++    assert_eq!(result.unwrap_err().to_string(), witness.pinned_refusal);
++}
++
++#[tokio::test]
++#[ignore = "desired settlement feature RED; new current profile, NOT unchanged-profile admission"]
++async fn s2_caption_desired_credit_after_explicit_current_profile_equivalence_is_missing() {
++    let witness = caption_witness("desired-credit-explicit-current-profile").await;
++    // All preceding premises hold, INCLUDING old-profile early refusal. This asks for
++    // a missing settlement-only contract, not a defect in current strict start policy.
++    let result =
++        current_project_hardware_parts(&witness.conn, &witness.project, DEVICE, &witness.original);
++    assert_eq!(result.ok(), Some(ProgrammingParts::ALL), "MISSING FEATURE ONLY: explicit new current-profile equal-plan proof has no settlement admission; old pinned profile refuses before hash/plan comparison");
++}

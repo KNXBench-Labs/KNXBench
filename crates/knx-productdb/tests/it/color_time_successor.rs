@@ -233,8 +233,12 @@ fn unproven_sources_refuse_atomically_with_named_diagnostic_while_independent_so
         conn.pragma_update(None, "foreign_keys", false).unwrap();
         match fault {
             "hash" => {
-                let changed = bad.replace("3600", "3601");
+                // A losing, non-normalized lexeme changes without affecting
+                // authoritative rows or the v15-bad tuple. Without the hash
+                // guard, tuple proof would admit the forbidden repair.
+                let changed = bad.replace("Space=\"RGB\"", "Space=\"HSV\"");
                 assert_ne!(changed, bad);
+                assert_eq!(changed.len(), bad.len());
                 conn.execute(
                     "UPDATE source_file SET bytes=?1 WHERE sha256=?2",
                     rusqlite::params![changed.as_bytes(), old],
@@ -395,6 +399,41 @@ fn native_storage_failure_is_fatal_and_rolls_back_migration_version_and_rows() {
         .query_row("PRAGMA user_version", [], |r| r.get(0))
         .unwrap();
     assert_eq!(version, 31);
+}
+
+#[test]
+fn first_color_time_remain_unchanged_despite_losing_same_blob_unknown_types() {
+    let first = program(
+        "A",
+        r#"<ParameterType Id="C" Name="good color"><TypeColor/></ParameterType><ParameterType Id="T" Name="good time"><TypeTime SizeInBit="32" minInclusive="2" maxInclusive="7200"/></ParameterType>"#,
+    );
+    let second = program(
+        "A",
+        r#"<ParameterType Id="C"><TypeHologram/></ParameterType><ParameterType Id="T"><TypeDate/></ParameterType>"#,
+    );
+    let xml = format!(
+        r#"<KNX xmlns="http://knx.org/xml/project/14"><ManufacturerData><Manufacturer RefId="M-00FA"><ApplicationPrograms>{first}{second}</ApplicationPrograms></Manufacturer></ManufacturerData></KNX>"#
+    );
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("products.sqlite");
+    let conn = knx_productdb::open_and_migrate(&path).unwrap();
+    knx_productdb::install_package(&conn, "fictional.knxprod", &package(&xml)).unwrap();
+    let expected = rows(&conn);
+    let preserved = untouched(&conn);
+    let unknown = query(&conn, "SELECT * FROM ingest_unknown ORDER BY id");
+    conn.execute_batch("PRAGMA user_version=31").unwrap();
+    drop(conn);
+    let conn = knx_productdb::open_and_migrate(&path).unwrap();
+    assert_eq!(rows(&conn), expected);
+    assert_eq!(untouched(&conn), preserved);
+    assert_eq!(
+        query(&conn, "SELECT * FROM ingest_unknown ORDER BY id"),
+        unknown
+    );
+    let version: i64 = conn
+        .query_row("PRAGMA user_version", [], |r| r.get(0))
+        .unwrap();
+    assert_eq!(version, 32);
 }
 
 #[test]

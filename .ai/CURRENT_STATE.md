@@ -1,10 +1,10 @@
 # Restart snapshot
 
-## WP-08 Color/Time successor repair (IN PROGRESS; owner next-tasks WebUI; observed 2026-11-03 09:32)
+## WP-08 Color/Time successor repair (WAITING; owner next-tasks WebUI; observed 2026-11-03 09:49)
 - Witness94d515855 remains immutable; admitted source claim2882e6b3d. Owned branch/tree `fix/wp08-color-time-successor-20261103`/`knxbench-wp08-color-time-successor-20261103`; parent owns acceptance/integration/publication.
 - Candidate schema32 repairs only authenticated, exact v15 loser-promotion tuples in four type columns; released migrations, original source/report/counter/unknown history stay unchanged. Narrow refusal reader admission uses the existing PromotionRepairError kind.
-- Original-source semantic RED retained; focused6 GREEN plus owning lib800 and integration1035/32ignored GREEN. No broad gates active; raw source-bound iterations retained at `<profile-scratch>/wp08-color-time-successor-20261103/invocations/`.
-- NEXT retain final-candidate v14/v31/fresh32/reopen comparisons, compact contract/docs and focused lint/header checks, then hand off candidate commit for independent review/mutations/selected gates. No corpus/bus/VM/native/network/release/deployment authority.
+- Original semantic RED retained; focused7 GREEN, owning lib800/integration1036(32ignored)/examples26/doctests2 GREEN. Final retained real14/31 copies and exact fresh32/reopen comparisons passed, all45 unrelated tables/history exact and originals unchanged; no adapter remains.
+- NEXT parent independent review/mutations/selected gates/integration/publication. Candidate contract/docs and focused fmt/clippy/headers pass; raw source-bound runs, HANDOFF.md/result.json at `<profile-scratch>/wp08-color-time-successor-20261103/`. No active lease or corpus/bus/VM/native/network/release authority.
 
 ## WP-11 native splitter reference (STANDING; observed 2026-11-03)
 - Latest Navigation-width subset:6 cells/24 pointer legs/3 preselections,48 native trees/24 settings/16 verified seat restores at80/100/150; all historical width-step observables match, including only the named150%-short cursor-4/edge-5 exception.

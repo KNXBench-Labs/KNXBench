@@ -12,6 +12,17 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## WP-08 Color/Time successor (3 November 2026, candidate only)
+
+The bounded v32 candidate repairs authenticated, exact released-v15 loser
+promotions in four existing type columns, including wrong non-NULL values.
+Original install history/counters/unknown evidence and released migrations are
+not rewritten. Original-source semantic RED, seven registered focused regressions
+and owning ProductDB lib/default integration checks are candidate evidence.
+Independent review, mutation calibration, selected gates, integration and
+publication are not yet accepted. No codec or broader WP-08 closure follows.
+[Contract and retained-artifact boundaries](contracts/color-time-successor-repair.md).
+
 ## Proportionate gate selection (3 November 2026, source)
 
 Main-first `703ec2904` selects a representative production dialogs suite for

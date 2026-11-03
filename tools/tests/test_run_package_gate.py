@@ -1,7 +1,8 @@
-"""Package gate runner: refusals before any stage runs."""
+"""Check gate admission, stage order, diagnostic proof and environment isolation."""
 from __future__ import annotations
 
 from contextlib import redirect_stdout
+from contextlib import contextmanager
 import io
 import os
 from pathlib import Path
@@ -9,16 +10,19 @@ import subprocess
 import tempfile
 import tomllib
 import unittest
+from unittest.mock import patch
 
 from tools import gate_scope
 from tools import run_web_gate
+from tools import run_package_gate as runner
 from tools.run_package_gate import ISOLATED_STAGES, StageEnvironments, check, preflight, stage_plan
 from tools import user_data_guard
 from tools.user_data_guard import (CARGO_KEEPS_EXPORTED_HOMES, USER_HOMES, Snapshot, isolated_environment,
                                    record_user_data, touched_user_data, user_data_snapshot, user_knx_dirs)
 
 # Independent of the production set: dropping a stage from it must fail a test.
-REQUIRED_ISOLATED = ('tool-tests', 'rust-tests', 'bindings', 'corpus', 'website-tests', 'story-tests')
+REQUIRED_ISOLATED = ('tool-tests', 'rust-tests', 'diagnostic-sections-tests', 'bindings',
+                     'corpus', 'website-tests', 'story-tests')
 
 
 def entries(dirs, home=None):
@@ -65,6 +69,15 @@ class Preflight(unittest.TestCase):
                          ['fmt', 'web-gate', 'clean-desktop', 'clippy', 'rust-tests', 'bindings',
                           'bindings-diff', 'corpus', 'website-tests', 'story-tests'])
 
+    def test_diagnostic_data_has_an_explicit_narrow_stage_but_full_stays_full(self):
+        result = gate_scope.Plan(changed=['apps/knx-server/src/diagnostic_bundle_sections.rs'],
+                                 diagnostic_sections=True)
+        stages = stage_plan(result, full=False)
+        self.assertIn('diagnostic-sections-tests', stages)
+        self.assertNotIn('rust-tests', stages)
+        self.assertNotIn('corpus', stages)
+        self.assertNotIn('diagnostic-sections-tests', stage_plan(result, full=True))
+
 
 class RecordingRun:
     """Stands in for MeasuredRun: keeps the environment each step was given."""
@@ -77,6 +90,136 @@ class RecordingRun:
         self.envs[name] = env
         self.commands[name] = command
         return {'exit': 0, 'wallSeconds': 0.0, 'proofValid': True}
+
+
+class DiagnosticProof(unittest.TestCase):
+    def setUp(self):
+        directory = tempfile.TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        self.root = Path(directory.name)
+        self.log = self.root / 'diagnostic.log'
+
+    def test_inventory_requires_nonzero_expected_prefix_and_summary_agreement(self):
+        prefix = 'diagnostic_bundle_routes::sections::tests::'
+        text = f'test {prefix}privacy ... ok\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 filtered out\n'
+        self.log.write_text(text)
+        proof = runner.diagnostic_counts(self.log)
+        self.assertEqual(proof['tests'], [prefix + 'privacy'])
+        self.assertEqual(proof['passed'], 1)
+        for value in ('', 'test result: ok. 0 passed; 0 failed; 0 ignored; 0 filtered out\n',
+                      f'test {prefix}privacy ... ignored\ntest result: ok. 0 passed; 0 failed; 1 ignored\n',
+                      text.replace(prefix, 'unrelated::'), text.replace('1 passed', '2 passed'),
+                      text.replace('0 failed', '1 failed'), text + text):
+            with self.subTest(value=value):
+                self.log.write_text(value)
+                with self.assertRaises(ValueError):
+                    runner.diagnostic_counts(self.log)
+
+    def test_narrow_stage_uses_lease_exact_filter_scratch_scrubbing_and_receipt(self):
+        self._assert_narrow_orchestration()
+
+    def test_narrow_mixed_independent_rust_stages_finish_in_planned_order(self):
+        self._assert_narrow_orchestration(["xtask"])
+
+    def _assert_narrow_orchestration(self, rust_packages=()):
+        git(self.root, 'init', '-q')
+        (self.root / 'README.md').write_text('# fixture')
+        (self.root / '.gitignore').write_text('private-output\n')
+        git(self.root, 'add', '.')
+        git(self.root, 'commit', '-qm', 'base')
+        result = gate_scope.Plan(changed=['apps/knx-server/src/diagnostic_bundle_sections.rs'],
+                                 diagnostic_sections=True, rust_packages=list(rust_packages),
+                                 corpus_packages=list(rust_packages))
+        events = []
+        instances = []
+        output = self.root / 'private-output'
+
+        class FakeRun(runner.MeasuredRun):
+            # Commands are simulated; receipt completion uses the real finalizer.
+            def __init__(self, path, stages):
+                super().__init__(path, stages)
+                instances.append(self)
+
+            def step(self, name, command, cwd, env, verify):
+                evidence = None
+                if name == 'diagnostic-sections-tests':
+                    self.command, self.env, self.cwd = command, env, cwd
+                    self.in_lease = events[-1] == 'lease-enter'
+                    (output / (name + '.log')).write_text(
+                        'test diagnostic_bundle_routes::sections::tests::privacy ... ok\n'
+                        'test result: ok. 1 passed; 0 failed; 0 ignored; 0 filtered out\n')
+                    evidence = verify()
+                stage = {'exit': 0, 'proofValid': True, 'wallSeconds': 0.0, 'evidence': evidence}
+                self.receipt['stages'].append({'name': name, 'command': command, **stage})
+                return stage
+
+        real_subprocess_run = subprocess.run
+
+        def subprocess_run(command, *args, **kwargs):
+            if command[:2] == ["python3", "tools/run_corpus_tests.py"] and "--list" in command:
+                return subprocess.CompletedProcess(command, 0, "0 corpus tests\n", "")
+            return real_subprocess_run(command, *args, **kwargs)
+
+        @contextmanager
+        def lease(*args):
+            events.append('lease-enter')
+            yield
+            events.append('lease-exit')
+
+        with patch.object(runner.gate_scope, 'changed_paths', return_value=result.changed), \
+             patch.object(runner.gate_scope, 'plan', return_value=result) as planner, \
+             patch.object(runner, 'preflight', return_value=[]), \
+             patch.object(runner, 'MeasuredRun', FakeRun), \
+             patch.object(runner, 'workspace_lease', lease), \
+             patch.object(runner.subprocess, 'run', side_effect=subprocess_run), \
+             patch.object(runner, 'source_fingerprint', return_value='frozen'), \
+             patch.object(runner, 'user_knx_dirs', return_value=[]), \
+             patch.dict(os.environ, {'KNX_FORBIDDEN_HARDWARE': 'never'}), \
+             redirect_stdout(io.StringIO()):
+            exit_code = runner.main(['--root', str(self.root), '--base', 'actual-base', '--output', str(output)])
+        self.assertEqual(exit_code, 0)
+        planner.assert_called_once_with(self.root, result.changed, comparison_base='actual-base')
+        run = instances[0]
+        self.assertEqual(run.command, ['cargo', *CARGO_KEEPS_EXPORTED_HOMES, 'test', '--offline', '--locked',
+                                      '-p', 'knx-server', '--lib', 'diagnostic_bundle_routes::sections::tests::'])
+        self.assertTrue(run.in_lease)
+        self.assertEqual(events, ['lease-enter', 'lease-exit'])
+        self.assertFalse(any(key.startswith('KNX_') for key in run.env))
+        for variable, _ in USER_HOMES:
+            self.assertTrue(Path(run.env[variable]).is_relative_to(output / 'scratch-homes'))
+        self.assertEqual(run.cwd, self.root)
+        stage = next(s for s in run.receipt['stages'] if s['name'] == 'diagnostic-sections-tests')
+        self.assertEqual((stage['exit'], stage['evidence']['passed']), (0, 1))
+        self.assertTrue(run.receipt['plan']['diagnostic_sections'])
+        self.assertTrue(run.receipt['success'])
+        self.assertTrue(run.receipt['complete'])
+        self.assertEqual([stage['name'] for stage in run.receipt['stages']], run.expected)
+
+    def test_real_python_child_exit_and_zero_inventory_fail_proof(self):
+        good = ('test diagnostic_bundle_routes::sections::tests::privacy ... ok\n'
+                'test result: ok. 1 passed; 0 failed; 0 ignored; 0 filtered out\n')
+        zero = 'test result: ok. 0 passed; 0 failed; 0 ignored; 0 filtered out\n'
+        for index, (text, exit_code, accepted) in enumerate(((good, 0, True), (zero, 0, False), (good, 7, False))):
+            with self.subTest(exit=exit_code, accepted=accepted):
+                run = runner.MeasuredRun(self.root / str(index), ['diagnostic-sections-tests'])
+                env = {k: v for k, v in os.environ.items() if not k.startswith('KNX_')}
+                envs = StageEnvironments(env, isolated_environment(env, self.root / ('homes-' + str(index))))
+                command = ['python3', '-c', f'print({text!r}); raise SystemExit({exit_code})']
+                def execute():
+                    with redirect_stdout(io.StringIO()):
+                        return check(run, 'diagnostic-sections-tests', command, self.root, envs,
+                                     lambda: runner.diagnostic_counts(run.output / 'diagnostic-sections-tests.log'))
+                if accepted:
+                    self.assertEqual(execute()['evidence']['passed'], 1)
+                else:
+                    with self.assertRaises(ValueError):
+                        execute()
+                self.assertEqual(run.receipt['stages'][0]['exit'], exit_code)
+                self.assertEqual(run.finish('frozen', 'frozen'), accepted)
+
+    def test_broad_server_selection_prevents_redundant_targeted_stage(self):
+        result = gate_scope.Plan(diagnostic_sections=True, rust_packages=['knx-server'])
+        self.assertNotIn('diagnostic-sections-tests', stage_plan(result, full=False))
 
 
 class UserDataIsolation(unittest.TestCase):
@@ -107,7 +250,7 @@ class UserDataIsolation(unittest.TestCase):
         envs = StageEnvironments(self.plain, isolated_environment(self.plain, self.root / 'homes'))
         run = RecordingRun()
         with redirect_stdout(io.StringIO()):
-            for stage in ('tool-tests', 'rust-tests', 'bindings', 'corpus', 'website-tests', 'story-tests',
+            for stage in ('tool-tests', 'rust-tests', 'diagnostic-sections-tests', 'bindings', 'corpus', 'website-tests', 'story-tests',
                           'web-gate', 'fmt', 'clippy', 'diff-check'):
                 check(run, stage, ['true'], self.root, envs)
             check(run, 'bindings', ['true'], self.root, envs, extra={'TS_RS_EXPORT_DIR': 'out'})

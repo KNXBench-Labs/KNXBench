@@ -35,13 +35,14 @@ current install keeps the first declaration authoritative. The unique-program
 control and an additional reopen are recorded. This closes the authentic
 pre-v15 reproduction prerequisite only, not the defect's acceptance.
 
-**Bounded successor candidate (3 November 2026):** the new v32 migration
+**Bounded successor delivered on main (3 November 2026):** the new v32 migration
 repairs source-authenticated, exact v15-bad Color/Time tuples back to the
 first declaration's `Other`/`Date`, including NULL Time fields. It does not
 rewrite original history or released migrations. Registered semantic RED/GREEN,
-focused ProductDB suites and retained real-v14/v31/fresh/reopen copies are
-candidate evidence; independent review, mutation checks, selected gates and
-integration/publication remain with the parent. See the
+focused ProductDB suites and corrected-source real-v14/v31/fresh/reopen copies
+were accepted after independent review, ten semantic mutant kills and complete
+branch/main-first 14-stage gates. Published as `5c405bfde`; see the
+[acceptance record](../status/2026-11-03-wp08-color-time-successor.md) and
 [repair contract](../contracts/color-time-successor-repair.md).
 Date/native/image and Colour/Picture codec evidence remains unchanged.
 

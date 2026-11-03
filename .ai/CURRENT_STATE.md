@@ -1,10 +1,10 @@
 # Restart snapshot
 
-## WP-08 Color/Time successor repair (CLAIMED; owner next-tasks WebUI; observed 2026-11-03)
-- Prerequisite witness94d515855 published/readback, branch+integrated docs10/10 complete/frozen, checked user data untouched; independent APPROVE/F1closure and original DBs/binaries retained under `<profile>/evidence/2026-11-03-wp08-authentic-color-time-upgrade/`. Two witness trees retired, no product repair yet.
-- Scope: new source-authenticated data-only migration for demonstrated old-v15 loser promotions, including contaminated non-NULL rows; existing reports/counters/unknown evidence and released migrations stay unchanged except named refusal diagnostics.
-- Reserve next ProductDB schema slot (current31), `knx-productdb` repair/migration/tests and necessary version consumers/docs. Branch/tree `fix/wp08-color-time-successor-20261103`/`knxbench-wp08-color-time-successor-20261103`; no source edits before this claim is published.
-- NEXT TDD then authentic retained v14/v31 upgrade/fresh/reopen controls, independent review and selected gates. No bus/VM/native/release/deployment authority; private corpus only through maintained isolated read-only gates. Other tracks preserved.
+## WP-08 Color/Time successor repair (ACTIVE; owner next-tasks WebUI; observed 2026-11-03)
+- Witness94d515855 remains immutable; admitted source claim2882e6b3d. Owned branch/tree `fix/wp08-color-time-successor-20261103`/`knxbench-wp08-color-time-successor-20261103`; parent owns acceptance/integration/publication.
+- Candidate schema32 repairs only authenticated, exact v15 loser-promotion tuples in four type columns; released migrations and original history stay unchanged. Initial review6/6 mutants detected, but BLOCK F1 global-orphan candidate leak; F2 comment corrected.
+- F1 source-local declaration-index admission now keeps attributable orphan refusal while preserving unrelated/unmeasured/ambiguous sources. Original-product10-test RED8/2 ->corrected10/10 GREEN; new tests include native diagnostic INSERT rollback. Earlier real14/31/fresh32 artifacts retain their own source identity, not promoted to corrected code.
+- NEXT finding-specific review/mutations, corrected artifact/package refresh, selected gates/integration/publication. Evidence `<profile-scratch>/wp08-color-time-successor-20261103/`; no broad gate yet, no bus/VM/native/release authority. Other tracks preserved.
 
 ## WP-11 native splitter reference (STANDING; observed 2026-11-03)
 - Latest Navigation-width subset:6 cells/24 pointer legs/3 preselections,48 native trees/24 settings/16 verified seat restores at80/100/150; all historical width-step observables match, including only the named150%-short cursor-4/edge-5 exception.

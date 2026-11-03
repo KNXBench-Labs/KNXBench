@@ -33,8 +33,16 @@ then opens its database through the current v31 chain. Two winner type rows
 incorrectly inherit the losing declaration's Color/Time metadata; a fresh
 current install keeps the first declaration authoritative. The unique-program
 control and an additional reopen are recorded. This closes the authentic
-pre-v15 reproduction prerequisite only, not the defect. A successor repair
-for already contaminated databases still needs a separately bounded design;
+pre-v15 reproduction prerequisite only, not the defect's acceptance.
+
+**Bounded successor candidate (3 November 2026):** the new v32 migration
+repairs source-authenticated, exact v15-bad Color/Time tuples back to the
+first declaration's `Other`/`Date`, including NULL Time fields. It does not
+rewrite original history or released migrations. Registered semantic RED/GREEN,
+focused ProductDB suites and retained real-v14/v31/fresh/reopen copies are
+candidate evidence; independent review, mutation checks, selected gates and
+integration/publication remain with the parent. See the
+[repair contract](../contracts/color-time-successor-repair.md).
 Date/native/image and Colour/Picture codec evidence remains unchanged.
 
 ## First deliverable

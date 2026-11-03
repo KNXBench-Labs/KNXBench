@@ -17,7 +17,22 @@ source changed. The released Color/Time pass was not rewritten.
 accompany this record. Complete original databases, source manifests, the
 scratch-only harness, executed binaries, reports and raw invocation receipts
 are retained privately under
-`<profile>/evidence/2026-11-03-wp08-authentic-color-time-upgrade/` after closeout.
+`<profile>/evidence/2026-11-03-wp08-authentic-color-time-upgrade/`.
+
+## Evidence publication
+
+Independent review approved the bounded runtime evidence. Its only public
+wording correction was checked against both original build receipts: the
+builds used one task-local target directory sequentially, not separate targets.
+No product invocation was repeated for that correction.
+
+The documentation feature `f7fb7732e` was published main-first as `94d515855`.
+Both selected ten-stage documentation gates completed successfully with frozen
+inputs and no touched or unchecked user data. Parent readback matched the
+integration, tracking and live main refs. These are documentation-delivery
+checks, not additional product regression or repair acceptance. The original
+and independent-review artifacts are retained at the evidence locator above;
+the two scratch witness worktrees have been retired without product edits.
 
 ## Actual producer and consumer
 

@@ -39,6 +39,10 @@ Contract: [system2-download-result](../contracts/system2-download-result.md).
   is accepted main-first as `99f7e65dd`: focused mounted execution, independent
   review with four compiled wrong-variant assertion failures and both complete
   selected 14-stage gates. This closes that bounded failure cross, not all E15.
+  The [E13 malformed-current-parameter follow-up](../status/2026-11-04-s2-current-parameter-refusal.md)
+  has focused mounted proof for both selector families/namespaces and prior
+  pending/marked states plus independent terminal-refusal and address-fallback
+  calibration. Package acceptance remains pending, not whole-E13 closure.
 - Field verification by the reporter is not requested; no hardware retry is needed
   for the software change.
 

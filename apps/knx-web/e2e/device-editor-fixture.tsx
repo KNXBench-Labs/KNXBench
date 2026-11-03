@@ -1,7 +1,7 @@
 /** Renders the real Inspector against static project data; no KNX server or device is involved. */
 import { createRoot } from "react-dom/client";
 import { useState, type ReactNode } from "react";
-import Inspector from "../src/Inspector";
+import { Inspector } from "../src/deviceComparisons.fixture";
 import { ReportProblemProvider } from "../src/ReportProblemEntry";
 import type { ReportProblemRequest } from "../src/reportProblem";
 import type { ProjectTree } from "../src/bindings/ProjectTree";

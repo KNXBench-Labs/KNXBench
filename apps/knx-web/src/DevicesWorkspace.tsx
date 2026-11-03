@@ -15,8 +15,8 @@ import { fellBack, LanguageFallbackBadge } from "./languageFallback";
 import { createProgrammingChips } from "./ProgrammingChips";
 import { refreshSystem2Status, useSystem2Status } from "./system2Status";
 import { matchSystem2Result } from "./system2Result";
-import { useDeviceComparisons } from "./useDeviceComparisons";
-import DeviceComparisonDialog, { ComparisonTag } from "./DeviceComparisonDialog";
+import type { DeviceComparisons } from "./useDeviceComparisons";
+import { ComparisonTag } from "./DeviceComparisonDialog";
 import "./deviceComparisons.css";
 
 const DEVICES_COLUMNS = [
@@ -55,14 +55,13 @@ const COMPACT_LABELS: Partial<Record<DeviceSortColumn, MessageKey>> = {
 };
 const CHECKBOX_CLICK = { shiftKey: false, ctrlKey: true, metaKey: false, preventDefault: () => {} };
 
-export default function DevicesWorkspace({ tree, active, selection, multiSelection, onItemClick, onCatalogue, onTreeUpdate }: {
+export default function DevicesWorkspace({ tree, active, selection, multiSelection, onItemClick, onCatalogue, comparisons }: {
   tree: ProjectTree; active: boolean; selection: Selection | null;
   multiSelection: MultiSelection | null; onItemClick: ItemClickHandler;
   onCatalogue: (catalogue: DeviceCatalog) => void;
-  onTreeUpdate?: (tree: ProjectTree) => void | Promise<void>;
+  comparisons: DeviceComparisons;
 }) {
   const t = useTranslate();
-  const comparisons = useDeviceComparisons(tree);
   const [language] = useUiLanguage();
   const programmingChips = useMemo(() => createProgrammingChips(t, language), [t, language]);
   const [productLanguage] = useProductLanguage();
@@ -175,7 +174,6 @@ export default function DevicesWorkspace({ tree, active, selection, multiSelecti
         <td className="device-comparison-actions"><ComparisonTag entry={comparisons.entry(row.id)} onClick={() => comparisons.inspect(row)} />
           <button type="button" disabled={comparisons.running} onClick={() => comparisons.open([row])}>{t("compare.one")}</button></td>
       </tr>)}</tbody></ResizableTable>
-    <DeviceComparisonDialog controller={comparisons} onTreeUpdate={onTreeUpdate} snapshotRevision={tree.snapshot_revision} />
     {rows.length === 0 && <p role="status">{t(total === 0 ? "workbench.noDevices" : "devices.noMatches")}</p>}
   </section>;
 }

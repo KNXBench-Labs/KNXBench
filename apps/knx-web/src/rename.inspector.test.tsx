@@ -3,7 +3,7 @@
 import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { expect, it, vi } from "vitest";
-import Inspector from "./Inspector";
+import { Inspector } from "./deviceComparisons.fixture";
 import type { ProjectTree } from "./bindings/ProjectTree";
 vi.mock("./api", () => ({ errorMessage: (e: unknown) => String(e), renameEntity: vi.fn() }));
 it("offers an editable Name field for a second-installation group address", async () => {

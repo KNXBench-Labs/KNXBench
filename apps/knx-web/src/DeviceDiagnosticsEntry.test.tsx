@@ -17,7 +17,7 @@ vi.mock("./features/rtf/client", async (importOriginal) => ({
   ...(await importOriginal<typeof import("./features/rtf/client")>()),
   createInstructionClient: () => ({ read: vi.fn(() => new Promise(() => {})), preview: vi.fn(), apply: vi.fn(), cancel: vi.fn().mockResolvedValue(undefined) }),
 }));
-import { DeviceWorkspace } from "./Inspector";
+import { DeviceWorkspace } from "./deviceComparisons.fixture";
 import DeviceDiagnosticsEntry from "./DeviceDiagnosticsEntry";
 import { ReportProblemProvider } from "./ReportProblemEntry";
 import type { ReportProblemRequest } from "./reportProblem";

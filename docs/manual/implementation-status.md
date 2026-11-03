@@ -2,6 +2,15 @@
 
 # Implementation status
 
+## Main-only after Alpha 19: Compare from the device editor
+
+**Compare** beside **Download to device…** opens the existing gateway-confirmed
+read-only review for the exact edited device. It shares progress, cancellation
+and session results with the Devices table; changing views does not create a
+second comparison queue. Opening the review alone contacts no device. Existing
+family/read/adoption limits remain unchanged.
+[Acceptance and boundaries](../status/2026-11-03-wp27-device-editor-compare.md).
+
 ## Main-only after Alpha 19: group-address sub-range navigation
 
 Columns and Atlas no longer lose a populated sub-range when local navigation

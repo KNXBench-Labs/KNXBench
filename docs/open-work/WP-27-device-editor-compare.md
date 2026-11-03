@@ -1,10 +1,10 @@
 # WP-27 — Compare button in the device editor
 
-Owner request and bounded implementation admission: 2 November 2026. The
-implementation candidate has focused verification; independent review, browser
-acceptance, integration and publication remain pending with the delivery owner.
+Delivered on main, 3 November 2026: source `080f2723d`. Independent review and
+source-bound software acceptance are complete; this does not add hardware or
+native-shell acceptance. [Measured coverage and boundaries](../status/2026-11-03-wp27-device-editor-compare.md).
 
-## Implemented candidate scope
+## Delivered scope
 
 Next to *Download to device…* in the device editor heading
 ([`Inspector.tsx`](../../apps/knx-web/src/Inspector.tsx)), *Compare* opens the
@@ -30,29 +30,44 @@ existing conservative *Outdated* semantics. The existing separately confirmed
 device → project adoption reaches the root tree; download handoff and sibling
 editor actions are not replaced.
 
-## Focused evidence
+## Focused evidence and final acceptance
 
-Synthetic, offline fixtures only; no real KNX access. Before production edits,
-the owning hook regression failed because same-tick confirmation made two
-calls, and the actual mounted App's EN/DE editor cases failed at the missing
-Compare button. A following scope-replacement regression, after only the
-same-tick guard fix, failed because a pending read lost exclusivity before its
-response settled. These are behavioral failures, not missing-API or setup
-failures. A separate shared-lease timeout executed no npm/test stage and is not
-RED evidence.
+Synthetic, offline fixtures only; no real KNX access. Retained semantic REDs
+show duplicate same-tick calls, premature pending-owner release after scope
+replacement, and the missing EN/DE editor button. They are not compiler/setup
+failures. A shared-lease timeout executed no npm/test stage and is not RED.
 
-The final focused run passed **485 tests in 12 files**, including eight hook
-cases, five mounted App comparison cases and all tests in their existing App,
-editor, table, adoption and minimally adapted consumer files. Coverage includes
-invalid/empty gateways, an exact frozen editor target despite table filter and
-selection, shared running/Stop/results, retained modal/draft/focus, late
-resolve/reject across project/null transitions, revision invalidation and
-separately confirmed adoption followed by Undo. The owning application and
-`tsconfig.comparison-fixtures.json` typechecks passed; the latter explicitly
-compiled the extended intercepted comparison browser spec.
+The implementation's focused run passed **485 tests in 12 files**, including
+eight hook and five mounted App comparison cases. It covers invalid/empty
+gateways, the exact frozen editor target despite table filter/selection, shared
+running/Stop/results, retained modal/draft/focus, late resolve/reject across
+project/null transitions, revision invalidation and separately confirmed adoption
+followed by Undo. Three standalone browser consumers were adapted explicitly;
+all 27 application/fixture TypeScript configurations then passed.
 
-Browser scenarios were authored for EN/DE at 1440/400 pixels and editor adoption,
-but **were not executed** in this implementation track. Chromium, visual review,
-production-devices/default browser acceptance, build/package/full gates and
-fresh-main integration remain the delivery owner's work. Focused GREEN is not a
-feature-completion, compatibility, release or publication claim.
+On the final runtime-tested merge `51d8f417f`, the selected package gate completed
+**11/11** stages with frozen inputs, no touched/unchecked user data, **5,056/5,056**
+Vitest tests and the complete selected default/production browser inventories.
+The comparison spec ran **13/13** cases under each default and production-devices
+configuration; the standalone editor and table-column owning configurations also
+ran. Eight EN/DE editor frames at 1440/400 pixels were actually inspected.
+
+While gating, main advanced only by six upstream documentation files. Published
+main-first `080f2723d` equals the accepted tree plus that exact patch, proven with
+an isolated Git index and a mismatching-tree control. Its separate documentation
+delta completed **10/10** stages; runtime results retain their original source
+identity rather than being relabelled as a new full run.
+
+The catalogue polling correction discovered during acceptance was delivered
+separately as `5296e56c5`; inherited footer locale preparation was corrected
+without weakening strict request, explicit-connect or overlap assertions.
+Historical failed runs remain retained, not waived or counted as final success.
+
+## Retained boundaries
+
+The existing comparison engine's family, image, identity, read and adoption
+restrictions are unchanged. No automatic read, reconnect, second queue, new
+backend path, transport, schema or storage format was added. The browser proof
+uses synthetic intercepted requests; no real bus/device, native WebKitGTK,
+release or deployment acceptance follows. Log/Monitor/Overview suspension has
+mounted-App/source evidence, not an additional dedicated real-browser matrix.

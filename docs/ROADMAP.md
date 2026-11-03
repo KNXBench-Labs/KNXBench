@@ -1,5 +1,12 @@
 # Roadmap
 
+## Candidate awaiting acceptance: narrow System-2 caption settlement
+
+The software-authorized S2-05 candidate implements only the finite selected-caption
+comparison, not general source equivalence. Independent review and parent gates
+are pending; no release, production activation, start/recovery authority or physical
+verification follows. [Candidate and limits](status/2026-11-03-s2-caption-settlement-candidate.md).
+
 ## Main-only after Alpha 19: bounded Color/Time data repair
 
 WP-08 has a source-authenticated ProductDB v32 successor for exact released-v15

@@ -15,6 +15,8 @@ use crate::report::{insert_unknown, IdConflict, TranslationCounts, UnknownCollec
 use crate::{sha256_hex, FileKind, IngestOutcome, ProductDbError};
 
 use knx_core::limits::{MAX_EXPANDED_ARCHIVE_BYTES, MAX_RETAINED_BYTES, MAX_RETAINED_BYTES_USIZE};
+mod settlement;
+pub use settlement::{settlement_inventory, SettlementMember};
 
 /// Raw package input: the input is retained whole as one `package.bytes`
 /// value, so the storage ceiling is its bound (ADR-0142).
@@ -857,6 +859,8 @@ pub(crate) struct ZipDirectory {
 struct CheckedZipEntry {
     central_offset: u64,
     local_offset: u64,
+    central_extra: std::ops::Range<usize>,
+    local_extra: std::ops::Range<usize>,
     flags: u16,
     /// Why the record's WinZip AES metadata contradicts itself, if it does.
     /// Recorded here but refused only by `open_checked_archive`: other users
@@ -1372,6 +1376,8 @@ fn validate_central_directory(
         checked_entries.push(CheckedZipEntry {
             central_offset: usize_to_u64(offset, "central-directory offset")?,
             local_offset: usize_to_u64(local_offset, "local-header offset")?,
+            central_extra: name_end..extra_end,
+            local_extra: local_name_end..local_extra_end,
             flags,
             aes_conflict,
             crc32,

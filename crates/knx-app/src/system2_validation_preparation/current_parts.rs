@@ -9,9 +9,9 @@ use knx_productdb::image_request::image_request_for_device;
 use std::io;
 
 /// The parts of `device` in the current `project` that still equal what the verified run
-/// wrote. Refuses (no credit at all) unless the ORIGINAL retained project still rebuilds,
-/// against the current catalogue winners, the exact normalized plan and source preparation
-/// the run was admitted with. Only then is the current request compared with the written
+/// wrote. Proves the ORIGINAL retained project through strict admission first, or the
+/// narrow caption-only settlement comparison after a typed changed-binding refusal.
+/// Only then is the current request compared with the written
 /// one, through the same dependency mask as a regular download. Product and program
 /// references must not switch; equal resolved program ids do not hide a switch.
 pub fn current_project_hardware_parts(
@@ -20,6 +20,10 @@ pub fn current_project_hardware_parts(
     device: DeviceId,
     bundle: &PreparedBundle,
 ) -> io::Result<ProgrammingParts> {
+    // Validate immutable O independently BEFORE interpreting any live preparation failure.
+    // A helper proves consistency only; the server owns terminal store/admission pairing.
+    bundle.plan()?;
+    bundle.preconditions()?;
     let hardware = bundle
         .hardware_preparation
         .as_ref()
@@ -33,7 +37,14 @@ pub fn current_project_hardware_parts(
     }
     // Source proof: the existing start admission, applied to the original project.
     let original = source.decoded_project()?;
-    admit_current_project_hardware(conn, &original, device, bundle)?;
+    let comparison = match super::source_phase::outcome(admit_current_project_hardware(
+        conn, &original, device, bundle,
+    ))? {
+        super::source_phase::StrictSource::Current => None,
+        super::source_phase::StrictSource::ChangedBinding => Some(
+            super::project::settlement::compare(conn, &original, device, bundle)?,
+        ),
+    };
     let (was, now) = original
         .devices
         .get(device)
@@ -52,7 +63,9 @@ pub fn current_project_hardware_parts(
         conn,
         project,
         device,
-        &source.profile_bytes,
+        comparison
+            .as_ref()
+            .map_or(source.profile_bytes.as_slice(), |c| c.profile.as_slice()),
         &hardware.operation,
         hardware.recovery_track,
     )?;
@@ -61,6 +74,12 @@ pub fn current_project_hardware_parts(
         .project_preparation
         .as_ref()
         .ok_or_else(|| invalid("missing fresh project source"))?;
+    if comparison
+        .as_ref()
+        .is_some_and(|c| c.input != fresh.product_input)
+    {
+        return Err(invalid("current comparison source recollection differs"));
+    }
     let written = image_request_for_device(conn, &original, device).map_err(io::Error::other)?;
     let current = image_request_for_device(conn, project, device).map_err(io::Error::other)?;
     if RequestRecord::from_request(&written) != source.request

@@ -79,6 +79,7 @@ pub use cleanup::{
     apply_catalog_cleanup, preview_catalog_cleanup, AppliedCleanup, CleanupError, CleanupPreview,
 };
 pub mod report;
+pub mod settlement_caption;
 pub mod source_diagnostics;
 pub mod system2;
 pub mod system2_procedure;

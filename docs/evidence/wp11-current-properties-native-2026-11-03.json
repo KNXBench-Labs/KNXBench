@@ -1,0 +1,330 @@
+{
+  "formatVersion": 1,
+  "observedDate": "2026-11-03",
+  "scope": "Current-at-admission source counterpart: six Properties pointer cells only; not whole WP-11/KL-130 closure",
+  "sourceRevision": "6ecb69427b34a5e6e2fd630424a953199d362566",
+  "nativeExecutableSha256": "563b9b03cd345d24eb739a6431436a99e3fca0b4d0625d7ba69d79a9281864b6",
+  "executedNativeExecutableSha256": "563b9b03cd345d24eb739a6431436a99e3fca0b4d0625d7ba69d79a9281864b6",
+  "frontendManifestSha256": "494f2a8dad39f56c2dff8d51328dc658edfcfa2610d4f8c7d41a96b3026da5e7",
+  "frontendFileCount": 147,
+  "fictionalFixtureSha256": "ddda4fd55e077f00bc34d5b0ca02dcd3c6d2d54da52f836ac7eea7e4f244dc2a",
+  "driverManifestSha256": "11c8377d0f21d716753b8a9915336f212e29ab883a8c503b1623b17b56036951",
+  "currentSourceParityClaimed": true,
+  "productRuntimeSourceChanged": false,
+  "execution": {
+    "toolkit": "native Wayland/WebKitGTK",
+    "xWayland": false,
+    "network": "separate loopback-only namespace",
+    "data": "isolated fictional office demo",
+    "outputScale": 1.25,
+    "windowLogicalSize": [
+      2024,
+      1098
+    ],
+    "renderEnvironment": {
+      "WEBKIT_DISABLE_DMABUF_RENDERER": "1",
+      "WEBKIT_DISABLE_COMPOSITING_MODE": "1"
+    },
+    "environmentEvidence": "recorded launch argv",
+    "sandboxDisableEnvironmentFlagSupplied": false,
+    "internalWebKitSandboxIndependentlyAttested": false,
+    "fullHostServiceConfinementAttested": false,
+    "sessionBusException": "Unfiltered host session D-Bus/AT-SPI access remains an explicit capability exception"
+  },
+  "units": {
+    "requestedDevicePixelsPerSeparatorLeg": 60,
+    "measuredLogicalPixelsPerSeparatorLeg": 48,
+    "sourceWidthBounds": [
+      280,
+      700
+    ],
+    "initialLayoutWidth": 360,
+    "persistedSetting": "inspectorPaneWidth"
+  },
+  "acceptedCells": 6,
+  "separatorDrags": 18,
+  "selectionDrags": 3,
+  "cells": [
+    {
+      "label": "properties-80-clean",
+      "zoom": 0.8,
+      "mode": "clean",
+      "selectionTexts": [],
+      "steps": [
+        {
+          "index": 0,
+          "dxLogical": -48,
+          "dxDevice": -60.0,
+          "before": 360.0,
+          "after": 420.0,
+          "persisted": 420,
+          "focused": true,
+          "postSelections": 0
+        },
+        {
+          "index": 1,
+          "dxLogical": 48,
+          "dxDevice": 60.0,
+          "before": 420.0,
+          "after": 360.0,
+          "persisted": 360,
+          "focused": true,
+          "postSelections": 0
+        },
+        {
+          "index": 2,
+          "dxLogical": -48,
+          "dxDevice": -60.0,
+          "before": 360.0,
+          "after": 420.0,
+          "persisted": 420,
+          "focused": true,
+          "postSelections": 0
+        },
+        {
+          "index": 3,
+          "dxLogical": 48,
+          "dxDevice": 60.0,
+          "before": 420.0,
+          "after": 360.0,
+          "persisted": 360,
+          "focused": true,
+          "postSelections": 0
+        }
+      ],
+      "seatRestored": true
+    },
+    {
+      "label": "properties-80-selected",
+      "zoom": 0.8,
+      "mode": "selected",
+      "selectionTexts": [
+        "Project statu"
+      ],
+      "steps": [
+        {
+          "index": 0,
+          "dxLogical": -48,
+          "dxDevice": -60.0,
+          "before": 360.0,
+          "after": 420.0,
+          "persisted": 420,
+          "focused": true,
+          "postSelections": 0
+        },
+        {
+          "index": 1,
+          "dxLogical": 48,
+          "dxDevice": 60.0,
+          "before": 420.0,
+          "after": 360.0,
+          "persisted": 360,
+          "focused": true,
+          "postSelections": 0
+        }
+      ],
+      "seatRestored": true
+    },
+    {
+      "label": "properties-100-clean",
+      "zoom": 1.0,
+      "mode": "clean",
+      "selectionTexts": [],
+      "steps": [
+        {
+          "index": 0,
+          "dxLogical": -48,
+          "dxDevice": -60.0,
+          "before": 360.0,
+          "after": 408.0,
+          "persisted": 408,
+          "focused": true,
+          "postSelections": 0
+        },
+        {
+          "index": 1,
+          "dxLogical": 48,
+          "dxDevice": 60.0,
+          "before": 408.0,
+          "after": 360.0,
+          "persisted": 360,
+          "focused": true,
+          "postSelections": 0
+        },
+        {
+          "index": 2,
+          "dxLogical": -48,
+          "dxDevice": -60.0,
+          "before": 360.0,
+          "after": 408.0,
+          "persisted": 408,
+          "focused": true,
+          "postSelections": 0
+        },
+        {
+          "index": 3,
+          "dxLogical": 48,
+          "dxDevice": 60.0,
+          "before": 408.0,
+          "after": 360.0,
+          "persisted": 360,
+          "focused": true,
+          "postSelections": 0
+        }
+      ],
+      "seatRestored": true
+    },
+    {
+      "label": "properties-100-selected",
+      "zoom": 1.0,
+      "mode": "selected",
+      "selectionTexts": [
+        "Project statu"
+      ],
+      "steps": [
+        {
+          "index": 0,
+          "dxLogical": -48,
+          "dxDevice": -60.0,
+          "before": 360.0,
+          "after": 408.0,
+          "persisted": 408,
+          "focused": true,
+          "postSelections": 0
+        },
+        {
+          "index": 1,
+          "dxLogical": 48,
+          "dxDevice": 60.0,
+          "before": 408.0,
+          "after": 360.0,
+          "persisted": 360,
+          "focused": true,
+          "postSelections": 0
+        }
+      ],
+      "seatRestored": true
+    },
+    {
+      "label": "properties-150-clean",
+      "zoom": 1.5,
+      "mode": "clean",
+      "selectionTexts": [],
+      "steps": [
+        {
+          "index": 0,
+          "dxLogical": -48,
+          "dxDevice": -60.0,
+          "before": 360.0,
+          "after": 392.0,
+          "persisted": 392,
+          "focused": true,
+          "postSelections": 0
+        },
+        {
+          "index": 1,
+          "dxLogical": 48,
+          "dxDevice": 60.0,
+          "before": 392.0,
+          "after": 360.0,
+          "persisted": 360,
+          "focused": true,
+          "postSelections": 0
+        },
+        {
+          "index": 2,
+          "dxLogical": -48,
+          "dxDevice": -60.0,
+          "before": 360.0,
+          "after": 392.0,
+          "persisted": 392,
+          "focused": true,
+          "postSelections": 0
+        },
+        {
+          "index": 3,
+          "dxLogical": 48,
+          "dxDevice": 60.0,
+          "before": 392.0,
+          "after": 360.0,
+          "persisted": 360,
+          "focused": true,
+          "postSelections": 0
+        }
+      ],
+      "seatRestored": true
+    },
+    {
+      "label": "properties-150-selected",
+      "zoom": 1.5,
+      "mode": "selected",
+      "selectionTexts": [
+        "Project statu"
+      ],
+      "steps": [
+        {
+          "index": 0,
+          "dxLogical": -48,
+          "dxDevice": -60.0,
+          "before": 360.0,
+          "after": 392.0,
+          "persisted": 392,
+          "focused": true,
+          "postSelections": 0
+        },
+        {
+          "index": 1,
+          "dxLogical": 48,
+          "dxDevice": 60.0,
+          "before": 392.0,
+          "after": 360.0,
+          "persisted": 360,
+          "focused": true,
+          "postSelections": 0
+        }
+      ],
+      "seatRestored": true
+    }
+  ],
+  "restoration": {
+    "verifiedReceipts": 14,
+    "allVerified": true,
+    "inputGesturesPressed": 21,
+    "inputGesturesReleased": 21
+  },
+  "teardown": {
+    "ordinaryNativeClose": true,
+    "launcherExit": 0,
+    "emergencyTermination": false,
+    "ownedWindowsRemaining": 0,
+    "ownedProcessesRemaining": 0,
+    "taskRulesDisabledVerified": true,
+    "identityCheckedPrivateRuntimeRemoved": true
+  },
+  "harnessOfflineChecks": {
+    "guardTests": 22,
+    "discriminatingMutationControls": 3,
+    "restoredGreen": true,
+    "nativeCells": false
+  },
+  "visuallyInspectedOwnedImages": {
+    "a11y-diagnostic-owned-window.png": "201c5f6df8b84151e3e9e0709e45d848b1429336509635707c58496080661ecb",
+    "properties-final-150-owned-window.png": "a34de514498a4cbd043728f23231e9114bc8535251a90539a2d57a8b0af10297"
+  },
+  "exclusions": [
+    "Not a packaged/AppImage, GPU-renderer or X11/XWayland acceptance",
+    "Current-source claim is limited to the pinned Properties subset, not the complete native matrix",
+    "No individual full-resolution image inspection at every zoom or keyboard-only focus-ring policy claim",
+    "No Properties restart-survival or project-save/roundtrip test",
+    "No boundary-clamping, other sizes/themes, Orca, Firefox or vendor GPU acceptance",
+    "No real project or KNX installation operation; wider WP-11/KL-130 stays open"
+  ],
+  "privateEvidenceLocator": "<profile>/evidence/2026-11-03-wp11-current-native-properties/",
+  "currentSourceParityScope": "Only the recorded Properties six-cell/18-leg behavior at this pinned source; not whole-app or pixel parity",
+  "comparedHistoricalMeasurement": "wp11-properties-native-2026-11-03.json",
+  "embeddedHttp": {
+    "status": 200,
+    "indexSha256": "84d5bb9d4d97bfcd9478c09acf1d278d32602288129e1e6853c0c8b425cd86c8",
+    "copiedIndexMatched": true
+  }
+}

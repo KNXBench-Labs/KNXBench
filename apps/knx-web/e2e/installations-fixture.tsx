@@ -5,7 +5,7 @@ import * as api from "../src/api";
 import type { DeviceDetail } from "../src/bindings/DeviceDetail";
 import type { ProjectTree } from "../src/bindings/ProjectTree";
 import type { Selection } from "../src/selection";
-import Inspector from "../src/Inspector";
+import { Inspector } from "../src/deviceComparisons.fixture";
 import ProjectExplorer from "../src/ProjectExplorer";
 import "../src/styles.css";
 

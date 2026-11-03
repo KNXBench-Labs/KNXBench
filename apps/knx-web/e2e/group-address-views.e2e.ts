@@ -1,5 +1,5 @@
 /** Production-built four-view group-address workspace with strictly intercepted data. */
-import { openNavigationSections } from "./disclosure-fixture";
+import { openExplorerBranches, openNavigationSections } from "./disclosure-fixture";
 import { expect, test, type Page } from "@playwright/test";
 import { join } from "node:path";
 import type { ProjectTree } from "../src/bindings/ProjectTree";
@@ -122,6 +122,72 @@ const capture = async (page: Page, name: string) => {
 };
 const noPageOverflow = async (page: Page) =>
   expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1);
+
+for (const language of ["en", "de"] as const) for (const width of [1440, 400]) for (const view of ["columns", "atlas"]) {
+  test(`WP28 ${language} ${view} replaces Explorer scope at ${width}px`, async ({ page }) => {
+    const m = language === "en" ? en : de;
+    await page.setViewportSize({ width, height: 1000 });
+    const tree = standardTree();
+    tree.installations[0].group_ranges.push(
+      range(40, null, "Other range", "2/0/0", "2/7/255"),
+      range(41, 40, "Populated child", "2/0/0", "2/0/255"),
+      range(42, 40, "Empty child", "2/1/0", "2/1/255"),
+    );
+    tree.installations[0].group_addresses.push(
+      ga(203, "2/0/3", "Navigation Zeta", 41), ga(201, "2/0/1", "Navigation Alpha", 41),
+    );
+    const state = await intercept(page, language, width === 1440 ? "graphite" : "porcelain", tree);
+    await openAddresses(page, language);
+    if (!(await page.locator(".project-explorer").isVisible()))
+      await page.getByRole("button", { name: m["workbench.navigation"], exact: true }).click();
+    await openExplorerBranches(page);
+    await page.locator(".project-explorer .tree-label").filter({ hasText: "Lighting" }).click();
+    const workspace = page.locator(".ga-workspace");
+    await chooseView(page, view);
+    await workspace.locator('[data-ga-scope="range:40:0"]').click();
+    await workspace.locator('[data-ga-scope="range:41:0"]').click();
+    await expect(workspace.locator("[data-ga-current-scope]")).toHaveText("Populated child");
+    await expect(workspace.locator("[data-ga-select]")).toHaveCount(2);
+    expect(await workspace.locator("[data-ga-select]").evaluateAll(nodes => nodes.map(node => node.getAttribute("data-ga-select"))))
+      .toEqual(["203", "201"]);
+    await expect(workspace.locator("[role=status]")).toHaveCount(0);
+    await workspace.locator('[data-ga-select="203"]').click();
+    await workspace.locator(".address-filter").fill("Alpha");
+    await expect(workspace.locator("[data-ga-select]")).toHaveCount(1);
+    await expect(workspace.locator('[data-ga-select="201"]')).toBeVisible();
+    await workspace.locator(".address-filter").fill("");
+    await workspace.locator('[data-ga-select="201"]').scrollIntoViewIfNeeded();
+    await capture(page, `wp28-${view}-${language}-${width}`);
+    await noPageOverflow(page);
+    if (view === "atlas") {
+      await workspace.locator(".ga-breadcrumb button").click();
+      await workspace.locator('[data-ga-scope="range:40:0"]').click();
+    }
+    await workspace.locator('[data-ga-scope="range:42:0"]').click();
+    await expect(workspace.locator("[data-ga-select]")).toHaveCount(0);
+    await expect(workspace.getByRole("status").filter({ hasText: m[view === "columns" ? "addressTable.noMatches" : "gaWorkspace.noDirectRows"] })).toBeVisible();
+    for (const selectAddress of [false, true]) {
+      // Start with an actual range selection, not the earlier selected address.
+      await page.locator(".project-explorer .tree-label").filter({ hasText: "Lighting" }).click();
+      await expect(workspace.locator("[data-ga-current-scope]")).toHaveText(m["gaWorkspace.all"]);
+      await workspace.locator('[data-ga-scope="range:40:0"]').click();
+      await workspace.locator('[data-ga-scope="range:41:0"]').click();
+      if (selectAddress) await workspace.locator('[data-ga-select="203"]').click();
+      await page.locator(".project-explorer .tree-label").filter({ hasText: "Lighting" }).click();
+      await expect(workspace.locator("[data-ga-current-scope]")).toHaveText(m["gaWorkspace.all"]);
+      if (view === "atlas") {
+        await expect(workspace.locator("[data-ga-select]")).toHaveCount(0);
+        await workspace.locator('[data-ga-scope="range:20:0"]').click();
+        await workspace.locator('[data-ga-scope="range:21:0"]').click();
+      }
+      expect(await workspace.locator("[data-ga-select]").evaluateAll(nodes => nodes.map(node => node.getAttribute("data-ga-select"))))
+        .toEqual(view === "columns" ? ["30", "31", "32"] : ["30", "31"]);
+    }
+    expect(state.unexpected).toEqual([]);
+    expect(state.requests.filter(request => !request.startsWith("GET ") && request !== "POST /api/project/new"
+      && request !== "POST /api/bus/discover" && request !== "PUT /api/settings" && request !== "POST /api/achievements/record")).toEqual([]);
+  });
+}
 
 test("400: German address tree preserves the long DPT label and scrolls locally", async ({ page }) => {
   await page.setViewportSize({ width: 400, height: 1000 });

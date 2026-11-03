@@ -91,14 +91,18 @@ export default function GroupAddressTable(props: {
     setOpen(previous => pruneGroups(previous, index));
   }, [index, scope, validScope]);
   useEffect(() => { setScope(null); }, [rangeScope]);
+  // Explorer activations carry a fresh selection even when the range ID is unchanged.
+  useEffect(() => { if (selection?.kind === "group_range") setScope(null); }, [selection]);
   // A new result set starts from a bounded window again; selection is unaffected.
   useEffect(() => { setLimit(GROUP_ADDRESS_WINDOW); }, [query, filter, scope, rangeScope, view]);
   const externalGroups = [...index.groups.values()].filter(group => group.range?.id === rangeScope);
   const externalScope = rangeScope !== null && externalGroups.length === 1 ? externalGroups[0].key : null;
   const baseResult = selectGroupAddressRows(index, { query, filter, scope: externalScope }, dpt => dptDisplay(dpt, language));
   const baseRows = baseResult.rows;
-  const allowed = new Set(baseRows.map(row => row.key));
-  const rows = selectGroupAddressRows(index, { query, filter, scope: validScope }, dpt => dptDisplay(dpt, language)).rows.filter(row => allowed.has(row.key));
+  // Explorer scope is the initial view; an offered range navigation replaces it.
+  // Intersecting two independent scopes hides addresses in a nonempty sibling.
+  const rows = validScope === null ? baseRows
+    : selectGroupAddressRows(index, { query, filter, scope: validScope }, dpt => dptDisplay(dpt, language)).rows;
   const selectedRows = index.rows.filter(row => selection?.kind === "group_address" && row.node.id === selection.id);
   const selected = selectedRows.length === 1 ? selectedRows[0].node : null;
   const shared: GroupAddressWorkspaceViewProps = { installation, index, rows, baseRows, scope: validScope,

@@ -1,11 +1,15 @@
 # S2-05: settlement-only source equivalence (proposal)
 
-**Status: PROPOSED / NOT IMPLEMENTED.** Source inspection at
+**Status: IMPLEMENTATION CANDIDATE / NOT ACCEPTED.** The explicitly authorized
+software candidate is described in the [candidate record](../status/2026-11-03-s2-caption-settlement-candidate.md).
+The sequence and E1–E17 below remain the design/acceptance obligations, not passed
+test results. Historical inspection at
 `efbeabb93b8332d28f314f00c990e8fc8e988ba2`, 3 November 2026.
-This document proposes a bounded project-belief comparison, not an adopted
-contract, implementation, acceptance result, start permission or recovery policy.
-The [maintained result contract](../contracts/system2-download-result.md#settlement)
-continues to require unchanged source preparation. S2-05 remains open.
+This document specifies a bounded project-belief comparison, not an acceptance
+result, start permission or recovery policy adoption.
+The accepted baseline remains strict unchanged-source settlement; the candidate
+extension in the [maintained result contract](../contracts/system2-download-result.md#settlement)
+is not yet accepted. S2-05 remains open.
 
 ## Recommendation and evidence limit
 
@@ -490,7 +494,7 @@ owning mounted worker path, not just direct App helpers or manual progress DTOs.
 | E2 App standalone positive | Public install + backup-restore replacement like the published patch, old originals retained as losers; only one selected `Name` value changes, unique new actual source/package pair. | Original validates unchanged, old pinned preparation/start still refuses early, comparison N fully prepares with actual two pins; exact O→N fields/plan bytes; mask ALL for unchanged current project. This is new comparison evidence, not replay of the witness. |
 | E3 App retained positive | Independently source-install both originals; replace the selected application winner caption only; preserve exact Hardware2Program original. Exercise admitted namespace 20 and 23 separately. | Same exact refs/owners/order/namespace; fresh new source **and closure** pins; retained replay reproduces measured descriptor; ALL only after full comparison. Do not count E2 as this evidence. |
 | E4 App profile/pin negatives | Only source refreshed; only selector refreshed; stale package/closure; changed family; changed namespace; altered id/version/configuration/classification/each interpretation or identity field; duplicate/unknown JSON key. | Refusal at owning lookup/parser/identity boundary even if a candidate plan is equal. O's bytes/hash unchanged. |
-| E5 App forged originals | Tamper each snapshot/profile/source/package/member/coverage/request/hash; rehash forged hardware/source binding; simulator/unbound/defaults-format bundle; foreign device id, fake observation serial/policy. | Full original reconstruction/grammar refuses before repinning; hashes alone cannot bless fabricated original authority. Call with no terminal worker cannot mutate a project. |
+| E5 App forged originals | Tamper each snapshot/profile/source/package/member/coverage/request/hash; rehash partially inconsistent hardware/source bindings; simulator/unbound/defaults-format bundle; foreign device id, cross-bound observation serial or unsupported policy. | Original reconstruction/grammar refuses partial or cross-binding corruption before repinning. A wholly self-consistent fabricated object cannot be distinguished from execution by hash alone: historical authority belongs to the actual server-owned terminal store/admission pair, not the pure helper. A helper call alone cannot mutate a project. |
 | E6 ProductDB ownership | Missing winning row/blob/parse evidence; loser substituted; stale/unavailable scanner; occurrence absent/2/repeated; bridge switches to equal-plan program; changed product/program/device source refs; same bytes under changed path. | Missing/ambiguous/refused owners/refs fail closed; no scanning/repair in read proof. Keep legitimate losing versions as non-ambiguous controls. |
 | E7 Package discovery | In the **changed-source equivalence branch only**: zero or two eligible new packages, including two recontainerizations of the same caption-changed members; multiple source memberships/paths; duplicate/unsafe/aliased/encrypted ZIP members; changed unrelated member or hardware source; hash/length mismatch and expansion limit. | Refuse; no first/default package or cross-family fallback. Exact same single eligible inventory is the new-branch positive control. E1's unchanged strict-success P0/P1 pair is deliberately different and must not enter this discovery. Assert branch, exact mask and immutable O for both paired cases. |
 | E8 Caption classifier | `Name` in comment/PI/other program/translation; absent/added/duplicate/qualified attribute; entities, quote change, attribute order/whitespace/namespace change; second changed byte anywhere; inactive/unknown metadata changed. | No broad XML equivalence: only the one structurally identified allowed literal value span passes. Unsupported/nonclass inputs remain no-credit, even with equal plans. |

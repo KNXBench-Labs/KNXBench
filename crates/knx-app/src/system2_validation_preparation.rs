@@ -3,6 +3,7 @@
 mod configured_hardware_preview;
 mod current_parts;
 mod hardware;
+mod source_phase;
 pub use current_parts::current_project_hardware_parts;
 pub use hardware::post_load_octet_admission;
 mod project;

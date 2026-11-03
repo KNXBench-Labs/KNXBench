@@ -9,6 +9,7 @@ use knx_app::system2_validation_preparation::{prepare_simulated_candidate, Valid
 use knx_core::IndividualAddress;
 use std::path::PathBuf;
 
+mod caption_fixture;
 mod fixture;
 use fixture::*;
 mod old_device;

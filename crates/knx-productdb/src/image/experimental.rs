@@ -815,8 +815,11 @@ impl Prepared {
                 && s.bytes()
                     .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
         };
-        if !valid_hash(&policy.binding.source_sha256) || sha != policy.binding.source_sha256 {
+        if !valid_hash(&policy.binding.source_sha256) {
             return Err(unsupported("source ownership binding mismatch"));
+        }
+        if sha != policy.binding.source_sha256 {
+            return Err(ImageError::SourceBindingChanged);
         }
         let bytes = crate::load_source_file(conn, &sha)?
             .ok_or_else(|| unsupported("source bytes unavailable"))?;

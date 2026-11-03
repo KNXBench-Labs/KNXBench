@@ -205,6 +205,7 @@ async fn preview(
 enum Edit {
     None,
     Parameter,
+    InvalidParameter,
     Links,
     Flags,
     Reference,
@@ -304,6 +305,20 @@ async fn run(namespace: u8, retained: bool, edit: Edit, saved: bool, marked: boo
                     )
                     .is_err()
                 );
+                if matches!(edit, Edit::InvalidParameter) {
+                    // Prove the changed-caption branch before injecting unsupported current input.
+                    assert_eq!(
+                        knx_app::system2_validation_preparation::current_project_hardware_parts(
+                            conn,
+                            project.as_ref().unwrap(),
+                            f::DEVICE,
+                            &original,
+                        )
+                        .unwrap(),
+                        ProgrammingParts::ALL,
+                        "caption comparison before malformed current input: namespace={namespace} retained={retained} marked={marked}"
+                    );
+                }
                 Ok::<_, std::io::Error>(())
             })
             .unwrap()
@@ -313,13 +328,18 @@ async fn run(namespace: u8, retained: bool, edit: Edit, saved: bool, marked: boo
         let mut guard = state.project.lock().unwrap();
         let project = guard.as_mut().unwrap();
         match edit {
-            Edit::Parameter => {
+            Edit::Parameter | Edit::InvalidParameter => {
+                let raw = if matches!(edit, Edit::InvalidParameter) {
+                    "not-a-number"
+                } else {
+                    "772"
+                };
                 project.installations[0]
                     .parameters
                     .iter_mut()
                     .find(|p| p.source.ets_id == format!("{}_R", f::PROGRAM))
                     .unwrap()
-                    .raw = "772".into()
+                    .raw = raw.into()
             }
             Edit::Links => {
                 project
@@ -376,11 +396,17 @@ async fn run(namespace: u8, retained: bool, edit: Edit, saved: bool, marked: boo
     let expected = match edit {
         Edit::Parameter => [true, true, false, false, true],
         Edit::Links | Edit::Flags => [true, true, true, false, true],
-        Edit::Reference | Edit::Nonclass | Edit::Quarantine => [marked, false, false, false, true],
+        Edit::InvalidParameter | Edit::Reference | Edit::Nonclass | Edit::Quarantine => {
+            [marked, false, false, false, true]
+        }
         Edit::Address => [marked, marked, marked, marked, true],
         Edit::None => [true, true, true, true, true],
     };
-    assert_eq!(flags(&state), expected);
+    assert_eq!(
+        flags(&state),
+        expected,
+        "terminal flags: namespace={namespace} retained={retained} marked={marked}"
+    );
     assert_eq!(
         std::fs::read(operation.join("observed.json")).unwrap(),
         original_bytes
@@ -534,4 +560,22 @@ async fn caption_mounted_links_flags_nonclass_and_quarantined_owner() {
 #[tokio::test]
 async fn caption_mounted_changed_current_address_is_not_recredited() {
     run(20, true, Edit::Address, false, true).await;
+}
+
+#[tokio::test]
+async fn caption_mounted_standalone_malformed_current_parameter_refuses_credit() {
+    for namespace in [20, 23] {
+        for marked in [false, true] {
+            run(namespace, false, Edit::InvalidParameter, false, marked).await;
+        }
+    }
+}
+
+#[tokio::test]
+async fn caption_mounted_retained_malformed_current_parameter_refuses_credit() {
+    for namespace in [20, 23] {
+        for marked in [false, true] {
+            run(namespace, true, Edit::InvalidParameter, false, marked).await;
+        }
+    }
 }

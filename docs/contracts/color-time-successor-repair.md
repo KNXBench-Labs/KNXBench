@@ -1,6 +1,6 @@
 # Source-authenticated Color/Time successor repair
 
-Status: **implementation candidate, not independently accepted** (3 November 2026).
+Status: **bounded repair accepted and published on main** (3 November 2026).
 ProductDB v32 is a data-only successor to the unchanged released v15 promotion.
 The [authentic historical witness](../status/2026-11-03-wp08-authentic-color-time-upgrade.md)
 remains the independent original-producer reproduction; authored known-state
@@ -76,7 +76,7 @@ supported downgrade. No DDL or dependency changes are needed. The pinned v28
 fresh-chain schema shape remains unchanged, but admission deliberately requires
 v32 and witnesses retain the actual version.
 
-## Candidate verification and remaining acceptance
+## Accepted verification and remaining scope
 
 The registered `color_time_successor` module now has ten leaf tests, including a
 13-variant refusal table and ten measured/unmeasured diagnostic-shape controls.
@@ -91,7 +91,9 @@ checking schema version. Coverage includes Other and Date winners, NULL Time
 restoration, legitimate and unique Color/Time, mixed own/foreign programs,
 full unrelated table/history preservation, native live-write failure and
 reopen/idempotence. Owning ProductDB lib/default integration checks are focused
-candidate evidence; ignored/private corpus checks are not claimed.
+package evidence. The subsequent selected gates and corpus are recorded in the
+[acceptance record](../status/2026-11-03-wp08-color-time-successor.md); neither
+the default suites nor those selected gates claim every ignored/private test.
 
 Separate retained artifacts exercise copies of the genuine original v14 and
 contaminated v31 databases, a fresh v32 install of the exact retained fictional
@@ -99,8 +101,12 @@ package, and every reopen. Typed table multisets, schema descriptors and
 unrelated history are compared independently of the four permitted columns.
 Original witness inputs are never opened writable or modified.
 
-Parent acceptance still requires independent code/data-integrity review,
-mutation calibration, complete selected gates, integration and publication.
+Independent correction review approved the source and retained artifacts; ten
+compiled semantic mutants were detected. Both complete selected 14-stage gates
+passed with frozen inputs and checked, untouched user data. Source `9ed8fca6a`
+was published main-first as `5c405bfde`; see the
+[acceptance record](../status/2026-11-03-wp08-color-time-successor.md) for source
+epochs, counts, exclusions and retention limits.
 Broader [WP-08](../open-work/WP-08-parameter-value-codecs.md) codec, checked date
 editor and native/image evidence remain open; this migration establishes none
 of those semantics and has no real-bus or hardware effect.

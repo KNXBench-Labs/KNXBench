@@ -668,6 +668,19 @@ ESF/OPC, hierarchy/security roundtrip or general application compatibility claim
 
 ## WP-11 bounded native Properties continuation (3 November 2026)
 
+The separate [current-source counterpart](status/2026-11-03-wp11-current-native-properties.md)
+now records the same six-cell/18-leg Properties subset on freshly built source
+`6ecb69427`, with its own 147-file frontend and executed-binary binding. Its 36
+full before/after native trees and 18 actual settings byte captures reproduce
+the historical step observables; this is bounded behavior, not pixel/tree or
+whole-app parity. The first 100% preselection inverse pair passed before the
+other five cells. All 14 seat restores and ordinary teardown are verified.
+The explicit software-render profile and session-D-Bus exception remain; this
+does not accept AppImage/GPU, Properties restart/save-roundtrip or wider
+WP-11/KL-130. No production code changed; tested source is not a later docs HEAD.
+
+The historical-source run below remains a separate record:
+
 Six actual Wayland/WebKitGTK Properties cells and 18 separator drags pass at
 80/100/150%, including three real text preselections. Pointer edges, announced
 widths and actual `inspectorPaneWidth` captures agree; inverse legs return to 360.

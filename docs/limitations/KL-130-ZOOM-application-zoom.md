@@ -151,3 +151,24 @@ a software-render diagnostic profile and retains the session-D-Bus confinement
 exception. Properties restart survival, end-stop clamping, other sizes/themes,
 current-source parity, Orca/Firefox and vendor GPU evidence remain outside it.
 The broader lifting conditions and ledger status are unchanged.
+
+## Update 3 November 2026: pinned current-source Properties counterpart
+
+The separate [current-source record](../status/2026-11-03-wp11-current-native-properties.md)
+and [measured receipt](../evidence/wp11-current-properties-native-2026-11-03.json)
+add six actual Properties cells and 18 real-cursor legs at 80/100/150% on freshly
+built source `6ecb69427b34a5e6e2fd630424a953199d362566`. Its executable and complete
+147-file frontend have independent current bindings; the fictional input is
+unchanged. The first 100% preselection inverse pair was independently read back
+before the other five cells. All 18 step observables match the historical public
+receipt, with 36 full before/after native trees and 18 actual settings byte captures.
+This is subset behavioral parity, not pixel/tree or whole-application parity.
+
+All 14 seat restores and ordinary close/process/window/rule/private-runtime
+teardown are verified. The same explicit software-render profile and unfiltered
+session-D-Bus/AT-SPI exception remain; no internal WebKit sandbox/full host-service
+attestation follows. No production code changed. Historical measurements and
+their source identity remain intact, and a later docs HEAD is not tested source.
+Broader current-source evidence, Properties restart/save-roundtrip, boundary
+clamping, other sizes/themes, AppImage/GPU, Orca/Firefox and the wider lifting
+conditions remain open. Ledger status is unchanged.

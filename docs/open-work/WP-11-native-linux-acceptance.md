@@ -1,6 +1,6 @@
 # WP-11 — Native Linux acceptance
 
-**Status:** In progress: bounded native editor, capture and real-pointer cells recorded; Properties now adds six historical-source pointer cells at 80/100/150% (3 November), with an explicit software-render profile. Current-source parity and the wider matrix remain open. Listed in [OPEN_WORK](../OPEN_WORK.md); per-ID status of record is the [ledger](../status/LEDGER.md).
+**Status:** In progress: bounded native editor, capture and real-pointer cells recorded; Properties has historical and pinned current-source six-cell pointer counterparts at 80/100/150% (3 November), with an explicit software-render profile. Broader current-source parity and the wider matrix remain open. Listed in [OPEN_WORK](../OPEN_WORK.md); per-ID status of record is the [ledger](../status/LEDGER.md).
 
 ## Task
 
@@ -108,6 +108,27 @@ The explicit software-render profile, historical artifact, no Properties restart
 test and missing per-zoom image-control matrix remain disclosed. This is not
 current-source, AppImage/GPU, Orca/Firefox or whole-WP-11 acceptance; ledger status
 is unchanged.
+
+## Current-source Properties counterpart — 3 November 2026
+
+The separate [current-source record](../status/2026-11-03-wp11-current-native-properties.md)
+and [measurement](../evidence/wp11-current-properties-native-2026-11-03.json) bind
+the same six-cell/18-leg Properties subset to freshly built source `6ecb69427`,
+not a later documentation HEAD. Current executable/147-file frontend hashes and
+the unchanged fictional fixture are recorded. The first 100% preselected-text
+pair passed 360 → 408 → 360 before the other five cells. The parent audit of 36
+full before/after native trees and 18 actual settings byte captures matches all
+historical step observables; it does not assert full-tree or pixel parity.
+All 14 seat restores, ordinary exit and owned process/window/rule/private-runtime
+retirement are verified. No production code changed.
+
+The historical-source Properties record above remains intact. Software-render
+flags and the host session-D-Bus/AT-SPI exception remain explicit; this is not
+AppImage/GPU, X11/XWayland, internal WebKit sandbox/full host-service attestation,
+Orca/Firefox, other sizes/themes, boundary clamping, Properties restart or
+save-roundtrip acceptance. Earlier non-Properties cells are not promoted to this
+source; broader current-source/native coverage and WP-11/KL-130 remain open.
+Ledger status is unchanged.
 
 ## Done when
 

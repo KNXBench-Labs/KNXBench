@@ -227,6 +227,12 @@ oracles. The [3 November Properties continuation](status/2026-11-03-wp11-native-
 adds six historical-source native pointer cells at 80/100/150%, including
 preselected text and exact settings readback, under an explicit software-render
 profile. It is not current-source, packaged-artifact or GPU parity.
+The separate [current-source Properties counterpart](status/2026-11-03-wp11-current-native-properties.md)
+now reproduces that six-cell/18-leg behavior on freshly built pinned source
+`6ecb69427`, with current artifacts, settings bytes and full native trees.
+That bounded counterpart does not establish pixel/tree parity, upgrade the
+historical non-Properties cells, or accept AppImage/GPU and restart/save-roundtrip
+coverage; the software-render and session-bus boundaries remain explicit.
 WP-11 stays open for other controls/imported-original instructions,
 virtual-key replacement attribution, remaining keyboard/layout/pointer cells
 and unavailable environments; no code, hardware or release capability is added.

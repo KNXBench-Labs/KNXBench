@@ -107,6 +107,13 @@ already found lying in the grass.
   test profile must stay explicit and is not GPU/package acceptance; never
   disable WebKit's sandbox to obtain a passing image.
   [Measured setup and boundaries](status/2026-11-03-wp11-native-properties.md).
+- **Bind a native counterpart to its actual tested source, not the later docs HEAD.**
+  Keep historical artifacts/results intact. A current-source build needs its own
+  complete frontend manifest, executed-binary identity and actual cells/settings/
+  native trees; matching historical step values is not pixel or whole-app parity.
+  Offline guard/mutation checks are not additional native cells. The
+  [current Properties counterpart](status/2026-11-03-wp11-current-native-properties.md)
+  pins source `6ecb69427` and keeps the software-render/session-bus boundaries.
 - **`knx-net`'s loopback-join test reads the host's `/proc/net/igmp`.** When that
   table does not fit one `read(2)` (many interfaces or groups at that moment),
   `the_loopback_join_lands_on_lo_and_nowhere_else` refuses the truncated snapshot

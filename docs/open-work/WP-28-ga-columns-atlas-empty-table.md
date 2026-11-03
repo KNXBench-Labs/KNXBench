@@ -1,7 +1,8 @@
 # WP-28 — Group-address Columns and Atlas views show no addresses for a sub-range
 
-Owner report: 2 November 2026. Implementation and independent source review
-complete; browser and integration acceptance remain pending.
+Owner report: 2 November 2026. **Delivered on main, 3 November 2026**, source
+`e1d6f916e`; independent review and selected integration acceptance complete.
+[Acceptance and retained boundaries](../status/2026-11-03-wp28-group-address-subranges.md).
 
 ## Observed
 
@@ -62,5 +63,8 @@ The focused suite passes 66 tests across eight files. Independent source review
 accepted the correction after the same-ID navigation finding was reproduced and
 fixed. Full-App Chromium cases cover both views, English/German, 400/1440 pixels,
 forward navigation, search, genuine emptiness and return through the real Explorer.
-Their execution and the full default/selected integration gates remain pending;
-no original private-project, hardware or live-server verification is claimed.
+The committed cases passed in the default development fixture, production
+preview and table-columns configurations. The full selected 11-stage gate passed
+with 5,043 Vitest tests and all selected default/production browser lanes; the
+subsequent upstream delta changed documentation only. No original private-project,
+native, hardware or live-server verification is claimed.

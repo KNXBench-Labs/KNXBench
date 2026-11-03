@@ -12,6 +12,19 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Group-address sub-range navigation keeps its rows (3 November 2026, main-only; WP-28)
+
+Explicit Columns/Atlas navigation replaces the initial Explorer scope rather
+than intersecting unrelated ranges. A subsequent Explorer activation wins again,
+including the same range ID; address selection does not reset local navigation.
+Main-first source `e1d6f916e` is published after independent review and a complete
+selected 11-stage gate: Vitest 5,043; default Chromium 848 functional + 46 exclusive;
+production group-addresses 29 + 1 and table-columns 164 + 4. Exact docs-only upstream
+composition and four delta checks preserve the accepted build/tool binding. No
+Rust/corpus stages were selected; no native, private-project, hardware, release
+or deployment acceptance follows.
+[Acceptance and retained boundaries](status/2026-11-03-wp28-group-address-subranges.md).
+
 ## Catalogue poll and disposed-owner lifetime (3 November 2026, source)
 
 Main-first `5296e56c5` stops queued automatic reads after valid terminal status,

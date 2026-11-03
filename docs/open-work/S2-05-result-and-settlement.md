@@ -33,8 +33,12 @@ Contract: [system2-download-result](../contracts/system2-download-result.md).
   is accepted main-first as `288bd8005` after independent review and both complete
   selected 14-stage gates. It implements the bounded [settlement-only design](../design/system2-settlement-source-equivalence.md),
   not general source equivalence or new start/recovery authority. Exhaustive E-matrix
-  adversaries, source-positive recovery/persistence-failure crosses, race/read-count
-  instrumentation and changed-source large-project measurements remain open.
+  adversaries, source-positive recovery crosses, race/read-count instrumentation
+  and changed-source large-project measurements remain open. A bounded
+  [E15 changed-caption persistence-failure follow-up](../status/2026-11-03-s2-caption-persistence.md)
+  has focused mounted execution and independent review with four compiled
+  wrong-variant assertion failures; package acceptance remains pending, not
+  whole-E15 closure.
 - Field verification by the reporter is not requested; no hardware retry is needed
   for the software change.
 

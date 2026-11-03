@@ -1,15 +1,15 @@
-# S2-05: settlement-only source equivalence (proposal)
+# S2-05: settlement-only source equivalence design
 
-**Status: IMPLEMENTATION CANDIDATE / NOT ACCEPTED.** The explicitly authorized
-software candidate is described in the [candidate record](../status/2026-11-03-s2-caption-settlement-candidate.md).
-The sequence and E1–E17 below remain the design/acceptance obligations, not passed
-test results. Historical inspection at
-`efbeabb93b8332d28f314f00c990e8fc8e988ba2`, 3 November 2026.
-This document specifies a bounded project-belief comparison, not an acceptance
-result, start permission or recovery policy adoption.
-The accepted baseline remains strict unchanged-source settlement; the candidate
-extension in the [maintained result contract](../contracts/system2-download-result.md#settlement)
-is not yet accepted. S2-05 remains open.
+**Status: BOUNDED SOFTWARE IMPLEMENTATION ACCEPTED.** Main-first `288bd8005`
+(source `d77f77be9`) implements only the selected-caption class; independent review
+and both complete selected 14-stage package gates passed. The [acceptance record](../status/2026-11-03-s2-caption-settlement-candidate.md)
+owns actual execution and remaining proof limits. E1–E17 below are obligations,
+not seventeen passed tests. This historical design was inspected at
+`efbeabb93b8332d28f314f00c990e8fc8e988ba2`, 3 November 2026; its base-code table
+and proposed-API wording remain historical, not descriptions of the final APIs.
+The [maintained result contract](../contracts/system2-download-result.md#settlement)
+includes the accepted extension. No start permission, recovery policy adoption,
+general source-equivalence support or overall S2-05 closure follows.
 
 ## Recommendation and evidence limit
 

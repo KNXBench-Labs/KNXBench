@@ -1,9 +1,10 @@
-# S2-05 caption-only settlement — implementation candidate, 3 November 2026
+# S2-05 caption-only settlement — bounded software acceptance, 3 November 2026
 
-**IMPLEMENTATION CANDIDATE — independent review and parent acceptance pending.**
-No integration, publication, production activation, release, device support or
-S2-05 closure is claimed. The explicit software authorization covers only the
-narrow caption rule; physical start/recovery permissions are unchanged.
+**SOFTWARE ACCEPTED — source `d77f77be9`, main-first `288bd8005`.**
+Independent review and both complete selected 14-stage package gates passed.
+This accepts only the software caption rule, not general source equivalence,
+a release, deployment, physical device support or all of S2-05. Physical
+start/recovery permissions are unchanged.
 
 ## Implemented boundary
 
@@ -44,7 +45,7 @@ consent without a live-catalogue freshness gate. No schemas, ProductDB version,
 protocol, dependencies, existing hardware/procedure policy IDs, timeout budgets or
 original records change.
 
-## Bounded executed candidate proof
+## Original focused implementation proof
 
 The final registered additions comprise 13 App integration cases, five ProductDB
 byte/inventory cases, one App typed-phase case and seven mounted-server cases.
@@ -58,10 +59,12 @@ Mounted proof includes both selector families in namespaces 20/23; saved success
 selective parameter credit and refused references for both families; live/recovered
 undo/redo, actual service reopen, unchanged frozen download facts and valid original
 recovery admission after source replacement. Source-only comparisons do not restore
-anything. No real bus, device, browser or private corpus was used.
+anything. These focused runs used no real bus, device, browser or private corpus;
+the later complete package gates separately ran the selected private corpus.
 
 Owning App/ProductDB library runs and server integration tests also have terminal
-results. Complete owning-package acceptance is **not** claimed: the ProductDB
+results at that earlier candidate epoch. They were not complete owning-package
+acceptance: the ProductDB
 integration permission test failed under namespace-root DAC override and passed
 when those capabilities were dropped; a broad server run preceded fixture-only
 corrections; two broad App integration attempts were interrupted without terminal
@@ -96,17 +99,58 @@ signed/unsigned descriptors and signatures inside declared payload/comments are
 separately checked. The review's original failing receipts/characterization remain
 historical; only its maintained regression changes to expect refusal.
 
-Both reviews' extra tests are retained as registered regressions. Its six archive
-mutants all compiled and failed intended assertions; malformed inputs rejected by
-earlier gates are not automatically credited as exercising later guards. Targeted
-independent correction review, complete selected gates and the remaining E-matrix
-limits still belong to parent acceptance; no global acceptance is claimed here.
+Both reviews' extra tests are retained as registered regressions. The archive
+review's six mutants compiled and failed intended assertions; malformed inputs
+rejected by earlier gates are not automatically credited as exercising later guards.
+Independent R2 approved only closure of R-ARCHIVE-01: eight ProductDB and five App
+controls passed in its own copy, including the restored control; one freshly
+compiled coverage-erasure mutant restored the exact public `ALL` bypass and made
+its refusal regression fail. This is targeted correction review, not a new full
+review or a claim that every E-matrix obligation passed.
+
+## Complete selected software acceptance
+
+Source `d77f77be9` and main-first integration `288bd8005` have identical trees.
+Both frozen-source package gates completed all 14 planned stages: formatting,
+documentation, browser-lane registration, layering, headers, anchors, ledger,
+corpus-gate registration, tool tests, desktop cleanup before selected compilation,
+Clippy, Rust tests,
+selected private corpus and whitespace. Every stage exited zero with valid proof;
+`success`, `complete`, `planCompleted` and `inputsFrozen` are true, with no touched
+or unchecked user data. The gates ran offline with isolated XDG homes, loopback-only
+network namespaces and no DAC-bypass capabilities in their outer test runtime.
+
+Each gate recorded **5,367 passed, zero failed and 176 ignored Rust tests**,
+from **19 actual test binaries and five doctest suites**, not 24 binaries. The
+selected private corpus separately passed **97/97 in six targets**; these
+populations are not summed or added to overlapping focused tests. Each toolsuite
+ran 517 tests with six existing opt-in skips. Both prerequisite web builds passed,
+but no browser fixture suite, native GUI or physical hardware run is claimed.
+Actual Rust executables are retained where an executable was produced.
+
+The first gate attempt failed on a 102-column test purpose header. The second
+failed the test-layout scanner on a path override (one of 517 tool tests failed,
+six skipped); neither is accepted. The parent shortened only the comment, then
+moved the unchanged archive test body to `caption_settlement/review.rs` and
+removed the path override. Module/test names stayed unchanged; the focused layout
+checks passed 4/4. Production bytes after independent approval are unchanged. Both
+complete gates above ran afresh on that corrected source; no earlier green stage
+was transplanted into their verdicts.
+
+Private evidence is under `<profile>/evidence/2026-11-03-s2-caption-settlement/`;
+the source-bound gate receipts are `acceptance/branch-r3/gate/receipt.json` and
+`acceptance/integrated-r3/gate/receipt.json` in the retained implementation packet.
+Original failed attempts, review findings, mutation receipts and source/executable
+epochs remain separately identified. Documentation-only successors carry these
+product results only with exact non-documentation input equality and a separate
+complete documentation-delta gate.
 
 ## Evidence and acceptance limits
 
 Registered regressions live in App `configured_hardware/caption_settlement.rs`,
-ProductDB `settlement_caption.rs` and `package/settlement.rs`, and server
-`tests/caption_mounted.rs`. The server fixture uses socketless hardware-kind
+`configured_hardware/caption_review.rs` and `caption_settlement/review.rs`, ProductDB
+`settlement_caption.rs`, `settlement_caption_review.rs`, `package/settlement.rs`
+and `package/settlement_review.rs`, and server `tests/caption_mounted.rs`. The server fixture uses socketless hardware-kind
 simulated transports, real mounted start admission and the real supervised worker;
 source replacement occurs after its first actual data write. The production
 prepare route remains retained-only; standalone tests supply a fully prepared
@@ -123,9 +167,16 @@ permission-test expectation is included.
 
 The task-private handoff records actual registered names, terminal run counts,
 source inventories, executable identities, direct exits and E1–E17 dispositions.
-That matrix remains an acceptance obligation, not seventeen passed labels. Parent
-review, critical mutant calibration, complete selected integration gates and wider
-race/limit measurements remain pending. Existing ignored cancellation/recovery
+That historical author matrix is not seventeen passed labels. Parent review,
+critical dispatch/archive calibration and complete selected integration gates are
+now accepted as described above; this does not close the following wider proof
+limits: exhaustive profile/record/caller cross-binding mutants, every owner/loser
+and second-package corruption, every XML lexical/size adversary, all policy
+revisions and cancellation/panic/read-budget combinations, actual changed-source
+restore, injected changed-source mounted persistence failure, every terminal
+incarnation/reuse combination, writer/project-edit races, discovery read counts
+and changed-source large-project timings. The inner-record/plan/derived guard
+mutant survived and is not relabelled a kill. Existing ignored cancellation/recovery
 measurements retain their original budgets and ignored state.
 
 A pure comparison proves internal consistency, not historical execution or vendor

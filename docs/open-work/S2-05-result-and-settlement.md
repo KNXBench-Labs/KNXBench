@@ -29,10 +29,12 @@ Contract: [system2-download-result](../contracts/system2-download-result.md).
   distinguishes old pinned-profile refusal before plan comparison from equal plans
   with an explicitly new source-and-package-pinned profile. No settlement-only
   re-pinning contract or production equivalence policy is implemented by that evidence.
-  The explicitly software-authorized [narrow caption-only candidate](../status/2026-11-03-s2-caption-settlement-candidate.md)
-  implements the [settlement-only design](../design/system2-settlement-source-equivalence.md)
-  in an isolated candidate. Independent review, full E1–E17 disposition and parent
-  acceptance remain open; this is not production activation or start/recovery policy adoption.
+  The explicitly software-authorized [narrow caption-only rule](../status/2026-11-03-s2-caption-settlement-candidate.md)
+  is accepted main-first as `288bd8005` after independent review and both complete
+  selected 14-stage gates. It implements the bounded [settlement-only design](../design/system2-settlement-source-equivalence.md),
+  not general source equivalence or new start/recovery authority. Exhaustive E-matrix
+  adversaries, source-positive recovery/persistence-failure crosses, race/read-count
+  instrumentation and changed-source large-project measurements remain open.
 - Field verification by the reporter is not requested; no hardware retry is needed
   for the software change.
 

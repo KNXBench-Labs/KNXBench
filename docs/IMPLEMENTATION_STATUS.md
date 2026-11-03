@@ -12,12 +12,15 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
-## Candidate, not delivery: System-2 caption settlement (3 November 2026)
+## System-2 caption-only settlement (3 November 2026, main-only)
 
-The narrow caption-only software implementation awaits independent review and
-parent acceptance. Both original selector families keep their own provenance;
-start/recovery authority is unchanged. General source equivalence and S2-05 stay
-open. [Candidate evidence and limits](status/2026-11-03-s2-caption-settlement-candidate.md).
+The finite selected-caption software rule is accepted main-first as `288bd8005`
+(source `d77f77be9`). Both selector families keep their provenance; strict-pin
+success remains separate and start/recovery authority is unchanged. Independent
+review closed an unindexed-ZIP inventory gap; both complete selected 14-stage
+gates passed, each with 5,367 Rust passes/176 ignored and a separate 97/97 corpus.
+No general source equivalence, full E1–E17 proof, hardware or S2-05 closure follows.
+[Acceptance, failed attempts and limits](status/2026-11-03-s2-caption-settlement-candidate.md).
 
 ## WP-08 Color/Time successor (3 November 2026, main-only)
 

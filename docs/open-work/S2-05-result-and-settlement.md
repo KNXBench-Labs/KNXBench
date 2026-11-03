@@ -29,6 +29,9 @@ Contract: [system2-download-result](../contracts/system2-download-result.md).
   distinguishes old pinned-profile refusal before plan comparison from equal plans
   with an explicitly new source-and-package-pinned profile. No settlement-only
   re-pinning contract or production equivalence policy is implemented by that evidence.
+  A separate [settlement-only source-equivalence proposal](../design/system2-settlement-source-equivalence.md)
+  is **PROPOSED / NOT IMPLEMENTED**: a bounded caption-only comparison, separate selector
+  provenance and preimplementation test obligations, not start/recovery policy adoption.
 - Field verification by the reporter is not requested; no hardware retry is needed
   for the software change.
 

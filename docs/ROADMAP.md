@@ -1,5 +1,12 @@
 # Roadmap
 
+## Candidate after Alpha 19: bounded Color/Time data repair
+
+WP-08 has a source-authenticated ProductDB v32 successor candidate for exact
+released-v15 loser promotions, not a new parameter codec. Independent review,
+mutation calibration, selected gates and publication remain pending; the wider
+codec evidence task stays open. [Contract](contracts/color-time-successor-repair.md).
+
 ## Main-only after Alpha 19: import findings after reopening
 
 WP-25 restores the stored primary report's counted findings into the session log

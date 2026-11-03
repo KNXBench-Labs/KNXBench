@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { createRoot } from "react-dom/client";
 import ResizableTable from "../src/ResizableTable";
-import DevicesWorkspace from "../src/DevicesWorkspace";
+import { DevicesWorkspace } from "../src/deviceComparisons.fixture";
 import ComObjectTable from "../src/ComObjectTable";
 import type { ComObjectNode } from "../src/bindings/ComObjectNode";
 import ComparisonTable from "../src/ComparisonTable";

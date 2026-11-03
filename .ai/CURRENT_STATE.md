@@ -17,12 +17,13 @@
   `docs/status/2026-11-02-rail-themes.md`. No release/deployment/native/bus claim.
 - NEXT: docs-only closeout, private evidence archive and owned cleanup.
 
-## Proportionate future gates (ACTIVE; same owner; observed 2026-11-02 22:13 CET)
-- User Go: `feat/proportionate-gates-20261102`, base249036fde; author `sa-0-419a08ee`.
-- Own planner/runner/fact helper, Python tests, ADR0144 and verification docs only.
-- CLI author was service-refused without edits; replacement owns bounded TDD.
-- NEXT source-bound handoff, independent review and acceptance; no publication yet.
-- Evidence `<profile-scratch>/proportionate-gates-20261102/`; broad fallback retained.
+## Proportionate gate acceptance reference (STANDING; observed 2026-11-03 03:12 CET)
+- Source703ec2904 published/readback equal; original policy and fixture reviews APPROVE.
+- Full490 acceptance10/10 +actual Rust diagnostic15/15 retained; exact successor composition,
+  complete delta11/11 with web42/42, frozen inputs and checked user data untouched.
+- Verification: `docs/status/2026-11-03-proportionate-gates.md`; GATE-01 remains open for other work.
+- NEXT documentation closeout, private evidence archive and owned cleanup. No active implementation
+  claim, release/deployment/native/bus authority or shared-root update from this delivery.
 
 ## Retained boundaries (STANDING; observed 2026-11-02 20:47 CET)
 - System-2 acceptance: `docs/status/2026-11-02-system2-selective-settlement.md`.

@@ -12,6 +12,18 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Proportionate gate selection (3 November 2026, source)
+
+Main-first `703ec2904` selects a representative production dialogs suite for
+proven font-only/app-shell HTML changes while retaining complete web/default
+checks, and an explicit Rust diagnostic stage for exactly bounded theme metadata.
+Unknown/functional changes and full/release gates keep conservative coverage.
+Independent review closed the ordering/JSON-reader findings; the later symlink
+fixture correction has its own regression and review. Original full acceptance
+on `490b6d60e` is composed with the successor's complete 11-stage delta, not
+relabeled as a new Rust/corpus run. [Measured coverage and retained limits](status/2026-11-03-proportionate-gates.md).
+No application, native-shell, hardware, release or deployment compatibility claim follows.
+
 ## Device-editor comparison shares the existing owner (3 November 2026, main-only; WP-27)
 
 The device editor now offers **Compare** beside Download. It opens the existing

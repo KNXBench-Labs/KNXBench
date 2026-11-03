@@ -5,19 +5,19 @@ use knx_core::commissioning::pending::ProgrammingParts;
 use knx_core::{flags::Direction, ComObjectInstanceId, DeviceId};
 
 const DEVICE: DeviceId = DeviceId(1);
-const ADR_APP: ProgrammingParts = ProgrammingParts {
+pub(super) const ADR_APP: ProgrammingParts = ProgrammingParts {
     address: true,
     application: true,
     parameters: false,
     group_addresses: false,
 };
-const ADR_APP_PAR: ProgrammingParts = ProgrammingParts {
+pub(super) const ADR_APP_PAR: ProgrammingParts = ProgrammingParts {
     parameters: true,
     ..ADR_APP
 };
 
 /// The observed, start-admitted bundle a verified run settles with.
-async fn observed(
+pub(super) async fn observed(
     conn: &knx_productdb::Connection,
     project: &knx_core::Project,
     profile: &[u8],
@@ -43,14 +43,14 @@ async fn observed(
     admit_current_project_hardware(conn, project, DEVICE, &bundle).unwrap();
     bundle
 }
-fn parts(
+pub(super) fn parts(
     conn: &knx_productdb::Connection,
     project: &knx_core::Project,
     bundle: &PreparedBundle,
 ) -> Option<ProgrammingParts> {
     current_project_hardware_parts(conn, project, DEVICE, bundle).ok()
 }
-fn parameter(project: &mut knx_core::Project, raw: &str) {
+pub(super) fn parameter(project: &mut knx_core::Project, raw: &str) {
     let id = format!("{}_R", super::super::fixture::PROGRAM);
     project.installations[0]
         .parameters

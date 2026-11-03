@@ -20,8 +20,8 @@ Contract: [system2-download-result](../contracts/system2-download-result.md).
   2 November 2026: a revision-3 UP258 preparation declares that octet, journals and shows each
   tolerated value; every other byte stays strict. Open: a field run of a build that contains it
   (not requested), and the exact clear time (Load Completed or restart).
-- Per-part source equivalence stays open: a source that changed in any part still credits
-  nothing. Since main-first `0d6299187` (2 November 2026) a verified run on a proven
+- General per-part source equivalence stays open. Since main-first `0d6299187`
+  (2 November 2026) a verified run on a proven
   unchanged source credits the parts the current project still states as written.
   Independent re-review and both selected 14-stage package gates passed
   ([acceptance](../status/2026-11-02-system2-selective-settlement.md)); no hardware run.
@@ -29,9 +29,10 @@ Contract: [system2-download-result](../contracts/system2-download-result.md).
   distinguishes old pinned-profile refusal before plan comparison from equal plans
   with an explicitly new source-and-package-pinned profile. No settlement-only
   re-pinning contract or production equivalence policy is implemented by that evidence.
-  A separate [settlement-only source-equivalence proposal](../design/system2-settlement-source-equivalence.md)
-  is **PROPOSED / NOT IMPLEMENTED**: a bounded caption-only comparison, separate selector
-  provenance and preimplementation test obligations, not start/recovery policy adoption.
+  The explicitly software-authorized [narrow caption-only candidate](../status/2026-11-03-s2-caption-settlement-candidate.md)
+  implements the [settlement-only design](../design/system2-settlement-source-equivalence.md)
+  in an isolated candidate. Independent review, full E1–E17 disposition and parent
+  acceptance remain open; this is not production activation or start/recovery policy adoption.
 - Field verification by the reporter is not requested; no hardware retry is needed
   for the software change.
 

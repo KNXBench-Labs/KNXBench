@@ -214,6 +214,11 @@ claiming `verified` is refused. `projectSettlement` is `notRecorded`, `noMutatio
 
 ## Settlement
 
+**Candidate extension, not accepted production activation:** the explicitly
+software-authorized [caption-only implementation](../status/2026-11-03-s2-caption-settlement-candidate.md)
+adds the narrow fallback below. Independent review and parent gates remain pending;
+all caller, persistence, start and recovery boundaries are unchanged.
+
 The worker settles once, on a blocking thread, before the terminal status is published,
 through `domain::settle_programming` (ADR-0129): outside undo, invalidating older
 programmed claims in undo and redo history, persisting before publishing, bound to the
@@ -231,10 +236,16 @@ and reopen never settle.
   1. **Source proof.** The original project is decoded from the validated, start-admitted
      bundle and passed through the unchanged start admission
      (`admit_current_project_hardware`) against the current catalogue winners: the same
-     normalized plan and the same full source-preparation hash. A changed, missing,
-     ambiguous or refused source, a bundle that does not validate, a simulator bundle and
-     another device id are refused: no part is credited, the memory parts become pending
-     and the address is not touched.
+     normalized plan and the same full source-preparation hash. Strict success never
+     performs new package discovery, and a later current-request refusal is terminal.
+     Only a typed source-binding phase can enter the candidate's narrow changed-caption
+     comparison: immutable original validation, exact bytes outside one selected literal
+     caption, actual measured same-family new pins, full original-request preparation,
+     exact policy/coverage/plan and derived-field comparisons, then current preparation.
+     See the [complete design](../design/system2-settlement-source-equivalence.md).
+     Missing, ambiguous, nonclass or refused sources, invalid bundles, simulator bundles,
+     another device id and operational/unknown errors grant no credit: memory becomes
+     pending and address is untouched.
   2. **Current request.** The device's product and program references must be the ones the
      run was prepared with; a switch is refused even when it resolves to the same program
      id. The current project must itself pass the same configured preparation; its request
@@ -248,8 +259,9 @@ and reopen never settle.
   four, a link or flag edit leaves Group addresses pending, a parameter edit leaves
   Parameters and Group addresses pending. The start admission itself is unchanged and
   still requires the whole preparation. This is a comparison of the current project's
-  request on an unchanged source, not a per-part source equivalence: a source that
-  changed in any part credits nothing, and no hash alone is used as per-part proof.
+  request after original-source proof, not general per-part source equivalence.
+  Outside the candidate's sole literal-caption class, changed source credits nothing;
+  no hash or equal normalized plan alone supplies proof.
 - **Recovery** that started: memory parts pending, never programmed, whatever its
   verification said.
 - The operation's server incarnation must equal the running server's; a historical operation
@@ -347,10 +359,10 @@ broken by it, without changing what "pending only" means. The explorer dot is un
 - The final-step category names the operation that stopped, not its cause. #30's actual
   allocation mismatch stays unresolved; new journals keep its bytes privately (above), but
   no field run has produced them yet.
-- A verified run credits only the parts whose current request still equals the written
-  one, and only after the original source is proven unchanged; a changed source in any
-  part credits nothing (documented above). A snapshot at settlement, not a subscription,
-  not a device read.
+- A verified run credits only parts whose current request still equals the written
+  one after strict original-source proof or the narrowly specified candidate caption
+  proof above. General changed-source equivalence remains unsupported. This is a
+  snapshot at settlement, not a subscription or a device read.
 - No hardware evidence. Tests use journals built on the public synthetic fixture,
   mounted hardware-kind simulator workers with the digest-pinned public package, and
   intercepted HTTP. The per-part matrix (unchanged, rename and unrelated edits, links,

@@ -1,6 +1,7 @@
 # S2-05 E15: changed-caption persistence failure — 3 November 2026
 
-**Independently reviewed focused software proof; package acceptance pending.**
+**SOFTWARE ACCEPTED — source `f5c65ea99`, main-first `99f7e65dd`.**
+Independent review and both complete selected 14-stage package gates passed.
 This fixture-only follow-up exercises a named portion of the caption rule's E15
 obligation, not all of E15 or S2-05. It changes no production behavior, source
 admission, recovery policy, timeout, production database schema or hardware permission.
@@ -47,7 +48,7 @@ the original targets after failure. Transfer facts remain Finished/Verified,
 with every step complete; original observed bundle bytes and recovery binding
 remain unchanged. No actual restore is executed.
 
-## Focused execution and remaining acceptance
+## Focused execution and independent review
 
 The parent ran the maintained Cargo library target with filter `caption_mounted`
 and two test threads: **11 passed, zero failed, zero ignored**, including the
@@ -71,11 +72,41 @@ are retained; repeated controls are not additional unique coverage. The isolated
 review copy independently bound the fixture/runtime bytes; original feature-base
 Git provenance was supplied by the parent, not reconstructed in that snapshot.
 
-Complete selected branch and main-first package gates and publication remain
-pending. The original module-registration/format refusals are setup results,
-not failed simulations. Evidence: `<profile-scratch>/queue-next-20261103/`,
-including `focused-r1/receipt.json`, `review/review-summary.json`, raw logs,
-the executed-binary bindings and `PARENT_REVIEW_VALIDATION.json`.
+## Complete selected acceptance and publication
+
+Source `f5c65ea99` and main-first `99f7e65dd` have identical trees. Both frozen
+package gates completed all 14 planned stages with direct exit zero and valid
+proofs: formatting, documentation, browser-lane registration, layering, headers,
+anchors, ledger, corpus-gate registration, tool tests, desktop cleanup, Clippy,
+Rust tests, selected corpus and whitespace. `success`, `complete`,
+`planCompleted` and `inputsFrozen` are true; checked user data was untouched
+and no user data remained unchecked.
+
+Each gate recorded **1,695 passed and 72 unchanged ignored Rust tests**, from
+five actual test binaries and two doctest suites. The selected private corpus
+separately passed **51/51 in two targets**. Tool tests ran 517 methods with
+six existing opt-in skips. Prerequisite web builds passed; browser-lane
+registration and `cargo clean -p knx-desktop` are not browser or native-GUI
+acceptance. The gate built/tested its selected targets, not a release artifact.
+
+The first package attempt failed the Chromium tooling check because dropping
+all outer capabilities prevented its nested uid mapping. A focused correction
+also initially refused the helper's overdeep TMPDIR. These environment refusals
+remain separate failed attempts, not product failures or relabelled passes.
+The corrected probe preserved nested user mapping while dropping DAC-bypass
+capabilities and used the approved scratch root. The exact Chromium test and
+both complete gates then passed without any source correction.
+
+Publication was read back on local integration, tracking and live remote
+`main` as `99f7e65dd`. The shared root checkout was intentionally not updated.
+A documentation-only successor carries these results only with exact
+non-documentation input equality and its own complete documentation-delta gate.
+Original module-registration/format refusals are setup results, not failed
+simulations. Private evidence is retained under
+`<profile>/evidence/2026-11-03-s2-caption-persistence/`, including the original
+`focused-r1/receipt.json`, `review/review-summary.json`,
+`branch-gate-r2/receipt.json`, `integrated/gate-r1/receipt.json`, raw logs,
+executed-binary bindings and `PARENT_REVIEW_VALIDATION.json`.
 
 ## Unchanged boundaries
 

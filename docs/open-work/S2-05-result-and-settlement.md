@@ -36,9 +36,9 @@ Contract: [system2-download-result](../contracts/system2-download-result.md).
   adversaries, source-positive recovery crosses, race/read-count instrumentation
   and changed-source large-project measurements remain open. A bounded
   [E15 changed-caption persistence-failure follow-up](../status/2026-11-03-s2-caption-persistence.md)
-  has focused mounted execution and independent review with four compiled
-  wrong-variant assertion failures; package acceptance remains pending, not
-  whole-E15 closure.
+  is accepted main-first as `99f7e65dd`: focused mounted execution, independent
+  review with four compiled wrong-variant assertion failures and both complete
+  selected 14-stage gates. This closes that bounded failure cross, not all E15.
 - Field verification by the reporter is not requested; no hardware retry is needed
   for the software change.
 

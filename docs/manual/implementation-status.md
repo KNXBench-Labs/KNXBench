@@ -2,6 +2,14 @@
 
 # Implementation status
 
+## Main-only after Alpha 19: group-address sub-range navigation
+
+Columns and Atlas no longer lose a populated sub-range when local navigation
+leaves an Explorer-selected range. Explicit local navigation takes over; a later
+Explorer activation takes it back, even when selecting the same range again.
+Search, selection and stored membership remain unchanged. Atlas still shows direct
+members only after local range selection. [Acceptance and boundaries](../status/2026-11-03-wp28-group-address-subranges.md).
+
 ## Main-only after Alpha 19: import findings after reopening
 
 Opening a native project reprojects the stored primary report's counted errors

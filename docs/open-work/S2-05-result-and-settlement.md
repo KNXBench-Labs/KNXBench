@@ -42,7 +42,8 @@ Contract: [system2-download-result](../contracts/system2-download-result.md).
   The [E13 malformed-current-parameter follow-up](../status/2026-11-04-s2-current-parameter-refusal.md)
   has focused mounted proof for both selector families/namespaces and prior
   pending/marked states plus independent terminal-refusal and address-fallback
-  calibration. Package acceptance remains pending, not whole-E13 closure.
+  calibration, accepted main-first as `37fcc9b50` after both complete selected
+  14-stage gates. This closes that bounded current-input cross, not all E13.
 - Field verification by the reporter is not requested; no hardware retry is needed
   for the software change.
 

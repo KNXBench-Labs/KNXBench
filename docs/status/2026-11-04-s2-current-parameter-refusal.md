@@ -1,6 +1,7 @@
 # S2-05 E13: malformed current parameter at mounted settlement — 4 November 2026
 
-**Independently reviewed focused software proof; package acceptance pending.**
+**SOFTWARE ACCEPTED — source `c0c7d1da2`, main-first `37fcc9b50`.**
+Independent review and both complete selected 14-stage package gates passed.
 This test-only characterization exercises the existing current-request refusal
 at the mounted terminal path. It changes no production behavior, source
 admission, validator, timeout, schema or hardware permission, and does not close
@@ -75,14 +76,37 @@ cell of each family before panic; the remaining six malformed cells are not
 claimed as mutant executions. Restored production bytes and complete input
 manifests match; four actual invocation binaries and raw results are retained.
 
-Complete selected branch/main-first package gates and publication remain
-pending. Source parsing/formatting was not runtime proof, and no original-source
-semantic RED is claimed for already-correct production.
+## Complete selected acceptance and publication
 
-Evidence: `<profile-scratch>/e13-current-refusal-20261103/`, including
-`focused-r1/receipt.json`, raw logs, `review-bindings.json`, `cases.json` and the
-executed-binary binding. The independent review copy includes the actual public
-base Git object, not only a supplied base identifier.
+Source `c0c7d1da2` and main-first `37fcc9b50` have identical trees. Both package
+gates completed all 14 planned stages with direct exit zero and valid proofs:
+formatting, documentation, browser-lane registration, layering, headers, anchors,
+ledger, corpus-gate registration, tool tests, desktop cleanup, Clippy, Rust tests,
+selected corpus and whitespace. `success`, `complete`, `planCompleted` and
+`inputsFrozen` are true; checked user data was untouched and none unchecked.
+
+Each gate recorded **1,697 passed and 72 unchanged ignored Rust tests**, from
+five actual test binaries and two empty doctest suites. The selected private
+corpus separately passed **51/51 in two targets**. Tool tests ran 517 methods
+with six existing opt-in skips. Prerequisite web builds passed; browser-lane
+registration and desktop cleanup (`cargo clean`) do not establish browser-suite
+or native-GUI acceptance. This is not a release-artifact verification.
+
+Publication was read back on local integration, tracking and live remote `main`
+as `37fcc9b50`; the shared root checkout was intentionally not synchronized.
+A documentation-only successor carries this runtime result only with exact
+non-documentation input equality and its own complete documentation-delta gate.
+No original-source semantic RED or production repair is claimed.
+
+Private evidence is retained under
+`<profile>/evidence/2026-11-04-s2-current-parameter-refusal/`, including
+`focused-r1/receipt.json`, `branch-gate-r1/receipt.json`,
+`integrated/gate-r1/receipt.json`, `review/review-summary.json`, raw logs,
+`PARENT_REVIEW_VALIDATION.json`, `review-bindings.json`, `cases.json` and actual
+executed-binary bindings. The review copy includes the actual public base Git
+object. The automatic source-parser edition refusal remains setup-only evidence,
+not a runtime RED. An optional post-run procfs observation raced an exited review
+wrapper; it did not change execution, restore results or source bindings.
 
 ## Unchanged boundaries
 

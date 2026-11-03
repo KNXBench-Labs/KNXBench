@@ -1,5 +1,10 @@
 # Restart snapshot
 
+## WP-08 authentic-upgrade evidence (ACTIVE; observed 2026-11-03 08:48 CET)
+- Actual v14 source91d319ea4 ->v31 source176a9b799 reproduces2 Color/Time winner-row contaminations; same-byte fresh and unique control correct, reopen identical. Independent evidence review APPROVE; sole publication wording F1 corrected against raw target receipts.
+- Source remains unchanged; record `docs/status/2026-11-03-wp08-authentic-color-time-upgrade.md`, compact JSON linked there. Existing codecs, historical reports and wider WP-08 boundaries remain open.
+- Docs-only selected10-stage acceptance/publication pending; branch `docs/wp08-authentic-v14-witness-20261103`, own evidence `<profile-scratch>/wp08-v14-witness-20261103/`. No product repair/source claim, private corpus, native, bus, VM, release or deployment authority. Root/private/other tracks preserved.
+
 ## WP-11 native splitter reference (STANDING; observed 2026-11-03)
 - Latest Navigation-width subset:6 cells/24 pointer legs/3 preselections,48 native trees/24 settings/16 verified seat restores at80/100/150; all historical width-step observables match, including only the named150%-short cursor-4/edge-5 exception.
 - Actual reused build6ecb69427/binary563b9b03/frontend494f2a8d/147; admission90b85c2fd differs only docs/checkpoint, tracked code/build/lock/assets equal. No new native build or original setup-method parity claim.

@@ -27,9 +27,15 @@ modes are not promoted: they retain `Other`, original evidence and counter
 contributions, with explicit backfill diagnostics and unavailable reports.
 
 Related historical follow-up: the unchanged v15 Color/Time backfill has a
-same-blob duplicate-program first-winner hole (independent helper-level witness,
-not a genuine pre-v15 migration). Reproduce it through an authentic pre-v15
-upgrade and design a successor repair separately; this slice fixes only Date.
+same-blob duplicate-program first-winner hole. The [authentic upgrade witness](../status/2026-11-03-wp08-authentic-color-time-upgrade.md)
+recorded on 3 November 2026 installs fictional bytes with actual v14 code,
+then opens its database through the current v31 chain. Two winner type rows
+incorrectly inherit the losing declaration's Color/Time metadata; a fresh
+current install keeps the first declaration authoritative. The unique-program
+control and an additional reopen are recorded. This closes the authentic
+pre-v15 reproduction prerequisite only, not the defect. A successor repair
+for already contaminated databases still needs a separately bounded design;
+Date/native/image and Colour/Picture codec evidence remains unchanged.
 
 ## First deliverable
 

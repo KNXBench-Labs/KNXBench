@@ -1,9 +1,10 @@
 # Restart snapshot
 
-## WP-08 authentic-upgrade evidence (ACTIVE; observed 2026-11-03 08:48 CET)
-- Actual v14 source91d319ea4 ->v31 source176a9b799 reproduces2 Color/Time winner-row contaminations; same-byte fresh and unique control correct, reopen identical. Independent evidence review APPROVE; sole publication wording F1 corrected against raw target receipts.
-- Source remains unchanged; record `docs/status/2026-11-03-wp08-authentic-color-time-upgrade.md`, compact JSON linked there. Existing codecs, historical reports and wider WP-08 boundaries remain open.
-- Docs-only selected10-stage acceptance/publication pending; branch `docs/wp08-authentic-v14-witness-20261103`, own evidence `<profile-scratch>/wp08-v14-witness-20261103/`. No product repair/source claim, private corpus, native, bus, VM, release or deployment authority. Root/private/other tracks preserved.
+## WP-08 Color/Time successor repair (CLAIMED; owner next-tasks WebUI; observed 2026-11-03)
+- Prerequisite witness94d515855 published/readback, branch+integrated docs10/10 complete/frozen, checked user data untouched; independent APPROVE/F1closure and original DBs/binaries retained under `<profile>/evidence/2026-11-03-wp08-authentic-color-time-upgrade/`. Two witness trees retired, no product repair yet.
+- Scope: new source-authenticated data-only migration for demonstrated old-v15 loser promotions, including contaminated non-NULL rows; existing reports/counters/unknown evidence and released migrations stay unchanged except named refusal diagnostics.
+- Reserve next ProductDB schema slot (current31), `knx-productdb` repair/migration/tests and necessary version consumers/docs. Branch/tree `fix/wp08-color-time-successor-20261103`/`knxbench-wp08-color-time-successor-20261103`; no source edits before this claim is published.
+- NEXT TDD then authentic retained v14/v31 upgrade/fresh/reopen controls, independent review and selected gates. No bus/VM/native/release/deployment authority; private corpus only through maintained isolated read-only gates. Other tracks preserved.
 
 ## WP-11 native splitter reference (STANDING; observed 2026-11-03)
 - Latest Navigation-width subset:6 cells/24 pointer legs/3 preselections,48 native trees/24 settings/16 verified seat restores at80/100/150; all historical width-step observables match, including only the named150%-short cursor-4/edge-5 exception.

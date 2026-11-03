@@ -1,0 +1,92 @@
+{
+  "task": "WP-08 authentic Color/Time upgrade witness",
+  "evidenceOnly": true,
+  "productRepair": false,
+  "sources": {
+    "historical": "91d319ea4aef481abc0f533296bab20d2e1cb318",
+    "current": "176a9b7997d7f3dcbdd973d114287fc13346752c"
+  },
+  "fixture": {
+    "origin": "Original fictional scheme-14 package; no third-party inputs",
+    "packageSha256": "3edaa98294353c028baada895a5e242faa939e89a105cf4164871a9565c3554c",
+    "programSha256": "6dc9d27934a453a9b934aa78b8f454178695d906c70353d2a81d1cea13cc3e42",
+    "masterSha256": "09977846f387288d4954adc656defd40bcbd38f20cfb35fb9935a5f812bf8ced",
+    "harnessSha256": "b9e305e404b49a4e786637ce75ca280454f5ec4fce28f18b04daf3edfb9981be",
+    "independentOracle": "First declaration order, recorded before product execution"
+  },
+  "databaseIdentities": {
+    "original": {
+      "version": 14,
+      "sha256": "e54e3a722483c63f20d0f96015b283e28bedcf7c54de4969084f3957c65c7165"
+    },
+    "migrated": {
+      "version": 31,
+      "sha256": "732191f9f1a179672018a41ce26d7802d0fa1021d997fc8bdba13e8a77646b9d"
+    },
+    "fresh": {
+      "version": 31,
+      "sha256": "4faeaf3df5cd9cdc9f8b5738c6e265f2ee2ca7dbbb25f590787f0ab85ef2c148"
+    }
+  },
+  "rows": [
+    {
+      "programId": "M-0001_A-1",
+      "typeId": "PT-C",
+      "historical": {"kind": "Other", "sizeInBit": null, "minInclusive": null, "maxInclusive": null},
+      "migrated": {"kind": "Color", "sizeInBit": null, "minInclusive": null, "maxInclusive": null},
+      "freshAndExpected": {"kind": "Other", "sizeInBit": null, "minInclusive": null, "maxInclusive": null}
+    },
+    {
+      "programId": "M-0001_A-1",
+      "typeId": "PT-T",
+      "historical": {"kind": "Other", "sizeInBit": null, "minInclusive": null, "maxInclusive": null},
+      "migrated": {"kind": "Time", "sizeInBit": 16, "minInclusive": "3", "maxInclusive": "303"},
+      "freshAndExpected": {"kind": "Other", "sizeInBit": null, "minInclusive": null, "maxInclusive": null}
+    },
+    {
+      "programId": "M-0001_A-2",
+      "typeId": "PT-C",
+      "historical": {"kind": "Other", "sizeInBit": null, "minInclusive": null, "maxInclusive": null},
+      "migrated": {"kind": "Color", "sizeInBit": null, "minInclusive": null, "maxInclusive": null},
+      "freshAndExpected": {"kind": "Color", "sizeInBit": null, "minInclusive": null, "maxInclusive": null}
+    },
+    {
+      "programId": "M-0001_A-2",
+      "typeId": "PT-T",
+      "historical": {"kind": "Other", "sizeInBit": null, "minInclusive": null, "maxInclusive": null},
+      "migrated": {"kind": "Time", "sizeInBit": 32, "minInclusive": "7", "maxInclusive": "707"},
+      "freshAndExpected": {"kind": "Time", "sizeInBit": 32, "minInclusive": "7", "maxInclusive": "707"}
+    }
+  ],
+  "observations": {
+    "historicalAndFreshKeepFirstProgramAuthority": true,
+    "upgradeContaminatesTwoTypeRows": true,
+    "uniqueProgramControlCorrect": true,
+    "migratedAndFreshUnknownSemanticRowsEqualExcludingTechnicalId": true,
+    "migratedAndFreshSchemaDdlEqual": true,
+    "originalAndIndependentBackupUnchanged": true,
+    "reopenLogicalAndFileIdentityUnchanged": true,
+    "allFourSnapshotsIntegrityOk": true,
+    "allFourSnapshotsForeignKeyViolations": 0,
+    "historicalAndMigratedReport": {"status": "measured", "unknownDistinct": 3, "unknownOccurrences": 6},
+    "freshReport": {"status": "measured", "unknownDistinct": 4, "unknownOccurrences": 8},
+    "wholeDatabaseEqualsFresh": false,
+    "intermediateV15SnapshotExecuted": false
+  },
+  "execution": {
+    "historicalBuild": 0,
+    "historicalInstall": 0,
+    "currentBuild": 0,
+    "currentMigration": 0,
+    "currentFreshInstall": 0,
+    "currentReopen": 0,
+    "scratchHarnessRustfmtCheck": 1,
+    "workspaceOrPackageGateClaimedForProduct": false
+  },
+  "limits": [
+    "One original fictional scheme-14 input; no XSD-conformance claim",
+    "Historical reports remain original encounter evidence, not fresh measurements",
+    "Attribution to v15 combines complete v14-to-v31 execution with source inspection",
+    "No product repair, codec, hardware, corpus, native UI, release or deployment acceptance"
+  ]
+}

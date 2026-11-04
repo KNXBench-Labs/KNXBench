@@ -202,7 +202,7 @@ server and xtask; it is not a full-workspace or release gate.
 - Separate selected private-corpus run: **91/91 passed in five targets**. This is
   not added to the default or focused totals, nor does it execute every ignored test.
 - Tool suite: **517 tests, six existing opt-in skips**, no failures.
-- Workspace Clippy/all-targets with warnings denied, formatting, documentation/privacy,
+- Selected-package Clippy/all-targets with warnings denied, formatting, documentation/privacy,
   layering, source headers, anchors, ledger, corpus registration, browser-lane registration,
   clean-desktop and whitespace checks all passed. The real web-bundle prerequisite
   was built; no web or runtime-browser lane was selected by this source diff.

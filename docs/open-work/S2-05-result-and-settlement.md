@@ -51,6 +51,15 @@ Contract: [system2-download-result](../contracts/system2-download-result.md).
   assertion calibration and both complete selected 14-stage gates. The callback
   counter is a separately labelled private seam probe, not worker read-count
   evidence. This closes that bounded cross, not all E14 or lifecycle/recovery.
+  The [E16 ineligible final-verification follow-up](../status/2026-11-04-s2-ineligible-terminal.md)
+  is accepted main-first as `633d669e3`: two new leaves/four retained/ns20 cases
+  cross a healthy caption-ALL witness with actual failed/healthy terminal workers,
+  exact MEMORY/history conservation and frozen facts. Independent review calibrated
+  two real owner variants; both complete selected 14-stage gates passed. Version
+  observations use current-producer deviation-only semantics, not retained raw
+  bytes or actual-worker read counts. This closes this bounded failure cross,
+  not all E16 or S2-05; standalone/ns23 negatives and wider lifecycle/recovery
+  remain separate and open.
 - Field verification by the reporter is not requested; no hardware retry is needed
   for the software change.
 

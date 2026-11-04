@@ -136,7 +136,10 @@ enum SessionActivity {
         id: u64,
         /// The gateway this monitor is connected to (issue #10: offered as
         /// a suggestion where a gateway is chosen).
-        gateway: String,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        gateway: Option<String>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        serial: Option<crate::bus_serial::SerialTarget>,
         state: &'static str,
     },
     LineScan {
@@ -225,7 +228,8 @@ async fn snapshot(State(state): State<SharedState>) -> Json<ActivitySnapshot> {
             if let Some(session) = guard.as_ref() {
                 sessions.push(SessionActivity::BusMonitor {
                     id: session.id(),
-                    gateway: session.gateway().to_string(),
+                    gateway: session.gateway().map(|gateway| gateway.to_string()),
+                    serial: session.serial().cloned(),
                     state: match session.status() {
                         SessionStatus::Active => "active",
                         SessionStatus::Closed => "closed",

@@ -1,4 +1,4 @@
-// apps/knx-server/src/bus_routes.rs
+//! Route bus connections and group traffic through the single shared bus session.
 //! `/api/bus/*` — T15 task 3: the HTTP layer over `bus.rs`'s session/buffer/
 //! drain-task machinery (design spec `docs/superpowers/specs/
 //! 2026-09-11-group-monitor-design.md` §4.3), plus T25's interface search.
@@ -51,11 +51,14 @@ use crate::SharedState;
 pub fn bus_routes() -> Router<SharedState> {
     Router::new()
         .route("/api/bus/monitor/start", post(start_monitor))
+        .route("/api/bus/monitor/start-serial", post(start_serial_monitor))
         .route("/api/bus/monitor/stop", post(stop_monitor))
         .route("/api/bus/monitor/stop-bound", post(stop_bound_monitor))
         .route("/api/bus/monitor/telegrams", get(poll_telegrams))
         .route("/api/bus/monitor/flow-snapshot", get(flow_snapshot))
         .route("/api/bus/write", post(write_value))
+        .route("/api/bus/write-bound", post(write_bound_value))
+        .route("/api/bus/read", post(read_value))
         .route("/api/bus/discover", post(discover_interfaces))
         .route("/api/bus/scan/estimate", post(estimate_scan))
         .route("/api/bus/scan/start", post(start_scan))
@@ -525,6 +528,7 @@ fn session_error_to_api_error(error: BusSessionError) -> ApiError {
         BusSessionError::Transport(e) => {
             ApiError::with_status(StatusCode::BAD_GATEWAY, e.to_string())
         }
+        BusSessionError::PassiveSerial => ApiError::conflict("passiveSerial", error.to_string()),
         BusSessionError::AlreadyActive | BusSessionError::NoActiveSession => {
             ApiError::with_status(StatusCode::CONFLICT, error.to_string())
         }
@@ -576,6 +580,8 @@ struct StartResponse {
     session_id: u64,
     server_incarnation: String,
     assigned_address: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    serial: Option<crate::bus_serial::SerialTarget>,
 }
 
 async fn start_monitor(
@@ -589,6 +595,40 @@ async fn start_monitor(
         .parse()
         .map_err(|_| ApiError::bad_request(format!("not a gateway address: {:?}", body.gateway)))?;
 
+    start_monitor_target(state, MonitorTarget::Ip(gateway)).await
+}
+
+enum MonitorTarget {
+    Ip(SocketAddrV4),
+    Serial(crate::bus_serial::SerialTarget),
+}
+
+async fn start_serial_monitor(
+    State(state): State<SharedState>,
+    body: Result<Json<crate::bus_serial::SerialTarget>, axum::extract::rejection::JsonRejection>,
+) -> Result<Json<StartResponse>, ApiError> {
+    let Json(target) = body.map_err(|_| {
+        ApiError::bad_request(
+            "serial start requires exactly path, source and mode (passive or active)",
+        )
+    })?;
+    target.validate().map_err(ApiError::bad_request)?;
+    if !cfg!(target_os = "linux") {
+        return Err(ApiError::with_details(
+            StatusCode::NOT_IMPLEMENTED,
+            "serialUnsupported",
+            "serial TP-UART requires a Linux server",
+            serde_json::Map::new(),
+        ));
+    }
+    state.stop_admission.admit()?;
+    start_monitor_target(state, MonitorTarget::Serial(target)).await
+}
+
+async fn start_monitor_target(
+    state: SharedState,
+    target: MonitorTarget,
+) -> Result<Json<StartResponse>, ApiError> {
     // WP-26: a start never queues behind a held reservation (a long management
     // or System-2 run would turn it into a late, surprising connect). It is
     // refused at once, before any connector call. The System-2 check follows
@@ -621,11 +661,17 @@ async fn start_monitor(
         // gateway) and, since issue #10, as the structured `holder`.
         return Err(crate::tunnel_holder::gateway_busy(
             crate::tunnel_holder::monitor_holder_of(existing),
-            format!(
-                "a monitor session is already active (id {}, gateway {})",
-                existing.id(),
-                existing.gateway()
-            ),
+            match existing.gateway() {
+                Some(gateway) => format!(
+                    "a monitor session is already active (id {}, gateway {})",
+                    existing.id(),
+                    gateway
+                ),
+                None => format!(
+                    "a serial monitor session is already active (id {})",
+                    existing.id()
+                ),
+            },
         ));
     }
 
@@ -647,17 +693,37 @@ async fn start_monitor(
         .next_bus_session_id
         .fetch_add(1, std::sync::atomic::Ordering::SeqCst);
 
-    let session = BusSession::start(id, gateway, state.connector.as_ref(), ctx)
-        .await
-        .map_err(|e| connect_error_to_api_error(gateway, e))?;
+    let session = match target {
+        MonitorTarget::Ip(gateway) => BusSession::start(id, gateway, state.connector.as_ref(), ctx)
+            .await
+            .map_err(|error| connect_error_to_api_error(gateway, error))?,
+        MonitorTarget::Serial(target) => {
+            let active = target.mode == crate::bus_serial::SerialMode::Active;
+            BusSession::start_serial(id, target, state.connector.as_ref(), ctx)
+                .await
+                .map_err(|error| {
+                    ApiError::with_details(
+                        StatusCode::BAD_GATEWAY,
+                        "serialConnectFailed",
+                        error.to_string(),
+                        serde_json::Map::from_iter([(
+                            "activeAutoAckStateUncertain".into(),
+                            active.into(),
+                        )]),
+                    )
+                })?
+        }
+    };
 
     let assigned_address = session.assigned_address().to_string();
+    let serial = session.serial().cloned();
     *guard = Some(session);
 
     Ok(Json(StartResponse {
         session_id: id,
         server_incarnation: state.server_incarnation.clone(),
         assigned_address,
+        serial,
     }))
 }
 
@@ -672,9 +738,9 @@ struct StopResponse {
     server_incarnation: String,
     telegram_count: usize,
     dropped_count: u64,
-    /// `Some(message)` only if the drain task's own `JoinHandle` reported a
-    /// panic (`BusSessionSummary::drain_panic`, carried Task 2 review
-    /// finding) — omitted from the wire entirely in the ordinary case
+    /// Drain panic/cancellation or serial cleanup error; omitted on clean cleanup.
+    /// A serial error can leave the auto-ACK state unknown. The existing
+    /// warning field preserves that uncertainty. Omitted in the ordinary case
     /// (`skip_serializing_if`). The additive `serverIncarnation` binds the
     /// reusable numeric id to this process lifetime. `200`, not `500`: the
     /// stop itself genuinely succeeded (the
@@ -686,14 +752,20 @@ struct StopResponse {
 }
 
 async fn stop_monitor(State(state): State<SharedState>) -> Result<Json<StopResponse>, ApiError> {
-    let session = {
-        let mut guard = state.bus_session.lock().await;
-        guard.take()
-    };
-    let Some(session) = session else {
+    let mut guard = state
+        .bus_session
+        .try_lock()
+        .map_err(|_| session_lock_busy(&state, system2_running(&state)))?;
+    let Some(session) = guard.take() else {
         return Err(session_error_to_api_error(BusSessionError::NoActiveSession));
     };
     let session_id = session.id();
+    let serial = session.serial().is_some();
+    // Serial owns the reservation through reset/disconnect, even when cleanup fails.
+    // IP retains its existing release-before-disconnect behavior.
+    if !serial {
+        drop(guard);
+    }
     let summary = session.stop().await;
     Ok(Json(StopResponse {
         session_id,
@@ -796,7 +868,9 @@ async fn stop_bound_monitor(
         ));
     }
     let session = guard.take().expect("matched a held session");
-    drop(guard);
+    if session.serial().is_none() {
+        drop(guard);
+    }
     let summary = session.stop().await;
     Ok(Json(StopResponse {
         session_id: bound.session_id,
@@ -988,6 +1062,8 @@ impl TelegramRowDto {
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 struct TelegramsResponse {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    serial: Option<crate::bus_serial::SerialTarget>,
     session_id: u64,
     server_incarnation: String,
     context_status: &'static str,
@@ -1045,6 +1121,7 @@ async fn poll_telegrams(
         SessionStatus::Closed => "closed",
     };
     let response = TelegramsResponse {
+        serial: session.serial().cloned(),
         session_id,
         server_incarnation: state.server_incarnation.clone(),
         context_status,
@@ -1228,6 +1305,118 @@ struct WriteResponse {
     decoded_echo: DecodedValueDto,
 }
 
+/// Both identity fields are required in the body; duplicate/extra fields fail decoding.
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct ReadRequest {
+    session_id: u64,
+    server_incarnation: String,
+    destination: String,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct BoundWriteRequest {
+    session_id: u64,
+    server_incarnation: String,
+    destination: String,
+    dpt: Option<String>,
+    input_format: Option<String>,
+    value: String,
+}
+
+fn validate_group_identity(id: u64, incarnation: &str) -> Result<(), ApiError> {
+    if id == 0
+        || id > 9_007_199_254_740_991
+        || incarnation.is_empty()
+        || incarnation.len() > 256
+        || !incarnation
+            .bytes()
+            .all(|b| b.is_ascii_alphanumeric() || b == b'-' || b == b'_')
+    {
+        return Err(ApiError::bad_request(
+            "a safe positive sessionId and serverIncarnation are required; nothing was sent",
+        ));
+    }
+    Ok(())
+}
+
+fn matching_group_session<'a>(
+    state: &SharedState,
+    held: &'a Option<BusSession>,
+    id: u64,
+    incarnation: &str,
+) -> Result<&'a BusSession, ApiError> {
+    held.as_ref()
+        .filter(|session| session.id() == id && state.server_incarnation == incarnation)
+        .ok_or_else(|| {
+            ApiError::conflict(
+                BUS_SESSION_CHANGED,
+                "the named bus session is no longer held; nothing was sent",
+            )
+        })
+}
+
+async fn read_value(
+    State(state): State<SharedState>,
+    body: Result<Json<ReadRequest>, axum::extract::rejection::JsonRejection>,
+) -> Result<Json<serde_json::Value>, ApiError> {
+    let Json(body) = body.map_err(|_| {
+        ApiError::bad_request(
+            "group read requires sessionId, serverIncarnation and destination; nothing was sent",
+        )
+    })?;
+    validate_group_identity(body.session_id, &body.server_incarnation)?;
+    let guard = state
+        .bus_session
+        .try_lock()
+        .map_err(|_| session_lock_busy(&state, system2_running(&state)))?;
+    if system2_running(&state) {
+        return Err(session_lock_busy(&state, true));
+    }
+    let session =
+        matching_group_session(&state, &guard, body.session_id, &body.server_incarnation)?;
+    let ga = GroupAddress::parse(
+        &body.destination,
+        session
+            .group_address_style()
+            .unwrap_or(GroupAddressStyle::ThreeLevel),
+    )
+    .map_err(|error| ApiError::bad_request(error.to_string()))?;
+    session
+        .send(Destination::Group(ga), ApplicationService::GroupValueRead)
+        .await
+        .map_err(session_error_to_api_error)?;
+    Ok(Json(serde_json::json!({ "service": "GroupValueRead" })))
+}
+
+async fn write_bound_value(
+    State(state): State<SharedState>,
+    body: Result<Json<BoundWriteRequest>, axum::extract::rejection::JsonRejection>,
+) -> Result<Json<WriteResponse>, ApiError> {
+    let Json(body) = body.map_err(|_| ApiError::bad_request("bound group write requires an exact session identity, destination and value; nothing was sent"))?;
+    validate_group_identity(body.session_id, &body.server_incarnation)?;
+    let guard = state
+        .bus_session
+        .try_lock()
+        .map_err(|_| session_lock_busy(&state, system2_running(&state)))?;
+    if system2_running(&state) {
+        return Err(session_lock_busy(&state, true));
+    }
+    let session =
+        matching_group_session(&state, &guard, body.session_id, &body.server_incarnation)?;
+    send_write_value(
+        session,
+        WriteRequest {
+            destination: body.destination,
+            dpt: body.dpt,
+            input_format: body.input_format,
+            value: body.value,
+        },
+    )
+    .await
+}
+
 async fn write_value(
     State(state): State<SharedState>,
     Json(body): Json<WriteRequest>,
@@ -1239,21 +1428,27 @@ async fn write_value(
     // comment.
     let guard = state.bus_session.lock().await;
 
-    // The active session's current shared style (Free/TwoLevel/ThreeLevel), or
-    // the three-level fallback if no session is active yet or its project
-    // snapshot has none — see `WriteRequest`'s doc comment for why this
-    // must match what `/telegrams` rendered.
-    let style = guard
+    let session = guard
         .as_ref()
-        .and_then(BusSession::group_address_style)
+        .ok_or_else(|| session_error_to_api_error(BusSessionError::NoActiveSession))?;
+    if session.serial().is_some() {
+        return Err(ApiError::conflict(
+            "busSessionBindingRequired",
+            "serial writes require the distinct bound write route; nothing was sent",
+        ));
+    }
+    send_write_value(session, body).await
+}
+
+async fn send_write_value(
+    session: &BusSession,
+    body: WriteRequest,
+) -> Result<Json<WriteResponse>, ApiError> {
+    let style = session
+        .group_address_style()
         .unwrap_or(GroupAddressStyle::ThreeLevel);
     let ga = GroupAddress::parse(&body.destination, style)
-        .map_err(|e| ApiError::bad_request(e.to_string()))?;
-
-    let Some(session) = guard.as_ref() else {
-        return Err(session_error_to_api_error(BusSessionError::NoActiveSession));
-    };
-
+        .map_err(|error| ApiError::bad_request(error.to_string()))?;
     let dpt = if let Some(dpt_str) = body.dpt.as_deref() {
         knx_core::DptRef::parse(dpt_str).map_err(|e| ApiError::bad_request(e.to_string()))?
     } else {

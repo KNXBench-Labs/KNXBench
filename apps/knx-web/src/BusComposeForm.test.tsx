@@ -1,3 +1,4 @@
+/** Verify group compose actions, validation and passive transport refusals. */
 // @vitest-environment happy-dom
 //
 // Standalone tests for the compose/send form's own resolve-then-send state
@@ -9,13 +10,16 @@
 import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { BusWriteResponse } from "./api";
+import type { BusWriteResponse, GroupActionSession } from "./api";
 
 const apiMock = vi.hoisted(() => ({
   writeBusValue: vi.fn(),
+  writeBoundBusValue: vi.fn(),
+  readBusValue: vi.fn(),
 }));
 
-vi.mock("./api", () => ({
+vi.mock("./api", async importOriginal => ({
+  isBoundBusSession: (await importOriginal<typeof import("./api")>()).isBoundBusSession,
   ...apiMock,
   errorMessage: (error: unknown) => (error instanceof Error ? error.message : String(error)),
 }));
@@ -50,6 +54,8 @@ async function renderForm(
   projectOpen = true,
   sessionClosed = false,
   contextStale = false,
+  passiveSerial = false,
+  actionSession: GroupActionSession = {kind:"ip",identity:{sessionId:1,serverIncarnation:"compose-test"}},
 ) {
   host = document.createElement("div");
   document.body.appendChild(host);
@@ -59,6 +65,7 @@ async function renderForm(
       <BusComposeForm
         destination={destination}
         resolution={resolution}
+        session={passiveSerial ? {kind:"serial",identity:actionSession.identity,mode:"passive"} : actionSession}
         projectOpen={projectOpen}
         sessionClosed={sessionClosed}
         contextStale={contextStale}
@@ -403,4 +410,47 @@ describe("BusComposeForm", () => {
 
     expect(apiMock.writeBusValue).not.toHaveBeenCalled();
   });
+});
+
+it("disables group sends in passive serial mode with an associated explanation", async () => {
+  const root=await renderForm("1/1/1",{kind:"single",dpt:"DPST-1-1"},true,false,false,true);
+  try {
+    for(const button of host!.querySelectorAll<HTMLButtonElement>(".bus-compose-fields button")) {
+      expect(button.disabled).toBe(true); expect(describedTextOf(".bus-compose-destination")).toContain("Passive serial monitoring cannot send");
+      await act(async()=>button.click());
+    }
+    expect(apiMock.readBusValue).not.toHaveBeenCalled(); expect(apiMock.writeBusValue).not.toHaveBeenCalled();
+  } finally { await act(async()=>root.unmount()); }
+});
+it("allows an explicit active group read without a write value or DPT",async()=>{
+  apiMock.readBusValue.mockResolvedValue({service:"GroupValueRead"});
+  const root=await renderForm("1/1/1",{kind:"none"});
+  try {
+    const button=[...host!.querySelectorAll<HTMLButtonElement>("button")].find(b=>b.textContent==="Read group value")!;
+    expect(button.disabled).toBe(false); await act(async()=>button.click());
+    expect(apiMock.readBusValue).toHaveBeenCalledExactlyOnceWith({sessionId:1,serverIncarnation:"compose-test"},"1/1/1");
+    expect(apiMock.writeBusValue).not.toHaveBeenCalled(); expect(host!.textContent).toContain("not device-state verification");
+  } finally {await act(async()=>root.unmount());}
+});
+
+it("uses only bound serial sends, while group reads carry the same identity",async()=>{
+  const identity={sessionId:17,serverIncarnation:"compose-process"};
+  apiMock.writeBoundBusValue.mockResolvedValue({service:"GroupValueWrite",encodedPayload:"0x01 (6-bit)",decodedEcho:{kind:"value",text:"on"}});
+  apiMock.readBusValue.mockResolvedValue({service:"GroupValueRead"});
+  const root=await renderForm("1.1.1",{kind:"single",dpt:"DPST-1-1"},true,false,false,false,{kind:"serial",identity,mode:"active"});
+  try {
+    await act(async()=>setInputValue(".bus-compose-value","on"));await clickSend();
+    expect(apiMock.writeBoundBusValue).toHaveBeenCalledExactlyOnceWith(identity,"1/1/1","DPST-1-1","on",null);
+    expect(apiMock.writeBusValue).not.toHaveBeenCalled();
+    await act(async()=>[...host!.querySelectorAll<HTMLButtonElement>("button")].find(button=>button.textContent==="Read group value")!.click());
+    expect(apiMock.readBusValue).toHaveBeenCalledExactlyOnceWith(identity,"1/1/1");
+  }finally{await act(async()=>root.unmount());}
+});
+it("never treats unknown serial action provenance as legacy IP",async()=>{
+  const root=await renderForm("1/1/1",{kind:"single",dpt:"DPST-1-1"},true,false,false,false,{kind:"unverified",identity:{sessionId:17,serverIncarnation:"process"}});
+  try {
+    for(const button of host!.querySelectorAll<HTMLButtonElement>(".bus-compose-fields button")){expect(button.disabled).toBe(true);await act(async()=>button.click());}
+    expect(host!.querySelector("#bus-compose-unverified-hint")).not.toBeNull();
+    expect(apiMock.writeBusValue).not.toHaveBeenCalled();expect(apiMock.writeBoundBusValue).not.toHaveBeenCalled();expect(apiMock.readBusValue).not.toHaveBeenCalled();
+  }finally{await act(async()=>root.unmount());}
 });

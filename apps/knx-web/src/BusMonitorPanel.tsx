@@ -1,4 +1,8 @@
 /** Bus monitor panel: starts or attaches a session, polls telegrams, and filters/renders them. */
+import { useBusTransport, useSerialTarget } from "./serialPreference";
+import { gatewayRefusalMessage } from "./gatewayRefusal";
+import BusTransportFields from "./BusTransportFields";
+import { serialLabel, validSerialTarget, type SerialTarget } from "./serialTransport";
 // apps/knx-web/src/BusMonitorPanel.tsx
 import ResizableTable from "./ResizableTable";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -23,7 +27,7 @@ import {
   readSessionContext,
   subscribeContextChanges,
 } from "./busContext";
-import { connectBusSession, disconnectBusSession, useBusConnection } from "./busConnection";
+import { busObservationVersion, acceptsObservedSession, knownSerialSession, connectBusSession, disconnectBusSession, useBusConnection } from "./busConnection";
 import { ensureBusDiscovery, searchBusInterfaces, useBusDiscovery } from "./busDiscovery";
 import { useTranslate, type Translate } from "./i18n";
 import { groupAddressMatches, useGroupAddressFormat } from "./gaNotation";
@@ -207,6 +211,10 @@ export default function BusMonitorPanel({ projectOpen, project, projectScope, on
   const formatGa = useGroupAddressFormat();
   const [language] = useUiLanguage();
   const settingsState = useSettingsState();
+  const [transport] = useBusTransport();
+  const [serial] = useSerialTarget();
+  const [sessionSerial, setSessionSerial] = useState<SerialTarget | undefined>();
+  const serialRef = useRef<SerialTarget | undefined>(undefined);
   const [gatewayFields, setGatewayFields] = useState(() => splitGatewayEndpoint(loadPreferredGateway()));
   const gatewayValidation = validateGatewayFields(gatewayFields);
   const gatewayValidationHint = gatewayValidation.ok
@@ -263,6 +271,14 @@ export default function BusMonitorPanel({ projectOpen, project, projectScope, on
       setContextLock(previous => previous === "stale" ? "stale" : "unverified");
       return;
     }
+    const expected = serialRef.current ?? knownSerialSession(response);
+    if (expected) { serialRef.current = expected; setSessionSerial(expected); }
+    if (expected && (!response.serial || response.serial.path !== expected.path
+        || response.serial.source !== expected.source || response.serial.mode !== expected.mode)) {
+      setContextLock("unverified"); return;
+    }
+    serialRef.current = response.serial;
+    setSessionSerial(response.serial);
     setContextLock(responseContextLock(response));
     setServerProjectOpen(typeof response.projectOpen === "boolean" ? response.projectOpen : null);
   }
@@ -357,6 +373,13 @@ export default function BusMonitorPanel({ projectOpen, project, projectScope, on
   const sessionRef = useRef<AttachedSession | null>(null);
   // WP-26: one action at a time in this window, shared with the status bar.
   const sharedAction = useBusConnection().action;
+  const observedSerial = session ? knownSerialSession(session) : undefined;
+  const serialUnverified = observedSerial !== undefined && (sessionSerial === undefined
+    || observedSerial.path !== sessionSerial.path || observedSerial.source !== sessionSerial.source || observedSerial.mode !== sessionSerial.mode);
+  const actionSession: api.GroupActionSession | null = session === null ? null
+    : serialUnverified || contextLock === "unverified" ? {kind:"unverified",identity:session}
+    : sessionSerial ? {kind:"serial",identity:session,mode:sessionSerial.mode} : {kind:"ip",identity:session};
+
 
   useEffect(() => {
     if (settingsState.hydration !== "hydrated" || gatewaySeedResolvedRef.current) return;
@@ -369,6 +392,7 @@ export default function BusMonitorPanel({ projectOpen, project, projectScope, on
   function attachTo(next: AttachedSession | null) {
     contextGenerationRef.current += 1;
     sessionRef.current = next;
+    if (!next) { serialRef.current = undefined; setSessionSerial(undefined); }
     setSession(next);
     // Retain provenance for a capture exported after Disconnect or a 404.
     if (next) setCaptureIdentity(next);
@@ -379,9 +403,11 @@ export default function BusMonitorPanel({ projectOpen, project, projectScope, on
   /// mount effect discard a reply that lands after unmount.
   async function reattach(isCancelled: () => boolean): Promise<void> {
     const generation = contextGenerationRef.current;
+    const observation = busObservationVersion();
     try {
       const response = await api.pollBusTelegrams(0);
       if (isCancelled() || generation !== contextGenerationRef.current || sessionRef.current !== null) return;
+      if (observation !== busObservationVersion() && !acceptsObservedSession(response)) { setContextLock("unverified"); setConnectError(t("busMonitor.contextUnverified")); return; }
       sinceRef.current = response.nextSince;
       const adopted = appendCapturedRows([], response.telegrams);
       setCapture({ rows: adopted.rows, pruned: adopted.pruned });
@@ -519,6 +545,9 @@ export default function BusMonitorPanel({ projectOpen, project, projectScope, on
           setDroppedBefore(0);
           setPollError(null);
           setReplacedBy(response.sessionId);
+          // A different identity owns its own transport; never retain the old serial target.
+          serialRef.current = undefined;
+          setSessionSerial(undefined);
           applyResponseContext(response, generation);
           setStatus(response.status);
           attachTo({
@@ -593,11 +622,14 @@ export default function BusMonitorPanel({ projectOpen, project, projectScope, on
     gatewaySeedResolvedRef.current = true;
     setConnectError(null);
     const validation = validateGatewayFields(gatewayFields);
-    if (!validation.ok) return;
+    if (transport === "serial" ? !validSerialTarget(serial) : !validation.ok) return;
+    const endpoint = transport === "serial" ? serial : validation.ok ? validation.endpoint : "";
     // WP-26: the shared controller owns the request, the achievement and the
     // session record; this panel's resets and `sessionRef` run synchronously
     // in `beforePublish`, after the achievement and before the record.
     function beforePublish(started: BusMonitorStartResponse) {
+      serialRef.current = started.serial;
+      setSessionSerial(started.serial);
       const current = sessionRef.current;
       // Reattach may already have captured A while its start response was pending.
       // Complete A's publication without clearing its cursor, rows or flow state.
@@ -638,9 +670,9 @@ export default function BusMonitorPanel({ projectOpen, project, projectScope, on
       return current === null || (current.sessionId === started.sessionId
         && current.serverIncarnation === started.serverIncarnation);
     }
-    const result = await connectBusSession(validation.endpoint, { beforePublish, stillOwned });
+    const result = await connectBusSession(endpoint, { beforePublish, stillOwned });
     if (!result.ok) {
-      if (result.reason === "failed") setConnectError(api.errorMessage(result.error));
+      if (result.reason === "failed") setConnectError(transport === "serial" ? gatewayRefusalMessage(result.error) ?? t("busTransport.unavailable") : api.errorMessage(result.error));
       else if (result.reason === "stale") setConnectError(t("busConnection.error.stale"));
       return;
     }
@@ -766,15 +798,16 @@ export default function BusMonitorPanel({ projectOpen, project, projectScope, on
           anybody's gateway. */}
       <header className="workspace-heading">
         <div>
-          <p className="eyebrow">{t("busMonitor.eyebrow")}</p>
+          <p className="eyebrow">{sessionSerial || (!session && transport === "serial") ? "USB/serial TP-UART" : t("busMonitor.eyebrow")}</p>
           <h1>{t("busMonitor.title")}</h1>
         </div>
         <div className="bus-monitor-connect">
+          <BusTransportFields disabled={!!session} />
           {/* Host and port remain separate until the existing start request.
               The server's tunnel is IPv4-only; a legacy hostname or IPv6
               preference stays visible for correction rather than being
               silently dropped or sent as though it could connect. */}
-          <div className="bus-monitor-endpoint-fields">
+          {transport === "ip" && <div className="bus-monitor-endpoint-fields">
             <label className="bus-monitor-host-field">
               <span>{t("busMonitor.gatewayHost")}</span>
               <input
@@ -782,7 +815,7 @@ export default function BusMonitorPanel({ projectOpen, project, projectScope, on
                 type="text"
                 placeholder="192.0.2.1"
                 aria-label={t("busMonitor.gatewayHost")}
-                aria-invalid={!gatewayValidation.ok && gatewayValidation.reason === "unsupportedHost"}
+                aria-invalid={transport === "ip" && !gatewayValidation.ok && gatewayValidation.reason === "unsupportedHost"}
                 aria-describedby={
                   !gatewayValidation.ok && gatewayValidation.reason === "unsupportedHost"
                     ? "bus-monitor-host-error" : undefined
@@ -805,7 +838,7 @@ export default function BusMonitorPanel({ projectOpen, project, projectScope, on
                 inputMode="numeric"
                 placeholder="3671"
                 aria-label={t("busMonitor.gatewayPort")}
-                aria-invalid={!gatewayValidation.ok && gatewayValidation.reason === "invalidPort"}
+                aria-invalid={transport === "ip" && !gatewayValidation.ok && gatewayValidation.reason === "invalidPort"}
                 aria-describedby={
                   !gatewayValidation.ok && gatewayValidation.reason === "invalidPort"
                     ? "bus-monitor-port-error" : undefined
@@ -820,15 +853,15 @@ export default function BusMonitorPanel({ projectOpen, project, projectScope, on
                 title={session ? t("busMonitor.gatewayLocked") : undefined}
               />
             </label>
-          </div>
+          </div>}
           {session ? (
             <button onClick={disconnect} disabled={sharedAction !== null}>{t("busMonitor.disconnect")}</button>
           ) : (
             <>
               <button
                 onClick={connect}
-                disabled={!gatewayValidation.ok || sharedAction !== null}
-                title={gatewayValidationHint}
+                disabled={(transport === "serial" ? !validSerialTarget(serial) : !gatewayValidation.ok) || sharedAction !== null}
+                title={transport === "serial" ? t("busTransport.invalid") : gatewayValidationHint}
               >
                 {t("busMonitor.connect")}
               </button>
@@ -861,6 +894,7 @@ export default function BusMonitorPanel({ projectOpen, project, projectScope, on
                   automated accessibility checker, a test, a future
                   non-AT consumer. */}
               <button
+                hidden={transport === "serial"}
                 className="bus-discovery-search"
                 onClick={() => void searchBusInterfaces()}
                 disabled={searching}
@@ -874,12 +908,12 @@ export default function BusMonitorPanel({ projectOpen, project, projectScope, on
           <HelpTip labelKey="help.tip.busGateway.label" textKey="help.tip.busGateway.text" topicId="busMonitor" />
         </div>
       </header>
-      {!gatewayValidation.ok && gatewayValidation.reason === "unsupportedHost" && gatewayFields.host.trim() && (
+      {transport === "ip" && !gatewayValidation.ok && gatewayValidation.reason === "unsupportedHost" && gatewayFields.host.trim() && (
         <p id="bus-monitor-host-error" className="field-error bus-monitor-host-error" role="alert">
           {t("busMonitor.invalidHost")}
         </p>
       )}
-      {!gatewayValidation.ok && gatewayValidation.reason === "invalidPort" && (
+      {transport === "ip" && !gatewayValidation.ok && gatewayValidation.reason === "invalidPort" && (
         <p id="bus-monitor-port-error" className="field-error bus-monitor-port-error" role="alert">
           {t("busMonitor.invalidPort")}
         </p>
@@ -894,7 +928,7 @@ export default function BusMonitorPanel({ projectOpen, project, projectScope, on
           sentence plus the reason it might be empty, and a search that
           could not run says so quietly and points back at the field, which
           has accepted typed addresses all along and still does. */}
-      {!session && discoveryStatus && (
+      {!session && transport === "ip" && discoveryStatus && (
         <section className="bus-discovery">
           <p className="bus-discovery-status" role="status" aria-live="polite">
             <span className={searching ? "task-status-text" : undefined}>{discoveryStatus}</span>
@@ -961,10 +995,11 @@ export default function BusMonitorPanel({ projectOpen, project, projectScope, on
       {session && (
         <p className="bus-monitor-session">
           {t("busMonitor.session", { id: session.sessionId })}
-          {session.assignedAddress && (
+          {sessionSerial && <span>{serialLabel(sessionSerial)} · {t(sessionSerial.mode === "active" ? "busTransport.activeWarning" : "busTransport.passiveHint")}</span>}
+          {!sessionSerial && session.assignedAddress && (
             <>{t("busMonitor.assignedAddress", { address: session.assignedAddress })}</>
           )}
-          {status === "closed" && t("busMonitor.closedByGateway")}
+          {status === "closed" && (sessionSerial ? t("busTransport.lost", {target:serialLabel(sessionSerial)}) : t("busMonitor.closedByGateway"))}
         </p>
       )}
       {stopSummary && (
@@ -996,7 +1031,7 @@ export default function BusMonitorPanel({ projectOpen, project, projectScope, on
           {t("busMonitor.contextStale")}
         </p>
       )}
-      {session && contextLock === "unverified" && (
+      {session && (contextLock === "unverified" || serialUnverified) && (
         <p className="bus-monitor-unverified-lock" role="note">
           {t("busMonitor.contextUnverified")}
         </p>
@@ -1029,6 +1064,7 @@ export default function BusMonitorPanel({ projectOpen, project, projectScope, on
           // dropping it mid-poll, and the mount-time reattach effect above
           // adopting one that was already closed — so no separate tracking
           // is needed here.
+          session={actionSession ?? {kind:"unverified",identity:session}}
           sessionClosed={status === "closed"}
           // A write resolves its DPT from the same last confirmed context
           // publication the decoded column reads through. If

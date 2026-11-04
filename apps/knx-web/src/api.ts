@@ -1,4 +1,5 @@
 /** fetch()-based HTTP client mirroring the Tauri invoke() surface the UI components call. */
+import { validSerialTarget, type SerialTarget } from "./serialTransport";
 //! fetch()-based replacement for @tauri-apps/api/core's invoke() — same
 //! function names and argument shapes the components already called, so
 //! swapping the import at each call site is the only change there.
@@ -1771,15 +1772,19 @@ export interface BusTelegramRow {
 
 // `StartResponse` (bus_routes.rs).
 export interface BusMonitorStartResponse {
+  serial?: SerialTarget;
   sessionId: number;
   serverIncarnation: string;
   assignedAddress: string;
 }
 
+/** Serial starts always echo the exact admitted transport target. */
+export interface SerialBusMonitorStartResponse extends BusMonitorStartResponse { serial: SerialTarget }
+
 // `StopResponse` (bus_routes.rs). `serverIncarnation` scopes the reusable
 // numeric id, as it does on start/poll. `warning` is `skip_serializing_if`
-// there, hence optional here — present only when the drain task's own
-// teardown panicked after an otherwise-successful stop (its doc comment:
+// there, hence optional here — present for a serial cleanup failure or
+// drain panic/cancellation after the session has stopped (its doc comment:
 // "a panic surfaced by the server and then swallowed by the UI is worse
 // than not surfacing it at all"). This is the one field the design spec's
 // §4.3 prose does not mention at all; it was added on review during task
@@ -1797,6 +1802,7 @@ export interface BusMonitorStopResponse {
 // compares it against what it already knew to notice a fresh gap (see
 // `BusMonitorPanel.tsx`).
 export interface BusMonitorTelegramsResponse {
+  serial?: SerialTarget;
   sessionId: number;
   serverIncarnation: string;
   /** Authoritative interpretation comparison; absent on legacy servers. */
@@ -1910,8 +1916,30 @@ export interface LineScanComparison {
   excludedInProject: string[];
 }
 
+export function readBusValue(identity: BoundBusSession, destination: string): Promise<{ service: "GroupValueRead" }> {
+  if (!isBoundBusSession(identity)) return Promise.reject(new Error("Malformed bus session identity; nothing was sent."));
+  return request("/api/bus/read", { method: "POST", body: JSON.stringify({ sessionId: identity.sessionId, serverIncarnation: identity.serverIncarnation, destination }) });
+}
+
+/** Serial UI sends only on this distinct route; an older server cannot ignore its binding. */
+export function writeBoundBusValue(identity: BoundBusSession, destination: string, dpt: string | null,
+  value: string, inputFormat: DptInputFormat | null): Promise<BusWriteResponse> {
+  if (!isBoundBusSession(identity)) return Promise.reject(new Error("Malformed bus session identity; nothing was sent."));
+  return request("/api/bus/write-bound", {method:"POST",body:JSON.stringify({sessionId:identity.sessionId,serverIncarnation:identity.serverIncarnation,destination,dpt,inputFormat,value})});
+}
+
 export function startBusMonitor(gateway: string): Promise<BusMonitorStartResponse> {
   return request("/api/bus/monitor/start", { method: "POST", body: JSON.stringify({ gateway }) });
+}
+
+/** A distinct route makes older servers fail closed instead of opening IP. */
+export async function startSerialBusMonitor(target: SerialTarget): Promise<SerialBusMonitorStartResponse> {
+  if (!validSerialTarget(target)) throw new Error("Invalid serial target; nothing was sent.");
+  const started = await request<SerialBusMonitorStartResponse>("/api/bus/monitor/start-serial", { method: "POST", body: JSON.stringify(target) });
+  if (!validSerialTarget(started?.serial) || started.serial.path !== target.path
+      || started.serial.source !== target.source || started.serial.mode !== target.mode
+      || started.assignedAddress !== target.source) throw new Error("Serial start returned an inconsistent target.");
+  return started;
 }
 
 export function stopBusMonitor(): Promise<BusMonitorStopResponse> {
@@ -1923,6 +1951,13 @@ export interface BoundBusSession {
   sessionId: number;
   serverIncarnation: string;
 }
+
+/** Required action provenance; unknown serial metadata is never the legacy IP contract. */
+export type GroupActionSession =
+  | { kind: "ip"; identity: BoundBusSession }
+  | { kind: "serial"; identity: BoundBusSession; mode: SerialTarget["mode"] }
+  | { kind: "unverified"; identity: BoundBusSession };
+
 
 /** A safe positive id and an unpadded base64url incarnation, exactly as the server issues them. */
 export function isBoundBusSession(value: unknown): value is BoundBusSession {
@@ -1948,8 +1983,10 @@ export async function stopBoundBusMonitor(identity: BoundBusSession): Promise<Bu
 // `since` defaults to `0` server-side too (`TelegramsQuery.since:
 // Option<u64>`) — always sent explicitly here so a caller never has to
 // remember that omitting it means "from the start."
-export function pollBusTelegrams(since: number, contextOnly = false): Promise<BusMonitorTelegramsResponse> {
-  return request(`/api/bus/monitor/telegrams?since=${since}${contextOnly ? "&contextOnly=true" : ""}`);
+export async function pollBusTelegrams(since: number, contextOnly = false): Promise<BusMonitorTelegramsResponse> {
+  const response = await request<BusMonitorTelegramsResponse>(`/api/bus/monitor/telegrams?since=${since}${contextOnly ? "&contextOnly=true" : ""}`);
+  if (response.serial !== undefined && !validSerialTarget(response.serial)) throw new Error("Malformed serial session target.");
+  return response;
 }
 
 /** AR20: configured participants of one session generation, validated; read-only. */

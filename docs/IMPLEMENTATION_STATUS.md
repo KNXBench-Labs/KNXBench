@@ -12,6 +12,20 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## USB/serial server and Web UI candidate (4 November 2026)
+
+Explicit IP/serial selection now reaches the existing shared server session
+through a strict serial-start endpoint. Settings, footer and monitor disclose
+passive versus active mode and server-local firmware/device prerequisites.
+Passive sends are refused at the server boundary. Review corrections bind serial
+group sends to session/process identity, retain admission through serial cleanup,
+expose conservative active-start uncertainty and preserve known serial provenance
+on fresh monitor attach. Correction acceptance is a separate source epoch.
+Parent review and package
+gates remain pending; focused execution results and limits are recorded in the
+[candidate contract](status/2026-11-04-usb-serial-ui.md). No physical compatibility,
+release, device-management or deployment claim.
+
 ## USB/serial TP-UART transport (4 November 2026, main-only)
 
 Linux CLI `bus monitor` and `bus write` can select a Busware TUL running

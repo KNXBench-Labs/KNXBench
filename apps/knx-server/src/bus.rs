@@ -1,4 +1,4 @@
-// apps/knx-server/src/bus.rs
+//! Own the shared bus session, transport seam and loss-accounted telegram buffer.
 //! The testability seam between `knx-server` and `knx-net` (design spec
 //! `docs/superpowers/specs/2026-09-11-group-monitor-design.md` §3 D6).
 //!
@@ -67,6 +67,20 @@ pub trait GatewayConnector: Send + Sync {
         &self,
         gateway: SocketAddrV4,
     ) -> Pin<Box<dyn Future<Output = Result<Box<dyn BusTunnel>, BusSessionError>> + Send + '_>>;
+
+    /// Serial is explicit and unsupported by default; never falls back to IP.
+    #[allow(clippy::type_complexity)]
+    fn connect_serial<'a>(
+        &'a self,
+        _target: &'a crate::bus_serial::SerialTarget,
+    ) -> Pin<Box<dyn Future<Output = Result<Box<dyn BusTunnel>, BusSessionError>> + Send + 'a>>
+    {
+        Box::pin(async {
+            Err(BusSessionError::Transport(BusError::Protocol(
+                "serial transport is unavailable".into(),
+            )))
+        })
+    }
 
     /// [`Self::connect_tunnel`] with an explicit wait for each
     /// `TUNNELLING_ACK`. A connector with no tunnel of its own to configure,
@@ -183,6 +197,7 @@ pub enum BusSessionError {
     /// the session's tunnel has already been taken by its own teardown —
     /// see that method's doc comment) when a route needed one.
     NoActiveSession,
+    PassiveSerial,
 }
 
 impl fmt::Display for BusSessionError {
@@ -193,6 +208,9 @@ impl fmt::Display for BusSessionError {
                 write!(f, "a monitor session is already active")
             }
             BusSessionError::NoActiveSession => write!(f, "no monitor session is active"),
+            BusSessionError::PassiveSerial => {
+                write!(f, "passive serial monitoring cannot send; nothing was sent")
+            }
         }
     }
 }
@@ -225,6 +243,14 @@ impl Default for RealConnector {
 }
 
 impl GatewayConnector for RealConnector {
+    fn connect_serial<'a>(
+        &'a self,
+        target: &'a crate::bus_serial::SerialTarget,
+    ) -> Pin<Box<dyn Future<Output = Result<Box<dyn BusTunnel>, BusSessionError>> + Send + 'a>>
+    {
+        Box::pin(crate::bus_serial::open(target))
+    }
+
     #[allow(clippy::type_complexity)]
     fn connect_tunnel(
         &self,
@@ -1447,18 +1473,13 @@ impl TelegramBuffer {
 pub struct BusSessionSummary {
     pub telegram_count: usize,
     pub dropped_count: u64,
-    /// `Some(message)` if the drain task's own `JoinHandle` reports a
-    /// panic (carried Task 2 review finding, `bus.rs:941` before this
-    /// fix) — `None` for the ordinary case, an orderly `break` out of the
-    /// select loop followed by a clean `disconnect()`. Never discarded:
-    /// see [`BusSession::stop`]'s doc comment for why a panic must not be
-    /// reported as an indistinguishable clean stop. Not `Copy` any more
-    /// (a `String` inside), hence dropping that derive here.
+    /// Drain panic/cancellation or serial disconnect failure; `None` after clean cleanup.
+    /// Retains the existing field name for callers. Serial cleanup errors must not hide
+    /// an unknown auto-ACK state; IP keeps its best-effort disconnect policy.
     pub drain_panic: Option<String>,
 }
 
-/// One open KNXnet/IP monitor session (design spec §4.1): an id, the
-/// gateway it connected to, the shared buffer the drain task and any poll
+/// One open IP or serial monitor session: an id, its explicit transport target, the shared buffer the drain task and any poll
 /// handler both read, and the means to stop the task cleanly. Replaces
 /// T15 task 1's deliberately minimal placeholder (`id` + boxed tunnel only,
 /// formerly in `domain.rs`) now that a session actually has behaviour —
@@ -1474,7 +1495,8 @@ pub struct BusSessionSummary {
 /// this session), just not as a literal separate field.
 pub struct BusSession {
     id: u64,
-    gateway: SocketAddrV4,
+    gateway: Option<SocketAddrV4>,
+    serial: Option<crate::bus_serial::SerialTarget>,
     /// `TunnelClient::assigned_address()` (design spec §4.3's `/start`
     /// response `assignedAddress`), captured once, synchronously, right
     /// after `connect_tunnel` returns — a plain field rather than an async
@@ -1506,7 +1528,7 @@ pub struct BusSession {
     /// trick to move a non-`Copy` field out of `&mut self` in a `Drop`-less
     /// world; `stop` always finds it `Some`.
     stop_tx: oneshot::Sender<()>,
-    join_handle: JoinHandle<()>,
+    join_handle: JoinHandle<Option<String>>,
 }
 
 impl BusSession {
@@ -1534,6 +1556,26 @@ impl BusSession {
         ctx: GroupAddressContext,
     ) -> Result<Self, BusSessionError> {
         let tunnel = connector.connect_tunnel(gateway).await?;
+        Ok(Self::from_tunnel(id, Some(gateway), None, tunnel, ctx))
+    }
+
+    pub(crate) async fn start_serial(
+        id: u64,
+        target: crate::bus_serial::SerialTarget,
+        connector: &dyn GatewayConnector,
+        ctx: GroupAddressContext,
+    ) -> Result<Self, BusSessionError> {
+        let tunnel = connector.connect_serial(&target).await?;
+        Ok(Self::from_tunnel(id, None, Some(target), tunnel, ctx))
+    }
+
+    fn from_tunnel(
+        id: u64,
+        gateway: Option<SocketAddrV4>,
+        serial: Option<crate::bus_serial::SerialTarget>,
+        tunnel: Box<dyn BusTunnel>,
+        ctx: GroupAddressContext,
+    ) -> Self {
         let assigned_address = tunnel.assigned_address();
         let receiver = tunnel.subscribe();
         let buffer = Arc::new(Mutex::new(TelegramBuffer::new()));
@@ -1549,25 +1591,31 @@ impl BusSession {
             task_buffer,
             task_ctx,
             stop_rx,
+            serial.is_some(),
         ));
-        Ok(Self {
+        Self {
             id,
             gateway,
+            serial,
             assigned_address,
             buffer,
             tunnel,
             ctx,
             stop_tx,
             join_handle,
-        })
+        }
     }
 
     pub fn id(&self) -> u64 {
         self.id
     }
 
-    pub fn gateway(&self) -> SocketAddrV4 {
+    pub fn gateway(&self) -> Option<SocketAddrV4> {
         self.gateway
+    }
+
+    pub fn serial(&self) -> Option<&crate::bus_serial::SerialTarget> {
+        self.serial.as_ref()
     }
 
     /// `TunnelClient::assigned_address()`, `Display`-formatted — design
@@ -1691,6 +1739,13 @@ impl BusSession {
         destination: Destination,
         service: ApplicationService,
     ) -> Result<(), BusSessionError> {
+        if self
+            .serial
+            .as_ref()
+            .is_some_and(|target| target.mode == crate::bus_serial::SerialMode::Passive)
+        {
+            return Err(BusSessionError::PassiveSerial);
+        }
         let guard = self.tunnel.lock().await;
         match guard.as_ref() {
             Some(tunnel) => tunnel.send(destination, service).await,
@@ -1741,7 +1796,7 @@ impl BusSession {
         let join_result = self.join_handle.await;
         let buffer = self.buffer.lock().expect("bus session buffer poisoned");
         let drain_panic = match join_result {
-            Ok(()) => None,
+            Ok(cleanup_warning) => cleanup_warning,
             Err(e) if e.is_panic() => Some(panic_payload_message(e.into_panic())),
             Err(_) => Some("drain task was cancelled".to_string()),
         };
@@ -1792,7 +1847,8 @@ async fn drain_task(
     buffer: Arc<Mutex<TelegramBuffer>>,
     ctx: Arc<RwLock<GroupAddressContext>>,
     mut stop_rx: oneshot::Receiver<()>,
-) {
+    report_cleanup: bool,
+) -> Option<String> {
     loop {
         tokio::select! {
             _ = &mut stop_rx => {
@@ -1842,8 +1898,12 @@ async fn drain_task(
     // and reports `BusSessionError::NoActiveSession` (see that method's
     // doc comment) rather than a panic or a silent no-op.
     if let Some(tunnel) = tunnel.lock().await.take() {
-        let _ = tunnel.disconnect().await;
+        let cleanup = tunnel.disconnect().await;
+        if report_cleanup {
+            return cleanup.err().map(|error| format!("serial cleanup failed; auto-ACK state unknown; do not retry automatically: {error}"));
+        }
     }
+    None
 }
 
 #[cfg(test)]

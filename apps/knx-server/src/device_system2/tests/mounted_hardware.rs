@@ -79,11 +79,17 @@ fn pir_fields(panel: &Value) -> Vec<&Value> {
 // OLD is never constructed by executing NEW, nor inferred from its resulting
 // memory. These source-shape extents match the existing pinned public App proof.
 fn old_device() -> Arc<SimulatedDevice> {
+    old_device_with_property_read_fault(None)
+}
+fn old_device_with_property_read_fault(
+    property_read_fault: Option<knx_net::commissioning::simulator::PropertyReadFault>,
+) -> Arc<SimulatedDevice> {
     let device = SimulatedDevice::with_config_at(
         TARGET.parse().unwrap(),
         SimulatorConfig {
             mask_version: 0x0025,
             serial_number: Some(SERIAL),
+            property_read_fault,
             ..Default::default()
         },
     );

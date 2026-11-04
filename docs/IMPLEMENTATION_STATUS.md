@@ -12,6 +12,17 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## System-2 final-verification source matrix (4 November 2026, main-only)
+
+Test-only source `70ad4e24c`, main-first `446480584`, extends the existing
+caption-only final-verification no-credit witness to retained/standalone sources
+and namespaces 20/23. Eight mounted leaves complete 16 failed/healthy and
+pending/marked cases with actual source-kind/namespace guards. Independent
+correction review and both selected 14-stage gates passed. Public HTTP preparation
+remains retained-only; standalone uses the existing private preparation helper.
+No production behavior, full E16/S2-05 or hardware acceptance follows.
+[Execution, correction and delivery scope](status/2026-11-04-s2-ineligible-terminal-matrix.md).
+
 ## System-2 recovery conversion reuse (4 November 2026, main-only)
 
 A source-bound timed probe traced the red mounted recovery wait to repeated App

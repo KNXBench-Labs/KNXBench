@@ -58,7 +58,11 @@ Contract: [system2-download-result](../contracts/system2-download-result.md).
   two real owner variants; both complete selected 14-stage gates passed. Version
   observations use current-producer deviation-only semantics, not retained raw
   bytes or actual-worker read counts. This closes this bounded failure cross,
-  not all E16 or S2-05; standalone/ns23 negatives and wider lifecycle/recovery
+  not all E16 or S2-05. The separately [extended final-verification matrix](../status/2026-11-04-s2-ineligible-terminal-matrix.md)
+  covers both source families and namespaces 20/23, failed/healthy workers and
+  pending/marked beliefs (eight leaves/16 cases), published main-first as
+  `446480584` after independent correction review and both selected 14-stage
+  gates. Wider terminal, lifecycle/recovery and race/read-count obligations
   remain separate and open.
 - Field verification by the reporter is not requested; no hardware retry is needed
   for the software change.

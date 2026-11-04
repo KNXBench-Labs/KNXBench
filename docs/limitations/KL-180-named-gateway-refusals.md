@@ -111,6 +111,9 @@ group write) can make a bound stop or a start answer busy; retry is manual. A
 closed session keeps the gateway's slot until it is disconnected. "Not
 connected" means no KNXBench session or reservation was seen in the partial
 activity snapshot, not that the bus is idle. The monitor panel's gateway field
-does not follow a later status-bar selection. There is no USB transport.
+does not follow a later status-bar selection. USB is not available through this
+server/controller or status-bar flow. The separately added
+[Linux CLI TP-UART transport](../status/2026-11-04-usb-tpuart.md) does not change
+that UI boundary and has no physical-adapter acceptance.
 Software-tested with fake connectors and intercepted browser HTTP only; no
 gateway, device or real installation was contacted.

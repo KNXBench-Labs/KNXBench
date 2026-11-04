@@ -9,6 +9,7 @@ mod cli_address_reset_recovery;
 mod cli_backup_application_identity;
 mod cli_bus_address_style;
 mod cli_bus_dpt;
+mod cli_bus_serial;
 mod cli_compare_activity;
 mod cli_diagnostic_bundle;
 mod cli_documentation_export;

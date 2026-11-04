@@ -781,6 +781,8 @@ shown but cannot be chosen. **Connect** and **Disconnect** are a separate
 button. Connect is available only when the state is known and the gateway is
 free; after a busy answer, try again yourself. Disconnect ends exactly the
 connection shown, never another one. **Check status**, **Search again** and
-**Bus settings…** are in the same list. USB interfaces are not supported.
+**Bus settings…** are in the same list. USB interfaces are not selectable here.
+The separate [Linux CLI TP-UART path](10-command-line.md#usbserial-tp-uart-linux)
+does not add USB support to this server-owned connection or status bar.
 
 [Manual index](../README.md) · Next: [Documentation export and project comparison](08-reports-and-diff.md) →

@@ -550,6 +550,55 @@ Without `--dry-run` the command connects, sends a group-value write, disconnects
 prints `wrote to 1/2/3`. Tunneling is confirmed, so a failure is reported rather than
 assumed away.
 
+### USB/serial TP-UART (Linux)
+
+The same `monitor` and `write` commands accept `--serial <serial-device>` instead
+of `--gateway`. This path is for a **Busware TUL with transparent USB-serial
+firmware**, not its MCP/console firmware, KNX USB/HID or an arbitrary USB-to-UART
+cable. It uses raw 19,200 baud, 8E1 and standard TP1 frames. Extended or corrupt
+frames terminate the connection explicitly; physical adapter compatibility is not
+yet verified. The bridge must preserve the NCN5130 9-bit UART/error contract
+(eight data bits plus even parity); selecting 8E1 on USB alone does not prove
+that, and NCN5130 8-bit/SPI mode is not admitted.
+[Protocol evidence and limits](../../status/2026-11-04-usb-tpuart.md).
+
+Choose the device path explicitly, preferably a stable `/dev/serial/by-id/` path,
+and choose a local individual address that no other bus participant uses.
+`--source` is mandatory for serial; it is a local interface identity, not a device
+to program. Serial and gateway flags are mutually exclusive. The monitor uses
+passive bus-monitor mode and does not set this address or send bus ACKs:
+
+```bash
+knx bus monitor --serial <serial-device> --source 1.1.250 --control
+```
+
+`--project` retains the same group names, address style and DPT decoding. Ctrl-C
+attempts a bounded transceiver reset before closing the port. Opening or closing
+a tty can affect driver modem lines even though KNXBench does not explicitly
+switch DTR/RTS. Ensure no other program owns the port; serial group membership
+and permissions are administered on the host, not bypassed by the application.
+
+For a group write, first encode without opening any port:
+
+```bash
+knx bus write --serial <serial-device> --source 1.1.250 --dpt DPST-1-1 --dry-run 1/2/3 1
+```
+
+**Removing `--dry-run` operates real equipment.** Active mode sets the local
+interface address and enables hardware auto-ACK for that individual address
+**and all group telegrams**. The command awaits positive link confirmation;
+that does not prove application execution. Negative/uncertain delivery closes
+the link and is not automatically retried. A reset failure during cleanup leaves
+the adapter's acknowledgement state unverified. The command exits nonzero even
+when delivery was confirmed; do not automatically resend the value or treat it
+as a clean close.
+
+Only Linux CLI monitor/write and the infrastructure library select this transport.
+The server, browser monitor, status-bar selector and device-management CLI routes
+remain IP-only. Software tests use synthetic streams and created PTYs, not an
+adapter or installation. USB enumeration and firmware console output are not
+physical receive/transmit acceptance.
+
 ### `knx bus route-monitor` — watch telegrams over routing
 
 ```bash

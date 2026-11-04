@@ -9,8 +9,11 @@ publish = false
 
 [dependencies]
 knx-core.workspace = true
-tokio = { workspace = true, features = ["net", "sync", "time", "macros", "rt"] }
+tokio = { workspace = true, features = ["net", "sync", "time", "macros", "rt", "io-util"] }
 socket2 = { workspace = true, features = ["all"] }
+
+[target.'cfg(target_os = "linux")'.dependencies]
+libc = "0.2"
 
 [dev-dependencies]
 # It is the workspace root's `resolver = "2"` (Cargo.toml:2) that keeps this

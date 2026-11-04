@@ -687,10 +687,21 @@ async fn run(case: Case) {
         "{case:?}: pre-worker baseline and ALL witness are read-only"
     );
     record_metadata(&state, true, case);
+    let (terminal_observation, _events) =
+        crate::device_system2::settlement_observation::Observation::new();
+    *state.device_system2.settlement_observer.lock().unwrap() = Some(terminal_observation.clone());
     let released_at = chrono::Utc::now();
     hardware.release.notify_one();
     super::super::failure_diagnostic::settled_slow(&state, &router, case.terminal()).await;
     let joined_at = chrono::Utc::now();
+    let reads = terminal_observation.counts();
+    let eligible = usize::from(!case.faulty);
+    assert_eq!(
+        (reads.callbacks, reads.attempts, reads.leases, reads.proofs),
+        (eligible, eligible, eligible, eligible),
+        "{case:?}: actual terminal worker read suppression"
+    );
+    assert_eq!(reads.parts, (!case.faulty).then_some(ProgrammingParts::ALL));
     assert_eq!(
         serde_json::to_value(record_metadata(&state, false, case)).unwrap(),
         serde_json::to_value(&meta).unwrap()
@@ -734,6 +745,11 @@ async fn run(case: Case) {
     assert_eq!(
         std::fs::read(operation.join("metadata.json")).unwrap(),
         metadata_bytes
+    );
+    assert_eq!(
+        terminal_observation.counts(),
+        reads,
+        "read-only observations never rerun source proof"
     );
     exercise_history(&state, &after, case);
     assert_eq!(

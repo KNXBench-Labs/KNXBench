@@ -328,26 +328,7 @@ fn assert_recovery_settlement(before: &Editor, after: &Editor, case: Case) {
 // Read only the original committed chain while the paused worker owns its lock.
 // The real producer, not this reader, creates every bundle/checkpoint/backup.
 fn backup_at_pause(operation: &Path, original: &PreparedBundle) -> RecoveryRecord {
-    let journal = operation.join("journal");
-    let head: Value =
-        serde_json::from_slice(&std::fs::read(journal.join("HEAD")).unwrap()).unwrap();
-    let mut previous = String::new();
-    let mut backup = None;
-    for index in 0..=head["sequence"].as_u64().unwrap() {
-        let bytes = std::fs::read(journal.join(format!("checkpoint-{index:08}.json"))).unwrap();
-        let envelope: Value = serde_json::from_slice(&bytes).unwrap();
-        assert_eq!(envelope["sequence"], index);
-        assert_eq!(envelope["previous_sha256"], previous);
-        let checkpoint: Checkpoint =
-            serde_json::from_value(envelope["checkpoint"].clone()).unwrap();
-        if let Checkpoint::RecoveryAcquired { recovery } = checkpoint {
-            assert!(backup.replace(recovery).is_none(), "one ORIGINAL prestate");
-        }
-        previous = knx_productdb::sha256_hex(&bytes);
-    }
-    assert_eq!(head["sha256"], previous);
-    let backup = backup.expect("actual original backup before the paused data write");
-    assert_eq!(backup.original_bundle, *original);
+    let backup = super::owned::backup_at_pause(operation, original);
     // The producer retains a serial override only when the acquisition differs
     // from the original observed binding; None is the matching-read form.
     assert_eq!(original.binding.serial, SERIAL);

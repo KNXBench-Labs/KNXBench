@@ -7,8 +7,14 @@ use crate::device_system2::tests::diagnostic_bundle_fallback::fixture;
 use knx_app::system2_validation_preparation::{prepare_project_hardware_source, RecoveryTrack};
 use knx_core::commissioning::pending::{ProgrammingChange, ProgrammingParts};
 
+#[path = "caption_mounted/contention.rs"]
+mod contention;
 #[path = "caption_mounted/ineligible_terminal.rs"]
 mod ineligible_terminal;
+#[path = "caption_mounted/lifecycle.rs"]
+mod lifecycle;
+#[path = "caption_mounted/owned.rs"]
+mod owned;
 #[path = "caption_mounted/persistence.rs"]
 mod persistence;
 #[path = "caption_mounted/recovery_authority.rs"]
@@ -212,6 +218,8 @@ enum Edit {
     None,
     Parameter,
     InvalidParameter,
+    InvalidFlag,
+    UnsupportedSource,
     Links,
     Flags,
     Reference,
@@ -275,6 +283,14 @@ async fn run(namespace: u8, retained: bool, edit: Edit, saved: bool, marked: boo
     let changed = if matches!(edit, Edit::Nonclass) {
         f::changed(&input.package, |s| {
             s.replace("Name=\"Synthetic\"", "Name='Revised caption'")
+        })
+    } else if matches!(edit, Edit::UnsupportedSource) {
+        f::changed(&input.package, |s| {
+            s.replace("Name=\"Synthetic\"", "Name=\"Revised caption\"")
+                .replace(
+                    "DownloadInvisibleParameters=\"Background\"",
+                    "DownloadInvisibleParameters=\"None\"",
+                )
         })
     } else {
         f::caption(&input.package)
@@ -347,6 +363,14 @@ async fn run(namespace: u8, retained: bool, edit: Edit, saved: bool, marked: boo
                     .unwrap()
                     .raw = raw.into()
             }
+            Edit::InvalidFlag => {
+                project
+                    .devices
+                    .com_object_mut(knx_core::ComObjectInstanceId(1))
+                    .unwrap()
+                    .flags
+                    .write = knx_core::provenance::Override::Malformed("Perhaps".into());
+            }
             Edit::Links => {
                 project
                     .devices
@@ -385,8 +409,19 @@ async fn run(namespace: u8, retained: bool, edit: Edit, saved: bool, marked: boo
             owner.with_read::<(), std::io::Error>(|_| panic!("caption test poisons owner"))
         }));
     }
+    let (terminal_observation, _events) =
+        crate::device_system2::settlement_observation::Observation::new();
+    *state.device_system2.settlement_observer.lock().unwrap() = Some(terminal_observation.clone());
     hardware.release.notify_one();
     super::failure_diagnostic::settled_slow(&state, &router, "finished").await;
+    let reads = terminal_observation.counts();
+    let eligible = usize::from(!matches!(edit, Edit::Address));
+    let healthy_owner = usize::from(!matches!(edit, Edit::Address | Edit::Quarantine));
+    assert_eq!(
+        (reads.callbacks, reads.attempts, reads.leases, reads.proofs),
+        (eligible, eligible, healthy_owner, healthy_owner),
+        "actual terminal read counts"
+    );
     let status = http(&router, "/api/device-system2/status", None, 200).await;
     assert_eq!(status["downloadResult"], "verified");
     assert_eq!(
@@ -402,9 +437,12 @@ async fn run(namespace: u8, retained: bool, edit: Edit, saved: bool, marked: boo
     let expected = match edit {
         Edit::Parameter => [true, true, false, false, true],
         Edit::Links | Edit::Flags => [true, true, true, false, true],
-        Edit::InvalidParameter | Edit::Reference | Edit::Nonclass | Edit::Quarantine => {
-            [marked, false, false, false, true]
-        }
+        Edit::InvalidParameter
+        | Edit::InvalidFlag
+        | Edit::UnsupportedSource
+        | Edit::Reference
+        | Edit::Nonclass
+        | Edit::Quarantine => [marked, false, false, false, true],
         Edit::Address => [marked, marked, marked, marked, true],
         Edit::None => [true, true, true, true, true],
     };
@@ -457,6 +495,11 @@ async fn run(namespace: u8, retained: bool, edit: Edit, saved: bool, marked: boo
     .await;
     assert_eq!(report["download"]["result"], "verified");
     assert_eq!(flags(&state), expected, "report does not settle again");
+    assert_eq!(
+        terminal_observation.counts(),
+        reads,
+        "report and status never replay proof"
+    );
     if saved {
         // One editor at a time: stale concurrent history revisions MUST refuse writes.
         for kind in ["live", "recovered"] {
@@ -535,32 +578,46 @@ fn required_release(bundle: &knx_app::property_validation_bundle::PreparedBundle
 
 #[tokio::test]
 async fn caption_mounted_retained20_verified_after_source_replacement() {
-    run(20, true, Edit::None, false, false).await;
+    for marked in [false, true] {
+        run(20, true, Edit::None, false, marked).await;
+    }
 }
 #[tokio::test]
 async fn caption_mounted_retained23_verified_after_source_replacement() {
-    run(23, true, Edit::None, false, false).await;
+    for marked in [false, true] {
+        run(23, true, Edit::None, false, marked).await;
+    }
 }
 #[tokio::test]
 async fn caption_mounted_standalone20_verified_after_source_replacement() {
-    run(20, false, Edit::None, false, false).await;
+    for marked in [false, true] {
+        run(20, false, Edit::None, false, marked).await;
+    }
 }
 #[tokio::test]
 async fn caption_mounted_standalone23_verified_after_source_replacement() {
-    run(23, false, Edit::None, false, false).await;
+    for marked in [false, true] {
+        run(23, false, Edit::None, false, marked).await;
+    }
 }
 #[tokio::test]
 async fn caption_mounted_saved_success_selective_and_refused_history_survive_fresh_server_reopen() {
-    for retained in [false, true] {
-        for edit in [Edit::None, Edit::Parameter, Edit::Reference] {
-            run(20, retained, edit, true, true).await;
+    for namespace in [20, 23] {
+        for retained in [false, true] {
+            for edit in [Edit::None, Edit::Parameter, Edit::Reference] {
+                run(namespace, retained, edit, true, true).await;
+            }
         }
     }
 }
 #[tokio::test]
 async fn caption_mounted_links_flags_nonclass_and_quarantined_owner() {
-    for edit in [Edit::Links, Edit::Flags, Edit::Nonclass, Edit::Quarantine] {
-        run(20, true, edit, false, true).await;
+    for namespace in [20, 23] {
+        for retained in [false, true] {
+            for edit in [Edit::Links, Edit::Flags, Edit::Nonclass, Edit::Quarantine] {
+                run(namespace, retained, edit, false, true).await;
+            }
+        }
     }
 }
 #[tokio::test]
@@ -582,6 +639,19 @@ async fn caption_mounted_retained_malformed_current_parameter_refuses_credit() {
     for namespace in [20, 23] {
         for marked in [false, true] {
             run(namespace, true, Edit::InvalidParameter, false, marked).await;
+        }
+    }
+}
+
+#[tokio::test]
+async fn caption_mounted_unsupported_source_and_unreadable_current_flag_refuse() {
+    for namespace in [20, 23] {
+        for retained in [false, true] {
+            for marked in [false, true] {
+                for edit in [Edit::UnsupportedSource, Edit::InvalidFlag] {
+                    run(namespace, retained, edit, false, marked).await;
+                }
+            }
         }
     }
 }

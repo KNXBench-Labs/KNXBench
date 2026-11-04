@@ -1,5 +1,4 @@
-//! Application services: opening and saving projects, commands, undo/redo,
-//! search, selection, and reports.
+//! Application services for project lifecycle, validated commands, search, and reports.
 //!
 //! This crate orchestrates. It holds no domain rules (those live in
 //! `knx-core`) and no storage or format knowledge (those live in
@@ -65,6 +64,10 @@ pub mod service_control_backup;
 pub mod stored_bus_access;
 pub mod support_report;
 pub mod system2_validation_preparation;
+
+#[cfg(test)]
+#[path = "../tests/it/system2_validation_preparation/fixture.rs"]
+mod system2_fixture;
 
 pub use import::{
     import_ets_project, import_ets_project_bytes, import_ets_project_observed,

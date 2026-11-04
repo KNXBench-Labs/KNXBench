@@ -3293,12 +3293,34 @@ pub(crate) fn apply_bound_prepared(
 ) -> Result<ProjectTree, BoundCommandError> {
     // Described from the project as it is now; if it changes before the
     // command runs, the binding check refuses the command anyway.
+    #[cfg(not(test))]
     let message = state
         .project
         .lock()
         .expect("state mutex poisoned")
         .as_ref()
         .and_then(|project| crate::log_text::describe(project, &cmd));
+    #[cfg(test)]
+    let message = {
+        let project = match state.project.try_lock() {
+            Ok(project) => project,
+            Err(std::sync::TryLockError::WouldBlock) => {
+                // The signal follows a REAL failed attempt inside this domain command.
+                // It does not claim that the subsequent blocking lock is already scheduled.
+                state
+                    .device_system2
+                    .observe_command_project_blocked(binding, &cmd);
+                state.project.lock().expect("state mutex poisoned")
+            }
+            Err(std::sync::TryLockError::Poisoned(error)) => {
+                drop(error);
+                state.project.lock().expect("state mutex poisoned")
+            }
+        };
+        project
+            .as_ref()
+            .and_then(|project| crate::log_text::describe(project, &cmd))
+    };
     let detail = format!("{cmd:?}");
     apply_bound(state, binding, label, message, detail, move |_| Ok(cmd))
 }

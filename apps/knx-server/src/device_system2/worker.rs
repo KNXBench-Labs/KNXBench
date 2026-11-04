@@ -284,25 +284,53 @@ async fn settle_off_runtime(
     let copy = state.clone();
     let meta = meta.clone();
     tokio::task::spawn_blocking(move || {
-        settlement::settle(&copy, &meta, &progress, run, |project, device| {
+        #[cfg(test)]
+        let observer = copy
+            .device_system2
+            .settlement_observer
+            .lock()
+            .unwrap()
+            .clone();
+        let receipt = settlement::settle(&copy, &meta, &progress, run, |project, device| {
+            #[cfg(test)]
+            if let Some(observer) = &observer {
+                observer.callback(project);
+            }
             // Any refusal (source changed, missing, ambiguous, unreadable) credits nothing.
             bundle
                 .as_ref()
                 .zip(copy.product_db.as_ref())
                 .and_then(|(bundle, owner)| {
+                    #[cfg(test)]
+                    if let Some(observer) = &observer {
+                        observer.attempt();
+                    }
                     owner
                         .with_read(|conn| {
-                            Ok::<_, std::convert::Infallible>(
+                            #[cfg(test)]
+                            if let Some(observer) = &observer {
+                                observer.acquired(project);
+                            }
+                            let parts =
                                 app::current_project_hardware_parts(conn, project, device, bundle)
-                                    .ok(),
-                            )
+                                    .ok();
+                            #[cfg(test)]
+                            if let Some(observer) = &observer {
+                                observer.proof(parts);
+                            }
+                            Ok::<_, std::convert::Infallible>(parts)
                         })
                         .ok()
                         .and_then(Result::ok)
                         .flatten()
                 })
                 .unwrap_or(ProgrammingParts::NONE)
-        })
+        });
+        #[cfg(test)]
+        if let Some(observer) = &observer {
+            observer.settled();
+        }
+        receipt
     })
     .await
     .unwrap_or(Receipt::Unavailable)
@@ -343,6 +371,16 @@ pub(super) async fn supervised_download(
         gateway,
         lease,
     )));
+    #[cfg(test)]
+    if let Some(observer) = copy
+        .device_system2
+        .settlement_observer
+        .lock()
+        .unwrap()
+        .as_ref()
+    {
+        observer.worker_started(worker.0.abort_handle());
+    }
     if (&mut worker.0).await.is_err() {
         unexpected_end(&copy, &storage, &meta, Run::Download).await;
     }

@@ -321,8 +321,11 @@ evidence; no result is guessed). A malformed or missing id is HTTP 400. A retain
 operation with neither a journal nor an observed record cannot prove that nothing was
 written: it reports `mutationPossible: true` and result `unknown`.
 
-The web report decoder accepts exactly format 3 (it refuses format 2, as it refused format 1
-before); the list must be present.
+The web report decoder accepts exactly formats 3 and 4; formats 1 and 2 refuse.
+Both require `finalStepFailures`. Format 4 also requires `postLoadOctets`, with
+only run/object entries. Format 3 refuses that key and retains its absence in the
+returned report; consistency checks treat its absent list as empty (`?? []`),
+without synthesizing observations or upgrading the report format.
 
 The panel saves the report as a local file and tells the user to review it and email
 it to issue@knxbench.com. The report is experimental evidence, not a compatibility claim.
@@ -380,8 +383,13 @@ broken by it, without changing what "pending only" means. The explorer dot is un
   nonclass, quarantined-owner and changed-address refusals with source replacement after
   the first actual write. See the [bounded acceptance record](../status/2026-11-03-s2-caption-settlement-candidate.md).
   These are different populations, not every selector/namespace/current-edit combination.
-  Actual changed-source restore and injected changed-source mounted persistence failure
-  remain unexercised; neither population proves physical hardware behavior.
+  The later accepted [original recovery](../status/2026-11-04-s2-caption-recovery-authority.md)
+  and [injected persistence failure](../status/2026-11-03-s2-caption-persistence.md)
+  follow-ups exercise those bounded changed-source crosses. The
+  [E1–E17 consolidation](../status/2026-11-04-s2-05-software-matrix.md) adds further
+  executed coverage and causal observations with independent source approval;
+  its final integrated package acceptance is recorded separately.
+  None of these populations proves physical hardware behavior.
 - Settlement revalidates both the original and current project while holding the
   project lock and one catalogue lease, once per verified run. The opt-in synthetic
   debug measurement `s2_per_part_large_project_measurement` uses 5,001 devices and an
@@ -389,3 +397,13 @@ broken by it, without changing what "pending only" means. The explorer dot is un
   strict admission alone and 2.49–2.50 s for selective settlement. This approximately
   doubled check cost is retained to keep the source proof explicit; it is not a
   release-build measurement or a bound for real projects with objects and links.
+
+The [E1–E17 consolidation](../status/2026-11-04-s2-05-software-matrix.md) records a
+separate changed-caption 5,001-device debug measurement: six complete samples
+across both selectors took 5.413092–5.538030 seconds for the full comparison.
+Its eight actual terminal catalogue-writer/project-edit cells record one managed
+read lease, one proof and one genuine command lock miss against the same candidate.
+These counters are not SQL-statement or device-read counts. The earlier strict-only
+timings above are not reused as changed-source evidence, and neither population
+is a release-build latency guarantee. All preparation and recovery ceilings stay
+unchanged; final integrated package acceptance is separate.

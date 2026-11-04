@@ -24,6 +24,7 @@ outside preserved historical blocks, or use the next free section number
 
 | Section | Where |
 | --- | --- |
+| [4 November 2026 — Busware TUL USB/serial TP-UART](research/2026-11-04-usb-tpuart.md) | Primary manufacturer/NCN5130 evidence, transparent-firmware boundary, passive versus active mode and simulated-only acceptance scope |
 | [2026-10-30 — OpenKNX distribution data: capabilities and limits](research/2026-10-30-openknx-distribution-analysis.md) | 37 public OpenKNX release archives: input boundary of the distribution form, 32-row capability gap summary and seven bounded work packages (since delivered, see the [reconciliation](status/2026-11-01-openknx-capability-reconciliation.md)); no third-party data published |
 | [2026-10-29 — Property-based run-state observation](research/2026-10-29-property-run-state-observation.md) | Original Resources/Management/Profiles evidence for a validated-object PID 6 observation on 0701/0705; explicit candidate-location interpretation and unresolved memory encoding |
 | [2026-10-27 — Docker image signing design](research/2026-10-27-docker-image-signing-design.md) | Proposed exact workflow identity, final-index verification, promotion and recovery policy; primary documentation only, no signing or registry-write acceptance |

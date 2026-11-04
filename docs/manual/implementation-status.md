@@ -2,6 +2,16 @@
 
 # Implementation status
 
+## Main-only after Alpha 19: Linux USB/serial TP-UART
+
+`knx bus monitor` and `knx bus write` accept an explicit `--serial` device plus
+`--source` for a Busware TUL running transparent firmware. Monitoring is passive;
+active sending waits for link confirmation and supports standard TP1 frames only.
+This is software-tested transport support, not physical compatibility or USB/HID
+support. The server, browser monitor and status-bar selector remain IP-only.
+[CLI usage](user-guide/10-command-line.md#usbserial-tp-uart-linux) ·
+[Evidence and limits](../status/2026-11-04-usb-tpuart.md).
+
 ## Main-only after Alpha 19: Compare from the device editor
 
 **Compare** beside **Download to device…** opens the existing gateway-confirmed

@@ -24,7 +24,9 @@ pub mod frame;
 pub mod management;
 pub mod routing;
 pub mod scan;
+pub mod tpuart;
 pub mod tunnelling;
+pub use tpuart::{TpuartClient, TpuartDiagnostics, TpuartMode};
 pub mod wire_tap;
 
 pub use cemi::{

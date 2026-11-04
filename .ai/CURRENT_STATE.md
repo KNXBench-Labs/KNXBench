@@ -1,11 +1,12 @@
 # Restart snapshot
 ## S2-05 wrong-serial recovery (ACTIVE; owner next-task WebUI; observed 2026-11-04 18:13 CET)
 - Claim `test/s2-caption-recovery-serial-20261104` / `knxbench-s2-caption-recovery-serial-20261104`: test-only E11 wrong-device-serial refusal after caption-positive settlement, both selectors/namespaces20/23 plus valid-original control. Own caption-mounted test module only; no production/simulator policy, hardware/bus/VM/release/deploy. Evidence `<profile-scratch>/next-task-20261104/`; NEXT implement, independent review, selected branch/main-first gates. Other tracks preserved.
+## USB/serial TP-UART candidate (ACTIVE; gate candidate, observed 2026-11-04 18:10 CET)
+- Owner USB WebUI; `feat/usb-tpuart-20261104` / `knxbench-usb-tpuart-20261104`, base18a53d19f. Linux NCN5130 + CLI monitor/write; focused38transport/4consumer/22CLI green; independent correction APPROVE/F1F2F3T1 closed with4mutants/4restoredcontrols. NEXT maintained16-stage branch/main-first gates; publication/retention pending, evidence `<profile-scratch>/usb-tpuart-20261104/`. No realdevice/bus/flash/release/deploy or physicalcompatibility claim; server/UI USB still open; other owners preserved.
 ## System2 recovery acceptance reference (STANDING; observed 2026-11-04 11:27 CET)
 - Source41b1bf61d/main-first1e0d0a6de published/readbackexact; finalcheckpoint73b340d18. Independentreview/correctionAPPROVE, maintained21/21+2targetedkills/restored21; unchanged10s originalsimulation1/1 twice. Bothselected14stagegates complete/proved/frozen/userdatacheckeduntouched: eachRust3446/143ignored (14summaryrows), separatecorpus91/91, tools517/6optinskips. No active runtime repair claim. Cause/scope/failedattempts: `docs/status/2026-11-04-system2-recovery-conversion.md`. Retention `<profile>/evidence/2026-11-04-system2-recovery/`; root-local checkpoint owns final private retention/retirement. GATE-01 bypass DROP/E17 separate; no simulator/timeout/protocolpolicy edit, hardware/bus/VM/release/deploy authority; foreign/native/root tracks preserved.
 ## S2-05 caption-only settlement reference (STANDING; observed 2026-11-03)
 - Source d77f77be9/main-first288bd8005 software-accepted: independent review/archive R2 closure, complete14+14 gates proved/frozen/userdata untouched; strict-success preserved, no new start/recovery/general-equivalence/hardware/release authority. Wider E1-E17/S2-05 open. Record `docs/status/2026-11-03-s2-caption-settlement-candidate.md`; evidence `<profile>/evidence/2026-11-03-s2-caption-settlement/`. NEXT separate docs gate/publication and owned retention/cleanup; other owners/root/private files preserved.
-
 ## WP-08 Color/Time successor reference (STANDING; observed 2026-11-03)
 - Corrected source9ed8fca6a published main-first5c405bfde; feature/integrated14-stage gates complete/proved/frozen, checked user data untouched. Source trees equal; source acceptance `docs/status/2026-11-03-wp08-color-time-successor.md`. Initial F1 global-orphan candidate leak and F2comment closed; correction RED8/2 then GREEN10/10, independent R2APPROVE/10 compiled semantic mutant kills. Corrected real14/31/fresh32/reopens preserve45other tables/history/original hashes. Old epochs are not rebound.
 - Evidence `<profile>/evidence/2026-11-03-wp08-color-time-successor/`; source bundle/raw receipts/reviews/binaries retained, first author RED executable unavailable explicitly. Documentation-only successors require exact runtime-input equality; no active source repair claim.
@@ -26,7 +27,6 @@
   until owned closeout/archive; older failed attempts are historical, not accepted.
 - Next queue candidates: WP-27 / WP-28 under a newly bounded claim; no hardware,
   USB, automatic reconnect/retry, release or deployment authority from this delivery.
-
 ## Rail acceptance reference (STANDING; owner WebUI; observed 2026-11-02 22:13 CET)
 - Main-first `ed01e2bd3` published; local/tracking/live equal, reviews closed.
 - All15 planned stages complete/frozen, checked user data untouched; source acceptance:

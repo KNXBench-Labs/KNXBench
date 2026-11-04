@@ -89,9 +89,13 @@ Reuse the shared KNXnet/IP interface search
 preferred gateway ([`gatewayPreference.ts`](../../apps/knx-web/src/gatewayPreference.ts));
 no second discovery or selection state.
 
-## Gap
+## USB transport foundation and remaining UI gap (4 November 2026)
 
-KNXBench has no USB transport yet. USB entries need their own researched
-transport/adapter package first (KNX USB interface protocol, Linux device
-access/permissions, desktop vs. server/container). Until then the menu shows IP
-gateways only and must not suggest USB support.
+The [Linux TP-UART transport package](../status/2026-11-04-usb-tpuart.md) adds
+CLI monitor/write selection for a Busware TUL with transparent USB-serial
+firmware. It does not add server-session or status-bar USB selection, KNX USB/HID,
+FT1.2 or arbitrary serial-adapter support, and physical compatibility is unverified.
+
+The menu still shows IP gateways only. USB entries require a separately bounded
+server/controller integration with local device permissions and container access;
+the CLI transport foundation must not be presented as complete WP-26 USB coverage.

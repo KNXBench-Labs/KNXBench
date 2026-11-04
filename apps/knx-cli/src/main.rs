@@ -8,6 +8,7 @@ use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
 mod activity_history_paths;
+mod bus_transport;
 mod catalog_update;
 mod contribution;
 mod device_address;
@@ -89,15 +90,18 @@ const USAGE: &str = "usage: knx import <file.knxproj> [--store <path.knxdb> [--r
      \x20         load procedure plans completely offline) or unsupported (with the refusal);\n\
      \x20         offline, product defaults, no connection)\n\
      \x20     knx bus discover\n\
-     \x20     knx bus monitor --gateway <host:port> [--project <path.knxdb>] [--control]\n\
+     \x20     knx bus monitor (--gateway <host:port> | --serial <tty> --source <area.line.device>) [--project <path.knxdb>] [--control]\n\
      \x20         (with --project, decodes against each address's resolved DPT;\n\
      \x20         --control appends priority, hop count and repeat flag)\n\
-     \x20     knx bus write --gateway <host:port> [--project <path.knxdb>] [--dpt <DPST-m-s>]\n\
+     \x20     knx bus write (--gateway <host:port> | --serial <tty> --source <area.line.device>) [--project <path.knxdb>] [--dpt <DPST-m-s>]\n\
      \x20                  [--input-format <canonical|decimal|hexadecimal|binary|text>]\n\
      \x20                  [--dry-run] <main/middle/sub> <value>\n\
      \x20         (--dpt encodes <value> as that type; --project resolves it from the\n\
      \x20         linked communication objects; neither given falls back to raw\n\
      \x20         0|1|hex; --dry-run encodes and prints without opening a connection)\n\
+     \x20         (serial: Linux raw 19200 8E1, transparent NCN5130 firmware, not console/HID;\n\
+     \x20         monitor is passive; write uses active auto-ACK for own address and ALL groups.\n\
+     \x20         Standard frames only; opening/closing may affect modem lines)\n\
      \x20     knx bus route-monitor --source-address <area.line.device> [--project <path.knxdb>]\n\
      \x20                  [--multicast-group <addr>]\n\
      \x20     knx bus route-send --source-address <area.line.device> [--multicast-group <addr>]\n\
@@ -4059,7 +4063,7 @@ async fn run_bus_discover_async() -> ExitCode {
 }
 
 struct BusMonitorArgs {
-    gateway: String,
+    endpoint: bus_transport::BusEndpoint,
     project: Option<String>,
     /// `--control`: append each telegram's priority, hop count and repeat
     /// flag (KNOWN_LIMITATIONS §147). Off by default, so the line stays
@@ -4068,14 +4072,14 @@ struct BusMonitorArgs {
 }
 
 fn parse_bus_monitor_args(args: &[String]) -> Result<BusMonitorArgs, String> {
-    let mut gateway = None;
+    let mut endpoint = bus_transport::EndpointArgs::default();
     let mut project = None;
     let mut control = false;
     let mut i = 0;
     while i < args.len() {
         match args[i].as_str() {
-            "--gateway" => {
-                gateway = Some(take_value(args, i + 1, "--gateway")?);
+            "--gateway" | "--serial" | "--source" => {
+                endpoint.take(args, i)?;
                 i += 2;
             }
             "--project" => {
@@ -4090,7 +4094,7 @@ fn parse_bus_monitor_args(args: &[String]) -> Result<BusMonitorArgs, String> {
         }
     }
     Ok(BusMonitorArgs {
-        gateway: gateway.ok_or_else(|| "--gateway is required".to_string())?,
+        endpoint: endpoint.finish()?,
         project,
         control,
     })
@@ -4101,13 +4105,6 @@ fn run_bus_monitor(args: &[String]) -> ExitCode {
         Ok(p) => p,
         Err(e) => {
             eprintln!("{e}\n{USAGE}");
-            return ExitCode::FAILURE;
-        }
-    };
-    let gateway: std::net::SocketAddrV4 = match parsed.gateway.parse() {
-        Ok(g) => g,
-        Err(_) => {
-            eprintln!("--gateway must be host:port, e.g. 192.0.2.1:3671");
             return ExitCode::FAILURE;
         }
     };
@@ -4136,7 +4133,7 @@ fn run_bus_monitor(args: &[String]) -> ExitCode {
     };
 
     runtime.block_on(run_bus_monitor_async(
-        gateway,
+        parsed.endpoint,
         style,
         ga_names,
         ga_dpts,
@@ -4145,34 +4142,38 @@ fn run_bus_monitor(args: &[String]) -> ExitCode {
 }
 
 async fn run_bus_monitor_async(
-    gateway: std::net::SocketAddrV4,
+    endpoint: bus_transport::BusEndpoint,
     style: knx_core::GroupAddressStyle,
     ga_names: std::collections::HashMap<u16, String>,
     ga_dpts: Option<std::collections::HashMap<u16, knx_core::GroupAddressDpt>>,
     show_control: bool,
 ) -> ExitCode {
-    use knx_net::BusConnection;
-    let client = knx_net::KnxNetIpClient::new();
-    let tunnel = match client.connect_tunnel(gateway).await {
+    let tunnel = match endpoint.connect(knx_net::TpuartMode::BusMonitor).await {
         Ok(t) => t,
         Err(e) => {
-            eprintln!("could not connect to {gateway}: {e}");
+            eprintln!("could not connect to {endpoint}: {e}");
             return ExitCode::FAILURE;
         }
     };
-    eprintln!(
-        "connected to {gateway}, assigned individual address {}. Ctrl-C to stop.",
-        tunnel.assigned_address()
-    );
+    if matches!(endpoint, bus_transport::BusEndpoint::Serial { .. }) {
+        eprintln!("passive TP-UART bus monitor: no data requests or ACK commands");
+        eprintln!("connected to {endpoint}, caller-supplied source {} (not assigned in passive mode). Ctrl-C to stop.", tunnel.assigned_address());
+    } else {
+        eprintln!(
+            "connected to {endpoint}, assigned individual address {}. Ctrl-C to stop.",
+            tunnel.assigned_address()
+        );
+    }
     let mut telegrams = tunnel.subscribe();
     loop {
         tokio::select! {
             _ = tokio::signal::ctrl_c() => {
                 eprintln!("disconnecting...");
-                if let Err(e) = tunnel.disconnect().await {
-                    eprintln!("disconnect: {e}");
-                }
-                break;
+                return bus_transport::monitor_cleanup_outcome(
+                    matches!(endpoint, bus_transport::BusEndpoint::Serial { .. }),
+                    tunnel.disconnect().await,
+                    &mut std::io::stderr(),
+                );
             }
             received = telegrams.recv() => match received {
                 Ok(knx_net::TunnelEvent::Telegram(telegram)) => {
@@ -4184,7 +4185,10 @@ async fn run_bus_monitor_async(
                     }
                 }
                 Ok(knx_net::TunnelEvent::Closed) => {
-                    eprintln!("gateway closed the tunnel");
+                    eprintln!("{}", tunnel.closure_message());
+                    if matches!(endpoint, bus_transport::BusEndpoint::Serial { .. }) {
+                        return ExitCode::FAILURE;
+                    }
                     break;
                 }
                 Err(tokio::sync::broadcast::error::RecvError::Lagged(n)) => {
@@ -4198,7 +4202,7 @@ async fn run_bus_monitor_async(
 }
 
 struct BusWriteArgs {
-    gateway: String,
+    endpoint: bus_transport::BusEndpoint,
     project: Option<String>,
     dpt: Option<String>,
     input_format: Option<knx_core::DptInputFormat>,
@@ -4208,7 +4212,7 @@ struct BusWriteArgs {
 }
 
 fn parse_bus_write_args(args: &[String]) -> Result<BusWriteArgs, String> {
-    let mut gateway = None;
+    let mut endpoint = bus_transport::EndpointArgs::default();
     let mut project = None;
     let mut dpt = None;
     let mut input_format = None;
@@ -4217,8 +4221,8 @@ fn parse_bus_write_args(args: &[String]) -> Result<BusWriteArgs, String> {
     let mut i = 0;
     while i < args.len() {
         match args[i].as_str() {
-            "--gateway" => {
-                gateway = Some(take_value(args, i + 1, "--gateway")?);
+            "--gateway" | "--serial" | "--source" => {
+                endpoint.take(args, i)?;
                 i += 2;
             }
             "--project" => {
@@ -4254,7 +4258,7 @@ fn parse_bus_write_args(args: &[String]) -> Result<BusWriteArgs, String> {
         return Err("expected exactly one group address and one value".to_string());
     };
     Ok(BusWriteArgs {
-        gateway: gateway.ok_or_else(|| "--gateway is required".to_string())?,
+        endpoint: endpoint.finish()?,
         project,
         dpt,
         input_format,
@@ -4278,7 +4282,7 @@ fn parse_group_value(s: &str) -> Result<knx_net::GroupValue, String> {
         "1" => Ok(knx_net::GroupValue::Short(1)),
         hex => {
             let hex = hex.strip_prefix("0x").unwrap_or(hex);
-            if hex.is_empty() || hex.len() % 2 != 0 {
+            if hex.is_empty() || !hex.is_ascii() || hex.len() % 2 != 0 {
                 return Err(format!(
                     "value must be 0, 1, or an even-length hex byte string, got {s}"
                 ));
@@ -4364,13 +4368,6 @@ fn run_bus_write(args: &[String]) -> ExitCode {
             return ExitCode::FAILURE;
         }
     };
-    let gateway: std::net::SocketAddrV4 = match parsed.gateway.parse() {
-        Ok(g) => g,
-        Err(_) => {
-            eprintln!("--gateway must be host:port, e.g. 192.0.2.1:3671");
-            return ExitCode::FAILURE;
-        }
-    };
     // Everything — project, address, DPT, value — is parsed and validated
     // here, before a socket is ever opened in any path. A given project is
     // read even next to `--dpt`: its style decides how the address is read.
@@ -4393,6 +4390,14 @@ fn run_bus_write(args: &[String]) -> ExitCode {
         }
     };
 
+    if let Err(error) = parsed.endpoint.validate_write(
+        knx_net::Destination::Group(group_address),
+        knx_net::ApplicationService::GroupValueWrite(value.clone()),
+    ) {
+        eprintln!("{error}");
+        return ExitCode::FAILURE;
+    }
+
     if parsed.dry_run {
         println!(
             "{} {dpt_label} {} -> {}",
@@ -4413,21 +4418,25 @@ fn run_bus_write(args: &[String]) -> ExitCode {
             return ExitCode::FAILURE;
         }
     };
-    runtime.block_on(run_bus_write_async(gateway, style, group_address, value))
+    runtime.block_on(run_bus_write_async(
+        parsed.endpoint,
+        style,
+        group_address,
+        value,
+    ))
 }
 
 async fn run_bus_write_async(
-    gateway: std::net::SocketAddrV4,
+    endpoint: bus_transport::BusEndpoint,
     style: knx_core::GroupAddressStyle,
     group_address: knx_core::GroupAddress,
     value: knx_net::GroupValue,
 ) -> ExitCode {
-    use knx_net::{ApplicationService, BusConnection, Destination};
-    let client = knx_net::KnxNetIpClient::new();
-    let tunnel = match client.connect_tunnel(gateway).await {
+    use knx_net::{ApplicationService, Destination};
+    let tunnel = match endpoint.connect(knx_net::TpuartMode::Active).await {
         Ok(t) => t,
         Err(e) => {
-            eprintln!("could not connect to {gateway}: {e}");
+            eprintln!("could not connect to {endpoint}: {e}");
             return ExitCode::FAILURE;
         }
     };
@@ -4437,19 +4446,14 @@ async fn run_bus_write_async(
             ApplicationService::GroupValueWrite(value),
         )
         .await;
-    if let Err(e) = tunnel.disconnect().await {
-        eprintln!("disconnect: {e}");
-    }
-    match result {
-        Ok(()) => {
-            println!("wrote to {}", group_address.format(style));
-            ExitCode::SUCCESS
-        }
-        Err(e) => {
-            eprintln!("write failed: {e}");
-            ExitCode::FAILURE
-        }
-    }
+    bus_transport::write_outcome(
+        matches!(endpoint, bus_transport::BusEndpoint::Serial { .. }),
+        result,
+        tunnel.disconnect().await,
+        &group_address.format(style),
+        &mut std::io::stdout(),
+        &mut std::io::stderr(),
+    )
 }
 
 struct BusRouteMonitorArgs {
@@ -5253,7 +5257,7 @@ mod tests {
         let asked =
             parse_bus_monitor_args(&args(&["--control", "--gateway", "192.0.2.1:3671"])).unwrap();
         assert!(asked.control);
-        assert_eq!(asked.gateway, "192.0.2.1:3671");
+        assert_eq!(asked.endpoint.to_string(), "192.0.2.1:3671");
     }
 
     #[test]

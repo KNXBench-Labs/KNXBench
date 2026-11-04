@@ -18,6 +18,8 @@ const HISTORICAL_DOWNLOAD: &str = "2001-02-03T04:05:06Z";
 
 #[derive(Clone, Copy, Debug)]
 struct Case {
+    namespace: u8,
+    retained: bool,
     faulty: bool,
     marked: bool,
 }
@@ -210,9 +212,20 @@ fn assert_original(original: &PreparedBundle, meta: &Metadata, case: Case) {
     assert_eq!(original.binding.target, meta.address);
     assert_eq!(original.normalized_plan.target, meta.address);
     assert_eq!(original.plan().unwrap().target().to_string(), meta.address);
+    let preparation = original.project_preparation.as_ref().unwrap();
+    assert_eq!(preparation.device_id, f::DEVICE.0);
     assert_eq!(
-        original.project_preparation.as_ref().unwrap().device_id,
-        f::DEVICE.0
+        preparation.schema_namespace,
+        format!("http://knx.org/xml/project/{}", case.namespace),
+        "{case:?}: actual admitted source namespace"
+    );
+    assert_eq!(
+        matches!(
+            &preparation.product_input,
+            knx_app::system2_validation_preparation::ProjectProductInput::RetainedSourceMembers { .. }
+        ),
+        case.retained,
+        "{case:?}: actual admitted source family"
     );
     let hardware = original.hardware_preparation.as_ref().unwrap();
     assert_eq!(hardware.operation, meta.operation_id);
@@ -546,7 +559,7 @@ fn exercise_history(state: &crate::SharedState, terminal: &Editor, case: Case) {
 }
 
 async fn run(case: Case) {
-    let input = f::inputs(20, true);
+    let input = f::inputs(case.namespace, case.retained);
     let data = input.dir.path();
     let mut project = input.project.clone();
     let device = project.devices.get_mut(f::DEVICE).unwrap();
@@ -574,7 +587,7 @@ async fn run(case: Case) {
     let router = crate::app(state.clone(), None);
     seed_history(&state, case);
     let before = Editor::read(&state);
-    let preparation = preview(&state, &router, &input.profile, true).await;
+    let preparation = preview(&state, &router, &input.profile, case.retained).await;
     let started = http(
         &router,
         "/api/device-system2/start",
@@ -737,17 +750,24 @@ async fn run(case: Case) {
         metadata_bytes
     );
     eprintln!(
-        "E16_CASE_OK family=retained namespace=20 terminal={} marked={}",
+        "E16_CASE_OK family={} namespace={} terminal={} marked={}",
+        if case.retained {
+            "retained"
+        } else {
+            "standalone"
+        },
+        case.namespace,
         if case.faulty { "fault" } else { "healthy" },
         case.marked
     );
 }
 
-#[tokio::test]
-async fn caption_ineligible_terminal_retained20_final_version_mismatch() {
+async fn run_beliefs(namespace: u8, retained: bool, faulty: bool) {
     for marked in [false, true] {
         run(Case {
-            faulty: true,
+            namespace,
+            retained,
+            faulty,
             marked,
         })
         .await;
@@ -755,12 +775,41 @@ async fn caption_ineligible_terminal_retained20_final_version_mismatch() {
 }
 
 #[tokio::test]
+async fn caption_ineligible_terminal_retained20_final_version_mismatch() {
+    run_beliefs(20, true, true).await;
+}
+
+#[tokio::test]
 async fn caption_ineligible_terminal_retained20_healthy_control() {
-    for marked in [false, true] {
-        run(Case {
-            faulty: false,
-            marked,
-        })
-        .await;
-    }
+    run_beliefs(20, true, false).await;
+}
+
+#[tokio::test]
+async fn caption_ineligible_terminal_retained23_final_version_mismatch() {
+    run_beliefs(23, true, true).await;
+}
+
+#[tokio::test]
+async fn caption_ineligible_terminal_retained23_healthy_control() {
+    run_beliefs(23, true, false).await;
+}
+
+#[tokio::test]
+async fn caption_ineligible_terminal_standalone20_final_version_mismatch() {
+    run_beliefs(20, false, true).await;
+}
+
+#[tokio::test]
+async fn caption_ineligible_terminal_standalone20_healthy_control() {
+    run_beliefs(20, false, false).await;
+}
+
+#[tokio::test]
+async fn caption_ineligible_terminal_standalone23_final_version_mismatch() {
+    run_beliefs(23, false, true).await;
+}
+
+#[tokio::test]
+async fn caption_ineligible_terminal_standalone23_healthy_control() {
+    run_beliefs(23, false, false).await;
 }

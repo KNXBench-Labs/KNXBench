@@ -12,6 +12,17 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Caption-positive original recovery authority (4 November 2026, main-only)
+
+Test-only source `806b25236`, main-first `77edfc3b3`, exercises actual original
+recovery after caption-positive settlement for standalone/retained sources and
+namespaces 20/23 (four leaves). Exact OLD model restoration, original evidence,
+confirmation refusals and conservative MEMORY/history settlement are checked.
+Independent review closed a real redo-oracle gap; the corrected fixture detects
+the previously surviving undo-only traversal. Both selected 14-stage package gates
+passed. No production behavior, broader E11/E16/S2-05 or physical recovery claim.
+[Execution, source epochs and remaining limits](status/2026-11-04-s2-caption-recovery-authority.md).
+
 ## System-2 final-verification source matrix (4 November 2026, main-only)
 
 Test-only source `70ad4e24c`, main-first `446480584`, extends the existing

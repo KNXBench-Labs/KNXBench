@@ -515,9 +515,11 @@ impl RecoveryRecord {
         snapshot: &PropertyRecoverySnapshot,
         bundle: &PreparedBundle,
     ) -> io::Result<Self> {
-        if snapshot.original_plan != bundle.plan()?
-            || snapshot.preconditions != bundle.preconditions()?
-        {
+        // Reconstruct retained sources once for this immutable conversion. The
+        // serialized record below still gets the complete evidence validation.
+        let plan = bundle.plan()?;
+        let preconditions = bundle.preconditions_for(&plan)?;
+        if snapshot.original_plan != plan || snapshot.preconditions != preconditions {
             return Err(invalid(
                 "acquired recovery does not bind the exact prepared bundle",
             ));
@@ -567,7 +569,7 @@ impl RecoveryRecord {
             observed_program_version: snapshot.program_version_observation().map(|o| o.observed),
             prestate_unreadable_allocations: snapshot.unreadable_allocations.clone(),
         };
-        record.to_snapshot(bundle)?;
+        record.to_snapshot_for(bundle, plan, preconditions)?;
         Ok(record)
     }
     pub fn to_snapshot(&self, bundle: &PreparedBundle) -> io::Result<PropertyRecoverySnapshot> {
@@ -577,7 +579,23 @@ impl RecoveryRecord {
             ));
         }
         let plan = bundle.plan()?;
-        let preconditions = bundle.preconditions()?;
+        let preconditions = bundle.preconditions_for(&plan)?;
+        self.to_snapshot_for(bundle, plan, preconditions)
+    }
+    /// Private to these conversions: the owned plan/premise were reconstructed
+    /// from this same immutable bundle in this synchronous invocation. Never a
+    /// persisted admission or a replacement for recovery evidence validation.
+    fn to_snapshot_for(
+        &self,
+        bundle: &PreparedBundle,
+        plan: PropertyDownloadPlan,
+        preconditions: ExperimentalPropertyPreconditions,
+    ) -> io::Result<PropertyRecoverySnapshot> {
+        if self.version != 1 || self.original_bundle != *bundle {
+            return Err(invalid(
+                "recovery source/application/profile/plan binding differs",
+            ));
+        }
         if self.resources.len() != preconditions.source_pointers.len()
             || self
                 .resources

@@ -1,5 +1,14 @@
 # Roadmap
 
+## Main-only after Alpha 19: bounded System-2 recovery conversion repair
+
+The optional original mounted cancellation/recovery simulation now completes with
+its original ten-second deadline. App recovery conversions reuse one freshly
+reconstructed immutable plan per invocation without dropping evidence validation or
+independent admission/backup barriers. This closes the named simulated recovery debt,
+not physical recovery, reporter field failures, general source equivalence or S2-05.
+[Cause, verification and limits](status/2026-11-04-system2-recovery-conversion.md).
+
 ## Main-only after Alpha 19: narrow System-2 caption settlement
 
 S2-05 now has the accepted finite selected-caption software rule (`288bd8005`),

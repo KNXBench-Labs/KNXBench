@@ -12,6 +12,17 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## System-2 recovery conversion reuse (4 November 2026, main-only)
+
+A source-bound timed probe traced the red mounted recovery wait to repeated App
+retained-source reconstruction before the first cooperative yield, not an observed
+long transport read. Each recovery conversion now reconstructs once while retaining
+complete evidence validation and independent admission/backup barriers. The unchanged
+original simulation passes task completion, exact original snapshot and durable
+Restored/restart/once-only checks; the ten-second deadline is unchanged. No simulator,
+protocol, physical-recovery or field-outcome claim follows.
+[Cause, regression/counterprobe and evidence limits](status/2026-11-04-system2-recovery-conversion.md).
+
 ## System-2 caption-only settlement (3 November 2026, main-only)
 
 The finite selected-caption software rule is accepted main-first as `288bd8005`

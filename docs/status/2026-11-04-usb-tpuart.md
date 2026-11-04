@@ -60,13 +60,19 @@ resource release, strict tty settings and CLI preflight/no-open behavior.
 The parent authenticates source manifests and direct-exit logs. Independent
 correction review closed F1/F2/F3/T1, with four compiled semantic mutant
 rejections and four restored controls; no compile failures or survivors were
-credited. The maintained change-scoped package gate is the final acceptance
-step. Task-private receipts retain individual execution results, failures
+credited. Both maintained **16-stage** change-scoped gates passed: branch
+`ee0076ed2` and main-first `81b0a2092`, each with **8,209 Rust passes and 247
+ignored tests**, a separate **155/155 corpus** and **62 binding-test passes**
+(the bindings overlap the workspace population and are not added to it).
+Both receipts prove complete stages, frozen inputs and checked, untouched
+user data. The source is published as `81b0a2092`; twelve source blobs were
+read back from the remote-tracking head after checking the live remote ref.
+Task-private receipts retain individual execution results, failures
 and source bindings rather than publishing installation data. Serial cleanup
 failure yields nonzero CLI status even after confirmed delivery; the value is
 not automatically resent.
 
-The current focused candidate passes **38 transport tests, four CLI endpoint/
+The focused suite passes **38 transport tests, four CLI endpoint/
 consumer-outcome tests and 22 actual CLI bus tests**, plus affected all-target
 Clippy with warnings denied and workspace formatting. The first independent
 review reproduced post-close subscription loss, an old unnumbered confirmation

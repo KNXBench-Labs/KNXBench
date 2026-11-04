@@ -1,4 +1,6 @@
 //! Both selector families settle one caption change without lending start or recovery authority.
+mod adversaries;
+mod limits;
 mod review;
 use super::super::caption_fixture as f;
 use super::per_part::{observed, parameter, parts, ADR_APP, ADR_APP_PAR};
@@ -52,33 +54,41 @@ async fn caption_retained_namespace23() {
 
 #[tokio::test]
 async fn caption_strict_success_ignores_other_containers_and_preserves_current_masks() {
-    for retained in [false, true] {
-        let input = f::inputs(20, retained);
-        // Original noncanonical JSON formatting is retained byte-exact.
-        let profile = serde_json::to_vec_pretty(
-            &serde_json::from_slice::<serde_json::Value>(&input.profile).unwrap(),
-        )
-        .unwrap();
-        let bundle = observed(&input.conn, &input.project, &profile).await;
-        let other = f::package(
-            &f::members(&input.package),
-            "P1 same members other container",
-        );
-        knx_productdb::install_package(&input.conn, "P1.knxprod", &other).unwrap();
-        assert_eq!(
-            parts(&input.conn, &input.project, &bundle),
-            Some(ProgrammingParts::ALL)
-        );
-        let mut edited = input.project.clone();
-        parameter(&mut edited, "772");
-        assert_eq!(parts(&input.conn, &edited, &bundle), Some(ADR_APP));
-        assert_eq!(
-            bundle.project_preparation.as_ref().unwrap().profile_bytes,
-            profile
-        );
-        // A current-request refusal after strict success is terminal, never fallback.
-        parameter(&mut edited, "not-a-number");
-        assert!(current_project_hardware_parts(&input.conn, &edited, f::DEVICE, &bundle).is_err());
+    for namespace in [20, 23] {
+        for retained in [false, true] {
+            let input = f::inputs(namespace, retained);
+            // Original noncanonical JSON formatting is retained byte-exact.
+            let profile = serde_json::to_vec_pretty(
+                &serde_json::from_slice::<serde_json::Value>(&input.profile).unwrap(),
+            )
+            .unwrap();
+            let bundle = observed(&input.conn, &input.project, &profile).await;
+            let other = f::package(
+                &f::members(&input.package),
+                "P1 same members other container",
+            );
+            assert_ne!(
+                knx_productdb::sha256_hex(&input.package),
+                knx_productdb::sha256_hex(&other)
+            );
+            knx_productdb::install_package(&input.conn, "P1.knxprod", &other).unwrap();
+            assert_eq!(
+                parts(&input.conn, &input.project, &bundle),
+                Some(ProgrammingParts::ALL)
+            );
+            let mut edited = input.project.clone();
+            parameter(&mut edited, "772");
+            assert_eq!(parts(&input.conn, &edited, &bundle), Some(ADR_APP));
+            assert_eq!(
+                bundle.project_preparation.as_ref().unwrap().profile_bytes,
+                profile
+            );
+            // A current-request refusal after strict success is terminal, never fallback.
+            parameter(&mut edited, "not-a-number");
+            assert!(
+                current_project_hardware_parts(&input.conn, &edited, f::DEVICE, &bundle).is_err()
+            );
+        }
     }
 }
 

@@ -2,6 +2,8 @@
 mod dto;
 mod routes;
 mod settlement;
+#[cfg(test)]
+mod settlement_observation;
 pub(crate) mod static_files;
 mod storage;
 #[cfg(test)]
@@ -233,6 +235,8 @@ struct Inner {
 /// The one actual task, local status and private durable evidence owner.
 pub struct System2Service {
     #[cfg(test)]
+    settlement_observer: Mutex<Option<Arc<settlement_observation::Observation>>>,
+    #[cfg(test)]
     observation: Option<Arc<test_observation::Observation>>,
     #[cfg(test)]
     admission_reads: Mutex<Option<Arc<storage::AdmissionReadCounts>>>,
@@ -312,6 +316,8 @@ impl System2Service {
         }
         Self {
             #[cfg(test)]
+            settlement_observer: Mutex::new(None),
+            #[cfg(test)]
             observation: None,
             #[cfg(test)]
             admission_reads: Mutex::new(None),
@@ -320,6 +326,17 @@ impl System2Service {
             inner: Mutex::new(inner),
             storage: Mutex::new(storage),
             storage_unavailable,
+        }
+    }
+
+    #[cfg(test)]
+    pub(crate) fn observe_command_project_blocked(
+        &self,
+        binding: &crate::domain::SnapshotBinding,
+        command: &knx_core::Command,
+    ) {
+        if let Some(observer) = self.settlement_observer.lock().unwrap().as_ref() {
+            observer.command_blocked(binding, command);
         }
     }
 

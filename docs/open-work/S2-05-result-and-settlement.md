@@ -10,6 +10,17 @@ Origin: GitHub issue #31.
 
 Contract: [system2-download-result](../contracts/system2-download-result.md).
 
+## Software consolidation, 4 November 2026
+
+The [E1–E17 software matrix consolidation](../status/2026-11-04-s2-05-software-matrix.md)
+has focused execution and independent source approval: App integrity/ownership
+adversaries, actual-worker catalogue/project contention, full lifecycle and
+history conservation, changed-source large-project measurement and exact limits.
+Two independently compiled wrong variants fail their owning assertions, with
+healthy and restored controls. Earlier failed attempts remain explicit; the
+committed main-first candidate still needs the final selected package gate.
+The narrow caption class and physical/general-equivalence limits are unchanged.
+
 ## Open
 
 - Splitting "final step did not finish" into verification mismatch, read failure and final
@@ -32,9 +43,12 @@ Contract: [system2-download-result](../contracts/system2-download-result.md).
   The explicitly software-authorized [narrow caption-only rule](../status/2026-11-03-s2-caption-settlement-candidate.md)
   is accepted main-first as `288bd8005` after independent review and both complete
   selected 14-stage gates. It implements the bounded [settlement-only design](../design/system2-settlement-source-equivalence.md),
-  not general source equivalence or new start/recovery authority. Exhaustive E-matrix
-  adversaries, broader source-positive recovery crosses, race/read-count instrumentation
-  and changed-source large-project measurements remain open. A bounded
+  not general source equivalence or new start/recovery authority. The later
+  [software consolidation](../status/2026-11-04-s2-05-software-matrix.md) maps all
+  finite E-rows to existing or newly executed controls, including actual-worker
+  lease/proof counts, causal project contention and changed-source measurements;
+  final integrated acceptance remains pending. It does not claim every possible
+  adversary, individual SQL counts or broader source policy. A bounded
   [E15 changed-caption persistence-failure follow-up](../status/2026-11-03-s2-caption-persistence.md)
   is accepted main-first as `99f7e65dd`: focused mounted execution, independent
   review with four compiled wrong-variant assertion failures and both complete
@@ -74,9 +88,10 @@ Contract: [system2-download-result](../contracts/system2-download-result.md).
   history settlement; four valid-original neighbors remain. Independent source
   review/correction closure, one compiled guard-bypass calibration with four intended
   failures/four valid neighbors, restored eight-leaf control and both selected
-  14-stage gates passed. This closes only that wrong-actual-serial cross. Wider
-  terminal/lifecycle/recovery, cross-bound journals and race/read-count obligations
-  remain separate and open.
+  14-stage gates passed. That historical package closes only its wrong-actual-serial
+  cross. Later lifecycle, complete backup conservation and real-worker contention
+  evidence is recorded in the software consolidation above; it does not rewrite
+  these historical verdicts or authorize physical recovery.
 - Field verification by the reporter is not requested; no hardware retry is needed
   for the software change.
 

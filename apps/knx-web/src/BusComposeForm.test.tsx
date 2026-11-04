@@ -415,6 +415,9 @@ describe("BusComposeForm", () => {
 it("disables group sends in passive serial mode with an associated explanation", async () => {
   const root=await renderForm("1/1/1",{kind:"single",dpt:"DPST-1-1"},true,false,false,true);
   try {
+    const hint = host!.querySelector("#bus-compose-passive-hint")!;
+    expect(hint.classList.contains("bus-compose-hint")).toBe(true);
+    expect(hint.getAttribute("role")).toBe("note");
     for(const button of host!.querySelectorAll<HTMLButtonElement>(".bus-compose-fields button")) {
       expect(button.disabled).toBe(true); expect(describedTextOf(".bus-compose-destination")).toContain("Passive serial monitoring cannot send");
       await act(async()=>button.click());

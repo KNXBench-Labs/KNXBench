@@ -244,7 +244,7 @@ export default function BusComposeForm({
           {t("busMonitor.contextUnverified")}
         </p>
       )}
-      {passiveSerial && <p id="bus-compose-passive-hint" role="note">{t("busTransport.passiveRefusal")}</p>}
+      {passiveSerial && <p id="bus-compose-passive-hint" className="bus-compose-hint" role="note">{t("busTransport.passiveRefusal")}</p>}
       {sessionClosed && (
         <p id="bus-compose-closed-hint" className="bus-compose-hint bus-compose-closed-hint">
           {t("busCompose.sessionClosedMessage")}

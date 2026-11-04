@@ -41,6 +41,7 @@ const UNSTYLED_BY_DESIGN = new Set([
   "bus-compose-dpt",
   "bus-compose-value",
   "bus-compose-closed-hint", // always paired with .bus-compose-hint
+  "bus-compose-passive-hint", // aria-describedby target, styled by .bus-compose-hint
   "bus-compose-error", // always paired with .field-error
   "bus-compose-dpt-hint", // aria-describedby target, styled by .bus-compose-hint
 ]);

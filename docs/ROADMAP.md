@@ -1,5 +1,15 @@
 # Roadmap
 
+## Main-only after Alpha 19: caption-positive original recovery proof
+
+Four mounted source/namespace cells now exercise original recovery after an
+accepted caption-only source change, including exact OLD model restoration and
+non-vacuous undo/redo MEMORY sanitization. Test-only `77edfc3b3` passed independent
+correction review and both selected 14-stage gates. Broader recovery/source-equivalence,
+race/read-count and E11/E16/S2-05 obligations remain open; no new production policy,
+hardware result, release or deployment follows.
+[Proof and limits](status/2026-11-04-s2-caption-recovery-authority.md).
+
 ## Main-only after Alpha 19: final-verification source matrix
 
 The bounded E16 witness now covers retained/standalone preparation and namespaces

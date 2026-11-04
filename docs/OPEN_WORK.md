@@ -6,7 +6,7 @@ the former dated sections are in the [archive](history/OPEN_WORK_2026-10-25.md).
 
 | ID | Task | Status | Details |
 | --- | --- | --- | --- |
-| WP-26 | Bus-connection drop-up with connect button in the status bar | IP connection controller, bound stop and footer delivered on main; USB still needs its own transport package | [WP-26](open-work/WP-26-status-bar-bus-connection.md) |
+| WP-26 | Bus-connection drop-up with connect button in the status bar | IP controller and footer delivered; Linux CLI TP-UART foundation added; server/web USB integration and physical acceptance remain open | [WP-26](open-work/WP-26-status-bar-bus-connection.md) |
 | S2-02 | System-2: own-run busy hint and missing refusal reason (#30) | P1: diagnostic shipped in Alpha 17, reporter re-test can be requested; actual failure unresolved | [S2-02](open-work/S2-02-gateway-busy-after-failed-runs.md) |
 | S2-04 | System-2 server: tunnel lost after the durable checkpoint (#30) | System-2, ordinary download/service-control and individual-address settler fixes ship in Alpha 18; field verification open | [S2-04](open-work/S2-04-tunnel-loss-after-checkpoint.md) |
 | S2-05 | System-2: result in the device list, report, project settlement (#31) | Result/report/settlement shipped; unchanged-source selective settlement delivered on main; narrow caption-only software rule accepted main-first 288bd8005 after independent review and both selected 14-stage gates; general source equivalence, wider proof limits and #30/#22 remain open | [S2-05](open-work/S2-05-result-and-settlement.md) |

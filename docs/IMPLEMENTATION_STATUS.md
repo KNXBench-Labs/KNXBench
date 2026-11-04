@@ -12,6 +12,16 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## USB/serial TP-UART transport (4 November 2026, main-only)
+
+Linux CLI `bus monitor` and `bus write` can select a Busware TUL running
+transparent USB-serial firmware with `--serial` and `--source`. The separate
+infrastructure adapter reuses the cEMI codec, provides passive monitoring and
+confirmed standard-frame sending, and fails closed on uncertain delivery.
+Verification uses injected peers, created PTYs and CLI preflight; physical
+compatibility remains unverified. Server/web/status-bar USB selection is still
+open. [Scope, evidence and limits](status/2026-11-04-usb-tpuart.md).
+
 ## Caption-positive original recovery authority (4 November 2026, main-only)
 
 Test-only source `806b25236`, main-first `77edfc3b3`, exercises actual original

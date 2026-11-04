@@ -318,7 +318,7 @@ describe("one editing workspace", () => {
     // admission (its one value import), calls no API and mutates nothing; the
     // companion does not call the new live reader.
     const liveGraph = valueImportGraph("liveActivity.ts");
-    expect([...liveGraph.keys()].sort()).toEqual(["activityHistory.ts", "downloadFailure.ts", "downloadReceipt.ts", "liveActivity.ts", "postDownloadCheck.ts"]);
+    expect([...liveGraph.keys()].sort()).toEqual(["activityHistory.ts", "downloadFailure.ts", "downloadReceipt.ts", "liveActivity.ts", "postDownloadCheck.ts", "serialTransport.ts"]);
     //
     // ADR-0089 adds `achievementEvents.ts`, reached from `BusMonitorPanel`
     // (session started, minutes open, capture saved, flow watched). It
@@ -398,6 +398,7 @@ describe("one editing workspace", () => {
     expect([...graph.keys()].sort()).toEqual([
       "BusComposeForm.tsx",
       "BusMonitorPanel.tsx",
+      "BusTransportFields.tsx",
       "DeviceLink.tsx",
       "DiagnosticsCompanion.tsx",
       "FlowImageExportDialog.tsx",
@@ -471,6 +472,8 @@ describe("one editing workspace", () => {
       "projectMetadata.ts",
       "projectPayloads.ts",
       "recordedDeviceState.ts", // Pure admission only; no IO, writer or device query.
+      "serialPreference.ts",
+      "serialTransport.ts",
       "session.ts",
       "sessionLogExport.ts",
       "settingsDiagnostic.ts",
@@ -507,8 +510,11 @@ describe("one editing workspace", () => {
       "getSessionLog",
       "isBoundBusSession", // Pure identity validation, no request.
       "pollBusTelegrams",
+      "readBusValue",
       "startBusMonitor",
+      "startSerialBusMonitor",
       "stopBoundBusMonitor",
+      "writeBoundBusValue",
       "writeBusValue",
     ]);
 

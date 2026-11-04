@@ -768,10 +768,10 @@ and the project's own [known limitations](../../KNOWN_LIMITATIONS.md).
 ## Bus connection in the status bar
 
 The status bar at the bottom shows the state of KNXBench's one bus connection:
-connected (with the gateway), connection lost, gateway busy (for example a
+connected (with the observed target), connection lost, gateway busy (for example a
 download or System-2 operation), unclear, unknown, or not connected. "Not
 connected" means KNXBench saw no own connection; it does not prove the bus is
-idle. Connecting opens the gateway's tunnel and buffers bus telegrams for the
+idle. Connecting opens the selected transport and buffers bus telegrams for the
 bus monitor.
 
 The **Gateway** button opens a list of discovered IP interfaces and your saved
@@ -781,8 +781,55 @@ shown but cannot be chosen. **Connect** and **Disconnect** are a separate
 button. Connect is available only when the state is known and the gateway is
 free; after a busy answer, try again yourself. Disconnect ends exactly the
 connection shown, never another one. **Check status**, **Search again** and
-**Bus settings…** are in the same list. USB interfaces are not selectable here.
-The separate [Linux CLI TP-UART path](10-command-line.md#usbserial-tp-uart-linux)
-does not add USB support to this server-owned connection or status bar.
+**Bus settings…** are in the same list.
+
+### USB/serial TP-UART (Linux server, main-only candidate)
+
+Source builds after Alpha 19 offer **Bus transport → USB/serial TP-UART** in
+Settings, the status-bar popover and Bus Monitor. Enter the device path visible
+on the **server**, including its container if applicable; a browser-local device
+path does not grant the server access. KNXBench never enumerates devices.
+Choose a valid individual source address that is unique on your installation.
+Your IP gateway preference stays available for device tools and scans.
+
+Choose **Passive monitor** to receive telegrams without sending telegrams or bus
+ACKs. Group Read/Send are disabled. To send, disconnect first and explicitly
+choose **Active group communication**. Before connecting, read the warning:
+active mode automatically acknowledges the local individual address **and ALL
+group telegrams**. A passive session is never promoted to active automatically.
+The footer opens configuration before serial Connect; only the explicit Connect
+inside it starts the session. Saving, selecting, focusing and polling never connect.
+The status shows the observed serial path, source and mode independently of your
+next selection. Disconnect names the session and server process it will stop.
+
+Requires transparent **NCN5130 TP-UART firmware**, 19200 baud **8E1**, with
+end-to-end parity/error signalling preserved. Installed firmware and physical
+compatibility remain unverified. Standard KNX USB HID, FT1.2 and arbitrary
+USB-to-serial adapters are unsupported. Permissions and device/container access
+must be configured on the Linux server. A missing serial endpoint or failed
+handshake fails visibly; KNXBench never falls back to IP, reconnects or retries an
+uncertain send automatically. A stop warning can mean the auto-ACK state is
+unknown. A link confirmation or group readback is not device-state verification.
+Device management, downloads and line scans remain **KNXnet/IP only**.
+
+Serial Read/Send name the exact session and server process shown. A changed
+session or occupied reservation refuses the action immediately; the request is
+never queued onto a later connection. Serial writes use a separate bound endpoint,
+so an older server cannot ignore the identity and send on the legacy IP route.
+Both stop routes reserve the shared bus through serial reset/disconnect completion.
+While cleanup runs, another Connect or Stop is refused; request it again explicitly
+after completion. Legacy unbound writes are IP-only.
+
+A failed active Connect can already have enabled automatic ACK before its failure
+was detected. The UI therefore warns conservatively that ACK/reset state is
+unconfirmed for active initialization failures. This is not an observation of the
+adapter state; no automatic reset or retry follows. Passive/validation/unsupported
+platform refusals do not claim that ACK was observed. If the window already knows
+a session is serial, missing serial metadata on a fresh monitor attach keeps
+Read/Send locked with an unverified-context explanation.
+
+This candidate still needs parent review and package gates. See the
+[contract and verification boundary](../../status/2026-11-04-usb-serial-ui.md) and
+[CLI path](10-command-line.md#usbserial-tp-uart-linux).
 
 [Manual index](../README.md) · Next: [Documentation export and project comparison](08-reports-and-diff.md) →

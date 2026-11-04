@@ -1,4 +1,5 @@
 /** UI-04: strict admission of the partial, volatile `GET /api/bus/activity` snapshot. */
+import { validSerialTarget, type SerialTarget } from "./serialTransport";
 import { admitHistoryPage, HistoryContractError, type HistoryEntry } from "./activityHistory";
 
 /** `system2Operation`: an admitted System-2 run, which itself holds the other locks (issue #30). */
@@ -17,7 +18,7 @@ export type SessionActivity =
   | { kind: "addressProgramming"; id: number; address: string;
       state: "waiting" | "programming" | "finished" | "stopped" | "failed"; rounds?: number }
   /** `gateway` is named by servers since issue #10; older ones omit it. */
-  | { kind: "busMonitor"; id: number; gateway?: string; state: "active" | "closed" }
+  | { kind: "busMonitor"; id: number; gateway?: string; serial?: SerialTarget; state: "active" | "closed" }
   | { kind: "lineScan"; id: number; state: "running" | "completed" | "cancelled" | "failed"; probed: number; total: number };
 export type SessionState = SessionActivity["state"];
 
@@ -54,7 +55,7 @@ const distinct = (values: readonly unknown[]) => new Set(values).size === values
 
 function admitSession(raw: unknown): SessionActivity {
   const kind = record(raw, ["kind"], ["id", "address", "state", "completedSteps", "totalSteps", "writtenOctets",
-    "totalOctets", "rounds", "probed", "total", "gateway"]).kind;
+    "totalOctets", "rounds", "probed", "total", "gateway", "serial"]).kind;
   switch (kind) {
     case "deviceDownload": {
       const s = record(raw, ["kind", "id", "address", "state", "completedSteps", "totalSteps", "writtenOctets", "totalOctets"]);
@@ -71,9 +72,10 @@ function admitSession(raw: unknown): SessionActivity {
       return s as SessionActivity;
     }
     case "busMonitor": {
-      const s = record(raw, ["kind", "id", "state"], ["gateway"]);
+      const s = record(raw, ["kind", "id", "state"], ["gateway", "serial"]);
       requireLive(positive(s.id) && oneOf(s.state, ["active", "closed"] as const));
       requireLive(!Object.hasOwn(s, "gateway") || endpoint(s.gateway));
+      requireLive(!Object.hasOwn(s, "serial") || (validSerialTarget(s.serial) && !Object.hasOwn(s, "gateway")));
       return s as SessionActivity;
     }
     case "lineScan": {

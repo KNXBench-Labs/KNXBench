@@ -1031,6 +1031,15 @@ Main types 1–30 have explicit formats/rulings; subtype/FB semantics remain par
 <a id="62-the-group-monitor-gui-t15-is-tunnelling-only-single-session-client-filtered-and-only-its-passive-receive-path-has-real-gateway-evidence"></a>
 ### 62. Group Monitor evidence
 
+Main-only candidate: explicit Linux USB/serial TP-UART through the shared server
+session is implemented pending review/gates. Requires transparent NCN5130 8E1
+firmware; installed firmware/physical compatibility are unverified. Passive mode
+cannot send; active mode auto-ACKs the local individual address and all group
+telegrams. Failed active initialization warns conservatively of unknown ACK/reset
+state; no observed-device-state claim or automatic retry. Serial sends are bound
+to immutable session/process identity and cleanup retains the shared reservation. Other USB protocols and serial management/download/scan are unsupported.
+[Candidate boundary](status/2026-11-04-usb-serial-ui.md).
+
 **Ledger status:** `ACCEPTED_BOUNDARY` ([KL-62](status/LEDGER.md#snapshot-ids)).
 The GUI is tunnelling-based, single-session and client-filtered. Passive receive evidence does not verify every send/device/routing/history scenario.
 [Details and history](limitations/KL-062-group-monitor-evidence.md)

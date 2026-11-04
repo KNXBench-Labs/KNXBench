@@ -1,4 +1,5 @@
 /** Shared bus-connection controller: activity-derived view, one action token, bound stop. */
+import type { BusEndpoint, SerialTarget } from "./serialTransport";
 import { useSyncExternalStore } from "react";
 import * as api from "./api";
 import type { BoundBusSession, BusMonitorStartResponse, BusMonitorStopResponse } from "./api";
@@ -22,7 +23,7 @@ import type { ActivitySnapshot } from "./liveActivity";
 export type BusConnectionView =
   | { phase: "unknown"; reason: "loading" | "unavailable" | "malformed" | "hidden" }
   | { phase: "disconnected" }
-  | { phase: "connected" | "lost"; sessionId: number; serverIncarnation: string; gateway?: string }
+  | { phase: "connected" | "lost"; sessionId: number; serverIncarnation: string; gateway?: string; serial?: SerialTarget }
   | { phase: "occupied"; holder: TunnelHolder }
   | { phase: "indeterminate" };
 
@@ -57,7 +58,7 @@ export function connectionFromActivity(snapshot: ActivitySnapshot): BusConnectio
       const identity = { sessionId: session.id, serverIncarnation: snapshot.serverIncarnation };
       if (!api.isBoundBusSession(identity)) return { phase: "unknown", reason: "malformed" };
       const view = { phase: session.state === "active" ? "connected" as const : "lost" as const, ...identity };
-      return session.gateway === undefined ? view : { ...view, gateway: session.gateway };
+      return { ...view, ...(session.gateway === undefined ? {} : { gateway: session.gateway }), ...(session.serial === undefined ? {} : { serial: session.serial }) };
     }
   }
   for (const session of snapshot.sessions) {
@@ -81,6 +82,31 @@ export function connectionFromActivity(snapshot: ActivitySnapshot): BusConnectio
 
 const INITIAL: BusConnectionState = { view: { phase: "unknown", reason: "loading" }, action: null, restarted: false };
 let state: BusConnectionState = INITIAL;
+let serialObservation: { identity: BoundBusSession; target: SerialTarget } | null = null;
+let observedIdentity: BoundBusSession | null = null;
+let observationVersion = 0;
+
+/** Synchronous observation token for a pending reattach, never a connection request. */
+export function busObservationVersion(): string { return `${epoch}:${observationVersion}`; }
+
+function rememberIdentity(identity: BoundBusSession): void {
+  if (observedIdentity?.sessionId !== identity.sessionId || observedIdentity.serverIncarnation !== identity.serverIncarnation) observationVersion += 1;
+  observedIdentity = {sessionId:identity.sessionId,serverIncarnation:identity.serverIncarnation};
+}
+
+/** Last admitted serial provenance for this exact immutable identity, even across unknown reads. */
+export function knownSerialSession(identity: BoundBusSession): SerialTarget | undefined {
+  return serialObservation?.identity.sessionId === identity.sessionId
+    && serialObservation.identity.serverIncarnation === identity.serverIncarnation ? serialObservation.target : undefined;
+}
+
+/** A fresh poll cannot override a different currently observed session or process. */
+export function acceptsObservedSession(identity: BoundBusSession): boolean {
+  if (lastIncarnation !== null && lastIncarnation !== identity.serverIncarnation) return false;
+  return observedIdentity === null || (observedIdentity.sessionId === identity.sessionId
+    && observedIdentity.serverIncarnation === identity.serverIncarnation);
+}
+
 const subscribers = new Set<() => void>();
 /** Bumped by every action start/settle and hide: an older read answer is dropped. */
 let readGeneration = 0;
@@ -97,6 +123,11 @@ let seenDuringAction: BoundBusSession[] = [];
 let recordAtActionStart: ReturnType<typeof readSessionContext> = null;
 
 function publish(next: Partial<BusConnectionState>): void {
+  const view = next.view;
+  if (view?.phase === "connected" || view?.phase === "lost") {
+    rememberIdentity(view);
+    if (view.serial) serialObservation = {identity:{sessionId:view.sessionId,serverIncarnation:view.serverIncarnation},target:view.serial};
+  }
   state = { ...state, ...next };
   for (const listener of subscribers) listener();
 }
@@ -261,7 +292,7 @@ function supersededDuringStop(identity: BoundBusSession): boolean {
  * nothing retries.
  */
 export async function connectBusSession(
-  endpoint: string,
+  endpoint: BusEndpoint,
   hooks: { beforePublish?: (started: BusMonitorStartResponse) => void; stillOwned?: (started: BusMonitorStartResponse) => boolean } = {},
 ): Promise<BusActionResult<BusMonitorStartResponse>> {
   const token = takeToken("connecting");
@@ -269,7 +300,7 @@ export async function connectBusSession(
   try {
     let started: BusMonitorStartResponse;
     try {
-      started = await api.startBusMonitor(endpoint);
+      started = await (typeof endpoint === "string" ? api.startBusMonitor(endpoint) : api.startSerialBusMonitor(endpoint));
     } catch (error) {
       return { ok: false, reason: "failed", error };
     }
@@ -280,6 +311,8 @@ export async function connectBusSession(
       || hooks.stillOwned?.(started) === false) {
       return { ok: false, reason: "stale" };
     }
+    rememberIdentity(started);
+    if (started.serial) serialObservation = {identity:{sessionId:started.sessionId,serverIncarnation:started.serverIncarnation},target:started.serial};
     emitAchievementEvent({ type: "busMonitorStarted" });
     hooks.beforePublish?.(started);
     recordSessionContext(started.sessionId, started.serverIncarnation);
@@ -341,6 +374,9 @@ export function resetBusConnectionForTests(): void {
   stopPolling = null;
   pollers = 0;
   state = INITIAL;
+  serialObservation = null;
+  observedIdentity = null;
+  observationVersion = 0;
   subscribers.clear();
   readGeneration += 1;
   epoch += 1;

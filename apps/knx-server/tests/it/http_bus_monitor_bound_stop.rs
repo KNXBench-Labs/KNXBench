@@ -410,9 +410,9 @@ async fn a_closed_stop_admission_still_lets_the_named_session_be_released() {
 }
 
 /// Why the route is separate: the legacy stop ignores any query and stops
-/// whatever it holds, and it still waits for a held lock. Both unchanged.
+/// whatever it holds. A held reservation now refuses so no stop can queue through serial cleanup.
 #[tokio::test]
-async fn the_legacy_stop_is_unchanged_it_ignores_identity_and_still_queues() {
+async fn the_legacy_stop_ignores_identity_but_never_queues_through_a_held_reservation() {
     let f = fixture();
     let (id, _) = start(&f).await;
     let (status, body) = call(
@@ -433,16 +433,14 @@ async fn the_legacy_stop_is_unchanged_it_ignores_identity_and_still_queues() {
     let app = g.app.clone();
     let mut task =
         tokio::spawn(async move { call(&app, "POST", "/api/bus/monitor/stop", None).await });
-    assert!(
-        tokio::time::timeout(Duration::from_millis(200), &mut task)
-            .await
-            .is_err(),
-        "the legacy stop no longer waits for the lock"
-    );
+    let answer = tokio::time::timeout(BOUND, &mut task).await;
     drop(held);
-    let (status, body) = tokio::time::timeout(BOUND, task).await.unwrap().unwrap();
-    assert_eq!(status, StatusCode::OK, "{body}");
-    assert_eq!(body["sessionId"], id);
+    let (status, body) = answer
+        .expect("legacy stop queued through a reservation")
+        .unwrap();
+    assert_eq!(status, StatusCode::CONFLICT, "{body}");
+    assert_eq!(body["kind"], "gatewayBusy");
+    assert_untouched(&g, id);
 }
 
 #[tokio::test]

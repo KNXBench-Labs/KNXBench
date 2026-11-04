@@ -4,10 +4,13 @@ Observed: 30 October 2026.
 
 ## Current disposition
 
-**The positive vertical implementation, focused consumer proof and independent
-source review are verified. Maintained package acceptance and publication are
-pending.** This record does not claim delivery on main, a published artifact or
-hardware acceptance. PRG-01 remains **In progress** and KL-007 remains open.
+**Historical main-first software acceptance is recorded on `2bec7dd8a`, which
+is contained in the inspected main history.** The retained 31 October gate
+completed 14/14 selected stages. The [4 November reconciliation](#historical-acceptance-reconciliation--4-november-2026)
+qualifies the missing separate branch-green and original final-smoke binary
+bindings. This corrects stale pending-delivery prose; it is not fresh acceptance
+of current main, a release artifact or hardware. PRG-01 remains **In progress**
+and KL-007 remains open.
 
 The [binding contract](../contracts/inactive-byte-write-selection.md) defines a
 KNXBench transfer policy on the existing regular Easy3/070n memory route, not the
@@ -108,11 +111,12 @@ is **412 distinct passing bodies**, re-executing all prior 376 and adding 36;
 focused consumer populations overlap and are not added again. Earlier shared-lock
 admission failures ran no leaves and remain failures, not retrospective GREEN.
 
-Final source-frozen checks passed with direct exit 0: offline locked Clippy for
-all targets of the four affected packages, fmt, headers, layering, documentation,
-local-info and diff checks. These are focused checks, **not** a maintained package,
-full-workspace, release-full or private-corpus acceptance result. They precede the
-current documentation edits, which still need their owning validation.
+The earlier focused-check epoch passed with direct exit 0: offline locked Clippy
+for all targets of the four affected packages, fmt, headers, layering,
+documentation, local-info and diff checks. Those focused checks were **not** a
+maintained package, full-workspace, release-full or private-corpus acceptance
+result. The later final main-first gate is a separate recorded epoch, reconciled
+below; earlier checks are not retroactively promoted into that gate.
 
 Independent complete-feature review first found two important issues; a correction
 review then found the remaining expanded-namespace gap. The final focused
@@ -177,13 +181,50 @@ generator only when it actually omitted a byte; otherwise it binds
 half-stated invariant comment, an undocumented partly omitted multibyte inactive
 field) are addressed in tests, code comment and contract.
 
+## Historical acceptance reconciliation — 4 November 2026
+
+The authenticated retained 31 October records establish **one** completed,
+source-frozen 14-stage change-scoped main-first gate on runtime `2bec7dd8a`
+(base `465f08cac`). Its feature-side parent `84e028ed6` has the identical Git
+tree; `2bec7dd8a` is contained in the inspected fetched main history. This is
+historical source containment and receipt-based acceptance, not a reconstructed
+original push/readback transaction or a fresh acceptance run on current main.
+
+The final gate records zero direct exits and valid proofs for all selected
+stages, with `success`, `complete`, `planCompleted` and `inputsFrozen` true and
+empty touched/unchecked user-data lists. Rust recorded **5,050 passes and 170
+ignored tests**; the selected private corpus separately passed **97/97 in six
+targets**. The 24 Rust result summaries are not an inventory of retained ELF
+binaries. The final plan selected no Web/browser suite, bindings or release-full
+lane; browser-lane registration was a static check, not browser acceptance.
+
+The original server build/smoke receipt and logs report build success on the same
+runtime, loopback health/version/index/asset checks, empty-download 404, normal
+exit and a closed listener, unchanged source and empty touched/unchecked
+user-data lists.
+The original Web build log records completion; no separate numeric Web-build
+exit receipt was established by this reconciliation. The final smoke executable
+digest is recorded, but its original bytes could not be rebound from the named
+retained archive candidates. Older retained executables were not substituted and
+no rebuild or new product execution was performed to manufacture that binding.
+
+Earlier branch `001` and main-first `005` remain failed/incomplete attempts on
+different revisions. This reconciliation establishes no separate final
+branch-green receipt and does not claim that every condition of a shared
+branch/main-first acceptance rule was proved. It also does not newly authenticate
+the final amendment-review raw receipt, original publication transaction or
+exact historical cleanup; the earlier review/correction narrative stays intact.
+Original records remain private under
+`<profile>/evidence/prg01-inactive-selection-20261031/`. The separate evidence
+locator for this read-only audit and prose reconciliation is
+`<profile>/evidence/2026-11-04-prg01-acceptance-reconciliation/`.
+
 ## Remaining acceptance and open work
 
-Still pending for the parent delivery owner: maintained routine branch and
-main-first package gates after adopting the current main diagnostics change,
-actual server and Web build/smoke, documentation review, commit/merge/publication
-and readback, then durable evidence retention and exact-owned cleanup. No future
-stage is credited by this result. Immutable Alpha 18 artifacts are unchanged.
+The old current-tense pending-delivery paragraph is superseded only by the
+historical evidence above. Missing original-byte and separate branch bindings
+remain disclosed, not silently filled. No new current-main runtime, release or
+hardware acceptance is claimed. Immutable Alpha 18 artifacts are unchanged.
 
 `regular-070n-exclusive-inactive-storage-survival` remains **OPEN**. Omitting a
 direct data write does not prove retention through Unload, allocation, task

@@ -333,7 +333,9 @@ synthetic data (real App executor, real tunnel tap, built CLI against the
 loopback gateway); see the
 [boundary note](research/2026-10-29-system2-bundle-credential-boundary.md#original-fourteen-case-matrix-executed-31-october-2026).
 
-## Inactive whole-byte write selection (30 October 2026; package acceptance pending)
+<a id="inactive-whole-byte-write-selection-30-october-2026-package-acceptance-pending"></a>
+
+## Inactive whole-byte write selection (historical acceptance reconciled 4 November 2026)
 
 The [bounded regular-write contract](contracts/inactive-byte-write-selection.md)
 is implemented through App preparation, actual executor frames, CLI/HTTP
@@ -348,9 +350,13 @@ decision): unproved bytes are written as before, program-wide failures keep the
 regular plan and the `inactive-write-selection` category is removed. A download
 binds the inactive-selection restore generator only when it omitted a byte.
 The amendment passed a second independent review after a first review's restore
-finding was fixed. Maintained main-first package gate, actual server/Web
-build/smoke and publication are pending. This is not a delivery entry for main or Alpha 18;
-physical inactive-byte survival, PRG-01 and KL-007 remain open.
+finding was fixed. The
+[historical acceptance reconciliation](status/2026-10-30-inactive-byte-write-selection.md#historical-acceptance-reconciliation--4-november-2026)
+records one complete 14-stage main-first gate on `2bec7dd8a`, contained in main,
+and original build/smoke receipt/log observations. Separate final branch-green
+and original final-smoke executable-byte bindings remain unestablished; this is
+not fresh current-main or release-artifact acceptance. Physical inactive-byte
+survival, PRG-01 and KL-007 remain open.
 
 ## Read-only manufacturer distribution inspection (31 October 2026 source)
 

@@ -1,9 +1,9 @@
 # Inactive whole-byte write selection
 
-Status: **implemented, focused software proof and independent source review
-verified; maintained package acceptance and publication pending**, 30 October
-2026. Baseline `a6cc2ebe99f`. The [result record](../status/2026-10-30-inactive-byte-write-selection.md)
-separates executed evidence from remaining delivery work; the
+Status: **implemented; historical 14-stage main-first acceptance recorded on
+`2bec7dd8a` and source contained in main**, reconciled 4 November 2026. Original
+baseline `a6cc2ebe99f`. The [result record](../status/2026-10-30-inactive-byte-write-selection.md)
+qualifies the separate branch/smoke-byte evidence gaps and remaining limits; the
 [research record](../research/2026-10-30-inactive-byte-write-selection.md) explains
 the source and compatibility boundaries. This is a positive regular-App-to-executor
 transfer slice, not another declaration-only refusal, physical storage-preservation

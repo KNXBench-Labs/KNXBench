@@ -1,7 +1,8 @@
 # S2-05 software matrix consolidation
 
-**Status: focused execution, independent source review and two discriminating
-calibrations complete; integrated package acceptance pending.** This record
+**Status: finite E1–E17 software consolidation accepted on main-first
+`cee41bf0d` (5 November 2026), after independent source/claims review and two
+discriminating compiled controls.** This record
 consolidates the finite E1–E17 software obligations without relabeling historical
 caption-only, persistence, target/revision, failed-terminal or recovery evidence.
 Authors changed source only; the controller performed the executions below.
@@ -131,13 +132,15 @@ workspace lease, loopback-only network isolation and dropped DAC bypass.
   failed**. The failing test expected a later envelope diagnostic, but the actual
   serializer refused canonical retained-byte expansion first. The corrected
   exact-boundary test passed **1/1** for both selector families. This is not a
-  relabeled all-green 29-test run; the final package gate must run the defaults.
+  relabeled all-green 29-test run; the accepted integrated gate independently
+  reran the complete owning defaults.
 - Mounted caption plus settlement-decision population: **53 passed / 2 failed**.
   Both failures were lifecycle fixture setup: `DeleteDevice` correctly refused
   dependent parameter data. After removing that data through validated undoable
   inverse commands, the two lifecycle leaves passed **2/2**, completing exactly
   **32 unique family/namespace/end/belief cells**. The earlier failed run remains
-  failed. The complete default server suite is still required in final acceptance.
+  failed. The accepted integrated gate separately passed the complete default
+  server suite.
 - The original mounted run completed all **8 unique contention cells**, including
   actual command lock misses, selective or ambiguous-source refusal masks,
   immutable metadata/full backup, exact history and read-only reattachment.
@@ -187,10 +190,31 @@ and successful complete comparison perform different contracts.
 
 ## Integrated acceptance and retained limits
 
-The committed main-first candidate still requires the complete maintained
-change-scoped package gate, including its selected default Rust and corpus
-populations and real web-bundle prerequisite. No release/full-workspace or new
-browser/native/hardware acceptance is inferred from the focused runs.
+Main-first `cee41bf0d` (source `d4e1332d4`, first parent `11a04c8f2`) passed the
+complete maintained **14-stage change-scoped package gate** on 5 November 2026.
+Every selected stage exited zero with a valid owning proof; the recorded start/end
+input digests match, the plan completed, and real user data was checked and untouched.
+The feature and integration trees are identical. The gate selected App, CLI, desktop,
+server and xtask; it is not a full-workspace or release gate.
+
+- Default Rust populations: **3,490 passed, 0 failed, 144 ignored**, across eleven
+  logged test executable invocations and three documentation-test summaries.
+- Separate selected private-corpus run: **91/91 passed in five targets**. This is
+  not added to the default or focused totals, nor does it execute every ignored test.
+- Tool suite: **517 tests, six existing opt-in skips**, no failures.
+- Workspace Clippy/all-targets with warnings denied, formatting, documentation/privacy,
+  layering, source headers, anchors, ledger, corpus registration, browser-lane registration,
+  clean-desktop and whitespace checks all passed. The real web-bundle prerequisite
+  was built; no web or runtime-browser lane was selected by this source diff.
+
+The first integrated attempt remains failed: Clippy rejected a fixture file declared
+as two unit-test modules, after ten green stages and before Rust/corpus execution.
+The correction declares that unchanged fixture once at the crate's `cfg(test)` common
+ancestor and imports private aliases in both callers; it does not suppress the lint.
+The successful retry is a new frozen run, not relabeled earlier stage evidence.
+Final claims/narrow-fixture review separately approved the corrected retained-byte and
+validated deletion fixtures. A prose-only closure carries this unchanged runtime/test
+acceptance; it does not claim a second functional execution.
 Evidence after retention: `<profile>/evidence/2026-11-04-s2-05-software/`.
 
 Unreachable lifecycle combinations are not enabled by test switches: a running

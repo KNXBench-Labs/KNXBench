@@ -1,5 +1,16 @@
 # Roadmap
 
+## Main-only after Alpha 19: finite System-2 E1–E17 software consolidation
+
+Main-first `cee41bf0d` closes the named finite caption-class adversarial, actual-worker
+contention/read-lease, lifecycle/history, original-recovery conservation and size/large-project
+software obligations after independent review, two compiled discriminating controls and
+the complete selected 14-stage integrated gate. This is not general source equivalence
+or proof of every possible metadata/adversarial class. Reporter field causes, firmware
+clear timing and physical recovery remain unverified; no new start/recovery authority,
+hardware action, release or deployment follows.
+[Matrix, executed populations and limits](status/2026-11-04-s2-05-software-matrix.md).
+
 ## Main-only after Alpha 19: Linux USB/serial transport foundation
 
 The CLI can select a transparent Busware TUL TP-UART link for passive monitoring
@@ -42,7 +53,8 @@ not physical recovery, reporter field failures, general source equivalence or S2
 
 S2-05 now has the accepted finite selected-caption software rule (`288bd8005`),
 with independent review and both complete selected 14-stage package gates. General
-source equivalence, wider adversarial/race/limit measurements and S2-05 remain open.
+source equivalence remains open; the later finite E1–E17 consolidation above closes
+the named adversarial/race/limit controls, not every source class or S2-05 as a whole.
 No release, deployment, new start/recovery authority or physical verification follows.
 [Acceptance and limits](status/2026-11-03-s2-caption-settlement-candidate.md).
 

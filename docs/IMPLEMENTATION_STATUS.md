@@ -12,6 +12,18 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## System-2 E1–E17 software consolidation (5 November 2026, main-only)
+
+Source `d4e1332d4`, main-first `cee41bf0d`, closes the named finite caption-class
+software matrix with App integrity/ownership adversaries, actual-worker lease/proof
+counts and causal command contention, lifecycle/history/full-recovery conservation,
+changed-caption large-project observations and exact retained-byte limits.
+Independent source/claims reviews and two compiled discriminating controls passed.
+The complete selected 14-stage integrated gate passed: 3,490 Rust tests, 144 ignored,
+separate corpus 91/91; prior failed attempts remain failed. General source equivalence,
+#30/#22 field causes, physical recovery, release and deployment remain outside this proof.
+[Execution, corrections and retained boundaries](status/2026-11-04-s2-05-software-matrix.md).
+
 ## USB/serial TP-UART transport (4 November 2026, main-only)
 
 Linux CLI `bus monitor` and `bus write` can select a Busware TUL running

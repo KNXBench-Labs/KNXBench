@@ -13,12 +13,12 @@ Contract: [system2-download-result](../contracts/system2-download-result.md).
 ## Software consolidation, 4 November 2026
 
 The [E1–E17 software matrix consolidation](../status/2026-11-04-s2-05-software-matrix.md)
-has focused execution and independent source approval: App integrity/ownership
+is accepted main-first as `cee41bf0d` on 5 November 2026: App integrity/ownership
 adversaries, actual-worker catalogue/project contention, full lifecycle and
 history conservation, changed-source large-project measurement and exact limits.
 Two independently compiled wrong variants fail their owning assertions, with
-healthy and restored controls. Earlier failed attempts remain explicit; the
-committed main-first candidate still needs the final selected package gate.
+healthy and restored controls. Independent source/claims reviews and the complete
+selected 14-stage integrated gate passed; earlier failed attempts remain explicit.
 The narrow caption class and physical/general-equivalence limits are unchanged.
 
 ## Open
@@ -47,7 +47,8 @@ The narrow caption class and physical/general-equivalence limits are unchanged.
   [software consolidation](../status/2026-11-04-s2-05-software-matrix.md) maps all
   finite E-rows to existing or newly executed controls, including actual-worker
   lease/proof counts, causal project contention and changed-source measurements;
-  final integrated acceptance remains pending. It does not claim every possible
+  finite software consolidation is accepted main-first as `cee41bf0d`. It does not
+  claim every possible
   adversary, individual SQL counts or broader source policy. A bounded
   [E15 changed-caption persistence-failure follow-up](../status/2026-11-03-s2-caption-persistence.md)
   is accepted main-first as `99f7e65dd`: focused mounted execution, independent

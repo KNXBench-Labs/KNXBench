@@ -44,6 +44,13 @@ Contract: [system2-download-result](../contracts/system2-download-result.md).
   pending/marked states plus independent terminal-refusal and address-fallback
   calibration, accepted main-first as `37fcc9b50` after both complete selected
   14-stage gates. This closes that bounded current-input cross, not all E13.
+  The [E14 command-bound current-target/revision follow-up](../status/2026-11-04-s2-current-target-revision.md)
+  is accepted main-first as `fb1facc41`: four new leaves/16 mounted cells across
+  both families/namespaces and pending/marked beliefs, exact post-command
+  preservation, a genuine revision-only positive control, independent four-variant
+  assertion calibration and both complete selected 14-stage gates. The callback
+  counter is a separately labelled private seam probe, not worker read-count
+  evidence. This closes that bounded cross, not all E14 or lifecycle/recovery.
 - Field verification by the reporter is not requested; no hardware retry is needed
   for the software change.
 

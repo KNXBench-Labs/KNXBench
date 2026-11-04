@@ -186,5 +186,29 @@ control and nine-observation server smoke remain pre-correction evidence.
   Those tests are filtered selections, not additional whole-suite totals.
 
 The final copy/capture-only successor changes neither transport nor lifecycle
-logic. Branch and merged package gates, final screenshot readback and publication
-remain pending. No hardware, live bus, firmware, VM, release or deployment action.
+logic. No hardware, live bus, firmware, VM, release or deployment action.
+
+## Package-gate epochs (4 November 2026)
+
+The frozen branch `b72315667` passed every selected package-gate stage (15/15),
+with checked, untouched user data. That run passed 1,733 scoped Rust tests
+(72 ignored), 51 separate corpus cases, 5,099 UI tests, 1,095 default browser
+cases and 92 communication-production browser cases. These are separate lane
+counts, not a deduplicated total or whole-workspace/release acceptance.
+
+The first main-first merge `1e54ec529` stopped in default functional browser
+acceptance: 1,025 passed and one German report-problem keyboard case failed.
+Its retained trace shows Enter with `html lang=en` and no matching commands;
+German rendering arrived only afterwards. Later stages did not run, and no
+publication followed that failed attempt.
+
+The fixture successor waits for the actual active language, focused query and
+exact selected command. The shared palette helper also awaits its localized
+menu entry. Production behavior, retry policy, timeouts, keyboard-only input,
+consent/save and strict unexpected-request assertions are unchanged. Both
+keyboard cases passed five repetitions each with retries disabled; the complete
+21-case file passed separately. These focused populations overlap and do not
+replace the final integrated gate or make the failed attempt green.
+
+Fresh main-first acceptance, remaining exact-build production consumers, final
+screenshot readback and publication are still pending.

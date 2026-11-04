@@ -1,5 +1,15 @@
 # Roadmap
 
+## Main-only after Alpha 19: final-verification source matrix
+
+The bounded E16 witness now covers retained/standalone preparation and namespaces
+20/23, with failed/healthy workers and pending/marked beliefs (eight leaves/16
+cases). Source `70ad4e24c`, main-first `446480584`, passed independent correction
+review and both selected 14-stage gates. This is test-only characterization, not
+new production behavior or standalone HTTP preparation. Broader E16, lifecycle,
+recovery, races, read counts, source equivalence and S2-05 remain open.
+[Evidence and limits](status/2026-11-04-s2-ineligible-terminal-matrix.md).
+
 ## Main-only after Alpha 19: bounded System-2 recovery conversion repair
 
 The optional original mounted cancellation/recovery simulation now completes with

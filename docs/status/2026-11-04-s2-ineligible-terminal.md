@@ -2,6 +2,12 @@
 
 Observed: 4 November 2026.
 
+The subsequent [source-family matrix extension](2026-11-04-s2-ineligible-terminal-matrix.md)
+is published main-first as `446480584`: both families and namespaces 20/23,
+failed/healthy workers and pending/marked beliefs complete eight leaves/16 cases.
+The record below remains the original retained/namespace-20 acceptance; its
+counts, source identities and historical exclusions are not upgraded.
+
 ## Current disposition
 
 **Bounded fixture package accepted and published main-first as `633d669e3`

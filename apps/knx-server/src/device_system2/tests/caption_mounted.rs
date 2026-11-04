@@ -9,6 +9,8 @@ use knx_core::commissioning::pending::{ProgrammingChange, ProgrammingParts};
 
 #[path = "caption_mounted/persistence.rs"]
 mod persistence;
+#[path = "caption_mounted/target_gate.rs"]
+mod target_gate;
 
 struct Hardware {
     device: Arc<SimulatedDevice>,

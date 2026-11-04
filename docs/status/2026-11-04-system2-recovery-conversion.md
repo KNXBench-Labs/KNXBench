@@ -91,6 +91,34 @@ The evidence-validation bypass was separately killed by the original allocation
 control. Version-guard deletion and exhaustive guard mutation were not executed.
 Finding-specific independent review is APPROVE; the production fix is unchanged.
 
+## Package acceptance and source delivery
+
+Published main-first as `1e0d0a6de` (production/test source `41b1bf61d`,
+final branch checkpoint `73b340d18`). Independent whole-feature and finding-specific
+reviews approved the corrected final test set before package acceptance. Local,
+tracking and live remote refs and all owned blobs were read back equal after push.
+
+Both branch and main-first maintained change-scoped gates completed all 14 selected
+stages with zero direct exits and valid proofs, identical start/end input fingerprints,
+and checked, untouched user data. Each executed 3,446 Rust passes / 143 routinely
+ignored cases (14 result-summary rows, including doctests), plus a separate 91/91
+selected corpus. These repeated/overlapping executions are not additive unique
+coverage. The tooling stage ran 517 tests with six existing opt-in skips. Web,
+browser feature suites, bindings and release-wide acceptance were not selected;
+the frontend bundle was built as the desktop compile prerequisite, not deployed.
+The separately selected original recovery simulation above actually executed
+despite remaining routinely ignored by the general Rust gate.
+
+Two early package attempts stopped at documentation validation before Rust tests:
+the new checkpoint used an unsupported status word, then its required `observed`
+time marker was missing. Separate documentation commits repaired those controller
+notes; both failed frozen receipts remain failed. The third branch attempt and
+main-first acceptance are complete green gates, not a relabelling of those failures.
+
+Evidence retention is private under `<profile>/evidence/2026-11-04-system2-recovery/`.
+Original failed diagnostics, raw receipts, source epochs, counterprobes, review
+survivors and corrected controls remain distinct from the accepted source.
+
 ## Scope and remaining limits
 
 Execution used in-process simulated transports in offline namespaces, the existing

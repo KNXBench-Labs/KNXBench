@@ -1,4 +1,6 @@
 # Restart snapshot
+## S2-05 E16 source-family matrix (ACTIVE; observed 2026-11-04 12:08 CET)
+- Owner session9e310a3ff9ca; branch `test/s2-e16-source-matrix-20261104`, tree `<sources>/knxbench-s2-e16-source-matrix-20261104`; corrected source 7cb5d85b... independently APPROVE/I1closed, focused8/8 and16/16 actual cases with frozen inputs/userdata checked untouched. Old empty inventory and wrong-family4/4 remain failed fixture epochs. NEXT maintained branch/main-first14-stage gates then conditional publication/scoped docs. Raw `<profile-scratch>/s2-e16-source-matrix-20261104/`; no active focused/review. Native/simulator/privatehardware owners preserved; no production/protocol/timeouts/bus/native/release/deploy.
 ## System2 recovery acceptance reference (STANDING; observed 2026-11-04 11:27 CET)
 - Source41b1bf61d/main-first1e0d0a6de published/readbackexact; finalcheckpoint73b340d18. Independentreview/correctionAPPROVE, maintained21/21+2targetedkills/restored21; unchanged10s originalsimulation1/1 twice. Bothselected14stagegates complete/proved/frozen/userdatacheckeduntouched: eachRust3446/143ignored (14summaryrows), separatecorpus91/91, tools517/6optinskips. No active runtime repair claim. Cause/scope/failedattempts: `docs/status/2026-11-04-system2-recovery-conversion.md`. Retention `<profile>/evidence/2026-11-04-system2-recovery/`; root-local checkpoint owns final private retention/retirement. GATE-01 bypass DROP/E17 separate; no simulator/timeout/protocolpolicy edit, hardware/bus/VM/release/deploy authority; foreign/native/root tracks preserved.
 ## S2-05 caption-only settlement reference (STANDING; observed 2026-11-03)
@@ -8,14 +10,12 @@
 - Corrected source9ed8fca6a published main-first5c405bfde; feature/integrated14-stage gates complete/proved/frozen, checked user data untouched. Source trees equal; source acceptance `docs/status/2026-11-03-wp08-color-time-successor.md`. Initial F1 global-orphan candidate leak and F2comment closed; correction RED8/2 then GREEN10/10, independent R2APPROVE/10 compiled semantic mutant kills. Corrected real14/31/fresh32/reopens preserve45other tables/history/original hashes. Old epochs are not rebound.
 - Evidence `<profile>/evidence/2026-11-03-wp08-color-time-successor/`; source bundle/raw receipts/reviews/binaries retained, first author RED executable unavailable explicitly. Documentation-only successors require exact runtime-input equality; no active source repair claim.
 - Wider WP08 codecs/checked editors and S2-05 remain separate/open; no bus/VM/native/release/deploy authority. Other tracks preserved.
-
 ## WP-11 native splitter reference (STANDING; observed 2026-11-03)
 - Latest Navigation-width subset:6 cells/24 pointer legs/3 preselections,48 native trees/24 settings/16 verified seat restores at80/100/150; all historical width-step observables match, including only the named150%-short cursor-4/edge-5 exception.
 - Actual reused build6ecb69427/binary563b9b03/frontend494f2a8d/147; admission90b85c2fd differs only docs/checkpoint, tracked code/build/lock/assets equal. No new native build or original setup-method parity claim.
 - Visible fictional identity admitted after observed Explorer disclosure; native End+10 Left commits prepare320 from250. R1 private trace/release defect blocked before live input; regression RED/GREEN and R2 binding review passed. Ordinary close/launcher/cleanup0 and owned IPC retirement verified.
 - Width record: `docs/status/2026-11-03-wp11-current-native-navigation.md`; evidence `<profile>/evidence/2026-11-03-wp11-current-native-width/`. Properties/height/historical records remain separate.
 - Wider WP-11/KL-130, restart/project-save/other sizes/unavailable environments remain open; explicit software profile and unfiltered host session D-Bus/AT-SPI exception, no full host-service/WebKit-sandbox attestation or focus-policy/pixel/tree parity. No bus/real-project/release/deploy authority.
-
 ## Queue and acceptance boundaries (STANDING; observed 2026-11-02 20:47 CET)
 - Runtime source published on main `7ea7ff6dd`; all R1–R9 and fixture review closed.
 - Main-first selected15-stage gate complete/frozen, checked user data untouched;

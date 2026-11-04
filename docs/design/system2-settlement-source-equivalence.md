@@ -11,6 +11,12 @@ The [maintained result contract](../contracts/system2-download-result.md#settlem
 includes the accepted extension. No start permission, recovery policy adoption,
 general source-equivalence support or overall S2-05 closure follows.
 
+The [4 November software matrix consolidation](../status/2026-11-04-s2-05-software-matrix.md)
+maps existing proof and executed extensions to every finite E-row, including a
+separate actual-terminal-worker contention seam, independently reviewed guards
+and compiled discriminating controls. Final integrated acceptance is still pending;
+this historical design is not itself an execution receipt.
+
 ## Recommendation and evidence limit
 
 Recommend **one selected ApplicationProgram caption-value change only**, with

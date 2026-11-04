@@ -4,6 +4,10 @@ use crate::system2_validation_preparation::hardware::prepare_project_hardware_so
 use knx_productdb::package::{settlement_inventory, PackageLimits};
 use knx_productdb::settlement_caption::caption_value_only;
 
+#[cfg(test)]
+#[path = "settlement_tests.rs"]
+mod tests;
+
 pub(in crate::system2_validation_preparation) struct Comparison {
     pub profile: Vec<u8>,
     pub input: ProjectProductInput,
@@ -200,26 +204,20 @@ pub(in crate::system2_validation_preparation) fn compare(
         hardware.recovery_track,
     )?;
     let new_bundle = fresh.preview();
-    let mut record = new_bundle
+    let record = new_bundle
         .project_preparation
         .as_ref()
-        .ok_or_else(|| invalid("missing comparison preparation"))?
-        .as_ref()
-        .clone();
+        .ok_or_else(|| invalid("missing comparison preparation"))?;
     if record.product_input != input {
         return Err(invalid("new source recollection differs"));
     }
-    // Full typed record equality after restoring ONLY enumerated provenance fields.
-    record.source_sha256 = source.source_sha256.clone();
-    record.product_input = source.product_input.clone();
-    record.profile_bytes = source.profile_bytes.clone();
-    record.profile_sha256 = source.profile_sha256.clone();
-    if record != **source
-        || new_bundle.normalized_plan != bundle.normalized_plan
-        || serde_json::to_vec(&new_bundle.normalized_plan).map_err(io::Error::other)?
-            != serde_json::to_vec(&bundle.normalized_plan).map_err(io::Error::other)?
-        || new_bundle.plan()? != bundle.plan()?
-    {
+    compare_prepared_records(
+        source,
+        record,
+        &bundle.normalized_plan,
+        &new_bundle.normalized_plan,
+    )?;
+    if new_bundle.plan()? != bundle.plan()? {
         return Err(invalid("original request/coverage/policy/plan differs"));
     }
     let a = replay_project_simulated_candidate(bundle)?;
@@ -236,4 +234,28 @@ pub(in crate::system2_validation_preparation) fn compare(
         profile: bytes,
         input,
     })
+}
+
+// Defense in depth AFTER full preparation and the literal-caption classifier. This private
+// value comparison grants no source, execution, start or recovery authority on its own.
+fn compare_prepared_records(
+    original: &ProjectPreparationRecord,
+    current: &ProjectPreparationRecord,
+    old_plan: &PlanRecord,
+    new_plan: &PlanRecord,
+) -> io::Result<()> {
+    let mut record = current.clone();
+    // Full typed record equality after restoring ONLY enumerated provenance fields.
+    record.source_sha256 = original.source_sha256.clone();
+    record.product_input = original.product_input.clone();
+    record.profile_bytes = original.profile_bytes.clone();
+    record.profile_sha256 = original.profile_sha256.clone();
+    if record != *original
+        || new_plan != old_plan
+        || serde_json::to_vec(new_plan).map_err(io::Error::other)?
+            != serde_json::to_vec(old_plan).map_err(io::Error::other)?
+    {
+        return Err(invalid("original request/coverage/policy/plan differs"));
+    }
+    Ok(())
 }

@@ -8,6 +8,9 @@ use knx_app::{
 };
 use knx_store::project_history::NativeSnapshot;
 
+#[path = "recovery_authority/wrong_serial.rs"]
+mod wrong_serial;
+
 const OLD_EXTENTS: [(u16, u16); 4] = [(278, 16), (608, 16), (1024, 8), (15360, 8)];
 const MEMORY: ProgrammingParts = ProgrammingParts {
     address: false,
@@ -20,6 +23,12 @@ const MEMORY: ProgrammingParts = ProgrammingParts {
 struct Case {
     namespace: u8,
     retained: bool,
+}
+
+#[derive(Clone, Copy)]
+enum RecoveryMode {
+    OriginalSerial,
+    WrongObservedSerial,
 }
 
 // The public-package OLD helper has larger allocation records. Recovery replays
@@ -56,6 +65,7 @@ struct Counters {
     connects: AtomicUsize,
     disconnects: AtomicUsize,
     frames: AtomicUsize,
+    services: Mutex<Vec<ApplicationService>>,
 }
 impl Counters {
     fn read(&self) -> [usize; 3] {
@@ -147,6 +157,7 @@ impl crate::BusTunnel for CountedTunnel {
         service: ApplicationService,
     ) -> Pin<Box<dyn Future<Output = Result<(), BusError>> + Send + '_>> {
         self.counters.frames.fetch_add(1, Ordering::SeqCst);
+        self.counters.services.lock().unwrap().push(service.clone());
         crate::BusTunnel::send_frame(&self.tunnel, destination, transport, service)
     }
     fn disconnect(
@@ -452,6 +463,10 @@ async fn observations(router: &Router, id: &str, facts: &DownloadFacts, receipt:
 }
 
 async fn run(case: Case) {
+    run_with_mode(case, RecoveryMode::OriginalSerial).await;
+}
+
+async fn run_with_mode(case: Case, mode: RecoveryMode) {
     let input = f::inputs(case.namespace, case.retained);
     let data = input.dir.path();
     let products = data.join("caption-products.sqlite");
@@ -699,6 +714,29 @@ async fn run(case: Case) {
         "downloadConfirmation":finished["downloadPhrase"],
         "releaseConfirmation":finished["releasePhrase"]
     });
+    if matches!(mode, RecoveryMode::WrongObservedSerial) {
+        assert_ne!(hardware.device.system2_snapshot(), old, "NEW is not OLD");
+        wrong_serial::finish(
+            &state,
+            &router,
+            &hardware,
+            &counters,
+            wrong_serial::Original {
+                case,
+                data,
+                operation: &operation,
+                original: &original,
+                original_bytes: &original_bytes,
+                backup: &backup,
+                facts: &facts,
+                before: &before_recovery,
+                finished: &finished,
+                recovery,
+            },
+        )
+        .await;
+        return;
+    }
     for field in [
         "recoveryConfirmation",
         "downloadConfirmation",

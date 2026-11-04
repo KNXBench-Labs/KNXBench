@@ -67,8 +67,16 @@ Contract: [system2-download-result](../contracts/system2-download-result.md).
   leaves check actual original recovery, exact OLD model restoration, original
   evidence/confirmation authority and conservative MEMORY/history settlement.
   Independent review closed a redo-oracle gap; both selected 14-stage gates passed.
-  This closes that finite cross, not all E11/E16. Wider terminal, lifecycle/recovery,
-  wrong-serial/binding and race/read-count obligations remain separate and open.
+  This closes that finite cross, not all E11/E16. The separate
+  [wrong-observed-serial recovery proof](../status/2026-11-04-s2-caption-recovery-serial.md)
+  is published main-first as `18ae7406b`: four mounted source/namespace leaves
+  preserve the existing no-write refusal, original Verified facts and conservative
+  history settlement; four valid-original neighbors remain. Independent source
+  review/correction closure, one compiled guard-bypass calibration with four intended
+  failures/four valid neighbors, restored eight-leaf control and both selected
+  14-stage gates passed. This closes only that wrong-actual-serial cross. Wider
+  terminal/lifecycle/recovery, cross-bound journals and race/read-count obligations
+  remain separate and open.
 - Field verification by the reporter is not requested; no hardware retry is needed
   for the software change.
 

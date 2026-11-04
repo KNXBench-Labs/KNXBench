@@ -106,8 +106,11 @@ change-scoped checks do not constitute fresh product or hardware execution.
 ## Remaining boundaries
 
 Only the four source/namespace cells and unsaved sessionOnly history are covered.
-Wrong serial/cross-bound journals, unreadable allocation backups, arbitrary OLD
-layouts, positive unconsumed recovery after restart, saved/recovered native history,
+A separate [wrong-observed-serial follow-up](2026-11-04-s2-caption-recovery-serial.md)
+closes that narrow mounted refusal cross on `18ae7406b`; it is not evidence from
+this original positive-only package. Cross-bound journals, unreadable allocation
+backups, arbitrary OLD layouts, positive unconsumed recovery after restart,
+saved/recovered native history,
 persistence failure, wider terminal/owner races/read counts, changed-source limits,
 general source equivalence and the rest of E11/E16/S2-05 remain open. The existing
 simulator snapshot has its own documented connection-local state scope; model

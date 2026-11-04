@@ -187,6 +187,17 @@ keeps the inline path.
   The download and service-control fixes share that limit. The witness's
   harness has no store path and does not run a real fsync.
 
+## Optional simulated recovery follow-up (4 November 2026)
+
+The historical optional-test failures above remain failed evidence, not green
+field acceptance. A new narrow timed probe identifies repeated App retained-source
+reconstruction before the first cooperative yield in the recovery worker. Recovery
+record conversions now reconstruct once per invocation and still perform complete
+evidence validation. The original mounted simulation passes actual completion,
+exact original snapshot equality, durable Restored reopen and once-only/restart
+refusal with its unchanged ten-second deadline. No simulator, protocol or field
+repair is inferred. [Cause, regression/counterprobe and limits](../status/2026-11-04-system2-recovery-conversion.md).
+
 ## Remaining
 
 - One optional reporter retest on source `3583ab8e0` or a descendant, containing

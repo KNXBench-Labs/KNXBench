@@ -11,6 +11,8 @@ use knx_core::commissioning::pending::{ProgrammingChange, ProgrammingParts};
 mod ineligible_terminal;
 #[path = "caption_mounted/persistence.rs"]
 mod persistence;
+#[path = "caption_mounted/recovery_authority.rs"]
+mod recovery_authority;
 #[path = "caption_mounted/target_gate.rs"]
 mod target_gate;
 

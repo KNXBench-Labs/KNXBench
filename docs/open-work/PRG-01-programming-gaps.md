@@ -211,7 +211,9 @@ failed their intended assertions, two inert controls passed, and the copied
 static review nor calibration replaces integrated delivery. This closes neither
 the broader parameter rules nor PRG-01.
 
-## Implemented, package acceptance pending — inactive whole-byte write selection
+<a id="implemented-package-acceptance-pending--inactive-whole-byte-write-selection"></a>
+
+## Historical software acceptance — inactive whole-byte write selection
 
 The [bounded contract](../contracts/inactive-byte-write-selection.md) now has a
 positive regular-App-to-executor implementation, not merely a declaration guard.
@@ -229,9 +231,12 @@ source review with no open findings are recorded in the
 [focused result](../status/2026-10-30-inactive-byte-write-selection.md). The
 [research](../research/2026-10-30-inactive-byte-write-selection.md) separates raw
 option/opaque-attribute/expanded-namespace provenance and actual scoped-plan
-historical evidence reuse. Maintained branch/main-first package gates, actual
-server/Web build/smoke and publication remain pending; this is not delivered
-software/package acceptance or new hardware support.
+historical evidence reuse. The
+[4 November historical reconciliation](../status/2026-10-30-inactive-byte-write-selection.md#historical-acceptance-reconciliation--4-november-2026)
+establishes one completed 14-stage main-first gate on `2bec7dd8a`, contained in
+main, and attributes the original build/smoke observations to their receipts and
+logs. No separate final branch-green or original final-smoke executable-byte
+binding is claimed. This is not fresh current-main or hardware acceptance.
 
 `regular-070n-exclusive-inactive-storage-survival` stays OPEN: omitted transfers
 do not prove retention through Unload, allocation, task control or Restart.

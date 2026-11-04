@@ -4,7 +4,7 @@ Observed: 30 October 2026. Scope: the existing regular Easy3/070n memory route.
 This records the implemented bounded policy and the evidence behind its
 corrections; it is not a recovered ETS algorithm or package-delivery receipt.
 [Binding contract](../contracts/inactive-byte-write-selection.md) ·
-[Focused result and pending acceptance](../status/2026-10-30-inactive-byte-write-selection.md).
+[Historical acceptance and evidence limits](../status/2026-10-30-inactive-byte-write-selection.md).
 
 ## Primary-source boundary
 

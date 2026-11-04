@@ -11,9 +11,12 @@ updates supersede them; they are not new work assignments.
 The [regular-route contract](../contracts/inactive-byte-write-selection.md) is
 implemented with positive executor-frame proof and independently reviewed source;
 [focused results](../status/2026-10-30-inactive-byte-write-selection.md) record the
-actual regression and original consumer failures separately. Maintained package
-gates, actual server/Web build/smoke and publication are still pending. This is
-not delivered package acceptance, new device support or closure of KL-007/PRG-01.
+actual regression and original consumer failures separately. The
+[historical reconciliation](../status/2026-10-30-inactive-byte-write-selection.md#historical-acceptance-reconciliation--4-november-2026)
+records one complete main-first gate on `2bec7dd8a`, contained in main, with
+original build/smoke observations attributed to receipts/logs and explicit
+separate-branch/final-executable-byte gaps. This is not fresh current-main
+acceptance, new device support or closure of KL-007/PRG-01.
 
 Only exclusively inactive whole bytes proved under the same source-default
 selection topology are omitted. Since the byte-precise fallback (31 October 2026,

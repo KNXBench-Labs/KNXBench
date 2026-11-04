@@ -1,8 +1,6 @@
 //! Owning unit controls separate record equality from caption classification and authority.
 use super::*;
-#[allow(dead_code)]
-#[path = "../../../tests/it/system2_validation_preparation/fixture.rs"]
-mod fixture;
+use crate::system2_fixture as fixture;
 use serde_json::json;
 use std::io::{Cursor, Read, Write};
 

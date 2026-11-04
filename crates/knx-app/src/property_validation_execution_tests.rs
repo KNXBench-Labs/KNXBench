@@ -1,11 +1,10 @@
 //! Count operation-local reuse at the real retained-source reconstruction seam.
 use super::*;
+use crate::system2_fixture as fixture;
 use crate::system2_validation_preparation::{
     count_reconstructions, prepare_retained_project_hardware_source, HardwareObservation,
     ProjectHardwareRecord, RecoveryTrack,
 };
-#[path = "../tests/it/system2_validation_preparation/fixture.rs"]
-mod fixture;
 
 fn bundle() -> PreparedBundle {
     let (_dir, conn, project, _profile) = fixture::configured_inputs();

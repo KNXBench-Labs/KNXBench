@@ -33,7 +33,7 @@ Contract: [system2-download-result](../contracts/system2-download-result.md).
   is accepted main-first as `288bd8005` after independent review and both complete
   selected 14-stage gates. It implements the bounded [settlement-only design](../design/system2-settlement-source-equivalence.md),
   not general source equivalence or new start/recovery authority. Exhaustive E-matrix
-  adversaries, source-positive recovery crosses, race/read-count instrumentation
+  adversaries, broader source-positive recovery crosses, race/read-count instrumentation
   and changed-source large-project measurements remain open. A bounded
   [E15 changed-caption persistence-failure follow-up](../status/2026-11-03-s2-caption-persistence.md)
   is accepted main-first as `99f7e65dd`: focused mounted execution, independent
@@ -62,8 +62,13 @@ Contract: [system2-download-result](../contracts/system2-download-result.md).
   covers both source families and namespaces 20/23, failed/healthy workers and
   pending/marked beliefs (eight leaves/16 cases), published main-first as
   `446480584` after independent correction review and both selected 14-stage
-  gates. Wider terminal, lifecycle/recovery and race/read-count obligations
-  remain separate and open.
+  gates. The bounded [caption-positive original recovery proof](../status/2026-11-04-s2-caption-recovery-authority.md)
+  is published main-first as `77edfc3b3`: four standalone/retained20/23 mounted
+  leaves check actual original recovery, exact OLD model restoration, original
+  evidence/confirmation authority and conservative MEMORY/history settlement.
+  Independent review closed a redo-oracle gap; both selected 14-stage gates passed.
+  This closes that finite cross, not all E11/E16. Wider terminal, lifecycle/recovery,
+  wrong-serial/binding and race/read-count obligations remain separate and open.
 - Field verification by the reporter is not requested; no hardware retry is needed
   for the software change.
 

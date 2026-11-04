@@ -343,6 +343,198 @@ fn journal_bytes(path: &std::path::Path) -> Vec<(std::ffi::OsString, Vec<u8>)> {
 }
 
 #[test]
+fn recovery_conversions_reconstruct_once_each_and_roundtrip_exact_original() {
+    let bundle = bundle();
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("operation");
+    let store = recovery_store(&path, &bundle);
+    let original = store.recovery().unwrap();
+    let before = journal_bytes(&path);
+    let progress = store.progress();
+    let (snapshot, reads) = count_reconstructions(|| original.to_snapshot(&bundle).unwrap());
+    assert_eq!(
+        reads, 1,
+        "one full source reconstruction per record conversion"
+    );
+    let (record, writes) =
+        count_reconstructions(|| RecoveryRecord::from_snapshot(&snapshot, &bundle).unwrap());
+    assert_eq!(&record, original);
+    assert_eq!(
+        writes, 1,
+        "one full source reconstruction, including record validation"
+    );
+    // Each public invocation independently checks sources, not a cached witness.
+    let (_, repeated) = count_reconstructions(|| record.to_snapshot(&bundle).unwrap());
+    assert_eq!(repeated, 1);
+    assert_eq!(journal_bytes(&path), before);
+    assert_eq!(store.progress(), progress);
+}
+
+#[test]
+fn recovery_conversion_reuse_preserves_source_and_evidence_refusals() {
+    let bundle = bundle();
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("operation");
+    let store = recovery_store(&path, &bundle);
+    let original = store.recovery().unwrap();
+    let snapshot = original.to_snapshot(&bundle).unwrap();
+    let before = journal_bytes(&path);
+    let progress = store.progress();
+    for fault in ["source-bytes", "source-request", "plan"] {
+        let mut bad = bundle.clone();
+        match fault {
+            "source-bytes" => {
+                let crate::system2_validation_preparation::ProjectProductInput::RetainedSourceMembers { member_bytes, .. } =
+                    &mut bad.project_preparation.as_mut().unwrap().product_input
+                else { panic!("retained source fixture required"); };
+                member_bytes[1][0] ^= 1;
+            }
+            "source-request" => {
+                bad.project_preparation
+                    .as_mut()
+                    .unwrap()
+                    .request
+                    .values
+                    .clear();
+            }
+            "plan" => {
+                let write = bad
+                    .normalized_plan
+                    .steps
+                    .iter_mut()
+                    .find_map(|s| {
+                        if let crate::property_validation_bundle::OperationRecord::WriteMemory {
+                            data,
+                            ..
+                        } = &mut s.operation
+                        {
+                            Some(data)
+                        } else {
+                            None
+                        }
+                    })
+                    .unwrap();
+                write[0] ^= 1;
+                bad.binding.plan_sha256 = bad.normalized_plan.sha256().unwrap();
+            }
+            _ => unreachable!(),
+        }
+        rebind_records(&mut bad);
+        let mut rebound = original.clone();
+        rebound.original_bundle = bad.clone();
+        assert!(rebound.to_snapshot(&bad).is_err(), "{fault}");
+        assert!(
+            RecoveryRecord::from_snapshot(&snapshot, &bad).is_err(),
+            "{fault}"
+        );
+    }
+    for fault in [
+        "resource-state",
+        "region-index",
+        "allocation-bytes",
+        "pointer-observation",
+    ] {
+        let mut bad = original.clone();
+        match fault {
+            "resource-state" => bad.resources[0].state = 0xff,
+            "region-index" => bad.regions[0].operation_index = usize::MAX,
+            "allocation-bytes" => bad.allocations[0].data[0] ^= 1,
+            "pointer-observation" => bad.prestate_observations.push(
+                crate::property_validation_bundle::PointerObservationRecord {
+                    object: bad.resources[0].object,
+                    expected: [0; 4],
+                    observed: None,
+                    state: 1,
+                },
+            ),
+            _ => unreachable!(),
+        }
+        assert!(bad.to_snapshot(&bundle).is_err(), "{fault}");
+    }
+    let mut bad_snapshot = snapshot.clone();
+    bad_snapshot.regions[0].source_index = usize::MAX;
+    assert!(RecoveryRecord::from_snapshot(&bad_snapshot, &bundle).is_err());
+    let mut bad_snapshot = snapshot.clone();
+    bad_snapshot.preconditions.serial[0] ^= 1;
+    assert!(RecoveryRecord::from_snapshot(&bad_snapshot, &bundle).is_err());
+    assert_eq!(journal_bytes(&path), before);
+    assert_eq!(store.progress(), progress);
+    store.require_restore_available().unwrap();
+}
+
+#[test]
+fn recovery_record_refuses_other_valid_original_before_reconstruction() {
+    let bundle = bundle();
+    let dir = tempfile::tempdir().unwrap();
+    let store = recovery_store(&dir.path().join("operation"), &bundle);
+    let mut record = store.recovery().unwrap().clone();
+    let mut other = bundle.clone();
+    other
+        .hardware_preparation
+        .as_mut()
+        .unwrap()
+        .operation
+        .push_str("-other");
+    rebind_records(&mut other);
+    other.plan().unwrap();
+    record.original_bundle = other;
+    let (result, count) = count_reconstructions(|| record.to_snapshot(&bundle));
+    assert!(
+        result.is_err(),
+        "different valid original bundle must refuse"
+    );
+    assert_eq!(
+        count, 0,
+        "bundle binding refuses before retained-source reconstruction"
+    );
+    eprintln!("S2-RECOVERY-CELL original-bundle-refused-before-reconstruction");
+}
+
+#[test]
+fn recovery_snapshot_cannot_silently_normalize_a_different_valid_width_premise() {
+    let bundle = bundle();
+    let dir = tempfile::tempdir().unwrap();
+    let store = recovery_store(&dir.path().join("operation"), &bundle);
+    let mut snapshot = store.recovery().unwrap().to_snapshot(&bundle).unwrap();
+    let objects = snapshot
+        .preconditions
+        .source_pointers
+        .iter()
+        .map(|p| p.object)
+        .collect();
+    snapshot.preconditions.pointer_widths =
+        knx_net::commissioning::pointer_width::PointerWidthAdmission::one_element_two_or_four(
+            objects,
+        )
+        .unwrap();
+    // The modified premise is internally admissible with the same four-octet
+    // resources. Only exact equality to the bundle must refuse this change.
+    snapshot.validate_evidence(&snapshot.original_plan).unwrap();
+    assert!(
+        RecoveryRecord::from_snapshot(&snapshot, &bundle).is_err(),
+        "changed valid width premise cannot be replaced with the bundle's premise"
+    );
+    eprintln!("S2-RECOVERY-CELL exact-width-premise-refused");
+}
+
+#[test]
+fn recovery_record_version_refuses_early_and_snapshot_version_refuses_helper() {
+    let bundle = bundle();
+    let dir = tempfile::tempdir().unwrap();
+    let store = recovery_store(&dir.path().join("operation"), &bundle);
+    let mut record = store.recovery().unwrap().clone();
+    let mut snapshot = record.to_snapshot(&bundle).unwrap();
+    record.version = 2;
+    let (result, count) = count_reconstructions(|| record.to_snapshot(&bundle));
+    assert!(result.is_err());
+    assert_eq!(count, 0);
+    eprintln!("S2-RECOVERY-CELL record-version-refused-before-reconstruction");
+    snapshot.version = 2;
+    assert!(RecoveryRecord::from_snapshot(&snapshot, &bundle).is_err());
+    eprintln!("S2-RECOVERY-CELL snapshot-version-refused-by-helper");
+}
+
+#[test]
 fn hardware_recovery_callbacks_reuse_original_plan_and_preserve_original_barrier() {
     let bundle = bundle();
     let dir = tempfile::tempdir().unwrap();
@@ -451,7 +643,10 @@ fn hardware_recovery_callbacks_reuse_original_plan_and_preserve_original_barrier
                 result,
                 Err("restore snapshot differs from durable original".into())
             );
-            assert_eq!(count, 4, "original snapshot validation stays independent");
+            assert_eq!(
+                count, 1,
+                "original snapshot evidence validation independently reconstructs once"
+            );
             assert_eq!(journal_bytes(&path), before);
             assert_eq!(store.progress(), progress);
             let (_, count) = count_reconstructions(|| {
@@ -464,7 +659,7 @@ fn hardware_recovery_callbacks_reuse_original_plan_and_preserve_original_barrier
                 )
                 .unwrap()
             });
-            assert_eq!(count, 4);
+            assert_eq!(count, 1);
             assert_eq!(
                 journal_bytes(&path),
                 before,

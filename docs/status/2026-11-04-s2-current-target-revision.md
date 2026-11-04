@@ -4,9 +4,10 @@ Observed: 4 November 2026.
 
 ## Current disposition
 
-**Fixture implementation, focused execution and independent whole-fixture
-review/assertion calibration verified; selected package gates and publication
-remain pending.** No production
+**Bounded fixture package accepted and published main-first as `fb1facc41`
+(source `03bc5e57d`).** Independent review, focused execution and both complete
+selected 14-stage gates passed. This is a fixture-only strengthening, not a new
+production behavior or overall E14 acceptance. No production
 behavior was changed and no original semantic defect or original-source RED was
 observed. This strengthens one E14 evidence cross; it does not close E14 or S2-05.
 
@@ -115,12 +116,35 @@ receipts/raw outcomes and exact four unique mutants, and checked that the whole
 candidate stayed unchanged and the disposable clone was fully restored. User-data
 guards remained clean and fully checked.
 
-## Pending package acceptance
+<a id="pending-package-acceptance"></a>
 
-Selected branch and main-first plans must be obtained from actual planner output;
-no future stage count, gate success or publication is preclaimed. The focused
-and review evidence above remains attributed to its original source/binary epoch;
-this new prose record and checkpoint are metadata-only amendments.
+## Package acceptance and main-first delivery
+
+The reviewed fixture source was committed as `03bc5e57d`; the separately gated
+main-first merge `fb1facc41` has its exact Git tree. Both actual change-scoped
+plans selected 14 stages and completed all of them with direct exit 0 and valid
+proofs: fmt, documentation, static browser-lane registration, layering, headers,
+anchors, ledger, corpus-gate registration, tool tests, clean-desktop, Clippy,
+Rust tests, selected corpus and diff check. Both receipts have success, complete,
+planCompleted and inputsFrozen true, with empty touched/unchecked user-data lists.
+
+Each gate recorded **1,701 Rust passes, 0 failures and 72 ignored tests**. The
+selected private corpus passed **51/51 separately**; its count is not added to
+Rust passes. Tool tests recorded **517 tests with six unchanged opt-in skips**.
+These are complete selected package plans, not full-workspace, Web/browser,
+release-full, standalone product-smoke or hardware acceptance. Static browser-lane
+registration is not browser execution.
+
+Five actually executed Rust-stage ELF copies per gate were retained and hashed;
+seven Rust result-summary rows are not seven executables. Parent authentication
+checked their bytes and original timestamps before the Rust stage ended. The
+source and main-first trees, gate heads/frozen inputs and exact
+local/tracking/live published main-first revision were checked directly. Broader
+corpus input-pin provenance remains independently open.
+
+Focused and review evidence remains attributed to its original source/binary
+epoch; this acceptance prose, queue link and checkpoint are a separate
+metadata-only closeout with no Rust/Web/protocol/schema/dependency changes.
 
 Evidence locator: `<profile>/evidence/2026-11-04-s2-current-target-revision/`.
 

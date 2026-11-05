@@ -9,7 +9,8 @@ in force.
 
 - Native hung-webview recovery design.
 - Redacted authorisation/restart status presentation.
-- The quiet-poll `Lagged` regression.
+- The quiet-poll `Lagged` regression: the [bounded test-only requirement](../status/2026-11-05-quiet-poll-event-loss.md)
+  passed its focused and mutation controls on 5 November 2026; integrated acceptance is pending.
 - Descriptor-pinned backup paths.
 - Profiled large-device navigation.
 

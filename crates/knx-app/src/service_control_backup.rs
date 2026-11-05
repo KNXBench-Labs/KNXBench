@@ -5,8 +5,9 @@
 //! and before any property write. Recovery is manual and requires rechecking
 //! target identity and mask; this module never replays a write automatically.
 
-use std::fs::{self, File, OpenOptions};
-use std::io::{self, Write};
+#[cfg(test)]
+use std::fs::{self, File};
+use std::io;
 use std::path::{Path, PathBuf};
 
 use knx_core::commissioning::properties::{PID_DEVICE_CONTROL, PID_SERVICE_CONTROL};
@@ -123,52 +124,166 @@ pub fn write_backup(
 }
 
 fn write_record(dir: &Path, record: ServiceControlBackup) -> io::Result<PathBuf> {
-    write_record_with_sync(dir, record, |directory| File::open(directory)?.sync_all())
+    write_record_with_hooks(dir, record, &mut crate::backup_directory::Hooks::default())
 }
 
-fn write_record_with_sync(
+fn write_record_with_hooks(
     dir: &Path,
     record: ServiceControlBackup,
-    sync_directory: impl FnMut(&Path) -> io::Result<()>,
+    hooks: &mut crate::backup_directory::Hooks<'_>,
 ) -> io::Result<PathBuf> {
+    // Semantic refusal must precede even directory acquisition, not just final file creation.
     record.validate()?;
-    fs::create_dir_all(dir)?;
     let stamp: String = record
         .taken
         .chars()
         .map(|ch| if ch.is_ascii_alphanumeric() { ch } else { '-' })
         .collect();
-    let path = dir.join(format!(
-        "service-control-{}-{stamp}.backup.json",
-        record.device
-    ));
-    let mut options = OpenOptions::new();
-    options.write(true).create_new(true);
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::OpenOptionsExt;
-        options.mode(0o600);
-    }
-    let mut file = options.open(&path)?;
-    serde_json::to_writer_pretty(&mut file, &record).map_err(io::Error::other)?;
-    file.write_all(b"\n")?;
-    file.sync_all()?;
-    drop(file);
-    let read_back: ServiceControlBackup =
-        serde_json::from_slice(&fs::read(&path)?).map_err(io::Error::other)?;
-    if read_back != record {
-        return Err(io::Error::new(
-            io::ErrorKind::InvalidData,
-            "service-control backup differs on readback",
-        ));
-    }
-    crate::backup_directory::sync_chain(dir, sync_directory)?;
-    Ok(path)
+    let basename = format!("service-control-{}-{stamp}.backup.json", record.device);
+    let mut bytes = serde_json::to_vec_pretty(&record).map_err(io::Error::other)?;
+    bytes.push(b'\n');
+    crate::backup_directory::write_verified(
+        dir,
+        &basename,
+        &bytes,
+        |text, _| {
+            let read_back: ServiceControlBackup =
+                serde_json::from_str(text).map_err(io::Error::other)?;
+            if read_back != record {
+                return Err(io::Error::new(
+                    io::ErrorKind::InvalidData,
+                    "service-control backup differs on readback",
+                ));
+            }
+            Ok(())
+        },
+        hooks,
+    )
+}
+
+#[cfg(all(test, unix))]
+fn write_record_with_sync(
+    dir: &Path,
+    record: ServiceControlBackup,
+    mut sync: impl FnMut(&File) -> io::Result<()>,
+) -> io::Result<PathBuf> {
+    let mut observe = |stage, file: &File, _: &Path| {
+        if stage == crate::backup_directory::Boundary::DirectorySync {
+            sync(file)?;
+        }
+        Ok(())
+    };
+    write_record_with_hooks(
+        dir,
+        record,
+        &mut crate::backup_directory::Hooks::new(&mut observe),
+    )
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[cfg(unix)]
+    fn pinned_record() -> ServiceControlBackup {
+        ServiceControlBackup {
+            taken: "2026-09-29T14:10:00+02:00".into(),
+            ..ServiceControlBackup::new("1.1.67".parse().unwrap(), 0x0701, 0x0104, 0x02)
+        }
+    }
+
+    #[cfg(unix)]
+    fn pinned_text() -> String {
+        serde_json::to_string_pretty(&pinned_record()).unwrap() + "\n"
+    }
+
+    #[cfg(unix)]
+    fn pinned_write(
+        dir: &Path,
+        hooks: &mut crate::backup_directory::Hooks<'_>,
+    ) -> io::Result<PathBuf> {
+        write_record_with_hooks(dir, pinned_record(), hooks)
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn pinned_namespace_changes() {
+        crate::backup_directory::test_support::namespace_changes(pinned_write, &pinned_text());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn pinned_same_file_and_final_identity() {
+        crate::backup_directory::test_support::same_file_and_final_identity(
+            pinned_write,
+            &pinned_text(),
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn pinned_io_failures() {
+        crate::backup_directory::test_support::failures(pinned_write);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn pinned_static_paths_and_collisions() {
+        crate::backup_directory::test_support::static_paths_and_collisions(
+            pinned_write,
+            &pinned_text(),
+        );
+    }
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn pinned_pathname_limit() {
+        crate::backup_directory::test_support::pathname_limit(pinned_write);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn pinned_relative_cwd() {
+        crate::backup_directory::test_support::relative_cwd(
+            "service_control_backup::tests::pinned_relative_cwd",
+            pinned_write,
+            &pinned_text(),
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn pinned_semantic_readback_refuses_changed_contents() {
+        use std::io::{Seek, Write};
+        let temp = tempfile::tempdir().unwrap();
+        let mut read = false;
+        let mut receipt = false;
+        let mut callback = |stage, mut file: &File, _: &Path| {
+            if stage == crate::backup_directory::Boundary::Written {
+                let changed = ServiceControlBackup {
+                    octets: "ABCD".into(),
+                    ..pinned_record()
+                };
+                file.rewind()?;
+                file.set_len(0)?;
+                file.write_all(serde_json::to_string_pretty(&changed).unwrap().as_bytes())?;
+            }
+            if stage == crate::backup_directory::Boundary::Read {
+                read = true;
+            }
+            if stage == crate::backup_directory::Boundary::BeforeReceipt {
+                receipt = true;
+            }
+            Ok(())
+        };
+        let error = pinned_write(
+            temp.path(),
+            &mut crate::backup_directory::Hooks::new(&mut callback),
+        )
+        .unwrap_err();
+        assert_eq!(error.kind(), io::ErrorKind::InvalidData);
+        assert!(read && !receipt);
+    }
 
     #[test]
     fn refuses_semantically_invalid_recovery_records() {
@@ -268,10 +383,15 @@ mod tests {
         ] {
             let dir = temp.path().join(format!("uncreated-{label}"));
             let mut synced = false;
-            let result = write_record_with_sync(&dir, record, |_| {
+            let mut observe = |_, _: &File, _: &Path| {
                 synced = true;
                 Ok(())
-            });
+            };
+            let result = write_record_with_hooks(
+                &dir,
+                record,
+                &mut crate::backup_directory::Hooks::new(&mut observe),
+            );
             assert!(
                 !dir.exists(),
                 "invalid recovery record must be refused before creating directories: {label}"
@@ -282,6 +402,7 @@ mod tests {
         }
     }
 
+    #[cfg(unix)]
     #[test]
     fn nested_backup_directory_entries_are_all_synced() {
         let temp = tempfile::tempdir().unwrap();
@@ -296,16 +417,20 @@ mod tests {
         let record = ServiceControlBackup::new("1.1.67".parse().unwrap(), 0x0701, 0x0104, 0);
         let mut synced = Vec::new();
         let path = write_record_with_sync(&dir, record.clone(), |directory| {
-            synced.push(directory.to_path_buf());
-            File::open(directory)?.sync_all()
+            synced.push(crate::backup_directory::test_support::id(directory));
+            directory.sync_all()
         })
         .unwrap();
-        let expected: Vec<_> = dir.ancestors().map(Path::to_path_buf).collect();
+        let expected: Vec<_> = dir
+            .ancestors()
+            .map(|path| crate::backup_directory::test_support::id(&fs::File::open(path).unwrap()))
+            .collect();
         assert_eq!(synced, expected, "new parent entries need their own sync");
         let saved: ServiceControlBackup = serde_json::from_slice(&fs::read(path).unwrap()).unwrap();
         assert_eq!(saved, record);
     }
 
+    #[cfg(unix)]
     #[test]
     fn parent_sync_failure_refuses_a_backup_receipt() {
         let temp = tempfile::tempdir().unwrap();
@@ -313,10 +438,12 @@ mod tests {
         let parent = dir.parent().unwrap();
         let record = ServiceControlBackup::new("1.1.67".parse().unwrap(), 0x0701, 0x0104, 0);
         let result = write_record_with_sync(&dir, record, |directory| {
-            if directory == parent {
+            if crate::backup_directory::test_support::id(directory)
+                == crate::backup_directory::test_support::id(&fs::File::open(parent)?)
+            {
                 return Err(io::Error::other("injected ancestor sync failure"));
             }
-            File::open(directory)?.sync_all()
+            directory.sync_all()
         });
         assert!(
             result.is_err(),
@@ -324,6 +451,7 @@ mod tests {
         );
     }
 
+    #[cfg(unix)]
     #[test]
     fn saves_the_entire_original_property_without_overwriting() {
         let dir = tempfile::tempdir().unwrap();

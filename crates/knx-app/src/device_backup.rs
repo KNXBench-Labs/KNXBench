@@ -48,7 +48,6 @@
 
 use std::fmt;
 use std::fs;
-use std::io::Write;
 use std::path::{Path, PathBuf};
 
 use knx_core::commissioning::device_backup::{
@@ -489,41 +488,48 @@ pub fn file_name(target: IndividualAddress, stamp: &str) -> String {
     format!("{target}_{stamp}.backup.json")
 }
 
-/// Writes `stored` to a new file in `dir` (created if missing), syncs it,
-/// reads it back and compares. Never overwrites an existing file.
+/// Reads and compares through the created descriptor; never overwrites an existing file.
+/// Relative directories produce absolute receipts anchored to the initially held CWD.
 pub fn write_backup(dir: &Path, stored: &StoredBackup) -> Result<PathBuf, BackupFileError> {
-    write_backup_with_sync(dir, stored, |directory| {
-        fs::File::open(directory)?.sync_all()
-    })
+    write_backup_with_hooks(dir, stored, &mut crate::backup_directory::Hooks::default())
 }
 
+fn write_backup_with_hooks(
+    dir: &Path,
+    stored: &StoredBackup,
+    hooks: &mut crate::backup_directory::Hooks<'_>,
+) -> Result<PathBuf, BackupFileError> {
+    crate::backup_directory::write_verified(
+        dir,
+        &file_name(stored.backup.target, &stored.taken),
+        to_json(stored).as_bytes(),
+        |text, path| {
+            if from_json(text)? != *stored {
+                return Err(BackupFileError::ReadBackDiffers(path.to_owned()));
+            }
+            Ok(())
+        },
+        hooks,
+    )
+}
+
+#[cfg(all(test, unix))]
 fn write_backup_with_sync(
     dir: &Path,
     stored: &StoredBackup,
-    sync_directory: impl FnMut(&Path) -> std::io::Result<()>,
+    mut sync: impl FnMut(&fs::File) -> std::io::Result<()>,
 ) -> Result<PathBuf, BackupFileError> {
-    fs::create_dir_all(dir)?;
-    let path = dir.join(file_name(stored.backup.target, &stored.taken));
-    let text = to_json(stored);
-    let mut options = fs::OpenOptions::new();
-    options.write(true).create_new(true);
-    // The device's memory can carry private configuration or keys.
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::OpenOptionsExt;
-        options.mode(0o600);
-    }
-    let mut file = options.open(&path)?;
-    file.write_all(text.as_bytes())?;
-    file.sync_all()?;
-    drop(file);
-    let back = read_backup(&path)?;
-    if back != *stored {
-        return Err(BackupFileError::ReadBackDiffers(path));
-    }
-    // An fsynced file is not yet durable without its directory entry.
-    crate::backup_directory::sync_chain(dir, sync_directory)?;
-    Ok(path)
+    let mut observe = |stage, file: &fs::File, _: &Path| {
+        if stage == crate::backup_directory::Boundary::DirectorySync {
+            sync(file)?;
+        }
+        Ok(())
+    };
+    write_backup_with_hooks(
+        dir,
+        stored,
+        &mut crate::backup_directory::Hooks::new(&mut observe),
+    )
 }
 
 /// Reads a backup file.
@@ -534,6 +540,95 @@ pub fn read_backup(path: &Path) -> Result<StoredBackup, BackupFileError> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[cfg(unix)]
+    fn pinned_write(
+        dir: &Path,
+        hooks: &mut crate::backup_directory::Hooks<'_>,
+    ) -> std::io::Result<PathBuf> {
+        write_backup_with_hooks(dir, &stored(), hooks).map_err(|error| match error {
+            BackupFileError::Io(error) => error,
+            other => std::io::Error::other(other),
+        })
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn pinned_namespace_changes() {
+        crate::backup_directory::test_support::namespace_changes(pinned_write, &to_json(&stored()));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn pinned_same_file_and_final_identity() {
+        crate::backup_directory::test_support::same_file_and_final_identity(
+            pinned_write,
+            &to_json(&stored()),
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn pinned_io_failures() {
+        crate::backup_directory::test_support::failures(pinned_write);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn pinned_static_paths_and_collisions() {
+        crate::backup_directory::test_support::static_paths_and_collisions(
+            pinned_write,
+            &to_json(&stored()),
+        );
+    }
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn pinned_pathname_limit() {
+        crate::backup_directory::test_support::pathname_limit(pinned_write);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn pinned_relative_cwd() {
+        crate::backup_directory::test_support::relative_cwd(
+            "device_backup::tests::pinned_relative_cwd",
+            pinned_write,
+            &to_json(&stored()),
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn pinned_semantic_readback_refuses_changed_contents() {
+        use std::io::{Seek, Write};
+        let temp = tempfile::tempdir().unwrap();
+        let mut reached_read = false;
+        let mut reached_receipt = false;
+        let mut callback = |stage, mut file: &fs::File, _: &Path| {
+            if stage == crate::backup_directory::Boundary::Written {
+                let mut changed = stored();
+                changed.application = "different application".into();
+                file.rewind()?;
+                file.set_len(0)?;
+                file.write_all(to_json(&changed).as_bytes())?;
+            }
+            if stage == crate::backup_directory::Boundary::Read {
+                reached_read = true;
+            }
+            if stage == crate::backup_directory::Boundary::BeforeReceipt {
+                reached_receipt = true;
+            }
+            Ok(())
+        };
+        let result = write_backup_with_hooks(
+            temp.path(),
+            &stored(),
+            &mut crate::backup_directory::Hooks::new(&mut callback),
+        );
+        assert!(matches!(result, Err(BackupFileError::ReadBackDiffers(_))));
+        assert!(reached_read && !reached_receipt);
+    }
 
     const SERIAL: [u8; 6] = [0x00, 0x83, 0x12, 0xAB, 0xCD, 0xEF];
     const EXEMPLAR: &str = "\"exemplar_serial\": \"008312ABCDEF\"";
@@ -572,6 +667,7 @@ mod tests {
         }
     }
 
+    #[cfg(unix)]
     #[test]
     fn nested_backup_directory_entries_are_all_synced() {
         let temp = tempfile::tempdir().unwrap();
@@ -585,25 +681,31 @@ mod tests {
             .join("new/parent/backups");
         let mut synced = Vec::new();
         let path = write_backup_with_sync(&dir, &stored(), |directory| {
-            synced.push(directory.to_path_buf());
-            fs::File::open(directory)?.sync_all()
+            synced.push(crate::backup_directory::test_support::id(directory));
+            directory.sync_all()
         })
         .unwrap();
-        let expected: Vec<_> = dir.ancestors().map(Path::to_path_buf).collect();
+        let expected: Vec<_> = dir
+            .ancestors()
+            .map(|path| crate::backup_directory::test_support::id(&fs::File::open(path).unwrap()))
+            .collect();
         assert_eq!(synced, expected, "new parent entries need their own sync");
         assert_eq!(read_backup(&path).unwrap(), stored());
     }
 
+    #[cfg(unix)]
     #[test]
     fn parent_sync_failure_refuses_a_backup_receipt() {
         let temp = tempfile::tempdir().unwrap();
         let dir = temp.path().join("new/parent/backups");
         let parent = dir.parent().unwrap();
         let result = write_backup_with_sync(&dir, &stored(), |directory| {
-            if directory == parent {
+            if crate::backup_directory::test_support::id(directory)
+                == crate::backup_directory::test_support::id(&fs::File::open(parent)?)
+            {
                 return Err(std::io::Error::other("injected ancestor sync failure"));
             }
-            fs::File::open(directory)?.sync_all()
+            directory.sync_all()
         });
         assert!(
             result.is_err(),
@@ -651,6 +753,7 @@ mod tests {
         }
     }
 
+    #[cfg(unix)]
     #[test]
     fn a_file_is_written_once_synced_and_never_overwritten() {
         let dir = tempfile::tempdir().unwrap();

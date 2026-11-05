@@ -16,6 +16,7 @@ Last updated: 2026-11-01 (Alpha 19 pre-release; source cutoff 2026-11-01)
 | Feature | Scope | Availability |
 | --- | --- | --- |
 | [USB/serial TP-UART](status/2026-11-04-usb-serial-ui.md) | Linux server + settings/footer/monitor; explicit passive/active mode, bound sends and reserved serial cleanup; transparent NCN5130 firmware required; correction review and software gates passed, no hardware compatibility claim | Main-only |
+| [Passive USB-serial candidates](research/2026-11-05-passive-serial-candidates.md) | Explicit Linux server-local by-id metadata list; bounded and unverified, path selection only, manual entry retained; source candidate awaiting independent review and package gates | Main-only candidate |
 | [Import findings after reopening](open-work/WP-25-import-findings-after-reopen.md) | Reprojects stored primary error/warning findings into the bounded session log; historical/open-time provenance and explicit full-report access; missing legacy evidence is not a clean assessment | Main-only |
 | [Rail themes](adr/0157-rail-built-in-presentation.md) | Built-in light/dark pair: square controls, Geist type, toolbar rail, KNX-cable green accent; own Theme effects motion category | Main-only |
 

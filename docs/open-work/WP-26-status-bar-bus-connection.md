@@ -108,3 +108,30 @@ on fresh monitor attach. Earlier browser/smoke proof is pre-correction evidence.
 firmware, extended frames, KNX USB HID, FT1.2 and arbitrary serial adapters remain
 open/unsupported. Device management, downloads and scans stay IP-only. The
 [original CLI delivery evidence](../status/2026-11-04-usb-tpuart.md) is retained.
+
+## Passive USB-serial candidates (5 November 2026; candidate, acceptance pending)
+
+The bounded successor adds explicit **List USB-serial candidates** beside the
+manual path in the existing shared settings/footer/monitor fields. The read-only
+`GET /api/bus/serial-candidates` inspects Linux server/container-local by-id
+symlinks and target metadata, never opens or probes a port, and never triggers IP
+discovery. It admits only safe USB-prefixed aliases resolving to immediate
+`/dev/ttyUSB<digits>` or `/dev/ttyACM<digits>` character devices.
+
+Results distinguish available (including empty), missing directory, permission/
+I/O unavailability and unsupported server platform. At most 512 directory entries
+and 64 returned candidates are considered; truncation and inspected omissions
+are disclosed. The inspected directory prefix can vary. Alias/target deduplication
+is not physical-device identity or a completeness guarantee. Many adapters have no
+admitted by-id alias; manual paths stay supported.
+
+Selection changes only the existing path preference. Listing/completion does not
+replace a manual edit, choose a candidate, change source/mode/transport/session or
+connect; Connect remains separate. These are **unverified USB-serial candidates**,
+not detected KNX-compatible adapters, availability or permission evidence. KNX USB
+HID, FT1.2 and other USB protocols remain unsupported.
+
+Tests use synthetic/injected filesystem data and intercepted HTTP only. No host
+hardware enumeration, device open, real installation or physical compatibility
+test belongs to this package. Independent whole-feature review and final selected
+package acceptance remain pending. [Primary source, API and test boundary](../research/2026-11-05-passive-serial-candidates.md).

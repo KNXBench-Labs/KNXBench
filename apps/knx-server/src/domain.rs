@@ -129,6 +129,8 @@ pub struct AppState {
     /// stateless/`Sync` (it only ever opens tunnels; each open tunnel's own
     /// state lives in `bus_session` below).
     pub connector: Box<dyn GatewayConnector>,
+    /// Passive filesystem-only candidate listing, independent of the live bus connector/session.
+    pub serial_candidates: std::sync::Arc<dyn crate::serial_candidates::SerialCandidateScanner>,
     /// Effective tunnel endpoint mode selected at process startup.
     pub tunnel_return_path: knx_net::TunnelReturnPath,
     /// At most one open monitor session (T15, design spec §4.1: "a monitor
@@ -397,6 +399,7 @@ impl AppState {
             product_db_unavailable: None,
             session_log: Mutex::new(SessionLog::default()),
             connector: Box::new(RealConnector::default()),
+            serial_candidates: std::sync::Arc::new(crate::serial_candidates::LocalSerialCandidates),
             tunnel_return_path: knx_net::TunnelReturnPath::default(),
             bus_session: tokio::sync::Mutex::new(None),
             group_address_style_publication: tokio::sync::Mutex::new(()),

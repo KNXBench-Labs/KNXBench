@@ -21,8 +21,10 @@ verification and authorized hardware checks remain separate. A bounded
 explicit passive/active selection through the shared session. Published main-first
 `eab79cc5b` passed correction review, the selected package gate and all 16 affected
 production configurations. Bound group sends, reserved cleanup and conservative
-startup uncertainty are included. Physical acceptance, extended frames, enumeration
-and other USB protocols remain open.
+startup uncertainty are included. A [passive USB-serial candidate listing](research/2026-11-05-passive-serial-candidates.md)
+successor is implemented pending review and final selected gates: explicit by-id
+metadata only, no port probe or compatibility inference. Complete USB enumeration,
+wider physical acceptance, extended frames and other USB protocols remain open.
 [Scope and limits](status/2026-11-04-usb-tpuart.md).
 
 ## Main-only after Alpha 19: caption-positive original recovery proof

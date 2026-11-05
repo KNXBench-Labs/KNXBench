@@ -329,6 +329,37 @@ describe("serial status controller join", () => {
   });
 });
 
+it.each(["en","de"] as const)("lists and selects a candidate without replacing the observed serial session in %s", async language => {
+  const m = language === "en" ? en : de;
+  const serial = { path: "/synthetic/connected", source: "1.1.249", mode: "active" as const };
+  const candidate = { path: "/dev/serial/by-id/usb-fictional-if00", target: "/dev/ttyACM0" };
+  setSetting("uiLanguage", language); setSetting("preferredBusTransport", "serial");
+  setSetting("serialPath", serial.path); setSetting("serialSource", serial.source); setSetting("serialMode", serial.mode);
+  apiMock.busActivity.mockResolvedValue(snapshot({ sessions: [{ kind: "busMonitor", id: 5, state: "active", serial }] }));
+  const fetcher = vi.fn().mockResolvedValue(new Response(JSON.stringify({ status: "available", candidates: [candidate], truncated: false, omittedEntries: 0 })));
+  vi.stubGlobal("fetch", fetcher);
+  try {
+    await render(); await act(async () => refreshBusConnection()); await click(trigger());
+    expect(fetcher).not.toHaveBeenCalled();
+    const connected = stateText(); expect(connected).toContain(serial.path);
+    const discoveries = apiMock.discoverBusInterfaces.mock.calls.length;
+    const button = (text: string) => [...host.querySelectorAll<HTMLButtonElement>(".bus-connection-panel button")].find(node => node.textContent === text)!;
+    await click(button(m["serialCandidates.list"]));
+    expect(stateText()).toBe(connected);
+    await click(button(m["serialCandidates.use"].replace("{path}", candidate.path)));
+    expect(stateText()).toBe(connected);
+    expect(q(".bus-connection-panel")!.textContent).toContain(candidate.path);
+    expect(loadPreferredGateway()).toBe("192.0.2.20:3671");
+    expect(fetcher).toHaveBeenCalledExactlyOnceWith("/api/bus/serial-candidates", { headers: undefined, method: "GET", cache: "no-store" });
+    expect(apiMock.discoverBusInterfaces).toHaveBeenCalledTimes(discoveries);
+    expect(apiMock.startSerialBusMonitor).not.toHaveBeenCalled(); expect(apiMock.startBusMonitor).not.toHaveBeenCalled();
+    expect(apiMock.stopBoundBusMonitor).not.toHaveBeenCalled(); expect(apiMock.stopBusMonitor).not.toHaveBeenCalled();
+    const fields = [...host.querySelectorAll<HTMLLabelElement>(".bus-transport-fields label")];
+    expect(fields.find(label => label.textContent === m["busTransport.source"])!.querySelector("input")!.value).toBe(serial.source);
+    expect(q<HTMLSelectElement>(".bus-transport-fields label:last-of-type select")!.value).toBe(serial.mode);
+  } finally { vi.unstubAllGlobals(); }
+});
+
 it.each(["en","de"] as const)("preserves active-start uncertainty through the real API/error path in %s",async language=>{
   const m=language==="en"?en:de;
   setSetting("uiLanguage",language);setSetting("preferredBusTransport","serial");setSetting("serialPath","/synthetic/tty");setSetting("serialSource","1.1.250");

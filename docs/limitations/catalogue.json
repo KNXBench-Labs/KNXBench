@@ -1530,7 +1530,7 @@
       "number": null,
       "title": "Backup directory synchronization",
       "topic": "Commissioning and recovery",
-      "summary": "Synced directory chains are not disk-loss or confinement proof. Paths must stay stable; failed diagnostic files are not recovery receipts.",
+      "summary": "Descriptor-pinned JSON backup writes still do not lock the namespace, preserve paths after external rename or prove power-loss recovery. Catalogue and legacy recorder paths remain outside that contract.",
       "file": "backup-directory-synchronization.md",
       "ledger_ids": [],
       "anchors": [

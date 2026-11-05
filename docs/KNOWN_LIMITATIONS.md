@@ -943,7 +943,7 @@ New hardware, power-loss, vendor and ETS experiments were removed by user decisi
 ### Backup directory synchronization
 
 **Ledger status:** Not separately tracked.
-Synced directory chains are not disk-loss or confinement proof. Paths must stay stable; failed diagnostic files are not recovery receipts.
+Descriptor-pinned JSON backup writes still do not lock the namespace, preserve paths after external rename or prove power-loss recovery. Catalogue and legacy recorder paths remain outside that contract.
 [Details and history](limitations/backup-directory-synchronization.md)
 
 <a id="catalogue-download-lifecycle-history"></a>

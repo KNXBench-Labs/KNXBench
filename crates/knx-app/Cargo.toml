@@ -33,12 +33,12 @@ serde_json.workspace = true
 zip.workspace = true
 quick-xml.workspace = true
 tempfile.workspace = true
+# Safe held-directory traversal and exclusive pre-write backup creation.
+rustix.workspace = true
 
 [dev-dependencies]
 # Paused virtual time round-trips the diagnostic collector's 180 s deadline.
 tokio = { workspace = true, features = ["test-util"] }
-# Confines opt-in authorized-export reads to a held directory, without symlinks.
-rustix.workspace = true
 tempfile.workspace = true
 knx-testsupport.workspace = true
 # Only `tests/csv_roundtrip.rs` needs this — no production `knx-app` code

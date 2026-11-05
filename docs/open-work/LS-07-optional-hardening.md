@@ -13,7 +13,16 @@ in force.
   four real-overflow/healthy tests, independent review, calibrated mutations and
   the selected 14-stage main-first gate passed on 5 November 2026. Runtime and
   physical acceptance are unchanged; no remaining work is assigned by this bullet.
-- Descriptor-pinned backup paths.
+- Descriptor-pinned JSON backup paths are implemented in three bounded parts:
+  held directory-chain acquisition/synchronization, device-memory writer, and
+  service-control writer. The [contract](../contracts/descriptor-pinned-json-backups.md)
+  preserves static aliases and `..`, uses same-file-descriptor readback and
+  refuses detected final identity changes. Focused software tests passed;
+  maintained package acceptance and publication remain pending in the
+  [execution record](../status/2026-11-05-descriptor-pinned-json-backups.md).
+  Catalogue SQLite/list/delete/restore and the legacy property-validation
+  recorder are excluded. Namespace confinement, permanent paths and power-loss
+  recovery are not established.
 - Profiled large-device navigation.
 
 ## Catalogue cleanup (not built, by decision)

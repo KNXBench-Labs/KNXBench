@@ -1,6 +1,14 @@
 # WP-06 — Communication-object organisation: remaining slices
 
-**Status:** Blocked: evidence. Listed in [OPEN_WORK](../OPEN_WORK.md); per-ID status of record is the [ledger](../status/LEDGER.md).
+**Status:** In progress: bounded saved schema-20 text display; other slices remain evidence-gated. Listed in [OPEN_WORK](../OPEN_WORK.md); per-ID status of record is the [ledger](../status/LEDGER.md).
+
+## Admitted increment — saved schema-20 node text
+
+The [source observation and bounded contract](../research/2026-11-05-saved-schema20-node-text.md)
+admit literal saved `Node/@Text` as additional read-only display, without changing
+folder identity or resolving manufacturer text/templates. Implementation, independent
+review and complete package acceptance are pending; no new compatibility or hardware
+claim follows. The remaining requirements below stay independent.
 
 ## Task
 

@@ -53,6 +53,7 @@ fn project_folder(saved: &SavedFolder) -> ComObjectProjectFolder {
                     }
                     .to_owned(),
                     ref_id: node.ref_id.clone(),
+                    text: node.text.clone(),
                 })
                 .collect();
             // Length-prefixed, so no `RefId` spelling can make two paths collide.
@@ -86,6 +87,7 @@ mod tests {
         TreeNodeRef {
             kind,
             ref_id: ref_id.to_owned(),
+            text: None,
         }
     }
 
@@ -105,6 +107,48 @@ mod tests {
             path: vec![node(TreeNodeKind::Folder, "CH-1/Folder:4:PB-3")],
         });
         assert_ne!(a.key, b.key);
+    }
+
+    #[test]
+    fn saved_text_changes_neither_opaque_keys_nor_ids_and_is_not_interpolated() {
+        let path = vec![
+            node(TreeNodeKind::Channel, "CH-1"),
+            node(TreeNodeKind::Folder, "PB-3"),
+        ];
+        let legacy = project_folder(&SavedFolder::Folder { path: path.clone() });
+        for text in ["", "   ", " & <b>{{ChNo}}</b> "] {
+            let mut captioned = path.clone();
+            captioned[0].text = Some("Channel {{0}}".into());
+            captioned[1].text = Some(text.into());
+            let projected = project_folder(&SavedFolder::Folder { path: captioned });
+            assert_eq!(projected.key, legacy.key);
+            assert_eq!(
+                projected.key.as_deref(),
+                Some("Channel:4:CH-1/Folder:4:PB-3")
+            );
+            assert_eq!(projected.path[0].ref_id, "CH-1");
+            assert_eq!(projected.path[0].text.as_deref(), Some("Channel {{0}}"));
+            assert_eq!(projected.path[1].ref_id, "PB-3");
+            assert_eq!(projected.path[1].text.as_deref(), Some(text));
+        }
+        assert_eq!(
+            serde_json::to_value(&legacy.path[1]).unwrap(),
+            serde_json::json!({ "kind": "Folder", "ref_id": "PB-3" })
+        );
+    }
+
+    #[test]
+    fn saved_node_text_json_accepts_legacy_absence_and_preserves_raw_values() {
+        let legacy = serde_json::json!({ "kind": "Folder", "ref_id": "PB-1" });
+        let node: ProjectTreeNode = serde_json::from_value(legacy.clone()).unwrap();
+        assert_eq!(node.text, None);
+        assert_eq!(serde_json::to_value(&node).unwrap(), legacy);
+        for text in ["", "   ", " & <b>{{ChNo}}</b> "] {
+            let json = serde_json::json!({ "kind": "Folder", "ref_id": "PB-1", "text": text });
+            let node: ProjectTreeNode = serde_json::from_value(json.clone()).unwrap();
+            assert_eq!(node.text.as_deref(), Some(text));
+            assert_eq!(serde_json::to_value(&node).unwrap(), json);
+        }
     }
 
     #[test]
@@ -153,8 +197,10 @@ mod tests {
                 resolution: knx_projection::ProductResolution::NoReference,
             },
         };
+        let mut saved_node = node(TreeNodeKind::Folder, "PB-1");
+        saved_node.text = Some("Must disappear with inactive placement".into());
         let saved = SavedFolder::Folder {
-            path: vec![node(TreeNodeKind::Folder, "PB-1")],
+            path: vec![saved_node],
         };
         let folders = BTreeMap::from([
             (ComObjectInstanceId(1), saved.clone()),
@@ -180,6 +226,12 @@ mod tests {
             detail.com_objects[0].project_folder.as_ref().unwrap().key,
             None
         );
+        assert!(detail.com_objects[0]
+            .project_folder
+            .as_ref()
+            .unwrap()
+            .path
+            .is_empty());
     }
 
     #[test]

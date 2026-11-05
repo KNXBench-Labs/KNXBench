@@ -1384,6 +1384,15 @@ and each heading shows the full saved path
 [Contract](contracts/communication-object-folders.md#saved-project-folder-display-24-october-2026) ·
 [WP-06](open-work/WP-06-communication-object-organisation.md).
 
+**5 November 2026 implementation candidate:** literal saved schema-20
+`Node/@Text` accompanies folder IDs without changing identity, membership or
+refusals. Owning schema/namespace admission and a 4,096-byte display bound are
+explicit; empty values remain raw, source placeholders stay literal, and IDs
+remain visible/searchable. Focused app/server/HTTP/projection/web checks and
+independent source review are recorded separately from the still-pending
+complete package/browser acceptance
+([bounded result](status/2026-11-05-saved-schema20-node-text.md)).
+
 ## Declared ETS download plug-ins refuse every download scope — delivered (24 October 2026)
 
 A read-only comparison against a real ETS-programmed device showed that a

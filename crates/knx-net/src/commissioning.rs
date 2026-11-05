@@ -6494,4 +6494,5 @@ mod tests {
     mod load_control_response;
     mod memory_response_pairing;
     mod patient_timing;
+    mod quiet_poll_lagged;
 }

@@ -271,6 +271,27 @@ in the server, storage, API, bindings or write path changes.
   no command; the existing dirty-field blur-save can still fire when focus moves
   to a view button, as it does for filters.
 
+## Saved schema-20 node text (5 November 2026 candidate)
+
+The [bounded source contract](../research/2026-11-05-saved-schema20-node-text.md)
+admits an optional literal saved `Node/@Text`, not a manufacturer caption.
+Only owning schema 20 with an explicit project/20 or wholly inherited retained
+tree gains text; other-schema placement behavior stays unchanged. Missing,
+qualified or over-4,096-byte text falls back to IDs; explicit empty/whitespace
+values remain distinguishable in the projection. Existing source ownership,
+hash, structure, duplicate, module and inactive refusals still apply.
+
+`Type`/`RefId` ancestry alone defines identity, duplicate-prefix checks and the
+opaque key. Folder text is displayed as plain literal text alongside IDs and is
+searchable; the full original ID path remains visible. Neither HTML nor source
+placeholders are interpreted, and saved text is not translated or refreshed from
+product data. No project/domain/storage/command or protocol behavior changes.
+
+This candidate supersedes only the earlier open schema-20 text-display item.
+The dated acceptance above remains historical. Manufacturer mapping, module
+placement, staleness, priority and broader real-export compatibility remain open.
+[Focused results, original failures and pending acceptance](../status/2026-11-05-saved-schema20-node-text.md).
+
 ## Source anchors
 
 - [Source representation](../../crates/knx-etsproj/src/source.rs),

@@ -2,9 +2,11 @@
 import { expect, test } from "@playwright/test";
 import { join } from "node:path";
 import { writeFileSync } from "node:fs";
+
 import { messages as en } from "../src/messages/en";
 import { messages as de } from "../src/messages/de";
 import { intercept, openList, openProject } from "./communication-fixture";
+import type { ComObjectProjectFolder } from "../src/bindings/ComObjectProjectFolder";
 // Issue #9 (devices view): a channel header reads "▾ name · count" from the left,
 // and its objects start one level right of the header's marker.
 for (const language of ["en", "de"] as const) for (const width of [1440, 400]) for (const theme of ["porcelain", "graphite"]) {
@@ -341,3 +343,77 @@ test("a refused editor survives switching through the folder view with exactly o
   expect(state.requests.filter(r => r === "POST /api/com-object-dpt")).toHaveLength(1);
   expect(JSON.stringify(state.tree)).toBe(before); expect(state.unexpected).toEqual([]);
 });
+
+for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
+  test(`${language} ${width}px: saved schema20 literal folder text is inert, searchable and never identity`, async ({ page }) => {
+    const m = language === "en" ? en : de;
+    await page.setViewportSize({ width, height: 900 });
+    const state = await intercept(page, language, 8);
+    const literal = '<img src=x onerror="alert(1)"> {{ChNo}} & {{0}}';
+    const folder = (channel: string, text: string): ComObjectProjectFolder => ({
+      status: "Assigned", key: `Channel:4:${channel}/Folder:4:PB-3`,
+      path: [{ kind: "Channel", ref_id: channel, text: "Channel-only secret" }, { kind: "Folder", ref_id: "PB-3", text }],
+    });
+    const fallback = (ref_id: string, text?: string): ComObjectProjectFolder => ({
+      status: "Assigned", key: `Folder:4:${ref_id}`, path: [{ kind: "Folder", ref_id, text }],
+    });
+    state.objects[0] = { ...state.objects[0], project_folder: folder("CH-1", literal) };
+    state.objects[1] = { ...state.objects[1], activation: "NotEvaluated", project_folder: folder("CH-2", literal) };
+    state.objects[2] = { ...state.objects[2], project_folder: folder("CH-1", "Captiononly {{ChNo}}") };
+    state.objects[3] = { ...state.objects[3], project_folder: fallback("PB-4", "   ") };
+    state.objects[4] = { ...state.objects[4], project_folder: fallback("PB-5", "") };
+    state.objects[5] = { ...state.objects[5], activation: "NotEvaluated", project_folder: fallback("PB-6") };
+    state.objects[6] = { ...state.objects[6], project_folder: { status: "ModuleObject", key: null, path: [] } };
+    state.objects[7] = { ...state.objects[7], project_folder: { status: "NoFolder", key: null, path: [] } };
+    await openProject(page, language); await openList(page, language);
+    await page.locator(".devices-table tbody td:nth-child(3) button").first().click();
+    const panel = page.locator(".com-table-panel");
+    const before = JSON.stringify({ tree: state.tree, objects: state.objects }), requestStart = state.requests.length;
+    const header = (key: string) => panel.locator(`tr.com-object-channel[data-group-key="${key}"] .com-object-channel-summary`);
+    const search = panel.getByRole("searchbox", { name: m["comTable.search"] });
+    await panel.getByRole("button", { name: m["comTable.byFolder"], exact: true }).click();
+    expect(await panel.locator("tr.com-object-channel").evaluateAll(rows => rows.map(r => r.getAttribute("data-group-key"))))
+      .toEqual([F1, F2, "folder:Folder:4:PB-4", "folder:Folder:4:PB-5", "folder:Folder:4:PB-6", "folder-none"]);
+    for (const [key, channel] of [[F1, "CH-1"], [F2, "CH-2"]]) {
+      await expect(header(key).locator("strong")).toHaveText(`${literal} (PB-3)`);
+      await expect(header(key).locator(".com-object-folder-path")).toBeVisible();
+      await expect(header(key).locator(".com-object-folder-path")).toHaveText(m["comTable.folderPath"].replace("{value}", `${channel} › PB-3`));
+    }
+    for (const id of [4, 5, 6]) await expect(header(`folder:Folder:4:PB-${id}`).locator("strong")).toHaveText(`PB-${id}`);
+    await expect(panel.locator(".com-folder-view-note")).toHaveText(m["comTable.folderViewNote"]);
+    await expect(panel.locator("img, script, b, [data-text-fill]")).toHaveCount(0);
+    await header(F1).focus(); await page.keyboard.press("Enter");
+    await expect(header(F1)).toHaveAttribute("aria-expanded", "true");
+    await expect(panel.locator('tr[data-object-id="1"]')).toBeVisible();
+    await expect(panel.locator('tr[data-object-id="3"]')).toBeVisible();
+    await expect(panel.locator('tr[data-object-id="1"] .com-object-project-folder')).toContainText(m["comTable.projectFolder"].replace("{value}", `${literal} (PB-3)`));
+    await expect(panel.locator('tr[data-object-id="1"] .com-object-folder-path')).toHaveText(m["comTable.folderPath"].replace("{value}", "CH-1 › PB-3"));
+    if (process.env.KNX_CO_CAPTURE_DIR) await page.screenshot({ path: join(process.env.KNX_CO_CAPTURE_DIR, `co-saved-text-${language}-${width}.png`) });
+    await search.fill("{{ChNo}}");
+    expect(await panel.locator("tr.com-object-summary:visible").evaluateAll(rows => rows.map(r => r.getAttribute("data-object-id"))))
+      .toEqual(["1", "3", "2"]);
+    await search.fill("Captiononly");
+    await expect(panel.locator("tr.com-object-summary:visible")).toHaveCount(1);
+    await expect(panel.locator('tr[data-object-id="3"]')).toBeVisible();
+    await expect(header(F1).locator(".com-object-channel-count")).toHaveText(m["comTable.count.other"].replace("{shown}", "1").replace("{total}", "2"));
+    await search.fill("PB-3");
+    await expect(panel.locator("tr.com-object-summary:visible")).toHaveCount(3);
+    await search.fill("Channel-only secret");
+    await expect(panel.locator("tr.com-object-summary:visible")).toHaveCount(0);
+    await panel.getByRole("button", { name: m["comTable.resetFilters"], exact: true }).click();
+    await expect(header(F1)).toHaveAttribute("aria-expanded", "true");
+    await expect(header(F2)).toHaveAttribute("aria-expanded", "false");
+    await panel.getByRole("button", { name: m["comTable.flat"], exact: true }).click();
+    await expect(panel.locator("thead th")).toHaveCount(7);
+    await expect(panel.locator('tr[data-object-id="7"] .com-object-project-folder')).toHaveText(m["comTable.projectFolderRefused.ModuleObject"]);
+    await expect(panel.locator('tr[data-object-id="8"] .com-object-project-folder')).toHaveCount(0);
+    await search.fill("PB-6");
+    await expect(panel.locator('tr[data-object-id="6"]')).toBeVisible();
+    await expect(panel.locator("tr.com-object-summary:visible")).toHaveCount(1);
+    await expect(panel.locator('tr[data-object-id="6"] .com-object-project-folder')).toHaveText(m["comTable.projectFolder"].replace("{value}", "PB-6"));
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1);
+    expect(JSON.stringify({ tree: state.tree, objects: state.objects })).toBe(before);
+    expect(state.requests.slice(requestStart).filter(r => !r.startsWith("GET ") && r !== "POST /api/achievements/record")).toEqual([]);
+    expect(state.unexpected).toEqual([]);
+  });
+}

@@ -11,7 +11,7 @@ import { useProductLanguage } from "./productLanguage";
 import { LanguageFallbackBadge, fellBack } from "./languageFallback";
 import { formatGroupAddress } from "./gaNotation";
 import { ACTIVATION_ORDER, DEFAULT_FILTERS, channelKey, deriveComObjectView, dptOptions, evaluatedChannel,
-  effectiveDpt, hasFilters, projectFolderIds, projectFolderRefusal, type ComFilters, type ComGrouping, type ComSort, type ComSortColumn,
+  effectiveDpt, hasFilters, projectFolderIds, projectFolderNodeLabel, projectFolderRefusal, type ComFilters, type ComGrouping, type ComSort, type ComSortColumn,
   type RefusedProjectFolder } from "./comObjectView";
 import ComMutationBoundary from "./ComMutationBoundary";
 import { dptDisplay } from "./dptLabels";
@@ -42,25 +42,28 @@ function ChannelText({ channel }: { channel: ComObjectChannel | null }) {
     {channel?.kind === "Channel" && channel.text && channel.name && <span className="com-object-channel-name">{t("inspector.channelName", { value: channel.name })}</span>}
     {channel?.kind === "Channel" && channel.number && <span className="com-object-channel-number">{t("inspector.channelNumber", { value: channel.number })}</span>}</>;
 }
-/** WP-06: a folder group's declared Folder ids and, always visible, its complete saved path. */
+/** Saved folder text accompanies IDs; the complete original ID path stays visible. */
 function FolderText({ folder }: { folder: ComObjectProjectFolder | null }) {
   const t = useTranslate();
   if (folder === null) return <strong>{t("comTable.noFolderGroup")}</strong>;
   const path = folder.path.map(n => n.ref_id).join(" › ");
-  return <><strong title={t("comTable.projectFolderTitle", { value: path })}>{folder.path.filter(n => n.kind === "Folder").map(n => n.ref_id).join(" › ")}</strong>
+  return <><strong title={t("comTable.projectFolderTitle", { value: path })}>{folder.path.filter(n => n.kind === "Folder").map(projectFolderNodeLabel).join(" › ")}</strong>
     <span className="com-object-folder-path">{t("comTable.folderPath", { value: path })}</span></>;
 }
 const FOLDER_REFUSAL_KEYS: Record<RefusedProjectFolder, MessageKey> = {
   Ambiguous: "comTable.projectFolderRefused.Ambiguous", UnidentifiedNode: "comTable.projectFolderRefused.UnidentifiedNode",
   TreeUnresolved: "comTable.projectFolderRefused.TreeUnresolved", ModuleObject: "comTable.projectFolderRefused.ModuleObject",
   Inactive: "comTable.projectFolderRefused.Inactive" };
-/** WP-06a: the saved project folder by its declared ids, or why the tree's folder is withheld. */
+/** Shows literal saved folder text with IDs, or the existing saved-placement refusal. */
 function ProjectFolderNote({ com }: { com: ComObjectNode }) {
   const t = useTranslate();
   const ids = projectFolderIds(com), refusal = projectFolderRefusal(com);
+  const folder = com.project_folder;
+  const path = folder?.path.map(n => n.ref_id).join(" › ") ?? "";
   if (ids !== null) return <small className="com-object-project-folder" data-folder-status="Assigned"
-    title={t("comTable.projectFolderTitle", { value: com.project_folder!.path.map(n => n.ref_id).join(" › ") })}>
-    {t("comTable.projectFolder", { value: ids.join(" › ") })}</small>;
+    title={t("comTable.projectFolderTitle", { value: path })}>
+    {t("comTable.projectFolder", { value: folder!.path.filter(n => n.kind === "Folder").map(projectFolderNodeLabel).join(" › ") })}
+    {folder!.path.some(n => n.kind === "Folder" && n.text !== undefined) && <><br /><span className="com-object-folder-path">{t("comTable.folderPath", { value: path })}</span></>}</small>;
   return refusal === null ? null
     : <small className="com-object-project-folder" data-folder-status={refusal}>{t(FOLDER_REFUSAL_KEYS[refusal])}</small>;
 }

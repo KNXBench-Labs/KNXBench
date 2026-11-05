@@ -1,7 +1,7 @@
 /** Communication-object filtering and stable sorting contracts. */
 import { expect, it } from "vitest";
 import type { ComObjectNode } from "./bindings/ComObjectNode";
-import { deriveComObjectView, dptOptions, DEFAULT_FILTERS, projectFolderIds, projectFolderRefusal, type ComSortColumn } from "./comObjectView";
+import { deriveComObjectView, dptOptions, DEFAULT_FILTERS, projectFolderIds, projectFolderNodeLabel, projectFolderRefusal, type ComSortColumn } from "./comObjectView";
 export function object(id: number, overrides: Partial<ComObjectNode> = {}): ComObjectNode {
   return { id, number: id, name: `Object ${id}`, function_text: null, description: null,
     description_layer: null, dpt: null, dpt_layer: null, program_dpt: null, dpt_text: null,
@@ -157,4 +157,44 @@ it("an explicit channel grouping equals the default grouping", () => {
   const explicit = deriveComObjectView(objects, DEFAULT_FILTERS, { column: null, descending: false }, "en", true, "channel");
   expect(explicit.groups.map(g => g.key)).toEqual(["channel:b", "unassigned"]);
   expect(explicit).toEqual(view(objects, DEFAULT_FILTERS, null, false, true));
+});
+
+it("saved schema20 text accompanies IDs verbatim and blank text only falls back for display", () => {
+  for (const text of [undefined, "", " \t\n"]) expect(projectFolderNodeLabel({ kind: "Folder", ref_id: "PB-3", text })).toBe("PB-3");
+  const node = { kind: "Folder", ref_id: "PB-3", text: "  <b>{{ChNo}}</b> & {{0}}  " };
+  expect(projectFolderNodeLabel(node)).toBe("  <b>{{ChNo}}</b> & {{0}}   (PB-3)");
+  expect(node.text).toBe("  <b>{{ChNo}}</b> & {{0}}  ");
+});
+it("searches only admitted Folder text and IDs, not refused paths or saved Channel text", () => {
+  const path = [{ kind: "Channel", ref_id: "CH-77", text: "Channel secret" },
+    { kind: "Folder", ref_id: "PB-3", text: "<b>{{ChNo}}</b> & Kitchen" }];
+  const objects = [object(1, { project_folder: { status: "Assigned", key: "opaque", path } }),
+    ...["Ambiguous", "UnidentifiedNode", "TreeUnresolved", "ModuleObject", "Inactive", "NoFolder", "NotInSavedTree"]
+      .map((status, i) => object(i + 2, { project_folder: { status: status as Folder["status"], key: "refused-key",
+        path: [{ kind: "Folder", ref_id: "REFUSED-ID", text: "Refused secret" }] } })),
+    object(9, { project_folder: { status: "Assigned", key: "channel-only", path: [path[0]] } })];
+  const before = JSON.stringify(objects);
+  for (const query of ["kitchen", "PB-3", "{{ChNo}}", "<b>"]) {
+    expect(byFolder(objects, { ...DEFAULT_FILTERS, query }).objects.map(o => o.id)).toEqual([1]);
+  }
+  for (const query of ["Channel secret", "CH-77", "Refused secret", "REFUSED-ID"]) {
+    expect(byFolder(objects, { ...DEFAULT_FILTERS, query }).objects).toEqual([]);
+  }
+  expect(JSON.stringify(objects)).toBe(before);
+});
+it("caption equality and caption changes never affect opaque folder membership, totals or order", () => {
+  const a = pb3("CH-1"), b = pb3("CH-2");
+  const caption = (folder: Folder, text: string): Folder => ({ ...folder, path: folder.path.map(n => ({ ...n, text })) });
+  const objects = [object(1, { project_folder: caption(a, "Same") }),
+    object(2, { project_folder: caption(b, "Same") }), object(3, { project_folder: caption(a, "Different") }), object(4)];
+  const expected = [
+    ["folder:Channel:4:CH-1/Folder:4:PB-3", [1, 3], 2],
+    ["folder:Channel:4:CH-2/Folder:4:PB-3", [2], 1], ["folder-none", [4], 1],
+  ];
+  const membership = (items: ComObjectNode[]) => byFolder(items).groups.map(g => [g.key, g.objects.map(o => o.id), g.total]);
+  expect(membership(objects)).toEqual(expected);
+  expect(membership(objects.map(o => ({ ...o, project_folder: o.project_folder ? caption(o.project_folder, "Changed {{0}}") : undefined })))).toEqual(expected);
+  expect(byFolder(objects, { ...DEFAULT_FILTERS, query: "Different" }).groups.map(g => [g.key, g.objects.map(o => o.id), g.total])).toEqual([
+    ["folder:Channel:4:CH-1/Folder:4:PB-3", [3], 2], ["folder:Channel:4:CH-2/Folder:4:PB-3", [], 1], ["folder-none", [], 1],
+  ]);
 });

@@ -36,6 +36,8 @@ pub enum TpuartMode {
 
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub struct TpuartDiagnostics {
+    /// Raw octets discarded before this session's first reset, never live telegrams.
+    pub startup_discarded_bytes: u64,
     /// First terminal error, or explicit disconnect; retained after Closed.
     pub closure: Option<String>,
     /// Raw bus acknowledgements seen in passive mode (not L_Data.con).
@@ -46,6 +48,7 @@ pub struct TpuartDiagnostics {
 #[derive(Clone, Copy)]
 struct Timing {
     initialize: Duration,
+    startup_quiet: Duration,
     send: Duration,
     frame: Duration,
     shutdown: Duration,
@@ -54,6 +57,7 @@ impl Default for Timing {
     fn default() -> Self {
         Self {
             initialize: Duration::from_secs(2),
+            startup_quiet: Duration::from_millis(20),
             send: Duration::from_secs(2),
             frame: Duration::from_millis(250),
             shutdown: Duration::from_millis(300),
@@ -142,7 +146,7 @@ impl TpuartClient {
     }
 
     async fn connect_stream<S>(
-        stream: S,
+        mut stream: S,
         source: IndividualAddress,
         mode: TpuartMode,
         timing: Timing,
@@ -151,6 +155,12 @@ impl TpuartClient {
         S: AsyncRead + AsyncWrite + Unpin + Send + 'static,
     {
         Self::validate_source(source)?;
+        let initialize_deadline = Instant::now() + timing.initialize;
+        let startup_discarded_bytes =
+            settle_startup_input(&mut stream, timing.startup_quiet, initialize_deadline).await?;
+        if Instant::now() >= initialize_deadline {
+            return Err(BusError::Timeout);
+        }
         let (requests, queue) = mpsc::channel(16);
         let (sender, _) = broadcast::channel(256);
         let events = Arc::new(Mutex::new(Events {
@@ -159,7 +169,10 @@ impl TpuartClient {
         }));
         let (stop, stopped) = watch::channel(false);
         let (done_tx, done) = watch::channel(false);
-        let diagnostics = Arc::new(Mutex::new(TpuartDiagnostics::default()));
+        let diagnostics = Arc::new(Mutex::new(TpuartDiagnostics {
+            startup_discarded_bytes,
+            ..Default::default()
+        }));
         let (ready_tx, ready) = oneshot::channel();
         let client = Self {
             source,
@@ -182,6 +195,7 @@ impl TpuartClient {
             events,
             diagnostics,
             ready_tx,
+            initialize_deadline,
         ));
         match ready
             .await
@@ -323,6 +337,39 @@ impl ScanTransport for TpuartClient {
     }
 }
 
+/// Drain pre-session USB/UART backlog, not protocol input after the first reset.
+/// The quiet interval is a bounded settling policy, not a KNX silence guarantee.
+async fn settle_startup_input<S: AsyncRead + Unpin>(
+    stream: &mut S,
+    quiet: Duration,
+    deadline: Instant,
+) -> Result<u64, BusError> {
+    if quiet.is_zero() {
+        return Err(protocol("startup quiet interval must be nonzero"));
+    }
+    let mut discarded = 0u64;
+    let mut buffer = [0u8; 256];
+    loop {
+        if Instant::now() >= deadline {
+            return Err(BusError::Timeout);
+        }
+        let idle_deadline = (Instant::now() + quiet).min(deadline);
+        match timeout_at(idle_deadline, stream.read(&mut buffer)).await {
+            Ok(Ok(0)) => {
+                return Err(protocol("serial stream closed during startup settling"));
+            }
+            Ok(Ok(n)) => {
+                discarded = discarded.saturating_add(n as u64);
+                // An always-ready stream must not starve cancellation or the budget.
+                tokio::task::yield_now().await;
+            }
+            Ok(Err(error)) => return Err(BusError::Io(error)),
+            Err(_) if Instant::now() >= deadline => return Err(BusError::Timeout),
+            Err(_) => return Ok(discarded),
+        }
+    }
+}
+
 async fn read_services<R: AsyncRead + Unpin>(
     mut reader: R,
     tx: mpsc::Sender<Result<Service, BusError>>,
@@ -367,6 +414,7 @@ struct Link<W> {
     events: Arc<Mutex<Events>>,
     diagnostics: Arc<Mutex<TpuartDiagnostics>>,
     mode: TpuartMode,
+    reset_attempted: bool,
 }
 impl<W: AsyncWrite + Unpin> Link<W> {
     async fn next(&mut self) -> Result<Service, BusError> {
@@ -408,7 +456,15 @@ impl<W: AsyncWrite + Unpin> Link<W> {
             self.background(service)?;
         }
     }
-    async fn initialize(&mut self, source: IndividualAddress) -> Result<(), BusError> {
+    async fn initialize(
+        &mut self,
+        source: IndividualAddress,
+        deadline: Instant,
+    ) -> Result<(), BusError> {
+        if Instant::now() >= deadline {
+            return Err(BusError::Timeout);
+        }
+        self.reset_attempted = true;
         self.write(&[1]).await?;
         self.expect(Service::Reset).await?;
         self.write(&[2]).await?;
@@ -479,6 +535,7 @@ async fn run<S: AsyncRead + AsyncWrite + Unpin + Send + 'static>(
     events: Arc<Mutex<Events>>,
     diagnostics: Arc<Mutex<TpuartDiagnostics>>,
     ready: oneshot::Sender<Result<(), BusError>>,
+    initialize_deadline: Instant,
 ) {
     let (reader, writer) = tokio::io::split(stream);
     let (incoming_tx, incoming) = mpsc::channel(256);
@@ -489,11 +546,16 @@ async fn run<S: AsyncRead + AsyncWrite + Unpin + Send + 'static>(
         events,
         diagnostics: diagnostics.clone(),
         mode,
+        reset_attempted: false,
     };
-    let initialized = tokio::select! {
-        biased;
-        _ = stopped.changed() => Err(protocol("initialization cancelled")),
-        result = timeout(timing.initialize, link.initialize(source)) => result.unwrap_or(Err(BusError::Timeout)),
+    let initialized = if Instant::now() >= initialize_deadline {
+        Err(BusError::Timeout)
+    } else {
+        tokio::select! {
+            biased;
+            _ = stopped.changed() => Err(protocol("initialization cancelled")),
+            result = timeout_at(initialize_deadline, link.initialize(source, initialize_deadline)) => result.unwrap_or(Err(BusError::Timeout)),
+        }
     };
     let mut reason = initialized.as_ref().err().map(ToString::to_string);
     let initialized = initialized.is_ok();
@@ -523,7 +585,12 @@ async fn run<S: AsyncRead + AsyncWrite + Unpin + Send + 'static>(
     }
     // Stop admitting sends before cleanup. Queued requests never reach the wire.
     queue.close();
-    let cleanup = timeout(timing.shutdown, link.reset()).await;
+    let cleanup = if link.reset_attempted {
+        timeout(timing.shutdown, link.reset()).await
+    } else {
+        // No protocol command began, so cancellation/expiry must not cause one.
+        Ok(Ok(()))
+    };
     let reason = match cleanup {
         Ok(Ok(())) => reason.unwrap_or_else(|| "client disconnected".into()),
         Ok(Err(e)) => format!(

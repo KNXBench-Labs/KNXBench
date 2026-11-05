@@ -5,6 +5,8 @@ use crate::cemi::{FrameControl, GroupValue};
 use knx_core::GroupAddress;
 use tokio::io::DuplexStream;
 
+mod startup;
+
 // Independent NCN5130 Table 12/13 + standard TP1 layout vectors. FCS is one's
 // complement XOR; no encoder-under-test builds the oracle or fake responses.
 const TP: &[u8] = &[0xbc, 0x11, 0x01, 0x09, 0x01, 0xe1, 0x00, 0x81, 0x3b];
@@ -34,6 +36,7 @@ fn frame() -> LDataFrame {
 fn timing() -> Timing {
     Timing {
         initialize: Duration::from_millis(100),
+        startup_quiet: Duration::from_millis(1),
         send: Duration::from_millis(100),
         frame: Duration::from_millis(40),
         shutdown: Duration::from_millis(50),
@@ -419,13 +422,21 @@ async fn initialization_reset_state_config_refusals_and_deadlines() {
 #[tokio::test(start_paused = true)]
 async fn initialization_cancellation_resets_then_closes() {
     let (stream, mut peer) = tokio::io::duplex(256);
-    let result = timeout(
-        Duration::from_millis(1),
-        TpuartClient::connect_stream(stream, source(), TpuartMode::Active, timing()),
-    )
-    .await;
-    assert!(result.is_err());
-    bytes(&mut peer, &[1, 1]).await;
+    let mut opening = Box::pin(TpuartClient::connect_stream(
+        stream,
+        source(),
+        TpuartMode::Active,
+        timing(),
+    ));
+    tokio::select! {
+        _ = &mut opening => panic!("initialization completed before cancellation point"),
+        first = peer.read_u8() => assert_eq!(first.unwrap(), 1),
+    }
+    // Cancel only after the first reset was actually sent, not during settling.
+    let cancelled_at = Instant::now();
+    drop(opening);
+    bytes(&mut peer, &[1]).await;
+    assert_eq!(Instant::now(), cancelled_at);
     peer.write_all(&[3]).await.unwrap();
     let mut rest = Vec::new();
     peer.read_to_end(&mut rest).await.unwrap();

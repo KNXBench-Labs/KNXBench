@@ -25,6 +25,24 @@ configurations covered on the same accepted build. The [source and verification 
 separates software execution from physical evidence and the older IP-only record.
 This update supersedes the old transport-only scope, not its historical results.
 
+## Bounded serial startup/receive update (5 November 2026)
+
+The later USB startup correction settles pre-session buffered input before the
+first reset, within the existing total initialization deadline. No post-reset
+service matching or frame validation is relaxed. Busy streams that never reach
+the bounded idle interval fail closed. The earlier software-only epoch above
+had no physical serial acceptance; the following narrow witness supersedes that
+absence, not the remaining error-path/transmit limits.
+
+An owner-authorized isolated C6 USB-Serial 1.0.8 session retrieved twelve decoded
+monitor records; its separately observed terminal counter was fourteen, not
+fourteen inspected records. Activity remained serial/passive and active,
+bound stop had no warning, and the server exited with its port released. No
+group action or IP fallback was called. This proves normal passive receive on
+one build, not bridge parity/error preservation, active sending, extended-frame
+support, other adapters or long-running stability. See the [dated source and
+verification record](../status/2026-11-04-usb-serial-ui.md#usb-startup-synchronization-and-bounded-receive-witness-5-november-2026).
+
 <!-- BEGIN retained catalogue record -->
 
 ## 62. The Group Monitor GUI (T15) is tunnelling-only, single-session, client-filtered, and only its passive receive path has real-gateway evidence

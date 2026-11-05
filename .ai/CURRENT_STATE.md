@@ -1,6 +1,8 @@
 # Restart snapshot
-## WP-26 passive serial candidates (ACTIVE; package acceptance; WebUI task queue; observed 2026-11-05 16:07 CET)
-- Own `feat/wp26-serial-candidates-20261105` / `knxbench-wp26-serial-candidates-20261105`; claim af17a91f3 published/docs10green. Originalreview BLOCK2 preserved; final3filev3 correction/25unchanged APPROVE0findings, independent guard mutant killed2cases and restored88. Focus5 complete9/frozen/buildsame/dev8+prod8,32PNGs/16unique inspected; author7Rust/242uniqueweb and parent28TS separate. No hardware compatibility/fullUSB census claim. NEXT reviewed source commit, selected15stage branch gate then main-first integration/gate/push and docs/owncleanup; no package acceptance or runtime publication yet. Evidence `<profile-scratch>/wp26-serial-candidates-20261105/`. Synthetic/intercepted+isolated corpus only; no hardware/port/probe/bus/native/VM/release/deploy; root/foreign preserved.
+## WP-06 saved node text (ACTIVE; WebUI next-tasks; observed 2026-11-05 16:16 CET)
+- Own `feat/wp06-schema20-captions-20261105` / `knxbench-wp06-schema20-captions-20261105`: public-witness admission for literal saved Node/@Text, then bounded reader/projection/table tests. No template evaluation/manufacturer mapping/identity change or module authority. Other owners preserved; no bus/hardware/native/VM/release/deploy. Next: reviewed source contract before code; evidence `<profile-scratch>/queue-next-20261105/`.
+## WP-26 passive serial candidates (ACTIVE; final package acceptance; WebUI task queue; observed 2026-11-05 16:34 CET)
+- Own `feat/wp26-serial-candidates-20261105` / `knxbench-wp26-serial-candidates-20261105`; source c760b5d85 plus independently APPROVED companion2file correction,29ownedpaths bound;105focused/type PASS, project-undo census mutant caught and17restored. Original branchgate FAILED/frozen/userdata clear (5167pass/1graphpin), not credited; final main-first complete selected15stage gate planned after this fixcommit. Upstream80e1416a0 is WP06claim-only checkpoint; snapshot preserves it, all other source unchanged. Earlier v3review/focus5dev8+prod8/visual remain historical bindings. NEXT main-first gate, actual serverbuild/version and conditionalpush, then accurate docs/ownretention/cleanup. Evidence `<profile-scratch>/wp26-serial-candidates-20261105/`; no runtime publication/package acceptance yet; isolated/synthetic only, no hardware/port/probe/bus/native/VM/release/deploy; root/foreign owners preserved.
 ## USB/serial UI acceptance reference (STANDING; observed 2026-11-05 07:01 CET)
 - Published/main-firsteab79cc5b (source40c327374/base8f1a933f2), live/tracking exact. IndependentF1–F4 APPROVE; full selected15-stage+supplement45-stage gates proved/frozen/userdata checkeduntouched; all16productionconfigs exact-build covered. Rust1741/72ignored, corpus51/51, UI5099, default1026+69, communication91+1; overlapping per-lane counts. Real-server smoke12HTTP/exit0 and16EN/DE400/1440 captures accepted. Prior failed epochs remain failed; source acceptance `docs/status/2026-11-04-usb-serial-ui.md`. No runtime repair claim, physical/firmware compatibility or release/deploy authority. Root-local checkpoint owns docs closeout/retention/retirement; foreign/native tracks preserved.
 ## System2 recovery acceptance reference (STANDING; observed 2026-11-04 11:27 CET)
@@ -32,7 +34,6 @@
 - All15 planned stages complete/frozen, checked user data untouched; source acceptance:
   `docs/status/2026-11-02-rail-themes.md`. No release/deployment/native/bus claim.
 - NEXT: docs-only closeout, private evidence archive and owned cleanup.
-
 ## Proportionate gate acceptance reference (STANDING; observed 2026-11-03 03:12 CET)
 - Source703ec2904 published/readback equal; original policy and fixture reviews APPROVE.
 - Full490 acceptance10/10 +actual Rust diagnostic15/15 retained; exact successor composition,
@@ -40,7 +41,6 @@
 - Verification: `docs/status/2026-11-03-proportionate-gates.md`; GATE-01 remains open for other work.
 - NEXT documentation closeout, private evidence archive and owned cleanup. No active implementation
   claim, release/deployment/native/bus authority or shared-root update from this delivery.
-
 ## Retained boundaries (STANDING; observed 2026-11-02 20:47 CET)
 - System-2 acceptance: `docs/status/2026-11-02-system2-selective-settlement.md`.
 - Root intentionally stale/dirty: preserve private/untracked files and other edits.

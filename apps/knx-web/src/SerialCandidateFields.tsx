@@ -1,6 +1,6 @@
 /** Offer explicit, unverified server-local serial candidates without changing connection state. */
 import { useEffect, useRef, useState } from "react";
-import { listSerialCandidates } from "./api";
+import * as api from "./api";
 import { useTranslate } from "./i18n";
 import type { SerialCandidates } from "./serialCandidates";
 
@@ -20,7 +20,7 @@ export default function SerialCandidateFields({ disabled, onSelect }: {
     const own = ++generation.current;
     setListing({ status: "loading" });
     try {
-      const response = await listSerialCandidates();
+      const response = await api.listSerialCandidates();
       if (own === generation.current) setListing(response);
     } catch (error) {
       if (own !== generation.current) return;

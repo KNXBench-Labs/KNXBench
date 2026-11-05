@@ -22,6 +22,7 @@ const apiMock = vi.hoisted(() => ({
   getSessionLog: vi.fn(),
   getImportEvidence: vi.fn(),
   discoverBusInterfaces: vi.fn().mockResolvedValue({ interfaces: [] }),
+  listSerialCandidates: vi.fn(),
   undo: vi.fn(),
   redo: vi.fn(),
 }));
@@ -37,7 +38,7 @@ vi.mock("./api", () => ({
 
 import { resetBusDiscoveryForTests } from "./busDiscovery";
 import DiagnosticsCompanion from "./DiagnosticsCompanion";
-import { resetSettingsForTests } from "./settingsStore";
+import { getSetting, resetSettingsForTests, setSetting } from "./settingsStore";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -395,6 +396,13 @@ describe("one editing workspace", () => {
     // through the shared controller (one action token, bound stop). It reads
     // the activity snapshot and calls the same start and a session-bound stop;
     // it holds no project state.
+    // Passive serial candidates add a local listing view plus pure wire admission.
+    // The explicit GET is pinned below; no project mutator or device probe is added.
+    const serialCandidatesGraph = valueImportGraph("serialCandidates.ts");
+    expect([...serialCandidatesGraph.keys()]).toEqual(["serialCandidates.ts"]);
+    expect(apiCallsIn(serialCandidatesGraph)).toEqual([]);
+    expect(mutatingFetchesIn(serialCandidatesGraph)).toEqual([]);
+    expect(serialCandidatesGraph.get("serialCandidates.ts")).not.toMatch(/\b(?:fetch|XMLHttpRequest|WebSocket|EventSource)\s*\(/);
     expect([...graph.keys()].sort()).toEqual([
       "BusComposeForm.tsx",
       "BusMonitorPanel.tsx",
@@ -412,6 +420,7 @@ describe("one editing workspace", () => {
       "ModalForeground.tsx", // React-only foreground context; default modal behavior is unchanged.
       "Overlay.tsx",
       "ResizableTable.tsx", // Browser-local presentation only; checked for API/fetch above.
+      "SerialCandidateFields.tsx", // Explicit metadata GET and path preference only.
       "TelegramFlowView.tsx",
       "achievementEvents.ts",
       "activityHistory.ts",
@@ -472,6 +481,7 @@ describe("one editing workspace", () => {
       "projectMetadata.ts",
       "projectPayloads.ts",
       "recordedDeviceState.ts", // Pure admission only; no IO, writer or device query.
+      "serialCandidates.ts", // Pure strict admission of unverified metadata, no IO.
       "serialPreference.ts",
       "serialTransport.ts",
       "session.ts",
@@ -509,6 +519,7 @@ describe("one editing workspace", () => {
       "getImportEvidence", // Authenticated GET only, never a project mutation.
       "getSessionLog",
       "isBoundBusSession", // Pure identity validation, no request.
+      "listSerialCandidates", // Explicit filesystem metadata GET, never a port open/project write.
       "pollBusTelegrams",
       "readBusValue",
       "startBusMonitor",
@@ -539,6 +550,36 @@ describe("one editing workspace", () => {
     expect(host!.querySelector(".project-explorer")).toBeNull();
     expect(host!.querySelector(".inspector")).toBeNull();
     expect(host!.querySelector(".toolbar")).toBeNull();
+  });
+
+  it("lists serial metadata only on an explicit companion action and selects only its path", async () => {
+    const path = "/dev/serial/by-id/usb-fictional-companion-if00";
+    const response: import("./serialCandidates").SerialCandidates = {
+      status: "available", candidates: [{ path, target: "/dev/ttyUSB0" }],
+      truncated: false, omittedEntries: 0,
+    };
+    setSetting("preferredBusTransport", "serial");
+    setSetting("serialPath", "/synthetic/manual");
+    setSetting("serialSource", "1.1.250");
+    setSetting("serialMode", "passive");
+    apiMock.listSerialCandidates.mockResolvedValue(response);
+    const root = await renderCompanion();
+    try {
+      expect(calledApiExports()).toEqual(["pollBusTelegrams"]);
+      const list = host!.querySelector<HTMLButtonElement>(".serial-candidate-fields > button")!;
+      expect(list).not.toBeNull();
+      await act(async () => list.click());
+      expect(apiMock.listSerialCandidates).toHaveBeenCalledExactlyOnceWith();
+      expect(getSetting("serialPath")).toBe("/synthetic/manual");
+      const choose = host!.querySelector<HTMLButtonElement>(".serial-candidate-fields li button")!;
+      expect(choose).not.toBeNull();
+      await act(async () => choose.click());
+      expect(getSetting("serialPath")).toBe(path);
+      expect(getSetting("serialSource")).toBe("1.1.250");
+      expect(getSetting("serialMode")).toBe("passive");
+      expect(getSetting("preferredBusTransport")).toBe("serial");
+      expect(calledApiExports()).toEqual(["listSerialCandidates", "pollBusTelegrams"]);
+    } finally { await act(async () => root.unmount()); }
   });
 
   it("switches to the session log without ever offering a save or an import", async () => {

@@ -285,8 +285,38 @@ start, poll, activity and stop were called; no group action, IP fallback, firmwa
 write or MCU reset was requested by this test.
 
 This is a bounded normal-receive witness on one adapter/firmware build, not full
-hardware acceptance: active transmission, bridge parity/error forwarding,
-extended frames, other adapters and long-running stability remain unverified.
+hardware acceptance. The subsequent transmit witness below narrows only the
+normal-send limit; bridge parity/error forwarding, extended frames, other
+adapters and long-running stability remain unverified.
 The existing deployed server was not replaced by this isolated test. The
 [research addendum](../research/2026-11-04-usb-tpuart.md#pre-session-usbuart-backlog-5-november-2026)
 records the narrower startup evidence and policy.
+
+### Published correction and one bounded USB group write
+
+The exact tested correction `b14f40089` was fast-forwarded to main and read back
+from the live remote. All fourteen selected package stages passed with valid
+stage proofs, frozen inputs and checked unchanged user data. The additional
+frontend API/composer check passed 131 tests, including active serial writes
+bound to the current session and server incarnation. These are scoped source
+checks, not a new workspace, release or deployment claim.
+
+A subsequent owner-authorized isolated server built at that revision performed
+exactly one bound `GroupValueWrite` for DPT 1.001, value ON, through the confirmed
+C6 USB-Serial 1.0.8 adapter. Serial capture verified one correctly addressed
+standard-TP1 frame with valid checksum, its full matching echo and immediately
+following positive `L_Data.con` (`0x8b`). Start, write and bound stop returned HTTP
+200; stop had no warning, the server exited 0 and the port was released. There
+was no IP fallback, second API write, automatic OFF, device programming, firmware
+write or requested MCU reset. Installation addresses and raw captures stay private.
+
+The owner subsequently confirmed the expected ON reaction and explicitly asked
+for OFF. A separate, newly authorized OFF call through the same tested binary
+also returned HTTP 200 with matching full echo, positive link confirmation and
+clean stop. Each attempt issued one application write; OFF was not automatic.
+
+These prove the bounded normal USB transmit path. Link acknowledgement does not
+identify the acknowledging device or provide automatic application-state
+readback; the owner's ON observation remains separate evidence. Other
+payloads, bridge parity/error propagation and broader hardware compatibility
+remain unverified; the existing deployed server was not replaced.

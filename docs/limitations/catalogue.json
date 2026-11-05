@@ -1664,7 +1664,7 @@
       "number": 62,
       "title": "Group Monitor evidence",
       "topic": "Bus diagnostics and DPT",
-      "summary": "The single-session, client-filtered GUI adds explicit Linux TP-UART in main-only source builds. Normal passive USB receive has one C6 USB-Serial 1.0.8 witness; active transmission, bridge error/parity forwarding and broader device/routing/history scenarios remain unverified.",
+      "summary": "The single-session, client-filtered GUI adds explicit Linux TP-UART in main-only source builds. One C6 USB-Serial 1.0.8 has bounded normal receive and one-bit group-transmit witnesses; actuator state, bridge error/parity forwarding and broader payload/device/routing/history scenarios remain unverified.",
       "file": "KL-062-group-monitor-evidence.md",
       "ledger_ids": [
         "KL-62"

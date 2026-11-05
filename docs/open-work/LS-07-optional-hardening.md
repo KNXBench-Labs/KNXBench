@@ -9,7 +9,10 @@ in force.
 
 - Native hung-webview recovery design.
 - Redacted authorisation/restart status presentation.
-- The quiet-poll `Lagged` regression.
+- Quiet-poll `Lagged` coverage is software-accepted in the [bounded test-only record](../status/2026-11-05-quiet-poll-event-loss.md):
+  four real-overflow/healthy tests, independent review, calibrated mutations and
+  the selected 14-stage main-first gate passed on 5 November 2026. Runtime and
+  physical acceptance are unchanged; no remaining work is assigned by this bullet.
 - Descriptor-pinned backup paths.
 - Profiled large-device navigation.
 

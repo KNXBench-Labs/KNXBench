@@ -88,6 +88,7 @@ mod monitor_export_routes;
 mod project_payload_routes;
 mod recorded_device_state_routes;
 mod serial_address_routes;
+pub mod serial_candidates;
 mod service_control_routes;
 mod source_import_report_routes;
 pub use domain::*;

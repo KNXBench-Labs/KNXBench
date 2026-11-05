@@ -1,5 +1,6 @@
 /** fetch()-based HTTP client mirroring the Tauri invoke() surface the UI components call. */
 import { validSerialTarget, type SerialTarget } from "./serialTransport";
+import { admitSerialCandidates, type SerialCandidates } from "./serialCandidates";
 //! fetch()-based replacement for @tauri-apps/api/core's invoke() — same
 //! function names and argument shapes the components already called, so
 //! swapping the import at each call site is the only change there.
@@ -2003,6 +2004,11 @@ export async function fetchFlowSnapshot(sessionId: number, generation: string): 
 // success, never an error — see `busDiscovery.ts`.
 export function discoverBusInterfaces(): Promise<BusDiscoverResponse> {
   return request("/api/bus/discover", { method: "POST" });
+}
+
+/** Explicit passive filesystem listing; no IP discovery, port probe or connection. */
+export async function listSerialCandidates(): Promise<SerialCandidates> {
+  return admitSerialCandidates(await request<unknown>("/api/bus/serial-candidates", { method: "GET", cache: "no-store" }));
 }
 
 export function estimateLineScan(requestBody: LineScanRequest): Promise<LineScanEstimate> {

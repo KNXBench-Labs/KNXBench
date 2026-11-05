@@ -4,11 +4,13 @@ import { isDeepStrictEqual } from "node:util";
 import type { BusMonitorStartResponse, BusMonitorTelegramsResponse } from "../src/api";
 import type { ActivitySnapshot } from "../src/liveActivity";
 import { validSerialTarget, type SerialTarget } from "../src/serialTransport";
+import type { SerialCandidates } from "../src/serialCandidates";
 import { messages as en } from "../src/messages/en";
 import { messages as de } from "../src/messages/de";
 import { dismissToasts, intercept, openProject } from "./communication-fixture";
 
 const serial: SerialTarget = {path:"/synthetic/tpuart",source:"1.1.250",mode:"passive"};
+const candidatePath = "/dev/serial/by-id/usb-fictional-interface-with-a-long-name-if00";
 async function serve(page: Page, language: "en"|"de") {
   const state = await intercept(page,language);
   const starts: unknown[] = [], stops: string[] = [], ipStarts: unknown[] = [], settings: Record<string,unknown> = {
@@ -17,6 +19,23 @@ async function serve(page: Page, language: "en"|"de") {
   const reads: unknown[] = [], writes: unknown[] = [], requests: string[] = [];
   page.on("request",request=>{const url=new URL(request.url());if(url.pathname.startsWith("/api/"))requests.push(`${request.method()} ${url.pathname}`);});
   let connected: SerialTarget | null = null;
+  const candidates: {status:number; body:SerialCandidates} = {status:200,body:{status:"available",candidates:[{path:candidatePath,target:"/dev/ttyUSB0"}],truncated:false,omittedEntries:0}};
+  const candidateRequests: string[] = [];
+  const candidateGate: { hold: boolean; release?: () => void } = { hold: false };
+  await page.route("**/api/bus/serial-candidates", async route => {
+    candidateRequests.push(route.request().method());
+    if(route.request().method() !== "GET") state.unexpected.push("candidate listing method");
+    if(candidateGate.hold) await new Promise<void>(resolve => { candidateGate.release = resolve; });
+    return route.fulfill({status:candidates.status,json:candidates.body});
+  });
+  await page.route("**/api/legacy-password", route => {
+    if(route.request().method() !== "GET") {
+      state.unexpected.push("legacy-password method");
+      return route.fulfill({status:405,json:{error:"fixture supports GET only"}});
+    }
+    const body: import("../src/api").LegacyPasswordStatus = {available:true,remembered:false,problem:null};
+    return route.fulfill({json:body});
+  });
   await page.route("https://api.github.com/**",route=>{state.unexpected.push("external release check"); return route.abort();});
   await page.route("**/api/settings",async route=>{
     if(route.request().method()==="PUT") {
@@ -66,7 +85,7 @@ async function serve(page: Page, language: "en"|"de") {
     return route.fulfill({json:{service:"GroupValueWrite",encodedPayload:"0x01 (6-bit)",decodedEcho:{kind:"value",dpt:"DPST-1-1",text:"on"}}});
   });
   await page.route("**/api/bus/write",route=>{state.unexpected.push("legacy unbound serial write");return route.fulfill({status:409,json:{error:"serial requires bound write"}});});
-  return {state,starts,stops,ipStarts,settings,reads,writes,requests};
+  return {state,starts,stops,ipStarts,settings,reads,writes,requests,candidates,candidateRequests,candidateGate};
 }
 async function command(page:Page,label:string) {
   await page.keyboard.press("Control+Shift+P"); await page.getByRole("combobox").fill(label); await page.getByRole("combobox").press("Enter");
@@ -90,6 +109,50 @@ for(const language of ["en","de"] as const) for(const width of [1440,400]) {
     await expect(panel.getByRole("button",{name:m["busConnection.connect"],exact:true})).toBeDisabled();
     await panel.getByLabel(m["busTransport.source"],{exact:true}).fill(serial.source);
     await expect(panel).toContainText(m["busTransport.passiveHint"]);
+    expect(fixture.candidateRequests).toEqual([]);
+    const listButton=panel.getByRole("button",{name:m["serialCandidates.list"],exact:true});
+    fixture.candidateGate.hold=true;
+    try {
+      if(width===1440) await listButton.click();
+      else { await listButton.focus(); await page.keyboard.press("Enter"); }
+      await expect.poll(()=>fixture.candidateRequests).toEqual(["GET"]);
+      await expect(listButton).toBeFocused();
+      await expect(listButton).toHaveAttribute("aria-disabled","true");
+      // Synchronous repeated activation must not start a second request before a render.
+      await listButton.evaluate(button=>{(button as HTMLButtonElement).click();(button as HTMLButtonElement).click();});
+      await panel.getByLabel(m["busTransport.path"],{exact:true}).fill("/synthetic/edited-while-pending");
+      await panel.getByLabel(m["busTransport.source"],{exact:true}).fill("1.1.249");
+      await panel.getByRole("combobox",{name:m["busTransport.mode"],exact:true}).selectOption("active");
+      await expect(panel).toBeVisible();
+      expect(fixture.candidateRequests).toEqual(["GET"]);
+      expect(fixture.starts).toEqual([]); expect(fixture.ipStarts).toEqual([]);
+    } finally { fixture.candidateGate.hold=false; fixture.candidateGate.release?.(); }
+    await expect(panel.getByRole("button",{name:m["serialCandidates.use"].replace("{path}",candidatePath),exact:true})).toBeVisible();
+    await expect(panel.getByLabel(m["busTransport.path"],{exact:true})).toHaveValue("/synthetic/edited-while-pending");
+    await expect(panel.getByLabel(m["busTransport.source"],{exact:true})).toHaveValue("1.1.249");
+    await expect(panel.getByRole("combobox",{name:m["busTransport.mode"],exact:true})).toHaveValue("active");
+    await panel.getByRole("button",{name:m["serialCandidates.use"].replace("{path}",candidatePath),exact:true}).click();
+    await expect(panel.getByLabel(m["busTransport.path"],{exact:true})).toHaveValue(candidatePath);
+    await expect(panel.getByLabel(m["busTransport.source"],{exact:true})).toHaveValue("1.1.249");
+    await expect(panel.getByRole("combobox",{name:m["busTransport.mode"],exact:true})).toHaveValue("active");
+    await panel.locator(".serial-candidate-fields").screenshot({path:test.info().outputPath("serial-footer-candidates.png")});
+    expect(fixture.candidateRequests).toEqual(["GET"]);
+    expect(fixture.requests.filter(request=>request==="POST /api/bus/discover")).toHaveLength(bootstrapDiscovery);
+    await listButton.focus();
+    await page.keyboard.press("Escape");
+    await expect(panel).not.toBeVisible();
+    await expect(page.locator(".bus-connection-trigger")).toBeFocused();
+    await page.locator(".bus-connection-trigger").click();
+    await expect(panel).toBeVisible();
+    await panel.getByLabel(m["busTransport.path"],{exact:true}).focus();
+    await page.locator(".workbench-brand").focus();
+    await expect(panel).not.toBeVisible(); // Genuine outside focus must still close the owner.
+    await page.locator(".bus-connection-trigger").click();
+    await expect(panel).toBeVisible();
+    expect(fixture.candidateRequests).toEqual(["GET"]); // Remounting never lists automatically.
+    await panel.getByLabel(m["busTransport.path"],{exact:true}).fill(serial.path); // Manual paths remain available.
+    await panel.getByLabel(m["busTransport.source"],{exact:true}).fill(serial.source);
+    await panel.getByRole("combobox",{name:m["busTransport.mode"],exact:true}).selectOption("passive");
     expect(fixture.starts).toEqual([]); expect(fixture.ipStarts).toEqual([]);
     await panel.getByRole("button",{name:m["busConnection.connect"],exact:true}).click();
     await expect.poll(()=>fixture.starts).toEqual([serial]);
@@ -98,12 +161,17 @@ for(const language of ["en","de"] as const) for(const width of [1440,400]) {
     await page.locator(".bus-connection").scrollIntoViewIfNeeded();
     await page.screenshot({path:test.info().outputPath("serial-footer.png")});
     await page.keyboard.press("Escape");
+    await expect(panel).not.toBeVisible();
     await page.locator(".bus-connection-action").click();
     await expect.poll(()=>fixture.stops).toEqual(["?sessionId=17&serverIncarnation=serial-fixture"]);
     await command(page,m["toolbar.busMonitor"]); const monitor=page.locator(".bus-monitor-panel");
     await expect(monitor).toBeVisible(); await dismissToasts(page,language);
     await monitor.getByRole("combobox",{name:m["busTransport.mode"],exact:true}).selectOption("active");
     await expect(monitor).toContainText(m["busTransport.activeWarning"]);
+    await monitor.getByRole("button",{name:m["serialCandidates.list"],exact:true}).click();
+    await expect(monitor.getByRole("button",{name:m["serialCandidates.use"].replace("{path}",candidatePath),exact:true})).toBeVisible();
+    await expect(monitor.getByLabel(m["busTransport.path"],{exact:true})).toHaveValue(serial.path);
+    expect(fixture.candidateRequests).toEqual(["GET","GET"]);
     expect(fixture.starts).toHaveLength(1);
     await monitor.getByRole("button",{name:m["busMonitor.connect"],exact:true}).click();
     await expect.poll(()=>fixture.starts).toEqual([serial,{...serial,mode:"active"}]);
@@ -131,5 +199,45 @@ for(const language of ["en","de"] as const) for(const width of [1440,400]) {
     expect(fixture.requests.filter(request=>request==="POST /api/bus/discover")).toHaveLength(bootstrapDiscovery);
     expect(fixture.requests.filter(request=>request==="POST /api/bus/write")).toEqual([]);
     expect(fixture.starts).toHaveLength(2); expect(fixture.ipStarts).toEqual([]); expect(fixture.state.unexpected).toEqual([]);
+  });
+  test(`${language} ${width}: settings candidate states are explicit and never change drafts or connect`,async({page})=>{
+    const m=language==="en"?en:de;
+    await page.setViewportSize({width,height:1000}); await page.emulateMedia({reducedMotion:"reduce"});
+    const fixture=await serve(page,language); await openProject(page,language); await dismissToasts(page,language);
+    await expect.poll(()=>fixture.requests.filter(request=>request==="POST /api/bus/discover").length).toBe(1);
+    const discovery=fixture.requests.filter(request=>request==="POST /api/bus/discover").length;
+    await page.locator(".bus-connection-trigger").click();
+    await page.getByRole("button",{name:m["busConnection.settings"],exact:true}).click();
+    const fields=page.locator(".settings-panel .bus-transport-fields");
+    await fields.getByRole("combobox",{name:m["busTransport.label"],exact:true}).selectOption("serial");
+    await fields.getByLabel(m["busTransport.path"],{exact:true}).fill(serial.path);
+    await fields.getByLabel(m["busTransport.source"],{exact:true}).fill(serial.source);
+    expect(fixture.candidateRequests).toEqual([]);
+    const states: [SerialCandidates,number,keyof typeof en][] = [
+      [{status:"available",candidates:[],truncated:false,omittedEntries:0},200,"serialCandidates.empty"],
+      [{status:"unavailable",reason:"missingDirectory"},200,"serialCandidates.missingDirectory"],
+      [{status:"unavailable",reason:"permissionDenied"},200,"serialCandidates.permissionDenied"],
+      [{status:"unavailable",reason:"io"},200,"serialCandidates.io"],
+      [{status:"unsupported"},200,"serialCandidates.unsupported"],
+      [{status:"unsupported"},404,"serialCandidates.legacy"],
+      [{status:"unsupported"},500,"serialCandidates.failed"],
+      [{status:"available",candidates:[{path:candidatePath,target:"/dev/ttyUSB0"}],truncated:true,omittedEntries:1},200,"serialCandidates.truncated"],
+    ];
+    for(const [body,status,key] of states) {
+      fixture.candidates.body=body; fixture.candidates.status=status;
+      await fields.getByRole("button",{name:m["serialCandidates.list"],exact:true}).click();
+      await expect(fields.getByRole("status")).toContainText(m[key]);
+      await expect(fields.getByLabel(m["busTransport.path"],{exact:true})).toHaveValue(serial.path);
+    }
+    await fields.getByRole("button",{name:m["serialCandidates.use"].replace("{path}",candidatePath),exact:true}).click();
+    await expect(fields.getByLabel(m["busTransport.path"],{exact:true})).toHaveValue(candidatePath);
+    await expect(fields.getByLabel(m["busTransport.source"],{exact:true})).toHaveValue(serial.source);
+    await expect(fields.getByRole("combobox",{name:m["busTransport.mode"],exact:true})).toHaveValue("passive");
+    await fields.locator(".serial-candidate-fields").screenshot({path:test.info().outputPath("serial-settings-candidates.png")});
+    expect(await page.evaluate(()=>document.documentElement.scrollWidth-document.documentElement.clientWidth)).toBeLessThanOrEqual(1);
+    expect(fixture.candidateRequests).toEqual(Array(8).fill("GET"));
+    expect(fixture.requests.filter(request=>request==="POST /api/bus/discover")).toHaveLength(discovery);
+    expect(fixture.starts).toEqual([]); expect(fixture.ipStarts).toEqual([]); expect(fixture.reads).toEqual([]); expect(fixture.writes).toEqual([]); expect(fixture.stops).toEqual([]);
+    expect(fixture.state.unexpected).toEqual([]);
   });
 }

@@ -2,6 +2,7 @@
 import { useBusTransport, useSerialTarget } from "./serialPreference";
 import { useTranslate } from "./i18n";
 import { validSerialPath, validSerialSource } from "./serialTransport";
+import SerialCandidateFields from "./SerialCandidateFields";
 import "./BusTransportFields.css";
 
 export default function BusTransportFields({ disabled = false }: { disabled?: boolean }) {
@@ -17,6 +18,7 @@ export default function BusTransportFields({ disabled = false }: { disabled?: bo
     {transport === "serial" && <>
       <label>{t("busTransport.path")}<input value={target.path} disabled={disabled}
         aria-invalid={!validSerialPath(target.path)} onChange={event => setTarget({ ...target, path: event.target.value })} /></label>
+      <SerialCandidateFields disabled={disabled} onSelect={path => setTarget({ ...target, path })} />
       <label>{t("busTransport.source")}<input value={target.source} disabled={disabled}
         aria-invalid={!validSerialSource(target.source)} placeholder="1.1.250" onChange={event => setTarget({ ...target, source: event.target.value })} /></label>
       <label>{t("busTransport.mode")}<select value={target.mode} disabled={disabled}

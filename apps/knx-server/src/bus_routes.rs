@@ -60,6 +60,10 @@ pub fn bus_routes() -> Router<SharedState> {
         .route("/api/bus/write-bound", post(write_bound_value))
         .route("/api/bus/read", post(read_value))
         .route("/api/bus/discover", post(discover_interfaces))
+        .route(
+            "/api/bus/serial-candidates",
+            get(crate::serial_candidates::list),
+        )
         .route("/api/bus/scan/estimate", post(estimate_scan))
         .route("/api/bus/scan/start", post(start_scan))
         .route("/api/bus/scan/results", get(poll_scan))

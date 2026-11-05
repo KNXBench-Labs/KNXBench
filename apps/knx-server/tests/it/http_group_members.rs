@@ -120,6 +120,7 @@ fn fixture() -> (Arc<knx_server::AppState>, tempfile::TempDir) {
         product_db_unavailable: None,
         session_log: Default::default(),
         connector: Box::new(knx_server::fake::FakeConnector::discovering(Vec::new())),
+        serial_candidates: Arc::new(knx_server::serial_candidates::LocalSerialCandidates),
         tunnel_return_path: Default::default(),
         bus_session: Default::default(),
         group_address_style_publication: Default::default(),

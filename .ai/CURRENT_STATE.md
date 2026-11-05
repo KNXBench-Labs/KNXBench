@@ -1,4 +1,6 @@
 # Restart snapshot
+## WP-06 saved node text (ACTIVE; WebUI next-tasks; observed 2026-11-05 16:16 CET)
+- Own `feat/wp06-schema20-captions-20261105` / `knxbench-wp06-schema20-captions-20261105`: public-witness admission for literal saved Node/@Text, then bounded reader/projection/table tests. No template evaluation/manufacturer mapping/identity change or module authority. Other owners preserved; no bus/hardware/native/VM/release/deploy. Next: reviewed source contract before code; evidence `<profile-scratch>/queue-next-20261105/`.
 ## WP-26 passive serial candidates (ACTIVE; owner WebUI task queue; observed 2026-11-05 14:49 CET)
 - Claimed branch/tree `feat/wp26-serial-candidates-20261105` / `knxbench-wp26-serial-candidates-20261105`: explicit server-local USB-serial candidate listing and selection in existing bus settings/footer; manual paths retained. Own surface: new passive filesystem adapter/route, API/UI consumers, synthetic tests and scoped docs. No port open/probe/connect, KNX compatibility inference, physical enumeration test, hardware/bus/native/VM/release/deploy action. Other owners/root preserved. No product acceptance yet; next: claim publication, implementation/review, selected gates, main-first delivery and own cleanup. Evidence `<profile-scratch>/wp26-serial-candidates-20261105/`.
 ## USB/serial UI acceptance reference (STANDING; observed 2026-11-05 07:01 CET)
@@ -32,7 +34,6 @@
 - All15 planned stages complete/frozen, checked user data untouched; source acceptance:
   `docs/status/2026-11-02-rail-themes.md`. No release/deployment/native/bus claim.
 - NEXT: docs-only closeout, private evidence archive and owned cleanup.
-
 ## Proportionate gate acceptance reference (STANDING; observed 2026-11-03 03:12 CET)
 - Source703ec2904 published/readback equal; original policy and fixture reviews APPROVE.
 - Full490 acceptance10/10 +actual Rust diagnostic15/15 retained; exact successor composition,
@@ -40,7 +41,6 @@
 - Verification: `docs/status/2026-11-03-proportionate-gates.md`; GATE-01 remains open for other work.
 - NEXT documentation closeout, private evidence archive and owned cleanup. No active implementation
   claim, release/deployment/native/bus authority or shared-root update from this delivery.
-
 ## Retained boundaries (STANDING; observed 2026-11-02 20:47 CET)
 - System-2 acceptance: `docs/status/2026-11-02-system2-selective-settlement.md`.
 - Root intentionally stale/dirty: preserve private/untracked files and other edits.

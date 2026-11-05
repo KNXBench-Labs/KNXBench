@@ -64,8 +64,8 @@ async fn buffered_open(mode: TpuartMode, bad_reset: bool) -> (Result<u64, String
             panic!("startup peer was not released");
         }
     };
-    if outcome.is_ok() {
-        assert_eq!(outcome.as_ref().unwrap(), &(old.len() as u64));
+    if let Ok(discarded) = &outcome {
+        assert_eq!(*discarded, old.len() as u64);
     }
     (outcome, written)
 }

@@ -158,7 +158,7 @@ mod unix {
     use std::os::unix::ffi::OsStringExt;
     use std::os::unix::fs::MetadataExt;
 
-    use rustix::fs::{AtFlags, FileType, Mode, OFlags, mkdirat, open, openat, readlinkat, statat};
+    use rustix::fs::{mkdirat, open, openat, readlinkat, statat, AtFlags, FileType, Mode, OFlags};
     use rustix::io::Errno;
 
     type Identity = (u64, u64);
@@ -381,6 +381,15 @@ mod unix {
                     return Err(changed());
                 }
             }
+            // A receipt must also fit ordinary pathname lookup used by public backup readers.
+            let named = File::from(open(
+                self.receipt.join(basename),
+                OFlags::RDONLY | OFlags::CLOEXEC | OFlags::NOFOLLOW | OFlags::NONBLOCK,
+                Mode::empty(),
+            )?);
+            if identity(&named)? != identity(file)? {
+                return Err(changed());
+            }
             Ok(())
         }
     }
@@ -495,7 +504,7 @@ pub(crate) mod test_support {
     use super::*;
     use std::fs;
     use std::os::fd::AsRawFd;
-    use std::os::unix::fs::{MetadataExt, PermissionsExt, symlink};
+    use std::os::unix::fs::{symlink, MetadataExt, PermissionsExt};
 
     pub(crate) fn id(file: &File) -> (u64, u64) {
         let metadata = file.metadata().unwrap();
@@ -809,11 +818,42 @@ pub(crate) mod test_support {
             0o640,
             "an existing control file's mode must not change"
         );
+        assert!(fs::symlink_metadata(receipt)
+            .unwrap()
+            .file_type()
+            .is_symlink());
+    }
+
+    #[cfg(target_os = "linux")]
+    pub(crate) fn pathname_limit(
+        mut write: impl FnMut(&Path, &mut Hooks<'_>) -> io::Result<PathBuf>,
+    ) {
+        let temp = tempfile::tempdir().unwrap();
+        let mut directory = temp.path().to_owned();
+        // Keep individual names modest; only the complete ordinary pathname exceeds its limit.
+        let component = "d".repeat(200);
+        while directory.as_os_str().len() <= 5000 {
+            directory.push(&component);
+        }
+        let mut read_back = false;
+        let mut callback = |stage, _: &File, _: &Path| {
+            if stage == Boundary::ReadBack {
+                read_back = true;
+            }
+            Ok(())
+        };
+        let result = write(&directory, &mut Hooks::new(&mut callback));
         assert!(
-            fs::symlink_metadata(receipt)
-                .unwrap()
-                .file_type()
-                .is_symlink()
+            result.is_err(),
+            "an unusable ordinary pathname must not become a receipt"
+        );
+        assert_eq!(
+            result.unwrap_err().raw_os_error(),
+            Some(rustix::io::Errno::NAMETOOLONG.raw_os_error())
+        );
+        assert!(
+            read_back,
+            "the descriptor-relative writer must reach verified readback"
         );
     }
 

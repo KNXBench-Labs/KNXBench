@@ -33,7 +33,10 @@ admission, protocol policy, hardware, release and deployment are excluded.
 - Write, file-sync, rewind and parse/compare using the same open file. Do not
   close and reopen a pathname as proof of the created file's contents.
 - Before returning a receipt, verify that the originally anchored pathname
-  still identifies the held target directory and created file; detected
+  still identifies the held target directory and created file, including one
+  ordinary full-path open used only for identity observation. A pathname that
+  exceeds normal lookup limits cannot become a receipt even when component-wise
+  descriptor traversal succeeded. Detected
   replacement or disappearance refuses a receipt. This is a bounded observation,
   not an atomic namespace lock. All mutating and sync operations stay bound to
   retained objects even if that final observation fails.

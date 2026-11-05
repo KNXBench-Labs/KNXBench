@@ -235,6 +235,12 @@ mod tests {
         );
     }
 
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn pinned_pathname_limit() {
+        crate::backup_directory::test_support::pathname_limit(pinned_write);
+    }
+
     #[cfg(unix)]
     #[test]
     fn pinned_relative_cwd() {

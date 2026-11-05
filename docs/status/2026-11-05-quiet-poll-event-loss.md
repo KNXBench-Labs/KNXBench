@@ -45,11 +45,26 @@ the reconnect-overflow test (each 3 passed, 1 failed). The equivalent
 `is_some_and` control and restored original each passed 4/4. All copied source
 inputs were restored exactly; the feature sources were unchanged.
 
-The maintained package gate is still pending. Its dry run selects the normal
-14-stage Rust/dependent-package and corpus closure, with no application browser
-or Web unit-test stage. Tool tests still need the installed browser tooling.
-No gate selection policy is changed. Raw focused/review/mutation evidence is
-retained under `<profile-scratch>/next-work-20261105/` until final retention.
+Source commit `b8f4d2ee9` passed the complete selected 14-stage package gate on
+main-first integration `a3eea3696` (first parent `eab79cc5b`): every stage exited
+zero with valid proof, inputs frozen and user data checked and untouched.
+The run passed 4,366 Rust tests with 153 explicitly ignored tests across
+17 result blocks, plus a separate selected corpus run of 91/91. Python tool
+coverage registered 517 tests with six existing optional skips. Clippy and the
+required desktop preparation/build consumers passed. No application browser or
+Web unit-test stage was selected, and no gate selection policy changed.
+
+The gate completed on 5 November 2026 at 07:40 CET. Its conditional push correctly
+refused because `main` had advanced only by the USB documentation closeout
+`bf83332e9`. The main-first successor preserves that documentation byte-for-byte,
+removes only this package's finished checkpoint block and carries these Rust and
+corpus results through an exact runtime-input equality proof. The composition
+check also rejects the old gated tree as a negative control; the successor runs
+its own maintained documentation-affected gate rather than replaying Rust.
+
+Raw review, focused/mutation runs, the accepted source gate and composition
+proofs are retained under `<profile>/evidence/2026-11-05-quiet-poll-event-loss/`.
+The broader LS-07 work remains separate.
 
 ## Limits
 

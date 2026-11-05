@@ -4725,6 +4725,21 @@ export const messages = {
   "busTransport.cleanupWarning": "Serial connection released, but cleanup/reset was not confirmed. Auto-ACK state is unknown. Check the adapter; do not retry the last send automatically.",
   "busTransport.activeStartUncertain": "Active serial setup failed. It may already have enabled automatic ACK; the auto-ACK/reset state cannot be confirmed. This is a conservative warning, not an observation of device state. Check the adapter; do not reset, reconnect or retry the last send automatically.",
   "busTransport.bindingRequired": "Serial group sends require a verified session identity and the bound send endpoint. Nothing was sent.",
+  "serialCandidates.list": "List USB-serial candidates",
+  "serialCandidates.warning": "Unverified USB-serial candidates on the server/container, not the browser. This is not a list of all adapters or proof of KNX compatibility, availability or permission. Selection only sets the path; source, mode and a separate Connect are still required.",
+  "serialCandidates.loading": "Listing server-local USB-serial aliases… Your manual path remains unchanged.",
+  "serialCandidates.results": "Unverified USB-serial candidates",
+  "serialCandidates.use": "Use path: {path}",
+  "serialCandidates.available": "{count} unverified candidate(s). No device was opened or probed.",
+  "serialCandidates.empty": "No candidates in the inspected aliases. Other adapters or manual paths may still exist.",
+  "serialCandidates.truncated": "Listing bounded: at most 512 directory entries and 64 candidates. Results may be incomplete; the inspected prefix can vary. Enter a path manually if needed.",
+  "serialCandidates.omitted": "Inspected entries not shown (filtered, duplicate or over the row limit): {count}.",
+  "serialCandidates.missingDirectory": "The server's serial by-id directory is absent. This does not mean no adapters exist. Keep or enter a manual path.",
+  "serialCandidates.permissionDenied": "The server could not inspect serial aliases because filesystem permission was denied. No device permissions were tested. Keep or enter a manual path.",
+  "serialCandidates.io": "The server could not inspect serial aliases due to a filesystem error. This is not an empty list. Keep or enter a manual path.",
+  "serialCandidates.unsupported": "Passive candidate listing requires a Linux server. The server platform is unsupported; manual paths remain unchanged.",
+  "serialCandidates.failed": "Candidate listing failed or returned an invalid response. No path was changed. Retry only explicitly or enter a manual path.",
+  "serialCandidates.legacy": "This server does not offer candidate listing (404). No fallback search or connection was attempted. Keep or enter a manual path.",
 } as const;
 
 export type Messages = typeof messages;

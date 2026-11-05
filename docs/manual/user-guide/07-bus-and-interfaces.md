@@ -790,7 +790,8 @@ connection shown, never another one. **Check status**, **Search again** and
 Source builds after Alpha 19 offer **Bus transport → USB/serial TP-UART** in
 Settings, the status-bar popover and Bus Monitor. Enter the device path visible
 on the **server**, including its container if applicable; a browser-local device
-path does not grant the server access. KNXBench never enumerates devices.
+path does not grant the server access. The accepted transport package uses manual
+paths; the passive-listing source candidate is described below.
 Choose a valid individual source address that is unique on your installation.
 Your IP gateway preference stays available for device tools and scans.
 
@@ -834,5 +835,37 @@ The software package passed correction review, the selected package gate and all
 16 affected production configurations; this is not hardware verification. See the
 [contract and verification boundary](../../status/2026-11-04-usb-serial-ui.md) and
 [CLI path](10-command-line.md#usbserial-tp-uart-linux).
+
+### Passive USB-serial candidates (source candidate)
+
+This addition is awaiting independent review and final selected package gates;
+it is not in Alpha 19. Choose **USB/serial TP-UART**, then explicitly press
+**List USB-serial candidates** beside the path in Settings, the status-bar
+configuration or Bus Monitor. Nothing is listed automatically on opening the view
+or polling the connection. The action inspects only `/dev/serial/by-id` symlinks
+and target metadata on the **Linux server/container**, not the browser's computer.
+It never opens a device or triggers IP discovery.
+
+The list shows **unverified USB-serial candidates**, not KNX-compatible adapters.
+Use a row only if you independently know the required transparent firmware and
+connection prerequisites. **Use path** changes only the stored serial path;
+listing itself preserves your manual edits, and source, mode, transport and live
+session remain unchanged. You must still choose the unique source and mode and
+press **Connect** separately. You can always type a path manually.
+
+An empty inspected list does not prove that no adapters exist. Missing by-id
+directory, permission denial, other filesystem errors and non-Linux servers are
+separate states. An older server's 404 or an invalid/failed response leaves the
+path unchanged without fallback search. Retry only explicitly. Many adapters
+have no admitted by-id alias; standard KNX USB HID, FT1.2 and arbitrary serial
+protocols are still unsupported.
+
+At most 512 directory entries and 64 candidates are shown/considered. The UI
+reports truncation and the count of inspected entries not shown (filtered,
+duplicates or row-limit omissions). Unvisited entries are not counted; the
+inspected prefix may vary. Aliases that resolve to the same tty target are
+collapsed, which is not proof of physical-device uniqueness. Existing metadata
+does not establish permission, availability or that a later Connect will work.
+[Primary source and exact contract](../../research/2026-11-05-passive-serial-candidates.md).
 
 [Manual index](../README.md) · Next: [Documentation export and project comparison](08-reports-and-diff.md) →

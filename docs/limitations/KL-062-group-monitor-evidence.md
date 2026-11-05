@@ -49,6 +49,24 @@ normal receive/transmit, not actuator state, bridge parity/error preservation,
 other payloads, extended-frame support, other adapters or long-running stability. See the [dated source and
 verification record](../status/2026-11-04-usb-serial-ui.md#usb-startup-synchronization-and-bounded-receive-witness-5-november-2026).
 
+## Passive candidate-list boundary (5 November 2026; acceptance pending)
+
+The [source candidate](../research/2026-11-05-passive-serial-candidates.md) adds
+explicit Linux server/container-local USB-prefixed by-id alias inspection in the
+shared settings/footer/monitor fields. It opens/probes no device, triggers no IP
+discovery and changes no session. Selection sets only the existing path draft.
+Manual paths, explicit source/mode and separate Connect are retained.
+
+By-id metadata is neither a KNX compatibility/availability/permission check nor
+a complete USB census: aliases require platform metadata and can be absent or
+change later. Only safe aliases resolving to immediate ttyUSB/ttyACM character
+devices qualify. The list inspects at most 512 entries plus a truncation lookahead,
+returns at most 64 target-deduplicated candidates and discloses omitted inspected
+entries. Missing directory, permission/I/O failure, unsupported platform and
+successful empty results remain distinct. Other USB protocols remain unsupported.
+Synthetic/injected filesystem and intercepted HTTP tests only; independent review
+and final selected acceptance are pending. No new physical witness is claimed.
+
 <!-- BEGIN retained catalogue record -->
 
 ## 62. The Group Monitor GUI (T15) is tunnelling-only, single-session, client-filtered, and only its passive receive path has real-gateway evidence

@@ -1,5 +1,14 @@
 # Roadmap
 
+## Source candidate: literal saved schema-20 folder text
+
+A bounded WP-06 implementation displays saved `Node/@Text` alongside folder IDs
+and searches the admitted text without changing grouping identity. It does not
+resolve manufacturer captions, source templates, module placement or staleness.
+Focused software checks are recorded; complete package/browser acceptance and
+publication remain pending. Other WP-06 requirements stay evidence-gated.
+[Candidate, original failures and limits](status/2026-11-05-saved-schema20-node-text.md).
+
 ## Main-only after Alpha 19: finite System-2 E1–E17 software consolidation
 
 Main-first `cee41bf0d` closes the named finite caption-class adversarial, actual-worker

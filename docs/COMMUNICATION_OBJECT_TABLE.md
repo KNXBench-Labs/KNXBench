@@ -46,8 +46,15 @@ project folder*, groups by the opaque saved-folder key (`folder:<key>`, fallback
 path visible in each heading and an import-time snapshot note. By channel stays
 the default and All objects is unchanged. Filter, expansion, editor-lifetime and
 blur-save rules below apply per namespaced group key. Status: implemented,
-review/gate pending, not delivered
+reviewed and delivered as `e6f227c4`
 ([folder grouping contract](contracts/communication-object-folders.md#saved-project-folder-grouping-24-october-2026)).
+**Saved schema-20 text candidate (5 November 2026):** a bounded optional literal
+saved caption accompanies Folder IDs and participates in search; full saved ID
+paths and the import-time note stay visible. Text is never an identity key,
+manufacturer lookup, translation or evaluated template. Missing/blank/oversized
+text keeps the ID fallback; existing refusals remain authoritative. Complete
+package and browser acceptance are pending
+([contract and results](status/2026-11-05-saved-schema20-node-text.md)).
 
 ## Sorting and filters
 

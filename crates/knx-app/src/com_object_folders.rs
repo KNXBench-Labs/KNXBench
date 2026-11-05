@@ -11,7 +11,8 @@
 //! The importer keeps every device's tree verbatim as an opaque
 //! `RetainedElement`; this module only reads that retained copy. It never
 //! resolves a `RefId` against product data, so a folder is shown by its
-//! declared id chain, not by a manufacturer label (WP-06: manufacturer
+//! declared id chain, optionally accompanied by literal saved schema-20 text,
+//! not by a manufacturer label (WP-06: manufacturer
 //! `ShowInComObjectTree` mapping is not admitted). Anything the declaration
 //! does not settle is refused, never guessed: a device whose tree cannot be
 //! attributed or read, an object listed more than once, a node without a
@@ -33,6 +34,8 @@ const TREE_NAME: &str = "GroupObjectTree";
 const MAX_TREE_BYTES: usize = 16 * 1024 * 1024;
 const MAX_TREE_DEPTH: usize = 64;
 const MAX_TREE_EVENTS: usize = 2_000_000;
+/// Withhold only display text above this UTF-8 byte limit; never truncate it.
+const MAX_NODE_TEXT_BYTES: usize = 4096;
 
 /// `Node/@Type`, as Project Schema 23 §1.2.5.23 lists it.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -42,11 +45,29 @@ pub enum TreeNodeKind {
 }
 
 /// One declared node on the way from the tree root to an object.
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TreeNodeRef {
     pub kind: TreeNodeKind,
     /// `Node/@RefId`, verbatim (a shortened channel or parameter-block id).
     pub ref_id: String,
+    /// Literal saved schema-20 `Node/@Text`, not a resolved product caption.
+    pub text: Option<String>,
+}
+
+/// Identity deliberately excludes saved display text, including for prefix refusals.
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+struct TreeNodeIdentity {
+    kind: TreeNodeKind,
+    ref_id: String,
+}
+
+fn identity_path(path: &[TreeNodeRef]) -> Vec<TreeNodeIdentity> {
+    path.iter()
+        .map(|node| TreeNodeIdentity {
+            kind: node.kind,
+            ref_id: node.ref_id.clone(),
+        })
+        .collect()
 }
 
 /// Where the saved tree places one object, or why it shows no folder.
@@ -93,6 +114,7 @@ struct ObjectSource {
 pub struct FolderInput {
     device: DeviceId,
     source: SourceRef,
+    saved_text_schema20: bool,
     /// Another device states the same source identity.
     shared_source: bool,
     objects: Vec<(ComObjectInstanceId, ObjectSource)>,
@@ -135,6 +157,7 @@ impl FolderInput {
         Some(Self {
             device,
             source: dev.source.clone(),
+            saved_text_schema20: project.info.ets_schema_version == 20,
             shared_source,
             objects,
         })
@@ -172,7 +195,7 @@ pub fn saved_folders(
     if knx_store::manufacturer_file_hash(&tree.bytes) != tree.sha256 {
         return everyone(SavedFolder::TreeUnresolved);
     }
-    let Ok(listed) = read_tree(&tree.bytes) else {
+    let Ok(listed) = read_tree(&tree.bytes, input.saved_text_schema20) else {
         return everyone(SavedFolder::TreeUnresolved);
     };
     input
@@ -245,14 +268,17 @@ enum Frame {
 /// the same namespace on every structural element. Anything else (a mixed or
 /// foreign namespace, an unbound prefix, a DTD, malformed XML) refuses the
 /// whole tree rather than reading around it.
-fn read_tree(bytes: &[u8]) -> Result<HashMap<String, Vec<Placement>>, TreeUnreadable> {
+fn read_tree(
+    bytes: &[u8],
+    saved_text_schema20: bool,
+) -> Result<HashMap<String, Vec<Placement>>, TreeUnreadable> {
     if bytes.len() > MAX_TREE_BYTES {
         return Err(TreeUnreadable);
     }
     let mut reader = NsReader::from_reader(bytes);
     let mut stack: Vec<Frame> = Vec::new();
     let mut listed: HashMap<String, Vec<Placement>> = HashMap::new();
-    let mut node_paths: BTreeMap<Vec<TreeNodeRef>, usize> = BTreeMap::new();
+    let mut node_paths: BTreeMap<Vec<TreeNodeIdentity>, usize> = BTreeMap::new();
     let mut tree_namespace = None;
     let mut root_seen = false;
     let mut events = 0usize;
@@ -280,6 +306,11 @@ fn read_tree(bytes: &[u8]) -> Result<HashMap<String, Vec<Placement>>, TreeUnread
         {
             return Err(TreeUnreadable);
         }
+        let admit_text = saved_text_schema20
+            && match &namespace {
+                ProjectNamespace::InheritedOmitted => true,
+                ProjectNamespace::Explicit(uri) => uri == "http://knx.org/xml/project/20",
+            };
         tree_namespace.get_or_insert(namespace);
         let local = element.local_name();
         let frame = match (stack.last(), local.as_ref()) {
@@ -290,10 +321,16 @@ fn read_tree(bytes: &[u8]) -> Result<HashMap<String, Vec<Placement>>, TreeUnread
             }
             (Some(Frame::Root), "Nodes") => Frame::Nodes(Some(Vec::new())),
             (Some(Frame::Node(path)), "Nodes") => Frame::Nodes(path.clone()),
-            (Some(Frame::Root), "Node") => node(&mut listed, &mut node_paths, element, Some(&[]))?,
-            (Some(Frame::Nodes(path)), "Node") => {
-                node(&mut listed, &mut node_paths, element, path.as_deref())?
+            (Some(Frame::Root), "Node") => {
+                node(&mut listed, &mut node_paths, element, Some(&[]), admit_text)?
             }
+            (Some(Frame::Nodes(path)), "Node") => node(
+                &mut listed,
+                &mut node_paths,
+                element,
+                path.as_deref(),
+                admit_text,
+            )?,
             _ => return Err(TreeUnreadable),
         };
         if !empty {
@@ -305,7 +342,7 @@ fn read_tree(bytes: &[u8]) -> Result<HashMap<String, Vec<Placement>>, TreeUnread
     }
     // A path declared by two nodes identifies neither of them, nor anything
     // below them.
-    let repeated: Vec<&Vec<TreeNodeRef>> = node_paths
+    let repeated: Vec<&Vec<TreeNodeIdentity>> = node_paths
         .iter()
         .filter(|(_, count)| **count > 1)
         .map(|(path, _)| path)
@@ -313,7 +350,8 @@ fn read_tree(bytes: &[u8]) -> Result<HashMap<String, Vec<Placement>>, TreeUnread
     for placements in listed.values_mut() {
         for placement in placements.iter_mut() {
             if let Placement::Declared(path) = placement {
-                if repeated.iter().any(|prefix| path.starts_with(prefix)) {
+                let identity = identity_path(path);
+                if repeated.iter().any(|prefix| identity.starts_with(prefix)) {
                     *placement = Placement::Unidentified;
                 }
             }
@@ -349,9 +387,10 @@ fn project_namespace(ns: &ResolveResult) -> Option<ProjectNamespace> {
 
 fn node(
     listed: &mut HashMap<String, Vec<Placement>>,
-    node_paths: &mut BTreeMap<Vec<TreeNodeRef>, usize>,
+    node_paths: &mut BTreeMap<Vec<TreeNodeIdentity>, usize>,
     element: &BytesStart,
     parent: Option<&[TreeNodeRef]>,
+    admit_text: bool,
 ) -> Result<Frame, TreeUnreadable> {
     let kind = match attribute(element, "Type")?.as_deref() {
         Some("Channel") => Some(TreeNodeKind::Channel),
@@ -362,8 +401,13 @@ fn node(
     let path = match (parent, kind, ref_id) {
         (Some(parent), Some(kind), Some(ref_id)) => {
             let mut path = parent.to_vec();
-            path.push(TreeNodeRef { kind, ref_id });
-            *node_paths.entry(path.clone()).or_default() += 1;
+            let text = if admit_text {
+                attribute(element, "Text")?.filter(|value| value.len() <= MAX_NODE_TEXT_BYTES)
+            } else {
+                None
+            };
+            path.push(TreeNodeRef { kind, ref_id, text });
+            *node_paths.entry(identity_path(&path)).or_default() += 1;
             Some(path)
         }
         _ => None,
@@ -427,6 +471,7 @@ mod tests {
                 .map(|(kind, ref_id)| TreeNodeRef {
                     kind: *kind,
                     ref_id: (*ref_id).to_owned(),
+                    text: None,
                 })
                 .collect(),
         }
@@ -435,6 +480,7 @@ mod tests {
     fn input(objects: &[(&str, bool, bool)]) -> FolderInput {
         FolderInput {
             device: DeviceId(1),
+            saved_text_schema20: false,
             source: SourceRef {
                 path: "P-0001/0.xml".into(),
                 ets_id: "P-0001-0_DI-1".into(),
@@ -526,6 +572,179 @@ mod tests {
             r#"<GroupObjectTree><Node Type="Folder" RefId="PB-1" GroupObjectInstances="O-1_R-1"/></GroupObjectTree>"#,
         )];
         saved_folders(&input, &rows)[&ComObjectInstanceId(1)].clone()
+    }
+
+    fn schema20_placed(objects: &[(&str, bool, bool)], tree: &str) -> Vec<SavedFolder> {
+        let mut input = input(objects);
+        input.saved_text_schema20 = true;
+        saved_folders(&input, &[tree_row("P-0001/0.xml", "P-0001-0_DI-1", tree)])
+            .into_values()
+            .collect()
+    }
+
+    #[test]
+    fn saved_text_requires_exact_owning_schema20_and_tree_namespace() {
+        for (version, namespace, expected_text) in [
+            (20, "", Some("Saved {{ChNo}}")),
+            (20, "http://knx.org/xml/project/20", Some("Saved {{ChNo}}")),
+            (20, "http://knx.org/xml/project/23", None),
+            (20, "http://knx.org/xml/project/020", None),
+            (23, "http://knx.org/xml/project/20", None),
+            (23, "", None),
+            (0, "", None),
+        ] {
+            let mut project = project_with_object(
+                SourceRef {
+                    path: "P-0001/0.xml".into(),
+                    ets_id: "O-1_R-1".into(),
+                },
+                DeviceId(1),
+            );
+            project.info.ets_schema_version = version;
+            let input = FolderInput::collect(&project, DeviceId(1)).unwrap();
+            let ns = if namespace.is_empty() {
+                String::new()
+            } else {
+                format!(r#" xmlns="{namespace}""#)
+            };
+            let tree = format!(
+                r#"<GroupObjectTree{ns}><Node Type="Folder" RefId="PB-1" Text="Saved {{{{ChNo}}}}" GroupObjectInstances="O-1_R-1"/></GroupObjectTree>"#
+            );
+            let mut expected = folder(&[(TreeNodeKind::Folder, "PB-1")]);
+            if let SavedFolder::Folder { path } = &mut expected {
+                path[0].text = expected_text.map(str::to_owned);
+            }
+            assert_eq!(
+                saved_folders(&input, &[tree_row("P-0001/0.xml", "P-0001-0_DI-1", &tree)])
+                    [&ComObjectInstanceId(1)],
+                expected,
+                "owning schema {version}, namespace {namespace}"
+            );
+        }
+        let prefixed = r#"<k:GroupObjectTree xmlns:k="http://knx.org/xml/project/20"><k:Node Type="Folder" RefId="PB-1" Text="Saved" GroupObjectInstances="O-1_R-1"/></k:GroupObjectTree>"#;
+        let SavedFolder::Folder { path } =
+            &schema20_placed(&[("O-1_R-1", false, true)], prefixed)[0]
+        else {
+            panic!("explicit schema-20 prefix should retain placement");
+        };
+        assert_eq!(path[0].text.as_deref(), Some("Saved"));
+    }
+
+    #[test]
+    fn saved_text_preserves_normalized_literals_and_bounds_only_utf8_display_bytes() {
+        let boundary = "é".repeat(2048);
+        let oversized = format!("{boundary}x");
+        for (attribute, expected_text) in [
+            (String::new(), None),
+            (
+                r#"xmlns:q="urn:caption" q:Text="Not admitted""#.into(),
+                None,
+            ),
+            (
+                r#"xmlns:q="http://knx.org/xml/project/20" q:Text="Shadow" Text="Literal""#.into(),
+                Some("Literal".into()),
+            ),
+            (r#"Text="""#.into(), Some(String::new())),
+            (r#"Text="   ""#.into(), Some("   ".into())),
+            (
+                r#"Text=" &amp; &quot; &lt;b&gt;{{ChNo}}&lt;/b&gt; &#xA; ""#.into(),
+                Some(" & \" <b>{{ChNo}}</b> \n ".into()),
+            ),
+            ("Text=\"a\tb\nc\"".into(), Some("a b c".into())),
+            (format!(r#"Text="{boundary}""#), Some(boundary)),
+            (format!(r#"Text="{oversized}""#), None),
+        ] {
+            let tree = format!(
+                r#"<GroupObjectTree><Node Type="Folder" RefId="PB-1" {attribute} GroupObjectInstances="O-1_R-1"/></GroupObjectTree>"#
+            );
+            let row = tree_row("P-0001/0.xml", "P-0001-0_DI-1", &tree);
+            let bytes = row.bytes.clone();
+            let hash = row.sha256.clone();
+            let mut input = input(&[("O-1_R-1", false, true)]);
+            input.saved_text_schema20 = true;
+            let placed = saved_folders(&input, std::slice::from_ref(&row));
+            let SavedFolder::Folder { path } = &placed[&ComObjectInstanceId(1)] else {
+                panic!("withholding display text must not withhold placement");
+            };
+            assert_eq!(path[0].ref_id, "PB-1");
+            assert_eq!(path[0].text, expected_text);
+            assert_eq!(row.bytes, bytes);
+            assert_eq!(row.sha256, hash);
+        }
+    }
+
+    #[test]
+    fn unequal_captions_never_disambiguate_duplicate_identity_or_its_descendants() {
+        let tree = concat!(
+            r#"<GroupObjectTree><Node Type="Channel" RefId="CH-1" Text="First"><Nodes>"#,
+            r#"<Node Type="Folder" RefId="PB-1" Text="Left" GroupObjectInstances="O-1_R-1"/>"#,
+            r#"</Nodes></Node><Node Type="Channel" RefId="CH-1" Text="Second"><Nodes>"#,
+            r#"<Node Type="Folder" RefId="PB-2" Text="Right" GroupObjectInstances="O-2_R-1"/>"#,
+            r#"</Nodes></Node><Node Type="Folder" RefId="PB-3" Text="A" GroupObjectInstances="O-3_R-1 O-5_R-1"/>"#,
+            r#"<Node Type="Folder" RefId="PB-3" Text="B" GroupObjectInstances="O-4_R-1 O-5_R-1"/></GroupObjectTree>"#,
+        );
+        assert_eq!(
+            schema20_placed(
+                &[
+                    ("O-1_R-1", false, true),
+                    ("O-2_R-1", false, true),
+                    ("O-3_R-1", false, true),
+                    ("O-4_R-1", false, true),
+                    ("O-5_R-1", false, true),
+                ],
+                tree,
+            ),
+            [
+                SavedFolder::UnidentifiedNode,
+                SavedFolder::UnidentifiedNode,
+                SavedFolder::UnidentifiedNode,
+                SavedFolder::UnidentifiedNode,
+                SavedFolder::Ambiguous,
+            ]
+        );
+    }
+
+    #[test]
+    fn saved_text_does_not_promote_refused_or_channel_only_placements() {
+        let tree = concat!(
+            r#"<GroupObjectTree><Node Type="Folder" RefId="PB-1" Text="Secret" GroupObjectInstances="O-1_R-1 O-2_R-1"/>"#,
+            r#"<Node Type="Folder" Text="No identity" GroupObjectInstances="O-3_R-1"/>"#,
+            r#"<Node Type="Channel" RefId="CH-1" Text="Not a folder" GroupObjectInstances="O-4_R-1"/>"#,
+            r#"<Node Type="Folder" RefId="PB-2" Text="Duplicate list" GroupObjectInstances="O-5_R-1 O-5_R-1"/></GroupObjectTree>"#,
+        );
+        assert_eq!(
+            schema20_placed(
+                &[
+                    ("O-1_R-1", true, true),
+                    ("O-2_R-1", false, false),
+                    ("O-3_R-1", false, true),
+                    ("O-4_R-1", false, true),
+                    ("O-5_R-1", false, true),
+                    ("O-6_R-1", false, true),
+                ],
+                tree,
+            ),
+            [
+                SavedFolder::ModuleObject,
+                SavedFolder::Inactive,
+                SavedFolder::UnidentifiedNode,
+                SavedFolder::NoFolder,
+                SavedFolder::Ambiguous,
+                SavedFolder::NotInSavedTree,
+            ]
+        );
+        for tree in [
+            r#"<GroupObjectTree xmlns="http://knx.org/xml/project/20"><Node xmlns="http://knx.org/xml/project/23" Type="Folder" RefId="PB-1" Text="Foreign" GroupObjectInstances="O-1_R-1"/></GroupObjectTree>"#,
+            r#"<k:GroupObjectTree xmlns:k="http://knx.org/xml/project/20"><Node Type="Folder" RefId="PB-1" Text="Unbound" GroupObjectInstances="O-1_R-1"/></k:GroupObjectTree>"#,
+            r#"<GroupObjectTree xmlns="urn:foreign"><Node Type="Folder" RefId="PB-1" Text="Foreign" GroupObjectInstances="O-1_R-1"/></GroupObjectTree>"#,
+            r#"<GroupObjectTree><Node Type="Folder" RefId="PB-1" Text="Broken &unknown;" GroupObjectInstances="O-1_R-1"/></GroupObjectTree>"#,
+            r#"<GroupObjectTree><Node Type="Folder" RefId="PB-1" Text="A" Text="B" GroupObjectInstances="O-1_R-1"/></GroupObjectTree>"#,
+        ] {
+            assert_eq!(
+                schema20_placed(&[("O-1_R-1", false, true)], tree),
+                [SavedFolder::TreeUnresolved]
+            );
+        }
     }
 
     #[test]

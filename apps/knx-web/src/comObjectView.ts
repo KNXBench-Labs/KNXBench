@@ -2,6 +2,7 @@
 import type { ComObjectNode } from "./bindings/ComObjectNode";
 import type { ComObjectChannel } from "./bindings/ComObjectChannel";
 import type { ComObjectProjectFolder } from "./bindings/ComObjectProjectFolder";
+import type { ProjectTreeNode } from "./bindings/ProjectTreeNode";
 import { groupAddressSpellings } from "./gaNotation";
 import { dptDisplay } from "./dptLabels";
 export type ComSortColumn = "number" | "name" | "function" | "dpt" | "addresses" | "status" | "channel";
@@ -22,6 +23,16 @@ export type RefusedProjectFolder = typeof REFUSED_PROJECT_FOLDERS[number];
 export function projectFolderIds(o: ComObjectNode): string[] | null {
   const folder = o.project_folder;
   return folder?.status === "Assigned" ? folder.path.filter(n => n.kind === "Folder").map(n => n.ref_id) : null;
+}
+/** Saved text is display-only; blank text falls back without changing the DTO. */
+export function projectFolderNodeLabel(node: ProjectTreeNode): string {
+  return node.text?.trim() ? `${node.text} (${node.ref_id})` : node.ref_id;
+}
+/** Only assigned Folder text is searchable, never refused or Channel-only labels. */
+function projectFolderSearch(o: ComObjectNode): string[] {
+  return o.project_folder?.status === "Assigned"
+    ? o.project_folder.path.filter(n => n.kind === "Folder").flatMap(n => [n.ref_id, n.text ?? ""])
+    : [];
 }
 /** Why the saved tree's folder is withheld; `null` for no folder, an assigned one or an unknown status. */
 export function projectFolderRefusal(o: ComObjectNode): RefusedProjectFolder | null {
@@ -74,7 +85,7 @@ export function deriveComObjectView(objects: ComObjectNode[], filters: ComFilter
     const channel = evaluatedChannel(o);
     const fields = [String(o.number), o.name, o.function_text, effectiveDpt(o), o.dpt_text,
       effectiveDpt(o) === null ? null : dptDisplay(effectiveDpt(o), language),
-      channel?.text, channel?.name, channel?.number, ...(projectFolderIds(o) ?? []), ...o.links.flatMap(l => [l.name, ...(l.address === null ? [] : groupAddressSpellings(l.address))])];
+      channel?.text, channel?.name, channel?.number, ...projectFolderSearch(o), ...o.links.flatMap(l => [l.name, ...(l.address === null ? [] : groupAddressSpellings(l.address))])];
     const descriptionMatch = !!needle && contains(o.description) && !fields.some(contains);
     if (descriptionMatch) descriptionMatches.add(o.id);
     const state = ACTIVATION_ORDER.includes(o.activation) ? o.activation : "unknown";

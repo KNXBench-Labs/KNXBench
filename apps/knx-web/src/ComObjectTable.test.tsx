@@ -416,3 +416,68 @@ it.each(["By channel", "All objects"])("%s measures its DPT fit floor while pres
     window.localStorage.clear();
   }
 });
+
+it("saved schema20 folder text renders as inert text with IDs and the complete visible ID path", async () => {
+  const label = '<img src=x onerror="alert(1)"> {{ChNo}} & {{0}}';
+  const folder: NonNullable<ComObjectNode["project_folder"]> = { status: "Assigned", key: "Channel:4:CH-1/Folder:4:PB-3/Folder:4:PB-4",
+    path: [{ kind: "Channel", ref_id: "CH-1", text: "Channel secret" }, { kind: "Folder", ref_id: "PB-3", text: label },
+      { kind: "Folder", ref_id: "PB-4", text: "Nested" }] };
+  const objects = [object(1, { project_folder: folder })];
+  const before = JSON.stringify(objects);
+  const v = await render(objects);
+  await show(v, "By saved project folder");
+  const key = "folder:Channel:4:CH-1/Folder:4:PB-3/Folder:4:PB-4";
+  const header = groupHeader(v.host, key)!;
+  expect(header.querySelector("strong")?.textContent).toBe(`${label} (PB-3) › Nested (PB-4)`);
+  expect(header.querySelector(".com-object-folder-path")?.textContent).toBe("Saved path: CH-1 › PB-3 › PB-4");
+  expect(header.querySelector("strong")?.getAttribute("title")).toBe("Saved project tree: CH-1 › PB-3 › PB-4. Ids as stored in the project; the product's folder names are not looked up.");
+  await v.click(groupButton(v.host, key)!);
+  const note = summaryRow(v.host, 1).querySelector(".com-object-project-folder")!;
+  expect(note.textContent).toContain(`Project folder: ${label} (PB-3) › Nested (PB-4)`);
+  expect(note.querySelector(".com-object-folder-path")?.textContent).toBe("Saved path: CH-1 › PB-3 › PB-4");
+  expect(note.textContent).not.toContain("Channel secret");
+  expect(header.querySelectorAll("img, script, b")).toHaveLength(0);
+  expect(note.querySelectorAll("img, script, b")).toHaveLength(0);
+  expect(v.host.querySelectorAll("[data-text-fill]")).toHaveLength(0);
+  expect(v.host.querySelector(".com-folder-view-note")?.textContent).toBe(
+    "Folders as saved in the project at import; later parameter changes are not reflected and the product's folder names are not looked up.");
+  await v.set(v.input("Search communication objects"), "{{ChNo}}");
+  expect(summaryRow(v.host, 1).hidden).toBe(false);
+  expect(v.host.querySelector(".com-table-count")?.textContent).toBe("1 / 1 objects");
+  await v.click(v.button("Reset filters"));
+  // A refreshed caption must retain the same key, header DOM and expanded state.
+  await v.rerender([object(1, { project_folder: { ...folder, path: folder.path.map(n => ({ ...n, text: "Changed" })) } })]);
+  expect(groupHeader(v.host, key)).toBe(header);
+  expect(groupButton(v.host, key)?.getAttribute("aria-expanded")).toBe("true");
+  expect(summaryRow(v.host, 1).hidden).toBe(false);
+  expect(JSON.stringify(objects)).toBe(before);
+  for (const write of [api.setComObjectDpt, api.setComObjectDescription, api.setComObjectFlag, api.linkComObject, api.unlinkComObject]) expect(write).not.toHaveBeenCalled();
+  await v.cleanup();
+});
+
+it("saved folder text preserves empty, whitespace and legacy ID fallbacks without exposing refused labels", async () => {
+  const objects = [undefined, "", " \t\n"].map((text, i) => object(i + 1, { project_folder: {
+    status: "Assigned", key: `blank-${i}`, path: [{ kind: "Folder", ref_id: `PB-${i}`, text }] } }));
+  objects.push(object(4, { project_folder: { status: "ModuleObject", key: null,
+    path: [{ kind: "Folder", ref_id: "REFUSED-ID", text: "Refused secret" }] } }),
+  object(5, { project_folder: { status: "NoFolder", key: null, path: [{ kind: "Channel", ref_id: "CH-9", text: "Channel secret" }] } }));
+  const before = JSON.stringify(objects);
+  const v = await render(objects);
+  await show(v, "By saved project folder");
+  expect([...v.host.querySelectorAll("tr.com-object-channel strong")].map(n => n.textContent)).toEqual(["PB-0", "PB-1", "PB-2", "Without saved project folder"]);
+  expect(v.host.textContent).not.toContain("Refused secret");
+  expect(v.host.textContent).not.toContain("Channel secret");
+  expect(v.host.textContent).not.toContain("REFUSED-ID");
+  await show(v, "All objects");
+  expect(summaryRow(v.host, 1).querySelector(".com-object-project-folder")?.textContent).toBe("Project folder: PB-0");
+  for (const id of [2, 3]) expect(summaryRow(v.host, id).querySelector(".com-object-project-folder")?.textContent).toContain(`Project folder: PB-${id - 1}`);
+  for (const query of ["Refused secret", "Channel secret", "REFUSED-ID"]) {
+    await v.set(v.input("Search communication objects"), query);
+    expect(v.host.querySelector(".com-table-count")?.textContent).toBe("0 / 5 objects");
+  }
+  await v.set(v.input("Search communication objects"), "PB-2");
+  expect(summaryRow(v.host, 3).hidden).toBe(false);
+  expect(v.host.querySelector(".com-table-count")?.textContent).toBe("1 / 5 objects");
+  expect(JSON.stringify(objects)).toBe(before);
+  await v.cleanup();
+});

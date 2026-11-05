@@ -2,15 +2,16 @@
 
 # Implementation status
 
-## Source candidate: passive USB-serial listing (acceptance pending)
+## Main-only after Alpha 19: passive USB-serial listing
 
 Settings, status-bar configuration and Bus Monitor share **List USB-serial
 candidates** beside the manual path. It inspects only bounded Linux server-local
 by-id aliases and metadata; candidates are not KNX compatibility, availability or
 permission evidence. Selection sets only the path, never Connect or source/mode.
 Missing/unreadable aliases, unsupported platforms, older servers and truncated
-lists are disclosed separately. Manual paths remain available. Independent review
-and final selected gates are pending. [Usage and limits](user-guide/07-bus-and-interfaces.md#passive-usb-serial-candidates-source-candidate).
+lists are disclosed separately. Manual paths remain available. The bounded
+software package is accepted on main, with no new physical witness.
+[Acceptance](../status/2026-11-05-wp26-passive-serial-candidates.md) · [Usage and limits](user-guide/07-bus-and-interfaces.md#passive-usb-serial-candidates-source-candidate).
 
 ## Main-only after Alpha 19: Linux USB/serial TP-UART
 

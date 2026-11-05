@@ -1664,7 +1664,7 @@
       "number": 62,
       "title": "Group Monitor evidence",
       "topic": "Bus diagnostics and DPT",
-      "summary": "The single-session, client-filtered GUI adds explicit Linux TP-UART in main-only source builds. One C6 USB-Serial 1.0.8 has bounded normal receive and one-bit group-transmit witnesses; actuator state, bridge error/parity forwarding and broader payload/device/routing/history scenarios remain unverified. An explicit bounded by-id candidate-list successor is implemented pending review/gates; metadata is not a complete USB census or KNX compatibility, availability or permission evidence.",
+      "summary": "The single-session, client-filtered GUI adds explicit Linux TP-UART in main-only source builds. One C6 USB-Serial 1.0.8 has bounded normal receive and one-bit group-transmit witnesses; actuator state, bridge error/parity forwarding and broader payload/device/routing/history scenarios remain unverified. The explicit bounded by-id candidate list is software-accepted on main; metadata is not a complete USB census or KNX compatibility, availability or permission evidence.",
       "file": "KL-062-group-monitor-evidence.md",
       "ledger_ids": [
         "KL-62"

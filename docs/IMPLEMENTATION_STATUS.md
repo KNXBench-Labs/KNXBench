@@ -12,16 +12,20 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
-## Passive USB-serial candidate listing (5 November 2026; source candidate)
+## Passive USB-serial candidate listing (5 November 2026; main-only)
 
 The shared settings/footer/monitor fields now offer an explicit bounded Linux
 server-local by-id candidate list. Strict HTTP admission, typed unavailable versus
 empty/unsupported results and EN/DE error/omission states retain manual paths and
 separate selection from Connect. No port is opened/probed and no IP discovery is
 triggered. Candidates are not KNX compatibility or availability evidence.
-Synthetic/injected filesystem and intercepted-client tests accompany the source;
-independent review and final selected package gates are pending. This is not a
-publication, release or physical acceptance claim. [Scope and contract](research/2026-11-05-passive-serial-candidates.md).
+Published `edc6c90d5` passed source-bound software acceptance: 1,748 scoped Rust
+tests (72 routinely ignored), a separate selected 51/51 corpus run, 5,169 UI tests
+and selected development/production browser coverage. The unchanged complete Web
+proof and final Rust-test-only delta retain their distinct source bindings. This
+is main-only, not an Alpha 19 release or physical acceptance.
+[Acceptance and limits](status/2026-11-05-wp26-passive-serial-candidates.md) ·
+[Scope and contract](research/2026-11-05-passive-serial-candidates.md).
 
 <a id="usbserial-server-and-web-ui-candidate-5-november-2026"></a>
 

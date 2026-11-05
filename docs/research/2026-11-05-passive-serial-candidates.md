@@ -13,7 +13,7 @@ aliases, that aliases uniquely identify physical hardware, or that any listed
 port implements KNX/TP-UART. The implementation admits only decimal tty suffixes,
 a deliberately narrower policy than the rule's shell pattern.
 
-## Implementation contract (candidate; acceptance pending)
+## Implementation contract (main-only; software-accepted)
 
 `GET /api/bus/serial-candidates` is a read-only, server/container-local operation.
 It runs only when requested, off the async reactor, independently of the bus
@@ -69,5 +69,6 @@ holds session/operation locks and uses a connector that panics on connect/discov
 EN/DE mounted tests cover pending edits, explicit selection, stale/unmounted
 responses, limits and all error states. The existing USB/serial browser fixture
 adds settings/footer/monitor cases at 400 and 1440 pixels with unexpected-request
-refusal. Independent review and final selected package gates remain required;
-this note is not acceptance or a physical hardware result.
+refusal. Whole-feature/correction and companion reviews are complete;
+[source-bound software acceptance](../status/2026-11-05-wp26-passive-serial-candidates.md)
+is published as `edc6c90d5`. This contract note adds no physical hardware result.

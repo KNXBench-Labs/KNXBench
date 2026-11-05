@@ -783,7 +783,9 @@ free; after a busy answer, try again yourself. Disconnect ends exactly the
 connection shown, never another one. **Check status**, **Search again** and
 **Bus settings…** are in the same list.
 
-### USB/serial TP-UART (Linux server, main-only candidate)
+<a id="usbserial-tp-uart-linux-server-main-only-candidate"></a>
+
+### USB/serial TP-UART (Linux server, main-only)
 
 Source builds after Alpha 19 offer **Bus transport → USB/serial TP-UART** in
 Settings, the status-bar popover and Bus Monitor. Enter the device path visible
@@ -828,7 +830,8 @@ platform refusals do not claim that ACK was observed. If the window already know
 a session is serial, missing serial metadata on a fresh monitor attach keeps
 Read/Send locked with an unverified-context explanation.
 
-This candidate still needs parent review and package gates. See the
+The software package passed correction review, the selected package gate and all
+16 affected production configurations; this is not hardware verification. See the
 [contract and verification boundary](../../status/2026-11-04-usb-serial-ui.md) and
 [CLI path](10-command-line.md#usbserial-tp-uart-linux).
 

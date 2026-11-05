@@ -8,7 +8,13 @@
 `--source` for a Busware TUL running transparent firmware. Monitoring is passive;
 active sending waits for link confirmation and supports standard TP1 frames only.
 This is software-tested transport support, not physical compatibility or USB/HID
-support. The server, browser monitor and status-bar selector remain IP-only.
+support. The Linux server, Settings, browser monitor and status-bar selector also
+offer explicit serial passive/active selection with session-bound sends and
+reserved cleanup. They require a server-local path and unique source address;
+selection never connects. The software package is accepted on main, not physically
+verified. Device management, downloads and scans remain IP-only.
+[Server/UI usage](user-guide/07-bus-and-interfaces.md#usbserial-tp-uart-linux-server-main-only) ·
+[Server/UI acceptance](../status/2026-11-04-usb-serial-ui.md).
 [CLI usage](user-guide/10-command-line.md#usbserial-tp-uart-linux) ·
 [Evidence and limits](../status/2026-11-04-usb-tpuart.md).
 
@@ -1083,11 +1089,11 @@ source-bound browser/unit/build evidence; this does not expand KNX compatibility
 | Gateway discovery | ✅ Implemented | CLI and graphical bus monitor — [Bus monitor and KNXnet/IP](user-guide/07-bus-and-interfaces.md) |
 | Tunnelling: connect, monitor, decode | ✅ Implemented | Verified live against one gateway; a 34-minute session read 1,299 telegrams with no drops |
 | Flow view: who talks to whom in the running session | ✅ Implemented | Read-only, session-local; checked in Chromium with synthetic traffic, not on a real bus; Motion Off advised for large installations — [§154](../KNOWN_LIMITATIONS.md#154-the-telegram-flow-view-is-checked-and-measured-in-chromium-only) |
-| Routing (multicast) | 🟡 Partial or experimental, command line only | The graphical monitor has no multicast routing; the serial candidate is separate — [§62](../KNOWN_LIMITATIONS.md#62-the-group-monitor-gui-t15-is-tunnelling-only-single-session-client-filtered-and-only-its-passive-receive-path-has-real-gateway-evidence) |
+| Routing (multicast) | 🟡 Partial or experimental, command line only | The graphical monitor has no multicast routing; the serial transport is separate — [§62](../KNOWN_LIMITATIONS.md#62-the-group-monitor-gui-t15-is-tunnelling-only-single-session-client-filtered-and-only-its-passive-receive-path-has-real-gateway-evidence) |
 | Sending a group value write | 🟡 Implemented, live evidence limited | Tested write paths are reachable; passive receive evidence does not prove every live send/UI/gateway combination. Undo does not reverse a bus write |
 | Line scan | 🟡 Partial or experimental | CLI and graphical diagnostics; live bus load, cannot identify products or cross couplers — [§72](../KNOWN_LIMITATIONS.md#72-line-scan-t17-an-unthrottled-scan-is-a-live-bus-cost-not-a-theoretical-one--shipped-2026-09-13-still-true) |
 | Verification against more than one gateway model | 🟡 Partial or experimental | Exactly one model so far |
-| USB/serial transparent TP-UART | Main-only candidate | Linux server, explicit passive/active settings/footer/monitor; bound sends and cleanup reservation; correction review/gates pending; [scope](../status/2026-11-04-usb-serial-ui.md) |
+| USB/serial transparent TP-UART | Main-only, software-tested | Linux server, explicit passive/active settings/footer/monitor; bound sends and cleanup reservation; correction review and package gates passed, physical compatibility unverified; [scope](../status/2026-11-04-usb-serial-ui.md) |
 | Other USB/non-IP interfaces | ❌ Not implemented | KNX USB HID, FT1.2 and arbitrary serial adapters unsupported |
 
 ## Commissioning and device download

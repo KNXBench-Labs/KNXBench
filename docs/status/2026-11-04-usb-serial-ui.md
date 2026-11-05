@@ -210,5 +210,48 @@ keyboard cases passed five repetitions each with retries disabled; the complete
 21-case file passed separately. These focused populations overlap and do not
 replace the final integrated gate or make the failed attempt green.
 
-Fresh main-first acceptance, remaining exact-build production consumers, final
-screenshot readback and publication are still pending.
+## Integrated acceptance and publication (5 November 2026)
+
+Main-first `eab79cc5b`, first parent `8f1a933f2`, was published and its live and
+tracking refs read back exactly. The complete selected 15-stage package gate
+passed with frozen inputs and checked, untouched user data:
+
+| Executed lane | Result |
+| --- | --- |
+| Scoped Rust tests | 1,741 passed, 72 regularly ignored |
+| Separate selected corpus | 51/51 passed |
+| UI unit tests | 5,099 passed |
+| Default Chromium | 1,026 functional and 69 exclusive passed |
+| Communication production | 91 functional and one exclusive passed |
+| Supplemental production | All 45 stages for the other 15 registered configurations passed |
+
+The primary and supplemental lanes together cover all 16 registered production
+configurations. The supplement used the maintained lane, lease, inventory and
+proof functions and the exact accepted build; source, build and execution-tool
+identities remained equal. Counts overlap across lanes and are not a unique-test
+sum or whole-workspace/release acceptance. The recorded Node identity throughout
+these executions was 26.7.0; a different interactive-shell selection observed
+later is not an in-run tool change or acceptance on that other version.
+
+The just-built native server also passed 12 isolated loopback HTTP observations,
+including strict malformed-body refusal, missing-path passive/active uncertainty,
+no leaked session and exact-identity read/write refusal. It served the built Web
+UI and terminated cleanly with exit 0. Its binary hash was recorded at execution.
+Only a guaranteed-absent task-local TTY path was used, not a physical device.
+
+Sixteen retained captures were viewed: eight default and eight communication
+production captures of the overlapping EN/DE, 400/1440-width passive-footer and
+active-monitor scenarios. No visible transport-warning clipping or blocked
+controls was found. Rendering is not physical compatibility evidence.
+
+The queued retry after the first main run stopped at 00:34 CET on 5 November
+before creating its worktree or executing a gate: both packages prepended a
+new implementation-history entry. The successor preserves the System-2 entry
+byte-for-byte alongside the USB entry; all 40 feature App/crate inputs match
+`40c327374`. The stopped queue and all earlier failed epochs remain failed.
+
+This closeout changes documentation only. Product execution remains bound to
+`eab79cc5b`; no hardware, bus, firmware, VM, release or deployment action occurred.
+Installed firmware, parity/error forwarding and physical receive/transmit remain
+unverified; other USB protocols, serial enumeration and serial device management
+remain outside the delivered scope.

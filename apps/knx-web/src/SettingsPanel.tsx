@@ -1,4 +1,5 @@
 /** Continuous settings workspace with immediate controls and accessible section jumps. */
+import BusTransportFields from "./BusTransportFields";
 import { emitAchievementEvent } from "./achievementEvents";
 import AchievementSettings from "./AchievementSettings";
 import UpdateSettings from "./UpdateSettings";
@@ -627,6 +628,7 @@ export default function SettingsPanel(props: {
       </section>
       <section className="settings-section settings-section-bus">
         <h2 id="settings-bus" tabIndex={-1}>{t("settings.section.busDiagnostics")}</h2>
+        <BusTransportFields />
         <label className="settings-field">
           <span className="settings-field-label">{t("settings.preferredGateway")}</span>
           <input

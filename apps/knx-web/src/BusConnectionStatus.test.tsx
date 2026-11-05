@@ -1,5 +1,5 @@
+/** Verify explicit status-bar bus actions and accurate IP/serial targets. */
 // @vitest-environment happy-dom
-/** Tests the status-bar bus connection: pure selection, explicit actions, honest states. */
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -9,6 +9,7 @@ import type { ActivitySnapshot, SessionActivity } from "./liveActivity";
 const apiMock = vi.hoisted(() => ({
   busActivity: vi.fn(),
   startBusMonitor: vi.fn(),
+  startSerialBusMonitor: vi.fn(),
   stopBusMonitor: vi.fn(),
   stopBoundBusMonitor: vi.fn(),
   discoverBusInterfaces: vi.fn(),
@@ -19,7 +20,7 @@ vi.mock("./api", async (importOriginal) => ({
 }));
 
 import BusConnectionStatus from "./BusConnectionStatus";
-import { resetBusConnectionForTests } from "./busConnection";
+import { refreshBusConnection, resetBusConnectionForTests } from "./busConnection";
 import { resetBusDiscoveryForTests, searchBusInterfaces } from "./busDiscovery";
 import { loadPreferredGateway, savePreferredGateway } from "./gatewayPreference";
 import { resetSettingsForTests, setSetting } from "./settingsStore";
@@ -286,4 +287,64 @@ describe("R8: a suppressed stop publication never invents a newer connection", (
     expect(stateText()).toContain(en["busConnection.state.disconnected"]);
     expect(apiMock.stopBusMonitor).not.toHaveBeenCalled();
   });
+});
+
+
+describe("serial status controller join", () => {
+  it.each(["passive", "active"] as const)("selects without traffic, discloses %s, and uses the shared bound session", async mode => {
+    const serial = {path:"/synthetic/tty",source:"1.1.250",mode};
+    setSetting("preferredBusTransport", "serial"); setSetting("serialPath", serial.path);
+    setSetting("serialSource", serial.source); setSetting("serialMode", mode);
+    await render(); await act(async () => refreshBusConnection());
+    expect(apiMock.startSerialBusMonitor).not.toHaveBeenCalled(); expect(apiMock.startBusMonitor).not.toHaveBeenCalled();
+    await click(action());
+    expect(q(".bus-connection-panel")!.textContent).toContain(en[mode === "active" ? "busTransport.activeWarning" : "busTransport.passiveHint"]);
+    expect(apiMock.startSerialBusMonitor).not.toHaveBeenCalled();
+    apiMock.startSerialBusMonitor.mockResolvedValueOnce({...started,serial});
+    apiMock.busActivity.mockResolvedValue(snapshot({sessions:[{kind:"busMonitor",id:5,state:"active",serial}]}));
+    const connect = [...host.querySelectorAll<HTMLButtonElement>(".bus-connection-panel button")].find(button => button.textContent === en["busConnection.connect"])!;
+    await click(connect);
+    expect(apiMock.startSerialBusMonitor).toHaveBeenCalledExactlyOnceWith(serial);
+    expect(apiMock.startBusMonitor).not.toHaveBeenCalled();
+    expect(stateText()).toContain(serial.path); expect(stateText()).not.toContain("192.0.2.");
+    expect(trigger().textContent).toContain("Interface:"); expect(trigger().textContent).not.toContain("Gateway:");
+    await act(async () => setSetting("serialPath", "/synthetic/other"));
+    expect(stateText()).toContain(serial.path);
+    expect(q(".bus-connection-panel")!.textContent).toContain("/synthetic/other");
+    apiMock.busActivity.mockResolvedValue(snapshot());
+    apiMock.stopBoundBusMonitor.mockResolvedValueOnce(mode === "active" ? {...summary,warning:"reset failed; auto-ACK state unknown"} : summary);
+    await click(action());
+    if(mode === "active") expect(q(".bus-connection-error")!.textContent).toBe(en["busTransport.cleanupWarning"]);
+    else expect(q(".bus-connection-error")).toBeNull();
+    expect(apiMock.stopBoundBusMonitor).toHaveBeenCalledExactlyOnceWith({sessionId:5,serverIncarnation:"process-a"});
+    expect(apiMock.stopBusMonitor).not.toHaveBeenCalled(); expect(loadPreferredGateway()).toBe("192.0.2.20:3671");
+  });
+  it("disables invalid serial targets and reports an unavailable server without claiming a session", async () => {
+    setSetting("preferredBusTransport","serial"); await render(); expect(action().disabled).toBe(true);
+    await act(async () => { setSetting("serialPath","/synthetic/tty"); setSetting("serialSource","1.1.250"); });
+    await click(action()); apiMock.startSerialBusMonitor.mockRejectedValueOnce(new Error("missing route"));
+    const connect=[...host.querySelectorAll<HTMLButtonElement>(".bus-connection-panel button")].find(button=>button.textContent===en["busConnection.connect"])!;
+    await click(connect); expect(q(".bus-connection-error")!.textContent).toBe(en["busTransport.unavailable"]);
+    expect(stateText()).toContain(en["busConnection.state.disconnected"]); expect(apiMock.startBusMonitor).not.toHaveBeenCalled();
+  });
+});
+
+it.each(["en","de"] as const)("preserves active-start uncertainty through the real API/error path in %s",async language=>{
+  const m=language==="en"?en:de;
+  setSetting("uiLanguage",language);setSetting("preferredBusTransport","serial");setSetting("serialPath","/synthetic/tty");setSetting("serialSource","1.1.250");
+  const actual=await vi.importActual<typeof import("./api")>("./api");
+  apiMock.startSerialBusMonitor.mockImplementation(actual.startSerialBusMonitor);
+  try {
+    for(const mode of ["active","passive"] as const){
+      setSetting("serialMode",mode);
+      vi.stubGlobal("fetch",vi.fn().mockResolvedValue(new Response(JSON.stringify({kind:"serialConnectFailed",activeAutoAckStateUncertain:mode==="active",error:mode==="active"?"initialization/reset failed; auto-ACK state unknown":"ordinary open failure"}),{status:502,headers:{"Content-Type":"application/json"}})));
+      if(mode==="active") await render();
+      await click(trigger());
+      const connect=[...host.querySelectorAll<HTMLButtonElement>(".bus-connection-panel button")].find(button=>button.textContent===m["busConnection.connect"])!;
+      await click(connect);
+      expect(q(".bus-connection-error")!.textContent).toBe(m[mode==="active"?"busTransport.activeStartUncertain":"busTransport.unavailable"]);
+      expect(fetch).toHaveBeenCalledTimes(1);expect(apiMock.startBusMonitor).not.toHaveBeenCalled();
+      if(mode==="active") await click(trigger());
+    }
+  }finally{vi.unstubAllGlobals();}
 });

@@ -133,6 +133,7 @@ impl Observation {
         use knx_net::BusError;
         let (class, kind) = match error {
             crate::BusSessionError::AlreadyActive => ("already-active", None),
+            crate::BusSessionError::PassiveSerial => ("passive-serial", None),
             crate::BusSessionError::NoActiveSession => ("no-active-session", None),
             crate::BusSessionError::Transport(error) => match error {
                 BusError::Io(error) => ("transport-io", Some(error.kind())),

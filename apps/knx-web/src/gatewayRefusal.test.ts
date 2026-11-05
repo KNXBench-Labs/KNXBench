@@ -207,3 +207,34 @@ describe("busSessionChanged (WP-26 bound stop)", () => {
     expect(admitGatewayRefusal(refusal(409, { error: "no active monitor session" }))).toBeNull();
   });
 });
+
+describe("serial transport refusals",()=>{
+  it("admits exact structured failures and words passive refusal in both languages",()=>{
+    const error=refusal(409,{error:"passive serial monitoring cannot send; nothing was sent",kind:"passiveSerial"});
+    expect(admitGatewayRefusal(error)).toEqual({kind:"passiveSerial"});
+    expect(describeGatewayRefusal({kind:"passiveSerial"},en)).toBe(en("busTransport.passiveRefusal"));
+    expect(describeGatewayRefusal({kind:"passiveSerial"},de)).toBe(de("busTransport.passiveRefusal"));
+    expect(admitGatewayRefusal(refusal(400,{error:"x",kind:"passiveSerial"}))).toBeNull();
+    expect(admitGatewayRefusal(refusal(409,{error:"x",kind:"passiveSerial",unexpected:true}))).toBeNull();
+    expect(admitGatewayRefusal(refusal(501,{error:"Linux required",kind:"serialUnsupported"}))).toEqual({kind:"serialUnsupported"});
+    expect(admitGatewayRefusal(refusal(502,{error:"failed",kind:"serialConnectFailed",activeAutoAckStateUncertain:false}))).toEqual({kind:"serialConnectFailed",activeAutoAckStateUncertain:false});
+  });
+  it("names a serial holder without offering its path as an IP gateway",()=>{
+    const serial={path:"/synthetic/tty",source:"1.1.250",mode:"active"} satisfies import("./serialTransport").SerialTarget;
+    const holder={kind:"busMonitor",sessionId:5,serial,state:"active"} satisfies import("./gatewayRefusal").TunnelHolder;
+    expect(admitGatewayRefusal(busy(holder))).toEqual({kind:"gatewayBusy",holder});
+    expect(describeHolder(holder,en)).toContain(serial.path);expect(describeHolder(holder,de)).toContain(serial.source);
+    expect(admitGatewayRefusal(busy({...holder,gateway:"192.0.2.1:3671"}))).toBeNull();
+  });
+});
+
+it("words conservative active-start uncertainty only from its structured boolean, in EN and DE",()=>{
+  const uncertain={kind:"serialConnectFailed",activeAutoAckStateUncertain:true} satisfies import("./gatewayRefusal").GatewayRefusal;
+  const ordinary={kind:"serialConnectFailed",activeAutoAckStateUncertain:false} satisfies import("./gatewayRefusal").GatewayRefusal;
+  expect(describeGatewayRefusal(uncertain,en)).toBe(en("busTransport.activeStartUncertain"));
+  expect(describeGatewayRefusal(uncertain,de)).toBe(de("busTransport.activeStartUncertain"));
+  expect(describeGatewayRefusal(ordinary,en)).toBe(en("busTransport.unavailable"));
+  expect(admitGatewayRefusal(refusal(502,{...uncertain,error:"plain missing-device error"}))).toEqual(uncertain);
+  expect(admitGatewayRefusal(refusal(502,{kind:"serialConnectFailed",error:"auto-ACK state unknown"}))).toBeNull();
+  expect(admitGatewayRefusal(refusal(502,{...uncertain,activeAutoAckStateUncertain:"true",error:"x"}))).toBeNull();
+});

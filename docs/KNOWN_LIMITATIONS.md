@@ -1032,7 +1032,7 @@ Main types 1–30 have explicit formats/rulings; subtype/FB semantics remain par
 ### 62. Group Monitor evidence
 
 **Ledger status:** `ACCEPTED_BOUNDARY` ([KL-62](status/LEDGER.md#snapshot-ids)).
-The GUI is tunnelling-based, single-session and client-filtered. Passive receive evidence does not verify every send/device/routing/history scenario.
+The single-session, client-filtered GUI adds explicit Linux TP-UART in main-only source builds. Physical serial firmware/receive/transmit and broader device/routing/history scenarios remain unverified.
 [Details and history](limitations/KL-062-group-monitor-evidence.md)
 
 <a id="catalogue-kl-072"></a>

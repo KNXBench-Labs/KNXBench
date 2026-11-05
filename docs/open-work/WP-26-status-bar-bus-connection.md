@@ -89,13 +89,18 @@ Reuse the shared KNXnet/IP interface search
 preferred gateway ([`gatewayPreference.ts`](../../apps/knx-web/src/gatewayPreference.ts));
 no second discovery or selection state.
 
-## USB transport foundation and remaining UI gap (4 November 2026)
+## USB/serial server and UI candidate (4 November 2026)
 
-The [Linux TP-UART transport package](../status/2026-11-04-usb-tpuart.md) adds
-CLI monitor/write selection for a Busware TUL with transparent USB-serial
-firmware. It does not add server-session or status-bar USB selection, KNX USB/HID,
-FT1.2 or arbitrary serial-adapter support, and physical compatibility is unverified.
+The [server/UI candidate](../status/2026-11-04-usb-serial-ui.md) connects the
+existing Linux TP-UART adapter through the shared session and offers explicit
+IP versus serial selection in settings, footer and monitor. It requires a
+server-local path, unique caller-chosen source and explicit passive/active mode;
+no hardware is enumerated. Active auto-ACK is disclosed before Connect.
 
-The menu still shows IP gateways only. USB entries require a separately bounded
-server/controller integration with local device permissions and container access;
-the CLI transport foundation must not be presented as complete WP-26 USB coverage.
+F1–F4 correction review and package gates are pending. The correction binds serial
+group traffic to the displayed session/process, retains admission through cleanup,
+surfaces conservative active-start uncertainty and honors known serial provenance
+on fresh monitor attach. Earlier browser/smoke proof is pre-correction evidence. Physical compatibility, installed
+firmware, extended frames, KNX USB HID, FT1.2 and arbitrary serial adapters remain
+open/unsupported. Device management, downloads and scans stay IP-only. The
+[original CLI delivery evidence](../status/2026-11-04-usb-tpuart.md) is retained.

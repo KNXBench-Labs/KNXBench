@@ -109,7 +109,7 @@ firmware, extended frames, KNX USB HID, FT1.2 and arbitrary serial adapters rema
 open/unsupported. Device management, downloads and scans stay IP-only. The
 [original CLI delivery evidence](../status/2026-11-04-usb-tpuart.md) is retained.
 
-## Passive USB-serial candidates (5 November 2026; candidate, acceptance pending)
+## Passive USB-serial candidates (5 November 2026; software-accepted on main)
 
 The bounded successor adds explicit **List USB-serial candidates** beside the
 manual path in the existing shared settings/footer/monitor fields. The read-only
@@ -133,5 +133,7 @@ HID, FT1.2 and other USB protocols remain unsupported.
 
 Tests use synthetic/injected filesystem data and intercepted HTTP only. No host
 hardware enumeration, device open, real installation or physical compatibility
-test belongs to this package. Independent whole-feature review and final selected
-package acceptance remain pending. [Primary source, API and test boundary](../research/2026-11-05-passive-serial-candidates.md).
+test belongs to this package. Published `edc6c90d5` completes this bounded
+software successor, not complete USB detection or the wider WP-26 hardware scope.
+[Acceptance and distinct execution bindings](../status/2026-11-05-wp26-passive-serial-candidates.md) ·
+[Primary source, API and test boundary](../research/2026-11-05-passive-serial-candidates.md).

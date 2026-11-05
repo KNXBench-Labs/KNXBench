@@ -22,8 +22,9 @@ explicit passive/active selection through the shared session. Published main-fir
 `eab79cc5b` passed correction review, the selected package gate and all 16 affected
 production configurations. Bound group sends, reserved cleanup and conservative
 startup uncertainty are included. A [passive USB-serial candidate listing](research/2026-11-05-passive-serial-candidates.md)
-successor is implemented pending review and final selected gates: explicit by-id
-metadata only, no port probe or compatibility inference. Complete USB enumeration,
+successor is software-accepted on main as `edc6c90d5`: explicit by-id
+metadata only, no port probe or compatibility inference.
+[Acceptance and source-bound verification](status/2026-11-05-wp26-passive-serial-candidates.md). Complete USB enumeration,
 wider physical acceptance, extended frames and other USB protocols remain open.
 [Scope and limits](status/2026-11-04-usb-tpuart.md).
 

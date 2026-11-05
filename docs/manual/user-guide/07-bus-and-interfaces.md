@@ -836,10 +836,12 @@ The software package passed correction review, the selected package gate and all
 [contract and verification boundary](../../status/2026-11-04-usb-serial-ui.md) and
 [CLI path](10-command-line.md#usbserial-tp-uart-linux).
 
-### Passive USB-serial candidates (source candidate)
+<a id="passive-usb-serial-candidates-source-candidate"></a>
 
-This addition is awaiting independent review and final selected package gates;
-it is not in Alpha 19. Choose **USB/serial TP-UART**, then explicitly press
+### Passive USB-serial candidates (main-only after Alpha 19)
+
+This bounded addition is software-accepted on main, not in Alpha 19;
+[acceptance and limits](../../status/2026-11-05-wp26-passive-serial-candidates.md). Choose **USB/serial TP-UART**, then explicitly press
 **List USB-serial candidates** beside the path in Settings, the status-bar
 configuration or Bus Monitor. Nothing is listed automatically on opening the view
 or polling the connection. The action inspects only `/dev/serial/by-id` symlinks

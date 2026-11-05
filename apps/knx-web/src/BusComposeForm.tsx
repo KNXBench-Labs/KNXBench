@@ -14,6 +14,7 @@
 
 import { useState } from "react";
 import * as api from "./api";
+import { gatewayRefusalMessage } from "./gatewayRefusal";
 import type { BusWriteResponse, DptInputFormat } from "./api";
 import { useTranslate } from "./i18n";
 import { canonicalGroupAddress, useGroupAddressFormat } from "./gaNotation";
@@ -68,6 +69,7 @@ interface BusComposeFormProps {
   /// for a session everybody already knew was gone. Same "say so rather
   /// than silently disabling itself" rule as `projectOpen` above — the form
   /// disables and explains, it does not just grey out.
+  session: api.GroupActionSession;
   sessionClosed: boolean;
   /// Whether the session's last confirmed project-context publication no
   /// longer matches the project as it is now (`busContext.ts`). Same shape as
@@ -96,11 +98,15 @@ export default function BusComposeForm({
   destination: initialDestination,
   resolution: initialResolution,
   projectOpen,
+  session,
   sessionClosed,
   contextStale,
-  contextUnverified = false,
+  contextUnverified: contextUnverifiedProp = false,
 }: BusComposeFormProps) {
   const t = useTranslate();
+  const passiveSerial = session.kind === "serial" && session.mode === "passive";
+  const sessionUnverified = session.kind === "unverified" || !api.isBoundBusSession(session.identity);
+  const contextUnverified = contextUnverifiedProp || sessionUnverified;
   const [language] = useUiLanguage();
   const formatGa = useGroupAddressFormat();
   const [destination, setDestination] = useState(initialDestination);
@@ -114,6 +120,7 @@ export default function BusComposeForm({
   const [sendError, setSendError] = useState<string | null>(null);
   const [sent, setSent] = useState<BusWriteResponse | null>(null);
   const [sending, setSending] = useState(false);
+  const [readSent, setReadSent] = useState(false);
 
   function onDestinationChange(next: string) {
     setDestination(next);
@@ -130,6 +137,7 @@ export default function BusComposeForm({
     setSendError(null);
     setSent(null);
 
+    if (passiveSerial) { setSendError(t("busTransport.passiveRefusal")); return; }
     if (sessionClosed) {
       // Belt and braces: the Send button (and every field) is already
       // `disabled` below whenever `sessionClosed` is true, but guarding
@@ -187,21 +195,26 @@ export default function BusComposeForm({
       // canonical `/` form (`gaNotation.ts`). Anything that is not a
       // level-style address goes through untouched, so the server's own
       // validation names what the user actually typed.
-      const response = await api.writeBusValue(
-        canonicalGroupAddress(destination),
-        dptToSend,
-        value,
-        inputFormat,
-      );
+      const response = session.kind === "serial"
+        ? await api.writeBoundBusValue(session.identity, canonicalGroupAddress(destination), dptToSend, value, inputFormat)
+        : await api.writeBusValue(canonicalGroupAddress(destination), dptToSend, value, inputFormat);
       setSent(response);
     } catch (e) {
       // `400`/`409`/`502` all land here — shown inline on the form, not
       // only as a toast (design §6: a `502` in particular is exactly the
       // kind of thing a KNX engineer needs to read in full).
-      setSendError(api.errorMessage(e));
+      setSendError(gatewayRefusalMessage(e) ?? api.errorMessage(e));
     } finally {
       setSending(false);
     }
+  }
+
+  async function read() {
+    if (!destination || sending || passiveSerial || sessionClosed || contextStale || contextUnverified) return;
+    setSending(true); setSendError(null); setReadSent(false);
+    try { await api.readBusValue(session.identity, canonicalGroupAddress(destination)); setReadSent(true); }
+    catch (error) { setSendError(gatewayRefusalMessage(error) ?? api.errorMessage(error)); }
+    finally { setSending(false); }
   }
 
   /// The four controls below go `disabled` for reasons that are only
@@ -213,6 +226,7 @@ export default function BusComposeForm({
   /// so this is a list, and it must never name an id that is not in the DOM.
   const disabledReason =
     [
+      passiveSerial ? "bus-compose-passive-hint" : null,
       sessionClosed ? "bus-compose-closed-hint" : null,
       contextStale ? "bus-compose-stale-hint" : null,
       contextUnverified ? "bus-compose-unverified-hint" : null,
@@ -230,6 +244,7 @@ export default function BusComposeForm({
           {t("busMonitor.contextUnverified")}
         </p>
       )}
+      {passiveSerial && <p id="bus-compose-passive-hint" className="bus-compose-hint" role="note">{t("busTransport.passiveRefusal")}</p>}
       {sessionClosed && (
         <p id="bus-compose-closed-hint" className="bus-compose-hint bus-compose-closed-hint">
           {t("busCompose.sessionClosedMessage")}
@@ -253,7 +268,7 @@ export default function BusComposeForm({
             value={destination}
             placeholder={formatGa("1/1/1")}
             onChange={(e) => onDestinationChange(e.target.value)}
-            disabled={sessionClosed || contextStale || contextUnverified}
+            disabled={passiveSerial || sessionClosed || contextStale || contextUnverified}
             aria-describedby={disabledReason}
           />
         </label>
@@ -263,7 +278,7 @@ export default function BusComposeForm({
             className="bus-compose-dpt"
             value={dpt}
             onChange={(e) => setDpt(e.target.value)}
-            disabled={sessionClosed || contextStale || contextUnverified}
+            disabled={passiveSerial || sessionClosed || contextStale || contextUnverified}
             aria-describedby={[disabledReason, "bus-compose-dpt-hint"].filter(Boolean).join(" ")}
           >
             <option value="">{t("busCompose.dptAutomatic")}</option>
@@ -281,7 +296,7 @@ export default function BusComposeForm({
             className="bus-compose-value"
             value={value}
             onChange={(e) => setValue(e.target.value)}
-            disabled={sessionClosed || contextStale || contextUnverified}
+            disabled={passiveSerial || sessionClosed || contextStale || contextUnverified}
             aria-describedby={disabledReason}
           />
         </label>
@@ -293,7 +308,7 @@ export default function BusComposeForm({
             onChange={(e) =>
               setInputFormat(e.target.value === "" ? null : (e.target.value as DptInputFormat))
             }
-            disabled={sessionClosed || contextStale || contextUnverified}
+            disabled={passiveSerial || sessionClosed || contextStale || contextUnverified}
             aria-describedby={disabledReason}
           >
             <option value="">{t("busCompose.inputFormatAuto")}</option>
@@ -304,15 +319,19 @@ export default function BusComposeForm({
             <option value="text">{t("busCompose.inputFormatText")}</option>
           </select>
         </label>
+        <button type="button" onClick={() => void read()}
+          disabled={sending || !destination || passiveSerial || sessionClosed || contextStale || contextUnverified}
+          aria-describedby={disabledReason}>{t("busTransport.read")}</button>
         <button
           onClick={() => void send()}
-          disabled={sending || !destination || !value || sessionClosed || contextStale || contextUnverified}
+          disabled={sending || !destination || !value || passiveSerial || sessionClosed || contextStale || contextUnverified}
           aria-describedby={disabledReason}
         >
           {t("busCompose.send")}
         </button>
       </div>
       <p id="bus-compose-dpt-hint" className="bus-compose-hint">{t("busCompose.dptSelectionHint")}</p>
+      {readSent && <p role="status">{t("busTransport.readSent")}</p>}
       {sendError && <span className="field-error bus-compose-error">{sendError}</span>}
       {sent && (
         <p className="bus-compose-sent">

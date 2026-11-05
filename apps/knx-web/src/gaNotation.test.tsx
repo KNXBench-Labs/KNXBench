@@ -9,7 +9,8 @@ const apiMock = vi.hoisted(() => ({
   unlinkComObject: vi.fn(),
 }));
 
-vi.mock("./api", () => ({
+vi.mock("./api", async importOriginal => ({
+  isBoundBusSession: (await importOriginal<typeof import("./api")>()).isBoundBusSession,
   ...apiMock,
   errorMessage: (error: unknown) => (error instanceof Error ? error.message : String(error)),
 }));
@@ -217,6 +218,7 @@ async function sendFrom(destination: string): Promise<void> {
   const host = mount(
     <BusComposeForm
       destination={destination}
+      session={{kind:"ip",identity:{sessionId:1,serverIncarnation:"notation-test"}}}
       resolution={{ kind: "single", dpt: "DPST-1-1" }}
       projectOpen
       sessionClosed={false}
@@ -224,7 +226,7 @@ async function sendFrom(destination: string): Promise<void> {
     />,
   );
   await act(async () => typeInto(host, "input.bus-compose-value", "off"));
-  const send = [...host.querySelectorAll("button")].find((b) => !b.disabled)!;
+  const send = [...host.querySelectorAll("button")].find((b) => b.textContent === "Send")!;
   await act(async () => {
     send.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     await Promise.resolve();

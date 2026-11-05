@@ -1,4 +1,5 @@
 /** Issue #10/WP-26: words structured gateway refusals; unknown shapes keep the server text. */
+import { serialLabel, validSerialTarget, type SerialTarget } from "./serialTransport";
 import { translate, type Translate, type TranslatableKey } from "./i18n";
 import { BUSY_LOCKS, type ActivitySnapshot, type BusyLock } from "./liveActivity";
 
@@ -12,7 +13,7 @@ export type TunnelHolder =
   /** `sessionId` is known only from the activity snapshot (to stop it). */
   | { kind: "addressProgramming"; address: string; state: "waiting" | "programming"; sessionId?: number }
   /** `gateway` is missing only from an older server's activity snapshot. */
-  | { kind: "busMonitor"; sessionId: number; gateway?: string; state: "active" | "closed" }
+  | { kind: "busMonitor"; sessionId: number; gateway?: string; serial?: SerialTarget; state: "active" | "closed" }
   | { kind: "lineScan"; sessionId: number; probed: number; total: number }
   | { kind: "connecting"; session: BusyLock };
 
@@ -25,7 +26,9 @@ export type GatewayRefusal =
   /** Goal A3 (KL-163): stop admission refused a new tunnel; nothing was sent. */
   | { kind: "serverStopping" }
   /** WP-26: a bound stop named a session that is not the one held; nothing was stopped. */
-  | { kind: "busSessionChanged" };
+  | { kind: "busSessionChanged" | "busSessionBindingRequired" }
+  | { kind: "passiveSerial" | "serialUnsupported" }
+  | { kind: "serialConnectFailed"; activeAutoAckStateUncertain: boolean };
 
 type Fields = Record<string, unknown>;
 
@@ -53,6 +56,9 @@ function admitHolder(value: unknown): TunnelHolder | null {
       h = exactly(value, ["kind", "address", "state"]);
       return h && individualAddress(h.address) && oneOf(h.state, ["waiting", "programming"]) ? h as TunnelHolder : null;
     case "busMonitor":
+      h = exactly(value, ["kind", "sessionId", "serial", "state"]);
+      if (h && positive(h.sessionId) && validSerialTarget(h.serial) && oneOf(h.state, ["active", "closed"]))
+        return { kind: "busMonitor", sessionId: h.sessionId, serial: h.serial, state: h.state === "active" ? "active" : "closed" };
       h = exactly(value, ["kind", "sessionId", "gateway", "state"]);
       return h && positive(h.sessionId) && endpoint(h.gateway) && oneOf(h.state, ["active", "closed"])
         ? h as TunnelHolder : null;
@@ -95,6 +101,15 @@ export function admitGatewayRefusal(error: unknown): GatewayRefusal | null {
       return b && status === 502 && endpoint(b.gateway) ? { kind, gateway: b.gateway as string } : null;
     case "serverStopping":
       return exactly(body, ["error", "kind"]) && status === 503 ? { kind } : null;
+    case "passiveSerial":
+      return exactly(body, ["error", "kind"]) && status === 409 ? { kind } : null;
+    case "serialUnsupported":
+      return exactly(body, ["error", "kind"]) && status === 501 ? { kind } : null;
+    case "serialConnectFailed":
+      b = exactly(body, ["error", "kind", "activeAutoAckStateUncertain"]);
+      return b && status === 502 && typeof b.activeAutoAckStateUncertain === "boolean"
+        ? {kind,activeAutoAckStateUncertain:b.activeAutoAckStateUncertain} : null;
+    case "busSessionBindingRequired":
     case "busSessionChanged":
       return exactly(body, ["error", "kind"]) && status === 409 ? { kind } : null;
     case "unsupportedByteOrder":
@@ -140,6 +155,7 @@ export function holderFromActivity(snapshot: ActivitySnapshot): TunnelHolder | n
   if (snapshot.busyLocks.includes("system2Operation")) return null;
   for (const session of snapshot.sessions) {
     if (session.kind === "busMonitor") {
+      if (session.serial) return { kind: "busMonitor", sessionId: session.id, serial: session.serial, state: session.state };
       return session.gateway === undefined
         ? { kind: "busMonitor", sessionId: session.id, state: session.state }
         : { kind: "busMonitor", sessionId: session.id, gateway: session.gateway, state: session.state };
@@ -164,6 +180,7 @@ export function describeHolder(holder: TunnelHolder, t: Translate): string {
         ? t("gatewayRefusal.busy.addressProgrammingWaiting", { address: holder.address })
         : t("gatewayRefusal.busy.addressProgramming", { address: holder.address });
     case "busMonitor":
+      if (holder.serial) return t(holder.state === "active" ? "busTransport.connected" : "busTransport.lost", { target: serialLabel(holder.serial) });
       if (holder.gateway === undefined) return t("gatewayRefusal.busy.busMonitorRunning");
       return holder.state === "active"
         ? t("gatewayRefusal.busy.busMonitor", { gateway: holder.gateway })
@@ -193,8 +210,12 @@ export function describeGatewayRefusal(refusal: GatewayRefusal, t: Translate): s
     }
     case "gatewayTimeout":
       return t("gatewayRefusal.timeout", { gateway: refusal.gateway });
+    case "passiveSerial": return t("busTransport.passiveRefusal");
+    case "serialUnsupported": return t("busTransport.unsupported");
+    case "serialConnectFailed": return t(refusal.activeAutoAckStateUncertain ? "busTransport.activeStartUncertain" : "busTransport.unavailable");
     case "serverStopping":
       return t("gatewayRefusal.serverStopping");
+    case "busSessionBindingRequired": return t("busTransport.bindingRequired");
     case "busSessionChanged":
       return t("gatewayRefusal.busSessionChanged");
     case "unsupportedByteOrder":

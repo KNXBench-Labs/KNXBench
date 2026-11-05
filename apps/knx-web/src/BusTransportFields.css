@@ -1,0 +1,5 @@
+/* Keep explicit transport configuration readable inside settings, monitor and footer popovers. */
+.bus-transport-fields { display: grid; gap: 0.5rem; min-width: 0; max-width: 100%; }
+.bus-transport-fields label { display: grid; gap: 0.25rem; min-width: 0; }
+.bus-transport-fields input, .bus-transport-fields select { width: 100%; min-width: 0; box-sizing: border-box; }
+.bus-transport-fields p { margin: 0; overflow-wrap: anywhere; font-size: 0.85rem; }

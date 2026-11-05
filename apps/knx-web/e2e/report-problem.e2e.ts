@@ -76,9 +76,13 @@ async function openFromMenu(page: Page, m: Messages) {
 
 async function openFromPalette(page: Page, m: Messages) {
   await expect(page.locator(".file-menu > summary")).toBeVisible();
+  await expect(page.locator(".file-menu [data-report-problem-open=menu]")).toHaveText(m["reportProblem.button"]);
   await page.keyboard.press("Control+Shift+P");
-  await page.getByRole("combobox").fill(m["reportProblem.button"].replace("…", ""));
-  await page.getByRole("combobox").press("Enter");
+  const query = page.getByRole("combobox");
+  await expect(query).toBeFocused();
+  await query.fill(m["reportProblem.button"].replace("…", ""));
+  await expect(page.getByRole("option", { name: m["reportProblem.button"], exact: true })).toHaveAttribute("aria-selected", "true");
+  await query.press("Enter");
 }
 
 /** Presses Tab until `selector` holds focus; fails instead of looping forever. */
@@ -224,9 +228,12 @@ for (const language of ["en", "de"] as const) {
     const { unexpected, log } = await intercept(page, language);
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/");
+    await expect(page.locator("html")).toHaveAttribute("lang", language);
     await expect(page.locator(".file-menu > summary")).toBeVisible();
     await page.keyboard.press("Control+Shift+P");
+    await expect(page.getByRole("combobox")).toBeFocused();
     await page.keyboard.type(m["reportProblem.button"].replace("…", ""));
+    await expect(page.getByRole("option", { name: m["reportProblem.button"], exact: true })).toHaveAttribute("aria-selected", "true");
     await page.keyboard.press("Enter");
     const dialog = page.getByRole("dialog", { name: m["reportProblem.title"], exact: true });
     await expect(dialog).toBeVisible();

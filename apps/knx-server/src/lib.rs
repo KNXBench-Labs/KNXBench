@@ -41,6 +41,7 @@ pub use auth_password::{
 
 mod auth_routes;
 mod bus;
+pub mod bus_serial;
 pub use bus::*;
 
 mod bus_routes;

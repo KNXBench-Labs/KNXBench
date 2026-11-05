@@ -1664,7 +1664,7 @@
       "number": 62,
       "title": "Group Monitor evidence",
       "topic": "Bus diagnostics and DPT",
-      "summary": "The GUI is tunnelling-based, single-session and client-filtered. Passive receive evidence does not verify every send/device/routing/history scenario.",
+      "summary": "The single-session, client-filtered GUI adds explicit Linux TP-UART in main-only source builds. Physical serial firmware/receive/transmit and broader device/routing/history scenarios remain unverified.",
       "file": "KL-062-group-monitor-evidence.md",
       "ledger_ids": [
         "KL-62"

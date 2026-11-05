@@ -1035,3 +1035,66 @@ describe("api", () => {
     expect(sessionExpired).toHaveBeenCalledTimes(1);
   });
 });
+
+describe("explicit serial API", () => {
+  const serial = { path: "/synthetic/tty", source: "1.1.250", mode: "passive" } satisfies import("./serialTransport").SerialTarget;
+  afterEach(() => vi.unstubAllGlobals());
+  it("posts exactly path/source/mode on the distinct route and preserves IP payloads", async () => {
+    mockFetchOnce({ sessionId: 1, serverIncarnation: "process", assignedAddress: serial.source, serial });
+    await api.startSerialBusMonitor(serial);
+    expect(fetch).toHaveBeenCalledExactlyOnceWith("/api/bus/monitor/start-serial", {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(serial),
+    });
+    mockFetchOnce({sessionId:1,serverIncarnation:"process",assignedAddress:"1.1.5"});
+    await api.startBusMonitor("192.0.2.1:3671");
+    expect(fetch).toHaveBeenCalledExactlyOnceWith("/api/bus/monitor/start", {
+      method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({gateway:"192.0.2.1:3671"}),
+    });
+  });
+  it.each([404,405,501,502])("refuses unavailable/legacy serial endpoints (%s) without retry or IP fallback", async status => {
+    mockFetchOnce({error:"unavailable"}, false, status);
+    await expect(api.startSerialBusMonitor(serial)).rejects.toMatchObject({status});
+    expect(fetch).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(fetch).mock.calls[0][0]).toBe("/api/bus/monitor/start-serial");
+  });
+  it("rejects missing, malformed and mismatched serial response targets", async () => {
+    for (const target of [undefined, {...serial, mode:"auto"}, {...serial,path:"other"}, {...serial,source:"1.1.2"}, {...serial,mode:"active"}]) {
+      mockFetchOnce({sessionId:1,serverIncarnation:"process",assignedAddress:serial.source,serial:target});
+      await expect(api.startSerialBusMonitor(serial)).rejects.toThrow("inconsistent target"); expect(fetch).toHaveBeenCalledTimes(1);
+    }
+    mockFetchOnce({}); await expect(api.startSerialBusMonitor({...serial,path:""})).rejects.toThrow("Invalid serial target");
+    expect(fetch).not.toHaveBeenCalled();
+  });
+  it("sends a group read with its exact session identity and destination", async () => {
+    mockFetchOnce({service:"GroupValueRead"}); await api.readBusValue({sessionId:1,serverIncarnation:"process"},"1/1/1");
+    expect(fetch).toHaveBeenCalledExactlyOnceWith("/api/bus/read",{method:"POST",headers:{"Content-Type":"application/json"},body:'{"sessionId":1,"serverIncarnation":"process","destination":"1/1/1"}'});
+  });
+});
+
+describe("bound group actions",()=>{
+  const identity={sessionId:17,serverIncarnation:"serial-process"};
+  afterEach(()=>vi.unstubAllGlobals());
+  it("posts exact immutable identity and payload to a distinct write route",async()=>{
+    mockFetchOnce({service:"GroupValueWrite",encodedPayload:"0x01 (6-bit)",decodedEcho:{kind:"value",text:"on"}});
+    await api.writeBoundBusValue(identity,"1/1/1","DPST-1-1","on",null);
+    expect(fetch).toHaveBeenCalledExactlyOnceWith("/api/bus/write-bound",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({...identity,destination:"1/1/1",dpt:"DPST-1-1",inputFormat:null,value:"on"})});
+  });
+  it.each([404,405,409,502])("does not fall back or retry a bound write refusal (%s)",async status=>{
+    mockFetchOnce({error:"refused"},false,status);
+    await expect(api.writeBoundBusValue(identity,"1/1/1","DPST-1-1","on",null)).rejects.toMatchObject({status});
+    expect(fetch).toHaveBeenCalledTimes(1);expect(vi.mocked(fetch).mock.calls[0][0]).toBe("/api/bus/write-bound");
+  });
+  it("rejects invalid read/write identity before fetch",async()=>{
+    mockFetchOnce({});
+    for(const bad of [{sessionId:0,serverIncarnation:"x"},{sessionId:2**53,serverIncarnation:"x"},{sessionId:1,serverIncarnation:"x y"}]){
+      await expect(api.readBusValue(bad,"1/1/1")).rejects.toThrow("Malformed");
+      await expect(api.writeBoundBusValue(bad,"1/1/1",null,"on",null)).rejects.toThrow("Malformed");
+    }
+    expect(fetch).not.toHaveBeenCalled();
+  });
+  it("preserves structured conservative active-start uncertainty through request and translation",async()=>{
+    mockFetchOnce({kind:"serialConnectFailed",activeAutoAckStateUncertain:true,error:"initialization/reset failed; auto-ACK state unknown"},false,502);
+    const error=await api.startSerialBusMonitor({path:"/synthetic/tty",source:"1.1.250",mode:"active"}).catch((error:unknown)=>error);
+    expect(api.errorMessage(error)).toContain("conservative warning");expect(api.errorMessage(error)).toContain("not an observation of device state");
+  });
+});

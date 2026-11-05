@@ -16,8 +16,11 @@ hardware action, release or deployment follows.
 The CLI can select a transparent Busware TUL TP-UART link for passive monitoring
 and confirmed standard-frame group writes. The infrastructure transport and
 software fault tests do not establish physical adapter compatibility. Firmware
-verification and authorized hardware checks remain separate; server/web/status-bar
-USB selection, extended frames and other USB protocols remain open.
+verification and authorized hardware checks remain separate. A bounded
+[server/Web UI serial candidate](status/2026-11-04-usb-serial-ui.md) now provides
+explicit passive/active selection through the shared session. Review corrections
+bind group sends to the shown session, reserve serial cleanup and surface startup
+uncertainty; correction review and package gates remain pending. Physical acceptance, extended frames and other USB protocols remain open.
 [Scope and limits](status/2026-11-04-usb-tpuart.md).
 
 ## Main-only after Alpha 19: caption-positive original recovery proof

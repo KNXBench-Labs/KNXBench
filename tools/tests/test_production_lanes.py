@@ -198,7 +198,8 @@ class Hazards(unittest.TestCase):
         self.assertIn('table-column-widths.e2e.ts', files)
         self.assertIn('notes-workspace.e2e.ts', files)
         self.assertIn('bus-connection-footer.e2e.ts', files)
-        self.assertEqual(len(files), 36)
+        self.assertIn('usb-serial-transport.e2e.ts', files)
+        self.assertEqual(len(files), 37)
         for name in files:
             self.assertTrue((APP / 'e2e' / name).is_file(), name)
 

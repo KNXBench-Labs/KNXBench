@@ -43,7 +43,10 @@ pub enum TunnelHolder {
     },
     BusMonitor {
         session_id: u64,
-        gateway: String,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        gateway: Option<String>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        serial: Option<crate::bus_serial::SerialTarget>,
         state: &'static str,
     },
     LineScan {
@@ -150,7 +153,8 @@ pub fn programming_holder_of(session: &AddressProgrammingSession) -> Option<Tunn
 pub fn monitor_holder_of(session: &BusSession) -> TunnelHolder {
     TunnelHolder::BusMonitor {
         session_id: session.id(),
-        gateway: session.gateway().to_string(),
+        gateway: session.gateway().map(|gateway| gateway.to_string()),
+        serial: session.serial().cloned(),
         state: match session.status() {
             SessionStatus::Active => "active",
             SessionStatus::Closed => "closed",

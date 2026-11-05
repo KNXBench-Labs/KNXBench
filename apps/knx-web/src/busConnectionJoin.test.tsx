@@ -1,5 +1,5 @@
+/** Verify shared footer/monitor ownership and stale-session refusal. */
 // @vitest-environment happy-dom
-/** WP-26 review R1/R2: the mounted footer and monitor panel share one controller; stale loses. */
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -9,23 +9,28 @@ import type { ActivitySnapshot, SessionActivity } from "./liveActivity";
 const apiMock = vi.hoisted(() => ({
   busActivity: vi.fn(),
   startBusMonitor: vi.fn(),
+  startSerialBusMonitor: vi.fn(),
   stopBusMonitor: vi.fn(),
   stopBoundBusMonitor: vi.fn(),
   pollBusTelegrams: vi.fn(),
   discoverBusInterfaces: vi.fn(),
   fetchFlowSnapshot: vi.fn(),
   writeBusValue: vi.fn(),
+  writeBoundBusValue: vi.fn(),
+  readBusValue: vi.fn(),
 }));
 vi.mock("./api", async (importOriginal) => ({ ...(await importOriginal<typeof import("./api")>()), ...apiMock }));
 
+import { messages as en } from "./messages/en";
+import { messages as de } from "./messages/de";
 import BusConnectionStatus from "./BusConnectionStatus";
 import BusMonitorPanel from "./BusMonitorPanel";
 import { subscribeAchievementEvents } from "./achievementEvents";
 import { CONTEXT_EVENT, readSessionContext, recordSessionContext } from "./busContext";
-import { readBusConnectionForTests, resetBusConnectionForTests } from "./busConnection";
+import { refreshBusConnection, readBusConnectionForTests, resetBusConnectionForTests } from "./busConnection";
 import { resetBusDiscoveryForTests } from "./busDiscovery";
 import { savePreferredGateway } from "./gatewayPreference";
-import { resetSettingsForTests } from "./settingsStore";
+import { resetSettingsForTests, setSetting } from "./settingsStore";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -342,4 +347,125 @@ describe("re-review R6-R8 in the mounted join", () => {
     expect(readSessionContext(localStorage)).toBeNull();
     expect(apiMock.stopBusMonitor).not.toHaveBeenCalled();
   });
+});
+
+
+describe("serial monitor join",()=>{
+  it.each(["passive","active"] as const)("connects exact %s target without IP and preserves the observed target on invalid later polls",async mode=>{
+    const serial={path:"/synthetic/tty",source:"1.1.250",mode};
+    setSetting("preferredBusTransport","serial");setSetting("serialPath",serial.path);
+    setSetting("serialSource",serial.source);setSetting("serialMode",mode);
+    await mount();
+    expect(apiMock.startSerialBusMonitor).not.toHaveBeenCalled();
+    apiMock.startSerialBusMonitor.mockResolvedValueOnce({sessionId:5,serverIncarnation:"process-a",assignedAddress:serial.source,serial});
+    apiMock.pollBusTelegrams.mockResolvedValue({...telegrams(5),serial});
+    apiMock.busActivity.mockResolvedValue(snapshot("process-a",[{kind:"busMonitor",id:5,state:"active",serial}]));
+    await act(async()=>panelButton("Connect")!.click());await flush();
+    expect(apiMock.startSerialBusMonitor).toHaveBeenCalledExactlyOnceWith(serial);
+    expect(apiMock.startBusMonitor).not.toHaveBeenCalled();
+    expect(host.querySelector(".bus-monitor-session")!.textContent).toContain(serial.path);
+    expect(host.querySelector(".bus-monitor-session")!.textContent).not.toContain("assigned address");
+    const input=host.querySelector<HTMLInputElement>(".bus-compose-destination")!;
+    expect(input.disabled).toBe(mode==="passive");
+    apiMock.pollBusTelegrams.mockResolvedValue(telegrams(5)); // Missing serial metadata cannot enable sends.
+    await act(async()=>{await vi.advanceTimersByTimeAsync(1000);});await flush();
+    expect(host.querySelector<HTMLInputElement>(".bus-compose-destination")!.disabled).toBe(true);
+    expect(host.querySelector(".bus-monitor-session")!.textContent).toContain(serial.path);
+    apiMock.stopBoundBusMonitor.mockResolvedValueOnce({sessionId:5,serverIncarnation:"process-a",telegramCount:0,droppedCount:0});
+    apiMock.busActivity.mockResolvedValue(snapshot("process-a")); apiMock.pollBusTelegrams.mockRejectedValue(notFound());
+    await act(async()=>panelButton("Disconnect")!.click());await flush();
+    expect(apiMock.stopBoundBusMonitor).toHaveBeenCalledExactlyOnceWith({sessionId:5,serverIncarnation:"process-a"});
+    expect(apiMock.stopBusMonitor).not.toHaveBeenCalled();
+  });
+});
+
+it("adopts a replacement IP session without carrying the former serial target or passive mode",async()=>{
+  const serial={path:"/synthetic/tty",source:"1.1.250",mode:"passive"} satisfies import("./serialTransport").SerialTarget;
+  setSetting("preferredBusTransport","serial");setSetting("serialPath",serial.path);setSetting("serialSource",serial.source);
+  await mount();
+  apiMock.startSerialBusMonitor.mockResolvedValueOnce({sessionId:5,serverIncarnation:"process-a",assignedAddress:serial.source,serial});
+  apiMock.pollBusTelegrams.mockResolvedValue({...telegrams(5),serial});
+  await act(async()=>panelButton("Connect")!.click());await flush();
+  expect(host.querySelector(".bus-monitor-session")!.textContent).toContain(serial.path);
+  apiMock.pollBusTelegrams.mockResolvedValue(telegrams(7));
+  apiMock.busActivity.mockResolvedValue(snapshot("process-a",[monitor(7)]));
+  await act(async()=>{await vi.advanceTimersByTimeAsync(1000);});await flush();
+  expect(host.querySelector(".bus-monitor-session")!.textContent).not.toContain(serial.path);
+  expect(host.querySelector<HTMLInputElement>(".bus-compose-destination")!.disabled).toBe(false);
+  expect(apiMock.startSerialBusMonitor).toHaveBeenCalledTimes(1);expect(apiMock.startBusMonitor).not.toHaveBeenCalled();
+});
+
+
+describe("F4 fresh monitor serial provenance",()=>{
+  it.each(["passive","active"] as const)("keeps an admitted %s serial identity locked when its first poll omits metadata",async mode=>{
+    const serial={path:"/synthetic/known",source:"1.1.250",mode};
+    apiMock.busActivity.mockResolvedValue(snapshot("process-a",[{kind:"busMonitor",id:5,state:"active",serial}]));
+    await refreshBusConnection(); // Real shared controller observation, before the panel exists.
+    apiMock.pollBusTelegrams.mockResolvedValue(telegrams(5,1,[row(1)]));
+    await mount();
+    expect(host.querySelector(".bus-monitor-session")!.textContent).toContain(serial.path);
+    expect(host.querySelector(".bus-monitor-unverified-lock")).not.toBeNull();
+    await act(async()=>host.querySelector<HTMLTableRowElement>(".bus-monitor-table tbody tr")!.click());
+    for(const button of host.querySelectorAll<HTMLButtonElement>(".bus-compose-fields button")){expect(button.disabled).toBe(true);await act(async()=>button.click());}
+    expect(apiMock.readBusValue).not.toHaveBeenCalled();expect(apiMock.writeBoundBusValue).not.toHaveBeenCalled();expect(apiMock.writeBusValue).not.toHaveBeenCalled();
+    expect(apiMock.startBusMonitor).not.toHaveBeenCalled();expect(apiMock.startSerialBusMonitor).not.toHaveBeenCalled();
+  });
+  it("retains known provenance through an unavailable activity read instead of using preferences as evidence",async()=>{
+    const serial={path:"/synthetic/known",source:"1.1.250",mode:"passive"} satisfies import("./serialTransport").SerialTarget;
+    apiMock.busActivity.mockResolvedValueOnce(snapshot("process-a",[{kind:"busMonitor",id:5,state:"active",serial}]));await refreshBusConnection();
+    apiMock.busActivity.mockRejectedValue(new Error("unavailable"));await refreshBusConnection();
+    setSetting("preferredBusTransport","ip");apiMock.pollBusTelegrams.mockResolvedValue(telegrams(5));
+    await mount();expect(host.querySelector(".bus-monitor-session")!.textContent).toContain(serial.path);
+    expect(host.querySelector<HTMLInputElement>(".bus-compose-destination")!.disabled).toBe(true);
+  });
+  it("keeps valid legacy IP first reattach enabled despite serial preferences",async()=>{
+    setSetting("preferredBusTransport","serial");setSetting("serialPath","/synthetic/preference-only");
+    apiMock.busActivity.mockResolvedValue(snapshot("process-a",[monitor(5)]));await refreshBusConnection();
+    apiMock.pollBusTelegrams.mockResolvedValue(telegrams(5));await mount();
+    expect(host.querySelector<HTMLInputElement>(".bus-compose-destination")!.disabled).toBe(false);
+    expect(host.querySelector(".bus-monitor-session")!.textContent).not.toContain("/synthetic/preference-only");
+  });
+  it("does not adopt a late old first poll after the controller observed its replacement",async()=>{
+    const serial={path:"/synthetic/old",source:"1.1.250",mode:"passive"} satisfies import("./serialTransport").SerialTarget;
+    apiMock.busActivity.mockResolvedValue(snapshot("process-a",[{kind:"busMonitor",id:5,state:"active",serial}]));await refreshBusConnection();
+    const pending=deferred<BusMonitorTelegramsResponse>();apiMock.pollBusTelegrams.mockReturnValueOnce(pending.promise);await mount();
+    apiMock.busActivity.mockResolvedValue(snapshot("process-a",[monitor(7)]));await act(async()=>refreshBusConnection());
+    await act(async()=>pending.resolve(telegrams(5)));await flush();
+    expect(host.querySelector(".bus-compose-form")).toBeNull();
+    apiMock.pollBusTelegrams.mockResolvedValue(telegrams(7));
+    await act(async()=>window.dispatchEvent(new Event("focus")));await flush();
+    expect(host.querySelector(".bus-monitor-session")!.textContent).not.toContain(serial.path);
+    expect(host.querySelector<HTMLInputElement>(".bus-compose-destination")!.disabled).toBe(false);
+  });
+  it("rejects malformed first-poll serial metadata through the actual API without enabling actions",async()=>{
+    const serial={path:"/synthetic/known",source:"1.1.250",mode:"passive"} satisfies import("./serialTransport").SerialTarget;
+    apiMock.busActivity.mockResolvedValue(snapshot("process-a",[{kind:"busMonitor",id:5,state:"active",serial}]));await refreshBusConnection();
+    const actual=await vi.importActual<typeof import("./api")>("./api");apiMock.pollBusTelegrams.mockImplementation(actual.pollBusTelegrams);
+    vi.stubGlobal("fetch",vi.fn().mockResolvedValue(new Response(JSON.stringify({...telegrams(5),serial:{...serial,mode:"unknown"}}),{status:200,headers:{"Content-Type":"application/json"}})));
+    try{await mount();expect(host.querySelector(".bus-compose-form")).toBeNull();expect(host.querySelector(".bus-connection-state")!.textContent).toContain(serial.path);expect(apiMock.writeBusValue).not.toHaveBeenCalled();}finally{vi.unstubAllGlobals();}
+  });
+});
+
+it.each(["en","de"] as const)("monitor preserves conservative active-start uncertainty through the actual API in %s",async language=>{
+  const messages=language==="en"?en:de;
+  setSetting("uiLanguage",language);setSetting("preferredBusTransport","serial");setSetting("serialPath","/synthetic/tty");setSetting("serialSource","1.1.250");setSetting("serialMode","active");
+  const actual=await vi.importActual<typeof import("./api")>("./api");apiMock.startSerialBusMonitor.mockImplementation(actual.startSerialBusMonitor);
+  vi.stubGlobal("fetch",vi.fn().mockResolvedValue(new Response(JSON.stringify({kind:"serialConnectFailed",activeAutoAckStateUncertain:true,error:"initialization failed; reset failed; auto-ACK state unknown"}),{status:502,headers:{"Content-Type":"application/json"}})));
+  try{
+    await mount();await act(async()=>panelButton(messages["busMonitor.connect"])!.click());await flush();
+    expect(host.querySelector(".bus-monitor-panel")!.textContent).toContain(messages["busTransport.activeStartUncertain"]);
+    expect(apiMock.startBusMonitor).not.toHaveBeenCalled();expect(fetch).toHaveBeenCalledTimes(1);
+  }finally{vi.unstubAllGlobals();}
+});
+
+it("fences a pending first serial poll when the observed server restarts with no session",async()=>{
+  const serial={path:"/synthetic/old-process",source:"1.1.250",mode:"passive"} satisfies import("./serialTransport").SerialTarget;
+  apiMock.busActivity.mockResolvedValue(snapshot("process-a",[{kind:"busMonitor",id:5,state:"active",serial}]));await refreshBusConnection();
+  const pending=deferred<BusMonitorTelegramsResponse>();apiMock.pollBusTelegrams.mockReturnValueOnce(pending.promise);await mount();
+  apiMock.busActivity.mockResolvedValue(snapshot("process-b"));await act(async()=>refreshBusConnection());
+  await act(async()=>pending.resolve(telegrams(5)));await flush();
+  expect(host.querySelector(".bus-compose-form")).toBeNull();
+  expect(host.querySelector(".bus-monitor-session")).toBeNull();
+  expect(host.querySelector(".bus-monitor-panel")!.textContent).toContain(en["busMonitor.contextUnverified"]);
+  expect(apiMock.readBusValue).not.toHaveBeenCalled();expect(apiMock.writeBusValue).not.toHaveBeenCalled();expect(apiMock.writeBoundBusValue).not.toHaveBeenCalled();
 });

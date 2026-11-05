@@ -12,6 +12,20 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## USB/serial server and Web UI candidate (5 November 2026)
+
+Explicit IP/serial selection now reaches the existing shared server session
+through a strict serial-start endpoint. Settings, footer and monitor disclose
+passive versus active mode and server-local firmware/device prerequisites.
+Passive sends are refused at the server boundary. Review corrections bind serial
+group sends to session/process identity, retain admission through serial cleanup,
+expose conservative active-start uncertainty and preserve known serial provenance
+on fresh monitor attach. Independent correction review and prior branch acceptance
+passed; final main-first package acceptance and publication remain pending.
+Focused execution results and limits are recorded in the
+[candidate contract](status/2026-11-04-usb-serial-ui.md). No physical compatibility,
+release, device-management or deployment claim.
+
 ## System-2 E1–E17 software consolidation (5 November 2026, main-only)
 
 Source `d4e1332d4`, main-first `cee41bf0d`, closes the named finite caption-class

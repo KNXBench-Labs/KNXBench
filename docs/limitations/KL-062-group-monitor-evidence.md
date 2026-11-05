@@ -6,6 +6,24 @@ This dossier preserves the technical detail and dated history. Earlier
 headings, failures and lifting conditions are historical where later
 updates supersede them; they are not new work assignments.
 
+## USB/serial source update (4 November 2026)
+
+The shared server session and Web UI now implement explicit Linux USB/serial
+TP-UART alongside IP. Transparent NCN5130 firmware, 19200 baud 8E1 and end-to-end
+parity/error signalling are prerequisites; installed firmware and physical
+receive/transmit remain unverified. Passive mode cannot send. Explicit active
+mode acknowledges the local individual address and all group telegrams; failed
+active initialization conservatively warns that ACK/reset state is unconfirmed.
+Serial actions are bound to immutable session/process identity and the shared
+reservation remains held through serial cleanup. No automatic mode promotion,
+retry or reconnect was added. Other USB protocols and serial device management,
+downloads and scans remain unsupported.
+
+Independent correction review is approved; package acceptance/publication remains
+pending. The [source and verification record](../status/2026-11-04-usb-serial-ui.md)
+separates software execution from physical evidence and the older IP-only record.
+This update supersedes the old transport-only scope, not its historical results.
+
 <!-- BEGIN retained catalogue record -->
 
 ## 62. The Group Monitor GUI (T15) is tunnelling-only, single-session, client-filtered, and only its passive receive path has real-gateway evidence

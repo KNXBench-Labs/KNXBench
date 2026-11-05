@@ -784,10 +784,10 @@ must not be described as either universally guessed or universally explicit.
 - **Details:** [§61 the DPT codec](../KNOWN_LIMITATIONS.md#61-the-dpt-codec-covers-thirty-main-types-infers-rather-than-reads-its-input-and-leaves-several-encoding-questions-to-a-stated-ruling-rather-than-the-standard),
   [§95 six places where the printed standard must not be followed literally](../KNOWN_LIMITATIONS.md#95-six-places-where-the-knx-standards-printed-text-must-not-be-followed-literally)
 
-### The group monitor is tunnelling only, one session at a time
+### The group monitor has one shared session and bounded transport support
 
 - **Affected:** the bus monitor in the user interface.
-- **Limitation:** tunnelling connections only — no routing in the monitor —
+- **Limitation:** no routing in the monitor; the [Linux serial candidate](../status/2026-11-04-usb-serial-ui.md) is pending review/gates —
   a single session, and filters applied in the browser rather
   than at the source. Only the passive receive path has evidence from a real
   gateway.

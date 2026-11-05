@@ -1,4 +1,7 @@
 /** Status-bar bus connection: state, gateway drop-up and explicit connect/disconnect. */
+import { useBusTransport, useSerialTarget } from "./serialPreference";
+import BusTransportFields from "./BusTransportFields";
+import { serialLabel, validSerialTarget } from "./serialTransport";
 import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import * as api from "./api";
 import { appUiScale } from "./appUiScale";
@@ -35,10 +38,12 @@ function stateText({ view, action }: BusConnectionState, t: Translate): string {
   if (action === "disconnecting") return t("busConnection.state.disconnecting");
   switch (view.phase) {
     case "connected":
+      if (view.serial) return t("busTransport.connected", { target: serialLabel(view.serial) });
       return view.gateway === undefined
         ? t("busConnection.state.connectedUnnamed", { id: view.sessionId })
         : t("busConnection.state.connected", { gateway: view.gateway });
     case "lost":
+      if (view.serial) return t("busTransport.lost", { target: serialLabel(view.serial) });
       return view.gateway === undefined
         ? t("busConnection.state.lostUnnamed", { id: view.sessionId })
         : t("busConnection.state.lost", { gateway: view.gateway });
@@ -51,8 +56,8 @@ function stateText({ view, action }: BusConnectionState, t: Translate): string {
 
 function detailText({ view }: BusConnectionState, t: Translate): string {
   switch (view.phase) {
-    case "connected": return t("busConnection.disclosure");
-    case "lost": return t("busConnection.detail.lost");
+    case "connected": return view.serial ? t(view.serial.mode === "active" ? "busTransport.activeWarning" : "busTransport.passiveHint") : t("busConnection.disclosure");
+    case "lost": return view.serial ? t("busTransport.unavailable") : t("busConnection.detail.lost");
     case "disconnected": return t("busConnection.detail.disconnected");
     case "occupied": return describeHolder(view.holder, t);
     case "indeterminate": return t("busConnection.detail.indeterminate");
@@ -83,6 +88,8 @@ export default function BusConnectionStatus({ onOpenBusSettings }: { onOpenBusSe
   const connection = useBusConnection();
   const discovery = useBusDiscovery();
   const [selected, select] = usePreferredGateway();
+  const [transport] = useBusTransport();
+  const [serial] = useSerialTarget();
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -120,22 +127,27 @@ export default function BusConnectionStatus({ onOpenBusSettings }: { onOpenBusSe
   const validation = validateGatewayFields(splitGatewayEndpoint(selected));
   const { view, action } = connection;
   const bound = view.phase === "connected" || view.phase === "lost" ? view : null;
-  const connectReason = !validation.ok
+  const valid = transport === "serial" ? validSerialTarget(serial) : validation.ok;
+  const endpoint = transport === "serial" ? serial : validation.ok ? validation.endpoint : "";
+  const connectReason = transport === "serial" && !valid ? t("busTransport.invalid") : transport === "ip" && !validation.ok
     ? t(INVALID_REASON[validation.reason])
     : view.phase === "disconnected" ? null : t("busConnection.connectBlocked");
 
   async function connect() {
-    if (!validation.ok) return;
+    if (!valid) return;
     setError(null);
-    const result = await connectBusSession(validation.endpoint);
-    setError(actionError(result, "busConnection.error.connect", t));
+    const result = await connectBusSession(endpoint);
+    setError(!result.ok && result.reason === "failed" && transport === "serial"
+      ? gatewayRefusalMessage(result.error) ?? t("busTransport.unavailable")
+      : actionError(result, "busConnection.error.connect", t));
   }
 
   async function disconnect() {
     if (bound === null) return;
     setError(null);
     const result = await disconnectBusSession({ sessionId: bound.sessionId, serverIncarnation: bound.serverIncarnation });
-    setError(actionError(result, "busConnection.error.disconnect", t));
+    setError(result.ok && bound.serial && result.value.warning
+      ? t("busTransport.cleanupWarning") : actionError(result, "busConnection.error.disconnect", t));
   }
 
   function close(returnFocus: boolean) {
@@ -145,7 +157,8 @@ export default function BusConnectionStatus({ onOpenBusSettings }: { onOpenBusSe
 
   const listed = discovery.interfaces.map((entry) => entry.controlEndpoint);
   const savedOnly = selected !== "" && !listed.includes(selected);
-  const selectedLabel = selected === "" ? t("busConnection.noneSelected") : selected;
+  const selectedLabel = transport === "serial" ? serialLabel(serial) : selected === "" ? t("busConnection.noneSelected") : selected;
+  const boundLabel = bound?.serial ? serialLabel(bound.serial) : bound?.gateway;
 
   return (
     <div
@@ -173,7 +186,7 @@ export default function BusConnectionStatus({ onOpenBusSettings }: { onOpenBusSe
         aria-controls={open ? panelId : undefined}
         onClick={() => setOpen((value) => !value)}
       >
-        {t("busConnection.trigger", { gateway: selectedLabel })}
+        {transport === "serial" ? t("busTransport.selection", {target:selectedLabel}) : t("busConnection.trigger", { gateway: selectedLabel })}
         <span aria-hidden="true"> ▴</span>
       </button>
       {bound ? (
@@ -184,9 +197,9 @@ export default function BusConnectionStatus({ onOpenBusSettings }: { onOpenBusSe
         <button
           type="button"
           className="bus-connection-action"
-          onClick={() => void connect()}
+          onClick={() => { if (transport === "serial") setOpen(true); else void connect(); }}
           disabled={action !== null || connectReason !== null}
-          title={connectReason ?? t("busConnection.disclosure")}
+          title={connectReason ?? (transport === "serial" ? t(serial.mode === "active" ? "busTransport.activeWarning" : "busTransport.passiveHint") : t("busConnection.disclosure"))}
         >
           {t("busConnection.connect")}
         </button>
@@ -196,13 +209,17 @@ export default function BusConnectionStatus({ onOpenBusSettings }: { onOpenBusSe
         <div id={panelId} className="bus-connection-panel" role="group" aria-label={t("busConnection.label")}>
           <p className="bus-connection-detail">{stateText(connection, t)}: {detailText(connection, t)}</p>
           {connection.restarted && <p className="bus-connection-detail">{t("busConnection.detail.restarted")}</p>}
-          {bound?.gateway !== undefined && selected !== "" && bound.gateway !== selected && (
+          {boundLabel !== undefined && boundLabel !== selectedLabel && (
             <p className="bus-connection-detail">
-              {t("busConnection.selectionDiffers", { connected: bound.gateway, selected })}
+              {t("busConnection.selectionDiffers", { connected: boundLabel, selected: selectedLabel })}
             </p>
           )}
           {!bound && connectReason && <p className="bus-connection-detail">{connectReason}</p>}
-          {!bound && <p className="bus-connection-detail">{t("busConnection.disclosure")}</p>}
+          {!bound && transport === "ip" && <p className="bus-connection-detail">{t("busConnection.disclosure")}</p>}
+          <BusTransportFields />
+          {transport === "serial" && !bound && <button type="button" onClick={() => void connect()}
+            disabled={action !== null || connectReason !== null}>{t("busConnection.connect")}</button>}
+          {transport === "ip" && <>
           <p className="bus-connection-heading">{t("busConnection.interfaces")}</p>
           <ul className="bus-connection-list">
             {savedOnly && (
@@ -235,11 +252,12 @@ export default function BusConnectionStatus({ onOpenBusSettings }: { onOpenBusSe
             <p className="bus-connection-detail">{t("busConnection.noInterfaces")}</p>
           )}
           {discovery.phase === "failed" && <p className="bus-connection-detail">{t("busConnection.searchFailed")}</p>}
+          </>}
           <div className="bus-connection-tools">
             <button type="button" onClick={() => void refreshBusConnection()}>{t("busConnection.checkStatus")}</button>
-            <button type="button" onClick={() => void searchBusInterfaces()} disabled={discovery.phase === "searching"}>
+            {transport === "ip" && <button type="button" onClick={() => void searchBusInterfaces()} disabled={discovery.phase === "searching"}>
               {discovery.phase === "searching" ? t("busDiscovery.searching") : t("busConnection.searchAgain")}
-            </button>
+            </button>}
             <button type="button" onClick={() => { close(false); onOpenBusSettings(); }}>{t("busConnection.settings")}</button>
           </div>
         </div>

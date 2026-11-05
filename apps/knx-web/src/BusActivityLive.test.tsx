@@ -193,3 +193,14 @@ it("admits the monitor's gateway the server names since issue #10", () => {
   ] }));
   expect(admitted.sessions).toEqual([{ kind: "busMonitor", id: 6, gateway: "192.0.2.10:3671", state: "active" }]);
 });
+
+it("admits serial session metadata and rejects ambiguous, missing and malformed targets",()=>{
+  const serial={path:"/synthetic/tty",source:"1.1.250",mode:"passive"};
+  const base={serverIncarnation:"process",coverage:"partial",historyState:"disabled",oneShot:[],oneShotDropped:0,busyLocks:[],untracked:[]};
+  const session={kind:"busMonitor",id:5,state:"active",serial};
+  expect(admitActivitySnapshot({...base,sessions:[session]}).sessions).toEqual([session]);
+  for(const target of [null,{...serial,source:"0.0.0"},{...serial,mode:"auto"},{...serial,extra:true},{path:serial.path,source:serial.source}]) {
+    expect(()=>admitActivitySnapshot({...base,sessions:[{...session,serial:target}]})).toThrow();
+  }
+  expect(()=>admitActivitySnapshot({...base,sessions:[{...session,gateway:"192.0.2.1:3671"}]})).toThrow();
+});

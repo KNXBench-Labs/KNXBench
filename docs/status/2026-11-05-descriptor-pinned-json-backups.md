@@ -17,8 +17,9 @@ public backup readers, file formats, protocol and hardware remain excluded.
 
 The three implementation tasks are present. The actual compiled owning suites
 passed with isolated data/config homes and unchanged frozen inputs: directory
-helper 3 tests, device-memory backup 25, service-control backup 13 (41 total;
-zero failures/ignored). These include existing format/semantic checks and the
+helper 3 tests, device-memory backup 26, service-control backup 14 (43 total;
+zero failures/ignored). The earlier candidate's 41-test pass remains a separate
+source epoch. These include existing format/semantic checks and the
 new deterministic writer controls; loop iterations are not additional registered
 tests. This is focused branch evidence, not the maintained package gate or
 publication.
@@ -28,11 +29,13 @@ A pre-compilation parent inspection corrected misplaced test-only assertions.
 Independent static review initially blocked on missing child-first checks for
 secondary branches; the corrected all-three-branch edge assertions received a
 separate independent static APPROVE. No runtime claim is derived from either
-static review. Three compiled semantic production mutations were each rejected
+static review. Four compiled semantic production mutations were each rejected
 by both actual writers' intended runtime assertions: insertion-order directory
-sync, pathname-reopened readback, and omitted final identity admission. Each
-mutated run had two failing tests; unmodified controls passed 12 tests before and
-after the isolated experiment. These controls overlap the focused suites and
+sync, pathname-reopened readback, omitted final identity admission, and omission
+of the full ordinary-path lookup check. Each mutated run had two failing tests;
+unmodified controls passed 14 tests before and after the final isolated
+experiment. The first source epoch separately passed its 12-test controls. These
+controls overlap the focused suites and
 must not be added to their registered-test total. Candidate source stayed
 unchanged and the disposable snapshot was restored exactly.
 
@@ -47,6 +50,20 @@ maintained package gate and publication remain pending.
 
 The original path-based behavior remains historical in the retained
 [limitation](../limitations/backup-directory-synchronization.md).
+
+The first maintained integrated attempt stopped at `fmt` before any other gate
+stage; it is retained as failed, not partial product acceptance. Direct rustfmt
+had used a different edition's formatting than the actual workspace. The
+successor uses `cargo fmt --all`.
+
+The parent then added one bounded compatibility correction: component-wise
+traversal can exceed the ordinary full-path lookup limit used by public readers.
+Before a receipt, a no-follow/nonblocking full-path open now checks the named
+file's identity without a second content read. The two real-writer regressions
+reach verified descriptor readback and then require `ENAMETOOLONG` with no
+receipt. Removing only this extra check makes both tests fail; no filesystem
+limit is raised or bypassed. The final four-mutation experiment and 43-test
+focused run bind this successor, not the earlier formatter-failed candidate.
 
 ## Admission decisions
 

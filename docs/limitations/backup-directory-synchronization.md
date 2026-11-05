@@ -32,7 +32,9 @@ The [descriptor-pinned contract](../contracts/descriptor-pinned-json-backups.md)
 replaces repeated pathname opens in the device-memory and service-control JSON
 backup writers. Their supplied/alias and resolved ancestor directories are held
 and synchronized child-first; file creation, file sync, rewind and semantic
-readback use the same retained file. Detected final target/leaf identity changes
+readback use the same retained file. A final no-follow/nonblocking full-path
+identity open also refuses paths that normal backup-reader lookup cannot use;
+it does not read file contents again. Detected final target/leaf identity changes
 refuse a receipt without path-based cleanup. Static symlinks and `..` remain
 supported. Relative inputs now return an absolute receipt anchored to the
 initially opened and spelling-checked CWD.

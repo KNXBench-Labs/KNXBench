@@ -17,8 +17,8 @@ in force.
   held directory-chain acquisition/synchronization, device-memory writer, and
   service-control writer. The [contract](../contracts/descriptor-pinned-json-backups.md)
   preserves static aliases and `..`, uses same-file-descriptor readback and
-  refuses detected final identity changes. Focused software tests passed;
-  maintained package acceptance and publication remain pending in the
+  refuses detected final identity changes. Main-first `98d2e6953` passed the
+  complete selected 14-stage software gate and publication readback; see the
   [execution record](../status/2026-11-05-descriptor-pinned-json-backups.md).
   Catalogue SQLite/list/delete/restore and the legacy property-validation
   recorder are excluded. Namespace confinement, permanent paths and power-loss

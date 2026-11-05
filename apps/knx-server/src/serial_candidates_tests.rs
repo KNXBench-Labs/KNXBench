@@ -106,19 +106,21 @@ fn serial_candidates_sorts_and_deduplicates_by_target_independent_of_entry_order
 }
 #[test]
 fn serial_candidates_filters_unsafe_names_before_metadata() {
-    let mut fs = Synthetic::default();
-    fs.names = [
-        "pci-a",
-        "usb-",
-        " usb-a",
-        "usb-a ",
-        "usb-a\n",
-        "usb-a\u{85}",
-        "usb-a/b",
-        "usb-a\\b",
-    ]
-    .map(OsString::from)
-    .into();
+    let mut fs = Synthetic {
+        names: [
+            "pci-a",
+            "usb-",
+            " usb-a",
+            "usb-a ",
+            "usb-a\n",
+            "usb-a\u{85}",
+            "usb-a/b",
+            "usb-a\\b",
+        ]
+        .map(OsString::from)
+        .into(),
+        ..Default::default()
+    };
     fs.names.push(format!("usb-{}", "a".repeat(252)).into());
     #[cfg(unix)]
     {

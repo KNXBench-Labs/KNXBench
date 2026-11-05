@@ -102,10 +102,11 @@ admitted peer contract is an ordered, conforming NCN5130 stream.
 
 These are the admitted design constraints, not standalone evidence that code or
 hardware has passed. Software execution and remaining limits are recorded with
-the delivered implementation. Physical receive/transmit, exact firmware/board
-coverage and electrical behavior remain unverified until separately authorized
-hardware tests. Server, browser status-bar selection and device-management CLI
-routing are not part of this transport package.
+the delivered implementation. At the initial software-only delivery, physical
+receive/transmit and electrical behavior were unverified. Later dated witnesses
+below narrow normal receive/transmit on one board/firmware only. Server/browser
+selection was delivered separately; device-management CLI routing remains
+outside this transport package.
 
 ## Pre-session USB/UART backlog (5 November 2026)
 
@@ -134,6 +135,18 @@ After the first reset no input is ignored or resynchronized: reset/state/config
 matching, unsupported-service rejection, frame length/FCS checks and transmission
 echo/confirmation requirements remain unchanged. Physical acceptance of this
 startup policy is separate from the earlier bounded raw diagnostic.
+
+**[V]** Published correction `b14f40089` subsequently supplied an isolated passive
+server/API receive witness and one specifically owner-authorized active group
+write on that C6 USB-Serial 1.0.8 adapter. The one-bit ON write had a valid TP1
+checksum, complete matching bus echo and immediately following positive
+`L_Data.con` (`0x8b`); the bound API write and stop returned HTTP 200, the server
+exited 0 and the port was released. After owner-confirmed ON behavior, a separately
+authorized OFF call passed the same checks with the identical binary. Each
+attempt issued one application write; no automatic OFF, IP fallback or MCU
+reset was requested. This is normal link-path evidence, not automatic state-readback,
+parity/error-forwarding or general adapter acceptance. Raw installation data
+remain private; see the [dated server record](../status/2026-11-04-usb-serial-ui.md#published-correction-and-one-bounded-usb-group-write).
 
 [product]: https://shop.busware.de/product_info.php?products_id=4
 [tul]: https://busware.de/products/tul/

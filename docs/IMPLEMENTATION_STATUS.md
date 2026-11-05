@@ -35,8 +35,11 @@ first reset, within the existing initialization budget; strict post-reset
 validation is unchanged. Forty-nine focused tests and independent review passed;
 the eleven-case independent baseline detected missing settling through a
 compiled negative-control mutation. An owner-authorized isolated C6 USB-Serial
-1.0.8 session supplied twelve inspected API records and stopped cleanly; this is
-normal passive-receive evidence only, not active-send, parity-error forwarding,
+1.0.8 session supplied twelve inspected API records and stopped cleanly. Published
+correction `b14f40089` passed all fourteen selected source-package stages. A later
+authorized USB test sent one DPT 1.001 ON group write with valid frame checksum,
+complete matching echo, positive link confirmation and clean bound stop. This
+adds bounded normal transmit evidence, not actuator-state, parity-error forwarding,
 other-adapter or existing-deployment acceptance. The [dated witness and exact
 count scopes](status/2026-11-04-usb-serial-ui.md#usb-startup-synchronization-and-bounded-receive-witness-5-november-2026)
 retain those distinctions.

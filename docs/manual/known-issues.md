@@ -787,8 +787,8 @@ must not be described as either universally guessed or universally explicit.
 ### The group monitor has one shared session and bounded transport support
 
 - **Affected:** the bus monitor in the user interface.
-- **Limitation:** no routing in the monitor; the [Linux serial candidate](../status/2026-11-04-usb-serial-ui.md) is pending review/gates —
-  a single session, and filters applied in the browser rather
+- **Limitation:** no routing in the monitor; the [Linux serial transport](../status/2026-11-04-usb-serial-ui.md) is software-tested only.
+  There is one shared session, with filters applied in the browser rather
   than at the source. Only the passive receive path has evidence from a real
   gateway.
 - **Consequence:** you cannot watch two gateways at once, and a filtered view

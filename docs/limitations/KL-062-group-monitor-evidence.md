@@ -19,8 +19,9 @@ reservation remains held through serial cleanup. No automatic mode promotion,
 retry or reconnect was added. Other USB protocols and serial device management,
 downloads and scans remain unsupported.
 
-Independent correction review is approved; package acceptance/publication remains
-pending. The [source and verification record](../status/2026-11-04-usb-serial-ui.md)
+Independent correction review and selected package acceptance passed; main-first
+`eab79cc5b` was published on 5 November 2026 with all 16 affected production
+configurations covered on the same accepted build. The [source and verification record](../status/2026-11-04-usb-serial-ui.md)
 separates software execution from physical evidence and the older IP-only record.
 This update supersedes the old transport-only scope, not its historical results.
 

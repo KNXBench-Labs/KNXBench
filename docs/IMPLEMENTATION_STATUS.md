@@ -12,7 +12,9 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
-## USB/serial server and Web UI candidate (5 November 2026)
+<a id="usbserial-server-and-web-ui-candidate-5-november-2026"></a>
+
+## USB/serial server and Web UI (5 November 2026, main-only)
 
 Explicit IP/serial selection now reaches the existing shared server session
 through a strict serial-start endpoint. Settings, footer and monitor disclose
@@ -20,10 +22,12 @@ passive versus active mode and server-local firmware/device prerequisites.
 Passive sends are refused at the server boundary. Review corrections bind serial
 group sends to session/process identity, retain admission through serial cleanup,
 expose conservative active-start uncertainty and preserve known serial provenance
-on fresh monitor attach. Independent correction review and prior branch acceptance
-passed; final main-first package acceptance and publication remain pending.
-Focused execution results and limits are recorded in the
-[candidate contract](status/2026-11-04-usb-serial-ui.md). No physical compatibility,
+on fresh monitor attach. Published main-first `eab79cc5b` passed independent
+correction review, the selected 15-stage package gate and all 16 affected production
+configurations on the same accepted build. Scoped Rust 1,741/72 ignored, corpus
+51/51, UI 5,099 and isolated real-server HTTP checks passed. Execution populations
+overlap; [acceptance and limits](status/2026-11-04-usb-serial-ui.md) keep failed
+epochs and physical uncertainty separate. No physical compatibility,
 release, device-management or deployment claim.
 
 ## System-2 E1–E17 software consolidation (5 November 2026, main-only)

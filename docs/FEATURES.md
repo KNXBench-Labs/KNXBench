@@ -15,7 +15,7 @@ Last updated: 2026-11-01 (Alpha 19 pre-release; source cutoff 2026-11-01)
 
 | Feature | Scope | Availability |
 | --- | --- | --- |
-| [USB/serial TP-UART](status/2026-11-04-usb-serial-ui.md) | Linux server + settings/footer/monitor candidate; explicit passive/active mode, bound sends and reserved serial cleanup; transparent NCN5130 firmware required; correction review/gates pending, no hardware compatibility claim | Main-only candidate |
+| [USB/serial TP-UART](status/2026-11-04-usb-serial-ui.md) | Linux server + settings/footer/monitor; explicit passive/active mode, bound sends and reserved serial cleanup; transparent NCN5130 firmware required; correction review and software gates passed, no hardware compatibility claim | Main-only |
 | [Import findings after reopening](open-work/WP-25-import-findings-after-reopen.md) | Reprojects stored primary error/warning findings into the bounded session log; historical/open-time provenance and explicit full-report access; missing legacy evidence is not a clean assessment | Main-only |
 | [Rail themes](adr/0157-rail-built-in-presentation.md) | Built-in light/dark pair: square controls, Geist type, toolbar rail, KNX-cable green accent; own Theme effects motion category | Main-only |
 
@@ -435,7 +435,7 @@ records the tested commit separately from artifact publication verification.
 | AES project import | Refused |
 | ETS schema 22 | Refused; samples had no devices |
 | KNX Secure | Data/IP Secure unsupported |
-| USB interfaces | Standard KNX USB HID/FT1.2 unsupported; bounded Linux transparent TP-UART server/UI candidate described above |
+| USB interfaces | Standard KNX USB HID/FT1.2 unsupported; bounded Linux transparent TP-UART server/UI support described above |
 | Individual-address writes | Recovery prerequisites unmet; refused |
 | Multi-user editing | No concurrency/conflict support |
 | User accounts | No roles/per-user audit |

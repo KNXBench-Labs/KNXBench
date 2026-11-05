@@ -32,8 +32,9 @@ and disconnects through that controller and stops only its own session. All nine
 runtime review findings and the browser-fixture review are closed. The selected
 15-stage main-first gate passed with frozen inputs and checked, untouched user
 data. [Acceptance and remaining boundaries](../status/2026-11-02-wp26-status-bar-connection.md).
-The download page's holder notice remains on the legacy global stop. USB is still
-open, so WP-26 is not a claim of complete transport coverage. Limits:
+The download page's holder notice remains on the legacy global stop. At that IP
+checkpoint USB was still open; the bounded successor below adds TP-UART software
+support without claiming complete transport coverage. Limits:
 [KL-180](../limitations/KL-180-named-gateway-refusals.md#session-bound-stop-and-status-bar-connection-2-november-2026-source).
 
 ## Controller/footer admission decisions (2 November 2026)
@@ -62,8 +63,8 @@ open, so WP-26 is not a claim of complete transport coverage. Limits:
   fixtures with discovery intercepted. No real installation access.
 
 The backend and IP controller/footer claims are released. Any further WP-26
-source work needs a newly bounded assignment; the USB transport gap below is not
-covered by this delivery. Tests used simulated connectors and intercepted HTTP
+source work needs a newly bounded assignment; the USB successor below is not
+covered by that historical IP delivery. Tests used simulated connectors and intercepted HTTP
 only, never the real installation.
 
 ## Requested outcome
@@ -89,15 +90,18 @@ Reuse the shared KNXnet/IP interface search
 preferred gateway ([`gatewayPreference.ts`](../../apps/knx-web/src/gatewayPreference.ts));
 no second discovery or selection state.
 
-## USB/serial server and UI candidate (4 November 2026)
+<a id="usbserial-server-and-ui-candidate-4-november-2026"></a>
 
-The [server/UI candidate](../status/2026-11-04-usb-serial-ui.md) connects the
+## USB/serial server and UI delivery (5 November 2026)
+
+The [accepted server/UI package](../status/2026-11-04-usb-serial-ui.md) connects the
 existing Linux TP-UART adapter through the shared session and offers explicit
 IP versus serial selection in settings, footer and monitor. It requires a
 server-local path, unique caller-chosen source and explicit passive/active mode;
 no hardware is enumerated. Active auto-ACK is disclosed before Connect.
 
-F1–F4 correction review and package gates are pending. The correction binds serial
+Published main-first `eab79cc5b` passed F1–F4 correction review, the complete
+selected package gate and all 16 affected production configurations. The correction binds serial
 group traffic to the displayed session/process, retains admission through cleanup,
 surfaces conservative active-start uncertainty and honors known serial provenance
 on fresh monitor attach. Earlier browser/smoke proof is pre-correction evidence. Physical compatibility, installed

@@ -1032,7 +1032,7 @@ Main types 1–30 have explicit formats/rulings; subtype/FB semantics remain par
 ### 62. Group Monitor evidence
 
 **Ledger status:** `ACCEPTED_BOUNDARY` ([KL-62](status/LEDGER.md#snapshot-ids)).
-The single-session, client-filtered GUI adds explicit Linux TP-UART in main-only source builds. One C6 USB-Serial 1.0.8 has bounded normal receive and one-bit group-transmit witnesses; actuator state, bridge error/parity forwarding and broader payload/device/routing/history scenarios remain unverified.
+The single-session, client-filtered GUI adds explicit Linux TP-UART in main-only source builds. One C6 USB-Serial 1.0.8 has bounded normal receive and one-bit group-transmit witnesses; actuator state, bridge error/parity forwarding and broader payload/device/routing/history scenarios remain unverified. An explicit bounded by-id candidate-list successor is implemented pending review/gates; metadata is not a complete USB census or KNX compatibility, availability or permission evidence.
 [Details and history](limitations/KL-062-group-monitor-evidence.md)
 
 <a id="catalogue-kl-072"></a>

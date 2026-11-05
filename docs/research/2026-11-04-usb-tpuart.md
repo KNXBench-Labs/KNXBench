@@ -107,6 +107,34 @@ coverage and electrical behavior remain unverified until separately authorized
 hardware tests. Server, browser status-bar selection and device-management CLI
 routing are not part of this transport package.
 
+## Pre-session USB/UART backlog (5 November 2026)
+
+**[V]** An owner-authorized, passive USB attempt with a C6 running the official
+USB-Serial 1.0.8 bridge reached the strict decoder with unsupported bytes before
+a session opened. A captured repeat sent only local reset requests and failed
+before receiving a reset indication. A separate raw diagnostic drained 1,533
+pre-session octets, sent exactly one local `01` and then observed `03` followed
+by one complete standard TP1 frame with a valid length and XOR checksum. No
+telegram requests or IP fallback were used. These observations establish a
+normal receive witness, not the bridge's parity/error forwarding, transmit
+correctness or full hardware compatibility.
+
+**[A]** A host `TCIFLUSH` alone cannot settle data still buffered upstream of the
+host tty. Before creating the strict protocol reader or sending the first reset,
+the client drains pre-session input until a 20 ms idle interval. This interval
+is an implementation settling policy, **not** a datasheet-defined silence or
+latency guarantee. The drain and subsequent reset/state/configuration exchange
+share the original fixed initialization deadline; input never becoming idle,
+EOF, read failure or cancellation fails without sending a protocol command.
+The discarded pre-session octet count is retained in client diagnostics. Busy
+streams without this idle interval may therefore refuse startup rather than
+admit uncertain framing.
+
+After the first reset no input is ignored or resynchronized: reset/state/config
+matching, unsupported-service rejection, frame length/FCS checks and transmission
+echo/confirmation requirements remain unchanged. Physical acceptance of this
+startup policy is separate from the earlier bounded raw diagnostic.
+
 [product]: https://shop.busware.de/product_info.php?products_id=4
 [tul]: https://busware.de/products/tul/
 [firmware]: https://github.com/tostmann/busware-esp32/blob/ccfde1edf68526ff5d344c1c18fc9e9def22cfcb/Simple/USBSerial/src/main.ino

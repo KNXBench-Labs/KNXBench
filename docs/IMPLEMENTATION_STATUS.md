@@ -30,6 +30,17 @@ overlap; [acceptance and limits](status/2026-11-04-usb-serial-ui.md) keep failed
 epochs and physical uncertainty separate. No physical compatibility,
 release, device-management or deployment claim.
 
+A later startup-buffer correction drains only pre-session USB input before the
+first reset, within the existing initialization budget; strict post-reset
+validation is unchanged. Forty-nine focused tests and independent review passed;
+the eleven-case independent baseline detected missing settling through a
+compiled negative-control mutation. An owner-authorized isolated C6 USB-Serial
+1.0.8 session supplied twelve inspected API records and stopped cleanly; this is
+normal passive-receive evidence only, not active-send, parity-error forwarding,
+other-adapter or existing-deployment acceptance. The [dated witness and exact
+count scopes](status/2026-11-04-usb-serial-ui.md#usb-startup-synchronization-and-bounded-receive-witness-5-november-2026)
+retain those distinctions.
+
 ## System-2 E1–E17 software consolidation (5 November 2026, main-only)
 
 Source `d4e1332d4`, main-first `cee41bf0d`, closes the named finite caption-class

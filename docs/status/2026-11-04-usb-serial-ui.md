@@ -1,11 +1,12 @@
-# USB/serial TP-UART server and Web UI candidate
+# USB/serial TP-UART server and Web UI evidence
 
-Scope: source implementation for a Linux server using the existing `knx-net`
-TP-UART adapter. Main-only after Alpha 19; independent correction review approved,
-with package acceptance and publication still pending.
-No physical device, installed firmware, real bus, discovery, VM or deployment
-acceptance is claimed. The [transport research](../research/2026-11-04-usb-tpuart.md)
-remains the protocol evidence; its original CLI package boundary is historical.
+Scope: a Linux server using the existing `knx-net` TP-UART adapter. The initial
+main-only software delivery after Alpha 19, correction review and integrated
+acceptance/publication are recorded below. Those original software checks did
+not access a physical adapter or installation. The later dated startup update
+adds only a bounded normal-receive witness, not broad hardware or deployment
+acceptance. The [transport research](../research/2026-11-04-usb-tpuart.md) remains
+the protocol evidence; its original CLI package boundary is historical.
 
 ## API and ownership
 
@@ -255,3 +256,37 @@ This closeout changes documentation only. Product execution remains bound to
 Installed firmware, parity/error forwarding and physical receive/transmit remain
 unverified; other USB protocols, serial enumeration and serial device management
 remain outside the delivered scope.
+
+## USB startup synchronization and bounded receive witness (5 November 2026)
+
+The initial software-only delivery above is followed by a source correction for
+pre-session USB buffering. Before the first local reset the client drains old
+input until a bounded 20 ms idle interval, sharing the original initialization
+deadline. Cancellation, expiry or read failure before a reset does not introduce
+a cleanup reset as the first command. Reset/state/config matching and the strict
+post-reset telegram/echo/confirmation parser remain unchanged. A continuously
+busy input that never reaches the idle interval refuses startup; the interval is
+an operational policy, not a KNX silence guarantee.
+
+Focused execution passed 49 TP-UART tests, including eleven new startup cases.
+Independent review approved the product change; its separately built eleven-case
+baseline passed, while removing the settling call made seven cases fail,
+including the actual passive/active connection outcomes. Earlier setup and
+fixture failures remain separate from those successful executions.
+
+With owner authorization, an isolated production server build then opened the
+confirmed C6 USB-Serial 1.0.8 interface in passive mode. In a 15-second window,
+twelve decoded records were retrieved from the monitor API; the terminal session
+counter was fourteen. These are separate observations, not fourteen inspected
+records. No dropped records were reported. Activity identified the serial/passive
+session as active before a bound stop returned without warning. The server
+terminated with exit 0 and the serial port was free afterwards. Only monitor
+start, poll, activity and stop were called; no group action, IP fallback, firmware
+write or MCU reset was requested by this test.
+
+This is a bounded normal-receive witness on one adapter/firmware build, not full
+hardware acceptance: active transmission, bridge parity/error forwarding,
+extended frames, other adapters and long-running stability remain unverified.
+The existing deployed server was not replaced by this isolated test. The
+[research addendum](../research/2026-11-04-usb-tpuart.md#pre-session-usbuart-backlog-5-november-2026)
+records the narrower startup evidence and policy.

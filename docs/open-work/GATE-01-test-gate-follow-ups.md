@@ -100,8 +100,9 @@ the explorer before its table measurement; the attachment omits that setup.
 A separate shared-lease-protected dev/production and expanded/closed comparison
 finds substantial preparation cost. Closed-state variants are diagnostic only,
 not coverage-equivalent replacements. No timeout, source, lane or concurrency
-policy changed; the historical S2-03 red cause and production CPU attribution
-remain unproved. GATE-01 stays open for a production preparation profile.
+policy changed. The historical S2-03 red cause remains unproved. Production
+preparation profiling was left open at this checkpoint; the bounded
+5 November attribution below addresses that later question, not the old cause.
 
 ## Document-language fanout correction — 28 October 2026
 
@@ -148,6 +149,27 @@ composition plus successor703 delta acceptance retain separate runtime identitie
 [Acceptance and boundaries](../status/2026-11-03-proportionate-gates.md).
 This closes that bounded selection work only; the scheduler and historical
 failure investigations above remain open under GATE-01.
+
+## Production preparation attribution — 5 November 2026
+
+The [bounded expanded-5000 production study](../research/2026-11-05-production-preparation-attribution.md)
+executes one unchanged canonical control and two identically instrumented arms,
+full snapshots versus snapshots-off diagnostic. All three pass the original
+5000-row/filter/one-GET/no-unexpected contract at 120 s / one worker / zero retries.
+Explorer action wall is 7796.886 ms versus 565.895 ms; conservative snapshotter-shaped
+signed sample weights are 6917.029 ms versus 0, while table residuals remain
+application-associated. These are single sequential observations, not a general
+speedup, exact CPU allocation, historical-cause proof or product optimization.
+
+The independent raw-evidence review approves this finite measurement only.
+Snapshots-off also removes network recording; blank-URL ancestry lacks captured
+Debugger script bytes; all six CPU profiles retain negative sampling deltas and
+observer/action windows differ. Cleanup checks the owned temp directory, direct
+children and accessible marker references, not a universal orphan audit. No
+trace-default, coverage, scheduler, timeout or concurrency policy changed; the
+diagnostic is not a gate replacement. This closes the previously requested
+bounded production-preparation profile, not GATE-01's scheduler/historical
+failure investigations above.
 
 ## Known boundary
 

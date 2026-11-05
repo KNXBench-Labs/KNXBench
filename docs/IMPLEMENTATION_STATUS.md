@@ -12,6 +12,18 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Descriptor-pinned JSON backups (6 November 2026; main-only)
+
+The device-memory and service-control JSON writers now create, verify and sync
+through held file/directory descriptors. Static aliases and `..` remain supported;
+relative receipts are anchored to the initial CWD, detected namespace substitutions
+and unusable full pathnames refuse receipts. Main-first `98d2e6953` passed all
+14 selected maintained stages: Rust 3,532/0 with 144 ignored, selected corpus
+91/91, plus independent reviews, 43 focused tests and four compiled negative
+controls. The actual server build/version passed. Catalogue/legacy recorder paths,
+namespace confinement, permanent names and physical recovery remain outside scope.
+[Acceptance and limits](status/2026-11-05-descriptor-pinned-json-backups.md).
+
 ## Passive USB-serial candidate listing (5 November 2026; main-only)
 
 The shared settings/footer/monitor fields now offer an explicit bounded Linux

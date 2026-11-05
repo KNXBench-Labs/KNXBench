@@ -13,7 +13,34 @@ This is one coherent storage-hardening package with three implementation tasks,
 not closure of LS-07 as a whole. Catalogue SQLite backup/list/delete/restore,
 public backup readers, file formats, protocol and hardware remain excluded.
 
-## Candidate state
+## Software acceptance and publication — 6 November 2026
+
+Corrected source `a79c12bac` was integrated main-first as `98d2e6953` on
+`61e28d225`. The complete maintained change-scoped gate passed all 14 selected
+ordered stages with valid proofs, frozen inputs and no touched or unchecked
+user-data paths. Warning-denied Clippy and tests covered `knx-app`, `knx-cli`,
+`knx-desktop`, `knx-server` and `xtask`: 3,532 Rust passes, zero failures and
+144 routinely ignored tests. The separate selected corpus run passed 91/91 in
+five targets. Tooling registered 517 tests, with six existing optional skips.
+These are separate populations, not additional counts for the focused tests.
+
+The real web bundle was built as the desktop/tooling prerequisite; no web or
+browser test lane was selected for this backend-only change. The actual server
+build and isolated `--version` invocation passed and returned
+`knx-server 0.1.0-alpha.19+g98d2e6953`. The resulting executable's recorded hash
+was independently rechecked. Publication was conditional on the fresh upstream
+base; local, tracking and live main were read back equal to `98d2e6953`.
+This is main-only software acceptance, not a release, deployment, bus operation,
+power-loss or physical-recovery proof.
+
+Original failed/queued attempts, all reviews, both mutation epochs, raw outputs
+and source manifests remain private. Eleven gate-produced Rust test executables
+and the actual server executable were copied and hash-verified before later
+documentation work; three doctest summaries are not executable copies. The
+earlier focused runs retain raw output and source-freeze manifests but no copy
+of their originally executed ELF; they are not rebound to a later binary.
+
+## Focused evidence and corrections
 
 The three implementation tasks are present. The actual compiled owning suites
 passed with isolated data/config homes and unchanged frozen inputs: directory
@@ -46,7 +73,7 @@ against both raw streams without rerunning it or its accepted positive control;
 only the previously unstarted controls and final restored control then ran.
 Injected I/O failures are per-call stage refusals immediately before operations,
 not a claim that an actual OS read/seek/fsync syscall was forced to fail. The
-maintained package gate and publication remain pending.
+maintained package gate and publication are established separately above.
 
 The original path-based behavior remains historical in the retained
 [limitation](../limitations/backup-directory-synchronization.md).
@@ -82,6 +109,6 @@ open; no new implementation or completed-task credit is claimed for their checks
 
 ## Verification boundary
 
-Acceptance must include the real two JSON writers, deterministic replacement and
+Acceptance includes the real two JSON writers, deterministic replacement and
 failure controls, independent review and the complete selected maintained gate.
 No bus/device, native GUI, VM, deployment or release action is authorized here.

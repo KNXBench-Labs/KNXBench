@@ -28,4 +28,4 @@ the former dated sections are in the [archive](history/OPEN_WORK_2026-10-25.md).
 | LS-04 | Statistics tooling | Later scope | [LS-04](open-work/LS-04-statistics-tooling.md) |
 | LS-05 | Optional humour copy | Later scope | [LS-05](open-work/LS-05-humour-copy.md) |
 | LS-06 | Wider product scope | Later scope | [LS-06](open-work/LS-06-wider-product-scope.md) |
-| LS-07 | Optional hardening and catalogue-cleanup extensions | Later scope | [LS-07](open-work/LS-07-optional-hardening.md) |
+| LS-07 | Optional hardening and catalogue-cleanup extensions | Bounded descriptor-pinned JSON writers delivered; wider hardening and catalogue scope remains later | [LS-07](open-work/LS-07-optional-hardening.md) |

@@ -1,5 +1,15 @@
 # Roadmap
 
+## Main-only after Alpha 19: descriptor-pinned pre-write JSON backups
+
+The bounded LS-07 directory-chain, device-memory writer and service-control writer
+tasks are delivered as `98d2e6953` after the complete selected 14-stage gate,
+independent reviews and compiled negative controls. Existing static aliases and
+`..` remain supported; CWD/substitution and ordinary-path receipt limits fail
+closed. This does not deliver catalogue SQLite/list/delete/restore hardening,
+namespace confinement, permanent paths or physical/power-loss recovery.
+[Execution and retained boundaries](status/2026-11-05-descriptor-pinned-json-backups.md).
+
 ## Source candidate: literal saved schema-20 folder text
 
 A bounded WP-06 implementation displays saved `Node/@Text` alongside folder IDs

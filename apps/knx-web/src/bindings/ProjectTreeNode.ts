@@ -11,4 +11,8 @@ kind: string,
 /**
  * `Node/@RefId`, the shortened channel or parameter-block id.
  */
-ref_id: string, };
+ref_id: string,
+/**
+ * Literal saved schema-20 `Node/@Text`, never evaluated or translated.
+ */
+text?: string, };

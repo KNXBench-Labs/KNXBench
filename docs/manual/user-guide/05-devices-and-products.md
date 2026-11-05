@@ -1107,6 +1107,16 @@ channel view, and each view keeps its own expansion. Switching views adds no
 write, but moving focus from a dirty field to a view button can trigger the
 existing blur-save described above.
 
+**Source candidate: literal saved folder text.**
+
+A bounded schema-20 source candidate additionally shows the text saved on a folder
+node, alongside its ID. This text is not a translated/current manufacturer label;
+source placeholders and HTML-looking strings remain literal. Empty or unavailable
+text keeps the ID display, and the original saved ID path remains visible. The
+candidate changes neither grouping identity nor the existing refusal rules.
+Complete acceptance and publication are still pending; see the
+[bounded result](../../status/2026-11-05-saved-schema20-node-text.md).
+
 The table scrolls locally, keeping all columns reachable on narrow displays.
 [Full contract and evidence](../../COMMUNICATION_OBJECT_TABLE.md). The
 [earlier source screenshot](../../evidence/communication-objects/real-demo-editor.png)

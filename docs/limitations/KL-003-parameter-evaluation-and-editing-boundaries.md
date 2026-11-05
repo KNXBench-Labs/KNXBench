@@ -2,6 +2,16 @@
 
 [Current summary and ledger status](../KNOWN_LIMITATIONS.md#catalogue-kl-003)
 
+## Saved project-folder text boundary (5 November 2026 candidate)
+
+The bounded [schema-20 saved-text candidate](../status/2026-11-05-saved-schema20-node-text.md)
+adds literal text retained in an imported project, not product
+`ShowInComObjectTree` caption resolution. It changes neither identity nor saved
+membership, and does not translate or evaluate source placeholders. Module
+placement, current placement after parameter edits, manufacturer mapping and
+object priority remain open. Complete package/browser acceptance and publication
+are pending; the existing ledger status is unchanged.
+
 ## Current caption and unit boundary (20 October 2026)
 
 The older blanket exclusion of parameter-driven captions below is superseded

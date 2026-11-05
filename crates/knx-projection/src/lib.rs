@@ -1,4 +1,4 @@
-//! Display-shaped projections of [`knx_core::Project`] for the desktop UI
+//! Projects KNX project data into display-shaped DTOs for the UI.
 //! (ADR-0009). The UI never receives `Project` itself — only these types,
 //! generated into TypeScript by `ts-rs` so the two sides cannot disagree
 //! without the build failing. Depends on `knx-core` only: no IO, no format,
@@ -883,13 +883,17 @@ pub struct ComObjectProjectFolder {
 }
 
 /// One declared `GroupObjectTree/…/Node` on a [`ComObjectProjectFolder::path`].
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, serde::Deserialize, TS)]
 #[ts(export)]
 pub struct ProjectTreeNode {
     /// `Channel` or `Folder` (`Node/@Type`).
     pub kind: String,
     /// `Node/@RefId`, the shortened channel or parameter-block id.
     pub ref_id: String,
+    /// Literal saved schema-20 `Node/@Text`, never evaluated or translated.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub text: Option<String>,
 }
 
 /// [`ComObjectProjectFolder::status`].
@@ -1225,6 +1229,18 @@ mod tests {
             path: "t".into(),
             ets_id: "t".into(),
         }
+    }
+
+    #[test]
+    fn saved_tree_node_text_defaults_for_legacy_maps_and_is_optional_in_typescript() {
+        let legacy = serde::de::value::MapDeserializer::<_, serde::de::value::Error>::new(
+            [("kind", "Folder"), ("ref_id", "PB-1")].into_iter(),
+        );
+        let node: ProjectTreeNode = serde::Deserialize::deserialize(legacy).unwrap();
+        assert_eq!(node.text, None);
+        assert_eq!(node.kind, "Folder");
+        assert_eq!(node.ref_id, "PB-1");
+        assert!(ProjectTreeNode::decl(&ts_rs::Config::default()).contains("text?: string"));
     }
 
     fn device(id: u32, name: &str, address: Option<(u8, u8, u8)>) -> DeviceInstance {

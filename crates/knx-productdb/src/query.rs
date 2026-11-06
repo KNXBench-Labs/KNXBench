@@ -1,5 +1,4 @@
-//! The read side: resolving a device's program reference, and the merged
-//! `ComObject` + `ComObjectRef` view the enrichment consumes.
+//! Queries read-only product views and preserves selected source-layer provenance.
 //!
 //! The merge keeps the layer that supplied each value. That is the whole
 //! point of the override chain (DATA_MODEL §3): a value without its layer
@@ -135,7 +134,11 @@ pub struct ComObjectView {
     pub visible_description_translated: bool,
     pub object_size: Option<String>,
     pub object_size_layer: ValueLayer,
+    /// Selected product literal, not an interpreted project or wire priority.
     pub priority: Option<String>,
+    /// The present declaration's origin, including empty/unknown literals (ADR-0158).
+    /// Absent priority has no origin; equal literals still follow reference presence.
+    pub priority_layer: Option<ValueLayer>,
     pub dpt_list: Option<String>,
     pub dpt_layer: ValueLayer,
     pub read: Option<String>,
@@ -404,7 +407,8 @@ pub fn com_object_views(
         let (communication, communication_layer) =
             pick(raw.co_communication, raw.cor_communication);
         let (read_on_init, read_on_init_layer) = pick(raw.co_read_on_init, raw.cor_read_on_init);
-        let priority = raw.cor_priority.or(raw.co_priority);
+        let (priority, selected_priority_layer) = pick(raw.co_priority, raw.cor_priority);
+        let priority_layer = priority.as_ref().map(|_| selected_priority_layer);
 
         views.insert(
             raw.cor_id,
@@ -422,6 +426,7 @@ pub fn com_object_views(
                 object_size,
                 object_size_layer,
                 priority,
+                priority_layer,
                 dpt_list,
                 dpt_layer,
                 read,
@@ -2369,6 +2374,9 @@ pub fn space_usage(
     }
     Ok(Some(row))
 }
+
+#[cfg(test)]
+mod priority_tests;
 
 #[cfg(test)]
 mod tests {

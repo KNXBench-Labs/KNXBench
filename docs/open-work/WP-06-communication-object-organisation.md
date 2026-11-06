@@ -50,6 +50,9 @@ priority losslessly.
    project-instance modelling, migration, editing and external consumers remain
    open. [Source admission](../research/2026-11-06-object-priority-provenance.md)
    does not establish new wire priority or whole-WP acceptance.
+   The bounded product-query origin is software-accepted and published as
+   `edd41cd25` ([result](../status/2026-11-06-product-priority-provenance.md));
+   that foundation does not close the remaining project-priority requirement.
 
 ## Already delivered (do not redo)
 

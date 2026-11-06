@@ -12,6 +12,24 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Product-query priority provenance (6 November 2026; bounded foundation)
+
+The product query now carries optional Program/ProgramRef provenance beside its
+unchanged priority literal. Explicit empty, whitespace, unknown and equal
+reference literals keep their actual origin; absence asserts no origin.
+[ADR-0158](adr/0158-object-priority-provenance.md) separates this query metadata
+from future project-effective priority and existing wire policies.
+Five focused production-reader/query regressions pass, including raw SQL values,
+same-ID program separation, translation isolation and read-only native reopen.
+The first run retained a test-fixture SQL setup failure, corrected by using the
+existing translation insertion API. Independent whole-feature review approved
+the bounded increment; three compiled origin mutants fail their intended
+assertions and the original/restored controls each pass five tests. Those are
+discrimination experiments, not pre-feature semantic REDs. Maintained main-first
+package acceptance remains pending; private receipts retain each exact candidate.
+No core/project field, migration, UI, image policy, compatibility or hardware
+acceptance is claimed; broader WP-06 remains open.
+
 ## Literal installed-product folder declarations (6 November 2026; bounded implementation)
 
 Already assigned saved folders can carry a separate, authenticated current

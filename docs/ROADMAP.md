@@ -1,5 +1,16 @@
 # Roadmap
 
+## Bounded foundation: object-priority provenance
+
+[ADR-0158](adr/0158-object-priority-provenance.md) separates raw declarations,
+selected product literals, future project-effective priority and wire priority.
+The first increment adds optional origin metadata to the existing product query
+without changing its selected text, catalogue schema or programming policy.
+Project-instance modelling, migrations, commands, API/UI/report/comparison and
+broader WP-06 remain open. Source admission is recorded in the
+[investigation](research/2026-11-06-object-priority-provenance.md); this is not
+new priority encoding, hardware acceptance, a release or deployment.
+
 ## Bounded implementation: literal installed-product folder declarations
 
 The additional WP-06 slice uses an authenticated current installed-product

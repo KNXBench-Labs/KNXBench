@@ -33,6 +33,89 @@ pub(crate) fn apply_project_folders(
     }
 }
 
+/// Adds optional declarations only after saved placement and final inactive refusal.
+/// Two passes admit every repeated DTO string before applying any caption.
+pub(crate) fn apply_product_captions(
+    detail: &mut DeviceDetail,
+    captions: &knx_productdb::com_object_folder_captions::FolderCaptions,
+) -> Result<(), knx_productdb::dynamic::TextProjectionError> {
+    let mut budget = knx_productdb::dynamic::TextProjectionBudget::default();
+    // Charge the retained source map as well as every eventual DTO copy.
+    for caption in captions.values() {
+        for text in [
+            caption.text.as_str(),
+            &caption.application_program_id,
+            &caption.parameter_block_id,
+            &caption.source_sha256,
+            "ProductDeclaration",
+        ] {
+            budget.admit_copy(text)?;
+        }
+    }
+    for com in &detail.com_objects {
+        let Some(folder) = &com.project_folder else {
+            continue;
+        };
+        if folder.status != ProjectFolderStatus::Assigned {
+            continue;
+        }
+        let path = caption_path(&folder.path);
+        for (index, node) in folder.path.iter().enumerate() {
+            if node.kind != "Folder" {
+                continue;
+            }
+            if let Some(caption) = captions.get(&path[..=index]) {
+                for text in [
+                    caption.text.as_str(),
+                    &caption.application_program_id,
+                    &caption.parameter_block_id,
+                    &caption.source_sha256,
+                    "ProductDeclaration",
+                ] {
+                    budget.admit_copy(text)?;
+                }
+            }
+        }
+    }
+    for com in &mut detail.com_objects {
+        let Some(folder) = &mut com.project_folder else {
+            continue;
+        };
+        if folder.status != ProjectFolderStatus::Assigned {
+            continue;
+        }
+        let path = caption_path(&folder.path);
+        for (index, node) in folder.path.iter_mut().enumerate() {
+            if node.kind != "Folder" {
+                continue;
+            }
+            if let Some(caption) = captions.get(&path[..=index]) {
+                node.product_caption = Some(knx_projection::ProductFolderCaption {
+                    source: knx_projection::ProductFolderCaptionSource::ProductDeclaration,
+                    text: caption.text.clone(),
+                    application_program_id: caption.application_program_id.clone(),
+                    parameter_block_id: caption.parameter_block_id.clone(),
+                    source_sha256: caption.source_sha256.clone(),
+                });
+            }
+        }
+    }
+    Ok(())
+}
+
+fn caption_path(
+    path: &[ProjectTreeNode],
+) -> Vec<knx_productdb::com_object_folder_captions::FolderPathNode> {
+    path.iter()
+        .map(
+            |n| knx_productdb::com_object_folder_captions::FolderPathNode {
+                kind: n.kind.clone(),
+                ref_id: n.ref_id.clone(),
+            },
+        )
+        .collect()
+}
+
 fn refused(status: ProjectFolderStatus) -> ComObjectProjectFolder {
     ComObjectProjectFolder {
         status,
@@ -54,6 +137,7 @@ fn project_folder(saved: &SavedFolder) -> ComObjectProjectFolder {
                     .to_owned(),
                     ref_id: node.ref_id.clone(),
                     text: node.text.clone(),
+                    product_caption: None,
                 })
                 .collect();
             // Length-prefixed, so no `RefId` spelling can make two paths collide.
@@ -232,6 +316,51 @@ mod tests {
             .unwrap()
             .path
             .is_empty());
+        use knx_productdb::com_object_folder_captions::{FolderCaption, FolderPathNode};
+        let captions = BTreeMap::from([(
+            vec![FolderPathNode {
+                kind: "Folder".into(),
+                ref_id: "PB-1".into(),
+            }],
+            FolderCaption {
+                text: "Installed & <b>literal</b>".into(),
+                application_program_id: "AP".into(),
+                parameter_block_id: "AP_PB-1".into(),
+                source_sha256: "a".repeat(64),
+            },
+        )]);
+        let before = serde_json::to_value(&detail).unwrap();
+        apply_product_captions(&mut detail, &captions).unwrap();
+        let path = &detail.com_objects[1].project_folder.as_ref().unwrap().path;
+        assert_eq!(
+            path[0].text.as_deref(),
+            Some("Must disappear with inactive placement")
+        );
+        let json = serde_json::to_value(&path[0]).unwrap();
+        assert_eq!(
+            json["product_caption"],
+            serde_json::json!({
+                "source": "ProductDeclaration", "text": "Installed & <b>literal</b>",
+                "application_program_id": "AP", "parameter_block_id": "AP_PB-1", "source_sha256": "a".repeat(64),
+            })
+        );
+        detail.com_objects[1].project_folder.as_mut().unwrap().path[0].product_caption = None;
+        assert_eq!(serde_json::to_value(&detail).unwrap(), before);
+        let copies = knx_productdb::dynamic::MAX_TEXT_PROJECTION_WORK / 4096 / 2;
+        detail.com_objects = vec![detail.com_objects[1].clone(); copies];
+        let mut oversized = captions;
+        let caption = oversized.values_mut().next().unwrap();
+        caption.text = "x".repeat(4096);
+        // Repeated metadata, not just the rendered text, must consume the budget.
+        caption.application_program_id = "p".repeat(4096);
+        caption.parameter_block_id = "b".repeat(4096);
+        let before = serde_json::to_value(&detail).unwrap();
+        assert!(apply_product_captions(&mut detail, &oversized).is_err());
+        assert_eq!(
+            serde_json::to_value(&detail).unwrap(),
+            before,
+            "no partial overlay"
+        );
     }
 
     #[test]

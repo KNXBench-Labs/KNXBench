@@ -3,6 +3,7 @@ import type { ComObjectNode } from "./bindings/ComObjectNode";
 import type { ComObjectChannel } from "./bindings/ComObjectChannel";
 import type { ComObjectProjectFolder } from "./bindings/ComObjectProjectFolder";
 import type { ProjectTreeNode } from "./bindings/ProjectTreeNode";
+import type { ProductFolderCaption } from "./bindings/ProductFolderCaption";
 import { groupAddressSpellings } from "./gaNotation";
 import { dptDisplay } from "./dptLabels";
 export type ComSortColumn = "number" | "name" | "function" | "dpt" | "addresses" | "status" | "channel";
@@ -24,14 +25,30 @@ export function projectFolderIds(o: ComObjectNode): string[] | null {
   const folder = o.project_folder;
   return folder?.status === "Assigned" ? folder.path.filter(n => n.kind === "Folder").map(n => n.ref_id) : null;
 }
-/** Saved text is display-only; blank text falls back without changing the DTO. */
-export function projectFolderNodeLabel(node: ProjectTreeNode): string {
-  return node.text?.trim() ? `${node.text} (${node.ref_id})` : node.ref_id;
+/** Unknown or malformed additive metadata never acquires product-declaration authority. */
+function isProductFolderCaption(value: unknown): value is ProductFolderCaption {
+  return typeof value === "object" && value !== null
+    && "source" in value && value.source === "ProductDeclaration"
+    && "text" in value && typeof value.text === "string" && value.text.trim().length > 0
+    && "application_program_id" in value && typeof value.application_program_id === "string" && value.application_program_id.trim().length > 0
+    && "parameter_block_id" in value && typeof value.parameter_block_id === "string" && value.parameter_block_id.trim().length > 0
+    && "source_sha256" in value && typeof value.source_sha256 === "string"
+    && value.source_sha256.length === 64 && /^[a-f0-9]{64}$/i.test(value.source_sha256);
 }
-/** Only assigned Folder text is searchable, never refused or Channel-only labels. */
+/** Only Folder nodes without saved text can display a declared product caption. */
+export function projectFolderProductCaption(node: ProjectTreeNode): ProductFolderCaption | null {
+  return node.kind === "Folder" && node.text === undefined && isProductFolderCaption(node.product_caption)
+    ? node.product_caption : null;
+}
+/** Saved text wins even when blank; product text is a separately provenanced fallback. */
+export function projectFolderNodeLabel(node: ProjectTreeNode): string {
+  const text = node.text !== undefined ? node.text : projectFolderProductCaption(node)?.text;
+  return text?.trim() ? `${text} (${node.ref_id})` : node.ref_id;
+}
+/** Search only assigned Folder IDs and selected display text, never hidden product metadata. */
 function projectFolderSearch(o: ComObjectNode): string[] {
   return o.project_folder?.status === "Assigned"
-    ? o.project_folder.path.filter(n => n.kind === "Folder").flatMap(n => [n.ref_id, n.text ?? ""])
+    ? o.project_folder.path.filter(n => n.kind === "Folder").map(projectFolderNodeLabel)
     : [];
 }
 /** Why the saved tree's folder is withheld; `null` for no folder, an assigned one or an unknown status. */

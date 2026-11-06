@@ -1,5 +1,17 @@
 # Roadmap
 
+## Bounded implementation: literal installed-product folder declarations
+
+The additional WP-06 slice uses an authenticated current installed-product
+literal only where no admitted saved text field takes precedence. Source metadata
+stays separate; saved paths, grouping identities, refusal states and history do
+not change. Resource admission avoids diagnostic-report expansion and repeated
+normalized-table scans. [Scope and verification](status/2026-11-06-declared-product-folder-captions.md)
+keep the four original-member reader calibrations separate from original-package
+import, original-tool rendering, current placement, native and hardware acceptance.
+Broader manufacturer captions, module authority, staleness and priority remain open;
+this is not a release or deployment.
+
 ## Main-only after Alpha 19: descriptor-pinned pre-write JSON backups
 
 The bounded LS-07 directory-chain, device-memory writer and service-control writer

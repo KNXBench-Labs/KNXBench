@@ -1,7 +1,9 @@
 /** Communication-object filtering and stable sorting contracts. */
 import { expect, it } from "vitest";
 import type { ComObjectNode } from "./bindings/ComObjectNode";
-import { deriveComObjectView, dptOptions, DEFAULT_FILTERS, projectFolderIds, projectFolderNodeLabel, projectFolderRefusal, type ComSortColumn } from "./comObjectView";
+import type { ProjectTreeNode } from "./bindings/ProjectTreeNode";
+import type { ProductFolderCaption } from "./bindings/ProductFolderCaption";
+import { deriveComObjectView, dptOptions, DEFAULT_FILTERS, projectFolderIds, projectFolderNodeLabel, projectFolderProductCaption, projectFolderRefusal, type ComSortColumn } from "./comObjectView";
 export function object(id: number, overrides: Partial<ComObjectNode> = {}): ComObjectNode {
   return { id, number: id, name: `Object ${id}`, function_text: null, description: null,
     description_layer: null, dpt: null, dpt_layer: null, program_dpt: null, dpt_text: null,
@@ -195,6 +197,90 @@ it("caption equality and caption changes never affect opaque folder membership, 
   expect(membership(objects)).toEqual(expected);
   expect(membership(objects.map(o => ({ ...o, project_folder: o.project_folder ? caption(o.project_folder, "Changed {{0}}") : undefined })))).toEqual(expected);
   expect(byFolder(objects, { ...DEFAULT_FILTERS, query: "Different" }).groups.map(g => [g.key, g.objects.map(o => o.id), g.total])).toEqual([
-    ["folder:Channel:4:CH-1/Folder:4:PB-3", [3], 2], ["folder:Channel:4:CH-2/Folder:4:PB-3", [], 1], ["folder-none", [], 1],
+    ["folder:Channel:4:CH-1/Folder:4:PB-3", [3], 2],    ["folder:Channel:4:CH-2/Folder:4:PB-3", [], 1], ["folder-none", [], 1],
   ]);
+});
+
+const productCaption = (text = "Literal product label"): ProductFolderCaption => ({
+  source: "ProductDeclaration", text, application_program_id: "M-FA01_A-0100-01-0000",
+  parameter_block_id: "M-FA01_A-0100-01-0000_PB-3", source_sha256: "ab".repeat(32),
+});
+// Model an untyped JSON boundary without asserting an invalid value is a valid DTO.
+function unexpectedCaption(value: unknown): ProjectTreeNode {
+  const node: ProjectTreeNode = { kind: "Folder", ref_id: "PB-3" };
+  Object.defineProperty(node, "product_caption", { value, enumerable: true });
+  return node;
+}
+it("saved text wins over product metadata, including explicit empty and whitespace values", () => {
+  const caption = productCaption();
+  const nodes: ProjectTreeNode[] = [
+    { kind: "Folder", ref_id: "PB-3", text: "  Saved literal  ", product_caption: caption },
+    { kind: "Folder", ref_id: "PB-3", text: "", product_caption: caption },
+    { kind: "Folder", ref_id: "PB-3", text: " \t\n", product_caption: caption },
+    { kind: "Folder", ref_id: "PB-3", product_caption: caption },
+    { kind: "Folder", ref_id: "PB-3" },
+  ];
+  const before = JSON.stringify(nodes);
+  expect(nodes.map(projectFolderNodeLabel)).toEqual(["  Saved literal   (PB-3)", "PB-3", "PB-3", "Literal product label (PB-3)", "PB-3"]);
+  expect(nodes.map(projectFolderProductCaption)).toEqual([null, null, null, caption, null]);
+  expect(JSON.stringify(nodes)).toBe(before);
+});
+it("only a complete known product declaration on a Folder can supply a label", () => {
+  const caption = productCaption();
+  const invalid: unknown[] = [null, "Literal product label", [], {},
+    { ...caption, source: "FutureDeclaration" }, { ...caption, source: "productdeclaration" },
+    { ...caption, text: " \t" }, { ...caption, text: 7 },
+    { source: "ProductDeclaration", text: "Missing provenance" },
+    { ...caption, application_program_id: "" }, { ...caption, parameter_block_id: null },
+    { ...caption, source_sha256: "not-a-sha256" }, { ...caption, source_sha256: `${caption.source_sha256}\n` }];
+  for (const value of invalid) {
+    const node = unexpectedCaption(value);
+    expect(projectFolderProductCaption(node)).toBeNull();
+    expect(projectFolderNodeLabel(node)).toBe("PB-3");
+  }
+  for (const kind of ["Channel", "FutureNode"]) {
+    const node: ProjectTreeNode = { kind, ref_id: "CH-1", product_caption: caption };
+    expect(projectFolderProductCaption(node)).toBeNull();
+    expect(projectFolderNodeLabel(node)).toBe("CH-1");
+  }
+});
+it("search includes only the selected admitted product literal and Folder ID, not its provenance", () => {
+  const caption = productCaption('<img src=x onerror="alert(1)"> & Productonly');
+  const folder = (node: ProjectTreeNode): Folder => ({ status: "Assigned", key: "opaque", path: [node] });
+  const objects = [object(1, { project_folder: folder({ kind: "Folder", ref_id: "PB-3", product_caption: caption }) }),
+    object(2, { project_folder: folder({ kind: "Folder", ref_id: "PB-4", text: "Savedonly", product_caption: caption }) }),
+    object(3, { project_folder: folder({ kind: "Folder", ref_id: "PB-5", text: "", product_caption: caption }) }),
+    object(4, { project_folder: folder({ kind: "Folder", ref_id: "PB-6", text: " \t", product_caption: caption }) }),
+    object(5, { project_folder: folder({ kind: "Channel", ref_id: "CH-99", product_caption: caption }) }),
+    object(6, { project_folder: folder(unexpectedCaption({ ...caption, source: "FutureDeclaration" })) }),
+    ...(["Ambiguous", "UnidentifiedNode", "TreeUnresolved", "ModuleObject", "Inactive", "NoFolder", "NotInSavedTree"] as const)
+      .map((status, index) => object(index + 7, { project_folder: { status, key: "refused-key",
+        path: [{ kind: "Folder", ref_id: "REFUSED-ID", product_caption: caption }] } }))];
+  const before = JSON.stringify(objects);
+  for (const query of ["productonly", "<img", "onerror", "PB-3"]) {
+    expect(view(objects, { ...DEFAULT_FILTERS, query }).objects.map(o => o.id)).toEqual(query === "PB-3" ? [1, 6] : [1]);
+  }
+  expect(view(objects, { ...DEFAULT_FILTERS, query: "savedonly" }).objects.map(o => o.id)).toEqual([2]);
+  for (const query of [caption.application_program_id, caption.parameter_block_id, caption.source_sha256,
+    "ProductDeclaration", "FutureDeclaration", "REFUSED-ID", "CH-99"]) {
+    expect(view(objects, { ...DEFAULT_FILTERS, query }).objects).toEqual([]);
+  }
+  for (const id of ["PB-4", "PB-5", "PB-6"]) expect(view(objects, { ...DEFAULT_FILTERS, query: id }).objects).toHaveLength(1);
+  expect(JSON.stringify(objects)).toBe(before);
+});
+it("equal product captions and changing source metadata do not change opaque groups or order", () => {
+  const annotated = (ch: string, caption: ProductFolderCaption | undefined): Folder => ({ ...pb3(ch),
+    path: [{ kind: "Channel", ref_id: ch }, { kind: "Folder", ref_id: "PB-3", product_caption: caption }] });
+  const membership = (items: ComObjectNode[]) => byFolder(items).groups.map(g => [g.key, g.objects.map(o => o.id), g.total]);
+  const objects = [object(1, { project_folder: annotated("CH-2", productCaption("Same")) }),
+    object(2, { project_folder: annotated("CH-1", productCaption("Same")) }),
+    object(3, { project_folder: annotated("CH-2", productCaption("Different")) }), object(4)];
+  const expected = [["folder:Channel:4:CH-2/Folder:4:PB-3", [1, 3], 2],
+    ["folder:Channel:4:CH-1/Folder:4:PB-3", [2], 1], ["folder-none", [4], 1]];
+  expect(membership(objects)).toEqual(expected);
+  for (const caption of [undefined, { ...productCaption("Changed"), source_sha256: "cd".repeat(32) }]) {
+    expect(membership(objects.map(o => ({ ...o, project_folder: o.project_folder ? {
+      ...o.project_folder, path: o.project_folder.path.map(node => ({ ...node, product_caption: caption })),
+    } : undefined })))).toEqual(expected);
+  }
 });

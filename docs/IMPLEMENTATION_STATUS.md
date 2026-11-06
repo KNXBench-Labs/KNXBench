@@ -12,6 +12,20 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Literal installed-product folder declarations (6 November 2026; bounded implementation)
+
+Already assigned saved folders can carry a separate, authenticated current
+installed-product literal declaration. Existing admitted saved text keeps
+precedence, including explicit blank/whitespace fields; identity, placement,
+activation/refusals and project/history/source bytes remain independent of labels.
+The reader bounds source/identity/normalized evidence and repeated metadata copies;
+the UI discloses provenance and searches only the selected display label.
+[Verification contract and evidence levels](status/2026-11-06-declared-product-folder-captions.md)
+separate original-member reader calibration, synthetic lifecycle and production
+client/browser checks from complete package/publication acceptance. No original
+package importer, original-tool, native, hardware or release equivalence is claimed;
+templates/translations/modules/staleness/priority and whole WP-06 remain open.
+
 ## Descriptor-pinned JSON backups (6 November 2026; main-only)
 
 The device-memory and service-control JSON writers now create, verify and sync

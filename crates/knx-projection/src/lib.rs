@@ -894,6 +894,70 @@ pub struct ProjectTreeNode {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[ts(optional)]
     pub text: Option<String>,
+    /// Literal current installed-product declaration, independent of saved `text`.
+    /// Does not assert import-time bytes, active placement, translation or evaluation.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub product_caption: Option<ProductFolderCaption>,
+}
+
+/// Read-only provenance of an exact installed application ParameterBlock declaration.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, serde::Deserialize, TS)]
+#[ts(export)]
+pub struct ProductFolderCaption {
+    pub source: ProductFolderCaptionSource,
+    pub text: String,
+    pub application_program_id: String,
+    pub parameter_block_id: String,
+    pub source_sha256: String,
+}
+
+/// A declaration source, never the project's saved caption or current placement.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, serde::Deserialize, TS)]
+#[ts(export)]
+pub enum ProductFolderCaptionSource {
+    ProductDeclaration,
+}
+
+#[cfg(test)]
+mod product_caption_contract_tests {
+    use super::*;
+
+    #[test]
+    fn separate_optional_declaration_provenance_exports_without_replacing_saved_text() {
+        let config = ts_rs::Config::default();
+        let tree = ProjectTreeNode::decl(&config);
+        assert!(tree.contains("text?: string"));
+        assert!(tree.contains("product_caption?: ProductFolderCaption"));
+        assert_eq!(
+            ProductFolderCaptionSource::decl(&config),
+            "type ProductFolderCaptionSource = \"ProductDeclaration\";"
+        );
+        let caption = ProductFolderCaption::decl(&config);
+        for field in [
+            "source: ProductFolderCaptionSource",
+            "text: string",
+            "application_program_id: string",
+            "parameter_block_id: string",
+            "source_sha256: string",
+        ] {
+            assert!(caption.contains(field), "{field}: {caption}");
+        }
+        let saved = ProjectTreeNode {
+            kind: "Folder".into(),
+            ref_id: "PB-1".into(),
+            text: Some(String::new()),
+            product_caption: Some(ProductFolderCaption {
+                source: ProductFolderCaptionSource::ProductDeclaration,
+                text: "Product".into(),
+                application_program_id: "AP".into(),
+                parameter_block_id: "AP_PB-1".into(),
+                source_sha256: "a".repeat(64),
+            }),
+        };
+        assert_eq!(saved.text.as_deref(), Some(""));
+        assert_eq!(saved.product_caption.unwrap().text, "Product");
+    }
 }
 
 /// [`ComObjectProjectFolder::status`].
@@ -1238,6 +1302,7 @@ mod tests {
         );
         let node: ProjectTreeNode = serde::Deserialize::deserialize(legacy).unwrap();
         assert_eq!(node.text, None);
+        assert_eq!(node.product_caption, None);
         assert_eq!(node.kind, "Folder");
         assert_eq!(node.ref_id, "PB-1");
         assert!(ProjectTreeNode::decl(&ts_rs::Config::default()).contains("text?: string"));

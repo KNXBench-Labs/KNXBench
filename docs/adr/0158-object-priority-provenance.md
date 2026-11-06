@@ -19,7 +19,8 @@ and refusal of High, are independent of read-only literal provenance.
 The current product query already chooses the reference's priority when
 present, otherwise the object's. It loses which of those layers supplied the
 result. Identical strings at both layers must not conceal a reference override.
-No current core field or project editor supplies a complete priority contract.
+At the initial product-query admission, no core field or project editor supplied
+a complete priority contract; the bounded captured-source successor is below.
 
 ## Decision
 
@@ -43,7 +44,7 @@ Maintain four distinct concepts:
    Empty/invalid instance text must not silently inherit a product value.
    Schema-23 omission inheritance is supported by the inspected source; other
    schema mappings require their own evidence. These rules do not yet define
-   a new core field, schema migration or editable command.
+   an effective/editable contract; the captured-source field below stays separate.
 4. **Wire priority.** Image generation and bus services retain their existing
    explicit admission, inference and refusal policies. A read-only literal,
    recognised token or matching source layer does not authorise encoding,
@@ -55,6 +56,17 @@ image request or wire byte. It does not present a new UI priority column or
 claim that the broader WP-06 priority requirement is complete.
 
 ### Future implementation requirements
+
+**Additional bounded admission, 6 November 2026:** the
+[captured saved-instance contract](../contracts/saved-instance-priority.md)
+admits a separate immutable source observation, not effective resolution or
+editing. Its additive native17 overlay leaves old files/history explicitly
+NotCaptured rather than guessing a backfill. Captured payloads are boxed and
+resource-bounded; original source retention remains unchanged. This is an
+implemented contract with focused migration/history proofs and independent
+review. The [delivery record](../status/2026-11-06-saved-instance-priority.md)
+separates those executions from pending integrated acceptance; it does not close
+effective priority, editing or whole WP-06.
 
 Before promoting project priority, inspect current opaque retention and define
 an atomic migration that cannot invent missing original declarations. Old files,

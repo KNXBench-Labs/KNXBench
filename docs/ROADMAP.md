@@ -2,12 +2,19 @@
 
 ## Bounded foundation: object-priority provenance
 
+The captured saved-instance successor now has a separate core fact, native17
+overlay, history and required read-only GET field. It retains old observations
+as NotCaptured rather than backfilling them. Focused proofs and independent
+review pass; integrated acceptance remains in the
+[delivery record](status/2026-11-06-saved-instance-priority.md). Effective priority,
+editing, UI/report/comparison and broader WP-06 remain separate work.
+
 [ADR-0158](adr/0158-object-priority-provenance.md) separates raw declarations,
 selected product literals, future project-effective priority and wire priority.
 The first increment adds optional origin metadata to the existing product query
 without changing its selected text, catalogue schema or programming policy.
-Project-instance modelling, migrations, commands, API/UI/report/comparison and
-broader WP-06 remain open. Source admission is recorded in the
+That first increment did not cover project-instance modelling or migration;
+its historical source admission is recorded in the
 [investigation](research/2026-11-06-object-priority-provenance.md); this is not
 new priority encoding, hardware acceptance, a release or deployment. Main-first
 `edd41cd25` is published after independent review and all fourteen selected

@@ -90,6 +90,7 @@ fn project() -> Project {
         });
     }
     project.devices.insert_com_object(ComObjectInstance {
+        saved_instance_priority: Default::default(),
         id: ComObjectInstanceId(1),
         source: source("object"),
         device: DeviceId(1),

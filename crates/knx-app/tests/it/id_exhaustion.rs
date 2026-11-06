@@ -156,6 +156,7 @@ fn populate_final_entities(project: &mut Project) {
         arguments: vec![],
     });
     project.devices.insert_com_object(ComObjectInstance {
+        saved_instance_priority: Default::default(),
         id: ComObjectInstanceId(n),
         source: source("object"),
         device: DeviceId(n),

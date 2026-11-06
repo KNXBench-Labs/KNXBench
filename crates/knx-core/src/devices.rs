@@ -73,6 +73,11 @@ impl Devices {
         self.com_objects.values()
     }
 
+    /// Mutable facts without allocating an id inventory during resource refusal.
+    pub fn com_objects_mut(&mut self) -> impl Iterator<Item = &mut ComObjectInstance> {
+        self.com_objects.values_mut()
+    }
+
     /// The program-layer defaults lifted for a communication object with
     /// at least one `Override::Empty` slot (ADR-0012 gap 2, ADR-0027).
     /// `None` for every com object `knx_productdb::enrich` had nothing to
@@ -140,6 +145,7 @@ mod tests {
         let mut d = Devices::new();
         d.insert(device(DeviceId(1))); // its `com_objects` list stays empty
         d.insert_com_object(ComObjectInstance {
+            saved_instance_priority: Default::default(),
             id: ComObjectInstanceId(7),
             source: SourceRef {
                 path: "t".into(),
@@ -209,6 +215,7 @@ mod tests {
         let mut d = Devices::new();
         let id = ComObjectInstanceId(42);
         d.insert_com_object(ComObjectInstance {
+            saved_instance_priority: Default::default(),
             id,
             source: SourceRef {
                 path: "t".into(),

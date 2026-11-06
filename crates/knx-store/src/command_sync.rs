@@ -276,6 +276,7 @@ mod tests {
         let conn = open_and_migrate_in_memory().unwrap();
         let mut project = project_with_one_unassigned_device();
         project.devices.insert_com_object(ComObjectInstance {
+            saved_instance_priority: Default::default(),
             id: ComObjectInstanceId(1),
             source: source(),
             device: DeviceId(1),
@@ -330,6 +331,7 @@ mod tests {
         let conn = open_and_migrate_in_memory().unwrap();
         let mut project = project_with_one_unassigned_device();
         project.devices.insert_com_object(ComObjectInstance {
+            saved_instance_priority: Default::default(),
             id: ComObjectInstanceId(1),
             source: source(),
             device: DeviceId(1),

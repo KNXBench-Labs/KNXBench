@@ -100,7 +100,7 @@ impl NativeSnapshot {
         conn.deserialize_read_exact(MAIN_DB, bytes, bytes.len(), false)?;
         conn.execute_batch("PRAGMA trusted_schema = OFF; PRAGMA foreign_keys = ON;")?;
         let version: i64 = conn.query_row("PRAGMA user_version", [], |r| r.get(0))?;
-        if ![12, 13, 14, 15, crate::CURRENT_SCHEMA_VERSION].contains(&version) {
+        if ![12, 13, 14, 15, 16, crate::CURRENT_SCHEMA_VERSION].contains(&version) {
             return Err(HistoryError::Invalid("unsupported snapshot schema version"));
         }
         let creator: String = conn.query_row(
@@ -182,8 +182,11 @@ fn check_schema_version(conn: &Connection, version: i64) -> Result<(), HistoryEr
     }
     let expected = crate::open_and_migrate_in_memory()
         .map_err(|_| HistoryError::Invalid("native schema admission initialization failed"))?;
-    if ![12, 13, 14, 15, crate::CURRENT_SCHEMA_VERSION].contains(&version) {
+    if ![12, 13, 14, 15, 16, crate::CURRENT_SCHEMA_VERSION].contains(&version) {
         return Err(HistoryError::Invalid("unsupported native schema shape"));
+    }
+    if version < 17 {
+        expected.execute_batch("DROP TABLE com_object_saved_priority;")?;
     }
     if version < 16 {
         expected.execute_batch("DROP TABLE manufacturer_file;")?;
@@ -234,7 +237,14 @@ fn semantic_store_hash(conn: &Connection) -> Result<String, HistoryError> {
         [],
         |row| row.get(0),
     )?;
-    let identity_version: u32 = if functions {
+    let priorities: bool = conn.query_row(
+        "SELECT EXISTS(SELECT 1 FROM com_object_saved_priority)",
+        [],
+        |row| row.get(0),
+    )?;
+    let identity_version: u32 = if priorities {
+        17
+    } else if functions {
         15
     } else if notes {
         14
@@ -256,6 +266,7 @@ fn semantic_store_hash(conn: &Connection) -> Result<String, HistoryError> {
             || name == "schema_meta"
             // File-level carried bytes, never snapshot content (ADR-0128).
             || name == "manufacturer_file"
+            || (!priorities && name == "com_object_saved_priority")
             || (!notes && matches!(name.as_str(), "project_note" | "project_note_state"))
             || (!functions
                 && matches!(
@@ -315,6 +326,33 @@ fn semantic_store_hash(conn: &Connection) -> Result<String, HistoryError> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn saved_instance_priority_empty_overlay_preserves_legacy_identity_and_explicit_v16_shape() {
+        let conn = crate::open_and_migrate_in_memory().unwrap();
+        let snapshot = NativeSnapshot {
+            project: Project::new(knx_core::Language("en".into())),
+            opaque: vec![],
+            manufacturer_refs: vec![],
+        };
+        crate::save_project(&conn, &snapshot.project).unwrap();
+        let current = semantic_store_hash(&conn).unwrap();
+        conn.execute_batch("DROP TABLE com_object_saved_priority; PRAGMA user_version=16;")
+            .unwrap();
+        check_schema_version(&conn, 16).unwrap();
+        let bytes = conn.serialize(MAIN_DB).unwrap().to_vec();
+        let decoded = NativeSnapshot::decode(&bytes, &image_hash(&bytes)).unwrap();
+        assert_eq!(decoded.semantic_hash().unwrap(), current);
+        let mut invalid = Connection::open_in_memory().unwrap();
+        invalid
+            .deserialize_read_exact(MAIN_DB, bytes.as_slice(), bytes.len(), false)
+            .unwrap();
+        invalid
+            .execute_batch("CREATE TABLE unknown_overlay (id INTEGER) STRICT;")
+            .unwrap();
+        assert!(check_schema_version(&invalid, 16).is_err());
+    }
+
     #[test]
     fn semantic_digest_orders_column_values_not_physical_row_insertion() {
         let snapshot = NativeSnapshot {

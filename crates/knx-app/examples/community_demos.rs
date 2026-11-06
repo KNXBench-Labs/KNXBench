@@ -345,7 +345,7 @@ fn build_project(
             } else {
                 ObjectSize::Byte((bits / 8) as u16)
             };
-            project.devices.insert_com_object(ComObjectInstance { id: cid,
+            project.devices.insert_com_object(ComObjectInstance { saved_instance_priority: Default::default(), id: cid,
                 source: source(format!("{}_O-{}_R-1", product.app, object.number)), device: id, number: object.number,
                 text: authored(Text::Literal(object.text.clone()), Layer::Program),
                 description: authored(Text::Literal(format!("Fictional channel {} / {}. Unlinked objects are reserve functions, not missing connections.", object.channel, object.name)), Layer::Program),

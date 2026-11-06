@@ -7,6 +7,8 @@
 
 use std::collections::HashMap;
 
+mod saved_instance_priority;
+pub use saved_instance_priority::*;
 mod functions;
 pub use functions::{
     build_functions_view, FunctionLocationNode, FunctionMemberNode, FunctionNode, FunctionsView,
@@ -776,6 +778,7 @@ pub enum ProductResolution {
 #[derive(Debug, Clone, Serialize, TS)]
 #[ts(export)]
 pub struct ComObjectNode {
+    pub saved_instance_priority: SavedInstancePriorityView,
     pub id: u32,
     /// From `_O-<n>` in the source `RefId`.
     pub number: u16,
@@ -1096,6 +1099,7 @@ pub struct GroupLinkNode {
 /// instance).
 pub fn build_device_detail(project: &Project, id: knx_core::DeviceId) -> Option<DeviceDetail> {
     let device = project.devices.get(id)?;
+    let bindings = knx_core::SavedPriorityBindings::new(project);
     Some(DeviceDetail {
         id: device.id.0,
         name: device.name.clone(),
@@ -1105,7 +1109,7 @@ pub fn build_device_detail(project: &Project, id: knx_core::DeviceId) -> Option<
             .com_objects
             .iter()
             .filter_map(|com_id| project.devices.com_object(*com_id))
-            .map(|com| build_com_object_node(com, project))
+            .map(|com| build_com_object_node(com, project, id, &bindings))
             .collect(),
         product: build_device_product_node(device),
     })
@@ -1131,7 +1135,12 @@ fn build_device_product_node(device: &knx_core::DeviceInstance) -> DeviceProduct
     }
 }
 
-fn build_com_object_node(com: &knx_core::ComObjectInstance, project: &Project) -> ComObjectNode {
+fn build_com_object_node(
+    com: &knx_core::ComObjectInstance,
+    project: &Project,
+    owner: knx_core::DeviceId,
+    bindings: &knx_core::SavedPriorityBindings<'_>,
+) -> ComObjectNode {
     let name = resolved_text(project, &com.text);
     let dpt = com.dpt.value().map(|resolved| resolved.value.to_string());
     let program_dpt = if dpt.is_none() {
@@ -1148,6 +1157,7 @@ fn build_com_object_node(com: &knx_core::ComObjectInstance, project: &Project) -
     let description_layer = com.description.layer().map(|layer| format!("{layer:?}"));
     let flag = |o: &knx_core::Override<bool>| o.value().map(|r| r.value).unwrap_or(false);
     ComObjectNode {
+        saved_instance_priority: saved_instance_priority::view(com, owner, bindings),
         id: com.id.0,
         number: com.number,
         name,
@@ -1760,6 +1770,7 @@ mod tests {
             binary_data: vec![],
         });
         project.devices.insert_com_object(ComObjectInstance {
+            saved_instance_priority: Default::default(),
             id: ComObjectInstanceId(1),
             source: source(),
             device: DeviceId(1),
@@ -1876,6 +1887,7 @@ mod tests {
         links: &[(u32, knx_core::Direction)],
     ) -> knx_core::ComObjectInstance {
         knx_core::ComObjectInstance {
+            saved_instance_priority: Default::default(),
             id: knx_core::ComObjectInstanceId(com_id),
             source: source(),
             device: DeviceId(device_id),

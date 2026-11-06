@@ -13,7 +13,9 @@ const api = vi.hoisted(() => ({ deviceParameters: vi.fn().mockResolvedValue({ pr
 vi.mock("./api", () => ({ ...api, errorMessage: String }));
 import { DeviceWorkspace } from "./deviceComparisons.fixture";
 const tree: ProjectTree = { schema_version: 12, errors: 0, warnings: 0, can_undo: false, can_redo: false, is_modified: false, group_address_style: "ThreeLevel", installations: [] };
-const object = (overrides: Partial<ComObjectNode> = {}): ComObjectNode => ({ id: 1, number: 1, name: "Example", description: null, description_layer: null, dpt: "DPST-9-1", dpt_layer: "Program", program_dpt: null, dpt_text: null, function_text: null, is_active: true, activation: "NotEvaluated", channel: null, read: false, write: false, communication: true, transmit: false, update: false, read_on_init: false, links: [], ...overrides });
+const object = (overrides: Partial<ComObjectNode> = {}): ComObjectNode => ({
+    saved_instance_priority: { status: "unavailable", reason: "NotCaptured" },
+ id: 1, number: 1, name: "Example", description: null, description_layer: null, dpt: "DPST-9-1", dpt_layer: "Program", program_dpt: null, dpt_text: null, function_text: null, is_active: true, activation: "NotEvaluated", channel: null, read: false, write: false, communication: true, transmit: false, update: false, read_on_init: false, links: [], ...overrides });
 const detail = (com: ComObjectNode): DeviceDetail => ({ id: 9, name: "Example device", address: null, description: null, com_objects: [com], product: { product_ref: null, program_ref: null, catalog: null, resolution: "NoReference" } });
 afterEach(() => { setUiLanguage("en"); vi.clearAllMocks(); });
 async function render(com: ComObjectNode) {

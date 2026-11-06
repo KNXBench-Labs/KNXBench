@@ -7,6 +7,8 @@ import {
 } from "./groupAddressObjectInventory";
 
 const object = (id: number, number: number): ComObjectNode => ({
+    saved_instance_priority: { status: "unavailable", reason: "NotCaptured" },
+
   id, number, name: null, dpt: null, dpt_layer: null, description: null, description_layer: null, is_active: true,
   read: false, write: false, transmit: false, update: false, communication: false, read_on_init: false,
   links: [], activation: "NotEvaluated", channel: null, program_dpt: null, dpt_text: null, function_text: null,

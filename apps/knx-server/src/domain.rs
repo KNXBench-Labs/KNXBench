@@ -5151,6 +5151,7 @@ fn plan_catalog_batch(
                 .next_com_object_instance_id()
                 .map_err(|error| error.to_string())?;
             com_objects.push(knx_core::ComObjectInstance {
+                saved_instance_priority: Default::default(),
                 id: com_id,
                 source: knx_core::SourceRef {
                     path: ref_id.clone(),

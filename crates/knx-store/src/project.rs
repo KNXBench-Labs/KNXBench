@@ -79,6 +79,7 @@ const DELETE_ALL_TABLES: &[&str] = &[
     "instruction_run",
     "instruction_document",
     "com_object_program_default",
+    "com_object_saved_priority",
     "com_object_override",
     "group_link",
     "com_object_instance",
@@ -1111,6 +1112,7 @@ mod tests {
         project.installations[0].topology.unassigned = vec![DeviceId(1)];
         project.devices.insert(device(1));
         project.devices.insert_com_object(ComObjectInstance {
+            saved_instance_priority: Default::default(),
             id: ComObjectInstanceId(7),
             source: source(),
             device: DeviceId(1),
@@ -1194,6 +1196,7 @@ mod tests {
         project.installations[0].topology.unassigned = vec![DeviceId(1)];
         project.devices.insert(device(1));
         project.devices.insert_com_object(ComObjectInstance {
+            saved_instance_priority: Default::default(),
             id: ComObjectInstanceId(1),
             source: source(),
             device: DeviceId(1),
@@ -1292,6 +1295,7 @@ mod tests {
         for (id, number) in [(9, 0), (3, 1)] {
             let id = ComObjectInstanceId(id);
             project.devices.insert_com_object(ComObjectInstance {
+                saved_instance_priority: Default::default(),
                 id,
                 source: source(),
                 device: DeviceId(1),

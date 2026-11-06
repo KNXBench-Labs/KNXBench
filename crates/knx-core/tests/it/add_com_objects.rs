@@ -22,6 +22,7 @@ fn project() -> Project {
 }
 fn object(id: u32) -> ComObjectInstance {
     ComObjectInstance {
+        saved_instance_priority: Default::default(),
         id: ComObjectInstanceId(id),
         source: SourceRef {
             path: format!("ref-{id}"),

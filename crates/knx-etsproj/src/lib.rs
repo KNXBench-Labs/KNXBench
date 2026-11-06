@@ -18,6 +18,7 @@ pub mod parse;
 pub mod progress;
 pub mod report;
 pub mod rtf;
+mod saved_instance_priority;
 pub mod source;
 #[cfg(test)]
 mod testutil;
@@ -309,7 +310,8 @@ fn import_knxproj_bytes_inner(
     observer.stage(ImportStage::Validate);
     let validation = validate::validate(&parsed.document);
     observer.stage(ImportStage::Map);
-    let mapped = map::map(&parsed.document, &topology_path).map_err(ImportFailure::Allocation)?;
+    let mut mapped =
+        map::map(&parsed.document, &topology_path).map_err(ImportFailure::Allocation)?;
     observer.stage(ImportStage::InferDatapointTypes);
     let inference = infer::infer_group_address_dpts(&mapped.project);
 
@@ -446,6 +448,14 @@ fn import_knxproj_bytes_inner(
     if let Some(raw) = &parsed.document.info.project_traces_raw {
         opaque_entries.push(opaque::from_retained_element(&info_path, raw));
     }
+
+    saved_instance_priority::capture_saved_instance_priorities(
+        &mut mapped.project,
+        &parsed.document,
+        &topology_path,
+        &topology_bytes,
+        &opaque_entries,
+    );
 
     let mut import_report = report::build(
         file_name,

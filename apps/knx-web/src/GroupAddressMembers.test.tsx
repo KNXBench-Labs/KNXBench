@@ -32,6 +32,8 @@ beforeEach(() => {
 afterEach(async () => { await act(async () => root.unmount()); host.remove(); });
 
 const object = (id: number, number: number, name: string, links: Array<[number, string]> = []): ComObjectNode => ({
+    saved_instance_priority: { status: "unavailable", reason: "NotCaptured" },
+
   id, number, name, dpt: "DPST-1-1", dpt_layer: "Instance", description: null, description_layer: null, is_active: true,
   read: false, write: true, transmit: false, update: false, communication: true, read_on_init: false,
   links: links.map(([ga_id, direction]) => ({ ga_id, address: null, name: null, direction })),

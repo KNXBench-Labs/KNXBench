@@ -9,7 +9,9 @@ without changing its selected text, catalogue schema or programming policy.
 Project-instance modelling, migrations, commands, API/UI/report/comparison and
 broader WP-06 remain open. Source admission is recorded in the
 [investigation](research/2026-11-06-object-priority-provenance.md); this is not
-new priority encoding, hardware acceptance, a release or deployment.
+new priority encoding, hardware acceptance, a release or deployment. Main-first
+`edd41cd25` is published after independent review and all fourteen selected
+package stages; [acceptance and retained limits](status/2026-11-06-product-priority-provenance.md).
 
 ## Bounded implementation: literal installed-product folder declarations
 

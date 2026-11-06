@@ -25,8 +25,12 @@ The first run retained a test-fixture SQL setup failure, corrected by using the
 existing translation insertion API. Independent whole-feature review approved
 the bounded increment; three compiled origin mutants fail their intended
 assertions and the original/restored controls each pass five tests. Those are
-discrimination experiments, not pre-feature semantic REDs. Maintained main-first
-package acceptance remains pending; private receipts retain each exact candidate.
+discrimination experiments, not pre-feature semantic REDs. Main-first `edd41cd25`
+passed all fourteen selected package stages: Rust 5,500/0 with 177 ignored,
+517 tooling tests with six optional skips, and selected corpus 97/97. Ordered
+proofs, frozen inputs, checked/untouched user data and exact live publication
+were verified. [Acceptance and limits](status/2026-11-06-product-priority-provenance.md)
+keep the original execution and documentation-only successor separate.
 No core/project field, migration, UI, image policy, compatibility or hardware
 acceptance is claimed; broader WP-06 remains open.
 

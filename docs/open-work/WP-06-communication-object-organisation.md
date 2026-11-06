@@ -1,6 +1,6 @@
 # WP-06 — Communication-object organisation: remaining slices
 
-**Status:** Bounded saved schema-20 text display software-accepted and published; other slices remain evidence-gated. Listed in [OPEN_WORK](../OPEN_WORK.md); per-ID status of record is the [ledger](../status/LEDGER.md).
+**Status:** Saved schema-20 text display delivered; bounded literal installed-product declaration fallback implemented; broader slices remain evidence-gated. Listed in [OPEN_WORK](../OPEN_WORK.md); per-ID status of record is the [ledger](../status/LEDGER.md).
 
 ## Admitted increment — saved schema-20 node text
 
@@ -13,6 +13,18 @@ live/tracking readback is retained. The [acceptance record](../status/2026-11-05
 keeps original failures and narrow-viewport limits separate. No new compatibility
 or hardware claim follows. The remaining requirements below stay independent.
 
+## Additional bounded increment — installed-product literal declarations
+
+The [literal declaration contract](../contracts/declared-product-folder-captions.md)
+adds separate current installed-product provenance to an already assigned saved
+Folder. Existing admitted saved text, including blank fields, keeps precedence;
+IDs/keys/placement/history never derive from labels. Measured source identity,
+exact full ancestry, bounded admission and normalized corroboration are required.
+The [implementation/verification boundary](../status/2026-11-06-declared-product-folder-captions.md)
+distinguishes the four real-source reader calibrations from synthetic fallback,
+HTTP lifecycle and production-client evidence. It does not establish original
+package import, original-tool rendering, current placement or whole-WP acceptance.
+
 ## Task
 
 Organise communication objects by source-backed folders and represent object
@@ -20,8 +32,9 @@ priority losslessly.
 
 ## Open
 
-1. Folder captions from product `ParameterBlock`s / `ShowInComObjectTree`
-   (manufacturer mapping with evidence, not guessed).
+1. Broader product-folder captions: the bounded literal installed-product subset
+   is implemented; template/translation/rename and broader source-schema mapping
+   still need evidence, not guessed manufacturer behavior.
 2. Folders for module objects (depends on
    [WP-07](WP-07-module-instance-authority.md)).
 3. Staleness of the saved tree after edits.

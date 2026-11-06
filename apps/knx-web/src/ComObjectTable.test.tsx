@@ -7,6 +7,8 @@ import { expect, it, vi, beforeEach } from "vitest";
 import type { ComObjectNode } from "./bindings/ComObjectNode";
 import type { DeviceDetail } from "./bindings/DeviceDetail";
 import type { ProjectTree } from "./bindings/ProjectTree";
+import type { ProjectTreeNode } from "./bindings/ProjectTreeNode";
+import type { ProductFolderCaption } from "./bindings/ProductFolderCaption";
 function object(id: number, overrides: Partial<ComObjectNode> = {}): ComObjectNode {
   return { id, number: id, name: `Object ${id}`, function_text: null, description: null,
     description_layer: null, dpt: null, dpt_layer: null, program_dpt: null, dpt_text: null,
@@ -230,7 +232,7 @@ it("WP-06a: shows a saved project folder by its declared ids and says why anothe
   const note = (id: number) => v.host.querySelector<HTMLElement>(`tr[data-object-id="${id}"] .com-object-project-folder`);
   expect(note(1)?.textContent).toBe("Project folder: PB-3");
   expect(note(1)?.dataset.folderStatus).toBe("Assigned");
-  expect(note(1)?.title).toBe("Saved project tree: CH-1 › PB-3. Ids as stored in the project; the product's folder names are not looked up.");
+  expect(note(1)?.title).toBe("Saved project tree: CH-1 › PB-3. IDs and saved text stay unchanged; separately labelled product declarations are used only when saved text is absent.");
   expect(note(2)?.textContent).toBe("No project folder: folders of module objects are not supported yet");
   expect(note(3)).toBeNull();
   expect(note(4)).toBeNull();
@@ -280,7 +282,7 @@ it("WP-06 folder view: three exclusive views, six columns, disambiguated heading
   expect(summaryRow(v.host, 1).dataset.channelKey).toBe("channel:c-1");
   expect(summaryRow(v.host, 3).querySelector(".com-object-project-folder")?.textContent).toBe("No project folder: folders of module objects are not supported yet");
   expect(v.host.querySelector(".com-folder-view-note")?.textContent).toBe(
-    "Folders as saved in the project at import; later parameter changes are not reflected and the product's folder names are not looked up.");
+    "Folders as saved in the project at import; later parameter changes are not reflected. Product declarations label saved folders only; they do not establish current placement or activation.");
   await show(v, "All objects");
   expect(VIEWS.map(name => v.button(name)?.getAttribute("aria-pressed"))).toEqual(["false", "false", "true"]);
   expect(v.host.querySelectorAll("tr.com-object-channel")).toHaveLength(0);
@@ -430,7 +432,7 @@ it("saved schema20 folder text renders as inert text with IDs and the complete v
   const header = groupHeader(v.host, key)!;
   expect(header.querySelector("strong")?.textContent).toBe(`${label} (PB-3) › Nested (PB-4)`);
   expect(header.querySelector(".com-object-folder-path")?.textContent).toBe("Saved path: CH-1 › PB-3 › PB-4");
-  expect(header.querySelector("strong")?.getAttribute("title")).toBe("Saved project tree: CH-1 › PB-3 › PB-4. Ids as stored in the project; the product's folder names are not looked up.");
+  expect(header.querySelector("strong")?.getAttribute("title")).toBe("Saved project tree: CH-1 › PB-3 › PB-4. IDs and saved text stay unchanged; separately labelled product declarations are used only when saved text is absent.");
   await v.click(groupButton(v.host, key)!);
   const note = summaryRow(v.host, 1).querySelector(".com-object-project-folder")!;
   expect(note.textContent).toContain(`Project folder: ${label} (PB-3) › Nested (PB-4)`);
@@ -440,7 +442,7 @@ it("saved schema20 folder text renders as inert text with IDs and the complete v
   expect(note.querySelectorAll("img, script, b")).toHaveLength(0);
   expect(v.host.querySelectorAll("[data-text-fill]")).toHaveLength(0);
   expect(v.host.querySelector(".com-folder-view-note")?.textContent).toBe(
-    "Folders as saved in the project at import; later parameter changes are not reflected and the product's folder names are not looked up.");
+    "Folders as saved in the project at import; later parameter changes are not reflected. Product declarations label saved folders only; they do not establish current placement or activation.");
   await v.set(v.input("Search communication objects"), "{{ChNo}}");
   expect(summaryRow(v.host, 1).hidden).toBe(false);
   expect(v.host.querySelector(".com-table-count")?.textContent).toBe("1 / 1 objects");
@@ -479,5 +481,103 @@ it("saved folder text preserves empty, whitespace and legacy ID fallbacks withou
   expect(summaryRow(v.host, 3).hidden).toBe(false);
   expect(v.host.querySelector(".com-table-count")?.textContent).toBe("1 / 5 objects");
   expect(JSON.stringify(objects)).toBe(before);
+  await v.cleanup();
+});
+
+const declaredCaption = (text = "Declared product folder"): ProductFolderCaption => ({
+  source: "ProductDeclaration", text, application_program_id: "M-FA01_A-0100-01-0000",
+  parameter_block_id: "M-FA01_A-0100-01-0000_PB-3", source_sha256: "ab".repeat(32),
+});
+const productFolder = (channel: string, caption: ProductFolderCaption | undefined): Folder => ({ ...pb3(channel),
+  path: [{ kind: "Channel", ref_id: channel }, { kind: "Folder", ref_id: "PB-3", product_caption: caption }] });
+it("product declarations are inert, separately provenanced labels with IDs and unchanged saved paths", async () => {
+  const literal = '<img src=x onerror="alert(1)"> & Declaration';
+  const caption = declaredCaption(literal);
+  const objects = [object(1, { project_folder: productFolder("CH-1", caption) }),
+    object(2, { project_folder: productFolder("CH-2", caption) })];
+  const before = JSON.stringify(objects);
+  const v = await render(objects);
+  await show(v, "By saved project folder");
+  expect([...v.host.querySelectorAll<HTMLElement>("tr.com-object-channel")].map(row => row.dataset.groupKey)).toEqual([F1, F2]);
+  for (const [key, channel] of [[F1, "CH-1"], [F2, "CH-2"]]) {
+    const header = groupHeader(v.host, key)!;
+    expect(header.querySelector("strong")?.textContent).toBe(`${literal} (PB-3)`);
+    expect(header.querySelector(".com-object-folder-path")?.textContent).toBe(`Saved path: ${channel} › PB-3`);
+    const badge = header.querySelector<HTMLElement>('[data-folder-caption-source="ProductDeclaration"]')!;
+    expect(badge.textContent).toBe("Product declaration: PB-3");
+    expect(badge.title).toBe("Literal declaration from the currently installed product source, not the original import source or current folder placement. Not translated or evaluated. Application program: M-FA01_A-0100-01-0000. Parameter block: M-FA01_A-0100-01-0000_PB-3. Source SHA-256: " + caption.source_sha256 + ".");
+  }
+  await v.click(groupButton(v.host, F1)!);
+  const note = summaryRow(v.host, 1).querySelector(".com-object-project-folder")!;
+  expect(note.textContent).toContain(`Project folder: ${literal} (PB-3)`);
+  expect(note.querySelector(".com-object-folder-path")?.textContent).toBe("Saved path: CH-1 › PB-3");
+  expect(note.querySelector("[data-folder-caption-source]")?.textContent).toBe("Product declaration: PB-3");
+  expect(v.host.querySelectorAll("img, script, [data-text-fill]")).toHaveLength(0);
+  await v.set(v.input("Search communication objects"), "Declaration");
+  expect([1, 2].map(id => summaryRow(v.host, id).hidden)).toEqual([false, false]);
+  await show(v, "All objects");
+  expect(summaryRow(v.host, 2).querySelector("[data-folder-caption-source]")?.textContent).toBe("Product declaration: PB-3");
+  expect(JSON.stringify(objects)).toBe(before);
+  for (const write of [api.setComObjectDpt, api.setComObjectDescription, api.setComObjectFlag, api.linkComObject, api.unlinkComObject]) expect(write).not.toHaveBeenCalled();
+  await v.cleanup();
+});
+it("saved and blank text take precedence; legacy, unknown, Channel and refused metadata stay unlabelled", async () => {
+  const caption = declaredCaption("Unshown product secret");
+  const invalid: ProjectTreeNode = { kind: "Folder", ref_id: "PB-6" };
+  // Unknown future metadata arrives through JSON, not through the generated DTO contract.
+  Object.defineProperty(invalid, "product_caption", { value: { ...caption, source: "FutureDeclaration" }, enumerable: true });
+  const nodes: ProjectTreeNode[] = [
+    { kind: "Folder", ref_id: "PB-1", text: "Saved wins", product_caption: caption },
+    { kind: "Folder", ref_id: "PB-2", text: "", product_caption: caption },
+    { kind: "Folder", ref_id: "PB-3", text: " \t\n", product_caption: caption },
+    { kind: "Folder", ref_id: "PB-4" },
+    { kind: "Channel", ref_id: "CH-5", product_caption: caption }, invalid,
+  ];
+  const objects = nodes.map((node, index) => object(index + 1, { project_folder: { status: "Assigned", key: `opaque-${index}`, path: [node] } }));
+  objects.push(object(7, { project_folder: { status: "ModuleObject", key: "refused", path: [{ kind: "Folder", ref_id: "REFUSED-ID", product_caption: caption }] } }));
+  const v = await render(objects);
+  await show(v, "By saved project folder");
+  expect([...v.host.querySelectorAll("tr.com-object-channel strong")].map(node => node.textContent))
+    .toEqual(["Saved wins (PB-1)", "PB-2", "PB-3", "PB-4", "PB-6", "Without saved project folder"]);
+  expect(v.host.querySelectorAll("[data-folder-caption-source]")).toHaveLength(0);
+  expect(v.host.textContent).not.toContain("Unshown product secret");
+  expect(v.host.textContent).not.toContain("REFUSED-ID");
+  await show(v, "All objects");
+  expect(summaryRow(v.host, 1).querySelector(".com-object-project-folder")?.textContent).toContain("Project folder: Saved wins (PB-1)");
+  for (const query of ["Unshown product secret", caption.application_program_id, caption.source_sha256, "REFUSED-ID", "CH-5"]) {
+    await v.set(v.input("Search communication objects"), query);
+    expect(v.host.querySelector(".com-table-count")?.textContent).toBe("0 / 7 objects");
+  }
+  await v.set(v.input("Search communication objects"), "PB-6");
+  expect(summaryRow(v.host, 6).hidden).toBe(false);
+  for (const write of [api.setComObjectDpt, api.setComObjectDescription, api.setComObjectFlag, api.linkComObject, api.unlinkComObject]) expect(write).not.toHaveBeenCalled();
+  await v.cleanup();
+});
+it("appearing, changed and removed product metadata retain the expanded group and dirty editor until blur", async () => {
+  const items = (caption: ProductFolderCaption | undefined) => [object(1, { dpt: "DPST-1-1", project_folder: productFolder("CH-1", caption) }), object(2)];
+  const v = await render(items(undefined));
+  await show(v, "By saved project folder"); await v.click(groupButton(v.host, F1)!);
+  await v.click(summaryRow(v.host, 1).querySelector<HTMLElement>("summary")!);
+  const header = groupHeader(v.host, F1), row = summaryRow(v.host, 1);
+  const draft = editorRow(v.host, 1).querySelector<HTMLSelectElement>(".dpt-field select")!;
+  await v.set(draft, "DPST-9-2");
+  for (const caption of [declaredCaption(), { ...declaredCaption("Changed declaration"), source_sha256: "cd".repeat(32) }, undefined]) {
+    await v.rerender(items(caption));
+    expect(groupHeader(v.host, F1)).toBe(header);
+    expect(summaryRow(v.host, 1)).toBe(row);
+    expect(groupButton(v.host, F1)?.getAttribute("aria-expanded")).toBe("true");
+    expect(editorRow(v.host, 1).hidden).toBe(false);
+    expect(editorRow(v.host, 1).querySelector(".dpt-field select")).toBe(draft);
+    expect(draft.value).toBe("DPST-9-2");
+    expect(header?.querySelector("strong")?.textContent).toBe(caption ? `${caption.text} (PB-3)` : "PB-3");
+    expect(header?.querySelectorAll("[data-folder-caption-source]").length).toBe(caption ? 1 : 0);
+  }
+  expect(api.setComObjectDpt).not.toHaveBeenCalled();
+  api.setComObjectDpt.mockRejectedValueOnce(new Error("Fictional refusal"));
+  await act(async () => draft.dispatchEvent(new FocusEvent("focusout", { bubbles: true })));
+  expect(api.setComObjectDpt).toHaveBeenCalledTimes(1);
+  expect(editorRow(v.host, 1).querySelector(".dpt-field select")).toBe(draft);
+  expect(editorRow(v.host, 1).textContent).toContain("Fictional refusal");
+  expect(v.applied).not.toHaveBeenCalled();
   await v.cleanup();
 });

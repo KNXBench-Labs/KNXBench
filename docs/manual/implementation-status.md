@@ -2,6 +2,18 @@
 
 # Implementation status
 
+## Main-only implementation: literal product-folder declarations
+
+In **By saved project folder**, an already assigned Folder can show a bounded
+literal declaration from its authenticated current installed product. A separate
+source badge distinguishes it from saved text; IDs and full saved paths stay
+visible. Existing admitted saved text keeps precedence, including blank/space
+fields. Labels never change grouping, activation, placement, edits or history.
+Templates, translations, module placement, staleness and priority remain outside
+this slice. The real-source probe calibrates four literal declarations, not a
+complete original-package import or a real missing-saved-text fallback.
+[Scope and verification](../status/2026-11-06-declared-product-folder-captions.md).
+
 ## Main-only after Alpha 19: passive USB-serial listing
 
 Settings, status-bar configuration and Bus Monitor share **List USB-serial

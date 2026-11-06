@@ -2517,9 +2517,16 @@ pub fn device_detail(
     language: Option<&str>,
 ) -> Result<knx_projection::DeviceDetail, String> {
     let mut folders = None;
-    let mut detail = device_detail_with_product_data(state, device_id, language, &mut folders)?;
+    let mut captions = None;
+    let mut detail =
+        device_detail_with_product_data(state, device_id, language, &mut folders, &mut captions)?;
     if let Some(folders) = folders {
         crate::com_object_folders::apply_project_folders(&mut detail, &folders);
+    }
+    if let Some(captions) = captions {
+        if crate::com_object_folders::apply_product_captions(&mut detail, &captions).is_err() {
+            eprintln!("warning: optional product folder caption copy budget exhausted");
+        }
     }
     Ok(detail)
 }
@@ -2534,10 +2541,11 @@ fn device_detail_with_product_data(
             knx_app::com_object_folders::SavedFolder,
         >,
     >,
+    captions: &mut Option<knx_productdb::com_object_folder_captions::FolderCaptions>,
 ) -> Result<knx_projection::DeviceDetail, String> {
     // Step 1: lock `project` (and, in the established order, `opaque` for the
     // retained object tree); never `product_db` at the same time.
-    let (mut detail, overlay_input, activation_input, name_input) = {
+    let (mut detail, overlay_input, activation_input, name_input, caption_schema) = {
         let project = state.project.lock().expect("state mutex poisoned");
         let project = project.as_ref().ok_or("no project open")?;
         let detail = device_detail_impl(project, device_id)?;
@@ -2560,7 +2568,17 @@ fn device_detail_with_product_data(
                 knx_core::DeviceId(device_id),
             )
         });
-        (detail, overlay_input, activation_input, name_input)
+        let caption_schema = folders.as_ref().is_some_and(|folders| folders.values().any(|folder| {
+            matches!(folder, knx_app::com_object_folders::SavedFolder::Folder { path }
+                if path.iter().any(|node| node.kind == knx_app::com_object_folders::TreeNodeKind::Folder))
+        })).then_some(project.info.ets_schema_version);
+        (
+            detail,
+            overlay_input,
+            activation_input,
+            name_input,
+            caption_schema,
+        )
     };
 
     // T16: a product/program ref is present, so `resolution` needs a real
@@ -2633,6 +2651,27 @@ fn device_detail_with_product_data(
                 }
             }
 
+            if let Some(schema) = caption_schema {
+                use knx_productdb::com_object_folder_captions::{
+                    folder_captions, CaptionEvidence, CaptionIssue,
+                };
+                match folder_captions(
+                    products,
+                    detail.product.product_ref.as_deref().unwrap_or_default(),
+                    detail.product.program_ref.as_deref().unwrap_or_default(),
+                    schema,
+                )
+                .map_err(|e| e.to_string())?
+                {
+                    CaptionEvidence::Declared(declared) => *captions = Some(declared),
+                    CaptionEvidence::Unavailable(CaptionIssue::ResourceLimit) => {
+                        eprintln!(
+                            "warning: optional product folder caption evidence resource limit"
+                        );
+                    }
+                    CaptionEvidence::Unavailable(_) => {}
+                }
+            }
             apply_dpt_texts(products, &mut detail, language)?;
             let evaluated = match activation_input {
                 Some(input) => apply_com_object_activation(products, &mut detail, input, language)?,

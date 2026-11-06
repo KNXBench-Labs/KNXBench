@@ -979,6 +979,9 @@ mod owner_witness_tests {
     }
 }
 
+// Optional readers use bounded admission, not the complete diagnostic report.
+pub(crate) mod admission;
+
 // ---------------------------------------------------------------------------
 // Queries
 // ---------------------------------------------------------------------------

@@ -38,7 +38,7 @@ program defaults, translated text/fallback and source provenance stay disclosed.
 Missing-target links are visible by ID and count as links, not as unlinked objects.
 **Saved project folder (24 October 2026):** below the name, an imported object
 shows its saved `GroupObjectTree` folder by declared `RefId`s, or why it is
-withheld; folder ids are searchable. No product caption is looked up
+withheld; folder ids are searchable. That initial increment looked up no product caption
 ([folder contract](contracts/communication-object-folders.md#saved-project-folder-display-24-october-2026)).
 **Folder grouping amendment (24 October 2026):** a third view, *By saved
 project folder*, groups by the opaque saved-folder key (`folder:<key>`, fallback
@@ -56,6 +56,16 @@ text keeps the ID fallback; existing refusals remain authoritative. Independent
 review, selected branch/main-first package gates and browser checks passed on
 runtime `61e28d225`; narrow table scrolling and transient-toast visibility limits
 remain explicit ([contract and results](status/2026-11-05-saved-schema20-node-text.md)).
+
+**Literal installed-product declaration (6 November 2026):** an already assigned
+Folder may additionally carry an authenticated current product literal and its
+separate provenance. An existing admitted saved `text` field always keeps its
+display choice, including blank-to-ID fallback. Otherwise a supported product
+literal accompanies the ID; full ID paths/opaque keys and existing refusals stay
+unchanged. Only the selected display label is searchable. No template evaluation,
+translation, module placement or import-time product equivalence is inferred
+([contract](contracts/declared-product-folder-captions.md),
+[verification boundary](status/2026-11-06-declared-product-folder-captions.md)).
 
 ## Sorting and filters
 

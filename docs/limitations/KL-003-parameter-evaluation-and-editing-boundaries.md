@@ -2,6 +2,17 @@
 
 [Current summary and ledger status](../KNOWN_LIMITATIONS.md#catalogue-kl-003)
 
+## Current installed-product folder declaration boundary (6 November 2026)
+
+The [bounded literal implementation](../status/2026-11-06-declared-product-folder-captions.md)
+adds separately authenticated current installed-product text to already assigned
+saved Folder nodes, without replacing an existing admitted saved text field or
+changing placement/identity. The source study calibrates four literal paths from
+two applications, not a real missing-text fallback or original-package import.
+Templates/translations/renames, modules, current placement after edits and priority
+remain open. The existing ledger disposition is unchanged; no broader original-tool,
+native or hardware equivalence follows.
+
 ## Saved project-folder text boundary (5 November 2026 source delivery)
 
 The bounded [schema-20 saved-text delivery](../status/2026-11-05-saved-schema20-node-text.md)

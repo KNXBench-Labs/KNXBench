@@ -7,6 +7,8 @@ import { messages as en } from "../src/messages/en";
 import { messages as de } from "../src/messages/de";
 import { intercept, openList, openProject } from "./communication-fixture";
 import type { ComObjectProjectFolder } from "../src/bindings/ComObjectProjectFolder";
+import type { ProjectTreeNode } from "../src/bindings/ProjectTreeNode";
+import type { ProductFolderCaption } from "../src/bindings/ProductFolderCaption";
 // Issue #9 (devices view): a channel header reads "▾ name · count" from the left,
 // and its objects start one level right of the header's marker.
 for (const language of ["en", "de"] as const) for (const width of [1440, 400]) for (const theme of ["porcelain", "graphite"]) {
@@ -414,6 +416,103 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
     expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1);
     expect(JSON.stringify({ tree: state.tree, objects: state.objects })).toBe(before);
     expect(state.requests.slice(requestStart).filter(r => !r.startsWith("GET ") && r !== "POST /api/achievements/record")).toEqual([]);
+    expect(state.unexpected).toEqual([]);
+  });
+}
+
+const declaredFolderCaption = (text: string, refId = "PB-3"): ProductFolderCaption => ({
+  source: "ProductDeclaration", text, application_program_id: "M-FA01_A-0100-01-0000",
+  parameter_block_id: `M-FA01_A-0100-01-0000_${refId}`, source_sha256: "ab".repeat(32),
+});
+for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
+  test(`${language} ${width}px: literal product folder declarations respect saved precedence and stay view-only`, async ({ page }) => {
+    const m = language === "en" ? en : de;
+    await page.setViewportSize({ width, height: 900 });
+    const state = await intercept(page, language, 10);
+    const literal = '<img src=x onerror="alert(1)"> & Declarationonly';
+    const product = declaredFolderCaption(literal);
+    const hidden = declaredFolderCaption("Unshown-product-secret");
+    const assigned = (key: string, path: ProjectTreeNode[]): ComObjectProjectFolder => ({ status: "Assigned", key, path });
+    const productPath = (channel: string): ProjectTreeNode[] => [
+      { kind: "Channel", ref_id: channel, product_caption: declaredFolderCaption("Channel-product-secret") },
+      { kind: "Folder", ref_id: "PB-3", product_caption: product },
+    ];
+    const future: ProjectTreeNode = { kind: "Folder", ref_id: "PB-U" };
+    const malformed: ProjectTreeNode = { kind: "Folder", ref_id: "PB-M" };
+    // These deliberately malformed JSON additions must not gain authority through a typed base DTO.
+    Object.defineProperty(future, "product_caption", { value: { ...hidden, text: "Future-product-secret", source: "FutureDeclaration" }, enumerable: true });
+    Object.defineProperty(malformed, "product_caption", { value: { source: "ProductDeclaration", text: "Malformed-product-secret" }, enumerable: true });
+    const folders: ComObjectProjectFolder[] = [
+      assigned("Channel:4:CH-1/Folder:4:PB-3", productPath("CH-1")),
+      assigned("Channel:4:CH-2/Folder:4:PB-3", productPath("CH-2")),
+      assigned("saved", [{ kind: "Folder", ref_id: "PB-S", text: "Saved wins", product_caption: hidden }]),
+      assigned("empty", [{ kind: "Folder", ref_id: "PB-E", text: "", product_caption: hidden }]),
+      assigned("space", [{ kind: "Folder", ref_id: "PB-W", text: " \t\n", product_caption: hidden }]),
+      assigned("legacy", [{ kind: "Folder", ref_id: "PB-L" }]),
+      assigned("future", [future]),
+      { status: "ModuleObject", key: null, path: [{ kind: "Folder", ref_id: "REFUSED-ID", product_caption: declaredFolderCaption("Refused-product-secret") }] },
+      assigned("channel-only", [{ kind: "Channel", ref_id: "CH-SECRET", product_caption: declaredFolderCaption("Channel-product-secret") }]),
+      assigned("malformed", [malformed]),
+    ];
+    folders.forEach((folder, index) => {
+      state.objects[index] = { ...state.objects[index], activation: "Active", project_folder: folder };
+    });
+    await openProject(page, language); await openList(page, language);
+    await page.locator(".devices-table tbody td:nth-child(3) button").first().click();
+    const panel = page.locator(".com-table-panel");
+    const before = JSON.stringify({ tree: state.tree, objects: state.objects }), requestStart = state.requests.length;
+    const header = (key: string) => panel.locator(`tr.com-object-channel[data-group-key="${key}"] .com-object-channel-summary`);
+    const row = (id: number) => panel.locator(`tr.com-object-summary[data-object-id="${id}"]`);
+    const search = panel.getByRole("searchbox", { name: m["comTable.search"] });
+    await panel.getByRole("button", { name: m["comTable.byFolder"], exact: true }).click();
+    expect(await panel.locator("tr.com-object-channel").evaluateAll(rows => rows.map(node => node.getAttribute("data-group-key"))))
+      .toEqual([F1, F2, "folder:saved", "folder:empty", "folder:space", "folder:legacy", "folder:future", "folder:malformed", "folder-none"]);
+    for (const [key, channel] of [[F1, "CH-1"], [F2, "CH-2"]]) {
+      await expect(header(key).locator("strong")).toHaveText(`${literal} (PB-3)`);
+      const badge = header(key).locator('[data-folder-caption-source="ProductDeclaration"]');
+      await expect(badge).toBeVisible();
+      await expect(badge).toHaveText(m["comTable.productFolderSource"].replace("{id}", "PB-3"));
+      await expect(badge).toHaveAttribute("title", m["comTable.productFolderTitle"]
+        .replace("{program}", product.application_program_id).replace("{block}", product.parameter_block_id).replace("{sha256}", product.source_sha256));
+      await expect(header(key).locator(".com-object-folder-path")).toBeVisible();
+      await expect(header(key).locator(".com-object-folder-path")).toHaveText(m["comTable.folderPath"].replace("{value}", `${channel} › PB-3`));
+    }
+    for (const [key, label] of [["saved", "Saved wins (PB-S)"], ["empty", "PB-E"], ["space", "PB-W"], ["legacy", "PB-L"], ["future", "PB-U"], ["malformed", "PB-M"]]) {
+      await expect(header(`folder:${key}`).locator("strong")).toHaveText(label);
+      await expect(header(`folder:${key}`).locator("[data-folder-caption-source]")).toHaveCount(0);
+    }
+    await expect(panel.locator("img, script, [data-text-fill]")).toHaveCount(0);
+    await expect(panel.locator(".com-folder-view-note")).toHaveText(m["comTable.folderViewNote"]);
+    await header(F1).focus(); await page.keyboard.press("Enter");
+    await expect(header(F1)).toHaveAttribute("aria-expanded", "true");
+    await expect(row(1)).toBeVisible();
+    await expect(row(1).locator("[data-folder-caption-source]")).toHaveText(m["comTable.productFolderSource"].replace("{id}", "PB-3"));
+    await expect(row(1).locator(".com-object-folder-path")).toHaveText(m["comTable.folderPath"].replace("{value}", "CH-1 › PB-3"));
+    if (process.env.KNX_CO_CAPTURE_DIR) await panel.screenshot({ path: join(process.env.KNX_CO_CAPTURE_DIR, `co-product-folder-${language}-${width}.png`) });
+    await search.fill("Declarationonly");
+    expect(await panel.locator("tr.com-object-summary:visible").evaluateAll(rows => rows.map(node => node.getAttribute("data-object-id")))).toEqual(["1", "2"]);
+    await search.fill("PB-3");
+    await expect(panel.locator("tr.com-object-summary:visible")).toHaveCount(2);
+    for (const query of ["Unshown-product-secret", "Future-product-secret", "Malformed-product-secret", "Channel-product-secret", "Refused-product-secret",
+      "REFUSED-ID", "CH-SECRET", product.application_program_id, product.source_sha256]) {
+      await search.fill(query);
+      await expect(panel.locator("tr.com-object-summary:visible")).toHaveCount(0);
+    }
+    await panel.getByRole("button", { name: m["comTable.resetFilters"], exact: true }).click();
+    await expect(header(F1)).toHaveAttribute("aria-expanded", "true");
+    await expect(header(F2)).toHaveAttribute("aria-expanded", "false");
+    await panel.getByRole("button", { name: m["comTable.flat"], exact: true }).click();
+    await expect(row(2).locator("[data-folder-caption-source]")).toBeVisible();
+    await expect(row(2).locator(".com-object-folder-path")).toHaveText(m["comTable.folderPath"].replace("{value}", "CH-2 › PB-3"));
+    await expect(row(8).locator(".com-object-project-folder")).toHaveText(m["comTable.projectFolderRefused.ModuleObject"]);
+    await expect(panel.locator("img, script")).toHaveCount(0);
+    await search.fill("PB-L");
+    await expect(panel.locator("tr.com-object-summary:visible")).toHaveCount(1);
+    await expect(row(6)).toBeVisible();
+    await expect(row(6).locator("[data-folder-caption-source]")).toHaveCount(0);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1);
+    expect(JSON.stringify({ tree: state.tree, objects: state.objects })).toBe(before);
+    expect(state.requests.slice(requestStart).filter(request => !request.startsWith("GET ") && request !== "POST /api/achievements/record")).toEqual([]);
     expect(state.unexpected).toEqual([]);
   });
 }

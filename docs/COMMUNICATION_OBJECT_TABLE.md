@@ -48,13 +48,14 @@ the default and All objects is unchanged. Filter, expansion, editor-lifetime and
 blur-save rules below apply per namespaced group key. Status: implemented,
 reviewed and delivered as `e6f227c4`
 ([folder grouping contract](contracts/communication-object-folders.md#saved-project-folder-grouping-24-october-2026)).
-**Saved schema-20 text candidate (5 November 2026):** a bounded optional literal
+**Saved schema-20 text (published 5 November 2026):** a bounded optional literal
 saved caption accompanies Folder IDs and participates in search; full saved ID
 paths and the import-time note stay visible. Text is never an identity key,
 manufacturer lookup, translation or evaluated template. Missing/blank/oversized
-text keeps the ID fallback; existing refusals remain authoritative. Complete
-package and browser acceptance are pending
-([contract and results](status/2026-11-05-saved-schema20-node-text.md)).
+text keeps the ID fallback; existing refusals remain authoritative. Independent
+review, selected branch/main-first package gates and browser checks passed on
+runtime `61e28d225`; narrow table scrolling and transient-toast visibility limits
+remain explicit ([contract and results](status/2026-11-05-saved-schema20-node-text.md)).
 
 ## Sorting and filters
 

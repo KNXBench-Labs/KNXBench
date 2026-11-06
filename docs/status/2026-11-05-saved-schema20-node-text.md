@@ -1,11 +1,18 @@
-# Saved schema-20 node text — bounded candidate
+# Saved schema-20 node text — bounded source delivery
 
 ## Delivery state
 
-Implementation candidate; **not yet package-accepted or published**. The source
-claim is `80e1416a0`; the complete selected branch/main-first package gates,
-real-browser evidence and publication readback remain pending. This record does
-not close WP-06 or claim ETS/native/hardware equivalence.
+**Software-accepted and published as main-first `61e28d225` on `84d081084`**;
+feature `e4aa31945` was based on `80e1416a0`. The original publication receipt records a
+successful actual isolated server build/version check and equal local,
+tracking and live tips. On 6 November 2026, a fresh upstream check finds that
+runtime commit in the ancestry of `15d443623`. This is a documentation
+reconciliation of retained execution, not fresh current-main product acceptance.
+It does not close WP-06 or claim ETS/native/hardware equivalence.
+
+The initial claim was `80e1416a0`; its former pending acceptance statements
+are superseded by the separately bound branch/main-first results below.
+Original failures and the focused evidence retain their own source identities.
 
 ## Contract and implementation
 
@@ -47,7 +54,9 @@ These are separate source-bound stages, not one completed package gate:
   not silently replayed or counted as new executions.
 - Independent whole-feature source review: no Critical, Important or Minor
   findings; 14 input hashes/lengths and 40 diff hunks independently checked.
-  A later correction supplies only the required Config argument in one test.
+  Review-01 was **static APPROVE / overall BLOCK** because runtime acceptance
+  was pending, not because of a reported product defect. A later correction
+  supplies only the required Config argument in one test.
 - Parent-executed private Vitest calibration: original, comment-only inert control
   and restored control each pass the same 44-test inventory. Removing only saved
   text search produces 3 assertion failures; suppressing text display produces
@@ -60,9 +69,9 @@ attempts and blocked downstream invocations are preserved separately. No result
 above establishes complete branch/integration acceptance, actual browser layout,
 full public-export importer equivalence or physical functionality.
 
-## Remaining verification and boundaries
+## Historical pre-gate plan and retained boundaries
 
-The maintained plan selects 17 stages: documentation/tooling, complete default
+The maintained plan selected 17 stages: documentation/tooling, complete default
 browser coverage plus communication/table-column production suites, app/projection
 Rust consumers including desktop compilation, generated bindings and selected
 isolated corpus. Commit bindings before this gate because its generator restores
@@ -75,3 +84,68 @@ Evidence is retained privately under `<profile-scratch>/queue-next-20261105/`:
 `runtime-review-03`. Per-stage producer exits and original failed wrappers remain
 separate. Manufacturer folder mapping, module placement, saved-tree staleness,
 priority and broader real-export/compatibility evidence stay open.
+
+## Complete selected software acceptance — 5 November 2026
+
+Both completed package receipts have the exact ordered 17-stage plan, direct
+zero exits and valid owning proofs, `complete`/`success`/`planCompleted`, equal
+start/end input fingerprints and `inputsFrozen`. Their outer user-data guards
+report no touched or unchecked real-user locations. Each nested web receipt
+independently has all 40 selected stages, valid proofs and frozen inputs; the
+user-data guard belongs to the outer package, not the nested web schema.
+
+| Run | Source binding | Rust summaries | Selected corpus |
+| --- | --- | --- | --- |
+| Branch | `80e1416a0` → `e4aa31945` | 3,669 passed, 0 failed, 144 ignored; 23 summary rows | 91/91 in five targets |
+| Main-first | `84d081084` → `61e28d225` | 3,676 passed, 0 failed, 144 ignored; 23 summary rows | 91/91 in five targets |
+
+Rust, corpus and overlapping browser configurations are separate populations,
+not a unique combined test count. Main-first includes newer upstream inputs;
+its seven additional Rust passes are not attributed to this feature. The plan
+includes warning-denied Clippy, desktop compilation, generated bindings and
+binding-diff verification. It is the complete change-selected gate, not the
+full-workspace/release profile.
+
+The focused browser successor exercises four new cases in each actual selecting
+configuration: development, production communication and production table columns.
+These 12 executions cover DE/EN, narrow/wide geometry, literal HTML/template-looking
+text, ID-visible paths, text search, stable opaque membership and no unexpected
+writes. All 27 maintained TypeScript fixture configurations were compiled.
+Review-02 **APPROVE** carries the original static audit and admits the corrected
+source plus bounded focused evidence; it is not a fresh integrated-tree review.
+Parent source/payload checks found no open findings within that scope. The later
+package/delivery receipts establish integrated acceptance and publication. The
+original review and two semantic calibration detections above remain separate
+evidence, not additional unique suite coverage.
+
+Visual inspection of the three contact sheets retains the narrow-view limits:
+the existing table scrolls horizontally, parts of long headings/paths can be
+outside the initial viewport, and an existing achievement toast obscures some
+pixels. No all-captions-at-once, universal fit, native/Orca or ETS-rendering
+claim follows from the browser passes.
+
+The original integration controller then builds the actual `knx-server` and
+runs `--version` in loopback-only isolation; both direct exits are zero.
+Its SHA-256 is `247b7100c9ab62e81b807bfd128eb03b9d627532de2b1ff3aeb608e3c1ff5501`.
+Fresh-base conditional publication and tracking/live readback succeeded at
+`61e28d225`. This is not server deployment or a live installation test.
+
+## Closeout evidence — 6 November 2026
+
+The parent revalidated the original receipt schemas, exact stage order/proofs,
+frozen fingerprints, outer user-data guards and raw Rust/corpus summaries without
+replaying accepted product checks. A first closeout observer incorrectly expected
+outer user-data fields in the nested web receipt and raised `KeyError`; it is
+retained as an observer-only refusal, not a product failure. The corrected reader
+validates the unchanged receipts with the guards at their actual outer boundary.
+
+Original evidence and execution logs are retained and member-verified under
+`<profile>/evidence/2026-11-06-wp06-saved-node-text/`: 12,188 original entries,
+37 recorded executable paths and an independently imported/fscked Git bundle.
+The server executable matches its original receipt hash; the other executable
+digests are retention-time observations, not invented launch-time bindings.
+Final documentation-gate/publication receipts and owned retirement are tracked
+in the root-local restart snapshot and private closure supplement. This
+prose-only successor does not silently rebind older runtime evidence to newer
+upstream code. Manufacturer mapping, module placement, staleness, priority and
+wider real-export equivalence remain open.

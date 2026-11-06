@@ -6,7 +6,9 @@ This admits only a read-only display of the literal `Node/@Text` retained in an
 imported schema-20 project's saved `GroupObjectTree`. It does not establish the
 manufacturer's current folder text, translation, activation, template semantics,
 or folder placement after edits. This is a WP-06 increment, not full WP-06 or
-ETS compatibility acceptance. Implementation and runtime acceptance are pending.
+ETS compatibility acceptance. The source delivery and bounded software acceptance
+are now [recorded](../status/2026-11-05-saved-schema20-node-text.md) on main-first
+`61e28d225`; the observation and pre-implementation contract below stay unchanged.
 
 ## Primary observation
 

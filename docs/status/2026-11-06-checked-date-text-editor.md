@@ -46,12 +46,31 @@ The browser fixtures use intercepted HTTP and synthetic value/history state.
 They do not execute server Date validation or prove native persistence. The
 review did not run browsers; parent browser/visual evidence is separate.
 
-## Final acceptance boundary
+## Committed software acceptance and publication
 
-At this source-admission checkpoint the committed main-first package gate and
-publication remain pending. Their results must be recorded against the actual
-commit and selected stage plan, with frozen inputs and checked user data; the
-focused counts above must not be relabelled as that final gate.
+Feature `b19dfb131` was integrated main-first as `76dc954a1` on base `7cba23ff2`.
+The feature and integration trees were identical. The maintained change-scoped
+package gate ran once on that committed integration, then published it only after
+all selected proofs passed and the upstream base still matched. Independent
+parent readback confirmed local, tracking and live `main` equality.
+
+All 14 selected stages passed, with the exact ordered plan, valid stage proofs,
+matching source fingerprints, and no touched or unchecked user data. The nested
+web gate passed all 37 selected stages: build, 27 fixture TypeScript projects,
+5,293 unit tests, 959 default-browser cases (913 functional, 46 exclusive), and
+40 production-parameters cases. Production/default cases overlap and are not
+unique-test totals. The empty production exclusive lane was inventory-backed.
+
+Clippy and 103 Rust tests in two actual xtask test executables passed. No
+application-crate Rust suite was selected. Tooling reported 517 tests with six
+existing optional skips. The corpus plan was explicitly empty because selected
+packages hold no corpus test: no private-corpus execution is claimed. This is
+complete selected-package software acceptance, not a full-workspace or release
+gate and not closure of the remaining evidence boundaries below.
+
+A later result-only documentation successor must preserve runtime input bytes
+and pass its own maintained selected gate; accepted runtime execution remains
+bound to `76dc954a1`, not relabelled as a fresh run on that successor.
 
 Private original logs, manifests, failed setup/fixture attempts, independent
 review, mutant patches, raw exits and visual captures are retained under

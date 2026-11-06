@@ -12,16 +12,21 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
-## Checked Date text editor (6 November 2026; candidate admission)
+## Checked Date text editor (6 November 2026; software-accepted on main)
 
 A bounded source-authenticated Date text editor adds calendar preflight and
 explicit revision-bound Apply without a native picker, normalization or image
-codec. Independent review approved all changed material, with three assertion-
-killed semantic mutants and restored green controls. Parent targeted precheck:
-34 selected stages, 5,293 unit tests, 40 default-browser cases and eight separately
-inspected editor crops. These are focused evidence, not final committed-package
-acceptance; [the record](status/2026-11-06-checked-date-text-editor.md) preserves
-scope, original fixture/setup failures and the still-pending final gate.
+codec. Independent whole-feature review approved the candidate; three semantic
+mutants failed their intended assertions and restored controls passed. Main-first
+`76dc954a1` passed all 14 selected package stages, including nested web37,
+27 fixture TypeScript projects, 5,293 unit tests, 959 default-browser cases and
+40 overlapping production-parameters cases. Clippy/103 xtask tests and tooling517
+with six optional skips passed; no private corpus cases were selected. Frozen
+inputs, checked untouched user data and exact publication readback were verified.
+Eight separate dev-fixture editor crops were inspected. The
+[acceptance record](status/2026-11-06-checked-date-text-editor.md) retains original
+fixture/setup failures and keeps source, runtime and visual scopes distinct.
+Broader WP-08/PDB-04, native/image, hardware, release and deployment remain open.
 
 ## Product-query priority provenance (6 November 2026; bounded foundation)
 

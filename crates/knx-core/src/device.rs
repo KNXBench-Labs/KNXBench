@@ -70,6 +70,8 @@ pub struct ComObjectInstance {
     /// defaults through `ModuleInstance` → `ModuleDef` → `ComObjectRef` →
     /// `ComObject` instead of the direct `ApplicationProgram` chain.
     pub module_instance: Option<ModuleInstanceId>,
+    /// Original saved declaration; never an effective or wire priority.
+    pub saved_instance_priority: crate::SavedInstancePriority,
 }
 
 /// The program-layer value sitting behind one of `ComObjectInstance`'s own
@@ -161,6 +163,7 @@ mod tests {
     /// size (unstated at instance level in schema 11, as `size` documents).
     fn com_object_instance_fixture() -> ComObjectInstance {
         ComObjectInstance {
+            saved_instance_priority: Default::default(),
             id: ComObjectInstanceId(1),
             source: source(),
             device: DeviceId(1),

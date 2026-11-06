@@ -646,6 +646,8 @@ it("mounts the explicit recorded-state read in the selected device Inspector", a
 
 function detailWithComObject(links: DeviceDetail["com_objects"][number]["links"] = []): DeviceDetail {
   return { ...deviceDetail(), com_objects: [{
+    saved_instance_priority: { status: "unavailable", reason: "NotCaptured" },
+
     id: 7, number: 1, name: "Switch actuator output", dpt: "DPST-1-1", dpt_layer: null,
     description: null, description_layer: null, is_active: true,
     activation: "NotEvaluated", channel: null, program_dpt: null, dpt_text: null, function_text: null,

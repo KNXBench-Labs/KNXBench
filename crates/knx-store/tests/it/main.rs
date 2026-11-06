@@ -11,4 +11,6 @@ mod notes_admission;
 mod project_history;
 mod read_only_open;
 mod reference_project;
+mod saved_instance_priority;
+mod saved_instance_priority_predecessor;
 mod store_integrity;

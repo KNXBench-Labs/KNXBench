@@ -364,6 +364,7 @@ mod tests {
 
     fn com_node(id: u32) -> ComObjectNode {
         ComObjectNode {
+            saved_instance_priority: Default::default(),
             id,
             number: 0,
             name: None,

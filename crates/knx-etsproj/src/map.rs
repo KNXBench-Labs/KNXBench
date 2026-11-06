@@ -834,6 +834,7 @@ fn map_com_object(
     }
 
     let instance = ComObjectInstance {
+        saved_instance_priority: Default::default(),
         id: com_id,
         source: SourceRef {
             path: source_path.to_string(),
@@ -1481,6 +1482,7 @@ fn map_com_object_v21(
     }
 
     let instance = ComObjectInstance {
+        saved_instance_priority: Default::default(),
         id: com_id,
         source: SourceRef {
             path: source_path.to_string(),

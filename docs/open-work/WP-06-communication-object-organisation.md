@@ -31,6 +31,14 @@ requirements below or any hardware/native/release/deployment acceptance.
 
 ## Task
 
+**Implemented and reviewed; integrated acceptance pending:**
+[captured saved-instance priority](../contracts/saved-instance-priority.md)
+adds a schema-23 source observation through native model/history and read-only
+projection. The additive 16→17 migration does not infer old declarations or
+absence: old files/history remain NotCaptured and retain their opaque facts.
+Effective priority, editing, wire encoding and whole-WP acceptance remain open.
+[Execution and remaining acceptance](../status/2026-11-06-saved-instance-priority.md).
+
 Organise communication objects by source-backed folders and represent object
 priority losslessly.
 
@@ -47,8 +55,10 @@ priority losslessly.
 5. Object priority across core, persistence, import, projection and
    comparison. [ADR-0158](../adr/0158-object-priority-provenance.md) defines
    raw/effective provenance and the bounded product-query origin increment;
-   project-instance modelling, migration, editing and external consumers remain
-   open. [Source admission](../research/2026-11-06-object-priority-provenance.md)
+   the captured instance/native-history/read-only GET slice is implemented and
+   reviewed, with integrated acceptance tracked above. Effective resolution,
+   editing, comparison/report/UI consumers remain open.
+   [Source admission](../research/2026-11-06-object-priority-provenance.md)
    does not establish new wire priority or whole-WP acceptance.
    The bounded product-query origin is software-accepted and published as
    `edd41cd25` ([result](../status/2026-11-06-product-priority-provenance.md));

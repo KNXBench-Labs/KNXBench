@@ -3,9 +3,10 @@ import type { ComObjectActivation } from "./ComObjectActivation";
 import type { ComObjectChannel } from "./ComObjectChannel";
 import type { ComObjectProjectFolder } from "./ComObjectProjectFolder";
 import type { GroupLinkNode } from "./GroupLinkNode";
+import type { SavedInstancePriorityView } from "./SavedInstancePriorityView";
 import type { TextFill } from "./TextFill";
 
-export type ComObjectNode = { id: number,
+export type ComObjectNode = { saved_instance_priority: SavedInstancePriorityView, id: number,
 /**
  * From `_O-<n>` in the source `RefId`.
  */

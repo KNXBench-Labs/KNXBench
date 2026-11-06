@@ -22,7 +22,7 @@ use std::path::Path;
 use rusqlite::{params, Connection, OptionalExtension, Transaction};
 
 /// Matches `knx_core::project::CURRENT_SCHEMA_VERSION`.
-pub const CURRENT_SCHEMA_VERSION: i64 = 16;
+pub const CURRENT_SCHEMA_VERSION: i64 = 17;
 
 #[derive(Debug)]
 pub enum MigrationError {
@@ -704,6 +704,11 @@ fn migrate_v15_to_v16(conn: &Connection) -> Result<(), MigrationError> {
     Ok(())
 }
 
+fn migrate_v16_to_v17(conn: &Connection) -> Result<(), MigrationError> {
+    conn.execute_batch(crate::saved_instance_priority::CREATE_TABLE)?;
+    Ok(())
+}
+
 type Migration = fn(&Connection) -> Result<(), MigrationError>;
 
 /// History owns the surrounding transaction so a refused editor write also
@@ -755,6 +760,7 @@ fn migrations() -> Vec<Migration> {
         migrate_v13_to_v14,
         migrate_v14_to_v15,
         migrate_v15_to_v16,
+        migrate_v16_to_v17,
     ]
 }
 
@@ -1450,6 +1456,7 @@ mod tests {
                 binary_data: vec![],
             });
             project.devices.insert_com_object(ComObjectInstance {
+                saved_instance_priority: Default::default(),
                 id: ComObjectInstanceId(5),
                 source: knx_core::SourceRef {
                     path: "P-0001/0.xml".into(),
@@ -1596,6 +1603,7 @@ mod tests {
             DeviceId(1),
             0,
             &ComObjectInstance {
+                saved_instance_priority: Default::default(),
                 id: ComObjectInstanceId(1),
                 source: knx_core::SourceRef {
                     path: "P-0001/0.xml".into(),

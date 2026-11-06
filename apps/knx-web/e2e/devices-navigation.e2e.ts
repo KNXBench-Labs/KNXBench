@@ -106,7 +106,9 @@ async function intercept(page: Page, language: "en" | "de", count = 3, theme = "
         text: "Operating mode", group: { key: "buttons", label: "Buttons" } }] });
     return data;
   };
-  const configuredObject = (): ComObjectNode => ({ id: 20, number: 1, name: mode === "1" ? "Rocker output" : "Left output", function_text: "Switch", description: null, description_layer: null, dpt: "DPST-1-1", dpt_layer: "Program", program_dpt: null, dpt_text: null, is_active: true, activation: "Active", channel: null, read: false, write: true, transmit: false, communication: true, update: false, read_on_init: false, links: [] });
+  const configuredObject = (): ComObjectNode => ({
+    saved_instance_priority: { status: "unavailable", reason: "NotCaptured" },
+ id: 20, number: 1, name: mode === "1" ? "Rocker output" : "Left output", function_text: "Switch", description: null, description_layer: null, dpt: "DPST-1-1", dpt_layer: "Program", program_dpt: null, dpt_text: null, is_active: true, activation: "Active", channel: null, read: false, write: true, transmit: false, communication: true, update: false, read_on_init: false, links: [] });
   // Like the real server: no project until the test creates one (ADR-0127).
   let projectOpen = false;
   await page.route("**/api/**", (route) => {

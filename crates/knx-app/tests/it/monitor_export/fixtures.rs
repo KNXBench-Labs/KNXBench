@@ -99,6 +99,7 @@ pub(super) fn fixture() -> Project {
         binary_data: vec![],
     });
     p.devices.insert_com_object(ComObjectInstance {
+        saved_instance_priority: Default::default(),
         id: ComObjectInstanceId(1),
         source: source(),
         device: DeviceId(1),

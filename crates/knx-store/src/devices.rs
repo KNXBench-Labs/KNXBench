@@ -541,6 +541,7 @@ pub fn upsert_com_object_instance(
     position: i64,
     com: &ComObjectInstance,
 ) -> Result<(), StoreError> {
+    crate::saved_instance_priority::validate(&com.saved_instance_priority)?;
     let (size_kind, size_value, size_layer) = size_columns(&com.size);
     conn.execute(
         "INSERT INTO com_object_instance
@@ -573,6 +574,7 @@ pub fn upsert_com_object_instance(
         ],
     )?;
 
+    crate::saved_instance_priority::write(conn, com.id, &com.saved_instance_priority)?;
     write_override_row(conn, com.id, Attr::Text, encode_text(&com.text))?;
     write_override_row(
         conn,
@@ -662,6 +664,7 @@ pub fn load_com_object_instance(
         },
     )?;
     let mut com = ComObjectInstance {
+        saved_instance_priority: Default::default(),
         id,
         source: SourceRef {
             path: source_path,
@@ -697,6 +700,7 @@ pub fn load_com_object_instance(
     for (attr, state, value, text_kind, layer) in rows {
         apply_override(&mut com, &attr, &state, value, text_kind, layer)?;
     }
+    com.saved_instance_priority = crate::saved_instance_priority::load(conn, id)?;
     Ok(com)
 }
 
@@ -715,6 +719,7 @@ pub(crate) fn load_all_com_objects(
     let mut indices = BTreeMap::new();
     let rows = stmt.query_map([], |row| {
         Ok(ComObjectInstance {
+            saved_instance_priority: Default::default(),
             id: ComObjectInstanceId(row.get(0)?),
             source: SourceRef {
                 path: row.get(2)?,
@@ -790,6 +795,13 @@ pub(crate) fn load_all_com_objects(
         objects[index].links.push(link);
     }
 
+    let mut priorities = crate::saved_instance_priority::load_all(conn)?;
+    for com in &mut objects {
+        com.saved_instance_priority = priorities.remove(&com.id).unwrap_or_default();
+    }
+    if !priorities.is_empty() {
+        return Err(StoreError::SavedPriorityIntegrity);
+    }
     let mut by_device = BTreeMap::new();
     for com in objects {
         by_device
@@ -1181,6 +1193,7 @@ mod tests {
 
     fn com_object_fixture() -> ComObjectInstance {
         ComObjectInstance {
+            saved_instance_priority: Default::default(),
             id: ComObjectInstanceId(1),
             source: SourceRef {
                 path: "0.xml".into(),

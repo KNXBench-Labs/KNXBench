@@ -12,6 +12,18 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Captured saved-instance priority (6 November 2026; reviewed implementation)
+
+The bounded schema-23 observation preserves declared raw, both omission causes
+and explicit unavailability through core, native17, working/history/undo/redo
+and the required read-only device-detail GET. Historical images remain NotCaptured;
+no opaque backfill or effective/wire interpretation is introduced. All 27 named
+focused contract tests have actual passes, with independent whole-feature review
+and F1 closure. The [delivery record](status/2026-11-06-saved-instance-priority.md)
+retains source epochs, original failures and pending integrated acceptance.
+Broader WP-06, editing, UI/report/comparison and hardware/native/release claims
+remain outside this slice.
+
 ## Product-query priority provenance (6 November 2026; bounded foundation)
 
 The product query now carries optional Program/ProgramRef provenance beside its

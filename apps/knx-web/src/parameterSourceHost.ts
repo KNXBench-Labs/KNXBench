@@ -23,7 +23,7 @@ export type ProjectedSource =
   | { kind: "malformed" };
 
 /** Field kinds whose presentation `chooseParameterEditor` decides on. */
-const CANDIDATE_KINDS: ReadonlySet<string> = new Set(["Time", "Number", "Color", "Picture", "IPAddress"]);
+const CANDIDATE_KINDS: ReadonlySet<string> = new Set(["Time", "Number", "Color", "Picture", "IPAddress", "Date"]);
 
 type Json = Record<string, unknown>;
 

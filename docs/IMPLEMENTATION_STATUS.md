@@ -12,6 +12,17 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Checked Date text editor (6 November 2026; candidate admission)
+
+A bounded source-authenticated Date text editor adds calendar preflight and
+explicit revision-bound Apply without a native picker, normalization or image
+codec. Independent review approved all changed material, with three assertion-
+killed semantic mutants and restored green controls. Parent targeted precheck:
+34 selected stages, 5,293 unit tests, 40 default-browser cases and eight separately
+inspected editor crops. These are focused evidence, not final committed-package
+acceptance; [the record](status/2026-11-06-checked-date-text-editor.md) preserves
+scope, original fixture/setup failures and the still-pending final gate.
+
 ## Product-query priority provenance (6 November 2026; bounded foundation)
 
 The product query now carries optional Program/ProgramRef provenance beside its

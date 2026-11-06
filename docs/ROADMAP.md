@@ -851,6 +851,14 @@ sections). The three alpha goals are
 finished; they were removed from the tree on 2026-10-08
 ([where to find them](history/REMOVED_DOCS.md)).
 
+## Main-only checked Date text editor (6 November 2026)
+
+The [bounded Date editor](contracts/checked-date-text-editor.md) adds source-bound
+calendar preflight and explicit revision-bound Apply to one exact Date text form.
+The existing server validator remains authoritative. This is not a native date
+picker, image codec, module mapping, release or hardware-compatibility claim.
+Broader [WP-08](open-work/WP-08-parameter-value-codecs.md) remains evidence-gated.
+
 ## Current reading guide — 8 October 2026
 
 Checked against source `608a204b`. The [ideas/roadmap audit](status/2026-10-08-ideas-roadmap-audit.md)

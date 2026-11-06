@@ -21,7 +21,10 @@ text field stays; the download refuses a placed date by name. The memory
 encoding of `Encoding="DPT 11"` is **not** established: a collection default
 lies before the DPT 11 year range, so DPT 11 octets are not assumed
 ([evidence](../research/2026-10-28-typedate-value-form.md)). The type's
-native/image codec, a checked date editor and Colour/Picture stay open.
+native/image codec and Colour/Picture stay open. The bounded
+[checked Date text editor](../contracts/checked-date-text-editor.md) adds only
+source-authenticated project-value preflight and explicit Apply; no native date
+picker, memory encoding or device compatibility follows.
 Sources whose affected evidence differs between targeted and extended-package
 modes are not promoted: they retain `Other`, original evidence and counter
 contributions, with explicit backfill diagnostics and unavailable reports.

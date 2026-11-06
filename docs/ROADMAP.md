@@ -10,14 +10,16 @@ closed. This does not deliver catalogue SQLite/list/delete/restore hardening,
 namespace confinement, permanent paths or physical/power-loss recovery.
 [Execution and retained boundaries](status/2026-11-05-descriptor-pinned-json-backups.md).
 
-## Source candidate: literal saved schema-20 folder text
+## Main-only after Alpha 19: literal saved schema-20 folder text
 
-A bounded WP-06 implementation displays saved `Node/@Text` alongside folder IDs
-and searches the admitted text without changing grouping identity. It does not
-resolve manufacturer captions, source templates, module placement or staleness.
-Focused software checks are recorded; complete package/browser acceptance and
-publication remain pending. Other WP-06 requirements stay evidence-gated.
-[Candidate, original failures and limits](status/2026-11-05-saved-schema20-node-text.md).
+The bounded WP-06 implementation displays saved `Node/@Text` alongside folder IDs
+and searches the admitted text without changing grouping identity. Published as
+main-first `61e28d225` (source `e4aa31945`), after independent review, branch and
+integrated selected package gates and an actual isolated server build/version
+check. It does not resolve manufacturer captions, source templates, module
+placement or staleness. Other WP-06 requirements stay evidence-gated; this is
+not a release, native or hardware acceptance.
+[Acceptance, original failures and limits](status/2026-11-05-saved-schema20-node-text.md).
 
 ## Main-only after Alpha 19: finite System-2 E1–E17 software consolidation
 

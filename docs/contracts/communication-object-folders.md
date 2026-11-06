@@ -271,7 +271,7 @@ in the server, storage, API, bindings or write path changes.
   no command; the existing dirty-field blur-save can still fire when focus moves
   to a view button, as it does for filters.
 
-## Saved schema-20 node text (5 November 2026 candidate)
+## Saved schema-20 node text (5 November 2026 source delivery)
 
 The [bounded source contract](../research/2026-11-05-saved-schema20-node-text.md)
 admits an optional literal saved `Node/@Text`, not a manufacturer caption.
@@ -287,10 +287,12 @@ searchable; the full original ID path remains visible. Neither HTML nor source
 placeholders are interpreted, and saved text is not translated or refreshed from
 product data. No project/domain/storage/command or protocol behavior changes.
 
-This candidate supersedes only the earlier open schema-20 text-display item.
-The dated acceptance above remains historical. Manufacturer mapping, module
-placement, staleness, priority and broader real-export compatibility remain open.
-[Focused results, original failures and pending acceptance](../status/2026-11-05-saved-schema20-node-text.md).
+Published as main-first `61e28d225` (feature `e4aa31945`) after independent
+review and complete selected branch/integrated software gates. This delivery
+supersedes only the earlier open schema-20 text-display item. The dated
+acceptance above remains historical. Manufacturer mapping, module placement,
+staleness, priority and broader real-export compatibility remain open.
+[Acceptance, original failures and visual limits](../status/2026-11-05-saved-schema20-node-text.md).
 
 ## Source anchors
 

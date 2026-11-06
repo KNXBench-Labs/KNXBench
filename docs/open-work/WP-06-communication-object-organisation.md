@@ -1,14 +1,17 @@
 # WP-06 — Communication-object organisation: remaining slices
 
-**Status:** In progress: bounded saved schema-20 text display; other slices remain evidence-gated. Listed in [OPEN_WORK](../OPEN_WORK.md); per-ID status of record is the [ledger](../status/LEDGER.md).
+**Status:** Bounded saved schema-20 text display software-accepted and published; other slices remain evidence-gated. Listed in [OPEN_WORK](../OPEN_WORK.md); per-ID status of record is the [ledger](../status/LEDGER.md).
 
 ## Admitted increment — saved schema-20 node text
 
 The [source observation and bounded contract](../research/2026-11-05-saved-schema20-node-text.md)
 admit literal saved `Node/@Text` as additional read-only display, without changing
-folder identity or resolving manufacturer text/templates. Implementation, independent
-review and complete package acceptance are pending; no new compatibility or hardware
-claim follows. The remaining requirements below stay independent.
+folder identity or resolving manufacturer text/templates. Source `e4aa31945`
+was independently reviewed and software-accepted through the complete selected
+branch and main-first gates; runtime `61e28d225` is published and its original
+live/tracking readback is retained. The [acceptance record](../status/2026-11-05-saved-schema20-node-text.md)
+keeps original failures and narrow-viewport limits separate. No new compatibility
+or hardware claim follows. The remaining requirements below stay independent.
 
 ## Task
 
@@ -21,10 +24,10 @@ priority losslessly.
    (manufacturer mapping with evidence, not guessed).
 2. Folders for module objects (depends on
    [WP-07](WP-07-module-instance-authority.md)).
-3. Schema-20 `Node/@Text`.
-4. Staleness of the saved tree after edits.
-5. A witness from a real export.
-6. Object priority across core, persistence, import, projection and
+3. Staleness of the saved tree after edits.
+4. A broader real-export membership/import witness (the public schema-20 source
+   observation does not establish end-to-end vendor-export equivalence).
+5. Object priority across core, persistence, import, projection and
    comparison, only after an ADR defines raw/effective provenance.
 
 ## Already delivered (do not redo)

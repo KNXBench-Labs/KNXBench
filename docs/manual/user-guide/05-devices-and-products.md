@@ -1107,15 +1107,16 @@ channel view, and each view keeps its own expansion. Switching views adds no
 write, but moving focus from a dirty field to a view button can trigger the
 existing blur-save described above.
 
-**Source candidate: literal saved folder text.**
+**Literal saved folder text — main-only after Alpha 19.**
 
-A bounded schema-20 source candidate additionally shows the text saved on a folder
-node, alongside its ID. This text is not a translated/current manufacturer label;
-source placeholders and HTML-looking strings remain literal. Empty or unavailable
-text keeps the ID display, and the original saved ID path remains visible. The
-candidate changes neither grouping identity nor the existing refusal rules.
-Complete acceptance and publication are still pending; see the
-[bounded result](../../status/2026-11-05-saved-schema20-node-text.md).
+The bounded schema-20 implementation additionally shows the text saved on a
+folder node, alongside its ID. This text is not a translated/current manufacturer
+label; source placeholders and HTML-looking strings remain literal. Empty or
+unavailable text keeps the ID display, and the original saved ID path remains
+visible. It changes neither grouping identity nor the existing refusal rules.
+The slice is software-accepted and published as main-first `61e28d225`, not a
+release-artifact, complete WP-06 or hardware acceptance; see the
+[bounded result and visual limits](../../status/2026-11-05-saved-schema20-node-text.md).
 
 The table scrolls locally, keeping all columns reachable on narrow displays.
 [Full contract and evidence](../../COMMUNICATION_OBJECT_TABLE.md). The

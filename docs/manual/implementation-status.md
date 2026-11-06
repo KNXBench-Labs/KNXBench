@@ -630,6 +630,12 @@ automatic repair or a memory codec. Other source forms retain the existing plain
 field. Alpha 18 and earlier do not have this addition; broader specialised
 codecs and module mapping remain open.
 
+Source builds after Alpha 19 also add a source-bound checked Date **text** editor
+with Gregorian-day preflight and explicit Apply. This is not a native date picker
+or parameter memory codec; unknown Date declarations and module mapping keep the
+fallback. The [bounded contract](../contracts/checked-date-text-editor.md) leaves
+the existing server validation and date-image refusal unchanged.
+
 ## Notes follow-ups (12 October 2026 source)
 
 Notes can now be attached to communication objects; the target list comes from the

@@ -6,6 +6,16 @@ This dossier preserves the technical detail and dated history. Earlier
 headings, failures and lifting conditions are historical where later
 updates supersede them; they are not new work assignments.
 
+## Update 2026-11-06: bounded Date text editor (WP-08)
+
+Source builds after Alpha 19 add one opt-in source-bound Date text form with
+calendar preflight and explicit Apply. Exact `TypeDate Encoding="DPT 11"` is
+admitted only without additional hints/bounds; module and unknown declarations
+fall back. Raw values are never converted or automatically repaired. The
+[contract](../contracts/checked-date-text-editor.md) preserves revision-bound
+authority and invalid pasted text. This is no native date picker, memory codec,
+physical acceptance or broader WP-08/PDB-04 closure.
+
 ## Update 2026-10-30: bounded IP-address literal editor (OKX-06)
 
 Source after Alpha 18 adds an opt-in checked text editor for the exact direct

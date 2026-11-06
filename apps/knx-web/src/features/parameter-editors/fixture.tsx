@@ -16,7 +16,7 @@ const calls: Array<{ ref: string; raw: string }> = [];
 Object.assign(window, { __parameterCalls: calls });
 function Host() {
   const [revision, setRevision] = useState(0);
-  const [values, setValues] = useState({ time: "0010", slider: "010" });
+  const [values, setValues] = useState({ time: "0010", slider: "010", date: "1899-12-31" });
   const [refuse, setRefuse] = useState(false);
   const label = (en: string, de: string) => locale === "de" ? de : en;
   function numeric(ref: "time" | "slider"): ParameterEditorField {
@@ -38,6 +38,7 @@ function Host() {
     <p style={{ margin: 0 }}>{label("Synthetic component fixture — no API, project storage or hardware.", "Synthetische Komponentenansicht — keine API, Projektspeicherung oder Hardware.")}</p>
     <ParameterEditor field={numeric("time")} source={metadata("time", "TypeTime", { minInclusive: "0", maxInclusive: "3600", Unit: "Seconds" })} context={context} selectionKey="synthetic/device1" revision={String(revision)} label={label("Delay", "Verzögerung")} locale={locale} onApply={apply} onApplied={applied} />
     <ParameterEditor field={numeric("slider")} source={metadata("slider", "TypeNumber", { Type: "unsignedInt", UIHint: "Slider", minInclusive: "0", maxInclusive: "100" })} context={context} selectionKey="synthetic/device1" revision={String(revision)} label={label("Output level", "Ausgangswert")} locale={locale} onApply={apply} onApplied={applied} />
+    <ParameterEditor field={{ etsId: "date", kind: "Date", value: values.date, min: null, max: null, editable: true, writeEtsId: "date", access: "ReadWrite" }} source={metadata("date", "TypeDate", { Encoding: "DPT 11" })} context={context} selectionKey="synthetic/device1" revision={String(revision)} label={label("Reference date", "Referenzdatum")} locale={locale} onApply={apply} onApplied={applied} />
     {(["Color", "Picture"] as const).map(kind => <ParameterEditor key={kind} field={{ ...numeric("time"), etsId: kind, kind, min: null, max: null, value: kind === "Color" ? "<img src=\"https://untrusted.invalid/never\">" : "https://untrusted.invalid/diagram.png" }} source={metadata(kind, `Type${kind}`, kind === "Color" ? { Space: "RGB" } : { RefId: "unverified-picture" })} context={context} selectionKey="synthetic/device1" revision={String(revision)} label={kind === "Color" ? label("Colour", "Farbe") : label("Picture", "Bild")} locale={locale} onApply={apply} onApplied={applied} />)}
     <section style={{ display: "flex", gap: 12, flexWrap: "wrap" }} aria-label="Fixture controls">
       <button type="button" onClick={() => setRevision(r => r + 1)}>{label("Change fixture revision", "Testrevision ändern")}</button>

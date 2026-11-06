@@ -14,7 +14,7 @@ the former dated sections are in the [archive](history/OPEN_WORK_2026-10-25.md).
 | WP-05 | Parameter layout fidelity: remaining features | Blocked: evidence | [WP-05](open-work/WP-05-parameter-layout-fidelity.md) |
 | WP-06 | Communication-object organisation: remaining slices | Literal saved schema-20 text delivered; bounded current installed-product literal fallback software-accepted on main; broader captions, module placement, staleness and priority remain evidence-gated | [WP-06](open-work/WP-06-communication-object-organisation.md) |
 | WP-07 | Module-instance authority | Blocked: evidence | [WP-07](open-work/WP-07-module-instance-authority.md) |
-| WP-08 | Parameter value codecs (Date, Colour, Picture) | Codec evidence blocked; bounded Color/Time successor delivered on main | [WP-08](open-work/WP-08-parameter-value-codecs.md) |
+| WP-08 | Parameter value codecs (Date, Colour, Picture) | Codec evidence blocked; bounded Color/Time successor and source-bound checked Date text editor, not a native picker or memory codec | [WP-08](open-work/WP-08-parameter-value-codecs.md) |
 | WP-09 | Offline image evidence gates | Blocked: evidence | [WP-09](open-work/WP-09-offline-image-evidence.md) |
 | WP-10 | Import and model evidence (incl. issue #7) | Blocked: input; MODEL-05 explicitly deferred | [WP-10](open-work/WP-10-import-and-model-evidence.md) |
 | WP-11 | Native Linux acceptance | In progress: historical and pinned current-source Properties, navigation-height and Navigation-width pointer counterparts recorded 3 Nov at 80/100/150%; broader current-source/native matrix remains open | [WP-11](open-work/WP-11-native-linux-acceptance.md) |

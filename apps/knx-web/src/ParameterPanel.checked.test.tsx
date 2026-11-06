@@ -56,6 +56,31 @@ const openButtons = () => Array.from(host.querySelectorAll("button")).filter((b)
 function row(etsId: string) { return host.querySelector(`[data-ets-id="${etsId}"]`); }
 
 describe("checked parameter editor in the parameter rows", () => {
+  it("offers Date from the real candidate predicate and preserves the exact host context", async () => {
+    const date = field("D1", "Date", { value: "1899-12-31", min: null, max: null, writeEtsId: "D-WRITE" });
+    apiMock.deviceParameters.mockResolvedValue({ ...panel, sections: [{ scope: null, fields: [date] }] });
+    await mount();
+    expect(openButtons().map(b => b.getAttribute("data-checked-for"))).toEqual(["D1"]);
+    expect(row("D1")?.querySelector<HTMLInputElement>('input[type="text"]')?.value).toBe("1899-12-31");
+    await act(async () => openButtons()[0].click());
+    expect(row("D1")?.querySelector("input")).toBeNull();
+    expect(editorProps.last).toMatchObject({ field: date, deviceId: 3, scope: null, programId: "PROG-1",
+      snapshot: { serverIncarnation: "srv-r", projectIncarnation: 5, snapshotRevision: 20 },
+      writeBinding: { serverIncarnation: "srv-r", projectIncarnation: 5, snapshotRevision: 20 } });
+    await act(async () => editorProps.last!.onClose());
+    expect(row("D1")?.querySelector<HTMLInputElement>('input[type="text"]')?.value).toBe("1899-12-31");
+    expect(apiMock.setParameterValue).not.toHaveBeenCalled();
+  });
+
+  it("does not offer a Date checked editor without authoritative project identity", async () => {
+    apiMock.deviceParameters.mockResolvedValue({ ...panel, sections: [{ scope: null, fields: [field("D1", "Date", { min: null, max: null })] }] });
+    await mount({ snapshot: null });
+    expect(openButtons()).toHaveLength(0);
+    // Absence of checked-editor evidence does not prohibit the existing plain field.
+    expect(row("D1")?.querySelector<HTMLInputElement>("input")?.disabled).toBe(false);
+    expect(apiMock.setParameterValue).not.toHaveBeenCalled();
+  });
+
   it("offers it for Time, Number and Colour rows, not for choices", async () => {
     apiMock.deviceParameters.mockResolvedValue(panel);
     await mount();

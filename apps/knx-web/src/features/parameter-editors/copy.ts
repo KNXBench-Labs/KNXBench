@@ -1,7 +1,9 @@
 /** Provides local EN/DE copy for isolated evidence-bound parameter controls. */
 export const parameterEditorCopy = {
   en: {
-    ipPasteComplete: "Select the entire displayed value and paste its complete replacement. Partial replacement is ambiguous while raw line breaks are hidden.",
+    literalPasteComplete: "Select the entire displayed value and paste its complete replacement. Partial replacement is ambiguous while raw line breaks are hidden.",
+    dateFormat: "Date as yyyy-mm-dd: four-digit year (0000–9999), two-digit month and day, in the Gregorian calendar. No conversion or date picker.",
+    date: "Enter an existing Gregorian calendar date as yyyy-mm-dd using ASCII digits, without whitespace, a sign, time or timezone.",
     ipFormat: "IPv4 dotted decimal (no leading zeros), or IPv6 with exactly eight groups of four hexadecimal digits. No conversion or network lookup.",
     "ip-address": "Enter a dotted IPv4 address or eight groups of four hexadecimal IPv6 digits, without whitespace, compression or a prefix.",
     empty: "The stored value is explicitly empty.", draft: "Unchanged invalid draft",
@@ -24,7 +26,9 @@ export const parameterEditorCopy = {
     settled: "Applied. The field shows the project's value.",
   },
   de: {
-    ipPasteComplete: "Markiere den gesamten angezeigten Wert und füge den vollständigen Ersatz ein. Bei ausgeblendeten Zeilenumbrüchen ist teilweises Einfügen nicht eindeutig.",
+    literalPasteComplete: "Markiere den gesamten angezeigten Wert und füge den vollständigen Ersatz ein. Bei ausgeblendeten Zeilenumbrüchen ist teilweises Einfügen nicht eindeutig.",
+    dateFormat: "Datum als yyyy-mm-dd: vierstelliges Jahr (0000–9999), zweistelliger Monat und Tag im gregorianischen Kalender. Keine Umrechnung und kein Datumsauswahldialog.",
+    date: "Gib ein existierendes Datum im gregorianischen Kalender als yyyy-mm-dd mit ASCII-Ziffern ein, ohne Leerraum, Vorzeichen, Uhrzeit oder Zeitzone.",
     ipFormat: "IPv4 in dezimaler Punktschreibweise (ohne führende Nullen) oder IPv6 mit genau acht Gruppen zu je vier Hexadezimalstellen. Keine Umwandlung oder Netzwerkabfrage.",
     "ip-address": "Gib eine IPv4-Adresse in Punktschreibweise oder acht Gruppen zu je vier IPv6-Hexadezimalstellen ein, ohne Leerraum, Komprimierung oder Präfix.",
     empty: "Der gespeicherte Wert ist ausdrücklich leer.", draft: "Unveränderter ungültiger Entwurf",

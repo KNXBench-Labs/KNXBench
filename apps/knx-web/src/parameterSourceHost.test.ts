@@ -110,7 +110,7 @@ describe("parameter source projection", () => {
   });
 
   it("offers the source-checked editor only for kinds the leaf decides on", () => {
-    expect(["Time", "Number", "Color", "Picture", "IPAddress"].every(isSourceEditorCandidate)).toBe(true);
+    expect(["Time", "Number", "Color", "Picture", "IPAddress", "Date"].every(isSourceEditorCandidate)).toBe(true);
     expect(["Restriction", "Text", "None", "Float", "Raw"].some(isSourceEditorCandidate)).toBe(false);
   });
 });

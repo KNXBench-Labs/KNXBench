@@ -73,6 +73,12 @@ package does not introduce an unmeasured cache or bulk-query abstraction.
 
 ## Supported presentation and refusals
 
+- Date (source builds after Alpha 19): the exact direct `TypeDate Encoding="DPT 11"`
+  form offers a checked text draft, not a native date picker. The
+  [Date contract](checked-date-text-editor.md) requires ASCII `yyyy-mm-dd` and
+  existing Gregorian days, preserving four-digit years without a DPT bus range.
+  Unknown hints and modules fall back. Source identity, raw paste, explicit Apply
+  and revision-bound writes use the existing host; image encoding stays refused.
 - Time: decimal integer count, not a date/clock/duration conversion. Declared
   `Unit` is visibly uninterpreted. The exact lexical value is not rewritten by
   selection/render/no-op. Integer draft comparison is exact and bounded to64
@@ -132,7 +138,7 @@ certify a changed assembled candidate.
 ## Workbench host (12 October 2026)
 
 The device editor's **Parameters** tab offers a **Checked editor** button under
-Time/Number/Color/Picture rows (and IPAddress rows since Alpha 19) when
+Time/Number/Color/Picture rows (IPAddress since Alpha 19, Date in newer source builds) when
 the tree carries a complete identity
 (`snapshotContextFromTree`) and the panel has a program; not in
 **Manufacturer fields** or **Diagnostics**. `ParameterSourceEditor.tsx` replaces the

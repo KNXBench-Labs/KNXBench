@@ -15,6 +15,7 @@ Last updated: 2026-11-01 (Alpha 19 pre-release; source cutoff 2026-11-01)
 
 | Feature | Scope | Availability |
 | --- | --- | --- |
+| [Checked Date text editor](contracts/checked-date-text-editor.md) | Exact source-bound Date form; calendar-checked raw text and explicit revision-bound Apply, no native picker or parameter memory codec | Main-only |
 | [USB/serial TP-UART](status/2026-11-04-usb-serial-ui.md) | Linux server + settings/footer/monitor; explicit passive/active mode, bound sends and reserved serial cleanup; transparent NCN5130 firmware required; correction review and software gates passed, no hardware compatibility claim | Main-only |
 | [Passive USB-serial candidates](research/2026-11-05-passive-serial-candidates.md) | Explicit Linux server-local by-id metadata list; bounded and unverified, path selection only, manual entry retained; software-accepted on main, without hardware verification | Main-only after Alpha 19 |
 | [Import findings after reopening](open-work/WP-25-import-findings-after-reopen.md) | Reprojects stored primary error/warning findings into the bounded session log; historical/open-time provenance and explicit full-report access; missing legacy evidence is not a clean assessment | Main-only |

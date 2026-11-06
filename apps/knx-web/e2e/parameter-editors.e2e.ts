@@ -26,6 +26,7 @@ interface Fixture {
   /** Every write body's Goal A2 binding, in order, conflicts included. */
   bindings: { serverIncarnation?: string; projectIncarnation?: number; snapshotRevision?: number; expectedValue?: string | null }[];
   refuseWrites: boolean;
+  refusalReason: string;
   identity: boolean;
   history: Record<string, string>[];
   future: Record<string, string>[];
@@ -54,6 +55,7 @@ function panelOf(f: Fixture, withTree: boolean): ParameterPanel {
       field(`${PROGRAM}_P-2_R-1`, "Basic brightness", "Number", f, "0", "100"),
       field(`${PROGRAM}_P-3_R-1`, "Status LED colour", "Color", f, null, null),
       field(`${PROGRAM}_P-4_R-1`, "Endpoint", "IPAddress", f, null, null),
+      field(`${PROGRAM}_P-5_R-1`, "Reference date", "Date", f, null, null),
     ] }] };
 }
 const SOURCES: Record<string, { child: string; type: string; attributes: Record<string, string> }> = {
@@ -61,11 +63,13 @@ const SOURCES: Record<string, { child: string; type: string; attributes: Record<
   [`${PROGRAM}_P-2_R-1`]: { child: "TypeNumber", type: "PT-Brightness", attributes: { SizeInBit: "8", Type: "unsignedInt", minInclusive: "0", maxInclusive: "100", UIHint: "Slider" } },
   [`${PROGRAM}_P-3_R-1`]: { child: "TypeColor", type: "PT-Colour", attributes: {} },
   [`${PROGRAM}_P-4_R-1`]: { child: "TypeIPAddress", type: "PT-Address", attributes: { AddressType: "HostAddress" } },
+  [`${PROGRAM}_P-5_R-1`]: { child: "TypeDate", type: "PT-Date", attributes: { Encoding: "DPT 11" } },
 };
 
 async function fixture(page: Page, language: Language, theme: string, width: number, identity = true): Promise<Fixture> {
-  const f: Fixture = { unexpected: [], revision: 1, writes: [], bindings: [], refuseWrites: false, identity, history: [], future: [], sourceFault: "none",
-    values: { [`${PROGRAM}_P-1_R-1`]: "0010", [`${PROGRAM}_P-2_R-1`]: "40", [`${PROGRAM}_P-3_R-1`]: "#00FF00", [`${PROGRAM}_P-4_R-1`]: "203.0.113.19" } };
+  const f: Fixture = { unexpected: [], revision: 1, writes: [], bindings: [], refuseWrites: false,
+    refusalReason: "Value 3601 is outside the parameter's range 0..3600", identity, history: [], future: [], sourceFault: "none",
+    values: { [`${PROGRAM}_P-1_R-1`]: "0010", [`${PROGRAM}_P-2_R-1`]: "40", [`${PROGRAM}_P-3_R-1`]: "#00FF00", [`${PROGRAM}_P-4_R-1`]: "203.0.113.19", [`${PROGRAM}_P-5_R-1`]: "1899-12-31" } };
   await page.setViewportSize({ width, height: 900 });
   // The same file runs against the preview (parameters lane) and the dev server (functional lane).
   const appOrigin = new URL(String(test.info().project.use.baseURL)).origin;
@@ -117,7 +121,7 @@ async function fixture(page: Page, language: Language, theme: string, width: num
         || binding.snapshotRevision !== f.revision || binding.expectedValue !== f.values[etsId]) {
         return refuse(409, "parameterWriteConflict", "parameter value or project changed since it was shown");
       }
-      if (f.refuseWrites) return refuse(400, "invalidParameterValue", "Value 3601 is outside the parameter's range 0..3600");
+      if (f.refuseWrites) return refuse(400, "invalidParameterValue", f.refusalReason);
       f.history.push({ ...f.values }); f.future = [];
       f.writes.push({ etsId, raw }); f.values[etsId] = raw; f.revision += 1;
       return ok(panelOf(f, true));
@@ -368,7 +372,7 @@ for (const mode of [
       const clipboardData = new DataTransfer(); clipboardData.setData("text/plain", "20");
       node.dispatchEvent(new ClipboardEvent("paste", { bubbles: true, cancelable: true, clipboardData }));
     });
-    await expect(editor.getByRole("alert")).toHaveText(copy.ipPasteComplete);
+    await expect(editor.getByRole("alert")).toHaveText(copy.literalPasteComplete);
     await expect(input).toHaveValue("203.0.113.19");
     await expect(editor.getByRole("button", { name: copy.apply, exact: true })).toBeDisabled();
     expect(f.writes).toEqual([]); expect(f.bindings).toEqual([]); expect(f.values[id]).toBe(original);
@@ -399,6 +403,143 @@ for (const sourceFault of ["sha", "ref", "program", "snapshot", "missing"] as co
     expect(f.bindings).toEqual([]);
     await editor.getByRole("button", { name: en["parameters.checked.close"], exact: true }).click();
     await expect(panel.locator(`[data-ets-id="${id}"] input`)).toHaveValue("203.0.113.19");
+    expect(f.unexpected).toEqual([]);
+  });
+}
+
+// Intercepted HTTP proves the Date production adapter and refresh, not native persistence.
+for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
+  test(`Date ${language} ${width}: text, raw paste and exact explicit Apply`, async ({ page }) => {
+    const m: Catalogue = language === "de" ? de : en;
+    const copy = parameterEditorCopy[language];
+    const errors: string[] = []; page.on("pageerror", error => errors.push(error.message));
+    const f = await fixture(page, language, language === "de" ? "porcelain" : "graphite", width);
+    const panel = await openParameters(page, m); const id = `${PROGRAM}_P-5_R-1`;
+    await expect(opener(panel, id)).toHaveText(m["parameters.checked.open"]);
+    await opener(panel, id).focus(); await page.keyboard.press("Enter");
+    const editor = panel.locator(`[data-ets-id="${id}"]`);
+    const input = editor.getByRole("textbox", { name: "Reference date", exact: true });
+    const apply = editor.getByRole("button", { name: copy.apply, exact: true });
+    await expect(input).toHaveAttribute("type", "text"); await expect(input).toHaveAttribute("inputmode", "text");
+    await expect(input).toHaveValue("1899-12-31"); await expect(editor).toContainText(copy.dateFormat);
+    await expect(editor.locator('input[type="date"],input[type="number"],img,a')).toHaveCount(0);
+    await expect(apply).toBeDisabled(); expect(f.bindings).toEqual([]);
+    await input.focus(); await input.press("ControlOrMeta+A"); await page.keyboard.type("1900-02-29");
+    await input.press("Enter"); await input.press("Tab");
+    await expect(editor.getByRole("alert")).toHaveText(copy.date); await expect(apply).toBeDisabled();
+    expect(f.bindings).toEqual([]);
+    await input.focus(); await input.press("ControlOrMeta+A");
+    const raw = "2000-02-29\r\n";
+    await input.evaluate((node, value) => {
+      const clipboardData = new DataTransfer(); clipboardData.setData("text/plain", value);
+      node.dispatchEvent(new ClipboardEvent("paste", { bubbles: true, cancelable: true, clipboardData }));
+    }, raw);
+    await expect(input).toHaveValue("2000-02-29");
+    await expect(editor.getByLabel(copy.draft)).toHaveJSProperty("textContent", raw);
+    await expect(editor.getByRole("alert")).toHaveText(copy.date); await expect(apply).toBeDisabled();
+    await input.evaluate(node => {
+      if (!(node instanceof HTMLInputElement)) throw new Error("Expected the Date textbox");
+      node.focus(); node.setSelectionRange(8, 10);
+      const clipboardData = new DataTransfer(); clipboardData.setData("text/plain", "28");
+      node.dispatchEvent(new ClipboardEvent("paste", { bubbles: true, cancelable: true, clipboardData }));
+    });
+    await expect(editor).toContainText(copy.literalPasteComplete);
+    await expect(editor.getByLabel(copy.draft)).toHaveJSProperty("textContent", raw);
+    expect(f.bindings).toEqual([]); expect(f.values[id]).toBe("1899-12-31");
+    await editor.scrollIntoViewIfNeeded(); await noHorizontalOverflow(page);
+    if (CAPTURE) await editor.screenshot({ path: join(CAPTURE, `date-${language}-${width}-invalid.png`) });
+    await input.focus(); await input.press("ControlOrMeta+A");
+    await input.evaluate(node => {
+      const clipboardData = new DataTransfer(); clipboardData.setData("text/plain", "0000-02-29");
+      node.dispatchEvent(new ClipboardEvent("paste", { bubbles: true, cancelable: true, clipboardData }));
+    });
+    await expect(input).toHaveValue("0000-02-29"); await expect(editor.getByRole("alert")).toHaveCount(0);
+    await input.press("Enter"); await input.press("Tab"); expect(f.bindings).toEqual([]);
+    await apply.focus(); await apply.press("Enter");
+    await expect(editor).toContainText(copy.settled); await expect(input).toHaveValue("0000-02-29");
+    expect(f.writes).toEqual([{ etsId: id, raw: "0000-02-29" }]);
+    expect(f.bindings).toEqual([{ serverIncarnation: "parameters-fixture", projectIncarnation: 3, snapshotRevision: 1, expectedValue: "1899-12-31" }]);
+    await expect(apply).toBeDisabled(); await input.focus(); await input.press("Tab");
+    expect(f.bindings).toHaveLength(1);
+    await editor.scrollIntoViewIfNeeded(); await noHorizontalOverflow(page);
+    if (CAPTURE) await editor.screenshot({ path: join(CAPTURE, `date-${language}-${width}-applied.png`) });
+    expect(f.unexpected).toEqual([]); expect(errors).toEqual([]);
+  });
+}
+
+for (const [language, width] of [["en", 1440], ["de", 400]] as const) {
+  test(`Date ${language} ${width}: historical hidden line breaks require complete replacement`, async ({ page }) => {
+    const copy = parameterEditorCopy[language]; const m: Catalogue = language === "de" ? de : en;
+    const f = await fixture(page, language, language === "de" ? "porcelain" : "graphite", width);
+    const id = `${PROGRAM}_P-5_R-1`; const original = "2000-02-\n29"; f.values[id] = original;
+    const panel = await openParameters(page, m); await opener(panel, id).click();
+    const editor = panel.locator(`[data-ets-id="${id}"]`);
+    const input = editor.getByRole("textbox", { name: "Reference date", exact: true });
+    await expect(input).toHaveValue("2000-02-29"); await expect(editor.getByLabel(copy.original)).toHaveJSProperty("textContent", original);
+    await input.evaluate(node => {
+      if (!(node instanceof HTMLInputElement)) throw new Error("Expected the Date textbox");
+      node.focus(); node.setSelectionRange(8, 10);
+      const clipboardData = new DataTransfer(); clipboardData.setData("text/plain", "28");
+      node.dispatchEvent(new ClipboardEvent("paste", { bubbles: true, cancelable: true, clipboardData }));
+    });
+    await expect(editor.getByRole("alert")).toHaveText(copy.literalPasteComplete);
+    await expect(editor.getByLabel(copy.original)).toHaveJSProperty("textContent", original);
+    await expect(editor.getByRole("button", { name: copy.apply, exact: true })).toBeDisabled(); expect(f.bindings).toEqual([]);
+    await input.focus(); await input.press("ControlOrMeta+A");
+    await input.evaluate(node => {
+      const clipboardData = new DataTransfer(); clipboardData.setData("text/plain", "2090-01-01");
+      node.dispatchEvent(new ClipboardEvent("paste", { bubbles: true, cancelable: true, clipboardData }));
+    });
+    await editor.getByRole("button", { name: copy.apply, exact: true }).click();
+    await expect(editor).toContainText(copy.settled);
+    expect(f.writes).toEqual([{ etsId: id, raw: "2090-01-01" }]);
+    expect(f.bindings).toEqual([{ serverIncarnation: "parameters-fixture", projectIncarnation: 3, snapshotRevision: 1, expectedValue: original }]);
+    expect(f.unexpected).toEqual([]);
+  });
+}
+
+test("Date service refusal retains its draft and retries only on explicit Apply", async ({ page }) => {
+  const copy = parameterEditorCopy.en; const f = await fixture(page, "en", "graphite", 1440);
+  const panel = await openParameters(page, en); const id = `${PROGRAM}_P-5_R-1`; await opener(panel, id).click();
+  const editor = panel.locator(`[data-ets-id="${id}"]`); const input = editor.getByRole("textbox", { name: "Reference date", exact: true });
+  f.refuseWrites = true; f.refusalReason = "Authoritative Date edit refused";
+  await input.fill("9999-12-31"); await editor.getByRole("button", { name: copy.apply, exact: true }).click();
+  await expect(editor.getByRole("alert")).toHaveText(f.refusalReason); await expect(input).toHaveValue("9999-12-31");
+  expect(f.writes).toEqual([]); expect(f.values[id]).toBe("1899-12-31"); expect(f.bindings).toHaveLength(1);
+  await input.focus(); await input.press("Enter"); await input.press("Tab"); expect(f.bindings).toHaveLength(1);
+  f.refuseWrites = false;
+  await editor.getByRole("button", { name: copy.apply, exact: true }).click(); await expect(editor).toContainText(copy.settled);
+  expect(f.writes).toEqual([{ etsId: id, raw: "9999-12-31" }]); expect(f.bindings).toHaveLength(2); expect(f.unexpected).toEqual([]);
+});
+
+test("Date conflict retains its draft until reset and sends a new authoritative binding", async ({ page }) => {
+  const copy = parameterEditorCopy.en; const f = await fixture(page, "en", "graphite", 1440);
+  const panel = await openParameters(page, en); const id = `${PROGRAM}_P-5_R-1`; await opener(panel, id).click();
+  const editor = panel.locator(`[data-ets-id="${id}"]`); const input = editor.getByRole("textbox", { name: "Reference date", exact: true });
+  await input.fill("2000-02-29"); f.values[id] = "0001-01-01"; f.revision += 1;
+  await editor.getByRole("button", { name: copy.apply, exact: true }).click();
+  await expect(editor).toContainText(copy.stale); await expect(input).toHaveValue("2000-02-29");
+  await expect(editor.getByRole("button", { name: copy.apply, exact: true })).toBeDisabled();
+  expect(f.writes).toEqual([]); expect(f.bindings).toHaveLength(1);
+  await editor.getByRole("button", { name: copy.reset, exact: true }).click(); await expect(input).toHaveValue("0001-01-01");
+  await input.fill("2000-02-29"); await editor.getByRole("button", { name: copy.apply, exact: true }).click();
+  await expect(editor).toContainText(copy.settled); expect(f.writes).toEqual([{ etsId: id, raw: "2000-02-29" }]);
+  expect(f.bindings).toEqual([
+    { serverIncarnation: "parameters-fixture", projectIncarnation: 3, snapshotRevision: 1, expectedValue: "1899-12-31" },
+    { serverIncarnation: "parameters-fixture", projectIncarnation: 3, snapshotRevision: 2, expectedValue: "0001-01-01" },
+  ]);
+  expect(f.unexpected).toEqual([]);
+});
+
+for (const sourceFault of ["sha", "ref", "program", "snapshot", "missing"] as const) {
+  test(`Date ${sourceFault} source keeps fallback and the unchanged generic text field`, async ({ page }) => {
+    const f = await fixture(page, "en", "graphite", 1440); f.sourceFault = sourceFault;
+    const panel = await openParameters(page, en); const id = `${PROGRAM}_P-5_R-1`; await opener(panel, id).click();
+    const editor = panel.locator(`[data-ets-id="${id}"]`);
+    await expect(editor).toContainText(parameterEditorCopy.en.fallback[sourceFault === "sha" ? "source-conflict" : "missing-evidence"]);
+    await expect(editor.getByRole("textbox")).toHaveCount(0); expect(f.bindings).toEqual([]);
+    await editor.getByRole("button", { name: en["parameters.checked.close"], exact: true }).click();
+    await expect(panel.locator(`[data-ets-id="${id}"] input[type="text"]`)).toHaveValue("1899-12-31");
     expect(f.unexpected).toEqual([]);
   });
 }

@@ -1367,6 +1367,13 @@ what that data proves:
   Only **Apply value** writes a changed
   valid draft; opening, Enter and blur write nothing. There is no new device
   or memory-image support.
+- **Date (source builds after Alpha 19):** one exact source declaration offers
+  a checked text field. Enter `yyyy-mm-dd` with a real Gregorian day, for example
+  `2000-02-29`; `1900-02-29` is invalid. The editor does not convert the value or
+  impose the bus datapoint's year range. Select the whole displayed value to
+  replace an invalid pasted draft containing line breaks. Only **Apply value**
+  writes a changed valid draft. This is not a native calendar picker and does not
+  enable date-parameter device downloads; unknown source forms keep the fallback.
 - **Colour** and **picture** values are shown unchanged with a note that their
   format is not verified. There is no colour picker, no image, and nothing is
   fetched.

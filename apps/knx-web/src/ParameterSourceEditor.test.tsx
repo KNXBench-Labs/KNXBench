@@ -19,6 +19,7 @@ const apiMock = vi.hoisted(() => ({
 vi.mock("./api", () => apiMock);
 
 import ParameterSourceEditor from "./ParameterSourceEditor";
+import { parameterEditorCopy } from "./features/parameter-editors/copy";
 
 const sha = "c".repeat(64);
 const field: ParameterField = {
@@ -64,6 +65,78 @@ function button(host: Element, label: string) {
 }
 
 describe("checked parameter editor host", () => {
+  const date: ParameterField = { ...field, kind: "Date", value: "1899-12-31", min: null, max: null, writeEtsId: "DATE-WRITE" };
+  const dateAnswer = (revision = 12) => ({ ...answer(revision), evidence: { status: "declared", source: {
+    sourceSha256: sha, programId: "A", parameterTypeId: "PT", schema: 21, child: "TypeDate",
+    attributes: { Encoding: "DPT 11" } as Record<string, string>, parentAttributes: { Id: "PT", Name: "Reference date" },
+  } } });
+
+  it.each(["en", "de"] as const)("%s Date joins real source projection, leaf and revision-bound mutation adapter", async locale => {
+    saveUiLanguage(settingsStorage, locale); resetUiLanguageForTests();
+    const copy = parameterEditorCopy[locale];
+    apiMock.parameterEditorSource.mockResolvedValue(dateAnswer());
+    apiMock.setParameterValue.mockResolvedValue(panel);
+    const { host, props } = await mount({ field: date, label: "Reference date" });
+    expect(apiMock.parameterEditorSource).toHaveBeenCalledExactlyOnceWith(41, "PR");
+    expect(host.textContent).toContain(copy.dateFormat);
+    expect(host.querySelector<HTMLInputElement>("input")?.inputMode).toBe("text");
+    expect(apiMock.setParameterValue).not.toHaveBeenCalled();
+    await type(host, "1900-02-29"); await act(async () => button(host, copy.apply).click());
+    expect(host.querySelector('[role="alert"]')?.textContent).toBe(copy.date);
+    expect(apiMock.setParameterValue).not.toHaveBeenCalled();
+    await type(host, "0000-02-29");
+    const input = host.querySelector<HTMLInputElement>("input")!;
+    await act(async () => { input.focus(); input.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true })); input.blur(); });
+    expect(apiMock.setParameterValue).not.toHaveBeenCalled();
+    await act(async () => { button(host, copy.apply).click(); button(host, copy.apply).click(); });
+    expect(apiMock.setParameterValue).toHaveBeenCalledExactlyOnceWith(41, "DATE-WRITE", "0000-02-29", "de-DE", { ...snapshot(11), expectedValue: "1899-12-31" });
+    expect(props.onUpdated).toHaveBeenCalledExactlyOnceWith(panel);
+    expect(props.onValueApplied).toHaveBeenCalledExactlyOnceWith(tree);
+  });
+
+  it("keeps a Date service refusal recoverable without publishing or repairing its draft", async () => {
+    apiMock.parameterEditorSource.mockResolvedValue(dateAnswer());
+    apiMock.setParameterValue.mockRejectedValueOnce(new Error("Authoritative date refusal")).mockResolvedValueOnce(panel);
+    const { host, props } = await mount({ field: date }); await type(host, "9999-12-31");
+    await act(async () => button(host, "Apply value").click());
+    expect(host.textContent).toContain("Authoritative date refusal");
+    expect(host.querySelector<HTMLInputElement>("input")?.value).toBe("9999-12-31");
+    expect(props.onUpdated).not.toHaveBeenCalled(); expect(props.onValueApplied).not.toHaveBeenCalled();
+    await act(async () => button(host, "Apply value").click());
+    expect(apiMock.setParameterValue).toHaveBeenCalledTimes(2);
+    expect(props.onUpdated).toHaveBeenCalledExactlyOnceWith(panel); expect(props.onValueApplied).toHaveBeenCalledExactlyOnceWith(tree);
+  });
+
+  it("reloads a Date conflict and requires reset before a freshly bound explicit Apply", async () => {
+    apiMock.parameterEditorSource.mockResolvedValueOnce(dateAnswer()).mockResolvedValueOnce(dateAnswer(13));
+    apiMock.setParameterValue.mockRejectedValueOnce(Object.assign(new Error("conflict"),
+      { status: 409, body: { error: "conflict", kind: "parameterWriteConflict" } })).mockResolvedValueOnce(panel);
+    const { host, props, root } = await mount({ field: date }); await type(host, "2000-02-29");
+    await act(async () => button(host, "Apply value").click());
+    expect(props.onConflict).toHaveBeenCalledOnce(); expect(props.onUpdated).not.toHaveBeenCalled();
+    const changed = { ...props, field: { ...date, value: "0001-01-01" }, snapshot: snapshot(13), writeBinding: snapshot(13) };
+    await act(async () => root.render(<ParameterSourceEditor {...changed} />));
+    expect(host.querySelector<HTMLInputElement>("input")?.value).toBe("2000-02-29");
+    expect(host.textContent).toContain(parameterEditorCopy.en.stale);
+    await act(async () => button(host, "Apply value").click()); expect(apiMock.setParameterValue).toHaveBeenCalledTimes(1);
+    await act(async () => button(host, "Discard draft and reload").click());
+    expect(host.querySelector<HTMLInputElement>("input")?.value).toBe("0001-01-01");
+    await type(host, "2000-02-29"); await act(async () => button(host, "Apply value").click());
+    expect(apiMock.setParameterValue).toHaveBeenLastCalledWith(41, "DATE-WRITE", "2000-02-29", "de-DE", { ...snapshot(13), expectedValue: "0001-01-01" });
+    expect(props.onUpdated).toHaveBeenCalledExactlyOnceWith(panel);
+  });
+
+  it.each(["mismatch", "qualified-encoding", "module"] as const)("Date %s keeps specialized fallback and makes no mutation", async mode => {
+    const body = dateAnswer();
+    if (mode === "mismatch") body.device = 42;
+    if (mode === "qualified-encoding") body.evidence.source.attributes = { "v:Encoding": "DPT 11" };
+    apiMock.parameterEditorSource.mockResolvedValue(body);
+    const { host } = await mount({ field: date, scope: mode === "module" ? { moduleNode: 7, moduleId: "MD-1_MI-1", moduleDefId: "MD-1" } : null });
+    expect(host.querySelector("input")).toBeNull();
+    expect(host.textContent).toContain(parameterEditorCopy.en.fallback[mode === "module" ? "module-scope" : mode === "qualified-encoding" ? "unsupported-hints" : "missing-evidence"]);
+    expect(apiMock.setParameterValue).not.toHaveBeenCalled();
+  });
+
   it("reads the source for the exact device and reference, then offers the time-count editor", async () => {
     apiMock.parameterEditorSource.mockResolvedValue(answer());
     const { host } = await mount();

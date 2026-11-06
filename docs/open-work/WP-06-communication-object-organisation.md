@@ -45,7 +45,11 @@ priority losslessly.
 4. A broader real-export membership/import witness (the public schema-20 source
    observation does not establish end-to-end vendor-export equivalence).
 5. Object priority across core, persistence, import, projection and
-   comparison, only after an ADR defines raw/effective provenance.
+   comparison. [ADR-0158](../adr/0158-object-priority-provenance.md) defines
+   raw/effective provenance and the bounded product-query origin increment;
+   project-instance modelling, migration, editing and external consumers remain
+   open. [Source admission](../research/2026-11-06-object-priority-provenance.md)
+   does not establish new wire priority or whole-WP acceptance.
 
 ## Already delivered (do not redo)
 

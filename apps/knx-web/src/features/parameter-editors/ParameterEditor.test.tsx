@@ -4,6 +4,7 @@ import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ParameterEditor, type ParameterEditorProps } from "./ParameterEditor";
+import { parameterEditorCopy } from "./copy";
 import ipVectors from "../../../../../crates/knx-productdb/tests/fixtures/ip-address-literal.json";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -151,6 +152,147 @@ describe("OKX06 IP literal component", () => {
     await click(host, "Discard draft and reload"); expect(host.querySelector<HTMLInputElement>("input")!.value).toBe("0.0.0.0");
     await act(async () => root.render(<ParameterEditor {...props} selectionKey="other-device" />));
     expect(host.querySelector<HTMLInputElement>("input")!.value).toBe(ip.field.value);
+  });
+});
+
+const date = {
+  field: { ...base.field, kind: "Date", min: null, max: null, value: "1899-12-31", writeEtsId: "WRITE-DATE" },
+  source: { ...base.source!, child: "TypeDate", attributes: { Encoding: "DPT 11" } },
+  label: "Reference date",
+};
+describe("checked Date text component", () => {
+  it.each(["en", "de"] as const)("%s text help and explicit Apply are the only write path", async locale => {
+    const copy = parameterEditorCopy[locale];
+    const { host, props, root } = await mount({ ...date, locale });
+    const input = host.querySelector<HTMLInputElement>('input[type="text"]')!;
+    expect(input.inputMode).toBe("text"); expect(input.value).toBe("1899-12-31");
+    expect(host.textContent).toContain(copy.dateFormat);
+    expect(input.getAttribute("aria-describedby")).toContain("-format");
+    expect(host.querySelector('input[type="date"],input[type="number"],img,a')).toBeNull();
+    await click(host, copy.apply); expect(props.onApply).not.toHaveBeenCalled();
+    await edit(host, "0000-02-29");
+    await act(async () => {
+      input.focus(); input.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true })); input.blur();
+      root.render(<ParameterEditor {...props} />);
+    });
+    expect(props.onApply).not.toHaveBeenCalled();
+    await click(host, copy.apply); await click(host, copy.apply);
+    expect(props.onApply).toHaveBeenCalledExactlyOnceWith("WRITE-DATE", "0000-02-29");
+    expect(props.onApplied).toHaveBeenCalledExactlyOnceWith({ tree: "authoritative" });
+    await act(async () => root.render(<ParameterEditor {...props} revision="next" field={{ ...date.field, value: "0000-02-29" }} />));
+    expect(input.value).toBe("0000-02-29"); expect(host.textContent).toContain(copy.settled);
+    await act(async () => root.render(<ParameterEditor {...props} revision="undo" />));
+    expect(input.value).toBe("1899-12-31");
+  });
+  it.each(["0001-01-01", "1990-01-01", "2000-02-29", "2089-12-31", "2090-01-01", "9999-12-31"])("applies exact valid %s once", async raw => {
+    const { host, props } = await mount(date);
+    await edit(host, raw); await click(host, "Apply value");
+    expect(props.onApply).toHaveBeenCalledExactlyOnceWith("WRITE-DATE", raw);
+  });
+  it.each(["1900-02-29", "2026-04-31", "2026-13-01", "２０２６-01-01", " 2000-02-29", "+2000-02-29", "2000-02-29Z"])("invalid %j never writes", async raw => {
+    const { host, props } = await mount({ ...date, locale: "de" });
+    await edit(host, raw); await click(host, parameterEditorCopy.de.apply);
+    expect(props.onApply).not.toHaveBeenCalled();
+    expect(host.querySelector('[role="alert"]')?.textContent).toBe(parameterEditorCopy.de.date);
+    expect(host.querySelector('[aria-label="Unveränderter ungültiger Entwurf"]')?.textContent).toBe(raw);
+  });
+  it.each([null, "", "historical invalid", "1900-02-29", "2000-02-29\r\n"])("never repairs historical %j on render, blur or no-op", async value => {
+    const { host, props } = await mount({ ...date, field: { ...date.field, value } });
+    const input = host.querySelector<HTMLInputElement>("input")!;
+    await act(async () => { input.focus(); input.blur(); }); await click(host, "Apply value");
+    expect(props.onApply).not.toHaveBeenCalled();
+    if (value === null) expect(host.textContent).toContain(parameterEditorCopy.en.absent);
+    else if (value === "") expect(host.textContent).toContain(parameterEditorCopy.en.empty);
+    else expect(host.querySelector('[aria-label="Unchanged original value"]')?.textContent).toBe(value);
+    await pasteSelection(input, "0000-02-29"); await click(host, "Apply value");
+    expect(props.onApply).toHaveBeenCalledExactlyOnceWith("WRITE-DATE", "0000-02-29");
+  });
+  it.each(["\n", "\r", "\r\n"])("keeps pasted %j raw and requires full replacement after DOM sanitization", async newline => {
+    const { host, props } = await mount(date);
+    const input = host.querySelector<HTMLInputElement>("input")!;
+    const raw = `2000-02-${newline}29`;
+    await pasteSelection(input, raw);
+    expect(input.value).toBe("2000-02-29");
+    expect(host.querySelector('[aria-label="Unchanged invalid draft"]')?.textContent).toBe(raw);
+    await click(host, "Apply value"); expect(props.onApply).not.toHaveBeenCalled();
+    await pasteSelection(input, "28", 8, 10);
+    expect(host.textContent).toContain(parameterEditorCopy.en.literalPasteComplete);
+    expect(host.querySelector('[aria-label="Unchanged invalid draft"]')?.textContent).toBe(raw);
+    await pasteSelection(input, "2090-01-01");
+    expect(input.value).toBe("2090-01-01");
+    await click(host, "Apply value"); expect(props.onApply).toHaveBeenCalledExactlyOnceWith("WRITE-DATE", "2090-01-01");
+  });
+  it.each(["2000-02-29\n", "2000-02-29\r\n", "2000-02-29\n9999-12-31"])("retains exact invalid trailing or mixed pasted draft %j", async raw => {
+    const { host, props } = await mount(date);
+    await pasteSelection(host.querySelector<HTMLInputElement>("input")!, raw);
+    expect(host.querySelector('[aria-label="Unchanged invalid draft"]')?.textContent).toBe(raw);
+    await click(host, "Apply value"); expect(props.onApply).not.toHaveBeenCalled();
+    await click(host, "Discard draft and reload");
+    expect(host.querySelector<HTMLInputElement>("input")!.value).toBe(date.field.value);
+  });
+  it("does not splice a historical multiline original, but ordinary partial paste is lossless", async () => {
+    const original = "2000-02-\n29";
+    const { host, props } = await mount({ ...date, field: { ...date.field, value: original } });
+    const input = host.querySelector<HTMLInputElement>("input")!;
+    await pasteSelection(input, "28", 8, 10);
+    expect(host.querySelector('[aria-label="Unchanged original value"]')?.textContent).toBe(original);
+    expect(host.textContent).toContain(parameterEditorCopy.en.literalPasteComplete);
+    await click(host, "Apply value"); expect(props.onApply).not.toHaveBeenCalled();
+    await pasteSelection(input, "2000-02-29"); await pasteSelection(input, "28", 8, 10);
+    expect(input.value).toBe("2000-02-28"); await click(host, "Apply value");
+    expect(props.onApply).toHaveBeenCalledExactlyOnceWith("WRITE-DATE", "2000-02-28");
+  });
+  it.each([{ editable: false }, { writeEtsId: null }, { access: "Read" }, { access: "None" }])("retains write restriction %j", async restriction => {
+    const { host, props } = await mount({ ...date, field: { ...date.field, ...restriction } });
+    expect(host.querySelector<HTMLInputElement>("input")!.disabled).toBe(true);
+    await edit(host, "2000-02-29"); await click(host, "Apply value"); expect(props.onApply).not.toHaveBeenCalled();
+  });
+  it("retains a refused draft, allows explicit retry and resets only on request", async () => {
+    const onApply = vi.fn().mockRejectedValueOnce(new Error("Exact date refusal")).mockResolvedValue({ tree: "actual retry result" });
+    const { host, props } = await mount({ ...date, onApply });
+    await edit(host, "2000-02-29"); await click(host, "Apply value");
+    expect(host.textContent).toContain("Exact date refusal"); expect(props.onApplied).not.toHaveBeenCalled();
+    expect(host.querySelector<HTMLInputElement>("input")!.value).toBe("2000-02-29");
+    await click(host, "Apply value"); expect(onApply).toHaveBeenCalledTimes(2);
+    expect(props.onApplied).toHaveBeenCalledExactlyOnceWith({ tree: "actual retry result" });
+    await click(host, "Discard draft and reload"); expect(host.querySelector<HTMLInputElement>("input")!.value).toBe(date.field.value);
+  });
+  it("rebases unchanged-field revisions but blocks a changed value until explicit reset", async () => {
+    const { host, props, root } = await mount(date); await edit(host, "2000-02-29");
+    await act(async () => root.render(<ParameterEditor {...props} revision="save" />));
+    expect(host.textContent).not.toContain(parameterEditorCopy.en.stale);
+    await act(async () => root.render(<ParameterEditor {...props} revision="foreign" field={{ ...date.field, value: "0001-01-01" }} />));
+    expect(host.textContent).toContain(parameterEditorCopy.en.stale);
+    expect(host.querySelector<HTMLInputElement>("input")!.value).toBe("2000-02-29");
+    await click(host, "Apply value"); expect(props.onApply).not.toHaveBeenCalled();
+    await click(host, "Discard draft and reload"); expect(host.querySelector<HTMLInputElement>("input")!.value).toBe("0001-01-01");
+  });
+  it("suppresses duplicate requests and late settlement across revision changes", async () => {
+    let settle!: (value: { tree: string }) => void;
+    const onApply = vi.fn().mockReturnValue(new Promise(done => { settle = done; }));
+    const { host, props, root } = await mount({ ...date, onApply }); await edit(host, "2000-02-29");
+    const button = Array.from(host.querySelectorAll("button")).find(b => b.textContent === "Apply value")!;
+    await act(async () => { button.click(); button.click(); }); expect(onApply).toHaveBeenCalledTimes(1);
+    await act(async () => root.render(<ParameterEditor {...props} revision="foreign" />));
+    await act(async () => settle({ tree: "old" })); expect(props.onApplied).not.toHaveBeenCalled();
+    await click(host, "Apply value"); expect(onApply).toHaveBeenCalledTimes(1);
+    expect(host.textContent).toContain(parameterEditorCopy.en.stale);
+  });
+  it.each(["selection", "source"] as const)("%s identity change resets the draft and ignores its late response", async change => {
+    let settle!: (value: { tree: string }) => void;
+    const onApply = vi.fn().mockReturnValue(new Promise(done => { settle = done; }));
+    const { host, props, root } = await mount({ ...date, onApply }); await edit(host, "2000-02-29"); await click(host, "Apply value");
+    const next = change === "selection" ? { selectionKey: "project1/device2" }
+      : { context: { ...base.context, sourceSha256: "b".repeat(64) }, source: { ...date.source, sourceSha256: "b".repeat(64) } };
+    await act(async () => root.render(<ParameterEditor {...props} {...next} />));
+    expect(host.querySelector<HTMLInputElement>("input")!.value).toBe(date.field.value);
+    await act(async () => settle({ tree: "old" })); expect(props.onApplied).not.toHaveBeenCalled();
+  });
+  it("withdraws the specialized control when the exact source form changes", async () => {
+    const { host, props, root } = await mount(date); await edit(host, "2000-02-29");
+    await act(async () => root.render(<ParameterEditor {...props} source={{ ...date.source, attributes: { Encoding: "DPT 11", UIHint: "Picker" } }} />));
+    expect(host.querySelector("input")).toBeNull(); expect(host.textContent).toContain(parameterEditorCopy.en.fallback["unsupported-hints"]);
+    expect(props.onApply).not.toHaveBeenCalled();
   });
 });
 

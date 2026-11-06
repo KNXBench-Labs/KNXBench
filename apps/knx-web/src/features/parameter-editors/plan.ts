@@ -31,6 +31,7 @@ export interface ParameterEditorContext {
 
 export type ParameterEditorPlan =
   | { kind: "ip-address-literal" }
+  | { kind: "date-literal" }
   | { kind: "time-count"; unit: string | null; min: string | null; max: string | null }
   | { kind: "integer-slider"; min: number; max: number; step: 1 }
   | { kind: "fallback"; reason: "missing-evidence" | "source-conflict" | "unsupported-codec" | "unsupported-hints" | "invalid-range" | "module-scope" };
@@ -60,6 +61,15 @@ export function chooseParameterEditor(
   }
   if (field.kind === "Color" || field.kind === "Picture") return { kind: "fallback", reason: "unsupported-codec" };
   const namespaceAttribute = (name: string) => name === "xmlns" || name.startsWith("xmlns:");
+  if (field.kind === "Date") {
+    // This raw source token is not evidence of a DPT 11 memory encoding or year range.
+    if (field.min !== null || field.max !== null || source.attributes.Encoding !== "DPT 11"
+        || Object.keys(source.attributes).some(name => name !== "Encoding" && !namespaceAttribute(name))
+        || Object.keys(source.parentAttributes).some(name => name !== "Id" && name !== "Name" && !namespaceAttribute(name))) {
+      return { kind: "fallback", reason: "unsupported-hints" };
+    }
+    return { kind: "date-literal" };
+  }
   if (field.kind === "IPAddress") {
     // One exact source role, not address usability, a memory codec or network policy.
     if (field.min !== null || field.max !== null || source.attributes.AddressType !== "HostAddress"
@@ -121,12 +131,25 @@ function ipAddressLiteral(value: string): boolean {
     /^(?:0|[1-9][0-9]{0,2})(?![\s\S])/.test(part) && Number(part) <= 255);
 }
 
-export type ParameterDraftIssue = "integer" | "bounds" | "unsupported" | "ip-address";
+/** Exact schema spelling and proleptic Gregorian check, including year zero; no conversion. */
+function dateLiteral(value: string): boolean {
+  if (!/^[0-9]{4}-[0-9]{2}-[0-9]{2}(?![\s\S])/.test(value)) return false;
+  const year = Number(value.slice(0, 4));
+  const month = Number(value.slice(5, 7));
+  const day = Number(value.slice(8, 10));
+  if (month < 1 || month > 12 || day < 1) return false;
+  const leap = year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
+  const days = [31, leap ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+  return day <= days[month - 1];
+}
+
+export type ParameterDraftIssue = "integer" | "bounds" | "unsupported" | "ip-address" | "date";
 
 /** UI preflight only; existing application validation remains authoritative. */
 export function parameterDraftIssue(plan: ParameterEditorPlan, value: string): ParameterDraftIssue | null {
   if (plan.kind === "fallback") return "unsupported";
   if (plan.kind === "ip-address-literal") return ipAddressLiteral(value) ? null : "ip-address";
+  if (plan.kind === "date-literal") return dateLiteral(value) ? null : "date";
   const parsed = decimalInteger(value);
   if (parsed === null) return "integer";
   const minimum = decimalInteger(plan.min === null ? null : String(plan.min));

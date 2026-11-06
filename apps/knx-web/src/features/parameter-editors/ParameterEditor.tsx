@@ -31,6 +31,7 @@ function ParameterDraft<T>(props: ParameterEditorProps<T>) {
   const { field, revision, onApply, onApplied } = props;
   const copy = parameterEditorCopy[props.locale ?? "en"];
   const plan = chooseParameterEditor(field, props.source, props.context);
+  const textLiteral = plan.kind === "ip-address-literal" || plan.kind === "date-literal";
   const [draft, setDraft] = useState(field.value ?? "");
   const [baseline, setBaseline] = useState(field.value);
   const [loadedRevision, setLoadedRevision] = useState(revision);
@@ -105,16 +106,16 @@ function ParameterDraft<T>(props: ParameterEditorProps<T>) {
   return <section className={styles.panel} aria-label={props.label}>
     <label htmlFor={id} className={styles.label}>{props.label}</label>
     {plan.kind === "time-count" && <p id={`${id}-count`} className={styles.caption}>{copy.count} <span>{plan.unit ?? copy.unspecified}</span></p>}
-    {plan.kind === "ip-address-literal" && <>
-      <p id={`${id}-format`} className={styles.caption}>{copy.ipFormat}</p>
+    {textLiteral && <>
+      <p id={`${id}-format`} className={styles.caption}>{plan.kind === "date-literal" ? copy.dateFormat : copy.ipFormat}</p>
       {field.value === null ? <p className={styles.notice}>{copy.absent}</p>
         : field.value === "" ? <p className={styles.notice}>{copy.empty}</p>
         : parameterDraftIssue(plan, field.value) !== null && <div className={styles.raw} aria-label={copy.original}>{field.value}</div>}
     </>}
-    {withSuffix(<input id={id} type="text" inputMode={plan.kind === "ip-address-literal" ? "text" : "numeric"} className={styles.input} value={draft}
+    {withSuffix(<input id={id} type="text" inputMode={textLiteral ? "text" : "numeric"} className={styles.input} value={draft}
       disabled={restricted || pending || accepted} aria-invalid={!unchanged && issue !== null}
-      aria-describedby={plan.kind === "ip-address-literal" ? `${id}-format ${id}-status` : `${id}-status`}
-      onPaste={plan.kind !== "ip-address-literal" ? undefined : event => {
+      aria-describedby={textLiteral ? `${id}-format ${id}-status` : `${id}-status`}
+      onPaste={!textLiteral ? undefined : event => {
         // Native single-line inputs strip pasted newlines. Keep the exact draft so
         // malformed input is refused visibly instead of becoming a different value.
         event.preventDefault();
@@ -125,7 +126,7 @@ function ParameterDraft<T>(props: ParameterEditorProps<T>) {
         // Selection offsets index the sanitized DOM value, not a raw multiline draft.
         // Only an explicit complete replacement is unambiguous when they differ.
         if (!wholeValue && draft !== input.value) {
-          setFailure(copy.ipPasteComplete); setSettled(false);
+          setFailure(copy.literalPasteComplete); setSettled(false);
           return;
         }
         const pasted = event.clipboardData.getData("text/plain");
@@ -140,7 +141,7 @@ function ParameterDraft<T>(props: ParameterEditorProps<T>) {
       {restricted && <p className={styles.notice}>{copy.restricted}</p>}
       {stale && <p role="status" className={styles.notice}>{copy.stale}</p>}
       {!unchanged && issue !== null && <p role="alert" className={styles.error}>{copy[issue]}</p>}
-      {plan.kind === "ip-address-literal" && !unchanged && issue !== null && <div className={styles.raw} aria-label={copy.draft}>{draft}</div>}
+      {textLiteral && !unchanged && issue !== null && <div className={styles.raw} aria-label={copy.draft}>{draft}</div>}
       {failure !== null && <p role="alert" className={styles.error}>{failure}</p>}
       {accepted && <p role="status">{copy.applied}</p>}
       {settled && <p role="status">{copy.settled}</p>}

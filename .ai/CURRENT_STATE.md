@@ -1,4 +1,6 @@
 # Restart snapshot
+## WP-08 checked Date text editor (ACTIVE; reviewed candidate; owner WebUI open-work-date; observed 2026-11-06 21:40 CET)
+- Own `feat/wp08-checked-date-editor-20261106` / `knxbench-wp08-checked-date-editor-20261106` from7cba23ff2. Independent whole-feature APPROVE/0findings,3assertion-killedmutants+2greencontrols authenticated. Parent focused244, targeted34stageprecheck/27fixtureTS/5293unit/40defaultbrowser pass; separate4cell/8crop visual pass, all frozen. Source record `docs/status/2026-11-06-checked-date-text-editor.md`. NEXT committed main-first candidate and maintained scoped acceptance, then conditional publication; no gate/push yet. No native picker/image codec/schema/new backend persistence/hardware/native/release/deploy; root-local checkpoint owns parallel/private coordination.
 ## WP-06 product-priority provenance (STANDING; observed 2026-11-06 20:58)
 - Featurec376f0347/main-firstedd41cd25 accepted and published; exact local/tracking/live+9blob readback. Independent whole-feature APPROVE,3compiled assertion-killed mutants+2green controls; complete selected14-stage gate proved/frozen/userdata checkeduntouched, Rust5500/177ignored, tooling517/6optional skips, separatecorpus97/97. Record `docs/status/2026-11-06-product-priority-provenance.md`; raw evidence `<profile-scratch>/next-task-20261106/` pending retention. Root-local owner tracks docs-only closeout/retention/retirement. ADR0158/product-query origin only; existing raw instance retention is not new, wider typed project priority/core/migrations/editors/consumers remain open. High refusal/Alert inference unchanged; no bus/device/native/VM/release/deploy action. Foreign tracks/root preserved.
 ## WP-06 literal installed-product declarations (STANDING; observed 2026-11-06)
@@ -21,12 +23,10 @@
 - Wider WP-11/KL-130, restart/project-save/other sizes/unavailable environments remain open; explicit software profile and unfiltered host session D-Bus/AT-SPI exception, no full host-service/WebKit-sandbox attestation or focus-policy/pixel/tree parity. No bus/real-project/release/deploy authority.
 ## Queue and acceptance boundaries (STANDING; observed 2026-11-02 20:47 CET)
 - Runtime source published on main `7ea7ff6dd`; all R1–R9 and fixture review closed.
-- Main-first selected15-stage gate complete/frozen, checked user data untouched;
-  Rust1684/72ignored, selected corpus51/51, Vitest4976, default browser998+69.
+- Main-first selected15-stage gate complete/frozen, checked user data untouched; Rust1684/72ignored, selected corpus51/51, Vitest4976, default browser998+69.
 - Result: `docs/status/2026-11-02-wp26-status-bar-connection.md`. IP-only; USB open.
 - No active WP-26 implementation claim. Legacy download-holder stop is unchanged.
-- Evidence stays private under `<profile-scratch>/wp26-controller-footer-20261102/`
-  until owned closeout/archive; older failed attempts are historical, not accepted.
+- Evidence stays private under `<profile-scratch>/wp26-controller-footer-20261102/` until owned closeout/archive; older failed attempts are historical, not accepted.
 - Next queue candidates: WP-27 / WP-28 under a newly bounded claim; no hardware,
   USB, automatic reconnect/retry, release or deployment authority from this delivery.
 ## Rail acceptance reference (STANDING; owner WebUI; observed 2026-11-02 22:13 CET)

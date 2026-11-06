@@ -22,7 +22,9 @@ The reader bounds source/identity/normalized evidence and repeated metadata copi
 the UI discloses provenance and searches only the selected display label.
 [Verification contract and evidence levels](status/2026-11-06-declared-product-folder-captions.md)
 separate original-member reader calibration, synthetic lifecycle and production
-client/browser checks from complete package/publication acceptance. No original
+client/browser checks from complete package/publication acceptance. Source
+`1e3b441d3` and main-first `252b11c3c` passed both complete selected17-stage
+gates, source-bound server build/version and exact publication readback. No original
 package importer, original-tool, native, hardware or release equivalence is claimed;
 templates/translations/modules/staleness/priority and whole WP-06 remain open.
 

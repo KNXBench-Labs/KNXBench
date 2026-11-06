@@ -101,8 +101,32 @@ original member bytes, not a repacked or successfully imported original package.
 No original-tool rendering, vendor-family, native, hardware, release or deployment
 acceptance follows.
 
-Complete selected branch and main-first integration gates, source-bound server
-build/version and publication readback are separate delivery requirements. Runtime
-receipts and original failures remain private; no vendor payload is copied into
-the repository. Whole WP-06 remains open in the
+## Software acceptance and publication
+
+Source `1e3b441d3` passed the independent complete-feature re-review after F1/F2/F3
+correction. Main-first integration `252b11c3c` has the identical tracked tree,
+with fresh main `91480fbf4` as its first parent. Both complete selected package
+gates passed all 17 planned stages, with valid proofs, frozen inputs and checked,
+untouched user data. These are change-scoped gates, not release `--full` gates.
+
+Each gate passed 5,615 Rust tests (177 ignored; 29 summary rows), 66 binding
+tests and all 97 selected private-corpus cases. Each nested web gate completed
+40 stages, including 27 TypeScript configurations and 5,181 unit tests. Browser
+inventories/runs were default 1,096 (1,029 functional / 67 exclusive), production
+communication 104 (103 / 1), and production table-columns 176 (172 / 4). These
+lanes overlap; their counts are not independent scenarios. The tool suite ran
+517 tests with six existing optional opt-in skips; those skips are not hardware
+or extra-runtime coverage.
+
+The actual integrated server built successfully offline in the isolated
+loopback-only environment. Its retained executable reports
+`knx-server 0.1.0-alpha.19+g252b11c3c`; the version invocation passed without
+starting a server or touching user data. This is a built CLI/version artifact,
+not a new HTTP-listener, native-shell, installation or deployment acceptance.
+
+The integration was pushed only after those checks and the fresh unchanged-main
+guard. Its exact main/tracking/live readback was verified. Runtime receipts,
+original failed attempts, reviews and retained executables remain private under
+`<profile>/evidence/2026-11-06-wp06-product-folder-captions/`; no vendor payload
+is copied into the repository. Whole WP-06 remains open in the
 [work record](../open-work/WP-06-communication-object-organisation.md).

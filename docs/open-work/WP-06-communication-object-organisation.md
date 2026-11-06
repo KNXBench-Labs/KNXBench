@@ -1,6 +1,6 @@
 # WP-06 — Communication-object organisation: remaining slices
 
-**Status:** Saved schema-20 text display delivered; bounded literal installed-product declaration fallback implemented; broader slices remain evidence-gated. Listed in [OPEN_WORK](../OPEN_WORK.md); per-ID status of record is the [ledger](../status/LEDGER.md).
+**Status:** Saved schema-20 text display delivered; bounded literal installed-product declaration fallback software-accepted on main; broader slices remain evidence-gated. Listed in [OPEN_WORK](../OPEN_WORK.md); per-ID status of record is the [ledger](../status/LEDGER.md).
 
 ## Admitted increment — saved schema-20 node text
 
@@ -24,6 +24,10 @@ The [implementation/verification boundary](../status/2026-11-06-declared-product
 distinguishes the four real-source reader calibrations from synthetic fallback,
 HTTP lifecycle and production-client evidence. It does not establish original
 package import, original-tool rendering, current placement or whole-WP acceptance.
+Source `1e3b441d3` and main-first `252b11c3c` passed both complete selected
+17-stage gates; the integrated server build/version and exact publication
+readback passed. This closes this literal-only software slice, not the broader
+requirements below or any hardware/native/release/deployment acceptance.
 
 ## Task
 
@@ -33,7 +37,7 @@ priority losslessly.
 ## Open
 
 1. Broader product-folder captions: the bounded literal installed-product subset
-   is implemented; template/translation/rename and broader source-schema mapping
+   is software-accepted on main; template/translation/rename and broader source-schema mapping
    still need evidence, not guessed manufacturer behavior.
 2. Folders for module objects (depends on
    [WP-07](WP-07-module-instance-authority.md)).

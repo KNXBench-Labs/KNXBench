@@ -12,6 +12,9 @@ fields. Labels never change grouping, activation, placement, edits or history.
 Templates, translations, module placement, staleness and priority remain outside
 this slice. The real-source probe calibrates four literal declarations, not a
 complete original-package import or a real missing-saved-text fallback.
+The bounded software slice is accepted on main after independent review, both
+complete selected package gates and the source-bound server build/version; this
+is not hardware, native-shell, release or deployment acceptance.
 [Scope and verification](../status/2026-11-06-declared-product-folder-captions.md).
 
 ## Main-only after Alpha 19: passive USB-serial listing

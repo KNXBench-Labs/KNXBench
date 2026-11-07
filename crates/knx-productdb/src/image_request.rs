@@ -119,6 +119,13 @@ pub enum ProjectRequestError {
         number: u16,
         raw: String,
     },
+    /// Two object instances share one `ComObjectRef` key (e.g. the same
+    /// module object in two instances) but state different priorities; one
+    /// statement cannot represent both, so neither is silently kept.
+    ConflictingPriority {
+        device: DeviceId,
+        com_object_ref: String,
+    },
 }
 
 impl fmt::Display for ProjectRequestError {
@@ -216,6 +223,14 @@ impl fmt::Display for ProjectRequestError {
             } => write!(
                 f,
                 "device {}: object {number} states Priority {raw:?}, which is not Low, High or Alert",
+                device.0
+            ),
+            Self::ConflictingPriority {
+                device,
+                com_object_ref,
+            } => write!(
+                f,
+                "device {}: objects sharing {com_object_ref} state different priorities",
                 device.0
             ),
         }
@@ -433,7 +448,18 @@ fn priority_statements(
             &object.source.ets_id,
             object.module_instance.is_some(),
         );
-        statements.insert(com_object_ref, stated);
+        match statements.get(&com_object_ref) {
+            Some(existing) if *existing != stated => {
+                return Err(ProjectRequestError::ConflictingPriority {
+                    device,
+                    com_object_ref,
+                })
+            }
+            Some(_) => {}
+            None => {
+                statements.insert(com_object_ref, stated);
+            }
+        }
     }
     Ok(statements)
 }
@@ -1062,6 +1088,33 @@ mod tests {
                 "{raw:?}"
             );
         }
+    }
+
+    #[test]
+    fn module_instances_sharing_a_key_must_agree_or_are_refused() {
+        let mut p = project();
+        object(&mut p, 10, 0, vec![]);
+        object(&mut p, 11, 1, vec![]);
+        let set = |p: &mut Project, id: u32, priority| {
+            let com = p.devices.com_object_mut(ComObjectInstanceId(id)).unwrap();
+            com.source.ets_id = format!("MD-1_M-1_MI-{id}_O-3-0_R-1");
+            com.module_instance = Some(knx_core::ids::ModuleInstanceId(id));
+            com.priority_edit = Some(priority);
+        };
+        set(&mut p, 10, knx_core::ObjectPriority::Alert);
+        set(&mut p, 11, knx_core::ObjectPriority::Alert);
+        let agreed = statements(&p);
+        assert_eq!(agreed.len(), 1, "{agreed:?}");
+        assert_eq!(agreed[0].1, "Alert");
+        set(&mut p, 11, knx_core::ObjectPriority::Low);
+        assert_eq!(
+            map(&p),
+            Err(ProjectRequestError::ConflictingPriority {
+                device: DeviceId(1),
+                com_object_ref: agreed[0].0.clone(),
+            }),
+            "a differing edit must not be lost behind the shared key"
+        );
     }
 
     #[test]

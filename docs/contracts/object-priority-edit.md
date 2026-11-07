@@ -70,6 +70,13 @@ priority each object instance states, by the same `com_object_lookup_id` key as
 | captured Declared, Empty or Unknown | refused: `ProjectRequestError::UnreadablePriority` (device, object number, raw) |
 | captured Absent or Unavailable, no edit | none (the product literal applies, as today) |
 
+The request is built before activation is known, so an Empty/Unknown
+declaration refuses the device even on an object the parameters leave
+inactive, and it also stops read-only previews built from the same request.
+Two instances sharing one `ComObjectRef` key (one module object in two module
+instances) must state the same value or the request is refused
+(`ConflictingPriority`); active module refs are refused by the builder anyway.
+
 The builder looks up the statement of every activated `ComObjectRef`. A
 statement is admitted only when the product's selected literal is present and
 equal; otherwise it refuses with `ImageError::PriorityDiffers { ref_id, project,
@@ -109,8 +116,9 @@ statements decide admission only and never reach an image octet.
 - Project diff compares `priority_edit` as its own field; captured priority keeps
   its existing comparison.
 - `POST /api/com-object-priority` with `{ comObjectId, priority }`, priority one of
-  `"Low"`, `"High"`, `"Alert"` or `null`; anything else is a 400. It returns the
-  project tree like the flag endpoint.
+  `"Low"`, `"High"`, `"Alert"` or `null`. Another token, an unknown object or a
+  no-op is a 400; a body without `priority` or with an unknown field is refused
+  by the JSON extractor (422). It returns the project tree like the flag endpoint.
 - `EffectivePrioritySource` gains `userEdit`.
 
 ## Web

@@ -49,6 +49,33 @@ the product literal. New boundary [KL-188](../KNOWN_LIMITATIONS.md#catalogue-kl-
   request, edit precedence in the effective view, store load, empty-table
   identity skip, programming content, no-op refusal, diff field.
 
+## Independent review and corrections
+
+Review of `947e342af` in a separate source copy: **APPROVE**, no Critical or
+Important findings, 7 Minor. 20 reviewer mutants: 13 killed, 6 survived, one
+did not compile. The reviewer also confirmed that the unchanged v17 code reads
+the fixture with exactly the provenance hashes, that the guard has no bypass
+(the two other `ImageRequest` constructions are program-default only) and, on
+three private real projects (115 devices, read-only), that no device is newly
+refused and all 42 admitted images are byte-identical with and without
+statements. Browser: a temporary real-server spec 4/4 (en/de, 1440/400 px),
+`device-editor-layout` 14/14 twice, `communication-objects` 52/52 twice.
+
+Corrections in the follow-up commit:
+
+- HTTP refusals now target an object holding `High`, so token and
+  unknown-field checks are not hidden by the no-op refusal (survivors R05/R18).
+- New store test removes an edited object and saves again; it also reads the
+  edit through the single-object loader (survivors R13/R21).
+- Two instances sharing a `ComObjectRef` key must state the same priority or
+  the request is refused (`ConflictingPriority`); previously the last one won
+  (survivors R07/R08 describe an unreachable path today, since active module
+  refs are refused by the builder).
+- Contract: 422 for a missing `priority` or unknown field; the request-time
+  refusal of Empty/Unknown declarations on inactive objects and its effect on
+  read-only previews are stated (also in KL-188). Manual: the refusal names
+  the object reference, not the number.
+
 ## Limits
 
 - No changed priority is ever programmed; a differing statement refuses the

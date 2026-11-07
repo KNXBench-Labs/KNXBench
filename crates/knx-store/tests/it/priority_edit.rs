@@ -214,6 +214,40 @@ fn edits_save_reload_clear_and_change_the_semantic_identity() {
 }
 
 #[test]
+fn removing_an_edited_object_removes_its_edit_row_on_the_next_save() {
+    let conn = knx_store::open_and_migrate_in_memory().unwrap();
+    let (_dir, path, _) = copy_fixture();
+    let old = knx_store::open_existing_read_only(&path).unwrap();
+    let mut project = knx_store::load_project(&old.conn).unwrap();
+    drop(old);
+    let target = project.devices.com_objects().next().unwrap().clone();
+    Command::SetComObjectPriority {
+        com_object: target.id,
+        priority: Some(ObjectPriority::Alert),
+    }
+    .apply(&mut project)
+    .unwrap();
+    knx_store::save_project(&conn, &project).unwrap();
+    assert_eq!(
+        knx_store::devices::load_com_object_instance(&conn, target.id)
+            .unwrap()
+            .priority_edit,
+        Some(ObjectPriority::Alert),
+        "the single-object loader reads the edit"
+    );
+    project.devices.remove_com_object(target.id);
+    project
+        .devices
+        .get_mut(target.device)
+        .unwrap()
+        .com_objects
+        .retain(|id| *id != target.id);
+    knx_store::save_project(&conn, &project).unwrap();
+    assert_eq!(edit_rows(&conn), 0);
+    assert_eq!(knx_store::load_project(&conn).unwrap(), project);
+}
+
+#[test]
 fn an_orphan_or_non_token_edit_row_is_refused_on_load() {
     let (_dir, path, _) = copy_fixture();
     let conn = knx_store::open_existing_and_migrate(&path).unwrap();

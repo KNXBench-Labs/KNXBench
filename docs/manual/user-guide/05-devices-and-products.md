@@ -1233,7 +1233,8 @@ effective row then says *Set by you in KNXBench*. *Not set by you* removes it.
 Each change is one undoable edit and is saved in the `.knxdb` file; the saved
 declaration from the imported file stays as it was. KNXBench does not program a
 changed priority: while an object's priority (yours or the saved one) differs
-from the product's, programming that device is refused with the object named.
+from the product's, programming that device is refused, naming the object's
+reference and both values.
 For objects whose saved priority was not captured, nothing is checked and the
 product's priority is written ([KL-188](../../KNOWN_LIMITATIONS.md#catalogue-kl-188)).
 

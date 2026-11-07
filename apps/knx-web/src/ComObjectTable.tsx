@@ -12,16 +12,32 @@ import { useUiLanguage } from "./uiLanguage";
 import { useProductLanguage } from "./productLanguage";
 import { LanguageFallbackBadge, fellBack } from "./languageFallback";
 import { formatGroupAddress } from "./gaNotation";
-import { ACTIVATION_ORDER, DEFAULT_FILTERS, channelKey, deriveComObjectView, dptOptions, evaluatedChannel,
+import { ACTIVATION_ORDER, DEFAULT_FILTERS, PRIORITY_ORDER, channelKey, deriveComObjectView, dptOptions, effectivePrioritySource, effectivePriorityToken, evaluatedChannel,
   effectiveDpt, hasFilters, projectFolderIds, projectFolderNodeLabel, projectFolderProductCaption, projectFolderRefusal, type ComFilters, type ComGrouping, type ComSort, type ComSortColumn,
   type RefusedProjectFolder } from "./comObjectView";
 import ComMutationBoundary from "./ComMutationBoundary";
 import { dptDisplay } from "./dptLabels";
+import { effectivePriorityDescription } from "./EffectivePriority";
+import { getSetting, setSetting, useSettingsRevision } from "./settingsStore";
+/** Opt-in view preference (default off); stores no project data. */
+export const PRIORITY_COLUMN_SETTING = "comTablePriorityColumn";
 const COLUMNS: { column: ComSortColumn; label: MessageKey }[] = [
   { column: "number", label: "comTable.number" }, { column: "name", label: "workbench.name" },
   { column: "function", label: "comTable.function" }, { column: "dpt", label: "inspector.dpt" },
   { column: "addresses", label: "comTable.addresses" }, { column: "status", label: "comTable.status" },
 ];
+const PRIORITY_COLUMN: { column: ComSortColumn; label: MessageKey } = { column: "priority", label: "comTable.priority" };
+const PRIORITY_SOURCE_KEYS: Record<"userEdit" | "instance" | "product", MessageKey> = {
+  userEdit: "comTable.prioritySource.userEdit", instance: "comTable.prioritySource.instance", product: "comTable.prioritySource.product" };
+/** Effective value and a short winning-source tag; the full wording stays in the title. */
+function PriorityCell({ com }: { com: ComObjectNode }) {
+  const t = useTranslate();
+  const token = effectivePriorityToken(com), source = effectivePrioritySource(com);
+  return <td className="com-object-priority" data-priority={token ?? "unresolved"} data-priority-source={source ?? undefined}
+    title={effectivePriorityDescription(t, (com as Partial<ComObjectNode>).effective_priority)}>
+    {token === null ? <span aria-label={t("comTable.unresolvedPriority")}>—</span> : <span>{token}</span>}
+    {source !== null && <small className="com-object-priority-source">{t(PRIORITY_SOURCE_KEYS[source])}</small>}</td>;
+}
 const STATUS_KEYS: Record<string, MessageKey> = { Active: "inspector.activation.active", Inactive: "inspector.activation.inactive",
   Undetermined: "inspector.activation.undetermined", NotEvaluated: "inspector.activation.notEvaluated" };
 function channelLabel(c: ComObjectChannel | null, t: Translate): string {
@@ -82,9 +98,9 @@ function ProjectFolderNote({ com }: { com: ComObjectNode }) {
   return refusal === null ? null
     : <small className="com-object-project-folder" data-folder-status={refusal}>{t(FOLDER_REFUSAL_KEYS[refusal])}</small>;
 }
-interface RowProps { com: ComObjectNode; flat: boolean; groupKey: string | null; hidden: boolean; matches: boolean; open: boolean;
+interface RowProps { com: ComObjectNode; flat: boolean; priority: boolean; span: number; groupKey: string | null; hidden: boolean; matches: boolean; open: boolean;
   descriptionMatch: boolean; editor: (com: ComObjectNode) => ReactNode; onOpen: (id: number, open: boolean) => void }
-function ObjectRow({ com, flat, groupKey, hidden, matches, open, descriptionMatch, editor, onOpen }: RowProps) {
+function ObjectRow({ com, flat, priority, span, groupKey, hidden, matches, open, descriptionMatch, editor, onOpen }: RowProps) {
   const t = useTranslate(); const [productLanguage] = useProductLanguage();
   const [language] = useUiLanguage();
   const [visited, setVisited] = useState(false), [busy, setBusy] = useState(false);
@@ -113,9 +129,10 @@ function ObjectRow({ com, flat, groupKey, hidden, matches, open, descriptionMatc
       <td><span className="com-object-status" data-activation={com.activation}>{t(STATUS_KEYS[com.activation] ?? "inspector.activation.unknown")}</span>
         {com.activation === "Active" && !com.is_active && <small className="com-object-stored-status">{t("inspector.storedInactive")}</small>}
         {com.activation === "Inactive" && com.is_active && <small className="com-object-stored-status">{t("inspector.storedActive")}</small>}</td>
+      {priority && <PriorityCell com={com} />}
       {flat && <td><ChannelText channel={evaluatedChannel(com)} /></td>}
     </tr>
-    <tr className="com-object-editor-row" data-editor-id={com.id} hidden={hidden || !open}><td colSpan={flat ? 7 : 6}>
+    <tr className="com-object-editor-row" data-editor-id={com.id} hidden={hidden || !open}><td colSpan={span}>
       {/* Once opened, keep this subtree mounted even when closed. Row keys are
           direct siblings under one tbody in every view: keys cannot preserve
           state if a channel/folder/flat switch reparents a component. */}
@@ -132,6 +149,10 @@ export default function ComObjectTable({ objects, editor, folderCurrency }: { ob
   // Channel and folder groups use disjoint key namespaces, so one expansion set serves both.
   const [mode, setMode] = useState<ComGrouping | "flat">("channel"), [openObjects, setOpenObjects] = useState(new Set<number>());
   const flat = mode === "flat", by: ComGrouping = mode === "folder" ? "folder" : "channel";
+  useSettingsRevision();
+  const showPriority = getSetting(PRIORITY_COLUMN_SETTING) === true;
+  const columns = [...COLUMNS, ...(showPriority ? [PRIORITY_COLUMN] : []),
+    ...(flat ? [{ column: "channel" as const, label: "comTable.channel" as const }] : [])];
   const [expanded, setExpanded] = useState(new Set<string>());
   const [removed, setRemoved] = useState(0);
   // Filter-collapse overrides belong to the exact filter signature, not the
@@ -177,7 +198,7 @@ export default function ComObjectTable({ objects, editor, folderCurrency }: { ob
     const groupVisible = flat || !filtered || count > 0 || hasEditor;
     if (!flat) rows.push(<tr className="com-object-channel" key={`group:${group.key}`} data-group-key={group.key}
       data-channel-key={by === "channel" ? group.key : undefined} hidden={!groupVisible}>
-      <th colSpan={6} scope="row"><button type="button" className="com-object-channel-summary" aria-expanded={isExpanded(group.key)} onClick={() => toggle(group.key)}>
+      <th colSpan={columns.length} scope="row"><button type="button" className="com-object-channel-summary" aria-expanded={isExpanded(group.key)} onClick={() => toggle(group.key)}>
         <span aria-hidden="true">{isExpanded(group.key) ? "▾" : "▸"}</span>
         {by === "folder" ? <FolderText folder={group.folder} /> : <ChannelText channel={group.channel} />}
         <span aria-hidden="true" className="com-object-channel-separator">·</span><span className="com-object-channel-count">{t("comTable.count", { shown: count, total: group.total })}</span>
@@ -188,11 +209,10 @@ export default function ComObjectTable({ objects, editor, folderCurrency }: { ob
       // Inside an expanded group (and in the flat view) an open editor stays
       // visible even outside the filter. Hidden rows keep their editors mounted.
       const visible = (open || matches) && (flat || groupVisible && isExpanded(group.key));
-      rows.push(<ObjectRow key={`object:${com.id}`} com={com} flat={flat} groupKey={flat ? null : group.key} hidden={!visible} matches={matches} open={open}
+      rows.push(<ObjectRow key={`object:${com.id}`} com={com} flat={flat} priority={showPriority} span={columns.length} groupKey={flat ? null : group.key} hidden={!visible} matches={matches} open={open}
         descriptionMatch={view.descriptionMatches.has(com.id)} editor={editor} onOpen={onOpen} />);
     }
   }
-  const columns = flat ? [...COLUMNS, { column: "channel" as const, label: "comTable.channel" as const }] : COLUMNS;
   return <section className="com-table-panel" aria-label={t("inspector.communicationObjects")}>
     <div className="com-table-toolbar">
       <input type="search" aria-label={t("comTable.search")} placeholder={t("comTable.search")} value={filters.query} onChange={e => change("query", e.target.value)} />
@@ -204,6 +224,9 @@ export default function ComObjectTable({ objects, editor, folderCurrency }: { ob
       <label>{t("inspector.dpt")}<select aria-label={t("comTable.dptFilter")} value={filters.dpt} onChange={e => change("dpt", e.target.value)}>
         <option value="all">{t("comTable.allDpts")}</option>{options.map(value => <option key={value} value={value}>{value === "missing" ? t("comTable.noDpt")
           : value.startsWith("family:") ? t("comTable.dptFamily", { number: value.slice(7) }) : dptDisplay(value.slice(6), language)}</option>)}</select></label>
+      {showPriority && <label>{t("comTable.priority")}<select aria-label={t("comTable.priorityFilter")} value={filters.priority} onChange={e => change("priority", e.target.value)}>
+        <option value="all">{t("comTable.allPriorities")}</option>{PRIORITY_ORDER.map(token => <option key={token} value={token}>{token}</option>)}
+        <option value="unresolved">{t("comTable.unresolvedPriority")}</option></select></label>}
       <button type="button" onClick={() => { resetCollapse(); setFilters({ ...DEFAULT_FILTERS }); }}>{t("comTable.resetFilters")}</button>
       <button type="button" onClick={() => setSort({ column: null, descending: false })}>{t("comTable.originalOrder")}</button>
       <div className="com-table-views" role="group" aria-label={t("comTable.view")}>
@@ -211,6 +234,14 @@ export default function ComObjectTable({ objects, editor, folderCurrency }: { ob
         <button type="button" aria-pressed={mode === "folder"} onClick={() => setMode("folder")}>{t("comTable.byFolder")}</button>
         <button type="button" aria-pressed={flat} onClick={() => setMode("flat")}>{t("comTable.flat")}</button>
       </div>
+      <button type="button" className="com-table-priority-toggle" aria-pressed={showPriority} onClick={() => {
+        // Hiding the column also drops its filter and sort, so nothing invisible narrows the table.
+        if (showPriority) {
+          if (filters.priority !== "all") change("priority", "all");
+          if (sort.column === "priority") setSort({ column: null, descending: false });
+        }
+        setSetting(PRIORITY_COLUMN_SETTING, !showPriority);
+      }}>{t("comTable.priorityColumn")}</button>
     </div>
     {removed > 0 && <p className="com-object-removal" role="status">{t("comTable.removed", { count: removed })}</p>}
     <p className="com-table-count" role="status">{t("comTable.count", { shown: view.objects.length, total: objects.length })}</p>

@@ -6,15 +6,36 @@ import type { ProjectTreeNode } from "./bindings/ProjectTreeNode";
 import type { ProductFolderCaption } from "./bindings/ProductFolderCaption";
 import { groupAddressSpellings } from "./gaNotation";
 import { dptDisplay } from "./dptLabels";
-export type ComSortColumn = "number" | "name" | "function" | "dpt" | "addresses" | "status" | "channel";
-export interface ComFilters { query: string; status: string; link: "all" | "linked" | "unlinked"; dpt: string }
+export type ComSortColumn = "number" | "name" | "function" | "dpt" | "addresses" | "status" | "priority" | "channel";
+/** `priority`: `all`, an exact token or `unresolved` (docs/COMMUNICATION_OBJECT_TABLE.md). */
+export interface ComFilters { query: string; status: string; link: "all" | "linked" | "unlinked"; dpt: string; priority: string }
 export interface ComSort { column: ComSortColumn | null; descending: boolean }
 /** WP-06: what the grouped table groups by; the flat view is separate. */
 export type ComGrouping = "channel" | "folder";
 export interface ComGroup { key: string; channel: ComObjectChannel | null; folder: ComObjectProjectFolder | null; objects: ComObjectNode[]; total: number }
-export const DEFAULT_FILTERS: ComFilters = { query: "", status: "all", link: "all", dpt: "all" };
+export const DEFAULT_FILTERS: ComFilters = { query: "", status: "all", link: "all", dpt: "all", priority: "all" };
 export const ACTIVATION_ORDER = ["Active", "Inactive", "Undetermined", "NotEvaluated"];
 export const effectiveDpt = (o: ComObjectNode): string | null => o.dpt ?? o.program_dpt;
+/** Schema token order, lowest first; a sort key, not a bus ranking claim. */
+export const PRIORITY_ORDER = ["Low", "High", "Alert"] as const;
+export type PriorityToken = typeof PRIORITY_ORDER[number];
+/** The effective token, or `null` for unresolved, missing or unrecognised server states. */
+export function effectivePriorityToken(o: ComObjectNode): PriorityToken | null {
+  const view = (o as Partial<ComObjectNode>).effective_priority;
+  return view?.status === "resolved" ? PRIORITY_ORDER.find(token => token === view.value) ?? null : null;
+}
+/** Which known layer won; `null` when unresolved or unrecognised. */
+export function effectivePrioritySource(o: ComObjectNode): "userEdit" | "instance" | "product" | null {
+  const view = (o as Partial<ComObjectNode>).effective_priority;
+  if (view?.status !== "resolved" || effectivePriorityToken(o) === null) return null;
+  const kind = view.source?.kind;
+  return kind === "userEdit" || kind === "instance" || kind === "product" ? kind : null;
+}
+function matchesPriority(o: ComObjectNode, filter: string): boolean {
+  if (filter === "all") return true;
+  const token = effectivePriorityToken(o);
+  return filter === "unresolved" ? token === null : token === filter;
+}
 export const evaluatedChannel = (o: ComObjectNode): ComObjectChannel | null => o.activation === "Active" ? o.channel ?? null : null;
 export const channelKey = (o: ComObjectNode): string => evaluatedChannel(o) ? `channel:${evaluatedChannel(o)!.key}` : "unassigned";
 /** WP-06a: saved-folder statuses that refuse a folder the tree would otherwise give. */
@@ -64,7 +85,7 @@ export function groupingFolder(o: ComObjectNode): ComObjectProjectFolder | null 
 /** Folder groups join on the exact opaque key; everything else shares one fallback. */
 export const folderKey = (o: ComObjectNode): string => { const f = groupingFolder(o); return f ? `folder:${f.key}` : "folder-none"; };
 export const groupKey = (o: ComObjectNode, by: ComGrouping): string => by === "folder" ? folderKey(o) : channelKey(o);
-export const hasFilters = (f: ComFilters): boolean => !!f.query.trim() || f.status !== "all" || f.link !== "all" || f.dpt !== "all";
+export const hasFilters = (f: ComFilters): boolean => !!f.query.trim() || f.status !== "all" || f.link !== "all" || f.dpt !== "all" || f.priority !== "all";
 /** `[main]` for `DPT-n`, `[main, sub]` for `DPST-n-m`, `null` for anything else. */
 export function dptParts(value: string | null): number[] | null {
   const match = value?.match(/^(?:DPT-(\d+)|DPST-(\d+)-(\d+))$/);
@@ -109,7 +130,8 @@ export function deriveComObjectView(objects: ComObjectNode[], filters: ComFilter
     return (!needle || descriptionMatch || fields.some(contains))
       && (filters.status === "all" || state === filters.status)
       && (filters.link === "all" || (o.links.length > 0) === (filters.link === "linked"))
-      && matchesDpt(o, filters.dpt);
+      && matchesDpt(o, filters.dpt)
+      && matchesPriority(o, filters.priority);
   });
   const sourceIndex = new Map(objects.map((o, i) => [o.id, i]));
   const key = (o: ComObjectNode): string | number | null => {
@@ -120,6 +142,7 @@ export function deriveComObjectView(objects: ComObjectNode[], filters: ComFilter
       case "dpt": return effectiveDpt(o);
       case "addresses": return o.links.map(l => l.address).filter((a): a is string => a !== null).sort(collator.compare)[0] ?? null;
       case "status": { const rank = ACTIVATION_ORDER.indexOf(o.activation); return rank < 0 ? ACTIVATION_ORDER.length : rank; }
+      case "priority": { const token = effectivePriorityToken(o); return token === null ? null : PRIORITY_ORDER.indexOf(token); }
       case "channel": { const c = evaluatedChannel(o); return c?.text || c?.name || null; }
       default: return null;
     }

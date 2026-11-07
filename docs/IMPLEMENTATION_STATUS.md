@@ -76,6 +76,15 @@ is never recomputed or hidden. The object table shows one notice when it is not
 [Contract](contracts/saved-folder-currency.md),
 [delivery record](status/2026-11-07-saved-folder-currency.md).
 
+## Object-table priority column (7 November 2026)
+
+An optional, read-only *Priority* column in the device's communication-object
+table (toolbar toggle, off by default, remembered as the `comTablePriorityColumn`
+setting) shows `effective_priority` as token plus a short source tag, sorts
+Low/High/Alert with unresolved last and adds a Priority filter. Web-only; no
+API, storage or programming change. [Table contract](COMMUNICATION_OBJECT_TABLE.md#presentation-and-derived-data),
+[delivery record](status/2026-11-07-priority-column.md).
+
 ## Editable object priority (7 November 2026)
 
 `Command::SetComObjectPriority` sets or clears `ComObjectInstance.priority_edit`

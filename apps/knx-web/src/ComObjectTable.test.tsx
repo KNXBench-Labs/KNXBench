@@ -10,13 +10,17 @@ import type { ProjectTree } from "./bindings/ProjectTree";
 import type { ProjectTreeNode } from "./bindings/ProjectTreeNode";
 import type { ProductFolderCaption } from "./bindings/ProductFolderCaption";
 import { messages as en } from "./messages/en";
+import { messages as de } from "./messages/de";
+import { getSetting, resetSettingsForTests, setSetting, settingsStorage } from "./settingsStore";
+import { resetUiLanguageForTests } from "./uiLanguage";
+import type { EffectivePriorityView } from "./bindings/EffectivePriorityView";
 function object(id: number, overrides: Partial<ComObjectNode> = {}): ComObjectNode {
   return { saved_instance_priority: { status: "unavailable", reason: "NotCaptured" }, effective_priority: { status: "unresolved", reason: "InstanceUnavailable", source: null, raw: null }, id, number: id, name: `Object ${id}`, function_text: null, description: null,
     description_layer: null, dpt: null, dpt_layer: null, program_dpt: null, dpt_text: null,
     is_active: true, activation: "NotEvaluated", channel: null, read: false, write: false,
     transmit: false, update: false, communication: true, read_on_init: false, links: [], ...overrides };
 }
-beforeEach(() => vi.clearAllMocks());
+beforeEach(() => { vi.clearAllMocks(); resetSettingsForTests(); });
 const api = vi.hoisted(() => ({ deviceParameters: vi.fn().mockResolvedValue({ programId: null, sections: [], stale: [], diagnostics: [] }),
   setComObjectDpt: vi.fn(), setComObjectDescription: vi.fn(), setComObjectFlag: vi.fn(), unlinkComObject: vi.fn(), linkComObject: vi.fn() }));
 vi.mock("./api", () => ({ ...api, errorMessage: String }));
@@ -603,4 +607,119 @@ it("WP-06 folder currency: the device-level notice follows the server and only a
   await act(async () => [...host.querySelectorAll<HTMLButtonElement>("button")].find(b => b.textContent === "By saved project folder")!.click());
   expect(notice()?.textContent).toBe(en["comTable.folderCurrency.changed"]);
   await act(async () => root.unmount()); host.remove();
+});
+
+const priority = (view: EffectivePriorityView) => ({ effective_priority: view });
+const PRIORITIES: ComObjectNode[] = [
+  object(1, priority({ status: "resolved", value: "Alert", source: { kind: "product", layer: "ProgramRef", omission: "AttributeOmitted" } })),
+  object(2, priority({ status: "unresolved", reason: "InstanceEmpty", source: { kind: "instance" }, raw: "" })),
+  object(3, priority({ status: "resolved", value: "Low", source: { kind: "userEdit" } })),
+  object(4, priority({ status: "resolved", value: "High", source: { kind: "instance" } })),
+];
+const headings = (host: HTMLElement) => [...host.querySelectorAll("thead th")].map(n => n.getAttribute("data-column"));
+it("WP-06 priority column: hidden by default, toggled and remembered as a view preference without writes", async () => {
+  const v = await render(PRIORITIES);
+  expect(headings(v.host)).toEqual(["number", "name", "function", "dpt", "addresses", "status"]);
+  expect(v.host.querySelector(".com-object-priority")).toBeNull();
+  expect(v.host.querySelector(`[aria-label="${en["comTable.priorityFilter"]}"]`)).toBeNull();
+  const toggle = v.host.querySelector<HTMLButtonElement>(".com-table-priority-toggle")!;
+  expect(toggle.textContent).toBe(en["comTable.priorityColumn"]);
+  expect(toggle.getAttribute("aria-pressed")).toBe("false");
+  await v.click(toggle);
+  expect(getSetting("comTablePriorityColumn")).toBe(true);
+  expect(toggle.getAttribute("aria-pressed")).toBe("true");
+  expect(headings(v.host)).toEqual(["number", "name", "function", "dpt", "addresses", "status", "priority"]);
+  expect(v.host.querySelector('th[data-column="priority"]')?.textContent).toContain("Priority");
+  // Group headings and editor rows span every visible column.
+  expect(v.host.querySelector<HTMLTableCellElement>(".com-object-channel th")!.colSpan).toBe(7);
+  expect(v.host.querySelector<HTMLTableCellElement>(".com-object-editor-row td")!.colSpan).toBe(7);
+  await v.click(v.button("All objects"));
+  expect(headings(v.host)).toEqual(["number", "name", "function", "dpt", "addresses", "status", "priority", "channel"]);
+  expect(v.host.querySelector<HTMLTableCellElement>(".com-object-editor-row td")!.colSpan).toBe(8);
+  const cell = (id: number) => v.host.querySelector<HTMLElement>(`tr[data-object-id="${id}"] .com-object-priority`)!;
+  expect([1, 2, 3, 4].map(id => [cell(id).dataset.priority, cell(id).dataset.prioritySource ?? null, cell(id).textContent])).toEqual([
+    ["Alert", "product", "Alertproduct"], ["unresolved", null, "—Unresolved"], ["Low", "userEdit", "Lowyours"], ["High", "instance", "Highsaved"]]);
+  expect(cell(1).title).toContain("object reference (ComObjectRef)");
+  expect(cell(2).title).toContain(en["inspector.effectivePriority.unresolved.InstanceEmpty"]);
+  expect(cell(3).title).toContain(en["inspector.effectivePriority.source.userEdit"]);
+  for (const call of Object.values(api)) if (call !== api.deviceParameters) expect(call).not.toHaveBeenCalled();
+  await v.cleanup();
+  // A fresh table (another device, a reload) starts from the remembered preference.
+  const again = await render(PRIORITIES);
+  expect(headings(again.host)).toContain("priority");
+  await again.cleanup();
+});
+it("WP-06 priority column: sorts by token with unresolved last, filters, and hiding drops its filter and sort", async () => {
+  const v = await render(PRIORITIES);
+  await v.click(v.host.querySelector<HTMLButtonElement>(".com-table-priority-toggle")!);
+  await v.click(v.button("All objects"));
+  const order = () => [...v.host.querySelectorAll("tr[data-object-id]:not([hidden])")].map(n => n.getAttribute("data-object-id"));
+  const sort = () => v.click(v.host.querySelector<HTMLButtonElement>('th[data-column="priority"] button')!);
+  await sort(); expect(order()).toEqual(["3", "4", "1", "2"]);
+  await sort(); expect(order()).toEqual(["1", "4", "3", "2"]);
+  const filter = v.input(en["comTable.priorityFilter"]) as unknown as HTMLSelectElement;
+  expect([...filter.options].map(o => o.value)).toEqual(["all", "Low", "High", "Alert", "unresolved"]);
+  await v.set(filter, "unresolved"); expect(order()).toEqual(["2"]);
+  await v.set(filter, "High"); expect(order()).toEqual(["4"]);
+  expect(v.host.querySelector(".com-table-count")?.textContent).toBe("1 / 4 objects");
+  await v.click(v.host.querySelector<HTMLButtonElement>(".com-table-priority-toggle")!);
+  expect(getSetting("comTablePriorityColumn")).toBe(false);
+  expect(headings(v.host)).not.toContain("priority");
+  expect(v.host.querySelector(".com-table-count")?.textContent).toBe("4 / 4 objects");
+  expect(order()).toEqual(["1", "2", "3", "4"]);
+  await v.cleanup();
+});
+it("WP-06 priority column: an unknown server state is shown as unresolved, never as a token", async () => {
+  setSetting("comTablePriorityColumn", true);
+  const odd = [object(1, priority({ status: "resolved", value: "Urgent", source: { kind: "userEdit" } } as unknown as EffectivePriorityView)),
+    object(2, priority({ status: "resolved", value: "Low", source: { kind: "later" } } as unknown as EffectivePriorityView)),
+    object(3, { effective_priority: undefined } as unknown as Partial<ComObjectNode>)];
+  const v = await render(odd);
+  await v.click(v.button("All objects"));
+  const cells = [...v.host.querySelectorAll<HTMLElement>(".com-object-priority")];
+  expect(cells.map(c => [c.dataset.priority, c.dataset.prioritySource ?? null])).toEqual([["unresolved", null], ["Low", null], ["unresolved", null]]);
+  expect(cells[2].title).toBe(en["inspector.effectivePriority.unrecognisedState"]);
+  await v.cleanup();
+});
+it("WP-06 priority column speaks German", async () => {
+  settingsStorage.setItem("uiLanguage", "de"); resetUiLanguageForTests();
+  setSetting("comTablePriorityColumn", true);
+  const v = await render(PRIORITIES);
+  expect(v.host.querySelector('th[data-column="priority"]')?.textContent).toContain(de["comTable.priority"]);
+  expect(v.host.querySelector(".com-table-priority-toggle")?.textContent).toBe(de["comTable.priorityColumn"]);
+  expect(v.host.querySelector(`[aria-label="${de["comTable.priorityFilter"]}"]`)).not.toBeNull();
+  await v.click([...v.host.querySelectorAll<HTMLButtonElement>("button")].find(b => b.textContent === de["comTable.flat"])!);
+  expect(v.host.querySelector('tr[data-object-id="3"] .com-object-priority-source')?.textContent).toBe(de["comTable.prioritySource.userEdit"]);
+  await v.cleanup();
+  settingsStorage.setItem("uiLanguage", "en"); resetUiLanguageForTests();
+});
+
+it("WP-06 priority column: hiding it through the settings store (another window) also drops its filter and sort", async () => {
+  setSetting("comTablePriorityColumn", true);
+  const v = await render(PRIORITIES);
+  await v.click(v.button("All objects"));
+  const order = () => [...v.host.querySelectorAll("tr[data-object-id]:not([hidden])")].map(n => n.getAttribute("data-object-id"));
+  await v.click(v.host.querySelector<HTMLButtonElement>('th[data-column="priority"] button')!);
+  await v.set(v.input(en["comTable.priorityFilter"]) as unknown as HTMLSelectElement, "High");
+  expect(order()).toEqual(["4"]);
+  await act(async () => setSetting("comTablePriorityColumn", false));
+  expect(headings(v.host)).not.toContain("priority");
+  expect(order()).toEqual(["1", "2", "3", "4"]);
+  expect(v.host.querySelector(".com-table-count")?.textContent).toBe("4 / 4 objects");
+  await act(async () => setSetting("comTablePriorityColumn", true));
+  expect((v.input(en["comTable.priorityFilter"]) as unknown as HTMLSelectElement).value).toBe("all");
+  expect(v.host.querySelector('th[data-column="priority"]')?.getAttribute("aria-sort")).toBe("none");
+  expect(order()).toEqual(["1", "2", "3", "4"]);
+  await v.cleanup();
+});
+it("WP-06 priority column: folder-view headings span it and an unresolved cell has a spoken name", async () => {
+  setSetting("comTablePriorityColumn", true);
+  const v = await render(PRIORITIES);
+  await v.click(v.button(en["comTable.byFolder"]));
+  expect(headings(v.host)).toEqual(["number", "name", "function", "dpt", "addresses", "status", "priority"]);
+  for (const th of v.host.querySelectorAll<HTMLTableCellElement>(".com-object-channel th")) expect(th.colSpan).toBe(7);
+  const unresolved = v.host.querySelector<HTMLElement>('tr[data-object-id="2"] .com-object-priority')!;
+  expect(unresolved.querySelector('[aria-hidden="true"]')?.textContent).toBe("—");
+  expect(unresolved.querySelector(".sr-only")?.textContent).toBe(en["comTable.unresolvedPriority"]);
+  await v.cleanup();
 });

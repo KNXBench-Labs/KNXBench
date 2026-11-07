@@ -516,3 +516,59 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
     expect(state.unexpected).toEqual([]);
   });
 }
+
+// WP-06: the optional priority column is off by default, a remembered view
+// preference, and shows the server's effective value with its winning source.
+for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
+  test(`${language} ${width}px: the optional priority column shows effective values and stays view-only`, async ({ page }) => {
+    const m = language === "en" ? en : de;
+    const theme = width === 1440 ? "graphite" : "porcelain";
+    await page.setViewportSize({ width, height: 900 });
+    const state = await intercept(page, language, 8, theme);
+    state.objects[0] = { ...state.objects[0], effective_priority: { status: "resolved", value: "Alert", source: { kind: "product", layer: "ProgramRef", omission: "AttributeOmitted" } } };
+    state.objects[1] = { ...state.objects[1], effective_priority: { status: "resolved", value: "Low", source: { kind: "userEdit" } } };
+    state.objects[2] = { ...state.objects[2], effective_priority: { status: "resolved", value: "High", source: { kind: "instance" } } };
+    await openProject(page, language); await openList(page, language);
+    await page.locator(".devices-table tbody td:nth-child(3) button").first().click();
+    const panel = page.locator(".com-table-panel");
+    await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
+    await expect(panel.locator("thead th")).toHaveCount(6);
+    await expect(panel.getByRole("combobox", { name: m["comTable.priorityFilter"] })).toHaveCount(0);
+    const before = JSON.stringify(state.tree), requestStart = state.requests.length;
+    const toggle = panel.getByRole("button", { name: m["comTable.priorityColumn"], exact: true });
+    await expect(toggle).toHaveAttribute("aria-pressed", "false");
+    await toggle.click();
+    await expect(toggle).toHaveAttribute("aria-pressed", "true");
+    await expect(panel.locator('th[data-column="priority"]')).toContainText(m["comTable.priority"]);
+    await panel.getByRole("button", { name: m["comTable.flat"], exact: true }).click();
+    await expect(panel.locator("thead th")).toHaveCount(8);
+    const cell = (id: number) => panel.locator(`tr[data-object-id="${id}"] .com-object-priority`);
+    await expect(cell(1)).toHaveAttribute("data-priority", "Alert");
+    await expect(cell(1).locator(".com-object-priority-source")).toHaveText(m["comTable.prioritySource.product"]);
+    await expect(cell(2).locator(".com-object-priority-source")).toHaveText(m["comTable.prioritySource.userEdit"]);
+    await expect(cell(3)).toHaveAttribute("data-priority", "High");
+    await expect(cell(4)).toHaveAttribute("data-priority", "unresolved");
+    await expect(cell(4)).toHaveAttribute("title", new RegExp(m["inspector.effectivePriority.unresolved.InstanceUnavailable"].replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+    await panel.locator('th[data-column="priority"] button').click();
+    await expect(panel.locator('th[data-column="priority"]')).toHaveAttribute("aria-sort", "ascending");
+    await expect(panel.locator("tr[data-object-id]:visible").first()).toHaveAttribute("data-object-id", "2");
+    await panel.getByRole("combobox", { name: m["comTable.priorityFilter"] }).selectOption("unresolved");
+    await expect(panel.locator("tr[data-object-id]:visible")).toHaveCount(5);
+    const alignment = await panel.locator("table").evaluate(table => {
+      const head = [...table.querySelectorAll("thead th")].map(n => n.getBoundingClientRect());
+      const row = [...table.querySelector("tr[data-object-id]:not([hidden])")!.children].map(n => n.getBoundingClientRect());
+      return head.map((h, i) => Math.abs(h.left - row[i].left));
+    });
+    expect(alignment.every(delta => delta < 1)).toBe(true);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1);
+    if (process.env.KNX_CO_CAPTURE_DIR) await page.screenshot({ path: join(process.env.KNX_CO_CAPTURE_DIR, `co-priority-${language}-${width}.png`) });
+    await toggle.click();
+    await expect(panel.locator("thead th")).toHaveCount(7);
+    await expect(panel.locator("tr[data-object-id]:visible")).toHaveCount(8);
+    // Only the view preference was written; the project is untouched.
+    expect(state.settings.comTablePriorityColumn).toBe(false);
+    expect(state.requests.slice(requestStart).filter(r => !r.startsWith("GET ") && r !== "POST /api/achievements/record")).toEqual(["PUT /api/settings", "PUT /api/settings"]);
+    expect(JSON.stringify(state.tree)).toBe(before);
+    expect(state.unexpected).toEqual([]);
+  });
+}

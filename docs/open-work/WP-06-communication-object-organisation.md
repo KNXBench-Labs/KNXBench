@@ -74,8 +74,9 @@ priority losslessly.
    Read-only effective resolution is delivered
    ([contract](../contracts/effective-object-priority.md)); editing as a
    separate user layer with a programming guard follows
-   ([contract](../contracts/object-priority-edit.md), KL-188). A web
-   object-table column remains open (owner UX decision).
+   ([contract](../contracts/object-priority-edit.md), KL-188). An optional
+   read-only object-table column (off by default) shows the effective value
+   ([table contract](../COMMUNICATION_OBJECT_TABLE.md#presentation-and-derived-data)).
    [Source admission](../research/2026-11-06-object-priority-provenance.md)
    does not establish new wire priority or whole-WP acceptance.
    The bounded product-query origin is software-accepted and published as

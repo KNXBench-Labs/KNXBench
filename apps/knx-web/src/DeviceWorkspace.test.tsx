@@ -47,6 +47,27 @@ it("places only the owning object's function dropdown below its DPT, without dev
   await cleanup();
 });
 
+it("shows each object's own captured saved priority read-only in its editor, beside the flags", async () => {
+  const source = { kind: "CapturedSavedInstance" as const, source_schema: 23, device_source: { path: "P-0001/0.xml", ets_id: "D-1" },
+    object_source: { path: "P-0001/0.xml", ets_id: "O-1" }, owner_xpath: "/KNX/Project", topology_sha256: "b".repeat(64) };
+  const { host, cleanup } = await render(NO_REFERENCE, false, [
+    object(1, { saved_instance_priority: { status: "declared", raw: "Alert", token_status: "Known", source } }),
+    object(2, { saved_instance_priority: { status: "absent", omission: "AttributeOmitted", source } }),
+  ]);
+  await act(async () => host.querySelector<HTMLButtonElement>(".com-object-channel-summary")!.click());
+  for (const id of [1, 2]) {
+    const details = host.querySelector<HTMLDetailsElement>(`[data-object-id="${id}"] details`)!;
+    await act(async () => { details.open = true; details.dispatchEvent(new Event("toggle")); });
+  }
+  const row = (id: number) => host.querySelector<HTMLElement>(`[data-editor-id="${id}"] .com-object-saved-priority`)!;
+  expect(row(1).previousElementSibling?.classList.contains("com-object-flags")).toBe(true);
+  expect(row(1).querySelector(".saved-priority-raw")?.textContent).toBe("Alert");
+  expect(row(2).querySelector(".saved-priority-raw")).toBeNull();
+  expect(row(2).textContent).toContain(englishMessages["inspector.savedPriority.absent.AttributeOmitted"]);
+  expect(row(1).querySelector("input, select, button")).toBeNull();
+  await cleanup();
+});
+
 const NO_REFERENCE: DeviceProductNode = { product_ref: null, program_ref: null, catalog: null, resolution: "NoReference" };
 
 function detail(product: DeviceProductNode = NO_REFERENCE, comObjects: DeviceDetail["com_objects"] = [], id = 9): DeviceDetail {

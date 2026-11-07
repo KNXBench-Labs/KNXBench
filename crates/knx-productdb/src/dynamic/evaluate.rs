@@ -29,7 +29,7 @@
 //! corpus consistency, not documented rules — see RESEARCH.md §4.3's
 //! `[D]`/`[V]`/`[A]` markers, preserved here in the same spirit.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 
 #[cfg(test)]
@@ -1339,6 +1339,12 @@ pub struct Activation {
     /// a `ModuleDef` wrapping its refs in an unrecognized node multiplies
     /// them with fan-out exactly as unwrapped refs would.
     skipped_refs_reported: usize,
+    /// `choose` controllers, keyed like [`Seen`], that a previous pass found
+    /// referenced but not active; their `choose` activates nothing
+    /// ([`evaluate`]). Internal; reset before the result is returned.
+    inactive_controllers: HashSet<ScopeKey>,
+    /// Every `choose` controller this pass consulted. Internal, reset.
+    consulted_controllers: HashSet<ScopeKey>,
     /// Internal admission state; input trees and catalogue data stay intact.
     work_units_used: usize,
     work_budget_exhausted: bool,
@@ -1562,8 +1568,72 @@ impl Activation {
 /// [`MAX_MODULE_EXPANSIONS`]'s budget on total `Module` expansions.
 /// ADR-0062's [`MAX_EVALUATION_WORK`] also admits repeated work producing
 /// no activations. Refusal preserves an explicitly incomplete result prefix.
+///
+/// `[V]` A `choose` whose controlling `ParameterRef` is placed in the tree
+/// (some `ParameterRefRef` names it) but is not active in that scope
+/// activates nothing. ETS 6.4 download images, captured against KNXBench's
+/// own simulator, wrote the value of the active controller's branch and
+/// ignored the branch an inactive controller's stored value selected, also
+/// where that branch would have written a larger value
+/// (docs/research/2026-11-07-ldctrlwriteprop-and-byte-order.md, ADR-0160). Hence
+/// passes: each one marks the controllers the previous pass left inactive,
+/// until none is added. Skipping only removes activations, so the set only
+/// grows and the passes end; they share one [`MAX_EVALUATION_WORK`]. A
+/// controller no `ParameterRefRef` names is read as before (unobserved).
 pub fn evaluate(trees: &ProgramTrees, values: &ValueMap) -> Activation {
-    let mut activation = Activation::default();
+    let placed = placed_parameter_refs(trees);
+    let mut inactive_controllers = HashSet::new();
+    let mut work_units_used = 0;
+    loop {
+        let mut activation = evaluate_pass(trees, values, inactive_controllers, work_units_used);
+        let active: HashSet<ScopeKey> = activation
+            .parameter_refs
+            .iter()
+            .map(|r| (scope_key_chain(r.scope.as_ref()), r.ref_id.clone()))
+            .collect();
+        let consulted = std::mem::take(&mut activation.consulted_controllers);
+        let newly: Vec<ScopeKey> = consulted
+            .into_iter()
+            .filter(|key| placed.contains(key.1.as_str()) && !active.contains(key))
+            .collect();
+        if activation.work_budget_exhausted || newly.is_empty() {
+            // Admission state is local to this call, not part of result
+            // equality. Completeness remains explicit in the retained
+            // budget diagnostics.
+            activation.inactive_controllers = HashSet::new();
+            activation.work_units_used = 0;
+            activation.work_budget_exhausted = false;
+            activation.activation_budget_diagnosed = false;
+            return activation;
+        }
+        work_units_used = activation.work_units_used;
+        inactive_controllers = std::mem::take(&mut activation.inactive_controllers);
+        inactive_controllers.extend(newly);
+    }
+}
+
+/// Every `ParameterRefRef/@RefId` in the program's tree or a `ModuleDef`'s.
+fn placed_parameter_refs(trees: &ProgramTrees) -> HashSet<&str> {
+    std::iter::once(&trees.program)
+        .chain(trees.modules.values())
+        .flat_map(|tree| tree.nodes.values())
+        .filter(|node| node.kind == "ParameterRefRef")
+        .filter_map(|node| node.ref_id.as_deref())
+        .collect()
+}
+
+/// One single-pass, depth-first walk in document order (design D6).
+fn evaluate_pass(
+    trees: &ProgramTrees,
+    values: &ValueMap,
+    inactive_controllers: HashSet<ScopeKey>,
+    work_units_used: usize,
+) -> Activation {
+    let mut activation = Activation {
+        inactive_controllers,
+        work_units_used,
+        ..Activation::default()
+    };
     let mut seen_params = Seen::new();
     let mut seen_coms = Seen::new();
     let mut expansions_used = 0usize;
@@ -1584,11 +1654,6 @@ pub fn evaluate(trees: &ProgramTrees, values: &ValueMap) -> Activation {
             PathContext::default(),
         );
     }
-    // Admission state is local to this call, not part of result equality.
-    // Completeness remains explicit in the retained budget diagnostics.
-    activation.work_units_used = 0;
-    activation.work_budget_exhausted = false;
-    activation.activation_budget_diagnosed = false;
     activation
 }
 
@@ -2393,6 +2458,13 @@ fn evaluate_choose(
     scope: Option<&Rc<ModuleScope>>,
     path: PathContext<'_>,
 ) {
+    if let Some(controller) = node.ref_id.as_deref() {
+        let key = (scope_key_chain(scope), controller.to_owned());
+        if activation.inactive_controllers.contains(&key) {
+            return; // An inactive controller selects nothing (`evaluate`).
+        }
+        activation.consulted_controllers.insert(key);
+    }
     let Some(control_kind) = node.control_kind.as_ref() else {
         activation.diagnose(
             scope,

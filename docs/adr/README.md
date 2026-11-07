@@ -164,3 +164,5 @@ the old one gets `Status: Superseded by ADR-NNNN`.
 | [0156](0156-operation-recorder-and-diagnostic-bundle.md) | Record every device operation; report problems through one consented bundle | Accepted | 2026-10-29 |
 | [0157](0157-rail-built-in-presentation.md) | Rail is a built-in light/dark pair with a controlled presentation | Accepted | 2026-11-02 |
 | [0158](0158-object-priority-provenance.md) | Object priority keeps source provenance separate from wire priority | Accepted (bounded product-query increment; project priority remains open) | 2026-11-06 |
+| [0159](0159-little-endian-numbers-and-fixed-load-steps.md) | LittleEndian numbers and fixed load steps follow observed ETS images | Accepted | 2026-11-07 |
+| [0160](0160-inactive-choose-controllers-select-nothing.md) | A choose whose placed controller is inactive selects nothing | Accepted | 2026-11-07 |

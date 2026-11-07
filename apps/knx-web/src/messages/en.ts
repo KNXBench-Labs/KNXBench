@@ -1401,7 +1401,7 @@ export const messages = {
   "gatewayRefusal.timeout": "The gateway {gateway} did not answer. Check its address and that this computer can reach it.",
   "gatewayRefusal.serverStopping": "The server is stopping. Nothing was started and nothing was sent to the bus.",
   "gatewayRefusal.byteOrder":
-    "Device {address} cannot be downloaded yet: its application program declares the byte order {order}, and KNXBench writes numbers high octet first only. Nothing was sent.",
+    "Device {address} cannot be downloaded yet: its application program declares the byte order {order}, which KNXBench does not write for this kind of device. Nothing was sent.",
   "activityLive.state.running": "Running",
   "activityLive.state.finished": "Finished",
   "activityLive.state.failed": "Failed (see the tool for details)",

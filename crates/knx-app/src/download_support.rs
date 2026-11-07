@@ -145,8 +145,8 @@ pub enum UnsupportedCategory {
     ParameterValue,
     /// A product structure the image builder does not write.
     ImageStructure,
-    /// The program declares a byte order other than `BigEndian`; numbers
-    /// are written high octet first only (KL-170).
+    /// The program declares a byte order KNXBench does not write: anything
+    /// but `BigEndian`, and `LittleEndian` outside a memory layout (KL-170).
     ByteOrder,
     /// The product database itself failed or lacks the program's code.
     ProductData,

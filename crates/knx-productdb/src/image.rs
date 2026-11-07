@@ -59,14 +59,15 @@
 //!   refused by name. A `TypeNumber` bound that is declared but not an integer
 //!   (empty, decimal, scientific, out of range) refuses the value by name; an
 //!   absent bound constrains nothing (docs/contracts/parameter-number-bound-admission.md).
-//! - **Byte order.** A program whose `Options/@ParameterByteOrder` is
-//!   anything but `BigEndian` is refused: numbers are written high octet
-//!   first (`knx_core::commissioning::parameter_image`). Corpus evidence
-//!   points at whole-octet numbers low octet first for `LittleEndian`, but no
-//!   source defines it and no device has confirmed it (KL-170,
-//!   docs/research/parameter-byte-order.md). [`crate::byte_order_probe`]
-//!   reads what an ETS-programmed device holds instead (ADR-0119); nothing it
-//!   finds reaches this module.
+//! - **Byte order.** Numbers are written high octet first
+//!   (`knx_core::commissioning::parameter_image`), as `BigEndian` and an
+//!   absent declaration (its schema default) need. For a memory (`070nh`)
+//!   program declaring `ParameterByteOrder="LittleEndian"`, a number whose
+//!   field starts on an octet and is whole octets wide is written low octet
+//!   first; one inside a single octet has no order; any other field crossing
+//!   an octet boundary is refused; texts stay octet strings, first character
+//!   first (KL-170, docs/research/parameter-byte-order.md, ADR-0159). Legacy
+//!   layouts and any other declared order still refuse the image.
 //! - **Priority.** `[A]` *Project Schema23* lists `Low`, `High` and `Alert`
 //!   (§1.1.2.4), and *Resources* lists `System`, `Urgent`, `Normal` and
 //!   `Low` (§4.18.3.1.2.1). No PDF maps one set onto the other, so only an
@@ -113,7 +114,7 @@ use knx_core::commissioning::group_tables::{
     build_group_tables, GroupTableError, TableCapacity, TableLink,
 };
 use knx_core::commissioning::parameter_image::{
-    ParameterField, ParameterImage, ParameterImageError,
+    reverse_octets, ParameterField, ParameterImage, ParameterImageError,
 };
 use knx_core::IndividualAddress;
 use rusqlite::Connection;
@@ -246,6 +247,8 @@ pub enum AttributedValue {
     Number {
         value: u64,
         nonnegative_signed: bool,
+        /// Written octet-reversed (`LittleEndian`, KL-170); decode likewise.
+        low_octet_first: bool,
     },
     Text {
         value: String,
@@ -299,11 +302,12 @@ pub enum ImageError {
     UnknownProgram(String),
     /// The `Dynamic` evaluation could not decide everything.
     Evaluation(Vec<ScopedDiagnostic>),
-    /// The program declares a `ParameterByteOrder` other than `BigEndian`;
-    /// this module writes numbers high octet first only (KL-170). Its own
-    /// variant so a client can explain it instead of quoting this text.
+    /// The program declares a `ParameterByteOrder` this module does not
+    /// write: anything but `BigEndian`, and `LittleEndian` outside a memory
+    /// (`070nh`) layout (KL-170, ADR-0159). Its own variant so a client can
+    /// explain it instead of quoting this text.
     UnsupportedByteOrder {
-        /// The declared order, verbatim (e.g. `LittleEndian`).
+        /// The declared order, verbatim (e.g. `LittleEndian` for a legacy layout).
         order: String,
     },
     /// A product structure this module does not write.
@@ -401,8 +405,8 @@ impl fmt::Display for ImageError {
             ),
             ImageError::UnsupportedByteOrder { order } => write!(
                 f,
-                "not supported for a download: ParameterByteOrder {order:?}: numbers are written \
-                 high octet first"
+                "not supported for a download: ParameterByteOrder {order:?}: only BigEndian, and \
+                 LittleEndian in a memory (070nh) layout, are written"
             ),
             ImageError::Unsupported { what } => write!(f, "not supported for a download: {what}"),
             ImageError::Value {
@@ -566,15 +570,15 @@ fn build_image_selected(
             });
         }
     }
-    if let Some(order) = code
-        .options
-        .get("ParameterByteOrder")
-        .filter(|order| *order != "BigEndian")
-    {
-        return Err(ImageError::UnsupportedByteOrder {
-            order: order.clone(),
-        });
-    }
+    let low_octet_first = match code.options.get("ParameterByteOrder").map(String::as_str) {
+        None | Some("BigEndian") => false,
+        Some("LittleEndian") if layout == ImageLayout::Easy3 => true,
+        Some(order) => {
+            return Err(ImageError::UnsupportedByteOrder {
+                order: order.to_string(),
+            })
+        }
+    };
     let protected_tables = if layout == ImageLayout::System2 {
         crate::system2::project_tool_metadata(&code).map_err(|error| ImageError::Unsupported {
             what: error.to_string(),
@@ -736,8 +740,21 @@ fn build_image_selected(
             .ok_or_else(|| ImageError::Unsupported {
                 what: format!("{parameter}: segment {segment_id} ships no Data"),
             })?;
+        let ordered = match &value {
+            Encoded::Number(number) if low_octet_first && crosses_octet_boundary(field) => {
+                reverse_octets(field, *number).map_err(|_| ImageError::Unsupported {
+                    what: format!(
+                        "{parameter_ref}: ParameterByteOrder \"LittleEndian\" field at bit \
+                         offset {} with {} bits has no established octet order",
+                        field.bit_offset, field.size_in_bit
+                    ),
+                })?
+            }
+            Encoded::Number(number) => *number,
+            Encoded::Text { .. } => 0,
+        };
         match &value {
-            Encoded::Number(number) => image.write(field, *number),
+            Encoded::Number(_) => image.write(field, ordered),
             Encoded::Text { octets, .. } => image.write_octets(field, octets),
         }
         .map_err(|error| overlap_or(error, parameter_ref, segment_id, &fields))?;
@@ -756,6 +773,7 @@ fn build_image_selected(
                 Encoded::Number(number) => AttributedValue::Number {
                     value: *number,
                     nonnegative_signed: facts.number_type.as_deref() == Some("signedInt"),
+                    low_octet_first: low_octet_first && crosses_octet_boundary(field),
                 },
                 Encoded::Text { text, .. } => AttributedValue::Text {
                     value: text.clone(),
@@ -1119,6 +1137,12 @@ fn unwritable_placement(parameter: &str, name: &str) -> ImageError {
 }
 
 /// The segment and field a parameter's placement puts it at.
+/// Whether `field` touches more than one octet, so that an octet order
+/// decides where its bits go (KL-170).
+fn crosses_octet_boundary(field: ParameterField) -> bool {
+    u32::from(field.bit_offset) + field.size_in_bit > 8
+}
+
 pub(crate) fn field_of<'a>(
     parameter: &str,
     placement: &'a ParameterPlacement,
@@ -1876,7 +1900,8 @@ mod tests {
             mode.value,
             AttributedValue::Number {
                 value: 1,
-                nonnegative_signed: false
+                nonnegative_signed: false,
+                low_octet_first: false
             }
         );
         let narrow = build_download_image(&conn, &request(&[("P-1_R-1", "2")], vec![])).unwrap();
@@ -2955,29 +2980,103 @@ mod tests {
         );
     }
 
-    /// `parameter_image` writes high octet first and leaves it to its
-    /// caller to refuse another declared order; this is that caller.
+    fn with_options(xml: &str, options: &str) -> String {
+        xml.replace("<Code>", &format!("{options}<Code>"))
+    }
+
+    /// KL-170: a `LittleEndian` memory program writes whole-octet numbers low
+    /// octet first, as an ETS download image of such a program holds them;
+    /// one-octet values and texts are the same either way.
     #[test]
-    fn a_program_declaring_another_byte_order_is_refused() {
-        let xml = kinds_program(
-            r#"<Options TextParameterEncoding="iso-8859-15" ParameterByteOrder="LittleEndian" />"#,
+    fn a_little_endian_program_writes_whole_octet_numbers_low_octet_first() {
+        let order = |order: &str| {
+            kinds_program(&format!(
+                r#"<Options TextParameterEncoding="iso-8859-15" ParameterByteOrder="{order}" />"#
+            ))
+        };
+        let little = build(&order("LittleEndian"), &[], vec![]).expect("little endian");
+        let big = build(&order("BigEndian"), &[], vec![]).expect("big endian");
+        // P-S8 = 2 at octet 0, P-S16 = 300 at octets 1-2, the text from octet 3.
+        assert_eq!(&octets(&big, "AS-4600")[..3], &[0x02, 0x01, 0x2C]);
+        assert_eq!(&octets(&little, "AS-4600")[..3], &[0x02, 0x2C, 0x01]);
+        assert_eq!(
+            octets(&little, "AS-4600")[3..],
+            octets(&big, "AS-4600")[3..]
         );
-        let error = build(&xml, &[], vec![]).unwrap_err();
-        // Typed since issue #10, so a client can explain it; the text is
-        // unchanged for the CLI and logs.
+        // The logical values are the same; only their attribution decodes reversed.
+        assert_eq!(little.parameters, big.parameters);
+        let attributed = |image: &DownloadImage, reference: &str| {
+            image
+                .parameter_fields
+                .iter()
+                .find(|field| field.reference == reference)
+                .map(|field| field.value.clone())
+        };
+        assert_eq!(
+            attributed(&little, "P-S16_R-1"),
+            Some(AttributedValue::Number {
+                value: 300,
+                nonnegative_signed: true,
+                low_octet_first: true
+            })
+        );
+        assert!(matches!(
+            attributed(&little, "P-S8_R-1"),
+            Some(AttributedValue::Number {
+                low_octet_first: false,
+                ..
+            })
+        ));
+        // The 16-bit union member at AS-4400 octet 13, default 255.
+        let little = build(
+            &with_options(PROGRAM, r#"<Options ParameterByteOrder="LittleEndian" />"#),
+            &[],
+            vec![],
+        )
+        .expect("little endian");
+        let big = build(PROGRAM, &[], vec![]).expect("undeclared is big endian");
+        assert_eq!(&octets(&big, "AS-4400")[13..15], &[0x00, 0xFF]);
+        assert_eq!(&octets(&little, "AS-4400")[13..15], &[0xFF, 0x00]);
+    }
+
+    /// A field crossing an octet boundary without being whole octets has no
+    /// observed little-endian placement, so it refuses the image by name.
+    #[test]
+    fn a_little_endian_field_across_an_octet_boundary_is_refused() {
+        // Mode 2 activates the 2-bit union member, moved to straddle octets 14-15.
+        let xml = with_options(PROGRAM, r#"<Options ParameterByteOrder="LittleEndian" />"#)
+            .replace(
+                r#"Offset="1" BitOffset="5" Value="2""#,
+                r#"Offset="1" BitOffset="7" Value="2""#,
+            );
+        let error = build(&xml, &[("P-1_R-1", "2")], vec![]).unwrap_err();
         assert!(
-            matches!(&error, ImageError::UnsupportedByteOrder { order } if order == "LittleEndian"),
+            matches!(&error, ImageError::Unsupported { what }
+                if what.starts_with("UP-2_R-4: ParameterByteOrder \"LittleEndian\" field at bit offset 7")),
+            "{error}"
+        );
+        let big = PROGRAM.replace(
+            r#"Offset="1" BitOffset="5" Value="2""#,
+            r#"Offset="1" BitOffset="7" Value="2""#,
+        );
+        build(&big, &[("P-1_R-1", "2")], vec![]).expect("big endian has a placement");
+    }
+
+    /// Any other declared order, and a little-endian legacy layout, keep the
+    /// typed refusal (issue #10); its text names what is written.
+    #[test]
+    fn another_declared_byte_order_is_refused() {
+        let xml = kinds_program(r#"<Options ParameterByteOrder="MiddleEndian" />"#);
+        let error = build(&xml, &[], vec![]).unwrap_err();
+        assert!(
+            matches!(&error, ImageError::UnsupportedByteOrder { order } if order == "MiddleEndian"),
             "{error}"
         );
         assert_eq!(
             error.to_string(),
-            "not supported for a download: ParameterByteOrder \"LittleEndian\": numbers are written \
-             high octet first"
+            "not supported for a download: ParameterByteOrder \"MiddleEndian\": only BigEndian, \
+             and LittleEndian in a memory (070nh) layout, are written"
         );
-        let big = kinds_program(
-            r#"<Options TextParameterEncoding="iso-8859-15" ParameterByteOrder="BigEndian" />"#,
-        );
-        build(&big, &[], vec![]).expect("the order this crate writes");
     }
 
     #[test]

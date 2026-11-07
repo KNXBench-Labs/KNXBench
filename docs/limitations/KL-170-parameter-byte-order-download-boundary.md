@@ -83,6 +83,20 @@ octet boundaries, floats, texts and negative values refused until observed
 as well. Swapping octets on suspicion is not a fix. Ledger `KL-170`.
 <!-- END retained catalogue record -->
 
+## Update 7 November 2026: whole-octet LittleEndian numbers are written
+
+ETS 6.4's own download images for three `LittleEndian` memory programs,
+recorded against KNXBench's simulator, hold all 9 discriminating whole-octet
+numbers low octet first ([research note](../research/2026-11-07-ldctrlwriteprop-and-byte-order.md)).
+This replaces the probe route of the lift condition above for that shape
+([ADR-0159](../adr/0159-little-endian-numbers-and-fixed-load-steps.md)): in a
+memory (`070nh`) layout such a number is now written low octet first, and the
+readback comparison reverses it the same way. Still refused, with the typed
+refusal: fields crossing an octet boundary without being whole octets, legacy
+(System 1/2) layouts and every other declared order; floats and negative
+values stay refused as everywhere. The resulting downloads are `untested`
+until a device confirms them. The probe remains useful as that confirmation.
+
 ## Re-check 17 October 2026: no new primary source
 
 The local specification collection is unchanged since 7 October; no new private

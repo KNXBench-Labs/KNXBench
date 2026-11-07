@@ -101,9 +101,9 @@ describe("describeGatewayRefusal", () => {
       error: "x", kind: "gatewayTimeout", gateway: "192.0.2.10:3671",
     }))!, en)).toBe("The gateway 192.0.2.10:3671 did not answer. Check its address and that this computer can reach it.");
     expect(describeGatewayRefusal(admitGatewayRefusal(refusal(422, {
-      error: "x", kind: "unsupportedByteOrder", address: "0.2.23", order: "LittleEndian",
+      error: "x", kind: "unsupportedByteOrder", address: "0.2.23", order: "MiddleEndian",
     }))!, en)).toBe("Device 0.2.23 cannot be downloaded yet: its application program declares the byte order "
-      + "LittleEndian, and KNXBench writes numbers high octet first only. Nothing was sent.");
+      + "MiddleEndian, which KNXBench does not write for this kind of device. Nothing was sent.");
   });
 
   it("speaks German in the Du form", () => {

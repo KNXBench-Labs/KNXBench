@@ -410,6 +410,10 @@ pub fn plan_memory_download_with_inferences(
                 });
             }
             LoadStep::Connect => steps.push(MemoryDownloadStep::Connect),
+            // `[V]` ETS 6.4 waited the declared time before the restart.
+            LoadStep::Delay { milliseconds } => steps.push(MemoryDownloadStep::Delay {
+                milliseconds: *milliseconds,
+            }),
             LoadStep::Disconnect => steps.push(MemoryDownloadStep::Disconnect),
             LoadStep::Restart => {
                 restarted = true;
@@ -420,6 +424,18 @@ pub fn plan_memory_download_with_inferences(
                 property_id,
                 data,
             } => steps.push(MemoryDownloadStep::CompareProperty {
+                object_index: *object_index,
+                property_id: *property_id,
+                inline_data: data.clone(),
+            }),
+            // `[V]` An ETS 6.4 download against KNXBench's simulator sends
+            // exactly this write where the procedure has it, between the
+            // compare and the unloads and again before the restart.
+            LoadStep::WriteProp {
+                object_index,
+                property_id,
+                data,
+            } => steps.push(MemoryDownloadStep::WriteProperty {
                 object_index: *object_index,
                 property_id: *property_id,
                 inline_data: data.clone(),

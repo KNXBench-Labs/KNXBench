@@ -1176,6 +1176,7 @@ selection. Expanding a row gives you:
 | DPT | Selects the object's datapoint type by number and localized name; preserves unknown existing values |
 | Description | Sets the object's description |
 | Flags | Read, Write, Transmit, Update, Communication, Read on init (with standard letters) |
+| Saved project priority | Read-only: the object's own priority declaration as captured from the imported project file, or why none was captured |
 | Group links | One row per directional link, with Unlink; paired links can be unlinked together |
 | New link | Pick an address, choose Send, Receive or Send + Receive, then click Link — or drop a group address from the Project Explorer on this row, which links it in the direction the row shows |
 
@@ -1193,6 +1194,15 @@ control; the current controls include both.
 These six flags are retained in native `.knxdb` project data. There is no
 `.knxproj` writer; editing a flag does not program hardware or establish that a
 manufacturer's application permits that combination.
+
+**Saved project priority** (current source, not yet released) shows what the
+imported ETS project file itself declared for this object instance, verbatim:
+a recognised value such as `Low`, an empty or unrecognised literal in quotes, a
+note that the object declared none, or why nothing was captured (for example a
+project saved before this was recorded, a module object or a file version that
+is not supported). A second line names the captured source schema and object. It is not the
+effective priority, not the product default and not what KNXBench would send on
+the bus, and it cannot be edited.
 
 This is the only place in the interface where a link between a communication object and
 a group address is created. [Working with group addresses](04-group-addresses.md)

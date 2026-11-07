@@ -37,8 +37,10 @@ adds a schema-23 source observation through native model/history and read-only
 projection. The additive 16→17 migration does not infer old declarations or
 absence: old files/history remain NotCaptured and retain their opaque facts.
 This is a captured saved-source fact, not effective, product or wire priority.
-Still open: effective resolution, editing, UI, report/comparison, wire encoding
-and whole-WP acceptance.
+A read-only object-editor row now shows that captured fact or its unavailable
+reason ([UI consumer](../contracts/saved-instance-priority.md#read-only-ui-consumer-7-november-2026)).
+Still open: effective resolution, editing, table column, report/comparison, wire
+encoding and whole-WP acceptance.
 [Execution and evidence](../status/2026-11-06-saved-instance-priority.md).
 
 Organise communication objects by source-backed folders and represent object
@@ -58,8 +60,9 @@ priority losslessly.
    comparison. [ADR-0158](../adr/0158-object-priority-provenance.md) defines
    raw/effective provenance and the bounded product-query origin increment;
    the captured instance/native-history/read-only GET slice is software-accepted
-   on main (`ed0cf7737`, see above). Effective resolution,
-   editing, comparison/report/UI consumers remain open.
+   on main (`ed0cf7737`, see above); a read-only object-editor row displays it.
+   Effective resolution, editing, table column and comparison/report consumers
+   remain open.
    [Source admission](../research/2026-11-06-object-priority-provenance.md)
    does not establish new wire priority or whole-WP acceptance.
    The bounded product-query origin is software-accepted and published as

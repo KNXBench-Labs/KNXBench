@@ -1177,6 +1177,7 @@ selection. Expanding a row gives you:
 | Description | Sets the object's description |
 | Flags | Read, Write, Transmit, Update, Communication, Read on init (with standard letters) |
 | Saved project priority | Read-only: the object's own priority declaration as captured from the imported project file, or why none was captured |
+| Effective project priority | Read-only: the priority that results for the project and where it comes from, or why it cannot be determined |
 | Group links | One row per directional link, with Unlink; paired links can be unlinked together |
 | New link | Pick an address, choose Send, Receive or Send + Receive, then click Link — or drop a group address from the Project Explorer on this row, which links it in the direction the row shows |
 
@@ -1203,6 +1204,18 @@ project saved before this was recorded, a module object or a file version that
 is not supported). A second line names the captured source schema and object. It is not the
 effective priority, not the product default and not what KNXBench would send on
 the bus, and it cannot be edited.
+
+**Effective project priority** (current source, not yet released) shows which
+priority applies to the object in the project. If the saved object declares
+`Low`, `High` or `Alert`, that value applies. If it declares nothing, or the
+project file has no entry for the object at all, the value comes from the
+installed product: the object reference (ComObjectRef) when it states one,
+otherwise the object (ComObject); the row names that source. An empty or
+unrecognised saved value is shown in quotes and stays unresolved instead of
+falling back to the product. Without an open product database, without an
+application program, or when the product states no priority, the row says so
+rather than assuming `Low`. This is a project value only: it is not read from
+the device, it is not what KNXBench sends on the bus, and it cannot be edited.
 
 This is the only place in the interface where a link between a communication object and
 a group address is created. [Working with group addresses](04-group-addresses.md)

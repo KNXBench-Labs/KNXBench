@@ -7,7 +7,9 @@
 
 use std::collections::HashMap;
 
+mod effective_priority;
 mod saved_instance_priority;
+pub use effective_priority::*;
 pub use saved_instance_priority::*;
 mod functions;
 pub use functions::{
@@ -779,6 +781,9 @@ pub enum ProductResolution {
 #[ts(export)]
 pub struct ComObjectNode {
     pub saved_instance_priority: SavedInstancePriorityView,
+    /// Read-only project-effective priority and its winning source (ADR-0158 §3).
+    /// Omitted declarations stay `ProductNotConsulted` until the server's product overlay.
+    pub effective_priority: EffectivePriorityView,
     pub id: u32,
     /// From `_O-<n>` in the source `RefId`.
     pub number: u16,
@@ -1156,8 +1161,10 @@ fn build_com_object_node(
     let description = resolved_text(project, &com.description);
     let description_layer = com.description.layer().map(|layer| format!("{layer:?}"));
     let flag = |o: &knx_core::Override<bool>| o.value().map(|r| r.value).unwrap_or(false);
+    let saved_instance_priority = saved_instance_priority::view(com, owner, bindings);
     ComObjectNode {
-        saved_instance_priority: saved_instance_priority::view(com, owner, bindings),
+        effective_priority: effective_priority::from_saved(&saved_instance_priority),
+        saved_instance_priority,
         id: com.id.0,
         number: com.number,
         name,

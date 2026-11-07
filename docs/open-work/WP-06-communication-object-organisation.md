@@ -41,8 +41,11 @@ A read-only object-editor row now shows that captured fact or its unavailable
 reason ([UI consumer](../contracts/saved-instance-priority.md#read-only-ui-consumer-7-november-2026)),
 project comparison reports its changes ([comparison consumer](../contracts/saved-instance-priority.md#comparison-consumer-7-november-2026))
 and the documentation report shows it as a column ([report consumer](../contracts/saved-instance-priority.md#documentation-report-consumer-7-november-2026)).
-Still open: effective resolution, editing, a web object-table column, wire
-encoding and whole-WP acceptance.
+A read-only effective priority now names the winning source (saved instance or
+product layer) and stays unresolved for empty/unknown declarations or missing
+product data ([effective contract](../contracts/effective-object-priority.md)).
+Still open: editing, a web object-table column, wire encoding, product-version
+staleness and whole-WP acceptance.
 [Execution and evidence](../status/2026-11-06-saved-instance-priority.md).
 
 Organise communication objects by source-backed folders and represent object
@@ -64,7 +67,9 @@ priority losslessly.
    the captured instance/native-history/read-only GET slice is software-accepted
    on main (`ed0cf7737`, see above); a read-only object-editor row displays it.
    Project comparison compares it and the documentation report shows it.
-   Effective resolution, editing and a web object-table column remain open.
+   Read-only effective resolution is delivered
+   ([contract](../contracts/effective-object-priority.md)); editing and a web
+   object-table column remain open.
    [Source admission](../research/2026-11-06-object-priority-provenance.md)
    does not establish new wire priority or whole-WP acceptance.
    The bounded product-query origin is software-accepted and published as

@@ -36,10 +36,12 @@ for (const language of ["en", "de"] as const) {
       const messages = language === "de" ? de : en;
       await expect(page.locator(".com-object-saved-priority .saved-priority-label")).toHaveText(messages["inspector.savedPriority.label"]);
       await expect(page.locator(".com-object-saved-priority .saved-priority-state")).toHaveText(messages["inspector.savedPriority.unavailable.NotCaptured"]);
+      await expect(page.locator(".com-object-effective-priority .saved-priority-label")).toHaveText(messages["inspector.effectivePriority.label"]);
+      await expect(page.locator(".com-object-effective-priority .saved-priority-state")).toHaveText(messages["inspector.effectivePriority.unresolved.InstanceUnavailable"]);
       const layout = await page.evaluate(() => {
         const flags = document.querySelector<HTMLElement>(".com-object-flags")!;
         const clipped = Array.from(document.querySelectorAll<HTMLElement>(
-          ".device-tabs button, .com-object-flags label, .com-object-saved-priority, .com-object-summary strong, .group-link-row, .individual-address-field",
+          ".device-tabs button, .com-object-flags label, .com-object-saved-priority, .com-object-effective-priority, .com-object-summary strong, .group-link-row, .individual-address-field",
         )).filter((element) => element.scrollWidth > element.clientWidth + 1)
           .map((element) => `${element.className || element.tagName}: ${element.scrollWidth}/${element.clientWidth}`);
         return {

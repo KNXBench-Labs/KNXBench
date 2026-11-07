@@ -2,11 +2,17 @@
 import type { ComObjectActivation } from "./ComObjectActivation";
 import type { ComObjectChannel } from "./ComObjectChannel";
 import type { ComObjectProjectFolder } from "./ComObjectProjectFolder";
+import type { EffectivePriorityView } from "./EffectivePriorityView";
 import type { GroupLinkNode } from "./GroupLinkNode";
 import type { SavedInstancePriorityView } from "./SavedInstancePriorityView";
 import type { TextFill } from "./TextFill";
 
-export type ComObjectNode = { saved_instance_priority: SavedInstancePriorityView, id: number,
+export type ComObjectNode = { saved_instance_priority: SavedInstancePriorityView,
+/**
+ * Read-only project-effective priority and its winning source (ADR-0158 §3).
+ * Omitted declarations stay `ProductNotConsulted` until the server's product overlay.
+ */
+effective_priority: EffectivePriorityView, id: number,
 /**
  * From `_O-<n>` in the source `RefId`.
  */

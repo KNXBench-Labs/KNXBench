@@ -1,6 +1,6 @@
 # WP-06 — Communication-object organisation: remaining slices
 
-**Status:** Saved schema-20 text display delivered; bounded literal installed-product declaration fallback software-accepted on main; broader slices remain evidence-gated. Listed in [OPEN_WORK](../OPEN_WORK.md); per-ID status of record is the [ledger](../status/LEDGER.md).
+**Status:** Saved schema-20 text display delivered; bounded literal installed-product declaration fallback and captured saved-instance priority foundation software-accepted on main; broader slices remain evidence-gated. Listed in [OPEN_WORK](../OPEN_WORK.md); per-ID status of record is the [ledger](../status/LEDGER.md).
 
 ## Admitted increment — saved schema-20 node text
 
@@ -31,13 +31,15 @@ requirements below or any hardware/native/release/deployment acceptance.
 
 ## Task
 
-**Implemented and reviewed; integrated acceptance pending:**
+**Delivered foundation, software-accepted on main `ed0cf7737`:**
 [captured saved-instance priority](../contracts/saved-instance-priority.md)
 adds a schema-23 source observation through native model/history and read-only
 projection. The additive 16→17 migration does not infer old declarations or
 absence: old files/history remain NotCaptured and retain their opaque facts.
-Effective priority, editing, wire encoding and whole-WP acceptance remain open.
-[Execution and remaining acceptance](../status/2026-11-06-saved-instance-priority.md).
+This is a captured saved-source fact, not effective, product or wire priority.
+Still open: effective resolution, editing, UI, report/comparison, wire encoding
+and whole-WP acceptance.
+[Execution and evidence](../status/2026-11-06-saved-instance-priority.md).
 
 Organise communication objects by source-backed folders and represent object
 priority losslessly.
@@ -55,8 +57,8 @@ priority losslessly.
 5. Object priority across core, persistence, import, projection and
    comparison. [ADR-0158](../adr/0158-object-priority-provenance.md) defines
    raw/effective provenance and the bounded product-query origin increment;
-   the captured instance/native-history/read-only GET slice is implemented and
-   reviewed, with integrated acceptance tracked above. Effective resolution,
+   the captured instance/native-history/read-only GET slice is software-accepted
+   on main (`ed0cf7737`, see above). Effective resolution,
    editing, comparison/report/UI consumers remain open.
    [Source admission](../research/2026-11-06-object-priority-provenance.md)
    does not establish new wire priority or whole-WP acceptance.

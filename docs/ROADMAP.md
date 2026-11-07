@@ -5,8 +5,9 @@
 The captured saved-instance successor now has a separate core fact, native17
 overlay, history and required read-only GET field. It retains old observations
 as NotCaptured rather than backfilling them. Focused proofs and independent
-review pass; integrated acceptance remains in the
-[delivery record](status/2026-11-06-saved-instance-priority.md). Effective priority,
+review pass; main-first `ed0cf7737` is published after the full selected
+17-stage gate ([delivery record](status/2026-11-06-saved-instance-priority.md)).
+This is a captured saved-source fact. Effective priority,
 editing, UI/report/comparison and broader WP-06 remain separate work.
 
 [ADR-0158](adr/0158-object-priority-provenance.md) separates raw declarations,
@@ -381,6 +382,11 @@ after correction; no product code changed. Ordinary teardown is verified;
 software-render/session-bus boundaries and wider WP-11/KL-130 exclusions remain.
 No restart/save-roundtrip, full-tree/pixel/focus-policy or new Properties/height
 acceptance is claimed; ledger status is unchanged.
+Four [File-submenu viewport cells](status/2026-11-07-wp11-file-submenu-viewport.md)
+(7 November; 80%/150% by 900x800/900x560) observe the same old pinned source
+`6ecb69427`, not current main. The failed original fourth cell was a harness
+precondition fault, rerun alone after an independently reviewed correction. No
+product change or new zoom/click/scroll policy.
 WP-11 stays open for other controls/imported-original instructions,
 virtual-key replacement attribution, remaining keyboard/layout/pointer cells
 and unavailable environments; no code, hardware or release capability is added.

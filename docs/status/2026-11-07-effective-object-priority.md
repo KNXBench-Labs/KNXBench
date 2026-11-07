@@ -62,7 +62,16 @@ web mutants). The reviewer's wider run had four
 `caption_mounted_recovery_authority_*` timeouts under load; rerun alone they
 passed 4/4 (known GATE-01 load flake, untouched by this package).
 
-The change-scoped package gate and publication are recorded below once executed.
+## Acceptance and publication
+
+Feature `c55147aab` plus review fix `a6ce2a412`, merged main-first as
+`40fab41b6` on `9a1c8b71b` (tree identical to the branch head). The maintained
+change-scoped package gate ran on that merge: all 17 selected stages exited 0
+with valid proofs, inputs frozen, no user data touched or unchecked. Counts:
+Rust 3,736 passed / 0 failed / 144 ignored (23 binaries), bindings 84,
+private corpus 91/91, web gate 55 stages including 1,120 browser cases. Pushed
+after the gate with `origin/main` unchanged; local, tracking and live `main`
+read back as `40fab41b6`.
 
 ## Limits
 

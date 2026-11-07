@@ -25,8 +25,10 @@ reports nothing and is not descended. `evaluate` runs in passes: each marks
 the controllers the previous pass consulted and left inactive; it stops when
 none is added. Skipping only removes activations, so the set only grows and
 the passes end; all passes share one `MAX_EVALUATION_WORK`, and exhausting it
-keeps the explicit budget diagnostic. A controller no `ParameterRefRef` names
-is read as before: that case was not observed.
+keeps the explicit budget diagnostic. A controller placed only inside its own
+`choose` counts as unplaced, and a pass with any diagnostic that may hide refs
+marks nothing: in both cases inactivity is not known. An unplaced controller
+is read as before; that case was not observed.
 
 ## Alternatives considered
 

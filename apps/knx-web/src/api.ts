@@ -6,6 +6,8 @@ import { admitSerialCandidates, type SerialCandidates } from "./serialCandidates
 //! swapping the import at each call site is the only change there.
 import type { Deletion, DispositionContext, WireChoice } from "./noteDisposition";
 import type { ProjectTree } from "./bindings/ProjectTree";
+import type { SavedPriorityOmissionView } from "./bindings/SavedPriorityOmissionView";
+import type { SavedPriorityUnavailableView } from "./bindings/SavedPriorityUnavailableView";
 import type { StatusMetrics } from "./statusMetrics";
 import type { AdoptionApplyResponse, AdoptionListing, AdoptionPreviewResponse } from "./pluginData";
 import {admitProjectMetadata,type ProjectMetadataView} from "./projectMetadata";
@@ -1592,7 +1594,15 @@ export interface ComObjectFields {
   readOnInit: boolean | null;
   links: ComObjectLink[];
   moduleInstance: string | null;
+  savedPriority: SavedPriorityFields;
 }
+
+// `SavedPriorityFieldsDto` — the compared captured saved-instance priority:
+// exact literal, omission kind or reason; not effective or wire priority.
+export type SavedPriorityFields =
+  | { status: "declared"; raw: string }
+  | { status: "absent"; omission: SavedPriorityOmissionView }
+  | { status: "unavailable"; reason: SavedPriorityUnavailableView };
 
 // `ParameterKeyDto`/`ParameterFieldsDto` — mirror
 // `knx_diff::ParameterKey`/`ParameterFields`.

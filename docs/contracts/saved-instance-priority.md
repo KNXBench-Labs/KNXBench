@@ -13,7 +13,8 @@ It is not selected-product priority, effective inheritance, live state or a wire
 encoding. Existing raw opaque retention and product-query provenance are already
 delivered and are not reimplemented.
 
-No priority edit command, UI column/editor, product resolution, activation rule,
+No priority edit command, table column or editing control (the later read-only
+row is [below](#read-only-ui-consumer-7-november-2026)), product resolution, activation rule,
 image/device-writer change, new source schema/module support, report/diff feature,
 bus action, native GUI acceptance, release or deployment is admitted.
 
@@ -192,6 +193,19 @@ must leave this field untouched. No extra endpoint or operation is added.
 Update generated bindings and all direct typed fixture literals explicitly;
 do not make the field optional, use `any`, exclude a configuration or weaken
 production types. Unrelated checked-date work remains with its existing owner.
+
+## Read-only UI consumer (7 November 2026)
+
+The communication-object editor renders `ComObjectNode.saved_instance_priority`
+in `SavedInstancePriority.tsx` as one read-only row after the flags. Declared
+Known literals appear verbatim; Empty/Unknown literals are quoted exactly so
+empty, whitespace and case differences stay visible. Absence names its omission
+kind, Unavailable names its closed reason including SourceBindingMismatch, and a
+state, reason, token status or omission this build does not know is reported as
+unknown rather than mapped to a default. The captured schema and object identity
+appear as visible secondary text, not only a hover title. A fixed hint says the value is not the effective or
+wire priority. No control, command, API call, table column, report or comparison
+consumer is added; the GET payload is unchanged.
 
 ## Executable acceptance obligations
 

@@ -808,6 +808,10 @@ main {
 }
 .com-object-flags .flag-code { font-family: var(--knx-font-mono); font-weight: 700; }
 .com-object-flags .flag-name { overflow-wrap: anywhere; }
+.com-object-saved-priority { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.25rem 0.5rem; }
+.com-object-saved-priority .saved-priority-label { font-weight: 600; }
+.com-object-saved-priority .saved-priority-raw { font-family: var(--knx-font-mono); white-space: pre-wrap; overflow-wrap: anywhere; }
+.com-object-saved-priority .field-hint { flex-basis: 100%; color: var(--knx-muted); font-size: 0.75rem; }
 
 .provenance-badge {
   display: inline-block;

@@ -365,6 +365,7 @@ mod com_object_text {
         description: Override<Text>,
     ) -> ComObjectInstance {
         ComObjectInstance {
+            priority_edit: None,
             saved_instance_priority: Default::default(),
             id: ComObjectInstanceId(id),
             source: source(ref_id),
@@ -483,6 +484,7 @@ mod positional_text {
 
     fn com(id: u32, name: &str, layer: Layer) -> ComObjectInstance {
         ComObjectInstance {
+            priority_edit: None,
             saved_instance_priority: Default::default(),
             id: ComObjectInstanceId(id),
             source: source(&format!("A-1_O-{id}_R-1")),

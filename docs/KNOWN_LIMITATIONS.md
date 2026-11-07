@@ -478,6 +478,13 @@ Unsupported layouts, calculations, activation and encodings remain named limits.
 `knx products inspect-distribution` reports manufacturer source facts with byte-exact references, without installation or write/initialization authority. Format 5 adds canonical distribution baggage joins, bounded single-frame PNG decoding and opt-in offline HTML; JSON remains the default. Help/ZIP content stays metadata only, native package policy is unchanged, and Dynamic/reference coverage remains a subset. Structural/report limits refuse the source; optional media limits retain named fallbacks. Arithmetic candidates are not validity verdicts. No ETS or KNX compatibility is claimed.
 [Details and history](limitations/KL-187-distribution-inspection.md)
 
+<a id="catalogue-kl-188"></a>
+### 188. A changed object priority is refused, not programmed
+
+**Ledger status:** `ACCEPTED_BOUNDARY` ([KL-188](status/LEDGER.md#post-snapshot-ids)).
+Programming refuses a device while an active object's project priority (user edit or saved declaration) differs from the product's literal; KNXBench never writes a changed priority. Instance priorities that were not captured (older native files, other schemas, module objects) are not checked, so the product priority is written for them.
+[Details and history](limitations/KL-188-object-priority-programming.md)
+
 ## Project model and storage
 
 <a id="catalogue-kl-009"></a>

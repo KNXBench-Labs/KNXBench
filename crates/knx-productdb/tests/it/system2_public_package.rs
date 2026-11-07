@@ -228,6 +228,7 @@ fn public_up258_package_pins_the_documented_refusals() {
         values: BTreeMap::new(),
         links: Vec::new(),
         flag_overrides: BTreeMap::new(),
+        priority_statements: Default::default(),
     };
     assert!(code.has_legacy_patch_always);
     let before = conn.total_changes();
@@ -265,6 +266,7 @@ fn public_up258_configured_values_do_not_bypass_the_source_stopline() {
             ]),
             links: Vec::new(),
             flag_overrides: BTreeMap::new(),
+            priority_statements: Default::default(),
         };
         let supplied = request.values.clone().into_iter().collect();
         let values = resolve_values(&conn, PROGRAM, &supplied).unwrap();

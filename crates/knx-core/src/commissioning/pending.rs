@@ -162,7 +162,8 @@ pub struct ProgrammingContent {
     application: (String, String),
     /// `(ParameterRef id, raw value)`, sorted.
     parameters: Vec<(String, String)>,
-    /// Per communication object, in id order: its effective flags and its
+    /// Per communication object, in id order: its effective flags, its user
+    /// priority edit (which decides whether an image is admitted) and its
     /// links with the linked group address's numeric value.
     group_addresses: Vec<ObjectContent>,
 }
@@ -176,7 +177,12 @@ type FlagValues = [Option<bool>; 6];
 type LinkContent = Vec<(Option<u16>, Direction)>;
 
 /// One communication object's share of the group address part.
-type ObjectContent = (ComObjectInstanceId, FlagValues, LinkContent);
+type ObjectContent = (
+    ComObjectInstanceId,
+    FlagValues,
+    Option<crate::ObjectPriority>,
+    LinkContent,
+);
 
 impl ProgrammingContent {
     /// The parts whose content differs between `self` and `other`.
@@ -242,10 +248,10 @@ pub fn programming_content(
                     .iter()
                     .map(|link| (numbers.get(&link.ga).copied(), link.direction))
                     .collect();
-                (co.id, flag_values(&co.flags), links)
+                (co.id, flag_values(&co.flags), co.priority_edit, links)
             })
             .collect();
-        objects.sort_by_key(|(co, _, _)| *co);
+        objects.sort_by_key(|(co, _, _, _)| *co);
         content.group_addresses = objects;
     }
     contents

@@ -1199,7 +1199,10 @@ fn build_com_object_node(
     let flag = |o: &knx_core::Override<bool>| o.value().map(|r| r.value).unwrap_or(false);
     let saved_instance_priority = saved_instance_priority::view(com, owner, bindings);
     ComObjectNode {
-        effective_priority: effective_priority::from_saved(&saved_instance_priority),
+        effective_priority: effective_priority::resolve(
+            com.priority_edit,
+            &saved_instance_priority,
+        ),
         saved_instance_priority,
         id: com.id.0,
         number: com.number,
@@ -1813,6 +1816,7 @@ mod tests {
             binary_data: vec![],
         });
         project.devices.insert_com_object(ComObjectInstance {
+            priority_edit: None,
             saved_instance_priority: Default::default(),
             id: ComObjectInstanceId(1),
             source: source(),
@@ -1930,6 +1934,7 @@ mod tests {
         links: &[(u32, knx_core::Direction)],
     ) -> knx_core::ComObjectInstance {
         knx_core::ComObjectInstance {
+            priority_edit: None,
             saved_instance_priority: Default::default(),
             id: knx_core::ComObjectInstanceId(com_id),
             source: source(),

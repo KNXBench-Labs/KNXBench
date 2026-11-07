@@ -28,6 +28,7 @@ fn request() -> ImageRequest {
             sending: true,
         }],
         flag_overrides: BTreeMap::new(),
+        priority_statements: Default::default(),
     }
 }
 

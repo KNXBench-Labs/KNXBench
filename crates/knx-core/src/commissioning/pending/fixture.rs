@@ -45,6 +45,7 @@ fn ga(id: GroupAddressId, raw: u16) -> GroupAddressEntry {
 
 fn com_object(id: ComObjectInstanceId, device: DeviceId, link: Direction) -> ComObjectInstance {
     ComObjectInstance {
+        priority_edit: None,
         saved_instance_priority: Default::default(),
         id,
         source: source("co"),

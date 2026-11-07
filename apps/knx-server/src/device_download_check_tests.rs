@@ -147,6 +147,7 @@ fn prepared(target: IndividualAddress, plan: MemoryDownloadPlan) -> PreparedDown
             values: Default::default(),
             links: vec![],
             flag_overrides: Default::default(),
+            priority_statements: Default::default(),
         },
         image: DownloadImage {
             code: ProgramCode::default(),

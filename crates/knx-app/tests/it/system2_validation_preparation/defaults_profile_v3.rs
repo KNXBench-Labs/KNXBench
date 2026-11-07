@@ -146,6 +146,7 @@ fn oracle(
         values: BTreeMap::new(),
         links: Vec::new(),
         flag_overrides: BTreeMap::new(),
+        priority_statements: Default::default(),
     };
     let template = profile.version == 3;
     let policy = ExperimentalSystem2ImagePolicy {

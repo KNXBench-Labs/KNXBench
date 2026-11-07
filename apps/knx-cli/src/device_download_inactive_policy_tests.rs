@@ -61,6 +61,7 @@ fn falls_back(xml: &str) {
         values: Default::default(),
         links: vec![],
         flag_overrides: Default::default(),
+        priority_statements: Default::default(),
     };
     let before = knx_productdb::image::build_download_image(&conn, &request).unwrap();
     let regular = knx_productdb::download_plan::plan_memory_download_with_inferences(&before)

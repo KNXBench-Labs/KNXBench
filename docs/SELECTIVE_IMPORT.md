@@ -1,6 +1,6 @@
 # Selective project import
 
-The current service admits normalized model v17 with an explicitly audited
+The current service admits normalized model v18 with an explicitly audited
 reference closure. The saved-instance-priority mapping correction and focused
 regressions are authored but not yet execution-accepted; see the
 [captured-fact contract](contracts/saved-instance-priority.md#audited-selective-import-mapping-native-model-17).
@@ -93,7 +93,9 @@ recomputes the plan. Existing full-project replacement import is unchanged.
 
 - Source input up to the storage ceiling of 1,000,000,000 bytes (ADR-0142;
   formerly 64 MiB), plus the existing container/parser resource ceilings.
-- Normalized model v17 only (`SELECTIVE_MODEL_VERSION`), on source and destination.
+- Normalized model v18 only (`SELECTIVE_MODEL_VERSION`), on source and destination.
+  v18 adds user priority edits: an ETS source never carries one, so copied
+  objects stay unedited and destination edits stay on their own objects.
   The audited closure preserves destination Functions, but refuses any source
   Functions until their selection/disposition mapping is defined. v16's
   manufacturer-file storage remains file-level evidence. v17 scopes the two

@@ -371,6 +371,7 @@ fn offline_download_selected(
         values: BTreeMap::new(),
         links: Vec::new(),
         flag_overrides: BTreeMap::new(),
+        priority_statements: Default::default(),
     };
     let image = build_download_image(conn, &request)
         .map_err(|e| (image_category(&e), format!("memory image: {e}")))?;

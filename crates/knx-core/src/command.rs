@@ -202,6 +202,14 @@ pub enum Command {
         flag: ComFlagKind,
         value: Override<bool>,
     },
+    /// Sets (`Some`) or clears (`None`) the user's project priority of one
+    /// object. Refuses an unknown object and the value already set. Its own
+    /// inverse; `saved_instance_priority` is never touched
+    /// (docs/contracts/object-priority-edit.md).
+    SetComObjectPriority {
+        com_object: ComObjectInstanceId,
+        priority: Option<crate::ObjectPriority>,
+    },
     /// Appends catalog-resolved instances; the inverse removes only these additions.
     AddComObjects {
         device: DeviceId,
@@ -690,6 +698,8 @@ pub enum CommandError {
         evidence_product_ref: String,
     },
     ComObjectNotFound(ComObjectInstanceId),
+    /// The object already has exactly this user priority edit (or none).
+    PriorityUnchanged(ComObjectInstanceId),
     InvalidComObjectBatch(DeviceId),
     GroupAddressNotFound(GroupAddressId),
     /// A group address id occurs more than once in the project.
@@ -918,6 +928,10 @@ impl fmt::Display for CommandError {
             CommandError::ComObjectNotFound(id) => {
                 write!(f, "communication object instance {id} not found")
             }
+            CommandError::PriorityUnchanged(id) => write!(
+                f,
+                "communication object instance {id} already has this priority edit"
+            ),
             CommandError::GroupAddressNotFound(id) => write!(f, "group address {id} not found"),
             CommandError::GroupAddressPlacementAmbiguous(id) => write!(
                 f,
@@ -2461,6 +2475,24 @@ impl Command {
                     com_object,
                     flag,
                     value: previous,
+                })
+            }
+            Command::SetComObjectPriority {
+                com_object,
+                priority,
+            } => {
+                let com_object = *com_object;
+                let com: &mut ComObjectInstance = project
+                    .devices
+                    .com_object_mut(com_object)
+                    .ok_or(CommandError::ComObjectNotFound(com_object))?;
+                if com.priority_edit == *priority {
+                    return Err(CommandError::PriorityUnchanged(com_object));
+                }
+                let previous = std::mem::replace(&mut com.priority_edit, *priority);
+                Ok(Command::SetComObjectPriority {
+                    com_object,
+                    priority: previous,
                 })
             }
             Command::SetParameterValue {
@@ -5107,6 +5139,7 @@ mod tests {
                 declared_dpt: Default::default(),
             });
         project.devices.insert_com_object(ComObjectInstance {
+            priority_edit: None,
             saved_instance_priority: Default::default(),
             id: ComObjectInstanceId(1),
             source: source(),
@@ -5143,6 +5176,7 @@ mod tests {
     fn set_com_object_dpt_marks_layer_as_user_edit_and_undoes() {
         let mut project = test_project_with_one_device(None);
         let com = ComObjectInstance {
+            priority_edit: None,
             saved_instance_priority: Default::default(),
             id: ComObjectInstanceId(1),
             source: source(),
@@ -5239,6 +5273,7 @@ mod tests {
     fn set_com_object_description_marks_layer_as_user_edit_and_undoes() {
         let mut project = test_project_with_one_device(None);
         let com = ComObjectInstance {
+            priority_edit: None,
             saved_instance_priority: Default::default(),
             id: ComObjectInstanceId(1),
             source: source(),
@@ -5286,6 +5321,7 @@ mod tests {
     fn setting_com_object_description_to_none_writes_empty_not_absent() {
         let mut project = test_project_with_one_device(None);
         let com = ComObjectInstance {
+            priority_edit: None,
             saved_instance_priority: Default::default(),
             id: ComObjectInstanceId(1),
             source: source(),
@@ -5325,6 +5361,7 @@ mod tests {
     fn setting_com_object_dpt_to_none_writes_empty_not_absent() {
         let mut project = test_project_with_one_device(None);
         let com = ComObjectInstance {
+            priority_edit: None,
             saved_instance_priority: Default::default(),
             id: ComObjectInstanceId(1),
             source: source(),
@@ -5370,6 +5407,7 @@ mod tests {
     fn set_com_object_flag_marks_layer_as_user_edit_and_undoes() {
         let mut project = test_project_with_one_device(None);
         let com = ComObjectInstance {
+            priority_edit: None,
             saved_instance_priority: Default::default(),
             id: ComObjectInstanceId(1),
             source: source(),
@@ -5412,9 +5450,76 @@ mod tests {
     }
 
     #[test]
+    fn a_priority_edit_sets_clears_refuses_no_ops_and_never_touches_the_captured_fact() {
+        use crate::ObjectPriority::{Alert, Low};
+        let mut project = test_project_with_one_device(None);
+        let captured = crate::SavedInstancePriority::Unavailable {
+            reason: crate::SavedPriorityUnavailable::ModuleScope,
+        };
+        project.devices.insert_com_object(ComObjectInstance {
+            priority_edit: None,
+            saved_instance_priority: captured.clone(),
+            id: ComObjectInstanceId(1),
+            source: source(),
+            device: DeviceId(1),
+            number: 0,
+            text: Override::Absent,
+            description: Override::Absent,
+            dpt: Override::Absent,
+            flags: ResolvedFlags::none(),
+            size: None,
+            is_active: true,
+            links: vec![],
+            module_instance: None,
+        });
+        let edit = |priority| Command::SetComObjectPriority {
+            com_object: ComObjectInstanceId(1),
+            priority,
+        };
+        let state = |project: &Project| {
+            let com = project.devices.com_object(ComObjectInstanceId(1)).unwrap();
+            assert_eq!(com.saved_instance_priority, captured);
+            com.priority_edit
+        };
+        let original = project.clone();
+        let mut stack = CommandStack::new();
+        assert!(matches!(
+            stack.do_command(&mut project, edit(None)),
+            Err(CommandError::PriorityUnchanged(ComObjectInstanceId(1)))
+        ));
+        assert_eq!(project, original, "a refused no-op changes nothing");
+        stack.do_command(&mut project, edit(Some(Alert))).unwrap();
+        assert_eq!(state(&project), Some(Alert));
+        assert!(matches!(
+            stack.do_command(&mut project, edit(Some(Alert))),
+            Err(CommandError::PriorityUnchanged(_))
+        ));
+        stack.do_command(&mut project, edit(Some(Low))).unwrap();
+        stack.do_command(&mut project, edit(None)).unwrap();
+        assert_eq!(state(&project), None);
+        stack.undo(&mut project).unwrap();
+        assert_eq!(state(&project), Some(Low));
+        stack.undo(&mut project).unwrap();
+        assert_eq!(state(&project), Some(Alert));
+        stack.undo(&mut project).unwrap();
+        assert_eq!(state(&project), None);
+        stack.redo(&mut project).unwrap();
+        assert_eq!(state(&project), Some(Alert));
+        assert!(matches!(
+            Command::SetComObjectPriority {
+                com_object: ComObjectInstanceId(99),
+                priority: Some(Low),
+            }
+            .apply(&mut project),
+            Err(CommandError::ComObjectNotFound(ComObjectInstanceId(99)))
+        ));
+    }
+
+    #[test]
     fn setting_a_never_stated_com_object_flag_writes_value_not_absent() {
         let mut project = test_project_with_one_device(None);
         let com = ComObjectInstance {
+            priority_edit: None,
             saved_instance_priority: Default::default(),
             id: ComObjectInstanceId(1),
             source: source(),
@@ -5460,6 +5565,7 @@ mod tests {
     fn setting_read_on_init_undoes_and_redoes_like_any_other_flag() {
         let mut project = test_project_with_one_device(None);
         project.devices.insert_com_object(ComObjectInstance {
+            priority_edit: None,
             saved_instance_priority: Default::default(),
             id: ComObjectInstanceId(1),
             source: source(),
@@ -6654,6 +6760,7 @@ mod tests {
 
     fn test_com_object_instance(id: ComObjectInstanceId, device: DeviceId) -> ComObjectInstance {
         ComObjectInstance {
+            priority_edit: None,
             saved_instance_priority: Default::default(),
             id,
             source: source(),
@@ -7777,6 +7884,7 @@ mod tests {
             .com_objects
             .push(ComObjectInstanceId(1));
         p.devices.insert_com_object(ComObjectInstance {
+            priority_edit: None,
             saved_instance_priority: Default::default(),
             id: ComObjectInstanceId(1),
             source: source(),
@@ -9436,6 +9544,7 @@ mod id_integrity_tests {
 
     fn com(id: u32, device: u32) -> ComObjectInstance {
         ComObjectInstance {
+            priority_edit: None,
             saved_instance_priority: Default::default(),
             id: ComObjectInstanceId(id),
             source: source(),

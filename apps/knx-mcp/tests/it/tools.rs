@@ -722,7 +722,7 @@ fn an_older_project_file_is_served_and_never_upgraded() {
     {
         let conn = knx_store::Connection::open(&path).unwrap();
         conn.execute_batch(
-            "DROP TABLE com_object_saved_priority;
+            "DROP TABLE com_object_priority_edit; DROP TABLE com_object_saved_priority;
          DROP TABLE instruction_run;
          DROP TABLE instruction_document; DROP TABLE manufacturer_file; DROP TABLE project_function_member; DROP TABLE project_function; DROP TABLE project_function_state; DROP TABLE project_note; DROP TABLE project_note_state;
          DROP TABLE project_history_state;

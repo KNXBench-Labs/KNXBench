@@ -90,6 +90,7 @@ fn project_with_write_dpt_outcomes() -> knx_core::Project {
     let com_object = |id: u32,
                       resolved_dpt: knx_core::Override<knx_core::DptRef>,
                       ga: GroupAddressId| ComObjectInstance {
+        priority_edit: None,
         saved_instance_priority: Default::default(),
         id: ComObjectInstanceId(id),
         source: source(),

@@ -238,6 +238,7 @@ fn image_request(values: &[(&str, &str)], links: Vec<Link>) -> ImageRequest {
             .collect(),
         links,
         flag_overrides: Default::default(),
+        priority_statements: Default::default(),
     }
 }
 

@@ -295,6 +295,7 @@ fn project_with_saved_priority(
         is_active: true,
         links: vec![],
         module_instance: None,
+        priority_edit: None,
         saved_instance_priority: priority(knx_core::SavedPrioritySource {
             source_schema: 23,
             device_source: member,

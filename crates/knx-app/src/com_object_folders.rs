@@ -548,6 +548,7 @@ mod tests {
             binary_data: vec![],
         });
         project.devices.insert_com_object(ComObjectInstance {
+            priority_edit: None,
             saved_instance_priority: Default::default(),
             id: ComObjectInstanceId(1),
             source,

@@ -78,6 +78,7 @@ fn com(
     links: &[(u32, Direction)],
 ) -> ComObjectInstance {
     ComObjectInstance {
+        priority_edit: None,
         saved_instance_priority: Default::default(),
         id: ComObjectInstanceId(id),
         source: source(&format!("M-00FA_A-0001-10-ABCD_O-{number}_R-1")),

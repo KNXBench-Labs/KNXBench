@@ -335,6 +335,7 @@ fn a_legacy_program_plans_a_download_from_its_s19_blocks() {
             sending: true,
         }],
         flag_overrides: Default::default(),
+        priority_statements: Default::default(),
     };
     let image = build_download_image(&conn, &request).unwrap();
     let plan = plan_memory_download(&image).unwrap();

@@ -3671,6 +3671,30 @@ pub fn set_com_object_flag_impl(
     )
 }
 
+/// Sets (`Some` exact token) or clears (`None`) the user's priority edit of
+/// one object; any other token is refused before a command exists
+/// (docs/contracts/object-priority-edit.md).
+pub fn set_com_object_priority_impl(
+    state: &AppState,
+    com_object_id: u32,
+    priority: Option<&str>,
+) -> Result<knx_projection::ProjectTree, String> {
+    let priority = priority
+        .map(|raw| {
+            knx_core::ObjectPriority::parse(raw).ok_or_else(|| {
+                format!("unknown priority '{raw}', expected one of Low/High/Alert or null")
+            })
+        })
+        .transpose()?;
+    apply(
+        state,
+        knx_core::Command::SetComObjectPriority {
+            com_object: knx_core::ComObjectInstanceId(com_object_id),
+            priority,
+        },
+    )
+}
+
 /// Restyles the whole project — `Command::SetGroupAddressStyle` itself
 /// checks every existing group address against the target style first and
 /// refuses the whole change, naming the offending address, if even one
@@ -5225,6 +5249,7 @@ fn plan_catalog_batch(
                 .next_com_object_instance_id()
                 .map_err(|error| error.to_string())?;
             com_objects.push(knx_core::ComObjectInstance {
+                priority_edit: None,
                 saved_instance_priority: Default::default(),
                 id: com_id,
                 source: knx_core::SourceRef {

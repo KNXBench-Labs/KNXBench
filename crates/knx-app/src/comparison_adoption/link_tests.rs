@@ -28,6 +28,7 @@ struct Fixture {
 
 fn object(id: u32, number: u16, links: Vec<GroupLink>) -> ComObjectInstance {
     ComObjectInstance {
+        saved_instance_priority: Default::default(),
         id: ComObjectInstanceId(id),
         source: SourceRef {
             path: "synthetic".into(),

@@ -75,6 +75,7 @@ fn project() -> Project {
     for number in 0..3u16 {
         let id = project.ids.next_com_object_instance_id().unwrap();
         project.devices.insert_com_object(ComObjectInstance {
+            saved_instance_priority: Default::default(),
             id,
             source: SourceRef {
                 path: "synthetic".into(),

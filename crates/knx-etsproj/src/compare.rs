@@ -636,6 +636,7 @@ mod tests {
             binary_data: vec![],
         });
         p.devices.insert_com_object(ComObjectInstance {
+            saved_instance_priority: Default::default(),
             id: com_id,
             source: source("MD-2_M-1_MI-1_O-2-0_R-1"),
             device: device_id,

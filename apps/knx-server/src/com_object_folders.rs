@@ -238,6 +238,7 @@ mod tests {
     #[test]
     fn an_evaluated_inactive_object_loses_its_saved_folder() {
         let com = |id: u32, activation: ComObjectActivation| knx_projection::ComObjectNode {
+            saved_instance_priority: Default::default(),
             id,
             number: 0,
             name: None,

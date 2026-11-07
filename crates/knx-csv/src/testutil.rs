@@ -98,6 +98,7 @@ pub(crate) fn linked_com_object(
     dpt: Option<DptRef>,
 ) -> ComObjectInstance {
     ComObjectInstance {
+        saved_instance_priority: Default::default(),
         id: ComObjectInstanceId(id),
         source: source(&format!("CO-{id}")),
         device: DeviceId(device),

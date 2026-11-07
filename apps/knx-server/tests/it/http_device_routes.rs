@@ -1,3 +1,5 @@
+//! Exercises mounted device routes and their persisted read-only object metadata.
+
 use std::sync::Arc;
 
 use axum::body::Body;
@@ -344,6 +346,7 @@ async fn deleting_a_device_with_a_linked_com_object_is_a_400() {
     project
         .devices
         .insert_com_object(knx_core::ComObjectInstance {
+            saved_instance_priority: Default::default(),
             id: knx_core::ComObjectInstanceId(1),
             source: SourceRef {
                 path: "t".into(),
@@ -552,4 +555,233 @@ async fn ambiguous_dpt_enrichment_succeeds_and_reports_the_alternatives() {
                 && diagnostic["refId"] == "A-1_O-1_R-1"
                 && diagnostic["alternatives"] == json!(["DPST-1-1", "DPST-3-7"])
         }));
+}
+
+#[tokio::test]
+async fn saved_instance_priority_mounted_get_preserves_all_required_states_after_working_reopen() {
+    use knx_core::{
+        ComObjectInstance, SavedInstancePriority as Fact, SavedPriorityAbsent,
+        SavedPriorityDeclared, SavedPriorityOmission as Omission, SavedPrioritySource,
+        SavedPriorityUnavailable as Reason,
+    };
+    use knx_store::project_history::{self as history, NativeSnapshot};
+    let state = state_with_one_installation();
+    let mut project = state.project.lock().unwrap().take().unwrap();
+    let owner = project.ids.next_device_id().unwrap();
+    let device_source = SourceRef {
+        path: "P-SYNTHETIC/0.xml".into(),
+        ets_id: "P-SYNTHETIC-0_DI-1".into(),
+    };
+    project.devices.insert(DeviceInstance {
+        id: owner,
+        source: device_source.clone(),
+        name: "Saved root".into(),
+        description: None,
+        address: None,
+        product_ref: "M-1_P-1".into(),
+        program_ref: "H-1_HP-1".into(),
+        commissioning: Default::default(),
+        visibility_calculated: true,
+        com_objects: vec![],
+        binary_data: vec![],
+    });
+    project.installations[0].topology.unassigned.push(owner);
+    let mut expected = Vec::new();
+    for position in 0..15 {
+        let id = project.ids.next_com_object_instance_id().unwrap();
+        let object_source = SourceRef {
+            path: device_source.path.clone(),
+            ets_id: format!("O-{}_R-1", position + 1),
+        };
+        let source = SavedPrioritySource {
+            source_schema: 23,
+            device_source: device_source.clone(),
+            object_source: object_source.clone(),
+            owner_xpath: format!("/synthetic/owner/object-{position}"),
+            topology_sha256: "a".repeat(64),
+        };
+        let fact = match position {
+            0 => Fact::Declared(Box::new(SavedPriorityDeclared {
+                raw: "High".into(),
+                source,
+            })),
+            1 => Fact::Declared(Box::new(SavedPriorityDeclared {
+                raw: String::new(),
+                source,
+            })),
+            2 => Fact::Declared(Box::new(SavedPriorityDeclared {
+                raw: " future Ω ".into(),
+                source,
+            })),
+            3 | 4 => Fact::Absent(Box::new(SavedPriorityAbsent {
+                omission: if position == 3 {
+                    Omission::AttributeOmitted
+                } else {
+                    Omission::InstanceElementOmitted
+                },
+                source,
+            })),
+            5 => Fact::default(),
+            6 => Fact::Unavailable {
+                reason: Reason::UnsupportedSourceSchema,
+            },
+            7 => Fact::Unavailable {
+                reason: Reason::ModuleScope,
+            },
+            8 => Fact::Unavailable {
+                reason: Reason::AmbiguousOwner,
+            },
+            9 => Fact::Unavailable {
+                reason: Reason::AmbiguousDeclaration,
+            },
+            10 => Fact::Unavailable {
+                reason: Reason::SourceIntegrity,
+            },
+            11 => Fact::Unavailable {
+                reason: Reason::ResourceLimit,
+            },
+            12 => Fact::Declared(Box::new(SavedPriorityDeclared {
+                raw: "Low".into(),
+                source,
+            })),
+            13 => Fact::Declared(Box::new(SavedPriorityDeclared {
+                raw: "Alert".into(),
+                source,
+            })),
+            14 => Fact::Declared(Box::new(SavedPriorityDeclared {
+                raw: "WITHHELD-REBOUND".into(),
+                source,
+            })),
+            _ => unreachable!(),
+        };
+        project.devices.insert_com_object(ComObjectInstance {
+            id,
+            device: owner,
+            source: object_source,
+            number: (position + 1) as u16,
+            text: knx_core::Override::Absent,
+            description: knx_core::Override::Absent,
+            dpt: knx_core::Override::Absent,
+            flags: ResolvedFlags::none(),
+            size: None,
+            is_active: true,
+            links: vec![],
+            module_instance: None,
+            saved_instance_priority: fact,
+        });
+        project.devices.get_mut(owner).unwrap().com_objects.push(id);
+        if position == 14 {
+            project.devices.com_object_mut(id).unwrap().source.path = "scoped/0.xml".into();
+        }
+    }
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("working.knxdb");
+    let conn = knx_store::open_and_migrate(&path).unwrap();
+    let mut snapshot = NativeSnapshot {
+        project,
+        opaque: vec![],
+        manufacturer_refs: vec![],
+    };
+    let mut stack = knx_core::CommandStack::new();
+    let generation = history::save_editor(&conn, &snapshot, &stack, None, true).unwrap();
+    stack
+        .do_command(
+            &mut snapshot.project,
+            knx_core::Command::RenameDevice {
+                device: owner,
+                name: "Recovered working".into(),
+            },
+        )
+        .unwrap();
+    history::save_editor(&conn, &snapshot, &stack, Some(generation), false).unwrap();
+    drop(conn);
+    let conn = knx_store::open_existing_and_migrate(&path).unwrap();
+    let recovered = history::load_editor(&conn).unwrap().unwrap();
+    let view = knx_projection::build_device_detail(&recovered.working.project, owner).unwrap();
+    for com in view.com_objects {
+        expected.push(serde_json::to_value(com.saved_instance_priority).unwrap());
+    }
+    assert_eq!(expected[0]["status"], "declared");
+    assert_eq!(expected[0]["raw"], "High");
+    assert_eq!(expected[1]["token_status"], "Empty");
+    assert_eq!(expected[2]["token_status"], "Unknown");
+    assert_eq!(expected[3]["omission"], "AttributeOmitted");
+    assert_eq!(expected[4]["omission"], "InstanceElementOmitted");
+    assert_eq!(
+        expected[14],
+        json!({"status":"unavailable","reason":"SourceBindingMismatch"})
+    );
+    // Pin wire reasons independently of the production projection, including payload absence.
+    let assert_unavailable = |facts: &[serde_json::Value]| {
+        for (position, reason) in [
+            (5, "NotCaptured"),
+            (6, "UnsupportedSourceSchema"),
+            (7, "ModuleScope"),
+            (8, "AmbiguousOwner"),
+            (9, "AmbiguousDeclaration"),
+            (10, "SourceIntegrity"),
+            (11, "ResourceLimit"),
+        ] {
+            assert_eq!(
+                facts[position],
+                json!({"status": "unavailable", "reason": reason}),
+                "independent unavailable wire contract at position {position}"
+            );
+        }
+    };
+    *state.project.lock().unwrap() = Some(recovered.working.project.clone());
+    *state.command_stack.lock().unwrap() =
+        knx_core::CommandStack::from_snapshot_states(recovered.undo, recovered.redo);
+    let state = Arc::new(state);
+    let app = knx_server::app(Arc::clone(&state), None);
+    let response = app
+        .oneshot(
+            Request::builder()
+                .uri(format!("/api/device/{}", owner.0))
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::OK);
+    let body = body_json(response).await;
+    assert_eq!(body["name"], "Recovered working");
+    let got: Vec<_> = body["com_objects"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|o| o["saved_instance_priority"].clone())
+        .collect();
+    assert_eq!(got, expected);
+    assert_unavailable(&got);
+    assert!(!body.to_string().contains("WITHHELD-REBOUND"));
+    // Actual catalogue/activation/text overlays must not alias or replace captured fields.
+    let (_products_dir, products) = temp_product_db();
+    products
+        .execute("UPDATE com_object SET priority='Low'", [])
+        .unwrap();
+    let mut enriched = state_with_one_installation();
+    enriched.product_db = Some(
+        knx_server::CatalogueOwner::adopt_opened(products, std::path::PathBuf::new()).unwrap(),
+    );
+    *enriched.project.lock().unwrap() = Some(recovered.working.project);
+    let response = knx_server::app(Arc::new(enriched), None)
+        .oneshot(
+            Request::builder()
+                .uri(format!("/api/device/{}", owner.0))
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::OK);
+    let body = body_json(response).await;
+    let got: Vec<_> = body["com_objects"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|o| o["saved_instance_priority"].clone())
+        .collect();
+    assert_eq!(got, expected);
+    assert_unavailable(&got);
 }

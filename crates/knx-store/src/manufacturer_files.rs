@@ -313,8 +313,26 @@ mod tests {
     #[test]
     fn a_v15_file_gains_an_empty_table_and_nothing_else_changes() {
         let conn = open_and_migrate_in_memory().unwrap();
-        conn.execute_batch("DROP TABLE manufacturer_file; PRAGMA user_version = 15;")
-            .unwrap();
+        conn.execute_batch(
+            "DROP TABLE com_object_saved_priority; DROP TABLE manufacturer_file; \
+             PRAGMA user_version = 15;",
+        )
+        .unwrap();
+        assert_eq!(
+            conn.query_row("PRAGMA user_version", [], |r| r.get::<_, i64>(0))
+                .unwrap(),
+            15
+        );
+        assert_eq!(
+            conn.query_row(
+                "SELECT COUNT(*) FROM sqlite_schema \
+                 WHERE name IN ('com_object_saved_priority', 'manufacturer_file')",
+                [],
+                |r| r.get::<_, i64>(0),
+            )
+            .unwrap(),
+            0
+        );
         crate::migration::migrate(&conn).unwrap();
         let version: i64 = conn
             .query_row("PRAGMA user_version", [], |r| r.get(0))

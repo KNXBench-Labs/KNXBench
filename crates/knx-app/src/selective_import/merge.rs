@@ -17,11 +17,13 @@ pub(super) fn plan(
     // Model15 (ADR-0124) does the same for Functions: destination Functions are kept (the merge only adds,
     // so their rooms and group addresses stay), source Functions are refused rather than dropped.
     // Model16 (ADR-0128) adds no Project field: its carried manufacturer files are file-level rows.
+    // Model17 (ADR-0158) scopes only source-bound captured priority SourceRefs; all other facts
+    // stay literal. Unbound captured source facts refuse rather than acquiring applicability.
     // A model bump needs a new audit, not accidental acceptance of newly cloned but unremapped entity fields.
     if before.project.schema_version != super::SELECTIVE_MODEL_VERSION
         || source.project.schema_version != super::SELECTIVE_MODEL_VERSION
     {
-        return Err("selective import supports normalized model v16 only; a new model requires an audited dependency mapping".into());
+        return Err("selective import supports normalized model v17 only; a new model requires an audited dependency mapping".into());
     }
     if !source.project.functions.is_empty() {
         return Err("source project Functions require an explicit selection/disposition mapping; selective import refused without dropping them".into());
@@ -272,12 +274,20 @@ pub(super) fn plan(
     }
     let mut com_map = BTreeMap::new();
     let mut text_keys = BTreeSet::new();
+    // Check against the original project, before IDs or source paths can hide an ambiguity.
+    // One index also includes unselected owners and their claims.
+    let priority_bindings = SavedPriorityBindings::new(&source.project);
     for id in &com_ids {
         let com = source
             .project
             .devices
             .com_object(*id)
             .ok_or("selected communication object not found")?;
+        if com.saved_instance_priority.source().is_some()
+            && !priority_bindings.captured_binding(com, com.device)
+        {
+            return Err("selected saved-instance priority has invalid or ambiguous original source binding; selective import refused without rewriting the captured fact".into());
+        }
         let new = after
             .project
             .ids
@@ -287,6 +297,17 @@ pub(super) fn plan(
         copied.id = new;
         copied.device = device_map[&com.device];
         copied.source = scoped(&com.source, &source.prefix);
+        if com.saved_instance_priority.source().is_some() {
+            let captured = match &mut copied.saved_instance_priority {
+                SavedInstancePriority::Absent(value) => &mut value.source,
+                SavedInstancePriority::Declared(value) => &mut value.source,
+                SavedInstancePriority::Unavailable { .. } => {
+                    unreachable!("captured source checked")
+                }
+            };
+            captured.device_source = scoped(&captured.device_source, &source.prefix);
+            captured.object_source = scoped(&captured.object_source, &source.prefix);
+        }
         for link in &mut copied.links {
             link.ga = *group_map
                 .get(&link.ga)
@@ -457,7 +478,23 @@ pub(super) fn plan(
         }
     }
     // Exact reopen admission catches unsupported shapes and allocator/reference loss.
+    // It also admits captured string limits after prefix expansion, never a truncated fact.
     after.encode().map_err(|e| e.to_string())?;
+    // A valid original binding must not become ambiguous against existing destination sources.
+    // Existing destination facts are deliberately neither rebound nor repaired.
+    let merged_bindings = SavedPriorityBindings::new(&after.project);
+    for id in com_map.values() {
+        let com = after
+            .project
+            .devices
+            .com_object(*id)
+            .ok_or("imported communication object not found")?;
+        if com.saved_instance_priority.source().is_some()
+            && !merged_bindings.captured_binding(com, com.device)
+        {
+            return Err("selected saved-instance priority has ambiguous destination source binding; selective import refused without changing destination facts".into());
+        }
+    }
     Ok(Plan {
         before: before.clone(),
         after,

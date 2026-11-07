@@ -33,6 +33,8 @@ it("indexes linked-only columns by device/object identity and retains every dire
 
 // A real device-detail object: every field the server sends, nothing invented.
 const object = (id: number, number: number, name: string | null): ComObjectNode => ({
+    saved_instance_priority: { status: "unavailable", reason: "NotCaptured" },
+
   id, number, name, dpt: null, dpt_layer: null, description: null, description_layer: null, is_active: true,
   read: false, write: true, transmit: false, update: false, communication: true, read_on_init: false,
   links: [], activation: "NotEvaluated", channel: null, program_dpt: null, dpt_text: null, function_text: null,

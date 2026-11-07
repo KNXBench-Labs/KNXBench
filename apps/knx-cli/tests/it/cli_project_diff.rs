@@ -118,6 +118,7 @@ fn project_with_device_com_object_read_flag(com_read_flag_present: bool) -> Proj
         Override::Absent
     };
     project.devices.insert_com_object(ComObjectInstance {
+        saved_instance_priority: Default::default(),
         id: ComObjectInstanceId(1),
         source: source("CO-1"),
         device: DeviceId(1),

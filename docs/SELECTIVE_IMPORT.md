@@ -1,7 +1,10 @@
 # Selective project import
 
-The current service admits normalized model v16 with an explicitly audited
-reference closure. Destination notes and Functions are preserved; source notes
+The current service admits normalized model v17 with an explicitly audited
+reference closure. The saved-instance-priority mapping correction and focused
+regressions are authored but not yet execution-accepted; see the
+[captured-fact contract](contracts/saved-instance-priority.md#audited-selective-import-mapping-native-model-17).
+Destination notes and Functions are preserved; source notes
 follow the mapping/explicit-choice rules below, while source Functions still
 refuse rather than disappear. The original v12 package was based on `b042048b`;
 [its integration verification](status/2026-10-10-import-expansion-integration.md)
@@ -90,11 +93,17 @@ recomputes the plan. Existing full-project replacement import is unchanged.
 
 - Source input up to the storage ceiling of 1,000,000,000 bytes (ADR-0142;
   formerly 64 MiB), plus the existing container/parser resource ceilings.
-- Normalized model v16 only (`SELECTIVE_MODEL_VERSION`). The audited closure
-  preserves destination Functions, but refuses any source Functions until their
-  selection/disposition mapping is defined. v16's manufacturer-file storage is
-  file-level evidence, not a new project reference. A later model bump needs a
-  fresh entity/reference audit rather than merely raising the guard.
+- Normalized model v17 only (`SELECTIVE_MODEL_VERSION`), on source and destination.
+  The audited closure preserves destination Functions, but refuses any source
+  Functions until their selection/disposition mapping is defined. v16's
+  manufacturer-file storage remains file-level evidence. v17 scopes the two
+  saved-priority SourceRefs only after their original unique owner/source binding
+  verifies, preserving raw/omission/schema/locator/digest facts. Invalid or
+  already-unbound captured facts and merged scoped-source ambiguity refuse the
+  whole plan; unavailable and existing destination facts stay unchanged. Final
+  native admission enforces post-prefix bounds. This does not generalize clone
+  repair, reauthenticate bytes or infer product defaults. A later model bump
+  needs a fresh entity/reference audit rather than merely raising the guard.
 - Destination notes are preserved. In note-carrying normalized sources, notes
   follow imported/reused targets; those outside the selection require an explicit
   `unselectedNotes` choice (`skip` with a report per note, or `attachToProject`).

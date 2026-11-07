@@ -88,6 +88,7 @@ impl fmt::Display for RepresentationIssue {
 /// keeps its own error (MODEL-02 repair commands exist for it); every other
 /// finding is reported together as [`StoreError::Unrepresentable`].
 pub(crate) fn check_representable(project: &Project) -> Result<(), StoreError> {
+    crate::saved_instance_priority::check(project)?;
     crate::notes::check(project)?;
     crate::functions::check(project)?;
     crate::instructions::check(project)?;

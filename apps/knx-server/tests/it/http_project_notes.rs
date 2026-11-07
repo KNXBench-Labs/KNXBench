@@ -974,6 +974,7 @@ async fn target_catalogue_offers_objects_by_stable_id_with_the_snapshot_identity
         project
             .devices
             .insert_com_object(knx_core::ComObjectInstance {
+                saved_instance_priority: Default::default(),
                 id,
                 source: knx_core::SourceRef {
                     path: "synthetic".into(),

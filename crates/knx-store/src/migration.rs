@@ -22,7 +22,7 @@ use std::path::Path;
 use rusqlite::{params, Connection, OptionalExtension, Transaction};
 
 /// Matches `knx_core::project::CURRENT_SCHEMA_VERSION`.
-pub const CURRENT_SCHEMA_VERSION: i64 = 16;
+pub const CURRENT_SCHEMA_VERSION: i64 = 17;
 
 #[derive(Debug)]
 pub enum MigrationError {
@@ -704,6 +704,11 @@ fn migrate_v15_to_v16(conn: &Connection) -> Result<(), MigrationError> {
     Ok(())
 }
 
+fn migrate_v16_to_v17(conn: &Connection) -> Result<(), MigrationError> {
+    conn.execute_batch(crate::saved_instance_priority::CREATE_TABLE)?;
+    Ok(())
+}
+
 type Migration = fn(&Connection) -> Result<(), MigrationError>;
 
 /// History owns the surrounding transaction so a refused editor write also
@@ -755,6 +760,7 @@ fn migrations() -> Vec<Migration> {
         migrate_v13_to_v14,
         migrate_v14_to_v15,
         migrate_v15_to_v16,
+        migrate_v16_to_v17,
     ]
 }
 
@@ -1408,12 +1414,9 @@ mod tests {
         .unwrap();
 
         let saved = {
-            // Same trick `a_pre_v7_com_object_reads_its_sixth_flag_as_absent_
-            // not_false` uses one screen down: write through today's writer,
-            // then take the file back to the old shape by hand. `save_project`
-            // clears `com_object_program_default` unconditionally and so
-            // cannot run against a file that lacks the table, and a v7 build's
-            // writer is not available to a v9 build to borrow.
+            // Write through today's writer, then take the file back to the
+            // old shape by hand. The current writer requires the current
+            // tables, and a historical writer is not available to borrow.
             let conn = open_and_migrate(&path).unwrap();
 
             let mut project = knx_core::Project::new(knx_core::Language("en".into()));
@@ -1450,6 +1453,7 @@ mod tests {
                 binary_data: vec![],
             });
             project.devices.insert_com_object(ComObjectInstance {
+                saved_instance_priority: Default::default(),
                 id: ComObjectInstanceId(5),
                 source: knx_core::SourceRef {
                     path: "P-0001/0.xml".into(),
@@ -1481,12 +1485,11 @@ mod tests {
             crate::project::cover_ids_in_use(&mut project);
             crate::project::save_project(&conn, &project).unwrap();
 
-            // Back to a genuine v7 shape: v8 is a no-DDL placeholder, v9's
-            // only change is this table and v10's are four columns, so
-            // dropping them and rewinding `user_version` leaves exactly the
-            // file a v7 build would have written for this project.
+            // Back to a genuine v7 shape: remove every later table and
+            // column before rewinding the header, including native17's table.
             conn.execute_batch(
-                "DROP TABLE instruction_run;
+                "DROP TABLE com_object_saved_priority;
+                 DROP TABLE instruction_run;
                  DROP TABLE instruction_document; DROP TABLE manufacturer_file; DROP TABLE project_function_member; DROP TABLE project_function; DROP TABLE project_function_state; DROP TABLE project_note; DROP TABLE project_note_state;
                  DROP TABLE project_history_state;
                  DROP TABLE project_history_stack;
@@ -1510,6 +1513,15 @@ mod tests {
                 .query_row("PRAGMA user_version", [], |r| r.get(0))
                 .unwrap();
             assert_eq!(version, 7, "the file under test must be a v7 file");
+            let later_tables: i64 = conn
+                .query_row(
+                    "SELECT COUNT(*) FROM sqlite_schema WHERE name IN \
+                     ('com_object_saved_priority', 'com_object_program_default')",
+                    [],
+                    |r| r.get(0),
+                )
+                .unwrap();
+            assert_eq!(later_tables, 0, "a v7 file has neither later object table");
             let devices: i64 = conn
                 .query_row("SELECT COUNT(*) FROM device", [], |r| r.get(0))
                 .unwrap();
@@ -1578,12 +1590,21 @@ mod tests {
         .unwrap();
         let conn = Connection::open(&path).unwrap();
         conn.pragma_update(None, "foreign_keys", "OFF").unwrap();
-        // A v6-shaped object: five flags' worth of vocabulary available and
-        // one of them stated. The insert goes through today's writer, which
-        // knows the sixth attribute, so the `read_on_init` row is deleted
-        // again below — a real v6 file has no such row at all, and a row
-        // saying `absent` would let the test pass without ever exercising
-        // the missing-row path it exists to prove.
+        let historical_ddl: String = conn
+            .query_row(
+                "SELECT group_concat(sql, char(10)) FROM \
+                 (SELECT sql FROM sqlite_schema ORDER BY name)",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        // Use today's writer only in a separate current-schema database,
+        // then transfer the old columns into the untouched v6 DDL. Remove
+        // its sixth flag below: even an `absent` row would bypass the
+        // missing-row path this test exists to prove.
+        let writer_path = dir.path().join("current-writer.sqlite");
+        let writer = open_and_migrate(&writer_path).unwrap();
+        writer.pragma_update(None, "foreign_keys", "OFF").unwrap();
         let flags = ResolvedFlags {
             communication: Override::Value(Resolved {
                 value: false,
@@ -1592,10 +1613,11 @@ mod tests {
             ..ResolvedFlags::none()
         };
         crate::devices::upsert_com_object_instance(
-            &conn,
+            &writer,
             DeviceId(1),
             0,
             &ComObjectInstance {
+                saved_instance_priority: Default::default(),
                 id: ComObjectInstanceId(1),
                 source: knx_core::SourceRef {
                     path: "P-0001/0.xml".into(),
@@ -1612,6 +1634,26 @@ mod tests {
                 links: vec![],
                 module_instance: None,
             },
+        )
+        .unwrap();
+        drop(writer);
+        conn.execute(
+            "ATTACH DATABASE ?1 AS current_writer",
+            [writer_path.to_str().unwrap()],
+        )
+        .unwrap();
+        conn.execute_batch(
+            "INSERT INTO com_object_instance
+                 (id, device_id, position, source_path, source_ets_id, number,
+                  size_kind, size_value, size_layer, is_active, module_instance_id)
+             SELECT id, device_id, position, source_path, source_ets_id, number,
+                    size_kind, size_value, size_layer, is_active, module_instance_id
+             FROM current_writer.com_object_instance;
+             INSERT INTO com_object_override
+                 (com_object_instance_id, attr, state, value, text_kind, layer)
+             SELECT com_object_instance_id, attr, state, value, text_kind, layer
+             FROM current_writer.com_object_override;
+             DETACH DATABASE current_writer;",
         )
         .unwrap();
         // Back to a genuine v6 shape: the attribute vocabulary of a v6
@@ -1631,6 +1673,31 @@ mod tests {
             )
             .unwrap();
         assert_eq!(remaining, 0);
+        assert_eq!(
+            conn.query_row("PRAGMA user_version", [], |r| r.get::<_, i64>(0))
+                .unwrap(),
+            6
+        );
+        assert_eq!(
+            conn.query_row(
+                "SELECT COUNT(*) FROM sqlite_schema WHERE name IN \
+                 ('com_object_saved_priority', 'com_object_program_default')",
+                [],
+                |r| r.get::<_, i64>(0),
+            )
+            .unwrap(),
+            0,
+            "the v6 fixture must retain its historical DDL before migration"
+        );
+        let populated_ddl: String = conn
+            .query_row(
+                "SELECT group_concat(sql, char(10)) FROM \
+                 (SELECT sql FROM sqlite_schema ORDER BY name)",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(populated_ddl, historical_ddl, "v6 DDL must stay unchanged");
         drop(conn);
 
         let conn = open_and_migrate(&path).unwrap();

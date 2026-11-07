@@ -2,6 +2,15 @@
 
 # Implementation status
 
+## Current-source implementation: captured saved-instance priority
+
+Current source also implements a separate read-only captured saved-instance
+priority observation in the model and device-detail API, not a new table column
+or editor. Native schema17 retains old files/history as NotCaptured; original
+source facts are not inferred or resolved against products. Focused proofs and
+independent review pass; [integrated acceptance and limits](../status/2026-11-06-saved-instance-priority.md)
+remain separate. Released Alpha 19 cutoffs are unchanged.
+
 ## Main-only implementation: literal product-folder declarations
 
 In **By saved project folder**, an already assigned Folder can show a bounded

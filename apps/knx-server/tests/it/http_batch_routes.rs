@@ -126,6 +126,7 @@ fn state_with_fixture() -> knx_server::AppState {
     project
         .devices
         .insert_com_object(knx_core::ComObjectInstance {
+            saved_instance_priority: Default::default(),
             id: knx_core::ComObjectInstanceId(1),
             source: source("t"),
             device: DeviceId(4),

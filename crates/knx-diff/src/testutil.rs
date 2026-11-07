@@ -236,6 +236,7 @@ pub(crate) fn add_parameter(
 /// into `project.devices` themselves with [`push_com_object`].
 pub(crate) fn com_object(id: u32, device: DeviceId, number: u16) -> ComObjectInstance {
     ComObjectInstance {
+        saved_instance_priority: Default::default(),
         id: ComObjectInstanceId(id),
         source: source(&format!("CO-{id}")),
         device,

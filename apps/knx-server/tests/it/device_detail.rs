@@ -29,6 +29,7 @@ fn project_with_one_device() -> Project {
         binary_data: vec![],
     });
     project.devices.insert_com_object(ComObjectInstance {
+        saved_instance_priority: Default::default(),
         id: ComObjectInstanceId(1),
         source: source(),
         device: DeviceId(1),
@@ -67,4 +68,20 @@ fn device_detail_impl_reports_an_unknown_device_by_id() {
     let project = project_with_one_device();
     let err = knx_server::device_detail_impl(&project, 42).unwrap_err();
     assert!(err.contains("42"));
+}
+
+#[test]
+fn saved_instance_priority_device_detail_default_is_required_and_never_product_or_wire() {
+    let project = project_with_one_device();
+    let detail = knx_server::device_detail_impl(&project, 1).unwrap();
+    let json = serde_json::to_value(&detail.com_objects[0]).unwrap();
+    assert_eq!(
+        json["saved_instance_priority"],
+        serde_json::json!({"status":"unavailable","reason":"NotCaptured"})
+    );
+    let priority = json["saved_instance_priority"].as_object().unwrap();
+    assert_eq!(priority.len(), 2);
+    for alias in ["raw", "effective", "priority_layer", "wire", "default"] {
+        assert!(!priority.contains_key(alias));
+    }
 }

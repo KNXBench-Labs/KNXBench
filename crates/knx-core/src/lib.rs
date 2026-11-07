@@ -26,6 +26,8 @@ pub mod note;
 pub mod parameter;
 pub mod project;
 pub mod provenance;
+pub mod saved_instance_priority;
+pub use saved_instance_priority::*;
 pub mod scan;
 pub mod string_table;
 pub mod system_family;

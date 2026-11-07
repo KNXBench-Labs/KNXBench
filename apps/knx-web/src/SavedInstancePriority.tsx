@@ -1,4 +1,4 @@
-/** Read-only row showing an object's captured saved-project priority declaration, never wire priority. */
+/** Read-only row for an object's captured saved-project priority, never its wire priority. */
 import type { CapturedSavedInstanceSource } from "./bindings/CapturedSavedInstanceSource";
 import type { SavedInstancePriorityView } from "./bindings/SavedInstancePriorityView";
 import type { SavedPriorityUnavailableView } from "./bindings/SavedPriorityUnavailableView";

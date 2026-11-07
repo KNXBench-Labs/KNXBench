@@ -380,7 +380,7 @@ fn saved_instance_priority_batch_reader_uses_one_metadata_query_for_many_objects
         statement: *mut c_void,
         _: *mut c_void,
     ) -> i32 {
-        if kind == rusqlite::ffi::SQLITE_TRACE_STMT as u32 {
+        if kind == rusqlite::ffi::SQLITE_TRACE_STMT {
             // SQLite supplies a live sqlite3_stmt for this synchronous trace callback.
             let sql = unsafe { rusqlite::ffi::sqlite3_sql(statement.cast()) };
             if !sql.is_null()
@@ -428,7 +428,7 @@ fn saved_instance_priority_batch_reader_uses_one_metadata_query_for_many_objects
         let status = unsafe {
             rusqlite::ffi::sqlite3_trace_v2(
                 conn.handle(),
-                rusqlite::ffi::SQLITE_TRACE_STMT as u32,
+                rusqlite::ffi::SQLITE_TRACE_STMT,
                 Some(count_statement),
                 (&counter as *const AtomicUsize).cast_mut().cast(),
             )

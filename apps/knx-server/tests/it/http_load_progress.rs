@@ -31,6 +31,7 @@ fn state() -> (Arc<knx_server::AppState>, tempfile::TempDir) {
         store_path: Default::default(),
         view_path_key: Default::default(),
         opaque: Default::default(),
+        folder_baselines: Default::default(),
         manufacturer_refs: Default::default(),
         command_stack: Default::default(),
         history_generation: Default::default(),

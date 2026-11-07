@@ -644,6 +644,41 @@ pub struct DeviceDetail {
     /// itself states, plus whatever `apps/knx-server` can add from a
     /// product database. See [`DeviceProductNode`].
     pub product: DeviceProductNode,
+    /// Whether the saved project folders still describe the device
+    /// (`docs/contracts/saved-folder-currency.md`). Server-only, like
+    /// [`ComObjectNode::project_folder`]: set when an object has a saved
+    /// Folder placement; [`build_device_detail`] leaves it absent.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub project_folder_currency: Option<ProjectFolderCurrency>,
+}
+
+/// [`DeviceDetail::project_folder_currency`]. Never recomputes or hides a folder.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, TS)]
+#[serde(tag = "status", rename_all = "camelCase")]
+#[ts(export)]
+pub enum ProjectFolderCurrency {
+    /// Parameter values and object set equal the original import.
+    Unchanged,
+    /// A parameter value or the object set differs from the original import.
+    ChangedSinceImport,
+    /// The original could not be read or attributed; no claim either way.
+    Unknown {
+        reason: ProjectFolderCurrencyUnknown,
+    },
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, TS)]
+#[ts(export)]
+pub enum ProjectFolderCurrencyUnknown {
+    NoRetainedSource,
+    AmbiguousSource,
+    SourceIntegrity,
+    SourceLimit,
+    UnsupportedSchema,
+    Unreadable,
+    DeviceNotInSource,
+    AmbiguousDevice,
 }
 
 /// A device's product identity, in two halves: `product_ref`/`program_ref`
@@ -1117,6 +1152,7 @@ pub fn build_device_detail(project: &Project, id: knx_core::DeviceId) -> Option<
             .map(|com| build_com_object_node(com, project, id, &bindings))
             .collect(),
         product: build_device_product_node(device),
+        project_folder_currency: None,
     })
 }
 

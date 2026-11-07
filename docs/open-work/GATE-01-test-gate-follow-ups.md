@@ -171,6 +171,17 @@ diagnostic is not a gate replacement. This closes the previously requested
 bounded production-preparation profile, not GATE-01's scheduler/historical
 failure investigations above.
 
+## Mounted System-2 recovery-authority timeouts under load — 7 November 2026
+
+One change-scoped package gate (unrelated diff/server change, no `device_system2`
+or `knx-app` edit) failed `rust-tests` with 868 passed / 4 failed: all four
+`caption_mounted_recovery_authority_{retained,standalone}{20,23}` cases hit the
+10 s `settled_with_timeout` wait (`Elapsed`) after their intended poisoning panic.
+Load average was about 10 with an unrelated VM running. The four passed 3/3 in
+isolation (about 13 s each) and the unchanged rerun passed all 3,664 Rust tests.
+Cause not established; the timeout was not raised and the failed receipt is
+retained privately. Reopen if it recurs in a gate.
+
 ## Known boundary
 
 Killing the stage supervisor with SIGKILL can still orphan children; see the

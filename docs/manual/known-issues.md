@@ -16,6 +16,10 @@ priority overlay never invents declarations or absence for historical files or
 history: they remain NotCaptured. Read-only opening migrates a memory copy only.
 No priority editor, effective/product resolution, wire behavior or new module/
 source-schema support follows. [Scope and acceptance](../status/2026-11-06-saved-instance-priority.md).
+Comparing a project saved before that capture, or an ETS4/ETS5 export
+(`UnsupportedSourceSchema`), with a fresh ETS6 import lists `saved_priority` for every
+captured object, and `knx diff --exit-code` then reports a difference. That is a real
+difference in recorded knowledge, not an edit.
 
 <a id="product-database-31--source-newer-than-alpha-18"></a>
 

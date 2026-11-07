@@ -19,7 +19,8 @@ use knx_core::{
     Area, BuildingPart, BuildingPartId, BuildingPartType, ComObjectInstance, CommissioningState,
     CompletionStatus, DeviceId, DeviceInstance, Direction, DptRef, GroupAddressEntry,
     GroupAddressId, GroupAddressStyle, GroupRange, GroupRangeId, Line, ModuleInstanceId, Override,
-    ParameterInstance, StringTable, Text, Topology,
+    ParameterInstance, SavedInstancePriority, SavedPriorityBindings, SavedPriorityOmission,
+    SavedPriorityUnavailable, StringTable, Text, Topology,
 };
 
 use crate::diff::FieldChange;
@@ -661,6 +662,51 @@ pub struct ComObjectFields {
     /// The linked module instance's own `ets_id`, `None` for a
     /// schema-11-shaped device.
     pub module_instance: Option<String>,
+    /// The captured saved-instance priority declaration (ADR-0158).
+    pub saved_priority: SavedPriorityFields,
+}
+
+/// A captured saved-instance priority as compared: the exact decoded literal,
+/// the omission kind or the reason nothing applies. Source metadata (archive
+/// paths, topology digest) is not compared, so two imports of the same
+/// declaration match; this is neither effective, product nor wire priority.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum SavedPriorityFields {
+    Declared(String),
+    Absent(SavedPriorityOmission),
+    Unavailable(SavedPriorityUnavailable),
+    /// The stored fact no longer binds to this object (as in the read-only
+    /// projection), so its literal is withheld rather than compared.
+    SourceBindingMismatch,
+}
+
+impl std::fmt::Display for SavedPriorityFields {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            // `Debug` quoting keeps empty, whitespace and control characters visible.
+            Self::Declared(raw) => write!(f, "declared {raw:?}"),
+            Self::Absent(omission) => write!(f, "absent ({omission:?})"),
+            Self::Unavailable(reason) => write!(f, "unavailable ({reason:?})"),
+            Self::SourceBindingMismatch => write!(f, "unavailable (SourceBindingMismatch)"),
+        }
+    }
+}
+
+/// The comparison value of `com`'s captured declaration under `owner`, using
+/// the same current-binding check as the device-detail projection.
+pub fn saved_priority_fields(
+    com: &ComObjectInstance,
+    owner: DeviceId,
+    bindings: &SavedPriorityBindings<'_>,
+) -> SavedPriorityFields {
+    match &com.saved_instance_priority {
+        SavedInstancePriority::Unavailable { reason } => SavedPriorityFields::Unavailable(*reason),
+        _ if !bindings.captured_binding(com, owner) => SavedPriorityFields::SourceBindingMismatch,
+        SavedInstancePriority::Absent(absent) => SavedPriorityFields::Absent(absent.omission),
+        SavedInstancePriority::Declared(declared) => {
+            SavedPriorityFields::Declared(declared.raw.clone())
+        }
+    }
 }
 
 pub fn com_object_key(com: &ComObjectInstance, device: DeviceKey) -> ComObjectKey {
@@ -675,6 +721,7 @@ pub fn com_object_fields(
     strings: &StringTable,
     ga_keys: &BTreeMap<GroupAddressId, GroupAddressKey>,
     module_ets_ids: &BTreeMap<ModuleInstanceId, String>,
+    saved_priority: SavedPriorityFields,
 ) -> ComObjectFields {
     let mut links: Vec<(GroupAddressKey, Direction)> = com
         .links
@@ -705,6 +752,7 @@ pub fn com_object_fields(
             .module_instance
             .and_then(|id| module_ets_ids.get(&id))
             .cloned(),
+        saved_priority,
     }
 }
 
@@ -734,6 +782,7 @@ pub fn com_object_changed_fields(
             read_on_init,
             links,
             module_instance,
+            saved_priority,
         ]
     )
 }
@@ -891,6 +940,7 @@ impl FieldDiff for ComObjectFields {
                 read_on_init => fmt_display_opt,
                 links => fmt_debug,
                 module_instance => fmt_plain_string_opt,
+                saved_priority => fmt_plain,
             ]
         )
     }
@@ -1368,7 +1418,13 @@ mod tests {
 
         let strings = StringTable::new(Language("en".into()));
         let module_ets_ids: BTreeMap<ModuleInstanceId, String> = BTreeMap::new();
-        let fields = com_object_fields(&com, &strings, &ga_keys, &module_ets_ids);
+        let fields = com_object_fields(
+            &com,
+            &strings,
+            &ga_keys,
+            &module_ets_ids,
+            SavedPriorityFields::Unavailable(SavedPriorityUnavailable::NotCaptured),
+        );
 
         let ga1 = group_address_key(&project.installations[0].group_addresses[0], style());
         let ga2 = group_address_key(&project.installations[0].group_addresses[1], style());
@@ -1392,7 +1448,13 @@ mod tests {
         let mut com = com_object(1, DeviceId(1), 0);
         com.module_instance = Some(module_id(1));
 
-        let fields = com_object_fields(&com, &strings, &ga_keys, &module_ets_ids);
+        let fields = com_object_fields(
+            &com,
+            &strings,
+            &ga_keys,
+            &module_ets_ids,
+            SavedPriorityFields::Unavailable(SavedPriorityUnavailable::NotCaptured),
+        );
         assert_eq!(fields.module_instance, Some("MD-2_M-1".to_string()));
     }
 
@@ -1576,6 +1638,7 @@ mod tests {
             read_on_init: None,
             links: vec![],
             module_instance: None,
+            saved_priority: SavedPriorityFields::Declared("High".into()),
         };
         let right = ComObjectFields {
             text: Some("Off".into()),
@@ -1583,11 +1646,12 @@ mod tests {
             // Absent on the left, stated on the right: the sixth flag
             // reports as a change like any other field (§117).
             read_on_init: Some(true),
+            saved_priority: SavedPriorityFields::SourceBindingMismatch,
             ..left.clone()
         };
         assert_eq!(
             com_object_changed_fields(&left, &right),
-            vec!["text", "update", "read_on_init"]
+            vec!["text", "update", "read_on_init", "saved_priority"]
         );
     }
 

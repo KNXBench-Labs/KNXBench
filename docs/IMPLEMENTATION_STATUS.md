@@ -28,17 +28,31 @@ Eight separate dev-fixture editor crops were inspected. The
 fixture/setup failures and keeps source, runtime and visual scopes distinct.
 Broader WP-08/PDB-04, native/image, hardware, release and deployment remain open.
 
-## Captured saved-instance priority (6 November 2026; reviewed implementation)
+## WP-11 bounded native File submenu viewport cells (7 November 2026)
+
+Four native cells (80%/150% by 900x800/900x560 actual root client) observe the
+File submenus on pinned old source `6ecb69427`, not current main or Alpha 19
+acceptance. The original fourth cell failed on an over-strict harness
+precondition, not a product defect; it was rerun alone in a fresh isolated
+profile after an independently reviewed harness correction (128 offline tests).
+16 post-scroll crops are accepted across the four cells. Ordinary teardown is
+verified. [Observation record](status/2026-11-07-wp11-file-submenu-viewport.md).
+No product change or upgrade of existing Properties/navigation evidence;
+whole WP-11/KL-130 and the wider current-source/environment matrix remain open.
+
+## Captured saved-instance priority (7 November 2026; software-accepted on main)
 
 The bounded schema-23 observation preserves declared raw, both omission causes
 and explicit unavailability through core, native17, working/history/undo/redo
 and the required read-only device-detail GET. Historical images remain NotCaptured;
-no opaque backfill or effective/wire interpretation is introduced. All 27 named
-focused contract tests have actual passes, with independent whole-feature review
-and F1 closure. The [delivery record](status/2026-11-06-saved-instance-priority.md)
-retains source epochs, original failures and pending integrated acceptance.
-Broader WP-06, editing, UI/report/comparison and hardware/native/release claims
-remain outside this slice.
+no opaque backfill or effective/wire interpretation is introduced. Main-first
+`ed0cf7737` is published (exact readback) after a selective-import provenance fix
+and genuine historical-fixture setups; the full selected 17-stage gate passed
+with fresh nested web stages, Rust 8,341 passed/248 ignored and private corpus
+155/155. The actual server build reports `0.1.0-alpha.19+ged0cf7737`. The
+[delivery record](status/2026-11-06-saved-instance-priority.md) retains source
+epochs and original failures. Broader WP-06, editing, UI/report/comparison and
+hardware/native/release claims remain outside this slice.
 
 ## Product-query priority provenance (6 November 2026; bounded foundation)
 

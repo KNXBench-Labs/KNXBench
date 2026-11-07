@@ -1,6 +1,6 @@
 # WP-11 — Native Linux acceptance
 
-**Status:** In progress: bounded native editor, capture and real-pointer cells recorded; Properties has historical and pinned current-source six-cell pointer counterparts; separate current Navigation height and width counterparts are recorded at 80/100/150% (3 November), with an explicit software-render profile. Broader current-source parity and the wider matrix remain open. Listed in [OPEN_WORK](../OPEN_WORK.md); per-ID status of record is the [ledger](../status/LEDGER.md).
+**Status:** In progress: bounded native editor, capture and real-pointer cells recorded; Properties has historical and pinned current-source six-cell pointer counterparts; separate current Navigation height and width counterparts are recorded at 80/100/150% (3 November), with an explicit software-render profile; four File-submenu viewport cells on that old source were observed on 7 November. Broader current-source parity and the wider matrix remain open. Listed in [OPEN_WORK](../OPEN_WORK.md); per-ID status of record is the [ledger](../status/LEDGER.md).
 
 ## Task
 
@@ -176,6 +176,22 @@ change. Ordinary close/owned teardown are verified. Software-render/session-bus,
 no restart/save-roundtrip, no full-tree/pixel/focus-policy and wider native
 exclusions remain. Earlier Properties/height/historical evidence is not upgraded;
 WP-11/KL-130 and ledger status remain unchanged.
+
+## Native File submenu viewport cells — 7 November 2026
+
+The [viewport record](../status/2026-11-07-wp11-file-submenu-viewport.md) adds
+four cells (80%/150% by actual root client 900x800 and 900x560) on pinned source
+`6ecb69427`, executed binary `563b9b03`, 147 frontend files. This is the old
+source epoch, not current main or Alpha 19 acceptance. The original fourth cell
+(150% short) failed on an over-strict harness precondition, not a product defect,
+and is retained; only that cell was rerun in a fresh isolated profile after an
+independently reviewed harness correction (128 offline tests). Each submenu
+returned Escape focus correctly, and 16 post-scroll crops are accepted across
+the four cells. Ordinary close, launcher and cleanup exited 0. No product change,
+no new zoom/click/scroll policy, no Close pointer-reachability claim. Existing
+bounded Properties/navigation records are unchanged. Orca, Firefox,
+GPU/AppImage, other sizes/themes and the wider matrix remain outside this
+slice; ledger status is unchanged.
 
 ## Done when
 

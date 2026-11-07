@@ -222,3 +222,20 @@ software rendering and the host session-D-Bus/AT-SPI exception remain, with no
 restart/save-roundtrip, full-tree/pixel/focus-policy, new Properties/height,
 other-size/theme or wider native acceptance. WP-11/KL-130 stay open; the retained
 catalogue block, previous records and ledger status are unchanged.
+
+## Update 7 November 2026: native File submenu viewport cells
+
+The [viewport record](../status/2026-11-07-wp11-file-submenu-viewport.md) observes
+the File submenus in four actual native cells: 80% and 150% by root client
+900x800 and 900x560. Source is the old pinned `6ecb69427` (executed binary
+`563b9b03`, 147 frontend files), not current main or Alpha 19. Each tested
+submenu closes with Escape back to the header and File control, About opens by
+real pointer and dismisses, and 16 post-scroll crops show the last entries
+inside the client. The original 150% short cell failed on an over-strict harness
+precondition (not a product defect) and was rerun alone after an independently
+reviewed harness correction; the failure stays recorded.
+
+This partly meets the File-submenu lifting condition above for those four
+windows only. It is not whole-zoom acceptance: other sizes, themes, Orca,
+Firefox, GPU/AppImage, restart and current-main parity remain open. No Close
+pointer-reachability claim, no product change; ledger status is unchanged.

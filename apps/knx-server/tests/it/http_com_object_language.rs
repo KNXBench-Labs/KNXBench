@@ -135,6 +135,7 @@ fn state_with_com_object(
         binary_data: vec![],
     });
     project.devices.insert_com_object(ComObjectInstance {
+        saved_instance_priority: Default::default(),
         id: ComObjectInstanceId(1),
         source: source("A-1_O-1_R-1"),
         device: DeviceId(1),

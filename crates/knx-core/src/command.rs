@@ -5107,6 +5107,7 @@ mod tests {
                 declared_dpt: Default::default(),
             });
         project.devices.insert_com_object(ComObjectInstance {
+            saved_instance_priority: Default::default(),
             id: ComObjectInstanceId(1),
             source: source(),
             device: DeviceId(1),
@@ -5142,6 +5143,7 @@ mod tests {
     fn set_com_object_dpt_marks_layer_as_user_edit_and_undoes() {
         let mut project = test_project_with_one_device(None);
         let com = ComObjectInstance {
+            saved_instance_priority: Default::default(),
             id: ComObjectInstanceId(1),
             source: source(),
             device: DeviceId(1),
@@ -5237,6 +5239,7 @@ mod tests {
     fn set_com_object_description_marks_layer_as_user_edit_and_undoes() {
         let mut project = test_project_with_one_device(None);
         let com = ComObjectInstance {
+            saved_instance_priority: Default::default(),
             id: ComObjectInstanceId(1),
             source: source(),
             device: DeviceId(1),
@@ -5283,6 +5286,7 @@ mod tests {
     fn setting_com_object_description_to_none_writes_empty_not_absent() {
         let mut project = test_project_with_one_device(None);
         let com = ComObjectInstance {
+            saved_instance_priority: Default::default(),
             id: ComObjectInstanceId(1),
             source: source(),
             device: DeviceId(1),
@@ -5321,6 +5325,7 @@ mod tests {
     fn setting_com_object_dpt_to_none_writes_empty_not_absent() {
         let mut project = test_project_with_one_device(None);
         let com = ComObjectInstance {
+            saved_instance_priority: Default::default(),
             id: ComObjectInstanceId(1),
             source: source(),
             device: DeviceId(1),
@@ -5365,6 +5370,7 @@ mod tests {
     fn set_com_object_flag_marks_layer_as_user_edit_and_undoes() {
         let mut project = test_project_with_one_device(None);
         let com = ComObjectInstance {
+            saved_instance_priority: Default::default(),
             id: ComObjectInstanceId(1),
             source: source(),
             device: DeviceId(1),
@@ -5409,6 +5415,7 @@ mod tests {
     fn setting_a_never_stated_com_object_flag_writes_value_not_absent() {
         let mut project = test_project_with_one_device(None);
         let com = ComObjectInstance {
+            saved_instance_priority: Default::default(),
             id: ComObjectInstanceId(1),
             source: source(),
             device: DeviceId(1),
@@ -5453,6 +5460,7 @@ mod tests {
     fn setting_read_on_init_undoes_and_redoes_like_any_other_flag() {
         let mut project = test_project_with_one_device(None);
         project.devices.insert_com_object(ComObjectInstance {
+            saved_instance_priority: Default::default(),
             id: ComObjectInstanceId(1),
             source: source(),
             device: DeviceId(1),
@@ -6599,8 +6607,54 @@ mod tests {
         assert_eq!(result, Err(CommandError::DeviceNotFound(DeviceId(99))));
     }
 
+    #[test]
+    fn saved_instance_priority_delete_restore_and_add_remove_inverses_retain_full_facts() {
+        use crate::{SavedInstancePriority, SavedPriorityDeclared, SavedPrioritySource};
+        let mut project = project_with_line_and_unassigned_device();
+        let mut object = test_com_object_instance(ComObjectInstanceId(771), DeviceId(1));
+        object.saved_instance_priority =
+            SavedInstancePriority::Declared(Box::new(SavedPriorityDeclared {
+                raw: " High Ω ".into(),
+                source: SavedPrioritySource {
+                    source_schema: 23,
+                    device_source: source(),
+                    object_source: source(),
+                    owner_xpath: "/synthetic/owner/object".into(),
+                    topology_sha256: "a".repeat(64),
+                },
+            }));
+        let expected = object.clone();
+        let mut stack = CommandStack::new();
+        stack
+            .do_command(
+                &mut project,
+                Command::AddComObjects {
+                    device: DeviceId(1),
+                    objects: vec![object],
+                    program_defaults: vec![],
+                },
+            )
+            .unwrap();
+        assert_eq!(project.devices.com_object(expected.id), Some(&expected));
+        stack.undo(&mut project).unwrap();
+        assert!(project.devices.com_object(expected.id).is_none());
+        stack.redo(&mut project).unwrap();
+        assert_eq!(project.devices.com_object(expected.id), Some(&expected));
+        stack
+            .do_command(&mut project, Command::DeleteDevice { id: DeviceId(1) })
+            .unwrap();
+        assert!(project.devices.com_object(expected.id).is_none());
+        stack.undo(&mut project).unwrap();
+        assert_eq!(project.devices.com_object(expected.id), Some(&expected));
+        stack.redo(&mut project).unwrap();
+        assert!(project.devices.com_object(expected.id).is_none());
+        stack.undo(&mut project).unwrap();
+        assert_eq!(project.devices.com_object(expected.id), Some(&expected));
+    }
+
     fn test_com_object_instance(id: ComObjectInstanceId, device: DeviceId) -> ComObjectInstance {
         ComObjectInstance {
+            saved_instance_priority: Default::default(),
             id,
             source: source(),
             device,
@@ -7723,6 +7777,7 @@ mod tests {
             .com_objects
             .push(ComObjectInstanceId(1));
         p.devices.insert_com_object(ComObjectInstance {
+            saved_instance_priority: Default::default(),
             id: ComObjectInstanceId(1),
             source: source(),
             device: DeviceId(1),
@@ -9381,6 +9436,7 @@ mod id_integrity_tests {
 
     fn com(id: u32, device: u32) -> ComObjectInstance {
         ComObjectInstance {
+            saved_instance_priority: Default::default(),
             id: ComObjectInstanceId(id),
             source: source(),
             device: DeviceId(device),

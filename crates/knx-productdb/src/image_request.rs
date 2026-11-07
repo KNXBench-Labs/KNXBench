@@ -603,6 +603,7 @@ mod tests {
 
     fn object(p: &mut Project, id: u32, number: u16, links: Vec<GroupLink>) {
         p.devices.insert_com_object(ComObjectInstance {
+            saved_instance_priority: Default::default(),
             id: ComObjectInstanceId(id),
             source: source(&format!("{PROGRAM}_O-{number}_R-{id}")),
             device: DeviceId(1),

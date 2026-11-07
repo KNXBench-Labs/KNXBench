@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<KNX xmlns="http://knx.org/xml/project/23" CreatedBy="Synthetic fixture" ToolVersion="synthetic-v16">
+  <Project Id="P-0001"><Installations><Installation Name="Synthetic installation" DefaultLine="P-0001-0_L-1">
+    <Topology><Area Id="P-0001-0_A-1" Name="Synthetic area" Address="1">
+      <Line Id="P-0001-0_L-1" Name="Synthetic line" Address="1">
+        <Segment Id="P-0001-0_L-1_S-1" Number="0" MediumTypeRefId="MT-0">
+          <DeviceInstance Id="P-0001-0_DI-1" Name="Synthetic baseline sensor" Address="10" ProductRefId="M-0001_H-1_P-1" Hardware2ProgramRefId="M-0001_H-1_HP-1">
+            <ComObjectInstanceRefs>
+              <ComObjectInstanceRef RefId="O-7_R-1" Priority="" />
+              <ComObjectInstanceRef RefId="O-8_R-2" Priority="Future-&#x3a9;" />
+              <ComObjectInstanceRef RefId="O-9_R-3" Priority="High" />
+              <ComObjectInstanceRef RefId="O-10_R-4" />
+            </ComObjectInstanceRefs>
+            <GroupObjectTree GroupObjectInstances="O-7_R-1 O-8_R-2 O-9_R-3 O-10_R-4 O-11_R-5" />
+          </DeviceInstance>
+        </Segment>
+      </Line>
+    </Area><UnassignedDevices>
+      <DeviceInstance Id="P-0001-0_DI-2" Name="Synthetic unassigned sensor" ProductRefId="M-0001_H-1_P-1" Hardware2ProgramRefId="M-0001_H-1_HP-1">
+        <ComObjectInstanceRefs><ComObjectInstanceRef RefId="O-7_R-1" Priority="Alert" /></ComObjectInstanceRefs>
+        <GroupObjectTree GroupObjectInstances="O-7_R-1" />
+      </DeviceInstance>
+    </UnassignedDevices></Topology>
+  </Installation></Installations></Project>
+</KNX>

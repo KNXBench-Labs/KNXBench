@@ -195,7 +195,7 @@ fn a_project_without_functions_keeps_its_semantic_identity_after_the_v15_tables_
     // The identity of a function-free image must not depend on whether the
     // empty v15 tables exist, or every predecessor history image would
     // suddenly look changed. A schema-14 shape is made by dropping the v15
-    // tables, then the real upgrade path recreates them.
+    // and later tables, then the real upgrade path recreates them.
     let dir = tempfile::tempdir().unwrap();
     let path = dir.path().join("v14.knxdb");
     let conn = knx_store::open_and_migrate(&path).unwrap();
@@ -205,10 +205,27 @@ fn a_project_without_functions_keeps_its_semantic_identity_after_the_v15_tables_
         .semantic_hash()
         .unwrap();
     conn.execute_batch(
-        "DROP TABLE manufacturer_file; DROP TABLE project_function_member; DROP TABLE project_function; \
+        "DROP TABLE com_object_saved_priority; DROP TABLE manufacturer_file; \
+         DROP TABLE project_function_member; DROP TABLE project_function; \
          DROP TABLE project_function_state; PRAGMA user_version=14;",
     )
     .unwrap();
+    assert_eq!(
+        conn.query_row("PRAGMA user_version", [], |r| r.get::<_, i64>(0))
+            .unwrap(),
+        14
+    );
+    assert_eq!(
+        conn.query_row(
+            "SELECT COUNT(*) FROM sqlite_schema WHERE name IN \
+             ('com_object_saved_priority', 'manufacturer_file', 'project_function_member', \
+              'project_function', 'project_function_state')",
+            [],
+            |r| r.get::<_, i64>(0),
+        )
+        .unwrap(),
+        0
+    );
     drop(conn);
     let upgraded = knx_store::open_existing_and_migrate(&path).unwrap();
     assert_eq!(

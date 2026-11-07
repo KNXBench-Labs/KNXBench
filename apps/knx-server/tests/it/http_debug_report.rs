@@ -324,6 +324,7 @@ fn project_with_a_decodable_group_address() -> Project {
     project
         .devices
         .insert_com_object(knx_core::ComObjectInstance {
+            saved_instance_priority: Default::default(),
             id: knx_core::ComObjectInstanceId(1),
             source: source("co1"),
             device: knx_core::DeviceId(1),

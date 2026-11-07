@@ -111,6 +111,7 @@ fn project_with_resolving_and_unresolving_group_addresses() -> knx_core::Project
     };
     let mut project = knx_core::Project::new(Language("en".into()));
     project.devices.insert_com_object(ComObjectInstance {
+        saved_instance_priority: Default::default(),
         id: ComObjectInstanceId(1),
         source: source.clone(),
         device: knx_core::DeviceId(1),

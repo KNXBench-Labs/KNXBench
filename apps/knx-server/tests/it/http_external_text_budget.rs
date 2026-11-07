@@ -86,6 +86,7 @@ fn state_with_translation(
     });
     for n in 1..=object_count {
         project.devices.insert_com_object(ComObjectInstance {
+            saved_instance_priority: Default::default(),
             id: ComObjectInstanceId(n),
             source: source(&format!("A-1_O-{n}_R-1")),
             device: DeviceId(1),

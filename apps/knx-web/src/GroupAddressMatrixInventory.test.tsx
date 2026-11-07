@@ -27,6 +27,8 @@ beforeEach(() => {
 afterEach(async () => { await act(async () => root.unmount()); host.remove(); });
 
 const object = (id: number, number: number, name: string): ComObjectNode => ({
+    saved_instance_priority: { status: "unavailable", reason: "NotCaptured" },
+
   id, number, name, dpt: null, dpt_layer: null, description: null, description_layer: null, is_active: true,
   read: false, write: true, transmit: false, update: false, communication: true, read_on_init: false,
   links: [], activation: "NotEvaluated", channel: null, program_dpt: null, dpt_text: null, function_text: null,

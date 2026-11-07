@@ -15,6 +15,8 @@ import "../src/deviceComparisons.css";
 
 const params = new URLSearchParams(location.search);
 const objects: ComObjectNode[] = params.has("words") ? [{
+    saved_instance_priority: { status: "unavailable", reason: "NotCaptured" },
+
   id: 1, number: 123, name: "Synthetic illumination sensor", dpt: "DPST-9-4", dpt_layer: null,
   description: null, description_layer: null, is_active: true, activation: "Undetermined", channel: null,
   program_dpt: null, dpt_text: "Windgeschwindigkeit", function_text: "Electromagnetic measurement",

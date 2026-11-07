@@ -1,0 +1,158 @@
+{
+  "fixture": {
+    "file": "native16-before-instance-priority.sqlite",
+    "sha256": "8246f92ca2610c8f8a58295bb026a6310134ff06acae5550e36a2cd9e62992b5",
+    "bytes": 2195456
+  },
+  "writer_base": "7cba23ff280e8b69d484f7ec87f75cef9963545c",
+  "native_schema": 16,
+  "producer": {
+    "file": "native16-before-instance-priority-producer.rs.txt",
+    "sha256": "6f3dfee1b7a7a3221072012df4d4731362be27e282bbac41965c23d86ffde7b6",
+    "executable_sha256": "53c6d4ea3f94e0ef1ec4a7ec6b4b4ac8bd3fd9043f738baf9dd227d596192639"
+  },
+  "inputs": {
+    "0.xml": {
+      "sha256": "aa3c89f6b3ce8b74e7c33c664668050d4de59d6509e77fea9cdaba3a72e8bf10",
+      "bytes": 1592
+    },
+    "Project.xml": {
+      "sha256": "b27d96d227cf14ab7c847a39a0fed0add3970f63f32c52915e0b3405b8d16971",
+      "bytes": 213
+    }
+  },
+  "argv": [
+    "native16_predecessor",
+    "<synthetic-input-directory>",
+    "<new-output-directory>"
+  ],
+  "source_archive_sha256": "49232f4f50bb5c0793555fe44f8adc9aa3e4630c8a85a7b2a782654c543e3f5f",
+  "original_writer_inputs_verified": 4220,
+  "counts": {
+    "devices": 2,
+    "objects": 6,
+    "undo": 2,
+    "redo": 1,
+    "named": 1,
+    "generation": 3
+  },
+  "images": {
+    "baseline-complete.image": {
+      "sha256": "3d4bfbb8c440cdc27c82a27cb85e10b45b58b23267c13d80e14ee44da41a478e",
+      "bytes": 319488
+    },
+    "baseline-model.image": {
+      "sha256": "dde1f05b591e9df65e50caf8b42ab588f693c12a4c2a78847e1e5f2ee12fe3a2",
+      "bytes": 311296
+    },
+    "redo-0.image": {
+      "sha256": "a2745521bd128c346b75ce3b2eada799711d8be5eaae60d4d37041b322999958",
+      "bytes": 311296
+    },
+    "undo-0.image": {
+      "sha256": "dde1f05b591e9df65e50caf8b42ab588f693c12a4c2a78847e1e5f2ee12fe3a2",
+      "bytes": 311296
+    },
+    "undo-1.image": {
+      "sha256": "56d35f8e79c74155e8ab9d0c1192c689d20df7466507435a40e74b9c57ab0bc6",
+      "bytes": 311296
+    },
+    "working-complete.image": {
+      "sha256": "5e5cccb9ab90bdc8207f57554000433cd851ae06ffd867d396d70bb05d32a443",
+      "bytes": 319488
+    },
+    "working-model.image": {
+      "sha256": "686ba410e7aaceb6983769645eefab748b1dff543cb21ff8bba680de762ab0b0",
+      "bytes": 311296
+    }
+  },
+  "history": {
+    "project_history_context": [
+      {
+        "content_hash": "939dac584c12177829fe39a1dad1a768536fa7bec9bdd39835aad5b9aa343603",
+        "format_version": 1,
+        "image": {
+          "bytes": 319488,
+          "sha256": "675b7df53fb81dea067e82e640628a2b0c09ee9030b034f2384254d915ed2e9e"
+        },
+        "image_hash": "675b7df53fb81dea067e82e640628a2b0c09ee9030b034f2384254d915ed2e9e"
+      }
+    ],
+    "project_history_state": [
+      {
+        "id": 0,
+        "format_version": 1,
+        "generation": 3,
+        "baseline_hash": "9ce47868538ba475bc913018a759e089db9500aee7394af026beb1d08899af81",
+        "working": {
+          "bytes": 311296,
+          "sha256": "686ba410e7aaceb6983769645eefab748b1dff543cb21ff8bba680de762ab0b0"
+        },
+        "working_hash": "686ba410e7aaceb6983769645eefab748b1dff543cb21ff8bba680de762ab0b0",
+        "context_hash": "939dac584c12177829fe39a1dad1a768536fa7bec9bdd39835aad5b9aa343603"
+      }
+    ],
+    "project_history_stack": [
+      {
+        "side": "undo",
+        "position": 1,
+        "format_version": 1,
+        "image": {
+          "bytes": 311296,
+          "sha256": "56d35f8e79c74155e8ab9d0c1192c689d20df7466507435a40e74b9c57ab0bc6"
+        },
+        "image_hash": "56d35f8e79c74155e8ab9d0c1192c689d20df7466507435a40e74b9c57ab0bc6",
+        "context_hash": "939dac584c12177829fe39a1dad1a768536fa7bec9bdd39835aad5b9aa343603"
+      },
+      {
+        "side": "undo",
+        "position": 0,
+        "format_version": 1,
+        "image": {
+          "bytes": 311296,
+          "sha256": "dde1f05b591e9df65e50caf8b42ab588f693c12a4c2a78847e1e5f2ee12fe3a2"
+        },
+        "image_hash": "dde1f05b591e9df65e50caf8b42ab588f693c12a4c2a78847e1e5f2ee12fe3a2",
+        "context_hash": "939dac584c12177829fe39a1dad1a768536fa7bec9bdd39835aad5b9aa343603"
+      },
+      {
+        "side": "redo",
+        "position": 0,
+        "format_version": 1,
+        "image": {
+          "bytes": 311296,
+          "sha256": "a2745521bd128c346b75ce3b2eada799711d8be5eaae60d4d37041b322999958"
+        },
+        "image_hash": "a2745521bd128c346b75ce3b2eada799711d8be5eaae60d4d37041b322999958",
+        "context_hash": "939dac584c12177829fe39a1dad1a768536fa7bec9bdd39835aad5b9aa343603"
+      }
+    ],
+    "project_history_version": [
+      {
+        "id": 1,
+        "format_version": 1,
+        "created_at": "2026-11-06T20:46:59.855Z",
+        "reason": "named",
+        "label": "Synthetic V16 baseline",
+        "image": {
+          "bytes": 311296,
+          "sha256": "dde1f05b591e9df65e50caf8b42ab588f693c12a4c2a78847e1e5f2ee12fe3a2"
+        },
+        "image_hash": "dde1f05b591e9df65e50caf8b42ab588f693c12a4c2a78847e1e5f2ee12fe3a2",
+        "context_hash": "939dac584c12177829fe39a1dad1a768536fa7bec9bdd39835aad5b9aa343603"
+      }
+    ]
+  },
+  "original_failures": {
+    "attempt-01": "unshare setgroups operation not permitted, no Cargo",
+    "attempt-02": "unshare /proc/self/setgroups write operation not permitted, no Cargo",
+    "attempt-03": "guard did not classify unmapped setuid(0) EINVAL refusal, no Cargo"
+  },
+  "safety": {
+    "offlineUnprivilegedScratchHomesVerified": true,
+    "allThreeLeasesRecorded": true,
+    "realHomeBeforeAfterSnapshotRecorded": false,
+    "qualification": "No real-home snapshot is credited for original producer attempt04. Its code uses explicit synthetic paths and isolated homes; new-package acceptance must provide its own full user-data guard."
+  },
+  "claim": "Authentic V16 writer provenance only; no V17 migration or current acceptance implied."
+}

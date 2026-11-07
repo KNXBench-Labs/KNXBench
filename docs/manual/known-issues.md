@@ -8,6 +8,15 @@ Historical titles do not mean that their old defect is still present. The
 [source/test audit](../status/2026-10-08-known-issues-status-audit.md) records
 the reconciliation; formal task dispositions remain in the engineering ledger.
 
+## Native project schema17 (current source, not a new release)
+
+**Current-source native project schema17:** new saves can be refused by older
+applications; keep originals and independent backups. The captured saved-instance
+priority overlay never invents declarations or absence for historical files or
+history: they remain NotCaptured. Read-only opening migrates a memory copy only.
+No priority editor, effective/product resolution, wire behavior or new module/
+source-schema support follows. [Scope and acceptance](../status/2026-11-06-saved-instance-priority.md).
+
 <a id="product-database-31--source-newer-than-alpha-18"></a>
 
 ## Product database 31 (since Alpha 19)

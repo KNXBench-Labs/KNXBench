@@ -390,6 +390,7 @@ mod tests {
         is_active: bool,
     ) -> ComObjectInstance {
         ComObjectInstance {
+            saved_instance_priority: Default::default(),
             id: ComObjectInstanceId(id),
             source: source(),
             device: DeviceId(1),

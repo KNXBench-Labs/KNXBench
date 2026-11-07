@@ -89,6 +89,7 @@ fn project() -> knx_core::Project {
         binary_data: vec![],
     });
     project.devices.insert_com_object(ComObjectInstance {
+        saved_instance_priority: Default::default(),
         id: ComObjectInstanceId(1),
         source: source(),
         device: DeviceId(1),

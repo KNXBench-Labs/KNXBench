@@ -1380,7 +1380,7 @@ export const messages: Record<MessageKey, string> = {
   "gatewayRefusal.timeout": "Das Gateway {gateway} hat nicht geantwortet. Prüf seine Adresse und ob dieser Computer es erreicht.",
   "gatewayRefusal.serverStopping": "Der Server wird beendet. Nichts wurde gestartet und nichts wurde an den Bus gesendet.",
   "gatewayRefusal.byteOrder":
-    "Gerät {address} kann noch nicht geladen werden: Sein Applikationsprogramm gibt die Byte-Reihenfolge {order} an, und KNXBench schreibt Zahlen nur mit dem höchstwertigen Oktett zuerst. Es wurde nichts gesendet.",
+    "Gerät {address} kann noch nicht geladen werden: Sein Applikationsprogramm gibt die Byte-Reihenfolge {order} an, die KNXBench für diese Geräteart nicht schreibt. Es wurde nichts gesendet.",
   "activityLive.state.running": "Läuft",
   "activityLive.state.finished": "Beendet",
   "activityLive.state.failed": "Fehlgeschlagen (Details im Werkzeug)",

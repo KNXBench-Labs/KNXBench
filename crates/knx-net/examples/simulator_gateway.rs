@@ -19,7 +19,9 @@ use tokio::net::UdpSocket;
 
 const USAGE: &str = "usage: simulator_gateway --advertise IP[:PORT] --device A.L.D [--mask HEX] \
 [--serial 12HEX] [--manufacturer HEX] [--hardware-type 12HEX] [--program-version 10HEX] \
-[--max-apdu N] [--gateway-property OBJTYPE:INSTANCE:PID=HEX]... [--capture FILE] [--datagrams]";
+[--max-apdu N] [--gateway-property OBJTYPE:INSTANCE:PID=HEX]... \
+[--device-property OBJIDX:PID=HEX]... [--device-property-description OBJIDX:PID:INDEX=8HEX]... \
+[--capture FILE] [--datagrams]";
 const MULTICAST: Ipv4Addr = Ipv4Addr::new(224, 0, 23, 12);
 
 fn hex(text: &str, octets: usize) -> Result<Vec<u8>, String> {
@@ -54,6 +56,25 @@ fn gateway_property(spec: &str) -> Result<(PropertyKey, Vec<u8>), String> {
     Ok((key, hex(data, data.len() / 2)?))
 }
 
+/// One `--device-property OBJIDX:PID=HEX` or, with `INDEX`, one
+/// `--device-property-description OBJIDX:PID:INDEX=8HEX` (AL §3.4.3.1 raw).
+fn device_property(spec: &str, described: bool) -> Result<(u8, u8, u8, Vec<u8>), String> {
+    let (key, data) = spec.split_once('=').ok_or(USAGE)?;
+    let parts: Vec<u8> = key
+        .split(':')
+        .map(|part| part.parse::<u8>().map_err(|_| USAGE.to_string()))
+        .collect::<Result<_, _>>()?;
+    let octets = if described { 4 } else { data.len() / 2 };
+    if data.len() % 2 != 0 || octets == 0 {
+        return Err(format!("{spec:?}: odd or empty hex"));
+    }
+    match (described, parts.as_slice()) {
+        (false, &[object, pid]) => Ok((object, pid, 0, hex(data, octets)?)),
+        (true, &[object, pid, index]) => Ok((object, pid, index, hex(data, octets)?)),
+        _ => Err(USAGE.into()),
+    }
+}
+
 fn dump(bytes: &[u8]) -> String {
     bytes.iter().map(|b| format!("{b:02x}")).collect()
 }
@@ -64,6 +85,7 @@ fn run() -> Result<(), String> {
     let (mut mask, mut serial, mut manufacturer) = (0x07B0u16, None, None);
     let (mut hardware, mut program, mut datagrams) = (None, None, false);
     let mut gateway_properties = Vec::new();
+    let (mut device_properties, mut descriptions) = (Vec::new(), Vec::new());
     let mut max_apdu = SimulatorConfig::default().max_apdu_length;
     while let Some(flag) = args.next() {
         if flag == "--datagrams" {
@@ -84,6 +106,8 @@ fn run() -> Result<(), String> {
             }
             "--hardware-type" => hardware = Some(hex(&value, 6)?),
             "--gateway-property" => gateway_properties.push(value),
+            "--device-property" => device_properties.push(device_property(&value, false)?),
+            "--device-property-description" => descriptions.push(device_property(&value, true)?),
             "--program-version" => program = Some(hex(&value, 5)?),
             "--max-apdu" => max_apdu = Some(value.parse().map_err(|_| USAGE)?),
             _ => return Err(USAGE.into()),
@@ -121,6 +145,13 @@ fn run() -> Result<(), String> {
     }
     if let Some(program) = program {
         simulated.preset_property(3, PID_PROGRAM_VERSION, &program);
+    }
+    for (object, pid, _, data) in &device_properties {
+        simulated.preset_property(*object, *pid, data);
+    }
+    for (object, pid, index, raw) in &descriptions {
+        let raw: [u8; 4] = raw.as_slice().try_into().expect("four octets");
+        simulated.preset_property_description(*object, *pid, *index, raw);
     }
     let device = Arc::new(simulated);
 

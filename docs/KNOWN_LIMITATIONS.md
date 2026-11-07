@@ -911,7 +911,7 @@ Instance overrides reach active tables, but unlinked objects can differ from ETS
 ### 170. Parameter byte-order download boundary
 
 **Ledger status:** `LATER` ([KL-170](status/LEDGER.md#post-snapshot-ids)).
-Unverified LittleEndian materialization remains refused. Defaults/base-image probes and tester reports define no per-type encoding or new write permission.
+Whole-octet LittleEndian numbers in memory layouts are written low octet first, as ETS 6.4 images showed (ADR-0159, untested on hardware). Fields across octet boundaries, legacy layouts and other declared orders remain refused.
 [Details and history](limitations/KL-170-parameter-byte-order-download-boundary.md)
 
 <a id="catalogue-kl-171"></a>

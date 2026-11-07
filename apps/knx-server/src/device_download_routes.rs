@@ -945,25 +945,25 @@ mod prepare_error_tests {
         (status, serde_json::from_slice(&bytes).unwrap())
     }
 
-    /// Issue #10 (3b): the deliberate KL-170 refusal stays, but as a code a
-    /// client explains, with the declared order and the target; the text is
-    /// unchanged.
+    /// Issue #10 (3b): the remaining KL-170 refusal is a code a client
+    /// explains, with the declared order and the target.
     #[tokio::test]
     async fn a_byte_order_refusal_is_a_structured_422() {
         let target: IndividualAddress = "0.2.23".parse().unwrap();
         let error = PrepareError::Image(ImageError::UnsupportedByteOrder {
-            order: "LittleEndian".into(),
+            order: "MiddleEndian".into(),
         });
         let (status, body) = body(prepare_error(target, &error)).await;
         assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY);
         assert_eq!(body["kind"], "unsupportedByteOrder", "{body}");
-        assert_eq!(body["order"], "LittleEndian", "{body}");
+        assert_eq!(body["order"], "MiddleEndian", "{body}");
         assert_eq!(body["category"], "byte-order", "{body}");
         assert_eq!(body["address"], "0.2.23", "{body}");
         assert_eq!(
             body["error"],
             "no download to device 0.2.23 prepared: memory image: not supported for a download: \
-             ParameterByteOrder \"LittleEndian\": numbers are written high octet first"
+             ParameterByteOrder \"MiddleEndian\": only BigEndian, and LittleEndian in a memory \
+             (070nh) layout, are written"
         );
     }
 

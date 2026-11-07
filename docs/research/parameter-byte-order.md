@@ -9,6 +9,13 @@ changes no download behaviour. Tags as in [RESEARCH.md](../RESEARCH.md):
 **[V]** measured here, **[D]** documented by a cited source, **[A]** inference.
 Machine-readable aggregates: [evidence receipt](../evidence/kl170-byte-order-evidence-2026-10-13.json).
 
+**Update 2026-11-07.** ETS 6.4's own download images for three `LittleEndian`
+memory programs, recorded against KNXBench's simulator, hold all 9
+discriminating whole-octet numbers low octet first, which settles what the tool
+writes for that shape ([note](2026-11-07-ldctrlwriteprop-and-byte-order.md),
+ADR-0159). It does not settle fields across octet boundaries, floats, negative
+values or legacy layouts, and it is not device evidence.
+
 ## Result
 
 1. **Still no defining source.** No KNX specification, schema copy or

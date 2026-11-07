@@ -130,6 +130,10 @@ fn writes_an_access_key(step: &MemoryDownloadStep) -> bool {
     match step {
         MemoryDownloadStep::Connect
         | MemoryDownloadStep::CompareProperty { .. }
+        // `A_PropertyValue_Write` of the product's fixed value; access keys
+        // travel only as `A_Key_Write`, which no step sends.
+        | MemoryDownloadStep::WriteProperty { .. }
+        | MemoryDownloadStep::Delay { .. }
         | MemoryDownloadStep::LoadRecord(_)
         | MemoryDownloadStep::WriteMemory { .. }
         | MemoryDownloadStep::RequireLoaded(_)

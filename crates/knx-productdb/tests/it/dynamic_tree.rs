@@ -829,6 +829,84 @@ fn a_default_when_covers_what_no_test_matches() {
     assert!(activation.diagnostics.is_empty());
 }
 
+/// The shape of a push-button program: a function picks which of two
+/// controllers is shown; each controller's own `choose` sets one union
+/// member. Only the shown controller's `choose` counts, also through a
+/// chain (`DEEP` is placed only below the inactive controller's branch).
+#[test]
+fn a_choose_whose_placed_controller_is_inactive_activates_nothing() {
+    let choose = |id, parent, controller: &str| DynamicNode {
+        control_kind: Some(ControlKind::Comparable),
+        ref_id: Some(controller.into()),
+        ..nd(id, parent, "choose")
+    };
+    let when = |id, parent, test: &str| DynamicNode {
+        test: Some(test.into()),
+        ..nd(id, Some(parent), "when")
+    };
+    let refref = |id, parent, r: &str| DynamicNode {
+        ref_id: Some(r.into()),
+        ..nd(id, Some(parent), "ParameterRefRef")
+    };
+    let tree = || {
+        DynamicTree::from_nodes(vec![
+            nd(0, None, "Dynamic"),
+            refref(1, 0, "F"),
+            choose(2, Some(0), "F"),
+            when(3, 2, "0"),
+            refref(4, 3, "V_NONE"),
+            when(5, 2, "1"),
+            refref(6, 5, "V_ONOFF"),
+            choose(7, Some(0), "V_NONE"),
+            when(8, 7, "0"),
+            refref(9, 8, "U_0"),
+            when(10, 7, "1"),
+            refref(11, 10, "U_1"),
+            refref(12, 10, "DEEP"),
+            choose(13, Some(0), "V_ONOFF"),
+            when(14, 13, "0"),
+            refref(15, 14, "U_0"),
+            when(16, 13, "3"),
+            refref(17, 16, "U_3"),
+            choose(18, Some(0), "DEEP"),
+            when(19, 18, "1"),
+            refref(20, 19, "X"),
+            // Never placed: read as before.
+            choose(21, Some(0), "HIDDEN"),
+            when(22, 21, "1"),
+            refref(23, 22, "H"),
+            DynamicNode {
+                is_default: true,
+                ..nd(24, Some(21), "when")
+            },
+        ])
+    };
+    let run = |pairs: &[(&str, &str)]| {
+        let activation = evaluate(&ProgramTrees::single(tree()), &values(pairs).into());
+        assert!(
+            activation.diagnostics.is_empty(),
+            "{:?}",
+            activation.diagnostics
+        );
+        activation.parameter_refs
+    };
+    let base = [("F", "1"), ("DEEP", "1"), ("HIDDEN", "1")];
+    // The inactive controller selects a larger value; it is ignored.
+    let quiet = run(&[base.as_slice(), &[("V_NONE", "1"), ("V_ONOFF", "0")]].concat());
+    assert_eq!(quiet, ["F", "V_ONOFF", "U_0", "H"].map(active));
+    let status = run(&[base.as_slice(), &[("V_NONE", "0"), ("V_ONOFF", "3")]].concat());
+    assert_eq!(status, ["F", "V_ONOFF", "U_3", "H"].map(active));
+    // Function 0 shows the other controller.
+    let other = run(&[
+        ("F", "0"),
+        ("DEEP", "1"),
+        ("HIDDEN", "0"),
+        ("V_NONE", "1"),
+        ("V_ONOFF", "3"),
+    ]);
+    assert_eq!(other, ["F", "V_NONE", "U_1", "DEEP", "X"].map(active));
+}
+
 /// No `when` matches and there is no default: nothing activates, and
 /// `NoBranchMatched` is reported.
 #[test]

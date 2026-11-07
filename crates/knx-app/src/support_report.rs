@@ -425,6 +425,10 @@ fn context(code: &ProgramCode) -> Context {
                 LoadStep::Connect => "connect",
                 LoadStep::Disconnect => "disconnect",
                 LoadStep::Restart => "restart",
+                LoadStep::Delay { milliseconds } => {
+                    a.insert("milliseconds", u32::from(*milliseconds));
+                    "delay"
+                }
                 LoadStep::Load { lsm } => {
                     a.insert("machine", (*lsm).into());
                     "load"
@@ -501,6 +505,16 @@ fn context(code: &ProgramCode) -> Context {
                     a.insert("propertyId", (*property_id).into());
                     a.insert("comparisonOctets", data.len() as u32);
                     "compare-property-values-withheld"
+                }
+                LoadStep::WriteProp {
+                    object_index,
+                    property_id,
+                    data,
+                } => {
+                    a.insert("objectIndex", (*object_index).into());
+                    a.insert("propertyId", (*property_id).into());
+                    a.insert("inlineOctets", data.len() as u32);
+                    "write-property-values-withheld"
                 }
                 LoadStep::Unmodelled { .. } => {
                     omitted += 1;

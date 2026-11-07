@@ -12,6 +12,22 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## LittleEndian push-buttons plan completely (7 November 2026; KL-170, issue #10)
+
+ETS 6.4 download images, recorded against KNXBench's simulator, settle four
+points ([research](research/2026-11-07-ldctrlwriteprop-and-byte-order.md)):
+whole-octet `LittleEndian` numbers in memory layouts are written low octet first
+([ADR-0159](adr/0159-little-endian-numbers-and-fixed-load-steps.md));
+`LdCtrlWriteProp` (fixed, unverified) writes one element as wide as the device
+describes it; `LdCtrlDelay` waits; a `choose` whose placed controller is inactive
+selects nothing ([ADR-0160](adr/0160-inactive-choose-controllers-select-nothing.md)).
+Images for five configurations match ETS in every parameter octet; the only
+differences are KL-145's communication-enable bits. A KNXBench download of a
+tester project's push-button to the simulator ran all 28 steps. In that project
+32 push-buttons move from `unsupported` to `untested`; room controllers and
+the second manufacturer's actuators stay refused for other reasons. No hardware
+was written.
+
 ## System-2 panel names a foreign retained operation (7 November 2026; issue #34)
 
 The System-2 panel says when the retained operation belongs to another device or

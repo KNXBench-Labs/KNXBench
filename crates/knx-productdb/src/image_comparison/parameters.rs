@@ -2,7 +2,7 @@
 
 use crate::image::{AttributedValue, DownloadImage, ParameterAttribution};
 use crate::image_comparison::ComparisonRow;
-use knx_core::commissioning::parameter_image::read_number;
+use knx_core::commissioning::parameter_image::{read_number, reverse_octets};
 use std::collections::BTreeMap;
 
 pub(crate) fn rows(
@@ -72,9 +72,16 @@ pub(crate) fn rows(
 fn value(parameter: &ParameterAttribution, bytes: &[u8]) -> Option<String> {
     match &parameter.value {
         AttributedValue::Number {
-            nonnegative_signed, ..
+            nonnegative_signed,
+            low_octet_first,
+            ..
         } => {
-            let number = read_number(parameter.field, bytes)?;
+            let held = read_number(parameter.field, bytes)?;
+            let number = if *low_octet_first {
+                reverse_octets(parameter.field, held).ok()?
+            } else {
+                held
+            };
             if *nonnegative_signed && number >> (parameter.field.size_in_bit - 1) != 0 {
                 return None;
             }

@@ -150,6 +150,7 @@ fn linked_fixture() -> Project {
     }
     for (id, device) in [(1, DeviceId(1)), (2, DeviceId(2))] {
         project.devices.insert_com_object(ComObjectInstance {
+            priority_edit: None,
             saved_instance_priority: Default::default(),
             id: ComObjectInstanceId(id),
             source: source(),

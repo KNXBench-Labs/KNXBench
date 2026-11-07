@@ -72,6 +72,7 @@ fn source(id: &str) -> SourceRef {
 
 fn object(n: u32, text: &str, layer: Layer) -> ComObjectInstance {
     ComObjectInstance {
+        priority_edit: None,
         saved_instance_priority: Default::default(),
         id: ComObjectInstanceId(n),
         source: source(&format!("A-1_O-{n}_R-1")),

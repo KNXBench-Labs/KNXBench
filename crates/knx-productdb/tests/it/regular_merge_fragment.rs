@@ -50,6 +50,7 @@ fn image_of(xml: &str) -> DownloadImage {
         values: Default::default(),
         links: Vec::new(),
         flag_overrides: Default::default(),
+        priority_statements: Default::default(),
     };
     build_download_image(&conn, &request).expect("the public image builder builds")
 }
@@ -260,6 +261,7 @@ fn stored_source_parser_image_and_refusal_keep_every_fragment_and_step() {
         values: Default::default(),
         links: Vec::new(),
         flag_overrides: Default::default(),
+        priority_statements: Default::default(),
     };
     let image = build_download_image(&conn, &request).expect("builds");
     stored("after the image");

@@ -74,6 +74,7 @@ fn option_c(target: IndividualAddress) -> DownloadImage {
             sending: true,
         }],
         flag_overrides: Default::default(),
+        priority_statements: Default::default(),
     };
     build_download_image(&conn, &request).expect("builds")
 }

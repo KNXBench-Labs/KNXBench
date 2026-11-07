@@ -155,6 +155,7 @@ fn reference_plan_sha256(
         values: BTreeMap::new(),
         links: Vec::new(),
         flag_overrides: BTreeMap::new(),
+        priority_statements: Default::default(),
     };
     let policy = ExperimentalSystem2ImagePolicy {
         revision: 1,

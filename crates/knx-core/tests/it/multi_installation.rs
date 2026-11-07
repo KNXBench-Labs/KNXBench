@@ -124,6 +124,7 @@ fn device(id: u32) -> DeviceInstance {
 
 fn com(id: u32) -> ComObjectInstance {
     ComObjectInstance {
+        priority_edit: None,
         saved_instance_priority: Default::default(),
         id: ComObjectInstanceId(id),
         source: source(),

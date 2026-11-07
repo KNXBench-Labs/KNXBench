@@ -575,6 +575,7 @@ pub fn upsert_com_object_instance(
     )?;
 
     crate::saved_instance_priority::write(conn, com.id, &com.saved_instance_priority)?;
+    crate::priority_edit::write(conn, com.id, com.priority_edit)?;
     write_override_row(conn, com.id, Attr::Text, encode_text(&com.text))?;
     write_override_row(
         conn,
@@ -664,6 +665,7 @@ pub fn load_com_object_instance(
         },
     )?;
     let mut com = ComObjectInstance {
+        priority_edit: None,
         saved_instance_priority: Default::default(),
         id,
         source: SourceRef {
@@ -701,6 +703,7 @@ pub fn load_com_object_instance(
         apply_override(&mut com, &attr, &state, value, text_kind, layer)?;
     }
     com.saved_instance_priority = crate::saved_instance_priority::load(conn, id)?;
+    com.priority_edit = crate::priority_edit::load(conn, id)?;
     Ok(com)
 }
 
@@ -719,6 +722,7 @@ pub(crate) fn load_all_com_objects(
     let mut indices = BTreeMap::new();
     let rows = stmt.query_map([], |row| {
         Ok(ComObjectInstance {
+            priority_edit: None,
             saved_instance_priority: Default::default(),
             id: ComObjectInstanceId(row.get(0)?),
             source: SourceRef {
@@ -801,6 +805,13 @@ pub(crate) fn load_all_com_objects(
     }
     if !priorities.is_empty() {
         return Err(StoreError::SavedPriorityIntegrity);
+    }
+    let mut edits = crate::priority_edit::load_all(conn)?;
+    for com in &mut objects {
+        com.priority_edit = edits.remove(&com.id);
+    }
+    if !edits.is_empty() {
+        return Err(StoreError::PriorityEditIntegrity);
     }
     let mut by_device = BTreeMap::new();
     for com in objects {
@@ -1193,6 +1204,7 @@ mod tests {
 
     fn com_object_fixture() -> ComObjectInstance {
         ComObjectInstance {
+            priority_edit: None,
             saved_instance_priority: Default::default(),
             id: ComObjectInstanceId(1),
             source: SourceRef {

@@ -35,6 +35,7 @@ fn device(id: u32, name: &str, objects: &[u32]) -> DeviceInstance {
 
 fn object(id: u32, device: u32, number: u16, name: Option<&str>) -> ComObjectInstance {
     ComObjectInstance {
+        priority_edit: None,
         saved_instance_priority: Default::default(),
         id: ComObjectInstanceId(id),
         source: source(),

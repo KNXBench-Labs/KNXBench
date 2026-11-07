@@ -15,7 +15,9 @@ project's priority and whether that winning literal is one of the three schema
 tokens. It is project metadata, not a wire priority, not a device readback and
 not permission to program anything.
 
-Not admitted: editing, a domain command, a web object-table column (an owner
+User edits are admitted separately by the
+[priority-edit contract](object-priority-edit.md); they add a `userEdit` source
+that wins over every row below. Otherwise not admitted: a web object-table column (an owner
 UX decision), a documentation-report or comparison consumer, module objects,
 other source schemas, product-version staleness checks, image generation, bus
 services and any new endpoint. Existing image priority policies (Low/missing,

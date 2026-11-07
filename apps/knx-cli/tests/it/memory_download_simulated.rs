@@ -59,6 +59,7 @@ fn option_c() -> DownloadImage {
             sending: true,
         }],
         flag_overrides: Default::default(),
+        priority_statements: Default::default(),
     };
     build_download_image(&conn, &request).expect("builds")
 }

@@ -52,6 +52,7 @@ fn project_with_group_address(ga_addr: &str, dpts: &[(u16, u16)]) -> Project {
         let device_id = project.ids.next_device_id().unwrap();
         let com_id = project.ids.next_com_object_instance_id().unwrap();
         project.devices.insert_com_object(ComObjectInstance {
+            priority_edit: None,
             saved_instance_priority: Default::default(),
             id: com_id,
             source: source("t"),

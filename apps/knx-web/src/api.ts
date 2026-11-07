@@ -534,6 +534,19 @@ export function setComObjectFlag(
   });
 }
 
+// `null` clears the user's own edit; the captured declaration never changes.
+export type ObjectPriorityToken = "Low" | "High" | "Alert";
+
+export function setComObjectPriority(
+  comObjectId: number,
+  priority: ObjectPriorityToken | null,
+): Promise<ProjectTree> {
+  return request("/api/com-object-priority", {
+    method: "POST",
+    body: JSON.stringify({ comObjectId, priority }),
+  });
+}
+
 // MODEL-01 / ADR-0070: `installationId` names the installation of a
 // range-less address; absent keeps the server's first-installation default.
 export function createGroupAddress(
@@ -1595,6 +1608,8 @@ export interface ComObjectFields {
   links: ComObjectLink[];
   moduleInstance: string | null;
   savedPriority: SavedPriorityFields;
+  // The user's own priority edit (exact token), null when unedited.
+  priorityEdit: string | null;
 }
 
 // `SavedPriorityFieldsDto` — the compared captured saved-instance priority:

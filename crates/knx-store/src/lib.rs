@@ -16,6 +16,7 @@ pub mod module_instance;
 mod notes;
 pub mod opaque;
 pub mod parameter;
+mod priority_edit;
 pub mod project;
 pub mod project_history;
 pub mod representable;
@@ -51,6 +52,8 @@ pub use rusqlite::{Connection, Error as SqlError};
 pub enum StoreError {
     /// Captured saved-instance metadata has a noncanonical native shape.
     SavedPriorityIntegrity,
+    /// A user priority edit names no object or no schema token.
+    PriorityEditIntegrity,
     History(Box<project_history::HistoryError>),
     Sqlite(rusqlite::Error),
     /// Native note content, target, ordering or allocator metadata is invalid.
@@ -117,6 +120,9 @@ impl fmt::Display for StoreError {
             StoreError::Sqlite(e) => write!(f, "{e}"),
             StoreError::SavedPriorityIntegrity => {
                 write!(f, "native saved-instance priority integrity refused")
+            }
+            StoreError::PriorityEditIntegrity => {
+                write!(f, "native object priority edit integrity refused")
             }
             StoreError::FunctionIntegrity(reason) => {
                 write!(f, "native project function integrity refused: {reason}")

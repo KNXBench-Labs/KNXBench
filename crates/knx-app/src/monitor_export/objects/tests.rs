@@ -24,6 +24,7 @@ fn object_dictionary_collision_is_refused_without_admission() {
         binary_data: vec![],
     });
     p.devices.insert_com_object(ComObjectInstance {
+        priority_edit: None,
         saved_instance_priority: Default::default(),
         id: ComObjectInstanceId(1),
         source,

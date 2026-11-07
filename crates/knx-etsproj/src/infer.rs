@@ -159,6 +159,7 @@ mod tests {
         for (com_id, dpt, ga) in com_objects {
             ids.push(com_id);
             project.devices.insert_com_object(ComObjectInstance {
+                priority_edit: None,
                 saved_instance_priority: Default::default(),
                 id: com_id,
                 source: source(),

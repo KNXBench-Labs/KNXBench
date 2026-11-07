@@ -99,6 +99,7 @@ pub fn project_routes() -> Router<SharedState> {
             post(set_com_object_description),
         )
         .route("/api/com-object-flag", post(set_com_object_flag))
+        .route("/api/com-object-priority", post(set_com_object_priority))
         .route("/api/group-addresses", post(create_group_address))
         .route("/api/group-addresses/{id}", delete(delete_group_address))
         .route(
@@ -1662,6 +1663,32 @@ async fn set_com_object_flag(
         .map_err(ApiError::bad_request)
 }
 
+/// `priority` is `"Low"`, `"High"`, `"Alert"` or `null` (clear the edit);
+/// both fields are required so a missing value is never read as a clear.
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct SetComObjectPriorityBody {
+    com_object_id: u32,
+    #[serde(deserialize_with = "required_nullable")]
+    priority: Option<String>,
+}
+
+fn required_nullable<'de, D>(deserializer: D) -> Result<Option<String>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    Option::<String>::deserialize(deserializer)
+}
+
+async fn set_com_object_priority(
+    State(state): State<SharedState>,
+    Json(body): Json<SetComObjectPriorityBody>,
+) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
+    domain::set_com_object_priority_impl(&state, body.com_object_id, body.priority.as_deref())
+        .map(Json)
+        .map_err(ApiError::bad_request)
+}
+
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct SetGroupAddressStyleBody {
@@ -2587,6 +2614,8 @@ struct ComObjectFieldsDto {
     links: Vec<ComObjectLinkDto>,
     module_instance: Option<String>,
     saved_priority: SavedPriorityFieldsDto,
+    /// The user's priority edit as its exact token, `None` when unedited.
+    priority_edit: Option<String>,
 }
 
 /// `knx_diff::SavedPriorityFields`: exact literal, omission kind or reason
@@ -2639,6 +2668,7 @@ impl From<&knx_diff::ComObjectFields> for ComObjectFieldsDto {
                 .collect(),
             module_instance: fields.module_instance.clone(),
             saved_priority: SavedPriorityFieldsDto::from(&fields.saved_priority),
+            priority_edit: fields.priority_edit.clone(),
         }
     }
 }

@@ -2,4 +2,4 @@
 import type { ProductPriorityLayer } from "./ProductPriorityLayer";
 import type { SavedPriorityOmissionView } from "./SavedPriorityOmissionView";
 
-export type EffectivePrioritySource = { "kind": "instance" } | { "kind": "product", layer: ProductPriorityLayer, omission: SavedPriorityOmissionView, };
+export type EffectivePrioritySource = { "kind": "userEdit" } | { "kind": "instance" } | { "kind": "product", layer: ProductPriorityLayer, omission: SavedPriorityOmissionView, };

@@ -346,6 +346,7 @@ async fn deleting_a_device_with_a_linked_com_object_is_a_400() {
     project
         .devices
         .insert_com_object(knx_core::ComObjectInstance {
+            priority_edit: None,
             saved_instance_priority: Default::default(),
             id: knx_core::ComObjectInstanceId(1),
             source: SourceRef {
@@ -667,6 +668,7 @@ async fn saved_instance_priority_mounted_get_preserves_all_required_states_after
             is_active: true,
             links: vec![],
             module_instance: None,
+            priority_edit: None,
             saved_instance_priority: fact,
         });
         project.devices.get_mut(owner).unwrap().com_objects.push(id);
@@ -885,6 +887,7 @@ fn effective_priority_project(
             is_active: true,
             links: vec![],
             module_instance: None,
+            priority_edit: None,
             saved_instance_priority: fact,
         });
         project.devices.get_mut(owner).unwrap().com_objects.push(id);
@@ -1102,5 +1105,132 @@ async fn effective_priority_names_missing_program_and_withholds_rebound_facts() 
     assert_eq!(
         objects[0]["effective_priority"],
         unresolved("InstanceUnavailable")
+    );
+}
+
+async fn call(
+    router: &axum::Router,
+    method: &str,
+    uri: &str,
+    body: Option<Value>,
+) -> (StatusCode, Value) {
+    let request = Request::builder().method(method).uri(uri);
+    let request = match body {
+        Some(body) => request
+            .header("content-type", "application/json")
+            .body(Body::from(body.to_string())),
+        None => request.body(Body::empty()),
+    }
+    .unwrap();
+    let response = router.clone().oneshot(request).await.unwrap();
+    let status = response.status();
+    let bytes = axum::body::to_bytes(response.into_body(), usize::MAX)
+        .await
+        .unwrap();
+    (
+        status,
+        serde_json::from_slice(&bytes).unwrap_or(Value::Null),
+    )
+}
+
+#[tokio::test]
+async fn a_priority_edit_wins_validates_its_token_undoes_and_leaves_the_captured_fact() {
+    use knx_core::SavedPriorityOmission as Omission;
+    let facts = [
+        ("O-1_R-1", absent_fact(Omission::AttributeOmitted)),
+        ("O-8_R-1", declared_fact("")),
+        ("O-10_R-1", knx_core::SavedInstancePriority::default()),
+    ];
+    let (project, owner) = effective_priority_project("H-1_HP-1", &facts);
+    let ids: Vec<u32> = project.devices.com_objects().map(|c| c.id.0).collect();
+    let (_dir, state) = with_priority_products(project);
+    let router = knx_server::app(Arc::new(state), None);
+    let device = format!("/api/device/{}", owner.0);
+    let (_, before) = call(&router, "GET", &device, None).await;
+    let edit = |id: u32, priority: Value| json!({"comObjectId": id, "priority": priority});
+    let user =
+        |value: &str| json!({"status": "resolved", "value": value, "source": {"kind": "userEdit"}});
+
+    for (id, token) in ids.iter().zip(["Low", "High", "Alert"]) {
+        let (status, _) = call(
+            &router,
+            "POST",
+            "/api/com-object-priority",
+            Some(edit(*id, json!(token))),
+        )
+        .await;
+        assert_eq!(status, StatusCode::OK, "{token}");
+    }
+    let (_, after) = call(&router, "GET", &device, None).await;
+    for (index, token) in ["Low", "High", "Alert"].into_iter().enumerate() {
+        let object = &after["com_objects"][index];
+        // Over a product literal, an empty declaration and an unavailable capture alike.
+        assert_eq!(object["effective_priority"], user(token), "#{index}");
+        assert_eq!(
+            object["saved_instance_priority"],
+            before["com_objects"][index]["saved_instance_priority"],
+            "the captured fact is untouched"
+        );
+    }
+
+    // ids[1] holds High: each refusal below would otherwise be a real change,
+    // so no no-op refusal can hide a token or shape check.
+    for refused in [
+        edit(ids[1], json!("low")),
+        edit(ids[1], json!(" Low")),
+        edit(ids[1], json!("Urgent")),
+        edit(ids[1], json!("")),
+        edit(ids[0], json!("Low")),
+        edit(9_999, json!("Low")),
+    ] {
+        let (status, _) = call(
+            &router,
+            "POST",
+            "/api/com-object-priority",
+            Some(refused.clone()),
+        )
+        .await;
+        assert_eq!(status, StatusCode::BAD_REQUEST, "{refused}");
+    }
+    for malformed in [
+        json!({"comObjectId": ids[1]}),
+        json!({"comObjectId": ids[1], "priority": "Low", "extra": 1}),
+    ] {
+        let (status, _) = call(
+            &router,
+            "POST",
+            "/api/com-object-priority",
+            Some(malformed.clone()),
+        )
+        .await;
+        assert!(status.is_client_error(), "{malformed}: {status}");
+    }
+    let (_, unchanged) = call(&router, "GET", &device, None).await;
+    assert_eq!(
+        unchanged["com_objects"], after["com_objects"],
+        "refusals change nothing"
+    );
+
+    let (status, _) = call(
+        &router,
+        "POST",
+        "/api/com-object-priority",
+        Some(edit(ids[2], Value::Null)),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    let (_, cleared) = call(&router, "GET", &device, None).await;
+    assert_eq!(
+        cleared["com_objects"][2]["effective_priority"],
+        before["com_objects"][2]["effective_priority"]
+    );
+    for _ in 0..4 {
+        let (status, _) = call(&router, "POST", "/api/undo", None).await;
+        assert_eq!(status, StatusCode::OK);
+    }
+    let (_, undone) = call(&router, "GET", &device, None).await;
+    assert_eq!(
+        undone["com_objects"], before["com_objects"],
+        "undo restores every prior edit state"
     );
 }

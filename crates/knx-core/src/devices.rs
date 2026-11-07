@@ -145,6 +145,7 @@ mod tests {
         let mut d = Devices::new();
         d.insert(device(DeviceId(1))); // its `com_objects` list stays empty
         d.insert_com_object(ComObjectInstance {
+            priority_edit: None,
             saved_instance_priority: Default::default(),
             id: ComObjectInstanceId(7),
             source: SourceRef {
@@ -215,6 +216,7 @@ mod tests {
         let mut d = Devices::new();
         let id = ComObjectInstanceId(42);
         d.insert_com_object(ComObjectInstance {
+            priority_edit: None,
             saved_instance_priority: Default::default(),
             id,
             source: SourceRef {

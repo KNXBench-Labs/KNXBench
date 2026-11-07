@@ -111,6 +111,21 @@ pub enum ProjectRequestError {
         number: u16,
         flag: &'static str,
     },
+    /// A captured instance priority that is empty or not a schema token. It
+    /// states a priority without saying which, so neither the product's nor
+    /// any other value can be admitted for it.
+    UnreadablePriority {
+        device: DeviceId,
+        number: u16,
+        raw: String,
+    },
+    /// Two object instances share one `ComObjectRef` key (e.g. the same
+    /// module object in two instances) but state different priorities; one
+    /// statement cannot represent both, so neither is silently kept.
+    ConflictingPriority {
+        device: DeviceId,
+        com_object_ref: String,
+    },
 }
 
 impl fmt::Display for ProjectRequestError {
@@ -199,6 +214,23 @@ impl fmt::Display for ProjectRequestError {
             } => write!(
                 f,
                 "device {}: object {number} states {flag}, but not as Enabled or Disabled",
+                device.0
+            ),
+            Self::UnreadablePriority {
+                device,
+                number,
+                raw,
+            } => write!(
+                f,
+                "device {}: object {number} states Priority {raw:?}, which is not Low, High or Alert",
+                device.0
+            ),
+            Self::ConflictingPriority {
+                device,
+                com_object_ref,
+            } => write!(
+                f,
+                "device {}: objects sharing {com_object_ref} state different priorities",
                 device.0
             ),
         }
@@ -362,7 +394,74 @@ pub fn image_request_from_project(
         values: parameter_values(project, device, program_id)?,
         links: links(project, device)?,
         flag_overrides: flag_overrides(project, device, program_id)?,
+        priority_statements: priority_statements(project, device, program_id)?,
     })
+}
+
+/// The priority each object instance states, by its `ComObjectRef` id: the
+/// user's edit, else a captured Known declaration. An Empty/Unknown
+/// declaration is refused; an omission or an unavailable capture states
+/// nothing (docs/contracts/object-priority-edit.md).
+fn priority_statements(
+    project: &Project,
+    device: DeviceId,
+    program_id: &str,
+) -> Result<BTreeMap<String, String>, ProjectRequestError> {
+    use knx_core::{SavedInstancePriority, SavedPriorityBindings, SavedPriorityTokenStatus};
+    let bindings = SavedPriorityBindings::new(project);
+    let instance = project
+        .devices
+        .get(device)
+        .ok_or(ProjectRequestError::UnknownDevice(device))?;
+    let mut statements = BTreeMap::new();
+    for id in &instance.com_objects {
+        let object =
+            project
+                .devices
+                .com_object(*id)
+                .ok_or(ProjectRequestError::MissingComObject {
+                    device,
+                    com_object: id.0,
+                })?;
+        let stated = match (&object.priority_edit, &object.saved_instance_priority) {
+            (Some(edit), _) => edit.as_str().to_string(),
+            // Only a declaration still bound to this device and object is the
+            // project's own statement, as in the effective priority.
+            (None, SavedInstancePriority::Declared(declared))
+                if bindings.captured_binding(object, device) =>
+            {
+                if SavedPriorityTokenStatus::classify(&declared.raw)
+                    != SavedPriorityTokenStatus::Known
+                {
+                    return Err(ProjectRequestError::UnreadablePriority {
+                        device,
+                        number: object.number,
+                        raw: declared.raw.clone(),
+                    });
+                }
+                declared.raw.clone()
+            }
+            (None, _) => continue,
+        };
+        let com_object_ref = com_object_lookup_id(
+            program_id,
+            &object.source.ets_id,
+            object.module_instance.is_some(),
+        );
+        match statements.get(&com_object_ref) {
+            Some(existing) if *existing != stated => {
+                return Err(ProjectRequestError::ConflictingPriority {
+                    device,
+                    com_object_ref,
+                })
+            }
+            Some(_) => {}
+            None => {
+                statements.insert(com_object_ref, stated);
+            }
+        }
+    }
+    Ok(statements)
 }
 
 /// Every flag an object instance states itself, at `Layer::Instance` (read
@@ -603,6 +702,7 @@ mod tests {
 
     fn object(p: &mut Project, id: u32, number: u16, links: Vec<GroupLink>) {
         p.devices.insert_com_object(ComObjectInstance {
+            priority_edit: None,
             saved_instance_priority: Default::default(),
             id: ComObjectInstanceId(id),
             source: source(&format!("{PROGRAM}_O-{number}_R-{id}")),
@@ -926,6 +1026,102 @@ mod tests {
                 "{state:?}"
             );
         }
+    }
+
+    /// Object 0 (instance 10) with a captured declaration `raw`, bound to
+    /// this device and object unless `bound` is false.
+    fn object_with_declared(raw: &str, bound: bool) -> Project {
+        let mut p = project();
+        object(&mut p, 10, 0, vec![send(1)]);
+        let com = p.devices.com_object_mut(ComObjectInstanceId(10)).unwrap();
+        let object_source = if bound {
+            com.source.clone()
+        } else {
+            source("elsewhere")
+        };
+        com.saved_instance_priority =
+            knx_core::SavedInstancePriority::Declared(Box::new(knx_core::SavedPriorityDeclared {
+                raw: raw.into(),
+                source: knx_core::SavedPrioritySource {
+                    source_schema: 23,
+                    device_source: source("KB-DEV-1"),
+                    object_source,
+                    owner_xpath: "/KNX/Project".into(),
+                    topology_sha256: "a".repeat(64),
+                },
+            }));
+        p
+    }
+
+    fn statements(p: &Project) -> Vec<(String, String)> {
+        map(p).unwrap().priority_statements.into_iter().collect()
+    }
+
+    #[test]
+    fn a_known_declaration_or_a_user_edit_is_a_priority_statement() {
+        let key = format!("{PROGRAM}_O-0_R-10");
+        for raw in ["Low", "High", "Alert"] {
+            assert_eq!(
+                statements(&object_with_declared(raw, true)),
+                [(key.clone(), raw.to_string())]
+            );
+        }
+        // The user's edit wins over every captured state, even an unreadable one.
+        let mut p = object_with_declared("", true);
+        p.devices
+            .com_object_mut(ComObjectInstanceId(10))
+            .unwrap()
+            .priority_edit = Some(knx_core::ObjectPriority::Alert);
+        assert_eq!(statements(&p), [(key, "Alert".to_string())]);
+    }
+
+    #[test]
+    fn an_empty_or_unknown_declaration_is_refused_rather_than_guessed() {
+        for raw in ["", "low", "Urgent", " High"] {
+            assert_eq!(
+                map(&object_with_declared(raw, true)),
+                Err(ProjectRequestError::UnreadablePriority {
+                    device: DeviceId(1),
+                    number: 0,
+                    raw: raw.into(),
+                }),
+                "{raw:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn module_instances_sharing_a_key_must_agree_or_are_refused() {
+        let mut p = project();
+        object(&mut p, 10, 0, vec![]);
+        object(&mut p, 11, 1, vec![]);
+        let set = |p: &mut Project, id: u32, priority| {
+            let com = p.devices.com_object_mut(ComObjectInstanceId(id)).unwrap();
+            com.source.ets_id = format!("MD-1_M-1_MI-{id}_O-3-0_R-1");
+            com.module_instance = Some(knx_core::ids::ModuleInstanceId(id));
+            com.priority_edit = Some(priority);
+        };
+        set(&mut p, 10, knx_core::ObjectPriority::Alert);
+        set(&mut p, 11, knx_core::ObjectPriority::Alert);
+        let agreed = statements(&p);
+        assert_eq!(agreed.len(), 1, "{agreed:?}");
+        assert_eq!(agreed[0].1, "Alert");
+        set(&mut p, 11, knx_core::ObjectPriority::Low);
+        assert_eq!(
+            map(&p),
+            Err(ProjectRequestError::ConflictingPriority {
+                device: DeviceId(1),
+                com_object_ref: agreed[0].0.clone(),
+            }),
+            "a differing edit must not be lost behind the shared key"
+        );
+    }
+
+    #[test]
+    fn omitted_unavailable_or_unbound_captures_state_nothing() {
+        assert!(statements(&object_with_flags(ResolvedFlags::none())).is_empty());
+        assert!(statements(&object_with_declared("High", false)).is_empty());
+        assert!(statements(&object_with_declared("", false)).is_empty());
     }
 
     #[test]

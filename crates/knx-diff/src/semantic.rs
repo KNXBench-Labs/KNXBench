@@ -664,6 +664,9 @@ pub struct ComObjectFields {
     pub module_instance: Option<String>,
     /// The captured saved-instance priority declaration (ADR-0158).
     pub saved_priority: SavedPriorityFields,
+    /// The user's own priority edit as its exact schema token, `None` when
+    /// unedited; compared apart from the captured declaration.
+    pub priority_edit: Option<String>,
 }
 
 /// A captured saved-instance priority as compared: the exact decoded literal,
@@ -753,6 +756,7 @@ pub fn com_object_fields(
             .and_then(|id| module_ets_ids.get(&id))
             .cloned(),
         saved_priority,
+        priority_edit: com.priority_edit.map(|p| p.as_str().to_string()),
     }
 }
 
@@ -783,6 +787,7 @@ pub fn com_object_changed_fields(
             links,
             module_instance,
             saved_priority,
+            priority_edit,
         ]
     )
 }
@@ -941,6 +946,7 @@ impl FieldDiff for ComObjectFields {
                 links => fmt_debug,
                 module_instance => fmt_plain_string_opt,
                 saved_priority => fmt_plain,
+                priority_edit => fmt_plain_string_opt,
             ]
         )
     }
@@ -1639,6 +1645,7 @@ mod tests {
             links: vec![],
             module_instance: None,
             saved_priority: SavedPriorityFields::Declared("High".into()),
+            priority_edit: None,
         };
         let right = ComObjectFields {
             text: Some("Off".into()),
@@ -1647,11 +1654,18 @@ mod tests {
             // reports as a change like any other field (§117).
             read_on_init: Some(true),
             saved_priority: SavedPriorityFields::SourceBindingMismatch,
+            priority_edit: Some("Alert".into()),
             ..left.clone()
         };
         assert_eq!(
             com_object_changed_fields(&left, &right),
-            vec!["text", "update", "read_on_init", "saved_priority"]
+            vec![
+                "text",
+                "update",
+                "read_on_init",
+                "saved_priority",
+                "priority_edit"
+            ]
         );
     }
 

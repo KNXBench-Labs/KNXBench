@@ -34,6 +34,7 @@ fn fixture(xml: &str) -> (tempfile::TempDir, knx_productdb::Connection, ImageReq
         values: Default::default(),
         links: vec![],
         flag_overrides: Default::default(),
+        priority_statements: Default::default(),
     };
     (dir, conn, request)
 }

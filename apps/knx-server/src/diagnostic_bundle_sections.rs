@@ -158,6 +158,7 @@ const COMMAND_SOURCES: &[&str] = &[
     "SetComObjectDescription",
     "SetComObjectDpt",
     "SetComObjectFlag",
+    "SetComObjectPriority",
     "SetCouplerIndividualAddress",
     "SetDeviceDescription",
     "SetDeviceInstructions",

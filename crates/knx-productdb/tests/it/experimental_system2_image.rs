@@ -605,6 +605,7 @@ fn project_experimental_valid_synthetic_package_ownership_is_pinned() {
         values: BTreeMap::new(),
         links: vec![],
         flag_overrides: BTreeMap::new(),
+        priority_statements: Default::default(),
     };
     let before = conn.total_changes();
     let result =
@@ -641,6 +642,7 @@ fn fixture(xml: &str) -> (tempfile::TempDir, knx_productdb::Connection, ImageReq
         values: BTreeMap::new(),
         links: vec![],
         flag_overrides: BTreeMap::new(),
+        priority_statements: Default::default(),
     };
     (dir, conn, request)
 }
@@ -1032,6 +1034,7 @@ fn public_default_complete_candidate_exercises_real_installer_builder_and_resolv
         values: BTreeMap::new(),
         links: vec![],
         flag_overrides: BTreeMap::new(),
+        priority_statements: Default::default(),
     };
     let before = conn.total_changes();
     let result = build_experimental_system2_image(&conn, &request, &policy).unwrap();

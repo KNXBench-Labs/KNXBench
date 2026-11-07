@@ -64,6 +64,14 @@ literal with its layer (Project Schema23 §1.2.5.11 and §1.2.5.13, printed page
 48). Missing product data, program or literal stays unresolved with a named
 reason. No editing, wire, image or table-column change is admitted.
 
+**Additional bounded admission, 7 November 2026 (owner decision):** the
+[priority-edit contract](../contracts/object-priority-edit.md) adds a separate
+user layer (`priority_edit`, native 18, validated undoable command) that wins in
+the effective priority and never rewrites the captured fact. Wire priority keeps
+its policy: the image request now states each object's priority, and the
+builder refuses a statement that is not exactly the product literal instead of
+writing the product's priority (KL-188). No project token is encoded.
+
 ### Future implementation requirements
 
 **Additional bounded admission, 6 November 2026:** the

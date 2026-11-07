@@ -2311,6 +2311,10 @@ fn apply_com_object_activation(
     let Some(program_id) = knx_productdb::query::resolve_program(products, &input.program_ref)
         .map_err(|e| e.to_string())?
     else {
+        knx_projection::mark_product_priority_unavailable(
+            &mut detail.com_objects,
+            knx_projection::ProductPriorityUnavailable::ProgramNotInDatabase,
+        );
         return Ok(None);
     };
     apply_function_texts(products, detail, &input, &program_id, language)?;
@@ -2449,11 +2453,37 @@ fn apply_function_texts(
     let views = knx_productdb::query::com_object_views(products, program_id, &refs, language)
         .map_err(|e| e.to_string())?;
     for com in &mut detail.com_objects {
-        com.function_text = lookup_ids
-            .get(&com.id)
-            .and_then(|lookup| views.get(lookup))
-            .and_then(|view| view.function_text.clone());
+        let view = lookup_ids.get(&com.id).and_then(|lookup| views.get(lookup));
+        com.function_text = view.and_then(|view| view.function_text.clone());
+        apply_product_priority(com, view)?;
     }
+    Ok(())
+}
+
+/// WP-06 (ADR-0158 §3): an omitted saved Priority takes the product's selected
+/// literal and its layer, from the same views as the function text. A saved
+/// declaration is never replaced; see `docs/contracts/effective-object-priority.md`.
+fn apply_product_priority(
+    com: &mut knx_projection::ComObjectNode,
+    view: Option<&knx_productdb::query::ComObjectView>,
+) -> Result<(), String> {
+    use knx_productdb::query::ValueLayer;
+    use knx_projection::ProductPriorityLayer as Layer;
+    let Some(view) = view else {
+        knx_projection::mark_product_priority_unavailable(
+            std::slice::from_mut(com),
+            knx_projection::ProductPriorityUnavailable::ProductObjectNotFound,
+        );
+        return Ok(());
+    };
+    let selected = match (view.priority.as_deref(), view.priority_layer) {
+        (None, _) => None,
+        (Some(raw), Some(ValueLayer::Program)) => Some((raw, Layer::Program)),
+        (Some(raw), Some(ValueLayer::ProgramRef)) => Some((raw, Layer::ProgramRef)),
+        // The query states a layer for every present literal; never guess one.
+        (Some(_), None) => return Err("product priority literal without its layer".into()),
+    };
+    knx_projection::apply_product_priority(com, selected);
     Ok(())
 }
 
@@ -2581,6 +2611,13 @@ fn device_detail_with_product_data(
         )
     };
 
+    if activation_input.is_none() {
+        knx_projection::mark_product_priority_unavailable(
+            &mut detail.com_objects,
+            knx_projection::ProductPriorityUnavailable::NoProgramReference,
+        );
+    }
+
     // T16: a product/program ref is present, so `resolution` needs a real
     // answer regardless of `language` — see this function's own doc comment.
     let needs_product_lookup = !matches!(
@@ -2599,6 +2636,10 @@ fn device_detail_with_product_data(
         if needs_product_lookup {
             detail.product.resolution = knx_projection::ProductResolution::NoDatabase;
         }
+        knx_projection::mark_product_priority_unavailable(
+            &mut detail.com_objects,
+            knx_projection::ProductPriorityUnavailable::NoProductDatabase,
+        );
         return Ok(detail);
     };
 

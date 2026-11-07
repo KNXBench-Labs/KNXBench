@@ -55,6 +55,15 @@ no selected literal, database schema, project state, import mapping, enrichment,
 image request or wire byte. It does not present a new UI priority column or
 claim that the broader WP-06 priority requirement is complete.
 
+**Additional bounded admission, 7 November 2026:** the
+[effective object priority contract](../contracts/effective-object-priority.md)
+adds a read-only `effective_priority` per device-detail object. A Known saved
+declaration wins; Empty/Unknown declarations and every unavailable saved fact
+stay unresolved and never inherit. Both omission kinds take the selected product
+literal with its layer (Project Schema23 §1.2.5.11 and §1.2.5.13, printed page
+48). Missing product data, program or literal stays unresolved with a named
+reason. No editing, wire, image or table-column change is admitted.
+
 ### Future implementation requirements
 
 **Additional bounded admission, 6 November 2026:** the

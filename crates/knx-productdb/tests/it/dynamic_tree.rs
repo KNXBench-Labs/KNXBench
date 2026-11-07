@@ -907,6 +907,52 @@ fn a_choose_whose_placed_controller_is_inactive_activates_nothing() {
     assert_eq!(other, ["F", "V_NONE", "U_1", "DEEP", "X"].map(active));
 }
 
+/// A controller placed only inside its own `choose`, and any pass with a
+/// diagnostic that may hide refs, leave every `choose` read as before.
+#[test]
+fn inactivity_needs_a_placement_outside_the_choose_and_a_complete_pass() {
+    let tree = |test: &str| {
+        DynamicTree::from_nodes(vec![
+            nd(0, None, "Dynamic"),
+            DynamicNode {
+                control_kind: Some(ControlKind::Comparable),
+                ref_id: Some("P".into()),
+                ..nd(1, Some(0), "choose")
+            },
+            DynamicNode {
+                test: Some(test.into()),
+                ..nd(2, Some(1), "when")
+            },
+            DynamicNode {
+                ref_id: Some("P".into()),
+                ..nd(3, Some(2), "ParameterRefRef")
+            },
+            DynamicNode {
+                is_default: true,
+                ..nd(4, Some(1), "when")
+            },
+            DynamicNode {
+                ref_id: Some("X".into()),
+                ..nd(5, Some(4), "ParameterRefRef")
+            },
+        ])
+    };
+    let own = evaluate(
+        &ProgramTrees::single(tree("1")),
+        &values(&[("P", "0")]).into(),
+    );
+    assert_eq!(own.parameter_refs, vec![active("X")]);
+    assert!(own.diagnostics.is_empty());
+    let unparsable = evaluate(
+        &ProgramTrees::single(tree("bogus")),
+        &values(&[("P", "0")]).into(),
+    );
+    assert!(unparsable
+        .diagnostics
+        .iter()
+        .any(|d| matches!(d.diagnostic, Diagnostic::UnparsableTest { .. })));
+}
+
 /// No `when` matches and there is no default: nothing activates, and
 /// `NoBranchMatched` is reported.
 #[test]

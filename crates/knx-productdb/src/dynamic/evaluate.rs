@@ -1579,7 +1579,9 @@ impl Activation {
 /// passes: each one marks the controllers the previous pass left inactive,
 /// until none is added. Skipping only removes activations, so the set only
 /// grows and the passes end; they share one [`MAX_EVALUATION_WORK`]. A
-/// controller no `ParameterRefRef` names is read as before (unobserved).
+/// controller no `ParameterRefRef` outside its own `choose` names is read as
+/// before (unobserved), and a pass with a diagnostic that may hide refs
+/// marks nothing.
 pub fn evaluate(trees: &ProgramTrees, values: &ValueMap) -> Activation {
     let placed = placed_parameter_refs(trees);
     let mut inactive_controllers = HashSet::new();
@@ -1596,7 +1598,13 @@ pub fn evaluate(trees: &ProgramTrees, values: &ValueMap) -> Activation {
             .into_iter()
             .filter(|key| placed.contains(key.1.as_str()) && !active.contains(key))
             .collect();
-        if activation.work_budget_exhausted || newly.is_empty() {
+        // Inactivity is known only from a pass that walked everything with
+        // known values (`Diagnostic::may_hide_refs`).
+        let complete = !activation
+            .diagnostics
+            .iter()
+            .any(|d| d.diagnostic.may_hide_refs());
+        if activation.work_budget_exhausted || !complete || newly.is_empty() {
             // Admission state is local to this call, not part of result
             // equality. Completeness remains explicit in the retained
             // budget diagnostics.
@@ -1612,14 +1620,35 @@ pub fn evaluate(trees: &ProgramTrees, values: &ValueMap) -> Activation {
     }
 }
 
-/// Every `ParameterRefRef/@RefId` in the program's tree or a `ModuleDef`'s.
+/// Every `ParameterRefRef/@RefId` in the program's tree or a `ModuleDef`'s
+/// that lies outside every `choose` it controls itself: a controller shown
+/// only in its own branches has no visibility of its own to lose.
 fn placed_parameter_refs(trees: &ProgramTrees) -> HashSet<&str> {
-    std::iter::once(&trees.program)
-        .chain(trees.modules.values())
-        .flat_map(|tree| tree.nodes.values())
-        .filter(|node| node.kind == "ParameterRefRef")
-        .filter_map(|node| node.ref_id.as_deref())
-        .collect()
+    let mut placed = HashSet::new();
+    for tree in std::iter::once(&trees.program).chain(trees.modules.values()) {
+        // Iterative, so a hostile nesting depth cannot exhaust the stack.
+        let mut pending: Vec<(i64, Vec<&str>)> = tree
+            .children_of(None)
+            .iter()
+            .map(|&id| (id, Vec::new()))
+            .collect();
+        while let Some((id, mut controllers)) = pending.pop() {
+            let Some(node) = tree.node(id) else {
+                continue;
+            };
+            match (node.kind.as_str(), node.ref_id.as_deref()) {
+                ("ParameterRefRef", Some(r)) if !controllers.contains(&r) => {
+                    placed.insert(r);
+                }
+                ("choose", Some(r)) => controllers.push(r),
+                _ => {}
+            }
+            for &child in tree.children_of(Some(id)) {
+                pending.push((child, controllers.clone()));
+            }
+        }
+    }
+    placed
 }
 
 /// One single-pass, depth-first walk in document order (design D6).

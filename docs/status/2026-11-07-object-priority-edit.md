@@ -76,6 +76,18 @@ Corrections in the follow-up commit:
   read-only previews are stated (also in KL-188). Manual: the refusal names
   the object reference, not the number.
 
+## Acceptance and publication
+
+Feature `c240cdbdf` + `947e342af` + review fixes `5c709b85e`, merged main-first
+as `0ad3dc8cf` on `fb5706a22` (a parallel System-2 panel text change merged
+cleanly; tree identical to the branch head plus that change). The maintained
+change-scoped package gate ran on the merge: all 17 selected stages exited 0
+with valid proofs, inputs frozen, no user data touched or unchecked. Counts:
+Rust 8,395 passed / 0 failed / 248 ignored (49 binaries), bindings 87, private
+corpus 155/155, web gate 34 stages with 1,120 browser cases. Pushed after the
+gate with `origin/main` unchanged; local, tracking and live `main` read back as
+`0ad3dc8cf`.
+
 ## Limits
 
 - No changed priority is ever programmed; a differing statement refuses the

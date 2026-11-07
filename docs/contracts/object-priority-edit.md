@@ -1,6 +1,6 @@
 # Editable object priority with a programming guard
 
-Status: implemented (7 November 2026); acceptance in the
+Status: software-accepted on main `0ad3dc8cf` (7 November 2026); acceptance in the
 [delivery record](../status/2026-11-07-object-priority-edit.md).
 Scope: one WP-06 increment under [ADR-0158](../adr/0158-object-priority-provenance.md).
 It builds on the [captured saved-instance contract](saved-instance-priority.md)

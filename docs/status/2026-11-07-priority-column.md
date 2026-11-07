@@ -64,6 +64,18 @@ Known and accepted: the full explanation is a hover title (the object editor
 shows it to keyboard and touch users); in the ~740 px inspector the extra column
 needs the table's existing horizontal scroll.
 
+## Acceptance and publication
+
+Feature `3017c51bb` plus review fixes `ffa3a0394`, merged main-first as
+`b6b0d29b6` on `6038b9427` (tree identical to the branch head). The gate was
+started only after a parallel session's gate had finished, to avoid load-driven
+timeouts. The change-scoped package gate selected 11 stages for this web-only
+change; all exited 0 with valid proofs, inputs frozen, no user data touched or
+unchecked. Web gate: 43 stages with 1,124 browser cases (1,055 functional, 69
+exclusive). No Rust, bindings or corpus stage was selected. Pushed after the gate
+with `origin/main` unchanged; local, tracking and live `main` read back as
+`b6b0d29b6`.
+
 ## Limits
 
 - Display of the server's effective priority only; table views outside the

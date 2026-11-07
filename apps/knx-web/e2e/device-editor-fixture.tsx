@@ -53,7 +53,7 @@ const detail: DeviceDetail = {
   description: null,
   product: { product_ref: null, program_ref: null, catalog: null, resolution: "NoReference" },
   com_objects: [{
-    saved_instance_priority: { status: "unavailable", reason: "NotCaptured" },
+    saved_instance_priority: { status: "unavailable", reason: "NotCaptured" }, effective_priority: { status: "unresolved", reason: "InstanceUnavailable", source: null, raw: null },
     id: 7,
     number: 1,
     name: longName,

@@ -226,6 +226,8 @@ UnsupportedSourceSchema for older ETS exports, differs from a captured value, so
 cross-format or pre-capture comparisons list it on many objects and make
 `knx diff --exit-code` report a difference.
 No product default, effective value, wire priority or report section is added.
+The separate read-only effective value is defined in the
+[effective object priority contract](effective-object-priority.md).
 
 ## Documentation report consumer (7 November 2026)
 

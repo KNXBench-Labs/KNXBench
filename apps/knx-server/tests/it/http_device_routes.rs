@@ -785,3 +785,313 @@ async fn saved_instance_priority_mounted_get_preserves_all_required_states_after
     assert_eq!(got, expected);
     assert_unavailable(&got);
 }
+
+/// Product program for effective priority: each object pins one layer/literal case.
+const PRIORITY_PROGRAM: &str = r#"<?xml version="1.0" encoding="utf-8"?>
+<KNX xmlns="http://knx.org/xml/project/11"><ManufacturerData><Manufacturer RefId="M-1">
+<ApplicationPrograms><ApplicationProgram Id="A-1" Name="P" ApplicationVersion="1"
+  MaskVersion="MV-0701"><Static>
+<ComObjectTable>
+  <ComObject Id="A-1_O-1" Number="1" Text="a" ObjectSize="1 Bit" Priority="Low" />
+  <ComObject Id="A-1_O-2" Number="2" Text="b" ObjectSize="1 Bit" Priority="High" />
+  <ComObject Id="A-1_O-3" Number="3" Text="c" ObjectSize="1 Bit" Priority="Low" />
+  <ComObject Id="A-1_O-4" Number="4" Text="d" ObjectSize="1 Bit" />
+  <ComObject Id="A-1_O-5" Number="5" Text="e" ObjectSize="1 Bit" Priority="Low" />
+  <ComObject Id="A-1_O-6" Number="6" Text="f" ObjectSize="1 Bit" />
+  <ComObject Id="A-1_O-7" Number="7" Text="g" ObjectSize="1 Bit" Priority="Alert" />
+  <ComObject Id="A-1_O-8" Number="8" Text="h" ObjectSize="1 Bit" Priority="Alert" />
+  <ComObject Id="A-1_O-9" Number="9" Text="i" ObjectSize="1 Bit" Priority="Alert" />
+  <ComObject Id="A-1_O-10" Number="10" Text="j" ObjectSize="1 Bit" Priority="Alert" />
+</ComObjectTable>
+<ComObjectRefs>
+  <ComObjectRef Id="A-1_O-1_R-1" RefId="A-1_O-1" Priority="Alert" />
+  <ComObjectRef Id="A-1_O-2_R-1" RefId="A-1_O-2" />
+  <ComObjectRef Id="A-1_O-3_R-1" RefId="A-1_O-3" Priority="Low" />
+  <ComObjectRef Id="A-1_O-4_R-1" RefId="A-1_O-4" />
+  <ComObjectRef Id="A-1_O-5_R-1" RefId="A-1_O-5" Priority="" />
+  <ComObjectRef Id="A-1_O-6_R-1" RefId="A-1_O-6" Priority="low" />
+  <ComObjectRef Id="A-1_O-7_R-1" RefId="A-1_O-7" />
+  <ComObjectRef Id="A-1_O-8_R-1" RefId="A-1_O-8" />
+  <ComObjectRef Id="A-1_O-9_R-1" RefId="A-1_O-9" />
+  <ComObjectRef Id="A-1_O-10_R-1" RefId="A-1_O-10" />
+</ComObjectRefs>
+</Static></ApplicationProgram></ApplicationPrograms></Manufacturer></ManufacturerData></KNX>"#;
+
+/// One device whose objects carry the given saved facts; `ref` is the object `RefId`.
+fn effective_priority_project(
+    program_ref: &str,
+    objects: &[(&str, knx_core::SavedInstancePriority)],
+) -> (Project, DeviceId) {
+    use knx_core::{ComObjectInstance, SavedInstancePriority as Fact};
+    let mut project = Project::new(Language("en".into()));
+    project.installations = state_with_one_installation()
+        .project
+        .lock()
+        .unwrap()
+        .take()
+        .unwrap()
+        .installations;
+    let owner = project.ids.next_device_id().unwrap();
+    let device_source = SourceRef {
+        path: "P-SYNTHETIC/0.xml".into(),
+        ets_id: "P-SYNTHETIC-0_DI-1".into(),
+    };
+    project.devices.insert(DeviceInstance {
+        id: owner,
+        source: device_source.clone(),
+        name: "Priorities".into(),
+        description: None,
+        address: None,
+        product_ref: "M-1_P-1".into(),
+        program_ref: program_ref.into(),
+        commissioning: Default::default(),
+        visibility_calculated: true,
+        com_objects: vec![],
+        binary_data: vec![],
+    });
+    project.installations[0].topology.unassigned.push(owner);
+    for (position, (ref_id, fact)) in objects.iter().enumerate() {
+        let id = project.ids.next_com_object_instance_id().unwrap();
+        let object_source = SourceRef {
+            path: device_source.path.clone(),
+            ets_id: (*ref_id).into(),
+        };
+        let mut fact = fact.clone();
+        let with_source = |fact: &mut Fact| {
+            let source = knx_core::SavedPrioritySource {
+                source_schema: 23,
+                device_source: device_source.clone(),
+                object_source: object_source.clone(),
+                owner_xpath: format!("/synthetic/owner/object-{position}"),
+                topology_sha256: "b".repeat(64),
+            };
+            match fact {
+                Fact::Absent(value) => value.source = source,
+                Fact::Declared(value) => value.source = source,
+                Fact::Unavailable { .. } => {}
+            }
+        };
+        with_source(&mut fact);
+        project.devices.insert_com_object(ComObjectInstance {
+            id,
+            device: owner,
+            source: object_source,
+            number: (position + 1) as u16,
+            text: Override::Absent,
+            description: Override::Absent,
+            dpt: Override::Absent,
+            flags: ResolvedFlags::none(),
+            size: None,
+            is_active: true,
+            links: vec![],
+            module_instance: None,
+            saved_instance_priority: fact,
+        });
+        project.devices.get_mut(owner).unwrap().com_objects.push(id);
+    }
+    (project, owner)
+}
+
+fn placeholder_source() -> knx_core::SavedPrioritySource {
+    knx_core::SavedPrioritySource {
+        source_schema: 23,
+        device_source: SourceRef {
+            path: String::new(),
+            ets_id: String::new(),
+        },
+        object_source: SourceRef {
+            path: String::new(),
+            ets_id: String::new(),
+        },
+        owner_xpath: String::new(),
+        topology_sha256: String::new(),
+    }
+}
+
+fn absent_fact(omission: knx_core::SavedPriorityOmission) -> knx_core::SavedInstancePriority {
+    knx_core::SavedInstancePriority::Absent(Box::new(knx_core::SavedPriorityAbsent {
+        omission,
+        source: placeholder_source(),
+    }))
+}
+
+fn declared_fact(raw: &str) -> knx_core::SavedInstancePriority {
+    knx_core::SavedInstancePriority::Declared(Box::new(knx_core::SavedPriorityDeclared {
+        raw: raw.into(),
+        source: placeholder_source(),
+    }))
+}
+
+async fn get_objects(state: knx_server::AppState, device: DeviceId) -> Vec<Value> {
+    let response = knx_server::app(Arc::new(state), None)
+        .oneshot(
+            Request::builder()
+                .uri(format!("/api/device/{}", device.0))
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::OK);
+    body_json(response).await["com_objects"]
+        .as_array()
+        .unwrap()
+        .clone()
+}
+
+fn with_priority_products(project: Project) -> (tempfile::TempDir, knx_server::AppState) {
+    let dir = tempfile::tempdir().unwrap();
+    let conn = knx_productdb::open_and_migrate(&dir.path().join("products.sqlite")).unwrap();
+    knx_productdb::parse::hardware::ingest_hardware(&conn, "h", "M-1/H.xml", HARDWARE.as_bytes())
+        .unwrap();
+    knx_productdb::parse::program::ingest_program(
+        &conn,
+        "p",
+        "M-1/A.xml",
+        PRIORITY_PROGRAM.as_bytes(),
+    )
+    .unwrap();
+    knx_productdb::parse::catalog::ingest_catalog(&conn, "c", "M-1/C.xml", CATALOG.as_bytes())
+        .unwrap();
+    let mut state = state_with_one_installation();
+    state.product_db =
+        Some(knx_server::CatalogueOwner::adopt_opened(conn, std::path::PathBuf::new()).unwrap());
+    *state.project.lock().unwrap() = Some(project);
+    (dir, state)
+}
+
+#[tokio::test]
+async fn effective_priority_mounted_get_names_winning_source_and_never_inherits_bad_declarations() {
+    use knx_core::{SavedInstancePriority as Fact, SavedPriorityOmission as Omission};
+    let unresolved = |reason: &str| json!({"status": "unresolved", "reason": reason, "source": null, "raw": null});
+    let product = |layer: &str, omission: &str| json!({"kind": "product", "layer": layer, "omission": omission});
+    let cases: Vec<(&str, Fact, Value, Value)> = vec![
+        // Reference literal wins by presence over the program's.
+        (
+            "O-1_R-1",
+            absent_fact(Omission::AttributeOmitted),
+            json!({"status": "resolved", "value": "Alert", "source": product("ProgramRef", "AttributeOmitted")}),
+            unresolved("NoProductDatabase"),
+        ),
+        // §1.2.5.11 + §1.2.5.13: an unlisted instance also takes the product value.
+        (
+            "O-2_R-1",
+            absent_fact(Omission::InstanceElementOmitted),
+            json!({"status": "resolved", "value": "High", "source": product("Program", "InstanceElementOmitted")}),
+            unresolved("NoProductDatabase"),
+        ),
+        // Equal literals at both layers still report the reference.
+        (
+            "O-3_R-1",
+            absent_fact(Omission::AttributeOmitted),
+            json!({"status": "resolved", "value": "Low", "source": product("ProgramRef", "AttributeOmitted")}),
+            unresolved("NoProductDatabase"),
+        ),
+        (
+            "O-4_R-1",
+            absent_fact(Omission::AttributeOmitted),
+            unresolved("ProductLiteralAbsent"),
+            unresolved("NoProductDatabase"),
+        ),
+        (
+            "O-5_R-1",
+            absent_fact(Omission::AttributeOmitted),
+            json!({"status": "unresolved", "reason": "ProductEmpty", "source": product("ProgramRef", "AttributeOmitted"), "raw": ""}),
+            unresolved("NoProductDatabase"),
+        ),
+        (
+            "O-6_R-1",
+            absent_fact(Omission::InstanceElementOmitted),
+            json!({"status": "unresolved", "reason": "ProductUnknown", "source": product("ProgramRef", "InstanceElementOmitted"), "raw": "low"}),
+            unresolved("NoProductDatabase"),
+        ),
+        (
+            "O-99_R-1",
+            absent_fact(Omission::AttributeOmitted),
+            unresolved("ProductObjectNotFound"),
+            unresolved("NoProductDatabase"),
+        ),
+        // Counter-proofs: declarations never take the product's Alert.
+        (
+            "O-7_R-1",
+            declared_fact("High"),
+            json!({"status": "resolved", "value": "High", "source": {"kind": "instance"}}),
+            json!({"status": "resolved", "value": "High", "source": {"kind": "instance"}}),
+        ),
+        (
+            "O-8_R-1",
+            declared_fact(""),
+            json!({"status": "unresolved", "reason": "InstanceEmpty", "source": {"kind": "instance"}, "raw": ""}),
+            json!({"status": "unresolved", "reason": "InstanceEmpty", "source": {"kind": "instance"}, "raw": ""}),
+        ),
+        (
+            "O-9_R-1",
+            declared_fact(" Alert"),
+            json!({"status": "unresolved", "reason": "InstanceUnknown", "source": {"kind": "instance"}, "raw": " Alert"}),
+            json!({"status": "unresolved", "reason": "InstanceUnknown", "source": {"kind": "instance"}, "raw": " Alert"}),
+        ),
+        (
+            "O-10_R-1",
+            Fact::default(),
+            unresolved("InstanceUnavailable"),
+            unresolved("InstanceUnavailable"),
+        ),
+    ];
+    let facts: Vec<(&str, Fact)> = cases.iter().map(|(r, f, _, _)| (*r, f.clone())).collect();
+
+    let (project, owner) = effective_priority_project("H-1_HP-1", &facts);
+    let (_dir, state) = with_priority_products(project.clone());
+    let with_db = get_objects(state, owner).await;
+    let without_db_state = state_with_one_installation();
+    *without_db_state.project.lock().unwrap() = Some(project);
+    let without_db = get_objects(without_db_state, owner).await;
+    for (index, (ref_id, _, expected, expected_without_db)) in cases.iter().enumerate() {
+        assert_eq!(
+            with_db[index]["effective_priority"], *expected,
+            "{ref_id} #{index}"
+        );
+        assert_eq!(
+            without_db[index]["effective_priority"], *expected_without_db,
+            "{ref_id} #{index} without product database"
+        );
+        // The captured fact is untouched by the overlay.
+        assert_eq!(
+            with_db[index]["saved_instance_priority"],
+            without_db[index]["saved_instance_priority"]
+        );
+    }
+}
+
+#[tokio::test]
+async fn effective_priority_names_missing_program_and_withholds_rebound_facts() {
+    use knx_core::SavedPriorityOmission as Omission;
+    let unresolved = |reason: &str| json!({"status": "unresolved", "reason": reason, "source": null, "raw": null});
+    let facts = [("O-1_R-1", absent_fact(Omission::AttributeOmitted))];
+    for (program_ref, reason) in [
+        ("", "NoProgramReference"),
+        ("H-9_HP-9", "ProgramNotInDatabase"),
+    ] {
+        let (project, owner) = effective_priority_project(program_ref, &facts);
+        let (_dir, state) = with_priority_products(project);
+        let objects = get_objects(state, owner).await;
+        assert_eq!(
+            objects[0]["effective_priority"],
+            unresolved(reason),
+            "{program_ref:?}"
+        );
+    }
+    // A rebound clone withholds the saved fact, so the product cannot fill it either.
+    let (mut project, owner) = effective_priority_project("H-1_HP-1", &facts);
+    let id = project.devices.get(owner).unwrap().com_objects[0];
+    project.devices.com_object_mut(id).unwrap().source.path = "scoped/0.xml".into();
+    let (_dir, state) = with_priority_products(project);
+    let objects = get_objects(state, owner).await;
+    assert_eq!(
+        objects[0]["saved_instance_priority"],
+        json!({"status": "unavailable", "reason": "SourceBindingMismatch"})
+    );
+    assert_eq!(
+        objects[0]["effective_priority"],
+        unresolved("InstanceUnavailable")
+    );
+}

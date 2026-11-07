@@ -67,6 +67,19 @@ translation, module placement or import-time product equivalence is inferred
 ([contract](contracts/declared-product-folder-captions.md),
 [verification boundary](status/2026-11-06-declared-product-folder-captions.md)).
 
+**Optional priority column (7 November 2026, owner decision):** a *Priority
+column* toggle in the toolbar adds one read-only column, off by default; the
+choice is a remembered view preference (`comTablePriorityColumn` setting), not
+project data. Each cell shows the server's effective priority token
+(`Low`/`High`/`Alert`) with a short winning-source tag (*yours*, *saved*,
+*product*); the full source or unresolved reason is the cell title. Unresolved
+or unrecognised server states show `—` and never a guessed token. Sorting
+orders Low, High, Alert with unresolved last; a Priority filter (all, each
+token, unresolved) appears with the column, joins the other filters and counts
+as a filter. Hiding the column drops its filter and sort. Editing stays in the
+object editor ([priority-edit contract](contracts/object-priority-edit.md)); the
+value is a project value, not read from the device.
+
 ## Sorting and filters
 
 Original order is the default and a separate reset. Column clicks select ascending
@@ -137,7 +150,9 @@ whole-page overflow; long values remain reachable. Existing editable fields and
 GA drag/drop reuse the existing API/application/core commands.
 
 No new dependency, core/storage/API schema, protocol behavior, export, bulk edit,
-project-wide CO explorer, resizable/reorderable columns or persistent preferences.
+project-wide CO explorer or reorderable columns. Column widths (browser-local)
+and the optional priority column (server settings) are the only remembered
+table preferences.
 Native WebKitGTK/Orca, full accessibility certification, real bus and full ETS
 compatibility are not established by Chromium or synthetic evidence.
 

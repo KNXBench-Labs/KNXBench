@@ -1012,6 +1012,15 @@ edit the project; they do not connect to, program or download a KNX device.
 which helps when picking a group address of matching size. Without product data
 the size stays blank rather than guessed.
 
+**Priority column** (current source, not yet released): the **Priority column**
+button above the table adds a column with each object's effective project
+priority (`Low`, `High` or `Alert`) and a short note where it comes from: *yours*
+(set by you), *saved* (from the imported project) or *product*. Hover a cell for
+the full wording; `—` means the priority cannot be determined and the tooltip
+says why. The column can be sorted and adds a **Priority** filter. It is off by
+default and KNXBench remembers your choice. To change a priority, expand the
+object and use **Your priority**.
+
 <a id="device-functions-source-builds-after-alpha-12"></a>
 
 #### Device functions (since Alpha 13)

@@ -17,8 +17,10 @@ not permission to program anything.
 
 User edits are admitted separately by the
 [priority-edit contract](object-priority-edit.md); they add a `userEdit` source
-that wins over every row below. Otherwise not admitted: a web object-table column (an owner
-UX decision), a documentation-report or comparison consumer, module objects,
+that wins over every row below. The optional read-only object-table column
+([table contract](../COMMUNICATION_OBJECT_TABLE.md#presentation-and-derived-data),
+owner decision 7 November 2026) displays this view. Otherwise not admitted: a
+documentation-report or comparison consumer, module objects,
 other source schemas, product-version staleness checks, image generation, bus
 services and any new endpoint. Existing image priority policies (Low/missing,
 documented Alert inference, High refusal) are unchanged and do not read this field.

@@ -25,13 +25,21 @@ function fixtureTree(nodes: DeviceNode[]): ProjectTree {
 export async function intercept(page: Page, language: "en" | "de", count = 8, theme = "porcelain") {
   const nodes = devices(2); const tree = fixtureTree(nodes);
   const objects = makeObjects(count);
-  const state = { tree, nodes, unexpected: [] as string[], requests: [] as string[], polls: 0, failCatalogue: false, objects, refuseDpt: false, projectOpen: false };
+  const state = { tree, nodes, unexpected: [] as string[], requests: [] as string[], polls: 0, failCatalogue: false, objects, refuseDpt: false, projectOpen: false,
+    settings: { uiLanguage: language, theme } as Record<string, unknown> };
   await page.route("**/api/**", (route) => {
     const url = new URL(route.request().url()); const path = url.pathname; const method = route.request().method();
     state.requests.push(`${method} ${path}`);
     let body: unknown; let status = 200;
     if (path === "/api/auth/status" && method === "GET") body = { required: false, authenticated: true };
-    else if (path === "/api/settings" && method === "GET") body = { schemaVersion: 1, status: "ok", settings: { uiLanguage: language, theme } };
+    else if (path === "/api/settings" && method === "GET") body = { schemaVersion: 1, status: "ok", settings: state.settings };
+    // A settings change lets the app re-read its build stage (onboarding/consent).
+    else if (path === "/api/version" && method === "GET") body = { version: "0.1.0-alpha.19+gfixture" };
+    // View preferences only (e.g. the optional priority column); never project data.
+    else if (path === "/api/settings" && method === "PUT") {
+      Object.assign(state.settings, route.request().postDataJSON().settings);
+      body = { conditionalPatchVersion: 1, schemaVersion: 1, status: "ok", settings: state.settings };
+    }
     // Like the real server: no project until the test creates one (ADR-0127).
     else if (path === "/api/project" && method === "GET") {
       if (state.projectOpen) body = state.tree; else { status = 400; body = { error: "no project open" }; }

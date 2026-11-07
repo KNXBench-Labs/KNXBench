@@ -75,6 +75,9 @@ pub struct AppState {
     /// project. The bytes are evidence of what the source file said
     /// (ADR-0006), which the import report and diagnostics read back.
     pub opaque: Mutex<Vec<knx_store::StoredOpaqueEntry>>,
+    /// Session-only memo of the parsed original topology member for the saved-folder
+    /// currency check; keyed by the verified digest, never saved.
+    pub folder_baselines: knx_app::saved_folder_currency::BaselineCache,
     pub manufacturer_refs: Mutex<Vec<knx_store::ManufacturerRef>>,
     /// Live inverses or admitted native snapshot entries for undo/redo.
     /// Native open recovers the persisted stack; new/import starts a fresh one.
@@ -386,6 +389,7 @@ impl AppState {
             store_path: Mutex::new(None),
             view_path_key: Mutex::new(None),
             opaque: Mutex::new(Vec::new()),
+            folder_baselines: Default::default(),
             manufacturer_refs: Mutex::new(Vec::new()),
             command_stack: Mutex::new(knx_core::CommandStack::new()),
             history_generation: Mutex::new(0),
@@ -2606,7 +2610,13 @@ fn device_detail_with_product_data(
                     project,
                     knx_core::DeviceId(device_id),
                 )
-                .map(|input| knx_app::saved_folder_currency::saved_tree_currency(input, &opaque));
+                .map(|input| {
+                    knx_app::saved_folder_currency::saved_tree_currency_cached(
+                        input,
+                        &opaque,
+                        &state.folder_baselines,
+                    )
+                });
             }
             placed
         });

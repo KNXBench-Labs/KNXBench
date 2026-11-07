@@ -5,11 +5,61 @@
 //! parameter values and object set with the retained original topology member
 //! and never changes, hides or recomputes a folder.
 
+use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::{Arc, Mutex};
+
 use knx_core::{DeviceId, Project, SourceRef};
 use knx_etsproj::device_baseline::{
-    read_device_baseline, BaselineReadError, MAX_BASELINE_XML_BYTES,
+    read_document_baselines, BaselineReadError, DocumentBaselines, MAX_BASELINE_XML_BYTES,
 };
 use knx_store::StoredOpaqueEntry;
+
+/// Session-only memo of the last parsed original member, keyed by its verified digest.
+///
+/// Holds derived baselines, never project data, and is never saved. Every lookup
+/// still verifies the retained bytes' SHA-256 before the memo can answer, so a
+/// changed original is re-parsed rather than served from memory.
+#[derive(Debug, Default)]
+pub struct BaselineCache {
+    last: Mutex<Option<(BaselineKey, ParsedDocument)>>,
+    parses: AtomicUsize,
+}
+
+type ParsedDocument = Arc<Result<DocumentBaselines, BaselineReadError>>;
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct BaselineKey {
+    sha256: String,
+    source_path: String,
+    schema_version: u32,
+}
+
+impl BaselineCache {
+    /// How many times a member was actually parsed (tests and diagnostics).
+    pub fn parses(&self) -> usize {
+        self.parses.load(Ordering::Relaxed)
+    }
+
+    fn document(&self, key: BaselineKey, bytes: &[u8]) -> ParsedDocument {
+        let mut last = self
+            .last
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        if let Some((cached, document)) = last.as_ref() {
+            if *cached == key {
+                return Arc::clone(document);
+            }
+        }
+        self.parses.fetch_add(1, Ordering::Relaxed);
+        let document = Arc::new(read_document_baselines(
+            bytes,
+            &key.source_path,
+            key.schema_version,
+        ));
+        *last = Some((key, Arc::clone(&document)));
+        document
+    }
+}
 
 /// Whether the saved tree still describes the device as it is now.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -77,6 +127,15 @@ pub fn saved_tree_currency(
     input: CurrencyInput,
     opaque: &[StoredOpaqueEntry],
 ) -> SavedTreeCurrency {
+    saved_tree_currency_cached(input, opaque, &BaselineCache::default())
+}
+
+/// [`saved_tree_currency`] reusing `cache` for an unchanged, re-verified original member.
+pub fn saved_tree_currency_cached(
+    input: CurrencyInput,
+    opaque: &[StoredOpaqueEntry],
+    cache: &BaselineCache,
+) -> SavedTreeCurrency {
     use CurrencyUnknown as U;
     let unknown = SavedTreeCurrency::Unknown;
     if input.source.path.is_empty() || input.source.ets_id.is_empty() {
@@ -104,13 +163,21 @@ pub fn saved_tree_currency(
     if knx_etsproj::opaque::sha256_hex(&original.bytes) != original.sha256 {
         return unknown(U::SourceIntegrity);
     }
-    let baseline = match read_device_baseline(
+    let document = cache.document(
+        BaselineKey {
+            sha256: original.sha256.clone(),
+            source_path: input.source.path.clone(),
+            schema_version: input.schema_version,
+        },
         &original.bytes,
-        &input.source.path,
-        input.schema_version,
-        &input.source.ets_id,
-    ) {
-        Ok(baseline) => baseline,
+    );
+    let baseline = match document
+        .as_ref()
+        .as_ref()
+        .map_err(|error| *error)
+        .and_then(|document| document.device(&input.source.ets_id))
+    {
+        Ok(baseline) => baseline.clone(),
         Err(error) => {
             return unknown(match error {
                 BaselineReadError::SourceLimit => U::SourceLimit,
@@ -271,5 +338,123 @@ mod tests {
             unknown(&[entry(bytes, None)], nameless),
             SavedTreeCurrency::Unknown(U::NoRetainedSource)
         );
+    }
+
+    /// Two installations, one device each; each device's parameters live in its own installation.
+    fn imported_two_installations() -> (Project, Vec<StoredOpaqueEntry>) {
+        let device = |installation: u32, id: u32, value: &str| {
+            format!(
+                r#"<Installation Name="I{installation}"><Topology><UnassignedDevices>
+<DeviceInstance Id="P-0001-0_DI-{id}" ProductRefId="M-1_P-1" Hardware2ProgramRefId="M-1_H-1_HP-1">
+<ParameterInstanceRefs><ParameterInstanceRef RefId="M-1_A-1_P-{id}_R-1" Value="{value}" />
+</ParameterInstanceRefs><GroupObjectTree GroupObjectInstances="O-{id}_R-1" /></DeviceInstance>
+</UnassignedDevices></Topology></Installation>"#
+            )
+        };
+        let topology = format!(
+            r#"<KNX xmlns="http://knx.org/xml/project/23"><Project Id="P-0001"><Installations>{}{}</Installations></Project></KNX>"#,
+            device(1, 1, "one"),
+            device(2, 2, "two"),
+        );
+        let info = r#"<KNX xmlns="http://knx.org/xml/project/23"><Project Id="P-0001"><ProjectInformation Name="Two"/></Project></KNX>"#;
+        let bytes = knx_testsupport::zip_with_entries(&[
+            ("P-0001.signature", b""),
+            ("P-0001/0.xml", topology.as_bytes()),
+            ("P-0001/project.xml", info.as_bytes()),
+        ]);
+        let outcome = knx_etsproj::import_knxproj_bytes(bytes, "two.knxproj").unwrap();
+        let opaque = outcome
+            .opaque
+            .iter()
+            .map(|e| StoredOpaqueEntry {
+                source_path: e.source_path.clone(),
+                xpath: e.xpath.clone(),
+                kind: format!("{:?}", e.kind),
+                name: e.name.clone(),
+                bytes: e.bytes.clone(),
+                sha256: e.sha256.clone(),
+            })
+            .collect();
+        (outcome.project, opaque)
+    }
+
+    fn device_by_source(project: &Project, ets_id: &str) -> DeviceId {
+        project
+            .devices
+            .iter()
+            .find(|d| d.source.ets_id == ets_id)
+            .unwrap()
+            .id
+    }
+
+    #[test]
+    fn collect_reads_only_this_device_from_every_installation() {
+        let (project, opaque) = imported_two_installations();
+        assert_eq!(project.installations.len(), 2);
+        for (ets_id, own) in [("P-0001-0_DI-1", "one"), ("P-0001-0_DI-2", "two")] {
+            let device = device_by_source(&project, ets_id);
+            let input = CurrencyInput::collect(&project, device).unwrap();
+            // Only this device's own value, wherever its installation is.
+            assert_eq!(input.parameters.len(), 1, "{ets_id}");
+            assert_eq!(input.parameters[0].1, own, "{ets_id}");
+            assert_eq!(
+                saved_tree_currency(input, &opaque),
+                SavedTreeCurrency::Unchanged,
+                "{ets_id}"
+            );
+        }
+    }
+
+    #[test]
+    fn a_source_identity_shared_by_two_devices_is_unknown() {
+        let (mut project, opaque) = imported_two_installations();
+        let first = device_by_source(&project, "P-0001-0_DI-1");
+        let second = device_by_source(&project, "P-0001-0_DI-2");
+        let source = project.devices.get(first).unwrap().source.clone();
+        project.devices.get_mut(second).unwrap().source = source;
+        let input = CurrencyInput::collect(&project, first).unwrap();
+        assert_eq!(
+            saved_tree_currency(input, &opaque),
+            SavedTreeCurrency::Unknown(CurrencyUnknown::AmbiguousSource)
+        );
+    }
+
+    #[test]
+    fn the_cache_parses_once_but_still_verifies_and_follows_a_changed_original() {
+        let (project, mut opaque) = imported_two_installations();
+        let cache = BaselineCache::default();
+        let input =
+            |ets_id| CurrencyInput::collect(&project, device_by_source(&project, ets_id)).unwrap();
+        for ets_id in ["P-0001-0_DI-1", "P-0001-0_DI-2", "P-0001-0_DI-1"] {
+            assert_eq!(
+                saved_tree_currency_cached(input(ets_id), &opaque, &cache),
+                SavedTreeCurrency::Unchanged
+            );
+        }
+        assert_eq!(cache.parses(), 1, "one member, one parse");
+        let original = opaque
+            .iter()
+            .position(|e| {
+                e.kind == "ContainerEntry" && e.source_path == "P-0001/0.xml" && e.xpath.is_empty()
+            })
+            .unwrap();
+        // Tampered bytes under the old digest: refused before the memo answers.
+        opaque[original].bytes.push(b' ');
+        assert_eq!(
+            saved_tree_currency_cached(input("P-0001-0_DI-1"), &opaque, &cache),
+            SavedTreeCurrency::Unknown(CurrencyUnknown::SourceIntegrity)
+        );
+        assert_eq!(cache.parses(), 1);
+        // A genuinely different original (new digest) is parsed again, not served stale.
+        let changed = String::from_utf8(opaque[original].bytes.clone())
+            .unwrap()
+            .replace(r#"Value="one""#, r#"Value="uno""#);
+        opaque[original].bytes = changed.into_bytes();
+        opaque[original].sha256 = knx_etsproj::opaque::sha256_hex(&opaque[original].bytes);
+        assert_eq!(
+            saved_tree_currency_cached(input("P-0001-0_DI-1"), &opaque, &cache),
+            SavedTreeCurrency::ChangedSinceImport
+        );
+        assert_eq!(cache.parses(), 2);
     }
 }

@@ -1,5 +1,7 @@
 //! Reads one device's original parameter values and object list from its retained topology XML.
 
+use std::collections::HashMap;
+
 use crate::known::{known_schema, uses_ets6_content_model};
 use crate::source::SourceDevice;
 
@@ -24,15 +26,32 @@ pub enum BaselineReadError {
     AmbiguousDevice,
 }
 
-/// Parses `xml` with the importer's schema-20/21/23 parser and returns device `ets_id`'s baseline.
+/// Every device baseline of one parsed topology member, keyed by exact `DeviceInstance/@Id`.
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct DocumentBaselines {
+    /// More than one entry means the member declares that id more than once.
+    devices: HashMap<String, Vec<DeviceBaseline>>,
+}
+
+impl DocumentBaselines {
+    /// The single baseline of `ets_id`, or why there is none.
+    pub fn device(&self, ets_id: &str) -> Result<&DeviceBaseline, BaselineReadError> {
+        match self.devices.get(ets_id).map(Vec::as_slice) {
+            None | Some([]) => Err(BaselineReadError::DeviceNotInSource),
+            Some([single]) => Ok(single),
+            Some(_) => Err(BaselineReadError::AmbiguousDevice),
+        }
+    }
+}
+
+/// Parses `xml` once with the importer's schema-20/21/23 parser and returns every device baseline.
 ///
 /// Never reads files, URLs or external entities and never modifies `xml`.
-pub fn read_device_baseline(
+pub fn read_document_baselines(
     xml: &[u8],
     source_path: &str,
     schema_version: u32,
-    ets_id: &str,
-) -> Result<DeviceBaseline, BaselineReadError> {
+) -> Result<DocumentBaselines, BaselineReadError> {
     if xml.len() > MAX_BASELINE_XML_BYTES {
         return Err(BaselineReadError::SourceLimit);
     }
@@ -41,7 +60,8 @@ pub fn read_device_baseline(
         .ok_or(BaselineReadError::UnsupportedSchema)?;
     let parsed = crate::parse::parse_installation_v21(xml, source_path, schema)
         .map_err(|_| BaselineReadError::Unreadable)?;
-    let mut matches = parsed
+    let mut devices: HashMap<String, Vec<DeviceBaseline>> = HashMap::new();
+    for device in parsed
         .document
         .installations
         .iter()
@@ -53,12 +73,25 @@ pub fn read_device_baseline(
                     .flat_map(|area| area.lines.iter().flat_map(|line| line.devices.iter())),
             )
         })
-        .filter(|device| device.id == ets_id);
-    let device = matches.next().ok_or(BaselineReadError::DeviceNotInSource)?;
-    if matches.next().is_some() {
-        return Err(BaselineReadError::AmbiguousDevice);
+    {
+        devices
+            .entry(device.id.clone())
+            .or_default()
+            .push(baseline(device));
     }
-    Ok(baseline(device))
+    Ok(DocumentBaselines { devices })
+}
+
+/// [`read_document_baselines`] for a single device `ets_id`.
+pub fn read_device_baseline(
+    xml: &[u8],
+    source_path: &str,
+    schema_version: u32,
+    ets_id: &str,
+) -> Result<DeviceBaseline, BaselineReadError> {
+    read_document_baselines(xml, source_path, schema_version)?
+        .device(ets_id)
+        .cloned()
 }
 
 fn baseline(device: &SourceDevice) -> DeviceBaseline {
@@ -114,6 +147,21 @@ mod tests {
         let unassigned = read_device_baseline(xml.as_bytes(), PATH, 23, "P-TEST-0_DI-9").unwrap();
         assert!(unassigned.parameters.is_empty());
         assert_eq!(unassigned.objects, vec!["O-9_R-1"]);
+    }
+
+    #[test]
+    fn reads_a_schema20_device_directly_under_its_line() {
+        // Schema 20 has no Segment: DeviceInstance is a direct Line child.
+        let xml = r#"<?xml version="1.0" encoding="utf-8"?>
+<KNX xmlns="http://knx.org/xml/project/20"><Project Id="P-TEST"><Installations>
+<Installation Name="I"><Topology><Area Id="P-TEST-0_A-1" Address="1"><Line Id="P-TEST-0_L-1" Address="1">
+<DeviceInstance Id="P-TEST-0_DI-4" Address="4" ProductRefId="M-1_P-1" Hardware2ProgramRefId="M-1_H-1_HP-1">
+<ParameterInstanceRefs><ParameterInstanceRef RefId="P-4" Value="a&amp;b" /></ParameterInstanceRefs>
+<GroupObjectTree GroupObjectInstances="O-4_R-1" /></DeviceInstance></Line></Area>
+</Topology></Installation></Installations></Project></KNX>"#;
+        let base = read_device_baseline(xml.as_bytes(), PATH, 20, "P-TEST-0_DI-4").unwrap();
+        assert_eq!(base.parameters, vec![("P-4".into(), "a&b".into())]);
+        assert_eq!(base.objects, vec!["O-4_R-1"]);
     }
 
     #[test]

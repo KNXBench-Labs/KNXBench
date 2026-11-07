@@ -328,6 +328,25 @@ mod tests {
             (ComObjectInstanceId(3), SavedFolder::NoFolder),
         ]);
         apply_project_folders(&mut detail, &folders);
+        // Currency is reported only while an Assigned folder is still shown.
+        let mut hidden = detail.clone();
+        for com in &mut hidden.com_objects {
+            if com
+                .project_folder
+                .as_ref()
+                .is_some_and(|f| f.status == ProjectFolderStatus::Assigned)
+            {
+                com.project_folder = Some(refused(ProjectFolderStatus::Inactive));
+            }
+        }
+        apply_folder_currency(&mut hidden, SavedTreeCurrency::ChangedSinceImport);
+        assert_eq!(hidden.project_folder_currency, None);
+        let mut shown = detail.clone();
+        apply_folder_currency(&mut shown, SavedTreeCurrency::ChangedSinceImport);
+        assert_eq!(
+            shown.project_folder_currency,
+            Some(knx_projection::ProjectFolderCurrency::ChangedSinceImport)
+        );
         let statuses: Vec<_> = detail
             .com_objects
             .iter()

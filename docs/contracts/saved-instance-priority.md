@@ -15,7 +15,8 @@ delivered and are not reimplemented.
 
 No priority edit command, table column or editing control (the later read-only
 row is [below](#read-only-ui-consumer-7-november-2026)), product resolution, activation rule,
-image/device-writer change, new source schema/module support, report/diff feature,
+image/device-writer change, new source schema/module support, documentation report
+(the later comparison field is [below](#comparison-consumer-7-november-2026)),
 bus action, native GUI acceptance, release or deployment is admitted.
 
 ## Core representation
@@ -206,6 +207,24 @@ unknown rather than mapped to a default. The captured schema and object identity
 appear as visible secondary text, not only a hover title. A fixed hint says the value is not the effective or
 wire priority. No control, command, API call, table column, report or comparison
 consumer is added; the GET payload is unchanged.
+
+## Comparison consumer (7 November 2026)
+
+`knx_diff::ComObjectFields.saved_priority` (`SavedPriorityFields`) compares the
+captured fact: Declared(exact raw), Absent(omission), Unavailable(stored reason)
+or SourceBindingMismatch, using the same `SavedPriorityBindings::captured_binding`
+check as the projection; each side's whole-project index is built once per compared
+installation pair. Source metadata is excluded, so
+equal declarations from different imports or archive digests match. A
+NotCaptured side is a reported difference, not assumed equality. CLI and the web
+field table show `declared "<raw>"`, an escaped rendering (Rust `Debug` quoting,
+deterministic per toolchain but not a stable wire format), `absent (<kind>)` or
+`unavailable (<reason>)`. The exact raw text is only in the HTTP DTO's
+`savedPriority.raw`, tagged by `status`. Every Unavailable reason, including
+UnsupportedSourceSchema for older ETS exports, differs from a captured value, so
+cross-format or pre-capture comparisons list it on many objects and make
+`knx diff --exit-code` report a difference.
+No product default, effective value, wire priority or report section is added.
 
 ## Executable acceptance obligations
 

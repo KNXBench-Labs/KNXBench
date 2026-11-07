@@ -117,6 +117,8 @@ impl FailureCode {
             | E::ExemplarMismatch { .. }
             | E::BackupExemplarMismatch { .. } => Self::PropertyMismatch,
             E::ExemplarElementCount { .. } => Self::MalformedProperty,
+            // The device's own description refuses the product's value.
+            E::PropertyNotWritable { .. } => Self::PropertyRefused,
             E::NotLoaded { .. } => Self::NotLoaded,
             E::UnexpectedState { .. } => Self::UnexpectedLoadState,
             E::Session { error, .. } => Self::of_session(error),
@@ -219,6 +221,8 @@ impl FailureCode {
 pub enum StepKind {
     Connect,
     CompareProperty,
+    WriteProperty,
+    Delay,
     LoadRecord,
     WriteMemory,
     RequireLoaded,
@@ -547,6 +551,7 @@ fn locate(
             index: Some(index), ..
         }
         | E::PropertyMismatch { index, .. }
+        | E::PropertyNotWritable { index, .. }
         | E::ExemplarMismatch { index }
         | E::ExemplarElementCount {
             index,
@@ -579,6 +584,17 @@ fn describe(step: &MemoryDownloadStep) -> (StepKind, String) {
         } => (
             StepKind::CompareProperty,
             format!("compare property {object_index}/{property_id}"),
+        ),
+        MemoryDownloadStep::Delay { milliseconds } => {
+            (StepKind::Delay, format!("wait {milliseconds} ms"))
+        }
+        MemoryDownloadStep::WriteProperty {
+            object_index,
+            property_id,
+            ..
+        } => (
+            StepKind::WriteProperty,
+            format!("write property {object_index}/{property_id}"),
         ),
         // Closed vocabulary: the exemplar guard is a compare to the result shapes.
         MemoryDownloadStep::RequireExemplar(_) => (

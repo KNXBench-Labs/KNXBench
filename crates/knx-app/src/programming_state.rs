@@ -99,8 +99,11 @@ pub fn attempted_parts(
                 parts
             }
             Step::WriteMemory { .. } => active.unwrap_or(scheduled),
+            // A product's fixed property write programs no part itself.
             Step::Connect
             | Step::CompareProperty { .. }
+            | Step::WriteProperty { .. }
+            | Step::Delay { .. }
             | Step::RequireLoaded(_)
             | Step::RequireExemplar(_)
             | Step::Restart

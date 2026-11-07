@@ -256,12 +256,10 @@ fn kind_then_plugin_then_customer_guard_precede_image_failures() {
         &products,
         program_xml(r#"<Options ParameterByteOrder="LittleEndian" />"#),
     );
-    assert!(matches!(
-        prepare_device_download(&products, &project, target()),
-        Err(PrepareError::Image(
-            knx_productdb::image::ImageError::UnsupportedByteOrder { .. }
-        ))
-    ));
+    // ADR-0159: a little-endian program is no longer refused for its byte
+    // order alone; without the guarded parameter it prepares.
+    let prepared = prepare_device_download(&products, &project, target());
+    assert!(prepared.is_ok(), "{:?}", prepared.err());
 }
 
 #[test]

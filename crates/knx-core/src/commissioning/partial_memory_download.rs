@@ -179,8 +179,12 @@ pub fn derive_partial_plan(
                 }
                 continue;
             }
+            // `[D]` CP §3.9.2.4 lists every transformation; none removes a
+            // property write, so the product's own `LdCtrlWriteProp` stays.
             MemoryDownloadStep::Connect
             | MemoryDownloadStep::CompareProperty { .. }
+            | MemoryDownloadStep::WriteProperty { .. }
+            | MemoryDownloadStep::Delay { .. }
             | MemoryDownloadStep::RequireLoaded(_)
             | MemoryDownloadStep::RequireExemplar(_)
             | MemoryDownloadStep::Restart

@@ -82,6 +82,24 @@ pub enum MemoryDownloadStep {
         /// `InlineData`, verbatim.
         inline_data: Vec<u8>,
     },
+    /// `LdCtrlDelay`: wait before the next step; sends nothing.
+    Delay {
+        /// `MilliSeconds`.
+        milliseconds: u16,
+    },
+    /// `LdCtrlWriteProp` with `InlineData`: write one element of a property.
+    /// The element's width is the device's own Property Datatype for it,
+    /// read with `A_PropertyDescription_Read` first ([`pdt_element_octets`]);
+    /// the octets are the first that many of `InlineData`
+    /// ([`write_property_octets`]).
+    WriteProperty {
+        /// `ObjIdx`.
+        object_index: u8,
+        /// `PropId`.
+        property_id: u8,
+        /// `InlineData`, verbatim.
+        inline_data: Vec<u8>,
+    },
     /// An `LdCtrlUnload`/`Load`/`AbsSegment`/`TaskSegment`/`LoadCompleted`
     /// record, written to `0104h`.
     LoadRecord(MemoryLoadRecord),
@@ -120,13 +138,17 @@ pub struct MemoryDownloadPlan {
 
 impl MemoryDownloadStep {
     /// Whether running this step changes the device: a load-state event,
-    /// segment data, or a restart. Connect, compare and disconnect only
-    /// read or manage the connection. A run that stopped after a step for
-    /// which this is `true` may have left the device partially written.
+    /// segment data, a property write or a restart. Connect, compare and
+    /// disconnect only read or manage the connection. A run that stopped
+    /// after a step for which this is `true` may have left the device
+    /// partially written.
     pub fn changes_device(&self) -> bool {
         matches!(
             self,
-            Self::LoadRecord(_) | Self::WriteMemory { .. } | Self::Restart
+            Self::LoadRecord(_)
+                | Self::WriteMemory { .. }
+                | Self::WriteProperty { .. }
+                | Self::Restart
         )
     }
 }
@@ -205,6 +227,60 @@ pub fn resource_matches(
         && property_matches(device, inline_data)
 }
 
+/// The octets one element of a property holds, by its Property Datatype.
+///
+/// `[D]` *Standard Identifier Tables* (`03_07_03` v01.04.01) §4.1, Table 6,
+/// pp. 18–19, column *Type-Length*. `None` where an element is not a fixed
+/// whole number of octets or the table leaves it open: `PDT_CONTROL`
+/// (1 read, 10 write), `PDT_VARIABLE_LENGTH`, `PDT_UTF-8`,
+/// `PDT_BINARY_INFORMATION` (one bit), `PDT_REFERENCE` (the table says 8,
+/// its definition in §4.2 says 10), `PDT_NE_VL`/`NE_FL`/`FUNCTION`/`ESCAPE`
+/// and every reserved code.
+pub fn pdt_element_octets(pdt: u8) -> Option<usize> {
+    match pdt {
+        0x01 | 0x02 => Some(1),
+        0x03..=0x05 => Some(2),
+        0x06 | 0x07 => Some(3),
+        0x08..=0x0A => Some(4),
+        0x0B => Some(8),
+        0x0C => Some(10),
+        0x0D => Some(3),
+        0x0E => Some(5),
+        0x0F => Some(8),
+        // PDT_GENERIC_01 … PDT_GENERIC_20.
+        0x11..=0x24 => Some(usize::from(pdt - 0x10)),
+        0x30 => Some(2),
+        0x31 => Some(6),
+        0x33 => Some(1),
+        0x34 => Some(2),
+        0x35 | 0x36 => Some(1),
+        _ => None,
+    }
+}
+
+/// What `LdCtrlWriteProp` writes as one element of a property with datatype
+/// `pdt`: `InlineData` from its first octet, as wide as
+/// [`pdt_element_octets`] says.
+///
+/// `[V]` ETS 6.4, downloading to KNXBench's own simulator, read the
+/// property's description first and wrote one element of exactly that
+/// width: `InlineData="01"` became `01` for a one-octet datatype and
+/// `01 00` for a two-octet one, zero-filled after the given octets
+/// (docs/research/2026-11-07-ldctrlwriteprop-and-byte-order.md). `[A]` A
+/// longer `InlineData` was not observed; like [`property_matches`], only
+/// the reading that leaves nothing unexplained is accepted: every octet
+/// past the element must be zero. `None` otherwise.
+pub fn write_property_octets(pdt: u8, inline_data: &[u8]) -> Option<Vec<u8>> {
+    let octets = pdt_element_octets(pdt)?;
+    let given = inline_data.len().min(octets);
+    if inline_data[given..].iter().any(|&octet| octet != 0) {
+        return None;
+    }
+    let mut element = inline_data[..given].to_vec();
+    element.resize(octets, 0);
+    Some(element)
+}
+
 /// The runs of a segment the product lets the tool write, as `(offset,
 /// octets)`.
 ///
@@ -240,6 +316,17 @@ impl fmt::Display for MemoryDownloadStep {
             } => write!(
                 f,
                 "compare property {object_index}/{property_id} with {}",
+                hex(inline_data)
+            ),
+            MemoryDownloadStep::Delay { milliseconds } => write!(f, "wait {milliseconds} ms"),
+            MemoryDownloadStep::WriteProperty {
+                object_index,
+                property_id,
+                inline_data,
+            } => write!(
+                f,
+                "A_PropertyValue_Write {object_index}/{property_id}: one element of {}, \
+                 as wide as the device describes it",
                 hex(inline_data)
             ),
             MemoryDownloadStep::LoadRecord(record) => write!(
@@ -316,6 +403,60 @@ pub fn machines(plan: &MemoryDownloadPlan) -> Vec<MemoryLoadStateMachine> {
 mod tests {
     use super::*;
     use crate::commissioning::load_control_memory::event_record;
+
+    #[test]
+    fn a_property_write_takes_one_element_of_the_described_width() {
+        let ten = [0x01, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+        // Observed: `01` as one and as two octets.
+        assert_eq!(write_property_octets(0x02, &[0x01]), Some(vec![0x01]));
+        assert_eq!(write_property_octets(0x04, &[0x01]), Some(vec![0x01, 0x00]));
+        assert_eq!(write_property_octets(0x04, &[0x02]), Some(vec![0x02, 0x00]));
+        assert_eq!(write_property_octets(0x02, &ten), Some(vec![0x01]));
+        assert_eq!(
+            write_property_octets(0x1A, &ten),
+            Some(ten.to_vec()),
+            "PDT_GENERIC_10"
+        );
+        assert_eq!(write_property_octets(0x00, &[0x01]), None, "no fixed width");
+        assert_eq!(
+            write_property_octets(0x02, &[0x01, 0x02]),
+            None,
+            "unexplained trailing data"
+        );
+        for open in [0x00, 0x10, 0x25, 0x26, 0x2F, 0x32, 0x37, 0x3C, 0x3F] {
+            assert_eq!(pdt_element_octets(open), None, "{open:#04x}");
+        }
+        // Table 6 spot checks across the whole range.
+        let widths = [
+            (0x01, 1),
+            (0x05, 2),
+            (0x07, 3),
+            (0x0A, 4),
+            (0x0B, 8),
+            (0x0C, 10),
+            (0x0D, 3),
+            (0x0E, 5),
+            (0x0F, 8),
+            (0x11, 1),
+            (0x24, 20),
+            (0x30, 2),
+            (0x31, 6),
+            (0x33, 1),
+            (0x34, 2),
+            (0x35, 1),
+            (0x36, 1),
+        ];
+        for (pdt, octets) in widths {
+            assert_eq!(pdt_element_octets(pdt), Some(octets), "{pdt:#04x}");
+        }
+        assert!(!MemoryDownloadStep::Delay { milliseconds: 10 }.changes_device());
+        assert!(MemoryDownloadStep::WriteProperty {
+            object_index: 5,
+            property_id: 51,
+            inline_data: vec![1],
+        }
+        .changes_device());
+    }
 
     #[test]
     fn only_load_records_data_and_restart_change_the_device() {

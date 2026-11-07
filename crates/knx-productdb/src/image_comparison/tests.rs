@@ -99,6 +99,7 @@ fn numeric_parameter_rows_use_captured_bits_and_never_swap_project_and_device_va
         value: AttributedValue::Number {
             value: 235,
             nonnegative_signed: false,
+            low_octet_first: false,
         },
     });
     plan.steps.push(MemoryDownloadStep::WriteMemory {

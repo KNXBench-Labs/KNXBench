@@ -337,6 +337,18 @@ pub fn plan_memory_download(
 /// sent (RESEARCH §19.12).
 pub const MACHINE_5_AFTER_RESTART: &str = "machine-5-after-restart";
 
+/// [`Inference::rule`]: a segment longer than its allocation is written up
+/// to the allocation only. `[V]` ETS 6.4 wrote exactly the allocated prefix
+/// of such a segment (docs/research/2026-11-07-ldctrlwriteprop-and-byte-order.md);
+/// KNXBench does so only when every written parameter and table lies in it.
+pub const SEGMENT_BEYOND_ALLOCATION: &str = "segment-beyond-allocation-not-written";
+
+/// [`Inference::rule`]: a property comparison the procedure places after a
+/// fixed property write is run before it. The executor checks the device
+/// before it changes anything; a comparison is only a read, so moving it
+/// first can at worst refuse a download, never write to the wrong device.
+pub const COMPARE_BEFORE_PROPERTY_WRITE: &str = "compare-before-property-write";
+
 /// `LsmIdx` of the fifth machine some converted procedures name.
 const MACHINE_5: u8 = 5;
 
@@ -410,6 +422,10 @@ pub fn plan_memory_download_with_inferences(
                 });
             }
             LoadStep::Connect => steps.push(MemoryDownloadStep::Connect),
+            // `[V]` ETS 6.4 waited the declared time before the restart.
+            LoadStep::Delay { milliseconds } => steps.push(MemoryDownloadStep::Delay {
+                milliseconds: *milliseconds,
+            }),
             LoadStep::Disconnect => steps.push(MemoryDownloadStep::Disconnect),
             LoadStep::Restart => {
                 restarted = true;
@@ -420,6 +436,18 @@ pub fn plan_memory_download_with_inferences(
                 property_id,
                 data,
             } => steps.push(MemoryDownloadStep::CompareProperty {
+                object_index: *object_index,
+                property_id: *property_id,
+                inline_data: data.clone(),
+            }),
+            // `[V]` An ETS 6.4 download against KNXBench's simulator sends
+            // exactly this write where the procedure has it, between the
+            // compare and the unloads and again before the restart.
+            LoadStep::WriteProp {
+                object_index,
+                property_id,
+                data,
+            } => steps.push(MemoryDownloadStep::WriteProperty {
                 object_index: *object_index,
                 property_id: *property_id,
                 inline_data: data.clone(),
@@ -454,7 +482,19 @@ pub fn plan_memory_download_with_inferences(
                     return Err(DownloadPlanError::AllocatedTwice(*address));
                 }
                 steps.push(MemoryDownloadStep::LoadRecord(record));
-                steps.extend(data_writes(image, *address, *size)?);
+                let (writes, beyond) = data_writes(image, *address, *size)?;
+                steps.extend(writes);
+                if let Some(beyond) = beyond {
+                    inferences.push(Inference {
+                        rule: SEGMENT_BEYOND_ALLOCATION,
+                        detail: format!(
+                            "the segment at {address:04X}h holds {beyond} octets past its \
+                             allocation of {size}; nothing written lies there, so they are not \
+                             sent, as ETS 6.4 does"
+                        ),
+                        reference: "docs/research/2026-11-07-ldctrlwriteprop-and-byte-order.md",
+                    });
+                }
             }
             LoadStep::TaskSegment { lsm, address } => {
                 let machine = machine(*lsm)?;
@@ -504,6 +544,16 @@ pub fn plan_memory_download_with_inferences(
             return Err(DownloadPlanError::NeverWritten(segment.id.clone()));
         }
     }
+    if let Some(moved) = compare_before_property_writes(&mut steps) {
+        inferences.push(Inference {
+            rule: COMPARE_BEFORE_PROPERTY_WRITE,
+            detail: format!(
+                "{moved} LdCtrlCompareProp after a leading LdCtrlWriteProp run before it: the \
+                 device is checked before anything is written to it"
+            ),
+            reference: "docs/research/2026-11-07-ldctrlwriteprop-and-byte-order.md",
+        });
+    }
 
     Ok((
         MemoryDownloadPlan {
@@ -513,6 +563,33 @@ pub fn plan_memory_download_with_inferences(
         },
         inferences,
     ))
+}
+
+/// Moves every comparison in the leading run of property writes and
+/// comparisons (before any other device change) in front of the first
+/// write, keeping their order. Returns how many moved, if any.
+fn compare_before_property_writes(steps: &mut [MemoryDownloadStep]) -> Option<usize> {
+    let first_write = steps
+        .iter()
+        .position(|step| matches!(step, MemoryDownloadStep::WriteProperty { .. }))?;
+    let lead_end = steps[first_write..]
+        .iter()
+        .position(|step| {
+            !matches!(
+                step,
+                MemoryDownloadStep::WriteProperty { .. }
+                    | MemoryDownloadStep::CompareProperty { .. }
+            )
+        })
+        .map_or(steps.len(), |offset| first_write + offset);
+    let lead = &mut steps[first_write..lead_end];
+    let moved = lead
+        .iter()
+        .filter(|step| matches!(step, MemoryDownloadStep::CompareProperty { .. }))
+        .count();
+    // A stable partition: comparisons first, writes after, each in order.
+    lead.sort_by_key(|step| !matches!(step, MemoryDownloadStep::CompareProperty { .. }));
+    (moved > 0).then_some(moved)
 }
 
 /// The product element a step was read from, for an inference's text.
@@ -526,19 +603,22 @@ fn element_name(step: &LoadStep) -> &'static str {
 }
 
 /// The writes for the segment allocated at `address`, if the image has one
-/// there. Two segments with data at one start are refused: nothing in the
-/// product says which one an allocation takes, equal octets or not.
+/// there, and how many of its octets lie past the allocation unsent. Two
+/// segments with data at one start are refused: nothing in the product says
+/// which one an allocation takes, equal octets or not. A segment shorter
+/// than its allocation, or longer with a written parameter or table past it,
+/// is refused ([`SEGMENT_BEYOND_ALLOCATION`]).
 fn data_writes(
     image: &DownloadImage,
     address: u16,
     size: u16,
-) -> Result<Vec<MemoryDownloadStep>, DownloadPlanError> {
+) -> Result<(Vec<MemoryDownloadStep>, Option<usize>), DownloadPlanError> {
     let mut here = image
         .segments
         .iter()
         .filter(|segment| segment.address == u32::from(address));
     let Some(segment) = here.next() else {
-        return Ok(Vec::new());
+        return Ok((Vec::new(), None));
     };
     if let Some(other) = here.next() {
         return Err(DownloadPlanError::DuplicateSegmentStart {
@@ -547,14 +627,21 @@ fn data_writes(
             second: other.id.clone(),
         });
     }
-    if segment.octets.len() != usize::from(size) {
-        return Err(DownloadPlanError::SizeMismatch {
-            address,
-            allocated: size,
-            octets: segment.octets.len(),
-        });
+    let allocated = usize::from(size);
+    let mismatch = || DownloadPlanError::SizeMismatch {
+        address,
+        allocated: size,
+        octets: segment.octets.len(),
+    };
+    if segment.octets.len() < allocated || written_end(image, &segment.id) > allocated {
+        return Err(mismatch());
     }
-    unmasked_runs(&segment.octets, segment.mask.as_deref())
+    let beyond = (segment.octets.len() > allocated).then(|| segment.octets.len() - allocated);
+    let mask = segment
+        .mask
+        .as_deref()
+        .map(|mask| &mask[..allocated.min(mask.len())]);
+    let writes = unmasked_runs(&segment.octets[..allocated], mask)
         .into_iter()
         .map(|(offset, octets)| {
             // `offset < size`, and `address + size - 1` fits 16 bits or the
@@ -565,7 +652,28 @@ fn data_writes(
                 octets: octets.to_vec(),
             })
         })
-        .collect()
+        .collect::<Result<Vec<_>, DownloadPlanError>>()?;
+    Ok((writes, beyond))
+}
+
+/// The end, in octets from the segment's start, of everything the image
+/// builder wrote into segment `id`: parameter fields and placed tables.
+fn written_end(image: &DownloadImage, id: &str) -> usize {
+    let fields = image
+        .parameter_fields
+        .iter()
+        .filter(|written| written.segment == id)
+        .map(|written| {
+            let bits = u64::from(written.field.bit_offset) + u64::from(written.field.size_in_bit);
+            usize::try_from(u64::from(written.field.offset) + bits.div_ceil(8))
+                .unwrap_or(usize::MAX)
+        });
+    let tables = image
+        .table_writes
+        .iter()
+        .filter(|table| table.segment_id == id)
+        .map(|table| table.end);
+    fields.chain(tables).max().unwrap_or(0)
 }
 
 fn event(lsm: u8, event: LoadEvent) -> Result<MemoryDownloadStep, DownloadPlanError> {
@@ -631,7 +739,8 @@ mod tests {
 
     use super::*;
     use crate::code::{LoadProcedure, ProgramCode};
-    use crate::image::SegmentImage;
+    use crate::image::{AttributedValue, ParameterAttribution, SegmentImage, TableWrite};
+    use knx_core::commissioning::parameter_image::ParameterField;
 
     fn abs(lsm: u8, address: u16, size: u16) -> LoadStep {
         LoadStep::AbsSegment {
@@ -881,17 +990,116 @@ mod tests {
     }
 
     #[test]
-    fn a_segment_whose_size_differs_from_its_allocation_is_refused() {
+    fn a_segment_shorter_than_its_allocation_is_refused() {
         let mut image = image();
-        image.segments[1].octets.push(0xCC);
+        image.segments[1].octets.pop();
         assert_eq!(
             plan_memory_download(&image),
             Err(DownloadPlanError::SizeMismatch {
                 address: 0x4400,
                 allocated: 2,
-                octets: 3
+                octets: 1
             })
         );
+    }
+
+    /// A comparison behind a leading property write runs first; a write
+    /// later in the procedure stays where it is.
+    #[test]
+    fn a_comparison_behind_a_leading_property_write_runs_before_it() {
+        let mut image = image();
+        let write = |data: u8| LoadStep::WriteProp {
+            object_index: 5,
+            property_id: 51,
+            data: vec![data, 0],
+        };
+        image.code.load_procedures[0].steps.insert(1, write(1));
+        let restart = image.code.load_procedures[0]
+            .steps
+            .iter()
+            .position(|step| *step == LoadStep::Restart)
+            .unwrap();
+        image.code.load_procedures[0]
+            .steps
+            .insert(restart, write(2));
+        let (plan, inferences) = plan_memory_download_with_inferences(&image).unwrap();
+        let property_write = |data: u8| MemoryDownloadStep::WriteProperty {
+            object_index: 5,
+            property_id: 51,
+            inline_data: vec![data, 0],
+        };
+        assert!(matches!(
+            plan.steps[1],
+            MemoryDownloadStep::CompareProperty { .. }
+        ));
+        assert_eq!(plan.steps[2], property_write(1));
+        assert_eq!(plan.steps[plan.steps.len() - 3], property_write(2));
+        assert!(inferences
+            .iter()
+            .any(|inference| inference.rule == COMPARE_BEFORE_PROPERTY_WRITE));
+        // Without a leading write nothing moves and nothing is said.
+        let (_, plain) = plan_memory_download_with_inferences(&super::tests::image()).unwrap();
+        assert!(!plain
+            .iter()
+            .any(|inference| inference.rule == COMPARE_BEFORE_PROPERTY_WRITE));
+    }
+
+    /// ETS writes the allocated prefix; so does the plan, but only while no
+    /// written parameter or table reaches past it.
+    #[test]
+    fn a_longer_segment_writes_its_allocation_while_nothing_written_lies_past_it() {
+        let mut image = image();
+        image.segments[1].octets.extend([0xCC, 0xDD]);
+        let (plan, inferences) = plan_memory_download_with_inferences(&image).unwrap();
+        let writes: Vec<_> = plan
+            .steps
+            .iter()
+            .filter_map(|step| match step {
+                MemoryDownloadStep::WriteMemory { address, octets } if *address >= 0x4400 => {
+                    Some((*address, octets.clone()))
+                }
+                _ => None,
+            })
+            .collect();
+        assert_eq!(writes, [(0x4400, vec![0xAA, 0xBB])]);
+        assert!(inferences
+            .iter()
+            .any(|inference| inference.rule == SEGMENT_BEYOND_ALLOCATION));
+
+        let refused = |image: &DownloadImage| {
+            assert_eq!(
+                plan_memory_download(image),
+                Err(DownloadPlanError::SizeMismatch {
+                    address: 0x4400,
+                    allocated: 2,
+                    octets: 4
+                })
+            );
+        };
+        let mut table = image.clone();
+        table.table_writes.push(TableWrite {
+            segment_id: "AS-4400".into(),
+            start: 1,
+            end: 3,
+        });
+        refused(&table);
+        let mut parameter = image.clone();
+        parameter.parameter_fields.push(ParameterAttribution {
+            reference: "P-1_R-1".into(),
+            name: "P".into(),
+            segment: "AS-4400".into(),
+            field: ParameterField {
+                offset: 1,
+                bit_offset: 4,
+                size_in_bit: 8,
+            },
+            value: AttributedValue::Number {
+                value: 1,
+                nonnegative_signed: false,
+                low_octet_first: false,
+            },
+        });
+        refused(&parameter);
     }
 
     #[test]

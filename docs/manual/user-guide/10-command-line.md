@@ -860,12 +860,13 @@ web export still offers only the identity profile.
 knx device byte-order-probe 1.1.12 --project house.knxdb --gateway 192.0.2.1:3671
 ```
 
-Some application programs declare `ParameterByteOrder="LittleEndian"`. KNXBench
-cannot download those yet: no published source says exactly how such a program lays
-out its values, and guessing would write wrong values into a device
+Some application programs declare `ParameterByteOrder="LittleEndian"`. No published
+source says exactly how such a program lays out its values. KNXBench writes
+whole-octet numbers of memory programs low octet first, as ETS 6.4 does, and refuses
+every other shape; those downloads are still *untested*
 ([known limitations §170](../../KNOWN_LIMITATIONS.md#170-little-endian-parameter-byte-order-is-refused-for-download-images)).
-A device that ETS has already programmed can answer the question, and this command
-asks it, **without writing anything**:
+A device that ETS has already programmed can confirm it, and this command asks it,
+**without writing anything**:
 
 - It plans the device exactly like a download, from the project's values, and reads
   only the octets of its multi-octet number parameters plus some one-octet

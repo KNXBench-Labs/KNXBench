@@ -329,7 +329,8 @@ pub fn byte_order_warnings(conn: &Connection, request: &ImageRequest) -> Vec<Dow
 /// a program that declares `BigEndian` or nothing: KNXBench writes what the
 /// program declares, and the base image is product data, not a device, so
 /// the mismatch is a reason to look, never a reason to write differently.
-/// A program declaring another order is refused before any plan exists.
+/// A program declaring another order is written as declared or refused
+/// (ADR-0159); either way this check has nothing to compare.
 pub fn byte_order_warnings_for(order: Result<BaseImageOrder, ProbeError>) -> Vec<DownloadWarning> {
     let order = match order {
         Ok(order) => order,

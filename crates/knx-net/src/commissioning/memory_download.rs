@@ -52,7 +52,8 @@ use knx_core::commissioning::load_control_memory::{loads_through_memory, MemoryL
 use knx_core::commissioning::load_state::{LoadEvent, LoadState, MaskVersion};
 use knx_core::commissioning::memory::{service_for, WriteLimit};
 use knx_core::commissioning::memory_download::{
-    machines, resource_matches, ExemplarSerial, MemoryDownloadPlan, MemoryDownloadStep,
+    machines, resource_matches, write_property_octets, ExemplarSerial, MemoryDownloadPlan,
+    MemoryDownloadStep,
 };
 use knx_core::commissioning::mutation::WriteScope;
 use knx_core::commissioning::properties::{ObjectIndex, PID_PROGRAM_VERSION, PID_SERIAL_NUMBER};
@@ -291,6 +292,20 @@ pub enum MemoryDownloadError {
         /// What the device answered.
         found: Vec<u8>,
     },
+    /// `LdCtrlWriteProp`: the device's description of the property does not
+    /// admit the write (not write-enabled, no element, a datatype without a
+    /// fixed width, or `InlineData` that is not one such element followed by
+    /// zeros). Nothing was written by this step.
+    PropertyNotWritable {
+        /// The step.
+        index: usize,
+        /// `ObjIdx`.
+        object_index: u8,
+        /// `PropId`.
+        property_id: u8,
+        /// The description as the device answered it (AL §3.4.3.1), if any.
+        description: Option<[u8; 4]>,
+    },
     /// The live Device Object serial is not the one the restore's backup captured. Carries no
     /// serial octets.
     ExemplarMismatch {
@@ -423,6 +438,17 @@ impl fmt::Display for MemoryDownloadError {
             } => write!(
                 f,
                 "step {index}: property {object_index}/{property_id} is {found:02X?}, which the product does not accept"
+            ),
+            MemoryDownloadError::PropertyNotWritable {
+                index,
+                object_index,
+                property_id,
+                description,
+            } => write!(
+                f,
+                "step {index}: property {object_index}/{property_id} cannot take the product's \
+                 value as described by the device ({}); nothing was written by this step",
+                description.map_or("no description".to_owned(), |raw| hex(&raw))
             ),
             MemoryDownloadError::ExemplarMismatch { index } => write!(
                 f,
@@ -566,6 +592,7 @@ fn check_shape(plan: &MemoryDownloadPlan) -> Result<(), MemoryDownloadError> {
             step,
             MemoryDownloadStep::LoadRecord(_)
                 | MemoryDownloadStep::WriteMemory { .. }
+                | MemoryDownloadStep::WriteProperty { .. }
                 | MemoryDownloadStep::Restart
         )
     });
@@ -1413,6 +1440,49 @@ async fn run_steps<T: ManagementTransport, K: FnMut(&DeviceBackup) -> Result<(),
                     });
                 }
                 Some(hex(&found))
+            }
+            MemoryDownloadStep::Delay { milliseconds } => {
+                tokio::time::sleep(std::time::Duration::from_millis(u64::from(*milliseconds)))
+                    .await;
+                Some(format!("waited {milliseconds} ms"))
+            }
+            MemoryDownloadStep::WriteProperty {
+                object_index,
+                property_id,
+                inline_data,
+            } => {
+                let object = ObjectIndex::new(*object_index);
+                let not_writable =
+                    |description: Option<[u8; 4]>| MemoryDownloadError::PropertyNotWritable {
+                        index,
+                        object_index: *object_index,
+                        property_id: *property_id,
+                        description,
+                    };
+                let Some(pid) = std::num::NonZeroU8::new(*property_id) else {
+                    session.disconnect().await;
+                    return Err(not_writable(None));
+                };
+                let (_, description) = session
+                    .read_property_description(object, pid)
+                    .await
+                    .map_err(at)?;
+                let octets = (description.write_enabled() && description.max_elements() >= 1)
+                    .then(|| write_property_octets(description.pdt(), inline_data))
+                    .flatten();
+                let Some(octets) = octets else {
+                    session.disconnect().await;
+                    return Err(not_writable(Some(description.raw())));
+                };
+                let read = session
+                    .write_property(object, *property_id, octets.clone(), WriteScope::Download)
+                    .await
+                    .map_err(at)?;
+                Some(format!(
+                    "{} written; device answered {}",
+                    hex(&octets),
+                    hex(&read)
+                ))
             }
             MemoryDownloadStep::RequireExemplar(wanted) => {
                 let found = read_exemplar(session)

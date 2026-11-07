@@ -94,6 +94,23 @@ pub enum LoadStep {
         /// `@InlineData`, decoded from hex.
         data: Vec<u8>,
     },
+    /// `LdCtrlDelay`: wait `@MilliSeconds` before the next step.
+    Delay {
+        /// `@MilliSeconds`.
+        milliseconds: u16,
+    },
+    /// `LdCtrlWriteProp` with `@InlineData`, `@Verify="false"` and neither
+    /// `@Count` nor `@AppliesTo`: write a fixed value to a property. Every
+    /// other shape (parameter-filled `@Count`, `@Verify="true"`) stays
+    /// [`LoadStep::Unmodelled`].
+    WriteProp {
+        /// `@ObjIdx`.
+        object_index: u8,
+        /// `@PropId`.
+        property_id: u8,
+        /// `@InlineData`, decoded from hex.
+        data: Vec<u8>,
+    },
     /// `LdCtrlUnload`.
     Unload {
         /// `@LsmIdx`.
@@ -867,7 +884,9 @@ impl<'a> Parser<'a> {
         let name = element.name.as_str();
         let known: &[&str] = match name {
             "LdCtrlConnect" | "LdCtrlDisconnect" | "LdCtrlRestart" => &[],
+            "LdCtrlDelay" => &["MilliSeconds"],
             "LdCtrlCompareProp" => &["ObjIdx", "PropId", "InlineData"],
+            "LdCtrlWriteProp" => &["ObjIdx", "PropId", "Verify", "InlineData"],
             "LdCtrlUnload" | "LdCtrlLoad" | "LdCtrlLoadCompleted" => &["LsmIdx"],
             "LdCtrlAbsSegment" => &[
                 "LsmIdx", "SegType", "Address", "Size", "Access", "MemType", "SegFlags",
@@ -879,7 +898,9 @@ impl<'a> Parser<'a> {
         };
         let exact = a.names().all(|attribute| known.contains(&attribute))
             && known.iter().all(|attribute| a.get(attribute).is_some());
-        if has_children || !exact {
+        // Only the observed fixed-value write; a verified one is unobserved.
+        let unverified_write = name != "LdCtrlWriteProp" || a.get("Verify") == Some("false");
+        if has_children || !exact || !unverified_write {
             return Ok(unmodelled(element, has_children));
         }
         let octet = |attribute: &str| -> Result<u8, CodeError> { self.field(name, a, attribute) };
@@ -888,7 +909,15 @@ impl<'a> Parser<'a> {
             "LdCtrlConnect" => LoadStep::Connect,
             "LdCtrlDisconnect" => LoadStep::Disconnect,
             "LdCtrlRestart" => LoadStep::Restart,
+            "LdCtrlDelay" => LoadStep::Delay {
+                milliseconds: word("MilliSeconds")?,
+            },
             "LdCtrlCompareProp" => LoadStep::CompareProp {
+                object_index: octet("ObjIdx")?,
+                property_id: octet("PropId")?,
+                data: self.hex(name, a.get("InlineData").unwrap_or_default())?,
+            },
+            "LdCtrlWriteProp" => LoadStep::WriteProp {
                 object_index: octet("ObjIdx")?,
                 property_id: octet("PropId")?,
                 data: self.hex(name, a.get("InlineData").unwrap_or_default())?,
@@ -1408,6 +1437,38 @@ mod tests {
         assert_eq!(name, "LdCtrlWriteProp");
         assert_eq!(attributes.get("PropId").map(String::as_str), Some("13"));
         assert!(!has_children);
+    }
+
+    /// Only the observed fixed-value shape is read; `Verify="true"`, a
+    /// parameter-filled `Count` or `AppliesTo` stay unmodelled by name.
+    #[test]
+    fn a_fixed_unverified_property_write_is_read_and_every_other_shape_is_not() {
+        let code = parsed(
+            r#"<LoadProcedures><LoadProcedure>
+                 <LdCtrlWriteProp ObjIdx="5" PropId="51" Verify="false" InlineData="0100" />
+                 <LdCtrlWriteProp ObjIdx="5" PropId="51" Verify="true" InlineData="01" />
+                 <LdCtrlWriteProp ObjIdx="6" PropId="52" Count="2" Verify="false" AppliesTo="full,par" />
+                 <LdCtrlWriteProp ObjIdx="5" PropId="51" Verify="false" InlineData="01" AppliesTo="full" />
+                 <LdCtrlDelay MilliSeconds="10" />
+               </LoadProcedure></LoadProcedures>"#,
+        );
+        let steps = &code.load_procedures[0].steps;
+        assert_eq!(steps[4], LoadStep::Delay { milliseconds: 10 });
+        let steps = &steps[..4];
+        assert_eq!(
+            steps[0],
+            LoadStep::WriteProp {
+                object_index: 5,
+                property_id: 51,
+                data: vec![1, 0]
+            }
+        );
+        for step in &steps[1..] {
+            assert!(
+                matches!(step, LoadStep::Unmodelled { name, .. } if name == "LdCtrlWriteProp"),
+                "{step:?}"
+            );
+        }
     }
 
     #[test]

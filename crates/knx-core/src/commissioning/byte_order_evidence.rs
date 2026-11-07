@@ -2,9 +2,10 @@
 //!
 //! KL-170: a program may declare `Options/@ParameterByteOrder="LittleEndian"`,
 //! and no source available to KNXBench defines what that means per parameter
-//! type (docs/research/parameter-byte-order.md). [`super::parameter_image`]
-//! writes high octet first only, and the image builder refuses every other
-//! declared order. This module answers the question a device can settle: for
+//! type (docs/research/parameter-byte-order.md). The image builder writes
+//! whole-octet `LittleEndian` numbers low octet first in a memory layout,
+//! as ETS 6.4 images showed (ADR-0159), and refuses every other declared
+//! order. This module answers the question a device can settle: for
 //! a device that ETS programmed with known values, which arrangement of each
 //! value do its memory octets hold?
 //!

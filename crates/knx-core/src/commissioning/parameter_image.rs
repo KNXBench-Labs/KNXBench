@@ -258,6 +258,31 @@ impl ParameterImage {
     }
 }
 
+/// `value` with its octets reversed within `field`: written by
+/// [`ParameterImage::write`], it lands low octet first, as a program declaring
+/// `ParameterByteOrder="LittleEndian"` needs (KL-170); applied to a value
+/// [`read_number`] returned, it undoes that. Only a field that starts on an
+/// octet and is whole octets wide has an octet order; any other is refused.
+pub fn reverse_octets(field: ParameterField, value: u64) -> Result<u64, ParameterImageError> {
+    if field.bit_offset != 0
+        || field.size_in_bit == 0
+        || field.size_in_bit > 64
+        || !field.size_in_bit.is_multiple_of(8)
+    {
+        return Err(ParameterImageError::UnsupportedField { field });
+    }
+    if field.size_in_bit < 64 && value >> field.size_in_bit != 0 {
+        return Err(ParameterImageError::ValueTooWide { field, value });
+    }
+    let width = (field.size_in_bit / 8) as usize;
+    let octets = value.to_be_bytes();
+    let mut reversed = [0u8; 8];
+    for i in 0..width {
+        reversed[8 - width + i] = octets[7 - i];
+    }
+    Ok(u64::from_be_bytes(reversed))
+}
+
 /// Reads one supported unsigned field from its exact covering octets (MSB-first).
 pub fn read_number(field: ParameterField, octets: &[u8]) -> Option<u64> {
     if !field.is_integer_shape() || octets.len() != field.octet_len() {
@@ -291,6 +316,67 @@ pub fn signed_bits(value: i64, size_in_bit: u8) -> Result<u64, ParameterImageErr
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn reverse_octets_places_whole_octet_numbers_low_octet_first() {
+        use super::{
+            read_number, reverse_octets, ParameterField, ParameterImage, ParameterImageError,
+        };
+        let field = |size_in_bit| ParameterField {
+            offset: 1,
+            bit_offset: 0,
+            size_in_bit,
+        };
+        let mut image = ParameterImage::new(vec![0xEE; 8]);
+        image
+            .write(field(16), reverse_octets(field(16), 0x1102).unwrap())
+            .unwrap();
+        assert_eq!(
+            image.octets(),
+            &[0xEE, 0x02, 0x11, 0xEE, 0xEE, 0xEE, 0xEE, 0xEE]
+        );
+        let wide = ParameterField {
+            offset: 3,
+            ..field(32)
+        };
+        image
+            .write(wide, reverse_octets(wide, 0x0A0B_0C0D).unwrap())
+            .unwrap();
+        assert_eq!(&image.octets()[3..7], &[0x0D, 0x0C, 0x0B, 0x0A]);
+        // Its own inverse, so it decodes what it encoded.
+        let held = read_number(field(16), &[0x02, 0x11]).unwrap();
+        assert_eq!(reverse_octets(field(16), held), Ok(0x1102));
+        assert_eq!(
+            reverse_octets(field(8), 0xAB),
+            Ok(0xAB),
+            "one octet has no order"
+        );
+        assert_eq!(reverse_octets(field(24), 0x0A_0B0C), Ok(0x0C_0B0A));
+        assert_eq!(
+            reverse_octets(field(64), 0x0102_0304_0506_0708),
+            Ok(0x0807_0605_0403_0201)
+        );
+        for shape in [
+            ParameterField {
+                bit_offset: 4,
+                ..field(16)
+            },
+            field(12),
+            field(0),
+        ] {
+            assert_eq!(
+                reverse_octets(shape, 1),
+                Err(ParameterImageError::UnsupportedField { field: shape })
+            );
+        }
+        assert_eq!(
+            reverse_octets(field(16), 0x1_0000),
+            Err(ParameterImageError::ValueTooWide {
+                field: field(16),
+                value: 0x1_0000
+            })
+        );
+    }
+
     #[test]
     fn read_number_pins_cross_octet_msb_bits_and_exact_covering_length() {
         use super::{read_number, ParameterField};

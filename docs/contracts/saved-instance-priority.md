@@ -136,6 +136,42 @@ downgrade. Retain producer source/base/input/argv/file/image/context hashes.
 The fixture includes genuine baseline, divergent working state, both stacks,
 a named version and keyed/unkeyed/empty/unknown synthetic opaque attributes.
 
+## Audited selective-import mapping (native model 17)
+
+The selective-import model-17 correction and its focused regressions are authored;
+execution and independent acceptance remain pending. It is a dedicated source-
+reference mapping, not permission for generic clone/rebind repair.
+
+- Before copying a selected captured fact, use the shared `SavedPriorityBindings`
+  index against the complete **original source project**, including unselected
+  owners/claims. Require structural validity and unique current owner, record,
+  object/list and source binding. Module-bound or already mismatched, ambiguous
+  or malformed captured facts refuse the **whole plan**, without changing either
+  project or rewriting the fact to make it applicable. Keeping an unscoped bad
+  fact is not safe: an already-prefixed mismatch could accidentally match after
+  the owning records are scoped. No replacement unavailable reason is invented.
+- For an originally bound declared/absent fact only, prepend the exact existing
+  `source.prefix` plus `/` to `device_source.path` and `object_source.path`, just
+  as for its owning Device/ComObject SourceRefs and retained member paths. Keep
+  both ETS identifiers, `source_schema`, `owner_xpath`, original topology digest,
+  raw decoded text and omission kind exact. Lexical token classification remains
+  derived from the same untrimmed raw string. This reference scoping does not
+  rewrite XML/archive/retained-attribute bytes or their hashes and does not infer
+  anything from program/product defaults.
+- Preserve every unavailable reason exactly, including canonical NotCaptured;
+  do not promote it to declared or absent. Existing destination captured facts
+  remain byte-for-byte semantic values, including any pre-existing mismatch.
+- Admit the complete candidate through final `NativeSnapshot::encode`, including
+  captured string bounds **after** prefix expansion and native resource/shape
+  limits. Recheck imported captured bindings against the full merged destination;
+  collision with an existing scoped owner/source refuses, rather than lending
+  apparently unique authority to either fact. No partial plan is returned.
+- The selective guard admits normalized model 17 on **both** sides only. Source
+  ETS schema support stays with the complete importer; future/unknown normalized
+  fields still require a new audit. Generic rebound clones outside this explicit
+  mapping retain the projection mismatch behavior below. No digest reauthentication
+  or new priority semantics are claimed by this mapping.
+
 ## Read-only projection
 
 Add required `ComObjectNode.saved_instance_priority` with tagged JSON/TS states:

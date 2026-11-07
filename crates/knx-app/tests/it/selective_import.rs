@@ -10,7 +10,10 @@ fn source() -> Source {
 }
 
 fn fixture() -> (Source, NativeSnapshot, Selection) {
-    let source = source();
+    fixture_from_source(source())
+}
+
+fn fixture_from_source(source: Source) -> (Source, NativeSnapshot, Selection) {
     let mut project = source.project.clone();
     project.info.name = "Destination identity".into();
     project.devices = Devices::new();
@@ -443,9 +446,23 @@ fn imported_building_flat_order_and_child_order_preserve_the_selected_source() {
 
 #[test]
 fn future_normalized_source_versions_refuse_instead_of_ignoring_new_entity_fields() {
-    let (mut source, target, selection) = fixture();
-    source.project.schema_version += 1;
-    assert!(import::plan(&target, &source, selection).is_err());
+    let (mut source, mut target, selection) = fixture();
+    let before = target.clone();
+    let current = source.project.schema_version;
+    assert_eq!(current, import::SELECTIVE_MODEL_VERSION);
+    for unsupported in [0, 16, current + 1, u32::MAX] {
+        source.project.schema_version = unsupported;
+        let error = import::plan(&target, &source, selection.clone()).unwrap_err();
+        assert!(error.contains("normalized model v17 only"), "{error}");
+        assert_eq!(target, before);
+        source.project.schema_version = current;
+        target.project.schema_version = unsupported;
+        let refused = target.clone();
+        let error = import::plan(&target, &source, selection.clone()).unwrap_err();
+        assert!(error.contains("normalized model v17 only"), "{error}");
+        assert_eq!(target, refused);
+        target.project.schema_version = current;
+    }
 }
 
 #[test]
@@ -1029,6 +1046,558 @@ fn source_functions_are_explicitly_refused_not_silently_dropped() {
         "{error}"
     );
     assert_eq!(target, before);
+}
+
+// Reuse the maintained schema-23 mapping fixture, including same RefId on another owner.
+// The second tree object deliberately has no instance element, not a guessed default.
+fn priority_fixture(
+    attribute: Option<&str>,
+) -> (Source, NativeSnapshot, Selection, Vec<u8>, String) {
+    use std::io::Read;
+    let bytes = knx_testsupport::mapping_boundary_knxproj_bytes(23, None, None, "O-7_R-1");
+    let mut zip = zip::ZipArchive::new(std::io::Cursor::new(bytes)).unwrap();
+    let mut entries = Vec::new();
+    let mut topology = String::new();
+    for index in 0..zip.len() {
+        let mut file = zip.by_index(index).unwrap();
+        let name = file.name().unwrap().into_owned();
+        let mut bytes = Vec::new();
+        file.read_to_end(&mut bytes).unwrap();
+        if name == "P-0001/0.xml" {
+            topology = String::from_utf8(bytes).unwrap();
+            let needle = r#"<ComObjectInstanceRef RefId="O-7_R-1""#;
+            assert!(topology.contains(needle));
+            if let Some(raw) = attribute {
+                topology = topology.replacen(needle, &format!(r#"{needle} Priority="{raw}""#), 1);
+            }
+            let omitted = r#"<ComObjectInstanceRef RefId="O-19_R-2" IsActive="1"/>"#;
+            assert!(topology.contains(omitted));
+            topology = topology.replacen(omitted, "", 1);
+            bytes = topology.as_bytes().to_vec();
+        }
+        entries.push((name, bytes));
+    }
+    assert!(!topology.is_empty());
+    let refs: Vec<_> = entries
+        .iter()
+        .map(|(name, bytes)| (name.as_str(), bytes.as_slice()))
+        .collect();
+    let archive = knx_testsupport::zip_with_entries(&refs);
+    let source = import::source_from_bytes(archive.clone(), None).unwrap();
+    assert_eq!(source.report.error_count(), 0);
+    let (source, target, selection) = fixture_from_source(source);
+    (source, target, selection, archive, topology)
+}
+
+fn scoped_priority(fact: &SavedInstancePriority, prefix: &str) -> SavedInstancePriority {
+    let mut expected = fact.clone();
+    let source = match &mut expected {
+        SavedInstancePriority::Declared(value) => &mut value.source,
+        SavedInstancePriority::Absent(value) => &mut value.source,
+        SavedInstancePriority::Unavailable { .. } => return expected,
+    };
+    source.device_source.path = format!("{prefix}/{}", source.device_source.path);
+    source.object_source.path = format!("{prefix}/{}", source.object_source.path);
+    expected
+}
+
+#[test]
+fn native17_selective_declared_priority_scopes_only_bound_sources_and_retains_raw_evidence() {
+    use knx_projection::{
+        SavedInstancePriorityView as View, SavedPriorityTokenStatusView as Token,
+    };
+    for (attribute, raw, token) in [
+        ("Low", "Low", Token::Known),
+        ("High", "High", Token::Known),
+        ("Alert", "Alert", Token::Known),
+        ("", "", Token::Empty),
+        ("  ", "  ", Token::Unknown),
+        (
+            "Gr&#xFC;&#xDF;e &amp; &#x03A9;",
+            "Grüße & Ω",
+            Token::Unknown,
+        ),
+    ] {
+        let (source, mut target, selection, archive, topology) = priority_fixture(Some(attribute));
+        let original_source = source.project.clone();
+        let device = source
+            .project
+            .devices
+            .get(DeviceId(selection.devices[0]))
+            .unwrap();
+        let old = source
+            .project
+            .devices
+            .com_object(device.com_objects[0])
+            .unwrap();
+        assert!(
+            matches!(&old.saved_instance_priority, SavedInstancePriority::Declared(v) if v.raw == raw)
+        );
+        assert!(SavedPriorityBindings::new(&source.project).captured_binding(old, device.id));
+        let original = old.saved_instance_priority.clone();
+        let prefix = format!("imports/{}", source.source_hash);
+        let plan = import::plan(&target, &source, selection).unwrap();
+        let new_id = ComObjectInstanceId(mapped(&plan, "communication_object", old.id.0));
+        let new_device = DeviceId(mapped(&plan, "device", device.id.0));
+        assert_ne!(new_id, old.id);
+        assert_ne!(new_device, device.id);
+        import::apply(&mut target, &mut CommandStack::new(), plan).unwrap();
+        let imported = target.project.devices.com_object(new_id).unwrap();
+        assert_eq!(
+            imported.saved_instance_priority,
+            scoped_priority(&original, &prefix)
+        );
+        assert_eq!(imported.device, new_device);
+        assert!(SavedPriorityBindings::new(&target.project).captured_binding(imported, new_device));
+        let captured = imported.saved_instance_priority.source().unwrap();
+        assert_eq!(
+            captured.device_source,
+            target.project.devices.get(new_device).unwrap().source
+        );
+        assert_eq!(captured.object_source, imported.source);
+        assert_eq!(
+            captured.topology_sha256,
+            knx_etsproj::opaque::sha256_hex(topology.as_bytes())
+        );
+        let detail = knx_projection::build_device_detail(&target.project, new_device).unwrap();
+        let view = &detail
+            .com_objects
+            .iter()
+            .find(|c| c.id == new_id.0)
+            .unwrap()
+            .saved_instance_priority;
+        assert!(
+            matches!(view, View::Declared { raw: value, token_status, .. } if value == raw && *token_status == token)
+        );
+        let retained_archive = target
+            .opaque
+            .iter()
+            .find(|e| e.kind == "SelectiveImportArchive")
+            .unwrap();
+        assert_eq!(retained_archive.bytes, archive);
+        assert_eq!(retained_archive.sha256, source.source_hash);
+        let member_path = format!("{prefix}/P-0001/0.xml");
+        assert!(target.opaque.iter().any(|e| e.source_path == member_path
+            && e.kind == "ContainerEntry"
+            && e.bytes == topology.as_bytes()
+            && e.sha256 == captured.topology_sha256));
+        assert!(target.opaque.iter().any(|e| e.source_path == member_path
+            && e.kind == import::SELECTIVE_ATTRIBUTE_KIND
+            && e.name == "Priority"
+            && e.xpath == captured.owner_xpath
+            && e.bytes == raw.as_bytes()
+            && e.sha256 == knx_etsproj::opaque::sha256_hex(raw.as_bytes())));
+        assert_eq!(source.project, original_source);
+        let encoded = target.encode().unwrap();
+        assert_eq!(
+            NativeSnapshot::decode(&encoded, &knx_store::project_history::image_hash(&encoded))
+                .unwrap(),
+            target
+        );
+    }
+}
+
+#[test]
+fn native17_selective_absence_causes_and_unavailable_reasons_are_not_defaults() {
+    let (source, mut target, selection, _, _) = priority_fixture(None);
+    let device = source
+        .project
+        .devices
+        .get(DeviceId(selection.devices[0]))
+        .unwrap();
+    let originals: Vec<_> = device
+        .com_objects
+        .iter()
+        .map(|id| {
+            (
+                *id,
+                source
+                    .project
+                    .devices
+                    .com_object(*id)
+                    .unwrap()
+                    .saved_instance_priority
+                    .clone(),
+            )
+        })
+        .collect();
+    assert_eq!(originals.len(), 2);
+    for ((_, fact), omission) in originals.iter().zip([
+        SavedPriorityOmission::AttributeOmitted,
+        SavedPriorityOmission::InstanceElementOmitted,
+    ]) {
+        assert!(matches!(fact, SavedInstancePriority::Absent(v) if v.omission == omission));
+    }
+    let prefix = format!("imports/{}", source.source_hash);
+    let plan = import::plan(&target, &source, selection).unwrap();
+    let ids: Vec<_> = originals
+        .iter()
+        .map(|(id, _)| ComObjectInstanceId(mapped(&plan, "communication_object", id.0)))
+        .collect();
+    import::apply(&mut target, &mut CommandStack::new(), plan).unwrap();
+    for (id, (_, original)) in ids.iter().zip(&originals) {
+        let com = target.project.devices.com_object(*id).unwrap();
+        assert_eq!(
+            com.saved_instance_priority,
+            scoped_priority(original, &prefix)
+        );
+        assert!(SavedPriorityBindings::new(&target.project).captured_binding(com, com.device));
+    }
+    let encoded = target.encode().unwrap();
+    assert_eq!(
+        NativeSnapshot::decode(&encoded, &knx_store::project_history::image_hash(&encoded))
+            .unwrap(),
+        target
+    );
+
+    // Real older-schema source load must stay UnsupportedSourceSchema, not become absence.
+    let (source, mut target, selection) = fixture();
+    assert!(source
+        .project
+        .devices
+        .com_objects()
+        .all(|c| c.saved_instance_priority
+            == SavedInstancePriority::Unavailable {
+                reason: SavedPriorityUnavailable::UnsupportedSourceSchema
+            }));
+    let plan = import::plan(&target, &source, selection).unwrap();
+    import::apply(&mut target, &mut CommandStack::new(), plan).unwrap();
+    assert!(target
+        .project
+        .devices
+        .com_objects()
+        .all(|c| c.saved_instance_priority
+            == SavedInstancePriority::Unavailable {
+                reason: SavedPriorityUnavailable::UnsupportedSourceSchema
+            }));
+
+    // Native unavailable observations remain exact, including NotCaptured's canonical no-row form.
+    for reason in [
+        SavedPriorityUnavailable::NotCaptured,
+        SavedPriorityUnavailable::ModuleScope,
+        SavedPriorityUnavailable::AmbiguousOwner,
+        SavedPriorityUnavailable::AmbiguousDeclaration,
+        SavedPriorityUnavailable::SourceIntegrity,
+        SavedPriorityUnavailable::ResourceLimit,
+    ] {
+        let (mut source, mut target, selection, _, _) = priority_fixture(Some("High"));
+        let id = source
+            .project
+            .devices
+            .get(DeviceId(selection.devices[0]))
+            .unwrap()
+            .com_objects[0];
+        source
+            .project
+            .devices
+            .com_object_mut(id)
+            .unwrap()
+            .saved_instance_priority = SavedInstancePriority::Unavailable { reason };
+        let plan = import::plan(&target, &source, selection).unwrap();
+        let mapped_id = ComObjectInstanceId(mapped(&plan, "communication_object", id.0));
+        import::apply(&mut target, &mut CommandStack::new(), plan).unwrap();
+        assert_eq!(
+            target
+                .project
+                .devices
+                .com_object(mapped_id)
+                .unwrap()
+                .saved_instance_priority,
+            SavedInstancePriority::Unavailable { reason }
+        );
+    }
+}
+
+#[test]
+fn native17_selective_priority_save_reopen_working_undo_and_redo_keep_scoped_fact() {
+    for attribute in [Some("High"), Some(""), Some("  "), None] {
+        let (source, target, selection, _, _) = priority_fixture(attribute);
+        priority_history_roundtrip(source, target, selection);
+    }
+    let (source, target, selection) = fixture();
+    priority_history_roundtrip(source, target, selection);
+}
+
+fn priority_history_roundtrip(source: Source, mut target: NativeSnapshot, selection: Selection) {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("priority.knxdb");
+    let mut stack = CommandStack::new();
+    let root = target.clone();
+    let generation = knx_app::project_history::save_as(&path, &target, &stack).unwrap();
+    stack
+        .do_command(
+            &mut target.project,
+            Command::RenameInstallation {
+                id: InstallationId(selection.target_installation),
+                name: "Before selective import".into(),
+            },
+        )
+        .unwrap();
+    let edited = target.project.clone();
+    let plan = import::plan(&target, &source, selection).unwrap();
+    import::apply(&mut target, &mut stack, plan).unwrap();
+    let merged = target.clone();
+    let generation =
+        knx_app::project_history::persist_working(&path, &target, &stack, generation).unwrap();
+    let reopened = knx_store::open_existing_read_only(&path).unwrap();
+    assert_eq!(NativeSnapshot::read(&reopened.conn).unwrap(), root);
+    let history = knx_store::project_history::load_editor(&reopened.conn)
+        .unwrap()
+        .unwrap();
+    assert_eq!(history.working, merged);
+    assert_eq!(history.baseline, root);
+    assert_eq!(history.undo.len(), 2);
+    assert!(history.redo.is_empty());
+    drop(reopened);
+    target = history.working;
+    stack = CommandStack::from_snapshot_states(history.undo, history.redo);
+    stack.undo(&mut target.project).unwrap();
+    assert!(target.project.same_user_content_as(&edited));
+    assert_eq!(target.opaque, merged.opaque);
+    let generation =
+        knx_app::project_history::persist_working(&path, &target, &stack, generation).unwrap();
+    let reopened = knx_store::open_existing_read_only(&path).unwrap();
+    let history = knx_store::project_history::load_editor(&reopened.conn)
+        .unwrap()
+        .unwrap();
+    assert_eq!(history.redo.len(), 1);
+    assert!(history.working.project.same_user_content_as(&edited));
+    assert_eq!(history.working.opaque, merged.opaque);
+    drop(reopened);
+    target = history.working;
+    stack = CommandStack::from_snapshot_states(history.undo, history.redo);
+    stack.redo(&mut target.project).unwrap();
+    assert_eq!(target, merged);
+    let bindings = SavedPriorityBindings::new(&target.project);
+    for com in target.project.devices.com_objects() {
+        if com.saved_instance_priority.source().is_some() {
+            assert!(bindings.captured_binding(com, com.device));
+        } else {
+            assert_eq!(
+                com.saved_instance_priority,
+                SavedInstancePriority::Unavailable {
+                    reason: SavedPriorityUnavailable::UnsupportedSourceSchema,
+                }
+            );
+        }
+    }
+    knx_app::project_history::save(&path, &target, &stack, generation).unwrap();
+    let reopened = knx_store::open_existing_read_only(&path).unwrap();
+    assert_eq!(NativeSnapshot::read(&reopened.conn).unwrap(), merged);
+    let history = knx_store::project_history::load_editor(&reopened.conn)
+        .unwrap()
+        .unwrap();
+    assert_eq!(history.baseline, merged);
+    assert_eq!(history.working, merged);
+}
+
+#[test]
+fn native17_selective_existing_destination_priority_facts_are_unchanged() {
+    let (source, mut target, selection, _, _) = priority_fixture(Some("Alert"));
+    target.project = source.project.clone();
+    let ids: Vec<_> = target.project.devices.iter().map(|d| d.id).collect();
+    for id in ids {
+        target.project.devices.get_mut(id).unwrap().address = None;
+    }
+    let first = target.project.devices.com_objects().next().unwrap().id;
+    target
+        .project
+        .devices
+        .com_object_mut(first)
+        .unwrap()
+        .source
+        .ets_id = "O-99_R-1".into();
+    let existing: Vec<_> = target.project.devices.com_objects().cloned().collect();
+    let before = target.clone();
+    let plan = import::plan(&target, &source, selection).unwrap();
+    let mut stack = CommandStack::new();
+    import::apply(&mut target, &mut stack, plan).unwrap();
+    for com in &existing {
+        assert_eq!(target.project.devices.com_object(com.id).unwrap(), com);
+        assert_eq!(
+            SavedPriorityBindings::new(&target.project)
+                .captured_binding(com_for(&target, com.id), com.device),
+            com.id != first,
+        );
+    }
+    let owner = com_for(&target, first).device;
+    let detail = knx_projection::build_device_detail(&target.project, owner).unwrap();
+    assert_eq!(
+        detail
+            .com_objects
+            .iter()
+            .find(|c| c.id == first.0)
+            .unwrap()
+            .saved_instance_priority,
+        knx_projection::SavedInstancePriorityView::Unavailable {
+            reason: knx_projection::SavedPriorityUnavailableView::SourceBindingMismatch,
+        },
+    );
+    let encoded = target.encode().unwrap();
+    let reopened =
+        NativeSnapshot::decode(&encoded, &knx_store::project_history::image_hash(&encoded))
+            .unwrap();
+    for com in &existing {
+        assert_eq!(reopened.project.devices.com_object(com.id).unwrap(), com);
+    }
+    stack.undo(&mut target.project).unwrap();
+    assert!(target.project.same_user_content_as(&before.project));
+    stack.redo(&mut target.project).unwrap();
+    for com in &existing {
+        assert_eq!(target.project.devices.com_object(com.id).unwrap(), com);
+    }
+}
+
+fn com_for(snapshot: &NativeSnapshot, id: ComObjectInstanceId) -> &ComObjectInstance {
+    snapshot.project.devices.com_object(id).unwrap()
+}
+
+#[test]
+fn native17_selective_mismatched_ambiguous_and_malformed_captured_facts_refuse_false_credit() {
+    for case in 0..5 {
+        let (mut source, target, selection, _, _) = priority_fixture(Some("High"));
+        let owner = DeviceId(selection.devices[0]);
+        let id = source.project.devices.get(owner).unwrap().com_objects[0];
+        if case == 3 {
+            let mut duplicate = source.project.devices.get(owner).unwrap().clone();
+            duplicate.id = source.project.ids.next_device_id().unwrap();
+            duplicate.address = None;
+            duplicate.com_objects.clear();
+            source.project.installations[0]
+                .topology
+                .unassigned
+                .push(duplicate.id);
+            source.project.devices.insert(duplicate);
+        } else {
+            let prefix = format!("imports/{}", source.source_hash);
+            let SavedInstancePriority::Declared(value) = &mut source
+                .project
+                .devices
+                .com_object_mut(id)
+                .unwrap()
+                .saved_instance_priority
+            else {
+                panic!("captured fixture");
+            };
+            match case {
+                0 => value.source.object_source.ets_id = "O-99_R-1".into(),
+                // Leaving an already-prefixed mismatched fact untouched would falsely bind after copy.
+                1 => {
+                    value.source.device_source.path =
+                        format!("{prefix}/{}", value.source.device_source.path);
+                    value.source.object_source.path =
+                        format!("{prefix}/{}", value.source.object_source.path);
+                }
+                2 => value.source.topology_sha256 = "not-a-digest".into(),
+                4 => {
+                    value.raw = "x".repeat(
+                        knx_core::saved_instance_priority::MAX_SAVED_PRIORITY_STRING_BYTES + 1,
+                    )
+                }
+                _ => unreachable!(),
+            }
+        }
+        let source_before = source.project.clone();
+        let before = target.clone();
+        let error = import::plan(&target, &source, selection).unwrap_err();
+        assert!(
+            error.contains("saved-instance priority") && error.contains("original source binding"),
+            "case {case}: {error}"
+        );
+        assert_eq!(source.project, source_before);
+        assert_eq!(target, before);
+    }
+}
+
+#[test]
+fn native17_selective_scoped_priority_destination_source_collision_refuses_without_rebinding() {
+    let (source, mut target, selection, _, _) = priority_fixture(Some("High"));
+    let original = source
+        .project
+        .devices
+        .get(DeviceId(selection.devices[0]))
+        .unwrap();
+    let mut collision = original.clone();
+    collision.id = target.project.ids.next_device_id().unwrap();
+    collision.address = None;
+    collision.com_objects.clear();
+    collision.source.path = format!("imports/{}/{}", source.source_hash, collision.source.path);
+    target.project.installations[0]
+        .topology
+        .unassigned
+        .push(collision.id);
+    target.project.devices.insert(collision);
+    let before = target.clone();
+    let error = import::plan(&target, &source, selection).unwrap_err();
+    assert!(
+        error.contains("ambiguous destination source binding"),
+        "{error}"
+    );
+    assert_eq!(target, before);
+}
+
+#[test]
+fn native17_selective_post_prefix_priority_string_bound_is_admitted_before_apply() {
+    use knx_core::saved_instance_priority::MAX_SAVED_PRIORITY_STRING_BYTES;
+    for at_bound in [true, false] {
+        let (mut source, mut target, selection, _, _) = priority_fixture(Some("High"));
+        let owner = DeviceId(selection.devices[0]);
+        let id = source.project.devices.get(owner).unwrap().com_objects[0];
+        let prefix = format!("imports/{}", source.source_hash);
+        let length = if at_bound {
+            MAX_SAVED_PRIORITY_STRING_BYTES - prefix.len() - 1
+        } else {
+            MAX_SAVED_PRIORITY_STRING_BYTES
+        };
+        let path = "p".repeat(length);
+        // Synthetic model corruption probe, not a newly authenticated source observation.
+        source.project.devices.get_mut(owner).unwrap().source.path = path.clone();
+        let objects = source
+            .project
+            .devices
+            .get(owner)
+            .unwrap()
+            .com_objects
+            .clone();
+        for object in objects {
+            let com = source.project.devices.com_object_mut(object).unwrap();
+            com.source.path = path.clone();
+            let captured = match &mut com.saved_instance_priority {
+                SavedInstancePriority::Declared(v) => &mut v.source,
+                SavedInstancePriority::Absent(v) => &mut v.source,
+                SavedInstancePriority::Unavailable { .. } => panic!("captured fixture"),
+            };
+            captured.device_source.path = path.clone();
+            captured.object_source.path = path.clone();
+        }
+        let com = source.project.devices.com_object(id).unwrap();
+        assert!(com.saved_instance_priority.is_valid());
+        assert!(SavedPriorityBindings::new(&source.project).captured_binding(com, owner));
+        let before = target.clone();
+        let planned = import::plan(&target, &source, selection);
+        if at_bound {
+            let plan = planned.unwrap();
+            let mapped_id = ComObjectInstanceId(mapped(&plan, "communication_object", id.0));
+            import::apply(&mut target, &mut CommandStack::new(), plan).unwrap();
+            assert_eq!(
+                com_for(&target, mapped_id)
+                    .saved_instance_priority
+                    .source()
+                    .unwrap()
+                    .object_source
+                    .path
+                    .len(),
+                MAX_SAVED_PRIORITY_STRING_BYTES
+            );
+            target.encode().unwrap();
+        } else {
+            assert!(
+                planned.is_err(),
+                "prefix expansion must not bypass native captured-string admission"
+            );
+            assert_eq!(target, before);
+        }
+    }
 }
 
 // This historical NativeSnapshot was harvested from a successful ORIGINAL

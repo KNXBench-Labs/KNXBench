@@ -56,6 +56,8 @@ export const messages: Record<MessageKey, string> = {
   "system2.phrase.recoveryConfirmation": "Gib die exakte Wiederherstellungsbestätigung für die ursprüngliche Sicherung ein:",
   "system2.start": "Experimentellen Download bestätigen und starten",
   "system2.operation": "Ursprüngliches Vorgangsziel",
+  "system2.otherDevice": "Dieser zurückbehaltene Vorgang gehört zu {address} — {device}, nicht zum ausgewählten Gerät. Er bleibt hier für sein Ergebnis und die Wiederherstellung sichtbar.",
+  "system2.prepareFailedOrdinary": "Gehört das ausgewählte Gerät nicht zum zugelassenen Anwendungsprogramm? Stelle den Downloadmodus oben auf „{mode}“ um.",
   "system2.checkpoints": "Dauerhaft abgeschlossene Prüfpunkte: {done} / {total}.",
   "system2.checkpointsUnknown": "Dauerhaft abgeschlossene Prüfpunkte: {done}; Gesamtzahl unbekannt.",
   "system2.backupAvailable": "Nachweise des tatsächlichen Vorzustands sind aufbewahrt. Dies garantiert nicht, dass das physische Gerät wiederherstellbar ist.",

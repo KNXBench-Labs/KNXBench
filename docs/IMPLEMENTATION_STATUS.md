@@ -12,6 +12,15 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## System-2 panel names a foreign retained operation (7 November 2026; issue #34)
+
+The System-2 panel says when the retained operation belongs to another device or
+project than the selected one, and a refused configured preparation points to the
+ordinary memory download mode. Wording and placement only; admission, retained
+lifetime and recovery are unchanged. Component tests cover the same-device,
+other-device and other-project cases in English and German; EN/DE crops at 1440 and
+400 px were inspected with intercepted API. Acceptance: change-scoped package gate.
+
 ## Checked Date text editor (6 November 2026; software-accepted on main)
 
 A bounded source-authenticated Date text editor adds calendar preflight and

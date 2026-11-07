@@ -397,6 +397,16 @@ same operation is not retried, and a new operation starts with no diagnostic.
 Keep the private journal, which still holds the raw prefix, and do not post it.
 [Contract](../../contracts/system2-safe-failure-diagnostic.md).
 
+### Another device's retained operation (issue #34, main only)
+
+The server keeps its last System-2 operation process-wide, so the panel shows it
+whichever device is selected. When it belongs to another device (or another project),
+the panel now says so under **Original operation target**: the record stays visible for
+its result and recovery, but it is not the selected device's data. When a configured
+preparation is refused, for example because the selected device is not the admitted
+application program, the panel points to the **Ordinary memory download** mode. Neither
+note changes what System-2 admits or any recovery action.
+
 <a id="what-an-ended-experimental-run-proves-issue-31"></a>
 
 ### What an ended experimental run proves (issue #31, since Alpha 18)

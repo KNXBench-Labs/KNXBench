@@ -22,10 +22,11 @@ fn source_limit_message() -> String {
     format!("selective-import source exceeds the {MAX_SOURCE_BYTES}-byte input limit")
 }
 /// Explicitly frozen reference closure; audit new fields before widening.
-/// v16 (ADR-0128) was audited: it adds no `Project` field, only the
-/// file-level `manufacturer_file` table, which a source never fills (its
-/// manufacturer files arrive as whole-file opaque entries, already carried).
-pub const SELECTIVE_MODEL_VERSION: u32 = 16;
+/// v17 (ADR-0158) carries saved-instance priority: only originally bound facts
+/// rebind their two SourceRefs to the same prefix as their owning records.
+/// Raw/omission/schema/locator/digest stay exact; unbound captured facts refuse.
+/// v16 manufacturer files remain file-level evidence, already carried as opaque entries.
+pub const SELECTIVE_MODEL_VERSION: u32 = 17;
 /// Source attributes remain evidence, not unscoped destination settings.
 pub const SELECTIVE_ATTRIBUTE_KIND: &str = "SelectiveImportRetainedAttribute";
 

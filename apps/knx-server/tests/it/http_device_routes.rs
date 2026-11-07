@@ -1080,6 +1080,15 @@ async fn effective_priority_names_missing_program_and_withholds_rebound_facts() 
             "{program_ref:?}"
         );
     }
+    // Without a program reference the missing database is irrelevant: that reason wins.
+    let (project, owner) = effective_priority_project("", &facts);
+    let no_db = state_with_one_installation();
+    *no_db.project.lock().unwrap() = Some(project);
+    let objects = get_objects(no_db, owner).await;
+    assert_eq!(
+        objects[0]["effective_priority"],
+        unresolved("NoProgramReference")
+    );
     // A rebound clone withholds the saved fact, so the product cannot fill it either.
     let (mut project, owner) = effective_priority_project("H-1_HP-1", &facts);
     let id = project.devices.get(owner).unwrap().com_objects[0];

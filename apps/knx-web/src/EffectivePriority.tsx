@@ -25,8 +25,12 @@ function own<T extends object>(table: T, key: string): key is Extract<keyof T, s
   return Object.prototype.hasOwnProperty.call(table, key);
 }
 
-function sourceText(t: Translate, source: EffectivePrioritySource | null | undefined): string | null {
-  if (source === null || source === undefined) return null;
+function sourceText(t: Translate, view: EffectivePriorityView): string | null {
+  const source: EffectivePrioritySource | null | undefined = view.source;
+  // Unresolved without a selected literal has no source; a resolved value always must.
+  if (source === null || source === undefined) {
+    return view.status === "resolved" ? t("inspector.effectivePriority.unrecognisedState") : null;
+  }
   if (source.kind === "instance") return t("inspector.effectivePriority.source.instance");
   if (source.kind === "product") {
     const layer = source.layer === "ProgramRef" ? t("inspector.effectivePriority.layer.ProgramRef")
@@ -59,8 +63,8 @@ export function EffectivePriorityRow(props: { priority: EffectivePriorityView })
   const t = useTranslate();
   const view = props.priority;
   const { text, value } = stateText(t, view);
-  const source = view.status === "resolved" || view.status === "unresolved" ? sourceText(t, view.source) : null;
-  return <div className="com-object-saved-priority com-object-effective-priority" data-status={view.status}>
+  const source = view.status === "resolved" || view.status === "unresolved" ? sourceText(t, view) : null;
+  return <div className="com-object-effective-priority" data-status={view.status}>
     <span className="saved-priority-label">{t("inspector.effectivePriority.label")}</span>
     {value !== null && <code className="saved-priority-raw">{value}</code>}
     <span className="saved-priority-state">{text}</span>

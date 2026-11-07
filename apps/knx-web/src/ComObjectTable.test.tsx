@@ -9,6 +9,7 @@ import type { DeviceDetail } from "./bindings/DeviceDetail";
 import type { ProjectTree } from "./bindings/ProjectTree";
 import type { ProjectTreeNode } from "./bindings/ProjectTreeNode";
 import type { ProductFolderCaption } from "./bindings/ProductFolderCaption";
+import { messages as en } from "./messages/en";
 function object(id: number, overrides: Partial<ComObjectNode> = {}): ComObjectNode {
   return { saved_instance_priority: { status: "unavailable", reason: "NotCaptured" }, effective_priority: { status: "unresolved", reason: "InstanceUnavailable", source: null, raw: null }, id, number: id, name: `Object ${id}`, function_text: null, description: null,
     description_layer: null, dpt: null, dpt_layer: null, program_dpt: null, dpt_text: null,
@@ -580,4 +581,26 @@ it("appearing, changed and removed product metadata retain the expanded group an
   expect(editorRow(v.host, 1).textContent).toContain("Fictional refusal");
   expect(v.applied).not.toHaveBeenCalled();
   await v.cleanup();
+});
+it("WP-06 folder currency: the device-level notice follows the server and only accompanies saved folders", async () => {
+  const host = document.createElement("div"); document.body.append(host); const root = createRoot(host);
+  const show = async (objects: ComObjectNode[], currency: DeviceDetail["project_folder_currency"]) => {
+    await act(async () => root.render(<DeviceWorkspace detail={{ ...detail(objects), project_folder_currency: currency }} tree={tree} onApplied={vi.fn()} />));
+  };
+  const notice = () => host.querySelector<HTMLElement>(".com-folder-currency");
+  const withFolder = [object(1, { project_folder: pb3("CH-1") }), object(2)];
+  await show(withFolder, { status: "changedSinceImport" });
+  expect(notice()?.textContent).toBe(en["comTable.folderCurrency.changed"]);
+  await show(withFolder, { status: "unknown", reason: "SourceIntegrity" });
+  expect(notice()?.textContent).toContain(en["comTable.folderCurrency.unknown.SourceIntegrity"]);
+  await show(withFolder, { status: "unchanged" });
+  expect(notice()).toBeNull();
+  await show(withFolder, undefined);
+  expect(notice()).toBeNull();
+  // No saved folder shown in the default view: no notice there; the folder view still shows it.
+  await show([object(1), object(2)], { status: "changedSinceImport" });
+  expect(notice()).toBeNull();
+  await act(async () => [...host.querySelectorAll<HTMLButtonElement>("button")].find(b => b.textContent === "By saved project folder")!.click());
+  expect(notice()?.textContent).toBe(en["comTable.folderCurrency.changed"]);
+  await act(async () => root.unmount()); host.remove();
 });

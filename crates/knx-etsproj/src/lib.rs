@@ -8,6 +8,7 @@
 pub mod compare;
 pub mod container;
 pub mod detect;
+pub mod device_baseline;
 mod id_table;
 pub mod infer;
 pub mod instructions;

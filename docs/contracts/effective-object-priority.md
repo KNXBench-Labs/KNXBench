@@ -31,8 +31,9 @@ printed page 48/64, original page rendered and visually inspected on
 - §1.2.5.13, `Priority` row: optional; when missing, the attribute of the
   underlying ComObjectRef or ComObject is used. This covers **AttributeOmitted**.
 - §1.2.5.11, `ComObjectInstanceRefs`: an object instance that has all default
-  settings and no associations need not be listed. An object without an
-  instance element therefore has default settings. Per §1.2.5.13 the default for
+  settings and no associations need not be listed. Assuming the writer only
+  omits instances under that rule, an object without an instance element has
+  default settings. Per §1.2.5.13 the default for
   `Priority` is the underlying ComObjectRef/ComObject attribute. This combination of two
   clauses on the same page covers **InstanceElementOmitted**. The step is an
   inference from the schema text, stated here explicitly; no real ETS export
@@ -77,9 +78,14 @@ wins, never value comparison). A product literal without a layer violates the
 query invariant and fails the request rather than guessing an origin.
 A resolved instance declaration is never replaced by product data; the overlay
 touches only `ProductNotConsulted` objects. Token classification is exact
-(`Low`, `High`, `Alert`; no trimming or case folding), shared with the saved view.
-Consumers that build a device detail without the server overlay (CLI, report)
-see `ProductNotConsulted` for omissions; none of them renders the field today.
+(`Low`, `High`, `Alert`; no trimming or case folding), the same rule as the saved
+view's token status (a separate function, pinned by tests on both sides).
+Consumers that build a device detail without the server overlay see
+`ProductNotConsulted` for omissions. Two of them serialize the field: the MCP
+`get_device` tool and the diagnostic bundle's `device.json`. Both therefore
+report `ProductNotConsulted` where the web editor can show a product-resolved
+value; that is an honest "not consulted", not a disagreement about the value.
+The documentation report and the CLI do not render the field.
 
 ## JSON shape
 

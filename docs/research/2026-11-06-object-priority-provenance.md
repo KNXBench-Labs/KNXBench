@@ -29,8 +29,9 @@ and visually inspected. Their printed page numbers are respectively 7/64 and
 The same original PDF (same SHA-256) was reopened and printed page 48/64 was
 rendered and visually inspected again for the effective-priority increment.
 §1.2.5.11 describes `ComObjectInstanceRefs` and states that an object instance
-with all default settings and no associations need not be listed. An unlisted
-instance therefore carries default settings, and §1.2.5.13 defines the default
+with all default settings and no associations need not be listed. Assuming the
+writer omits instances only under that rule, an unlisted instance carries default
+settings, and §1.2.5.13 defines the default
 for a missing `Priority` as the underlying ComObjectRef/ComObject attribute.
 KNXBench applies the product literal to `InstanceElementOmitted` on that
 two-clause basis, which is an explicit inference from the schema text. No real

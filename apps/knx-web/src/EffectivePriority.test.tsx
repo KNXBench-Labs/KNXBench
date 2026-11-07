@@ -87,7 +87,7 @@ it("reports a newer server's state, reason, value or source as unknown instead o
     expect(row.textContent).not.toContain(en["inspector.effectivePriority.resolved"] + "Low");
     next();
   }
-  for (const source of [{ kind: "device" }, { kind: "product", layer: "Hardware", omission: "AttributeOmitted" },
+  for (const source of [null, { kind: "device" }, { kind: "product", layer: "Hardware", omission: "AttributeOmitted" },
     { kind: "product", layer: "Program", omission: "Later" }]) {
     const row = render({ status: "resolved", value: "Low", source } as unknown as EffectivePriorityView);
     expect(row.querySelector(".saved-priority-source")?.textContent).toBe(unknown);

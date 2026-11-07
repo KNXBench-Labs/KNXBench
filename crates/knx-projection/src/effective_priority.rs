@@ -293,7 +293,7 @@ mod tests {
             from_saved(&declared("")),
             rejected(R::InstanceEmpty, "", instance)
         );
-        for raw in [" ", " Low", "low", "ALERT", "Höchste"] {
+        for raw in [" ", " Low", "High ", "\tAlert", "low", "ALERT", "Höchste"] {
             assert_eq!(
                 from_saved(&declared(raw)),
                 rejected(R::InstanceUnknown, raw, instance)
@@ -363,12 +363,15 @@ mod tests {
                     com.effective_priority,
                     rejected(R::ProductEmpty, "", source)
                 );
-                let mut com = node(absent(omission));
-                apply_product_priority(&mut com, Some((" high", layer)));
-                assert_eq!(
-                    com.effective_priority,
-                    rejected(R::ProductUnknown, " high", source)
-                );
+                // Exact match: padding that trimming would turn into a token stays unknown.
+                for raw in [" high", " Low", "High ", "\tAlert", "Alert\n", "LOW"] {
+                    let mut com = node(absent(omission));
+                    apply_product_priority(&mut com, Some((raw, layer)));
+                    assert_eq!(
+                        com.effective_priority,
+                        rejected(R::ProductUnknown, raw, source)
+                    );
+                }
             }
             let mut com = node(absent(omission));
             apply_product_priority(&mut com, None);

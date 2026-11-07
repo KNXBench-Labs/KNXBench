@@ -51,8 +51,10 @@ it("shows each object's own captured saved priority read-only in its editor, bes
   const source = { kind: "CapturedSavedInstance" as const, source_schema: 23, device_source: { path: "P-0001/0.xml", ets_id: "D-1" },
     object_source: { path: "P-0001/0.xml", ets_id: "O-1" }, owner_xpath: "/KNX/Project", topology_sha256: "b".repeat(64) };
   const { host, cleanup } = await render(NO_REFERENCE, false, [
-    object(1, { saved_instance_priority: { status: "declared", raw: "Alert", token_status: "Known", source } }),
-    object(2, { saved_instance_priority: { status: "absent", omission: "AttributeOmitted", source } }),
+    object(1, { saved_instance_priority: { status: "declared", raw: "Alert", token_status: "Known", source },
+      effective_priority: { status: "resolved", value: "Alert", source: { kind: "instance" } } }),
+    object(2, { saved_instance_priority: { status: "absent", omission: "AttributeOmitted", source },
+      effective_priority: { status: "unresolved", reason: "ProductNotConsulted", source: null, raw: null } }),
   ]);
   await act(async () => host.querySelector<HTMLButtonElement>(".com-object-channel-summary")!.click());
   for (const id of [1, 2]) {
@@ -65,6 +67,13 @@ it("shows each object's own captured saved priority read-only in its editor, bes
   expect(row(2).querySelector(".saved-priority-raw")).toBeNull();
   expect(row(2).textContent).toContain(englishMessages["inspector.savedPriority.absent.AttributeOmitted"]);
   expect(row(1).querySelector("input, select, button")).toBeNull();
+  // The effective row follows the saved row in the same editor, read-only.
+  const effective = (id: number) => host.querySelector<HTMLElement>(`[data-editor-id="${id}"] .com-object-effective-priority`)!;
+  expect(effective(1).previousElementSibling).toBe(row(1));
+  expect(effective(1).querySelector(".saved-priority-raw")?.textContent).toBe("Alert");
+  expect(effective(1).querySelector(".saved-priority-source")?.textContent).toBe(englishMessages["inspector.effectivePriority.source.instance"]);
+  expect(effective(2).textContent).toContain(englishMessages["inspector.effectivePriority.unresolved.ProductNotConsulted"]);
+  expect(effective(1).querySelector("input, select, button")).toBeNull();
   await cleanup();
 });
 

@@ -39,9 +39,10 @@ absence: old files/history remain NotCaptured and retain their opaque facts.
 This is a captured saved-source fact, not effective, product or wire priority.
 A read-only object-editor row now shows that captured fact or its unavailable
 reason ([UI consumer](../contracts/saved-instance-priority.md#read-only-ui-consumer-7-november-2026)),
-and project comparison reports its changes ([comparison consumer](../contracts/saved-instance-priority.md#comparison-consumer-7-november-2026)).
-Still open: effective resolution, editing, table column, documentation report,
-wire encoding and whole-WP acceptance.
+project comparison reports its changes ([comparison consumer](../contracts/saved-instance-priority.md#comparison-consumer-7-november-2026))
+and the documentation report shows it as a column ([report consumer](../contracts/saved-instance-priority.md#documentation-report-consumer-7-november-2026)).
+Still open: effective resolution, editing, a web object-table column, wire
+encoding and whole-WP acceptance.
 [Execution and evidence](../status/2026-11-06-saved-instance-priority.md).
 
 Organise communication objects by source-backed folders and represent object
@@ -62,8 +63,8 @@ priority losslessly.
    raw/effective provenance and the bounded product-query origin increment;
    the captured instance/native-history/read-only GET slice is software-accepted
    on main (`ed0cf7737`, see above); a read-only object-editor row displays it.
-   Project comparison compares it. Effective resolution, editing, table column
-   and the documentation report remain open.
+   Project comparison compares it and the documentation report shows it.
+   Effective resolution, editing and a web object-table column remain open.
    [Source admission](../research/2026-11-06-object-priority-provenance.md)
    does not establish new wire priority or whole-WP acceptance.
    The bounded product-query origin is software-accepted and published as

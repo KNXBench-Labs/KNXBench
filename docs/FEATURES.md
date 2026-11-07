@@ -21,6 +21,7 @@ Last updated: 2026-11-01 (Alpha 19 pre-release; source cutoff 2026-11-01)
 | [Import findings after reopening](open-work/WP-25-import-findings-after-reopen.md) | Reprojects stored primary error/warning findings into the bounded session log; historical/open-time provenance and explicit full-report access; missing legacy evidence is not a clean assessment | Main-only |
 | [Saved project priority row](contracts/saved-instance-priority.md#read-only-ui-consumer-7-november-2026) | Read-only object-editor row with the captured saved-instance declaration, its absence or the unavailable reason; verbatim literal, no effective/product/wire priority, no editing | Main-only |
 | [Saved priority in project comparison](contracts/saved-instance-priority.md#comparison-consumer-7-november-2026) | `knx diff`, HTTP and the comparison dialog report changed captured saved-instance priority: exact literal, omission or reason; source metadata not compared | Main-only |
+| [Saved priority in the documentation report](contracts/saved-instance-priority.md#documentation-report-consumer-7-november-2026) | Final object-table column with the captured literal, omission or reason (en/de) plus a limits line; not effective/wire priority | Main-only |
 | [Rail themes](adr/0157-rail-built-in-presentation.md) | Built-in light/dark pair: square controls, Geist type, toolbar rail, KNX-cable green accent; own Theme effects motion category | Main-only |
 
 ## New in Alpha 19

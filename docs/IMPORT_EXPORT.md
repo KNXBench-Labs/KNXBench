@@ -1441,7 +1441,8 @@ Devices (name, individual address, description, commissioning state, raw
 manufacturer/product/program names, stored parameters and module arguments,
 each device's
 communication objects with number, name, description, DPT, the resolved
-layer, the six flags, active state and links, plus any orphaned
+layer, the six flags, active state, links and (main only) the captured saved
+project priority as declared in the imported file, plus any orphaned
 communication object) — "Limits and warnings". Header, contents, and this
 last section remain mandatory even when an API caller selects only a subset
 of the five content sections.
@@ -1463,7 +1464,8 @@ values and every parameter kind without a report formatter remain raw and
 warn. Module arguments remain raw bindings: `AllocatorRef`, unknown kinds,
 allocation metadata and repeat semantics are not interpreted. Binary data is
 referenced by name and id only, and the document says plainly that it is not
-an ETS report and has not been compared to one.
+an ETS report and has not been compared to one. The saved-priority column is
+stated to be neither effective priority, a product default nor wire priority.
 
 **PDF is produced by the browser's own print dialog**, not by KNXBench —
 the document ships `@media print` rules (no page breaks inside a table

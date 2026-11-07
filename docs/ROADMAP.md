@@ -7,9 +7,9 @@ overlay, history and required read-only GET field. It retains old observations
 as NotCaptured rather than backfilling them. Focused proofs and independent
 review pass; main-first `ed0cf7737` is published after the full selected
 17-stage gate ([delivery record](status/2026-11-06-saved-instance-priority.md)).
-This is a captured saved-source fact. A read-only object-editor row and a project
-comparison field now consume it; effective priority, editing, table column,
-documentation report and broader WP-06 remain separate work.
+This is a captured saved-source fact. A read-only object-editor row, a project
+comparison field and a documentation-report column now consume it; effective
+priority, editing, a web table column and broader WP-06 remain separate work.
 
 [ADR-0158](adr/0158-object-priority-provenance.md) separates raw declarations,
 selected product literals, future project-effective priority and wire priority.

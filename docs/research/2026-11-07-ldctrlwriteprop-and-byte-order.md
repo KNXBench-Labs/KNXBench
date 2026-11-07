@@ -77,11 +77,18 @@ Defaults first, then two configured variants of one push-button program.
    comparison first (inference `compare-before-property-write`): a read moved
    earlier can only refuse a download, never write to the wrong device.
 
+7. **`[V]` Text of a program without `TextParameterEncoding` is
+   Windows-1252.** The room controller declares no encoding. ETS wrote
+   "Hallo Büro!" as `48 61 6C 6C 6F 20 42 FC 72 6F 21`, zero-filled, and
+   `€ßÄö` as `80 DF C4 F6`. `80h` for the euro sign exists in Windows-1252
+   only. The ETS installation runs a Western European Windows; whether ETS
+   uses the Windows code page and would differ elsewhere is not known.
+
 ## Not settled here
 
 - Five group-object-table config octets differ in the defaults and both
   variants: ETS clears communication enable on unlinked active objects
   (KL-145), KNXBench keeps the product's flag.
-- Property-placed parameters, `TypeTime`, `LdCtrlMasterReset` and texts with
-  non-ASCII characters in programs without `TextParameterEncoding` are separate
+- Property-placed parameters, `TypeTime`, `LdCtrlMasterReset` and a union
+  starting mid-octet with members at other bit offsets are separate
   boundaries.

@@ -39,6 +39,18 @@ parameter. Display and editing are unaffected.
 cover multi-octet characters at the field boundary. Ledger `KL-171`.
 <!-- END retained catalogue record -->
 
+## Update 7 November 2026: undeclared programs use Windows-1252
+
+The limitation above also refused every non-ASCII character of a program that
+declares no `TextParameterEncoding`. ETS 6.4 on a Western European Windows,
+downloading such a program to KNXBench's simulator, wrote `ü ß Ä ö €` as
+`FC DF C4 F6 80`; the euro sign at `80h` rules out ISO-8859-1 and -15
+([research note](../research/2026-11-07-ldctrlwriteprop-and-byte-order.md)).
+KNXBench now writes such text in Windows-1252 and names the inference
+`undeclared-text-windows-1252` in the plan; characters Windows-1252 lacks are
+refused. Whether ETS follows the Windows code page on other locales is not
+known. `utf-8` and any other declared encoding stay refused as described.
+
 ## Re-check 17 October 2026: no new primary source
 
 Nothing defines octet-versus-character sizing or truncation for UTF-8 text

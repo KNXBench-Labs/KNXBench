@@ -119,38 +119,6 @@ impl SavedInstancePriority {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn saved_instance_priority_default_and_lexical_tokens_are_not_effective_values() {
-        assert_eq!(
-            SavedInstancePriority::default(),
-            SavedInstancePriority::Unavailable {
-                reason: SavedPriorityUnavailable::NotCaptured
-            }
-        );
-        assert!(std::mem::size_of::<SavedInstancePriority>() <= 24);
-        for raw in ["Low", "High", "Alert"] {
-            assert_eq!(
-                SavedPriorityTokenStatus::classify(raw),
-                SavedPriorityTokenStatus::Known
-            );
-        }
-        assert_eq!(
-            SavedPriorityTokenStatus::classify(""),
-            SavedPriorityTokenStatus::Empty
-        );
-        for raw in [" ", "low", "Future", " Löw "] {
-            assert_eq!(
-                SavedPriorityTokenStatus::classify(raw),
-                SavedPriorityTokenStatus::Unknown
-            );
-        }
-    }
-}
-
 /// Operation-local owner/source index; build once for a complete device detail or capture.
 pub struct SavedPriorityBindings<'a> {
     project: &'a crate::Project,
@@ -230,5 +198,37 @@ impl<'a> SavedPriorityBindings<'a> {
                 .devices
                 .get(owner)
                 .is_some_and(|device| device.source == source.device_source)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn saved_instance_priority_default_and_lexical_tokens_are_not_effective_values() {
+        assert_eq!(
+            SavedInstancePriority::default(),
+            SavedInstancePriority::Unavailable {
+                reason: SavedPriorityUnavailable::NotCaptured
+            }
+        );
+        assert!(std::mem::size_of::<SavedInstancePriority>() <= 24);
+        for raw in ["Low", "High", "Alert"] {
+            assert_eq!(
+                SavedPriorityTokenStatus::classify(raw),
+                SavedPriorityTokenStatus::Known
+            );
+        }
+        assert_eq!(
+            SavedPriorityTokenStatus::classify(""),
+            SavedPriorityTokenStatus::Empty
+        );
+        for raw in [" ", "low", "Future", " Löw "] {
+            assert_eq!(
+                SavedPriorityTokenStatus::classify(raw),
+                SavedPriorityTokenStatus::Unknown
+            );
+        }
     }
 }

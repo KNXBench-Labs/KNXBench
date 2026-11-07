@@ -52,7 +52,8 @@ with fresh nested web stages, Rust 8,341 passed/248 ignored and private corpus
 155/155. The actual server build reports `0.1.0-alpha.19+ged0cf7737`. The
 [delivery record](status/2026-11-06-saved-instance-priority.md) retains source
 epochs and original failures. Broader WP-06, editing, UI/report/comparison and
-hardware/native/release claims remain outside this slice.
+hardware/native/release claims remain outside this slice; the read-only editor row
+and comparison field followed on 7 November ([consumers](contracts/saved-instance-priority.md#comparison-consumer-7-november-2026)).
 
 ## Product-query priority provenance (6 November 2026; bounded foundation)
 

@@ -15,7 +15,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use knx_core::{
     Area, BuildingPart, BuildingPartId, ComObjectInstance, DeviceId, DeviceInstance, Devices,
     GroupAddressEntry, GroupAddressId, GroupRange, GroupRangeId, Installation, Line,
-    ModuleInstanceId, ParameterInstance, Project, ProjectInfo, StringTable,
+    ModuleInstanceId, ParameterInstance, Project, ProjectInfo, SavedPriorityBindings, StringTable,
 };
 
 use crate::key::{
@@ -683,6 +683,7 @@ fn prepare_com_objects(
     strings: &StringTable,
     ga_keys: &BTreeMap<GroupAddressId, GroupAddressKey>,
     module_ets_ids: &BTreeMap<ModuleInstanceId, String>,
+    priority_bindings: &SavedPriorityBindings<'_>,
     device_key: DeviceKey,
 ) -> Vec<Prepared<ComObjectKey, ComObjectFields, u16>> {
     device
@@ -693,7 +694,13 @@ fn prepare_com_objects(
             ets_id: c.source.ets_id.clone(),
             natural_key: Some(c.number),
             key: com_object_key(c, device_key.clone()),
-            fields: com_object_fields(c, strings, ga_keys, module_ets_ids),
+            fields: com_object_fields(
+                c,
+                strings,
+                ga_keys,
+                module_ets_ids,
+                saved_priority_fields(c, device.id, priority_bindings),
+            ),
         })
         .collect()
 }
@@ -851,6 +858,8 @@ fn diff_devices(
     let right_ga_keys = ga_keys_map(project_right, inst_right);
     let left_module_ets_ids = module_ets_ids_map(project_left);
     let right_module_ets_ids = module_ets_ids_map(project_right);
+    let left_priority_bindings = SavedPriorityBindings::new(project_left);
+    let right_priority_bindings = SavedPriorityBindings::new(project_right);
 
     let device_fields_left = |d: &DeviceInstance| -> DeviceFields {
         let line = line_of_device(d.id, &inst_left.topology);
@@ -903,6 +912,7 @@ fn diff_devices(
                 &project_left.strings,
                 &left_ga_keys,
                 &left_module_ets_ids,
+                &left_priority_bindings,
                 key.clone(),
             ),
             &prepare_com_objects(
@@ -911,6 +921,7 @@ fn diff_devices(
                 &project_right.strings,
                 &right_ga_keys,
                 &right_module_ets_ids,
+                &right_priority_bindings,
                 key.clone(),
             ),
             com_object_changed_fields,
@@ -1128,6 +1139,168 @@ mod tests {
             .com_objects
             .push(ComObjectInstanceId(1));
         project
+    }
+
+    /// `device_with_one_com_object` with a captured saved-instance priority
+    /// bound to its device (the binding needs one shared archive member).
+    fn device_with_saved_priority(
+        priority: impl Fn(knx_core::SavedPrioritySource) -> knx_core::SavedInstancePriority,
+        digest: char,
+    ) -> Project {
+        let mut project = device_with_one_com_object();
+        let member = "P-0001/0.xml";
+        let device = project.devices.get_mut(DeviceId(1)).unwrap();
+        device.source.path = member.into();
+        let device_source = device.source.clone();
+        let com = project
+            .devices
+            .com_object_mut(ComObjectInstanceId(1))
+            .unwrap();
+        com.source.path = member.into();
+        com.saved_instance_priority = priority(knx_core::SavedPrioritySource {
+            source_schema: 23,
+            device_source,
+            object_source: com.source.clone(),
+            owner_xpath: "/synthetic/owner".into(),
+            topology_sha256: digest.to_string().repeat(64),
+        });
+        project
+    }
+
+    fn declared(
+        raw: &str,
+    ) -> impl Fn(knx_core::SavedPrioritySource) -> knx_core::SavedInstancePriority + '_ {
+        move |source| {
+            knx_core::SavedInstancePriority::Declared(Box::new(knx_core::SavedPriorityDeclared {
+                raw: raw.into(),
+                source,
+            }))
+        }
+    }
+
+    fn absent(
+        omission: knx_core::SavedPriorityOmission,
+    ) -> impl Fn(knx_core::SavedPrioritySource) -> knx_core::SavedInstancePriority {
+        move |source| {
+            knx_core::SavedInstancePriority::Absent(Box::new(knx_core::SavedPriorityAbsent {
+                omission,
+                source,
+            }))
+        }
+    }
+
+    fn priority_changes(left: &Project, right: &Project) -> Vec<FieldChange> {
+        let diff = diff_projects(left, right);
+        let devices = &diff.installations[0].devices;
+        devices
+            .changed
+            .iter()
+            .flat_map(|d| d.com_objects.changed.iter())
+            .flat_map(|c| c.field_changes())
+            .filter(|f| f.field == "saved_priority")
+            .collect()
+    }
+
+    #[test]
+    fn saved_priority_compares_the_exact_literal_but_not_its_source_metadata() {
+        let left = device_with_saved_priority(declared("High"), 'a');
+        let same_other_import = device_with_saved_priority(declared("High"), 'b');
+        assert!(priority_changes(&left, &same_other_import).is_empty());
+
+        for (raw, shown) in [
+            ("high", "declared \"high\""),
+            ("High ", "declared \"High \""),
+            ("", "declared \"\""),
+        ] {
+            let right = device_with_saved_priority(declared(raw), 'a');
+            let changes = priority_changes(&left, &right);
+            assert_eq!(changes.len(), 1, "{raw:?}");
+            assert_eq!(changes[0].left, "declared \"High\"");
+            assert_eq!(changes[0].right, shown);
+        }
+    }
+
+    #[test]
+    fn saved_priority_separates_an_empty_declaration_from_both_absence_kinds() {
+        use knx_core::SavedPriorityOmission::{AttributeOmitted, InstanceElementOmitted};
+        let empty = device_with_saved_priority(declared(""), 'a');
+        let omitted = device_with_saved_priority(absent(AttributeOmitted), 'a');
+        let no_element = device_with_saved_priority(absent(InstanceElementOmitted), 'a');
+        let changes = priority_changes(&empty, &omitted);
+        assert_eq!(
+            (changes[0].left.as_str(), changes[0].right.as_str()),
+            ("declared \"\"", "absent (AttributeOmitted)")
+        );
+        let changes = priority_changes(&omitted, &no_element);
+        assert_eq!(changes[0].right, "absent (InstanceElementOmitted)");
+        assert!(priority_changes(
+            &omitted,
+            &device_with_saved_priority(absent(AttributeOmitted), 'c')
+        )
+        .is_empty());
+    }
+
+    #[test]
+    fn saved_priority_reports_a_not_captured_side_rather_than_assuming_equality() {
+        let old = device_with_one_com_object();
+        let captured = device_with_saved_priority(declared("Low"), 'a');
+        let changes = priority_changes(&old, &captured);
+        assert_eq!(changes.len(), 1);
+        assert_eq!(changes[0].left, "unavailable (NotCaptured)");
+        assert_eq!(changes[0].right, "declared \"Low\"");
+        let diff = diff_projects(&old, &captured);
+        assert_eq!(
+            diff.installations[0].devices.changed[0].com_objects.changed[0].changed_fields,
+            vec!["saved_priority"]
+        );
+        assert!(priority_changes(&old, &device_with_one_com_object()).is_empty());
+    }
+
+    #[test]
+    fn saved_priority_compares_each_unavailable_reason_exactly() {
+        use knx_core::SavedPriorityUnavailable::{
+            ModuleScope, ResourceLimit, UnsupportedSourceSchema,
+        };
+        let with = |reason| {
+            let mut project = device_with_one_com_object();
+            project
+                .devices
+                .com_object_mut(ComObjectInstanceId(1))
+                .unwrap()
+                .saved_instance_priority = knx_core::SavedInstancePriority::Unavailable { reason };
+            project
+        };
+        let changes = priority_changes(&with(UnsupportedSourceSchema), &with(ResourceLimit));
+        assert_eq!(changes.len(), 1);
+        assert_eq!(changes[0].left, "unavailable (UnsupportedSourceSchema)");
+        assert_eq!(changes[0].right, "unavailable (ResourceLimit)");
+        assert!(priority_changes(&with(ModuleScope), &with(ModuleScope)).is_empty());
+        let changes = priority_changes(
+            &with(ModuleScope),
+            &device_with_saved_priority(declared("Low"), 'a'),
+        );
+        assert_eq!(changes[0].left, "unavailable (ModuleScope)");
+    }
+
+    #[test]
+    fn saved_priority_withholds_a_literal_whose_source_no_longer_binds() {
+        let bound = device_with_saved_priority(declared("Alert"), 'a');
+        let mut rebound = device_with_saved_priority(declared("Low"), 'a');
+        rebound
+            .devices
+            .com_object_mut(ComObjectInstanceId(1))
+            .unwrap()
+            .source
+            .ets_id = "O-rebound".into();
+        let changes = priority_changes(&bound, &rebound);
+        assert_eq!(changes.len(), 1);
+        assert_eq!(changes[0].right, "unavailable (SourceBindingMismatch)");
+        assert!(!changes[0].right.contains("Low"));
+        // The stored fact itself is untouched by the comparison.
+        assert!(matches!(
+            &rebound.devices.com_object(ComObjectInstanceId(1)).unwrap().saved_instance_priority,
+            knx_core::SavedInstancePriority::Declared(d) if d.raw == "Low"
+        ));
     }
 
     #[test]

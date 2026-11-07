@@ -266,6 +266,161 @@ async fn a_changed_device_description_is_named_in_the_response() {
     );
 }
 
+/// `project_with_device_description` plus one communication object whose
+/// captured saved-instance priority is `priority` (bound to its device).
+fn project_with_saved_priority(
+    priority: impl FnOnce(knx_core::SavedPrioritySource) -> knx_core::SavedInstancePriority,
+) -> Project {
+    use knx_core::{ComObjectInstance, ComObjectInstanceId, Override, ResolvedFlags};
+    let mut project = project_with_device_description("Same");
+    let member = SourceRef {
+        path: "P-0001/0.xml".into(),
+        ets_id: "d1".into(),
+    };
+    let object = SourceRef {
+        path: "P-0001/0.xml".into(),
+        ets_id: "O-1_R-1".into(),
+    };
+    project.devices.get_mut(DeviceId(1)).unwrap().source = member.clone();
+    project.devices.insert_com_object(ComObjectInstance {
+        id: ComObjectInstanceId(1),
+        source: object.clone(),
+        device: DeviceId(1),
+        number: 1,
+        text: Override::Absent,
+        description: Override::Absent,
+        dpt: Override::Absent,
+        flags: ResolvedFlags::none(),
+        size: None,
+        is_active: true,
+        links: vec![],
+        module_instance: None,
+        saved_instance_priority: priority(knx_core::SavedPrioritySource {
+            source_schema: 23,
+            device_source: member,
+            object_source: object,
+            owner_xpath: "/synthetic/owner".into(),
+            topology_sha256: "c".repeat(64),
+        }),
+    });
+    project
+        .devices
+        .get_mut(DeviceId(1))
+        .unwrap()
+        .com_objects
+        .push(ComObjectInstanceId(1));
+    project
+}
+
+#[tokio::test]
+async fn a_changed_saved_priority_survives_the_comparison_file_and_is_named_exactly() {
+    let dir = tempfile::tempdir().unwrap();
+    let db_path = dir.path().join("compare.knxdb");
+    write_knxdb_fixture(
+        &db_path,
+        &project_with_saved_priority(|source| {
+            knx_core::SavedInstancePriority::Absent(Box::new(knx_core::SavedPriorityAbsent {
+                omission: knx_core::SavedPriorityOmission::AttributeOmitted,
+                source,
+            }))
+        }),
+    );
+    let declared = |source| {
+        knx_core::SavedInstancePriority::Declared(Box::new(knx_core::SavedPriorityDeclared {
+            raw: " High".into(),
+            source,
+        }))
+    };
+    let app = knx_server::app(
+        Arc::new(state_with_project(project_with_saved_priority(declared))),
+        None,
+    );
+
+    let response = diff_project(&app, &db_path).await;
+    assert_eq!(response.status(), StatusCode::OK);
+    let body = body_json(response).await;
+    let device = &body["installations"][0]["devices"]["changed"][0];
+    assert_eq!(device["changedFields"], json!([]), "{body}");
+    let object = &device["comObjects"]["changed"][0];
+    assert_eq!(object["changedFields"], json!(["saved_priority"]), "{body}");
+    assert_eq!(
+        object["fieldChanges"],
+        json!([{
+            "field": "saved_priority",
+            "left": "declared \" High\"",
+            "right": "absent (AttributeOmitted)"
+        }]),
+        "{body}"
+    );
+    assert_eq!(
+        object["left"]["savedPriority"],
+        json!({ "status": "declared", "raw": " High" }),
+        "{body}"
+    );
+    assert_eq!(
+        object["right"]["savedPriority"],
+        json!({ "status": "absent", "omission": "AttributeOmitted" }),
+        "{body}"
+    );
+
+    // The same declaration saved and compared again is not a change.
+    let same = dir.path().join("same.knxdb");
+    write_knxdb_fixture(&same, &project_with_saved_priority(declared));
+    let body = body_json(diff_project(&app, &same).await).await;
+    assert_eq!(
+        body["installations"][0]["devices"]["changed"],
+        json!([]),
+        "{body}"
+    );
+}
+
+#[tokio::test]
+async fn unavailable_and_unbound_saved_priorities_cross_http_with_their_exact_reasons() {
+    let dir = tempfile::tempdir().unwrap();
+    let db_path = dir.path().join("compare.knxdb");
+    // Right: a declaration captured for another object, so it no longer binds.
+    let rebound = project_with_saved_priority(|mut source| {
+        source.object_source.ets_id = "O-9_R-9".into();
+        knx_core::SavedInstancePriority::Declared(Box::new(knx_core::SavedPriorityDeclared {
+            raw: "Low".into(),
+            source,
+        }))
+    });
+    write_knxdb_fixture(&db_path, &rebound);
+    let left = project_with_saved_priority(|_| knx_core::SavedInstancePriority::Unavailable {
+        reason: knx_core::SavedPriorityUnavailable::ModuleScope,
+    });
+    let app = knx_server::app(Arc::new(state_with_project(left)), None);
+
+    let body = body_json(diff_project(&app, &db_path).await).await;
+    let device = &body["installations"][0]["devices"]["changed"][0];
+    let text = body.to_string();
+    assert!(
+        !text.contains("\"Low\""),
+        "unbound literal must be withheld: {body}"
+    );
+    let object = &device["comObjects"]["changed"][0];
+    assert_eq!(
+        object["left"]["savedPriority"],
+        json!({ "status": "unavailable", "reason": "ModuleScope" }),
+        "{body}"
+    );
+    assert_eq!(
+        object["right"]["savedPriority"],
+        json!({ "status": "unavailable", "reason": "SourceBindingMismatch" }),
+        "{body}"
+    );
+    assert_eq!(
+        object["fieldChanges"],
+        json!([{
+            "field": "saved_priority",
+            "left": "unavailable (ModuleScope)",
+            "right": "unavailable (SourceBindingMismatch)"
+        }]),
+        "{body}"
+    );
+}
+
 /// One room (`Kitchen`) with one group address and one Function whose
 /// name and member role vary (ADR-0124).
 fn project_with_function(name: &str, role: &str) -> Project {

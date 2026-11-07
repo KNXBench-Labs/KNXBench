@@ -656,6 +656,7 @@ describe("ProjectDiffPanel entity details", () => {
                         readOnInit: null,
                         links: [],
                         moduleInstance: null,
+                        savedPriority: { status: "unavailable", reason: "NotCaptured" },
                       },
                     ],
                   ],
@@ -789,6 +790,7 @@ describe("ProjectDiffPanel entity details", () => {
     const comObject = {
       text: "Switch", description: null, dpt: null, read: null, write: null, transmit: null,
       update: null, communication: null, readOnInit: null, links: [], moduleInstance: null,
+      savedPriority: { status: "unavailable" as const, reason: "NotCaptured" as const },
     };
     const changed: DeviceChange[] = Array.from({ length: 200 }, (_, i) => ({
       key: { etsId: `d${i}`, address: `1.1.${i}` },

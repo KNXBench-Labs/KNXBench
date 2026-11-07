@@ -594,12 +594,24 @@ It walks these entity kinds:
 | Group addresses | Name, central flag, unfiltered flag, range |
 | Building parts | Name, number, kind, completion, default line |
 | KNX Functions | Name, type, number, comment, description, completion, building part and the ordered members (group address, name, role) |
-| Communication objects | Text, description, DPT, the read/write/transmit/update/communication flags, its group links and its module instance, nested under their device |
+| Communication objects | Text, description, DPT, the read/write/transmit/update/communication/read-on-init flags, its group links, its module instance and its captured saved project priority (`saved_priority`, main only), nested under their device |
 | Parameters | The raw stored value, nested under their device |
 
 The project id is excluded on purpose: two copies of the same project are still the
 same project, and comparing their identifiers would report a difference in every pair
 that matters.
+
+`saved_priority` compares what the imported project file itself declared, shown as
+`declared "High"` (the literal in quotes, so empty or whitespace text stays visible),
+`absent (…)` or `unavailable (…)` with its reason. Where it came from (archive member,
+digest) is not compared, so two imports of the same declaration are equal. Where it
+could not be captured, the reason is compared too: a project saved before KNXBench
+captured it reads `unavailable (NotCaptured)`, an ETS4/ETS5 export reads
+`unavailable (UnsupportedSourceSchema)`, and module objects read
+`unavailable (ModuleScope)`. Comparing such a project with an ETS6 import of the
+same installation therefore lists `saved_priority` for every captured object, and
+`knx diff --exit-code` exits `1`. That is a real difference in what each file records,
+not an edit. It is not the effective priority or what the bus uses.
 
 ### The shape of a result
 

@@ -2586,6 +2586,35 @@ struct ComObjectFieldsDto {
     read_on_init: Option<bool>,
     links: Vec<ComObjectLinkDto>,
     module_instance: Option<String>,
+    saved_priority: SavedPriorityFieldsDto,
+}
+
+/// `knx_diff::SavedPriorityFields`: exact literal, omission kind or reason
+/// (each enum's `Debug` name); never source metadata, effective or wire priority.
+#[derive(serde::Serialize)]
+#[serde(tag = "status", rename_all = "camelCase")]
+enum SavedPriorityFieldsDto {
+    Declared { raw: String },
+    Absent { omission: String },
+    Unavailable { reason: String },
+}
+
+impl From<&knx_diff::SavedPriorityFields> for SavedPriorityFieldsDto {
+    fn from(fields: &knx_diff::SavedPriorityFields) -> Self {
+        use knx_diff::SavedPriorityFields as F;
+        match fields {
+            F::Declared(raw) => Self::Declared { raw: raw.clone() },
+            F::Absent(omission) => Self::Absent {
+                omission: format!("{omission:?}"),
+            },
+            F::Unavailable(reason) => Self::Unavailable {
+                reason: format!("{reason:?}"),
+            },
+            F::SourceBindingMismatch => Self::Unavailable {
+                reason: "SourceBindingMismatch".into(),
+            },
+        }
+    }
 }
 
 impl From<&knx_diff::ComObjectFields> for ComObjectFieldsDto {
@@ -2609,6 +2638,7 @@ impl From<&knx_diff::ComObjectFields> for ComObjectFieldsDto {
                 })
                 .collect(),
             module_instance: fields.module_instance.clone(),
+            saved_priority: SavedPriorityFieldsDto::from(&fields.saved_priority),
         }
     }
 }

@@ -487,8 +487,16 @@ through the server API. Every included section is linked from the table of conte
 | Limits and warnings | The document's own honest list of its limits and every anomaly found while generating it |
 
 A device's communication object table carries the number, name, description, DPT, an
-active flag, the five KNX flags (**R**ead, **W**rite, **T**ransmit, **U**pdate,
-**C**ommunication) and the group addresses each object is linked to. Communication
+active flag, the six KNX flags (**R**ead, **W**rite, **T**ransmit, **U**pdate,
+**C**ommunication, read on **I**nit), the group addresses each object is linked to and
+(main only) a **Saved priority** column. That column shows what the imported project
+file declared for the object: a recognised value as is, an empty or unrecognised value
+in quotes, *not declared*, *no saved entry*, or `— (reason)` when no value applies,
+either because none was captured or because a captured value no longer matches its
+object and is withheld. It is not the
+effective priority, a product default or what the bus uses; the document's limits
+section says so too. Adding the column changes the HTML of every report, so a
+version-controlled export shows one diff the first time. Communication
 objects with no owning device get their own table, because losing them silently would
 be worse than admitting they are odd.
 
@@ -512,6 +520,8 @@ caveats travel with the file:
   tables, communication-object text, and diagnostics remain in their existing
   language, so the report is only partially localized.
 - This is not an ETS report and has not been compared to one.
+- (Main only.) The saved-priority column is what the imported project file declared,
+  not the effective priority, a product default or what the bus uses.
 
 Below that list, the document prints **Anomalies found while generating this
 document** — every structurally odd thing the generator ran into, such as a link to a

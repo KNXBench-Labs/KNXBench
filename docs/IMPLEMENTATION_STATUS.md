@@ -19,14 +19,17 @@ points ([research](research/2026-11-07-ldctrlwriteprop-and-byte-order.md)):
 whole-octet `LittleEndian` numbers in memory layouts are written low octet first
 ([ADR-0159](adr/0159-little-endian-numbers-and-fixed-load-steps.md));
 `LdCtrlWriteProp` (fixed, unverified) writes one element as wide as the device
-describes it; `LdCtrlDelay` waits; a `choose` whose placed controller is inactive
-selects nothing ([ADR-0160](adr/0160-inactive-choose-controllers-select-nothing.md)).
-Images for five configurations match ETS in every parameter octet; the only
-differences are KL-145's communication-enable bits. A KNXBench download of a
-tester project's push-button to the simulator ran all 28 steps. In that project
-32 push-buttons move from `unsupported` to `untested`; room controllers and
-the second manufacturer's actuators stay refused for other reasons. No hardware
-was written.
+describes it; `LdCtrlDelay` waits; a segment longer than its allocation is
+written up to it; a `choose` whose placed controller is inactive selects nothing
+([ADR-0160](adr/0160-inactive-choose-controllers-select-nothing.md)). A
+comparison behind a leading property write runs first, so the device is still
+checked before any write. Images for five configurations match ETS in every
+parameter octet; the only differences are KL-145's communication-enable bits.
+KNXBench downloads of a tester project's push-button and room controller to the
+simulator ran all 28 steps each. In that project 41 devices move from
+`unsupported` to `untested` (32 push-buttons, 8 room controllers, one more
+program of the same manufacturer); the second manufacturer's actuators stay
+refused for other reasons. No hardware was written.
 
 ## System-2 panel names a foreign retained operation (7 November 2026; issue #34)
 

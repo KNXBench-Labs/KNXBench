@@ -65,10 +65,23 @@ Defaults first, then two configured variants of one push-button program.
    names was not observed and is read as before. Both variant images match
    KNXBench's image in every parameter octet.
 
+5. **`[V]` A segment longer than its allocation is written up to the
+   allocation.** The room controller's code segment holds 8,292 octets, its
+   `LdCtrlAbsSegment` allocates 1,792; ETS wrote exactly `43FEh`–`4AFDh`. No
+   parameter or union of that program lies past octet 1,792. KNXBench writes the
+   allocated prefix only while every written parameter field and placed table
+   lies inside it, and says so as inference `segment-beyond-allocation-not-written`.
+6. **Order, not observed as ETS does it.** The room controller's procedure
+   writes property 5/51 *before* comparing the hardware type; ETS follows that
+   order. KNXBench checks the device before changing anything, so it runs such a
+   comparison first (inference `compare-before-property-write`): a read moved
+   earlier can only refuse a download, never write to the wrong device.
+
 ## Not settled here
 
 - Five group-object-table config octets differ in the defaults and both
   variants: ETS clears communication enable on unlinked active objects
   (KL-145), KNXBench keeps the product's flag.
-- Property-placed parameters, `TypeTime`, `LdCtrlMasterReset` and the
-  room controller's segment size are separate boundaries.
+- Property-placed parameters, `TypeTime`, `LdCtrlMasterReset` and texts with
+  non-ASCII characters in programs without `TextParameterEncoding` are separate
+  boundaries.

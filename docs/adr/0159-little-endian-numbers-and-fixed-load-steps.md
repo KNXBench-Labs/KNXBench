@@ -35,6 +35,12 @@ wait. That is evidence of the tool, not of a device.
   description does not admit it. Other shapes stay unmodelled.
 - `LdCtrlDelay` becomes `MemoryDownloadStep::Delay`, a wait that sends
   nothing.
+- A segment longer than its allocation is written up to the allocation, as
+  ETS does, while every written parameter field and placed table lies inside
+  it; otherwise, and for a shorter segment, the size mismatch is refused.
+- A comparison that a procedure places behind a leading property write runs
+  before that write, so the device is still checked before anything changes.
+  Both are named inferences in the plan.
 - These downloads stay `untested` (`--accept-untested`) until hardware
   confirms them.
 
@@ -49,7 +55,7 @@ wait. That is evidence of the tool, not of a device.
 
 ## Consequences
 
-The tester's push-buttons plan completely. Readiness category `byte-order`
+The tester's push-buttons and room controllers plan completely. Readiness category `byte-order`
 remains for the refused shapes. Every newly translated step is covered by
 exhaustive matches (failure classification, partial download, restore,
 programming state, support report). A device that rejects the write or

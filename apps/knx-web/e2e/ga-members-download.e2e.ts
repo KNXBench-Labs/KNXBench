@@ -66,7 +66,7 @@ function buildTree(links: Link[], revision: number, history: number): ProjectTre
 function detail(deviceId: number, links: Link[]): DeviceDetail {
   const device = DEVICES[deviceId];
   const objects: ComObjectNode[] = OBJECTS.filter((o) => o.deviceId === deviceId).map((o) => ({
-    saved_instance_priority: { status: "unavailable", reason: "NotCaptured" },
+    saved_instance_priority: { status: "unavailable", reason: "NotCaptured" }, effective_priority: { status: "unresolved", reason: "InstanceUnavailable", source: null, raw: null },
 
     id: o.id, number: o.number, name: o.name, dpt: o.dpt, dpt_layer: "Instance", description: null, description_layer: null,
     is_active: true, read: false, write: true, transmit: true, update: false, communication: true, read_on_init: false,

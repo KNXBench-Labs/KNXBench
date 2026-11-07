@@ -5,7 +5,7 @@ import type { ProjectTree } from "../src/bindings/ProjectTree";
 
 const device = { id: 42, name: "Kitchen actuator", address: null, description: null, com_object_count: 1 };
 const comObject = {
-    saved_instance_priority: { status: "unavailable", reason: "NotCaptured" } as const,
+    saved_instance_priority: { status: "unavailable", reason: "NotCaptured" } as const, effective_priority: { status: "unresolved", reason: "InstanceUnavailable", source: null, raw: null } as const,
 
   id: 7, number: 1, name: "Switch output", dpt: "DPST-1-1", dpt_layer: null, description: null,
   description_layer: null, is_active: true, activation: "NotEvaluated", channel: null, program_dpt: null,

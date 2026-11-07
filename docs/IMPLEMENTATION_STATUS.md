@@ -56,6 +56,19 @@ hardware/native/release claims remain outside this slice; the read-only editor r
 comparison field and documentation-report column followed on 7 November
 ([consumers](contracts/saved-instance-priority.md#documentation-report-consumer-7-november-2026)).
 
+## Effective object priority (7 November 2026; read-only)
+
+`ComObjectNode.effective_priority` reports the project-effective priority and its
+winning source: a Known saved declaration, or for either omission kind the
+selected product literal with its ComObjectRef/ComObject layer. Empty/unknown
+declarations, unavailable saved facts and missing program, database, product
+object or literal stay unresolved with a named reason; nothing defaults to Low.
+The server fills product cases in the device-detail route; other device-detail
+consumers report `ProductNotConsulted`. The object editor shows one read-only
+row. No editing, table column, report/comparison field, staleness check, image
+or wire change. [Contract](contracts/effective-object-priority.md),
+[delivery record](status/2026-11-07-effective-object-priority.md).
+
 ## Product-query priority provenance (6 November 2026; bounded foundation)
 
 The product query now carries optional Program/ProgramRef provenance beside its

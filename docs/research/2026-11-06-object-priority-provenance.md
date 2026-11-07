@@ -24,6 +24,21 @@ and visually inspected. Their printed page numbers are respectively 7/64 and
 - These are schema-23 project rules. They do not independently establish every
   manufacturer-package schema, legacy project schema or module binding.
 
+### Addendum, 7 November 2026: omitted instance elements
+
+The same original PDF (same SHA-256) was reopened and printed page 48/64 was
+rendered and visually inspected again for the effective-priority increment.
+§1.2.5.11 describes `ComObjectInstanceRefs` and states that an object instance
+with all default settings and no associations need not be listed. An unlisted
+instance therefore carries default settings, and §1.2.5.13 defines the default
+for a missing `Priority` as the underlying ComObjectRef/ComObject attribute.
+KNXBench applies the product literal to `InstanceElementOmitted` on that
+two-clause basis, which is an explicit inference from the schema text. No real
+ETS export was executed for this. The Project Schema document contains no
+`Priority` occurrence outside pages 7 and 48 (case-sensitive whole-document
+text search). The product-schema default for a ComObject without `Priority` is not in the local
+corpus, so a product with neither layer declaring it stays unresolved.
+
 ## Existing implementation, not a new format claim
 
 At base `87642b851`, `knx-productdb::parse::comobject` stores separate nullable

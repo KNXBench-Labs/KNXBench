@@ -5,7 +5,7 @@ import type { ProjectTreeNode } from "./bindings/ProjectTreeNode";
 import type { ProductFolderCaption } from "./bindings/ProductFolderCaption";
 import { deriveComObjectView, dptOptions, DEFAULT_FILTERS, projectFolderIds, projectFolderNodeLabel, projectFolderProductCaption, projectFolderRefusal, type ComSortColumn } from "./comObjectView";
 export function object(id: number, overrides: Partial<ComObjectNode> = {}): ComObjectNode {
-  return { saved_instance_priority: { status: "unavailable", reason: "NotCaptured" }, id, number: id, name: `Object ${id}`, function_text: null, description: null,
+  return { saved_instance_priority: { status: "unavailable", reason: "NotCaptured" }, effective_priority: { status: "unresolved", reason: "InstanceUnavailable", source: null, raw: null }, id, number: id, name: `Object ${id}`, function_text: null, description: null,
     description_layer: null, dpt: null, dpt_layer: null, program_dpt: null, dpt_text: null,
     is_active: true, activation: "NotEvaluated", channel: null, read: false, write: false,
     transmit: false, update: false, communication: true, read_on_init: false, links: [], ...overrides };

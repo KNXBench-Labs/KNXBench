@@ -116,7 +116,7 @@ export async function openList(page: Page, language: "en" | "de") {
 
 import type { ComObjectNode } from "../src/bindings/ComObjectNode";
 function makeObjects(count: number): ComObjectNode[] {
-  return Array.from({ length: count }, (_, index) => ({ saved_instance_priority: { status: "unavailable", reason: "NotCaptured" }, id: index + 1, number: index + 1,
+  return Array.from({ length: count }, (_, index) => ({ saved_instance_priority: { status: "unavailable", reason: "NotCaptured" }, effective_priority: { status: "unresolved", reason: "InstanceUnavailable", source: null, raw: null }, id: index + 1, number: index + 1,
     name: `Object ${index + 1}`, function_text: `Function ${index + 1}`, description: index === 0 ? "Hidden boiler marker" : null,
     description_layer: null, dpt: index % 3 === 0 ? "DPST-1-1" : null, program_dpt: index % 3 === 1 ? "DPST-9-1" : null,
     dpt_layer: index % 3 === 0 ? "Program" : null, dpt_text: index % 3 === 1 ? "Temperature" : null, read: false, write: true, transmit: false,

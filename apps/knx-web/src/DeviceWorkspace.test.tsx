@@ -168,7 +168,7 @@ type Issue08Object = DeviceDetail["com_objects"][number] & {
 
 function object(id: number, overrides: Partial<Issue08Object> = {}): Issue08Object {
   return {
-    saved_instance_priority: { status: "unavailable", reason: "NotCaptured" } as const,
+    saved_instance_priority: { status: "unavailable", reason: "NotCaptured" } as const, effective_priority: { status: "unresolved", reason: "InstanceUnavailable", source: null, raw: null } as const,
     id, number: id, name: `Object ${id}`, description: null, description_layer: null, dpt: null, dpt_layer: null,
     read: false, write: false, communication: true, transmit: false, update: false, read_on_init: false,
     links: [], activation: "NotEvaluated", channel: null, is_active: true,
@@ -629,7 +629,7 @@ it("offers a later-installation device only that installation's group addresses 
       topology: [{ id: 5, name: "Area", address: 2, lines: [{ id: 6, name: "Line", address: 1, devices: [device] }] }] },
   ] };
   const com = {
-    saved_instance_priority: { status: "unavailable", reason: "NotCaptured" } as const,
+    saved_instance_priority: { status: "unavailable", reason: "NotCaptured" } as const, effective_priority: { status: "unresolved", reason: "InstanceUnavailable", source: null, raw: null } as const,
 
     id: 7, number: 1, name: "Switch", dpt: "DPST-1-1", dpt_layer: null, description: null, description_layer: null,
     is_active: true, activation: "NotEvaluated", channel: null, program_dpt: null, dpt_text: null, function_text: null,

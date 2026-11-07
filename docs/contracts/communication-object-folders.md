@@ -294,6 +294,13 @@ acceptance above remains historical. Manufacturer mapping, module placement,
 staleness, priority and broader real-export compatibility remain open.
 [Acceptance, original failures and visual limits](../status/2026-11-05-saved-schema20-node-text.md).
 
+## Saved folder currency (7 November 2026)
+
+WP-06 item 3 (staleness after edits) is answered by a separate read-only
+marker, not by recomputing placement: see the
+[saved folder currency contract](saved-folder-currency.md). Placements above
+are unchanged by it.
+
 ## Source anchors
 
 - [Source representation](../../crates/knx-etsproj/src/source.rs),

@@ -4,6 +4,8 @@ import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from "
 import type { ComObjectNode } from "./bindings/ComObjectNode";
 import type { ComObjectChannel } from "./bindings/ComObjectChannel";
 import type { ComObjectProjectFolder } from "./bindings/ComObjectProjectFolder";
+import type { ProjectFolderCurrency } from "./bindings/ProjectFolderCurrency";
+import { FolderCurrencyNotice } from "./FolderCurrency";
 import type { TextFill } from "./bindings/TextFill";
 import { useTranslate, type MessageKey, type Translate } from "./i18n";
 import { useUiLanguage } from "./uiLanguage";
@@ -121,7 +123,9 @@ function ObjectRow({ com, flat, groupKey, hidden, matches, open, descriptionMatc
     </td></tr>
   </Fragment>;
 }
-export default function ComObjectTable({ objects, editor }: { objects: ComObjectNode[]; editor: (com: ComObjectNode) => ReactNode }) {
+export default function ComObjectTable({ objects, editor, folderCurrency }: { objects: ComObjectNode[]; editor: (com: ComObjectNode) => ReactNode;
+  /** Server-only: whether the saved folders still describe this device. */
+  folderCurrency?: ProjectFolderCurrency }) {
   const t = useTranslate(); const [language] = useUiLanguage();
   const [filters, setFilters] = useState<ComFilters>({ ...DEFAULT_FILTERS });
   const [sort, setSort] = useState<ComSort>({ column: null, descending: false });
@@ -211,6 +215,7 @@ export default function ComObjectTable({ objects, editor }: { objects: ComObject
     {removed > 0 && <p className="com-object-removal" role="status">{t("comTable.removed", { count: removed })}</p>}
     <p className="com-table-count" role="status">{t("comTable.count", { shown: view.objects.length, total: objects.length })}</p>
     {mode === "folder" && <p className="com-folder-view-note">{t("comTable.folderViewNote")}</p>}
+    {(mode === "folder" || objects.some(o => o.project_folder?.status === "Assigned")) && <FolderCurrencyNotice currency={folderCurrency} />}
       <ResizableTable scrollClassName="workspace-table-wrap com-table-scroll" scrollLabel={t("comTable.table")} tableId="communication-objects"
         columns={columns.map(c => ({ id: c.column, width: c.column === "number" ? 120 : (flat ? 114 : 136), min: c.column === "number" ? 64 : 100 }))} className="workspace-table com-table"><thead><tr>{columns.map(c => <th scope="col" key={c.column} data-column={c.column}
         aria-sort={sort.column === c.column ? sort.descending ? "descending" : "ascending" : "none"}>

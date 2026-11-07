@@ -1107,6 +1107,16 @@ channel view, and each view keeps its own expansion. Switching views adds no
 write, but moving focus from a dirty field to a view button can trigger the
 existing blur-save described above.
 
+**Changed since import — current source, not yet released.** When the
+table shows saved folders, KNXBench also checks whether the device's parameter
+values or its set of objects differ from the imported project file. If they do,
+a note says that the device has been changed since import and that the folders
+shown may no longer match; KNXBench does not rebuild or hide them. Undoing the
+change, or setting a value back to its original text, removes the note. If the
+original data cannot be checked, the note says why. Other edits, such as names,
+descriptions, flags or group links, do not count. See the
+[contract](../../contracts/saved-folder-currency.md).
+
 **Literal saved folder text — main-only after Alpha 19.**
 
 The bounded schema-20 implementation additionally shows the text saved on a

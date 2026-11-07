@@ -9,6 +9,7 @@
 use std::collections::BTreeMap;
 
 use knx_app::com_object_folders::{SavedFolder, TreeNodeKind};
+use knx_app::saved_folder_currency::SavedTreeCurrency;
 use knx_core::ComObjectInstanceId;
 use knx_projection::{
     ComObjectActivation, ComObjectProjectFolder, DeviceDetail, ProjectFolderStatus, ProjectTreeNode,
@@ -31,6 +32,38 @@ pub(crate) fn apply_project_folders(
         }
         com.project_folder = Some(folder);
     }
+}
+
+/// WP-06: says whether the saved folders still describe the device
+/// (`docs/contracts/saved-folder-currency.md`), only when an object still shows
+/// a saved Folder after the inactive refusal. Never changes a placement.
+pub(crate) fn apply_folder_currency(detail: &mut DeviceDetail, currency: SavedTreeCurrency) {
+    use knx_app::saved_folder_currency::CurrencyUnknown as U;
+    use knx_projection::{ProjectFolderCurrency as C, ProjectFolderCurrencyUnknown as R};
+    let shown = detail.com_objects.iter().any(|com| {
+        com.project_folder
+            .as_ref()
+            .is_some_and(|folder| folder.status == ProjectFolderStatus::Assigned)
+    });
+    if !shown {
+        return;
+    }
+    detail.project_folder_currency = Some(match currency {
+        SavedTreeCurrency::Unchanged => C::Unchanged,
+        SavedTreeCurrency::ChangedSinceImport => C::ChangedSinceImport,
+        SavedTreeCurrency::Unknown(reason) => C::Unknown {
+            reason: match reason {
+                U::NoRetainedSource => R::NoRetainedSource,
+                U::AmbiguousSource => R::AmbiguousSource,
+                U::SourceIntegrity => R::SourceIntegrity,
+                U::SourceLimit => R::SourceLimit,
+                U::UnsupportedSchema => R::UnsupportedSchema,
+                U::Unreadable => R::Unreadable,
+                U::DeviceNotInSource => R::DeviceNotInSource,
+                U::AmbiguousDevice => R::AmbiguousDevice,
+            },
+        },
+    });
 }
 
 /// Adds optional declarations only after saved placement and final inactive refusal.
@@ -282,6 +315,7 @@ mod tests {
                 catalog: None,
                 resolution: knx_projection::ProductResolution::NoReference,
             },
+            project_folder_currency: None,
         };
         let mut saved_node = node(TreeNodeKind::Folder, "PB-1");
         saved_node.text = Some("Must disappear with inactive placement".into());
@@ -294,6 +328,25 @@ mod tests {
             (ComObjectInstanceId(3), SavedFolder::NoFolder),
         ]);
         apply_project_folders(&mut detail, &folders);
+        // Currency is reported only while an Assigned folder is still shown.
+        let mut hidden = detail.clone();
+        for com in &mut hidden.com_objects {
+            if com
+                .project_folder
+                .as_ref()
+                .is_some_and(|f| f.status == ProjectFolderStatus::Assigned)
+            {
+                com.project_folder = Some(refused(ProjectFolderStatus::Inactive));
+            }
+        }
+        apply_folder_currency(&mut hidden, SavedTreeCurrency::ChangedSinceImport);
+        assert_eq!(hidden.project_folder_currency, None);
+        let mut shown = detail.clone();
+        apply_folder_currency(&mut shown, SavedTreeCurrency::ChangedSinceImport);
+        assert_eq!(
+            shown.project_folder_currency,
+            Some(knx_projection::ProjectFolderCurrency::ChangedSinceImport)
+        );
         let statuses: Vec<_> = detail
             .com_objects
             .iter()

@@ -839,3 +839,206 @@ async fn unsupported_product_source_never_authorizes_captions_or_changes_saved_s
         assert_eq!(std::fs::read(&source).unwrap(), original);
     }
 }
+
+/// Same synthetic tree as [`knxproj`], with original parameter values.
+fn knxproj_with_parameters() -> Vec<u8> {
+    let topology = format!(
+        r#"<KNX xmlns="http://knx.org/xml/project/23"><Project Id="P-0001"><Installations><Installation InstallationId="0"><Topology><Area Id="P-0001-0_A-1" Address="1"><Line Id="P-0001-0_L-1" Address="1"><Segment Id="P-0001-0_S-1" Number="1"><DeviceInstance Id="P-0001-0_DI-1" Address="1" ProductRefId="M-0001_P-1" Hardware2ProgramRefId="M-0001_H-1_HP-1"><ParameterInstanceRefs><ParameterInstanceRef RefId="M-0001_A-1_P-1_R-1" Value="7"/><ParameterInstanceRef RefId="M-0001_A-1_P-2_R-1"/></ParameterInstanceRefs><ModuleInstances><ModuleInstance Id="MD-1_M-1_MI-1" RefId="MD-1_M-1"/></ModuleInstances><ComObjectInstanceRefs><ComObjectInstanceRef RefId="O-4_R-1" IsActive="false"/></ComObjectInstanceRefs>{TREE}</DeviceInstance></Segment></Line></Area></Topology></Installation></Installations></Project></KNX>"#
+    );
+    let info = r#"<KNX xmlns="http://knx.org/xml/project/23"><Project Id="P-0001"><ProjectInformation Name="Synthetic folders"/></Project></KNX>"#;
+    knx_testsupport::zip_with_entries(&[
+        ("P-0001.signature", b""),
+        ("P-0001/0.xml", topology.as_bytes()),
+        ("P-0001/project.xml", info.as_bytes()),
+    ])
+}
+
+async fn currency(app: &axum::Router, state: &knx_server::AppState) -> Value {
+    let device = state
+        .project
+        .lock()
+        .unwrap()
+        .as_ref()
+        .unwrap()
+        .devices
+        .iter()
+        .next()
+        .unwrap()
+        .id
+        .0;
+    let detail = call(app, "GET", &format!("/api/device/{device}"), None).await;
+    detail
+        .get("project_folder_currency")
+        .cloned()
+        .unwrap_or(Value::Null)
+}
+
+/// Applies one real domain command through the server's own undo stack.
+fn apply(
+    state: &knx_server::AppState,
+    command: impl FnOnce(&mut knx_core::Project) -> knx_core::Command,
+) {
+    let mut project = state.project.lock().unwrap();
+    let project = project.as_mut().unwrap();
+    let command = command(project);
+    state
+        .command_stack
+        .lock()
+        .unwrap()
+        .do_command(project, command)
+        .unwrap();
+}
+
+#[tokio::test]
+async fn folder_currency_follows_parameter_edits_against_the_original_and_survives_reopen() {
+    let dir = tempfile::tempdir().unwrap();
+    let source = dir.path().join("synthetic.knxproj");
+    std::fs::write(&source, knxproj_with_parameters()).unwrap();
+    let state = Arc::new(knx_server::AppState {
+        data_dir: dir.path().to_path_buf(),
+        ..Default::default()
+    });
+    let app = knx_server::app(state.clone(), None);
+    call(
+        &app,
+        "POST",
+        "/api/project/import",
+        Some(json!({ "path": source })),
+    )
+    .await;
+    let unchanged = json!({ "status": "unchanged" });
+    let changed = json!({ "status": "changedSinceImport" });
+    assert_eq!(currency(&app, &state).await, unchanged);
+
+    // A description edit does not change parameters or objects.
+    let assigned = state
+        .project
+        .lock()
+        .unwrap()
+        .as_ref()
+        .unwrap()
+        .devices
+        .com_objects()
+        .find(|com| com.source.ets_id == "O-3_R-1")
+        .unwrap()
+        .id
+        .0;
+    let body = json!({ "comObjectId": assigned, "description": "edited" });
+    call(&app, "POST", "/api/com-object-description", Some(body)).await;
+    assert_eq!(currency(&app, &state).await, unchanged);
+    call(&app, "POST", "/api/undo", None).await;
+
+    // Overwrite an original value, then undo: back to the original.
+    let device = state
+        .project
+        .lock()
+        .unwrap()
+        .as_ref()
+        .unwrap()
+        .devices
+        .iter()
+        .next()
+        .unwrap()
+        .id;
+    let set = |raw: &'static str, ets_id: &'static str| {
+        move |project: &mut knx_core::Project| knx_core::Command::SetParameterValue {
+            id: project.ids.next_parameter_instance_id().unwrap(),
+            device,
+            ets_id: ets_id.into(),
+            raw: raw.into(),
+        }
+    };
+    apply(&state, set("8", "M-0001_A-1_P-1_R-1"));
+    assert_eq!(currency(&app, &state).await, changed);
+    // The folders themselves are untouched by the marker.
+    let placed = folders(&app, &state).await;
+    assert_eq!(placed["O-6_R-1"]["status"], "Assigned");
+    call(&app, "POST", "/api/undo", None).await;
+    assert_eq!(currency(&app, &state).await, unchanged);
+
+    // A value written back to its original text is unchanged; a new entry is a change.
+    apply(&state, set("7", "M-0001_A-1_P-1_R-1"));
+    assert_eq!(currency(&app, &state).await, unchanged);
+    apply(&state, set("", "M-0001_A-1_P-9_R-1"));
+    assert_eq!(currency(&app, &state).await, changed);
+
+    // The comparison reads the retained original, so it survives native save/reopen.
+    let native = dir.path().join("native.knxdb");
+    call(
+        &app,
+        "POST",
+        "/api/project/save-as",
+        Some(json!({ "path": native })),
+    )
+    .await;
+    call(
+        &app,
+        "POST",
+        "/api/project/open",
+        Some(json!({ "path": native })),
+    )
+    .await;
+    assert_eq!(currency(&app, &state).await, changed);
+    call(&app, "POST", "/api/undo", None).await;
+    assert_eq!(currency(&app, &state).await, unchanged);
+}
+
+#[tokio::test]
+async fn folder_currency_is_absent_without_a_shown_folder_and_unknown_without_the_original() {
+    // No saved Folder at all: no claim either way.
+    let dir = tempfile::tempdir().unwrap();
+    let source = dir.path().join("minimal.knxproj");
+    std::fs::write(&source, knx_testsupport::minimal_knxproj_bytes()).unwrap();
+    let state = Arc::new(knx_server::AppState {
+        data_dir: dir.path().to_path_buf(),
+        ..Default::default()
+    });
+    let app = knx_server::app(state.clone(), None);
+    call(
+        &app,
+        "POST",
+        "/api/project/import",
+        Some(json!({ "path": source })),
+    )
+    .await;
+    assert_eq!(currency(&app, &state).await, Value::Null);
+
+    // Folders shown but the original member is gone: unknown, never unchanged.
+    let source = dir.path().join("synthetic.knxproj");
+    std::fs::write(&source, knxproj_with_parameters()).unwrap();
+    call(
+        &app,
+        "POST",
+        "/api/project/import",
+        Some(json!({ "path": source })),
+    )
+    .await;
+    state
+        .opaque
+        .lock()
+        .unwrap()
+        .retain(|entry| entry.kind != "ContainerEntry" || !entry.source_path.ends_with("/0.xml"));
+    assert_eq!(
+        currency(&app, &state).await,
+        json!({ "status": "unknown", "reason": "NoRetainedSource" })
+    );
+    // A tampered original fails its checksum.
+    let source = dir.path().join("again.knxproj");
+    std::fs::write(&source, knxproj_with_parameters()).unwrap();
+    call(
+        &app,
+        "POST",
+        "/api/project/import",
+        Some(json!({ "path": source })),
+    )
+    .await;
+    for entry in state.opaque.lock().unwrap().iter_mut() {
+        if entry.kind == "ContainerEntry" && entry.source_path.ends_with("/0.xml") {
+            entry.bytes.push(b' ');
+        }
+    }
+    assert_eq!(
+        currency(&app, &state).await,
+        json!({ "status": "unknown", "reason": "SourceIntegrity" })
+    );
+}

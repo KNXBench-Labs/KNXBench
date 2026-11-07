@@ -638,7 +638,7 @@ it("WP-06 priority column: hidden by default, toggled and remembered as a view p
   expect(v.host.querySelector<HTMLTableCellElement>(".com-object-editor-row td")!.colSpan).toBe(8);
   const cell = (id: number) => v.host.querySelector<HTMLElement>(`tr[data-object-id="${id}"] .com-object-priority`)!;
   expect([1, 2, 3, 4].map(id => [cell(id).dataset.priority, cell(id).dataset.prioritySource ?? null, cell(id).textContent])).toEqual([
-    ["Alert", "product", "Alertproduct"], ["unresolved", null, "—"], ["Low", "userEdit", "Lowyours"], ["High", "instance", "Highsaved"]]);
+    ["Alert", "product", "Alertproduct"], ["unresolved", null, "—Unresolved"], ["Low", "userEdit", "Lowyours"], ["High", "instance", "Highsaved"]]);
   expect(cell(1).title).toContain("object reference (ComObjectRef)");
   expect(cell(2).title).toContain(en["inspector.effectivePriority.unresolved.InstanceEmpty"]);
   expect(cell(3).title).toContain(en["inspector.effectivePriority.source.userEdit"]);
@@ -692,4 +692,34 @@ it("WP-06 priority column speaks German", async () => {
   expect(v.host.querySelector('tr[data-object-id="3"] .com-object-priority-source')?.textContent).toBe(de["comTable.prioritySource.userEdit"]);
   await v.cleanup();
   settingsStorage.setItem("uiLanguage", "en"); resetUiLanguageForTests();
+});
+
+it("WP-06 priority column: hiding it through the settings store (another window) also drops its filter and sort", async () => {
+  setSetting("comTablePriorityColumn", true);
+  const v = await render(PRIORITIES);
+  await v.click(v.button("All objects"));
+  const order = () => [...v.host.querySelectorAll("tr[data-object-id]:not([hidden])")].map(n => n.getAttribute("data-object-id"));
+  await v.click(v.host.querySelector<HTMLButtonElement>('th[data-column="priority"] button')!);
+  await v.set(v.input(en["comTable.priorityFilter"]) as unknown as HTMLSelectElement, "High");
+  expect(order()).toEqual(["4"]);
+  await act(async () => setSetting("comTablePriorityColumn", false));
+  expect(headings(v.host)).not.toContain("priority");
+  expect(order()).toEqual(["1", "2", "3", "4"]);
+  expect(v.host.querySelector(".com-table-count")?.textContent).toBe("4 / 4 objects");
+  await act(async () => setSetting("comTablePriorityColumn", true));
+  expect((v.input(en["comTable.priorityFilter"]) as unknown as HTMLSelectElement).value).toBe("all");
+  expect(v.host.querySelector('th[data-column="priority"]')?.getAttribute("aria-sort")).toBe("none");
+  expect(order()).toEqual(["1", "2", "3", "4"]);
+  await v.cleanup();
+});
+it("WP-06 priority column: folder-view headings span it and an unresolved cell has a spoken name", async () => {
+  setSetting("comTablePriorityColumn", true);
+  const v = await render(PRIORITIES);
+  await v.click(v.button(en["comTable.byFolder"]));
+  expect(headings(v.host)).toEqual(["number", "name", "function", "dpt", "addresses", "status", "priority"]);
+  for (const th of v.host.querySelectorAll<HTMLTableCellElement>(".com-object-channel th")) expect(th.colSpan).toBe(7);
+  const unresolved = v.host.querySelector<HTMLElement>('tr[data-object-id="2"] .com-object-priority')!;
+  expect(unresolved.querySelector('[aria-hidden="true"]')?.textContent).toBe("—");
+  expect(unresolved.querySelector(".sr-only")?.textContent).toBe(en["comTable.unresolvedPriority"]);
+  await v.cleanup();
 });

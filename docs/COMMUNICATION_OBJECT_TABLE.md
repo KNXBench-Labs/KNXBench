@@ -42,7 +42,8 @@ withheld; folder ids are searchable. That initial increment looked up no product
 ([folder contract](contracts/communication-object-folders.md#saved-project-folder-display-24-october-2026)).
 **Folder grouping amendment (24 October 2026):** a third view, *By saved
 project folder*, groups by the opaque saved-folder key (`folder:<key>`, fallback
-`folder-none` last), in first-encounter order, with six columns, the full saved
+`folder-none` last), in first-encounter order, with six columns (seven with the
+optional priority column), the full saved
 path visible in each heading and an import-time snapshot note. By channel stays
 the default and All objects is unchanged. Filter, expansion, editor-lifetime and
 blur-save rules below apply per namespaced group key. Status: implemented,
@@ -67,6 +68,21 @@ translation, module placement or import-time product equivalence is inferred
 ([contract](contracts/declared-product-folder-captions.md),
 [verification boundary](status/2026-11-06-declared-product-folder-captions.md)).
 
+**Optional priority column (7 November 2026, owner decision):** a *Priority
+column* toggle in the toolbar adds one read-only column, off by default; the
+choice is a remembered view preference (`comTablePriorityColumn` setting), not
+project data. Each cell shows the server's effective priority token
+(`Low`/`High`/`Alert`) with a short winning-source tag (*yours*, *saved*,
+*product*); the full source or unresolved reason is the cell title. Unresolved
+or unrecognised server states show `—` and never a guessed token. Sorting
+orders Low, High, Alert with unresolved last; a Priority filter (all, each
+token, unresolved) appears with the column, joins the other filters and counts
+as a filter. However the column disappears (toggle, another window, a settings
+refresh), its filter and sort are dropped. An unresolved cell's `—` carries a
+visually hidden spoken label. Editing stays in the
+object editor ([priority-edit contract](contracts/object-priority-edit.md)); the
+value is a project value, not read from the device.
+
 ## Sorting and filters
 
 Original order is the default and a separate reset. Column clicks select ascending
@@ -82,7 +98,7 @@ Case-insensitive substring search covers number, name, function, description,
 channel text/name/number, effective DPT ID/text, every linked GA name/address.
 Slash and dotted GA spellings are searchable; no regex/query language is added.
 Description-only matches disclose the description. Search AND status AND link
-AND DPT filters apply together. DPT filters offer family, exact raw subtype/type
+AND DPT (AND, while its column is shown, priority) filters apply together. DPT filters offer family, exact raw subtype/type
 and missing. Unknown raw types remain selectable without invented membership.
 A selected type disappearing after a refresh remains selected as a zero-result
 filter, not silently changed to All.
@@ -137,7 +153,9 @@ whole-page overflow; long values remain reachable. Existing editable fields and
 GA drag/drop reuse the existing API/application/core commands.
 
 No new dependency, core/storage/API schema, protocol behavior, export, bulk edit,
-project-wide CO explorer, resizable/reorderable columns or persistent preferences.
+project-wide CO explorer or reorderable columns. Column widths (browser-local)
+and the optional priority column (server settings) are the only remembered
+table preferences.
 Native WebKitGTK/Orca, full accessibility certification, real bus and full ETS
 compatibility are not established by Chromium or synthetic evidence.
 

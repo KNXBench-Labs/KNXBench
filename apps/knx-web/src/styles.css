@@ -3681,6 +3681,10 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
 .com-table-toolbar button { max-width: 100%; white-space: normal; }
 .com-table-views { display: flex; flex-wrap: wrap; gap: 4px; }
 .com-table-views [aria-pressed="true"] { background: var(--knx-accent); border-color: var(--knx-accent); color: var(--knx-on-accent) !important; }
+.com-table-priority-toggle[aria-pressed="true"] { background: var(--knx-accent); border-color: var(--knx-accent); color: var(--knx-on-accent) !important; }
+/* Positioned so its absolute `.sr-only` label stays inside the scrolling table, not the page. */
+.com-object-priority { position: relative; }
+.com-object-priority .com-object-priority-source { display: block; color: var(--knx-muted); font-size: 0.72rem; }
 .com-table-count { color: var(--knx-muted); font-size: 0.85rem; }
 .com-folder-currency { margin: 0.25rem 0; padding: 0.35rem 0.5rem; border-left: 3px solid var(--knx-warning-color); font-size: 0.85rem; }
 .com-table-scroll { max-width: 100%; max-height: 65vh; overflow: auto; container-type: inline-size; }

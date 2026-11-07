@@ -3,7 +3,7 @@ import { expect, it } from "vitest";
 import type { ComObjectNode } from "./bindings/ComObjectNode";
 import type { ProjectTreeNode } from "./bindings/ProjectTreeNode";
 import type { ProductFolderCaption } from "./bindings/ProductFolderCaption";
-import { deriveComObjectView, dptOptions, DEFAULT_FILTERS, projectFolderIds, projectFolderNodeLabel, projectFolderProductCaption, projectFolderRefusal, type ComSortColumn } from "./comObjectView";
+import { deriveComObjectView, dptOptions, DEFAULT_FILTERS, hasFilters, effectivePriorityToken, projectFolderIds, projectFolderNodeLabel, projectFolderProductCaption, projectFolderRefusal, type ComSortColumn } from "./comObjectView";
 export function object(id: number, overrides: Partial<ComObjectNode> = {}): ComObjectNode {
   return { saved_instance_priority: { status: "unavailable", reason: "NotCaptured" }, effective_priority: { status: "unresolved", reason: "InstanceUnavailable", source: null, raw: null }, id, number: id, name: `Object ${id}`, function_text: null, description: null,
     description_layer: null, dpt: null, dpt_layer: null, program_dpt: null, dpt_text: null,
@@ -283,4 +283,15 @@ it("equal product captions and changing source metadata do not change opaque gro
       ...o.project_folder, path: o.project_folder.path.map(node => ({ ...node, product_caption: caption })),
     } : undefined })))).toEqual(expected);
   }
+});
+
+it("WP-06: the priority filter counts as a filter and only known resolved tokens are tokens", () => {
+  expect(hasFilters(DEFAULT_FILTERS)).toBe(false);
+  expect(hasFilters({ ...DEFAULT_FILTERS, priority: "unresolved" })).toBe(true);
+  const base = { id: 1 } as unknown as ComObjectNode;
+  const withView = (effective_priority: unknown) => ({ ...base, effective_priority }) as ComObjectNode;
+  expect(effectivePriorityToken(withView({ status: "resolved", value: "Alert", source: { kind: "product" } }))).toBe("Alert");
+  expect(effectivePriorityToken(withView({ status: "resolved", value: "alert", source: { kind: "userEdit" } }))).toBeNull();
+  expect(effectivePriorityToken(withView({ status: "unresolved", reason: "InstanceEmpty", source: null, raw: "" }))).toBeNull();
+  expect(effectivePriorityToken(withView(undefined))).toBeNull();
 });

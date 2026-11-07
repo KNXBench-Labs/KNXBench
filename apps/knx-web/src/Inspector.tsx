@@ -37,6 +37,7 @@ import GroupAddressLinks from "./GroupAddressLinks";
 import OpenDownloadButton from "./OpenDownloadButton";
 import type { DeviceComparisons } from "./useDeviceComparisons";
 import { useTranslate, type MessageKey, type Translate } from "./i18n";
+import { SavedInstancePriorityRow } from "./SavedInstancePriority";
 import { useProductLanguage } from "./productLanguage";
 import DeviceInstructionsPanel from "./DeviceInstructionsPanel";
 import { LanguageFallbackBadge, fellBack } from "./languageFallback";
@@ -880,6 +881,7 @@ function ComObjectEditor(props: { com: ComObjectNode; groupAddresses: GroupAddre
     </div>
     <ComObjectDescriptionField com={com} onApplied={onApplied} />
     <ComObjectFlagsRow com={com} onApplied={onApplied} />
+    <SavedInstancePriorityRow priority={com.saved_instance_priority} />
     <ul className="group-link-list">
       {com.links.map(link => <GroupLinkRow key={`${link.ga_id}-${link.direction}`} com={com} link={link} onApplied={onApplied} />)}
       <NewGroupLinkRow com={com} groupAddresses={groupAddresses} onApplied={onApplied} />

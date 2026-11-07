@@ -184,8 +184,7 @@ fn saved_instance_priority_absence_causes_scope_and_out_of_tree() {
             "O-7_R-1",
         ),
         "",
-    )
-    .replace("</GroupObjectTree>", "</GroupObjectTree>");
+    );
     let xml = xml.replace("</DeviceInstance>",r#"<Foreign><ComObjectInstanceRefs><ComObjectInstanceRef RefId="O-7_R-1" Priority="Alert"/></ComObjectInstanceRefs></Foreign></DeviceInstance>"#);
     let c = knx_store::open_and_migrate_in_memory().unwrap();
     assert_declared(&import(&xml, &c).project, &xml, "Low", false);

@@ -187,6 +187,7 @@ export default function System2DownloadPanel({ project, deviceId, gateway, enabl
     {unknown && <p data-system2-unknown role="alert" className="form-warning">{t("system2.unknown")}</p>}
     {unknown === "start" && startRefusal && <p data-system2-start-refusal>{t("system2.startRefused", { reason: startRefusal })}</p>}
     {error && <p role="alert" className="form-error">{t("system2.prepareFailed")}</p>}
+    {error && <p data-system2-prepare-ordinary>{t("system2.prepareFailedOrdinary", { mode: t("system2.mode.memory") })}</p>}
     <button type="button" data-system2-refresh disabled={pending} onClick={() => void poll()}>{t("system2.refresh")}</button>
     {enabled && <>
       <p>{t("system2.configured")}</p>
@@ -221,6 +222,10 @@ export default function System2DownloadPanel({ project, deviceId, gateway, enabl
     </section>}
     {status && <section data-system2-status aria-live="polite">
       <h4>{t("system2.operation")}: {status.address} — {status.deviceName}</h4>
+      {/* Issue #34: the server keeps one operation process-wide; say whose it is. */}
+      {deviceId !== null && (status.binding.deviceId !== deviceId || (project?.project_incarnation !== undefined &&
+        status.binding.projectIncarnation !== String(project.project_incarnation))) && <p data-system2-other-device className="form-warning">
+        {t("system2.otherDevice", { address: status.address, device: status.deviceName })}</p>}
       <p style={{ overflowWrap: "anywhere" }}><code>{status.operationId}</code> · {t(nothingWritten(status) ? `system2.state.${status.state === "failed" ? "failed" : "cancelled"}BeforeWrite` : `system2.state.${status.state}`)}</p>
       {nothingWritten(status) && <p data-system2-nothing-written>{t("system2.nothingWritten")}</p>}
       <p>{status.totalSteps === null ? t("system2.checkpointsUnknown", { done: status.completedSteps }) : t("system2.checkpoints", { done: status.completedSteps, total: status.totalSteps })}</p>

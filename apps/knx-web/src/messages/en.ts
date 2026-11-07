@@ -76,6 +76,8 @@ export const messages = {
   "system2.phrase.recoveryConfirmation": "Type the exact original-backup recovery acknowledgement:",
   "system2.start": "Confirm and start experimental download",
   "system2.operation": "Original operation target",
+  "system2.otherDevice": "This retained operation belongs to {address} — {device}, not to the selected device. It stays here for its result and recovery.",
+  "system2.prepareFailedOrdinary": "Is the selected device not the admitted application program? Switch the download mode above to “{mode}”.",
   "system2.checkpoints": "Durable completed checkpoints: {done} / {total}.",
   "system2.checkpointsUnknown": "Durable completed checkpoints: {done}; total unknown.",
   "system2.backupAvailable": "Actual-prestate backup evidence is retained. This is not a guarantee that the physical device can be restored.",

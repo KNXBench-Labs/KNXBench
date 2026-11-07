@@ -116,6 +116,7 @@ fn hand_written() -> ImageRequest {
             sending: true,
         }],
         flag_overrides: Default::default(),
+        priority_statements: Default::default(),
     }
 }
 

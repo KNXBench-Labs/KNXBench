@@ -357,6 +357,7 @@ pub fn base_image_order(
         values: BTreeMap::new(),
         links: Vec::new(),
         flag_overrides: BTreeMap::new(),
+        priority_statements: Default::default(),
     };
     let (plan, code) = plan_fields(conn, &defaults, usize::MAX)?;
     let mut readings = Vec::with_capacity(plan.fields.len());
@@ -768,6 +769,7 @@ mod tests {
                 .collect(),
             links: vec![],
             flag_overrides: BTreeMap::new(),
+            priority_statements: Default::default(),
         }
     }
 

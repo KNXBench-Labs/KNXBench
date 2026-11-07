@@ -178,6 +178,17 @@ fn an_object_flag_marks_group_addresses_but_a_datapoint_type_does_not() {
 }
 
 #[test]
+fn a_priority_edit_marks_group_addresses_and_its_clear_round_trips() {
+    marks_then_round_trips(
+        Command::SetComObjectPriority {
+            com_object: CO1,
+            priority: Some(crate::ObjectPriority::Alert),
+        },
+        &[(D1, parts(|p| p.group_addresses = true))],
+    );
+}
+
+#[test]
 fn renumbering_a_linked_group_address_marks_every_linked_device() {
     marks_then_round_trips(
         Command::ReaddressGroupAddress {

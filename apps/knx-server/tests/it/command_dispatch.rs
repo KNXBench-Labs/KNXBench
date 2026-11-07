@@ -32,6 +32,7 @@ fn state_with_two_devices() -> AppState {
         binary_data: vec![],
     });
     project.devices.insert_com_object(ComObjectInstance {
+        priority_edit: None,
         saved_instance_priority: Default::default(),
         id: ComObjectInstanceId(1),
         source: source(),
@@ -177,6 +178,7 @@ fn deleting_a_group_address_still_linked_from_a_com_object_is_rejected() {
             binary_data: vec![],
         });
         project.devices.insert_com_object(ComObjectInstance {
+            priority_edit: None,
             saved_instance_priority: Default::default(),
             id: ComObjectInstanceId(1),
             source: SourceRef {

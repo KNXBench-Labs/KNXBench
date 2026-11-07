@@ -8,6 +8,7 @@ mod instruction_predecessor;
 mod instructions;
 mod lossless_save;
 mod notes_admission;
+mod priority_edit;
 mod project_history;
 mod read_only_open;
 mod reference_project;

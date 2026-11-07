@@ -73,6 +73,7 @@ fn add_device(project: &mut Project, id: u32, links: Vec<GroupLink>) {
         binary_data: vec![],
     });
     project.devices.insert_com_object(ComObjectInstance {
+        priority_edit: None,
         saved_instance_priority: Default::default(),
         id: ComObjectInstanceId(id),
         source: source(&format!("CO-{id}")),

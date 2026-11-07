@@ -147,5 +147,14 @@
   ]
  },
  "result": "PASS: schema17 before/after saves; captured declarations=4 absent=2; import errors=0; exact Project/opaque equality; root distinct from working; undo=2 redo=1 named=1; close/read-only reopen twice unchanged; recovered undo/redo replay; authentic image decode/hash refusal controls; named restore on independent copy",
- "claim": "Synthetic native17 file written by the unchanged v17 writer at writer_base before any native18 change; not a real user project."
+ "claim": "Synthetic native17 file written by the unchanged v17 writer at writer_base before any native18 change; not a real user project.",
+ "semantic_sha256": {
+  "baseline-complete": "b3b66cf29a3e4c96e80bd3eaa92c133faa22d15babfe40c2f831c79d9db222ff",
+  "baseline-model": "a3fe3ac3584dbb6a11a36a38839c0235ecb1fbf87e51b722c8b663f1b7ee0435",
+  "redo-0": "5d60f69983d9fb34c087597c7cb65787c11276df2acc5272a5654a212523c2ed",
+  "undo-0": "a3fe3ac3584dbb6a11a36a38839c0235ecb1fbf87e51b722c8b663f1b7ee0435",
+  "undo-1": "7b96e6cdf238b43996da21d4991a0dfcee2e60c025da41b6d09a8e6c53f33456",
+  "working-complete": "e0295ff79d1aa53169431bae5c4415f43074e493d8d734f17b34f04df44c378d",
+  "working-model": "980d2c75465f66a32e01c24bb0f51f39a5a49be35c21e839c5ae4087d92f76f8"
+ }
 }

@@ -2020,6 +2020,7 @@ async fn linking_then_unlinking_a_com_object_to_a_group_address() {
     project
         .devices
         .insert_com_object(knx_core::ComObjectInstance {
+            priority_edit: None,
             saved_instance_priority: Default::default(),
             id: knx_core::ComObjectInstanceId(1),
             source: SourceRef {

@@ -1,7 +1,12 @@
-/** Read-only row for an object's effective project priority and its winning source. */
+/** Effective project priority row with its winning source, and the user's own priority edit. */
 import type { EffectivePrioritySource } from "./bindings/EffectivePrioritySource";
 import type { EffectivePriorityUnresolved } from "./bindings/EffectivePriorityUnresolved";
 import type { EffectivePriorityView } from "./bindings/EffectivePriorityView";
+import { useState } from "react";
+import * as api from "./api";
+import type { ComObjectNode } from "./bindings/ComObjectNode";
+import type { ProjectTree } from "./bindings/ProjectTree";
+import { useComMutation } from "./ComMutationBoundary";
 import { useTranslate, type MessageKey, type Translate } from "./i18n";
 
 const REASON_KEYS: Record<EffectivePriorityUnresolved, MessageKey> = {
@@ -31,6 +36,7 @@ function sourceText(t: Translate, view: EffectivePriorityView): string | null {
   if (source === null || source === undefined) {
     return view.status === "resolved" ? t("inspector.effectivePriority.unrecognisedState") : null;
   }
+  if (source.kind === "userEdit") return t("inspector.effectivePriority.source.userEdit");
   if (source.kind === "instance") return t("inspector.effectivePriority.source.instance");
   if (source.kind === "product") {
     const layer = source.layer === "ProgramRef" ? t("inspector.effectivePriority.layer.ProgramRef")
@@ -70,5 +76,44 @@ export function EffectivePriorityRow(props: { priority: EffectivePriorityView })
     <span className="saved-priority-state">{text}</span>
     {source !== null && <span className="field-hint saved-priority-source">{source}</span>}
     <span className="field-hint">{t("inspector.effectivePriority.hint")}</span>
+  </div>;
+}
+
+/** The user's current edit, read from the effective view: only `userEdit` names one. */
+export function priorityEdit(view: EffectivePriorityView): api.ObjectPriorityToken | null {
+  return view.status === "resolved" && view.source.kind === "userEdit" && VALUES.has(view.value)
+    ? view.value
+    : null;
+}
+
+/** Sets or clears the user's priority edit; programming refuses a value the product does not state. */
+export function PriorityEditField(props: { com: ComObjectNode; onApplied: (tree: ProjectTree) => void }) {
+  const { com, onApplied } = props;
+  const t = useTranslate();
+  const mutate = useComMutation();
+  const [error, setError] = useState<string | null>(null);
+  const current = priorityEdit(com.effective_priority);
+
+  async function change(value: string) {
+    setError(null);
+    const next = value === "" ? null : (value as api.ObjectPriorityToken);
+    try {
+      const tree = await mutate(() => api.setComObjectPriority(com.id, next));
+      if (tree) onApplied(tree);
+    } catch (e) {
+      setError(api.errorMessage(e));
+    }
+  }
+
+  const id = `com-priority-edit-${com.id}`;
+  return <div className="com-object-priority-edit">
+    <label htmlFor={id}>{t("inspector.priorityEdit.label")}</label>
+    <select id={id} value={current ?? ""} aria-describedby={`${id}-hint`}
+      onChange={(event) => void change(event.target.value)}>
+      <option value="">{t("inspector.priorityEdit.none")}</option>
+      {(["Low", "High", "Alert"] as const).map((token) => <option key={token} value={token}>{token}</option>)}
+    </select>
+    <span id={`${id}-hint`} className="field-hint">{t("inspector.priorityEdit.hint")}</span>
+    {error && <span className="field-error">{error}</span>}
   </div>;
 }

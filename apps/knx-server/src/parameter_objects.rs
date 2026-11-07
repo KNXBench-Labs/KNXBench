@@ -218,6 +218,7 @@ pub(crate) fn include_missing(
             .next_com_object_instance_id()
             .map_err(|e| e.to_string())?;
         preview.devices.insert_com_object(ComObjectInstance {
+            priority_edit: None,
             saved_instance_priority: Default::default(),
             id,
             source: SourceRef {

@@ -155,6 +155,12 @@ pub struct ImageRequest {
     pub values: BTreeMap<String, String>,
     /// The group address links.
     pub links: Vec<Link>,
+    /// The priority literal each object instance states (a user edit or a
+    /// captured Known declaration), by the instance's `ComObjectRef` id.
+    /// An active ref's statement must equal the product's selected literal,
+    /// or the build is refused ([`ImageError::PriorityDiffers`]); nothing
+    /// here is ever encoded.
+    pub priority_statements: BTreeMap<String, String>,
     /// Flags the project states for one object instance over the
     /// product's, by the instance's `ComObjectRef` id. Applied to the
     /// activated `ComObjectRef` with that id; an entry for a ref the
@@ -342,6 +348,17 @@ pub enum ImageError {
         /// The object number.
         object: u8,
     },
+    /// The project states a priority for an active object that is not the
+    /// product's selected literal; writing the product priority would
+    /// silently program something else (docs/contracts/object-priority-edit.md).
+    PriorityDiffers {
+        /// The `ComObjectRef` id.
+        ref_id: String,
+        /// The project's stated token (user edit or captured declaration).
+        project: String,
+        /// The product's selected literal; `None` when it states none.
+        product: Option<String>,
+    },
     /// A change would hit an octet the segment's `Mask` marks.
     Masked {
         /// The segment.
@@ -423,6 +440,22 @@ impl fmt::Display for ImageError {
                 f,
                 "group object {object} is linked, but the chosen parameters do not activate it"
             ),
+            ImageError::PriorityDiffers {
+                ref_id,
+                project,
+                product,
+            } => match product {
+                Some(product) => write!(
+                    f,
+                    "{ref_id}: the project priority {project:?} differs from the product \
+                     priority {product:?}; KNXBench does not program a changed priority"
+                ),
+                None => write!(
+                    f,
+                    "{ref_id}: the project priority {project:?} is not stated by the product; \
+                     KNXBench does not program a changed priority"
+                ),
+            },
             ImageError::Masked { segment, offset } => write!(
                 f,
                 "{segment}: the change at octet {offset} hits an octet the product's Mask marks"
@@ -794,6 +827,15 @@ fn build_image_selected(
         let view = views.get(*ref_id).ok_or_else(|| ImageError::Unsupported {
             what: format!("{ref_id}: no such ComObjectRef"),
         })?;
+        if let Some(stated) = request.priority_statements.get(*ref_id) {
+            if view.priority.as_deref() != Some(stated.as_str()) {
+                return Err(ImageError::PriorityDiffers {
+                    ref_id: (*ref_id).to_string(),
+                    project: stated.clone(),
+                    product: view.priority.clone(),
+                });
+            }
+        }
         if layout.legacy() && !matches!(view.priority.as_deref(), None | Some("Low")) {
             return Err(ImageError::Unsupported {
                 what: format!(
@@ -1985,6 +2027,7 @@ mod tests {
                 .collect(),
             links,
             flag_overrides: BTreeMap::new(),
+            priority_statements: Default::default(),
         }
     }
 
@@ -2477,6 +2520,96 @@ mod tests {
         assert!(
             matches!(&error, ImageError::Unsupported { what } if what.contains("High")),
             "{error}"
+        );
+    }
+
+    /// Builds `xml` (product `Priority` on `O-0` set to `product`, if any)
+    /// with `statement` stated for `ref_id`, and the same build without it.
+    fn with_statement(
+        product: Option<&str>,
+        ref_id: &str,
+        statement: &str,
+    ) -> (
+        Result<DownloadImage, ImageError>,
+        Result<DownloadImage, ImageError>,
+    ) {
+        let xml = match product {
+            Some(p) => PROGRAM.replace(
+                r#"RefId="O-0" />"#,
+                &format!(r#"RefId="O-0" Priority="{p}" />"#),
+            ),
+            None => PROGRAM.to_string(),
+        };
+        let (_dir, conn) = db(&xml);
+        let plain = build_download_image(&conn, &request(&[], vec![]));
+        let mut stated = request(&[], vec![]);
+        stated
+            .priority_statements
+            .insert(ref_id.to_string(), statement.to_string());
+        (build_download_image(&conn, &stated), plain)
+    }
+
+    #[test]
+    fn a_stated_priority_equal_to_the_product_literal_changes_no_octet() {
+        for (product, statement) in [("Low", "Low"), ("Alert", "Alert")] {
+            let (stated, plain) = with_statement(Some(product), "O-0_R-1", statement);
+            let (stated, plain) = (stated.expect("admitted"), plain.expect("builds"));
+            assert_eq!(stated.segments, plain.segments, "{product}");
+            assert_eq!(stated.inferences, plain.inferences, "{product}");
+        }
+    }
+
+    #[test]
+    fn a_stated_priority_the_product_does_not_state_identically_is_refused() {
+        for (product, statement) in [
+            (None, "Low"),
+            (Some("Low"), "Alert"),
+            (Some("Alert"), "Low"),
+            (Some("Low"), "High"),
+        ] {
+            let (stated, plain) = with_statement(product, "O-0_R-1", statement);
+            plain.expect("the product alone builds");
+            match stated {
+                Err(ImageError::PriorityDiffers {
+                    ref_id,
+                    project,
+                    product: found,
+                }) => {
+                    assert_eq!(ref_id, "O-0_R-1");
+                    assert_eq!(project, statement);
+                    assert_eq!(found.as_deref(), product);
+                    let shown = ImageError::PriorityDiffers {
+                        ref_id,
+                        project,
+                        product: found,
+                    }
+                    .to_string();
+                    assert!(
+                        shown.contains("does not program a changed priority"),
+                        "{shown}"
+                    );
+                    assert!(shown.contains(&format!("{statement:?}")), "{shown}");
+                }
+                other => panic!("{product:?}/{statement}: {other:?}"),
+            }
+        }
+    }
+
+    #[test]
+    fn an_equal_high_statement_still_meets_the_existing_high_refusal() {
+        let (stated, _) = with_statement(Some("High"), "O-0_R-1", "High");
+        assert!(
+            matches!(&stated, Err(ImageError::Unsupported { what }) if what.contains("High")),
+            "{stated:?}"
+        );
+    }
+
+    #[test]
+    fn a_statement_on_an_inactive_object_has_no_octet_to_guard() {
+        let (stated, plain) = with_statement(None, "O-1_R-2", "Alert");
+        assert_eq!(
+            stated.expect("builds").segments,
+            plain.expect("builds").segments
         );
     }
 

@@ -177,6 +177,7 @@ fn project_with_object() -> Project {
         binary_data: vec![],
     });
     project.devices.insert_com_object(ComObjectInstance {
+        priority_edit: None,
         saved_instance_priority: Default::default(),
         id: object,
         source: source("O-1"),

@@ -67,6 +67,18 @@ is never recomputed or hidden. The object table shows one notice when it is not
 [Contract](contracts/saved-folder-currency.md),
 [delivery record](status/2026-11-07-saved-folder-currency.md).
 
+## Editable object priority (7 November 2026)
+
+`Command::SetComObjectPriority` sets or clears `ComObjectInstance.priority_edit`
+(`Low`/`High`/`Alert`), undoable, saved in native schema 18
+(`com_object_priority_edit`, additive, no backfill; an authentic native17 file
+migrates with its history identities unchanged). The edit wins in the effective
+priority (source `userEdit`), is compared by project diff and set through
+`POST /api/com-object-priority` and an object-editor select. The image request
+states each object's priority; the builder refuses a statement that is not the
+product literal (KL-188); admitted images are unchanged. No table column, report
+consumer or new encoding. [Contract](contracts/object-priority-edit.md).
+
 ## Effective object priority (7 November 2026; read-only)
 
 `ComObjectNode.effective_priority` reports the project-effective priority and its

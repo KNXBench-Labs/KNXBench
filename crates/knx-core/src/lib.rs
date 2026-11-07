@@ -23,6 +23,8 @@ pub mod limits;
 pub mod module;
 pub mod names;
 pub mod note;
+pub mod object_priority;
+pub use object_priority::ObjectPriority;
 pub mod parameter;
 pub mod project;
 pub mod provenance;

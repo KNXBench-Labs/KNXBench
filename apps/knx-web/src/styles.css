@@ -812,6 +812,9 @@ main {
 :is(.com-object-saved-priority, .com-object-effective-priority) .saved-priority-label { font-weight: 600; }
 :is(.com-object-saved-priority, .com-object-effective-priority) .saved-priority-raw { font-family: var(--knx-font-mono); white-space: pre-wrap; overflow-wrap: anywhere; }
 :is(.com-object-saved-priority, .com-object-effective-priority) .field-hint { flex-basis: 100%; color: var(--knx-muted); font-size: 0.75rem; }
+.com-object-priority-edit { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.25rem 0.5rem; }
+.com-object-priority-edit label { font-weight: 600; }
+.com-object-priority-edit .field-hint { flex-basis: 100%; color: var(--knx-muted); font-size: 0.75rem; }
 
 .provenance-badge {
   display: inline-block;

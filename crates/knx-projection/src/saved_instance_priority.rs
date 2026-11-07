@@ -192,6 +192,7 @@ mod tests {
             is_active: true,
             links: vec![],
             module_instance: None,
+            priority_edit: None,
             saved_instance_priority: SavedInstancePriority::Declared(Box::new(
                 SavedPriorityDeclared {
                     raw: "High".into(),

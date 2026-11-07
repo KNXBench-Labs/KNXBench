@@ -1,0 +1,151 @@
+{
+ "fixture": {
+  "file": "native17-before-priority-edit.sqlite",
+  "sha256": "3cccedfd802f5b612a904e1290374bd3b7454d9b170562ecc57e1421762a70df",
+  "bytes": 2224128
+ },
+ "writer_base": "51f87d58704941adc6e2f8be6c4f74bdd530f108",
+ "native_schema": 17,
+ "producer": {
+  "file": "native17-before-priority-edit-producer.rs.txt",
+  "sha256": "ecd24f3fc716d4a83028d8a7e9e2a8e0d6cab42211ccbceb9c6da4884e793423",
+  "executable_sha256": "cfdd19578e5c493b52f7e6f4030b266e8aa8bccbc94902b12087a65ad913b444",
+  "derived_from": "native16-before-instance-priority-producer.rs.txt (version asserts 16->17, captured-fact check, no edit table)"
+ },
+ "inputs": {
+  "0.xml": {
+   "directory": "native16-before-instance-priority-inputs",
+   "sha256": "aa3c89f6b3ce8b74e7c33c664668050d4de59d6509e77fea9cdaba3a72e8bf10",
+   "bytes": 1592
+  },
+  "Project.xml": {
+   "directory": "native16-before-instance-priority-inputs",
+   "sha256": "b27d96d227cf14ab7c847a39a0fed0add3970f63f32c52915e0b3405b8d16971",
+   "bytes": 213
+  }
+ },
+ "argv": [
+  "native17_predecessor",
+  "<synthetic-input-directory>",
+  "<new-output-directory>"
+ ],
+ "counts": {
+  "devices": 2,
+  "objects": 6,
+  "captured_declared": 4,
+  "captured_absent": 2,
+  "undo": 2,
+  "redo": 1,
+  "named": 1,
+  "generation": 3
+ },
+ "images": {
+  "baseline-complete.image": {
+   "sha256": "47b422bd758b88b199534d64057cf9c48cb3c5f8077ae6f1082b870866f15305",
+   "bytes": 323584
+  },
+  "baseline-model.image": {
+   "sha256": "7cd2458c5f3b531221eeceb0877506deb4dc6f6b0062c891867e934718c0163e",
+   "bytes": 315392
+  },
+  "redo-0.image": {
+   "sha256": "03613ef91825e65d3c59f4c7857e0b08b970013ae3b99acbf4f3e61369353536",
+   "bytes": 315392
+  },
+  "undo-0.image": {
+   "sha256": "7cd2458c5f3b531221eeceb0877506deb4dc6f6b0062c891867e934718c0163e",
+   "bytes": 315392
+  },
+  "undo-1.image": {
+   "sha256": "11077ad36bd3d4fa1d2e239ea09bf144f82cc807cea47d37f0732c0b60afd3f9",
+   "bytes": 315392
+  },
+  "working-complete.image": {
+   "sha256": "83c46162b07de78f61d6dd172b018736a6052c62919e70a1b82d747210e945b3",
+   "bytes": 323584
+  },
+  "working-model.image": {
+   "sha256": "ad1e13a09d8fd4b6a4e2e6b84f5dc55d0b5d9fbaad5d5e54323465aff0d9f742",
+   "bytes": 315392
+  }
+ },
+ "history": {
+  "project_history_context": [
+   {
+    "content_hash": "939dac584c12177829fe39a1dad1a768536fa7bec9bdd39835aad5b9aa343603",
+    "format_version": 1,
+    "image": {
+     "bytes": 323584,
+     "sha256": "5ab320221cbfe9342e8587625f425a1665f21273524c1730be475938ec125bc4"
+    },
+    "image_hash": "5ab320221cbfe9342e8587625f425a1665f21273524c1730be475938ec125bc4"
+   }
+  ],
+  "project_history_state": [
+   {
+    "id": 0,
+    "format_version": 1,
+    "generation": 3,
+    "baseline_hash": "b3b66cf29a3e4c96e80bd3eaa92c133faa22d15babfe40c2f831c79d9db222ff",
+    "working": {
+     "bytes": 315392,
+     "sha256": "ad1e13a09d8fd4b6a4e2e6b84f5dc55d0b5d9fbaad5d5e54323465aff0d9f742"
+    },
+    "working_hash": "ad1e13a09d8fd4b6a4e2e6b84f5dc55d0b5d9fbaad5d5e54323465aff0d9f742",
+    "context_hash": "939dac584c12177829fe39a1dad1a768536fa7bec9bdd39835aad5b9aa343603"
+   }
+  ],
+  "project_history_stack": [
+   {
+    "side": "redo",
+    "position": 0,
+    "format_version": 1,
+    "image": {
+     "bytes": 315392,
+     "sha256": "03613ef91825e65d3c59f4c7857e0b08b970013ae3b99acbf4f3e61369353536"
+    },
+    "image_hash": "03613ef91825e65d3c59f4c7857e0b08b970013ae3b99acbf4f3e61369353536",
+    "context_hash": "939dac584c12177829fe39a1dad1a768536fa7bec9bdd39835aad5b9aa343603"
+   },
+   {
+    "side": "undo",
+    "position": 0,
+    "format_version": 1,
+    "image": {
+     "bytes": 315392,
+     "sha256": "7cd2458c5f3b531221eeceb0877506deb4dc6f6b0062c891867e934718c0163e"
+    },
+    "image_hash": "7cd2458c5f3b531221eeceb0877506deb4dc6f6b0062c891867e934718c0163e",
+    "context_hash": "939dac584c12177829fe39a1dad1a768536fa7bec9bdd39835aad5b9aa343603"
+   },
+   {
+    "side": "undo",
+    "position": 1,
+    "format_version": 1,
+    "image": {
+     "bytes": 315392,
+     "sha256": "11077ad36bd3d4fa1d2e239ea09bf144f82cc807cea47d37f0732c0b60afd3f9"
+    },
+    "image_hash": "11077ad36bd3d4fa1d2e239ea09bf144f82cc807cea47d37f0732c0b60afd3f9",
+    "context_hash": "939dac584c12177829fe39a1dad1a768536fa7bec9bdd39835aad5b9aa343603"
+   }
+  ],
+  "project_history_version": [
+   {
+    "id": 1,
+    "format_version": 1,
+    "created_at": "2026-11-07T17:35:56.990Z",
+    "reason": "named",
+    "label": "Synthetic V17 baseline",
+    "image": {
+     "bytes": 315392,
+     "sha256": "7cd2458c5f3b531221eeceb0877506deb4dc6f6b0062c891867e934718c0163e"
+    },
+    "image_hash": "7cd2458c5f3b531221eeceb0877506deb4dc6f6b0062c891867e934718c0163e",
+    "context_hash": "939dac584c12177829fe39a1dad1a768536fa7bec9bdd39835aad5b9aa343603"
+   }
+  ]
+ },
+ "result": "PASS: schema17 before/after saves; captured declarations=4 absent=2; import errors=0; exact Project/opaque equality; root distinct from working; undo=2 redo=1 named=1; close/read-only reopen twice unchanged; recovered undo/redo replay; authentic image decode/hash refusal controls; named restore on independent copy",
+ "claim": "Synthetic native17 file written by the unchanged v17 writer at writer_base before any native18 change; not a real user project."
+}

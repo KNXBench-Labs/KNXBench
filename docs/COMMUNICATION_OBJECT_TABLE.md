@@ -42,7 +42,8 @@ withheld; folder ids are searchable. That initial increment looked up no product
 ([folder contract](contracts/communication-object-folders.md#saved-project-folder-display-24-october-2026)).
 **Folder grouping amendment (24 October 2026):** a third view, *By saved
 project folder*, groups by the opaque saved-folder key (`folder:<key>`, fallback
-`folder-none` last), in first-encounter order, with six columns, the full saved
+`folder-none` last), in first-encounter order, with six columns (seven with the
+optional priority column), the full saved
 path visible in each heading and an import-time snapshot note. By channel stays
 the default and All objects is unchanged. Filter, expansion, editor-lifetime and
 blur-save rules below apply per namespaced group key. Status: implemented,
@@ -76,7 +77,9 @@ project data. Each cell shows the server's effective priority token
 or unrecognised server states show `—` and never a guessed token. Sorting
 orders Low, High, Alert with unresolved last; a Priority filter (all, each
 token, unresolved) appears with the column, joins the other filters and counts
-as a filter. Hiding the column drops its filter and sort. Editing stays in the
+as a filter. However the column disappears (toggle, another window, a settings
+refresh), its filter and sort are dropped. An unresolved cell's `—` carries a
+visually hidden spoken label. Editing stays in the
 object editor ([priority-edit contract](contracts/object-priority-edit.md)); the
 value is a project value, not read from the device.
 
@@ -95,7 +98,7 @@ Case-insensitive substring search covers number, name, function, description,
 channel text/name/number, effective DPT ID/text, every linked GA name/address.
 Slash and dotted GA spellings are searchable; no regex/query language is added.
 Description-only matches disclose the description. Search AND status AND link
-AND DPT filters apply together. DPT filters offer family, exact raw subtype/type
+AND DPT (AND, while its column is shown, priority) filters apply together. DPT filters offer family, exact raw subtype/type
 and missing. Unknown raw types remain selectable without invented membership.
 A selected type disappearing after a refresh remains selected as a zero-result
 filter, not silently changed to All.

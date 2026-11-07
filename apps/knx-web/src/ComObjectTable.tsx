@@ -35,7 +35,7 @@ function PriorityCell({ com }: { com: ComObjectNode }) {
   const token = effectivePriorityToken(com), source = effectivePrioritySource(com);
   return <td className="com-object-priority" data-priority={token ?? "unresolved"} data-priority-source={source ?? undefined}
     title={effectivePriorityDescription(t, (com as Partial<ComObjectNode>).effective_priority)}>
-    {token === null ? <span aria-label={t("comTable.unresolvedPriority")}>—</span> : <span>{token}</span>}
+    {token === null ? <><span aria-hidden="true">—</span><span className="sr-only">{t("comTable.unresolvedPriority")}</span></> : <span>{token}</span>}
     {source !== null && <small className="com-object-priority-source">{t(PRIORITY_SOURCE_KEYS[source])}</small>}</td>;
 }
 const STATUS_KEYS: Record<string, MessageKey> = { Active: "inspector.activation.active", Inactive: "inspector.activation.inactive",
@@ -151,6 +151,13 @@ export default function ComObjectTable({ objects, editor, folderCurrency }: { ob
   const flat = mode === "flat", by: ComGrouping = mode === "folder" ? "folder" : "channel";
   useSettingsRevision();
   const showPriority = getSetting(PRIORITY_COLUMN_SETTING) === true;
+  // However the column disappears (this toggle, another window, a settings
+  // refresh), its filter and sort go with it, so nothing invisible narrows the table.
+  useEffect(() => {
+    if (showPriority) return;
+    setFilters(previous => previous.priority === "all" ? previous : { ...previous, priority: "all" });
+    setSort(previous => previous.column === "priority" ? { column: null, descending: false } : previous);
+  }, [showPriority]);
   const columns = [...COLUMNS, ...(showPriority ? [PRIORITY_COLUMN] : []),
     ...(flat ? [{ column: "channel" as const, label: "comTable.channel" as const }] : [])];
   const [expanded, setExpanded] = useState(new Set<string>());
@@ -234,14 +241,8 @@ export default function ComObjectTable({ objects, editor, folderCurrency }: { ob
         <button type="button" aria-pressed={mode === "folder"} onClick={() => setMode("folder")}>{t("comTable.byFolder")}</button>
         <button type="button" aria-pressed={flat} onClick={() => setMode("flat")}>{t("comTable.flat")}</button>
       </div>
-      <button type="button" className="com-table-priority-toggle" aria-pressed={showPriority} onClick={() => {
-        // Hiding the column also drops its filter and sort, so nothing invisible narrows the table.
-        if (showPriority) {
-          if (filters.priority !== "all") change("priority", "all");
-          if (sort.column === "priority") setSort({ column: null, descending: false });
-        }
-        setSetting(PRIORITY_COLUMN_SETTING, !showPriority);
-      }}>{t("comTable.priorityColumn")}</button>
+      <button type="button" className="com-table-priority-toggle" aria-pressed={showPriority}
+        onClick={() => setSetting(PRIORITY_COLUMN_SETTING, !showPriority)}>{t("comTable.priorityColumn")}</button>
     </div>
     {removed > 0 && <p className="com-object-removal" role="status">{t("comTable.removed", { count: removed })}</p>}
     <p className="com-table-count" role="status">{t("comTable.count", { shown: view.objects.length, total: objects.length })}</p>

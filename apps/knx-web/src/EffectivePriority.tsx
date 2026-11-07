@@ -67,7 +67,7 @@ function stateText(t: Translate, view: EffectivePriorityView): { text: string; v
 
 /** One-line description of a view (state, value, source) for a compact table cell's title. */
 export function effectivePriorityDescription(t: Translate, view: EffectivePriorityView | undefined): string {
-  if (view === undefined) return t("inspector.effectivePriority.unrecognisedState");
+  if (view === undefined || view === null) return t("inspector.effectivePriority.unrecognisedState");
   const { text, value } = stateText(t, view);
   const source = view.status === "resolved" || view.status === "unresolved" ? sourceText(t, view) : null;
   return [value === null ? text : `${value} (${text})`, source].filter(part => part !== null).join(" · ");

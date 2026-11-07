@@ -33,6 +33,37 @@ Contract: [communication-object table](../COMMUNICATION_OBJECT_TABLE.md#presenta
   a settings change; the fixture now answers it.
 - Documentation, local-info, headers, anchors, `git diff --check`.
 
+## Independent review and corrections
+
+Review of `3017c51bb` in a separate source copy: **APPROVE**, two Minor and
+five Nit findings; 18 reviewer mutants, 16 killed. Browser in the reviewer's
+copy: `communication` 108/108, `table-columns` 180/180, focused default specs
+156/156, the full default lane 1124/1124, a temporary screenshot spec 11/11
+(24 captures, grouped/folder/flat, en/de, 1440/400, light/dark).
+
+Corrections in the follow-up commit:
+
+- The priority filter and sort are dropped by an effect whenever the column is
+  hidden, also when another window or a settings refresh hides it (the review
+  reproduced a lingering filter); a test hides it through the settings store.
+- New folder-view test for the heading span with the column (survivor M07).
+- The unresolved dash is `aria-hidden` with a visually hidden `.sr-only` label
+  instead of an `aria-label` on a plain span (survivor M16).
+- German wording aligned with the object editor (*Nicht aufgelöst*, *von dir*);
+  the cell description tolerates a `null` view; table contract wording for the
+  folder view column count and the filter list.
+- Re-run mutants: M07, M16 and removal of the hide effect are killed.
+- The first browser run of these corrections failed 2/2 at 400 px in both
+  configurations: the absolutely positioned `.sr-only` label escaped the
+  scrolling table and widened the page by 262 px. The priority cell is now
+  `position: relative`, which keeps the label inside the table's own scroll.
+  Re-run after the fix: Vitest 330 files / 5,326 tests, `communication`
+  108/108, `table-columns` 180/180.
+
+Known and accepted: the full explanation is a hover title (the object editor
+shows it to keyboard and touch users); in the ~740 px inspector the extra column
+needs the table's existing horizontal scroll.
+
 ## Limits
 
 - Display of the server's effective priority only; table views outside the

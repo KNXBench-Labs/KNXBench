@@ -1016,7 +1016,7 @@ the size stays blank rather than guessed.
 button above the table adds a column with each object's effective project
 priority (`Low`, `High` or `Alert`) and a short note where it comes from: *yours*
 (set by you), *saved* (from the imported project) or *product*. Hover a cell for
-the full wording; `—` means the priority cannot be determined and the tooltip
+the full wording (the object editor shows the same text); `—` means the priority cannot be determined and the tooltip
 says why. The column can be sorted and adds a **Priority** filter. It is off by
 default and KNXBench remembers your choice. To change a priority, expand the
 object and use **Your priority**.

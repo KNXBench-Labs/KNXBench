@@ -144,6 +144,20 @@ it("retains original operation identity across selection and never cancels on un
   expect(host.querySelector("progress")).toBeNull(); await click("[data-system2-cancel]"); expect(mock.cancelSystem2).toHaveBeenCalledWith(status.operationId);
   await act(async () => root.unmount()); root = createRoot(host); expect(mock.cancelSystem2).toHaveBeenCalledTimes(1);
 });
+it("says when the retained operation belongs to another device than the selected one (issue #34)", async () => {
+  mock.getSystem2Status.mockResolvedValue({ ...status, state: "finished" }); await render();
+  expect(host.querySelector("[data-system2-other-device]")).toBeNull();
+  await render(11);
+  const note = host.querySelector("[data-system2-other-device]")!.textContent!;
+  expect(note).toContain(`${status.address} — ${status.deviceName}`); expect(note).toContain("not to the selected device");
+  // Same device number, other project incarnation: still not the selected device.
+  await render(10, { ...project, project_incarnation: 2 });
+  expect(host.querySelector("[data-system2-other-device]")).not.toBeNull();
+  const { setSetting } = await import("./settingsStore"); await act(async () => setSetting("uiLanguage", "de")); await flush();
+  expect(host.querySelector("[data-system2-other-device]")!.textContent).toContain("nicht zum ausgewählten Gerät");
+  await act(async () => setSetting("uiLanguage", "en"));
+  expect(mock.startSystem2).not.toHaveBeenCalled(); expect(mock.cancelSystem2).not.toHaveBeenCalled(); expect(mock.recoverSystem2).not.toHaveBeenCalled();
+});
 it("a lost start response polls only, consumes the local preview and never resends", async () => {
   await render(); await prepare(); await confirmations(); mock.startSystem2.mockRejectedValueOnce(new Error("response lost"));
   mock.getSystem2Status.mockResolvedValue(status); await click("[data-system2-start]");
@@ -220,6 +234,8 @@ it("a refused preparation leaves no start capability or defaults fallback", asyn
   mock.prepareSystem2.mockRejectedValueOnce(new Error("private debug output must not be displayed"));
   await render(); await prepare(); expect(host.textContent).toContain("Configured preparation was refused");
   expect(host.textContent).not.toContain("private debug"); expect(host.querySelector("[data-system2-start]")).toBeNull(); expect(mock.startSystem2).not.toHaveBeenCalled();
+  // Issue #34: the way out names the ordinary mode exactly as the selector does.
+  expect(host.querySelector("[data-system2-prepare-ordinary]")!.textContent).toContain("“Ordinary memory download”");
 });
 it("a lost recovery response is never automatically resent and retains the original operation", async () => {
   await render(); await prepare(); await confirmations(); await click("[data-system2-start]");

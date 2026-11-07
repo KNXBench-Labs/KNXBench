@@ -18,7 +18,10 @@ evidence for encoding a project token, so it does not try:
   (`ImageError::PriorityDiffers`). An absent product literal is not read as
   `Low` for this comparison. Equal values change no octet.
 - **Unreadable declarations.** A captured Empty or Unknown declaration without
-  a user edit refuses the request (`ProjectRequestError::UnreadablePriority`).
+  a user edit refuses the request (`ProjectRequestError::UnreadablePriority`),
+  even on an inactive object, because the request is built before activation;
+  read-only previews from the same request stop too. Setting your own priority
+  on that object lifts it.
 - **Not checked.** Captured priority is unavailable for native files saved
   before schema 17, other source schemas, module objects and unbound facts.
   Those objects state nothing, and the product priority is written as before.

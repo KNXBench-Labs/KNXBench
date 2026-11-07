@@ -1173,10 +1173,13 @@ async fn a_priority_edit_wins_validates_its_token_undoes_and_leaves_the_captured
         );
     }
 
+    // ids[1] holds High: each refusal below would otherwise be a real change,
+    // so no no-op refusal can hide a token or shape check.
     for refused in [
-        edit(ids[0], json!("low")),
-        edit(ids[0], json!("Urgent")),
-        edit(ids[0], json!("")),
+        edit(ids[1], json!("low")),
+        edit(ids[1], json!(" Low")),
+        edit(ids[1], json!("Urgent")),
+        edit(ids[1], json!("")),
         edit(ids[0], json!("Low")),
         edit(9_999, json!("Low")),
     ] {
@@ -1190,8 +1193,8 @@ async fn a_priority_edit_wins_validates_its_token_undoes_and_leaves_the_captured
         assert_eq!(status, StatusCode::BAD_REQUEST, "{refused}");
     }
     for malformed in [
-        json!({"comObjectId": ids[0]}),
-        json!({"comObjectId": ids[0], "priority": "Low", "extra": 1}),
+        json!({"comObjectId": ids[1]}),
+        json!({"comObjectId": ids[1], "priority": "Low", "extra": 1}),
     ] {
         let (status, _) = call(
             &router,

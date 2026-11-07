@@ -22,7 +22,7 @@ use std::path::Path;
 use rusqlite::{params, Connection, OptionalExtension, Transaction};
 
 /// Matches `knx_core::project::CURRENT_SCHEMA_VERSION`.
-pub const CURRENT_SCHEMA_VERSION: i64 = 17;
+pub const CURRENT_SCHEMA_VERSION: i64 = 18;
 
 #[derive(Debug)]
 pub enum MigrationError {
@@ -709,6 +709,13 @@ fn migrate_v16_to_v17(conn: &Connection) -> Result<(), MigrationError> {
     Ok(())
 }
 
+/// Additive: user priority edits start empty; nothing is derived from
+/// captured facts or retained attributes (docs/contracts/object-priority-edit.md).
+fn migrate_v17_to_v18(conn: &Connection) -> Result<(), MigrationError> {
+    conn.execute_batch(crate::priority_edit::CREATE_TABLE)?;
+    Ok(())
+}
+
 type Migration = fn(&Connection) -> Result<(), MigrationError>;
 
 /// History owns the surrounding transaction so a refused editor write also
@@ -761,6 +768,7 @@ fn migrations() -> Vec<Migration> {
         migrate_v14_to_v15,
         migrate_v15_to_v16,
         migrate_v16_to_v17,
+        migrate_v17_to_v18,
     ]
 }
 
@@ -1453,6 +1461,7 @@ mod tests {
                 binary_data: vec![],
             });
             project.devices.insert_com_object(ComObjectInstance {
+                priority_edit: None,
                 saved_instance_priority: Default::default(),
                 id: ComObjectInstanceId(5),
                 source: knx_core::SourceRef {
@@ -1488,7 +1497,7 @@ mod tests {
             // Back to a genuine v7 shape: remove every later table and
             // column before rewinding the header, including native17's table.
             conn.execute_batch(
-                "DROP TABLE com_object_saved_priority;
+                "DROP TABLE com_object_priority_edit; DROP TABLE com_object_saved_priority;
                  DROP TABLE instruction_run;
                  DROP TABLE instruction_document; DROP TABLE manufacturer_file; DROP TABLE project_function_member; DROP TABLE project_function; DROP TABLE project_function_state; DROP TABLE project_note; DROP TABLE project_note_state;
                  DROP TABLE project_history_state;
@@ -1617,6 +1626,7 @@ mod tests {
             DeviceId(1),
             0,
             &ComObjectInstance {
+                priority_edit: None,
                 saved_instance_priority: Default::default(),
                 id: ComObjectInstanceId(1),
                 source: knx_core::SourceRef {

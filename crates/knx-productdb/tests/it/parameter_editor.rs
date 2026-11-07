@@ -131,6 +131,7 @@ fn okx06_placed_ip_literals_still_have_no_image_codec() {
             values: [("PR-Address".into(), raw.into())].into(),
             links: vec![],
             flag_overrides: Default::default(),
+            priority_statements: Default::default(),
         };
         let error = build_download_image(&c, &request).unwrap_err();
         assert!(

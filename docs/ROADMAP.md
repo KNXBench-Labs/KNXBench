@@ -11,8 +11,10 @@ This is a captured saved-source fact. A read-only object-editor row, a project
 comparison field and a documentation-report column now consume it. A read-only
 [effective priority](contracts/effective-object-priority.md) with its winning
 source follows in the editor, and saved folders carry a changed-since-import
-marker ([contract](contracts/saved-folder-currency.md)); editing, a web table
-column, folder recomputation and broader WP-06 remain separate work.
+marker ([contract](contracts/saved-folder-currency.md)). Priority is now editable
+as a separate user layer (native 18) with a programming guard
+([contract](contracts/object-priority-edit.md), KL-188); a web table column,
+folder recomputation and broader WP-06 remain separate work.
 
 [ADR-0158](adr/0158-object-priority-provenance.md) separates raw declarations,
 selected product literals, future project-effective priority and wire priority.

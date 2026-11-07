@@ -207,6 +207,7 @@ pub fn prepare_simulated_candidate(
         values: BTreeMap::new(),
         links: Vec::new(),
         flag_overrides: BTreeMap::new(),
+        priority_statements: Default::default(),
     };
     let policy = ExperimentalSystem2ImagePolicy {
         // Revision 2 is the configured path's source-template reading (v3 only).

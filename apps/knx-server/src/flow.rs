@@ -537,6 +537,7 @@ mod tests {
         flags: ResolvedFlags,
     ) -> ComObjectInstance {
         ComObjectInstance {
+            priority_edit: None,
             saved_instance_priority: Default::default(),
             id: ComObjectInstanceId(id),
             source: source(),

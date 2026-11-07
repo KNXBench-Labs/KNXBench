@@ -70,6 +70,9 @@ pub struct ComObjectInstance {
     /// defaults through `ModuleInstance` → `ModuleDef` → `ComObjectRef` →
     /// `ComObject` instead of the direct `ApplicationProgram` chain.
     pub module_instance: Option<ModuleInstanceId>,
+    /// The user's own priority token; `None` = not edited. Never rewrites
+    /// `saved_instance_priority` (docs/contracts/object-priority-edit.md).
+    pub priority_edit: Option<crate::ObjectPriority>,
     /// Original saved declaration; never an effective or wire priority.
     pub saved_instance_priority: crate::SavedInstancePriority,
 }
@@ -163,6 +166,7 @@ mod tests {
     /// size (unstated at instance level in schema 11, as `size` documents).
     fn com_object_instance_fixture() -> ComObjectInstance {
         ComObjectInstance {
+            priority_edit: None,
             saved_instance_priority: Default::default(),
             id: ComObjectInstanceId(1),
             source: source(),

@@ -72,8 +72,10 @@ priority losslessly.
    on main (`ed0cf7737`, see above); a read-only object-editor row displays it.
    Project comparison compares it and the documentation report shows it.
    Read-only effective resolution is delivered
-   ([contract](../contracts/effective-object-priority.md)); editing and a web
-   object-table column remain open.
+   ([contract](../contracts/effective-object-priority.md)); editing as a
+   separate user layer with a programming guard follows
+   ([contract](../contracts/object-priority-edit.md), KL-188). A web
+   object-table column remains open (owner UX decision).
    [Source admission](../research/2026-11-06-object-priority-provenance.md)
    does not establish new wire priority or whole-WP acceptance.
    The bounded product-query origin is software-accepted and published as

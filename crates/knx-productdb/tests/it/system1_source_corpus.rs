@@ -102,6 +102,7 @@ fn configured_system1_sources_keep_named_refusals_and_public_download_boundaries
             values: Default::default(),
             links: Vec::new(),
             flag_overrides: Default::default(),
+            priority_statements: Default::default(),
         };
         let result = build_system1_image(&conn, &request);
         let Err(error) = result else {

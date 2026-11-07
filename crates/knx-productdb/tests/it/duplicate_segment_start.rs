@@ -59,6 +59,7 @@ fn image_of(xml: &str) -> DownloadImage {
         values: Default::default(),
         links: Vec::new(),
         flag_overrides: Default::default(),
+        priority_statements: Default::default(),
     };
     build_download_image(&conn, &request).expect("the public image builder keeps every Data")
 }

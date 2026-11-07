@@ -129,6 +129,7 @@ pub(crate) fn device(id: u32, com_objects: &[u32]) -> DeviceInstance {
 /// owned, and skip it when they want an orphan.
 pub(crate) fn linked_com_object(id: u32, device: u32, ga: u32) -> ComObjectInstance {
     ComObjectInstance {
+        priority_edit: None,
         saved_instance_priority: Default::default(),
         id: ComObjectInstanceId(id),
         source: source(&format!("CO-{id}")),

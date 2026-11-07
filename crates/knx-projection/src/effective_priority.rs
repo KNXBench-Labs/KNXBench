@@ -45,6 +45,10 @@ pub enum EffectivePriorityToken {
 #[serde(tag = "kind", rename_all = "lowercase")]
 #[ts(export)]
 pub enum EffectivePrioritySource {
+    /// The user's own edit (`ComObjectInstance.priority_edit`); wins over
+    /// every captured or product value (contract `object-priority-edit.md`).
+    #[serde(rename = "userEdit")]
+    UserEdit,
     /// The saved object instance's own declaration.
     Instance,
     /// The product literal, applied because the saved instance omitted Priority.
@@ -104,8 +108,27 @@ fn token(raw: &str) -> Option<EffectivePriorityToken> {
     }
 }
 
+/// The user's edit when present, else the already binding-checked saved view;
+/// omissions await product data.
+pub(crate) fn resolve(
+    edit: Option<knx_core::ObjectPriority>,
+    saved: &SavedInstancePriorityView,
+) -> EffectivePriorityView {
+    match edit {
+        Some(edit) => EffectivePriorityView::Resolved {
+            value: match edit {
+                knx_core::ObjectPriority::Low => EffectivePriorityToken::Low,
+                knx_core::ObjectPriority::High => EffectivePriorityToken::High,
+                knx_core::ObjectPriority::Alert => EffectivePriorityToken::Alert,
+            },
+            source: EffectivePrioritySource::UserEdit,
+        },
+        None => from_saved(saved),
+    }
+}
+
 /// Effective priority from the already binding-checked saved view; omissions await product data.
-pub(crate) fn from_saved(saved: &SavedInstancePriorityView) -> EffectivePriorityView {
+fn from_saved(saved: &SavedInstancePriorityView) -> EffectivePriorityView {
     use EffectivePriorityUnresolved as R;
     match saved {
         SavedInstancePriorityView::Unavailable { .. } => unresolved(R::InstanceUnavailable),
@@ -321,6 +344,39 @@ mod tests {
             EffectivePriorityView::default(),
             unresolved(R::InstanceUnavailable)
         );
+    }
+
+    #[test]
+    fn a_user_edit_wins_over_every_saved_state_and_every_product_literal() {
+        use knx_core::ObjectPriority as P;
+        use EffectivePriorityToken as T;
+        let saved = [
+            declared("High"),
+            declared(""),
+            declared("bogus"),
+            absent(SavedPriorityOmissionView::AttributeOmitted),
+            SavedInstancePriorityView::Unavailable {
+                reason: crate::SavedPriorityUnavailableView::NotCaptured,
+            },
+        ];
+        for state in saved {
+            for (edit, value) in [(P::Low, T::Low), (P::High, T::High), (P::Alert, T::Alert)] {
+                let wanted = EffectivePriorityView::Resolved {
+                    value,
+                    source: EffectivePrioritySource::UserEdit,
+                };
+                let mut com = node(state.clone());
+                com.effective_priority = resolve(Some(edit), &state);
+                assert_eq!(com.effective_priority, wanted);
+                apply_product_priority(&mut com, Some(("Alert", ProductPriorityLayer::Program)));
+                mark_product_priority_unavailable(
+                    std::slice::from_mut(&mut com),
+                    ProductPriorityUnavailable::NoProductDatabase,
+                );
+                assert_eq!(com.effective_priority, wanted, "{state:?}");
+            }
+            assert_eq!(resolve(None, &state), from_saved(&state));
+        }
     }
 
     #[test]

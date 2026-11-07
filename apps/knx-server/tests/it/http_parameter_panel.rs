@@ -542,6 +542,7 @@ fn state_with_existing_object(
         let p = guard.as_mut().unwrap();
         let id = knx_core::ComObjectInstanceId(1);
         p.devices.insert_com_object(knx_core::ComObjectInstance {
+            priority_edit: None,
             saved_instance_priority: Default::default(),
             id,
             device: DeviceId(1),
@@ -645,6 +646,7 @@ async fn module_objects_and_module_fields_get_no_inferred_object_controls() {
         for (raw, module_instance) in [(1, None), (2, Some(knx_core::ModuleInstanceId(1)))] {
             let id = knx_core::ComObjectInstanceId(raw);
             p.devices.insert_com_object(knx_core::ComObjectInstance {
+                priority_edit: None,
                 saved_instance_priority: Default::default(),
                 id,
                 device: DeviceId(1),
@@ -928,6 +930,7 @@ async fn object_addition_preserves_preexisting_links_and_instance_overrides() {
         let mut guard = state.project.lock().unwrap();
         let p = guard.as_mut().unwrap();
         let object = knx_core::ComObjectInstance {
+            priority_edit: None,
             saved_instance_priority: Default::default(),
             id: knx_core::ComObjectInstanceId(1),
             device: DeviceId(1),

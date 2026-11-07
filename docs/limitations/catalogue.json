@@ -2764,6 +2764,18 @@
         "KL-187"
       ],
       "anchors": []
+    },
+    {
+      "key": "KL-188",
+      "number": 188,
+      "title": "A changed object priority is refused, not programmed",
+      "topic": "Manufacturer data and parameters",
+      "summary": "Programming refuses a device while an active object's project priority (user edit or saved declaration) differs from the product's literal; KNXBench never writes a changed priority. Instance priorities that were not captured (older native files, other schemas, module objects) are not checked, so the product priority is written for them.",
+      "file": "KL-188-object-priority-programming.md",
+      "ledger_ids": [
+        "KL-188"
+      ],
+      "anchors": []
     }
   ]
 }

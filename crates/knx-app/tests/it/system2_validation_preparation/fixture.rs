@@ -128,6 +128,7 @@ pub(crate) fn synthetic_project() -> knx_core::Project {
             });
         }
         project.devices.insert_com_object(ComObjectInstance {
+            priority_edit: None,
             saved_instance_priority: Default::default(),
             id,
             source: syn_source(&syn_ref(suffix)),

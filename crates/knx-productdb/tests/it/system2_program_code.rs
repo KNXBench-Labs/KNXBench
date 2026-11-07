@@ -119,6 +119,7 @@ fn siemens_system2_preserves_the_whole_procedure_and_stays_not_executable() {
         values: Default::default(),
         links: vec![],
         flag_overrides: Default::default(),
+        priority_statements: Default::default(),
     };
     assert!(code.has_legacy_patch_always);
     let before = conn.total_changes();

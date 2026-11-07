@@ -287,6 +287,11 @@ fn translated(request: &ImageRequest, legacy: &str) -> ImageRequest {
             .iter()
             .map(|(k, v)| (rename(k), *v))
             .collect(),
+        priority_statements: request
+            .priority_statements
+            .iter()
+            .map(|(k, v)| (rename(k), v.clone()))
+            .collect(),
     }
 }
 

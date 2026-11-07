@@ -1221,6 +1221,35 @@ mod tests {
     }
 
     #[test]
+    fn a_priority_edit_is_its_own_field_beside_the_untouched_captured_declaration() {
+        let left = device_with_saved_priority(declared("High"), 'a');
+        let mut right = left.clone();
+        right
+            .devices
+            .com_object_mut(ComObjectInstanceId(1))
+            .unwrap()
+            .priority_edit = Some(knx_core::ObjectPriority::Low);
+        let diff = diff_projects(&left, &right);
+        let changes: Vec<FieldChange> = diff.installations[0]
+            .devices
+            .changed
+            .iter()
+            .flat_map(|d| d.com_objects.changed.iter())
+            .flat_map(|c| c.field_changes())
+            .collect();
+        assert_eq!(changes.len(), 1, "{changes:?}");
+        assert_eq!(changes[0].field, "priority_edit");
+        assert_eq!(
+            (changes[0].left.as_str(), changes[0].right.as_str()),
+            ("-", "Low")
+        );
+        assert!(diff_projects(&right, &right.clone()).installations[0]
+            .devices
+            .changed
+            .is_empty());
+    }
+
+    #[test]
     fn saved_priority_separates_an_empty_declaration_from_both_absence_kinds() {
         use knx_core::SavedPriorityOmission::{AttributeOmitted, InstanceElementOmitted};
         let empty = device_with_saved_priority(declared(""), 'a');

@@ -85,6 +85,7 @@ fn configured_relative_sources_match_independent_oracles_and_stay_not_executable
             values: BTreeMap::new(),
             links: Vec::new(),
             flag_overrides: BTreeMap::new(),
+            priority_statements: Default::default(),
         };
         for build in [build_download_image, build_system2_image] {
             assert!(

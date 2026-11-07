@@ -100,7 +100,7 @@ impl NativeSnapshot {
         conn.deserialize_read_exact(MAIN_DB, bytes, bytes.len(), false)?;
         conn.execute_batch("PRAGMA trusted_schema = OFF; PRAGMA foreign_keys = ON;")?;
         let version: i64 = conn.query_row("PRAGMA user_version", [], |r| r.get(0))?;
-        if ![12, 13, 14, 15, 16, crate::CURRENT_SCHEMA_VERSION].contains(&version) {
+        if ![12, 13, 14, 15, 16, 17, crate::CURRENT_SCHEMA_VERSION].contains(&version) {
             return Err(HistoryError::Invalid("unsupported snapshot schema version"));
         }
         let creator: String = conn.query_row(
@@ -182,8 +182,11 @@ fn check_schema_version(conn: &Connection, version: i64) -> Result<(), HistoryEr
     }
     let expected = crate::open_and_migrate_in_memory()
         .map_err(|_| HistoryError::Invalid("native schema admission initialization failed"))?;
-    if ![12, 13, 14, 15, 16, crate::CURRENT_SCHEMA_VERSION].contains(&version) {
+    if ![12, 13, 14, 15, 16, 17, crate::CURRENT_SCHEMA_VERSION].contains(&version) {
         return Err(HistoryError::Invalid("unsupported native schema shape"));
+    }
+    if version < 18 {
+        expected.execute_batch("DROP TABLE com_object_priority_edit;")?;
     }
     if version < 17 {
         expected.execute_batch("DROP TABLE com_object_saved_priority;")?;
@@ -242,7 +245,16 @@ fn semantic_store_hash(conn: &Connection) -> Result<String, HistoryError> {
         [],
         |row| row.get(0),
     )?;
-    let identity_version: u32 = if priorities {
+    // User priority edits (native 18): a store without any keeps its
+    // native17-or-older identity.
+    let edits: bool = conn.query_row(
+        "SELECT EXISTS(SELECT 1 FROM com_object_priority_edit)",
+        [],
+        |row| row.get(0),
+    )?;
+    let identity_version: u32 = if edits {
+        18
+    } else if priorities {
         17
     } else if functions {
         15
@@ -267,6 +279,7 @@ fn semantic_store_hash(conn: &Connection) -> Result<String, HistoryError> {
             // File-level carried bytes, never snapshot content (ADR-0128).
             || name == "manufacturer_file"
             || (!priorities && name == "com_object_saved_priority")
+            || (!edits && name == "com_object_priority_edit")
             || (!notes && matches!(name.as_str(), "project_note" | "project_note_state"))
             || (!functions
                 && matches!(
@@ -337,7 +350,7 @@ mod tests {
         };
         crate::save_project(&conn, &snapshot.project).unwrap();
         let current = semantic_store_hash(&conn).unwrap();
-        conn.execute_batch("DROP TABLE com_object_saved_priority; PRAGMA user_version=16;")
+        conn.execute_batch("DROP TABLE com_object_priority_edit; DROP TABLE com_object_saved_priority; PRAGMA user_version=16;")
             .unwrap();
         check_schema_version(&conn, 16).unwrap();
         let bytes = conn.serialize(MAIN_DB).unwrap().to_vec();

@@ -2488,6 +2488,7 @@ mod tests {
         };
         let com_object =
             |id: u32, resolved_dpt: Override<DptRef>, ga: GroupAddressId| ComObjectInstance {
+                priority_edit: None,
                 saved_instance_priority: Default::default(),
                 id: ComObjectInstanceId(id),
                 source: source(),
@@ -2643,6 +2644,7 @@ mod tests {
         // rejects (main type 1 wants the 6-bit inline form), not a main
         // type this codec slice fails to implement at all.
         project.devices.insert_com_object(ComObjectInstance {
+            priority_edit: None,
             saved_instance_priority: Default::default(),
             id: ComObjectInstanceId(1),
             source: source.clone(),

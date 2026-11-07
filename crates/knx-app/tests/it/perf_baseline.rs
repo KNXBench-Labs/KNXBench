@@ -303,6 +303,7 @@ fn build_devices_and_topology(
             };
             global_com_index += 1;
             devices.insert_com_object(ComObjectInstance {
+                priority_edit: None,
                 saved_instance_priority: Default::default(),
                 id: com_id,
                 // Real ETS `RefId`s of this exact shape are shared across

@@ -216,6 +216,7 @@ mod tests {
         project
             .devices
             .insert_com_object(knx_core::ComObjectInstance {
+                priority_edit: None,
                 saved_instance_priority: Default::default(),
                 id: ComObjectInstanceId(153),
                 source: source(),

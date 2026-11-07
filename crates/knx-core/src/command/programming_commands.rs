@@ -55,6 +55,8 @@ pub(super) fn candidates(cmd: &Command, project: &Project, out: &mut BTreeSet<De
         }
         Command::SetComObjectFlag { com_object, .. }
         | Command::RestoreComObjectFlag { com_object, .. }
+        // A stated priority decides whether the image is admitted.
+        | Command::SetComObjectPriority { com_object, .. }
         | Command::LinkComObject { com_object, .. }
         | Command::UnlinkComObject { com_object, .. }
         | Command::RestoreGroupLink { com_object, .. } => owner(project, *com_object, out),

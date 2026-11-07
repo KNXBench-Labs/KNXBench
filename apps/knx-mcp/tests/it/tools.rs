@@ -722,7 +722,8 @@ fn an_older_project_file_is_served_and_never_upgraded() {
     {
         let conn = knx_store::Connection::open(&path).unwrap();
         conn.execute_batch(
-            "DROP TABLE instruction_run;
+            "DROP TABLE com_object_saved_priority;
+         DROP TABLE instruction_run;
          DROP TABLE instruction_document; DROP TABLE manufacturer_file; DROP TABLE project_function_member; DROP TABLE project_function; DROP TABLE project_function_state; DROP TABLE project_note; DROP TABLE project_note_state;
          DROP TABLE project_history_state;
          DROP TABLE project_history_stack;
@@ -736,6 +737,20 @@ fn an_older_project_file_is_served_and_never_upgraded() {
              PRAGMA user_version = 9;",
         )
         .unwrap();
+        assert_eq!(
+            conn.query_row("PRAGMA user_version", [], |r| r.get::<_, i64>(0))
+                .unwrap(),
+            9
+        );
+        assert_eq!(
+            conn.query_row(
+                "SELECT COUNT(*) FROM sqlite_schema WHERE name = 'com_object_saved_priority'",
+                [],
+                |r| r.get::<_, i64>(0),
+            )
+            .unwrap(),
+            0
+        );
     }
     let before = std::fs::read(&path).unwrap();
     let products = product_db(dir.path());

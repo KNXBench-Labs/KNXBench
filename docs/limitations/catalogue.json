@@ -1476,7 +1476,7 @@
       "number": 170,
       "title": "Parameter byte-order download boundary",
       "topic": "Commissioning and recovery",
-      "summary": "Unverified LittleEndian materialization remains refused. Defaults/base-image probes and tester reports define no per-type encoding or new write permission.",
+      "summary": "Whole-octet LittleEndian numbers in memory layouts are written low octet first, as ETS 6.4 images showed (ADR-0159, untested on hardware). Fields across octet boundaries, legacy layouts and other declared orders remain refused.",
       "file": "KL-170-parameter-byte-order-download-boundary.md",
       "ledger_ids": [
         "KL-170"

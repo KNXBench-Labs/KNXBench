@@ -16,7 +16,8 @@ delivered and are not reimplemented.
 No priority edit command, table column or editing control (the later read-only
 row is [below](#read-only-ui-consumer-7-november-2026)), product resolution, activation rule,
 image/device-writer change, new source schema/module support, documentation report
-(the later comparison field is [below](#comparison-consumer-7-november-2026)),
+(the later [comparison field](#comparison-consumer-7-november-2026) and
+[report column](#documentation-report-consumer-7-november-2026) are below),
 bus action, native GUI acceptance, release or deployment is admitted.
 
 ## Core representation
@@ -225,6 +226,17 @@ UnsupportedSourceSchema for older ETS exports, differs from a captured value, so
 cross-format or pre-capture comparisons list it on many objects and make
 `knx diff --exit-code` report a difference.
 No product default, effective value, wire priority or report section is added.
+
+## Documentation report consumer (7 November 2026)
+
+`knx-report` adds a final **Saved priority** column to each device's object table,
+from the projected `saved_instance_priority` of `build_device_detail` (so the same
+binding check applies). Known literals are HTML-escaped verbatim; Empty/Unknown
+literals are Rust-`Debug`-quoted (deterministic per toolchain, not a stable
+format) then escaped; Absent names its omission; every
+Unavailable reason, including SourceBindingMismatch, has its own `— (reason)` text
+in English and German. A limits-section line states that it is neither effective,
+product-default nor wire priority. No captured source metadata is rendered.
 
 ## Executable acceptance obligations
 

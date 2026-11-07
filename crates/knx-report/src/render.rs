@@ -18,7 +18,10 @@ use knx_core::{
     BuildingPart, BuildingPartId, ComObjectInstanceId, DeviceInstance, Devices, GroupAddressEntry,
     GroupAddressId, GroupAddressStyle, GroupRange, GroupRangeId, Project,
 };
-use knx_projection::{build_device_detail, ComObjectNode};
+use knx_projection::{
+    build_device_detail, ComObjectNode, SavedInstancePriorityView, SavedPriorityOmissionView,
+    SavedPriorityTokenStatusView, SavedPriorityUnavailableView,
+};
 
 use crate::html::{document_head, document_tail, escape_text};
 use crate::model::{self, Counts, InstallationModel, MalformedField, ReportModel};
@@ -1252,6 +1255,7 @@ fn render_com_objects_table(
         language.text("C", "K"),
         "I",
         language.text("Links", "Verknüpfungen"),
+        language.text("Saved priority", "Gespeicherte Priorität"),
     ];
     out.push_str("<table><tr>");
     for header in headers {
@@ -1325,13 +1329,18 @@ fn render_com_objects_table(
                 .collect();
             out.push_str(&parts.join(", "));
         }
-        out.push_str("</td></tr>");
+        write!(
+            out,
+            "</td><td>{}</td></tr>",
+            saved_priority_cell(&com.saved_instance_priority, language)
+        )
+        .unwrap();
 
         if let Some(fields) = malformed_com_object_fields.get(&ComObjectInstanceId(com.id)) {
             for field in fields {
                 write!(
                     out,
-                    "<tr class=\"warning\"><td colspan=\"12\">Unparseable source value kept \
+                    "<tr class=\"warning\"><td colspan=\"13\">Unparseable source value kept \
                      verbatim in field <strong>{}</strong>: {}</td></tr>",
                     escape_text(field.field),
                     escape_text(&field.raw)
@@ -1343,8 +1352,55 @@ fn render_com_objects_table(
     out.push_str("</table>");
 }
 
+/// The captured saved-instance priority as the project file declared it
+/// (ADR-0158): a known literal verbatim, empty/unknown literals quoted, or why
+/// nothing applies. Never an effective, product-default or wire priority.
+fn saved_priority_cell(view: &SavedInstancePriorityView, language: ReportLanguage) -> String {
+    use SavedPriorityUnavailableView as R;
+    match view {
+        SavedInstancePriorityView::Declared {
+            raw,
+            token_status: SavedPriorityTokenStatusView::Known,
+            ..
+        } => escape_text(raw),
+        // Debug quoting keeps empty, whitespace and control characters visible.
+        SavedInstancePriorityView::Declared { raw, .. } => escape_text(&format!("{raw:?}")),
+        SavedInstancePriorityView::Absent { omission, .. } => match omission {
+            SavedPriorityOmissionView::AttributeOmitted => {
+                language.text("not declared", "nicht deklariert")
+            }
+            SavedPriorityOmissionView::InstanceElementOmitted => {
+                language.text("no saved entry", "kein gespeicherter Eintrag")
+            }
+        }
+        .to_string(),
+        SavedInstancePriorityView::Unavailable { reason } => {
+            let why = match reason {
+                R::NotCaptured => language.text("not captured", "nicht erfasst"),
+                R::UnsupportedSourceSchema => {
+                    language.text("unsupported file version", "Dateiversion nicht unterstützt")
+                }
+                R::ModuleScope => language.text("module object", "Modulobjekt"),
+                R::AmbiguousOwner => language.text("owner not unique", "Zuordnung nicht eindeutig"),
+                R::AmbiguousDeclaration => {
+                    language.text("declared more than once", "mehrfach deklariert")
+                }
+                R::SourceIntegrity => {
+                    language.text("source data inconsistent", "Quelldaten inkonsistent")
+                }
+                R::ResourceLimit => language.text("capture limit", "Erfassungsgrenze"),
+                R::SourceBindingMismatch => language.text(
+                    "no longer bound to its source",
+                    "nicht mehr an die Quelle gebunden",
+                ),
+            };
+            format!("\u{2014} ({why})")
+        }
+    }
+}
+
 /// The fixed closing section §5 requires every generated document to carry:
-/// six honesty statements about what this generator deliberately does not
+/// its honesty statements about what this generator deliberately does not
 /// resolve or render, plus every anomaly the model walk found — rendered
 /// here regardless of whether it was also surfaced naturally by an earlier
 /// section, so this list alone is a complete account of every warning
@@ -1380,6 +1436,15 @@ fn render_limits(out: &mut String, warnings: &[ReportWarning], language: ReportL
         language.text(
             "This report is not an ETS report and has not been compared to one.",
             "Dieser Bericht ist kein ETS-Bericht und wurde mit keinem solchen verglichen.",
+        )
+    )
+    .unwrap();
+    write!(
+        out,
+        "<li>{}</li>",
+        language.text(
+            "Saved priority is what the imported project file declared for the object, not its effective priority, a product default or what the bus uses.",
+            "Die gespeicherte Priorität ist die Deklaration der importierten Projektdatei für das Objekt, nicht die wirksame Priorität, keine Produktvorgabe und nicht das, was der Bus verwendet.",
         )
     )
     .unwrap();
@@ -1622,6 +1687,221 @@ mod tests {
         }
     }
 
+    /// `sample_project` whose device 1 / object 1 carry `priority`, captured
+    /// from one shared archive member so the projection binds it.
+    fn project_with_saved_priority(
+        priority: impl FnOnce(knx_core::SavedPrioritySource) -> knx_core::SavedInstancePriority,
+    ) -> Project {
+        let mut project = sample_project();
+        let member = "P-0001/0.xml".to_string();
+        let device = project.devices.get_mut(DeviceId(1)).unwrap();
+        device.source.path = member.clone();
+        let device_source = device.source.clone();
+        let com = project
+            .devices
+            .com_object_mut(knx_core::ComObjectInstanceId(1))
+            .unwrap();
+        com.source.path = member;
+        com.saved_instance_priority = priority(knx_core::SavedPrioritySource {
+            source_schema: 23,
+            device_source,
+            object_source: com.source.clone(),
+            owner_xpath: "/synthetic/owner".into(),
+            topology_sha256: "d".repeat(64),
+        });
+        project
+    }
+
+    fn declared(
+        raw: &str,
+    ) -> impl FnOnce(knx_core::SavedPrioritySource) -> knx_core::SavedInstancePriority + '_ {
+        move |source| {
+            knx_core::SavedInstancePriority::Declared(Box::new(knx_core::SavedPriorityDeclared {
+                raw: raw.into(),
+                source,
+            }))
+        }
+    }
+
+    /// The last cell of object 1's row, i.e. the saved-priority column.
+    fn priority_cell(html: &str) -> String {
+        let row_start = html
+            .find("<tr><td>0</td>")
+            .expect("object 1 row (number 0)");
+        let row = &html[row_start..row_start + html[row_start..].find("</tr>").unwrap()];
+        let last = row.rfind("<td>").unwrap();
+        row[last + 4..row.len() - 5].to_string()
+    }
+
+    #[test]
+    fn the_object_table_shows_the_saved_priority_declaration_verbatim_or_quoted() {
+        for (raw, cell) in [
+            ("High", "High"),
+            ("", "\"\""),
+            (" low", "\" low\""),
+            ("<Alert>", "\"&lt;Alert&gt;\""),
+        ] {
+            let report = render_html(
+                &project_with_saved_priority(declared(raw)),
+                &ReportOptions::new(fixed_time()),
+            );
+            assert_eq!(priority_cell(&report.html), cell, "{raw:?}");
+        }
+    }
+
+    #[test]
+    fn the_object_table_names_absence_and_every_unavailable_reason_without_a_default() {
+        use knx_core::SavedPriorityUnavailable as R;
+        let absent = |omission| {
+            move |source| {
+                knx_core::SavedInstancePriority::Absent(Box::new(knx_core::SavedPriorityAbsent {
+                    omission,
+                    source,
+                }))
+            }
+        };
+        let options = ReportOptions::new(fixed_time());
+        let html = |p: &Project| render_html(p, &options).html;
+        assert_eq!(
+            priority_cell(&html(&project_with_saved_priority(absent(
+                knx_core::SavedPriorityOmission::AttributeOmitted
+            )))),
+            "not declared"
+        );
+        assert_eq!(
+            priority_cell(&html(&project_with_saved_priority(absent(
+                knx_core::SavedPriorityOmission::InstanceElementOmitted
+            )))),
+            "no saved entry"
+        );
+        let mut seen = std::collections::BTreeSet::new();
+        for reason in [
+            R::NotCaptured,
+            R::UnsupportedSourceSchema,
+            R::ModuleScope,
+            R::AmbiguousOwner,
+            R::AmbiguousDeclaration,
+            R::SourceIntegrity,
+            R::ResourceLimit,
+        ] {
+            let cell = priority_cell(&html(&project_with_saved_priority(|_| {
+                knx_core::SavedInstancePriority::Unavailable { reason }
+            })));
+            assert!(cell.starts_with("\u{2014} ("), "{reason:?}: {cell}");
+            assert!(!cell.contains("Low") && !cell.contains("High"), "{cell}");
+            seen.insert(cell);
+        }
+        // A literal captured for another object is withheld, not shown.
+        let rebound = project_with_saved_priority(|mut source| {
+            source.object_source.ets_id = "O-other".into();
+            declared("Alert")(source)
+        });
+        let cell = priority_cell(&html(&rebound));
+        assert_eq!(cell, "\u{2014} (no longer bound to its source)");
+        seen.insert(cell);
+        assert_eq!(seen.len(), 8, "every reason has its own text: {seen:?}");
+    }
+
+    #[test]
+    fn the_saved_priority_column_and_its_limit_speak_german() {
+        let mut options = ReportOptions::new(fixed_time());
+        options.language = ReportLanguage::German;
+        let html = render_html(
+            &project_with_saved_priority(|_| knx_core::SavedInstancePriority::Unavailable {
+                reason: knx_core::SavedPriorityUnavailable::NotCaptured,
+            }),
+            &options,
+        )
+        .html;
+        assert!(html.contains("<th>Gespeicherte Priorität</th>"));
+        assert_eq!(priority_cell(&html), "\u{2014} (nicht erfasst)");
+        assert!(html.contains("nicht die wirksame Priorität"));
+
+        // Every German state has its own text, distinct from all others.
+        use knx_core::SavedPriorityUnavailable as R;
+        type Make =
+            Box<dyn FnOnce(knx_core::SavedPrioritySource) -> knx_core::SavedInstancePriority>;
+        let absent = |omission| -> Make {
+            Box::new(move |source| {
+                knx_core::SavedInstancePriority::Absent(Box::new(knx_core::SavedPriorityAbsent {
+                    omission,
+                    source,
+                }))
+            })
+        };
+        let mut cells: Vec<Make> = vec![
+            absent(knx_core::SavedPriorityOmission::AttributeOmitted),
+            absent(knx_core::SavedPriorityOmission::InstanceElementOmitted),
+            Box::new(|mut source| {
+                source.object_source.ets_id = "O-other".into();
+                declared("Low")(source)
+            }),
+        ];
+        for reason in [
+            R::NotCaptured,
+            R::UnsupportedSourceSchema,
+            R::ModuleScope,
+            R::AmbiguousOwner,
+            R::AmbiguousDeclaration,
+            R::SourceIntegrity,
+            R::ResourceLimit,
+        ] {
+            cells.push(Box::new(move |_| {
+                knx_core::SavedInstancePriority::Unavailable { reason }
+            }));
+        }
+        let count = cells.len();
+        let mut seen = std::collections::BTreeSet::new();
+        for (index, priority) in cells.into_iter().enumerate() {
+            let html = render_html(&project_with_saved_priority(priority), &options).html;
+            let cell = priority_cell(&html);
+            match index {
+                0 => assert_eq!(cell, "nicht deklariert"),
+                1 => assert_eq!(cell, "kein gespeicherter Eintrag"),
+                2 => assert_eq!(cell, "\u{2014} (nicht mehr an die Quelle gebunden)"),
+                _ => assert!(cell.starts_with("\u{2014} ("), "{cell}"),
+            }
+            assert!(
+                !cell.contains("not ") && !cell.contains("no ") && !cell.contains("module"),
+                "German text expected: {cell}"
+            );
+            seen.insert(cell);
+        }
+        assert_eq!(seen.len(), count, "{seen:?}");
+    }
+
+    #[test]
+    fn every_object_row_has_as_many_cells_as_the_header_and_warnings_span_it() {
+        use knx_core::Override;
+        let mut project = project_with_saved_priority(declared("Low"));
+        let mut malformed = linked_com_object(4, 1, 1);
+        malformed.dpt = Override::Malformed("DPST-garbage".into());
+        project.devices.insert_com_object(malformed);
+        project
+            .devices
+            .get_mut(DeviceId(1))
+            .unwrap()
+            .com_objects
+            .push(knx_core::ComObjectInstanceId(4));
+        let html = render_html(&project, &ReportOptions::new(fixed_time())).html;
+        let start = html.find("<th>Saved priority</th>").expect("object table");
+        let table_start = html[..start].rfind("<table>").unwrap();
+        let table = &html[table_start..table_start + html[table_start..].find("</table>").unwrap()];
+        let headers = table.matches("<th>").count();
+        assert_eq!(headers, 13);
+        let mut data_rows = 0;
+        for row in table.split("<tr").skip(2) {
+            if row.starts_with(" class=\"warning\"") {
+                assert!(row.contains(&format!("colspan=\"{headers}\"")), "{row}");
+            } else {
+                assert_eq!(row.matches("<td>").count(), headers, "{row}");
+                data_rows += 1;
+            }
+        }
+        assert_eq!(data_rows, 2);
+        assert!(table.contains("DPST-garbage"));
+    }
+
     #[test]
     fn the_honesty_section_names_every_documented_limitation() {
         let project = sample_project();
@@ -1632,6 +1912,8 @@ mod tests {
         assert!(report.html.contains("warnings"));
         assert!(report.html.contains("Binary data"));
         assert!(report.html.contains("not an ETS report"));
+        assert!(report.html.contains("not its effective priority"));
+        assert!(report.html.contains("<th>Saved priority</th>"));
     }
 
     #[test]

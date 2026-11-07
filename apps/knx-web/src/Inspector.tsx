@@ -944,7 +944,7 @@ export function DeviceWorkspace(props: {
         is ever in the tab order. */}
     <div role="tabpanel" id={`device-panel-${detail.id}-0`} aria-labelledby={`device-tab-${detail.id}-0`} hidden={tab !== 0} tabIndex={0}>
       <h3>{t("inspector.communicationObjects")}</h3>
-      <ComObjectTable key={detail.id} objects={detail.com_objects} editor={com =>
+      <ComObjectTable key={detail.id} objects={detail.com_objects} folderCurrency={detail.project_folder_currency} editor={com =>
         <ComObjectEditor com={com} groupAddresses={groupAddresses} onApplied={onApplied}
           functions={<ComObjectFunctionControls deviceId={detail.id} objectId={com.id} state={parameterState} onValueApplied={onApplied} />} />} />
 

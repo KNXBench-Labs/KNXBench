@@ -2548,10 +2548,20 @@ pub fn device_detail(
 ) -> Result<knx_projection::DeviceDetail, String> {
     let mut folders = None;
     let mut captions = None;
-    let mut detail =
-        device_detail_with_product_data(state, device_id, language, &mut folders, &mut captions)?;
+    let mut currency = None;
+    let mut detail = device_detail_with_product_data(
+        state,
+        device_id,
+        language,
+        &mut folders,
+        &mut captions,
+        &mut currency,
+    )?;
     if let Some(folders) = folders {
         crate::com_object_folders::apply_project_folders(&mut detail, &folders);
+    }
+    if let Some(currency) = currency {
+        crate::com_object_folders::apply_folder_currency(&mut detail, currency);
     }
     if let Some(captions) = captions {
         if crate::com_object_folders::apply_product_captions(&mut detail, &captions).is_err() {
@@ -2572,6 +2582,7 @@ fn device_detail_with_product_data(
         >,
     >,
     captions: &mut Option<knx_productdb::com_object_folder_captions::FolderCaptions>,
+    currency: &mut Option<knx_app::saved_folder_currency::SavedTreeCurrency>,
 ) -> Result<knx_projection::DeviceDetail, String> {
     // Step 1: lock `project` (and, in the established order, `opaque` for the
     // retained object tree); never `product_db` at the same time.
@@ -2585,7 +2596,19 @@ fn device_detail_with_product_data(
         )
         .map(|input| {
             let opaque = state.opaque.lock().expect("state mutex poisoned");
-            knx_app::com_object_folders::saved_folders(&input, &opaque)
+            let placed = knx_app::com_object_folders::saved_folders(&input, &opaque);
+            // Re-read the original only when a saved Folder could be shown at all.
+            let any_folder = placed
+                .values()
+                .any(|f| matches!(f, knx_app::com_object_folders::SavedFolder::Folder { .. }));
+            if any_folder {
+                *currency = knx_app::saved_folder_currency::CurrencyInput::collect(
+                    project,
+                    knx_core::DeviceId(device_id),
+                )
+                .map(|input| knx_app::saved_folder_currency::saved_tree_currency(input, &opaque));
+            }
+            placed
         });
         let activation_input = activation_input(project, knx_core::DeviceId(device_id));
         let name_input = knx_app::com_object_text_fill::NameFillInput::collect(

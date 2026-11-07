@@ -58,7 +58,11 @@ priority losslessly.
    still need evidence, not guessed manufacturer behavior.
 2. Folders for module objects (depends on
    [WP-07](WP-07-module-instance-authority.md)).
-3. Staleness of the saved tree after edits.
+3. Staleness of the saved tree after edits: a conservative read-only
+   "changed since import" marker compares parameter values and the object set
+   with the retained original ([contract](../contracts/saved-folder-currency.md)).
+   Recomputing folder membership after edits stays open (needs manufacturer
+   `ShowInComObjectTree` mapping and evidence of the original tool's rebuild).
 4. A broader real-export membership/import witness (the public schema-20 source
    observation does not establish end-to-end vendor-export equivalence).
 5. Object priority across core, persistence, import, projection and

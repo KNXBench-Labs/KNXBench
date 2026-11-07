@@ -56,6 +56,17 @@ hardware/native/release claims remain outside this slice; the read-only editor r
 comparison field and documentation-report column followed on 7 November
 ([consumers](contracts/saved-instance-priority.md#documentation-report-consumer-7-november-2026)).
 
+## Saved folder currency (7 November 2026; read-only)
+
+`DeviceDetail.project_folder_currency` (server-only, set when a saved Folder is
+shown) reports `unchanged`, `changedSinceImport` or `unknown` with a reason, by
+comparing the device's parameter values and object set with its retained,
+checksum-verified original topology member (schemas 20/21/23). Folder placement
+is never recomputed or hidden. The object table shows one notice when it is not
+`unchanged`. Module arguments and recomputation are outside this slice.
+[Contract](contracts/saved-folder-currency.md),
+[delivery record](status/2026-11-07-saved-folder-currency.md).
+
 ## Effective object priority (7 November 2026; read-only)
 
 `ComObjectNode.effective_priority` reports the project-effective priority and its

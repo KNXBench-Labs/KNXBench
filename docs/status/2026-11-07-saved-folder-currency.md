@@ -65,6 +65,18 @@ committed.
 - MINOR: contract wording (shown-folder condition, notice text), counts in this
   record, and a schema-20 line-device reader test.
 
+## Acceptance and publication
+
+Feature `1b85f4df1` plus review fix `424efce07` (focused re-review APPROVE:
+earlier survivors M3/M4/M5/M9 and new M10–M12 killed), merged main-first as
+`b33f95145` on `b111a7eed` (tree identical to the branch head). The maintained
+change-scoped package gate ran on that merge: all 17 selected stages exited 0
+with valid proofs, inputs frozen, no user data touched or unchecked. Counts:
+Rust 4,470 passed / 0 failed / 206 ignored (32 binaries), bindings 86, private
+corpus 149/149, web gate 34 stages including 1,120 browser cases. Pushed after
+the gate with `origin/main` unchanged; local, tracking and live `main` read back
+as `b33f95145`.
+
 ## Limits
 
 No folder recomputation, hiding or parameter-level diff; ETS rebuild behaviour

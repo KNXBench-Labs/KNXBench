@@ -20,7 +20,7 @@ overstate it.
 
 The device detail gains an optional, server-only
 `DeviceDetail.project_folder_currency`, set when at least one object of the
-device has a saved Folder placement:
+device still shows an Assigned saved folder after the existing inactive refusal:
 
 | Value | Meaning |
 |---|---|
@@ -29,9 +29,9 @@ device has a saved Folder placement:
 | `unknown` + reason | The original could not be read or attributed; no claim either way |
 
 Folder placement itself is never altered, hidden or recomputed by this marker.
-The object table shows one notice when the marker is not `unchanged`: "Folders as
-saved at import; this device has been changed since". An unknown marker names
-its reason. A state this build does not know is shown as unknown, never as
+The object table shows one notice when the marker is not `unchanged`, saying
+that the device has been changed in KNXBench since import and that the folders
+shown are still those saved at import. An unknown marker names its reason. A state this build does not know is shown as unknown, never as
 current.
 
 ## Comparison
@@ -66,8 +66,15 @@ The original member is refused above 64 MiB before hashing or parsing.
 
 Recomputing folder membership, hiding folders, a parameter-level diff view,
 ETS rebuild behaviour, module-argument comparison, any write or bus action.
-Each device-detail request with saved folders re-reads that device's original
-member; the cost is measured in the delivery record.
+
+## Cost
+
+Every device-detail request with a shown saved folder hashes the retained
+original member. The parsed baselines of the last member are kept in a
+session-only memo keyed by that verified digest, source path and schema, so a
+member is parsed once until its bytes change. The memo is derived data, is
+never saved and cannot answer for bytes that fail their checksum. Measurements
+are in the delivery record.
 
 ## Executable obligations
 

@@ -578,8 +578,9 @@ the frame, **not that a KNX device received or executed it**. TCP has no
 TUNNELLING_ACK; it does retain connection heartbeat monitoring. No automatic
 reconnect or replay is performed. Plain TCP is not KNX IP Secure.
 
-The [bounded contract](../../contracts/tcp-tunnelling.md) is in correction review;
-full software acceptance and real-gateway interoperability are not yet claimed.
+The [bounded contract](../../contracts/tcp-tunnelling.md) passed independent review
+and the selected software package gate ([record](../../status/2026-11-08-optional-tcp-tunnelling.md)).
+It is main-only; real-gateway interoperability is not claimed.
 The examples remain subject to the installation-access warning above.
 
 

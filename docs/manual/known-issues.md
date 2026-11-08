@@ -4,8 +4,9 @@
 
 ## Optional TCP monitor/group-traffic candidate (8 November 2026)
 
-The [TCP candidate](../contracts/tcp-tunnelling.md) is still in correction review,
-not published or fully accepted. It covers only explicit CLI monitor/write and
+The [bounded TCP slice](../contracts/tcp-tunnelling.md) is software-accepted on
+main, not a new release ([execution record](../status/2026-11-08-optional-tcp-tunnelling.md)).
+It covers only explicit CLI monitor/write and
 the server/Web monitor's bound group traffic; other device/scan workflows remain
 UDP-only. A TCP socket accepting a frame does not confirm KNX device delivery.
 Unknown/over-cap frames are drained rather than retained; their skip metadata

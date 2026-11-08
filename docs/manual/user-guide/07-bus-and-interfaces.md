@@ -114,9 +114,11 @@ a successful send reports local socket acceptance, not device delivery. Skipped
 TCP frames are accounted separately from buffered telegram drops; an unknown
 service is not automatically a lost telegram. Plain TCP is not KNX IP Secure.
 
-[Contract and acceptance boundary](../../contracts/tcp-tunnelling.md): correction
-review and integrated acceptance are pending, and real-gateway interoperability
-has not been verified. The published screenshot above has not been replaced.
+[Contract and acceptance boundary](../../contracts/tcp-tunnelling.md): the bounded
+software slice passed independent review and the selected package gate
+([record](../../status/2026-11-08-optional-tcp-tunnelling.md)). It is main-only;
+real-gateway interoperability has not been verified. The published screenshot
+above has not been replaced.
 
 ## What the monitor shows
 

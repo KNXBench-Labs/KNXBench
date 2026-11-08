@@ -1,9 +1,10 @@
 # Optional TCP tunnelling for monitoring and group traffic
 
-Status: implementation candidate, 8 November 2026; integrated acceptance and
-publication are still pending. [WP-29](../open-work/WP-29-knxnet-ip-tcp-tunnelling.md)
-remains open beyond this bounded slice. This contract defines the candidate's
-required behaviour, not a claim that authored tests have passed.
+Status: bounded software acceptance, 8 November 2026; main-only, not a new release.
+[WP-29](../open-work/WP-29-knxnet-ip-tcp-tunnelling.md) remains open beyond this
+slice. The [execution record](../status/2026-11-08-optional-tcp-tunnelling.md)
+separates actual passed checks from this contract's required behaviour and from
+unverified real-gateway interoperability.
 
 ## Scope and defaults
 

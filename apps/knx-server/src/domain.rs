@@ -85,6 +85,11 @@ pub struct AppState {
     /// Compare-and-write generation of the native recovery journal. Zero means
     /// a legacy/new project without a persisted editor workspace.
     pub history_generation: Mutex<i64>,
+    /// What this server last wrote to the recovery journal (issue #35): the
+    /// next write keeps the stack rows it proves unchanged instead of
+    /// re-encoding every undo state. Correctness never depends on it being
+    /// current: the store keeps a row only while its stored hash matches.
+    pub persisted_history: Mutex<Option<PersistedHistory>>,
     /// (errors, warnings) from the initial import's `ImportReport`,
     /// reapplied to every tree rebuilt after a command/undo/redo — edits
     /// don't change what import lost. `(0, 0)` for a `.knxdb` native load.
@@ -393,6 +398,7 @@ impl AppState {
             manufacturer_refs: Mutex::new(Vec::new()),
             command_stack: Mutex::new(knx_core::CommandStack::new()),
             history_generation: Mutex::new(0),
+            persisted_history: Mutex::new(None),
             import_counts: Mutex::new((0, 0)),
             import_report_available: AtomicBool::new(true),
             import_report_historical: AtomicBool::new(false),
@@ -2989,21 +2995,33 @@ fn replace_project_state_transaction(
     // A recorded request belongs to the project it was committed into.
     catalog_requests.clear();
 
-    let (clean_replacement, recovered_stack, generation) = match recovered {
+    let (clean_replacement, recovered_stack, generation, rows) = match recovered {
         Some(history) => (
             history.baseline.project,
             knx_core::CommandStack::from_snapshot_states(history.undo, history.redo),
             history.generation,
+            Some(history.rows),
         ),
-        None => (replacement.clone(), knx_core::CommandStack::new(), 0),
+        None => (replacement.clone(), knx_core::CommandStack::new(), 0, None),
     };
     state.project_incarnation.fetch_add(1, Ordering::Relaxed);
+    // The opened journal's rows are exactly the recovered stack's states, so
+    // even the first edit after opening re-encodes only what it changes.
+    let persisted = rows.map(|rows| PersistedHistory {
+        project: replacement.clone(),
+        stack: recovered_stack.clone(),
+        rows,
+    });
     *project = Some(replacement);
     *stack = recovered_stack;
     *state
         .history_generation
         .lock()
         .expect("state mutex poisoned") = generation;
+    *state
+        .persisted_history
+        .lock()
+        .expect("state mutex poisoned") = persisted;
     *import_counts = replacement_import_counts;
     // Only native-open replacements carry a store path. Save As sets one
     // later without replacing the live import evidence. Publish atomically.
@@ -3149,8 +3167,53 @@ fn persist_native_working_reported(
             .expect("state mutex poisoned")
             .clone(),
     };
-    *generation = knx_app::project_history::persist_working(path, &snapshot, stack, *generation)?;
+    let mut persisted = state
+        .persisted_history
+        .lock()
+        .expect("state mutex poisoned");
+    let reuse = persisted.as_ref().map_or_else(Default::default, |earlier| {
+        earlier.reuse_for(project, stack)
+    });
+    // A failed write leaves no claim about the file: the next one rewrites fully.
+    *persisted = None;
+    let (next, rows) = knx_app::project_history::persist_working_reusing(
+        path,
+        &snapshot,
+        stack,
+        *generation,
+        &reuse,
+    )?;
+    *generation = next;
+    *persisted = Some(PersistedHistory {
+        project: project.clone(),
+        stack: stack.clone(),
+        rows,
+    });
     Ok(true)
+}
+
+/// The project, stack and stored row hashes of this server's last journal write.
+/// Holds full copies of both, so the history occupies memory about twice.
+pub struct PersistedHistory {
+    project: knx_core::Project,
+    stack: knx_core::CommandStack,
+    pub(crate) rows: knx_store::project_history::StackRows,
+}
+
+impl PersistedHistory {
+    /// The stored rows still holding states of `stack` over `project`: those
+    /// below the prefix both histories provably share.
+    fn reuse_for(
+        &self,
+        project: &knx_core::Project,
+        stack: &knx_core::CommandStack,
+    ) -> knx_store::project_history::StackRows {
+        let shared = stack.shared_snapshot_prefix(project, &self.stack, &self.project);
+        knx_store::project_history::StackRows {
+            undo: self.rows.undo[..shared.undo.min(self.rows.undo.len())].to_vec(),
+            redo: self.rows.redo[..shared.redo.min(self.rows.redo.len())].to_vec(),
+        }
+    }
 }
 
 fn durable_mutation<T>(

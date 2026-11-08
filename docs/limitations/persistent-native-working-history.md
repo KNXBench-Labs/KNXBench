@@ -45,6 +45,20 @@ payload and the cumulative decoded budget are each bounded to 4 GiB. The
 256-state and 256-version limits are unchanged, and admission still refuses
 rather than trims ([contract](../contracts/large-history-images.md)).
 
+## Journal write cost (ADR-0163, 8 November 2026; issue #35)
+
+A journal write no longer re-encodes or re-decodes undo states it proves
+unchanged, so its cost no longer grows with the number of undo steps. Measured on
+the dev machine (release build, 36-device demo project): 2.1 to 2.5 s per
+parameter write of a saved project with 48 to 56 undo states, formerly 6 to 16 s.
+What remains grows with the project: the saved baseline is hashed semantically
+twice, the working state and one new state are encoded, and the write still runs
+synchronously while holding the project lock, so other requests wait for it. The
+affected row says it is saving meanwhile. The server keeps a copy of the project
+and stack it last stored, so the history occupies memory about twice. An unsaved project does not journal
+(0.14 s on the same project). No figures exist for other machines, Docker volumes
+or larger projects.
+
 ## Save As archive boundary (Alpha 18 artifact verification, 29 October 2026)
 
 Saving As to a new native file constructs its history from the current normalized

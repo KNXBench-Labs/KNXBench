@@ -2184,6 +2184,7 @@ export const messages: Record<MessageKey, string> = {
   "parameters.conflictApply": "Meinen Wert übernehmen",
   "parameters.conflictDiscard": "Meinen Wert verwerfen",
   "parameters.noContextCaption": "Nur lesbar: Es gibt keinen aktuellen Projektstand, an den dieser Schreibvorgang gebunden werden kann.",
+  "parameters.savingCaption": "Wird gespeichert … das Feld ist wieder frei, sobald das Projekt die Änderung abgelegt hat.",
   "parameters.checked.open": "Geprüfter Editor",
   "parameters.checked.openHint": "Bearbeite diesen Wert mit Bereich und Einheit aus den Produktdaten",
   "parameters.checked.close": "Zurück zum einfachen Feld",

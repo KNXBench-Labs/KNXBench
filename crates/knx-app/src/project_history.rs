@@ -18,6 +18,22 @@ pub fn persist_working(
     history::save_editor(&conn, snapshot, stack, Some(generation), false).map_err(|e| e.to_string())
 }
 
+/// [`persist_working`] that keeps the bottom stack rows `reuse` names while
+/// their stored image hashes still match (`history::save_editor_reusing`).
+/// Returns the new generation and the hash of every stored stack row.
+pub fn persist_working_reusing(
+    path: &Path,
+    snapshot: &NativeSnapshot,
+    stack: &CommandStack,
+    generation: i64,
+    reuse: &history::StackRows,
+) -> Result<(i64, history::StackRows), String> {
+    let conn =
+        history::open_editor_store_trusting(path, false, reuse).map_err(|e| e.to_string())?;
+    history::save_editor_reusing(&conn, snapshot, stack, generation, reuse)
+        .map_err(|e| e.to_string())
+}
+
 pub fn save(
     path: &Path,
     snapshot: &NativeSnapshot,

@@ -4,13 +4,31 @@ from __future__ import annotations
 import json
 import copy
 from pathlib import Path
+import hashlib
 import subprocess
 import unittest
+from unittest import mock
 
-from tools import gate_scope
+from tools import gate_data_facts, gate_scope
 from tools.tests.test_gate_scope import Fixture, MEMBERS
 
 WEB = 'apps/knx-web/'
+
+# Planner-input fixtures: tiny source texts that merely mention the data file they read. They are
+# not compiled and prove nothing about the real xtask readers. Their digests are fixed literals,
+# computed once by tool, and stand in for the production pins only inside these tests.
+READER_FIXTURES = {
+    'xtask/src/appimage.rs': (
+        '// Planner input fixture, not product code.\nconst NPM_MANIFEST: &str = "apps/knx-web/package.json";\n',
+        '268b63f0639127becc05d96bbbb95bb87fb9d425aae1f3ee9761564e207e0353'),
+    'xtask/src/ledger.rs': (
+        '// Planner input fixture, not product code.\nconst LIMITATIONS: &str = "docs/KNOWN_LIMITATIONS.md";\n',
+        '8ece94a73d3021007478668eba459b1a314faa9c77616b14dfb861115e3b9dbc'),
+}
+FIXTURE_CONTRACTS = {
+    WEB + 'package.json': ('xtask/src/appimage.rs', READER_FIXTURES['xtask/src/appimage.rs'][1]),
+    'docs/KNOWN_LIMITATIONS.md': ('xtask/src/ledger.rs', READER_FIXTURES['xtask/src/ledger.rs'][1]),
+}
 
 
 class ProportionateGates(unittest.TestCase):
@@ -72,13 +90,39 @@ class ProportionateGates(unittest.TestCase):
         self.assertEqual(result.production_configs, ['dialogs', 'devices'])
 
     def readers(self):
-        source = Path(__file__).resolve().parents[2]
-        for name in ('appimage.rs', 'ledger.rs'):
-            self.write('xtask/src/' + name, (source / 'xtask/src' / name).read_text())
+        patcher = mock.patch.dict(gate_data_facts.READER_CONTRACTS, FIXTURE_CONTRACTS)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        for name, (text, _) in READER_FIXTURES.items():
+            self.write(name, text)
         self.write('docs/KNOWN_LIMITATIONS.md', '# Before')
         self.git('add', '.')
         self.git('commit', '-qm', 'reader base')
         self.git('update-ref', 'refs/remotes/origin/main', 'HEAD')
+
+    def test_reader_fixture_digests_are_the_literals_written_above(self):
+        for name, (text, digest) in READER_FIXTURES.items():
+            self.assertEqual(hashlib.sha256(text.encode()).hexdigest(), digest, name)
+
+    def test_fixture_contracts_are_scoped_to_the_test(self):
+        production = copy.deepcopy(gate_data_facts.READER_CONTRACTS)
+        self.readers()
+        for target, contract in FIXTURE_CONTRACTS.items():
+            self.assertEqual(gate_data_facts.READER_CONTRACTS[target], contract)
+        self.doCleanups()
+        self.assertEqual(gate_data_facts.READER_CONTRACTS, production)
+        self.assertNotEqual(production, FIXTURE_CONTRACTS)
+
+    def test_untrusted_reader_committed_into_the_baseline_still_selects_xtask(self):
+        self.readers()
+        path = self.root / 'xtask/src/appimage.rs'
+        path.write_text(path.read_text() + '// changed and already in the baseline\n')
+        self.git('add', '.')
+        self.git('commit', '-qm', 'untrusted reader in baseline')
+        self.git('update-ref', 'refs/remotes/origin/main', 'HEAD')
+        self.font()  # data-only change; the reader file itself is not in the diff
+        self.assertNotIn('xtask/src/appimage.rs', gate_scope.changed_paths(self.root, 'origin/main'))
+        self.assertIn('xtask', self.plan().rust_packages)
 
     def test_audited_version_projection_and_ledger_data_do_not_select_xtask(self):
         self.readers()

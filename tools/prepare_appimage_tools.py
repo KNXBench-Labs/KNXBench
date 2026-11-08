@@ -3,8 +3,8 @@
 Tauri CLI 2.11.4 reuses <cargo target_directory>/.tauri when
 bundle.useLocalToolsDir is true. Never patch the user's global tool cache.
 Two anchored changes only: the generated AppRun hook's forced X11 line is
-replaced, and the host-library policy is appended after the plugin's final
-step. GTK library/resource collection otherwise stays upstream-owned. See
+replaced, and the host-library and permission policies are appended after the
+plugin's final step. GTK library/resource collection otherwise stays upstream-owned. See
 docs/APPIMAGE_LAUNCHER.md.
 """
 
@@ -65,7 +65,9 @@ def patch_source(source: str) -> str:
     """Apply both owned policies to the verified upstream plugin text."""
     display = (ROOT / "tools/appimage/display-backend.sh").read_text(encoding="utf-8")
     libraries = (ROOT / "tools/appimage/host-libraries.sh").read_text(encoding="utf-8")
-    return append_host_library_policy(patch_plugin(source, display), libraries)
+    permissions = (ROOT / "tools/appimage/permissions.sh").read_text(encoding="utf-8")
+    appended = libraries.rstrip("\n") + "\n\n" + permissions
+    return append_host_library_policy(patch_plugin(source, display), appended)
 
 
 def atomic_write(path: Path, data: bytes, mode: int) -> None:

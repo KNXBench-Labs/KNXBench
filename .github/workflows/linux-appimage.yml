@@ -1,5 +1,7 @@
 name: Linux AppImage
 
+# AppImages are built at releases only: a version tag, or a deliberate manual dispatch to
+# prepare one. Never add branch pushes or pull_request triggers (xtask check-appimage).
 on:
   workflow_dispatch:
   push:
@@ -12,7 +14,8 @@ permissions:
 jobs:
   build:
     name: Build AppImage
-    runs-on: ubuntu-latest
+    # Keep the packaged glibc baseline stable when ubuntu-latest advances.
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
 
@@ -20,9 +23,11 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y \
+            binutils \
             build-essential \
             curl \
             file \
+            iproute2 \
             libayatana-appindicator3-dev \
             libgtk-3-dev \
             librsvg2-dev \
@@ -30,8 +35,12 @@ jobs:
             libwebkit2gtk-4.1-dev \
             patchelf \
             python3 \
+            squashfs-tools \
+            util-linux \
             wget \
             weston \
+            x11-apps \
+            x11-utils \
             xauth \
             xvfb
 
@@ -42,6 +51,29 @@ jobs:
 
       - name: Install Rust toolchain
         uses: actions-rust-lang/setup-rust-toolchain@v1
+
+      # The legacy browser download endpoint can return 504 after a costly compile.
+      # Fetch immutable API assets first, and verify bytes before making them executable.
+      - name: Prepare pinned AppImage tools
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p target/.tauri
+          fetch_tool() {
+            local asset="$1" digest="$2" name="$3"
+            local temporary="target/.tauri/$name.part"
+            gh api -H 'Accept: application/octet-stream' "$asset" > "$temporary"
+            printf '%s  %s\n' "$digest" "$temporary" | sha256sum --check
+            chmod 755 "$temporary"
+            mv "$temporary" "target/.tauri/$name"
+          }
+          fetch_tool repos/tauri-apps/binary-releases/releases/assets/274691722 \
+            f30140a43a0a59e46db21bdefdf749b9e9f2c6946e92afabbacf98b8ae73fb4f AppRun-x86_64
+          fetch_tool repos/tauri-apps/binary-releases/releases/assets/182515537 \
+            e762bea85c8eb0d4b3508d46e5c1f037f717d0f9303ae3b4aafc8b04991fa1ef linuxdeploy-x86_64.AppImage
+          fetch_tool repos/linuxdeploy/linuxdeploy-plugin-appimage/releases/assets/602435573 \
+            49d6a17160675a6bd1781699aae6bdf7692d98552e02a3671d2183d10547842e linuxdeploy-plugin-appimage.AppImage
 
       - name: Install Tauri CLI
         run: cargo install tauri-cli --version 2.11.4 --locked
@@ -54,7 +86,7 @@ jobs:
         run: node --input-type=module -e "await import('rolldown'); console.log('Rolldown native binding loaded')"
 
       - name: Test AppImage launcher policy
-        run: python3 -m unittest tools.tests.test_appimage_launcher tools.tests.test_appimage_frontend_binding -v
+        run: python3 -m unittest tools.tests.test_appimage_launcher tools.tests.test_appimage_frontend_binding tools.tests.test_appimage_glibc tools.tests.test_appimage_extraction -v
 
       - name: Build AppImage
         working-directory: apps/knx-desktop
@@ -64,6 +96,12 @@ jobs:
 
       - name: Verify host-provided libraries are not bundled
         run: tools/appimage/check-host-libraries.sh target/release/bundle/appimage/*.AppImage
+
+      - name: Verify finished AppImage permissions
+        run: tools/appimage/check-permissions.sh target/release/bundle/appimage/*.AppImage
+
+      - name: Verify AppImage glibc baseline
+        run: python3 tools/check_appimage_glibc.py target/release/bundle/appimage/*.AppImage --max-version 2.39
 
       - name: Validate tagged AppImage
         if: github.event_name == 'push' && github.ref_type == 'tag'
@@ -103,6 +141,19 @@ jobs:
           status=$?
           set -e
           test "$status" -eq 124 || { cat appimage-wayland.log; exit 1; }
+
+      # Image owner is the runner; the app runs as another uid, offline (loopback only), with a
+      # fresh private HOME/XDG, under Xvfb. The WebKit sandbox stays enabled.
+      - name: Smoke test AppImage as another user, offline
+        run: sudo python3 tools/appimage/smoke_cross_user.py target/release/bundle/appimage/*.AppImage
+
+      - name: Upload cross-user smoke evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: appimage-smoke-evidence
+          path: appimage-smoke/
+          if-no-files-found: ignore
 
       - name: Upload AppImage
         uses: actions/upload-artifact@v4

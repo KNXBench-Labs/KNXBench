@@ -16,7 +16,7 @@ with Alpha 20 cannot be opened with Alpha 19 any more (see [Upgrade](#upgrade)).
 |---|---|
 | Group addresses | Import ETS6 CSV exports, choose UTF-8 or Windows-1252, new **Description** field |
 | Bus connection | USB/serial TP-UART adapter on Linux, connection status in the status bar |
-| KNXnet/IP | TCP-PENDING-GLANCE |
+| KNXnet/IP | Optional TCP tunnelling for the bus monitor and group telegrams; UDP stays the default |
 | Downloads | More devices can be prepared: push-buttons, room controllers, property-based actuators, dimmers |
 | Communication objects | Priority shown, editable and filterable; saved folder names visible |
 | System-2 | A verified download keeps its "done" status after unrelated edits |
@@ -80,7 +80,27 @@ More: [Bus guide](../manual/user-guide/07-bus-and-interfaces.md#bus-connection-i
 
 ## KNXnet/IP TCP tunnelling (optional)
 
-TCP-PENDING: filled from WP-29's delivered commits or removed if TCP is deferred.
+Some KNXnet/IP interfaces also offer tunnelling over TCP. KNXBench can now use it,
+on request, for a first and deliberately small set of jobs:
+
+- **Bus monitor** in the web app and desktop, with group read/write from the same
+  session: choose **TCP (optional)** in the IP transport fields before connecting.
+- **Command line:** `knx bus monitor` and `knx bus write` with
+  `--tunnel-transport tcp`.
+
+**UDP stays the default**, and nothing switches to TCP on its own. If TCP is
+refused, KNXBench says so instead of quietly falling back to UDP; the session
+label shows the transport actually in use, not the one you wished for.
+Downloads, device management, scans, discovery and routing still use UDP.
+
+Worth knowing: TCP has no tunnelling acknowledgement, so "sent" means the network
+accepted the frame, not that a device on the bus acted on it. There is no
+automatic reconnect. Plain TCP is not KNX IP Secure. This was tested against
+local test peers, **not yet against a real KNX interface** — so it is
+TCP for the curious, not TCP for the commissioning deadline.
+[Guide](../manual/user-guide/07-bus-and-interfaces.md) ·
+[Command line](../manual/user-guide/10-command-line.md) ·
+[Contract](../contracts/tcp-tunnelling.md)
 
 ## Downloads
 
@@ -199,7 +219,8 @@ the app.
 - **Not verified:** the new download types, priorities, descriptions and System-2
   changes were not tested on real devices; *untested* means exactly that, not
   "probably fine". USB was
-  tested with one adapter and one firmware only. The new screens were not tested in
+  tested with one adapter and one firmware only. TCP tunnelling was not tested
+  with a real KNX interface. The new screens were not tested in
   the native desktop window (WebKitGTK/Tauri) or with screen readers. Going back
   from Alpha 20 to Alpha 19 is not tested; restore your copies instead.
 - CSV: files without a header, other encodings and clearing descriptions are not

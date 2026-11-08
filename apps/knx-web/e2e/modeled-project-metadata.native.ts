@@ -20,7 +20,7 @@ for(const language of ["en","de"] as const)for(const width of [400,1440]){
   const nativePath=join(process.env.KNX_METADATA_DATA_DIR!,filename);const original=await readFile(nativePath);
   page.on("pageerror",error=>errors.push(error.message));
   page.on("request",req=>{if(new URL(req.url()).pathname==="/api/project/metadata") {expect(req.method()).toBe("GET");reads++;}});
-  await page.route("**/api/bus/**",route=>{expect(new URL(route.request().url()).pathname).toBe("/api/bus/discover");return route.fulfill({status:200,contentType:"application/json",body:JSON.stringify({interfaces:[]})});});
+  await page.route("**/api/bus/**",route=>{const path=new URL(route.request().url()).pathname;if(path==="/api/bus/activity"){expect(route.request().method()).toBe("GET");return route.fulfill({status:200,contentType:"application/json",body:JSON.stringify({serverIncarnation:"fixture",coverage:"partial",historyState:"disabled",sessions:[],oneShot:[],oneShotDropped:0,busyLocks:[],untracked:[]})});}expect(path).toBe("/api/bus/discover");return route.fulfill({status:200,contentType:"application/json",body:JSON.stringify({interfaces:[]})});});
   await page.route("**/api/settings",route=>{expect(route.request().method()).toBe("GET");return route.fulfill({status:200,contentType:"application/json",body:JSON.stringify({schemaVersion:1,status:"ok",settings:{uiLanguage:language,theme:language==="en"?"graphite":"porcelain"}})});});
   await page.setViewportSize({width,height:900});await page.goto("/?view=editor");
   const panel=page.locator(".project-metadata-panel");await expect(panel).toBeVisible();expect(reads).toBe(0);

@@ -392,14 +392,13 @@ fn read_editor(
                 "unknown stack version or position gap",
             ));
         }
-        if matches!(read, StackRead::Admit(_)) {
-            if trusted_rows.contains(hash.as_str()) {
-                if image_hash(&image) != hash {
-                    return Err(HistoryError::Invalid("stack image hash mismatch"));
-                }
-                hashes.push(hash);
-                continue;
+        // Only admission trusts rows; `States` decodes all of them.
+        if trusted_rows.contains(hash.as_str()) {
+            if image_hash(&image) != hash {
+                return Err(HistoryError::Invalid("stack image hash mismatch"));
             }
+            hashes.push(hash);
+            continue;
         }
         let snapshot = context::attach(&image, &hash, &retained)?;
         if snapshot.project.info.project_id != working.project.info.project_id
@@ -519,12 +518,19 @@ impl Reuse<'static> {
     };
 }
 
+/// Stored working-image bytes whose state the writer knows.
+struct KnownWorkingImage<'a> {
+    project: &'a Project,
+    image: Vec<u8>,
+    hash: String,
+}
+
 /// The stored working image while it still holds the working model `trust`
 /// knows: the next stack row is usually that state, so its bytes serve as is.
 fn known_working_image<'a>(
     conn: &Connection,
     trust: &'a JournalTrust,
-) -> Result<Option<(&'a Project, Vec<u8>, String)>, HistoryError> {
+) -> Result<Option<KnownWorkingImage<'a>>, HistoryError> {
     let Some((project, hash)) = trust.working() else {
         return Ok(None);
     };
@@ -540,7 +546,11 @@ fn known_working_image<'a>(
             if image_hash(&image) != stored {
                 return Err(HistoryError::Invalid("working image hash mismatch"));
             }
-            Ok(Some((project, image, stored)))
+            Ok(Some(KnownWorkingImage {
+                project,
+                image,
+                hash: stored,
+            }))
         }
         _ => Ok(None),
     }
@@ -613,8 +623,8 @@ fn write_workspace(
                     knx_core::command::HistorySide::Redo => &mut rows.redo,
                 };
                 let (image, hash) = match &previous_working {
-                    Some((known, image, hash)) if *known == project => {
-                        (image.clone(), hash.clone())
+                    Some(known) if known.project == project => {
+                        (known.image.clone(), known.hash.clone())
                     }
                     _ => {
                         let image = context::model_image(project)?;

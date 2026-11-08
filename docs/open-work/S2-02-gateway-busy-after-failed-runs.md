@@ -2,7 +2,7 @@
 
 **Priority:** P1. **Status:** In progress: the own-run hint/refusal diagnostic
 slice ships in the published Alpha 17 (`v0.1.0-alpha.17`), so a reporter re-test
-can be requested; the actual reporter-side start failure remains unresolved.
+was requested on 8 November 2026; the actual reporter-side start failure remains unresolved.
 Listed in [OPEN_WORK](../OPEN_WORK.md). Origin: GitHub issue #30.
 
 ## Facts and unknowns (25 October 2026)
@@ -48,9 +48,12 @@ Diagnostic slice delivered in `aa2f39f1b` (main `a15b8f0eb`) and published in Al
 
 1. Review and exercise this diagnostic slice with synthetic software/loopback
    fixtures, including zero device access for pre-connect refusals.
-2. Published in Alpha 17: a new reporter attempt on `v0.1.0-alpha.17` can now be
-   requested. A prior build cannot expose the newly retained reason. Preserve the
-   original private journals; do not post them publicly.
+2. Published in Alpha 17. The reporter's later attempts on Alpha 17 source builds
+   started without a refusal (27 October, comment `6438334297`; 28 October,
+   comment `6468817418`), so the original start failure did not recur; its cause
+   stays unproven. A combined optional retest on a current `main` build was
+   requested on 8 November 2026 ([#30](https://github.com/KNXBench-Labs/KNXBench/issues/30#issuecomment-6718382084)). Preserve the original private
+   journals; do not post them publicly.
 3. Use the new reason to investigate the actual start failure. Shared-lock
    conflicts and failure to acquire the process lease currently share
    `gatewayBusy`, including lease-file/runtime I/O errors; the token alone does

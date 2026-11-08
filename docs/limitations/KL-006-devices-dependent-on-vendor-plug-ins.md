@@ -41,7 +41,9 @@ the local private product corpus (758 programs when measured), 7 programs
 are refused with `vendor-download-plugin`. The pinned coverage test there
 (`download_coverage_corpus.rs`) predates the corpus growth and still pins
 105 packages / 467 programs; it fails on its package count before this rule
-and was not re-pinned here.
+and was not re-pinned here. Owner decision 8 November 2026: the pins get a new
+documented characterisation baseline instead of the unattributable historical
+selection ([PRG-01](../open-work/PRG-01-programming-gaps.md#open)).
 
 **Still allowed.** Read-only `knx device compare` (CLI and server) and
 comparison adoption into the project use

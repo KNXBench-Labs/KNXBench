@@ -2,6 +2,8 @@
 
 **Status:** Blocked: evidence. Listed in [OPEN_WORK](../OPEN_WORK.md); per-ID status of record is the [ledger](../status/LEDGER.md).
 
+**Evidence route (8 November 2026):** clean-room observation is admitted by the owner ([OWN-01](OWN-01-owner-decisions.md#decisions-recorded--8-november-2026), [rules](../RESEARCH.md#evidence-routes)); no observation has been made for this package yet.
+
 ## Task
 
 Three separately claimable family packages (the exact UP258 application is

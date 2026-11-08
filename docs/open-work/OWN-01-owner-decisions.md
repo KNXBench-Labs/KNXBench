@@ -2,6 +2,45 @@
 
 **Status:** Decisions recorded; remaining evidence and owner review pending. Listed in [OPEN_WORK](../OPEN_WORK.md); per-ID status of record is the [ledger](../status/LEDGER.md).
 
+## Decisions recorded — 8 November 2026
+
+Owner answers to that day's list of open decisions. As before, none of them is
+blanket authority for bus or device writes, releases or deployments.
+
+- **Evidence by clean-room observation.** Evidence-gated work may use data the
+  project observes itself: ETS recorded against KNXBench's own simulator or
+  exporting fictional projects, the private local corpus, material a reporter
+  sent for an issue, and backups of the owner's own devices. Findings are
+  written in own words with their provenance; vendor code, product data,
+  private projects and raw captures stay out of Git. Rule:
+  [evidence routes](../RESEARCH.md#evidence-routes). This opens a route for
+  WP-05, WP-06, WP-07, WP-08, WP-09, WP-10 (IMPORT-02: such ETS exports count as
+  authorised exports) and WP-14; it is not itself evidence for any of them.
+- **Reporter field runs (#30/#22).** One optional System-2 attempt on a current
+  `main` build was requested ([#30](https://github.com/KNXBench-Labs/KNXBench/issues/30#issuecomment-6718382084), pointer in #22). It serves as the
+  S2-02 reporter retest and as the S2-05 field run of the `Download_Flag`
+  tolerance.
+- **WP-11 scope: the simplest complete target.** See
+  [acceptance target](WP-11-native-linux-acceptance.md#acceptance-target--owner-decision-8-november-2026).
+- **GATE-01:** the larger scheduler and the historical timeouts are reconsidered
+  only during release preparation.
+- **KL-006 coverage pins (PRG-01):** replace the unattributable historical
+  105-package selection with a new documented baseline (see
+  [PRG-01](PRG-01-programming-gaps.md#open)).
+- **Docker base-image rebuilds:** approved; implement before the first stable
+  release. Published version tags are not silently overwritten; how a rebuild is
+  published is settled in that package. The prerelease channel's name remains
+  open (proposal: `next`). Supersedes the 27 October deferral below.
+- **Public research summary:** publication approved once a separately authored
+  summary passes the confidentiality and provenance review. Originals stay
+  private.
+- **Private mailbox verification** is the owner's own action and is no longer
+  tracked here.
+
+Still open after this round: Docker signing approval, the website / Evolution
+Story privacy review copy, KL-186 plug-in acceptance, the WP-12 operation-specific
+hardware consents and the SmartSensor bootloader follow-up.
+
 ## Decisions recorded — 1 November 2026
 
 - OKX-05 passive Button labels: the cue wording "Source button label – action
@@ -67,17 +106,16 @@ live Docker Hub verification.
 
 ## Remaining evidence and owner review
 
-- WP-11 has a first bounded native slice; the remaining cells and missing
-  environments stay open, not accepted by consent alone.
+- WP-11 has a first bounded native slice; the cells of the 8 November
+  acceptance target stay open, not accepted by consent alone.
 - S2-03's invisible-parameter precedence was decided by the owner on 28 October
   2026 (defaults v3, observation-supported hypothesis); defining evidence is still
   absent. Other import/model and hardware evidence boundaries are unchanged.
 - Website / Evolution Story privacy acceptance requires a concrete review copy;
   no blanket privacy approval was given. Optional WebKit evidence remains open.
-- Private mailbox verification remains a separate external/owner action and was
-  not confirmed complete.
-- Any public research summary still needs confidentiality/provenance review and
-  explicit publication approval. The originals stay private.
+- A public research summary still needs its confidentiality/provenance review;
+  publication after that review was approved on 8 November 2026. The originals
+  stay private.
 
 ## Deferred by recorded decision (reopen only on a new decision)
 

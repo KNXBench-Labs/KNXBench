@@ -4,7 +4,10 @@ This local test harness requires **authorized ETS `.knxproj` exports** of two or
 more revisions of one project. It never reads ETS's live database or internal
 `.restorepoint` files. No authorized restore-point export set was supplied for
 this delivery; the real historical regression remains an external prerequisite.
-Public synthetic harness tests are not ETS evidence.
+Public synthetic harness tests are not ETS evidence. Since the owner decision of
+8 November 2026, ETS exports of fictional projects made by the project count as
+authorised exports ([evidence routes](RESEARCH.md#evidence-routes)); they stay
+private like any other export set.
 
 ## Private setup
 

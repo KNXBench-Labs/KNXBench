@@ -653,3 +653,54 @@ fn ga_import_of_a_real_change_against_a_readonly_store_reports_the_save_error() 
         "a save that failed must leave the store exactly as it was"
     );
 }
+
+#[test]
+fn ga_import_refuses_non_utf8_with_its_offset_and_reads_tab_name_address_files() {
+    let dir = tempfile::tempdir().unwrap();
+    let store = dir.path().join("project.knxdb");
+    write_store(&store);
+    let before = store_addresses(&store);
+
+    // A single-byte code page (0xFC is `ü` in Windows-1252) is refused, not guessed.
+    let legacy = dir.path().join("legacy.csv");
+    std::fs::write(
+        &legacy,
+        b"\"Group name\";\"Address\"\r\n\"K\xfcche\";\"1/1/4\"\r\n",
+    )
+    .unwrap();
+    let refused = run_cli(&[
+        "ga-import",
+        store.to_str().unwrap(),
+        legacy.to_str().unwrap(),
+    ]);
+    let stderr = String::from_utf8(refused.stderr).unwrap();
+    assert_eq!(refused.status.code(), Some(1), "{stderr}");
+    assert!(stderr.contains("not UTF-8 text"), "{stderr}");
+    assert!(stderr.contains("offset 26"), "{stderr}");
+    assert_eq!(store_addresses(&store), before);
+
+    // The same file as UTF-8 with tab separators imports through the name/address-only shape.
+    let tabbed = dir.path().join("tabbed.csv");
+    std::fs::write(
+        &tabbed,
+        "\"Main\"\t\"Middle\"\t\"Sub\"\t\"Address\"\r\n\
+         \"Floor\"\t\"\"\t\"\"\t\"1/-/-\"\r\n\
+         \"\"\t\"\"\t\"K\u{fc}che\"\t\"1/1/4\"\r\n",
+    )
+    .unwrap();
+    let imported = run_cli(&[
+        "ga-import",
+        store.to_str().unwrap(),
+        tabbed.to_str().unwrap(),
+    ]);
+    let stdout = String::from_utf8(imported.stdout).unwrap();
+    assert_eq!(imported.status.code(), Some(0), "{stdout}");
+    assert!(stdout.contains("1 created"), "{stdout}");
+    assert!(stdout.contains("warning: row 2"), "{stdout}");
+    let after = store_addresses(&store);
+    assert_eq!(after.len(), before.len() + 1);
+    assert!(
+        after.contains(&("1/1/4".to_string(), "K\u{fc}che".to_string())),
+        "{after:?}"
+    );
+}

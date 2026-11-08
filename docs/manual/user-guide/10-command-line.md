@@ -165,10 +165,12 @@ knx ga-import house.knxdb group-addresses.csv --dry-run
 ```
 
 Reads KNXBench's group-address CSV back into a project, or imports one of the
-four fixed [name/address column profiles](../../contracts/group-address-csv-profiles.md).
+eight fixed [name/address column profiles](../../contracts/group-address-csv-profiles.md).
 Since Alpha 18 those profiles are address-only: range rows and `Security=Auto` are explicitly
 reported as not imported; nonempty descriptions or other security values reject
 the whole file. DPT remains read-only. They do not change the native export format.
+The profiles' header rows match ETS6 6.4.1's group-address CSV exports; the file
+must be UTF-8, with `,`, `;` or tab as separator.
 `--dry-run` parses, plans and reports without writing anything.
 
 The output always ends with a line saying whether the project file was written, which

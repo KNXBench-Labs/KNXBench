@@ -8,17 +8,29 @@ updates supersede them; they are not new work assignments.
 
 ## Address-only column profiles
 
-The import adapter recognises four fixed ordered headers with either one name
+The import adapter recognises eight fixed ordered headers with either one name
 column or separate hierarchy-name columns, and either one address column or
-three numeric address components. See the exact
+three numeric address components, with or without the five metadata columns. See the exact
 [contract](../contracts/group-address-csv-profiles.md). This improves bounded
 spreadsheet exchange without changing the native CSV export or project schema.
 
 Range rows are explicitly reported and not applied. Nonempty descriptions and
 security tokens other than `Auto` refuse the entire import. `Auto` is reported
 as not imported; it never becomes a guessed security value. DPT is validated
-read-only, not assigned. Only three-level addresses and UTF-8 comma/semicolon
-files are admitted in these profiles. Native CSV behaviour is unchanged.
+read-only, not assigned. Only three-level addresses and UTF-8 files separated
+by comma, semicolon or tab are admitted.
+
+**Checked against real ETS output (8 November 2026).** ETS6 6.4.1 exports of a
+fictional project ([research](../research/2026-11-08-ets6-group-address-csv-export.md))
+have exactly these header rows. Of its 40 CSV variants, the unchanged files are
+all refused because ETS writes a single-byte code page, not UTF-8; the refusal
+now names the byte offset and asks for conversion instead of guessing a code
+page. After conversion, the twelve `CSV (ETS3 Format)` files with header import
+(tab included). Full `CSV` files are refused while any address has a
+description, and header-less files are refused by design. Still open: an
+explicit encoding choice, a group-address description in the project model, and
+assigning a datapoint type to new addresses — each changes what the import may
+write and needs its own decision.
 
 This is not full hierarchy/metadata roundtrip, a new external export format,
 ESF/OPC support or general application interoperability. The historical record

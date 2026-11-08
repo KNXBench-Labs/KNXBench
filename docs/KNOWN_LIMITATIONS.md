@@ -83,7 +83,7 @@ Whole-file response buffering is resolved by streaming. Export still creates a t
 ### 38. CSV interoperability
 
 **Ledger status:** `ACCEPTED_BOUNDARY` ([KL-38](status/LEDGER.md#snapshot-ids)).
-Native CSV v1 export is unchanged. Four fixed address-only import profiles report omitted ranges/security and refuse unsupported metadata; no general ETS/ESF interoperability or full hierarchy roundtrip is claimed.
+Native CSV v1 export is unchanged. Eight fixed address-only import profiles, whose headers match ETS6 6.4.1's CSV exports, report omitted ranges/security and refuse unsupported metadata and non-UTF-8 files; no general ETS/ESF interoperability or full hierarchy roundtrip is claimed.
 [Details and history](limitations/KL-038-csv-interoperability.md)
 
 <a id="catalogue-kl-039"></a>
@@ -107,7 +107,7 @@ DPT/group context is read-only; changed values are refused. The address-only pro
 ### 41. Spreadsheet transformations
 
 **Ledger status:** `ACCEPTED_BOUNDARY` ([KL-41](status/LEDGER.md#snapshot-ids)).
-Comma/semicolon separators are supported. Spreadsheet encoding changes or transformed address/boolean cells are not universally accommodated.
+Comma, semicolon and tab separators are supported. Spreadsheet encoding changes or transformed address/boolean cells are not universally accommodated.
 [Details and history](limitations/KL-041-spreadsheet-transformations.md)
 
 <a id="catalogue-kl-044"></a>

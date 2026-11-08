@@ -1009,7 +1009,10 @@ APPROVE; both maintained 14-stage gates passed (integrated Rust2,878,
 corpus91/91; frozen inputs and unchanged user data).
 [Acceptance and exclusions](status/2026-10-27-group-address-csv-profiles.md).
 
-The shared CSV reader accepts four fixed ordered name/address column profiles,
+The shared CSV reader accepts eight fixed ordered name/address column profiles
+(since 8 November 2026: the four name/address-only variants and tab separators,
+checked against real ETS6 6.4.1 exports, see
+[research](research/2026-11-08-ets6-group-address-csv-export.md)),
 including separate numeric address components and positional duplicate headers.
 The address-only adapter reports range rows as omitted, refuses nonempty
 Description and unsupported Security values atomically, and validates DPT

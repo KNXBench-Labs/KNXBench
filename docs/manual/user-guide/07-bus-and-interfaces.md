@@ -56,8 +56,10 @@ things because they are.
 
 **Tunneling** is a point-to-point conversation with one interface. You connect to a
 host and port, the interface hands your session its own individual address, and it
-forwards telegrams in both directions. It works across normal switched networks, and
-it is confirmed: the interface tells you whether your frame made it.
+forwards telegrams in both directions. UDP acknowledges receipt of a tunnelling
+request; that acknowledgement is not proof a physical device acted. Optional TCP
+uses a reliable stream instead of that tunnelling ACK, so a successful socket
+write likewise does not confirm delivery or execution on the KNX bus.
 
 **Routing** is multicast. Frames go to a group address on the network and every KNX
 IP router listening there picks them up. Nothing confirms anything. It needs a network
@@ -70,7 +72,7 @@ through `knx bus route-monitor` and `knx bus route-send`, both described in
 ## Connecting the bus monitor
 
 Open **Bus monitor** from the navigation sidebar. Enter the interface's numeric
-IPv4 address in **Gateway host** and its UDP port in **Gateway port** (3671 by
+IPv4 address in **Gateway host** and its control port in **Gateway port** (3671 by
 default), then press **Connect**. A blank port uses 3671; a port outside 1–65535
 is rejected before any connection. This tunnel currently accepts IPv4 only:
 hostnames and IPv6 addresses remain visible if they were saved previously, but
@@ -88,14 +90,33 @@ reports that it could not run. KNXBench runs that read-only search once on its o
 the application starts, and again when you press **Search**; it only lists what
 answers and never connects by itself.
 
-Notice the eyebrow above the title: *KNXnet/IP · Tunnelling*. That is the panel
-telling you which transport it uses, and it is the only one it offers. The telegram
-table below is empty because no session is running yet.
+Notice the eyebrow above the title: *KNXnet/IP · Tunnelling*. The screenshot
+shows the released monitor before the optional TCP selector. The telegram table
+is empty because no session is running yet.
 
 While a session runs, both gateway fields are locked — KNXBench tells you to
 *"Disconnect the running session before changing the gateway address."* Once connected, the panel
 shows `Session <id>`, followed by the individual address the interface assigned to
 your session.
+
+### Optional TCP (source candidate, 8 November 2026)
+
+The source candidate offers UDP (the unchanged default) or TCP in the existing
+IP transport fields. Choose it before connecting; selecting or saving a choice
+does not connect. The running-session label uses observed transport rather than
+the saved preference. A server without the strict TCP start route refuses the
+request; KNXBench does not retry it as UDP.
+
+This selection covers only monitoring and the same session's bound group
+read/write actions. Device programming, downloads, scans, discovery and routing
+do not follow it and retain their existing UDP paths. TCP has no tunnelling ACK:
+a successful send reports local socket acceptance, not device delivery. Skipped
+TCP frames are accounted separately from buffered telegram drops; an unknown
+service is not automatically a lost telegram. Plain TCP is not KNX IP Secure.
+
+[Contract and acceptance boundary](../../contracts/tcp-tunnelling.md): correction
+review and integrated acceptance are pending, and real-gateway interoperability
+has not been verified. The published screenshot above has not been replaced.
 
 ## What the monitor shows
 

@@ -47,6 +47,8 @@ pub enum TunnelHolder {
         gateway: Option<String>,
         #[serde(skip_serializing_if = "Option::is_none")]
         serial: Option<crate::bus_serial::SerialTarget>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        transport: Option<&'static str>,
         state: &'static str,
     },
     LineScan {
@@ -155,6 +157,11 @@ pub fn monitor_holder_of(session: &BusSession) -> TunnelHolder {
         session_id: session.id(),
         gateway: session.gateway().map(|gateway| gateway.to_string()),
         serial: session.serial().cloned(),
+        // Named only for TCP: the UDP holder keeps its long-pinned shape.
+        transport: session
+            .transport()
+            .filter(|transport| *transport == knx_net::TunnelTransport::Tcp)
+            .map(knx_net::TunnelTransport::as_str),
         state: match session.status() {
             SessionStatus::Active => "active",
             SessionStatus::Closed => "closed",

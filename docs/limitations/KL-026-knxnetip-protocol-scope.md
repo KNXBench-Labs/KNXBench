@@ -55,3 +55,16 @@ deferred, documented as a limitation, not rejected — applies here too; this
 2026-09-06 shelving decision and T19's ruling stand together, not as two
 separate calls.
 <!-- END retained catalogue record -->
+
+## 8 November 2026 — optional plain TCP candidate
+
+The bounded [TCP contract](../contracts/tcp-tunnelling.md) covers explicit library,
+CLI monitor/write and server/Web monitor/group-traffic selection, with UDP still
+the default. Source implementation is in correction review; integrated acceptance
+and publication are not yet established. Device programming, scans and other
+existing device workflows remain UDP-only. Discovery/routing scope and KNX IP
+Secure are not widened, and no real-gateway TCP interoperability is inferred.
+The [source review](../research/2026-11-08-knxnet-ip-tcp-tunnelling.md) distinguishes
+specified timers from local budgets, no-ACK TCP sending from actual device
+delivery, and frame draining from loss accounting. [WP-29](../open-work/WP-29-knxnet-ip-tcp-tunnelling.md)
+remains open beyond the bounded monitor/group-traffic slice.

@@ -195,7 +195,7 @@ export default function BusComposeForm({
       // canonical `/` form (`gaNotation.ts`). Anything that is not a
       // level-style address goes through untouched, so the server's own
       // validation names what the user actually typed.
-      const response = session.kind === "serial"
+      const response = session.kind === "serial" || session.kind === "tcp"
         ? await api.writeBoundBusValue(session.identity, canonicalGroupAddress(destination), dptToSend, value, inputFormat)
         : await api.writeBusValue(canonicalGroupAddress(destination), dptToSend, value, inputFormat);
       setSent(response);
@@ -333,6 +333,7 @@ export default function BusComposeForm({
       <p id="bus-compose-dpt-hint" className="bus-compose-hint">{t("busCompose.dptSelectionHint")}</p>
       {readSent && <p role="status">{t("busTransport.readSent")}</p>}
       {sendError && <span className="field-error bus-compose-error">{sendError}</span>}
+      {sent && sent.transport === "tcp" && <p role="note">{t("busTransport.ipTunnel.sendNote")}</p>}
       {sent && (
         <p className="bus-compose-sent">
           {t("busCompose.sent", { service: sent.service, payload: sent.encodedPayload })}

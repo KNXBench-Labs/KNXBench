@@ -158,6 +158,7 @@ fn prepared(target: IndividualAddress, plan: MemoryDownloadPlan) -> PreparedDown
             inferences: vec![],
             parameter_fields: vec![],
             table_writes: vec![],
+            properties: Vec::new(),
         },
         plan,
         inferences: vec![],

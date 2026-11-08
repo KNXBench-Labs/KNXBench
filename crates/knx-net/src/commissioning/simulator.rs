@@ -955,6 +955,14 @@ pub struct SimulatedSystem2Snapshot {
     pub properties: BTreeMap<(u8, u8), Vec<u8>>,
 }
 
+/// One property read and written element by element.
+#[derive(Debug, Clone)]
+struct ElementProperty {
+    width: usize,
+    max: u16,
+    octets: Vec<u8>,
+}
+
 #[derive(Debug)]
 struct State {
     /// Where the simulated device currently lives. Starts at
@@ -1035,6 +1043,12 @@ struct State {
     mcb: HashMap<u8, Vec<u8>>,
     properties: HashMap<(u8, u8), Vec<u8>>,
     descriptions: HashMap<(u8, u8), (u8, [u8; 4])>,
+    /// Properties read and written element by element
+    /// ([`SimulatedDevice::preset_element_property`]).
+    element_properties: HashMap<(u8, u8), ElementProperty>,
+    /// Return codes a function property answers with
+    /// ([`SimulatedDevice::preset_function_return`]).
+    function_returns: HashMap<(u8, u8), u8>,
     memory: HashMap<u32, u8>,
     seen: Vec<Seen>,
     /// Where [`SimulatorConfig::serial_number_holder`] currently stands.
@@ -1169,6 +1183,8 @@ impl SimulatedDevice {
             allocation_attempts: HashMap::new(),
             mcb: HashMap::new(),
             descriptions: HashMap::new(),
+            element_properties: HashMap::new(),
+            function_returns: HashMap::new(),
             properties,
             memory,
             seen: Vec::new(),
@@ -1243,6 +1259,108 @@ impl SimulatedDevice {
         self.lock()
             .descriptions
             .insert((object_index, property_id), (response_index, raw));
+    }
+
+    /// Makes property `object_index`/`property_id` an array of `width`-octet
+    /// elements holding `data`, at most `max` of them. `[D]` AL §3.4.4
+    /// (A_PropertyValue_Read/Write): element 0 is the current number of
+    /// elements, two octets, high first; elements from 1 hold the value; a
+    /// request beyond what exists or fits is answered with `nr_of_elem = 0`.
+    /// Opt-in: every other property keeps the whole-value model.
+    pub fn preset_element_property(
+        &self,
+        object_index: u8,
+        property_id: u8,
+        width: usize,
+        max: u16,
+        data: &[u8],
+    ) {
+        assert!(
+            width > 0 && data.len().is_multiple_of(width),
+            "whole elements"
+        );
+        self.lock().element_properties.insert(
+            (object_index, property_id),
+            ElementProperty {
+                width,
+                max,
+                octets: data.to_vec(),
+            },
+        );
+    }
+
+    /// Makes every function property command and state read of
+    /// `object_index`/`property_id` answer `return_code`, with no data.
+    pub fn preset_function_return(&self, object_index: u8, property_id: u8, return_code: u8) {
+        self.lock()
+            .function_returns
+            .insert((object_index, property_id), return_code);
+    }
+
+    /// The elements of an element property, if it is one.
+    pub fn element_property(&self, object_index: u8, property_id: u8) -> Option<Vec<u8>> {
+        self.lock()
+            .element_properties
+            .get(&(object_index, property_id))
+            .map(|property| property.octets.clone())
+    }
+
+    /// The answer to a read of an element property: `None` when the
+    /// property is not one, otherwise `(nr_of_elem, data)`.
+    fn element_read(&self, key: (u8, u8), count: u8, start: u16) -> Option<(u8, Vec<u8>)> {
+        let state = self.lock();
+        let property = state.element_properties.get(&key)?;
+        let current = property.octets.len() / property.width;
+        let (count, start) = (usize::from(count), usize::from(start));
+        Some(match start {
+            0 if count == 1 => (1, (current as u16).to_be_bytes().to_vec()),
+            first if first >= 1 && count >= 1 && first + count - 1 <= current => {
+                let from = (first - 1) * property.width;
+                let octets = property.octets[from..from + count * property.width].to_vec();
+                (count as u8, octets)
+            }
+            _ => (0, Vec::new()),
+        })
+    }
+
+    /// The answer to a write of an element property, as [`Self::element_read`].
+    /// Writing past the current count extends it up to `max`, zero-filled.
+    fn element_write(
+        &self,
+        key: (u8, u8),
+        count: u8,
+        start: u16,
+        data: &[u8],
+    ) -> Option<(u8, Vec<u8>)> {
+        let writable = self.may_write();
+        let mut state = self.lock();
+        let property = state.element_properties.get_mut(&key)?;
+        let (count, start) = (usize::from(count), usize::from(start));
+        let width = property.width;
+        let refused = Some((0, Vec::new()));
+        if !writable || count == 0 {
+            return refused;
+        }
+        if start == 0 {
+            let Ok(octets) = <[u8; 2]>::try_from(data) else {
+                return refused;
+            };
+            let wanted = u16::from_be_bytes(octets);
+            if count != 1 || wanted > property.max {
+                return refused;
+            }
+            property.octets.resize(usize::from(wanted) * width, 0);
+            return Some((1, octets.to_vec()));
+        }
+        let last = start + count - 1;
+        if data.len() != count * width || last > usize::from(property.max) {
+            return refused;
+        }
+        if property.octets.len() < last * width {
+            property.octets.resize(last * width, 0);
+        }
+        property.octets[(start - 1) * width..last * width].copy_from_slice(data);
+        Some((count as u8, data.to_vec()))
     }
 
     /// Puts a Memory Control Block in place for one object, so that a
@@ -2487,6 +2605,18 @@ impl SimulatedDevice {
                 nr_of_elem,
                 start_index,
             } => {
+                if let Some((nr_of_elem, data)) =
+                    self.element_read((object_index, property_id), nr_of_elem, start_index)
+                {
+                    self.emit_answer(ApplicationService::PropertyValueResponse {
+                        object_index,
+                        property_id,
+                        nr_of_elem,
+                        start_index,
+                        data,
+                    });
+                    return;
+                }
                 let fault_reads = self.lock().fault_reads;
                 let data = self.property_read(object_index, property_id);
                 let (nr_of_elem, data) = match data {
@@ -2525,6 +2655,18 @@ impl SimulatedDevice {
                 start_index,
                 data,
             } => {
+                if let Some((nr_of_elem, data)) =
+                    self.element_write((object_index, property_id), nr_of_elem, start_index, &data)
+                {
+                    self.emit_answer(ApplicationService::PropertyValueResponse {
+                        object_index,
+                        property_id,
+                        nr_of_elem,
+                        start_index,
+                        data,
+                    });
+                    return;
+                }
                 let answer = self.property_write(object_index, property_id, &data);
                 let (nr_of_elem, data) = match answer {
                     Some(read_back) => (nr_of_elem.max(1), read_back),
@@ -2760,6 +2902,13 @@ impl SimulatedDevice {
         command: bool,
     ) -> (Option<u8>, Vec<u8>) {
         use knx_core::commissioning::rf_configuration::{PID_OBJECTLINK, PID_PARAMETER};
+        if let Some(code) = self
+            .lock()
+            .function_returns
+            .get(&(object_index, property_id))
+        {
+            return (Some(*code), Vec::new());
+        }
         if object_index != 0 || !self.config.rf_function_properties {
             return (None, Vec::new());
         }

@@ -99,6 +99,24 @@ pub fn attempted_parts(
                 parts
             }
             Step::WriteMemory { .. } => active.unwrap_or(scheduled),
+            // Parameters placed in properties, and a master reset, which
+            // erases parameters (erase code 5) or links (6): both may leave
+            // the device's parameters and group links in another state.
+            Step::WritePropertyParameters { .. } => {
+                active = None;
+                ProgrammingParts {
+                    parameters: true,
+                    ..ProgrammingParts::NONE
+                }
+            }
+            Step::MasterResetCommand { .. } => {
+                active = None;
+                ProgrammingParts {
+                    parameters: true,
+                    group_addresses: true,
+                    ..ProgrammingParts::NONE
+                }
+            }
             // A product's fixed property write programs no part itself.
             Step::Connect
             | Step::CompareProperty { .. }

@@ -516,6 +516,35 @@ fn context(code: &ProgramCode) -> Context {
                     a.insert("inlineOctets", data.len() as u32);
                     "write-property-values-withheld"
                 }
+                LoadStep::MasterReset {
+                    erase_code,
+                    channel,
+                } => {
+                    a.insert("eraseCode", (*erase_code).into());
+                    a.insert("channel", (*channel).into());
+                    "master-reset"
+                }
+                LoadStep::DeclarePropDesc {
+                    object_index,
+                    property_id,
+                    max_elements,
+                    ..
+                } => {
+                    a.insert("objectIndex", (*object_index).into());
+                    a.insert("propertyId", (*property_id).into());
+                    a.insert("maxElements", (*max_elements).into());
+                    "declare-property-description"
+                }
+                LoadStep::WriteParameterProp {
+                    object_index,
+                    property_id,
+                    count,
+                } => {
+                    a.insert("objectIndex", (*object_index).into());
+                    a.insert("propertyId", (*property_id).into());
+                    a.insert("count", (*count).into());
+                    "write-property-parameters"
+                }
                 LoadStep::Unmodelled { .. } => {
                     omitted += 1;
                     "unsupported-source-step-withheld"

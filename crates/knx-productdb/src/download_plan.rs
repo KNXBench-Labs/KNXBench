@@ -44,6 +44,9 @@ use crate::code::{CustomerAdjustableCounts, LoadStep, ProgramCode};
 use crate::image::DownloadImage;
 use crate::inference::Inference;
 
+mod property_steps;
+pub use property_steps::MASTER_RESET_AS_FUNCTION_PROPERTY;
+
 /// Apply write-only proof to an already validated regular plan; source masks stay untouched.
 /// Callers must first run the existing image and complete-plan validation. Never refuses:
 /// only bytes proved exclusively inactive are omitted; every other byte is written as before.
@@ -178,6 +181,22 @@ pub enum DownloadPlanError {
     VendorDownloadPlugin(String),
     /// Presence-only conservative regular-write refusal; no source payload is exposed.
     CustomerAdjustableParameters(CustomerAdjustableCounts),
+    /// An `LdCtrlMasterReset` with no observed translation (ADR-0161).
+    MasterReset {
+        /// `EraseCode`.
+        erase_code: u8,
+        /// `ChannelNumber`.
+        channel: u8,
+    },
+    /// A property's parameters cannot be written as observed (ADR-0161).
+    PropertyParameters {
+        /// `ObjIdx`.
+        object_index: u8,
+        /// `PropId`.
+        property_id: u8,
+        /// Why.
+        reason: String,
+    },
 }
 
 impl std::error::Error for DownloadPlanError {}
@@ -252,6 +271,19 @@ impl fmt::Display for DownloadPlanError {
                 counts.total(), counts.root_parameters, counts.root_union_parameters,
                 counts.module_parameters, counts.module_union_parameters, counts.root_options
             ),
+            DownloadPlanError::MasterReset {
+                erase_code,
+                channel,
+            } => write!(
+                f,
+                "LdCtrlMasterReset EraseCode={erase_code} ChannelNumber={channel} has no \
+                 observed translation; only erase codes 5 and 6 on channel 0 of mask 0701h do"
+            ),
+            DownloadPlanError::PropertyParameters {
+                object_index,
+                property_id,
+                reason,
+            } => write!(f, "property {object_index}/{property_id}: {reason}"),
             DownloadPlanError::VendorDownloadPlugin(plugin) => write!(
                 f,
                 "the application program declares the ETS download plug-in {plugin}, which writes \
@@ -395,6 +427,7 @@ pub fn plan_memory_download_with_inferences(
     let mut steps = Vec::new();
     let mut allocated = BTreeSet::new();
     let mut restarted = false;
+    let mut properties = property_steps::PropertySteps::new(image, mask);
     for step in &procedure.steps {
         match step {
             // `[D]` Cookbook *Load Controls* (`02_03_01` v01.00.02) §2.3: a
@@ -452,6 +485,23 @@ pub fn plan_memory_download_with_inferences(
                 property_id: *property_id,
                 inline_data: data.clone(),
             }),
+            LoadStep::MasterReset {
+                erase_code,
+                channel,
+            } => steps.push(properties.master_reset(*erase_code, *channel, &mut inferences)?),
+            // Sends nothing: the next parameter-filled write relies on it.
+            LoadStep::DeclarePropDesc {
+                object_index,
+                property_id,
+                property_type,
+                writable,
+                ..
+            } => properties.declare(*object_index, *property_id, property_type, *writable)?,
+            LoadStep::WriteParameterProp {
+                object_index,
+                property_id,
+                count,
+            } => steps.push(properties.write(*object_index, *property_id, *count)?),
             LoadStep::Unload { lsm } => steps.push(event(*lsm, LoadEvent::Unload)?),
             LoadStep::Load { lsm } => steps.push(event(*lsm, LoadEvent::StartLoading)?),
             LoadStep::LoadCompleted { lsm } => steps.push(event(*lsm, LoadEvent::LoadCompleted)?),
@@ -537,6 +587,7 @@ pub fn plan_memory_download_with_inferences(
         }
     }
 
+    properties.finish()?;
     for segment in &image.segments {
         let address = u16::try_from(segment.address)
             .map_err(|_| DownloadPlanError::Address(segment.address))?;
@@ -848,6 +899,7 @@ mod tests {
             inferences: Vec::new(),
             parameter_fields: Vec::new(),
             table_writes: Vec::new(),
+            properties: Vec::new(),
         }
     }
 
@@ -1005,6 +1057,139 @@ mod tests {
 
     /// A comparison behind a leading property write runs first; a write
     /// later in the procedure stays where it is.
+    /// [`image`] with the steps ETS 6.4 was observed with for a property
+    /// program (ADR-0161) inserted after the comparison, and one property
+    /// carrying parameters.
+    fn property_image(steps: Vec<LoadStep>) -> DownloadImage {
+        let mut image = image();
+        let procedure = &mut image.code.load_procedures[0].steps;
+        for (offset, step) in steps.into_iter().enumerate() {
+            procedure.insert(2 + offset, step);
+        }
+        image.properties = vec![crate::image::property::PropertyImage {
+            object_index: 8,
+            property_id: 52,
+            octets: vec![0x01, 0x78, 0x00],
+            owned: vec![0x01, 0xFF, 0xFF],
+        }];
+        image
+    }
+
+    fn declare(property_type: &str) -> LoadStep {
+        LoadStep::DeclarePropDesc {
+            object_index: 8,
+            property_id: 52,
+            property_type: property_type.into(),
+            max_elements: 4,
+            read_access: 0,
+            write_access: 0,
+            writable: true,
+        }
+    }
+
+    fn write_parameters(count: u16) -> LoadStep {
+        LoadStep::WriteParameterProp {
+            object_index: 8,
+            property_id: 52,
+            count,
+        }
+    }
+
+    #[test]
+    fn master_resets_and_parameter_properties_become_the_observed_commands() {
+        let image = property_image(vec![
+            LoadStep::MasterReset {
+                erase_code: 6,
+                channel: 0,
+            },
+            LoadStep::MasterReset {
+                erase_code: 5,
+                channel: 0,
+            },
+            declare("PDT_UNSIGNED_CHAR"),
+            write_parameters(5),
+        ]);
+        let (plan, inferences) = plan_memory_download_with_inferences(&image).unwrap();
+        assert_eq!(
+            plan.steps[2..5],
+            [
+                MemoryDownloadStep::MasterResetCommand {
+                    erase_code: 6,
+                    object_index: 5,
+                    property_id: 52,
+                    command: 0x04,
+                },
+                MemoryDownloadStep::MasterResetCommand {
+                    erase_code: 5,
+                    object_index: 5,
+                    property_id: 52,
+                    command: 0x10,
+                },
+                // `Count` elements, the image zero-padded and owning nothing past it.
+                MemoryDownloadStep::WritePropertyParameters {
+                    object_index: 8,
+                    property_id: 52,
+                    elements: 5,
+                    octets: vec![0x01, 0x78, 0x00, 0x00, 0x00],
+                    owned: vec![0x01, 0xFF, 0xFF, 0x00, 0x00],
+                },
+            ]
+        );
+        assert_eq!(
+            inferences
+                .iter()
+                .filter(|inference| inference.rule == MASTER_RESET_AS_FUNCTION_PROPERTY)
+                .count(),
+            2
+        );
+    }
+
+    #[test]
+    fn property_steps_without_an_observed_translation_are_refused_by_name() {
+        let refused = |steps: Vec<LoadStep>| {
+            plan_memory_download(&property_image(steps)).expect_err("refused")
+        };
+        for (erase_code, channel) in [(1, 0), (7, 0), (5, 1)] {
+            assert_eq!(
+                refused(vec![LoadStep::MasterReset {
+                    erase_code,
+                    channel
+                }]),
+                DownloadPlanError::MasterReset {
+                    erase_code,
+                    channel
+                }
+            );
+        }
+        let reason = |error: DownloadPlanError| match error {
+            DownloadPlanError::PropertyParameters { reason, .. } => reason,
+            other => panic!("{other:?}"),
+        };
+        assert!(reason(refused(vec![
+            declare("PDT_UNSIGNED_INT"),
+            write_parameters(3)
+        ]))
+        .contains("PDT_UNSIGNED_INT"));
+        assert!(reason(refused(vec![write_parameters(3)])).contains("without a declared"));
+        assert!(reason(refused(vec![
+            declare("PDT_UNSIGNED_CHAR"),
+            write_parameters(2)
+        ]))
+        .contains("past the elements"));
+        assert!(reason(refused(vec![declare("PDT_UNSIGNED_CHAR")])).contains("never writes"));
+        // Another mask has no observed mapping either.
+        let mut other_mask = property_image(vec![LoadStep::MasterReset {
+            erase_code: 6,
+            channel: 0,
+        }]);
+        other_mask.code.mask_version = Some("MV-0705".into());
+        other_mask.properties.clear();
+        assert!(matches!(
+            plan_memory_download(&other_mask),
+            Err(DownloadPlanError::MasterReset { .. })
+        ));
+    }
+
     #[test]
     fn a_comparison_behind_a_leading_property_write_runs_before_it() {
         let mut image = image();

@@ -754,6 +754,23 @@ is the remaining copy defect.
   download tab's **Before you write** box). Check multi-octet values after such a
   download, and report what you saw from **Help verify this device**.
 
+### Devices with parameters in properties download untested
+
+- **Affected:** mask-`0701h` devices whose program keeps its parameters in
+  interface-object properties and resets the device first (some Hager and
+  Berker switch, blind and push-button actuators).
+- **Changed on main (8 November 2026):** they plan and download as ETS 6.4
+  sends them to a simulator (ADR-0161): the master reset as a function property
+  command, the parameters merged bit by bit into what the device holds.
+- **Limitation:** no real device has confirmed this yet, so the download asks
+  for `--accept-untested`. A backup does not hold property values, so such a
+  download cannot be restored from a backup, and no partial download is offered.
+  Programs with other property-write shapes, erase codes or `Time` parameters are
+  still refused; readiness says why.
+- **Consequence:** keep the ETS project of such a device until a KNXBench
+  download has been checked on the device.
+- **Details:** [research](../research/2026-11-08-property-placed-parameters.md)
+
 ### Stopping the server is not a safe cancellation of a device write
 
 - **Affected:** server/container shutdown during commissioning.

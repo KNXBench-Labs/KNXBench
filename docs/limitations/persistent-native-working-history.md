@@ -45,19 +45,29 @@ payload and the cumulative decoded budget are each bounded to 4 GiB. The
 256-state and 256-version limits are unchanged, and admission still refuses
 rather than trims ([contract](../contracts/large-history-images.md)).
 
-## Journal write cost (ADR-0163, 8 November 2026; issue #35)
+## Journal write cost (ADR-0163 and ADR-0165, 8 November 2026; issue #35)
 
 A journal write no longer re-encodes or re-decodes undo states it proves
-unchanged, so its cost no longer grows with the number of undo steps. Measured on
-the dev machine (release build, 36-device demo project): 2.1 to 2.5 s per
-parameter write of a saved project with 48 to 56 undo states, formerly 6 to 16 s.
-What remains grows with the project: the saved baseline is hashed semantically
-twice, the working state and one new state are encoded, and the write still runs
-synchronously while holding the project lock, so other requests wait for it. The
-affected row says it is saving meanwhile. The server keeps a copy of the project
-and stack it last stored, so the history occupies memory about twice. An unsaved project does not journal
-(0.14 s on the same project). No figures exist for other machines, Docker volumes
-or larger projects.
+unchanged, so its cost no longer grows with the number of undo steps
+([ADR-0163](../adr/0163-journal-writes-keep-unchanged-undo-rows.md)). Nor does it
+re-derive the retained source context or the saved baseline it verified at its
+last write or at open, or re-encode the previous working state as the new undo
+state ([ADR-0165](../adr/0165-journal-writes-trust-the-verified-context.md)).
+Measured on the dev machine (release build): 2.1 to 2.5 s per parameter write of
+a 36-device demo project with 48 to 56 undo states, formerly 6 to 16 s; on a
+308 MB file from a large real ETS import (141 MB retained context) 3.9 to 5.5 s
+before ADR-0165 and median 1.5 s (1.47 to 1.76 s) without saved versions and 1.8 s (1.67 to 2.30 s) with 10 named versions, against 4.0 s and 4.9 s for the previous build in the same interleaved run afterwards.
+
+What remains grows with the project: two admissions each read the saved baseline
+and hash the stored context bytes and every reused row, the new working state is
+encoded, and the write still runs synchronously while holding the project lock,
+so other requests wait for it. The affected row says it is saving meanwhile. A
+write after another writer changed the file (Save, restore, Clear undo, another
+process) decodes and encodes again what changed. The server keeps a copy of the
+project and stack it last stored, so the history occupies memory about twice, plus
+a copy of the retained context and the baseline model (about 134 MB for the file
+above). An unsaved project does not journal (0.14 s on the demo project). No
+figures exist for other machines or Docker volumes.
 
 ## Save As archive boundary (Alpha 18 artifact verification, 29 October 2026)
 

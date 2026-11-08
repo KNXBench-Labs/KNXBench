@@ -41,6 +41,12 @@ encoded again. A row whose stored content changed is rewritten, and opening a
 file still decodes everything. Contract items 1 to 8 are unchanged; within one
 build a reopened incremental file equals a fully rewritten one, row for row.
 
+[ADR-0165](adr/0165-journal-writes-trust-the-verified-context.md) extends the claim
+to the retained context, the saved baseline and the stored working state: each is
+checked by stored-byte SHA-256 or value equality instead of being decoded, encoded
+or hashed again, and anything another writer changed is derived afresh. No format
+change.
+
 ## Contract
 
 1. Once a project has a native save location, successful reversible commands,

@@ -560,7 +560,9 @@ Without `--dry-run` the default UDP command connects, sends a group-value write,
 disconnects and prints `wrote to 1/2/3`. Its tunnelling ACK is not physical device
 confirmation; a transport failure is reported rather than assumed away.
 
-### Optional TCP (source candidate, 8 November 2026)
+<a id="optional-tcp-source-candidate-8-november-2026"></a>
+
+### Optional TCP (since Alpha 20)
 
 For `bus monitor` and `bus write`, `--tunnel-transport tcp` explicitly selects
 plain TCP; `udp` is the default. It never falls back to UDP after a refusal.
@@ -580,7 +582,7 @@ reconnect or replay is performed. Plain TCP is not KNX IP Secure.
 
 The [bounded contract](../../contracts/tcp-tunnelling.md) passed independent review
 and the selected software package gate ([record](../../status/2026-11-08-optional-tcp-tunnelling.md)).
-It is main-only; real-gateway interoperability is not claimed.
+It ships in Alpha 20; real-gateway interoperability is not claimed.
 The examples remain subject to the installation-access warning above.
 
 

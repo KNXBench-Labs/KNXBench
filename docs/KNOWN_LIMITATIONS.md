@@ -420,7 +420,7 @@ Previously unreported attributes are now retained/reported at scoped ingestion. 
 ### AP3 bounded parameter controls
 
 **Ledger status:** `LATER` ([PDB-04](status/LEDGER.md#snapshot-ids)).
-Time retains counts; sliders need bounded integer evidence. Colour/Picture stay unsupported-codec originals; modules need separate mapping contracts. A bounded v32 Color/Time data-repair candidate adds no codec evidence.
+Time retains counts; sliders need bounded integer evidence. Colour/Picture stay unsupported-codec originals; modules need separate mapping contracts. The bounded v32 Color/Time data repair (since Alpha 20) adds no codec evidence.
 [Details and history](limitations/ap3-bounded-parameter-controls.md)
 
 <a id="catalogue-catalogue-batch-creation"></a>
@@ -452,7 +452,7 @@ Updates use user-supplied files, not the KNX Online Catalog. Full database backu
 ### Checked parameter editors
 
 **Ledger status:** `LATER` ([PDB-04](status/LEDGER.md#snapshot-ids)).
-Checked controls are opt-in and bounded; modules fall back, Colour/Picture remain unconverted originals. IPAddress admits only an exact HostAddress literal form; newer source builds add one checked Date text form, not a native picker or memory codec. Writes remain revision-bound end to end.
+Checked controls are opt-in and bounded; modules fall back, Colour/Picture remain unconverted originals. IPAddress admits only an exact HostAddress literal form; since Alpha 20 one checked Date text form is added, not a native picker or memory codec. Writes remain revision-bound end to end.
 [Details and history](limitations/checked-parameter-editors.md)
 
 <a id="catalogue-manufacturer-report-history"></a>
@@ -999,7 +999,7 @@ Generic diagnostics read identity only (descriptor, PID12, PID78). CLI and, sinc
 ### 26. KNXnet/IP protocol scope
 
 **Ledger status:** Not separately tracked.
-Tunnelling/routing/discovery have bounded implementations. Ordinary connectivity does not imply KNX IP Secure or extended discovery support.
+Tunnelling/routing/discovery have bounded implementations; since Alpha 20 optional plain TCP covers only the bus monitor and its bound group traffic, with UDP the default and no real-gateway interoperability verified. Ordinary connectivity does not imply KNX IP Secure or extended discovery support.
 [Details and history](limitations/KL-026-knxnetip-protocol-scope.md)
 
 <a id="catalogue-kl-029"></a>
@@ -1039,7 +1039,7 @@ Main types 1–30 have explicit formats/rulings; subtype/FB semantics remain par
 ### 62. Group Monitor evidence
 
 **Ledger status:** `ACCEPTED_BOUNDARY` ([KL-62](status/LEDGER.md#snapshot-ids)).
-The single-session, client-filtered GUI adds explicit Linux TP-UART in main-only source builds. One C6 USB-Serial 1.0.8 has bounded normal receive and one-bit group-transmit witnesses; actuator state, bridge error/parity forwarding and broader payload/device/routing/history scenarios remain unverified. The explicit bounded by-id candidate list is software-accepted on main; metadata is not a complete USB census or KNX compatibility, availability or permission evidence.
+The single-session, client-filtered GUI adds explicit Linux TP-UART since Alpha 20. One C6 USB-Serial 1.0.8 has bounded normal receive and one-bit group-transmit witnesses; actuator state, bridge error/parity forwarding and broader payload/device/routing/history scenarios remain unverified. The explicit bounded by-id candidate list ships in Alpha 20; metadata is not a complete USB census or KNX compatibility, availability or permission evidence.
 [Details and history](limitations/KL-062-group-monitor-evidence.md)
 
 <a id="catalogue-kl-072"></a>

@@ -104,8 +104,8 @@ exported or removed through Theme files.
 
 ### Rail and Rail Dark
 
-**Rail** (light) and **Rail Dark** are built in like LCARS (2 November 2026
-source, main-only; it needs a source build after Alpha 19). Buttons, fields and
+**Rail** (light) and **Rail Dark** are built in like LCARS (since Alpha 20).
+Buttons, fields and
 panels have square corners, text uses Geist and Geist Mono, and a thin measuring
 rail with a tick every 18 pixels runs under the toolbar. The green accent is
 fixed; success messages use turquoise so they never look like a selection.
@@ -184,7 +184,7 @@ notifications, achievement popups and the telegram Flow separately. Since Alpha 
 there is also **Structure lines in the explorer**: *Inherit* lets the lines grow
 when a branch opens and pulse about every twelve seconds, *At most subtle* only lets
 them grow, *Off* draws them still. The pulse also pauses while the tab is hidden.
-**Theme effects (Rail)** (main-only) covers the Rail themes' own effects. Each starts at
+**Theme effects (Rail)** (since Alpha 20) covers the Rail themes' own effects. Each starts at
 *Inherit* (follow the motion level) and can only go down: *At most subtle* or *Off*.
 A category never brings back motion that the level, or your desktop, turned off;
 switch the level back on and each category returns to its own choice.

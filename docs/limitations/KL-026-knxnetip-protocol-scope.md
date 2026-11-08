@@ -56,11 +56,13 @@ deferred, documented as a limitation, not rejected — applies here too; this
 separate calls.
 <!-- END retained catalogue record -->
 
-## 8 November 2026 — optional plain TCP candidate
+<a id="8-november-2026--optional-plain-tcp-candidate"></a>
+
+## Optional plain TCP (since Alpha 20)
 
 The bounded [TCP contract](../contracts/tcp-tunnelling.md) covers explicit library,
 CLI monitor/write and server/Web monitor/group-traffic selection, with UDP still
-the default. The bounded slice is main-only and passed independent review and
+the default. The bounded slice ships in Alpha 20 and passed independent review and
 all selected package stages ([record](../status/2026-11-08-optional-tcp-tunnelling.md)).
 Device programming, scans and other
 existing device workflows remain UDP-only. Discovery/routing scope and KNX IP

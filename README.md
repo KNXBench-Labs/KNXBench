@@ -77,17 +77,19 @@ Retained bytes are not a promise of complete ETS semantics.
   expansion stays at 4 GiB; the explicit Large profile permits up to 16 GiB, not an
   aggregate memory or disk quota.
 - 🧠 **Watch your bus think.**
-  Gateway discovery, KNXnet/IP tunnelling, a live group monitor and a
+  Gateway discovery, KNXnet/IP tunnelling (UDP, optional TCP since Alpha 20), a
+  Linux USB/serial TP-UART option for one adapter type, a live group monitor and a
   [flow view](docs/manual/user-guide/07-bus-and-interfaces.md#the-flow-view) where
   devices light up as they talk. You can send group values, too — when you mean it.
 - 📄 **Paperwork, automated.**
-  Group-address CSV export and import, a self-contained HTML project document with print
+  Group-address CSV export and import (ETS6 exports in UTF-8 or Windows-1252 since
+  Alpha 20), a self-contained HTML project document with print
   preview, and a diff between two projects with an exit code your CI will love.
 - ⌨️ **Keyboard first, mouse welcome.**
   Command palette, <kbd>Ctrl</kbd>+<kbd>K</kbd> search, project explorer, properties
   inspector, drag & drop.
 - 🎨 **Looks the way you like it.**
-  Porcelain, Graphite, Cupertino, LCARS and a phosphor-green CRT theme. English and
+  Porcelain, Graphite, Cupertino, LCARS, Rail and a phosphor-green CRT theme. English and
   German, plus Boarisch (Bavarian) and Klingon packs for the brave. And 42 optional
   achievements, because engineering work deserves a little applause.
 - 🤖 **Your AI agent gets a workbench, not the bus keys.**
@@ -99,16 +101,17 @@ Retained bytes are not a promise of complete ETS semantics.
   command line for the scriptable bits.
 
 > [!NOTE]
-> **Alpha 19 is a pre-release (source cutoff 1 November 2026):** `knx products
-> inspect-distribution` reads OpenKNX and other manufacturer distributions offline
-> without installing them; **Report problem…** builds one reviewed, consented
-> diagnostic ZIP; regular programming refuses customer-adjustable declarations,
-> omits only bytes proved inactive and restores only when the device's serial number
-> matches the backup; and Settings opens as a center page. None of this is new
-> hardware support, and the allocation mismatch of issues #30/#22 is unresolved.
-> [Release scope](docs/releases/alpha19.md) lists the scope, upgrade notes and
-> boundaries. Native/model **16** is unchanged; the product database moves **30 to
-> 31**, which Alpha 18 refuses.
+> **Alpha 20 is a pre-release (source cutoff 8 November 2026):** group addresses
+> import from ETS6 CSV exports with an explicit UTF-8 or Windows-1252 choice and gain
+> a description field; Linux can listen to and send group telegrams through one
+> USB/serial TP-UART adapter type; optional KNXnet/IP TCP tunnelling covers the bus monitor
+> and group traffic (UDP stays the default); more device kinds can be prepared for a
+> download as *untested*; object priorities are shown and editable; editing saved
+> projects is much faster (issue #35); and the AppImage starts for every user again.
+> None of this is verified on real hardware, and the allocation mismatch of issues
+> #30/#22 is unresolved. [Release scope](docs/releases/alpha20.md) lists the scope,
+> upgrade notes and boundaries. The project file moves from schema **16 to 19** and
+> the product database from **31 to 32**; Alpha 19 refuses both.
 
 ## See it in action
 
@@ -174,10 +177,10 @@ docker run -d --name knxbench --network host \
 Open <https://127.0.0.1:8484>, sign in with that password, and choose **New project…** or
 import a `.knxproj`. Your projects live in `data/` and survive restarts.
 
-The Alpha 19 image is published for **x86-64 (`amd64`) and 64-bit Arm
+The Alpha 20 image is published for **x86-64 (`amd64`) and 64-bit Arm
 (`arm64`)**. `latest` follows published releases, including
 alphas, not the newest source or a promise of stability. To stay on a specific
-release, use a version tag in both commands (`0.1.0-alpha.19`)
+release, use a version tag in both commands (`0.1.0-alpha.20`)
 ([tags and details](docs/manual/user-guide/11-web-and-docker.md#ready-made-image-from-docker-hub)).
 
 Want changes newer than the release? [Build the container from source](docs/manual/getting-started/04-installation.md#build-the-container-from-source).
@@ -199,19 +202,21 @@ and may enter shell history.
 
 ### Linux desktop, via AppImage
 
-Download the **Alpha 19 pre-release** AppImage and verify its checksum
-from the [release page](https://github.com/KNXBench-Labs/KNXBench/releases/tag/v0.1.0-alpha.19):
+Download the **Alpha 20 pre-release** AppImage and verify its checksum
+from the [release page](https://github.com/KNXBench-Labs/KNXBench/releases/tag/v0.1.0-alpha.20):
 
 ```bash
-REL=https://github.com/KNXBench-Labs/KNXBench/releases/download/v0.1.0-alpha.19
-curl -LO "$REL/KNXBench_0.1.0-alpha.19_amd64.AppImage"
+REL=https://github.com/KNXBench-Labs/KNXBench/releases/download/v0.1.0-alpha.20
+curl -LO "$REL/KNXBench_0.1.0-alpha.20_amd64.AppImage"
 curl -LO "$REL/SHA256SUMS"
 sha256sum -c --ignore-missing SHA256SUMS
-chmod +x KNXBench_0.1.0-alpha.19_amd64.AppImage
-./KNXBench_0.1.0-alpha.19_amd64.AppImage
+chmod +x KNXBench_0.1.0-alpha.20_amd64.AppImage
+./KNXBench_0.1.0-alpha.20_amd64.AppImage
 ```
 
-The `v0.1.0-alpha.19` AppImage is x86-64 only.
+The `v0.1.0-alpha.20` AppImage is x86-64 only. It is built on Ubuntu 24.04 and
+needs glibc 2.39 or newer; that is an ABI floor, not a promise for every
+distribution or graphics driver.
 `--ignore-missing` skips the `knx-mcp` binary listed in the same checksum file.
 Source changes after this tag still need a
 [source build](docs/manual/getting-started/04-installation.md#c-from-source). The
@@ -220,26 +225,25 @@ packages it needs and what has been tested.
 
 > [!IMPORTANT]
 > Before upgrading, close KNXBench and back up native project files and Docker
-> data, including the closed product database. Alpha 19 keeps native/model schema 16
-> and migrates the product database 30 → 31 on writable open (server, desktop app and
-> Docker startup and catalogue-writing CLI commands; read-only readers migrate
-> only in memory). Alpha 18 refuses
-> product31 and starts without products; there is no catalogue downgrade path.
-> Opening Alpha 19 files in Alpha 18 is not tested. Alpha 18 also refuses device
-> backups of format 3/4, activity-history pages with the new support-read kind and
-> System-2 journals with an allocation-comparison record; format-1/2 backups no
-> longer restore ([upgrade notes](docs/releases/alpha19.md#upgrade)). Coming from
-> Alpha 17: Alpha 18 and later migrate its product database 28 → 30, and Alpha 17
-> refuses product30. Keep matching original `.knxproj`/`.knxprod` files. Alpha 11
-> and earlier refuse native schema 16 files.
+> data, including the closed product database. Alpha 20 migrates native project
+> files from schema 16 to 19 and the product database from 31 to 32 on writable open
+> (server, desktop app and Docker startup and writing CLI commands; read-only readers
+> migrate only in memory). Alpha 19 refuses schema-19 projects
+> (`FutureSchemaVersion`) and product32 (`FutureVersion`; the server then starts
+> without products); there is no downgrade path. Alpha 19 also cannot read the new
+> System-2 journal entries for the `Download_Flag` rule
+> ([upgrade notes](docs/releases/alpha20.md#upgrade)). Coming from Alpha 18: Alpha 19
+> and later migrate its product database 30 → 31, and Alpha 18 refuses product31 and
+> format-3/4 device backups. Keep matching original `.knxproj`/`.knxprod` files.
+> Alpha 11 and earlier refuse native schema 16 and newer files.
 > To go back, restore the pre-upgrade backup. Internal versions are not external backups.
 
 ### Where it runs
 
 | Platform | Status |
 | --- | --- |
-| Linux, Docker + browser | Alpha 19 image published for amd64 and arm64; the bus needs host networking |
-| Linux x86-64, AppImage | Alpha 19 AppImage published for x86-64; FUSE and native display behaviour remain host-dependent |
+| Linux, Docker + browser | Alpha 20 image published for amd64 and arm64; the bus needs host networking |
+| Linux x86-64, AppImage | Alpha 20 AppImage published for x86-64 (glibc 2.39 or newer); FUSE and native display behaviour remain host-dependent |
 | Linux, from source | Rust 1.98 and Node.js 22.12+ ([building from source](docs/manual/development/02-building-from-source.md)) |
 | Windows, macOS | No native build. Docker Desktop is plausible, but untested |
 
@@ -258,9 +262,9 @@ Alpha.10 is the first release with it; Alpha.9 and older packages do not check.
 
 ## Project status
 
-**Alpha — and we mean it.** [Alpha 19](docs/releases/alpha19.md) is the current
+**Alpha — and we mean it.** [Alpha 20](docs/releases/alpha20.md) is the current
 pre-release. The [release page](https://github.com/KNXBench-Labs/KNXBench/releases)
-is the authority for available downloads. [Alpha 18](docs/releases/alpha18.md) and
+is the authority for available downloads. [Alpha 19](docs/releases/alpha19.md) and
 earlier remain in the release history.
 The test suite is large, the documentation is honest, and things still move.
 
@@ -284,7 +288,7 @@ that converts it all into *Lord of the Rings* re-reads and ant colonies. It is a
 generated snapshot (last run 7 October 2026), so read its numbers as "as of".
 
 The [test catalogue](docs/TEST_CATALOGUE.md) explains what gets exercised; each
-[release note](docs/releases/alpha19.md) names its own scope. Test results belong to
+[release note](docs/releases/alpha20.md) names its own scope. Test results belong to
 an exact source snapshot, not a perpetually growing badge. The
 [architecture decisions](docs/adr/README.md) explain the engineering behind it.
 

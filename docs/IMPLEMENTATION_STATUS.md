@@ -12,6 +12,26 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Alpha 20 pre-release (source cutoff 8 November 2026)
+
+`v0.1.0-alpha.20` is the current pre-release, cut from main at source cutoff
+`dfb3f88b8`. Application versions are aligned at `0.1.0-alpha.20`; native/store and
+core model move 16 → 19 (17 saved-instance priority, 18 priority edits, 19
+group-address description) and the product database 31 → 32 through the data-only
+Color/Time repair. Alpha 19 refuses schema 19 (`FutureSchemaVersion`) and v32
+(`FutureVersion`). Every dated delivery entry from 1 to 8 November 2026 below, down
+to the Alpha 19 entry, plus the System-2 declared post-load octets entry (2 November
+UP258 declaration), ships in Alpha 20; their "main-only", "source" and "pending"
+labels record the state on their delivery date, not a missing release. That includes
+the ETS6 CSV encoding and group-address description work, optional TCP monitor/group
+traffic (first WP-29 stage), the Linux USB/serial TP-UART transport and UI, the
+little-endian, property-placed and time-parameter download preparations (untested),
+object priority provenance, editing and column, faster journal writes (#35), System-2
+selective and caption settlement plus the `Download_Flag` declaration, WP-25 to WP-28
+and the AppImage packaging repair (glibc 2.39 ceiling, readable for every user). No
+hardware acceptance follows; the allocation mismatch of #30/#22 stays unresolved.
+Scope, upgrade notes and boundaries: [Alpha 20 release notes](releases/alpha20.md).
+
 ## Optional TCP monitor/group traffic (8 November 2026; bounded WP-29)
 
 Explicit TCP is software-accepted for the library, CLI monitor/write and shared
@@ -553,7 +573,7 @@ next release; the Alpha 19 stills stay as released).
 
 ## Alpha 19 pre-release (source cutoff 1 November 2026)
 
-`v0.1.0-alpha.19` is the current pre-release, cut from main at source cutoff
+`v0.1.0-alpha.19` is the previous pre-release, cut from main at source cutoff
 `858b0a24d`. Application versions are aligned at `0.1.0-alpha.19`; native/store and
 core model stay at 16, the product database moves 30 → 31 through one data-only
 migration (Alpha 18 refuses v31). Every dated delivery entry from 29 October to

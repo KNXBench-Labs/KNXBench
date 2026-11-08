@@ -29,10 +29,14 @@ similar) can look things up in a project instead of guessing:
 > file. It never reaches the KNX bus: the program is not even linked against
 > the bus code. The tool names and answers may still change during the alpha.
 
-**Alpha 19 upgrade:** update `knx-mcp` with the application. Native/model16 is
-unchanged; the product database moves 30 → 31 and Alpha 18 refuses it, so keep the
-reader and the application on the same release. The MCP tools are unchanged.
-[Release scope](../../releases/alpha19.md#upgrade).
+**Alpha 20 upgrade:** update `knx-mcp` with the application. Native/model moves
+16 → 19 and the product database 31 → 32, and Alpha 19 refuses both, so keep the
+reader and the application on the same release.
+[Release scope](../../releases/alpha20.md#upgrade).
+
+**Earlier Alpha 19 upgrade:** update `knx-mcp` with the application. Native/model16 was
+unchanged; the product database moved 30 → 31 and Alpha 18 refuses it. The MCP tools
+were unchanged. [Release scope](../../releases/alpha19.md#upgrade).
 
 **Earlier Alpha 18 upgrade:** update `knx-mcp` with the application. Native/model16 is
 unchanged; the product database moves 28 → 30 and Alpha 17 refuses it, so keep the

@@ -76,7 +76,7 @@ list and the panel says *unavailable*; it never infers a reason from `message` o
 `refusal`. Exact semantics:
 [safe failure diagnostic](system2-safe-failure-diagnostic.md).
 
-Issue #30 own-run diagnostic follow-up (unreleased source): `refusal` is a
+Issue #30 own-run diagnostic follow-up (since Alpha 17): `refusal` is a
 required nullable stable error-kind token, ASCII alphanumeric with 1–64 characters
 when present. It records only a refusal from the current in-process worker and
 is cleared on a new attempt or historical reattachment; it is not persisted or

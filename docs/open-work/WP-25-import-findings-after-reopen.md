@@ -1,7 +1,7 @@
 # WP-25 — Import findings after reopening
 
 Owner report and implementation Go: 2 November 2026. Delivered on main as
-`3455fdb9c`; main-only after Alpha 19, not a release claim.
+`3455fdb9c`; ships in Alpha 20.
 [Acceptance and boundaries](../status/2026-11-02-wp25-import-findings.md).
 
 ## Reproduced cause

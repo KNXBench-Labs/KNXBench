@@ -68,7 +68,9 @@ value. The **full local download** is not truncated. Original source names,
 attributes, hashes or other private data can occur in a report; the UI warns before
 sharing. No automatic external transmission or anonymization is provided.
 
-## Session-log projection on native open (WP-25; main-only after Alpha 19)
+<a id="session-log-projection-on-native-open-wp-25-main-only-after-alpha-19"></a>
+
+## Session-log projection on native open (WP-25; since Alpha 20)
 
 Successful native open reprojects counted primary error/warning findings from the
 admitted recovered working image, before publication and only appended after

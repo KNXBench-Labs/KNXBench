@@ -56,7 +56,7 @@ After importing through the server and saving a native copy, reopening that copy
 restores the original report and warning counts. **Historical import findings**
 means recorded original findings, not a new compatibility or hardware check.
 Older native files that never stored a report remain explicitly unavailable.
-**Main-only after Alpha 19 (WP-25).** On opening, the stored errors and warnings
+**Since Alpha 20 (WP-25).** On opening, the stored errors and warnings
 are also listed in the session log,
 so the counters in the project status and Explorer open the same entries as
 after an import. Those entries carry the time of the opening, not of the

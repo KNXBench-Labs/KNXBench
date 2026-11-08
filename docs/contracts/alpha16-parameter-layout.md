@@ -23,7 +23,7 @@ and resource/integrity limits below are unchanged.
 | Missing language/translation | Existing exact match, otherwise locale-prefix tie-break, otherwise source fallback | Reused without introducing another language resolver. |
 | Module-local captions | Existing evaluated node scope and validated stored/default text-parameter authority | Reused; no label-based instance matching. |
 | Declared row/column `TextParameterRefId` | Retained metadata is not a dynamic-node host in the existing positional resolver | Remains explicit unsupported fallback; do not borrow a neighbouring host's text value. |
-| Table versus Grid, inline/nested/CollapseIfEmpty and in-cell buttons | Existing retained declarations do not alone establish every activation/layout rule | No blanket expansion. Existing delivered grids, access, separators and indentation remain unchanged. Main-only since 31 October 2026: the literal text of an in-cell `Button` is shown as passive text ([below](#passive-source-button-labels-button-literal-passive-v1)); its action is not. |
+| Table versus Grid, inline/nested/CollapseIfEmpty and in-cell buttons | Existing retained declarations do not alone establish every activation/layout rule | No blanket expansion. Existing delivered grids, access, separators and indentation remain unchanged. Since Alpha 19 (31 October 2026 source): the literal text of an in-cell `Button` is shown as passive text ([below](#passive-source-button-labels-button-literal-passive-v1)); its action is not. |
 
 ## Integrity and resource contract
 
@@ -59,7 +59,7 @@ belongs to the one final candidate campaign.
 
 ## Passive source Button labels (`button-literal-passive-v1`)
 
-Main-only since 31 October 2026. This is KNXBench presentation policy, not ETS
+Since Alpha 19 (31 October 2026 source). This is KNXBench presentation policy, not ETS
 Button behaviour, handler support or Table/Grid visual equivalence.
 
 - **Admission.** Only a program-owned (not `ModuleDef`) exact-namespace

@@ -99,9 +99,11 @@ While a session runs, both gateway fields are locked — KNXBench tells you to
 shows `Session <id>`, followed by the individual address the interface assigned to
 your session.
 
-### Optional TCP (source candidate, 8 November 2026)
+<a id="optional-tcp-source-candidate-8-november-2026"></a>
 
-The source candidate offers UDP (the unchanged default) or TCP in the existing
+### Optional TCP (since Alpha 20)
+
+Alpha 20 offers UDP (the unchanged default) or **TCP (optional)** in the existing
 IP transport fields. Choose it before connecting; selecting or saving a choice
 does not connect. The running-session label uses observed transport rather than
 the saved preference. A server without the strict TCP start route refuses the
@@ -116,9 +118,10 @@ service is not automatically a lost telegram. Plain TCP is not KNX IP Secure.
 
 [Contract and acceptance boundary](../../contracts/tcp-tunnelling.md): the bounded
 software slice passed independent review and the selected package gate
-([record](../../status/2026-11-08-optional-tcp-tunnelling.md)). It is main-only;
-real-gateway interoperability has not been verified. The published screenshot
-above has not been replaced.
+([record](../../status/2026-11-08-optional-tcp-tunnelling.md)). It was tested
+against local test peers only; real-gateway interoperability has not been
+verified. There is no automatic reconnect. The screenshot above predates this
+option.
 
 ## What the monitor shows
 
@@ -808,13 +811,15 @@ connection shown, never another one. **Check status**, **Search again** and
 
 <a id="usbserial-tp-uart-linux-server-main-only-candidate"></a>
 
-### USB/serial TP-UART (Linux server, main-only)
+<a id="usbserial-tp-uart-linux-server-main-only"></a>
 
-Source builds after Alpha 19 offer **Bus transport → USB/serial TP-UART** in
+### USB/serial TP-UART (Linux server, since Alpha 20)
+
+Since Alpha 20, **Bus transport → USB/serial TP-UART** is offered in
 Settings, the status-bar popover and Bus Monitor. Enter the device path visible
 on the **server**, including its container if applicable; a browser-local device
-path does not grant the server access. The accepted transport package uses manual
-paths; the passive-listing source candidate is described below.
+path does not grant the server access. Paths are entered manually; the passive
+candidate listing is described below.
 Choose a valid individual source address that is unique on your installation.
 Your IP gateway preference stays available for device tools and scans.
 
@@ -861,10 +866,12 @@ The software package passed correction review, the selected package gate and all
 
 <a id="passive-usb-serial-candidates-source-candidate"></a>
 
-### Passive USB-serial candidates (main-only after Alpha 19)
+<a id="passive-usb-serial-candidates-main-only-after-alpha-19"></a>
 
-This bounded addition is software-accepted on main, not in Alpha 19;
-[acceptance and limits](../../status/2026-11-05-wp26-passive-serial-candidates.md). Choose **USB/serial TP-UART**, then explicitly press
+### Passive USB-serial candidates (since Alpha 20)
+
+This bounded addition ships in Alpha 20; Alpha 19 does not have it
+([acceptance and limits](../../status/2026-11-05-wp26-passive-serial-candidates.md)). Choose **USB/serial TP-UART**, then explicitly press
 **List USB-serial candidates** beside the path in Settings, the status-bar
 configuration or Bus Monitor. Nothing is listed automatically on opening the view
 or polling the connection. The action inspects only `/dev/serial/by-id` symlinks

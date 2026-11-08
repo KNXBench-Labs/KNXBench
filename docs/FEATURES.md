@@ -1,38 +1,63 @@
-Last updated: 2026-11-01 (Alpha 19 pre-release; source cutoff 2026-11-01)
+Last updated: 2026-11-08 (Alpha 20 pre-release; source cutoff 2026-11-08)
 
 # KNXBench Features
 
 | Reference | Value |
 | --- | --- |
-| Source snapshot | `v0.1.0-alpha.19` (cutoff `858b0a24d`) |
-| Released baseline | `v0.1.0-alpha.19` |
+| Source snapshot | `v0.1.0-alpha.20` (cutoff `dfb3f88b8`) |
+| Released baseline | `v0.1.0-alpha.20` |
 | Main-only | Newer than released baseline |
 | Local-only | Unpublished; not accepted on main |
 | Scope | Listed boundaries; not universal compatibility |
 | Later scope | No delivery dates promised |
 
-## In-progress source candidates
+<a id="in-progress-source-candidates"></a>
+
+<a id="main-only-after-alpha-19"></a>
+
+## New in Alpha 20
+
+The [release scope](releases/alpha20.md) covers changes after Alpha 19 up to
+cutoff `dfb3f88b8`. Native/store schema moves 16 → 19 (17 saved-instance priority,
+18 priority edits, 19 group-address description) and the product database 31 → 32
+through one data-only migration; Alpha 19 refuses both (`FutureSchemaVersion`,
+`FutureVersion`). Opening Alpha 20 files in Alpha 19 is not supported and going back
+is not tested. Nothing below is verified on real hardware: new download kinds are
+compared with recorded ETS images in the simulator and stay *untested*, USB/serial is
+tested with one adapter type, TCP only against local test peers, and issues #30 and
+#22 stay open.
 
 | Feature | Scope | Availability |
 | --- | --- | --- |
-| [Optional TCP tunnelling](contracts/tcp-tunnelling.md) | Explicit library, CLI monitor/write and server/Web monitor/group traffic; UDP default retained, other device/scan paths UDP-only; software-accepted with independent review and the selected package gate; no gateway interoperability claim | Main-only |
-
-## Main-only after Alpha 19
-
-| Feature | Scope | Availability |
-| --- | --- | --- |
-| [Checked Date text editor](contracts/checked-date-text-editor.md) | Exact source-bound Date form; calendar-checked raw text and explicit revision-bound Apply, no native picker or parameter memory codec | Main-only |
-| [USB/serial TP-UART](status/2026-11-04-usb-serial-ui.md) | Linux server + settings/footer/monitor; explicit passive/active mode, bound sends and reserved serial cleanup; transparent NCN5130 firmware required; correction review and software gates passed, no hardware compatibility claim | Main-only |
-| [Passive USB-serial candidates](research/2026-11-05-passive-serial-candidates.md) | Explicit Linux server-local by-id metadata list; bounded and unverified, path selection only, manual entry retained; software-accepted on main, without hardware verification | Main-only after Alpha 19 |
-| [Import findings after reopening](open-work/WP-25-import-findings-after-reopen.md) | Reprojects stored primary error/warning findings into the bounded session log; historical/open-time provenance and explicit full-report access; missing legacy evidence is not a clean assessment | Main-only |
-| [Saved folders: changed since import](contracts/saved-folder-currency.md) | Object-table notice when a device's parameter values or objects differ from the imported original; folders stay as saved, unknown checks name their reason | Main-only |
-| [Effective project priority row](contracts/effective-object-priority.md) | Object-editor row: effective value with winning source (your edit, saved object or product ComObjectRef/ComObject), or a named unresolved reason; no default or wire priority | Main-only |
-| [Priority column in the object table](COMMUNICATION_OBJECT_TABLE.md#presentation-and-derived-data) | Optional read-only column (off by default, remembered): effective token with a short source tag, sort (unresolved last) and filter; editing stays in the object editor | Main-only |
-| [Editable object priority](contracts/object-priority-edit.md) | Object-editor select sets or clears `Low`/`High`/`Alert` as an undoable user edit (native 18), compared by project diff; programming refuses a device whose stated priority differs from the product's (KL-188) | Main-only |
-| [Saved project priority row](contracts/saved-instance-priority.md#read-only-ui-consumer-7-november-2026) | Read-only object-editor row with the captured saved-instance declaration, its absence or the unavailable reason; verbatim literal, no effective/product/wire priority, no editing | Main-only |
-| [Saved priority in project comparison](contracts/saved-instance-priority.md#comparison-consumer-7-november-2026) | `knx diff`, HTTP and the comparison dialog report changed captured saved-instance priority: exact literal, omission or reason; source metadata not compared | Main-only |
-| [Saved priority in the documentation report](contracts/saved-instance-priority.md#documentation-report-consumer-7-november-2026) | Final object-table column with the captured literal, omission or reason (en/de) plus a limits line; not effective/wire priority | Main-only |
-| [Rail themes](adr/0157-rail-built-in-presentation.md) | Built-in light/dark pair: square controls, Geist type, toolbar rail, KNX-cable green accent; own Theme effects motion category | Main-only |
+| [ETS6 group-address CSV import](adr/0164-group-address-description-and-csv-encoding.md) | ETS6 exports in the four full profiles, including "CSV (ETS3 Format)" and tab-separated files with a header; explicit UTF-8 (default) or Windows-1252 in the web import and `knx ga-import --encoding windows-1252`; a byte invalid for the chosen encoding stops the import with its offset; no guessing, headerless files still refused ([KL-038](KNOWN_LIMITATIONS.md#catalogue-kl-038)) | alpha.20 |
+| [Group-address description](adr/0164-group-address-description-and-csv-encoding.md) | New project field (native 19), filled from `.knxproj` imports and CSV description columns; an empty CSV cell never clears it; shown in the inspector, no editor yet; a CSV datapoint type applies to addresses the import creates | alpha.20 |
+| [USB/serial TP-UART](status/2026-11-04-usb-serial-ui.md) | Linux server + settings/footer/monitor; explicit passive/active mode, bound sends and reserved serial cleanup; transparent NCN5130 firmware required; correction review and software gates passed, no hardware compatibility claim | alpha.20 |
+| [Passive USB-serial candidates](research/2026-11-05-passive-serial-candidates.md) | Explicit Linux server-local by-id metadata list; bounded and unverified, path selection only, manual entry retained; without hardware verification | alpha.20 |
+| [Optional TCP tunnelling](contracts/tcp-tunnelling.md) | Explicit library, CLI monitor/write and server/Web monitor/group traffic; UDP default retained, other device/scan paths UDP-only; no real-gateway interoperability claim | alpha.20 |
+| [Little-endian numbers and fixed load steps](adr/0159-little-endian-numbers-and-fixed-load-steps.md) | Download preparation for `ParameterByteOrder="LittleEndian"` programs and their `LdCtrlWriteProp`/`LdCtrlDelay` steps, compared with recorded ETS 6.4 images in the simulator; marked untested, needs explicit acceptance ([KL-170](KNOWN_LIMITATIONS.md#catalogue-kl-170)) | alpha.20 |
+| [Inactive choose controllers](adr/0160-inactive-choose-controllers-select-nothing.md) | A `choose` whose placed controller is inactive selects nothing, so hidden push-button LED controllers no longer produce conflicting values | alpha.20 |
+| Undeclared text encoding | Text parameters without a declared encoding are written as Windows-1252, as ETS does; marked untested ([KL-171](KNOWN_LIMITATIONS.md#catalogue-kl-171)) | alpha.20 |
+| [Property-placed parameters and master resets](adr/0161-property-placed-parameters-and-master-resets.md) | Mask-`0701h` programs keeping parameters in interface-object properties, with `LdCtrlMasterReset`, `LdCtrlDeclarePropDesc` and parameter-filled `LdCtrlWriteProp`; untested; no restore or partial download for these devices | alpha.20 |
+| [Time parameters and inline property writes](adr/0162-time-parameters-and-inline-property-writes.md) | `TypeTime` values and property writes that also carry `InlineData`, as ETS 6.4 sends them; untested | alpha.20 |
+| [Faster saved-project edits](adr/0163-journal-writes-keep-unchanged-undo-rows.md) | Journal writes keep the undo rows they prove unchanged instead of rewriting the whole history (issue #35); rows being saved show **Saving…** | alpha.20 |
+| [System-2 declared post-load octet](contracts/system2-download-result.md#declared-post-load-octets) | For UP 258D12 `M-0001_A-9205-04-9270` only, the `Download_Flag` octet the device clears after loading is expected in final verification; every other byte stays strict; applies only to configured physical preparations with a new (revision-3) hardware record; older records and simulator bundles stay strict; issues #30/#22 stay open | alpha.20 |
+| [System-2 selective settlement](status/2026-11-02-system2-selective-settlement.md) | A verified System-2 download keeps its settled parts after unrelated edits; only changed parts become pending; a caption-only (program-name) source change still counts as the same program | alpha.20 |
+| [Bus connection in the status bar](open-work/WP-26-status-bar-bus-connection.md) | Footer status with Connect/Disconnect on the shared bus session; Settings changes never switch a running connection; a monitor start during a bus job is refused at once (`gatewayBusy`) | alpha.20 |
+| [Compare from the device editor](open-work/WP-27-device-editor-compare.md) | **Compare** next to Download opens the existing read-only comparison for the edited device; opening it does not read the device | alpha.20 |
+| [Group-address sub-range views](open-work/WP-28-ga-columns-atlas-empty-table.md) | Columns and Atlas keep their address rows after a range and then a sub-range are selected | alpha.20 |
+| [Descriptor-pinned JSON backups](contracts/descriptor-pinned-json-backups.md) | Device-memory and service-control backups are created and synchronised through retained directory handles with exclusive creation and readback | alpha.20 |
+| [AppImage packaging](status/2026-11-08-appimage-catalog.md) | Readable/executable for every user again; built on Ubuntu 24.04 with a checked glibc 2.39 ceiling; not a promise for every distribution | alpha.20 |
+| [Product database 32](contracts/color-time-successor-repair.md) | Data-only repair of parameter types wrongly kinded as Color or Time, only where the retained product source proves it | alpha.20 |
+| [Checked Date text editor](contracts/checked-date-text-editor.md) | Exact source-bound Date form; calendar-checked raw text and explicit revision-bound Apply, no native picker or parameter memory codec | alpha.20 |
+| [Import findings after reopening](open-work/WP-25-import-findings-after-reopen.md) | Reprojects stored primary error/warning findings into the bounded session log; historical/open-time provenance and explicit full-report access; missing legacy evidence is not a clean assessment | alpha.20 |
+| [Saved folders: changed since import](contracts/saved-folder-currency.md) | Object-table notice when a device's parameter values or objects differ from the imported original; folders stay as saved, unknown checks name their reason | alpha.20 |
+| [Effective project priority row](contracts/effective-object-priority.md) | Object-editor row: effective value with winning source (your edit, saved object or product ComObjectRef/ComObject), or a named unresolved reason; no default or wire priority | alpha.20 |
+| [Priority column in the object table](COMMUNICATION_OBJECT_TABLE.md#presentation-and-derived-data) | Optional read-only column (off by default, remembered): effective token with a short source tag, sort (unresolved last) and filter; editing stays in the object editor | alpha.20 |
+| [Editable object priority](contracts/object-priority-edit.md) | Object-editor select sets or clears `Low`/`High`/`Alert` as an undoable user edit (native 18), compared by project diff; programming refuses a device whose stated priority differs from the product's (KL-188) | alpha.20 |
+| [Saved project priority row](contracts/saved-instance-priority.md#read-only-ui-consumer-7-november-2026) | Read-only object-editor row with the captured saved-instance declaration, its absence or the unavailable reason; verbatim literal, no effective/product/wire priority, no editing | alpha.20 |
+| [Saved priority in project comparison](contracts/saved-instance-priority.md#comparison-consumer-7-november-2026) | `knx diff`, HTTP and the comparison dialog report changed captured saved-instance priority: exact literal, omission or reason; source metadata not compared | alpha.20 |
+| [Saved priority in the documentation report](contracts/saved-instance-priority.md#documentation-report-consumer-7-november-2026) | Final object-table column with the captured literal, omission or reason (en/de) plus a limits line; not effective/wire priority | alpha.20 |
+| [Rail themes](adr/0157-rail-built-in-presentation.md) | Built-in light/dark pair: square controls, Geist type, toolbar rail, KNX-cable green accent; own Theme effects motion category | alpha.20 |
 
 ## New in Alpha 19
 
@@ -412,7 +437,7 @@ records the tested commit separately from artifact publication verification.
 | Download preparation | Gateway choice from the shared search; device-editor hand-off; step guide | alpha.10 |
 | Gateway busy/refused | Names which KNXBench session holds the tunnel, and the gateway's own refusal code (#10) | alpha.11 |
 | Read-only device verification | Limited hardware evidence | alpha.6 |
-| Byte-order probe | CLI, read only: which octet order an ETS-programmed device holds; little-endian downloads stay refused | alpha.11 |
+| Byte-order probe | CLI, read only: which octet order an ETS-programmed device holds; little-endian downloads stayed refused until Alpha 20 | alpha.11 |
 | Tester download reports | After a download: steps, checklist and report file (program, outcome, values; no names or address), issue form or issue@knxbench.com; download tab, CLI and server | alpha.11 |
 | Byte-order download warning | Named plan warning when a big-endian program's own data looks little-endian; download tab, CLI and server | alpha.11 |
 | MCP integration | Saved files; eight read tools | alpha.6 |

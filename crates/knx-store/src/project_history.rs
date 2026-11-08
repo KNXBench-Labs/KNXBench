@@ -136,8 +136,11 @@ pub struct EditorHistory {
     pub redo: Vec<Project>,
     /// The stored image hash of every `undo`/`redo` state, in the same order.
     pub rows: StackRows,
-    /// What the read verified beyond `rows` (see [`Self::trust`]).
+    /// What the read verified beyond `rows`.
     verified: Option<VerifiedHashes>,
+    /// The knowledge a full read verified, captured with the values it read so
+    /// that later changes to the public fields cannot alter it (see [`Self::trust`]).
+    opened: Option<JournalTrust>,
 }
 
 /// The identities one journal read checked: the retained context's semantic
@@ -153,25 +156,36 @@ struct VerifiedHashes {
 
 impl EditorHistory {
     /// What this read verified, for a writer that keeps working on it: the
-    /// rows, the retained context of `working` and the saved baseline.
+    /// rows, the retained context of `working`, the saved baseline and the
+    /// working state, with the values read from the file. Changing `working`,
+    /// `baseline`, `undo` or `redo` afterwards does not change it.
     pub fn trust(&self) -> JournalTrust {
-        let Some(verified) = &self.verified else {
-            return JournalTrust::from_rows(self.rows.clone());
-        };
-        let context = trust::KnownContext {
-            opaque: self.working.opaque.clone(),
-            manufacturer_refs: self.working.manufacturer_refs.clone(),
-            content_hash: verified.context.clone(),
-            image_hash: verified.context_image.clone(),
-        };
-        JournalTrust::knowing(
-            self.rows.clone(),
-            context,
-            &self.baseline,
-            &verified.baseline,
-            (self.working.project.clone(), verified.working_image.clone()),
-        )
+        self.opened
+            .clone()
+            .unwrap_or_else(|| JournalTrust::from_rows(self.rows.clone()))
     }
+}
+
+/// The knowledge of a full read from what it verified and the values it read.
+fn opened_trust(
+    rows: &StackRows,
+    verified: &VerifiedHashes,
+    baseline: &NativeSnapshot,
+    working: &NativeSnapshot,
+) -> JournalTrust {
+    let context = trust::KnownContext {
+        opaque: working.opaque.clone(),
+        manufacturer_refs: working.manufacturer_refs.clone(),
+        content_hash: verified.context.clone(),
+        image_hash: verified.context_image.clone(),
+    };
+    JournalTrust::knowing(
+        rows.clone(),
+        context,
+        baseline,
+        &verified.baseline,
+        (working.project.clone(), verified.working_image.clone()),
+    )
 }
 
 #[derive(Debug, Clone)]
@@ -414,6 +428,15 @@ fn read_editor(
         }
         hashes.push(hash);
     }
+    let verified = VerifiedHashes {
+        context: context_hash,
+        context_image,
+        baseline: baseline_hash,
+        working_image: hash,
+    };
+    // Admission attached no context value, so only a full read knows one.
+    let opened = matches!(read, StackRead::States)
+        .then(|| opened_trust(&rows_read, &verified, &baseline, &working));
     Ok(Some(EditorHistory {
         generation,
         baseline,
@@ -421,12 +444,8 @@ fn read_editor(
         undo,
         redo,
         rows: rows_read,
-        verified: Some(VerifiedHashes {
-            context: context_hash,
-            context_image,
-            baseline: baseline_hash,
-            working_image: hash,
-        }),
+        verified: Some(verified),
+        opened,
     }))
 }
 
@@ -1129,6 +1148,7 @@ pub fn change_history(
                 redo: Vec::new(),
                 rows: StackRows::default(),
                 verified: None,
+                opened: None,
             })
         }
     };

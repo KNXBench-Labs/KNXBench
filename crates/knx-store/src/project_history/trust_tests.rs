@@ -302,3 +302,29 @@ fn older_context_hash(conn: &Connection, working: &NativeSnapshot) -> String {
     )
     .unwrap()
 }
+
+#[test]
+fn trust_from_an_open_ignores_later_changes_to_the_read_values() {
+    let seed = seed();
+    let mut file = saved(&seed);
+    let mut working = seed.clone();
+    let mut stack = CommandStack::new();
+    stack.do_command(&mut working.project, style(0)).unwrap();
+    file.generation =
+        save_editor(&file.conn, &working, &stack, Some(file.generation), false).unwrap();
+    let mut opened = load_editor(&file.conn).unwrap().unwrap();
+    // A caller edits the returned values before asking for the trust.
+    opened.working.opaque[0].bytes[0] = 0x77;
+    opened.baseline.project.info.name = "Edited after reading".into();
+    let trust = opened.trust();
+    let mut changed = working.clone();
+    changed.opaque[0].bytes[0] = 0x77;
+    stack.do_command(&mut changed.project, style(1)).unwrap();
+    trusted(&mut file, &changed, &stack, &trust);
+    let stored = load_editor(&file.conn).unwrap().unwrap();
+    assert_eq!(
+        stored.working.opaque[0].bytes[0], 0x77,
+        "the new context is stored"
+    );
+    assert_matches_full_rewrite(&file, &seed, &changed, &stack);
+}

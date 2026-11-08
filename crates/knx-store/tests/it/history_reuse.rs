@@ -62,7 +62,7 @@ impl Incremental {
             JournalTrust::default,
             |(project, earlier, trust)| {
                 let shared = stack.shared_snapshot_prefix(&working.project, earlier, project);
-                trust.with_rows(StackRows {
+                trust.clone().with_rows(StackRows {
                     undo: trust.rows.undo[..shared.undo].to_vec(),
                     redo: trust.rows.redo[..shared.redo].to_vec(),
                 })

@@ -11,6 +11,18 @@ fn stored(path: &std::path::Path) -> StackRows {
         .rows
 }
 
+/// Whether the cache knows more than rows: retained context, baseline, working state.
+fn knows_context(state: &AppState) -> bool {
+    state
+        .persisted_history
+        .lock()
+        .unwrap()
+        .as_ref()
+        .is_some_and(|cache| {
+            cache.trust != history::JournalTrust::from_rows(cache.trust.rows.clone())
+        })
+}
+
 fn cached(state: &AppState) -> Option<StackRows> {
     state
         .persisted_history
@@ -36,6 +48,10 @@ fn the_cache_follows_journal_writes_native_open_and_project_replacement() {
             "after editing to {name}"
         );
     }
+    assert!(
+        knows_context(&state),
+        "a journal write hands its context on"
+    );
     domain::undo_impl(&state).unwrap();
     let rows = stored(&path);
     assert_eq!((rows.undo.len(), rows.redo.len()), (2, 1));
@@ -46,6 +62,7 @@ fn the_cache_follows_journal_writes_native_open_and_project_replacement() {
     let progress = domain::detached_progress(crate::load_progress::LoadKind::Open, &path);
     domain::open_native_project(&reopened, &path, true, &progress).unwrap();
     assert_eq!(cached(&reopened), Some(rows));
+    assert!(knows_context(&reopened), "an open hands its context on");
     domain::rename_installation_impl(&reopened, installation, "Fourth".into()).unwrap();
     assert_eq!(cached(&reopened), Some(stored(&path)));
 

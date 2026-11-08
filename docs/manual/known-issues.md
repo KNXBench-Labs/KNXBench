@@ -765,8 +765,13 @@ is the remaining copy defect.
 - **Limitation:** no real device has confirmed this yet, so the download asks
   for `--accept-untested`. A backup does not hold property values, so such a
   download cannot be restored from a backup, and no partial download is offered.
-  Programs with other property-write shapes, erase codes or `Time` parameters are
-  still refused; readiness says why.
+  Programs with other property-write shapes, erase codes, non-zero inline data
+  or packed time units are still refused; readiness says why.
+- **Changed on main (8 November 2026):** time parameters in a plain unit (for
+  example tenths of a second) and property writes with all-zero inline data
+  follow ETS 6.4 too (ADR-0162), so Hager dimming actuators like the tester's
+  plan as well. Other devices with time parameters in a plain unit now plan too,
+  also untested.
 - **Consequence:** keep the ETS project of such a device until a KNXBench
   download has been checked on the device.
 - **Details:** [research](../research/2026-11-08-property-placed-parameters.md)

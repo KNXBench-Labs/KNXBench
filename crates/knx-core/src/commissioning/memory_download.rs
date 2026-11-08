@@ -121,7 +121,8 @@ pub enum MemoryDownloadStep {
     /// `LdCtrlDeclarePropDesc` + parameter-filled `LdCtrlWriteProp`: write
     /// `elements` one-octet elements from index 1, each octet the device's
     /// own bits merged with the parameters' ([`merge_owned_bits`]). The
-    /// device's elements are read first; nothing else is written.
+    /// device's elements are read first unless `owned` covers every bit
+    /// (ADR-0162); nothing else is written.
     WritePropertyParameters {
         /// `ObjIdx`.
         object_index: u8,
@@ -402,6 +403,17 @@ impl fmt::Display for MemoryDownloadStep {
                 f,
                 "master reset, erase code {erase_code}: A_FunctionPropertyCommand \
                  {object_index}/{property_id} {command:02X}"
+            ),
+            MemoryDownloadStep::WritePropertyParameters {
+                object_index,
+                property_id,
+                elements,
+                owned,
+                ..
+            } if owned.iter().all(|octet| *octet == 0xFF) => write!(
+                f,
+                "A_PropertyValue_Write {object_index}/{property_id}: {elements} elements, \
+                 every bit determined by the product, nothing read from the device"
             ),
             MemoryDownloadStep::WritePropertyParameters {
                 object_index,

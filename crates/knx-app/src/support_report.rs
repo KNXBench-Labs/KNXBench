@@ -539,10 +539,15 @@ fn context(code: &ProgramCode) -> Context {
                     object_index,
                     property_id,
                     count,
+                    inline_data,
                 } => {
                     a.insert("objectIndex", (*object_index).into());
                     a.insert("propertyId", (*property_id).into());
                     a.insert("count", (*count).into());
+                    if let Some(inline) = inline_data {
+                        let octets = u32::try_from(inline.len()).unwrap_or(u32::MAX);
+                        a.insert("inlineDataOctets", octets);
+                    }
                     "write-property-parameters"
                 }
                 LoadStep::Unmodelled { .. } => {

@@ -52,6 +52,29 @@ jobs:
       - name: Install Rust toolchain
         uses: actions-rust-lang/setup-rust-toolchain@v1
 
+      # The legacy browser download endpoint can return 504 after a costly compile.
+      # Fetch immutable API assets first, and verify bytes before making them executable.
+      - name: Prepare pinned AppImage tools
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p target/.tauri
+          fetch_tool() {
+            local asset="$1" digest="$2" name="$3"
+            local temporary="target/.tauri/$name.part"
+            gh api -H 'Accept: application/octet-stream' "$asset" > "$temporary"
+            printf '%s  %s\n' "$digest" "$temporary" | sha256sum --check
+            chmod 755 "$temporary"
+            mv "$temporary" "target/.tauri/$name"
+          }
+          fetch_tool repos/tauri-apps/binary-releases/releases/assets/274691722 \
+            f30140a43a0a59e46db21bdefdf749b9e9f2c6946e92afabbacf98b8ae73fb4f AppRun-x86_64
+          fetch_tool repos/tauri-apps/binary-releases/releases/assets/182515537 \
+            e762bea85c8eb0d4b3508d46e5c1f037f717d0f9303ae3b4aafc8b04991fa1ef linuxdeploy-x86_64.AppImage
+          fetch_tool repos/linuxdeploy/linuxdeploy-plugin-appimage/releases/assets/602435573 \
+            49d6a17160675a6bd1781699aae6bdf7692d98552e02a3671d2183d10547842e linuxdeploy-plugin-appimage.AppImage
+
       - name: Install Tauri CLI
         run: cargo install tauri-cli --version 2.11.4 --locked
 

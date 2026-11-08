@@ -10,6 +10,7 @@ import shutil
 import struct
 import subprocess
 import tempfile
+import textwrap
 import unittest
 from unittest.mock import patch
 
@@ -566,6 +567,9 @@ class SmokeHelperTests(unittest.TestCase):
         self.assertIn(f"APPIMAGE={image}", tokens)
         self.assertIn(f"APPDIR={root}", tokens)
         self.assertIn(f"HOME={work / 'home'}", tokens)
+        self.assertIn("WEBKIT_DISABLE_DMABUF_RENDERER=1", tokens)
+        self.assertIn("WEBKIT_DISABLE_COMPOSITING_MODE=1", tokens)
+        self.assertNotIn("WEBKIT_DISABLE_SANDBOX", " ".join(tokens))
 
     def test_failed_xvfb_start_reaps_its_process(self):
         smoke = self.load()
@@ -605,6 +609,47 @@ class SmokeHelperTests(unittest.TestCase):
 
 
 class PackagingContractTests(unittest.TestCase):
+    def prefetch_body(self):
+        source = (ROOT / ".github/workflows/linux-appimage.yml").read_text()
+        step = source.split("      - name: Prepare pinned AppImage tools\n", 1)[1]
+        step = step.split("      - name: Install Tauri CLI\n", 1)[0]
+        return textwrap.dedent(step.split("        run: |\n", 1)[1])
+
+    def test_ci_fetches_immutable_tool_assets_and_verifies_before_execution(self):
+        body = self.prefetch_body()
+        pins = (
+            ("274691722", "f30140a43a0a59e46db21bdefdf749b9e9f2c6946e92afabbacf98b8ae73fb4f", "AppRun-x86_64"),
+            ("182515537", "e762bea85c8eb0d4b3508d46e5c1f037f717d0f9303ae3b4aafc8b04991fa1ef", "linuxdeploy-x86_64.AppImage"),
+            ("602435573", "49d6a17160675a6bd1781699aae6bdf7692d98552e02a3671d2183d10547842e", "linuxdeploy-plugin-appimage.AppImage"),
+        )
+        for asset, digest, name in pins:
+            self.assertIn(f"/assets/{asset}", body)
+            self.assertIn(f"{digest} {name}", body)
+        self.assertIn("set -euo pipefail", body)
+        self.assertLess(body.index("gh api"), body.index("sha256sum --check"))
+        self.assertLess(body.index("sha256sum --check"), body.index("chmod 755"))
+        self.assertLess(body.index("chmod 755"), body.index('mv "$temporary"'))
+
+    def test_ci_tool_download_and_checksum_failures_never_publish_an_executable(self):
+        body = self.prefetch_body()
+        for failure in ("exit 22", "printf corrupt"):
+            with self.subTest(failure=failure), tempfile.TemporaryDirectory(prefix="appimage-prefetch-") as directory:
+                work = Path(directory)
+                binaries = work / "bin"
+                binaries.mkdir()
+                gh = binaries / "gh"
+                gh.write_text(f"#!/bin/sh\n{failure}\n")
+                gh.chmod(0o755)
+                result = subprocess.run(
+                    ["bash", "-c", body], cwd=work, capture_output=True, text=True,
+                    env=dict(os.environ, PATH=str(binaries) + os.pathsep + os.environ["PATH"]),
+                )
+                self.assertNotEqual(result.returncode, 0)
+                cache = work / "target/.tauri"
+                self.assertFalse((cache / "AppRun-x86_64").exists())
+                for path in cache.iterdir():
+                    self.assertEqual(path.stat().st_mode & 0o111, 0, path)
+
     def test_bundle_always_prepares_the_owned_hook(self):
         config = json.loads(
             (ROOT / "apps/knx-desktop/src-tauri/tauri.conf.json").read_text()

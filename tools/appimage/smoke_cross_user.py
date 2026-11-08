@@ -140,7 +140,8 @@ def launch_command(image: Path, root: Path, work: Path, display: str) -> list:
     inner = ('ip link set lo up && cd {w} && exec setpriv --reuid={u} --regid={g} --clear-groups '
              'env -i PATH=/usr/sbin:/usr/bin:/sbin:/bin HOME={h} XDG_CONFIG_HOME={h}/.config '
              'XDG_DATA_HOME={h}/.local/share XDG_CACHE_HOME={h}/.cache TMPDIR={w}/tmp '
-             'XDG_RUNTIME_DIR={w}/run DISPLAY={d} APPDIR={r} APPIMAGE={i} OWD={w} "$0"').format(
+             'XDG_RUNTIME_DIR={w}/run DISPLAY={d} WEBKIT_DISABLE_DMABUF_RENDERER=1 '
+             'WEBKIT_DISABLE_COMPOSITING_MODE=1 APPDIR={r} APPIMAGE={i} OWD={w} "$0"').format(
         u=TARGET_UID, g=TARGET_GID, h=shlex.quote(str(home)), w=shlex.quote(str(work)),
         r=shlex.quote(str(root)), d=shlex.quote(display), i=shlex.quote(str(image)))
     return ["sudo", "unshare", "--net", "sh", "-c", inner, str(root / "AppRun")]
@@ -149,7 +150,7 @@ def launch_command(image: Path, root: Path, work: Path, display: str) -> list:
 def start_xvfb(env_out: dict):
     """Let Xvfb pick a free display and report it through -displayfd."""
     read_fd, write_fd = os.pipe()
-    xvfb = subprocess.Popen(["Xvfb", "-displayfd", str(write_fd), "-screen", "0", "1280x800x24",
+    xvfb = subprocess.Popen(["Xvfb", "-displayfd", str(write_fd), "-screen", "0", "1920x1200x24",
                              "-nolisten", "tcp", "-ac"], pass_fds=(write_fd,),
                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     os.close(write_fd)

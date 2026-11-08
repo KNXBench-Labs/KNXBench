@@ -1,0 +1,176 @@
+{
+ "fixture": {
+  "file": "native18-before-ga-description.sqlite",
+  "sha256": "01713f37dc39caa0d2a9365cf7cf49bbcb4c982cc0dae3b72ba3c37ee8327fb4",
+  "bytes": 2281472
+ },
+ "writer_base": "f2c5b478c7f0c96e18cb837adbce00b4ae4d4494",
+ "native_schema": 18,
+ "producer": {
+  "file": "native18-before-ga-description-producer.rs.txt",
+  "sha256": "e5c7bb9fd1cbf8247a5480ffad8b0ad407da4e6124cb9ecd0f8428559c4db456",
+  "executable_sha256": "6b742e49dcbc50be40df1ff829836f35df7c40c3b3b852647742348168ea746a",
+  "derived_from": "native17-before-priority-edit-producer.rs.txt (version asserts 17->18, group-address description evidence instead of priority facts)",
+  "built_as": "temporary knx-store example on the unchanged writer base, removed after the run"
+ },
+ "inputs": {
+  "0.xml": {
+   "directory": "native18-before-ga-description-inputs",
+   "sha256": "2009ab763f63780d7cf30b0f1a30df5851cf5a263d3ff5f6c65ed809397d5285",
+   "bytes": 2332
+  },
+  "Project.xml": {
+   "directory": "native18-before-ga-description-inputs",
+   "sha256": "5f46bbd138c050f8524c49df3947c682bda53ae1488b8004ce1c2994185544cd",
+   "bytes": 213
+  }
+ },
+ "argv": [
+  "native18_predecessor",
+  "<synthetic-input-directory>",
+  "<new-output-directory>"
+ ],
+ "counts": {
+  "group_ranges": 2,
+  "group_addresses": 3,
+  "keyed_retained_descriptions": 2,
+  "unkeyed_retained_descriptions": 1,
+  "undo": 2,
+  "redo": 1,
+  "named": 1,
+  "generation": 3
+ },
+ "retained_description_rows": [
+  {
+   "xpath": "",
+   "bytes_utf8": "Unkeyed-control"
+  },
+  {
+   "xpath": "/KNX/Project/Installations/Installation/GroupAddresses/GroupRanges/GroupRange/GroupAddress[@Id='P-0001-0_GA-1']",
+   "bytes_utf8": "Beschreibung mit; Semikolon und \"Anführung\" ß"
+  },
+  {
+   "xpath": "/KNX/Project/Installations/Installation/GroupAddresses/GroupRanges/GroupRange/GroupAddress[@Id='P-0001-0_GA-2']",
+   "bytes_utf8": ""
+  }
+ ],
+ "integrity_check": "ok",
+ "images": {
+  "baseline-complete.image": {
+   "sha256": "5a76d2c02faf28c2be4efa6e018bbd583e1765b063028150240c9de2550daa8e",
+   "bytes": 331776
+  },
+  "baseline-model.image": {
+   "sha256": "0976911fbd1347c67c34930059b233d163b29d598b20311970c6efd2bed3af18",
+   "bytes": 323584
+  },
+  "redo-0.image": {
+   "sha256": "e90b9ebcc0501f6957c50cebed7ff2ddfac724c3243cb0ca58b5a4542652cf5d",
+   "bytes": 323584
+  },
+  "undo-0.image": {
+   "sha256": "0976911fbd1347c67c34930059b233d163b29d598b20311970c6efd2bed3af18",
+   "bytes": 323584
+  },
+  "undo-1.image": {
+   "sha256": "a95dee9c6ff2c94cd3f6ba4a390be9cda48a41fb3c79ecea72664df3fca18408",
+   "bytes": 323584
+  },
+  "working-complete.image": {
+   "sha256": "1cc5866c2a3f22d534d976ffb6313e9e47da1b1e1a59f71fca3713994e17d306",
+   "bytes": 331776
+  },
+  "working-model.image": {
+   "sha256": "3ebe0808a70a427bf6b66371af4b3a7e44b1050d28062afd45e9db88ab913c01",
+   "bytes": 323584
+  }
+ },
+ "history": {
+  "project_history_context": [
+   {
+    "content_hash": "b1dd8f6bc018607f4a823add92b8814175917e36565f7ccac983191f098d7726",
+    "format_version": 1,
+    "image": {
+     "bytes": 331776,
+     "sha256": "064f2fe23557bafbaf777af4d1f7e493179f938dbef1288514e98d3d44849288"
+    },
+    "image_hash": "064f2fe23557bafbaf777af4d1f7e493179f938dbef1288514e98d3d44849288"
+   }
+  ],
+  "project_history_state": [
+   {
+    "id": 0,
+    "format_version": 1,
+    "generation": 3,
+    "baseline_hash": "2ffac29075f5997b2da9241a179a81f6df806a49c1c11dcc71695e2d74f5e83d",
+    "working": {
+     "bytes": 323584,
+     "sha256": "3ebe0808a70a427bf6b66371af4b3a7e44b1050d28062afd45e9db88ab913c01"
+    },
+    "working_hash": "3ebe0808a70a427bf6b66371af4b3a7e44b1050d28062afd45e9db88ab913c01",
+    "context_hash": "b1dd8f6bc018607f4a823add92b8814175917e36565f7ccac983191f098d7726"
+   }
+  ],
+  "project_history_stack": [
+   {
+    "side": "redo",
+    "position": 0,
+    "format_version": 1,
+    "image": {
+     "bytes": 323584,
+     "sha256": "e90b9ebcc0501f6957c50cebed7ff2ddfac724c3243cb0ca58b5a4542652cf5d"
+    },
+    "image_hash": "e90b9ebcc0501f6957c50cebed7ff2ddfac724c3243cb0ca58b5a4542652cf5d",
+    "context_hash": "b1dd8f6bc018607f4a823add92b8814175917e36565f7ccac983191f098d7726"
+   },
+   {
+    "side": "undo",
+    "position": 0,
+    "format_version": 1,
+    "image": {
+     "bytes": 323584,
+     "sha256": "0976911fbd1347c67c34930059b233d163b29d598b20311970c6efd2bed3af18"
+    },
+    "image_hash": "0976911fbd1347c67c34930059b233d163b29d598b20311970c6efd2bed3af18",
+    "context_hash": "b1dd8f6bc018607f4a823add92b8814175917e36565f7ccac983191f098d7726"
+   },
+   {
+    "side": "undo",
+    "position": 1,
+    "format_version": 1,
+    "image": {
+     "bytes": 323584,
+     "sha256": "a95dee9c6ff2c94cd3f6ba4a390be9cda48a41fb3c79ecea72664df3fca18408"
+    },
+    "image_hash": "a95dee9c6ff2c94cd3f6ba4a390be9cda48a41fb3c79ecea72664df3fca18408",
+    "context_hash": "b1dd8f6bc018607f4a823add92b8814175917e36565f7ccac983191f098d7726"
+   }
+  ],
+  "project_history_version": [
+   {
+    "id": 1,
+    "format_version": 1,
+    "created_at": "2026-11-08T12:56:25.698Z",
+    "reason": "named",
+    "label": "Synthetic V18 baseline",
+    "image": {
+     "bytes": 323584,
+     "sha256": "0976911fbd1347c67c34930059b233d163b29d598b20311970c6efd2bed3af18"
+    },
+    "image_hash": "0976911fbd1347c67c34930059b233d163b29d598b20311970c6efd2bed3af18",
+    "context_hash": "b1dd8f6bc018607f4a823add92b8814175917e36565f7ccac983191f098d7726"
+   }
+  ]
+ },
+ "result": "PASS: schema18 save; import errors=0; keyed retained descriptions=2 (one empty) plus unkeyed control; exact Project/opaque equality; undo=2 redo=1 named=1; close/read-only reopen twice unchanged; recovered undo/redo replay; image decode/hash refusal controls",
+ "claim": "Synthetic native18 file written by the unchanged v18 writer at writer_base before any native19 change; not a real user project.",
+ "semantic_sha256": {
+  "baseline-complete": "2ffac29075f5997b2da9241a179a81f6df806a49c1c11dcc71695e2d74f5e83d",
+  "baseline-model": "dbdac75f95db6db303fd621c472f2fbf4bdb9945c800e4e7e884adbf433994b3",
+  "redo-0": "6ea3435637bcb0b5e4ce97516b1fbfec666f2c755224bba5931dacd34beec839",
+  "undo-0": "dbdac75f95db6db303fd621c472f2fbf4bdb9945c800e4e7e884adbf433994b3",
+  "undo-1": "ad66fb07a8b5680bcfb9b24bafa6e12b1023f5317984f07a19a32eb5ee1a8d37",
+  "working-complete": "313335e7ff787e21a136140440d3566adb517db01529df698fbb950fa4f4880d",
+  "working-model": "391b0eb4281e7a2383e03bccb6dc2e650cd20941da168b586959682d8a7ecbbe"
+ }
+}

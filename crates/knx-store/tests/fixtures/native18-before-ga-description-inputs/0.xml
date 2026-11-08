@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<KNX xmlns="http://knx.org/xml/project/23" CreatedBy="Synthetic fixture" ToolVersion="synthetic-v18">
+  <Project Id="P-0001"><Installations><Installation Name="Synthetic installation" DefaultLine="P-0001-0_L-1">
+    <Topology><Area Id="P-0001-0_A-1" Name="Synthetic area" Address="1">
+      <Line Id="P-0001-0_L-1" Name="Synthetic line" Address="1">
+        <Segment Id="P-0001-0_L-1_S-1" Number="0" MediumTypeRefId="MT-0">
+          <DeviceInstance Id="P-0001-0_DI-1" Name="Synthetic baseline sensor" Address="10" ProductRefId="M-0001_H-1_P-1" Hardware2ProgramRefId="M-0001_H-1_HP-1">
+            <ComObjectInstanceRefs>
+              <ComObjectInstanceRef RefId="O-7_R-1" Priority="" />
+              <ComObjectInstanceRef RefId="O-8_R-2" Priority="Future-&#x3a9;" />
+              <ComObjectInstanceRef RefId="O-9_R-3" Priority="High" />
+              <ComObjectInstanceRef RefId="O-10_R-4" />
+            </ComObjectInstanceRefs>
+            <GroupObjectTree GroupObjectInstances="O-7_R-1 O-8_R-2 O-9_R-3 O-10_R-4 O-11_R-5" />
+          </DeviceInstance>
+        </Segment>
+      </Line>
+    </Area><UnassignedDevices>
+      <DeviceInstance Id="P-0001-0_DI-2" Name="Synthetic unassigned sensor" ProductRefId="M-0001_H-1_P-1" Hardware2ProgramRefId="M-0001_H-1_HP-1">
+        <ComObjectInstanceRefs><ComObjectInstanceRef RefId="O-7_R-1" Priority="Alert" /></ComObjectInstanceRefs>
+        <GroupObjectTree GroupObjectInstances="O-7_R-1" />
+      </DeviceInstance>
+    </UnassignedDevices></Topology>
+    <GroupAddresses><GroupRanges>
+      <GroupRange Id="P-0001-0_GR-1" Name="Synthetic main" RangeStart="1" RangeEnd="2047" Puid="20">
+        <GroupRange Id="P-0001-0_GR-2" Name="Synthetic middle" RangeStart="1" RangeEnd="255" Puid="21">
+          <GroupAddress Id="P-0001-0_GA-1" Name="Synthetic described" Address="1" Description="Beschreibung mit; Semikolon und &quot;Anf&#xfc;hrung&quot; &#xdf;" DatapointType="DPST-1-1" Puid="22" />
+          <GroupAddress Id="P-0001-0_GA-2" Name="Synthetic empty description" Address="2" Description="" Puid="23" />
+          <GroupAddress Id="P-0001-0_GA-3" Name="Synthetic without description" Address="3" Puid="24" />
+        </GroupRange>
+      </GroupRange>
+    </GroupRanges></GroupAddresses>
+  </Installation></Installations></Project>
+</KNX>

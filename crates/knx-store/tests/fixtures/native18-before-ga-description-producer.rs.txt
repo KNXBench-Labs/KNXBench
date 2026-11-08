@@ -1,0 +1,168 @@
+//! Produces and verifies a synthetic native V18 predecessor using unchanged public APIs.
+use knx_core::{Command, CommandStack, GroupAddressStyle, Project};
+use knx_store::project_history::{self as history, NativeSnapshot};
+use knx_store::{Connection, StoredOpaqueEntry};
+use std::{fs, path::Path};
+
+const GA_PREFIX: &str = "/KNX/Project/Installations/Installation/GroupAddresses/GroupRanges/GroupRange/GroupAddress";
+const DESCRIBED: &str = "Beschreibung mit; Semikolon und \"Anf\u{fc}hrung\" \u{df}";
+
+fn schema(conn: &Connection) {
+    assert_eq!(knx_core::project::CURRENT_SCHEMA_VERSION, 18);
+    assert_eq!(knx_store::CURRENT_SCHEMA_VERSION, 18);
+    let v: i64 = conn.query_row("PRAGMA user_version", [], |r| r.get(0)).unwrap();
+    assert_eq!(v, 18);
+    let edit_table: i64 = conn.query_row("SELECT count(*) FROM sqlite_schema WHERE name='com_object_priority_edit'", [], |r| r.get(0)).unwrap();
+    assert_eq!(edit_table, 1, "native18 carries the priority edit table");
+    let description_table: i64 = conn.query_row("SELECT count(*) FROM sqlite_schema WHERE name GLOB 'group_address_description*'", [], |r| r.get(0)).unwrap();
+    assert_eq!(description_table, 0, "native18 has no group-address description table");
+    let check: String = conn.query_row("PRAGMA integrity_check", [], |r| r.get(0)).unwrap();
+    assert_eq!(check, "ok");
+    assert!(!conn.prepare("PRAGMA foreign_key_check").unwrap().exists([]).unwrap());
+}
+
+fn image(out: &Path, name: &str, snapshot: &NativeSnapshot) {
+    let bytes = snapshot.encode().unwrap();
+    let hash = history::image_hash(&bytes);
+    assert_eq!(NativeSnapshot::decode(&bytes, &hash).unwrap(), *snapshot);
+    fs::write(out.join(format!("{name}.image")), &bytes).unwrap();
+    fs::write(out.join(format!("{name}.semantic-sha256")), snapshot.semantic_hash().unwrap()).unwrap();
+    fs::write(out.join(format!("{name}.debug")), format!("{snapshot:#?}\n")).unwrap();
+    assert!(NativeSnapshot::decode(&bytes, &"0".repeat(64)).is_err());
+}
+
+fn model(project: &Project) -> NativeSnapshot {
+    NativeSnapshot { project: project.clone(), opaque: vec![], manufacturer_refs: vec![] }
+}
+
+fn preserved(project: &Project, baseline: &Project) {
+    assert_eq!(project.schema_version, 18);
+    assert_eq!(project.devices.com_objects().count(), 6);
+    assert_eq!(project.installations[0].group_ranges, baseline.installations[0].group_ranges);
+    assert_eq!(project.installations[0].group_addresses.len(), 3);
+}
+
+/// The v18 importer keeps `GroupAddress/@Description` as a keyed retained attribute.
+fn description_evidence(opaque: &[StoredOpaqueEntry], topology: &[u8]) {
+    let expectations = [("P-0001-0_GA-1", Some(DESCRIBED)), ("P-0001-0_GA-2", Some("")), ("P-0001-0_GA-3", None)];
+    for (ets_id, raw) in expectations {
+        let xpath = format!("{GA_PREFIX}[@Id='{ets_id}']");
+        let rows: Vec<_> = opaque.iter().filter(|e| e.kind == "RetainedAttribute" && e.source_path == "P-0001/0.xml" && e.name == "Description" && e.xpath == xpath).collect();
+        match raw {
+            Some(raw) => {
+                assert_eq!(rows.len(), 1, "exact owner-keyed description {xpath}");
+                assert_eq!(rows[0].bytes, raw.as_bytes());
+                assert_eq!(rows[0].sha256, history::image_hash(raw.as_bytes()));
+            }
+            None => assert!(rows.is_empty(), "no description attribute on {xpath}"),
+        }
+    }
+    let source: Vec<_> = opaque.iter().filter(|e| e.kind == "ContainerEntry" && e.source_path == "P-0001/0.xml" && e.xpath.is_empty() && e.name.is_empty()).collect();
+    assert_eq!(source.len(), 1);
+    assert_eq!(source[0].bytes, topology);
+    let unkeyed: Vec<_> = opaque.iter().filter(|e| e.kind == "RetainedAttribute" && e.name == "Description" && e.xpath.is_empty()).collect();
+    assert_eq!(unkeyed.len(), 1);
+    assert_eq!(unkeyed[0].bytes, b"Unkeyed-control");
+    for entry in opaque { assert_eq!(entry.sha256, history::image_hash(&entry.bytes)); }
+}
+
+fn verify_reopen(path: &Path, root: &NativeSnapshot, working: &NativeSnapshot, undo: &[Project], redo: &[Project], generation: i64, named_id: i64) {
+    let before = fs::read(path).unwrap();
+    let store = knx_store::open_existing_read_only(path).unwrap();
+    assert_eq!(store.migrated_from, None);
+    schema(&store.conn);
+    assert_eq!(NativeSnapshot::read(&store.conn).unwrap(), *root);
+    let recovered = history::load_editor(&store.conn).unwrap().unwrap();
+    assert_eq!(recovered.generation, generation);
+    assert_eq!(recovered.baseline, *root);
+    assert_eq!(recovered.working, *working);
+    assert_eq!(recovered.undo, undo);
+    assert_eq!(recovered.redo, redo);
+    assert_eq!(recovered.undo.len(), 2);
+    assert_eq!(recovered.redo.len(), 1);
+    let versions = history::list_versions(&store.conn).unwrap();
+    assert_eq!(versions.len(), 1);
+    assert_eq!(versions[0].label, "Synthetic V18 baseline");
+    assert_eq!(versions[0].id, named_id);
+    assert_eq!(history::read_version(&store.conn, named_id).unwrap(), *root);
+    let mut project = recovered.working.project.clone();
+    let mut stack = CommandStack::from_snapshot_states(recovered.undo, recovered.redo);
+    stack.undo(&mut project).unwrap();
+    assert_eq!(project, undo[1]);
+    stack.undo(&mut project).unwrap();
+    assert_eq!(project, root.project);
+    stack.redo(&mut project).unwrap();
+    stack.redo(&mut project).unwrap();
+    assert_eq!(project, working.project);
+    stack.redo(&mut project).unwrap();
+    assert_eq!(project, redo[0]);
+    preserved(&project, &root.project);
+    assert!(store.conn.execute("DELETE FROM project_history_state", []).is_err(), "read-only is enforced");
+    drop(store);
+    assert_eq!(fs::read(path).unwrap(), before, "read-only close/reopen must preserve file octets");
+}
+
+fn main() {
+    let args: Vec<_> = std::env::args().collect();
+    assert_eq!(args.len(), 3, "producer INPUT_DIR NEW_OUTPUT_DIR");
+    let input = Path::new(&args[1]);
+    let out = Path::new(&args[2]);
+    fs::create_dir(out).expect("new attempt directory required");
+    let topology = fs::read(input.join("0.xml")).unwrap();
+    let info = fs::read(input.join("Project.xml")).unwrap();
+    let signature = b"Synthetic unsigned import fixture; not a real signature";
+    let zip = knx_testsupport::zip_with_entries(&[("P-0001.signature", signature), ("P-0001/0.xml", &topology), ("P-0001/Project.xml", &info)]);
+    fs::write(out.join("synthetic-input.knxproj"), &zip).unwrap();
+    let imported = knx_etsproj::import_knxproj_bytes(zip, "synthetic-native18.knxproj").unwrap();
+    fs::write(out.join("original-import-report.debug"), format!("{:#?}\n", imported.report)).unwrap();
+    fs::write(out.join("original-imported-project.debug"), format!("{:#?}\n", imported.project)).unwrap();
+    assert_eq!(imported.report.source.schema_version, 23);
+    assert!(imported.report.errors.is_empty(), "synthetic project must be valid: {:?}", imported.report.errors);
+    assert_eq!(imported.project.devices.com_objects().count(), 6);
+    assert_eq!(imported.project.installations[0].group_ranges.len(), 2);
+    assert_eq!(imported.project.installations[0].group_addresses.len(), 3);
+    let mut opaque: Vec<_> = imported.opaque.iter().map(|e| StoredOpaqueEntry {
+        source_path: e.source_path.clone(), xpath: e.xpath.clone(), kind: format!("{:?}", e.kind), name: e.name.clone(), bytes: e.bytes.clone(), sha256: e.sha256.clone(),
+    }).collect();
+    // Deliberately external, unkeyed opaque control, added via public passthrough APIs.
+    opaque.push(StoredOpaqueEntry { source_path: "P-0001/0.xml".into(), xpath: String::new(), kind: "RetainedAttribute".into(), name: "Description".into(), bytes: b"Unkeyed-control".to_vec(), sha256: history::image_hash(b"Unkeyed-control") });
+    description_evidence(&opaque, &topology);
+    let root = NativeSnapshot { project: imported.project, opaque, manufacturer_refs: vec![] };
+    let path = out.join("native18-before-ga-description.sqlite");
+    let conn = knx_store::open_and_migrate(&path).unwrap();
+    schema(&conn);
+    knx_store::save_project_with_passthrough(&conn, &root.project, &root.opaque, &root.manufacturer_refs).unwrap();
+    schema(&conn);
+    assert_eq!(NativeSnapshot::read(&conn).unwrap(), root);
+    let generation = history::save_editor(&conn, &root, &CommandStack::new(), None, true).unwrap();
+    let generation = history::create_version(&conn, &root, "Synthetic V18 baseline", generation).unwrap();
+    let named_id = history::list_versions(&conn).unwrap()[0].id;
+    let described = root.project.installations[0].group_addresses.iter().find(|g| g.source.ets_id == "P-0001-0_GA-1").unwrap().clone();
+    let plain = root.project.installations[0].group_addresses.iter().find(|g| g.source.ets_id == "P-0001-0_GA-3").unwrap().clone();
+    let mut working = root.clone();
+    let mut stack = CommandStack::new();
+    stack.do_command(&mut working.project, Command::UpdateGroupAddress { id: described.id, name: "Synthetic working name".into(), central: described.central, unfiltered: described.unfiltered }).unwrap();
+    stack.do_command(&mut working.project, Command::SetGroupAddressStyle { style: GroupAddressStyle::Free }).unwrap();
+    stack.do_command(&mut working.project, Command::UpdateGroupAddress { id: plain.id, name: "Synthetic redo name".into(), central: true, unfiltered: plain.unfiltered }).unwrap();
+    stack.undo(&mut working.project).unwrap();
+    assert_eq!(stack.history_lengths(), (2, 1));
+    let (undo, redo) = stack.snapshot_states(&working.project).unwrap();
+    assert_eq!(undo[0], root.project);
+    for project in undo.iter().chain(redo.iter()).chain([&working.project]) { preserved(project, &root.project); }
+    let generation = history::save_editor(&conn, &working, &stack, Some(generation), false).unwrap();
+    schema(&conn);
+    assert_eq!(NativeSnapshot::read(&conn).unwrap(), root);
+    image(out, "baseline-complete", &root);
+    image(out, "baseline-model", &model(&root.project));
+    image(out, "working-complete", &working);
+    image(out, "working-model", &model(&working.project));
+    for (i, p) in undo.iter().enumerate() { image(out, &format!("undo-{i}"), &model(p)); }
+    for (i, p) in redo.iter().enumerate() { image(out, &format!("redo-{i}"), &model(p)); }
+    fs::write(out.join("generation.txt"), generation.to_string()).unwrap();
+    drop(conn);
+    verify_reopen(&path, &root, &working, &undo, &redo, generation, named_id);
+    verify_reopen(&path, &root, &working, &undo, &redo, generation, named_id);
+    description_evidence(&working.opaque, &topology);
+    fs::write(out.join("producer-result.txt"), "PASS: schema18 save; import errors=0; keyed retained descriptions=2 (one empty) plus unkeyed control; exact Project/opaque equality; undo=2 redo=1 named=1; close/read-only reopen twice unchanged; recovered undo/redo replay; image decode/hash refusal controls\n").unwrap();
+    println!("PASS native18 predecessor: group addresses=3 undo=2 redo=1 named=1 generation={generation}");
+}

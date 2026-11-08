@@ -105,6 +105,20 @@ struct HeaderMap {
     middle_group: Option<usize>,
 }
 
+/// Reads an import file's bytes as UTF-8 text, the only encoding the reader
+/// accepts. The refusal names the first invalid byte offset and how to fix it,
+/// rather than a bare stream error; no other code page is guessed.
+pub fn decode_csv_text(bytes: &[u8]) -> Result<&str, String> {
+    std::str::from_utf8(bytes).map_err(|error| {
+        format!(
+            "file is not UTF-8 text (first invalid byte at offset {}); group-address CSV \
+             import reads UTF-8 only, so convert the file to UTF-8 (for example from \
+             Windows-1252) and import again",
+            error.valid_up_to()
+        )
+    })
+}
+
 /// Reads "KNXBench group-address CSV v1" `text` and produces typed rows.
 ///
 /// `style` is the project's own [`GroupAddressStyle`]; addresses are parsed
@@ -569,15 +583,17 @@ fn strip_bom(text: &str) -> &str {
     text.strip_prefix('\u{FEFF}').unwrap_or(text)
 }
 
-/// Counts `,` versus `;` outside quoted spans on the header line only,
-/// defaulting to `,` on a tie. `text.lines()` strips a trailing `\r`, so
-/// this works for both CRLF and LF input.
+/// Counts `,`, `;` and tab outside quoted spans on the header line only and
+/// picks the most frequent, defaulting to `,` on a tie with it and preferring
+/// `;` over tab. `text.lines()` strips a trailing `\r`, so this works for both
+/// CRLF and LF input.
 fn detect_separator(text: &str) -> char {
     let header_line = text.lines().next().unwrap_or("");
 
     let mut in_quotes = false;
     let mut commas = 0usize;
     let mut semicolons = 0usize;
+    let mut tabs = 0usize;
     let mut chars = header_line.chars().peekable();
     while let Some(c) = chars.next() {
         match c {
@@ -590,11 +606,14 @@ fn detect_separator(text: &str) -> char {
             }
             ',' if !in_quotes => commas += 1,
             ';' if !in_quotes => semicolons += 1,
+            '\t' if !in_quotes => tabs += 1,
             _ => {}
         }
     }
 
-    if semicolons > commas {
+    if tabs > commas && tabs > semicolons {
+        '\t'
+    } else if semicolons > commas {
         ';'
     } else {
         ','

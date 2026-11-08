@@ -2,7 +2,8 @@
 
 use crate::testutil::{empty_project, entry_with_flags, linked_com_object, range};
 use crate::{
-    parse_group_addresses, plan_import, CsvProblem, IgnoredColumnReason, ParsedCsv, Severity,
+    decode_csv_text, parse_group_addresses, plan_import, CsvProblem, IgnoredColumnReason,
+    ParsedCsv, Severity,
 };
 use knx_core::{Command, DptRef, GroupAddress, GroupAddressId, GroupAddressStyle, GroupRangeId};
 
@@ -14,6 +15,12 @@ const SHAPE3: &str =
     "Main;Middle;Sub;Address;Central;Unfiltered;Description;DatapointType;Security";
 const SHAPE4: &str =
     "Main;Middle;Sub;Main;Middle;Sub;Central;Unfiltered;Description;DatapointType;Security";
+const NAME_ADDRESS_SHAPES: [&str; 4] = [
+    "Group name;Address",
+    "Group name;Main;Middle;Sub",
+    "Main;Middle;Sub;Address",
+    "Main;Middle;Sub;Main;Middle;Sub",
+];
 const AUTO_WARNING: &str = "Security Auto is not imported; project security is unchanged";
 
 fn three(text: &str) -> GroupAddress {
@@ -60,7 +67,7 @@ fn assert_refused(text: &str) {
     assert_eq!(errs.len(), 1, "{:?}", parsed.problems);
     assert_eq!(errs[0].row, None, "{:?}", errs[0]);
     assert!(
-        errs[0].detail.contains("not exactly one of the four"),
+        errs[0].detail.contains("not exactly one of the eight"),
         "{:?}",
         errs[0]
     );
@@ -334,7 +341,7 @@ fn comma_separated_profile_files_parse() {
 fn repeated_main_middle_sub_are_legal_only_in_the_complete_shape_four() {
     assert_clean(&parse(&file(SHAPE4, &[])));
     for header in [
-        "Main;Middle;Sub;Main;Middle;Sub",
+        "Main;Middle;Sub;Main;Middle;Sub;Central",
         "Main;Middle;Sub;Main;Middle;Sub;Central;Unfiltered;Description;DatapointType",
         "Main;Main;Middle;Sub;Middle;Sub;Central;Unfiltered;Description;DatapointType;Security",
         "Main;Middle;Sub;Sub;Middle;Main;Central;Unfiltered;Description;DatapointType;Security",
@@ -359,7 +366,9 @@ fn native_duplicate_header_protection_remains() {
 #[test]
 fn ambiguous_or_mixed_external_looking_headers_fail_closed() {
     for header in [
-        "Group name;Address",
+        "Group name;Address;Central",
+        "Address;Group name",
+        "Main;Middle;Sub;Address;Description",
         "Name;Main;Middle;Sub",
         "Group name;Address;Action;NewAddress;Central;Unfiltered;Description;DatapointType;Security",
         "Address;Group name;Central;Unfiltered;Description;DatapointType;Security",
@@ -868,4 +877,156 @@ fn native_action_files_still_work_in_a_three_level_project() {
     assert_clean(&parsed);
     assert_eq!(parsed.rows.len(), 1);
     assert_eq!(TAIL.split(';').count(), 5);
+}
+
+#[test]
+fn name_address_only_shapes_map_leaves_without_metadata() {
+    let rows: [&[&str]; 4] = [
+        &["Pump", "1/2/3"],
+        &["Pump", "1", "2", "3"],
+        &["", "", "Pump", "1/2/3"],
+        &["", "", "Pump", "1", "2", "3"],
+    ];
+    for (header, row) in NAME_ADDRESS_SHAPES.into_iter().zip(rows) {
+        let parsed = parse(&file(header, &[row]));
+        assert_clean(&parsed);
+        assert!(parsed.ignored_columns.is_empty(), "{header}");
+        let row = &parsed.rows[0];
+        assert_eq!(
+            (row.name.as_str(), row.address),
+            ("Pump", three("1/2/3")),
+            "{header}"
+        );
+        assert_eq!((row.central, row.unfiltered), (None, None), "{header}");
+        assert_eq!(row.datapoint_type, None, "{header}");
+    }
+}
+
+#[test]
+fn name_address_only_range_rows_are_skipped_with_an_explicit_warning() {
+    let parsed = parse(&file(
+        "Main;Middle;Sub;Address",
+        &[&["Floor", "", "", "1/-/-"], &["", "Rooms", "", "1/2/-"]],
+    ));
+    assert!(parsed.rows.is_empty());
+    assert!(errors(&parsed).is_empty(), "{:?}", parsed.problems);
+    assert_eq!(warnings(&parsed).len(), 2);
+    assert!(warnings(&parsed).iter().all(|w| w
+        .detail
+        .contains("group range name and address are not imported")));
+}
+
+#[test]
+fn name_address_only_files_keep_row_validation() {
+    assert_single_row_error(
+        &file("Group name;Address", &[&["", "1/1/1"]]),
+        "name is blank",
+    );
+    assert_single_row_error(
+        &file("Main;Middle;Sub;Address", &[&["Pump", "", "", "1/1/1"]]),
+        "Sub name column",
+    );
+    assert_single_row_error(
+        &file("Group name;Main;Middle;Sub", &[&["Pump", "1", "", "3"]]),
+        "without gaps",
+    );
+}
+
+#[test]
+fn a_name_address_only_leaf_creates_with_native_defaults() {
+    let project = empty_project(GroupAddressStyle::ThreeLevel);
+    let parsed = parse(&file("Group name;Address", &[&["Pump", "1/1/1"]]));
+    let plan = plan_import(&project, &parsed);
+    assert_eq!(plan.report.created, 1);
+    let Some(Command::Batch(commands)) = plan.command else {
+        panic!("expected a batch");
+    };
+    let Command::CreateGroupAddress { entry, .. } = &commands[0] else {
+        panic!("expected a create, got {:?}", commands[0]);
+    };
+    assert_eq!((entry.central, entry.unfiltered), (false, false));
+    assert_eq!(
+        (entry.name.as_str(), entry.address),
+        ("Pump", three("1/1/1"))
+    );
+}
+
+#[test]
+fn tab_separated_profile_files_parse_with_quoted_cells() {
+    let header = SHAPE4
+        .split(';')
+        .map(|c| format!("\"{c}\""))
+        .collect::<Vec<_>>()
+        .join("\t");
+    let leaf = [
+        "",
+        "",
+        "Pump; \"\"west\"\"",
+        "1",
+        "0",
+        "7",
+        "",
+        "",
+        "",
+        "",
+        "Auto",
+    ]
+    .map(|c| format!("\"{c}\""))
+    .join("\t");
+    let range = ["Floor", "", "", "1", "", "", "", "", "", "", "Auto"]
+        .map(|c| format!("\"{c}\""))
+        .join("\t");
+    let parsed = parse(&format!("{header}\r\n{range}\r\n{leaf}\r\n"));
+    assert!(errors(&parsed).is_empty(), "{:?}", parsed.problems);
+    assert_eq!(parsed.separator, '\t');
+    assert_eq!(parsed.rows.len(), 1);
+    assert_eq!(parsed.rows[0].name, "Pump; \"west\"");
+    assert_eq!(parsed.rows[0].address, three("1/0/7"));
+    assert_eq!(parsed.rows[0].line, 3);
+}
+
+#[test]
+fn tab_separated_native_files_parse() {
+    let parsed = parse_group_addresses(
+        "Address\tName\n1/1/1\tPump\n",
+        GroupAddressStyle::ThreeLevel,
+    );
+    assert!(errors(&parsed).is_empty(), "{:?}", parsed.problems);
+    assert_eq!(parsed.separator, '\t');
+    assert_eq!(parsed.rows[0].name, "Pump");
+}
+
+#[test]
+fn non_utf8_bytes_are_refused_with_their_offset_and_no_guessed_code_page() {
+    assert_eq!(
+        decode_csv_text("Group name;Address\n".as_bytes()),
+        Ok("Group name;Address\n")
+    );
+    let error = decode_csv_text(b"\"K\xfcche\";\"1/1/1\"").unwrap_err();
+    assert!(error.contains("not UTF-8 text"), "{error}");
+    assert!(error.contains("offset 2"), "{error}");
+}
+
+#[test]
+fn separator_ties_prefer_comma_then_semicolon_over_tab() {
+    let comma = parse_group_addresses(
+        "Address,Name\tX\n1/1/1,Pump\tA\n",
+        GroupAddressStyle::ThreeLevel,
+    );
+    assert_eq!(comma.separator, ',');
+    let semicolon = parse_group_addresses(
+        "Address;Name\tX\n1/1/1;Pump\tA\n",
+        GroupAddressStyle::ThreeLevel,
+    );
+    assert_eq!(semicolon.separator, ';');
+}
+
+#[test]
+fn tabs_inside_quoted_header_cells_do_not_count_as_separators() {
+    let parsed = parse_group_addresses(
+        "\"Address\";\"Name\";\"No\t\t\tte\"\n1/1/1;Pump;x\n",
+        GroupAddressStyle::ThreeLevel,
+    );
+    assert_eq!(parsed.separator, ';');
+    assert_eq!(parsed.rows[0].name, "Pump");
 }

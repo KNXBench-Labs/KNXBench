@@ -88,7 +88,7 @@
       "number": 38,
       "title": "CSV interoperability",
       "topic": "Import and export",
-      "summary": "Native CSV v1 export is unchanged. Four fixed address-only import profiles report omitted ranges/security and refuse unsupported metadata; no general ETS/ESF interoperability or full hierarchy roundtrip is claimed.",
+      "summary": "Native CSV v1 export is unchanged. Eight fixed address-only import profiles, whose headers match ETS6 6.4.1's CSV exports, report omitted ranges/security and refuse unsupported metadata and non-UTF-8 files; no general ETS/ESF interoperability or full hierarchy roundtrip is claimed.",
       "file": "KL-038-csv-interoperability.md",
       "ledger_ids": [
         "KL-38"
@@ -132,7 +132,7 @@
       "number": 41,
       "title": "Spreadsheet transformations",
       "topic": "Import and export",
-      "summary": "Comma/semicolon separators are supported. Spreadsheet encoding changes or transformed address/boolean cells are not universally accommodated.",
+      "summary": "Comma, semicolon and tab separators are supported. Spreadsheet encoding changes or transformed address/boolean cells are not universally accommodated.",
       "file": "KL-041-spreadsheet-transformations.md",
       "ledger_ids": [
         "KL-41"

@@ -4,24 +4,34 @@
 
 `parse_group_addresses` (`crates/knx-csv`) stays the single import entry point. Besides the
 native KNXBench v1 format ([IMPORT_EXPORT.md](../IMPORT_EXPORT.md) section 11), it recognizes
-four fixed, complete header shapes. This is a bounded, **address-only** import adapter:
+eight fixed, complete header shapes. This is a bounded, **address-only** import adapter:
 
 - It creates and updates group-address leaves through the existing planner and commands.
 - It never creates, updates, deletes or renames group ranges and is not a hierarchy-preserving
   roundtrip.
 - There is no export profile. The native writer is unchanged.
-- It makes no claim of interoperability with any particular application. Only the shapes below
-  are supported; neighbouring variants are refused, never guessed.
+- Only the shapes below are supported; neighbouring variants are refused, never guessed. The
+  shapes match the header rows ETS6 6.4.1 writes in its `CSV` and `CSV (ETS3 Format)` group
+  address exports, observed on one fictional project
+  ([research](../research/2026-11-08-ets6-group-address-csv-export.md)). That is a checked
+  header match, not a general interoperability claim.
 
-Native format behavior is unchanged: arbitrary column order, `,`/`;`, optional BOM, optional
+Native format behavior is otherwise unchanged: arbitrary column order, optional BOM, optional
 columns, `Action`/`NewAddress`, read-only validation, duplicate-header errors and row line
-numbers.
+numbers. One edge case changed with tab detection: a header whose unquoted tabs outnumber its
+commas and semicolons (for example `Address,Name` followed by two stray tabs) is now read as
+tab-separated and refused for missing columns, where it was read as comma-separated before.
+Nothing is imported in that case.
 
 ## Framing
 
-UTF-8 text, optional leading BOM, CRLF or LF, separator `,` or `;` auto-detected from the
-header line, RFC 4180 quoting. Tabs, UTF-16, legacy code pages and spreadsheet-format guessing
-are not supported; invalid UTF-8 is rejected by the callers before parsing.
+UTF-8 text, optional leading BOM, CRLF or LF, separator `,`, `;` or tab auto-detected from the
+header line (the most frequent unquoted one; a tie goes to `,`, then `;`), RFC 4180 quoting.
+This applies to native files too. UTF-16, legacy code pages and spreadsheet-format guessing are
+not supported. Invalid UTF-8 is refused before parsing with the offset of the first invalid
+byte and a request to convert the file; no code page is guessed, because the same bytes mean
+different characters in different Windows locales. ETS6 6.4.1 writes its CSV export in a
+single-byte code page, so a file with non-ASCII names must be converted first.
 
 ## Recognized header shapes
 
@@ -34,9 +44,15 @@ present, in this exact order:
 | 2 | `Group name; Main; Middle; Sub; Central; Unfiltered; Description; DatapointType; Security` |
 | 3 | `Main; Middle; Sub; Address; Central; Unfiltered; Description; DatapointType; Security` |
 | 4 | `Main; Middle; Sub; Main; Middle; Sub; Central; Unfiltered; Description; DatapointType; Security` |
+| 5 | `Group name; Address` |
+| 6 | `Group name; Main; Middle; Sub` |
+| 7 | `Main; Middle; Sub; Address` |
+| 8 | `Main; Middle; Sub; Main; Middle; Sub` |
 
-In shape 4 the first triplet holds names and the second the address components. `Main`,
-`Middle` and `Sub` may repeat only at those positions of the complete shape 4.
+Shapes 5–8 are shapes 1–4 without the five metadata columns. Their rows carry no flags,
+description, datapoint type or security, so leaves behave as if those cells were blank and no
+column is reported as ignored. In shapes 4 and 8 the first triplet holds names and the second
+the address components. `Main`, `Middle` and `Sub` may repeat only at those positions.
 
 The required native `Name` and `Address` columns take precedence, preserving the
 existing native format, including its reporting of extra columns as unknown.
@@ -44,7 +60,8 @@ Otherwise a header containing `Group name`, or a standalone `Main`/`Middle`/`Sub
 cell, must match exactly one shape. Reordered, duplicated, incomplete or extended
 profile headers (including an added `Action`) are file-level errors. Headers with
 neither native required columns nor profile markers retain native missing-column
-diagnostics. This distinction is structural, not a guess from row contents.
+diagnostics. Header-less files therefore stay refused: their first data row is read as a
+header. This distinction is structural, not a guess from row contents.
 
 Profiles require a `ThreeLevel` project; `TwoLevel` and `Free` projects are refused.
 

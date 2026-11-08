@@ -147,6 +147,10 @@ fn comparable(code: &ProgramCode) -> Comparable {
                                 + u32::from(*bit_offset)
                         })
                         .ok_or_else(|| union.code_segment.clone()),
+                    ParameterPlacement::Property(property) => Err(format!(
+                        "Property {}/{}",
+                        property.object_index, property.property_id
+                    )),
                     ParameterPlacement::Unmodelled { name, attributes } => {
                         Err(format!("{name} {attributes:?}"))
                     }

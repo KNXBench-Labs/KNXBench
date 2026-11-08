@@ -21,6 +21,7 @@ const USAGE: &str = "usage: simulator_gateway --advertise IP[:PORT] --device A.L
 [--serial 12HEX] [--manufacturer HEX] [--hardware-type 12HEX] [--program-version 10HEX] \
 [--max-apdu N] [--gateway-property OBJTYPE:INSTANCE:PID=HEX]... \
 [--device-property OBJIDX:PID=HEX]... [--device-property-description OBJIDX:PID:INDEX=8HEX]... \
+[--device-element-property OBJIDX:PID:WIDTH:MAX=HEX]... \
 [--capture FILE] [--datagrams]";
 const MULTICAST: Ipv4Addr = Ipv4Addr::new(224, 0, 23, 12);
 
@@ -75,6 +76,33 @@ fn device_property(spec: &str, described: bool) -> Result<(u8, u8, u8, Vec<u8>),
     }
 }
 
+/// One `--device-element-property OBJIDX:PID:WIDTH:MAX=HEX`: an array of
+/// `WIDTH`-octet elements, at most `MAX`, holding `HEX` (may be empty).
+fn element_property(spec: &str) -> Result<(u8, u8, usize, u16, Vec<u8>), String> {
+    let (key, data) = spec.split_once('=').ok_or(USAGE)?;
+    let parts: Vec<u16> = key
+        .split(':')
+        .map(|part| part.parse::<u16>().map_err(|_| USAGE.to_string()))
+        .collect::<Result<_, _>>()?;
+    let &[object, pid, width, max] = parts.as_slice() else {
+        return Err(USAGE.into());
+    };
+    let (object, pid) = (
+        u8::try_from(object).map_err(|_| USAGE.to_string())?,
+        u8::try_from(pid).map_err(|_| USAGE.to_string())?,
+    );
+    let width = usize::from(width);
+    let octets = if data.is_empty() {
+        Vec::new()
+    } else {
+        hex(data, data.len() / 2)?
+    };
+    if width == 0 || data.len() % 2 != 0 || octets.len() % width != 0 {
+        return Err(format!("{spec:?}: not whole {width}-octet elements"));
+    }
+    Ok((object, pid, width, max, octets))
+}
+
 fn dump(bytes: &[u8]) -> String {
     bytes.iter().map(|b| format!("{b:02x}")).collect()
 }
@@ -86,6 +114,7 @@ fn run() -> Result<(), String> {
     let (mut hardware, mut program, mut datagrams) = (None, None, false);
     let mut gateway_properties = Vec::new();
     let (mut device_properties, mut descriptions) = (Vec::new(), Vec::new());
+    let mut element_properties = Vec::new();
     let mut max_apdu = SimulatorConfig::default().max_apdu_length;
     while let Some(flag) = args.next() {
         if flag == "--datagrams" {
@@ -108,6 +137,7 @@ fn run() -> Result<(), String> {
             "--gateway-property" => gateway_properties.push(value),
             "--device-property" => device_properties.push(device_property(&value, false)?),
             "--device-property-description" => descriptions.push(device_property(&value, true)?),
+            "--device-element-property" => element_properties.push(element_property(&value)?),
             "--program-version" => program = Some(hex(&value, 5)?),
             "--max-apdu" => max_apdu = Some(value.parse().map_err(|_| USAGE)?),
             _ => return Err(USAGE.into()),
@@ -148,6 +178,9 @@ fn run() -> Result<(), String> {
     }
     for (object, pid, _, data) in &device_properties {
         simulated.preset_property(*object, *pid, data);
+    }
+    for (object, pid, width, max, data) in &element_properties {
+        simulated.preset_element_property(*object, *pid, *width, *max, data);
     }
     for (object, pid, index, raw) in &descriptions {
         let raw: [u8; 4] = raw.as_slice().try_into().expect("four octets");

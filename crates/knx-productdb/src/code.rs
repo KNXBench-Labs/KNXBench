@@ -111,6 +111,44 @@ pub enum LoadStep {
         /// `@InlineData`, decoded from hex.
         data: Vec<u8>,
     },
+    /// `LdCtrlMasterReset` with `@EraseCode` and `@ChannelNumber`; an
+    /// `@AppliesTo` must name `full`.
+    MasterReset {
+        /// `@EraseCode`.
+        erase_code: u8,
+        /// `@ChannelNumber`.
+        channel: u8,
+    },
+    /// `LdCtrlDeclarePropDesc`: the description the next parameter-filled
+    /// write of this property relies on instead of reading one; an
+    /// `@AppliesTo` must name `full`.
+    DeclarePropDesc {
+        /// `@ObjIdx`.
+        object_index: u8,
+        /// `@PropId`.
+        property_id: u8,
+        /// `@PropType`, verbatim, for example `PDT_UNSIGNED_CHAR`.
+        property_type: String,
+        /// `@MaxElements`.
+        max_elements: u16,
+        /// `@ReadAccess`.
+        read_access: u8,
+        /// `@WriteAccess`.
+        write_access: u8,
+        /// `@Writable`.
+        writable: bool,
+    },
+    /// `LdCtrlWriteProp` with `@Count`, `@Verify="false"` and no
+    /// `@InlineData`: write the parameters placed in the property; an
+    /// `@AppliesTo` must name `full`.
+    WriteParameterProp {
+        /// `@ObjIdx`.
+        object_index: u8,
+        /// `@PropId`.
+        property_id: u8,
+        /// `@Count`: how many elements, from index 1.
+        count: u16,
+    },
     /// `LdCtrlUnload`.
     Unload {
         /// `@LsmIdx`.
@@ -201,6 +239,20 @@ impl LoadProcedure {
     }
 }
 
+/// Where a `Property` element puts a value: `@ObjectIndex`, `@PropertyId`,
+/// `@Offset`, `@BitOffset`, verbatim.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PropertyPlacement {
+    /// `@ObjectIndex`.
+    pub object_index: u8,
+    /// `@PropertyId`.
+    pub property_id: u8,
+    /// `@Offset` into the property's value, in octets.
+    pub offset: u32,
+    /// `@BitOffset`, 0–7.
+    pub bit_offset: u8,
+}
+
 /// Where a `Memory` element puts a value: `@CodeSegment`, `@Offset`,
 /// `@BitOffset`, verbatim.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -231,7 +283,11 @@ pub enum ParameterPlacement {
         /// The member's `@BitOffset`.
         bit_offset: u8,
     },
-    /// Anything else (a `Property` placement, attributes that do not
+    /// `Parameter/Property`: bits of an interface-object property's value,
+    /// counted from the first octet of element 1, which a parameter-filled
+    /// `LdCtrlWriteProp` writes (ADR-0161).
+    Property(PropertyPlacement),
+    /// Anything else (a `Union/Property` placement, attributes that do not
     /// parse), kept by name so that it can be refused by name.
     Unmodelled {
         /// What was found, for example `Property` or `Union/Property`.
@@ -794,10 +850,13 @@ impl<'a> Parser<'a> {
         }
         while let Some(child) = self.next_inside(&element.name)? {
             if placement.is_none() && matches!(child.name.as_str(), "Memory" | "Property") {
-                placement = Some(match memory_placement(&child) {
-                    Some(memory) => ParameterPlacement::Memory(memory),
-                    None => unmodelled_placement(&child.name, &child),
-                });
+                placement = Some(
+                    match (memory_placement(&child), property_placement(&child)) {
+                        (Some(memory), _) => ParameterPlacement::Memory(memory),
+                        (None, Some(property)) => ParameterPlacement::Property(property),
+                        (None, None) => unmodelled_placement(&child.name, &child),
+                    },
+                );
             }
             self.skip(&child)?;
         }
@@ -882,6 +941,9 @@ impl<'a> Parser<'a> {
     fn step(&self, element: &Element, has_children: bool) -> Result<LoadStep, CodeError> {
         let a = &element.attributes;
         let name = element.name.as_str();
+        if let Some(step) = self.property_step(element, has_children)? {
+            return Ok(step);
+        }
         let known: &[&str] = match name {
             "LdCtrlConnect" | "LdCtrlDisconnect" | "LdCtrlRestart" => &[],
             "LdCtrlDelay" => &["MilliSeconds"],
@@ -959,6 +1021,73 @@ impl<'a> Parser<'a> {
         })
     }
 
+    /// The steps that may carry `@AppliesTo` (ADR-0161): a master reset, a
+    /// declared property description and a parameter-filled property write.
+    /// `None` for every other element. Any other shape, or an `@AppliesTo`
+    /// that leaves the complete download out, is [`LoadStep::Unmodelled`].
+    fn property_step(
+        &self,
+        element: &Element,
+        has_children: bool,
+    ) -> Result<Option<LoadStep>, CodeError> {
+        let a = &element.attributes;
+        let name = element.name.as_str();
+        let known: &[&str] = match name {
+            "LdCtrlMasterReset" => &["EraseCode", "ChannelNumber"],
+            "LdCtrlDeclarePropDesc" => &[
+                "ObjIdx",
+                "PropId",
+                "PropType",
+                "MaxElements",
+                "ReadAccess",
+                "WriteAccess",
+                "Writable",
+            ],
+            "LdCtrlWriteProp" if a.get("Count").is_some() && a.get("InlineData").is_none() => {
+                &["ObjIdx", "PropId", "Count", "Verify"]
+            }
+            _ => return Ok(None),
+        };
+        let exact = a
+            .names()
+            .all(|attribute| attribute == "AppliesTo" || known.contains(&attribute))
+            && known.iter().all(|attribute| a.get(attribute).is_some());
+        let in_full_download = a
+            .get("AppliesTo")
+            .is_none_or(|applies| applies.split(',').any(|part| part.trim() == "full"));
+        let writable = match a.get("Writable") {
+            None | Some("true") => Some(true),
+            Some("false") => Some(false),
+            Some(_) => None,
+        };
+        let unverified_write = name != "LdCtrlWriteProp" || a.get("Verify") == Some("false");
+        if has_children || !exact || !in_full_download || !unverified_write || writable.is_none() {
+            return Ok(Some(unmodelled(element, has_children)));
+        }
+        let octet = |attribute: &str| -> Result<u8, CodeError> { self.field(name, a, attribute) };
+        let word = |attribute: &str| -> Result<u16, CodeError> { self.field(name, a, attribute) };
+        Ok(Some(match name {
+            "LdCtrlMasterReset" => LoadStep::MasterReset {
+                erase_code: octet("EraseCode")?,
+                channel: octet("ChannelNumber")?,
+            },
+            "LdCtrlDeclarePropDesc" => LoadStep::DeclarePropDesc {
+                object_index: octet("ObjIdx")?,
+                property_id: octet("PropId")?,
+                property_type: a.get("PropType").unwrap_or_default().to_string(),
+                max_elements: word("MaxElements")?,
+                read_access: octet("ReadAccess")?,
+                write_access: octet("WriteAccess")?,
+                writable: writable == Some(true),
+            },
+            _ => LoadStep::WriteParameterProp {
+                object_index: octet("ObjIdx")?,
+                property_id: octet("PropId")?,
+                count: word("Count")?,
+            },
+        }))
+    }
+
     fn field<T: std::str::FromStr>(
         &self,
         step: &str,
@@ -1008,6 +1137,24 @@ fn memory_placement(element: &Element) -> Option<MemoryPlacement> {
     (bit_offset <= 7).then_some(())?;
     Some(MemoryPlacement {
         code_segment: a.get("CodeSegment")?.to_string(),
+        offset: a.get("Offset")?.parse().ok()?,
+        bit_offset,
+    })
+}
+
+/// A `Property` element's placement, or `None` if it is not a `Property`
+/// with an object index, a property id, an octet offset and a bit offset of
+/// 0–7.
+fn property_placement(element: &Element) -> Option<PropertyPlacement> {
+    let a = &element.attributes;
+    if element.name != "Property" {
+        return None;
+    }
+    let bit_offset: u8 = a.get("BitOffset")?.parse().ok()?;
+    (bit_offset <= 7).then_some(())?;
+    Some(PropertyPlacement {
+        object_index: a.get("ObjectIndex")?.parse().ok()?,
+        property_id: a.get("PropertyId")?.parse().ok()?,
         offset: a.get("Offset")?.parse().ok()?,
         bit_offset,
     })
@@ -1439,8 +1586,9 @@ mod tests {
         assert!(!has_children);
     }
 
-    /// Only the observed fixed-value shape is read; `Verify="true"`, a
-    /// parameter-filled `Count` or `AppliesTo` stay unmodelled by name.
+    /// Only the observed fixed-value shape is read; `Verify="true"` and a fixed
+    /// value with `AppliesTo` stay unmodelled by name; a parameter-filled `Count`
+    /// is its own step (ADR-0161).
     #[test]
     fn a_fixed_unverified_property_write_is_read_and_every_other_shape_is_not() {
         let code = parsed(
@@ -1463,7 +1611,15 @@ mod tests {
                 data: vec![1, 0]
             }
         );
-        for step in &steps[1..] {
+        assert_eq!(
+            steps[2],
+            LoadStep::WriteParameterProp {
+                object_index: 6,
+                property_id: 52,
+                count: 2
+            }
+        );
+        for step in [&steps[1], &steps[3]] {
             assert!(
                 matches!(step, LoadStep::Unmodelled { name, .. } if name == "LdCtrlWriteProp"),
                 "{step:?}"
@@ -1660,7 +1816,7 @@ mod tests {
     }
 
     #[test]
-    fn property_placements_and_unparsable_ones_are_kept_as_unmodelled() {
+    fn union_property_placements_and_unparsable_ones_are_kept_as_unmodelled() {
         let parameters = parsed(PARAMETERS).parameters;
         let name = |id: &str| match parameters.get(id) {
             Some(ParameterPlacement::Unmodelled { name, attributes }) => {
@@ -1668,12 +1824,83 @@ mod tests {
             }
             other => panic!("{id}: expected Unmodelled, got {other:?}"),
         };
-        assert_eq!(name("P-3"), ("Property".to_string(), Some("0".to_string())));
+        assert_eq!(
+            parameters.get("P-3"),
+            Some(&ParameterPlacement::Property(PropertyPlacement {
+                object_index: 1,
+                property_id: 2,
+                offset: 0,
+                bit_offset: 0,
+            }))
+        );
+        let bad = parsed(
+            r#"<Parameters><Parameter Id="P-5" ParameterType="T"><Property ObjectIndex="1" PropertyId="2" Offset="0" BitOffset="8" /></Parameter></Parameters>"#,
+        )
+        .parameters;
+        assert!(matches!(
+            bad.get("P-5"),
+            Some(ParameterPlacement::Unmodelled { name, .. }) if name == "Property"
+        ));
         assert_eq!(
             name("UP-4"),
             ("Union/Property".to_string(), Some("0".to_string()))
         );
         assert_eq!(name("P-4"), ("Memory".to_string(), Some("x".to_string())));
+    }
+
+    #[test]
+    fn master_resets_declared_descriptions_and_parameter_writes_are_read_when_in_full() {
+        let steps = |body: &str| {
+            parsed(&format!(
+                "<LoadProcedures><LoadProcedure>{body}</LoadProcedure></LoadProcedures>"
+            ))
+            .load_procedures
+            .remove(0)
+            .steps
+        };
+        let read = steps(concat!(
+            r#"<LdCtrlMasterReset AppliesTo="full,grp" EraseCode="6" ChannelNumber="0" />"#,
+            r#"<LdCtrlDeclarePropDesc ObjIdx="8" PropId="52" PropType="PDT_UNSIGNED_CHAR" MaxElements="16" ReadAccess="0" WriteAccess="0" Writable="true" AppliesTo="full,par" />"#,
+            r#"<LdCtrlWriteProp ObjIdx="8" PropId="52" Count="17" Verify="false" AppliesTo="full,par" />"#,
+        ));
+        assert_eq!(
+            read,
+            vec![
+                LoadStep::MasterReset {
+                    erase_code: 6,
+                    channel: 0
+                },
+                LoadStep::DeclarePropDesc {
+                    object_index: 8,
+                    property_id: 52,
+                    property_type: "PDT_UNSIGNED_CHAR".into(),
+                    max_elements: 16,
+                    read_access: 0,
+                    write_access: 0,
+                    writable: true,
+                },
+                LoadStep::WriteParameterProp {
+                    object_index: 8,
+                    property_id: 52,
+                    count: 17,
+                },
+            ]
+        );
+        // Outside the complete download, verified, with InlineData or an unknown
+        // attribute: kept by name, so the planner refuses it by name.
+        for unmodelled in [
+            r#"<LdCtrlMasterReset AppliesTo="par" EraseCode="5" ChannelNumber="0" />"#,
+            r#"<LdCtrlWriteProp ObjIdx="8" PropId="52" Count="1" Verify="true" />"#,
+            r#"<LdCtrlWriteProp ObjIdx="6" PropId="52" Count="6" Verify="false" InlineData="00" AppliesTo="full,par" />"#,
+            r#"<LdCtrlWriteProp ObjIdx="11" PropId="52" Verify="false" AppliesTo="full,par" />"#,
+            r#"<LdCtrlMasterReset EraseCode="5" ChannelNumber="0" Other="1" />"#,
+            r#"<LdCtrlDeclarePropDesc ObjIdx="8" PropId="52" PropType="PDT_UNSIGNED_CHAR" MaxElements="1" ReadAccess="0" WriteAccess="0" Writable="maybe" />"#,
+        ] {
+            assert!(
+                matches!(steps(unmodelled).as_slice(), [LoadStep::Unmodelled { .. }]),
+                "{unmodelled}"
+            );
+        }
     }
 
     #[test]

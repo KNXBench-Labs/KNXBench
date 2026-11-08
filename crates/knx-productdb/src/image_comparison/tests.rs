@@ -41,6 +41,7 @@ fn fixture() -> (DownloadImage, DeviceBackup, MemoryDownloadPlan) {
         inferences: vec![],
         parameter_fields: vec![],
         table_writes: vec![],
+        properties: Vec::new(),
     };
     let held = DeviceBackup {
         target: "1.1.67".parse().unwrap(),

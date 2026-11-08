@@ -247,6 +247,19 @@ impl ParameterImage {
         Ok(())
     }
 
+    /// Which bits the fields written so far cover, as a mask as long as the
+    /// image: bit set where a field put its value.
+    pub fn written_mask(&self) -> Vec<u8> {
+        let mut mask = vec![0u8; self.octets.len()];
+        for field in &self.written {
+            let (start, end) = field.span();
+            for bit in start..end {
+                mask[(bit / 8) as usize] |= 0x80 >> (bit % 8);
+            }
+        }
+        mask
+    }
+
     /// The image.
     pub fn octets(&self) -> &[u8] {
         &self.octets
@@ -443,6 +456,20 @@ mod tests {
     }
 
     use super::*;
+
+    #[test]
+    fn the_written_mask_covers_exactly_the_written_bits() {
+        let mut image = ParameterImage::new(vec![0xEE; 3]);
+        let field = |offset, bit_offset, size_in_bit| ParameterField {
+            offset,
+            bit_offset,
+            size_in_bit,
+        };
+        image.write(field(0, 7, 1), 1).unwrap();
+        image.write(field(1, 4, 8), 0xA5).unwrap();
+        assert_eq!(image.written_mask(), vec![0x01, 0x0F, 0xF0]);
+        assert_eq!(image.octets(), &[0xEF, 0xEA, 0x5E]);
+    }
 
     fn field(offset: u32, bit_offset: u8, size_in_bit: u32) -> ParameterField {
         ParameterField {

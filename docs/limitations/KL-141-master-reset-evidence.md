@@ -6,6 +6,15 @@ This dossier preserves the technical detail and dated history. Earlier
 headings, failures and lifting conditions are historical where later
 updates supersede them; they are not new work assignments.
 
+## Update 2026-11-08: a product procedure's master reset (ADR-0161)
+
+A mask-`0701h` load procedure's `LdCtrlMasterReset` (erase codes 6 and 5,
+channel 0) is not an `A_Restart` Master Reset: as ETS 6.4 does, the download
+sends it as `A_FunctionPropertyCommand` (object 5, PID 52, `04h`/`10h`) under
+the download's own authorisation
+([ADR-0161](../adr/0161-property-placed-parameters-and-master-resets.md)). The
+`A_Restart` Master Reset described below and its hardware refusal are unchanged.
+
 <!-- BEGIN retained catalogue record -->
 
 ## §141 Master Reset erases in the simulator only; hardware keeps its configuration

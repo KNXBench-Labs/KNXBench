@@ -75,14 +75,9 @@ impl JournalTrust {
     }
 
     /// The same knowledge with other stack rows, e.g. a proven shared prefix.
-    pub fn with_rows(&self, rows: StackRows) -> Self {
-        Self {
-            rows,
-            context: self.context.clone(),
-            baseline: self.baseline.clone(),
-            working: self.working.clone(),
-            checked_contexts: self.checked_contexts.clone(),
-        }
+    /// Consumes the trust, so the large retained context is moved, not copied.
+    pub fn with_rows(self, rows: StackRows) -> Self {
+        Self { rows, ..self }
     }
 
     /// The same knowledge, with `checked` as the other checked contexts.

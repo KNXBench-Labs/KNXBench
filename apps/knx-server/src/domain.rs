@@ -3210,11 +3210,10 @@ fn persist_native_working_reported(
         .persisted_history
         .lock()
         .expect("state mutex poisoned");
-    let trust = persisted.as_ref().map_or_else(Default::default, |earlier| {
-        earlier.trust_for(project, stack)
-    });
     // A failed write leaves no claim about the file: the next one rewrites fully.
-    *persisted = None;
+    let trust = persisted.take().map_or_else(Default::default, |earlier| {
+        earlier.into_trust(project, stack)
+    });
     let (next, trust) = knx_app::project_history::persist_working_trusting(
         path,
         &snapshot,
@@ -3242,20 +3241,21 @@ pub struct PersistedHistory {
 }
 
 impl PersistedHistory {
-    /// The knowledge still valid for `stack` over `project`: stored rows below
+    /// Consumes the cache into the knowledge still valid for `stack` over `project`: stored rows below
     /// the prefix both histories provably share, and the retained context and
     /// baseline, which the store checks against the file itself.
-    fn trust_for(
-        &self,
+    fn into_trust(
+        self,
         project: &knx_core::Project,
         stack: &knx_core::CommandStack,
     ) -> knx_store::project_history::JournalTrust {
         let shared = stack.shared_snapshot_prefix(project, &self.stack, &self.project);
         let rows = &self.trust.rows;
-        self.trust.with_rows(knx_store::project_history::StackRows {
+        let rows = knx_store::project_history::StackRows {
             undo: rows.undo[..shared.undo.min(rows.undo.len())].to_vec(),
             redo: rows.redo[..shared.redo.min(rows.redo.len())].to_vec(),
-        })
+        };
+        self.trust.with_rows(rows)
     }
 }
 

@@ -6,6 +6,14 @@ use knx_core::Project;
 use rusqlite::{Connection, MAIN_DB};
 use sha2::{Digest, Sha256};
 
+#[cfg(test)]
+thread_local! {
+    /// In-memory native stores built on this thread, as (carrying a retained
+    /// context, model only): what a write encoded or hashed afresh.
+    pub(super) static BUILT_STORES: std::cell::Cell<(usize, usize)> =
+        const { std::cell::Cell::new((0, 0)) };
+}
+
 /// A complete native semantic project, not a global catalogue or hardware backup.
 #[derive(Debug, Clone, PartialEq)]
 pub struct NativeSnapshot {
@@ -27,6 +35,17 @@ impl NativeSnapshot {
         if self.project.schema_version != knx_core::project::CURRENT_SCHEMA_VERSION {
             return Err(HistoryError::Invalid("unsupported model version"));
         }
+        #[cfg(test)]
+        BUILT_STORES.with(|built| {
+            let (context, model) = built.get();
+            built.set(
+                if self.opaque.is_empty() && self.manufacturer_refs.is_empty() {
+                    (context, model + 1)
+                } else {
+                    (context + 1, model)
+                },
+            );
+        });
         let conn = crate::open_and_migrate_in_memory()
             .map_err(|_| HistoryError::Invalid("snapshot store initialization failed"))?;
         // The fresh store has no preceding project/history. Plain-save hooks

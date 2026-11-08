@@ -90,6 +90,8 @@ pub struct AppState {
     /// re-encoding every undo state. Correctness never depends on it being
     /// current: the store keeps a row only while its stored hash matches.
     pub persisted_history: Mutex<Option<PersistedHistory>>,
+    /// Timings of the recent journal writes, for the diagnostic bundle (issue #35).
+    pub journal_writes: Mutex<crate::journal_write_log::RecentJournalWrites>,
     /// (errors, warnings) from the initial import's `ImportReport`,
     /// reapplied to every tree rebuilt after a command/undo/redo — edits
     /// don't change what import lost. `(0, 0)` for a `.knxdb` native load.
@@ -400,6 +402,7 @@ impl AppState {
             command_stack: Mutex::new(knx_core::CommandStack::new()),
             history_generation: Mutex::new(0),
             persisted_history: Mutex::new(None),
+            journal_writes: Default::default(),
             import_counts: Mutex::new((0, 0)),
             import_report_available: AtomicBool::new(true),
             import_report_historical: AtomicBool::new(false),
@@ -899,7 +902,7 @@ fn load_native(path: &Path, progress: &LoadHandle) -> Result<NativeLoad, LoadFai
     let manufacturer_refs =
         knx_store::load_manufacturer_refs(&read).map_err(|e| LoadFailure::from(e.to_string()))?;
     progress.phase(LoadPhase::BuildProjectTree);
-    let recovered = knx_store::project_history::load_editor(&read)
+    let recovered = knx_store::project_history::load_editor_with_trust(&read)
         .map_err(|e| LoadFailure::from(e.to_string()))?;
     let (project, opaque, manufacturer_refs) = match &recovered {
         Some(history) => (
@@ -3031,22 +3034,25 @@ fn replace_project_state_transaction(
     // A recorded request belongs to the project it was committed into.
     catalog_requests.clear();
 
-    let (clean_replacement, recovered_stack, generation, rows) = match recovered {
-        Some(history) => (
-            history.baseline.project,
-            knx_core::CommandStack::from_snapshot_states(history.undo, history.redo),
-            history.generation,
-            Some(history.rows),
-        ),
+    let (clean_replacement, recovered_stack, generation, trust) = match recovered {
+        Some(mut history) => {
+            let trust = history.take_trust();
+            (
+                history.baseline.project,
+                knx_core::CommandStack::from_snapshot_states(history.undo, history.redo),
+                history.generation,
+                Some(trust),
+            )
+        }
         None => (replacement.clone(), knx_core::CommandStack::new(), 0, None),
     };
     state.project_incarnation.fetch_add(1, Ordering::Relaxed);
     // The opened journal's rows are exactly the recovered stack's states, so
     // even the first edit after opening re-encodes only what it changes.
-    let persisted = rows.map(|rows| PersistedHistory {
+    let persisted = trust.map(|trust| PersistedHistory {
         project: replacement.clone(),
         stack: recovered_stack.clone(),
-        rows,
+        trust,
     });
     *project = Some(replacement);
     *stack = recovered_stack;
@@ -3186,10 +3192,37 @@ fn persist_native_working_reported(
     project: &knx_core::Project,
     stack: &knx_core::CommandStack,
 ) -> Result<bool, String> {
+    let started = std::time::Instant::now();
     let path = state.store_path.lock().expect("state mutex poisoned");
     let Some(path) = path.as_deref() else {
         return Ok(false);
     };
+    let mut report = knx_store::project_history::JournalWriteReport::default();
+    // Waiting for the store path counts in the total, as the caller waited too.
+    report.phase("storeWait", started);
+    let result = write_native_journal(state, path, project, stack, &mut report);
+    state
+        .journal_writes
+        .lock()
+        .expect("state mutex poisoned")
+        .record(crate::journal_write_log::JournalWriteRecord {
+            at: chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Millis, true),
+            total: started.elapsed(),
+            ok: result.is_ok(),
+            report,
+        });
+    result.map(|()| true)
+}
+
+/// The journal write of [`persist_native_working_reported`], reporting its phases.
+fn write_native_journal(
+    state: &AppState,
+    path: &std::path::Path,
+    project: &knx_core::Project,
+    stack: &knx_core::CommandStack,
+    report: &mut knx_store::project_history::JournalWriteReport,
+) -> Result<(), String> {
+    let started = std::time::Instant::now();
     let mut generation = state
         .history_generation
         .lock()
@@ -3207,48 +3240,56 @@ fn persist_native_working_reported(
         .persisted_history
         .lock()
         .expect("state mutex poisoned");
-    let reuse = persisted.as_ref().map_or_else(Default::default, |earlier| {
-        earlier.reuse_for(project, stack)
-    });
     // A failed write leaves no claim about the file: the next one rewrites fully.
-    *persisted = None;
-    let (next, rows) = knx_app::project_history::persist_working_reusing(
+    let trust = persisted.take().map_or_else(Default::default, |earlier| {
+        earlier.into_trust(project, stack)
+    });
+    report.phase("prepare", started);
+    let (next, trust) = knx_app::project_history::persist_working_trusting(
         path,
         &snapshot,
         stack,
         *generation,
-        &reuse,
+        &trust,
+        report,
     )?;
     *generation = next;
+    let started = std::time::Instant::now();
     *persisted = Some(PersistedHistory {
         project: project.clone(),
         stack: stack.clone(),
-        rows,
+        trust,
     });
-    Ok(true)
+    report.phase("retain", started);
+    Ok(())
 }
 
-/// The project, stack and stored row hashes of this server's last journal write.
-/// Holds full copies of both, so the history occupies memory about twice.
+/// The project, stack and journal knowledge of this server's last journal
+/// write: stored row hashes, retained context and saved baseline (ADR-0165).
+/// Holds full copies of the project, stack and retained context, so the
+/// history occupies memory about twice and the retained context once more.
 pub struct PersistedHistory {
     project: knx_core::Project,
     stack: knx_core::CommandStack,
-    pub(crate) rows: knx_store::project_history::StackRows,
+    pub(crate) trust: knx_store::project_history::JournalTrust,
 }
 
 impl PersistedHistory {
-    /// The stored rows still holding states of `stack` over `project`: those
-    /// below the prefix both histories provably share.
-    fn reuse_for(
-        &self,
+    /// Consumes the cache into the knowledge still valid for `stack` over `project`: stored rows below
+    /// the prefix both histories provably share, and the retained context and
+    /// baseline, which the store checks against the file itself.
+    fn into_trust(
+        self,
         project: &knx_core::Project,
         stack: &knx_core::CommandStack,
-    ) -> knx_store::project_history::StackRows {
+    ) -> knx_store::project_history::JournalTrust {
         let shared = stack.shared_snapshot_prefix(project, &self.stack, &self.project);
-        knx_store::project_history::StackRows {
-            undo: self.rows.undo[..shared.undo.min(self.rows.undo.len())].to_vec(),
-            redo: self.rows.redo[..shared.redo.min(self.rows.redo.len())].to_vec(),
-        }
+        let rows = &self.trust.rows;
+        let rows = knx_store::project_history::StackRows {
+            undo: rows.undo[..shared.undo.min(rows.undo.len())].to_vec(),
+            redo: rows.redo[..shared.redo.min(rows.redo.len())].to_vec(),
+        };
+        self.trust.with_rows(rows)
     }
 }
 

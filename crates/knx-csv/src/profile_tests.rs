@@ -1006,3 +1006,27 @@ fn non_utf8_bytes_are_refused_with_their_offset_and_no_guessed_code_page() {
     assert!(error.contains("not UTF-8 text"), "{error}");
     assert!(error.contains("offset 2"), "{error}");
 }
+
+#[test]
+fn separator_ties_prefer_comma_then_semicolon_over_tab() {
+    let comma = parse_group_addresses(
+        "Address,Name\tX\n1/1/1,Pump\tA\n",
+        GroupAddressStyle::ThreeLevel,
+    );
+    assert_eq!(comma.separator, ',');
+    let semicolon = parse_group_addresses(
+        "Address;Name\tX\n1/1/1;Pump\tA\n",
+        GroupAddressStyle::ThreeLevel,
+    );
+    assert_eq!(semicolon.separator, ';');
+}
+
+#[test]
+fn tabs_inside_quoted_header_cells_do_not_count_as_separators() {
+    let parsed = parse_group_addresses(
+        "\"Address\";\"Name\";\"No\t\t\tte\"\n1/1/1;Pump;x\n",
+        GroupAddressStyle::ThreeLevel,
+    );
+    assert_eq!(parsed.separator, ';');
+    assert_eq!(parsed.rows[0].name, "Pump");
+}

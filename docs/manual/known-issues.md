@@ -647,9 +647,9 @@ is the remaining copy defect.
   for three-level addresses; their header rows match ETS6 6.4.1's `CSV` and
   `CSV (ETS3 Format)` group-address exports. Range rows and `Security=Auto` are
   explicitly not imported; unsupported metadata, including any description,
-  refuses the whole file. Files must be UTF-8: ETS writes its CSV in a Windows
-  code page, so a file with umlauts or other non-ASCII names must be converted
-  first. Files without a header row are refused. This is not a full
+  refuses the whole file. Files must be UTF-8: ETS6 wrote its CSV export in a
+  single-byte character set (one byte per umlaut), so a file with umlauts or other
+  non-ASCII names must be converted first. Files without a header row are refused. This is not a full
   hierarchy/security roundtrip, XML exchange or ESF/OPC adapter.
 - **Consequence:** do not assume another application will accept the native export.
 - **Workaround:** inspect import warnings and keep the original input for fields

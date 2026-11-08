@@ -107,7 +107,7 @@ DPT/group context is read-only; changed values are refused. The address-only pro
 ### 41. Spreadsheet transformations
 
 **Ledger status:** `ACCEPTED_BOUNDARY` ([KL-41](status/LEDGER.md#snapshot-ids)).
-Comma/semicolon separators are supported. Spreadsheet encoding changes or transformed address/boolean cells are not universally accommodated.
+Comma, semicolon and tab separators are supported. Spreadsheet encoding changes or transformed address/boolean cells are not universally accommodated.
 [Details and history](limitations/KL-041-spreadsheet-transformations.md)
 
 <a id="catalogue-kl-044"></a>

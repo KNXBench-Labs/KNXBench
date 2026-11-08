@@ -132,7 +132,7 @@
       "number": 41,
       "title": "Spreadsheet transformations",
       "topic": "Import and export",
-      "summary": "Comma/semicolon separators are supported. Spreadsheet encoding changes or transformed address/boolean cells are not universally accommodated.",
+      "summary": "Comma, semicolon and tab separators are supported. Spreadsheet encoding changes or transformed address/boolean cells are not universally accommodated.",
       "file": "KL-041-spreadsheet-transformations.md",
       "ledger_ids": [
         "KL-41"

@@ -325,8 +325,10 @@ whitespace ignored), and their order does not matter.
 
 The file is written as UTF-8 with a byte-order mark and CRLF line endings, so
 spreadsheets open it without mangling umlauts, and it is read back with or without a
-BOM, with either line ending, and with `,` or `;` as the separator — whichever your
-spreadsheet produced. Unknown columns are reported by name, never silently ignored.
+BOM, with either line ending, and with `,`, `;` or tab as the separator — whichever your
+spreadsheet produced. A file that is not UTF-8 is refused with the position of its first
+invalid byte; convert it to UTF-8 and import again. Unknown columns are reported by name,
+never silently ignored.
 
 ### What import does, and what it refuses to do
 

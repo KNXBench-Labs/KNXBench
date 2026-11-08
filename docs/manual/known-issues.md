@@ -649,8 +649,8 @@ is the remaining copy defect.
   datapoint type becomes the declared type of an address the import creates.
   Range rows and `Security=Auto` are explicitly not imported; other security values
   refuse the whole file. You choose the file's encoding: UTF-8 (default) or
-  Windows-1252, which is what ETS6 wrote on the observed German system; nothing is
-  guessed. Other code pages are not supported. Files without a header row are
+  Windows-1252, whose umlauts match what ETS6 wrote on the observed German system;
+  nothing is guessed. Other code pages are not supported. Files without a header row are
   refused. A blank description cell never clears an existing description. This is
   not a full hierarchy/security roundtrip, XML exchange or ESF/OPC adapter.
 - **Consequence:** do not assume another application will accept the native export.
@@ -659,6 +659,8 @@ is the remaining copy defect.
   **Windows-1252** next to the import button (`--encoding windows-1252` in the
   CLI) and export with a header row. A file in another code page must be
   converted to UTF-8 first, for example with `iconv`.
+- **Details:** [§38 no verified ETS interoperability](../KNOWN_LIMITATIONS.md#38-group-address-csv-exportimport-t12-has-no-verified-ets-interoperability),
+  [§41 a CSV saved from Excel under a German locale](../KNOWN_LIMITATIONS.md#41-a-csv-file-saved-from-excel-under-a-german-locale-may-still-surprise-a-user)
 
 ### Older project files show no group-address descriptions
 
@@ -666,11 +668,12 @@ is the remaining copy defect.
 - **Limitation:** such files kept `GroupAddress/@Description` only as retained
   source data. Opening them does not move it into the new description field, so
   that undo history and saved versions stay valid.
+- **Consequence:** a selective import from a fresh `.knxproj` export into such a
+  file treats an existing group address whose description now differs (empty in
+  the old file, filled in the source) as a conflict and refuses the import.
 - **Workaround:** import the original `.knxproj` again to see descriptions; or set
   them through a CSV import. There is no description editor yet.
 - **Details:** [ADR-0164](../adr/0164-group-address-description-and-csv-encoding.md)
-- **Details:** [§38 no verified ETS interoperability](../KNOWN_LIMITATIONS.md#38-group-address-csv-exportimport-t12-has-no-verified-ets-interoperability),
-  [§41 a CSV saved from Excel under a German locale](../KNOWN_LIMITATIONS.md#41-a-csv-file-saved-from-excel-under-a-german-locale-may-still-surprise-a-user)
 
 ## The bus
 

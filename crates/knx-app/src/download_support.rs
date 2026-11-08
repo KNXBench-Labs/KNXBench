@@ -30,7 +30,7 @@ use knx_core::IndividualAddress;
 use knx_productdb::code::load_program_code;
 use knx_productdb::download_plan::{
     check_customer_adjustable, check_download_plugin, check_program_kind,
-    plan_memory_download_with_inferences, DownloadPlanError,
+    plan_memory_download_with_inferences, stored_mask_refusal, DownloadPlanError,
 };
 use knx_productdb::image::{build_download_image, ImageError, ImageRequest};
 use knx_productdb::inference::Inference;
@@ -406,10 +406,20 @@ pub fn check_kind(
             .and_then(|_| check_customer_adjustable(&code))
             .map_err(|e| (plan_category(&e), format!("load procedure: {e}"))),
         Ok(None) => Ok(()),
-        Err(e) => Err((
-            UnsupportedCategory::ProductData,
-            format!("program code: {e}"),
-        )),
+        // Unreadable code (for example a RelativeSegment whose Data and
+        // Size disagree) must not hide a mask no download loads: that
+        // refusal is the more fundamental one (RESEARCH §19.22). A failed
+        // fallback lookup keeps the code's own refusal.
+        Err(e) => match stored_mask_refusal(conn, program_id).ok().flatten() {
+            Some(refusal) => Err((
+                plan_category(&refusal),
+                format!("load procedure: {refusal}"),
+            )),
+            None => Err((
+                UnsupportedCategory::ProductData,
+                format!("program code: {e}"),
+            )),
+        },
     }
 }
 

@@ -760,6 +760,36 @@ fn checksum_control(flags: u8) -> Result<bool, DownloadPlanError> {
     Ok(flags & SEGMENT_FLAG_CHECKSUM != 0)
 }
 
+/// The kind refusal a program's stored mask settles on its own: `Some` for
+/// a recorded mask that does not load through memory, the refusal
+/// [`check_program_kind`] would give first. For callers whose program code
+/// cannot be read, so that an unreadable code does not hide the more
+/// fundamental refusal (RESEARCH §19.22). A missing program or mask is
+/// `None`: the caller's own refusal stands.
+pub fn stored_mask_refusal(
+    conn: &crate::Connection,
+    program_id: &str,
+) -> Result<Option<DownloadPlanError>, crate::ProductDbError> {
+    use rusqlite::OptionalExtension;
+    let mask: Option<Option<String>> = conn
+        .query_row(
+            "SELECT mask_version FROM application_program WHERE id = ?1",
+            [program_id],
+            |row| row.get(0),
+        )
+        .optional()?;
+    Ok(match mask.flatten() {
+        Some(mask)
+            if parse_mask(&mask)
+                .filter(|m| loads_through_memory(*m))
+                .is_none() =>
+        {
+            Some(DownloadPlanError::NotMemoryMapped(Some(mask)))
+        }
+        _ => None,
+    })
+}
+
 /// `MV-0701` → `0701h`.
 fn parse_mask(text: &str) -> Option<MaskVersion> {
     let digits = text.strip_prefix("MV-")?;

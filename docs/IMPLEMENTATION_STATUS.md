@@ -12,6 +12,24 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Group-address descriptions and ETS CSV import (8 November 2026; KL-038b)
+
+Owner decisions of 8 November ([ADR-0164](adr/0164-group-address-description-and-csv-encoding.md)):
+group-address CSV import reads UTF-8 or an explicitly chosen Windows-1252 (CLI
+`--encoding`, server body `encoding`, web select); the five undefined
+Windows-1252 bytes are refused with their offset and confirmation tokens bind
+bytes plus encoding. Group addresses gained a byte-exact description (native
+schema 19, table `group_address_description`, undoable
+`SetGroupAddressDescription`), mapped from schema 20–23 `.knxproj`
+`GroupAddress/@Description` and no longer kept a second time as opaque data. The
+18 → 19 migration lifts nothing, keeping recorded history identities; an
+authentic native-18 fixture written by the unchanged v18 writer pins this. CSV
+profiles and the native `Description` column apply descriptions; profile
+`DatapointType` declares the type of addresses the import creates. Diff, `.knxproj`
+comparison, selective import, projection (read-only in the inspector) and the
+documentation export include the description. Synthetic tests only; a local run
+against the private ETS6 exports is recorded in the delivery summary, not here.
+
 ## Release-only AppImage packaging (8 November 2026)
 
 Automatic AppImage builds run only for release tags, not normal commits or PRs;

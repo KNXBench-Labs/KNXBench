@@ -49,3 +49,15 @@ the domain model — no task currently schedules either.
 Alpha: derived columns stay read-only and there are no Description/Comment
 columns. No schema change before the release.
 <!-- END retained catalogue record -->
+
+## Update — 8 November 2026 (KL-038b)
+
+The `Description` half of this record is superseded
+([ADR-0164](../adr/0164-group-address-description-and-csv-encoding.md)): group
+addresses have a description (native schema 19), the native CSV writes and reads
+an optional `Description` column, and the fixed profiles apply theirs. A blank
+cell never clears a description, and a range row's description is reported and
+not imported. A profile `DatapointType` declares the type of an address the
+import creates; on existing addresses it stays read-only, and the native
+`DatapointType (read-only)`, `MainGroup (read-only)` and
+`MiddleGroup (read-only)` columns are unchanged. `Comment` is still not modelled.

@@ -68,6 +68,12 @@ Files without a header stay refused by design: nothing in the data rows says
 which layout they use. The [contract](../contracts/group-address-csv-profiles.md)
 records what changed in response.
 
+**Follow-up (8 November 2026, KL-038b).** Owner decisions recorded in
+[ADR-0164](../adr/0164-group-address-description-and-csv-encoding.md) lift the
+remaining refusals: the import encoding is now an explicit choice (Windows-1252
+reads these files), descriptions are modelled and applied, and a type on a new
+address becomes its declared type.
+
 ## Limits
 
 One ETS version, one locale and one small project. No flag values, no

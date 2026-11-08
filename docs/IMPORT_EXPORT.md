@@ -1258,10 +1258,11 @@ data (same blocker as schema 23 project data).
 ## 11. Group-address CSV exchange
 
 **The native export is "KNXBench group-address CSV v1", a format KNXBench owns.**
-The importer also accepts four bounded, fixed column profiles with separate
+The importer also accepts eight bounded, fixed column profiles with separate
 name/address components. Their [address-only contract](contracts/group-address-csv-profiles.md)
-reports omitted range rows, keeps DPT read-only, and refuses unsupported metadata
-atomically. This is not a hierarchy-preserving exchange or a claim that native
+reports omitted range rows, applies descriptions, gives addresses it creates their
+datapoint type, keeps the type of existing addresses read-only, and refuses unsupported
+metadata atomically. This is not a hierarchy-preserving exchange or a claim that native
 exports can be imported by ETS. ESF/OPC, XML exchange and other profile variants
 remain outside this adapter.
 
@@ -1280,8 +1281,14 @@ or LF, including a file that mixes the two. Written with `,` as the
 separator; read with `,`, `;` or tab, auto-detected per file from the header
 line — a German-locale Excel writes `;` and reads `,` depending on the OS list
 separator, so both are accepted rather than picking one, and tab is one of the
-separators ETS6 offers for its group-address export. A file that is not UTF-8
-is refused with the offset of its first invalid byte; no code page is guessed. Quoting follows RFC 4180: a field
+separators ETS6 offers for its group-address export. Import decodes the bytes in
+the encoding the user chose, UTF-8 (default) or Windows-1252
+([ADR-0164](adr/0164-group-address-description-and-csv-encoding.md)); nothing is
+detected or guessed. Under UTF-8 a file that is not UTF-8 is refused with the
+offset of its first invalid byte. Under Windows-1252 every defined byte is mapped
+by the complete `CP1252.TXT` table and the five undefined bytes (`0x81`, `0x8D`,
+`0x8F`, `0x90`, `0x9D`) are refused with their offset; a leading UTF-8 BOM is
+refused as a contradicting choice. Export always writes UTF-8. Quoting follows RFC 4180: a field
 containing the separator, a quote character, or a line break is
 double-quote-quoted, with embedded quotes doubled.
 
@@ -1296,6 +1303,7 @@ with surrounding whitespace ignored; column order does not matter.
 | `Name` | the entry's name | **required**, must be non-empty |
 | `Central` | `true`/`false` | optional; accepted spellings (case-insensitive): `true`/`false`/`1`/`0`/`yes`/`no`; empty means "false" when creating a new address and "leave unchanged" when updating an existing one |
 | `Unfiltered` | `true`/`false` | same rules as `Central` |
+| `Description` | the address's description, byte-exact; empty when it has none (or an empty one) | optional; kept byte-exact; non-blank sets the description on create and update; blank (empty after trimming) means none on create and "leave unchanged" on update, so a cell never clears a description |
 | `DatapointType (read-only)` | the address's effective DPT ([ADR 0078](adr/0078-group-address-declared-dpt.md)): its own declaration where it applies, otherwise the linked communication objects' DPTs (unanimous → that DPT, none → empty, disagreement → empty plus one export warning naming the address); a declaration whose width differs from a linked object's → empty plus a warning naming the size difference | recognized and validated against the project, but **never applied**; changing the cell is an explicit row error rather than a silently ignored edit. The legacy `DatapointType` header remains accepted with the same semantics |
 | `MainGroup (read-only)` | the name of the containing main group range, if any | recognized and validated, never applied; legacy `MainGroup` remains accepted |
 | `MiddleGroup (read-only)` | the name of the containing middle group range, if any | recognized and validated, never applied; legacy `MiddleGroup` remains accepted |
@@ -1346,17 +1354,19 @@ undo step.
 
 **What import still never does**, stated as plainly as what it does:
 
-- **It never applies `DatapointType`, `MainGroup`, or `MiddleGroup`.** These
-  three read-only columns show derived context. Their values are validated;
-  edits are rejected instead of ignored or silently dropped.
+- **It never applies the native `DatapointType (read-only)`, `MainGroup`, or
+  `MiddleGroup` columns.** These three read-only columns show derived context.
+  Their values are validated; edits are rejected instead of ignored or silently
+  dropped. Only the fixed profiles' own `DatapointType` column declares a type,
+  and only for an address the import creates.
 - **It never creates or renames group ranges.** A newly created address is
   placed into the innermost existing group range whose bounds already
   contain it, if any; if none contains it, the address is created without a
   range and the report says so. No range is ever created by a CSV import.
-- **It never applies `Description` or `Comment`.** The native format has no
-  such columns. The fixed column profiles recognise `Description` and refuse
-  nonempty cells (including whitespace-only content), rather than losing them.
-  The domain model has no corresponding fields or CSV edit commands.
+- **It never clears a description and never applies `Comment`.** A blank
+  `Description` cell leaves an existing description alone; there is no
+  `Comment` column or group-address comment field. A description on a range
+  row of a profile file is reported and not imported.
 
 **One server undo step.** A successful server/web import applies as one
 `Command::Batch`, so the whole import is one undo. The standalone CLI writes
@@ -1366,12 +1376,17 @@ the resulting project file and has no cross-process undo history.
 `POST /api/group-addresses/csv-import` (`apps/knx-server`), both path-based
 like the project import route, and both logging to the
 T11 session log. CLI: `knx ga-export <store.knxdb> <out.csv>` and
-`knx ga-import <store.knxdb> <in.csv> [--dry-run] [--confirm <token>]`
-(`apps/knx-cli`) —
+`knx ga-import <store.knxdb> <in.csv> [--dry-run] [--confirm <token>]
+[--encoding utf-8|windows-1252]` (`apps/knx-cli`) —
 `--dry-run` runs the identical plan and prints a byte-identical report body
 to a real import, then a trailing `store written: yes`/`no (…)` line makes
 explicit whether anything was actually saved. Web: two toolbar buttons in
-the group-address view (`GroupAddressCsvButtons.tsx`).
+the group-address view (`GroupAddressCsvButtons.tsx`) and an encoding select next
+to the import button. The server route takes the encoding as the optional body
+field `encoding` (`utf-8` or `windows-1252`; anything else is a `400`). Every
+confirmation token binds the raw bytes and the encoding: a preview under one
+encoding cannot confirm an apply under the other. A CLI token without
+`--encoding` (UTF-8) is unchanged from before the option existed.
 
 **Installation scope (MODEL-01).** Both server routes accept an optional
 `installationId`; without it the first installation is read and written, as
@@ -1384,6 +1399,23 @@ project revision, so a preview for one installation cannot confirm an apply
 into another. The CLI offers the same as `--installation <id>` on `knx
 ga-export`/`ga-import` (its token is unchanged when the flag is absent). The
 web buttons still use the first installation.
+
+**Format version (8 November 2026).** Adding `Description` keeps the native
+format at v1: the column is optional on import, column order never mattered,
+and an older KNXBench reading a newer export reports `Description` as an
+unknown column and imports everything else unchanged. Nothing an older file
+said changes meaning, so no version bump is needed to read either direction
+safely; the older reader simply does not apply descriptions.
+
+**Group-address description in `.knxproj` imports.** Schema 20–23 files carry
+`GroupAddress/@Description`; it is now mapped into the address's description
+(byte-exact, an empty attribute stays an empty description) and no longer kept
+as a retained opaque attribute. Schema 11 does not list the attribute, so there
+it stays an unknown retained attribute, as before. A `.knxdb` saved before
+native schema 19 keeps such descriptions only as retained attributes: the 18 → 19
+migration does not lift them, so the field stays empty there until the project
+is imported again from its `.knxproj`
+([ADR-0164](adr/0164-group-address-description-and-csv-encoding.md)).
 
 Design record: `docs/superpowers/specs/2026-09-10-csv-group-address-exchange-design.md`.
 

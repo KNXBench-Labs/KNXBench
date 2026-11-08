@@ -375,6 +375,61 @@ describe("GroupAddressCsvButtons — installation choice", () => {
   });
 });
 
+// KL-038b: the import encoding is an explicit choice next to the import
+// action; UTF-8 is the default and leaves the request unchanged.
+describe("GroupAddressCsvButtons — import encoding", () => {
+  function encodingSelect(): HTMLSelectElement {
+    return host!.querySelector<HTMLSelectElement>('select[aria-label="CSV import encoding"]')!;
+  }
+
+  it("offers UTF-8 as the default and Windows-1252, and sends no encoding by default", async () => {
+    filePickerMock.pickOpenPath.mockResolvedValueOnce("/data/in.csv");
+    apiMock.importGroupAddressesCsv.mockResolvedValueOnce({
+      tree: fakeTree,
+      report: { separator: ";", rowsRead: 0, created: 0, updated: 0, unchanged: 0, ignoredColumns: [], problems: [] },
+    });
+    const { root } = await renderButtons();
+    const select = encodingSelect();
+    expect(Array.from(select.options, (option) => [option.value, option.textContent])).toEqual([
+      ["utf-8", "UTF-8 (default)"],
+      ["windows-1252", "Windows-1252 (ETS export)"],
+    ]);
+    expect(select.value).toBe("utf-8");
+    await click(importButton());
+    expect(apiMock.importGroupAddressesCsv.mock.calls).toEqual([["/data/in.csv"]]);
+    root.unmount();
+  });
+
+  it("previews and confirms with the same chosen Windows-1252 encoding", async () => {
+    filePickerMock.pickOpenPath.mockResolvedValueOnce("/data/ets.csv");
+    Object.defineProperty(window, "confirm", { configurable: true, value: vi.fn(() => true) });
+    const report = { separator: ";", rowsRead: 1, created: 0, updated: 0, readdressed: 0, deleted: 1, unchanged: 0,
+      destructiveChanges: [{ row: 2, action: "delete", id: 5, sourceAddress: 1, targetAddress: null, affectedLinks: [] }],
+      ignoredColumns: [], problems: [] };
+    apiMock.importGroupAddressesCsv
+      .mockResolvedValueOnce({ tree: fakeTree, report, applied: false, confirmationToken: "preview-token" })
+      .mockResolvedValueOnce({ tree: fakeTree, report, applied: true, confirmationToken: null });
+    const { root } = await renderButtons();
+    await act(async () => {
+      const select = encodingSelect();
+      select.value = "windows-1252";
+      select.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+    await click(importButton());
+    expect(apiMock.importGroupAddressesCsv.mock.calls).toEqual([
+      ["/data/ets.csv", undefined, undefined, "windows-1252"],
+      ["/data/ets.csv", "preview-token", undefined, "windows-1252"],
+    ]);
+    root.unmount();
+  });
+
+  it("is disabled without a project", async () => {
+    const { root } = await renderButtons(null);
+    expect(encodingSelect().disabled).toBe(true);
+    root.unmount();
+  });
+});
+
 // ADR-0089: export, then an import that was actually applied.
 describe("GroupAddressCsvButtons achievement events", () => {
   const preview = (applied: boolean) => ({

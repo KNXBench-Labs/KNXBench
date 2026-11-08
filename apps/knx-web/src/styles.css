@@ -3540,6 +3540,7 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
    the same element, so the compound selector below must win). */
 .dpt-outcome { margin: 4px 0 12px; color: var(--knx-muted); font-size: 12px; line-height: 1.45; max-width: 78ch; }
 .dpt-outcome.dpt-conflict { color: var(--knx-warning-color); }
+.inspector-facts .ga-description { white-space: pre-wrap; overflow-wrap: anywhere; }
 .address-links-panel { margin-top: 24px; }
 .address-links-panel h2 { font-size: 16px; margin: 0 0 8px; }
 .address-links-panel small { color: var(--knx-muted); }

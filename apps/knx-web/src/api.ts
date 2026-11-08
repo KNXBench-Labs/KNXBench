@@ -1352,14 +1352,24 @@ export interface CsvImportResponse {
 // MODEL-01: `installationId` names the target installation. The server binds
 // it into the confirmation token, so preview and confirmation must name the
 // same one.
+// KL-038b: the file's encoding is the user's explicit choice, never guessed;
+// absent means UTF-8. The token also binds it, so both requests must agree.
+export type CsvImportEncoding = "utf-8" | "windows-1252";
+
 export function importGroupAddressesCsv(
   path: string,
   confirmationToken?: string,
   installationId?: number,
+  encoding?: CsvImportEncoding,
 ): Promise<CsvImportResponse> {
   return request("/api/group-addresses/csv-import", {
     method: "POST",
-    body: JSON.stringify({ path, ...(confirmationToken ? { confirmationToken } : {}), installationId }),
+    body: JSON.stringify({
+      path,
+      ...(confirmationToken ? { confirmationToken } : {}),
+      installationId,
+      ...(encoding ? { encoding } : {}),
+    }),
   });
 }
 

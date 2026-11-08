@@ -138,8 +138,9 @@ pub struct EditorHistory {
     pub rows: StackRows,
     /// What the read verified beyond `rows`.
     verified: Option<VerifiedHashes>,
-    /// The knowledge a full read verified, captured with the values it read so
-    /// that later changes to the public fields cannot alter it (see [`Self::trust`]).
+    /// The knowledge a [`load_editor_with_trust`] read verified, captured with
+    /// the values it read so that later changes to the public fields cannot
+    /// alter it (see [`Self::take_trust`]). Other reads leave it empty.
     opened: Option<JournalTrust>,
 }
 
@@ -155,13 +156,14 @@ struct VerifiedHashes {
 }
 
 impl EditorHistory {
-    /// What this read verified, for a writer that keeps working on it: the
-    /// rows, the retained context of `working`, the saved baseline and the
-    /// working state, with the values read from the file. Changing `working`,
-    /// `baseline`, `undo` or `redo` afterwards does not change it.
-    pub fn trust(&self) -> JournalTrust {
+    /// Moves out what this read verified, for a writer that keeps working on
+    /// it: the rows and, after [`load_editor_with_trust`], the retained context
+    /// of `working`, the saved baseline and the working state, with the values
+    /// read from the file. Changing `working`, `baseline`, `undo` or `redo`
+    /// afterwards does not change it. A second call knows only the rows.
+    pub fn take_trust(&mut self) -> JournalTrust {
         self.opened
-            .clone()
+            .take()
             .unwrap_or_else(|| JournalTrust::from_rows(self.rows.clone()))
     }
 }
@@ -287,6 +289,8 @@ fn check_limits(conn: &Connection) -> Result<(), HistoryError> {
 enum StackRead<'a> {
     /// Decode and check every row and return its project state.
     States,
+    /// As `States`, and also capture the read's [`JournalTrust`].
+    StatesWithTrust,
     /// Check only, returning no states. A row whose stored hash the trust's
     /// `rows` name is verified by the SHA-256 of its bytes instead of being
     /// decoded: the caller already holds that image's state, encoded by itself
@@ -299,6 +303,19 @@ enum StackRead<'a> {
 
 fn load_editor_inner(conn: &Connection) -> Result<Option<EditorHistory>, HistoryError> {
     read_editor(conn, StackRead::States)
+}
+
+/// [`load_editor`] that also captures what the read verified, for a writer
+/// that keeps editing the journal ([`EditorHistory::take_trust`]). The capture
+/// copies the retained context and the baseline and working models once.
+pub fn load_editor_with_trust(conn: &Connection) -> Result<Option<EditorHistory>, HistoryError> {
+    if !conn.is_autocommit() {
+        return read_editor(conn, StackRead::StatesWithTrust);
+    }
+    let tx = conn.unchecked_transaction()?;
+    let history = read_editor(conn, StackRead::StatesWithTrust)?;
+    tx.commit()?;
+    Ok(history)
 }
 
 /// A retained context row whose bytes were checked: its semantic identity and
@@ -350,7 +367,7 @@ fn read_editor(
     let baseline = NativeSnapshot::read(conn)?;
     let actual_baseline_hash = match read {
         StackRead::Admit(trust) => trust.semantic_hash(&baseline)?,
-        StackRead::States => baseline.semantic_hash()?,
+        StackRead::States | StackRead::StatesWithTrust => baseline.semantic_hash()?,
     };
     if actual_baseline_hash != baseline_hash {
         return Err(HistoryError::Stale);
@@ -359,7 +376,7 @@ fn read_editor(
         StackRead::Admit(trust) => trust
             .context()
             .filter(|known| known.content_hash == context_hash),
-        StackRead::States => None,
+        StackRead::States | StackRead::StatesWithTrust => None,
     };
     // Admission returns no states, so a verified known context needs no value:
     // every state below attaches the same one.
@@ -372,7 +389,7 @@ fn read_editor(
     let working = context::attach(&image, &hash, &retained)?;
     let trusted_rows: HashSet<&str> = match read {
         StackRead::Admit(trust) => trust.rows.hashes(),
-        StackRead::States => HashSet::new(),
+        StackRead::States | StackRead::StatesWithTrust => HashSet::new(),
     };
     if working.project.info.project_id != baseline.project.info.project_id {
         return Err(HistoryError::Invalid(
@@ -423,7 +440,7 @@ fn read_editor(
                 "stack snapshot belongs to another project or retained context",
             ));
         }
-        if matches!(read, StackRead::States) {
+        if matches!(read, StackRead::States | StackRead::StatesWithTrust) {
             target.push(snapshot.project);
         }
         hashes.push(hash);
@@ -435,7 +452,7 @@ fn read_editor(
         working_image: hash,
     };
     // Admission attached no context value, so only a full read knows one.
-    let opened = matches!(read, StackRead::States)
+    let opened = matches!(read, StackRead::StatesWithTrust)
         .then(|| opened_trust(&rows_read, &verified, &baseline, &working));
     Ok(Some(EditorHistory {
         generation,

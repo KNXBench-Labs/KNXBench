@@ -899,7 +899,7 @@ fn load_native(path: &Path, progress: &LoadHandle) -> Result<NativeLoad, LoadFai
     let manufacturer_refs =
         knx_store::load_manufacturer_refs(&read).map_err(|e| LoadFailure::from(e.to_string()))?;
     progress.phase(LoadPhase::BuildProjectTree);
-    let recovered = knx_store::project_history::load_editor(&read)
+    let recovered = knx_store::project_history::load_editor_with_trust(&read)
         .map_err(|e| LoadFailure::from(e.to_string()))?;
     let (project, opaque, manufacturer_refs) = match &recovered {
         Some(history) => (
@@ -3032,8 +3032,8 @@ fn replace_project_state_transaction(
     catalog_requests.clear();
 
     let (clean_replacement, recovered_stack, generation, trust) = match recovered {
-        Some(history) => {
-            let trust = history.trust();
+        Some(mut history) => {
+            let trust = history.take_trust();
             (
                 history.baseline.project,
                 knx_core::CommandStack::from_snapshot_states(history.undo, history.redo),

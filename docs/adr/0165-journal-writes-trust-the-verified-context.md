@@ -67,9 +67,11 @@ values:
 A default trust knows nothing. It decodes everything as before with one exception:
 listing the saved versions in the same transaction as an admission no longer
 decodes a version context identical to the working context that admission just
-checked, including for ordinary Save and open. A full read captures its trust with
-the values it read, so a caller changing the returned history afterwards cannot
-turn its own edits into a claim the file does not back. Other
+checked, including for ordinary Save and open. Only the server's open uses
+`load_editor_with_trust`, which captures the trust with the values it read, so a
+caller changing the returned history afterwards cannot turn its own edits into a
+claim the file does not back; `take_trust` moves it out. Plain `load_editor` (CLI,
+MCP, version actions) captures nothing and copies nothing extra. Other
 writers (Save, restore, Clear undo and so on) still leave the server's knowledge
 stale; that only costs the decode or encode a claim would have saved, because every
 claim is checked against the file.
@@ -102,7 +104,9 @@ claim is checked against the file.
   | no saved versions, run 2 | 8 | 4.04 s (3.73 to 4.29) | 1.49 s (1.47 to 1.76) |
   | 10 named versions | 12 | 4.90 s (4.55 to 7.68) | 1.79 s (1.67 to 2.30) |
 
-  Run 1 measured an earlier candidate without item 4; runs 2 and 3 the final one.
+  Run 1 measured an earlier candidate without item 4; runs 2 and 3 commit
+  6c283d15b. The later review fixes change only when the trust is captured and how
+  it is handed over, not what a write checks or skips.
   What remains: two admissions of about 0.3 s each (root read, a 141 MB byte hash,
   the working image decode, row hashes, limit checks), one model image of the new
   working state, the version list and the commit. No figures exist for other
@@ -111,9 +115,8 @@ claim is checked against the file.
   model, and of the baseline's retained context while it differs: for the measured
   file about 134 MB more resident memory. During a write the trust is moved out of
   the cache rather than copied, but returning the known context still copies it
-  once; an open also copies it while it publishes the project. That transient peak
-  is unmeasured; it stays below the previous build's in-memory encoding of the same
-  context.
+  once; the trusting read at open copies it once as well. That transient peak is
+  unmeasured.
 - Unit tests count the in-memory stores a write builds (a test-only counter): after
   one verified write or an open, the next edit and an undo build none with a
   retained context and only the new working image. They also refuse a baseline
@@ -126,5 +129,6 @@ claim is checked against the file.
   hand more than rows on. The counter counts in-memory store builds, not decodes.
   An independent review with seven run-backed mutants (all killed, comment-only
   control survived) found the trust sound for current callers; its finding that
-  `trust()` read the public fields is fixed as above.
+  `trust()` read the public fields is fixed as above, and a re-review approved
+  the fix.
 - No file format change; older and newer builds read the same files.

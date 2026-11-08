@@ -6,6 +6,13 @@ This dossier preserves the technical detail and dated history. Earlier
 headings, failures and lifting conditions are historical where later
 updates supersede them; they are not new work assignments.
 
+## Update 2026-11-08: time values in downloads (ADR-0162)
+
+`TypeTime/@Unit` stays a reported, not stored, attribute. A download now reads it
+from the retained program source and writes a time value in a plain unit as the
+count of that unit, like a number; packed, unknown or missing units stay refused
+([ADR-0162](../adr/0162-time-parameters-and-inline-property-writes.md)).
+
 <!-- BEGIN retained catalogue record -->
 
 ## PDB-9 parameter and Dynamic coverage boundary

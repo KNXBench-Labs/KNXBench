@@ -1,4 +1,4 @@
-//! Translates master resets and parameter-filled property writes of mask `0701h` (ADR-0161).
+//! Translates master resets and parameter-filled property writes of mask `0701h` (ADR-0161/0162).
 //!
 //! `[V]` What ETS 6.4 sent for these load controls to KNXBench's simulator
 //! (docs/research/2026-11-08-property-placed-parameters.md):
@@ -13,6 +13,12 @@
 //!   declared property and wrote it with the declared type.
 //! - A parameter-filled `LdCtrlWriteProp Count="n"` wrote `n` elements from
 //!   index 1, even where `n` exceeds the declared `MaxElements`.
+//! - With an all-zero `InlineData` of at least `n` octets as well, ETS read
+//!   nothing and wrote zero into every element no parameter reaches; with a
+//!   shorter one it read and merged the device's value as without; a
+//!   property no parameter reaches it did not write at all
+//!   (docs/research/2026-11-08-time-parameters-and-inline-property-writes.md,
+//!   ADR-0162). A non-zero `InlineData` was not observed and is refused.
 
 use std::collections::BTreeSet;
 
@@ -27,7 +33,21 @@ use crate::inference::Inference;
 /// command ETS 6.4 maps it to.
 pub const MASTER_RESET_AS_FUNCTION_PROPERTY: &str = "master-reset-as-function-property";
 
+/// [`Inference::rule`]: an all-zero `InlineData` covering `Count` fills
+/// every element no parameter reaches; nothing is read.
+pub const INLINE_DATA_FILLS_PROPERTY: &str = "inline-data-fills-property";
+
+/// [`Inference::rule`]: an `InlineData` shorter than `Count` is not used;
+/// the device's value is read and merged.
+pub const SHORT_INLINE_DATA_READS_DEVICE: &str = "short-inline-data-reads-device";
+
+/// [`Inference::rule`]: a parameter-filled write with `InlineData` that
+/// reaches no parameter is not sent.
+pub const PROPERTY_WITHOUT_PARAMETERS_NOT_SENT: &str = "property-without-parameters-not-sent";
+
 const REFERENCE: &str = "docs/research/2026-11-08-property-placed-parameters.md";
+const INLINE_REFERENCE: &str =
+    "docs/research/2026-11-08-time-parameters-and-inline-property-writes.md";
 
 /// `FirstAppObjectIdx` of mask `0701h` in the KNX master data.
 const FIRST_APPLICATION_OBJECT_0701: u8 = 5;
@@ -53,6 +73,12 @@ pub(super) struct PropertySteps<'a> {
     mask: MaskVersion,
     declared: BTreeSet<(u8, u8)>,
     written: BTreeSet<(u8, u8)>,
+    /// Writes filled from their `InlineData`, without a read.
+    inline_filled: usize,
+    /// Writes whose `InlineData` is shorter than `Count`.
+    inline_short: usize,
+    /// Writes with `InlineData` that reach no parameter, so send nothing.
+    unsent: usize,
 }
 
 impl<'a> PropertySteps<'a> {
@@ -62,6 +88,9 @@ impl<'a> PropertySteps<'a> {
             mask,
             declared: BTreeSet::new(),
             written: BTreeSet::new(),
+            inline_filled: 0,
+            inline_short: 0,
+            unsent: 0,
         }
     }
 
@@ -118,12 +147,15 @@ impl<'a> PropertySteps<'a> {
         Ok(())
     }
 
+    /// The step a parameter-filled write becomes; `None` when, as ETS 6.4
+    /// did, it sends nothing.
     pub(super) fn write(
         &mut self,
         object_index: u8,
         property_id: u8,
         count: u16,
-    ) -> Result<MemoryDownloadStep, DownloadPlanError> {
+        inline_data: Option<&[u8]>,
+    ) -> Result<Option<MemoryDownloadStep>, DownloadPlanError> {
         let refuse = |reason: &str| DownloadPlanError::PropertyParameters {
             object_index,
             property_id,
@@ -141,41 +173,92 @@ impl<'a> PropertySteps<'a> {
         if count == 0 {
             return Err(refuse("written with Count=0"));
         }
+        if inline_data.is_some_and(|inline| inline.iter().any(|octet| *octet != 0)) {
+            return Err(refuse(
+                "InlineData with a non-zero octet; only all-zero InlineData was observed",
+            ));
+        }
         let elements = usize::from(count);
-        let (mut octets, mut owned) = self
+        let property = self
             .image
             .properties
             .iter()
-            .find(|property| (property.object_index, property.property_id) == key)
-            .map(|property| (property.octets.clone(), property.owned.clone()))
-            .unwrap_or_default();
+            .find(|property| (property.object_index, property.property_id) == key);
+        let (mut octets, mut owned) = match (property, inline_data) {
+            (Some(property), _) => (property.octets.clone(), property.owned.clone()),
+            (None, Some(_)) => {
+                self.unsent += 1;
+                return Ok(None);
+            }
+            (None, None) => Default::default(),
+        };
         if octets.len() > elements {
             return Err(refuse("parameters lie past the elements Count writes"));
         }
         octets.resize(elements, 0);
         owned.resize(elements, 0);
-        Ok(MemoryDownloadStep::WritePropertyParameters {
+        match inline_data {
+            // Every bit is the product's: zero where no parameter reaches.
+            Some(inline) if inline.len() >= elements => {
+                self.inline_filled += 1;
+                owned = vec![0xFF; elements];
+            }
+            Some(_) => self.inline_short += 1,
+            None => {}
+        }
+        Ok(Some(MemoryDownloadStep::WritePropertyParameters {
             object_index,
             property_id,
             elements: count,
             octets,
             owned,
-        })
+        }))
     }
 
-    /// Every property the image places parameters in is written.
-    pub(super) fn finish(self) -> Result<(), DownloadPlanError> {
-        match self.image.properties.iter().find(|property| {
+    /// Every property the image places parameters in is written; the
+    /// `InlineData` rules applied are named.
+    pub(super) fn finish(self, inferences: &mut Vec<Inference>) -> Result<(), DownloadPlanError> {
+        if let Some(property) = self.image.properties.iter().find(|property| {
             !self
                 .written
                 .contains(&(property.object_index, property.property_id))
         }) {
-            Some(property) => Err(DownloadPlanError::PropertyParameters {
+            return Err(DownloadPlanError::PropertyParameters {
                 object_index: property.object_index,
                 property_id: property.property_id,
                 reason: "holds parameters, but the procedure never writes it".into(),
-            }),
-            None => Ok(()),
+            });
         }
+        for (count, rule, detail) in [
+            (
+                self.inline_filled,
+                INLINE_DATA_FILLS_PROPERTY,
+                "parameter-filled property writes carry an all-zero InlineData covering Count: \
+                 every element no parameter reaches is written as zero and nothing is read, as \
+                 ETS 6.4 did",
+            ),
+            (
+                self.inline_short,
+                SHORT_INLINE_DATA_READS_DEVICE,
+                "parameter-filled property writes carry an InlineData shorter than Count: it is \
+                 not used, the device's value is read and only the parameters' bits change, as \
+                 ETS 6.4 did",
+            ),
+            (
+                self.unsent,
+                PROPERTY_WITHOUT_PARAMETERS_NOT_SENT,
+                "parameter-filled property writes with InlineData reach no parameter and are not \
+                 sent, as ETS 6.4 did",
+            ),
+        ] {
+            if count > 0 {
+                inferences.push(Inference {
+                    rule,
+                    detail: format!("{count} {detail}"),
+                    reference: INLINE_REFERENCE,
+                });
+            }
+        }
+        Ok(())
     }
 }

@@ -590,6 +590,8 @@ pub fn load_legacy_program_code(
         // EX-IM `program_plugin` rows are not mapped (KL-006): not refused here.
         download_plugin: None,
         parameters,
+        // EX-IM has no `TypeTime` unit: a legacy time value stays refused.
+        time_units: BTreeMap::new(),
         program_attributes,
     })
 }

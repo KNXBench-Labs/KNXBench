@@ -45,7 +45,10 @@ use crate::image::DownloadImage;
 use crate::inference::Inference;
 
 mod property_steps;
-pub use property_steps::MASTER_RESET_AS_FUNCTION_PROPERTY;
+pub use property_steps::{
+    INLINE_DATA_FILLS_PROPERTY, MASTER_RESET_AS_FUNCTION_PROPERTY,
+    PROPERTY_WITHOUT_PARAMETERS_NOT_SENT, SHORT_INLINE_DATA_READS_DEVICE,
+};
 
 /// Apply write-only proof to an already validated regular plan; source masks stay untouched.
 /// Callers must first run the existing image and complete-plan validation. Never refuses:
@@ -501,7 +504,13 @@ pub fn plan_memory_download_with_inferences(
                 object_index,
                 property_id,
                 count,
-            } => steps.push(properties.write(*object_index, *property_id, *count)?),
+                inline_data,
+            } => steps.extend(properties.write(
+                *object_index,
+                *property_id,
+                *count,
+                inline_data.as_deref(),
+            )?),
             LoadStep::Unload { lsm } => steps.push(event(*lsm, LoadEvent::Unload)?),
             LoadStep::Load { lsm } => steps.push(event(*lsm, LoadEvent::StartLoading)?),
             LoadStep::LoadCompleted { lsm } => steps.push(event(*lsm, LoadEvent::LoadCompleted)?),
@@ -587,7 +596,7 @@ pub fn plan_memory_download_with_inferences(
         }
     }
 
-    properties.finish()?;
+    properties.finish(&mut inferences)?;
     for segment in &image.segments {
         let address = u16::try_from(segment.address)
             .map_err(|_| DownloadPlanError::Address(segment.address))?;
@@ -1076,8 +1085,12 @@ mod tests {
     }
 
     fn declare(property_type: &str) -> LoadStep {
+        declare_at(8, property_type)
+    }
+
+    fn declare_at(object_index: u8, property_type: &str) -> LoadStep {
         LoadStep::DeclarePropDesc {
-            object_index: 8,
+            object_index,
             property_id: 52,
             property_type: property_type.into(),
             max_elements: 4,
@@ -1088,11 +1101,110 @@ mod tests {
     }
 
     fn write_parameters(count: u16) -> LoadStep {
+        write_inline(8, count, None)
+    }
+
+    fn write_inline(object_index: u8, count: u16, inline_data: Option<Vec<u8>>) -> LoadStep {
         LoadStep::WriteParameterProp {
-            object_index: 8,
+            object_index,
             property_id: 52,
             count,
+            inline_data,
         }
+    }
+
+    /// `[V]` ETS 6.4 against KNXBench's simulator (ADR-0162): an all-zero
+    /// `InlineData` covering `Count` is the value under the parameters, and
+    /// nothing is read; a shorter one is not used; a property no parameter
+    /// reaches is not written.
+    #[test]
+    fn inline_data_fills_covered_writes_and_a_write_without_parameters_sends_nothing() {
+        let plan_of =
+            |steps: Vec<LoadStep>| plan_memory_download_with_inferences(&property_image(steps));
+        let rules = |inferences: &[Inference]| -> Vec<&str> {
+            inferences.iter().map(|inference| inference.rule).collect()
+        };
+
+        let (plan, inferences) = plan_of(vec![
+            declare("PDT_UNSIGNED_CHAR"),
+            // Exactly as long as Count: still covering.
+            write_inline(8, 6, Some(vec![0; 6])),
+            declare_at(10, "PDT_UNSIGNED_CHAR"),
+            write_inline(10, 11, Some(vec![0; 10])),
+            // Unobserved: covering InlineData on a property without
+            // parameters. Sending nothing is the safe reading.
+            declare_at(11, "PDT_UNSIGNED_CHAR"),
+            write_inline(11, 2, Some(vec![0; 10])),
+        ])
+        .unwrap();
+        let parameters: Vec<_> = plan
+            .steps
+            .iter()
+            .filter(|step| matches!(step, MemoryDownloadStep::WritePropertyParameters { .. }))
+            .collect();
+        assert_eq!(
+            parameters,
+            [&MemoryDownloadStep::WritePropertyParameters {
+                object_index: 8,
+                property_id: 52,
+                elements: 6,
+                octets: vec![0x01, 0x78, 0x00, 0x00, 0x00, 0x00],
+                owned: vec![0xFF; 6],
+            }]
+        );
+        let found = rules(&inferences);
+        assert!(found.contains(&INLINE_DATA_FILLS_PROPERTY), "{found:?}");
+        let unsent = inferences
+            .iter()
+            .find(|inference| inference.rule == PROPERTY_WITHOUT_PARAMETERS_NOT_SENT)
+            .expect("the unsent writes are named");
+        assert!(unsent.detail.starts_with("2 "), "{}", unsent.detail);
+        assert!(
+            !found.contains(&SHORT_INLINE_DATA_READS_DEVICE),
+            "{found:?}"
+        );
+
+        // Shorter than Count: merged into what the device holds, as without.
+        let (plan, inferences) = plan_of(vec![
+            declare("PDT_UNSIGNED_CHAR"),
+            write_inline(8, 5, Some(vec![0; 2])),
+        ])
+        .unwrap();
+        assert!(plan
+            .steps
+            .contains(&MemoryDownloadStep::WritePropertyParameters {
+                object_index: 8,
+                property_id: 52,
+                elements: 5,
+                octets: vec![0x01, 0x78, 0x00, 0x00, 0x00],
+                owned: vec![0x01, 0xFF, 0xFF, 0x00, 0x00],
+            }));
+        assert!(rules(&inferences).contains(&SHORT_INLINE_DATA_READS_DEVICE));
+
+        // A non-zero InlineData was never observed.
+        let refused = plan_memory_download(&property_image(vec![
+            declare("PDT_UNSIGNED_CHAR"),
+            write_inline(8, 6, Some(vec![0, 0, 1])),
+        ]))
+        .unwrap_err();
+        assert!(
+            matches!(&refused, DownloadPlanError::PropertyParameters { reason, .. }
+                if reason.contains("non-zero")),
+            "{refused:?}"
+        );
+        // Without InlineData a property no parameter reaches is still written.
+        let (plan, _) = plan_of(vec![
+            declare("PDT_UNSIGNED_CHAR"),
+            write_parameters(3),
+            declare_at(10, "PDT_UNSIGNED_CHAR"),
+            write_inline(10, 2, None),
+        ])
+        .unwrap();
+        assert!(plan.steps.iter().any(|step| matches!(
+            step,
+            MemoryDownloadStep::WritePropertyParameters { object_index: 10, owned, .. }
+                if owned == &[0, 0]
+        )));
     }
 
     #[test]

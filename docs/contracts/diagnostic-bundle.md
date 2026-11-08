@@ -354,7 +354,7 @@ implemented once in `knx_app::diagnostic_bundle::default_offer`.
 
 | Section | ZIP path | Source |
 | --- | --- | --- |
-| environment (fixed) | `environment/environment.json` | writer identity, platform, server incarnation, effective timings, product database and project state; `journalWrites`: the last 20 journal writes of this server process (time, total and per-phase milliseconds, success, undo/redo/version counts, kept/copied/encoded rows, retained-context bytes, reuse flags; no names, paths or values; ADR-0165) |
+| environment (fixed) | `environment/environment.json` | writer identity, platform, server incarnation, effective timings, product database and project state; `journalWrites`: the last 20 journal writes of project commands (edits, undo and redo, programming settlement, catalogue creation; not Save, versions, notes, instructions or other direct journal writers) of this server process (time, total and per-phase milliseconds, success, undo/redo/version counts, kept/copied/encoded rows, retained-context bytes, reuse flags; no names, paths or values; ADR-0165) |
 | session log | `session-log/session-log.json` | ordered typed chronology, known sources/messages, withheld-field counts; no arbitrary location/detail text |
 | operation / earlier operations | `operations/<id>/recording.jsonl`, or `system2-private.json` / a retained typed result file | non-System-2: the recorder-redacted raw recording after consent; System-2: the admitted private projection only |
 | minimised legacy reports | `reports/...` | the existing download and System-2 reports of that operation |

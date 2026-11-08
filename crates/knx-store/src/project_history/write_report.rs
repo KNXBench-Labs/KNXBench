@@ -30,9 +30,4 @@ impl JournalWriteReport {
     pub fn phase(&mut self, phase: &'static str, started: Instant) {
         self.phases.push((phase, started.elapsed()));
     }
-
-    /// The sum of all recorded phases.
-    pub fn total(&self) -> Duration {
-        self.phases.iter().map(|(_, time)| *time).sum()
-    }
 }

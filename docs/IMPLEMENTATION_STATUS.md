@@ -125,7 +125,7 @@ another writer is still refused as stale; damaged context bytes refuse the write
 Same file afterwards: median 1.5 s (1.47 to 1.76 s) without saved versions and 1.8 s (1.67 to 2.30 s) with 10 named versions, against 4.0 s and 4.9 s for the previous build in the same interleaved run. Unit tests count the in-memory stores a write
 builds; the ADR-0163 harness runs the trusted chain against full rewrites. For field
 diagnosis the diagnostic bundle's environment section lists the phase times, counts
-and reuse flags of the last 20 journal writes, and a write of 2 s or more logs one
+and reuse flags of the last 20 journal writes of project commands (edits, undo/redo; not Save or version actions), and a write of 2 s or more logs one
 line to standard error; neither holds names, paths or values. Costs
 and memory that remain: [history limits](limitations/persistent-native-working-history.md).
 

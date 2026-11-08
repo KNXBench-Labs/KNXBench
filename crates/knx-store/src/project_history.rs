@@ -922,22 +922,29 @@ fn save_editor_inner(
     if undo_steps.saturating_add(redo_steps) > MAX_STACK_STATES {
         return Err(HistoryError::Limit("undo and redo exceed 256 states"));
     }
+    // Each phase is recorded before its error propagates, so a busy lock or a
+    // refusal still shows the step that cost the time.
     let started = Instant::now();
-    let tx = Transaction::new_unchecked(conn, TransactionBehavior::Immediate)?;
-    crate::migration::migrate_in_transaction(&tx)?;
-    snapshot::check_schema(&tx)?;
+    let tx = Transaction::new_unchecked(conn, TransactionBehavior::Immediate);
     report.phase("lock", started);
+    let tx = tx?;
+    let started = Instant::now();
+    let migrated = crate::migration::migrate_in_transaction(&tx).map_err(HistoryError::from);
+    let checked = migrated.and_then(|()| snapshot::check_schema(&tx));
+    report.phase("schema", started);
+    checked?;
     // What this writer itself encoded or admitted is re-hashed, not decoded again.
     let untrusted = JournalTrust::default();
     let trusted = reuse.unwrap_or(&untrusted);
     let started = Instant::now();
-    let (current, admitted_context) = admitted_generation(&tx, expected_generation, trusted)?;
+    let admitted = admitted_generation(&tx, expected_generation, trusted);
     report.phase("admission", started);
+    let (current, admitted_context) = admitted?;
     let started = Instant::now();
-    let (versions, checked_contexts) =
-        list_versions_checked(&tx, trusted, admitted_context.as_ref())?;
-    report.saved_versions = versions.len();
+    let listed = list_versions_checked(&tx, trusted, admitted_context.as_ref());
     report.phase("versions", started);
+    let (versions, checked_contexts) = listed?;
+    report.saved_versions = versions.len();
     // The admission checked the working context; `remember` need not again.
     let context_verified = trusted.context().is_some_and(|known| {
         admitted_context.as_ref().is_some_and(|(content, image)| {
@@ -1008,8 +1015,9 @@ fn save_editor_inner(
         crate::load_manufacturer_file(&tx, &sha).map_err(HistoryError::Carried)?;
     }
     let started = Instant::now();
-    tx.commit()?;
+    let committed = tx.commit();
     report.phase("commit", started);
+    committed?;
     Ok((generation, written))
 }
 

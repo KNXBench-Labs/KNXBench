@@ -403,6 +403,7 @@ fn a_write_reports_its_phases_and_what_it_reused() {
         names,
         [
             "lock",
+            "schema",
             "admission",
             "versions",
             "rootRead",
@@ -441,4 +442,25 @@ fn a_write_reports_its_phases_and_what_it_reused() {
     );
     assert!(warm.context_reused && warm.baseline_hash_reused);
     assert_eq!(warm.context_bytes, cold.context_bytes);
+}
+
+#[test]
+fn a_refused_write_still_reports_the_phase_that_refused() {
+    let seed = seed();
+    let file = saved(&seed);
+    let mut working = seed.clone();
+    let mut stack = CommandStack::new();
+    stack.do_command(&mut working.project, style(0)).unwrap();
+    let mut report = JournalWriteReport::default();
+    let stale = save_editor_trusting(
+        &file.conn,
+        &working,
+        &stack,
+        file.generation + 7,
+        &JournalTrust::default(),
+        &mut report,
+    );
+    assert!(matches!(stale, Err(HistoryError::Stale)), "{stale:?}");
+    let names: Vec<_> = report.phases.iter().map(|(name, _)| *name).collect();
+    assert_eq!(names, ["lock", "schema", "admission"]);
 }

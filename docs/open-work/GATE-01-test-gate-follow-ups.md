@@ -190,7 +190,11 @@ retransmissions) and durations that scale with contention: 0.65 s at rest (of
 which 0.17 s for 58 fsync-backed checkpoints), 1.8–3.8 s at four test threads
 during a parallel gate, over 10 s in the full parallel suite. This is waiting
 time, not a protocol or worker defect. CPU versus storage share under gate load
-is unmeasured. The deadline is unchanged; three options await an owner decision.
+is unmeasured. Owner decision (8 November 2026): these eight cases now use the
+existing sleep-polled 180 s `settled_slow` budget with all assertions unchanged
+([delivery record](../status/2026-11-08-s2-recovery-patient-join.md)); other
+`settled` callers keep 10 s. This closes this flake's deadline question, not the
+scheduler and historical items above.
 
 ## Known boundary
 

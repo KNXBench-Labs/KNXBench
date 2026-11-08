@@ -107,6 +107,16 @@ fn checked_raw(raw: &str, operation: &Path, raws: &[&str]) -> (Value, String) {
 /// Like `settled`, with a wider budget: a debug-build restore under load can outlast 10 s
 /// while still progressing (observed on the unchanged base as well).
 pub(super) async fn settled_slow(state: &crate::SharedState, router: &Router, outcome: &str) {
+    settled_slow_status(state, router, outcome).await;
+}
+/// [`settled_slow`] returning the settled status. The sleep-polled 180 s budget
+/// tolerates parallel-suite contention: identical traffic took 0.65 s at rest and
+/// over 10 s beside another gate (docs/research/2026-11-08-s2-recovery-authority-load-timeouts.md).
+pub(super) async fn settled_slow_status(
+    state: &crate::SharedState,
+    router: &Router,
+    outcome: &str,
+) -> Value {
     tokio::time::timeout(Duration::from_secs(180), async {
         while !state
             .device_system2
@@ -126,6 +136,7 @@ pub(super) async fn settled_slow(state: &crate::SharedState, router: &Router, ou
     state.device_system2.join_finished().await;
     let status = http(router, "/api/device-system2/status", None, 200).await;
     assert_eq!(status["state"], outcome);
+    status
 }
 fn last_checkpoint(journal: &Path) -> Value {
     let head: Value =

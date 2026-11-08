@@ -218,6 +218,7 @@ fn build_group_addresses(ids: &mut IdGen) -> GroupSpace {
             unfiltered: false,
             range: Some(middle_id),
             declared_dpt: Default::default(),
+            description: None,
         });
         pool.push(id);
     }

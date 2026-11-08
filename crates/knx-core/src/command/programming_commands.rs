@@ -111,6 +111,7 @@ pub(super) fn candidates(cmd: &Command, project: &Project, out: &mut BTreeSet<De
         // only changes how the same number is written.
         | Command::CreateGroupAddress { .. }
         | Command::UpdateGroupAddress { .. }
+        | Command::SetGroupAddressDescription { .. }
         | Command::SetGroupAddressStyle { .. }
         // Structure and placement do not change an address (a line move
         // keeps it; `SetIndividualAddress` is the re-address).

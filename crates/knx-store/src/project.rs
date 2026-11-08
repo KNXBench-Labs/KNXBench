@@ -89,6 +89,7 @@ const DELETE_ALL_TABLES: &[&str] = &[
     "parameter_instance",
     "module_instance_argument",
     "module_instance",
+    "group_address_description",
     "group_address",
     "group_range",
     "device",
@@ -924,6 +925,7 @@ mod tests {
                     unfiltered: false,
                     range: None,
                     declared_dpt,
+                    description: None,
                 });
         }
         crate::project::cover_ids_in_use(&mut project);
@@ -1010,6 +1012,7 @@ mod tests {
                 unfiltered: false,
                 range: None,
                 declared_dpt: Default::default(),
+                description: None,
             });
         // Stored counters: device 2, group address 3 — both below the ids above.
         project.ids = IdAllocators::from_counts(2, 0, 0, 0, 0, 3, 0, 0, 0);
@@ -1417,6 +1420,7 @@ mod tests {
             unfiltered: false,
             range: Some(GroupRangeId(2)),
             declared_dpt: Default::default(),
+            description: None,
         };
         ((building, floor), (main_range, mid_range), ga)
     }

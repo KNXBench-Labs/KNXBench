@@ -72,6 +72,7 @@ fn project(function_ids: (u32, u32)) -> Project {
                 unfiltered: false,
                 range: None,
                 declared_dpt: Default::default(),
+                description: None,
             })
             .collect(),
         parameters: vec![],

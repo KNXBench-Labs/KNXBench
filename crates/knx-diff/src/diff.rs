@@ -1715,4 +1715,31 @@ mod tests {
         assert_table_empty(&change_b.com_objects);
         assert_table_empty(&change_b.parameters);
     }
+
+    #[test]
+    fn a_group_address_description_change_is_reported_with_both_values() {
+        let (left, _, _, _, _, _, group_address, _) = build_big_fixture();
+        let (mut right, _, _, _, _, _, _, _) = build_big_fixture();
+        Command::SetGroupAddressDescription {
+            id: group_address,
+            description: Some("Beschreibung; neu".into()),
+        }
+        .apply(&mut right)
+        .unwrap();
+
+        let diff = diff_projects(&left, &right);
+        let inst = &diff.installations[0];
+        assert_eq!(inst.group_addresses.changed.len(), 1);
+        let change = &inst.group_addresses.changed[0];
+        assert_eq!(change.changed_fields, vec!["description"]);
+        assert_eq!(
+            change.field_changes(),
+            vec![FieldChange {
+                field: "description",
+                left: "-".into(),
+                right: "Beschreibung; neu".into(),
+            }]
+        );
+        assert!(inst.devices.changed.is_empty());
+    }
 }

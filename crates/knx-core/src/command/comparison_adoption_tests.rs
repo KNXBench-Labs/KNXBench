@@ -146,6 +146,7 @@ fn linked_fixture() -> Project {
                 unfiltered: false,
                 range: None,
                 declared_dpt: Default::default(),
+                description: None,
             });
     }
     for (id, device) in [(1, DeviceId(1)), (2, DeviceId(2))] {

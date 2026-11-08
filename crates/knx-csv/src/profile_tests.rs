@@ -1,11 +1,14 @@
 //! Tests for the fixed group-address CSV import header profiles, with synthetic fixtures only.
 
-use crate::testutil::{empty_project, entry_with_flags, linked_com_object, range};
+use crate::testutil::{empty_project, entry, entry_with_flags, linked_com_object, range};
 use crate::{
-    decode_csv_text, parse_group_addresses, plan_import, CsvProblem, IgnoredColumnReason,
-    ParsedCsv, Severity,
+    decode_csv_bytes, decode_csv_text, parse_group_addresses, plan_import, CsvEncoding, CsvProblem,
+    IgnoredColumnReason, ParsedCsv, Severity,
 };
-use knx_core::{Command, DptRef, GroupAddress, GroupAddressId, GroupAddressStyle, GroupRangeId};
+use knx_core::{
+    Command, CommandStack, DptRef, GroupAddress, GroupAddressId, GroupAddressStyle, GroupRangeId,
+    Layer, Override, Resolved,
+};
 
 const TAIL: &str = "Central;Unfiltered;Description;DatapointType;Security";
 const SHAPE1: &str = "Group name;Address;Central;Unfiltered;Description;DatapointType;Security";
@@ -147,7 +150,7 @@ fn headers_are_case_insensitive_and_trimmed() {
 }
 
 #[test]
-fn profile_dpt_description_and_security_columns_are_reported_as_not_applied() {
+fn only_the_profile_security_column_is_reported_as_not_applied() {
     let parsed = parse(&file(SHAPE1, &[]));
     assert_clean(&parsed);
     let names: Vec<_> = parsed
@@ -155,14 +158,7 @@ fn profile_dpt_description_and_security_columns_are_reported_as_not_applied() {
         .iter()
         .map(|c| (c.name.as_str(), c.reason))
         .collect();
-    assert_eq!(
-        names,
-        vec![
-            ("Description", IgnoredColumnReason::ReadOnly),
-            ("DatapointType", IgnoredColumnReason::ReadOnly),
-            ("Security", IgnoredColumnReason::ReadOnly),
-        ]
-    );
+    assert_eq!(names, vec![("Security", IgnoredColumnReason::ReadOnly)]);
 }
 
 #[test]
@@ -551,17 +547,140 @@ fn split_names_in_shape_four_follow_the_address_depth() {
 }
 
 #[test]
-fn descriptions_are_refused_including_whitespace_only() {
-    for description in ["Note", " ", "\t", "  x  "] {
-        let leaf = file(SHAPE1, &[&["Pump", "1/1/1", "", "", description, "", ""]]);
-        assert_single_row_error(&leaf, "Description");
-        let range = file(SHAPE1, &[&["Floor", "1/-/-", "", "", description, "", ""]]);
-        assert_single_row_error(&range, "Description");
+fn leaf_descriptions_are_read_byte_exact_and_blank_means_none() {
+    for (cell, expected) in [
+        ("Note", Some("Note")),
+        ("  x  ", Some("  x  ")),
+        (
+            "Beschreibung mit; Semikolon",
+            Some("Beschreibung mit; Semikolon"),
+        ),
+        ("", None),
+        (" ", None),
+        ("\t", None),
+    ] {
+        let text = format!("{SHAPE1}\n\"Pump\";\"1/1/1\";\"\";\"\";\"{cell}\";\"\";\"\"\n");
+        let parsed = parse(&text);
+        assert_clean(&parsed);
+        assert_eq!(parsed.rows[0].description.as_deref(), expected, "{cell:?}");
     }
-    assert_clean(&parse(&file(
+    // Every full shape carries the column at its own position.
+    let rows: [&[&str]; 4] = [
+        &["Pump", "1/2/3", "", "", "D", "", ""],
+        &["Pump", "1", "2", "3", "", "", "D", "", ""],
+        &["", "", "Pump", "1/2/3", "", "", "D", "", ""],
+        &["", "", "Pump", "1", "2", "3", "", "", "D", "", ""],
+    ];
+    for (header, row) in [SHAPE1, SHAPE2, SHAPE3, SHAPE4].into_iter().zip(rows) {
+        let parsed = parse(&file(header, &[row]));
+        assert_clean(&parsed);
+        assert_eq!(parsed.rows[0].description.as_deref(), Some("D"), "{header}");
+        assert!(parsed.rows[0].datapoint_type_on_create, "{header}");
+    }
+}
+
+#[test]
+fn range_descriptions_are_not_imported_and_warned_about() {
+    let parsed = parse(&file(
         SHAPE1,
-        &[&["Pump", "1/1/1", "", "", "", "", ""]],
-    )));
+        &[
+            &["Floor", "1/-/-", "", "", "Ground floor", "", ""],
+            &["Rooms", "1/2/-", "", "", " ", "", ""],
+        ],
+    ));
+    assert!(errors(&parsed).is_empty(), "{:?}", parsed.problems);
+    assert!(parsed.rows.is_empty());
+    let details: Vec<_> = warnings(&parsed)
+        .into_iter()
+        .map(|w| (w.row, w.detail.as_str()))
+        .collect();
+    assert_eq!(
+        details,
+        vec![
+            (
+                Some(2),
+                "group range name and address are not imported; this import only creates and \
+                 updates addresses"
+            ),
+            (
+                Some(2),
+                "group range description is not imported; only group-address descriptions are \
+                 applied"
+            ),
+            (
+                Some(3),
+                "group range name and address are not imported; this import only creates and \
+                 updates addresses"
+            ),
+        ]
+    );
+}
+
+#[test]
+fn a_description_is_set_on_create_and_on_update_and_blank_leaves_it_alone() {
+    let mut project = empty_project(GroupAddressStyle::ThreeLevel);
+    // Id 50 sits above the fresh allocator, so the two creates get 1 and 2.
+    let mut existing = entry(50, three("1/1/1").raw(), "Pump");
+    existing.description = Some("Old".into());
+    project.installations[0].group_addresses.push(existing);
+    let parsed = parse(&file(
+        SHAPE1,
+        &[
+            &["Pump", "1/1/1", "", "", "New text", "", ""],
+            &["Fan", "1/1/2", "", "", "Fresh", "", ""],
+            &["Valve", "1/1/3", "", "", "", "", ""],
+        ],
+    ));
+    let plan = plan_import(&project, &parsed);
+    assert_eq!((plan.report.created, plan.report.updated), (2, 1));
+    let Some(Command::Batch(commands)) = plan.command.clone() else {
+        panic!("expected a batch, got {:?}", plan.command);
+    };
+    assert_eq!(
+        commands[0],
+        Command::SetGroupAddressDescription {
+            id: GroupAddressId(50),
+            description: Some("New text".into()),
+        },
+        "a description-only change does not rewrite name or flags"
+    );
+    let created: Vec<_> = commands
+        .iter()
+        .filter_map(|c| match c {
+            Command::CreateGroupAddress { entry, .. } => Some(entry.description.clone()),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(created, vec![Some("Fresh".to_string()), None]);
+
+    // Apply through the undo stack: one step, exactly reversible.
+    let before = project.clone();
+    let mut stack = CommandStack::new();
+    stack
+        .do_command(&mut project, plan.command.unwrap())
+        .unwrap();
+    let after = project.clone();
+    assert_eq!(
+        after.installations[0].group_addresses[0]
+            .description
+            .as_deref(),
+        Some("New text")
+    );
+    stack.undo(&mut project).unwrap();
+    assert_eq!(project.installations, before.installations);
+    stack.redo(&mut project).unwrap();
+    assert_eq!(project, after);
+
+    // A blank cell on an existing address never clears its description.
+    let blank = parse(&file(SHAPE1, &[&["Pump", "1/1/1", "", "", "", "", ""]]));
+    let plan = plan_import(&after, &blank);
+    assert_eq!(plan.report.unchanged, 1);
+    assert!(plan.command.is_none());
+    let same = parse(&file(
+        SHAPE1,
+        &[&["Pump", "1/1/1", "", "", "New text", "", ""]],
+    ));
+    assert_eq!(plan_import(&after, &same).report.unchanged, 1);
 }
 
 #[test]
@@ -745,19 +864,63 @@ fn a_dpt_matching_the_derived_type_is_accepted_and_never_applied() {
 }
 
 #[test]
-fn a_new_address_with_a_dpt_is_refused() {
+fn a_new_address_gets_the_profile_dpt_as_its_declared_type() {
     let project = empty_project(GroupAddressStyle::ThreeLevel);
     let parsed = parse(&file(
         SHAPE1,
-        &[&["Pump", "1/1/1", "", "", "", "DPST-1-1", ""]],
+        &[
+            &["Pump", "1/1/1", "", "", "", "DPST-1-1", ""],
+            &["Fan", "1/1/2", "", "", "", "DPT-09", ""],
+            &["Valve", "1/1/3", "", "", "", "", ""],
+        ],
     ));
+    let plan = plan_import(&project, &parsed);
+    assert!(
+        plan.report
+            .problems
+            .iter()
+            .all(|p| p.severity == Severity::Warning),
+        "{:?}",
+        plan.report.problems
+    );
+    let Some(Command::Batch(commands)) = plan.command else {
+        panic!("expected a batch, got {:?}", plan.command);
+    };
+    let declared: Vec<_> = commands
+        .iter()
+        .filter_map(|c| match c {
+            Command::CreateGroupAddress { entry, .. } => Some(entry.declared_dpt.clone()),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(
+        declared,
+        vec![
+            Override::Value(Resolved {
+                value: DptRef::parse("DPST-1-1").unwrap(),
+                layer: Layer::UserEdit,
+            }),
+            Override::Value(Resolved {
+                value: DptRef::parse("DPT-9").unwrap(),
+                layer: Layer::UserEdit,
+            }),
+            Override::Absent,
+        ]
+    );
+}
+
+#[test]
+fn the_native_read_only_dpt_column_still_refuses_a_type_on_a_new_address() {
+    let project = empty_project(GroupAddressStyle::ThreeLevel);
+    let parsed = parse("Address;Name;DatapointType (read-only)\n1/1/1;Pump;DPST-1-1\n");
+    assert!(!parsed.rows[0].datapoint_type_on_create);
     let plan = plan_import(&project, &parsed);
     assert!(plan.command.is_none());
     assert!(plan
         .report
         .problems
         .iter()
-        .any(|p| p.severity == Severity::Error && p.detail.contains("DatapointType")));
+        .any(|p| p.severity == Severity::Error && p.detail.contains("read-only")));
 }
 
 #[test]
@@ -857,18 +1020,51 @@ fn native_required_columns_keep_precedence_over_unknown_profile_named_columns() 
 }
 
 #[test]
-fn native_files_keep_their_unknown_column_behavior() {
+fn native_files_read_description_and_keep_other_unknown_columns() {
     let parsed = parse_group_addresses(
-        "Address,Name,Description,Security\n100,Kitchen,x,y\n",
+        "Address,Name,Description,Security\n100,Kitchen,x,y\n101,Hall, ,z\n",
         GroupAddressStyle::Free,
     );
     assert!(parsed.problems.is_empty(), "{:?}", parsed.problems);
-    assert_eq!(parsed.rows.len(), 1);
-    assert_eq!(parsed.ignored_columns.len(), 2);
-    assert!(parsed
-        .ignored_columns
+    assert_eq!(parsed.rows.len(), 2);
+    assert_eq!(parsed.rows[0].description.as_deref(), Some("x"));
+    assert_eq!(parsed.rows[1].description, None, "blank is no description");
+    assert_eq!(parsed.ignored_columns.len(), 1);
+    assert_eq!(parsed.ignored_columns[0].name, "Security");
+    assert_eq!(
+        parsed.ignored_columns[0].reason,
+        IgnoredColumnReason::Unknown
+    );
+    let duplicate = parse_group_addresses(
+        "Address,Name,Description,description\n100,Kitchen,x,y\n",
+        GroupAddressStyle::Free,
+    );
+    assert!(duplicate
+        .problems
         .iter()
-        .all(|c| c.reason == IgnoredColumnReason::Unknown));
+        .any(|p| p.row.is_none() && p.detail.contains("column \"Description\"")));
+}
+
+#[test]
+fn native_export_writes_the_description_and_reimports_it_as_unchanged() {
+    let mut project = empty_project(GroupAddressStyle::ThreeLevel);
+    let mut described = entry(1, three("1/1/1").raw(), "Pump");
+    described.description = Some("Zeile 1\nZeile 2; \"zitiert\" \u{e4}".into());
+    project.installations[0].group_addresses.push(described);
+    project.installations[0]
+        .group_addresses
+        .push(entry(2, three("1/1/2").raw(), "Fan"));
+    let export = crate::export_group_addresses(&project);
+    let parsed = parse(&export.text);
+    assert_clean(&parsed);
+    assert_eq!(
+        parsed.rows[0].description.as_deref(),
+        Some("Zeile 1\nZeile 2; \"zitiert\" \u{e4}")
+    );
+    assert_eq!(parsed.rows[1].description, None);
+    let plan = plan_import(&project, &parsed);
+    assert_eq!(plan.report.unchanged, 2, "{:?}", plan.report.problems);
+    assert!(plan.command.is_none());
 }
 
 #[test]
@@ -1029,4 +1225,64 @@ fn tabs_inside_quoted_header_cells_do_not_count_as_separators() {
     );
     assert_eq!(parsed.separator, ';');
     assert_eq!(parsed.rows[0].name, "Pump");
+}
+
+/// Synthetic bytes shaped like an ETS6 6.4.1 `CSV` 1/1 export with header:
+/// every cell quoted, `;` separator, CRLF, single-byte umlauts.
+fn ets_like_windows_1252_bytes() -> Vec<u8> {
+    let mut bytes = Vec::new();
+    for line in [
+        &b"\"Group name\";\"Address\";\"Central\";\"Unfiltered\";\"Description\";\"DatapointType\";\"Security\""[..],
+        b"\"Erdgeschoss\";\"0/-/-\";\"\";\"\";\"\";\"\";\"Auto\"",
+        b"\"K\xfcche\";\"0/0/-\";\"\";\"\";\"\";\"\";\"Auto\"",
+        b"\"Licht K\xfcche \xc4\xd6\xdc\";\"0/0/1\";\"\";\"\";\"\";\"DPST-1-1\";\"Auto\"",
+        b"\"Stra\xdfe \xe4\xf6\xfc\xdf\";\"0/0/3\";\"\";\"\";\"Beschreibung mit; Semikolon und \"\"Anf\xfchrung\"\"\";\"\";\"Auto\"",
+    ] {
+        bytes.extend_from_slice(line);
+        bytes.extend_from_slice(b"\r\n");
+    }
+    bytes
+}
+
+#[test]
+fn an_ets_like_windows_1252_file_imports_umlauts_descriptions_and_new_types() {
+    let bytes = ets_like_windows_1252_bytes();
+    let utf8 = decode_csv_bytes(&bytes, CsvEncoding::Utf8).unwrap_err();
+    assert!(utf8.contains("Windows-1252"), "{utf8}");
+
+    let text = decode_csv_bytes(&bytes, CsvEncoding::Windows1252).unwrap();
+    let parsed = parse(&text);
+    assert!(errors(&parsed).is_empty(), "{:?}", parsed.problems);
+    assert_eq!(parsed.separator, ';');
+    let rows: Vec<_> = parsed
+        .rows
+        .iter()
+        .map(|r| (r.line, r.name.as_str(), r.description.as_deref()))
+        .collect();
+    assert_eq!(
+        rows,
+        vec![
+            (4, "Licht K\u{fc}che \u{c4}\u{d6}\u{dc}", None),
+            (
+                5,
+                "Stra\u{df}e \u{e4}\u{f6}\u{fc}\u{df}",
+                Some("Beschreibung mit; Semikolon und \"Anf\u{fc}hrung\"")
+            ),
+        ]
+    );
+
+    let project = empty_project(GroupAddressStyle::ThreeLevel);
+    let plan = plan_import(&project, &parsed);
+    assert_eq!(plan.report.created, 2, "{:?}", plan.report.problems);
+    let mut project_after = project.clone();
+    plan.command.unwrap().apply(&mut project_after).unwrap();
+    let created = &project_after.installations[0].group_addresses;
+    assert_eq!(
+        created[0].declared_dpt.value().map(|r| (r.value, r.layer)),
+        Some((DptRef::parse("DPST-1-1").unwrap(), Layer::UserEdit))
+    );
+    assert_eq!(
+        created[1].description.as_deref(),
+        Some("Beschreibung mit; Semikolon und \"Anf\u{fc}hrung\"")
+    );
 }

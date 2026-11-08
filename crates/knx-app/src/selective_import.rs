@@ -28,7 +28,9 @@ fn source_limit_message() -> String {
 /// v16 manufacturer files remain file-level evidence, already carried as opaque entries.
 /// v18 user priority edits: an ETS source never carries one, so copied objects
 /// keep `None`; destination edits stay with their own objects.
-pub const SELECTIVE_MODEL_VERSION: u32 = 18;
+/// v19 group-address descriptions (ADR-0164) travel with the copied address;
+/// an existing destination address only matches with an equal description.
+pub const SELECTIVE_MODEL_VERSION: u32 = 19;
 /// Source attributes remain evidence, not unscoped destination settings.
 pub const SELECTIVE_ATTRIBUTE_KIND: &str = "SelectiveImportRetainedAttribute";
 

@@ -163,6 +163,7 @@ const COMMAND_SOURCES: &[&str] = &[
     "SetDeviceDescription",
     "SetDeviceInstructions",
     "SetDeviceProgramming",
+    "SetGroupAddressDescription",
     "SetGroupAddressStyle",
     "SetIdAllocators",
     "SetIndividualAddress",

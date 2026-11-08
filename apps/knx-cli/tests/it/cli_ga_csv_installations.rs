@@ -40,6 +40,7 @@ fn installation(id: u8, name: &str, ga_id: u32, ga_name: &str) -> Installation {
             unfiltered: false,
             range: None,
             declared_dpt: Default::default(),
+            description: None,
         }],
         parameters: vec![],
     }

@@ -81,6 +81,7 @@ fn write_installation(project: &Project, installation: Option<&Installation>) ->
             "Name",
             "Central",
             "Unfiltered",
+            "Description",
             "DatapointType (read-only)",
             "MainGroup (read-only)",
             "MiddleGroup (read-only)",
@@ -121,6 +122,7 @@ fn write_installation(project: &Project, installation: Option<&Installation>) ->
                     ga.name.clone(),
                     ga.central.to_string(),
                     ga.unfiltered.to_string(),
+                    ga.description.clone().unwrap_or_default(),
                     dpt.map(|d| d.to_string()).unwrap_or_default(),
                     main_group.unwrap_or_default(),
                     middle_group.unwrap_or_default(),
@@ -207,7 +209,7 @@ mod tests {
         let header = export.text.lines().next().unwrap();
         assert_eq!(
             header.trim_start_matches('\u{FEFF}').trim_end_matches('\r'),
-            "Address,Action,NewAddress,Name,Central,Unfiltered,DatapointType (read-only),MainGroup (read-only),MiddleGroup (read-only)"
+            "Address,Action,NewAddress,Name,Central,Unfiltered,Description,DatapointType (read-only),MainGroup (read-only),MiddleGroup (read-only)"
         );
     }
 
@@ -377,11 +379,11 @@ mod tests {
 
         let lines: Vec<_> = export.text.lines().collect();
         assert!(
-            lines[1].contains(",GA,false,false,DPST-9-1,"),
+            lines[1].contains(",GA,false,false,,DPST-9-1,"),
             "{:?}",
             lines[1]
         );
-        assert!(lines[2].contains(",GA,false,false,,"), "{:?}", lines[2]);
+        assert!(lines[2].contains(",GA,false,false,,,"), "{:?}", lines[2]);
         assert_eq!(export.warnings.len(), 1);
         assert_eq!(export.warnings[0].row, Some(3));
         assert!(export.warnings[0].detail.contains("differ in size"));

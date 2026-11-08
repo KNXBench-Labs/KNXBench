@@ -83,6 +83,7 @@ pub(super) fn fixture() -> Project {
             main: 1,
             sub: Some(2),
         }),
+        description: None,
     });
     p.installations.push(i);
     p.devices.insert(DeviceInstance {

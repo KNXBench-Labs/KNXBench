@@ -550,6 +550,8 @@ pub struct GroupAddressFields {
     /// The address's own declared DPT (ADR-0078), by the same rule as a
     /// communication object's `dpt`.
     pub declared_dpt: Option<String>,
+    /// The address's description (ADR-0164), byte-exact; `None` = none known.
+    pub description: Option<String>,
 }
 
 pub fn group_address_key(entry: &GroupAddressEntry, style: GroupAddressStyle) -> GroupAddressKey {
@@ -572,6 +574,7 @@ pub fn group_address_fields(
             .and_then(|id| ranges_by_id.get(&id))
             .map(|r| group_range_key(r)),
         declared_dpt: semantic_dpt(&entry.declared_dpt),
+        description: entry.description.clone(),
     }
 }
 
@@ -582,7 +585,7 @@ pub fn group_address_changed_fields(
     changed_fields!(
         left,
         right,
-        [name, central, unfiltered, range, declared_dpt]
+        [name, central, unfiltered, range, declared_dpt, description]
     )
 }
 
@@ -923,7 +926,7 @@ impl FieldDiff for GroupAddressFields {
         field_changes!(
             self,
             right,
-            [name => fmt_plain, central => fmt_plain, unfiltered => fmt_plain, range => fmt_debug, declared_dpt => fmt_plain_string_opt]
+            [name => fmt_plain, central => fmt_plain, unfiltered => fmt_plain, range => fmt_debug, declared_dpt => fmt_plain_string_opt, description => fmt_plain_string_opt]
         )
     }
 }
@@ -1597,16 +1600,27 @@ mod tests {
             unfiltered: false,
             range: None,
             declared_dpt: None,
+            description: None,
         };
         let right = GroupAddressFields {
             name: "Light off".into(),
             unfiltered: true,
             declared_dpt: Some("DPST-1-1".into()),
+            description: Some("Beschreibung".into()),
             ..left.clone()
         };
         assert_eq!(
             group_address_changed_fields(&left, &right),
-            vec!["name", "unfiltered", "declared_dpt"]
+            vec!["name", "unfiltered", "declared_dpt", "description"]
+        );
+        // An empty description is a value, not the absence of one.
+        let empty = GroupAddressFields {
+            description: Some(String::new()),
+            ..left.clone()
+        };
+        assert_eq!(
+            group_address_changed_fields(&left, &empty),
+            vec!["description"]
         );
     }
 

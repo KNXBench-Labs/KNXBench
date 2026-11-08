@@ -98,6 +98,7 @@ pub(crate) fn entry(id: u32, address: u16, name: &str) -> GroupAddressEntry {
         unfiltered: false,
         range: None,
         declared_dpt: Default::default(),
+        description: None,
     }
 }
 

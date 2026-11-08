@@ -192,6 +192,7 @@ pub(crate) fn synthetic_project() -> knx_core::Project {
                 unfiltered: false,
                 range: None,
                 declared_dpt: Override::Absent,
+                description: None,
             }
         })
         .collect();

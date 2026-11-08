@@ -282,6 +282,7 @@ fn build_project(
             unfiltered: false,
             range,
             declared_dpt: authored(dpt(&s.dpt)?, Layer::UserEdit),
+            description: None,
         });
     }
     let mut individual_addresses = std::collections::BTreeSet::new();
@@ -488,6 +489,7 @@ fn practice_expected(baseline: &Project) -> Result<Project, Error> {
             unfiltered: false,
             range: Some(range),
             declared_dpt: Override::Absent,
+            description: None,
         },
         installation: None,
     }

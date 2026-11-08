@@ -224,6 +224,7 @@ mod tests {
                 unfiltered: false,
                 range: None,
                 declared_dpt: Default::default(),
+                description: None,
             }],
             parameters: vec![],
         });

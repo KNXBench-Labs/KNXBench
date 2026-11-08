@@ -19,11 +19,16 @@ pub(super) fn plan(
     // Model16 (ADR-0128) adds no Project field: its carried manufacturer files are file-level rows.
     // Model17 (ADR-0158) scopes only source-bound captured priority SourceRefs; all other facts
     // stay literal. Unbound captured source facts refuse rather than acquiring applicability.
+    // Model19 (ADR-0164) adds GroupAddressEntry::description: plain text with no entity reference,
+    // so it is copied with its address and needs no remapping.
     // A model bump needs a new audit, not accidental acceptance of newly cloned but unremapped entity fields.
     if before.project.schema_version != super::SELECTIVE_MODEL_VERSION
         || source.project.schema_version != super::SELECTIVE_MODEL_VERSION
     {
-        return Err("selective import supports normalized model v17 only; a new model requires an audited dependency mapping".into());
+        return Err(format!(
+            "selective import supports normalized model v{} only; a new model requires an audited dependency mapping",
+            super::SELECTIVE_MODEL_VERSION
+        ));
     }
     if !source.project.functions.is_empty() {
         return Err("source project Functions require an explicit selection/disposition mapping; selective import refused without dropping them".into());

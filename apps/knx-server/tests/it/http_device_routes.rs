@@ -324,6 +324,7 @@ async fn deleting_a_device_with_a_linked_com_object_is_a_400() {
             unfiltered: false,
             range: None,
             declared_dpt: Default::default(),
+            description: None,
         }],
         parameters: vec![],
     });

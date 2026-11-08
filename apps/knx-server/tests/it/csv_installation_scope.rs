@@ -54,6 +54,7 @@ fn ga(id: u32, address: &str, name: &str, range: Option<u32>) -> GroupAddressEnt
         unfiltered: false,
         range: range.map(GroupRangeId),
         declared_dpt: Default::default(),
+        description: None,
     }
 }
 

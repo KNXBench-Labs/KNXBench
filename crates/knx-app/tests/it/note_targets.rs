@@ -136,6 +136,7 @@ fn project() -> Project {
         unfiltered: false,
         range: Some(GroupRangeId(1)),
         declared_dpt: Override::Absent,
+        description: None,
     });
     project.installations.push(install);
     project

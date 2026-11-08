@@ -45,6 +45,7 @@ fn fixture() -> (tempfile::TempDir, std::path::PathBuf, NativeSnapshot) {
                 unfiltered: true,
                 range: None,
                 declared_dpt: Default::default(),
+                description: None,
             });
     }
     let snapshot = NativeSnapshot {

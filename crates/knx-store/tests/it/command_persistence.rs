@@ -172,6 +172,7 @@ fn structural_nested_batch_and_history_reopen_the_complete_post_state() {
                 unfiltered: false,
                 range: Some(range),
                 declared_dpt: Default::default(),
+                description: None,
             },
             installation: None,
         },
@@ -218,6 +219,7 @@ fn deleting_and_restoring_a_middle_group_address_preserves_sibling_order() {
                 unfiltered: false,
                 range: None,
                 declared_dpt: Default::default(),
+                description: None,
             },
             installation: None,
         });

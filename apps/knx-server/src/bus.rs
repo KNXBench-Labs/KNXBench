@@ -2541,6 +2541,7 @@ mod tests {
                     unfiltered: false,
                     range: None,
                     declared_dpt: Default::default(),
+                    description: None,
                 },
                 GroupAddressEntry {
                     id: GroupAddressId(2),
@@ -2551,6 +2552,7 @@ mod tests {
                     unfiltered: false,
                     range: None,
                     declared_dpt: Default::default(),
+                    description: None,
                 },
                 GroupAddressEntry {
                     id: GroupAddressId(3),
@@ -2561,6 +2563,7 @@ mod tests {
                     unfiltered: false,
                     range: None,
                     declared_dpt: Default::default(),
+                    description: None,
                 },
             ],
             parameters: vec![],
@@ -2687,6 +2690,7 @@ mod tests {
                 unfiltered: false,
                 range: None,
                 declared_dpt: Default::default(),
+                description: None,
             }],
             parameters: vec![],
         });
@@ -2744,6 +2748,7 @@ mod tests {
                     unfiltered: false,
                     range: None,
                     declared_dpt: Default::default(),
+                    description: None,
                 })
                 .collect(),
             parameters: vec![],

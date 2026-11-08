@@ -248,6 +248,12 @@ pub struct GroupAddressNode {
     #[serde(skip_serializing_if = "Option::is_none")]
     #[ts(optional)]
     pub dpt_detail: Option<GroupAddressDptDetail>,
+    /// The address's description (ADR-0164), byte-exact and read-only here.
+    /// Omitted when none is known; an empty string is a description that
+    /// was written empty.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub description: Option<String>,
     /// Every communication object linked to this address, in
     /// `ComObjectInstanceId` order — the reverse of `ComObjectNode::links`.
     pub links: Vec<GroupAddressLinkNode>,
@@ -519,6 +525,7 @@ fn build_group_address_node(
         range: entry.range.map(|r| r.0),
         dpts: dpt_strings(&ty.effective()),
         dpt_detail: Some(dpt_detail(&ty)),
+        description: entry.description.clone(),
         links: index.links.get(&entry.id).cloned().unwrap_or_default(),
     }
 }
@@ -1701,6 +1708,7 @@ mod tests {
             unfiltered: false,
             range: None,
             declared_dpt: Default::default(),
+            description: None,
         });
         project.installations.push(inst);
         project
@@ -1861,6 +1869,7 @@ mod tests {
             unfiltered: false,
             range: None,
             declared_dpt: Default::default(),
+            description: None,
         });
         project.installations.push(inst);
 
@@ -1979,6 +1988,7 @@ mod tests {
             unfiltered: false,
             range: range.map(knx_core::GroupRangeId),
             declared_dpt: Default::default(),
+            description: None,
         }
     }
 
@@ -2263,6 +2273,26 @@ mod tests {
         let ga = &build_project_tree(&project).installations[0].group_addresses[0];
         assert!(ga.dpts.is_empty());
         assert!(ga.links.is_empty());
+    }
+
+    #[test]
+    fn a_group_address_description_is_projected_and_omitted_when_unknown() {
+        let mut project = Project::new(Language("en".into()));
+        let mut inst = empty_installation();
+        let mut described = group_address(7, "Described", "1/0/1", None);
+        described.description = Some("Beschreibung; \"zitiert\"".into());
+        inst.group_addresses.push(described);
+        inst.group_addresses
+            .push(group_address(8, "Plain", "1/0/2", None));
+        project.installations.push(inst);
+
+        let tree = build_project_tree(&project);
+        let gas = &tree.installations[0].group_addresses;
+        assert_eq!(
+            gas[0].description.as_deref(),
+            Some("Beschreibung; \"zitiert\"")
+        );
+        assert_eq!(gas[1].description, None);
     }
 
     #[test]

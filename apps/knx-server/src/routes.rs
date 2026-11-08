@@ -3050,6 +3050,10 @@ struct CsvImportBody {
     /// MODEL-01: target installation; absent means the first one.
     #[serde(default)]
     installation_id: Option<u8>,
+    /// KL-038b: `utf-8` (the default when absent) or `windows-1252`. Read as
+    /// text so an unknown label is this route's `400`, not a JSON-shape `422`.
+    #[serde(default)]
+    encoding: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -3072,12 +3076,21 @@ async fn import_group_addresses_csv(
     State(state): State<SharedState>,
     Json(body): Json<CsvImportBody>,
 ) -> Result<Json<CsvImportResponseDto>, ApiError> {
+    let encoding = match body.encoding.as_deref() {
+        None => knx_csv::CsvEncoding::default(),
+        Some(label) => knx_csv::CsvEncoding::from_label(label).ok_or_else(|| {
+            ApiError::bad_request(format!(
+                "unknown encoding {label:?}: expected utf-8 or windows-1252"
+            ))
+        })?,
+    };
     let path = resolve_project_path(&state.data_dir, &body.path)?;
-    domain::import_group_addresses_csv_into_impl(
+    domain::import_group_addresses_csv_encoded_impl(
         &state,
         &path,
         body.confirmation_token.as_deref(),
         body.installation_id,
+        encoding,
     )
     .map(|outcome| CsvImportResponseDto {
         tree: outcome.tree,

@@ -453,6 +453,7 @@ fn project_with_function(name: &str, role: &str) -> Project {
         unfiltered: false,
         range: None,
         declared_dpt: Default::default(),
+        description: None,
     });
     project.functions.push(Function {
         id: FunctionId(1),

@@ -668,9 +668,19 @@ fn validate_ga_csv_profiles_report_omissions_and_refusals_without_writing() {
             .contains("range name and address are not imported")));
     assert!(problems.iter().any(|p| p["row"] == 3
         && p["detail"] == "Security Auto is not imported; project security is unchanged"));
+    // KL-038b: a description and a new address's type are now valid changes.
+    let described = tools::validate_ga_csv(
+        &ws,
+        "workshop",
+        &format!("{header}\nPump;1/1/10;;;note;DPST-1-1;Auto\n"),
+        None,
+    )
+    .unwrap();
+    assert_eq!(described["result"]["valid"], true, "{described}");
+    assert_eq!(described["result"]["counts"]["created"], 1);
     for (row, diagnostic) in [
-        ("Pump;1/1/10;;;note;;Auto", "Description"),
         ("Pump;1/1/10;;;;;On", "Security"),
+        ("Pump;1/1/10;;;;DPT-x;Auto", "DatapointType"),
     ] {
         let refused =
             tools::validate_ga_csv(&ws, "workshop", &format!("{header}\n{row}\n"), None).unwrap();
@@ -722,7 +732,7 @@ fn an_older_project_file_is_served_and_never_upgraded() {
     {
         let conn = knx_store::Connection::open(&path).unwrap();
         conn.execute_batch(
-            "DROP TABLE com_object_priority_edit; DROP TABLE com_object_saved_priority;
+            "DROP TABLE group_address_description; DROP TABLE com_object_priority_edit; DROP TABLE com_object_saved_priority;
          DROP TABLE instruction_run;
          DROP TABLE instruction_document; DROP TABLE manufacturer_file; DROP TABLE project_function_member; DROP TABLE project_function; DROP TABLE project_function_state; DROP TABLE project_note; DROP TABLE project_note_state;
          DROP TABLE project_history_state;

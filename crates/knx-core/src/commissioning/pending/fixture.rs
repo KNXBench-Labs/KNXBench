@@ -40,6 +40,7 @@ fn ga(id: GroupAddressId, raw: u16) -> GroupAddressEntry {
         unfiltered: false,
         range: None,
         declared_dpt: Override::Absent,
+        description: None,
     }
 }
 

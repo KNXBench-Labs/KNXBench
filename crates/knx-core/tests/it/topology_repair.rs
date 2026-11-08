@@ -71,6 +71,7 @@ fn ga(id: u32, raw: u16, range: Option<u32>) -> GroupAddressEntry {
         unfiltered: false,
         range: range.map(GroupRangeId),
         declared_dpt: Default::default(),
+        description: None,
     }
 }
 

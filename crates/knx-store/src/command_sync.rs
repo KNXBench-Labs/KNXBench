@@ -206,6 +206,7 @@ mod tests {
             unfiltered: false,
             range: None,
             declared_dpt: Default::default(),
+            description: None,
         };
         let create = Command::CreateGroupAddress {
             entry: entry.clone(),

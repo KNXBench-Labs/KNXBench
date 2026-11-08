@@ -67,8 +67,17 @@ pub struct CsvRow {
     /// with an empty cell, which is still an explicit read-only value to
     /// validate against the project.
     pub datapoint_type: Option<String>,
+    /// `true` only for the profile shapes' `DatapointType` column: a valid
+    /// type on a row that creates an address becomes its declared type. On an
+    /// existing address it stays a read-only comparison. The native
+    /// `DatapointType (read-only)` column never applies.
+    pub datapoint_type_on_create: bool,
     pub main_group: Option<String>,
     pub middle_group: Option<String>,
+    /// The `Description` cell, byte-exact. `None` when the column is absent
+    /// or the cell is blank after trimming: no description on create, the
+    /// existing one unchanged on update. A blank cell never clears one.
+    pub description: Option<String>,
 }
 
 /// Explicit row intent. Destructive meaning is never inferred from a row
@@ -103,17 +112,19 @@ struct HeaderMap {
     datapoint_type: Option<usize>,
     main_group: Option<usize>,
     middle_group: Option<usize>,
+    description: Option<usize>,
 }
 
-/// Reads an import file's bytes as UTF-8 text, the only encoding the reader
-/// accepts. The refusal names the first invalid byte offset and how to fix it,
-/// rather than a bare stream error; no other code page is guessed.
+/// Reads an import file's bytes as UTF-8 text, the default encoding. The
+/// refusal names the first invalid byte offset and the explicit alternatives,
+/// rather than a bare stream error; no other code page is guessed. See
+/// [`crate::decode_csv_bytes`] for the user-chosen Windows-1252 path.
 pub fn decode_csv_text(bytes: &[u8]) -> Result<&str, String> {
     std::str::from_utf8(bytes).map_err(|error| {
         format!(
-            "file is not UTF-8 text (first invalid byte at offset {}); group-address CSV \
-             import reads UTF-8 only, so convert the file to UTF-8 (for example from \
-             Windows-1252) and import again",
+            "file is not UTF-8 text (first invalid byte at offset {}); no encoding is \
+             guessed, so import it again with the Windows-1252 encoding if it was written \
+             in that code page, or convert it to UTF-8",
             error.valid_up_to()
         )
     })
@@ -440,8 +451,10 @@ pub fn parse_group_addresses(text: &str, style: GroupAddressStyle) -> ParsedCsv 
             central,
             unfiltered,
             datapoint_type: read_optional_cell(&record, columns.datapoint_type),
+            datapoint_type_on_create: false,
             main_group: read_optional_cell(&record, columns.main_group),
             middle_group: read_optional_cell(&record, columns.middle_group),
+            description: read_description(&record, columns.description),
         });
     }
 
@@ -455,6 +468,16 @@ pub fn parse_group_addresses(text: &str, style: GroupAddressStyle) -> ParsedCsv 
 
 fn read_optional_cell(record: &csv::StringRecord, column: Option<usize>) -> Option<String> {
     column.map(|index| record.get(index).unwrap_or("").trim().to_string())
+}
+
+/// A non-blank `Description` cell, kept byte-exact like names; blank (empty
+/// after trimming) or an absent column is `None`.
+pub(crate) fn read_description(
+    record: &csv::StringRecord,
+    column: Option<usize>,
+) -> Option<String> {
+    let raw = record.get(column?)?;
+    (!raw.trim().is_empty()).then(|| raw.to_string())
 }
 
 /// Reads and validates one optional boolean column, pushing a row-level
@@ -517,6 +540,9 @@ fn map_headers(header: &csv::StringRecord) -> (HeaderMap, Vec<IgnoredColumn>, Ve
             }
             "unfiltered" => {
                 set_known_header(&mut columns.unfiltered, i, "Unfiltered", &mut problems);
+            }
+            "description" => {
+                set_known_header(&mut columns.description, i, "Description", &mut problems);
             }
             "datapointtype" | "datapointtype (read-only)" => {
                 if set_known_header(

@@ -232,8 +232,10 @@ fn orphan_object_overrides_are_reported_not_silently_lost() {
         .any(|e| e.xpath.is_empty() && e.source_path == "P-0001/0.xml"));
 }
 
+/// Since ADR-0164 the description is modelled, so it is neither unknown nor
+/// kept a second time as an opaque row.
 #[test]
-fn documented_group_description_is_retained_without_being_misclassified() {
+fn documented_group_description_is_modelled_without_being_misclassified() {
     let input = topology("").replace(
         "Address=\"1\"/>",
         "Address=\"1\" Description=\"synthetic description\"/>",
@@ -248,10 +250,18 @@ fn documented_group_description_is_retained_without_being_misclassified() {
         .unknown
         .iter()
         .any(|u| u.name == "Description"));
-    assert!(result
+    assert!(!result
         .opaque
         .iter()
         .any(|e| e.name == "Description" && e.bytes == b"synthetic description"));
+    let described: Vec<_> = result
+        .project
+        .installations
+        .iter()
+        .flat_map(|i| &i.group_addresses)
+        .filter_map(|g| g.description.as_deref())
+        .collect();
+    assert_eq!(described, vec!["synthetic description"]);
 }
 
 #[test]

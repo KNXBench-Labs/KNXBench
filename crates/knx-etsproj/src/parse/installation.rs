@@ -590,6 +590,7 @@ fn build_frame(
             central: bag.take("Central"),
             unfiltered: bag.take("Unfiltered"),
             datapoint_type: None,
+            description: None,
             other: Vec::new(),
         }),
         _ => unreachable!("build_frame called for non-frame-bearing element {local}"),

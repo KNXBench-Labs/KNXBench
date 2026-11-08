@@ -69,6 +69,7 @@ fn tiny_project() -> Project {
             unfiltered: false,
             range: Some(GroupRangeId(1)),
             declared_dpt: Default::default(),
+            description: None,
         });
 
     project

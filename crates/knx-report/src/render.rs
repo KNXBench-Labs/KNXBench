@@ -787,6 +787,14 @@ fn render_group_address(out: &mut String, ga_id: GroupAddressId, ctx: &GroupAddr
         )
         .unwrap();
     }
+    if let Some(description) = entry.description.as_deref().filter(|d| !d.is_empty()) {
+        write!(
+            out,
+            " \u{b7} <span class=\"ga-description\">{}</span>",
+            escape_text(description)
+        )
+        .unwrap();
+    }
     match ctx.links_by_address.get(&ga_id) {
         None => write!(
             out,
@@ -1607,6 +1615,22 @@ mod tests {
         assert!(report.html.contains("Licht &amp; Steckdose"));
         assert!(!report.html.contains("<Keller>"));
         assert!(report.html.contains("&lt;Keller&gt;"));
+    }
+
+    #[test]
+    fn a_group_address_description_is_listed_escaped_and_an_empty_one_is_not() {
+        let mut project = sample_project();
+        project.installations[0].group_addresses[0].description =
+            Some("Beschreibung mit; <Semikolon> & \"Anf\u{fc}hrung\"".into());
+        let report = render_html(&project, &ReportOptions::new(fixed_time()));
+        assert!(report.html.contains(
+            "<span class=\"ga-description\">Beschreibung mit; &lt;Semikolon&gt; &amp; \
+             \"Anf\u{fc}hrung\"</span>"
+        ));
+
+        project.installations[0].group_addresses[0].description = Some(String::new());
+        let report = render_html(&project, &ReportOptions::new(fixed_time()));
+        assert!(!report.html.contains("ga-description"));
     }
 
     #[test]

@@ -2,7 +2,9 @@
 //! `GroupRange` is stored flat with the same two-ordering pattern as
 //! `BuildingPart` (`building.rs`): `flat_position` for `Installation::
 //! group_ranges`, `position` (sibling order under `parent_id`) for
-//! `GroupRange::children`.
+//! `GroupRange::children`. A group address's description lives in its own
+//! native-19 table (ADR-0164) so a project without any keeps the semantic
+//! identity older history images recorded.
 
 use rusqlite::{params, Connection};
 
@@ -11,6 +13,13 @@ use knx_core::group::{GroupAddressEntry, GroupRange};
 use knx_core::ids::{GroupAddressId, GroupRangeId, InstallationId, SourceRef};
 
 use crate::StoreError;
+
+/// Native 19: one row per group address that has a description. No row means
+/// `None`; an empty `text` is a description written empty.
+pub(crate) const CREATE_DESCRIPTION_TABLE: &str = "CREATE TABLE group_address_description (
+    group_address_id INTEGER PRIMARY KEY REFERENCES group_address(id),
+    text TEXT NOT NULL
+) STRICT;";
 
 pub fn upsert_group_range(
     conn: &Connection,
@@ -139,6 +148,17 @@ pub fn upsert_group_address(
             dpt.layer,
         ],
     )?;
+    match &entry.description {
+        None => conn.execute(
+            "DELETE FROM group_address_description WHERE group_address_id = ?1",
+            params![entry.id.0],
+        )?,
+        Some(text) => conn.execute(
+            "INSERT INTO group_address_description (group_address_id, text) VALUES (?1, ?2)
+             ON CONFLICT(group_address_id) DO UPDATE SET text = excluded.text",
+            params![entry.id.0, text],
+        )?,
+    };
     Ok(())
 }
 
@@ -147,9 +167,11 @@ pub fn load_group_addresses(
     installation_id: InstallationId,
 ) -> Result<Vec<GroupAddressEntry>, StoreError> {
     let mut stmt = conn.prepare(
-        "SELECT id, range_id, source_path, source_ets_id, name, address, central, unfiltered,
-                dpt_state, dpt_value, dpt_layer
-         FROM group_address WHERE installation_id = ?1 ORDER BY position",
+        "SELECT g.id, g.range_id, g.source_path, g.source_ets_id, g.name, g.address, g.central,
+                g.unfiltered, g.dpt_state, g.dpt_value, g.dpt_layer, d.text
+         FROM group_address g
+         LEFT JOIN group_address_description d ON d.group_address_id = g.id
+         WHERE g.installation_id = ?1 ORDER BY g.position",
     )?;
     let entries = stmt
         .query_map(params![installation_id.0], |row| {
@@ -169,6 +191,7 @@ pub fn load_group_addresses(
                     row.get(9)?,
                     row.get(10)?,
                 ),
+                description: row.get(11)?,
             })
         })?
         .collect::<Result<Vec<_>, _>>()?;
@@ -178,6 +201,10 @@ pub fn load_group_addresses(
 pub fn delete_group_address(conn: &Connection, id: GroupAddressId) -> Result<(), StoreError> {
     conn.execute(
         "DELETE FROM group_link WHERE group_address_id = ?1",
+        params![id.0],
+    )?;
+    conn.execute(
+        "DELETE FROM group_address_description WHERE group_address_id = ?1",
         params![id.0],
     )?;
     conn.execute("DELETE FROM group_address WHERE id = ?1", params![id.0])?;
@@ -309,6 +336,7 @@ mod tests {
             unfiltered: false,
             range: None,
             declared_dpt: Default::default(),
+            description: None,
         };
         upsert_group_address(&conn, InstallationId(0), 0, &entry).unwrap();
         assert_eq!(
@@ -356,6 +384,7 @@ mod tests {
                 unfiltered: false,
                 range: None,
                 declared_dpt,
+                description: None,
             })
             .collect();
         for (i, entry) in entries.iter().enumerate() {
@@ -365,6 +394,59 @@ mod tests {
             load_group_addresses(&conn, InstallationId(0)).unwrap(),
             entries
         );
+    }
+
+    #[test]
+    fn a_group_address_description_round_trips_in_all_three_states_and_deletes() {
+        let conn = open_and_migrate_in_memory().unwrap();
+        upsert_installation_row(&conn, &installation()).unwrap();
+        let entries: Vec<GroupAddressEntry> = [
+            None,
+            Some(String::new()),
+            Some("Beschreibung mit; Semikolon und \"Anf\u{fc}hrung\"\nzweite Zeile".to_string()),
+        ]
+        .into_iter()
+        .enumerate()
+        .map(|(i, description)| GroupAddressEntry {
+            id: GroupAddressId(i as u32 + 1),
+            source: source(),
+            name: format!("ga {i}"),
+            address: GroupAddress::from_raw(100 + i as u16),
+            central: false,
+            unfiltered: false,
+            range: None,
+            declared_dpt: Default::default(),
+            description,
+        })
+        .collect();
+        for (i, entry) in entries.iter().enumerate() {
+            upsert_group_address(&conn, InstallationId(0), i as i64, entry).unwrap();
+        }
+        assert_eq!(
+            load_group_addresses(&conn, InstallationId(0)).unwrap(),
+            entries
+        );
+        let rows: i64 = conn
+            .query_row("SELECT count(*) FROM group_address_description", [], |r| {
+                r.get(0)
+            })
+            .unwrap();
+        assert_eq!(rows, 2, "None writes no row; an empty description does");
+
+        let mut cleared = entries[2].clone();
+        cleared.description = None;
+        upsert_group_address(&conn, InstallationId(0), 2, &cleared).unwrap();
+        assert_eq!(
+            load_group_addresses(&conn, InstallationId(0)).unwrap()[2],
+            cleared
+        );
+        delete_group_address(&conn, entries[1].id).unwrap();
+        let rows: i64 = conn
+            .query_row("SELECT count(*) FROM group_address_description", [], |r| {
+                r.get(0)
+            })
+            .unwrap();
+        assert_eq!(rows, 0);
     }
 
     #[test]
@@ -380,6 +462,7 @@ mod tests {
             unfiltered: true,
             range: None,
             declared_dpt: Default::default(),
+            description: None,
         };
         upsert_group_address(&conn, InstallationId(0), 0, &entry).unwrap();
         let loaded = load_group_addresses(&conn, InstallationId(0)).unwrap();

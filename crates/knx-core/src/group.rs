@@ -53,6 +53,13 @@ pub struct GroupAddressEntry {
     /// `GroupAddress/@DatapointType` (schema ≥21) in its four source states
     /// (ADR-0010, ADR-0078). Never filled by inference.
     pub declared_dpt: Override<DptRef>,
+    /// The address's free-text description (ADR-0164), byte-exact. `None`
+    /// means none is known: the source had no `GroupAddress/@Description`,
+    /// or the project predates native schema 19 and still holds it only as
+    /// a retained attribute. `Some("")` is a description written empty. A
+    /// plain entity attribute like `DeviceInstance::description`, not an
+    /// `Override`: no product layer can supply one.
+    pub description: Option<String>,
 }
 
 #[cfg(test)]

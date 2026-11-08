@@ -816,6 +816,7 @@ fn build_frame(
             central: bag.take("Central"),
             unfiltered: bag.take("Unfiltered"),
             datapoint_type: bag.take("DatapointType"),
+            description: bag.take("Description"),
             other: Vec::new(),
         }),
         "ModuleInstance" => Frame::ModuleInstance(SourceModuleInstance {

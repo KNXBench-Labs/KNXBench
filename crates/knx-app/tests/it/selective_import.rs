@@ -256,6 +256,37 @@ fn group_address_conflict_and_stale_target_are_not_silent_overwrites() {
         .contains("group address"));
 }
 
+/// ADR-0164: an existing destination address is only reused when its
+/// description matches too; a differing one is a refused conflict, never a
+/// silent keep-or-overwrite.
+#[test]
+fn a_differing_group_address_description_is_a_conflict_not_a_silent_match() {
+    let (source, mut target, selection) = fixture();
+    let plan = import::plan(&target, &source, selection.clone()).unwrap();
+    let mut stack = CommandStack::new();
+    import::apply(&mut target, &mut stack, plan).unwrap();
+    let copied_address = source.project.installations[0].group_addresses[0].address;
+    let copied = target.project.installations[0]
+        .group_addresses
+        .iter()
+        .position(|g| g.address == copied_address)
+        .expect("the selected address was copied");
+    // Free the copied device's individual address so a second plan of the
+    // same selection reaches the group-address match.
+    let ids: Vec<_> = target.project.devices.iter().map(|d| d.id).collect();
+    for id in ids {
+        target.project.devices.get_mut(id).unwrap().address =
+            Some(knx_core::IndividualAddress::new(1, 1, 250).unwrap());
+    }
+    let same = import::plan(&target, &source, selection.clone());
+    assert!(same.is_ok(), "an equal address is reused: {same:?}");
+    let mut changed = target.clone();
+    changed.project.installations[0].group_addresses[copied].description =
+        Some("Destination text".into());
+    let error = import::plan(&changed, &source, selection).unwrap_err();
+    assert!(error.contains("group address"), "{error}");
+}
+
 fn source_with_installation_key_and_serial() -> Source {
     use std::io::Read;
     let mut zip = zip::ZipArchive::new(std::io::Cursor::new(
@@ -453,13 +484,13 @@ fn future_normalized_source_versions_refuse_instead_of_ignoring_new_entity_field
     for unsupported in [0, 16, current + 1, u32::MAX] {
         source.project.schema_version = unsupported;
         let error = import::plan(&target, &source, selection.clone()).unwrap_err();
-        assert!(error.contains("normalized model v17 only"), "{error}");
+        assert!(error.contains("normalized model v19 only"), "{error}");
         assert_eq!(target, before);
         source.project.schema_version = current;
         target.project.schema_version = unsupported;
         let refused = target.clone();
         let error = import::plan(&target, &source, selection.clone()).unwrap_err();
-        assert!(error.contains("normalized model v17 only"), "{error}");
+        assert!(error.contains("normalized model v19 only"), "{error}");
         assert_eq!(target, refused);
         target.project.schema_version = current;
     }
@@ -986,6 +1017,7 @@ fn destination_function(target: &mut NativeSnapshot) -> knx_core::function::Func
         unfiltered: false,
         range: None,
         declared_dpt: Default::default(),
+        description: None,
     });
     target
         .project

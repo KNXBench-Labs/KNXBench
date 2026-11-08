@@ -115,6 +115,7 @@ fn populate_final_entities(project: &mut Project) {
         unfiltered: false,
         range: Some(GroupRangeId(n)),
         declared_dpt: Default::default(),
+        description: None,
     });
     installation.buildings.push(BuildingPart {
         id: BuildingPartId(n),
@@ -231,6 +232,7 @@ fn exhaustion_does_not_prevent_an_update_that_needs_no_new_id() {
             unfiltered: false,
             range: None,
             declared_dpt: Default::default(),
+            description: None,
         });
     let parsed = parse_group_addresses("Address,Name\n100,Updated\n", GroupAddressStyle::Free);
     let plan = plan_import(&project, &parsed);

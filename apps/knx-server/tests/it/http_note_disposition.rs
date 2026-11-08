@@ -68,6 +68,7 @@ fn group(id: u32) -> GroupAddressEntry {
         unfiltered: false,
         range: None,
         declared_dpt: Override::Absent,
+        description: None,
     }
 }
 fn range(id: u32) -> GroupRange {

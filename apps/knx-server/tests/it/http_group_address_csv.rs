@@ -66,6 +66,7 @@ fn state_with_two_group_addresses() -> knx_server::AppState {
             unfiltered: false,
             range: None,
             declared_dpt: Default::default(),
+            description: None,
         });
 
     let id2 = project.ids.next_group_address_id().unwrap();
@@ -80,6 +81,7 @@ fn state_with_two_group_addresses() -> knx_server::AppState {
             unfiltered: false,
             range: None,
             declared_dpt: Default::default(),
+            description: None,
         });
 
     let state = knx_server::AppState::default();
@@ -236,11 +238,10 @@ async fn column_profiles_apply_one_undoable_batch_and_keep_omitted_addresses() {
 #[tokio::test]
 async fn column_profile_errors_preserve_full_project_and_command_history() {
     for (row, diagnostic) in [
-        ("Pump;1/1/2;;;note;;Auto", "Description"),
-        ("Pump;1/1/2;;;;;Off", "Security"),
+        ("Pump;1/1/2;;;note;;Off", "Security"),
         ("Pump;1/1/2;;;;DPST-1-1;Auto", "read-only"),
+        ("Pump;1/1/4;;;;DPT-x;Auto", "DatapointType"),
         ("Workshop;1/-/-;false;;;;Auto", "range"),
-        ("Workshop;1/-/-;;;hidden;;Auto", "Description"),
     ] {
         let state = Arc::new(state_with_two_group_addresses());
         let app = knx_server::app(state.clone(), None);
@@ -408,10 +409,10 @@ async fn exporting_writes_a_csv_file_whose_first_data_row_matches_the_project() 
     let lines: Vec<&str> = text.trim_end_matches("\r\n").split("\r\n").collect();
     assert_eq!(
         lines[0],
-        "Address,Action,NewAddress,Name,Central,Unfiltered,DatapointType (read-only),MainGroup (read-only),MiddleGroup (read-only)"
+        "Address,Action,NewAddress,Name,Central,Unfiltered,Description,DatapointType (read-only),MainGroup (read-only),MiddleGroup (read-only)"
     );
-    assert_eq!(lines[1], "1/1/1,upsert,,Living Room Light,false,false,,,");
-    assert_eq!(lines[2], "1/1/2,upsert,,Kitchen Light,false,false,,,");
+    assert_eq!(lines[1], "1/1/1,upsert,,Living Room Light,false,false,,,,");
+    assert_eq!(lines[2], "1/1/2,upsert,,Kitchen Light,false,false,,,,");
 }
 
 #[tokio::test]
@@ -649,4 +650,172 @@ async fn a_non_utf8_csv_is_refused_with_its_offset_and_leaves_the_project_unchan
     assert!(error.contains("not UTF-8 text"), "{body}");
     assert!(error.contains("offset 20"), "{body}");
     assert_eq!(*state.project.lock().unwrap(), before);
+}
+
+async fn import_csv_encoded(
+    app: &axum::Router,
+    path: &std::path::Path,
+    confirmation_token: Option<&str>,
+    encoding: &str,
+) -> axum::response::Response {
+    call(
+        app,
+        "POST",
+        "/api/group-addresses/csv-import",
+        Some(json!({
+            "path": path.to_string_lossy(),
+            "confirmationToken": confirmation_token,
+            "encoding": encoding,
+        })),
+    )
+    .await
+}
+
+/// Synthetic ETS-like `CSV` 1/1 export with header in Windows-1252.
+fn ets_like_windows_1252() -> Vec<u8> {
+    let mut bytes = Vec::new();
+    for line in [
+        &b"\"Group name\";\"Address\";\"Central\";\"Unfiltered\";\"Description\";\"DatapointType\";\"Security\""[..],
+        b"\"Licht\";\"1/1/-\";\"\";\"\";\"Bereich\";\"\";\"Auto\"",
+        b"\"Living Room Light\";\"1/1/1\";\"\";\"\";\"Beschreibung mit; Semikolon und \"\"Anf\xfchrung\"\"\";\"\";\"Auto\"",
+        b"\"K\xfcche \xe4\xf6\xfc\xdf\";\"1/1/3\";\"\";\"\";\"\";\"DPST-1-1\";\"Auto\"",
+    ] {
+        bytes.extend_from_slice(line);
+        bytes.extend_from_slice(b"\r\n");
+    }
+    bytes
+}
+
+#[tokio::test]
+async fn a_windows_1252_import_applies_descriptions_and_new_types_as_one_undo_step() {
+    let state = Arc::new(state_with_two_group_addresses());
+    let before = state.project.lock().unwrap().clone();
+    let app = knx_server::app(state.clone(), None);
+    let dir = tempfile::tempdir().unwrap();
+    let input = dir.path().join("ets.csv");
+    std::fs::write(&input, ets_like_windows_1252()).unwrap();
+
+    // Default UTF-8 refuses the same bytes and names the explicit choice.
+    let refused = import_csv(&app, &input).await;
+    assert_eq!(refused.status(), StatusCode::BAD_REQUEST);
+    let body = body_json(refused).await;
+    assert!(
+        body["error"].as_str().unwrap().contains("Windows-1252"),
+        "{body}"
+    );
+    assert_eq!(*state.project.lock().unwrap(), before);
+
+    let response = import_csv_encoded(&app, &input, None, "windows-1252").await;
+    let status = response.status();
+    let body = body_json(response).await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    assert_eq!(body["applied"], true);
+    assert_eq!(body["report"]["created"], 1);
+    assert_eq!(body["report"]["updated"], 1);
+    let problems = body["report"]["problems"].as_array().unwrap();
+    assert!(
+        problems.iter().all(|p| p["severity"] == "warning"),
+        "{body}"
+    );
+    assert!(problems.iter().any(|p| p["row"] == 2
+        && p["detail"]
+            .as_str()
+            .unwrap()
+            .contains("group range description is not imported")));
+    let ignored: Vec<_> = body["report"]["ignoredColumns"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|c| c["name"].as_str().unwrap().to_string())
+        .collect();
+    assert_eq!(ignored, vec!["Security".to_string()]);
+
+    let gas = body["tree"]["installations"][0]["group_addresses"]
+        .as_array()
+        .unwrap();
+    let described = gas.iter().find(|g| g["address"] == "1/1/1").unwrap();
+    assert_eq!(
+        described["description"],
+        "Beschreibung mit; Semikolon und \"Anf\u{fc}hrung\""
+    );
+    let created = gas.iter().find(|g| g["address"] == "1/1/3").unwrap();
+    assert_eq!(created["name"], "K\u{fc}che \u{e4}\u{f6}\u{fc}\u{df}");
+    assert_eq!(created["dpts"], json!(["DPST-1-1"]));
+    assert_eq!(created["dpt_detail"]["declared"]["state"], "Value");
+    assert!(
+        gas.iter()
+            .find(|g| g["address"] == "1/1/2")
+            .unwrap()
+            .get("description")
+            .is_none(),
+        "an address without a description sends none"
+    );
+
+    let undo = call(&app, "POST", "/api/undo", Some(json!({}))).await;
+    assert_eq!(undo.status(), StatusCode::OK);
+    let mut expected = before.clone();
+    expected.as_mut().unwrap().ids = state.project.lock().unwrap().as_ref().unwrap().ids.clone();
+    assert_eq!(*state.project.lock().unwrap(), expected);
+}
+
+#[tokio::test]
+async fn an_unknown_encoding_is_a_400_and_changes_nothing() {
+    let state = Arc::new(state_with_two_group_addresses());
+    let before = state.project.lock().unwrap().clone();
+    let app = knx_server::app(state.clone(), None);
+    let dir = tempfile::tempdir().unwrap();
+    let input = dir.path().join("in.csv");
+    std::fs::write(&input, "Address,Name\n1/1/3,New\n").unwrap();
+    for encoding in ["latin1", "cp1252", ""] {
+        let response = import_csv_encoded(&app, &input, None, encoding).await;
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST, "{encoding:?}");
+        let body = body_json(response).await;
+        assert!(
+            body["error"].as_str().unwrap().contains("unknown encoding"),
+            "{body}"
+        );
+    }
+    let undefined = dir.path().join("undefined.csv");
+    std::fs::write(&undefined, b"Address,Name\n1/1/3,Bad \x9d\n").unwrap();
+    let response = import_csv_encoded(&app, &undefined, None, "windows-1252").await;
+    assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+    let body = body_json(response).await;
+    assert!(
+        body["error"]
+            .as_str()
+            .unwrap()
+            .contains("0x9D at offset 23"),
+        "{body}"
+    );
+    assert_eq!(*state.project.lock().unwrap(), before);
+}
+
+#[tokio::test]
+async fn a_confirmation_token_from_one_encoding_does_not_confirm_the_other() {
+    let state = Arc::new(state_with_two_group_addresses());
+    let before = state.project.lock().unwrap().clone();
+    let app = knx_server::app(state.clone(), None);
+    let dir = tempfile::tempdir().unwrap();
+    let csv_path = dir.path().join("readdress.csv");
+    // ASCII only, so both encodings decode the same text.
+    std::fs::write(
+        &csv_path,
+        "Address,Action,NewAddress,Name\n1/1/1,readdress,1/1/3,Living Room Light\n",
+    )
+    .unwrap();
+    let preview = body_json(import_csv_encoded(&app, &csv_path, None, "windows-1252").await).await;
+    let cp1252 = preview["confirmationToken"].as_str().unwrap().to_string();
+    let preview = body_json(import_csv(&app, &csv_path).await).await;
+    let utf8 = preview["confirmationToken"].as_str().unwrap().to_string();
+    assert_ne!(cp1252, utf8);
+
+    let crossed = import_csv_with_confirmation(&app, &csv_path, Some(&cp1252)).await;
+    assert_eq!(crossed.status(), StatusCode::BAD_REQUEST);
+    let crossed = import_csv_encoded(&app, &csv_path, Some(&utf8), "windows-1252").await;
+    assert_eq!(crossed.status(), StatusCode::BAD_REQUEST);
+    assert_eq!(*state.project.lock().unwrap(), before);
+
+    let confirmed = import_csv_encoded(&app, &csv_path, Some(&cp1252), "windows-1252").await;
+    assert_eq!(confirmed.status(), StatusCode::OK);
+    assert_eq!(body_json(confirmed).await["applied"], true);
 }

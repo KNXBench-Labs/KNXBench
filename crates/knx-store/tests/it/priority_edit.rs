@@ -131,7 +131,7 @@ fn native17_predecessor_migrates_without_edits_and_keeps_every_identity() {
 
     // An owned write migrates; an edit then rides the old history.
     let conn = knx_store::open_existing_and_migrate(&path).unwrap();
-    assert_eq!(user_version(&conn), 18);
+    assert_eq!(user_version(&conn), knx_store::CURRENT_SCHEMA_VERSION);
     assert_eq!(history_rows(&conn), rows);
     let mut working = recovered.working.clone();
     let mut stack = CommandStack::from_snapshot_states(recovered.undo, recovered.redo);

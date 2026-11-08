@@ -77,6 +77,7 @@ fn state() -> NativeSnapshot {
                 unfiltered: true,
                 range: None,
                 declared_dpt: Default::default(),
+                description: None,
             });
     }
     NativeSnapshot {

@@ -1888,7 +1888,9 @@ main {
   color: var(--knx-muted);
 }
 
-.bus-monitor-warning {
+.bus-monitor-warning,
+.bus-monitor-skipped-frames,
+.bus-monitor-stop-skipped {
   color: var(--knx-warning-color);
   font-weight: bold;
 }
@@ -1950,7 +1952,8 @@ main {
   margin: 0.5rem 0;
 }
 
-.bus-monitor-unverified-lock {
+.bus-monitor-unverified-lock,
+.bus-monitor-skipped-frames-unavailable {
   display: block;
   color: var(--knx-warning-color);
   margin: 0.5rem 0;

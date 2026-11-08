@@ -495,16 +495,11 @@ describe("one editing workspace", () => {
       "useTableColumnWidths.ts", // Validated localStorage preferences, no project writes.
     ]);
 
-    // Every `api.x(...)` the graph performs. Four of them are `POST`s.
-    // Three write to the *bus*, never to the project, and each needs a
-    // deliberate click; the fourth, `discoverBusInterfaces`, is a `POST`
-    // only so that no cache or prefetch can fire it, and it writes
-    // nothing anywhere — it asks by multicast who is listening and reads
-    // the replies. No undo, no redo, no save, no import, no rename, no
-    // parameter or flag write appears — out of 61 exported functions, 47
-    // of which issue a mutating request:
-    //   grep -cE '^export (async )?function ' api.ts
-    //   grep -cE 'method: "(POST|PUT|DELETE|PATCH)"' api.ts
+    // Every `api.x(...)` the graph performs. The POSTs reachable here are
+    // explicit bus actions or read-only discovery, never project writes.
+    // TCP adds one distinct start route after the same deliberate connect
+    // action; an unsupported TCP route never falls back to UDP.
+    // No undo, redo, save, import, rename, parameter or flag write appears.
     //
     // WP-26: the monitor's disconnect is the session-bound stop now (still a
     // bus-side POST after a deliberate click, never the project), the shared
@@ -524,6 +519,7 @@ describe("one editing workspace", () => {
       "readBusValue",
       "startBusMonitor",
       "startSerialBusMonitor",
+      "startTcpBusMonitor", // Explicit bus transport selection; never a project mutation.
       "stopBoundBusMonitor",
       "writeBoundBusValue",
       "writeBusValue",

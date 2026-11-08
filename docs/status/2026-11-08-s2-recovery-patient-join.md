@@ -29,6 +29,19 @@ Test code only.
   change only widens the wait, so the earlier red condition is not
   reproduced as a positive witness.
 
+## Independent review
+
+Focused review of `83a62976a` in a separate copy: **APPROVE**, nothing
+blocking. Every line after the join matches the base; other `settled` callers,
+including the original 10 s recovery test, are unchanged. Reviewer runs: the
+filter 3 × 8/8, `device_system2` 87 passed / 16 ignored, clippy and fmt clean.
+Mutants: returning an empty status and expecting a wrong outcome in either
+file are killed; removing the helper's state assertion survives, as it did
+with the old `settled` (that assertion is the only check of the outcome
+string, and the restored outcome is additionally checked through settlement
+and the operation store). The stale options heading in the diagnosis was
+reworded.
+
 ## Limits
 
 - A slower recovery is no longer reported as a deadline failure up to 180 s;

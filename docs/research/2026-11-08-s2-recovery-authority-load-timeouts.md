@@ -60,7 +60,7 @@ load (the load phases could not run), and whether the join loop's
 `yield_now` busy wait adds to contention. Its poll counts varied between
 about 2,300 and 99,000 per recovery.
 
-## Options (owner decision; nothing applied)
+## Options presented to the owner
 
 1. Raise the join deadline of these eight cases to the existing 180 s
    `settled_slow` deadline and wait with a short sleep instead of
@@ -72,7 +72,7 @@ about 2,300 and 99,000 per recovery.
 3. Keep everything as is and treat a red gate here as known, rerunning
    the filter alone.
 
-The 10 s deadline stays as it is until the owner decides.
+The diagnosis itself applied none of them.
 
 ## Decision and change (8 November 2026)
 

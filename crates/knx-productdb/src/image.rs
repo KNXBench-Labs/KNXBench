@@ -52,8 +52,12 @@
 //!   first character first, zero-filled to the field: `[V]` 262 text fields
 //!   of those base images hold their default exactly so, 8 of them filling
 //!   the field with no terminator. Only `iso-8859-1` and `iso-8859-15`, the
-//!   two those programs declare, are understood; without a declaration only
-//!   ASCII, whose octets every declared encoding shares, is written.
+//!   two those programs declare, are understood. Without a declaration the
+//!   text is written in Windows-1252: `[V]` ETS 6.4 on a Western European
+//!   Windows wrote `ü ß Ä ö €` of an undeclared program as `FC DF C4 F6 80`
+//!   (the euro sign rules out both ISO encodings); ASCII is unchanged, and
+//!   a non-ASCII text names [`UNDECLARED_TEXT_WINDOWS_1252`]. Whether ETS
+//!   follows the Windows code page elsewhere is not known.
 //!   `TypeFloat` is refused: 48 `DPT 9` fields match that encoding only at
 //!   zero, and the 15 non-zero ones contradict it. Every other type is
 //!   refused by name. A `TypeNumber` bound that is declared but not an integer
@@ -133,6 +137,11 @@ use crate::ProductDbError;
 /// [`Inference::rule`] of the union rule: of two active members of one
 /// union that share bits, the one later in the parameter tree is written.
 pub const UNION_LATER_MEMBER: &str = "union-later-member";
+
+/// [`Inference::rule`]: a program that declares no `TextParameterEncoding`
+/// gets its non-ASCII text characters in Windows-1252, as ETS 6.4 wrote
+/// them (docs/research/2026-11-07-ldctrlwriteprop-and-byte-order.md).
+pub const UNDECLARED_TEXT_WINDOWS_1252: &str = "undeclared-text-windows-1252";
 
 /// [`Inference::rule`]: `Priority="Alert"` is written as urgent, `10b`.
 pub const ALERT_IS_URGENT: &str = "alert-is-urgent";
@@ -996,6 +1005,15 @@ fn build_image_selected(
         _ => {}
     }
 
+    if types.text_encoding.is_none() && texts.values().any(|text| !text.is_ascii()) {
+        inferences.push(Inference {
+            rule: UNDECLARED_TEXT_WINDOWS_1252,
+            detail: "the program declares no TextParameterEncoding; non-ASCII text characters \
+                     are written in Windows-1252, as ETS 6.4 on a Western European Windows did"
+                .into(),
+            reference: "docs/research/2026-11-07-ldctrlwriteprop-and-byte-order.md",
+        });
+    }
     check_masks(&code, &segments)?;
     Ok(DownloadImage {
         code,
@@ -1489,9 +1507,44 @@ enum TextEncoding {
     Latin1,
     /// ISO/IEC 8859-15: ISO/IEC 8859-1 with eight positions replaced.
     Latin9,
+    /// Windows-1252: ISO/IEC 8859-1 with 27 printable characters in
+    /// `80h`–`9Fh`; `81h`, `8Dh`, `8Fh`, `90h`, `9Dh` and the other C1
+    /// controls are refused. Only for a program that declares nothing.
+    Windows1252,
 }
 
 impl TextEncoding {
+    /// Windows-1252's printable assignments in `80h`–`9Fh` (the WHATWG
+    /// Encoding Standard's `windows-1252` index, identical there).
+    const WINDOWS_1252: [(char, u8); 27] = [
+        ('€', 0x80),
+        ('‚', 0x82),
+        ('ƒ', 0x83),
+        ('„', 0x84),
+        ('…', 0x85),
+        ('†', 0x86),
+        ('‡', 0x87),
+        ('ˆ', 0x88),
+        ('‰', 0x89),
+        ('Š', 0x8A),
+        ('‹', 0x8B),
+        ('Œ', 0x8C),
+        ('Ž', 0x8E),
+        ('‘', 0x91),
+        ('’', 0x92),
+        ('“', 0x93),
+        ('”', 0x94),
+        ('•', 0x95),
+        ('–', 0x96),
+        ('—', 0x97),
+        ('˜', 0x98),
+        ('™', 0x99),
+        ('š', 0x9A),
+        ('›', 0x9B),
+        ('œ', 0x9C),
+        ('ž', 0x9E),
+        ('Ÿ', 0x9F),
+    ];
     const LATIN_9: [(char, u8); 8] = [
         ('€', 0xA4),
         ('Š', 0xA6),
@@ -1515,13 +1568,18 @@ impl TextEncoding {
         }
     }
 
-    fn character(self, octet: u8) -> char {
-        if matches!(self, Self::Latin9) {
-            if let Some((character, _)) = Self::LATIN_9.iter().find(|(_, byte)| *byte == octet) {
-                return *character;
-            }
+    /// The character for `octet`, if the encoding assigns one.
+    fn character(self, octet: u8) -> Option<char> {
+        let table: &[(char, u8)] = match self {
+            Self::Latin1 => &[],
+            Self::Latin9 => &Self::LATIN_9,
+            Self::Windows1252 => &Self::WINDOWS_1252,
+        };
+        if let Some((character, _)) = table.iter().find(|(_, byte)| *byte == octet) {
+            return Some(*character);
         }
-        char::from(octet)
+        let c1 = (0x80..=0x9F).contains(&octet);
+        (!(c1 && self == Self::Windows1252)).then(|| char::from(octet))
     }
 
     /// The octet for `c`, if the encoding has one.
@@ -1530,6 +1588,14 @@ impl TextEncoding {
         let code = u32::from(c);
         match self {
             TextEncoding::Latin1 => u8::try_from(code).ok(),
+            TextEncoding::Windows1252 => {
+                if let Some((_, octet)) = Self::WINDOWS_1252.iter().find(|(known, _)| *known == c) {
+                    return Some(*octet);
+                }
+                u8::try_from(code)
+                    .ok()
+                    .filter(|octet| !(0x80..=0x9F).contains(octet))
+            }
             TextEncoding::Latin9 => {
                 if let Some((_, octet)) = Self::LATIN_9.iter().find(|(known, _)| *known == c) {
                     return Some(*octet);
@@ -1573,16 +1639,12 @@ pub(crate) fn decode_parameter_text(encoding: Option<&str>, bytes: &[u8]) -> Opt
         return None;
     }
     let encoding = match encoding {
-        Some(name) => Some(TextEncoding::named(name)?),
-        None => None,
+        Some(name) => TextEncoding::named(name)?,
+        None => TextEncoding::Windows1252,
     };
     bytes[..end]
         .iter()
-        .map(|b| match encoding {
-            Some(encoding) => Some(encoding.character(*b)),
-            None if b.is_ascii() => Some(char::from(*b)),
-            None => None,
-        })
+        .map(|b| encoding.character(*b))
         .collect()
 }
 
@@ -1788,17 +1850,13 @@ impl ParameterTypes {
             cause,
         };
         let encoding = match self.text_encoding.as_deref() {
-            None => None,
-            Some(name) => {
-                Some(
-                    TextEncoding::named(name).ok_or_else(|| ImageError::Unsupported {
-                        what: format!(
-                            "{}: TextParameterEncoding {name:?} is not one this crate writes",
-                            found.parameter
-                        ),
-                    })?,
-                )
-            }
+            None => TextEncoding::Windows1252,
+            Some(name) => TextEncoding::named(name).ok_or_else(|| ImageError::Unsupported {
+                what: format!(
+                    "{}: TextParameterEncoding {name:?} is not one this crate writes",
+                    found.parameter
+                ),
+            })?,
         };
         let mut octets = Vec::with_capacity(raw.len());
         for c in raw.chars() {
@@ -1807,20 +1865,14 @@ impl ParameterTypes {
                     "a NUL character would end the text early".to_string(),
                 ));
             }
-            let octet = match encoding {
-                Some(encoding) => encoding.octet(c).ok_or_else(|| {
-                    invalid(format!(
-                        "{c:?} has no octet in {}",
-                        self.text_encoding.as_deref().unwrap_or_default()
-                    ))
-                })?,
-                None if c.is_ascii() => c as u8,
-                None => {
-                    return Err(invalid(format!(
-                        "{c:?} is not ASCII, and the program declares no TextParameterEncoding"
-                    )))
-                }
-            };
+            let octet = encoding.octet(c).ok_or_else(|| {
+                invalid(format!(
+                    "{c:?} has no octet in {}",
+                    self.text_encoding
+                        .as_deref()
+                        .unwrap_or("Windows-1252 (no TextParameterEncoding declared)")
+                ))
+            })?;
             octets.push(octet);
         }
         let field = (self.size(parameter_ref)? / 8) as usize;
@@ -2931,7 +2983,21 @@ mod tests {
             decode_parameter_text(None, b"abc\0\0").as_deref(),
             Some("abc")
         );
-        assert_eq!(decode_parameter_text(None, &[0xA4]), None);
+        assert_eq!(decode_parameter_text(None, &[0xA4]).as_deref(), Some("¤"));
+        assert_eq!(
+            decode_parameter_text(None, &[0x48, 0x80, 0xFC, 0x9F]).as_deref(),
+            Some("H€üŸ")
+        );
+        assert_eq!(
+            decode_parameter_text(None, &[0x81]),
+            None,
+            "unassigned in Windows-1252"
+        );
+        assert_eq!(
+            decode_parameter_text(Some("iso-8859-1"), &[0x81]).as_deref(),
+            Some("\u{81}"),
+            "ISO-8859-1 keeps its C1 controls"
+        );
         assert_eq!(decode_parameter_text(Some("utf-8"), b"abc"), None);
         assert_eq!(
             decode_parameter_text(Some("ISO-8859-1"), &[0xA4, 0xBC, 0]).as_deref(),
@@ -3031,9 +3097,9 @@ mod tests {
     }
 
     /// ISO-8859-1 and ISO-8859-15 are the two encodings the corpus's
-    /// `070nh` programs declare. Without a declaration only a value whose
-    /// octets are the same under every declared encoding (ASCII) is
-    /// written; anything else is refused rather than guessed.
+    /// `070nh` programs declare. Without a declaration the text is written
+    /// in Windows-1252, as ETS 6.4 wrote it, and says so when it is not
+    /// ASCII; a character Windows-1252 lacks is refused.
     #[test]
     fn a_text_value_is_encoded_as_declared_and_ascii_needs_no_declaration() {
         let latin_1 = kinds_program(r#"<Options TextParameterEncoding="iso-8859-1" />"#);
@@ -3047,10 +3113,29 @@ mod tests {
         let undeclared = kinds_program_with("", "Licht", "", "", "");
         let image = build(&undeclared, &[], vec![]).expect("ASCII needs no declaration");
         assert_eq!(&octets(&image, "AS-4600")[3..9], b"Licht\0");
-        let error = build(&undeclared, &[("P-T_R-1", "Grüß")], vec![]).unwrap_err();
+        assert!(!image
+            .inferences
+            .iter()
+            .any(|inference| inference.rule == UNDECLARED_TEXT_WINDOWS_1252));
+        // `[V]` The observed ETS octets, euro sign included.
+        let image = build(&undeclared, &[("P-T_R-1", "€ßÄö")], vec![]).unwrap();
+        assert_eq!(
+            &octets(&image, "AS-4600")[3..8],
+            [0x80, 0xDF, 0xC4, 0xF6, 0x00]
+        );
+        assert!(image
+            .inferences
+            .iter()
+            .any(|inference| inference.rule == UNDECLARED_TEXT_WINDOWS_1252));
+        let error = build(&undeclared, &[("P-T_R-1", "Ω")], vec![]).unwrap_err();
         assert!(
-            matches!(&error, ImageError::Value { cause, .. } if cause.contains("TextParameterEncoding")),
+            matches!(&error, ImageError::Value { cause, .. } if cause.contains("Windows-1252")),
             "{error}"
+        );
+        let error = build(&undeclared, &[("P-T_R-1", "\u{81}")], vec![]).unwrap_err();
+        assert!(
+            matches!(&error, ImageError::Value { .. }),
+            "an unassigned position: {error}"
         );
 
         let utf_8 = kinds_program_with(

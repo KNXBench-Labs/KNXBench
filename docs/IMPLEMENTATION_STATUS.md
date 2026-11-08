@@ -12,6 +12,14 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Undeclared text encoding is Windows-1252 (7 November 2026; KL-171)
+
+A program that declares no `TextParameterEncoding` now gets its text in
+Windows-1252 instead of being refused for any non-ASCII character, as ETS 6.4
+wrote it ([research](research/2026-11-07-ldctrlwriteprop-and-byte-order.md),
+finding 7). ASCII text is unchanged; non-ASCII text names the inference
+`undeclared-text-windows-1252`. Declared `utf-8` stays refused.
+
 ## LittleEndian push-buttons plan completely (7 November 2026; KL-170, issue #10)
 
 ETS 6.4 download images, recorded against KNXBench's simulator, settle four

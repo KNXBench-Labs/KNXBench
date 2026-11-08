@@ -42,6 +42,8 @@ fn the_ten_minute_window_includes_its_boundary_and_counts_older_rows() {
             .expect("monotonic clock older than test")
     };
     let snapshot = MonitorSnapshot {
+        transport: None,
+        skipped_frames: None,
         session_id: 1,
         status: SessionStatus::Active,
         dropped_before: 3,
@@ -107,6 +109,8 @@ fn text_dpts_long_payloads_and_codec_text_are_withheld() {
     odd.service = "Password123".into();
     odd.source = "Password123".into();
     let snapshot = MonitorSnapshot {
+        transport: None,
+        skipped_frames: None,
         session_id: 1,
         status: SessionStatus::Closed,
         dropped_before: 0,
@@ -210,6 +214,8 @@ fn wrong_types_and_oversized_error_lists_are_withheld_not_echoed() {
 fn snapshot_of(rows: Vec<TelegramRow>) -> MonitorSnapshot {
     let taken = Instant::now();
     MonitorSnapshot {
+        transport: None,
+        skipped_frames: None,
         session_id: 1,
         status: SessionStatus::Active,
         dropped_before: 0,
@@ -217,6 +223,60 @@ fn snapshot_of(rows: Vec<TelegramRow>) -> MonitorSnapshot {
         rows,
         taken,
     }
+}
+
+#[test]
+fn transport_and_skip_metadata_are_exactly_what_the_snapshot_carries() {
+    use knx_net::TunnelTransport;
+    let carried = |transport, skipped_frames| {
+        let mut snapshot = snapshot_of(vec![row(0, Instant::now())]);
+        snapshot.transport = transport;
+        snapshot.skipped_frames = skipped_frames;
+        body(&monitor_of(&snapshot))
+    };
+    let tcp = carried(Some(TunnelTransport::Tcp), Some(3));
+    assert_eq!(tcp["transport"], "tcp");
+    assert_eq!(tcp["skippedFramesAtReview"], 3);
+    // A TCP session that skipped nothing says 0; that is a measurement, not an omission.
+    assert_eq!(
+        carried(Some(TunnelTransport::Tcp), Some(0))["skippedFramesAtReview"],
+        0
+    );
+    let udp = carried(Some(TunnelTransport::Udp), None);
+    assert_eq!(udp["transport"], "udp");
+    assert!(udp.get("skippedFramesAtReview").is_none());
+    // Serial or an unrecorded source: neither key, never a fabricated UDP.
+    let unknown = carried(None, None);
+    assert!(unknown.get("transport").is_none());
+    assert!(unknown.get("skippedFramesAtReview").is_none());
+    // The projection keeps its existing keys in every case.
+    for body in [&tcp, &udp, &unknown] {
+        assert_eq!(body["droppedBeforeAtReview"], 0);
+        assert_eq!(body["telegrams"].as_array().unwrap().len(), 1);
+    }
+}
+
+#[test]
+fn a_reviewed_tcp_skip_count_stays_pinned_when_later_frames_are_skipped() {
+    let mut snapshot = snapshot_of(vec![row(0, Instant::now())]);
+    snapshot.transport = Some(knx_net::TunnelTransport::Tcp);
+    snapshot.skipped_frames = Some(2);
+    let reviewed = monitor_window(&snapshot);
+    let before = bus_monitor(&snapshot, &reviewed).unwrap();
+    snapshot.skipped_frames = Some(5);
+    let after = bus_monitor(&snapshot, &reviewed).unwrap();
+    assert_eq!(before.files[0].bytes, after.files[0].bytes);
+    assert_eq!(body(&after)["skippedFramesAtReview"], 2);
+    assert_eq!(body(&monitor_of(&snapshot))["skippedFramesAtReview"], 5);
+
+    let mut missing = reviewed.clone();
+    missing.skipped_frames_at_review = None;
+    assert!(bus_monitor(&snapshot, &missing).is_none());
+    let mut impossible = reviewed.clone();
+    impossible.skipped_frames_at_review = Some(6);
+    assert!(bus_monitor(&snapshot, &impossible).is_none());
+    impossible.skipped_frames_at_review = Some(9_007_199_254_740_992);
+    assert!(!impossible.is_well_formed());
 }
 
 fn group_row(seq: u64, value: knx_core::GroupValue, decoded: Option<DecodedValue>) -> TelegramRow {
@@ -425,6 +485,8 @@ fn command_sources_equal_the_command_enum() {
 fn contiguous(seqs: &[u64]) -> MonitorSnapshot {
     let taken = Instant::now();
     MonitorSnapshot {
+        transport: None,
+        skipped_frames: None,
         session_id: 7,
         status: SessionStatus::Active,
         dropped_before: 0,
@@ -440,6 +502,7 @@ fn pinned(first_seq: u64, end_seq: u64) -> MonitorBinding {
         first_seq,
         end_seq,
         dropped_before: 0,
+        skipped_frames_at_review: None,
         status_at_review: MonitorStatus::Active,
         captured_at: "2026-11-01T09:00:00.000Z".into(),
     }

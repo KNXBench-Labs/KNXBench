@@ -457,3 +457,29 @@ it("never treats unknown serial action provenance as legacy IP",async()=>{
     expect(apiMock.writeBusValue).not.toHaveBeenCalled();expect(apiMock.writeBoundBusValue).not.toHaveBeenCalled();expect(apiMock.readBusValue).not.toHaveBeenCalled();
   }finally{await act(async()=>root.unmount());}
 });
+
+it("sends TCP group actions only on the bound routes and says the TCP socket accepted the telegram",async()=>{
+  const identity={sessionId:17,serverIncarnation:"compose-process"};
+  apiMock.writeBoundBusValue.mockResolvedValue({service:"GroupValueWrite",encodedPayload:"0x01 (6-bit)",decodedEcho:{kind:"value",text:"on"},transport:"tcp"});
+  apiMock.readBusValue.mockResolvedValue({service:"GroupValueRead",transport:"tcp"});
+  const root=await renderForm("1.1.1",{kind:"single",dpt:"DPST-1-1"},true,false,false,false,{kind:"tcp",identity});
+  try {
+    expect(host!.textContent).not.toContain("accepted the telegram");
+    await act(async()=>setInputValue(".bus-compose-value","on"));await clickSend();
+    expect(apiMock.writeBoundBusValue).toHaveBeenCalledExactlyOnceWith(identity,"1/1/1","DPST-1-1","on",null);
+    expect(apiMock.writeBusValue).not.toHaveBeenCalled();
+    expect(host!.textContent).toContain("Sent over TCP: the TCP socket accepted the telegram. This is not confirmation from a device.");
+    await act(async()=>[...host!.querySelectorAll<HTMLButtonElement>("button")].find(button=>button.textContent==="Read group value")!.click());
+    expect(apiMock.readBusValue).toHaveBeenCalledExactlyOnceWith(identity,"1/1/1");
+    expect(apiMock.writeBusValue).not.toHaveBeenCalled();
+  }finally{await act(async()=>root.unmount());}
+});
+it("shows no TCP delivery note for a UDP send, which keeps the unbound route",async()=>{
+  apiMock.writeBusValue.mockResolvedValue({service:"GroupValueWrite",encodedPayload:"0x01 (6-bit)",decodedEcho:{kind:"value",text:"on"},transport:"udp"});
+  const root=await renderForm("1.1.1",{kind:"single",dpt:"DPST-1-1"});
+  try {
+    await act(async()=>setInputValue(".bus-compose-value","on"));await clickSend();
+    expect(apiMock.writeBusValue).toHaveBeenCalledTimes(1);expect(apiMock.writeBoundBusValue).not.toHaveBeenCalled();
+    expect(host!.textContent).not.toContain("TCP");
+  }finally{await act(async()=>root.unmount());}
+});

@@ -2,6 +2,16 @@
 
 # Implementation status
 
+## Optional TCP monitor/group-traffic candidate (8 November 2026)
+
+The current candidate adds explicit TCP to CLI bus monitor/write and the shared
+server/Web bus-monitor session. UDP remains the default; device programming,
+scans and discovery/routing do not follow the TCP preference. The source-backed
+[contract](../contracts/tcp-tunnelling.md) requires truthful observed transport,
+bound group actions, skip/loss accounting and cancellation cleanup. Review
+corrections and integrated acceptance are pending; this is neither a published
+release nor real-gateway interoperability evidence.
+
 ## Current-source implementation: captured saved-instance priority
 
 Current source also implements a separate read-only captured saved-instance

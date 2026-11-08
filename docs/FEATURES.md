@@ -11,6 +11,12 @@ Last updated: 2026-11-01 (Alpha 19 pre-release; source cutoff 2026-11-01)
 | Scope | Listed boundaries; not universal compatibility |
 | Later scope | No delivery dates promised |
 
+## In-progress source candidates
+
+| Feature | Scope | Availability |
+| --- | --- | --- |
+| [Optional TCP tunnelling](contracts/tcp-tunnelling.md) | Explicit library, CLI monitor/write and server/Web monitor/group traffic; UDP default retained, other device/scan paths UDP-only; correction review and integrated acceptance pending, no gateway interoperability claim | Local-only |
+
 ## Main-only after Alpha 19
 
 | Feature | Scope | Availability |

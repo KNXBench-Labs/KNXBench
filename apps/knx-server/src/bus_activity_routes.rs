@@ -140,6 +140,9 @@ enum SessionActivity {
         gateway: Option<String>,
         #[serde(skip_serializing_if = "Option::is_none")]
         serial: Option<crate::bus_serial::SerialTarget>,
+        /// The IP transport the monitor really runs on; absent for serial.
+        #[serde(skip_serializing_if = "Option::is_none")]
+        transport: Option<&'static str>,
         state: &'static str,
     },
     LineScan {
@@ -230,6 +233,7 @@ async fn snapshot(State(state): State<SharedState>) -> Json<ActivitySnapshot> {
                     id: session.id(),
                     gateway: session.gateway().map(|gateway| gateway.to_string()),
                     serial: session.serial().cloned(),
+                    transport: session.transport().map(knx_net::TunnelTransport::as_str),
                     state: match session.status() {
                         SessionStatus::Active => "active",
                         SessionStatus::Closed => "closed",

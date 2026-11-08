@@ -2,6 +2,18 @@
 
 # Known issues
 
+## Optional TCP monitor/group-traffic candidate (8 November 2026)
+
+The [TCP candidate](../contracts/tcp-tunnelling.md) is still in correction review,
+not published or fully accepted. It covers only explicit CLI monitor/write and
+the server/Web monitor's bound group traffic; other device/scan workflows remain
+UDP-only. A TCP socket accepting a frame does not confirm KNX device delivery.
+Unknown/over-cap frames are drained rather than retained; their skip metadata
+and counters must be reported separately from buffered-row drops. Plain TCP is
+not KNX IP Secure, an established S2-04 fix or verified gateway interoperability.
+An older server without the strict TCP start route refuses rather than silently
+using UDP. UDP remains the default. [Open work](../open-work/WP-29-knxnet-ip-tcp-tunnelling.md).
+
 **Current-source review: 8 October 2026, `608a204b`.** This page separates
 remaining defects, intentional safety/scope boundaries and missing evidence.
 Historical titles do not mean that their old defect is still present. The

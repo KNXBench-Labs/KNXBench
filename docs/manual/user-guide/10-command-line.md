@@ -548,9 +548,32 @@ in a free-style project); without it, three-level. Everything — project, addre
 datapoint type, value — is parsed and validated before a socket is opened, so a typo
 fails without touching the network.
 
-Without `--dry-run` the command connects, sends a group-value write, disconnects and
-prints `wrote to 1/2/3`. Tunneling is confirmed, so a failure is reported rather than
-assumed away.
+Without `--dry-run` the default UDP command connects, sends a group-value write,
+disconnects and prints `wrote to 1/2/3`. Its tunnelling ACK is not physical device
+confirmation; a transport failure is reported rather than assumed away.
+
+### Optional TCP (source candidate, 8 November 2026)
+
+For `bus monitor` and `bus write`, `--tunnel-transport tcp` explicitly selects
+plain TCP; `udp` is the default. It never falls back to UDP after a refusal.
+The flag is invalid with `--serial` and is not a transport selector for device
+programming, scans, discovery or routing.
+
+```bash
+knx bus monitor --gateway 192.0.2.1:3671 --tunnel-transport tcp
+knx bus write --gateway 192.0.2.1:3671 --tunnel-transport tcp --dpt DPST-1-1 --dry-run 1/2/3 1
+```
+
+The monitor identifies actual TCP and reports skipped-frame counts separately
+from buffered telegram drops. A real TCP write reports that the socket accepted
+the frame, **not that a KNX device received or executed it**. TCP has no
+TUNNELLING_ACK; it does retain connection heartbeat monitoring. No automatic
+reconnect or replay is performed. Plain TCP is not KNX IP Secure.
+
+The [bounded contract](../../contracts/tcp-tunnelling.md) is in correction review;
+full software acceptance and real-gateway interoperability are not yet claimed.
+The examples remain subject to the installation-access warning above.
+
 
 ### USB/serial TP-UART (Linux)
 

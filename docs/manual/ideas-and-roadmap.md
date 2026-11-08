@@ -10,7 +10,7 @@ than anything inside them:
 3. **Ideas and experiments** — things someone wrote down. Not commitments.
 
 No future release schedule is promised here. KNXBench is in its `0.1.0-alpha`
-series; [Alpha 19](../releases/alpha19.md) is the current pre-release. The original source audit below was checked on **8 October
+series; [Alpha 20](../releases/alpha20.md) is the current pre-release. The original source audit below was checked on **8 October
 2026**, at `608a204b`; dated release updates supersede its delivery status, not
 its historical evidence. An item's position in part 2 does not schedule it or
 reopen a recorded alpha boundary. Released artifacts are separate snapshots.
@@ -23,6 +23,15 @@ reopen a recorded alpha boundary. Released artifacts are separate snapshots.
 ---
 
 ## What is already built
+
+**Since Alpha 20:** ETS6 group-address CSV exports import with an explicit UTF-8 or
+Windows-1252 choice and a new description field; Linux gets a USB/serial TP-UART
+option for one adapter type and optional TCP tunnelling covers the bus monitor;
+little-endian, property-placed and time parameters can be prepared for download as
+*untested*; object priorities are shown and editable; saved-project edits are much
+faster; and the AppImage starts for every user again. Project schema 19 and product
+database 32 arrive. No new verified hardware support and the #30/#22 allocation
+mismatch is unresolved. [Release scope](../releases/alpha20.md#boundaries).
 
 **Since Alpha 19:** `knx products inspect-distribution` reports on OpenKNX and other
 manufacturer distributions offline without installing them; **Report problem…**

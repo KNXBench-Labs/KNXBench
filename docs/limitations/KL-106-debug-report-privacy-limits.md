@@ -35,7 +35,9 @@ matrix with test names is in the
 The sentinel scanner finds contiguous runs only, which suffices while System-2
 recordings never leave raw.
 
-## Reduced supplementary sections (1 November 2026 source)
+<a id="reduced-supplementary-sections-1-november-2026-source"></a>
+
+## Reduced supplementary sections (since Alpha 19)
 
 The unified bundle's session log, monitor and browser facts are actual sections,
 not unconditional unavailable offers. They are deliberately reduced projections:

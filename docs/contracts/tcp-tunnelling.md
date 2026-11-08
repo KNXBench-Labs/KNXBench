@@ -1,6 +1,6 @@
 # Optional TCP tunnelling for monitoring and group traffic
 
-Status: bounded software acceptance, 8 November 2026; main-only, not a new release.
+Status: bounded software acceptance, 8 November 2026; ships in Alpha 20.
 [WP-29](../open-work/WP-29-knxnet-ip-tcp-tunnelling.md) remains open beyond this
 slice. The [execution record](../status/2026-11-08-optional-tcp-tunnelling.md)
 separates actual passed checks from this contract's required behaviour and from

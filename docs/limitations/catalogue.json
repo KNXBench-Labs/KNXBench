@@ -666,7 +666,7 @@
       "number": null,
       "title": "AP3 bounded parameter controls",
       "topic": "Manufacturer data and parameters",
-      "summary": "Time retains counts; sliders need bounded integer evidence. Colour/Picture stay unsupported-codec originals; modules need separate mapping contracts. A bounded v32 Color/Time data-repair candidate adds no codec evidence.",
+      "summary": "Time retains counts; sliders need bounded integer evidence. Colour/Picture stay unsupported-codec originals; modules need separate mapping contracts. The bounded v32 Color/Time data repair (since Alpha 20) adds no codec evidence.",
       "file": "ap3-bounded-parameter-controls.md",
       "ledger_ids": [
         "PDB-04"
@@ -720,7 +720,7 @@
       "number": null,
       "title": "Checked parameter editors",
       "topic": "Manufacturer data and parameters",
-      "summary": "Checked controls are opt-in and bounded; modules fall back, Colour/Picture remain unconverted originals. IPAddress admits only an exact HostAddress literal form; newer source builds add one checked Date text form, not a native picker or memory codec. Writes remain revision-bound end to end.",
+      "summary": "Checked controls are opt-in and bounded; modules fall back, Colour/Picture remain unconverted originals. IPAddress admits only an exact HostAddress literal form; since Alpha 20 one checked Date text form is added, not a native picker or memory codec. Writes remain revision-bound end to end.",
       "file": "checked-parameter-editors.md",
       "ledger_ids": [
         "PDB-04"
@@ -1593,7 +1593,7 @@
       "number": 26,
       "title": "KNXnet/IP protocol scope",
       "topic": "Bus diagnostics and DPT",
-      "summary": "Tunnelling/routing/discovery have bounded implementations. Ordinary connectivity does not imply KNX IP Secure or extended discovery support.",
+      "summary": "Tunnelling/routing/discovery have bounded implementations; since Alpha 20 optional plain TCP covers only the bus monitor and its bound group traffic, with UDP the default and no real-gateway interoperability verified. Ordinary connectivity does not imply KNX IP Secure or extended discovery support.",
       "file": "KL-026-knxnetip-protocol-scope.md",
       "ledger_ids": [],
       "anchors": [
@@ -1664,7 +1664,7 @@
       "number": 62,
       "title": "Group Monitor evidence",
       "topic": "Bus diagnostics and DPT",
-      "summary": "The single-session, client-filtered GUI adds explicit Linux TP-UART in main-only source builds. One C6 USB-Serial 1.0.8 has bounded normal receive and one-bit group-transmit witnesses; actuator state, bridge error/parity forwarding and broader payload/device/routing/history scenarios remain unverified. The explicit bounded by-id candidate list is software-accepted on main; metadata is not a complete USB census or KNX compatibility, availability or permission evidence.",
+      "summary": "The single-session, client-filtered GUI adds explicit Linux TP-UART since Alpha 20. One C6 USB-Serial 1.0.8 has bounded normal receive and one-bit group-transmit witnesses; actuator state, bridge error/parity forwarding and broader payload/device/routing/history scenarios remain unverified. The explicit bounded by-id candidate list ships in Alpha 20; metadata is not a complete USB census or KNX compatibility, availability or permission evidence.",
       "file": "KL-062-group-monitor-evidence.md",
       "ledger_ids": [
         "KL-62"

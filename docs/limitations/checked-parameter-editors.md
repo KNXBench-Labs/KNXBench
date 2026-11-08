@@ -8,7 +8,7 @@ updates supersede them; they are not new work assignments.
 
 ## Update 2026-11-06: bounded Date text editor (WP-08)
 
-Source builds after Alpha 19 add one opt-in source-bound Date text form with
+Since Alpha 20 KNXBench adds one opt-in source-bound Date text form with
 calendar preflight and explicit Apply. Exact `TypeDate Encoding="DPT 11"` is
 admitted only without additional hints/bounds; module and unknown declarations
 fall back. Raw values are never converted or automatically repaired. The

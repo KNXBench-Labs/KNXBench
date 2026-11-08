@@ -358,6 +358,20 @@ that source check is not a new native test of the downloaded image. If
 neither display is reachable, the new launcher still cannot create a window.
 Broader compositor/GPU compatibility is not guaranteed.
 
+## The Alpha 19 AppImage says "Permission denied" or asks for `GLIBC_2.43`
+
+**You see:** the `v0.1.0-alpha.19` AppImage stops with
+`AppRun.wrapped: Permission denied` when a user other than the file owner starts
+it, or the host's loader reports a missing `GLIBC_2.43` version.
+
+**Why:** that release's inner launcher was packaged readable and executable only for
+its owner and group, and a moved build runner linked six bundled libraries against
+glibc 2.43 ([packaging record](../../status/2026-11-08-appimage-catalog.md)).
+
+**Do this:** use the Alpha 20 or a later AppImage. It is readable and executable for
+every user and needs glibc 2.39 or newer; that floor is not a promise for every
+distribution or graphics driver.
+
 ## The AppImage window stays empty: "Could not create default EGL display"
 
 **You see:** the window opens empty or the program ends, and the terminal shows

@@ -24,7 +24,7 @@ feature at a time, never inferred manufacturer behaviour.
 
 Area register, matrix placement, separators, block access, indentation, the
 #26 section-caption resolver (reuse it), the Alpha 16 block/separator
-`Text` language overlays (A16-07, `cde8d89a3`) and, main-only, passive literal
+`Text` language overlays (A16-07, `cde8d89a3`) and, since Alpha 19, passive literal
 Button labels in grid cells
 ([`button-literal-passive-v1`](../contracts/alpha16-parameter-layout.md#passive-source-button-labels-button-literal-passive-v1)).
 

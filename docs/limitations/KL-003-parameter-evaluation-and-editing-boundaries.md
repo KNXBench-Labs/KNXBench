@@ -13,7 +13,9 @@ Templates/translations/renames, modules, current placement after edits and prior
 remain open. The existing ledger disposition is unchanged; no broader original-tool,
 native or hardware equivalence follows.
 
-## Saved project-folder text boundary (5 November 2026 source delivery)
+<a id="saved-project-folder-text-boundary-5-november-2026-source-delivery"></a>
+
+## Saved project-folder text boundary (since Alpha 20)
 
 The bounded [schema-20 saved-text delivery](../status/2026-11-05-saved-schema20-node-text.md)
 adds literal text retained in an imported project, not product

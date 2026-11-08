@@ -3,7 +3,7 @@
 Bounded source safety fix of 2026-10-25, on top of
 [partial-identity-comparison](partial-identity-comparison.md) and ADR-0049.
 
-**Additional replay rule, 29 October 2026 source candidate:** the
+**Additional replay rule, since Alpha 19 (29 October 2026 source):** the
 [exemplar-binding contract](regular-restore-exemplar-binding.md) adds mandatory
 captured, bindable serial evidence and a live executor precondition. All format
 1/2 files therefore remain readable but cannot restore, including partial files.

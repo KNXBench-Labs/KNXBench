@@ -73,7 +73,7 @@ package does not introduce an unmeasured cache or bulk-query abstraction.
 
 ## Supported presentation and refusals
 
-- Date (source builds after Alpha 19): the exact direct `TypeDate Encoding="DPT 11"`
+- Date (since Alpha 20): the exact direct `TypeDate Encoding="DPT 11"`
   form offers a checked text draft, not a native date picker. The
   [Date contract](checked-date-text-editor.md) requires ASCII `yyyy-mm-dd` and
   existing Gregorian days, preserving four-digit years without a DPT bus range.

@@ -2,32 +2,63 @@
 
 # Implementation status
 
-## Optional TCP monitor/group-traffic candidate (8 November 2026)
+## Alpha 20 — current pre-release
 
-The current candidate adds explicit TCP to CLI bus monitor/write and the shared
+Alpha 20 (`v0.1.0-alpha.20`, source cutoff `dfb3f88b8`) imports ETS6 group-address
+CSV exports, adds a group-address description, a Linux USB/serial TP-UART option,
+optional TCP tunnelling for the bus monitor, more download preparations and object
+priorities. None of it is verified on real hardware; the new download kinds are
+compared with recorded ETS images in the simulator and stay *untested*, and the
+allocation mismatch of issues #30/#22 is unresolved.
+[Release scope, upgrade notes and boundaries](../releases/alpha20.md).
+
+| Capability | Boundary |
+| --- | --- |
+| Group-address CSV | ETS6 exports with a header line import through the four full profiles; choose UTF-8 (default) or Windows-1252, nothing is guessed; a byte invalid for the chosen encoding stops the import with its offset. [CSV guide](user-guide/04-group-addresses.md#group-addresses-as-csv). |
+| Group-address description | Filled from `.knxproj` imports and CSV description columns; an empty CSV cell never clears it; shown in the inspector, no editor yet. Older imports are not backfilled; import the `.knxproj` again. |
+| Bus transports | Linux USB/serial TP-UART for one adapter type (Busware TUL, transparent NCN5130 firmware) for monitoring and group telegrams; optional TCP for the bus monitor and its group traffic, UDP the default. Downloads, device management and scans stay KNXnet/IP over UDP. |
+| Downloads | Little-endian numbers, undeclared text encoding, property-placed parameters with master resets, and time parameters can be prepared as *untested*; they need explicit acceptance. Property-based devices have no restore or partial download yet. |
+| Object priority | Saved, effective and edited priority in the object editor, an optional Priority column, comparison and report; programming refuses a device whose project priority differs from the product's ([KL-188](../KNOWN_LIMITATIONS.md#catalogue-kl-188)). |
+| Workbench | Faster saved-project edits (issue #35), status-bar connection, Compare from the device editor, Rail themes, checked Date editor, import findings after reopening. |
+
+Native/store and model move **16 → 19** and the product database **31 → 32** on a
+writable open. Alpha 19 refuses schema-19 projects (`FutureSchemaVersion`) and
+product32 (`FutureVersion`; the server then starts without products), and cannot
+read the new System-2 `Download_Flag` journal entries. Going back is not tested;
+keep independent backups before upgrading and restore them to return.
+
+<a id="optional-tcp-monitorgroup-traffic-candidate-8-november-2026"></a>
+
+## Optional TCP monitor and group traffic (since Alpha 20)
+
+Alpha 20 adds explicit TCP to CLI bus monitor/write and the shared
 server/Web bus-monitor session. UDP remains the default; device programming,
 scans and discovery/routing do not follow the TCP preference. The source-backed
 [contract](../contracts/tcp-tunnelling.md) requires truthful observed transport,
 bound group actions, skip/loss accounting and cancellation cleanup. Independent
 review and all 15 selected package stages passed ([software acceptance](../status/2026-11-08-optional-tcp-tunnelling.md)).
-This is main-only, neither a new release nor real-gateway interoperability evidence.
+This is not real-gateway interoperability evidence.
 
-## Current-source implementation: captured saved-instance priority
+<a id="current-source-implementation-captured-saved-instance-priority"></a>
 
-Current source also implements a separate read-only captured saved-instance
+## Captured saved-instance priority (since Alpha 20)
+
+Alpha 20 implements a separate read-only captured saved-instance
 priority observation in the model and device-detail API. Native schema17 retains
 old files/history as NotCaptured; original source facts are not inferred or
 resolved against products ([acceptance and limits](../status/2026-11-06-saved-instance-priority.md)).
-Main additionally shows it as a read-only **Saved project priority** row in the
+It is shown as a read-only **Saved project priority** row in the
 communication-object editor, with no table column and no editing control
 ([UI consumer](../contracts/saved-instance-priority.md#read-only-ui-consumer-7-november-2026)).
 Project comparison compares it, and the documentation report lists it in a final
 column ([report consumer](../contracts/saved-instance-priority.md#documentation-report-consumer-7-november-2026)).
 A second read-only **Effective project priority** row shows the resulting value
 and whether it comes from the saved object or the product
-([effective contract](../contracts/effective-object-priority.md)). Released Alpha 19 cutoffs are unchanged.
+([effective contract](../contracts/effective-object-priority.md)). Alpha 19 and earlier have none of these rows.
 
-## Main-only implementation: literal product-folder declarations
+<a id="main-only-implementation-literal-product-folder-declarations"></a>
+
+## Literal product-folder declarations (since Alpha 20)
 
 In **By saved project folder**, an already assigned Folder can show a bounded
 literal declaration from its authenticated current installed product. A separate
@@ -37,23 +68,27 @@ fields. Labels never change grouping, activation, placement, edits or history.
 Templates, translations, module placement, staleness and priority remain outside
 this slice. The real-source probe calibrates four literal declarations, not a
 complete original-package import or a real missing-saved-text fallback.
-The bounded software slice is accepted on main after independent review, both
-complete selected package gates and the source-bound server build/version; this
-is not hardware, native-shell, release or deployment acceptance.
+The bounded software slice passed independent review, both complete selected
+package gates and the source-bound server build/version; this is not hardware or
+native-shell acceptance.
 [Scope and verification](../status/2026-11-06-declared-product-folder-captions.md).
 
-## Main-only after Alpha 19: passive USB-serial listing
+<a id="main-only-after-alpha-19-passive-usb-serial-listing"></a>
+
+## Passive USB-serial listing (since Alpha 20)
 
 Settings, status-bar configuration and Bus Monitor share **List USB-serial
 candidates** beside the manual path. It inspects only bounded Linux server-local
 by-id aliases and metadata; candidates are not KNX compatibility, availability or
 permission evidence. Selection sets only the path, never Connect or source/mode.
 Missing/unreadable aliases, unsupported platforms, older servers and truncated
-lists are disclosed separately. Manual paths remain available. The bounded
-software package is accepted on main, with no new physical witness.
-[Acceptance](../status/2026-11-05-wp26-passive-serial-candidates.md) · [Usage and limits](user-guide/07-bus-and-interfaces.md#passive-usb-serial-candidates-source-candidate).
+lists are disclosed separately. Manual paths remain available. There is no new
+physical witness.
+[Acceptance](../status/2026-11-05-wp26-passive-serial-candidates.md) · [Usage and limits](user-guide/07-bus-and-interfaces.md#passive-usb-serial-candidates-since-alpha-20).
 
-## Main-only after Alpha 19: Linux USB/serial TP-UART
+<a id="main-only-after-alpha-19-linux-usbserial-tp-uart"></a>
+
+## Linux USB/serial TP-UART (since Alpha 20)
 
 `knx bus monitor` and `knx bus write` accept an explicit `--serial` device plus
 `--source` for a Busware TUL running transparent firmware. Monitoring is passive;
@@ -62,14 +97,16 @@ This is software-tested transport support, not physical compatibility or USB/HID
 support. The Linux server, Settings, browser monitor and status-bar selector also
 offer explicit serial passive/active selection with session-bound sends and
 reserved cleanup. They require a server-local path and unique source address;
-selection never connects. The software package is accepted on main, not physically
-verified. Device management, downloads and scans remain IP-only.
-[Server/UI usage](user-guide/07-bus-and-interfaces.md#usbserial-tp-uart-linux-server-main-only) ·
+selection never connects. The software package is not physically verified.
+Device management, downloads and scans remain IP-only.
+[Server/UI usage](user-guide/07-bus-and-interfaces.md#usbserial-tp-uart-linux-server-since-alpha-20) ·
 [Server/UI acceptance](../status/2026-11-04-usb-serial-ui.md).
 [CLI usage](user-guide/10-command-line.md#usbserial-tp-uart-linux) ·
 [Evidence and limits](../status/2026-11-04-usb-tpuart.md).
 
-## Main-only after Alpha 19: Compare from the device editor
+<a id="main-only-after-alpha-19-compare-from-the-device-editor"></a>
+
+## Compare from the device editor (since Alpha 20)
 
 **Compare** beside **Download to device…** opens the existing gateway-confirmed
 read-only review for the exact edited device. It shares progress, cancellation
@@ -78,7 +115,9 @@ second comparison queue. Opening the review alone contacts no device. Existing
 family/read/adoption limits remain unchanged.
 [Acceptance and boundaries](../status/2026-11-03-wp27-device-editor-compare.md).
 
-## Main-only after Alpha 19: group-address sub-range navigation
+<a id="main-only-after-alpha-19-group-address-sub-range-navigation"></a>
+
+## Group-address sub-range navigation (since Alpha 20)
 
 Columns and Atlas no longer lose a populated sub-range when local navigation
 leaves an Explorer-selected range. Explicit local navigation takes over; a later
@@ -86,7 +125,9 @@ Explorer activation takes it back, even when selecting the same range again.
 Search, selection and stored membership remain unchanged. Atlas still shows direct
 members only after local range selection. [Acceptance and boundaries](../status/2026-11-03-wp28-group-address-subranges.md).
 
-## Main-only after Alpha 19: import findings after reopening
+<a id="main-only-after-alpha-19-import-findings-after-reopening"></a>
+
+## Import findings after reopening (since Alpha 20)
 
 Opening a native project reprojects the stored primary report's counted errors
 and warnings into the session log. The log explains historical/opening-time
@@ -95,7 +136,9 @@ when its 16,000-entry cap leaves fewer findings than the counters. No reimport,
 new compatibility assessment or recovery of missing legacy evidence is implied.
 [Scope and verification](../open-work/WP-25-import-findings-after-reopen.md).
 
-## Alpha 19 — current pre-release
+<a id="alpha-19--current-pre-release"></a>
+
+## Alpha 19 — previous pre-release (history)
 
 Alpha 19 (`v0.1.0-alpha.19`, source cutoff `858b0a24d`) adds read-only
 manufacturer-distribution inspection, the consented diagnostic bundle and narrower
@@ -655,7 +698,7 @@ automatic repair or a memory codec. Other source forms retain the existing plain
 field. Alpha 18 and earlier do not have this addition; broader specialised
 codecs and module mapping remain open.
 
-Source builds after Alpha 19 also add a source-bound checked Date **text** editor
+Since Alpha 20 it also offers a source-bound checked Date **text** editor
 with Gregorian-day preflight and explicit Apply. This is not a native date picker
 or parameter memory codec; unknown Date declarations and module mapping keep the
 fallback. The [bounded contract](../contracts/checked-date-text-editor.md) leaves
@@ -1060,7 +1103,9 @@ Main source delivery is [verified](../status/2026-10-09-offline-ap1-verification
 | Choosing free, two-level or three-level style when the project is created | ✅ Implemented | Initial display/address structure; the next row describes changing it later |
 | Changing the style afterwards | ✅ Implemented | On the Project node in the properties pane, undoable |
 | CSV export and re-import in KNXBench's own format | ✅ Implemented | Every address in the reference project round-trips unchanged |
-| CSV column-profile import | ✅ Bounded adapter | Four fixed name/address layouts; range rows explicitly omitted, unsupported metadata atomically refused, DPT read-only. [Contract](../contracts/group-address-csv-profiles.md). No external export or general ETS/ESF interoperability claim. |
+| CSV column-profile import | ✅ Bounded adapter | Four fixed name/address layouts; range rows explicitly omitted, unsupported metadata atomically refused. Since Alpha 20 a CSV datapoint type applies to addresses the import creates; existing addresses keep theirs. [Contract](../contracts/group-address-csv-profiles.md). No external export or general ETS/ESF interoperability claim. |
+| ETS6 CSV exports and explicit encoding | ✅ Since Alpha 20, bounded | ETS6 exports with a header line, including "CSV (ETS3 Format)" and tab-separated files; UTF-8 (default) or Windows-1252 chosen by you, never guessed; a byte invalid for that encoding stops the import with its offset; headerless files refused — [ADR-0164](../adr/0164-group-address-description-and-csv-encoding.md), [KL-038](../KNOWN_LIMITATIONS.md#catalogue-kl-038) |
+| Group-address description | 🟡 Since Alpha 20, read-only in the inspector | Stored from `.knxproj` imports and CSV description columns (native schema 19); an empty CSV cell never clears it; no editor yet |
 | Explicit, preview-confirmed re-addressing and unreferenced deletion through CSV | ✅ Implemented | Stable ids, directional-link preview, state-bound confirmation |
 | Creating or restructuring ranges through CSV | ❌ Not implemented | [§39](../KNOWN_LIMITATIONS.md#39-csv-import-never-re-addresses-deletes-or-manages-group-ranges) |
 
@@ -1150,7 +1195,8 @@ source-bound browser/unit/build evidence; this does not expand KNX compatibility
 | Sending a group value write | 🟡 Implemented, live evidence limited | Tested write paths are reachable; passive receive evidence does not prove every live send/UI/gateway combination. Undo does not reverse a bus write |
 | Line scan | 🟡 Partial or experimental | CLI and graphical diagnostics; live bus load, cannot identify products or cross couplers — [§72](../KNOWN_LIMITATIONS.md#72-line-scan-t17-an-unthrottled-scan-is-a-live-bus-cost-not-a-theoretical-one--shipped-2026-09-13-still-true) |
 | Verification against more than one gateway model | 🟡 Partial or experimental | Exactly one model so far |
-| USB/serial transparent TP-UART | Main-only, software-tested | Linux server, explicit passive/active settings/footer/monitor; bound sends and cleanup reservation; correction review and package gates passed, physical compatibility unverified; [scope](../status/2026-11-04-usb-serial-ui.md) |
+| Optional TCP tunnelling | 🟡 Since Alpha 20, software-tested | Bus monitor and its bound group read/write (web, desktop, `knx bus monitor`/`knx bus write --tunnel-transport tcp`); UDP default, no fallback, no tunnelling ACK so acceptance is not device delivery; not KNX IP Secure; no real-gateway interoperability verified — [contract](../contracts/tcp-tunnelling.md) |
+| USB/serial transparent TP-UART | 🟡 Since Alpha 20, software-tested | Linux server, explicit passive/active settings/footer/monitor; bound sends and cleanup reservation; correction review and package gates passed, physical compatibility unverified; [scope](../status/2026-11-04-usb-serial-ui.md) |
 | Other USB/non-IP interfaces | ❌ Not implemented | KNX USB HID, FT1.2 and arbitrary serial adapters unsupported |
 
 ## Commissioning and device download

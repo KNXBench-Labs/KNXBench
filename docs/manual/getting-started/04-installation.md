@@ -18,17 +18,17 @@ Docker Desktop networking is not a verified substitute for Linux host networking
 ## a) Linux AppImage
 
 The commands below use the
-[`v0.1.0-alpha.19`](https://github.com/KNXBench-Labs/KNXBench/releases/tag/v0.1.0-alpha.19)
+[`v0.1.0-alpha.20`](https://github.com/KNXBench-Labs/KNXBench/releases/tag/v0.1.0-alpha.20)
 pre-release.
-Download **both** `KNXBench_0.1.0-alpha.19_amd64.AppImage` and `SHA256SUMS` from
+Download **both** `KNXBench_0.1.0-alpha.20_amd64.AppImage` and `SHA256SUMS` from
 that release page into the same directory.
 
 From that directory:
 
 ```bash
 sha256sum -c --ignore-missing SHA256SUMS
-chmod +x KNXBench_0.1.0-alpha.19_amd64.AppImage
-./KNXBench_0.1.0-alpha.19_amd64.AppImage
+chmod +x KNXBench_0.1.0-alpha.20_amd64.AppImage
+./KNXBench_0.1.0-alpha.20_amd64.AppImage
 ```
 
 `SHA256SUMS` also lists the `knx-mcp` binary; `--ignore-missing` checks only the
@@ -37,6 +37,11 @@ files you downloaded and still fails on any mismatch.
 **Expected result:** the checksum reports `OK`, then the application opens a
 welcome screen. Stop if the checksum differs; do not solve an integrity warning
 by becoming less interested in it.
+
+The Alpha 20 AppImage is built on Ubuntu 24.04 and needs **glibc 2.39 or newer**
+(the Alpha 19 AppImage needed 2.43 and could only be started by its file owner; both
+are fixed). The glibc floor is checked for every packaged library; it is not a
+promise for every distribution or graphics driver.
 
 The package is built by GitHub Actions with Xvfb/headless-Weston launch checks. It prefers a
 native Wayland window and can fall back to X11. [Linux setup](05-linux-setup.md)
@@ -53,18 +58,29 @@ The [launcher contract](../../APPIMAGE_LAUNCHER.md) records the tested boundary.
 older data directory. Keep the old files and open/copy them deliberately; see
 [known limitation §161](../../KNOWN_LIMITATIONS.md#161-alpha5-does-not-pick-up-the-alpha4-data-folder).
 
-**Alpha 19:** native/store schema 16 and core model 16 are unchanged from Alpha 18.
-The product database moves 30 → 31 through one data-only migration when a writable
-server, desktop app or Docker startup opens it, and when catalogue-writing CLI
-commands open it. Read-only readers migrate only an in-memory copy. Alpha 18
+**Alpha 20:** native/store schema and core model move 16 → 19 (17 saved-instance
+priority, 18 priority edits, 19 group-address description) and the product database
+31 → 32 through one data-only Color/Time repair, when a writable server, desktop app
+or Docker startup or a writing CLI command opens them. Read-only readers migrate only
+an in-memory copy. **Alpha 19 refuses an upgraded project** with
+`FutureSchemaVersion` and a v32 catalogue with `FutureVersion`, then starts without
+products; there is no downgrade path, and reinstalling Alpha 19 does not undo the
+conversion. Alpha 19 also cannot read the new System-2 journal entries for the
+`Download_Flag` rule. Close the application and back up project/catalogue files,
+device backups, original import files and all Docker data independently before
+updating; to go back, restore those pre-upgrade copies.
+[Current release scope](../../releases/alpha20.md#upgrade).
+
+**Earlier Alpha 19:** native/store schema 16 and core model 16 were unchanged from Alpha 18.
+The product database moved 30 → 31 through one data-only migration when a writable
+server, desktop app or Docker startup opened it, and when catalogue-writing CLI
+commands opened it. Alpha 18
 refuses a v31 catalogue with `FutureVersion` and starts without products; there is
 no downgrade path. Opening Alpha 19 files in Alpha 18 is **not tested**. Alpha 18
 also refuses regular device backups of format 3/4, activity-history pages with the
 new `supportDiagnostics` kind and System-2 journals with an allocation-comparison
 record (checkpoint envelope 4). Alpha 19 still reads format-1/2 backups, but they no
-longer restore. Close the application and back up project/catalogue files, device
-backups and all Docker data independently before updating.
-[Current release scope](../../releases/alpha19.md#upgrade).
+longer restore ([Alpha 19 upgrade notes](../../releases/alpha19.md#upgrade)).
 
 **Earlier Alpha 18:** native/model16 was unchanged; the product database moved
 28 → 30 through two data-only migrations on writable open, and Alpha 17 refuses
@@ -145,7 +161,7 @@ compare the browser's certificate fingerprint with the one in
 
 **Choose your update policy:** `latest` follows published releases, including
 alpha pre-releases; it does not track `main`. Use
-`knxbench/knxbench-server:0.1.0-alpha.19` in both commands to pin that release.
+`knxbench/knxbench-server:0.1.0-alpha.20` in both commands to pin that release.
 The source server and source-built images now default to 8484. Keeping
 `-e KNX_PORT=8484` also makes the commands work with Alpha.9 and older images.
 Images start at `0.1.0-alpha.6` (9 October 2026); see

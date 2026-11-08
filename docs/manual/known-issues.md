@@ -2,37 +2,62 @@
 
 # Known issues
 
-## Optional TCP monitor/group-traffic candidate (8 November 2026)
-
-The [bounded TCP slice](../contracts/tcp-tunnelling.md) is software-accepted on
-main, not a new release ([execution record](../status/2026-11-08-optional-tcp-tunnelling.md)).
-It covers only explicit CLI monitor/write and
-the server/Web monitor's bound group traffic; other device/scan workflows remain
-UDP-only. A TCP socket accepting a frame does not confirm KNX device delivery.
-Unknown/over-cap frames are drained rather than retained; their skip metadata
-and counters must be reported separately from buffered-row drops. Plain TCP is
-not KNX IP Secure, an established S2-04 fix or verified gateway interoperability.
-An older server without the strict TCP start route refuses rather than silently
-using UDP. UDP remains the default. [Open work](../open-work/WP-29-knxnet-ip-tcp-tunnelling.md).
-
 **Current-source review: 8 October 2026, `608a204b`.** This page separates
 remaining defects, intentional safety/scope boundaries and missing evidence.
 Historical titles do not mean that their old defect is still present. The
 [source/test audit](../status/2026-10-08-known-issues-status-audit.md) records
 the reconciliation; formal task dispositions remain in the engineering ledger.
 
-## Native project schema17 (current source, not a new release)
+<a id="optional-tcp-monitorgroup-traffic-candidate-8-november-2026"></a>
 
-**Current-source native project schema17:** new saves can be refused by older
-applications; keep originals and independent backups. The captured saved-instance
-priority overlay never invents declarations or absence for historical files or
-history: they remain NotCaptured. Read-only opening migrates a memory copy only.
-No priority editor, effective/product resolution, wire behavior or new module/
-source-schema support follows. [Scope and acceptance](../status/2026-11-06-saved-instance-priority.md).
+## Optional TCP tunnelling (since Alpha 20)
+
+Alpha 20 adds [optional TCP tunnelling](../contracts/tcp-tunnelling.md) as a bounded
+first stage ([execution record](../status/2026-11-08-optional-tcp-tunnelling.md)).
+It covers only explicit CLI monitor/write (`--tunnel-transport tcp`) and the
+web/desktop bus monitor's bound group traffic (**TCP (optional)**); downloads,
+device management, scans, discovery and routing remain UDP-only. UDP remains the
+default, and a refused TCP start is reported instead of silently falling back to
+UDP; an older server without the strict TCP start route refuses as well. A TCP
+socket accepting a frame does not confirm KNX device delivery: there is no
+tunnelling acknowledgement and no automatic reconnect. Unknown/over-cap frames are
+drained rather than retained; their skip metadata and counters are reported
+separately from buffered-row drops. Plain TCP is not KNX IP Secure and not an
+established S2-04 fix. It was tested against local test peers only; no real-gateway
+interoperability is verified.
+[Open work](../open-work/WP-29-knxnet-ip-tcp-tunnelling.md).
+
+<a id="native-project-schema17-current-source-not-a-new-release"></a>
+
+## Project schema 19 (since Alpha 20)
+
+Alpha 20 moves native project files from schema 16 to 19 the first time it opens
+them for writing: 17 records the captured saved-instance priority, 18 your priority
+edits, 19 group-address descriptions. Nothing existing is changed. **Alpha 19 refuses
+an upgraded file** as newer than it supports (`FutureSchemaVersion`); reinstalling
+Alpha 19 does not convert it back. Keep a copy of every project before you upgrade,
+and restore that pre-upgrade copy to go back. Read-only opening migrates a memory
+copy only and leaves the file at its own version.
+
+The captured saved-instance priority overlay never invents declarations or absence
+for historical files or history: they remain NotCaptured. No wire behaviour or new
+module/source-schema support follows.
+[Scope and acceptance](../status/2026-11-06-saved-instance-priority.md).
 Comparing a project saved before that capture, or an ETS4/ETS5 export
 (`UnsupportedSourceSchema`), with a fresh ETS6 import lists `saved_priority` for every
 captured object, and `knx diff --exit-code` then reports a difference. That is a real
 difference in recorded knowledge, not an edit.
+
+## Product database 32 (since Alpha 20)
+
+Alpha 20 moves the product database from 31 to 32 the first time it opens it for
+writing. The step only repairs parameter types that an earlier version wrongly
+marked as Color or Time values, and only where the retained product source proves
+it; products, programs and package files stay as they are
+([contract](../contracts/color-time-successor-repair.md)). Alpha 19 then refuses that
+catalogue as newer than it supports (`FutureVersion`) and the server starts without
+products, so keep a copy of the closed catalogue file before you upgrade. Readers
+migrate an in-memory copy and leave the file at its own version.
 
 <a id="product-database-31--source-newer-than-alpha-18"></a>
 
@@ -94,7 +119,28 @@ sidecars to bypass the refusal; see [CLI input handling](user-guide/10-command-l
 Source delivery and internal runtime checks are complete on `4eee65d8`; a new
 release is not implied. No receiver/bus compatibility is claimed.
 
-## Alpha 19 — pre-release scope and evidence limits
+## Alpha 20 — pre-release scope and evidence limits
+
+Alpha 20 (`v0.1.0-alpha.20`) is a pre-release with source cutoff `dfb3f88b8`
+(8 November 2026). Its new download preparations (little-endian numbers, undeclared
+text encoding, property-placed parameters, time parameters) were compared with ETS
+6.4 downloads recorded in KNXBench's simulator, not run on real devices; they are
+*untested* and need explicit acceptance. Priorities, descriptions and the System-2
+changes were not tested on real devices either; programming refuses a device whose
+project priority differs from the product's ([KL-188](../KNOWN_LIMITATIONS.md#catalogue-kl-188)).
+USB/serial TP-UART was tested with one adapter type and one firmware; TCP tunnelling
+only against local test peers. The new screens were not tested in the native
+WebKitGTK/Tauri window or with screen readers. System-2 stays experimental and
+limited to UP 258D12; the `Download_Flag` rule does not resolve the allocation
+mismatch behind issues #30 and #22, which both stay open. The AppImage needs glibc
+2.39 or newer; that is not a promise for every distribution or graphics driver.
+Project schema moves 16 → 19 and the product database 31 → 32; Alpha 19 refuses
+both, and going back means restoring your pre-upgrade copies.
+[Release scope and boundaries](../releases/alpha20.md#boundaries).
+
+<a id="alpha-19--pre-release-scope-and-evidence-limits"></a>
+
+## Alpha 19 — previous pre-release scope and evidence limits
 
 Alpha 19 (`v0.1.0-alpha.19`) is a pre-release with source cutoff `858b0a24d`
 (1 November 2026). Its programming, restore and diagnostic behaviour is tested with
@@ -331,7 +377,7 @@ Missing grouping stays visible under Other parameters; unsupported value/script
 semantics still have their existing diagnostic/refusal behavior. Rows declared as
 indented are indented; since Alpha 15 declared `SuffixText` units appear after
 the value and supported caption placeholders resolve with readable fallbacks.
-Inline sections and object folders are not shown yet. On main, a `Button` in a
+Inline sections and object folders are not shown yet. Since Alpha 19, a `Button` in a
 declared grid shows only its literal source text as a passive label; its action
 (callbacks, online transfer) is not supported and nothing can be triggered. Alpha 13 and older binaries do not contain this layout.
 
@@ -677,7 +723,7 @@ is the remaining copy defect.
 
 ### Older project files show no group-address descriptions
 
-- **Affected:** `.knxdb` files saved before this version from a `.knxproj` import.
+- **Affected:** `.knxdb` files saved before Alpha 20 from a `.knxproj` import.
 - **Limitation:** such files kept `GroupAddress/@Description` only as retained
   source data. Opening them does not move it into the new description field, so
   that undo history and saved versions stay valid.
@@ -769,7 +815,7 @@ is the remaining copy defect.
 - **Affected:** devices whose application program declares
   `ParameterByteOrder="LittleEndian"` (in the public product files KNXBench has
   seen, mostly ABB and Busch-Jaeger, some Hager and Berker programs).
-- **Changed on main (7 November 2026):** for memory programs, numbers that fill
+- **Changed in Alpha 20:** for memory programs, numbers that fill
   whole octets are now written low octet first, as ETS 6.4 does for such programs
   (ADR-0159). Those devices plan normally and are *untested* downloads: no device
   has confirmed them yet, so the download asks for `--accept-untested`.
@@ -794,7 +840,7 @@ is the remaining copy defect.
 - **Affected:** mask-`0701h` devices whose program keeps its parameters in
   interface-object properties and resets the device first (some Hager and
   Berker switch, blind and push-button actuators).
-- **Changed on main (8 November 2026):** they plan and download as ETS 6.4
+- **Changed in Alpha 20:** they plan and download as ETS 6.4
   sends them to a simulator (ADR-0161): the master reset as a function property
   command, the parameters merged bit by bit into what the device holds.
 - **Limitation:** no real device has confirmed this yet, so the download asks
@@ -802,7 +848,7 @@ is the remaining copy defect.
   download cannot be restored from a backup, and no partial download is offered.
   Programs with other property-write shapes, erase codes, non-zero inline data
   or packed time units are still refused; readiness says why.
-- **Changed on main (8 November 2026):** time parameters in a plain unit (for
+- **Changed in Alpha 20:** time parameters in a plain unit (for
   example tenths of a second) and property writes with all-zero inline data
   follow ETS 6.4 too (ADR-0162), so Hager dimming actuators like the tester's
   plan as well. Other devices with time parameters in a plain unit now plan too,

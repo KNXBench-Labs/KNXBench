@@ -1,8 +1,29 @@
 # Roadmap
 
-## Optional TCP monitoring candidate (8 November 2026)
+## Alpha 20 pre-release (source cutoff 8 November 2026)
 
-This bounded source candidate adds explicit TCP for CLI bus monitor/write and
+`v0.1.0-alpha.20` is the current pre-release, cut from main at source cutoff
+`dfb3f88b8`. It ships every delivery merged after Alpha 19 up to that cutoff,
+including the ETS6 group-address CSV import with an explicit UTF-8/Windows-1252
+choice and the new group-address description, optional TCP tunnelling for the bus
+monitor and group traffic (first WP-29 stage; UDP stays the default), the Linux
+USB/serial TP-UART transport with its settings, status-bar and candidate listing,
+download preparation for little-endian, property-placed and time parameters (all
+*untested*), object priority provenance, editing and the priority column, faster
+saved-project edits (issue #35), System-2 selective and caption settlement with the
+UP258 `Download_Flag` declaration, WP-25 to WP-28, the Rail themes, the checked Date
+editor, descriptor-pinned JSON backups and the AppImage packaging repair. Native/model
+moves 16 → 19 and the product database 31 → 32; Alpha 19 refuses both. No hardware
+support, recovery guarantee or ETS equivalence follows; the allocation mismatch of
+issues #30/#22 is unresolved and both stay open.
+[Release scope and boundaries](releases/alpha20.md).
+Work merged on main after `dfb3f88b8` belongs to the next alpha.
+
+<a id="optional-tcp-monitoring-candidate-8-november-2026"></a>
+
+## Optional TCP monitoring in Alpha 20
+
+This bounded first stage adds explicit TCP for CLI bus monitor/write and
 the server/Web shared monitor session with bound group traffic. UDP remains the
 default. Other device/scan workflows stay UDP-only. Plain TCP is not KNX IP
 Secure, and software loopback tests do not prove real-gateway interoperability.
@@ -10,7 +31,7 @@ The [contract](contracts/tcp-tunnelling.md) and [open work](open-work/WP-29-knxn
 separate source implementation, integrated acceptance and remaining scope.
 The bounded slice passed independent review and all 15 selected package stages;
 see the [software acceptance](status/2026-11-08-optional-tcp-tunnelling.md).
-It is main-only, not a new release or a closure of the wider WP-29.
+It ships in Alpha 20; it does not close the wider WP-29.
 
 ## Bounded foundation: object-priority provenance
 
@@ -36,7 +57,7 @@ without changing its selected text, catalogue schema or programming policy.
 That first increment did not cover project-instance modelling or migration;
 its historical source admission is recorded in the
 [investigation](research/2026-11-06-object-priority-provenance.md); this is not
-new priority encoding, hardware acceptance, a release or deployment. Main-first
+new priority encoding or hardware acceptance. Main-first
 `edd41cd25` is published after independent review and all fourteen selected
 package stages; [acceptance and retained limits](status/2026-11-06-product-priority-provenance.md).
 
@@ -49,20 +70,24 @@ not change. Resource admission avoids diagnostic-report expansion and repeated
 normalized-table scans. [Scope and verification](status/2026-11-06-declared-product-folder-captions.md)
 keep the four original-member reader calibrations separate from original-package
 import, original-tool rendering, current placement, native and hardware acceptance.
-Broader manufacturer captions, module authority, staleness and priority remain open;
-this is not a release or deployment.
+Broader manufacturer captions, module authority, staleness and priority remain open.
+Ships in Alpha 20.
 
-## Main-only after Alpha 19: descriptor-pinned pre-write JSON backups
+<a id="main-only-after-alpha-19-descriptor-pinned-pre-write-json-backups"></a>
+
+## Descriptor-pinned pre-write JSON backups in Alpha 20
 
 The bounded LS-07 directory-chain, device-memory writer and service-control writer
 tasks are delivered as `98d2e6953` after the complete selected 14-stage gate,
 independent reviews and compiled negative controls. Existing static aliases and
 `..` remain supported; CWD/substitution and ordinary-path receipt limits fail
 closed. This does not deliver catalogue SQLite/list/delete/restore hardening,
-namespace confinement, permanent paths or physical/power-loss recovery.
+namespace confinement, permanent paths or physical/power-loss recovery. Ships in Alpha 20.
 [Execution and retained boundaries](status/2026-11-05-descriptor-pinned-json-backups.md).
 
-## Main-only after Alpha 19: literal saved schema-20 folder text
+<a id="main-only-after-alpha-19-literal-saved-schema-20-folder-text"></a>
+
+## Literal saved schema-20 folder text in Alpha 20
 
 The bounded WP-06 implementation displays saved `Node/@Text` alongside folder IDs
 and searches the admitted text without changing grouping identity. Published as
@@ -70,21 +95,25 @@ main-first `61e28d225` (source `e4aa31945`), after independent review, branch an
 integrated selected package gates and an actual isolated server build/version
 check. It does not resolve manufacturer captions, source templates, module
 placement or staleness. Other WP-06 requirements stay evidence-gated; this is
-not a release, native or hardware acceptance.
+not native or hardware acceptance. Ships in Alpha 20.
 [Acceptance, original failures and limits](status/2026-11-05-saved-schema20-node-text.md).
 
-## Main-only after Alpha 19: finite System-2 E1–E17 software consolidation
+<a id="main-only-after-alpha-19-finite-system-2-e1e17-software-consolidation"></a>
+
+## Finite System-2 E1–E17 software consolidation in Alpha 20
 
 Main-first `cee41bf0d` closes the named finite caption-class adversarial, actual-worker
 contention/read-lease, lifecycle/history, original-recovery conservation and size/large-project
 software obligations after independent review, two compiled discriminating controls and
 the complete selected 14-stage integrated gate. This is not general source equivalence
 or proof of every possible metadata/adversarial class. Reporter field causes, firmware
-clear timing and physical recovery remain unverified; no new start/recovery authority,
-hardware action, release or deployment follows.
+clear timing and physical recovery remain unverified; no new start/recovery authority
+or hardware action follows. Ships in Alpha 20.
 [Matrix, executed populations and limits](status/2026-11-04-s2-05-software-matrix.md).
 
-## Main-only after Alpha 19: Linux USB/serial transport foundation
+<a id="main-only-after-alpha-19-linux-usbserial-transport-foundation"></a>
+
+## Linux USB/serial transport foundation in Alpha 20
 
 The CLI can select a transparent Busware TUL TP-UART link for passive monitoring
 and confirmed standard-frame group writes. The infrastructure transport and
@@ -99,67 +128,82 @@ successor is software-accepted on main as `edc6c90d5`: explicit by-id
 metadata only, no port probe or compatibility inference.
 [Acceptance and source-bound verification](status/2026-11-05-wp26-passive-serial-candidates.md). Complete USB enumeration,
 wider physical acceptance, extended frames and other USB protocols remain open.
+Ships in Alpha 20.
 [Scope and limits](status/2026-11-04-usb-tpuart.md).
 
-## Main-only after Alpha 19: caption-positive original recovery proof
+<a id="main-only-after-alpha-19-caption-positive-original-recovery-proof"></a>
+
+## Caption-positive original recovery proof in Alpha 20
 
 Four mounted source/namespace cells now exercise original recovery after an
 accepted caption-only source change, including exact OLD model restoration and
 non-vacuous undo/redo MEMORY sanitization. Test-only `77edfc3b3` passed independent
 correction review and both selected 14-stage gates. Broader recovery/source-equivalence,
-race/read-count and E11/E16/S2-05 obligations remain open; no new production policy,
-hardware result, release or deployment follows.
+race/read-count and E11/E16/S2-05 obligations remain open; no new production policy
+or hardware result follows. Ships in Alpha 20.
 [Proof and limits](status/2026-11-04-s2-caption-recovery-authority.md).
 
-## Main-only after Alpha 19: final-verification source matrix
+<a id="main-only-after-alpha-19-final-verification-source-matrix"></a>
+
+## Final-verification source matrix in Alpha 20
 
 The bounded E16 witness now covers retained/standalone preparation and namespaces
 20/23, with failed/healthy workers and pending/marked beliefs (eight leaves/16
 cases). Source `70ad4e24c`, main-first `446480584`, passed independent correction
 review and both selected 14-stage gates. This is test-only characterization, not
 new production behavior or standalone HTTP preparation. Broader E16, lifecycle,
-recovery, races, read counts, source equivalence and S2-05 remain open.
+recovery, races, read counts, source equivalence and S2-05 remain open. Ships in Alpha 20.
 [Evidence and limits](status/2026-11-04-s2-ineligible-terminal-matrix.md).
 
-## Main-only after Alpha 19: bounded System-2 recovery conversion repair
+<a id="main-only-after-alpha-19-bounded-system-2-recovery-conversion-repair"></a>
+
+## Bounded System-2 recovery conversion repair in Alpha 20
 
 The optional original mounted cancellation/recovery simulation now completes with
 its original ten-second deadline. App recovery conversions reuse one freshly
 reconstructed immutable plan per invocation without dropping evidence validation or
 independent admission/backup barriers. This closes the named simulated recovery debt,
 not physical recovery, reporter field failures, general source equivalence or S2-05.
+Ships in Alpha 20.
 [Cause, verification and limits](status/2026-11-04-system2-recovery-conversion.md).
 
-## Main-only after Alpha 19: narrow System-2 caption settlement
+<a id="main-only-after-alpha-19-narrow-system-2-caption-settlement"></a>
+
+## Narrow System-2 caption settlement in Alpha 20
 
 S2-05 now has the accepted finite selected-caption software rule (`288bd8005`),
 with independent review and both complete selected 14-stage package gates. General
 source equivalence remains open; the later finite E1–E17 consolidation above closes
 the named adversarial/race/limit controls, not every source class or S2-05 as a whole.
-No release, deployment, new start/recovery authority or physical verification follows.
+No new start/recovery authority or physical verification follows. Ships in Alpha 20.
 [Acceptance and limits](status/2026-11-03-s2-caption-settlement-candidate.md).
 
-## Main-only after Alpha 19: bounded Color/Time data repair
+<a id="main-only-after-alpha-19-bounded-colortime-data-repair"></a>
+
+## Bounded Color/Time data repair in Alpha 20
 
 WP-08 has a source-authenticated ProductDB v32 successor for exact released-v15
 loser promotions, not a new parameter codec. Published as `5c405bfde` after
 independent review, ten semantic mutant kills and both selected 14-stage gates.
-The wider codec evidence task stays open.
+The wider codec evidence task stays open. Ships in Alpha 20.
 [Acceptance](status/2026-11-03-wp08-color-time-successor.md) ·
 [Contract](contracts/color-time-successor-repair.md).
 
-## Main-only after Alpha 19: import findings after reopening
+<a id="main-only-after-alpha-19-import-findings-after-reopening"></a>
+
+## Import findings after reopening in Alpha 20
 
 WP-25 restores the stored primary report's counted findings into the session log
 at native open. It reuses the existing filtered list and explicit full-report
 reader; no new findings store, schema migration or bus operation. Historical
-provenance, missing legacy evidence and log-cap mismatch remain explicit.
+provenance, missing legacy evidence and log-cap mismatch remain explicit. Ships in
+Alpha 20.
 [Scope and verification](open-work/WP-25-import-findings-after-reopen.md).
 
 ## Alpha 19 pre-release (source cutoff 1 November 2026)
 
-`v0.1.0-alpha.19` is the current pre-release, cut from main at source cutoff
-`858b0a24d`. It ships every delivery merged after Alpha 18 up to that cutoff,
+`v0.1.0-alpha.19` is the previous pre-release, cut from main at source cutoff
+`858b0a24d`. It shipped every delivery merged after Alpha 18 up to that cutoff,
 including read-only OpenKNX/manufacturer distribution inspection (OKX-01 to OKX-07,
 including baggage owners and the opt-in offline HTML view), the DIAG-03 operation
 recorder and consented diagnostic bundle with its reduced session-log, bus-monitor
@@ -171,7 +215,7 @@ the checked IP-address literal editor, the support-read activity-history fix, th
 16 is unchanged. No hardware support, recovery guarantee or ETS equivalence follows;
 the allocation mismatch of issues #30/#22 is unresolved and both stay open.
 [Release scope and boundaries](releases/alpha19.md).
-Work merged on main after `858b0a24d` belongs to the next alpha.
+Deliveries after `858b0a24d` through `dfb3f88b8` ship in Alpha 20.
 
 <a id="distribution-resources-and-offline-inspection-view-1-november-2026"></a>
 
@@ -883,12 +927,14 @@ sections). The three alpha goals are
 finished; they were removed from the tree on 2026-10-08
 ([where to find them](history/REMOVED_DOCS.md)).
 
-## Main-only checked Date text editor (6 November 2026)
+<a id="main-only-checked-date-text-editor-6-november-2026"></a>
+
+## Checked Date text editor in Alpha 20
 
 The [bounded Date editor](contracts/checked-date-text-editor.md) adds source-bound
 calendar preflight and explicit revision-bound Apply to one exact Date text form.
 The existing server validator remains authoritative. This is not a native date
-picker, image codec, module mapping, release or hardware-compatibility claim.
+picker, image codec, module mapping or hardware-compatibility claim. Ships in Alpha 20.
 Broader [WP-08](open-work/WP-08-parameter-value-codecs.md) remains evidence-gated.
 
 ## Current reading guide — 8 October 2026

@@ -25,7 +25,9 @@ an x86_64 Arch Linux host, under XWayland, with a compatible glibc, GTK 3,
 and WebKitGTK 4.1. That is the tested boundary — not a claim that it works on
 other distributions, other architectures, or native Wayland. If you run it
 somewhere else and it works, good; if it does not, that is expected until
-someone tests and documents that combination.
+someone tests and documents that combination. The release AppImage since
+Alpha 20 is built on Ubuntu 24.04 and needs glibc 2.39 or newer on the host; that
+is an ABI floor, not a tested distribution list.
 
 There is currently no ARM64 build, no distribution package, and no
 auto-updater for the desktop shell.

@@ -9,36 +9,40 @@ Read this chapter before you trust KNXBench with a project you care about.
 Every part of KNXBench carries its own version
 ([ADR-0018](../../adr/0018-program-versions-and-file-headers.md)). Since the
 `v0.1.0-alpha.6` release (9 October 2026), application versions have been aligned.
-Alpha 19 is a pre-release with source cutoff 1 November 2026 and aligns the CLI, desktop,
-web frontend, server and `knx-mcp` at `0.1.0-alpha.19`; library crates keep their
-own numbers. Its [release scope](../../releases/alpha19.md) uses source cutoff
-`858b0a24d`. [Installation](04-installation.md) names the Alpha 19 artifacts.
+Alpha 20 is a pre-release with source cutoff 8 November 2026 and aligns the CLI, desktop,
+web frontend, server and `knx-mcp` at `0.1.0-alpha.20`; library crates keep their
+own numbers. Its [release scope](../../releases/alpha20.md) uses source cutoff
+`dfb3f88b8`. [Installation](04-installation.md) names the Alpha 20 artifacts.
 
-Alpha 19 adds `knx products inspect-distribution`, a read-only offline report on
-OpenKNX and other manufacturer distributions that installs nothing and runs no
-scripts. **Report problem…** opens one wizard that builds a reviewed, consented
-diagnostic ZIP from operation recordings, reduced session-log, bus-monitor and
-browser sections and other evidence; nothing is uploaded. Regular programming
-refuses customer-adjustable declarations, omits only bytes proved inactive, can
-report the run state after a download on exact masks and restores only when the
-device answers with the serial number captured in the backup. Settings opens as a
-center page. None of this is new hardware support, and the allocation mismatch
-behind issues #30 and #22 is unresolved. [Release notes](../../releases/alpha19.md)
+Alpha 20 imports group addresses from ETS6 CSV exports with an explicit UTF-8 or
+Windows-1252 choice and adds a group-address description. On Linux, one USB/serial
+TP-UART adapter type can monitor the bus and send group telegrams; optional TCP
+tunnelling covers the bus monitor and its group traffic, while UDP stays the default.
+More device kinds (little-endian numbers, parameters in properties, time parameters)
+can be prepared for a download as *untested*. Object priorities are shown, editable
+and filterable; programming refuses a device whose priority differs from the
+product's. Editing a saved project is much faster (issue #35), a verified System-2
+download keeps its status after unrelated edits, and the AppImage starts for every
+user again. None of this is verified on real hardware, and the allocation mismatch
+behind issues #30 and #22 is unresolved. [Release notes](../../releases/alpha20.md)
 keep the exact boundaries together.
-The manual and README screenshots show the published Alpha 19 server and
-frontend, including step-by-step pictures of the new **Report problem…** wizard.
+The manual and README screenshots still show the published Alpha 19 server and
+frontend; they do not show the Alpha 20 additions yet.
 
 **Before upgrading:** close the app and independently back up `.knxdb` files and
 all Docker data, including the product database and device backups. Native/store
-and core model **16** are unchanged; the product database moves **30 → 31** on a
-writable open, and Alpha 18 refuses it. Opening Alpha 19 files in Alpha 18 is
-**not tested**. Alpha 18 also refuses device backups of format 3/4, activity-history
-pages with the new support-read kind and System-2 journals with an
-allocation-comparison record. Backups of format 1/2 no longer restore. Alpha 17
-refuses product30; Alpha 11 and earlier refuse native16. Returning means restoring
-independent copies, not pressing Undo. Update `knx-mcp` with the application.
+and core model move **16 → 19** and the product database **31 → 32** on a writable
+open. Alpha 19 refuses both (`FutureSchemaVersion` for projects; for the catalogue
+`FutureVersion`, and the server starts without products), and cannot read the new
+System-2 `Download_Flag` journal entries. Alpha 18 refuses product31 and device
+backups of format 3/4; Alpha 11 and earlier refuse native16 and newer. Returning
+means restoring independent copies, not pressing Undo. Update `knx-mcp` with the
+application.
 
-**Earlier releases:** [Alpha 18](../../releases/alpha18.md) added the System-2
+**Earlier releases:** [Alpha 19](../../releases/alpha19.md) added offline
+distribution inspection, the **Report problem…** diagnostic bundle, narrower regular
+programming and restore rules and Settings as a center page.
+[Alpha 18](../../releases/alpha18.md) added the System-2
 run result, final-step category, S2 chip and report, group-address CSV profiles and
 German CLI reports. [Alpha 17](../../releases/alpha17.md) added the
 UP 258D12 prestate observations and the regular-download checks. [Alpha 16](../../releases/alpha16.md) added cancellable

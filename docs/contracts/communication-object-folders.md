@@ -271,7 +271,9 @@ in the server, storage, API, bindings or write path changes.
   no command; the existing dirty-field blur-save can still fire when focus moves
   to a view button, as it does for filters.
 
-## Saved schema-20 node text (5 November 2026 source delivery)
+<a id="saved-schema-20-node-text-5-november-2026-source-delivery"></a>
+
+## Saved schema-20 node text (since Alpha 20)
 
 The [bounded source contract](../research/2026-11-05-saved-schema20-node-text.md)
 admits an optional literal saved `Node/@Text`, not a manufacturer caption.

@@ -19,11 +19,11 @@ manufacturer publishes, not something KNXBench invents. See
 This chapter covers the catalog, adding a device, and the device panel's objects,
 parameters, product data, diagnostics and inspection-only manufacturer fields.
 
-> Section labels such as *since Alpha 18* or *since Alpha 19* name the first
-> pre-release that carries the behaviour. Alpha 19 (source cutoff 1 November 2026) is the
-> current pre-release; its [release scope](../../releases/alpha19.md)
-> keeps the exact boundaries together. [Alpha 18](../../releases/alpha18.md) was
-> published on 29 October 2026.
+> Section labels such as *since Alpha 19* or *since Alpha 20* name the first
+> pre-release that carries the behaviour. Alpha 20 (source cutoff 8 November 2026) is the
+> current pre-release; its [release scope](../../releases/alpha20.md)
+> keeps the exact boundaries together. [Alpha 19](../../releases/alpha19.md) was
+> published on 1 November 2026.
 
 ## The Devices view
 
@@ -118,7 +118,7 @@ filter after opening review does not change the reviewed list. Choose a
 gateway and confirm the **read-only** operation once for the whole list.
 Opening the review alone contacts no device.
 
-**Main-only after Alpha 19:** the opened device editor also has **Compare**
+**Since Alpha 20:** the opened device editor also has **Compare**
 beside **Download to device…**. It reviews exactly that device, regardless of
 the table filter or checkboxes, and uses the same gateway confirmation, running
 operation and session results as the table. Settings/Back retains the review's
@@ -1012,7 +1012,7 @@ edit the project; they do not connect to, program or download a KNX device.
 which helps when picking a group address of matching size. Without product data
 the size stays blank rather than guessed.
 
-**Priority column** (current source, not yet released): the **Priority column**
+**Priority column** (since Alpha 20): the **Priority column**
 button above the table adds a column with each object's effective project
 priority (`Low`, `High` or `Alert`) and a short note where it comes from: *yours*
 (set by you), *saved* (from the imported project) or *product*. Hover a cell for
@@ -1126,7 +1126,7 @@ channel view, and each view keeps its own expansion. Switching views adds no
 write, but moving focus from a dirty field to a view button can trigger the
 existing blur-save described above.
 
-**Changed since import — current source, not yet released.** When the
+**Changed since import (since Alpha 20).** When the
 table shows saved folders, KNXBench also checks whether the device's parameter
 values or its set of objects differ from the imported project file. If they do,
 a note says that the device has been changed since import and that the folders
@@ -1136,7 +1136,7 @@ original data cannot be checked, the note says why. Other edits, such as names,
 descriptions, flags or group links, do not count. See the
 [contract](../../contracts/saved-folder-currency.md).
 
-**Literal saved folder text — main-only after Alpha 19.**
+**Literal saved folder text (since Alpha 20).**
 
 The bounded schema-20 implementation additionally shows the text saved on a
 folder node, alongside its ID. This text is not a translated/current manufacturer
@@ -1226,7 +1226,7 @@ These six flags are retained in native `.knxdb` project data. There is no
 `.knxproj` writer; editing a flag does not program hardware or establish that a
 manufacturer's application permits that combination.
 
-**Saved project priority** (current source, not yet released) shows what the
+**Saved project priority** (since Alpha 20) shows what the
 imported ETS project file itself declared for this object instance, verbatim:
 a recognised value such as `Low`, an empty or unrecognised literal in quotes, a
 note that the object declared none, or why nothing was captured (for example a
@@ -1235,7 +1235,7 @@ is not supported). A second line names the captured source schema and object. It
 effective priority, not the product default and not what KNXBench would send on
 the bus, and it cannot be edited.
 
-**Effective project priority** (current source, not yet released) shows which
+**Effective project priority** (since Alpha 20) shows which
 priority applies to the object in the project. If the saved object declares
 `Low`, `High` or `Alert`, that value applies. If it declares nothing, or the
 project file has no entry for the object at all, the value comes from the
@@ -1246,7 +1246,7 @@ falling back to the product. Without an open product database, without an
 application program, or when the product states no priority, the row says so
 rather than assuming `Low`. It is not read from the device.
 
-**Your priority** (current source, not yet released) sets the object's priority
+**Your priority** (since Alpha 20) sets the object's priority
 yourself. Your choice wins over the saved value and the product value, and the
 effective row then says *Set by you in KNXBench*. *Not set by you* removes it.
 Each change is one undoable edit and is saved in the `.knxdb` file; the saved
@@ -1341,7 +1341,7 @@ works exactly as in the row view, and switching areas keeps your drafts. Areas
 without a declared grid stay in rows with a short note saying so; an unknown or
 unreadable layout description also falls back to rows and names the reason.
 Search results are always rows. Wide grids scroll sideways inside the area on
-narrow windows. On main, a button the product data places in a grid cell shows
+narrow windows. Since Alpha 19, a button the product data places in a grid cell shows
 only its literal text, marked **Source button label – action unsupported**: it
 is plain text, cannot be clicked or focused, and its action is not supported.
 The note above such a grid says the label is shown but its action is not
@@ -1430,7 +1430,7 @@ what that data proves:
   Only **Apply value** writes a changed
   valid draft; opening, Enter and blur write nothing. There is no new device
   or memory-image support.
-- **Date (source builds after Alpha 19):** one exact source declaration offers
+- **Date (since Alpha 20):** one exact source declaration offers
   a checked text field. Enter `yyyy-mm-dd` with a real Gregorian day, for example
   `2000-02-29`; `1900-02-29` is invalid. The editor does not convert the value or
   impose the bus datapoint's year range. Select the whole displayed value to

@@ -77,9 +77,21 @@ ZIP excludes parameter values; the older ended-download verification report is
 separate and can contain them. See the
 [reporting guide](../user-guide/08-reports-and-diff.md#universal-device-support-reporting).
 
-**What changes when I upgrade to Alpha 19?**
+**What changes when I upgrade to Alpha 20?**
 
-Native/store and model 16 are unchanged. The product database moves from 30 to 31
+Native/store and model move from 16 to 19 (saved priority, your priority edits,
+group-address descriptions) and the product database from 31 to 32 (a data-only
+Color/Time repair), both on writable open, including server, desktop and Docker
+startup and writing CLI commands. Read-only readers migrate only in memory. Alpha 19
+refuses schema-19 projects (`FutureSchemaVersion`) and product32 (`FutureVersion`;
+the server then starts without products), and cannot read the new System-2
+`Download_Flag` journal entries. Going back is not tested: close KNXBench and keep
+independent project/catalogue/device-backup/Docker-data copies first, and restore
+them to return. [Release scope](../../releases/alpha20.md#upgrade).
+
+**What changed when upgrading to Alpha 19?**
+
+Native/store and model 16 were unchanged. The product database moved from 30 to 31
 through one data-only migration on writable open, including server, desktop and
 Docker startup and catalogue-writing CLI commands. Read-only readers migrate only in
 memory. Alpha 18 refuses product31 and starts without products. It also refuses
@@ -192,7 +204,7 @@ exists," not certification by the KNX Association.
 
 **What does "alpha" mean for this project specifically?**
 
-The `0.1.0-alpha` series is at `v0.1.0-alpha.19`. Concretely: `docs/KNOWN_LIMITATIONS.md` lists
+The `0.1.0-alpha` series is at `v0.1.0-alpha.20`. Concretely: `docs/KNOWN_LIMITATIONS.md` lists
 known limitations, several classified critical, and writing to a real device is verified
 only for narrowly recorded device/application cases. See
 [Project status](../getting-started/03-project-status.md) for the evidence boundaries and what

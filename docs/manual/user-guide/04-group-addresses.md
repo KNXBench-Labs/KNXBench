@@ -65,7 +65,7 @@ addresses, the same search, filter and range scope, and the same selection: sele
 an address in one view, switch, and it is still selected. Editing always happens in
 the properties pane and the existing commands; no view edits on its own.
 
-**Main-only after Alpha 19:** selecting a range in Columns or Atlas takes over
+**Since Alpha 20:** selecting a range in Columns or Atlas takes over
 from the initial Explorer range, so a populated sibling sub-range keeps its
 addresses. Activating a range in the Explorer takes navigation back, even when
 you activate the same range again. Selecting an address does not reset the local
@@ -303,8 +303,9 @@ few hundred names in a spreadsheet without clicking through a few hundred rows.
 > **Note**
 >
 > This is KNXBench's own format — "KNXBench group-address CSV v1". It is not ETS's
-> group-address export, and no sample of ETS's own format exists in this project to
-> check against, so nothing here claims the two interoperate.
+> group-address export. Since Alpha 20 the import also reads ETS6 exports through
+> fixed column profiles (see below); they were checked against the project's own
+> fictional ETS6 6.4.1 export set, which is not a general interoperability claim.
 
 ### The columns
 
@@ -383,8 +384,8 @@ Three boundaries remain:
   range that already contains it; if no range does, the address is created without one
   and the report says so.
 
-There are no description or comment columns in either direction, because the domain
-model does not carry those fields for a group address yet.
+Since Alpha 20 the `Description` column is exported and imported as described in the
+table above; there is still no comment column.
 
 After an import, a summary appears as a toast with every outcome count, plus warnings
 and ignored columns and a pointer to the Log. If the file was rejected or the preview

@@ -92,6 +92,54 @@ live-process count does not discriminate here (the recovery respawns the web
 process), and no screenshot was taken. The reporter's own machine
 (Kubuntu 24.04) has not been tested; details were requested in issue #6.
 
+## Release baseline and catalog permissions
+
+Automatic AppImage builds run only on `v*` release-tag pushes. Ordinary branch
+commits, pull requests and schedules do not build images. `workflow_dispatch`
+remains available for deliberate release-preparation verification. The workflow
+validator rejects additional triggers.
+
+The AppImage build job is pinned to **Ubuntu 24.04**, rather than
+`ubuntu-latest`, to keep a maximum **glibc 2.39** requirement. The finished-image
+check `python3 tools/check_appimage_glibc.py <AppImage> --max-version 2.39`
+examines undefined versioned symbols and numeric version-needs entries in
+every packaged ELF and in the outer runtime, including weak references. It does not confuse exported version
+definitions with requirements. A newer requirement, corrupt ELF or empty
+payload fails publication. This is an ABI ceiling, not universal distribution
+compatibility; the host still provides libc and the graphics stack.
+
+The alpha.19 catalog failure had two independent packaging causes: the wrapped
+launcher was 0770, and a moved `ubuntu-latest` runner introduced glibc 2.43
+references in six bundled libraries. The [artifact/source investigation](research/2026-11-08-appimage-catalog-packaging.md)
+records the checksum, exact files and build log. Published alpha.19 assets are
+not replaced by this source change.
+
+`tools/appimage/permissions.sh` runs at the end of the pinned GTK input plugin,
+when Tauri has already copied its cached AppRun into the AppDir, before the
+AppImage output plugin packages it. It makes directories readable/searchable and
+files readable to everyone, retains executable bits and explicitly enables
+execution of the launcher and any already-created wrapped launcher. It removes
+group/other write permission, does not mark ordinary data executable and does
+not follow arbitrary payload symlinks. Launcher symlinks must resolve to regular
+files inside the AppDir. If wrapping happens later, renaming the corrected
+launcher preserves its mode.
+
+`tools/appimage/check-permissions.sh <AppImage>` reads the actual SquashFS via
+`--appimage-offset` and `unsquashfs`, not the runtime extractor (which creates
+0700 directories irrespective of their packaged modes). It inspects the finished package:
+all directories must be readable/searchable, files readable, entries not
+world-writable, and both launchers, when present or referenced, readable and
+executable by everyone. Missing launchers and escaping launcher links fail.
+
+The cross-user offline smoke executes the **packaged AppRun**, extracted by
+root through `unsquashfs` in CI, as an unprivileged test UID. It does not repair the test input
+or extract it as that UID (which would conceal 0770). Private HOME/XDG directories
+and a network namespace with only loopback isolate application data and external
+networking. The native window must belong to the app, have rendered central
+content and have a ready local frontend. Its retained receipt/window capture is
+startup evidence, not full native/accessibility acceptance or a new catalog
+result. WebKit's sandbox is not disabled.
+
 ## Reproducible build integration
 
 Tauri CLI **2.11.4**, the version pinned by the release workflow, runs
@@ -101,7 +149,8 @@ Tauri CLI **2.11.4**, the version pinned by the release workflow, runs
 `apps/knx-desktop/src-tauri`, exactly as Tauri does, so Cargo config and a
 relative/custom `CARGO_TARGET_DIR` are respected.
 
-`tools/prepare_appimage_tools.py` prepares **only** that GTK deploy plugin:
+`tools/prepare_appimage_tools.py` prepares that GTK deploy plugin, including
+the owned host-library and pre-packaging permission policies:
 
 1. Fetch the immutable upstream source on its first run; read at most 128 KiB
    plus one overflow-detection byte, with a 30-second request timeout.
@@ -124,14 +173,15 @@ Pinned GTK deploy source:
 The user's global `~/.cache/tauri` is not patched. The inspected global cache
 was an older plugin than this pin; consequently this is not a byte-for-byte
 repack of the released alpha. Library/resource deployment stays upstream-owned
-at the pinned revision; only the launcher assignment is changed relative to
-that revision. Do not share one Cargo target/tool directory between independent
-applications' bundlers. Tauri's other deploy tools retain its normal download
+at the pinned revision; the display assignment and appended host-library/permission
+policies are the project-owned changes relative to that revision. Do not share
+one Cargo target/tool directory between independent applications' bundlers. Tauri's other deploy tools retain its normal download
 behavior; this change does not make the entire toolchain hermetic.
 
 **Dependencies:** Python 3 standard library for preparation/tests; the existing
-Tauri/linuxdeploy toolchain. Weston and Xvfb are smoke-test tools, not runtime
-resources or new application dependencies. No Rust/npm dependency was added.
+Tauri/linuxdeploy toolchain. SquashFS tools, X11 inspection tools, Weston and
+Xvfb are packaging/smoke-test tools, not runtime resources or new application
+dependencies. No Rust/npm dependency was added.
 
 ### Recovery from a tool-cache error
 
@@ -220,7 +270,8 @@ workflow evidence, not Orca acceptance, every-picker coverage or a new release.
 Focused automated checks:
 
 ```sh
-python3 -m unittest tools.tests.test_appimage_launcher -v
+python3 -m unittest tools.tests.test_appimage_launcher tools.tests.test_appimage_glibc tools.tests.test_appimage_extraction -v
+cargo test -p xtask appimage
 ```
 
 The suite exercises session hints, backend ordering, X11 defaults, wildcard

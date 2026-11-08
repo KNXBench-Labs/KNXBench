@@ -2,6 +2,8 @@
 
 **Status:** Saved schema-20 text display delivered; bounded literal installed-product declaration fallback and captured saved-instance priority foundation software-accepted on main; broader slices remain evidence-gated. Listed in [OPEN_WORK](../OPEN_WORK.md); per-ID status of record is the [ledger](../status/LEDGER.md).
 
+**Evidence route (8 November 2026):** clean-room observation is admitted by the owner ([OWN-01](OWN-01-owner-decisions.md#decisions-recorded--8-november-2026), [rules](../RESEARCH.md#evidence-routes)); no observation has been made for this package yet.
+
 ## Admitted increment — saved schema-20 node text
 
 The [source observation and bounded contract](../research/2026-11-05-saved-schema20-node-text.md)

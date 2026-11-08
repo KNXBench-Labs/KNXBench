@@ -193,6 +193,23 @@ bounded Properties/navigation records are unchanged. Orca, Firefox,
 GPU/AppImage, other sizes/themes and the wider matrix remain outside this
 slice; ledger status is unchanged.
 
+## Acceptance target — owner decision 8 November 2026
+
+The owner chose the simplest complete target. Required are the cells that run
+on the development machine under the 27 October consent, with fictional or
+simulator data on current source:
+
+- WebKitGTK keyboard, focus, draft and dialog behaviour of the named editors
+  (notes, instructions, checked parameters);
+- Wayland save, cancel and overwrite paths, including the bus-monitor capture
+  export;
+- the zoom cells at 80, 100 and 150 %.
+
+Orca and other screen readers, Firefox as the app host, the AppImage on a
+newer-Mesa host (issue #6) and other desktops or compositors stay explicitly
+untested boundaries. They are documented, not claimed, and need no further
+work for WP-11.
+
 ## Done when
 
 Native actions and resulting files/states are recorded for each tested cell;

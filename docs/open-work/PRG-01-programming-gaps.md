@@ -264,6 +264,11 @@ Broader inactive/default/Union/customer-write rules and PRG-01 remain open.
   manifests contained no such selection evidence. That is not an exhaustive
   negative finding about every retained artifact and supplies no category
   attribution. Pins and opt-in expectations are unchanged.
+  **Owner decision 8 November 2026:** stop searching for the historical selection
+  and replace it with a new documented baseline: a named, hash-listed fixture set
+  at a named commit, with per-category attribution, labelled as characterisation
+  rather than an independent oracle. Old pins stay in history; every changed
+  count is explained, no silent repin.
 
 ## Boundaries
 

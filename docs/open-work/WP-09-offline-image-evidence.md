@@ -2,13 +2,18 @@
 
 **Status:** Blocked: evidence. Listed in [OPEN_WORK](../OPEN_WORK.md); per-ID status of record is the [ledger](../status/LEDGER.md).
 
+**Evidence route (8 November 2026):** clean-room observation is admitted by the owner ([OWN-01](OWN-01-owner-decisions.md#decisions-recorded--8-november-2026), [rules](../RESEARCH.md#evidence-routes)); no observation has been made for this package yet.
+
 ## Task
 
 Settle each offline-image encoding question with defining evidence. Each is a
 separate question; a probe for one does not settle the others:
 
-- KL-170: per-type byte placement (byte order).
-- KL-171: UTF-8 byte capacity, termination and cut rule.
+- KL-170: per-type byte placement (byte order). Whole-octet LittleEndian
+  numbers are partly lifted since 7 November 2026 (ADR-0159); fields across
+  octet boundaries, legacy layouts and other orders remain.
+- KL-171: UTF-8 byte capacity, termination and cut rule. Programs without a
+  declared encoding write Windows-1252 since 7 November 2026; UTF-8 remains.
 - KL-172: `LoadedImage`/`CheckSums` payload.
 - G10: hidden PID-78 parameter placement (write, compare or ignore).
 - G14: segment `Data` shorter than `Size` (fill rule).

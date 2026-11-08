@@ -30,7 +30,7 @@ The narrow caption class and physical/general-equivalence limits are unchanged.
   octet itself ([research](../research/2026-11-01-up258-post-load-flag-octet.md)). Source since
   2 November 2026: a revision-3 UP258 preparation declares that octet, journals and shows each
   tolerated value; every other byte stays strict. Open: a field run of a build that contains it
-  (not requested), and the exact clear time (Load Completed or restart).
+  (requested 8 November 2026 in #30), and the exact clear time (Load Completed or restart).
 - General per-part source equivalence stays open. Since main-first `0d6299187`
   (2 November 2026) a verified run on a proven
   unchanged source credits the parts the current project still states as written.
@@ -93,8 +93,9 @@ The narrow caption class and physical/general-equivalence limits are unchanged.
   cross. Later lifecycle, complete backup conservation and real-worker contention
   evidence is recorded in the software consolidation above; it does not rewrite
   these historical verdicts or authorize physical recovery.
-- Field verification by the reporter is not requested; no hardware retry is needed
-  for the software change.
+- Field verification: one optional reporter run on a current `main` build was
+  requested on 8 November 2026 ([#30](https://github.com/KNXBench-Labs/KNXBench/issues/30#issuecomment-6718382084)); the software change itself needs
+  no hardware retry.
 
 ## Update 28 October 2026: final-step failure category (source, focused proof)
 

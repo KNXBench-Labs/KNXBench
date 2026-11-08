@@ -10,6 +10,26 @@ Every statement below is tagged:
 * **[D]** — documented by a public, citable source, not verified here.
 * **[A]** — assumption or inference. Must be validated before it drives an irreversible design decision.
 
+<a id="evidence-routes"></a>
+### Evidence routes (owner decision, 8 November 2026)
+
+Work blocked on evidence may use data the project observes itself, under a
+clean-room rule:
+
+* **Admitted sources:** ETS recorded against KNXBench's own simulator or
+  exporting fictional projects; the private local corpus; material a reporter
+  sent for an issue; backups and captures of the owner's own devices.
+* **Recording:** describe the finding in own words in `docs/research/`, naming
+  the observation (tool and version, setup, what was varied) and tagging it
+  **[V]**. Private projects, product data, vendor code or binaries and raw
+  captures stay out of Git.
+* **Scope:** an observation proves the observed case only. Discriminating cases,
+  negative controls and refusal of everything unobserved still follow the
+  package contract. ETS behaviour is evidence of what ETS does, not of what a
+  device does; device behaviour needs its own field or hardware evidence.
+* **Unchanged:** no vendor or KNX Association contact; live-bus and device
+  access follow the hardware rules in `AGENTS.md`.
+
 ## Where the research lives
 
 Split by topic on 2026-10-04 (AR14D D4). Section numbers stay global and

@@ -1,6 +1,6 @@
 # GATE-01 — Test-gate speed and stability follow-ups
 
-**Status:** Open. Listed in [OPEN_WORK](../OPEN_WORK.md); per-ID status of record is the [ledger](../status/LEDGER.md).
+**Status:** Open; parked until release preparation (owner decision 8 November 2026). Listed in [OPEN_WORK](../OPEN_WORK.md); per-ID status of record is the [ledger](../status/LEDGER.md).
 
 Small and optional; none blocks a delivery.
 

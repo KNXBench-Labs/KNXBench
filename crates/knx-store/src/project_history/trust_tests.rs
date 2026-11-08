@@ -62,8 +62,17 @@ fn trusted(
     stack: &CommandStack,
     trust: &JournalTrust,
 ) -> (JournalTrust, (usize, usize)) {
-    let ((generation, next), built) =
-        built(|| save_editor_trusting(&file.conn, working, stack, file.generation, trust).unwrap());
+    let ((generation, next), built) = built(|| {
+        save_editor_trusting(
+            &file.conn,
+            working,
+            stack,
+            file.generation,
+            trust,
+            &mut JournalWriteReport::default(),
+        )
+        .unwrap()
+    });
     file.generation = generation;
     (next, built)
 }
@@ -151,7 +160,14 @@ fn a_baseline_changed_by_another_writer_is_hashed_again_and_refused() {
         .execute("UPDATE project_info SET name = 'Saved elsewhere'", [])
         .unwrap();
     stack.do_command(&mut working.project, style(1)).unwrap();
-    let refused = save_editor_trusting(&file.conn, &working, &stack, file.generation, &trust);
+    let refused = save_editor_trusting(
+        &file.conn,
+        &working,
+        &stack,
+        file.generation,
+        &trust,
+        &mut JournalWriteReport::default(),
+    );
     assert!(matches!(refused, Err(HistoryError::Stale)), "{refused:?}");
 }
 
@@ -192,7 +208,14 @@ fn a_known_context_whose_bytes_changed_is_refused() {
         )
         .unwrap();
     stack.do_command(&mut working.project, style(1)).unwrap();
-    let refused = save_editor_trusting(&file.conn, &working, &stack, file.generation, &trust);
+    let refused = save_editor_trusting(
+        &file.conn,
+        &working,
+        &stack,
+        file.generation,
+        &trust,
+        &mut JournalWriteReport::default(),
+    );
     assert!(
         refused.is_err(),
         "damaged context bytes must not be trusted"
@@ -286,7 +309,14 @@ fn a_known_version_context_whose_bytes_changed_is_refused() {
         )
         .unwrap();
     stack.do_command(&mut working.project, style(2)).unwrap();
-    let refused = save_editor_trusting(&file.conn, &working, &stack, file.generation, &trust);
+    let refused = save_editor_trusting(
+        &file.conn,
+        &working,
+        &stack,
+        file.generation,
+        &trust,
+        &mut JournalWriteReport::default(),
+    );
     assert!(
         refused.is_err(),
         "damaged version context bytes must not be trusted"
@@ -348,4 +378,67 @@ fn only_a_trusting_read_captures_the_context() {
     assert_ne!(trusting.take_trust(), JournalTrust::from_rows(rows.clone()));
     // Taken once: a second call knows only the rows.
     assert_eq!(trusting.take_trust(), JournalTrust::from_rows(rows));
+}
+
+#[test]
+fn a_write_reports_its_phases_and_what_it_reused() {
+    let seed = seed();
+    let mut file = saved(&seed);
+    let mut working = seed.clone();
+    let mut stack = CommandStack::new();
+    stack.do_command(&mut working.project, style(0)).unwrap();
+    let mut cold = JournalWriteReport::default();
+    let (generation, trust) = save_editor_trusting(
+        &file.conn,
+        &working,
+        &stack,
+        file.generation,
+        &JournalTrust::default(),
+        &mut cold,
+    )
+    .unwrap();
+    file.generation = generation;
+    let names: Vec<_> = cold.phases.iter().map(|(name, _)| *name).collect();
+    assert_eq!(
+        names,
+        [
+            "lock",
+            "admission",
+            "versions",
+            "rootRead",
+            "baselineHash",
+            "context",
+            "workingImage",
+            "stackRows",
+            "limits",
+            "commit"
+        ]
+    );
+    assert_eq!((cold.undo_states, cold.redo_states), (1, 0));
+    assert_eq!(
+        (cold.kept_rows, cold.copied_rows, cold.encoded_rows),
+        (0, 0, 1)
+    );
+    assert!(!cold.context_reused && !cold.baseline_hash_reused);
+    assert!(cold.context_bytes > 0);
+
+    name_version(&mut file, &working, "Named");
+    stack.do_command(&mut working.project, style(1)).unwrap();
+    let mut warm = JournalWriteReport::default();
+    save_editor_trusting(
+        &file.conn,
+        &working,
+        &stack,
+        file.generation,
+        &trust,
+        &mut warm,
+    )
+    .unwrap();
+    assert_eq!((warm.undo_states, warm.saved_versions), (2, 1));
+    assert_eq!(
+        (warm.kept_rows, warm.copied_rows, warm.encoded_rows),
+        (1, 1, 0)
+    );
+    assert!(warm.context_reused && warm.baseline_hash_reused);
+    assert_eq!(warm.context_bytes, cold.context_bytes);
 }

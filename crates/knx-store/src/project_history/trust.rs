@@ -134,20 +134,25 @@ impl JournalTrust {
     /// The semantic hash of `snapshot`: the remembered one when it equals the
     /// remembered baseline, otherwise computed.
     pub(super) fn semantic_hash(&self, snapshot: &NativeSnapshot) -> Result<String, HistoryError> {
-        if let Some(baseline) = &self.baseline {
-            let same_context = match &baseline.retained {
-                Some((opaque, manufacturer_refs)) => {
-                    snapshot.opaque == *opaque && snapshot.manufacturer_refs == *manufacturer_refs
-                }
-                None => self
-                    .context
-                    .as_ref()
-                    .is_some_and(|known| known.holds(snapshot)),
-            };
-            if same_context && snapshot.project == baseline.project {
-                return Ok(baseline.hash.clone());
-            }
+        match self.known_semantic_hash(snapshot) {
+            Some(hash) => Ok(hash),
+            None => snapshot.semantic_hash(),
         }
-        snapshot.semantic_hash()
+    }
+
+    /// The remembered semantic hash of `snapshot` when it equals the
+    /// remembered baseline, value and retained context alike.
+    pub(super) fn known_semantic_hash(&self, snapshot: &NativeSnapshot) -> Option<String> {
+        let baseline = self.baseline.as_ref()?;
+        let same_context = match &baseline.retained {
+            Some((opaque, manufacturer_refs)) => {
+                snapshot.opaque == *opaque && snapshot.manufacturer_refs == *manufacturer_refs
+            }
+            None => self
+                .context
+                .as_ref()
+                .is_some_and(|known| known.holds(snapshot)),
+        };
+        (same_context && snapshot.project == baseline.project).then(|| baseline.hash.clone())
     }
 }

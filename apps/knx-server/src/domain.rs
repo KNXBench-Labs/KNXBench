@@ -90,6 +90,8 @@ pub struct AppState {
     /// re-encoding every undo state. Correctness never depends on it being
     /// current: the store keeps a row only while its stored hash matches.
     pub persisted_history: Mutex<Option<PersistedHistory>>,
+    /// Timings of the recent journal writes, for the diagnostic bundle (issue #35).
+    pub journal_writes: Mutex<crate::journal_write_log::RecentJournalWrites>,
     /// (errors, warnings) from the initial import's `ImportReport`,
     /// reapplied to every tree rebuilt after a command/undo/redo — edits
     /// don't change what import lost. `(0, 0)` for a `.knxdb` native load.
@@ -400,6 +402,7 @@ impl AppState {
             command_stack: Mutex::new(knx_core::CommandStack::new()),
             history_generation: Mutex::new(0),
             persisted_history: Mutex::new(None),
+            journal_writes: Default::default(),
             import_counts: Mutex::new((0, 0)),
             import_report_available: AtomicBool::new(true),
             import_report_historical: AtomicBool::new(false),
@@ -3193,10 +3196,35 @@ fn persist_native_working_reported(
     let Some(path) = path.as_deref() else {
         return Ok(false);
     };
+    let started = std::time::Instant::now();
+    let mut report = knx_store::project_history::JournalWriteReport::default();
+    let result = write_native_journal(state, path, project, stack, &mut report);
+    state
+        .journal_writes
+        .lock()
+        .expect("state mutex poisoned")
+        .record(crate::journal_write_log::JournalWriteRecord {
+            at: chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Millis, true),
+            total: started.elapsed(),
+            ok: result.is_ok(),
+            report,
+        });
+    result.map(|()| true)
+}
+
+/// The journal write of [`persist_native_working_reported`], reporting its phases.
+fn write_native_journal(
+    state: &AppState,
+    path: &std::path::Path,
+    project: &knx_core::Project,
+    stack: &knx_core::CommandStack,
+    report: &mut knx_store::project_history::JournalWriteReport,
+) -> Result<(), String> {
     let mut generation = state
         .history_generation
         .lock()
         .expect("state mutex poisoned");
+    let started = std::time::Instant::now();
     let snapshot = knx_store::project_history::NativeSnapshot {
         project: project.clone(),
         opaque: state.opaque.lock().expect("state mutex poisoned").clone(),
@@ -3214,12 +3242,14 @@ fn persist_native_working_reported(
     let trust = persisted.take().map_or_else(Default::default, |earlier| {
         earlier.into_trust(project, stack)
     });
+    report.phase("prepare", started);
     let (next, trust) = knx_app::project_history::persist_working_trusting(
         path,
         &snapshot,
         stack,
         *generation,
         &trust,
+        report,
     )?;
     *generation = next;
     *persisted = Some(PersistedHistory {
@@ -3227,7 +3257,7 @@ fn persist_native_working_reported(
         stack: stack.clone(),
         trust,
     });
-    Ok(true)
+    Ok(())
 }
 
 /// The project, stack and journal knowledge of this server's last journal

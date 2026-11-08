@@ -2,6 +2,7 @@
 
 use std::collections::HashSet;
 use std::fmt;
+use std::time::Instant;
 
 use crate::StoreError;
 use knx_core::{CommandStack, Project};
@@ -125,8 +126,10 @@ mod snapshot;
 mod trust;
 #[cfg(test)]
 mod trust_tests;
+mod write_report;
 pub use snapshot::{image_hash, NativeSnapshot};
 pub use trust::JournalTrust;
+pub use write_report::JournalWriteReport;
 #[derive(Debug)]
 pub struct EditorHistory {
     pub generation: i64,
@@ -599,23 +602,49 @@ fn write_workspace(
     stack: &CommandStack,
     generation: i64,
     reuse: Reuse<'_>,
+    report: &mut JournalWriteReport,
 ) -> Result<JournalTrust, HistoryError> {
     let (undo_steps, redo_steps) = stack.history_lengths();
     if undo_steps.saturating_add(redo_steps) > MAX_STACK_STATES {
         return Err(HistoryError::Limit("undo and redo exceed 256 states"));
     }
+    report.undo_states = undo_steps;
+    report.redo_states = redo_steps;
     let trust = reuse.trust;
-    let baseline_hash = trust.semantic_hash(baseline)?;
-    let context = context::remember(conn, working, trust.context(), reuse.context_verified)?;
+    let started = Instant::now();
+    let baseline_hash = match trust.known_semantic_hash(baseline) {
+        Some(hash) => {
+            report.baseline_hash_reused = true;
+            hash
+        }
+        None => baseline.semantic_hash()?,
+    };
+    report.phase("baselineHash", started);
+    let started = Instant::now();
+    let (context, context_reused) =
+        context::remember(conn, working, trust.context(), reuse.context_verified)?;
+    report.context_reused = context_reused;
+    report.context_bytes = conn
+        .query_row(
+            "SELECT length(image) FROM project_history_context WHERE content_hash = ?1",
+            [&context.content_hash],
+            |r| r.get::<_, i64>(0),
+        )
+        .map_or(0, |bytes| u64::try_from(bytes).unwrap_or(0));
+    report.phase("context", started);
     let context_hash = context.content_hash.clone();
+    let started = Instant::now();
     let previous_working = known_working_image(conn, trust)?;
     let image = context::model_image(&working.project)?;
     let working_image_hash = image_hash(&image);
+    report.phase("workingImage", started);
+    let started = Instant::now();
     let reuse = &trust.rows;
     // Kept rows hold exactly the states a full rewrite would produce; every
     // stack row pairs with the working context, as a full rewrite stores it.
     let keep_undo = kept_rows(conn, "undo", &reuse.undo)?.min(undo_steps);
     let keep_redo = kept_rows(conn, "redo", &reuse.redo)?.min(redo_steps);
+    report.kept_rows = keep_undo + keep_redo;
     conn.execute(
         "DELETE FROM project_history_stack WHERE (side = 'undo' AND position >= ?1) OR (side = 'redo' AND position >= ?2)",
         params![keep_undo as i64, keep_redo as i64],
@@ -660,9 +689,11 @@ fn write_workspace(
                 };
                 let (image, hash) = match &previous_working {
                     Some(known) if known.project == project => {
+                        report.copied_rows += 1;
                         (known.image.clone(), known.hash.clone())
                     }
                     _ => {
+                        report.encoded_rows += 1;
                         let image = context::model_image(project)?;
                         let hash = image_hash(&image);
                         (image, hash)
@@ -703,7 +734,10 @@ fn write_workspace(
     if !complete {
         return Err(refusal.unwrap_or(HistoryError::Invalid("history admission stopped")));
     }
+    report.phase("stackRows", started);
+    let started = Instant::now();
     check_limits(conn)?;
+    report.phase("limits", started);
     Ok(JournalTrust::knowing(
         rows,
         context,
@@ -724,7 +758,9 @@ fn append_version(
             "version label must contain 1 to 120 characters",
         ));
     }
-    let context_hash = context::remember(conn, snapshot, None, false)?.content_hash;
+    let context_hash = context::remember(conn, snapshot, None, false)?
+        .0
+        .content_hash;
     let image = context::model_image(&snapshot.project)?;
     conn.execute(
         "INSERT INTO project_history_version (format_version, created_at, reason, label, image, image_hash, context_hash) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
@@ -778,6 +814,7 @@ pub fn save_editor_reusing(
         stack,
         expected_generation,
         &JournalTrust::from_rows(reuse.clone()),
+        &mut JournalWriteReport::default(),
     )
     .map(|(generation, trust)| (generation, trust.rows))
 }
@@ -785,13 +822,15 @@ pub fn save_editor_reusing(
 /// [`save_editor_reusing`] that also checks the retained context and saved
 /// baseline `trust` knows by byte hash or value equality instead of decoding,
 /// encoding or hashing them again (ADR-0165). Returns the new generation and
-/// what the write verified, for the next one.
+/// what the write verified, for the next one. `report` receives the phase
+/// times and size facts, also of a write that fails.
 pub fn save_editor_trusting(
     conn: &Connection,
     working: &NativeSnapshot,
     stack: &CommandStack,
     expected_generation: i64,
     trust: &JournalTrust,
+    report: &mut JournalWriteReport,
 ) -> Result<(i64, JournalTrust), HistoryError> {
     save_editor_inner(
         conn,
@@ -801,6 +840,7 @@ pub fn save_editor_trusting(
         false,
         SaveExtras {
             reuse: Some(trust),
+            report: Some(report),
             ..SaveExtras::default()
         },
     )
@@ -859,6 +899,7 @@ struct SaveExtras<'a> {
     expected_working_hash: Option<&'a str>,
     sources: &'a [crate::CarriedManufacturerFile],
     reuse: Option<&'a JournalTrust>,
+    report: Option<&'a mut JournalWriteReport>,
 }
 
 fn save_editor_inner(
@@ -873,19 +914,30 @@ fn save_editor_inner(
         expected_working_hash,
         sources,
         reuse,
+        report,
     } = extras;
+    let mut unreported = JournalWriteReport::default();
+    let report = report.unwrap_or(&mut unreported);
     let (undo_steps, redo_steps) = stack.history_lengths();
     if undo_steps.saturating_add(redo_steps) > MAX_STACK_STATES {
         return Err(HistoryError::Limit("undo and redo exceed 256 states"));
     }
+    let started = Instant::now();
     let tx = Transaction::new_unchecked(conn, TransactionBehavior::Immediate)?;
     crate::migration::migrate_in_transaction(&tx)?;
     snapshot::check_schema(&tx)?;
+    report.phase("lock", started);
     // What this writer itself encoded or admitted is re-hashed, not decoded again.
     let untrusted = JournalTrust::default();
     let trusted = reuse.unwrap_or(&untrusted);
+    let started = Instant::now();
     let (current, admitted_context) = admitted_generation(&tx, expected_generation, trusted)?;
-    let (_, checked_contexts) = list_versions_checked(&tx, trusted, admitted_context.as_ref())?;
+    report.phase("admission", started);
+    let started = Instant::now();
+    let (versions, checked_contexts) =
+        list_versions_checked(&tx, trusted, admitted_context.as_ref())?;
+    report.saved_versions = versions.len();
+    report.phase("versions", started);
     // The admission checked the working context; `remember` need not again.
     let context_verified = trusted.context().is_some_and(|known| {
         admitted_context.as_ref().is_some_and(|(content, image)| {
@@ -893,11 +945,13 @@ fn save_editor_inner(
         })
     });
     let generation = next_generation(current)?;
+    let started = Instant::now();
     let old = match NativeSnapshot::read(&tx) {
         Ok(snapshot) => Some(snapshot),
         Err(HistoryError::Store(StoreError::NotSaved)) => None,
         Err(error) => return Err(error),
     };
+    report.phase("rootRead", started);
     if let Some(expected) = expected_working_hash {
         let current = load_editor_inner(&tx)?
             .map(|editor| editor.working)
@@ -936,7 +990,7 @@ fn save_editor_inner(
         trust: trusted,
         context_verified,
     };
-    let written = write_workspace(&tx, baseline, working, stack, generation, reuse)?
+    let written = write_workspace(&tx, baseline, working, stack, generation, reuse, report)?
         .with_checked_contexts(checked_contexts);
     for source in sources {
         let sha = crate::manufacturer_file_hash(&source.bytes);
@@ -953,7 +1007,9 @@ fn save_editor_inner(
             .map_err(HistoryError::Carried)?;
         crate::load_manufacturer_file(&tx, &sha).map_err(HistoryError::Carried)?;
     }
+    let started = Instant::now();
     tx.commit()?;
+    report.phase("commit", started);
     Ok((generation, written))
 }
 
@@ -1112,6 +1168,7 @@ pub fn change_history(
             &CommandStack::new(),
             generation,
             Reuse::NOTHING,
+            &mut JournalWriteReport::default(),
         )?;
     }
     let restored = match action {
@@ -1133,6 +1190,7 @@ pub fn change_history(
                 &CommandStack::new(),
                 generation,
                 Reuse::NOTHING,
+                &mut JournalWriteReport::default(),
             )?;
             None
         }
@@ -1156,6 +1214,7 @@ pub fn change_history(
                 &CommandStack::new(),
                 generation,
                 Reuse::NOTHING,
+                &mut JournalWriteReport::default(),
             )?;
             Some(EditorHistory {
                 generation,
@@ -1254,6 +1313,7 @@ pub(crate) fn before_plain_save(
             &CommandStack::new(),
             generation,
             Reuse::NOTHING,
+            &mut JournalWriteReport::default(),
         )?;
     }
     Ok(())

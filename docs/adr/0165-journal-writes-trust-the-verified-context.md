@@ -131,4 +131,14 @@ claim is checked against the file.
   control survived) found the trust sound for current callers; its finding that
   `trust()` read the public fields is fixed as above, and a re-review approved
   the fix.
+- Field diagnosis: every journal write records its phase times (server
+  preparation, read-only pre-admission, lock, admission, versions, root read,
+  baseline hash, context, working image, stack rows, limits, commit) with counts,
+  the retained-context size and whether context and baseline hash were reused. The
+  server keeps the last 20 in memory and shows them as `journalWrites` in the
+  diagnostic bundle's environment section; a write of 2 s or more also logs one
+  line to standard error (`docker logs`). Neither holds names, paths or values; a
+  server test pins that for a renamed installation and a saved file path. This
+  lets a tester's environment (a Docker bind mount, for example) say where its
+  time goes without sharing the project.
 - No file format change; older and newer builds read the same files.

@@ -48,7 +48,8 @@ type PlacedValue<'a> = (ParameterField, u64, &'a str);
 /// Every property image `code` needs, keyed by `(object, property)`.
 ///
 /// `written` holds the active parameters' values by `Parameter` id;
-/// `defaults` the product defaults, for the invisible ones. Refuses unless
+/// `defaults` the product defaults, for the invisible ones, whose time
+/// values are counted into `time_values` by unit. Refuses unless
 /// the program declares the policy ETS was observed with, for a layout whose
 /// byte order is established.
 pub(super) fn property_images(
@@ -57,6 +58,7 @@ pub(super) fn property_images(
     written: &BTreeMap<String, (String, Encoded)>,
     defaults: &ValueMap,
     low_octet_first: bool,
+    time_values: &mut BTreeMap<String, usize>,
     inferences: &mut Vec<Inference>,
 ) -> Result<Vec<PropertyImage>, ImageError> {
     let placed: Vec<_> = code
@@ -109,7 +111,11 @@ pub(super) fn property_images(
             Some((_, value)) => value.clone(),
             None => {
                 invisible += 1;
-                default_of(parameter, refs, types, defaults)?
+                let value = default_of(parameter, refs, types, defaults)?;
+                if let Some(unit) = types.time_unit(first_ref)? {
+                    *time_values.entry(unit.to_string()).or_default() += 1;
+                }
+                value
             }
         };
         let Encoded::Number(number) = value else {
@@ -171,7 +177,8 @@ pub(super) fn property_images(
         rule: PROPERTY_PARAMETERS_MERGED,
         detail: format!(
             "{} properties carry parameters; only the parameters' bits are written, every \
-             other bit is written back as the device holds it",
+             other bit is written back as the device holds it unless the load procedure's \
+             InlineData determines it",
             images.len()
         ),
         reference: REFERENCE,

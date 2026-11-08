@@ -636,7 +636,8 @@ enum PropertyRead {
 /// Reads elements 1.. of a property in frames of `per_frame` and merges the
 /// parameters' owned bits into them ([`merge_owned_bits`]).
 ///
-/// `[V]` As ETS 6.4 did: a read the device refuses because it holds fewer
+/// `[V]` As ETS 6.4 did: a value whose every bit is owned is not read at
+/// all. A read the device refuses because it holds fewer
 /// elements is followed by a read of element 0, the current count, and the
 /// elements up to it. An element past that count is written only if the
 /// parameters own every one of its bits; no other value is invented.
@@ -648,6 +649,9 @@ async fn merged_property_value<T: ManagementTransport>(
 ) -> Result<Vec<u8>, PropertyRead> {
     let object = ObjectIndex::new(object_index);
     let total = octets.len();
+    if owned.len() == total && owned.iter().all(|bits| *bits == 0xFF) {
+        return Ok(octets.to_vec());
+    }
     let mut device = Vec::with_capacity(total);
     let mut present = total;
     while device.len() < present {
@@ -1677,10 +1681,14 @@ async fn run_steps<T: ManagementTransport, K: FnMut(&DeviceBackup) -> Result<(),
                         .await
                         .map_err(at)?;
                 }
-                Some(format!(
-                    "{elements} elements written, {} owned bits from the parameters",
-                    owned.iter().map(|octet| octet.count_ones()).sum::<u32>()
-                ))
+                let determined = owned.iter().map(|octet| octet.count_ones()).sum::<u32>();
+                Some(if determined as usize == owned.len() * 8 {
+                    format!("{elements} elements written, every bit from the plan, nothing read")
+                } else {
+                    format!(
+                        "{elements} elements written, {determined} owned bits from the parameters"
+                    )
+                })
             }
             MemoryDownloadStep::RequireExemplar(wanted) => {
                 let found = read_exemplar(session)
@@ -1967,6 +1975,41 @@ mod tests {
         assert!(
             reset.contains("10h sent") && reset.contains("no return code"),
             "{reset}"
+        );
+    }
+
+    #[tokio::test]
+    async fn a_property_value_owned_bit_for_bit_is_written_without_a_read() {
+        let device = device(SimulatorConfig::default());
+        device.preset_element_property(8, 52, 1, 6, &[0xEE; 6]);
+        // `[V]` ETS 6.4 read nothing for an InlineData-filled write (ADR-0162).
+        let octets = vec![0x00, 0x6E, 0x91, 0x00, 0x7A, 0x17];
+        let plan = property_plan(6, octets.clone(), vec![0xFF; 6]);
+        assert!(
+            plan.steps[3]
+                .to_string()
+                .contains("nothing read from the device"),
+            "{}",
+            plan.steps[3]
+        );
+        let mut session = session(&device, WriteScope::Download);
+
+        let report = run_memory_download(&mut session, &plan)
+            .await
+            .expect("runs");
+
+        assert_eq!(
+            report.steps[3].observed.as_deref(),
+            Some("6 elements written, every bit from the plan, nothing read")
+        );
+        assert_eq!(device.element_property(8, 52), Some(octets));
+        assert!(
+            !device
+                .property_read_requests()
+                .iter()
+                .any(|(object, property, ..)| (*object, *property) == (8, 52)),
+            "{:?}",
+            device.property_read_requests()
         );
     }
 

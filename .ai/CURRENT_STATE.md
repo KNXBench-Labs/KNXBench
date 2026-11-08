@@ -45,7 +45,6 @@ Release freeze: taken by claude-release-alpha20 (2026-11-08 20:47 CET). Cutoff `
   claim, release/deployment/native/bus authority or shared-root update from this delivery.
 ## Retained boundaries (STANDING; observed 2026-11-02 20:47 CET)
 - System-2 acceptance: `docs/status/2026-11-02-system2-selective-settlement.md`.
-- Root intentionally stale/dirty: preserve private/untracked files and other edits.
-- Foreign simulator-control-records worktree and Alpha16 belong to other tracks.
+- Root intentionally stale/dirty: preserve private/untracked files and other edits. Foreign simulator-control-records worktree and Alpha16 belong to other tracks.
 - Private hardware-research is not owned here; root's parked private-track notes remain authoritative for its separate owner/consent. Private bytes stay private.
 - WP-11 historical and pinned current-source Properties six-cell pointer evidence is recorded; wider native matrix and KL-130 remain open.

@@ -169,6 +169,9 @@ pub enum RestoreError {
     PlanAlreadyGuarded,
     /// The plan changes nothing, so there is no point to guard before.
     PlanChangesNothing,
+    /// The plan resets the device or writes parameters into properties,
+    /// which no backup holds: replaying it would not restore the old state.
+    PlanChangesUnbackedState,
 }
 
 impl std::error::Error for RestoreError {}
@@ -225,6 +228,10 @@ impl fmt::Display for RestoreError {
             ),
             Self::PlanChangesNothing => f.write_str(
                 "the plan changes nothing on the device, so there is nothing to restore",
+            ),
+            Self::PlanChangesUnbackedState => f.write_str(
+                "the plan resets the device or writes parameters into properties, which a \
+                 backup does not hold; restore refused",
             ),
         }
     }
@@ -362,6 +369,13 @@ pub fn restore_plan(
     backup: &DeviceBackup,
 ) -> Result<MemoryDownloadPlan, RestoreError> {
     check_same_shape(plan, target, backup)?;
+    if plan
+        .steps
+        .iter()
+        .any(MemoryDownloadStep::changes_unbacked_state)
+    {
+        return Err(RestoreError::PlanChangesUnbackedState);
+    }
     let plan_machines = machines(plan);
     let mut backup_machines: Vec<_> = backup
         .load_states
@@ -543,6 +557,24 @@ mod tests {
         );
         assert_eq!(restored.steps, expected);
         assert_eq!(restored.data_octets(), plan().data_octets());
+    }
+
+    #[test]
+    fn a_plan_that_resets_or_writes_property_parameters_is_not_restored() {
+        let mut reset = plan();
+        reset.steps.insert(
+            2,
+            MemoryDownloadStep::MasterResetCommand {
+                erase_code: 5,
+                object_index: 5,
+                property_id: 52,
+                command: 0x10,
+            },
+        );
+        assert_eq!(
+            restore_plan(&reset, address("1.1.67"), &backup()),
+            Err(RestoreError::PlanChangesUnbackedState)
+        );
     }
 
     #[test]

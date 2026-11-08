@@ -89,6 +89,7 @@
 mod experimental;
 pub(crate) mod inactive_selection;
 mod legacy_source;
+pub mod property;
 mod system1;
 
 /// Validated GA/association reservations; the object span is not capacity padding.
@@ -294,6 +295,9 @@ pub struct DownloadImage {
     /// Where each computed group table was placed, so the plan writes the
     /// table content rather than the template's full writable capacity.
     pub table_writes: Vec<TableWrite>,
+    /// The parameters placed in properties, one image per property
+    /// ([`property::PropertyImage`]); empty for most programs.
+    pub properties: Vec<property::PropertyImage>,
 }
 
 impl DownloadImage {
@@ -715,6 +719,16 @@ fn build_image_selected(
         if let ParameterPlacement::Unmodelled { name, .. } = placement {
             return Err(unwritable_placement(parameter, name));
         }
+        // Only under the policy ETS was observed with (ADR-0161).
+        if matches!(placement, ParameterPlacement::Property(_))
+            && code
+                .options
+                .get("DownloadInvisibleParameters")
+                .map(String::as_str)
+                != Some("Background")
+        {
+            return Err(unwritable_placement(parameter, "Property"));
+        }
         let value = match experimental {
             Some(policy) => policy.value(&types, parameter_ref, raw)?,
             None => types.value(parameter_ref, raw)?,
@@ -730,6 +744,14 @@ fn build_image_selected(
                 })
             }
             None => {}
+        }
+        // Written into the property's image after this loop (ADR-0161).
+        if let ParameterPlacement::Property(_) = placement {
+            if let Encoded::Number(number) = &value {
+                parameters.insert(parameter_ref.to_string(), *number);
+            }
+            written.insert(parameter.to_string(), (parameter_ref.to_string(), value));
+            continue;
         }
         let (segment_id, field) = field_of(parameter, placement, types.size(parameter_ref)?)?;
         if let Some(defaults) = &defaults {
@@ -832,6 +854,28 @@ fn build_image_selected(
         };
         written.insert(parameter.to_string(), (parameter_ref.to_string(), value));
     }
+    let properties = if code
+        .parameters
+        .values()
+        .any(|placement| matches!(placement, ParameterPlacement::Property(_)))
+    {
+        if layout != ImageLayout::Easy3 || experimental.is_some() {
+            return Err(ImageError::Unsupported {
+                what: format!("{} parameters placed in properties", layout.family()),
+            });
+        }
+        let defaults = resolve_values(conn, program_id, &Default::default())?;
+        property::property_images(
+            &code,
+            &types,
+            &written,
+            &defaults,
+            low_octet_first,
+            &mut inferences,
+        )?
+    } else {
+        Vec::new()
+    };
     let mut segments: Vec<SegmentImage> = images
         .into_iter()
         .map(|(segment, image)| SegmentImage {
@@ -1024,6 +1068,7 @@ fn build_image_selected(
         inferences,
         parameter_fields,
         table_writes,
+        properties,
     })
 }
 
@@ -1250,6 +1295,8 @@ pub(crate) fn field_of<'a>(
                 "{parameter}: a union member offset inside a union that starts mid-octet"
             ),
         }),
+        // A property is not a segment: [`property::property_images`] places it.
+        ParameterPlacement::Property(_) => Err(unwritable_placement(parameter, "Property")),
         ParameterPlacement::Unmodelled { name, .. } => Err(unwritable_placement(parameter, name)),
     }
 }
@@ -1731,6 +1778,13 @@ impl ParameterTypes {
                 parameter_ref: parameter_ref.to_string(),
                 cause: "no such ParameterRef in this program".to_string(),
             })
+    }
+
+    /// Every `ParameterRef` of the program with the `Parameter` it names.
+    pub(crate) fn refs(&self) -> impl Iterator<Item = (&str, &str)> {
+        self.refs
+            .iter()
+            .map(|(parameter_ref, found)| (parameter_ref.as_str(), found.parameter.as_str()))
     }
 
     pub(crate) fn parameter_of(&self, parameter_ref: &str) -> Result<&str, ImageError> {
@@ -3200,6 +3254,61 @@ mod tests {
 
     fn with_options(xml: &str, options: &str) -> String {
         xml.replace("<Code>", &format!("{options}<Code>"))
+    }
+
+    /// ADR-0161: under `DownloadInvisibleParameters="Background"` every parameter
+    /// placed in a property is imaged, a visible one with its value, an invisible
+    /// one (`P-4`, in no `Dynamic` branch) with its default, numbers low octet
+    /// first; the octet no parameter reaches is not owned.
+    #[test]
+    fn property_parameters_are_imaged_with_values_defaults_and_an_ownership_mask() {
+        let program = with_options(
+            PROGRAM,
+            r#"<Options ParameterByteOrder="LittleEndian" DownloadInvisibleParameters="Background" />"#,
+        )
+        .replace(
+            "<Union SizeInBit=\"16\">",
+            r#"<Parameter Id="P-4" Name="Hidden" ParameterType="PT-W" Value="255"><Property ObjectIndex="1" PropertyId="2" Offset="2" BitOffset="0" /></Parameter>
+  <Union SizeInBit="16">"#,
+        )
+        .replace(
+            r#"<ParameterRef Id="P-3_R-6" RefId="P-3" />"#,
+            r#"<ParameterRef Id="P-3_R-6" RefId="P-3" /><ParameterRef Id="P-4_R-7" RefId="P-4" />"#,
+        );
+        let property = |image: &DownloadImage| {
+            let [property] = image.properties.as_slice() else {
+                panic!("{:?}", image.properties);
+            };
+            assert_eq!((property.object_index, property.property_id), (1, 2));
+            assert_eq!(property.owned, vec![0xFF, 0x00, 0xFF, 0xFF]);
+            property.octets.clone()
+        };
+        let visible = build(&program, &[("P-1_R-1", "0"), ("P-3_R-6", "5")], vec![]).unwrap();
+        assert_eq!(property(&visible), vec![0x05, 0x00, 0xFF, 0x00]);
+        assert_eq!(visible.parameters.get("P-3_R-6"), Some(&5));
+        let rules: Vec<_> = visible.inferences.iter().map(|i| i.rule).collect();
+        assert!(
+            rules.contains(&property::PROPERTY_PARAMETERS_MERGED),
+            "{rules:?}"
+        );
+        assert!(rules.contains(&property::INVISIBLE_PROPERTY_PARAMETERS_DEFAULT));
+        // P-3 invisible: its default, 1, whatever the project holds for it.
+        let hidden = build(&program, &[("P-1_R-1", "1"), ("P-3_R-6", "5")], vec![]).unwrap();
+        assert_eq!(property(&hidden), vec![0x01, 0x00, 0xFF, 0x00]);
+
+        // Two refs of an invisible parameter that disagree on its default.
+        let disagreeing = program.replace(
+            r#"<ParameterRef Id="P-4_R-7" RefId="P-4" />"#,
+            r#"<ParameterRef Id="P-4_R-7" RefId="P-4" /><ParameterRef Id="P-4_R-8" RefId="P-4" Value="2" />"#,
+        );
+        let error = build(&disagreeing, &[("P-1_R-1", "0")], vec![]).unwrap_err();
+        assert!(error.to_string().contains("different defaults"), "{error}");
+        // Without the observed policy an invisible one is still not written.
+        let unknown = PROGRAM.replace(
+            "<Code>",
+            r#"<Options DownloadInvisibleParameters="DefaultValue" /><Code>"#,
+        );
+        assert!(build(&unknown, &[], vec![]).unwrap().properties.is_empty());
     }
 
     /// KL-170: a `LittleEndian` memory program writes whole-octet numbers low

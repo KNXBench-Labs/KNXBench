@@ -24,6 +24,11 @@
 //!   exactly that many octets: [`resource_matches`].
 //! - `[A]` Octets whose product `Mask` octet is not `FFh` are not written:
 //!   [`unmasked_runs`].
+//! - `[V]` A master reset and parameters placed in properties are sent as
+//!   ETS 6.4 sends them to a mask-`0701h` device:
+//!   [`MemoryDownloadStep::MasterResetCommand`],
+//!   [`MemoryDownloadStep::WritePropertyParameters`] and [`merge_owned_bits`]
+//!   (docs/research/2026-11-08-property-placed-parameters.md).
 
 use std::fmt;
 
@@ -100,6 +105,35 @@ pub enum MemoryDownloadStep {
         /// `InlineData`, verbatim.
         inline_data: Vec<u8>,
     },
+    /// `LdCtrlMasterReset` on a mask-`0701h` device: `A_FunctionPropertyCommand`
+    /// with one octet, as ETS 6.4 maps the erase code (ADR-0161). The device
+    /// must answer return code `00h` (or none, which ETS accepted too).
+    MasterResetCommand {
+        /// The product's `EraseCode`, kept for reports.
+        erase_code: u8,
+        /// The interface object the command goes to.
+        object_index: u8,
+        /// The function property.
+        property_id: u8,
+        /// The one octet sent.
+        command: u8,
+    },
+    /// `LdCtrlDeclarePropDesc` + parameter-filled `LdCtrlWriteProp`: write
+    /// `elements` one-octet elements from index 1, each octet the device's
+    /// own bits merged with the parameters' ([`merge_owned_bits`]). The
+    /// device's elements are read first; nothing else is written.
+    WritePropertyParameters {
+        /// `ObjIdx`.
+        object_index: u8,
+        /// `PropId`.
+        property_id: u8,
+        /// `Count`: how many elements are written.
+        elements: u16,
+        /// The parameters' bits, `elements` octets long.
+        octets: Vec<u8>,
+        /// Which bits of `octets` the parameters own, `elements` octets long.
+        owned: Vec<u8>,
+    },
     /// An `LdCtrlUnload`/`Load`/`AbsSegment`/`TaskSegment`/`LoadCompleted`
     /// record, written to `0104h`.
     LoadRecord(MemoryLoadRecord),
@@ -148,9 +182,39 @@ impl MemoryDownloadStep {
             Self::LoadRecord(_)
                 | Self::WriteMemory { .. }
                 | Self::WriteProperty { .. }
+                | Self::MasterResetCommand { .. }
+                | Self::WritePropertyParameters { .. }
                 | Self::Restart
         )
     }
+
+    /// Whether the step changes property values a memory backup does not
+    /// hold, so that a restore or a partial download cannot replay it.
+    pub fn changes_unbacked_state(&self) -> bool {
+        matches!(
+            self,
+            Self::MasterResetCommand { .. } | Self::WritePropertyParameters { .. }
+        )
+    }
+}
+
+/// The octets [`MemoryDownloadStep::WritePropertyParameters`] writes: every
+/// bit `owned` marks from `octets`, every other bit as the device holds it.
+///
+/// `[V]` ETS 6.4 wrote back every element no parameter reaches exactly as it
+/// read it, whatever the device held. `[A]` Inside an octet a parameter
+/// reaches, ETS takes the other bits from an image of its own the product
+/// file does not declare; KNXBench keeps the device's instead, so it never
+/// changes a bit no parameter owns. `None` unless all three are equally long.
+pub fn merge_owned_bits(device: &[u8], octets: &[u8], owned: &[u8]) -> Option<Vec<u8>> {
+    (device.len() == octets.len() && octets.len() == owned.len()).then(|| {
+        device
+            .iter()
+            .zip(octets)
+            .zip(owned)
+            .map(|((device, octet), owned)| (device & !owned) | (octet & owned))
+            .collect()
+    })
 }
 
 impl MemoryDownloadPlan {
@@ -329,6 +393,28 @@ impl fmt::Display for MemoryDownloadStep {
                  as wide as the device describes it",
                 hex(inline_data)
             ),
+            MemoryDownloadStep::MasterResetCommand {
+                erase_code,
+                object_index,
+                property_id,
+                command,
+            } => write!(
+                f,
+                "master reset, erase code {erase_code}: A_FunctionPropertyCommand \
+                 {object_index}/{property_id} {command:02X}"
+            ),
+            MemoryDownloadStep::WritePropertyParameters {
+                object_index,
+                property_id,
+                elements,
+                owned,
+                ..
+            } => write!(
+                f,
+                "A_PropertyValue_Write {object_index}/{property_id}: {elements} elements, \
+                 the parameters' {} bits merged into what the device holds",
+                owned.iter().map(|octet| octet.count_ones()).sum::<u32>()
+            ),
             MemoryDownloadStep::LoadRecord(record) => write!(
                 f,
                 "A_Memory_Write 0104h: {} ({} {})",
@@ -402,6 +488,49 @@ pub fn machines(plan: &MemoryDownloadPlan) -> Vec<MemoryLoadStateMachine> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_merge_takes_owned_bits_from_the_parameters_and_the_rest_from_the_device() {
+        // One one-bit parameter at bit offset 7 (01h), one whole octet, one octet no
+        // parameter reaches: the device's EEh survives wherever nothing is owned.
+        let merged = merge_owned_bits(
+            &[0xEE, 0xEE, 0xEE],
+            &[0x01, 0x78, 0x00],
+            &[0x01, 0xFF, 0x00],
+        );
+        assert_eq!(merged, Some(vec![0xEF, 0x78, 0xEE]));
+        assert_eq!(
+            merge_owned_bits(&[0x11], &[0x01], &[0x01]),
+            Some(vec![0x11])
+        );
+        assert_eq!(merge_owned_bits(&[0x11, 0x00], &[0x01], &[0x01]), None);
+    }
+
+    #[test]
+    fn master_resets_and_property_parameters_change_what_no_backup_holds() {
+        let reset = MemoryDownloadStep::MasterResetCommand {
+            erase_code: 6,
+            object_index: 5,
+            property_id: 52,
+            command: 0x04,
+        };
+        let parameters = MemoryDownloadStep::WritePropertyParameters {
+            object_index: 8,
+            property_id: 52,
+            elements: 1,
+            octets: vec![0x81],
+            owned: vec![0xFF],
+        };
+        for step in [&reset, &parameters] {
+            assert!(step.changes_device() && step.changes_unbacked_state());
+        }
+        let fixed = MemoryDownloadStep::WriteProperty {
+            object_index: 5,
+            property_id: 51,
+            inline_data: vec![0x01],
+        };
+        assert!(fixed.changes_device() && !fixed.changes_unbacked_state());
+    }
     use crate::commissioning::load_control_memory::event_record;
 
     #[test]

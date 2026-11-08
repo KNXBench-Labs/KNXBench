@@ -52,15 +52,15 @@ use knx_core::commissioning::load_control_memory::{loads_through_memory, MemoryL
 use knx_core::commissioning::load_state::{LoadEvent, LoadState, MaskVersion};
 use knx_core::commissioning::memory::{service_for, WriteLimit};
 use knx_core::commissioning::memory_download::{
-    machines, resource_matches, write_property_octets, ExemplarSerial, MemoryDownloadPlan,
-    MemoryDownloadStep,
+    machines, merge_owned_bits, resource_matches, write_property_octets, ExemplarSerial,
+    MemoryDownloadPlan, MemoryDownloadStep,
 };
 use knx_core::commissioning::mutation::WriteScope;
 use knx_core::commissioning::properties::{ObjectIndex, PID_PROGRAM_VERSION, PID_SERIAL_NUMBER};
 
 use knx_core::ContactableAddress;
 
-use super::{ManagementSession, SessionError, SessionTiming};
+use super::{Comparison, ManagementSession, SessionError, SessionTiming};
 use crate::management::ManagementTransport;
 
 mod download_stop;
@@ -306,6 +306,28 @@ pub enum MemoryDownloadError {
         /// The description as the device answered it (AL §3.4.3.1), if any.
         description: Option<[u8; 4]>,
     },
+    /// `LdCtrlMasterReset`: the device answered the function property
+    /// command with a return code other than `00h`.
+    MasterResetRefused {
+        /// The step.
+        index: usize,
+        /// The return code.
+        return_code: u8,
+    },
+    /// The parameters of a property could not be merged into what the
+    /// device holds: an answer of the wrong length, or elements missing on
+    /// the device where bits no parameter owns would have to be invented.
+    /// Nothing was written by this step.
+    PropertyElements {
+        /// The step.
+        index: usize,
+        /// `ObjIdx`.
+        object_index: u8,
+        /// `PropId`.
+        property_id: u8,
+        /// What did not fit.
+        reason: String,
+    },
     /// The live Device Object serial is not the one the restore's backup captured. Carries no
     /// serial octets.
     ExemplarMismatch {
@@ -438,6 +460,21 @@ impl fmt::Display for MemoryDownloadError {
             } => write!(
                 f,
                 "step {index}: property {object_index}/{property_id} is {found:02X?}, which the product does not accept"
+            ),
+            MemoryDownloadError::MasterResetRefused { index, return_code } => write!(
+                f,
+                "step {index}: the device refused the master reset with return code \
+                 {return_code:02X}h"
+            ),
+            MemoryDownloadError::PropertyElements {
+                index,
+                object_index,
+                property_id,
+                reason,
+            } => write!(
+                f,
+                "step {index}: property {object_index}/{property_id}: {reason}; nothing was \
+                 written by this step"
             ),
             MemoryDownloadError::PropertyNotWritable {
                 index,
@@ -582,6 +619,84 @@ fn closes_a_loaded_download(
             .all(|step| *step == MemoryDownloadStep::Disconnect)
 }
 
+/// How many one-octet elements one `A_PropertyValue_Read/Write` carries:
+/// at most 15 (`nr_of_elem` is four bits, AL §3.4.4) and no more than the
+/// negotiated frame holds, a property PDU's header being two octets longer
+/// than a memory write's.
+fn property_elements_per_frame(limit: WriteLimit) -> u8 {
+    limit.max_octets().saturating_sub(2).clamp(1, 15)
+}
+
+/// Why [`merged_property_value`] produced nothing.
+enum PropertyRead {
+    Session(SessionError),
+    Elements(String),
+}
+
+/// Reads elements 1.. of a property in frames of `per_frame` and merges the
+/// parameters' owned bits into them ([`merge_owned_bits`]).
+///
+/// `[V]` As ETS 6.4 did: a read the device refuses because it holds fewer
+/// elements is followed by a read of element 0, the current count, and the
+/// elements up to it. An element past that count is written only if the
+/// parameters own every one of its bits; no other value is invented.
+async fn merged_property_value<T: ManagementTransport>(
+    session: &mut ManagementSession<'_, T>,
+    (object_index, property_id): (u8, u8),
+    (octets, owned): (&[u8], &[u8]),
+    per_frame: u8,
+) -> Result<Vec<u8>, PropertyRead> {
+    let object = ObjectIndex::new(object_index);
+    let total = octets.len();
+    let mut device = Vec::with_capacity(total);
+    let mut present = total;
+    while device.len() < present {
+        let start = device.len() + 1;
+        let wanted = (present - device.len()).min(usize::from(per_frame));
+        let (answered, data) = session
+            .read_property_counted(object, property_id, wanted as u8, start as u16)
+            .await
+            .map_err(PropertyRead::Session)?;
+        if usize::from(answered) == wanted && data.len() == wanted {
+            device.extend(data);
+            continue;
+        }
+        if answered != 0 || present < total {
+            return Err(PropertyRead::Elements(format!(
+                "elements {start}.. answered {answered} elements in {} octets, not {wanted}",
+                data.len()
+            )));
+        }
+        let (answered, count) = session
+            .read_property_counted(object, property_id, 1, 0)
+            .await
+            .map_err(PropertyRead::Session)?;
+        let current = match (answered, count.as_slice()) {
+            (1, [high, low]) => usize::from(u16::from_be_bytes([*high, *low])),
+            _ => {
+                return Err(PropertyRead::Elements(format!(
+                    "refused elements {start}.., and its element count answered {count:02X?}"
+                )))
+            }
+        };
+        if current >= start + wanted - 1 || current < device.len() {
+            return Err(PropertyRead::Elements(format!(
+                "refused elements {start}.. although it reports {current} elements"
+            )));
+        }
+        present = current;
+    }
+    if let Some(missing) = owned[present..].iter().position(|bits| *bits != 0xFF) {
+        return Err(PropertyRead::Elements(format!(
+            "holds {present} elements; element {} has bits no parameter owns",
+            present + missing + 1
+        )));
+    }
+    device.extend_from_slice(&octets[present..]);
+    merge_owned_bits(&device, octets, owned)
+        .ok_or_else(|| PropertyRead::Elements("image and mask differ in length".into()))
+}
+
 /// Refuses a plan whose shape this module will not run.
 fn check_shape(plan: &MemoryDownloadPlan) -> Result<(), MemoryDownloadError> {
     if plan.steps.first() != Some(&MemoryDownloadStep::Connect) {
@@ -593,6 +708,8 @@ fn check_shape(plan: &MemoryDownloadPlan) -> Result<(), MemoryDownloadError> {
             MemoryDownloadStep::LoadRecord(_)
                 | MemoryDownloadStep::WriteMemory { .. }
                 | MemoryDownloadStep::WriteProperty { .. }
+                | MemoryDownloadStep::MasterResetCommand { .. }
+                | MemoryDownloadStep::WritePropertyParameters { .. }
                 | MemoryDownloadStep::Restart
         )
     });
@@ -1484,6 +1601,87 @@ async fn run_steps<T: ManagementTransport, K: FnMut(&DeviceBackup) -> Result<(),
                     hex(&read)
                 ))
             }
+            MemoryDownloadStep::MasterResetCommand {
+                erase_code,
+                object_index,
+                property_id,
+                command,
+            } => {
+                let (return_code, _) = session
+                    .function_property_command(
+                        ObjectIndex::new(*object_index),
+                        *property_id,
+                        vec![*command],
+                        WriteScope::Download,
+                    )
+                    .await
+                    .map_err(at)?;
+                // `[V]` ETS 6.4 accepted an answer without a return code.
+                if let Some(code @ 1..) = return_code {
+                    session.disconnect().await;
+                    return Err(MemoryDownloadError::MasterResetRefused {
+                        index,
+                        return_code: code,
+                    });
+                }
+                Some(format!(
+                    "erase code {erase_code}: {command:02X}h sent; device answered {}",
+                    return_code.map_or("no return code".to_owned(), |code| format!("{code:02X}h"))
+                ))
+            }
+            MemoryDownloadStep::WritePropertyParameters {
+                object_index,
+                property_id,
+                elements,
+                octets,
+                owned,
+            } => {
+                let per_frame =
+                    property_elements_per_frame(limit.expect("check_shape puts Connect first"));
+                let merged = merged_property_value(
+                    session,
+                    (*object_index, *property_id),
+                    (octets, owned),
+                    per_frame,
+                )
+                .await
+                .map_err(|error| match error {
+                    PropertyRead::Session(error) => at(error),
+                    PropertyRead::Elements(reason) => MemoryDownloadError::PropertyElements {
+                        index,
+                        object_index: *object_index,
+                        property_id: *property_id,
+                        reason,
+                    },
+                });
+                let merged = match merged {
+                    Ok(merged) => merged,
+                    Err(error) => {
+                        session.disconnect().await;
+                        return Err(error);
+                    }
+                };
+                let object = ObjectIndex::new(*object_index);
+                for (chunk, values) in merged.chunks(usize::from(per_frame)).enumerate() {
+                    let start = 1 + chunk * usize::from(per_frame);
+                    session
+                        .property_write_octets(
+                            object,
+                            *property_id,
+                            values.len() as u8,
+                            start as u16,
+                            values.to_vec(),
+                            WriteScope::Download,
+                            Comparison::ExactOctets,
+                        )
+                        .await
+                        .map_err(at)?;
+                }
+                Some(format!(
+                    "{elements} elements written, {} owned bits from the parameters",
+                    owned.iter().map(|octet| octet.count_ones()).sum::<u32>()
+                ))
+            }
             MemoryDownloadStep::RequireExemplar(wanted) => {
                 let found = read_exemplar(session)
                     .await
@@ -1717,6 +1915,102 @@ mod tests {
                 MemoryDownloadStep::Disconnect,
             ],
         }
+    }
+
+    /// [`plan`] cut to the identity checks, then a master reset and the
+    /// parameters of property 8/52 over `elements` elements (ADR-0161).
+    fn property_plan(elements: u16, octets: Vec<u8>, owned: Vec<u8>) -> MemoryDownloadPlan {
+        let mut plan = plan();
+        plan.steps.truncate(2);
+        plan.steps.extend([
+            MemoryDownloadStep::MasterResetCommand {
+                erase_code: 5,
+                object_index: 5,
+                property_id: 52,
+                command: 0x10,
+            },
+            MemoryDownloadStep::WritePropertyParameters {
+                object_index: 8,
+                property_id: 52,
+                elements,
+                octets,
+                owned,
+            },
+            MemoryDownloadStep::Disconnect,
+        ]);
+        plan
+    }
+
+    #[tokio::test]
+    async fn property_parameters_are_merged_into_what_the_device_holds() {
+        let device = device(SimulatorConfig::default());
+        // Sixteen elements held, room for seventeen, as ETS 6.4 met them.
+        device.preset_element_property(8, 52, 1, 17, &[0xEE; 16]);
+        let mut owned = vec![0x00; 17];
+        owned[0] = 0x01;
+        owned[16] = 0xFF;
+        let mut octets = vec![0x00; 17];
+        octets[0] = 0x01;
+        octets[16] = 0x5A;
+        let plan = property_plan(17, octets, owned);
+        let mut session = session(&device, WriteScope::Download);
+
+        let report = run_memory_download(&mut session, &plan)
+            .await
+            .expect("runs");
+
+        let mut expected = vec![0xEE; 17];
+        expected[0] = 0xEF;
+        expected[16] = 0x5A;
+        assert_eq!(device.element_property(8, 52), Some(expected));
+        let reset = report.steps[2].observed.as_deref().unwrap_or_default();
+        assert!(
+            reset.contains("10h sent") && reset.contains("no return code"),
+            "{reset}"
+        );
+    }
+
+    #[tokio::test]
+    async fn a_missing_element_with_unowned_bits_or_a_refused_reset_writes_nothing_more() {
+        let device = device(SimulatorConfig::default());
+        device.preset_element_property(8, 52, 1, 17, &[0xEE; 16]);
+        // Element 17 has bits no parameter owns, and the device holds no value for it.
+        let plan = property_plan(17, vec![0x00; 17], vec![0x01; 17]);
+        let mut first = session(&device, WriteScope::Download);
+        let error = run_memory_download(&mut first, &plan).await.unwrap_err();
+        assert!(
+            matches!(&error, MemoryDownloadError::PropertyElements { index: 3, reason, .. }
+                if reason.contains("element 17")),
+            "{error}"
+        );
+        assert_eq!(device.element_property(8, 52), Some(vec![0xEE; 16]));
+
+        let device = self::device(SimulatorConfig::default());
+        device.preset_element_property(8, 52, 1, 1, &[0xEE]);
+        device.preset_function_return(5, 52, 0x01);
+        let plan = property_plan(1, vec![0x01], vec![0x01]);
+        let mut second = session(&device, WriteScope::Download);
+        let error = run_memory_download(&mut second, &plan).await.unwrap_err();
+        assert!(
+            matches!(
+                error,
+                MemoryDownloadError::MasterResetRefused {
+                    index: 2,
+                    return_code: 0x01
+                }
+            ),
+            "{error}"
+        );
+        assert_eq!(device.element_property(8, 52), Some(vec![0xEE]));
+    }
+
+    #[test]
+    fn a_property_frame_holds_fifteen_elements_at_most_and_fits_the_frame() {
+        use knx_core::commissioning::memory::{write_limit, ApduLengthSource};
+        let per_frame = |apdu| property_elements_per_frame(write_limit(apdu));
+        // The standard frame: 12 memory octets, so 10 property elements.
+        assert_eq!(per_frame(ApduLengthSource::Absent), 10);
+        assert_eq!(per_frame(ApduLengthSource::DeviceObject(55)), 15);
     }
 
     fn memory_writes(device: &SimulatedDevice) -> Vec<(u32, Vec<u8>)> {

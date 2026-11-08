@@ -61,6 +61,26 @@ contains the matching WebKitGTK 2.52.6 package for that distribution. Thus an
 unversioned runner label raised the bundled-library baseline without a project
 source change. The permission fix alone cannot lower those ELF requirements.
 
+## Build transport finding
+
+The deliberate manual verification run
+[42468804084](https://github.com/KNXBench-Labs/KNXBench/actions/runs/42468804084)
+compiled the actual desktop release executable in attempts 1 and 2, then both
+failed with HTTP 504 at Tauri's legacy `apprun-old/AppRun-x86_64` browser URL.
+Those attempts did not produce an accepted AppImage or run its startup checks.
+The official release-asset API returned the genuine launcher successfully:
+asset ID `274691722`, 31,552 bytes, SHA-256
+`f30140a43a0a59e46db21bdefdf749b9e9f2c6946e92afabbacf98b8ae73fb4f`.
+Both GitHub's API digest and alpha.19's wrapped payload match those bytes.
+
+The CI prefetch now uses immutable API asset IDs and digest checks for the
+launcher and the two executable deploy tools before expensive compilation.
+Its exact shell body was exercised against the real APIs; all three downloads
+passed their digest checks before executable permission and atomic cache rename.
+[The launcher contract](../APPIMAGE_LAUNCHER.md#pinned-ci-build-tools) records
+the complete pins and the older linuxdeploy asset's missing API digest.
+This is build-transport evidence, not a substituted successful image build.
+
 ## Implementation boundary
 
 Pin the AppImage build job to `ubuntu-24.04`, and check the finished image's

@@ -2,12 +2,12 @@
 
 This local test harness requires **authorized ETS `.knxproj` exports** of two or
 more revisions of one project. It never reads ETS's live database or internal
-`.restorepoint` files. No authorized restore-point export set was supplied for
-this delivery; the real historical regression remains an external prerequisite.
-Public synthetic harness tests are not ETS evidence. Since the owner decision of
-8 November 2026, ETS exports of fictional projects made by the project count as
-authorised exports ([evidence routes](RESEARCH.md#evidence-routes)); they stay
-private like any other export set.
+`.restorepoint` files. Public synthetic harness tests are not ETS evidence;
+the first real run is under [Run record](#run-record-8-november-2026).
+Since the owner decision of 8 November 2026, ETS exports of fictional projects
+made by the project count as authorised exports
+([evidence routes](RESEARCH.md#evidence-routes)); they stay private like any
+other export set.
 
 ## Private setup
 
@@ -60,14 +60,52 @@ password support or protected real fixtures are not claimed.
 
 Public tests pin authorization, schema/count shape, distinct identities,
 missing configuration, forbidden internal-file/path syntax, and leaf/ancestor
-symlink confinement. Genuine exported revisions still need to exercise this
-entire harness before historical compatibility can be claimed.
+symlink confinement. They do not exercise the harness on genuine exports; the
+run record below does, for its stated scope only.
+
+## Run record (8 November 2026)
+
+First real run, under the owner's clean-room route. The project built a small
+fictional project in ETS6 6.4.1 (schema 23: one catalogue switch actuator,
+default topology) and exported it unprotected three times:
+
+- revision A: one group address linked to one communication object, all
+  parameters at their defaults;
+- revision B: a second group address linked to a second object, and one
+  parameter changed (which makes ETS show one more object);
+- revision A′: revision A brought back through ETS's own project archive
+  ("create backup in archive", then "restore") and exported again. Its project
+  XML equals revision A apart from one added `ArchivedVersion` attribute.
+
+The baselines come from the ETS user interface and from the raw XML, not from
+KNXBench. Devices, group addresses, communication objects (as listed by ETS),
+parameter instances, modules and the schema were counted that way. The
+KNXBench-only diagnostic fields (`unknown`, `opaque`, `unsupported`, `errors`)
+were observed once and then checked against the XML: every `opaque` difference
+between revisions maps to a concrete retained attribute (one `Puid` per new
+group address, one `ChannelId` per new object link, the archive's
+`ArchivedVersion`). A separate reviewer recomputed the ETS/XML counts, the
+opaque deltas and the file digests from the raw exports; the run record was
+written only after that review. Format observations are recorded in
+[research](research/2026-11-08-ets6-revision-exports.md).
+
+The named ignored test passed on `ac636f22f` with three verified exports, in a
+network-free namespace with scratch XDG directories. The input hashes were the
+same before and after. A negative control that changed one expected parameter
+count failed as required.
+
+Scope: one ETS version and schema, unprotected exports, one manufacturer
+product, one archive restore. This is not evidence for older ETS versions,
+other schemas, protected projects or ETS's internal restore-point files, and
+those exports and manifests stay private. Further revision sets go through the
+same harness.
 
 ## Unblock condition
 
-The project owner supplies an explicitly authorized, private export set made
-from the required ETS restore-point revisions and independently reviews its
-baselines. Run the named ignored test on the actual gated source, inspect its
-aggregate result and retain the private evidence locally. This is separate
-from native KNXBench project history and from the
-[selective import workflow](SELECTIVE_IMPORT.md).
+Met on 8 November 2026 for the scope above. For further sets: supply an
+explicitly authorized, private export set (since 8 November 2026 this includes
+the project's own exports of fictional projects) of distinct revisions of one
+project, have its baselines reviewed independently, run the named ignored test
+on the actual gated source, inspect its aggregate result and retain the private
+evidence locally. This is separate from native KNXBench project history and
+from the [selective import workflow](SELECTIVE_IMPORT.md).

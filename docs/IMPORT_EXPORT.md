@@ -263,7 +263,9 @@ through the saved version, not Undo ([KL-186](KNOWN_LIMITATIONS.md#catalogue-kl-
 The full-project import/replacement path remains available and unchanged.
 [Authorized revision-export regressions](AUTHORIZED_RESTORE_EXPORTS.md) accept
 only supplied authorized `.knxproj` files, not ETS internal restore points.
-No historical export set has been tested. [cvexc analysis](research/cvexc.md)
+One fictional ETS6 6.4.1 revision set has passed
+([run record](AUTHORIZED_RESTORE_EXPORTS.md#run-record-8-november-2026)); other
+versions are untested. [cvexc analysis](research/cvexc.md)
 is read-only observation, not executable comparison/download policy.
 [Verification](status/2026-10-10-import-expansion-verification.md).
 

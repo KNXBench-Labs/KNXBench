@@ -2,7 +2,7 @@
 
 **Status:** Blocked: input. Listed in [OPEN_WORK](../OPEN_WORK.md); per-ID status of record is the [ledger](../status/LEDGER.md).
 
-**Evidence route (8 November 2026):** clean-room observation is admitted by the owner ([OWN-01](OWN-01-owner-decisions.md#decisions-recorded--8-november-2026), [rules](../RESEARCH.md#evidence-routes)); no observation has been made for this package yet.
+**Evidence route (8 November 2026):** clean-room observation is admitted by the owner ([OWN-01](OWN-01-owner-decisions.md#decisions-recorded--8-november-2026), [rules](../RESEARCH.md#evidence-routes)). IMPORT-02 used it first: the harness ran on a project-made fictional ETS6 export set ([run record](../AUTHORIZED_RESTORE_EXPORTS.md#run-record-8-november-2026)).
 
 ## Task
 
@@ -11,8 +11,11 @@ Independent, input-gated import/model cases:
 1. `IMPORT-02`: authorised ETS restore-point exports of distinct revisions
    plus independently reviewed baselines. Since the owner decision of
    8 November 2026, ETS exports of fictional projects made by the project count
-   as authorised ([evidence routes](../RESEARCH.md#evidence-routes)); the
-   baselines still need independent review.
+   as authorised ([evidence routes](../RESEARCH.md#evidence-routes)).
+   **Done for one scope on 8 November 2026:** ETS6 6.4.1, schema 23, revisions
+   A/B plus an archive-restored A′, with baselines taken from ETS and the XML
+   ([run record](../AUTHORIZED_RESTORE_EXPORTS.md#run-record-8-november-2026)).
+   Other ETS versions, schemas and protected projects remain open.
 2. `MODEL-05`: explicitly deferred by the owner on 27 October 2026; no current
    need for a KNXBench-native site spanning separate installations. No model
    change is commissioned or implemented. Reopen only on a new owner decision

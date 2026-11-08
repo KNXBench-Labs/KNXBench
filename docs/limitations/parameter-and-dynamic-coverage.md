@@ -6,6 +6,13 @@ This dossier preserves the technical detail and dated history. Earlier
 headings, failures and lifting conditions are historical where later
 updates supersede them; they are not new work assignments.
 
+## Update 2026-11-08: time values in downloads (ADR-0162)
+
+`TypeTime/@Unit` stays a reported, not stored, attribute. A download now reads it
+from the retained program source and writes a time value in a plain unit as the
+count of that unit, like a number; packed, unknown or missing units stay refused
+([ADR-0162](../adr/0162-time-parameters-and-inline-property-writes.md)).
+
 <!-- BEGIN retained catalogue record -->
 
 ## PDB-9 parameter and Dynamic coverage boundary
@@ -52,9 +59,7 @@ than dropped:
   `DisplayFormat`, `Pattern`, `Encoding`, `AddressType`, `TypeTime/@Unit`,
   `TypeColor/@Space`, `TypePicture/@RefId`/`@HorizontalAlignment` and
   `TypeRawData/@MaxSize` are reported with a sample, not stored in columns:
-  the ordinary parameter rows do not use them. A download reads
-  `TypeTime/@Unit` from the retained source and writes only plain units
-  ([ADR-0162](../adr/0162-time-parameters-and-inline-property-writes.md)). Since 12 October 2026 an
+  the ordinary parameter rows do not use them. Since 12 October 2026 an
   opt-in **Checked editor** in the device editor's Parameters tab
   ([host](../contracts/parameter-editor-host.md#workbench-host-12-october-2026))
   reads the retained source for Time (decimal count, `Unit` shown

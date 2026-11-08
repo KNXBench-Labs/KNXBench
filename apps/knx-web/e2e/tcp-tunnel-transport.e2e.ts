@@ -96,7 +96,7 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
     return fixture;
   };
 
-  test(`${language} ${width}: saved TCP preference starts only on the TCP route and the observed TCP drives footer, monitor and bound group traffic`, async ({ page }) => {
+  test(`${language} ${width}: saved TCP preference starts only on the TCP route and the observed TCP drives footer, monitor and bound group traffic`, { tag: "@exclusive" }, async ({ page }) => {
     const fixture = await setup(page, { preference: "tcp" });
     await expect(page.locator(".bus-connection-state")).toContainText(m["busConnection.state.disconnected"]);
     await page.waitForTimeout(500);
@@ -144,7 +144,7 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
     expect(fixture.udpStarts).toEqual([]); expect(fixture.state.unexpected).toEqual([]);
   });
 
-  test(`${language} ${width}: an older server without the TCP route fails once with the unsupported text and no UDP request`, async ({ page }) => {
+  test(`${language} ${width}: an older server without the TCP route fails once with the unsupported text and no UDP request`, { tag: "@exclusive" }, async ({ page }) => {
     const fixture = await setup(page, { preference: "tcp", tcpRoute: "missing" });
     await page.locator(".bus-connection-action").click();
     await expect(page.locator(".bus-connection-error")).toHaveText(m["busTransport.ipTunnel.unsupported"]);

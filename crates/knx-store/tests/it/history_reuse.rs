@@ -74,6 +74,7 @@ impl Incremental {
             stack,
             self.file.generation,
             &trust,
+            &mut history::JournalWriteReport::default(),
         )
         .unwrap();
         assert_eq!(

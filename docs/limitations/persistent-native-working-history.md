@@ -67,7 +67,10 @@ process) decodes and encodes again what changed. The server keeps a copy of the
 project and stack it last stored, so the history occupies memory about twice, plus
 a copy of the retained context and the baseline model (about 134 MB for the file
 above). An unsaved project does not journal (0.14 s on the demo project). No
-figures exist for other machines or Docker volumes.
+figures exist for other machines or Docker volumes; the diagnostic bundle's
+environment section lists the phase times of the last 20 journal writes, and a
+write of 2 s or more logs one line to standard error, so a field setup can show
+where its time goes.
 
 ## Save As archive boundary (Alpha 18 artifact verification, 29 October 2026)
 

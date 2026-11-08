@@ -70,3 +70,38 @@ fn the_cache_follows_journal_writes_native_open_and_project_replacement() {
     domain::new_project_impl(&reopened, None, None, None, None, true).unwrap();
     assert_eq!(cached(&reopened), None);
 }
+
+#[test]
+fn journal_writes_reach_the_diagnostic_environment_without_project_content() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("project.knxdb");
+    let state = std::sync::Arc::new(AppState::default());
+    let tree = domain::new_project_impl(&state, None, None, None, None, true).unwrap();
+    let installation = tree.installations[0].id;
+    domain::save_project_as(&state, &path).unwrap();
+    for name in ["Secret installation name", "Another secret name"] {
+        domain::rename_installation_impl(&state, installation, name.into()).unwrap();
+    }
+    let section = crate::diagnostic_bundle_routes::environment(&state);
+    let file = section
+        .files
+        .iter()
+        .find(|file| file.name == "environment.json")
+        .unwrap();
+    let text = String::from_utf8(file.bytes.clone()).unwrap();
+    let environment: serde_json::Value = serde_json::from_str(&text).unwrap();
+    let recent = environment["journalWrites"]["recent"].as_array().unwrap();
+    assert_eq!(recent.len(), 2);
+    let last = &recent[1];
+    assert_eq!(last["ok"], true);
+    assert_eq!(last["undoStates"], 2);
+    assert_eq!(last["contextReused"], true);
+    for phase in ["prepare", "preAdmission", "admission", "context", "commit"] {
+        assert!(
+            last["phasesMs"].get(phase).is_some(),
+            "phase {phase} in {last}"
+        );
+    }
+    assert!(!text.contains("Secret"), "no project content: {text}");
+    assert!(!text.contains("project.knxdb"), "no path: {text}");
+}

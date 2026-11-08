@@ -21,16 +21,17 @@ pub(super) fn model_image(project: &Project) -> Result<Vec<u8>, HistoryError> {
 /// Stores the retained context of `snapshot` unless present and returns it as
 /// known. A `known` context holding the same value is confirmed by the SHA-256
 /// of its stored bytes instead of being encoded and decoded again, or taken as
-/// is when this transaction already verified it (`verified`).
+/// is when this transaction already verified it (`verified`). The flag says
+/// whether the known context was taken.
 pub(super) fn remember(
     conn: &Connection,
     snapshot: &NativeSnapshot,
     known: Option<&KnownContext>,
     verified: bool,
-) -> Result<KnownContext, HistoryError> {
+) -> Result<(KnownContext, bool), HistoryError> {
     if let Some(known) = known.filter(|known| known.holds(snapshot)) {
         if verified || verify_known(conn, known)? {
-            return Ok(known.clone());
+            return Ok((known.clone(), true));
         }
     }
     let context = NativeSnapshot {
@@ -55,12 +56,15 @@ pub(super) fn remember(
         conn.execute("INSERT INTO project_history_context (content_hash, format_version, image, image_hash) VALUES (?1, ?2, ?3, ?4)", params![content_hash, FORMAT_VERSION, image, stored_hash])?;
         stored_hash
     };
-    Ok(KnownContext {
-        opaque: context.opaque,
-        manufacturer_refs: context.manufacturer_refs,
-        content_hash,
-        image_hash: stored_hash,
-    })
+    Ok((
+        KnownContext {
+            opaque: context.opaque,
+            manufacturer_refs: context.manufacturer_refs,
+            content_hash,
+            image_hash: stored_hash,
+        },
+        false,
+    ))
 }
 
 /// Whether the stored context row `known` names still holds exactly the bytes

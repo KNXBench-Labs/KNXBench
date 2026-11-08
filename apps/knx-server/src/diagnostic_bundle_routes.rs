@@ -1412,7 +1412,7 @@ fn catalogue(state: &SharedState, device_id: Option<u32>) -> BundleSection {
     section
 }
 
-fn environment(state: &SharedState) -> BundleSection {
+pub(crate) fn environment(state: &SharedState) -> BundleSection {
     let identity = crate::operation_recordings::writer_identity();
     let project_open = state
         .project
@@ -1455,6 +1455,11 @@ fn environment(state: &SharedState) -> BundleSection {
             "incarnation": state.project_incarnation.load(Ordering::Relaxed),
             "revision": state.project_revision.load(Ordering::Relaxed),
         },
+        "journalWrites": state
+            .journal_writes
+            .lock()
+            .expect("state mutex poisoned")
+            .to_json(),
     });
     let mut section = BundleSection::new(SectionKind::Environment);
     section

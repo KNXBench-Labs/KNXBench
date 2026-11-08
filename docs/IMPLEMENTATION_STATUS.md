@@ -32,6 +32,17 @@ and the AppImage packaging repair (glibc 2.39 ceiling, readable for every user).
 hardware acceptance follows; the allocation mismatch of #30/#22 stays unresolved.
 Scope, upgrade notes and boundaries: [Alpha 20 release notes](releases/alpha20.md).
 
+Published on 9 November 2026 at immutable `1d3c7d433d2b2139a1ecbfac1314bacc4ef9fc22`
+after two rejected candidates (a 51-line restart snapshot; then a load-sensitive
+knx-net fault test and three native evidence specs that refused the status bar's
+activity poll, both fixed test-only). Both tag publishers succeeded; downloaded
+AppImage/MCP/checksum bytes, the AppImage permissions and glibc ceiling, the
+amd64/arm64 registry identities, an isolated amd64 authenticated smoke and an Alpha 19
+project migrated through the image were checked separately from the source gate. The
+full pinned compatibility matrix was not run (owner-approved 28-file cross-section
+instead). Limits are explicit in the
+[public verification receipt](evidence/release-alpha20-2026-11-09.json).
+
 ## Optional TCP monitor/group traffic (8 November 2026; bounded WP-29)
 
 Explicit TCP is software-accepted for the library, CLI monitor/write and shared

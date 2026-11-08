@@ -1,5 +1,7 @@
 name: Linux AppImage
 
+# AppImages are built at releases only: a version tag, or a deliberate manual dispatch to
+# prepare one. Never add branch pushes or pull_request triggers (xtask check-appimage).
 on:
   workflow_dispatch:
   push:
@@ -12,7 +14,8 @@ permissions:
 jobs:
   build:
     name: Build AppImage
-    runs-on: ubuntu-latest
+    # Keep the packaged glibc baseline stable when ubuntu-latest advances.
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
 
@@ -20,9 +23,11 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y \
+            binutils \
             build-essential \
             curl \
             file \
+            iproute2 \
             libayatana-appindicator3-dev \
             libgtk-3-dev \
             librsvg2-dev \
@@ -30,8 +35,12 @@ jobs:
             libwebkit2gtk-4.1-dev \
             patchelf \
             python3 \
+            squashfs-tools \
+            util-linux \
             wget \
             weston \
+            x11-apps \
+            x11-utils \
             xauth \
             xvfb
 
@@ -54,7 +63,7 @@ jobs:
         run: node --input-type=module -e "await import('rolldown'); console.log('Rolldown native binding loaded')"
 
       - name: Test AppImage launcher policy
-        run: python3 -m unittest tools.tests.test_appimage_launcher tools.tests.test_appimage_frontend_binding -v
+        run: python3 -m unittest tools.tests.test_appimage_launcher tools.tests.test_appimage_frontend_binding tools.tests.test_appimage_glibc tools.tests.test_appimage_extraction -v
 
       - name: Build AppImage
         working-directory: apps/knx-desktop
@@ -64,6 +73,12 @@ jobs:
 
       - name: Verify host-provided libraries are not bundled
         run: tools/appimage/check-host-libraries.sh target/release/bundle/appimage/*.AppImage
+
+      - name: Verify finished AppImage permissions
+        run: tools/appimage/check-permissions.sh target/release/bundle/appimage/*.AppImage
+
+      - name: Verify AppImage glibc baseline
+        run: python3 tools/check_appimage_glibc.py target/release/bundle/appimage/*.AppImage --max-version 2.39
 
       - name: Validate tagged AppImage
         if: github.event_name == 'push' && github.ref_type == 'tag'
@@ -103,6 +118,19 @@ jobs:
           status=$?
           set -e
           test "$status" -eq 124 || { cat appimage-wayland.log; exit 1; }
+
+      # Image owner is the runner; the app runs as another uid, offline (loopback only), with a
+      # fresh private HOME/XDG, under Xvfb. The WebKit sandbox stays enabled.
+      - name: Smoke test AppImage as another user, offline
+        run: sudo python3 tools/appimage/smoke_cross_user.py target/release/bundle/appimage/*.AppImage
+
+      - name: Upload cross-user smoke evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: appimage-smoke-evidence
+          path: appimage-smoke/
+          if-no-files-found: ignore
 
       - name: Upload AppImage
         uses: actions/upload-artifact@v4

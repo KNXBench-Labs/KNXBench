@@ -2543,6 +2543,40 @@ impl<'t, T: ManagementTransport> ManagementSession<'t, T> {
             .await
     }
 
+    /// `A_FunctionPropertyCommand` in the connection, answered by an
+    /// `A_FunctionPropertyState_Response` of the same object and property;
+    /// returns its return code (absent in a short answer) and data. `scope`
+    /// is checked against the session's authorisation, as for every write.
+    pub async fn function_property_command(
+        &mut self,
+        object_index: ObjectIndex,
+        property_id: u8,
+        data: Vec<u8>,
+        scope: WriteScope,
+    ) -> Result<(Option<u8>, Vec<u8>), SessionError> {
+        self.authorise_write(scope)?;
+        self.exchange(
+            ApplicationService::FunctionPropertyCommand {
+                object_index: object_index.octet(),
+                property_id,
+                data,
+            },
+            "A_FunctionPropertyState_Response to a command",
+            |service| match service {
+                ApplicationService::FunctionPropertyStateResponse {
+                    object_index: oi,
+                    property_id: pid,
+                    return_code,
+                    data,
+                } if *oi == object_index.octet() && *pid == property_id => {
+                    Some((*return_code, data.clone()))
+                }
+                _ => None,
+            },
+        )
+        .await
+    }
+
     #[allow(clippy::too_many_arguments)]
     async fn property_write_octets(
         &mut self,
@@ -3972,6 +4006,62 @@ mod tests {
     }
 
     // -------------------------------------------------- reads and answers
+
+    /// The simulator's opt-in element property (AL §3.4.4): element 0 is
+    /// the count, writes extend it up to the maximum, anything past that or
+    /// not whole elements is answered with no elements.
+    #[tokio::test]
+    async fn an_element_property_answers_element_by_element() {
+        let device = SimulatedDevice::new();
+        device.preset_element_property(6, 53, 1, 3, &[0xEE]);
+        let mut session = writer(&device, WriteScope::Download);
+        session.connect().await.expect("connect");
+        let object = ObjectIndex::new(6);
+        assert_eq!(
+            session
+                .read_property_counted(object, 53, 1, 0)
+                .await
+                .unwrap(),
+            (1, vec![0, 1])
+        );
+        let comparison = Comparison::ExactOctets;
+        let scope = WriteScope::Download;
+        session
+            .property_write_octets(object, 53, 2, 2, vec![0x57, 0x00], scope, comparison)
+            .await
+            .expect("elements 2 and 3 extend the count to the maximum");
+        for (count, start, data) in [(1u8, 4u16, vec![0xFF]), (2, 1, vec![0x01])] {
+            session
+                .property_write_octets(object, 53, count, start, data, scope, comparison)
+                .await
+                .expect_err("past the maximum, or not whole elements");
+        }
+        assert_eq!(
+            session
+                .read_property_counted(object, 53, 1, 0)
+                .await
+                .unwrap(),
+            (1, vec![0, 3])
+        );
+        assert_eq!(device.element_property(6, 53), Some(vec![0xEE, 0x57, 0x00]));
+        assert_eq!(
+            session
+                .read_property_counted(object, 53, 2, 2)
+                .await
+                .unwrap(),
+            (2, vec![0x57, 0x00])
+        );
+        assert_eq!(
+            session
+                .read_property_counted(object, 53, 1, 4)
+                .await
+                .unwrap()
+                .0,
+            0
+        );
+        // Any other property keeps the whole-value model.
+        assert_eq!(device.element_property(6, 52), None);
+    }
 
     #[tokio::test]
     async fn a_read_only_session_reads_state_without_writing_anything() {

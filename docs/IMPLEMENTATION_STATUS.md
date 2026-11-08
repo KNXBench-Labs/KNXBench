@@ -12,6 +12,21 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Property-placed parameters and master resets (8 November 2026; issue #10)
+
+Mask-`0701h` programs that keep their parameters in properties now plan
+([ADR-0161](adr/0161-property-placed-parameters-and-master-resets.md),
+[research](research/2026-11-08-property-placed-parameters.md)).
+`LdCtrlMasterReset` (erase codes 6 and 5) is sent as the function property
+command ETS 6.4 maps it to; a parameter-filled `LdCtrlWriteProp` reads the
+property, merges the parameters' bits into it and writes it back; invisible
+parameters are written with their default under
+`DownloadInvisibleParameters="Background"`. Restore and partial download refuse
+such plans. A KNXBench download of a switch actuator to the simulator matched
+ETS in every function property command, every written property and every
+parameter-owned bit. In the tester project nine more devices move from
+`unsupported` to `untested`. No hardware was written.
+
 ## Undeclared text encoding is Windows-1252 (7 November 2026; KL-171)
 
 A program that declares no `TextParameterEncoding` now gets its text in

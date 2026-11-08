@@ -122,6 +122,7 @@ fn image() -> DownloadImage {
         inferences: vec![],
         parameter_fields: vec![],
         table_writes: vec![],
+        properties: Vec::new(),
     }
 }
 

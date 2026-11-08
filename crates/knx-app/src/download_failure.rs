@@ -118,7 +118,8 @@ impl FailureCode {
             | E::BackupExemplarMismatch { .. } => Self::PropertyMismatch,
             E::ExemplarElementCount { .. } => Self::MalformedProperty,
             // The device's own description refuses the product's value.
-            E::PropertyNotWritable { .. } => Self::PropertyRefused,
+            E::PropertyNotWritable { .. } | E::MasterResetRefused { .. } => Self::PropertyRefused,
+            E::PropertyElements { .. } => Self::MalformedProperty,
             E::NotLoaded { .. } => Self::NotLoaded,
             E::UnexpectedState { .. } => Self::UnexpectedLoadState,
             E::Session { error, .. } => Self::of_session(error),
@@ -222,6 +223,8 @@ pub enum StepKind {
     Connect,
     CompareProperty,
     WriteProperty,
+    MasterReset,
+    WritePropertyParameters,
     Delay,
     LoadRecord,
     WriteMemory,
@@ -552,6 +555,8 @@ fn locate(
         }
         | E::PropertyMismatch { index, .. }
         | E::PropertyNotWritable { index, .. }
+        | E::MasterResetRefused { index, .. }
+        | E::PropertyElements { index, .. }
         | E::ExemplarMismatch { index }
         | E::ExemplarElementCount {
             index,
@@ -595,6 +600,18 @@ fn describe(step: &MemoryDownloadStep) -> (StepKind, String) {
         } => (
             StepKind::WriteProperty,
             format!("write property {object_index}/{property_id}"),
+        ),
+        MemoryDownloadStep::MasterResetCommand { erase_code, .. } => (
+            StepKind::MasterReset,
+            format!("master reset, erase code {erase_code}"),
+        ),
+        MemoryDownloadStep::WritePropertyParameters {
+            object_index,
+            property_id,
+            ..
+        } => (
+            StepKind::WritePropertyParameters,
+            format!("write the parameters in property {object_index}/{property_id}"),
         ),
         // Closed vocabulary: the exemplar guard is a compare to the result shapes.
         MemoryDownloadStep::RequireExemplar(_) => (

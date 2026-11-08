@@ -84,6 +84,10 @@ pub enum PartialPlanError {
     },
     /// After the rules, nothing is left that writes the device.
     NothingToWrite,
+    /// The complete plan resets the device or writes parameters into
+    /// properties; CP §3.9.2.4's rules say nothing about either, so no
+    /// partial download is derived from it.
+    UnbackedStateSteps,
 }
 
 impl std::error::Error for PartialPlanError {}
@@ -106,6 +110,10 @@ impl fmt::Display for PartialPlanError {
             PartialPlanError::NothingToWrite => {
                 f.write_str("after CP §3.9.2.4's rules the partial download writes nothing")
             }
+            PartialPlanError::UnbackedStateSteps => f.write_str(
+                "the complete download resets the device or writes parameters into properties; \
+                 no partial download is derived from it",
+            ),
         }
     }
 }
@@ -122,6 +130,13 @@ pub fn derive_partial_plan(
 ) -> Result<PartialPlan, PartialPlanError> {
     if !parts.parameters && !parts.group_addresses {
         return Err(PartialPlanError::NothingSelected);
+    }
+    if complete
+        .steps
+        .iter()
+        .any(MemoryDownloadStep::changes_unbacked_state)
+    {
+        return Err(PartialPlanError::UnbackedStateSteps);
     }
     let identity = application_identity(complete).ok_or(PartialPlanError::NoApplicationIdentity)?;
 
@@ -184,6 +199,8 @@ pub fn derive_partial_plan(
             MemoryDownloadStep::Connect
             | MemoryDownloadStep::CompareProperty { .. }
             | MemoryDownloadStep::WriteProperty { .. }
+            | MemoryDownloadStep::MasterResetCommand { .. }
+            | MemoryDownloadStep::WritePropertyParameters { .. }
             | MemoryDownloadStep::Delay { .. }
             | MemoryDownloadStep::RequireLoaded(_)
             | MemoryDownloadStep::RequireExemplar(_)
@@ -395,6 +412,36 @@ mod tests {
         parameters: true,
         group_addresses: true,
     };
+
+    #[test]
+    fn a_plan_that_resets_or_writes_property_parameters_has_no_partial_download() {
+        let mut plan = complete();
+        plan.steps.insert(
+            2,
+            MemoryDownloadStep::WritePropertyParameters {
+                object_index: 8,
+                property_id: 52,
+                elements: 1,
+                octets: vec![0x81],
+                owned: vec![0xFF],
+            },
+        );
+        for parts in [
+            PartialDownloadParts {
+                parameters: true,
+                group_addresses: false,
+            },
+            PartialDownloadParts {
+                parameters: false,
+                group_addresses: true,
+            },
+        ] {
+            assert_eq!(
+                derive_partial_plan(&plan, parts),
+                Err(PartialPlanError::UnbackedStateSteps)
+            );
+        }
+    }
 
     #[test]
     fn both_parts_drop_only_the_application_unload_and_allocations() {

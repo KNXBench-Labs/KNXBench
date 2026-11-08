@@ -1592,6 +1592,9 @@ export const messages = {
   // saved yet; the timestamped form uses the browser's own locale
   // formatting (`Intl.DateTimeFormat`), not a hardcoded pattern.
   "statusBar.lastSaved": "Last saved: {time}",
+  "statusBar.journalSaving": "Saving changes…",
+  "statusBar.journalFailed": "Changes not written to the project file: {message}",
+  "statusBar.journalRetry": "Retry",
   "statusBar.neverSaved": "Not saved yet",
   "settings.uiLanguage": "UI language",
   "language.en": "English",

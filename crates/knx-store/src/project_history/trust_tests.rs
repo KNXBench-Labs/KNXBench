@@ -129,7 +129,10 @@ fn what_an_open_verified_serves_the_first_write() {
     stack.do_command(&mut working.project, style(0)).unwrap();
     file.generation =
         save_editor(&file.conn, &working, &stack, Some(file.generation), false).unwrap();
-    let opened = load_editor(&file.conn).unwrap().unwrap().trust();
+    let opened = load_editor_with_trust(&file.conn)
+        .unwrap()
+        .unwrap()
+        .take_trust();
     stack.do_command(&mut working.project, style(1)).unwrap();
     let (_, first) = trusted(&mut file, &working, &stack, &opened);
     assert_eq!(first, (0, 1));
@@ -292,7 +295,7 @@ fn a_known_version_context_whose_bytes_changed_is_refused() {
 
 /// The retained context of the saved versions that is not the working one.
 fn older_context_hash(conn: &Connection, working: &NativeSnapshot) -> String {
-    let working_hash = load_editor(conn).unwrap().unwrap().trust();
+    let working_hash = load_editor_with_trust(conn).unwrap().unwrap().take_trust();
     let known = working_hash.context().unwrap().content_hash.clone();
     assert!(working.opaque[0].bytes[0] != 0x11);
     conn.query_row(
@@ -312,11 +315,11 @@ fn trust_from_an_open_ignores_later_changes_to_the_read_values() {
     stack.do_command(&mut working.project, style(0)).unwrap();
     file.generation =
         save_editor(&file.conn, &working, &stack, Some(file.generation), false).unwrap();
-    let mut opened = load_editor(&file.conn).unwrap().unwrap();
+    let mut opened = load_editor_with_trust(&file.conn).unwrap().unwrap();
     // A caller edits the returned values before asking for the trust.
     opened.working.opaque[0].bytes[0] = 0x77;
     opened.baseline.project.info.name = "Edited after reading".into();
-    let trust = opened.trust();
+    let trust = opened.take_trust();
     let mut changed = working.clone();
     changed.opaque[0].bytes[0] = 0x77;
     stack.do_command(&mut changed.project, style(1)).unwrap();
@@ -327,4 +330,22 @@ fn trust_from_an_open_ignores_later_changes_to_the_read_values() {
         "the new context is stored"
     );
     assert_matches_full_rewrite(&file, &seed, &changed, &stack);
+}
+
+#[test]
+fn only_a_trusting_read_captures_the_context() {
+    let seed = seed();
+    let mut file = saved(&seed);
+    let mut working = seed.clone();
+    let mut stack = CommandStack::new();
+    stack.do_command(&mut working.project, style(0)).unwrap();
+    file.generation =
+        save_editor(&file.conn, &working, &stack, Some(file.generation), false).unwrap();
+    let mut plain = load_editor(&file.conn).unwrap().unwrap();
+    let rows = plain.rows.clone();
+    assert_eq!(plain.take_trust(), JournalTrust::from_rows(rows.clone()));
+    let mut trusting = load_editor_with_trust(&file.conn).unwrap().unwrap();
+    assert_ne!(trusting.take_trust(), JournalTrust::from_rows(rows.clone()));
+    // Taken once: a second call knows only the rows.
+    assert_eq!(trusting.take_trust(), JournalTrust::from_rows(rows));
 }

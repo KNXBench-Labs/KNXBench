@@ -71,6 +71,20 @@ simulator ran all 28 steps each. In that project 41 devices move from
 program of the same manufacturer); the second manufacturer's actuators stay
 refused for other reasons. No hardware was written.
 
+## Journal writes keep unchanged undo rows (8 November 2026; issue #35)
+
+In a saved project every edit re-encoded and twice re-decoded the whole undo
+stack before it was shown, so a parameter dropdown stayed disabled for 6 to 16 s
+on a 36-device demo project with 33 to 56 undo steps, and longer with more steps.
+[ADR-0163](adr/0163-journal-writes-keep-unchanged-undo-rows.md): the core proves
+which bottom states two histories share, the store keeps those rows only while
+their stored hashes match and re-hashes instead of re-decoding rows the server
+encoded itself, and a native open seeds the same claim. Same project afterwards:
+2.1 to 2.5 s, independent of the history length. The row shows "Saving…" while its
+write is pending. Store tests compare incremental and full rewrites row by row and
+after reopening; remaining project-sized costs are listed in the
+[history limits](limitations/persistent-native-working-history.md).
+
 ## System-2 panel names a foreign retained operation (7 November 2026; issue #34)
 
 The System-2 panel says when the retained operation belongs to another device or

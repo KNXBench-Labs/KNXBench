@@ -124,6 +124,8 @@ mod programming_state;
 pub use programming_state::address_programming_settler;
 mod historical_import_log;
 #[cfg(test)]
+mod history_reuse_tests;
+#[cfg(test)]
 mod import_restore_tests;
 mod parameter_editor_routes;
 mod paths;

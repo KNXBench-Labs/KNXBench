@@ -7,10 +7,13 @@ pub mod comparison_adoption;
 #[cfg(test)]
 mod comparison_adoption_tests;
 mod function_commands;
+mod history_prefix;
 mod object_commands;
 mod programming_commands;
 #[cfg(test)]
 mod programming_tests;
+
+pub use history_prefix::SharedHistoryPrefix;
 
 use std::collections::HashSet;
 use std::fmt;
@@ -4102,14 +4105,25 @@ impl CommandStack {
     pub fn visit_snapshot_states(
         &self,
         project: &Project,
+        visitor: impl FnMut(HistorySide, usize, &Project) -> bool,
+    ) -> Result<bool, CommandError> {
+        self.visit_snapshot_states_above(project, SharedHistoryPrefix::default(), visitor)
+    }
+
+    /// [`Self::visit_snapshot_states`] that stops each side at its `floor`:
+    /// positions below it are neither replayed nor visited.
+    pub fn visit_snapshot_states_above(
+        &self,
+        project: &Project,
+        floor: SharedHistoryPrefix,
         mut visitor: impl FnMut(HistorySide, usize, &Project) -> bool,
     ) -> Result<bool, CommandError> {
-        for (side, entries) in [
-            (HistorySide::Undo, &self.undo),
-            (HistorySide::Redo, &self.redo),
+        for (side, entries, floor) in [
+            (HistorySide::Undo, &self.undo, floor.undo),
+            (HistorySide::Redo, &self.redo, floor.redo),
         ] {
             let mut current = project.clone();
-            for (position, entry) in entries.iter().enumerate().rev() {
+            for (position, entry) in entries.iter().enumerate().skip(floor).rev() {
                 entry.clone().apply(&mut current)?;
                 if !visitor(side, position, &current) {
                     return Ok(false);
@@ -4237,7 +4251,7 @@ mod tests {
         }
     }
 
-    fn test_project_with_one_device(address: Option<IndividualAddress>) -> Project {
+    pub(super) fn test_project_with_one_device(address: Option<IndividualAddress>) -> Project {
         let mut p = Project::new(Language("en".into()));
         p.installations.push(Installation {
             id: InstallationId(0),

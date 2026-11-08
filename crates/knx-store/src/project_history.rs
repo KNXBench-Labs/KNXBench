@@ -1,5 +1,6 @@
 //! Versioned native snapshots, durable editor recovery and atomic project time travel.
 
+use std::collections::HashSet;
 use std::fmt;
 
 use crate::StoreError;
@@ -12,10 +13,22 @@ pub fn open_editor_store(
     path: &std::path::Path,
     allow_empty: bool,
 ) -> Result<Connection, HistoryError> {
+    open_editor_store_trusting(path, allow_empty, &StackRows::default())
+}
+
+/// [`open_editor_store`] whose read-only admission verifies the stack rows
+/// `trusted` names by the SHA-256 of their bytes alone ([`StackRead::Admit`]).
+pub fn open_editor_store_trusting(
+    path: &std::path::Path,
+    allow_empty: bool,
+    trusted: &StackRows,
+) -> Result<Connection, HistoryError> {
     match crate::open_existing_read_only(path) {
         Ok(admitted) => {
-            load_editor(&admitted.conn)?;
-            list_versions(&admitted.conn)?;
+            let tx = admitted.conn.unchecked_transaction()?;
+            admit_editor(&tx, &trusted.hashes())?;
+            list_versions_inner(&tx)?;
+            tx.commit()?;
         }
         Err(crate::MigrationError::NothingSaved) if allow_empty => {}
         Err(error) => return Err(error.into()),
@@ -116,6 +129,8 @@ pub struct EditorHistory {
     pub working: NativeSnapshot,
     pub undo: Vec<Project>,
     pub redo: Vec<Project>,
+    /// The stored image hash of every `undo`/`redo` state, in the same order.
+    pub rows: StackRows,
 }
 
 #[derive(Debug, Clone)]
@@ -213,7 +228,34 @@ fn check_limits(conn: &Connection) -> Result<(), HistoryError> {
     Ok(())
 }
 
+/// What one pass over the stored journal keeps of each stack row.
+enum StackRead<'a> {
+    /// Decode and check every row and return its project state.
+    States,
+    /// Check only, returning no states. A row whose stored hash `trusted`
+    /// names is verified by the SHA-256 of its bytes instead of being decoded:
+    /// the caller already holds that image's state, encoded by itself or
+    /// decoded and admitted when the file was opened. Every other row is
+    /// decoded and checked as in `States`.
+    Admit(&'a HashSet<&'a str>),
+}
+
 fn load_editor_inner(conn: &Connection) -> Result<Option<EditorHistory>, HistoryError> {
+    read_editor(conn, StackRead::States)
+}
+
+/// Admission without materializing states; see [`StackRead::Admit`].
+fn admit_editor(
+    conn: &Connection,
+    trusted: &HashSet<&str>,
+) -> Result<Option<EditorHistory>, HistoryError> {
+    read_editor(conn, StackRead::Admit(trusted))
+}
+
+fn read_editor(
+    conn: &Connection,
+    read: StackRead<'_>,
+) -> Result<Option<EditorHistory>, HistoryError> {
     snapshot::check_schema(conn)?;
     check_limits(conn)?;
     let state = conn.query_row(
@@ -247,6 +289,7 @@ fn load_editor_inner(conn: &Connection) -> Result<Option<EditorHistory>, History
     }
     let mut undo = Vec::new();
     let mut redo = Vec::new();
+    let mut rows_read = StackRows::default();
     let mut stmt = conn.prepare("SELECT side, position, format_version, image, image_hash, context_hash FROM project_history_stack ORDER BY side, position")?;
     let mut rows = stmt.query([])?;
     while let Some(row) = rows.next()? {
@@ -261,15 +304,24 @@ fn load_editor_inner(conn: &Connection) -> Result<Option<EditorHistory>, History
                 "stack retained context differs from the working project",
             ));
         }
-        let target = match side.as_str() {
-            "undo" => &mut undo,
-            "redo" => &mut redo,
+        let (target, hashes) = match side.as_str() {
+            "undo" => (&mut undo, &mut rows_read.undo),
+            "redo" => (&mut redo, &mut rows_read.redo),
             _ => return Err(HistoryError::Invalid("unknown stack side")),
         };
-        if position != target.len() as i64 || format != FORMAT_VERSION {
+        if position != hashes.len() as i64 || format != FORMAT_VERSION {
             return Err(HistoryError::Invalid(
                 "unknown stack version or position gap",
             ));
+        }
+        if let StackRead::Admit(trusted) = read {
+            if trusted.contains(hash.as_str()) {
+                if image_hash(&image) != hash {
+                    return Err(HistoryError::Invalid("stack image hash mismatch"));
+                }
+                hashes.push(hash);
+                continue;
+            }
         }
         let snapshot = context::attach(&image, &hash, &retained)?;
         if snapshot.project.info.project_id != working.project.info.project_id
@@ -280,7 +332,10 @@ fn load_editor_inner(conn: &Connection) -> Result<Option<EditorHistory>, History
                 "stack snapshot belongs to another project or retained context",
             ));
         }
-        target.push(snapshot.project);
+        if matches!(read, StackRead::States) {
+            target.push(snapshot.project);
+        }
+        hashes.push(hash);
     }
     Ok(Some(EditorHistory {
         generation,
@@ -288,6 +343,7 @@ fn load_editor_inner(conn: &Connection) -> Result<Option<EditorHistory>, History
         working,
         undo,
         redo,
+        rows: rows_read,
     }))
 }
 
@@ -302,8 +358,12 @@ pub fn load_editor(conn: &Connection) -> Result<Option<EditorHistory>, HistoryEr
     Ok(history)
 }
 
-fn admitted_generation(conn: &Connection, expected: Option<i64>) -> Result<i64, HistoryError> {
-    let current = load_editor_inner(conn)?.map_or(0, |h| h.generation);
+fn admitted_generation(
+    conn: &Connection,
+    expected: Option<i64>,
+    trusted: &HashSet<&str>,
+) -> Result<i64, HistoryError> {
+    let current = admit_editor(conn, trusted)?.map_or(0, |h| h.generation);
     if expected.is_some_and(|e| e != current) {
         return Err(HistoryError::Stale);
     }
@@ -317,13 +377,51 @@ fn next_generation(current: i64) -> Result<i64, HistoryError> {
         .ok_or(HistoryError::Invalid("generation exhausted"))
 }
 
+/// Image hashes of the stored undo and redo rows, bottom to top per side.
+/// As a reuse request it names the bottom rows a caller proved unchanged.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct StackRows {
+    pub undo: Vec<String>,
+    pub redo: Vec<String>,
+}
+
+impl StackRows {
+    fn hashes(&self) -> HashSet<&str> {
+        self.undo
+            .iter()
+            .chain(&self.redo)
+            .map(String::as_str)
+            .collect()
+    }
+}
+
+/// Leading rows of `side` whose stored image hash still equals `expected`.
+/// Hashes were verified against their images by the admission before this.
+fn kept_rows(conn: &Connection, side: &str, expected: &[String]) -> Result<usize, HistoryError> {
+    let mut stmt = conn.prepare(
+        "SELECT image_hash FROM project_history_stack WHERE side = ?1 AND position = ?2 AND format_version = ?3",
+    )?;
+    let mut kept = 0;
+    for (position, hash) in expected.iter().enumerate() {
+        let stored: Option<String> = stmt
+            .query_row(params![side, position as i64, FORMAT_VERSION], |r| r.get(0))
+            .optional()?;
+        if stored.as_deref() != Some(hash.as_str()) {
+            break;
+        }
+        kept += 1;
+    }
+    Ok(kept)
+}
+
 fn write_workspace(
     conn: &Connection,
     baseline: &NativeSnapshot,
     working: &NativeSnapshot,
     stack: &CommandStack,
     generation: i64,
-) -> Result<(), HistoryError> {
+    reuse: &StackRows,
+) -> Result<StackRows, HistoryError> {
     let (undo_steps, redo_steps) = stack.history_lengths();
     if undo_steps.saturating_add(redo_steps) > MAX_STACK_STATES {
         return Err(HistoryError::Limit("undo and redo exceed 256 states"));
@@ -331,7 +429,24 @@ fn write_workspace(
     let baseline_hash = baseline.semantic_hash()?;
     let context_hash = context::remember(conn, working)?;
     let image = context::model_image(&working.project)?;
-    conn.execute("DELETE FROM project_history_stack", [])?;
+    // Kept rows hold exactly the states a full rewrite would produce; every
+    // stack row pairs with the working context, as a full rewrite stores it.
+    let keep_undo = kept_rows(conn, "undo", &reuse.undo)?.min(undo_steps);
+    let keep_redo = kept_rows(conn, "redo", &reuse.redo)?.min(redo_steps);
+    conn.execute(
+        "DELETE FROM project_history_stack WHERE (side = 'undo' AND position >= ?1) OR (side = 'redo' AND position >= ?2)",
+        params![keep_undo as i64, keep_redo as i64],
+    )?;
+    conn.execute(
+        "UPDATE project_history_stack SET context_hash = ?1",
+        [&context_hash],
+    )?;
+    let mut rows = StackRows {
+        undo: reuse.undo[..keep_undo].to_vec(),
+        redo: reuse.redo[..keep_redo].to_vec(),
+    };
+    rows.undo.resize(undo_steps, String::new());
+    rows.redo.resize(redo_steps, String::new());
     conn.execute(
         "INSERT INTO project_history_state (id, format_version, generation, baseline_hash, working, working_hash, context_hash)
          VALUES (0, ?1, ?2, ?3, ?4, ?5, ?6) ON CONFLICT(id) DO UPDATE SET
@@ -346,12 +461,20 @@ fn write_workspace(
     }
     let mut stmt = conn.prepare("INSERT INTO project_history_stack (side, position, format_version, image, image_hash, context_hash) VALUES (?1, ?2, ?3, ?4, ?5, ?6)")?;
     let mut refusal = None;
+    let floor = knx_core::command::SharedHistoryPrefix {
+        undo: keep_undo,
+        redo: keep_redo,
+    };
     let complete = stack
-        .visit_snapshot_states(&working.project, |side, position, project| {
+        .visit_snapshot_states_above(&working.project, floor, |side, position, project| {
             let result = (|| -> Result<(), HistoryError> {
                 if project.info.project_id != working.project.info.project_id {
                     return Err(HistoryError::Invalid("cross-project stack state"));
                 }
+                let side_rows = match side {
+                    knx_core::command::HistorySide::Undo => &mut rows.undo,
+                    knx_core::command::HistorySide::Redo => &mut rows.redo,
+                };
                 let image = context::model_image(project)?;
                 bytes = bytes
                     .checked_add(image.len() as i64)
@@ -363,14 +486,16 @@ fn write_workspace(
                     knx_core::command::HistorySide::Undo => "undo",
                     knx_core::command::HistorySide::Redo => "redo",
                 };
+                let hash = image_hash(&image);
                 stmt.execute(params![
                     side,
                     position as i64,
                     FORMAT_VERSION,
                     image,
-                    image_hash(&image),
+                    hash,
                     context_hash
                 ])?;
+                side_rows[position] = hash;
                 Ok(())
             })();
             match result {
@@ -387,7 +512,8 @@ fn write_workspace(
     if !complete {
         return Err(refusal.unwrap_or(HistoryError::Invalid("history admission stopped")));
     }
-    check_limits(conn)
+    check_limits(conn)?;
+    Ok(rows)
 }
 
 fn append_version(
@@ -432,8 +558,33 @@ pub fn save_editor(
         stack,
         expected_generation,
         save_root,
-        None,
-        &[],
+        SaveExtras::default(),
+    )
+    .map(|(generation, _)| generation)
+}
+
+/// [`save_editor`] of the working journal alone that keeps the bottom stack
+/// rows whose stored image hashes still equal `reuse`. The caller must have
+/// proven those states unchanged (`CommandStack::shared_snapshot_prefix`);
+/// a row whose hash differs, or any row above them, is written afresh.
+/// Returns the new generation and the image hash of every stored row.
+pub fn save_editor_reusing(
+    conn: &Connection,
+    working: &NativeSnapshot,
+    stack: &CommandStack,
+    expected_generation: i64,
+    reuse: &StackRows,
+) -> Result<(i64, StackRows), HistoryError> {
+    save_editor_inner(
+        conn,
+        working,
+        stack,
+        Some(expected_generation),
+        false,
+        SaveExtras {
+            reuse: Some(reuse),
+            ..SaveExtras::default()
+        },
     )
 }
 
@@ -452,9 +603,12 @@ pub fn save_editor_with_sources(
         stack,
         expected_generation,
         true,
-        None,
-        sources,
+        SaveExtras {
+            sources,
+            ..SaveExtras::default()
+        },
     )
+    .map(|(generation, _)| generation)
 }
 
 /// Compare the reviewed working snapshot under the same write lock as all writes.
@@ -473,9 +627,20 @@ pub fn save_editor_if_unchanged(
         stack,
         Some(expected_generation),
         save_root,
-        Some(expected_working_hash),
-        &[],
+        SaveExtras {
+            expected_working_hash: Some(expected_working_hash),
+            ..SaveExtras::default()
+        },
     )
+    .map(|(generation, _)| generation)
+}
+
+/// The optional inputs of one editor save; the default asks for none.
+#[derive(Default)]
+struct SaveExtras<'a> {
+    expected_working_hash: Option<&'a str>,
+    sources: &'a [crate::CarriedManufacturerFile],
+    reuse: Option<&'a StackRows>,
 }
 
 fn save_editor_inner(
@@ -484,9 +649,13 @@ fn save_editor_inner(
     stack: &CommandStack,
     expected_generation: Option<i64>,
     save_root: bool,
-    expected_working_hash: Option<&str>,
-    sources: &[crate::CarriedManufacturerFile],
-) -> Result<i64, HistoryError> {
+    extras: SaveExtras<'_>,
+) -> Result<(i64, StackRows), HistoryError> {
+    let SaveExtras {
+        expected_working_hash,
+        sources,
+        reuse,
+    } = extras;
     let (undo_steps, redo_steps) = stack.history_lengths();
     if undo_steps.saturating_add(redo_steps) > MAX_STACK_STATES {
         return Err(HistoryError::Limit("undo and redo exceed 256 states"));
@@ -494,7 +663,9 @@ fn save_editor_inner(
     let tx = Transaction::new_unchecked(conn, TransactionBehavior::Immediate)?;
     crate::migration::migrate_in_transaction(&tx)?;
     snapshot::check_schema(&tx)?;
-    let current = admitted_generation(&tx, expected_generation)?;
+    // Rows this writer itself encoded are re-hashed, not decoded again.
+    let trusted = reuse.map(StackRows::hashes).unwrap_or_default();
+    let current = admitted_generation(&tx, expected_generation, &trusted)?;
     list_versions_inner(&tx)?;
     let generation = next_generation(current)?;
     let old = match NativeSnapshot::read(&tx) {
@@ -536,7 +707,14 @@ fn save_editor_inner(
             "workspace requires a saved native project",
         ))?
     };
-    write_workspace(&tx, baseline, working, stack, generation)?;
+    let rows = write_workspace(
+        &tx,
+        baseline,
+        working,
+        stack,
+        generation,
+        reuse.unwrap_or(&StackRows::default()),
+    )?;
     for source in sources {
         let sha = crate::manufacturer_file_hash(&source.bytes);
         if !working.manufacturer_refs.iter().any(|r| {
@@ -553,7 +731,7 @@ fn save_editor_inner(
         crate::load_manufacturer_file(&tx, &sha).map_err(HistoryError::Carried)?;
     }
     tx.commit()?;
-    Ok(generation)
+    Ok((generation, rows))
 }
 
 fn list_versions_inner(conn: &Connection) -> Result<Vec<ProjectVersion>, HistoryError> {
@@ -664,7 +842,7 @@ pub fn change_history(
     let tx = Transaction::new_unchecked(conn, TransactionBehavior::Immediate)?;
     crate::migration::migrate_in_transaction(&tx)?;
     snapshot::check_schema(&tx)?;
-    let generation = next_generation(admitted_generation(&tx, Some(expected))?)?;
+    let generation = next_generation(admitted_generation(&tx, Some(expected), &HashSet::new())?)?;
     list_versions_inner(&tx)?;
     let baseline = NativeSnapshot::read(&tx)?;
     if current_working.project.info.project_id != baseline.project.info.project_id {
@@ -680,6 +858,7 @@ pub fn change_history(
             current_working,
             &CommandStack::new(),
             generation,
+            &StackRows::default(),
         )?;
     }
     let restored = match action {
@@ -700,6 +879,7 @@ pub fn change_history(
                 current_working,
                 &CommandStack::new(),
                 generation,
+                &StackRows::default(),
             )?;
             None
         }
@@ -722,6 +902,7 @@ pub fn change_history(
                 &replacement,
                 &CommandStack::new(),
                 generation,
+                &StackRows::default(),
             )?;
             Some(EditorHistory {
                 generation,
@@ -729,6 +910,7 @@ pub fn change_history(
                 working: replacement,
                 undo: Vec::new(),
                 redo: Vec::new(),
+                rows: StackRows::default(),
             })
         }
     };
@@ -816,6 +998,7 @@ pub(crate) fn before_plain_save(
             replacement,
             &CommandStack::new(),
             generation,
+            &StackRows::default(),
         )?;
     }
     Ok(())

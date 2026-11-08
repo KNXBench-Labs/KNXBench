@@ -277,6 +277,32 @@ describe("ParameterPanel", () => {
     expect(apiMock.setParameterValue).toHaveBeenCalledTimes(1);
     await act(async () => root.unmount());
   });
+  it("says a selection is being saved while its write is pending and unlocks after it (#35)", async () => {
+    const field = { ...fixture.sections[0].fields[0], kind: "Restriction", value: "30",
+      group: { key: "brightness", label: "Brightness" },
+      enumOptions: [{ value: "10", text: "10 seconds", language: null }, { value: "30", text: "30 seconds", language: null }] };
+    const panel = { ...fixture, sections: [{ scope: null, fields: [field] }] };
+    apiMock.deviceParameters.mockResolvedValue(panel);
+    let settle!: (value: ParameterPanelDto) => void;
+    apiMock.setParameterValue.mockReturnValue(new Promise<ParameterPanelDto>((resolve) => { settle = resolve; }));
+    const root = await renderPanel();
+    await act(async () => host!.querySelector<HTMLButtonElement>(".parameter-workspace-nav button")!.click());
+    const select = host!.querySelector<HTMLSelectElement>("select")!;
+    expect(host!.querySelector(".parameter-field-saving")).toBeNull();
+    await act(async () => setSelectValue(select, "10"));
+    expect(apiMock.setParameterValue).toHaveBeenCalledExactlyOnceWith(1, "P1", "10", null, bound("30"));
+    const saving = host!.querySelector(".parameter-field-saving");
+    expect(saving?.getAttribute("role")).toBe("status");
+    expect(saving?.textContent).toContain("Saving");
+    expect(select.disabled).toBe(true);
+    expect(select.value).toBe("10");
+    await act(async () => settle({ ...panel, sections: [{ scope: null, fields: [{ ...field, value: "10", valueSource: "Stored" }] }], tree: { ...shownTree, snapshot_revision: 3 } }));
+    expect(host!.querySelector(".parameter-field-saving")).toBeNull();
+    expect(host!.querySelector<HTMLSelectElement>("select")!.disabled).toBe(false);
+    expect(host!.querySelector<HTMLSelectElement>("select")!.value).toBe("10");
+    await act(async () => root.unmount());
+  });
+
   it("renders declared-grid cells with the same bound rows and the one existing write path", async () => {
     const choice = { ...fixture.sections[0].fields[0], kind: "Restriction", value: "0", cell: { row: 1, column: 2 },
       group: { key: "pairs", label: "Pairs" },

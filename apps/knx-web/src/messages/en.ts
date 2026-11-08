@@ -2207,6 +2207,7 @@ export const messages = {
   "parameters.conflictApply": "Apply my value",
   "parameters.conflictDiscard": "Discard my value",
   "parameters.noContextCaption": "Read-only: no current project snapshot to bind this write to.",
+  "parameters.savingCaption": "Saving… the field unlocks once the project has stored this change.",
   "parameters.checked.open": "Checked editor",
   "parameters.checked.openHint": "Edit this value with the range and unit declared in the product data",
   "parameters.checked.close": "Back to the plain field",

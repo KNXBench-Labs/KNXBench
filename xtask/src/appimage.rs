@@ -96,6 +96,36 @@ fn read_json(path: &Path) -> Result<Value, String> {
 const HOST_LIBRARY_CHECK: &str =
     "tools/appimage/check-host-libraries.sh target/release/bundle/appimage/*.AppImage";
 
+/// Finished-image permission check and the cross-user offline smoke (AppRun mode 0770 failure).
+const PERMISSION_CHECK: &str =
+    "tools/appimage/check-permissions.sh target/release/bundle/appimage/*.AppImage";
+const CROSS_USER_SMOKE: &str =
+    "sudo python3 tools/appimage/smoke_cross_user.py target/release/bundle/appimage/*.AppImage";
+const GLIBC_CHECK: &str = "python3 tools/check_appimage_glibc.py target/release/bundle/appimage/*.AppImage --max-version 2.39";
+
+/// AppImages build at releases only: version tags and a deliberate manual dispatch.
+fn verify_triggers(workflow: &Yaml) -> Result<(), String> {
+    let error = "Linux AppImage workflow must trigger only on workflow_dispatch and v* tag pushes";
+    let Yaml::Hash(triggers) = &workflow["on"] else {
+        return Err(error.to_string());
+    };
+    let keys: Vec<&str> = triggers.keys().filter_map(Yaml::as_str).collect();
+    if triggers.len() != 2 || !keys.contains(&"workflow_dispatch") || !keys.contains(&"push") {
+        return Err(error.to_string());
+    }
+    let Yaml::Hash(push) = &workflow["on"]["push"] else {
+        return Err(error.to_string());
+    };
+    let tags_only = push.len() == 1
+        && matches!(&workflow["on"]["push"]["tags"], Yaml::Array(tags)
+            if tags.len() == 1 && tags[0].as_str() == Some("v*"));
+    if tags_only {
+        Ok(())
+    } else {
+        Err(error.to_string())
+    }
+}
+
 fn verify_workflow(root: &Path) -> Result<(), String> {
     let path = root.join(".github/workflows/linux-appimage.yml");
     let source = fs::read_to_string(&path)
@@ -141,6 +171,37 @@ fn verify_workflow(root: &Path) -> Result<(), String> {
         ));
     }
 
+    let build_index = steps
+        .iter()
+        .position(|step| step["name"].as_str() == Some("Build AppImage"))
+        .ok_or_else(|| "Linux AppImage workflow has no build step".to_string())?;
+    for (name, command) in [
+        ("Verify finished AppImage permissions", PERMISSION_CHECK),
+        ("Verify AppImage glibc baseline", GLIBC_CHECK),
+        (
+            "Smoke test AppImage as another user, offline",
+            CROSS_USER_SMOKE,
+        ),
+    ] {
+        let Some((index, step)) = steps.iter().enumerate().find(|(_, step)| {
+            step["name"].as_str() == Some(name)
+                && step["run"].as_str().map(str::trim) == Some(command)
+        }) else {
+            return Err(format!("Linux AppImage workflow must run `{command}`"));
+        };
+        if index <= build_index
+            || !matches!(&step["if"], Yaml::BadValue)
+            || !matches!(
+                &step["continue-on-error"],
+                Yaml::BadValue | Yaml::Boolean(false)
+            )
+        {
+            return Err(format!(
+                "Linux AppImage check `{command}` must be unconditional, blocking and after the build"
+            ));
+        }
+    }
+
     let repository_context_error =
         "Linux AppImage release step must set GH_REPO to ${{ github.repository }}";
     let Yaml::Array(release_steps) = &workflow["jobs"]["release"]["steps"] else {
@@ -153,7 +214,12 @@ fn verify_workflow(root: &Path) -> Result<(), String> {
         return Err(repository_context_error.to_string());
     }
 
-    Ok(())
+    if workflow["jobs"]["build"]["runs-on"].as_str() != Some("ubuntu-24.04") {
+        return Err(
+            "Linux AppImage build must pin ubuntu-24.04 for the glibc baseline".to_string(),
+        );
+    }
+    verify_triggers(workflow)
 }
 
 fn verify_artifacts(dir: &Path, version: &str) -> Result<VerifiedAppImage, String> {
@@ -225,6 +291,9 @@ mod tests {
     use std::fs;
     use std::os::unix::fs::PermissionsExt;
     use std::path::Path;
+
+    const TRIGGERS: &str = "on:\n  workflow_dispatch:\n  push:\n    tags:\n      - \"v*\"\n";
+    const NEW_STEPS: &str = "      - name: Verify finished AppImage permissions\n        run: tools/appimage/check-permissions.sh target/release/bundle/appimage/*.AppImage\n      - name: Smoke test AppImage as another user, offline\n        run: sudo python3 tools/appimage/smoke_cross_user.py target/release/bundle/appimage/*.AppImage\n      - name: Verify AppImage glibc baseline\n        run: python3 tools/check_appimage_glibc.py target/release/bundle/appimage/*.AppImage --max-version 2.39\n";
 
     fn write_executable(path: &Path, contents: &[u8]) {
         fs::write(path, contents).unwrap();
@@ -327,7 +396,7 @@ mod tests {
 
         fs::write(
             &workflow,
-            "jobs:\n  build:\n    steps:\n      - name: Build AppImage\n        run: cargo tauri build\n",
+            "jobs:\n  build:\n    runs-on: ubuntu-24.04\n    steps:\n      - name: Build AppImage\n        run: cargo tauri build\n",
         )
         .unwrap();
         assert_eq!(
@@ -337,7 +406,7 @@ mod tests {
 
         fs::write(
             &workflow,
-            "jobs:\n  build:\n    steps:\n      - name: Build AppImage\n        run: cargo tauri build\n      - name: Other\n        env:\n          NO_STRIP: \"1\"\n",
+            "jobs:\n  build:\n    runs-on: ubuntu-24.04\n    steps:\n      - name: Build AppImage\n        run: cargo tauri build\n      - name: Other\n        env:\n          NO_STRIP: \"1\"\n",
         )
         .unwrap();
         assert_eq!(
@@ -347,7 +416,7 @@ mod tests {
 
         fs::write(
             &workflow,
-            "jobs:\n  build:\n    steps:\n      - name: Build AppImage\n        env:\n          NO_STRIP: 1\n        run: cargo tauri build\n",
+            "jobs:\n  build:\n    runs-on: ubuntu-24.04\n    steps:\n      - name: Build AppImage\n        env:\n          NO_STRIP: 1\n        run: cargo tauri build\n",
         )
         .unwrap();
         assert_eq!(
@@ -357,7 +426,7 @@ mod tests {
 
         fs::write(
             workflow,
-            "jobs:\n  build:\n    steps:\n      - name: Build AppImage\n        env:\n          NO_STRIP: \"1\"\n        run: cargo tauri build\n      - name: Smoke test AppImage startup\n        run: |\n          status=$?\n          set -e\n          test \"$status\" -eq 124 || { cat appimage-startup.log; exit 1; }\n      - name: Verify host-provided libraries are not bundled\n        run: tools/appimage/check-host-libraries.sh target/release/bundle/appimage/*.AppImage\n  release:\n    steps:\n      - name: Create or update release\n        env:\n          GH_REPO: ${{ github.repository }}\n",
+            [TRIGGERS, "jobs:\n  build:\n    runs-on: ubuntu-24.04\n    steps:\n      - name: Build AppImage\n        env:\n          NO_STRIP: \"1\"\n        run: cargo tauri build\n      - name: Smoke test AppImage startup\n        run: |\n          status=$?\n          set -e\n          test \"$status\" -eq 124 || { cat appimage-startup.log; exit 1; }\n      - name: Verify host-provided libraries are not bundled\n        run: tools/appimage/check-host-libraries.sh target/release/bundle/appimage/*.AppImage\n", NEW_STEPS, "  release:\n    steps:\n      - name: Create or update release\n        env:\n          GH_REPO: ${{ github.repository }}\n"].concat(),
         )
         .unwrap();
         assert!(verify_workflow(dir.path()).is_ok());
@@ -369,7 +438,7 @@ mod tests {
         fs::create_dir_all(&workflow_dir).unwrap();
         fs::write(
             workflow_dir.join("linux-appimage.yml"),
-            format!("jobs:\n  build:\n    steps:\n      - name: Build AppImage\n        env:\n          NO_STRIP: \"1\"\n      - name: Smoke test AppImage startup\n        run: |\n          status=$?\n          set -e\n          test \"$status\" -eq 124 || {{ cat appimage-startup.log; exit 1; }}\n{check_step}  release:\n    steps:\n      - name: Create or update release\n        env:\n          GH_REPO: ${{{{ github.repository }}}}\n"),
+            format!("{TRIGGERS}jobs:\n  build:\n    runs-on: ubuntu-24.04\n    steps:\n      - name: Build AppImage\n        env:\n          NO_STRIP: \"1\"\n      - name: Smoke test AppImage startup\n        run: |\n          status=$?\n          set -e\n          test \"$status\" -eq 124 || {{ cat appimage-startup.log; exit 1; }}\n{check_step}{NEW_STEPS}  release:\n    steps:\n      - name: Create or update release\n        env:\n          GH_REPO: ${{{{ github.repository }}}}\n"),
         )
         .unwrap();
         dir
@@ -399,6 +468,105 @@ mod tests {
         verify_workflow(root).unwrap();
     }
 
+    /// The repository workflow with one textual mutation, checked by `verify_workflow`.
+    fn mutated_repository_workflow(from: &str, to: &str) -> Result<(), String> {
+        let root = Path::new(env!("CARGO_MANIFEST_DIR")).parent().unwrap();
+        let source = fs::read_to_string(root.join(".github/workflows/linux-appimage.yml")).unwrap();
+        assert!(source.contains(from), "mutation target missing: {from}");
+        let dir = tempfile::tempdir().unwrap();
+        let workflow_dir = dir.path().join(".github/workflows");
+        fs::create_dir_all(&workflow_dir).unwrap();
+        fs::write(
+            workflow_dir.join("linux-appimage.yml"),
+            source.replacen(from, to, 1),
+        )
+        .unwrap();
+        verify_workflow(dir.path())
+    }
+
+    #[test]
+    fn appimages_are_built_at_releases_only() {
+        let error =
+            "Linux AppImage workflow must trigger only on workflow_dispatch and v* tag pushes";
+        for (from, to) in [
+            (
+                "  push:\n    tags:\n      - \"v*\"\n",
+                "  push:\n    branches:\n      - main\n    tags:\n      - \"v*\"\n",
+            ),
+            ("  push:\n    tags:\n      - \"v*\"\n", "  push:\n"),
+            (
+                "  push:\n    tags:\n      - \"v*\"\n",
+                "  push:\n    tags:\n      - \"*\"\n",
+            ),
+            (
+                "  push:\n    tags:\n      - \"v*\"\n",
+                "  push:\n    tags:\n      - \"v*\"\n  pull_request:\n",
+            ),
+            (
+                "  push:\n    tags:\n      - \"v*\"\n",
+                "  push:\n    tags:\n      - \"v*\"\n  schedule:\n    - cron: \"0 3 * * *\"\n",
+            ),
+            ("  workflow_dispatch:\n", ""),
+            ("  push:\n    tags:\n      - \"v*\"\n", ""),
+        ] {
+            assert_eq!(
+                mutated_repository_workflow(from, to).unwrap_err(),
+                error,
+                "{to}"
+            );
+        }
+    }
+
+    #[test]
+    fn build_runner_cannot_silently_raise_the_glibc_baseline() {
+        assert_eq!(
+            mutated_repository_workflow("runs-on: ubuntu-24.04", "runs-on: ubuntu-latest")
+                .unwrap_err(),
+            "Linux AppImage build must pin ubuntu-24.04 for the glibc baseline"
+        );
+    }
+
+    #[test]
+    fn workflow_requires_permission_check_and_cross_user_smoke() {
+        for (from, to, command) in [
+            (PERMISSION_CHECK, "echo skipped", PERMISSION_CHECK),
+            (GLIBC_CHECK, "echo skipped", GLIBC_CHECK),
+            (GLIBC_CHECK, &format!("{GLIBC_CHECK} || true"), GLIBC_CHECK),
+            (CROSS_USER_SMOKE, "echo skipped", CROSS_USER_SMOKE),
+            (
+                CROSS_USER_SMOKE,
+                &format!("{CROSS_USER_SMOKE} || true"),
+                CROSS_USER_SMOKE,
+            ),
+        ] {
+            assert_eq!(
+                mutated_repository_workflow(from, to).unwrap_err(),
+                format!("Linux AppImage workflow must run `{command}`")
+            );
+        }
+    }
+
+    #[test]
+    fn required_checks_cannot_be_optional_or_run_before_the_build() {
+        let name = "      - name: Verify finished AppImage permissions\n";
+        for replacement in [
+            format!("{name}        continue-on-error: true\n"),
+            format!("{name}        if: false\n"),
+        ] {
+            assert_eq!(
+                mutated_repository_workflow(name, &replacement).unwrap_err(),
+                format!("Linux AppImage check `{PERMISSION_CHECK}` must be unconditional, blocking and after the build")
+            );
+        }
+        let early = format!(
+            "{name}        run: {PERMISSION_CHECK}\n\n      - name: Install Linux build dependencies"
+        );
+        assert_eq!(
+            mutated_repository_workflow("      - name: Install Linux build dependencies", &early).unwrap_err(),
+            format!("Linux AppImage check `{PERMISSION_CHECK}` must be unconditional, blocking and after the build")
+        );
+    }
+
     #[test]
     fn release_workflow_rejects_nostrip_in_shell_text() {
         let dir = tempfile::tempdir().unwrap();
@@ -406,7 +574,7 @@ mod tests {
         fs::create_dir_all(&workflow_dir).unwrap();
         fs::write(
             workflow_dir.join("linux-appimage.yml"),
-            "jobs:\n  build:\n    steps:\n      - name: Build AppImage\n        run: |\n          NO_STRIP: \"1\"\n          cargo tauri build\n",
+            "jobs:\n  build:\n    runs-on: ubuntu-24.04\n    steps:\n      - name: Build AppImage\n        run: |\n          NO_STRIP: \"1\"\n          cargo tauri build\n",
         )
         .unwrap();
 
@@ -423,7 +591,7 @@ mod tests {
         fs::create_dir_all(&workflow_dir).unwrap();
         fs::write(
             workflow_dir.join("linux-appimage.yml"),
-            "jobs:\n  build:\n    steps:\n      - name: Build AppImage\n        run: cargo tauri build\n      - env:\n          NO_STRIP: \"1\"\n        run: echo later\n",
+            "jobs:\n  build:\n    runs-on: ubuntu-24.04\n    steps:\n      - name: Build AppImage\n        run: cargo tauri build\n      - env:\n          NO_STRIP: \"1\"\n        run: echo later\n",
         )
         .unwrap();
 
@@ -440,7 +608,7 @@ mod tests {
         fs::create_dir_all(&workflow_dir).unwrap();
         fs::write(
             workflow_dir.join("linux-appimage.yml"),
-            "jobs:\n  build:\n    steps:\n      - name: Build AppImage\n        env:\n          NO_STRIP: \"1\"\n      - name: Smoke test AppImage startup\n        run: |\n          status=$?\n          set -e\n          test \"$status\" -eq 124 || { cat appimage-startup.log; exit 1; }\n      - name: Verify host-provided libraries are not bundled\n        run: tools/appimage/check-host-libraries.sh target/release/bundle/appimage/*.AppImage\n  release:\n    steps:\n      - name: Create or update release\n        env:\n          GH_TOKEN: ${{ github.token }}\n        run: gh release view \"$GITHUB_REF_NAME\"\n",
+            [TRIGGERS, "jobs:\n  build:\n    runs-on: ubuntu-24.04\n    steps:\n      - name: Build AppImage\n        env:\n          NO_STRIP: \"1\"\n      - name: Smoke test AppImage startup\n        run: |\n          status=$?\n          set -e\n          test \"$status\" -eq 124 || { cat appimage-startup.log; exit 1; }\n      - name: Verify host-provided libraries are not bundled\n        run: tools/appimage/check-host-libraries.sh target/release/bundle/appimage/*.AppImage\n", NEW_STEPS, "  release:\n    steps:\n      - name: Create or update release\n        env:\n          GH_TOKEN: ${{ github.token }}\n        run: gh release view \"$GITHUB_REF_NAME\"\n"].concat(),
         )
         .unwrap();
 
@@ -457,7 +625,7 @@ mod tests {
         fs::create_dir_all(&workflow_dir).unwrap();
         fs::write(
             workflow_dir.join("linux-appimage.yml"),
-            "jobs:\n  build:\n    steps:\n      - name: Build AppImage\n        env:\n          NO_STRIP: \"1\"\n      - name: Smoke test AppImage startup\n        run: |\n          status=$?\n          set -e\n          test \"$status\" -eq 124 || { cat appimage-startup.log; exit \"$status\"; }\n  release:\n    steps:\n      - name: Create or update release\n        env:\n          GH_REPO: ${{ github.repository }}\n",
+            "jobs:\n  build:\n    runs-on: ubuntu-24.04\n    steps:\n      - name: Build AppImage\n        env:\n          NO_STRIP: \"1\"\n      - name: Smoke test AppImage startup\n        run: |\n          status=$?\n          set -e\n          test \"$status\" -eq 124 || { cat appimage-startup.log; exit \"$status\"; }\n  release:\n    steps:\n      - name: Create or update release\n        env:\n          GH_REPO: ${{ github.repository }}\n",
         )
         .unwrap();
 

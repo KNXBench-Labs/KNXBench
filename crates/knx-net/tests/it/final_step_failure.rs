@@ -17,9 +17,11 @@ use knx_net::commissioning::property_download::{
 };
 use knx_net::commissioning::property_recovery::PropertyJournalEvent;
 use knx_net::commissioning::simulator::SimulatedDevice;
+use knx_net::commissioning::SessionTiming;
 use knx_net::management::ManagementTransport;
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::Arc;
+use std::time::Duration;
 use tokio::sync::broadcast;
 
 const FINAL_STEP: usize = 7;
@@ -192,13 +194,24 @@ async fn run_with(fault: Fault, armed_from_start: bool) -> PropertySimulationErr
         &plan,
         auth(&device),
         AuthorisationPlan::Skip,
-        timing(),
+        load_tolerant_timing(),
         &preconditions,
         &mut arm_at_final_step(armed),
         &|| false,
     )
     .await
     .expect_err("the injected fault must stop the run")
+}
+
+/// Waits long enough that only an injected silence times out, even on a loaded gate host:
+/// with the shared 5 ms answer window an honest earlier step could time out first under
+/// load and the run then failed at the wrong step (Alpha 20 release gate, 5/120 under load).
+fn load_tolerant_timing() -> SessionTiming {
+    SessionTiming {
+        connection_timeout: Duration::from_millis(500),
+        response_timeout: Duration::from_millis(250),
+        ..timing()
+    }
 }
 
 fn failure(kind: FinalStepKind, stage: FinalStepStage) -> Option<FinalStepFailure> {
@@ -288,7 +301,7 @@ async fn mismatch_after(change: impl Fn(&SimulatedDevice)) -> PropertySimulation
         &plan,
         auth(&device),
         AuthorisationPlan::Skip,
-        timing(),
+        load_tolerant_timing(),
         &preconditions,
         &mut |event| {
             if let PropertyJournalEvent::OperationStarting {
@@ -359,7 +372,7 @@ async fn a_journal_failure_in_the_middle_of_the_final_step_is_never_classified()
         &plan,
         auth(&device),
         AuthorisationPlan::Skip,
-        timing(),
+        load_tolerant_timing(),
         &preconditions,
         &mut |event| match event {
             PropertyJournalEvent::FinalPointerObservations(_) => {
@@ -409,7 +422,7 @@ async fn errors_before_or_beside_the_final_operations_are_never_classified() {
             &plan,
             auth(&device),
             AuthorisationPlan::Skip,
-            timing(),
+            load_tolerant_timing(),
             &preconditions,
             &mut |event| match (event, stop_at) {
                 (
@@ -449,7 +462,7 @@ async fn errors_before_or_beside_the_final_operations_are_never_classified() {
         &plan,
         auth(&device),
         AuthorisationPlan::Skip,
-        timing(),
+        load_tolerant_timing(),
         &preconditions,
         &mut |event| {
             if let PropertyJournalEvent::OperationCompleted {
@@ -483,7 +496,7 @@ async fn a_failed_explicit_restore_classifies_its_own_final_step() {
         &plan,
         auth(&device),
         AuthorisationPlan::Skip,
-        timing(),
+        load_tolerant_timing(),
         &preconditions,
         &mut |event| {
             match event {
@@ -508,7 +521,7 @@ async fn a_failed_explicit_restore_classifies_its_own_final_step() {
         &snapshot,
         auth(&device),
         AuthorisationPlan::Skip,
-        timing(),
+        load_tolerant_timing(),
         &mut arm_at_final_step(armed),
         &|| false,
     )

@@ -40,6 +40,57 @@ pub fn persist_working_trusting(
         .map_err(|e| e.to_string())
 }
 
+/// A connection kept open by the background journal writer (ADR-0166 D) and
+/// the `PRAGMA data_version` it read right after its own last commit.
+pub struct KeptJournal {
+    conn: knx_store::Connection,
+    data_version: i64,
+}
+
+impl KeptJournal {
+    /// Whether another connection committed to the file since this one last did.
+    pub fn changed_elsewhere(&self) -> Result<bool, String> {
+        data_version(&self.conn).map(|now| now != self.data_version)
+    }
+}
+
+fn data_version(conn: &knx_store::Connection) -> Result<i64, String> {
+    conn.query_row("PRAGMA data_version", [], |r| r.get(0))
+        .map_err(|e| e.to_string())
+}
+
+/// [`persist_working_trusting`] that keeps its connection: with `kept` it
+/// takes the ADR-0166 own-commit path, which skips re-admitting what this
+/// writer wrote itself; the caller must have checked
+/// [`KeptJournal::changed_elsewhere`]. Returns the connection to keep next.
+pub fn persist_working_kept(
+    path: &Path,
+    kept: Option<KeptJournal>,
+    snapshot: &NativeSnapshot,
+    stack: &CommandStack,
+    generation: i64,
+    trust: &history::JournalTrust,
+    report: &mut history::JournalWriteReport,
+) -> Result<(i64, history::JournalTrust, KeptJournal), String> {
+    let (conn, own) = match kept {
+        Some(kept) => (kept.conn, true),
+        None => {
+            let started = std::time::Instant::now();
+            let conn = history::open_editor_store_trusting(path, false, trust);
+            report.phase("preAdmission", started);
+            (conn.map_err(|e| e.to_string())?, false)
+        }
+    };
+    let written = if own {
+        history::save_editor_after_own_commit(&conn, snapshot, stack, generation, trust, report)
+    } else {
+        history::save_editor_trusting(&conn, snapshot, stack, generation, trust, report)
+    };
+    let (generation, trust) = written.map_err(|e| e.to_string())?;
+    let data_version = data_version(&conn)?;
+    Ok((generation, trust, KeptJournal { conn, data_version }))
+}
+
 pub fn save(
     path: &Path,
     snapshot: &NativeSnapshot,

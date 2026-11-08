@@ -74,6 +74,8 @@ pub fn project_routes() -> Router<SharedState> {
         .route("/api/project/open", post(open_native_project))
         .route("/api/project/save", post(save_project))
         .route("/api/project/save-as", post(save_project_as))
+        .route("/api/project/journal", get(journal_status))
+        .route("/api/project/journal/retry", post(journal_retry))
         .route(
             "/api/project/group-address-style",
             post(set_group_address_style),
@@ -1534,6 +1536,21 @@ struct SaveAsBody {
     path: String,
     #[serde(default)]
     overwrite: bool,
+}
+
+/// Whether every acknowledged project command is in the file (ADR-0166).
+async fn journal_status(
+    State(state): State<SharedState>,
+) -> Json<crate::journal_writer::JournalStatus> {
+    Json(state.journal().status())
+}
+
+/// Runs a failed journal write again; answers the state right after.
+async fn journal_retry(
+    State(state): State<SharedState>,
+) -> Json<crate::journal_writer::JournalStatus> {
+    crate::domain::retry_journal(&state);
+    Json(state.journal().status())
 }
 
 async fn save_project_as(

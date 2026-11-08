@@ -200,6 +200,12 @@ async fn main() {
         drain.end,
         knx_server::WriteWaitEnd::TimedOut | knx_server::WriteWaitEnd::SecondSignal
     );
+    // Acknowledged edits not yet in the file are written before the process ends.
+    state.journal().flush();
+    if let knx_server::journal_writer::JournalStatus::Failed { message } = state.journal().status()
+    {
+        eprintln!("knx-server: the last edits could not be written to the project file: {message}");
+    }
     eprintln!("knx-server: stopped");
     if !matches!(end, Ok(knx_server::ServeEnd::Drained))
         || write_cut_short

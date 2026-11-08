@@ -379,6 +379,18 @@ main {
   white-space: nowrap;
 }
 
+/* ADR-0166: a background journal write is running or failed. */
+.workbench-status-journal {
+  white-space: nowrap;
+}
+
+.workbench-status-journal-failed {
+  color: var(--knx-error-color);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
 .toast {
   display: flex;
   align-items: center;

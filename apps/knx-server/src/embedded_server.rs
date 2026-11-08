@@ -218,6 +218,9 @@ async fn run_close(inner: &Inner) -> EmbeddedClose {
     };
     let bus = crate::release_bus(&inner.state, crate::BUS_RELEASE_TIMEOUT).await;
     let (writes, catalogue, system2) = drain_owned_work(&inner.state, &inner.second_stop).await;
+    // Acknowledged edits not yet in the file are written before the app closes (ADR-0166).
+    let journal_state = std::sync::Arc::clone(&inner.state);
+    let _ = tokio::task::spawn_blocking(move || journal_state.journal().flush()).await;
     EmbeddedClose {
         http,
         bus,

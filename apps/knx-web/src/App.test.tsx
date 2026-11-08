@@ -83,6 +83,9 @@ const apiMock = vi.hoisted(() => ({
   // that has loaded nothing, and the answer every test here wants except
   // the two that drive a load on purpose.
   loadProgress: vi.fn().mockResolvedValue(null),
+  // ADR-0166: the status bar asks whether background journal writes are done.
+  journalStatus: vi.fn().mockResolvedValue({ state: "saved" }),
+  retryJournal: vi.fn().mockResolvedValue({ state: "saved" }),
   currentProject: vi.fn(),
   // Overview reads storage metadata separately; keep unrelated shell tests
   // pending at its explicit loading state.

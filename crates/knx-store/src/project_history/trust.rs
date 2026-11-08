@@ -88,6 +88,11 @@ impl JournalTrust {
         }
     }
 
+    /// The other retained contexts this writer checked.
+    pub(super) fn checked_contexts(&self) -> &BTreeMap<String, String> {
+        &self.checked_contexts
+    }
+
     /// Whether this writer checked the context `content_hash` stored with the
     /// SHA-256 `image_hash`.
     pub(super) fn knows_context(&self, content_hash: &str, image_hash: &str) -> bool {

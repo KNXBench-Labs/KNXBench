@@ -84,14 +84,15 @@ pub struct AppState {
     pub command_stack: Mutex<knx_core::CommandStack>,
     /// Compare-and-write generation of the native recovery journal. Zero means
     /// a legacy/new project without a persisted editor workspace.
-    pub history_generation: Mutex<i64>,
+    /// Locking it waits for the background journal writer (ADR-0166).
+    pub history_generation: crate::journal_writer::HistoryGeneration,
     /// What this server last wrote to the recovery journal (issue #35): the
     /// next write keeps the stack rows it proves unchanged instead of
     /// re-encoding every undo state. Correctness never depends on it being
     /// current: the store keeps a row only while its stored hash matches.
-    pub persisted_history: Mutex<Option<PersistedHistory>>,
+    pub persisted_history: std::sync::Arc<Mutex<Option<PersistedHistory>>>,
     /// Timings of the recent journal writes, for the diagnostic bundle (issue #35).
-    pub journal_writes: Mutex<crate::journal_write_log::RecentJournalWrites>,
+    pub journal_writes: std::sync::Arc<Mutex<crate::journal_write_log::RecentJournalWrites>>,
     /// (errors, warnings) from the initial import's `ImportReport`,
     /// reapplied to every tree rebuilt after a command/undo/redo — edits
     /// don't change what import lost. `(0, 0)` for a `.knxdb` native load.
@@ -277,7 +278,22 @@ impl AppState {
         let mut state = Self::with_product_db_at(data_dir, knx_productdb::default_path());
         state.legacy_password = knx_app::legacy::default_remembered_password_path()
             .map(knx_app::legacy::RememberedPassword::at);
+        // A user's server answers edits first and journals them after (ADR-0166).
+        state.journal().run_in_background();
         state
+    }
+
+    /// The writer that journals project commands (ADR-0166).
+    pub fn journal(&self) -> &crate::journal_writer::JournalWriter {
+        &self.history_generation.writer
+    }
+
+    fn journal_cells(&self) -> crate::journal_writer::JournalCells {
+        crate::journal_writer::JournalCells {
+            generation: std::sync::Arc::clone(&self.history_generation.value),
+            persisted: std::sync::Arc::clone(&self.persisted_history),
+            writes: std::sync::Arc::clone(&self.journal_writes),
+        }
     }
 
     /// [`Self::new`] plus the product database at `path` (`None`: no
@@ -400,8 +416,8 @@ impl AppState {
             folder_baselines: Default::default(),
             manufacturer_refs: Mutex::new(Vec::new()),
             command_stack: Mutex::new(knx_core::CommandStack::new()),
-            history_generation: Mutex::new(0),
-            persisted_history: Mutex::new(None),
+            history_generation: Default::default(),
+            persisted_history: Default::default(),
             journal_writes: Default::default(),
             import_counts: Mutex::new((0, 0)),
             import_report_available: AtomicBool::new(true),
@@ -1669,6 +1685,9 @@ fn save_editor_state(
         .history_generation
         .lock()
         .expect("state mutex poisoned");
+    // Under the project lock and after the flush above: every job so far is
+    // older than the state this save writes.
+    let through = state.journal().sequence();
     let mut clean_project = state.clean_project.lock().expect("state mutex poisoned");
     let mut last_saved_at = state.last_saved_at.lock().expect("state mutex poisoned");
     let snapshot = knx_store::project_history::NativeSnapshot {
@@ -1704,6 +1723,7 @@ fn save_editor_state(
         *state.view_path_key.lock().expect("state mutex poisoned") = Some(view_key_of_path(path));
     }
     *generation = new_generation;
+    state.journal().superseded(through);
     *clean_project = Some(project.clone());
     *last_saved_at = Some(session_log::now());
     next_project_revision(state);
@@ -3060,6 +3080,8 @@ fn replace_project_state_transaction(
         .history_generation
         .lock()
         .expect("state mutex poisoned") = generation;
+    // The flush above wrote the old project's last edits; nothing of it remains to write.
+    state.journal().superseded(state.journal().sequence());
     *state
         .persisted_history
         .lock()
@@ -3200,6 +3222,8 @@ fn persist_native_working_reported(
     let mut report = knx_store::project_history::JournalWriteReport::default();
     // Waiting for the store path counts in the total, as the caller waited too.
     report.phase("storeWait", started);
+    // Read before the write: the state written is at least this new.
+    let through = state.journal().sequence();
     let result = write_native_journal(state, path, project, stack, &mut report);
     state
         .journal_writes
@@ -3211,7 +3235,55 @@ fn persist_native_working_reported(
             ok: result.is_ok(),
             report,
         });
+    if result.is_ok() {
+        // The newest state is in the file; an older pending one must not follow it.
+        state.journal().superseded(through);
+    }
     result.map(|()| true)
+}
+
+/// Runs a failed background journal write again with the current state, not
+/// the one that failed: another writer may have stored newer content since.
+/// Under the project lock, as every synchronous journal writer runs.
+pub fn retry_journal(state: &AppState) {
+    let project = state.project.lock().expect("state mutex poisoned");
+    let stack = state.command_stack.lock().expect("state mutex poisoned");
+    state.journal().clear_failure();
+    if let Some(project) = project.as_ref() {
+        // A refusal here is impossible: the failure was just cleared.
+        let _ = enqueue_native_working(state, project, &stack);
+    }
+}
+
+/// Hands the newest state of an acknowledged project command to the
+/// background journal writer (ADR-0166). Refused while its last write failed.
+fn enqueue_native_working(
+    state: &AppState,
+    project: &knx_core::Project,
+    stack: &knx_core::CommandStack,
+) -> Result<(), String> {
+    let path = state.store_path.lock().expect("state mutex poisoned");
+    let Some(path) = path.clone() else {
+        return Ok(());
+    };
+    state.journal().refuse_if_failed()?;
+    let snapshot = knx_store::project_history::NativeSnapshot {
+        project: project.clone(),
+        opaque: state.opaque.lock().expect("state mutex poisoned").clone(),
+        manufacturer_refs: state
+            .manufacturer_refs
+            .lock()
+            .expect("state mutex poisoned")
+            .clone(),
+    };
+    state.journal().enqueue(crate::journal_writer::JournalJob {
+        sequence: 0,
+        path,
+        snapshot,
+        stack: stack.clone(),
+        cells: state.journal_cells(),
+    });
+    Ok(())
 }
 
 /// The journal write of [`persist_native_working_reported`], reporting its phases.
@@ -3255,11 +3327,7 @@ fn write_native_journal(
     )?;
     *generation = next;
     let started = std::time::Instant::now();
-    *persisted = Some(PersistedHistory {
-        project: project.clone(),
-        stack: stack.clone(),
-        trust,
-    });
+    *persisted = Some(PersistedHistory::new(project.clone(), stack.clone(), trust));
     report.phase("retain", started);
     Ok(())
 }
@@ -3275,10 +3343,22 @@ pub struct PersistedHistory {
 }
 
 impl PersistedHistory {
+    pub(crate) fn new(
+        project: knx_core::Project,
+        stack: knx_core::CommandStack,
+        trust: knx_store::project_history::JournalTrust,
+    ) -> Self {
+        Self {
+            project,
+            stack,
+            trust,
+        }
+    }
+
     /// Consumes the cache into the knowledge still valid for `stack` over `project`: stored rows below
     /// the prefix both histories provably share, and the retained context and
     /// baseline, which the store checks against the file itself.
-    fn into_trust(
+    pub(crate) fn into_trust(
         self,
         project: &knx_core::Project,
         stack: &knx_core::CommandStack,
@@ -3293,6 +3373,9 @@ impl PersistedHistory {
     }
 }
 
+/// Applies `mutation` to copies and publishes them once journaled: written before
+/// on a synchronous server, handed to the background writer on a user's server
+/// (ADR-0166), which refuses while its last write failed.
 fn durable_mutation<T>(
     state: &AppState,
     project: &mut knx_core::Project,
@@ -3302,7 +3385,11 @@ fn durable_mutation<T>(
     let mut candidate = project.clone();
     let mut candidate_stack = stack.clone();
     let result = mutation(&mut candidate, &mut candidate_stack)?;
-    persist_native_working(state, &candidate, &candidate_stack)?;
+    if state.journal().is_background() {
+        enqueue_native_working(state, &candidate, &candidate_stack)?;
+    } else {
+        persist_native_working(state, &candidate, &candidate_stack)?;
+    }
     *project = candidate;
     *stack = candidate_stack;
     Ok(result)
@@ -3628,9 +3715,10 @@ pub(crate) fn snapshot_is_current(
 }
 
 /// The commit half of every guarded command, run while the caller holds
-/// `state.project`: `mutation` runs on a copy that is persisted before it is
-/// published (`durable_mutation`), then the revision, tree and session log
-/// follow. A failed mutation or persistence publishes nothing.
+/// `state.project`: `mutation` runs on a copy that is journaled (`durable_mutation`;
+/// in the background on a user's server, ADR-0166) and published, then the
+/// revision, tree and session log follow. A failed mutation, a refused hand-over
+/// or a failed synchronous write publishes nothing.
 fn commit_locked(
     state: &AppState,
     project: &mut knx_core::Project,

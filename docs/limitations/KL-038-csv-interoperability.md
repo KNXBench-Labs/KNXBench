@@ -12,25 +12,39 @@ The import adapter recognises eight fixed ordered headers with either one name
 column or separate hierarchy-name columns, and either one address column or
 three numeric address components, with or without the five metadata columns. See the exact
 [contract](../contracts/group-address-csv-profiles.md). This improves bounded
-spreadsheet exchange without changing the native CSV export or project schema.
+spreadsheet exchange; the native CSV gained only an optional `Description`
+column.
 
-Range rows are explicitly reported and not applied. Nonempty descriptions and
-security tokens other than `Auto` refuse the entire import. `Auto` is reported
-as not imported; it never becomes a guessed security value. DPT is validated
-read-only, not assigned. Only three-level addresses and UTF-8 files separated
-by comma, semicolon or tab are admitted.
+Range rows are explicitly reported and not applied, including a range's
+description. Security tokens other than `Auto` refuse the entire import. `Auto`
+is reported as not imported; it never becomes a guessed security value. Only
+three-level addresses and files separated by comma, semicolon or tab are
+admitted.
 
 **Checked against real ETS output (8 November 2026).** ETS6 6.4.1 exports of a
 fictional project ([research](../research/2026-11-08-ets6-group-address-csv-export.md))
-have exactly these header rows. Of its 40 CSV variants, the unchanged files are
-all refused because ETS writes a single-byte code page, not UTF-8; the refusal
-now names the byte offset and asks for conversion instead of guessing a code
-page. After conversion, the twelve `CSV (ETS3 Format)` files with header import
-(tab included). Full `CSV` files are refused while any address has a
-description, and header-less files are refused by design. Still open: an
-explicit encoding choice, a group-address description in the project model, and
-assigning a datapoint type to new addresses — each changes what the import may
-write and needs its own decision.
+have exactly these header rows. The files are a single-byte code page, not
+UTF-8; the first round refused all 40 at the UTF-8 check, full `CSV` files
+also on their descriptions and on types of new addresses.
+
+**Owner decisions applied (8 November 2026, KL-038b,
+[ADR-0164](../adr/0164-group-address-description-and-csv-encoding.md)).**
+
+- The user chooses the import encoding explicitly: UTF-8 (default) or
+  Windows-1252. Nothing is detected or guessed; the five undefined
+  Windows-1252 bytes are refused with their offset. Every confirmation token
+  binds bytes and encoding.
+- Group addresses have a description (native schema 19). `.knxproj` imports
+  (schema 20–23) map `GroupAddress/@Description`; CSV `Description` cells set it
+  on create and update, blank leaves it unchanged.
+- A profile `DatapointType` on an address the import creates becomes its
+  declared type; for an existing address it stays a read-only comparison.
+
+Remaining boundaries: header-less files stay refused (their layout cannot be
+known); other code pages, UTF-16 and detection are unsupported; a description
+cannot be cleared through CSV; files saved before native schema 19 keep
+imported descriptions only as retained source evidence until the project is
+re-imported; there is no description editor yet.
 
 This is not full hierarchy/metadata roundtrip, a new external export format,
 ESF/OPC support or general application interoperability. The historical record

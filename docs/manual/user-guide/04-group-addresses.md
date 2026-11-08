@@ -319,6 +319,7 @@ whitespace ignored), and their order does not matter.
 | `Name` | The name | Required, must not be empty |
 | `Central` | `true` / `false` | Optional: `true`/`false`/`1`/`0`/`yes`/`no` |
 | `Unfiltered` | `true` / `false` | Same as `Central` |
+| `Description` | The address's description, or empty | Optional. A filled cell sets the description; an empty one leaves it unchanged (a new address gets none) |
 | `DatapointType (read-only)` | The type that applies (declaration or linked objects), empty if they conflict | Validated, never applied; editing it rejects the row |
 | `MainGroup (read-only)` | The containing main range's name | Validated, never applied |
 | `MiddleGroup (read-only)` | The containing middle range's name | Validated, never applied |
@@ -326,9 +327,26 @@ whitespace ignored), and their order does not matter.
 The file is written as UTF-8 with a byte-order mark and CRLF line endings, so
 spreadsheets open it without mangling umlauts, and it is read back with or without a
 BOM, with either line ending, and with `,`, `;` or tab as the separator — whichever your
-spreadsheet produced. A file that is not UTF-8 is refused with the position of its first
-invalid byte; convert it to UTF-8 and import again. Unknown columns are reported by name,
-never silently ignored.
+spreadsheet produced. Unknown columns are reported by name, never silently ignored.
+
+Next to the import button you choose the file's **encoding**: **UTF-8 (default)** or
+**Windows-1252 (ETS export)**. KNXBench never guesses it. With UTF-8, a file that is not
+UTF-8 is refused with the position of its first invalid byte. With Windows-1252, every
+character of that code page is read, and the five byte values it leaves undefined are
+refused with their position. ETS6 wrote its group-address CSV export in Windows-1252 on
+the observed German system, so choose it for such a file; for other code pages convert
+the file to UTF-8 first.
+
+The import also reads the header rows ETS6 writes for its group-address export (see the
+[column profiles](../../contracts/group-address-csv-profiles.md)). From those files it
+takes names, flags and descriptions; a datapoint type becomes the declared type of an
+address the import creates, while for an existing address it must match the project.
+Group ranges and their descriptions are reported as not imported.
+
+The inspector shows an address's description read-only below its type. Descriptions
+come from a `.knxproj` import or from a CSV import; there is no editor for them yet. A
+project file saved by an older version shows none until you import its `.knxproj`
+again.
 
 ### What import does, and what it refuses to do
 

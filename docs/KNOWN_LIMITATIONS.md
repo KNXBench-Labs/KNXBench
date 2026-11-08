@@ -83,7 +83,7 @@ Whole-file response buffering is resolved by streaming. Export still creates a t
 ### 38. CSV interoperability
 
 **Ledger status:** `ACCEPTED_BOUNDARY` ([KL-38](status/LEDGER.md#snapshot-ids)).
-Native CSV v1 export is unchanged. Eight fixed address-only import profiles, whose headers match ETS6 6.4.1's CSV exports, report omitted ranges/security and refuse unsupported metadata and non-UTF-8 files; no general ETS/ESF interoperability or full hierarchy roundtrip is claimed.
+Native CSV v1 gained an optional Description column. Eight fixed address-only import profiles, whose headers match ETS6 6.4.1's CSV exports, apply descriptions and new addresses' datapoint types, read UTF-8 or an explicitly chosen Windows-1252, and report omitted ranges/security; header-less files and other code pages stay refused; no general ETS/ESF interoperability or full hierarchy roundtrip is claimed.
 [Details and history](limitations/KL-038-csv-interoperability.md)
 
 <a id="catalogue-kl-039"></a>
@@ -99,7 +99,7 @@ CSV does not edit group ranges; removing rows alone does nothing. Explicit moves
 ### 40. CSV read-only and absent columns
 
 **Ledger status:** `ACCEPTED_BOUNDARY` ([KL-40](status/LEDGER.md#snapshot-ids)).
-DPT/group context is read-only; changed values are refused. The address-only profiles recognise but refuse nonempty Description; Description/Comment editing and native interchange remain unsupported.
+Native DPT/group context columns are read-only; changed values are refused. Since KL-038b a Description column (native and profiles) sets group-address descriptions and profile DPTs declare the type of addresses the import creates; clearing descriptions, Comment and range descriptions remain unsupported.
 [Details and history](limitations/KL-040-csv-read-only-and-absent-columns.md)
 
 <a id="catalogue-kl-041"></a>

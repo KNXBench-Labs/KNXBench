@@ -6,10 +6,13 @@
 native KNXBench v1 format ([IMPORT_EXPORT.md](../IMPORT_EXPORT.md) section 11), it recognizes
 eight fixed, complete header shapes. This is a bounded, **address-only** import adapter:
 
-- It creates and updates group-address leaves through the existing planner and commands.
+- It creates and updates group-address leaves through the existing planner and commands,
+  including their description and, for addresses it creates, their declared datapoint type
+  ([ADR-0164](../adr/0164-group-address-description-and-csv-encoding.md)).
 - It never creates, updates, deletes or renames group ranges and is not a hierarchy-preserving
   roundtrip.
-- There is no export profile. The native writer is unchanged.
+- There is no export profile. The native writer only gained the `Description` column
+  (IMPORT_EXPORT §11).
 - Only the shapes below are supported; neighbouring variants are refused, never guessed. The
   shapes match the header rows ETS6 6.4.1 writes in its `CSV` and `CSV (ETS3 Format)` group
   address exports, observed on one fictional project
@@ -25,13 +28,32 @@ Nothing is imported in that case.
 
 ## Framing
 
-UTF-8 text, optional leading BOM, CRLF or LF, separator `,`, `;` or tab auto-detected from the
-header line (the most frequent unquoted one; a tie goes to `,`, then `;`), RFC 4180 quoting.
-This applies to native files too. UTF-16, legacy code pages and spreadsheet-format guessing are
-not supported. Invalid UTF-8 is refused before parsing with the offset of the first invalid
-byte and a request to convert the file; no code page is guessed, because the same bytes mean
-different characters in different Windows locales. ETS6 6.4.1 writes its CSV export in a
-single-byte code page, so a file with non-ASCII names must be converted first.
+The user chooses the file's encoding explicitly: **UTF-8** (the default) or **Windows-1252**.
+Nothing is detected or guessed, because the same bytes mean different characters in different
+Windows locales. This applies to native files too.
+
+- UTF-8: optional leading BOM. Invalid UTF-8 is refused before parsing with the offset of the
+  first invalid byte; the message names the Windows-1252 choice and conversion as the two ways
+  forward.
+- Windows-1252: decoded with the complete table of the Unicode Consortium's Microsoft mapping
+  (`CP1252.TXT`): `0x00`–`0x7F` and `0xA0`–`0xFF` are the code points of the same value,
+  `0x80`–`0x9F` the table's 27 defined characters (for example `0x80` is `€`). The five bytes
+  that table leaves undefined (`0x81`, `0x8D`, `0x8F`, `0x90`, `0x9D`) are refused with their
+  offset, never mapped to control characters. A file that starts with a UTF-8 BOM is refused
+  under Windows-1252 because the choice contradicts the file's own marker.
+
+After decoding: CRLF or LF, separator `,`, `;` or tab auto-detected from the header line (the
+most frequent unquoted one; a tie goes to `,`, then `;`), RFC 4180 quoting. UTF-16 and other
+code pages are not supported. ETS6 6.4.1 writes its CSV export in a single-byte code page whose
+umlauts match Windows-1252 (`ä` = 0xE4); other Windows locales were not observed.
+
+Surfaces: CLI `knx ga-import … --encoding utf-8|windows-1252`, server
+`POST /api/group-addresses/csv-import` body field `encoding` (optional, default `utf-8`; any
+other value is a `400`), and a select next to the web import action. Labels are compared
+ASCII case-insensitively; no alias such as `cp1252` or `latin1` is accepted. A destructive
+preview's confirmation token binds the raw file bytes and the chosen encoding, so a token from
+one encoding cannot confirm an import in the other. The MCP tool `validate_ga_csv` receives
+text, not bytes, so it has no encoding choice.
 
 ## Recognized header shapes
 
@@ -51,7 +73,8 @@ present, in this exact order:
 
 Shapes 5–8 are shapes 1–4 without the five metadata columns. Their rows carry no flags,
 description, datapoint type or security, so leaves behave as if those cells were blank and no
-column is reported as ignored. In shapes 4 and 8 the first triplet holds names and the second
+column is reported as ignored. In shapes 1–4 only `Security` is reported as an ignored
+(read-only) column; `Description` and `DatapointType` can be applied. In shapes 4 and 8 the first triplet holds names and the second
 the address components. `Main`, `Middle` and `Sub` may repeat only at those positions.
 
 The required native `Name` and `Address` columns take precedence, preserving the
@@ -87,8 +110,8 @@ is an error.
 | Column | Leaf row | Range row |
 | --- | --- | --- |
 | `Central`, `Unfiltered` | native boolean spellings; blank = default on create, unchanged on update | any non-blank value is an error |
-| `Description` | any non-empty content, including whitespace only, is an error | same |
-| `DatapointType` | blank = unspecified; else `DPT-N` or `DPST-N-N` with N plain ASCII digits (signs such as `+1` are refused), normalized (`DPT-01` becomes `DPT-1`), then compared by the existing read-only check with the type the project derives; never applied or inferred, so a new address with a type is refused | any non-blank value is an error |
+| `Description` | kept byte-exact (separators, quotes, line breaks, non-ASCII); non-blank sets the address's description on create and on update; blank (empty after trimming) = none on create, unchanged on update; a cell can never clear a description | not imported; a non-blank cell adds the warning `group range description is not imported; only group-address descriptions are applied` |
+| `DatapointType` | blank = unspecified; else `DPT-N` or `DPST-N-N` with N plain ASCII digits (signs such as `+1` are refused), normalized (`DPT-01` becomes `DPT-1`). On a row that **creates** an address the type becomes its declared datapoint type (provenance `UserEdit`). On an **existing** address it stays the read-only comparison with the type the project derives; a difference is a row error | any non-blank value is an error |
 | `Security` | empty accepted; exactly `Auto` accepted with a warning; everything else is an error | same |
 
 The `Auto` warning reads `Security Auto is not imported; project security is unchanged`.
@@ -97,10 +120,13 @@ Security is never interpreted as secure or unsecure and no security field is add
 ## Range rows
 
 All supplied fields are validated first. A valid range row is skipped with a row warning that
-the range name and address are not imported. Invalid range rows keep their errors.
+the range name and address are not imported, plus the range-description warning above when its
+`Description` cell is non-blank. Invalid range rows keep their errors.
 
 ## Outcome
 
 Errors anywhere in the file suppress the whole command, as for native files. Leaf rows are
 normal upserts (create, update or unchanged); `Action`-style readdress or delete cannot be
-expressed.
+expressed. A description change is its own undoable command
+(`SetGroupAddressDescription`) inside the import's single batch, so a row that only changes
+the description does not rewrite the name or flags.

@@ -37,6 +37,15 @@ blanket authority for bus or device writes, releases or deployments.
   private.
 - **Private mailbox verification** is the owner's own action and is no longer
   tracked here.
+- **KL-038b — ETS group-address CSV import.** (1) CSV import encoding is an
+  explicit choice, UTF-8 (default) or Windows-1252, never detected; undefined
+  Windows-1252 bytes are refused. (2) Group addresses get a description in the
+  model (native schema migration, `.knxproj` mapping, undoable commands, diff,
+  read-only display). (3) The full CSV profiles apply `Description`, and a
+  `DatapointType` declares the type of an address the import creates; existing
+  addresses keep the read-only comparison. Implemented as
+  [ADR-0164](../adr/0164-group-address-description-and-csv-encoding.md);
+  boundaries in [KL-038](../limitations/KL-038-csv-interoperability.md).
 
 Still open after this round: Docker signing approval, the website / Evolution
 Story privacy review copy, KL-186 plug-in acceptance, the WP-12 operation-specific

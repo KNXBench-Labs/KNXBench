@@ -166,11 +166,19 @@ knx ga-import house.knxdb group-addresses.csv --dry-run
 
 Reads KNXBench's group-address CSV back into a project, or imports one of the
 eight fixed [name/address column profiles](../../contracts/group-address-csv-profiles.md).
-Since Alpha 18 those profiles are address-only: range rows and `Security=Auto` are explicitly
-reported as not imported; nonempty descriptions or other security values reject
-the whole file. DPT remains read-only. They do not change the native export format.
-The profiles' header rows match ETS6 6.4.1's group-address CSV exports; the file
-must be UTF-8, with `,`, `;` or tab as separator.
+Those profiles are address-only: range rows and `Security=Auto` are explicitly
+reported as not imported; other security values reject the whole file. Descriptions
+are applied, and a datapoint type becomes the declared type of an address the import
+creates; for an existing address it must match the project.
+The profiles' header rows match ETS6 6.4.1's group-address CSV exports, with `,`, `;`
+or tab as separator. The file is read as UTF-8 unless you pass
+`--encoding windows-1252`; nothing is guessed. ETS6 wrote its export in Windows-1252
+on the observed system:
+
+```bash
+knx ga-import house.knxdb ets-export.csv --encoding windows-1252 --dry-run
+```
+
 `--dry-run` parses, plans and reports without writing anything.
 
 The output always ends with a line saying whether the project file was written, which
@@ -195,8 +203,8 @@ store written: no (destructive confirmation required)
 ```
 
 Review the plan, then repeat the exact command with `--confirm <opaque token>`. The token
-binds the CSV and loaded project content; editing either one invalidates it, so you
-must preview again. KNXBench performs the comparison and save under the same SQLite
+binds the CSV bytes, the chosen `--encoding` and the loaded project content; changing any
+of them invalidates it, so you must preview again. KNXBench performs the comparison and save under the same SQLite
 write lock, so another writer cannot slip between them. This protects scripted use from
 approving yesterday's plan against today's project — the spreadsheet equivalent of
 checking the label before flipping the breaker.

@@ -169,3 +169,4 @@ the old one gets `Status: Superseded by ADR-NNNN`.
 | [0161](0161-property-placed-parameters-and-master-resets.md) | Property-placed parameters and master resets as ETS 6.4 sends them | Accepted | 2026-11-08 |
 | [0162](0162-time-parameters-and-inline-property-writes.md) | Time parameters and property writes with inline data as ETS 6.4 sends them | Accepted | 2026-11-08 |
 | [0163](0163-journal-writes-keep-unchanged-undo-rows.md) | Journal writes keep the undo rows they prove unchanged | Accepted | 2026-11-08 |
+| [0164](0164-group-address-description-and-csv-encoding.md) | Group-address description, explicit CSV encoding and new-address types | Accepted | 2026-11-08 |

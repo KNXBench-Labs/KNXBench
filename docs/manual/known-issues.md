@@ -631,8 +631,8 @@ is the remaining copy defect.
 - **Affected:** the group-address CSV import.
 - **Limitation:** native CSV supports explicit, preview-confirmed readdress/delete,
   but import does not create or restructure group ranges. The additional fixed
-  column profiles are address-only: range rows are reported as not imported,
-  DPT is read-only, and nonempty descriptions reject the entire file.
+  column profiles are address-only: range rows (and their descriptions) are
+  reported as not imported, and the DPT of an existing address is read-only.
 - **Consequence:** CSV can perform safe bulk address edits, but it is not a
   range-hierarchy or replacement/synchronisation format. Missing rows never
   imply deletion.
@@ -645,18 +645,30 @@ is the remaining copy defect.
 - **Limitation:** export remains KNXBench's own CSV format. Import additionally
   accepts eight fixed [column profiles](../contracts/group-address-csv-profiles.md)
   for three-level addresses; their header rows match ETS6 6.4.1's `CSV` and
-  `CSV (ETS3 Format)` group-address exports. Range rows and `Security=Auto` are
-  explicitly not imported; unsupported metadata, including any description,
-  refuses the whole file. Files must be UTF-8: ETS6 wrote its CSV export in a
-  single-byte character set (one byte per umlaut), so a file with umlauts or other
-  non-ASCII names must be converted first. Files without a header row are refused. This is not a full
-  hierarchy/security roundtrip, XML exchange or ESF/OPC adapter.
+  `CSV (ETS3 Format)` group-address exports. Descriptions are applied, and a
+  datapoint type becomes the declared type of an address the import creates.
+  Range rows and `Security=Auto` are explicitly not imported; other security values
+  refuse the whole file. You choose the file's encoding: UTF-8 (default) or
+  Windows-1252, which is what ETS6 wrote on the observed German system; nothing is
+  guessed. Other code pages are not supported. Files without a header row are
+  refused. A blank description cell never clears an existing description. This is
+  not a full hierarchy/security roundtrip, XML exchange or ESF/OPC adapter.
 - **Consequence:** do not assume another application will accept the native export.
 - **Workaround:** inspect import warnings and keep the original input for fields
-  that this address-only adapter cannot transfer. An ETS export in the
-  `CSV (ETS3 Format)` carries only names and addresses and imports without
-  description refusals; convert it to UTF-8 first, for example with
-  `iconv -f WINDOWS-1252 -t UTF-8`, if your Windows uses that code page.
+  that this address-only adapter cannot transfer. For an ETS export, choose
+  **Windows-1252** next to the import button (`--encoding windows-1252` in the
+  CLI) and export with a header row. A file in another code page must be
+  converted to UTF-8 first, for example with `iconv`.
+
+### Older project files show no group-address descriptions
+
+- **Affected:** `.knxdb` files saved before this version from a `.knxproj` import.
+- **Limitation:** such files kept `GroupAddress/@Description` only as retained
+  source data. Opening them does not move it into the new description field, so
+  that undo history and saved versions stay valid.
+- **Workaround:** import the original `.knxproj` again to see descriptions; or set
+  them through a CSV import. There is no description editor yet.
+- **Details:** [ADR-0164](../adr/0164-group-address-description-and-csv-encoding.md)
 - **Details:** [§38 no verified ETS interoperability](../KNOWN_LIMITATIONS.md#38-group-address-csv-exportimport-t12-has-no-verified-ets-interoperability),
   [§41 a CSV saved from Excel under a German locale](../KNOWN_LIMITATIONS.md#41-a-csv-file-saved-from-excel-under-a-german-locale-may-still-surprise-a-user)
 

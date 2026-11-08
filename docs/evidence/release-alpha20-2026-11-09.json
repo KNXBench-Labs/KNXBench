@@ -1,0 +1,194 @@
+{
+  "schema": "knxbench-release-publication/1",
+  "tag": "v0.1.0-alpha.20",
+  "tag_object": "b2bbac21fab6def30a92627835479a6d79a37378",
+  "candidate": "1d3c7d433d2b2139a1ecbfac1314bacc4ef9fc22",
+  "source_cutoff": "dfb3f88b8",
+  "published_date": "2026-11-09",
+  "published_at": "2026-11-08T23:01:51Z",
+  "release_url": "https://github.com/KNXBench-Labs/KNXBench/releases/tag/v0.1.0-alpha.20",
+  "prerelease": true,
+  "draft": false,
+  "source_acceptance": "../releases/alpha20.md#acceptance-and-public-verification",
+  "candidates": [
+    {
+      "revision": "38b1688d383596ede84cdbddbf990edf5fdac326",
+      "verdict": "rejected",
+      "stages": 31,
+      "green": null,
+      "red": "gate stopped early: documentation check refused the 51-line restart snapshot (limit 50); release-only diff check flagged generated ts-rs bindings whitespace (runner then excluded the bindings directory)",
+      "dry_runs": {
+        "appimage_mcp": 42517818941,
+        "docker": 42517822305,
+        "cancelled_as_superseded": true,
+        "inherited": false
+      }
+    },
+    {
+      "revision": "91cd49ea4d63f981fd1558fb955e78c6b934b156",
+      "verdict": "rejected",
+      "stages": 31,
+      "green": 28,
+      "red": "knx-net final_step_failure test timed out at the wrong step under load (5 ms answer window; 5 of 120 parallel runs); three native evidence specs refused the status bar's GET /api/bus/activity (12/12). Both test-only, fixed in b259eab62 and 1d3c7d433",
+      "dry_runs": {
+        "appimage_mcp": 42518066982,
+        "docker": 42518069236,
+        "publish_jobs_skipped": true,
+        "inherited": false
+      }
+    },
+    {
+      "revision": "1d3c7d433d2b2139a1ecbfac1314bacc4ef9fc22",
+      "verdict": "accepted",
+      "stages": 31,
+      "green": 31,
+      "dry_runs": {
+        "appimage_mcp": 42525295156,
+        "docker": 42525297146,
+        "publish_jobs_skipped": true
+      }
+    }
+  ],
+  "acceptance_boundary": {
+    "runtime_revision": "1d3c7d433d2b2139a1ecbfac1314bacc4ef9fc22",
+    "method": "One frozen candidate per gate; complete maintained package gate plus release-only extras on the final candidate. Candidates 1 and 2 rejected and retained; candidate 3 gated in full, not inherited.",
+    "package_gate": {
+      "mode": "complete",
+      "requested_full": true,
+      "plan_completed": true,
+      "inputs_frozen": true,
+      "user_data_touched": [],
+      "user_data_unchecked": [],
+      "rust": {
+        "passed": 8602,
+        "failed": 0,
+        "ignored": 248,
+        "harnesses": 56
+      },
+      "bindings": {
+        "passed": 88,
+        "failed": 0
+      },
+      "vitest": 5402,
+      "fixture_browser": {
+        "total": 1140,
+        "functional": 1063,
+        "exclusive": 77
+      },
+      "production_browser": 736,
+      "corpus": {
+        "passed": 155,
+        "selected": 155,
+        "targets": 9
+      },
+      "tool_tests": {
+        "ran": 560,
+        "skipped": 16
+      }
+    },
+    "release_extras": {
+      "extra_browser_configs": 45,
+      "native_evidence": 12,
+      "native_edit_specs": 12,
+      "product_whole_corpus_modules": {
+        "modules": 4,
+        "tests": 15
+      },
+      "legacy_member_names": "1 passed on owner-approved 28-file cross-section",
+      "download_coverage_baseline": "1 passed (122 packages / 758 programs)",
+      "ingest_differential": {
+        "files": 28,
+        "identical": 28,
+        "different": 0,
+        "installed_previous": 27,
+        "installed_candidate": 27
+      },
+      "pinned_compatibility_matrix": "not run; replaced by the 28-file ingest differential"
+    },
+    "migration_probe": {
+      "binaries": "candidate gate build",
+      "predecessor": "Alpha 19 import of a demo project, schema 16",
+      "steps": [
+        "windows-1252 CSV refused under UTF-8",
+        "applied with windows-1252",
+        "schema 19",
+        "descriptions, umlauts and declared DPT survive save/reopen",
+        "Alpha 19 refuses schema 19 and leaves the file unchanged",
+        "server open/save-as/reopen 647/647 names"
+      ],
+      "failures": 0
+    }
+  },
+  "publication": {
+    "workflows": {
+      "appimage_mcp": {
+        "run": 42533122082,
+        "event": "push",
+        "head": "1d3c7d433d2b2139a1ecbfac1314bacc4ef9fc22",
+        "build": "success",
+        "publish": "success"
+      },
+      "docker": {
+        "run": 42533122108,
+        "event": "push",
+        "head": "1d3c7d433d2b2139a1ecbfac1314bacc4ef9fc22",
+        "amd64": "success",
+        "arm64": "success",
+        "publish": "success"
+      }
+    },
+    "assets": [
+      {
+        "name": "knx-mcp-x86_64-linux",
+        "size": 14444376,
+        "digest": "sha256:fa83835b0591320a35995afa04e6e22f56b256c46be80075a33001f2339c1691"
+      },
+      {
+        "name": "KNXBench_0.1.0-alpha.20_amd64.AppImage",
+        "size": 94558712,
+        "digest": "sha256:a054bd81843bd6b79d9cf1a9502a66098f513bfc55ab77f58c69eed7e7d6fe98"
+      },
+      {
+        "name": "SHA256SUMS",
+        "size": 194,
+        "digest": "sha256:4a04d7f9a9b8a8dd48e816f393cf110b190cf4b4b06010f36c9579d5438b4396"
+      }
+    ],
+    "sha256sums_check": "OK for both binaries",
+    "mcp_version": "knx-mcp 0.1.0-alpha.20+g1d3c7d4",
+    "appimage": {
+      "launchers": "root-owned, mode 0755",
+      "glibc_max_required": "2.39",
+      "libwayland_client_bundled": 0,
+      "ci_cross_user_offline_start": {
+        "uid": 65534,
+        "interfaces": [
+          "lo"
+        ],
+        "frontend_http": 200,
+        "bound_to_published_sha256": true
+      }
+    },
+    "docker": {
+      "index_digest": "sha256:9a3ef089f5fccf930e4273ac611100ef65f47ae33415e426177f73fd4fd9db45",
+      "latest_equal": true,
+      "platforms": [
+        "linux/amd64",
+        "linux/arm64"
+      ],
+      "revision_label_matches": true,
+      "server_version": "knx-server 0.1.0-alpha.20+g1d3c7d4",
+      "isolated_amd64_smoke": "authenticated create/save passed, --network none",
+      "isolated_amd64_migration": "Alpha 19 schema-16 store opened, saved as and reopened: 647/647 names, saved schema 19, original unchanged",
+      "owner_container_unchanged": true
+    }
+  },
+  "not_verified": [
+    "physical KNX hardware",
+    "real KNX interfaces including TCP tunnelling",
+    "native WebKitGTK/Tauri windows",
+    "ARM runtime execution",
+    "FUSE AppImage launch",
+    "full 115-instance pinned compatibility matrix"
+  ]
+}

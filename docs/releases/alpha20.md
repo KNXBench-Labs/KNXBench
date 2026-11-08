@@ -216,6 +216,7 @@ the app.
 
 ## Boundaries
 
+- **Receipt:** the [sanitized public receipt](../evidence/release-alpha20-2026-11-09.json) records all three candidates, the dry runs, the tag publishers and the checks of the final public bytes: downloads and `SHA256SUMS` match, the Docker version and `latest` share one index for amd64 and arm64 with the exact revision label, and an isolated amd64 container passed the authenticated smoke and opened, saved and reopened an Alpha 19 project (647/647 names, schema 19). The owner's own container was not touched.
 - **Not verified:** the new download types, priorities, descriptions and System-2
   changes were not tested on real devices; *untested* means exactly that, not
   "probably fine". USB was
@@ -247,8 +248,29 @@ host. [Installation](../manual/getting-started/04-installation.md) ·
 
 ## By the numbers
 
-RELEASE-GATE-PENDING
+| | Alpha 20 |
+|---|---|
+| Commits since Alpha 19 | **288** (218 without merges) — busy week |
+| Files changed | **837**, +77,046 / −2,340 lines |
+| Estimated active development time | **about 66 hours** in 66 working sessions, over 7 calendar days* |
+| Rust tests | **8,602 passed, 0 failed**; 248 ignored ones are reported, not counted as coverage |
+| Frontend unit tests | **5,402 passed** |
+| Browser test executions | **1,140** fixture, **736** production, **45** extra, **12 + 12** native — overlapping suites, not one unique total |
+| Corpus tests | **155/155** in 9 targets, plus the 4 whole-corpus product modules (15 tests), the legacy-name check and the 122-package download-coverage baseline |
+| Alpha 19 vs Alpha 20 on 28 real product files | **28/28 identical** ingest results (27 install with both, the same 1 refuses with both) |
+| Migration probe | Alpha 19 project → Windows-1252 CSV → schema 19 → save/reopen: **0 failures**; Alpha 19 then politely refuses the file |
+| Release candidates | **3**. No. 1 was refused by the documentation check over a 51-line handover note (limit: 50). No. 2 found a test that got nervous on a busy machine (5 of 120 runs under load) and three test scripts that had never met the new status bar. No. 3: **31/31 green** |
+| Gate time | about **2 h 55 min** over 3 attempts; one flaky test re-run **300 times** to catch and then clear it |
+| Packaging dry runs | **6** (AppImage + Docker per candidate), **0 accidental publications** |
+
+\* Estimated from commit times (a gap over 45 minutes starts a new session, each session counts from 15 minutes before its first commit) — not time tracking.
 
 ## Acceptance and public verification
 
-RELEASE-GATE-PENDING
+Published on **9 November 2026** from immutable `1d3c7d433d2b2139a1ecbfac1314bacc4ef9fc22` (branch `release/alpha20-20261108`, source cutoff `dfb3f88b8`).
+
+- **Source campaign:** the complete maintained package gate (complete, plan completed, inputs frozen, no user data touched) plus the release-only browser, native, product-corpus, download-coverage and Alpha 19 comparison stages: **31/31 green** with the candidate unchanged from start to end. Candidates 1 and 2 are kept as rejected, not relabelled.
+- **Migration:** a real ETS 6.3 demo project imported by Alpha 19 (schema 16), then a Windows-1252 ETS CSV applied by Alpha 20: schema 19, umlauts and a description with semicolon and quotes survive save and reopen, the CSV's datapoint type lands on the new address, Alpha 19 refuses the migrated file and leaves it unchanged. Through the server: open, save as, switch away, reopen — 647/647 names identical.
+- **AppImage (dry run of this commit):** both launchers root-owned with mode 0755, highest glibc requirement 2.39, no bundled `libwayland-client`; started as a different user with loopback only, rendered window, frontend and API answering. `knx-mcp` reports `0.1.0-alpha.20+g1d3c7d4`.
+- **Docker (dry run of this commit):** amd64 and arm64 built; publishing was skipped until the tag.
+- **Not verified:** physical KNX hardware and real KNX interfaces (including TCP tunnelling), native WebKitGTK/Tauri windows, ARM runtime execution, FUSE AppImage launch and the full 115-instance pinned compatibility matrix (replaced by the 28-file comparison above).

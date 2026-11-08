@@ -42,6 +42,15 @@ string, and the restored outcome is additionally checked through settlement
 and the operation store). The stale options heading in the diagnosis was
 reworded.
 
+## Acceptance and publication
+
+Commits `83a62976a` (test change) and `372f7b8e2` (docs), merged main-first as
+`f3af37ca4` on `02084e5c5` (tree identical to the branch head). The
+change-scoped package gate selected 14 stages; all exited 0 with valid proofs,
+inputs frozen, no user data touched or unchecked: Rust 1,764 passed / 0 failed /
+72 ignored (7 binaries), private corpus 51/51. Pushed with `origin/main`
+unchanged; local, tracking and live `main` read back as `f3af37ca4`.
+
 ## Limits
 
 - A slower recovery is no longer reported as a deadline failure up to 180 s;

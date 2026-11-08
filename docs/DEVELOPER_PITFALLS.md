@@ -47,6 +47,14 @@ already found lying in the grass.
 
 ## Gates
 
+- **Pinned reader tests need their own source fixtures.** Copying a live reader
+  into an audited-hash fixture makes every legitimate reader edit break an
+  unrelated positive planner test. Use small fixed source-text fixtures and
+  test-only scoped contracts, retaining changed-reader and committed-baseline
+  rejection controls. Do not refresh production audit pins merely to make the
+  fixture pass: the unaudited production reader must retain its conservative
+  test selection until separately reviewed.
+
 - **Test diagnostics must not manufacture crash reports.** The browser-wrapper
   timeout helper captures `/proc` state, wait channels, signal masks and existing
   stderr, then uses retained pidfds for bounded SIGKILL cleanup. Do not send

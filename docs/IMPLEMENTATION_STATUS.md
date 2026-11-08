@@ -12,6 +12,17 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Release-only AppImage packaging (8 November 2026)
+
+Automatic AppImage builds run only for release tags, not normal commits or PRs;
+manual release preparation remains deliberate. The Ubuntu 24.04 build applies
+world-readable/executable payload policy before packaging and checks the finished
+image's modes and glibc 2.39 ceiling. A real manual CI image started as a different
+UID without external networking and showed the rendered workspace; all 165 ELF
+files stayed within the ceiling. The published alpha.19 asset is unchanged and
+no new release or catalog retest was performed. See the
+[acceptance and boundaries](status/2026-11-08-appimage-catalog.md).
+
 ## Time parameters and inline property writes (8 November 2026; issue #10)
 
 A dimming actuator whose soft-on/off times are `TypeTime` parameters in

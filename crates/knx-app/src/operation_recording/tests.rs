@@ -7,6 +7,7 @@ use std::time::Duration;
 use knx_core::IndividualAddress;
 use knx_net::cemi::{self, ApplicationService, Destination, LDataFrame, LDataMessageKind, Tpci};
 use knx_net::frame;
+use knx_net::frame_stream::SkipReason;
 use knx_net::tunnelling;
 use knx_net::wire_tap::{TunnelTapEvent, WireDirection};
 use serde_json::{json, Value};
@@ -163,6 +164,76 @@ fn a_recording_has_a_header_its_datagrams_notes_and_an_end() {
         .map(|l| l["seq"].as_u64().unwrap())
         .collect();
     assert!(seqs.windows(2).all(|w| w[0] < w[1]), "{seqs:?}");
+}
+
+/// A skipped TCP frame is a tunnel line with its header facts and reason
+/// only: no octets, no address, no key. A recording without a skip has no
+/// such line.
+#[test]
+fn a_skipped_frame_is_recorded_as_header_facts_without_its_octets() {
+    let dir = tempfile::tempdir().unwrap();
+    let store = store_in(dir.path());
+    let recorder = store.start(OperationStart::new(OperationKind::System2Download));
+    let tap = recorder.wire_tap().expect("a recording recorder has a tap");
+    tap.event(TunnelTapEvent::FrameSkipped {
+        service_type: 0x0999,
+        total_length: 18,
+        reason: SkipReason::UnhandledService,
+    });
+    tap.event(TunnelTapEvent::FrameSkipped {
+        service_type: tunnelling::TUNNELLING_REQUEST,
+        total_length: 65535,
+        reason: SkipReason::AboveLocalCap,
+    });
+    recorder.finish(RecordedOutcome::succeeded(json!({})));
+    assert!(store.wait_until_idle(IDLE));
+    let (_, lines) = only_recording(&store);
+    let skipped: Vec<&Value> = lines
+        .iter()
+        .filter(|line| line["event"] == "frame-skipped")
+        .collect();
+    assert_eq!(skipped.len(), 2, "{lines:?}");
+    for (line, (service_type, total_length, reason)) in skipped.iter().zip([
+        ("0x0999", 18, "unhandled-service"),
+        ("0x0420", 65535, "above-local-cap"),
+    ]) {
+        assert_eq!(line["type"], "tunnel");
+        assert_eq!(line["service_type"], service_type);
+        assert_eq!(line["total_length"], total_length);
+        assert_eq!(line["reason"], reason);
+        let mut keys: Vec<&str> = line
+            .as_object()
+            .unwrap()
+            .keys()
+            .map(String::as_str)
+            .collect();
+        keys.sort_unstable();
+        assert_eq!(
+            keys,
+            [
+                "event",
+                "reason",
+                "seq",
+                "service_type",
+                "t_us",
+                "total_length",
+                "type",
+                "wall"
+            ],
+            "nothing but header facts"
+        );
+    }
+
+    // Negative control: a recording without skips has no such line.
+    let dir = tempfile::tempdir().unwrap();
+    let store = store_in(dir.path());
+    let recorder = store.start(OperationStart::new(OperationKind::System2Download));
+    let tap = recorder.wire_tap().expect("a recording recorder has a tap");
+    tap.datagram(WireDirection::Sent, &memory_write_datagram(0));
+    recorder.finish(RecordedOutcome::succeeded(json!({})));
+    assert!(store.wait_until_idle(IDLE));
+    let (_, lines) = only_recording(&store);
+    assert!(lines.iter().all(|line| line["event"] != "frame-skipped"));
 }
 
 #[test]

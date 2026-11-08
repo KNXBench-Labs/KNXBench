@@ -1,8 +1,8 @@
 /** Bus monitor panel: starts or attaches a session, polls telegrams, and filters/renders them. */
-import { useBusTransport, useSerialTarget } from "./serialPreference";
+import { useBusTransport, useIpTunnelTransport, useSerialTarget } from "./serialPreference";
 import { gatewayRefusalMessage } from "./gatewayRefusal";
 import BusTransportFields from "./BusTransportFields";
-import { serialLabel, validSerialTarget, type SerialTarget } from "./serialTransport";
+import { serialLabel, validSerialTarget, type BusEndpoint, type IpTunnelTransport, type SerialTarget } from "./serialTransport";
 // apps/knx-web/src/BusMonitorPanel.tsx
 import ResizableTable from "./ResizableTable";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -27,7 +27,7 @@ import {
   readSessionContext,
   subscribeContextChanges,
 } from "./busContext";
-import { busObservationVersion, acceptsObservedSession, knownSerialSession, connectBusSession, disconnectBusSession, useBusConnection } from "./busConnection";
+import { busObservationVersion, acceptsObservedSession, knownSerialSession, knownTcpSession, connectBusSession, disconnectBusSession, tcpStartErrorMessage, useBusConnection } from "./busConnection";
 import { ensureBusDiscovery, searchBusInterfaces, useBusDiscovery } from "./busDiscovery";
 import { useTranslate, type Translate } from "./i18n";
 import { groupAddressMatches, useGroupAddressFormat } from "./gaNotation";
@@ -212,9 +212,17 @@ export default function BusMonitorPanel({ projectOpen, project, projectScope, on
   const [language] = useUiLanguage();
   const settingsState = useSettingsState();
   const [transport] = useBusTransport();
+  const [tunnel] = useIpTunnelTransport();
   const [serial] = useSerialTarget();
   const [sessionSerial, setSessionSerial] = useState<SerialTarget | undefined>();
   const serialRef = useRef<SerialTarget | undefined>(undefined);
+  // The IP transport the attached session was observed to run on; the saved preference never feeds it.
+  const [sessionTransport, setSessionTransport] = useState<IpTunnelTransport | undefined>();
+  const transportRef = useRef<IpTunnelTransport | undefined>(undefined);
+  // Cumulative TCP frames the stream decoder skipped: a number, `null` when a TCP session gave
+  // none (unavailable, never read as zero), `undefined` when the session is not TCP.
+  const [skippedFrames, setSkippedFrames] = useState<number | null | undefined>();
+  const [stopSkipped, setStopSkipped] = useState<number | null | undefined>();
   const [gatewayFields, setGatewayFields] = useState(() => splitGatewayEndpoint(loadPreferredGateway()));
   const gatewayValidation = validateGatewayFields(gatewayFields);
   const gatewayValidationHint = gatewayValidation.ok
@@ -277,8 +285,16 @@ export default function BusMonitorPanel({ projectOpen, project, projectScope, on
         || response.serial.source !== expected.source || response.serial.mode !== expected.mode)) {
       setContextLock("unverified"); return;
     }
+    // A session once admitted as TCP is never reclassified as legacy UDP by a poll without that metadata.
+    if ((transportRef.current === "tcp" || knownTcpSession(response)) && response.transport !== "tcp") {
+      transportRef.current = "tcp"; setSessionTransport(undefined); setSkippedFrames(null);
+      setContextLock("unverified"); return;
+    }
     serialRef.current = response.serial;
     setSessionSerial(response.serial);
+    transportRef.current = response.transport;
+    setSessionTransport(response.transport);
+    setSkippedFrames(response.transport === "tcp" ? response.skippedFrames ?? null : undefined);
     setContextLock(responseContextLock(response));
     setServerProjectOpen(typeof response.projectOpen === "boolean" ? response.projectOpen : null);
   }
@@ -376,9 +392,11 @@ export default function BusMonitorPanel({ projectOpen, project, projectScope, on
   const observedSerial = session ? knownSerialSession(session) : undefined;
   const serialUnverified = observedSerial !== undefined && (sessionSerial === undefined
     || observedSerial.path !== sessionSerial.path || observedSerial.source !== sessionSerial.source || observedSerial.mode !== sessionSerial.mode);
+  const tcpUnverified = session !== null && knownTcpSession(session) && sessionTransport !== "tcp";
   const actionSession: api.GroupActionSession | null = session === null ? null
-    : serialUnverified || contextLock === "unverified" ? {kind:"unverified",identity:session}
-    : sessionSerial ? {kind:"serial",identity:session,mode:sessionSerial.mode} : {kind:"ip",identity:session};
+    : serialUnverified || tcpUnverified || contextLock === "unverified" ? {kind:"unverified",identity:session}
+    : sessionSerial ? {kind:"serial",identity:session,mode:sessionSerial.mode}
+    : sessionTransport === "tcp" ? {kind:"tcp",identity:session} : {kind:"ip",identity:session};
 
 
   useEffect(() => {
@@ -392,7 +410,7 @@ export default function BusMonitorPanel({ projectOpen, project, projectScope, on
   function attachTo(next: AttachedSession | null) {
     contextGenerationRef.current += 1;
     sessionRef.current = next;
-    if (!next) { serialRef.current = undefined; setSessionSerial(undefined); }
+    if (!next) { serialRef.current = undefined; setSessionSerial(undefined); transportRef.current = undefined; setSessionTransport(undefined); setSkippedFrames(undefined); }
     setSession(next);
     // Retain provenance for a capture exported after Disconnect or a 404.
     if (next) setCaptureIdentity(next);
@@ -548,6 +566,9 @@ export default function BusMonitorPanel({ projectOpen, project, projectScope, on
           // A different identity owns its own transport; never retain the old serial target.
           serialRef.current = undefined;
           setSessionSerial(undefined);
+          transportRef.current = undefined;
+          setSessionTransport(undefined);
+          setSkippedFrames(undefined);
           applyResponseContext(response, generation);
           setStatus(response.status);
           attachTo({
@@ -623,13 +644,19 @@ export default function BusMonitorPanel({ projectOpen, project, projectScope, on
     setConnectError(null);
     const validation = validateGatewayFields(gatewayFields);
     if (transport === "serial" ? !validSerialTarget(serial) : !validation.ok) return;
-    const endpoint = transport === "serial" ? serial : validation.ok ? validation.endpoint : "";
+    const endpoint: BusEndpoint = transport === "serial" ? serial
+      : !validation.ok ? ""
+      : tunnel === "tcp" ? { kind: "tcp", gateway: validation.endpoint } : validation.endpoint;
     // WP-26: the shared controller owns the request, the achievement and the
     // session record; this panel's resets and `sessionRef` run synchronously
     // in `beforePublish`, after the achievement and before the record.
     function beforePublish(started: BusMonitorStartResponse) {
       serialRef.current = started.serial;
       setSessionSerial(started.serial);
+      transportRef.current = started.transport;
+      setSessionTransport(started.transport);
+      setSkippedFrames(started.transport === "tcp" ? started.skippedFrames ?? null : undefined);
+      setStopSkipped(undefined);
       const current = sessionRef.current;
       // Reattach may already have captured A while its start response was pending.
       // Complete A's publication without clearing its cursor, rows or flow state.
@@ -672,7 +699,8 @@ export default function BusMonitorPanel({ projectOpen, project, projectScope, on
     }
     const result = await connectBusSession(endpoint, { beforePublish, stillOwned });
     if (!result.ok) {
-      if (result.reason === "failed") setConnectError(transport === "serial" ? gatewayRefusalMessage(result.error) ?? t("busTransport.unavailable") : api.errorMessage(result.error));
+      if (result.reason === "failed") setConnectError(transport === "serial" ? gatewayRefusalMessage(result.error) ?? t("busTransport.unavailable")
+        : tunnel === "tcp" ? tcpStartErrorMessage(result.error, t) : api.errorMessage(result.error));
       else if (result.reason === "stale") setConnectError(t("busConnection.error.stale"));
       return;
     }
@@ -688,6 +716,10 @@ export default function BusMonitorPanel({ projectOpen, project, projectScope, on
     // WP-26: stops exactly this panel's session on the bound route. Local
     // state detaches in `afterStop`, before the controller forgets the record.
     function afterStop(summary: BusMonitorStopResponse) {
+      // Read before the detach clears it: was this a TCP session, and what did the stop count?
+      const held = sessionRef.current;
+      const wasTcp = transportRef.current === "tcp" || (held !== null && knownTcpSession(held));
+      setStopSkipped(wasTcp ? summary.skippedFrames ?? null : undefined);
       attachTo(null);
       setPaused(false);
       setStatus(null);
@@ -999,6 +1031,7 @@ export default function BusMonitorPanel({ projectOpen, project, projectScope, on
           {!sessionSerial && session.assignedAddress && (
             <>{t("busMonitor.assignedAddress", { address: session.assignedAddress })}</>
           )}
+          {sessionTransport && <span data-testid="bus-session-transport"> · {t("busTransport.ipTunnel.observed", { transport: sessionTransport === "tcp" ? "TCP" : "UDP" })}</span>}
           {status === "closed" && (sessionSerial ? t("busTransport.lost", {target:serialLabel(sessionSerial)}) : t("busMonitor.closedByGateway"))}
         </p>
       )}
@@ -1011,6 +1044,12 @@ export default function BusMonitorPanel({ projectOpen, project, projectScope, on
           })}
           {stopSummary.warning && <span className="bus-monitor-warning"> {stopSummary.warning}</span>}
         </p>
+      )}
+      {stopSummary && stopSkipped === null && (
+        <p className="bus-monitor-stop-skipped" role="note">{t("busMonitor.skippedFramesUnavailable")}</p>
+      )}
+      {stopSummary && typeof stopSkipped === "number" && stopSkipped > 0 && (
+        <p className="bus-monitor-stop-skipped" role="note">{t("busMonitor.skippedFramesAtStop", { count: stopSkipped })}</p>
       )}
       {endedElsewhere && (
         <p className="bus-monitor-ended-elsewhere" role="alert">
@@ -1031,11 +1070,12 @@ export default function BusMonitorPanel({ projectOpen, project, projectScope, on
           {t("busMonitor.contextStale")}
         </p>
       )}
-      {session && (contextLock === "unverified" || serialUnverified) && (
+      {session && (contextLock === "unverified" || serialUnverified || tcpUnverified) && (
         <p className="bus-monitor-unverified-lock" role="note">
           {t("busMonitor.contextUnverified")}
         </p>
       )}
+      {session && tcpUnverified && <p className="bus-monitor-unverified-lock" role="note">{t("busTransport.ipTunnel.unverified")}</p>}
       {pollError && <span className="field-error">{pollError}</span>}
       {/* The user-facing half of "never lose a telegram silently" (§4.2's
           `Lagged(n)`/ring-buffer eviction accounting): whenever the
@@ -1043,6 +1083,12 @@ export default function BusMonitorPanel({ projectOpen, project, projectScope, on
           banner says so and by how many, and it updates every time the
           counter grows on a later poll — it is never folded quietly into
           the row count. */}
+      {(sessionTransport === "tcp" || tcpUnverified) && skippedFrames === null && (
+        <p className="bus-monitor-skipped-frames-unavailable" role="note">{t("busMonitor.skippedFramesUnavailable")}</p>
+      )}
+      {(sessionTransport === "tcp" || tcpUnverified) && typeof skippedFrames === "number" && skippedFrames > 0 && (
+        <p className="bus-monitor-skipped-frames" role="alert">{t("busMonitor.skippedFrames", { count: skippedFrames })}</p>
+      )}
       {droppedBefore > 0 && (
         <p className="bus-monitor-gap-notice" role="alert">
           {t("busMonitor.gapNotice", { count: droppedBefore })}

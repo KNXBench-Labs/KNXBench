@@ -2,7 +2,24 @@
 
 export interface SerialTarget { path: string; source: string; mode: "passive" | "active" }
 export type BusTransport = "ip" | "serial";
-export type BusEndpoint = string | SerialTarget;
+/** The IP tunnel transport of a KNXnet/IP session; UDP is the default, TCP always explicit. */
+export type IpTunnelTransport = "udp" | "tcp";
+/** An explicit TCP tunnel to a gateway `host:port`; a bare string stays the UDP endpoint. */
+export interface TcpEndpoint { kind: "tcp"; gateway: string }
+export type BusEndpoint = string | SerialTarget | TcpEndpoint;
+
+export function isIpTunnelTransport(value: unknown): value is IpTunnelTransport {
+  return value === "udp" || value === "tcp";
+}
+export function isTcpEndpoint(value: unknown): value is TcpEndpoint {
+  return value !== null && typeof value === "object" && !Array.isArray(value)
+    && Object.keys(value).length === 2 && "kind" in value && "gateway" in value
+    && value.kind === "tcp" && typeof value.gateway === "string" && value.gateway.length > 0;
+}
+/** `gateway`, or `gateway · TCP` for an observed or selected TCP tunnel; UDP stays unmarked. */
+export function gatewayWithTransport(gateway: string, transport: IpTunnelTransport | undefined): string {
+  return transport === "tcp" ? `${gateway} · TCP` : gateway;
+}
 
 export function validSerialSource(source: string): boolean {
   if (!/^(0|[1-9][0-9]?)\.(0|[1-9][0-9]?)\.(0|[1-9][0-9]{0,2})$/.test(source)) return false;

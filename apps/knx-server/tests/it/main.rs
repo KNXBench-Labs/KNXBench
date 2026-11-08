@@ -23,6 +23,7 @@ mod http_bus_monitor_admission;
 mod http_bus_monitor_bound_stop;
 mod http_bus_scan;
 mod http_bus_serial;
+mod http_bus_tcp;
 mod http_bus_write;
 mod http_catalog_to_device;
 mod http_catalog_translation;

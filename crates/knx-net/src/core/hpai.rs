@@ -1,12 +1,19 @@
-//! Host Protocol Address Information, IPv4/UDP form (Core v01.06.02 AS
-//! §7.5.1, §8.6.2.1, Table 10). This cycle implements only `IPV4_UDP`;
-//! `IPV4_TCP` is restricted to the all-zero "Route Back" encoding
-//! (§8.6.2.2), which this cycle's single-gateway UDP client never needs.
+//! Host Protocol Address Information: the IPv4 UDP form and the TCP Route Back form.
+//!
+//! Core v01.06.02 AS §7.5.1, §8.6.2.1, Table 10. [`Hpai`] encodes and decodes
+//! the `IPV4_UDP` form. `IPV4_TCP` is valid only in the all-zero "Route Back"
+//! encoding (§8.6.2.2, printed pp. 49–50): a TCP HPAI with a non-zero address
+//! or port is invalid. That one encoding is [`TCP_ROUTE_BACK`]; the optional
+//! TCP tunnel compares against it octet for octet instead of decoding it.
 
 use std::net::Ipv4Addr;
 
 pub const IPV4_UDP: u8 = 0x01;
+pub const IPV4_TCP: u8 = 0x02;
 pub const HPAI_LEN: u8 = 8;
+
+/// The only valid TCP HPAI (§8.6.2.2): Route Back, address and port zero.
+pub const TCP_ROUTE_BACK: [u8; 8] = [HPAI_LEN, IPV4_TCP, 0, 0, 0, 0, 0, 0];
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Hpai {
@@ -121,9 +128,14 @@ mod tests {
     }
 
     #[test]
+    fn the_tcp_route_back_hpai_is_all_zero_after_its_protocol_code() {
+        assert_eq!(TCP_ROUTE_BACK, [0x08, 0x02, 0, 0, 0, 0, 0, 0]);
+    }
+
+    #[test]
     fn decode_rejects_tcp_host_protocol() {
         // IPV4_TCP (02h) is only valid in the all-zero "Route Back" form
-        // (Core v01.06.02 AS §8.6.2.2), which this cycle does not support.
+        // (Core v01.06.02 AS §8.6.2.2), which `Hpai` does not represent.
         let err = Hpai::decode(&[0x08, 0x02, 0, 0, 0, 0, 0, 0]).unwrap_err();
         assert_eq!(err, HpaiError::UnsupportedHostProtocol(0x02));
     }

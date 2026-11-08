@@ -1,5 +1,6 @@
-//! The `BusConnection` trait and its tunnelling implementation
-//! (ARCHITECTURE.md §8). `discover` (multicast `SEARCH_REQUEST`/
+//! The `BusConnection` trait with its discovery, UDP or TCP tunnelling and routing clients.
+//!
+//! ARCHITECTURE.md §8. `discover` (multicast `SEARCH_REQUEST`/
 //! `SEARCH_RESPONSE`) is implemented as of Session 6 Cycle 3.
 //! `TunnelClient::send` is implemented as of Session 6 Cycle 2
 //! (KNOWN_LIMITATIONS.md §26). `connect_routing`/`RoutingClient` are
@@ -9,7 +10,9 @@
 //! subscribers when the tunnel dies (#28), and `RoutingClient::send`
 //! honors `ROUTING_BUSY` (#32). `connect_routing_to_group` (E6,
 //! KNOWN_LIMITATIONS.md #31) lets a caller join a non-default routing
-//! multicast group instead of `ROUTING_MULTICAST`.
+//! multicast group instead of `ROUTING_MULTICAST`. WP-29 adds optional
+//! TCP tunnelling ([`TunnelTransport::Tcp`], `client_tcp.rs`) behind the
+//! same [`TunnelClient`]; UDP stays the default and its behaviour unchanged.
 
 use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4};
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
@@ -56,6 +59,31 @@ impl TunnelAckWait {
         match self {
             Self::Standard => Duration::from_secs(1),
             Self::Patient => Duration::from_secs(10),
+        }
+    }
+}
+
+/// Which IP transport a tunnel runs on (Core v01.06.02 AS §8.4.1).
+///
+/// UDP is the default and the one every KNXnet/IP server supports; TCP is
+/// an optional server feature (§8.4.3). TCP is used only when a caller asks
+/// for it, and a failed TCP connect is an error: there is no fallback to UDP
+/// in either direction (§8.4.1: a connection keeps its request's transport).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum TunnelTransport {
+    /// UDP datagrams, with `TUNNELLING_ACK` and its repetition.
+    #[default]
+    Udp,
+    /// One TCP stream the client opens to the control endpoint.
+    Tcp,
+}
+
+impl TunnelTransport {
+    /// Stable lower-case name for diagnostics and recordings.
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Udp => "udp",
+            Self::Tcp => "tcp",
         }
     }
 }
@@ -113,10 +141,23 @@ pub enum TunnelClosure {
     /// The `CONNECTIONSTATE_REQUEST` heartbeat failed (Core v01.06.02 AS
     /// §5.4), so this client asked to disconnect.
     HeartbeatFailed,
-    /// Receiving on the tunnel socket failed.
+    /// Receiving on the tunnel socket failed (over TCP: also a reset).
     SocketFailed,
     /// This client disconnected or was dropped.
     ClientDisconnect,
+    /// TCP only: the gateway closed its side of the stream (Core v01.06.02 AS
+    /// §8.4.3.3), so this client closed the whole connection at once.
+    PeerClosed,
+    /// TCP only: the gateway sent a header that is not well formed (header
+    /// length other than 06h, or a total length below six), which closes the
+    /// stream (Core v01.06.02 AS §8.4.3.3).
+    MalformedStream,
+    /// TCP only: the gateway sent a protocol version other than 1.0. Closing
+    /// the stream for it is local policy; no negative reply is sent.
+    UnsupportedVersion { version: u8 },
+    /// TCP only: a frame could not be written whole within the local write
+    /// budget, or writing failed, so the stream was closed.
+    StreamWriteFailed,
 }
 
 impl std::fmt::Display for TunnelClosure {
@@ -145,6 +186,20 @@ impl std::fmt::Display for TunnelClosure {
             }
             TunnelClosure::SocketFailed => write!(f, "receiving on the tunnel socket failed"),
             TunnelClosure::ClientDisconnect => write!(f, "this client closed the tunnel"),
+            TunnelClosure::PeerClosed => write!(f, "the gateway closed the TCP connection"),
+            TunnelClosure::MalformedStream => write!(
+                f,
+                "the gateway sent a malformed KNXnet/IP header on the TCP connection"
+            ),
+            TunnelClosure::UnsupportedVersion { version } => write!(
+                f,
+                "the gateway sent KNXnet/IP protocol version {version:#04x} on the TCP \
+                 connection, which this client does not support"
+            ),
+            TunnelClosure::StreamWriteFailed => write!(
+                f,
+                "writing to the TCP connection failed or did not finish in time"
+            ),
         }
     }
 }
@@ -216,6 +271,7 @@ pub enum TunnelReturnPath {
 pub struct KnxNetIpClient {
     tunnel_return_path: TunnelReturnPath,
     tunnel_ack_wait: TunnelAckWait,
+    tunnel_transport: TunnelTransport,
     /// Records every tunnel datagram and connection event (DIAG-03).
     wire_tap: Option<WireTap>,
 }
@@ -231,8 +287,25 @@ impl KnxNetIpClient {
         Self {
             tunnel_return_path: path,
             tunnel_ack_wait: TunnelAckWait::default(),
+            tunnel_transport: TunnelTransport::default(),
             wire_tap: None,
         }
+    }
+
+    /// The same client whose tunnels run on `transport`. Discovery and
+    /// routing stay UDP whatever this says.
+    ///
+    /// Over TCP the return path and the acknowledgement wait do not apply:
+    /// every HPAI is the TCP Route Back HPAI, the only valid TCP form (Core
+    /// v01.06.02 AS §8.6.2.2), and there is no `TUNNELLING_ACK` (§8.4.3.4.1).
+    pub fn with_tunnel_transport(mut self, transport: TunnelTransport) -> Self {
+        self.tunnel_transport = transport;
+        self
+    }
+
+    /// The transport `connect_tunnel` uses.
+    pub fn tunnel_transport(&self) -> TunnelTransport {
+        self.tunnel_transport
     }
 
     /// The same client, keeping its return path, whose tunnels wait `wait`
@@ -377,13 +450,20 @@ impl BusConnection for KnxNetIpClient {
     }
 
     async fn connect_tunnel(&self, gateway: SocketAddrV4) -> Result<TunnelClient, BusError> {
-        TunnelClient::connect(
-            gateway,
-            self.tunnel_return_path,
-            self.tunnel_ack_wait,
-            self.wire_tap.clone(),
-        )
-        .await
+        match self.tunnel_transport {
+            TunnelTransport::Udp => {
+                TunnelClient::connect(
+                    gateway,
+                    self.tunnel_return_path,
+                    self.tunnel_ack_wait,
+                    self.wire_tap.clone(),
+                )
+                .await
+            }
+            TunnelTransport::Tcp => {
+                TunnelClient::connect_tcp(gateway, tcp::PRODUCTION, self.wire_tap.clone()).await
+            }
+        }
     }
 
     async fn connect_routing(
@@ -622,15 +702,17 @@ impl TunnelState {
     }
 }
 
+/// The UDP tunnel behind [`TunnelClient`].
+///
 /// `disconnect()` is the graceful path — it tells the gateway we're leaving
 /// and stops the background tasks. The `Drop` impl below is a safety net for
-/// callers that drop a `TunnelClient` without calling it (early return, panic
+/// callers that drop a tunnel without calling it (early return, panic
 /// unwind, ...); it is not a substitute for calling `disconnect()`.
-pub struct TunnelClient {
+struct UdpTunnel {
     state: Arc<TunnelState>,
 }
 
-impl TunnelClient {
+impl UdpTunnel {
     async fn connect(
         gateway: SocketAddrV4,
         return_path: TunnelReturnPath,
@@ -742,7 +824,7 @@ impl TunnelClient {
         tokio::spawn(receive_loop(state.clone()));
         tokio::spawn(heartbeat_loop(state.clone()));
 
-        Ok(TunnelClient { state })
+        Ok(UdpTunnel { state })
     }
 
     pub fn assigned_address(&self) -> IndividualAddress {
@@ -765,26 +847,11 @@ impl TunnelClient {
         self.state.closure()
     }
 
-    /// Sends an `L_Data.req` carrying `Tpci::UnnumberedData` (Tunnelling
-    /// v01.07.01 AS §2.6) — what every group service, and every
-    /// unconnected point-to-point service, uses. Delegates to
-    /// [`Self::send_frame`]; kept as its own method because it is the
-    /// overwhelming majority of callers and they should not have to name
-    /// a TPCI they never vary.
-    pub async fn send(
-        &self,
-        destination: Destination,
-        service: ApplicationService,
-    ) -> Result<(), BusError> {
-        self.send_frame(destination, cemi::Tpci::UnnumberedData, service)
-            .await
-    }
-
     /// Sends an `L_Data.req` (Tunnelling v01.07.01 AS §2.6): source/kind
     /// are the client's concern, not the caller's — the gateway assigns
     /// the actual source address and message code, so only the
     /// destination, transport (TPCI) and application service are exposed
-    /// here. The general path behind [`Self::send`]; a line scan
+    /// here. The general path behind [`TunnelClient::send`]; a line scan
     /// (T17) needs `T_Connect`/numbered `T_Data_Connected`/`T_Disconnect`,
     /// which a fixed `Tpci::UnnumberedData` cannot express.
     ///
@@ -931,13 +998,220 @@ impl TunnelClient {
     }
 }
 
-impl Drop for TunnelClient {
+impl Drop for UdpTunnel {
     fn drop(&mut self) {
-        // Safety net for a `TunnelClient` dropped without calling
+        // Safety net for a `UdpTunnel` dropped without calling
         // `disconnect()` (early return, panic unwind, ...). Idempotent
         // alongside the explicit path.
         self.state.close(TunnelClosure::ClientDisconnect);
         self.state.stop();
+    }
+}
+
+/// A connected KNXnet/IP tunnel over UDP (the default) or TCP.
+///
+/// `disconnect()` is the graceful path. Dropping a tunnel without it is a
+/// safety net that tells its background tasks to stop. Over TCP the drop
+/// also refuses every queued frame and requests the abort of every task
+/// before it returns; the runtime then drops the tasks and releases the
+/// socket, which ends the connection on it (Core v01.06.02 AS §8.4.3.5).
+/// The drop does not wait for that release.
+pub struct TunnelClient {
+    inner: TunnelInner,
+}
+
+/// Each transport has its own lifecycle: the UDP tunnel's acknowledgement
+/// and sequence state does not exist over TCP.
+enum TunnelInner {
+    Udp(UdpTunnel),
+    Tcp(tcp::TcpTunnel),
+}
+
+impl TunnelClient {
+    async fn connect(
+        gateway: SocketAddrV4,
+        return_path: TunnelReturnPath,
+        ack_wait: TunnelAckWait,
+        tap: Option<WireTap>,
+    ) -> Result<Self, BusError> {
+        UdpTunnel::connect(gateway, return_path, ack_wait, tap)
+            .await
+            .map(|tunnel| Self {
+                inner: TunnelInner::Udp(tunnel),
+            })
+    }
+
+    /// [`Self::connect`] with an explicit heartbeat timing; tests shorten it.
+    #[cfg(test)]
+    async fn connect_timed(
+        gateway: SocketAddrV4,
+        return_path: TunnelReturnPath,
+        heartbeat: HeartbeatTiming,
+        ack_wait: TunnelAckWait,
+    ) -> Result<Self, BusError> {
+        UdpTunnel::connect_timed(gateway, return_path, heartbeat, ack_wait)
+            .await
+            .map(|tunnel| Self {
+                inner: TunnelInner::Udp(tunnel),
+            })
+    }
+
+    /// A TCP tunnel to `gateway`'s control endpoint under `policy`.
+    async fn connect_tcp(
+        gateway: SocketAddrV4,
+        policy: tcp::TcpPolicy,
+        tap: Option<WireTap>,
+    ) -> Result<Self, BusError> {
+        tcp::TcpTunnel::connect(gateway, policy, tap)
+            .await
+            .map(|tunnel| Self {
+                inner: TunnelInner::Tcp(tunnel),
+            })
+    }
+
+    /// [`Self::connect_tcp`] with test hooks on the real writer task.
+    #[cfg(test)]
+    async fn connect_tcp_hooked(
+        gateway: SocketAddrV4,
+        policy: tcp::TcpPolicy,
+        tap: Option<WireTap>,
+        hooks: tcp::Hooks,
+    ) -> Result<Self, BusError> {
+        tcp::TcpTunnel::connect_with(gateway, policy, tap, hooks)
+            .await
+            .map(|tunnel| Self {
+                inner: TunnelInner::Tcp(tunnel),
+            })
+    }
+
+    /// TCP only: the whole graceful disconnect without taking ownership, so a
+    /// test can race it against senders sharing the tunnel.
+    #[cfg(test)]
+    async fn disconnect_shared(&self) -> Result<(), BusError> {
+        match &self.inner {
+            TunnelInner::Udp(_) => panic!("a TCP tunnel was expected"),
+            TunnelInner::Tcp(tunnel) => tunnel.disconnect_shared().await,
+        }
+    }
+
+    /// The UDP state, for this module's tests.
+    #[cfg(test)]
+    fn udp_state(&self) -> &Arc<TunnelState> {
+        match &self.inner {
+            TunnelInner::Udp(tunnel) => &tunnel.state,
+            TunnelInner::Tcp(_) => panic!("a UDP tunnel was expected"),
+        }
+    }
+
+    /// The transport this tunnel actually runs on.
+    pub fn transport(&self) -> TunnelTransport {
+        match &self.inner {
+            TunnelInner::Udp(_) => TunnelTransport::Udp,
+            TunnelInner::Tcp(_) => TunnelTransport::Tcp,
+        }
+    }
+
+    pub fn assigned_address(&self) -> IndividualAddress {
+        match &self.inner {
+            TunnelInner::Udp(tunnel) => tunnel.assigned_address(),
+            TunnelInner::Tcp(tunnel) => tunnel.assigned_address(),
+        }
+    }
+
+    pub fn subscribe(&self) -> broadcast::Receiver<TunnelEvent> {
+        match &self.inner {
+            TunnelInner::Udp(tunnel) => tunnel.subscribe(),
+            TunnelInner::Tcp(tunnel) => tunnel.subscribe(),
+        }
+    }
+
+    /// How many `TUNNELLING_REQUEST`s on this connection carried a cEMI
+    /// payload that failed to decode. Only the first one is ever printed
+    /// to stderr; this is where the rest are seen.
+    pub fn decode_failure_count(&self) -> u64 {
+        match &self.inner {
+            TunnelInner::Udp(tunnel) => tunnel.decode_failure_count(),
+            TunnelInner::Tcp(tunnel) => tunnel.decode_failure_count(),
+        }
+    }
+
+    /// TCP only: how many well-formed frames were read past without being
+    /// stored, because their service is not one a tunnel reads or they were
+    /// larger than the local receive cap (Core v01.06.02 AS §8.4.3.3). Their
+    /// octets are not kept; a wire tap records each as a
+    /// `TunnelTapEvent::FrameSkipped` with its header facts. Cumulative over
+    /// the connection, handshake included. Always 0 over UDP.
+    pub fn skipped_frame_count(&self) -> u64 {
+        match &self.inner {
+            TunnelInner::Udp(_) => 0,
+            TunnelInner::Tcp(tunnel) => tunnel.skipped_frame_count(),
+        }
+    }
+
+    /// Why this tunnel stopped carrying traffic, or `None` while it is open.
+    pub fn closure(&self) -> Option<TunnelClosure> {
+        match &self.inner {
+            TunnelInner::Udp(tunnel) => tunnel.closure(),
+            TunnelInner::Tcp(tunnel) => tunnel.closure(),
+        }
+    }
+
+    /// Sends an `L_Data.req` carrying `Tpci::UnnumberedData` (Tunnelling
+    /// v01.07.01 AS §2.6) — what every group service, and every
+    /// unconnected point-to-point service, uses. Delegates to
+    /// [`Self::send_frame`].
+    pub async fn send(
+        &self,
+        destination: Destination,
+        service: ApplicationService,
+    ) -> Result<(), BusError> {
+        self.send_frame(destination, cemi::Tpci::UnnumberedData, service)
+            .await
+    }
+
+    /// Sends an `L_Data.req` (Tunnelling v01.07.01 AS §2.6) with the given
+    /// destination, transport (TPCI) and application service; the gateway
+    /// assigns the actual source address.
+    ///
+    /// Over UDP: waits up to [`TunnelAckWait::timeout`] for the matching
+    /// `TUNNELLING_ACK`, repeats once with the same sequence counter, and
+    /// terminates the connection if that also fails (§2.6.1/§2.6.2).
+    ///
+    /// Over TCP: no `TUNNELLING_ACK` exists (Core v01.06.02 AS §8.4.3.4.1);
+    /// `Ok` means the whole frame was handed to the local TCP stack, not that
+    /// the gateway or the bus received it. The frame is never repeated. A
+    /// frame still queued when teardown begins is refused, never written; a
+    /// frame cut off by a closing stream is reported as a closure, its fate
+    /// at the gateway unknown.
+    ///
+    /// Either way, a tunnel that is already closed refuses at once with its
+    /// recorded cause.
+    pub async fn send_frame(
+        &self,
+        destination: Destination,
+        transport: cemi::Tpci,
+        service: ApplicationService,
+    ) -> Result<(), BusError> {
+        match &self.inner {
+            TunnelInner::Udp(tunnel) => tunnel.send_frame(destination, transport, service).await,
+            TunnelInner::Tcp(tunnel) => tunnel.send_frame(destination, transport, service).await,
+        }
+    }
+
+    /// Graceful disconnect (Core v01.06.02 AS §5.5): `DISCONNECT_REQUEST`,
+    /// then the matching `DISCONNECT_RESPONSE`, then the background tasks
+    /// stop. Only a confirmed termination is `Ok`; the tunnel is torn down
+    /// on every outcome. Over TCP, frames still queued are refused first, so
+    /// nothing follows the `DISCONNECT_REQUEST`; the wait is bounded by local
+    /// cleanup and response budgets whatever the queue held; the stream is
+    /// closed afterwards; and a gateway closing the stream instead of
+    /// answering also confirms the termination (§8.4.3.5: closing the stream
+    /// ends its connections).
+    pub async fn disconnect(self) -> Result<(), BusError> {
+        match self.inner {
+            TunnelInner::Udp(tunnel) => tunnel.disconnect().await,
+            TunnelInner::Tcp(tunnel) => tunnel.disconnect().await,
+        }
     }
 }
 
@@ -1940,12 +2214,17 @@ mod tests {
             .connect_tunnel(server_addr)
             .await
             .expect("connect to loopback gateway");
-        let own = match client.state.socket.local_addr().expect("client address") {
+        let own = match client
+            .udp_state()
+            .socket
+            .local_addr()
+            .expect("client address")
+        {
             SocketAddr::V4(addr) => addr,
             SocketAddr::V6(_) => unreachable!("bound an IPv4 socket"),
         };
         assert!(
-            send_heartbeat_with_retries(&client.state).await,
+            send_heartbeat_with_retries(client.udp_state()).await,
             "heartbeat answered"
         );
         client.disconnect().await.expect("disconnect answered");
@@ -2980,7 +3259,9 @@ mod tests {
             TunnelAckWait::default(),
         ));
         let client = TunnelClient {
-            state: state.clone(),
+            inner: TunnelInner::Udp(UdpTunnel {
+                state: state.clone(),
+            }),
         };
         tokio::spawn(receive_loop(state));
 
@@ -3033,3 +3314,10 @@ mod closure_tests;
 #[cfg(test)]
 #[path = "client_tap_tests.rs"]
 mod tap_tests;
+
+#[path = "client_tcp.rs"]
+mod tcp;
+
+#[cfg(test)]
+#[path = "client_tcp_tests.rs"]
+mod tcp_tests;

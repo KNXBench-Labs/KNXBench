@@ -1,5 +1,5 @@
 /** fetch()-based HTTP client mirroring the Tauri invoke() surface the UI components call. */
-import { validSerialTarget, type SerialTarget } from "./serialTransport";
+import { isIpTunnelTransport, validSerialTarget, type IpTunnelTransport, type SerialTarget } from "./serialTransport";
 import { admitSerialCandidates, type SerialCandidates } from "./serialCandidates";
 //! fetch()-based replacement for @tauri-apps/api/core's invoke() — same
 //! function names and argument shapes the components already called, so
@@ -1809,10 +1809,17 @@ export interface BusTelegramRow {
 // `StartResponse` (bus_routes.rs).
 export interface BusMonitorStartResponse {
   serial?: SerialTarget;
+  /** The IP transport the session really runs on; absent from older servers and for serial. */
+  transport?: IpTunnelTransport;
+  /** TCP only: cumulative frames the stream decoder skipped (unknown service or above the receive cap). */
+  skippedFrames?: number;
   sessionId: number;
   serverIncarnation: string;
   assignedAddress: string;
 }
+
+/** TCP starts always echo `transport: "tcp"` and no serial target. */
+export interface TcpBusMonitorStartResponse extends BusMonitorStartResponse { transport: "tcp"; skippedFrames: number }
 
 /** Serial starts always echo the exact admitted transport target. */
 export interface SerialBusMonitorStartResponse extends BusMonitorStartResponse { serial: SerialTarget }
@@ -1831,6 +1838,8 @@ export interface BusMonitorStopResponse {
   telegramCount: number;
   droppedCount: number;
   warning?: string;
+  /** TCP only: cumulative skipped frames, read just before the disconnect request was sent. */
+  skippedFrames?: number;
 }
 
 // `TelegramsResponse` (bus_routes.rs). `droppedBefore` is the buffer's
@@ -1839,6 +1848,10 @@ export interface BusMonitorStopResponse {
 // `BusMonitorPanel.tsx`).
 export interface BusMonitorTelegramsResponse {
   serial?: SerialTarget;
+  /** The observed IP transport; absent from older servers and for serial. */
+  transport?: IpTunnelTransport;
+  /** Required exactly when `transport` is "tcp": cumulative frames the stream decoder skipped. Not dropped rows. */
+  skippedFrames?: number;
   sessionId: number;
   serverIncarnation: string;
   /** Authoritative interpretation comparison; absent on legacy servers. */
@@ -1868,6 +1881,8 @@ export interface BusWriteResponse {
   encodedPayload: string;
   service: "GroupValueWrite";
   decodedEcho: BusDecodedValue;
+  /** Over TCP a successful send is the socket accepting the frame, not a device's confirmation. */
+  transport?: IpTunnelTransport;
 }
 
 export type DptInputFormat = "canonical" | "decimal" | "hexadecimal" | "binary" | "text";
@@ -1952,20 +1967,35 @@ export interface LineScanComparison {
   excludedInProject: string[];
 }
 
-export function readBusValue(identity: BoundBusSession, destination: string): Promise<{ service: "GroupValueRead" }> {
-  if (!isBoundBusSession(identity)) return Promise.reject(new Error("Malformed bus session identity; nothing was sent."));
-  return request("/api/bus/read", { method: "POST", body: JSON.stringify({ sessionId: identity.sessionId, serverIncarnation: identity.serverIncarnation, destination }) });
+/** An action answer states no transport or a known one; anything else is malformed. */
+function admitActionTransport<T extends { transport?: IpTunnelTransport }>(answer: T): T {
+  if (answer?.transport !== undefined && !isIpTunnelTransport(answer.transport)) throw new Error("Malformed session transport.");
+  return answer;
+}
+
+export async function readBusValue(identity: BoundBusSession, destination: string): Promise<{ service: "GroupValueRead"; transport?: IpTunnelTransport }> {
+  if (!isBoundBusSession(identity)) throw new Error("Malformed bus session identity; nothing was sent.");
+  return admitActionTransport(await request<{ service: "GroupValueRead"; transport?: IpTunnelTransport }>("/api/bus/read", { method: "POST", body: JSON.stringify({ sessionId: identity.sessionId, serverIncarnation: identity.serverIncarnation, destination }) }));
 }
 
 /** Serial UI sends only on this distinct route; an older server cannot ignore its binding. */
-export function writeBoundBusValue(identity: BoundBusSession, destination: string, dpt: string | null,
+export async function writeBoundBusValue(identity: BoundBusSession, destination: string, dpt: string | null,
   value: string, inputFormat: DptInputFormat | null): Promise<BusWriteResponse> {
-  if (!isBoundBusSession(identity)) return Promise.reject(new Error("Malformed bus session identity; nothing was sent."));
-  return request("/api/bus/write-bound", {method:"POST",body:JSON.stringify({sessionId:identity.sessionId,serverIncarnation:identity.serverIncarnation,destination,dpt,inputFormat,value})});
+  if (!isBoundBusSession(identity)) throw new Error("Malformed bus session identity; nothing was sent.");
+  return admitActionTransport(await request<BusWriteResponse>("/api/bus/write-bound", {method:"POST",body:JSON.stringify({sessionId:identity.sessionId,serverIncarnation:identity.serverIncarnation,destination,dpt,inputFormat,value})}));
 }
 
-export function startBusMonitor(gateway: string): Promise<BusMonitorStartResponse> {
-  return request("/api/bus/monitor/start", { method: "POST", body: JSON.stringify({ gateway }) });
+/** A skipped-frame counter is a nonnegative safe integer; anything else is malformed, never zero. */
+const isSkippedCount = (value: unknown): value is number => typeof value === "number" && Number.isSafeInteger(value) && value >= 0;
+
+/** The UDP start states no transport or exactly "udp", and never a serial target or a TCP counter. */
+export async function startBusMonitor(gateway: string): Promise<BusMonitorStartResponse> {
+  const started = await request<BusMonitorStartResponse>("/api/bus/monitor/start", { method: "POST", body: JSON.stringify({ gateway }) });
+  if (started?.serial !== undefined || started?.skippedFrames !== undefined
+      || (started?.transport !== undefined && started.transport !== "udp")) {
+    throw new Error("UDP start returned an inconsistent transport.");
+  }
+  return started;
 }
 
 /** A distinct route makes older servers fail closed instead of opening IP. */
@@ -1975,11 +2005,29 @@ export async function startSerialBusMonitor(target: SerialTarget): Promise<Seria
   if (!validSerialTarget(started?.serial) || started.serial.path !== target.path
       || started.serial.source !== target.source || started.serial.mode !== target.mode
       || started.assignedAddress !== target.source) throw new Error("Serial start returned an inconsistent target.");
+  if (started.transport !== undefined || started.skippedFrames !== undefined) throw new Error("Serial start must not state an IP transport.");
   return started;
 }
 
-export function stopBusMonitor(): Promise<BusMonitorStopResponse> {
-  return request("/api/bus/monitor/stop", { method: "POST" });
+/**
+ * A distinct strict route: a server without it answers 404 and nothing is
+ * opened, so an explicit TCP request can never become a UDP session.
+ */
+export async function startTcpBusMonitor(gateway: string): Promise<TcpBusMonitorStartResponse> {
+  const started = await request<TcpBusMonitorStartResponse>("/api/bus/monitor/start-tcp", { method: "POST", body: JSON.stringify({ gateway }) });
+  if (started?.transport !== "tcp" || started.serial !== undefined || !isSkippedCount(started.skippedFrames)) {
+    throw new Error("TCP start returned an inconsistent transport.");
+  }
+  return started;
+}
+
+function admitStop(stopped: BusMonitorStopResponse): BusMonitorStopResponse {
+  if (stopped?.skippedFrames !== undefined && !isSkippedCount(stopped.skippedFrames)) throw new Error("Malformed skipped-frame count.");
+  return stopped;
+}
+
+export async function stopBusMonitor(): Promise<BusMonitorStopResponse> {
+  return admitStop(await request<BusMonitorStopResponse>("/api/bus/monitor/stop", { method: "POST" }));
 }
 
 /** WP-26: the session a bound stop names. Ids restart per process, hence the incarnation. */
@@ -1992,6 +2040,7 @@ export interface BoundBusSession {
 export type GroupActionSession =
   | { kind: "ip"; identity: BoundBusSession }
   | { kind: "serial"; identity: BoundBusSession; mode: SerialTarget["mode"] }
+  | { kind: "tcp"; identity: BoundBusSession }
   | { kind: "unverified"; identity: BoundBusSession };
 
 
@@ -2013,7 +2062,7 @@ export async function stopBoundBusMonitor(identity: BoundBusSession): Promise<Bu
   if (stopped?.sessionId !== identity.sessionId || stopped.serverIncarnation !== identity.serverIncarnation) {
     throw new Error("The bound stop answered for another bus session.");
   }
-  return stopped;
+  return admitStop(stopped);
 }
 
 // `since` defaults to `0` server-side too (`TelegramsQuery.since:
@@ -2022,6 +2071,13 @@ export async function stopBoundBusMonitor(identity: BoundBusSession): Promise<Bu
 export async function pollBusTelegrams(since: number, contextOnly = false): Promise<BusMonitorTelegramsResponse> {
   const response = await request<BusMonitorTelegramsResponse>(`/api/bus/monitor/telegrams?since=${since}${contextOnly ? "&contextOnly=true" : ""}`);
   if (response.serial !== undefined && !validSerialTarget(response.serial)) throw new Error("Malformed serial session target.");
+  if (response.transport !== undefined && (!isIpTunnelTransport(response.transport) || response.serial !== undefined)) {
+    throw new Error("Malformed session transport.");
+  }
+  // A TCP session states its counter; every other session states none. Never read a gap as zero.
+  if (response.transport === "tcp" ? !isSkippedCount(response.skippedFrames) : response.skippedFrames !== undefined) {
+    throw new Error("Malformed skipped-frame count.");
+  }
   return response;
 }
 

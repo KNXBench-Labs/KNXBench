@@ -1,5 +1,15 @@
 # Roadmap
 
+## Optional TCP monitoring candidate (8 November 2026)
+
+This bounded source candidate adds explicit TCP for CLI bus monitor/write and
+the server/Web shared monitor session with bound group traffic. UDP remains the
+default. Other device/scan workflows stay UDP-only. Plain TCP is not KNX IP
+Secure, and software loopback tests do not prove real-gateway interoperability.
+The [contract](contracts/tcp-tunnelling.md) and [open work](open-work/WP-29-knxnet-ip-tcp-tunnelling.md)
+separate source implementation, integrated acceptance and remaining scope;
+review corrections and final package acceptance are still pending.
+
 ## Bounded foundation: object-priority provenance
 
 The captured saved-instance successor now has a separate core fact, native17

@@ -52,6 +52,7 @@ pub fn bus_routes() -> Router<SharedState> {
     Router::new()
         .route("/api/bus/monitor/start", post(start_monitor))
         .route("/api/bus/monitor/start-serial", post(start_serial_monitor))
+        .route("/api/bus/monitor/start-tcp", post(start_tcp_monitor))
         .route("/api/bus/monitor/stop", post(stop_monitor))
         .route("/api/bus/monitor/stop-bound", post(stop_bound_monitor))
         .route("/api/bus/monitor/telegrams", get(poll_telegrams))
@@ -586,6 +587,12 @@ struct StartResponse {
     assigned_address: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     serial: Option<crate::bus_serial::SerialTarget>,
+    /// The IP transport the session really runs on; absent for serial.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    transport: Option<&'static str>,
+    /// TCP only: the cumulative skipped-frame count at start (see `StopResponse`).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    skipped_frames: Option<u64>,
 }
 
 async fn start_monitor(
@@ -604,7 +611,122 @@ async fn start_monitor(
 
 enum MonitorTarget {
     Ip(SocketAddrV4),
+    Tcp(SocketAddrV4),
     Serial(crate::bus_serial::SerialTarget),
+}
+
+/// Exactly a gateway; unknown, repeated or missing fields are refused.
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct TcpStartRequest {
+    gateway: String,
+}
+
+/// A unicast IPv4 `host:port` with a nonzero port, the CLI's rule for `--gateway`.
+fn parse_tcp_gateway(value: &str) -> Result<SocketAddrV4, ApiError> {
+    let refuse = || {
+        ApiError::bad_request(format!(
+            "TCP start requires a unicast IPv4 host:port with a nonzero port, got {value:?}; nothing was opened"
+        ))
+    };
+    let gateway: SocketAddrV4 = value.parse().map_err(|_| refuse())?;
+    if gateway.port() == 0
+        || gateway.ip().is_unspecified()
+        || gateway.ip().is_broadcast()
+        || gateway.ip().is_multicast()
+    {
+        return Err(refuse());
+    }
+    Ok(gateway)
+}
+
+/// The explicit TCP start. A separate strict route, not a field on the UDP
+/// start: a server without it answers 404 and the client never connects.
+async fn start_tcp_monitor(
+    State(state): State<SharedState>,
+    body: Result<Json<TcpStartRequest>, axum::extract::rejection::JsonRejection>,
+) -> Result<Json<StartResponse>, ApiError> {
+    let Json(body) = body.map_err(|_| {
+        ApiError::bad_request("TCP start requires exactly a gateway host:port; nothing was opened")
+    })?;
+    let gateway = parse_tcp_gateway(&body.gateway)?;
+    state.stop_admission.admit()?;
+    // The connect and its cleanup run in a task of their own: a dropped
+    // request must not release the reservation while a socket is still
+    // being opened or closed.
+    let (done, answer) = tokio::sync::oneshot::channel();
+    let task_state = state.clone();
+    tokio::spawn(async move {
+        let result = start_monitor_target(task_state.clone(), MonitorTarget::Tcp(gateway)).await;
+        if let Err(Ok(Json(unclaimed))) = done.send(result) {
+            release_unclaimed(&task_state, unclaimed.session_id).await;
+        }
+    });
+    answer.await.unwrap_or_else(|_| {
+        Err(ApiError::with_status(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "the TCP start task ended without an answer",
+        ))
+    })
+}
+
+/// Stops a session nobody is waiting for, holding the reservation until the
+/// tunnel is released. A session already replaced or stopped is left alone.
+async fn release_unclaimed(state: &SharedState, session_id: u64) {
+    let mut guard = state.bus_session.lock().await;
+    if guard.as_ref().is_some_and(|held| held.id() == session_id) {
+        if let Some(session) = guard.take() {
+            session.stop().await;
+        }
+    }
+}
+
+/// Finishes the stop of the TCP session held under `guard` in a task of its own. The guard
+/// moves into the task, so the identity the caller checked, the removal and the cleanup all
+/// happen under the one reservation, which is released only after the tunnel is, even when
+/// the HTTP request is dropped meanwhile.
+async fn stop_tcp_session(
+    mut guard: tokio::sync::OwnedMutexGuard<Option<BusSession>>,
+    state: &SharedState,
+) -> Result<Json<StopResponse>, ApiError> {
+    let (done, answer) = tokio::sync::oneshot::channel();
+    let incarnation = state.server_incarnation.clone();
+    tokio::spawn(async move {
+        let result = match guard.take() {
+            Some(session) => {
+                let session_id = session.id();
+                Ok(stop_response(
+                    &incarnation,
+                    session_id,
+                    session.stop().await,
+                ))
+            }
+            None => Err(session_error_to_api_error(BusSessionError::NoActiveSession)),
+        };
+        drop(guard);
+        let _ = done.send(result);
+    });
+    answer.await.unwrap_or_else(|_| {
+        Err(ApiError::with_status(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "the TCP stop task ended without an answer",
+        ))
+    })
+}
+
+fn stop_response(
+    server_incarnation: &str,
+    session_id: u64,
+    summary: crate::bus::BusSessionSummary,
+) -> Json<StopResponse> {
+    Json(StopResponse {
+        session_id,
+        server_incarnation: server_incarnation.to_owned(),
+        telegram_count: summary.telegram_count,
+        dropped_count: summary.dropped_count,
+        warning: summary.drain_panic,
+        skipped_frames: summary.skipped_frames,
+    })
 }
 
 async fn start_serial_monitor(
@@ -644,6 +766,10 @@ async fn start_monitor_target(
         return Err(session_lock_busy(&state, system2_running));
     }
     let mut guard = held.map_err(|_| session_lock_busy(&state, system2_running))?;
+    // The handler admitted before this task (or the lock) was reached; an orderly stop may
+    // have closed admission since. Under the reservation, before any connector call, a
+    // closed admission means nothing opens: the stop's release then cannot miss a late session.
+    state.stop_admission.admit()?;
     // Checked while holding this session's lock, never before it: a
     // download start holds its own lock and then waits for this one, so
     // this `try_lock` sees it (ADR-0045 §4).
@@ -701,6 +827,11 @@ async fn start_monitor_target(
         MonitorTarget::Ip(gateway) => BusSession::start(id, gateway, state.connector.as_ref(), ctx)
             .await
             .map_err(|error| connect_error_to_api_error(gateway, error))?,
+        MonitorTarget::Tcp(gateway) => {
+            BusSession::start_tcp(id, gateway, state.connector.as_ref(), ctx)
+                .await
+                .map_err(|error| connect_error_to_api_error(gateway, error))?
+        }
         MonitorTarget::Serial(target) => {
             let active = target.mode == crate::bus_serial::SerialMode::Active;
             BusSession::start_serial(id, target, state.connector.as_ref(), ctx)
@@ -721,6 +852,8 @@ async fn start_monitor_target(
 
     let assigned_address = session.assigned_address().to_string();
     let serial = session.serial().cloned();
+    let transport = session.transport().map(knx_net::TunnelTransport::as_str);
+    let skipped_frames = session.skipped_frames();
     *guard = Some(session);
 
     Ok(Json(StartResponse {
@@ -728,6 +861,8 @@ async fn start_monitor_target(
         server_incarnation: state.server_incarnation.clone(),
         assigned_address,
         serial,
+        transport,
+        skipped_frames,
     }))
 }
 
@@ -753,13 +888,22 @@ struct StopResponse {
     /// full reasoning and the task report for why `500` was rejected.
     #[serde(skip_serializing_if = "Option::is_none")]
     warning: Option<String>,
+    /// TCP only: cumulative frames the stream decoder skipped (unknown service or above the
+    /// receive cap), sampled just before the DISCONNECT_REQUEST. Frames, not telegram rows,
+    /// and not part of `droppedCount`; those skipped during cleanup are not covered.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    skipped_frames: Option<u64>,
 }
 
 async fn stop_monitor(State(state): State<SharedState>) -> Result<Json<StopResponse>, ApiError> {
     let mut guard = state
         .bus_session
-        .try_lock()
+        .clone()
+        .try_lock_owned()
         .map_err(|_| session_lock_busy(&state, system2_running(&state)))?;
+    if guard.as_ref().is_some_and(|held| held.is_tcp()) {
+        return stop_tcp_session(guard, &state).await;
+    }
     let Some(session) = guard.take() else {
         return Err(session_error_to_api_error(BusSessionError::NoActiveSession));
     };
@@ -771,13 +915,11 @@ async fn stop_monitor(State(state): State<SharedState>) -> Result<Json<StopRespo
         drop(guard);
     }
     let summary = session.stop().await;
-    Ok(Json(StopResponse {
+    Ok(stop_response(
+        &state.server_incarnation,
         session_id,
-        server_incarnation: state.server_incarnation.clone(),
-        telegram_count: summary.telegram_count,
-        dropped_count: summary.dropped_count,
-        warning: summary.drain_panic,
-    }))
+        summary,
+    ))
 }
 
 // ---------------------------------------------------------------------------
@@ -852,7 +994,7 @@ async fn stop_bound_monitor(
     RawQuery(query): RawQuery,
 ) -> Result<Json<StopResponse>, ApiError> {
     let bound = parse_bound_session(query.as_deref())?;
-    let held = state.bus_session.try_lock();
+    let held = state.bus_session.clone().try_lock_owned();
     let system2_running = system2_running(&state);
     if system2_running {
         return Err(session_lock_busy(&state, system2_running));
@@ -871,18 +1013,19 @@ async fn stop_bound_monitor(
             ),
         ));
     }
+    if guard.as_ref().is_some_and(|held| held.is_tcp()) {
+        return stop_tcp_session(guard, &state).await;
+    }
     let session = guard.take().expect("matched a held session");
     if session.serial().is_none() {
         drop(guard);
     }
     let summary = session.stop().await;
-    Ok(Json(StopResponse {
-        session_id: bound.session_id,
-        server_incarnation: state.server_incarnation.clone(),
-        telegram_count: summary.telegram_count,
-        dropped_count: summary.dropped_count,
-        warning: summary.drain_panic,
-    }))
+    Ok(stop_response(
+        &state.server_incarnation,
+        bound.session_id,
+        summary,
+    ))
 }
 
 // ---------------------------------------------------------------------------
@@ -1068,6 +1211,13 @@ impl TelegramRowDto {
 struct TelegramsResponse {
     #[serde(skip_serializing_if = "Option::is_none")]
     serial: Option<crate::bus_serial::SerialTarget>,
+    /// The IP transport the session really runs on; absent for serial.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    transport: Option<&'static str>,
+    /// TCP only: cumulative frames the stream decoder skipped (unknown service or above
+    /// the receive cap). Frames, not telegram rows, and not part of `droppedBefore`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    skipped_frames: Option<u64>,
     session_id: u64,
     server_incarnation: String,
     context_status: &'static str,
@@ -1126,6 +1276,8 @@ async fn poll_telegrams(
     };
     let response = TelegramsResponse {
         serial: session.serial().cloned(),
+        transport: session.transport().map(knx_net::TunnelTransport::as_str),
+        skipped_frames: session.skipped_frames(),
         session_id,
         server_incarnation: state.server_incarnation.clone(),
         context_status,
@@ -1307,6 +1459,10 @@ struct WriteResponse {
     encoded_payload: String,
     service: &'static str,
     decoded_echo: DecodedValueDto,
+    /// The IP transport the write went out on. Over TCP a successful send is
+    /// the socket accepting the frame, not a device's confirmation.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    transport: Option<&'static str>,
 }
 
 /// Both identity fields are required in the body; duplicate/extra fields fail decoding.
@@ -1391,7 +1547,13 @@ async fn read_value(
         .send(Destination::Group(ga), ApplicationService::GroupValueRead)
         .await
         .map_err(session_error_to_api_error)?;
-    Ok(Json(serde_json::json!({ "service": "GroupValueRead" })))
+    Ok(Json(match session.transport() {
+        Some(transport) => serde_json::json!({
+            "service": "GroupValueRead",
+            "transport": transport.as_str(),
+        }),
+        None => serde_json::json!({ "service": "GroupValueRead" }),
+    }))
 }
 
 async fn write_bound_value(
@@ -1435,10 +1597,10 @@ async fn write_value(
     let session = guard
         .as_ref()
         .ok_or_else(|| session_error_to_api_error(BusSessionError::NoActiveSession))?;
-    if session.serial().is_some() {
+    if session.serial().is_some() || session.is_tcp() {
         return Err(ApiError::conflict(
             "busSessionBindingRequired",
-            "serial writes require the distinct bound write route; nothing was sent",
+            "serial and TCP writes require the distinct bound write route; nothing was sent",
         ));
     }
     send_write_value(session, body).await
@@ -1509,6 +1671,7 @@ async fn send_write_value(
         encoded_payload: bus::format_group_value_payload(&value),
         service: "GroupValueWrite",
         decoded_echo: DecodedValueDto::from(&decode_single(dpt, &value)),
+        transport: session.transport().map(knx_net::TunnelTransport::as_str),
     }))
 }
 
@@ -1606,3 +1769,7 @@ async fn discover_interfaces(
             .collect(),
     }))
 }
+
+#[cfg(test)]
+#[path = "bus_routes_admission_tests.rs"]
+mod admission_tests;

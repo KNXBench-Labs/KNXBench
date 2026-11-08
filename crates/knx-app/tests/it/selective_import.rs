@@ -261,7 +261,9 @@ fn group_address_conflict_and_stale_target_are_not_silent_overwrites() {
 /// silent keep-or-overwrite.
 #[test]
 fn a_differing_group_address_description_is_a_conflict_not_a_silent_match() {
-    let (source, mut target, selection) = fixture();
+    let (mut source, mut target, selection) = fixture();
+    source.project.installations[0].group_addresses[0].description =
+        Some("Source text; \"quoted\" \u{e4}".into());
     let plan = import::plan(&target, &source, selection.clone()).unwrap();
     let mut stack = CommandStack::new();
     import::apply(&mut target, &mut stack, plan).unwrap();
@@ -271,6 +273,11 @@ fn a_differing_group_address_description_is_a_conflict_not_a_silent_match() {
         .iter()
         .position(|g| g.address == copied_address)
         .expect("the selected address was copied");
+    assert_eq!(
+        target.project.installations[0].group_addresses[copied].description,
+        source.project.installations[0].group_addresses[0].description,
+        "a copied group address keeps its description byte-exact"
+    );
     // Free the copied device's individual address so a second plan of the
     // same selection reaches the group-address match.
     let ids: Vec<_> = target.project.devices.iter().map(|d| d.id).collect();

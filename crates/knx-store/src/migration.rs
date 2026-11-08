@@ -1012,6 +1012,14 @@ mod tests {
     use super::*;
 
     #[test]
+    fn store_and_domain_schema_versions_agree() {
+        assert_eq!(
+            CURRENT_SCHEMA_VERSION,
+            i64::from(knx_core::project::CURRENT_SCHEMA_VERSION)
+        );
+    }
+
+    #[test]
     fn fresh_file_migrates_to_current_version() {
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("p.sqlite");

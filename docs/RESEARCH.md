@@ -44,6 +44,7 @@ outside preserved historical blocks, or use the next free section number
 
 | Section | Where |
 | --- | --- |
+| [8 November 2026 — ETS6 revision exports and archive restore](research/2026-11-08-ets6-revision-exports.md) | [V] clean-room observation for IMPORT-02: schema-23 parameter/link/`Puid`/`ChannelId` deltas, whole-project archive restore and its `ArchivedVersion` attribute; one ETS version only |
 | [5 November 2026 — Production preparation attribution](research/2026-11-05-production-preparation-attribution.md) | Expanded-5000 canonical/full/off evidence; snapshotter-associated preparation, retained table residuals and composite-control/sampling limits; no trace-policy change |
 | [5 November 2026 — Passive USB-serial candidates](research/2026-11-05-passive-serial-candidates.md) | Pinned systemd v257 by-id rule prerequisites; bounded metadata-only listing, unverified candidates and synthetic-only test boundary |
 | [4 November 2026 — Busware TUL USB/serial TP-UART](research/2026-11-04-usb-tpuart.md) | Primary manufacturer/NCN5130 evidence, transparent-firmware boundary, passive versus active mode and simulated-only acceptance scope |

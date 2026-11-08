@@ -383,8 +383,9 @@ Original archive and opaque-byte retention do not imply semantic understanding
 or ETS export compatibility. Selected source attributes cannot become unscoped
 destination access keys; serial metadata needs exact source/device identity.
 Synthetic HTTP/CLI/Chromium evidence is not real ETS/hardware/native acceptance.
-[Historical authorized exports](AUTHORIZED_RESTORE_EXPORTS.md) remain an external
-prerequisite; [cvexc observations](research/cvexc.md) do not verify signatures,
+The [authorized revision-export harness](AUTHORIZED_RESTORE_EXPORTS.md) has
+passed on one fictional ETS6 6.4.1 / schema-23 set only;
+[cvexc observations](research/cvexc.md) do not verify signatures,
 option defaults or executable device rules. Source integration does not add released-artifact acceptance.
 
 ## Offline AP1 reconstruction is not executable compatibility (2026-10-09)

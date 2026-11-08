@@ -137,7 +137,8 @@ wording describes that historical attempt, not the current publication state.
 This 20 October reconciliation is source/documentation checking, not a fresh
 runtime, independent-review, hardware or release acceptance run.
 
-The separate [authorized export harness](AUTHORIZED_RESTORE_EXPORTS.md) does not
-replace unavailable real restore-point exports. Converter-exception observations
+The separate [authorized export harness](AUTHORIZED_RESTORE_EXPORTS.md) has
+one recorded real run (fictional ETS6 6.4.1 set); it is not a restore-point
+reader. Converter-exception observations
 are documented in [cvexc research](research/cvexc.md); they do not drive runtime
 policies.

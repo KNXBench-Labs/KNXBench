@@ -41,3 +41,11 @@ It neither verifies signatures nor activates comparison/reconstruction/download
 rules. [Acceptance and rejected attempts](../status/2026-10-10-import-expansion-verification.md)
 are local evidence only; no commit, integration, release or deployment is implied.
 <!-- END retained catalogue record -->
+
+## Authorized revision exports — 8 November 2026
+
+The [private revision harness](../AUTHORIZED_RESTORE_EXPORTS.md#run-record-8-november-2026)
+has run on one project-made fictional ETS6 6.4.1 set: schema 23, revisions A and
+B, plus A restored through ETS's own project archive. Other ETS versions, other
+schemas and protected projects are not covered. The retained record's statement
+that no authorized set exists describes the state before this run.

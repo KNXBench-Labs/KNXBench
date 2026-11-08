@@ -1,7 +1,7 @@
-//! Proves incremental journal writes store exactly what a full stack rewrite stores.
+//! Proves incremental, trusted journal writes store exactly what a full stack rewrite stores.
 
 use knx_core::{Command, CommandStack, GroupAddressStyle, Language, Project};
-use knx_store::project_history::{self as history, NativeSnapshot, StackRows};
+use knx_store::project_history::{self as history, JournalTrust, NativeSnapshot, StackRows};
 
 fn style(step: usize) -> Command {
     let styles = [
@@ -49,40 +49,42 @@ fn saved(seed: &NativeSnapshot) -> File {
     }
 }
 
-/// The server's write path: reuse what the last own write proves unchanged.
+/// The server's write path: trust what the last own write verified, rows only
+/// below the prefix the core proves unchanged.
 struct Incremental {
     file: File,
-    earlier: Option<(Project, CommandStack, StackRows)>,
+    earlier: Option<(Project, CommandStack, JournalTrust)>,
 }
 
 impl Incremental {
     fn write(&mut self, working: &NativeSnapshot, stack: &CommandStack) -> (usize, usize) {
-        let reuse =
-            self.earlier
-                .as_ref()
-                .map_or_else(StackRows::default, |(project, earlier, rows)| {
-                    let shared = stack.shared_snapshot_prefix(&working.project, earlier, project);
-                    StackRows {
-                        undo: rows.undo[..shared.undo].to_vec(),
-                        redo: rows.redo[..shared.redo].to_vec(),
-                    }
-                });
-        let (generation, rows) = history::save_editor_reusing(
+        let trust = self.earlier.as_ref().map_or_else(
+            JournalTrust::default,
+            |(project, earlier, trust)| {
+                let shared = stack.shared_snapshot_prefix(&working.project, earlier, project);
+                trust.clone().with_rows(StackRows {
+                    undo: trust.rows.undo[..shared.undo].to_vec(),
+                    redo: trust.rows.redo[..shared.redo].to_vec(),
+                })
+            },
+        );
+        let (generation, next) = history::save_editor_trusting(
             &self.file.conn,
             working,
             stack,
             self.file.generation,
-            &reuse,
+            &trust,
+            &mut history::JournalWriteReport::default(),
         )
         .unwrap();
         assert_eq!(
-            rows,
+            next.rows,
             stored_rows(&self.file.conn),
             "returned rows are the stored rows"
         );
         self.file.generation = generation;
-        self.earlier = Some((working.project.clone(), stack.clone(), rows));
-        (reuse.undo.len(), reuse.redo.len())
+        self.earlier = Some((working.project.clone(), stack.clone(), next));
+        (trust.rows.undo.len(), trust.rows.redo.len())
     }
 }
 

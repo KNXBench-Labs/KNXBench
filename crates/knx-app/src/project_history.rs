@@ -18,19 +18,25 @@ pub fn persist_working(
     history::save_editor(&conn, snapshot, stack, Some(generation), false).map_err(|e| e.to_string())
 }
 
-/// [`persist_working`] that keeps the bottom stack rows `reuse` names while
-/// their stored image hashes still match (`history::save_editor_reusing`).
-/// Returns the new generation and the hash of every stored stack row.
-pub fn persist_working_reusing(
+/// [`persist_working`] that keeps the bottom stack rows `trust` names while
+/// their stored image hashes still match, and checks the retained context and
+/// saved baseline it knows without re-deriving them
+/// (`history::save_editor_trusting`). Returns the new generation and what the
+/// write verified, for the next one. `report` receives the phase times and size
+/// facts, also of a write that fails.
+pub fn persist_working_trusting(
     path: &Path,
     snapshot: &NativeSnapshot,
     stack: &CommandStack,
     generation: i64,
-    reuse: &history::StackRows,
-) -> Result<(i64, history::StackRows), String> {
-    let conn =
-        history::open_editor_store_trusting(path, false, reuse).map_err(|e| e.to_string())?;
-    history::save_editor_reusing(&conn, snapshot, stack, generation, reuse)
+    trust: &history::JournalTrust,
+    report: &mut history::JournalWriteReport,
+) -> Result<(i64, history::JournalTrust), String> {
+    let started = std::time::Instant::now();
+    let conn = history::open_editor_store_trusting(path, false, trust);
+    report.phase("preAdmission", started);
+    let conn = conn.map_err(|e| e.to_string())?;
+    history::save_editor_trusting(&conn, snapshot, stack, generation, trust, report)
         .map_err(|e| e.to_string())
 }
 

@@ -127,6 +127,7 @@ mod historical_import_log;
 mod history_reuse_tests;
 #[cfg(test)]
 mod import_restore_tests;
+mod journal_write_log;
 mod parameter_editor_routes;
 mod paths;
 mod project_history;

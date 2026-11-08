@@ -141,6 +141,25 @@ simulator ran all 28 steps each. In that project 41 devices move from
 program of the same manufacturer); the second manufacturer's actuators stay
 refused for other reasons. No hardware was written.
 
+## Journal writes trust the verified context (8 November 2026; issue #35 follow-up)
+
+After ADR-0163 a tester still waited up to 40 s per parameter change in a 76-device,
+335 MB project. Reproduced with a 308 MB file from a large real ETS import: 3.9 to
+5.5 s per write on the dev machine, nearly all of it decoding, re-encoding and
+semantically hashing the 141 MB retained source context and the saved baseline the
+server had itself just written or admitted.
+[ADR-0165](adr/0165-journal-writes-trust-the-verified-context.md): the server
+remembers that context, the baseline and the stored working state with full values;
+admission and the write check them by stored-byte SHA-256 or value equality, and the
+previous working state's bytes become the new undo row. A baseline changed by
+another writer is still refused as stale; damaged context bytes refuse the write.
+Same file afterwards: median 1.5 s (1.47 to 1.76 s) without saved versions and 1.8 s (1.67 to 2.30 s) with 10 named versions, against 4.0 s and 4.9 s for the previous build in the same interleaved run. Unit tests count the in-memory stores a write
+builds; the ADR-0163 harness runs the trusted chain against full rewrites. For field
+diagnosis the diagnostic bundle's environment section lists the phase times, counts
+and reuse flags of the last 20 journal writes of project commands (edits, undo/redo; not Save or version actions), and a write of 2 s or more logs one
+line to standard error; neither holds names, paths or values. Costs
+and memory that remain: [history limits](limitations/persistent-native-working-history.md).
+
 ## Journal writes keep unchanged undo rows (8 November 2026; issue #35)
 
 In a saved project every edit re-encoded and twice re-decoded the whole undo

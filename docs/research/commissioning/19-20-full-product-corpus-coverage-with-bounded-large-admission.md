@@ -6,6 +6,11 @@ This is a preserved research dossier, not fresh protocol or hardware acceptance.
 Original dates, assumptions, corrections and numbered sections stay in force.
 
 <a id="1920-full-product-corpus-coverage-with-bounded-large-admission-2026-10-09"></a>
+**Superseded baseline (8 November 2026):** the ignored test now uses the
+[new 122-package characterisation baseline](19-22-product-coverage-characterisation-baseline.md).
+The following 105-package observation remains historical; its exact fixture
+selection was not reconstructed.
+
 <!-- BEGIN preserved record-2-029 -->
 ### 19.20 Full product-corpus coverage with bounded large admission (2026-10-09)
 

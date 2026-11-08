@@ -3192,12 +3192,14 @@ fn persist_native_working_reported(
     project: &knx_core::Project,
     stack: &knx_core::CommandStack,
 ) -> Result<bool, String> {
+    let started = std::time::Instant::now();
     let path = state.store_path.lock().expect("state mutex poisoned");
     let Some(path) = path.as_deref() else {
         return Ok(false);
     };
-    let started = std::time::Instant::now();
     let mut report = knx_store::project_history::JournalWriteReport::default();
+    // Waiting for the store path counts in the total, as the caller waited too.
+    report.phase("storeWait", started);
     let result = write_native_journal(state, path, project, stack, &mut report);
     state
         .journal_writes
@@ -3220,11 +3222,11 @@ fn write_native_journal(
     stack: &knx_core::CommandStack,
     report: &mut knx_store::project_history::JournalWriteReport,
 ) -> Result<(), String> {
+    let started = std::time::Instant::now();
     let mut generation = state
         .history_generation
         .lock()
         .expect("state mutex poisoned");
-    let started = std::time::Instant::now();
     let snapshot = knx_store::project_history::NativeSnapshot {
         project: project.clone(),
         opaque: state.opaque.lock().expect("state mutex poisoned").clone(),
@@ -3252,11 +3254,13 @@ fn write_native_journal(
         report,
     )?;
     *generation = next;
+    let started = std::time::Instant::now();
     *persisted = Some(PersistedHistory {
         project: project.clone(),
         stack: stack.clone(),
         trust,
     });
+    report.phase("retain", started);
     Ok(())
 }
 

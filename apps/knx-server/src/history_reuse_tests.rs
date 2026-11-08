@@ -96,7 +96,15 @@ fn journal_writes_reach_the_diagnostic_environment_without_project_content() {
     assert_eq!(last["ok"], true);
     assert_eq!(last["undoStates"], 2);
     assert_eq!(last["contextReused"], true);
-    for phase in ["prepare", "preAdmission", "admission", "context", "commit"] {
+    for phase in [
+        "storeWait",
+        "prepare",
+        "preAdmission",
+        "admission",
+        "context",
+        "commit",
+        "retain",
+    ] {
         assert!(
             last["phasesMs"].get(phase).is_some(),
             "phase {phase} in {last}"
@@ -104,4 +112,40 @@ fn journal_writes_reach_the_diagnostic_environment_without_project_content() {
     }
     assert!(!text.contains("Secret"), "no project content: {text}");
     assert!(!text.contains("project.knxdb"), "no path: {text}");
+}
+
+fn journal_records(state: &AppState) -> Vec<crate::journal_write_log::JournalWriteRecord> {
+    state
+        .journal_writes
+        .lock()
+        .unwrap()
+        .records()
+        .cloned()
+        .collect()
+}
+
+#[test]
+fn an_unsaved_project_records_no_journal_write() {
+    let state = AppState::default();
+    let tree = domain::new_project_impl(&state, None, None, None, None, true).unwrap();
+    domain::rename_installation_impl(&state, tree.installations[0].id, "Edited".into()).unwrap();
+    assert!(journal_records(&state).is_empty());
+}
+
+#[test]
+fn a_failed_journal_write_is_recorded_as_failed_with_its_phases() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("project.knxdb");
+    let state = AppState::default();
+    let tree = domain::new_project_impl(&state, None, None, None, None, true).unwrap();
+    domain::save_project_as(&state, &path).unwrap();
+    // The file disappears under the server: the read-only pre-admission refuses.
+    std::fs::remove_file(&path).unwrap();
+    let refused = domain::rename_installation_impl(&state, tree.installations[0].id, "Lost".into());
+    assert!(refused.is_err());
+    let records = journal_records(&state);
+    let last = records.last().expect("the failed write is recorded");
+    assert!(!last.ok);
+    let names: Vec<_> = last.report.phases.iter().map(|(name, _)| *name).collect();
+    assert_eq!(names, ["storeWait", "prepare", "preAdmission"]);
 }

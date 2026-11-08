@@ -5,7 +5,7 @@ addresses from ETS CSV exports with a choice of text encoding and a new
 description field, a Linux USB connection to the KNX bus, more devices that
 KNXBench can prepare a download for, priorities you can see and change on
 communication objects, much faster editing in saved projects, and an AppImage
-that starts again for every user.
+that starts again for every user, not just for the one who built it.
 
 **Before you upgrade, keep a copy of your projects and data.** Projects opened
 with Alpha 20 cannot be opened with Alpha 19 any more (see [Upgrade](#upgrade)).
@@ -28,7 +28,7 @@ with Alpha 20 cannot be opened with Alpha 19 any more (see [Upgrade](#upgrade)).
 
 | Issue | Status in Alpha 20 |
 |---|---|
-| [#35](https://github.com/KNXBench-Labs/KNXBench/issues/35) Dropdown stays disabled after a change | **Fixed.** Nothing was stuck; every edit was just very slow. See [Faster editing](#faster-editing). |
+| [#35](https://github.com/KNXBench-Labs/KNXBench/issues/35) Dropdown stays disabled after a change | **Fixed.** Nothing was stuck; every edit was just very, very thorough. See [Faster editing](#faster-editing). |
 | [#34](https://github.com/KNXBench-Labs/KNXBench/issues/34) System-2 panel shows another device's operation | **Fixed.** The panel now says clearly when a kept operation belongs to another device or project. |
 | [#30](https://github.com/KNXBench-Labs/KNXBench/issues/30) System-2 download for UP 258D12 | **Improved, still open.** The one byte the device clears itself after loading (`Download_Flag`) is now expected for this exact application; every other byte is still checked strictly. Only new download preparations use the new rule. |
 | [#22](https://github.com/KNXBench-Labs/KNXBench/issues/22) Siemens presence detector (`MV-0025`) | **Partly.** The same `Download_Flag` rule covers its shared application; nothing else is new. |
@@ -40,12 +40,14 @@ with Alpha 20 cannot be opened with Alpha 19 any more (see [Upgrade](#upgrade)).
 - **Import ETS6 CSV exports.** Group-address lists exported from ETS6, including
   the "CSV (ETS3 Format)" variant and tab-separated files, can be imported
   directly. Files without a header line are still refused.
-- **You pick the encoding; KNXBench never guesses.** Choose **UTF-8** (default) or
+- **You pick the encoding; KNXBench never guesses.** No more `GrÃ¼n` instead of
+  `Grün`. Choose **UTF-8** (default) or
   **Windows-1252 (ETS export)** next to the import button. On the command line:
   `knx ga-import … --encoding windows-1252`. If the file does not match the chosen
   encoding, the import stops and names the position of the first bad byte.
 - **New description field.** Every group address can now carry a description. It
-  is filled from `.knxproj` imports and from CSV files with a description column.
+  is filled from `.knxproj` imports and from CSV files with a description column,
+  so "1/2/3" can finally explain what it is for.
   An empty CSV cell never deletes an existing description. The inspector shows the
   description; an editor for it follows later.
 - **Datapoint type for new addresses.** If the CSV names a datapoint type, it is
@@ -61,9 +63,10 @@ More: [CSV guide](../manual/user-guide/04-group-addresses.md#group-addresses-as-
   can now use a USB/serial TP-UART adapter. Choose **Passive monitor** (only
   listens) or **Active group communication**. One adapter type is supported:
   Busware TUL with NCN5130 USB-serial firmware. KNX USB HID interfaces and other
-  adapters are not supported yet. Downloads and scans still need KNXnet/IP.
+  adapters are not supported yet. Downloads and scans still need KNXnet/IP; the USB
+  stick is a good listener, not yet a programmer.
 - **Find your adapter.** **List USB-serial candidates** shows the serial devices the
-  server sees, without opening or probing them.
+  server sees, without opening or probing them. Looking is not touching.
 - **Connection in the status bar.** The footer shows whether the bus is connected
   and offers Connect and Disconnect. Changing the interface in Settings never
   switches a running connection.
@@ -115,7 +118,7 @@ device's program cannot be read, the reason given is now more precise.
 
 - A verified download no longer loses all of its "done" status to an unrelated
   edit. Renaming, or editing another device, keeps it; only the parts you really
-  changed become pending again.
+  changed become pending again. A typo fix is no longer a full re-download.
 - A product update that changes only the program's name still counts as the same
   program.
 - Recovery after an interrupted download runs faster, with the same checks.
@@ -128,14 +131,16 @@ In saved projects with a long undo history, each change used to take 6 to 16
 seconds on the reporter's project
 ([#35](https://github.com/KNXBench-Labs/KNXBench/issues/35)). KNXBench now keeps
 the unchanged parts of the history instead of rewriting them, and the same project
-needs about 2 seconds per change, however long the history is. A row that is being
-saved shows **Saving…**.
+needs about 2 seconds per change, however long the history is. Your undo history
+stops reciting itself in full on every keystroke. A row that is being saved shows
+**Saving…**.
 [ADR-0163](../adr/0163-journal-writes-keep-unchanged-undo-rows.md)
 
 ## Workbench, desktop and web
 
-- **Rail and Rail Dark:** two new built-in themes with a sharper look; their
-  effects turn off with reduced motion.
+- **Rail and Rail Dark:** two new built-in themes with a sharper look, a bus-cable
+  green accent and a measuring rail under the toolbar; their effects turn off with
+  reduced motion.
 - **Compare from the device editor:** a **Compare** button next to Download opens
   the read-only comparison for this device.
 - **Import notes after reopening:** the session log shows a project's import
@@ -148,8 +153,8 @@ saved shows **Saving…**.
 
 ## AppImage
 
-The Alpha 19 AppImage could only be started by the user who owned its files
-("Permission denied" for everyone else) and needed a very new Linux system
+The Alpha 19 AppImage was a little shy: it could only be started by the user who
+owned its files ("Permission denied" for everyone else) and needed a very new Linux system
 (glibc 2.43). Both are fixed. The AppImage is built on Ubuntu 24.04 again and
 needs glibc 2.39 or newer. Before publication, every release image is checked for
 file permissions and started as a different user without network access.
@@ -192,7 +197,8 @@ the app.
 ## Boundaries
 
 - **Not verified:** the new download types, priorities, descriptions and System-2
-  changes were not tested on real devices; *untested* means exactly that. USB was
+  changes were not tested on real devices; *untested* means exactly that, not
+  "probably fine". USB was
   tested with one adapter and one firmware only. The new screens were not tested in
   the native desktop window (WebKitGTK/Tauri) or with screen readers. Going back
   from Alpha 20 to Alpha 19 is not tested; restore your copies instead.

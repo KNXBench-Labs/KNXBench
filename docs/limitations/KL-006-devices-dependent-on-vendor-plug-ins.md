@@ -38,12 +38,13 @@ more fundamental refusal; the plug-in category covers what would otherwise
 plan. In the maintainer's house corpus this moved one device from `untested`
 to `vendor-download-plugin`; two plug-in devices keep `not-memory-mapped`. In
 the local private product corpus (758 programs when measured), 7 programs
-are refused with `vendor-download-plugin`. The pinned coverage test there
-(`download_coverage_corpus.rs`) predates the corpus growth and still pins
-105 packages / 467 programs; it fails on its package count before this rule
-and was not re-pinned here. Owner decision 8 November 2026: the pins get a new
-documented characterisation baseline instead of the unattributable historical
-selection ([PRG-01](../open-work/PRG-01-programming-gaps.md#open)).
+are refused with `vendor-download-plugin`. At the time of this field finding,
+the ignored coverage test still pinned 105 packages / 467 programs. On
+8 November 2026 the owner-authorised
+[new characterisation baseline](../research/commissioning/19-22-product-coverage-characterisation-baseline.md)
+replaced those pins with 122 packages / 758 programs, an input commitment and
+per-category attribution. That closes the pin-maintenance debt, not the
+vendor plug-in limitation or its legacy EX-IM boundary.
 
 **Still allowed.** Read-only `knx device compare` (CLI and server) and
 comparison adoption into the project use

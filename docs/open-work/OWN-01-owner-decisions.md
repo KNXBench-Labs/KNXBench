@@ -25,8 +25,9 @@ blanket authority for bus or device writes, releases or deployments.
 - **GATE-01:** the larger scheduler and the historical timeouts are reconsidered
   only during release preparation.
 - **KL-006 coverage pins (PRG-01):** replace the unattributable historical
-  105-package selection with a new documented baseline (see
-  [PRG-01](PRG-01-programming-gaps.md#open)).
+  105-package selection with a new documented baseline. Implemented as the
+  [122-package characterisation baseline](../research/commissioning/19-22-product-coverage-characterisation-baseline.md);
+  broader [PRG-01](PRG-01-programming-gaps.md#open) remains open.
 - **Docker base-image rebuilds:** approved; implement before the first stable
   release. Published version tags are not silently overwritten; how a rebuild is
   published is settled in that package. The prerelease channel's name remains

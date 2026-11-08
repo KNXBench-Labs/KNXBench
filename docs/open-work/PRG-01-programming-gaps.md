@@ -252,23 +252,22 @@ Broader inactive/default/Union/customer-write rules and PRG-01 remain open.
   inactive-byte survival, broader inactive/default semantics, editable Dynamic,
   `Union` and customer-write rules remain unresolved.
 - Complete mutation effects and whole-mutation recovery contracts.
-- Existing full-product opt-in coverage pin debt (see
-  [KL-006](../limitations/KL-006-devices-dependent-on-vendor-plug-ins.md)):
-  owner **programming-correctness track**, attribution review checkpoint
-  **26 October 2026**: authentic fixture-scope and category provenance remain
-  unresolved, so pin maintenance is still blocked. Explain those inputs and
-  evidence changes before any separately reviewed adjustment; no dynamic
-  expectation derived from actual output, no silent repin in these increments.
-  A bounded archive-manifest follow-up on 29 October did not establish the
-  historical private 105-package fixture selection: three authenticated source
-  manifests contained no such selection evidence. That is not an exhaustive
-  negative finding about every retained artifact and supplies no category
-  attribution. Pins and opt-in expectations are unchanged.
-  **Owner decision 8 November 2026:** stop searching for the historical selection
-  and replace it with a new documented baseline: a named, hash-listed fixture set
-  at a named commit, with per-category attribution, labelled as characterisation
-  rather than an independent oracle. Old pins stay in history; every changed
-  count is explained, no silent repin.
+
+## Full-product coverage pin debt resolved — 8 November 2026
+
+The owner authorised a new documented characterisation baseline rather than
+further reconstruction of the historical 105-package selection. The ignored
+`download_coverage_corpus` test now pins **122 packages / 758 programs**, plus an
+input-content and installation-order commitment. The private input manifest
+names every file and its hash; [research §19.22](../research/commissioning/19-22-product-coverage-characterisation-baseline.md)
+attributes every changed category against the 9 October code on the same inputs.
+A small refusal-precedence correction keeps non-memory masks classified as such
+even when their code cannot be read; memory-mapped malformed code still refuses
+as `product-data`. No parser guard was relaxed and no hardware support added.
+
+This resolves only the pin-maintenance debt. The original selection is still
+unreconstructed; the new baseline is explicitly not an independent semantic
+oracle. The broader PRG-01 requirements above and KL-006 remain open.
 
 ## Boundaries
 

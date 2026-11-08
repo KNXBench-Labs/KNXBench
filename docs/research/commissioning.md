@@ -76,6 +76,8 @@ Do not regrow this index into a chronological log.
 - [19.20 Full product-corpus coverage with bounded large admission (2026-10-09)](commissioning/19-20-full-product-corpus-coverage-with-bounded-large-admission.md)
 <a id="1921-bathroom-fourfold-button-1114-complete-download-and-restore-2026-10-09"></a>
 - [19.21 Bathroom fourfold button 1.1.14: complete download and restore (2026-10-09)](commissioning/19-21-bathroom-fourfold-button-1114-complete-download-and-restore.md)
+<a id="1922-product-coverage-characterisation-baseline-2026-11-08"></a>
+- [19.22 Product coverage characterisation baseline (2026-11-08)](commissioning/19-22-product-coverage-characterisation-baseline.md)
 <a id="22-serial-address-write-recovery-scope-2026-09-30"></a>
 - [22. Serial-address write recovery scope (2026-09-30)](commissioning/22-serial-address-write-recovery-scope.md)
 <a id="23-k13-reset-recovery-scope-2026-09-30"></a>

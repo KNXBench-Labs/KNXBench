@@ -22,7 +22,7 @@ use knx_productdb::byte_order_probe::{
 use knx_productdb::code::load_program_code;
 use knx_productdb::download_plan::{
     check_customer_adjustable, check_download_plugin, check_program_kind,
-    plan_memory_download_with_inferences, DownloadPlanError,
+    plan_memory_download_with_inferences, stored_mask_refusal, DownloadPlanError,
 };
 use knx_productdb::image::{build_download_image, DownloadImage, ImageError, ImageRequest};
 use knx_productdb::image_request::{image_request_for_device, DeviceRequestError};
@@ -232,9 +232,23 @@ fn plan_request(
     // the kind (mask, then procedure style) is the more fundamental refusal
     // and comes first; then a declared plug-in (KL-006), then uninterpreted
     // customer-adjustable declarations refuse what remains, before image construction.
-    if let Some(code) = load_program_code(conn, &request.program_id)
-        .map_err(|e| PrepareError::Image(ImageError::Code(e)))?
-    {
+    let code = match load_program_code(conn, &request.program_id) {
+        Ok(code) => code,
+        // Unreadable code must not hide a mask no download loads
+        // (RESEARCH §19.22); a failed fallback lookup keeps the code error.
+        Err(e) => {
+            return Err(
+                match stored_mask_refusal(conn, &request.program_id)
+                    .ok()
+                    .flatten()
+                {
+                    Some(refusal) => PrepareError::Plan(refusal),
+                    None => PrepareError::Image(ImageError::Code(e)),
+                },
+            )
+        }
+    };
+    if let Some(code) = code {
         check_program_kind(&code).map_err(PrepareError::Plan)?;
         if purpose == Purpose::Download {
             check_download_plugin(&code).map_err(PrepareError::Plan)?;

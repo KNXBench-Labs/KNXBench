@@ -182,6 +182,16 @@ isolation (about 13 s each) and the unchanged rerun passed all 3,664 Rust tests.
 Cause not established; the timeout was not raised and the failed receipt is
 retained privately. Reopen if it recurs in a gate.
 
+It recurred the same day: a focused full `knx-server --lib` run during another
+session's gate failed 7 of the 8 cases (alone 8/8). A bounded
+[diagnosis](../research/2026-11-08-s2-recovery-authority-load-timeouts.md)
+found identical traffic in every run (192 management frames, no
+retransmissions) and durations that scale with contention: 0.65 s at rest (of
+which 0.17 s for 58 fsync-backed checkpoints), 1.8–3.8 s at four test threads
+during a parallel gate, over 10 s in the full parallel suite. This is waiting
+time, not a protocol or worker defect. CPU versus storage share under gate load
+is unmeasured. The deadline is unchanged; three options await an owner decision.
+
 ## Known boundary
 
 Killing the stage supervisor with SIGKILL can still orphan children; see the

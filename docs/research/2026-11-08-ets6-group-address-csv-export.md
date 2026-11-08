@@ -25,8 +25,9 @@ groups.
   `ß` as 0xDF), so the file is not UTF-8. These characters cannot tell
   Windows-1252 from ISO-8859-1; the system code page of other Windows locales
   was not observed. Both XML exports are UTF-8 with a byte-order mark.
-- **[V]** Every cell is quoted, and embedded quotes are doubled. A separator
-  inside a quoted description stays literal. The tab, comma and semicolon
+- **[V]** Every cell is quoted, and embedded quotes are doubled. A `;` inside the
+  quoted description stayed literal in all three separator variants; other
+  separators inside cells were not tried. The tab, comma and semicolon
   variants of one layout differ only in the separator byte.
 - **[V]** Without the header option, the file is the header file minus its first
   line.

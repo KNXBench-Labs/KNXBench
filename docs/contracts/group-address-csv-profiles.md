@@ -18,7 +18,10 @@ eight fixed, complete header shapes. This is a bounded, **address-only** import 
 
 Native format behavior is otherwise unchanged: arbitrary column order, optional BOM, optional
 columns, `Action`/`NewAddress`, read-only validation, duplicate-header errors and row line
-numbers.
+numbers. One edge case changed with tab detection: a header whose unquoted tabs outnumber its
+commas and semicolons (for example `Address,Name` followed by two stray tabs) is now read as
+tab-separated and refused for missing columns, where it was read as comma-separated before.
+Nothing is imported in that case.
 
 ## Framing
 

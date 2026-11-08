@@ -6,6 +6,7 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import BusTransportFields from "./BusTransportFields";
 import { getSetting, resetSettingsForTests, setSetting } from "./settingsStore";
 import { loadSerialTarget } from "./serialPreference";
+import { connectBusSession, resetBusConnectionForTests } from "./busConnection";
 import { resetUiLanguageForTests } from "./uiLanguage";
 import { messages as en } from "./messages/en";
 import { messages as de } from "./messages/de";
@@ -116,4 +117,54 @@ it("disables listing and selection under the existing parent busy guard", async 
   const choose = host.querySelector<HTMLButtonElement>(".serial-candidate-fields li button")!;
   expect(choose.disabled).toBe(true); await act(async () => choose.click());
   expect(loadSerialTarget().path).toBe("/synthetic/manual"); expect(fetcher).toHaveBeenCalledTimes(1);
+});
+
+const tunnelSelect = () => host.querySelector<HTMLSelectElement>(".bus-transport-fields label:nth-of-type(2) select");
+async function choose(select: HTMLSelectElement, value: string) {
+  await act(async () => { select.value = value; select.dispatchEvent(new Event("change", { bubbles: true })); });
+}
+for (const language of ["en", "de"] as const) {
+  const m = language === "en" ? en : de;
+  it(`${language}: KNXnet/IP offers UDP by default and TCP explicitly, states its scope and never connects`, async () => {
+    setSetting("uiLanguage", language); resetUiLanguageForTests(); setSetting("preferredBusTransport", "ip");
+    await render();
+    const select = tunnelSelect()!;
+    expect(host.querySelector(".bus-transport-fields label:nth-of-type(2)")!.textContent).toContain(m["busTransport.ipTunnel.label"]);
+    expect([...select.options].map(option => [option.value, option.textContent])).toEqual([
+      ["udp", m["busTransport.ipTunnel.udp"]], ["tcp", m["busTransport.ipTunnel.tcp"]],
+    ]);
+    expect(select.value).toBe("udp"); expect(getSetting("preferredIpTunnelTransport")).toBeUndefined();
+    // The note limits the scope to monitoring and group traffic; programming stays UDP.
+    expect(host.textContent).toContain(m["busTransport.ipTunnel.note"]);
+    expect(m["busTransport.ipTunnel.note"]).toMatch(/UDP/);
+    await choose(select, "tcp");
+    expect(getSetting("preferredIpTunnelTransport")).toBe("tcp"); expect(tunnelSelect()!.value).toBe("tcp");
+    expect(getSetting("preferredBusTransport")).toBe("ip");
+    await choose(tunnelSelect()!, "udp");
+    expect(getSetting("preferredIpTunnelTransport")).toBe("udp");
+    expect(fetcher).not.toHaveBeenCalled(); // Selecting a transport never connects, discovers or lists.
+  });
+}
+it.each(["TCP", "tls", "", null, 7, {}, ["tcp"]])("shows UDP, never TCP, for the invalid saved value %j", async (saved) => {
+  setSetting("preferredBusTransport", "ip"); setSetting("preferredIpTunnelTransport", saved);
+  await render(); expect(tunnelSelect()!.value).toBe("udp"); expect(fetcher).not.toHaveBeenCalled();
+});
+it("hides the IP tunnel choice for serial and keeps the saved choice for a later switch back", async () => {
+  setSetting("preferredBusTransport", "ip"); setSetting("preferredIpTunnelTransport", "tcp"); await render();
+  expect(tunnelSelect()!.value).toBe("tcp");
+  await act(async () => setSetting("preferredBusTransport", "serial"));
+  expect(host.textContent).not.toContain(en["busTransport.ipTunnel.label"]); expect(tunnelSelect()).toBeNull();
+  await act(async () => setSetting("preferredBusTransport", "ip"));
+  expect(tunnelSelect()!.value).toBe("tcp");
+});
+it("disables the tunnel choice under the parent guard and while this window's connect is pending", async () => {
+  setSetting("preferredBusTransport", "ip"); await render(true);
+  expect(tunnelSelect()!.disabled).toBe(true);
+  await choose(tunnelSelect()!, "tcp"); expect(getSetting("preferredIpTunnelTransport")).toBeUndefined();
+  await render(false); expect(tunnelSelect()!.disabled).toBe(false);
+  fetcher.mockImplementation(() => new Promise<Response>(() => {}));
+  await act(async () => { void connectBusSession("192.0.2.1:3671"); });
+  expect(tunnelSelect()!.disabled).toBe(true);
+  await choose(tunnelSelect()!, "tcp"); expect(getSetting("preferredIpTunnelTransport")).toBeUndefined();
+  resetBusConnectionForTests();
 });

@@ -393,6 +393,10 @@ pub(super) fn session_log(entries: &[LogEntry]) -> BundleSection {
 pub(super) struct MonitorSnapshot {
     /// [`crate::bus::BusSession::id`]: a new session restarts `seq` at 0.
     pub session_id: u64,
+    /// Actual IP transport of this immutable session; absent for serial/unrecorded sources.
+    pub transport: Option<knx_net::TunnelTransport>,
+    /// Cumulative skipped TCP frames when the snapshot was taken; `None` unless a TCP session.
+    pub skipped_frames: Option<u64>,
     pub status: SessionStatus,
     pub dropped_before: u64,
     pub next_seq: u64,
@@ -408,6 +412,8 @@ pub(super) async fn monitor_snapshot(state: &crate::AppState) -> Option<MonitorS
     let buffer = buffer.lock().expect("bus session buffer poisoned");
     Some(MonitorSnapshot {
         session_id: session.id(),
+        transport: session.transport(),
+        skipped_frames: session.skipped_frames(),
         status: buffer.status(),
         dropped_before: buffer.dropped_before(),
         next_seq: buffer.next_seq(),
@@ -618,6 +624,9 @@ pub(crate) struct MonitorBinding {
     /// One past the last `seq`: the buffer's `next_seq` when the preview was taken.
     pub end_seq: u64,
     pub dropped_before: u64,
+    /// TCP frame-skip count captured by this review, never refreshed by text/ZIP collection.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub skipped_frames_at_review: Option<u64>,
     pub status_at_review: MonitorStatus,
     /// UTC RFC 3339 with milliseconds, as rendered by the preview.
     pub captured_at: String,
@@ -639,6 +648,9 @@ impl MonitorBinding {
             && self.end_seq <= MAX_SAFE_INTEGER
             && self.session_id <= MAX_SAFE_INTEGER
             && self.dropped_before <= MAX_SAFE_INTEGER
+            && self
+                .skipped_frames_at_review
+                .is_none_or(|count| count <= MAX_SAFE_INTEGER)
             && timestamp(&self.captured_at).as_deref() == Some(self.captured_at.as_str())
     }
 }
@@ -657,6 +669,7 @@ pub(super) fn monitor_window(snapshot: &MonitorSnapshot) -> MonitorBinding {
         first_seq,
         end_seq: snapshot.next_seq,
         dropped_before: snapshot.dropped_before,
+        skipped_frames_at_review: snapshot.skipped_frames,
         status_at_review: match snapshot.status {
             SessionStatus::Active => MonitorStatus::Active,
             SessionStatus::Closed => MonitorStatus::Closed,
@@ -674,6 +687,13 @@ pub(super) fn bus_monitor(
     if snapshot.session_id != binding.session_id
         || !binding.is_well_formed()
         || binding.end_seq > snapshot.next_seq
+        || binding.skipped_frames_at_review.is_some()
+            != (snapshot.transport == Some(knx_net::TunnelTransport::Tcp))
+        || binding.skipped_frames_at_review.is_some_and(|reviewed| {
+            snapshot
+                .skipped_frames
+                .is_none_or(|current| current < reviewed)
+        })
     {
         return None;
     }
@@ -702,7 +722,7 @@ pub(super) fn bus_monitor(
         .map(|row| monitor_row(row, &mut withheld))
         .collect();
     let entries = telegrams.len();
-    let body = json!({
+    let mut body = json!({
         "format": "knxbench-bus-monitor",
         "formatVersion": 1,
         "sessionId": binding.session_id,
@@ -715,6 +735,13 @@ pub(super) fn bus_monitor(
         "telegrams": telegrams,
         "withheld": withheld.to_value(),
     });
+    if let Some(transport) = snapshot.transport {
+        body["transport"] = json!(transport.as_str());
+    }
+    // The exact skip count reviewed with this window, not later live observations.
+    if let Some(skipped) = binding.skipped_frames_at_review {
+        body["skippedFramesAtReview"] = json!(skipped);
+    }
     let mut section = section(
         SectionKind::BusMonitor,
         "bus-monitor.json",

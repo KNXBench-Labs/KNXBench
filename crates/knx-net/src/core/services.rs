@@ -1,8 +1,11 @@
-//! Core connection-management services: CONNECT/CONNECTIONSTATE/DISCONNECT
-//! (Core v01.06.02 AS §7.4.1, §7.8). The CRI/CRD bodies these frames wrap
+//! Core connection-management services: CONNECT, CONNECTIONSTATE and DISCONNECT frame bodies.
+//!
+//! Core v01.06.02 AS §7.4.1, §7.8. The CRI/CRD bodies these frames wrap
 //! are connection-type specific (§7.5.2/§7.5.3 defer to the connection
 //! type's own clause) — this module treats them as opaque byte slices;
-//! `tunnelling.rs` owns their actual layout.
+//! `tunnelling.rs` owns their actual layout. The request encoders take a
+//! UDP [`Hpai`]; their `_with_hpai` forms take the eight encoded octets, so
+//! the optional TCP tunnel can send its Route Back HPAI (§8.6.2.2).
 
 use super::hpai::Hpai;
 
@@ -138,9 +141,14 @@ impl From<super::hpai::HpaiError> for ServiceError {
 /// CONNECT_RESPONSE, ever), this order gets one every time. Wire format
 /// wins over the paragraph.
 pub fn encode_connect_request(control: Hpai, data: Hpai, cri: &[u8]) -> Vec<u8> {
+    encode_connect_request_with_hpai(control.encode(), data.encode(), cri)
+}
+
+/// [`encode_connect_request`] with already encoded HPAIs, same order.
+pub fn encode_connect_request_with_hpai(control: [u8; 8], data: [u8; 8], cri: &[u8]) -> Vec<u8> {
     let mut body = Vec::with_capacity(8 + 8 + cri.len());
-    body.extend_from_slice(&control.encode());
-    body.extend_from_slice(&data.encode());
+    body.extend_from_slice(&control);
+    body.extend_from_slice(&data);
     body.extend_from_slice(cri);
     body
 }
@@ -175,11 +183,12 @@ pub fn decode_connect_response(body: &[u8]) -> Result<ConnectResponse, ServiceEr
 
 /// Core v01.06.02 AS §7.8.3: channel ID, reserved octet, client control HPAI.
 pub fn encode_connectionstate_request(channel_id: u8, control: Hpai) -> Vec<u8> {
-    let mut body = Vec::with_capacity(2 + 8);
-    body.push(channel_id);
-    body.push(0x00);
-    body.extend_from_slice(&control.encode());
-    body
+    encode_connectionstate_request_with_hpai(channel_id, control.encode())
+}
+
+/// [`encode_connectionstate_request`] with an already encoded HPAI.
+pub fn encode_connectionstate_request_with_hpai(channel_id: u8, control: [u8; 8]) -> Vec<u8> {
+    encode_channel_reserved_hpai(channel_id, control)
 }
 
 /// Core v01.06.02 AS §7.8.4: channel ID, status.
@@ -192,10 +201,20 @@ pub fn decode_connectionstate_response(
 
 /// Core v01.06.02 AS §7.8.5: channel ID, reserved octet, client control HPAI.
 pub fn encode_disconnect_request(channel_id: u8, control: Hpai) -> Vec<u8> {
+    encode_disconnect_request_with_hpai(channel_id, control.encode())
+}
+
+/// [`encode_disconnect_request`] with an already encoded HPAI.
+pub fn encode_disconnect_request_with_hpai(channel_id: u8, control: [u8; 8]) -> Vec<u8> {
+    encode_channel_reserved_hpai(channel_id, control)
+}
+
+/// Channel ID, reserved octet 00h, control HPAI (§7.8.3 and §7.8.5 alike).
+fn encode_channel_reserved_hpai(channel_id: u8, control: [u8; 8]) -> Vec<u8> {
     let mut body = Vec::with_capacity(2 + 8);
     body.push(channel_id);
     body.push(0x00);
-    body.extend_from_slice(&control.encode());
+    body.extend_from_slice(&control);
     body
 }
 
@@ -338,6 +357,42 @@ mod tests {
     fn decode_rejects_short_body() {
         let err = decode_connectionstate_response(&[0x15]).unwrap_err();
         assert_eq!(err, ServiceError::TooShort { needed: 2, got: 1 });
+    }
+
+    /// Core v01.06.02 AS §7.8.1 Figure 35 (p. 38) with the TCP Route Back
+    /// HPAI of §8.6.2.2 (pp. 49–50) in both places and the basic link-layer
+    /// CRI: the complete 26-octet TCP CONNECT_REQUEST.
+    #[test]
+    fn a_tcp_connect_request_carries_route_back_twice_then_the_cri() {
+        use super::super::hpai::TCP_ROUTE_BACK;
+        let body = encode_connect_request_with_hpai(
+            TCP_ROUTE_BACK,
+            TCP_ROUTE_BACK,
+            &[0x04, 0x04, 0x02, 0x00],
+        );
+        let frame = crate::frame::encode_frame(CONNECT_REQUEST, &body);
+        assert_eq!(
+            frame,
+            [
+                0x06, 0x10, 0x02, 0x05, 0x00, 0x1A, 0x08, 0x02, 0, 0, 0, 0, 0, 0, 0x08, 0x02, 0, 0,
+                0, 0, 0, 0, 0x04, 0x04, 0x02, 0x00
+            ]
+        );
+        let mut expected = vec![0x2A, 0x00];
+        expected.extend_from_slice(&TCP_ROUTE_BACK);
+        assert_eq!(
+            encode_connectionstate_request_with_hpai(0x2A, TCP_ROUTE_BACK),
+            expected
+        );
+        assert_eq!(
+            encode_disconnect_request_with_hpai(0x2A, TCP_ROUTE_BACK),
+            expected
+        );
+        // The UDP encoders are the same layout with the UDP HPAI.
+        assert_eq!(
+            encode_disconnect_request(0x2A, hpai()),
+            encode_disconnect_request_with_hpai(0x2A, hpai().encode())
+        );
     }
 
     #[test]

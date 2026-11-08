@@ -1,5 +1,5 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": { "types": ["node"] },
-  "include": ["src", "e2e/usb-serial-transport.e2e.ts", "e2e/communication-fixture.ts"]
+  "include": ["src", "e2e/usb-serial-transport.e2e.ts", "e2e/tcp-tunnel-transport.e2e.ts", "e2e/communication-fixture.ts"]
 }

@@ -172,3 +172,20 @@ it("admits the reviewed bus-monitor window closed-schema and sends it back uncha
   const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
   expect(JSON.parse(init.body as string).review.monitor).toEqual(MONITOR);
 });
+
+it.each([0, 2, Number.MAX_SAFE_INTEGER])("pins the optional TCP skip count %j across preview and text", async (skippedFramesAtReview) => {
+  const monitor = { ...MONITOR, skippedFramesAtReview };
+  const withMonitor = { ...PREVIEW, review: { ...REVIEW, monitor } };
+  expect(admitPreview(withMonitor)).toBe(withMonitor);
+  reply(200, { key: "busMonitor", text: "t" });
+  await sectionText({ problemType: "deviceReading", review: { ...REVIEW, monitor } }, "busMonitor");
+  const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+  expect(JSON.parse(init.body as string).review.monitor).toEqual(monitor);
+});
+
+it.each([-1, 0.5, Number.NaN, Number.POSITIVE_INFINITY, 9_007_199_254_740_992, null, undefined, "2", {}])(
+  "refuses an invalid reviewed TCP skip count %j", (skippedFramesAtReview) => {
+    expect(() => admitPreview({ ...PREVIEW, review: { ...REVIEW, monitor: { ...MONITOR, skippedFramesAtReview } } }))
+      .toThrow("diagnostic-bundle-response-invalid");
+  },
+);

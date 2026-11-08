@@ -187,8 +187,8 @@ monotonic) and `wall` (UTC RFC 3339 with milliseconds).
 | `type` | Content |
 | --- | --- |
 | `header` | first line: `format`, `format_version`, `operation_id`, `operation_kind`, `started_at`, `writer` (`program`, `version` = `GET /api/version`, `commit`, `build_profile`), `platform` (OS, family, architecture, container flag; never host or user name), `target`, `gateway`, `related` ids (`downloadId`, `operationId`, `diagnosticsToken`, `serverIncarnation`, ...), effective `settings`, `redaction` policy |
-| `datagram` | `dir` (`sent`/`received`), `octets`, `raw` (lower-case hex of the exact UDP payload), decoded `service`, `channel`, `tunnel_seq`, `status`, and for cEMI frames `message`, `confirm_error`, `source`, `destination`, `tpci`, `apci`, `summary`; `redacted` when key octets were removed |
-| `tunnel` | connection events: connect refused, ACK timeout and repeat, heartbeat attempts, discarded frames (foreign channel, duplicate), close reason, socket errors |
+| `datagram` | `dir` (`sent`/`received`), `octets`, `raw` (lower-case hex of the exact UDP payload or retained whole TCP frame, never a stream chunk), decoded `service`, `channel`, `tunnel_seq`, `status`, and for cEMI frames `message`, `confirm_error`, `source`, `destination`, `tpci`, `apci`, `summary`; `redacted` when key octets were removed |
+| `tunnel` | connection events: connect refused, ACK timeout and repeat, heartbeat attempts, discarded frames (foreign channel, duplicate), close reason, socket errors; `frame-skipped` retains only service, length and reason, never skipped frame content |
 | `note` | operation-level facts: plan, step results, full error chains, results projected from typed reports |
 | `gap` | `lost_records` and `reason` when records could not be written |
 | `end` | last line: `outcome` (`succeeded`, `failed`, `cancelled`, or `abandoned` when the operation ended without reporting one), `error_chain`, `summary`, `records_written`, `records_dropped`, `failed_writes` |
@@ -388,8 +388,11 @@ arbitrary text can be certified credential-free.
 ### Reviewed monitor window
 
 A selected, available bus-monitor section adds optional `review.monitor`:
-`{sessionId, firstSeq, endSeq, droppedBefore, statusAtReview, capturedAt}`. Its
-fields are closed; counters are nonnegative safe integers, `firstSeq <= endSeq`,
+`{sessionId, firstSeq, endSeq, droppedBefore, statusAtReview, capturedAt}`, plus
+`skippedFramesAtReview` for a captured TCP session. The optional skip count is a
+nonnegative safe integer and is bound to the same review, not refreshed by later
+text/ZIP requests. Its absence is retained for historical, UDP and serial bindings.
+Its fields are closed; other counters are nonnegative safe integers, `firstSeq <= endSeq`,
 the interval has at most 5000 rows, status is `active` or `closed`, and capture
 time is canonical UTC RFC 3339 with milliseconds. A malformed binding is HTTP 400
 `bundlePreviewRequired`. No monitor selection requires no binding.
@@ -408,7 +411,10 @@ selected sections still use strict current-content review.
 
 The monitor file carries format/version, session identity, `statusAtReview`,
 `capturedAt`, window seconds, interval, `droppedBeforeAtReview`, projected rows and
-withheld counts. Broadcast/retention losses after preview are not observations
+withheld counts. A known IP session includes `transport` (`udp` or `tcp`); a TCP
+session additionally includes its review-pinned `skippedFramesAtReview` count.
+Unknown and serial sources never invent IP provenance or a TCP counter.
+Broadcast/retention losses and later skips after preview are not observations
 of that pinned body. No monitor is started or restarted by collection.
 
 Rows retain safe typed transport metadata and capped project group-address

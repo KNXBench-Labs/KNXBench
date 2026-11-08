@@ -90,15 +90,19 @@ const USAGE: &str = "usage: knx import <file.knxproj> [--store <path.knxdb> [--r
      \x20         load procedure plans completely offline) or unsupported (with the refusal);\n\
      \x20         offline, product defaults, no connection)\n\
      \x20     knx bus discover\n\
-     \x20     knx bus monitor (--gateway <host:port> | --serial <tty> --source <area.line.device>) [--project <path.knxdb>] [--control]\n\
+     \x20     knx bus monitor (--gateway <host:port> [--tunnel-transport <udp|tcp>] | --serial <tty> --source <area.line.device>) [--project <path.knxdb>] [--control]\n\
      \x20         (with --project, decodes against each address's resolved DPT;\n\
-     \x20         --control appends priority, hop count and repeat flag)\n\
-     \x20     knx bus write (--gateway <host:port> | --serial <tty> --source <area.line.device>) [--project <path.knxdb>] [--dpt <DPST-m-s>]\n\
+     \x20         --control appends priority, hop count and repeat flag;\n\
+     \x20         --tunnel-transport defaults to udp; tcp opens the optional TCP tunnel for\n\
+     \x20         this command only, never falls back to udp, and is refused with --serial)\n\
+     \x20     knx bus write (--gateway <host:port> [--tunnel-transport <udp|tcp>] | --serial <tty> --source <area.line.device>) [--project <path.knxdb>] [--dpt <DPST-m-s>]\n\
      \x20                  [--input-format <canonical|decimal|hexadecimal|binary|text>]\n\
      \x20                  [--dry-run] <main/middle/sub> <value>\n\
      \x20         (--dpt encodes <value> as that type; --project resolves it from the\n\
      \x20         linked communication objects; neither given falls back to raw\n\
-     \x20         0|1|hex; --dry-run encodes and prints without opening a connection)\n\
+     \x20         0|1|hex; --dry-run encodes and prints without opening a connection;\n\
+     \x20         over tcp a success means the TCP socket accepted the frame, not that a\n\
+     \x20         device confirmed it)\n\
      \x20         (serial: Linux raw 19200 8E1, transparent NCN5130 firmware, not console/HID;\n\
      \x20         monitor is passive; write uses active auto-ACK for own address and ALL groups.\n\
      \x20         Standard frames only; opening/closing may affect modem lines)\n\
@@ -4085,7 +4089,7 @@ fn parse_bus_monitor_args(args: &[String]) -> Result<BusMonitorArgs, String> {
     let mut i = 0;
     while i < args.len() {
         match args[i].as_str() {
-            "--gateway" | "--serial" | "--source" => {
+            "--gateway" | "--serial" | "--source" | "--tunnel-transport" => {
                 endpoint.take(args, i)?;
                 i += 2;
             }
@@ -4162,9 +4166,23 @@ async fn run_bus_monitor_async(
             return ExitCode::FAILURE;
         }
     };
+    // Registered before the ready line below: a signal sent once "Ctrl-C to stop" is printed is
+    // always seen. Before this point a Ctrl-C keeps its default effect and ends the process.
+    let mut interrupt = match bus_transport::Interrupt::register() {
+        Ok(interrupt) => interrupt,
+        Err(e) => {
+            eprintln!("could not listen for Ctrl-C: {e}");
+            return ExitCode::FAILURE;
+        }
+    };
     if matches!(endpoint, bus_transport::BusEndpoint::Serial { .. }) {
         eprintln!("passive TP-UART bus monitor: no data requests or ACK commands");
         eprintln!("connected to {endpoint}, caller-supplied source {} (not assigned in passive mode). Ctrl-C to stop.", tunnel.assigned_address());
+    } else if tunnel.ip_transport() == Some(knx_net::TunnelTransport::Tcp) {
+        eprintln!(
+            "connected to {endpoint} over TCP, assigned individual address {}. Ctrl-C to stop.",
+            tunnel.assigned_address()
+        );
     } else {
         eprintln!(
             "connected to {endpoint}, assigned individual address {}. Ctrl-C to stop.",
@@ -4174,8 +4192,10 @@ async fn run_bus_monitor_async(
     let mut telegrams = tunnel.subscribe();
     loop {
         tokio::select! {
-            _ = tokio::signal::ctrl_c() => {
+            _ = interrupt.recv() => {
                 eprintln!("disconnecting...");
+                // Sampled now: frames skipped while the disconnect runs are not counted.
+                bus_transport::report_skipped_frames(tunnel.skipped_frames(), &mut std::io::stderr());
                 return bus_transport::monitor_cleanup_outcome(
                     matches!(endpoint, bus_transport::BusEndpoint::Serial { .. }),
                     tunnel.disconnect().await,
@@ -4205,6 +4225,7 @@ async fn run_bus_monitor_async(
             },
         }
     }
+    bus_transport::report_skipped_frames(tunnel.skipped_frames(), &mut std::io::stderr());
     ExitCode::SUCCESS
 }
 
@@ -4228,7 +4249,7 @@ fn parse_bus_write_args(args: &[String]) -> Result<BusWriteArgs, String> {
     let mut i = 0;
     while i < args.len() {
         match args[i].as_str() {
-            "--gateway" | "--serial" | "--source" => {
+            "--gateway" | "--serial" | "--source" | "--tunnel-transport" => {
                 endpoint.take(args, i)?;
                 i += 2;
             }
@@ -4455,6 +4476,7 @@ async fn run_bus_write_async(
         .await;
     bus_transport::write_outcome(
         matches!(endpoint, bus_transport::BusEndpoint::Serial { .. }),
+        tunnel.ip_transport() == Some(knx_net::TunnelTransport::Tcp),
         result,
         tunnel.disconnect().await,
         &group_address.format(style),
@@ -5165,9 +5187,10 @@ fn format_decoded_value(v: &knx_net::GroupValue, dpt: DptAnnotation) -> String {
 #[cfg(test)]
 mod tests {
     use super::{
-        format_control, format_telegram, format_version_line, load_project_bus_view,
+        bus_transport, format_control, format_telegram, format_version_line, load_project_bus_view,
         load_project_individual_addresses, parse_bus_monitor_args, parse_bus_route_monitor_args,
-        parse_bus_route_send_args, parse_doc_export_args, DISCOVER_EMPTY_HINT,
+        parse_bus_route_send_args, parse_bus_write_args, parse_doc_export_args,
+        DISCOVER_EMPTY_HINT,
     };
     use std::path::Path;
 
@@ -5265,6 +5288,73 @@ mod tests {
             parse_bus_monitor_args(&args(&["--control", "--gateway", "192.0.2.1:3671"])).unwrap();
         assert!(asked.control);
         assert_eq!(asked.endpoint.to_string(), "192.0.2.1:3671");
+    }
+
+    #[test]
+    fn monitor_and_write_parse_an_explicit_tunnel_transport_and_default_to_udp() {
+        use knx_net::TunnelTransport;
+        let args = |a: &[&str]| a.iter().map(|s| s.to_string()).collect::<Vec<_>>();
+        let transport = |endpoint: &bus_transport::BusEndpoint| match endpoint {
+            bus_transport::BusEndpoint::Gateway { transport, .. } => *transport,
+            bus_transport::BusEndpoint::Serial { .. } => panic!("expected a gateway"),
+        };
+        let gateway = ["--gateway", "192.0.2.1:3671"];
+        let plain = parse_bus_monitor_args(&args(&gateway)).unwrap();
+        assert_eq!(transport(&plain.endpoint), TunnelTransport::Udp);
+        let tcp = parse_bus_monitor_args(&args(&[
+            "--tunnel-transport",
+            "tcp",
+            "--control",
+            gateway[0],
+            gateway[1],
+        ]))
+        .unwrap();
+        assert_eq!(transport(&tcp.endpoint), TunnelTransport::Tcp);
+        assert!(tcp.control);
+        let write = parse_bus_write_args(&args(&[
+            gateway[0],
+            gateway[1],
+            "--tunnel-transport",
+            "tcp",
+            "--dry-run",
+            "1/1/1",
+            "1",
+        ]))
+        .unwrap();
+        assert_eq!(transport(&write.endpoint), TunnelTransport::Tcp);
+        assert!(write.dry_run);
+        let default_write =
+            parse_bus_write_args(&args(&[gateway[0], gateway[1], "1/1/1", "1"])).unwrap();
+        assert_eq!(transport(&default_write.endpoint), TunnelTransport::Udp);
+        // Refused before any I/O, for both commands.
+        for bad in [
+            vec!["--tunnel-transport", "tcp", "--tunnel-transport", "tcp"],
+            vec!["--tunnel-transport", "TCP"],
+            vec!["--tunnel-transport", "tls"],
+            vec![
+                "--tunnel-transport",
+                "tcp",
+                "--serial",
+                "missing",
+                "--source",
+                "1.1.1",
+            ],
+            vec![
+                "--tunnel-transport",
+                "udp",
+                "--serial",
+                "missing",
+                "--source",
+                "1.1.1",
+            ],
+        ] {
+            let mut monitor = gateway.to_vec();
+            monitor.extend(&bad);
+            let mut write = monitor.clone();
+            write.extend(["1/1/1", "1"]);
+            assert!(parse_bus_monitor_args(&args(&monitor)).is_err(), "{bad:?}");
+            assert!(parse_bus_write_args(&args(&write)).is_err(), "{bad:?}");
+        }
     }
 
     #[test]

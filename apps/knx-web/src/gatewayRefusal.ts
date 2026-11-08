@@ -1,5 +1,5 @@
 /** Issue #10/WP-26: words structured gateway refusals; unknown shapes keep the server text. */
-import { serialLabel, validSerialTarget, type SerialTarget } from "./serialTransport";
+import { gatewayWithTransport, serialLabel, validSerialTarget, type IpTunnelTransport, type SerialTarget } from "./serialTransport";
 import { translate, type Translate, type TranslatableKey } from "./i18n";
 import { BUSY_LOCKS, type ActivitySnapshot, type BusyLock } from "./liveActivity";
 
@@ -13,7 +13,7 @@ export type TunnelHolder =
   /** `sessionId` is known only from the activity snapshot (to stop it). */
   | { kind: "addressProgramming"; address: string; state: "waiting" | "programming"; sessionId?: number }
   /** `gateway` is missing only from an older server's activity snapshot. */
-  | { kind: "busMonitor"; sessionId: number; gateway?: string; serial?: SerialTarget; state: "active" | "closed" }
+  | { kind: "busMonitor"; sessionId: number; gateway?: string; serial?: SerialTarget; transport?: IpTunnelTransport; state: "active" | "closed" }
   | { kind: "lineScan"; sessionId: number; probed: number; total: number }
   | { kind: "connecting"; session: BusyLock };
 
@@ -59,6 +59,10 @@ function admitHolder(value: unknown): TunnelHolder | null {
       h = exactly(value, ["kind", "sessionId", "serial", "state"]);
       if (h && positive(h.sessionId) && validSerialTarget(h.serial) && oneOf(h.state, ["active", "closed"]))
         return { kind: "busMonitor", sessionId: h.sessionId, serial: h.serial, state: h.state === "active" ? "active" : "closed" };
+      h = exactly(value, ["kind", "sessionId", "gateway", "transport", "state"]);
+      // The server names a holder's transport only for TCP.
+      if (h && positive(h.sessionId) && endpoint(h.gateway) && h.transport === "tcp" && oneOf(h.state, ["active", "closed"]))
+        return { kind: "busMonitor", sessionId: h.sessionId, gateway: h.gateway as string, transport: "tcp", state: h.state === "active" ? "active" : "closed" };
       h = exactly(value, ["kind", "sessionId", "gateway", "state"]);
       return h && positive(h.sessionId) && endpoint(h.gateway) && oneOf(h.state, ["active", "closed"])
         ? h as TunnelHolder : null;
@@ -156,8 +160,9 @@ export function holderFromActivity(snapshot: ActivitySnapshot): TunnelHolder | n
   for (const session of snapshot.sessions) {
     if (session.kind === "busMonitor") {
       if (session.serial) return { kind: "busMonitor", sessionId: session.id, serial: session.serial, state: session.state };
-      return session.gateway === undefined
-        ? { kind: "busMonitor", sessionId: session.id, state: session.state }
+      if (session.gateway === undefined) return { kind: "busMonitor", sessionId: session.id, state: session.state };
+      return session.transport === "tcp"
+        ? { kind: "busMonitor", sessionId: session.id, gateway: session.gateway, transport: "tcp", state: session.state }
         : { kind: "busMonitor", sessionId: session.id, gateway: session.gateway, state: session.state };
     }
     if (session.kind === "lineScan" && session.state === "running") {
@@ -183,8 +188,8 @@ export function describeHolder(holder: TunnelHolder, t: Translate): string {
       if (holder.serial) return t(holder.state === "active" ? "busTransport.connected" : "busTransport.lost", { target: serialLabel(holder.serial) });
       if (holder.gateway === undefined) return t("gatewayRefusal.busy.busMonitorRunning");
       return holder.state === "active"
-        ? t("gatewayRefusal.busy.busMonitor", { gateway: holder.gateway })
-        : t("gatewayRefusal.busy.busMonitorClosed", { gateway: holder.gateway });
+        ? t("gatewayRefusal.busy.busMonitor", { gateway: gatewayWithTransport(holder.gateway, holder.transport) })
+        : t("gatewayRefusal.busy.busMonitorClosed", { gateway: gatewayWithTransport(holder.gateway, holder.transport) });
     case "lineScan":
       return t("gatewayRefusal.busy.lineScan", { probed: holder.probed, total: holder.total });
     case "connecting":

@@ -210,6 +210,17 @@ fn tunnel_event(event: &TunnelTapEvent) -> Vec<(&'static str, Value)> {
             ("operation", (*operation).into()),
             ("reason", reason.clone().into()),
         ],
+        // Header facts only: the skipped octets never reach the tap.
+        TunnelTapEvent::FrameSkipped {
+            service_type,
+            total_length,
+            reason,
+        } => vec![
+            ("event", "frame-skipped".into()),
+            ("service_type", format!("{service_type:#06x}").into()),
+            ("total_length", (*total_length).into()),
+            ("reason", reason.as_str().into()),
+        ],
     }
 }
 

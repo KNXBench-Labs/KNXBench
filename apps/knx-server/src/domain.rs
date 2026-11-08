@@ -153,8 +153,9 @@ pub struct AppState {
     /// duration of `BusSession::start`'s `.await` on purpose: only one
     /// session may ever exist, so serializing concurrent `start` attempts
     /// through this same lock is the correct behaviour, not a cost to
-    /// avoid.
-    pub bus_session: tokio::sync::Mutex<Option<BusSession>>,
+    /// avoid. An `Arc` so a TCP stop can move the owned guard into the task that
+    /// finishes the stop, keeping the reservation through cleanup.
+    pub bus_session: std::sync::Arc<tokio::sync::Mutex<Option<BusSession>>>,
     /// Serializes the complete project-style mutation, fresh context snapshot
     /// and active-session publication. It is deliberately distinct from both
     /// `project` and `bus_session`: those two locks are acquired in separate
@@ -411,7 +412,7 @@ impl AppState {
             connector: Box::new(RealConnector::default()),
             serial_candidates: std::sync::Arc::new(crate::serial_candidates::LocalSerialCandidates),
             tunnel_return_path: knx_net::TunnelReturnPath::default(),
-            bus_session: tokio::sync::Mutex::new(None),
+            bus_session: std::sync::Arc::new(tokio::sync::Mutex::new(None)),
             group_address_style_publication: tokio::sync::Mutex::new(()),
             next_bus_session_id: std::sync::atomic::AtomicU64::new(1),
             line_scan_session: tokio::sync::Mutex::new(None),

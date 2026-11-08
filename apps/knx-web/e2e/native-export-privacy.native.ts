@@ -23,9 +23,12 @@ for(const language of ["en","de"] as const)for(const width of [400,1440]){
    HTMLAnchorElement.prototype.click=function(){if(new URL(this.href).pathname==="/api/project/download")links.push(this.href);return click.call(this);};
   });
   const links=()=>page.evaluate(()=>(window as unknown as {__nativeExportLinks:string[]}).__nativeExportLinks);
-  // No actual KNX discovery/connection request reaches the backend.
+  // No actual KNX discovery/connection request reaches the backend; the status bar's
+  // read-only activity poll gets an idle snapshot.
   await page.route("**/api/bus/**",route=>{
-   expect(new URL(route.request().url()).pathname).toBe("/api/bus/discover");
+   const path=new URL(route.request().url()).pathname;
+   if(path==="/api/bus/activity"){expect(route.request().method()).toBe("GET");return route.fulfill({status:200,contentType:"application/json",body:JSON.stringify({serverIncarnation:"fixture",coverage:"partial",historyState:"disabled",sessions:[],oneShot:[],oneShotDropped:0,busyLocks:[],untracked:[]})});}
+   expect(path).toBe("/api/bus/discover");
    return route.fulfill({status:200,contentType:"application/json",body:JSON.stringify({interfaces:[]})});
   });
   await page.route("**/api/settings",route=>{

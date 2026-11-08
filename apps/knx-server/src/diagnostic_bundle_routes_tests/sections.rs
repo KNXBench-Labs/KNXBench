@@ -718,6 +718,81 @@ mod monitor {
         state.bus_session.lock().await.take().unwrap().stop().await;
     }
 
+    /// Starts the monitor session over a fake of the given transport and reads it back.
+    async fn start_over(
+        state: &crate::AppState,
+        transport: knx_net::TunnelTransport,
+    ) -> (FakeTunnelHandle, Arc<std::sync::Mutex<TelegramBuffer>>) {
+        let (tunnel, handle) = FakeTunnel::new("1.1.2".parse().unwrap(), 16);
+        let tunnel = tunnel.with_transport(transport);
+        let connector = FakeConnector::succeeding(tunnel).accepting_tcp();
+        let gateway = "203.0.113.250:3671".parse().unwrap();
+        let ctx = GroupAddressContext::from_project(None);
+        let session = match transport {
+            knx_net::TunnelTransport::Tcp => {
+                BusSession::start_tcp(1, gateway, &connector, ctx).await
+            }
+            knx_net::TunnelTransport::Udp => BusSession::start(1, gateway, &connector, ctx).await,
+        }
+        .unwrap();
+        let buffer = session.buffer();
+        *state.bus_session.lock().await = Some(session);
+        (handle, buffer)
+    }
+
+    #[tokio::test]
+    async fn the_exported_monitor_names_the_actual_transport_and_skipped_tcp_frames() {
+        for (transport, skipped) in [
+            (knx_net::TunnelTransport::Tcp, Some(2)),
+            (knx_net::TunnelTransport::Udp, None),
+        ] {
+            let dir = tempfile::tempdir().unwrap();
+            let state = state(dir.path(), true);
+            let (handle, buffer) = start_over(&state, transport).await;
+            handle.set_skipped_frames(2);
+            send_rows(&handle, &buffer, 1).await;
+            let request_preview = preview;
+            let preview = request_preview(&state, &QUERY()).await;
+            let text = monitor_text(&state, &QUERY(), &preview).await;
+            let (status, bytes) = export_monitor(&state, &QUERY(), &preview).await;
+            assert_eq!(status, StatusCode::OK);
+            let bytes = bytes.unwrap();
+            let body: Value = serde_json::from_slice(&bytes).unwrap();
+            assert_eq!(body["transport"], transport.as_str());
+            assert_eq!(
+                body.get("skippedFramesAtReview"),
+                skipped.map(Value::from).as_ref()
+            );
+            // The reviewed text and the ZIP carry the same metadata, and nothing else new leaks.
+            let text = text.as_str().unwrap();
+            assert!(text.contains(std::str::from_utf8(&bytes).unwrap().trim_end()));
+            for forbidden in FORBIDDEN {
+                assert!(!text.to_lowercase().contains(forbidden), "{forbidden}");
+            }
+            // Later skips must not change the reviewed text or ZIP; only a fresh review sees them.
+            if skipped.is_some() {
+                handle.set_skipped_frames(5);
+                assert_eq!(
+                    monitor_text(&state, &QUERY(), &preview)
+                        .await
+                        .as_str()
+                        .unwrap(),
+                    text
+                );
+                let (status, again) = export_monitor(&state, &QUERY(), &preview).await;
+                assert_eq!(status, StatusCode::OK);
+                assert_eq!(again.unwrap(), bytes);
+                let fresh = request_preview(&state, &QUERY()).await;
+                let (status, updated) = export_monitor(&state, &QUERY(), &fresh).await;
+                assert_eq!(status, StatusCode::OK);
+                let updated: Value = serde_json::from_slice(&updated.unwrap()).unwrap();
+                assert_eq!(updated["skippedFramesAtReview"], 5);
+                assert_eq!(updated["telegrams"], body["telegrams"]);
+            }
+            state.bus_session.lock().await.take().unwrap().stop().await;
+        }
+    }
+
     #[tokio::test]
     async fn an_empty_snapshot_stays_empty_and_a_missing_session_refuses() {
         let dir = tempfile::tempdir().unwrap();

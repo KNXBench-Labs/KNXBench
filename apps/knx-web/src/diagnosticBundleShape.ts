@@ -90,6 +90,8 @@ export interface MonitorBinding {
   /** One past the last row; equal to `firstSeq` for an empty window. */
   endSeq: number;
   droppedBefore: number;
+  /** TCP frame skips at review time; absent for historical/UDP/serial bindings. */
+  skippedFramesAtReview?: number;
   statusAtReview: "active" | "closed";
   /** UTC RFC 3339 with milliseconds. */
   capturedAt: string;

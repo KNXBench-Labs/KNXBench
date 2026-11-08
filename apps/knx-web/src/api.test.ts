@@ -1109,3 +1109,128 @@ describe("bound group actions",()=>{
     expect(api.errorMessage(error)).toContain("conservative warning");expect(api.errorMessage(error)).toContain("not an observation of device state");
   });
 });
+
+describe("explicit TCP API", () => {
+  afterEach(() => vi.unstubAllGlobals());
+  const started = { sessionId: 4, serverIncarnation: "process", assignedAddress: "1.1.250", transport: "tcp", skippedFrames: 0 };
+  const serialTarget = { path: "/synthetic/tty", source: "1.1.250", mode: "passive" };
+  const plainStart = { sessionId: 4, serverIncarnation: "process", assignedAddress: "1.1.250" };
+  it("posts exactly the gateway to the distinct strict route and never to the UDP start", async () => {
+    mockFetchOnce(started);
+    await expect(api.startTcpBusMonitor("192.0.2.1:3671")).resolves.toEqual(started);
+    expect(fetch).toHaveBeenCalledExactlyOnceWith("/api/bus/monitor/start-tcp", {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: '{"gateway":"192.0.2.1:3671"}',
+    });
+  });
+  it.each([404, 405, 501, 502])("an older or refusing server (%s) fails once with zero UDP request", async (status) => {
+    mockFetchOnce({ error: "no such route" }, false, status);
+    await expect(api.startTcpBusMonitor("192.0.2.1:3671")).rejects.toMatchObject({ status });
+    expect(fetch).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(fetch).mock.calls.map(([url]) => url)).toEqual(["/api/bus/monitor/start-tcp"]);
+  });
+  it("keeps the server's own text for an unstructured TCP 502 and for a normal generic failure", async () => {
+    mockFetchOnce({ error: "Protocol error: the connector opened a non-TCP tunnel for an explicit TCP request" }, false, 502);
+    const refused = await api.startTcpBusMonitor("192.0.2.1:3671").catch((error: unknown) => error);
+    expect(api.errorMessage(refused)).toBe("Protocol error: the connector opened a non-TCP tunnel for an explicit TCP request");
+    mockFetchOnce({ error: "internal failure" }, false, 500);
+    expect(api.errorMessage(await api.startTcpBusMonitor("192.0.2.1:3671").catch((error: unknown) => error))).toBe("internal failure");
+  });
+  it("the TCP start states TCP, no serial target and a nonnegative safe integer counter", async () => {
+    const table: [string, Record<string, unknown>][] = [
+      ["no transport", { ...started, transport: undefined }], ["udp", { ...started, transport: "udp" }],
+      ["TCP case", { ...started, transport: "TCP" }], ["null transport", { ...started, transport: null }],
+      ["serial next to tcp", { ...started, serial: serialTarget }],
+      ["no counter", { ...started, skippedFrames: undefined }], ["null counter", { ...started, skippedFrames: null }],
+      ["negative", { ...started, skippedFrames: -1 }], ["fraction", { ...started, skippedFrames: 1.5 }],
+      ["string", { ...started, skippedFrames: "0" }], ["unsafe", { ...started, skippedFrames: 2 ** 53 }],
+      ["NaN-like", { ...started, skippedFrames: Number.NaN }], ["infinite", { ...started, skippedFrames: Number.POSITIVE_INFINITY }],
+    ];
+    for (const [name, body] of table) {
+      mockFetchOnce(body);
+      await expect(api.startTcpBusMonitor("192.0.2.1:3671"), name).rejects.toThrow("inconsistent transport");
+    }
+    for (const count of [0, 1, 2 ** 53 - 1]) {
+      mockFetchOnce({ ...started, skippedFrames: count });
+      await expect(api.startTcpBusMonitor("192.0.2.1:3671")).resolves.toMatchObject({ skippedFrames: count });
+    }
+  });
+  it("the UDP start admits no transport or exactly udp, and never a counter, serial target or other value", async () => {
+    for (const body of [plainStart, { ...plainStart, transport: "udp" }]) {
+      mockFetchOnce(body);
+      await expect(api.startBusMonitor("192.0.2.1:3671")).resolves.toEqual(body);
+    }
+    const table: [string, Record<string, unknown>][] = [
+      ["tcp", { ...plainStart, transport: "tcp" }], ["TCP case", { ...plainStart, transport: "UDP" }],
+      ["null", { ...plainStart, transport: null }], ["empty", { ...plainStart, transport: "" }],
+      ["number", { ...plainStart, transport: 1 }], ["counter", { ...plainStart, skippedFrames: 0 }],
+      ["udp with counter", { ...plainStart, transport: "udp", skippedFrames: 0 }],
+      ["serial", { ...plainStart, serial: serialTarget }],
+    ];
+    for (const [name, body] of table) {
+      mockFetchOnce(body);
+      await expect(api.startBusMonitor("192.0.2.1:3671"), name).rejects.toThrow("UDP start returned an inconsistent transport");
+    }
+  });
+  it("the serial start admits no IP transport and no counter", async () => {
+    const serial = { ...plainStart, assignedAddress: serialTarget.source, serial: serialTarget };
+    mockFetchOnce(serial);
+    await expect(api.startSerialBusMonitor(serialTarget as import("./serialTransport").SerialTarget)).resolves.toEqual(serial);
+    for (const extra of [{ transport: "udp" }, { transport: "tcp" }, { transport: null }, { transport: "" }, { skippedFrames: 0 }]) {
+      mockFetchOnce({ ...serial, ...extra });
+      await expect(api.startSerialBusMonitor(serialTarget as import("./serialTransport").SerialTarget), JSON.stringify(extra))
+        .rejects.toThrow("Serial start must not state an IP transport");
+    }
+  });
+  it("polls: TCP requires its counter, every other session forbids one, malformed metadata is refused", async () => {
+    const poll = { sessionId: 4, serverIncarnation: "process", status: "active", nextSince: 0, droppedBefore: 0, telegrams: [] };
+    mockFetchOnce({ ...poll, transport: "tcp", skippedFrames: 3 });
+    await expect(api.pollBusTelegrams(0)).resolves.toMatchObject({ transport: "tcp", skippedFrames: 3 });
+    mockFetchOnce({ ...poll, transport: "udp" });
+    await expect(api.pollBusTelegrams(0)).resolves.toMatchObject({ transport: "udp" });
+    mockFetchOnce(poll);
+    expect((await api.pollBusTelegrams(0)).transport).toBeUndefined();
+    for (const extra of [{ transport: "tls" }, { transport: "" }, { transport: null }, { transport: 1 }, { transport: "tcp", skippedFrames: 0, serial: serialTarget }]) {
+      mockFetchOnce({ ...poll, ...extra });
+      await expect(api.pollBusTelegrams(0), JSON.stringify(extra)).rejects.toThrow(/Malformed (session transport|serial)/);
+    }
+    // A known TCP poll without a valid counter is malformed, never zero.
+    for (const counter of [undefined, null, -1, 0.5, "1", 2 ** 53, Number.NaN]) {
+      mockFetchOnce({ ...poll, transport: "tcp", skippedFrames: counter });
+      await expect(api.pollBusTelegrams(0), String(counter)).rejects.toThrow("Malformed skipped-frame count");
+    }
+    // A counter next to UDP, a legacy server or serial is malformed.
+    for (const extra of [{ transport: "udp" }, {}, { serial: serialTarget }]) {
+      mockFetchOnce({ ...poll, ...extra, skippedFrames: 0 });
+      await expect(api.pollBusTelegrams(0), JSON.stringify(extra)).rejects.toThrow("Malformed skipped-frame count");
+    }
+  });
+  it("both stops accept an absent or valid counter and refuse a malformed one", async () => {
+    const identity = { sessionId: 4, serverIncarnation: "process" };
+    const stopped = { ...identity, telegramCount: 1, droppedCount: 0 };
+    for (const body of [stopped, { ...stopped, skippedFrames: 0 }, { ...stopped, skippedFrames: 7 }]) {
+      mockFetchOnce(body); await expect(api.stopBoundBusMonitor(identity)).resolves.toEqual(body);
+      mockFetchOnce(body); await expect(api.stopBusMonitor()).resolves.toEqual(body);
+    }
+    for (const counter of [null, -1, 0.5, "1", 2 ** 53, Number.NaN]) {
+      mockFetchOnce({ ...stopped, skippedFrames: counter });
+      await expect(api.stopBoundBusMonitor(identity), String(counter)).rejects.toThrow("Malformed skipped-frame count");
+      mockFetchOnce({ ...stopped, skippedFrames: counter });
+      await expect(api.stopBusMonitor(), String(counter)).rejects.toThrow("Malformed skipped-frame count");
+    }
+  });
+  it("sends TCP group actions only on the bound routes with the exact identity and checks the answer's transport", async () => {
+    const identity = { sessionId: 4, serverIncarnation: "process" };
+    mockFetchOnce({ service: "GroupValueRead", transport: "tcp" });
+    await expect(api.readBusValue(identity, "1/1/1")).resolves.toEqual({ service: "GroupValueRead", transport: "tcp" });
+    const written = { service: "GroupValueWrite", encodedPayload: "0x01 (6-bit)", decodedEcho: { kind: "value", text: "on" } };
+    mockFetchOnce({ ...written, transport: "tcp" });
+    await api.writeBoundBusValue(identity, "1/1/1", "DPST-1-1", "on", null);
+    expect(vi.mocked(fetch).mock.calls.map(([url]) => url)).toEqual(["/api/bus/write-bound"]);
+    for (const transport of ["tls", "", null, 1]) {
+      mockFetchOnce({ service: "GroupValueRead", transport });
+      await expect(api.readBusValue(identity, "1/1/1")).rejects.toThrow("Malformed session transport");
+      mockFetchOnce({ ...written, transport });
+      await expect(api.writeBoundBusValue(identity, "1/1/1", "DPST-1-1", "on", null)).rejects.toThrow("Malformed session transport");
+    }
+  });
+});

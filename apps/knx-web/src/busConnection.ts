@@ -1,5 +1,5 @@
 /** Shared bus-connection controller: activity-derived view, one action token, bound stop. */
-import type { BusEndpoint, SerialTarget } from "./serialTransport";
+import { isTcpEndpoint, validSerialTarget, type BusEndpoint, type IpTunnelTransport, type SerialTarget } from "./serialTransport";
 import { useSyncExternalStore } from "react";
 import * as api from "./api";
 import type { BoundBusSession, BusMonitorStartResponse, BusMonitorStopResponse } from "./api";
@@ -7,6 +7,7 @@ import { emitAchievementEvent } from "./achievementEvents";
 import { HistoryContractError } from "./activityHistory";
 import { forgetSessionContext, readSessionContext, recordSessionContext, subscribeContextChanges } from "./busContext";
 import type { TunnelHolder } from "./gatewayRefusal";
+import type { Translate } from "./i18n";
 import type { ActivitySnapshot } from "./liveActivity";
 
 /**
@@ -23,7 +24,7 @@ import type { ActivitySnapshot } from "./liveActivity";
 export type BusConnectionView =
   | { phase: "unknown"; reason: "loading" | "unavailable" | "malformed" | "hidden" }
   | { phase: "disconnected" }
-  | { phase: "connected" | "lost"; sessionId: number; serverIncarnation: string; gateway?: string; serial?: SerialTarget }
+  | { phase: "connected" | "lost"; sessionId: number; serverIncarnation: string; gateway?: string; serial?: SerialTarget; transport?: IpTunnelTransport }
   | { phase: "occupied"; holder: TunnelHolder }
   | { phase: "indeterminate" };
 
@@ -58,7 +59,12 @@ export function connectionFromActivity(snapshot: ActivitySnapshot): BusConnectio
       const identity = { sessionId: session.id, serverIncarnation: snapshot.serverIncarnation };
       if (!api.isBoundBusSession(identity)) return { phase: "unknown", reason: "malformed" };
       const view = { phase: session.state === "active" ? "connected" as const : "lost" as const, ...identity };
-      return { ...view, ...(session.gateway === undefined ? {} : { gateway: session.gateway }), ...(session.serial === undefined ? {} : { serial: session.serial }) };
+      return {
+        ...view,
+        ...(session.gateway === undefined ? {} : { gateway: session.gateway }),
+        ...(session.serial === undefined ? {} : { serial: session.serial }),
+        ...(session.transport === undefined ? {} : { transport: session.transport }),
+      };
     }
   }
   for (const session of snapshot.sessions) {
@@ -83,6 +89,8 @@ export function connectionFromActivity(snapshot: ActivitySnapshot): BusConnectio
 const INITIAL: BusConnectionState = { view: { phase: "unknown", reason: "loading" }, action: null, restarted: false };
 let state: BusConnectionState = INITIAL;
 let serialObservation: { identity: BoundBusSession; target: SerialTarget } | null = null;
+/** Last admitted TCP provenance for one immutable identity; UDP needs no memory (it is the legacy contract). */
+let tcpObservation: BoundBusSession | null = null;
 let observedIdentity: BoundBusSession | null = null;
 let observationVersion = 0;
 
@@ -98,6 +106,15 @@ function rememberIdentity(identity: BoundBusSession): void {
 export function knownSerialSession(identity: BoundBusSession): SerialTarget | undefined {
   return serialObservation?.identity.sessionId === identity.sessionId
     && serialObservation.identity.serverIncarnation === identity.serverIncarnation ? serialObservation.target : undefined;
+}
+
+/** Whether this exact identity was admitted as a TCP session, even across unknown reads. */
+export function knownTcpSession(identity: BoundBusSession): boolean {
+  return tcpObservation?.sessionId === identity.sessionId && tcpObservation.serverIncarnation === identity.serverIncarnation;
+}
+
+function rememberTcp(identity: BoundBusSession): void {
+  tcpObservation = { sessionId: identity.sessionId, serverIncarnation: identity.serverIncarnation };
 }
 
 /** A fresh poll cannot override a different currently observed session or process. */
@@ -127,6 +144,7 @@ function publish(next: Partial<BusConnectionState>): void {
   if (view?.phase === "connected" || view?.phase === "lost") {
     rememberIdentity(view);
     if (view.serial) serialObservation = {identity:{sessionId:view.sessionId,serverIncarnation:view.serverIncarnation},target:view.serial};
+    if (view.transport === "tcp") rememberTcp(view);
   }
   state = { ...state, ...next };
   for (const listener of subscribers) listener();
@@ -147,6 +165,10 @@ async function readOnce(): Promise<void> {
     const snapshot = await api.busActivity();
     incarnation = snapshot.serverIncarnation;
     view = connectionFromActivity(snapshot);
+    // Known TCP never reads back as the legacy UDP contract: missing or other metadata fails closed.
+    if ((view.phase === "connected" || view.phase === "lost") && knownTcpSession(view) && view.transport !== "tcp") {
+      view = { phase: "unknown", reason: "malformed" };
+    }
   } catch (error) {
     view = { phase: "unknown", reason: error instanceof HistoryContractError ? "malformed" : "unavailable" };
   }
@@ -284,6 +306,21 @@ function supersededDuringStop(identity: BoundBusSession): boolean {
     || otherSessionAppeared(identity);
 }
 
+/** Worded failure of an explicit TCP start: a server without the route says so; UDP was never tried. */
+export function tcpStartErrorMessage(error: unknown, t: Translate): string {
+  const status = api.errorStatus(error);
+  if (status === 404 || status === 405) return t("busTransport.ipTunnel.unsupported");
+  return api.errorMessage(error);
+}
+
+/** Each endpoint kind has exactly one start route; an unrecognised shape opens nothing. */
+function startEndpoint(endpoint: BusEndpoint): Promise<BusMonitorStartResponse> {
+  if (typeof endpoint === "string") return api.startBusMonitor(endpoint);
+  if (isTcpEndpoint(endpoint)) return api.startTcpBusMonitor(endpoint.gateway);
+  if (validSerialTarget(endpoint)) return api.startSerialBusMonitor(endpoint);
+  return Promise.reject(new Error("Invalid bus endpoint; nothing was sent."));
+}
+
 /**
  * Explicit connect: the start route, then, only for the current epoch and
  * the server lifetime observed now, the achievement, the caller's synchronous
@@ -300,7 +337,7 @@ export async function connectBusSession(
   try {
     let started: BusMonitorStartResponse;
     try {
-      started = await (typeof endpoint === "string" ? api.startBusMonitor(endpoint) : api.startSerialBusMonitor(endpoint));
+      started = await startEndpoint(endpoint);
     } catch (error) {
       return { ok: false, reason: "failed", error };
     }
@@ -313,6 +350,7 @@ export async function connectBusSession(
     }
     rememberIdentity(started);
     if (started.serial) serialObservation = {identity:{sessionId:started.sessionId,serverIncarnation:started.serverIncarnation},target:started.serial};
+    if (started.transport === "tcp") rememberTcp(started);
     emitAchievementEvent({ type: "busMonitorStarted" });
     hooks.beforePublish?.(started);
     recordSessionContext(started.sessionId, started.serverIncarnation);
@@ -375,6 +413,7 @@ export function resetBusConnectionForTests(): void {
   pollers = 0;
   state = INITIAL;
   serialObservation = null;
+  tcpObservation = null;
   observedIdentity = null;
   observationVersion = 0;
   subscribers.clear();

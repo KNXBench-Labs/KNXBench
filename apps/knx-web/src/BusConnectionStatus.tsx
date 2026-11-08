@@ -1,12 +1,12 @@
 /** Status-bar bus connection: state, gateway drop-up and explicit connect/disconnect. */
-import { useBusTransport, useSerialTarget } from "./serialPreference";
+import { useBusTransport, useIpTunnelTransport, useSerialTarget } from "./serialPreference";
 import BusTransportFields from "./BusTransportFields";
-import { serialLabel, validSerialTarget } from "./serialTransport";
+import { gatewayWithTransport, serialLabel, validSerialTarget, type BusEndpoint } from "./serialTransport";
 import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import * as api from "./api";
 import { appUiScale } from "./appUiScale";
 import {
-  acquireBusConnectionPolling, connectBusSession, disconnectBusSession, refreshBusConnection, useBusConnection,
+  acquireBusConnectionPolling, connectBusSession, disconnectBusSession, refreshBusConnection, tcpStartErrorMessage, useBusConnection,
   type BusActionResult, type BusConnectionState,
 } from "./busConnection";
 import { searchBusInterfaces, useBusDiscovery } from "./busDiscovery";
@@ -41,12 +41,12 @@ function stateText({ view, action }: BusConnectionState, t: Translate): string {
       if (view.serial) return t("busTransport.connected", { target: serialLabel(view.serial) });
       return view.gateway === undefined
         ? t("busConnection.state.connectedUnnamed", { id: view.sessionId })
-        : t("busConnection.state.connected", { gateway: view.gateway });
+        : t("busConnection.state.connected", { gateway: gatewayWithTransport(view.gateway, view.transport) });
     case "lost":
       if (view.serial) return t("busTransport.lost", { target: serialLabel(view.serial) });
       return view.gateway === undefined
         ? t("busConnection.state.lostUnnamed", { id: view.sessionId })
-        : t("busConnection.state.lost", { gateway: view.gateway });
+        : t("busConnection.state.lost", { gateway: gatewayWithTransport(view.gateway, view.transport) });
     case "disconnected": return t("busConnection.state.disconnected");
     case "occupied": return t("busConnection.state.occupied");
     case "indeterminate": return t("busConnection.state.indeterminate");
@@ -89,6 +89,7 @@ export default function BusConnectionStatus({ onOpenBusSettings }: { onOpenBusSe
   const discovery = useBusDiscovery();
   const [selected, select] = usePreferredGateway();
   const [transport] = useBusTransport();
+  const [tunnel] = useIpTunnelTransport();
   const [serial] = useSerialTarget();
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -128,7 +129,9 @@ export default function BusConnectionStatus({ onOpenBusSettings }: { onOpenBusSe
   const { view, action } = connection;
   const bound = view.phase === "connected" || view.phase === "lost" ? view : null;
   const valid = transport === "serial" ? validSerialTarget(serial) : validation.ok;
-  const endpoint = transport === "serial" ? serial : validation.ok ? validation.endpoint : "";
+  const endpoint: BusEndpoint = transport === "serial" ? serial
+    : !validation.ok ? ""
+    : tunnel === "tcp" ? { kind: "tcp", gateway: validation.endpoint } : validation.endpoint;
   const connectReason = transport === "serial" && !valid ? t("busTransport.invalid") : transport === "ip" && !validation.ok
     ? t(INVALID_REASON[validation.reason])
     : view.phase === "disconnected" ? null : t("busConnection.connectBlocked");
@@ -139,7 +142,9 @@ export default function BusConnectionStatus({ onOpenBusSettings }: { onOpenBusSe
     const result = await connectBusSession(endpoint);
     setError(!result.ok && result.reason === "failed" && transport === "serial"
       ? gatewayRefusalMessage(result.error) ?? t("busTransport.unavailable")
-      : actionError(result, "busConnection.error.connect", t));
+      : !result.ok && result.reason === "failed" && transport === "ip" && tunnel === "tcp"
+        ? tcpStartErrorMessage(result.error, t)
+        : actionError(result, "busConnection.error.connect", t));
   }
 
   async function disconnect() {
@@ -157,8 +162,10 @@ export default function BusConnectionStatus({ onOpenBusSettings }: { onOpenBusSe
 
   const listed = discovery.interfaces.map((entry) => entry.controlEndpoint);
   const savedOnly = selected !== "" && !listed.includes(selected);
-  const selectedLabel = transport === "serial" ? serialLabel(serial) : selected === "" ? t("busConnection.noneSelected") : selected;
-  const boundLabel = bound?.serial ? serialLabel(bound.serial) : bound?.gateway;
+  const selectedLabel = transport === "serial" ? serialLabel(serial)
+    : selected === "" ? t("busConnection.noneSelected") : gatewayWithTransport(selected, tunnel);
+  const boundLabel = bound?.serial ? serialLabel(bound.serial)
+    : bound?.gateway === undefined ? undefined : gatewayWithTransport(bound.gateway, bound.transport);
 
   return (
     <div

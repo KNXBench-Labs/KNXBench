@@ -56,6 +56,7 @@ fn tiny_project() -> Project {
             unfiltered: false,
             range: None,
             declared_dpt: Default::default(),
+            description: None,
         });
 
     project
@@ -202,12 +203,9 @@ fn ga_import_column_profiles_apply_and_reexport_without_implicit_deletion() {
 #[test]
 fn ga_import_column_profile_refusals_preserve_store_bytes_and_model() {
     let cases = [
-        ("Pump;1/1/1;;;note;;Auto", "Description"),
-        ("Pump;1/1/1;;; ;;Auto", "Description"),
-        ("Pump;1/1/1;;;;;On", "Security"),
-        ("Pump;1/1/2;;;;DPST-1-1;Auto", "read-only"),
+        ("Pump;1/1/2;;;note;;On", "Security"),
+        ("Pump;1/1/2;;;;DPST-1-1 DPST-1-2;Auto", "DatapointType"),
         ("Workshop;1/-/-;false;;;;Auto", "range"),
-        ("Workshop;1/-/-;;;hidden;;Auto", "Description"),
         ("Pump;32/0/1;;;;;Auto", "32"),
     ];
     for (row, diagnostic) in cases {
@@ -418,9 +416,9 @@ fn ga_export_writes_the_header_and_one_data_row() {
     let lines: Vec<&str> = text.trim_end_matches("\r\n").split("\r\n").collect();
     assert_eq!(
         lines[0],
-        "Address,Action,NewAddress,Name,Central,Unfiltered,DatapointType (read-only),MainGroup (read-only),MiddleGroup (read-only)"
+        "Address,Action,NewAddress,Name,Central,Unfiltered,Description,DatapointType (read-only),MainGroup (read-only),MiddleGroup (read-only)"
     );
-    assert_eq!(lines[1], "1/1/1,upsert,,Living Room Light,false,false,,,");
+    assert_eq!(lines[1], "1/1/1,upsert,,Living Room Light,false,false,,,,");
     assert_eq!(lines.len(), 2, "{lines:?}");
 }
 
@@ -703,4 +701,239 @@ fn ga_import_refuses_non_utf8_with_its_offset_and_reads_tab_name_address_files()
         after.contains(&("1/1/4".to_string(), "K\u{fc}che".to_string())),
         "{after:?}"
     );
+}
+
+/// Every group address in the store as `(address, name, description, declared type)`.
+fn store_details(path: &Path) -> Vec<(String, String, Option<String>, Option<String>)> {
+    let conn = knx_store::open_and_migrate(path).expect("open/migrate store");
+    let project = knx_store::load_project(&conn).expect("load project");
+    project.installations[0]
+        .group_addresses
+        .iter()
+        .map(|ga| {
+            (
+                ga.address.format(project.info.group_address_style),
+                ga.name.clone(),
+                ga.description.clone(),
+                ga.declared_dpt.value().map(|r| r.value.to_string()),
+            )
+        })
+        .collect()
+}
+
+/// Synthetic ETS-like `CSV` 1/1 export with header in Windows-1252: quoted
+/// cells, `;`, CRLF, single-byte umlauts, a range row and `Security` Auto.
+fn ets_like_windows_1252() -> Vec<u8> {
+    let mut bytes = Vec::new();
+    for line in [
+        &b"\"Group name\";\"Address\";\"Central\";\"Unfiltered\";\"Description\";\"DatapointType\";\"Security\""[..],
+        b"\"Licht\";\"1/1/-\";\"\";\"\";\"\";\"\";\"Auto\"",
+        b"\"Living Room Light\";\"1/1/1\";\"\";\"\";\"Beschreibung mit; Semikolon und \"\"Anf\xfchrung\"\"\";\"\";\"Auto\"",
+        b"\"K\xfcche \xc4\xd6\xdc\xdf\";\"1/1/2\";\"\";\"\";\"\";\"DPST-1-1\";\"Auto\"",
+    ] {
+        bytes.extend_from_slice(line);
+        bytes.extend_from_slice(b"\r\n");
+    }
+    bytes
+}
+
+#[test]
+fn ga_import_windows_1252_applies_umlauts_descriptions_and_new_types_only_when_chosen() {
+    let dir = tempfile::tempdir().unwrap();
+    let store = dir.path().join("project.knxdb");
+    let input = dir.path().join("ets.csv");
+    write_store(&store);
+    std::fs::write(&input, ets_like_windows_1252()).unwrap();
+    let before = std::fs::read(&store).unwrap();
+    let path = |p: &Path| p.to_str().unwrap().to_string();
+
+    // Without a choice the default UTF-8 refuses and names the alternative.
+    let refused = run_cli(&["ga-import", &path(&store), &path(&input)]);
+    let stderr = String::from_utf8(refused.stderr).unwrap();
+    assert_eq!(refused.status.code(), Some(1), "{stderr}");
+    assert!(stderr.contains("not UTF-8 text"), "{stderr}");
+    assert!(stderr.contains("Windows-1252"), "{stderr}");
+    assert_eq!(std::fs::read(&store).unwrap(), before);
+
+    let dry = run_cli(&[
+        "ga-import",
+        &path(&store),
+        &path(&input),
+        "--encoding",
+        "windows-1252",
+        "--dry-run",
+    ]);
+    let dry_stdout = String::from_utf8(dry.stdout).unwrap();
+    assert_eq!(dry.status.code(), Some(0), "{dry_stdout}");
+    assert_eq!(std::fs::read(&store).unwrap(), before, "dry run wrote");
+
+    let real = run_cli(&[
+        "ga-import",
+        &path(&store),
+        &path(&input),
+        "--encoding",
+        "Windows-1252",
+    ]);
+    let real_stdout = String::from_utf8(real.stdout).unwrap();
+    assert_eq!(real.status.code(), Some(0), "{real_stdout}");
+    let (dry_body, dry_status) = split_trailing_status_line(&dry_stdout);
+    let (real_body, real_status) = split_trailing_status_line(&real_stdout);
+    assert_eq!(dry_body, real_body, "dry-run report must be byte-identical");
+    assert_eq!(dry_status, "store written: no (dry run)");
+    assert_eq!(real_status, "store written: yes");
+    assert!(real_body.contains("1 created"), "{real_body}");
+    assert!(real_body.contains("1 updated"), "{real_body}");
+
+    assert_eq!(
+        store_details(&store),
+        vec![
+            (
+                "1/1/1".to_string(),
+                "Living Room Light".to_string(),
+                Some("Beschreibung mit; Semikolon und \"Anf\u{fc}hrung\"".to_string()),
+                None,
+            ),
+            (
+                "1/1/2".to_string(),
+                "K\u{fc}che \u{c4}\u{d6}\u{dc}\u{df}".to_string(),
+                None,
+                Some("DPST-1-1".to_string()),
+            ),
+        ]
+    );
+
+    // Re-importing the same file changes nothing: descriptions and the
+    // now-declared type compare equal.
+    let again = run_cli(&[
+        "ga-import",
+        &path(&store),
+        &path(&input),
+        "--encoding",
+        "windows-1252",
+    ]);
+    let again_stdout = String::from_utf8(again.stdout).unwrap();
+    assert_eq!(again.status.code(), Some(0), "{again_stdout}");
+    assert!(
+        again_stdout.ends_with("store written: no (nothing to do)\n"),
+        "{again_stdout}"
+    );
+}
+
+#[test]
+fn ga_import_refuses_an_unknown_encoding_and_an_undefined_windows_1252_byte() {
+    let dir = tempfile::tempdir().unwrap();
+    let store = dir.path().join("project.knxdb");
+    let input = dir.path().join("in.csv");
+    write_store(&store);
+    let before = std::fs::read(&store).unwrap();
+    std::fs::write(&input, b"Address,Name\n1/1/2,Bad \x81 byte\n").unwrap();
+    for (encoding, needle) in [
+        ("latin1", "unknown --encoding"),
+        ("windows-1252", "0x81 at offset"),
+    ] {
+        let out = run_cli(&[
+            "ga-import",
+            store.to_str().unwrap(),
+            input.to_str().unwrap(),
+            "--encoding",
+            encoding,
+        ]);
+        let stderr = String::from_utf8(out.stderr).unwrap();
+        assert_eq!(out.status.code(), Some(1), "{stderr}");
+        assert!(stderr.contains(needle), "{stderr}");
+        assert_eq!(std::fs::read(&store).unwrap(), before);
+    }
+}
+
+#[test]
+fn ga_import_confirmation_token_is_bound_to_the_chosen_encoding() {
+    let dir = tempfile::tempdir().unwrap();
+    let store = dir.path().join("project.knxdb");
+    let input = dir.path().join("readdress.csv");
+    write_store(&store);
+    // ASCII only: the same bytes decode identically in both encodings, so
+    // only the binding can tell the two previews apart.
+    std::fs::write(
+        &input,
+        "Address,Action,NewAddress,Name\n1/1/1,readdress,1/1/3,Living Room Light\n",
+    )
+    .unwrap();
+    let token_for = |encoding: &str| {
+        let out = run_cli(&[
+            "ga-import",
+            store.to_str().unwrap(),
+            input.to_str().unwrap(),
+            "--encoding",
+            encoding,
+        ]);
+        let stdout = String::from_utf8(out.stdout).unwrap();
+        stdout
+            .lines()
+            .find_map(|line| line.strip_prefix("confirmation token: "))
+            .expect("preview token")
+            .to_string()
+    };
+    let utf8 = token_for("utf-8");
+    let cp1252 = token_for("windows-1252");
+    assert_ne!(utf8, cp1252);
+    let before = std::fs::read(&store).unwrap();
+
+    let crossed = run_cli(&[
+        "ga-import",
+        store.to_str().unwrap(),
+        input.to_str().unwrap(),
+        "--confirm",
+        &cp1252,
+    ]);
+    let stdout = String::from_utf8(crossed.stdout).unwrap();
+    assert_eq!(crossed.status.code(), Some(1), "{stdout}");
+    assert!(
+        stdout.contains("store written: no (stale confirmation)"),
+        "{stdout}"
+    );
+    assert_eq!(std::fs::read(&store).unwrap(), before);
+
+    let confirmed = run_cli(&[
+        "ga-import",
+        store.to_str().unwrap(),
+        input.to_str().unwrap(),
+        "--encoding",
+        "windows-1252",
+        "--confirm",
+        &cp1252,
+    ]);
+    assert_eq!(
+        confirmed.status.code(),
+        Some(0),
+        "{}",
+        String::from_utf8_lossy(&confirmed.stderr)
+    );
+    assert_eq!(
+        store_addresses(&store),
+        vec![("1/1/3".to_string(), "Living Room Light".to_string())]
+    );
+}
+
+#[test]
+fn ga_import_mismatched_type_on_an_existing_address_stays_read_only() {
+    let dir = tempfile::tempdir().unwrap();
+    let store = dir.path().join("project.knxdb");
+    let input = dir.path().join("dpt.csv");
+    write_store(&store);
+    let before = std::fs::read(&store).unwrap();
+    std::fs::write(
+        &input,
+        "Group name;Address;Central;Unfiltered;Description;DatapointType;Security\n\
+         Living Room Light;1/1/1;;;;DPST-1-1;Auto\n",
+    )
+    .unwrap();
+    let out = run_cli(&[
+        "ga-import",
+        store.to_str().unwrap(),
+        input.to_str().unwrap(),
+    ]);
+    let stdout = String::from_utf8(out.stdout).unwrap();
+    assert_eq!(out.status.code(), Some(2), "{stdout}");
+    assert!(stdout.contains("read-only"), "{stdout}");
+    assert_eq!(std::fs::read(&store).unwrap(), before);
 }

@@ -120,6 +120,7 @@ fn ga(id: u32, raw: u16, name: &str) -> GroupAddressEntry {
         unfiltered: false,
         range: Some(GroupRangeId(1)),
         declared_dpt: Default::default(),
+        description: None,
     }
 }
 

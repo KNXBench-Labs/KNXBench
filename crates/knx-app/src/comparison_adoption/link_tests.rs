@@ -64,6 +64,7 @@ fn add_group_address(project: &mut Project, raw: u16) -> GroupAddressId {
             unfiltered: false,
             range: None,
             declared_dpt: Default::default(),
+            description: None,
         });
     id
 }

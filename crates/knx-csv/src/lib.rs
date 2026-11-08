@@ -4,12 +4,14 @@
 //! accepts eight fixed column profiles; unsupported metadata is diagnosed and
 //! never granted mutation authority. See `docs/contracts/group-address-csv-profiles.md`.
 //! Neither path claims general interoperability with another application.
+//! Import bytes are decoded in the encoding the user chose ([`CsvEncoding`]).
 //!
 //! `knx-csv` is pure: text in, typed rows/plans out, and project data in,
 //! text out. It knows nothing of the filesystem, SQLite, HTTP, or
 //! `AppState` — orchestration lives in the callers (`apps/knx-server`,
 //! `apps/knx-cli`).
 
+mod encoding;
 mod plan;
 mod profile;
 #[cfg(test)]
@@ -19,6 +21,7 @@ mod read;
 mod testutil;
 mod write;
 
+pub use encoding::{decode_csv_bytes, CsvEncoding};
 pub use plan::{
     plan_import, plan_import_into, CsvAffectedLink, CsvDestructiveAction, CsvDestructiveChange,
     CsvImportReport, ImportPlan,

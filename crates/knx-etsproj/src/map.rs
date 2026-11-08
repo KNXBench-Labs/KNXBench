@@ -1594,6 +1594,7 @@ fn map_group_range(
                 &crate::xpath::group_address(&address.id),
                 problems,
             ),
+            description: address.description.clone(),
         });
         retained.extend(keyed(
             &address.other,

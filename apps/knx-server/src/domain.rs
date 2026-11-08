@@ -2089,12 +2089,35 @@ pub fn import_group_addresses_csv_into_impl(
     confirmation_token: Option<&str>,
     installation: Option<u8>,
 ) -> Result<CsvImportOutcome, String> {
+    import_group_addresses_csv_encoded_impl(
+        state,
+        path,
+        confirmation_token,
+        installation,
+        knx_csv::CsvEncoding::Utf8,
+    )
+}
+
+/// [`import_group_addresses_csv_into_impl`] decoding the file in the
+/// encoding the user chose (KL-038b); nothing is guessed. A destructive
+/// preview's confirmation token binds the raw bytes and the encoding.
+pub fn import_group_addresses_csv_encoded_impl(
+    state: &AppState,
+    path: &Path,
+    confirmation_token: Option<&str>,
+    installation: Option<u8>,
+    encoding: knx_csv::CsvEncoding,
+) -> Result<CsvImportOutcome, String> {
     let installation = installation.map(knx_core::InstallationId);
     let result = (|| -> Result<CsvImportOutcome, String> {
         let bytes = std::fs::read(path).map_err(|e| e.to_string())?;
-        let text = knx_csv::decode_csv_text(&bytes)?;
-        let planned = plan_csv_import(state, text, installation)?;
-        apply_planned_csv_import(state, text, planned, confirmation_token)
+        let text = knx_csv::decode_csv_bytes(&bytes, encoding)?;
+        let planned = plan_csv_import(state, &text, installation)?;
+        let source = CsvSource {
+            bytes: &bytes,
+            encoding,
+        };
+        apply_planned_csv_import(state, source, planned, confirmation_token)
     })();
 
     log_outcome(
@@ -2122,6 +2145,14 @@ pub fn import_group_addresses_csv_into_impl(
     );
 
     result
+}
+
+/// The raw import bytes and the encoding they were decoded with, both bound
+/// into a destructive preview's confirmation token.
+#[derive(Clone, Copy)]
+struct CsvSource<'a> {
+    bytes: &'a [u8],
+    encoding: knx_csv::CsvEncoding,
 }
 
 /// A CSV import plan, the project revision it was computed against and the
@@ -2156,7 +2187,7 @@ fn plan_csv_import(
 /// instead of applying a stale view. The user simply imports again.
 fn apply_planned_csv_import(
     state: &AppState,
-    text: &str,
+    source: CsvSource<'_>,
     planned: PlannedCsvImport,
     confirmation_token: Option<&str>,
 ) -> Result<CsvImportOutcome, String> {
@@ -2201,7 +2232,10 @@ fn apply_planned_csv_import(
             None => hasher.update([0u8]),
             Some(id) => hasher.update([1u8, id.0]),
         }
-        hasher.update(text.as_bytes());
+        // A preview decoded in one encoding must not confirm the other.
+        hasher.update(source.encoding.label().as_bytes());
+        hasher.update([0u8]);
+        hasher.update(source.bytes);
         format!("{:x}", hasher.finalize())
     });
     if destructive && confirmation_token != expected_token.as_deref() {
@@ -3826,6 +3860,7 @@ pub fn create_group_address_in_impl(
                 unfiltered: false,
                 range: range_id.map(knx_core::GroupRangeId),
                 declared_dpt: Default::default(),
+                description: None,
             },
             installation: installation.map(knx_core::InstallationId),
         }
@@ -7782,7 +7817,11 @@ mod tests {
         create_group_address_impl(&state, "Interleaved".into(), "1/1/2".into(), None).unwrap();
         let after_edit = state.project.lock().unwrap().clone().unwrap();
 
-        let err = match apply_planned_csv_import(&state, text, planned, None) {
+        let source = CsvSource {
+            bytes: text.as_bytes(),
+            encoding: knx_csv::CsvEncoding::Utf8,
+        };
+        let err = match apply_planned_csv_import(&state, source, planned, None) {
             Ok(_) => panic!("a stale plan must be refused"),
             Err(err) => err,
         };
@@ -7790,7 +7829,7 @@ mod tests {
         assert_eq!(state.project.lock().unwrap().as_ref(), Some(&after_edit));
 
         let replanned = plan_csv_import(&state, text, None).unwrap();
-        let outcome = apply_planned_csv_import(&state, text, replanned, None).unwrap();
+        let outcome = apply_planned_csv_import(&state, source, replanned, None).unwrap();
         assert!(outcome.applied);
         let names: Vec<String> = state
             .project

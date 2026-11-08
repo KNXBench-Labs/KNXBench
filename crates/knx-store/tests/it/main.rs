@@ -3,6 +3,7 @@
 mod command_persistence;
 mod completion_vocabulary;
 mod functions;
+mod group_address_description;
 mod history_compare_and_save;
 mod history_reuse;
 mod instruction_predecessor;

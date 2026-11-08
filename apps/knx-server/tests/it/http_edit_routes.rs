@@ -1998,6 +1998,7 @@ async fn linking_then_unlinking_a_com_object_to_a_group_address() {
             unfiltered: false,
             range: None,
             declared_dpt: Default::default(),
+            description: None,
         }],
         parameters: vec![],
     });
@@ -2285,6 +2286,7 @@ async fn group_address_style_restyles_a_project_and_round_trips_through_undo() {
             unfiltered: false,
             range: None,
             declared_dpt: Default::default(),
+            description: None,
         }],
         parameters: vec![],
     });

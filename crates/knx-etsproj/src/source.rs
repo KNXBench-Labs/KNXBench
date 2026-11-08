@@ -246,6 +246,9 @@ pub struct SourceGroupAddress {
     pub unfiltered: Option<String>,
     /// `@DatapointType`, schema ≥21 only (ADR-0078).
     pub datapoint_type: Option<String>,
+    /// `@Description`, schema ≥20 (the v21 parser) only (ADR-0164). Schema 11
+    /// does not list it, so there it stays an unknown retained attribute.
+    pub description: Option<String>,
     pub other: Vec<RetainedAttribute>,
 }
 

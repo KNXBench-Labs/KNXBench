@@ -223,6 +223,7 @@ fn target_project() -> Project {
             unfiltered: false,
             range: Some(GroupRangeId(1)),
             declared_dpt: Override::Absent,
+            description: None,
         }],
         parameters: vec![],
     });

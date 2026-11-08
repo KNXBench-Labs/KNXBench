@@ -305,6 +305,13 @@ pub enum Command {
         central: bool,
         unfiltered: bool,
     },
+    /// Replaces an existing group address's description (ADR-0164); `None`
+    /// removes it. Any text is accepted byte-exact, as for names. The inverse
+    /// carries the previous description.
+    SetGroupAddressDescription {
+        id: GroupAddressId,
+        description: Option<String>,
+    },
     /// Changes an existing group address's numeric address while preserving
     /// its stable id, and therefore every communication-object link that
     /// targets that id. `range` is selected explicitly by the caller for the
@@ -3611,6 +3618,20 @@ impl Command {
                     unfiltered: previous_unfiltered,
                 })
             }
+            Command::SetGroupAddressDescription { id, description } => {
+                let id = *id;
+                let index = require_unique_group_address(project, id)?;
+                let entry = project.installations[index]
+                    .group_addresses
+                    .iter_mut()
+                    .find(|e| e.id == id)
+                    .ok_or(CommandError::GroupAddressNotFound(id))?;
+                let previous = std::mem::replace(&mut entry.description, description.clone());
+                Ok(Command::SetGroupAddressDescription {
+                    id,
+                    description: previous,
+                })
+            }
             Command::ReaddressGroupAddress { id, address, range } => {
                 let id = *id;
                 let address = *address;
@@ -5031,6 +5052,7 @@ mod tests {
             unfiltered: false,
             range: None,
             declared_dpt: Default::default(),
+            description: None,
         };
         stack
             .do_command(
@@ -5109,6 +5131,7 @@ mod tests {
                 unfiltered: false,
                 range: None,
                 declared_dpt: Default::default(),
+                description: None,
             });
         let mut stack = CommandStack::new();
         let result = stack.do_command(
@@ -5123,6 +5146,7 @@ mod tests {
                     unfiltered: false,
                     range: None,
                     declared_dpt: Default::default(),
+                    description: None,
                 },
                 installation: None,
             },
@@ -5151,6 +5175,7 @@ mod tests {
                 unfiltered: false,
                 range: None,
                 declared_dpt: Default::default(),
+                description: None,
             });
         project.devices.insert_com_object(ComObjectInstance {
             priority_edit: None,
@@ -6904,6 +6929,7 @@ mod tests {
                 unfiltered: false,
                 range: None,
                 declared_dpt: Default::default(),
+                description: None,
             });
         let mut com = test_com_object_instance(ComObjectInstanceId(1), DeviceId(1));
         com.links.push(GroupLink {
@@ -7398,6 +7424,7 @@ mod tests {
                 unfiltered: false,
                 range: Some(GroupRangeId(1)),
                 declared_dpt: Default::default(),
+                description: None,
             });
         let mut stack = CommandStack::new();
         let result = stack.do_command(
@@ -7688,6 +7715,7 @@ mod tests {
                 unfiltered: false,
                 range: Some(GroupRangeId(1)),
                 declared_dpt: Default::default(),
+                description: None,
             });
         let mut stack = CommandStack::new();
         stack
@@ -7724,6 +7752,7 @@ mod tests {
                 unfiltered: true,
                 range: None,
                 declared_dpt: Default::default(),
+                description: None,
             });
         let inverse = Command::UpdateGroupAddress {
             id: GroupAddressId(1),
@@ -7742,6 +7771,74 @@ mod tests {
                 unfiltered: true,
             }
         );
+    }
+
+    #[test]
+    fn set_group_address_description_undoes_and_redoes_exactly() {
+        let mut project = test_project_with_one_device(None);
+        project.installations[0]
+            .group_addresses
+            .push(GroupAddressEntry {
+                id: GroupAddressId(1),
+                source: source(),
+                name: "Name".into(),
+                address: GroupAddress::from_raw(1),
+                central: false,
+                unfiltered: false,
+                range: None,
+                declared_dpt: Default::default(),
+                description: None,
+            });
+        let before = project.clone();
+        let text = "Beschreibung mit; Semikolon und \"Anf\u{fc}hrung\"";
+        let mut stack = CommandStack::new();
+        stack
+            .do_command(
+                &mut project,
+                Command::SetGroupAddressDescription {
+                    id: GroupAddressId(1),
+                    description: Some(text.into()),
+                },
+            )
+            .unwrap();
+        let entry = &project.installations[0].group_addresses[0];
+        assert_eq!(entry.description.as_deref(), Some(text));
+        assert_eq!(entry.name, "Name", "only the description changes");
+        let after = project.clone();
+        stack.undo(&mut project).unwrap();
+        assert_eq!(project, before);
+        stack.redo(&mut project).unwrap();
+        assert_eq!(project, after);
+        let inverse = Command::SetGroupAddressDescription {
+            id: GroupAddressId(1),
+            description: None,
+        }
+        .apply(&mut project)
+        .unwrap();
+        assert_eq!(
+            inverse,
+            Command::SetGroupAddressDescription {
+                id: GroupAddressId(1),
+                description: Some(text.into()),
+            }
+        );
+        assert_eq!(
+            project.installations[0].group_addresses[0].description,
+            None
+        );
+    }
+
+    #[test]
+    fn set_description_on_an_unknown_group_address_is_rejected() {
+        let mut project = test_project_with_one_device(None);
+        let before = project.clone();
+        let result = Command::SetGroupAddressDescription {
+            id: GroupAddressId(99),
+            description: Some("x".into()),
+        }
+        .apply(&mut project);
+        assert!(result.is_err());
+        assert_eq!(project, before);
     }
 
     #[test]
@@ -7777,6 +7874,7 @@ mod tests {
                 unfiltered: false,
                 range: None,
                 declared_dpt: Default::default(),
+                description: None,
             });
         let mut stack = CommandStack::new();
         stack
@@ -7824,6 +7922,7 @@ mod tests {
                     unfiltered: false,
                     range: Some(GroupRangeId(1)),
                     declared_dpt: Default::default(),
+                    description: None,
                 },
                 installation: None,
             },
@@ -7856,6 +7955,7 @@ mod tests {
                         unfiltered: false,
                         range: Some(GroupRangeId(1)),
                         declared_dpt: Default::default(),
+                        description: None,
                     },
                     installation: None,
                 },
@@ -7880,6 +7980,7 @@ mod tests {
                     unfiltered: false,
                     range: Some(GroupRangeId(99)),
                     declared_dpt: Default::default(),
+                    description: None,
                 },
                 installation: None,
             },
@@ -7925,6 +8026,7 @@ mod tests {
             unfiltered: false,
             range: None,
             declared_dpt: Default::default(),
+            description: None,
         });
         p
     }
@@ -9056,6 +9158,7 @@ mod tests {
             unfiltered: false,
             range: None,
             declared_dpt: Default::default(),
+            description: None,
         }
     }
 
@@ -9499,6 +9602,7 @@ mod id_integrity_tests {
             unfiltered: false,
             range: None,
             declared_dpt: Default::default(),
+            description: None,
         }
     }
 

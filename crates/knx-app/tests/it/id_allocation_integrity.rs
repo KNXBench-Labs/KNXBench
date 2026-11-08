@@ -55,6 +55,7 @@ fn group_address(id: GroupAddressId, raw: u16, name: &str) -> GroupAddressEntry 
         unfiltered: false,
         range: None,
         declared_dpt: Default::default(),
+        description: None,
     }
 }
 

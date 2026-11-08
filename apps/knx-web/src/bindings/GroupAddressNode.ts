@@ -37,7 +37,13 @@ dpts: Array<string>,
  * on the wire so that hand-written trees without it stay valid, and a
  * client shows no detail rather than inventing one when it is absent.
  */
-dpt_detail?: GroupAddressDptDetail,
+dpt_detail?: GroupAddressDptDetail, 
+/**
+ * The address's description (ADR-0164), byte-exact and read-only here.
+ * Omitted when none is known; an empty string is a description that
+ * was written empty.
+ */
+description?: string, 
 /**
  * Every communication object linked to this address, in
  * `ComObjectInstanceId` order — the reverse of `ComObjectNode::links`.

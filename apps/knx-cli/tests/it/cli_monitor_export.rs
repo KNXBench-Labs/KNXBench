@@ -48,6 +48,7 @@ fn project() -> Project {
             unfiltered: false,
             range: None,
             declared_dpt: Default::default(),
+            description: None,
         }],
     });
     project

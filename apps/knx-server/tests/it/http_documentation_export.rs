@@ -70,6 +70,7 @@ fn state_with_one_group_address() -> knx_server::AppState {
             unfiltered: false,
             range: Some(GroupRangeId(1)),
             declared_dpt: Default::default(),
+            description: None,
         });
 
     let state = knx_server::AppState::default();

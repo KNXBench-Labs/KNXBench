@@ -91,6 +91,7 @@ fn project_in_style(style: GroupAddressStyle, ga: &str) -> Project {
             unfiltered: false,
             range: None,
             declared_dpt: Default::default(),
+            description: None,
         }],
         parameters: vec![],
     });

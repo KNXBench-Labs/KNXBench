@@ -428,6 +428,7 @@ pub(super) fn groups(
                     && existing.central == ga.central
                     && existing.unfiltered == ga.unfiltered
                     && existing.declared_dpt == ga.declared_dpt
+                    && existing.description == ga.description
                     && existing.range == range =>
             {
                 (existing.id, true)

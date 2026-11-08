@@ -3,12 +3,15 @@
 use knx_core::{DptRef, GroupAddress, GroupAddressStyle};
 
 use crate::read::{
-    read_bool_column, CsvAction, CsvProblem, CsvRow, IgnoredColumn, IgnoredColumnReason, Severity,
+    read_bool_column, read_description, CsvAction, CsvProblem, CsvRow, IgnoredColumn,
+    IgnoredColumnReason, Severity,
 };
 
 const SECURITY_AUTO_WARNING: &str = "Security Auto is not imported; project security is unchanged";
 const RANGE_WARNING: &str =
     "group range name and address are not imported; this import only creates and updates addresses";
+const RANGE_DESCRIPTION_WARNING: &str =
+    "group range description is not imported; only group-address descriptions are applied";
 
 /// How a profile spells the row's name.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -211,22 +214,21 @@ pub(crate) fn detect(header: &csv::StringRecord, style: GroupAddressStyle) -> De
     }
 }
 
-/// The columns a profile reads, validates, and never applies.
+/// The columns a profile reads, validates, and never applies: only `Security`.
+/// `Description` is applied to addresses, and `DatapointType` to addresses the
+/// import creates, so neither is reported as ignored.
 pub(crate) fn ignored_columns(header: &csv::StringRecord, profile: Profile) -> Vec<IgnoredColumn> {
     let Some(metadata) = profile.metadata() else {
         return Vec::new();
     };
-    [
-        metadata.description(),
-        metadata.datapoint_type(),
-        metadata.security(),
-    ]
-    .into_iter()
-    .map(|index| IgnoredColumn {
-        name: header.get(index).unwrap_or("").trim().to_string(),
+    vec![IgnoredColumn {
+        name: header
+            .get(metadata.security())
+            .unwrap_or("")
+            .trim()
+            .to_string(),
         reason: IgnoredColumnReason::ReadOnly,
-    })
-    .collect()
+    }]
 }
 
 /// What an address cell group denotes.
@@ -299,6 +301,9 @@ pub(crate) fn parse_record(
         Some(metadata) => parse_metadata(metadata, record, line, is_range, &mut problems, &mut ok),
         None => (None, None, None),
     };
+    let description = profile
+        .metadata()
+        .and_then(|metadata| read_description(record, Some(metadata.description())));
 
     match (ok, target) {
         (true, Some(Target::Leaf(address))) => {
@@ -311,8 +316,10 @@ pub(crate) fn parse_record(
                 central,
                 unfiltered,
                 datapoint_type,
+                datapoint_type_on_create: profile.metadata().is_some(),
                 main_group: None,
                 middle_group: None,
+                description,
             };
             (Some(row), problems)
         }
@@ -322,14 +329,21 @@ pub(crate) fn parse_record(
                 severity: Severity::Warning,
                 detail: RANGE_WARNING.to_string(),
             });
+            if description.is_some() {
+                problems.push(CsvProblem {
+                    row: Some(line),
+                    severity: Severity::Warning,
+                    detail: RANGE_DESCRIPTION_WARNING.to_string(),
+                });
+            }
             (None, problems)
         }
         (false, _) => (None, problems),
     }
 }
 
-/// Validates the five metadata columns of a full shape; returns `Central`, `Unfiltered` and
-/// the normalized `DatapointType`.
+/// Validates the metadata columns of a full shape except `Description`, which any text
+/// satisfies; returns `Central`, `Unfiltered` and the normalized `DatapointType`.
 fn parse_metadata(
     metadata: Metadata,
     record: &csv::StringRecord,
@@ -383,15 +397,6 @@ fn parse_metadata(
             ),
         )
     };
-
-    if !cell(metadata.description()).is_empty() {
-        fail(
-            problems,
-            ok,
-            line,
-            "column \"Description\" is not supported; leave it empty".to_string(),
-        );
-    }
 
     let dpt_raw = cell(metadata.datapoint_type()).trim();
     let datapoint_type = if dpt_raw.is_empty() {

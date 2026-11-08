@@ -8,6 +8,7 @@ mod download_state;
 mod functions;
 mod golden_reference_project;
 mod group_address_declared_dpt;
+mod group_address_description;
 mod import_integrity;
 mod instructions;
 mod links_direction;

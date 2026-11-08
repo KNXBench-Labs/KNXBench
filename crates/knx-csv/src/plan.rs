@@ -7,8 +7,9 @@
 use std::collections::HashMap;
 
 use knx_core::{
-    ComObjectInstanceId, Command, Direction, GroupAddress, GroupAddressEntry, GroupAddressId,
-    GroupRange, GroupRangeId, InstallationId, Project, SourceRef,
+    ComObjectInstanceId, Command, Direction, DptRef, GroupAddress, GroupAddressEntry,
+    GroupAddressId, GroupRange, GroupRangeId, InstallationId, Layer, Override, Project, Resolved,
+    SourceRef,
 };
 
 use crate::read::{CsvAction, CsvProblem, CsvRow, IgnoredColumn, ParsedCsv, Severity};
@@ -341,17 +342,18 @@ fn validate_read_only_cells(
         .and_then(|entry| derive_dpt(project, entry.id).0)
         .map(|dpt| dpt.to_string())
         .unwrap_or_default();
+    // A profile row that creates an address applies its type instead
+    // (`plan_create`); only existing addresses are compared read-only.
+    let dpt_cell = if existing.is_none() && row.datapoint_type_on_create {
+        None
+    } else {
+        row.datapoint_type.as_deref()
+    };
     let (expected_main, expected_middle) = installation
         .map(|installation| containing_range_names(installation, row.address))
         .unwrap_or_default();
 
-    validate_read_only_cell(
-        row,
-        "DatapointType",
-        row.datapoint_type.as_deref(),
-        &expected_dpt,
-        problems,
-    );
+    validate_read_only_cell(row, "DatapointType", dpt_cell, &expected_dpt, problems);
     validate_read_only_cell(
         row,
         "MainGroup",
@@ -438,7 +440,8 @@ fn plan_create(
         central: row.central.unwrap_or(false),
         unfiltered: row.unfiltered.unwrap_or(false),
         range,
-        declared_dpt: Default::default(),
+        declared_dpt: declared_dpt_on_create(row),
+        description: row.description.clone(),
     };
     commands.push(Command::CreateGroupAddress {
         entry,
@@ -446,26 +449,54 @@ fn plan_create(
     });
 }
 
+/// The declared type a profile row gives the address it creates: its
+/// normalized `DatapointType` as the user's own value, or `Absent` when the
+/// cell is blank or the column cannot apply (native read-only column).
+fn declared_dpt_on_create(row: &CsvRow) -> Override<DptRef> {
+    if !row.datapoint_type_on_create {
+        return Override::Absent;
+    }
+    match row.datapoint_type.as_deref().map(DptRef::parse) {
+        Some(Ok(value)) => Override::Value(Resolved {
+            value,
+            layer: Layer::UserEdit,
+        }),
+        _ => Override::Absent,
+    }
+}
+
 /// Compares `row` against `existing` and, if anything applied differs,
-/// plans a `Command::UpdateGroupAddress`. Returns whether it did (`true` =
-/// updated, `false` = unchanged). An empty `central`/`unfiltered` cell means
-/// "leave unchanged" here (design §3), unlike `plan_create`'s "false".
+/// plans a `Command::UpdateGroupAddress` and/or a
+/// `Command::SetGroupAddressDescription`. Returns whether it did (`true` =
+/// updated, `false` = unchanged). An empty `central`/`unfiltered`/
+/// `Description` cell means "leave unchanged" here (design §3), unlike
+/// `plan_create`'s "false"/no description.
 fn plan_update(row: &CsvRow, existing: &GroupAddressEntry, commands: &mut Vec<Command>) -> bool {
     let central = row.central.unwrap_or(existing.central);
     let unfiltered = row.unfiltered.unwrap_or(existing.unfiltered);
+    let description = row
+        .description
+        .as_ref()
+        .filter(|text| existing.description.as_ref() != Some(*text));
 
-    if existing.name == row.name && existing.central == central && existing.unfiltered == unfiltered
-    {
-        return false;
+    let fields_changed = existing.name != row.name
+        || existing.central != central
+        || existing.unfiltered != unfiltered;
+    if fields_changed {
+        commands.push(Command::UpdateGroupAddress {
+            id: existing.id,
+            name: row.name.clone(),
+            central,
+            unfiltered,
+        });
     }
-
-    commands.push(Command::UpdateGroupAddress {
-        id: existing.id,
-        name: row.name.clone(),
-        central,
-        unfiltered,
-    });
-    true
+    if let Some(text) = description {
+        commands.push(Command::SetGroupAddressDescription {
+            id: existing.id,
+            description: Some(text.clone()),
+        });
+    }
+    fields_changed || description.is_some()
 }
 
 /// The `GroupRange` with the narrowest `start..=end` that contains

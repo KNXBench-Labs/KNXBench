@@ -50,7 +50,7 @@ const USAGE: &str = "usage: knx import <file.knxproj> [--store <path.knxdb> [--r
      \x20                   [--prefix <literal>] [--suffix <literal>] [--confirm <token>]\n\
      \x20     knx ga-export <store.knxdb> <out.csv> [--installation <id>]\n\
      \x20     knx ga-import <store.knxdb> <in.csv> [--dry-run] [--confirm <token>]\n\
-     \x20                   [--installation <id>]\n\
+     \x20                   [--installation <id>] [--encoding utf-8|windows-1252]\n\
      \x20     knx monitor-export <project.knxdb> <new.zip> [--installation <id>]\n\
      \x20                   [--language <code>] [--product-db <path>] [--no-product-db]\n\
      \x20         (offline reduced monitoring projection, not a backup; never overwrites)\n\
@@ -1294,6 +1294,8 @@ struct GaImportArgs {
     confirmation_token: Option<String>,
     /// MODEL-01: `None` = the first installation.
     installation: Option<knx_core::InstallationId>,
+    /// The file's encoding as the user stated it; UTF-8 unless `--encoding`.
+    encoding: knx_csv::CsvEncoding,
 }
 
 fn parse_ga_import_args(args: &[String]) -> Result<GaImportArgs, String> {
@@ -1302,10 +1304,18 @@ fn parse_ga_import_args(args: &[String]) -> Result<GaImportArgs, String> {
     let mut dry_run = false;
     let mut confirmation_token = None;
     let mut installation = None;
+    let mut encoding = knx_csv::CsvEncoding::default();
     let mut i = 0;
     while i < args.len() {
         match args[i].as_str() {
             "--dry-run" => dry_run = true,
+            "--encoding" => {
+                i += 1;
+                let label = take_value(args, i, "--encoding")?;
+                encoding = knx_csv::CsvEncoding::from_label(&label).ok_or_else(|| {
+                    format!("unknown --encoding {label:?}: expected utf-8 or windows-1252")
+                })?;
+            }
             "--installation" => {
                 i += 1;
                 installation = Some(parse_installation(take_value(args, i, "--installation")?)?);
@@ -1331,6 +1341,7 @@ fn parse_ga_import_args(args: &[String]) -> Result<GaImportArgs, String> {
         dry_run,
         confirmation_token,
         installation,
+        encoding,
     })
 }
 
@@ -1401,7 +1412,7 @@ fn run_ga_import(args: &[String]) -> ExitCode {
             return ExitCode::FAILURE;
         }
     };
-    let text = match knx_csv::decode_csv_text(&bytes) {
+    let text = match knx_csv::decode_csv_bytes(&bytes, parsed.encoding) {
         Ok(text) => text,
         Err(e) => {
             eprintln!("failed to read {}: {e}", parsed.input);
@@ -1409,7 +1420,7 @@ fn run_ga_import(args: &[String]) -> ExitCode {
         }
     };
 
-    let parsed_csv = knx_csv::parse_group_addresses(text, project.info.group_address_style);
+    let parsed_csv = knx_csv::parse_group_addresses(&text, project.info.group_address_style);
     let plan = knx_csv::plan_import_into(&project, &parsed_csv, parsed.installation);
 
     print_import_report(&parsed.input, &plan.report);
@@ -1431,8 +1442,9 @@ fn run_ga_import(args: &[String]) -> ExitCode {
     if !plan.report.destructive_changes.is_empty() {
         let token = ga_import_confirmation_token(
             project_snapshot.as_bytes(),
-            text.as_bytes(),
+            &bytes,
             parsed.installation,
+            parsed.encoding,
         );
         println!("confirmation token: {token}");
         if parsed.dry_run || parsed.confirmation_token.is_none() {
@@ -1491,10 +1503,14 @@ fn run_ga_import(args: &[String]) -> ExitCode {
     ExitCode::SUCCESS
 }
 
+/// Binds the semantic project snapshot, the raw CSV bytes, the installation
+/// and the chosen encoding. Without `--installation` and with the default
+/// UTF-8 encoding the token is unchanged from before either option existed.
 fn ga_import_confirmation_token(
     project: &[u8],
     csv: &[u8],
     installation: Option<knx_core::InstallationId>,
+    encoding: knx_csv::CsvEncoding,
 ) -> String {
     use sha2::{Digest as _, Sha256};
 
@@ -1507,6 +1523,12 @@ fn ga_import_confirmation_token(
     if let Some(id) = installation {
         hasher.update(b"\0installation\0");
         hasher.update([id.0]);
+    }
+    // The same bytes decode differently in another encoding, so a preview
+    // under one must not confirm an apply under the other.
+    if encoding != knx_csv::CsvEncoding::Utf8 {
+        hasher.update(b"\0encoding\0");
+        hasher.update(encoding.label().as_bytes());
     }
     hasher.update(csv);
     format!("{:x}", hasher.finalize())

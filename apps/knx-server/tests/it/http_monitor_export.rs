@@ -250,6 +250,7 @@ fn setup(dir: &std::path::Path) -> Arc<knx_server::AppState> {
             unfiltered: false,
             range: None,
             declared_dpt: Default::default(),
+            description: None,
         });
     project.notes.push(
         knx_core::note::ProjectNote::new(

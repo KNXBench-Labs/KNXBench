@@ -95,6 +95,7 @@ fn fixture() -> (Arc<knx_server::AppState>, tempfile::TempDir) {
                 unfiltered: true,
                 range: None,
                 declared_dpt: Default::default(),
+                description: None,
             }],
         });
     }

@@ -22,7 +22,7 @@ use std::path::Path;
 use rusqlite::{params, Connection, OptionalExtension, Transaction};
 
 /// Matches `knx_core::project::CURRENT_SCHEMA_VERSION`.
-pub const CURRENT_SCHEMA_VERSION: i64 = 18;
+pub const CURRENT_SCHEMA_VERSION: i64 = 19;
 
 #[derive(Debug)]
 pub enum MigrationError {
@@ -716,6 +716,18 @@ fn migrate_v17_to_v18(conn: &Connection) -> Result<(), MigrationError> {
     Ok(())
 }
 
+/// v18 -> v19: group-address descriptions (ADR-0164). Additive: an older file
+/// gains an empty table. A description an older import kept as a retained
+/// `GroupAddress/@Description` attribute is deliberately not lifted: it stays
+/// in the opaque store unchanged, so the saved root keeps the semantic
+/// identity its recorded history baseline was computed from (lifting would
+/// mark every such workspace stale). Re-importing the `.knxproj` fills the
+/// field (docs/IMPORT_EXPORT.md §11).
+fn migrate_v18_to_v19(conn: &Connection) -> Result<(), MigrationError> {
+    conn.execute_batch(crate::group::CREATE_DESCRIPTION_TABLE)?;
+    Ok(())
+}
+
 type Migration = fn(&Connection) -> Result<(), MigrationError>;
 
 /// History owns the surrounding transaction so a refused editor write also
@@ -769,6 +781,7 @@ fn migrations() -> Vec<Migration> {
         migrate_v15_to_v16,
         migrate_v16_to_v17,
         migrate_v17_to_v18,
+        migrate_v18_to_v19,
     ]
 }
 
@@ -1497,7 +1510,7 @@ mod tests {
             // Back to a genuine v7 shape: remove every later table and
             // column before rewinding the header, including native17's table.
             conn.execute_batch(
-                "DROP TABLE com_object_priority_edit; DROP TABLE com_object_saved_priority;
+                "DROP TABLE group_address_description; DROP TABLE com_object_priority_edit; DROP TABLE com_object_saved_priority;
                  DROP TABLE instruction_run;
                  DROP TABLE instruction_document; DROP TABLE manufacturer_file; DROP TABLE project_function_member; DROP TABLE project_function; DROP TABLE project_function_state; DROP TABLE project_note; DROP TABLE project_note_state;
                  DROP TABLE project_history_state;

@@ -158,6 +158,7 @@ fn project_with_resolving_and_unresolving_group_addresses() -> knx_core::Project
                 unfiltered: false,
                 range: None,
                 declared_dpt: Default::default(),
+                description: None,
             },
             GroupAddressEntry {
                 id: GroupAddressId(2),
@@ -168,6 +169,7 @@ fn project_with_resolving_and_unresolving_group_addresses() -> knx_core::Project
                 unfiltered: false,
                 range: None,
                 declared_dpt: Default::default(),
+                description: None,
             },
         ],
         parameters: vec![],

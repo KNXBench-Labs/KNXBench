@@ -150,6 +150,8 @@ pub struct SemanticGroupAddress {
     pub range: Option<String>,
     /// `GroupAddress/@DatapointType` (ADR-0078), by `semantic_dpt`'s rule.
     pub declared_dpt: Option<String>,
+    /// `GroupAddress/@Description` (ADR-0164), byte-exact.
+    pub description: Option<String>,
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -446,6 +448,7 @@ fn semantic_group_address(
             .and_then(|id| by_id.get(&id))
             .map(|r| r.source.ets_id.clone()),
         declared_dpt: semantic_dpt(&g.declared_dpt),
+        description: g.description.clone(),
     }
 }
 

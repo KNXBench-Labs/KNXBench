@@ -125,7 +125,13 @@ pub(super) async fn finish(
         expected_accepted[field] = Value::Null;
     }
     assert_eq!(accepted, expected_accepted);
-    let failed = super::super::super::settled(state, router, "restoreFailed").await;
+    // Sleep-polled 180 s join (owner decision 8 November 2026, GATE-01 load timeouts).
+    let failed = super::super::super::failure_diagnostic::settled_slow_status(
+        state,
+        router,
+        "restoreFailed",
+    )
+    .await;
     no_worker(state);
 
     // A real asynchronous transport read, not HTTP-only refusal. Allow exactly

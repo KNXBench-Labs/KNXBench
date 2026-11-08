@@ -2,8 +2,9 @@
 
 Scope: GATE-01 diagnosis of the `caption_mounted::recovery_authority` tests in
 `apps/knx-server` (`caption_mounted_recovery_authority_{retained,standalone}{20,23}`
-and their `wrong_serial` siblings). Diagnosis only: no source, test, deadline,
-simulator or gate policy changed. Measured on `2b70040a4`.
+and their `wrong_serial` siblings), measured on `2b70040a4` without changing
+any source, test, deadline, simulator or gate policy. The owner's follow-up
+decision and the resulting test change are recorded at the end.
 
 ## Observed failures
 
@@ -59,7 +60,7 @@ load (the load phases could not run), and whether the join loop's
 `yield_now` busy wait adds to contention. Its poll counts varied between
 about 2,300 and 99,000 per recovery.
 
-## Options (owner decision; nothing applied)
+## Options presented to the owner
 
 1. Raise the join deadline of these eight cases to the existing 180 s
    `settled_slow` deadline and wait with a short sleep instead of
@@ -71,4 +72,15 @@ about 2,300 and 99,000 per recovery.
 3. Keep everything as is and treat a red gate here as known, rerunning
    the filter alone.
 
-The 10 s deadline stays as it is until the owner decides.
+The diagnosis itself applied none of them.
+
+## Decision and change (8 November 2026)
+
+The owner chose option 1. The four authority cases and the four
+`wrong_serial` cases now join through `settled_slow_status` (the existing
+`settled_slow` budget: 180 s, polling with a 20 ms sleep instead of
+`yield_now`, returning the settled status). Every state, traffic, settlement
+and durable-evidence assertion is unchanged. `settled` with its 10 s deadline
+stays for all other callers. This is test robustness only: no production
+policy, simulator timing, protocol timeout or recovery behaviour changed.
+Acceptance in the [delivery record](../status/2026-11-08-s2-recovery-patient-join.md).

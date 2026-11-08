@@ -860,9 +860,11 @@ async fn run_with_mode(case: Case, mode: RecoveryMode) {
     )
     .await;
     assert_eq!(restoring["operationId"], id);
-    // Use the original recovery test's unchanged 10-second join deadline, not a
-    // cached status or a broader wait. The caption download uses its existing helper.
-    let restored = super::super::settled(&state, &router, "restored").await;
+    // Join the actual worker, not a cached status. The sleep-polled 180 s budget
+    // replaced the original 10 s deadline (owner decision 8 November 2026): the
+    // identical recovery took 0.65 s at rest but over 10 s in a parallel suite.
+    let restored =
+        super::super::failure_diagnostic::settled_slow_status(&state, &router, "restored").await;
     no_worker(&state);
     assert_eq!(restored["projectSettlement"], "sessionOnly");
     assert_eq!(

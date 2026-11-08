@@ -1277,9 +1277,11 @@ path, applying the resulting command, saving the store) lives in
 BOM-less UTF-8 as the system code page and mangles non-ASCII names), read
 with or without one. Written with CRLF line endings, read with either CRLF
 or LF, including a file that mixes the two. Written with `,` as the
-separator; read with `,` or `;`, auto-detected per file — a German-locale
-Excel writes `;` and reads `,` depending on the OS list separator, so both
-are accepted rather than picking one. Quoting follows RFC 4180: a field
+separator; read with `,`, `;` or tab, auto-detected per file from the header
+line — a German-locale Excel writes `;` and reads `,` depending on the OS list
+separator, so both are accepted rather than picking one, and tab is one of the
+separators ETS6 offers for its group-address export. A file that is not UTF-8
+is refused with the offset of its first invalid byte; no code page is guessed. Quoting follows RFC 4180: a field
 containing the separator, a quote character, or a line break is
 double-quote-quoted, with embedded quotes doubled.
 

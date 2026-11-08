@@ -2085,9 +2085,10 @@ pub fn import_group_addresses_csv_into_impl(
 ) -> Result<CsvImportOutcome, String> {
     let installation = installation.map(knx_core::InstallationId);
     let result = (|| -> Result<CsvImportOutcome, String> {
-        let text = std::fs::read_to_string(path).map_err(|e| e.to_string())?;
-        let planned = plan_csv_import(state, &text, installation)?;
-        apply_planned_csv_import(state, &text, planned, confirmation_token)
+        let bytes = std::fs::read(path).map_err(|e| e.to_string())?;
+        let text = knx_csv::decode_csv_text(&bytes)?;
+        let planned = plan_csv_import(state, text, installation)?;
+        apply_planned_csv_import(state, text, planned, confirmation_token)
     })();
 
     log_outcome(

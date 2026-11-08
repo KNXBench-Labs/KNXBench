@@ -24,15 +24,32 @@ enum Addresses {
     Split(usize),
 }
 
-/// One of the four complete, ordered header shapes.
+/// One of the eight complete, ordered header shapes.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) struct Profile {
     names: Names,
     addresses: Addresses,
-    central: usize,
+    /// Index of `Central`, followed by `Unfiltered`, `Description`, `DatapointType` and
+    /// `Security`; `None` for the name/address-only shapes, which carry none of them.
+    central: Option<usize>,
 }
 
 impl Profile {
+    fn metadata(self) -> Option<Metadata> {
+        self.central.map(|central| Metadata { central })
+    }
+}
+
+/// Column indices of the five metadata columns of a full shape.
+#[derive(Debug, Clone, Copy)]
+struct Metadata {
+    central: usize,
+}
+
+impl Metadata {
+    const fn unfiltered(self) -> usize {
+        self.central + 1
+    }
     const fn description(self) -> usize {
         self.central + 2
     }
@@ -44,7 +61,7 @@ impl Profile {
     }
 }
 
-const SHAPES: [(&[&str], Profile); 4] = [
+const SHAPES: [(&[&str], Profile); 8] = [
     (
         &[
             "group name",
@@ -58,7 +75,7 @@ const SHAPES: [(&[&str], Profile); 4] = [
         Profile {
             names: Names::Single(0),
             addresses: Addresses::Composite(1),
-            central: 2,
+            central: Some(2),
         },
     ),
     (
@@ -76,7 +93,7 @@ const SHAPES: [(&[&str], Profile); 4] = [
         Profile {
             names: Names::Single(0),
             addresses: Addresses::Split(1),
-            central: 4,
+            central: Some(4),
         },
     ),
     (
@@ -94,7 +111,7 @@ const SHAPES: [(&[&str], Profile); 4] = [
         Profile {
             names: Names::Triplet(0),
             addresses: Addresses::Composite(3),
-            central: 4,
+            central: Some(4),
         },
     ),
     (
@@ -114,7 +131,40 @@ const SHAPES: [(&[&str], Profile); 4] = [
         Profile {
             names: Names::Triplet(0),
             addresses: Addresses::Split(3),
-            central: 6,
+            central: Some(6),
+        },
+    ),
+    // The same four layouts with only the name and address columns.
+    (
+        &["group name", "address"],
+        Profile {
+            names: Names::Single(0),
+            addresses: Addresses::Composite(1),
+            central: None,
+        },
+    ),
+    (
+        &["group name", "main", "middle", "sub"],
+        Profile {
+            names: Names::Single(0),
+            addresses: Addresses::Split(1),
+            central: None,
+        },
+    ),
+    (
+        &["main", "middle", "sub", "address"],
+        Profile {
+            names: Names::Triplet(0),
+            addresses: Addresses::Composite(3),
+            central: None,
+        },
+    ),
+    (
+        &["main", "middle", "sub", "main", "middle", "sub"],
+        Profile {
+            names: Names::Triplet(0),
+            addresses: Addresses::Split(3),
+            central: None,
         },
     ),
 ];
@@ -152,7 +202,7 @@ pub(crate) fn detect(header: &csv::StringRecord, style: GroupAddressStyle) -> De
         .any(|c| matches!(c.as_str(), "group name" | "main" | "middle" | "sub"));
     if external {
         Detected::Refused(
-            "header looks like a group-address CSV profile but is not exactly one of the four \
+            "header looks like a group-address CSV profile but is not exactly one of the eight \
              supported column orders"
                 .to_string(),
         )
@@ -163,10 +213,13 @@ pub(crate) fn detect(header: &csv::StringRecord, style: GroupAddressStyle) -> De
 
 /// The columns a profile reads, validates, and never applies.
 pub(crate) fn ignored_columns(header: &csv::StringRecord, profile: Profile) -> Vec<IgnoredColumn> {
+    let Some(metadata) = profile.metadata() else {
+        return Vec::new();
+    };
     [
-        profile.description(),
-        profile.datapoint_type(),
-        profile.security(),
+        metadata.description(),
+        metadata.datapoint_type(),
+        metadata.security(),
     ]
     .into_iter()
     .map(|index| IgnoredColumn {
@@ -242,89 +295,10 @@ pub(crate) fn parse_record(
     };
 
     let is_range = matches!(target, Some(Target::MainRange | Target::MiddleRange));
-    let (central, unfiltered) = if is_range {
-        for (index, label) in [
-            (profile.central, "Central"),
-            (profile.central + 1, "Unfiltered"),
-        ] {
-            if !cell(index).trim().is_empty() {
-                ok = fail(
-                    &mut problems,
-                    format!("column \"{label}\" is not supported on range rows"),
-                );
-            }
-        }
-        (None, None)
-    } else {
-        (
-            read_bool_column(
-                record,
-                Some(profile.central),
-                "Central",
-                line,
-                &mut problems,
-                &mut ok,
-            ),
-            read_bool_column(
-                record,
-                Some(profile.central + 1),
-                "Unfiltered",
-                line,
-                &mut problems,
-                &mut ok,
-            ),
-        )
+    let (central, unfiltered, datapoint_type) = match profile.metadata() {
+        Some(metadata) => parse_metadata(metadata, record, line, is_range, &mut problems, &mut ok),
+        None => (None, None, None),
     };
-
-    if !cell(profile.description()).is_empty() {
-        ok = fail(
-            &mut problems,
-            "column \"Description\" is not supported; leave it empty".to_string(),
-        );
-    }
-
-    let dpt_raw = cell(profile.datapoint_type()).trim();
-    let datapoint_type = if dpt_raw.is_empty() {
-        None
-    } else if is_range {
-        ok = fail(
-            &mut problems,
-            "column \"DatapointType\" is not supported on range rows".to_string(),
-        );
-        None
-    } else if !is_dpt_token(dpt_raw) {
-        ok = fail(
-            &mut problems,
-            format!(
-                "column \"DatapointType\": invalid datapoint type {dpt_raw:?}: \
-                 expected DPT-<n> or DPST-<n>-<n>"
-            ),
-        );
-        None
-    } else {
-        match DptRef::parse(dpt_raw) {
-            Ok(dpt) => Some(dpt.to_string()),
-            Err(error) => {
-                ok = fail(&mut problems, format!("column \"DatapointType\": {error}"));
-                None
-            }
-        }
-    };
-
-    match cell(profile.security()) {
-        "" => {}
-        "Auto" => problems.push(CsvProblem {
-            row: Some(line),
-            severity: Severity::Warning,
-            detail: SECURITY_AUTO_WARNING.to_string(),
-        }),
-        other => {
-            ok = fail(
-                &mut problems,
-                format!("column \"Security\": unsupported value {other:?}; only empty or Auto is accepted"),
-            );
-        }
-    }
 
     match (ok, target) {
         (true, Some(Target::Leaf(address))) => {
@@ -352,6 +326,125 @@ pub(crate) fn parse_record(
         }
         (false, _) => (None, problems),
     }
+}
+
+/// Validates the five metadata columns of a full shape; returns `Central`, `Unfiltered` and
+/// the normalized `DatapointType`.
+fn parse_metadata(
+    metadata: Metadata,
+    record: &csv::StringRecord,
+    line: usize,
+    is_range: bool,
+    problems: &mut Vec<CsvProblem>,
+    ok: &mut bool,
+) -> (Option<bool>, Option<bool>, Option<String>) {
+    fn fail(problems: &mut Vec<CsvProblem>, ok: &mut bool, line: usize, detail: String) {
+        problems.push(CsvProblem {
+            row: Some(line),
+            severity: Severity::Error,
+            detail,
+        });
+        *ok = false;
+    }
+    let cell = |index: usize| record.get(index).unwrap_or("");
+
+    let (central, unfiltered) = if is_range {
+        for (index, label) in [
+            (metadata.central, "Central"),
+            (metadata.unfiltered(), "Unfiltered"),
+        ] {
+            if !cell(index).trim().is_empty() {
+                fail(
+                    problems,
+                    ok,
+                    line,
+                    format!("column \"{label}\" is not supported on range rows"),
+                );
+            }
+        }
+        (None, None)
+    } else {
+        (
+            read_bool_column(
+                record,
+                Some(metadata.central),
+                "Central",
+                line,
+                problems,
+                ok,
+            ),
+            read_bool_column(
+                record,
+                Some(metadata.unfiltered()),
+                "Unfiltered",
+                line,
+                problems,
+                ok,
+            ),
+        )
+    };
+
+    if !cell(metadata.description()).is_empty() {
+        fail(
+            problems,
+            ok,
+            line,
+            "column \"Description\" is not supported; leave it empty".to_string(),
+        );
+    }
+
+    let dpt_raw = cell(metadata.datapoint_type()).trim();
+    let datapoint_type = if dpt_raw.is_empty() {
+        None
+    } else if is_range {
+        fail(
+            problems,
+            ok,
+            line,
+            "column \"DatapointType\" is not supported on range rows".to_string(),
+        );
+        None
+    } else if !is_dpt_token(dpt_raw) {
+        fail(
+            problems,
+            ok,
+            line,
+            format!(
+                "column \"DatapointType\": invalid datapoint type {dpt_raw:?}: \
+                 expected DPT-<n> or DPST-<n>-<n>"
+            ),
+        );
+        None
+    } else {
+        match DptRef::parse(dpt_raw) {
+            Ok(dpt) => Some(dpt.to_string()),
+            Err(error) => {
+                fail(
+                    problems,
+                    ok,
+                    line,
+                    format!("column \"DatapointType\": {error}"),
+                );
+                None
+            }
+        }
+    };
+
+    match cell(metadata.security()) {
+        "" => {}
+        "Auto" => problems.push(CsvProblem {
+            row: Some(line),
+            severity: Severity::Warning,
+            detail: SECURITY_AUTO_WARNING.to_string(),
+        }),
+        other => {
+            fail(problems, ok, line,
+                format!("column \"Security\": unsupported value {other:?}; only empty or Auto is accepted"),
+            );
+        }
+    }
+
+    (central, unfiltered, datapoint_type)
 }
 
 fn parse_target(addresses: Addresses, record: &csv::StringRecord) -> Result<Target, String> {

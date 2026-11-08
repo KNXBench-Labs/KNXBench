@@ -5,7 +5,7 @@
 //! events that no datagram shows on its own (the cause that closed the tunnel,
 //! a request that went unacknowledged, a frame discarded for its sequence).
 //!
-//! Two rules make the tap safe to leave on for every device operation:
+//! Three rules make the tap safe to leave on for every device operation:
 //!
 //! - **It never changes the exchange.** [`WireSink::record`] must return at
 //!   once and must not block, await or fail into the caller; a sink that cannot
@@ -13,6 +13,10 @@
 //!   an outgoing datagram just before handing it to the socket (so an answer
 //!   can never be recorded ahead of its request; a failed send follows as a
 //!   `SocketError` event) and an incoming one just after receiving it.
+//! - **Nothing is skipped silently.** A TCP frame read past without being
+//!   stored (an unhandled service, or larger than the local receive cap) is
+//!   reported as a [`TunnelTapEvent::FrameSkipped`] with its service type,
+//!   stated length and reason, never with its octets.
 //! - **Secrets never leave this crate.** A datagram carrying an
 //!   `A_Authorize_Request` or `A_Key_Write` key is redacted *before* the sink
 //!   sees it: the key octets are replaced by zero and a [`Redaction`] names
@@ -23,6 +27,7 @@ use std::time::{Instant, SystemTime};
 
 use crate::cemi::{APCI_AUTHORIZE_REQUEST, APCI_KEY_WRITE};
 use crate::client::TunnelClosure;
+use crate::frame_stream::SkipReason;
 use crate::tunnelling;
 
 /// Which way a datagram crossed the socket, seen from this client.
@@ -98,6 +103,14 @@ pub enum TunnelTapEvent {
     SocketError {
         operation: &'static str,
         reason: String,
+    },
+    /// TCP only: a well-formed received frame was read past without being
+    /// stored (Core v01.06.02 AS §8.4.3.3), so no datagram record exists for
+    /// it. Only its header facts are kept; its octets never reach the tap.
+    FrameSkipped {
+        service_type: u16,
+        total_length: u16,
+        reason: SkipReason,
     },
 }
 

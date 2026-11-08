@@ -21,6 +21,7 @@ pub mod commissioning;
 pub mod core;
 pub mod discovery;
 pub mod frame;
+pub mod frame_stream;
 pub mod management;
 pub mod routing;
 pub mod scan;
@@ -34,7 +35,7 @@ pub use cemi::{
 };
 pub use client::{
     BusConnection, BusError, DiscoveredGateway, KnxNetIpClient, RoutingClient, TunnelAckWait,
-    TunnelClient, TunnelEvent, TunnelReturnPath,
+    TunnelClient, TunnelEvent, TunnelReturnPath, TunnelTransport,
 };
 pub use commissioning::{
     ConnectionState, ManagementSession, SessionError, SessionTiming, VerifyMode,

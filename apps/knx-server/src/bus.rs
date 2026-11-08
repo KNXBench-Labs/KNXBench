@@ -37,6 +37,7 @@ use std::fmt;
 use std::future::Future;
 use std::net::SocketAddrV4;
 use std::pin::Pin;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, RwLock};
 
 use knx_core::commissioning::group_object_table::TransmissionPriority;
@@ -46,7 +47,7 @@ use knx_core::{
 };
 use knx_net::{
     ApplicationService, BusConnection, BusError, Destination, DiscoveredGateway, KnxNetIpClient,
-    Tpci, TunnelAckWait,
+    Tpci, TunnelAckWait, TunnelTransport,
 };
 use tokio::sync::{broadcast, oneshot};
 use tokio::task::JoinHandle;
@@ -67,6 +68,27 @@ pub trait GatewayConnector: Send + Sync {
         &self,
         gateway: SocketAddrV4,
     ) -> Pin<Box<dyn Future<Output = Result<Box<dyn BusTunnel>, BusSessionError>> + Send + '_>>;
+
+    /// [`Self::connect_tunnel`] over the IP transport the caller asked for.
+    /// UDP is the ordinary tunnel. TCP is explicit and refused by default, so
+    /// a fake or custom connector can never open a UDP tunnel for a TCP
+    /// request; only a connector that really speaks TCP overrides it.
+    #[allow(clippy::type_complexity)]
+    fn connect_tunnel_with_transport(
+        &self,
+        gateway: SocketAddrV4,
+        transport: TunnelTransport,
+    ) -> Pin<Box<dyn Future<Output = Result<Box<dyn BusTunnel>, BusSessionError>> + Send + '_>>
+    {
+        match transport {
+            TunnelTransport::Udp => self.connect_tunnel(gateway),
+            TunnelTransport::Tcp => Box::pin(async {
+                Err(BusSessionError::Transport(BusError::Protocol(
+                    "TCP tunnelling is unavailable on this connector".into(),
+                )))
+            }),
+        }
+    }
 
     /// Serial is explicit and unsupported by default; never falls back to IP.
     #[allow(clippy::type_complexity)]
@@ -139,6 +161,17 @@ pub trait BusTunnel: Send + Sync {
     /// transports default to hardware; only explicit synthetic adapters opt in.
     fn diagnostics_are_simulated(&self) -> bool {
         false
+    }
+    /// The IP transport this tunnel really runs on, never the one requested.
+    /// UDP unless an adapter reports otherwise; serial tunnels ignore it.
+    fn transport(&self) -> TunnelTransport {
+        TunnelTransport::Udp
+    }
+    /// Cumulative frames the tunnel's stream decoder skipped without delivering them
+    /// (unknown service or above the local receive cap); always 0 where the transport has no
+    /// stream decoder. They are frames, not necessarily telegrams, and never telegram rows.
+    fn skipped_frames(&self) -> u64 {
+        0
     }
     fn assigned_address(&self) -> IndividualAddress;
     fn subscribe(&self) -> broadcast::Receiver<TunnelEvent>;
@@ -268,6 +301,26 @@ impl GatewayConnector for RealConnector {
     }
 
     #[allow(clippy::type_complexity)]
+    fn connect_tunnel_with_transport(
+        &self,
+        gateway: SocketAddrV4,
+        transport: TunnelTransport,
+    ) -> Pin<Box<dyn Future<Output = Result<Box<dyn BusTunnel>, BusSessionError>> + Send + '_>>
+    {
+        if transport == TunnelTransport::Udp {
+            return self.connect_tunnel(gateway);
+        }
+        Box::pin(async move {
+            let tunnel = KnxNetIpClient::with_tunnel_return_path(self.return_path)
+                .with_tunnel_transport(transport)
+                .connect_tunnel(gateway)
+                .await
+                .map_err(BusSessionError::Transport)?;
+            Ok(Box::new(RealTunnel(tunnel)) as Box<dyn BusTunnel>)
+        })
+    }
+
+    #[allow(clippy::type_complexity)]
     fn connect_tunnel_with_ack_wait(
         &self,
         gateway: SocketAddrV4,
@@ -327,6 +380,14 @@ impl GatewayConnector for RealConnector {
 pub struct RealTunnel(knx_net::TunnelClient);
 
 impl BusTunnel for RealTunnel {
+    fn transport(&self) -> TunnelTransport {
+        self.0.transport()
+    }
+
+    fn skipped_frames(&self) -> u64 {
+        self.0.skipped_frame_count()
+    }
+
     fn assigned_address(&self) -> IndividualAddress {
         self.0.assigned_address()
     }
@@ -384,12 +445,13 @@ impl BusTunnel for RealTunnel {
 /// crate has no feature flags today and `publish = false` means nothing
 /// outside this workspace ever sees this module regardless.
 pub mod fake {
-    use std::sync::atomic::{AtomicUsize, Ordering};
+    use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
     use std::sync::{Arc, Mutex};
 
     use super::{
         ApplicationService, BusError, BusSessionError, BusTunnel, Destination, DiscoveredGateway,
         Future, GatewayConnector, IndividualAddress, Pin, SocketAddrV4, Tpci, TunnelEvent,
+        TunnelTransport,
     };
     use tokio::sync::broadcast;
 
@@ -418,6 +480,10 @@ pub mod fake {
         /// next `send` call, then cleared, so a test can still assert a
         /// later `send` succeeds normally.
         fail_next_send: Mutex<bool>,
+        /// What [`BusTunnel::transport`] reports; UDP unless a test says TCP.
+        transport: Mutex<TunnelTransport>,
+        /// What [`BusTunnel::skipped_frames`] reports; cumulative, set by the test.
+        skipped_frames: AtomicU64,
     }
 
     /// The boxed side of a fake tunnel — what `FakeConnector::connect_tunnel`
@@ -454,6 +520,8 @@ pub mod fake {
                 disconnected: Mutex::new(false),
                 panic_on_disconnect: Mutex::new(false),
                 fail_next_send: Mutex::new(false),
+                transport: Mutex::new(TunnelTransport::Udp),
+                skipped_frames: AtomicU64::new(0),
             });
             (
                 FakeTunnel {
@@ -462,9 +530,20 @@ pub mod fake {
                 FakeTunnelHandle { shared },
             )
         }
+
+        /// The same fake, reporting `transport` as the one it runs on.
+        pub fn with_transport(self, transport: TunnelTransport) -> Self {
+            *self.shared.transport.lock().expect("fake mutex poisoned") = transport;
+            self
+        }
     }
 
     impl FakeTunnelHandle {
+        /// Sets the cumulative skipped-frame count the linked [`FakeTunnel`] reports from now on.
+        pub fn set_skipped_frames(&self, count: u64) {
+            self.shared.skipped_frames.store(count, Ordering::SeqCst);
+        }
+
         /// The sender side of this fake tunnel's event channel — send
         /// `TunnelEvent::Telegram(..)` to simulate bus traffic, or enough of
         /// them (with a small `capacity`) to force a `RecvError::Lagged` in
@@ -531,6 +610,14 @@ pub mod fake {
     }
 
     impl BusTunnel for FakeTunnel {
+        fn transport(&self) -> TunnelTransport {
+            *self.shared.transport.lock().expect("fake mutex poisoned")
+        }
+
+        fn skipped_frames(&self) -> u64 {
+            self.shared.skipped_frames.load(Ordering::SeqCst)
+        }
+
         fn assigned_address(&self) -> IndividualAddress {
             self.shared.address
         }
@@ -627,6 +714,11 @@ pub mod fake {
         /// same list without scripting it twice.
         discovery: Mutex<Result<Vec<DiscoveredGateway>, BusSessionError>>,
         discovery_calls: AtomicUsize,
+        /// Whether `connect_tunnel_with_transport(.., Tcp)` is served from
+        /// `outcome` (see [`FakeConnector::accepting_tcp`]) and how often it
+        /// was asked. Off by default: an unaware fake refuses TCP.
+        accepts_tcp: bool,
+        tcp_calls: AtomicUsize,
     }
 
     /// `BusSessionError` does not implement `Clone` (its `Transport`
@@ -647,6 +739,8 @@ pub mod fake {
                 calls: AtomicUsize::new(0),
                 discovery: Mutex::new(Ok(Vec::new())),
                 discovery_calls: AtomicUsize::new(0),
+                accepts_tcp: false,
+                tcp_calls: AtomicUsize::new(0),
             }
         }
 
@@ -656,6 +750,8 @@ pub mod fake {
                 calls: AtomicUsize::new(0),
                 discovery: Mutex::new(Ok(Vec::new())),
                 discovery_calls: AtomicUsize::new(0),
+                accepts_tcp: false,
+                tcp_calls: AtomicUsize::new(0),
             }
         }
 
@@ -671,6 +767,8 @@ pub mod fake {
                 calls: AtomicUsize::new(0),
                 discovery: Mutex::new(Ok(gateways)),
                 discovery_calls: AtomicUsize::new(0),
+                accepts_tcp: false,
+                tcp_calls: AtomicUsize::new(0),
             }
         }
 
@@ -685,7 +783,21 @@ pub mod fake {
                 calls: AtomicUsize::new(0),
                 discovery: Mutex::new(Err(fresh_discovery_failure())),
                 discovery_calls: AtomicUsize::new(0),
+                accepts_tcp: false,
+                tcp_calls: AtomicUsize::new(0),
             }
+        }
+
+        /// The same connector, now serving explicit TCP requests from its one
+        /// scripted outcome. Its `connect_tunnel` (UDP) still counts apart.
+        pub fn accepting_tcp(mut self) -> Self {
+            self.accepts_tcp = true;
+            self
+        }
+
+        /// How many explicit TCP connects reached an accepting connector.
+        pub fn tcp_call_count(&self) -> usize {
+            self.tcp_calls.load(Ordering::SeqCst)
         }
 
         /// How many times `connect_tunnel` has actually been called —
@@ -719,6 +831,35 @@ pub mod fake {
                      script exactly as many outcomes as the test calls connect_tunnel",
                 );
             Box::pin(async move { outcome.map(|tunnel| Box::new(tunnel) as Box<dyn BusTunnel>) })
+        }
+
+        #[allow(clippy::type_complexity)]
+        fn connect_tunnel_with_transport(
+            &self,
+            gateway: SocketAddrV4,
+            transport: TunnelTransport,
+        ) -> Pin<Box<dyn Future<Output = Result<Box<dyn BusTunnel>, BusSessionError>> + Send + '_>>
+        {
+            match transport {
+                TunnelTransport::Udp => self.connect_tunnel(gateway),
+                TunnelTransport::Tcp if self.accepts_tcp => {
+                    self.tcp_calls.fetch_add(1, Ordering::SeqCst);
+                    let outcome = self
+                        .outcome
+                        .lock()
+                        .expect("fake mutex poisoned")
+                        .take()
+                        .expect("FakeConnector: no scripted outcome left for the TCP connect");
+                    Box::pin(
+                        async move { outcome.map(|tunnel| Box::new(tunnel) as Box<dyn BusTunnel>) },
+                    )
+                }
+                TunnelTransport::Tcp => Box::pin(async {
+                    Err(BusSessionError::Transport(BusError::Protocol(
+                        "TCP tunnelling is unavailable on this connector".into(),
+                    )))
+                }),
+            }
         }
 
         #[allow(clippy::type_complexity)]
@@ -1477,6 +1618,10 @@ pub struct BusSessionSummary {
     /// Retains the existing field name for callers. Serial cleanup errors must not hide
     /// an unknown auto-ACK state; IP keeps its best-effort disconnect policy.
     pub drain_panic: Option<String>,
+    /// Cumulative skipped TCP frames, sampled immediately before the DISCONNECT_REQUEST is
+    /// sent: frames the stream decoder skipped during cleanup are not covered. `None` for
+    /// sessions that are not TCP.
+    pub skipped_frames: Option<u64>,
 }
 
 /// One open IP or serial monitor session: an id, its explicit transport target, the shared buffer the drain task and any poll
@@ -1497,6 +1642,12 @@ pub struct BusSession {
     id: u64,
     gateway: Option<SocketAddrV4>,
     serial: Option<crate::bus_serial::SerialTarget>,
+    /// The IP transport the tunnel reported when it opened, never the one
+    /// requested; `None` for serial, which is not an IP tunnel.
+    transport: Option<TunnelTransport>,
+    /// Cumulative skipped-frame count as last sampled from the tunnel (start, poll, stop).
+    /// Counters only grow, so a sample is a valid lower bound when the tunnel is busy.
+    skipped: Arc<AtomicU64>,
     /// `TunnelClient::assigned_address()` (design spec §4.3's `/start`
     /// response `assignedAddress`), captured once, synchronously, right
     /// after `connect_tunnel` returns — a plain field rather than an async
@@ -1559,6 +1710,27 @@ impl BusSession {
         Ok(Self::from_tunnel(id, Some(gateway), None, tunnel, ctx))
     }
 
+    /// An explicit TCP tunnel for `gateway`. A connector that answers with a
+    /// tunnel that is not TCP is closed again and refused: an explicit TCP
+    /// request never ends as a UDP session.
+    pub(crate) async fn start_tcp(
+        id: u64,
+        gateway: SocketAddrV4,
+        connector: &dyn GatewayConnector,
+        ctx: GroupAddressContext,
+    ) -> Result<Self, BusSessionError> {
+        let tunnel = connector
+            .connect_tunnel_with_transport(gateway, TunnelTransport::Tcp)
+            .await?;
+        if tunnel.transport() != TunnelTransport::Tcp {
+            let _ = tunnel.disconnect().await;
+            return Err(BusSessionError::Transport(BusError::Protocol(
+                "the connector opened a non-TCP tunnel for an explicit TCP request".into(),
+            )));
+        }
+        Ok(Self::from_tunnel(id, Some(gateway), None, tunnel, ctx))
+    }
+
     pub(crate) async fn start_serial(
         id: u64,
         target: crate::bus_serial::SerialTarget,
@@ -1577,6 +1749,8 @@ impl BusSession {
         ctx: GroupAddressContext,
     ) -> Self {
         let assigned_address = tunnel.assigned_address();
+        let transport = serial.is_none().then(|| tunnel.transport());
+        let skipped = Arc::new(AtomicU64::new(tunnel.skipped_frames()));
         let receiver = tunnel.subscribe();
         let buffer = Arc::new(Mutex::new(TelegramBuffer::new()));
         let (stop_tx, stop_rx) = oneshot::channel();
@@ -1592,11 +1766,14 @@ impl BusSession {
             task_ctx,
             stop_rx,
             serial.is_some(),
+            Arc::clone(&skipped),
         ));
         Self {
             id,
             gateway,
             serial,
+            transport,
+            skipped,
             assigned_address,
             buffer,
             tunnel,
@@ -1616,6 +1793,33 @@ impl BusSession {
 
     pub fn serial(&self) -> Option<&crate::bus_serial::SerialTarget> {
         self.serial.as_ref()
+    }
+
+    /// The observed IP transport; `None` for a serial session.
+    pub fn transport(&self) -> Option<TunnelTransport> {
+        self.transport
+    }
+
+    /// Whether this session really runs over a TCP tunnel.
+    pub fn is_tcp(&self) -> bool {
+        self.transport == Some(TunnelTransport::Tcp)
+    }
+
+    /// Cumulative TCP frames the stream decoder skipped, or `None` when this is not a TCP
+    /// session. Never blocks: a tunnel busy with a send keeps its last sample, which is a lower
+    /// bound. These are frames (unknown service or above the receive cap), not telegram rows,
+    /// and they are not part of the buffer's dropped count.
+    pub fn skipped_frames(&self) -> Option<u64> {
+        if !self.is_tcp() {
+            return None;
+        }
+        if let Ok(guard) = self.tunnel.try_lock() {
+            if let Some(tunnel) = guard.as_ref() {
+                self.skipped
+                    .fetch_max(tunnel.skipped_frames(), Ordering::SeqCst);
+            }
+        }
+        Some(self.skipped.load(Ordering::SeqCst))
     }
 
     /// `TunnelClient::assigned_address()`, `Display`-formatted — design
@@ -1792,6 +1996,7 @@ impl BusSession {
         // `stop_tx.send` fails only if the drain task already exited (e.g.
         // a gateway-side close beat this call) — the task is gone either
         // way, so a failed send changes nothing about what happens next.
+        let is_tcp = self.is_tcp();
         let _ = self.stop_tx.send(());
         let join_result = self.join_handle.await;
         let buffer = self.buffer.lock().expect("bus session buffer poisoned");
@@ -1804,6 +2009,7 @@ impl BusSession {
             telegram_count: buffer.len(),
             dropped_count: buffer.dropped_before(),
             drain_panic,
+            skipped_frames: is_tcp.then(|| self.skipped.load(Ordering::SeqCst)),
         }
     }
 }
@@ -1848,6 +2054,7 @@ async fn drain_task(
     ctx: Arc<RwLock<GroupAddressContext>>,
     mut stop_rx: oneshot::Receiver<()>,
     report_cleanup: bool,
+    skipped: Arc<AtomicU64>,
 ) -> Option<String> {
     loop {
         tokio::select! {
@@ -1898,6 +2105,9 @@ async fn drain_task(
     // and reports `BusSessionError::NoActiveSession` (see that method's
     // doc comment) rather than a panic or a silent no-op.
     if let Some(tunnel) = tunnel.lock().await.take() {
+        // The last sample is taken before the DISCONNECT_REQUEST: frames skipped while
+        // the disconnect runs are not counted, and `disconnect` consumes the tunnel.
+        skipped.fetch_max(tunnel.skipped_frames(), Ordering::SeqCst);
         let cleanup = tunnel.disconnect().await;
         if report_cleanup {
             return cleanup.err().map(|error| format!("serial cleanup failed; auto-ACK state unknown; do not retry automatically: {error}"));

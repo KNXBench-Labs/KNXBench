@@ -49,7 +49,8 @@ const MONITOR_KEYS = ["sessionId", "firstSeq", "endSeq", "droppedBefore", "statu
 /** Closed schema of the reviewed monitor window; the server re-checks every field. */
 function isMonitorBinding(value: unknown): boolean {
   return isObject(value)
-    && exactKeys(value, MONITOR_KEYS)
+    && exactKeys(value, "skippedFramesAtReview" in value ? [...MONITOR_KEYS, "skippedFramesAtReview"] : MONITOR_KEYS)
+    && (!("skippedFramesAtReview" in value) || isSafeCount(value.skippedFramesAtReview))
     && isSafeCount(value.sessionId) && isSafeCount(value.firstSeq) && isSafeCount(value.endSeq) && isSafeCount(value.droppedBefore)
     && value.firstSeq <= value.endSeq && value.endSeq - value.firstSeq <= MONITOR_WINDOW_ROWS
     && (value.statusAtReview === "active" || value.statusAtReview === "closed")

@@ -12,6 +12,16 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Optional TCP monitor/group traffic (8 November 2026; bounded WP-29)
+
+Explicit TCP is software-accepted for the library, CLI monitor/write and shared
+server/Web monitor with bound group traffic; UDP remains the default. Independent
+review and all 15 selected package stages passed on `6b27d5b1a`: Web 37 stages,
+5,402 unit tests; Rust 4,553 passed / 153 ignored; separate corpus 91/91.
+Main-only, no new release or physical gateway interoperability claim. Device/scan
+workflows remain UDP-only; broader WP-29 and KNX IP Secure are not closed.
+[Acceptance, failure history and limits](status/2026-11-08-optional-tcp-tunnelling.md).
+
 ## Group-address descriptions and ETS CSV import (8 November 2026; KL-038b)
 
 Owner decisions of 8 November ([ADR-0164](adr/0164-group-address-description-and-csv-encoding.md)):

@@ -1,7 +1,8 @@
 # WP-29 — Optional KNXnet/IP TCP tunnelling
 
 Owner request: 8 November 2026. Continuation authorised 8 November 2026.
-Implementation in progress; no live-bus operation is authorised by this entry.
+Bounded monitor/group-traffic slice software-accepted; broader WP-29 remains open.
+No live-bus operation is authorised by this entry.
 
 ## Requested outcome and current basis
 
@@ -14,21 +15,21 @@ mandatory UDP requirement.
 
 ## Bounded packages and actual status
 
-1. **Wire/library and bounded consumers — correction review in progress, not accepted.** Add explicit
-   UDP/TCP selection to the existing client while keeping its public tunnel
-   operations usable by existing callers. Separate TCP framing/lifecycle from
-   UDP ACK/retry policy. Required: real loopback tests, cancellation/cleanup,
-   heartbeat and secret-redacted recording. No application-selectable TCP claim
-   follows from completing this package alone.
-2. **CLI/server/Web consumers — correction review in progress, not accepted.**
-   The first bounded consumers are CLI bus monitor/write and the shared
-   server/Web monitor session with bound group read/write, observed transport
-   and remembered preference. Other device/scan workflows remain UDP-only.
-   Source implementation does not establish passed caller-level tests or
-   publication. See the [contract](../contracts/tcp-tunnelling.md).
-3. **Integrated acceptance — open.** Independent whole-feature review, the
-   relevant maintained gates and publication. Real-gateway interoperability
-   remains separate and requires its own authorisation.
+1. **Wire/library — software-accepted within this slice.** Explicit UDP/TCP
+   selection preserves existing callers' UDP defaults and separates stream
+   framing/lifecycle from UDP ACK/retry policy. Real loopback tests cover
+   cancellation/cleanup, heartbeat and secret-redacted recording.
+2. **Bounded CLI/server/Web consumers — software-accepted on main.** CLI bus
+   monitor/write and the shared server/Web monitor support explicit TCP,
+   bound group read/write, observed transport and remembered preference.
+   Other device/scan workflows remain UDP-only. See the
+   [contract](../contracts/tcp-tunnelling.md).
+3. **Integrated software acceptance — passed for the bounded slice.** Independent
+   whole-feature review and all 15 selected package stages passed on `6b27d5b1a`;
+   the [execution record](../status/2026-11-08-optional-tcp-tunnelling.md) separates
+   source acceptance, result-only documentation and remaining scope.
+   Real-gateway interoperability remains separate and requires authorisation.
+   Broader WP-29, device/scan consumers and KNX IP Secure remain open.
 
 ## Independently checked source basis
 

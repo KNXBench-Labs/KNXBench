@@ -7,8 +7,10 @@ the server/Web shared monitor session with bound group traffic. UDP remains the
 default. Other device/scan workflows stay UDP-only. Plain TCP is not KNX IP
 Secure, and software loopback tests do not prove real-gateway interoperability.
 The [contract](contracts/tcp-tunnelling.md) and [open work](open-work/WP-29-knxnet-ip-tcp-tunnelling.md)
-separate source implementation, integrated acceptance and remaining scope;
-review corrections and final package acceptance are still pending.
+separate source implementation, integrated acceptance and remaining scope.
+The bounded slice passed independent review and all 15 selected package stages;
+see the [software acceptance](status/2026-11-08-optional-tcp-tunnelling.md).
+It is main-only, not a new release or a closure of the wider WP-29.
 
 ## Bounded foundation: object-priority provenance
 

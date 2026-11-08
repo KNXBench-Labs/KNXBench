@@ -8,9 +8,9 @@ The current candidate adds explicit TCP to CLI bus monitor/write and the shared
 server/Web bus-monitor session. UDP remains the default; device programming,
 scans and discovery/routing do not follow the TCP preference. The source-backed
 [contract](../contracts/tcp-tunnelling.md) requires truthful observed transport,
-bound group actions, skip/loss accounting and cancellation cleanup. Review
-corrections and integrated acceptance are pending; this is neither a published
-release nor real-gateway interoperability evidence.
+bound group actions, skip/loss accounting and cancellation cleanup. Independent
+review and all 15 selected package stages passed ([software acceptance](../status/2026-11-08-optional-tcp-tunnelling.md)).
+This is main-only, neither a new release nor real-gateway interoperability evidence.
 
 ## Current-source implementation: captured saved-instance priority
 

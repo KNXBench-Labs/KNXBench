@@ -60,8 +60,9 @@ separate calls.
 
 The bounded [TCP contract](../contracts/tcp-tunnelling.md) covers explicit library,
 CLI monitor/write and server/Web monitor/group-traffic selection, with UDP still
-the default. Source implementation is in correction review; integrated acceptance
-and publication are not yet established. Device programming, scans and other
+the default. The bounded slice is main-only and passed independent review and
+all selected package stages ([record](../status/2026-11-08-optional-tcp-tunnelling.md)).
+Device programming, scans and other
 existing device workflows remain UDP-only. Discovery/routing scope and KNX IP
 Secure are not widened, and no real-gateway TCP interoperability is inferred.
 The [source review](../research/2026-11-08-knxnet-ip-tcp-tunnelling.md) distinguishes

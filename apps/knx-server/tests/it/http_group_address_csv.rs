@@ -633,3 +633,20 @@ async fn both_csv_operations_append_to_the_session_log_without_clearing_it() {
         "expected a csv-import summary entry: {entries:?}"
     );
 }
+
+#[tokio::test]
+async fn a_non_utf8_csv_is_refused_with_its_offset_and_leaves_the_project_unchanged() {
+    let state = Arc::new(state_with_two_group_addresses());
+    let before = state.project.lock().unwrap().clone();
+    let app = knx_server::app(state.clone(), None);
+    let dir = tempfile::tempdir().unwrap();
+    let input = dir.path().join("legacy.csv");
+    std::fs::write(&input, b"Group name;Address\nK\xfcche;1/1/4\n").unwrap();
+    let response = import_csv(&app, &input).await;
+    assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+    let body = body_json(response).await;
+    let error = body["error"].as_str().unwrap();
+    assert!(error.contains("not UTF-8 text"), "{body}");
+    assert!(error.contains("offset 20"), "{body}");
+    assert_eq!(*state.project.lock().unwrap(), before);
+}

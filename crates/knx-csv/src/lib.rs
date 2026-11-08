@@ -1,7 +1,7 @@
 //! Native group-address CSV exchange and bounded address-only import profiles.
 //!
 //! The writer produces "KNXBench group-address CSV v1". The reader additionally
-//! accepts four fixed column profiles; unsupported metadata is diagnosed and
+//! accepts eight fixed column profiles; unsupported metadata is diagnosed and
 //! never granted mutation authority. See `docs/contracts/group-address-csv-profiles.md`.
 //! Neither path claims general interoperability with another application.
 //!
@@ -24,8 +24,8 @@ pub use plan::{
     CsvImportReport, ImportPlan,
 };
 pub use read::{
-    parse_group_addresses, CsvAction, CsvProblem, CsvRow, IgnoredColumn, IgnoredColumnReason,
-    ParsedCsv, Severity,
+    decode_csv_text, parse_group_addresses, CsvAction, CsvProblem, CsvRow, IgnoredColumn,
+    IgnoredColumnReason, ParsedCsv, Severity,
 };
 pub use write::{
     export_group_addresses, export_group_addresses_from, CsvExport, UnknownInstallation,

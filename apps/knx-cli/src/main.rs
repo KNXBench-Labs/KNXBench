@@ -1394,7 +1394,14 @@ fn run_ga_import(args: &[String]) -> ExitCode {
     let expected_project = project.clone();
     let project_snapshot = format!("{project:?}");
 
-    let text = match std::fs::read_to_string(&parsed.input) {
+    let bytes = match std::fs::read(&parsed.input) {
+        Ok(bytes) => bytes,
+        Err(e) => {
+            eprintln!("failed to read {}: {e}", parsed.input);
+            return ExitCode::FAILURE;
+        }
+    };
+    let text = match knx_csv::decode_csv_text(&bytes) {
         Ok(text) => text,
         Err(e) => {
             eprintln!("failed to read {}: {e}", parsed.input);
@@ -1402,7 +1409,7 @@ fn run_ga_import(args: &[String]) -> ExitCode {
         }
     };
 
-    let parsed_csv = knx_csv::parse_group_addresses(&text, project.info.group_address_style);
+    let parsed_csv = knx_csv::parse_group_addresses(text, project.info.group_address_style);
     let plan = knx_csv::plan_import_into(&project, &parsed_csv, parsed.installation);
 
     print_import_report(&parsed.input, &plan.report);

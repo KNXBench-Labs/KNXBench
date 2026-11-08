@@ -32,6 +32,15 @@ separating model/context/decoded/aggregate budgets. Legacy SQLite image reads
 remain supported; new compressed images require a compatible reader. This does
 not establish support for every import size or for ETS/device recovery.
 
+## Incremental journal writes (8 November 2026; issue #35)
+
+[ADR-0163](adr/0163-journal-writes-keep-unchanged-undo-rows.md): a journal write
+keeps every stored undo/redo row whose state the core proves unchanged and whose
+stored hash still equals the one the server recorded; only changed states are
+encoded again. A row whose stored content changed is rewritten, and opening a
+file still decodes everything. Contract items 1 to 8 are unchanged; within one
+build a reopened incremental file equals a fully rewritten one, row for row.
+
 ## Contract
 
 1. Once a project has a native save location, successful reversible commands,

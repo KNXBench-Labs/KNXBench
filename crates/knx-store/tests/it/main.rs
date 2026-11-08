@@ -4,6 +4,7 @@ mod command_persistence;
 mod completion_vocabulary;
 mod functions;
 mod history_compare_and_save;
+mod history_reuse;
 mod instruction_predecessor;
 mod instructions;
 mod lossless_save;

@@ -110,6 +110,7 @@ fn fixture() -> (Arc<knx_server::AppState>, tempfile::TempDir) {
         manufacturer_refs: Default::default(),
         command_stack: Default::default(),
         history_generation: Default::default(),
+        persisted_history: Default::default(),
         import_counts: Default::default(),
         import_report_available: std::sync::atomic::AtomicBool::new(true),
         import_report_historical: std::sync::atomic::AtomicBool::new(false),

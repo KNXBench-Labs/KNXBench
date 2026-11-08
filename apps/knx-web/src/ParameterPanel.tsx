@@ -294,6 +294,9 @@ function ParameterFieldRow(props: {
         </span>
       )}
       {!restricted && binding === null && <span className="parameter-field-caption">{t("parameters.noContextCaption")}</span>}
+      {/* #35: a saved project stores every edit before it is shown, which can
+          take a moment; the locked control says why instead of looking dead. */}
+      {saving && <span className="parameter-field-caption parameter-field-saving" role="status">{t("parameters.savingCaption")}</span>}
       {error && <span className="field-error" role={conflict ? "alert" : undefined}>{error}</span>}
     </label>
     {conflict && <div className="parameter-conflict" data-conflict-for={field.etsId}>

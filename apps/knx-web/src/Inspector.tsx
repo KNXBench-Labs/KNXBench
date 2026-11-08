@@ -1183,6 +1183,12 @@ function GroupAddressInspector(props: {
             </dd>
           </>
         )}
+        {ga.description !== undefined && (
+          <>
+            <dt>{t("inspector.groupAddressDescription")}</dt>
+            <dd className="ga-description">{ga.description}</dd>
+          </>
+        )}
         <dt>{t("addressTable.links")}</dt>
         <dd>
           {counts.total === 0

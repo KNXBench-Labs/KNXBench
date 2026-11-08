@@ -866,6 +866,17 @@ describe("api", () => {
     });
   });
 
+  it("importGroupAddressesCsv sends the chosen encoding with the token, and omits the default", async () => {
+    mockFetchOnce({ applied: true, confirmationToken: null });
+    await api.importGroupAddressesCsv("/data/in.csv", "opaque-preview-token", undefined, "windows-1252");
+    const [, init] = (fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(JSON.parse(init.body as string)).toEqual({
+      path: "/data/in.csv",
+      confirmationToken: "opaque-preview-token",
+      encoding: "windows-1252",
+    });
+  });
+
   it("importGroupAddressesCsv surfaces the server's row-naming error message on a 400", async () => {
     mockFetchOnce(
       { error: "1 error(s), nothing applied: row 4: unknown group address style" },

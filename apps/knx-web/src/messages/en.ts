@@ -3173,6 +3173,9 @@ export const messages = {
   "groupAddressCsv.exportButton": "Export group addresses (CSV)…",
   "groupAddressCsv.importButton": "Import group addresses (CSV)…",
   "groupAddressCsv.installation": "Installation for CSV",
+  "groupAddressCsv.encoding": "CSV import encoding",
+  "groupAddressCsv.encodingUtf8": "UTF-8 (default)",
+  "groupAddressCsv.encodingWindows1252": "Windows-1252 (ETS export)",
   "groupAddressCsv.exportSummaryNone": "Group addresses exported to CSV, no warnings.",
   "groupAddressCsv.exportSummaryWithWarnings.one":
     "Group addresses exported to CSV, {count} warning — see Log.",
@@ -3285,6 +3288,7 @@ export const messages = {
   "addressTable.dptConflict": "conflicting",
   // KL-61 / ADR-0078: the group-address Inspector's type detail.
   "gaType.declared": "Declared on the address",
+  "inspector.groupAddressDescription": "Description",
   "gaType.linked": "Linked objects state",
   "gaType.declaredAbsent": "none",
   "gaType.declaredEmpty": "empty",

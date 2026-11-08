@@ -823,6 +823,23 @@ describe("Inspector — group address type detail", () => {
     expect(host!.textContent).not.toContain("Declared on the address");
     expect(host!.querySelector(".dpt-outcome")).toBeNull();
   });
+
+  // ADR-0164: the description is shown read-only; no editor is offered.
+  it("shows a description read-only and nothing when none is known", async () => {
+    const tree = twoInstallationTree();
+    tree.installations[0].group_addresses = [
+      { ...ga(301, "Described", "1/0/2"), description: "Beschreibung mit; Semikolon und \"Anführung\"" },
+      { ...ga(302, "Plain", "1/0/3") },
+    ];
+    await renderInspector({ kind: "group_address", id: 301 }, tree);
+    expect(facts()).toEqual(expect.arrayContaining([
+      ["Description", "Beschreibung mit; Semikolon und \"Anführung\""],
+    ]));
+    const shown = host!.querySelector(".inspector-facts .ga-description");
+    expect(shown?.querySelector("input, textarea")).toBeNull();
+    await renderInspector({ kind: "group_address", id: 302 }, tree);
+    expect(host!.querySelector(".inspector-facts .ga-description")).toBeNull();
+  });
 });
 
 // Restyling uses the existing command-backed route, not a display preference.

@@ -3042,6 +3042,9 @@ export const messages: Record<MessageKey, string> = {
   "groupAddressCsv.exportButton": "Gruppenadressen exportieren (CSV)…",
   "groupAddressCsv.importButton": "Gruppenadressen importieren (CSV)…",
   "groupAddressCsv.installation": "Installation für CSV",
+  "groupAddressCsv.encoding": "Zeichenkodierung für CSV-Import",
+  "groupAddressCsv.encodingUtf8": "UTF-8 (Standard)",
+  "groupAddressCsv.encodingWindows1252": "Windows-1252 (ETS-Export)",
   "groupAddressCsv.exportSummaryNone": "Gruppenadressen als CSV exportiert, keine Warnungen.",
   "groupAddressCsv.exportSummaryWithWarnings.one":
     "Gruppenadressen als CSV exportiert, {count} Warnung — siehe Log.",
@@ -3153,6 +3156,7 @@ export const messages: Record<MessageKey, string> = {
   "addressTable.noDpt": "nicht angegeben",
   "addressTable.dptConflict": "widersprüchlich",
   "gaType.declared": "An der Adresse angegeben",
+  "inspector.groupAddressDescription": "Beschreibung",
   "gaType.linked": "Verknüpfte Objekte geben an",
   "gaType.declaredAbsent": "keine",
   "gaType.declaredEmpty": "leer",

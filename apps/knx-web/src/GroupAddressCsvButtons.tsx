@@ -1,4 +1,4 @@
-/** Buttons for exporting/importing group addresses in the project's own CSV format, not ETS's. */
+/** Group-address CSV export/import buttons with an explicit import encoding; no ETS claim. */
 import { useState } from "react";
 import { pickOpenPath, pickSavePath } from "./filePicker";
 import * as api from "./api";
@@ -86,6 +86,17 @@ export default function GroupAddressCsvButtons(props: {
   const target = installations.length > 1
     ? (installations.find((installation) => installation.id === chosen) ?? installations[0]).id
     : undefined;
+  // KL-038b: the user states the file's encoding; nothing is guessed. UTF-8
+  // stays the default and keeps the request exactly as before.
+  const [encoding, setEncoding] = useState<api.CsvImportEncoding>("utf-8");
+
+  function requestImport(path: string, token?: string) {
+    if (encoding !== "utf-8") return api.importGroupAddressesCsv(path, token, target, encoding);
+    if (target !== undefined) return api.importGroupAddressesCsv(path, token, target);
+    return token === undefined
+      ? api.importGroupAddressesCsv(path)
+      : api.importGroupAddressesCsv(path, token);
+  }
 
   async function exportCsv() {
     const path = await pickSavePath(csvFilter, "group-addresses.csv");
@@ -116,9 +127,7 @@ export default function GroupAddressCsvButtons(props: {
     if (!path) return;
     onClearErrors();
     try {
-      let response = target === undefined
-        ? await api.importGroupAddressesCsv(path)
-        : await api.importGroupAddressesCsv(path, undefined, target);
+      let response = await requestImport(path);
       if (!response.applied && response.confirmationToken) {
         const affectedLinks = response.report.destructiveChanges.reduce(
           (count, change) => count + change.affectedLinks.length,
@@ -161,9 +170,7 @@ export default function GroupAddressCsvButtons(props: {
           onSummary(t("groupAddressCsv.confirmCancelled"));
           return;
         }
-        response = target === undefined
-          ? await api.importGroupAddressesCsv(path, response.confirmationToken)
-          : await api.importGroupAddressesCsv(path, response.confirmationToken, target);
+        response = await requestImport(path, response.confirmationToken);
       }
       onTreeUpdate(response.tree);
       if (response.applied) emitAchievementEvent({ type: "groupAddressCsvImported" });
@@ -189,6 +196,11 @@ export default function GroupAddressCsvButtons(props: {
       <button {...entry} onClick={exportCsv} disabled={!tree}>
         {t("groupAddressCsv.exportButton")}
       </button>
+      <select aria-label={t("groupAddressCsv.encoding")} value={encoding} disabled={!tree}
+        onChange={(e) => setEncoding(e.target.value as api.CsvImportEncoding)}>
+        <option value="utf-8">{t("groupAddressCsv.encodingUtf8")}</option>
+        <option value="windows-1252">{t("groupAddressCsv.encodingWindows1252")}</option>
+      </select>
       <button {...entry} onClick={importCsv} disabled={!tree}>
         {t("groupAddressCsv.importButton")}
       </button>

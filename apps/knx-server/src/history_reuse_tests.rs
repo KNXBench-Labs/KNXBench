@@ -17,7 +17,7 @@ fn cached(state: &AppState) -> Option<StackRows> {
         .lock()
         .unwrap()
         .as_ref()
-        .map(|cache| cache.rows.clone())
+        .map(|cache| cache.trust.rows.clone())
 }
 
 #[test]

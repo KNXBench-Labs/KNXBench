@@ -13,21 +13,22 @@ pub fn open_editor_store(
     path: &std::path::Path,
     allow_empty: bool,
 ) -> Result<Connection, HistoryError> {
-    open_editor_store_trusting(path, allow_empty, &StackRows::default())
+    open_editor_store_trusting(path, allow_empty, &JournalTrust::default())
 }
 
-/// [`open_editor_store`] whose read-only admission verifies the stack rows
-/// `trusted` names by the SHA-256 of their bytes alone ([`StackRead::Admit`]).
+/// [`open_editor_store`] whose read-only admission checks what `trusted`
+/// knows by byte hash or value equality instead of decoding it again
+/// ([`StackRead::Admit`]).
 pub fn open_editor_store_trusting(
     path: &std::path::Path,
     allow_empty: bool,
-    trusted: &StackRows,
+    trusted: &JournalTrust,
 ) -> Result<Connection, HistoryError> {
     match crate::open_existing_read_only(path) {
         Ok(admitted) => {
             let tx = admitted.conn.unchecked_transaction()?;
-            admit_editor(&tx, &trusted.hashes())?;
-            list_versions_inner(&tx)?;
+            let context = admit_editor(&tx, trusted)?.map(|(_, context)| context);
+            list_versions_checked(&tx, trusted, context.as_ref())?;
             tx.commit()?;
         }
         Err(crate::MigrationError::NothingSaved) if allow_empty => {}
@@ -121,7 +122,11 @@ mod context;
 mod decoded_budget_tests;
 mod image_codec;
 mod snapshot;
+mod trust;
+#[cfg(test)]
+mod trust_tests;
 pub use snapshot::{image_hash, NativeSnapshot};
+pub use trust::JournalTrust;
 #[derive(Debug)]
 pub struct EditorHistory {
     pub generation: i64,
@@ -131,6 +136,42 @@ pub struct EditorHistory {
     pub redo: Vec<Project>,
     /// The stored image hash of every `undo`/`redo` state, in the same order.
     pub rows: StackRows,
+    /// What the read verified beyond `rows` (see [`Self::trust`]).
+    verified: Option<VerifiedHashes>,
+}
+
+/// The identities one journal read checked: the retained context's semantic
+/// and stored-image hashes, the baseline's semantic hash and the working
+/// state's stored-image hash.
+#[derive(Debug, Clone)]
+struct VerifiedHashes {
+    context: String,
+    context_image: String,
+    baseline: String,
+    working_image: String,
+}
+
+impl EditorHistory {
+    /// What this read verified, for a writer that keeps working on it: the
+    /// rows, the retained context of `working` and the saved baseline.
+    pub fn trust(&self) -> JournalTrust {
+        let Some(verified) = &self.verified else {
+            return JournalTrust::from_rows(self.rows.clone());
+        };
+        let context = trust::KnownContext {
+            opaque: self.working.opaque.clone(),
+            manufacturer_refs: self.working.manufacturer_refs.clone(),
+            content_hash: verified.context.clone(),
+            image_hash: verified.context_image.clone(),
+        };
+        JournalTrust::knowing(
+            self.rows.clone(),
+            context,
+            &self.baseline,
+            &verified.baseline,
+            (self.working.project.clone(), verified.working_image.clone()),
+        )
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -232,24 +273,40 @@ fn check_limits(conn: &Connection) -> Result<(), HistoryError> {
 enum StackRead<'a> {
     /// Decode and check every row and return its project state.
     States,
-    /// Check only, returning no states. A row whose stored hash `trusted`
-    /// names is verified by the SHA-256 of its bytes instead of being decoded:
-    /// the caller already holds that image's state, encoded by itself or
-    /// decoded and admitted when the file was opened. Every other row is
-    /// decoded and checked as in `States`.
-    Admit(&'a HashSet<&'a str>),
+    /// Check only, returning no states. A row whose stored hash the trust's
+    /// `rows` name is verified by the SHA-256 of its bytes instead of being
+    /// decoded: the caller already holds that image's state, encoded by itself
+    /// or decoded and admitted when the file was opened. So is a retained
+    /// context the trust knows, and a saved baseline equal to the known one
+    /// takes the known semantic hash. Everything else is decoded and checked as
+    /// in `States`.
+    Admit(&'a JournalTrust),
 }
 
 fn load_editor_inner(conn: &Connection) -> Result<Option<EditorHistory>, HistoryError> {
     read_editor(conn, StackRead::States)
 }
 
+/// A retained context row whose bytes were checked: its semantic identity and
+/// the recorded SHA-256 of its stored bytes.
+type ContextIdentity = (String, String);
+
 /// Admission without materializing states; see [`StackRead::Admit`].
+/// Answers the admitted generation, or `None` without a workspace, and the
+/// working state's retained context, which it checked.
 fn admit_editor(
     conn: &Connection,
-    trusted: &HashSet<&str>,
-) -> Result<Option<EditorHistory>, HistoryError> {
-    read_editor(conn, StackRead::Admit(trusted))
+    trusted: &JournalTrust,
+) -> Result<Option<(i64, ContextIdentity)>, HistoryError> {
+    Ok(
+        read_editor(conn, StackRead::Admit(trusted))?.and_then(|history| {
+            let verified = history.verified?;
+            Some((
+                history.generation,
+                (verified.context, verified.context_image),
+            ))
+        }),
+    )
 }
 
 fn read_editor(
@@ -277,11 +334,32 @@ fn read_editor(
         ));
     }
     let baseline = NativeSnapshot::read(conn)?;
-    if baseline.semantic_hash()? != baseline_hash {
+    let actual_baseline_hash = match read {
+        StackRead::Admit(trust) => trust.semantic_hash(&baseline)?,
+        StackRead::States => baseline.semantic_hash()?,
+    };
+    if actual_baseline_hash != baseline_hash {
         return Err(HistoryError::Stale);
     }
-    let retained = context::read(conn, &context_hash)?;
+    let known_context = match read {
+        StackRead::Admit(trust) => trust
+            .context()
+            .filter(|known| known.content_hash == context_hash),
+        StackRead::States => None,
+    };
+    // Admission returns no states, so a verified known context needs no value:
+    // every state below attaches the same one.
+    let (retained, context_image) = match known_context {
+        Some(known) if context::verify_known(conn, known)? => {
+            (context::unvalued(), known.image_hash.clone())
+        }
+        _ => context::read_with_image_hash(conn, &context_hash)?,
+    };
     let working = context::attach(&image, &hash, &retained)?;
+    let trusted_rows: HashSet<&str> = match read {
+        StackRead::Admit(trust) => trust.rows.hashes(),
+        StackRead::States => HashSet::new(),
+    };
     if working.project.info.project_id != baseline.project.info.project_id {
         return Err(HistoryError::Invalid(
             "workspace belongs to another project",
@@ -314,8 +392,8 @@ fn read_editor(
                 "unknown stack version or position gap",
             ));
         }
-        if let StackRead::Admit(trusted) = read {
-            if trusted.contains(hash.as_str()) {
+        if matches!(read, StackRead::Admit(_)) {
+            if trusted_rows.contains(hash.as_str()) {
                 if image_hash(&image) != hash {
                     return Err(HistoryError::Invalid("stack image hash mismatch"));
                 }
@@ -344,6 +422,12 @@ fn read_editor(
         undo,
         redo,
         rows: rows_read,
+        verified: Some(VerifiedHashes {
+            context: context_hash,
+            context_image,
+            baseline: baseline_hash,
+            working_image: hash,
+        }),
     }))
 }
 
@@ -358,16 +442,21 @@ pub fn load_editor(conn: &Connection) -> Result<Option<EditorHistory>, HistoryEr
     Ok(history)
 }
 
+/// The admitted generation, refused unless it is `expected`, and the retained
+/// context the admission checked.
 fn admitted_generation(
     conn: &Connection,
     expected: Option<i64>,
-    trusted: &HashSet<&str>,
-) -> Result<i64, HistoryError> {
-    let current = admit_editor(conn, trusted)?.map_or(0, |h| h.generation);
+    trusted: &JournalTrust,
+) -> Result<(i64, Option<ContextIdentity>), HistoryError> {
+    let (current, context) = match admit_editor(conn, trusted)? {
+        Some((generation, context)) => (generation, Some(context)),
+        None => (0, None),
+    };
     if expected.is_some_and(|e| e != current) {
         return Err(HistoryError::Stale);
     }
-    Ok(current)
+    Ok((current, context))
 }
 
 fn next_generation(current: i64) -> Result<i64, HistoryError> {
@@ -414,21 +503,69 @@ fn kept_rows(conn: &Connection, side: &str, expected: &[String]) -> Result<usize
     Ok(kept)
 }
 
+/// What one workspace write may take from its writer's knowledge.
+#[derive(Clone, Copy)]
+struct Reuse<'a> {
+    trust: &'a JournalTrust,
+    /// Whether this transaction's admission already verified the retained
+    /// context `trust` knows.
+    context_verified: bool,
+}
+
+impl Reuse<'static> {
+    const NOTHING: Self = Self {
+        trust: &JournalTrust::EMPTY,
+        context_verified: false,
+    };
+}
+
+/// The stored working image while it still holds the working model `trust`
+/// knows: the next stack row is usually that state, so its bytes serve as is.
+fn known_working_image<'a>(
+    conn: &Connection,
+    trust: &'a JournalTrust,
+) -> Result<Option<(&'a Project, Vec<u8>, String)>, HistoryError> {
+    let Some((project, hash)) = trust.working() else {
+        return Ok(None);
+    };
+    let row: Option<(i64, Vec<u8>, String)> = conn
+        .query_row(
+            "SELECT format_version, working, working_hash FROM project_history_state WHERE id = 0",
+            [],
+            |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
+        )
+        .optional()?;
+    match row {
+        Some((format, image, stored)) if format == FORMAT_VERSION && stored == *hash => {
+            if image_hash(&image) != stored {
+                return Err(HistoryError::Invalid("working image hash mismatch"));
+            }
+            Ok(Some((project, image, stored)))
+        }
+        _ => Ok(None),
+    }
+}
+
 fn write_workspace(
     conn: &Connection,
     baseline: &NativeSnapshot,
     working: &NativeSnapshot,
     stack: &CommandStack,
     generation: i64,
-    reuse: &StackRows,
-) -> Result<StackRows, HistoryError> {
+    reuse: Reuse<'_>,
+) -> Result<JournalTrust, HistoryError> {
     let (undo_steps, redo_steps) = stack.history_lengths();
     if undo_steps.saturating_add(redo_steps) > MAX_STACK_STATES {
         return Err(HistoryError::Limit("undo and redo exceed 256 states"));
     }
-    let baseline_hash = baseline.semantic_hash()?;
-    let context_hash = context::remember(conn, working)?;
+    let trust = reuse.trust;
+    let baseline_hash = trust.semantic_hash(baseline)?;
+    let context = context::remember(conn, working, trust.context(), reuse.context_verified)?;
+    let context_hash = context.content_hash.clone();
+    let previous_working = known_working_image(conn, trust)?;
     let image = context::model_image(&working.project)?;
+    let working_image_hash = image_hash(&image);
+    let reuse = &trust.rows;
     // Kept rows hold exactly the states a full rewrite would produce; every
     // stack row pairs with the working context, as a full rewrite stores it.
     let keep_undo = kept_rows(conn, "undo", &reuse.undo)?.min(undo_steps);
@@ -452,7 +589,7 @@ fn write_workspace(
          VALUES (0, ?1, ?2, ?3, ?4, ?5, ?6) ON CONFLICT(id) DO UPDATE SET
          format_version=excluded.format_version, generation=excluded.generation, baseline_hash=excluded.baseline_hash,
          working=excluded.working, working_hash=excluded.working_hash, context_hash=excluded.context_hash",
-        params![FORMAT_VERSION, generation, baseline_hash, image, image_hash(&image), context_hash],
+        params![FORMAT_VERSION, generation, baseline_hash, image, working_image_hash, context_hash],
     )?;
     context::collect_unreferenced(conn)?;
     let mut bytes = stored_history_bytes(conn)?;
@@ -475,7 +612,16 @@ fn write_workspace(
                     knx_core::command::HistorySide::Undo => &mut rows.undo,
                     knx_core::command::HistorySide::Redo => &mut rows.redo,
                 };
-                let image = context::model_image(project)?;
+                let (image, hash) = match &previous_working {
+                    Some((known, image, hash)) if *known == project => {
+                        (image.clone(), hash.clone())
+                    }
+                    _ => {
+                        let image = context::model_image(project)?;
+                        let hash = image_hash(&image);
+                        (image, hash)
+                    }
+                };
                 bytes = bytes
                     .checked_add(image.len() as i64)
                     .ok_or(HistoryError::Limit("history byte accounting overflow"))?;
@@ -486,7 +632,6 @@ fn write_workspace(
                     knx_core::command::HistorySide::Undo => "undo",
                     knx_core::command::HistorySide::Redo => "redo",
                 };
-                let hash = image_hash(&image);
                 stmt.execute(params![
                     side,
                     position as i64,
@@ -513,7 +658,13 @@ fn write_workspace(
         return Err(refusal.unwrap_or(HistoryError::Invalid("history admission stopped")));
     }
     check_limits(conn)?;
-    Ok(rows)
+    Ok(JournalTrust::knowing(
+        rows,
+        context,
+        baseline,
+        &baseline_hash,
+        (working.project.clone(), working_image_hash),
+    ))
 }
 
 fn append_version(
@@ -527,7 +678,7 @@ fn append_version(
             "version label must contain 1 to 120 characters",
         ));
     }
-    let context_hash = context::remember(conn, snapshot)?;
+    let context_hash = context::remember(conn, snapshot, None, false)?.content_hash;
     let image = context::model_image(&snapshot.project)?;
     conn.execute(
         "INSERT INTO project_history_version (format_version, created_at, reason, label, image, image_hash, context_hash) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
@@ -575,6 +726,27 @@ pub fn save_editor_reusing(
     expected_generation: i64,
     reuse: &StackRows,
 ) -> Result<(i64, StackRows), HistoryError> {
+    save_editor_trusting(
+        conn,
+        working,
+        stack,
+        expected_generation,
+        &JournalTrust::from_rows(reuse.clone()),
+    )
+    .map(|(generation, trust)| (generation, trust.rows))
+}
+
+/// [`save_editor_reusing`] that also checks the retained context and saved
+/// baseline `trust` knows by byte hash or value equality instead of decoding,
+/// encoding or hashing them again (ADR-0165). Returns the new generation and
+/// what the write verified, for the next one.
+pub fn save_editor_trusting(
+    conn: &Connection,
+    working: &NativeSnapshot,
+    stack: &CommandStack,
+    expected_generation: i64,
+    trust: &JournalTrust,
+) -> Result<(i64, JournalTrust), HistoryError> {
     save_editor_inner(
         conn,
         working,
@@ -582,7 +754,7 @@ pub fn save_editor_reusing(
         Some(expected_generation),
         false,
         SaveExtras {
-            reuse: Some(reuse),
+            reuse: Some(trust),
             ..SaveExtras::default()
         },
     )
@@ -640,7 +812,7 @@ pub fn save_editor_if_unchanged(
 struct SaveExtras<'a> {
     expected_working_hash: Option<&'a str>,
     sources: &'a [crate::CarriedManufacturerFile],
-    reuse: Option<&'a StackRows>,
+    reuse: Option<&'a JournalTrust>,
 }
 
 fn save_editor_inner(
@@ -650,7 +822,7 @@ fn save_editor_inner(
     expected_generation: Option<i64>,
     save_root: bool,
     extras: SaveExtras<'_>,
-) -> Result<(i64, StackRows), HistoryError> {
+) -> Result<(i64, JournalTrust), HistoryError> {
     let SaveExtras {
         expected_working_hash,
         sources,
@@ -663,10 +835,17 @@ fn save_editor_inner(
     let tx = Transaction::new_unchecked(conn, TransactionBehavior::Immediate)?;
     crate::migration::migrate_in_transaction(&tx)?;
     snapshot::check_schema(&tx)?;
-    // Rows this writer itself encoded are re-hashed, not decoded again.
-    let trusted = reuse.map(StackRows::hashes).unwrap_or_default();
-    let current = admitted_generation(&tx, expected_generation, &trusted)?;
-    list_versions_inner(&tx)?;
+    // What this writer itself encoded or admitted is re-hashed, not decoded again.
+    let untrusted = JournalTrust::default();
+    let trusted = reuse.unwrap_or(&untrusted);
+    let (current, admitted_context) = admitted_generation(&tx, expected_generation, trusted)?;
+    let (_, checked_contexts) = list_versions_checked(&tx, trusted, admitted_context.as_ref())?;
+    // The admission checked the working context; `remember` need not again.
+    let context_verified = trusted.context().is_some_and(|known| {
+        admitted_context.as_ref().is_some_and(|(content, image)| {
+            known.content_hash == *content && known.image_hash == *image
+        })
+    });
     let generation = next_generation(current)?;
     let old = match NativeSnapshot::read(&tx) {
         Ok(snapshot) => Some(snapshot),
@@ -707,14 +886,12 @@ fn save_editor_inner(
             "workspace requires a saved native project",
         ))?
     };
-    let rows = write_workspace(
-        &tx,
-        baseline,
-        working,
-        stack,
-        generation,
-        reuse.unwrap_or(&StackRows::default()),
-    )?;
+    let reuse = Reuse {
+        trust: trusted,
+        context_verified,
+    };
+    let written = write_workspace(&tx, baseline, working, stack, generation, reuse)?
+        .with_checked_contexts(checked_contexts);
     for source in sources {
         let sha = crate::manufacturer_file_hash(&source.bytes);
         if !working.manufacturer_refs.iter().any(|r| {
@@ -731,11 +908,30 @@ fn save_editor_inner(
         crate::load_manufacturer_file(&tx, &sha).map_err(HistoryError::Carried)?;
     }
     tx.commit()?;
-    Ok((generation, rows))
+    Ok((generation, written))
 }
 
 fn list_versions_inner(conn: &Connection) -> Result<Vec<ProjectVersion>, HistoryError> {
+    list_versions_checked(conn, &JournalTrust::EMPTY, None).map(|(versions, _)| versions)
+}
+
+/// [`list_versions_inner`] that checks a retained context `trusted` knows by
+/// the SHA-256 of its bytes instead of decoding it, and skips the one this
+/// transaction already checked (`checked`). Also answers every context it
+/// checked, by semantic identity, with the SHA-256 recorded for its bytes.
+fn list_versions_checked(
+    conn: &Connection,
+    trusted: &JournalTrust,
+    checked: Option<&ContextIdentity>,
+) -> Result<
+    (
+        Vec<ProjectVersion>,
+        std::collections::BTreeMap<String, String>,
+    ),
+    HistoryError,
+> {
     check_limits(conn)?;
+    let mut checked_contexts = std::collections::BTreeMap::new();
     let mut stmt = conn.prepare("SELECT id, format_version, created_at, reason, label, image, image_hash, context_hash FROM project_history_version ORDER BY id DESC")?;
     let mut rows = stmt.query([])?;
     let mut result = Vec::new();
@@ -752,12 +948,22 @@ fn list_versions_inner(conn: &Connection) -> Result<Vec<ProjectVersion>, History
         let context_bytes = if let Some(bytes) = contexts.get(&context_hash) {
             *bytes
         } else {
-            context::read(conn, &context_hash)?;
-            let bytes: i64 = conn.query_row(
-                "SELECT length(image) FROM project_history_context WHERE content_hash = ?1",
-                [&context_hash],
-                |r| r.get(0),
-            )?;
+            let (bytes, stored_image): (i64, String) = conn
+                .query_row(
+                    "SELECT length(image), image_hash FROM project_history_context WHERE content_hash = ?1",
+                    [&context_hash],
+                    |r| Ok((r.get(0)?, r.get(1)?)),
+                )
+                .optional()?
+                .ok_or(HistoryError::Invalid("referenced retained context is missing"))?;
+            let identity = (context_hash.clone(), stored_image);
+            let already = checked == Some(&identity)
+                || (trusted.knows_context(&identity.0, &identity.1)
+                    && context::verify_stored(conn, &identity.0, &identity.1)?);
+            if !already {
+                context::read(conn, &context_hash)?;
+            }
+            checked_contexts.insert(identity.0, identity.1);
             contexts.insert(context_hash, bytes);
             bytes
         };
@@ -785,7 +991,7 @@ fn list_versions_inner(conn: &Connection) -> Result<Vec<ProjectVersion>, History
             image_hash: hash,
         });
     }
-    Ok(result)
+    Ok((result, checked_contexts))
 }
 
 pub fn list_versions(conn: &Connection) -> Result<Vec<ProjectVersion>, HistoryError> {
@@ -842,7 +1048,8 @@ pub fn change_history(
     let tx = Transaction::new_unchecked(conn, TransactionBehavior::Immediate)?;
     crate::migration::migrate_in_transaction(&tx)?;
     snapshot::check_schema(&tx)?;
-    let generation = next_generation(admitted_generation(&tx, Some(expected), &HashSet::new())?)?;
+    let generation =
+        next_generation(admitted_generation(&tx, Some(expected), &JournalTrust::default())?.0)?;
     list_versions_inner(&tx)?;
     let baseline = NativeSnapshot::read(&tx)?;
     if current_working.project.info.project_id != baseline.project.info.project_id {
@@ -858,7 +1065,7 @@ pub fn change_history(
             current_working,
             &CommandStack::new(),
             generation,
-            &StackRows::default(),
+            Reuse::NOTHING,
         )?;
     }
     let restored = match action {
@@ -879,7 +1086,7 @@ pub fn change_history(
                 current_working,
                 &CommandStack::new(),
                 generation,
-                &StackRows::default(),
+                Reuse::NOTHING,
             )?;
             None
         }
@@ -902,7 +1109,7 @@ pub fn change_history(
                 &replacement,
                 &CommandStack::new(),
                 generation,
-                &StackRows::default(),
+                Reuse::NOTHING,
             )?;
             Some(EditorHistory {
                 generation,
@@ -911,6 +1118,7 @@ pub fn change_history(
                 undo: Vec::new(),
                 redo: Vec::new(),
                 rows: StackRows::default(),
+                verified: None,
             })
         }
     };
@@ -998,7 +1206,7 @@ pub(crate) fn before_plain_save(
             replacement,
             &CommandStack::new(),
             generation,
-            &StackRows::default(),
+            Reuse::NOTHING,
         )?;
     }
     Ok(())

@@ -150,6 +150,10 @@ pub const ALERT_IS_URGENT: &str = "alert-is-urgent";
 /// [`Inference::rule`]: an enabled `ReadOnInitFlag` has no bit on `070nh`.
 pub const READ_ON_INIT_NOT_ON_070N: &str = "read-on-init-not-on-070n";
 
+/// [`Inference::rule`]: a `TypeTime` value is written as a plain count of
+/// its unit, like a number (ADR-0162).
+pub const TIME_AS_UNIT_COUNT: &str = "time-as-unit-count";
+
 /// One group address link: object `object` (its `Number`) uses
 /// `group_address`; `sending` marks the address it transmits on.
 pub type Link = TableLink;
@@ -854,6 +858,14 @@ fn build_image_selected(
         };
         written.insert(parameter.to_string(), (parameter_ref.to_string(), value));
     }
+    // Every time value written, by unit; invisible ones placed in a
+    // property are added where their defaults are taken.
+    let mut time_values: BTreeMap<String, usize> = BTreeMap::new();
+    for (parameter_ref, _) in written.values() {
+        if let Some(unit) = types.time_unit(parameter_ref)? {
+            *time_values.entry(unit.to_string()).or_default() += 1;
+        }
+    }
     let properties = if code
         .parameters
         .values()
@@ -871,11 +883,27 @@ fn build_image_selected(
             &written,
             &defaults,
             low_octet_first,
+            &mut time_values,
             &mut inferences,
         )?
     } else {
         Vec::new()
     };
+    if !time_values.is_empty() {
+        let counts: Vec<String> = time_values
+            .iter()
+            .map(|(unit, count)| format!("{count} in {unit}"))
+            .collect();
+        inferences.push(Inference {
+            rule: TIME_AS_UNIT_COUNT,
+            detail: format!(
+                "time parameters ({}) are written as the plain count of their unit, like a \
+                 number, as ETS 6.4 wrote HundredMilliseconds",
+                counts.join(", ")
+            ),
+            reference: "docs/research/2026-11-08-time-parameters-and-inline-property-writes.md",
+        });
+    }
     let mut segments: Vec<SegmentImage> = images
         .into_iter()
         .map(|(segment, image)| SegmentImage {
@@ -1545,7 +1573,22 @@ pub(crate) struct ParameterTypes {
     enums: BTreeMap<String, BTreeSet<String>>,
     /// `Options/@TextParameterEncoding`, if declared.
     text_encoding: Option<String>,
+    /// `TypeTime/@Unit` by parameter type id ([`ProgramCode::time_units`]).
+    time_units: BTreeMap<String, Option<String>>,
 }
+
+/// The `TypeTime` units whose value is a plain count of the unit: the six
+/// the local collection declares besides the packed ones
+/// (docs/contracts/parameter-editor-admission.md). Such a value is encoded
+/// like a `TypeNumber` (ADR-0162).
+const COUNTED_TIME_UNITS: [&str; 6] = [
+    "Hours",
+    "Minutes",
+    "Seconds",
+    "HundredMilliseconds",
+    "TenMilliseconds",
+    "Milliseconds",
+];
 
 /// A text encoding this module writes.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -1768,6 +1811,7 @@ impl ParameterTypes {
             refs,
             enums,
             text_encoding: code.options.get("TextParameterEncoding").cloned(),
+            time_units: code.time_units.clone(),
         })
     }
 
@@ -1845,15 +1889,16 @@ impl ParameterTypes {
             }
             (Some("Number"), _, Some("unsignedInt")) => {
                 let value = unsigned()?;
-                let min = declared_bound(parameter_ref, "minInclusive", "unsignedInt", &found.min);
-                let max = declared_bound(parameter_ref, "maxInclusive", "unsignedInt", &found.max);
-                let (min, max) = (min?, max?);
-                if min.is_some_and(|min| value < min) || max.is_some_and(|max| value > max) {
-                    return Err(invalid(format!(
-                        "{value} is outside {:?}..={:?}",
-                        found.min, found.max
-                    )));
-                }
+                self.within_unsigned_bounds(parameter_ref, found, value)?;
+                Ok(Encoded::Number(value))
+            }
+            // `[V]` ETS 6.4 wrote a `TypeTime` value in `HundredMilliseconds`
+            // as the plain count, like a number in the declared byte order
+            // (ADR-0162). A packed or undeclared unit stays refused.
+            (Some("Time"), _, _) => {
+                self.time_unit(parameter_ref)?;
+                let value = unsigned()?;
+                self.within_unsigned_bounds(parameter_ref, found, value)?;
                 Ok(Encoded::Number(value))
             }
             (Some("Number"), _, Some("signedInt")) => {
@@ -1894,6 +1939,48 @@ impl ParameterTypes {
                 ),
             }),
         }
+    }
+
+    /// A `TypeTime` ref's unit, if it is a plain count ([`COUNTED_TIME_UNITS`]);
+    /// `None` for a ref of another kind; refused for any other unit.
+    pub(crate) fn time_unit(&self, parameter_ref: &str) -> Result<Option<&str>, ImageError> {
+        let found = self.get(parameter_ref)?;
+        if found.kind.as_deref() != Some("Time") {
+            return Ok(None);
+        }
+        let unit = found
+            .parameter_type
+            .as_ref()
+            .and_then(|id| self.time_units.get(id))
+            .and_then(Option::as_deref);
+        match unit {
+            Some(unit) if COUNTED_TIME_UNITS.contains(&unit) => Ok(Some(unit)),
+            other => Err(ImageError::Unsupported {
+                what: format!(
+                    "{}: TypeTime unit {other:?} has no established encoding",
+                    found.parameter
+                ),
+            }),
+        }
+    }
+
+    /// Refuses `value` outside the ref's declared unsigned bounds.
+    fn within_unsigned_bounds(
+        &self,
+        parameter_ref: &str,
+        found: &RefType,
+        value: u64,
+    ) -> Result<(), ImageError> {
+        let min = declared_bound(parameter_ref, "minInclusive", "unsignedInt", &found.min);
+        let max = declared_bound(parameter_ref, "maxInclusive", "unsignedInt", &found.max);
+        let (min, max): (Option<u64>, Option<u64>) = (min?, max?);
+        if min.is_some_and(|min| value < min) || max.is_some_and(|max| value > max) {
+            return Err(ImageError::Value {
+                parameter_ref: parameter_ref.to_string(),
+                cause: format!("{value} is outside {:?}..={:?}", found.min, found.max),
+            });
+        }
+        Ok(())
     }
 
     /// A `TypeText` value in the program's declared encoding, zero-filled
@@ -3227,6 +3314,72 @@ mod tests {
             matches!(&error, ImageError::Unsupported { what } if what.contains("P-F9") && what.contains("Float")),
             "{error}"
         );
+    }
+
+    /// ADR-0162: a `TypeTime` value in a plain unit is the count of that
+    /// unit, written like a number in the declared byte order (`[V]` ETS 6.4:
+    /// 37230 in `HundredMilliseconds` as `6E 91` under `LittleEndian`); a
+    /// packed, undeclared or unknown unit and a value out of bounds are refused.
+    #[test]
+    fn a_time_parameter_is_a_count_of_its_unit_in_the_declared_byte_order() {
+        let program = |options: &str, unit: &str| {
+            kinds_program_with(
+                options,
+                "Grüß",
+                &format!(
+                    r#"<ParameterType Id="PT-TT" Name="TT"><TypeTime SizeInBit="16" {unit} minInclusive="0" maxInclusive="63000" UIHint="Duration_hhmmss" /></ParameterType>"#
+                ),
+                r#"<Parameter Id="P-TT" Name="TT" ParameterType="PT-TT" Value="0"><Memory CodeSegment="AS-4600" Offset="9" BitOffset="0" /></Parameter>"#,
+                r#"<ParameterRef Id="P-TT_R-1" RefId="P-TT" />"#,
+            )
+            .replace(
+                r#"<ParameterRefRef RefId="P-T_R-1" />"#,
+                r#"<ParameterRefRef RefId="P-T_R-1" /><ParameterRefRef RefId="P-TT_R-1" />"#,
+            )
+        };
+        let hundred = r#"Unit="HundredMilliseconds""#;
+        let little =
+            r#"<Options TextParameterEncoding="iso-8859-15" ParameterByteOrder="LittleEndian" />"#;
+        let image = build(&program(little, hundred), &[("P-TT_R-1", "37230")], vec![])
+            .expect("a counted unit builds");
+        assert_eq!(&octets(&image, "AS-4600")[9..11], &[0x6E, 0x91]);
+        assert_eq!(image.parameters.get("P-TT_R-1"), Some(&37230));
+        let time = image
+            .inferences
+            .iter()
+            .find(|inference| inference.rule == TIME_AS_UNIT_COUNT)
+            .expect("the time rule is named");
+        assert!(
+            time.detail.contains("1 in HundredMilliseconds"),
+            "{}",
+            time.detail
+        );
+        let big = build(&program(LATIN_9, hundred), &[("P-TT_R-1", "6010")], vec![]).unwrap();
+        assert_eq!(&octets(&big, "AS-4600")[9..11], &[0x17, 0x7A]);
+
+        for unit in [
+            r#"Unit="PackedSecondsAndMilliseconds""#,
+            r#"Unit="Fortnights""#,
+            "",
+        ] {
+            let error = build(&program(little, unit), &[], vec![]).unwrap_err();
+            assert!(
+                matches!(&error, ImageError::Unsupported { what }
+                    if what.starts_with("P-TT: TypeTime unit")),
+                "{unit}: {error}"
+            );
+        }
+        let error = build(&program(little, hundred), &[("P-TT_R-1", "63001")], vec![]).unwrap_err();
+        assert!(
+            matches!(&error, ImageError::Value { cause, .. } if cause.contains("outside")),
+            "{error}"
+        );
+        // A program without a time parameter names no time rule.
+        let plain = build(&kinds_program(LATIN_9), &[], vec![]).unwrap();
+        assert!(!plain
+            .inferences
+            .iter()
+            .any(|inference| inference.rule == TIME_AS_UNIT_COUNT));
     }
 
     /// WP-08: a `TypeDate` value has a schema-documented spelling, but no

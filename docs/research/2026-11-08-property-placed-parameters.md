@@ -81,7 +81,8 @@ fill. Compared with the ETS run:
 In the tester project of issue #10 nine devices move from `unsupported` to
 `untested`. Still refused: `LdCtrlWriteProp` with `AppliesTo` and neither
 `Count` nor `InlineData`, or with `Count` and `InlineData`; a `Time` parameter
-type.
+type. The last two were settled later the same day
+([follow-up](2026-11-08-time-parameters-and-inline-property-writes.md)).
 
 ## Open
 

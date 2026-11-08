@@ -12,6 +12,23 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Time parameters and inline property writes (8 November 2026; issue #10)
+
+A dimming actuator whose soft-on/off times are `TypeTime` parameters in
+properties now plans
+([ADR-0162](adr/0162-time-parameters-and-inline-property-writes.md),
+[research](research/2026-11-08-time-parameters-and-inline-property-writes.md)).
+A time value in a plain unit is the stored count of that unit, written like a
+number in the declared byte order; packed units stay refused. A
+parameter-filled property write with all-zero `InlineData` covering its count
+is written without a read, one that reaches no parameter is not sent, and the
+executor no longer reads a property whose every bit is determined. A KNXBench
+download to the simulator matched ETS 6.4 in every function property command,
+every written property and every parameter-owned bit. In the tester project
+the device moves from `unsupported` to `untested`. Other products whose memory
+or property parameters use a plain time unit now plan too, also as `untested`
+(the plan names `time-as-unit-count`). No hardware was written.
+
 ## Property-placed parameters and master resets (8 November 2026; issue #10)
 
 Mask-`0701h` programs that keep their parameters in properties now plan

@@ -138,9 +138,10 @@ pub enum LoadStep {
         /// `@Writable`.
         writable: bool,
     },
-    /// `LdCtrlWriteProp` with `@Count`, `@Verify="false"` and no
-    /// `@InlineData`: write the parameters placed in the property; an
-    /// `@AppliesTo` must name `full`.
+    /// `LdCtrlWriteProp` with `@Count` and `@Verify="false"`: write the
+    /// parameters placed in the property; an `@AppliesTo` must name `full`.
+    /// An `@InlineData` it also carries is kept for the planner to judge
+    /// (ADR-0162).
     WriteParameterProp {
         /// `@ObjIdx`.
         object_index: u8,
@@ -148,6 +149,8 @@ pub enum LoadStep {
         property_id: u8,
         /// `@Count`: how many elements, from index 1.
         count: u16,
+        /// `@InlineData`, decoded from hex, when present.
+        inline_data: Option<Vec<u8>>,
     },
     /// `LdCtrlUnload`.
     Unload {
@@ -340,6 +343,11 @@ pub struct ProgramCode {
     /// `Static/Parameters` placements by parameter id. A parameter with
     /// no placement (it lives nowhere in memory) has no entry.
     pub parameters: BTreeMap<String, ParameterPlacement>,
+    /// `Static/ParameterTypes/ParameterType/TypeTime/@Unit` by parameter
+    /// type id, verbatim; `None` where a `TypeTime` declares no unit. The
+    /// database stores no unit column (ADR-0041), and a time value's
+    /// encoding depends on it (ADR-0162).
+    pub time_units: BTreeMap<String, Option<String>>,
     /// Every `ApplicationProgram` attribute, verbatim (`ApplicationNumber`,
     /// `ApplicationVersion`, `PeiType`, ...).
     pub program_attributes: BTreeMap<String, String>,
@@ -634,6 +642,7 @@ impl<'a> Parser<'a> {
                     self.skip(&child)?;
                 }
                 "LoadProcedures" if !child.empty => self.read_procedures(code)?,
+                "ParameterTypes" if !child.empty => self.read_time_units(code)?,
                 "Parameters" if !child.empty => {
                     child_path.push(Occurrence::Parameters(ordinal));
                     self.read_parameters(code, &child_path)?;
@@ -825,6 +834,25 @@ impl<'a> Parser<'a> {
                     self.read_union(code, &child_path)?;
                 }
                 _ => self.skip(&child)?,
+            }
+        }
+        Ok(())
+    }
+
+    /// The `@Unit` of every `ParameterType` whose type child is `TypeTime`.
+    fn read_time_units(&mut self, code: &mut ProgramCode) -> Result<(), CodeError> {
+        while let Some(child) = self.next_inside("ParameterTypes")? {
+            if child.name != "ParameterType" || child.empty {
+                self.skip(&child)?;
+                continue;
+            }
+            let id = child.attributes.get("Id").map(str::to_string);
+            while let Some(kind) = self.next_inside("ParameterType")? {
+                if let (Some(id), "TypeTime") = (&id, kind.name.as_str()) {
+                    let unit = kind.attributes.get("Unit").map(str::to_string);
+                    code.time_units.insert(id.clone(), unit);
+                }
+                self.skip(&kind)?;
             }
         }
         Ok(())
@@ -1043,8 +1071,12 @@ impl<'a> Parser<'a> {
                 "WriteAccess",
                 "Writable",
             ],
-            "LdCtrlWriteProp" if a.get("Count").is_some() && a.get("InlineData").is_none() => {
-                &["ObjIdx", "PropId", "Count", "Verify"]
+            "LdCtrlWriteProp" if a.get("Count").is_some() => {
+                if a.get("InlineData").is_some() {
+                    &["ObjIdx", "PropId", "Count", "Verify", "InlineData"]
+                } else {
+                    &["ObjIdx", "PropId", "Count", "Verify"]
+                }
             }
             _ => return Ok(None),
         };
@@ -1084,6 +1116,10 @@ impl<'a> Parser<'a> {
                 object_index: octet("ObjIdx")?,
                 property_id: octet("PropId")?,
                 count: word("Count")?,
+                inline_data: a
+                    .get("InlineData")
+                    .map(|text| self.hex(name, text))
+                    .transpose()?,
             },
         }))
     }
@@ -1616,7 +1652,8 @@ mod tests {
             LoadStep::WriteParameterProp {
                 object_index: 6,
                 property_id: 52,
-                count: 2
+                count: 2,
+                inline_data: None,
             }
         );
         for step in [&steps[1], &steps[3]] {
@@ -1883,15 +1920,29 @@ mod tests {
                     object_index: 8,
                     property_id: 52,
                     count: 17,
+                    inline_data: None,
                 },
             ]
         );
-        // Outside the complete download, verified, with InlineData or an unknown
-        // attribute: kept by name, so the planner refuses it by name.
+        // `Count` with `InlineData` (ADR-0162): the octets are kept for the planner.
+        assert_eq!(
+            steps(
+                r#"<LdCtrlWriteProp ObjIdx="6" PropId="52" Count="6" Verify="false" InlineData="00000000000000000000" AppliesTo="full,par" />"#
+            ),
+            vec![LoadStep::WriteParameterProp {
+                object_index: 6,
+                property_id: 52,
+                count: 6,
+                inline_data: Some(vec![0; 10]),
+            }]
+        );
+        // Outside the complete download, verified, or an unknown attribute:
+        // kept by name, so the planner refuses it by name.
         for unmodelled in [
             r#"<LdCtrlMasterReset AppliesTo="par" EraseCode="5" ChannelNumber="0" />"#,
             r#"<LdCtrlWriteProp ObjIdx="8" PropId="52" Count="1" Verify="true" />"#,
-            r#"<LdCtrlWriteProp ObjIdx="6" PropId="52" Count="6" Verify="false" InlineData="00" AppliesTo="full,par" />"#,
+            r#"<LdCtrlWriteProp ObjIdx="6" PropId="52" Count="6" Verify="true" InlineData="00" AppliesTo="full,par" />"#,
+            r#"<LdCtrlWriteProp ObjIdx="6" PropId="52" Count="6" Verify="false" InlineData="00" AppliesTo="par" />"#,
             r#"<LdCtrlWriteProp ObjIdx="11" PropId="52" Verify="false" AppliesTo="full,par" />"#,
             r#"<LdCtrlMasterReset EraseCode="5" ChannelNumber="0" Other="1" />"#,
             r#"<LdCtrlDeclarePropDesc ObjIdx="8" PropId="52" PropType="PDT_UNSIGNED_CHAR" MaxElements="1" ReadAccess="0" WriteAccess="0" Writable="maybe" />"#,
@@ -1901,6 +1952,33 @@ mod tests {
                 "{unmodelled}"
             );
         }
+    }
+
+    #[test]
+    fn time_units_are_read_per_parameter_type_and_nothing_else_is() {
+        let code = parsed(
+            r#"<ParameterTypes>
+                 <ParameterType Id="PT-T"><TypeTime SizeInBit="16" Unit="HundredMilliseconds" minInclusive="0" maxInclusive="63000" UIHint="Duration_hhmmss" /></ParameterType>
+                 <ParameterType Id="PT-P"><TypeTime SizeInBit="32" Unit="PackedSecondsAndMilliseconds" minInclusive="0" maxInclusive="1" /></ParameterType>
+                 <ParameterType Id="PT-U"><TypeTime SizeInBit="8" minInclusive="0" maxInclusive="9" /></ParameterType>
+                 <ParameterType Id="PT-N"><TypeNumber SizeInBit="16" Type="unsignedInt" minInclusive="0" maxInclusive="9" /></ParameterType>
+                 <ParameterType Id="PT-E"><TypeRestriction Base="Value" SizeInBit="8"><Enumeration Id="PT-E_EN-0" Value="0" /></TypeRestriction></ParameterType>
+               </ParameterTypes>
+               <Options ParameterByteOrder="LittleEndian" />"#,
+        );
+        assert_eq!(
+            code.time_units,
+            BTreeMap::from([
+                (
+                    "PT-P".to_string(),
+                    Some("PackedSecondsAndMilliseconds".to_string())
+                ),
+                ("PT-T".to_string(), Some("HundredMilliseconds".to_string())),
+                ("PT-U".to_string(), None),
+            ])
+        );
+        // The walk ends where the ParameterTypes end: what follows is still read.
+        assert_eq!(code.options["ParameterByteOrder"], "LittleEndian");
     }
 
     #[test]

@@ -44,6 +44,7 @@ outside preserved historical blocks, or use the next free section number
 
 | Section | Where |
 | --- | --- |
+| [9 November 2026 — Product-database download types](research/2026-11-09-product-database-download-type-census.md) | [V] declaration census of 1,367 programs / 1,352 devices: system family by declared mask, load-procedure style and 107 programs with a vendor download plug-in; no device or ETS behaviour |
 | [9 November 2026 — Conditional parameter-block rename](research/2026-11-09-conditional-parameter-block-rename.md) | [V] one ETS6 observation: a rename leaf retitles its enclosing block in navigation and page heading, persists, restores the base; implemented contract is narrower |
 | [8 November 2026 — KNXnet/IP TCP tunnelling](research/2026-11-08-knxnet-ip-tcp-tunnelling.md) | [V] independently read Core/Tunnelling wire and lifecycle clauses; optional transport, Route Back, no ACK, retained heartbeat, bounded frame draining and explicit unresolved version-response policy; not runtime or hardware acceptance |
 | [8 November 2026 — ETS6 group-address CSV export](research/2026-11-08-ets6-group-address-csv-export.md) | [V] dialog options, header rows of all eight layouts, single-byte encoding, quoting and range rows; consequences for the KL-038 import profiles |

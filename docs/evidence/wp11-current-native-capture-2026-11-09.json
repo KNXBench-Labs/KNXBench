@@ -1,0 +1,271 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-11-09",
+  "scope": "WP-11 current-source native bus-monitor capture export (Cancel, Save, overwrite Cancel, Replace at 80/100/150% app zoom); one fictional loopback frame; not whole WP-11",
+  "result": "bounded-native-evidence-passed",
+  "wholeWp11Complete": false,
+  "target": {
+    "builtSourceRevision": "0b182054a4a03b6e03d49743bb2b155809dfeff7",
+    "admissionRevision": "4c427fc0dafe5406e77ff47de438b7ce87f0e702",
+    "uiVersionString": "0.1.0-alpha.20",
+    "nativeExecutableSha256": "8ea1c2f0a20ce94ff7c387148bd277fa97ddd519e94cdcdba3270d0ac666dc67",
+    "frontendFileCount": 147,
+    "frontendManifestSha256": "acb0e387d927f571ab40fc6752e1e0374b0f61f4d04d580b0471064b4406338c",
+    "frontendManifestMethod": "Executed from the retained frontend directory: find . -type f | LC_ALL=en_US.UTF-8 sort | xargs sha256sum | sha256sum (includes ./ path prefixes)",
+    "priorArchiveSha256": "1c1a816c0622b4cf3e25b95178ab590bbe09c349c135f51aa2de5e0b80999ae6",
+    "artifactFilesReused": 149,
+    "reuse": "Authenticated reuse of the retained 9 November native build; no fresh build and no new UI-stamp claim. Tracked changes between built and admission revisions are documentation only (two status documents, two evidence records, one open-work edit); all other source, lockfiles, configuration and assets are identical.",
+    "observedDocumentTitle": "KNXBench 0.1.0-alpha.20",
+    "observedFooterVersion": "v0.1.0-alpha.20"
+  },
+  "fixture": {
+    "cemiHex": "2900bce011010801010081",
+    "tunnellingRequestHex": "061004200015042100002900bce011010801010081",
+    "peerSha256": "588c7c8c251be8b443fbeeded968e0c66831ff9232b4fd19422a9505a9e8f974",
+    "cemiSource": "crates/knx-net/src/cemi.rs, test helper group_write_indication (GroupValueWrite 1 from 1.1.1 to 1/0/1), byte-identical at the built and admission revisions",
+    "independentDecode": {
+      "priorityBits": 3,
+      "notRepeatedBit": 1,
+      "groupAddressedBit": 1,
+      "hopCount": 6,
+      "source": "1.1.1",
+      "destinationRaw": 2049,
+      "destination3level": "1/0/1",
+      "apduLength": 1,
+      "apci": 2,
+      "shortValue": 1
+    },
+    "sourceRaw": 4353,
+    "destinationRaw": 2049,
+    "nativeNoProjectDestination": "2049",
+    "peerHistory": "The 27 October disposable peer, unchanged bytes, served the current TunnelClient; no protocol edit was needed.",
+    "sourceBinding": "Software input witness, not normative KNX, device or hardware evidence"
+  },
+  "safety": {
+    "realBusAccess": false,
+    "physicalDevices": false,
+    "productSendOrGroupReadUsed": false,
+    "network": "Desktop and peer shared one fresh loopback-only network namespace (only lo, only loopback routes); peer bound 127.0.0.1:3671 and the desktop connected only to it. Initial interface discovery was refused under the fence and left as is.",
+    "filesystem": "user data, mount and runtime trees masked, private HOME/XDG/results, read-only inputs",
+    "capabilities": "effective set zero for both processes",
+    "childUid": "nonzero",
+    "runtimeProofBeforeConnect": true,
+    "exceptions": [
+      "direct GTK chooser (GTK_USE_PORTAL=0), not desktop-portal behavior",
+      "in-memory GSettings (GSETTINGS_BACKEND=memory)",
+      "host Wayland, session D-Bus and AT-SPI shared; AT-SPI reported the per-application socket as unreachable yet the tree was readable over the shared bus",
+      "no full WebKit sandbox or host-identity separation claim",
+      "software-render flags WEBKIT_DISABLE_COMPOSITING_MODE=1 WEBKIT_DISABLE_DMABUF_RENDERER=1",
+      "not portal, GPU or package acceptance",
+      "GVFS fell back to the shared host session bus; direct filesystem masks do not establish host-service isolation"
+    ]
+  },
+  "session": {
+    "sessionId": 1,
+    "transport": "UDP (default)",
+    "assignedAddress": "1.1.1",
+    "connectedStatusBeforeEmission": "Connected to 127.0.0.1:3671",
+    "telegramsBeforeEmission": "No telegrams yet.",
+    "noEmissionControl": {
+      "uiBeforeEmit": [
+        "Session 1 — assigned address 1.1.1 · Observed transport: UDP",
+        "No telegrams yet."
+      ],
+      "statusConnected": true,
+      "peerFrameTxBeforeEmitRequest": false
+    },
+    "nativeRowText": "0\t2026-11-09T00:54:37.638028211+00:00\t1.1.1 — No project device has this address.\t2049\tGroupValueWrite\t\nLow\nHop count: 6\nNot repeated\n0x01 (6-bit)\tNo project in sessionno project open\n",
+    "rowTimestamp": "2026-11-09T00:54:37.638028211+00:00",
+    "rowAfterEmitRequestMs": 26.7,
+    "observedAgeMs": 190,
+    "frames": 1,
+    "rowAfterEmitRequestMsMeaning": "Difference between trigger wall-clock record and backend row insertion timestamp, not packet receive latency, echo or RTT; peer monotonic clock was not calibrated to this clock"
+  },
+  "peerProtocol": {
+    "connectRequests": 1,
+    "heartbeatRoundtrips": 4,
+    "tunnellingRequestsSent": 1,
+    "tunnellingAckHex": "06100421000a04210000",
+    "disconnectRequests": 1,
+    "disconnectResponses": 1,
+    "allSourcesLoopback": true,
+    "settledEvent": {
+      "kind": "settled",
+      "monotonicNs": 752102608305141,
+      "frameSent": true,
+      "frameAcked": true
+    }
+  },
+  "cells": {
+    "100": {
+      "zoomPercent": 100,
+      "persistedUiScale": "absent (default 1)",
+      "exportCaptureButtonBoundsXywh": [
+        1882,
+        792,
+        119,
+        33
+      ],
+      "exportCaptureButtonShowingBeforeAction": true,
+      "exportCancel": {
+        "result": "passed",
+        "captureAbsentAfter": true,
+        "resultsDirectoryUnchanged": true,
+        "chooserClosed": true
+      },
+      "save": {
+        "result": "passed",
+        "fileName": "cap-100",
+        "bytes": 1024,
+        "sha256": "059bd3f3d28df5eb0e82864e3d952b707bce3e4141bdb3d8b15ef5f055014505",
+        "exportedAt": "2026-11-09T00:55:18.236Z",
+        "rows": 1
+      },
+      "overwriteCancel": {
+        "result": "passed",
+        "questionText": [
+          "A file named “cap-100” already exists.  Do you want to replace it?",
+          "The file already exists in “results”.  Replacing it will overwrite its contents."
+        ],
+        "bytesAndMtimePreserved": true,
+        "chooserDisposedWithCancel": true
+      },
+      "replace": {
+        "result": "passed",
+        "bytes": 1024,
+        "sha256": "5720aa6e9d82539d092ddc49d89964565496b6d6d8862901307f1f998c9b1534",
+        "exportedAt": "2026-11-09T00:56:00.752Z",
+        "changedFields": [
+          "exportedAt"
+        ],
+        "rowsAndProvenanceIdentical": true,
+        "mtimeAdvanced": true
+      }
+    },
+    "80": {
+      "zoomPercent": 80,
+      "persistedUiScale": 0.8,
+      "exportCaptureButtonBoundsXywh": [
+        1911,
+        594,
+        94,
+        27
+      ],
+      "exportCaptureButtonShowingBeforeAction": true,
+      "exportCancel": {
+        "result": "passed",
+        "captureAbsentAfter": true,
+        "resultsDirectoryUnchanged": true,
+        "chooserClosed": true
+      },
+      "save": {
+        "result": "passed",
+        "fileName": "cap-80",
+        "bytes": 1024,
+        "sha256": "0cf89cdad37075265c06c28c657a963ea64447774bab3ea7c51107998f97fbf3",
+        "exportedAt": "2026-11-09T00:56:45.939Z",
+        "rows": 1
+      },
+      "overwriteCancel": {
+        "result": "passed",
+        "questionText": [
+          "A file named “cap-80” already exists.  Do you want to replace it?",
+          "The file already exists in “results”.  Replacing it will overwrite its contents."
+        ],
+        "bytesAndMtimePreserved": true,
+        "chooserDisposedWithCancel": true
+      },
+      "replace": {
+        "result": "passed",
+        "bytes": 1024,
+        "sha256": "f4d45df865bcd00b5ad8d95f22358a2abf123783467946510dc64a14fbc1f434",
+        "exportedAt": "2026-11-09T00:57:19.513Z",
+        "changedFields": [
+          "exportedAt"
+        ],
+        "rowsAndProvenanceIdentical": true,
+        "mtimeAdvanced": true
+      }
+    },
+    "150": {
+      "zoomPercent": 150,
+      "persistedUiScale": 1.5,
+      "exportCaptureButtonBoundsXywh": [
+        1811,
+        1389,
+        177,
+        49
+      ],
+      "exportCaptureButtonShowingBeforeAction": false,
+      "exportCancel": {
+        "result": "passed",
+        "captureAbsentAfter": true,
+        "resultsDirectoryUnchanged": true,
+        "chooserClosed": true
+      },
+      "save": {
+        "result": "passed",
+        "fileName": "cap-150",
+        "bytes": 1024,
+        "sha256": "4c3ee00b278539f04b3d0cd3a77359813337d226ef8a4687138e1ee4a20b4702",
+        "exportedAt": "2026-11-09T00:57:57.854Z",
+        "rows": 1
+      },
+      "overwriteCancel": {
+        "result": "passed",
+        "questionText": [
+          "A file named “cap-150” already exists.  Do you want to replace it?",
+          "The file already exists in “results”.  Replacing it will overwrite its contents."
+        ],
+        "bytesAndMtimePreserved": true,
+        "chooserDisposedWithCancel": true
+      },
+      "replace": {
+        "result": "passed",
+        "bytes": 1024,
+        "sha256": "0bca039dce6fd105387299084fe9005202dec40acb2674b7156393739a460d60",
+        "exportedAt": "2026-11-09T00:58:32.257Z",
+        "changedFields": [
+          "exportedAt"
+        ],
+        "rowsAndProvenanceIdentical": true,
+        "mtimeAdvanced": true
+      }
+    }
+  },
+  "crossZoomInvariant": "All six saved/replaced files share format, version, capacity, sessionId, serverIncarnation, status, loss counters (0/0), notice and the single row; only exportedAt differs, and it strictly increases across the six writes",
+  "teardown": {
+    "ordinaryDisconnectAnswered": true,
+    "ordinaryWindowClose": true,
+    "desktopExit": 0,
+    "peerExit": 0,
+    "launcherExit": 0,
+    "ownedProcessesRemaining": 0,
+    "ownedWindowsRemaining": 0,
+    "seat": "Active-window (none) and per-output visible workspace/focus predicates matched the pre-run state; the cursor position also matched; the temporary workspace disappeared. Not a full inventory or other-application restoration claim."
+  },
+  "counts": {
+    "nativeStepReceipts": 81,
+    "meaning": "recorded native driver invocations including setup, trees and settlement steps, not independently counted tests",
+    "failedStepReceipts": 0,
+    "screenshots": 4,
+    "screenshotMeaning": "owned-window crops with address and workspace guards before and after; corroboration only"
+  },
+  "inputMethods": "AT-SPI actions and the chooser name field through AT-SPI EditableText (not physical typing); gateway host and app zoom through guarded wtype input",
+  "notEstablished": [
+    "full WP-11",
+    "hardware, firmware, ETS or normative KNX compatibility",
+    "NAT/RouteBack, reconnect or general protocol conformance",
+    "portal or GPU rendering",
+    "Orca, Firefox, accessibility conformance",
+    "other layout, theme or keyboard cells",
+    "suffix behavior of the native name field (extensionless names used)"
+  ],
+  "privateEvidence": "<profile>/evidence/2026-11-09-wp11-current-capture/native-core.tar.gz (821 fully verified members); original review, reader failures and SCOPE_DEVIATION_DISPOSITION.json retained separately",
+  "scopeDeviation": {
+    "kind": "unapproved diagnostic write outside task scratch",
+    "priorExistenceAndContents": "unknown; no before-write observation",
+    "controllerDisposition": "Current regular-file state copied and hashed privately; original left untouched. No deletion or fabricated restoration; prior-state-dependent cleanup deferred. This is a scope deviation, not expanded authority or sandbox success."
+  },
+  "preparationFailures": "81 native-step receipts all exit 0. Three reader-development verify.py failures (label-alias IndexError, nested-settings KeyError, offscreen-geometry KeyError) were corrected against retained observations without native replay; missing-file inspections also failed. No claim of failure-free preparation."
+}

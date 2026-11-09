@@ -224,6 +224,20 @@ Software-render and shared session-bus exceptions remain. Not other controls,
 imported-original instructions, Orca/Firefox/AppImage or whole WP-11; ledger status
 is unchanged.
 
+## Current-source capture export cells — 9 November 2026
+
+The [record](../status/2026-11-09-wp11-current-native-capture.md) and
+[measurement](../evidence/wp11-current-native-capture-2026-11-09.json) cover the
+bus-monitor capture export on the retained `0b182054a` build (reused for
+admission `4c427fc0d`: documentation-only tracked diff, no new build) at
+80/100/150% in an isolated actual window. A source-bound fictional frame from a
+disposable loopback KNXnet/IP peer reaches the real backend after a proven
+connected, empty session. Per zoom: chooser Cancel leaves no file; Save writes a
+parseable v1 capture with the one row; overwrite Cancel preserves bytes and
+mtime; Replace changes only `exportedAt`. Direct-chooser, software-render and
+shared session-bus exceptions remain. Not hardware or protocol completeness,
+other cells or whole WP-11; ledger status is unchanged.
+
 ## Acceptance target — owner decision 8 November 2026
 
 The owner chose the simplest complete target. Required are the cells that run

@@ -24,13 +24,20 @@ completely independent of each other:
   loaded product database carries a translation for them. A language pack
   has no effect on this at all; see "The honest boundary" below.
 
+In the device parameter editor, the UI language also labels the parameter type,
+value origin and manufacturer access mode. Known metadata such as `ReadWrite`,
+`Stored` and `ProgramDefault` has German display labels; the original token
+remains available in its tooltip. Unknown tokens remain verbatim. This never
+translates or rewrites a parameter value or an imported manufacturer caption,
+and changing the UI language does not change the selected product-data language.
+
 The UI language field offers **English** (`en`), **Deutsch** (`de`), and
 two included fun-language packs: **Boarisch** (`bar`) and
 **Klingonisch/Klingon** (`tlh`). Picker names are fixed self-names rather
 than translations in the currently selected interface language. The Klingon
 entry deliberately stays exactly `Klingonisch/Klingon`, not `tlhIngan Hol`.
 
-The fun packs contain 335 curated interface strings each, covering the
+The fun packs contain 334 curated interface strings each, covering the
 workbench, settings, project creation, catalog, search, properties, address
 table, bus controls and flow view. They are playful partial translations,
 not linguistically authoritative or complete translations. Missing messages

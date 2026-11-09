@@ -574,8 +574,8 @@ fn a_v29_database_is_upgraded_to_exactly_the_fresh_values() {
         .query_row("PRAGMA user_version", [], |r| r.get(0))
         .unwrap();
     assert_eq!(version, CURRENT_PRODUCTDB_VERSION);
-    // v31 master ranges and v32 Color/Time repair do not change these legacy rows.
-    assert_eq!(version, 32);
+    // v31 master ranges, v32 Color/Time repair and v33 rename leaves do not change these legacy rows.
+    assert_eq!(version, 33);
     assert_eq!(enum_columns(&conn), fresh_enums);
     assert_eq!(dump(&conn, "SELECT * FROM parameter_type"), fresh_types);
     // Only binary_value differs from the pre-upgrade rows.

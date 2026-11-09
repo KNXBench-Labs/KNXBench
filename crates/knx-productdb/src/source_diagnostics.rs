@@ -78,6 +78,8 @@ pub fn source_diagnostics(
                 | "IdConflict"
                 | "BaggageIndexParseError"
                 | "PromotionRepairError"
+                // v33 (WP-05): a blob it could not re-read stays readable, by its own name.
+                | "RenameBackfillError"
         ) {
             return Err(invalid());
         }

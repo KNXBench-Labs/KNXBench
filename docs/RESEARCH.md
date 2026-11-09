@@ -44,6 +44,7 @@ outside preserved historical blocks, or use the next free section number
 
 | Section | Where |
 | --- | --- |
+| [9 November 2026 — Conditional parameter-block rename](research/2026-11-09-conditional-parameter-block-rename.md) | [V] one ETS6 observation: a rename leaf retitles its enclosing block in navigation and page heading, persists, restores the base; implemented contract is narrower |
 | [8 November 2026 — KNXnet/IP TCP tunnelling](research/2026-11-08-knxnet-ip-tcp-tunnelling.md) | [V] independently read Core/Tunnelling wire and lifecycle clauses; optional transport, Route Back, no ACK, retained heartbeat, bounded frame draining and explicit unresolved version-response policy; not runtime or hardware acceptance |
 | [8 November 2026 — ETS6 group-address CSV export](research/2026-11-08-ets6-group-address-csv-export.md) | [V] dialog options, header rows of all eight layouts, single-byte encoding, quoting and range rows; consequences for the KL-038 import profiles |
 | [8 November 2026 — ETS6 revision exports and archive restore](research/2026-11-08-ets6-revision-exports.md) | [V] clean-room observation for IMPORT-02: schema-23 parameter/link/`Puid`/`ChannelId` deltas, whole-project archive restore and its `ArchivedVersion` attribute; one ETS version only |

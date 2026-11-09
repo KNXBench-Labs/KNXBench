@@ -12,9 +12,9 @@ mod witness;
 
 /// The admitted `user_version`. The pinned fresh-chain shape (`schema28`) is
 /// the one v28 introduced; v29 (WP-08), v30 (WP-03), v31 (master BOM ranges) and
-/// v32 (Color/Time successor repair) change no DDL. Any later version must
+/// v32 (Color/Time successor repair) and v33 (conditional block rename) change no DDL. Any later version must
 /// re-establish its shape before it is admitted.
-const ADMITTED_VERSION: i64 = 32;
+const ADMITTED_VERSION: i64 = 33;
 const _: () = assert!(ADMITTED_VERSION == crate::migration::CURRENT_PRODUCTDB_VERSION);
 
 pub(crate) use witness::{

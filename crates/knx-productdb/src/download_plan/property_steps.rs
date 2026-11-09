@@ -1,4 +1,4 @@
-//! Translates master resets and parameter-filled property writes of mask `0701h` (ADR-0161/0162).
+//! Plans mask `0701h` master resets and parameter-filled property writes (ADR-0161/0162/0167).
 //!
 //! `[V]` What ETS 6.4 sent for these load controls to KNXBench's simulator
 //! (docs/research/2026-11-08-property-placed-parameters.md):
@@ -19,8 +19,10 @@
 //!   property no parameter reaches it did not write at all
 //!   (docs/research/2026-11-08-time-parameters-and-inline-property-writes.md,
 //!   ADR-0162). A non-zero `InlineData` was not observed and is refused.
+//! - Without `Count` and `InlineData`, ETS wrote the declared `MaxElements`,
+//!   read nothing and wrote zero into every bit no parameter owns (ADR-0167).
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 
 use knx_core::commissioning::load_state::MaskVersion;
 use knx_core::commissioning::memory_download::MemoryDownloadStep;
@@ -32,6 +34,10 @@ use crate::inference::Inference;
 /// [`Inference::rule`]: a master reset is sent as the function property
 /// command ETS 6.4 maps it to.
 pub const MASTER_RESET_AS_FUNCTION_PROPERTY: &str = "master-reset-as-function-property";
+
+/// [`Inference::rule`]: a parameter-filled write without `Count` writes the
+/// declared `MaxElements`, zero where no parameter reaches; nothing is read.
+pub const DECLARED_SIZE_WITHOUT_COUNT: &str = "declared-size-without-count";
 
 /// [`Inference::rule`]: an all-zero `InlineData` covering `Count` fills
 /// every element no parameter reaches; nothing is read.
@@ -48,6 +54,7 @@ pub const PROPERTY_WITHOUT_PARAMETERS_NOT_SENT: &str = "property-without-paramet
 const REFERENCE: &str = "docs/research/2026-11-08-property-placed-parameters.md";
 const INLINE_REFERENCE: &str =
     "docs/research/2026-11-08-time-parameters-and-inline-property-writes.md";
+const DECLARED_REFERENCE: &str = "docs/research/2026-11-08-property-writes-without-a-count.md";
 
 /// `FirstAppObjectIdx` of mask `0701h` in the KNX master data.
 const FIRST_APPLICATION_OBJECT_0701: u8 = 5;
@@ -71,8 +78,11 @@ fn master_reset_command(erase_code: u8) -> Option<u8> {
 pub(super) struct PropertySteps<'a> {
     image: &'a DownloadImage,
     mask: MaskVersion,
-    declared: BTreeSet<(u8, u8)>,
+    /// Declared properties and their `MaxElements`.
+    declared: BTreeMap<(u8, u8), u16>,
     written: BTreeSet<(u8, u8)>,
+    /// Writes without `Count`, sized by the declaration, without a read.
+    declared_size: usize,
     /// Writes filled from their `InlineData`, without a read.
     inline_filled: usize,
     /// Writes whose `InlineData` is shorter than `Count`.
@@ -86,8 +96,9 @@ impl<'a> PropertySteps<'a> {
         Self {
             image,
             mask,
-            declared: BTreeSet::new(),
+            declared: BTreeMap::new(),
             written: BTreeSet::new(),
+            declared_size: 0,
             inline_filled: 0,
             inline_short: 0,
             unsent: 0,
@@ -125,9 +136,9 @@ impl<'a> PropertySteps<'a> {
 
     pub(super) fn declare(
         &mut self,
-        object_index: u8,
-        property_id: u8,
+        (object_index, property_id): (u8, u8),
         property_type: &str,
+        max_elements: u16,
         writable: bool,
     ) -> Result<(), DownloadPlanError> {
         let refuse = |reason: String| DownloadPlanError::PropertyParameters {
@@ -143,7 +154,8 @@ impl<'a> PropertySteps<'a> {
         if !writable {
             return Err(refuse("declared not writable".into()));
         }
-        self.declared.insert((object_index, property_id));
+        self.declared
+            .insert((object_index, property_id), max_elements);
         Ok(())
     }
 
@@ -153,7 +165,7 @@ impl<'a> PropertySteps<'a> {
         &mut self,
         object_index: u8,
         property_id: u8,
-        count: u16,
+        count: Option<u16>,
         inline_data: Option<&[u8]>,
     ) -> Result<Option<MemoryDownloadStep>, DownloadPlanError> {
         let refuse = |reason: &str| DownloadPlanError::PropertyParameters {
@@ -162,14 +174,22 @@ impl<'a> PropertySteps<'a> {
             reason: reason.to_string(),
         };
         let key = (object_index, property_id);
-        if !self.declared.contains(&key) {
+        let Some(&max_elements) = self.declared.get(&key) else {
             return Err(refuse(
                 "written by parameters without a declared description",
             ));
-        }
+        };
         if !self.written.insert(key) {
             return Err(refuse("written by parameters twice"));
         }
+        let image = self.image;
+        let property = image
+            .properties
+            .iter()
+            .find(|property| (property.object_index, property.property_id) == key);
+        let Some(count) = count else {
+            return self.write_declared(key, max_elements, property.map(|p| &p.octets[..]));
+        };
         if count == 0 {
             return Err(refuse("written with Count=0"));
         }
@@ -179,11 +199,6 @@ impl<'a> PropertySteps<'a> {
             ));
         }
         let elements = usize::from(count);
-        let property = self
-            .image
-            .properties
-            .iter()
-            .find(|property| (property.object_index, property.property_id) == key);
         let (mut octets, mut owned) = match (property, inline_data) {
             (Some(property), _) => (property.octets.clone(), property.owned.clone()),
             (None, Some(_)) => {
@@ -215,6 +230,47 @@ impl<'a> PropertySteps<'a> {
         }))
     }
 
+    /// A write without `Count` or `InlineData`: `[V]` ETS 6.4 wrote the
+    /// declared `MaxElements`, read nothing, and wrote zero into every bit no
+    /// parameter owns (ADR-0167). Only a property that holds parameters was
+    /// observed.
+    fn write_declared(
+        &mut self,
+        (object_index, property_id): (u8, u8),
+        max_elements: u16,
+        parameters: Option<&[u8]>,
+    ) -> Result<Option<MemoryDownloadStep>, DownloadPlanError> {
+        let refuse = |reason: &str| DownloadPlanError::PropertyParameters {
+            object_index,
+            property_id,
+            reason: reason.to_string(),
+        };
+        let Some(parameters) = parameters else {
+            return Err(refuse(
+                "written without Count, but holds no parameter; that was not observed",
+            ));
+        };
+        let elements = usize::from(max_elements);
+        if elements == 0 {
+            return Err(refuse(
+                "written without Count, and declared with MaxElements=0",
+            ));
+        }
+        if parameters.len() > elements {
+            return Err(refuse("parameters lie past the declared MaxElements"));
+        }
+        let mut octets = parameters.to_vec();
+        octets.resize(elements, 0);
+        self.declared_size += 1;
+        Ok(Some(MemoryDownloadStep::WritePropertyParameters {
+            object_index,
+            property_id,
+            elements: max_elements,
+            octets,
+            owned: vec![0xFF; elements],
+        }))
+    }
+
     /// Every property the image places parameters in is written; the
     /// `InlineData` rules applied are named.
     pub(super) fn finish(self, inferences: &mut Vec<Inference>) -> Result<(), DownloadPlanError> {
@@ -229,13 +285,22 @@ impl<'a> PropertySteps<'a> {
                 reason: "holds parameters, but the procedure never writes it".into(),
             });
         }
-        for (count, rule, detail) in [
+        for (count, rule, detail, reference) in [
+            (
+                self.declared_size,
+                DECLARED_SIZE_WITHOUT_COUNT,
+                "parameter-filled property writes carry no Count: the declared MaxElements are \
+                 written, every bit no parameter owns as zero, and nothing is read, as ETS 6.4 \
+                 did",
+                DECLARED_REFERENCE,
+            ),
             (
                 self.inline_filled,
                 INLINE_DATA_FILLS_PROPERTY,
                 "parameter-filled property writes carry an all-zero InlineData covering Count: \
                  every element no parameter reaches is written as zero and nothing is read, as \
                  ETS 6.4 did",
+                INLINE_REFERENCE,
             ),
             (
                 self.inline_short,
@@ -243,19 +308,21 @@ impl<'a> PropertySteps<'a> {
                 "parameter-filled property writes carry an InlineData shorter than Count: it is \
                  not used, the device's value is read and only the parameters' bits change, as \
                  ETS 6.4 did",
+                INLINE_REFERENCE,
             ),
             (
                 self.unsent,
                 PROPERTY_WITHOUT_PARAMETERS_NOT_SENT,
                 "parameter-filled property writes with InlineData reach no parameter and are not \
                  sent, as ETS 6.4 did",
+                INLINE_REFERENCE,
             ),
         ] {
             if count > 0 {
                 inferences.push(Inference {
                     rule,
                     detail: format!("{count} {detail}"),
-                    reference: INLINE_REFERENCE,
+                    reference,
                 });
             }
         }

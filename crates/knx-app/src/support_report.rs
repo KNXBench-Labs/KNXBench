@@ -543,7 +543,9 @@ fn context(code: &ProgramCode) -> Context {
                 } => {
                     a.insert("objectIndex", (*object_index).into());
                     a.insert("propertyId", (*property_id).into());
-                    a.insert("count", (*count).into());
+                    if let Some(count) = count {
+                        a.insert("count", (*count).into());
+                    }
                     if let Some(inline) = inline_data {
                         let octets = u32::try_from(inline.len()).unwrap_or(u32::MAX);
                         a.insert("inlineDataOctets", octets);

@@ -67,4 +67,5 @@ no parameter owns. These downloads stay untested until a device confirms them.
 `LdCtrlWriteProp` without `Count`, with `Count` and `InlineData`, other erase
 codes and other declared types stay refused. (ADR-0162 later admitted `Count`
 with all-zero `InlineData` and `TypeTime` values in plain units, and lets the
-executor skip the read when every bit is owned.)
+executor skip the read when every bit is owned; ADR-0167 admitted writes
+without `Count` or `InlineData`, sized by the declaration.)

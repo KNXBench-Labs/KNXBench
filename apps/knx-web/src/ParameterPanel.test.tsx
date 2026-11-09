@@ -906,6 +906,7 @@ describe("ParameterPanel", () => {
     ["parameterAccessReadOnly", "Einige Felder hat der Hersteller schreibgeschützt oder verborgen (Access); sie sind nicht beschreibbar."],
     ["manufacturerCalculation", "Einige Felder sind Ein- oder Ausgaben einer Herstellerberechnung, die KNXBench nicht ausführt; sie sind schreibgeschützt."],
     ["writeAuthorityUnavailable", "Die Produktdatenbank hat für dieses Programm keine Schreibberechtigung erfasst; seine Felder sind schreibgeschützt. Installiere das Produkt neu, um sie zu erfassen."],
+    ["assignedControllerDiffers", "Der steuernde Parameter einer verborgenen Auswahl wird durch eine Zuweisung, die KNXBench nicht ausführt, auf einen anderen Wert gesetzt; das Ergebnis ist unvollständig."],
     ["unsupportedControlKind", "Der steuernde Parameter einer Auswahl hat einen nicht unterstützten Typ; ihre Zweige wurden nicht ausgewertet."],
     ["evaluationWorkBudgetExhausted", "Dieses Programm hat die Auswertungsgrenze überschritten; seine unvollständige Parameteransicht ist schreibgeschützt."],
     ["parameterBlockAccessRestricted", "Einige Felder liegen in einer Parametergruppe, die der Hersteller schreibgeschützt oder verborgen hat (Access); sie sind nicht beschreibbar."],

@@ -18,9 +18,9 @@ use rusqlite::Connection;
 use zip::write::SimpleFileOptions;
 
 use knx_productdb::dynamic::{
-    evaluate, load_program_trees, ActiveRef, ControlKind, Diagnostic, DynamicNode, DynamicTree,
-    ModuleScope, Op, ProgramTrees, ScopedDiagnostic, Test, ValueMap, MAX_EVALUATION_WORK,
-    MAX_MODULE_ACTIVATIONS, MAX_MODULE_EXPANSIONS, MAX_MODULE_NESTING_DEPTH,
+    evaluate, load_program_trees, ActiveRef, AssignSource, Assignment, ControlKind, Diagnostic,
+    DynamicNode, DynamicTree, ModuleScope, Op, ProgramTrees, ScopedDiagnostic, Test, ValueMap,
+    MAX_EVALUATION_WORK, MAX_MODULE_ACTIVATIONS, MAX_MODULE_EXPANSIONS, MAX_MODULE_NESTING_DEPTH,
 };
 
 fn db() -> (tempfile::TempDir, Connection) {
@@ -951,6 +951,430 @@ fn inactivity_needs_a_placement_outside_the_choose_and_a_complete_pass() {
         .diagnostics
         .iter()
         .any(|d| matches!(d.diagnostic, Diagnostic::UnparsableTest { .. })));
+}
+
+/// ADR-0168 review: an `Assign` below a controller this pass marks inactive
+/// is not run, so it neither keeps nor refuses its target. Below a
+/// controller an agreeing assignment keeps, it still counts.
+#[test]
+fn an_assign_below_a_marked_controller_does_not_count() {
+    let choose = |id, parent, controller: &str| DynamicNode {
+        control_kind: Some(ControlKind::Comparable),
+        ref_id: Some(controller.into()),
+        ..nd(id, Some(parent), "choose")
+    };
+    let when = |id, parent, test: &str| DynamicNode {
+        test: Some(test.into()),
+        ..nd(id, Some(parent), "when")
+    };
+    let refref = |id, parent, kind: &str, r: &str| DynamicNode {
+        ref_id: Some(r.into()),
+        ..nd(id, Some(parent), kind)
+    };
+    let assign = |target: &str, source: AssignSource| {
+        Some(Assignment {
+            target: target.into(),
+            source,
+        })
+    };
+    let tree = |keep_a: bool| {
+        let mut nodes = vec![
+            nd(0, None, "Dynamic"),
+            refref(1, 0, "ParameterRefRef", "MODE"),
+            choose(2, 0, "MODE"),
+            when(3, 2, "1"),
+            refref(4, 3, "ParameterRefRef", "A"),
+            refref(5, 3, "ParameterRefRef", "B"),
+            when(6, 2, "2"),
+            choose(7, 0, "A"),
+            when(8, 7, "0"),
+            nd(9, Some(8), "Assign"),
+            choose(10, 0, "B"),
+            when(11, 10, "0"),
+            refref(12, 11, "ComObjectRefRef", "X"),
+        ];
+        let mut declared = vec![(9, assign("B", AssignSource::Value("1".into())))];
+        if keep_a {
+            nodes.push(nd(13, Some(6), "Assign"));
+            declared.push((13, assign("A", AssignSource::Value("0".into()))));
+        }
+        DynamicTree::from_nodes(nodes).with_assignments(declared)
+    };
+    let run = |keep_a| {
+        evaluate(
+            &ProgramTrees::single(tree(keep_a)),
+            &values(&[("MODE", "2"), ("A", "0"), ("B", "0")]).into(),
+        )
+    };
+    let hidden = run(false);
+    assert!(hidden.diagnostics.is_empty(), "{:?}", hidden.diagnostics);
+    assert!(
+        hidden.com_object_refs.is_empty(),
+        "{:?}",
+        hidden.com_object_refs
+    );
+    let kept = run(true);
+    assert_eq!(
+        kept.diagnostics,
+        vec![diag(Diagnostic::AssignedControllerDiffers {
+            assign_node: 9,
+            param_ref: "B".into(),
+            assigned_value: Some("1".into()),
+            observed_value: Some("0".into()),
+        })]
+    );
+}
+
+/// ADR-0168: controllers that only assign each other from below their own
+/// hidden `choose` are both marked; nothing outside them runs those
+/// assignments, so no differing value is reported.
+#[test]
+fn controllers_assigning_each_other_from_hidden_branches_are_both_marked() {
+    let choose = |id, parent, controller: &str| DynamicNode {
+        control_kind: Some(ControlKind::Comparable),
+        ref_id: Some(controller.into()),
+        ..nd(id, Some(parent), "choose")
+    };
+    let when = |id, parent, test: &str| DynamicNode {
+        test: Some(test.into()),
+        ..nd(id, Some(parent), "when")
+    };
+    let refref = |id, parent, kind: &str, r: &str| DynamicNode {
+        ref_id: Some(r.into()),
+        ..nd(id, Some(parent), kind)
+    };
+    let assign = |node, target: &str| {
+        (
+            node,
+            Some(Assignment {
+                target: target.into(),
+                source: AssignSource::Value("1".into()),
+            }),
+        )
+    };
+    let tree = DynamicTree::from_nodes(vec![
+        nd(0, None, "Dynamic"),
+        refref(1, 0, "ParameterRefRef", "MODE"),
+        choose(2, 0, "MODE"),
+        when(3, 2, "1"),
+        refref(4, 3, "ParameterRefRef", "A"),
+        refref(5, 3, "ParameterRefRef", "B"),
+        when(6, 2, "2"),
+        choose(7, 0, "A"),
+        when(8, 7, "0"),
+        nd(9, Some(8), "Assign"),
+        refref(10, 8, "ComObjectRefRef", "X"),
+        choose(11, 0, "B"),
+        when(12, 11, "0"),
+        nd(13, Some(12), "Assign"),
+    ])
+    .with_assignments([assign(9, "B"), assign(13, "A")]);
+    let activation = evaluate(
+        &ProgramTrees::single(tree),
+        &values(&[("MODE", "2"), ("A", "0"), ("B", "0")]).into(),
+    );
+    assert!(
+        activation.diagnostics.is_empty(),
+        "{:?}",
+        activation.diagnostics
+    );
+    assert!(
+        activation.com_object_refs.is_empty(),
+        "{:?}",
+        activation.com_object_refs
+    );
+}
+
+/// ADR-0168: a controller no `ParameterRefRef` names, whose `choose`
+/// selects by value and competes with a placed controller for the same
+/// reference (`V_HEAT` beside the shown `V_ONOFF`), selects nothing while it
+/// holds its default. An unnamed controller without such competition
+/// (`PAIR`), unconditional structure (`TypeNone`, default-only), a `choose`
+/// with a default branch, a controller named only inside its own `choose`
+/// (`OWN`) and an alternative holding another value are read as before.
+#[test]
+fn an_unnamed_alternative_controller_selects_nothing() {
+    let choose = |id, parent, controller: &str, kind: ControlKind| DynamicNode {
+        control_kind: Some(kind),
+        ref_id: Some(controller.into()),
+        ..nd(id, Some(parent), "choose")
+    };
+    let when = |id, parent, test: &str| DynamicNode {
+        test: Some(test.into()),
+        ..nd(id, Some(parent), "when")
+    };
+    let default = |id, parent| DynamicNode {
+        is_default: true,
+        ..nd(id, Some(parent), "when")
+    };
+    let refref = |id, parent, r: &str| DynamicNode {
+        ref_id: Some(r.into()),
+        ..nd(id, Some(parent), "ParameterRefRef")
+    };
+    let tree = DynamicTree::from_nodes(vec![
+        nd(0, None, "Dynamic"),
+        refref(1, 0, "V_ONOFF"),
+        choose(2, 0, "V_ONOFF", ControlKind::Comparable),
+        when(3, 2, "0"),
+        refref(4, 3, "U_0"),
+        when(5, 2, "1"),
+        refref(6, 5, "U_1"),
+        choose(7, 0, "V_HEAT", ControlKind::Comparable),
+        when(8, 7, "0"),
+        refref(9, 8, "U_0"),
+        choose(10, 0, "PAIR", ControlKind::Comparable),
+        when(11, 10, "0"),
+        refref(12, 11, "BUTTON_5"),
+        choose(13, 0, "NONE", ControlKind::TypeNone),
+        default(14, 13),
+        refref(15, 14, "STRUCTURE"),
+        choose(16, 0, "ALWAYS", ControlKind::Comparable),
+        default(17, 16),
+        refref(18, 17, "GENERAL"),
+        choose(19, 0, "FALLBACK", ControlKind::Comparable),
+        when(20, 19, "1"),
+        default(21, 19),
+        refref(22, 21, "FALLEN_BACK"),
+        choose(23, 0, "OWN", ControlKind::Comparable),
+        when(24, 23, "0"),
+        refref(25, 24, "OWN"),
+        when(26, 23, "1"),
+        refref(27, 26, "U_0"),
+    ]);
+    let defaults = [("V_HEAT", "0"), ("PAIR", "0"), ("OWN", "1")];
+    let run = |heat: &str| {
+        evaluate(
+            &ProgramTrees::single(tree.clone()).with_defaults(defaults),
+            &values(&[
+                ("V_ONOFF", "1"),
+                ("V_HEAT", heat),
+                ("PAIR", "0"),
+                ("NONE", ""),
+                ("ALWAYS", "0"),
+                ("FALLBACK", "0"),
+                ("OWN", "1"),
+            ])
+            .into(),
+        )
+    };
+    let at_default = run("0");
+    assert!(
+        at_default.diagnostics.is_empty(),
+        "{:?}",
+        at_default.diagnostics
+    );
+    assert_eq!(
+        at_default.parameter_refs,
+        [
+            "V_ONOFF",
+            "U_1",
+            "BUTTON_5",
+            "STRUCTURE",
+            "GENERAL",
+            "FALLEN_BACK",
+            "U_0"
+        ]
+        .map(active)
+    );
+    // Another value is read as before, and an illegal one reported.
+    let changed = run("1");
+    assert_eq!(
+        changed.diagnostics,
+        vec![diag(Diagnostic::NoBranchMatched {
+            choose_node: 7,
+            param_ref: Some("V_HEAT".into()),
+            observed_value: "1".into(),
+        })]
+    );
+}
+
+/// ADR-0168: an unnamed alternative deciding a `choose` inside a
+/// `ModuleDef` is read as before, even at its program default: a module
+/// instance may hold another value.
+#[test]
+fn an_unnamed_alternative_inside_a_module_is_read_as_before() {
+    let choose = |id, parent, controller: &str| DynamicNode {
+        control_kind: Some(ControlKind::Comparable),
+        ref_id: Some(controller.into()),
+        ..nd(id, Some(parent), "choose")
+    };
+    let when = |id, parent, test: &str| DynamicNode {
+        test: Some(test.into()),
+        ..nd(id, Some(parent), "when")
+    };
+    let refref = |id, parent, r: &str| DynamicNode {
+        ref_id: Some(r.into()),
+        ..nd(id, Some(parent), "ParameterRefRef")
+    };
+    let program = DynamicTree::from_nodes(vec![
+        nd(0, None, "Dynamic"),
+        refref(1, 0, "V_ONOFF"),
+        choose(2, 0, "V_ONOFF"),
+        when(3, 2, "0"),
+        refref(4, 3, "U_0"),
+        when(6, 2, "1"),
+        DynamicNode {
+            element_id: Some("M-A".into()),
+            ref_id: Some("MD-1".into()),
+            ..nd(5, Some(0), "Module")
+        },
+    ]);
+    let module_def = DynamicTree::from_nodes(vec![
+        nd(0, None, "Dynamic"),
+        choose(1, 0, "V_HEAT"),
+        when(2, 1, "0"),
+        refref(3, 2, "U_0"),
+        when(4, 1, "1"),
+        refref(5, 4, "U_1"),
+    ]);
+    let trees =
+        ProgramTrees::from_parts(program, HashMap::from([("MD-1".to_string(), module_def)]))
+            .with_defaults([("V_HEAT", "0")]);
+    let mut vm: ValueMap = values(&[("V_ONOFF", "1"), ("V_HEAT", "0")]).into();
+    vm.insert_scoped("M-A".to_string(), "V_HEAT".to_string(), "1".to_string());
+    let activation = evaluate(&trees, &vm);
+    assert!(
+        activation.diagnostics.is_empty(),
+        "{:?}",
+        activation.diagnostics
+    );
+    let refs: Vec<&str> = activation
+        .parameter_refs
+        .iter()
+        .map(|r| r.ref_id.as_str())
+        .collect();
+    assert_eq!(refs, ["V_ONOFF", "U_1"]);
+}
+
+/// ADR-0168, the shape of a one-button push-button program: a constant
+/// mode hides the block placing `SPLIT`, but an active `Assign` sets it,
+/// so its `choose` still decides the channel. `OTHER`, hidden the same way
+/// and assigned by nothing, still selects nothing (ADR-0160).
+#[test]
+fn an_assigned_hidden_controller_is_evaluated_when_the_assignment_agrees() {
+    let choose = |id, parent, controller: &str| DynamicNode {
+        control_kind: Some(ControlKind::Comparable),
+        ref_id: Some(controller.into()),
+        ..nd(id, parent, "choose")
+    };
+    let when = |id, parent, test: &str| DynamicNode {
+        test: Some(test.into()),
+        ..nd(id, Some(parent), "when")
+    };
+    let refref = |id, parent, kind: &str, r: &str| DynamicNode {
+        ref_id: Some(r.into()),
+        ..nd(id, Some(parent), kind)
+    };
+    let tree = |assignment: Option<Option<Assignment>>| {
+        let tree = DynamicTree::from_nodes(vec![
+            nd(0, None, "Dynamic"),
+            refref(1, 0, "ParameterRefRef", "MODE"),
+            choose(2, Some(0), "MODE"),
+            when(3, 2, "2"),
+            nd(4, Some(3), "Assign"),
+            when(5, 2, "1"),
+            refref(6, 5, "ParameterRefRef", "SPLIT"),
+            refref(7, 5, "ParameterRefRef", "OTHER"),
+            choose(8, Some(0), "SPLIT"),
+            when(9, 8, "0"),
+            refref(10, 9, "ComObjectRefRef", "O_BUTTON_1"),
+            when(11, 8, "1"),
+            refref(12, 11, "ComObjectRefRef", "O_ROCKER"),
+            choose(13, Some(0), "OTHER"),
+            when(14, 13, "0"),
+            refref(15, 14, "ComObjectRefRef", "O_BUTTON_3"),
+        ]);
+        match assignment {
+            Some(assignment) => tree.with_assignments([(4, assignment)]),
+            None => tree,
+        }
+    };
+    let from_fix = || {
+        Some(Assignment {
+            target: "SPLIT".into(),
+            source: AssignSource::Parameter("FIX".into()),
+        })
+    };
+    let run = |assignment, pairs: &[(&str, &str)]| {
+        evaluate(
+            &ProgramTrees::single(tree(assignment)),
+            &values(pairs).into(),
+        )
+    };
+    let hidden = [("MODE", "2"), ("SPLIT", "0"), ("OTHER", "0")];
+
+    let agreeing = run(
+        Some(from_fix()),
+        &[hidden.as_slice(), &[("FIX", "0")]].concat(),
+    );
+    assert_eq!(agreeing.com_object_refs, vec![active("O_BUTTON_1")]);
+    assert!(
+        agreeing.diagnostics.is_empty(),
+        "{:?}",
+        agreeing.diagnostics
+    );
+    let literal = run(
+        Some(Some(Assignment {
+            target: "SPLIT".into(),
+            source: AssignSource::Value("00".into()),
+        })),
+        &hidden,
+    );
+    assert_eq!(literal.com_object_refs, vec![active("O_BUTTON_1")]);
+    assert!(literal.diagnostics.is_empty(), "{:?}", literal.diagnostics);
+
+    // Unchanged without an assignment, or with it in an inactive branch.
+    let inert = run(None, &hidden);
+    assert!(
+        inert.com_object_refs.is_empty(),
+        "{:?}",
+        inert.com_object_refs
+    );
+    assert!(inert.diagnostics.is_empty(), "{:?}", inert.diagnostics);
+    let shown = run(
+        Some(from_fix()),
+        &[("MODE", "1"), ("SPLIT", "1"), ("OTHER", "0"), ("FIX", "0")],
+    );
+    assert_eq!(
+        shown.com_object_refs,
+        ["O_ROCKER", "O_BUTTON_3"].map(active)
+    );
+    assert!(shown.diagnostics.is_empty(), "{:?}", shown.diagnostics);
+
+    // An assignment KNXBench would have to execute is reported, not guessed.
+    let differing = run(
+        Some(from_fix()),
+        &[hidden.as_slice(), &[("FIX", "1")]].concat(),
+    );
+    assert_eq!(
+        differing.diagnostics,
+        vec![diag(Diagnostic::AssignedControllerDiffers {
+            assign_node: 4,
+            param_ref: "SPLIT".into(),
+            assigned_value: Some("1".into()),
+            observed_value: Some("0".into()),
+        })]
+    );
+    assert!(differing.diagnostics[0].diagnostic.may_hide_refs());
+    let unknown_source = run(Some(from_fix()), &hidden);
+    assert!(matches!(
+        unknown_source.diagnostics.as_slice(),
+        [ScopedDiagnostic {
+            diagnostic: Diagnostic::AssignedControllerDiffers {
+                assigned_value: None,
+                ..
+            },
+            ..
+        }]
+    ));
+    let unreadable = run(Some(None), &hidden);
+    assert_eq!(
+        unreadable.diagnostics,
+        vec![diag(Diagnostic::UnrecognizedNode {
+            node_id: 4,
+            kind: "Assign".into(),
+        })]
+    );
 }
 
 /// No `when` matches and there is no default: nothing activates, and

@@ -12,6 +12,27 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Assigned and unnamed controllers, short segments, mid-octet unions (9 November 2026; issue #10 follow-up)
+
+Four more devices of the tester project plan
+([ADR-0168](adr/0168-assigned-and-unnamed-controllers.md),
+[research](research/2026-11-09-assigned-controllers-and-short-segments.md)).
+The evaluator no longer counts a hidden `choose` controller as inactive when
+an active `Assign` sets it to the stored value; a different or unknown
+assigned value is reported as `AssignedControllerDiffers` (server, web panel
+in English and German) instead of being guessed. An unnamed controller whose
+`choose` competes with a placed one for the same reference counts as placed
+while it holds its default (ADR-0160 then applies). An allocation longer than its segment writes the
+segment (`allocation-beyond-segment-not-written`), and union members of a
+mid-octet union add the bit offsets on mask `0701h` layouts; System-1 and
+System-2 layouts keep that refusal. ETS 6.4 images recorded against the
+simulator equal KNXBench's for the same configuration in every parameter
+octet except KL-145 flags; KNXBench downloads to the simulator completed and
+wrote nothing past the segment. Active objects equal ETS's records on all 51
+tester devices that carry them. Readiness of the tester project: 10
+unsupported, 65 untested (0.2.7, 0.2.49, 0.2.63, 0.2.66 moved). No hardware
+was written.
+
 ## Property writes without a count (9 November 2026; issue #10 follow-up)
 
 A parameter-filled `LdCtrlWriteProp` that carries neither `Count` nor

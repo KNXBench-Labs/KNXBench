@@ -378,6 +378,13 @@ pub const MACHINE_5_AFTER_RESTART: &str = "machine-5-after-restart";
 /// KNXBench does so only when every written parameter and table lies in it.
 pub const SEGMENT_BEYOND_ALLOCATION: &str = "segment-beyond-allocation-not-written";
 
+/// [`Inference::rule`]: an allocation longer than its segment is written up
+/// to the segment's end only. `[V]` ETS 6.4 wrote exactly the segment's
+/// octets of such an allocation
+/// (docs/research/2026-11-09-assigned-controllers-and-short-segments.md);
+/// KNXBench does so only when every written parameter and table lies in them.
+pub const ALLOCATION_BEYOND_SEGMENT: &str = "allocation-beyond-segment-not-written";
+
 /// [`Inference::rule`]: a property comparison the procedure places after a
 /// fixed property write is run before it. The executor checks the device
 /// before it changes anything; a comparison is only a read, so moving it
@@ -547,10 +554,11 @@ pub fn plan_memory_download_with_inferences(
                     return Err(DownloadPlanError::AllocatedTwice(*address));
                 }
                 steps.push(MemoryDownloadStep::LoadRecord(record));
-                let (writes, beyond) = data_writes(image, *address, *size)?;
+                let (writes, fit) = data_writes(image, *address, *size)?;
                 steps.extend(writes);
-                if let Some(beyond) = beyond {
-                    inferences.push(Inference {
+                match fit {
+                    SegmentFit::Exact => {}
+                    SegmentFit::Longer(beyond) => inferences.push(Inference {
                         rule: SEGMENT_BEYOND_ALLOCATION,
                         detail: format!(
                             "the segment at {address:04X}h holds {beyond} octets past its \
@@ -558,7 +566,17 @@ pub fn plan_memory_download_with_inferences(
                              sent, as ETS 6.4 does"
                         ),
                         reference: "docs/research/2026-11-07-ldctrlwriteprop-and-byte-order.md",
-                    });
+                    }),
+                    SegmentFit::Shorter(octets) => inferences.push(Inference {
+                        rule: ALLOCATION_BEYOND_SEGMENT,
+                        detail: format!(
+                            "the allocation of {size} octets at {address:04X}h is longer than \
+                             its segment's {octets}; only the segment's octets are written, as \
+                             ETS 6.4 does"
+                        ),
+                        reference:
+                            "docs/research/2026-11-09-assigned-controllers-and-short-segments.md",
+                    }),
                 }
             }
             LoadStep::TaskSegment { lsm, address } => {
@@ -668,23 +686,35 @@ fn element_name(step: &LoadStep) -> &'static str {
     }
 }
 
+/// How a segment's octets compare with its allocation.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum SegmentFit {
+    Exact,
+    /// This many octets lie past the allocation, unsent.
+    Longer(usize),
+    /// The segment holds only this many octets; the rest of the allocation
+    /// is not written.
+    Shorter(usize),
+}
+
 /// The writes for the segment allocated at `address`, if the image has one
-/// there, and how many of its octets lie past the allocation unsent. Two
-/// segments with data at one start are refused: nothing in the product says
-/// which one an allocation takes, equal octets or not. A segment shorter
-/// than its allocation, or longer with a written parameter or table past it,
-/// is refused ([`SEGMENT_BEYOND_ALLOCATION`]).
+/// there, and how its octets fit the allocation. Two segments with data at
+/// one start are refused: nothing in the product says which one an
+/// allocation takes, equal octets or not. Only the octets both the segment
+/// and the allocation cover are written ([`SEGMENT_BEYOND_ALLOCATION`],
+/// [`ALLOCATION_BEYOND_SEGMENT`]); a written parameter or table outside
+/// them is refused.
 fn data_writes(
     image: &DownloadImage,
     address: u16,
     size: u16,
-) -> Result<(Vec<MemoryDownloadStep>, Option<usize>), DownloadPlanError> {
+) -> Result<(Vec<MemoryDownloadStep>, SegmentFit), DownloadPlanError> {
     let mut here = image
         .segments
         .iter()
         .filter(|segment| segment.address == u32::from(address));
     let Some(segment) = here.next() else {
-        return Ok((Vec::new(), None));
+        return Ok((Vec::new(), SegmentFit::Exact));
     };
     if let Some(other) = here.next() {
         return Err(DownloadPlanError::DuplicateSegmentStart {
@@ -699,15 +729,21 @@ fn data_writes(
         allocated: size,
         octets: segment.octets.len(),
     };
-    if segment.octets.len() < allocated || written_end(image, &segment.id) > allocated {
+    let held = segment.octets.len();
+    let end = allocated.min(held);
+    if written_end(image, &segment.id) > end {
         return Err(mismatch());
     }
-    let beyond = (segment.octets.len() > allocated).then(|| segment.octets.len() - allocated);
+    let fit = match held.cmp(&allocated) {
+        std::cmp::Ordering::Equal => SegmentFit::Exact,
+        std::cmp::Ordering::Greater => SegmentFit::Longer(held - allocated),
+        std::cmp::Ordering::Less => SegmentFit::Shorter(held),
+    };
     let mask = segment
         .mask
         .as_deref()
-        .map(|mask| &mask[..allocated.min(mask.len())]);
-    let writes = unmasked_runs(&segment.octets[..allocated], mask)
+        .map(|mask| &mask[..end.min(mask.len())]);
+    let writes = unmasked_runs(&segment.octets[..end], mask)
         .into_iter()
         .map(|(offset, octets)| {
             // `offset < size`, and `address + size - 1` fits 16 bits or the
@@ -719,7 +755,7 @@ fn data_writes(
             })
         })
         .collect::<Result<Vec<_>, DownloadPlanError>>()?;
-    Ok((writes, beyond))
+    Ok((writes, fit))
 }
 
 /// The end, in octets from the segment's start, of everything the image
@@ -1086,12 +1122,39 @@ mod tests {
         );
     }
 
+    /// ADR-0168's research note: ETS 6.4 wrote only the segment's octets
+    /// of a longer allocation. Something written past them still refuses.
     #[test]
-    fn a_segment_shorter_than_its_allocation_is_refused() {
+    fn a_shorter_segment_writes_its_octets_while_nothing_written_lies_past_them() {
         let mut image = image();
         image.segments[1].octets.pop();
+        let (plan, inferences) = plan_memory_download_with_inferences(&image).unwrap();
+        let writes: Vec<_> = plan
+            .steps
+            .iter()
+            .filter_map(|step| match step {
+                MemoryDownloadStep::WriteMemory { address, octets } if *address >= 0x4400 => {
+                    Some((*address, octets.clone()))
+                }
+                _ => None,
+            })
+            .collect();
+        assert_eq!(writes, [(0x4400, vec![0xAA])]);
+        assert!(inferences
+            .iter()
+            .any(|inference| inference.rule == ALLOCATION_BEYOND_SEGMENT));
+        assert!(!inferences
+            .iter()
+            .any(|inference| inference.rule == SEGMENT_BEYOND_ALLOCATION));
+
+        let mut table = image.clone();
+        table.table_writes.push(TableWrite {
+            segment_id: "AS-4400".into(),
+            start: 0,
+            end: 2,
+        });
         assert_eq!(
-            plan_memory_download(&image),
+            plan_memory_download(&table),
             Err(DownloadPlanError::SizeMismatch {
                 address: 0x4400,
                 allocated: 2,

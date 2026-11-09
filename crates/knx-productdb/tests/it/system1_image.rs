@@ -425,3 +425,43 @@ fn an_unreadable_number_bound_refuses_the_system1_image_instead_of_vanishing() {
         }
     }
 }
+
+/// ADR-0168: on a legacy layout a member away from the start of a mid-octet
+/// union still refuses, also when a later member overlaps it.
+#[test]
+fn a_legacy_mid_octet_union_member_still_refuses() {
+    let xml = program()
+        .replace(
+            "<ParameterType Id=\"PT\" Name=\"Number\"><TypeNumber SizeInBit=\"8\" Type=\"unsignedInt\" minInclusive=\"0\" maxInclusive=\"255\" /></ParameterType>",
+            "<ParameterType Id=\"PT\" Name=\"Number\"><TypeNumber SizeInBit=\"8\" Type=\"unsignedInt\" minInclusive=\"0\" maxInclusive=\"255\" /></ParameterType><ParameterType Id=\"PT3\" Name=\"N3\"><TypeNumber SizeInBit=\"3\" Type=\"unsignedInt\" minInclusive=\"0\" maxInclusive=\"7\" /></ParameterType><ParameterType Id=\"PT6\" Name=\"N6\"><TypeNumber SizeInBit=\"6\" Type=\"unsignedInt\" minInclusive=\"0\" maxInclusive=\"63\" /></ParameterType>",
+        )
+        .replace(
+            "<Parameters><Parameter Id=\"P\" Name=\"Level\" ParameterType=\"PT\" Value=\"18\"><Memory CodeSegment=\"S\" Offset=\"224\" BitOffset=\"0\" /></Parameter></Parameters>",
+            "<Parameters><Union SizeInBit=\"6\"><Memory CodeSegment=\"S\" Offset=\"224\" BitOffset=\"2\" /><Parameter Id=\"A\" Name=\"A\" ParameterType=\"PT3\" Value=\"2\" Offset=\"0\" BitOffset=\"3\" /><Parameter Id=\"P\" Name=\"Level\" ParameterType=\"PT6\" Value=\"18\" Offset=\"0\" BitOffset=\"0\" /></Union></Parameters>",
+        )
+        .replace(
+            "<ParameterRef Id=\"P_R\" RefId=\"P\" />",
+            "<ParameterRef Id=\"A_R\" RefId=\"A\" /><ParameterRef Id=\"P_R\" RefId=\"P\" />",
+        )
+        .replace(
+            "<ParameterRefRef RefId=\"P_R\" />",
+            "<ParameterRefRef RefId=\"A_R\" /><ParameterRefRef RefId=\"P_R\" />",
+        );
+    let (_dir, conn, mut request) = fixture(&xml);
+    request.values.clear();
+    let result = build_system1_image(&conn, &request);
+    // Only the moved member active.
+    let alone = xml.replace("<ParameterRefRef RefId=\"P_R\" />", "");
+    let (_d2, conn2, mut request2) = fixture(&alone);
+    request2.values.clear();
+    let refused = |result: Result<_, ImageError>| {
+        assert!(
+            matches!(&result, Err(ImageError::Unsupported { what })
+                if what == "A: a union member offset inside a union that starts mid-octet"),
+            "{:?}",
+            result.map(|_: knx_productdb::image::DownloadImage| ())
+        );
+    };
+    refused(result);
+    refused(build_system1_image(&conn2, &request2));
+}

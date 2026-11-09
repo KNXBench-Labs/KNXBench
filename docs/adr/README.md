@@ -176,3 +176,4 @@ the old one gets `Status: Superseded by ADR-NNNN`.
 | [0168](0168-assigned-and-unnamed-controllers.md) | Assigned and unnamed choose controllers, short segments, mid-octet unions | Accepted | 2026-11-09 |
 | [0169](0169-float-parameters.md) | Float parameters are written in their declared encoding | Accepted | 2026-11-09 |
 | [0170](0170-every-matching-when-is-active.md) | Every matching `when` of a `choose` is active | Accepted | 2026-11-09 |
+| [0171](0171-assigned-invisible-parameters.md) | Invisible parameters an active `Assign` sets carry the assigned value | Accepted | 2026-11-09 |

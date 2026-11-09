@@ -131,9 +131,10 @@ use crate::code::{
     load_program_code, AbsoluteSegment, CodeError, MemoryPlacement, ParameterPlacement,
     ProgramCode, TablePlacement,
 };
+use crate::dynamic::evaluate::same_value;
 use crate::dynamic::{
-    evaluate, load_program_trees, resolve_values, Activation, Diagnostic, ScopedDiagnostic,
-    ValueMap,
+    evaluate, load_program_trees, resolve_values, Activation, AssignSource, Diagnostic,
+    ScopedDiagnostic, ValueMap,
 };
 use crate::inference::Inference;
 use crate::ProductDbError;
@@ -719,14 +720,27 @@ fn build_image_selected(
     let mut parameters = BTreeMap::new();
     let mut texts = BTreeMap::new();
     let mut parameter_fields = Vec::new();
-    for active in &activation.parameter_refs {
-        let parameter_ref = active.ref_id.as_str();
+    let assigned = if layout == ImageLayout::Easy3 && experimental.is_none() {
+        assigned_invisible_values(&code, &types, &activation, &values)?
+    } else {
+        Vec::new()
+    };
+    let refs = activation
+        .parameter_refs
+        .iter()
+        .map(|active| active.ref_id.as_str());
+    let assigned_refs = assigned.iter().map(|(target, _)| target.as_str());
+    for parameter_ref in refs.chain(assigned_refs) {
         let parameter = types.parameter_of(parameter_ref)?;
         let Some(placement) = code.parameters.get(parameter) else {
             continue; // Lives nowhere in memory.
         };
-        let raw = values
-            .get_unscoped(parameter_ref)
+        let assigned_value = assigned
+            .iter()
+            .find(|(target, _)| target == parameter_ref)
+            .map(|(_, value)| value.as_str());
+        let raw = assigned_value
+            .or_else(|| values.get_unscoped(parameter_ref))
             .ok_or_else(|| ImageError::Value {
                 parameter_ref: parameter_ref.to_string(),
                 cause: "no value, and no default".to_string(),
@@ -1127,6 +1141,112 @@ fn build_image_selected(
         table_writes,
         properties,
     })
+}
+
+/// ADR-0171: the invisible parameters an active `Assign` sets, with the value
+/// it sets, in a program whose `DownloadInvisibleParameters="Background"`.
+/// ETS 6.4 wrote the assigned value into such a parameter's memory field,
+/// where KNXBench wrote the template; ETS runs the assignment whatever the
+/// project held before. Only plain `Memory` placements of unscoped
+/// assignments are admitted, and only where writing the assigned value
+/// cannot contradict the rest of the image; everything else refuses rather
+/// than guesses:
+/// - an unreadable active `Assign` (its target is unknown);
+/// - assignments that disagree, or a source without a value;
+/// - a target that steers the evaluation (the controller of a `choose` the
+///   evaluation consulted, or the source of another active `Assign`) and
+///   holds another value: KNXBench evaluated with the stored value, ETS with
+///   the assigned one;
+/// - a target whose parameter an active reference writes with another value.
+fn assigned_invisible_values(
+    code: &ProgramCode,
+    types: &ParameterTypes,
+    activation: &Activation,
+    values: &ValueMap,
+) -> Result<Vec<(String, String)>, ImageError> {
+    if code
+        .options
+        .get("DownloadInvisibleParameters")
+        .map(String::as_str)
+        != Some("Background")
+    {
+        return Ok(Vec::new());
+    }
+    let refuse = |what: String| Err(ImageError::Unsupported { what });
+    let active_refs: BTreeSet<&str> = activation
+        .parameter_refs
+        .iter()
+        .map(|active| active.ref_id.as_str())
+        .collect();
+    let unscoped: Vec<_> = activation
+        .assigned
+        .iter()
+        .filter(|active| active.scope.is_none())
+        .collect();
+    let sources: BTreeSet<&str> = unscoped
+        .iter()
+        .filter_map(|active| match &active.assignment.as_ref()?.source {
+            AssignSource::Parameter(source) => Some(source.as_str()),
+            AssignSource::Value(_) => None,
+        })
+        .collect();
+    let mut out: Vec<(String, String)> = Vec::new();
+    for active in unscoped {
+        let Some(assignment) = &active.assignment else {
+            return refuse("an active Assign could not be read".into());
+        };
+        let target = assignment.target.as_str();
+        if active_refs.contains(target) {
+            continue; // A visible target keeps its own value (ADR-0168 compares it).
+        }
+        let Ok(parameter) = types.parameter_of(target) else {
+            return refuse(format!(
+                "{target}: an active Assign targets an unknown parameter"
+            ));
+        };
+        if !matches!(
+            code.parameters.get(parameter),
+            Some(ParameterPlacement::Memory(_))
+        ) {
+            continue; // Unions, properties and unplaced ones keep their handling.
+        }
+        let assigned = match &assignment.source {
+            AssignSource::Parameter(source) => values.get_unscoped(source),
+            AssignSource::Value(value) => Some(value.as_str()),
+        };
+        let Some(assigned) = assigned else {
+            return refuse(format!("{target}: an active Assign's source has no value"));
+        };
+        let stored = values.get_unscoped(target);
+        let steers = active.target_controls_choose || sources.contains(target);
+        if steers && !stored.is_some_and(|stored| same_value(stored, assigned)) {
+            return refuse(format!(
+                "{target}: an active Assign sets {assigned:?}, the evaluation read {stored:?}"
+            ));
+        }
+        for sibling in &activation.parameter_refs {
+            let sibling = sibling.ref_id.as_str();
+            if types.parameter_of(sibling).ok() == Some(parameter)
+                && !values
+                    .get_unscoped(sibling)
+                    .is_some_and(|value| same_value(value, assigned))
+            {
+                return refuse(format!(
+                    "{target}: an active Assign sets {assigned:?}, the visible {sibling} differs"
+                ));
+            }
+        }
+        match out.iter().find(|(known, _)| known == target) {
+            Some((_, earlier)) if same_value(earlier, assigned) => {}
+            Some((_, earlier)) => {
+                return refuse(format!(
+                    "{target}: active Assign elements set {earlier:?} and {assigned:?}"
+                ))
+            }
+            None => out.push((target.to_string(), assigned.to_string())),
+        }
+    }
+    Ok(out)
 }
 
 /// The parameters and objects `request`'s values activate, and every value
@@ -3754,6 +3874,169 @@ mod tests {
             r#"<Options DownloadInvisibleParameters="DefaultValue" /><Code>"#,
         );
         assert!(build(&unknown, &[], vec![]).unwrap().properties.is_empty());
+    }
+
+    /// ADR-0171: under `Background`, an invisible memory parameter an active
+    /// `Assign` sets is written with the assigned value, whatever the project
+    /// held; disagreeing assignments refuse; an `Assign` in an inactive branch,
+    /// or without that policy, writes nothing; a visible target keeps its own
+    /// value.
+    #[test]
+    fn an_invisible_parameter_an_active_assign_sets_is_written() {
+        let assign = |test: &str| {
+            with_options(PROGRAM, r#"<Options DownloadInvisibleParameters="Background" />"#)
+                .replace(
+                    r#"<when test="0"><ParameterRefRef RefId="P-3_R-6" /></when>"#,
+                    &format!(
+                        r#"<when test="0"><ParameterRefRef RefId="P-3_R-6" /></when><when test="{test}"><Assign TargetParamRefRef="P-2_R-2" Value="42" /></when>"#
+                    ),
+                )
+        };
+        let program = assign("2");
+        assert!(
+            program.contains(r#"<when test="2"><Assign TargetParamRefRef="P-2_R-2" Value="42" />"#)
+        );
+        let time = |image: &DownloadImage| octets(image, "AS-4400")[12];
+        // P-1 = 2 hides P-2; the active Assign set it and the project holds 42.
+        let image = build(&program, &[("P-1_R-1", "2"), ("P-2_R-2", "42")], vec![]).unwrap();
+        assert_eq!(time(&image), 42);
+        assert!(image
+            .parameter_fields
+            .iter()
+            .any(|f| f.reference == "P-2_R-2"));
+        // The project still holds the default: ETS runs the assignment anyway.
+        let image = build(&program, &[("P-1_R-1", "2")], vec![]).unwrap();
+        assert_eq!(time(&image), 42);
+        // Two active assignments that disagree: refused, not picked.
+        let twice = program.replace(
+            r#"<Assign TargetParamRefRef="P-2_R-2" Value="42" />"#,
+            r#"<Assign TargetParamRefRef="P-2_R-2" Value="42" /><Assign TargetParamRefRef="P-2_R-2" Value="43" />"#,
+        );
+        assert_ne!(twice, program);
+        let error = build(&twice, &[("P-1_R-1", "2")], vec![]).unwrap_err();
+        assert!(
+            error
+                .to_string()
+                .contains("P-2_R-2: active Assign elements set"),
+            "{error}"
+        );
+        // A value the type does not allow is refused as such.
+        let illegal = program.replace(r#"Value="42" />"#, r#"Value="101" />"#);
+        assert!(build(&illegal, &[("P-1_R-1", "2")], vec![]).is_err());
+        // The Assign sits in a branch the value does not select.
+        let inactive = assign("3");
+        let image = build(&inactive, &[("P-1_R-1", "2"), ("P-2_R-2", "42")], vec![]).unwrap();
+        assert_eq!(time(&image), 0, "template");
+        // Without the observed policy nothing is written.
+        let plain = program.replace(
+            r#"<Options DownloadInvisibleParameters="Background" />"#,
+            "",
+        );
+        assert_ne!(plain, program);
+        let image = build(&plain, &[("P-1_R-1", "2"), ("P-2_R-2", "42")], vec![]).unwrap();
+        assert_eq!(time(&image), 0, "template");
+        // A visible target is written with its own value as before.
+        let image = build(&program, &[("P-1_R-1", "1"), ("P-2_R-2", "7")], vec![]).unwrap();
+        assert_eq!(time(&image), 7);
+    }
+
+    /// ADR-0171's boundaries, each with an active `Assign` (P-1 = 2): a
+    /// visible target keeps its own value; a visible sibling reference that
+    /// differs, a target that steers a consulted `choose` or another `Assign`
+    /// with another stored value, and an unreadable `Assign` refuse; a `choose`
+    /// the evaluation never reached steers nothing; union members and property
+    /// placements are not written by an `Assign`.
+    #[test]
+    fn assigned_invisible_parameters_never_contradict_the_image() {
+        let base = with_options(PROGRAM, r#"<Options DownloadInvisibleParameters="Background" />"#)
+            .replace(
+                r#"<Parameter Id="P-3" Name="Prop""#,
+                r#"<Parameter Id="P-4" Name="Steer" ParameterType="PT-N" Value="50"><Memory CodeSegment="AS-4400" Offset="15" BitOffset="0" /></Parameter>
+  <Parameter Id="P-3" Name="Prop""#,
+            )
+            .replace(
+                r#"<ParameterRef Id="P-3_R-6" RefId="P-3" />"#,
+                r#"<ParameterRef Id="P-3_R-6" RefId="P-3" /><ParameterRef Id="P-4_R-8" RefId="P-4" /><ParameterRef Id="P-2_R-9" RefId="P-2" />"#,
+            );
+        assert!(base.contains(r#"<ParameterRef Id="P-4_R-8" RefId="P-4" />"#));
+        let with = |inside: &str| {
+            let xml = base.replace(
+                r#"<when test="2"><ParameterRefRef RefId="UP-2_R-4" />"#,
+                &format!(r#"<when test="2">{inside}<ParameterRefRef RefId="UP-2_R-4" />"#),
+            );
+            assert_ne!(xml, base, "{inside}");
+            xml
+        };
+        let selected = [("P-1_R-1", "2")];
+        let plain = build(&base, &selected, vec![]).unwrap();
+
+        // A visible target keeps its own value.
+        let visible = with(
+            r#"<ParameterRefRef RefId="P-2_R-2" /><Assign TargetParamRefRef="P-2_R-2" Value="42" />"#,
+        );
+        let image = build(&visible, &[("P-1_R-1", "2"), ("P-2_R-2", "7")], vec![]).unwrap();
+        assert_eq!(octets(&image, "AS-4400")[12], 7);
+
+        // A visible sibling reference of the same parameter that differs.
+        let sibling = with(
+            r#"<ParameterRefRef RefId="P-2_R-2" /><Assign TargetParamRefRef="P-2_R-9" Value="42" />"#,
+        );
+        let error = build(&sibling, &[("P-1_R-1", "2"), ("P-2_R-2", "7")], vec![]).unwrap_err();
+        assert!(
+            error.to_string().contains("the visible P-2_R-2 differs"),
+            "{error}"
+        );
+
+        // A union member and a property placement are not written by an Assign.
+        let union = with(r#"<Assign TargetParamRefRef="UP-1_R-3" Value="0" />"#);
+        let image = build(&union, &selected, vec![]).unwrap();
+        assert_eq!(octets(&image, "AS-4400"), octets(&plain, "AS-4400"));
+        let property = with(r#"<Assign TargetParamRefRef="P-3_R-6" Value="5" />"#);
+        let image = build(&property, &selected, vec![]).unwrap();
+        assert_eq!(image.properties, plain.properties);
+
+        // A target that steers a `choose`: the evaluation read the stored value.
+        let steering = with(
+            r#"<Assign TargetParamRefRef="P-4_R-8" Value="60" /><choose ParamRefId="P-4_R-8"><when test="60"><ComObjectRefRef RefId="O-0_R-1" /></when></choose>"#,
+        );
+        let error = build(&steering, &selected, vec![]).unwrap_err();
+        assert!(
+            error.to_string().contains("P-4_R-8: an active Assign sets"),
+            "{error}"
+        );
+        let image = build(&steering, &[("P-1_R-1", "2"), ("P-4_R-8", "60")], vec![]).unwrap();
+        assert_eq!(octets(&image, "AS-4400")[15], 60);
+        // The same `choose` in a branch the evaluation never reached steers nothing.
+        let unreached = with(r#"<Assign TargetParamRefRef="P-4_R-8" Value="60" />"#).replace(
+            r#"<when test="0"><ParameterRefRef RefId="P-3_R-6" /></when>"#,
+            r#"<when test="0"><ParameterRefRef RefId="P-3_R-6" /><choose ParamRefId="P-4_R-8"><when test="60"><ComObjectRefRef RefId="O-0_R-1" /></when></choose></when>"#,
+        );
+        assert!(unreached.contains(r#"<choose ParamRefId="P-4_R-8">"#));
+        let image = build(&unreached, &selected, vec![]).unwrap();
+        assert_eq!(octets(&image, "AS-4400")[15], 60);
+
+        // A chain: the source of another active Assign holds another value.
+        let chain = with(
+            r#"<Assign TargetParamRefRef="P-4_R-8" Value="60" /><Assign SourceParamRefRef="P-4_R-8" TargetParamRefRef="P-2_R-2" />"#,
+        );
+        let error = build(&chain, &selected, vec![]).unwrap_err();
+        assert!(
+            error.to_string().contains("P-4_R-8: an active Assign sets"),
+            "{error}"
+        );
+        let image = build(&chain, &[("P-1_R-1", "2"), ("P-4_R-8", "60")], vec![]).unwrap();
+        assert_eq!(
+            octets(&image, "AS-4400")[12],
+            60,
+            "P-2 from the chained source"
+        );
+        assert_eq!(octets(&image, "AS-4400")[15], 60);
+
+        // An unreadable Assign: its target is unknown.
+        let unreadable =
+            with(r#"<Assign TargetParamRefRef="P-2_R-2" SourceParamRefRef="P-4_R-8" Value="1" />"#);
+        let error = build(&unreadable, &selected, vec![]).unwrap_err();
+        assert!(error.to_string().contains("could not be read"), "{error}");
     }
 
     /// ADR-0169: no float placed in a property was observed, so it refuses,

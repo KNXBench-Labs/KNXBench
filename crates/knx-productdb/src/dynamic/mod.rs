@@ -24,10 +24,10 @@ pub mod positional;
 // and re-exporting it too would just give the same function two names.
 pub use evaluate::{
     evaluate, load_module_def_arguments, load_program_trees, load_tree, resolve_values,
-    substitute_text, substitute_text_checked, Activation, ActiveButton, ActiveLabel, ActiveRef,
-    ActiveRename, ActiveSeparator, ArgumentKind, AssignSource, Assignment, BoundArgument,
-    ChannelOwner, ControlKind, Diagnostic, DynamicNode, DynamicTree, ModuleDefArgument,
-    ModuleScope, Op, ProgramTrees, ScopedDiagnostic, Test, TextProjectionBudget,
+    substitute_text, substitute_text_checked, Activation, ActiveAssign, ActiveButton, ActiveLabel,
+    ActiveRef, ActiveRename, ActiveSeparator, ArgumentKind, AssignSource, Assignment,
+    BoundArgument, ChannelOwner, ControlKind, Diagnostic, DynamicNode, DynamicTree,
+    ModuleDefArgument, ModuleScope, Op, ProgramTrees, ScopedDiagnostic, Test, TextProjectionBudget,
     TextProjectionError, UnparsableTest, ValueMap, MAX_EVALUATION_WORK, MAX_MODULE_ACTIVATIONS,
     MAX_MODULE_EXPANSIONS, MAX_MODULE_NESTING_DEPTH, MAX_TEXT_PROJECTION_WORK,
 };

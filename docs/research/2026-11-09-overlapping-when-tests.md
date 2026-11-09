@@ -41,17 +41,28 @@ modules.
    with first-match). The logic module of the [float note](2026-11-09-float-parameters.md),
    which has overlapping tests too, stays identical.
 
+4. **`[V]` Assigned invisible parameters.** Three octets of the glass
+   push-button (`4E29h`..`4E2Bh`) differed under either `when` rule: ETS wrote
+   `FFh`, KNXBench the template (`06h`, `08h`, `0Ah`). Their parameters are
+   invisible (`DownloadInvisibleParameters="Background"`), an `Assign` in an
+   active branch sets them to `255`, and ETS's exported project holds `255`
+   for them. Writing such parameters with that value
+   ([ADR-0171](../adr/0171-assigned-invisible-parameters.md)) makes all three
+   recorded images (logic module, push-button, glass push-button) equal ETS's
+   parameter segments octet for octet.
+
 ## Not covered
 
-- Three octets of the glass push-button (`4E29h`..`4E2Bh`) still differ: ETS
-  writes `FFh`, the value an active `Assign` gives these invisible parameters;
-  KNXBench writes their template. That is independent of this rule (first
-  match differs there too) and stays open.
-- Both observations come from one manufacturer's programs.
+- Both rules rest on one manufacturer's programs.
+- Assigned union members, property placements and module scopes keep their
+  previous handling. KNXBench still does not execute `Assign` while
+  evaluating, so an assigned value that would steer a `choose` or another
+  assignment differently from the stored one refuses the image.
 
 ## Effect
 
 Tester project: one more device plans (7 unsupported, 68 untested); one
-planning glass push-button writes five octets differently. The private
+planning glass push-button writes five octets differently with ADR-0170 and
+three more with ADR-0171. The private
 product-corpus coverage classification is unchanged program by program
 (758 rows identical with and without the rule).

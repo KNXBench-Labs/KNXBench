@@ -430,7 +430,14 @@ fn an_oversized_replacement_is_refused_by_the_evaluation_budget_before_any_copy(
     let copy_too_large = "x".repeat(MAX_EVALUATION_WORK * 3 / 5);
     let copied = run(vec![
         block(0, None, "PB-1", "Base"),
-        rename(1, 0, "ParameterBlockRename", "PR-A", "PB-1", &copy_too_large),
+        rename(
+            1,
+            0,
+            "ParameterBlockRename",
+            "PR-A",
+            "PB-1",
+            &copy_too_large,
+        ),
     ]);
     assert!(copied.renames.is_empty());
     assert!(copied.diagnostics.iter().any(|d| matches!(
@@ -481,7 +488,10 @@ fn public_evaluate_settles_renames_on_the_budget_its_walk_left() {
     let size = (MAX_EVALUATION_WORK - 1 - fixed) / per_byte;
     let caption = "c".repeat(size);
     let used = walked(&caption);
-    assert!(used <= MAX_EVALUATION_WORK && used + 2 > MAX_EVALUATION_WORK, "{used}");
+    assert!(
+        used <= MAX_EVALUATION_WORK && used + 2 > MAX_EVALUATION_WORK,
+        "{used}"
+    );
     let activation = run(tree(&caption));
     assert!(activation.renames.is_empty());
     assert_eq!(

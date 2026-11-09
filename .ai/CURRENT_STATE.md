@@ -31,12 +31,10 @@ Release freeze: released by claude-release-alpha20 (2026-11-09 00:24 CET): v0.1.
 - Result: `docs/status/2026-11-02-wp26-status-bar-connection.md`. IP-only; USB open.
 - No active WP-26 implementation claim. Legacy download-holder stop is unchanged.
 - Evidence stays private under `<profile-scratch>/wp26-controller-footer-20261102/` until owned closeout/archive; older failed attempts are historical, not accepted.
-- Next queue candidates: WP-27 / WP-28 under a newly bounded claim; no hardware,
-  USB, automatic reconnect/retry, release or deployment authority from this delivery.
+- Next queue candidates: WP-27 / WP-28 under a newly bounded claim; no hardware, USB, automatic reconnect/retry, release or deployment authority from this delivery.
 ## Rail acceptance reference (STANDING; owner WebUI; observed 2026-11-02 22:13 CET)
 - Main-first `ed01e2bd3` published; local/tracking/live equal, reviews closed.
-- All15 planned stages complete/frozen, checked user data untouched; source acceptance:
-  `docs/status/2026-11-02-rail-themes.md`. No release/deployment/native/bus claim.
+- All15 planned stages complete/frozen, checked user data untouched; source acceptance: `docs/status/2026-11-02-rail-themes.md`. No release/deployment/native/bus claim.
 - NEXT: docs-only closeout, private evidence archive and owned cleanup.
 ## Proportionate gate acceptance reference (STANDING; observed 2026-11-03 03:12 CET)
 - Source703ec2904 published/readback equal; original policy and fixture reviews APPROVE.

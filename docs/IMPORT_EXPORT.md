@@ -1366,7 +1366,8 @@ undo step.
 - **It clears a description only when asked, and never applies `Comment`.**
   A blank `Description` cell leaves an existing description alone. With the
   explicit option *clear blank descriptions* (`knx ga-import
-  --clear-blank-descriptions`, server `clearBlankDescriptions`, web checkbox) a
+  --clear-blank-descriptions`, server `clearBlankDescriptions`, a toggle beside
+  the CSV import in the web group-address view) a
   blank cell removes it instead; each removal is a destructive change
   (`ClearDescription`) that needs the preview's confirmation token, and a file
   without a `Description` column is refused with the option set

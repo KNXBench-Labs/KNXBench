@@ -354,8 +354,9 @@ CSV import. A project file saved by an older version shows none until you import
 
 A blank description cell in a CSV file leaves an existing description alone, so
 importing an export again never wipes descriptions. To remove descriptions through a
-file, tick **Blank descriptions remove existing ones** next to the import button
-(`--clear-blank-descriptions` in the command line). The import then lists every
+file, switch on **Blank descriptions remove existing ones** beside the CSV import in the
+Group addresses view (`--clear-blank-descriptions` in the command line); the import in
+the File menu always keeps descriptions. The import then lists every
 description it would remove and applies only after you confirm. A file without a
 description column cannot say "blank" and is refused with this option. With the
 option, an exported description that is empty or only spaces also reads back as blank

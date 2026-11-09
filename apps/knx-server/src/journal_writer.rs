@@ -220,9 +220,7 @@ fn write_job(
         let mut persisted = job.cells.persisted.lock().expect("state mutex poisoned");
         let own = match kept.take() {
             Some((path, at, connection))
-                if path == job.path
-                    && at == *generation
-                    && !connection.changed_elsewhere().unwrap_or(true) =>
+                if path == job.path && at == *generation && connection.still_own(&job.path) =>
             {
                 Some(connection)
             }

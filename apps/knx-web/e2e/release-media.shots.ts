@@ -84,14 +84,49 @@ async function nav(page: Page, name: string): Promise<void> {
 }
 
 async function theme(page: Page, value: string): Promise<void> {
+  // Since Alpha 19 Settings is a centre page with a Back button, not a dialog.
   await page.getByRole("button", {name: "Settings", exact: true}).first().click();
-  const settings = page.getByRole("dialog");
-  await settings.getByLabel("Theme", {exact: true}).selectOption(value);
+  const settings = page.getByRole("region", {name: "Settings", exact: true});
+  await settings.getByRole("combobox", {name: "Theme", exact: true}).selectOption(value);
   await expect(page.locator("html")).toHaveAttribute("data-theme", value);
   await expect(settings.getByRole("status").filter({hasText: "Theme saved."})).toBeVisible();
-  await settings.focus();
-  await page.keyboard.press("Escape");
+  await settings.getByRole("button", {name: "Back to previous view", exact: true}).click();
   await expect(settings).toBeHidden();
+}
+
+/** An ETS6-style "CSV (ETS3 Format)" export: tab-separated, quoted, Windows-1252 bytes. */
+function etsCsv(): Buffer {
+  const rows = [
+    ["Group name", "Address", "Central", "Unfiltered", "Description", "DatapointType", "Security"],
+    ["Kitchen light", "0/0/2", "", "", "Pendant lights above the kitchen island \u2013 switched at the door and at the island", "", ""],
+    ["Hall light", "0/0/3", "", "", "Ceiling spots in the hall; the motion detector switches them at night", "", ""],
+    ["Terrace light", "0/0/5", "", "", "Wall lights on the terrace \u2013 new in the kitchen redesign", "DPST-1-1", ""],
+    ["Living room actual temperature", "2/0/1", "", "", "Wall sensor next to the terrace door, in \u00b0C", "", ""],
+    ["Living room setpoint", "2/0/2", "", "", "Comfort setpoint \u2013 21 \u00b0C in the evening", "", ""],
+  ];
+  const text = rows.map(row => row.map(cell => `"${cell}"`).join("\t")).join("\r\n") + "\r\n";
+  const table: Record<string, number> = {"\u2013": 0x96, "\u00b0": 0xb0};
+  return Buffer.from(Array.from(text, ch => {
+    const code = ch.codePointAt(0)!;
+    if (code < 0x80) return code;
+    if (table[ch] === undefined) throw new Error(`no Windows-1252 byte for ${ch}`);
+    return table[ch];
+  }));
+}
+
+async function importEtsCsv(page: Page): Promise<void> {
+  await nav(page, "Group addresses");
+  await page.locator('select[aria-label="CSV import encoding"]:visible').selectOption("windows-1252");
+  await page.locator("button:visible", {hasText: "Import group addresses (CSV)…"}).click();
+  const picker = page.locator(".fs-picker");
+  await expect(picker).toBeVisible();
+  await picker.locator(".fs-picker-upload-input").setInputFiles({
+    name: "sample-house-ets.csv", mimeType: "text/csv", buffer: etsCsv(),
+  });
+  await expect(picker.getByRole("status")).toHaveText("Uploaded 1 file. Choose one to open.");
+  await picker.getByRole("button", {name: "sample-house-ets.csv", exact: true}).click();
+  await expect(page.getByText(/Group addresses imported from CSV: 1 created, 4 updated/).first())
+    .toBeVisible({timeout: 20_000});
 }
 
 async function kitchenLight(page: Page): Promise<void> {
@@ -147,7 +182,17 @@ test("website highlight stills, real application and fictional project", async (
   });
   await page.setViewportSize({width: 1440, height: 1080});
 
+  // Highlight: an ETS CSV in Windows-1252 brings descriptions and one new, typed address.
+  await importEtsCsv(page);
+  await page.locator("[data-ga-expand-all]").click();
+  await page.getByRole("button", {name: "0/0/5", exact: true}).first().click();
+  await expect(page.locator(".workbench-pane-right .ga-description"))
+    .toHaveText("Wall lights on the terrace \u2013 new in the kitchen redesign");
+  await shot(page, "graphite-csv-description");
+
   await kitchenLight(page);
+  await expect(page.locator(".workbench-pane-right .ga-description"))
+    .toHaveText("Pendant lights above the kitchen island \u2013 switched at the door and at the island");
   await shot(page, "graphite-addresses");
 
   // Highlight: Ctrl+K search across devices and group addresses.

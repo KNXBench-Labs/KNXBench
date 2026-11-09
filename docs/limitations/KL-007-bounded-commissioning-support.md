@@ -6,6 +6,16 @@ This dossier preserves the technical detail and dated history. Earlier
 headings, failures and lifting conditions are historical where later
 updates supersede them; they are not new work assignments.
 
+## Float parameters — 9 November 2026 source
+
+`TypeFloat` parameters are no longer refused by the memory (`070nh`) image
+builder: they are written in their declared `DPT 9` or `IEEE-754 Single`
+encoding, high octet first, as ETS 6.4 wrote them against the simulator
+([ADR-0169](../adr/0169-float-parameters.md)). This supersedes the `TypeFloat`
+half of the retained §7 sentence below; `Priority="High"` stays refused.
+Other layouts, `LittleEndian` programs and property placements still refuse a
+float. No float has been downloaded to hardware.
+
 ## Inactive whole-byte write selection — 30 October 2026 focused result
 
 The [regular-route contract](../contracts/inactive-byte-write-selection.md) is
@@ -548,11 +558,8 @@ after the final restart is not sent), both RESEARCH §19.12;
 instead: a `070nh` group object cannot read its value after a reset
 (Resources NOTE 85), so an enabled `ReadOnInitFlag` is not carried out.
 None of these has been exercised by a KNXBench download on hardware.
-`Priority="High"` parameters stay refused: the product data contradicts
-every reading (§19.18). `TypeFloat` parameters are written in their declared
-encoding by the memory image builder since ADR-0169 (ETS 6.4 observed against
-the simulator); other layouts, `LittleEndian` programs and property
-placements still refuse them.
+`Priority="High"` and `TypeFloat` parameters stay refused: the product data
+contradicts every reading (§19.18).
 
 **Backup is bounded.** Before a permitted memory download's first mutation,
 the executor persists the overwritten memory regions and affected load

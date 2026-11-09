@@ -4,7 +4,7 @@
 //! that root cannot bypass), so the background write of an acknowledged
 //! edit fails for real.
 
-use std::io::{BufRead, BufReader, Read, Write};
+use std::io::{self, Read, Write};
 use std::net::{TcpListener, TcpStream};
 use std::path::PathBuf;
 use std::process::{Child, Command, ExitStatus, Stdio};
@@ -26,7 +26,7 @@ impl Drop for Server {
     }
 }
 
-fn start(name: &str) -> Server {
+fn scratch_dir(name: &str) -> PathBuf {
     let nanos = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .unwrap()
@@ -36,33 +36,145 @@ fn start(name: &str) -> Server {
         std::process::id()
     ));
     std::fs::create_dir_all(&dir).unwrap();
+    dir
+}
+
+fn spawn_guarded(mut command: Command, port: u16, dir: PathBuf) -> Server {
+    // Regular files need no detached reader and cannot strand a blocked pipe read.
+    let child = (|| -> io::Result<Child> {
+        let stdout = std::fs::File::create(dir.join("stdout.log"))?;
+        let stderr = std::fs::File::create(dir.join("stderr.log"))?;
+        command
+            .stdout(Stdio::from(stdout))
+            .stderr(Stdio::from(stderr))
+            .spawn()
+    })();
+    match child {
+        Ok(child) => Server { child, port, dir },
+        Err(error) => {
+            let _ = std::fs::remove_dir_all(&dir);
+            panic!("failed to start fixture child: {error}");
+        }
+    }
+}
+
+fn wait_for_readiness(server: &mut Server, limit: Duration) -> io::Result<()> {
+    let started = Instant::now();
+    loop {
+        let stdout = std::fs::read_to_string(server.dir.join("stdout.log"))?;
+        if let Some((line, _)) = stdout.split_once('\n') {
+            return if line.starts_with("knx-server listening on http://127.0.0.1:") {
+                Ok(())
+            } else {
+                Err(io::Error::new(
+                    io::ErrorKind::InvalidData,
+                    format!("unexpected first line: {line:?}"),
+                ))
+            };
+        }
+        if let Some(status) = server.child.try_wait()? {
+            return Err(io::Error::new(
+                io::ErrorKind::UnexpectedEof,
+                format!("fixture exited before readiness: {status}"),
+            ));
+        }
+        if started.elapsed() >= limit {
+            return Err(io::Error::new(
+                io::ErrorKind::TimedOut,
+                "fixture did not produce a complete readiness line",
+            ));
+        }
+        std::thread::sleep(Duration::from_millis(20));
+    }
+}
+
+fn start(name: &str) -> Server {
+    let dir = scratch_dir(name);
     let port = TcpListener::bind("127.0.0.1:0")
         .unwrap()
         .local_addr()
         .unwrap()
         .port();
-    let mut child = Command::new(env!("CARGO_BIN_EXE_knx-server"))
+    let mut command = Command::new(env!("CARGO_BIN_EXE_knx-server"));
+    command
         .env("KNX_PORT", port.to_string())
         .env("KNX_DATA_DIR", dir.join("data"))
         .env("XDG_DATA_HOME", dir.join("xdg"))
         .env("KNX_TLS", "off")
         .env_remove("KNX_AUTH_PASSWORD")
         .env_remove("KNX_AUTH_PASSWORD_HASH")
-        .env_remove("KNX_STATIC_DIR")
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn()
-        .expect("failed to start the knx-server binary");
-    let mut stdout = BufReader::new(child.stdout.take().unwrap());
-    let mut line = String::new();
-    stdout.read_line(&mut line).unwrap();
-    // Dropped on a failed start too: the guard below reaps the child.
-    let server = Server { child, port, dir };
-    assert!(
-        line.starts_with("knx-server listening on http://127.0.0.1:"),
-        "unexpected first line: {line:?}"
-    );
+        .env_remove("KNX_STATIC_DIR");
+    // Ownership precedes every readiness read, including all panic/error paths.
+    let mut server = spawn_guarded(command, port, dir);
+    wait_for_readiness(&mut server, Duration::from_secs(20)).unwrap();
     server
+}
+
+/// Exercises the actual startup guard through success and caught startup panics.
+fn readiness_probe(name: &str, script: &str, expected: Option<io::ErrorKind>) {
+    let dir = scratch_dir(name);
+    let mut pid = 0;
+    let mut observed = None;
+    let outcome = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        let mut command = Command::new("sh");
+        command.arg("-c").arg(script);
+        let mut server = spawn_guarded(command, 0, dir.clone());
+        pid = server.child.id();
+        let limit = if expected == Some(io::ErrorKind::TimedOut) {
+            Duration::from_millis(200)
+        } else {
+            Duration::from_secs(20)
+        };
+        let ready = wait_for_readiness(&mut server, limit);
+        observed = ready.as_ref().err().map(io::Error::kind);
+        ready.unwrap();
+    }));
+    assert_ne!(pid, 0, "probe must spawn the guarded child");
+    assert_eq!(observed, expected, "wrong startup boundary was exercised");
+    assert_eq!(outcome.is_err(), expected.is_some());
+    assert!(!dir.exists(), "startup guard did not remove its directory");
+    assert!(
+        !Command::new("kill")
+            .args(["-0", &pid.to_string()])
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .status()
+            .unwrap()
+            .success(),
+        "startup guard left child {pid} alive or unreaped"
+    );
+}
+
+#[test]
+fn readiness_success_keeps_cleanup_ownership() {
+    readiness_probe(
+        "ready",
+        "printf 'knx-server listening on http://127.0.0.1:0\\n'; exec sleep 60",
+        None,
+    );
+}
+
+#[test]
+fn readiness_timeout_reaps_the_child_and_removes_its_directory() {
+    readiness_probe(
+        "ready-timeout",
+        "exec sleep 60",
+        Some(io::ErrorKind::TimedOut),
+    );
+}
+
+#[test]
+fn readiness_read_failure_reaps_the_child_and_removes_its_directory() {
+    readiness_probe(
+        "ready-read-error",
+        "printf '\\377\\n'; exec sleep 60",
+        Some(io::ErrorKind::InvalidData),
+    );
+}
+
+#[test]
+fn readiness_early_exit_is_reaped_and_removes_its_directory() {
+    readiness_probe("ready-exit", "exit 7", Some(io::ErrorKind::UnexpectedEof));
 }
 
 /// One request with `Connection: close`; answers status and parsed body.
@@ -139,16 +251,8 @@ fn wait_for_exit(server: &mut Server, limit: Duration) -> ExitStatus {
     panic!("knx-server did not exit within {limit:?}");
 }
 
-fn stderr_of(server: &mut Server) -> String {
-    let mut stderr = String::new();
-    server
-        .child
-        .stderr
-        .take()
-        .unwrap()
-        .read_to_string(&mut stderr)
-        .unwrap();
-    stderr
+fn stderr_of(server: &Server) -> String {
+    std::fs::read_to_string(server.dir.join("stderr.log")).unwrap()
 }
 
 fn stored_name(file: &std::path::Path) -> String {
@@ -186,7 +290,7 @@ fn a_drained_stop_with_a_healthy_journal_flushes_the_edit_and_exits_zero() {
     let file = saved_project_then_edit(&server, false);
     signal_term(&server);
     let status = wait_for_exit(&mut server, PROMPT_EXIT);
-    let stderr = stderr_of(&mut server);
+    let stderr = stderr_of(&server);
     assert!(status.success(), "exit status {status}: {stderr}");
     assert!(stderr.contains("knx-server: stopped"), "{stderr}");
     assert!(!stderr.contains("could not be written"), "{stderr}");
@@ -200,7 +304,7 @@ fn a_drained_stop_with_a_failed_journal_reports_it_and_exits_nonzero() {
     wait_for_failed_journal(&server);
     signal_term(&server);
     let status = wait_for_exit(&mut server, PROMPT_EXIT);
-    let stderr = stderr_of(&mut server);
+    let stderr = stderr_of(&server);
     assert!(
         stderr.contains("knx-server: the last edits could not be written to the project file:"),
         "{stderr}"
@@ -235,7 +339,7 @@ fn a_forced_stop_with_a_failed_journal_exits_nonzero() {
     let _stalled = stalled_connection(&server);
     signal_term(&server);
     let status = wait_for_exit(&mut server, Duration::from_secs(15));
-    let stderr = stderr_of(&mut server);
+    let stderr = stderr_of(&server);
     assert!(
         stderr.contains("are cut off"),
         "the stop was not forced: {stderr}"
@@ -255,7 +359,7 @@ fn a_forced_stop_with_a_healthy_journal_still_exits_zero() {
     let _stalled = stalled_connection(&server);
     signal_term(&server);
     let status = wait_for_exit(&mut server, Duration::from_secs(15));
-    let stderr = stderr_of(&mut server);
+    let stderr = stderr_of(&server);
     assert!(
         stderr.contains("are cut off"),
         "the stop was not forced: {stderr}"

@@ -6,6 +6,8 @@ import sys
 import tempfile
 import unittest
 
+# The checker imports sibling tool modules lazily; make that work when run alone.
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 SPEC = importlib.util.spec_from_file_location(
     "check_documentation", Path(__file__).resolve().parents[1] / "check_documentation.py"
 )
@@ -94,6 +96,38 @@ class DocumentationTests(unittest.TestCase):
             (root / "README.md").write_text('[missing](lost.md)\n<img src="lost.png" alt="">')
             _, errors = checker.check(root)
             self.assertEqual(len(errors), 3)
+
+    def test_only_checks_the_named_files(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            (root / "docs").mkdir()
+            (root / "README.md").write_text("[board](docs/board.md)\n")
+            (root / "docs/board.md").write_text("# Board\n")
+            (root / "docs/broken.md").write_text("[gone](missing.md)\n")
+            counts, errors = checker.check_only(root, [Path("README.md"), Path("docs/board.md")])
+            self.assertEqual(errors, [])
+            self.assertEqual((counts["files"], counts["local_targets"]), (2, 1))
+            _, errors = checker.check_only(root, [Path("docs/broken.md")])
+            self.assertEqual(errors, ["docs/broken.md: missing target: missing.md"])
+
+    def test_only_rejects_missing_or_outside_files_and_local_details(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary) / "checkout"
+            root.mkdir()
+            (Path(temporary) / "outside.md").write_text("# Outside\n")
+            _, errors = checker.check_only(root, [Path("absent.md"), Path("../outside.md")])
+            self.assertEqual(errors, ["absent.md: not a file inside the checkout",
+                                      "../outside.md: not a file inside the checkout"])
+            (root / "board.json").write_text('{"path": "%s/notes"}\n' % Path.home())
+            _, errors = checker.check_only(root, [Path("board.json")])
+            self.assertEqual(len(errors), 1)
+            self.assertTrue(errors[0].startswith("local machine detail: board.json:1"))
+
+    def test_hall_of_fame_workflow_checks_only_its_outputs(self):
+        workflow = (Path(__file__).resolve().parents[2]
+                    / ".github/workflows/community-hall-of-fame.yml").read_text()
+        self.assertIn("python3 tools/check_documentation.py --root . --only README.md "
+                      "docs/community/HALL_OF_FAME.md docs/community/hall-of-fame.json", workflow)
 
 
 if __name__ == "__main__":

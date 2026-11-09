@@ -57,7 +57,9 @@ jobs:
             git reset --hard "origin/$DEFAULT_BRANCH"
             python3 -m unittest discover -s tools/tests -p test_community_hall_of_fame.py
             python3 tools/community_hall_of_fame.py --repository "$REPOSITORY" --notify
-            python3 tools/check_documentation.py --root .
+            # Check only the bot's own outputs: an unrelated repository-wide docs
+            # finding on main must not block the scoreboard (CI owns the full check).
+            python3 tools/check_documentation.py --root . --only README.md docs/community/HALL_OF_FAME.md docs/community/hall-of-fame.json
             git add -- README.md docs/community/HALL_OF_FAME.md docs/community/hall-of-fame.json
             if git diff --cached --quiet; then
               exit 0

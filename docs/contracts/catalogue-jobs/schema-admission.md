@@ -211,3 +211,12 @@ observed version, and no witness survives a migration. This explicit version
 update does not admit historical schema variants. The bounded repair has its
 own [independent review, mutation and selected-gate acceptance](../../status/2026-11-03-wp08-color-time-successor.md);
 that acceptance does not broaden this schema admission contract.
+
+## Amendment: data-only product database v33 (9 November 2026)
+
+The [conditional block rename](../conditional-parameter-block-rename.md) step re-parses retained
+application blobs into existing `dynamic_node` columns and retires three attribute rows from
+the unknown ledger. It adds no DDL; the pinned v28 fresh-chain descriptors and the recorded
+oracle are unchanged. Admission now requires `ADMITTED_VERSION = 33`, still compile-time-bound
+to `CURRENT_PRODUCTDB_VERSION`; v32 and v34 are refused. Witnesses retain the observed version
+and no witness survives a migration.

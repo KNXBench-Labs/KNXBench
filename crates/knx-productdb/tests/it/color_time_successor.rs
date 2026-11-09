@@ -59,7 +59,7 @@ fn contaminated_v31_reopens_with_source_winner_and_null_time_fields() {
     let version: i64 = conn
         .query_row("PRAGMA user_version", [], |r| r.get(0))
         .unwrap();
-    assert_eq!(version, 32);
+    assert_eq!(version, knx_productdb::CURRENT_PRODUCTDB_VERSION);
     drop(conn);
     let conn = knx_productdb::open_and_migrate(&path).unwrap();
     assert_eq!(rows(&conn), expected);
@@ -135,7 +135,7 @@ fn date_winners_legitimate_color_time_and_unique_controls_preserve_every_other_r
     let version: i64 = conn
         .query_row("PRAGMA user_version", [], |r| r.get(0))
         .unwrap();
-    assert_eq!(version, 32);
+    assert_eq!(version, knx_productdb::CURRENT_PRODUCTDB_VERSION);
 }
 
 #[test]
@@ -333,7 +333,9 @@ fn unproven_sources_refuse_atomically_with_named_diagnostic_while_independent_so
         assert_eq!(
             query(
                 &conn,
-                "SELECT * FROM ingest_unknown WHERE name<>'repair_color_time_kinds' ORDER BY id"
+                // v33's own refusal of a blob it cannot re-read is a separate, named record.
+                "SELECT * FROM ingest_unknown
+                 WHERE name NOT IN ('repair_color_time_kinds','reparse_rename_leaves') ORDER BY id"
             ),
             old_unknown
         );
@@ -433,7 +435,7 @@ fn first_color_time_remain_unchanged_despite_losing_same_blob_unknown_types() {
     let version: i64 = conn
         .query_row("PRAGMA user_version", [], |r| r.get(0))
         .unwrap();
-    assert_eq!(version, 32);
+    assert_eq!(version, knx_productdb::CURRENT_PRODUCTDB_VERSION);
 }
 
 #[test]

@@ -411,6 +411,8 @@ fn v28_to_v29_names_a_damaged_blob_keeps_its_rows_and_downgrades_its_report() {
                 "ParameterKindBackfillError".into(),
                 "backfill_date_kind".into()
             ),
+            // v33 cannot re-read the same damaged blob either, and says so by its own name.
+            ("RenameBackfillError".into(), "reparse_rename_leaves".into()),
         ]
     );
     // Nothing re-kinded, nothing retired, nothing invented.

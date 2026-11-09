@@ -6,6 +6,19 @@ This dossier preserves the technical detail and dated history. Earlier
 headings, failures and lifting conditions are historical where later
 updates supersede them; they are not new work assignments.
 
+## Update 2026-11-09: conditional block captions (WP-05)
+
+A literal `ParameterBlockRename`/`Rename` leaf naming its own unique enclosing
+block in the application's root tree now replaces that block's caption while
+its branch is active ([contract](../contracts/conditional-parameter-block-rename.md)).
+Module scope, other targets, text parameters, source placeholders, unexpected
+attributes or children, duplicate identities and competing or undecided targets
+remain unsupported. Refused replacements keep the base caption; the existing
+unsupported, unresolved or budget diagnostics explain the boundary. A selected
+translation containing a placeholder uses the leaf's source text and adds a
+leaf-bound `unresolvedTextPlaceholder` panel diagnostic. Button scripts are not run.
+The retained record below describes the earlier boundary, not this current subset.
+
 ## Update 2026-11-08: time values in downloads (ADR-0162)
 
 `TypeTime/@Unit` stays a reported, not stored, attribute. A download now reads it

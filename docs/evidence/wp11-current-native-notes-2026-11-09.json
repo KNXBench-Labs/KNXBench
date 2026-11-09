@@ -4,7 +4,7 @@
  "scope": "Current-source native notes cells (create/draft-cancel/save/reopen at 80/100/150%, one real process restart); not whole WP-11 or KL-130 acceptance",
  "sourceRevision": "0b182054a4a03b6e03d49743bb2b155809dfeff7",
  "sourceTreeCleanAtBuild": true,
- "uiVersionString": "0.1.0-alpha.20+g0b182054a",
+ "uiVersionString": "0.1.0-alpha.20",
  "build": {
   "command": "cargo build --release -p knx-desktop -j4 (private CARGO_TARGET_DIR, scratch XDG, nice 19) after npm ci && npm run build",
   "nativeExecutableSha256": "8ea1c2f0a20ce94ff7c387148bd277fa97ddd519e94cdcdba3270d0ac666dc67",
@@ -375,5 +375,6 @@
   "full WP-11 completion; no ledger change",
   "no source fix; no product bug reproduced"
  ],
- "privateEvidence": "<profile>/evidence/2026-11-09-wp11-current-notes/native-core.tar.gz (native-worker/run/ev: raw trees, actions, raw input, screenshots, oracle JSON, launch receipts); exact 535-member payload verified in NATIVE_CORE_VERIFIED.json"
+ "privateEvidence": "<profile>/evidence/2026-11-09-wp11-current-notes/native-core.tar.gz (native-worker/run/ev: raw trees, actions, raw input, screenshots, oracle JSON, launch receipts); exact 535-member payload verified in NATIVE_CORE_VERIFIED.json",
+ "observedDocumentTitle": "KNXBench 0.1.0-alpha.20"
 }

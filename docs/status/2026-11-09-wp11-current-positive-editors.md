@@ -4,7 +4,7 @@ Scope: the instruction editor and one declared checked integer slider at 80/100/
 
 ## Binding
 
-- Actual build source `0b182054a`; admission source `bf6065f0f`. The tracked diff between them is three documentation files, so the retained build is reused (tracked-input equivalence only). No new build; the UI still reports `0.1.0-alpha.20+g0b182054a`. This is not a freshly built `bf6065f0f` binary.
+- Actual build source `0b182054a`; admission source `bf6065f0f`. The tracked diff between them is three documentation files, so the retained build is reused (tracked-input equivalence only). No new build; the observed document title is `KNXBench 0.1.0-alpha.20`; actual build source is authenticated separately, not inferred from a UI Git suffix. This is not a freshly built `bf6065f0f` binary.
 - Executable SHA-256 `8ea1c2f0a20ce94ff7c387148bd277fa97ddd519e94cdcdba3270d0ac666dc67`; 147-file frontend manifest `acb0e387d927f571ab40fc6752e1e0374b0f61f4d04d580b0471064b4406338c` (recipe in the JSON); all 149 artifact files authenticated against the retained manifest. Both launches recorded the same executable digest.
 - Fixture: the original fictional `native-slider.knxprod` (SHA-256 `32e8a5b4cf21a14c0e8dda2c861a5babbac54559707d82353074aae02d06f2e1`), decoded from the public 27 October fixture record, member hashes re-verified. `M-7FF2`, default 2, bounds 0…240, declared Slider hint. The no-hint control is not used.
 - Setup was native UI only: new project, Add device, product package chooser, consent, install, create device, Save through the native Save chooser. No SQL or CLI edits. WebKitGTK 2.54.1, GTK 3.24.52, libsoup 3.8.0, AT-SPI core 2.62.1.

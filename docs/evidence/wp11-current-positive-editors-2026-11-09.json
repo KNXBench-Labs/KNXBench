@@ -4,7 +4,7 @@
  "purpose": "Current-source native positive instruction editor and declared checked integer slider at 80/100/150% zoom, fictional data, one restart",
  "admissionSource": "bf6065f0f77c8ffc4533d44a7b0b9efd12ed16b9",
  "actualBuildSource": "0b182054a4a03b6e03d49743bb2b155809dfeff7",
- "reuseBasis": "No new build. Complete tracked diff 0b182054a..bf6065f0f is three documentation files (one status record, one evidence JSON, one open-work page); a scoped diff excluding docs/.ai is empty. Tracked-input equivalence only, not toolchain equivalence. UI stamp stays alpha.20+g0b182054a. This is not a newly built bf6065f0f binary.",
+ "reuseBasis": "No new build. Complete tracked diff 0b182054a..bf6065f0f is three documentation files (one status record, one evidence JSON, one open-work page); a scoped diff excluding docs/.ai is empty. Tracked-input equivalence only, not toolchain equivalence. Observed document title stays KNXBench 0.1.0-alpha.20; actual build source is authenticated separately. This is not a newly built bf6065f0f binary.",
  "retainedNativeCoreArchiveSha256": "1c1a816c0622b4cf3e25b95178ab590bbe09c349c135f51aa2de5e0b80999ae6",
  "artifacts": {
   "executableSha256": "8ea1c2f0a20ce94ff7c387148bd277fa97ddd519e94cdcdba3270d0ac666dc67",
@@ -158,5 +158,6 @@
   "not full-tree or pixel parity; not physical-keyboard comparison",
   "no ledger change"
  ],
- "privateEvidence": "<profile>/evidence/2026-11-09-wp11-current-editors/native-core.tar.gz (811 verified members; raw trees/actions/oracles, native artifact and frontend retained); NATIVE_CORE_VERIFIED.json"
+ "privateEvidence": "<profile>/evidence/2026-11-09-wp11-current-editors/native-core.tar.gz (811 verified members; raw trees/actions/oracles, native artifact and frontend retained); NATIVE_CORE_VERIFIED.json",
+ "observedDocumentTitle": "KNXBench 0.1.0-alpha.20"
 }

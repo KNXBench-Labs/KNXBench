@@ -41,6 +41,8 @@ Still open: module-scoped renames, renames of anything but the enclosing block, 
 or undecided leaves, text-parameter or template replacements (a selected translation with a
 placeholder falls back to the leaf's source text and is named in the panel diagnostics), other ETS versions, languages and products.
 The slice does not close the package.
+Accepted on main `da7d667d1`: [software acceptance](../status/2026-11-09-conditional-block-captions.md),
+including the scoped gate, preserved failed runs and next-release ProductDB obligation.
 
 ## Done when (per admitted feature)
 

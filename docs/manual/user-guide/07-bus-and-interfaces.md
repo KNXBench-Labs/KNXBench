@@ -368,7 +368,7 @@ same name-first labels. [Scope and preservation](../../contracts/dpt-selection.m
 The **Log** entry in the sidebar opens the session log: everything KNXBench did this
 session, filtered by Error, Warning and Info.
 
-![The KNXBench session log with Error, Warning and Info filters, a search field and an export button; the newest entries on top: two achievement notifications and the loaded sample project from this browser session, the catalogue batch that created a device, then the import of the sample project with its counts and entries for manufacturer files preserved in the product database](../../assets/screenshots/porcelain-log.png)
+![The KNXBench session log with Error, Warning and Info filters, a search field and an export button; the newest entries on top: the catalogue batch that created a device, two achievement notifications and the loaded sample project from this browser session, then the import of the sample project with its counts and entries for manufacturer files preserved in the product database](../../assets/screenshots/porcelain-log.png)
 
 Log entries are the server's own text and stay in English even when the interface is
 translated — a deliberate choice, so an error message you paste into a bug report

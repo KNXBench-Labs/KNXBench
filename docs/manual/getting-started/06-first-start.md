@@ -136,7 +136,7 @@ KNXBench: navigation on the left, the main workspace in the center, and a
 properties inspector on the right. The Overview screen is a good first stop
 — it summarizes what was loaded:
 
-![KNXBench's Project status overview, showing the schema version and counts of installations, areas, lines, devices, group addresses, building parts and communication objects, with the topology tree open in the left sidebar.](../../assets/screenshots/porcelain-dashboard.png)
+![KNXBench's Project status overview, showing the schema version and counts of installations, areas, lines, devices, group addresses, building parts and communication objects; the navigation blocks in the left sidebar are still folded.](../../assets/screenshots/porcelain-dashboard.png)
 
 The counts here — areas, lines, devices, group addresses, communication
 objects — are the same structures the rest of this manual explains one at a

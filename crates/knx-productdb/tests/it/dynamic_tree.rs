@@ -1025,13 +1025,73 @@ fn an_assign_below_a_marked_controller_does_not_count() {
     );
 }
 
+/// ADR-0168: controllers that only assign each other from below their own
+/// hidden `choose` are both marked; nothing outside them runs those
+/// assignments, so no differing value is reported.
+#[test]
+fn controllers_assigning_each_other_from_hidden_branches_are_both_marked() {
+    let choose = |id, parent, controller: &str| DynamicNode {
+        control_kind: Some(ControlKind::Comparable),
+        ref_id: Some(controller.into()),
+        ..nd(id, Some(parent), "choose")
+    };
+    let when = |id, parent, test: &str| DynamicNode {
+        test: Some(test.into()),
+        ..nd(id, Some(parent), "when")
+    };
+    let refref = |id, parent, kind: &str, r: &str| DynamicNode {
+        ref_id: Some(r.into()),
+        ..nd(id, Some(parent), kind)
+    };
+    let assign = |node, target: &str| {
+        (
+            node,
+            Some(Assignment {
+                target: target.into(),
+                source: AssignSource::Value("1".into()),
+            }),
+        )
+    };
+    let tree = DynamicTree::from_nodes(vec![
+        nd(0, None, "Dynamic"),
+        refref(1, 0, "ParameterRefRef", "MODE"),
+        choose(2, 0, "MODE"),
+        when(3, 2, "1"),
+        refref(4, 3, "ParameterRefRef", "A"),
+        refref(5, 3, "ParameterRefRef", "B"),
+        when(6, 2, "2"),
+        choose(7, 0, "A"),
+        when(8, 7, "0"),
+        nd(9, Some(8), "Assign"),
+        refref(10, 8, "ComObjectRefRef", "X"),
+        choose(11, 0, "B"),
+        when(12, 11, "0"),
+        nd(13, Some(12), "Assign"),
+    ])
+    .with_assignments([assign(9, "B"), assign(13, "A")]);
+    let activation = evaluate(
+        &ProgramTrees::single(tree),
+        &values(&[("MODE", "2"), ("A", "0"), ("B", "0")]).into(),
+    );
+    assert!(
+        activation.diagnostics.is_empty(),
+        "{:?}",
+        activation.diagnostics
+    );
+    assert!(
+        activation.com_object_refs.is_empty(),
+        "{:?}",
+        activation.com_object_refs
+    );
+}
+
 /// ADR-0168: a controller no `ParameterRefRef` names, whose `choose`
 /// selects by value and competes with a placed controller for the same
-/// reference (`V_HEAT` beside the shown `V_ONOFF`), selects nothing. An
-/// unnamed controller without such competition (`PAIR`), unconditional
-/// structure (`TypeNone`, default-only), a `choose` with a default branch,
-/// and a controller named only inside its own `choose` (`OWN`) are read as
-/// before.
+/// reference (`V_HEAT` beside the shown `V_ONOFF`), selects nothing while it
+/// holds its default. An unnamed controller without such competition
+/// (`PAIR`), unconditional structure (`TypeNone`, default-only), a `choose`
+/// with a default branch, a controller named only inside its own `choose`
+/// (`OWN`) and an alternative holding another value are read as before.
 #[test]
 fn an_unnamed_alternative_controller_selects_nothing() {
     let choose = |id, parent, controller: &str, kind: ControlKind| DynamicNode {
@@ -1078,28 +1138,33 @@ fn an_unnamed_alternative_controller_selects_nothing() {
         choose(23, 0, "OWN", ControlKind::Comparable),
         when(24, 23, "0"),
         refref(25, 24, "OWN"),
-        refref(26, 24, "U_0"),
+        when(26, 23, "1"),
+        refref(27, 26, "U_0"),
     ]);
-    let activation = evaluate(
-        &ProgramTrees::single(tree),
-        &values(&[
-            ("V_ONOFF", "1"),
-            ("V_HEAT", "0"),
-            ("PAIR", "0"),
-            ("NONE", ""),
-            ("ALWAYS", "0"),
-            ("FALLBACK", "0"),
-            ("OWN", "0"),
-        ])
-        .into(),
-    );
+    let defaults = [("V_HEAT", "0"), ("PAIR", "0"), ("OWN", "1")];
+    let run = |heat: &str| {
+        evaluate(
+            &ProgramTrees::single(tree.clone()).with_defaults(defaults),
+            &values(&[
+                ("V_ONOFF", "1"),
+                ("V_HEAT", heat),
+                ("PAIR", "0"),
+                ("NONE", ""),
+                ("ALWAYS", "0"),
+                ("FALLBACK", "0"),
+                ("OWN", "1"),
+            ])
+            .into(),
+        )
+    };
+    let at_default = run("0");
     assert!(
-        activation.diagnostics.is_empty(),
+        at_default.diagnostics.is_empty(),
         "{:?}",
-        activation.diagnostics
+        at_default.diagnostics
     );
     assert_eq!(
-        activation.parameter_refs,
+        at_default.parameter_refs,
         [
             "V_ONOFF",
             "U_1",
@@ -1107,10 +1172,19 @@ fn an_unnamed_alternative_controller_selects_nothing() {
             "STRUCTURE",
             "GENERAL",
             "FALLEN_BACK",
-            "OWN",
             "U_0"
         ]
         .map(active)
+    );
+    // Another value is read as before, and an illegal one reported.
+    let changed = run("1");
+    assert_eq!(
+        changed.diagnostics,
+        vec![diag(Diagnostic::NoBranchMatched {
+            choose_node: 7,
+            param_ref: Some("V_HEAT".into()),
+            observed_value: "1".into(),
+        })]
     );
 }
 

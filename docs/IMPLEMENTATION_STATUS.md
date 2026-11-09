@@ -22,7 +22,7 @@ an active `Assign` sets it to the stored value; a different or unknown
 assigned value is reported as `AssignedControllerDiffers` (server, web panel
 in English and German) instead of being guessed. An unnamed controller whose
 `choose` competes with a placed one for the same reference counts as placed
-(ADR-0160 then applies). An allocation longer than its segment writes the
+while it holds its default (ADR-0160 then applies). An allocation longer than its segment writes the
 segment (`allocation-beyond-segment-not-written`), and union members of a
 mid-octet union add the bit offsets on mask `0701h` layouts; System-1 and
 System-2 layouts keep that refusal. ETS 6.4 images recorded against the

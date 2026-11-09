@@ -617,6 +617,10 @@ pub struct ProgramTrees {
     /// pre-task-12 hand-built test tree is: no declarations, so no
     /// substitution, so those trees evaluate exactly as they did before.
     arguments: HashMap<String, ModuleDefArgument>,
+    /// ADR-0168: each `ParameterRef`'s product default (its own `@Value`,
+    /// else its parameter's), as [`resolve_values`] falls back to it. Empty
+    /// for hand-built trees unless given with [`ProgramTrees::with_defaults`].
+    defaults: HashMap<String, String>,
 }
 
 /// One `ModuleDef/Arguments/Argument` declaration (design D47). The
@@ -695,6 +699,7 @@ impl ProgramTrees {
             program,
             modules,
             arguments: HashMap::new(),
+            defaults: HashMap::new(),
         }
     }
 
@@ -702,6 +707,19 @@ impl ProgramTrees {
     /// step rather than a third `from_parts` parameter so that every
     /// pre-task-12 caller keeps compiling and keeps meaning what it meant:
     /// a tree set with no declarations substitutes nothing.
+    /// Declares the product default of each named `ParameterRef`, as
+    /// [`load_program_trees`] reads it (ADR-0168).
+    pub fn with_defaults<K: Into<String>, V: Into<String>>(
+        mut self,
+        defaults: impl IntoIterator<Item = (K, V)>,
+    ) -> ProgramTrees {
+        self.defaults = defaults
+            .into_iter()
+            .map(|(k, v)| (k.into(), v.into()))
+            .collect();
+        self
+    }
+
     pub fn with_arguments(
         mut self,
         arguments: impl IntoIterator<Item = ModuleDefArgument>,
@@ -723,6 +741,7 @@ impl ProgramTrees {
             program,
             modules: HashMap::new(),
             arguments: HashMap::new(),
+            defaults: HashMap::new(),
         }
     }
 
@@ -760,7 +779,29 @@ pub fn load_program_trees(
         modules.insert(module_def_id, tree);
     }
     Ok(ProgramTrees::from_parts(program, modules)
-        .with_arguments(load_module_def_arguments(conn, program_id)?))
+        .with_arguments(load_module_def_arguments(conn, program_id)?)
+        .with_defaults(load_defaults(conn, program_id)?))
+}
+
+/// Each `ParameterRef`'s product default, `parameter_ref.value` before
+/// `parameter.value`, as [`resolve_values`] falls back to them.
+fn load_defaults(
+    conn: &Connection,
+    program_id: &str,
+) -> Result<HashMap<String, String>, ProductDbError> {
+    let mut stmt = conn.prepare(
+        "SELECT pr.id, COALESCE(pr.value, p.value)
+         FROM parameter_ref pr
+         JOIN parameter p ON p.program_id = pr.program_id AND p.id = pr.parameter_id
+         WHERE pr.program_id = ?1",
+    )?;
+    let rows = stmt
+        .query_map([program_id], |r| {
+            Ok((r.get::<_, String>(0)?, r.get::<_, Option<String>>(1)?))
+        })?
+        .filter_map(|row| row.map(|(id, value)| value.map(|v| (id, v))).transpose())
+        .collect::<Result<HashMap<_, _>, _>>()?;
+    Ok(rows)
 }
 
 /// Loads every `ModuleDef/Arguments/Argument` declaration stored for one
@@ -1767,7 +1808,10 @@ impl Activation {
 /// ([`Diagnostic::AssignedControllerDiffers`]).
 pub fn evaluate(trees: &ProgramTrees, values: &ValueMap) -> Activation {
     let mut placed = placed_parameter_refs(trees);
-    let alternatives = unnamed_alternative_controllers(trees, &placed);
+    let alternatives = unnamed_alternative_controllers(trees, &placed)
+        .into_iter()
+        .filter(|controller| holds_its_default(trees, values, controller))
+        .collect::<Vec<_>>();
     placed.extend(alternatives);
     let mut inactive_controllers = HashSet::new();
     let mut work_units_used = 0;
@@ -1795,10 +1839,10 @@ pub fn evaluate(trees: &ProgramTrees, values: &ValueMap) -> Activation {
         if complete && !activation.work_budget_exhausted && !candidates.is_empty() {
             // ADR-0168: an active `Assign` sets the controller, so it is not
             // inactive; agreeing values keep its `choose`, differing refuse.
-            let (unassigned, mut differing, effective) =
-                assign::settle(&candidates, &assignments, values);
-            newly = unassigned;
-            differing.extend(assign::unreadable(&effective));
+            let settled = assign::settle(&candidates, &assignments, values);
+            newly = settled.unassigned;
+            let mut differing = settled.differing;
+            differing.extend(assign::unreadable(&settled.effective));
             if !differing.is_empty() {
                 for (scope, diagnostic) in differing {
                     activation.diagnose(scope.as_ref(), diagnostic);
@@ -1880,13 +1924,26 @@ fn enclosing_controllers(
     out
 }
 
+/// Whether the unscoped value of `controller` is its product default. A
+/// value something else set (a stored edit, an `Assign` ETS ran) may select
+/// what ETS shows, so such a controller is read as before (ADR-0168), and
+/// an illegal value keeps being reported.
+fn holds_its_default(trees: &ProgramTrees, values: &ValueMap, controller: &str) -> bool {
+    match (values.get(None, controller), trees.defaults.get(controller)) {
+        (Some(value), Some(default)) => assign::same_value(value, default),
+        _ => false,
+    }
+}
+
 /// ADR-0168: alternatives of a placed controller that nothing names. A
 /// controller no `ParameterRefRef` names anywhere, whose every `choose`
 /// selects by value (`Comparable`, no `default` branch), counts as placed
 /// when its branches activate a `ParameterRefRef` that a branch of a placed
 /// controller's `choose` also activates: it competes with a shown one for
 /// the same reference, as push-button programs' virtual LED-status
-/// controllers do. Any other unnamed controller stays read as before.
+/// controllers do, and only while it holds its default
+/// ([`holds_its_default`]). Any other unnamed controller stays read as
+/// before.
 fn unnamed_alternative_controllers<'a>(
     trees: &'a ProgramTrees,
     placed: &HashSet<&'a str>,
@@ -1894,7 +1951,8 @@ fn unnamed_alternative_controllers<'a>(
     let mut named = HashSet::new();
     let mut selective: HashMap<&str, bool> = HashMap::new();
     let mut branch_refs: HashMap<&str, HashSet<&str>> = HashMap::new();
-    for tree in std::iter::once(&trees.program).chain(trees.modules.values()) {
+    let program = std::iter::once((true, &trees.program));
+    for (unscoped, tree) in program.chain(trees.modules.values().map(|tree| (false, tree))) {
         for node in tree.nodes.values() {
             match (node.kind.as_str(), node.ref_id.as_deref()) {
                 ("ParameterRefRef", Some(r)) => {
@@ -1902,7 +1960,10 @@ fn unnamed_alternative_controllers<'a>(
                 }
                 ("choose", Some(r)) => {
                     let whens = tree.children_of(Some(node.node_id));
-                    let by_value = matches!(node.control_kind, Some(ControlKind::Comparable))
+                    // Only the program's own tree: [`holds_its_default`]
+                    // reads unscoped values.
+                    let by_value = unscoped
+                        && matches!(node.control_kind, Some(ControlKind::Comparable))
                         && !whens
                             .iter()
                             .any(|&child| tree.node(child).is_some_and(|when| when.is_default));

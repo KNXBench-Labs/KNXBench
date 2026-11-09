@@ -70,21 +70,31 @@ pub(super) struct ActiveAssignment {
     pub(super) enclosing: Vec<ScopeKey>,
 }
 
-/// The candidates' fate in one pass: those no effective assignment sets
-/// (marked inactive), the diagnostics of differing ones, and the effective
-/// assignments. An assignment below a controller this pass marks is not
-/// run by ETS, so it does not count. Excluding fewer assignments can only
-/// assign more candidates, so starting from all candidates the excluded set
-/// shrinks to a fixed point.
+/// A diagnostic with the module scope it was raised in.
+pub(super) type Scoped = (Option<Rc<ModuleScope>>, Diagnostic);
+
+/// The outcome of [`settle`].
+pub(super) struct Settled<'a> {
+    /// Candidates no effective assignment sets: marked inactive.
+    pub(super) unassigned: Vec<ScopeKey>,
+    /// One diagnostic per assignment that differs from the stored value.
+    pub(super) differing: Vec<Scoped>,
+    /// The assignments that count.
+    pub(super) effective: Vec<&'a ActiveAssignment>,
+}
+
+/// The candidates' fate in one pass. An assignment below a controller this
+/// pass marks is not run by ETS, so it does not count. Excluding fewer
+/// assignments can only assign more candidates, so starting from all
+/// candidates the excluded set shrinks to a fixed point (at most one round
+/// per candidate). Starting from all of them is the greatest fixed point:
+/// controllers that only assign each other from below their own `choose`
+/// are all marked, as nothing outside them runs those assignments.
 pub(super) fn settle<'a>(
     candidates: &[ScopeKey],
     assignments: &'a [ActiveAssignment],
     values: &ValueMap,
-) -> (
-    Vec<ScopeKey>,
-    Vec<(Option<Rc<ModuleScope>>, Diagnostic)>,
-    Vec<&'a ActiveAssignment>,
-) {
+) -> Settled<'a> {
     let mut marked: HashSet<&ScopeKey> = candidates.iter().collect();
     loop {
         let effective: Vec<&ActiveAssignment> = assignments
@@ -102,11 +112,11 @@ pub(super) fn settle<'a>(
         }
         let next: HashSet<&ScopeKey> = unassigned.iter().copied().collect();
         if next == marked {
-            return (
-                unassigned.into_iter().cloned().collect(),
+            return Settled {
+                unassigned: unassigned.into_iter().cloned().collect(),
                 differing,
                 effective,
-            );
+            };
         }
         marked = next;
     }
@@ -163,9 +173,7 @@ fn verdict(controller: &ScopeKey, assignments: &[&ActiveAssignment], values: &Va
 
 /// The unreadable active assignments, once each: whether one sets a given
 /// controller is unknown, so each is reported as unrecognized.
-pub(super) fn unreadable(
-    assignments: &[&ActiveAssignment],
-) -> Vec<(Option<Rc<ModuleScope>>, Diagnostic)> {
+pub(super) fn unreadable(assignments: &[&ActiveAssignment]) -> Vec<Scoped> {
     let mut seen = HashSet::new();
     assignments
         .iter()
@@ -189,7 +197,7 @@ pub(super) fn unreadable(
 }
 
 /// Equal as integers when both read as one, else equal as written.
-fn same_value(a: &str, b: &str) -> bool {
+pub(super) fn same_value(a: &str, b: &str) -> bool {
     match (a.trim().parse::<i64>(), b.trim().parse::<i64>()) {
         (Ok(a), Ok(b)) => a == b,
         _ => a == b,

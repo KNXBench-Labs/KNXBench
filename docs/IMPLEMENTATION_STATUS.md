@@ -12,6 +12,14 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Hall of Fame publishes past unrelated docs findings (9 November 2026)
+
+The [Community Hall of Fame](contracts/community-recognition.md) workflow
+failed whenever any repository-wide documentation rule broke on `main` (for
+example a 51-line restart snapshot). Its pre-publication check now runs
+`tools/check_documentation.py --only` on the three generated outputs; CI keeps
+the full check. Repository tooling only.
+
 ## Assigned and unnamed controllers, short segments, mid-octet unions (9 November 2026; issue #10 follow-up)
 
 Four more devices of the tester project plan

@@ -114,9 +114,8 @@ def chapter_chain(root: Path) -> tuple[list[Path], list[str]]:
     return chapters, errors
 
 
-def check(root: Path) -> tuple[dict, list[str]]:
-    root = root.resolve()
-    sources = sorted(set(root.glob("*.md")) | set((root / "docs").rglob("*.md")))
+def check_links(root: Path, sources: list[Path]) -> tuple[int, int, list[str]]:
+    """Local link targets and image descriptions of the given Markdown sources."""
     errors = []
     count = images = 0
     for source in sources:
@@ -135,6 +134,37 @@ def check(root: Path) -> tuple[dict, list[str]]:
                 count += 1
                 if not target.exists():
                     errors.append(f"{source.relative_to(root)}: missing target: {link.target}")
+    return count, images, errors
+
+
+def check_only(root: Path, files: list[Path]) -> tuple[dict, list[str]]:
+    """Check only the named files: their links, image descriptions and local machine details.
+
+    Generated outputs (the Hall of Fame bot) use this so that an unrelated
+    repository-wide documentation finding cannot block their publication.
+    """
+    root = root.resolve()
+    errors = [f"{name}: not a file inside the checkout" for name in files
+              if not (root / name).resolve().is_file() or not (root / name).resolve().is_relative_to(root)]
+    if errors:
+        return {"files": len(files)}, errors
+    sources = sorted({(root / name).resolve() for name in files})
+    markdown = [source for source in sources if source.suffix == ".md"]
+    count, images, errors = check_links(root, markdown)
+    from check_local_info import GENERIC_RULES, machine_rules, read_text, scan_text
+    rules = list(GENERIC_RULES) + machine_rules(root)
+    for source in sources:
+        text = read_text(source)
+        if text is not None:
+            name = str(source.relative_to(root))
+            errors.extend(f"local machine detail: {finding}" for finding in scan_text(name, text, rules))
+    return {"files": len(sources), "local_targets": count, "images": images}, errors
+
+
+def check(root: Path) -> tuple[dict, list[str]]:
+    root = root.resolve()
+    sources = sorted(set(root.glob("*.md")) | set((root / "docs").rglob("*.md")))
+    count, images, errors = check_links(root, sources)
     chapters, navigation = chapter_chain(root)
     errors.extend(navigation)
     if (root / 'docs/KNOWN_LIMITATIONS.md').is_file():
@@ -155,8 +185,10 @@ def check(root: Path) -> tuple[dict, list[str]]:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", type=Path, default=Path(__file__).resolve().parents[1])
+    parser.add_argument("--only", type=Path, nargs="+", metavar="FILE",
+                        help="check only these files (relative to --root), skipping repository-wide checks")
     args = parser.parse_args()
-    counts, errors = check(args.root)
+    counts, errors = check_only(args.root, args.only) if args.only else check(args.root)
     print("Documentation:", ", ".join(f"{key}={value}" for key, value in counts.items()))
     for error in errors:
         print("ERROR:", error)

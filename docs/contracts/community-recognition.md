@@ -96,6 +96,13 @@ Bot handles may include a bounded literal `[bot]` suffix; profile URL path
 segments are percent-encoded. Unknown actor types still fail closed. Being an
 eligible participant does not make an external bot's award marker trusted.
 
+Before publishing, the workflow checks only its own three outputs (README, page,
+JSON) with `check_documentation.py --only`: their local links, image
+descriptions and local machine details. Repository-wide documentation rules
+(snapshot length, manual chain, catalogues) belong to CI, so an unrelated
+documentation finding on the default branch no longer blocks the scoreboard
+(owner amendment, 9 November 2026).
+
 ## Completion acknowledgement
 
 Eligible new completed issues get a separate automatic issue reply:
@@ -295,3 +302,10 @@ the committed board no longer lists it. The board, README block and JSON
 snapshot are regenerated without dependabot. Repository-tooling-only change;
 no application build, Rust workspace, private-corpus, hardware or release gate
 is claimed.
+
+Scoped documentation check (9 November 2026): the workflow's pre-publication
+check covers only the three generated outputs. Tests pin that unrelated broken
+links are ignored, broken links, missing or outside files and local machine
+details in the named files fail, and the workflow uses exactly that scope.
+Repository-tooling-only change; no application, Rust, corpus, hardware or
+release gate is claimed.

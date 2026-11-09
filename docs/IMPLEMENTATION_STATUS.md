@@ -12,6 +12,17 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Every matching `when` (9 November 2026; issue #10 follow-up)
+
+A `choose` whose sibling `when` tests overlap now activates every matching
+branch, not the first; `@default` stays the fallback
+([ADR-0170](adr/0170-every-matching-when-is-active.md),
+[research](research/2026-11-09-overlapping-when-tests.md)). ETS 6.4 showed both
+blocks of a push-button and of a glass push-button, with their objects, and
+wrote their values; both images now equal ETS's parameter segments, except
+three octets of the glass push-button that an `Assign` sets (open). Tester
+project 7 unsupported / 68 untested. Untested on hardware.
+
 ## Float parameters (9 November 2026; issue #10 follow-up)
 
 Two more devices of the tester project plan

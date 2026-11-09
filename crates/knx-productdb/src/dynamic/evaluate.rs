@@ -24,10 +24,11 @@
 //! path is exercised only by hand-built unit tests today, not by
 //! anything in `OriginalData/`.
 //!
-//! Nothing here has been validated against ETS. The no-match policy (D8)
-//! and the `@default`-is-fallback reading (below) are inferences from
-//! corpus consistency, not documented rules — see RESEARCH.md §4.3's
-//! `[D]`/`[V]`/`[A]` markers, preserved here in the same spirit.
+//! The no-match policy (D8) and the `@default`-is-fallback reading (below)
+//! are inferences from corpus consistency, not documented rules — see
+//! RESEARCH.md §4.3's `[D]`/`[V]`/`[A]` markers, preserved here in the same
+//! spirit. Later rules observed in ETS 6.4 name their ADR (e.g. ADR-0160,
+//! ADR-0168, ADR-0170: every matching `when` is active).
 
 use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
@@ -3148,12 +3149,11 @@ fn evaluate_comparable_choose(
         return;
     };
 
-    // First (and only) matching test wins; `@default="true"` covers the
-    // rest. [A] This is an inference from 22630 consistent corpus
-    // observations (RESEARCH.md §4.3), not a stated rule: `@default` never
-    // co-occurs with `@test`, no `choose` has more than one default `when`,
-    // and no `choose` has two `when` children with an identical `@test`.
-    let mut selected: Option<i64> = None;
+    // Every matching test's branch is active, in document order;
+    // `@default="true"` covers a value no test matches. `[V]` ETS 6.4 showed
+    // the objects of both sibling `when`s whose tests overlap
+    // (docs/research/2026-11-09-overlapping-when-tests.md, ADR-0170).
+    let mut selected: Vec<i64> = Vec::new();
     let mut default_child: Option<i64> = None;
     for &child_id in tree.children_of(Some(node.node_id)) {
         if !activation.admit_work(scope, child_id, 1) {
@@ -3196,10 +3196,7 @@ fn evaluate_comparable_choose(
             return;
         }
         match Test::parse(raw_test) {
-            Ok(test) if test.matches(observed) => {
-                selected = Some(child_id);
-                break;
-            }
+            Ok(test) if test.matches(observed) => selected.push(child_id),
             Ok(_) => {}
             Err(UnparsableTest) => activation.diagnose(
                 scope,
@@ -3214,8 +3211,22 @@ fn evaluate_comparable_choose(
     if activation.work_budget_exhausted {
         return;
     }
-    match selected.or(default_child) {
-        Some(child) => walk(
+    if selected.is_empty() {
+        selected.extend(default_child);
+    }
+    if selected.is_empty() {
+        activation.diagnose(
+            scope,
+            Diagnostic::NoBranchMatched {
+                choose_node: node.node_id,
+                param_ref: node.ref_id.clone(),
+                observed_value: observed.to_string(),
+            },
+        );
+        return;
+    }
+    for child in selected {
+        walk(
             trees,
             tree,
             child,
@@ -3226,14 +3237,6 @@ fn evaluate_comparable_choose(
             expansions_used,
             scope,
             path,
-        ),
-        None => activation.diagnose(
-            scope,
-            Diagnostic::NoBranchMatched {
-                choose_node: node.node_id,
-                param_ref: node.ref_id.clone(),
-                observed_value: observed.to_string(),
-            },
-        ),
+        );
     }
 }

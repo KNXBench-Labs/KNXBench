@@ -59,6 +59,15 @@ cargo build -p knx-server                # web deployment; desktop shell: apps/k
 - A local gate that skips a check is partial. Say which part ran.
 - Direct `cargo test` inherits the real home. Export scratch `XDG_DATA_HOME` and `XDG_CONFIG_HOME` first (see `docs/DEVELOPER_PITFALLS.md`).
 
+## Code Navigation (optional)
+
+A local [graphify](https://github.com/Graphify-Labs/graphify) code graph may exist. It is a navigation aid, never evidence and never a required tool.
+
+- Hermes sessions keep it in a dedicated detached worktree `<sources>/KNXBench-graphify` on `origin/main` (`graphify-out/graph.json`, never committed). Only its refresh script moves that worktree; do not edit, commit in or retire it.
+- Before broad searches, query it with `--graph <graph.json>`: `graphify query "<question>"`, `graphify explain "<path>::<Symbol>"`, `graphify affected "<path>::<Symbol>"`. Set `GRAPHIFY_BACKEND=none` so nothing is sent to an LLM backend.
+- The graph shows `origin/main` at its last refresh, not your branch. Confirm every finding in the source before acting on it.
+- Only the code graph is built (`graphify update`, tree-sitter, offline); the semantic pass over `docs/` is not used.
+
 ## Development
 
 - Work incrementally with the smallest clean solution. No unrelated refactors.

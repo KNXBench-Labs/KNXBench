@@ -197,7 +197,7 @@ pub(super) fn unreadable(assignments: &[&ActiveAssignment]) -> Vec<Scoped> {
 }
 
 /// Equal as integers when both read as one, else equal as written.
-pub(super) fn same_value(a: &str, b: &str) -> bool {
+pub(crate) fn same_value(a: &str, b: &str) -> bool {
     match (a.trim().parse::<i64>(), b.trim().parse::<i64>()) {
         (Ok(a), Ok(b)) => a == b,
         _ => a == b,

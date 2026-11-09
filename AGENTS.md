@@ -47,7 +47,9 @@ Layout: `crates/` (domain, app, store, import, net, productdb, ...), `apps/` (`k
 
 ## Verification
 
-- Routine acceptance is the change-scoped package gate `python3 tools/run_package_gate.py --base origin/main` (`--full` for releases). Individual commands, build order and private corpus tests: `docs/VERIFICATION.md`.
+- Work in bounded packages: implement several coherent steps and their tests, then run the relevant checks at the end. Do not run tests, builds or gates after every small edit; intermediate runs only resolve a concrete failure or a critical uncertainty that blocks further work. Strict test-first / RED-GREEN is optional, not the default.
+- Routine acceptance is the change-scoped package gate `python3 tools/run_package_gate.py --base origin/main` (`--full` for releases). Do not repeat its checks separately beforehand or rerun unchanged suites. Individual commands, build order and private corpus tests: `docs/VERIFICATION.md`.
+- Final coverage, isolation, hardware authorization and honest failure reporting stay mandatory.
 - Direct `cargo test` inherits the real home. Export scratch `XDG_DATA_HOME` and `XDG_CONFIG_HOME` first (see `docs/DEVELOPER_PITFALLS.md`).
 - A local gate that skips a check is partial. Say which part ran.
 

@@ -324,6 +324,11 @@ altogether, and no source consulted states the matching algorithm itself
 be a validation error was never observed, but its absence could equally
 be an artifact of these particular sample programs).
 
+**Superseded (9 November 2026):** overlapping tests occur in later corpora,
+and ETS 6.4 activates every matching `when`, not the first
+([ADR-0170](../adr/0170-every-matching-when-is-active.md),
+[research note](2026-11-09-overlapping-when-tests.md)).
+
 **Three findings that matter for T18's design, in order of how much they
 should shape it:**
 

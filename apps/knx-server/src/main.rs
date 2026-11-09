@@ -5,15 +5,15 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 #[tokio::main]
-async fn main() {
+async fn main() -> std::process::ExitCode {
     match std::env::args().nth(1).as_deref() {
         Some("--version" | "-V") => {
             println!("{}", knx_server::version_line());
-            return;
+            return std::process::ExitCode::SUCCESS;
         }
         Some("--hash-password") => {
             hash_password_from_stdin();
-            return;
+            return std::process::ExitCode::SUCCESS;
         }
         _ => {}
     }
@@ -202,10 +202,16 @@ async fn main() {
     );
     // Acknowledged edits not yet in the file are written before the process ends.
     state.journal().flush();
-    if let knx_server::journal_writer::JournalStatus::Failed { message } = state.journal().status()
+    // Edits the user saw acknowledged are not in the file: the exit status says so.
+    let journal_failed = if let knx_server::journal_writer::JournalStatus::Failed { message } =
+        state.journal().status()
     {
         eprintln!("knx-server: the last edits could not be written to the project file: {message}");
-    }
+        true
+    } else {
+        false
+    };
+    let exit_code: u8 = u8::from(journal_failed);
     eprintln!("knx-server: stopped");
     if !matches!(end, Ok(knx_server::ServeEnd::Drained))
         || write_cut_short
@@ -216,8 +222,9 @@ async fn main() {
         // Tokio runtime, and that waits for every `spawn_blocking` task
         // without a limit, which is exactly the hang this path exists to
         // avoid.
-        std::process::exit(0);
+        std::process::exit(i32::from(exit_code));
     }
+    std::process::ExitCode::from(exit_code)
 }
 
 fn report_catalogue_drain(drain: &knx_server::CatalogueDrain) {

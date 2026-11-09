@@ -4039,6 +4039,118 @@ mod tests {
         assert!(error.to_string().contains("could not be read"), "{error}");
     }
 
+    /// An Assign-only module can reach a global reference without activating scoped refs.
+    #[test]
+    fn a_scoped_assign_cannot_write_a_global_memory_parameter() {
+        let program = with_options(
+            PROGRAM,
+            r#"<Options DownloadInvisibleParameters="Background" />"#,
+        )
+        .replace(
+            "</Static>",
+            r#"</Static><ModuleDefs><ModuleDef Id="MD-1" Name="assign-only"><Dynamic><Assign TargetParamRefRef="P-2_R-2" Value="42" /></Dynamic></ModuleDef></ModuleDefs>"#,
+        )
+        .replace(
+            r#"<when test="2"><ParameterRefRef RefId="UP-2_R-4" />"#,
+            r#"<when test="2"><Module Id="MD-1_M-1" RefId="MD-1" /><ParameterRefRef RefId="UP-2_R-4" />"#,
+        );
+        assert!(program.contains(r#"<Module Id="MD-1_M-1" RefId="MD-1" />"#));
+        assert!(program.contains(r#"<ParameterRef Id="P-2_R-2" RefId="P-2" />"#));
+        let image = build(&program, &[("P-1_R-1", "2")], vec![]).unwrap();
+        assert_eq!(
+            octets(&image, "AS-4400")[12],
+            0,
+            "a scoped Assign must not replace the global parameter's template byte"
+        );
+        assert!(!image.parameters.contains_key("P-2_R-2"));
+
+        // Prove admission reaches the scope guard rather than a scoped-ref refusal.
+        let (_dir, conn) = db(&program);
+        let values = resolve_values(
+            &conn,
+            ID,
+            &[("P-1_R-1".to_string(), "2".to_string())]
+                .into_iter()
+                .collect(),
+        )
+        .unwrap();
+        let activation = evaluate(&load_program_trees(&conn, ID).unwrap(), &values);
+        assert!(
+            activation.diagnostics.is_empty(),
+            "{:?}",
+            activation.diagnostics
+        );
+        assert_eq!(activation.assigned.len(), 1);
+        assert!(activation.assigned[0].scope.is_some());
+        assert_eq!(
+            activation.assigned[0].assignment.as_ref().unwrap().target,
+            "P-2_R-2"
+        );
+        assert!(activation.parameter_refs.iter().all(|r| r.scope.is_none()));
+        assert!(activation.com_object_refs.iter().all(|r| r.scope.is_none()));
+    }
+
+    /// Unknown targets and absent sources refuse even without any choose-controller candidates.
+    #[test]
+    fn an_assign_with_an_unknown_target_or_missing_source_is_refused() {
+        let base = with_options(
+            PROGRAM,
+            r#"<Options DownloadInvisibleParameters="Background" />"#,
+        );
+        let start = base.find("<Dynamic>").unwrap();
+        let end = base.find("</Dynamic>").unwrap() + "</Dynamic>".len();
+        for (assignment, reason) in [
+            (
+                r#"<Assign TargetParamRefRef="P-999_R-999" Value="42" />"#,
+                "an active Assign targets an unknown parameter",
+            ),
+            (
+                r#"<Assign SourceParamRefRef="P-999_R-999" TargetParamRefRef="P-2_R-2" />"#,
+                "an active Assign's source has no value",
+            ),
+        ] {
+            let program = format!(
+                "{}<Dynamic>{assignment}</Dynamic>{}",
+                &base[..start],
+                &base[end..]
+            );
+            assert!(program.contains(assignment));
+            assert!(!program.contains("<choose"));
+            let error = build(&program, &[], vec![]).unwrap_err();
+            assert!(error.to_string().contains(reason), "{error}");
+        }
+    }
+
+    /// An earlier pass's consultation must not refuse the final, consistent image.
+    #[test]
+    fn an_assign_only_checks_controllers_consulted_in_the_final_pass() {
+        let program = with_options(
+            PROGRAM,
+            r#"<Options DownloadInvisibleParameters="Background" />"#,
+        )
+        .replace(
+            r#"<Parameter Id="P-3" Name="Prop""#,
+            r#"<Parameter Id="P-4" Name="Steer" ParameterType="PT-N" Value="50"><Memory CodeSegment="AS-4400" Offset="15" BitOffset="0" /></Parameter><Parameter Id="P-3" Name="Prop""#,
+        )
+        .replace(
+            r#"<ParameterRef Id="P-3_R-6" RefId="P-3" />"#,
+            r#"<ParameterRef Id="P-3_R-6" RefId="P-3" /><ParameterRef Id="P-4_R-8" RefId="P-4" />"#,
+        )
+        .replace(
+            r#"<when test="2"><ParameterRefRef RefId="UP-2_R-4" />"#,
+            r#"<when test="2"><Assign TargetParamRefRef="P-4_R-8" Value="60" /><choose ParamRefId="P-2_R-2"><when test="50"><choose ParamRefId="P-4_R-8"><when test="50"/><when test="60"><ComObjectRefRef RefId="O-0_R-1" /></when></choose></when></choose><ParameterRefRef RefId="UP-2_R-4" />"#,
+        );
+        assert!(program.contains(r#"<Parameter Id="P-4" Name="Steer""#));
+        assert!(program.contains(r#"<ParameterRef Id="P-4_R-8" RefId="P-4" />"#));
+        assert!(program.contains(r#"<choose ParamRefId="P-4_R-8">"#));
+        // P-2 is placed but not active, so the final pass marks its choose inactive;
+        // the nested P-4 choose was consulted earlier but no longer steers this image.
+        let image = build(&program, &[("P-1_R-1", "2")], vec![])
+            .expect("an earlier-pass consultation must not refuse the final-pass image");
+        assert_eq!(octets(&image, "AS-4400")[15], 60);
+        assert!(image.objects.iter().all(|object| object.number != 0));
+    }
+
     /// ADR-0169: no float placed in a property was observed, so it refuses,
     /// visible or written as an invisible default.
     #[test]

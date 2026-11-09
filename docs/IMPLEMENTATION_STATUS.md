@@ -141,6 +141,21 @@ simulator ran all 28 steps each. In that project 41 devices move from
 program of the same manufacturer); the second manufacturer's actuators stay
 refused for other reasons. No hardware was written.
 
+## A renamed parameter block shows its current name (9 November 2026; WP-05)
+
+One ETS6 observation showed a block retitled while a selector value is active and restored when
+it is not. KNXBench now applies the same narrow shape: a literal `ParameterBlockRename`/`Rename`
+leaf naming its own enclosing block in the root tree replaces that block's caption in
+navigation, heading, context and search, using its own translation, with the base caption back
+when no leaf is active. Display only; values still change through the existing parameter
+command and undo/redo. Everything else about renames stays reported and unapplied (module scope,
+other targets, competing leaves, leaves on undecided paths naming the same block, placeholders).
+A v33 report rewrite validates the stored report first; an invalid one becomes unavailable. ProductDB 32 to 33 re-parses retained programs
+(no DDL). [Contract](contracts/conditional-parameter-block-rename.md),
+[research](research/2026-11-09-conditional-parameter-block-rename.md). Tests: evaluator, ProductDB
+ingest/migration, HTTP edit/undo/redo, Vitest and the `parameters` browser lane; no bus, no
+download claim. WP-05 stays open for its other items.
+
 ## Edits answer first, the journal follows in the background (9 November 2026; issue #35)
 
 Owner decision after ADR-0165: a value change must not wait for the journal.

@@ -39,9 +39,17 @@ than dropped:
   repeated module's parameters are not offered for editing. Expansion needs
   the repeat count (`@Count` or a controlling `@ParameterRefId`) and
   project-side instance matching.
-- **Renames and buttons.** `ParameterBlockRename` (270), `Rename` (56) and
-  `Button` (20) are `UnrecognizedNode`: a conditional rename is not applied
-  to the displayed label, and a button's `@EventHandler` script is not run.
+- **Renames and buttons.** Since 9 November 2026 a literal `ParameterBlockRename`/`Rename`
+  leaf that names its own enclosing block in the application's root tree retitles that
+  block's caption while its branch is active
+  ([contract](../contracts/conditional-parameter-block-rename.md)). Every other rename
+  (module scope, another target, text parameter, placeholder, extra attribute or child,
+  duplicate identity, competing leaves, a leaf on a path the evaluation left undecided that
+  names the same block, a block without a base caption) stays `UnrecognizedNode` and the
+  base caption. A selected translation of an applied rename that holds a placeholder is not
+  filled: the leaf's source text is shown and an `unresolvedTextPlaceholder` panel
+  diagnostic names the leaf. `Button` (20) is `UnrecognizedNode` and a button's
+  `@EventHandler` script is not run.
 - **Calculations and allocators.** `ParameterCalculation` (1,236 in 91
   programs) and `Allocator` (94 in 14) are reported unknown elements with
   their attributes, and the program bytes are retained; their

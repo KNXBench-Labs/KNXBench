@@ -15,7 +15,7 @@ use crate::parse::translation::{ingest_translations, TranslationScope};
 use crate::report::{insert_unknown, UnknownKind};
 
 /// The product-database schema version this build writes.
-pub const CURRENT_PRODUCTDB_VERSION: i64 = 32;
+pub const CURRENT_PRODUCTDB_VERSION: i64 = 33;
 
 #[derive(Debug)]
 pub enum ProductDbError {
@@ -339,6 +339,7 @@ fn migrations() -> Vec<Migration> {
         crate::legacy::migrate_v29_to_v30,
         crate::master_provenance::migrate_v30_to_v31,
         crate::color_time_successor::repair,
+        migrate_v32_to_v33,
     ]
 }
 
@@ -407,6 +408,15 @@ struct Promotion {
     retired: &'static [Retired],
     /// `ingest_unknown.kind` and `.name` of a blob that was not carried forward.
     blob_error: (&'static str, &'static str),
+    /// Leave a package alone when none of its members lost a row: its counter and its report
+    /// are exactly what the step would write, and a member that could not be re-read must
+    /// not downgrade a report the step never needed to touch. Set from v33 on; v23 to v26
+    /// keep the behaviour they were released with.
+    skip_untouched_packages: bool,
+    /// Validate the stored report before rebuilding its counts, so an invalid historical
+    /// counter or a missing mandatory row makes it `unavailable` instead of being rebuilt
+    /// as measured. Set from v33 on; v23 to v26 keep the unvalidated rewrite they shipped.
+    validates_history: bool,
     /// `ingest_unknown.name` of a report that could not be rewritten.
     report_error: &'static str,
 }
@@ -423,6 +433,8 @@ const TEXT_PARAMETER_REF_PROMOTION: Promotion = Promotion {
         "TextParameterRefBackfillError",
         "backfill_text_parameter_refs",
     ),
+    skip_untouched_packages: false,
+    validates_history: false,
     report_error: "text_parameter_ref_report_backfill",
 };
 
@@ -435,6 +447,8 @@ const ACCESS_PROMOTION: Promotion = Promotion {
         keeps_dynamic: false,
     }],
     blob_error: ("PresentationBackfillError", "backfill_presentation"),
+    skip_untouched_packages: false,
+    validates_history: false,
     report_error: "presentation_report_backfill",
 };
 
@@ -553,6 +567,8 @@ const PLACEMENT_PROMOTION: Promotion = Promotion {
         },
     ],
     blob_error: ("PlacementBackfillError", "backfill_placement_columns"),
+    skip_untouched_packages: false,
+    validates_history: false,
     report_error: "placement_report_backfill",
 };
 
@@ -603,6 +619,53 @@ fn migrate_v24_to_v25(conn: &Connection) -> Result<(), ProductDbError> {
     add_attribute_unknowns(conn, "v25", Some(&carried))
 }
 
+/// The `Dynamic` rename leaves v33 models, at both the program's own tree and a `ModuleDef`'s.
+const RENAME_HOSTS: [&str; 2] = ["Dynamic/ParameterBlockRename", "Dynamic/Rename"];
+
+const RENAME_PROMOTION: Promotion = Promotion {
+    version: "v33",
+    retired: &[
+        Retired {
+            kind: UnknownKind::Attribute,
+            name: "Id",
+            hosts: &RENAME_HOSTS,
+            keeps_dynamic: false,
+        },
+        Retired {
+            kind: UnknownKind::Attribute,
+            name: "RefId",
+            hosts: &RENAME_HOSTS,
+            keeps_dynamic: false,
+        },
+        Retired {
+            kind: UnknownKind::Attribute,
+            name: "Text",
+            hosts: &RENAME_HOSTS,
+            keeps_dynamic: false,
+        },
+    ],
+    blob_error: ("RenameBackfillError", "reparse_rename_leaves"),
+    skip_untouched_packages: true,
+    validates_history: true,
+    report_error: "rename_report_backfill",
+};
+
+/// v32 -> v33 (WP-05, conditional block rename). No DDL: `ParameterBlockRename` and `Rename`
+/// leaves already had `element_id`, `ref_id` and `text` columns, but the parser sent their
+/// `Id`/`RefId`/`Text` to `extra` and reported them. A fresh parse now fills the columns, so
+/// v23's procedure re-parses each retained program blob and retires exactly those three
+/// attribute rows at those two hosts. Any other attribute on a rename leaf stays in `extra`
+/// and stays reported. A blob that is not carried forward keeps its old rows and gets a
+/// `RenameBackfillError` record. Its package's report is rewritten, and so downgraded to
+/// `unavailable`, only when another member of that package lost rows; a package in which no
+/// member lost a row keeps its measured report as recorded, because nothing in it changed.
+/// A report is rewritten only after the stored one validates; one that does not becomes
+/// `unavailable` with an `InstallReportBackfillError`, never a rebuilt measured report.
+fn migrate_v32_to_v33(conn: &Connection) -> Result<(), ProductDbError> {
+    let retired = promote_from_program_blobs(conn, &RENAME_PROMOTION, reparse_owned_trees)?;
+    retire_promoted_from_reports(conn, &retired, &RENAME_PROMOTION)
+}
+
 /// The hosts v26 stores `SuffixText` on: `Parameter` (also a union member or a
 /// `ModuleDef`'s) and `ParameterRef`, in `Static` only. Any other host, and
 /// both inside `Dynamic`, stays reported.
@@ -617,6 +680,8 @@ const SUFFIX_TEXT_PROMOTION: Promotion = Promotion {
         keeps_dynamic: true,
     }],
     blob_error: ("SuffixTextBackfillError", "backfill_suffix_text"),
+    skip_untouched_packages: false,
+    validates_history: false,
     report_error: "suffix_text_report_backfill",
 };
 
@@ -1054,6 +1119,9 @@ fn retire_promoted_from_reports(
             let rows = i64::try_from(retired.get(m).map_or(0, Vec::len)).map_err(|_| overflow())?;
             total.checked_add(rows).ok_or_else(overflow)
         })?;
+        if promotion.skip_untouched_packages && lost == 0 {
+            continue;
+        }
         let updated = conn.execute(
             "UPDATE package SET unknown_count = unknown_count - ?2
              WHERE sha256 = ?1 AND unknown_count >= ?2",
@@ -1090,6 +1158,9 @@ fn retire_promoted_from_reports(
             Some(member) => Ok(Err(crate::package::ReportNotUpgradable(format!(
                 "member {member} was not carried forward"
             )))),
+            None if promotion.validates_history => {
+                crate::package::retire_validated_report_rows(conn, &package, &keys)
+            }
             None => crate::package::retire_report_rows(conn, &package, &keys),
         };
         let why = match outcome {

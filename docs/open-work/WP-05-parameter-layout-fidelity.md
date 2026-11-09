@@ -1,8 +1,8 @@
 # WP-05 — Parameter layout fidelity: remaining features
 
-**Status:** Blocked: evidence. Listed in [OPEN_WORK](../OPEN_WORK.md); per-ID status of record is the [ledger](../status/LEDGER.md).
+**Status:** In progress: the conditional block rename slice is implemented (9 November 2026); the rest stays blocked on evidence. Listed in [OPEN_WORK](../OPEN_WORK.md); per-ID status of record is the [ledger](../status/LEDGER.md).
 
-**Evidence route (8 November 2026):** clean-room observation is admitted by the owner ([OWN-01](OWN-01-owner-decisions.md#decisions-recorded--8-november-2026), [rules](../RESEARCH.md#evidence-routes)); no observation has been made for this package yet.
+**Evidence route (8 November 2026):** clean-room observation is admitted by the owner ([OWN-01](OWN-01-owner-decisions.md#decisions-recorded--8-november-2026), [rules](../RESEARCH.md#evidence-routes)). One observation exists: the [conditional block rename](../research/2026-11-09-conditional-parameter-block-rename.md); none for the other items below.
 
 ## Task
 
@@ -11,7 +11,9 @@ feature at a time, never inferred manufacturer behaviour.
 
 ## Open (each needs its own evidence)
 
-- Parameter-driven row/column captions (`TextParameterRefId`) and `Rename`.
+- Parameter-driven row/column captions (`TextParameterRefId`). `Rename` is implemented only for the
+  literal leaf that retitles its enclosing block; module-scoped, cross-target and text-parameter
+  renames remain open (see below).
 - Translated row/column captions.
 - Inline sections, nested blocks and `CollapseIfEmpty`.
 - Button actions inside grid cells (`EventHandler*`, online callbacks, own
@@ -27,6 +29,18 @@ Area register, matrix placement, separators, block access, indentation, the
 `Text` language overlays (A16-07, `cde8d89a3`) and, since Alpha 19, passive literal
 Button labels in grid cells
 ([`button-literal-passive-v1`](../contracts/alpha16-parameter-layout.md#passive-source-button-labels-button-literal-passive-v1)).
+
+## Implemented 9 November 2026: conditional block rename
+
+A literal `ParameterBlockRename`/`Rename` leaf that names its own enclosing block now replaces
+that block's caption while its `when` is active, in navigation, heading, context and search,
+with its own translation and the base caption restored when it is not. Contract:
+[conditional-parameter-block-rename](../contracts/conditional-parameter-block-rename.md).
+Evidence: one ETS6 observation (one product, German text, no claim about repaint timing).
+Still open: module-scoped renames, renames of anything but the enclosing block, competing
+or undecided leaves, text-parameter or template replacements (a selected translation with a
+placeholder falls back to the leaf's source text and is named in the panel diagnostics), other ETS versions, languages and products.
+The slice does not close the package.
 
 ## Done when (per admitted feature)
 

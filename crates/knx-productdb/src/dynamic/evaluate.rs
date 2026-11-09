@@ -33,6 +33,8 @@ use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 
 #[cfg(test)]
+mod rename_tests;
+#[cfg(test)]
 mod work_budget_tests;
 
 #[cfg(test)]
@@ -358,21 +360,73 @@ pub struct DynamicTree {
     access: HashMap<i64, Rc<str>>,
     // Presence only: the human audit trail is never loaded or reparsed as semantics.
     has_unmodelled_attributes: bool,
+    /// Nodes whose stored row keeps attributes outside the normalized model.
+    opaque: HashSet<i64>,
+    /// How often each `ParameterBlock/@Id` is declared, for rename target uniqueness.
+    block_ids: HashMap<String, usize>,
+    /// How often each `ParameterBlockRename`/`Rename` `@Id` is declared.
+    rename_ids: HashMap<String, usize>,
+    /// Pre-order position and last descendant position per reachable node, built only when
+    /// the tree holds a rename leaf: a refused subtree's rename leaves are then a range
+    /// lookup in `renames_in_order`, not a second walk.
+    spans: Spans,
+    /// `(pre-order position, node_id)` of every rename leaf of any shape, ascending.
+    renames_in_order: Vec<(usize, i64)>,
 }
 
 impl DynamicTree {
     pub fn from_nodes(nodes: Vec<DynamicNode>) -> DynamicTree {
         let mut children: HashMap<Option<i64>, Vec<i64>> = HashMap::new();
+        let mut block_ids: HashMap<String, usize> = HashMap::new();
+        let mut rename_ids: HashMap<String, usize> = HashMap::new();
+        let mut has_rename = false;
         for n in &nodes {
             children.entry(n.parent_id).or_default().push(n.node_id);
+            has_rename |= is_rename(&n.kind);
+            let Some(id) = n.element_id.as_ref() else {
+                continue;
+            };
+            if n.kind == "ParameterBlock" {
+                *block_ids.entry(id.clone()).or_default() += 1;
+            } else if is_rename(&n.kind) {
+                *rename_ids.entry(id.clone()).or_default() += 1;
+            }
         }
-        let nodes = nodes.into_iter().map(|n| (n.node_id, n)).collect();
+        let nodes: HashMap<i64, DynamicNode> = nodes.into_iter().map(|n| (n.node_id, n)).collect();
+        let (spans, renames_in_order) = if has_rename {
+            rename_spans(&nodes, &children)
+        } else {
+            Default::default()
+        };
         DynamicTree {
             nodes,
             children,
             access: HashMap::new(),
             has_unmodelled_attributes: false,
+            opaque: HashSet::new(),
+            block_ids,
+            rename_ids,
+            spans,
+            renames_in_order,
         }
+    }
+
+    /// The rename leaves at or below `node_id`, of any shape, in document order.
+    fn renames_within(&self, node_id: i64) -> &[(usize, i64)] {
+        let Some(&(pre, last)) = self.spans.get(&node_id) else {
+            return &[];
+        };
+        let start = self.renames_in_order.partition_point(|&(at, _)| at < pre);
+        let end = self.renames_in_order.partition_point(|&(at, _)| at <= last);
+        &self.renames_in_order[start..end]
+    }
+
+    /// Marks nodes whose stored row keeps unmodelled attributes, as `load_tree` reads
+    /// `dynamic_node.extra`. For hand-built trees.
+    pub fn with_opaque(mut self, nodes: impl IntoIterator<Item = i64>) -> Self {
+        self.opaque.extend(nodes);
+        self.has_unmodelled_attributes |= !self.opaque.is_empty();
+        self
     }
 
     /// Declares `Access` on the given nodes, as `load_tree` reads it from
@@ -407,6 +461,41 @@ impl DynamicTree {
     fn roots(&self) -> &[i64] {
         self.children_of(None)
     }
+}
+
+/// Node id to (pre-order position, last descendant's position).
+type Spans = HashMap<i64, (usize, usize)>;
+
+/// One iterative pre-order pass over the nodes reachable from the roots: each node's
+/// position and its last descendant's, plus the rename leaves in position order. Linear in
+/// the tree, built once per load, so a hostile depth cannot exhaust the stack.
+fn rename_spans(
+    nodes: &HashMap<i64, DynamicNode>,
+    children: &HashMap<Option<i64>, Vec<i64>>,
+) -> (Spans, Vec<(usize, i64)>) {
+    let mut spans: Spans = HashMap::with_capacity(nodes.len());
+    let mut renames = Vec::new();
+    let mut clock = 0usize;
+    let roots = children.get(&None).map(Vec::as_slice).unwrap_or(&[]);
+    let mut pending: Vec<(i64, bool)> = roots.iter().rev().map(|&id| (id, false)).collect();
+    while let Some((id, leaving)) = pending.pop() {
+        if leaving {
+            if let Some(span) = spans.get_mut(&id) {
+                span.1 = clock - 1;
+            }
+            continue;
+        }
+        spans.insert(id, (clock, clock));
+        if nodes.get(&id).is_some_and(|n| is_rename(&n.kind)) {
+            renames.push((clock, id));
+        }
+        clock += 1;
+        pending.push((id, true));
+        if let Some(below) = children.get(&Some(id)) {
+            pending.extend(below.iter().rev().map(|&child| (child, false)));
+        }
+    }
+    (spans, renames)
 }
 
 /// Loads one `Dynamic` scope (`module_def_id = ""` for an
@@ -456,8 +545,12 @@ pub fn load_tree(
 
     let mut nodes = Vec::with_capacity(rows.len());
     let mut has_unmodelled_attributes = false;
+    let mut opaque_nodes = Vec::new();
     for (mut node, declared, opaque) in rows {
         has_unmodelled_attributes |= opaque;
+        if opaque {
+            opaque_nodes.push(node.node_id);
+        }
         if let Some(declared) = declared {
             access.push((node.node_id, declared));
         }
@@ -469,7 +562,8 @@ pub fn load_tree(
         nodes.push(node);
     }
     let mut tree = DynamicTree::from_nodes(nodes)
-        .with_access(access.iter().map(|(id, token)| (*id, token.as_str())));
+        .with_access(access.iter().map(|(id, token)| (*id, token.as_str())))
+        .with_opaque(opaque_nodes);
     tree.has_unmodelled_attributes = has_unmodelled_attributes;
     Ok(tree)
 }
@@ -1300,6 +1394,28 @@ pub struct ActiveLabel {
     pub text: String,
 }
 
+/// One active literal `ParameterBlockRename`/`Rename` leaf that retitles its enclosing block.
+///
+/// Only the root application tree qualifies, so there is no module scope: `target_node_id`
+/// names the block's [`ActiveLabel`] with `scope: None`. Base and replacement stay separate
+/// so a later evaluation with another value map restores the base caption by simply not
+/// reporting the rename.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ActiveRename {
+    /// `dynamic_node.node_id` of the rename leaf; its `@Id` is the translation host.
+    pub node_id: i64,
+    /// The leaf's element kind, `ParameterBlockRename` or `Rename`.
+    pub kind: String,
+    /// The leaf's own `@Id`.
+    pub rename_id: String,
+    /// `dynamic_node.node_id` of the enclosing block.
+    pub target_node_id: i64,
+    /// The block's `@Id`, equal to the leaf's `@RefId`.
+    pub target_id: String,
+    /// The leaf's `@Text` as stored.
+    pub text: String,
+}
+
 /// One `Diagnostic`, qualified by where it was found (design D14).
 /// `Diagnostic`'s own variants are unchanged — the scope wraps them, it
 /// does not move into them, so a diagnostic's `node_id`/`choose_node`/
@@ -1333,7 +1449,16 @@ pub struct Activation {
     pub separators: Vec<ActiveSeparator>,
     /// Reached `Button`s in document order; never an activation or a label.
     pub buttons: Vec<ActiveButton>,
+    /// The one active replacement caption per renamed block, in document order. The block's
+    /// own [`ActiveLabel`] keeps the base caption; the consumer chooses which to show.
+    pub renames: Vec<ActiveRename>,
     pub diagnostics: Vec<ScopedDiagnostic>,
+    /// Supported rename leaves reached this pass, before target resolution. Internal.
+    rename_candidates: Vec<ActiveRename>,
+    /// The `@RefId` (`None`: none declared) of every other rename leaf this pass reached or
+    /// skipped past structurally: an intent it cannot interpret, still naming a target.
+    /// Internal; drained by `resolve_renames`.
+    rename_intents: Vec<Option<String>>,
     /// How many [`Diagnostic::RefBelowSkippedNode`]s were emitted. Counted
     /// against [`MAX_MODULE_ACTIVATIONS`] like a ref or a label (ADR-0041):
     /// a `ModuleDef` wrapping its refs in an unrecognized node multiplies
@@ -1370,6 +1495,8 @@ struct PathContext<'a> {
     channel: Option<&'a ChannelOwner>,
     /// The most restrictive block `Access` so far ([`ActiveRef::block_access`]).
     block_access: Option<&'a Rc<str>>,
+    /// The nearest enclosing `ParameterBlock`, the only target a rename may name.
+    block: Option<i64>,
 }
 
 /// `None` for an `Access` that restricts nothing (`ReadWrite`), otherwise its
@@ -1447,6 +1574,7 @@ impl Activation {
         self.parameter_refs.len()
             + self.com_object_refs.len()
             + self.labels.len()
+            + self.rename_candidates.len()
             + self.skipped_refs_reported
     }
 
@@ -1608,6 +1736,8 @@ pub fn evaluate(trees: &ProgramTrees, values: &ValueMap) -> Activation {
             // Admission state is local to this call, not part of result
             // equality. Completeness remains explicit in the retained
             // budget diagnostics.
+            // Renames settle on this pass's own work budget, before its state is reset.
+            resolve_renames(&trees.program, &mut activation);
             activation.inactive_controllers = HashSet::new();
             activation.work_units_used = 0;
             activation.work_budget_exhausted = false;
@@ -1745,6 +1875,10 @@ fn report_refs_below(
         let Some(node) = tree.node(id) else {
             continue;
         };
+        // A rename nobody walked still names its target (`resolve_renames`).
+        if is_rename(&node.kind) && !note_rename_intent(activation, scope, node) {
+            return;
+        }
         if is_reference(&node.kind) {
             if activation.activation_budget_spent(scope, id, node.ref_id.as_deref()) {
                 return;
@@ -1818,6 +1952,11 @@ fn walk(
         let path = PathContext {
             channel: opened.as_ref().or(path.channel),
             block_access: narrowed.as_ref().or(path.block_access),
+            block: if node.kind == "ParameterBlock" {
+                Some(node_id)
+            } else {
+                path.block
+            },
         };
         for &child in tree.children_of(Some(node_id)) {
             if activation.work_budget_exhausted {
@@ -1836,6 +1975,11 @@ fn walk(
                 path,
             );
         }
+        return;
+    }
+    // A supported rename is a candidate, not a label: the walk stays in document order
+    // and `resolve_renames` settles the target once the pass has seen every branch.
+    if is_rename(&node.kind) && collect_rename(tree, node, activation, scope, path) {
         return;
     }
     match node.kind.as_str() {
@@ -2151,6 +2295,168 @@ fn bind_arguments(
         }
     }
     Some(bound)
+}
+
+fn is_rename(kind: &str) -> bool {
+    matches!(kind, "ParameterBlockRename" | "Rename")
+}
+
+/// Records `node` as a rename candidate when it is the one shape the contract admits:
+/// a childless, fully modelled leaf with its own unique `@Id`, a plain `@Text`, and a
+/// `@RefId` naming the unique enclosing block of the root application tree. Any other
+/// shape is noted as an intent on its `@RefId` and returns `false`, keeping today's
+/// `UnrecognizedNode` report. Scanning and every retained copy are admitted first; `true`
+/// without a candidate means the shared work budget refused and the walk stops here.
+fn collect_rename(
+    tree: &DynamicTree,
+    node: &DynamicNode,
+    activation: &mut Activation,
+    scope: Option<&Rc<ModuleScope>>,
+    path: PathContext<'_>,
+) -> bool {
+    let text = node.text.as_deref().unwrap_or_default();
+    // The placeholder scan reads the whole text before anything is decided.
+    if !activation.admit_work(scope, node.node_id, text.len()) {
+        return true;
+    }
+    let target = path.block.and_then(|id| tree.node(id));
+    let rename_id = node.element_id.as_deref();
+    let admitted = scope.is_none()
+        && !text.is_empty()
+        && !text.contains(PLACEHOLDER_OPEN)
+        && node.ref_id.is_some()
+        && target.is_some_and(|target| node.ref_id == target.element_id)
+        && tree.children_of(Some(node.node_id)).is_empty()
+        && !tree.opaque.contains(&node.node_id)
+        && rename_id.is_some_and(|id| tree.rename_ids.get(id) == Some(&1))
+        && node
+            .ref_id
+            .as_ref()
+            .is_some_and(|id| tree.block_ids.get(id) == Some(&1));
+    let (Some(target), Some(rename_id), Some(target_id), true) =
+        (target, rename_id, node.ref_id.as_deref(), admitted)
+    else {
+        return !note_rename_intent(activation, scope, node);
+    };
+    if activation.activation_budget_spent(scope, node.node_id, None) {
+        return false;
+    }
+    let retained = [rename_id, text, target_id, node.kind.as_str()]
+        .iter()
+        .fold(0usize, |total, part| total.saturating_add(part.len()));
+    if !activation.admit_work(scope, node.node_id, retained) {
+        return true;
+    }
+    activation.rename_candidates.push(ActiveRename {
+        node_id: node.node_id,
+        kind: node.kind.clone(),
+        rename_id: rename_id.to_string(),
+        target_node_id: target.node_id,
+        target_id: target_id.to_string(),
+        text: text.to_string(),
+    });
+    true
+}
+
+/// Keeps the `@RefId` of a rename leaf that is not a candidate: whatever it means, it names
+/// that target, so no other leaf may win it. `false` when the work budget refused.
+fn note_rename_intent(
+    activation: &mut Activation,
+    scope: Option<&Rc<ModuleScope>>,
+    node: &DynamicNode,
+) -> bool {
+    let units = node.ref_id.as_ref().map_or(1, |id| id.len().max(1));
+    if !activation.admit_work(scope, node.node_id, units) {
+        return false;
+    }
+    activation.rename_intents.push(node.ref_id.clone());
+    true
+}
+
+/// Settles the final pass's rename candidates on that pass's own work budget. A target gets
+/// its replacement only when exactly one candidate names it, its block has a base label, and
+/// nothing else in the pass could name it too: no other rename leaf the pass reached or
+/// skipped past (`rename_intents`), and no rename leaf inside a program-tree subtree a
+/// `may_hide_refs` diagnostic left unwalked. A rename intent without `@RefId`, or a pass that
+/// ran out of work or activation budget, could name any target and so blocks all of them.
+/// Every refused candidate gets the `UnrecognizedNode` the unmodelled leaf always produced.
+/// No first or last candidate wins, and nothing is decided on an unwalked path.
+fn resolve_renames(program: &DynamicTree, activation: &mut Activation) {
+    let candidates = std::mem::take(&mut activation.rename_candidates);
+    let intents = std::mem::take(&mut activation.rename_intents);
+    if candidates.is_empty() {
+        return;
+    }
+    let mut blocked: HashSet<&str> = HashSet::new();
+    let mut block_all = activation.work_budget_exhausted || activation.activation_budget_diagnosed;
+    for intent in &intents {
+        match intent {
+            Some(target) => {
+                blocked.insert(target.as_str());
+            }
+            None => block_all = true,
+        }
+    }
+    // Indexed by position, so a `diagnose` below can grow the list without a second copy.
+    let walked = activation.diagnostics.len();
+    for index in 0..walked {
+        if block_all {
+            break;
+        }
+        let scoped = &activation.diagnostics[index];
+        if scoped.scope.is_some() || !scoped.diagnostic.may_hide_refs() {
+            continue;
+        }
+        let unwalked = scoped.diagnostic.node_id();
+        if !activation.admit_work(None, unwalked, 1) {
+            block_all = true;
+            break;
+        }
+        for &(_, leaf) in program.renames_within(unwalked) {
+            if !activation.admit_work(None, leaf, 1) {
+                block_all = true;
+                break;
+            }
+            match program.node(leaf).and_then(|n| n.ref_id.as_deref()) {
+                Some(target) => {
+                    blocked.insert(target);
+                }
+                None => block_all = true,
+            }
+        }
+    }
+    let mut per_target: HashMap<i64, usize> = HashMap::new();
+    for candidate in &candidates {
+        *per_target.entry(candidate.target_node_id).or_default() += 1;
+    }
+    let labelled: HashSet<i64> = activation
+        .labels
+        .iter()
+        .filter(|label| label.scope.is_none() && label.kind == "ParameterBlock")
+        .map(|label| label.node_id)
+        .collect();
+    let mut accepted = Vec::new();
+    for candidate in candidates {
+        if !block_all
+            && per_target[&candidate.target_node_id] == 1
+            && labelled.contains(&candidate.target_node_id)
+            && !blocked.contains(candidate.target_id.as_str())
+        {
+            accepted.push(candidate);
+        } else {
+            activation.diagnose(
+                None,
+                Diagnostic::UnrecognizedNode {
+                    node_id: candidate.node_id,
+                    kind: candidate.kind,
+                },
+            );
+        }
+    }
+    // A budget refused while settling leaves the pass incomplete: nothing is decided on it.
+    if !activation.work_budget_exhausted {
+        activation.renames = accepted;
+    }
 }
 
 /// Records one activated element's `@Text` as a label, substituted against

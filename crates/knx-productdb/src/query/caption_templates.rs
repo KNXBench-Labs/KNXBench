@@ -35,6 +35,7 @@ impl From<TextProjectionError> for CaptionTemplateError {
 }
 
 /// Select only `Text` translations for block/separator hosts, never parameter values.
+/// The rename leaves are hosts too: an active replacement is translated by its own identity.
 ///
 /// Keys retain the defining tree and node, including repeated module expansions.
 /// The existing exact/prefix language rule is shared with all other product text
@@ -51,7 +52,7 @@ pub fn parameter_caption_templates(
          FROM dynamic_node AS n JOIN translation AS t
            ON t.scope='Program' AND t.scope_id=n.program_id
           AND t.ref_id=n.element_id AND t.attribute_name='Text'
-         WHERE n.program_id=?1 AND n.kind IN ('ParameterBlock','ParameterSeparator')
+         WHERE n.program_id=?1 AND n.kind IN ('ParameterBlock','ParameterSeparator','ParameterBlockRename','Rename')
            AND t.text IS NOT NULL
          ORDER BY n.module_def_id, n.node_id, t.language",
     )?;

@@ -4,7 +4,7 @@ import { defineConfig } from "@playwright/test";
 
 export default defineConfig({
   testDir: "./e2e",
-  testMatch: "parameter-editors.e2e.ts",
+  testMatch: ["parameter-editors.e2e.ts", "parameter-block-rename.e2e.ts"],
   outputDir: "../../target/playwright/parameter-editors",
   fullyParallel: false,
   workers: 1,

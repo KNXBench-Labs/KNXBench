@@ -56,25 +56,25 @@
       "encoding": "lossless WebP of the decoded frame at 7.0 s"
     },
     "crt.webp": {
-      "sha256": "b6967fe8c02199d738f8c8e2dda5b627eb4755a33c5047ff3a33e12e522abcb0",
-      "bytes": 66282,
+      "sha256": "21f77aec2dfc16f4eed92c58b8916879c2b4a34d4402e64cc822f6dd4ff022bf",
+      "bytes": 69284,
       "width": 1440,
       "height": 1080,
-      "source": "docs/assets/releases/alpha17/website/user-modern-retro-green-crt-addresses.png",
-      "sourceSha256": "63d4f1dd59fab117dfbe1599d96ea77a322952cbb88c04843ea1a8e443f512a7",
-      "applicationSource": "a9ea32d72364478b25e158d0b95465af7a4702df",
-      "kind": "real-app screenshot (v0.1.0-alpha.17); actual server; fictional project",
+      "source": "docs/assets/releases/alpha20/website/user-modern-retro-green-crt-addresses.png",
+      "sourceSha256": "112f3548d024177b1a0400baebad37cc1dbc70470263e1a678fb18c87a278be6",
+      "applicationSource": "1d3c7d433d2b2139a1ecbfac1314bacc4ef9fc22",
+      "kind": "real-app screenshot (v0.1.0-alpha.20); actual server; fictional project",
       "encoding": "lossless WebP; exact captured pixels, no repainting or synthetic controls"
     },
     "graphite.webp": {
-      "sha256": "f5dc056754dc448db805b7c134f097a6e283f10229766a0d766173cb0350fba7",
-      "bytes": 60182,
+      "sha256": "5808aa0d620ae47e350298790283b4e44c65e374cd8af917c2cc0d566f26cb13",
+      "bytes": 62216,
       "width": 1440,
       "height": 1080,
-      "source": "docs/assets/releases/alpha17/website/graphite-addresses.png",
-      "sourceSha256": "e45299936848cf8551c8f563af13a3cda1d26a10ca745f6d30a62473b2caf264",
-      "applicationSource": "a9ea32d72364478b25e158d0b95465af7a4702df",
-      "kind": "real-app screenshot (v0.1.0-alpha.17); actual server; fictional project",
+      "source": "docs/assets/releases/alpha20/website/graphite-addresses.png",
+      "sourceSha256": "cd814e0618dc8c993cb15d664b78ac7f48ba58ee99f4d945251e87445c9e57df",
+      "applicationSource": "1d3c7d433d2b2139a1ecbfac1314bacc4ef9fc22",
+      "kind": "real-app screenshot (v0.1.0-alpha.20); actual server; fictional project",
       "encoding": "lossless WebP; exact captured pixels, no repainting or synthetic controls"
     },
     "group-details-de.vtt": {
@@ -86,12 +86,12 @@
       "bytes": 96
     },
     "group-details.mp4": {
-      "sha256": "ebe142c41b1dfb48400da0b5a22bc74772513d614af871a3d492c279e8aa8aec",
-      "bytes": 139391,
+      "sha256": "7dccfd67e6f4fb5952273a2cfb6d93863fabc91c51b3128ed97c101ecff9d68e",
+      "bytes": 130289,
       "source": "apps/knx-web/e2e/release-media.shots.ts",
-      "sourceSha256": "8806725d8175cfaf2654475fb9b911d58c4e5308f28bbbbc33342dbba34f8660",
-      "applicationSource": "a9ea32d72364478b25e158d0b95465af7a4702df",
-      "kind": "real app and server (v0.1.0-alpha.17); fictional sample house",
+      "sourceSha256": "0ac744b52eb71e27eccec58d94b16987de957b80e31879ecbd1ee4e6d08ae60b",
+      "applicationSource": "1d3c7d433d2b2139a1ecbfac1314bacc4ef9fc22",
+      "kind": "real app and server (v0.1.0-alpha.20); fictional sample house",
       "probe": {
         "streams": [
           {
@@ -108,8 +108,8 @@
       "encoding": "H.264/yuv420p CRF 20, faststart, no audio; encoded directly from lossless screencast frames"
     },
     "group-details.webp": {
-      "sha256": "b6e58fa4064b74712f23b0ae9acc447867e9c504f462d2650b14aadf9e61d1f7",
-      "bytes": 115472,
+      "sha256": "ad4fe8f036bb4fa7fe65428e753b388537433d9f73c359106559fcbe335811f3",
+      "bytes": 115452,
       "width": 1440,
       "height": 900,
       "source": "website/assets/group-details.mp4",
@@ -117,69 +117,80 @@
       "encoding": "lossless WebP of the decoded frame at 4.0 s"
     },
     "highlight-catalogue.webp": {
-      "sha256": "aaa7a83ee0edbd353f086590b545c39b2235cf691a62cfeb0bc66ae7528e736d",
-      "bytes": 77558,
+      "sha256": "b8e2b23175ced2529689a0da670bb50f955ffe2013308fa8f32858c21e7c2b21",
+      "bytes": 78938,
       "width": 1440,
       "height": 1080,
-      "source": "docs/assets/releases/alpha17/website/graphite-vendor-zip.png",
-      "sourceSha256": "393ccadc72ef797604ea63ae1e37bda94ddab393791e4616e7f757f7f1d9d142",
-      "applicationSource": "a9ea32d72364478b25e158d0b95465af7a4702df",
-      "kind": "real-app screenshot (v0.1.0-alpha.17); actual server; fictional project",
+      "source": "docs/assets/releases/alpha20/website/graphite-vendor-zip.png",
+      "sourceSha256": "f3045151c766c4e47da9f8ac9dabf15a2ab55d3bb50cd51dda7e88f9dbabfe56",
+      "applicationSource": "1d3c7d433d2b2139a1ecbfac1314bacc4ef9fc22",
+      "kind": "real-app screenshot (v0.1.0-alpha.20); actual server; fictional project",
+      "encoding": "lossless WebP; exact captured pixels, no repainting or synthetic controls"
+    },
+    "highlight-csv.webp": {
+      "sha256": "87ca962805469f9d350c981f766fc67831574a917493b9f645ab64ba7276391f",
+      "bytes": 59336,
+      "width": 1440,
+      "height": 1080,
+      "source": "docs/assets/releases/alpha20/website/graphite-csv-description.png",
+      "sourceSha256": "90ce97d2844dab0a4de7a0ab8f2c63bf89680b8772861534a1507ca9bb40972b",
+      "applicationSource": "1d3c7d433d2b2139a1ecbfac1314bacc4ef9fc22",
+      "kind": "real-app screenshot (v0.1.0-alpha.20); actual server; fictional project",
       "encoding": "lossless WebP; exact captured pixels, no repainting or synthetic controls"
     },
     "highlight-history.webp": {
-      "sha256": "6e67027c4e0a8d096c19d7784d17828fd71c6ebc1a2be5e692d18e6e3d5c61c4",
-      "bytes": 75302,
+      "sha256": "56472cb022bae8ca1664055fe44512946b2a21b8a5e2ced219f49dee141cc722",
+      "bytes": 73892,
       "width": 1440,
       "height": 1080,
-      "source": "docs/assets/releases/alpha17/website/graphite-history.png",
-      "sourceSha256": "12e85a2c5c8f4d702e2b9b0f48ec5d0963de553e91756cda54396953bca5562b",
-      "applicationSource": "a9ea32d72364478b25e158d0b95465af7a4702df",
-      "kind": "real-app screenshot (v0.1.0-alpha.17); actual server; fictional project",
+      "source": "docs/assets/releases/alpha20/website/graphite-history.png",
+      "sourceSha256": "be6f0fa84f9fa1a44ccd0fa7d63de1980e3f87b56d5aae9cb728b67c521f666f",
+      "applicationSource": "1d3c7d433d2b2139a1ecbfac1314bacc4ef9fc22",
+      "kind": "real-app screenshot (v0.1.0-alpha.20); actual server; fictional project",
       "encoding": "lossless WebP; exact captured pixels, no repainting or synthetic controls"
     },
     "highlight-import.webp": {
-      "sha256": "6a7c835ef0107cbc723d0eef64a3bc1c300d25dd4565b97cb8444e7f3a53453f",
-      "bytes": 33618,
+      "sha256": "1a4a0c8fe3b96d7dac6238a42e1d8b7159d1476198370ac252d9906147e48693",
+      "bytes": 35186,
       "width": 1440,
       "height": 1080,
-      "source": "docs/assets/releases/alpha17/website/graphite-import.png",
-      "sourceSha256": "2bb64f7dd328b32c85d1718fb9bd4dca982e4e7e352aee1a195a577afb4add69",
-      "applicationSource": "a9ea32d72364478b25e158d0b95465af7a4702df",
-      "kind": "real-app screenshot (v0.1.0-alpha.17); actual server; fictional project",
+      "source": "docs/assets/releases/alpha20/website/graphite-import.png",
+      "sourceSha256": "ecc2539bc7fc84be571b53c1b860247068d282f7f3bb46cdcc185bfd7adf5eb4",
+      "applicationSource": "1d3c7d433d2b2139a1ecbfac1314bacc4ef9fc22",
+      "kind": "real-app screenshot (v0.1.0-alpha.20); actual server; fictional project",
       "encoding": "lossless WebP; exact captured pixels, no repainting or synthetic controls"
     },
     "highlight-parameters.webp": {
-      "sha256": "c418869eea90cf024face092e169d2da27e8ad31752525514382d7b72de9a35a",
-      "bytes": 61678,
+      "sha256": "26a8c30f8ea8a5774c558d1b4a83acd21397b2c10939f89005f87b63afecfb6c",
+      "bytes": 63116,
       "width": 1440,
       "height": 1080,
-      "source": "docs/assets/releases/alpha17/website/graphite-parameters.png",
-      "sourceSha256": "9dd72862886bb25b9e772a66ce98e580d0e80a70bcb0d07fdd3f5edbeabde62d",
-      "applicationSource": "a9ea32d72364478b25e158d0b95465af7a4702df",
-      "kind": "real-app screenshot (v0.1.0-alpha.17); actual server; fictional project",
+      "source": "docs/assets/releases/alpha20/website/graphite-parameters.png",
+      "sourceSha256": "0b22ccdfd28fa40cd3221e182427851403c204a174b7a5827fdb876af4a094bb",
+      "applicationSource": "1d3c7d433d2b2139a1ecbfac1314bacc4ef9fc22",
+      "kind": "real-app screenshot (v0.1.0-alpha.20); actual server; fictional project",
       "encoding": "lossless WebP; exact captured pixels, no repainting or synthetic controls"
     },
     "highlight-search.webp": {
-      "sha256": "389b1450971cbf6543cf51b7896a2bdead9453f0cacf288c91c5f3b84879a1df",
-      "bytes": 54816,
+      "sha256": "ba64c0aac54017815aa05d48893ccd313ffc50a681c4430d3ec6439d358abc10",
+      "bytes": 55668,
       "width": 1440,
       "height": 1080,
-      "source": "docs/assets/releases/alpha17/website/graphite-search.png",
-      "sourceSha256": "6c9892d1c69df6f3201922fb0816687b9c24f3e5626855b3a3d514844e4945bc",
-      "applicationSource": "a9ea32d72364478b25e158d0b95465af7a4702df",
-      "kind": "real-app screenshot (v0.1.0-alpha.17); actual server; fictional project",
+      "source": "docs/assets/releases/alpha20/website/graphite-search.png",
+      "sourceSha256": "96a6f4175d172a1129f33f25ae73c19ed164f7ad59dea536a0396ec93306b21b",
+      "applicationSource": "1d3c7d433d2b2139a1ecbfac1314bacc4ef9fc22",
+      "kind": "real-app screenshot (v0.1.0-alpha.20); actual server; fictional project",
       "encoding": "lossless WebP; exact captured pixels, no repainting or synthetic controls"
     },
     "highlight-wizard.webp": {
-      "sha256": "ea9fdf345aebe75b13beed93b013a7eb3a0c6db642b6e215f1d082be6c73998a",
-      "bytes": 75236,
+      "sha256": "3314a8d3579b030fb966f708ff561fa03442c7146b2d66d43547251de218fa79",
+      "bytes": 77034,
       "width": 1440,
       "height": 1080,
-      "source": "docs/assets/releases/alpha17/website/graphite-device-wizard.png",
-      "sourceSha256": "780e7ba709a372c49b00bb27a5d334527fa4f58722d7b4fdae7c093539be9333",
-      "applicationSource": "a9ea32d72364478b25e158d0b95465af7a4702df",
-      "kind": "real-app screenshot (v0.1.0-alpha.17); actual server; fictional project",
+      "source": "docs/assets/releases/alpha20/website/graphite-device-wizard.png",
+      "sourceSha256": "af808797c308ae8f5556aceb8e45fed3ad5a5d387cda90eb16d48b7207890b26",
+      "applicationSource": "1d3c7d433d2b2139a1ecbfac1314bacc4ef9fc22",
+      "kind": "real-app screenshot (v0.1.0-alpha.20); actual server; fictional project",
       "encoding": "lossless WebP; exact captured pixels, no repainting or synthetic controls"
     },
     "inter.woff2": {
@@ -187,14 +198,14 @@
       "bytes": 23664
     },
     "lcars.webp": {
-      "sha256": "b916915e129f862cdebf0bc1696ac2d3fb67d6eb1d8094ec7edc7731811aaef5",
-      "bytes": 72522,
+      "sha256": "18efe52b139e9a8f0672440f137cd826d156b57441662b9ed8ece41ff1dbc1ac",
+      "bytes": 74018,
       "width": 1440,
       "height": 1080,
-      "source": "docs/assets/releases/alpha17/website/lcars-addresses.png",
-      "sourceSha256": "45afb205e7bdf491b4eee351b8e8d27d4008932318952ed0e919d8ae4adc15e4",
-      "applicationSource": "a9ea32d72364478b25e158d0b95465af7a4702df",
-      "kind": "real-app screenshot (v0.1.0-alpha.17); actual server; fictional project",
+      "source": "docs/assets/releases/alpha20/website/lcars-addresses.png",
+      "sourceSha256": "dd59ff288a73325ee258edcf568c02e07fb61a19177abfa756f4c60bf275825e",
+      "applicationSource": "1d3c7d433d2b2139a1ecbfac1314bacc4ef9fc22",
+      "kind": "real-app screenshot (v0.1.0-alpha.20); actual server; fictional project",
       "encoding": "lossless WebP; exact captured pixels, no repainting or synthetic controls"
     },
     "project-work-de.vtt": {
@@ -278,7 +289,7 @@
       "source": "production frontend, fictional API answers; no live KNX server"
     }
   },
-  "applicationSource": "a9ea32d72364478b25e158d0b95465af7a4702df",
+  "applicationSource": "1d3c7d433d2b2139a1ecbfac1314bacc4ef9fc22",
   "alpha9Capture": {
     "captured_on": "2026-10-11",
     "application_release": "v0.1.0-alpha.9",
@@ -332,6 +343,24 @@
     "source_frozen": true
   },
   "highlightCapture": {
+    "captured_on": "2026-11-09",
+    "application_release": "v0.1.0-alpha.20",
+    "application_source_commit": "1d3c7d433d2b2139a1ecbfac1314bacc4ef9fc22",
+    "manifest": "docs/assets/releases/alpha20/website/media-manifest.json",
+    "manifest_sha256": "0dba4425d97b9e0c90a15261ebe9fc7709f630999413b22b4403862888f43cf2",
+    "network": "isolated loopback-only user/network namespace (only interface: lo)",
+    "data": "fictional schema-11 Sample house (tools/manual_sample_project.py); fictional ETS-style group-address CSV (Windows-1252, tab-separated) uploaded through the file picker; fictional demo product package in a vendor-style ZIP, previewed only",
+    "server_binary_sha256": "a6f0ffcdeb11958e499e48542474e7994406922b87e40d6f2cb7e808e7ac3f61",
+    "capture_spec_sha256": "0ac744b52eb71e27eccec58d94b16987de957b80e31879ecbd1ee4e6d08ae60b",
+    "capture_config_sha256": "3c0e8562064c37fb071a84ca2d8f515b2796626e166cd7d3c1ed2d0f1f97b45d",
+    "capture_result": {
+      "passed": 1,
+      "failed": 0,
+      "skipped": 0
+    },
+    "retained_clips": "project-work.mp4 and bus-flow.mp4 remain the v0.1.0-alpha.14 recordings recorded in alpha14Capture"
+  },
+  "alpha17Capture": {
     "captured_on": "2026-10-27",
     "application_release": "v0.1.0-alpha.17",
     "application_source_commit": "a9ea32d72364478b25e158d0b95465af7a4702df",

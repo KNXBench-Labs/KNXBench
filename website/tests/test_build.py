@@ -201,7 +201,8 @@ class BuildTests(unittest.TestCase):
         # alpha notice stays, release numbers, upgrade chains and per-release cards go.
         self.require_build()
         images = ("highlight-import.webp", "highlight-history.webp", "highlight-wizard.webp",
-                  "highlight-parameters.webp", "highlight-catalogue.webp", "highlight-search.webp")
+                  "highlight-parameters.webp", "highlight-catalogue.webp", "highlight-search.webp",
+                  "highlight-csv.webp")
         for lang in ("de", "en"):
             page = (self.out / lang / "index.html").read_text()
             doc = Document(page)
@@ -209,7 +210,7 @@ class BuildTests(unittest.TestCase):
             self.assertIn("features", ids)
             self.assertFalse({"release-features", "release-history"} & ids, lang)
             features = page[page.index('id="features"'):page.index('id="watch"')]
-            self.assertEqual(features.count("<h3>"), 9, lang)
+            self.assertEqual(features.count("<h3>"), 10, lang)
             for asset in images:
                 self.assertTrue(any(tag == "img" and attrs.get("src", "").endswith("/" + asset)
                                     and attrs.get("alt") for tag, attrs in doc.elements), (lang, asset))
@@ -241,7 +242,7 @@ class BuildTests(unittest.TestCase):
     def test_highlight_media_has_reproducible_release_provenance(self):
         media = json.loads((WEBSITE / "media.json").read_text())
         capture = media["highlightCapture"]
-        self.assertEqual(capture["application_release"], "v0.1.0-alpha.17")
+        self.assertEqual(capture["application_release"], "v0.1.0-alpha.20")
         self.assertEqual(media["applicationSource"], capture["application_source_commit"])
         self.assertEqual(capture["capture_result"], {"passed": 1, "failed": 0, "skipped": 0})
         self.assertIn("recordingChecks", media["historicalRecording"])
@@ -257,7 +258,7 @@ class BuildTests(unittest.TestCase):
         self.assertEqual(capture["capture_spec_sha256"], hashlib.sha256(spec.read_bytes()).hexdigest())
         for name in ("graphite.webp", "crt.webp", "lcars.webp", "highlight-import.webp", "highlight-history.webp",
                      "highlight-wizard.webp", "highlight-parameters.webp", "highlight-catalogue.webp",
-                     "highlight-search.webp"):
+                     "highlight-search.webp", "highlight-csv.webp"):
             record = media["assets"][name]
             source = WEBSITE.parent / record["source"]
             self.assertEqual(record["sourceSha256"], hashlib.sha256(source.read_bytes()).hexdigest(), name)

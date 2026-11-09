@@ -105,9 +105,10 @@ Imprint acceptance recipe: `tests/verify-imprint.js`.
 ## Highlights content
 
 The landing page lists product highlights, not per-release changes (owner request,
-27 October 2026). `#features` holds nine numbered highlights: six with a real-app still
-(import, history/undo, wizards, parameters, catalogue, search) and three text cards (bus
-and flow view, documents/comparison, AI agents over MCP). Every claim maps to an
+27 October 2026). `#features` holds ten numbered highlights: seven with a real-app still
+(import, history/undo, wizards, parameters, catalogue, search, and since Alpha 20 the ETS
+CSV import with descriptions as a full-width card) and three text cards (bus and flow view,
+documents/comparison, AI agents over MCP). Every claim maps to an
 implemented row in `docs/FEATURES.md` or the README highlights; anything proven on a single
 device or only in simulation stays out. The alpha notice stays in the hero tag and the
 status section. Release numbers, upgrade chains and download URLs of a specific release
@@ -119,16 +120,20 @@ guard the structure, the stills and the absence of release numbers.
 
 ## Media
 
-The hero, the CRT/LCARS gallery, the six highlight stills and the group-details clip
-show **`v0.1.0-alpha.17`** (commit `a9ea32d7`): real server and production frontend of the
-tagged source, fictional Sample house, loopback-only namespace. The add-device wizard is
-cancelled at its review (nothing created); the vendor-ZIP scene stops at the catalogue
-job's bound preview (nothing installed); the sample is saved as `.knxdb` in the scratch
-data directory so the history scene can create a named version. Nine PNGs and the capture
-manifest live in `docs/assets/releases/alpha17/website/`; the public WebPs are lossless
-and pixel-equal to those PNGs. `project-work.mp4` and `bus-flow.mp4` remain Alpha 14
+The hero, the CRT/LCARS gallery, the seven highlight stills and the group-details clip
+show **`v0.1.0-alpha.20`** (commit `1d3c7d43`): real server and production frontend of the
+tagged source, fictional Sample house, loopback-only namespace. Right after the import the
+spec uploads a fictional ETS-style CSV (`CSV (ETS3 Format)` shape, tab-separated, quoted,
+Windows-1252 bytes) through the server file picker with the encoding select on
+**Windows-1252**: four descriptions on existing addresses and one new address with a
+datapoint type, so the hero and the theme stills show a real description. The add-device
+wizard is cancelled at its review (nothing created); the vendor-ZIP scene stops at the
+catalogue job's bound preview (nothing installed); the sample is saved as `.knxdb` in the
+scratch data directory so the history scene can create a named version. Ten PNGs and the
+capture manifest live in `docs/assets/releases/alpha20/website/`; the public WebPs are
+lossless and pixel-equal to those PNGs. `project-work.mp4` and `bus-flow.mp4` remain Alpha 14
 recordings (`alpha14Capture`). `media.json` records every source and output hash;
-earlier Alpha 9/12/14 capture records stay as history.
+earlier Alpha 9/12/14/17 capture records stay as history.
 
 Regenerate after building the tagged server (`cargo build -p knx-server`) and
 frontend (`npm ci && npm run build` in `apps/knx-web`), under the shared gate

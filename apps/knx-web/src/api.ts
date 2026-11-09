@@ -374,6 +374,24 @@ export function loadProgress(): Promise<LoadProgressSnapshot | null> {
 }
 
 /**
+ * Whether every acknowledged project edit is in the project file (ADR-0166):
+ * a user's server answers an edit first and writes it in the background.
+ */
+export type JournalStatus =
+  | { state: "saved" }
+  | { state: "saving" }
+  | { state: "failed"; message: string };
+
+export function journalStatus(): Promise<JournalStatus> {
+  return request("/api/project/journal");
+}
+
+/** Runs a failed background write again; answers the state right after. */
+export function retryJournal(): Promise<JournalStatus> {
+  return request("/api/project/journal/retry", { method: "POST" });
+}
+
+/**
  * The three spellings `POST /api/project/new` accepts for
  * `groupAddressStyle` — the same tokens ETS writes into a `.knxproj` and
  * `knx-store` persists, so nothing here needs translating on the way to

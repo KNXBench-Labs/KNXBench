@@ -141,6 +141,21 @@ simulator ran all 28 steps each. In that project 41 devices move from
 program of the same manufacturer); the second manufacturer's actuators stay
 refused for other reasons. No hardware was written.
 
+## Edits answer first, the journal follows in the background (9 November 2026; issue #35)
+
+Owner decision after ADR-0165: a value change must not wait for the journal.
+[ADR-0166](adr/0166-commands-acknowledged-from-memory-journaled-in-background.md):
+on a user's server project commands are published and answered from memory; one
+background writer journals the newest state and coalesces rapid edits. Everything
+that reads the history generation waits for it, stop and desktop close flush, and
+a failed write refuses further edits until a retry or Save As (status bar note
+with retry). The writer keeps its connection and skips re-admitting its own file
+while the file identity and `data_version` show nobody else wrote. 308 MB test
+file: 0.21 to 0.43 s per parameter change instead of 1.6 to 1.8 s. Server tests
+cover answering before the write, coalescing, failure, retry, waiting readers,
+foreign writes, a replaced file and project switches; web tests cover the note.
+Limits: [history limits](limitations/persistent-native-working-history.md).
+
 ## Journal writes trust the verified context (8 November 2026; issue #35 follow-up)
 
 After ADR-0163 a tester still waited up to 40 s per parameter change in a 76-device,

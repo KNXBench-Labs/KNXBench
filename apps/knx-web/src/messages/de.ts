@@ -1568,6 +1568,9 @@ export const messages: Record<MessageKey, string> = {
   "toolbar.busMonitor": "Busmonitor",
   "toolbar.commands": "Befehle… (Strg+Umschalt+P)",
   "statusBar.lastSaved": "Zuletzt gespeichert: {time}",
+  "statusBar.journalSaving": "Änderungen werden gespeichert…",
+  "statusBar.journalFailed": "Änderungen nicht in die Projektdatei geschrieben: {message}",
+  "statusBar.journalRetry": "Erneut versuchen",
   "statusBar.neverSaved": "Noch nicht gespeichert",
   "settings.uiLanguage": "UI-Sprache",
   // A language names itself, not the currently active UI language — this

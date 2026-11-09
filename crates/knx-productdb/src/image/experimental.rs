@@ -345,7 +345,7 @@ impl Prepared {
                     .ok_or_else(|| unsupported("requested field has no source data"))?,
             );
             match value {
-                Encoded::Number(n) => probe.write(field, n),
+                Encoded::Number(n) | Encoded::Float { bits: n, .. } => probe.write(field, n),
                 Encoded::Text { octets, .. } => probe.write_octets(field, &octets),
             }
             .map_err(|error| ImageError::Parameter {
@@ -695,7 +695,7 @@ impl Prepared {
             // Validate every alternative, even when not selected for the base.
             let mut probe = ParameterImage::new(image.octets().to_vec());
             match &value {
-                Encoded::Number(n) => probe.write(field, *n),
+                Encoded::Number(n) | Encoded::Float { bits: n, .. } => probe.write(field, *n),
                 Encoded::Text { octets, .. } => probe.write_octets(field, octets),
             }
             .map_err(|error| ImageError::Parameter {
@@ -724,7 +724,7 @@ impl Prepared {
                 continue;
             }
             match value {
-                Encoded::Number(n) => image.write(field, n),
+                Encoded::Number(n) | Encoded::Float { bits: n, .. } => image.write(field, n),
                 Encoded::Text { octets, .. } => image.write_octets(field, &octets),
             }
             .map_err(|error| ImageError::Parameter {

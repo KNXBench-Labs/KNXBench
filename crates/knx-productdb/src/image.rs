@@ -58,9 +58,11 @@
 //!   (the euro sign rules out both ISO encodings); ASCII is unchanged, and
 //!   a non-ASCII text names [`UNDECLARED_TEXT_WINDOWS_1252`]. Whether ETS
 //!   follows the Windows code page elsewhere is not known.
-//!   `TypeFloat` is refused: 48 `DPT 9` fields match that encoding only at
-//!   zero, and the 15 non-zero ones contradict it. Every other type is
-//!   refused by name. A `TypeNumber` bound that is declared but not an integer
+//!   A `TypeFloat` is written in its declared `DPT 9` or `IEEE-754 Single`
+//!   encoding by the memory (`070nh`) builder only, as `[V]` ETS 6.4 wrote
+//!   it ([`float`], ADR-0169); the templates that disagree with `DPT 9` hold
+//!   octets ETS overwrites. Every other type is refused by name. A
+//!   `TypeNumber` bound that is declared but not an integer
 //!   (empty, decimal, scientific, out of range) refuses the value by name; an
 //!   absent bound constrains nothing (docs/contracts/parameter-number-bound-admission.md).
 //! - **Byte order.** Numbers are written high octet first
@@ -87,6 +89,7 @@
 //!   refused.
 
 mod experimental;
+pub mod float;
 pub(crate) mod inactive_selection;
 mod legacy_source;
 pub mod property;
@@ -270,6 +273,11 @@ pub enum AttributedValue {
         /// Written octet-reversed (`LittleEndian`, KL-170); decode likewise.
         low_octet_first: bool,
     },
+    /// A `TypeFloat` value's bits in its encoding (ADR-0169).
+    Float {
+        bits: u64,
+        encoding: float::FloatEncoding,
+    },
     Text {
         value: String,
         encoding: Option<String>,
@@ -285,7 +293,7 @@ pub struct DownloadImage {
     /// One image per segment with `Data`.
     pub segments: Vec<SegmentImage>,
     /// The numeric parameters written, by `ParameterRef` id, with their
-    /// values.
+    /// values; a float's value is its encoded bits (ADR-0169).
     pub parameters: BTreeMap<String, u64>,
     /// The text parameters written, by `ParameterRef` id, with their
     /// values.
@@ -640,6 +648,11 @@ fn build_image_selected(
         Vec::new()
     };
     let types = ParameterTypes::load(conn, program_id, &code)?;
+    let types = if layout == ImageLayout::Easy3 && experimental.is_none() {
+        types.admitting_floats()
+    } else {
+        types
+    };
 
     // Every chosen value is checked before evaluation, so that a value the
     // type does not allow is reported as such, not as an undecided branch.
@@ -827,10 +840,12 @@ fn build_image_selected(
                 })?
             }
             Encoded::Number(number) => *number,
+            // Refused in a LittleEndian program (ParameterTypes::float_encoding).
+            Encoded::Float { bits, .. } => *bits,
             Encoded::Text { .. } => 0,
         };
         match &value {
-            Encoded::Number(_) => image.write(field, ordered),
+            Encoded::Number(_) | Encoded::Float { .. } => image.write(field, ordered),
             Encoded::Text { octets, .. } => image.write_octets(field, octets),
         }
         .map_err(|error| overlap_or(error, parameter_ref, segment_id, &fields))?;
@@ -851,6 +866,10 @@ fn build_image_selected(
                     nonnegative_signed: facts.number_type.as_deref() == Some("signedInt"),
                     low_octet_first: low_octet_first && crosses_octet_boundary(field),
                 },
+                Encoded::Float { bits, encoding } => AttributedValue::Float {
+                    bits: *bits,
+                    encoding: *encoding,
+                },
                 Encoded::Text { text, .. } => AttributedValue::Text {
                     value: text.clone(),
                     encoding: types.text_encoding.clone(),
@@ -858,7 +877,9 @@ fn build_image_selected(
             },
         });
         match &value {
-            Encoded::Number(number) => parameters.insert(parameter_ref.to_string(), *number),
+            Encoded::Number(number) | Encoded::Float { bits: number, .. } => {
+                parameters.insert(parameter_ref.to_string(), *number)
+            }
             Encoded::Text { text, .. } => {
                 texts.insert(parameter_ref.to_string(), text.clone());
                 None
@@ -1569,6 +1590,11 @@ fn object_size_bits(size: &str) -> Option<u32> {
 pub(crate) enum Encoded {
     /// A number, written by width ([`ParameterImage::write`]).
     Number(u64),
+    /// A `TypeFloat` value's bits, written by width like a number (ADR-0169).
+    Float {
+        bits: u64,
+        encoding: float::FloatEncoding,
+    },
     /// A text, written as `octets` ([`ParameterImage::write_octets`]).
     Text {
         /// The value as chosen.
@@ -1599,6 +1625,15 @@ pub(crate) struct ParameterTypes {
     text_encoding: Option<String>,
     /// `TypeTime/@Unit` by parameter type id ([`ProgramCode::time_units`]).
     time_units: BTreeMap<String, Option<String>>,
+    /// `TypeFloat/@Encoding` by parameter type id
+    /// ([`ProgramCode::float_encodings`]).
+    float_encodings: BTreeMap<String, Option<String>>,
+    /// The program declares `ParameterByteOrder="LittleEndian"`: no float
+    /// was observed in one, so floats refuse (ADR-0169).
+    little_endian: bool,
+    /// Floats are written only by the memory (`070nh`) builder, the one
+    /// layout ETS was observed in ([`ParameterTypes::admitting_floats`]).
+    floats_admitted: bool,
 }
 
 /// The `TypeTime` units whose value is a plain count of the unit: the six
@@ -1787,6 +1822,21 @@ fn declared_bound<T: std::str::FromStr>(
         })
 }
 
+/// A `TypeFloat` bound as a number; an unreadable one refuses by name.
+fn float_bound(
+    parameter_ref: &str,
+    attribute: &str,
+    text: &Option<String>,
+) -> Result<Option<f64>, ImageError> {
+    let Some(raw) = text.as_deref() else {
+        return Ok(None);
+    };
+    float::parse(raw).map(Some).map_err(|_| ImageError::Value {
+        parameter_ref: parameter_ref.to_string(),
+        cause: format!("{attribute} {raw:?} is not a float bound this builder reads"),
+    })
+}
+
 impl ParameterTypes {
     pub(crate) fn load(
         conn: &Connection,
@@ -1836,7 +1886,17 @@ impl ParameterTypes {
             enums,
             text_encoding: code.options.get("TextParameterEncoding").cloned(),
             time_units: code.time_units.clone(),
+            float_encodings: code.float_encodings.clone(),
+            little_endian: code.options.get("ParameterByteOrder").map(String::as_str)
+                == Some("LittleEndian"),
+            floats_admitted: false,
         })
+    }
+
+    /// The same types, with `TypeFloat` values admitted (ADR-0169).
+    pub(crate) fn admitting_floats(mut self) -> Self {
+        self.floats_admitted = true;
+        self
     }
 
     fn get(&self, parameter_ref: &str) -> Result<&RefType, ImageError> {
@@ -1861,6 +1921,9 @@ impl ParameterTypes {
 
     /// The field width: 1 to 64 bits for a number, whole octets for a text.
     pub(crate) fn size(&self, parameter_ref: &str) -> Result<u32, ImageError> {
+        if let Some(encoding) = self.float_encoding(parameter_ref)? {
+            return Ok(encoding.size_in_bit());
+        }
         let found = self.get(parameter_ref)?;
         let text = found.kind.as_deref() == Some("Text");
         found
@@ -1956,6 +2019,26 @@ impl ParameterTypes {
                 Ok(Encoded::Number(value as u64))
             }
             (Some("Text"), _, _) => self.text(parameter_ref, found, raw),
+            // `[V]` ETS 6.4 wrote both encodings as their bits, high octet
+            // first, in a program without a declared byte order (ADR-0169).
+            (Some("Float"), _, _) => {
+                let encoding = self
+                    .float_encoding(parameter_ref)?
+                    .expect("a Float ref has an encoding or was refused");
+                let value = float::parse(raw).map_err(&invalid)?;
+                let min = float_bound(parameter_ref, "minInclusive", &found.min)?;
+                let max = float_bound(parameter_ref, "maxInclusive", &found.max)?;
+                if min.is_some_and(|min| value < min) || max.is_some_and(|max| value > max) {
+                    return Err(invalid(format!(
+                        "{raw} is outside {:?}..={:?}",
+                        found.min, found.max
+                    )));
+                }
+                Ok(Encoded::Float {
+                    bits: encoding.encode(raw).map_err(invalid)?,
+                    encoding,
+                })
+            }
             (kind, base, number_type) => Err(ImageError::Unsupported {
                 what: format!(
                     "{}: parameter type {kind:?} (base {base:?}, number type {number_type:?})",
@@ -1986,6 +2069,51 @@ impl ParameterTypes {
                 ),
             }),
         }
+    }
+
+    /// A `TypeFloat` ref's encoding (ADR-0169); `None` for a ref of another
+    /// kind; refused for an encoding not observed, or in a `LittleEndian`
+    /// program.
+    pub(crate) fn float_encoding(
+        &self,
+        parameter_ref: &str,
+    ) -> Result<Option<float::FloatEncoding>, ImageError> {
+        let found = self.get(parameter_ref)?;
+        if found.kind.as_deref() != Some("Float") {
+            return Ok(None);
+        }
+        let declared = found
+            .parameter_type
+            .as_ref()
+            .and_then(|id| self.float_encodings.get(id))
+            .and_then(Option::as_deref);
+        let encoding = declared
+            .and_then(float::FloatEncoding::named)
+            .ok_or_else(|| ImageError::Unsupported {
+                what: format!(
+                    "{}: TypeFloat encoding {declared:?} has no established encoding",
+                    found.parameter
+                ),
+            })?;
+        if !self.floats_admitted {
+            return Err(ImageError::Unsupported {
+                what: format!(
+                    "{}: a TypeFloat outside the memory (070nh) image builder has no \
+                     established encoding",
+                    found.parameter
+                ),
+            });
+        }
+        if self.little_endian {
+            return Err(ImageError::Unsupported {
+                what: format!(
+                    "{}: a TypeFloat in a ParameterByteOrder \"LittleEndian\" program has no \
+                     established octet order",
+                    found.parameter
+                ),
+            });
+        }
+        Ok(Some(encoding))
     }
 
     /// Refuses `value` outside the ref's declared unsigned bounds.
@@ -3368,26 +3496,115 @@ mod tests {
         );
     }
 
-    /// `[V]` The corpus's `DPT 9` float fields match that encoding only at
-    /// zero; the non-zero ones contradict it (RESEARCH §19.9). So a float
-    /// is still refused by name, for its type, not its value's spelling.
+    /// ADR-0169: a `TypeFloat` value is written in its declared encoding,
+    /// high octet first (`[V]` ETS 6.4 on a memory program); an encoding not
+    /// observed, an undeclared one, a `LittleEndian` program and a value out
+    /// of bounds or unparsable are refused. Property placements:
+    /// `a_float_placed_in_a_property_is_refused`.
     #[test]
-    fn a_float_parameter_is_refused_for_its_type() {
-        let xml = kinds_program_with(
-            LATIN_9,
-            "Grüß",
-            r#"<ParameterType Id="PT-F9" Name="F9"><TypeFloat Encoding="DPT 9" /></ParameterType>"#,
-            r#"<Parameter Id="P-F9" Name="F9" ParameterType="PT-F9" Value="5.000000000000000E+002"><Memory CodeSegment="AS-4600" Offset="10" BitOffset="0" /></Parameter>"#,
-            r#"<ParameterRef Id="P-F9_R-1" RefId="P-F9" />"#,
+    fn a_float_parameter_is_written_in_its_encoding() {
+        // The fixture's 12-octet segment holds a 48-bit text at 3; a single
+        // needs 4 octets, so its variant narrows the text to one octet.
+        let placed = |options: &str, encoding: &str, bounds: &str, offset: u32| {
+            kinds_program_with(
+                options,
+                if offset == 10 { "Grüß" } else { "G" },
+                &format!(
+                    r#"<ParameterType Id="PT-F" Name="F"><TypeFloat {encoding} {bounds} /></ParameterType>"#
+                ),
+                &format!(
+                    r#"<Parameter Id="P-F" Name="F" ParameterType="PT-F" Value="1.000000000000000E+000"><Memory CodeSegment="AS-4600" Offset="{offset}" BitOffset="0" /></Parameter>"#
+                ),
+                r#"<ParameterRef Id="P-F_R-1" RefId="P-F" />"#,
+            )
+            .replace(
+                r#"<ParameterRefRef RefId="P-T_R-1" />"#,
+                r#"<ParameterRefRef RefId="P-T_R-1" /><ParameterRefRef RefId="P-F_R-1" />"#,
+            )
+            .replace(
+                r#"<TypeText SizeInBit="48" />"#,
+                if offset == 10 {
+                    r#"<TypeText SizeInBit="48" />"#
+                } else {
+                    r#"<TypeText SizeInBit="8" />"#
+                },
+            )
+        };
+        let program =
+            |options: &str, encoding: &str, bounds: &str| placed(options, encoding, bounds, 10);
+        let dpt9 = r#"Encoding="DPT 9""#;
+        let single = r#"Encoding="IEEE-754 Single""#;
+        let bounds = r#"minInclusive="-50" maxInclusive="600""#;
+        // The product default, in its C# "E15" spelling: 100 hundredths.
+        let image = build(&program(LATIN_9, dpt9, bounds), &[], vec![]).expect("DPT 9 builds");
+        assert_eq!(&octets(&image, "AS-4600")[10..12], &[0x00, 0x64]);
+        let image = build(
+            &program(LATIN_9, dpt9, bounds),
+            &[("P-F_R-1", "-12.5")],
+            vec![],
         )
-        .replace(
-            r#"<ParameterRefRef RefId="P-T_R-1" />"#,
-            r#"<ParameterRefRef RefId="P-T_R-1" /><ParameterRefRef RefId="P-F9_R-1" />"#,
+        .expect("a negative DPT 9 builds");
+        assert_eq!(&octets(&image, "AS-4600")[10..12], &[0x83, 0x1E]);
+        let attribution = image
+            .parameter_fields
+            .iter()
+            .find(|field| field.reference == "P-F_R-1")
+            .expect("attributed");
+        assert_eq!(
+            attribution.value,
+            AttributedValue::Float {
+                bits: 0x831E,
+                encoding: float::FloatEncoding::Dpt9
+            }
         );
-        let error = build(&xml, &[], vec![]).unwrap_err();
-        assert!(
-            matches!(&error, ImageError::Unsupported { what } if what.contains("P-F9") && what.contains("Float")),
-            "{error}"
+        assert_eq!(attribution.field.size_in_bit, 16);
+        let image = build(
+            &placed(LATIN_9, single, "", 4),
+            &[("P-F_R-1", "1.3"), ("P-T_R-1", "G")],
+            vec![],
+        )
+        .expect("IEEE-754 Single builds");
+        assert_eq!(&octets(&image, "AS-4600")[4..8], &[0x3F, 0xA6, 0x66, 0x66]);
+
+        let refused = |xml: &str, values: &[(&str, &str)], needle: &str| {
+            let error = build(xml, values, vec![]).unwrap_err();
+            assert!(error.to_string().contains(needle), "{needle}: {error}");
+        };
+        refused(
+            &program(LATIN_9, r#"Encoding="IEEE-754 Double""#, ""),
+            &[],
+            "TypeFloat encoding Some(\"IEEE-754 Double\")",
+        );
+        refused(&program(LATIN_9, "", ""), &[], "TypeFloat encoding None");
+        refused(
+            &program(r#"<Options ParameterByteOrder="LittleEndian" />"#, dpt9, ""),
+            &[],
+            "LittleEndian",
+        );
+        refused(
+            &program(LATIN_9, dpt9, bounds),
+            &[("P-F_R-1", "600.5")],
+            "outside",
+        );
+        refused(
+            &program(LATIN_9, dpt9, bounds),
+            &[("P-F_R-1", "-50.5")],
+            "outside",
+        );
+        refused(
+            &program(LATIN_9, dpt9, bounds),
+            &[("P-F_R-1", "5,0")],
+            "not a decimal",
+        );
+        refused(
+            &program(LATIN_9, dpt9, bounds),
+            &[("P-F_R-1", "NaN")],
+            "not a decimal",
+        );
+        refused(
+            &program(LATIN_9, dpt9, r#"minInclusive="low""#),
+            &[],
+            "not a float bound",
         );
     }
 
@@ -3537,6 +3754,37 @@ mod tests {
             r#"<Options DownloadInvisibleParameters="DefaultValue" /><Code>"#,
         );
         assert!(build(&unknown, &[], vec![]).unwrap().properties.is_empty());
+    }
+
+    /// ADR-0169: no float placed in a property was observed, so it refuses,
+    /// visible or written as an invisible default.
+    #[test]
+    fn a_float_placed_in_a_property_is_refused() {
+        let program = with_options(
+            PROGRAM,
+            r#"<Options DownloadInvisibleParameters="Background" />"#,
+        )
+        .replace(
+            "</ParameterTypes>",
+            r#"<ParameterType Id="PT-F" Name="F"><TypeFloat Encoding="DPT 9" /></ParameterType></ParameterTypes>"#,
+        )
+        .replace(
+            r#"<Parameter Id="P-3" Name="Prop" ParameterType="PT-N" Value="1">"#,
+            r#"<Parameter Id="P-3" Name="Prop" ParameterType="PT-F" Value="1.5">"#,
+        );
+        assert!(program.contains(r#"ParameterType="PT-F" Value="1.5""#));
+        for values in [
+            &[("P-1_R-1", "0"), ("P-3_R-6", "2.5")][..],
+            &[("P-1_R-1", "1")],
+        ] {
+            let error = build(&program, values, vec![]).unwrap_err();
+            assert!(
+                error
+                    .to_string()
+                    .contains("P-3: a float placed in a property"),
+                "{values:?}: {error}"
+            );
+        }
     }
 
     /// KL-170: a `LittleEndian` memory program writes whole-octet numbers low

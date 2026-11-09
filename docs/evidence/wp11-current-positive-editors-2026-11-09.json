@@ -1,0 +1,162 @@
+{
+ "schemaVersion": 1,
+ "date": "2026-11-09",
+ "purpose": "Current-source native positive instruction editor and declared checked integer slider at 80/100/150% zoom, fictional data, one restart",
+ "admissionSource": "bf6065f0f77c8ffc4533d44a7b0b9efd12ed16b9",
+ "actualBuildSource": "0b182054a4a03b6e03d49743bb2b155809dfeff7",
+ "reuseBasis": "No new build. Complete tracked diff 0b182054a..bf6065f0f is three documentation files (one status record, one evidence JSON, one open-work page); a scoped diff excluding docs/.ai is empty. Tracked-input equivalence only, not toolchain equivalence. UI stamp stays alpha.20+g0b182054a. This is not a newly built bf6065f0f binary.",
+ "retainedNativeCoreArchiveSha256": "1c1a816c0622b4cf3e25b95178ab590bbe09c349c135f51aa2de5e0b80999ae6",
+ "artifacts": {
+  "executableSha256": "8ea1c2f0a20ce94ff7c387148bd277fa97ddd519e94cdcdba3270d0ac666dc67",
+  "executableBytes": 53788152,
+  "frontendFiles": 147,
+  "frontendManifestSha256": "acb0e387d927f571ab40fc6752e1e0374b0f61f4d04d580b0471064b4406338c",
+  "frontendManifestRecipe": "cd frontend && find . -type f | LC_ALL=en_US.UTF-8 sort | xargs sha256sum | sha256sum",
+  "artifactFilesAuthenticated": 149,
+  "note": "binary + empty .cargo-lock layout marker + 147 frontend files, each authenticated against the retained manifest (size, sha256, mode) before copy; no old HOME/settings/state reused"
+ },
+ "fixture": {
+  "name": "native-slider.knxprod",
+  "sha256": "32e8a5b4cf21a14c0e8dda2c861a5babbac54559707d82353074aae02d06f2e1",
+  "bytes": 2311,
+  "origin": "decoded from docs/evidence/wp11-positive-native-fixtures-2026-10-27.json; four member hashes re-verified",
+  "members": {
+   "M-7FF2/Catalog.xml": "2685aca69ffb98640799c5d00661ea8ed164484a9beaf7f9dbc2a5dd92ddf5b7",
+   "M-7FF2/Hardware.xml": "83f4370068679ab0ddfe88a5d97a0a76332b10128e57b690ffa84bb339438b9e",
+   "M-7FF2/M-7FF2_A-0001-10-0001.xml": "d5e612f0de98e40d2733abbba424ac65d70b342ff8da056480599ae8a00765b3",
+   "knx_master.xml": "bdf0308d719f8953a7848d4453d669a01f7eecfffe758527fc513175a539d2fd"
+  },
+  "semantics": "fictional M-7FF2, default 2, bounds 0..240, declared UIHint Slider; the no-hint M-7FF1 control is not used",
+  "setup": "Project, product install and device creation were done through the native UI (new project, Add device, product package chooser, consent, install, create); no SQL or CLI project edits"
+ },
+ "toolkit": {
+  "webkit2gtk": "2.54.1",
+  "gtk3": "3.24.52",
+  "libsoup3": "3.8.0",
+  "at-spi2-core": "2.62.1",
+  "loadedLibraries": [
+   "libwebkit2gtk-4.1.so.0.24.4",
+   "libjavascriptcoregtk-4.1.so.0.11.8",
+   "libgtk-3.so.0.2420.32",
+   "libsoup-3.0.so.0.8.0",
+   "libatspi.so.0.0.1",
+   "libatk-bridge-2.0.so.0.0.0"
+  ]
+ },
+ "isolation": {
+  "observedPerLaunch": "uid nonzero, loopback-only network namespace, user-data filesystem masks, private HOME/XDG, dropped capabilities, own runtime dir only; recorded for both launches",
+  "exceptions": [
+   "shared Wayland socket, session D-Bus and AT-SPI bus (not full host-service isolation)",
+   "GTK_USE_PORTAL=0 direct chooser, GSETTINGS_BACKEND=memory",
+   "software render flags WEBKIT_DISABLE_COMPOSITING_MODE=1 and WEBKIT_DISABLE_DMABUF_RENDERER=1",
+   "no full WebKit-internal sandbox attestation",
+   "filesystem masks do not confine shared host services; nonzero UID is not host-identity isolation proof"
+  ]
+ },
+ "zoomCells": {
+  "100": {
+   "uiScale": 1,
+   "sliderCommitted": "2",
+   "draftBoundedValue": 9,
+   "sliderCancel": "entry 9 in draft, back to 2, file sha/mtime unchanged",
+   "applySave": "raw 9",
+   "undoSave": "no override row (default 2)",
+   "redoSave": "raw 9",
+   "instructionPreviewCancelDiscard": "saved empty, draft marker discarded, file sha/mtime unchanged",
+   "instructionSave": "Fiktive Anleitung 100: Schaltschrank prüfen & Größe notieren.\nZweite Zeile <ok> – Übung \"100\".",
+   "geometry": {
+    "slider": [
+     516,
+     781,
+     808,
+     35
+    ],
+    "entry": [
+     516,
+     730,
+     808,
+     42
+    ]
+   }
+  },
+  "80": {
+   "uiScale": 0.8,
+   "sliderCommitted": "9",
+   "draftBoundedValue": 13,
+   "sliderCancel": "back to 9, file sha/mtime unchanged",
+   "applySave": "raw 13",
+   "undoSave": "raw 9",
+   "redoSave": "raw 13",
+   "instructionPreviewCancelDiscard": "saved 100 text unchanged, file sha/mtime unchanged",
+   "instructionRemoveSave": "Remove instructions, Apply change, Save: zero instruction rows",
+   "instructionSave": "Fiktive Anleitung 80: Schaltschrank prüfen & Größe notieren.\nZweite Zeile <ok> – Übung \"80\".",
+   "geometry": {
+    "saveButton": [
+     1876,
+     14,
+     52,
+     27
+    ]
+   }
+  },
+  "150": {
+   "uiScale": 1.5,
+   "sliderCommitted": "13",
+   "draftBoundedValue": 21,
+   "sliderCancel": "back to 13, file sha/mtime unchanged",
+   "applySave": "raw 21",
+   "undoSave": "raw 13",
+   "redoSave": "raw 21",
+   "instructionPreviewCancelDiscard": "saved 80 text unchanged, file sha/mtime unchanged",
+   "instructionRemoveSave": "zero instruction rows",
+   "instructionSave": "Fiktive Anleitung 150: Schaltschrank prüfen & Größe notieren.\nZweite Zeile <ok> – Übung \"150\".",
+   "geometry": {
+    "saveButton": [
+     338,
+     106,
+     98,
+     49
+    ]
+   }
+  }
+ },
+ "restart": {
+  "closeOrdinary": "first launch closed via the app Close button, launcher exit 0, no owned process or window left; second launch with same private profile",
+  "readback": "project reopened through native Open chooser; instruction text exactly equal to the 150% two-line text; slider entry 21, slider value 21; uiScale 1.5; read-only reopen left file sha/mtime unchanged",
+  "finalFileSha256": "a6a546abc64bb4bf2ba76cd7b5dcbf4d640790ebd8061624d619bbf56c057a1e",
+  "secondCloseExit": 0
+ },
+ "semantics": [
+  "Slider Apply value changes the file bytes before the toolbar Save but the parameter_instance row appears only after Save",
+  "Instruction Apply change likewise writes the instruction row only after Save",
+  "Leaving to All devices and reopening discards an unapplied instruction draft; the draft survives tab switches and preview Cancel change",
+  "Remove instructions yields a change preview; Apply change plus Save empties instruction_run"
+ ],
+ "harnessObservations": [
+  "Ctrl+End did not move the caret in the instruction contenteditable after grab_focus at 80%: marker went to the start; first attempt retained (assertion refused before preview), successor expects the prefix",
+  "At 150%, two batches of four unsuccessful instruction attempts (original and b-labelled) refused on SHOWING=false; neither batch delivered text/key input, though b-labelled attempts performed native navigation. Successful c-labelled attempts followed native AT-SPI scroll_to and still required SHOWING. Pipeline grep/tail exits and finally seat restoration did not establish cell success.",
+  "cells.py and closeapp.py initially lacked the task driver sys.path under isolated Python; import errors occurred before any action. These were not restart/step/launcher failures."
+ ],
+ "counts": {
+  "structuralTreeSnapshotFiles": 118,
+  "readOnlyOracleFiles": 56,
+  "seatRestoreReceipts": 66,
+  "seatRestorePredicatesOk": 66,
+  "screenshots": 86,
+  "retryNamedFiles": 1,
+  "actionRecords": 173,
+  "rawInputRecords": 114,
+  "externalCommands": 2216,
+  "externalNonZero": 0,
+  "note": "artifacts, not independent tests; counts are structural incl. retry names"
+ },
+ "seatPredicate": "All 66 active-window/active-workspace predicates passed; saved and restored active-window addresses were null in all receipts, so restoration of another focused application was not demonstrated. Cursor position and full workspace inventory were not restored or claimed.",
+ "notClaimed": [
+  "not a newly built bf6065f0f binary or latest HEAD",
+  "not other checked controls, no-hint control as positive, imported-original instruction editing, rich formatting",
+  "not capture export, Orca, Firefox, AppImage/GPU, X11, other desktops",
+  "not full-tree or pixel parity; not physical-keyboard comparison",
+  "no ledger change"
+ ],
+ "privateEvidence": "<profile>/evidence/2026-11-09-wp11-current-editors/native-core.tar.gz (811 verified members; raw trees/actions/oracles, native artifact and frontend retained); NATIVE_CORE_VERIFIED.json"
+}

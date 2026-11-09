@@ -207,6 +207,23 @@ are retained. Software-render and shared session-bus exceptions remain. Only the
 Project target; not instructions, checked parameters, capture export or whole
 WP-11. Ledger status is unchanged.
 
+## Current-source positive editor cells — 9 November 2026
+
+The [record](../status/2026-11-09-wp11-current-positive-editors.md) and
+[measurement](../evidence/wp11-current-positive-editors-2026-11-09.json) cover the
+native instruction editor and one declared checked integer Slider (original
+fictional `M-7FF2`, bounds 0…240) at 80/100/150% on the retained source
+`0b182054a` build, reused for admission `bf6065f0f` because the complete
+tracked diff is documentation only (no new build). Per zoom: slider draft Cancel
+leaves the file unchanged; Apply+Save, Undo+Save and Redo+Save change exactly the
+selected raw value; instruction preview/Cancel/discard leaves the saved text and
+file unchanged; exact two-line plain text is confirmed, saved and reopened. One
+ordinary close and process restart read back the exact final instruction, slider 21
+and zoom 150%. Failed and refused attempts (caret, offscreen controls) are retained.
+Software-render and shared session-bus exceptions remain. Not other controls,
+imported-original instructions, Orca/Firefox/AppImage or whole WP-11; ledger status
+is unchanged.
+
 ## Acceptance target — owner decision 8 November 2026
 
 The owner chose the simplest complete target. Required are the cells that run

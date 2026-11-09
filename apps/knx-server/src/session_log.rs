@@ -1192,6 +1192,7 @@ mod tests {
             readdressed: 0,
             deleted: 0,
             unchanged: 1,
+            descriptions_cleared: 0,
             destructive_changes: Vec::new(),
             ignored_columns: vec![knx_csv::IgnoredColumn {
                 name: "DatapointType".into(),

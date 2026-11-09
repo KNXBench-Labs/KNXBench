@@ -937,3 +937,96 @@ fn ga_import_mismatched_type_on_an_existing_address_stays_read_only() {
     assert!(stdout.contains("read-only"), "{stdout}");
     assert_eq!(std::fs::read(&store).unwrap(), before);
 }
+
+#[test]
+fn ga_import_clears_blank_descriptions_only_with_the_flag_and_a_matching_confirmation() {
+    let dir = tempfile::tempdir().unwrap();
+    let store = dir.path().join("project.knxdb");
+    let describe = dir.path().join("describe.csv");
+    let blank = dir.path().join("blank.csv");
+    write_store(&store);
+    std::fs::write(
+        &describe,
+        "Address,Name,Description\n1/1/1,Living Room Light,Old\n",
+    )
+    .unwrap();
+    std::fs::write(
+        &blank,
+        "Address,Name,Description\n1/1/1,Living Room Light,\n",
+    )
+    .unwrap();
+    let path = |p: &Path| p.to_str().unwrap().to_string();
+    let description = |store: &Path| store_details(store)[0].2.clone();
+    assert!(run_cli(&["ga-import", &path(&store), &path(&describe)])
+        .status
+        .success());
+    assert_eq!(description(&store).as_deref(), Some("Old"));
+
+    // Without the flag a blank cell leaves it alone.
+    let kept = run_cli(&["ga-import", &path(&store), &path(&blank)]);
+    let kept = String::from_utf8(kept.stdout).unwrap();
+    assert!(kept.contains("nothing to do"), "{kept}");
+    assert_eq!(description(&store).as_deref(), Some("Old"));
+
+    let flag = "--clear-blank-descriptions";
+    let preview = run_cli(&["ga-import", &path(&store), &path(&blank), flag]);
+    let preview = String::from_utf8(preview.stdout).unwrap();
+    assert!(
+        preview.contains("1 description(s) cleared by blank cells"),
+        "{preview}"
+    );
+    assert!(
+        preview.contains("ClearDescription row 2: 2305"),
+        "{preview}"
+    );
+    assert!(
+        preview.ends_with("store written: no (destructive confirmation required)\n"),
+        "{preview}"
+    );
+    assert_eq!(description(&store).as_deref(), Some("Old"));
+    let token = preview
+        .lines()
+        .find_map(|line| line.strip_prefix("confirmation token: "))
+        .unwrap()
+        .to_string();
+
+    // The token binds the flag: without it the same token is no consent.
+    let crossed = run_cli(&[
+        "ga-import",
+        &path(&store),
+        &path(&blank),
+        "--confirm",
+        &token,
+    ]);
+    assert!(String::from_utf8(crossed.stdout)
+        .unwrap()
+        .contains("nothing to do"));
+    assert_eq!(description(&store).as_deref(), Some("Old"));
+
+    let confirmed = run_cli(&[
+        "ga-import",
+        &path(&store),
+        &path(&blank),
+        flag,
+        "--confirm",
+        &token,
+    ]);
+    let stdout = String::from_utf8(confirmed.stdout).unwrap();
+    assert_eq!(confirmed.status.code(), Some(0), "{stdout}");
+    assert!(stdout.ends_with("store written: yes\n"), "{stdout}");
+    assert_eq!(description(&store), None);
+
+    // A file without a Description column cannot state a blank: refused.
+    let names = dir.path().join("names.csv");
+    std::fs::write(&names, "Address,Name\n1/1/1,Living Room Light\n").unwrap();
+    let refused = run_cli(&["ga-import", &path(&store), &path(&names), flag]);
+    let stdout = String::from_utf8(refused.stdout).unwrap();
+    assert!(
+        stdout.contains("needs a \"Description\" column"),
+        "{stdout}"
+    );
+    assert!(
+        stdout.ends_with("store written: no (rejected)\n"),
+        "{stdout}"
+    );
+}

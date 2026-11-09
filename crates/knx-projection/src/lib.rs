@@ -248,7 +248,8 @@ pub struct GroupAddressNode {
     #[serde(skip_serializing_if = "Option::is_none")]
     #[ts(optional)]
     pub dpt_detail: Option<GroupAddressDptDetail>,
-    /// The address's description (ADR-0164), byte-exact and read-only here.
+    /// The address's description (ADR-0164), byte-exact; edited through
+    /// `SetGroupAddressDescription`, never through this projection.
     /// Omitted when none is known; an empty string is a description that
     /// was written empty.
     #[serde(skip_serializing_if = "Option::is_none")]

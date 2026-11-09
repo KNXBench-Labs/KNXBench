@@ -81,5 +81,43 @@ pins that behaviour.
 - Older builds refuse a native-19 file as a newer schema, as before.
 - A predecessor `.knxdb` shows no descriptions until re-imported; this is
   documented, not silently repaired.
-- No editing UI for descriptions yet; the web inspector shows them read-only.
+- No editing UI for descriptions yet; the web inspector shows them read-only
+  (superseded by the amendment below).
 - Other Windows code pages, UTF-16 and automatic detection remain unsupported.
+
+## Amendment — 9 November 2026: editor, CSV removal, MCP
+
+The three follow-ups left open above are decided as follows; the field, its
+storage and the migration rule are unchanged.
+
+1. **Editor.** The web inspector edits a group address's description in a
+   multi-line field through `POST /api/group-address-description`
+   (`{ groupAddressId, description }`, unknown fields refused), which applies the
+   existing undoable `SetGroupAddressDescription`. `null` removes the
+   description; any string, empty included, is stored byte-exact. Because a
+   textarea reports CRLF as LF, the field writes only after the user typed and
+   only when the text differs ignoring that difference: visiting an imported
+   description never rewrites it. A description holding CR shows a hint that an
+   edit saves plain line breaks; emptying the field removes the description.
+2. **Removal through CSV is an explicit, confirmed choice.** Decision 5 stays
+   the default: a blank cell leaves a description unchanged, so re-importing an
+   export never wipes one. The import option *clear blank descriptions* (CLI
+   `--clear-blank-descriptions`, server body `clearBlankDescriptions`, a toggle
+   beside the CSV import in the web group-address view) makes a blank or whitespace-only `Description` cell on an existing
+   address remove its description (`Some("")` included). Each removal is a
+   destructive change `ClearDescription` with no affected links, counted in
+   `descriptions_cleared`, so the existing preview and confirmation apply: the
+   CLI prints a token and writes only with `--confirm`, the server answers a
+   preview with a token, and every token binds the option, so a preview with it
+   cannot confirm an import without it, nor the other way round. A file without
+   a `Description` column (native without one, the name/address-only profiles)
+   cannot state a blank and is refused as a file-level error when the option is
+   set. Creating an address with a blank cell still gives it none.
+   The toggle is not a File menu row: that menu holds entries only, and in
+   short windows its import submenu has no height to spare. The File menu
+   import therefore keeps the safe default; the option resets after each
+   import.
+3. **MCP.** `get_group_address` documents the description it already returned
+   through the projection (verbatim; absent when none is known), and `search`
+   also matches group-address descriptions (`matchedIn: ["description"]`). The
+   adapter stays read-only.

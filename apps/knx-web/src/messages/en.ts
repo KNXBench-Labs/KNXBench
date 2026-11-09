@@ -3184,6 +3184,7 @@ export const messages = {
   "groupAddressCsv.encoding": "CSV import encoding",
   "groupAddressCsv.encodingUtf8": "UTF-8 (default)",
   "groupAddressCsv.encodingWindows1252": "Windows-1252 (ETS export)",
+  "groupAddressCsv.clearBlankDescriptions": "Blank descriptions remove existing ones",
   "groupAddressCsv.exportSummaryNone": "Group addresses exported to CSV, no warnings.",
   "groupAddressCsv.exportSummaryWithWarnings.one":
     "Group addresses exported to CSV, {count} warning — see Log.",
@@ -3197,6 +3198,15 @@ export const messages = {
     "{action}: raw address {source} → {target}; communication-object ids: {links}",
   "groupAddressCsv.actionReaddress": "Readdress",
   "groupAddressCsv.actionDelete": "Delete",
+  "groupAddressCsv.actionClearDescription": "Remove description",
+  "groupAddressCsv.confirmDescriptionsCleared.one": "Blank Description cells remove {count} existing description.",
+  "groupAddressCsv.confirmDescriptionsCleared.other": "Blank Description cells remove {count} existing descriptions.",
+  "groupAddressCsv.confirmDescriptionsOnly.one":
+    "Apply this CSV plan? Blank Description cells remove {count} existing description. This exact preview will be rejected if the project or CSV changes.",
+  "groupAddressCsv.confirmDescriptionsOnly.other":
+    "Apply this CSV plan? Blank Description cells remove {count} existing descriptions. This exact preview will be rejected if the project or CSV changes.",
+  "groupAddressCsv.importSummaryDescriptionsCleared.one": "{count} description removed",
+  "groupAddressCsv.importSummaryDescriptionsCleared.other": "{count} descriptions removed",
   "groupAddressCsv.directionSend": "send",
   "groupAddressCsv.directionReceive": "receive",
   "groupAddressCsv.confirmCancelled": "CSV import cancelled; no changes were applied.",
@@ -3297,6 +3307,7 @@ export const messages = {
   // KL-61 / ADR-0078: the group-address Inspector's type detail.
   "gaType.declared": "Declared on the address",
   "inspector.groupAddressDescription": "Description",
+  "inspector.groupAddressDescriptionLineBreaks": "This description has Windows line breaks; editing saves them as plain line breaks.",
   "gaType.linked": "Linked objects state",
   "gaType.declaredAbsent": "none",
   "gaType.declaredEmpty": "empty",

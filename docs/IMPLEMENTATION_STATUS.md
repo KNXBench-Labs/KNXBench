@@ -19,13 +19,14 @@ Two more devices of the tester project plan
 [research](research/2026-11-09-float-parameters.md)). The memory (`070nh`)
 image builder writes `TypeFloat` values in their declared encoding, high octet
 first: `DPT 9` as KNX `F16` with the smallest fitting exponent and the
-mantissa rounded to nearest, ties to even; `IEEE-754 Single` as the nearest
+mantissa rounded to nearest, ties to even on the exact decimal value;
+`IEEE-754 Single` as the nearest
 binary32 value. Bounds, the encoding's range and `7FFFh` are checked; other
 encodings, `LittleEndian` programs, property placements and the System-1/2
 and experimental builders refuse. The device comparison decodes float fields.
-ETS 6.4's image of a logic module with eight float values in both encodings,
-recorded against the simulator, equals KNXBench's parameter segment octet for
-octet; a KNXBench download wrote the same octets except KL-145 flags. Tester
+ETS 6.4's images of a logic module with float values in both encodings (two
+downloads, four rounding ties), recorded against the simulator, equal
+KNXBench's parameter segment octet for octet; a KNXBench download wrote the same octets except KL-145 flags. Tester
 project 8 unsupported / 67 untested. Untested on hardware.
 
 ## Hall of Fame publishes past unrelated docs findings (9 November 2026)

@@ -465,3 +465,22 @@ fn a_legacy_mid_octet_union_member_still_refuses() {
     refused(result);
     refused(build_system1_image(&conn2, &request2));
 }
+
+/// ADR-0169: floats were observed in a memory (`070nh`) image only; the
+/// System-1 builder refuses one by its layout, not its encoding.
+#[test]
+fn a_float_parameter_refuses_the_system1_image() {
+    let xml = program().replace(
+        r#"<TypeNumber SizeInBit="8" Type="unsignedInt" minInclusive="0" maxInclusive="255" />"#,
+        r#"<TypeFloat Encoding="DPT 9" minInclusive="0" maxInclusive="255" />"#,
+    );
+    assert!(xml.contains("TypeFloat"));
+    let (_dir, conn, request) = fixture(&xml);
+    let error = build_system1_image(&conn, &request).unwrap_err();
+    assert!(
+        error
+            .to_string()
+            .contains("P: a TypeFloat outside the memory (070nh) image builder"),
+        "{error}"
+    );
+}

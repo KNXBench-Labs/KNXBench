@@ -62,11 +62,18 @@ device evidence.
    `3FA66666`).
 3. **`[V]` `DPT 9` uses the smallest exponent whose mantissa fits**
    (`2.5` → `E = 0`, `M = 250`; `1000` → `E = 6`; `25000` → `E = 11`).
-4. **`[V]` `DPT 9` rounds the mantissa to nearest, ties to even.** `25000`
-   gives `1220.7` and ETS wrote `1221` (not truncated); `1000` gives exactly
-   `1562.5` and ETS wrote `1562` (`361Ah`), not `1563`. One tie was observed.
+4. **`[V]` `DPT 9` rounds the mantissa to nearest, ties to even, on the
+   exact decimal value.** `25000` gives `1220.7` and ETS wrote `1221` (not
+   truncated); `1000` gives exactly `1562.5` and ETS wrote `1562` (`361Ah`),
+   not `1563`. A second download changed three values to decimal ties at
+   `E = 1` whose binary doubles are *not* ties: `32.09` (`1604.5`, double
+   `1604.5000000000002`), `32.45` (`1622.5`) and `32.23` (`1611.5`, double
+   `1611.4999999999998`). ETS wrote `0E44h`, `0E56h` and `0E4Ch`, the even
+   neighbour each time; a binary-double encoder would have written `0E45h`,
+   `0E57h` and `0E4Bh`. So ETS rounds the decimal value, not a binary
+   approximation of it.
 5. **`[V]` Whole segment.** KNXBench's image of the parameter segment
-   (`4800h`, 2 090 octets) equals ETS's octet for octet. In `4400h` the only
+   (`4800h`, 2 090 octets) equals ETS's octet for octet, for both downloads. In `4400h` the only
    differences are nine KL-145 communication-enable bits; below that are the
    known table representations. A KNXBench download of the same project to
    the simulator completed, left no ETS image octet unwritten, and differed
@@ -93,8 +100,14 @@ nothing else changes
 - One program and one manufacturer; the encodings are named by the product
   data, so other programs declaring them are read the same way, but no other
   program was observed.
-- The tie rule rests on one value. Floats in a `LittleEndian` program are
-  unobserved and refused.
+- Four ties were observed (one exact in binary, three only in decimal).
+  `IEEE-754 Single` ties were not observed; KNXBench uses the standard
+  nearest-even conversion of the decimal text. A non-zero single value that
+  underflows is refused. Floats in a `LittleEndian` program are unobserved
+  and refused.
+- The device-property path and the inactive-byte write selection do not
+  admit floats: a float placed in a property refuses, and a program with a
+  float parameter keeps writing its whole parameter segment (as ETS did).
 - The templates that disagree with `DPT 9` (§19.9) remain unexplained; for a
   parameter ETS writes they do not matter, for an inactive one KNXBench keeps
   the template like ETS.

@@ -107,3 +107,8 @@ spent in re-deriving and re-checking, not in the disk.
   the discard confirmation; opening another
   project writes the last edits first. Web: the status note stays silent, follows
   a running write, keeps a failure with a retry and tolerates an older server.
+- Final flush and exit status: the standalone server exits with status 1 when the
+  journal is still failed after the stop's last flush (it prints the failure as
+  before), on the ordinary return and on the forced-exit path; a healthy journal
+  and every other stop outcome keep their status. A script or container
+  supervisor can thus see that acknowledged edits did not reach the file.

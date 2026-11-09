@@ -210,6 +210,71 @@ describe("ParameterWorkspace", () => {
   });
 });
 
+describe("ParameterWorkspace conditional block rename", () => {
+  // The server sends one resolved caption per group key; a rename changes only that caption.
+  const page = (label: string, access: "ReadWrite" | "Read" = "ReadWrite"): ParameterSection[] => [{ scope: null, fields: [
+    { ...field("Selector"), group: { key: "PB-1", label } },
+    { ...field("Delay"), group: { key: "PB-1", label }, access, blockAccess: access === "Read" ? "Read" : null },
+    { ...field("Elsewhere"), group: { key: "PB-2", label: "Other page" } },
+  ] }];
+  const render = (data: ParameterSection[]) =>
+    act(async () => root.render(<ParameterWorkspace sections={data} renderField={renderField} />));
+  const heading = () => host.querySelector(".parameter-workspace-heading h4")!.textContent;
+  const context = () => host.querySelector(".parameter-workspace-context")!.textContent!;
+  const search = (query: string) => act(async () => setInput(host.querySelector<HTMLInputElement>('input[type="search"]')!, query));
+  const shown = () => [...host.querySelectorAll<HTMLDivElement>("[data-parameter-row]")].filter(row => !row.hidden).map(row => row.dataset.parameterRow);
+
+  it("follows each caption in navigation, heading, context and search with the area, draft and selection intact", async () => {
+    await mount(page("fixture_base_px"));
+    await act(async () => nav("fixture_base_px").click());
+    const input = host.querySelector<HTMLInputElement>('[data-parameter-row="Selector"] input')!;
+    await act(async () => setInput(input, "7"));
+    await act(async () => input.focus());
+    expect(heading()).toBe("fixture_base_px");
+    expect(context()).toContain("fixture_base_px");
+    const seen: string[] = [];
+    for (const caption of ["fixture_switch_py", "fixture_switch_pz", "fixture_base_px", "fixture_switch_py"]) {
+      await render(page(caption));
+      seen.push(heading()!);
+      // One area, renamed in place: no second entry, no stale base caption, still the open area.
+      expect(host.querySelectorAll(".parameter-workspace-nav-entry")).toHaveLength(2);
+      expect(nav(caption).getAttribute("aria-current")).toBe("page");
+      expect(context()).toContain(`/ ${caption}`);
+      expect(host.querySelector('[data-parameter-row="Selector"] input')).toBe(input);
+      expect(input.value).toBe("7");
+      expect(host.querySelector<HTMLDivElement>('[data-parameter-row="Selector"]')!.dataset.selected).toBe("true");
+      await search(caption.toLowerCase());
+      expect(shown()).toEqual(["Selector", "Delay"]);
+      for (const stale of ["fixture_switch_py", "fixture_switch_pz", "fixture_base_px"].filter(name => name !== caption)) {
+        await search(stale);
+        expect(shown(), `${stale} must not match under ${caption}`).toEqual([]);
+      }
+      await search("");
+    }
+    expect(seen).toEqual(["fixture_switch_py", "fixture_switch_pz", "fixture_base_px", "fixture_switch_py"]);
+  });
+
+  it("renames a restricted area without changing which rows are writable", async () => {
+    await mount(page("fixture_base_px", "Read"));
+    await act(async () => nav("fixture_base_px").click());
+    await render(page("fixture_switch_py", "Read"));
+    expect(nav("fixture_switch_py").getAttribute("aria-current")).toBe("page");
+    const delay = host.querySelector<HTMLDivElement>('[data-parameter-row="Delay"]')!;
+    expect(delay.dataset.access).toBe("Read");
+    await act(async () => delay.click());
+    expect(context()).toContain("fixture_switch_py");
+    expect(context()).toContain("Read");
+  });
+
+  it("does not treat a renamed key as another area when the replacement disappears", async () => {
+    await mount(page("fixture_switch_py"));
+    await act(async () => nav("fixture_switch_py").click());
+    await render(page("fixture_base_px"));
+    expect(nav("fixture_base_px").getAttribute("aria-current")).toBe("page");
+    expect(host.querySelector(".parameter-workspace-closed")).toBeNull();
+  });
+});
+
 describe("ParameterWorkspace declared grids", () => {
   const grid = (patch: Partial<ParameterGroupLayout> = {}): ParameterGroupLayout => ({
     groupKey: "Pairs", version: 1, declaredLayout: "Table", status: "grid",
@@ -251,6 +316,33 @@ describe("ParameterWorkspace declared grids", () => {
     expect(host.querySelector(".parameter-matrix-unplaced")!.textContent).toContain("Not placed");
     expect(host.querySelector(".parameter-workspace-layout-note")!.textContent).toContain("Table");
     expect(host.querySelector(".parameter-workspace-columns")).toBeNull();
+  });
+
+  it("renames a matrix area and a row area alike: same layout, same placement, new heading", async () => {
+    // A conditional block rename changes only the label the server sends for an unchanged key.
+    const renamed = (pairs: string, leds: string): ParameterSection[] => gridSections().map(section => ({ ...section,
+      fields: section.fields.map(item => ({ ...item, group: { key: item.group!.key, label: item.group!.key === "Pairs" ? pairs : leds } })) }));
+    const show = (data: ParameterSection[]) => act(async () => root.render(<ParameterWorkspace sections={data} renderField={renderField} />));
+    const heading = () => host.querySelector(".parameter-workspace-heading h4")!.textContent;
+    const matrixCaptions = () => [...host.querySelectorAll(".parameter-matrix-caption")].map(node => node.textContent);
+    await mount(renamed("fixture_base_px", "fixture_row_px"));
+    await act(async () => nav("fixture_base_px").click());
+    const declared = matrixCaptions();
+    for (const [pairs, leds] of [["fixture_switch_py", "fixture_row_py"], ["fixture_base_px", "fixture_row_px"]]) {
+      await show(renamed(pairs, leds));
+      expect(heading()).toBe(pairs);
+      expect(rowsParent().getAttribute("data-layout")).toBe("matrix");
+      expect(style("L1").gridRow).toBe("2 / span 1");
+      expect(style("R2").gridColumn).toBe("3 / span 1");
+      expect(matrixCaptions()).toEqual(declared);
+      expect(host.querySelectorAll(".parameter-workspace-nav-entry")).toHaveLength(2);
+    }
+    await act(async () => nav("fixture_row_px").click());
+    await show(renamed("fixture_switch_pz", "fixture_row_pz"));
+    expect(heading()).toBe("fixture_row_pz");
+    expect(rowsParent().getAttribute("data-layout")).toBeNull();
+    expect(style("Delay").gridRow).toBe("");
+    expect(host.querySelector(".parameter-matrix-caption")).toBeNull();
   });
 
   it("keeps the row view with an explicit hint when no grid is declared", async () => {

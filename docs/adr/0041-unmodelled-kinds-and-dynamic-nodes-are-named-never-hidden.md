@@ -82,7 +82,10 @@ integer bounds; `TypeColor/@Space` takes only `RGB` (64) and `HSV` (51).
    and no activation. Should a reference ever appear inside one (never in
    the corpus), it is named by rule 3 rather than lost.
 5. **`Rename`, `ParameterBlockRename`, `Button` and `Repeat` stay
-   `UnrecognizedNode`.** Applying a rename, running a button's script
+   `UnrecognizedNode`** (amended 9 November 2026: one literal-leaf shape of the two rename
+   kinds is now applied, see the
+   [conditional rename contract](../contracts/conditional-parameter-block-rename.md); every
+   other rename stays reported). Applying a rename, running a button's script
    handler and expanding a repeat are not modelled; the first three have no
    children to lose, and the `Module` inside `Repeat` is now named.
 

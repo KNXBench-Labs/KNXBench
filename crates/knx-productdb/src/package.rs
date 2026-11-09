@@ -2277,9 +2277,35 @@ pub(crate) fn retire_report_rows(
     sha256: &str,
     keys: &[(&str, crate::report::UnknownKind, &str)],
 ) -> Result<Result<(), ReportNotUpgradable>, ProductDbError> {
-    let Some(mut facts) = load_facts_unvalidated(conn, sha256)? else {
+    let Some(facts) = load_facts_unvalidated(conn, sha256)? else {
         return Ok(Ok(()));
     };
+    retire_rows_from(conn, sha256, facts, keys)
+}
+
+/// `retire_report_rows` that first validates the stored report as it stands (v33 on). A
+/// historical counter that disagrees with its rows, or a missing mandatory row, is not
+/// rebuilt into a new measured report: absence is not zero. The caller downgrades it.
+pub(crate) fn retire_validated_report_rows(
+    conn: &Connection,
+    sha256: &str,
+    keys: &[(&str, crate::report::UnknownKind, &str)],
+) -> Result<Result<(), ReportNotUpgradable>, ProductDbError> {
+    let facts = match load_facts(conn, sha256) {
+        Ok(Some(facts)) => facts,
+        Ok(None) => return Ok(Ok(())),
+        Err(ProductDbError::Sqlite(error)) => return Err(ProductDbError::Sqlite(error)),
+        Err(error) => return Ok(Err(ReportNotUpgradable(error.to_string()))),
+    };
+    retire_rows_from(conn, sha256, facts, keys)
+}
+
+fn retire_rows_from(
+    conn: &Connection,
+    sha256: &str,
+    mut facts: InstallFacts,
+    keys: &[(&str, crate::report::UnknownKind, &str)],
+) -> Result<Result<(), ReportNotUpgradable>, ProductDbError> {
     facts.unknown_constructs.retain(|unknown| {
         !keys.iter().any(|(xpath, kind, name)| {
             unknown.kind == *kind && unknown.name == *name && unknown.xpath == *xpath

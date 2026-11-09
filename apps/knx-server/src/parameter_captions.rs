@@ -68,8 +68,41 @@ pub(crate) fn apply(
         module_instances,
     };
     let mut filled = Vec::new();
+    let mut refused = Vec::new();
+    // At most one active replacement per block (the evaluator refuses competing ones).
+    let renames: HashMap<i64, &knx_productdb::dynamic::ActiveRename> = evaluation
+        .activation
+        .renames
+        .iter()
+        .map(|rename| (rename.target_node_id, rename))
+        .collect();
     for (index, label) in evaluation.activation.labels.iter().enumerate() {
         if !matches!(label.kind.as_str(), "ParameterBlock" | "ParameterSeparator") {
+            continue;
+        }
+        // The replacement is translated by its own identity, never by the block's: the base
+        // block translation and its positional fill are not consulted while one is active.
+        if let Some(rename) = renames
+            .get(&label.node_id)
+            .filter(|_| label.kind == "ParameterBlock" && label.scope.is_none())
+        {
+            // A selected translation with a placeholder is not filled: positional values
+            // belong to the base caption's own text parameters. The source text is shown
+            // instead and the refusal is named against the replacement's own node.
+            let selected = translated.get(&(String::new(), rename.node_id));
+            let unsupported = selected.and_then(|text| placeholder_name(text));
+            let text = match (selected, unsupported) {
+                (Some(text), None) => budget.copy_text(text),
+                _ => budget.copy_text(&rename.text),
+            }
+            .map_err(|e| e.to_string())?;
+            if let Some(name) = unsupported {
+                refused.push((
+                    rename.node_id,
+                    budget.copy_text(name).map_err(|e| e.to_string())?,
+                ));
+            }
+            filled.push((index, text, None));
             continue;
         }
         let tree = label
@@ -119,5 +152,24 @@ pub(crate) fn apply(
         }
         label.text = text;
     }
+    // Panel diagnostics list every activation diagnostic; this one hides no reference.
+    for (node_id, name) in refused {
+        evaluation
+            .activation
+            .diagnostics
+            .push(knx_productdb::dynamic::ScopedDiagnostic {
+                scope: None,
+                diagnostic: knx_productdb::dynamic::Diagnostic::UnresolvedTextPlaceholder {
+                    node_id,
+                    name,
+                },
+            });
+    }
     Ok(CaptionFills { fills, budget })
+}
+
+/// The inside of the first placeholder in `text`, or everything after an unclosed opener.
+fn placeholder_name(text: &str) -> Option<&str> {
+    let inside = &text[text.find("{{")? + 2..];
+    Some(inside.find("}}").map_or(inside, |close| &inside[..close]))
 }

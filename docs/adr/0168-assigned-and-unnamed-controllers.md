@@ -28,20 +28,25 @@ the object activity ETS records in the tester's project, settled each point
    evaluated as it stands. Otherwise, or when the source value is unknown,
    the pass reports `AssignedControllerDiffers` (and an unreadable `Assign` as
    an unrecognized node) and stops marking, so nothing is guessed: a download
-   is refused, the parameter panel shows the diagnostic.
-2. **Unnamed selecting controllers.** A controller that no `ParameterRefRef`
-   names anywhere, and whose every `choose` is `Comparable` without a
-   `default` branch, counts as placed, so ADR-0160 applies when it is not
-   active. `TypeNone` and default-only `choose` elements remain unconditional
-   structure, and a controller named only inside its own `choose` stays read
-   as before.
+   is refused, the parameter panel shows the diagnostic. An `Assign` below a
+   controller that the same pass marks inactive is not run and does not count;
+   starting from all candidates, the excluded set shrinks to a fixed point.
+2. **Unnamed alternative controllers.** A controller that no
+   `ParameterRefRef` names anywhere, whose every `choose` is `Comparable`
+   without a `default` branch, and whose branches activate a
+   `ParameterRefRef` that a branch of a placed controller's `choose` also
+   activates, counts as placed, so ADR-0160 applies when it is not active.
+   Every other unnamed controller (`TypeNone` and default-only structure, a
+   controller with no placed competitor) and a controller named only inside
+   its own `choose` stay read as before.
 3. **Short segments.** An allocation longer than its segment writes the
    segment's octets, provided every written parameter field and table lies in
    them; the plan names `allocation-beyond-segment-not-written`.
 4. **Mid-octet unions.** A union member's position is the union's offset and
    bit offset plus the member's offset and bit offset, whole octets carried.
-   The legacy System-1 and System-2 image layouts keep refusing members away
-   from the start of a mid-octet union.
+   A member so placed that crosses an octet boundary is refused (unobserved),
+   and the legacy System-1 and System-2 image layouts keep refusing members
+   away from the start of a mid-octet union.
 
 ## Alternatives considered
 
@@ -52,6 +57,13 @@ the object activity ETS records in the tester's project, settled each point
   project, it made 13 devices of two other manufacturers refuse links on
   objects ETS keeps (eight of them planned before): their unnamed controllers
   are `TypeNone` or default-only structure.
+- **Treat every unnamed `Comparable` controller without a default branch as
+  placed.** It matched ETS on the tester project, including two hidden
+  push-button channels ETS does not list, but independent review showed it
+  skips the value check of hidden selectors: an illegal stored value that was
+  refused through `NoBranchMatched` would build an image. Those channels'
+  objects stay inactive anyway (their function defaults to "not active"); the
+  narrower rule keeps them evaluated as before.
 - **Resolve the union-member conflict by "the shown one wins".** It names the
   outcome, not a rule the walk can apply before conflicts arise, and leaves
   the unnamed channels active that ETS does not show.
@@ -63,8 +75,8 @@ the object activity ETS records in the tester's project, settled each point
 The push-button sensor 0.2.49 and the binary inputs 0.2.7, 0.2.63 and 0.2.66
 of the tester project plan and move to `untested`; KNXBench's images equal
 ETS's in every parameter octet, differing only in KL-145 flags. Active objects
-equal ETS's records on all 51 devices that carry them. Thirty-two devices of a
-related push-button program count fewer parameter fields as written, with
-identical octets. The rules rest on one program each and on simulator runs;
-the downloads stay untested until a device confirms them, and `Assign` stays
-unexecuted.
+equal ETS's records on all 51 devices that carry them. The rules rest on one
+program each and on simulator runs; the downloads stay untested until a device
+confirms them, and `Assign` stays unexecuted. An `Assign` targeting a
+reference in another module scope than the `choose` it would decide never
+matches and falls back to ADR-0160 without a diagnostic; none was observed.

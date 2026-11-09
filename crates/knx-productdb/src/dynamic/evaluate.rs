@@ -1759,15 +1759,16 @@ impl Activation {
 /// controller named only inside its own `choose` is read as before, and a
 /// pass with a diagnostic that may hide refs marks nothing.
 ///
-/// ADR-0168 refines this: a controller no `ParameterRefRef` names at all
-/// and whose every `choose` selects by value counts as placed
-/// ([`unnamed_selective_controllers`]); and a controller that an active
+/// ADR-0168 refines this: an unnamed controller competing with a placed one
+/// for the same reference counts as placed
+/// ([`unnamed_alternative_controllers`]); and a controller that an active
 /// `Assign` sets is not marked, its `choose` is read with the stored value
 /// when the assignment yields it, else reported
 /// ([`Diagnostic::AssignedControllerDiffers`]).
 pub fn evaluate(trees: &ProgramTrees, values: &ValueMap) -> Activation {
     let mut placed = placed_parameter_refs(trees);
-    placed.extend(unnamed_selective_controllers(trees));
+    let alternatives = unnamed_alternative_controllers(trees, &placed);
+    placed.extend(alternatives);
     let mut inactive_controllers = HashSet::new();
     let mut work_units_used = 0;
     loop {
@@ -1794,17 +1795,10 @@ pub fn evaluate(trees: &ProgramTrees, values: &ValueMap) -> Activation {
         if complete && !activation.work_budget_exhausted && !candidates.is_empty() {
             // ADR-0168: an active `Assign` sets the controller, so it is not
             // inactive; agreeing values keep its `choose`, differing refuse.
-            let mut differing = Vec::new();
-            for key in candidates {
-                match assign::verdict(&key, &assignments, values) {
-                    assign::Verdict::Unassigned => newly.push(key),
-                    assign::Verdict::Agrees => {}
-                    assign::Verdict::Differs(scope, diagnostic) => {
-                        differing.push((scope, diagnostic));
-                    }
-                }
-            }
-            differing.extend(assign::unreadable(&assignments));
+            let (unassigned, mut differing, effective) =
+                assign::settle(&candidates, &assignments, values);
+            newly = unassigned;
+            differing.extend(assign::unreadable(&effective));
             if !differing.is_empty() {
                 for (scope, diagnostic) in differing {
                     activation.diagnose(scope.as_ref(), diagnostic);
@@ -1861,14 +1855,45 @@ fn placed_parameter_refs(trees: &ProgramTrees) -> HashSet<&str> {
     placed
 }
 
-/// ADR-0168: controllers no `ParameterRefRef` names anywhere, whose every
-/// `choose` selects by value (`Comparable`, no `default` branch). Nothing
-/// shows them, so like a placed controller left inactive they select
-/// nothing. A `TypeNone` or default-only `choose` is unconditional
-/// structure and stays read as before.
-fn unnamed_selective_controllers(trees: &ProgramTrees) -> HashSet<&str> {
+/// The controllers of every `choose` enclosing `node_id` in `tree`, keyed
+/// like [`Seen`]. Bounded by the tree's size, so a malformed parent chain
+/// cannot loop.
+fn enclosing_controllers(
+    tree: &DynamicTree,
+    node_id: i64,
+    scope: Option<&Rc<ModuleScope>>,
+) -> Vec<ScopeKey> {
+    let chain = scope_key_chain(scope);
+    let mut out = Vec::new();
+    let mut current = tree.node(node_id).and_then(|node| node.parent_id);
+    for _ in 0..tree.nodes.len() {
+        let Some(node) = current.and_then(|id| tree.node(id)) else {
+            break;
+        };
+        if node.kind == "choose" {
+            if let Some(controller) = &node.ref_id {
+                out.push((chain.clone(), controller.clone()));
+            }
+        }
+        current = node.parent_id;
+    }
+    out
+}
+
+/// ADR-0168: alternatives of a placed controller that nothing names. A
+/// controller no `ParameterRefRef` names anywhere, whose every `choose`
+/// selects by value (`Comparable`, no `default` branch), counts as placed
+/// when its branches activate a `ParameterRefRef` that a branch of a placed
+/// controller's `choose` also activates: it competes with a shown one for
+/// the same reference, as push-button programs' virtual LED-status
+/// controllers do. Any other unnamed controller stays read as before.
+fn unnamed_alternative_controllers<'a>(
+    trees: &'a ProgramTrees,
+    placed: &HashSet<&'a str>,
+) -> HashSet<&'a str> {
     let mut named = HashSet::new();
     let mut selective: HashMap<&str, bool> = HashMap::new();
+    let mut branch_refs: HashMap<&str, HashSet<&str>> = HashMap::new();
     for tree in std::iter::once(&trees.program).chain(trees.modules.values()) {
         for node in tree.nodes.values() {
             match (node.kind.as_str(), node.ref_id.as_deref()) {
@@ -1876,20 +1901,38 @@ fn unnamed_selective_controllers(trees: &ProgramTrees) -> HashSet<&str> {
                     named.insert(r);
                 }
                 ("choose", Some(r)) => {
+                    let whens = tree.children_of(Some(node.node_id));
                     let by_value = matches!(node.control_kind, Some(ControlKind::Comparable))
-                        && !tree
-                            .children_of(Some(node.node_id))
+                        && !whens
                             .iter()
                             .any(|&child| tree.node(child).is_some_and(|when| when.is_default));
                     *selective.entry(r).or_insert(true) &= by_value;
+                    let refs = branch_refs.entry(r).or_default();
+                    for &when in whens {
+                        refs.extend(tree.children_of(Some(when)).iter().filter_map(|&child| {
+                            tree.node(child)
+                                .filter(|leaf| leaf.kind == "ParameterRefRef")
+                                .and_then(|leaf| leaf.ref_id.as_deref())
+                        }));
+                    }
                 }
                 _ => {}
             }
         }
     }
+    let shown: HashSet<&str> = branch_refs
+        .iter()
+        .filter(|(controller, _)| placed.contains(*controller))
+        .flat_map(|(_, refs)| refs.iter().copied())
+        .collect();
     selective
         .into_iter()
         .filter(|(r, by_value)| *by_value && !named.contains(r))
+        .filter(|(r, _)| {
+            branch_refs
+                .get(r)
+                .is_some_and(|refs| !refs.is_disjoint(&shown))
+        })
         .map(|(r, _)| r)
         .collect()
 }
@@ -2149,6 +2192,7 @@ fn walk(
                     node_id,
                     scope: scope.cloned(),
                     assignment: assignment.clone(),
+                    enclosing: enclosing_controllers(tree, node_id, scope),
                 });
             }
             report_refs_below(tree, node_id, activation, scope);

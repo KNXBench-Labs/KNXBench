@@ -66,6 +66,50 @@ pub(super) struct ActiveAssignment {
     pub(super) scope: Option<Rc<ModuleScope>>,
     /// `None`: the stored declaration could not be read.
     pub(super) assignment: Option<Assignment>,
+    /// The controllers of the `choose` elements enclosing it.
+    pub(super) enclosing: Vec<ScopeKey>,
+}
+
+/// The candidates' fate in one pass: those no effective assignment sets
+/// (marked inactive), the diagnostics of differing ones, and the effective
+/// assignments. An assignment below a controller this pass marks is not
+/// run by ETS, so it does not count. Excluding fewer assignments can only
+/// assign more candidates, so starting from all candidates the excluded set
+/// shrinks to a fixed point.
+pub(super) fn settle<'a>(
+    candidates: &[ScopeKey],
+    assignments: &'a [ActiveAssignment],
+    values: &ValueMap,
+) -> (
+    Vec<ScopeKey>,
+    Vec<(Option<Rc<ModuleScope>>, Diagnostic)>,
+    Vec<&'a ActiveAssignment>,
+) {
+    let mut marked: HashSet<&ScopeKey> = candidates.iter().collect();
+    loop {
+        let effective: Vec<&ActiveAssignment> = assignments
+            .iter()
+            .filter(|active| !active.enclosing.iter().any(|key| marked.contains(key)))
+            .collect();
+        let mut unassigned = Vec::new();
+        let mut differing = Vec::new();
+        for key in candidates {
+            match verdict(key, &effective, values) {
+                Verdict::Unassigned => unassigned.push(key),
+                Verdict::Agrees => {}
+                Verdict::Differs(scope, diagnostic) => differing.push((scope, diagnostic)),
+            }
+        }
+        let next: HashSet<&ScopeKey> = unassigned.iter().copied().collect();
+        if next == marked {
+            return (
+                unassigned.into_iter().cloned().collect(),
+                differing,
+                effective,
+            );
+        }
+        marked = next;
+    }
 }
 
 /// What the active assignments say about a controller the pass found
@@ -83,11 +127,7 @@ pub(super) enum Verdict {
 }
 
 /// The verdict for `controller` (a [`ScopeKey`]) under `assignments`.
-pub(super) fn verdict(
-    controller: &ScopeKey,
-    assignments: &[ActiveAssignment],
-    values: &ValueMap,
-) -> Verdict {
+fn verdict(controller: &ScopeKey, assignments: &[&ActiveAssignment], values: &ValueMap) -> Verdict {
     let mut setting = assignments.iter().filter_map(|active| {
         let assignment = active.assignment.as_ref()?;
         let key = (
@@ -124,7 +164,7 @@ pub(super) fn verdict(
 /// The unreadable active assignments, once each: whether one sets a given
 /// controller is unknown, so each is reported as unrecognized.
 pub(super) fn unreadable(
-    assignments: &[ActiveAssignment],
+    assignments: &[&ActiveAssignment],
 ) -> Vec<(Option<Rc<ModuleScope>>, Diagnostic)> {
     let mut seen = HashSet::new();
     assignments

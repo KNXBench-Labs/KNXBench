@@ -953,13 +953,87 @@ fn inactivity_needs_a_placement_outside_the_choose_and_a_complete_pass() {
         .any(|d| matches!(d.diagnostic, Diagnostic::UnparsableTest { .. })));
 }
 
-/// ADR-0168: a controller no `ParameterRefRef` names and whose `choose`
-/// selects by value is shown nowhere, so it selects nothing, as a placed
-/// inactive one (`V_HEAT` beside the shown `V_ONOFF`; `PAIR` keeping two
-/// channels). Unconditional structure (`TypeNone`, default-only) and a
-/// `choose` with a default branch are read as before.
+/// ADR-0168 review: an `Assign` below a controller this pass marks inactive
+/// is not run, so it neither keeps nor refuses its target. Below a
+/// controller an agreeing assignment keeps, it still counts.
 #[test]
-fn an_unnamed_selecting_controller_selects_nothing() {
+fn an_assign_below_a_marked_controller_does_not_count() {
+    let choose = |id, parent, controller: &str| DynamicNode {
+        control_kind: Some(ControlKind::Comparable),
+        ref_id: Some(controller.into()),
+        ..nd(id, Some(parent), "choose")
+    };
+    let when = |id, parent, test: &str| DynamicNode {
+        test: Some(test.into()),
+        ..nd(id, Some(parent), "when")
+    };
+    let refref = |id, parent, kind: &str, r: &str| DynamicNode {
+        ref_id: Some(r.into()),
+        ..nd(id, Some(parent), kind)
+    };
+    let assign = |target: &str, source: AssignSource| {
+        Some(Assignment {
+            target: target.into(),
+            source,
+        })
+    };
+    let tree = |keep_a: bool| {
+        let mut nodes = vec![
+            nd(0, None, "Dynamic"),
+            refref(1, 0, "ParameterRefRef", "MODE"),
+            choose(2, 0, "MODE"),
+            when(3, 2, "1"),
+            refref(4, 3, "ParameterRefRef", "A"),
+            refref(5, 3, "ParameterRefRef", "B"),
+            when(6, 2, "2"),
+            choose(7, 0, "A"),
+            when(8, 7, "0"),
+            nd(9, Some(8), "Assign"),
+            choose(10, 0, "B"),
+            when(11, 10, "0"),
+            refref(12, 11, "ComObjectRefRef", "X"),
+        ];
+        let mut declared = vec![(9, assign("B", AssignSource::Value("1".into())))];
+        if keep_a {
+            nodes.push(nd(13, Some(6), "Assign"));
+            declared.push((13, assign("A", AssignSource::Value("0".into()))));
+        }
+        DynamicTree::from_nodes(nodes).with_assignments(declared)
+    };
+    let run = |keep_a| {
+        evaluate(
+            &ProgramTrees::single(tree(keep_a)),
+            &values(&[("MODE", "2"), ("A", "0"), ("B", "0")]).into(),
+        )
+    };
+    let hidden = run(false);
+    assert!(hidden.diagnostics.is_empty(), "{:?}", hidden.diagnostics);
+    assert!(
+        hidden.com_object_refs.is_empty(),
+        "{:?}",
+        hidden.com_object_refs
+    );
+    let kept = run(true);
+    assert_eq!(
+        kept.diagnostics,
+        vec![diag(Diagnostic::AssignedControllerDiffers {
+            assign_node: 9,
+            param_ref: "B".into(),
+            assigned_value: Some("1".into()),
+            observed_value: Some("0".into()),
+        })]
+    );
+}
+
+/// ADR-0168: a controller no `ParameterRefRef` names, whose `choose`
+/// selects by value and competes with a placed controller for the same
+/// reference (`V_HEAT` beside the shown `V_ONOFF`), selects nothing. An
+/// unnamed controller without such competition (`PAIR`), unconditional
+/// structure (`TypeNone`, default-only), a `choose` with a default branch,
+/// and a controller named only inside its own `choose` (`OWN`) are read as
+/// before.
+#[test]
+fn an_unnamed_alternative_controller_selects_nothing() {
     let choose = |id, parent, controller: &str, kind: ControlKind| DynamicNode {
         control_kind: Some(kind),
         ref_id: Some(controller.into()),
@@ -981,24 +1055,30 @@ fn an_unnamed_selecting_controller_selects_nothing() {
         nd(0, None, "Dynamic"),
         refref(1, 0, "V_ONOFF"),
         choose(2, 0, "V_ONOFF", ControlKind::Comparable),
-        when(3, 2, "1"),
-        refref(4, 3, "U_1"),
-        choose(5, 0, "V_HEAT", ControlKind::Comparable),
-        when(6, 5, "0"),
-        refref(7, 6, "U_0"),
-        choose(8, 0, "PAIR", ControlKind::Comparable),
-        when(9, 8, "0"),
-        refref(10, 9, "BUTTON_5"),
-        choose(11, 0, "NONE", ControlKind::TypeNone),
-        default(12, 11),
-        refref(13, 12, "STRUCTURE"),
-        choose(14, 0, "ALWAYS", ControlKind::Comparable),
-        default(15, 14),
-        refref(16, 15, "GENERAL"),
-        choose(17, 0, "FALLBACK", ControlKind::Comparable),
-        when(18, 17, "1"),
-        default(19, 17),
-        refref(20, 19, "FALLEN_BACK"),
+        when(3, 2, "0"),
+        refref(4, 3, "U_0"),
+        when(5, 2, "1"),
+        refref(6, 5, "U_1"),
+        choose(7, 0, "V_HEAT", ControlKind::Comparable),
+        when(8, 7, "0"),
+        refref(9, 8, "U_0"),
+        choose(10, 0, "PAIR", ControlKind::Comparable),
+        when(11, 10, "0"),
+        refref(12, 11, "BUTTON_5"),
+        choose(13, 0, "NONE", ControlKind::TypeNone),
+        default(14, 13),
+        refref(15, 14, "STRUCTURE"),
+        choose(16, 0, "ALWAYS", ControlKind::Comparable),
+        default(17, 16),
+        refref(18, 17, "GENERAL"),
+        choose(19, 0, "FALLBACK", ControlKind::Comparable),
+        when(20, 19, "1"),
+        default(21, 19),
+        refref(22, 21, "FALLEN_BACK"),
+        choose(23, 0, "OWN", ControlKind::Comparable),
+        when(24, 23, "0"),
+        refref(25, 24, "OWN"),
+        refref(26, 24, "U_0"),
     ]);
     let activation = evaluate(
         &ProgramTrees::single(tree),
@@ -1009,6 +1089,7 @@ fn an_unnamed_selecting_controller_selects_nothing() {
             ("NONE", ""),
             ("ALWAYS", "0"),
             ("FALLBACK", "0"),
+            ("OWN", "0"),
         ])
         .into(),
     );
@@ -1019,7 +1100,17 @@ fn an_unnamed_selecting_controller_selects_nothing() {
     );
     assert_eq!(
         activation.parameter_refs,
-        ["V_ONOFF", "U_1", "STRUCTURE", "GENERAL", "FALLEN_BACK"].map(active)
+        [
+            "V_ONOFF",
+            "U_1",
+            "BUTTON_5",
+            "STRUCTURE",
+            "GENERAL",
+            "FALLEN_BACK",
+            "OWN",
+            "U_0"
+        ]
+        .map(active)
     );
 }
 

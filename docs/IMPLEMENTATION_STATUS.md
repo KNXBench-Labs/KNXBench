@@ -20,8 +20,8 @@ Four more devices of the tester project plan
 The evaluator no longer counts a hidden `choose` controller as inactive when
 an active `Assign` sets it to the stored value; a different or unknown
 assigned value is reported as `AssignedControllerDiffers` (server, web panel
-in English and German) instead of being guessed. A controller that no
-`ParameterRefRef` names and whose `choose` selects by value counts as placed
+in English and German) instead of being guessed. An unnamed controller whose
+`choose` competes with a placed one for the same reference counts as placed
 (ADR-0160 then applies). An allocation longer than its segment writes the
 segment (`allocation-beyond-segment-not-written`), and union members of a
 mid-octet union add the bit offsets on mask `0701h` layouts; System-1 and

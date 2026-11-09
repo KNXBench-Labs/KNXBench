@@ -1188,6 +1188,64 @@ fn an_unnamed_alternative_controller_selects_nothing() {
     );
 }
 
+/// ADR-0168: an unnamed alternative deciding a `choose` inside a
+/// `ModuleDef` is read as before, even at its program default: a module
+/// instance may hold another value.
+#[test]
+fn an_unnamed_alternative_inside_a_module_is_read_as_before() {
+    let choose = |id, parent, controller: &str| DynamicNode {
+        control_kind: Some(ControlKind::Comparable),
+        ref_id: Some(controller.into()),
+        ..nd(id, Some(parent), "choose")
+    };
+    let when = |id, parent, test: &str| DynamicNode {
+        test: Some(test.into()),
+        ..nd(id, Some(parent), "when")
+    };
+    let refref = |id, parent, r: &str| DynamicNode {
+        ref_id: Some(r.into()),
+        ..nd(id, Some(parent), "ParameterRefRef")
+    };
+    let program = DynamicTree::from_nodes(vec![
+        nd(0, None, "Dynamic"),
+        refref(1, 0, "V_ONOFF"),
+        choose(2, 0, "V_ONOFF"),
+        when(3, 2, "0"),
+        refref(4, 3, "U_0"),
+        when(6, 2, "1"),
+        DynamicNode {
+            element_id: Some("M-A".into()),
+            ref_id: Some("MD-1".into()),
+            ..nd(5, Some(0), "Module")
+        },
+    ]);
+    let module_def = DynamicTree::from_nodes(vec![
+        nd(0, None, "Dynamic"),
+        choose(1, 0, "V_HEAT"),
+        when(2, 1, "0"),
+        refref(3, 2, "U_0"),
+        when(4, 1, "1"),
+        refref(5, 4, "U_1"),
+    ]);
+    let trees =
+        ProgramTrees::from_parts(program, HashMap::from([("MD-1".to_string(), module_def)]))
+            .with_defaults([("V_HEAT", "0")]);
+    let mut vm: ValueMap = values(&[("V_ONOFF", "1"), ("V_HEAT", "0")]).into();
+    vm.insert_scoped("M-A".to_string(), "V_HEAT".to_string(), "1".to_string());
+    let activation = evaluate(&trees, &vm);
+    assert!(
+        activation.diagnostics.is_empty(),
+        "{:?}",
+        activation.diagnostics
+    );
+    let refs: Vec<&str> = activation
+        .parameter_refs
+        .iter()
+        .map(|r| r.ref_id.as_str())
+        .collect();
+    assert_eq!(refs, ["V_ONOFF", "U_1"]);
+}
+
 /// ADR-0168, the shape of a one-button push-button program: a constant
 /// mode hides the block placing `SPLIT`, but an active `Assign` sets it,
 /// so its `choose` still decides the channel. `OTHER`, hidden the same way

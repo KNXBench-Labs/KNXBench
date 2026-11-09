@@ -184,7 +184,7 @@ async function openList(page: Page, language: "en" | "de") {
   await expect(page.locator(".devices-workspace")).toBeVisible();
 }
 for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
-  test(`${language} source-group parameter workspace at ${width}px`, async ({ page }) => {
+  test(`${language} source-group parameter workspace at ${width}px`, async ({ page }, testInfo) => {
     const m = language === "de" ? de : en;
     await page.setViewportSize({ width, height: 1000 });
     const state = await intercept(page, language, 3, width === 1440 ? "graphite" : "porcelain", true, true);
@@ -244,6 +244,8 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
     if (dimensions.width > 580) expect(dimensions.rowHeight).toBeLessThan(100);
     expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1);
     if (process.env.KNX_DEVICES_CAPTURE_DIR) await page.screenshot({ path: join(process.env.KNX_DEVICES_CAPTURE_DIR, `parameter-workspace-${language}-${width}.png`) });
+    await metadata.scrollIntoViewIfNeeded();
+    await testInfo.attach(`parameter-metadata-${language}-${width}`, { body: await metadata.screenshot(), contentType: "image/png" });
     expect(state.unexpected).toEqual([]);
   });
 

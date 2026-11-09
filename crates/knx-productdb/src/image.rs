@@ -1336,10 +1336,16 @@ pub(crate) fn field_of<'a>(
                     ),
                 })?;
             // `bits % 8 < 8`.
-            Ok((
-                union.code_segment.as_str(),
-                field(union, octets, (bits % 8) as u8),
-            ))
+            let placed = field(union, octets, (bits % 8) as u8);
+            if moves_past_a_mid_octet_union_start(placement) && crosses_octet_boundary(placed) {
+                // Observed members all stayed inside one octet.
+                return Err(ImageError::Unsupported {
+                    what: format!(
+                        "{parameter}: a mid-octet union member crossing an octet boundary"
+                    ),
+                });
+            }
+            Ok((union.code_segment.as_str(), placed))
         }
         // A property is not a segment: [`property::property_images`] places it.
         ParameterPlacement::Property(_) => Err(unwritable_placement(parameter, "Property")),
@@ -2103,6 +2109,9 @@ mod tests {
             bit_offset: 6,
         };
         assert!(field_of("P", &far, 1).is_err());
+        // Unobserved: a mid-octet member running into the next octet.
+        assert!(field_of("P", &member(0, 4), 3).is_err());
+        assert_eq!(at(&member(0, 0), 7), (460, 2, 7));
     }
 
     const ID: &str = "M-0001_A-0001-01-0000";

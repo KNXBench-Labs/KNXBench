@@ -54,16 +54,20 @@ project: for every device ETS records which group objects are active
    project ETS offered both objects for linking. With the assignment's value
    (equal to the stored one) evaluated, KNXBench's active objects equal ETS's
    on all 51 tester devices; without it, on 50.
-2. **`[V]` An unnamed controller that selects by value selects nothing.**
-   With the shown LED-status controller at "always on" (member value 1) and
-   the unnamed one at its default (member value 0), ETS wrote `01`. ETS also
-   listed exactly four channels for the push-button device (general, LED
-   management, button 1, information): the two channels under
-   `Push-button 5-6` were not shown, although its value 0 selects them.
+2. **`[V]` An unnamed controller competing with a shown one selects
+   nothing.** The unnamed LED-status controller's branches set the same
+   references as the shown one's. With the shown controller at "always on"
+   (member value 1) and the unnamed one at its default (member value 0), ETS
+   wrote `01`. ETS also listed exactly four channels for the push-button
+   device (general, LED management, button 1, information): the two channels
+   under `Push-button 5-6`, an unnamed controller with no competitor, were not
+   shown although its value 0 selects them. KNXBench keeps evaluating that
+   kind (see *What stays open*); its objects stay inactive either way.
 3. **`[V]` An allocation longer than its segment writes the segment.** ETS
    logged the allocation `Memory[$43FE-$5C23]` but sent memory writes for the
    segment's 1,457 octets only; the simulator capture contains no write past
-   `49AEh`.
+   `49AEh`. That allocation sets checksum control (`SegFlags="128"`), so the
+   short write was observed with it on.
 4. **`[V]` A mid-octet union adds the bit offsets.** With the union at bit 2,
    members at bit 3 (3 bits, value 4), bit 4 (2 bits, values 3 and 2) and
    bit 5 (1 bit, value 1) were written at bit 5, 6, 6 and 7 of the union's
@@ -79,21 +83,20 @@ sensor. Both union octets and the LED-status octet match.
 
 In the tester project four devices move from `unsupported` to `untested`: the
 push-button sensor 0.2.49 and the binary inputs 0.2.7, 0.2.63 and 0.2.66
-(10 unsupported, 65 untested). No other device's plan or image octets change;
-for 32 push-button devices of the related program `M-0006_A-E052-12-3406`,
-six or eight parameter fields under `Push-button 5-6` are no longer counted as
-written, with unchanged segment octets and masks (their values equal the
-template).
+(10 unsupported, 65 untested). No other device's plan or image changes.
 
 ## What stays open
 
 - `Assign` is still not executed: a controller whose assignment yields a value
   other than the stored one, or an unknown one, is reported
   (`AssignedControllerDiffers`) and the download refused.
-- The unnamed-controller rule rests on one program. A `TypeNone` or
-  default-only `choose` (unconditional structure, common in other
-  manufacturers' programs) and a `choose` with a default branch keep being
-  read; those were not observed here.
-- The mid-octet union reading was observed for mask `0701h` programs only;
-  the legacy System-1 and System-2 image layouts keep refusing such members.
+- The unnamed-controller rule rests on one program and is limited to
+  controllers that compete with a shown one for the same reference. Unnamed
+  controllers without a competitor, such as `Push-button 5-6`, are still
+  evaluated, so KNXBench lists two channels ETS hides (no objects or octets
+  differ). A broader rule lost the refusal of illegal hidden selector values
+  in review and was not taken.
+- The mid-octet union reading was observed for mask `0701h` programs only,
+  with members inside one octet; members crossing an octet and the legacy
+  System-1 and System-2 image layouts keep refusing.
 - No device confirmed any of this; the downloads stay `untested`.

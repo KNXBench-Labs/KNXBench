@@ -14,6 +14,14 @@ Priority order: **Correctness → Data Integrity → Compatibility → Maintaina
 
 Entry points: `docs/OPEN_WORK.md` (everything not done), `docs/status/LEDGER.md` (per-ID status of record), `docs/IMPLEMENTATION_STATUS.md`, `docs/ROADMAP.md`, `docs/KNOWN_LIMITATIONS.md`, `docs/DEVELOPER_PITFALLS.md`, `docs/adr/` (architecture decisions), `docs/VERIFICATION.md` (gates and commands).
 
+## Code Navigation (graphify)
+
+Every coding session can use the local [graphify](https://github.com/Graphify-Labs/graphify) code graph of `origin/main` (offline, tree-sitter, code only).
+
+- Graph: `<sources>/KNXBench-graphify/graphify-out/graph.json`, a dedicated detached worktree next to the checkout, refreshed automatically every 15 minutes. Only its refresh script moves it; do not run `graphify update` there, edit, commit in or retire it. Queries only read and also work from a sandbox.
+- Before broad searches, orient with `GRAPHIFY_BACKEND=none graphify query "<question>" --graph <graph.json>`; also `graphify explain "<path>::<Symbol>"` and `graphify affected "<path>::<Symbol>"`. Never run the semantic pass over `docs/`.
+- The graph is a navigation aid, not evidence: it shows `origin/main` at its last refresh, not your branch. Confirm every finding in the source. If the graph is missing, work without it.
+
 ## Architecture
 
 ```text

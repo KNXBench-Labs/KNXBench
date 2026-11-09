@@ -138,17 +138,18 @@ pub enum LoadStep {
         /// `@Writable`.
         writable: bool,
     },
-    /// `LdCtrlWriteProp` with `@Count` and `@Verify="false"`: write the
-    /// parameters placed in the property; an `@AppliesTo` must name `full`.
-    /// An `@InlineData` it also carries is kept for the planner to judge
-    /// (ADR-0162).
+    /// `LdCtrlWriteProp` with `@Verify="false"` and either `@Count` or neither
+    /// `@Count` nor `@InlineData`: write the parameters placed in the
+    /// property; an `@AppliesTo` must name `full`. An `@InlineData` it also
+    /// carries is kept for the planner to judge (ADR-0162).
     WriteParameterProp {
         /// `@ObjIdx`.
         object_index: u8,
         /// `@PropId`.
         property_id: u8,
-        /// `@Count`: how many elements, from index 1.
-        count: u16,
+        /// `@Count`: how many elements, from index 1; `None` when absent,
+        /// so the declared `MaxElements` decides (ADR-0167).
+        count: Option<u16>,
         /// `@InlineData`, decoded from hex, when present.
         inline_data: Option<Vec<u8>>,
     },
@@ -1078,6 +1079,9 @@ impl<'a> Parser<'a> {
                     &["ObjIdx", "PropId", "Count", "Verify"]
                 }
             }
+            // Neither `Count` nor `InlineData`: filled by parameters over the
+            // declared elements (ADR-0167).
+            "LdCtrlWriteProp" if a.get("InlineData").is_none() => &["ObjIdx", "PropId", "Verify"],
             _ => return Ok(None),
         };
         let exact = a
@@ -1115,7 +1119,7 @@ impl<'a> Parser<'a> {
             _ => LoadStep::WriteParameterProp {
                 object_index: octet("ObjIdx")?,
                 property_id: octet("PropId")?,
-                count: word("Count")?,
+                count: a.get("Count").map(|_| word("Count")).transpose()?,
                 inline_data: a
                     .get("InlineData")
                     .map(|text| self.hex(name, text))
@@ -1652,7 +1656,7 @@ mod tests {
             LoadStep::WriteParameterProp {
                 object_index: 6,
                 property_id: 52,
-                count: 2,
+                count: Some(2),
                 inline_data: None,
             }
         );
@@ -1919,7 +1923,7 @@ mod tests {
                 LoadStep::WriteParameterProp {
                     object_index: 8,
                     property_id: 52,
-                    count: 17,
+                    count: Some(17),
                     inline_data: None,
                 },
             ]
@@ -1932,8 +1936,20 @@ mod tests {
             vec![LoadStep::WriteParameterProp {
                 object_index: 6,
                 property_id: 52,
-                count: 6,
+                count: Some(6),
                 inline_data: Some(vec![0; 10]),
+            }]
+        );
+        // Neither `Count` nor `InlineData` (ADR-0167): the declared elements decide.
+        assert_eq!(
+            steps(
+                r#"<LdCtrlWriteProp ObjIdx="11" PropId="52" Verify="false" AppliesTo="full,par" />"#
+            ),
+            vec![LoadStep::WriteParameterProp {
+                object_index: 11,
+                property_id: 52,
+                count: None,
+                inline_data: None,
             }]
         );
         // Outside the complete download, verified, or an unknown attribute:
@@ -1943,7 +1959,8 @@ mod tests {
             r#"<LdCtrlWriteProp ObjIdx="8" PropId="52" Count="1" Verify="true" />"#,
             r#"<LdCtrlWriteProp ObjIdx="6" PropId="52" Count="6" Verify="true" InlineData="00" AppliesTo="full,par" />"#,
             r#"<LdCtrlWriteProp ObjIdx="6" PropId="52" Count="6" Verify="false" InlineData="00" AppliesTo="par" />"#,
-            r#"<LdCtrlWriteProp ObjIdx="11" PropId="52" Verify="false" AppliesTo="full,par" />"#,
+            r#"<LdCtrlWriteProp ObjIdx="11" PropId="52" AppliesTo="full,par" />"#,
+            r#"<LdCtrlWriteProp ObjIdx="11" PropId="52" Verify="false" AppliesTo="grp" />"#,
             r#"<LdCtrlMasterReset EraseCode="5" ChannelNumber="0" Other="1" />"#,
             r#"<LdCtrlDeclarePropDesc ObjIdx="8" PropId="52" PropType="PDT_UNSIGNED_CHAR" MaxElements="1" ReadAccess="0" WriteAccess="0" Writable="maybe" />"#,
         ] {

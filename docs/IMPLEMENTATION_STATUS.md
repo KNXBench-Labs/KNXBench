@@ -12,6 +12,22 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Property writes without a count (9 November 2026; issue #10 follow-up)
+
+A parameter-filled `LdCtrlWriteProp` that carries neither `Count` nor
+`InlineData` now plans
+([ADR-0167](adr/0167-property-writes-without-a-count.md),
+[research](research/2026-11-08-property-writes-without-a-count.md)): it writes
+the elements its `LdCtrlDeclarePropDesc` declares, the parameters' bits and zero
+elsewhere, without reading the device, as ETS 6.4 did. A property without
+parameters, an undeclared one, or parameters past the declared elements stay
+refused. KNXBench downloads to the simulator matched ETS in the function
+property commands, every written property and element count, and this
+property's octet for both parameter values; other differences are the known
+device-held bits and KL-145. In the tester project the switch actuator 0.2.67
+moves from `unsupported` to `untested` (14 unsupported, 61 untested); the plan
+names `declared-size-without-count`. No hardware was written.
+
 ## Manual screenshots after Alpha 20 (9 November 2026)
 
 Docs and media only, no application change. All 59 manual stills and the three

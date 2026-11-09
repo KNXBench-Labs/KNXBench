@@ -856,6 +856,9 @@ is the remaining copy defect.
   follow ETS 6.4 too (ADR-0162), so Hager dimming actuators like the tester's
   plan as well. Other devices with time parameters in a plain unit now plan too,
   also untested.
+- **Changed after Alpha 20:** a property write that names no element count
+  writes the elements the program declares for that property, as ETS 6.4 does
+  (ADR-0167), so the tester's switch actuator 0.2.67 plans too, untested.
 - **Consequence:** keep the ETS project of such a device until a KNXBench
   download has been checked on the device.
 - **Details:** [research](../research/2026-11-08-property-placed-parameters.md)

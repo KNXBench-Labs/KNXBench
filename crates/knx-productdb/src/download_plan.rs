@@ -46,7 +46,7 @@ use crate::inference::Inference;
 
 mod property_steps;
 pub use property_steps::{
-    INLINE_DATA_FILLS_PROPERTY, MASTER_RESET_AS_FUNCTION_PROPERTY,
+    DECLARED_SIZE_WITHOUT_COUNT, INLINE_DATA_FILLS_PROPERTY, MASTER_RESET_AS_FUNCTION_PROPERTY,
     PROPERTY_WITHOUT_PARAMETERS_NOT_SENT, SHORT_INLINE_DATA_READS_DEVICE,
 };
 
@@ -497,9 +497,15 @@ pub fn plan_memory_download_with_inferences(
                 object_index,
                 property_id,
                 property_type,
+                max_elements,
                 writable,
                 ..
-            } => properties.declare(*object_index, *property_id, property_type, *writable)?,
+            } => properties.declare(
+                (*object_index, *property_id),
+                property_type,
+                *max_elements,
+                *writable,
+            )?,
             LoadStep::WriteParameterProp {
                 object_index,
                 property_id,
@@ -1138,9 +1144,64 @@ mod tests {
         LoadStep::WriteParameterProp {
             object_index,
             property_id: 52,
-            count,
+            count: Some(count),
             inline_data,
         }
+    }
+
+    fn write_without_count(object_index: u8) -> LoadStep {
+        LoadStep::WriteParameterProp {
+            object_index,
+            property_id: 52,
+            count: None,
+            inline_data: None,
+        }
+    }
+
+    /// `[V]` ETS 6.4 against KNXBench's simulator (ADR-0167): without `Count`
+    /// the declared `MaxElements` are written, every bit no parameter owns as
+    /// zero, and nothing is read; a property without parameters is refused.
+    #[test]
+    fn a_write_without_count_writes_the_declared_elements_and_reads_nothing() {
+        // `declare_at` declares four elements; the image places three octets.
+        let (plan, inferences) = plan_memory_download_with_inferences(&property_image(vec![
+            declare("PDT_UNSIGNED_CHAR"),
+            write_without_count(8),
+        ]))
+        .unwrap();
+        assert!(plan
+            .steps
+            .contains(&MemoryDownloadStep::WritePropertyParameters {
+                object_index: 8,
+                property_id: 52,
+                elements: 4,
+                octets: vec![0x01, 0x78, 0x00, 0x00],
+                owned: vec![0xFF; 4],
+            }));
+        let declared = inferences
+            .iter()
+            .find(|inference| inference.rule == DECLARED_SIZE_WITHOUT_COUNT)
+            .expect("the rule is named");
+        assert!(declared.detail.starts_with("1 "), "{}", declared.detail);
+
+        let reason = |steps: Vec<LoadStep>| match plan_memory_download(&property_image(steps)) {
+            Err(DownloadPlanError::PropertyParameters { reason, .. }) => reason,
+            other => panic!("{other:?}"),
+        };
+        // A property without parameters: unobserved.
+        assert!(reason(vec![
+            declare("PDT_UNSIGNED_CHAR"),
+            write_parameters(3),
+            declare_at(10, "PDT_UNSIGNED_CHAR"),
+            write_without_count(10),
+        ])
+        .contains("holds no parameter"));
+        // Parameters past the declared elements.
+        let mut small = declare("PDT_UNSIGNED_CHAR");
+        if let LoadStep::DeclarePropDesc { max_elements, .. } = &mut small {
+            *max_elements = 2;
+        }
+        assert!(reason(vec![small, write_without_count(8)]).contains("MaxElements"));
     }
 
     /// `[V]` ETS 6.4 against KNXBench's simulator (ADR-0162): an all-zero

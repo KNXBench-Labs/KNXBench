@@ -41,6 +41,16 @@ Synthetic tests only; no ETS, bus or device involved.
   refused write reverts), CSV toggle (off by default, absent from the File menu, confirmation text,
   same choice on confirmation, disabled without project), API bodies.
 
+## Follow-up for the next website stills
+
+`apps/knx-web/e2e/release-media.shots.ts` still waits for the read-only
+`.ga-description` row and is left unchanged on purpose: it captures the tagged
+Alpha 20 server, and `website/media.json` pins its SHA-256 as the stills'
+provenance. When stills are next captured from a release with this editor,
+switch both description checks to `.ga-description-editor` with `toHaveValue`
+(verified: the release-media capture passes 1/1 that way against this code) and
+refresh the provenance together with the stills.
+
 ## Not claimed
 
 No `Comment` field or column, no range descriptions, no rich-text editing, no

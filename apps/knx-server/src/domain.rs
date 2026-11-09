@@ -6232,6 +6232,10 @@ fn diagnostic_kind_and_message(
             Kind::UnresolvedTextPlaceholder,
             "A text placeholder had no matching module argument and was left as written.",
         ),
+        Diagnostic::AssignedControllerDiffers { .. } => (
+            Kind::AssignedControllerDiffers,
+            "A hidden choice's controlling parameter is set by an assignment KNXBench does not run, to a different value; the result is incomplete.",
+        ),
     }
 }
 
@@ -9788,6 +9792,16 @@ mod tests {
                 },
                 Kind::UnresolvedTextPlaceholder,
                 "A text placeholder had no matching module argument and was left as written.",
+            ),
+            (
+                Diagnostic::AssignedControllerDiffers {
+                    assign_node: 1,
+                    param_ref: "x".to_string(),
+                    assigned_value: Some("1".to_string()),
+                    observed_value: Some("0".to_string()),
+                },
+                Kind::AssignedControllerDiffers,
+                "A hidden choice's controlling parameter is set by an assignment KNXBench does not run, to a different value; the result is incomplete.",
             ),
         ];
 

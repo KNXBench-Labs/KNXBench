@@ -2094,6 +2094,8 @@ export const messages: Record<MessageKey, string> = {
     "Ein Modulargument konnte nicht der Deklaration des Moduls zugeordnet werden und wurde ignoriert.",
   "parameters.diagnostic.unsupportedModuleArgumentKind":
     "Ein Modulargument verwendet eine Art, die diese Version nicht interpretiert, und wurde ignoriert.",
+  "parameters.diagnostic.assignedControllerDiffers":
+    "Der steuernde Parameter einer verborgenen Auswahl wird durch eine Zuweisung, die KNXBench nicht ausführt, auf einen anderen Wert gesetzt; das Ergebnis ist unvollständig.",
   "parameters.diagnostic.unsupportedControlKind": "Der steuernde Parameter einer Auswahl hat einen nicht unterstützten Typ; ihre Zweige wurden nicht ausgewertet.",
   "parameters.diagnostic.evaluationWorkBudgetExhausted": "Dieses Programm hat die Auswertungsgrenze überschritten; seine unvollständige Parameteransicht ist schreibgeschützt.",
   "parameters.diagnostic.parameterAccessReadOnly": "Einige Felder hat der Hersteller schreibgeschützt oder verborgen (Access); sie sind nicht beschreibbar.",

@@ -91,4 +91,5 @@ Defaults first, then two configured variants of one push-button program.
   (KL-145), KNXBench keeps the product's flag.
 - Property-placed parameters, `TypeTime`, `LdCtrlMasterReset` and a union
   starting mid-octet with members at other bit offsets are separate
-  boundaries.
+  boundaries; the mid-octet union was settled on 9 November
+  ([note](2026-11-09-assigned-controllers-and-short-segments.md)).

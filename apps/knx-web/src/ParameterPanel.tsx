@@ -383,6 +383,7 @@ const PARAMETER_DIAGNOSTIC_MESSAGE_KEYS: Record<ParameterDiagnosticKind, Transla
   moduleArgumentNotBound: "parameters.diagnostic.moduleArgumentNotBound",
   unsupportedModuleArgumentKind: "parameters.diagnostic.unsupportedModuleArgumentKind",
   unresolvedTextPlaceholder: "parameters.diagnostic.unresolvedTextPlaceholder",
+  assignedControllerDiffers: "parameters.diagnostic.assignedControllerDiffers",
   unsupportedControlKind: "parameters.diagnostic.unsupportedControlKind",
   evaluationWorkBudgetExhausted: "parameters.diagnostic.evaluationWorkBudgetExhausted",
   parameterAccessReadOnly: "parameters.diagnostic.parameterAccessReadOnly",

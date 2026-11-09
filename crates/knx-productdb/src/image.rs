@@ -757,6 +757,14 @@ fn build_image_selected(
             written.insert(parameter.to_string(), (parameter_ref.to_string(), value));
             continue;
         }
+        if layout.legacy() && moves_past_a_mid_octet_union_start(placement) {
+            // ADR-0168 rests on mask 0701h images; legacy layouts keep the refusal.
+            return Err(ImageError::Unsupported {
+                what: format!(
+                    "{parameter}: a union member offset inside a union that starts mid-octet"
+                ),
+            });
+        }
         let (segment_id, field) = field_of(parameter, placement, types.size(parameter_ref)?)?;
         if let Some(defaults) = &defaults {
             if experimental.is_none() {
@@ -1269,6 +1277,16 @@ fn unwritable_placement(parameter: &str, name: &str) -> ImageError {
     }
 }
 
+/// Whether `placement` is a union member away from the start of a union that
+/// itself starts inside an octet.
+fn moves_past_a_mid_octet_union_start(placement: &ParameterPlacement) -> bool {
+    matches!(
+        placement,
+        ParameterPlacement::UnionMember { union, offset, bit_offset }
+            if union.bit_offset != 0 && (*offset != 0 || *bit_offset != 0)
+    )
+}
+
 /// The segment and field a parameter's placement puts it at.
 /// Whether `field` touches more than one octet, so that an octet order
 /// decides where its bits go (KL-170).
@@ -1299,30 +1317,36 @@ pub(crate) fn field_of<'a>(
             field(memory, 0, memory.bit_offset),
         )),
         // `[V]` The union's placement plus the member's own offsets
-        // (module documentation). A member at 0/0 simply is the union's
-        // placement; any other member of a union that itself starts inside
-        // an octet has no attested reading.
-        ParameterPlacement::UnionMember {
-            union,
-            offset: 0,
-            bit_offset: 0,
-        } => Ok((
-            union.code_segment.as_str(),
-            field(union, 0, union.bit_offset),
-        )),
+        // (module documentation). A union starting inside an octet adds its
+        // bit offset to the member's, carrying whole octets into the
+        // offset: ETS 6.4 placed members at union bit 2 + member bits 3
+        // and 4 that way (docs/research/2026-11-09-assigned-controllers-and-short-segments.md).
         ParameterPlacement::UnionMember {
             union,
             offset,
             bit_offset,
-        } if union.bit_offset == 0 => Ok((
-            union.code_segment.as_str(),
-            field(union, *offset, *bit_offset),
-        )),
-        ParameterPlacement::UnionMember { .. } => Err(ImageError::Unsupported {
-            what: format!(
-                "{parameter}: a union member offset inside a union that starts mid-octet"
-            ),
-        }),
+        } => {
+            let bits = u32::from(union.bit_offset) + u32::from(*bit_offset);
+            let octets = offset
+                .checked_add(bits / 8)
+                .filter(|octets| union.offset.checked_add(*octets).is_some())
+                .ok_or_else(|| ImageError::Unsupported {
+                    what: format!(
+                        "{parameter}: union member offset exceeds 32-bit source placement"
+                    ),
+                })?;
+            // `bits % 8 < 8`.
+            let placed = field(union, octets, (bits % 8) as u8);
+            if moves_past_a_mid_octet_union_start(placement) && crosses_octet_boundary(placed) {
+                // Observed members all stayed inside one octet.
+                return Err(ImageError::Unsupported {
+                    what: format!(
+                        "{parameter}: a mid-octet union member crossing an octet boundary"
+                    ),
+                });
+            }
+            Ok((union.code_segment.as_str(), placed))
+        }
         // A property is not a segment: [`property::property_images`] places it.
         ParameterPlacement::Property(_) => Err(unwritable_placement(parameter, "Property")),
         ParameterPlacement::Unmodelled { name, .. } => Err(unwritable_placement(parameter, name)),
@@ -2038,6 +2062,57 @@ mod tests {
     use knx_core::GroupAddress;
 
     mod number_bounds;
+
+    /// ADR-0168: a union starting at bit 2 adds its bit offset to the
+    /// member's, carrying into the next octet; the placements are those of
+    /// the observed ETS 6.4 images. Legacy layouts keep the refusal.
+    #[test]
+    fn a_mid_octet_union_adds_its_bit_offset_to_the_members() {
+        let union = |bit_offset| MemoryPlacement {
+            code_segment: "AS-43FE".into(),
+            offset: 460,
+            bit_offset,
+        };
+        let member = |offset, bit_offset| ParameterPlacement::UnionMember {
+            union: union(2),
+            offset,
+            bit_offset,
+        };
+        let at = |placement: &ParameterPlacement, size| {
+            let (segment, field) = field_of("P", placement, size).unwrap();
+            assert_eq!(segment, "AS-43FE");
+            (field.offset, field.bit_offset, field.size_in_bit)
+        };
+        assert_eq!(at(&member(0, 0), 6), (460, 2, 6));
+        assert_eq!(at(&member(0, 3), 3), (460, 5, 3));
+        assert_eq!(at(&member(0, 4), 2), (460, 6, 2));
+        assert_eq!(at(&member(0, 5), 1), (460, 7, 1));
+        assert_eq!(at(&member(0, 6), 2), (461, 0, 2));
+        assert_eq!(at(&member(1, 7), 1), (462, 1, 1));
+        let aligned = ParameterPlacement::UnionMember {
+            union: union(0),
+            offset: 1,
+            bit_offset: 3,
+        };
+        assert_eq!(at(&aligned, 1), (461, 3, 1));
+
+        assert!(moves_past_a_mid_octet_union_start(&member(0, 4)));
+        assert!(moves_past_a_mid_octet_union_start(&member(1, 0)));
+        assert!(!moves_past_a_mid_octet_union_start(&member(0, 0)));
+        assert!(!moves_past_a_mid_octet_union_start(&aligned));
+        let far = ParameterPlacement::UnionMember {
+            union: MemoryPlacement {
+                offset: u32::MAX,
+                ..union(2)
+            },
+            offset: 0,
+            bit_offset: 6,
+        };
+        assert!(field_of("P", &far, 1).is_err());
+        // Unobserved: a mid-octet member running into the next octet.
+        assert!(field_of("P", &member(0, 4), 3).is_err());
+        assert_eq!(at(&member(0, 0), 7), (460, 2, 7));
+    }
 
     const ID: &str = "M-0001_A-0001-01-0000";
 

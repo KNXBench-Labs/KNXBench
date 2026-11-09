@@ -27,7 +27,21 @@ on a neutral weekday so no date-dependent startup joke reaches a still, then
 return to the real time. Exact files, sizes and hashes are in the
 [manifest](media-manifest.json).
 
+## Website highlight media (9 November 2026)
+
+Ten PNGs and the [capture manifest](releases/alpha20/website/media-manifest.json) are in
+`releases/alpha20/website/`. They show the `v0.1.0-alpha.20` tag (`1d3c7d43`): production
+frontend, actual `knx-server` and the fictional Sample house, captured in an isolated
+loopback-only namespace with no application response replaced. Scenes as below, plus an
+ETS-style group-address CSV imported in Windows-1252 (descriptions on four addresses, one
+new address with its datapoint type); its still shows the new address with description and
+declared type. The re-recorded group-details clip comes from the same run; the project-work
+and bus-flow clips remain the Alpha 14 recordings below.
+
 ## Website highlight media (27 October 2026)
+
+*Superseded on the website by the Alpha 20 captures above; the files stay as history.*
+
 
 Nine PNGs and the [capture manifest](releases/alpha17/website/media-manifest.json) are in
 `releases/alpha17/website/`. They show the `v0.1.0-alpha.17` tag (`a9ea32d7`): production

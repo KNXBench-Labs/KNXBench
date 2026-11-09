@@ -7,6 +7,26 @@ remote IPv6 HTTPS were verified on 2026-10-09; Pages actions now use Node 24.
 Owner privacy review and optional WebKit evidence remain separate follow-ups.
 Decision: [ADR-0095](adr/0095-static-marketing-companion.md).
 
+## Alpha 20 refresh (9 November 2026)
+
+Owner request: update the website to Alpha 20, refresh the screenshots and the feature list.
+
+- **Stills and clip:** hero, LCARS/CRT gallery, the six highlight stills and the
+  group-details clip are new captures of the `v0.1.0-alpha.20` tag (`1d3c7d43`) with the
+  updated `release-media.shots.ts` (Settings is a centre page since Alpha 19, so the theme
+  helper uses it and its Back button). PNGs and manifest: `docs/assets/releases/alpha20/website/`.
+  `project-work` and `bus-flow` stay the Alpha 14 recordings.
+- **New highlight 07 with still:** ETS6 group-address CSV import with an explicit UTF-8 /
+  Windows-1252 choice, descriptions and datapoint types for created addresses
+  (`docs/FEATURES.md`, ADR-0164). The capture imports a fictional Windows-1252 CSV through the
+  real upload picker. The still spans both grid columns (image beside text from 801 px,
+  stacked below); `verify-highlights.js` checks both layouts.
+- **Copy:** object priorities join the parameter highlight, the status-bar connection joins
+  the bus highlight, Compare from the device editor joins the paperwork highlight, and the
+  personality section names Rail in light and dark. USB/serial and TCP tunnelling stay out
+  of the highlights (one adapter / no real interface tested), as do the *untested* download
+  families and the editing-speed figure.
+
 ## Highlights instead of release notes (27 October 2026)
 
 Owner request: take the release-specific material off the landing page, list only the

@@ -1,0 +1,80 @@
+{
+  "schema": "knxbench-website-highlights-media/1",
+  "captured_on": "2026-11-09",
+  "application_release": "v0.1.0-alpha.20",
+  "application_source_commit": "1d3c7d433d2b2139a1ecbfac1314bacc4ef9fc22",
+  "knx_server_version": "knx-server 0.1.0-alpha.20+g1d3c7d433",
+  "server_binary_sha256": "a6f0ffcdeb11958e499e48542474e7994406922b87e40d6f2cb7e808e7ac3f61",
+  "frontend": "production build (npm ci && npm run build) of the tagged source",
+  "network": "isolated loopback-only user/network namespace (only interface: lo)",
+  "data": "fictional schema-11 Sample house (tools/manual_sample_project.py); fictional ETS-style group-address CSV (Windows-1252, tab-separated) uploaded through the file picker; fictional demo product package in a vendor-style ZIP, previewed only",
+  "captures": {
+    "stills_and_group_details_clip": {
+      "spec": {
+        "path": "apps/knx-web/e2e/release-media.shots.ts",
+        "sha256": "0ac744b52eb71e27eccec58d94b16987de957b80e31879ecbd1ee4e6d08ae60b",
+        "note": "tag spec plus the Settings-page theme helper and the CSV scene; committed byte-identical"
+      },
+      "config": {
+        "path": "apps/knx-web/playwright.release-media.config.ts",
+        "sha256": "3c0e8562064c37fb071a84ca2d8f515b2796626e166cd7d3c1ed2d0f1f97b45d"
+      },
+      "result": {
+        "passed": 1,
+        "failed": 0,
+        "skipped": 0
+      },
+      "server": "actual knx-server; no application response replaced",
+      "refused_requests_asserted_absent": "support diagnose/export, device-diagnostics start/export, device download/address start, catalogue install/apply",
+      "notes": "CSV import applied 1 created / 4 updated addresses (descriptions; the new address takes the CSV datapoint type); device wizard cancelled at the review step (nothing created); vendor ZIP stopped at the bound preview (nothing installed); sample saved as .knxdb in the scratch data directory so a named version could be created"
+    }
+  },
+  "stills": {
+    "graphite-addresses.png": {
+      "sha256": "cd814e0618dc8c993cb15d664b78ac7f48ba58ee99f4d945251e87445c9e57df",
+      "website_asset": "graphite.webp"
+    },
+    "lcars-addresses.png": {
+      "sha256": "dd59ff288a73325ee258edcf568c02e07fb61a19177abfa756f4c60bf275825e",
+      "website_asset": "lcars.webp"
+    },
+    "user-modern-retro-green-crt-addresses.png": {
+      "sha256": "112f3548d024177b1a0400baebad37cc1dbc70470263e1a678fb18c87a278be6",
+      "website_asset": "crt.webp"
+    },
+    "graphite-import.png": {
+      "sha256": "ecc2539bc7fc84be571b53c1b860247068d282f7f3bb46cdcc185bfd7adf5eb4",
+      "website_asset": "highlight-import.webp"
+    },
+    "graphite-history.png": {
+      "sha256": "be6f0fa84f9fa1a44ccd0fa7d63de1980e3f87b56d5aae9cb728b67c521f666f",
+      "website_asset": "highlight-history.webp"
+    },
+    "graphite-device-wizard.png": {
+      "sha256": "af808797c308ae8f5556aceb8e45fed3ad5a5d387cda90eb16d48b7207890b26",
+      "website_asset": "highlight-wizard.webp"
+    },
+    "graphite-parameters.png": {
+      "sha256": "0b22ccdfd28fa40cd3221e182427851403c204a174b7a5827fdb876af4a094bb",
+      "website_asset": "highlight-parameters.webp"
+    },
+    "graphite-vendor-zip.png": {
+      "sha256": "f3045151c766c4e47da9f8ac9dabf15a2ab55d3bb50cd51dda7e88f9dbabfe56",
+      "website_asset": "highlight-catalogue.webp"
+    },
+    "graphite-search.png": {
+      "sha256": "96a6f4175d172a1129f33f25ae73c19ed164f7ad59dea536a0396ec93306b21b",
+      "website_asset": "highlight-search.webp"
+    },
+    "graphite-csv-description.png": {
+      "sha256": "90ce97d2844dab0a4de7a0ab8f2c63bf89680b8772861534a1507ca9bb40972b",
+      "website_asset": "highlight-csv.webp"
+    }
+  },
+  "clip": {
+    "group-details.mp4": {
+      "sha256": "7dccfd67e6f4fb5952273a2cfb6d93863fabc91c51b3128ed97c101ecff9d68e",
+      "poster": "group-details.webp, lossless WebP of the decoded frame at 4.0 s"
+    }
+  }
+}

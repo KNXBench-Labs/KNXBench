@@ -83,6 +83,13 @@ p { max-width: 68ch; }
 .highlight-grid article > p { color: var(--muted); font-size: 15px; }
 .highlight-grid .detail-note { color: var(--ink); font-size: 12px; margin-top: 18px; }
 .highlight-more { margin-top: 72px; }
+.highlight-grid article.wide { grid-column: 1 / -1; }
+@media (min-width: 801px) {
+  .highlight-grid article.wide { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 40px; align-content: start; }
+  .highlight-grid article.wide > figure { grid-column: 1; grid-row: 1 / span 5; margin: 0; }
+  .highlight-grid article.wide > :not(figure) { grid-column: 2; }
+  .highlight-grid article.wide .step { margin-top: 0; }
+}
 @media (max-width: 800px) { .highlight-grid { grid-template-columns: 1fr; } }
 .transcript { margin-top: 23px; color: var(--muted); font-size: 13px; }
 summary { cursor: pointer; width: fit-content; }

@@ -7,7 +7,7 @@ async (page) => {
     checks.push(name);
   };
   const assets = ['highlight-import.webp', 'highlight-history.webp', 'highlight-wizard.webp',
-    'highlight-parameters.webp', 'highlight-catalogue.webp', 'highlight-search.webp'];
+    'highlight-parameters.webp', 'highlight-catalogue.webp', 'highlight-search.webp', 'highlight-csv.webp'];
   for (const javaScriptEnabled of [true, false]) {
     const context = await page.context().browser().newContext({ javaScriptEnabled, reducedMotion: 'reduce' });
     try {
@@ -27,9 +27,9 @@ async (page) => {
           await tab.evaluate(() => document.fonts.ready);
           const section = tab.locator('#features');
           await section.scrollIntoViewIfNeeded();
-          assert(`${prefix}: nine highlights`, await section.locator('article').count() === 9);
-          assert(`${prefix}: numbered 01 to 09`, (await section.locator('.step').allTextContents()).join(',') ===
-            '01,02,03,04,05,06,07,08,09');
+          assert(`${prefix}: ten highlights`, await section.locator('article').count() === 10);
+          assert(`${prefix}: numbered 01 to 10`, (await section.locator('.step').allTextContents()).join(',') ===
+            '01,02,03,04,05,06,07,08,09,10');
           for (const asset of assets) {
             const image = section.locator(`img[src$="/${asset}"]`);
             await image.scrollIntoViewIfNeeded();
@@ -43,6 +43,13 @@ async (page) => {
               !!data.alt && data.width === data.declaredWidth && data.height === data.declaredHeight &&
               data.link.endsWith('/' + asset) && data.shown > 0);
           }
+          const wide = await section.locator('article.wide').evaluate(node => {
+            const image = node.querySelector('img').getBoundingClientRect();
+            const heading = node.querySelector('h3').getBoundingClientRect();
+            return { imageRight: image.right, imageBottom: image.bottom, headingLeft: heading.left, headingTop: heading.top };
+          });
+          assert(`${prefix}: wide highlight sits beside its text on wide screens and stacks on narrow ones`, width > 800
+            ? wide.imageRight <= wide.headingLeft : wide.imageBottom <= wide.headingTop);
           assert(`${prefix}: no release-specific sections`, await tab.locator('#release-features, #release-history').count() === 0);
           const main = await tab.locator('main').textContent();
           assert(`${prefix}: no release numbers in the page`, !/Alpha[ -]?\d|alpha\.\d|System-2|#30/.test(main));

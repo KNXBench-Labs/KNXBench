@@ -39,7 +39,8 @@ dpts: Array<string>,
  */
 dpt_detail?: GroupAddressDptDetail, 
 /**
- * The address's description (ADR-0164), byte-exact and read-only here.
+ * The address's description (ADR-0164), byte-exact; edited through
+ * `SetGroupAddressDescription`, never through this projection.
  * Omitted when none is known; an empty string is a description that
  * was written empty.
  */

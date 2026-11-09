@@ -1303,7 +1303,7 @@ with surrounding whitespace ignored; column order does not matter.
 | `Name` | the entry's name | **required**, must be non-empty |
 | `Central` | `true`/`false` | optional; accepted spellings (case-insensitive): `true`/`false`/`1`/`0`/`yes`/`no`; empty means "false" when creating a new address and "leave unchanged" when updating an existing one |
 | `Unfiltered` | `true`/`false` | same rules as `Central` |
-| `Description` | the address's description, byte-exact; empty when it has none (or an empty one) | optional; kept byte-exact; non-blank sets the description on create and update; blank (empty after trimming) means none on create and "leave unchanged" on update, so a cell never clears a description |
+| `Description` | the address's description, byte-exact; empty when it has none (or an empty one) | optional; kept byte-exact; non-blank sets the description on create and update; blank (empty after trimming) means none on create and "leave unchanged" on update; only the explicit *clear blank descriptions* option makes it remove an existing description, as a confirmed destructive change |
 | `DatapointType (read-only)` | the address's effective DPT ([ADR 0078](adr/0078-group-address-declared-dpt.md)): its own declaration where it applies, otherwise the linked communication objects' DPTs (unanimous → that DPT, none → empty, disagreement → empty plus one export warning naming the address); a declaration whose width differs from a linked object's → empty plus a warning naming the size difference | recognized and validated against the project, but **never applied**; changing the cell is an explicit row error rather than a silently ignored edit. The legacy `DatapointType` header remains accepted with the same semantics |
 | `MainGroup (read-only)` | the name of the containing main group range, if any | recognized and validated, never applied; legacy `MainGroup` remains accepted |
 | `MiddleGroup (read-only)` | the name of the containing middle group range, if any | recognized and validated, never applied; legacy `MiddleGroup` remains accepted |
@@ -1363,10 +1363,16 @@ undo step.
   placed into the innermost existing group range whose bounds already
   contain it, if any; if none contains it, the address is created without a
   range and the report says so. No range is ever created by a CSV import.
-- **It never clears a description and never applies `Comment`.** A blank
-  `Description` cell leaves an existing description alone; there is no
-  `Comment` column or group-address comment field. A description on a range
-  row of a profile file is reported and not imported.
+- **It clears a description only when asked, and never applies `Comment`.**
+  A blank `Description` cell leaves an existing description alone. With the
+  explicit option *clear blank descriptions* (`knx ga-import
+  --clear-blank-descriptions`, server `clearBlankDescriptions`, web checkbox) a
+  blank cell removes it instead; each removal is a destructive change
+  (`ClearDescription`) that needs the preview's confirmation token, and a file
+  without a `Description` column is refused with the option set
+  ([ADR-0164 amendment](adr/0164-group-address-description-and-csv-encoding.md#amendment--9-november-2026-editor-csv-removal-mcp)).
+  There is no `Comment` column or group-address comment field. A description on
+  a range row of a profile file is reported and not imported.
 
 **One server undo step.** A successful server/web import applies as one
 `Command::Batch`, so the whole import is one undo. The standalone CLI writes

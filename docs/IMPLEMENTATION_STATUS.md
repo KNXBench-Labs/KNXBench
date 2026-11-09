@@ -53,6 +53,21 @@ Main-only, no new release or physical gateway interoperability claim. Device/sca
 workflows remain UDP-only; broader WP-29 and KNX IP Secure are not closed.
 [Acceptance, failure history and limits](status/2026-11-08-optional-tcp-tunnelling.md).
 
+## Group-address description follow-ups (9 November 2026; KL-038b)
+
+The three KL-038b follow-ups ([ADR-0164 amendment](adr/0164-group-address-description-and-csv-encoding.md#amendment--9-november-2026-editor-csv-removal-mcp)):
+the web inspector edits a group address's description in a multi-line field
+(`POST /api/group-address-description`, undoable `SetGroupAddressDescription`;
+it writes only after typing, so CRLF texts are never rewritten by a visit, and
+an emptied field removes the description). CSV import keeps "blank = unchanged"
+by default; the explicit option *clear blank descriptions* (CLI
+`--clear-blank-descriptions`, server `clearBlankDescriptions`, web checkbox)
+turns a blank cell into a `ClearDescription` destructive change behind the
+existing preview token, which binds the option; files without a `Description`
+column are refused with it. MCP `get_group_address` documents the description and
+`search` matches it. Tested with synthetic unit, HTTP, CLI and component tests.
+[Record](status/2026-11-09-group-address-description-followups.md).
+
 ## Group-address descriptions and ETS CSV import (8 November 2026; KL-038b)
 
 Owner decisions of 8 November ([ADR-0164](adr/0164-group-address-description-and-csv-encoding.md)):
@@ -67,7 +82,8 @@ schema 19, table `group_address_description`, undoable
 authentic native-18 fixture written by the unchanged v18 writer pins this. CSV
 profiles and the native `Description` column apply descriptions; profile
 `DatapointType` declares the type of addresses the import creates. Diff, `.knxproj`
-comparison, selective import, projection (read-only in the inspector) and the
+comparison, selective import, projection (read-only in the inspector until the
+9 November follow-up above) and the
 documentation export include the description. Synthetic tests only; a local run
 against the private ETS6 exports is recorded in the delivery summary, not here.
 

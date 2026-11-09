@@ -35,6 +35,7 @@ const apiMock = vi.hoisted(() => ({
   deleteGroupAddress: vi.fn(),
   repairDevicePlacement: vi.fn(),
   repairLineOwner: vi.fn(),
+  setGroupAddressDescription: vi.fn(),
 }));
 
 vi.mock("./api", () => ({
@@ -824,21 +825,104 @@ describe("Inspector — group address type detail", () => {
     expect(host!.querySelector(".dpt-outcome")).toBeNull();
   });
 
-  // ADR-0164: the description is shown read-only; no editor is offered.
-  it("shows a description read-only and nothing when none is known", async () => {
+  // ADR-0164: the description is edited byte-exact; leaving the field
+  // untouched never writes, even when a textarea reports CRLF as LF.
+  function descriptionField(): HTMLTextAreaElement {
+    return host!.querySelector<HTMLTextAreaElement>('textarea[aria-label="Description"]')!;
+  }
+  function typeDescription(value: string) {
+    const field = descriptionField();
+    const setter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, "value")!.set!;
+    setter.call(field, value);
+    field.dispatchEvent(new Event("input", { bubbles: true }));
+  }
+  async function leaveDescription() {
+    await act(async () => descriptionField().dispatchEvent(new Event("focusout", { bubbles: true })));
+  }
+  function describedTree(description?: string): ProjectTree {
+    const tree = twoInstallationTree();
+    tree.installations[0].group_addresses = [{ ...ga(301, "Described", "1/0/2"), description }];
+    return tree;
+  }
+  afterEach(() => apiMock.setGroupAddressDescription.mockReset());
+
+  it("shows the stored description in an editor and writes nothing when it is only visited", async () => {
+    const text = "Zeile eins\r\nZeile zwei; \"zitiert\"";
+    await renderInspector({ kind: "group_address", id: 301 }, describedTree(text));
+    expect(descriptionField().value.replace(/\r\n/g, "\n")).toBe("Zeile eins\nZeile zwei; \"zitiert\"");
+    expect(host!.textContent).toContain("This description has Windows line breaks");
+    await leaveDescription();
+    // Typing the same text back is no change either.
+    await act(async () => typeDescription("Zeile eins\nZeile zwei; \"zitiert\""));
+    await leaveDescription();
+    expect(apiMock.setGroupAddressDescription).not.toHaveBeenCalled();
+  });
+
+  it("writes a typed description, and an emptied field removes it", async () => {
+    const applied = { ...describedTree("Neu"), can_undo: true };
+    apiMock.setGroupAddressDescription.mockResolvedValueOnce(applied);
+    const onApplied = await renderInspector({ kind: "group_address", id: 301 }, describedTree("Alt"));
+    expect(host!.textContent).not.toContain("Windows line breaks");
+    await act(async () => typeDescription("Neu"));
+    await leaveDescription();
+    expect(apiMock.setGroupAddressDescription).toHaveBeenCalledExactlyOnceWith(301, "Neu");
+    expect(onApplied).toHaveBeenCalledExactlyOnceWith(applied);
+
+    apiMock.setGroupAddressDescription.mockResolvedValueOnce(describedTree());
+    await act(async () => typeDescription(""));
+    await leaveDescription();
+    expect(apiMock.setGroupAddressDescription).toHaveBeenLastCalledWith(301, null);
+  });
+
+  it("never carries a draft to another address when the selection changes during a save", async () => {
+    let finish!: (tree: ProjectTree) => void;
+    apiMock.setGroupAddressDescription.mockReturnValueOnce(new Promise<ProjectTree>((done) => { finish = done; }));
     const tree = twoInstallationTree();
     tree.installations[0].group_addresses = [
-      { ...ga(301, "Described", "1/0/2"), description: "Beschreibung mit; Semikolon und \"Anführung\"" },
-      { ...ga(302, "Plain", "1/0/3") },
+      { ...ga(301, "A", "1/0/2"), description: "A old" },
+      { ...ga(302, "B", "1/0/3"), description: "B old" },
     ];
-    await renderInspector({ kind: "group_address", id: 301 }, tree);
-    expect(facts()).toEqual(expect.arrayContaining([
-      ["Description", "Beschreibung mit; Semikolon und \"Anführung\""],
-    ]));
-    const shown = host!.querySelector(".inspector-facts .ga-description");
-    expect(shown?.querySelector("input, textarea")).toBeNull();
-    await renderInspector({ kind: "group_address", id: 302 }, tree);
-    expect(host!.querySelector(".inspector-facts .ga-description")).toBeNull();
+    const onApplied = await renderInspector({ kind: "group_address", id: 301 }, tree);
+    await act(async () => typeDescription("A new"));
+    await leaveDescription();
+    // Same root: the inspector re-renders for B instead of mounting afresh.
+    await act(async () => {
+      root!.render(
+        <Inspector selection={{ kind: "group_address", id: 302 }} tree={tree}
+          deviceDetail={null} onApplied={onApplied} onDeleted={vi.fn()} />,
+      );
+    });
+    expect(descriptionField().value).toBe("B old");
+    await act(async () => finish(tree));
+    expect(descriptionField().value).toBe("B old");
+    await leaveDescription();
+    expect(apiMock.setGroupAddressDescription.mock.calls).toEqual([[301, "A new"]]);
+  });
+
+  it("saves text typed while an earlier save was still running", async () => {
+    let finish!: (tree: ProjectTree) => void;
+    apiMock.setGroupAddressDescription
+      .mockReturnValueOnce(new Promise<ProjectTree>((done) => { finish = done; }))
+      .mockResolvedValueOnce(describedTree("XY"));
+    await renderInspector({ kind: "group_address", id: 301 }, describedTree("Alt"));
+    await act(async () => typeDescription("X"));
+    await leaveDescription();
+    await act(async () => typeDescription("XY"));
+    await leaveDescription();
+    expect(apiMock.setGroupAddressDescription.mock.calls).toEqual([[301, "X"]]);
+    await act(async () => finish(describedTree("X")));
+    expect(apiMock.setGroupAddressDescription.mock.calls).toEqual([[301, "X"], [301, "XY"]]);
+    expect(descriptionField().value).toBe("XY");
+  });
+
+  it("offers an empty editor when no description is known and reverts a refused write", async () => {
+    apiMock.setGroupAddressDescription.mockRejectedValueOnce(new Error("group address 301 not found"));
+    await renderInspector({ kind: "group_address", id: 301 }, describedTree());
+    expect(descriptionField().value).toBe("");
+    await act(async () => typeDescription("Text"));
+    await leaveDescription();
+    expect(host!.querySelector(".field-error")?.textContent).toBe("group address 301 not found");
+    expect(descriptionField().value).toBe("");
   });
 });
 

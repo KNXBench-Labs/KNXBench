@@ -41,10 +41,12 @@ also on their descriptions and on types of new addresses.
   declared type; for an existing address it stays a read-only comparison.
 
 Remaining boundaries: header-less files stay refused (their layout cannot be
-known); other code pages, UTF-16 and detection are unsupported; a description
-cannot be cleared through CSV; files saved before native schema 19 keep
-imported descriptions only as retained source evidence until the project is
-re-imported; there is no description editor yet.
+known); other code pages, UTF-16 and detection are unsupported; files saved
+before native schema 19 keep imported descriptions only as retained source
+evidence until the project is re-imported. Since 9 November 2026 a blank cell
+removes a description only with the explicit, confirmed *clear blank
+descriptions* option, and the web inspector edits descriptions
+([ADR-0164 amendment](../adr/0164-group-address-description-and-csv-encoding.md#amendment--9-november-2026-editor-csv-removal-mcp)).
 
 This is not full hierarchy/metadata roundtrip, a new external export format,
 ESF/OPC support or general application interoperability. The historical record

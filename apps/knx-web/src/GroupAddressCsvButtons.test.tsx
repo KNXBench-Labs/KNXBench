@@ -478,3 +478,79 @@ describe("GroupAddressCsvButtons achievement events", () => {
     root.unmount();
   });
 });
+
+describe("GroupAddressCsvButtons — clearing blank descriptions", () => {
+  function clearBox(): HTMLInputElement {
+    return Array.from(host!.querySelectorAll("label"))
+      .find((label) => label.textContent === "Blank descriptions remove existing ones")!
+      .querySelector("input")!;
+  }
+
+  it("is off by default and sends nothing extra", async () => {
+    filePickerMock.pickOpenPath.mockResolvedValueOnce("/data/in.csv");
+    apiMock.importGroupAddressesCsv.mockResolvedValueOnce({
+      tree: fakeTree,
+      report: { separator: ";", rowsRead: 0, created: 0, updated: 0, unchanged: 0, ignoredColumns: [], problems: [] },
+    });
+    const { root } = await renderButtons();
+    expect(clearBox().checked).toBe(false);
+    await click(importButton());
+    expect(apiMock.importGroupAddressesCsv.mock.calls).toEqual([["/data/in.csv"]]);
+    root.unmount();
+  });
+
+  it("previews the removals, names them in the confirmation and confirms with the same choice", async () => {
+    filePickerMock.pickOpenPath.mockResolvedValueOnce("/data/blank.csv");
+    const confirm = vi.fn(() => true);
+    Object.defineProperty(window, "confirm", { configurable: true, value: confirm });
+    const report = { separator: ",", rowsRead: 2, created: 0, updated: 2, readdressed: 0, deleted: 0, unchanged: 0,
+      descriptionsCleared: 2,
+      destructiveChanges: [
+        { row: 2, action: "clearDescription", id: 5, sourceAddress: 2305, targetAddress: null, affectedLinks: [] },
+        { row: 3, action: "clearDescription", id: 6, sourceAddress: 2306, targetAddress: null, affectedLinks: [] },
+      ],
+      ignoredColumns: [], problems: [] };
+    apiMock.importGroupAddressesCsv
+      .mockResolvedValueOnce({ tree: fakeTree, report, applied: false, confirmationToken: "preview-token" })
+      .mockResolvedValueOnce({ tree: fakeTree, report, applied: true, confirmationToken: null });
+    const { root, onSummary } = await renderButtons();
+    await act(async () => { clearBox().click(); });
+    expect(clearBox().checked).toBe(true);
+    await click(importButton());
+    expect(apiMock.importGroupAddressesCsv.mock.calls).toEqual([
+      ["/data/blank.csv", undefined, undefined, "utf-8", true],
+      ["/data/blank.csv", "preview-token", undefined, "utf-8", true],
+    ]);
+    const message = (confirm.mock.calls[0] as unknown[])[0] as string;
+    expect(message).toContain("Blank Description cells remove 2 existing descriptions.");
+    expect(message).toContain("Remove description: raw address 2305 → —; communication-object ids: —");
+    expect(onSummary).toHaveBeenCalledWith(expect.stringContaining("2 descriptions removed"));
+    root.unmount();
+  });
+
+  it("resets after an import and asks only about descriptions for a removal-only plan", async () => {
+    filePickerMock.pickOpenPath.mockResolvedValueOnce("/data/blank.csv");
+    const confirm = vi.fn(() => false);
+    Object.defineProperty(window, "confirm", { configurable: true, value: confirm });
+    const report = { separator: ",", rowsRead: 1, created: 0, updated: 1, readdressed: 0, deleted: 0, unchanged: 0,
+      descriptionsCleared: 1,
+      destructiveChanges: [{ row: 2, action: "clearDescription", id: 5, sourceAddress: 2305, targetAddress: null, affectedLinks: [] }],
+      ignoredColumns: [], problems: [] };
+    apiMock.importGroupAddressesCsv.mockResolvedValueOnce({ tree: fakeTree, report, applied: false, confirmationToken: "t" });
+    const { root } = await renderButtons();
+    await act(async () => { clearBox().click(); });
+    await click(importButton());
+    const message = (confirm.mock.calls[0] as unknown[])[0] as string;
+    expect(message.startsWith("Apply this CSV plan? Blank Description cells remove 1 existing description.")).toBe(true);
+    expect(message).not.toContain("readdress 0");
+    expect(apiMock.importGroupAddressesCsv).toHaveBeenCalledTimes(1);
+    expect(clearBox().checked).toBe(false);
+    root.unmount();
+  });
+
+  it("is disabled without a project", async () => {
+    const { root } = await renderButtons(null);
+    expect(clearBox().disabled).toBe(true);
+    root.unmount();
+  });
+});

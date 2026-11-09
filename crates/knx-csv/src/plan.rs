@@ -43,6 +43,9 @@ pub struct CsvImportReport {
     pub readdressed: usize,
     pub deleted: usize,
     pub unchanged: usize,
+    /// Existing descriptions a blank cell clears (`CsvImportOptions`); each
+    /// is also listed in `destructive_changes`.
+    pub descriptions_cleared: usize,
     pub destructive_changes: Vec<CsvDestructiveChange>,
     pub ignored_columns: Vec<IgnoredColumn>,
     pub problems: Vec<CsvProblem>,
@@ -52,6 +55,19 @@ pub struct CsvImportReport {
 pub enum CsvDestructiveAction {
     Readdress,
     Delete,
+    /// A blank `Description` cell removes the address's description; only
+    /// planned when the import opts in (`CsvImportOptions`).
+    ClearDescription,
+}
+
+/// What the user chose for one import beyond the file itself.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct CsvImportOptions {
+    /// A blank `Description` cell on an existing address removes its
+    /// description instead of leaving it unchanged. Off by default, so a
+    /// re-imported export never wipes descriptions; a file without a
+    /// `Description` column is refused rather than read as "all blank".
+    pub clear_blank_descriptions: bool,
 }
 
 /// One explicitly requested destructive mutation and the stable-id links it
@@ -93,6 +109,21 @@ pub fn plan_import_into(
     parsed: &ParsedCsv,
     target_installation: Option<InstallationId>,
 ) -> ImportPlan {
+    plan_import_with(
+        project,
+        parsed,
+        target_installation,
+        CsvImportOptions::default(),
+    )
+}
+
+/// [`plan_import_into`] with the user's [`CsvImportOptions`].
+pub fn plan_import_with(
+    project: &Project,
+    parsed: &ParsedCsv,
+    target_installation: Option<InstallationId>,
+    options: CsvImportOptions,
+) -> ImportPlan {
     let installation = match target_installation {
         None => project.installations.first(),
         Some(id) => match project.installations.iter().find(|i| i.id == id) {
@@ -108,8 +139,20 @@ pub fn plan_import_into(
         .unwrap_or(&[]);
 
     let mut problems = parsed.problems.clone();
+    if options.clear_blank_descriptions && !parsed.description_column {
+        problems.push(CsvProblem {
+            row: None,
+            severity: Severity::Error,
+            detail:
+                "clearing blank descriptions needs a \"Description\" column; this file has none"
+                    .to_string(),
+        });
+    }
+    // Refused above without the column; nothing is planned as cleared then.
+    let clear_blank = options.clear_blank_descriptions && parsed.description_column;
     let mut commands = Vec::new();
     let mut created = 0usize;
+    let mut descriptions_cleared = 0usize;
     let mut updated = 0usize;
     let mut readdressed = 0usize;
     let mut deleted = 0usize;
@@ -176,7 +219,12 @@ pub fn plan_import_into(
                 created += 1;
             }
             (CsvAction::Upsert, Some(existing)) => {
-                if plan_update(row, existing, &mut commands) {
+                let outcome = plan_update(row, existing, clear_blank, &mut commands);
+                if outcome.cleared_description {
+                    descriptions_cleared += 1;
+                    destructive_changes.push(clear_description_change(row, existing));
+                }
+                if outcome.changed {
                     updated += 1;
                 } else {
                     unchanged += 1;
@@ -230,7 +278,10 @@ pub fn plan_import_into(
                     address: target,
                     range,
                 });
-                plan_update(row, existing, &mut commands);
+                if plan_update(row, existing, clear_blank, &mut commands).cleared_description {
+                    descriptions_cleared += 1;
+                    destructive_changes.push(clear_description_change(row, existing));
+                }
             }
             (CsvAction::Delete, Some(existing)) => {
                 let affected_links = affected_links(project, existing.id);
@@ -283,6 +334,7 @@ pub fn plan_import_into(
             readdressed,
             deleted,
             unchanged,
+            descriptions_cleared,
             destructive_changes,
             ignored_columns: parsed.ignored_columns.clone(),
             problems,
@@ -307,10 +359,24 @@ fn unknown_installation_plan(parsed: &ParsedCsv, id: InstallationId) -> ImportPl
             readdressed: 0,
             deleted: 0,
             unchanged: 0,
+            descriptions_cleared: 0,
             destructive_changes: Vec::new(),
             ignored_columns: parsed.ignored_columns.clone(),
             problems,
         },
+    }
+}
+
+/// The destructive-change entry for a description `row` clears on
+/// `existing`; no link is affected.
+fn clear_description_change(row: &CsvRow, existing: &GroupAddressEntry) -> CsvDestructiveChange {
+    CsvDestructiveChange {
+        row: row.line,
+        action: CsvDestructiveAction::ClearDescription,
+        id: existing.id,
+        source_address: row.address,
+        target_address: None,
+        affected_links: Vec::new(),
     }
 }
 
@@ -465,19 +531,32 @@ fn declared_dpt_on_create(row: &CsvRow) -> Override<DptRef> {
     }
 }
 
+/// What [`plan_update`] planned for one existing address.
+struct UpdateOutcome {
+    /// Anything applied differs (`true` = updated, `false` = unchanged).
+    changed: bool,
+    /// The planned change includes removing the existing description.
+    cleared_description: bool,
+}
+
 /// Compares `row` against `existing` and, if anything applied differs,
 /// plans a `Command::UpdateGroupAddress` and/or a
-/// `Command::SetGroupAddressDescription`. Returns whether it did (`true` =
-/// updated, `false` = unchanged). An empty `central`/`unfiltered`/
-/// `Description` cell means "leave unchanged" here (design §3), unlike
-/// `plan_create`'s "false"/no description.
-fn plan_update(row: &CsvRow, existing: &GroupAddressEntry, commands: &mut Vec<Command>) -> bool {
+/// `Command::SetGroupAddressDescription`. An empty `central`/`unfiltered`
+/// cell means "leave unchanged" here (design §3), unlike `plan_create`'s
+/// "false". An empty `Description` cell also leaves the description
+/// unchanged unless `clear_blank` is set, which removes an existing one.
+fn plan_update(
+    row: &CsvRow,
+    existing: &GroupAddressEntry,
+    clear_blank: bool,
+    commands: &mut Vec<Command>,
+) -> UpdateOutcome {
     let central = row.central.unwrap_or(existing.central);
     let unfiltered = row.unfiltered.unwrap_or(existing.unfiltered);
-    let description = row
-        .description
-        .as_ref()
-        .filter(|text| existing.description.as_ref() != Some(*text));
+    let description = match &row.description {
+        Some(text) => (existing.description.as_ref() != Some(text)).then(|| Some(text.clone())),
+        None => (clear_blank && existing.description.is_some()).then_some(None),
+    };
 
     let fields_changed = existing.name != row.name
         || existing.central != central
@@ -490,13 +569,18 @@ fn plan_update(row: &CsvRow, existing: &GroupAddressEntry, commands: &mut Vec<Co
             unfiltered,
         });
     }
-    if let Some(text) = description {
+    let cleared_description = description == Some(None);
+    let description_changed = description.is_some();
+    if let Some(description) = description {
         commands.push(Command::SetGroupAddressDescription {
             id: existing.id,
-            description: Some(text.clone()),
+            description,
         });
     }
-    fields_changed || description.is_some()
+    UpdateOutcome {
+        changed: fields_changed || description_changed,
+        cleared_description,
+    }
 }
 
 /// The `GroupRange` with the narrowest `start..=end` that contains

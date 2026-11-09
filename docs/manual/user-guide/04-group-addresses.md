@@ -344,10 +344,23 @@ takes names, flags and descriptions; a datapoint type becomes the declared type 
 address the import creates, while for an existing address it must match the project.
 Group ranges and their descriptions are reported as not imported.
 
-The inspector shows an address's description read-only below its type. Descriptions
-come from a `.knxproj` import or from a CSV import; there is no editor for them yet. A
-project file saved by an older version shows none until you import its `.knxproj`
-again.
+The inspector shows an address's description in an editable field below its address.
+Line breaks are kept; the change is saved when you leave the field (or press
+Ctrl+Enter) and is one undo step. Emptying the field removes the description. Just
+clicking into a field and leaving it changes nothing, so an imported description is
+never rewritten by accident. Descriptions also come from a `.knxproj` import or from a
+CSV import. A project file saved by an older version shows none until you import its
+`.knxproj` again.
+
+A blank description cell in a CSV file leaves an existing description alone, so
+importing an export again never wipes descriptions. To remove descriptions through a
+file, tick **Blank descriptions remove existing ones** next to the import button
+(`--clear-blank-descriptions` in the command line). The import then lists every
+description it would remove and applies only after you confirm. A file without a
+description column cannot say "blank" and is refused with this option. With the
+option, an exported description that is empty or only spaces also reads back as blank
+and is listed for removal, so check the list before confirming. The option resets
+after each import.
 
 ### What import does, and what it refuses to do
 

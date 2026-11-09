@@ -3053,6 +3053,7 @@ export const messages: Record<MessageKey, string> = {
   "groupAddressCsv.encoding": "Zeichenkodierung für CSV-Import",
   "groupAddressCsv.encodingUtf8": "UTF-8 (Standard)",
   "groupAddressCsv.encodingWindows1252": "Windows-1252 (ETS-Export)",
+  "groupAddressCsv.clearBlankDescriptions": "Leere Beschreibungen entfernen vorhandene",
   "groupAddressCsv.exportSummaryNone": "Gruppenadressen als CSV exportiert, keine Warnungen.",
   "groupAddressCsv.exportSummaryWithWarnings.one":
     "Gruppenadressen als CSV exportiert, {count} Warnung — siehe Log.",
@@ -3066,6 +3067,15 @@ export const messages: Record<MessageKey, string> = {
     "{action}: Rohadresse {source} → {target}; Kommunikationsobjekt-IDs: {links}",
   "groupAddressCsv.actionReaddress": "Umadressieren",
   "groupAddressCsv.actionDelete": "Löschen",
+  "groupAddressCsv.actionClearDescription": "Beschreibung entfernen",
+  "groupAddressCsv.confirmDescriptionsCleared.one": "Leere Beschreibungszellen entfernen {count} vorhandene Beschreibung.",
+  "groupAddressCsv.confirmDescriptionsCleared.other": "Leere Beschreibungszellen entfernen {count} vorhandene Beschreibungen.",
+  "groupAddressCsv.confirmDescriptionsOnly.one":
+    "Diesen CSV-Plan anwenden? Leere Beschreibungszellen entfernen {count} vorhandene Beschreibung. Diese Vorschau wird abgelehnt, falls sich Projekt oder CSV ändern.",
+  "groupAddressCsv.confirmDescriptionsOnly.other":
+    "Diesen CSV-Plan anwenden? Leere Beschreibungszellen entfernen {count} vorhandene Beschreibungen. Diese Vorschau wird abgelehnt, falls sich Projekt oder CSV ändern.",
+  "groupAddressCsv.importSummaryDescriptionsCleared.one": "{count} Beschreibung entfernt",
+  "groupAddressCsv.importSummaryDescriptionsCleared.other": "{count} Beschreibungen entfernt",
   "groupAddressCsv.directionSend": "senden",
   "groupAddressCsv.directionReceive": "empfangen",
   "groupAddressCsv.confirmCancelled": "CSV-Import abgebrochen; es wurden keine Änderungen angewendet.",
@@ -3165,6 +3175,7 @@ export const messages: Record<MessageKey, string> = {
   "addressTable.dptConflict": "widersprüchlich",
   "gaType.declared": "An der Adresse angegeben",
   "inspector.groupAddressDescription": "Beschreibung",
+  "inspector.groupAddressDescriptionLineBreaks": "Diese Beschreibung enthält Windows-Zeilenumbrüche; beim Bearbeiten werden sie als einfache Zeilenumbrüche gespeichert.",
   "gaType.linked": "Verknüpfte Objekte geben an",
   "gaType.declaredAbsent": "keine",
   "gaType.declaredEmpty": "leer",

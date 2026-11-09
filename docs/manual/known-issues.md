@@ -710,7 +710,9 @@ is the remaining copy defect.
   refuse the whole file. You choose the file's encoding: UTF-8 (default) or
   Windows-1252, whose umlauts match what ETS6 wrote on the observed German system;
   nothing is guessed. Other code pages are not supported. Files without a header row are
-  refused. A blank description cell never clears an existing description. This is
+  refused. A blank description cell leaves an existing description alone unless
+  you tick **Blank descriptions remove existing ones** (`--clear-blank-descriptions`),
+  which then asks for confirmation. This is
   not a full hierarchy/security roundtrip, XML exchange or ESF/OPC adapter.
 - **Consequence:** do not assume another application will accept the native export.
 - **Workaround:** inspect import warnings and keep the original input for fields
@@ -731,7 +733,7 @@ is the remaining copy defect.
   file treats an existing group address whose description now differs (empty in
   the old file, filled in the source) as a conflict and refuses the import.
 - **Workaround:** import the original `.knxproj` again to see descriptions; or set
-  them through a CSV import. There is no description editor yet.
+  them in the inspector or through a CSV import.
 - **Details:** [ADR-0164](../adr/0164-group-address-description-and-csv-encoding.md)
 
 ## The bus

@@ -228,6 +228,7 @@ pub fn search(
                     &terms,
                     &[
                         ("name", Some(ga.name.as_str())),
+                        ("description", ga.description.as_deref()),
                         ("address", Some(ga.address.as_str())),
                     ],
                 ) {
@@ -401,6 +402,23 @@ pub fn validate_ga_csv(
     csv: &str,
     installation: Option<u8>,
 ) -> ToolResult {
+    validate_ga_csv_with(
+        ws,
+        alias,
+        csv,
+        installation,
+        knx_csv::CsvImportOptions::default(),
+    )
+}
+
+/// [`validate_ga_csv`] with the import options `knx ga-import` takes as flags.
+pub fn validate_ga_csv_with(
+    ws: &Workspace,
+    alias: &str,
+    csv: &str,
+    installation: Option<u8>,
+    options: knx_csv::CsvImportOptions,
+) -> ToolResult {
     if csv.len() > MAX_CSV_BYTES {
         return Err(format!("csv is larger than {MAX_CSV_BYTES} bytes"));
     }
@@ -408,7 +426,8 @@ pub fn validate_ga_csv(
     let project = &snapshot.project;
     let style = project.info.group_address_style;
     let parsed = knx_csv::parse_group_addresses(csv, style);
-    let plan = knx_csv::plan_import_into(project, &parsed, installation.map(InstallationId));
+    let plan =
+        knx_csv::plan_import_with(project, &parsed, installation.map(InstallationId), options);
     let report = &plan.report;
     let errors = report
         .problems
@@ -429,6 +448,7 @@ pub fn validate_ga_csv(
                 "action": match c.action {
                     knx_csv::CsvDestructiveAction::Readdress => "readdress",
                     knx_csv::CsvDestructiveAction::Delete => "delete",
+                    knx_csv::CsvDestructiveAction::ClearDescription => "clearDescription",
                 },
                 "address": c.source_address.format(style),
                 "newAddress": c.target_address.map(|a| a.format(style)),
@@ -454,6 +474,7 @@ pub fn validate_ga_csv(
                 "readdressed": report.readdressed,
                 "deleted": report.deleted,
                 "unchanged": report.unchanged,
+                "descriptionsCleared": report.descriptions_cleared,
             },
             "destructiveChanges": destructive,
             "ignoredColumns": ignored,

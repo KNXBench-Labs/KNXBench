@@ -12,8 +12,9 @@ private. Observed behaviour is separated below from what KNXBench implements
 - **[V]** ETS6 Demo 6.4.1, build 8718, German interface and German product text, one run.
   No language-selection dialog appeared; the displayed captions and selections matched the
   German translation entries of the product source.
-- **[V]** One product, held unchanged, in project schema 11. Its application declares one
-  channel at application scope with one parameter block under it, and no module constructs.
+- **[V]** One unchanged product package, using the KNX XML `project/11` namespace. The
+  observed parameter block sits beneath a channel in the application's own `Dynamic` tree;
+  the application contains no module constructs.
 - **[V]** The block's controller is one enumeration parameter with the values 0, 1 and 2,
   default 0, no reference-level default override.
 - **[V]** The block carries a base caption. Two `ParameterBlockRename` elements sit as leaves,

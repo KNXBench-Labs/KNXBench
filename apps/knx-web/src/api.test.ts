@@ -479,6 +479,31 @@ describe("api", () => {
     });
   });
 
+  it("setGroupAddressDescription posts to /api/group-address-description, null removing it", async () => {
+    const sent = async (description: string | null) => {
+      mockFetchOnce({ installations: [] });
+      await api.setGroupAddressDescription(4, description);
+      const [url, init] = (fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+      return [url, JSON.parse(init.body as string)];
+    };
+    expect(await sent("Zeile\r\nzwei")).toEqual([
+      "/api/group-address-description", { groupAddressId: 4, description: "Zeile\r\nzwei" },
+    ]);
+    expect(await sent(null)).toEqual([
+      "/api/group-address-description", { groupAddressId: 4, description: null },
+    ]);
+  });
+
+  it("importGroupAddressesCsv sends clearBlankDescriptions only when chosen", async () => {
+    const body = async (clear: boolean) => {
+      mockFetchOnce({});
+      await api.importGroupAddressesCsv("/d/a.csv", undefined, undefined, "utf-8", clear);
+      return JSON.parse((fetch as ReturnType<typeof vi.fn>).mock.calls[0][1].body as string);
+    };
+    expect(await body(true)).toEqual({ path: "/d/a.csv", encoding: "utf-8", clearBlankDescriptions: true });
+    expect(await body(false)).toEqual({ path: "/d/a.csv", encoding: "utf-8" });
+  });
+
   it("setComObjectDescription posts to /api/com-object-description with camelCase field names", async () => {
     mockFetchOnce({ installations: [] });
     await api.setComObjectDescription(3, "Aktoreingang 1");

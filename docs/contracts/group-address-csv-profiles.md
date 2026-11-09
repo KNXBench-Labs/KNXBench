@@ -129,4 +129,8 @@ Errors anywhere in the file suppress the whole command, as for native files. Lea
 normal upserts (create, update or unchanged); `Action`-style readdress or delete cannot be
 expressed. A description change is its own undoable command
 (`SetGroupAddressDescription`) inside the import's single batch, so a row that only changes
-the description does not rewrite the name or flags.
+the description does not rewrite the name or flags. A blank `Description` cell leaves an
+existing description unchanged; with the explicit *clear blank descriptions* option it
+removes it as a confirmed destructive change, and the name/address-only shapes, which have
+no `Description` column, are refused with that option
+([ADR-0164 amendment](../adr/0164-group-address-description-and-csv-encoding.md#amendment--9-november-2026-editor-csv-removal-mcp)).

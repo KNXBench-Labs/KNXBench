@@ -99,7 +99,7 @@ CSV does not edit group ranges; removing rows alone does nothing. Explicit moves
 ### 40. CSV read-only and absent columns
 
 **Ledger status:** `ACCEPTED_BOUNDARY` ([KL-40](status/LEDGER.md#snapshot-ids)).
-Native DPT/group context columns are read-only; changed values are refused. Since KL-038b a Description column (native and profiles) sets group-address descriptions and profile DPTs declare the type of addresses the import creates; clearing descriptions, Comment and range descriptions remain unsupported.
+Native DPT/group context columns are read-only; changed values are refused. Since KL-038b a Description column (native and profiles) sets group-address descriptions and profile DPTs declare the type of addresses the import creates; a blank cell removes a description only with the explicit, confirmed clear-blank-descriptions option; Comment and range descriptions remain unsupported.
 [Details and history](limitations/KL-040-csv-read-only-and-absent-columns.md)
 
 <a id="catalogue-kl-041"></a>

@@ -167,6 +167,10 @@ pub struct CsvArgs {
     /// Target installation id (default: the first installation).
     #[serde(default)]
     pub installation: Option<u8>,
+    /// Check as `knx ga-import --clear-blank-descriptions` would: a blank
+    /// Description cell removes an existing description (default: false).
+    #[serde(default)]
+    pub clear_blank_descriptions: bool,
 }
 
 #[derive(Debug, Clone, Deserialize, JsonSchema)]
@@ -327,7 +331,7 @@ impl KnxMcp {
 
     #[tool(
         name = "get_group_address",
-        description = "One group address: name, range path, central/unfiltered flags, effective datapoint type with conflict detail, and every communication object that sends to or listens on it.",
+        description = "One group address: name, description (verbatim; absent when none is known), range path, central/unfiltered flags, effective datapoint type with conflict detail, and every communication object that sends to or listens on it.",
         annotations(
             read_only_hint = true,
             destructive_hint = false,
@@ -430,7 +434,7 @@ impl KnxMcp {
 
     #[tool(
         name = "validate_ga_csv",
-        description = "Check a proposed group-address CSV against the project exactly as `knx ga-import --dry-run` would: counts of created, updated, re-addressed and deleted addresses, destructive changes and row problems. Changes nothing; a person applies the file.",
+        description = "Check a proposed group-address CSV against the project exactly as `knx ga-import --dry-run` would: counts of created, updated, re-addressed and deleted addresses and of removed descriptions (with clearBlankDescriptions, as `--clear-blank-descriptions`), destructive changes and row problems. Changes nothing; a person applies the file.",
         annotations(
             read_only_hint = true,
             destructive_hint = false,
@@ -443,7 +447,15 @@ impl KnxMcp {
         Parameters(args): Parameters<CsvArgs>,
     ) -> Result<CallToolResult, ErrorData> {
         run(self.ws.clone(), move |ws| {
-            tools::validate_ga_csv(ws, &args.project, &args.csv, args.installation)
+            tools::validate_ga_csv_with(
+                ws,
+                &args.project,
+                &args.csv,
+                args.installation,
+                knx_csv::CsvImportOptions {
+                    clear_blank_descriptions: args.clear_blank_descriptions,
+                },
+            )
         })
         .await
     }

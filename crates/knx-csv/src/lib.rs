@@ -23,8 +23,8 @@ mod write;
 
 pub use encoding::{decode_csv_bytes, CsvEncoding};
 pub use plan::{
-    plan_import, plan_import_into, CsvAffectedLink, CsvDestructiveAction, CsvDestructiveChange,
-    CsvImportReport, ImportPlan,
+    plan_import, plan_import_into, plan_import_with, CsvAffectedLink, CsvDestructiveAction,
+    CsvDestructiveChange, CsvImportOptions, CsvImportReport, ImportPlan,
 };
 pub use read::{
     decode_csv_text, parse_group_addresses, CsvAction, CsvProblem, CsvRow, IgnoredColumn,

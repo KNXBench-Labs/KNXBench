@@ -88,6 +88,10 @@ pub fn project_routes() -> Router<SharedState> {
         .route("/api/individual-address", post(set_individual_address))
         .route("/api/device-description", post(set_device_description))
         .route(
+            "/api/group-address-description",
+            post(set_group_address_description),
+        )
+        .route(
             "/api/devices/{id}/name",
             patch(crate::rename_routes::device),
         )
@@ -1622,6 +1626,24 @@ async fn set_device_description(
 }
 
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct SetGroupAddressDescriptionBody {
+    group_address_id: u32,
+    /// `null` removes the description; any string, empty included, is kept
+    /// byte-exact.
+    description: Option<String>,
+}
+
+async fn set_group_address_description(
+    State(state): State<SharedState>,
+    Json(body): Json<SetGroupAddressDescriptionBody>,
+) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
+    domain::set_group_address_description_impl(&state, body.group_address_id, body.description)
+        .map(Json)
+        .map_err(ApiError::bad_request)
+}
+
+#[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct SetComObjectDptBody {
     com_object_id: u32,
@@ -2984,6 +3006,7 @@ struct CsvImportReportDto {
     readdressed: usize,
     deleted: usize,
     unchanged: usize,
+    descriptions_cleared: usize,
     destructive_changes: Vec<CsvDestructiveChangeDto>,
     ignored_columns: Vec<IgnoredColumnDto>,
     problems: Vec<CsvProblemDto>,
@@ -3014,6 +3037,7 @@ impl From<&knx_csv::CsvDestructiveChange> for CsvDestructiveChangeDto {
             action: match change.action {
                 knx_csv::CsvDestructiveAction::Readdress => "readdress",
                 knx_csv::CsvDestructiveAction::Delete => "delete",
+                knx_csv::CsvDestructiveAction::ClearDescription => "clearDescription",
             },
             id: change.id.0,
             source_address: change.source_address.raw(),
@@ -3043,6 +3067,7 @@ impl From<&knx_csv::CsvImportReport> for CsvImportReportDto {
             readdressed: report.readdressed,
             deleted: report.deleted,
             unchanged: report.unchanged,
+            descriptions_cleared: report.descriptions_cleared,
             destructive_changes: report.destructive_changes.iter().map(Into::into).collect(),
             ignored_columns: report.ignored_columns.iter().map(Into::into).collect(),
             problems: report.problems.iter().map(Into::into).collect(),
@@ -3071,6 +3096,10 @@ struct CsvImportBody {
     /// text so an unknown label is this route's `400`, not a JSON-shape `422`.
     #[serde(default)]
     encoding: Option<String>,
+    /// A blank `Description` cell removes an existing description; absent
+    /// means `false`. Each removal is a destructive change to confirm.
+    #[serde(default)]
+    clear_blank_descriptions: bool,
 }
 
 #[derive(Deserialize)]
@@ -3108,6 +3137,9 @@ async fn import_group_addresses_csv(
         body.confirmation_token.as_deref(),
         body.installation_id,
         encoding,
+        knx_csv::CsvImportOptions {
+            clear_blank_descriptions: body.clear_blank_descriptions,
+        },
     )
     .map(|outcome| CsvImportResponseDto {
         tree: outcome.tree,

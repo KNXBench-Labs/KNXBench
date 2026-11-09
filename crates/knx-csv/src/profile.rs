@@ -38,6 +38,11 @@ pub(crate) struct Profile {
 }
 
 impl Profile {
+    /// Whether this shape carries a `Description` column (the full shapes).
+    pub(crate) const fn has_description(self) -> bool {
+        self.central.is_some()
+    }
+
     fn metadata(self) -> Option<Metadata> {
         self.central.map(|central| Metadata { central })
     }

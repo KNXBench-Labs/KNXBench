@@ -2,8 +2,9 @@
 
 use crate::testutil::{empty_project, entry, entry_with_flags, linked_com_object, range};
 use crate::{
-    decode_csv_bytes, decode_csv_text, parse_group_addresses, plan_import, CsvEncoding, CsvProblem,
-    IgnoredColumnReason, ParsedCsv, Severity,
+    decode_csv_bytes, decode_csv_text, parse_group_addresses, plan_import, plan_import_with,
+    CsvDestructiveAction, CsvEncoding, CsvImportOptions, CsvProblem, IgnoredColumnReason,
+    ParsedCsv, Severity,
 };
 use knx_core::{
     Command, CommandStack, DptRef, GroupAddress, GroupAddressId, GroupAddressStyle, GroupRangeId,
@@ -681,6 +682,178 @@ fn a_description_is_set_on_create_and_on_update_and_blank_leaves_it_alone() {
         &[&["Pump", "1/1/1", "", "", "New text", "", ""]],
     ));
     assert_eq!(plan_import(&after, &same).report.unchanged, 1);
+}
+
+const CLEAR: CsvImportOptions = CsvImportOptions {
+    clear_blank_descriptions: true,
+};
+
+#[test]
+fn the_clear_option_turns_a_blank_description_cell_into_a_confirmed_removal() {
+    let mut project = empty_project(GroupAddressStyle::ThreeLevel);
+    let mut old = entry(50, three("1/1/1").raw(), "Pump");
+    old.description = Some("Old".into());
+    let mut written_empty = entry(51, three("1/1/2").raw(), "Fan");
+    written_empty.description = Some(String::new());
+    let none = entry(52, three("1/1/3").raw(), "Valve");
+    let mut kept = entry(53, three("1/1/4").raw(), "Heater");
+    kept.description = Some("Keep".into());
+    project.installations[0]
+        .group_addresses
+        .extend([old, written_empty, none, kept]);
+    let parsed = parse(&file(
+        SHAPE1,
+        &[
+            &["Pump", "1/1/1", "", "", "", "", ""],
+            &["Fan", "1/1/2", "", "", "  ", "", ""],
+            &["Valve", "1/1/3", "", "", "", "", ""],
+            &["Heater", "1/1/4", "", "", "Keep", "", ""],
+            &["Boiler", "1/1/5", "", "", "", "", ""],
+        ],
+    ));
+
+    // Without the option nothing is cleared (the ADR-0164 default).
+    let default = plan_import(&project, &parsed);
+    assert_eq!(default.report.descriptions_cleared, 0);
+    assert!(default.report.destructive_changes.is_empty());
+
+    let plan = plan_import_with(&project, &parsed, None, CLEAR);
+    assert!(
+        errors_of(&plan.report.problems).is_empty(),
+        "{:?}",
+        plan.report.problems
+    );
+    assert_eq!(
+        plan.report.descriptions_cleared, 2,
+        "Old and the written-empty one"
+    );
+    assert_eq!(
+        (
+            plan.report.created,
+            plan.report.updated,
+            plan.report.unchanged
+        ),
+        (1, 2, 2)
+    );
+    let cleared: Vec<_> = plan
+        .report
+        .destructive_changes
+        .iter()
+        .map(|c| (c.action, c.id, c.row, c.affected_links.len()))
+        .collect();
+    assert_eq!(
+        cleared,
+        vec![
+            (
+                CsvDestructiveAction::ClearDescription,
+                GroupAddressId(50),
+                2,
+                0
+            ),
+            (
+                CsvDestructiveAction::ClearDescription,
+                GroupAddressId(51),
+                3,
+                0
+            ),
+        ]
+    );
+    let Some(Command::Batch(commands)) = plan.command.clone() else {
+        panic!("expected a batch, got {:?}", plan.command);
+    };
+    for id in [50, 51] {
+        assert!(commands.contains(&Command::SetGroupAddressDescription {
+            id: GroupAddressId(id),
+            description: None,
+        }));
+    }
+
+    let before = project.clone();
+    let mut stack = CommandStack::new();
+    stack
+        .do_command(&mut project, plan.command.unwrap())
+        .unwrap();
+    let descriptions: Vec<_> = project.installations[0]
+        .group_addresses
+        .iter()
+        .map(|e| e.description.clone())
+        .collect();
+    assert_eq!(
+        descriptions,
+        vec![None, None, None, Some("Keep".into()), None]
+    );
+    stack.undo(&mut project).unwrap();
+    assert_eq!(project.installations, before.installations);
+}
+
+#[test]
+fn the_clear_option_is_refused_for_a_file_without_a_description_column() {
+    let mut project = empty_project(GroupAddressStyle::ThreeLevel);
+    let mut old = entry(50, three("1/1/1").raw(), "Pump");
+    old.description = Some("Old".into());
+    project.installations[0].group_addresses.push(old);
+    let refused = "clearing blank descriptions needs a \"Description\" column; this file has none";
+    let native = parse_group_addresses("Address,Name\n1/1/1,Pump\n", GroupAddressStyle::ThreeLevel);
+    for parsed in [
+        native,
+        parse(&file(NAME_ADDRESS_SHAPES[0], &[&["Pump", "1/1/1"]])),
+    ] {
+        assert!(!parsed.description_column);
+        let plan = plan_import_with(&project, &parsed, None, CLEAR);
+        assert!(plan.command.is_none());
+        assert_eq!(plan.report.descriptions_cleared, 0);
+        let details: Vec<_> = errors_of(&plan.report.problems)
+            .into_iter()
+            .map(|p| (p.row, p.detail.as_str()))
+            .collect();
+        assert_eq!(details, vec![(None, refused)]);
+        // Without the option the same file is a plain, harmless import.
+        assert!(errors_of(&plan_import(&project, &parsed).report.problems).is_empty());
+    }
+}
+
+#[test]
+fn the_clear_option_applies_to_the_native_description_column_and_to_readdress() {
+    let mut project = empty_project(GroupAddressStyle::ThreeLevel);
+    let mut old = entry(50, three("1/1/1").raw(), "Pump");
+    old.description = Some("Old".into());
+    project.installations[0].group_addresses.push(old);
+    let parsed = parse_group_addresses(
+        "Address,Action,NewAddress,Name,Description\n1/1/1,readdress,1/1/9,Pump,\n",
+        GroupAddressStyle::ThreeLevel,
+    );
+    assert!(parsed.description_column);
+    let plan = plan_import_with(&project, &parsed, None, CLEAR);
+    let actions: Vec<_> = plan
+        .report
+        .destructive_changes
+        .iter()
+        .map(|c| c.action)
+        .collect();
+    assert_eq!(
+        actions,
+        vec![
+            CsvDestructiveAction::Readdress,
+            CsvDestructiveAction::ClearDescription
+        ]
+    );
+    assert_eq!(plan.report.descriptions_cleared, 1);
+    let mut stack = CommandStack::new();
+    stack
+        .do_command(&mut project, plan.command.unwrap())
+        .unwrap();
+    let entry = &project.installations[0].group_addresses[0];
+    assert_eq!(
+        (entry.address, entry.description.clone()),
+        (three("1/1/9"), None)
+    );
+}
+
+fn errors_of(problems: &[CsvProblem]) -> Vec<&CsvProblem> {
+    problems
+        .iter()
+        .filter(|p| p.severity == Severity::Error)
+        .collect()
 }
 
 #[test]

@@ -431,6 +431,66 @@ fn get_group_address_lists_links_types_and_range() {
 }
 
 #[test]
+fn group_address_descriptions_are_shown_verbatim_and_searchable() {
+    let dir = tempfile::tempdir().unwrap();
+    let mut home = project("Home");
+    let entry = home.installations[0]
+        .group_addresses
+        .iter_mut()
+        .find(|e| e.name == "Kitchen light switch")
+        .unwrap();
+    entry.description = Some("Pantry side\r\nsecond line".into());
+    let path = save(dir.path(), "home.knxdb", &home);
+    let ws = workspace(&[("home", &path)], None);
+
+    let out = tools::get_group_address(&ws, "home", "1/1/1").unwrap();
+    assert_eq!(
+        out["result"]["matches"][0]["groupAddress"]["description"], "Pantry side\r\nsecond line",
+        "byte-exact, line break included"
+    );
+    let other = tools::get_group_address(&ws, "home", "#3").unwrap();
+    assert!(
+        other["result"]["matches"][0]["groupAddress"]
+            .get("description")
+            .is_none(),
+        "no description known: the key is absent, not an invented empty text"
+    );
+
+    let found = tools::search(&ws, "home", "pantry", None, page()).unwrap();
+    let hits = items(&found["result"]["hits"]);
+    assert_eq!(hits.len(), 1, "{hits:?}");
+    assert_eq!(hits[0]["kind"], "groupAddress");
+    assert_eq!(hits[0]["address"], "1/1/1");
+    assert_eq!(hits[0]["matchedIn"], json!(["description"]));
+}
+
+#[test]
+fn validate_ga_csv_shows_description_removal_only_when_asked() {
+    let dir = tempfile::tempdir().unwrap();
+    let mut home = project("Home");
+    home.installations[0].group_addresses[0].description = Some("Old".into());
+    let address = home.installations[0].group_addresses[0]
+        .address
+        .format(home.info.group_address_style);
+    let name = home.installations[0].group_addresses[0].name.clone();
+    let path = save(dir.path(), "home.knxdb", &home);
+    let ws = workspace(&[("home", &path)], None);
+    let csv = format!("Address;Name;Description\n{address};{name};\n");
+
+    let kept = tools::validate_ga_csv(&ws, "home", &csv, None).unwrap();
+    assert_eq!(kept["result"]["counts"]["descriptionsCleared"], 0);
+    let options = knx_csv::CsvImportOptions {
+        clear_blank_descriptions: true,
+    };
+    let cleared = tools::validate_ga_csv_with(&ws, "home", &csv, None, options).unwrap();
+    assert_eq!(cleared["result"]["counts"]["descriptionsCleared"], 1);
+    assert_eq!(
+        cleared["result"]["destructiveChanges"][0]["action"],
+        "clearDescription"
+    );
+}
+
+#[test]
 fn find_issues_reports_each_planted_problem_with_complete_counts() {
     let dir = tempfile::tempdir().unwrap();
     let path = save(dir.path(), "home.knxdb", &project("Home"));

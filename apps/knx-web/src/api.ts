@@ -523,6 +523,17 @@ export function setDeviceDescription(
   });
 }
 
+// ADR-0164: `null` removes the description; any string is kept byte-exact.
+export function setGroupAddressDescription(
+  groupAddressId: number,
+  description: string | null,
+): Promise<ProjectTree> {
+  return request("/api/group-address-description", {
+    method: "POST",
+    body: JSON.stringify({ groupAddressId, description }),
+  });
+}
+
 export function setComObjectDescription(
   comObjectId: number,
   description: string | null,
@@ -1336,7 +1347,7 @@ export interface IgnoredColumn {
 
 export interface CsvDestructiveChange {
   row: number;
-  action: "readdress" | "delete";
+  action: "readdress" | "delete" | "clearDescription";
   id: number;
   sourceAddress: number;
   targetAddress: number | null;
@@ -1351,6 +1362,8 @@ export interface CsvImportReport {
   readdressed: number;
   deleted: number;
   unchanged: number;
+  // Optional so an older server's report without the field stays valid.
+  descriptionsCleared?: number;
   destructiveChanges: CsvDestructiveChange[];
   ignoredColumns: IgnoredColumn[];
   problems: CsvProblem[];
@@ -1372,6 +1385,8 @@ export interface CsvImportResponse {
 // same one.
 // KL-038b: the file's encoding is the user's explicit choice, never guessed;
 // absent means UTF-8. The token also binds it, so both requests must agree.
+// `clearBlankDescriptions` makes a blank Description cell remove an existing
+// description; each removal is a destructive change the token also binds.
 export type CsvImportEncoding = "utf-8" | "windows-1252";
 
 export function importGroupAddressesCsv(
@@ -1379,6 +1394,7 @@ export function importGroupAddressesCsv(
   confirmationToken?: string,
   installationId?: number,
   encoding?: CsvImportEncoding,
+  clearBlankDescriptions?: boolean,
 ): Promise<CsvImportResponse> {
   return request("/api/group-addresses/csv-import", {
     method: "POST",
@@ -1387,6 +1403,7 @@ export function importGroupAddressesCsv(
       ...(confirmationToken ? { confirmationToken } : {}),
       installationId,
       ...(encoding ? { encoding } : {}),
+      ...(clearBlankDescriptions ? { clearBlankDescriptions } : {}),
     }),
   });
 }

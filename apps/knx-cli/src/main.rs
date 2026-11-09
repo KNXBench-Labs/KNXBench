@@ -51,6 +51,7 @@ const USAGE: &str = "usage: knx import <file.knxproj> [--store <path.knxdb> [--r
      \x20     knx ga-export <store.knxdb> <out.csv> [--installation <id>]\n\
      \x20     knx ga-import <store.knxdb> <in.csv> [--dry-run] [--confirm <token>]\n\
      \x20                   [--installation <id>] [--encoding utf-8|windows-1252]\n\
+     \x20                   [--clear-blank-descriptions]\n\
      \x20     knx monitor-export <project.knxdb> <new.zip> [--installation <id>]\n\
      \x20                   [--language <code>] [--product-db <path>] [--no-product-db]\n\
      \x20         (offline reduced monitoring projection, not a backup; never overwrites)\n\
@@ -1300,6 +1301,9 @@ struct GaImportArgs {
     installation: Option<knx_core::InstallationId>,
     /// The file's encoding as the user stated it; UTF-8 unless `--encoding`.
     encoding: knx_csv::CsvEncoding,
+    /// `--clear-blank-descriptions`: a blank `Description` cell removes an
+    /// existing description, a destructive change that needs `--confirm`.
+    clear_blank_descriptions: bool,
 }
 
 fn parse_ga_import_args(args: &[String]) -> Result<GaImportArgs, String> {
@@ -1309,10 +1313,12 @@ fn parse_ga_import_args(args: &[String]) -> Result<GaImportArgs, String> {
     let mut confirmation_token = None;
     let mut installation = None;
     let mut encoding = knx_csv::CsvEncoding::default();
+    let mut clear_blank_descriptions = false;
     let mut i = 0;
     while i < args.len() {
         match args[i].as_str() {
             "--dry-run" => dry_run = true,
+            "--clear-blank-descriptions" => clear_blank_descriptions = true,
             "--encoding" => {
                 i += 1;
                 let label = take_value(args, i, "--encoding")?;
@@ -1346,6 +1352,7 @@ fn parse_ga_import_args(args: &[String]) -> Result<GaImportArgs, String> {
         confirmation_token,
         installation,
         encoding,
+        clear_blank_descriptions,
     })
 }
 
@@ -1425,7 +1432,10 @@ fn run_ga_import(args: &[String]) -> ExitCode {
     };
 
     let parsed_csv = knx_csv::parse_group_addresses(&text, project.info.group_address_style);
-    let plan = knx_csv::plan_import_into(&project, &parsed_csv, parsed.installation);
+    let options = knx_csv::CsvImportOptions {
+        clear_blank_descriptions: parsed.clear_blank_descriptions,
+    };
+    let plan = knx_csv::plan_import_with(&project, &parsed_csv, parsed.installation, options);
 
     print_import_report(&parsed.input, &plan.report);
 
@@ -1449,6 +1459,7 @@ fn run_ga_import(args: &[String]) -> ExitCode {
             &bytes,
             parsed.installation,
             parsed.encoding,
+            options,
         );
         println!("confirmation token: {token}");
         if parsed.dry_run || parsed.confirmation_token.is_none() {
@@ -1508,13 +1519,15 @@ fn run_ga_import(args: &[String]) -> ExitCode {
 }
 
 /// Binds the semantic project snapshot, the raw CSV bytes, the installation
-/// and the chosen encoding. Without `--installation` and with the default
-/// UTF-8 encoding the token is unchanged from before either option existed.
+/// the chosen encoding and import options. Without `--installation`, with
+/// the default UTF-8 encoding and no option the token is unchanged from
+/// before any of them existed.
 fn ga_import_confirmation_token(
     project: &[u8],
     csv: &[u8],
     installation: Option<knx_core::InstallationId>,
     encoding: knx_csv::CsvEncoding,
+    options: knx_csv::CsvImportOptions,
 ) -> String {
     use sha2::{Digest as _, Sha256};
 
@@ -1534,6 +1547,11 @@ fn ga_import_confirmation_token(
         hasher.update(b"\0encoding\0");
         hasher.update(encoding.label().as_bytes());
     }
+    // A preview that clears descriptions must not confirm one that keeps
+    // them, nor the other way round.
+    if options.clear_blank_descriptions {
+        hasher.update(b"\0clear-blank-descriptions\0");
+    }
     hasher.update(csv);
     format!("{:x}", hasher.finalize())
 }
@@ -1552,6 +1570,12 @@ fn print_import_report(input: &str, report: &knx_csv::CsvImportReport) {
         report.deleted,
         report.unchanged
     );
+    if report.descriptions_cleared > 0 {
+        println!(
+            "  {} description(s) cleared by blank cells",
+            report.descriptions_cleared
+        );
+    }
     if report.created == 0 && report.updated == 0 && report.readdressed == 0 && report.deleted == 0
     {
         println!("  nothing to do");

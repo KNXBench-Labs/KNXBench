@@ -179,6 +179,12 @@ on the observed system:
 knx ga-import house.knxdb ets-export.csv --encoding windows-1252 --dry-run
 ```
 
+A blank `Description` cell leaves an existing description unchanged. Add
+`--clear-blank-descriptions` to remove descriptions instead: the run then prints a
+confirmation token and the descriptions it would remove, and writes only when you
+repeat it with `--confirm <token>` and the same options. A file without a
+`Description` column is refused with this flag.
+
 `--dry-run` parses, plans and reports without writing anything.
 
 The output always ends with a line saying whether the project file was written, which

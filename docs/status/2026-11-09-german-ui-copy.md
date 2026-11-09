@@ -61,5 +61,19 @@ translation, an English German-catalogue value, and a renamed singular count
 placeholder. Restoring the exact original source returned all 65 tests to green.
 The original failed gate is retained separately; it is not counted as acceptance.
 
+The final main-first candidate `33f072e8a` passed all 11 selected package stages
+on base `fe0b1f50c`: the web gate passed all 40 stages, the build and all 27
+fixture typechecks, 5,480 unit tests and 1,380 browser executions (1,129 default,
+71 production-devices, 180 production-table-columns; these lanes overlap).
+There were no browser skips, retries or failures. All stage proofs passed,
+inputs stayed frozen, and the user-data guard reported neither touched nor
+unchecked data. Rust runtime and private-corpus stages were not selected.
+
+All twelve source-bound metadata crops (English/German, 400/1440 px, the three
+browser lanes) were inspected: changed metadata values are readable and do not
+clip. Several narrow captures have a new-project achievement toast over the
+heading; this is not a claim that those headings were unobscured. Manufacturer
+captions and engineering values remain unchanged.
+
 These are software/UI checks using fictional data and intercepted APIs. No bus,
 device, native-shell, release or deployment acceptance follows from this change.

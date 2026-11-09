@@ -102,8 +102,8 @@ storage and the migration rule are unchanged.
 2. **Removal through CSV is an explicit, confirmed choice.** Decision 5 stays
    the default: a blank cell leaves a description unchanged, so re-importing an
    export never wipes one. The import option *clear blank descriptions* (CLI
-   `--clear-blank-descriptions`, server body `clearBlankDescriptions`, web
-   checkbox) makes a blank or whitespace-only `Description` cell on an existing
+   `--clear-blank-descriptions`, server body `clearBlankDescriptions`, a toggle
+   beside the CSV import in the web group-address view) makes a blank or whitespace-only `Description` cell on an existing
    address remove its description (`Some("")` included). Each removal is a
    destructive change `ClearDescription` with no affected links, counted in
    `descriptions_cleared`, so the existing preview and confirmation apply: the
@@ -113,6 +113,10 @@ storage and the migration rule are unchanged.
    a `Description` column (native without one, the name/address-only profiles)
    cannot state a blank and is refused as a file-level error when the option is
    set. Creating an address with a blank cell still gives it none.
+   The toggle is not a File menu row: that menu holds entries only, and in
+   short windows its import submenu has no height to spare. The File menu
+   import therefore keeps the safe default; the option resets after each
+   import.
 3. **MCP.** `get_group_address` documents the description it already returned
    through the projection (verbatim; absent when none is known), and `search`
    also matches group-address descriptions (`matchedIn: ["description"]`). The

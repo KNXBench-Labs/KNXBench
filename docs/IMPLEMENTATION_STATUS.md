@@ -61,7 +61,8 @@ the web inspector edits a group address's description in a multi-line field
 it writes only after typing, so CRLF texts are never rewritten by a visit, and
 an emptied field removes the description). CSV import keeps "blank = unchanged"
 by default; the explicit option *clear blank descriptions* (CLI
-`--clear-blank-descriptions`, server `clearBlankDescriptions`, web checkbox)
+`--clear-blank-descriptions`, server `clearBlankDescriptions`, a toggle beside the
+CSV import in the group-address view; the File menu import keeps the default)
 turns a blank cell into a `ClearDescription` destructive change behind the
 existing preview token, which binds the option; files without a `Description`
 column are refused with it. MCP `get_group_address` documents the description and

@@ -480,11 +480,11 @@ describe("GroupAddressCsvButtons achievement events", () => {
 });
 
 describe("GroupAddressCsvButtons — clearing blank descriptions", () => {
-  function clearBox(): HTMLInputElement {
-    return Array.from(host!.querySelectorAll("label"))
-      .find((label) => label.textContent === "Blank descriptions remove existing ones")!
-      .querySelector("input")!;
+  function clearToggle(): HTMLButtonElement {
+    return Array.from(host!.querySelectorAll("button"))
+      .find((button) => button.textContent?.endsWith("Blank descriptions remove existing ones"))!;
   }
+  const isOn = () => clearToggle().getAttribute("aria-pressed") === "true";
 
   it("is off by default and sends nothing extra", async () => {
     filePickerMock.pickOpenPath.mockResolvedValueOnce("/data/in.csv");
@@ -493,7 +493,7 @@ describe("GroupAddressCsvButtons — clearing blank descriptions", () => {
       report: { separator: ";", rowsRead: 0, created: 0, updated: 0, unchanged: 0, ignoredColumns: [], problems: [] },
     });
     const { root } = await renderButtons();
-    expect(clearBox().checked).toBe(false);
+    expect(isOn()).toBe(false);
     await click(importButton());
     expect(apiMock.importGroupAddressesCsv.mock.calls).toEqual([["/data/in.csv"]]);
     root.unmount();
@@ -514,8 +514,8 @@ describe("GroupAddressCsvButtons — clearing blank descriptions", () => {
       .mockResolvedValueOnce({ tree: fakeTree, report, applied: false, confirmationToken: "preview-token" })
       .mockResolvedValueOnce({ tree: fakeTree, report, applied: true, confirmationToken: null });
     const { root, onSummary } = await renderButtons();
-    await act(async () => { clearBox().click(); });
-    expect(clearBox().checked).toBe(true);
+    await act(async () => { clearToggle().click(); });
+    expect(isOn()).toBe(true);
     await click(importButton());
     expect(apiMock.importGroupAddressesCsv.mock.calls).toEqual([
       ["/data/blank.csv", undefined, undefined, "utf-8", true],
@@ -538,19 +538,19 @@ describe("GroupAddressCsvButtons — clearing blank descriptions", () => {
       ignoredColumns: [], problems: [] };
     apiMock.importGroupAddressesCsv.mockResolvedValueOnce({ tree: fakeTree, report, applied: false, confirmationToken: "t" });
     const { root } = await renderButtons();
-    await act(async () => { clearBox().click(); });
+    await act(async () => { clearToggle().click(); });
     await click(importButton());
     const message = (confirm.mock.calls[0] as unknown[])[0] as string;
     expect(message.startsWith("Apply this CSV plan? Blank Description cells remove 1 existing description.")).toBe(true);
     expect(message).not.toContain("readdress 0");
     expect(apiMock.importGroupAddressesCsv).toHaveBeenCalledTimes(1);
-    expect(clearBox().checked).toBe(false);
+    expect(isOn()).toBe(false);
     root.unmount();
   });
 
   it("is disabled without a project", async () => {
     const { root } = await renderButtons(null);
-    expect(clearBox().disabled).toBe(true);
+    expect(clearToggle().disabled).toBe(true);
     root.unmount();
   });
 });

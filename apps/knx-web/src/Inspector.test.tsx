@@ -915,6 +915,21 @@ describe("Inspector — group address type detail", () => {
     expect(descriptionField().value).toBe("XY");
   });
 
+  it("saves a revert to the original text typed while the first save was running", async () => {
+    let finish!: (tree: ProjectTree) => void;
+    apiMock.setGroupAddressDescription
+      .mockReturnValueOnce(new Promise<ProjectTree>((done) => { finish = done; }))
+      .mockResolvedValueOnce(describedTree("Alt"));
+    await renderInspector({ kind: "group_address", id: 301 }, describedTree("Alt"));
+    await act(async () => typeDescription("X"));
+    await leaveDescription();
+    await act(async () => typeDescription("Alt"));
+    await leaveDescription();
+    await act(async () => finish(describedTree("X")));
+    expect(apiMock.setGroupAddressDescription.mock.calls).toEqual([[301, "X"], [301, "Alt"]]);
+    expect(descriptionField().value).toBe("Alt");
+  });
+
   it("offers an empty editor when no description is known and reverts a refused write", async () => {
     apiMock.setGroupAddressDescription.mockRejectedValueOnce(new Error("group address 301 not found"));
     await renderInspector({ kind: "group_address", id: 301 }, describedTree());

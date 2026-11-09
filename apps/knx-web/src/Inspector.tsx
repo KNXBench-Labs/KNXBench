@@ -321,7 +321,10 @@ function GroupAddressDescriptionField(props: {
     saving.current = true;
     try {
       const tree = await api.setGroupAddressDescription(ga.id, sent === "" ? null : sent);
+      // The sent text is now stored, even before the parent re-renders, so
+      // typing the old text back during the request still saves the revert.
       // Text typed while the request ran stays a draft and is saved next.
+      sourceValue.current = sent;
       edited.current = latest.current !== sent;
       onApplied(tree);
     } catch (e) {

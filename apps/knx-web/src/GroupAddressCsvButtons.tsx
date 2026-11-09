@@ -82,6 +82,7 @@ export default function GroupAddressCsvButtons(props: {
   const { tree, onTreeUpdate, onSummary, onError, onClearErrors } = props;
   const t = useTranslate();
   const entry = useFileMenuItemProps();
+  const inMenu = "role" in entry;
   const csvFilter = [{ name: t("groupAddressCsv.filterName"), extensions: ["csv"] }];
   // MODEL-01: with several installations the user names the one the CSV
   // exchange acts on; with one, the calls stay exactly as before.
@@ -225,11 +226,17 @@ export default function GroupAddressCsvButtons(props: {
         <option value="utf-8">{t("groupAddressCsv.encodingUtf8")}</option>
         <option value="windows-1252">{t("groupAddressCsv.encodingWindows1252")}</option>
       </select>
-      <label className="csv-import-option">
-        <input type="checkbox" checked={clearBlank} disabled={!tree}
-          onChange={(e) => setClearBlank(e.target.checked)} />
-        {t("groupAddressCsv.clearBlankDescriptions")}
-      </label>
+      {/* Removing descriptions is a rare, deliberate choice: offered beside the
+          import in the group-address view, not as another File menu row (the
+          menu holds entries only and has no height to spare in short windows).
+          The File menu import keeps the safe default. */}
+      {!inMenu && (
+        <button type="button" className="csv-import-option" disabled={!tree}
+          aria-pressed={clearBlank} onClick={() => setClearBlank((on) => !on)}>
+          <span aria-hidden="true">{clearBlank ? "☑ " : "☐ "}</span>
+          {t("groupAddressCsv.clearBlankDescriptions")}
+        </button>
+      )}
       <button {...entry} onClick={importCsv} disabled={!tree}>
         {t("groupAddressCsv.importButton")}
       </button>

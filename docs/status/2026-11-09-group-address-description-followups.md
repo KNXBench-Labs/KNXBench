@@ -11,7 +11,9 @@ Date: 2026-11-09. Decision record:
   the user typed and only when the text differs beyond CRLF/LF, so visiting an
   imported description never rewrites it; a CR-holding description shows a hint.
 - **CSV removal.** `knx_csv::CsvImportOptions::clear_blank_descriptions` (CLI
-  `--clear-blank-descriptions`, server `clearBlankDescriptions`, web checkbox).
+  `--clear-blank-descriptions`, server `clearBlankDescriptions`, a toggle beside
+  the CSV import in the group-address view; not a File menu row, whose short-window
+  height budget it would overrun).
   Off by default, so the ADR-0164 "blank leaves unchanged" rule holds. With it, a
   blank cell on an existing address plans `SetGroupAddressDescription { None }`
   and a `ClearDescription` destructive change (no affected links), counted in
@@ -36,7 +38,7 @@ Synthetic tests only; no ETS, bus or device involved.
   column.
 - `knx-mcp`: verbatim CRLF description, absent key without one, search hit.
 - Web: editor (visit without write, CRLF hint, typed write, emptied removal,
-  refused write reverts), CSV checkbox (off by default, confirmation text,
+  refused write reverts), CSV toggle (off by default, absent from the File menu, confirmation text,
   same choice on confirmation, disabled without project), API bodies.
 
 ## Not claimed

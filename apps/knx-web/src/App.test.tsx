@@ -1958,6 +1958,8 @@ describe("App — the File menu by keyboard alone", () => {
       expect(declared(level).filter((b) => b.tabIndex === 0), "one tab stop per level").toHaveLength(1);
       expect(declared(level).every((b) => b.getAttribute("role") === "menuitem")).toBe(true);
     }
+    // Removing descriptions through CSV is offered only in the group-address view.
+    expect(menu.querySelector(".csv-import-option")).toBeNull();
     const entries = [...menu.querySelectorAll<HTMLButtonElement>("[data-file-menu-item]")];
     // This minimal offline tree has neither an installation nor live snapshot identity:
     // monitoring export must refuse it. Other entries retain their existing availability.

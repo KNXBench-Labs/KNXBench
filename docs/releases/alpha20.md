@@ -43,8 +43,9 @@ with Alpha 20 cannot be opened with Alpha 19 any more (see [Upgrade](#upgrade)).
 - **You pick the encoding; KNXBench never guesses.** No more `GrÃ¼n` instead of
   `Grün`. Choose **UTF-8** (default) or
   **Windows-1252 (ETS export)** next to the import button. On the command line:
-  `knx ga-import … --encoding windows-1252`. If the file does not match the chosen
-  encoding, the import stops and names the position of the first bad byte.
+  `knx ga-import … --encoding windows-1252`. A byte the chosen encoding does not
+  allow stops the import and names its position. Pick the encoding the file was written
+  in: a UTF-8 file read as Windows-1252 usually still decodes, just with wrong umlauts.
 - **New description field.** Every group address can now carry a description. It
   is filled from `.knxproj` imports and from CSV files with a description column,
   so "1/2/3" can finally explain what it is for.

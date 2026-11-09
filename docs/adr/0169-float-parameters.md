@@ -22,7 +22,8 @@ showed what it writes
    encoding its type declares, as a number of the encoding's width, high
    octet first:
    - `DPT 9`: the KNX `F16` format with the smallest exponent whose mantissa
-     fits, the mantissa rounded to nearest with ties to even;
+     fits, the mantissa rounded to nearest with ties to even, computed on the
+     exact decimal value (not a binary double);
    - `IEEE-754 Single`: the nearest binary32 value.
 2. The value must be a plain decimal number within the type's declared
    `minInclusive`/`maxInclusive` and the encoding's range; `7FFFh` (invalid
@@ -38,6 +39,9 @@ showed what it writes
   for the parameters it writes; the declared encoding is what ETS used.
 - **Round halves away from zero.** ETS wrote `361Ah` for `1000` (mantissa
   `1562.5`), the even neighbour.
+- **Round a binary double.** ETS wrote `0E44h` for `32.09`, whose double
+  `3209.0000000000005 / 2` rounds to `0E45h`; three such decimal ties agree
+  with exact decimal rounding.
 - **Admit floats in every layout.** Only a memory image was observed.
 
 ## Consequences
@@ -45,7 +49,8 @@ showed what it writes
 The tester's devices 0.2.70 and 0.2.72 plan and move to `untested`; the
 KNXBench image of the observed program equals ETS's in every parameter octet
 except KL-145 flags, and a KNXBench download to the simulator wrote the same
-octets. In the private product corpus six programs of the same manufacturer
-that only floats kept from planning plan as well; nothing else changes. The
-rule rests on one program and one tie; it stays untested until a device
+octets; two ETS downloads (eleven float values, four ties) equal KNXBench's
+parameter segment. In the private product corpus six programs of the same
+manufacturer that only floats kept from planning plan as well; nothing else
+changes. The rule rests on one program; it stays untested until a device
 confirms it.

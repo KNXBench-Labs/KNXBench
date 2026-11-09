@@ -61,7 +61,8 @@
 //!   A `TypeFloat` is written in its declared `DPT 9` or `IEEE-754 Single`
 //!   encoding by the memory (`070nh`) builder only, as `[V]` ETS 6.4 wrote
 //!   it ([`float`], ADR-0169); the templates that disagree with `DPT 9` hold
-//!   octets ETS overwrites. Every other type is refused by name. A `TypeNumber` bound that is declared but not an integer
+//!   octets ETS overwrites. Every other type is refused by name. A
+//!   `TypeNumber` bound that is declared but not an integer
 //!   (empty, decimal, scientific, out of range) refuses the value by name; an
 //!   absent bound constrains nothing (docs/contracts/parameter-number-bound-admission.md).
 //! - **Byte order.** Numbers are written high octet first
@@ -292,7 +293,7 @@ pub struct DownloadImage {
     /// One image per segment with `Data`.
     pub segments: Vec<SegmentImage>,
     /// The numeric parameters written, by `ParameterRef` id, with their
-    /// values.
+    /// values; a float's value is its encoded bits (ADR-0169).
     pub parameters: BTreeMap<String, u64>,
     /// The text parameters written, by `ParameterRef` id, with their
     /// values.
@@ -3497,8 +3498,9 @@ mod tests {
 
     /// ADR-0169: a `TypeFloat` value is written in its declared encoding,
     /// high octet first (`[V]` ETS 6.4 on a memory program); an encoding not
-    /// observed, an undeclared one, a `LittleEndian` program, a property
-    /// placement and a value out of bounds or unparsable are refused.
+    /// observed, an undeclared one, a `LittleEndian` program and a value out
+    /// of bounds or unparsable are refused. Property placements:
+    /// `a_float_placed_in_a_property_is_refused`.
     #[test]
     fn a_float_parameter_is_written_in_its_encoding() {
         // The fixture's 12-octet segment holds a 48-bit text at 3; a single
@@ -3582,6 +3584,11 @@ mod tests {
         refused(
             &program(LATIN_9, dpt9, bounds),
             &[("P-F_R-1", "600.5")],
+            "outside",
+        );
+        refused(
+            &program(LATIN_9, dpt9, bounds),
+            &[("P-F_R-1", "-50.5")],
             "outside",
         );
         refused(
@@ -3747,6 +3754,37 @@ mod tests {
             r#"<Options DownloadInvisibleParameters="DefaultValue" /><Code>"#,
         );
         assert!(build(&unknown, &[], vec![]).unwrap().properties.is_empty());
+    }
+
+    /// ADR-0169: no float placed in a property was observed, so it refuses,
+    /// visible or written as an invisible default.
+    #[test]
+    fn a_float_placed_in_a_property_is_refused() {
+        let program = with_options(
+            PROGRAM,
+            r#"<Options DownloadInvisibleParameters="Background" />"#,
+        )
+        .replace(
+            "</ParameterTypes>",
+            r#"<ParameterType Id="PT-F" Name="F"><TypeFloat Encoding="DPT 9" /></ParameterType></ParameterTypes>"#,
+        )
+        .replace(
+            r#"<Parameter Id="P-3" Name="Prop" ParameterType="PT-N" Value="1">"#,
+            r#"<Parameter Id="P-3" Name="Prop" ParameterType="PT-F" Value="1.5">"#,
+        );
+        assert!(program.contains(r#"ParameterType="PT-F" Value="1.5""#));
+        for values in [
+            &[("P-1_R-1", "0"), ("P-3_R-6", "2.5")][..],
+            &[("P-1_R-1", "1")],
+        ] {
+            let error = build(&program, values, vec![]).unwrap_err();
+            assert!(
+                error
+                    .to_string()
+                    .contains("P-3: a float placed in a property"),
+                "{values:?}: {error}"
+            );
+        }
     }
 
     /// KL-170: a `LittleEndian` memory program writes whole-octet numbers low

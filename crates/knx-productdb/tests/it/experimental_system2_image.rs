@@ -1104,3 +1104,41 @@ fn public_default_complete_candidate_exercises_real_installer_builder_and_resolv
     assert!(build_system2_image(&conn, &request).is_err());
     assert!(knx_productdb::download_plan::plan_memory_download(&result.image).is_err());
 }
+
+/// ADR-0169: floats were observed in a memory (`070nh`) image only. The
+/// System-2 builder refuses one with a declared encoding by its layout; the
+/// experimental builders refuse its source element before any value.
+#[test]
+fn a_float_parameter_refuses_the_system2_and_experimental_images() {
+    let xml = XML.replace(
+        r#"<TypeNumber SizeInBit="16" Type="unsignedInt" minInclusive="0" maxInclusive="65535" />"#,
+        r#"<TypeFloat Encoding="DPT 9" minInclusive="0" maxInclusive="65535" />"#,
+    );
+    assert!(xml.contains(r#"TypeFloat Encoding="DPT 9""#));
+    let (_dir, conn, request) = fixture(&xml);
+    let refused = |error: String, needle: &str| {
+        assert!(error.contains(needle), "{needle}: {error}");
+    };
+    refused(
+        build_system2_image(&conn, &request)
+            .unwrap_err()
+            .to_string(),
+        "a TypeFloat outside the memory (070nh) image builder",
+    );
+    refused(
+        build_experimental_system2_image(&conn, &request, &policy(&xml))
+            .unwrap_err()
+            .to_string(),
+        "ParameterType/TypeFloat",
+    );
+    refused(
+        knx_productdb::image::build_project_experimental_system2_image(
+            &conn,
+            &request,
+            &project_policy(&xml),
+        )
+        .unwrap_err()
+        .to_string(),
+        "TypeFloat",
+    );
+}

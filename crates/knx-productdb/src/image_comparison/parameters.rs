@@ -36,7 +36,10 @@ pub(crate) fn rows(
                 .and_then(|bytes| value(parameter, bytes));
             let expected = match &parameter.value {
                 AttributedValue::Number { value, .. } => value.to_string(),
-                AttributedValue::Float { bits, encoding } => encoding.decode(*bits)?,
+                // Undecodable bits stay a row the projection cannot confirm.
+                AttributedValue::Float { bits, encoding } => encoding
+                    .decode(*bits)
+                    .unwrap_or_else(|| format!("{bits:#x}")),
                 AttributedValue::Text { value, .. } => value.clone(),
             };
             // Attribution was captured at the write; verify it still agrees with the

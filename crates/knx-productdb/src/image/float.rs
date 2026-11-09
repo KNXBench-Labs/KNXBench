@@ -7,8 +7,9 @@
 //! say which of several representations an encoder picks, nor how it rounds.
 //! `[V]` ETS 6.4, downloading a memory (`0705h`) program to KNXBench's
 //! simulator, wrote the smallest exponent whose mantissa fits, the mantissa
-//! rounded to nearest with a tie to even (`1000` → `1562.5` → `361Ah`),
-//! high octet first (docs/research/2026-11-09-float-parameters.md).
+//! rounded to nearest with ties to even on the exact decimal value (`1000` →
+//! `1562.5` → `361Ah`; `32.09` → `1604.5` → `0E44h`), high octet first
+//! (docs/research/2026-11-09-float-parameters.md).
 //! `IEEE-754 Single` is the 32-bit binary interchange format, the value
 //! rounded to nearest, high octet first in a `BigEndian` program like any
 //! number. Any other `Encoding` is refused by name.
@@ -44,13 +45,18 @@ impl FloatEncoding {
     /// The bits `raw` is written as, or why it cannot be.
     pub fn encode(self, raw: &str) -> Result<u64, String> {
         match self {
-            FloatEncoding::Dpt9 => encode_dpt9(parse(raw)?).map(u64::from),
+            FloatEncoding::Dpt9 => encode_dpt9(raw).map(u64::from),
             FloatEncoding::Ieee754Single => {
                 let value: f32 = parse_text(raw)?
                     .parse()
                     .map_err(|_| format!("{raw:?} is not a decimal number"))?;
                 if !value.is_finite() {
                     return Err(format!("{raw:?} does not fit an IEEE-754 single"));
+                }
+                // A non-zero value that underflows to zero or a subnormal was
+                // not observed; refuse it rather than write a different number.
+                if !value.is_normal() && parse(raw)? != 0.0 {
+                    return Err(format!("{raw:?} underflows an IEEE-754 single"));
                 }
                 Ok(u64::from(value.to_bits()))
             }
@@ -98,24 +104,96 @@ pub fn parse(raw: &str) -> Result<f64, String> {
     }
 }
 
-/// The `F16` bits for `value`: the smallest exponent whose mantissa, rounded
-/// to nearest with ties to even, fits `-2048..=2047`.
-fn encode_dpt9(value: f64) -> Result<u16, String> {
-    let hundredths = value * 100.0;
+/// `raw` in hundredths as the exact fraction `±numerator / denominator`,
+/// from its decimal digits, not a binary approximation.
+fn exact_hundredths(raw: &str) -> Result<(bool, u128, u128), String> {
+    let invalid = || format!("{raw:?} is not a decimal number");
+    let text = parse_text(raw)?;
+    let (negative, unsigned) = match text.as_bytes().first() {
+        Some(b'-') => (true, &text[1..]),
+        Some(b'+') => (false, &text[1..]),
+        _ => (false, text),
+    };
+    let (significand, exponent) = match unsigned.find(['e', 'E']) {
+        Some(at) => {
+            let exponent: i32 = unsigned[at + 1..].parse().map_err(|_| invalid())?;
+            (&unsigned[..at], exponent)
+        }
+        None => (unsigned, 0),
+    };
+    let (whole, fraction) = significand.split_once('.').unwrap_or((significand, ""));
+    if (whole.is_empty() && fraction.is_empty())
+        || !whole
+            .bytes()
+            .chain(fraction.bytes())
+            .all(|b| b.is_ascii_digit())
+    {
+        return Err(invalid());
+    }
+    let digits = format!("{whole}{fraction}");
+    let digits = digits.trim_start_matches('0');
+    let mut scale = i64::from(exponent) + 2 - fraction.len() as i64;
+    let trimmed = digits.trim_end_matches('0');
+    scale += (digits.len() - trimmed.len()) as i64;
+    if trimmed.is_empty() {
+        return Ok((negative, 0, 1));
+    }
+    let too_precise = || format!("{raw:?} has more digits than KNXBench reads for DPT 9");
+    let mut numerator: u128 = if trimmed.len() <= 38 {
+        trimmed.parse().map_err(|_| invalid())?
+    } else {
+        return Err(too_precise());
+    };
+    let mut denominator: u128 = 1;
+    if scale >= 0 {
+        // Any scale past 10 is far beyond F16's 67 108 864 hundredths.
+        if scale > 10 {
+            return Err(format!("{raw:?} is outside the DPT 9 range"));
+        }
+        numerator = numerator
+            .checked_mul(10u128.pow(scale as u32))
+            .ok_or_else(|| format!("{raw:?} is outside the DPT 9 range"))?;
+    } else {
+        if -scale > 30 {
+            return Err(too_precise());
+        }
+        denominator = 10u128.pow((-scale) as u32);
+    }
+    Ok((negative, numerator, denominator))
+}
+
+/// The `F16` bits for `raw`: the smallest exponent whose mantissa fits
+/// `-2048..=2047`, the mantissa rounded to nearest with ties to even, on the
+/// exact decimal value (`[V]` ETS: `32.09` → `0E44h`, where the binary double
+/// `3209.0000000000005` would round to `0E45h`).
+fn encode_dpt9(raw: &str) -> Result<u16, String> {
+    let (negative, numerator, denominator) = exact_hundredths(raw)?;
     for exponent in 0..=15u16 {
-        let mantissa = (hundredths / f64::from(1u32 << exponent)).round_ties_even();
-        if (-2048.0..=2047.0).contains(&mantissa) {
-            // In range, so the cast is exact.
-            let mantissa = mantissa as i16;
+        let divisor = denominator << exponent;
+        let (quotient, remainder) = (numerator / divisor, numerator % divisor);
+        let twice = remainder * 2;
+        let magnitude = if twice > divisor || (twice == divisor && quotient % 2 == 1) {
+            quotient + 1
+        } else {
+            quotient
+        };
+        let limit = if negative { 2048 } else { 2047 };
+        if magnitude <= limit {
+            // At most 2048, so the casts are exact.
+            let mantissa = if negative {
+                -(magnitude as i16)
+            } else {
+                magnitude as i16
+            };
             let twelve = (mantissa as u16) & 0x0FFF;
             let bits = ((twelve & 0x0800) << 4) | (exponent << 11) | (twelve & 0x07FF);
             if bits == 0x7FFF {
-                return Err(format!("{value} encodes as 7FFFh, the invalid-data marker"));
+                return Err(format!("{raw} encodes as 7FFFh, the invalid-data marker"));
             }
             return Ok(bits);
         }
     }
-    Err(format!("{value} is outside the DPT 9 range"))
+    Err(format!("{raw} is outside the DPT 9 range"))
 }
 
 /// The value of `F16` bits in hundredths, `M * 2^E` exactly; `None` for
@@ -168,10 +246,31 @@ mod tests {
         assert_eq!(dpt9("82.03125"), Ok(0x1C01));
         // `[V]` ETS: 25000 → 2500000 / 2048 = 1220.7: nearest, 1221.
         assert_eq!(dpt9("25000"), Ok(0x5CC5));
-        // 0.025 → 2.5 hundredths, a tie in binary too: to even, 2. (0.035 is
-        // 3.5000000000000004 in binary, so not a tie: 4.)
+        // Exact decimal ties, to even: 0.025 → 2.5 → 2; 0.035 → 3.5 → 4.
         assert_eq!(dpt9("0.025"), Ok(0x0002));
         assert_eq!(dpt9("0.035"), Ok(0x0004));
+        // `[V]` ETS: decimal ties at E = 1, where the binary double is not a
+        // tie (3209.0000000000005 and 3222.9999999999995).
+        assert_eq!(dpt9("32.09"), Ok(0x0E44));
+        assert_eq!(dpt9("32.45"), Ok(0x0E56));
+        assert_eq!(dpt9("32.23"), Ok(0x0E4C));
+        // Spellings of one value encode alike.
+        for raw in [
+            "1",
+            "1.0",
+            "+1",
+            "1e0",
+            "100E-2",
+            "1.000000000000000E+000",
+            ".01e2",
+        ] {
+            assert_eq!(dpt9(raw), Ok(0x0064), "{raw}");
+        }
+        assert_eq!(dpt9("-0"), Ok(0x0000));
+        // The mantissa limits are asymmetric: +2048 needs E + 1, -2048 fits.
+        assert_eq!(dpt9("20.48"), Ok(0x0C00));
+        assert_eq!(dpt9("-20.48"), Ok(0x8000));
+        assert_eq!(dpt9("-20.49"), Ok(0x8C00));
         assert_eq!(dpt9("1.000000000000000E+000"), Ok(0x0064));
     }
 
@@ -190,6 +289,11 @@ mod tests {
         assert!(dpt9("inf").is_err());
         assert!(dpt9(" 1").is_err());
         assert!(dpt9("").is_err());
+        assert!(dpt9("1e400").is_err());
+        assert!(dpt9("1e-400").is_err(), "more digits than KNXBench reads");
+        assert!(dpt9("1.2.3").is_err());
+        assert!(dpt9("e5").is_err());
+        assert!(dpt9("--1").is_err());
     }
 
     #[test]
@@ -237,6 +341,9 @@ mod tests {
         assert_eq!(single("0"), Ok(0));
         assert_eq!(single("3.4E+38"), Ok(u64::from(3.4e38f32.to_bits())));
         assert!(single("3.5E+38").is_err(), "overflows to infinity");
+        assert!(single("1e-50").is_err(), "underflows to zero");
+        assert!(single("1e-40").is_err(), "a subnormal");
+        assert_eq!(single("1.2E-38"), Ok(u64::from(1.2e-38f32.to_bits())));
         assert!(single("5,0").is_err());
         assert_eq!(
             FloatEncoding::Ieee754Single.decode(0x3FA6_6666).as_deref(),

@@ -77,8 +77,9 @@ fn the_corpus_coverage_is_pinned() {
     // refusals disappear because inactive choose branches no longer select
     // their fields (not Float support); 2 conflicting-reference programs
     // likewise plan (ADR-0160). Four previously planning programs declare an ETS
-    // download plug-in (KL-006).
-    assert_eq!((summary.verified, summary.untested), (1, 112));
+    // download plug-in (KL-006). 9 November (RESEARCH §19.22 addendum): +6
+    // programs whose only refusal was a Float now plan (ADR-0169).
+    assert_eq!((summary.verified, summary.untested), (1, 118));
     let unsupported: BTreeMap<&str, usize> = summary
         .unsupported
         .iter()
@@ -93,8 +94,9 @@ fn the_corpus_coverage_is_pinned() {
             ("not-memory-mapped", 507),
             // 25 LittleEndian programs now build their image (KL-170,
             // ADR-0159) and stop at LdCtrlCompareProp; the 3 October ones
-            // (LdCtrlWriteProp) are now vendor-download-plugin.
-            ("unmodelled-step", 25),
+            // (LdCtrlWriteProp) are now vendor-download-plugin. +2 since
+            // ADR-0168: a mid-octet union no longer stops them first.
+            ("unmodelled-step", 27),
             ("procedure-contents", 1),
             ("parameter-evaluation", 51),
             // 6 conflicting-reference programs left: 2 plan, 4 stop at a
@@ -102,14 +104,15 @@ fn the_corpus_coverage_is_pinned() {
             ("parameter-value", 3),
             // 84 with October code on this corpus: -25 to unmodelled-step,
             // -13 inactive Float fields no longer selected,
-            // +4 from parameter-value.
-            ("image-structure", 50),
+            // +4 from parameter-value. 9 November: -2 to unmodelled-step
+            // (ADR-0168), -6 to untested (Float, ADR-0169).
+            ("image-structure", 42),
             ("product-data", 1),
             ("vendor-download-plugin", 7),
         ])
     );
     assert_eq!(summary.by_mask.get("MV-0701"), Some(&(103, 42)));
-    assert_eq!(summary.by_mask.get("MV-0705"), Some(&(148, 71)));
+    assert_eq!(summary.by_mask.get("MV-0705"), Some(&(148, 77)));
 
     // Every mask outside 070nh is refused for its mask, and none of them
     // for a reason that sounds like "almost".

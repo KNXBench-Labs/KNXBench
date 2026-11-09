@@ -469,6 +469,15 @@ fn plan_fields_for_scope(
                 skip(&mut skipped, parameter_ref, SkipReason::Text);
                 continue;
             }
+            // Unreachable: these types do not admit floats (ADR-0169).
+            Ok(Encoded::Float { .. }) => {
+                skip(
+                    &mut skipped,
+                    parameter_ref,
+                    SkipReason::Refused("a TypeFloat value".into()),
+                );
+                continue;
+            }
             Err(error) => {
                 skip(
                     &mut skipped,

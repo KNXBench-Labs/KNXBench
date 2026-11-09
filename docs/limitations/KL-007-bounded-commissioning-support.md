@@ -548,8 +548,11 @@ after the final restart is not sent), both RESEARCH §19.12;
 instead: a `070nh` group object cannot read its value after a reset
 (Resources NOTE 85), so an enabled `ReadOnInitFlag` is not carried out.
 None of these has been exercised by a KNXBench download on hardware.
-`Priority="High"` and `TypeFloat` parameters stay refused: the product data
-contradicts every reading (§19.18).
+`Priority="High"` parameters stay refused: the product data contradicts
+every reading (§19.18). `TypeFloat` parameters are written in their declared
+encoding by the memory image builder since ADR-0169 (ETS 6.4 observed against
+the simulator); other layouts, `LittleEndian` programs and property
+placements still refuse them.
 
 **Backup is bounded.** Before a permitted memory download's first mutation,
 the executor persists the overwritten memory regions and affected load

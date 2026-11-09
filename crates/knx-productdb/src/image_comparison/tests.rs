@@ -147,6 +147,54 @@ fn numeric_parameter_rows_use_captured_bits_and_never_swap_project_and_device_va
     );
 }
 
+/// ADR-0169: a float field is decoded in its encoding on both sides; the
+/// invalid-data marker is not decoded.
+#[test]
+fn float_parameter_rows_decode_their_encoding() {
+    use crate::image::float::FloatEncoding;
+    use crate::image::{AttributedValue, ParameterAttribution};
+    use knx_core::commissioning::parameter_image::ParameterField;
+    let (mut image, mut held, mut plan) = fixture();
+    image.segments.push(SegmentImage {
+        id: "P".into(),
+        address: 0x4800,
+        octets: vec![0x36, 0x1A],
+        mask: None,
+    });
+    image.parameter_fields.push(ParameterAttribution {
+        reference: "P-Max_R-1".into(),
+        name: "Maximum".into(),
+        segment: "P".into(),
+        field: ParameterField {
+            offset: 0,
+            bit_offset: 0,
+            size_in_bit: 16,
+        },
+        value: AttributedValue::Float {
+            bits: 0x361A,
+            encoding: FloatEncoding::Dpt9,
+        },
+    });
+    plan.steps.push(MemoryDownloadStep::WriteMemory {
+        address: 0x4800,
+        octets: vec![0x36, 0x1A],
+    });
+    held.regions.push(BackupRegion {
+        address: 0x4800,
+        octets: vec![0x83, 0x1E],
+    });
+    let rows = decode(&image, &held, &plan);
+    let parameter = rows.iter().find(|r| r.kind == "parameter").unwrap();
+    assert_eq!(parameter.project.as_deref(), Some("999.68"));
+    assert_eq!(parameter.device.as_deref(), Some("-12.5"));
+    assert_eq!(parameter.reason, None);
+    held.regions.last_mut().unwrap().octets = vec![0x7F, 0xFF];
+    let rows = decode(&image, &held, &plan);
+    let parameter = rows.iter().find(|r| r.kind == "parameter").unwrap();
+    assert_eq!(parameter.device, None);
+    assert!(parameter.reason.is_some());
+}
+
 #[test]
 fn tables_use_placements_big_endian_and_each_sides_own_tsap() {
     let (image, held, plan) = fixture();

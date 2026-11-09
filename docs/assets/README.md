@@ -2,7 +2,7 @@
 
 # Visual assets: real application, fictional building
 
-The current manual stills show the published **v0.1.0-alpha.19**, in light
+The current manual stills show the published **v0.1.0-alpha.20**, in light
 **Porcelain** (`porcelain`) and dark **Graphite** (`graphite`). The optional
 CRT/LCARS stills also show that release. Chromium runs the production frontend
 against the real server extracted from the published Docker image, not from
@@ -11,7 +11,26 @@ All device names, rooms and products come from the generated **Sample house**
 or the first-project **Practice house** exercise. No customer project or live
 bus capture belongs in this directory.
 
+## Manual refresh for Alpha 20 (9 November 2026)
+
+All 59 manual stills and the three workflow GIFs were recaptured from the published
+`v0.1.0-alpha.20` image (index digest `sha256:9a3ef089…`, tagged commit
+`1d3c7d433`): its `knx-server` and production frontend, the fictional Sample house
+and Practice house, in an isolated loopback-only namespace. The capture specs did
+not need changes; only the expected-version default moved to Alpha 20. Newly visible
+are the group-address CSV export/import buttons with their encoding choice, the
+UDP/TCP transport fields in the bus monitor and the connection status bar. The
+diagnostic-export and Report problem stills again come from the tag's diagnostic
+simulator; the production frontend built from the tag is byte-identical to the
+image's. Six of those nine element captures came out byte-identical to the Alpha 19
+pictures. Alpha 20 shows a group-address description read-only and only when one
+exists; the fictional sample has none, so no still shows one, and the later
+description editor is not pictured. Exact files, sizes and hashes are in the
+[manifest](media-manifest.json).
+
 ## Manual refresh for Alpha 19 (1 November 2026)
+
+*Superseded by the Alpha 20 captures above; the description stays as history.*
 
 All manual stills and the three workflow GIFs were recaptured from the published
 `v0.1.0-alpha.19` image (index digest `sha256:a8c48252…`, tagged commit
@@ -118,12 +137,12 @@ README recordings remain historical media; replacing stills does not date them a
 
 | Asset | What it teaches | Capture |
 | --- | --- | --- |
-| `screenshots/porcelain-*.png` | Light workspace, dialogs, project/device wizards, search, the Settings page, monitor, reopened practice project, history and the four group-address presentations | Published Alpha 19; refreshed 1 November 2026 |
-| `screenshots/graphite-*.png` | Dark device overview, object/DPT and parameter editor, group addresses, installation properties, history, message details and login | Published Alpha 19; real server, same fictional project |
-| `screenshots/user-modern-retro-green-crt-group-addresses.png`, `screenshots/lcars-group-addresses.png` | Optional themes used by the website gallery | Published Alpha 19; no live bus |
-| `screenshots/porcelain-report-problem-*.png` | [Report problem wizard](../manual/user-guide/08-reports-and-diff.md#report-problem): File menu entry, problem type, contents, preview, save and send | `v0.1.0-alpha.19` tagged source: production frontend, real HTTP handlers and the regular KNX simulator on loopback (fictional device), real ZIP download. Reproduce with `apps/knx-web/e2e/diagnostic-guide.shots.ts` and `playwright.diagnostic-guide.config.ts` (`KNX_DIAG_GUIDE_OUT`) |
+| `screenshots/porcelain-*.png` | Light workspace, dialogs, project/device wizards, search, the Settings page, monitor, reopened practice project, history and the four group-address presentations | Published Alpha 20; refreshed 9 November 2026 |
+| `screenshots/graphite-*.png` | Dark device overview, object/DPT and parameter editor, group addresses, installation properties, history, message details and login | Published Alpha 20; real server, same fictional project |
+| `screenshots/user-modern-retro-green-crt-group-addresses.png`, `screenshots/lcars-group-addresses.png` | Optional themes used by the website gallery | Published Alpha 20; no live bus |
+| `screenshots/porcelain-report-problem-*.png` | [Report problem wizard](../manual/user-guide/08-reports-and-diff.md#report-problem): File menu entry, problem type, contents, preview, save and send | `v0.1.0-alpha.20` tagged source: production frontend, real HTTP handlers and the regular KNX simulator on loopback (fictional device), real ZIP download. Reproduce with `apps/knx-web/e2e/diagnostic-guide.shots.ts` and `playwright.diagnostic-guide.config.ts` (`KNX_DIAG_GUIDE_OUT`) |
 | [New project](workflows/new-project.gif) | Details → optional structure → review → creation; the result explicitly says **not saved yet** | Real UI actions, 960 × 600, 10 fps |
-| `screenshots/porcelain-diagnostic-export-*.png` | Step-by-step [diagnostic export guide](../manual/user-guide/08-reports-and-diff.md#send-diagnostic-data): File menu, device and interface, preview and read, result with **Report problem…** | `v0.1.0-alpha.19` tagged source, 1 November 2026; production frontend, real HTTP handlers and the regular KNX simulator on loopback (fictional device, labelled *SIMULATED*), no live bus. Same spec as the report stills |
+| `screenshots/porcelain-diagnostic-export-*.png` | Step-by-step [diagnostic export guide](../manual/user-guide/08-reports-and-diff.md#send-diagnostic-data): File menu, device and interface, preview and read, result with **Report problem…** | `v0.1.0-alpha.20` tagged source, 9 November 2026; production frontend, real HTTP handlers and the regular KNX simulator on loopback (fictional device, labelled *SIMULATED*), no live bus. Same spec as the report stills |
 | [Add device](workflows/add-device.gif) | Explorer action → product → placement → address preview → confirmed creation | Real project mutation, fictional actuator; no hardware access |
 | [Search](workflows/search.gif) | Ctrl+K → type `light` → filtered results → Escape | Search only; it does not connect to a gateway |
 | [Telegram flow](readme/telegram-flow.gif) | Session-local traffic animation under the CRT theme | Earlier real component capture with **synthetic traffic**; not real-bus evidence |
@@ -133,7 +152,7 @@ README recordings remain historical media; replacing stills does not date them a
 byte sizes and SHA-256 hashes for the refreshed screenshots and workflow GIFs.
 The source snapshot and exercised checks are recorded in the documentation
 validation evidence linked from [the implementation log](../IMPLEMENTATION_STATUS.md).
-The Alpha 19 refresh covers **59 screenshots** (46 from the main capture, four
+The Alpha 20 refresh covers **59 screenshots** (46 from the main capture, four
 group-address presentations, four diagnostic-export and five Report problem
 stills) and **three workflow GIFs**. Workspace PNGs are full captures at 1× scale:
 1440 × 900 normally, 1440 × 1080 for history, the expanded DPT field and message
@@ -166,8 +185,8 @@ For these exact **release** captures, use the published image rather than the
 source build above. Extracting a stopped container does not start the application:
 
 ```bash
-artifact="$(mktemp -d "${TMPDIR:-/tmp}/knx-alpha19.XXXXXX")"
-container="$(docker create --network none knxbench/knxbench-server:0.1.0-alpha.19)"
+artifact="$(mktemp -d "${TMPDIR:-/tmp}/knx-alpha20.XXXXXX")"
+container="$(docker create --network none knxbench/knxbench-server:0.1.0-alpha.20)"
 docker cp "$container:/usr/local/bin/knx-server" "$artifact/knx-server"
 docker cp "$container:/app/frontend" "$artifact/frontend"
 docker rm -v "$container"
@@ -186,23 +205,26 @@ Run this alternative from the repository root, on Linux matching the extracted
 server architecture. `MANUAL_FRONTEND_DIR` overrides `dist/`; without it the config
 keeps the normal source-build route. Record the image revision/digest and binary
 hash in the manifest. The captures here bind to release source
-`0b827abee222c459ce068cbce83a941691a16805` and published image index digest
-`sha256:a8c48252786f029518096fa77fe4518987685bce73d5a832e950bc5a544f01ba`.
+`1d3c7d433d2b2139a1ecbfac1314bacc4ef9fc22` and published image index digest
+`sha256:9a3ef089f5fccf930e4273ac611100ef65f47ae33415e426177f73fd4fd9db45`.
 
 The diagnostic-export and Report problem stills need the regular KNX simulator,
-which the image does not contain. Build it from the tag, and build the production
-frontend (`npm run build` in `apps/knx-web`) from a checkout whose application
-source matches the tag; for this refresh `git diff v0.1.0-alpha.19 -- apps crates`
-was empty apart from the capture specs:
+which the image does not contain. Build it from the tag and run the capture inside a
+detached worktree of the tag, so the simulator serves the tag's own production
+frontend. For this refresh that frontend was byte-identical to the image's
+(`diff -r` empty):
 
 ```bash
-git worktree add --detach ../knxbench-tag v0.1.0-alpha.19
-(cd ../knxbench-tag && cargo build -p knx-server --example diagnostic_simulator)
+repo="$PWD"
+git worktree add --detach ../knxbench-tag v0.1.0-alpha.20
+cd ../knxbench-tag
+cargo build -p knx-server --example diagnostic_simulator
 cd apps/knx-web
+npm ci && npm run build
 unshare --user --map-root-user --net sh -c \
   'ip link set lo up && exec "$@"' sh \
-  env KNX_DIAG_EVIDENCE="$(mktemp -d)" KNX_DIAG_GUIDE_OUT=../../docs/assets/screenshots \
-  KNX_DIAG_SIM_BIN=../../../knxbench-tag/target/debug/examples/diagnostic_simulator \
+  env KNX_DIAG_EVIDENCE="$(mktemp -d)" \
+  KNX_DIAG_GUIDE_OUT="$repo/docs/assets/screenshots" \
   npx playwright test -c playwright.diagnostic-guide.config.ts
 ```
 Remove only your extraction directory after verifying the output and stopping the

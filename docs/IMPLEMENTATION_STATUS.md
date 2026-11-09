@@ -12,6 +12,26 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Manual screenshots after Alpha 20 (9 November 2026)
+
+Docs and media only, no application change. All 59 manual stills and the three
+workflow GIFs were recaptured from the server and frontend extracted from the
+published `knxbench/knxbench-server:0.1.0-alpha.20` image (tagged commit
+`1d3c7d433`) in a loopback-only namespace with the fictional Sample house; the
+diagnostic-export and Report problem stills come from the tag's regular KNX
+simulator, whose tag-built frontend is byte-identical to the image's. The capture
+specs ran unchanged; only the expected-version default moved to Alpha 20. Two
+complete runs of all three specs passed; byte/pixel reproducibility is in the
+[media manifest](assets/media-manifest.json). README and manual captions now name
+Alpha 20, and stale "screenshot predates" notes about the TCP choice, programming
+chips and channel groups are corrected because the stills show them. Alt texts that
+no longer matched the picture were fixed: schema version 19 on the Overview, the
+Buildings **+ New** button, the device description below the inspector crop and the
+README search clip (group addresses only). The stills show Alpha 20, not main: the
+group-address description is read-only there and absent from the fictional sample,
+so the later description editor is not pictured. The project-history limits now read
+`953.7 MiB`; the Alpha 19 stills showed the unrounded value.
+
 ## German UI and parameter metadata (9 November 2026; main-only)
 
 Known parameter types, value origins and manufacturer access modes now use

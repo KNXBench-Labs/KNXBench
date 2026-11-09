@@ -422,7 +422,7 @@ test("manual screenshot of the sign-in page", async ({ page }) => {
   await page.reload();
   await expect(page.getByLabel(/Password/i)).toBeVisible();
   // The release being photographed; a stale frontend would show its own version.
-  const version = process.env.MANUAL_EXPECTED_VERSION ?? "0.1.0-alpha.19";
+  const version = process.env.MANUAL_EXPECTED_VERSION ?? "0.1.0-alpha.20";
   await expect(page.getByText(version, { exact: false })).toBeVisible();
   await shot(page, "login", "graphite");
 });

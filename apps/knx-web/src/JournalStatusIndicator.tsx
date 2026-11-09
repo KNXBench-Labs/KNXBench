@@ -10,16 +10,28 @@ export const JOURNAL_POLL_MS = 400;
  * Shows nothing while every edit is in the file. After `revision` changes in a
  * project that has a file (`saved`), it asks the server until the write is
  * done; a failure stays visible with a retry until a write succeeds. An unsaved
- * project journals nothing, so nothing is asked before its first save.
+ * project journals nothing: changes before its first save, and the save
+ * itself, ask nothing.
  */
 export default function JournalStatusIndicator({ revision, saved }: { revision: number | undefined; saved: boolean }) {
   const t = useTranslate();
   const [status, setStatus] = useState<api.JournalStatus>({ state: "saved" });
-  const first = useRef(revision);
+  // The last revision already in the file as far as this note knows: while
+  // unsaved it follows every revision, so the first save starts from there.
+  const seen = useRef(revision);
   const [checks, setChecks] = useState(0);
+  const handled = useRef(checks);
+  const wasSaved = useRef(saved);
 
   useEffect(() => {
-    if (!saved || (revision === first.current && checks === 0)) return;
+    const retried = checks !== handled.current;
+    handled.current = checks;
+    const firstSave = !wasSaved.current && saved;
+    wasSaved.current = saved;
+    // Unsaved, nothing is journaled; the first save writes everything itself.
+    if (!saved || firstSave) { seen.current = revision; return; }
+    if (revision === seen.current && !retried) return;
+    seen.current = revision;
     let stopped = false;
     let timer: ReturnType<typeof setTimeout> | undefined;
     const poll = () => {

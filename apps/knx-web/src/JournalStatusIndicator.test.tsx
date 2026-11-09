@@ -81,6 +81,17 @@ describe("JournalStatusIndicator", () => {
     expect(apiMock.journalStatus).not.toHaveBeenCalled();
   });
 
+  it("asks nothing for the changes before, nor for, the first save", async () => {
+    await show(1, false);
+    await show(2, false);
+    await show(3, true);
+    expect(apiMock.journalStatus).not.toHaveBeenCalled();
+    apiMock.journalStatus.mockResolvedValue({ state: "saved" });
+    await show(4, true);
+    await settle();
+    expect(apiMock.journalStatus).toHaveBeenCalledTimes(1);
+  });
+
   it("shows nothing when the server has no journal route", async () => {
     apiMock.journalStatus.mockRejectedValue(new Error("404"));
     await show(1);

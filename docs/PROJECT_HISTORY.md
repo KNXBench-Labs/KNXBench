@@ -47,6 +47,12 @@ checked by stored-byte SHA-256 or value equality instead of being decoded, encod
 or hashed again, and anything another writer changed is derived afresh. No format
 change.
 
+[ADR-0166](adr/0166-commands-acknowledged-from-memory-journaled-in-background.md)
+changes contract item "durable before acknowledged" for project commands on a
+user's server: they are answered from memory and journaled by one background
+writer; every other writer, Save and stop wait for it. Programming settlement and
+catalogue creation stay durable before they answer.
+
 ## Contract
 
 1. Once a project has a native save location, successful reversible commands,

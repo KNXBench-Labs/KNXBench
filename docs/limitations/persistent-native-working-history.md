@@ -72,6 +72,23 @@ environment section lists the phase times of the last 20 journal writes of proje
 write of 2 s or more logs one line to standard error, so a field setup can show
 where its time goes.
 
+## Background journal writes (ADR-0166, 9 November 2026; issue #35)
+
+On a user's server (`knx-server`, desktop) an edit, bulk device creation, undo or
+redo is answered from memory and written to the journal in the background
+([ADR-0166](../adr/0166-commands-acknowledged-from-memory-journaled-in-background.md)).
+Measured on the dev machine (release build, the 308 MB file with 10 saved
+versions): a parameter change answers in 0.21 to 0.43 s instead of 1.6 to 1.8 s;
+ten changes in a row became three journal writes, and the file was current 1.5 s
+after the last one. A hard crash or power loss can lose the edits of the write
+still running or pending (normally one to two seconds); a clean stop, desktop
+close, Save, Save As, opening another project and every other journal writer wait
+for the writer first. A failed write refuses further edits until a retry or Save
+As succeeds; the status bar shows the failure. Programming results and catalogue
+device creation still write before they answer. The remaining answer time is
+copying the project, stack and retained context and building the tree, not the
+journal. No figures exist for other machines or Docker volumes.
+
 ## Save As archive boundary (Alpha 18 artifact verification, 29 October 2026)
 
 Saving As to a new native file constructs its history from the current normalized

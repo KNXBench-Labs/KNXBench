@@ -46,5 +46,20 @@ this package does not claim complete translation of either pack.
   parameter metadata in English/German at 400/1440 px, retaining the existing
   editor-identity, navigation, mutation and overflow checks.
 
+## Verification history
+
+The first integrated package gate stopped at Vitest: 5,466 tests passed and one
+new catalogue-guard test failed. The guard had mistaken four existing
+non-plural action/diagnostic keys ending in `.one`/`.other` for incomplete
+plural pairs. The correction names those exact keys and adds positive/negative
+controls; real missing halves and exact singular placeholder multisets remain
+checked. This is a test correction, not a manufacturer-data or runtime change.
+
+The focused four-file regression run then passed all 65 tests. Three deliberate
+faults in an isolated source copy were detected by assertions: bypassed metadata
+translation, an English German-catalogue value, and a renamed singular count
+placeholder. Restoring the exact original source returned all 65 tests to green.
+The original failed gate is retained separately; it is not counted as acceptance.
+
 These are software/UI checks using fictional data and intercepted APIs. No bus,
 device, native-shell, release or deployment acceptance follows from this change.

@@ -1202,6 +1202,8 @@ mod tests {
             *max_elements = 2;
         }
         assert!(reason(vec![small, write_without_count(8)]).contains("MaxElements"));
+        // Undeclared: without `Count` nothing states the size.
+        assert!(reason(vec![write_without_count(8)]).contains("size is unknown"));
     }
 
     /// `[V]` ETS 6.4 against KNXBench's simulator (ADR-0162): an all-zero

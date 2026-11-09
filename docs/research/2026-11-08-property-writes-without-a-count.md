@@ -39,6 +39,12 @@ blinds 1). Every other parameter-filled write of the program carries `Count`.
 
 ## What stays open
 
+- Finding 3 rests on one octet: one one-bit parameter and seven unowned bits.
+  In other properties of the same runs ETS wrote bits from its own image where
+  no parameter is declared (finding 7 of the
+  [earlier note](2026-11-08-property-placed-parameters.md)); a count-less
+  property with such image bits was not observed.
+
 - A write without `Count` to a property that holds no parameter, and one whose
   declaration has more elements than its parameters reach, were not observed.
   KNXBench refuses the first and zero-fills the second as finding 3 suggests.

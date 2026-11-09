@@ -40,8 +40,10 @@ spent in re-deriving and re-checking, not in the disk.
    nothing while every edit is in the file.
 4. **A failed write blocks further edits.** While `failed`, project commands are
    refused with a message that names the failure; nothing already shown is
-   discarded. The writer retries on request; Save As to another file also clears
-   it. The in-memory state remains the newest and is what Save writes.
+   discarded. The writer retries on request; Save, Save As, programming
+   settlement and catalogue creation also clear it, because each writes the
+   newest state synchronously. The in-memory state remains the newest and is what
+   Save writes. A writer that panics records a failure instead of staying busy.
 5. **Flush before anything that needs the file.** Locking the history
    generation waits until the writer is idle or failed. Every other journal
    writer (Save, Save As, open, new, import, version and undo-history actions,
@@ -50,8 +52,10 @@ spent in re-deriving and re-checking, not in the disk.
    interleaves with a background write or writes over a newer one. Server stop
    and desktop close flush explicitly. The writer never takes the project lock,
    so a caller may wait while holding it. A synchronous write of the newest state
-   discards every older pending job by sequence number and clears its failure;
-   replacing the project discards the old one's jobs after writing them.
+   discards every older pending job by sequence number and clears its failure.
+   Replacing the project writes the old one's pending jobs first; a write that
+   had already failed holds unsaved edits, so replacing needs the usual discard
+   confirmation, and the server log names the discarded write.
 6. **Some writes stay synchronous.** A programming result
    (`settle_programming`) is persisted before it is published: it records what a
    device holds, and losing it would misstate the installation. Catalogue device
@@ -62,7 +66,9 @@ spent in re-deriving and re-checking, not in the disk.
    `PRAGMA data_version` and the stored generation are unchanged since its own
    last commit, no other connection has written the file, so it skips the
    read-only pre-admission and the in-transaction re-admission and version
-   listing. Any other answer, or a platform without a file identity, runs the
+   listing. Identity and `data_version` are read before each write and the
+   identity compared again after it, so a commit or swap during the write also
+   counts. Any other answer, or a platform without a file identity, runs the
    full ADR-0165 path. `data_version` changes on the connection whenever another
    connection commits to the database (https://sqlite.org/pragma.html#pragma_data_version,
    inspected 2026-11-09).
@@ -95,7 +101,9 @@ spent in re-deriving and re-checking, not in the disk.
   (not the failed job) once the file is back; a real foreign save stops the
   writer as stale instead of being overwritten; reading the generation waits for the writer; own
   commits skip the admission and a foreign commit restores it; a file replaced
-  under the same path is admitted afresh instead of written blind (the previous
-  code wrote into the replaced file's old connection); opening another
+  under the same path is admitted afresh and written (the previous code failed
+  the write: SQLite refuses writing a moved file on unix); a writer panic records
+  a failure instead of hanging readers; replacing the project while failed needs
+  the discard confirmation; opening another
   project writes the last edits first. Web: the status note stays silent, follows
   a running write, keeps a failure with a retry and tolerates an older server.

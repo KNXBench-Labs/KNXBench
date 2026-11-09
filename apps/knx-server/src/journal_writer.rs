@@ -85,7 +85,7 @@ impl JournalWriter {
         self.inner
             .queue
             .lock()
-            .expect("journal writer mutex poisoned")
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
     }
 
     pub fn status(&self) -> JournalStatus {
@@ -135,7 +135,7 @@ impl JournalWriter {
                 .inner
                 .changed
                 .wait(queue)
-                .expect("journal writer mutex poisoned");
+                .unwrap_or_else(std::sync::PoisonError::into_inner);
         }
     }
 
@@ -186,12 +186,23 @@ impl JournalWriter {
                         .inner
                         .changed
                         .wait(queue)
-                        .expect("journal writer mutex poisoned");
+                        .unwrap_or_else(std::sync::PoisonError::into_inner);
                 }
                 queue.busy = true;
                 queue.pending.take().expect("a pending job")
             };
-            let failure = write_job(&job, &mut kept).err();
+            // A panic must not leave the writer busy forever: every reader of
+            // the generation and every stop would wait for it.
+            let written = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                write_job(&job, &mut kept)
+            }));
+            let failure = match written {
+                Ok(result) => result.err(),
+                Err(_) => {
+                    kept = None;
+                    Some("the journal writer failed unexpectedly".to_string())
+                }
+            };
             let mut queue = self.queue();
             queue.busy = false;
             if let Some(message) = failure {
@@ -213,11 +224,23 @@ fn write_job(
     job: &JournalJob,
     kept: &mut Option<(PathBuf, i64, knx_app::project_history::KeptJournal)>,
 ) -> Result<(), String> {
+    #[cfg(test)]
+    if INJECT_PANIC.swap(false, Ordering::SeqCst) {
+        panic!("injected journal writer fault");
+    }
     let started = Instant::now();
     let mut report = JournalWriteReport::default();
     let result = (|| {
-        let mut generation = job.cells.generation.lock().expect("state mutex poisoned");
-        let mut persisted = job.cells.persisted.lock().expect("state mutex poisoned");
+        let mut generation = job
+            .cells
+            .generation
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
+        let mut persisted = job
+            .cells
+            .persisted
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
         let own = match kept.take() {
             Some((path, at, connection))
                 if path == job.path && at == *generation && connection.still_own(&job.path) =>
@@ -253,7 +276,7 @@ fn write_job(
     job.cells
         .writes
         .lock()
-        .expect("state mutex poisoned")
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
         .record(JournalWriteRecord {
             at: chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Millis, true),
             total: started.elapsed(),
@@ -285,4 +308,12 @@ impl JournalWriter {
     pub(crate) fn is_busy(&self) -> bool {
         self.queue().busy
     }
+
+    /// Makes the next background write panic, as an unexpected fault would.
+    pub(crate) fn inject_panic_for_tests(&self) {
+        INJECT_PANIC.store(true, Ordering::SeqCst);
+    }
 }
+
+#[cfg(test)]
+static INJECT_PANIC: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);

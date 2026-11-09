@@ -5,6 +5,7 @@ import { useTranslate } from "./i18n";
 import { indexParameterWorkspace, matchesParameterSearch, type ParameterWorkspaceSeparator } from "./parameterWorkspace";
 import { matrixStyle, planParameterMatrix, type GroupLayoutView } from "./parameterMatrix";
 import "./parameterWorkspace.css";
+import { parameterMetadataLabel } from "./parameterMetadata";
 import { parameterCaption } from "./parameterCaption";
 
 interface Props {
@@ -136,15 +137,15 @@ export default function ParameterWorkspace({ sections, renderField }: Props) {
           {!visible.has(selectedRow!.key) && <p className="parameter-workspace-hidden-note">{t("parameters.workspace.selectedHidden")}</p>}
           <dl>
             <dt>{t("parameters.workspace.identifier")}</dt><dd>{selectedField.etsId}</dd>
-            <dt>{t("parameters.workspace.type")}</dt><dd>{selectedField.kind}</dd>
+            <dt>{t("parameters.workspace.type")}</dt><dd title={selectedField.kind}>{parameterMetadataLabel(t, "kind", selectedField.kind)}</dd>
             {selectedField.kind !== "None" && <>
-              <dt>{t("parameters.workspace.source")}</dt><dd>{selectedField.valueSource}</dd>
+              <dt>{t("parameters.workspace.source")}</dt><dd title={selectedField.valueSource}>{parameterMetadataLabel(t, "source", selectedField.valueSource)}</dd>
               <dt>{t("parameters.workspace.reportedValue")}</dt><dd>{selectedField.value ?? t("parameters.none")}</dd>
             </>}
             {selectedField.min !== null && <><dt>{t("parameters.workspace.minimum")}</dt><dd>{selectedField.min}</dd></>}
             {selectedField.max !== null && <><dt>{t("parameters.workspace.maximum")}</dt><dd>{selectedField.max}</dd></>}
-            {selectedField.access !== null && <><dt>{t("parameters.workspace.access")}</dt><dd>{selectedField.access}</dd></>}
-            {selectedField.blockAccess != null && <><dt>{t("parameters.workspace.blockAccess")}</dt><dd>{selectedField.blockAccess}</dd></>}
+            {selectedField.access !== null && <><dt>{t("parameters.workspace.access")}</dt><dd title={selectedField.access}>{parameterMetadataLabel(t, "access", selectedField.access)}</dd></>}
+            {selectedField.blockAccess != null && <><dt>{t("parameters.workspace.blockAccess")}</dt><dd title={selectedField.blockAccess}>{parameterMetadataLabel(t, "access", selectedField.blockAccess)}</dd></>}
           </dl>
         </section> : <p>{t("parameters.workspace.selectHint")}</p>}
       </aside>

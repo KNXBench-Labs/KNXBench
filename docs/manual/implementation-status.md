@@ -2,6 +2,16 @@
 
 # Implementation status
 
+## German parameter metadata (main-only, after Alpha 20)
+
+The parameter editor translates known type, value-source and manufacturer-access
+labels with the UI language. German shows **Auswahl**, **Im Projekt gespeichert**,
+**Programmstandard**, **Nur lesen** and **Lesen und Schreiben** instead of raw
+English metadata. Original tokens remain in tooltips. Manufacturer parameter
+names, choices and values still use the separate product-data language and its
+existing fallback; changing UI language never rewrites them.
+[Scope and regression coverage](../status/2026-11-09-german-ui-copy.md).
+
 ## Alpha 20 — current pre-release
 
 Alpha 20 (`v0.1.0-alpha.20`, source cutoff `dfb3f88b8`) imports ETS6 group-address

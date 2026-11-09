@@ -30,7 +30,7 @@ Existing settings still apply through their usual immediate-apply and
 acknowledged-save paths; there is no new global Save button.
 [Navigation and state contract](../../contracts/settings-workspace.md).
 
-![Alpha 19 in Porcelain: Settings as a page in the center workspace, with Back to previous view, the section jump links and the Appearance section; the left navigation stays visible](../../assets/screenshots/porcelain-settings.png)
+![Alpha 20 in Porcelain: Settings as a page in the center workspace, with Back to previous view, the section jump links and the Appearance section; the left navigation stays visible](../../assets/screenshots/porcelain-settings.png)
 
 **Alpha 18 and earlier:** Settings opens a resizable window over the
 workspace. Escape closes it and returns focus to the opener; the window's resize
@@ -75,7 +75,7 @@ The **Theme** menu is the one place to choose a theme. It lists:
 
 A choice is saved immediately; to go back, pick the previous entry.
 
-![The published Alpha 19 workbench in Graphite, showing the fictional Sample house’s open group-address ranges and Kitchen light properties](../../assets/screenshots/graphite-group-addresses.png)
+![The published Alpha 20 workbench in Graphite, showing the fictional Sample house’s open group-address ranges and Kitchen light properties](../../assets/screenshots/graphite-group-addresses.png)
 
 *Graphite is the ordinary dark workbench, not a different application. The light
 Porcelain views elsewhere in this manual use the same project and controls.*
@@ -176,8 +176,8 @@ ordinary motion level: Standard gives a 2.5-second left-to-right sweep and a
 1-second pause; Subtle keeps it slow (about 3.6 seconds per complete cycle).
 The glint stays steady even with Glitch style. Off or OS reduced motion leaves
 the real status text static. It does not animate ordinary connection states,
-errors, results or decision prompts, and adds no separate setting. This needs
-a since Alpha 12; the existing screenshots show the released UI.
+errors, results or decision prompts, and adds no separate setting. Available
+since Alpha 12; a still screenshot cannot show the glint.
 
 **Motion by category** (since Alpha 11) sets toast
 notifications, achievement popups and the telegram Flow separately. Since Alpha 12

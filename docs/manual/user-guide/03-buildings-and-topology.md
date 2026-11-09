@@ -47,7 +47,7 @@ unassigned card. Alpha 14 still draws empty lines.
 
 ![The Buildings view with the building "Sample house", its Ground floor and First
 floor cards, and rooms such as Living room, Kitchen and Hall holding their devices;
-a "+ Device" button sits in the header](../../assets/screenshots/porcelain-buildings.png)
+a "+ New" button sits in the header](../../assets/screenshots/porcelain-buildings.png)
 
 The Buildings view draws building parts as nested cards with their devices inside.
 Clicking a card focuses it: the view then shows that part's devices as a table and its
@@ -121,8 +121,8 @@ Delete button.
 
 ![The properties pane for device 1.1.1 "Switch actuator ground floor", showing Delete,
 the device number 1.1.1, Line "Line 1: Ground floor", Building part "Sample house /
-Ground floor / Distribution board" and the Description "Fictional sample
-device"](../../assets/screenshots/porcelain-device-inspector.png)
+Ground floor / Distribution board"; the Description field follows below the
+picture](../../assets/screenshots/porcelain-device-inspector.png)
 
 Areas, lines and building parts can be renamed. Current source also renames
 project-local devices and individual group addresses (newer than alpha.6): use

@@ -118,7 +118,7 @@ Retained bytes are not a promise of complete ETS semantics.
 <table>
   <tr>
     <td width="50%"><img src="docs/assets/workflows/new-project.gif" alt="New-project wizard in the Porcelain theme: details, optional topology, building and group structure, review, then the created project, marked as not saved yet"></td>
-    <td width="50%"><img src="docs/assets/workflows/search.gif" alt="Ctrl+K search in the Porcelain theme: typing light filters the devices and group addresses of the fictional sample house"></td>
+    <td width="50%"><img src="docs/assets/workflows/search.gif" alt="Ctrl+K search in the Porcelain theme: typing light filters the group addresses of the fictional sample house"></td>
   </tr>
   <tr>
     <td align="center"><sub>New project: structure first, devices later</sub></td>
@@ -156,7 +156,7 @@ no actual building was switched on and off for this clip.</sub></p>
   </tr>
 </table>
 
-<p align="center"><sub>Stills and workflow clips: the published Alpha 19 server and frontend, fictional Sample house, no live bus.</sub></p>
+<p align="center"><sub>Stills and workflow clips: the published Alpha 20 server and frontend, fictional Sample house, no live bus.</sub></p>
 
 ## Getting started
 

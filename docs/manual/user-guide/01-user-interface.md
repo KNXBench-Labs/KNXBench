@@ -99,8 +99,7 @@ waiting for your input do not shimmer. Busy action-button captions are unchanged
 
 Turn **Settings → Appearance → Motion level → Off** to stop it. Your operating
 system's reduced-motion preference also wins; forced-colour mode and printing
-keep plain text. This needs a since Alpha 12; the published manual
-screenshots still show the earlier released UI. See
+keep plain text. Available since Alpha 12; a still screenshot cannot show the motion. See
 [Motion settings](09-settings-and-appearance.md#motion-style-and-motion-level).
 
 <a id="closed-by-default-source-builds-after-alpha-13"></a>
@@ -120,7 +119,7 @@ in-flight results. An explicit search reveal, selected group address or range
 scope can still open the path needed to show its target. Previously remembered
 group-address tree openings remain respected; the new default applies when no
 view state was saved. Alpha 13 and older open this content by default; the
-manual's screenshots show Alpha 19, so a folded block there is the new normal,
+manual's screenshots show Alpha 20, so a folded block there is the new normal,
 not a missing feature.
 
 ## The navigation pane
@@ -178,7 +177,7 @@ input or filter. To leave it, choose another view explicitly; clicking the activ
 entry is no longer a close toggle. The separate diagnostics window keeps its
 existing opening behaviour.
 
-![The Overview of an imported project in three cards: Project contents with the counts of installations, areas, lines, devices, building parts, group addresses and communication objects, Import report with 0 errors and 3 warnings, and Technical details with schema version 16; the navigation blocks on the left are still folded](../../assets/screenshots/porcelain-dashboard.png)
+![The Overview of an imported project in three cards: Project contents with the counts of installations, areas, lines, devices, building parts, group addresses and communication objects, Import report with 0 errors and 3 warnings, and Technical details with schema version 19; the navigation blocks on the left are still folded](../../assets/screenshots/porcelain-dashboard.png)
 
 The Overview of the fictional sample project the manual's screenshots use: 1 area,
 2 lines, 8 devices, 15 group addresses, 8 building parts, 39 communication objects.
@@ -241,7 +240,7 @@ the read-only text and use Ctrl+C; if clipboard permission is refused, the
 record is selected for manual copying. Escape closes details and returns focus
 to the log row. Text is not interpreted as HTML or changed for copying.
 
-![Alpha 19 in Graphite: message details for the achievement notification Come to the Dark Side after a theme change, with Copy message, Copy all details and the original entry as selectable JSON](../../assets/screenshots/graphite-message-details.png)
+![Alpha 20 in Graphite: message details for the achievement notification Come to the Dark Side after a theme change, with Copy message, Copy all details and the original entry as selectable JSON](../../assets/screenshots/graphite-message-details.png)
 
 *This is a browser notification, not a bus telegram or a server-log export. The
 message really came from changing the theme; no error was invented for the camera.*

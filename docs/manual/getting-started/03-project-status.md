@@ -26,8 +26,11 @@ download keeps its status after unrelated edits, and the AppImage starts for eve
 user again. None of this is verified on real hardware, and the allocation mismatch
 behind issues #30 and #22 is unresolved. [Release notes](../../releases/alpha20.md)
 keep the exact boundaries together.
-The manual and README screenshots still show the published Alpha 19 server and
-frontend; they do not show the Alpha 20 additions yet.
+The manual and README screenshots show the published Alpha 20 server and
+frontend, including the group-address CSV buttons with their encoding choice and
+the UDP/TCP choice in the bus monitor. Alpha 20 shows a group-address description
+read-only, and only when there is one (the fictional sample has none); the
+description editor came after this release.
 
 **Before upgrading:** close the app and independently back up `.knxdb` files and
 all Docker data, including the product database and device backups. Native/store

@@ -58,7 +58,7 @@ with or without project links.
 
 **Since Alpha 10.** Alpha 9 and older show only the single flat table described
 above. Like every screenshot in this manual, the four below show the published
-Alpha 19.
+Alpha 20.
 
 The **Presentation** select switches between four views. They all show the same
 addresses, the same search, filter and range scope, and the same selection: select
@@ -79,7 +79,7 @@ all-ranges page remains an overview. [Verification](../../status/2026-11-03-wp28
 | **Address atlas** | Cards for ranges and addresses with counts, DPT and number of project links. It is navigation through stored ranges, not a map of the physical topology. |
 | **Connection matrix** | Group addresses against communication objects: the ones linked to them, plus every object of the devices whose object list you load. `S` is a projected Send link, `R` a projected Receive link (German UI: `S`/`E`), `?` an unknown direction (exact value in the cell details), `—` no projected link. |
 
-![Alpha 19, Porcelain: the tree table groups the fictional Sample house by its stored ranges Lighting, Switching, Status and Blinds; Status is collapsed and shows its count of 4, and the selected Kitchen light 0/0/2 is highlighted and open in Properties with its three links](../../assets/screenshots/porcelain-ga-view-tree.png)
+![Alpha 20, Porcelain: the tree table groups the fictional Sample house by its stored ranges Lighting, Switching, Status and Blinds; Status is collapsed and shows its count of 4, and the selected Kitchen light 0/0/2 is highlighted and open in Properties with its three links](../../assets/screenshots/porcelain-ga-view-tree.png)
 
 *Tree table, the default. Range headings fold away; the count stays visible.*
 
@@ -98,15 +98,15 @@ local storage, never written into the project, and a new project that was never
 saved does not remember it. The screenshot above was taken after **Expand all**
 and one click on Status.
 
-![Alpha 19, Porcelain: the column browser with a Range column listing Lighting, Blinds and Heating, a Lighting column listing Switching and Status, the breadcrumb All ranges / Switching, and the four Switching addresses below with Kitchen light still selected](../../assets/screenshots/porcelain-ga-view-columns.png)
+![Alpha 20, Porcelain: the column browser with a Range column listing Lighting, Blinds and Heating, a Lighting column listing Switching and Status, the breadcrumb All ranges / Switching, and the four Switching addresses below with Kitchen light still selected](../../assets/screenshots/porcelain-ga-view-columns.png)
 
 *Column browser: one column per range level. The selection came along from the tree.*
 
-![Alpha 19, Porcelain: the address atlas in the Switching range showing four address cards with DPT Switch (1.001) and their project link counts; the Kitchen light card is outlined as selected, with the Links panel below](../../assets/screenshots/porcelain-ga-view-atlas.png)
+![Alpha 20, Porcelain: the address atlas in the Switching range showing four address cards with DPT Switch (1.001) and their project link counts; the Kitchen light card is outlined as selected, with the Links panel below](../../assets/screenshots/porcelain-ga-view-atlas.png)
 
 *Address atlas: the same scope as cards. It is stored-range navigation, not a floor plan.*
 
-![Alpha 19, Porcelain: the connection matrix with the Properties pane hidden with its scope note for linked objects plus loaded devices, the S/R/?/— legend, the status line Object lists: 1 of 8 devices with objects loaded · 7 not loaded · 0 loading · 0 unavailable, a folded chooser reading 3 of 23 object columns selected (maximum 12), and a grid with two linked columns (Living room ceiling light 0/0/1 has R under Switch actuator ground floor, Channel A and S under Push button living room) and a third column, Switch actuator ground floor, Channel D: Switch #6, with dashes all the way down because it has no project links](../../assets/screenshots/porcelain-ga-view-matrix.png)
+![Alpha 20, Porcelain: the connection matrix with the Properties pane hidden with its scope note for linked objects plus loaded devices, the S/R/?/— legend, the status line Object lists: 1 of 8 devices with objects loaded · 7 not loaded · 0 loading · 0 unavailable, a folded chooser reading 3 of 23 object columns selected (maximum 12), and a grid with two linked columns (Living room ceiling light 0/0/1 has R under Switch actuator ground floor, Channel A and S under Push button living room) and a third column, Switch actuator ground floor, Channel D: Switch #6, with dashes all the way down because it has no project links](../../assets/screenshots/porcelain-ga-view-matrix.png)
 
 *Connection matrix: who sends and who receives, as planned in the project. The third
 column comes from loading the actuator's object list: Channel D is not linked

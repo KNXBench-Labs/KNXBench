@@ -414,7 +414,7 @@ that file after a server/app restart restores the working project and both stack
 Changes can therefore recover while still marked unsaved: Save/autosave controls
 the clean baseline. Closing without saving does not erase the recovery journal.
 
-![Alpha 19 in Graphite: project history with the named version Before the kitchen redesign on the version timeline, one undo step, one project version, the history storage used and explicit storage and backup limits](../../assets/screenshots/graphite-project-history.png)
+![Alpha 20 in Graphite: project history with the named version Before the kitchen redesign on the version timeline, one undo step, one project version, the history storage used and explicit storage and backup limits](../../assets/screenshots/graphite-project-history.png)
 
 *The fictional Sample house has already been saved to a native file. A version is
 a way back from an edit, not a second copy of that file.*

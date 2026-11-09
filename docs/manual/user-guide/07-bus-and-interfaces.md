@@ -83,7 +83,7 @@ that address. You can replace it without changing the saved preference. **Search
 lists the interfaces that answered and lets you select one; the selection does not
 connect until you press Connect.
 
-![The KNXBench bus monitor before a session starts: the tabs Bus monitor, Line scan, Device checks, Download to device, Program address, Debug · service control, Live activity and Activity history; separate gateway host and port fields, the Connect and Search buttons, and the note that the search could not be run because the network is unreachable](../../assets/screenshots/porcelain-bus-monitor.png)
+![The KNXBench bus monitor before a session starts: the tabs Bus monitor, Line scan, Device checks, Download to device, Program address, Debug · service control, Live activity and Activity history; the Bus transport and KNXnet/IP tunnel transport choices with UDP (default) selected, separate gateway host and port fields, the Connect and Search buttons, and the note that the search could not be run because the network is unreachable](../../assets/screenshots/porcelain-bus-monitor.png)
 
 The screenshot was taken on a machine without any network, so the gateway search
 reports that it could not run. KNXBench runs that read-only search once on its own when
@@ -120,8 +120,8 @@ service is not automatically a lost telegram. Plain TCP is not KNX IP Secure.
 software slice passed independent review and the selected package gate
 ([record](../../status/2026-11-08-optional-tcp-tunnelling.md)). It was tested
 against local test peers only; real-gateway interoperability has not been
-verified. There is no automatic reconnect. The screenshot above predates this
-option.
+verified. There is no automatic reconnect. The screenshot above shows both transport
+fields with UDP selected.
 
 ## What the monitor shows
 

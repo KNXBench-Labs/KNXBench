@@ -540,7 +540,8 @@ impl StackRows {
 }
 
 /// Leading rows of `side` whose stored image hash still equals `expected`.
-/// Hashes were verified against their images by the admission before this.
+/// Hashes were verified against their images by the admission before this,
+/// or, on the ADR-0166 own-commit path, written by this writer itself.
 fn kept_rows(conn: &Connection, side: &str, expected: &[String]) -> Result<usize, HistoryError> {
     let mut stmt = conn.prepare(
         "SELECT image_hash FROM project_history_stack WHERE side = ?1 AND position = ?2 AND format_version = ?3",

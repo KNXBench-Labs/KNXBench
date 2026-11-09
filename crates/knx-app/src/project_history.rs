@@ -102,6 +102,10 @@ pub fn persist_working_kept(
     trust: &history::JournalTrust,
     report: &mut history::JournalWriteReport,
 ) -> Result<(i64, history::JournalTrust, KeptJournal), String> {
+    // Read before the write: a foreign commit or file swap from here on makes
+    // the next write admit the file in full. This connection's own commits do
+    // not change its data_version.
+    let file = FileIdentity::of(path);
     let (conn, own) = match kept {
         Some(kept) => (kept.conn, true),
         None => {
@@ -111,14 +115,15 @@ pub fn persist_working_kept(
             (conn.map_err(|e| e.to_string())?, false)
         }
     };
+    let data_version = data_version(&conn)?;
     let written = if own {
         history::save_editor_after_own_commit(&conn, snapshot, stack, generation, trust, report)
     } else {
         history::save_editor_trusting(&conn, snapshot, stack, generation, trust, report)
     };
     let (generation, trust) = written.map_err(|e| e.to_string())?;
-    let data_version = data_version(&conn)?;
-    let file = FileIdentity::of(path);
+    // A file swapped during the write: never trust this connection next time.
+    let file = file.filter(|before| FileIdentity::of(path) == Some(*before));
     Ok((
         generation,
         trust,

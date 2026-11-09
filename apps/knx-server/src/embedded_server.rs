@@ -221,6 +221,12 @@ async fn run_close(inner: &Inner) -> EmbeddedClose {
     // Acknowledged edits not yet in the file are written before the app closes (ADR-0166).
     let journal_state = std::sync::Arc::clone(&inner.state);
     let _ = tokio::task::spawn_blocking(move || journal_state.journal().flush()).await;
+    if let crate::journal_writer::JournalStatus::Failed { message } = inner.state.journal().status()
+    {
+        eprintln!(
+            "knx-desktop: the last edits could not be written to the project file: {message}"
+        );
+    }
     EmbeddedClose {
         http,
         bus,

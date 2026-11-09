@@ -3080,7 +3080,14 @@ fn replace_project_state_transaction(
         .history_generation
         .lock()
         .expect("state mutex poisoned") = generation;
-    // The flush above wrote the old project's last edits; nothing of it remains to write.
+    // The flush above wrote the old project's last edits; nothing of it remains
+    // to write. A write that had failed held unsaved edits the user agreed to
+    // discard (`can_replace`); the server log still says so.
+    if let crate::journal_writer::JournalStatus::Failed { message } = state.journal().status() {
+        eprintln!(
+            "warning: discarded edits the journal could not write to the previous project ({message})"
+        );
+    }
     state.journal().superseded(state.journal().sequence());
     *state
         .persisted_history

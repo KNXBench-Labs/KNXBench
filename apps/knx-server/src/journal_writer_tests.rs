@@ -260,3 +260,49 @@ fn a_file_replaced_under_the_same_path_is_admitted_afresh_not_written_blind() {
         .iter()
         .any(|(name, _)| *name == "preAdmission"));
 }
+
+#[test]
+fn a_panicking_write_fails_instead_of_hanging_every_reader() {
+    let dir = tempfile::tempdir().unwrap();
+    let (state, _path, installation) = background(&dir);
+    state.journal().inject_panic_for_tests();
+    domain::rename_installation_impl(&state, installation, "Panicking".into()).unwrap();
+    let (done, waited) = std::sync::mpsc::channel();
+    let writer = state.journal().clone();
+    std::thread::spawn(move || {
+        writer.flush();
+        let _ = done.send(());
+    });
+    waited
+        .recv_timeout(Duration::from_secs(20))
+        .expect("flush returns after a writer panic");
+    assert!(matches!(
+        state.journal().status(),
+        JournalStatus::Failed { .. }
+    ));
+    // The writer survived: a retry writes the state.
+    domain::retry_journal(&state);
+    state.journal().flush();
+    assert_eq!(state.journal().status(), JournalStatus::Saved);
+}
+
+#[test]
+fn replacing_the_project_while_failed_needs_the_discard_confirmation() {
+    let dir = tempfile::tempdir().unwrap();
+    let (state, path, installation) = background(&dir);
+    std::fs::remove_file(&path).unwrap();
+    domain::rename_installation_impl(&state, installation, "Never written".into()).unwrap();
+    state.journal().flush();
+    assert!(matches!(
+        state.journal().status(),
+        JournalStatus::Failed { .. }
+    ));
+    // The unwritten edits are unsaved work: no silent replacement.
+    assert!(domain::new_project_impl(&state, None, None, None, None, false).is_err());
+    assert!(matches!(
+        state.journal().status(),
+        JournalStatus::Failed { .. }
+    ));
+    domain::new_project_impl(&state, None, None, None, None, true).unwrap();
+    assert_eq!(state.journal().status(), JournalStatus::Saved);
+}

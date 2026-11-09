@@ -35,7 +35,7 @@ pub(super) fn validate_default(
         .ok_or_else(|| unsupported("parameter has no source bytes"))?;
     let mut probe = ParameterImage::new(base.clone());
     match default {
-        Encoded::Number(value) => probe.write(field, *value),
+        Encoded::Number(value) | Encoded::Float { bits: value, .. } => probe.write(field, *value),
         Encoded::Text { octets, .. } => probe.write_octets(field, octets),
     }
     .map_err(|error| ImageError::Parameter {

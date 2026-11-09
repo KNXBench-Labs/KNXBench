@@ -349,6 +349,11 @@ pub struct ProgramCode {
     /// database stores no unit column (ADR-0041), and a time value's
     /// encoding depends on it (ADR-0162).
     pub time_units: BTreeMap<String, Option<String>>,
+    /// `Static/ParameterTypes/ParameterType/TypeFloat/@Encoding` by parameter
+    /// type id, verbatim; `None` where a `TypeFloat` declares none. The
+    /// database stores no encoding column, and the octets depend on it
+    /// (ADR-0169).
+    pub float_encodings: BTreeMap<String, Option<String>>,
     /// Every `ApplicationProgram` attribute, verbatim (`ApplicationNumber`,
     /// `ApplicationVersion`, `PeiType`, ...).
     pub program_attributes: BTreeMap<String, String>,
@@ -840,7 +845,8 @@ impl<'a> Parser<'a> {
         Ok(())
     }
 
-    /// The `@Unit` of every `ParameterType` whose type child is `TypeTime`.
+    /// The `@Unit` of every `ParameterType` whose type child is `TypeTime`,
+    /// and the `@Encoding` of every one whose type child is `TypeFloat`.
     fn read_time_units(&mut self, code: &mut ProgramCode) -> Result<(), CodeError> {
         while let Some(child) = self.next_inside("ParameterTypes")? {
             if child.name != "ParameterType" || child.empty {
@@ -849,9 +855,16 @@ impl<'a> Parser<'a> {
             }
             let id = child.attributes.get("Id").map(str::to_string);
             while let Some(kind) = self.next_inside("ParameterType")? {
-                if let (Some(id), "TypeTime") = (&id, kind.name.as_str()) {
-                    let unit = kind.attributes.get("Unit").map(str::to_string);
-                    code.time_units.insert(id.clone(), unit);
+                match (&id, kind.name.as_str()) {
+                    (Some(id), "TypeTime") => {
+                        let unit = kind.attributes.get("Unit").map(str::to_string);
+                        code.time_units.insert(id.clone(), unit);
+                    }
+                    (Some(id), "TypeFloat") => {
+                        let encoding = kind.attributes.get("Encoding").map(str::to_string);
+                        code.float_encodings.insert(id.clone(), encoding);
+                    }
+                    _ => {}
                 }
                 self.skip(&kind)?;
             }
@@ -1991,8 +2004,17 @@ mod tests {
                  <ParameterType Id="PT-U"><TypeTime SizeInBit="8" minInclusive="0" maxInclusive="9" /></ParameterType>
                  <ParameterType Id="PT-N"><TypeNumber SizeInBit="16" Type="unsignedInt" minInclusive="0" maxInclusive="9" /></ParameterType>
                  <ParameterType Id="PT-E"><TypeRestriction Base="Value" SizeInBit="8"><Enumeration Id="PT-E_EN-0" Value="0" /></TypeRestriction></ParameterType>
+                 <ParameterType Id="PT-F"><TypeFloat Encoding="DPT 9" minInclusive="-50" maxInclusive="600" /></ParameterType>
+                 <ParameterType Id="PT-G"><TypeFloat minInclusive="0" maxInclusive="1" /></ParameterType>
                </ParameterTypes>
                <Options ParameterByteOrder="LittleEndian" />"#,
+        );
+        assert_eq!(
+            code.float_encodings,
+            BTreeMap::from([
+                ("PT-F".to_string(), Some("DPT 9".to_string())),
+                ("PT-G".to_string(), None),
+            ])
         );
         assert_eq!(
             code.time_units,

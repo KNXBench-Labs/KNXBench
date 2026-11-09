@@ -12,6 +12,22 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Float parameters (9 November 2026; issue #10 follow-up)
+
+Two more devices of the tester project plan
+([ADR-0169](adr/0169-float-parameters.md),
+[research](research/2026-11-09-float-parameters.md)). The memory (`070nh`)
+image builder writes `TypeFloat` values in their declared encoding, high octet
+first: `DPT 9` as KNX `F16` with the smallest fitting exponent and the
+mantissa rounded to nearest, ties to even; `IEEE-754 Single` as the nearest
+binary32 value. Bounds, the encoding's range and `7FFFh` are checked; other
+encodings, `LittleEndian` programs, property placements and the System-1/2
+and experimental builders refuse. The device comparison decodes float fields.
+ETS 6.4's image of a logic module with eight float values in both encodings,
+recorded against the simulator, equals KNXBench's parameter segment octet for
+octet; a KNXBench download wrote the same octets except KL-145 flags. Tester
+project 8 unsupported / 67 untested. Untested on hardware.
+
 ## Hall of Fame publishes past unrelated docs findings (9 November 2026)
 
 The [Community Hall of Fame](contracts/community-recognition.md) workflow

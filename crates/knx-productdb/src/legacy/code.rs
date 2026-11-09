@@ -592,6 +592,7 @@ pub fn load_legacy_program_code(
         parameters,
         // EX-IM has no `TypeTime` unit: a legacy time value stays refused.
         time_units: BTreeMap::new(),
+        float_encodings: BTreeMap::new(),
         program_attributes,
     })
 }

@@ -236,3 +236,27 @@ fn opening_another_project_writes_the_last_edits_first() {
     assert_eq!(state.journal().status(), JournalStatus::Saved);
     assert_eq!(stored_name(&path), "Before switching");
 }
+
+#[test]
+fn a_file_replaced_under_the_same_path_is_admitted_afresh_not_written_blind() {
+    let dir = tempfile::tempdir().unwrap();
+    let (state, path, installation) = background(&dir);
+    domain::rename_installation_impl(&state, installation, "Kept".into()).unwrap();
+    state.journal().flush();
+    // Another program replaces the file with a copy (same content, new inode):
+    // writing through the kept connection would land in the unlinked old file.
+    let replacement = dir.path().join("replacement.knxdb");
+    std::fs::copy(&path, &replacement).unwrap();
+    std::fs::rename(&replacement, &path).unwrap();
+    domain::rename_installation_impl(&state, installation, "Into the new file".into()).unwrap();
+    state.journal().flush();
+    assert_eq!(state.journal().status(), JournalStatus::Saved);
+    assert_eq!(stored_name(&path), "Into the new file");
+    let writes = state.journal_writes.lock().unwrap();
+    let last = writes.records().last().unwrap();
+    assert!(last
+        .report
+        .phases
+        .iter()
+        .any(|(name, _)| *name == "preAdmission"));
+}

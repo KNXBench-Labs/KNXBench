@@ -40,17 +40,47 @@ pub fn persist_working_trusting(
         .map_err(|e| e.to_string())
 }
 
-/// A connection kept open by the background journal writer (ADR-0166 D) and
-/// the `PRAGMA data_version` it read right after its own last commit.
+/// A connection kept open by the background journal writer (ADR-0166 D), the
+/// `PRAGMA data_version` it read right after its own last commit, and the
+/// identity of the file it has open.
 pub struct KeptJournal {
     conn: knx_store::Connection,
     data_version: i64,
+    file: Option<FileIdentity>,
+}
+
+/// Device and inode of a file: a file replaced under the same path (a restored
+/// backup, another program's save, a rename over it) has another identity.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct FileIdentity {
+    device: u64,
+    inode: u64,
+}
+
+impl FileIdentity {
+    #[cfg(unix)]
+    fn of(path: &Path) -> Option<Self> {
+        use std::os::unix::fs::MetadataExt;
+        std::fs::metadata(path).ok().map(|m| Self {
+            device: m.dev(),
+            inode: m.ino(),
+        })
+    }
+
+    /// Without a portable file identity a kept connection is never trusted.
+    #[cfg(not(unix))]
+    fn of(_path: &Path) -> Option<Self> {
+        None
+    }
 }
 
 impl KeptJournal {
-    /// Whether another connection committed to the file since this one last did.
-    pub fn changed_elsewhere(&self) -> Result<bool, String> {
-        data_version(&self.conn).map(|now| now != self.data_version)
+    /// Whether the kept connection may skip re-admitting `path`: the path still
+    /// names the very file it has open, and no other connection committed to
+    /// that file since this one last did. Anything unknown answers `false`.
+    pub fn still_own(&self, path: &Path) -> bool {
+        let same_file = self.file.is_some() && FileIdentity::of(path) == self.file;
+        same_file && data_version(&self.conn).is_ok_and(|now| now == self.data_version)
     }
 }
 
@@ -61,8 +91,8 @@ fn data_version(conn: &knx_store::Connection) -> Result<i64, String> {
 
 /// [`persist_working_trusting`] that keeps its connection: with `kept` it
 /// takes the ADR-0166 own-commit path, which skips re-admitting what this
-/// writer wrote itself; the caller must have checked
-/// [`KeptJournal::changed_elsewhere`]. Returns the connection to keep next.
+/// writer wrote itself; the caller must have checked [`KeptJournal::still_own`].
+/// Returns the connection to keep next.
 pub fn persist_working_kept(
     path: &Path,
     kept: Option<KeptJournal>,
@@ -88,7 +118,16 @@ pub fn persist_working_kept(
     };
     let (generation, trust) = written.map_err(|e| e.to_string())?;
     let data_version = data_version(&conn)?;
-    Ok((generation, trust, KeptJournal { conn, data_version }))
+    let file = FileIdentity::of(path);
+    Ok((
+        generation,
+        trust,
+        KeptJournal {
+            conn,
+            data_version,
+            file,
+        },
+    ))
 }
 
 pub fn save(

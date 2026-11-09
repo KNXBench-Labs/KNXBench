@@ -1,7 +1,7 @@
 # ADR 0166: Project commands are acknowledged from memory and journaled in the background
 
 Date: 2026-11-09
-Status: Proposed
+Status: Accepted
 
 ## Context
 
@@ -57,10 +57,15 @@ spent in re-deriving and re-checking, not in the disk.
    device holds, and losing it would misstate the installation. Catalogue device
    creation keeps its synchronous write too. Both flush first.
 7. **No full re-admission of the server's own file (D).** The writer keeps its
-   connection open between writes. When `PRAGMA data_version` and the stored
-   generation are unchanged since its own last commit, no other connection has
-   written the file, so it skips the read-only pre-admission and the in-transaction
-   re-admission and version listing. Any other value runs the full ADR-0165 path.
+   connection open between writes. When the path still names the file it has
+   open (same device and inode, so nothing was renamed or copied over it), and
+   `PRAGMA data_version` and the stored generation are unchanged since its own
+   last commit, no other connection has written the file, so it skips the
+   read-only pre-admission and the in-transaction re-admission and version
+   listing. Any other answer, or a platform without a file identity, runs the
+   full ADR-0165 path. `data_version` changes on the connection whenever another
+   connection commits to the database (https://sqlite.org/pragma.html#pragma_data_version,
+   inspected 2026-11-09).
 
 ## Alternatives considered
 
@@ -89,6 +94,8 @@ spent in re-deriving and re-checking, not in the disk.
   refuses further edits until Save As succeeds; a retry writes the current state
   (not the failed job) once the file is back; a real foreign save stops the
   writer as stale instead of being overwritten; reading the generation waits for the writer; own
-  commits skip the admission and a foreign commit restores it; opening another
+  commits skip the admission and a foreign commit restores it; a file replaced
+  under the same path is admitted afresh instead of written blind (the previous
+  code wrote into the replaced file's old connection); opening another
   project writes the last edits first. Web: the status note stays silent, follows
   a running write, keeps a failure with a retry and tolerates an older server.

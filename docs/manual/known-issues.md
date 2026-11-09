@@ -859,6 +859,12 @@ is the remaining copy defect.
 - **Changed after Alpha 20:** a property write that names no element count
   writes the elements the program declares for that property, as ETS 6.4 does
   (ADR-0167), so the tester's switch actuator 0.2.67 plans too, untested.
+- **Changed after Alpha 20:** hidden settings that the program sets itself,
+  hidden settings shown nowhere, a load allocation larger than the program's
+  data and option bits packed inside one octet now follow ETS 6.4 (ADR-0168).
+  The tester's push-button 0.2.49 and binary inputs 0.2.7, 0.2.63 and 0.2.66
+  plan too, untested. Where a program would set a hidden setting to a value
+  other than the one stored, KNXBench says so and does not download.
 - **Consequence:** keep the ETS project of such a device until a KNXBench
   download has been checked on the device.
 - **Details:** [research](../research/2026-11-08-property-placed-parameters.md)

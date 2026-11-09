@@ -2117,6 +2117,8 @@ export const messages = {
     "A module argument could not be matched to the module's declaration and was ignored.",
   "parameters.diagnostic.unsupportedModuleArgumentKind":
     "A module argument uses a kind this build does not interpret and was ignored.",
+  "parameters.diagnostic.assignedControllerDiffers":
+    "A hidden choice's controlling parameter is set by an assignment KNXBench does not run, to a different value; the result is incomplete.",
   "parameters.diagnostic.unsupportedControlKind": "A choice's controlling parameter uses an unsupported type; its branches were not evaluated.",
   "parameters.diagnostic.evaluationWorkBudgetExhausted": "This program exceeded the evaluation work limit; its incomplete parameter panel is read-only.",
   "parameters.diagnostic.parameterAccessReadOnly": "Some fields are declared read-only or hidden by the manufacturer (Access); they are not writable.",

@@ -2742,6 +2742,8 @@ export type ParameterDiagnosticKind =
   | "moduleArgumentNotBound"
   | "unsupportedModuleArgumentKind"
   | "unresolvedTextPlaceholder"
+  // ADR-0168: a hidden controller is set by an `Assign` KNXBench does not run.
+  | "assignedControllerDiffers"
   // ADR-0061 / ADR-0062, adopted with ADR-0080 by the UI owner (2026-10-05).
   | "unsupportedControlKind"
   | "evaluationWorkBudgetExhausted"

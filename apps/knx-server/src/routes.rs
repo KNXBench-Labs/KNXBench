@@ -735,6 +735,9 @@ pub(crate) enum ParameterDiagnosticKindDto {
     ModuleArgumentNotBound,
     UnsupportedModuleArgumentKind,
     UnresolvedTextPlaceholder,
+    /// ADR-0168: a hidden choice controller is set by an `Assign` this
+    /// build does not execute, to another value.
+    AssignedControllerDiffers,
     /// ADR-0080: the field's effective `Access` (`ParameterRef`'s, else
     /// `Parameter`'s) is present and is not `ReadWrite`. Web's unknown-kind
     /// English fallback applies until the UI owner adopts this token.

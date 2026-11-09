@@ -32,6 +32,8 @@
 use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 
+mod assign;
+pub use assign::{AssignSource, Assignment};
 #[cfg(test)]
 mod rename_tests;
 #[cfg(test)]
@@ -372,6 +374,9 @@ pub struct DynamicTree {
     spans: Spans,
     /// `(pre-order position, node_id)` of every rename leaf of any shape, ascending.
     renames_in_order: Vec<(usize, i64)>,
+    /// ADR-0168: each `Assign` node's stored declaration, `None` when it
+    /// could not be read. Absent for a node built without one.
+    assignments: HashMap<i64, Option<Assignment>>,
 }
 
 impl DynamicTree {
@@ -408,6 +413,7 @@ impl DynamicTree {
             rename_ids,
             spans,
             renames_in_order,
+            assignments: HashMap::new(),
         }
     }
 
@@ -426,6 +432,17 @@ impl DynamicTree {
     pub fn with_opaque(mut self, nodes: impl IntoIterator<Item = i64>) -> Self {
         self.opaque.extend(nodes);
         self.has_unmodelled_attributes |= !self.opaque.is_empty();
+        self
+    }
+
+    /// Declares what `Assign` nodes assign (`None`: unreadable), as
+    /// `load_tree` reads it from `dynamic_node.extra` (ADR-0168). For
+    /// hand-built trees.
+    pub fn with_assignments(
+        mut self,
+        declared: impl IntoIterator<Item = (i64, Option<Assignment>)>,
+    ) -> Self {
+        self.assignments.extend(declared);
         self
     }
 
@@ -561,9 +578,24 @@ pub fn load_tree(
         }
         nodes.push(node);
     }
+    let mut stmt = conn.prepare(
+        "SELECT node_id, extra FROM dynamic_node
+         WHERE program_id = ?1 AND module_def_id = ?2 AND kind = 'Assign'",
+    )?;
+    let assignments: Vec<(i64, Option<Assignment>)> = stmt
+        .query_map(params![program_id, module_def_id], |r| {
+            let extra: Option<String> = r.get(1)?;
+            Ok((
+                r.get(0)?,
+                extra.as_deref().and_then(assign::parse_stored_assignment),
+            ))
+        })?
+        .collect::<Result<_, _>>()?;
+    drop(stmt);
     let mut tree = DynamicTree::from_nodes(nodes)
         .with_access(access.iter().map(|(id, token)| (*id, token.as_str())))
-        .with_opaque(opaque_nodes);
+        .with_opaque(opaque_nodes)
+        .with_assignments(assignments);
     tree.has_unmodelled_attributes = has_unmodelled_attributes;
     Ok(tree)
 }
@@ -1115,6 +1147,18 @@ pub enum Diagnostic {
     /// reported here: nothing about them is unresolved by this mechanism,
     /// because they were never this mechanism's to resolve.
     UnresolvedTextPlaceholder { node_id: i64, name: String },
+    /// ADR-0168: a `choose` controller placed only in inactive branches is
+    /// set by an active `Assign` to a value other than the one read for it
+    /// (or to an unknown one). ETS evaluates such a controller with the
+    /// assigned value; this build does not execute `Assign`, so the
+    /// activation would differ and is reported instead.
+    AssignedControllerDiffers {
+        /// The `Assign` element's `node_id`.
+        assign_node: i64,
+        param_ref: String,
+        assigned_value: Option<String>,
+        observed_value: Option<String>,
+    },
 }
 
 impl Diagnostic {
@@ -1138,6 +1182,7 @@ impl Diagnostic {
             | Self::ModuleArgumentNotBound { node_id, .. }
             | Self::UnsupportedModuleArgumentKind { node_id, .. }
             | Self::UnresolvedTextPlaceholder { node_id, .. } => *node_id,
+            Self::AssignedControllerDiffers { assign_node, .. } => *assign_node,
         }
     }
 
@@ -1175,7 +1220,8 @@ impl Diagnostic {
             | Diagnostic::MissingValue { .. }
             | Diagnostic::ModuleWithoutId { .. }
             | Diagnostic::ModuleArgumentNotBound { .. }
-            | Diagnostic::UnsupportedModuleArgumentKind { .. } => true,
+            | Diagnostic::UnsupportedModuleArgumentKind { .. }
+            | Diagnostic::AssignedControllerDiffers { .. } => true,
         }
     }
 }
@@ -1470,6 +1516,9 @@ pub struct Activation {
     inactive_controllers: HashSet<ScopeKey>,
     /// Every `choose` controller this pass consulted. Internal, reset.
     consulted_controllers: HashSet<ScopeKey>,
+    /// Every `Assign` this pass reached in an active branch (ADR-0168).
+    /// Internal, reset.
+    assignments: Vec<assign::ActiveAssignment>,
     /// Internal admission state; input trees and catalogue data stay intact.
     work_units_used: usize,
     work_budget_exhausted: bool,
@@ -1707,11 +1756,18 @@ impl Activation {
 /// passes: each one marks the controllers the previous pass left inactive,
 /// until none is added. Skipping only removes activations, so the set only
 /// grows and the passes end; they share one [`MAX_EVALUATION_WORK`]. A
-/// controller no `ParameterRefRef` outside its own `choose` names is read as
-/// before (unobserved), and a pass with a diagnostic that may hide refs
-/// marks nothing.
+/// controller named only inside its own `choose` is read as before, and a
+/// pass with a diagnostic that may hide refs marks nothing.
+///
+/// ADR-0168 refines this: a controller no `ParameterRefRef` names at all
+/// and whose every `choose` selects by value counts as placed
+/// ([`unnamed_selective_controllers`]); and a controller that an active
+/// `Assign` sets is not marked, its `choose` is read with the stored value
+/// when the assignment yields it, else reported
+/// ([`Diagnostic::AssignedControllerDiffers`]).
 pub fn evaluate(trees: &ProgramTrees, values: &ValueMap) -> Activation {
-    let placed = placed_parameter_refs(trees);
+    let mut placed = placed_parameter_refs(trees);
+    placed.extend(unnamed_selective_controllers(trees));
     let mut inactive_controllers = HashSet::new();
     let mut work_units_used = 0;
     loop {
@@ -1722,16 +1778,40 @@ pub fn evaluate(trees: &ProgramTrees, values: &ValueMap) -> Activation {
             .map(|r| (scope_key_chain(r.scope.as_ref()), r.ref_id.clone()))
             .collect();
         let consulted = std::mem::take(&mut activation.consulted_controllers);
-        let newly: Vec<ScopeKey> = consulted
+        let assignments = std::mem::take(&mut activation.assignments);
+        let mut candidates: Vec<ScopeKey> = consulted
             .into_iter()
             .filter(|key| placed.contains(key.1.as_str()) && !active.contains(key))
             .collect();
+        candidates.sort();
         // Inactivity is known only from a pass that walked everything with
         // known values (`Diagnostic::may_hide_refs`).
-        let complete = !activation
+        let mut complete = !activation
             .diagnostics
             .iter()
             .any(|d| d.diagnostic.may_hide_refs());
+        let mut newly = Vec::new();
+        if complete && !activation.work_budget_exhausted && !candidates.is_empty() {
+            // ADR-0168: an active `Assign` sets the controller, so it is not
+            // inactive; agreeing values keep its `choose`, differing refuse.
+            let mut differing = Vec::new();
+            for key in candidates {
+                match assign::verdict(&key, &assignments, values) {
+                    assign::Verdict::Unassigned => newly.push(key),
+                    assign::Verdict::Agrees => {}
+                    assign::Verdict::Differs(scope, diagnostic) => {
+                        differing.push((scope, diagnostic));
+                    }
+                }
+            }
+            differing.extend(assign::unreadable(&assignments));
+            if !differing.is_empty() {
+                for (scope, diagnostic) in differing {
+                    activation.diagnose(scope.as_ref(), diagnostic);
+                }
+                complete = false;
+            }
+        }
         if activation.work_budget_exhausted || !complete || newly.is_empty() {
             // Admission state is local to this call, not part of result
             // equality. Completeness remains explicit in the retained
@@ -1779,6 +1859,39 @@ fn placed_parameter_refs(trees: &ProgramTrees) -> HashSet<&str> {
         }
     }
     placed
+}
+
+/// ADR-0168: controllers no `ParameterRefRef` names anywhere, whose every
+/// `choose` selects by value (`Comparable`, no `default` branch). Nothing
+/// shows them, so like a placed controller left inactive they select
+/// nothing. A `TypeNone` or default-only `choose` is unconditional
+/// structure and stays read as before.
+fn unnamed_selective_controllers(trees: &ProgramTrees) -> HashSet<&str> {
+    let mut named = HashSet::new();
+    let mut selective: HashMap<&str, bool> = HashMap::new();
+    for tree in std::iter::once(&trees.program).chain(trees.modules.values()) {
+        for node in tree.nodes.values() {
+            match (node.kind.as_str(), node.ref_id.as_deref()) {
+                ("ParameterRefRef", Some(r)) => {
+                    named.insert(r);
+                }
+                ("choose", Some(r)) => {
+                    let by_value = matches!(node.control_kind, Some(ControlKind::Comparable))
+                        && !tree
+                            .children_of(Some(node.node_id))
+                            .iter()
+                            .any(|&child| tree.node(child).is_some_and(|when| when.is_default));
+                    *selective.entry(r).or_insert(true) &= by_value;
+                }
+                _ => {}
+            }
+        }
+    }
+    selective
+        .into_iter()
+        .filter(|(r, by_value)| *by_value && !named.contains(r))
+        .map(|(r, _)| r)
+        .collect()
 }
 
 /// One single-pass, depth-first walk in document order (design D6).
@@ -2030,7 +2143,16 @@ fn walk(
             }
             report_refs_below(tree, node_id, activation, scope);
         }
-        "Assign" => report_refs_below(tree, node_id, activation, scope),
+        "Assign" => {
+            if let Some(assignment) = tree.assignments.get(&node_id) {
+                activation.assignments.push(assign::ActiveAssignment {
+                    node_id,
+                    scope: scope.cloned(),
+                    assignment: assignment.clone(),
+                });
+            }
+            report_refs_below(tree, node_id, activation, scope);
+        }
         kind if is_layout_container(kind) => report_refs_below(tree, node_id, activation, scope),
         // Design D19: `Module` is dispatched here like any other node kind,
         // no special container handling. Its own children (`NumericArg`/

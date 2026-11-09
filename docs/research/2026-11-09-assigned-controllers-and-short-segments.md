@@ -91,12 +91,15 @@ push-button sensor 0.2.49 and the binary inputs 0.2.7, 0.2.63 and 0.2.66
   other than the stored one, or an unknown one, is reported
   (`AssignedControllerDiffers`) and the download refused.
 - The unnamed-controller rule rests on one program and is limited to
-  controllers that compete with a shown one for the same reference. Unnamed
+  controllers that compete with a shown one for the same reference and hold
+  their product default. The competing shape occurs in 10 of 1,441 corpus
+  programs; another value keeps a controller read as before. Unnamed
   controllers without a competitor, such as `Push-button 5-6`, are still
   evaluated, so KNXBench lists two channels ETS hides (no objects or octets
   differ). A broader rule lost the refusal of illegal hidden selector values
   in review and was not taken.
 - The mid-octet union reading was observed for mask `0701h` programs only,
   with members inside one octet; members crossing an octet and the legacy
-  System-1 and System-2 image layouts keep refusing.
+  System-1 and System-2 image layouts keep refusing. A member inside one
+  octet is not checked against the union's size.
 - No device confirmed any of this; the downloads stay `untested`.

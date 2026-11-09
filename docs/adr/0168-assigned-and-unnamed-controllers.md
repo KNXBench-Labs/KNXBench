@@ -35,10 +35,13 @@ the object activity ETS records in the tester's project, settled each point
    `ParameterRefRef` names anywhere, whose every `choose` is `Comparable`
    without a `default` branch, and whose branches activate a
    `ParameterRefRef` that a branch of a placed controller's `choose` also
-   activates, counts as placed, so ADR-0160 applies when it is not active.
-   Every other unnamed controller (`TypeNone` and default-only structure, a
-   controller with no placed competitor) and a controller named only inside
-   its own `choose` stay read as before.
+   activates, counts as placed while its value is its product default, so
+   ADR-0160 applies when it is not active. Holding another value (a stored
+   edit, or one an `Assign` set), it is read as before, and an illegal value
+   is still reported. Every other unnamed controller (`TypeNone` and
+   default-only structure, a controller with no placed competitor, one
+   deciding a `choose` inside a `ModuleDef`) and a controller named only
+   inside its own `choose` stay read as before.
 3. **Short segments.** An allocation longer than its segment writes the
    segment's octets, provided every written parameter field and table lies in
    them; the plan names `allocation-beyond-segment-not-written`.
@@ -64,6 +67,13 @@ the object activity ETS records in the tester's project, settled each point
   refused through `NoBranchMatched` would build an image. Those channels'
   objects stay inactive anyway (their function defaults to "not active"); the
   narrower rule keeps them evaluated as before.
+- **Mark competing alternatives whatever their value.** A read-only scan of
+  the private corpus found the competing shape in 10 of 1,441 programs,
+  including logic and timer programs of other manufacturers. With a stored
+  non-default value of such a controller, independent review measured 15
+  parameters and three objects silently dropped, and illegal values no
+  longer reported. Limiting the rule to the default keeps those programs as
+  before wherever a value was chosen.
 - **Resolve the union-member conflict by "the shown one wins".** It names the
   outcome, not a rule the walk can apply before conflicts arise, and leaves
   the unnamed channels active that ETS does not show.
@@ -79,4 +89,11 @@ equal ETS's records on all 51 devices that carry them. The rules rest on one
 program each and on simulator runs; the downloads stay untested until a device
 confirms them, and `Assign` stays unexecuted. An `Assign` targeting a
 reference in another module scope than the `choose` it would decide never
-matches and falls back to ADR-0160 without a diagnostic; none was observed.
+matches and falls back to ADR-0160 without a diagnostic, and an `Assign`
+inside a `ModuleDef` instantiated below a hidden controller still counts
+(refusing rather than guessing); neither was observed. At their defaults, the
+competing controllers of the other corpus programs hide at most one
+parameter without memory, as review measured on three of them. Controllers
+that only assign each other from below their own hidden `choose` are all
+marked (the greatest fixed point), as nothing outside them runs those
+assignments.

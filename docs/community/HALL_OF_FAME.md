@@ -8,10 +8,10 @@ with the details. You do not need to write code to earn a place here.
 
 | Place | Bug hunter | Rank & title | Medal | XP | Issues | Replies | Resolved | PRs | Open PRs | Merged PRs | Closed unmerged | XP sources |
 | ---: | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
-| 1 | [@thengsty](https://github.com/thengsty) | Tunnel Trouble Exorcist | 🏅 Golden Bus Probe<br>🏅 Double-Decade Fault Finder<br>🏅 Loose End Lasso<br>🏅 Regression Repair Ribbon<br>🏅 Acknowledgement Ace<br>🏅 Closed-Loop Champion<br>🏅 Patch Pilot<br>🏅 Green Merge Ribbon | **412** | 25 | 32 | 23 | 1 | 0 | 1 | 0 | 125 issue + 32 reply + 230 completion + 25 PR |
+| 1 | [@thengsty](https://github.com/thengsty) | Tunnel Trouble Exorcist | 🏅 Golden Bus Probe<br>🏅 Double-Decade Fault Finder<br>🏅 Loose End Lasso<br>🏅 Regression Repair Ribbon<br>🏅 Acknowledgement Ace<br>🏅 Closed-Loop Champion<br>🏅 Patch Pilot<br>🏅 Green Merge Ribbon | **413** | 25 | 33 | 23 | 1 | 0 | 1 | 0 | 125 issue + 33 reply + 230 completion + 25 PR |
 | 2 | [@hagbardZ](https://github.com/hagbardZ) | Bus Bug Scout | — | **18** | 1 | 3 | 1 | 0 | 0 | 0 | 0 | 5 issue + 3 reply + 10 completion + 0 PR |
 
-*Snapshot: 2026-11-08T17:32:15Z.*
+*Snapshot: 2026-11-09T21:44:50Z.*
 
 ## How the points work
 

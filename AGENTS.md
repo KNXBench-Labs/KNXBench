@@ -68,6 +68,22 @@ A local [graphify](https://github.com/Graphify-Labs/graphify) code graph may exi
 - The graph shows `origin/main` at its last refresh, not your branch. Confirm every finding in the source before acting on it.
 - Only the code graph is built (`graphify update`, tree-sitter, offline); the semantic pass over `docs/` is not used.
 
+## Agent skills
+
+Configuration for the engineering skills from [mattpocock/skills](https://github.com/mattpocock/skills).
+
+### Issue tracker
+
+Own work lives in `docs/OPEN_WORK.md` with one detail file per ID under `docs/open-work/`; GitHub Issues take external reports. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+The five default role labels (`needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`). See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context: `docs/GLOSSARY.md` plus `docs/adr/`. See `docs/agents/domain.md`.
+
 ## Development
 
 - Work incrementally with the smallest clean solution. No unrelated refactors.

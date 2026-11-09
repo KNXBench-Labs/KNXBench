@@ -171,3 +171,4 @@ the old one gets `Status: Superseded by ADR-NNNN`.
 | [0163](0163-journal-writes-keep-unchanged-undo-rows.md) | Journal writes keep the undo rows they prove unchanged | Accepted | 2026-11-08 |
 | [0164](0164-group-address-description-and-csv-encoding.md) | Group-address description, explicit CSV encoding and new-address types | Accepted | 2026-11-08 |
 | [0165](0165-journal-writes-trust-the-verified-context.md) | Journal writes trust the context and baseline they verified | Accepted | 2026-11-08 |
+| [0166](0166-commands-acknowledged-from-memory-journaled-in-background.md) | Project commands are acknowledged from memory and journaled in the background | Accepted | 2026-11-09 |

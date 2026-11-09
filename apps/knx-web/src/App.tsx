@@ -36,6 +36,7 @@ import { StoredBusAccessDialog } from "./StoredBusAccess";
 import type { CommandContext } from "./commandRegistry";
 import { appUiScale } from "./appUiScale";
 import BusConnectionStatus from "./BusConnectionStatus";
+import JournalStatusIndicator from "./JournalStatusIndicator";
 import SettingsPanel from "./SettingsPanel";
 import { ModalForeground } from "./ModalForeground";
 import { serverLegacyPassword } from "./LegacyPasswordSettings";
@@ -1724,6 +1725,7 @@ function AppBody({ manifestVersion = packageVersion, session, editorReturn = fal
               : t("statusBar.neverSaved")}
           </span>
         )}
+        {tree && <JournalStatusIndicator revision={tree.snapshot_revision} saved={Boolean(tree.last_saved_at)} />}
         <BusConnectionStatus onOpenBusSettings={openBusSettings} />
         <span>v{manifestVersion}</span>
       </footer>

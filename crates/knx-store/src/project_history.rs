@@ -480,6 +480,23 @@ pub fn load_editor(conn: &Connection) -> Result<Option<EditorHistory>, HistoryEr
     Ok(history)
 }
 
+/// The stored generation of a file only this writer committed to since its own
+/// last commit, refused unless it is `expected`.
+fn own_generation(conn: &Connection, expected: Option<i64>) -> Result<i64, HistoryError> {
+    let current: i64 = conn
+        .query_row(
+            "SELECT generation FROM project_history_state WHERE id = 0",
+            [],
+            |r| r.get(0),
+        )
+        .optional()?
+        .unwrap_or(0);
+    if expected.is_some_and(|e| e != current) {
+        return Err(HistoryError::Stale);
+    }
+    Ok(current)
+}
+
 /// The admitted generation, refused unless it is `expected`, and the retained
 /// context the admission checked.
 fn admitted_generation(
@@ -523,7 +540,8 @@ impl StackRows {
 }
 
 /// Leading rows of `side` whose stored image hash still equals `expected`.
-/// Hashes were verified against their images by the admission before this.
+/// Hashes were verified against their images by the admission before this,
+/// or, on the ADR-0166 own-commit path, written by this writer itself.
 fn kept_rows(conn: &Connection, side: &str, expected: &[String]) -> Result<usize, HistoryError> {
     let mut stmt = conn.prepare(
         "SELECT image_hash FROM project_history_stack WHERE side = ?1 AND position = ?2 AND format_version = ?3",
@@ -846,6 +864,35 @@ pub fn save_editor_trusting(
     )
 }
 
+/// [`save_editor_trusting`] for a writer that proved no other connection
+/// committed to the file since its own last commit at `expected_generation`
+/// (ADR-0166 D: `PRAGMA data_version` unchanged on its kept connection). It
+/// skips the admission and version listing that re-read what it wrote itself;
+/// the stored generation is still compared, the retained context still checked
+/// by the SHA-256 of its bytes and the limits still enforced.
+pub fn save_editor_after_own_commit(
+    conn: &Connection,
+    working: &NativeSnapshot,
+    stack: &CommandStack,
+    expected_generation: i64,
+    trust: &JournalTrust,
+    report: &mut JournalWriteReport,
+) -> Result<(i64, JournalTrust), HistoryError> {
+    save_editor_inner(
+        conn,
+        working,
+        stack,
+        Some(expected_generation),
+        false,
+        SaveExtras {
+            reuse: Some(trust),
+            report: Some(report),
+            own_commit: true,
+            ..SaveExtras::default()
+        },
+    )
+}
+
 /// Saves the explicit root and its newly acquired retained sources atomically.
 /// Payloads are file-owned and never enter editor history images.
 pub fn save_editor_with_sources(
@@ -900,6 +947,8 @@ struct SaveExtras<'a> {
     sources: &'a [crate::CarriedManufacturerFile],
     reuse: Option<&'a JournalTrust>,
     report: Option<&'a mut JournalWriteReport>,
+    /// See [`save_editor_after_own_commit`].
+    own_commit: bool,
 }
 
 fn save_editor_inner(
@@ -915,6 +964,7 @@ fn save_editor_inner(
         sources,
         reuse,
         report,
+        own_commit,
     } = extras;
     let mut unreported = JournalWriteReport::default();
     let report = report.unwrap_or(&mut unreported);
@@ -937,14 +987,33 @@ fn save_editor_inner(
     let untrusted = JournalTrust::default();
     let trusted = reuse.unwrap_or(&untrusted);
     let started = Instant::now();
-    let admitted = admitted_generation(&tx, expected_generation, trusted);
+    let admitted = if own_commit {
+        own_generation(&tx, expected_generation).map(|current| (current, None))
+    } else {
+        admitted_generation(&tx, expected_generation, trusted)
+    };
     report.phase("admission", started);
     let (current, admitted_context) = admitted?;
     let started = Instant::now();
-    let listed = list_versions_checked(&tx, trusted, admitted_context.as_ref());
+    let listed = if own_commit {
+        // Nothing but this writer committed since it listed them itself.
+        tx.query_row("SELECT count(*) FROM project_history_version", [], |r| {
+            r.get::<_, i64>(0)
+        })
+        .map_err(HistoryError::from)
+        .map(|count| {
+            (
+                usize::try_from(count).unwrap_or(0),
+                trusted.checked_contexts().clone(),
+            )
+        })
+    } else {
+        list_versions_checked(&tx, trusted, admitted_context.as_ref())
+            .map(|(versions, checked)| (versions.len(), checked))
+    };
     report.phase("versions", started);
     let (versions, checked_contexts) = listed?;
-    report.saved_versions = versions.len();
+    report.saved_versions = versions;
     // The admission checked the working context; `remember` need not again.
     let context_verified = trusted.context().is_some_and(|known| {
         admitted_context.as_ref().is_some_and(|(content, image)| {

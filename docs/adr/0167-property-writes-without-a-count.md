@@ -40,4 +40,8 @@ simulator wrote 11/52 exactly as ETS did in both runs (`00` and `80`) and read
 nothing, with either device fill. The size rule rests on one program whose
 declaration and parameters both fit one element: the declaration is the only
 size the procedure states, so it is used, and the refusals keep everything
-else out. These downloads stay untested until a device confirms them.
+else out. The zero fill was likewise seen in one octet only (one one-bit
+parameter beside seven unowned bits); ETS writes its own image into unowned
+bits of other properties (ADR-0161 finding 7), so zero here is an observation
+of this property, matching the `InlineData` fill of ADR-0162. These downloads
+stay untested until a device confirms them.

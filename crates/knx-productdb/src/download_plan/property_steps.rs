@@ -175,9 +175,11 @@ impl<'a> PropertySteps<'a> {
         };
         let key = (object_index, property_id);
         let Some(&max_elements) = self.declared.get(&key) else {
-            return Err(refuse(
-                "written by parameters without a declared description",
-            ));
+            return Err(refuse(if count.is_none() {
+                "written without Count and without a declared description, so its size is unknown"
+            } else {
+                "written by parameters without a declared description"
+            }));
         };
         if !self.written.insert(key) {
             return Err(refuse("written by parameters twice"));
@@ -250,12 +252,9 @@ impl<'a> PropertySteps<'a> {
                 "written without Count, but holds no parameter; that was not observed",
             ));
         };
+        // A property here holds at least one parameter octet, so
+        // `MaxElements=0` is refused by this check too.
         let elements = usize::from(max_elements);
-        if elements == 0 {
-            return Err(refuse(
-                "written without Count, and declared with MaxElements=0",
-            ));
-        }
         if parameters.len() > elements {
             return Err(refuse("parameters lie past the declared MaxElements"));
         }

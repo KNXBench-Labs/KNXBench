@@ -1952,6 +1952,17 @@ mod tests {
                 inline_data: None,
             }]
         );
+        // Without `AppliesTo` it belongs to every download, as for the `Count`
+        // form; the planner still requires a declaration and parameters.
+        assert_eq!(
+            steps(r#"<LdCtrlWriteProp ObjIdx="11" PropId="52" Verify="false" />"#),
+            vec![LoadStep::WriteParameterProp {
+                object_index: 11,
+                property_id: 52,
+                count: None,
+                inline_data: None,
+            }]
+        );
         // Outside the complete download, verified, or an unknown attribute:
         // kept by name, so the planner refuses it by name.
         for unmodelled in [

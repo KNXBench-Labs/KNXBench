@@ -575,3 +575,35 @@ fn context(code: &ProgramCode) -> Context {
         omitted_steps: omitted,
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use knx_productdb::code::LoadProcedure;
+
+    use super::*;
+
+    /// A property write names its count only when the source has one (ADR-0167).
+    #[test]
+    fn a_property_write_lists_its_count_only_when_it_has_one() {
+        let write = |count| LoadStep::WriteParameterProp {
+            object_index: 11,
+            property_id: 52,
+            count,
+            inline_data: None,
+        };
+        let code = ProgramCode {
+            load_procedures: vec![LoadProcedure {
+                merge_id: None,
+                steps: vec![write(Some(3)), write(None)],
+            }],
+            ..ProgramCode::default()
+        };
+        assert_eq!(
+            context(&code).steps,
+            [
+                r#"write-property-parameters {"count":3,"objectIndex":11,"propertyId":52}"#,
+                r#"write-property-parameters {"objectIndex":11,"propertyId":52}"#,
+            ]
+        );
+    }
+}

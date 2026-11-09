@@ -221,6 +221,12 @@ while the file identity and `data_version` show nobody else wrote. 308 MB test
 file: 0.21 to 0.43 s per parameter change instead of 1.6 to 1.8 s. Server tests
 cover answering before the write, coalescing, failure, retry, waiting readers,
 foreign writes, a replaced file and project switches; web tests cover the note.
+Final-flush exit status: when the last flush at stop leaves the journal failed, the
+standalone server still prints the failure and now also exits with status 1, on
+the drained return and on the forced-exit path alike (a healthy journal keeps 0;
+other stop outcomes are unchanged). Real-binary tests delete the project file
+under the running server to fail the write for real, and cover healthy and failed
+journals, drained and forced. Not exercised: the desktop shell, a retry at stop.
 Limits: [history limits](limitations/persistent-native-working-history.md).
 
 ## Journal writes trust the verified context (8 November 2026; issue #35 follow-up)

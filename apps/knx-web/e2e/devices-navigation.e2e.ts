@@ -225,7 +225,14 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
     await mode.selectOption("2");
     await expect(mode).toHaveValue("2");
     await workspace.locator('[data-parameter-row="Mode"] .parameter-workspace-info').click();
-    await expect(workspace.locator(".parameter-workspace-context")).toContainText("ReadWrite");
+    const metadata = workspace.locator(".parameter-workspace-context");
+    const metadataValue = (label: string) => metadata.getByText(label, { exact: true }).locator("xpath=following-sibling::dd[1]");
+    await expect(metadataValue(m["parameters.workspace.access"])).toHaveText(language === "de" ? "Lesen und Schreiben" : "ReadWrite");
+    await expect(metadataValue(m["parameters.workspace.access"])).toHaveAttribute("title", "ReadWrite");
+    await expect(metadataValue(m["parameters.workspace.type"])).toHaveText(language === "de" ? "Auswahl" : "Restriction");
+    await expect(metadataValue(m["parameters.workspace.type"])).toHaveAttribute("title", "Restriction");
+    await expect(metadataValue(m["parameters.workspace.source"])).toHaveText(language === "de" ? "Im Projekt gespeichert" : "Stored");
+    await expect(metadataValue(m["parameters.workspace.source"])).toHaveAttribute("title", "Stored");
     const normalBadge = workspace.locator('[data-parameter-row="Mode"] .provenance-badge');
     await expect(normalBadge).toBeHidden();
     const dimensions = await workspace.evaluate(node => {

@@ -12,6 +12,17 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## German UI and parameter metadata (9 November 2026; main-only)
+
+Known parameter types, value origins and manufacturer access modes now use
+catalogue labels in the parameter editor instead of English server tokens.
+German copy also removes leftover English UI wording in history, achievements,
+appearance, activity records and download guidance. Source tokens remain in
+tooltips; manufacturer captions/options/values, product-language selection,
+write permissions and confirmation phrases are unchanged. Catalogue parity and
+mounted/browser regressions cover the display boundary.
+[Scope and regression coverage](status/2026-11-09-german-ui-copy.md).
+
 ## Alpha 20 pre-release (source cutoff 8 November 2026)
 
 `v0.1.0-alpha.20` is the current pre-release, cut from main at source cutoff

@@ -15,6 +15,7 @@ import { useProductLanguage } from "./productLanguage";
 import { LanguageFallbackBadge } from "./languageFallback";
 import { filterParameterSection, groupParameterDiagnostics, isManufacturerRestricted, isPassiveLabelRestricted, isSeparatorRestricted,
   restrictingAccess } from "./parameterPresentation";
+import { parameterMetadataLabel } from "./parameterMetadata";
 import { parameterCaption } from "./parameterCaption";
 import { useTranslate, type Translate, type TranslatableKey } from "./i18n";
 import { snapshotContextFromTree, type SnapshotContext } from "./snapshotIdentity";
@@ -279,7 +280,7 @@ function ParameterFieldRow(props: {
   return <>
     <label className="inspector-field parameter-field" data-ets-id={field.etsId}>
       <span className="parameter-field-name">{label}</span>
-      {field.access && <span className="provenance-badge">{field.access}</span>}
+      {field.access && <span className="provenance-badge" title={field.access}>{parameterMetadataLabel(t, "access", field.access)}</span>}
       {untranslated && language !== null && (
         <LanguageFallbackBadge selected={language} source={sourceLanguage} part={untranslated} />
       )}

@@ -18,7 +18,7 @@ All 59 manual stills and the three workflow GIFs were recaptured from the publis
 `1d3c7d433`): its `knx-server` and production frontend, the fictional Sample house
 and Practice house, in an isolated loopback-only namespace. The capture specs did
 not need changes; only the expected-version default moved to Alpha 20. Newly visible
-are the group-address CSV export/import buttons with their encoding choice, the
+are the encoding choice beside the group-address CSV export/import buttons, the
 UDP/TCP transport fields in the bus monitor and the connection status bar. The
 diagnostic-export and Report problem stills again come from the tag's diagnostic
 simulator; the production frontend built from the tag is byte-identical to the

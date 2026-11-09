@@ -186,6 +186,7 @@ A v33 report rewrite validates the stored report first; an invalid one becomes u
 [research](research/2026-11-09-conditional-parameter-block-rename.md). Tests: evaluator, ProductDB
 ingest/migration, HTTP edit/undo/redo, Vitest and the `parameters` browser lane; no bus, no
 download claim. WP-05 stays open for its other items.
+Accepted on main `da7d667d1`; [source-bound software acceptance and remaining boundaries](status/2026-11-09-conditional-block-captions.md).
 
 ## Edits answer first, the journal follows in the background (9 November 2026; issue #35)
 

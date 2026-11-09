@@ -20,8 +20,11 @@ German copy also removes leftover English UI wording in history, achievements,
 appearance, activity records and download guidance. Source tokens remain in
 tooltips; manufacturer captions/options/values, product-language selection,
 write permissions and confirmation phrases are unchanged. Catalogue parity and
-mounted/browser regressions cover the display boundary.
-[Scope and regression coverage](status/2026-11-09-german-ui-copy.md).
+mounted/browser regressions cover the display boundary. Main-first `33f072e8a`
+passed all 11 selected package stages: web 40 stages, 5,480 unit tests and
+1,380 browser executions across overlapping default/production lanes; no Rust
+runtime or private-corpus stage was selected. Twelve metadata crops were inspected.
+[Scope, regression coverage and acceptance](status/2026-11-09-german-ui-copy.md).
 
 ## Alpha 20 pre-release (source cutoff 8 November 2026)
 

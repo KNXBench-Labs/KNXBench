@@ -32,9 +32,18 @@ function placeholderMismatches(catalogue: Catalogue): string[] {
   return bad;
 }
 
+// These existing action/diagnostic keys are not grammatical plural forms.
+const NON_PLURAL_KEYS = new Set([
+  "compare.one",
+  "storedBusAccess.element.other",
+  "diagnostics.stopReason.other",
+  "deviceDownload.readiness.reason.other",
+]);
+
 function pluralBases(catalogue: Catalogue): Set<string> {
   const bases = new Set<string>();
   for (const key of Object.keys(catalogue)) {
+    if (NON_PLURAL_KEYS.has(key)) continue;
     const match = /^(.*)\.(one|other)$/.exec(key);
     if (match) bases.add(match[1]);
   }
@@ -48,6 +57,24 @@ function danglingPluralHalves(catalogue: Catalogue): string[] {
   }
   return bad;
 }
+
+describe("catalogue guard controls", () => {
+  it("distinguishes action/default keys from inflection while rejecting missing plural halves", () => {
+    expect(danglingPluralHalves({ "compare.one": "Compare", "storedBusAccess.element.other": "{element}",
+      "diagnostics.stopReason.other": "Other", "deviceDownload.readiness.reason.other": "{category}" })).toEqual([]);
+    expect(danglingPluralHalves({ "items.one": "One item" })).toEqual(["items"]);
+    expect(danglingPluralHalves({ "items.other": "{count} items" })).toEqual(["items"]);
+    expect(danglingPluralHalves({ "items.one": "One item", "items.other": "{count} items" })).toEqual([]);
+  });
+
+  it("detects missing, renamed and repeated placeholders in singular forms too", () => {
+    const key = "achievements.moreUnlocked.one";
+    expect(placeholderMismatches({ [key]: "+{count} weiterer Erfolg freigeschaltet" })).toEqual([]);
+    for (const text of ["Ein weiterer Erfolg", "+{total} Erfolg", "{count} {count}"]) {
+      expect(placeholderMismatches({ [key]: text })).toEqual([key]);
+    }
+  });
+});
 
 describe("German catalogue parity with English", () => {
   it("has exactly the English key set", () => {

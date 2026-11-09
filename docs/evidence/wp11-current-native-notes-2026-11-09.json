@@ -1,0 +1,379 @@
+{
+ "schemaVersion": 1,
+ "date": "2026-11-09",
+ "scope": "Current-source native notes cells (create/draft-cancel/save/reopen at 80/100/150%, one real process restart); not whole WP-11 or KL-130 acceptance",
+ "sourceRevision": "0b182054a4a03b6e03d49743bb2b155809dfeff7",
+ "sourceTreeCleanAtBuild": true,
+ "uiVersionString": "0.1.0-alpha.20+g0b182054a",
+ "build": {
+  "command": "cargo build --release -p knx-desktop -j4 (private CARGO_TARGET_DIR, scratch XDG, nice 19) after npm ci && npm run build",
+  "nativeExecutableSha256": "8ea1c2f0a20ce94ff7c387148bd277fa97ddd519e94cdcdba3270d0ac666dc67",
+  "frontendFileCount": 147,
+  "frontendManifestSha256": "acb0e387d927f571ab40fc6752e1e0374b0f61f4d04d580b0471064b4406338c",
+  "frontendManifestMethod": "Executed from the retained frontend directory: find . -type f | LC_ALL=en_US.UTF-8 sort | xargs sha256sum | sha256sum (includes ./ path prefixes)",
+  "executedBinaryEqualsBuilt": true
+ },
+ "libraries": {
+  "webkit2gtk-4.1": "2.54.1-1",
+  "gtk3": "3.24.52-2",
+  "libsoup3": "3.8.0-1",
+  "at-spi2-core": "2.62.1-1",
+  "wtype": "0.4-2",
+  "grim": "1.5.0-2"
+ },
+ "fixture": {
+  "name": "fictional-office.knxdb",
+  "sha256": "ddda4fd55e077f00bc34d5b0ca02dcd3c6d2d54da52f836ac7eea7e4f244dc2a",
+  "note": "same fictional input as the 3 Nov records; user_version 10, no project_note table before first confirmed change; copied to a writable sandbox path"
+ },
+ "isolation": {
+  "launch": "unshare user+net (loopback only) -> setpriv drop caps -> bwrap, read-only root, user-data, mount, runtime and temp trees masked, private XDG dirs, private runtime dir",
+  "receipt": "steps/isolation-restart-run.json",
+  "childUid": 1000,
+  "loopbackOnly": true,
+  "exceptions": [
+   "direct GTK chooser (GTK_USE_PORTAL=0), not desktop-portal behavior",
+   "in-memory GSettings (GSETTINGS_BACKEND=memory)",
+   "host Wayland, session D-Bus and AT-SPI socket directory shared; GVFS fell back to the shared session bus",
+   "masking concerns direct filesystem mounts, not host-service isolation; no full WebKit sandbox attestation",
+   "software-render flags WEBKIT_DISABLE_COMPOSITING_MODE=1 WEBKIT_DISABLE_DMABUF_RENDERER=1",
+   "runtime isolation inspected on restart only; first launch has identical recorded argv",
+   "nonzero child UID is an observation, not host-identity separation proof"
+  ]
+ },
+ "cells": [
+  {
+   "label": "c100",
+   "zoom": 1.0,
+   "noteTitle": "Fictional note 100",
+   "uiScaleSetting": 1,
+   "observedMetrics_atspiWindowBounds_xywh": {
+    "Save": [
+     1837,
+     14,
+     66,
+     33
+    ],
+    "Reload notes": [
+     1515,
+     140,
+     107,
+     38
+    ],
+    "Find notes": [
+     293,
+     292,
+     399,
+     40
+    ],
+    "New note": [
+     293,
+     339,
+     399,
+     39
+    ],
+    "Title": [
+     709,
+     292,
+     912,
+     60
+    ],
+    "Note text": [
+     709,
+     386,
+     912,
+     221
+    ],
+    "Preview change": [
+     709,
+     723,
+     125,
+     39
+    ]
+   },
+   "A_create": {
+    "fileSha_before": "ddda4fd55e077f00bc34d5b0ca02dcd3c6d2d54da52f836ac7eea7e4f244dc2a",
+    "sha_afterConfirmBeforeSave": "f49f2635c290cee54db5779db234476dd48a65201a98ed18333b60454c5d6597",
+    "noteRowPresentAfterConfirmBeforeSave": false,
+    "sha_afterSave": "5ca7fff90cac4a324a46a1d4ecba60b6ccb7b40f758ffe349e5d565c87e0334e",
+    "savedBody": [
+     "Panel schedule check at 100 percent.\nUmlaut line: Größe & Übung <ok>."
+    ]
+   },
+   "B_cancel": {
+    "sha_before": "5ca7fff90cac4a324a46a1d4ecba60b6ccb7b40f758ffe349e5d565c87e0334e",
+    "sha_after": "5ca7fff90cac4a324a46a1d4ecba60b6ccb7b40f758ffe349e5d565c87e0334e",
+    "mtimeNsEqual": true,
+    "shaEqual": true,
+    "savedBodyAfter": [
+     "Panel schedule check at 100 percent.\nUmlaut line: Größe & Übung <ok>."
+    ]
+   },
+   "C_edit_save": {
+    "sha_before": "5ca7fff90cac4a324a46a1d4ecba60b6ccb7b40f758ffe349e5d565c87e0334e",
+    "bodyAfterConfirmBeforeSave": [
+     "Panel schedule check at 100 percent.\nUmlaut line: Größe & Übung <ok>."
+    ],
+    "shaAfterConfirmBeforeSave": "375ab87e178fcd5e1fa9ee124a9b5453ded37e2992819791659b1cd4075d4aac",
+    "sha_afterSave": "7d00438903918ab633a2e081093e6ef2995a6c8a0462030c16e7e9755ae82191",
+    "savedBody": [
+     "Panel schedule check at 100 percent.\nUmlaut line: Größe & Übung <ok>. [edited at 100]"
+    ]
+   }
+  },
+  {
+   "label": "c80",
+   "zoom": 0.8,
+   "noteTitle": "Fictional note 80",
+   "uiScaleSetting": 0.8,
+   "observedMetrics_atspiWindowBounds_xywh": {
+    "Save": [
+     1876,
+     11,
+     52,
+     26
+    ],
+    "Reload notes": [
+     1617,
+     110,
+     85,
+     31
+    ],
+    "Find notes": [
+     234,
+     231,
+     441,
+     32
+    ],
+    "New note": [
+     234,
+     269,
+     441,
+     30
+    ],
+    "Title": [
+     688,
+     231,
+     1014,
+     48
+    ],
+    "Note text": [
+     688,
+     306,
+     1014,
+     177
+    ],
+    "Preview change": [
+     688,
+     575,
+     100,
+     31
+    ]
+   },
+   "A_create": {
+    "fileSha_before": "7d00438903918ab633a2e081093e6ef2995a6c8a0462030c16e7e9755ae82191",
+    "sha_afterConfirmBeforeSave": "ef78b3518abb977806e35db3d42d3aa15132c24d3eceeff59d22cee816109b7a",
+    "noteRowPresentAfterConfirmBeforeSave": false,
+    "sha_afterSave": "16ed9d5da6b8a7dacebb342345ccbc1d0fc601a2cc8e13846fb96f42d4d81eb9",
+    "savedBody": [
+     "Panel schedule check at 80 percent.\nUmlaut line: Größe & Übung <ok>."
+    ]
+   },
+   "B_cancel": {
+    "sha_before": "16ed9d5da6b8a7dacebb342345ccbc1d0fc601a2cc8e13846fb96f42d4d81eb9",
+    "sha_after": "16ed9d5da6b8a7dacebb342345ccbc1d0fc601a2cc8e13846fb96f42d4d81eb9",
+    "mtimeNsEqual": true,
+    "shaEqual": true,
+    "savedBodyAfter": [
+     "Panel schedule check at 80 percent.\nUmlaut line: Größe & Übung <ok>."
+    ]
+   },
+   "C_edit_save": {
+    "sha_before": "16ed9d5da6b8a7dacebb342345ccbc1d0fc601a2cc8e13846fb96f42d4d81eb9",
+    "bodyAfterConfirmBeforeSave": [
+     "Panel schedule check at 80 percent.\nUmlaut line: Größe & Übung <ok>."
+    ],
+    "shaAfterConfirmBeforeSave": "df38b38f9ad44d167ce6a66186a755bfc3f19474efdcd968203957a77692c2ac",
+    "sha_afterSave": "12663df19e288ebe480d715ec9d64a209041e2ee1335225e4a1194a70df6128b",
+    "savedBody": [
+     "Panel schedule check at 80 percent.\nUmlaut line: Größe & Übung <ok>. [edited at 80]"
+    ]
+   }
+  },
+  {
+   "label": "c150b",
+   "zoom": 1.5,
+   "noteTitle": "Fictional note 150-clean",
+   "uiScaleSetting": 1.5,
+   "observedMetrics_atspiWindowBounds_xywh": {
+    "Save": [
+     1743,
+     21,
+     98,
+     49
+    ],
+    "Reload notes": [
+     1260,
+     210,
+     160,
+     57
+    ],
+    "Find notes": [
+     439,
+     472,
+     295,
+     60
+    ],
+    "New note": [
+     439,
+     543,
+     295,
+     57
+    ],
+    "Title": [
+     760,
+     472,
+     660,
+     89
+    ],
+    "Note text": [
+     760,
+     613,
+     660,
+     331
+    ]
+   },
+   "A_create": {
+    "fileSha_before": "79d99c6b8b82449020d3bb094464ca28999dc5671ac20a9f53b34b08b66549ed",
+    "sha_afterConfirmBeforeSave": "b1a73c9de3e9998d99acb0d5081b0869bfdba18787bb0a1142ccc53285c53376",
+    "noteRowPresentAfterConfirmBeforeSave": false,
+    "sha_afterSave": "5cee2fe08063faecbff5de7b00ebcd2e3ca129402fe30899aa38a4831f6b0b89",
+    "savedBody": [
+     "Panel schedule check at 150 percent.\nUmlaut line: Größe & Übung <ok>."
+    ]
+   },
+   "B_cancel": {
+    "sha_before": "5cee2fe08063faecbff5de7b00ebcd2e3ca129402fe30899aa38a4831f6b0b89",
+    "sha_after": "5cee2fe08063faecbff5de7b00ebcd2e3ca129402fe30899aa38a4831f6b0b89",
+    "mtimeNsEqual": true,
+    "shaEqual": true,
+    "savedBodyAfter": [
+     "Panel schedule check at 150 percent.\nUmlaut line: Größe & Übung <ok>."
+    ]
+   },
+   "C_edit_save": {
+    "sha_before": "5cee2fe08063faecbff5de7b00ebcd2e3ca129402fe30899aa38a4831f6b0b89",
+    "bodyAfterConfirmBeforeSave": [
+     "Panel schedule check at 150 percent.\nUmlaut line: Größe & Übung <ok>."
+    ],
+    "shaAfterConfirmBeforeSave": "48aa8c82e21390d3c442c04dd557e42f00428ad74663beca19662175a7996a4e",
+    "sha_afterSave": "10879e9d2a7dd22c83d30f10e4e62bc67cbb01236f47539cffda632311d609c4",
+    "savedBody": [
+     "Panel schedule check at 150 percent.\nUmlaut line: Größe & Übung <ok>. [edited at 150]"
+    ]
+   }
+  }
+ ],
+ "restart": {
+  "closeExit": [
+   0,
+   0
+  ],
+  "uiScaleAfterRestart": 1.5,
+  "metricsAfterRestartEqualC150Metrics": true,
+  "fileShaBeforeAndAfterReadOnlyReopen": [
+   "10879e9d2a7dd22c83d30f10e4e62bc67cbb01236f47539cffda632311d609c4",
+   "10879e9d2a7dd22c83d30f10e4e62bc67cbb01236f47539cffda632311d609c4"
+  ],
+  "readback": {
+   "Fictional note 100": "Panel schedule check at 100 percent.\nUmlaut line: Größe & Übung <ok>. [edited at 100]",
+   "Fictional note 80": "Panel schedule check at 80 percent.\nUmlaut line: Größe & Übung <ok>. [edited at 80]",
+   "Fictional note 150": "Panel schedule check at 150 percent.\nUmlaut line: Größe & Übung <ok>. [CANCELLED DRAFT] [edited at 150] [edited at 150]",
+   "Fictional note 150-clean": "Panel schedule check at 150 percent.\nUmlaut line: Größe & Übung <ok>. [edited at 150]"
+  },
+  "finalOracleRows": [
+   [
+    1,
+    0,
+    "project",
+    null,
+    "Fictional note 100",
+    "Panel schedule check at 100 percent.\nUmlaut line: Größe & Übung <ok>. [edited at 100]",
+    0
+   ],
+   [
+    2,
+    1,
+    "project",
+    null,
+    "Fictional note 80",
+    "Panel schedule check at 80 percent.\nUmlaut line: Größe & Übung <ok>. [edited at 80]",
+    0
+   ],
+   [
+    3,
+    2,
+    "project",
+    null,
+    "Fictional note 150",
+    "Panel schedule check at 150 percent.\nUmlaut line: Größe & Übung <ok>. [CANCELLED DRAFT] [edited at 150] [edited at 150]",
+    0
+   ],
+   [
+    4,
+    3,
+    "project",
+    null,
+    "Fictional note 150-clean",
+    "Panel schedule check at 150 percent.\nUmlaut line: Größe & Übung <ok>. [edited at 150]",
+    0
+   ]
+  ]
+ },
+ "counts": {
+  "screenshots": 56,
+  "actionRecords": 146,
+  "rawInputRecords": 48,
+  "seatRestoreReceipts": 29,
+  "atspiTreeSnapshotFilesIncludingRetries": 92,
+  "focusActiveWorkspacePredicateAllPassed": true
+ },
+ "observations": [
+  "Confirm change rewrites the project file (hash changes, schema/history state) but the saved note row keeps its previous content; the note row changes only after the toolbar Save (all three cells, create and edit).",
+  "After the toolbar Save the notes editor shows the first note again (screenshot), not the edited one; the edited note was re-selected for the exact readback.",
+  "Cancel preview keeps the draft (still dirty); the draft is dropped by Reload notes + Discard draft, after which UI and file both show the unchanged stored note.",
+  "At 150% and 80% some controls (Preview change, Confirm change, Reload notes, Discard draft) fell outside the scroll viewport (AT-SPI SHOWING=false); the driver scrolled them into view with AT-SPI scroll_to before activating. That is a reachability observation, not a product-bug claim.",
+  "Typed text readback used the AT-SPI text interface of the Title and Note text entries; text was typed with wtype into the guarded owned window."
+ ],
+ "notAcceptedAttempts": [
+  "launcher-exited-with-controller-script: first launch died with its parent (bwrap die-with-parent); harness mistake, retained, relaunched with a persistent launcher.",
+  "c100 first create: Confirm change was offscreen (SHOWING=false); run aborted before commit, draft discarded manually; a retried run then typed into a retained draft (doubled text) and was not accepted.",
+  "c150 create/cancel/edit r1-r2 (labels c150, c150r2): Preview/Reload controls offscreen aborted runs midway; the c150 note body became \"...[CANCELLED DRAFT] [edited at 150] [edited at 150]\" through these partial runs. Not accepted; superseded by clean note \"Fictional note 150-clean\" (label c150b). The c150/c150r3 cancel and edit cells still passed their own oracles but are not the accepted 150% cell.",
+  "one sqlite read-only oracle read returned \"attempt to write a readonly database\" while the app was mid-write; the oracle now retries; no result relied on that read."
+ ],
+ "accepted150Cell": "c150b (note \"Fictional note 150-clean\")",
+ "teardown": {
+  "ordinaryCloseButtonUsed": true,
+  "launcherExitCodes": [
+   0,
+   0
+  ],
+  "ownedProcessesRemaining": 0,
+  "windowsRemaining": 0,
+  "runtimeRulesDisabledAndVerified": true,
+  "privateRuntimeDirRemoved": true,
+  "focusAndWorkspaceRestored": "All 29 recorded active-window/active-workspace/focused-output predicates passed; cursor position and full workspace inventory were not restored. The initial empty workspace 1 disappeared.",
+  "emptyWorkspace1Disappeared": "workspace 1 on the secondary output was empty at start and is auto-removed by the compositor once left; not restored explicitly"
+ },
+ "notClaimed": [
+  "all keyboard/zoom/layout policies",
+  "physical keyboard vs virtual keys",
+  "Orca/Firefox/AppImage/GPU/X11",
+  "note targets other than Project",
+  "note move/remove, documentation-include flag",
+  "AT-SPI/software-render exceptions apply",
+  "full WP-11 completion; no ledger change",
+  "no source fix; no product bug reproduced"
+ ],
+ "privateEvidence": "<profile>/evidence/2026-11-09-wp11-current-notes/native-core.tar.gz (native-worker/run/ev: raw trees, actions, raw input, screenshots, oracle JSON, launch receipts); exact 535-member payload verified in NATIVE_CORE_VERIFIED.json"
+}

@@ -193,6 +193,20 @@ bounded Properties/navigation records are unchanged. Orca, Firefox,
 GPU/AppImage, other sizes/themes and the wider matrix remain outside this
 slice; ledger status is unchanged.
 
+## Current-source notes cells — 9 November 2026
+
+The [record](../status/2026-11-09-wp11-current-native-notes.md) and
+[measurement](../evidence/wp11-current-native-notes-2026-11-09.json) cover the
+notes editor on freshly built source `0b182054a` in an isolated actual
+Wayland/WebKitGTK window at 80/100/150% (observed by persisted scale and control
+geometry): create, exact save, draft Cancel/Discard with unchanged file hash and
+mtime, edit + Save with read-only oracle, reopen, and one real process restart.
+Confirm change does not write the note row; the toolbar Save does. Offscreen
+controls at 80/150% needed AT-SPI scroll-to; failed and contaminated attempts
+are retained. Software-render and shared session-bus exceptions remain. Only the
+Project target; not instructions, checked parameters, capture export or whole
+WP-11. Ledger status is unchanged.
+
 ## Acceptance target — owner decision 8 November 2026
 
 The owner chose the simplest complete target. Required are the cells that run

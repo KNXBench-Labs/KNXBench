@@ -118,10 +118,22 @@ pub(super) fn property_images(
                 value
             }
         };
-        let Encoded::Number(number) = value else {
-            return Err(ImageError::Unsupported {
-                what: format!("{parameter}: a text placed in a property has no observed encoding"),
-            });
+        let number = match value {
+            Encoded::Number(number) => number,
+            Encoded::Float { .. } => {
+                return Err(ImageError::Unsupported {
+                    what: format!(
+                        "{parameter}: a float placed in a property has no observed encoding"
+                    ),
+                })
+            }
+            Encoded::Text { .. } => {
+                return Err(ImageError::Unsupported {
+                    what: format!(
+                        "{parameter}: a text placed in a property has no observed encoding"
+                    ),
+                })
+            }
         };
         let field = ParameterField {
             offset: property.offset,

@@ -124,3 +124,22 @@ independent semantic oracle**, ETS-equivalence claim, project-configuration
 census or hardware acceptance. The refusal-precedence correction changes the
 diagnostic, not acceptance of unreadable products. PRG-01 and KL-006's actual
 vendor plug-in limitation remain open.
+
+## Addendum 9 November 2026: re-pinned after ADR-0168 and ADR-0169
+
+**[V]** Same input set and commitment. Measured on the ADR-0169 candidate,
+twice in parallel: once as is, and once with float admission disabled by a
+temporary local switch (not committed), so the two packages' effects
+separate. Per-program classifications were compared with the private
+8 November dump (`main-run1.tsv`); apart from the 135 already explained
+`product-data` → `not-memory-mapped` rows, exactly these changed:
+
+| Change | Programs | Observed reason |
+| --- | ---: | --- |
+| `image-structure` → `unmodelled-step` | 2 | A `0701h` `LittleEndian` program family no longer stops at a mid-octet union (ADR-0168, already on `main`); the next refusal names `LdCtrlCompareProp`. The ignored test was not re-pinned then. |
+| `image-structure` → `untested` | 6 | Programs of one manufacturer whose only refusal was a `TypeFloat` (ADR-0169). All `MV-0705`. |
+
+New pins: verified 1, untested 118, `unmodelled-step` 27, `image-structure` 42,
+everything else unchanged; `MV-0705` plans 77 of 148. As before this
+characterises the code, not ETS equivalence; the six float programs were not
+observed in ETS, only the program of the research note was.

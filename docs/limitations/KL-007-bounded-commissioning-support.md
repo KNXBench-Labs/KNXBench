@@ -6,6 +6,16 @@ This dossier preserves the technical detail and dated history. Earlier
 headings, failures and lifting conditions are historical where later
 updates supersede them; they are not new work assignments.
 
+## Float parameters — 9 November 2026 source
+
+`TypeFloat` parameters are no longer refused by the memory (`070nh`) image
+builder: they are written in their declared `DPT 9` or `IEEE-754 Single`
+encoding, high octet first, as ETS 6.4 wrote them against the simulator
+([ADR-0169](../adr/0169-float-parameters.md)). This supersedes the `TypeFloat`
+half of the retained §7 sentence below; `Priority="High"` stays refused.
+Other layouts, `LittleEndian` programs and property placements still refuse a
+float. No float has been downloaded to hardware.
+
 ## Inactive whole-byte write selection — 30 October 2026 focused result
 
 The [regular-route contract](../contracts/inactive-byte-write-selection.md) is

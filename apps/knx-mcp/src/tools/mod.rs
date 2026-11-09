@@ -14,8 +14,8 @@ mod project;
 pub use device::{explain_parameter, get_device, get_group_address, DeviceView, VISIBILITY_VALUES};
 pub use functions::list_functions;
 pub use project::{
-    diff_projects, find_issues, project_summary, search, validate_ga_csv, MAX_CSV_BYTES,
-    MAX_QUERY_CHARS, SEARCH_KINDS,
+    diff_projects, find_issues, project_summary, search, validate_ga_csv, validate_ga_csv_with,
+    MAX_CSV_BYTES, MAX_QUERY_CHARS, SEARCH_KINDS,
 };
 
 use serde::Serialize;

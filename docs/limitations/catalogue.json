@@ -117,7 +117,7 @@
       "number": 40,
       "title": "CSV read-only and absent columns",
       "topic": "Import and export",
-      "summary": "Native DPT/group context columns are read-only; changed values are refused. Since KL-038b a Description column (native and profiles) sets group-address descriptions and profile DPTs declare the type of addresses the import creates; clearing descriptions, Comment and range descriptions remain unsupported.",
+      "summary": "Native DPT/group context columns are read-only; changed values are refused. Since KL-038b a Description column (native and profiles) sets group-address descriptions and profile DPTs declare the type of addresses the import creates; a blank cell removes a description only with the explicit, confirmed clear-blank-descriptions option; Comment and range descriptions remain unsupported.",
       "file": "KL-040-csv-read-only-and-absent-columns.md",
       "ledger_ids": [
         "KL-40"

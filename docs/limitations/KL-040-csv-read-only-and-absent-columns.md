@@ -56,8 +56,19 @@ The `Description` half of this record is superseded
 ([ADR-0164](../adr/0164-group-address-description-and-csv-encoding.md)): group
 addresses have a description (native schema 19), the native CSV writes and reads
 an optional `Description` column, and the fixed profiles apply theirs. A blank
-cell never clears a description, and a range row's description is reported and
+cell never clears a description (see the 9 November update below for the explicit
+option that does), and a range row's description is reported and
 not imported. A profile `DatapointType` declares the type of an address the
 import creates; on existing addresses it stays read-only, and the native
 `DatapointType (read-only)`, `MainGroup (read-only)` and
 `MiddleGroup (read-only)` columns are unchanged. `Comment` is still not modelled.
+
+## Update — 9 November 2026
+
+A blank `Description` cell can now remove a description, but only with the
+explicit import option *clear blank descriptions*; each removal is a confirmed
+destructive change, and a file without a `Description` column is refused with
+the option set
+([ADR-0164 amendment](../adr/0164-group-address-description-and-csv-encoding.md#amendment--9-november-2026-editor-csv-removal-mcp)).
+Without the option a blank cell still leaves the description unchanged.
+`Comment`, range descriptions and the read-only columns are unchanged.

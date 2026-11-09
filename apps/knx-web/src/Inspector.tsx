@@ -266,6 +266,102 @@ function DeviceDescriptionField(props: {
   );
 }
 
+/** Line breaks as a textarea reports them (LF), for comparison only. */
+function asTyped(text: string): string {
+  return text.replace(/\r\n?/g, "\n");
+}
+
+// ADR-0164: a group address's description, byte-exact. A textarea keeps
+// line breaks, but its value reports CRLF as LF, so the field writes only
+// after the user actually typed: merely focusing and leaving it must never
+// rewrite an imported text. Empty removes the description. Mounted with
+// `key={ga.id}`, so a draft can never move to another address.
+function GroupAddressDescriptionField(props: {
+  ga: GroupAddressNode;
+  onApplied: (tree: ProjectTree) => void;
+}) {
+  const { ga, onApplied } = props;
+  const t = useTranslate();
+  const stored = ga.description ?? "";
+  const [value, setValue] = useState(stored);
+  const [error, setError] = useState<string | null>(null);
+  // `edited`: the field holds typed text not yet saved. `latest` mirrors
+  // `value` for the async save, which must see typing that happened after
+  // it started. `saving` blocks a second request while one is in flight.
+  const edited = useRef(false);
+  const latest = useRef(stored);
+  const saving = useRef(false);
+
+  const sourceValue = useRef(stored);
+  useEffect(() => {
+    const previous = sourceValue.current;
+    sourceValue.current = stored;
+    // Refresh committed values only in clean fields, never over a draft.
+    setValue(draft => {
+      const next = draft === previous ? stored : draft;
+      latest.current = next;
+      return next;
+    });
+  }, [stored]);
+
+  function change(next: string) {
+    edited.current = true;
+    latest.current = next;
+    setValue(next);
+  }
+
+  async function apply() {
+    if (!edited.current || saving.current) return;
+    const sent = latest.current;
+    if (asTyped(sent) === asTyped(sourceValue.current)) {
+      edited.current = false;
+      return;
+    }
+    setError(null);
+    saving.current = true;
+    try {
+      const tree = await api.setGroupAddressDescription(ga.id, sent === "" ? null : sent);
+      // The sent text is now stored, even before the parent re-renders, so
+      // typing the old text back during the request still saves the revert.
+      // Text typed while the request ran stays a draft and is saved next.
+      sourceValue.current = sent;
+      edited.current = latest.current !== sent;
+      onApplied(tree);
+    } catch (e) {
+      setError(api.errorMessage(e));
+      if (latest.current === sent) {
+        edited.current = false;
+        latest.current = sourceValue.current;
+        setValue(sourceValue.current);
+      }
+    } finally {
+      saving.current = false;
+    }
+    if (edited.current) await apply();
+  }
+
+  return (
+    <label className="inspector-field">
+      {t("inspector.groupAddressDescription")}
+      <textarea
+        className="ga-description-editor"
+        aria-label={t("inspector.groupAddressDescription")}
+        rows={2}
+        value={value}
+        onChange={(e) => change(e.target.value)}
+        onBlur={apply}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) (e.target as HTMLTextAreaElement).blur();
+        }}
+      />
+      {stored.includes("\r") && (
+        <small className="inspector-description">{t("inspector.groupAddressDescriptionLineBreaks")}</small>
+      )}
+      {error && <span className="field-error">{error}</span>}
+    </label>
+  );
+}
+
 function ComObjectDescriptionField(props: {
   com: ComObjectNode;
   onApplied: (tree: ProjectTree) => void;
@@ -1167,6 +1263,7 @@ function GroupAddressInspector(props: {
       <h2>{ga.name}</h2>
       <RenameNameField tree={props.tree} target={{ kind: "group_address", id: ga.id, name: ga.name }} onApplied={props.onApplied} />
       <p className="inspector-address ga-address">{formatGa(ga.address)}</p>
+      <GroupAddressDescriptionField key={ga.id} ga={ga} onApplied={props.onApplied} />
       <dl className="inspector-facts">
         <dt>{t("addressTable.dpt")}</dt>
         <dd className={hasDptConflict(ga) ? "mono dpt-conflict" : "mono"}>
@@ -1181,12 +1278,6 @@ function GroupAddressInspector(props: {
             <dd className="mono">
               {ga.dpt_detail.linked.length === 0 ? t("addressTable.noDpt") : ga.dpt_detail.linked.map(raw => dptDisplay(raw, language)).join(" · ")}
             </dd>
-          </>
-        )}
-        {ga.description !== undefined && (
-          <>
-            <dt>{t("inspector.groupAddressDescription")}</dt>
-            <dd className="ga-description">{ga.description}</dd>
           </>
         )}
         <dt>{t("addressTable.links")}</dt>

@@ -819,3 +819,199 @@ async fn a_confirmation_token_from_one_encoding_does_not_confirm_the_other() {
     assert_eq!(confirmed.status(), StatusCode::OK);
     assert_eq!(body_json(confirmed).await["applied"], true);
 }
+
+async fn import_csv_clearing(
+    app: &axum::Router,
+    path: &std::path::Path,
+    confirmation_token: Option<&str>,
+) -> axum::response::Response {
+    call(
+        app,
+        "POST",
+        "/api/group-addresses/csv-import",
+        Some(json!({
+            "path": path.to_string_lossy(),
+            "confirmationToken": confirmation_token,
+            "clearBlankDescriptions": true,
+        })),
+    )
+    .await
+}
+
+/// `state_with_two_group_addresses` with a description on 1/1/1.
+fn state_with_a_description() -> knx_server::AppState {
+    let state = state_with_two_group_addresses();
+    state
+        .project
+        .lock()
+        .unwrap()
+        .as_mut()
+        .unwrap()
+        .installations[0]
+        .group_addresses[0]
+        .description = Some("Above the sofa".into());
+    state
+}
+
+#[tokio::test]
+async fn clearing_blank_descriptions_is_opt_in_previewed_and_confirmed() {
+    let state = Arc::new(state_with_a_description());
+    let before = state.project.lock().unwrap().clone();
+    let app = knx_server::app(state.clone(), None);
+    let dir = tempfile::tempdir().unwrap();
+    let csv_path = dir.path().join("blank.csv");
+    std::fs::write(
+        &csv_path,
+        "Address,Name,Description\n1/1/1,Living Room Light,\n1/1/2,Kitchen Light,\n",
+    )
+    .unwrap();
+
+    // Without the option a blank cell leaves the description alone.
+    let kept = body_json(import_csv(&app, &csv_path).await).await;
+    assert_eq!(kept["report"]["unchanged"], 2, "{kept}");
+    assert_eq!(kept["report"]["descriptionsCleared"], 0, "{kept}");
+    assert_eq!(*state.project.lock().unwrap(), before);
+
+    let preview = import_csv_clearing(&app, &csv_path, None).await;
+    assert_eq!(preview.status(), StatusCode::OK);
+    let preview = body_json(preview).await;
+    assert_eq!(preview["applied"], false, "{preview}");
+    assert_eq!(preview["report"]["descriptionsCleared"], 1, "{preview}");
+    let change = &preview["report"]["destructiveChanges"][0];
+    assert_eq!(change["action"], "clearDescription", "{preview}");
+    assert_eq!(change["row"], 2);
+    assert_eq!(change["affectedLinks"], json!([]));
+    assert_eq!(
+        *state.project.lock().unwrap(),
+        before,
+        "a preview changes nothing"
+    );
+    let token = preview["confirmationToken"].as_str().unwrap().to_string();
+
+    let confirmed = body_json(import_csv_clearing(&app, &csv_path, Some(&token)).await).await;
+    assert_eq!(confirmed["applied"], true, "{confirmed}");
+    let ga = &confirmed["tree"]["installations"][0]["group_addresses"][0];
+    assert!(ga.get("description").is_none(), "{ga}");
+
+    let undone = call(&app, "POST", "/api/undo", None).await;
+    assert_eq!(undone.status(), StatusCode::OK);
+    assert_eq!(
+        state
+            .project
+            .lock()
+            .unwrap()
+            .as_ref()
+            .unwrap()
+            .installations,
+        before.as_ref().unwrap().installations,
+        "one undo step restores the description"
+    );
+}
+
+#[tokio::test]
+async fn a_clearing_preview_token_does_not_confirm_a_keeping_import() {
+    let state = Arc::new(state_with_a_description());
+    let before = state.project.lock().unwrap().clone();
+    let app = knx_server::app(state.clone(), None);
+    let dir = tempfile::tempdir().unwrap();
+    let csv_path = dir.path().join("readdress.csv");
+    std::fs::write(
+        &csv_path,
+        "Address,Action,NewAddress,Name,Description\n1/1/1,readdress,1/1/3,Living Room Light,\n",
+    )
+    .unwrap();
+    let clearing = body_json(import_csv_clearing(&app, &csv_path, None).await).await;
+    let clearing = clearing["confirmationToken"].as_str().unwrap().to_string();
+    let keeping = body_json(import_csv(&app, &csv_path).await).await;
+    let keeping = keeping["confirmationToken"].as_str().unwrap().to_string();
+    assert_ne!(clearing, keeping);
+
+    let crossed = import_csv_with_confirmation(&app, &csv_path, Some(&clearing)).await;
+    assert_eq!(crossed.status(), StatusCode::BAD_REQUEST);
+    let crossed = import_csv_clearing(&app, &csv_path, Some(&keeping)).await;
+    assert_eq!(crossed.status(), StatusCode::BAD_REQUEST);
+    assert_eq!(*state.project.lock().unwrap(), before);
+}
+
+#[tokio::test]
+async fn the_clear_option_without_a_description_column_is_refused() {
+    let state = Arc::new(state_with_a_description());
+    let before = state.project.lock().unwrap().clone();
+    let app = knx_server::app(state.clone(), None);
+    let dir = tempfile::tempdir().unwrap();
+    let csv_path = dir.path().join("names.csv");
+    std::fs::write(&csv_path, "Address,Name\n1/1/1,Living Room Light\n").unwrap();
+    let refused = import_csv_clearing(&app, &csv_path, None).await;
+    assert_eq!(refused.status(), StatusCode::BAD_REQUEST);
+    let body = body_json(refused).await;
+    let error = body["error"].as_str().unwrap_or_default();
+    assert!(error.contains("needs a \"Description\" column"), "{body}");
+    assert_eq!(*state.project.lock().unwrap(), before);
+}
+
+#[tokio::test]
+async fn the_description_route_sets_keeps_and_removes_byte_exact_with_undo() {
+    let state = Arc::new(state_with_two_group_addresses());
+    let app = knx_server::app(state.clone(), None);
+    let id = state
+        .project
+        .lock()
+        .unwrap()
+        .as_ref()
+        .unwrap()
+        .installations[0]
+        .group_addresses[1]
+        .id
+        .0;
+    let set = |description: Value| {
+        call(
+            &app,
+            "POST",
+            "/api/group-address-description",
+            Some(json!({ "groupAddressId": id, "description": description })),
+        )
+    };
+
+    let text = " Zwei Zeilen\r\nmit Rand ";
+    let tree = body_json(set(json!(text)).await).await;
+    assert_eq!(
+        tree["installations"][0]["group_addresses"][1]["description"],
+        text
+    );
+    assert_eq!(tree["can_undo"], true, "{tree}");
+    let tree = body_json(set(json!("")).await).await;
+    assert_eq!(
+        tree["installations"][0]["group_addresses"][1]["description"], "",
+        "an empty string is a description written empty"
+    );
+    let tree = body_json(set(Value::Null).await).await;
+    assert!(tree["installations"][0]["group_addresses"][1]
+        .get("description")
+        .is_none());
+
+    let undone = body_json(call(&app, "POST", "/api/undo", None).await).await;
+    assert_eq!(
+        undone["installations"][0]["group_addresses"][1]["description"],
+        ""
+    );
+
+    let unknown = call(
+        &app,
+        "POST",
+        "/api/group-address-description",
+        Some(json!({ "groupAddressId": 999, "description": "x" })),
+    )
+    .await;
+    assert_eq!(unknown.status(), StatusCode::BAD_REQUEST);
+    let extra = call(
+        &app,
+        "POST",
+        "/api/group-address-description",
+        Some(json!({ "groupAddressId": id, "description": "x", "name": "y" })),
+    )
+    .await;
+    assert!(
+        extra.status().is_client_error(),
+        "unknown fields are refused"
+    );
+}

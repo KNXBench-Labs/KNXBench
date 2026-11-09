@@ -1,4 +1,4 @@
-/** Group-address CSV export/import buttons with an explicit import encoding; no ETS claim. */
+/** Group-address CSV export/import buttons with explicit import choices; no ETS claim. */
 import { useState } from "react";
 import { pickOpenPath, pickSavePath } from "./filePicker";
 import * as api from "./api";
@@ -58,6 +58,10 @@ function importSummary(t: Translate, report: api.CsvImportReport): string {
   const warningCount = report.problems.filter((p) => p.severity === "warning").length;
   const ignoredCount = report.ignoredColumns.length;
   const extras: string[] = [];
+  const cleared = report.descriptionsCleared ?? 0;
+  if (cleared > 0) {
+    extras.push(t("groupAddressCsv.importSummaryDescriptionsCleared", { count: cleared }));
+  }
   if (warningCount > 0) {
     extras.push(t("groupAddressCsv.importSummaryWarnings", { count: warningCount }));
   }
@@ -78,6 +82,7 @@ export default function GroupAddressCsvButtons(props: {
   const { tree, onTreeUpdate, onSummary, onError, onClearErrors } = props;
   const t = useTranslate();
   const entry = useFileMenuItemProps();
+  const inMenu = "role" in entry;
   const csvFilter = [{ name: t("groupAddressCsv.filterName"), extensions: ["csv"] }];
   // MODEL-01: with several installations the user names the one the CSV
   // exchange acts on; with one, the calls stay exactly as before.
@@ -89,8 +94,13 @@ export default function GroupAddressCsvButtons(props: {
   // KL-038b: the user states the file's encoding; nothing is guessed. UTF-8
   // stays the default and keeps the request exactly as before.
   const [encoding, setEncoding] = useState<api.CsvImportEncoding>("utf-8");
+  // Off by default: a blank Description cell leaves a description alone
+  // unless the user asks for removal, which the server then has confirmed.
+  // Reset after every import attempt, so it never silently carries over.
+  const [clearBlank, setClearBlank] = useState(false);
 
   function requestImport(path: string, token?: string) {
+    if (clearBlank) return api.importGroupAddressesCsv(path, token, target, encoding, true);
     if (encoding !== "utf-8") return api.importGroupAddressesCsv(path, token, target, encoding);
     if (target !== undefined) return api.importGroupAddressesCsv(path, token, target);
     return token === undefined
@@ -127,6 +137,14 @@ export default function GroupAddressCsvButtons(props: {
     if (!path) return;
     onClearErrors();
     try {
+      await runImport(path);
+    } finally {
+      setClearBlank(false);
+    }
+  }
+
+  async function runImport(path: string) {
+    try {
       let response = await requestImport(path);
       if (!response.applied && response.confirmationToken) {
         const affectedLinks = response.report.destructiveChanges.reduce(
@@ -139,7 +157,9 @@ export default function GroupAddressCsvButtons(props: {
               action: t(
                 change.action === "readdress"
                   ? "groupAddressCsv.actionReaddress"
-                  : "groupAddressCsv.actionDelete",
+                  : change.action === "clearDescription"
+                    ? "groupAddressCsv.actionClearDescription"
+                    : "groupAddressCsv.actionDelete",
               ),
               source: change.sourceAddress,
               target: change.targetAddress ?? "—",
@@ -159,13 +179,18 @@ export default function GroupAddressCsvButtons(props: {
             }),
           )
           .join("\n");
-        const confirmed = window.confirm(
-          `${t("groupAddressCsv.confirmDestructive", {
+        const cleared = response.report.descriptionsCleared ?? 0;
+        const structural = response.report.readdressed + response.report.deleted > 0;
+        const summary = structural
+          ? t("groupAddressCsv.confirmDestructive", {
               readdressed: response.report.readdressed,
               deleted: response.report.deleted,
               affectedLinks,
-            })}\n\n${detail}`,
-        );
+            }) + (cleared > 0
+              ? `\n${t("groupAddressCsv.confirmDescriptionsCleared", { count: cleared })}`
+              : "")
+          : t("groupAddressCsv.confirmDescriptionsOnly", { count: cleared });
+        const confirmed = window.confirm(`${summary}\n\n${detail}`);
         if (!confirmed) {
           onSummary(t("groupAddressCsv.confirmCancelled"));
           return;
@@ -201,6 +226,17 @@ export default function GroupAddressCsvButtons(props: {
         <option value="utf-8">{t("groupAddressCsv.encodingUtf8")}</option>
         <option value="windows-1252">{t("groupAddressCsv.encodingWindows1252")}</option>
       </select>
+      {/* Removing descriptions is a rare, deliberate choice: offered beside the
+          import in the group-address view, not as another File menu row (the
+          menu holds entries only and has no height to spare in short windows).
+          The File menu import keeps the safe default. */}
+      {!inMenu && (
+        <button type="button" className="csv-import-option" disabled={!tree}
+          aria-pressed={clearBlank} onClick={() => setClearBlank((on) => !on)}>
+          <span aria-hidden="true">{clearBlank ? "☑ " : "☐ "}</span>
+          {t("groupAddressCsv.clearBlankDescriptions")}
+        </button>
+      )}
       <button {...entry} onClick={importCsv} disabled={!tree}>
         {t("groupAddressCsv.importButton")}
       </button>

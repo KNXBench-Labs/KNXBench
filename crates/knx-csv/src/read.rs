@@ -76,7 +76,8 @@ pub struct CsvRow {
     pub middle_group: Option<String>,
     /// The `Description` cell, byte-exact. `None` when the column is absent
     /// or the cell is blank after trimming: no description on create, the
-    /// existing one unchanged on update. A blank cell never clears one.
+    /// existing one unchanged on update. A blank cell clears one only when
+    /// the import says so ([`crate::CsvImportOptions`]).
     pub description: Option<String>,
 }
 
@@ -95,6 +96,9 @@ pub enum CsvAction {
 #[derive(Debug, Clone, PartialEq)]
 pub struct ParsedCsv {
     pub separator: char,
+    /// Whether the header has a `Description` column, so a blank cell is a
+    /// stated "no description" rather than a file that cannot say one.
+    pub description_column: bool,
     pub rows: Vec<CsvRow>,
     pub ignored_columns: Vec<IgnoredColumn>,
     pub problems: Vec<CsvProblem>,
@@ -144,6 +148,7 @@ pub fn parse_group_addresses(text: &str, style: GroupAddressStyle) -> ParsedCsv 
     if text.trim().is_empty() {
         return ParsedCsv {
             separator: ',',
+            description_column: false,
             rows: Vec::new(),
             ignored_columns: Vec::new(),
             problems: vec![CsvProblem {
@@ -167,6 +172,7 @@ pub fn parse_group_addresses(text: &str, style: GroupAddressStyle) -> ParsedCsv 
         Err(e) => {
             return ParsedCsv {
                 separator,
+                description_column: false,
                 rows: Vec::new(),
                 ignored_columns: Vec::new(),
                 problems: vec![CsvProblem {
@@ -192,6 +198,7 @@ pub fn parse_group_addresses(text: &str, style: GroupAddressStyle) -> ParsedCsv 
         Detected::Refused(detail) => {
             return ParsedCsv {
                 separator,
+                description_column: false,
                 rows: Vec::new(),
                 ignored_columns: Vec::new(),
                 problems: vec![CsvProblem {
@@ -220,12 +227,17 @@ pub fn parse_group_addresses(text: &str, style: GroupAddressStyle) -> ParsedCsv 
         if columns.address.is_none() || columns.name.is_none() {
             return ParsedCsv {
                 separator,
+                description_column: false,
                 rows: Vec::new(),
                 ignored_columns,
                 problems,
             };
         }
     }
+    let description_column = match profile {
+        Some(shape) => shape.has_description(),
+        None => columns.description.is_some(),
+    };
     // Unused for profile files, which never reach the native row code below.
     let address_col = columns.address.unwrap_or(0);
     let name_col = columns.name.unwrap_or(0);
@@ -460,6 +472,7 @@ pub fn parse_group_addresses(text: &str, style: GroupAddressStyle) -> ParsedCsv 
 
     ParsedCsv {
         separator,
+        description_column,
         rows,
         ignored_columns,
         problems,

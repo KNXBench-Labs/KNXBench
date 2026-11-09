@@ -1,7 +1,7 @@
 # ADR 0160: A choose whose placed controller is inactive selects nothing
 
 Date: 2026-11-07
-Status: Accepted
+Status: Accepted; refined by [ADR-0168](0168-assigned-and-unnamed-controllers.md)
 
 ## Context
 

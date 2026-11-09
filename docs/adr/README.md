@@ -173,3 +173,4 @@ the old one gets `Status: Superseded by ADR-NNNN`.
 | [0165](0165-journal-writes-trust-the-verified-context.md) | Journal writes trust the context and baseline they verified | Accepted | 2026-11-08 |
 | [0166](0166-commands-acknowledged-from-memory-journaled-in-background.md) | Project commands are acknowledged from memory and journaled in the background | Accepted | 2026-11-09 |
 | [0167](0167-property-writes-without-a-count.md) | Property writes without a count follow the declared size | Accepted | 2026-11-09 |
+| [0168](0168-assigned-and-unnamed-controllers.md) | Assigned and unnamed choose controllers, short segments, mid-octet unions | Accepted | 2026-11-09 |

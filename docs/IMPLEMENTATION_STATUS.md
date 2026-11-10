@@ -12,6 +12,15 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Background activity footer (10 November 2026; bounded source implementation)
+
+App-owned open/import, save/readback, device-detail and read-only comparison
+producers plus the retained catalogue controller now feed an operation-identity
+observer and a delayed, expandable footer. Focused regressions and the real-App
+browser flow passed in both languages, both widths and both owning lanes. No job-engine,
+new cancellation or panel-owned download lifetime migration is claimed.
+[Design, inventory, exclusions and verification](status/2026-11-10-background-activity-footer.md).
+
 ## Device-scoped readiness and parameter reply ordering (10 November 2026; issues #36/#37)
 
 The Download panel requests offline readiness only for its selected device,

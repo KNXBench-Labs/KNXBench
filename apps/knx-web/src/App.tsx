@@ -22,6 +22,11 @@ import PaneSplitter from "./PaneSplitter";
 import WorkbenchIcon from "./WorkbenchIcon";
 import StructureWorkspace, { type StructureView } from "./StructureWorkspace";
 import CatalogBrowser from "./CatalogBrowser";
+import { ActivityProvider, useActivityController } from "./ActivityContext";
+import ActivityFooter from "./ActivityFooter";
+import { projectActivityContext, type ActivityHandle } from "./activityController";
+import { collectDevices } from "./treeUtils";
+import { observeCatalogueActivity } from "./catalogueActivity";
 import { CatalogueJobsProvider, CatalogueJobsRootNotice, useCatalogueJobs } from "./CatalogueJobsContext";
 import NewProjectDialog from "./NewProjectDialog";
 import DeviceWizard from "./DeviceWizard";
@@ -85,7 +90,7 @@ import DiagnosticExportButton from "./DiagnosticExportButton";
 import IdentityReadButton from "./IdentityReadButton";
 import ProjectDiffPanel from "./ProjectDiffPanel";
 import LoadProgressBanner from "./LoadProgressBanner";
-import { localFailure, ownsOperation } from "./loadProgress";
+import { loadFraction, localFailure, ownsOperation, phaseMessageKey } from "./loadProgress";
 import HelpPanel from "./HelpPanel";
 import AboutDialog from "./AboutDialog";
 import OnboardingGuide from "./OnboardingGuide";
@@ -202,11 +207,17 @@ function acceptedSnapshotLifetime(
 }
 
 function App(props: AppProps) {
-  return <CatalogueJobsProvider><AppBody {...props} /></CatalogueJobsProvider>;
+  return <ActivityProvider><CatalogueJobsProvider><AppBody {...props} /></CatalogueJobsProvider></ActivityProvider>;
 }
 
 function AppBody({ manifestVersion = packageVersion, session, editorReturn = false }: AppProps) {
-  const {state: catalogueJobs} = useCatalogueJobs();
+  const activity = useActivityController();
+  const {controller: catalogueController, state: catalogueJobs} = useCatalogueJobs();
+  const [catalogueActivityOpen, setCatalogueActivityOpen] = useState(0);
+  useEffect(() => observeCatalogueActivity(catalogueController, activity), [catalogueController, activity]);
+  const projectActivityScope = useRef<object>({});
+  const activitySerial = useRef(0);
+  const loadActivity = useRef<ActivityHandle | null>(null);
   // Called unconditionally on every render (not just from `SettingsPanel`,
   // which only mounts once Settings is opened) so `useUiLanguage()`'s own
   // effect — setting `document.documentElement.lang` — runs for the whole
@@ -229,7 +240,7 @@ function AppBody({ manifestVersion = packageVersion, session, editorReturn = fal
   const etsProjectFilter = [{ name: t("app.filterName.etsProject"), extensions: ["knxproj"] }];
   const knxdbFilter = [{ name: t("app.filterName.knxDesktopProject"), extensions: ["knxdb"] }];
   const [tree, setTree] = useState<ProjectTree | null>(null);
-  const comparisons = useDeviceComparisons(tree);
+  const comparisons = useDeviceComparisons(tree, activity);
   const treeRef = useRef(tree); treeRef.current = tree;
   const [flowProjectScope, setFlowProjectScope] = useState(() => createFlowScope());
   const flowScopeRef = useRef(flowProjectScope); flowScopeRef.current = flowProjectScope;
@@ -649,15 +660,20 @@ function AppBody({ manifestVersion = packageVersion, session, editorReturn = fal
   // wins over the late answer.
   useEffect(() => {
     let cancelled = false;
+    const scope = projectActivityScope.current;
+    const task = activity.begin({ kind: "resume", operationId: String(++activitySerial.current), projectScope: scope, access: "read" });
     void api.currentProject().then(current => {
-      if (cancelled || treeRef.current !== null || loadingRef.current) return;
-      if (!resetTree(current)) return;
+      if (cancelled || scope !== projectActivityScope.current || treeRef.current !== null || loadingRef.current) { task.finish("discarded"); return; }
+      if (!resetTree(current, () => { task.update(projectActivityContext(current)); task.finish(); })) {
+        task.finish("discarded"); return;
+      }
       setHasStorePath(current.has_store_path);
       if (!editorReturn) pushFun(latestT.current(current.is_modified ? "resume.noticeUnsaved" : "resume.notice"));
     }).catch(error => {
-      if (!cancelled && treeRef.current === null && !loadingRef.current && api.errorStatus(error) !== 400) reportError(error);
+      if (!cancelled && scope === projectActivityScope.current && treeRef.current === null && !loadingRef.current && api.errorStatus(error) !== 400) { task.finish("failed", api.errorMessage(error)); reportError(error); }
+      else task.finish("discarded");
     });
-    return () => { cancelled = true; };
+    return () => { cancelled = true; task.finish("discarded"); };
     // Once per mount: the marker cannot change after `main.tsx` read it.
   }, []);
 
@@ -673,6 +689,11 @@ function AppBody({ manifestVersion = packageVersion, session, editorReturn = fal
     else if (result === "failed") pushError(t("companion.failed"), { serverText: false });
   }
 
+  function withdrawProjectReads() {
+    activity.invalidateScope(projectActivityScope.current);
+    projectActivityScope.current = {};
+  }
+
   function publishTree(newTree: ProjectTree): boolean {
     const nextLifetime = acceptedSnapshotLifetime(snapshotLifetimeRef.current, newTree);
     if (nextLifetime === null) return false;
@@ -680,6 +701,8 @@ function AppBody({ manifestVersion = packageVersion, session, editorReturn = fal
     // lifetime can veto a delayed local reply. The same record must exist
     // before a confirmed style response can rebase its exact bus session.
     if (!publishProjectContext(newTree)) return false;
+    const previous = treeRef.current;
+    if (previous && (previous.server_incarnation !== newTree.server_incarnation || previous.project_incarnation !== newTree.project_incarnation)) withdrawProjectReads();
     snapshotLifetimeRef.current = nextLifetime;
     rebasePublishedSessionContext(newTree);
     treeRef.current = newTree;
@@ -687,8 +710,12 @@ function AppBody({ manifestVersion = packageVersion, session, editorReturn = fal
     return true;
   }
 
-  function resetTree(newTree: ProjectTree): boolean {
+  function resetTree(newTree: ProjectTree, onAdmitted?: () => void): boolean {
+    const previousScope = projectActivityScope.current;
     if (!publishTree(newTree)) return false;
+    // Resume settles only after admission, before resetting its initial read scope.
+    onAdmitted?.();
+    if (previousScope === projectActivityScope.current) withdrawProjectReads();
     setHistoryOpen(false);
     const scope = createFlowScope(); flowScopeRef.current = scope; setFlowProjectScope(scope);
     setBuildingScope(null);
@@ -747,27 +774,32 @@ function AppBody({ manifestVersion = packageVersion, session, editorReturn = fal
       setDeviceDetail(null);
       return;
     }
+    await readSelectedDevice(sel.id, productLanguage);
+  }
+
+  async function readSelectedDevice(id: number, language: string | null) {
     const requestId = ++deviceDetailRequestIdRef.current;
+    const scope = projectActivityScope.current;
+    const owner = treeRef.current;
+    const device = owner ? collectDevices(owner).get(id) : undefined;
+    const task = activity.begin({ kind: "deviceDetail", operationId: String(++activitySerial.current),
+      projectScope: scope, entityId: String(id), access: "read" }, {
+      ...projectActivityContext(owner), entities: device ? [{ label: device.name, address: device.address }] : undefined,
+    });
+    const live = () => scope === projectActivityScope.current && requestId === deviceDetailRequestIdRef.current
+      && selectionRef.current?.kind === "device" && selectionRef.current.id === id;
     try {
-      const detail = await api.deviceDetail(sel.id, productLanguage);
-      if (
-        requestId === deviceDetailRequestIdRef.current &&
-        selectionRef.current?.kind === "device" &&
-        selectionRef.current.id === sel.id
-      ) {
-        setDeviceDetail(detail);
-        setDeviceDetailLoading(false);
-      }
-    } catch (e) {
-      if (
-        requestId === deviceDetailRequestIdRef.current &&
-        selectionRef.current?.kind === "device" &&
-        selectionRef.current.id === sel.id
-      ) {
-        setDeviceDetailLoading(false);
-        reportError(e);
-        setDeviceDetail(null);
-      }
+      const detail = await api.deviceDetail(id, language);
+      if (!live()) { task.finish("discarded"); return; }
+      setDeviceDetail(detail);
+      setDeviceDetailLoading(false);
+      task.finish();
+    } catch (error) {
+      if (!live()) { task.finish("discarded"); return; }
+      task.finish("failed", api.errorMessage(error));
+      setDeviceDetailLoading(false);
+      reportError(error);
+      setDeviceDetail(null);
     }
   }
 
@@ -858,28 +890,7 @@ function AppBody({ manifestVersion = packageVersion, session, editorReturn = fal
     if (!publishTree(newTree)) return;
     const sel = selectionRef.current;
     if (sel?.kind !== "device") return;
-    const requestId = ++deviceDetailRequestIdRef.current;
-    try {
-      const detail = await api.deviceDetail(sel.id, productLanguage);
-      if (
-        requestId === deviceDetailRequestIdRef.current &&
-        selectionRef.current?.kind === "device" &&
-        selectionRef.current.id === sel.id
-      ) {
-        setDeviceDetail(detail);
-        setDeviceDetailLoading(false);
-      }
-    } catch (e) {
-      if (
-        requestId === deviceDetailRequestIdRef.current &&
-        selectionRef.current?.kind === "device" &&
-        selectionRef.current.id === sel.id
-      ) {
-        reportError(e);
-        setDeviceDetail(null);
-        setDeviceDetailLoading(false);
-      }
-    }
+    await readSelectedDevice(sel.id, productLanguage);
   }
 
   // A language change while a device is already selected must refetch its
@@ -905,30 +916,7 @@ function AppBody({ manifestVersion = packageVersion, session, editorReturn = fal
   useEffect(() => {
     const sel = selectionRef.current;
     if (sel?.kind !== "device") return;
-    const requestId = ++deviceDetailRequestIdRef.current;
-    (async () => {
-      try {
-        const detail = await api.deviceDetail(sel.id, productLanguage);
-        if (
-          requestId === deviceDetailRequestIdRef.current &&
-          selectionRef.current?.kind === "device" &&
-          selectionRef.current.id === sel.id
-        ) {
-          setDeviceDetail(detail);
-          setDeviceDetailLoading(false);
-        }
-      } catch (e) {
-        if (
-          requestId === deviceDetailRequestIdRef.current &&
-          selectionRef.current?.kind === "device" &&
-          selectionRef.current.id === sel.id
-        ) {
-          reportError(e);
-          setDeviceDetail(null);
-          setDeviceDetailLoading(false);
-        }
-      }
-    })();
+    void readSelectedDevice(sel.id, productLanguage);
   }, [productLanguage]);
 
   // Opening the dialog itself does nothing to the open project — the
@@ -1014,7 +1002,7 @@ function AppBody({ manifestVersion = packageVersion, session, editorReturn = fal
     storePath: boolean,
     imported?: { passwordProtected: boolean },
   ) {
-    if (!resetTree(loadedTree)) return;
+    if (!resetTree(loadedTree)) { setLoadSource(null); setLoadSnapshot(null); return false; }
     setCatalogTarget(null); // Product search/selection is scoped to this project lifetime.
     setHasStorePath(storePath);
     setLoadSource(null);
@@ -1030,6 +1018,7 @@ function AppBody({ manifestVersion = packageVersion, session, editorReturn = fal
         passwordProtected: imported.passwordProtected,
       });
     }
+    return true;
   }
 
   async function runLoad(
@@ -1041,6 +1030,11 @@ function AppBody({ manifestVersion = packageVersion, session, editorReturn = fal
   ) {
     const imported = kind === "import" ? { passwordProtected } : undefined;
     if (loadingRef.current) return;
+    const loadScope = projectActivityScope.current;
+    const clientToken = crypto.randomUUID();
+    const task = activity.begin({ kind, operationId: `${clientToken}:${++activitySerial.current}`, projectScope: loadScope, access: "write" }, { source: fileNameOf(path) });
+    loadActivity.current = task;
+    const currentLoad = () => projectActivityScope.current === loadScope;
     loadingRef.current = true;
     // A new import must not remove the unread failure of the attempt before.
     setLoadSource(fileNameOf(path));
@@ -1050,10 +1044,12 @@ function AppBody({ manifestVersion = packageVersion, session, editorReturn = fal
     // generated before the POST so every snapshot from here on — the
     // poll's and the post-failure fetch's alike — can be judged against
     // it (ADR-0023 fix round 3, F9).
-    loadClientTokenRef.current = crypto.randomUUID();
+    loadClientTokenRef.current = clientToken;
     setLoading(true);
     try {
-      finishLoadedProject(await load(path, loadClientTokenRef.current), path, storePath, imported);
+      const loadedTree = await load(path, clientToken);
+      if (!currentLoad()) { task.finish("discarded"); return; }
+      task.finish(finishLoadedProject(loadedTree, path, storePath, imported) ? "succeeded" : "discarded");
     } catch (e) {
       // The transport rejection is not necessarily a load failure: the
       // server may have committed our operation before its response was
@@ -1063,20 +1059,24 @@ function AppBody({ manifestVersion = packageVersion, session, editorReturn = fal
       // recovery error instead of the superseded transport error.
       let failure = e;
       const final = await api.loadProgress().catch(() => null);
+      if (!currentLoad()) { task.finish("discarded"); return; }
       if (final?.status === "succeeded"
         && ownsOperation({ clientToken: loadClientTokenRef.current }, final)) {
         try {
           const current = await api.currentProject();
-          finishLoadedProject(current, null, current.has_store_path, imported);
+          if (!currentLoad()) { task.finish("discarded"); return; }
+          task.finish(finishLoadedProject(current, null, current.has_store_path, imported) ? "succeeded" : "discarded");
           return;
         } catch (recoveryError) {
           failure = recoveryError;
         }
       }
+      if (!currentLoad()) { task.finish("discarded"); return; }
       // AR08: a protected ETS project is not a failure to report but a
       // question to ask; the server wrote nothing, so nothing is pinned.
       const passwordRefusal = kind === "import" ? projectPasswordRefusal(failure) : null;
       if (passwordRefusal) {
+        task.finish("decision");
         setLoadSource(null);
         setLoadSnapshot(null);
         setPasswordPrompt({ path, reason: passwordRefusal, discardChanges: loadDiscardRef.current });
@@ -1085,6 +1085,7 @@ function AppBody({ manifestVersion = packageVersion, session, editorReturn = fal
       // F1: the server found unsaved edits (one made after this click, or a
       // client that did not know): the same question as before the click.
       if (api.isUnsavedProjectConflict(failure)) {
+        task.finish("decision");
         setLoadSource(null);
         setLoadSnapshot(null);
         setReplaceConfirm({ path, kind });
@@ -1092,12 +1093,15 @@ function AppBody({ manifestVersion = packageVersion, session, editorReturn = fal
       }
       reportError(failure);
       const message = api.errorMessage(failure);
+      task.finish("failed", message);
       const ours = final?.status === "failed" && ownsOperation({ clientToken: loadClientTokenRef.current }, final);
       setLoadSnapshot((previous) => (ours && final ? final : localFailure(previous, message)));
     } finally {
       // Synchronously, before anything React does: from here on every
       // poll still in flight belongs to a load that is over (F-C).
       loadGenerationRef.current += 1;
+      loadActivity.current = null;
+      if (!currentLoad()) { setLoadSource(null); setLoadSnapshot(null); }
       setLoading(false);
       loadingRef.current = false;
     }
@@ -1112,6 +1116,7 @@ function AppBody({ manifestVersion = packageVersion, session, editorReturn = fal
   // POST is refused precisely *because* another operation is in flight.
   useEffect(() => {
     if (!loading) return;
+    const scope = projectActivityScope.current;
     let cancelled = false;
     async function poll() {
       // The generation this poll was fired for. `cancelled` alone cannot
@@ -1121,10 +1126,14 @@ function AppBody({ manifestVersion = packageVersion, session, editorReturn = fal
       const generation = loadGenerationRef.current;
       try {
         const snapshot = await api.loadProgress();
-        if (cancelled || generation !== loadGenerationRef.current) return;
+        if (cancelled || generation !== loadGenerationRef.current || scope !== projectActivityScope.current) return;
         if (snapshot?.status !== "running") return;
         if (!ownsOperation({ clientToken: loadClientTokenRef.current }, snapshot)) return;
         setLoadSnapshot(snapshot);
+        const key = phaseMessageKey(snapshot.phase);
+        const fraction = loadFraction(snapshot);
+        loadActivity.current?.update({ phaseKey: key ?? undefined, phase: key ? undefined : snapshot.phase,
+          progress: fraction ? { completed: String(fraction.completed), total: String(fraction.total) } : undefined });
       } catch {
         /* see above */
       }
@@ -1216,18 +1225,18 @@ function AppBody({ manifestVersion = packageVersion, session, editorReturn = fal
     await startLoad(path, kind, false);
   }
 
-  // Resolves `true` only when the refreshed snapshot was accepted *and*
-  // the server reports it clean. That is the one answer Save-and-quit and
-  // Save-and-create may act on: a save that worked but raced a newer edit
-  // is not "nothing left to lose".
-  async function refreshSavedProject(): Promise<boolean> {
+  // Accepted-but-dirty confirms persistence, not permission for Save-and-*.
+  // A refused/stale readback confirms neither; do not manufacture a save failure.
+  async function refreshSavedProject(scope: object, owner: ProjectTree | null): Promise<"accepted-clean" | "accepted-dirty" | "discarded"> {
     const current = await api.currentProject();
-    if (!publishTree(current)) return false;
+    if (scope !== projectActivityScope.current || !owner || current.server_incarnation !== owner.server_incarnation
+      || current.project_incarnation !== owner.project_incarnation) return "discarded";
+    if (!publishTree(current)) return "discarded";
     setHasStorePath(current.has_store_path);
     // Every save path (Save, Save as, autosave, save-before-replace) lands
     // here after the server wrote the file, so this is where it counts.
     emitAchievementEvent({ type: "projectSaved" });
-    return !current.is_modified;
+    return current.is_modified ? "accepted-dirty" : "accepted-clean";
   }
 
   // Both manual saves still swallow failures into the error toast, but
@@ -1236,6 +1245,7 @@ function AppBody({ manifestVersion = packageVersion, session, editorReturn = fal
   // is `false`. The Save-and-* buttons below depend on that answer.
   async function saveProjectAs(): Promise<boolean> {
     autosave.cancelCountdown();
+    const pickerScope = projectActivityScope.current;
     const projectSnapshot = {
       serverIncarnation: snapshotLifetimeRef.current.serverIncarnation,
       revision: snapshotLifetimeRef.current.revision,
@@ -1243,10 +1253,13 @@ function AppBody({ manifestVersion = packageVersion, session, editorReturn = fal
     const path = await pickSavePath(knxdbFilter, "project.knxdb");
     const unchanged = () => {
       const latestSnapshot = snapshotLifetimeRef.current;
-      return projectSnapshot.serverIncarnation === latestSnapshot.serverIncarnation &&
+      return pickerScope === projectActivityScope.current && projectSnapshot.serverIncarnation === latestSnapshot.serverIncarnation &&
         projectSnapshot.revision === latestSnapshot.revision;
     };
     if (!path || !unchanged()) return false;
+    const scope = projectActivityScope.current;
+    const owner = treeRef.current;
+    const task = activity.begin({ kind: "save", operationId: String(++activitySerial.current), projectScope: scope, access: "write" }, { source: fileNameOf(path), ...projectActivityContext(owner) });
     clearErrors();
     try {
       requestCrtActivation(saveButtonRef.current);
@@ -1256,12 +1269,18 @@ function AppBody({ manifestVersion = packageVersion, session, editorReturn = fal
         await api.saveProjectAs(path, isTauri());
       } catch (e) {
         if (!api.isSaveAsFileExists(e)) throw e;
+        task.update({ state: "waiting" });
         const replace = await new Promise<boolean>((answer) => setOverwritePrompt({ path, answer }));
-        if (!replace || !unchanged()) return false;
+        if (!replace || !unchanged()) { task.finish("cancelled"); return false; }
+        task.update({ state: "running" });
         await api.saveProjectAs(path, true);
       }
-      return await refreshSavedProject();
+      const saved = await refreshSavedProject(scope, owner);
+      if (saved === "accepted-dirty") task.update({ resultKey: "backgroundActivity.savedWithEdits" });
+      task.finish(saved === "discarded" ? "discarded" : "succeeded");
+      return saved === "accepted-clean";
     } catch (e) {
+      task.finish("failed", api.errorMessage(e));
       reportError(e);
       return false;
     }
@@ -1269,13 +1288,20 @@ function AppBody({ manifestVersion = packageVersion, session, editorReturn = fal
 
   async function saveProject(): Promise<boolean> {
     if (!hasStorePath) return saveProjectAs();
+    const scope = projectActivityScope.current;
+    const owner = treeRef.current;
+    const task = activity.begin({ kind: "save", operationId: String(++activitySerial.current), projectScope: scope, access: "write" }, projectActivityContext(owner));
     autosave.cancelCountdown();
     clearErrors();
     try {
       requestCrtActivation(saveButtonRef.current);
       await api.saveProject();
-      return await refreshSavedProject();
+      const saved = await refreshSavedProject(scope, owner);
+      if (saved === "accepted-dirty") task.update({ resultKey: "backgroundActivity.savedWithEdits" });
+      task.finish(saved === "discarded" ? "discarded" : "succeeded");
+      return saved === "accepted-clean";
     } catch (e) {
+      task.finish("failed", api.errorMessage(e));
       reportError(e);
       return false;
     }
@@ -1290,10 +1316,20 @@ function AppBody({ manifestVersion = packageVersion, session, editorReturn = fal
   // the one save the button already uses.
   async function autosaveProject() {
     if (!hasStorePath) return;
+    const scope = projectActivityScope.current;
+    const owner = treeRef.current;
+    const task = activity.begin({ kind: "autosave", operationId: String(++activitySerial.current), projectScope: scope, access: "write" }, projectActivityContext(owner));
     clearErrors();
-    await api.saveProject();
-    await refreshSavedProject();
-    emitAchievementEvent({ type: "autosaveSucceeded" });
+    try {
+      await api.saveProject();
+      const saved = await refreshSavedProject(scope, owner);
+      if (saved === "accepted-dirty") task.update({ resultKey: "backgroundActivity.savedWithEdits" });
+      task.finish(saved === "discarded" ? "discarded" : "succeeded");
+      if (saved !== "discarded") emitAchievementEvent({ type: "autosaveSucceeded" });
+    } catch (error) {
+      task.finish("failed", api.errorMessage(error));
+      throw error;
+    }
   }
 
   function exportProject() {
@@ -1588,7 +1624,7 @@ function AppBody({ manifestVersion = packageVersion, session, editorReturn = fal
     <ReportProblemProvider request={reportRequest} onOpen={setReportRequest} onClose={() => setReportRequest(null)} tree={tree} notifications={notifications}>
     <main ref={workbenchRef} className={`workbench${stackInspector ? " workbench--stacked-inspector" : ""}${welcomeVisible ? " workbench--welcome" : ""}`}>
       <header className="workbench-toolbar">
-        <CatalogueJobsRootNotice />
+        <CatalogueJobsRootNotice openRequest={catalogueActivityOpen} />
         {catalogueRefreshFailed && <span role="alert">{t("catalogJob.refreshDirty")} <button type="button" onClick={() => setCatalogueReadAttempt(n => n + 1)}>{t("catalogJob.retryRefresh")}</button></span>}
         <a className="workbench-brand" href="#" onClick={(e) => { e.preventDefault(); setSettingsOpen(false); setView("overview"); setLogOpen(false); setMonitorOpen(false); }}><img className="workbench-logo" src={brandMark} width="44" height="34" alt="" draggable={false} /><strong>KNXBench</strong></a>
         <details ref={fileMenuRef} className="file-menu" onKeyDown={(e) => { if (e.key === "Escape") { e.currentTarget.open = false; e.currentTarget.querySelector("summary")?.focus(); } }}>
@@ -1726,6 +1762,12 @@ function AppBody({ manifestVersion = packageVersion, session, editorReturn = fal
           </span>
         )}
         {tree && <JournalStatusIndicator revision={tree.snapshot_revision} saved={Boolean(tree.last_saved_at)} />}
+        <ActivityFooter canOpenDetails={entry => entry.destination === "catalogue" && entry.identity.operationId === catalogueJobs.operationId
+          || entry.destination === "comparison" && comparisons.ownsActivity(entry.id) && comparisons.review !== null}
+          onOpenDetails={entry => {
+            if (entry.destination === "comparison") { if (comparisons.ownsActivity(entry.id)) openDevices(); }
+            else if (catalogueController.getSnapshot().operationId === entry.identity.operationId) setCatalogueActivityOpen(n => n + 1);
+          }} />
         <BusConnectionStatus onOpenBusSettings={openBusSettings} />
         <span>v{manifestVersion}</span>
       </footer>

@@ -15,6 +15,12 @@ Last updated: 2026-11-08 (Alpha 20 pre-release; source cutoff 2026-11-08)
 
 <a id="main-only-after-alpha-19"></a>
 
+## Source updates after Alpha 20
+
+| Feature | Scope | Availability |
+| --- | --- | --- |
+| [Background activity footer](status/2026-11-10-background-activity-footer.md) | Delayed concurrent/recent inventory for retained App-owned loading, saving, device-editor reads, read-only comparisons and catalogue jobs; sticky errors and existing details owner; no new cancellation or generic job persistence. Two-second reveal, bounded summary and full retained context | Source only (not in Alpha 20) |
+
 ## New in Alpha 20
 
 The [release scope](releases/alpha20.md) covers changes after Alpha 19 up to

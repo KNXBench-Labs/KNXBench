@@ -4,7 +4,7 @@ import { defineConfig } from "@playwright/test";
 
 export default defineConfig({
   testDir: "./e2e",
-  testMatch: ["import-status.e2e.ts", "ga-members-download.e2e.ts"],
+  testMatch: ["import-status.e2e.ts", "ga-members-download.e2e.ts", "background-activity.e2e.ts"],
   outputDir: "../../target/playwright/task-status",
   fullyParallel: false,
   workers: 1,

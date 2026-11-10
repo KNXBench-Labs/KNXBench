@@ -3,6 +3,7 @@ import { catalogueJobsApi, CatalogueJobRefusal, type CatalogueJobsApi, type Owne
 import { CatalogueProtocolError, parseCatalogueMessage, sameHandle, u64 } from "./catalogueJobsProtocol";
 import type { ApplyCommand, Artifact, CancelCommand, CancelReply, Create, Page, Preview, Status } from "./catalogueJobsTypes";
 export type CatalogueJobsSnapshot = {
+ operationId: string | null; sourceName: string | null;
  status: Status | null; origin: string | null; selecting: boolean; pending: boolean;
  error: string | null; uncertain: boolean; unavailable: boolean; applyUncertain: boolean;
  cancelOutcome: CancelReply["outcome"] | null; cancelQueued: boolean; catalogueRevision: bigint; committedOrigin: string | null;
@@ -18,8 +19,9 @@ export function catalogueRandomId(bytes = 16): string {
 }
 export class CatalogueJobsController {
  #op: Operation | null = null;
+ #operationSerial = 0;
  #listeners = new Set<() => void>();
- #state: CatalogueJobsSnapshot = {status:null,origin:null,selecting:false,pending:false,error:null,uncertain:false,unavailable:false,applyUncertain:false,cancelOutcome:null,cancelQueued:false,catalogueRevision:0n,committedOrigin:null,committed:false,previousUncertain:false,page:null,pageBusy:false,legacyAvailable:false};
+ #state: CatalogueJobsSnapshot = {operationId:null,sourceName:null,status:null,origin:null,selecting:false,pending:false,error:null,uncertain:false,unavailable:false,applyUncertain:false,cancelOutcome:null,cancelQueued:false,catalogueRevision:0n,committedOrigin:null,committed:false,previousUncertain:false,page:null,pageBusy:false,legacyAvailable:false};
  #timer: ReturnType<typeof setTimeout> | null = null;
  #connected = false;
  #transport = new AbortController();
@@ -71,7 +73,7 @@ export class CatalogueJobsController {
  async start(file: File, profile: "standard" | "large", acknowledged: boolean, origin: string | null) {
   if (this.#op || this.#state.selecting || profile === "large" && !acknowledged) return;
   const signal = this.#transport.signal;
-  this.#patch({selecting:true,pending:true,error:null,origin});
+  this.#patch({operationId:String(++this.#operationSerial),sourceName:file.name,selecting:true,pending:true,error:null,origin});
   try {
    const offer = await this.api.admission(signal);
    if (signal.aborted) throw new Error("Transport closed");
@@ -148,6 +150,6 @@ export class CatalogueJobsController {
  forgetUnavailable() { if (!this.#state.pending && (this.#state.unavailable || this.#state.uncertain && !this.#op?.owner || !this.#op)) this.#forget(true); }
  #forget(uncertain: boolean) {
   this.#op = null; this.#cancelIntent = null; if (this.#timer !== null) clearTimeout(this.#timer); this.#timer = null;
-  this.#patch({status:null,origin:null,selecting:false,error:null,uncertain:false,unavailable:false,applyUncertain:false,cancelOutcome:null,cancelQueued:false,committed:false,page:null,pageBusy:false,legacyAvailable:false,previousUncertain:this.#state.previousUncertain || uncertain});
+  this.#patch({operationId:null,sourceName:null,status:null,origin:null,selecting:false,error:null,uncertain:false,unavailable:false,applyUncertain:false,cancelOutcome:null,cancelQueued:false,committed:false,page:null,pageBusy:false,legacyAvailable:false,previousUncertain:this.#state.previousUncertain || uncertain});
  }
 }

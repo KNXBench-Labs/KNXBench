@@ -1,4 +1,4 @@
-//! Select exactly one validated bus endpoint and preserve shared CLI monitor/write behavior.
+//! Validate CLI bus endpoints and transport selection without changing transport semantics.
 
 use knx_core::IndividualAddress;
 use knx_net::{
@@ -57,6 +57,39 @@ pub(crate) fn write_outcome(
     }
 }
 
+/// Parse one explicit transport without last-wins or implicit fallback.
+pub(crate) fn take_tunnel_transport(
+    slot: &mut Option<TunnelTransport>,
+    args: &[String],
+    i: usize,
+) -> Result<(), String> {
+    let flag = "--tunnel-transport";
+    if slot.is_some() {
+        return Err(format!("duplicate {flag}"));
+    }
+    *slot = Some(match crate::take_value(args, i + 1, flag)?.as_str() {
+        "udp" => TunnelTransport::Udp,
+        "tcp" => TunnelTransport::Tcp,
+        _ => return Err(format!("{flag} must be udp or tcp")),
+    });
+    Ok(())
+}
+
+/// Validate an explicit IPv4 tunnel endpoint before any I/O, including dry runs.
+pub(crate) fn parse_gateway(gateway: &str) -> Result<SocketAddrV4, String> {
+    let gateway: SocketAddrV4 = gateway
+        .parse()
+        .map_err(|_| "--gateway must be host:port, e.g. 192.0.2.1:3671")?;
+    if gateway.port() == 0
+        || gateway.ip().is_unspecified()
+        || gateway.ip().is_broadcast()
+        || gateway.ip().is_multicast()
+    {
+        return Err("--gateway requires a unicast IPv4 address and nonzero port".into());
+    }
+    Ok(gateway)
+}
+
 #[derive(Default)]
 pub(crate) struct EndpointArgs {
     gateway: Option<String>,
@@ -69,7 +102,7 @@ impl EndpointArgs {
     pub(crate) fn take(&mut self, args: &[String], i: usize) -> Result<(), String> {
         let flag = args[i].as_str();
         if flag == "--tunnel-transport" {
-            return self.take_tunnel_transport(args, i);
+            return take_tunnel_transport(&mut self.tunnel_transport, args, i);
         }
         let slot = match flag {
             "--gateway" => &mut self.gateway,
@@ -88,19 +121,6 @@ impl EndpointArgs {
         Ok(())
     }
 
-    fn take_tunnel_transport(&mut self, args: &[String], i: usize) -> Result<(), String> {
-        let flag = "--tunnel-transport";
-        if self.tunnel_transport.is_some() {
-            return Err(format!("duplicate {flag}"));
-        }
-        self.tunnel_transport = Some(match crate::take_value(args, i + 1, flag)?.as_str() {
-            "udp" => TunnelTransport::Udp,
-            "tcp" => TunnelTransport::Tcp,
-            _ => return Err(format!("{flag} must be udp or tcp")),
-        });
-        Ok(())
-    }
-
     pub(crate) fn finish(self) -> Result<BusEndpoint, String> {
         if self.tunnel_transport.is_some() && self.serial.is_some() {
             return Err("--tunnel-transport is only valid with --gateway, not --serial".into());
@@ -110,16 +130,7 @@ impl EndpointArgs {
             (Some(_), Some(_), _) => Err("--gateway and --serial are mutually exclusive".into()),
             (Some(_), None, Some(_)) => Err("--source is only valid with --serial".into()),
             (Some(gateway), None, None) => {
-                let gateway: SocketAddrV4 = gateway
-                    .parse()
-                    .map_err(|_| "--gateway must be host:port, e.g. 192.0.2.1:3671")?;
-                if gateway.port() == 0
-                    || gateway.ip().is_unspecified()
-                    || gateway.ip().is_broadcast()
-                    || gateway.ip().is_multicast()
-                {
-                    return Err("--gateway requires a unicast IPv4 address and nonzero port".into());
-                }
+                let gateway = parse_gateway(&gateway)?;
                 Ok(BusEndpoint::Gateway { gateway, transport })
             }
             (None, Some(path), Some(source)) => {

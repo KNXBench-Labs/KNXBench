@@ -25,13 +25,19 @@ Work merged on main after `dfb3f88b8` belongs to the next alpha.
 
 This bounded first stage adds explicit TCP for CLI bus monitor/write and
 the server/Web shared monitor session with bound group traffic. UDP remains the
-default. Other device/scan workflows stay UDP-only. Plain TCP is not KNX IP
+default. That released slice left device/scan workflows UDP-only. Plain TCP is not KNX IP
 Secure, and software loopback tests do not prove real-gateway interoperability.
 The [contract](contracts/tcp-tunnelling.md) and [open work](open-work/WP-29-knxnet-ip-tcp-tunnelling.md)
 separate source implementation, integrated acceptance and remaining scope.
 The bounded slice passed independent review and all 15 selected package stages;
 see the [software acceptance](status/2026-11-08-optional-tcp-tunnelling.md).
 It ships in Alpha 20; it does not close the wider WP-29.
+
+The 10 November source successor adds optional TCP to CLI `bus scan` only
+(single device and line/range), with default UDP, no fallback and unchanged
+device-evidence rules. Loopback regressions accompany it; independent review
+and integrated acceptance remain pending. It is not a release or hardware
+claim. Server/Web scans and other device workflows remain UDP-only.
 
 ## Bounded foundation: object-priority provenance
 

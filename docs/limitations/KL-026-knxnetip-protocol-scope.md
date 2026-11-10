@@ -71,3 +71,16 @@ The [source review](../research/2026-11-08-knxnet-ip-tcp-tunnelling.md) distingu
 specified timers from local budgets, no-ACK TCP sending from actual device
 delivery, and frame draining from loss accounting. [WP-29](../open-work/WP-29-knxnet-ip-tcp-tunnelling.md)
 remains open beyond the bounded monitor/group-traffic slice.
+
+## 10 November 2026 — CLI scan source successor
+
+The source now permits explicit UDP/TCP on CLI `bus scan` for a single device
+or a line/range; UDP stays the default, with no TCP fallback. This supersedes
+only the CLI-scan exclusion above. Descriptor replies and positive connect
+confirmations retain their distinct meanings; local socket acceptance alone
+never proves occupancy. Target/exclusion safety, deadlines, dry-run no-I/O,
+project comparison and diagnostic recording remain unchanged. Loopback tests
+cover the actual CLI caller, refusal/closure and observed cleanup. Independent
+review and integrated acceptance remain pending; no release or real-gateway
+claim. Server/Web scans, programming and other device workflows remain UDP-only;
+serial, discovery/routing and KNX IP Secure scope is unchanged.

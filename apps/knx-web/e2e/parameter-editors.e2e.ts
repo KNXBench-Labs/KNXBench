@@ -31,6 +31,8 @@ interface Fixture {
   history: Record<string, string>[];
   future: Record<string, string>[];
   sourceFault: "none" | "sha" | "ref" | "program" | "snapshot" | "missing";
+  /** Hold complete HTTP replies, independently of the fixture's committed model. */
+  beforeParameterReply?: (etsId: string, status: number) => Promise<void>;
 }
 
 function projectTree(f: Fixture): ProjectTree {
@@ -116,15 +118,21 @@ async function fixture(page: Page, language: Language, theme: string, width: num
     if (path === "/api/device/41/parameters" && method === "POST") {
       const { etsId, raw, ...binding } = route.request().postDataJSON() as { etsId: string; raw: string } & Fixture["bindings"][number];
       f.bindings.push(binding);
+      const reply = async (body: unknown, status = 200) => {
+        // Serialize now: a held old reply must not follow later mutable fixture values.
+        const bytes = JSON.stringify(body);
+        await f.beforeParameterReply?.(etsId, status);
+        return route.fulfill({ status, contentType: "application/json", body: bytes });
+      };
       // Checked like the server (revision-bound-writes): any moved context or value is a 409.
       if (binding.serverIncarnation !== "parameters-fixture" || binding.projectIncarnation !== 3
         || binding.snapshotRevision !== f.revision || binding.expectedValue !== f.values[etsId]) {
-        return refuse(409, "parameterWriteConflict", "parameter value or project changed since it was shown");
+        return reply({ kind: "parameterWriteConflict", error: "parameter value or project changed since it was shown" }, 409);
       }
-      if (f.refuseWrites) return refuse(400, "invalidParameterValue", f.refusalReason);
+      if (f.refuseWrites) return reply({ kind: "invalidParameterValue", error: f.refusalReason }, 400);
       f.history.push({ ...f.values }); f.future = [];
       f.writes.push({ etsId, raw }); f.values[etsId] = raw; f.revision += 1;
-      return ok(panelOf(f, true));
+      return reply(panelOf(f, true));
     }
     if (path === "/api/device/41/parameter-editor-source" && method === "GET") {
       const etsId = url.searchParams.get("etsId") ?? "";
@@ -579,5 +587,84 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
     await expect(input).toHaveValue("60");
     expect(f.unexpected).toEqual([]);
     expect(errors).toEqual([]);
+  });
+}
+
+test("#37: a committed reply after navigation still updates App history and same-device reopening", async ({ page }) => {
+  const f = await fixture(page, "en", "graphite", 1440);
+  const editor = await openParameters(page, en);
+  const id = `${PROGRAM}_P-1_R-1`;
+  const input = editor.locator(`label[data-ets-id="${id}"] input[type="number"]`);
+  const undo = page.getByRole("button", { name: en["toolbar.undo"], exact: true });
+  await expect(undo).toBeDisabled();
+  let release!: () => void;
+  const held = new Promise<void>(done => { release = done; });
+  f.beforeParameterReply = () => held;
+  try {
+    await input.fill("12"); await input.press("Enter"); await expect(input).toBeDisabled();
+    await page.getByRole("navigation", { name: en["workbench.navigation"], exact: true })
+      .getByRole("button", { name: en["workbench.devices"], exact: true }).click();
+    await expect(page.locator(".device-workspace")).toHaveCount(0);
+    await expect(undo).toBeDisabled();
+    release();
+    // Retiring a row must not lose the only notification of a committed command.
+    await expect(undo).toBeEnabled();
+    await page.locator(".devices-workspace").getByRole("button", { name: DEVICE.name, exact: true }).click();
+    await page.getByRole("tab", { name: en["workbench.parameters"], exact: true }).click();
+    await openParameterSections(page);
+    await expect(input).toBeEnabled(); await expect(input).toHaveValue("12");
+    expect(f.writes).toEqual([{ etsId: id, raw: "12" }]);
+    expect(f.unexpected).toEqual([]);
+  } finally { release(); }
+});
+
+// #37: real App publication rejects an old tree, so the shared parameter
+// panel must reject that response too instead of waiting for a healing refetch.
+for (const language of ["en", "de"] as const) {
+  test(`#37 ${language}: overlapping rows settle, conflict retries bind freshly, late success cannot roll back`, async ({ page }) => {
+    const m: Catalogue = language === "de" ? de : en;
+    const f = await fixture(page, language, "graphite", 1440);
+    const editor = await openParameters(page, m);
+    const aId = `${PROGRAM}_P-1_R-1`, bId = `${PROGRAM}_P-2_R-1`;
+    const aRow = editor.locator(`label[data-ets-id="${aId}"]`), bRow = editor.locator(`label[data-ets-id="${bId}"]`);
+    const a = aRow.locator('input[type="number"]'), b = bRow.locator('input[type="number"]');
+    let releaseA!: () => void, releaseB!: () => void;
+    const heldA = new Promise<void>(done => { releaseA = done; });
+    const heldB = new Promise<void>(done => { releaseB = done; });
+    f.beforeParameterReply = (id, status) => id === aId ? heldA : status === 409 ? heldB : Promise.resolve();
+    try {
+      await a.fill("12"); await a.press("Enter");
+      await expect(a).toBeDisabled();
+      await b.fill("60"); await b.press("Enter");
+      await expect(b).toBeDisabled();
+      await expect(aRow.locator(".parameter-field-saving")).toBeVisible();
+      await expect(bRow.locator(".parameter-field-saving")).toBeVisible();
+      await expect.poll(() => f.bindings.length).toBe(2);
+      expect(f.writes).toEqual([{ etsId: aId, raw: "12" }]);
+      releaseB();
+      await expect(b).toBeEnabled(); await expect(a).toBeDisabled();
+      await expect(bRow.getByRole("alert")).toHaveText(m["parameters.conflict"]);
+      await expect(b).toHaveValue("60");
+      const retry = editor.locator(`[data-conflict-for="${bId}"]`).getByRole("button", { name: m["parameters.conflictApply"], exact: true });
+      await expect(retry).toBeEnabled(); await retry.click();
+      await expect(b).toBeEnabled();
+      expect(f.bindings).toEqual([
+        { serverIncarnation: "parameters-fixture", projectIncarnation: 3, snapshotRevision: 1, expectedValue: "0010" },
+        { serverIncarnation: "parameters-fixture", projectIncarnation: 3, snapshotRevision: 1, expectedValue: "40" },
+        { serverIncarnation: "parameters-fixture", projectIncarnation: 3, snapshotRevision: 2, expectedValue: "40" },
+      ]);
+      releaseA();
+      await expect(a).toBeEnabled(); await expect(b).toBeEnabled();
+      await expect(a).toHaveValue("12"); await expect(b).toHaveValue("60");
+      await expect(editor.locator(".parameter-field-saving")).toHaveCount(0);
+      expect(f.writes).toEqual([{ etsId: aId, raw: "12" }, { etsId: bId, raw: "60" }]);
+      // No lost command and no extra retry: normal history remains authoritative.
+      await page.locator(".device-workspace h2").click();
+      await page.getByRole("button", { name: m["toolbar.undo"], exact: true }).click();
+      await expect(b).toHaveValue("40"); await expect(a).toHaveValue("12");
+      await page.getByRole("button", { name: m["toolbar.redo"], exact: true }).click();
+      await expect(b).toHaveValue("60"); await expect(a).toHaveValue("12");
+      expect(f.unexpected).toEqual([]);
+    } finally { releaseA(); releaseB(); }
   });
 }

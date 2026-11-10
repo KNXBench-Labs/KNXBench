@@ -1979,13 +1979,17 @@ export interface LineScanResult {
   outcome: LineScanOutcome;
 }
 
-export interface LineScanStartResponse {
-  sessionId: number;
+export interface LineScanStartResponse extends BoundBusSession {
+  transport: IpTunnelTransport;
+  skippedFrames: number | null;
   estimate: LineScanEstimate;
 }
 
-export interface LineScanResultsResponse {
-  sessionId: number;
+export interface LineScanResultsResponse extends BoundBusSession {
+  transport: IpTunnelTransport;
+  skippedFrames: number | null;
+  disconnectConfirmed: boolean | null;
+  cleanupError: string | null;
   status: "running" | "completed" | "cancelled" | "failed";
   error: string | null;
   nextSince: number;
@@ -2144,20 +2148,73 @@ export function estimateLineScan(requestBody: LineScanRequest): Promise<LineScan
   });
 }
 
-export function startLineScan(requestBody: LineScanRequest): Promise<LineScanStartResponse> {
-  return request("/api/bus/scan/start", {
-    method: "POST",
-    body: JSON.stringify(requestBody),
+/** Required runtime provenance: a missing counter is not a measurement of zero. */
+function admitScanProvenance(value: unknown, expected?: BoundBusSession): asserts value is LineScanStartResponse {
+  if (!isBoundBusSession(value)) throw new Error("Malformed line scan identity.");
+  const row = value as unknown as Record<string, unknown>;
+  if (!isIpTunnelTransport(row.transport)
+    || (row.transport === "udp" ? row.skippedFrames !== null
+      : !Number.isSafeInteger(row.skippedFrames) || (row.skippedFrames as number) < 0)) {
+    throw new Error("Malformed line scan transport or skipped-frame count.");
+  }
+    if (expected && (value.sessionId !== expected.sessionId || value.serverIncarnation !== expected.serverIncarnation
+      || ("transport" in expected && row.transport !== expected.transport))) {
+    throw new Error("Line scan session changed; the reply does not belong to this scan.");
+  }
+}
+const scanInteger = (value: unknown): value is number => Number.isSafeInteger(value) && (value as number) >= 0;
+const scanStrings = (value: unknown): value is string[] => Array.isArray(value) && value.every(item => typeof item === "string");
+
+export function admitLineScanResults(value: unknown, expected?: BoundBusSession): LineScanResultsResponse {
+  admitScanProvenance(value, expected);
+  const row = value as unknown as Record<string, unknown>;
+  const running = row.status === "running";
+  if (typeof row.status !== "string" || !["running", "completed", "cancelled", "failed"].includes(row.status)
+    || !(row.error === null || typeof row.error === "string")
+    || !(row.cleanupError === null || typeof row.cleanupError === "string")
+    || (running ? row.disconnectConfirmed !== null || row.cleanupError !== null
+      : typeof row.disconnectConfirmed !== "boolean" || (row.disconnectConfirmed ? row.cleanupError !== null : typeof row.cleanupError !== "string"))
+    || !scanInteger(row.nextSince) || !scanInteger(row.completedCount) || !scanInteger(row.totalCount)
+    || row.nextSince !== row.completedCount || row.completedCount > row.totalCount
+    || !scanStrings(row.omittedAddresses) || !scanStrings(row.excludedAddresses)
+    || !Array.isArray(row.results) || row.results.length > row.completedCount
+    || !row.results.every(result => result && typeof result.address === "string" && result.outcome
+      && ["occupied", "occupiedBusy", "occupiedSilent", "vacant", "indeterminate", "selfAddress"].includes(result.outcome.kind)
+      && (result.outcome.kind !== "occupied" || result.outcome.maskVersion === null
+        || (scanInteger(result.outcome.maskVersion) && result.outcome.maskVersion <= 65535)))) {
+    throw new Error("Malformed line scan results or cleanup metadata; actions are blocked.");
+  }
+  return value as unknown as LineScanResultsResponse;
+}
+
+function scanBinding(identity: BoundBusSession): string {
+  if (!isBoundBusSession(identity)) throw new Error("Malformed line scan identity; nothing was changed.");
+  return `sessionId=${identity.sessionId}&serverIncarnation=${identity.serverIncarnation}`;
+}
+
+export async function startLineScan(requestBody: LineScanRequest, transport: IpTunnelTransport = "udp"): Promise<LineScanStartResponse> {
+  if (!isIpTunnelTransport(transport)) throw new Error("Malformed line scan transport.");
+  const answer = await request<unknown>(transport === "tcp" ? "/api/bus/scan/start-tcp" : "/api/bus/scan/start", {
+    method: "POST", body: JSON.stringify(requestBody),
   });
+  admitScanProvenance(answer);
+  if (answer.transport !== transport) throw new Error("Line scan opened a different transport; no fallback is allowed.");
+  const estimate = answer.estimate;
+  if (!estimate || !scanInteger(estimate.candidateCount) || !scanStrings(estimate.omittedAddresses)
+    || !scanInteger(estimate.responseTimeoutMs) || !scanInteger(estimate.vacantConfirmations)
+    || !scanInteger(estimate.interProbePauseMs) || !scanInteger(estimate.worstCaseMs)) {
+    throw new Error("Malformed line scan estimate in start reply.");
+  }
+  return answer;
 }
 
-export function pollLineScan(since: number, sessionId?: number): Promise<LineScanResultsResponse> {
-  const expected = sessionId === undefined ? "" : `&sessionId=${sessionId}`;
-  return request(`/api/bus/scan/results?since=${since}${expected}`);
+export async function pollLineScan(since: number, identity?: BoundBusSession): Promise<LineScanResultsResponse> {
+  const expected = identity === undefined ? "" : `&${scanBinding(identity)}`;
+  return admitLineScanResults(await request<unknown>(`/api/bus/scan/results?since=${since}${expected}`), identity);
 }
 
-export function cancelLineScan(sessionId: number): Promise<LineScanResultsResponse> {
-  return request(`/api/bus/scan/cancel?sessionId=${sessionId}`, { method: "POST" });
+export async function cancelLineScan(identity: BoundBusSession): Promise<LineScanResultsResponse> {
+  return admitLineScanResults(await request<unknown>(`/api/bus/scan/cancel-bound?${scanBinding(identity)}`, { method: "POST" }), identity);
 }
 
 // ---- Download to a device (KNXBench → device over the bus; ADR-0045) ----
@@ -2507,18 +2564,18 @@ export function stopAddressProgramming(programmingId: number): Promise<{ stoppin
   });
 }
 
-export function compareLineScan(sessionId: number): Promise<LineScanComparison> {
-  return request(`/api/bus/scan/comparison?sessionId=${sessionId}`);
+export function compareLineScan(identity: BoundBusSession): Promise<LineScanComparison> {
+  return request(`/api/bus/scan/comparison-bound?${scanBinding(identity)}`);
 }
 
 export function reconcileLineScan(
-  sessionId: number,
+  identity: BoundBusSession,
   unexpected: string[],
   missing: string[],
 ): Promise<ProjectTree> {
-  return request("/api/bus/scan/reconcile", {
+  return request(`/api/bus/scan/reconcile-bound?${scanBinding(identity)}`, {
     method: "POST",
-    body: JSON.stringify({ sessionId, unexpected, missing }),
+    body: JSON.stringify({ unexpected, missing }),
   });
 }
 

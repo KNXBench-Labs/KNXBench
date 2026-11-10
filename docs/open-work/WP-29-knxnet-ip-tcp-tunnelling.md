@@ -42,6 +42,16 @@ mandatory UDP requirement.
    ([acceptance and preserved failures](../status/2026-11-10-cli-tcp-scans.md)).
    This does not establish release or real-gateway interoperability.
 
+## Server/Web scan successor candidate (10 November 2026)
+
+The next bounded candidate adds explicit recorded TCP to server/Web line scans,
+with UDP default, strict identity-bound effects, runtime provenance and live /
+pre-disconnect skip accounting. It preserves the existing DD0 scanner and
+reconciliation commands. Implementation is pending independent review and
+integrated acceptance; authored tests are not passed checks. Programming,
+downloads, serial, discovery/routing, hardware interoperability and wider WP-29
+remain outside it. [Candidate and acceptance boundary](../status/2026-11-10-server-web-tcp-scans.md).
+
 ## Independently checked source basis
 
 The original KNXnet/IP Core v01.06.02 and Tunnelling v01.07.01 clauses were read

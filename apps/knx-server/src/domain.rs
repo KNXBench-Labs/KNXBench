@@ -20,7 +20,7 @@ use std::collections::{HashMap, HashSet};
 use std::fmt;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 
 use base64::engine::general_purpose::URL_SAFE_NO_PAD as B64URL;
 use base64::Engine as _;
@@ -178,7 +178,7 @@ pub struct AppState {
     pub next_bus_session_id: std::sync::atomic::AtomicU64,
     /// At most one line scan, retained after completion so the final batch
     /// remains pollable until a later scan replaces it.
-    pub line_scan_session: tokio::sync::Mutex<Option<LineScanSession>>,
+    pub line_scan_session: Arc<tokio::sync::Mutex<Option<LineScanSession>>>,
     pub next_line_scan_session_id: std::sync::atomic::AtomicU64,
     /// The plan last shown for a download to a device (ADR-0045 §3), kept
     /// so `POST /api/device-download/start` can prove it writes exactly
@@ -434,7 +434,7 @@ impl AppState {
             bus_session: std::sync::Arc::new(tokio::sync::Mutex::new(None)),
             group_address_style_publication: tokio::sync::Mutex::new(()),
             next_bus_session_id: std::sync::atomic::AtomicU64::new(1),
-            line_scan_session: tokio::sync::Mutex::new(None),
+            line_scan_session: Arc::new(tokio::sync::Mutex::new(None)),
             next_line_scan_session_id: std::sync::atomic::AtomicU64::new(1),
             device_download_plan: Mutex::new(None),
             plugin_data_plan: Mutex::new(None),

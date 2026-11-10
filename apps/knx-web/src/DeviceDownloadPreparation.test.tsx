@@ -28,7 +28,8 @@ vi.mock("./api", () => ({
 import DeviceDownloadPanel from "./DeviceDownloadPanel";
 import { messages as en } from "./messages/en";
 import type { ProjectTree } from "./bindings/ProjectTree";
-import type { BusDiscoveredInterface, DeviceDownloadStatusResponse } from "./api";
+import type { BusDiscoveredInterface, DeviceDownloadStatusResponse, LineScanResultsResponse } from "./api";
+import { HOLDER_POLL_MS } from "./DownloadGatewayHolder";
 import { resetBusDiscoveryForTests, searchBusInterfaces } from "./busDiscovery";
 import { downloadHandoff, type DownloadHandoff } from "./downloadHandoff";
 import { PREFERRED_GATEWAY_KEY } from "./gatewayPreference";
@@ -74,6 +75,12 @@ function running(): DeviceDownloadStatusResponse {
   return { downloadId: 3, address: "1.1.3", deviceName: "Actuator", steps: 4, dataOctets: 8,
     status: { state: "running" }, nextSince: 1, events: [], backupFile: null };
 }
+
+const SCAN_CANCELLED: LineScanResultsResponse = {
+  sessionId: 4, serverIncarnation: "srv", transport: "tcp", skippedFrames: 2,
+  status: "cancelled", error: null, disconnectConfirmed: true, cleanupError: null,
+  nextSince: 37, completedCount: 37, totalCount: 120, omittedAddresses: [], excludedAddresses: [], results: [],
+};
 
 function activity(sessions: unknown[], busyLocks: string[] = []) {
   return { serverIncarnation: "srv", coverage: "partial", historyState: "disabled", sessions, oneShot: [],
@@ -140,6 +147,7 @@ afterEach(async () => {
   await act(async () => root.unmount());
   host.remove();
   resetBusDiscoveryForTests();
+  vi.useRealTimers();
 });
 
 it("reads the shared search without starting one, and says when none has run", async () => {
@@ -449,12 +457,60 @@ it("offers the monitor's gateway as a suggestion and never overwrites a typed on
 
 it("names a running line scan with its progress and cancels it by its id", async () => {
   apiMock.busActivity.mockResolvedValue(activity([{ kind: "lineScan", id: 4, state: "running", probed: 37, total: 120 }]));
-  apiMock.cancelLineScan.mockResolvedValue({});
+  apiMock.cancelLineScan.mockResolvedValue(SCAN_CANCELLED);
   await render();
   expect(text(".device-download-holder [role=status]")).toContain("(37/120 addresses probed)");
   await act(async () => button(en["deviceDownload.holder.cancelScan"])!.click());
   await flush();
-  expect(apiMock.cancelLineScan).toHaveBeenCalledWith(4);
+  expect(apiMock.cancelLineScan).toHaveBeenCalledWith({ sessionId: 4, serverIncarnation: "srv" });
+});
+
+it("retains failed scan cleanup after refreshed activity removes the holder", async () => {
+  apiMock.busActivity.mockResolvedValue(activity([{ kind: "lineScan", id: 4, state: "running", probed: 37, total: 120 }]));
+  apiMock.cancelLineScan.mockResolvedValue({ ...SCAN_CANCELLED, disconnectConfirmed: false, cleanupError: "synthetic disconnect failed" });
+  await render();
+  apiMock.busActivity.mockResolvedValue(activity([]));
+  await act(async () => button(en["deviceDownload.holder.cancelScan"])!.click()); await flush();
+  expect(host.querySelector('[data-holder="lineScan"]')).toBeNull();
+  expect([...host.querySelectorAll('[role="alert"]')].some(alert => alert.textContent?.includes("synthetic disconnect failed"))).toBe(true);
+  expect(host.textContent).toContain(en["lineScan.cleanupUnconfirmed"].replace("{error}", "synthetic disconnect failed"));
+  expect(apiMock.cancelLineScan).toHaveBeenCalledExactlyOnceWith({ sessionId: 4, serverIncarnation: "srv" });
+  expect(apiMock.startDeviceDownload).not.toHaveBeenCalled();
+});
+
+it("retains an uncertain Cancel reply error after the volatile holder disappears", async () => {
+  apiMock.busActivity.mockResolvedValue(activity([{ kind: "lineScan", id: 4, state: "running", probed: 37, total: 120 }]));
+  apiMock.cancelLineScan.mockRejectedValue(new Error("Cancel reply was lost"));
+  await render(); apiMock.busActivity.mockResolvedValue(activity([]));
+  await act(async () => button(en["deviceDownload.holder.cancelScan"])!.click()); await flush();
+  expect(host.querySelector('[data-holder="lineScan"]')).toBeNull();
+  expect([...host.querySelectorAll('[role="alert"]')].some(alert => alert.textContent === "Cancel reply was lost")).toBe(true);
+  expect(apiMock.cancelLineScan).toHaveBeenCalledTimes(1);
+});
+
+it("cancels only the displayed activity pair when an older same-id process arrives late", async () => {
+  vi.useFakeTimers();
+  const old = deferred<ReturnType<typeof activity>>();
+  const stop = deferred<LineScanResultsResponse>();
+  apiMock.busActivity.mockReturnValueOnce(old.promise).mockResolvedValue({
+    ...activity([{ kind: "lineScan", id: 4, state: "running", probed: 74, total: 120 }]), serverIncarnation: "process-b",
+  });
+  apiMock.cancelLineScan.mockReturnValueOnce(stop.promise);
+  await render();
+  await act(async () => { await vi.advanceTimersByTimeAsync(HOLDER_POLL_MS); });
+  expect(text(".device-download-holder [role=status]")).toContain("(74/120 addresses probed)");
+  expect(apiMock.busActivity).toHaveBeenCalledTimes(2);
+  await act(async () => button(en["deviceDownload.holder.cancelScan"])!.click());
+  expect(apiMock.cancelLineScan).toHaveBeenCalledExactlyOnceWith({ sessionId: 4, serverIncarnation: "process-b" });
+  await act(async () => old.resolve({
+    ...activity([{ kind: "lineScan", id: 4, state: "running", probed: 37, total: 120 }]), serverIncarnation: "process-a",
+  }));
+  expect(text(".device-download-holder [role=status]")).toContain("(37/120 addresses probed)");
+  expect(button(en["deviceDownload.holder.cancelScan"])!.disabled).toBe(true);
+  apiMock.busActivity.mockResolvedValue(activity([]));
+  await act(async () => stop.resolve({ ...SCAN_CANCELLED, serverIncarnation: "process-b" })); await flush();
+  expect(apiMock.cancelLineScan).toHaveBeenCalledExactlyOnceWith({ sessionId: 4, serverIncarnation: "process-b" });
+  expect(apiMock.busActivity).toHaveBeenCalledTimes(3);
 });
 
 it("shows nothing when the activity cannot be read: the start's own refusal stays", async () => {

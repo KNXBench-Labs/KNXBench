@@ -18,12 +18,39 @@ session from the transport actually opened, never that preference.
 The 10 November CLI scan successor adds explicit TCP to `knx bus scan` for a
 single device or a line/range. This increment passed independent review and the
 selected integrated gate on `ac9b23814` ([acceptance](../status/2026-11-10-cli-tcp-scans.md));
-it is not part of the Alpha 20 release above. Server/Web line scans,
-device programming, downloads/restores, individual-address programming and
-other existing device workflows retain their UDP path. Discovery and
-routing are separate UDP services. No preference silently converts those paths
+it is not part of the Alpha 20 release above. At that accepted CLI baseline,
+Server/Web line scans retained UDP; the separate source candidate below adds
+explicit TCP and is still pending acceptance. Device programming,
+downloads/restores, individual-address programming and other existing device
+workflows retain their UDP path. Discovery and routing are separate UDP services.
+No preference silently converts those paths
 to TCP. Plain TCP is not KNX IP Secure, hardware compatibility or a remedy for
 an unresolved tunnel-loss report.
+
+## Server/Web line-scan successor (10 November 2026; candidate)
+
+The bounded candidate adds `POST /api/bus/scan/start-tcp`, not a transport flag
+on the legacy UDP start. It uses recorded transport selection and the unchanged
+DD0 scanner. Web selection is scan-local, initially UDP, and never reads or
+persists the monitor transport preference. Older strict-route failures never
+retry the UDP endpoint.
+
+Start/results/cancel require `sessionId`, `serverIncarnation`, actual `transport`
+and `skippedFrames` (TCP measured integer; UDP null). Results/cancel additionally
+require nullable `disconnectConfirmed` and `cleanupError`. Running includes
+cleanup; terminal counts are sampled before disconnect, not final-wire totals.
+Probe failures remain separate from cleanup uncertainty.
+
+New UI callers use strict `cancel-bound`, `comparison-bound`, `reconcile-bound`
+query bindings; attached polling supplies the same exact pair. Legacy mutating
+routes refuse TCP. Reservations and joins survive dropped requests; no stale
+pair may cancel or reconcile a successor. Tab navigation leaves server-owned
+scans running; explicit pending Cancel follows only its eventual exact identity.
+Missing or contradictory metadata locks actions, never guesses UDP.
+
+This is an implementation candidate, pending independent review and package
+acceptance, not an Alpha 20 addition or hardware result. See the
+[scoped record](../status/2026-11-10-server-web-tcp-scans.md).
 
 ## Explicit public selection
 

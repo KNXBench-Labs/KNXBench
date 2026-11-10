@@ -1,5 +1,7 @@
 //! Drive the real `knx` binary through optional TCP tunnelling against loopback gateways.
 
+mod scan;
+
 use std::{
     io::{BufRead, BufReader, Read, Write},
     net::{Ipv4Addr, SocketAddr, TcpListener, TcpStream, UdpSocket},

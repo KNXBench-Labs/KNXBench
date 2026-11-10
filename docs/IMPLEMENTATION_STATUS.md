@@ -167,9 +167,23 @@ Explicit TCP is software-accepted for the library, CLI monitor/write and shared
 server/Web monitor with bound group traffic; UDP remains the default. Independent
 review and all 15 selected package stages passed on `6b27d5b1a`: Web 37 stages,
 5,402 unit tests; Rust 4,553 passed / 153 ignored; separate corpus 91/91.
-Main-only, no new release or physical gateway interoperability claim. Device/scan
-workflows remain UDP-only; broader WP-29 and KNX IP Secure are not closed.
+Main-only, no new release or physical gateway interoperability claim. That
+accepted slice left device/scan workflows UDP-only; broader WP-29 and KNX IP
+Secure are not closed.
 [Acceptance, failure history and limits](status/2026-11-08-optional-tcp-tunnelling.md).
+
+## Optional TCP CLI scans (10 November 2026; bounded WP-29 successor)
+
+The source now accepts `--tunnel-transport udp|tcp` for `knx bus scan` with
+`--device` or `--line`/`--range`; omission remains UDP. The actual scan caller
+selects the transport and labels the opened tunnel without changing probe or
+project-comparison semantics. Invalid/duplicate/missing transport values refuse
+before I/O and dry runs open nothing. Loopback CLI regressions cover device
+descriptor evidence, positive connect confirmation, silence, default/explicit
+UDP, TCP refusal/closure without fallback and cleanup. Independent review and
+integrated package acceptance remain pending; no release or hardware claim.
+Server/Web scans, programming and discovery/routing are unchanged.
+[Scope](open-work/WP-29-knxnet-ip-tcp-tunnelling.md).
 
 ## Group-address description follow-ups (9 November 2026; KL-038b)
 

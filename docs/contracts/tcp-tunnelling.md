@@ -1,4 +1,4 @@
-# Optional TCP tunnelling for monitoring and group traffic
+# Optional TCP tunnelling for monitoring, group traffic and CLI scans
 
 Status: bounded software acceptance, 8 November 2026; ships in Alpha 20.
 [WP-29](../open-work/WP-29-knxnet-ip-tcp-tunnelling.md) remains open beyond this
@@ -15,17 +15,24 @@ server/Web shared bus-monitor session with its bound group read/write actions.
 The UI remembers a monitoring/group-traffic preference, but labels a running
 session from the transport actually opened, never that preference.
 
-Device programming, downloads/restores, individual-address operations, line
-scans and other existing device workflows retain their UDP path. Discovery and
+The 10 November CLI scan successor adds explicit TCP to `knx bus scan` for a
+single device or a line/range. This is a source increment pending integrated
+acceptance, not part of the Alpha 20 acceptance above. Server/Web line scans,
+device programming, downloads/restores, individual-address programming and
+other existing device workflows retain their UDP path. Discovery and
 routing are separate UDP services. No preference silently converts those paths
 to TCP. Plain TCP is not KNX IP Secure, hardware compatibility or a remedy for
 an unresolved tunnel-loss report.
 
 ## Explicit public selection
 
-- CLI: `--tunnel-transport udp|tcp` on **bus monitor/write only**. Omission means
-  UDP. Invalid/duplicate values and use with `--serial` refuse before I/O;
-  dry-run writes still open nothing.
+- CLI: `--tunnel-transport udp|tcp` on **bus monitor/write/scan**. Omission means
+  UDP. Invalid/duplicate/missing values refuse before I/O. Scan accepts only a
+  unicast IPv4 gateway with a nonzero port; serial remains unsupported. Dry-run
+  writes and scans open nothing. Scan preserves target/exclusion admission,
+  probe deadlines, project comparison and result semantics: TCP socket acceptance
+  alone is not occupancy or a descriptor reply. The connection message names the
+  actual tunnel transport. The diagnostic tap retains `OperationKind::LineScan`.
 - Server: `POST /api/bus/monitor/start-tcp` accepts exactly a gateway IPv4
   `host:port`. It is a separate strict route, not an ignored field on the legacy
   UDP endpoint. An older server therefore refuses the request; no UDP retry is

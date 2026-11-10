@@ -1632,13 +1632,3 @@ Removed/withdrawn entries retain historical anchors and evidence links. Numbers 
 **Ledger status:** Not separately tracked.
 The 8 October audit is a dated interpretation guide, not the current feature inventory or a new work assignment.
 [Details and history](limitations/historical-reading-guide.md)
-
-## 10 November 2026 — CLI TCP scan source successor
-
-The CLI-only `bus scan` successor adds explicit UDP/TCP for `--device` and
-`--line`/`--range`, pending integrated acceptance. UDP remains the default; TCP
-never falls back. This supersedes the CLI-scan exclusion in earlier TCP scope
-notes, not server/Web scans, programming, serial, discovery/routing or KNX IP
-Secure. Socket acceptance is not device evidence. Loopback regressions do not
-prove real-gateway interoperability or a release.
-[Scope and remaining acceptance](open-work/WP-29-knxnet-ip-tcp-tunnelling.md).

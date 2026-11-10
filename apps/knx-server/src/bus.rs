@@ -55,6 +55,10 @@ use tokio::task::JoinHandle;
 use crate::flow::FlowParticipants;
 use crate::session_log;
 
+/// A connector's owned tunnel result, retaining the borrowing connector lifetime.
+pub type TunnelConnectFuture<'a> =
+    Pin<Box<dyn Future<Output = Result<Box<dyn BusTunnel>, BusSessionError>> + Send + 'a>>;
+
 /// What a monitor session needs from something that can open a tunnel.
 /// `knx_net::KnxNetIpClient` is the production implementer via
 /// [`RealConnector`]; tests use [`fake::FakeConnector`]. Manually boxed
@@ -133,6 +137,20 @@ pub trait GatewayConnector: Send + Sync {
     {
         let _ = tap;
         self.connect_tunnel_with_ack_wait(gateway, wait)
+    }
+
+    /// Recorded transport selection never silently substitutes UDP for TCP.
+    fn connect_tunnel_recorded_with_transport(
+        &self,
+        gateway: SocketAddrV4,
+        wait: TunnelAckWait,
+        tap: Option<knx_net::wire_tap::WireTap>,
+        transport: TunnelTransport,
+    ) -> TunnelConnectFuture<'_> {
+        match transport {
+            TunnelTransport::Udp => self.connect_tunnel_recorded(gateway, wait, tap),
+            TunnelTransport::Tcp => self.connect_tunnel_with_transport(gateway, transport),
+        }
     }
 
     /// One multicast `SEARCH_REQUEST` and whatever `SEARCH_RESPONSE`s come
@@ -345,9 +363,20 @@ impl GatewayConnector for RealConnector {
         tap: Option<knx_net::wire_tap::WireTap>,
     ) -> Pin<Box<dyn Future<Output = Result<Box<dyn BusTunnel>, BusSessionError>> + Send + '_>>
     {
+        self.connect_tunnel_recorded_with_transport(gateway, wait, tap, TunnelTransport::Udp)
+    }
+
+    fn connect_tunnel_recorded_with_transport(
+        &self,
+        gateway: SocketAddrV4,
+        wait: TunnelAckWait,
+        tap: Option<knx_net::wire_tap::WireTap>,
+        transport: TunnelTransport,
+    ) -> TunnelConnectFuture<'_> {
         Box::pin(async move {
             let mut client = KnxNetIpClient::with_tunnel_return_path(self.return_path)
-                .with_tunnel_ack_wait(wait);
+                .with_tunnel_ack_wait(wait)
+                .with_tunnel_transport(transport);
             if let Some(tap) = tap {
                 client = client.with_wire_tap(tap);
             }

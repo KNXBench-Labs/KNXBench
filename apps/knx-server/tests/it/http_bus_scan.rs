@@ -1,4 +1,6 @@
-//! Incremental line-scan HTTP lifecycle tests over the in-process fake tunnel only.
+//! Incremental line-scan HTTP lifecycle tests over synthetic tunnels and loopback TCP peers.
+
+mod tcp;
 
 use std::sync::Arc;
 

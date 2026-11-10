@@ -24,6 +24,74 @@ function mockFetchOnce(body: unknown, ok = true, status = 200) {
   );
 }
 
+describe("api.lineScan strict transport and identity", () => {
+  afterEach(() => vi.unstubAllGlobals());
+  const identity = { sessionId: 4, serverIncarnation: "scan-process" };
+  const estimate: api.LineScanEstimate = { candidateCount: 1, omittedAddresses: [], responseTimeoutMs: 10, vacantConfirmations: 1, interProbePauseMs: 0, worstCaseMs: 10 };
+  const plan: api.LineScanRequest = { gateway: "192.0.2.10:3671", area: 1, line: 1, firstDevice: 5, lastDevice: 5, excluded: [], responseTimeoutMs: 10, interProbePauseMs: 0 };
+  const result = (transport: "tcp" | "udp" = "tcp"): api.LineScanResultsResponse => ({
+    ...identity, transport, skippedFrames: transport === "tcp" ? 0 : null, status: "cancelled", error: null,
+    disconnectConfirmed: true, cleanupError: null, nextSince: 0, completedCount: 0, totalCount: 1,
+    omittedAddresses: [], excludedAddresses: [], results: [],
+  });
+  it("selects distinct starts, keeps UDP default and never retries a missing TCP route", async () => {
+    mockFetchOnce({ ...identity, transport: "udp", skippedFrames: null, estimate });
+    await api.startLineScan(plan);
+    expect(vi.mocked(fetch).mock.calls[0][0]).toBe("/api/bus/scan/start");
+    mockFetchOnce({ ...identity, transport: "tcp", skippedFrames: 0, estimate });
+    await api.startLineScan(plan,"tcp");
+    expect(vi.mocked(fetch).mock.calls[0][0]).toBe("/api/bus/scan/start-tcp");
+    expect(JSON.parse(vi.mocked(fetch).mock.calls[0][1]!.body as string)).toEqual(plan);
+    for (const status of [404,405]) {
+      mockFetchOnce({ error: "unsupported" },false,status);
+      await expect(api.startLineScan(plan,"tcp")).rejects.toMatchObject({ status });
+      expect(fetch).toHaveBeenCalledTimes(1);
+      expect(vi.mocked(fetch).mock.calls[0][0]).toBe("/api/bus/scan/start-tcp");
+    }
+  });
+  it("binds poll, cancel, comparison and reconciliation on strict routes without hidden fields", async () => {
+    mockFetchOnce(result()); await api.pollLineScan(7,identity);
+    expect(vi.mocked(fetch).mock.calls[0][0]).toBe("/api/bus/scan/results?since=7&sessionId=4&serverIncarnation=scan-process");
+    mockFetchOnce(result()); await api.cancelLineScan(identity);
+    expect(vi.mocked(fetch).mock.calls[0][0]).toBe("/api/bus/scan/cancel-bound?sessionId=4&serverIncarnation=scan-process");
+    mockFetchOnce({ unexpected:[],missing:[],excludedInProject:[] }); await api.compareLineScan(identity);
+    expect(vi.mocked(fetch).mock.calls[0][0]).toBe("/api/bus/scan/comparison-bound?sessionId=4&serverIncarnation=scan-process");
+    mockFetchOnce({}); await api.reconcileLineScan(identity,["1.1.5"],[]);
+    expect(vi.mocked(fetch).mock.calls[0][0]).toBe("/api/bus/scan/reconcile-bound?sessionId=4&serverIncarnation=scan-process");
+    expect(JSON.parse(vi.mocked(fetch).mock.calls[0][1]!.body as string)).toEqual({unexpected:["1.1.5"],missing:[]});
+  });
+  it("refuses every missing required metadata field and unsafe or contradictory values", async () => {
+    for (const field of ["sessionId","serverIncarnation","transport","skippedFrames","disconnectConfirmed","cleanupError"]) {
+      const body: Record<string,unknown> = { ...result() }; delete body[field];
+      mockFetchOnce(body); await expect(api.pollLineScan(0)).rejects.toThrow();
+      mockFetchOnce(body); await expect(api.cancelLineScan(identity)).rejects.toThrow();
+    }
+    for (const patch of [
+      { transport:"tls" },{ transport:null },{ sessionId:0 },{ sessionId:2**53 },{ serverIncarnation:"" },
+      { skippedFrames:null },{ skippedFrames:-1 },{ skippedFrames:0.5 },{ skippedFrames:2**53 },
+      { transport:"udp",skippedFrames:0 },{ disconnectConfirmed:null },{ disconnectConfirmed:false,cleanupError:null },
+      { status:"running",disconnectConfirmed:true },{ status:"completed",cleanupError:"oops" },
+      { status:["completed"] },{ status:["running"] },{ status:{} },{ status:1 },{ status:true },{ status:null },
+    ]) { mockFetchOnce({ ...result(),...patch }); await expect(api.pollLineScan(0)).rejects.toThrow(); }
+    for (const patch of [{ sessionId:5 },{ serverIncarnation:"successor" },{ transport:"udp",skippedFrames:null }]) {
+      mockFetchOnce({ ...result(),...patch });
+      await expect(api.pollLineScan(0,{ ...identity,transport:"tcp" } as api.BoundBusSession)).rejects.toThrow();
+    }
+    expect(api.admitLineScanResults(result()).skippedFrames).toBe(0);
+    expect(api.admitLineScanResults(result("udp")).skippedFrames).toBeNull();
+  });
+  it("refuses malformed starts and cleanup answers without any guessed compensating action", async () => {
+    for (const patch of [{transport:"udp",skippedFrames:null},{skippedFrames:undefined},{serverIncarnation:undefined},{estimate:null}]) {
+      mockFetchOnce({ ...identity,transport:"tcp",skippedFrames:0,estimate,...patch });
+      await expect(api.startLineScan(plan,"tcp")).rejects.toThrow(); expect(fetch).toHaveBeenCalledTimes(1);
+    }
+    mockFetchOnce({ ...result(),serverIncarnation:"successor" });
+    await expect(api.cancelLineScan(identity)).rejects.toThrow("changed"); expect(fetch).toHaveBeenCalledTimes(1);
+    mockFetchOnce({ error:"unsupported" },false,404);
+    await expect(api.cancelLineScan(identity)).rejects.toMatchObject({ status:404 }); expect(fetch).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe("api.stopBoundBusMonitor (WP-26)", () => {
   afterEach(() => vi.unstubAllGlobals());
 

@@ -43,7 +43,7 @@ use crate::bus::{
     self, decode_single, BusSession, BusSessionError, DecodeFailureReason, DecodedValue,
     GroupAddressContext, SessionStatus, TelegramRow,
 };
-use crate::bus_scan::{LineScanResult, LineScanSession, LineScanStatus};
+use crate::bus_scan::{LineScanResult, LineScanSession, LineScanStatus, LineScanTarget};
 use crate::domain;
 use crate::errors::ApiError;
 use crate::SharedState;
@@ -67,10 +67,14 @@ pub fn bus_routes() -> Router<SharedState> {
         )
         .route("/api/bus/scan/estimate", post(estimate_scan))
         .route("/api/bus/scan/start", post(start_scan))
+        .route("/api/bus/scan/start-tcp", post(start_tcp_scan))
         .route("/api/bus/scan/results", get(poll_scan))
         .route("/api/bus/scan/cancel", post(cancel_scan))
+        .route("/api/bus/scan/cancel-bound", post(cancel_bound_scan))
         .route("/api/bus/scan/comparison", get(scan_comparison))
+        .route("/api/bus/scan/comparison-bound", get(scan_comparison_bound))
         .route("/api/bus/scan/reconcile", post(reconcile_scan))
+        .route("/api/bus/scan/reconcile-bound", post(reconcile_scan_bound))
 }
 
 #[derive(Deserialize)]
@@ -167,7 +171,52 @@ async fn estimate_scan(
 #[serde(rename_all = "camelCase")]
 struct ScanStartResponse {
     session_id: u64,
+    server_incarnation: String,
+    transport: &'static str,
+    skipped_frames: Option<u64>,
     estimate: ScanEstimateResponse,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct TcpScanRequest {
+    gateway: String,
+    area: u8,
+    line: u8,
+    first_device: u8,
+    last_device: u8,
+    excluded: Vec<String>,
+    response_timeout_ms: u64,
+    inter_probe_pause_ms: u64,
+}
+
+async fn start_tcp_scan(
+    State(state): State<SharedState>,
+    body: Result<Json<TcpScanRequest>, axum::extract::rejection::JsonRejection>,
+) -> Result<Json<ScanStartResponse>, ApiError> {
+    let Json(body) = body
+        .map_err(|_| ApiError::bad_request("TCP scan requires exactly the complete scan plan"))?;
+    let gateway = parse_tcp_gateway(&body.gateway)?;
+    let body = ScanRequest {
+        gateway: Some(body.gateway),
+        area: body.area,
+        line: body.line,
+        first_device: body.first_device,
+        last_device: body.last_device,
+        excluded: body.excluded,
+        response_timeout_ms: body.response_timeout_ms,
+        inter_probe_pause_ms: body.inter_probe_pause_ms,
+    };
+    start_scan_owned(state, body, gateway, knx_net::TunnelTransport::Tcp).await
+}
+
+fn scan_reservation_busy() -> ApiError {
+    crate::tunnel_holder::gateway_busy(
+        crate::tunnel_holder::TunnelHolder::Connecting {
+            session: "lineScan",
+        },
+        "a line scan reservation is held; nothing was started or cancelled",
+    )
 }
 
 async fn start_scan(
@@ -182,9 +231,26 @@ async fn start_scan(
         .ok_or_else(|| ApiError::bad_request("gateway is required"))?
         .parse::<SocketAddrV4>()
         .map_err(|_| ApiError::bad_request("gateway is not a host:port IPv4 address"))?;
+    start_scan_owned(state, body, gateway, knx_net::TunnelTransport::Udp).await
+}
+
+async fn start_scan_owned(
+    state: SharedState,
+    body: ScanRequest,
+    gateway: SocketAddrV4,
+    transport: knx_net::TunnelTransport,
+) -> Result<Json<ScanStartResponse>, ApiError> {
     let (plan, policy, estimate, range) = build_scan(&body)?;
     let response_estimate = estimate_response(&plan, &policy, estimate);
-    let mut guard = state.line_scan_session.lock().await;
+    let mut guard = state
+        .line_scan_session
+        .clone()
+        .try_lock_owned()
+        .map_err(|_| scan_reservation_busy())?;
+    state.stop_admission.admit()?;
+    if system2_running(&state) {
+        return Err(session_lock_busy(&state, true));
+    }
     // Checked while holding this session's lock, never before it: a
     // download start holds its own lock and then waits for this one, so
     // this `try_lock` sees it (ADR-0045 §4).
@@ -207,48 +273,78 @@ async fn start_scan(
                 format!("line scan session {} is already running", existing.id()),
             ));
         }
-        existing.cancel().await;
     }
-    let id = state
-        .next_line_scan_session_id
-        .fetch_add(1, std::sync::atomic::Ordering::SeqCst);
-    let session = LineScanSession::start(
-        id,
-        range,
-        gateway,
-        state.connector.as_ref(),
-        plan,
-        policy,
-        crate::operation_recordings::start(
-            &state,
-            knx_app::operation_recording::OperationStart::new(
-                knx_app::operation_recording::OperationKind::LineScan,
+    let (done, answer) = tokio::sync::oneshot::channel();
+    tokio::spawn(async move {
+        let result = async {
+            // Admission may close after handler reservation but before this task runs.
+            state.stop_admission.admit()?;
+            if let Some(existing) = guard.as_mut() {
+                existing.cancel().await;
+            }
+            state.stop_admission.admit()?;
+            if system2_running(&state) {
+                return Err(session_lock_busy(&state, true));
+            }
+            let id = state
+                .next_line_scan_session_id
+                .fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+            let mut session = LineScanSession::start_with_transport(
+                id,
+                LineScanTarget {
+                    range,
+                    gateway,
+                    transport,
+                },
+                state.connector.as_ref(),
+                plan,
+                policy,
+                crate::operation_recordings::start(
+                    &state,
+                    knx_app::operation_recording::OperationStart::new(
+                        knx_app::operation_recording::OperationKind::LineScan,
+                    )
+                    .target(serde_json::json!({
+                        "area": range.area, "line": range.line,
+                        "firstDevice": range.first_device, "lastDevice": range.last_device,
+                    }))
+                    .gateway(gateway)
+                    .related("lineScanSessionId", id),
+                ),
             )
-            .target(serde_json::json!({
-                "area": range.area,
-                "line": range.line,
-                "firstDevice": range.first_device,
-                "lastDevice": range.last_device,
-            }))
-            .gateway(gateway)
-            .related("lineScanSessionId", id),
-        ),
-    )
-    .await
-    .map_err(|e| connect_error_to_api_error(gateway, e))?;
-    *guard = Some(session);
-    Ok(Json(ScanStartResponse {
-        session_id: id,
-        estimate: response_estimate,
-    }))
-}
-
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct ScanPollQuery {
-    #[serde(default)]
-    since: usize,
-    session_id: Option<u64>,
+            .await
+            .map_err(|e| connect_error_to_api_error(gateway, e))?;
+            // Shutdown during connect still owns and releases its late tunnel.
+            if let Err(error) = state.stop_admission.admit() {
+                session.cancel().await;
+                *guard = Some(session);
+                return Err(error);
+            }
+            let snapshot = session.snapshot(0);
+            let response = Json(ScanStartResponse {
+                session_id: id,
+                server_incarnation: state.server_incarnation.clone(),
+                transport: session.transport().as_str(),
+                skipped_frames: snapshot.skipped_frames,
+                estimate: response_estimate,
+            });
+            *guard = Some(session);
+            Ok(response)
+        }
+        .await;
+        // Keep this exact reservation through disposal of an unclaimed successful start.
+        if let Err(Ok(_)) = done.send(result) {
+            if let Some(session) = guard.as_mut() {
+                session.cancel().await;
+            }
+        }
+    });
+    answer.await.unwrap_or_else(|_| {
+        Err(ApiError::with_status(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "line scan start owner ended without an answer",
+        ))
+    })
 }
 
 #[derive(Deserialize)]
@@ -305,6 +401,11 @@ impl From<LineScanResult> for ScanResultDto {
 #[serde(rename_all = "camelCase")]
 struct ScanResultsResponse {
     session_id: u64,
+    server_incarnation: String,
+    transport: &'static str,
+    skipped_frames: Option<u64>,
+    disconnect_confirmed: Option<bool>,
+    cleanup_error: Option<String>,
     status: &'static str,
     error: Option<String>,
     next_since: usize,
@@ -324,11 +425,21 @@ fn scan_status(status: LineScanStatus) -> (&'static str, Option<String>) {
     }
 }
 
-fn scan_response(session: &LineScanSession, since: usize) -> ScanResultsResponse {
-    let (snapshot_status, next_since, results) = session.snapshot_since(since);
-    let (status, error) = scan_status(snapshot_status);
+fn scan_response(
+    session: &LineScanSession,
+    since: usize,
+    incarnation: &str,
+) -> ScanResultsResponse {
+    let snapshot = session.snapshot(since);
+    let (status, error) = scan_status(snapshot.status);
+    let next_since = snapshot.next_since;
     ScanResultsResponse {
         session_id: session.id(),
+        server_incarnation: incarnation.to_owned(),
+        transport: session.transport().as_str(),
+        skipped_frames: snapshot.skipped_frames,
+        disconnect_confirmed: snapshot.disconnect_confirmed,
+        cleanup_error: snapshot.cleanup_error,
         status,
         error,
         next_since,
@@ -336,46 +447,164 @@ fn scan_response(session: &LineScanSession, since: usize) -> ScanResultsResponse
         total_count: session.total_count(),
         omitted_addresses: session.omitted().iter().map(ToString::to_string).collect(),
         excluded_addresses: session.excluded().iter().map(ToString::to_string).collect(),
-        results: results.into_iter().map(Into::into).collect(),
+        results: snapshot.results.into_iter().map(Into::into).collect(),
     }
+}
+
+fn scan_changed() -> ApiError {
+    ApiError::conflict(
+        "lineScanSessionChanged",
+        "the named line scan is not held by this server; nothing was changed",
+    )
+}
+
+fn check_scan_binding(
+    state: &SharedState,
+    session: Option<&LineScanSession>,
+    bound: &BoundSession,
+) -> Result<(), ApiError> {
+    if bound.server_incarnation != state.server_incarnation
+        || !session.is_some_and(|held| held.id() == bound.session_id)
+    {
+        return Err(scan_changed());
+    }
+    Ok(())
+}
+
+fn require_legacy_udp(session: &LineScanSession) -> Result<(), ApiError> {
+    if session.transport() == knx_net::TunnelTransport::Tcp {
+        return Err(ApiError::conflict(
+            "lineScanSessionBindingRequired",
+            "TCP scans require the strict identity-bound route; nothing was changed",
+        ));
+    }
+    Ok(())
 }
 
 async fn poll_scan(
     State(state): State<SharedState>,
-    Query(query): Query<ScanPollQuery>,
+    RawQuery(raw): RawQuery,
 ) -> Result<Json<ScanResultsResponse>, ApiError> {
-    let guard = state.line_scan_session.lock().await;
+    let mut since = None;
+    let mut binding = Vec::new();
+    let mut has_incarnation = false;
+    for pair in raw.as_deref().unwrap_or("").split('&') {
+        if pair.is_empty() {
+            if raw.as_deref().is_none_or(str::is_empty) {
+                continue;
+            }
+            return Err(ApiError::bad_request("empty scan query field"));
+        }
+        let (name, value) = pair
+            .split_once('=')
+            .ok_or_else(|| ApiError::bad_request("scan query field needs a value"))?;
+        if name == "since" {
+            if since.is_some()
+                || value.is_empty()
+                || (value.len() > 1 && value.starts_with('0'))
+                || !value.bytes().all(|b| b.is_ascii_digit())
+            {
+                return Err(ApiError::bad_request(
+                    "since must be one canonical nonnegative integer",
+                ));
+            }
+            since = Some(
+                value
+                    .parse::<usize>()
+                    .map_err(|_| ApiError::bad_request("since out of range"))?,
+            );
+        } else {
+            has_incarnation |= name == "serverIncarnation";
+            binding.push(pair);
+        }
+    }
+    let legacy = !binding.is_empty() && !has_incarnation;
+    let bound = if binding.is_empty() {
+        None
+    } else {
+        let mut query = binding.join("&");
+        if legacy {
+            query.push_str(&format!("&serverIncarnation={}", state.server_incarnation));
+        }
+        Some(parse_bound_session(Some(&query))?)
+    };
+    let guard = state
+        .line_scan_session
+        .try_lock()
+        .map_err(|_| scan_reservation_busy())?;
+    if let Some(bound) = &bound {
+        check_scan_binding(&state, guard.as_ref(), bound)?;
+    }
     let session = guard.as_ref().ok_or_else(|| {
         ApiError::with_status(StatusCode::NOT_FOUND, "no line scan session exists")
     })?;
-    if query.session_id.is_some_and(|id| id != session.id()) {
-        return Err(ApiError::with_status(
-            StatusCode::CONFLICT,
-            format!(
-                "line scan session {} is no longer active",
-                query.session_id.unwrap()
-            ),
-        ));
+    if legacy {
+        require_legacy_udp(session)?;
     }
-    Ok(Json(scan_response(session, query.since)))
+    Ok(Json(scan_response(
+        session,
+        since.unwrap_or(0),
+        &state.server_incarnation,
+    )))
 }
 
 async fn cancel_scan(
     State(state): State<SharedState>,
     Query(query): Query<ScanSessionQuery>,
 ) -> Result<Json<ScanResultsResponse>, ApiError> {
-    let mut guard = state.line_scan_session.lock().await;
-    let session = guard.as_mut().ok_or_else(|| {
-        ApiError::with_status(StatusCode::CONFLICT, "no line scan session exists")
-    })?;
+    let guard = state
+        .line_scan_session
+        .clone()
+        .try_lock_owned()
+        .map_err(|_| scan_reservation_busy())?;
+    let session = guard.as_ref().ok_or_else(scan_changed)?;
     if query.session_id != session.id() {
-        return Err(ApiError::with_status(
-            StatusCode::CONFLICT,
-            format!("line scan session {} is no longer active", query.session_id),
+        return Err(scan_changed());
+    }
+    require_legacy_udp(session)?;
+    cancel_scan_owned(guard, state.server_incarnation.clone()).await
+}
+
+async fn cancel_bound_scan(
+    State(state): State<SharedState>,
+    RawQuery(query): RawQuery,
+) -> Result<Json<ScanResultsResponse>, ApiError> {
+    let bound = parse_scan_bound(query.as_deref())?;
+    let guard = state
+        .line_scan_session
+        .clone()
+        .try_lock_owned()
+        .map_err(|_| scan_reservation_busy())?;
+    check_scan_binding(&state, guard.as_ref(), &bound)?;
+    cancel_scan_owned(guard, state.server_incarnation.clone()).await
+}
+
+fn parse_scan_bound(query: Option<&str>) -> Result<BoundSession, ApiError> {
+    if query.is_none_or(|q| q.split('&').any(str::is_empty)) {
+        return Err(ApiError::bad_request(
+            "exact scan session binding is required",
         ));
     }
-    session.cancel().await;
-    Ok(Json(scan_response(session, 0)))
+    parse_bound_session(query)
+}
+
+async fn cancel_scan_owned(
+    mut guard: tokio::sync::OwnedMutexGuard<Option<LineScanSession>>,
+    incarnation: String,
+) -> Result<Json<ScanResultsResponse>, ApiError> {
+    let (done, answer) = tokio::sync::oneshot::channel();
+    tokio::spawn(async move {
+        let session = guard.as_mut().expect("matched held scan");
+        session.cancel().await;
+        let response = scan_response(session, 0, &incarnation);
+        let _ = done.send(Ok(Json(response)));
+    });
+    answer.await.unwrap_or_else(|_| {
+        Err(ApiError::with_status(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "line scan cancel owner ended without an answer",
+        ))
+    })
 }
 
 #[derive(Serialize)]
@@ -390,17 +619,35 @@ async fn scan_comparison(
     State(state): State<SharedState>,
     Query(query): Query<ScanSessionQuery>,
 ) -> Result<Json<ScanComparisonResponse>, ApiError> {
-    let guard = state.line_scan_session.lock().await;
-    let session = guard.as_ref().ok_or_else(|| {
-        ApiError::with_status(StatusCode::CONFLICT, "no line scan session exists")
-    })?;
+    let guard = state
+        .line_scan_session
+        .try_lock()
+        .map_err(|_| scan_reservation_busy())?;
+    let session = guard.as_ref().ok_or_else(scan_changed)?;
     if query.session_id != session.id() {
-        return Err(ApiError::with_status(
-            StatusCode::CONFLICT,
-            format!("line scan session {} is no longer active", query.session_id),
-        ));
+        return Err(scan_changed());
     }
+    require_legacy_udp(session)?;
+    scan_comparison_impl(&state, session)
+}
 
+async fn scan_comparison_bound(
+    State(state): State<SharedState>,
+    RawQuery(query): RawQuery,
+) -> Result<Json<ScanComparisonResponse>, ApiError> {
+    let bound = parse_scan_bound(query.as_deref())?;
+    let guard = state
+        .line_scan_session
+        .try_lock()
+        .map_err(|_| scan_reservation_busy())?;
+    check_scan_binding(&state, guard.as_ref(), &bound)?;
+    scan_comparison_impl(&state, guard.as_ref().expect("matched scan"))
+}
+
+fn scan_comparison_impl(
+    state: &SharedState,
+    session: &LineScanSession,
+) -> Result<Json<ScanComparisonResponse>, ApiError> {
     let (status, _, results) = session.snapshot_since(0);
     if status != LineScanStatus::Completed {
         return Err(ApiError::with_status(
@@ -473,16 +720,55 @@ async fn reconcile_scan(
     State(state): State<SharedState>,
     Json(body): Json<ScanReconcileBody>,
 ) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
-    let guard = state.line_scan_session.lock().await;
-    let session = guard.as_ref().ok_or_else(|| {
-        ApiError::with_status(StatusCode::CONFLICT, "no line scan session exists")
-    })?;
+    let guard = state
+        .line_scan_session
+        .try_lock()
+        .map_err(|_| scan_reservation_busy())?;
+    let session = guard.as_ref().ok_or_else(scan_changed)?;
     if body.session_id != session.id() {
-        return Err(ApiError::with_status(
-            StatusCode::CONFLICT,
-            format!("line scan session {} is no longer active", body.session_id),
-        ));
+        return Err(scan_changed());
     }
+    require_legacy_udp(session)?;
+    reconcile_scan_impl(&state, session, body.unexpected, body.missing)
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct BoundScanReconcileBody {
+    unexpected: Vec<String>,
+    missing: Vec<String>,
+}
+
+async fn reconcile_scan_bound(
+    State(state): State<SharedState>,
+    RawQuery(query): RawQuery,
+    body: Result<Json<BoundScanReconcileBody>, axum::extract::rejection::JsonRejection>,
+) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
+    let bound = parse_scan_bound(query.as_deref())?;
+    let Json(body) = body.map_err(|_| {
+        ApiError::bad_request(
+            "bound reconciliation requires exactly unexpected and missing selections",
+        )
+    })?;
+    let guard = state
+        .line_scan_session
+        .try_lock()
+        .map_err(|_| scan_reservation_busy())?;
+    check_scan_binding(&state, guard.as_ref(), &bound)?;
+    reconcile_scan_impl(
+        &state,
+        guard.as_ref().expect("matched scan"),
+        body.unexpected,
+        body.missing,
+    )
+}
+
+fn reconcile_scan_impl(
+    state: &SharedState,
+    session: &LineScanSession,
+    unexpected: Vec<String>,
+    missing: Vec<String>,
+) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
     let (status, _, results) = session.snapshot_since(0);
     if status != LineScanStatus::Completed {
         return Err(ApiError::with_status(
@@ -491,15 +777,15 @@ async fn reconcile_scan(
         ));
     }
 
-    let unexpected = parse_scan_selection(body.unexpected, "unexpected")?;
-    let missing = parse_scan_selection(body.missing, "missing")?;
+    let unexpected = parse_scan_selection(unexpected, "unexpected")?;
+    let missing = parse_scan_selection(missing, "missing")?;
     let evidence: Vec<_> = results
         .into_iter()
         .map(|result| (result.address, result.outcome))
         .collect();
     let excluded = session.excluded().iter().copied().collect();
     let tree = domain::reconcile_scan_impl(
-        &state,
+        state,
         session.range(),
         &evidence,
         &excluded,

@@ -35,9 +35,10 @@ It ships in Alpha 20; it does not close the wider WP-29.
 
 The 10 November source successor adds optional TCP to CLI `bus scan` only
 (single device and line/range), with default UDP, no fallback and unchanged
-device-evidence rules. Loopback regressions accompany it; independent review
-and integrated acceptance remain pending. It is not a release or hardware
-claim. Server/Web scans and other device workflows remain UDP-only.
+device-evidence rules. Independent review and the integrated 13-stage package
+gate passed on `ac9b23814`; [acceptance and limits](status/2026-11-10-cli-tcp-scans.md).
+It is not a release or hardware claim. Server/Web scans and other device
+workflows remain UDP-only.
 
 ## Bounded foundation: object-priority provenance
 

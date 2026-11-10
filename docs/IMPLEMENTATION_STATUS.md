@@ -180,8 +180,10 @@ selects the transport and labels the opened tunnel without changing probe or
 project-comparison semantics. Invalid/duplicate/missing transport values refuse
 before I/O and dry runs open nothing. Loopback CLI regressions cover device
 descriptor evidence, positive connect confirmation, silence, default/explicit
-UDP, TCP refusal/closure without fallback and cleanup. Independent review and
-integrated package acceptance remain pending; no release or hardware claim.
+UDP, TCP refusal/closure without fallback, skip disclosure and cleanup. Independent
+review and all 13 selected integrated package stages passed on `ac9b23814`
+(Rust 646/0, separate corpus 17/17); no release or hardware claim.
+[Acceptance and failure history](status/2026-11-10-cli-tcp-scans.md).
 Server/Web scans, programming and discovery/routing are unchanged.
 [Scope](open-work/WP-29-knxnet-ip-tcp-tunnelling.md).
 

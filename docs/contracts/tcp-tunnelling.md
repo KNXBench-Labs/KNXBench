@@ -16,8 +16,9 @@ The UI remembers a monitoring/group-traffic preference, but labels a running
 session from the transport actually opened, never that preference.
 
 The 10 November CLI scan successor adds explicit TCP to `knx bus scan` for a
-single device or a line/range. This is a source increment pending integrated
-acceptance, not part of the Alpha 20 acceptance above. Server/Web line scans,
+single device or a line/range. This increment passed independent review and the
+selected integrated gate on `ac9b23814` ([acceptance](../status/2026-11-10-cli-tcp-scans.md));
+it is not part of the Alpha 20 release above. Server/Web line scans,
 device programming, downloads/restores, individual-address programming and
 other existing device workflows retain their UDP path. Discovery and
 routing are separate UDP services. No preference silently converts those paths

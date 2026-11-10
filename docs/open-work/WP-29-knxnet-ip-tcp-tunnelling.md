@@ -30,7 +30,7 @@ mandatory UDP requirement.
    source acceptance, result-only documentation and remaining scope.
    Real-gateway interoperability remains separate and requires authorisation.
    Broader WP-29, remaining device/scan consumers and KNX IP Secure remain open.
-4. **CLI scan successor — implemented, integrated acceptance pending (10 November).**
+4. **CLI scan successor — software-accepted on main (10 November).**
    `knx bus scan --device` and `--line`/`--range` accept explicit UDP/TCP, with
    UDP still the default and no TCP-to-UDP fallback. The actual caller retains
    descriptor/confirmation evidence, safety exclusions, preview and comparison
@@ -38,7 +38,9 @@ mandatory UDP requirement.
    cover descriptor scans, silence versus confirmed occupancy, UDP controls,
    refused/closed TCP, no-I/O admission and observed socket release. This does
    not widen server/Web scans, programming, discovery/routing or serial support;
-   independent review and the package gate remain separate acceptance steps.
+   independent review and all 13 selected package stages passed on `ac9b23814`
+   ([acceptance and preserved failures](../status/2026-11-10-cli-tcp-scans.md)).
+   This does not establish release or real-gateway interoperability.
 
 ## Independently checked source basis
 

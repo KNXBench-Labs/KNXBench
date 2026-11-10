@@ -1,6 +1,7 @@
 # Optional TCP tunnelling for monitoring, group traffic and read-only CLI queries
 
-Status: bounded software acceptance, 8 November 2026; ships in Alpha 20.
+Initial monitor/group-traffic acceptance: 8 November 2026; ships in Alpha 20.
+The separately dated scan/find-serial successors below are main-only additions.
 [WP-29](../open-work/WP-29-knxnet-ip-tcp-tunnelling.md) remains open beyond this
 slice. The [execution record](../status/2026-11-08-optional-tcp-tunnelling.md)
 separates actual passed checks from this contract's required behaviour and from
@@ -77,7 +78,7 @@ This is a main-only successor, not an Alpha 20 addition or hardware result. See 
 - Group actions and Stop retain the exact session ID and server incarnation.
   A replacement session/process is not the target of an older callback.
 
-## Read-only CLI find-serial successor (10 November 2026; gate pending)
+## Read-only CLI find-serial successor (10 November 2026; main-only acceptance)
 
 Both existing queries accept optional `--tunnel-transport udp|tcp`:
 
@@ -105,8 +106,9 @@ optional consented/redacted bundle classification and temporary-recording cleanu
 are preserved, as are result/exit codes, best-effort tunnel disconnect and
 existing SIGINT behavior. This adds no address/programming write authority or
 general cancellation guarantee. Independent source reviews and narrow optional
-fixture closure passed; final integrated gate/publication are pending in the
-[scoped execution record](../status/2026-11-10-cli-tcp-find-serial.md).
+fixture closure and the complete selected integrated package gate passed;
+runtime publication was read back. This is not an Alpha 20 release or hardware
+claim ([scoped execution record](../status/2026-11-10-cli-tcp-find-serial.md)).
 
 ## Wire and lifecycle
 

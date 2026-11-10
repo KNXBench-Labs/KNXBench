@@ -42,15 +42,17 @@ mandatory UDP requirement.
    ([acceptance and preserved failures](../status/2026-11-10-cli-tcp-scans.md)).
    This does not establish release or real-gateway interoperability.
 
-## Server/Web scan successor candidate (10 November 2026)
+<a id="serverweb-scan-successor-candidate-10-november-2026"></a>
 
-The next bounded candidate adds explicit recorded TCP to server/Web line scans,
+## Server/Web scan successor (10 November 2026; main-only acceptance)
+
+The separately accepted bounded source successor adds explicit recorded TCP to server/Web line scans,
 with UDP default, strict identity-bound effects, runtime provenance and live /
 pre-disconnect skip accounting. It preserves the existing DD0 scanner and
-reconciliation commands. Implementation is pending independent review and
-integrated acceptance; authored tests are not passed checks. Programming,
+reconciliation commands. Independent source closure and bounded privacy calibration passed; the complete
+selected acceptance plan is closed by source-bound composition. Programming,
 downloads, serial, discovery/routing, hardware interoperability and wider WP-29
-remain outside it. [Candidate and acceptance boundary](../status/2026-11-10-server-web-tcp-scans.md).
+remain outside it. [Acceptance and limitations](../status/2026-11-10-server-web-tcp-scans.md).
 
 ## Independently checked source basis
 

@@ -1,6 +1,5 @@
 //! Drive the real `knx` binary through optional TCP tunnelling against loopback gateways.
 
-#[path = "cli_bus_tcp_scan.rs"]
 mod scan;
 
 use std::{

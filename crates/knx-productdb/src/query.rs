@@ -12,7 +12,8 @@ use crate::ProductDbError;
 
 mod product_details;
 pub use product_details::{
-    device_product_details, manufacturer_name, ProductDetailField, ProductDetailSection,
+    device_product_details, manufacturer_name, ManufacturerNameCache, NameDiscoveryRefusal,
+    ProductDetailField, ProductDetailSection,
 };
 
 mod caption_templates;
@@ -1934,7 +1935,7 @@ pub fn device_product(
         product_ref_id,
         hardware2program_ref_id,
         language,
-        &mut HashMap::new(),
+        &mut ManufacturerNameCache::default(),
     )
 }
 
@@ -1944,7 +1945,7 @@ pub fn device_product_cached(
     product_ref_id: &str,
     hardware2program_ref_id: &str,
     language: Option<&str>,
-    manufacturer_names: &mut HashMap<String, Option<String>>,
+    manufacturer_names: &mut ManufacturerNameCache,
 ) -> Result<Option<DeviceProductRow>, ProductDbError> {
     const SQL: &str = "SELECT p.manufacturer_id, m.name, p.text, p.order_number,
                 h.name, h.version_number, h.serial_number,
@@ -1974,15 +1975,11 @@ pub fn device_product_cached(
     let Some(mut raw) = raw else {
         return Ok(None);
     };
-    if !manufacturer_names.contains_key(&raw.row.manufacturer_id) {
-        let name = manufacturer_name(
-            conn,
-            &raw.row.manufacturer_id,
-            raw.row.manufacturer_name.as_deref(),
-        )?;
-        manufacturer_names.insert(raw.row.manufacturer_id.clone(), name);
-    }
-    raw.row.manufacturer_name = manufacturer_names[&raw.row.manufacturer_id].clone();
+    raw.row.manufacturer_name = manufacturer_names.resolve(
+        conn,
+        &raw.row.manufacturer_id,
+        raw.row.manufacturer_name.as_deref(),
+    );
     let Some(lang) = language else {
         return Ok(Some(raw.row));
     };

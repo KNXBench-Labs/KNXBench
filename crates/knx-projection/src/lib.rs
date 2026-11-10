@@ -750,7 +750,7 @@ pub struct DeviceProductCatalog {
     #[ts(optional)]
     pub details: Option<Vec<ProductDetailSection>>,
     pub manufacturer_id: String,
-    /// `manufacturer.name` from the KNX master data (`knx_master.xml`).
+    /// Resolved display name: real installed name, otherwise unambiguous retained master evidence.
     pub manufacturer_name: Option<String>,
     /// `product.text` — the product's display name.
     pub product_text: Option<String>,

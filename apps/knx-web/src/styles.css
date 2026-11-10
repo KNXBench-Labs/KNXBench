@@ -3674,6 +3674,7 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
 .resolution-badge[data-resolution="NotInDatabase"] { border-color: color-mix(in srgb, var(--knx-warning-color) 60%, transparent); background: color-mix(in srgb, var(--knx-warning-color) 14%, transparent); }
 .identity-fields { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 11px 22px; margin: 12px 0 0; }
 .product-database-details { min-width: 0; }
+.product-database-details dd { white-space: pre-wrap; }
 .product-database-details summary { cursor: pointer; overflow-wrap: anywhere; }
 .product-database-details .identity-fields { grid-template-columns: repeat(auto-fill, minmax(min(210px, 100%), 1fr)); }
 .identity-row { display: grid; gap: 1px; align-content: start; min-width: 0; }

@@ -17,7 +17,7 @@ export type DeviceProductCatalog = {
  */
 details?: Array<ProductDetailSection>, manufacturer_id: string,
 /**
- * `manufacturer.name` from the KNX master data (`knx_master.xml`).
+ * Resolved display name: real installed name, otherwise unambiguous retained master evidence.
  */
 manufacturer_name: string | null,
 /**

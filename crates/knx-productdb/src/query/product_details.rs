@@ -34,43 +34,138 @@ fn meaningful_name<'a>(id: &str, name: Option<&'a str>) -> Option<&'a str> {
     })
 }
 
-/// Keep a real installed name. Only missing/ID-shaped names consult retained masters;
-/// conflicting declarations remain unresolved rather than inventing a winner or writing the DB.
+// Optional name discovery is deliberately smaller than ingest. Exhaustion refuses the entire
+// fallback index: a prefix cannot prove uniqueness. No filename or membership filter is sound
+// for older generic ingest, which retained content-classified masters under arbitrary names.
+const MAX_NAME_SOURCES: usize = 4096;
+const MAX_NAME_SOURCE_BYTES: usize = 8 * 1024 * 1024;
+const MAX_NAME_TOTAL_BYTES: usize = 32 * 1024 * 1024;
+const MAX_NAME_XML_EVENTS: usize = 262_144;
+const MAX_NAME_XML_DEPTH: usize = 128;
+const MAX_NAME_XML_ATTRIBUTES: usize = 256;
+
+type RetainedNames = std::collections::BTreeMap<String, Option<String>>;
+
+/// Optional discovery refused; ordinary normalized product facts remain available.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum NameDiscoveryRefusal {
+    SourceCount,
+    SourceBytes,
+    XmlWork,
+    Unreadable,
+}
+
+/// Lazy, complete retained-name index owned by one request/read snapshot only.
+/// Construct a fresh cache for every catalogue read; never share across connections or writes.
+#[derive(Default)]
+pub struct ManufacturerNameCache {
+    retained: Option<Result<RetainedNames, NameDiscoveryRefusal>>,
+}
+
+impl ManufacturerNameCache {
+    pub fn refusal(&self) -> Option<NameDiscoveryRefusal> {
+        self.retained
+            .as_ref()
+            .and_then(|result| result.as_ref().err())
+            .copied()
+    }
+
+    pub fn resolve(
+        &mut self,
+        conn: &Connection,
+        id: &str,
+        installed: Option<&str>,
+    ) -> Option<String> {
+        if let Some(name) = meaningful_name(id, installed) {
+            return Some(name.to_owned());
+        }
+        if !valid_manufacturer_id(id) {
+            return None;
+        }
+        self.retained
+            .get_or_insert_with(|| discover_names(conn))
+            .as_ref()
+            .ok()
+            .and_then(|names| names.get(id))
+            .cloned()
+            .flatten()
+    }
+}
+
+fn valid_manufacturer_id(id: &str) -> bool {
+    id.len() == 6 && id.starts_with("M-") && id.as_bytes()[2..].iter().all(u8::is_ascii_hexdigit)
+}
+
+/// Keep real installed names; bounded, complete retained evidence alone can supply a fallback.
+/// Discovery failures are optional-name refusals, never failures of the product lookup itself.
 pub fn manufacturer_name(
     conn: &Connection,
     id: &str,
     installed: Option<&str>,
 ) -> Result<Option<String>, ProductDbError> {
-    if let Some(name) = meaningful_name(id, installed) {
-        return Ok(Some(name.to_owned()));
-    }
-    if id.len() != 6
-        || !id.starts_with("M-")
-        || !id.as_bytes()[2..].iter().all(u8::is_ascii_hexdigit)
-    {
-        return Ok(None);
-    }
-    let mut stmt = conn.prepare(
-        "SELECT sha256, len, bytes FROM source_file s WHERE length(bytes) <= ?1 AND
-         (EXISTS(SELECT 1 FROM package_member p WHERE p.source_sha256=s.sha256 AND p.role='Master')
-          OR EXISTS(SELECT 1 FROM master_source m WHERE m.source_sha256=s.sha256)
-          OR replace(s.source_path, char(92), '/') LIKE '%knx_master.xml') ORDER BY sha256",
-    )?;
-    let mut names = BTreeSet::new();
-    for source in stmt.query_map([crate::master_provenance::MAX_MASTER_BYTES as i64], |r| {
+    Ok(ManufacturerNameCache::default().resolve(conn, id, installed))
+}
+
+fn discover_names(conn: &Connection) -> Result<RetainedNames, NameDiscoveryRefusal> {
+    discover_names_sql(conn).map_err(|_| NameDiscoveryRefusal::Unreadable)?
+}
+
+fn discover_names_sql(
+    conn: &Connection,
+) -> rusqlite::Result<Result<RetainedNames, NameDiscoveryRefusal>> {
+    // One bounded table pass; no sort, correlated membership scans or payload projection.
+    // SQLite length(BLOB) reads the stored size without materializing the payload. Preflight
+    // every retained source before fetching any bytes, even ones with unhelpful filenames.
+    let mut stmt = conn.prepare("SELECT rowid, len, length(bytes) FROM source_file LIMIT ?1")?;
+    let mut sources = Vec::new();
+    let mut total = 0usize;
+    for row in stmt.query_map([MAX_NAME_SOURCES as i64 + 1], |row| {
         Ok((
-            r.get::<_, String>(0)?,
-            r.get::<_, i64>(1)?,
-            r.get::<_, Vec<u8>>(2)?,
+            row.get::<_, i64>(0)?,
+            row.get::<_, i64>(1)?,
+            row.get::<_, i64>(2)?,
         ))
     })? {
-        let (sha, len, bytes) = source?;
-        // Damaged/foreign XML is not name evidence. This uses the existing validated format,
-        // not a repair parser, and never replays ingest writes.
-        if len != bytes.len() as i64
-            || crate::sha256_hex(&bytes) != sha
-            || crate::xml::validate_complete_document("knx_master.xml", &bytes).is_err()
-        {
+        let (rowid, recorded, size) = row?;
+        let Ok(size) = usize::try_from(size) else {
+            return Ok(Err(NameDiscoveryRefusal::SourceBytes));
+        };
+        if sources.len() == MAX_NAME_SOURCES {
+            return Ok(Err(NameDiscoveryRefusal::SourceCount));
+        }
+        if size > MAX_NAME_SOURCE_BYTES || size > MAX_NAME_TOTAL_BYTES - total {
+            return Ok(Err(NameDiscoveryRefusal::SourceBytes));
+        }
+        total += size;
+        sources.push((rowid, recorded, size));
+    }
+    drop(stmt);
+    let mut names = RetainedNames::new();
+    let mut events_left = MAX_NAME_XML_EVENTS;
+    let mut bytes_stmt = conn.prepare(
+        "SELECT sha256, bytes FROM source_file WHERE rowid=?1 AND length(bytes)=?2 AND length(sha256)=64",
+    )?;
+    for (rowid, recorded, size) in sources {
+        // Invalid recorded length/hash is not valid name evidence. Bound even malformed hashes
+        // in SQL, before Rust copies them, and only fetch byte-admitted sources by rowid.
+        if recorded != size as i64 {
+            continue;
+        }
+        let source = bytes_stmt
+            .query_row((rowid, size as i64), |row| {
+                Ok((row.get::<_, String>(0)?, row.get::<_, Vec<u8>>(1)?))
+            })
+            .optional()?;
+        let Some((sha, bytes)) = source else { continue };
+        if crate::sha256_hex(&bytes) != sha {
+            continue;
+        }
+        // Preflight parser work before complete validation's attribute checks. All events,
+        // depth and attributes are bounded; exceeding any bound invalidates the entire index.
+        if !xml_work_admitted(&bytes, &mut events_left) {
+            return Ok(Err(NameDiscoveryRefusal::XmlWork));
+        }
+        if crate::xml::validate_complete_document("retained-source.xml", &bytes).is_err() {
             continue;
         }
         let mut reader = quick_xml::Reader::from_reader(bytes.as_slice());
@@ -80,30 +175,80 @@ pub fn manufacturer_name(
             let empty = matches!(&event, Ok(quick_xml::events::Event::Empty(_)));
             match event {
                 Ok(quick_xml::events::Event::Start(e) | quick_xml::events::Event::Empty(e)) => {
-                    let name = crate::xml::local_name(&e);
-                    if stack == ["KNX", "MasterData", "Manufacturers"] && name == "Manufacturer" {
-                        let attrs = crate::xml::attrs(&e, "knx_master.xml")?;
-                        if attrs.get("Id") == Some(id) {
+                    let element = crate::xml::local_name(&e);
+                    if stack == ["KNX", "MasterData", "Manufacturers"] && element == "Manufacturer"
+                    {
+                        let attrs = match crate::xml::attrs(&e, "retained-source.xml") {
+                            Ok(attrs) => attrs,
+                            Err(_) => return Ok(Err(NameDiscoveryRefusal::Unreadable)),
+                        };
+                        if let Some(id) = attrs.get("Id").filter(|id| valid_manufacturer_id(id)) {
                             if let Some(name) = meaningful_name(id, attrs.get("Name")) {
-                                names.insert(name.to_owned());
+                                names
+                                    .entry(id.to_owned())
+                                    .and_modify(|old| {
+                                        if old.as_deref() != Some(name) {
+                                            *old = None;
+                                        }
+                                    })
+                                    .or_insert_with(|| Some(name.to_owned()));
                             }
                         }
                     }
                     if !empty {
-                        stack.push(name);
+                        stack.push(element);
                     }
                 }
                 Ok(quick_xml::events::Event::End(_)) => {
                     stack.pop();
                 }
-                Ok(quick_xml::events::Event::Eof) | Err(_) => break,
+                Ok(quick_xml::events::Event::Eof) => break,
+                Err(_) => return Ok(Err(NameDiscoveryRefusal::Unreadable)),
                 _ => {}
             }
         }
     }
-    Ok((names.len() == 1)
-        .then(|| names.into_iter().next())
-        .flatten())
+    Ok(Ok(names))
+}
+
+fn xml_work_admitted(bytes: &[u8], events_left: &mut usize) -> bool {
+    use quick_xml::events::Event;
+    let mut reader = quick_xml::Reader::from_reader(bytes);
+    let mut depth = 0usize;
+    loop {
+        let Some(remaining) = events_left.checked_sub(1) else {
+            return false;
+        };
+        *events_left = remaining;
+        match reader.read_event() {
+            Ok(Event::Start(e)) => {
+                depth += 1;
+                if depth > MAX_NAME_XML_DEPTH
+                    || e.attributes()
+                        .with_checks(false)
+                        .take(MAX_NAME_XML_ATTRIBUTES + 1)
+                        .count()
+                        > MAX_NAME_XML_ATTRIBUTES
+                {
+                    return false;
+                }
+            }
+            Ok(Event::Empty(e)) => {
+                if depth + 1 > MAX_NAME_XML_DEPTH
+                    || e.attributes()
+                        .with_checks(false)
+                        .take(MAX_NAME_XML_ATTRIBUTES + 1)
+                        .count()
+                        > MAX_NAME_XML_ATTRIBUTES
+                {
+                    return false;
+                }
+            }
+            Ok(Event::End(_)) => depth = depth.saturating_sub(1),
+            Ok(Event::Eof) | Err(_) => return true,
+            _ => {}
+        }
+    }
 }
 
 /// All non-NULL scalar columns from the normalized records supporting this exact pair.
@@ -321,7 +466,14 @@ fn append_record(
     sources: &mut BTreeSet<String>,
 ) -> Result<(), ProductDbError> {
     let id_column = if table == "package" { "sha256" } else { "id" };
-    let mut stmt = conn.prepare(&format!("SELECT * FROM {table} WHERE {id_column}=?1"))?;
+    let columns = if table == "package" {
+        "sha256, source_name, scheme, size"
+    } else {
+        "*"
+    };
+    let mut stmt = conn.prepare(&format!(
+        "SELECT {columns} FROM {table} WHERE {id_column}=?1"
+    ))?;
     let keys: Vec<String> = stmt
         .column_names()
         .iter()

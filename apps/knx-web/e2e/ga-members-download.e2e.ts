@@ -296,6 +296,42 @@ for (const language of ["en", "de"] as const) for (const theme of ["porcelain", 
   });
 }
 
+test("#36: a retained pending download status does not own a same-device editor reload", async ({ page }) => {
+  let releaseStatus!: () => void, releaseOldDetail!: () => void;
+  const statusGate = new Promise<void>(done => { releaseStatus = done; });
+  const oldDetailGate = new Promise<void>(done => { releaseOldDetail = done; });
+  const f = await fixture(page, { language: "de", theme: "graphite", width: 1440, statusGate });
+  let detailReads = 0;
+  await page.route("**/api/device/10", async route => {
+    ++detailReads;
+    const reply = { ...detail(10, [{ objectId: 100, gaId: 500, direction: "Send" }]),
+      name: detailReads === 2 ? "Obsolete editor reply" : detailReads > 2 ? "Fresh editor reply" : "Push button" };
+    if (detailReads === 2) await oldDetailGate;
+    return route.fulfill({ contentType: "application/json", body: JSON.stringify(reply) });
+  });
+  try {
+    await openDeviceEditor(page, de, "Push button");
+    await page.locator(".device-workspace").getByRole("button", { name: de["devices.downloadToDevice"], exact: true }).click();
+    await expect(page.locator('[data-handoff="pending"]')).toBeVisible();
+    const navigation = page.getByRole("navigation", { name: de["workbench.navigation"], exact: true });
+    await navigation.getByRole("button", { name: de["workbench.overview"], exact: true }).click();
+    await navigation.getByRole("button", { name: de["workbench.devices"], exact: true }).click();
+    await page.locator(".devices-workspace").getByRole("button", { name: "Push button", exact: true }).click();
+    await expect(page.locator(".device-editor-view")).toContainText(de["devices.loadingEditor"]);
+    // Replace a pending load with another activation of the SAME device.
+    await navigation.getByRole("button", { name: de["workbench.devices"], exact: true }).click();
+    await page.locator(".devices-workspace").getByRole("button", { name: "Push button", exact: true }).click();
+    await expect(page.locator(".device-workspace h2")).toHaveText("Fresh editor reply");
+    const obsolete = page.waitForResponse(response => new URL(response.url()).pathname === "/api/device/10");
+    releaseOldDetail();
+    await (await obsolete).finished();
+    releaseStatus();
+    await expect(page.locator(".device-workspace h2")).toHaveText("Fresh editor reply");
+    expect(detailReads).toBe(3);
+    expect(f.writes).toEqual([]); expect(f.unexpected).toEqual([]);
+  } finally { releaseStatus(); releaseOldDetail(); }
+});
+
 test("one found gateway is filled in; a repeated click selects the device again", async ({ page }) => {
   const f = await fixture(page, { language: "en", theme: "porcelain", width: 1440, gateways: [gateway("198.51.100.10:3671", "Line coupler", "1.1.250")] });
   await openDeviceEditor(page, en, "Push button");

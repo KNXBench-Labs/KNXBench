@@ -116,6 +116,11 @@ against the runtime-tested revision. It does not claim a new runtime binary buil
   passed 51/51 and diff-check passed, with nonempty inventory, frozen source/HEAD,
   unchanged bundle/corpus inputs and checked real user data. These form the
   explicit additive acceptance above; the failed original remains failed.
+- The first result-only documentation gate stopped after format because a
+  `PUBLISHED` track must leave the current snapshot. Only the completed owned
+  runtime entry was removed, matching the maintained compactor; this record keeps
+  acceptance, while parent root coordination owns final verification/retention.
+  The separate documentation-gate retry changes no runtime inputs.
 - Earlier focused preparation retains its formatting-only refusal and a private
   capture-validator failure after the successful wire witness. The real producer
   emits two files containing three response objects each, not three files.

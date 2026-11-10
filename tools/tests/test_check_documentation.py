@@ -5,6 +5,7 @@ from pathlib import Path
 import sys
 import tempfile
 import unittest
+from unittest.mock import patch
 
 # The checker imports sibling tool modules lazily; make that work when run alone.
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -118,8 +119,10 @@ class DocumentationTests(unittest.TestCase):
             _, errors = checker.check_only(root, [Path("absent.md"), Path("../outside.md")])
             self.assertEqual(errors, ["absent.md: not a file inside the checkout",
                                       "../outside.md: not a file inside the checkout"])
-            (root / "board.json").write_text('{"path": "%s/notes"}\n' % Path.home())
-            _, errors = checker.check_only(root, [Path("board.json")])
+            # Pin one home-directory finding independently of the caller's scratch-home layout.
+            with patch.object(Path, "home", return_value=Path("/home/alice")):
+                (root / "board.json").write_text('{"path": "%s/notes"}\n' % Path.home())
+                _, errors = checker.check_only(root, [Path("board.json")])
             self.assertEqual(len(errors), 1)
             self.assertTrue(errors[0].startswith("local machine detail: board.json:1"))
 

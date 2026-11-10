@@ -12,6 +12,20 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Device-scoped readiness and parameter reply ordering (10 November 2026; issues #36/#37)
+
+The Download panel requests offline readiness only for its selected device,
+not an automatic full-project sweep on mount or each edit. The optional HTTP
+`deviceId` selector preserves the complete project context and existing grading,
+exclusion, evidence and plan-validation policy; calls without a selector retain
+the full report. Source `bf85a5b69` follows the stale parameter-reply correction
+`1bb99ac26`, which prevents older responses from replacing a newer accepted panel
+without losing committed App/Undo notification. See the
+[delivery and acceptance record](status/2026-11-10-device-scoped-readiness.md#source-delivery-and-acceptance)
+and [reply lifecycle record](status/2026-11-10-issues36-37-editor.md).
+The original permanent-hang reports remain open for reporter confirmation;
+no hardware, release or deployment claim follows.
+
 ## Assigned invisible parameters (9 November 2026; issue #10 follow-up)
 
 Under `DownloadInvisibleParameters="Background"` an invisible memory parameter

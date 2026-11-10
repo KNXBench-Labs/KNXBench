@@ -1,4 +1,4 @@
-# 2026-11-10 — Device-scoped offline download readiness candidate
+# 2026-11-10 — Device-scoped offline download readiness
 
 ## Bounded correction
 
@@ -70,7 +70,39 @@ Package-batch regression verification, not an original-source RED claim:
   unexpected-request list. Browser execution used isolated loopback networking
   with intercepted APIs; no real server, catalogue, project or bus was accessed.
 
-This is a focused tested source candidate. No broad package gate, independent
-review, publication, deployment, hardware acceptance or full issue closure is
-claimed. The all-device endpoint remains deliberately available and unchanged
-in scope; one selected device can still require expensive preparation.
+The preceding totals describe focused candidate verification, before independent
+review and the complete package gate.
+
+## Source delivery and acceptance
+
+Source `bf85a5b69` is published on `main`, following the separately delivered
+parameter-reply correction `1bb99ac26`. The parent read back the exact remote
+revision and the application, server, Download panel and API-helper GitHub blobs.
+No release or deployment was made.
+
+Independent **source-only** review approved all 15 changed paths without
+findings; 78 material source/test/configuration bindings remained unchanged.
+The reviewer did not execute tests or mutants, and its verdict is not presented
+as runtime acceptance.
+
+The maintained change-scoped package gate on the frozen source passed all
+**15 selected stages**, including production Web build and typechecks, the
+selected browser configurations, clean desktop build, Clippy, Rust tests and
+selected private corpus. The nested Web gate passed **46 stages**, including
+**5,501 unit cases** and the selected default browser lane plus communication,
+download-support, devices and table-columns production configurations. These
+browser configurations overlap and are not a count of unique scenarios.
+
+Rust result blocks, including doctests: **3,672 passed, 0 failed, 144 ignored**.
+The separately selected corpus passed **91/91** in five targets. Every selected
+stage exited zero with a valid native proof; the ordered stage list matched the
+plan, input fingerprints matched, and both user-data touched and unchecked lists
+were empty. This is change-scoped acceptance, not a claim that every workspace
+or hardware test ran. Primary receipts are `scoped-readiness/package-gate-01/`
+beneath `<profile>/evidence/2026-11-10-issues36-37-editor/`.
+
+The all-device endpoint remains deliberately available and unchanged in scope;
+one selected device can still require expensive preparation. The original
+permanent loading/saving symptoms, exact reported GVS configuration and browser
+release behavior still require reporter confirmation. Issues #36 and #37 remain
+open for that confirmation; no further device programming is requested.

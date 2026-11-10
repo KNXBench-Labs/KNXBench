@@ -54,7 +54,7 @@ selected acceptance plan is closed by source-bound composition. Programming,
 downloads, serial, discovery/routing, hardware interoperability and wider WP-29
 remain outside it. [Acceptance and limitations](../status/2026-11-10-server-web-tcp-scans.md).
 
-## CLI find-serial successor (10 November 2026; integrated gate pending)
+## CLI find-serial successor (10 November 2026; software-accepted on main)
 
 Both existing read-only `knx device find-serial` query forms now admit explicit
 `--tunnel-transport udp|tcp`: serial-to-address broadcast lookup and
@@ -67,8 +67,9 @@ cleanup policies remain unchanged.
 Both independent source-review axes passed. The only optional finding, a bounded
 initial accept in the rejected-handshake test, was adopted and independently
 closed without production or assertion changes. Historical focused evidence is
-source-bound composition, not a new full run. Integrated package acceptance and
-publication remain pending in the [dedicated record](../status/2026-11-10-cli-tcp-find-serial.md).
+source-bound composition, not a new full run. All 13 selected maintained integrated
+package stages passed on `5b20e14a1` and runtime publication was read back
+([dedicated record](../status/2026-11-10-cli-tcp-find-serial.md)).
 This is a narrow exception to the earlier device-workflow exclusion, not device
 programming/address assignment, KNX IP Secure, hardware interoperability or
 closure of wider WP-29.

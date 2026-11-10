@@ -2,6 +2,16 @@
 
 # Implementation status
 
+## Background activities (source only, after Alpha 20)
+
+An expandable footer observes actual App-owned project loading/saving, device
+editor reads, read-only comparison and retained catalogue jobs. Its summary
+waits two seconds; visible success clears after three seconds, errors require
+acknowledgement. Existing bus status and result panels remain. Ordinary device
+downloads and other panel-owned jobs are not migrated. Focused regression and
+real-App browser verification cover both languages and narrow/wide layouts.
+[Scope and remaining work](../status/2026-11-10-background-activity-footer.md).
+
 <a id="serverweb-tcp-scan-candidate-after-alpha-20"></a>
 
 ## Server/Web TCP scans (main-only, after Alpha 20)

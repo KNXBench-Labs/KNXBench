@@ -89,6 +89,37 @@ Two things appear in this bar only when they have something to say:
   found something worth telling you about. Clicking it goes to the Overview, where the
   counts are broken down. [Projects](02-projects.md) explains what those numbers mean.
 
+## Background activities (source only, after Alpha 20)
+
+The **Activities** button in the footer opens concurrent work and recent session
+results. Local loading feedback starts immediately; a global status summary
+appears only after two seconds, so quick work does not flash. A visible ordinary
+success clears from the summary after three seconds. The list keeps the latest
+20 settled activities; unread errors remain until you choose **Acknowledge
+error**. Closing the list does not acknowledge an error or stop a job.
+Rows retain their original project and device names/addresses when available,
+so changing projects does not relabel older work. For large comparisons the
+summary shows one device plus a remaining-device count; the bounded, scrollable
+list keeps the full context. A discarded result is not a
+successful save or proof of rollback. A save accepted with remaining unsaved
+changes says so explicitly and cannot authorize Save-and-quit.
+
+You can focus Activities and press `Enter` or `Space` to expand it. `Escape`
+inside the list closes it and returns focus to the button. Acknowledging an
+error also returns focus there, even when its old row leaves the recent list.
+Catalogue **Show
+details** returns to its existing consent/result owner, not a new job. Consent,
+password and overwrite decisions have static text. Motion Off and your system
+reduced-motion setting keep working text static and readable. Bus connection
+status remains alongside the hub, immediately before the version.
+
+This source implementation covers App-owned opening/importing, saving/autosaving, current
+project and device-editor reads, read-only device comparisons and retained
+catalogue package jobs. It does not migrate ordinary download-panel polling or
+other panel-owned operations, add arbitrary cancellation, or promise resumption
+after app exit/reload. Existing project-change and quit safety guards still
+apply. Alpha 20 screenshots do not show this later source feature. [Precise scope and exclusions](../../status/2026-11-10-background-activity-footer.md).
+
 ## Active task status text (14 October 2026 source, main-only)
 
 While work is actually running, its status text has a quiet glint that moves

@@ -25,8 +25,9 @@ export function CatalogueJobsProvider({children, controller: supplied}: {childre
  return <Context.Provider value={controller}>{children}</Context.Provider>;
 }
 /** Always mounted in App, outside the conditional catalogue/wizard. No fetch on mount. */
-export function CatalogueJobsRootNotice() {
+export function CatalogueJobsRootNotice({ openRequest = 0 }: { openRequest?: number }) {
  const {state} = useCatalogueJobs(); const t = useTranslate(); const [open,setOpen] = useState(false);
+ useEffect(() => { if (openRequest > 0) setOpen(true); }, [openRequest]);
  const active = state.selecting || state.status?.state === "running" || state.uncertain;
  useEffect(() => {
   if (!active) return;

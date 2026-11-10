@@ -26,6 +26,16 @@ and [reply lifecycle record](status/2026-11-10-issues36-37-editor.md).
 The original permanent-hang reports remain open for reporter confirmation;
 no hardware, release or deployment claim follows.
 
+## Server/Web TCP line scans (10 November 2026; candidate, not accepted)
+
+A bounded source candidate carries explicit recorded TCP through the existing
+scanner to the Web selector, with strict session/incarnation effects, required
+runtime provenance and live/pre-disconnect skip disclosure. UDP remains the
+default. Pending-connect/cancel/cleanup ownership and terminal-after-disconnect
+ordering are part of this package. Independent review and integrated acceptance
+are pending; no passed counts, release or hardware result are claimed.
+[Candidate contract and verification boundary](status/2026-11-10-server-web-tcp-scans.md).
+
 ## Assigned invisible parameters (9 November 2026; issue #10 follow-up)
 
 Under `DownloadInvisibleParameters="Background"` an invisible memory parameter

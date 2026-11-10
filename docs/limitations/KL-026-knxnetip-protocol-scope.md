@@ -72,6 +72,18 @@ specified timers from local budgets, no-ACK TCP sending from actual device
 delivery, and frame draining from loss accounting. [WP-29](../open-work/WP-29-knxnet-ip-tcp-tunnelling.md)
 remains open beyond the bounded monitor/group-traffic slice.
 
+## 10 November 2026 — server/Web scan candidate (pending acceptance)
+
+A separately bounded source candidate adds recorded TCP to server/Web line scans,
+strict session/incarnation effects, actual transport and live/pre-disconnect skip
+counts. UDP remains the scan-local default; no monitor preference is reused.
+Probe errors and disconnect uncertainty are independent. Terminal publication
+waits for consuming cleanup; tab navigation does not cancel a server-owned scan.
+No skipped body export, fallback/reconnect, programming/download, discovery,
+routing, serial, KNX IP Secure or hardware support is added. Independent review
+and integrated package acceptance remain pending.
+[Candidate and remaining acceptance](../status/2026-11-10-server-web-tcp-scans.md).
+
 ## 10 November 2026 — CLI scan source successor
 
 The source now permits explicit UDP/TCP on CLI `bus scan` for a single device
@@ -83,5 +95,7 @@ project comparison and diagnostic recording remain unchanged. Loopback tests
 cover the actual CLI caller, refusal/closure, skipped-frame disclosure and
 observed cleanup. Independent review and all selected integrated package stages
 passed on `ac9b23814` ([acceptance](../status/2026-11-10-cli-tcp-scans.md));
-no release or real-gateway claim. Server/Web scans, programming and other device workflows remain UDP-only;
-serial, discovery/routing and KNX IP Secure scope is unchanged.
+no release or real-gateway claim. That accepted CLI baseline left Server/Web
+scans on UDP; the separately scoped Server/Web candidate remains pending
+acceptance. Programming, other device workflows, serial, discovery/routing
+and KNX IP Secure scope is unchanged.

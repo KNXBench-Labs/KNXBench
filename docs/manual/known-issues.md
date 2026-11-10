@@ -8,6 +8,19 @@ Historical titles do not mean that their old defect is still present. The
 [source/test audit](../status/2026-10-08-known-issues-status-audit.md) records
 the reconciliation; formal task dispositions remain in the engineering ledger.
 
+## Server/Web TCP scans (source candidate, pending acceptance)
+
+The 10 November candidate separately enables explicit TCP line scans; UDP stays
+the scan-local default. Strict routes refuse old servers without UDP retry.
+Required session/process provenance protects cancellation and reconciliation;
+malformed metadata blocks actions. Running includes cleanup, whose uncertainty
+is reported separately from scan evidence. Nonzero decoder skips are warnings,
+not lost telegrams; terminal counts exclude disconnect traffic. A lost Start
+reply is not authority to reconnect. Hardware support, programming/downloads,
+serial and discovery/routing are not widened. Independent review and integrated
+acceptance are pending, not implied by authored tests.
+[Candidate scope](../status/2026-11-10-server-web-tcp-scans.md).
+
 <a id="optional-tcp-monitorgroup-traffic-candidate-8-november-2026"></a>
 
 ## Optional TCP tunnelling (since Alpha 20)

@@ -61,6 +61,47 @@ fn tcp_fake() -> Arc<FakeConnector> {
 const GATEWAY: &str = "192.0.2.10:3671";
 
 #[tokio::test]
+async fn scan_admission_closed_between_reservation_and_owned_task_opens_nothing() {
+    for transport in [TunnelTransport::Udp, TunnelTransport::Tcp] {
+        let connector = tcp_fake();
+        let state = state_with(connector.clone());
+        let body = super::ScanRequest {
+            gateway: Some(GATEWAY.into()),
+            area: 1,
+            line: 1,
+            first_device: 5,
+            last_device: 7,
+            excluded: vec![],
+            response_timeout_ms: 10,
+            inter_probe_pause_ms: 0,
+        };
+        let mut start = Box::pin(super::start_scan_owned(
+            state.clone(),
+            body,
+            GATEWAY.parse().unwrap(),
+            transport,
+        ));
+        std::future::poll_fn(|cx| {
+            assert!(start.as_mut().poll(cx).is_pending());
+            std::task::Poll::Ready(())
+        })
+        .await;
+        // Single-thread runtime: the owned task exists, but has not executed yet.
+        state.stop_admission.close();
+        let error = start
+            .await
+            .err()
+            .expect("closed admission refuses before connecting");
+        assert_eq!(
+            error.into_response().status(),
+            StatusCode::SERVICE_UNAVAILABLE
+        );
+        assert_eq!(connector.call_count() + connector.tcp_call_count(), 0);
+        assert!(state.line_scan_session.try_lock().unwrap().is_none());
+    }
+}
+
+#[tokio::test]
 async fn admission_closed_after_the_handler_but_before_the_task_runs_opens_nothing() {
     let connector = tcp_fake();
     let state = state_with(connector.clone());

@@ -574,8 +574,9 @@ For `bus monitor` and `bus write`, `--tunnel-transport tcp` explicitly selects
 plain TCP; `udp` is the default. It never falls back to UDP after a refusal.
 The flag is invalid with `--serial` and is not a transport selector for device
 programming, server/Web scans, discovery or routing. A separate 10 November
-source successor adds the same explicit flag to CLI `bus scan` (below), pending
-integrated acceptance; it is not part of the released Alpha 20 slice.
+source successor adds the same explicit flag to CLI `bus scan` (below), accepted
+on main `ac9b23814`; it is not part of the released Alpha 20 slice.
+[Acceptance and limits](../../status/2026-11-10-cli-tcp-scans.md).
 
 ```bash
 knx bus monitor --gateway 192.0.2.1:3671 --tunnel-transport tcp
@@ -695,7 +696,7 @@ determine occupancy; timeout, exclusions and project comparison are unchanged.
 | Flag | Effect |
 | --- | --- |
 | `--gateway <host:port>` | The unicast IPv4 interface and nonzero port to connect through |
-| `--tunnel-transport <udp|tcp>` | UDP by default; explicit TCP never falls back to UDP (10 November source successor, integrated acceptance pending) |
+| `--tunnel-transport <udp|tcp>` | UDP by default; explicit TCP never falls back to UDP (10 November source successor, software-accepted on main `ac9b23814`) |
 | `--line <area.line>` | Which line to scan. Give either this or `--device`, never both |
 | `--device <area.line.device>` | Probe exactly this one device. Device `0` is refused — it is the line coupler's own address |
 | `--range <first>-<last>` | Two full addresses on the `--line` given; the first may not be device `0` |

@@ -124,7 +124,8 @@ verified. There is no automatic reconnect. The screenshot above shows both trans
 fields with UDP selected.
 
 The 10 November source successor separately adds explicit UDP/TCP to CLI
-`knx bus scan` only (single device and line/range), pending integrated acceptance.
+`knx bus scan` only (single device and line/range), software-accepted on main
+`ac9b23814` ([acceptance and limits](../../status/2026-11-10-cli-tcp-scans.md)).
 It does not change this monitor preference or server/Web line scans.
 
 ## What the monitor shows

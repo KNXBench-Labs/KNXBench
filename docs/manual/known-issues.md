@@ -27,7 +27,7 @@ established S2-04 fix. It was tested against local test peers only; no real-gate
 interoperability is verified.
 [Open work](../open-work/WP-29-knxnet-ip-tcp-tunnelling.md).
 
-**10 November source update (integrated acceptance pending):** CLI `bus scan`
+**10 November source update (software-accepted on main `ac9b23814`):** CLI `bus scan`
 now accepts explicit UDP/TCP for a single device or line/range, with UDP the
 default, no fallback and unchanged device-evidence rules. This supersedes the
 CLI-scan exclusion above only; server/Web scans, other device workflows,

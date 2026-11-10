@@ -12,6 +12,28 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Assigned invisible parameters (9 November 2026; issue #10 follow-up)
+
+Under `DownloadInvisibleParameters="Background"` an invisible memory parameter
+that an active `Assign` sets is written with the assigned value, as ETS runs
+the assignment
+([ADR-0171](adr/0171-assigned-invisible-parameters.md)). Where that value could
+contradict the evaluation (a `choose` controller or chained source holding
+another value, a differing visible sibling, an unreadable or disagreeing
+`Assign`) the image is refused. Three recorded ETS 6.4 images now equal
+KNXBench's parameter segments octet for octet. Untested on hardware.
+
+## Every matching `when` (9 November 2026; issue #10 follow-up)
+
+A `choose` whose sibling `when` tests overlap now activates every matching
+branch, not the first; `@default` stays the fallback
+([ADR-0170](adr/0170-every-matching-when-is-active.md),
+[research](research/2026-11-09-overlapping-when-tests.md)). ETS 6.4 showed both
+blocks of a push-button and of a glass push-button, with their objects, and
+wrote their values; both images now equal ETS's parameter segments, except
+three octets of the glass push-button that an `Assign` sets (closed by ADR-0171, above). Tester
+project 7 unsupported / 68 untested. Untested on hardware.
+
 ## Float parameters (9 November 2026; issue #10 follow-up)
 
 Two more devices of the tester project plan

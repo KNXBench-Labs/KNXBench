@@ -24,15 +24,17 @@
 //! path is exercised only by hand-built unit tests today, not by
 //! anything in `OriginalData/`.
 //!
-//! Nothing here has been validated against ETS. The no-match policy (D8)
-//! and the `@default`-is-fallback reading (below) are inferences from
-//! corpus consistency, not documented rules — see RESEARCH.md §4.3's
-//! `[D]`/`[V]`/`[A]` markers, preserved here in the same spirit.
+//! The no-match policy (D8) and the `@default`-is-fallback reading (below)
+//! are inferences from corpus consistency, not documented rules — see
+//! RESEARCH.md §4.3's `[D]`/`[V]`/`[A]` markers, preserved here in the same
+//! spirit. Later rules observed in ETS 6.4 name their ADR (e.g. ADR-0160,
+//! ADR-0168, ADR-0170: every matching `when` is active).
 
 use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 
 mod assign;
+pub(crate) use assign::same_value;
 pub use assign::{AssignSource, Assignment};
 #[cfg(test)]
 mod rename_tests;
@@ -1379,6 +1381,17 @@ impl ModuleScope {
     }
 }
 
+/// One `Assign` that counts (ADR-0171), with the module scope it ran in.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ActiveAssign {
+    pub scope: Option<Rc<ModuleScope>>,
+    /// `None`: the stored declaration could not be read.
+    pub assignment: Option<Assignment>,
+    /// The target controls a `choose` the evaluation consulted: it selected
+    /// that `choose`'s branches with the stored value, not the assigned one.
+    pub target_controls_choose: bool,
+}
+
 /// One activated `ParameterRefRef`/`ComObjectRefRef` id, qualified by
 /// where it was found (design D14).
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -1539,6 +1552,10 @@ pub struct Activation {
     /// The one active replacement caption per renamed block, in document order. The block's
     /// own [`ActiveLabel`] keeps the base caption; the consumer chooses which to show.
     pub renames: Vec<ActiveRename>,
+    /// ADR-0171: the `Assign` elements the final pass reached in an active
+    /// branch, in document order. A controller marked inactive (ADR-0168)
+    /// activates nothing, so nothing below it is listed.
+    pub assigned: Vec<ActiveAssign>,
     pub diagnostics: Vec<ScopedDiagnostic>,
     /// Supported rename leaves reached this pass, before target resolution. Internal.
     rename_candidates: Vec<ActiveRename>,
@@ -1825,8 +1842,9 @@ pub fn evaluate(trees: &ProgramTrees, values: &ValueMap) -> Activation {
         let consulted = std::mem::take(&mut activation.consulted_controllers);
         let assignments = std::mem::take(&mut activation.assignments);
         let mut candidates: Vec<ScopeKey> = consulted
-            .into_iter()
-            .filter(|key| placed.contains(key.1.as_str()) && !active.contains(key))
+            .iter()
+            .filter(|&key| placed.contains(key.1.as_str()) && !active.contains(key))
+            .cloned()
             .collect();
         candidates.sort();
         // Inactivity is known only from a pass that walked everything with
@@ -1856,6 +1874,17 @@ pub fn evaluate(trees: &ProgramTrees, values: &ValueMap) -> Activation {
             // budget diagnostics.
             // Renames settle on this pass's own work budget, before its state is reset.
             resolve_renames(&trees.program, &mut activation);
+            activation.assigned = assignments
+                .into_iter()
+                .map(|active| ActiveAssign {
+                    target_controls_choose: active.assignment.as_ref().is_some_and(|a| {
+                        let key = (scope_key_chain(active.scope.as_ref()), a.target.clone());
+                        consulted.contains(&key)
+                    }),
+                    scope: active.scope,
+                    assignment: active.assignment,
+                })
+                .collect();
             activation.inactive_controllers = HashSet::new();
             activation.work_units_used = 0;
             activation.work_budget_exhausted = false;
@@ -3148,12 +3177,11 @@ fn evaluate_comparable_choose(
         return;
     };
 
-    // First (and only) matching test wins; `@default="true"` covers the
-    // rest. [A] This is an inference from 22630 consistent corpus
-    // observations (RESEARCH.md §4.3), not a stated rule: `@default` never
-    // co-occurs with `@test`, no `choose` has more than one default `when`,
-    // and no `choose` has two `when` children with an identical `@test`.
-    let mut selected: Option<i64> = None;
+    // Every matching test's branch is active, in document order;
+    // `@default="true"` covers a value no test matches. `[V]` ETS 6.4 showed
+    // the objects of both sibling `when`s whose tests overlap
+    // (docs/research/2026-11-09-overlapping-when-tests.md, ADR-0170).
+    let mut selected: Vec<i64> = Vec::new();
     let mut default_child: Option<i64> = None;
     for &child_id in tree.children_of(Some(node.node_id)) {
         if !activation.admit_work(scope, child_id, 1) {
@@ -3196,10 +3224,7 @@ fn evaluate_comparable_choose(
             return;
         }
         match Test::parse(raw_test) {
-            Ok(test) if test.matches(observed) => {
-                selected = Some(child_id);
-                break;
-            }
+            Ok(test) if test.matches(observed) => selected.push(child_id),
             Ok(_) => {}
             Err(UnparsableTest) => activation.diagnose(
                 scope,
@@ -3214,8 +3239,22 @@ fn evaluate_comparable_choose(
     if activation.work_budget_exhausted {
         return;
     }
-    match selected.or(default_child) {
-        Some(child) => walk(
+    if selected.is_empty() {
+        selected.extend(default_child);
+    }
+    if selected.is_empty() {
+        activation.diagnose(
+            scope,
+            Diagnostic::NoBranchMatched {
+                choose_node: node.node_id,
+                param_ref: node.ref_id.clone(),
+                observed_value: observed.to_string(),
+            },
+        );
+        return;
+    }
+    for child in selected {
+        walk(
             trees,
             tree,
             child,
@@ -3226,14 +3265,6 @@ fn evaluate_comparable_choose(
             expansions_used,
             scope,
             path,
-        ),
-        None => activation.diagnose(
-            scope,
-            Diagnostic::NoBranchMatched {
-                choose_node: node.node_id,
-                param_ref: node.ref_id.clone(),
-                observed_value: observed.to_string(),
-            },
-        ),
+        );
     }
 }

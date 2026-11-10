@@ -829,6 +829,93 @@ fn a_default_when_covers_what_no_test_matches() {
     assert!(activation.diagnostics.is_empty());
 }
 
+/// ADR-0170: every `when` whose test matches is active, in document order,
+/// not only the first; `@default` stays the fallback for a value none
+/// matches. `[V]` ETS 6.4 showed both blocks of an MDT push-button whose
+/// `choose` has `when test="2 3"` and `when test="2"`, and their objects.
+#[test]
+fn every_matching_when_is_active_and_default_only_covers_no_match() {
+    let base = || {
+        vec![
+            DynamicNode {
+                control_kind: Some(ControlKind::Comparable),
+                ref_id: Some("P".into()),
+                ..nd(0, None, "choose")
+            },
+            DynamicNode {
+                test: Some("2 3".to_string()),
+                ..nd(1, Some(0), "when")
+            },
+            DynamicNode {
+                ref_id: Some("FIRST".into()),
+                ..nd(2, Some(1), "ParameterRefRef")
+            },
+            DynamicNode {
+                test: Some("2".to_string()),
+                ..nd(3, Some(0), "when")
+            },
+            DynamicNode {
+                ref_id: Some("SECOND".into()),
+                ..nd(4, Some(3), "ParameterRefRef")
+            },
+            DynamicNode {
+                ref_id: Some("O-SECOND".into()),
+                ..nd(5, Some(3), "ComObjectRefRef")
+            },
+            DynamicNode {
+                is_default: true,
+                ..nd(6, Some(0), "when")
+            },
+            DynamicNode {
+                ref_id: Some("FALLBACK".into()),
+                ..nd(7, Some(6), "ParameterRefRef")
+            },
+        ]
+    };
+    let tree = || DynamicTree::from_nodes(base());
+    let refs = |value: &str| {
+        let activation = evaluate(
+            &ProgramTrees::single(tree()),
+            &values(&[("P", value)]).into(),
+        );
+        assert!(
+            activation.diagnostics.is_empty(),
+            "{value}: {:?}",
+            activation.diagnostics
+        );
+        let objects: Vec<String> = activation
+            .com_object_refs
+            .iter()
+            .map(|r| r.ref_id.clone())
+            .collect();
+        (activation.parameter_refs, objects)
+    };
+    assert_eq!(
+        refs("2"),
+        (
+            vec![active("FIRST"), active("SECOND")],
+            vec!["O-SECOND".to_string()]
+        )
+    );
+    assert_eq!(refs("3"), (vec![active("FIRST")], vec![]));
+    assert_eq!(refs("9"), (vec![active("FALLBACK")], vec![]));
+
+    // A ref both matching branches name is activated once, at its first place.
+    let mut nodes = base();
+    nodes.push(DynamicNode {
+        ref_id: Some("FIRST".into()),
+        ..nd(8, Some(3), "ParameterRefRef")
+    });
+    let shared = evaluate(
+        &ProgramTrees::single(DynamicTree::from_nodes(nodes)),
+        &values(&[("P", "2")]).into(),
+    );
+    assert_eq!(
+        shared.parameter_refs,
+        vec![active("FIRST"), active("SECOND")]
+    );
+}
+
 /// The shape of a push-button program: a function picks which of two
 /// controllers is shown; each controller's own `choose` sets one union
 /// member. Only the shown controller's `choose` counts, also through a

@@ -1,5 +1,5 @@
 /** Panel rendering and editing a device's application-program parameters, fetched per selection. */
-import { Fragment, useCallback, useEffect, useRef, useState, type ReactElement } from "react";
+import { Fragment, useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactElement } from "react";
 import * as api from "./api";
 import type {
   ModuleScope,
@@ -134,6 +134,16 @@ function ParameterFieldRow(props: {
   const [checkedOpen, setCheckedOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const savingRef = useRef(false);
+  // A row's async result belongs to this mounted device/language/field owner,
+  // not a later editor that happens to show the same parameter ID.
+  const ownerRef = useRef<object | null>(null);
+  useEffect(() => {
+    const owner = {};
+    ownerRef.current = owner;
+    savingRef.current = false;
+    setSaving(false);
+    return () => { if (ownerRef.current === owner) ownerRef.current = null; };
+  }, [deviceId, language, field.etsId]);
   const [error, setError] = useState<string | null>(null);
   // Goal B1 (revision-bound-writes): a refused stale write keeps the draft
   // across the reload; `at` is the binding it was refused under, so the
@@ -161,7 +171,9 @@ function ParameterFieldRow(props: {
   }
 
   async function apply(explicit = false, nextValue = value) {
-    if (savingRef.current) return;
+    const owner = ownerRef.current;
+    if (savingRef.current || owner === null) return;
+    const isCurrent = () => ownerRef.current === owner;
     if (restricted || binding === null || field.writeEtsId === null) return;
     // After a conflict only the explicit button may send again.
     if (conflictRef.current && !explicit) return;
@@ -184,22 +196,26 @@ function ParameterFieldRow(props: {
       // Object editors suppress publication after unmount and admit one mutation
       // at a time; standalone Parameters rows use the context's direct fallback.
       if (tree && written) {
-        clearConflict();
-        onUpdated(written);
+        if (isCurrent()) { clearConflict(); onUpdated(written); }
+        // A committed command belongs to App even after this row retires.
+        // Its revision/lifetime guard decides whether the tree is still current.
         onValueApplied(tree);
       }
     } catch (e) {
+      if (!isCurrent()) return;
       if (isRevisionConflict(e, "parameterWriteConflict")) {
         conflictRef.current = true;
         setConflict({ at: snapshotKey(binding) });
         setError(t("parameters.conflict"));
-        onConflict().catch((reason) => setError(t("parameters.conflictReloadFailed", { message: api.errorMessage(reason) })));
+        onConflict().catch((reason) => {
+          if (isCurrent()) setError(t("parameters.conflictReloadFailed", { message: api.errorMessage(reason) }));
+        });
         return;
       }
       setError(api.errorMessage(e));
       setValue(current);
     } finally {
-      savingRef.current = false; setSaving(false);
+      if (isCurrent()) { savingRef.current = false; setSaving(false); }
     }
   }
 
@@ -295,8 +311,8 @@ function ParameterFieldRow(props: {
         </span>
       )}
       {!restricted && binding === null && <span className="parameter-field-caption">{t("parameters.noContextCaption")}</span>}
-      {/* #35: a saved project stores every edit before it is shown, which can
-          take a moment; the locked control says why instead of looking dead. */}
+      {/* The field waits for its HTTP command result, not journal completion.
+          Background persistence has its own project-level status. */}
       {saving && <span className="parameter-field-caption parameter-field-saving" role="status">{t("parameters.savingCaption")}</span>}
       {error && <span className="field-error" role={conflict ? "alert" : undefined}>{error}</span>}
     </label>
@@ -533,70 +549,95 @@ type ParameterPanelProps = {
   snapshot?: SnapshotContext | null;
 };
 
+/** A late panel may not roll back a newer snapshot or cross project lifetimes. */
+function acceptsParameterSnapshot(next: SnapshotContext | null, current: SnapshotContext | null): boolean {
+  if (next === null || current === null) return true;
+  return next.serverIncarnation === current.serverIncarnation
+    && next.projectIncarnation === current.projectIncarnation
+    && next.snapshotRevision >= current.snapshotRevision;
+}
+
 /** One read model shared by the editor and both inspection-only tabs. */
 export function useDeviceParameters(deviceId: number, refreshKey?: ProjectTree) {
   const [language] = useProductLanguage();
-  // The panel together with the snapshot it was read under (Goal B1): a
-  // write binds to the state that rendered the field, never to a later tree.
   const [shown, setShown] = useState<{ panel: ParameterPanelDto; snapshot: SnapshotContext | null } | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
-  // Guards against a slower, earlier device's response landing after a
-  // faster, later one's — same stale-reply hazard `CatalogBrowser.tsx`'s
-  // `requestIdRef` guards for its own server round trips. A language
-  // change re-fetches through this same effect and races the same way a
-  // device change always has, so it needs no guard of its own.
   const requestIdRef = useRef(0);
-  // Only another device or product language blanks the panel. A new revision
-  // (Save, Apply, Undo) keeps the current rows mounted until the new answer
-  // lands, so an open editor and its draft survive it.
+  const ownerRef = useRef<object | null>(null);
+  const desiredSnapshot = refreshKey ? snapshotContextFromTree(refreshKey) : null;
+  const targetKey = JSON.stringify([deviceId, language, desiredSnapshot?.serverIncarnation, desiredSnapshot?.projectIncarnation]);
+  const targetRef = useRef(targetKey);
+  const selectionRef = useRef({ deviceId, language });
+  const floorRef = useRef<{ target: string; snapshot: SnapshotContext | null }>({ target: targetKey, snapshot: desiredSnapshot });
+  // Only committed renders change request authority. A suspended speculative
+  // selection must not retire the still-visible editor's pending reads.
+  useLayoutEffect(() => {
+    targetRef.current = targetKey;
+    selectionRef.current = { deviceId, language };
+    if (floorRef.current.target !== targetKey || desiredSnapshot !== null && acceptsParameterSnapshot(desiredSnapshot, floorRef.current.snapshot)) {
+      floorRef.current = { target: targetKey, snapshot: desiredSnapshot };
+    }
+  }, [deviceId, language, refreshKey]);
+  // Revision refreshes keep the existing rows and drafts mounted. A different
+  // device, language or project lifetime blanks them until its own read lands.
   const shownRef = useRef<string | null>(null);
+  useEffect(() => {
+    const owner = {};
+    ownerRef.current = owner;
+    return () => { ownerRef.current = null; ++requestIdRef.current; };
+  }, []);
 
   useEffect(() => {
-    const shownKey = JSON.stringify([deviceId, language]);
-    if (shownRef.current !== shownKey) {
-      shownRef.current = shownKey;
+    if (shownRef.current !== targetKey) {
+      shownRef.current = targetKey;
       setShown(null);
       setLoadError(null);
     }
     const requestId = ++requestIdRef.current;
-    const snapshot = refreshKey ? snapshotContextFromTree(refreshKey) : null;
-    api
-      .deviceParameters(deviceId, language)
-      .then((p) => {
-        if (requestId !== requestIdRef.current) return;
-        // A refresh can follow a failed one now that the panel is not blanked.
-        setLoadError(null);
-        setShown({ panel: p, snapshot });
-      })
-      .catch((e) => {
-        if (requestId !== requestIdRef.current) return;
-        setLoadError(api.errorMessage(e));
-      });
+    const snapshot = desiredSnapshot;
+    api.deviceParameters(deviceId, language).then((panel) => {
+      if (requestId !== requestIdRef.current || targetRef.current !== targetKey) return;
+      if (!acceptsParameterSnapshot(snapshot, floorRef.current.snapshot)) return;
+      setLoadError(null);
+      setShown({ panel, snapshot });
+    }).catch((error) => {
+      if (requestId === requestIdRef.current && targetRef.current === targetKey) setLoadError(api.errorMessage(error));
+    });
+    return () => { if (requestId === requestIdRef.current) ++requestIdRef.current; };
   }, [deviceId, language, refreshKey]);
 
-  /**
-   * Shows a write's returned panel only while the same device and product
-   * language are still displayed; a late reply for another target is not
-   * put in front of this one. Its snapshot is the write's own tree.
-   */
   const acceptWrite = useCallback((forDevice: number, forLanguage: string | null, panel: ParameterPanelDto) => {
-    if (shownRef.current !== JSON.stringify([forDevice, forLanguage])) return;
-    setShown({ panel, snapshot: panel.tree ? snapshotContextFromTree(panel.tree) : null });
+    if (ownerRef.current === null || shownRef.current !== targetRef.current) return;
+    if (selectionRef.current.deviceId !== forDevice || selectionRef.current.language !== forLanguage) return;
+    const snapshot = panel.tree ? snapshotContextFromTree(panel.tree) : null;
+    if (!acceptsParameterSnapshot(snapshot, floorRef.current.snapshot)) return;
+    // Fence any GET already in flight before this accepted write; its answer
+    // was captured under the older panel's context, not this write's tree.
+    ++requestIdRef.current;
+    floorRef.current = { target: targetRef.current, snapshot };
+    setLoadError(null);
+    setShown({ panel, snapshot });
   }, []);
 
-  return { panel: shown?.panel ?? null, snapshot: shown?.snapshot ?? null, loadError, language, acceptWrite };
+  const reloadProject = useCallback(async (publish: (tree: ProjectTree) => void) => {
+    const owner = ownerRef.current, target = targetRef.current;
+    const tree = await api.currentProject();
+    if (owner !== null && ownerRef.current === owner && targetRef.current === target) publish(tree);
+  }, []);
+
+  return { panel: shown?.panel ?? null, snapshot: shown?.snapshot ?? null, loadError, language, acceptWrite, reloadProject };
 }
 
 export function ParameterPanelContent(props: ParameterPanelProps & {
   state: ReturnType<typeof useDeviceParameters>;
 }) {
   const { deviceId, onValueApplied, view = "parameters", state } = props;
-  const { panel, snapshot, loadError, language, acceptWrite } = state;
+  const { panel, snapshot, loadError, language, acceptWrite, reloadProject } = state;
   const onUpdated = useCallback((written: ParameterPanelDto) => acceptWrite(deviceId, language, written),
     [acceptWrite, deviceId, language]);
   // A stale-write refusal reloads the authoritative tree; publishing it
   // re-reads this panel through `refreshKey`. Nothing is written here.
-  const onConflict = useCallback(async () => { onValueApplied(await api.currentProject()); }, [onValueApplied]);
+  const onConflict = useCallback(() => reloadProject(onValueApplied), [reloadProject, onValueApplied]);
   const t = useTranslate();
   const title = view === "diagnostics" ? "parameters.diagnosticsTab"
     : view === "restricted" ? "parameters.restrictedTab" : view === "functions" ? "parameters.functions" : "parameters.title";
@@ -695,11 +736,11 @@ export function ComObjectFunctionControls(props: {
   onValueApplied: (tree: ProjectTree) => void;
 }) {
   const { deviceId, objectId, state, onValueApplied } = props;
-  const { panel, snapshot, language, acceptWrite, loadError } = state;
+  const { panel, snapshot, language, acceptWrite, loadError, reloadProject } = state;
   const t = useTranslate();
   const onUpdated = useCallback((written: ParameterPanelDto) => acceptWrite(deviceId, language, written),
     [acceptWrite, deviceId, language]);
-  const onConflict = useCallback(async () => { onValueApplied(await api.currentProject()); }, [onValueApplied]);
+  const onConflict = useCallback(() => reloadProject(onValueApplied), [reloadProject, onValueApplied]);
   if (loadError) return <div className="com-object-functions"><span className="field-error">{loadError}</span></div>;
   if (!panel) return <div className="com-object-functions"><span className="task-status-text">{t("parameters.loading")}</span></div>;
   const fields = panel?.sections.filter(section => section.scope === null).flatMap(section => section.fields)

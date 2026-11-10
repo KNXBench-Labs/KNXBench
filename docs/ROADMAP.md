@@ -1,5 +1,14 @@
 # Roadmap
 
+## Background-activity feedback (10 November 2026)
+
+The bounded footer observer covers real App-owned load/save/editor-read
+and device-comparison producers plus retained catalogue work, with focused
+regression and browser verification. This is not closure of the broader background-job goal. Ordinary
+download panel lifetime, project-diff fencing, remaining panel-owned producers
+and any new safe-exit/cancellation capability remain separate work.
+[Inventory, decisions and verification](status/2026-11-10-background-activity-footer.md).
+
 ## Alpha 20 pre-release (source cutoff 8 November 2026)
 
 `v0.1.0-alpha.20` is the current pre-release, cut from main at source cutoff

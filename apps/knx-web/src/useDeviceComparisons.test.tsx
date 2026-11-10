@@ -3,6 +3,7 @@
 import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
+import { ActivityController } from "./activityController";
 import { useDeviceComparisons, type DeviceComparisons } from "./useDeviceComparisons";
 import type { ProjectTree } from "./bindings/ProjectTree";
 import type { BoundDeviceComparison } from "./deviceComparisons";
@@ -30,10 +31,32 @@ function result(): BoundDeviceComparison {
 let host: HTMLDivElement;
 let root: ReturnType<typeof createRoot>;
 let controller: DeviceComparisons;
-function Harness({ project }: { project: ProjectTree | null }) { controller = useDeviceComparisons(project); return null; }
+let activity: ActivityController;
+function Harness({ project }: { project: ProjectTree | null }) { controller = useDeviceComparisons(project, activity); return null; }
 async function render(project: ProjectTree | null = tree) { await act(async () => root.render(<Harness project={project} />)); }
-beforeEach(() => { api.compareDevice.mockReset(); host = document.createElement("div"); document.body.append(host); root = createRoot(host); });
+beforeEach(() => { activity = new ActivityController(); api.compareDevice.mockReset(); host = document.createElement("div"); document.body.append(host); root = createRoot(host); });
 afterEach(async () => { await act(async () => root.unmount()); host.remove(); });
+
+it("retains one activity across view-like rerenders and waits for the in-flight read before stopping", async () => {
+  const pending = deferred<BoundDeviceComparison>(); api.compareDevice.mockReturnValue(pending.promise);
+  await render(); await act(async () => controller.open(targets));
+  let running!: Promise<void>;
+  await act(async () => { running = controller.confirm(endpoint); });
+  const id = activity.getSnapshot()[0].id;
+  expect(activity.getSnapshot()[0].destination).toBe("comparison");
+  expect(controller.activityId).toBe(id);
+  expect(activity.getSnapshot()[0].state).toBe("running");
+  await render({ ...tree, snapshot_revision: 2 });
+  expect(activity.getSnapshot()).toHaveLength(1); expect(activity.getSnapshot()[0].id).toBe(id);
+  await act(async () => controller.cancel());
+  expect(activity.getSnapshot()[0].state).toBe("cancelling");
+  expect(controller.running).toBe(true);
+  await act(async () => { pending.resolve(result()); await running; });
+  expect(activity.getSnapshot()[0].state).toBe("cancelled");
+  expect(controller.running).toBe(false); expect(api.compareDevice).toHaveBeenCalledTimes(1);
+  await act(async () => controller.open([targets[1]]));
+  expect(controller.activityId, "a new review must not inherit the previous activity's result link").toBeNull();
+});
 
 it("admits only one confirmation in the same React tick", async () => {
   const pending = deferred<BoundDeviceComparison>(); api.compareDevice.mockReturnValue(pending.promise);
@@ -48,7 +71,9 @@ it("admits only one confirmation in the same React tick", async () => {
 
 it.each(["resolve", "reject"] as const)("keeps the pending owner exclusive across project replacement and late %s", async (settlement) => {
   const pending = deferred<BoundDeviceComparison>(); api.compareDevice.mockReturnValue(pending.promise);
-  await render(); await act(async () => controller.open(targets));
+  const original = { ...tree, installations: [{ id: 1, name: "Original comparison installation", topology: [], buildings: [],
+    unassigned: [], group_addresses: [], group_ranges: [] }] };
+  await render(original); await act(async () => controller.open(targets));
   let first!: Promise<void>; let competing!: Promise<void>;
   await act(async () => { first = controller.confirm(endpoint); controller.cancel(); });
   expect(controller.running).toBe(true); expect(controller.stopping).toBe(true);
@@ -67,6 +92,8 @@ it.each(["resolve", "reject"] as const)("keeps the pending owner exclusive acros
   expect(calls).toBe(1); expect(api.compareDevice).toHaveBeenCalledTimes(1);
   expect(controller.entry(2)).toBeNull(); expect(controller.entry(9)).toBeNull(); expect(controller.error).toBeNull();
   expect(controller.running).toBe(false);
+  expect(activity.getSnapshot()[0]).toMatchObject({ projectName: "Original comparison installation", state: "cancelled",
+    entities: [{ label: "First", address: "1.1.2" }, { label: "Second", address: "1.1.9" }] });
   await act(async () => controller.open([targets[1]]));
   expect(controller.review?.targets.map((target) => target.id)).toEqual([9]);
 });

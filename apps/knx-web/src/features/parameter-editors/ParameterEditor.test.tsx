@@ -379,6 +379,52 @@ describe("isolated parameter editor", () => {
     await edit(host, "13"); expect(host.textContent).not.toContain("Applied. The field shows");
     await click(host, "Apply value"); expect(props.onApply).toHaveBeenLastCalledWith("PR", "13");
   });
+  it("settles only the exact own result published before Apply resolves", async () => {
+    let resolve!: (result: { tree: string }) => void;
+    const onApply = vi.fn().mockReturnValue(new Promise(done => { resolve = done; }));
+    const { host, props, root } = await mount({ onApply, appliedReceipt: result => ({ revision: result.tree, value: "12" }) });
+    await edit(host, "12"); await click(host, "Apply value");
+    await act(async () => root.render(<ParameterEditor {...props} revision="server1/snapshot2" field={{ ...base.field, value: "12" }} />));
+    expect(host.textContent).toContain("draft is retained");
+    expect(host.querySelector<HTMLInputElement>('input[type="text"]')?.disabled).toBe(true);
+    await act(async () => resolve({ tree: "server1/snapshot2" }));
+    expect(props.onApplied).toHaveBeenCalledExactlyOnceWith({ tree: "server1/snapshot2" });
+    expect(host.textContent).not.toContain("draft is retained");
+    expect(host.textContent).toContain("Applied. The field shows the project's value.");
+    expect(host.querySelector<HTMLInputElement>('input[type="text"]')?.disabled).toBe(false);
+    await edit(host, "13");
+    expect([...host.querySelectorAll("button")].find(button => button.textContent === "Apply value")?.disabled).toBe(false);
+  });
+  it.each([
+    { name: "newer revision", shown: "server1/snapshot3", receipt: "server1/snapshot2", returnedValue: "12", shownValue: "12" },
+    { name: "other project identity", shown: "server1/project2/snapshot2", receipt: "server1/project1/snapshot2", returnedValue: "12", shownValue: "12" },
+    { name: "different returned value", shown: "server1/snapshot2", receipt: "server1/snapshot2", returnedValue: "13", shownValue: "12" },
+    { name: "different visible value", shown: "server1/snapshot2", receipt: "server1/snapshot2", returnedValue: "12", shownValue: "13" },
+    { name: "missing acknowledgement", shown: "server1/snapshot2", receipt: null, returnedValue: "12", shownValue: "12" },
+  ])("does not acknowledge $name while Apply is pending", async testCase => {
+    let resolve!: (result: { tree: string }) => void;
+    const onApply = vi.fn().mockReturnValue(new Promise(done => { resolve = done; }));
+    const { host, props, root } = await mount({ onApply,
+      appliedReceipt: () => testCase.receipt === null ? null : { revision: testCase.receipt, value: testCase.returnedValue } });
+    await edit(host, "12"); await click(host, "Apply value");
+    await act(async () => root.render(<ParameterEditor {...props} revision={testCase.shown} field={{ ...base.field, value: testCase.shownValue }} />));
+    await act(async () => resolve({ tree: "own-result" }));
+    expect(props.onApplied).not.toHaveBeenCalled();
+    expect(host.textContent).toContain("draft is retained");
+    expect(host.querySelector<HTMLInputElement>('input[type="text"]')?.value).toBe("12");
+    const apply = [...host.querySelectorAll("button")].find(button => button.textContent === "Apply value")!;
+    expect(apply.disabled).toBe(true); await click(host, "Apply value"); expect(onApply).toHaveBeenCalledTimes(1);
+  });
+  it("cannot acknowledge an own result after the selection has retired", async () => {
+    let resolve!: (result: { tree: string }) => void;
+    const onApply = vi.fn().mockReturnValue(new Promise(done => { resolve = done; }));
+    const { host, props, root } = await mount({ onApply, appliedReceipt: result => ({ revision: result.tree, value: "12" }) });
+    await edit(host, "12"); await click(host, "Apply value");
+    await act(async () => root.render(<ParameterEditor {...props} selectionKey="project1/device2" revision="server1/snapshot2" field={{ ...base.field, value: "12" }} />));
+    await act(async () => resolve({ tree: "server1/snapshot2" }));
+    expect(props.onApplied).not.toHaveBeenCalled();
+    expect(host.textContent).not.toContain("Applied. The field shows");
+  });
   it("never rebases onto a revision that arrived while its own write was in flight", async () => {
     let settle!: (value: { tree: string }) => void;
     const onApply = vi.fn().mockReturnValue(new Promise(done => { settle = done; }));

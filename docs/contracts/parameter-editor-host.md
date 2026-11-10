@@ -55,8 +55,10 @@ package does not introduce an unmeasured cache or bulk-query abstraction.
    browser time, local counters or a human label. Module scopes use explicit
    unsupported fallback until separately audited mapping exists.
 5. `onApply(writeEtsId,raw)` invokes only existing `setParameterValue` using the
-   exact device/write target and original raw draft. `onApplied(result)` publishes
-   the **actual** returned panel and project tree through the current owner.
+   exact device/write target and original raw draft. The host publishes the
+   **actual** returned panel and project tree inside `onApply`, before its promise
+   settles, so publication does not depend on the leaf remaining mounted.
+   `onApplied(result)` is the leaf's notification, not another publication owner.
    Do not locally predict dependency changes or refresh only the edited number.
 6. Host must keep an outstanding mutation tracked even if selection unmounts the
    editor, and serialize writes appropriately. Suppressing a late UI callback is
@@ -119,8 +121,16 @@ package does not introduce an unmeasured cache or bulk-query abstraction.
   bumps the revision) the draft moves onto the new revision, a draft equal to the
   new authoritative value settles, and an editor without a draft follows the
   project. A revision that arrives during the editor's own write is never adopted
-  (amended 2026-10-12). Selection/source changes reset the isolated editor;
-  late outcomes are not republished into the new context.
+  (amended 2026-10-12). **Amended 2026-11-10:** the sole exception is an explicit
+  `appliedReceipt` for that successful write: its complete server/project/snapshot
+  identity must equal the currently shown revision, and both its returned field
+  value and the currently shown field value must equal the submitted raw draft.
+  The host derives this receipt only from the real post-write tree and one exact
+  returned plain-scope field, with the same program/server/project and an advanced
+  revision; missing or ambiguous evidence grants no exception. Only that exact
+  own-result revision is unblocked. A newer/unrelated revision or mismatching
+  value still preserves the stale draft. Selection/source changes reset the
+  isolated editor; late outcomes are not republished into the new context.
 
 ## Evidence scopes
 

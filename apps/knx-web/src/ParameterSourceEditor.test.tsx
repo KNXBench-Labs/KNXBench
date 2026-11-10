@@ -2,6 +2,7 @@
 // @vitest-environment happy-dom
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act } from "react";
+import { flushSync } from "react-dom";
 import { createRoot, type Root } from "react-dom/client";
 import type { ParameterField, ParameterPanel } from "./api";
 import type { ProjectTree } from "./bindings/ProjectTree";
@@ -157,6 +158,32 @@ describe("checked parameter editor host", () => {
     expect(props.onValueApplied).toHaveBeenCalledWith(tree);
   });
 
+  it.each(["en", "de"] as const)("%s acknowledges its exact response even when the host publishes before Apply resolves", async locale => {
+    saveUiLanguage(settingsStorage, locale); resetUiLanguageForTests();
+    const copy = parameterEditorCopy[locale];
+    const nextField = { ...field, value: "12" };
+    const nextTree = { ...tree, server_incarnation: "srv-p", project_incarnation: 4, snapshot_revision: 13 };
+    const returned: ParameterPanel = { ...panel, sections: [{ scope: null, fields: [nextField] }], tree: nextTree };
+    apiMock.parameterEditorSource.mockResolvedValueOnce(answer()).mockResolvedValue(answer(13));
+    apiMock.setParameterValue.mockResolvedValue(returned);
+    let view!: Awaited<ReturnType<typeof mount>>;
+    const publish = vi.fn((actual: ProjectTree) => {
+      expect(actual).toEqual(nextTree);
+      // Force the real host/leaf join to render the committed revision while its Apply promise is still pending.
+      flushSync(() => view.root.render(<ParameterSourceEditor {...view.props} field={nextField} snapshot={snapshot(13)} writeBinding={snapshot(13)} />));
+      expect(view.host.querySelector<HTMLInputElement>('input[type="text"]')?.disabled).toBe(true);
+      expect(view.host.textContent).toContain(copy.stale);
+    });
+    view = await mount({ writeBinding: snapshot(), onValueApplied: publish });
+    await type(view.host, "12"); await act(async () => button(view.host, copy.apply).click());
+    expect(view.props.onUpdated).toHaveBeenCalledExactlyOnceWith(returned);
+    expect(publish).toHaveBeenCalledExactlyOnceWith(nextTree);
+    expect(apiMock.setParameterValue).toHaveBeenCalledExactlyOnceWith(41, "PR", "12", "de-DE", { ...snapshot(), expectedValue: "0010" });
+    expect(view.host.textContent).toContain(copy.settled);
+    expect(view.host.textContent).not.toContain(copy.stale);
+    expect(view.host.querySelector<HTMLInputElement>('input[type="text"]')?.value).toBe("12");
+    expect(view.host.querySelector<HTMLInputElement>('input[type="text"]')?.disabled).toBe(false);
+  });
   it("keeps the draft on a stale-write conflict, reloads once and publishes nothing", async () => {
     apiMock.parameterEditorSource.mockResolvedValue(answer());
     apiMock.setParameterValue.mockRejectedValueOnce(Object.assign(new Error("raw server text"),

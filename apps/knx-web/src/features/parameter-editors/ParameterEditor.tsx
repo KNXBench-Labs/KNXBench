@@ -4,6 +4,8 @@ import { chooseParameterEditor, parameterDraftIssue, type ParameterEditorContext
 import { parameterEditorCopy } from "./copy";
 import styles from "./editor.module.css";
 
+export interface ParameterApplyReceipt { revision: string; value: string | null; }
+
 export interface ParameterEditorProps<T> {
   field: ParameterEditorField;
   source: ParameterEditorSource | null;
@@ -18,6 +20,8 @@ export interface ParameterEditorProps<T> {
   suffix?: string | null;
   locale?: "en" | "de";
   onApply: (writeEtsId: string, value: string) => Promise<T>;
+  /** Exact own-result identity/value when the host publishes before this promise settles. */
+  appliedReceipt?: (result: T) => ParameterApplyReceipt | null;
   /** Publish the service's actual panel/tree, not a local reconstruction. */
   onApplied: (result: T) => void;
 }
@@ -40,6 +44,7 @@ function ParameterDraft<T>(props: ParameterEditorProps<T>) {
   const [failure, setFailure] = useState<string | null>(null);
   const mounted = useRef(true);
   const latestRevision = useRef(revision);
+  const latestField = useRef(field);
   const inFlight = useRef(false);
   const id = useId();
   // Saving the project bumps the revision without touching this field. A
@@ -49,12 +54,12 @@ function ParameterDraft<T>(props: ParameterEditorProps<T>) {
   // When the authoritative value equals the draft (typically the refresh after
   // our own Apply), nothing can be lost: the editor settles onto it. A clean
   // editor follows the project. A revision that arrived while a write was in
-  // flight is never adopted silently.
+  // flight needs the exact own-write acknowledgement before it can be adopted.
   const loadedSignature = useRef(fieldSignature);
   const blockedRevision = useRef<string | null>(null);
   const [settled, setSettled] = useState(false);
   useEffect(() => {
-    latestRevision.current = revision;
+    latestRevision.current = revision; latestField.current = field;
     if (inFlight.current) { if (revision !== loadedRevision) blockedRevision.current = revision; return; }
     if (revision === blockedRevision.current) return;
     if (field.value !== null && draft === field.value && (baseline !== field.value || revision !== loadedRevision)) {
@@ -82,7 +87,13 @@ function ParameterDraft<T>(props: ParameterEditorProps<T>) {
     const requestRevision = revision;
     try {
       const result = await onApply(field.writeEtsId, draft);
-      if (!mounted.current || latestRevision.current !== requestRevision) return;
+      if (!mounted.current) return;
+      if (latestRevision.current !== requestRevision) {
+        const own = props.appliedReceipt?.(result);
+        if (!own || own.revision !== latestRevision.current || own.value !== draft || latestField.current.value !== own.value) return;
+        // Clear only our exact acknowledged result, never a newer/unrelated revision.
+        if (blockedRevision.current === own.revision) blockedRevision.current = null;
+      }
       setAccepted(true);
       onApplied(result);
     } catch (error) {

@@ -12,11 +12,11 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import * as api from "./api";
 import type { ModuleScope, ParameterField, ParameterPanel } from "./api";
 import type { ProjectTree } from "./bindings/ProjectTree";
-import { ParameterEditor } from "./features/parameter-editors/ParameterEditor";
+import { ParameterEditor, type ParameterApplyReceipt } from "./features/parameter-editors/ParameterEditor";
 import type { ParameterEditorField } from "./features/parameter-editors/plan";
 import { useTranslate } from "./i18n";
 import { parameterRevision, parameterSelectionKey, projectParameterSource, type ProjectedSource } from "./parameterSourceHost";
-import type { SnapshotContext } from "./snapshotIdentity";
+import { snapshotContextFromTree, type SnapshotContext } from "./snapshotIdentity";
 import { isRevisionConflict } from "./revisionConflict";
 import { useUiLanguage } from "./uiLanguage";
 
@@ -95,6 +95,14 @@ export default function ParameterSourceEditor(props: ParameterSourceEditorProps)
     onValueApplied(panel.tree);
     return panel;
   }, [deviceId, language, writeBinding, expectedValue, onConflict, onUpdated, onValueApplied, t]);
+  const appliedReceipt = useCallback((panel: ParameterPanel): ParameterApplyReceipt | null => {
+    const own = panel.tree && snapshotContextFromTree(panel.tree);
+    if (!own || own.serverIncarnation !== writeBinding.serverIncarnation || own.projectIncarnation !== writeBinding.projectIncarnation
+        || own.snapshotRevision <= writeBinding.snapshotRevision || panel.programId !== programId || scope !== null) return null;
+    const returned = panel.sections.filter(section => section.scope === null).flatMap(section => section.fields)
+      .filter(candidate => candidate.etsId === field.etsId && candidate.writeEtsId === field.writeEtsId);
+    return returned.length === 1 ? { revision: parameterRevision(own), value: returned[0].value } : null;
+  }, [writeBinding, programId, scope, field.etsId, field.writeEtsId]);
   const onApplied = useCallback(() => {}, []);
 
   const projected = state.status === "ready" ? state.projected : null;
@@ -110,7 +118,7 @@ export default function ParameterSourceEditor(props: ParameterSourceEditorProps)
     {projected !== null && <ParameterEditor field={editorField(field)} source={source}
       context={{ programId, sourceSha256: source?.sourceSha256 ?? "", moduleScoped: scope !== null }}
       selectionKey={parameterSelectionKey(snapshot, deviceId, scope)} revision={revision} label={props.label}
-      suffix={field.suffixText} locale={uiLanguage === "de" ? "de" : "en"} onApply={onApply} onApplied={onApplied} />}
+      suffix={field.suffixText} locale={uiLanguage === "de" ? "de" : "en"} onApply={onApply} appliedReceipt={appliedReceipt} onApplied={onApplied} />}
     <button type="button" className="parameter-checked-close" onClick={props.onClose}>{t("parameters.checked.close")}</button>
   </div>;
 }

@@ -123,6 +123,10 @@ against local test peers only; real-gateway interoperability has not been
 verified. There is no automatic reconnect. The screenshot above shows both transport
 fields with UDP selected.
 
+The 10 November source successor separately adds explicit UDP/TCP to CLI
+`knx bus scan` only (single device and line/range), pending integrated acceptance.
+It does not change this monitor preference or server/Web line scans.
+
 ## What the monitor shows
 
 Every telegram the interface forwards becomes one row, with these columns:

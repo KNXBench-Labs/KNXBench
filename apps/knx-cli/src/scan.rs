@@ -5,9 +5,8 @@
 //! turning a `ProbeOutcome` into a printable line, turning a batch of
 //! results into a summary, and comparing a scan against a stored project.
 //! `main.rs` owns the only two things that need a runtime: opening the
-//! tunnel and loading the project file from disk. Splitting it this way is
-//! what makes "no test in this task opens a socket" (T17 Task 4 brief)
-//! possible without faking a `TunnelClient`.
+//! tunnel and loading the project file from disk. Parser and formatting unit
+//! tests stay socket-free; CLI integration tests exercise loopback transports.
 
 use std::collections::HashSet;
 use std::time::Duration;
@@ -15,7 +14,7 @@ use std::time::Duration;
 use knx_core::scan::{ScanPlan, ScanPlanBuilder};
 use knx_core::IndividualAddress;
 pub use knx_net::{compare_with_project, ProjectComparison, ScannedRange};
-use knx_net::{ProbeOutcome, ProbePolicy};
+use knx_net::{ProbeOutcome, ProbePolicy, TunnelTransport};
 
 /// Raw `knx bus scan` arguments, one field per flag, unvalidated. Kept
 /// separate from the validated forms below (`ScannedRange`, `ScanPlan`,
@@ -24,6 +23,7 @@ use knx_net::{ProbeOutcome, ProbePolicy};
 #[derive(Debug)]
 pub struct ScanArgs {
     pub gateway: String,
+    pub tunnel_transport: TunnelTransport,
     /// `--line <area.line>`: which line to scan. Exactly one of `line` and
     /// `device` is set — `parse_scan_args` enforces it, so a later
     /// consumer can match on them without a third "neither" case.
@@ -49,6 +49,7 @@ pub struct ScanArgs {
 /// [`build_probe_policy`], which do the actual validation.
 pub fn parse_scan_args(args: &[String]) -> Result<ScanArgs, String> {
     let mut gateway = None;
+    let mut tunnel_transport = None;
     let mut line = None;
     let mut device = None;
     let mut range = None;
@@ -62,6 +63,10 @@ pub fn parse_scan_args(args: &[String]) -> Result<ScanArgs, String> {
         match args[i].as_str() {
             "--gateway" => {
                 gateway = Some(crate::take_value(args, i + 1, "--gateway")?);
+                i += 2;
+            }
+            "--tunnel-transport" => {
+                crate::bus_transport::take_tunnel_transport(&mut tunnel_transport, args, i)?;
                 i += 2;
             }
             "--line" => {
@@ -127,6 +132,7 @@ pub fn parse_scan_args(args: &[String]) -> Result<ScanArgs, String> {
     }
     Ok(ScanArgs {
         gateway: gateway.ok_or_else(|| "--gateway is required".to_string())?,
+        tunnel_transport: tunnel_transport.unwrap_or(TunnelTransport::Udp),
         line,
         device,
         range,
@@ -571,6 +577,28 @@ mod tests {
         assert_eq!(parsed.pause_ms.as_deref(), Some("50"));
         assert_eq!(parsed.project.as_deref(), Some("proj.knxdb"));
         assert!(parsed.dry_run);
+    }
+
+    #[test]
+    fn scan_transport_defaults_to_udp_and_accepts_explicit_selection() {
+        for (flags, expected) in [
+            (vec![], TunnelTransport::Udp),
+            (vec!["--tunnel-transport", "udp"], TunnelTransport::Udp),
+            (vec!["--tunnel-transport", "tcp"], TunnelTransport::Tcp),
+        ] {
+            for target in [
+                vec!["--device", "1.1.5"],
+                vec!["--line", "1.1", "--range", "1.1.5-1.1.7"],
+            ] {
+                let mut input = vec!["--gateway", "192.0.2.1:3671"];
+                input.extend(target);
+                input.extend(flags.iter().copied());
+                assert_eq!(
+                    parse_scan_args(&args(&input)).unwrap().tunnel_transport,
+                    expected
+                );
+            }
+        }
     }
 
     #[test]

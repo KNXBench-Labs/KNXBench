@@ -1,9 +1,8 @@
 # Overlapping `when` tests: every match is active (9 November 2026)
 
 Evidence for [ADR-0170](../adr/0170-every-matching-when-is-active.md). Issue
-#10's tester project; ETS 6.4.1, German UI, analysis VM, downloads recorded
-against KNXBench's own simulator (mask `0705h`). Logs, captures and exports
-stay private.
+#10's tester project; ETS 6.4.1 downloads recorded against KNXBench's own
+simulator (mask `0705h`). Logs, captures and exports stay private.
 
 ## Question
 
@@ -56,8 +55,9 @@ modules.
 - Both rules rest on one manufacturer's programs.
 - Assigned union members, property placements and module scopes keep their
   previous handling. KNXBench still does not execute `Assign` while
-  evaluating, so an assigned value that would steer a `choose` or another
-  assignment differently from the stored one refuses the image.
+  evaluating, so an assigned value that would steer a `choose` consulted
+  in the final pass, or another active assignment, differently from the
+  stored value refuses the image.
 
 ## Effect
 
@@ -66,3 +66,13 @@ planning glass push-button writes five octets differently with ADR-0170 and
 three more with ADR-0171. The private
 product-corpus coverage classification is unchanged program by program
 (758 rows identical with and without the rule).
+
+## Software verification (10 November 2026)
+
+Published on `main` at `64231f5a8` after independent review and the complete
+14-stage change-scoped package gate: 5703 Rust tests passed (180 ignored),
+97 of 97 selected private-corpus tests passed, all stage proofs valid and
+inputs frozen; checked user data was untouched. Regression tests pin scoped
+assignment exclusion, unknown targets, final-pass consultation and refusal
+of malformed later `when` tests through image, write, read and offline
+preparation. This is software/simulator evidence, not hardware acceptance.

@@ -163,8 +163,10 @@ for (const language of ["en", "de"] as const) {
       await expect(trigger).toContainText(HALL);
       await expect.poll(() => bus.settingsPuts).toBeGreaterThan(0);
       expect(bus.starts).toEqual([]);
-      await page.mouse.click(width / 2, 20);
+      // Click an inert, panel-external footer point; viewport coordinates can hit a scrolled welcome command.
+      await page.locator(".workbench-status").click({ position: { x: 2, y: 2 } });
       await expect(page.locator(".bus-connection-panel")).toHaveCount(0);
+      await expect(page.locator(".search-overlay")).toHaveCount(0);
 
       // One explicit Connect, with the selected endpoint.
       const action = page.locator(".bus-connection-action");

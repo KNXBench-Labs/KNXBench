@@ -62,6 +62,12 @@ guards remain in place; no new safe-exit capability is claimed.
 
 ## Reviewed corrections and regressions
 
+- The parameter host acknowledges its own exact returned revision/value even
+  when synchronous activity publication renders that committed revision before
+  the leaf's Apply promise settles. Unrelated/newer revisions, wrong values and
+  retired selections remain blocked; validation, undo history and App admission
+  are unchanged. Forced host/leaf publication regressions cover this ordering.
+
 - Resume reports success only after snapshot and cross-window publication
   admission. It settles at that seam before resetting its own initial read
   scope; a refused response is discarded, not successful.

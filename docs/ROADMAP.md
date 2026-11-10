@@ -19,14 +19,17 @@ issues #30/#22 is unresolved and both stay open.
 [Release scope and boundaries](releases/alpha20.md).
 Work merged on main after `dfb3f88b8` belongs to the next alpha.
 
-## Server/Web scan successor candidate (10 November 2026)
+<a id="serverweb-scan-successor-candidate-10-november-2026"></a>
 
-Explicit TCP line scans are implemented as a bounded source candidate with
+## Server/Web scan successor (10 November 2026; main-only acceptance)
+
+Explicit TCP line scans are software-accepted on main as a bounded successor with
 UDP default, strict identity-bound effects and disclosed cleanup/skip provenance.
-Independent review and integrated acceptance remain pending. It is not in Alpha
+Independent source closure passed; the complete selected acceptance plan
+is closed by source-bound composition. It is not in Alpha
 20 and does not widen device programming, downloads, discovery/routing, serial,
 KNX IP Secure or real-gateway claims.
-[Candidate and remaining acceptance](status/2026-11-10-server-web-tcp-scans.md).
+[Acceptance and limitations](status/2026-11-10-server-web-tcp-scans.md).
 
 <a id="optional-tcp-monitoring-candidate-8-november-2026"></a>
 
@@ -48,7 +51,7 @@ device-evidence rules. Independent review and the integrated 13-stage package
 gate passed on `ac9b23814`; [acceptance and limits](status/2026-11-10-cli-tcp-scans.md).
 It is not a release or hardware claim. That accepted CLI baseline left
 Server/Web scans and other device workflows on UDP; the separately scoped
-Server/Web candidate above is still pending acceptance.
+Server/Web successor above is now separately software-accepted on main.
 
 ## Bounded foundation: object-priority provenance
 

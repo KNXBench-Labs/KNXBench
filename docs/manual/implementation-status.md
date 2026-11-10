@@ -2,14 +2,16 @@
 
 # Implementation status
 
-## Server/Web TCP scan candidate (after Alpha 20)
+<a id="serverweb-tcp-scan-candidate-after-alpha-20"></a>
 
-The bounded source candidate adds a scan-local UDP/TCP selector, actual
+## Server/Web TCP scans (main-only, after Alpha 20)
+
+The bounded source successor adds a scan-local UDP/TCP selector, actual
 transport/skip/cleanup provenance and strict session/incarnation cancellation,
 comparison and deliberate reconciliation. UDP remains the default independently
-of the monitor preference. Independent review and integrated acceptance are
-pending; no release or real-gateway claim.
-[Candidate and verification boundary](../status/2026-11-10-server-web-tcp-scans.md).
+of the monitor preference. Independent source closure passed; the complete selected acceptance plan
+is closed by source-bound composition; no release or real-gateway claim.
+[Acceptance and verification boundary](../status/2026-11-10-server-web-tcp-scans.md).
 
 ## German parameter metadata (main-only, after Alpha 20)
 

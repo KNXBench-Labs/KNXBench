@@ -14,7 +14,9 @@ Everything so far happened inside a file. This chapter is the one where KNXBench
 talks to an actual installation — and, just as importantly, the chapter that says
 plainly what it will not do there.
 
-### Server/Web TCP scans (source candidate after Alpha 20)
+<a id="serverweb-tcp-scans-source-candidate-after-alpha-20"></a>
+
+### Server/Web TCP scans (main-only after Alpha 20)
 
 The scan panel's **Transport for the next scan** starts at UDP, independently of
 the monitor preference. Choosing TCP only changes the next scan plan and
@@ -34,9 +36,9 @@ cleanup; an unconfirmed disconnect is shown separately from the probe outcome.
 Comparison and deliberate reconciliation retain the same identity and existing
 undo behavior. Device programming, downloads and discovery/routing are unchanged.
 
-This bounded implementation is pending independent review and integrated
-acceptance, not part of Alpha 20 or proof of real-gateway support.
-[Candidate and remaining acceptance](../../status/2026-11-10-server-web-tcp-scans.md).
+This bounded source successor passed independent source closure; its complete
+selected acceptance plan is closed by source-bound composition. It is not part of Alpha 20 or proof of real-gateway support.
+[Acceptance and limitations](../../status/2026-11-10-server-web-tcp-scans.md).
 
 ## What KNXnet/IP is
 

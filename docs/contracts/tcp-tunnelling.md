@@ -19,17 +19,19 @@ The 10 November CLI scan successor adds explicit TCP to `knx bus scan` for a
 single device or a line/range. This increment passed independent review and the
 selected integrated gate on `ac9b23814` ([acceptance](../status/2026-11-10-cli-tcp-scans.md));
 it is not part of the Alpha 20 release above. At that accepted CLI baseline,
-Server/Web line scans retained UDP; the separate source candidate below adds
-explicit TCP and is still pending acceptance. Device programming,
+Server/Web line scans retained UDP; the separate source successor below adds
+explicit TCP and is now software-accepted on main. Device programming,
 downloads/restores, individual-address programming and other existing device
 workflows retain their UDP path. Discovery and routing are separate UDP services.
 No preference silently converts those paths
 to TCP. Plain TCP is not KNX IP Secure, hardware compatibility or a remedy for
 an unresolved tunnel-loss report.
 
-## Server/Web line-scan successor (10 November 2026; candidate)
+<a id="serverweb-line-scan-successor-10-november-2026-candidate"></a>
 
-The bounded candidate adds `POST /api/bus/scan/start-tcp`, not a transport flag
+## Server/Web line-scan successor (10 November 2026; main-only acceptance)
+
+The bounded successor adds `POST /api/bus/scan/start-tcp`, not a transport flag
 on the legacy UDP start. It uses recorded transport selection and the unchanged
 DD0 scanner. Web selection is scan-local, initially UDP, and never reads or
 persists the monitor transport preference. Older strict-route failures never
@@ -48,8 +50,9 @@ pair may cancel or reconcile a successor. Tab navigation leaves server-owned
 scans running; explicit pending Cancel follows only its eventual exact identity.
 Missing or contradictory metadata locks actions, never guesses UDP.
 
-This is an implementation candidate, pending independent review and package
-acceptance, not an Alpha 20 addition or hardware result. See the
+Independent source closure passed; the complete selected acceptance plan
+is closed by source-bound composition.
+This is a main-only successor, not an Alpha 20 addition or hardware result. See the
 [scoped record](../status/2026-11-10-server-web-tcp-scans.md).
 
 ## Explicit public selection

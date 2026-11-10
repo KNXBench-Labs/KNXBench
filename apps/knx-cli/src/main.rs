@@ -116,6 +116,7 @@ const USAGE: &str = "usage: knx import <file.knxproj> [--store <path.knxdb> [--r
      \x20         §2.3.1; omitted, both route-monitor and route-send join the standard group)\n\
      \x20     knx bus scan --gateway <host:port> (--line <area.line> | --device <area.line.device>)\n\
      \x20                  [--range <first>-<last>] [--exclude <addr>[,<addr>...]]...\n\
+     \x20                  [--tunnel-transport <udp|tcp>]\n\
      \x20                  [--timeout-ms <n>] [--pause-ms <n>] [--project <path.knxdb>] [--dry-run]\n\
      \x20         (--line scans a whole line; --device probes exactly one device. --range takes\n\
      \x20         two full area.line.device addresses on the --line given, and its first device\n\
@@ -124,7 +125,8 @@ const USAGE: &str = "usage: knx import <file.knxproj> [--store <path.knxdb> [--r
      \x20         probes the listed addresses, and a malformed one aborts before any frame is\n\
      \x20         sent; --project prints a comparison, never writes it back; --dry-run prints the\n\
      \x20         candidate count, first/last candidate and excluded list, then exits without\n\
-     \x20         opening a connection)\n\
+     \x20         opening a connection; --tunnel-transport defaults to udp; tcp never falls back\n\
+     \x20         to udp. Scans require device evidence, not just a TCP socket send; no serial)\n\
      \x20     knx device download <area.line.device> --project <path.knxdb> [--product-db <path>]\n\
      \x20                  [--activity-history <path>]\n\
      \x20         (activity history: required for confirmed writes; metadata, not recovery)\n\
@@ -4807,10 +4809,10 @@ fn run_bus_scan(args: &[String]) -> ExitCode {
             return ExitCode::FAILURE;
         }
     };
-    let gateway: std::net::SocketAddrV4 = match parsed.gateway.parse() {
+    let gateway = match bus_transport::parse_gateway(&parsed.gateway) {
         Ok(g) => g,
-        Err(_) => {
-            eprintln!("--gateway must be host:port, e.g. 192.0.2.1:3671");
+        Err(error) => {
+            eprintln!("{error}");
             return ExitCode::FAILURE;
         }
     };
@@ -4870,6 +4872,7 @@ fn run_bus_scan(args: &[String]) -> ExitCode {
     };
     runtime.block_on(run_bus_scan_async(
         gateway,
+        parsed.tunnel_transport,
         plan,
         policy,
         range,
@@ -4887,6 +4890,7 @@ fn run_bus_scan(args: &[String]) -> ExitCode {
 #[allow(clippy::too_many_arguments)]
 async fn run_bus_scan_async(
     gateway: std::net::SocketAddrV4,
+    transport: knx_net::TunnelTransport,
     plan: knx_core::scan::ScanPlan,
     policy: knx_net::ProbePolicy,
     range: scan::ScannedRange,
@@ -4896,7 +4900,7 @@ async fn run_bus_scan_async(
 ) -> ExitCode {
     use knx_net::BusConnection;
     let client = crate::diagnostic_bundle_cli::tapped(
-        knx_net::KnxNetIpClient::new(),
+        knx_net::KnxNetIpClient::new().with_tunnel_transport(transport),
         knx_app::operation_recording::OperationKind::LineScan,
         gateway,
     );
@@ -4908,7 +4912,8 @@ async fn run_bus_scan_async(
         }
     };
     eprintln!(
-        "connected to {gateway}, assigned individual address {}. scanning {} candidate address(es)...",
+        "connected to {gateway} over {}, assigned individual address {}. scanning {} candidate address(es)...",
+        bus_transport::transport_label(tunnel.transport()),
         tunnel.assigned_address(),
         plan.addresses().len()
     );
@@ -4927,6 +4932,11 @@ async fn run_bus_scan_async(
     })
     .await;
     let elapsed_total = start.elapsed();
+
+    // Sample before consuming the tunnel; skips during disconnect are not included.
+    let skipped =
+        (tunnel.transport() == knx_net::TunnelTransport::Tcp).then(|| tunnel.skipped_frame_count());
+    bus_transport::report_skipped_frames(skipped, &mut std::io::stderr());
 
     let (results, scan_ok) = match scan_result {
         Ok(results) => (results, true),

@@ -26,7 +26,7 @@ allocation mismatch of issues #30/#22 is unresolved.
 | --- | --- |
 | Group-address CSV | ETS6 exports with a header line import through the four full profiles; choose UTF-8 (default) or Windows-1252, nothing is guessed; a byte invalid for the chosen encoding stops the import with its offset. [CSV guide](user-guide/04-group-addresses.md#group-addresses-as-csv). |
 | Group-address description | Filled from `.knxproj` imports and CSV description columns, edited in the inspector (on main after Alpha 20); an empty CSV cell removes one only with the explicit, confirmed *clear blank descriptions* option. Older imports are not backfilled; import the `.knxproj` again. |
-| Bus transports | Linux USB/serial TP-UART for one adapter type (Busware TUL, transparent NCN5130 firmware) for monitoring and group telegrams; optional TCP for the bus monitor and its group traffic, UDP the default. Downloads, device management and scans stay KNXnet/IP over UDP. |
+| Bus transports | Linux USB/serial TP-UART for one adapter type (Busware TUL, transparent NCN5130 firmware) for monitoring and group telegrams; optional TCP for the bus monitor and its group traffic, UDP the default. Downloads, device management and server/Web scans stay KNXnet/IP over UDP; the 10 November CLI-scan source successor has explicit UDP/TCP, pending integrated acceptance. |
 | Downloads | Little-endian numbers, undeclared text encoding, property-placed parameters with master resets, and time parameters can be prepared as *untested*; they need explicit acceptance. Property-based devices have no restore or partial download yet. |
 | Object priority | Saved, effective and edited priority in the object editor, an optional Priority column, comparison and report; programming refuses a device whose project priority differs from the product's ([KL-188](../KNOWN_LIMITATIONS.md#catalogue-kl-188)). |
 | Workbench | Faster saved-project edits (issue #35), status-bar connection, Compare from the device editor, Rail themes, checked Date editor, import findings after reopening. |
@@ -48,6 +48,12 @@ scans and discovery/routing do not follow the TCP preference. The source-backed
 bound group actions, skip/loss accounting and cancellation cleanup. Independent
 review and all 15 selected package stages passed ([software acceptance](../status/2026-11-08-optional-tcp-tunnelling.md)).
 This is not real-gateway interoperability evidence.
+
+**10 November source successor:** CLI `bus scan --device` and `--line`/`--range`
+now accept explicit UDP/TCP. UDP remains the default; invalid transport options
+refuse before I/O, dry runs open nothing and device replies still determine
+occupancy. Independent review and integrated acceptance remain pending; this
+does not change server/Web scans or claim release/hardware interoperability.
 
 <a id="current-source-implementation-captured-saved-instance-priority"></a>
 

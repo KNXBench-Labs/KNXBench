@@ -22,14 +22,23 @@ mandatory UDP requirement.
 2. **Bounded CLI/server/Web consumers — software-accepted on main.** CLI bus
    monitor/write and the shared server/Web monitor support explicit TCP,
    bound group read/write, observed transport and remembered preference.
-   Other device/scan workflows remain UDP-only. See the
+   That accepted slice left device/scan workflows UDP-only. See the
    [contract](../contracts/tcp-tunnelling.md).
 3. **Integrated software acceptance — passed for the bounded slice.** Independent
    whole-feature review and all 15 selected package stages passed on `6b27d5b1a`;
    the [execution record](../status/2026-11-08-optional-tcp-tunnelling.md) separates
    source acceptance, result-only documentation and remaining scope.
    Real-gateway interoperability remains separate and requires authorisation.
-   Broader WP-29, device/scan consumers and KNX IP Secure remain open.
+   Broader WP-29, remaining device/scan consumers and KNX IP Secure remain open.
+4. **CLI scan successor — implemented, integrated acceptance pending (10 November).**
+   `knx bus scan --device` and `--line`/`--range` accept explicit UDP/TCP, with
+   UDP still the default and no TCP-to-UDP fallback. The actual caller retains
+   descriptor/confirmation evidence, safety exclusions, preview and comparison
+   semantics, diagnostic recording and cleanup. Maintained loopback CLI tests
+   cover descriptor scans, silence versus confirmed occupancy, UDP controls,
+   refused/closed TCP, no-I/O admission and observed socket release. This does
+   not widen server/Web scans, programming, discovery/routing or serial support;
+   independent review and the package gate remain separate acceptance steps.
 
 ## Independently checked source basis
 

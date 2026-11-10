@@ -182,27 +182,29 @@ export default function DeviceDownloadPanel({ project, handoff = null, onHandoff
     if (deviceId !== null && selectedDevice === null) setDeviceId(null);
   }, [deviceId, selectedDevice]);
 
-  // Offline readiness (no bus access), re-read for every project version:
-  // a device the server cannot plan is marked before anything is prepared.
+  // Offline readiness belongs only to the selected device in this project version.
+  // Never sweep the project on mount or borrow an address mark for a different id.
   const [readinessAttempt, setReadinessAttempt] = useState(0);
-  const [readiness, setReadiness] = useState<{ project: ProjectTree; marks: Map<string, DownloadReadinessMark>; error: SupportGuidance | null; checking: boolean } | null>(null);
-  const currentReadiness = readiness?.project === project ? readiness : null;
+  const [readiness, setReadiness] = useState<{ project: ProjectTree; deviceId: number; marks: Map<string, DownloadReadinessMark>; error: SupportGuidance | null; checking: boolean } | null>(null);
+  const currentReadiness = readiness?.project === project && readiness.deviceId === selectedDevice?.id ? readiness : null;
   const marks = currentReadiness?.marks ?? new Map<string, DownloadReadinessMark>();
+  const readinessDeviceId = selectedDevice?.id ?? null;
   useEffect(() => {
-    if (project === null) return;
+    if (project === null || readinessDeviceId === null) return;
+    const deviceId = readinessDeviceId;
     let current = true;
-    setReadiness({ project, marks: new Map(), error: null, checking: true });
+    setReadiness({ project, deviceId, marks: new Map(), error: null, checking: true });
     void (async () => {
       try {
-        const next = readinessMarks((await api.getDeviceReadiness()).devices);
-        if (current) setReadiness({ project, marks: next, error: null, checking: false });
+        const next = readinessMarks((await api.getDeviceReadiness(deviceId)).devices);
+        if (current) setReadiness({ project, deviceId, marks: next, error: null, checking: false });
       } catch (reason) {
         // Also a malformed answer: no marks, and the panel says so.
-        if (current) setReadiness({ project, marks: new Map(), error: guidanceForError(reason), checking: false });
+        if (current) setReadiness({ project, deviceId, marks: new Map(), error: guidanceForError(reason), checking: false });
       }
     })();
     return () => { current = false; };
-  }, [project, readinessAttempt]);
+  }, [project, readinessDeviceId, readinessAttempt]);
   const selectedMark = address === "" ? undefined : marks.get(address);
   const selectedRefusal = refusal?.project === project && refusal.deviceId === deviceId && refusal.scope === scope ? refusal.guidance : null;
   // Readiness, its failures and plan refusals are about the ordinary memory
@@ -490,7 +492,7 @@ export default function DeviceDownloadPanel({ project, handoff = null, onHandoff
               onChange={(event) => { setDeviceId(event.target.value === "" ? null : Number(event.target.value)); dropPlan(); setHandoffOutcome(null); }}>
               <option value="">{t("deviceDownload.chooseDevice")}</option>
               {devices.map((device) => {
-                const mark = device.address === null ? undefined : marks.get(device.address);
+                const mark = device.id === readinessDeviceId && device.address !== null ? marks.get(device.address) : undefined;
                 const suffix = mark === undefined || (!ordinaryMode && mark.kind !== "excluded") ? ""
                   : ` (${t(mark.kind === "excluded" ? "deviceDownload.readiness.optionMarkExcluded" : "deviceDownload.readiness.optionMark")})`;
                 return (
@@ -509,6 +511,7 @@ export default function DeviceDownloadPanel({ project, handoff = null, onHandoff
               <option value="system2">{t("system2.title")}</option>
             </select>
           </label>
+          {ordinaryMode && <p data-readiness-scope>{t("deviceDownload.readiness.scope")}</p>}
           {ordinaryMode && selectedMark?.kind === "unsupported" && selectedMark.category === "not-memory-mapped" && (
             <p className="device-download-system2-hint" data-system2-hint>{t("deviceDownload.system2Hint")}</p>
           )}

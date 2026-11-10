@@ -176,6 +176,7 @@ it("keeps an ordinary readiness failure out of System-2 mode and back in memory 
 it("hides the ordinary readiness loading note in System-2 mode", async () => {
   apiMock.getDeviceReadiness.mockImplementation(() => new Promise(() => {}));
   await render();
+  await chooseDevice();
   expect(q("[data-readiness-loading]")).not.toBeNull();
   await chooseMode("system2");
   expect(q("[data-readiness-loading]")).toBeNull();

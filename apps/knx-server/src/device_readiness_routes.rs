@@ -1,4 +1,4 @@
-//! `/api/device-readiness`: every project device, graded as its download would be.
+//! Offline readiness for all project devices or one selected device.
 //!
 //! The HTTP face of `knx device readiness` ([`project_readiness`]): offline,
 //! per device of the open project, the download `/api/device-download/plan`
@@ -6,14 +6,18 @@
 //! tunnel: this route never reaches the bus, so it takes no tunnel lock
 //! either and can run beside a monitor or a download.
 
-use axum::extract::State;
+use axum::extract::{Query, State};
 use axum::http::StatusCode;
 use axum::routing::get;
 use axum::{Json, Router};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
+
+use knx_core::DeviceId;
 
 use knx_app::download_support::{shipped_evidence, SupportLevel};
-use knx_app::project_readiness::{project_readiness, DeviceReadiness, ReadinessSummary};
+use knx_app::project_readiness::{
+    device_readiness, project_readiness, DeviceReadiness, ReadinessSummary,
+};
 
 use crate::errors::ApiError;
 use crate::SharedState;
@@ -50,7 +54,17 @@ struct ReadinessResponse {
     counts: std::collections::BTreeMap<&'static str, usize>,
 }
 
-async fn readiness(State(state): State<SharedState>) -> Result<Json<ReadinessResponse>, ApiError> {
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct ReadinessQuery {
+    /// Absent preserves the full-project report; present prepares only this device id.
+    device_id: Option<u32>,
+}
+
+async fn readiness(
+    State(state): State<SharedState>,
+    Query(query): Query<ReadinessQuery>,
+) -> Result<Json<ReadinessResponse>, ApiError> {
     let Some(owner) = state.product_db.as_ref() else {
         return Err(ApiError::with_kind(
             StatusCode::CONFLICT,
@@ -72,11 +86,15 @@ async fn readiness(State(state): State<SharedState>) -> Result<Json<ReadinessRes
             ));
         };
         owner
-            .with_read(|products| {
-                Ok::<_, std::convert::Infallible>(project_readiness(products, project, &evidence))
+            .with_read(|products| match query.device_id {
+                Some(id) => device_readiness(products, project, DeviceId(id), &evidence)
+                    .map(|row| vec![row])
+                    .ok_or_else(|| {
+                        ApiError::with_status(StatusCode::NOT_FOUND, "device not found")
+                    }),
+                None => Ok(project_readiness(products, project, &evidence)),
             })
-            .map_err(crate::catalogue_owner::owner_error)?
-            .unwrap()
+            .map_err(crate::catalogue_owner::owner_error)??
     };
     let counts = ReadinessSummary::of(&rows).by_code;
     let devices = rows

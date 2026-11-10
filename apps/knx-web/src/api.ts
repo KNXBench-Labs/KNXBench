@@ -2295,8 +2295,9 @@ export interface DeviceReadinessResponse {
   counts: Record<string, number>;
 }
 
-export function getDeviceReadiness(): Promise<DeviceReadinessResponse> {
-  return request("/api/device-readiness");
+/** Omit the selector for the full report; a selected id is never a full-project fallback. */
+export function getDeviceReadiness(deviceId?: number): Promise<DeviceReadinessResponse> {
+  return request(`/api/device-readiness${deviceId === undefined ? "" : `?deviceId=${deviceId}`}`);
 }
 
 // POST /api/device-compare (device_compare_routes.rs): read-only management

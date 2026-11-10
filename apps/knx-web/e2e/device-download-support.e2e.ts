@@ -17,11 +17,17 @@ for (const language of ["en", "de"] as const) {
       await page.setViewportSize({ width, height: 1000 });
       const state = await intercept(page, language, 8, theme);
       const calls: string[] = [];
+      const readinessCalls: string[] = [];
       const bundle = bundleLog();
       await page.route("**/api/diagnostics/**", async (route) => { if (!(await answerBundleRoute(route, bundle))) await route.fallback(); });
-      await page.route("**/api/device-readiness", (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({
-        devices: [{ address: "1.1.2", name: "PRIVATE customer", programRef: "M-0001_A-0001-01-0000", readiness: "unsupported", category: "byte-order", detail: "CUSTOMER_SECRET 1.1.2 /home/private token=secret", steps: null, octets: null }], counts: { unsupported: 1 },
-      }) }));
+      await page.route("**/api/device-readiness?*", (route) => {
+        const url = new URL(route.request().url());
+        readinessCalls.push(url.pathname + url.search);
+        expect(url.search).toBe("?deviceId=1");
+        return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({
+          devices: [{ address: "1.1.2", name: "PRIVATE customer", programRef: "M-0001_A-0001-01-0000", readiness: "unsupported", category: "byte-order", detail: "CUSTOMER_SECRET 1.1.2 /home/private token=secret", steps: null, octets: null }], counts: { unsupported: 1 },
+        }) });
+      });
       await page.route("**/api/device-download/plan", (route) => {
         calls.push("plan"); return route.fulfill({ status: 422, contentType: "application/json", body: JSON.stringify({ error: "PRIVATE configuration detail", kind: "downloadPreparationRefused", category: "modules" }) });
       });
@@ -32,9 +38,12 @@ for (const language of ["en", "de"] as const) {
       await page.getByRole("combobox").press("Enter");
       await page.getByRole("button", { name: m["deviceDownload.title"], exact: true }).click();
       const panel = page.locator(".device-download-panel");
+      expect(state.requests.filter((request) => request.includes("/api/device-readiness"))).toEqual([]);
+      expect(readinessCalls).toEqual([]);
       await panel.locator("[data-download-device]").selectOption("1");
       const help = panel.locator("[data-support-guidance]");
       await expect(help).toContainText(m["deviceDownload.readiness.reason.byteOrder"]);
+      expect(readinessCalls).toEqual(["/api/device-readiness?deviceId=1"]);
       await expect(help.locator("[data-next-action=requestSupport]")).toHaveText(m["deviceDownload.help.action.requestSupport"]);
       await expect(panel.locator(".device-download-plan,.device-download-verify")).toHaveCount(0);
       expect(calls).toEqual([]);

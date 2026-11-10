@@ -99,11 +99,10 @@ for (const language of ["en", "de"] as const) {
             stops += 1; monitor = false;
             return route.fulfill({ contentType: "application/json", body: JSON.stringify({ sessionId: 6, telegramCount: 0 }) });
           });
-          await page.route("**/api/device-readiness", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({
+          await page.route("**/api/device-readiness?deviceId=1", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({
             counts: {}, devices: [
               { address: "1.1.2", name: "Actuator 1", programRef: "p", readiness: "unsupported", category: "byte-order", detail: "x",
                 steps: null, octets: null },
-              { address: "1.1.10", name: "Actuator 2", programRef: "p", readiness: "untested", category: null, detail: null, steps: 1, octets: 1 },
             ] }) }));
           await openProject(page, language);
           await dismissToasts(page, language);
@@ -117,8 +116,9 @@ for (const language of ["en", "de"] as const) {
           const holder = panel.locator(".device-download-holder");
           await expect(holder.getByRole("status")).toHaveText(fill(messages["gatewayRefusal.busy.busMonitor"], { gateway: GATEWAY }));
           const mark = messages["deviceDownload.readiness.optionMark"];
-          await expect(panel.locator("select[data-download-device] option")).toContainText([`1.1.2 — Actuator 1 (${mark})`]);
-          await panel.locator("select[data-download-device]").selectOption({ label: `1.1.2 — Actuator 1 (${mark})` });
+          await expect(panel.locator("select[data-download-device] option[value='1']")).toHaveText("1.1.2 — Actuator 1");
+          await panel.locator("select[data-download-device]").selectOption("1");
+          await expect(panel.locator("select[data-download-device] option[value='1']")).toHaveText(`1.1.2 — Actuator 1 (${mark})`);
           const guidance = panel.locator("[data-support-guidance=unsupported]");
           await expect(guidance.getByRole("status")).toHaveText(messages["deviceDownload.readiness.reason.byteOrder"]);
           await expect(guidance.locator("[data-next-action=requestSupport]")).toHaveText(messages["deviceDownload.help.action.requestSupport"]);

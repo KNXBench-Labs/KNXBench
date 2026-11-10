@@ -1,4 +1,4 @@
-//! Download readiness of every device in a project, offline.
+//! Offline download readiness for all project devices or one selected device.
 //!
 //! `knx products coverage` answers per *application program*, with product
 //! defaults. The question an installer has is narrower: which of *my*
@@ -14,7 +14,7 @@
 
 use std::collections::BTreeMap;
 
-use knx_core::{is_project_excluded, IndividualAddress, Project};
+use knx_core::{is_project_excluded, DeviceId, DeviceInstance, IndividualAddress, Project};
 use knx_productdb::Connection;
 
 use crate::device_download::{prepare_device_download, PrepareError};
@@ -69,21 +69,52 @@ pub fn project_readiness(
     let mut rows: Vec<DeviceRow> = project
         .devices
         .iter()
-        .map(|device| DeviceRow {
-            address: device.address,
-            name: device.name.clone(),
-            program_ref: device.program_ref.clone(),
-            readiness: match device.address {
-                None => DeviceReadiness::NoAddress,
-                Some(address) if is_project_excluded(address) => DeviceReadiness::Excluded,
-                Some(address) => DeviceReadiness::Graded(grade(conn, project, address, evidence)),
-            },
-        })
+        .map(|device| device_row(conn, project, device, evidence))
         .collect();
     rows.sort_by(|a, b| {
         (a.address.is_none(), a.address, &a.name).cmp(&(b.address.is_none(), b.address, &b.name))
     });
     rows
+}
+
+/// Only the selected device, using the complete project for preparation and safety checks.
+/// An unknown id returns `None`; no other device is prepared.
+pub fn device_readiness(
+    conn: &Connection,
+    project: &Project,
+    device_id: DeviceId,
+    evidence: &BTreeMap<String, VerifiedEvidence>,
+) -> Option<DeviceRow> {
+    project
+        .devices
+        .get(device_id)
+        .map(|device| device_row(conn, project, device, evidence))
+}
+
+fn device_row(
+    conn: &Connection,
+    project: &Project,
+    device: &DeviceInstance,
+    evidence: &BTreeMap<String, VerifiedEvidence>,
+) -> DeviceRow {
+    DeviceRow {
+        address: device.address,
+        name: device.name.clone(),
+        program_ref: device.program_ref.clone(),
+        readiness: match device.address {
+            None => DeviceReadiness::NoAddress,
+            Some(address) if is_project_excluded(address) => DeviceReadiness::Excluded,
+            Some(address) => DeviceReadiness::Graded(grade(conn, project, address, evidence)),
+        },
+    }
+}
+
+#[cfg(test)]
+thread_local! {
+    // Records real preparation entry, not returned rows; each test thread owns its trace.
+    static PREPARED_ADDRESSES: std::cell::RefCell<Vec<IndividualAddress>> = const {
+        std::cell::RefCell::new(Vec::new())
+    };
 }
 
 fn grade(
@@ -92,6 +123,8 @@ fn grade(
     address: IndividualAddress,
     evidence: &BTreeMap<String, VerifiedEvidence>,
 ) -> SupportLevel {
+    #[cfg(test)]
+    PREPARED_ADDRESSES.with_borrow_mut(|addresses| addresses.push(address));
     match prepare_device_download(conn, project, address) {
         Ok(prepared) => download_level(&prepared, evidence),
         Err(error) => SupportLevel::Unsupported {
@@ -229,6 +262,152 @@ mod tests {
             "{}",
             detail(&rows[2])
         );
+    }
+
+    #[test]
+    fn scoped_rows_match_full_rows_including_exclusions_and_duplicate_address_refusals() {
+        let dir = tempfile::tempdir().unwrap();
+        let conn = knx_productdb::open_and_migrate(&dir.path().join("p.sqlite")).unwrap();
+        let excluded = knx_core::EXCLUDED_INDIVIDUAL_ADDRESSES[0].to_string();
+        let mut project = Project::new(Language("en".into()));
+        for device in [
+            device(1, None, ""),
+            device(2, Some(&excluded), ""),
+            device(3, Some("1.1.3"), ""),
+            device(4, Some("1.1.4"), "missing-program"),
+            device(5, Some("1.1.5"), ""),
+            device(6, Some("1.1.5"), ""),
+        ] {
+            project.devices.insert(device);
+        }
+        let evidence = BTreeMap::new();
+        let full = project_readiness(&conn, &project, &evidence);
+        for id in 1..=6 {
+            let scoped = device_readiness(&conn, &project, DeviceId(id), &evidence).unwrap();
+            assert_eq!(
+                &scoped,
+                full.iter().find(|row| row.name == scoped.name).unwrap()
+            );
+        }
+        assert!(device_readiness(&conn, &project, DeviceId(99), &evidence).is_none());
+        let duplicate = device_readiness(&conn, &project, DeviceId(5), &evidence).unwrap();
+        assert!(matches!(duplicate.readiness,
+            DeviceReadiness::Graded(SupportLevel::Unsupported { category: UnsupportedCategory::Configuration, ref detail })
+            if detail.contains("2 devices")));
+    }
+
+    #[test]
+    fn scoped_readiness_prepares_only_the_requested_device() {
+        let dir = tempfile::tempdir().unwrap();
+        let conn = knx_productdb::open_and_migrate(&dir.path().join("p.sqlite")).unwrap();
+        let mut project = Project::new(Language("en".into()));
+        let excluded = knx_core::EXCLUDED_INDIVIDUAL_ADDRESSES[0].to_string();
+        for device in [
+            device(1, Some("1.1.1"), ""),
+            device(2, Some("1.1.2"), ""),
+            device(3, Some(&excluded), ""),
+            device(4, None, ""),
+        ] {
+            project.devices.insert(device);
+        }
+        let evidence = BTreeMap::new();
+        PREPARED_ADDRESSES.with_borrow_mut(Vec::clear);
+        device_readiness(&conn, &project, DeviceId(2), &evidence).unwrap();
+        for id in [3, 4, 99] {
+            let _ = device_readiness(&conn, &project, DeviceId(id), &evidence);
+        }
+        PREPARED_ADDRESSES.with_borrow(|addresses| {
+            assert_eq!(addresses, &["1.1.2".parse::<IndividualAddress>().unwrap()]);
+        });
+        // Calibrate the observer: the unchanged full path really prepares both ordinary devices.
+        PREPARED_ADDRESSES.with_borrow_mut(Vec::clear);
+        project_readiness(&conn, &project, &evidence);
+        PREPARED_ADDRESSES.with_borrow(|addresses| {
+            assert_eq!(
+                addresses,
+                &[
+                    "1.1.1".parse::<IndividualAddress>().unwrap(),
+                    "1.1.2".parse().unwrap()
+                ]
+            );
+        });
+    }
+
+    #[test]
+    fn scoped_readiness_preserves_real_plan_grading_evidence_and_plan_refusal() {
+        use knx_testsupport::vendor_plugin::{
+            declaration, program_xml, HARDWARE2PROGRAM_REF, HARDWARE_XML, PRODUCT_REF, PROGRAM_ID,
+            TARGET,
+        };
+        let mut project = Project::new(Language("en".into()));
+        let mut target = device(1, Some(TARGET), HARDWARE2PROGRAM_REF);
+        target.product_ref = PRODUCT_REF.into();
+        project.devices.insert(target);
+        project.installations.push(knx_core::Installation {
+            id: knx_core::InstallationId(0),
+            name: "Synthetic".into(),
+            default_line: None,
+            multicast_address: None,
+            completion: knx_core::CompletionStatus::FinishedDesign,
+            topology: knx_core::Topology {
+                areas: vec![],
+                lines: vec![],
+                unassigned: vec![DeviceId(1)],
+            },
+            buildings: vec![],
+            group_ranges: vec![],
+            group_addresses: vec![],
+            parameters: vec![],
+        });
+        for plugin in [false, true] {
+            let dir = tempfile::tempdir().unwrap();
+            let conn = knx_productdb::open_and_migrate(&dir.path().join("p.sqlite")).unwrap();
+            let program = program_xml(&if plugin { declaration() } else { String::new() });
+            knx_productdb::ingest_file(&conn, "M-FFF6/A.xml", program.as_bytes()).unwrap();
+            knx_productdb::ingest_file(&conn, "M-FFF6/Hardware.xml", HARDWARE_XML.as_bytes())
+                .unwrap();
+            for verified in [false, true] {
+                // Synthetic evidence tests grade selection only; it makes no hardware claim.
+                let evidence = if verified {
+                    BTreeMap::from([(
+                        PROGRAM_ID.into(),
+                        VerifiedEvidence {
+                            program_id: PROGRAM_ID.into(),
+                            scopes: vec!["complete".into()],
+                            device: "Synthetic test only".into(),
+                            date: "2026-01-01".into(),
+                            reference: "synthetic".into(),
+                        },
+                    )])
+                } else {
+                    BTreeMap::new()
+                };
+                let scoped = device_readiness(&conn, &project, DeviceId(1), &evidence).unwrap();
+                assert_eq!(
+                    vec![scoped.clone()],
+                    project_readiness(&conn, &project, &evidence)
+                );
+                assert_eq!(
+                    scoped.readiness.code(),
+                    if plugin {
+                        "unsupported"
+                    } else if verified {
+                        "verified"
+                    } else {
+                        "untested"
+                    }
+                );
+                if plugin {
+                    assert!(matches!(
+                        scoped.readiness,
+                        DeviceReadiness::Graded(SupportLevel::Unsupported {
+                            category: UnsupportedCategory::VendorDownloadPlugin,
+                            ..
+                        })
+                    ));
+                }
+            }
+        }
     }
 
     #[test]

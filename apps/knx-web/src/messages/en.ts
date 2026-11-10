@@ -4217,6 +4217,7 @@ export const messages = {
   "deviceDownload.status.unknown": "Could not check whether a download is running.",
   "deviceDownload.status.retry": "Check again",
   "deviceDownload.readiness.loading": "Checking which devices KNXBench can prepare…",
+  "deviceDownload.readiness.scope": "Readiness is checked only for the selected device. Other devices have not been checked.",
   "deviceDownload.readiness.retry": "Check again",
   "deviceDownload.guide.title": "Steps",
   "deviceDownload.guide.step.device": "1. Choose the device",

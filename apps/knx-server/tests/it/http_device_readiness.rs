@@ -52,11 +52,19 @@ fn state(project: Option<Project>, products: bool) -> (tempfile::TempDir, knx_se
 }
 
 async fn get(state: knx_server::AppState) -> (StatusCode, Value) {
+    get_query(state, "").await
+}
+
+async fn get_query(state: knx_server::AppState, query: &str) -> (StatusCode, Value) {
     let app = knx_server::app(Arc::new(state), None);
+    get_from(app, query).await
+}
+
+async fn get_from(app: axum::Router, query: &str) -> (StatusCode, Value) {
     let response = app
         .oneshot(
             Request::builder()
-                .uri("/api/device-readiness")
+                .uri(format!("/api/device-readiness{query}"))
                 .body(Body::empty())
                 .unwrap(),
         )
@@ -106,6 +114,66 @@ async fn every_device_is_listed_with_its_grade_and_the_counts() {
     assert_eq!(body["counts"]["unsupported"], 1);
     assert_eq!(body["counts"]["excluded"], 1);
     assert_eq!(body["counts"]["no-address"], 1);
+}
+
+#[tokio::test]
+async fn typed_device_selector_returns_only_that_row_and_subset_counts() {
+    let excluded = knx_core::EXCLUDED_INDIVIDUAL_ADDRESSES[0].to_string();
+    let mut project = Project::new(Language("en".into()));
+    for device in [
+        device(1, Some("1.1.10")),
+        device(2, Some(&excluded)),
+        device(3, None),
+        device(4, Some("1.1.10")),
+    ] {
+        project.devices.insert(device);
+    }
+    let (_dir, state) = state(Some(project), true);
+    let app = knx_server::app(Arc::new(state), None);
+    let (status, full) = get_from(app.clone(), "").await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(full["devices"].as_array().unwrap().len(), 4);
+    for id in 1..=4 {
+        let (status, body) = get_from(app.clone(), &format!("?deviceId={id}")).await;
+        assert_eq!(status, StatusCode::OK, "{body}");
+        let expected = full["devices"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|row| row["name"] == format!("Device {id}"))
+            .unwrap();
+        assert_eq!(body["devices"], serde_json::json!([expected]));
+        let code = expected["readiness"].as_str().unwrap();
+        assert_eq!(body["counts"], serde_json::json!({ code: 1 }));
+        if id == 1 || id == 4 {
+            assert!(body["devices"][0]["detail"]
+                .as_str()
+                .unwrap()
+                .contains("2 devices"));
+        }
+    }
+    let (status, body) = get_from(app, "?deviceId=99").await;
+    assert_eq!(status, StatusCode::NOT_FOUND, "{body}");
+    assert_eq!(body["error"], "device not found");
+    assert!(body.get("devices").is_none());
+}
+
+#[tokio::test]
+async fn malformed_or_duplicate_device_selectors_are_not_silently_full_reads() {
+    let (_dir, state) = state(Some(Project::new(Language("en".into()))), true);
+    let app = knx_server::app(Arc::new(state), None);
+    for query in [
+        "?deviceId=",
+        "?deviceId=no",
+        "?deviceId=-1",
+        "?deviceId=4294967296",
+        "?deviceId=1&deviceId=2",
+        "?deviceId=1&deviceId=1",
+    ] {
+        let (status, body) = get_from(app.clone(), query).await;
+        assert_eq!(status, StatusCode::BAD_REQUEST, "{query}: {body}");
+        assert!(body.get("devices").is_none(), "{query}: {body}");
+    }
 }
 
 #[tokio::test]

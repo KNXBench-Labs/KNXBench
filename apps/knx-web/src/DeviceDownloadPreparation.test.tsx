@@ -142,6 +142,89 @@ afterEach(async () => {
   resetBusDiscoveryForTests();
 });
 
+it("does not read readiness without a selected addressed device, even after a revision", async () => {
+  await render();
+  await render({ tree: { ...project(), snapshot_revision: 2 } });
+  expect(apiMock.getDeviceReadiness).not.toHaveBeenCalled();
+  expect(host.querySelector("[data-readiness-loading]")).toBeNull();
+  expect(text("[data-readiness-scope]")).toBe(en["deviceDownload.readiness.scope"]);
+  await setSelect(deviceSelect(), "10");
+  expect(apiMock.getDeviceReadiness.mock.calls).toEqual([[10]]);
+  await setSelect(deviceSelect(), "");
+  await render({ tree: { ...project(), snapshot_revision: 3 } });
+  expect(apiMock.getDeviceReadiness.mock.calls).toEqual([[10]]);
+  expect(host.querySelector("[data-support-guidance]")).toBeNull();
+  expect(apiMock.planDeviceDownload).not.toHaveBeenCalled();
+  expect(apiMock.startDeviceDownload).not.toHaveBeenCalled();
+});
+
+it("requests the selected id again after a revision and stops when it loses its address", async () => {
+  const tree = project();
+  await render({ tree });
+  await setSelect(deviceSelect(), "10");
+  await render({ tree: { ...tree, snapshot_revision: 2 } });
+  expect(apiMock.getDeviceReadiness.mock.calls).toEqual([[10], [10]]);
+  const noTarget = structuredClone(tree);
+  noTarget.installations[0].topology[0].lines[0].devices[0].address = null;
+  await render({ tree: noTarget });
+  expect(deviceSelect().value).toBe("");
+  expect(apiMock.getDeviceReadiness.mock.calls).toEqual([[10], [10]]);
+});
+
+it.each(["selection", "revision"] as const)("ignores old readiness replies and failures after %s changes", async (change) => {
+  const old = deferred<{ devices: unknown[]; counts: Record<string, number> }>();
+  const next = deferred<{ devices: unknown[]; counts: Record<string, number> }>();
+  apiMock.getDeviceReadiness.mockReturnValueOnce(old.promise).mockReturnValueOnce(next.promise);
+  const tree = project();
+  await render({ tree });
+  await setSelect(deviceSelect(), "10");
+  if (change === "selection") await setSelect(deviceSelect(), "11");
+  else await render({ tree: { ...tree, snapshot_revision: 2 } });
+  expect(apiMock.getDeviceReadiness.mock.calls).toEqual(change === "selection" ? [[10], [11]] : [[10], [10]]);
+  const address = change === "selection" ? "1.1.3" : "1.1.67";
+  await act(async () => next.resolve({ devices: [{ address, readiness: "unsupported", category: "byte-order", detail: "CURRENT" }], counts: {} }));
+  await flush();
+  expect(text("[data-support-guidance]")).toContain("CURRENT");
+  await act(async () => old.reject(new Error("STALE FAILURE")));
+  await flush();
+  expect(text("[data-support-guidance]")).toContain("CURRENT");
+  expect(host.textContent).not.toContain("STALE FAILURE");
+  expect(host.querySelector("[data-readiness-retry]")).toBeNull();
+  expect(host.querySelector("[data-readiness-loading]")).toBeNull();
+  expect(apiMock.startDeviceDownload).not.toHaveBeenCalled();
+});
+
+it.each(["selection", "revision"] as const)("does not let a late success erase the current failure after %s changes", async (change) => {
+  const old = deferred<{ devices: unknown[]; counts: Record<string, number> }>();
+  apiMock.getDeviceReadiness.mockReturnValueOnce(old.promise).mockRejectedValueOnce(new Error("CURRENT FAILURE"));
+  const tree = project();
+  await render({ tree });
+  await setSelect(deviceSelect(), "10");
+  if (change === "selection") await setSelect(deviceSelect(), "11");
+  else await render({ tree: { ...tree, snapshot_revision: 2 } });
+  await flush();
+  expect(text("[data-support-guidance=transient]")).toContain("CURRENT FAILURE");
+  await act(async () => old.resolve({ devices: [{ address: "1.1.67", readiness: "unsupported", category: "modules", detail: "STALE MARK" }], counts: {} }));
+  await flush();
+  expect(text("[data-support-guidance=transient]")).toContain("CURRENT FAILURE");
+  expect(host.textContent).not.toContain("STALE MARK");
+  expect(host.querySelector("[data-readiness-retry]")).not.toBeNull();
+  expect([...deviceSelect().options].every((option) => !option.textContent?.includes(en["deviceDownload.readiness.optionMark"]))).toBe(true);
+});
+
+it("does not give an unselected device the selected id's mark even at the same address", async () => {
+  const tree = project();
+  tree.installations[0].topology[0].lines[0].devices[1].address = "1.1.67";
+  apiMock.getDeviceReadiness.mockResolvedValue({ devices: [{ address: "1.1.67", readiness: "unsupported", category: "configuration", detail: "2 devices" }], counts: {} });
+  await render({ tree });
+  await setSelect(deviceSelect(), "10");
+  expect(deviceSelect().querySelector("option[value='10']")!.textContent).toContain(en["deviceDownload.readiness.optionMark"]);
+  expect(deviceSelect().querySelector("option[value='11']")!.textContent).not.toContain(en["deviceDownload.readiness.optionMark"]);
+  await setSelect(deviceSelect(), "11");
+  expect(apiMock.getDeviceReadiness.mock.calls).toEqual([[10], [11]]);
+  expect(deviceSelect().querySelector("option[value='10']")!.textContent).not.toContain(en["deviceDownload.readiness.optionMark"]);
+});
+
 it("reads the shared search without starting one, and says when none has run", async () => {
   await render();
   expect(apiMock.discoverBusInterfaces).not.toHaveBeenCalled();
@@ -389,6 +472,7 @@ it("#18: shows readiness while it loads, and a failed read can be retried", asyn
   const ready = deferred<{ devices: never[]; counts: Record<string, never> }>();
   apiMock.getDeviceReadiness.mockReset().mockReturnValueOnce(ready.promise);
   await render();
+  await setSelect(deviceSelect(), "10");
   expect(text("[data-readiness-loading]")).toBe(en["deviceDownload.readiness.loading"]);
   expect(host.querySelector('[data-readiness-loading] .task-status-text')).not.toBeNull();
   await act(async () => ready.reject(new Error("readiness exploded")));
@@ -479,6 +563,8 @@ it("marks a device KNXBench cannot program yet, with the reason, before anything
     { address: "1.1.3", name: "Actuator", programRef: "p", readiness: "untested", category: null, detail: null, steps: 1, octets: 1 },
   ] });
   await render();
+  expect(apiMock.getDeviceReadiness).not.toHaveBeenCalled();
+  await setSelect(deviceSelect(), "10");
   const labels = [...deviceSelect().options].map((option) => option.textContent);
   expect(labels).toContain("1.1.67 — Push button 2-fold (memory download: not supported yet)");
   expect(labels).toContain("1.1.3 — Actuator");
@@ -497,6 +583,7 @@ it("names the prepare step plainly and says nothing is written yet", async () =>
 it("says readiness could not be checked instead of marking nothing silently", async () => {
   apiMock.getDeviceReadiness.mockResolvedValue([]);
   await render();
+  await setSelect(deviceSelect(), "10");
   expect(text("[data-support-guidance=transient]")).toContain(en["deviceDownload.help.reason.transient"]);
   expect([...deviceSelect().options].map((option) => option.textContent)).toContain("1.1.67 — Push button 2-fold");
 });

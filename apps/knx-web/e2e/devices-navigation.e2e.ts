@@ -151,9 +151,17 @@ async function intercept(page: Page, language: "en" | "de", count = 3, theme = "
           seq: 1, timestamp: "2026-10-08T12:00:00Z", source: "1.1.2", destination: "1/1/1", destinationName: "Kitchen light",
           service: "GroupValueWrite", rawPayload: "01", decoded: null, control: null,
         }] : [] };
-    } else if (path === "/api/device-readiness" && method === "GET") body = { devices: nodes.map((node) => ({
-      address: node.address, name: node.name, programRef: "fictional", readiness: "untested", category: null, detail: null, steps: 1, octets: 1,
-    })), counts: { untested: nodes.length } };
+    } else if (path === "/api/device-readiness" && method === "GET") {
+      const selector = url.searchParams.get("deviceId");
+      const selected = selector === null ? nodes : nodes.filter((node) => node.id === Number(selector));
+      if (selector !== null) expect([...url.searchParams.keys()]).toEqual(["deviceId"]);
+      if (selector !== null && selected.length !== 1) {
+        state.unexpected.push(`${method} ${url.pathname}${url.search}`);
+        status = 404; body = { error: "device not found" };
+      } else body = { devices: selected.map((node) => ({
+        address: node.address, name: node.name, programRef: "fictional", readiness: "untested", category: null, detail: null, steps: 1, octets: 1,
+      })), counts: { untested: selected.length } };
+    }
     else if (path === "/api/device-address/availability" && method === "GET") body = { startAvailable: false, reason: "Device-specific recovery not implemented" };
     else if (path === "/api/bus/scan/results" && method === "GET") body = { sessionId: 4, status: "completed", error: null,
       nextSince: 1, completedCount: 1, totalCount: 1, omittedAddresses: [], excludedAddresses: [],

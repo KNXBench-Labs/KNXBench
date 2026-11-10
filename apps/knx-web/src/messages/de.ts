@@ -4043,6 +4043,7 @@ export const messages: Record<MessageKey, string> = {
   "deviceDownload.status.unknown": "Ob ein Download läuft, ließ sich nicht prüfen.",
   "deviceDownload.status.retry": "Erneut prüfen",
   "deviceDownload.readiness.loading": "Prüfe, welche Geräte KNXBench vorbereiten kann…",
+  "deviceDownload.readiness.scope": "Die Bereitschaft wird nur für das ausgewählte Gerät geprüft. Andere Geräte sind nicht geprüft.",
   "deviceDownload.readiness.retry": "Erneut prüfen",
   "deviceDownload.guide.title": "Schritte",
   "deviceDownload.guide.step.device": "1. Gerät wählen",

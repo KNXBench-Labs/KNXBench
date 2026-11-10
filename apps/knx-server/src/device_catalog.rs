@@ -189,7 +189,7 @@ pub(crate) async fn get(
                    inputs: Vec<(DeviceNode, (String, String))>|
      -> Result<(Vec<DeviceCatalogRow>, Option<&'static str>), ApiError> {
         let mut metadata = HashMap::new();
-        let mut manufacturer_names = HashMap::new();
+        let mut manufacturer_names = knx_productdb::query::ManufacturerNameCache::default();
         let mut problem = None;
         let mut devices = Vec::with_capacity(inputs.len());
         for (device, refs) in inputs {

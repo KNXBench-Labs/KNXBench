@@ -5,12 +5,22 @@
 The Devices list and device Product data overview use the same product-database
 name resolver. A nonempty installed manufacturer name wins unchanged. A missing,
 empty or ID-shaped name (`M-xxxx` or its four hex digits) may use retained
-`knx_master.xml` declarations for that exact, valid manufacturer ID. One distinct
+master-content declarations for that exact, valid manufacturer ID, regardless of
+the retained filename or package membership. One distinct
 non-placeholder name resolves it; conflicting names, damaged masters and absent
 matches leave the exact ID as fallback. There is no embedded vendor-name table,
 network lookup, database rewrite or project mutation. Retained master bytes must
 match their recorded length and SHA-256 before they can supply a name. The batch endpoint caches
-name decisions only for its current read. Ordinary master-ingest last-writer-wins
+a lazy, complete retained-name index only for its current read, shared across all
+manufacturers in that request. Discovery makes one bounded source-table pass,
+without source-by-membership scans. Before fetching payloads it admits at most
+4096 sources, 8 MiB per source and 32 MiB in aggregate; XML examination also admits
+at most 262144 events in aggregate, depth 128 and 256 attributes per element.
+Exceeding any bound or an unreadable query refuses **all** optional fallback names,
+not just the unexamined suffix. Real installed names still win, and all available
+normalized product facts remain available. Thus a large unrelated source can make
+fallback names unknown; a partial scan never establishes uniqueness. No schema or
+persistent cache is added. Ordinary master-ingest last-writer-wins
 policy is unchanged ([KL-088](../limitations/KL-088-manufacturer-display-name-winner.md)).
 
 This also covers older databases whose generic `ingest_file` retained a master
@@ -56,7 +66,9 @@ records are explicitly untranslated literals with translated EN/DE field labels.
 Empty strings stay visible as empty values, NULL stays omitted, and zero/false
 are not treated as absent. Flags and security values are declarations, not
 verified runtime capabilities. The omission count describes only overview fields.
-Long identifiers and prose wrap inside the current pane.
+Long identifiers and prose wrap inside the current pane; database literals preserve
+newlines and repeated whitespace. Scalar package/source metadata queries never
+project discarded binary payloads.
 
 No schema migration, device communication, catalogue installation or compatibility
 policy is added. Full XML/baggage interpretation and manufacturer-name recency
@@ -68,7 +80,9 @@ The regression fixture is a fictional normalized SQLite database plus a retained
 otherwise uninterpreted master. The real HTTP handler's complete product response
 is pinned to the typed browser fixture in `e2e/fixtures/product-details.ts`.
 Product-query tests cover all scalar columns, duplicate/ambiguous names, unknown
-IDs, absent values, multiple placements, cycles and mismatched links. HTTP tests
+IDs, renamed generic-retained masters/conflicts, bounded source/byte/XML refusal,
+observed SQLite instruction work and payload-column projection denial, absent values,
+multiple placements, cycles and mismatched links. HTTP tests
 cover both device endpoints and unchanged project state. Mounted production and
 development browser cases cover EN/DE at 1440/400 pixels and long literals; all
 API requests, including automatic discovery, are intercepted inside an offline

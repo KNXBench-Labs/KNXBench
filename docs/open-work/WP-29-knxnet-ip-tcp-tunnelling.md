@@ -54,6 +54,25 @@ selected acceptance plan is closed by source-bound composition. Programming,
 downloads, serial, discovery/routing, hardware interoperability and wider WP-29
 remain outside it. [Acceptance and limitations](../status/2026-11-10-server-web-tcp-scans.md).
 
+## CLI find-serial successor (10 November 2026; integrated gate pending)
+
+Both existing read-only `knx device find-serial` query forms now admit explicit
+`--tunnel-transport udp|tcp`: serial-to-address broadcast lookup and
+`--address`-to-serial property read. UDP remains the default; there is no
+fallback, reconnect or replay. Strict gateway/query admission precedes contact.
+Actual transport and positive TCP skips sampled before disconnect are disclosed
+without requiring recording. Result, history, optional bundle and best-effort
+cleanup policies remain unchanged.
+
+Both independent source-review axes passed. The only optional finding, a bounded
+initial accept in the rejected-handshake test, was adopted and independently
+closed without production or assertion changes. Historical focused evidence is
+source-bound composition, not a new full run. Integrated package acceptance and
+publication remain pending in the [dedicated record](../status/2026-11-10-cli-tcp-find-serial.md).
+This is a narrow exception to the earlier device-workflow exclusion, not device
+programming/address assignment, KNX IP Secure, hardware interoperability or
+closure of wider WP-29.
+
 ## Independently checked source basis
 
 The original KNXnet/IP Core v01.06.02 and Tunnelling v01.07.01 clauses were read

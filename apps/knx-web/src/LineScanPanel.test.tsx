@@ -77,7 +77,7 @@ beforeEach(() => {
     interProbePauseMs: 100,
     worstCaseMs: 18200,
   });
-  apiMock.startLineScan.mockResolvedValue({ sessionId: 4, estimate: awaitableEstimate() });
+  apiMock.startLineScan.mockResolvedValue({ sessionId: 4, serverIncarnation: "scan-test", transport: "udp", skippedFrames: null, estimate: awaitableEstimate() });
   apiMock.cancelLineScan.mockResolvedValue(scanResponse("cancelled", []));
   apiMock.compareLineScan.mockResolvedValue({
     unexpected: ["1.1.4"],
@@ -94,7 +94,7 @@ afterEach(async () => {
   }
   host?.remove();
   host = undefined;
-  vi.clearAllMocks();
+  vi.resetAllMocks();
   vi.useRealTimers();
 });
 
@@ -112,6 +112,11 @@ function awaitableEstimate() {
 function scanResponse(status: "running" | "completed" | "cancelled" | "failed", results: unknown[]) {
   return {
     sessionId: 4,
+    serverIncarnation: "scan-test",
+    transport: "udp" as const,
+    skippedFrames: null,
+    disconnectConfirmed: status === "running" ? null : true,
+    cleanupError: null,
     status,
     error: null,
     nextSince: results.length,
@@ -124,6 +129,193 @@ function scanResponse(status: "running" | "completed" | "cancelled" | "failed", 
 }
 
 describe("LineScanPanel", () => {
+  it.each([false, true].flatMap(detach => ["success", "error"].map(outcome => [detach, outcome] as const)))(
+    "cancels the accepted pair before its first poll settles (detach=%s, late poll=%s)", async (detach, outcome) => {
+      await renderPanel(); await prepareStart();
+      let finishPoll!: (value: ReturnType<typeof scanResponse>) => void;
+      let rejectPoll!: (error: Error) => void;
+      let finishCancel!: (value: ReturnType<typeof scanResponse>) => void;
+      apiMock.pollLineScan.mockReturnValueOnce(new Promise((resolve, reject) => { finishPoll = resolve; rejectPoll = reject; }));
+      apiMock.cancelLineScan.mockReturnValueOnce(new Promise(resolve => { finishCancel = resolve; }));
+      await act(async () => { click("Start read-only scan"); await Promise.resolve(); });
+      await act(async () => click("Cancel scan"));
+      expect(apiMock.cancelLineScan).toHaveBeenCalledExactlyOnceWith({ sessionId: 4, serverIncarnation: "scan-test", transport: "udp" });
+      if (detach) {
+        await act(async () => { root!.unmount(); root = undefined; }); host!.remove();
+        apiMock.pollLineScan.mockResolvedValueOnce({ ...scanResponse("running", [{ address: "1.1.7", outcome: { kind: "occupiedBusy" } }]), serverIncarnation: "successor" });
+        await renderPanel();
+      }
+      await act(async () => {
+        if (outcome === "success") finishPoll(scanResponse("running", [{ address: "1.1.5", outcome: { kind: "occupiedBusy" } }]));
+        else rejectPoll(new Error("retired first poll"));
+        await Promise.resolve();
+      });
+      expect(host!.textContent).not.toContain("1.1.5");
+      expect(host!.textContent).not.toContain("retired first poll");
+      if (!detach) expect([...host!.querySelectorAll<HTMLButtonElement>("button")].find(button => button.textContent === "Cancel scan")!.disabled).toBe(true);
+      await act(async () => { finishCancel(scanResponse("cancelled", [])); await Promise.resolve(); });
+      if (detach) expect(host!.textContent).toContain("1.1.7");
+      else expect(host!.textContent).toContain("Cancelled");
+      expect(apiMock.cancelLineScan).toHaveBeenCalledTimes(1);
+    },
+  );
+  it.each([400, 404, 405])("keeps definite Start refusal %s editable and retries only on an explicit new choice", async status => {
+    await renderPanel(); await prepareStart();
+    await act(async () => { chooseTransport("tcp"); });
+    await act(async () => { click("Estimate cost"); await Promise.resolve(); });
+    apiMock.startLineScan.mockRejectedValueOnce(Object.assign(new Error("definite refusal"), { status }));
+    await act(async () => { click("Start read-only scan"); await Promise.resolve(); });
+    expect(host!.querySelector<HTMLSelectElement>(".line-scan-config select")!.disabled).toBe(false);
+    expect(host!.querySelector<HTMLInputElement>('.line-scan-config input[placeholder="192.0.2.10:3671"]')!.disabled).toBe(false);
+    expect(apiMock.startLineScan).toHaveBeenCalledTimes(1);
+    expect(apiMock.cancelLineScan).not.toHaveBeenCalled();
+    await act(async () => { chooseTransport("udp"); });
+    expect(host!.querySelector<HTMLButtonElement>(".line-scan-start")!.disabled).toBe(true);
+    await act(async () => { click("Estimate cost"); await Promise.resolve(); });
+    apiMock.pollLineScan.mockResolvedValueOnce(scanResponse("running", []));
+    await act(async () => { click("Start read-only scan"); await Promise.resolve(); });
+    expect(apiMock.startLineScan).toHaveBeenCalledTimes(2);
+    expect(apiMock.startLineScan.mock.calls.map(call => call[1])).toEqual(["tcp", "udp"]);
+  });
+  it.each([
+    new Error("lost Start reply"), new Error("Malformed line scan identity."),
+    Object.assign(new Error("server failure"), { status: 500 }), Object.assign(new Error("connect uncertain"), { status: 502 }),
+  ])("does not turn ambiguous Start failure %s into reconnect authority", async reason => {
+    await renderPanel(); await prepareStart();
+    apiMock.startLineScan.mockRejectedValueOnce(reason);
+    await act(async () => { click("Start read-only scan"); await Promise.resolve(); });
+    expect(host!.querySelector<HTMLButtonElement>(".line-scan-start")!.disabled).toBe(true);
+    expect(host!.querySelector<HTMLSelectElement>(".line-scan-config select")!.disabled).toBe(true);
+    expect(apiMock.startLineScan).toHaveBeenCalledTimes(1);
+    expect(apiMock.cancelLineScan).not.toHaveBeenCalled();
+  });
+  it.each(["success", "error"])("fences a delayed comparison %s after a same-id successor", async outcome => {
+    let finish!: (value: { unexpected: string[]; missing: string[]; excludedInProject: string[] }) => void;
+    let reject!: (error: Error) => void;
+    apiMock.pollLineScan.mockResolvedValueOnce(scanResponse("completed", []));
+    apiMock.compareLineScan.mockReturnValueOnce(new Promise((resolve, fail) => { finish = resolve; reject = fail; }));
+    await renderPanel(); await prepareStart();
+    apiMock.startLineScan.mockResolvedValueOnce({ sessionId: 4, serverIncarnation: "successor", transport: "udp", skippedFrames: null, estimate: awaitableEstimate() });
+    apiMock.pollLineScan.mockResolvedValueOnce({ ...scanResponse("completed", []), serverIncarnation: "successor" });
+    apiMock.compareLineScan.mockResolvedValueOnce({ unexpected: ["1.1.7"], missing: [], excludedInProject: [] });
+    await act(async () => { click("Start read-only scan"); await Promise.resolve(); });
+    await act(async () => {
+      if (outcome === "success") finish({ unexpected: ["1.1.9"], missing: [], excludedInProject: [] });
+      else reject(new Error("retired comparison"));
+      await Promise.resolve();
+    });
+    expect(host!.textContent).toContain("1.1.7");
+    expect(host!.textContent).not.toContain("1.1.9");
+    expect(host!.textContent).not.toContain("retired comparison");
+    expect(apiMock.compareLineScan).toHaveBeenCalledTimes(2);
+  });
+  it.each(["success", "error"])("refuses a successor Start until deliberate reconciliation %s settles", async outcome => {
+    let finish!: (value: { can_undo: boolean }) => void;
+    let reject!: (error: Error) => void;
+    apiMock.pollLineScan.mockResolvedValueOnce(scanResponse("completed", []));
+    const onTreeUpdate = vi.fn();
+    await renderPanel(onTreeUpdate); await prepareStart();
+    await act(async () => host!.querySelector<HTMLInputElement>('.line-scan-reconciliation input[type="checkbox"]')!.click());
+    apiMock.reconcileLineScan.mockReturnValueOnce(new Promise((resolve, fail) => { finish = resolve; reject = fail; }));
+    await act(async () => click("Apply selected changes"));
+    const start = host!.querySelector<HTMLButtonElement>(".line-scan-start")!;
+    expect(start.disabled).toBe(true);
+    await act(async () => start.click());
+    expect(apiMock.startLineScan).not.toHaveBeenCalled();
+    await act(async () => {
+      if (outcome === "success") finish({ can_undo: true }); else reject(new Error("reconciliation refused"));
+      await Promise.resolve();
+    });
+    expect(start.disabled).toBe(false);
+    if (outcome === "success") expect(onTreeUpdate).toHaveBeenCalledWith({ can_undo: true });
+    else expect(onTreeUpdate).not.toHaveBeenCalled();
+    apiMock.startLineScan.mockResolvedValueOnce({ sessionId: 5, serverIncarnation: "scan-test", transport: "udp", skippedFrames: null, estimate: awaitableEstimate() });
+    apiMock.pollLineScan.mockResolvedValueOnce({ ...scanResponse("completed", []), sessionId: 5 });
+    await act(async () => { click("Start read-only scan"); await Promise.resolve(); });
+    await act(async () => host!.querySelector<HTMLInputElement>('.line-scan-reconciliation input[type="checkbox"]')!.click());
+    expect([...host!.querySelectorAll<HTMLButtonElement>("button")].find(button => button.textContent === "Apply selected changes")!.disabled).toBe(false);
+  });
+
+  async function prepareStart() {
+    await act(async () => setInput('.line-scan-config input[placeholder="192.0.2.10:3671"]', "192.0.2.10:3671"));
+    await act(async () => { click("Estimate cost"); await Promise.resolve(); });
+  }
+  function chooseTransport(value: "udp" | "tcp") {
+    const select = host!.querySelector<HTMLSelectElement>(".line-scan-config select")!;
+    Object.getOwnPropertyDescriptor(window.HTMLSelectElement.prototype,"value")!.set!.call(select,value);
+    select.dispatchEvent(new Event("change",{bubbles:true}));
+  }
+  it("keeps a scan-local UDP default despite TCP monitoring preference and invalidates estimates on selection", async () => {
+    setSetting("preferredIpTunnelTransport","tcp");
+    await renderPanel(); await prepareStart();
+    expect(host!.querySelector<HTMLSelectElement>("select")!.value).toBe("udp");
+    await act(async () => chooseTransport("tcp"));
+    expect(host!.querySelector<HTMLButtonElement>(".line-scan-start")!.disabled).toBe(true);
+    expect(apiMock.startLineScan).not.toHaveBeenCalled();
+    expect(getSetting("preferredIpTunnelTransport")).toBe("tcp");
+    apiMock.startLineScan.mockResolvedValueOnce({ sessionId:4,serverIncarnation:"scan-test",transport:"tcp",skippedFrames:0,estimate:awaitableEstimate() });
+    apiMock.pollLineScan.mockResolvedValueOnce({ ...scanResponse("running",[]),transport:"tcp",skippedFrames:2 });
+    await act(async () => { click("Estimate cost"); await Promise.resolve(); });
+    await act(async () => { click("Start read-only scan"); await Promise.resolve(); });
+    expect(apiMock.startLineScan).toHaveBeenCalledWith(expect.objectContaining({ gateway:"192.0.2.10:3671" }),"tcp");
+    expect(host!.textContent).toContain("Observed scan transport: TCP");
+    expect(host!.textContent).toContain("2 stream frames skipped");
+    expect(host!.querySelector<HTMLSelectElement>("select")!.disabled).toBe(true);
+  });
+  it.each([false,true])("retains pending explicit Cancel across detach=%s and uses exactly the returned pair", async detach => {
+    let resolveStart!: (value: unknown) => void;
+    apiMock.startLineScan.mockReturnValueOnce(new Promise(resolve => { resolveStart=resolve; }));
+    apiMock.cancelLineScan.mockResolvedValueOnce({ ...scanResponse("cancelled", []), sessionId: 41, serverIncarnation: "old-process", transport: "tcp", skippedFrames: 0 });
+    await renderPanel(); await prepareStart();
+    await act(async () => chooseTransport("tcp"));
+    await act(async () => { click("Estimate cost"); await Promise.resolve(); });
+    await act(async () => { click("Start read-only scan"); });
+    await act(async () => { click("Cancel scan"); });
+    expect(apiMock.cancelLineScan).not.toHaveBeenCalled();
+    expect(host!.textContent).not.toContain("Cancelled");
+    if (detach) await act(async () => { root!.unmount(); root=undefined; });
+    await act(async () => { resolveStart({ sessionId:41,serverIncarnation:"old-process",transport:"tcp",skippedFrames:0,estimate:awaitableEstimate() }); await Promise.resolve(); });
+    expect(apiMock.cancelLineScan).toHaveBeenCalledExactlyOnceWith({ sessionId:41,serverIncarnation:"old-process",transport:"tcp" });
+    expect(apiMock.pollLineScan).toHaveBeenCalledTimes(1);
+  });
+  it("does not silently cancel an accepted server-owned scan on navigation", async () => {
+    apiMock.pollLineScan.mockResolvedValueOnce(scanResponse("running",[]));
+    await renderPanel();
+    await act(async () => { root!.unmount(); root=undefined; });
+    expect(apiMock.cancelLineScan).not.toHaveBeenCalled();
+  });
+  it.each(["success","error"])("fences an old first-poll %s after a start accepts a new same-id process", async outcome => {
+    let finish!: (value: ReturnType<typeof scanResponse>) => void;
+    let reject!: (reason: Error) => void;
+    apiMock.pollLineScan.mockReturnValueOnce(new Promise((resolve,reject_) => { finish=resolve; reject=reject_; }));
+    await renderPanel(); await prepareStart();
+    apiMock.startLineScan.mockResolvedValueOnce({ sessionId:4,serverIncarnation:"new-process",transport:"udp",skippedFrames:null,estimate:awaitableEstimate() });
+    apiMock.pollLineScan.mockResolvedValueOnce({ ...scanResponse("running",[{address:"1.1.7",outcome:{kind:"occupiedBusy"}}]),serverIncarnation:"new-process" });
+    await act(async () => { click("Start read-only scan"); await Promise.resolve(); });
+    await act(async () => { if (outcome==="success") finish(scanResponse("completed",[{address:"1.1.5",outcome:{kind:"occupiedBusy"}}])); else reject(new Error("obsolete failure")); await Promise.resolve(); });
+    expect(host!.textContent).toContain("1.1.7"); expect(host!.textContent).not.toContain("1.1.5");
+    expect(host!.textContent).not.toContain("obsolete failure");
+    expect(apiMock.compareLineScan).not.toHaveBeenCalled();
+  });
+  it("locks actions after malformed reattachment instead of guessing legacy UDP", async () => {
+    apiMock.pollLineScan.mockRejectedValueOnce(new Error("Malformed line scan transport or skipped-frame count."));
+    await renderPanel(); await prepareStart();
+    expect(host!.querySelector<HTMLButtonElement>(".line-scan-start")!.disabled).toBe(true);
+    expect(host!.querySelector<HTMLSelectElement>("select")!.disabled).toBe(true);
+    expect(apiMock.startLineScan).not.toHaveBeenCalled(); expect(apiMock.cancelLineScan).not.toHaveBeenCalled();
+  });
+  it("does not update a remounted successor with a detached pending cancel error", async () => {
+    let rejectCancel!: (error:Error)=>void;
+    apiMock.pollLineScan.mockResolvedValueOnce(scanResponse("running",[]));
+    apiMock.cancelLineScan.mockReturnValueOnce(new Promise((_,reject) => { rejectCancel=reject; }));
+    await renderPanel(); await act(async () => click("Cancel scan"));
+    await act(async () => { root!.unmount(); root=undefined; }); host!.remove();
+    apiMock.pollLineScan.mockResolvedValueOnce({ ...scanResponse("running",[{address:"1.1.7",outcome:{kind:"occupiedBusy"}}]),serverIncarnation:"successor" });
+    await renderPanel();
+    await act(async () => { rejectCancel(new Error("obsolete cancel")); await Promise.resolve(); });
+    expect(host!.textContent).toContain("1.1.7"); expect(host!.textContent).not.toContain("obsolete cancel");
+    expect(apiMock.cancelLineScan).toHaveBeenCalledTimes(1);
+  });
   it("seeds a fresh gateway field from the cached preference without estimating", async () => {
     savePreferredGateway("192.0.2.10:3671");
     await renderPanel();
@@ -350,7 +542,7 @@ describe("LineScanPanel", () => {
     });
 
     expect(apiMock.cancelLineScan).toHaveBeenCalledOnce();
-    expect(apiMock.cancelLineScan).toHaveBeenCalledWith(4);
+    expect(apiMock.cancelLineScan).toHaveBeenCalledWith({ sessionId: 4, serverIncarnation: "scan-test", transport: "udp" });
     expect(host!.textContent).toContain("Cancelled");
   });
 
@@ -439,7 +631,7 @@ describe("LineScanPanel", () => {
       await Promise.resolve();
     });
 
-    expect(apiMock.compareLineScan).toHaveBeenCalledWith(4);
+    expect(apiMock.compareLineScan).toHaveBeenCalledWith({ sessionId: 4, serverIncarnation: "scan-test", transport: "udp" });
     expect(host!.textContent).toContain("Bus answered, not in project");
     expect(host!.textContent).toContain("In project, no answer");
     expect(host!.textContent).toContain("In project, not examined");
@@ -470,7 +662,7 @@ describe("LineScanPanel", () => {
       await Promise.resolve();
       await Promise.resolve();
     });
-    expect(apiMock.reconcileLineScan).toHaveBeenCalledWith(4, ["1.1.4"], []);
+    expect(apiMock.reconcileLineScan).toHaveBeenCalledWith({ sessionId: 4, serverIncarnation: "scan-test", transport: "udp" }, ["1.1.4"], []);
     expect(onTreeUpdate).toHaveBeenCalledWith({ can_undo: true });
   });
 

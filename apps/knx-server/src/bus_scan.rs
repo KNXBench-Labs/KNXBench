@@ -28,14 +28,32 @@ pub struct LineScanResult {
     pub outcome: ProbeOutcome,
 }
 
-#[derive(Debug)]
 struct SharedScan {
     status: Mutex<LineScanStatus>,
     results: Mutex<Vec<LineScanResult>>,
+    // Readers borrow under this lock, never clone tunnel ownership into a snapshot.
+    lifecycle: Mutex<ScanLifecycle>,
+}
+
+struct ScanLifecycle {
+    tunnel: Option<Arc<Box<dyn BusTunnel>>>,
+    skipped_frames: Option<u64>,
+    disconnect_confirmed: Option<bool>,
+    cleanup_error: Option<String>,
+}
+
+pub struct ScanSnapshot {
+    pub status: LineScanStatus,
+    pub next_since: usize,
+    pub results: Vec<LineScanResult>,
+    pub skipped_frames: Option<u64>,
+    pub disconnect_confirmed: Option<bool>,
+    pub cleanup_error: Option<String>,
 }
 
 pub struct LineScanSession {
     id: u64,
+    transport: knx_net::TunnelTransport,
     range: ScannedRange,
     total_count: usize,
     omitted: Vec<IndividualAddress>,
@@ -43,6 +61,12 @@ pub struct LineScanSession {
     shared: Arc<SharedScan>,
     cancel: Option<oneshot::Sender<()>>,
     task: Option<JoinHandle<()>>,
+}
+
+pub struct LineScanTarget {
+    pub range: ScannedRange,
+    pub gateway: SocketAddrV4,
+    pub transport: knx_net::TunnelTransport,
 }
 
 impl LineScanSession {
@@ -55,6 +79,34 @@ impl LineScanSession {
         policy: ProbePolicy,
         recorder: knx_app::operation_recording::OperationRecorder,
     ) -> Result<Self, BusSessionError> {
+        Self::start_with_transport(
+            id,
+            LineScanTarget {
+                range,
+                gateway,
+                transport: knx_net::TunnelTransport::Udp,
+            },
+            connector,
+            plan,
+            policy,
+            recorder,
+        )
+        .await
+    }
+
+    pub async fn start_with_transport(
+        id: u64,
+        target: LineScanTarget,
+        connector: &dyn GatewayConnector,
+        plan: ScanPlan,
+        policy: ProbePolicy,
+        recorder: knx_app::operation_recording::OperationRecorder,
+    ) -> Result<Self, BusSessionError> {
+        let LineScanTarget {
+            range,
+            gateway,
+            transport: requested_transport,
+        } = target;
         recorder.note(
             "plan",
             serde_json::json!({
@@ -63,10 +115,11 @@ impl LineScanSession {
             }),
         );
         let tunnel = match connector
-            .connect_tunnel_recorded(
+            .connect_tunnel_recorded_with_transport(
                 gateway,
                 knx_net::TunnelAckWait::Standard,
                 recorder.wire_tap(),
+                requested_transport,
             )
             .await
         {
@@ -80,6 +133,29 @@ impl LineScanSession {
                 return Err(error);
             }
         };
+        let transport = tunnel.transport();
+        if requested_transport == knx_net::TunnelTransport::Tcp && transport != requested_transport
+        {
+            let cleanup = tokio::spawn(async move { tunnel.disconnect().await }).await;
+            let cleanup_error = match cleanup {
+                Ok(Ok(())) => None,
+                Ok(Err(error)) => Some(error.to_string()),
+                Err(error) => Some(format!("disconnect task stopped unexpectedly: {error}")),
+            };
+            let reason = "explicit TCP scan received a non-TCP tunnel";
+            crate::operation_recordings::finish_failed(
+                &recorder,
+                reason,
+                serde_json::json!({
+                    "disconnectConfirmed": cleanup_error.is_none(),
+                    "cleanupError": cleanup_error,
+                }),
+            );
+            return Err(BusSessionError::Transport(BusError::Protocol(
+                reason.into(),
+            )));
+        }
+        let tunnel = Arc::new(tunnel);
         let total_count = plan.addresses().len();
         let omitted = plan.omitted().to_vec();
         let mut excluded: Vec<_> = plan.excluded().iter().copied().collect();
@@ -87,6 +163,12 @@ impl LineScanSession {
         let shared = Arc::new(SharedScan {
             status: Mutex::new(LineScanStatus::Running),
             results: Mutex::new(Vec::with_capacity(total_count)),
+            lifecycle: Mutex::new(ScanLifecycle {
+                tunnel: Some(Arc::clone(&tunnel)),
+                skipped_frames: None,
+                disconnect_confirmed: None,
+                cleanup_error: None,
+            }),
         });
         let task_shared = Arc::clone(&shared);
         let (cancel_tx, cancel_rx) = oneshot::channel();
@@ -95,6 +177,7 @@ impl LineScanSession {
         });
         Ok(Self {
             id,
+            transport,
             range,
             total_count,
             omitted,
@@ -157,15 +240,61 @@ impl LineScanSession {
         (status, next_since, results)
     }
 
+    pub fn transport(&self) -> knx_net::TunnelTransport {
+        self.transport
+    }
+
+    /// Status is read first, so terminal snapshots include settled cleanup metadata.
+    pub fn snapshot(&self, since: usize) -> ScanSnapshot {
+        let (status, next_since, results) = self.snapshot_since(since);
+        let lifecycle = self
+            .shared
+            .lifecycle
+            .lock()
+            .expect("scan lifecycle poisoned");
+        let skipped_frames = (self.transport == knx_net::TunnelTransport::Tcp).then(|| {
+            lifecycle.tunnel.as_ref().map_or_else(
+                || lifecycle.skipped_frames.expect("frozen before disconnect"),
+                |tunnel| tunnel.skipped_frames(),
+            )
+        });
+        let running = status == LineScanStatus::Running;
+        ScanSnapshot {
+            status,
+            next_since,
+            results,
+            skipped_frames,
+            disconnect_confirmed: if running {
+                None
+            } else {
+                lifecycle.disconnect_confirmed
+            },
+            cleanup_error: if running {
+                None
+            } else {
+                lifecycle.cleanup_error.clone()
+            },
+        }
+    }
+
     pub async fn cancel(&mut self) -> LineScanStatus {
         if let Some(cancel) = self.cancel.take() {
             let _ = cancel.send(());
         }
-        if let Some(task) = self.task.take() {
+        if let Some(task) = self.task.as_mut() {
             if task.await.is_err() {
+                let mut lifecycle = self
+                    .shared
+                    .lifecycle
+                    .lock()
+                    .expect("scan lifecycle poisoned");
+                lifecycle.disconnect_confirmed = Some(false);
+                lifecycle.cleanup_error =
+                    Some("scan owner stopped unexpectedly; cleanup unconfirmed".into());
                 *self.shared.status.lock().expect("scan status poisoned") =
                     LineScanStatus::Failed("scan task stopped unexpectedly".to_string());
             }
+            self.task.take();
         }
         self.status()
     }
@@ -193,38 +322,62 @@ impl ScanTransport for TunnelScanTransport<'_> {
 }
 
 async fn run_scan(
-    tunnel: Box<dyn BusTunnel>,
+    tunnel: Arc<Box<dyn BusTunnel>>,
     plan: ScanPlan,
     policy: ProbePolicy,
     cancel: oneshot::Receiver<()>,
     shared: Arc<SharedScan>,
     recorder: knx_app::operation_recording::OperationRecorder,
 ) {
-    let result = {
-        let transport = TunnelScanTransport(tunnel.as_ref());
-        let progress_shared = Arc::clone(&shared);
-        let scan = scan_line(&transport, &plan, &policy, move |address, outcome| {
+    let actual_transport = tunnel.transport();
+    // The supervisor owns the tunnel even when a probe panics or is cancelled.
+    let probe_tunnel = Arc::clone(&tunnel);
+    let progress_shared = Arc::clone(&shared);
+    let mut probe = tokio::spawn(async move {
+        let transport = TunnelScanTransport(probe_tunnel.as_ref().as_ref());
+        scan_line(&transport, &plan, &policy, move |address, outcome| {
             progress_shared
                 .results
                 .lock()
                 .expect("scan results poisoned")
                 .push(LineScanResult { address, outcome });
-        });
-        tokio::pin!(scan);
-        tokio::select! {
-            _ = cancel => None,
-            result = &mut scan => Some(result),
-        }
+        })
+        .await
+    });
+    let result = tokio::select! {
+        _ = cancel => {
+            probe.abort();
+            let _ = probe.await; // Reap before consuming the tunnel.
+            None
+        },
+        result = &mut probe => Some(result),
     };
-
     let status = match result {
         None => LineScanStatus::Cancelled,
-        Some(Ok(_)) => LineScanStatus::Completed,
-        Some(Err(ScanError::Plan(error))) => LineScanStatus::Failed(error.to_string()),
-        Some(Err(ScanError::Transport { source, .. })) => {
+        Some(Ok(Ok(_))) => LineScanStatus::Completed,
+        Some(Ok(Err(ScanError::Plan(error)))) => LineScanStatus::Failed(error.to_string()),
+        Some(Ok(Err(ScanError::Transport { source, .. }))) => {
             LineScanStatus::Failed(source.to_string())
         }
+        Some(Err(error)) => {
+            LineScanStatus::Failed(format!("scan task stopped unexpectedly: {error}"))
+        }
     };
+    // Freeze the last pre-disconnect count under the same lock used by snapshot readers.
+    // Only the supervisor and this slot ever own Arcs; snapshot readers only borrow.
+    {
+        let mut lifecycle = shared.lifecycle.lock().expect("scan lifecycle poisoned");
+        lifecycle.skipped_frames = Some(tunnel.skipped_frames());
+        lifecycle.tunnel.take();
+    }
+    let tunnel = Arc::try_unwrap(tunnel).unwrap_or_else(|_| unreachable!("probe joined"));
+    let cleanup = tokio::spawn(async move { tunnel.disconnect().await }).await;
+    let cleanup_error = match cleanup {
+        Ok(Ok(())) => None,
+        Ok(Err(error)) => Some(error.to_string()),
+        Err(error) => Some(format!("disconnect task stopped unexpectedly: {error}")),
+    };
+    let disconnect_confirmed = cleanup_error.is_none();
     let results: Vec<String> = shared
         .results
         .lock()
@@ -232,14 +385,24 @@ async fn run_scan(
         .iter()
         .map(|result| format!("{} {:?}", result.address, result.outcome))
         .collect();
-    let summary = serde_json::json!({ "status": format!("{status:?}"), "results": results });
+    let summary = serde_json::json!({
+        "status": format!("{status:?}"), "results": results,
+        "transport": actual_transport.as_str(),
+        "skippedFrames": (actual_transport == knx_net::TunnelTransport::Tcp).then(||
+            shared.lifecycle.lock().expect("scan lifecycle poisoned").skipped_frames).flatten(),
+        "disconnectConfirmed": disconnect_confirmed, "cleanupError": cleanup_error,
+    });
     let failure = match &status {
         LineScanStatus::Failed(reason) => Some(reason.clone()),
-        _ => None,
+        _ => cleanup_error.clone(),
     };
+    {
+        let mut lifecycle = shared.lifecycle.lock().expect("scan lifecycle poisoned");
+        lifecycle.disconnect_confirmed = Some(disconnect_confirmed);
+        lifecycle.cleanup_error = cleanup_error;
+    }
+    // Running (and therefore exclusive holder status) includes consuming cleanup.
     *shared.status.lock().expect("scan status poisoned") = status;
-    let cleanup = tunnel.disconnect().await;
-    let summary = serde_json::json!({ "scan": summary, "disconnectConfirmed": cleanup.is_ok() });
     match failure {
         Some(reason) => crate::operation_recordings::finish_failed(&recorder, reason, summary),
         None => recorder.finish(knx_app::operation_recording::RecordedOutcome::succeeded(
@@ -252,15 +415,72 @@ async fn run_scan(
 mod tests {
     use super::*;
 
+    #[tokio::test]
+    async fn dropped_cancel_wait_retains_the_join_until_cleanup_settles() {
+        let (done, wait) = oneshot::channel();
+        let shared = Arc::new(SharedScan {
+            status: Mutex::new(LineScanStatus::Running),
+            results: Mutex::new(vec![]),
+            lifecycle: Mutex::new(ScanLifecycle {
+                tunnel: None,
+                skipped_frames: Some(0),
+                disconnect_confirmed: None,
+                cleanup_error: None,
+            }),
+        });
+        let publisher = shared.clone();
+        let task = tokio::spawn(async move {
+            let _ = wait.await;
+            *publisher.status.lock().unwrap() = LineScanStatus::Cancelled;
+        });
+        let mut session = LineScanSession {
+            id: 1,
+            transport: knx_net::TunnelTransport::Tcp,
+            range: ScannedRange {
+                area: 1,
+                line: 1,
+                first_device: 5,
+                last_device: 5,
+            },
+            total_count: 1,
+            omitted: vec![],
+            excluded: vec![],
+            shared,
+            cancel: None,
+            task: Some(task),
+        };
+        let mut cancel = Box::pin(session.cancel());
+        std::future::poll_fn(|cx| {
+            assert!(std::future::Future::poll(cancel.as_mut(), cx).is_pending());
+            std::task::Poll::Ready(())
+        })
+        .await;
+        drop(cancel);
+        assert!(
+            session.task.is_some(),
+            "dropping the waiter must not detach the tracked join"
+        );
+        done.send(()).unwrap();
+        assert_eq!(session.cancel().await, LineScanStatus::Cancelled);
+        assert!(session.task.is_none());
+    }
+
     #[test]
     fn completion_between_status_and_results_keeps_snapshot_non_terminal() {
         let shared = Arc::new(SharedScan {
             status: Mutex::new(LineScanStatus::Running),
             results: Mutex::new(Vec::new()),
+            lifecycle: Mutex::new(ScanLifecycle {
+                tunnel: None,
+                skipped_frames: Some(0),
+                disconnect_confirmed: None,
+                cleanup_error: None,
+            }),
         });
         let publisher = Arc::clone(&shared);
         let session = LineScanSession {
             id: 1,
+            transport: knx_net::TunnelTransport::Udp,
             range: ScannedRange {
                 area: 2,
                 line: 3,

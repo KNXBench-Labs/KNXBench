@@ -1,11 +1,12 @@
 /** Device checks are reachable from the bus workspace without starting a tunnel. */
 // @vitest-environment happy-dom
-import { act } from "react";
+import { act, StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { expect, it, vi } from "vitest";
 
 vi.mock("./BusMonitorPanel", () => ({ default: () => <p>Monitor stub</p> }));
-vi.mock("./LineScanPanel", () => ({ default: () => <p>Scan stub</p> }));
+const scanApi = vi.hoisted(() => ({ pollLineScan:vi.fn(),cancelLineScan:vi.fn(),startLineScan:vi.fn() }));
+vi.mock("./api", async importOriginal => ({ ...await importOriginal<typeof import("./api")>(),...scanApi }));
 vi.mock("./DeviceDownloadPanel", () => ({ default: () => <p>Download stub</p> }));
 vi.mock("./AddressProgrammingPanel", () => ({ default: () => <p>Address stub</p> }));
 vi.mock("./ServiceControlPanel", () => ({ default: ({ projectOpen }: { projectOpen: boolean }) => <p>Service stub {projectOpen ? "open" : "closed"}</p> }));
@@ -14,6 +15,29 @@ import BusDiagnosticsPanel from "./BusDiagnosticsPanel";
 import { messages as en } from "./messages/en";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
+
+it("reattaches the real scan child across tabs without cancellation or a second start", async () => {
+  const retained: import("./api").LineScanResultsResponse = {
+    sessionId:4,serverIncarnation:"retained-process",transport:"tcp",skippedFrames:2,
+    status:"running",error:null,cleanupError:null,disconnectConfirmed:null,
+    nextSince:1,completedCount:1,totalCount:2,omittedAddresses:[],excludedAddresses:[],
+    results:[{address:"1.1.5",outcome:{kind:"occupied",maskVersion:0x07b0}}],
+  };
+  scanApi.pollLineScan.mockResolvedValue(retained);
+  const host=document.createElement("div"); document.body.appendChild(host); const root=createRoot(host);
+  const tab=(name:string) => [...host.querySelectorAll<HTMLButtonElement>(".bus-diagnostics-tabs button")].find(button=>button.textContent===name)!;
+  try {
+    await act(async () => root.render(<StrictMode><BusDiagnosticsPanel project={null} onTreeUpdate={vi.fn()} /></StrictMode>));
+    await act(async () => { tab(en["lineScan.title"]).click(); await Promise.resolve(); });
+    expect(host.textContent).toContain("Observed scan transport: TCP"); expect(host.textContent).toContain("1.1.5");
+    await act(async () => tab(en["serviceControl.tab"]).click());
+    await act(async () => { tab(en["lineScan.title"]).click(); await Promise.resolve(); });
+    expect(host.querySelectorAll("[data-scan-outcome]")).toHaveLength(1);
+    expect(scanApi.pollLineScan).toHaveBeenCalledTimes(2);
+    expect(scanApi.pollLineScan).toHaveBeenNthCalledWith(2,0,undefined);
+    expect(scanApi.cancelLineScan).not.toHaveBeenCalled(); expect(scanApi.startLineScan).not.toHaveBeenCalled();
+  } finally { await act(async () => root.unmount()); host.remove(); vi.clearAllMocks(); }
+});
 
 it("opens an explicitly read-only device-checks view without a project", async () => {
   const host = document.createElement("div");

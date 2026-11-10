@@ -14,6 +14,30 @@ Everything so far happened inside a file. This chapter is the one where KNXBench
 talks to an actual installation — and, just as importantly, the chapter that says
 plainly what it will not do there.
 
+### Server/Web TCP scans (source candidate after Alpha 20)
+
+The scan panel's **Transport for the next scan** starts at UDP, independently of
+the monitor preference. Choosing TCP only changes the next scan plan and
+invalidates its previous estimate; it does not connect or discover. Estimate
+again, then start deliberately. The running label reports actual transport.
+
+Navigation between tabs leaves the server-owned scan running; returning attaches
+to its validated retained identity. Cancel during a pending start records intent
+and stops only that start's eventual session/server pair. A lost start reply is
+not permission to retry. Older strict-route failures never fall back to UDP.
+Missing or contradictory provenance blocks actions instead of guessing a session.
+
+Skipped unknown/over-cap stream frames are a separate warning, not occupied
+addresses or lost telegram rows. Their bodies are not retained. Terminal counts
+are sampled before disconnect and exclude cleanup traffic. Running includes
+cleanup; an unconfirmed disconnect is shown separately from the probe outcome.
+Comparison and deliberate reconciliation retain the same identity and existing
+undo behavior. Device programming, downloads and discovery/routing are unchanged.
+
+This bounded implementation is pending independent review and integrated
+acceptance, not part of Alpha 20 or proof of real-gateway support.
+[Candidate and remaining acceptance](../../status/2026-11-10-server-web-tcp-scans.md).
+
 ## What KNXnet/IP is
 
 A KNX installation is a twisted-pair bus that no computer can plug into directly.

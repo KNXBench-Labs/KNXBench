@@ -3,7 +3,7 @@ import { openExplorerBranches, openNavigationSections, openParameterSections } f
 import { expect, test, type Page } from "@playwright/test";
 import { join } from "node:path";
 import type { ProjectTree } from "../src/bindings/ProjectTree";
-import type { ParameterPanel } from "../src/api";
+import type { ParameterPanel, LineScanResultsResponse } from "../src/api";
 import type { ComObjectNode } from "../src/bindings/ComObjectNode";
 import type { DeviceNode } from "../src/bindings/DeviceNode";
 import { messages as en } from "../src/messages/en";
@@ -155,10 +155,10 @@ async function intercept(page: Page, language: "en" | "de", count = 3, theme = "
       address: node.address, name: node.name, programRef: "fictional", readiness: "untested", category: null, detail: null, steps: 1, octets: 1,
     })), counts: { untested: nodes.length } };
     else if (path === "/api/device-address/availability" && method === "GET") body = { startAvailable: false, reason: "Device-specific recovery not implemented" };
-    else if (path === "/api/bus/scan/results" && method === "GET") body = { sessionId: 4, status: "completed", error: null,
+    else if (path === "/api/bus/scan/results" && method === "GET") body = { sessionId: 4, serverIncarnation: "devices-browser", transport: "udp", skippedFrames: null, disconnectConfirmed: true, cleanupError: null, status: "completed", error: null,
       nextSince: 1, completedCount: 1, totalCount: 1, omittedAddresses: [], excludedAddresses: [],
-      results: [{ address: "1.1.2", outcome: { kind: "occupied", maskVersion: 1793 } }] };
-    else if (path === "/api/bus/scan/comparison" && method === "GET") body = { unexpected: [], missing: [], excludedInProject: [] };
+      results: [{ address: "1.1.2", outcome: { kind: "occupied", maskVersion: 1793 } }] } satisfies LineScanResultsResponse;
+    else if (path === "/api/bus/scan/comparison-bound" && method === "GET") body = { unexpected: [], missing: [], excludedInProject: [] };
     else if (path === "/api/bus/activity" && method === "GET") body = { serverIncarnation: "fixture", coverage: "partial", historyState: "disabled", sessions: [], oneShot: [], oneShotDropped: 0, busyLocks: [], untracked: [] };
     else if (achievementsFixtureAnswer(method, path) !== undefined) body = achievementsFixtureAnswer(method, path);
     else {

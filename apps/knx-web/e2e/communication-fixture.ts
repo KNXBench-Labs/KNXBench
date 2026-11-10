@@ -1,4 +1,5 @@
 /** Devices navigation browser contracts with strictly intercepted, fictional API data. */
+import type { LineScanResultsResponse } from "../src/api";
 import { expect, type Page } from "@playwright/test";
 import type { ProjectTree } from "../src/bindings/ProjectTree";
 import type { DeviceNode } from "../src/bindings/DeviceNode";
@@ -80,10 +81,10 @@ export async function intercept(page: Page, language: "en" | "de", count = 8, th
       address: node.address, name: node.name, programRef: "fictional", readiness: "untested", category: null, detail: null, steps: 1, octets: 1,
     })), counts: { untested: nodes.length } };
     else if (path === "/api/device-address/availability" && method === "GET") body = { startAvailable: false, reason: "Device-specific recovery not implemented" };
-    else if (path === "/api/bus/scan/results" && method === "GET") body = { sessionId: 4, status: "completed", error: null,
+    else if (path === "/api/bus/scan/results" && method === "GET") body = { sessionId: 4, serverIncarnation: "devices-browser", transport: "udp", skippedFrames: null, disconnectConfirmed: true, cleanupError: null, status: "completed", error: null,
       nextSince: 1, completedCount: 1, totalCount: 1, omittedAddresses: [], excludedAddresses: [],
-      results: [{ address: "1.1.2", outcome: { kind: "occupied", maskVersion: 1793 } }] };
-    else if (path === "/api/bus/scan/comparison" && method === "GET") body = { unexpected: [], missing: [], excludedInProject: [] };
+      results: [{ address: "1.1.2", outcome: { kind: "occupied", maskVersion: 1793 } }] } satisfies LineScanResultsResponse;
+    else if (path === "/api/bus/scan/comparison-bound" && method === "GET") body = { unexpected: [], missing: [], excludedInProject: [] };
     // Read-only: the download page's gateway hint (issue #10); nothing holds the gateway here.
     else if (path === "/api/bus/activity" && method === "GET") body = { serverIncarnation: "fixture", coverage: "partial", historyState: "disabled", sessions: [], oneShot: [], oneShotDropped: 0, busyLocks: [], untracked: [] };
     else if (achievementsFixtureAnswer(method, path) !== undefined) body = achievementsFixtureAnswer(method, path);

@@ -25,15 +25,18 @@ interface DownloadGatewayHolderProps {
  */
 export default function DownloadGatewayHolder({ gateway, disabled, onUseGateway }: DownloadGatewayHolderProps) {
   const t = useTranslate();
-  const [holder, setHolder] = useState<TunnelHolder | null>(null);
+  const [snapshot, setSnapshot] = useState<{ holder: TunnelHolder | null; serverIncarnation: string } | null>(null);
+  const holder = snapshot?.holder ?? null;
   const [stopping, setStopping] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [scanCleanupError, setScanCleanupError] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     try {
-      setHolder(holderFromActivity(await api.busActivity()));
+      const activity = await api.busActivity();
+      setSnapshot({ holder: holderFromActivity(activity), serverIncarnation: activity.serverIncarnation });
     } catch {
-      setHolder(null);
+      setSnapshot(null);
     }
   }, []);
 
@@ -43,15 +46,22 @@ export default function DownloadGatewayHolder({ gateway, disabled, onUseGateway 
     return () => window.clearInterval(interval);
   }, [refresh]);
 
-  if (holder === null) return null;
+  // A terminal activity snapshot has no holder; that must not erase failed cleanup.
+  const errorNotice = error === null ? null : <p className="form-error" role="alert">{error}</p>;
+  const cleanupNotice = scanCleanupError === null ? null
+    : <p className="form-error" role="alert">{t("lineScan.cleanupUnconfirmed", { error: scanCleanupError })}</p>;
+  if (holder === null) return <>{errorNotice}{cleanupNotice}</>;
   const monitorGateway = holder.kind === "busMonitor" ? holder.gateway : undefined;
 
-  async function stop(current: TunnelHolder) {
+  async function stop(current: TunnelHolder, serverIncarnation: string) {
     setError(null);
     setStopping(true);
     try {
       if (current.kind === "busMonitor") await api.stopBusMonitor();
-      else if (current.kind === "lineScan") await api.cancelLineScan(current.sessionId);
+      else if (current.kind === "lineScan") {
+        const acknowledgement = await api.cancelLineScan({ sessionId: current.sessionId, serverIncarnation });
+        if (acknowledgement.disconnectConfirmed === false) setScanCleanupError(acknowledgement.cleanupError);
+      }
       else if (current.kind === "addressProgramming" && current.sessionId !== undefined) {
         await api.stopAddressProgramming(current.sessionId);
       }
@@ -78,7 +88,7 @@ export default function DownloadGatewayHolder({ gateway, disabled, onUseGateway 
       <p role="status">{describeHolder(holder, t)}</p>
       <div className="device-download-holder-actions">
         {stopLabel && (
-          <button type="button" disabled={disabled || stopping} onClick={() => void stop(holder)}>{stopLabel}</button>
+          <button type="button" disabled={disabled || stopping} onClick={() => snapshot && void stop(holder, snapshot.serverIncarnation)}>{stopLabel}</button>
         )}
         {monitorGateway !== undefined && monitorGateway !== gateway.trim() && (
           <button type="button" disabled={disabled} onClick={() => onUseGateway(monitorGateway)}>
@@ -86,7 +96,8 @@ export default function DownloadGatewayHolder({ gateway, disabled, onUseGateway 
           </button>
         )}
       </div>
-      {error && <p className="form-error" role="alert">{error}</p>}
+      {errorNotice}
+      {cleanupNotice}
     </div>
   );
 }

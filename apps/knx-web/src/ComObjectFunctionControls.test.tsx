@@ -26,7 +26,8 @@ async function mount(shown: ParameterPanel | null = panel) {
   await act(async () => root.render(<ComMutationBoundary onBusy={busy}>
     <input aria-label="Sibling DPT" />
     <ComObjectFunctionControls deviceId={3} objectId={7} onValueApplied={applied}
-      state={{ panel: shown, snapshot, language: null, loadError: null, acceptWrite }} />
+      state={{ panel: shown, snapshot, language: null, loadError: null, acceptWrite,
+        reloadProject: async publish => { publish(await api.currentProject()); } }} />
   </ComMutationBoundary>));
   return { host, applied, acceptWrite, busy, cleanup: async () => { await act(async () => root.unmount()); host.remove(); } };
 }

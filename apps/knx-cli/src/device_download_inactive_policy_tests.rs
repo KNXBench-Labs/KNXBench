@@ -3,11 +3,12 @@ use super::*;
 use knx_app::device_download::{
     prepare_device_download, prepare_device_download_for_reading, PrepareError,
 };
-use knx_app::download_support::offline_plan;
+use knx_app::download_support::{offline_plan, UnsupportedCategory};
 use knx_core::commissioning::memory_download::MemoryDownloadStep;
 use knx_core::commissioning::partial_memory_download::PartialDownloadParts;
 use knx_productdb::download_plan::DownloadPlanError;
-use knx_productdb::image::ImageRequest;
+use knx_productdb::dynamic::Diagnostic;
+use knx_productdb::image::{ImageError, ImageRequest};
 use std::collections::BTreeMap;
 
 fn catalogue(xml: &str) -> (tempfile::TempDir, knx_productdb::Connection) {
@@ -188,10 +189,52 @@ fn unknown_branch_placement_and_invisible_parameter_options_fall_back_to_the_reg
             falls_back(&xml.replace("<Static>", &declared));
         }
     }
-    falls_back(&xml.replace(
-        "</choose>",
-        "<when test=\"unknown-private-token\" /></choose>",
-    ));
+}
+
+/// ADR-0170 checks later siblings even after a match; malformed tests cannot yield a safe plan.
+#[test]
+fn an_unparsable_later_when_refuses_image_write_reading_and_offline_plans() {
+    let assert_evaluation = |error: ImageError| {
+        let ImageError::Evaluation(diagnostics) = error else {
+            panic!("expected the malformed-when diagnostic, got {error:?}");
+        };
+        assert!(
+            matches!(diagnostics.as_slice(), [diagnostic]
+                if diagnostic.scope.is_none()
+                && matches!(&diagnostic.diagnostic, Diagnostic::UnparsableTest { raw, .. }
+                    if raw == "unknown-private-token")),
+            "{diagnostics:?}"
+        );
+    };
+    for mode in [0, 1] {
+        let xml = source(mode).replace(
+            "</choose>",
+            "<when test=\"unknown-private-token\" /></choose>",
+        );
+        assert!(xml.contains("<when test=\"unknown-private-token\" /></choose>"));
+        let (_dir, conn) = catalogue(&xml);
+        let request = ImageRequest {
+            program_id: PROGRAM_ID.into(),
+            individual_address: TARGET.parse().unwrap(),
+            values: Default::default(),
+            links: vec![],
+            flag_overrides: Default::default(),
+            priority_statements: Default::default(),
+        };
+        assert_evaluation(knx_productdb::image::build_download_image(&conn, &request).unwrap_err());
+        for result in [
+            prepare_device_download(&conn, &project(), TARGET.parse().unwrap()),
+            prepare_device_download_for_reading(&conn, &project(), TARGET.parse().unwrap()),
+        ] {
+            let error = result.unwrap_err();
+            let PrepareError::Image(image_error) = error else {
+                panic!("expected an image evaluation refusal, got {error:?}");
+            };
+            assert_evaluation(image_error);
+        }
+        let (category, _) = offline_plan(&conn, PROGRAM_ID).unwrap_err();
+        assert_eq!(category, UnsupportedCategory::ParameterEvaluation);
+    }
 }
 
 #[test]

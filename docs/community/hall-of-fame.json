@@ -1,7 +1,7 @@
 {
   "schema_version": 2,
   "repository": "KNXBench-Labs/KNXBench",
-  "generated_at": "2026-11-10T20:51:48Z",
+  "generated_at": "2026-11-10T20:56:23Z",
   "policy": {
     "excluded_logins": [
       "KNXBench-Labs",
@@ -266,27 +266,28 @@
   "contributors": [
     {
       "login": "thengsty",
-      "issues": 29,
-      "replies": 37,
+      "issues": 37,
+      "replies": 38,
       "resolutions": 24,
       "pull_requests": 1,
       "pull_requests_open": 0,
       "pull_requests_closed": 0,
       "pull_requests_merged": 1,
       "xp_breakdown": {
-        "issues": 145,
-        "replies": 37,
+        "issues": 185,
+        "replies": 38,
         "resolutions": 240,
         "pull_requests": 25
       },
-      "xp": 447,
+      "xp": 488,
       "rank": {
-        "minimum_xp": 325,
-        "title": "Tunnel Trouble Exorcist"
+        "minimum_xp": 450,
+        "title": "Routing Riddle Resolver"
       },
       "medals": [
         "Golden Bus Probe",
         "Double-Decade Fault Finder",
+        "Topology Treasure Hunter",
         "Loose End Lasso",
         "Regression Repair Ribbon",
         "Acknowledgement Ace",

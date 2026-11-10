@@ -1,4 +1,4 @@
-# Optional TCP tunnelling for monitoring, group traffic and CLI scans
+# Optional TCP tunnelling for monitoring, group traffic and read-only CLI queries
 
 Status: bounded software acceptance, 8 November 2026; ships in Alpha 20.
 [WP-29](../open-work/WP-29-knxnet-ip-tcp-tunnelling.md) remains open beyond this
@@ -21,8 +21,9 @@ selected integrated gate on `ac9b23814` ([acceptance](../status/2026-11-10-cli-t
 it is not part of the Alpha 20 release above. At that accepted CLI baseline,
 Server/Web line scans retained UDP; the separate source successor below adds
 explicit TCP and is now software-accepted on main. Device programming,
-downloads/restores, individual-address programming and other existing device
-workflows retain their UDP path. Discovery and routing are separate UDP services.
+downloads/restores and individual-address programming retain their UDP path.
+The read-only find-serial exception below does not widen those write workflows.
+Discovery and routing are separate UDP services.
 No preference silently converts those paths
 to TCP. Plain TCP is not KNX IP Secure, hardware compatibility or a remedy for
 an unresolved tunnel-loss report.
@@ -75,6 +76,37 @@ This is a main-only successor, not an Alpha 20 addition or hardware result. See 
   legacy UDP or authorise an unbound action.
 - Group actions and Stop retain the exact session ID and server incarnation.
   A replacement session/process is not the target of an older callback.
+
+## Read-only CLI find-serial successor (10 November 2026; gate pending)
+
+Both existing queries accept optional `--tunnel-transport udp|tcp`:
+
+```text
+knx device find-serial <MMMM:NNNNNNNN> --gateway <host:port> [--tunnel-transport udp|tcp]
+knx device find-serial --address <a.l.d> --gateway <host:port> [--tunnel-transport udp|tcp]
+```
+
+Omission is UDP. Invalid, missing or duplicate transport values refuse before
+I/O, as do malformed/excluded/mutually exclusive queries and unsupported flags.
+Both transports require a unicast IPv4 gateway and nonzero port, validated before
+history/runtime/contact. This is not serial-port transport. Explicit TCP never
+falls back to UDP, reconnects or replays.
+
+Transport selection precedes the diagnostic tap and connection. Ordinary stderr
+names the opened handle's actual transport, not a requested preference. Positive
+TCP skipped-frame counts are reported after either success or error/EOF, with
+recording disabled too, and explicitly sampled before disconnect consumes the
+handle. Measured TCP zero differs from UDP unavailable; neither emits a positive
+warning. Skips are not a final-wire total or automatically lost KNX telegrams.
+
+The existing read-only broadcast/property procedures and matching-answer result
+semantics remain authoritative. `SerialNumberAddress`, metadata-only history,
+optional consented/redacted bundle classification and temporary-recording cleanup
+are preserved, as are result/exit codes, best-effort tunnel disconnect and
+existing SIGINT behavior. This adds no address/programming write authority or
+general cancellation guarantee. Independent source reviews and narrow optional
+fixture closure passed; final integrated gate/publication are pending in the
+[scoped execution record](../status/2026-11-10-cli-tcp-find-serial.md).
 
 ## Wire and lifecycle
 

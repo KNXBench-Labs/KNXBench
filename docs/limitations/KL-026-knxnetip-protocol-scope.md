@@ -101,3 +101,16 @@ no release or real-gateway claim. That accepted CLI baseline left Server/Web
 scans on UDP; the separately scoped Server/Web successor is now software-accepted
 on main. Programming, other device workflows, serial, discovery/routing
 and KNX IP Secure scope is unchanged.
+
+## 10 November 2026 — bounded CLI find-serial exception (gate pending)
+
+Both read-only `device find-serial` queries now accept explicit UDP/TCP with UDP
+default and no fallback. This supersedes only the find-serial part of the earlier
+other-device-workflow exclusions, not address programming or other writes.
+Strict pre-contact unicast IPv4/nonzero-port admission, actual transport and
+positive pre-disconnect skip reporting preserve existing result/history/bundle
+and best-effort cleanup policies. Independent source review and narrow optional
+fixture closure passed; integrated gate/publication remain pending in the
+[scoped record](../status/2026-11-10-cli-tcp-find-serial.md).
+This does not add serial-port transport, discovery/routing, KNX IP Secure or
+real-gateway interoperability and does not close WP-29.

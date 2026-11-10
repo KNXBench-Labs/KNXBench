@@ -287,7 +287,8 @@ pub enum FindSerial {
 /// Read-only either way.
 pub struct FindSerialArgs {
     pub query: FindSerial,
-    pub gateway: String,
+    pub gateway: std::net::SocketAddrV4,
+    pub transport: knx_net::TunnelTransport,
     pub activity_history: Option<String>,
 }
 
@@ -295,12 +296,20 @@ pub fn parse_find_serial_args(args: &[String]) -> Result<FindSerialArgs, String>
     let mut serial = None;
     let mut address = None;
     let mut gateway = None;
+    let mut transport = None;
     let mut activity_history = None;
     let mut i = 0;
     while i < args.len() {
         match args[i].as_str() {
             "--gateway" => {
+                if gateway.is_some() {
+                    return Err("duplicate --gateway".into());
+                }
                 gateway = Some(crate::take_value(args, i + 1, "--gateway")?);
+                i += 2;
+            }
+            "--tunnel-transport" => {
+                crate::bus_transport::take_tunnel_transport(&mut transport, args, i)?;
                 i += 2;
             }
             "--activity-history" => {
@@ -311,6 +320,9 @@ pub fn parse_find_serial_args(args: &[String]) -> Result<FindSerialArgs, String>
                 i += 2;
             }
             "--address" => {
+                if address.is_some() {
+                    return Err("duplicate --address".into());
+                }
                 address = Some(crate::take_value(args, i + 1, "--address")?);
                 i += 2;
             }
@@ -337,9 +349,11 @@ pub fn parse_find_serial_args(args: &[String]) -> Result<FindSerialArgs, String>
         (Some(_), Some(_)) => return Err("give a serial number or --address, not both".to_string()),
     };
     let gateway = gateway.ok_or("find-serial asks the bus and needs --gateway <host:port>")?;
+    let gateway = crate::bus_transport::parse_gateway(&gateway)?;
     Ok(FindSerialArgs {
         query,
         gateway,
+        transport: transport.unwrap_or(knx_net::TunnelTransport::Udp),
         activity_history,
     })
 }
@@ -676,8 +690,65 @@ mod tests {
                 parsed.activity_history.as_deref(),
                 Some("not-opened-history.sqlite")
             );
-            assert_eq!(parsed.gateway, "192.0.2.1:3671");
+            assert_eq!(parsed.gateway, "192.0.2.1:3671".parse().unwrap());
         }
+    }
+
+    #[test]
+    fn find_serial_transport_and_gateway_admission() {
+        use knx_net::TunnelTransport::{Tcp, Udp};
+        for question in [vec![SERIAL], vec!["--address", "1.1.67"]] {
+            for (flags, expected) in [
+                (vec![], Udp),
+                (vec!["--tunnel-transport", "udp"], Udp),
+                (vec!["--tunnel-transport", "tcp"], Tcp),
+            ] {
+                let mut input = question.clone();
+                input.extend(["--gateway", "192.0.2.1:3671"]);
+                input.extend(flags);
+                let parsed = parse_find_serial_args(&args(&input)).unwrap();
+                assert_eq!(parsed.transport, expected);
+                assert_eq!(parsed.gateway, "192.0.2.1:3671".parse().unwrap());
+            }
+        }
+        for gateway in [
+            "192.0.2.1:0",
+            "0.0.0.0:3671",
+            "255.255.255.255:3671",
+            "224.0.0.1:3671",
+            "[::1]:3671",
+            "localhost:3671",
+            "192.0.2.1",
+        ] {
+            assert!(parse_find_serial_args(&args(&[SERIAL, "--gateway", gateway])).is_err());
+        }
+        for flags in [
+            vec!["--tunnel-transport"],
+            vec!["--tunnel-transport", "--address"],
+            vec!["--tunnel-transport", "TCP"],
+            vec!["--tunnel-transport", "tls"],
+            vec!["--tunnel-transport", ""],
+            vec!["--tunnel-transport", "tcp", "--tunnel-transport", "udp"],
+            vec!["--tunnel-transport", "tcp", "--tunnel-transport", "tcp"],
+            vec!["--gateway", "192.0.2.2:3671"],
+            vec!["--confirm", "yes"],
+            vec!["--key-file", "absent"],
+            vec!["--serial", "absent"],
+            vec!["--source", "1.1.1"],
+        ] {
+            let mut input = vec![SERIAL, "--gateway", "192.0.2.1:3671"];
+            input.extend(flags);
+            assert!(parse_find_serial_args(&args(&input)).is_err(), "{input:?}");
+        }
+        assert!(parse_find_serial_args(&args(&[
+            "--address",
+            "1.1.67",
+            "--address",
+            "1.1.68",
+            "--gateway",
+            "192.0.2.1:3671"
+        ]))
+        .is_err());
     }
 
     #[test]

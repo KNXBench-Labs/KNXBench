@@ -71,6 +71,15 @@ fn knx(dir: &std::path::Path) -> Command {
 
 #[test]
 fn a_find_serial_run_cleans_up_and_exports_its_recording_byte_exactly() {
+    find_serial_udp_bundle(&[]);
+}
+
+#[test]
+fn explicit_udp_find_serial_keeps_results_recording_and_cleanup() {
+    find_serial_udp_bundle(&["--tunnel-transport", "udp"]);
+}
+
+fn find_serial_udp_bundle(flags: &[&str]) {
     let dir = tempfile::tempdir().unwrap();
     let (endpoint, seen) = gateway();
     let bundle = dir.path().join("out").join("report.zip");
@@ -85,10 +94,17 @@ fn a_find_serial_run_cleans_up_and_exports_its_recording_byte_exactly() {
             "--gateway",
             &endpoint,
         ])
+        .args(flags)
         .output()
         .unwrap();
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(output.status.success(), "{stderr}");
+    assert!(stderr.contains("over UDP"), "{stderr}");
+    assert!(
+        !stderr.contains("skipped"),
+        "UDP has no TCP skip measurement"
+    );
+    assert!(String::from_utf8_lossy(&output.stdout).contains("0083:12345678:"));
     assert!(stderr.contains("diagnostic bundle written to"), "{stderr}");
     // The consent text must not promise less than the ZIP holds.
     assert!(

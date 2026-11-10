@@ -234,7 +234,8 @@ const USAGE: &str = "usage: knx import <file.knxproj> [--store <path.knxdb> [--r
      \x20         a durable pre-write backup of all affected storage is not implemented.\n\
      \x20         Read-only find-serial remains available; no restart is sent)\n\
      \x20     knx device find-serial (<MMMM:NNNNNNNN> | --address <a.l.d>) --gateway <host:port>\n\
-     \x20                  [--activity-history <path>]\n\
+     \x20                  [--tunnel-transport <udp|tcp>] [--activity-history <path>]\n\
+     \x20         (tunnel transport defaults to udp; explicit tcp never falls back to udp)\n\
      \x20         (optional metadata history; unavailable explicit history refuses lookup before a tunnel)\n\
      \x20         (which address has this serial number, MP §2.4 broadcast; or which serial\n\
      \x20         number the device at --address has, PID_SERIAL_NUMBER; read-only)\n\
@@ -3721,18 +3722,12 @@ fn run_device_find_serial(args: &[String]) -> ExitCode {
     let device_serial::FindSerialArgs {
         query,
         gateway,
+        transport,
         activity_history,
     } = match device_serial::parse_find_serial_args(args) {
         Ok(parsed) => parsed,
         Err(e) => {
             eprintln!("{e}\n{USAGE}");
-            return ExitCode::FAILURE;
-        }
-    };
-    let gateway: std::net::SocketAddrV4 = match gateway.parse() {
-        Ok(gateway) => gateway,
-        Err(_) => {
-            eprintln!("--gateway must be host:port, e.g. 192.0.2.1:3671");
             return ExitCode::FAILURE;
         }
     };
@@ -3775,7 +3770,7 @@ fn run_device_find_serial(args: &[String]) -> ExitCode {
     runtime.block_on(async {
         use knx_net::BusConnection;
         let tunnel = match crate::diagnostic_bundle_cli::tapped(
-            knx_net::KnxNetIpClient::new(),
+            knx_net::KnxNetIpClient::new().with_tunnel_transport(transport),
             knx_app::operation_recording::OperationKind::SerialNumberAddress,
             gateway,
         )
@@ -3799,7 +3794,16 @@ fn run_device_find_serial(args: &[String]) -> ExitCode {
                 return ExitCode::FAILURE;
             }
         };
+        eprintln!(
+            "connected to {gateway} over {}, assigned individual address {}. looking up serial number/address...",
+            bus_transport::transport_label(tunnel.transport()),
+            tunnel.assigned_address()
+        );
         let found = device_serial::find(&tunnel, &query, knx_net::SessionTiming::default()).await;
+        // Sample before consuming the tunnel; skips during disconnect are not included.
+        let skipped = (tunnel.transport() == knx_net::TunnelTransport::Tcp)
+            .then(|| tunnel.skipped_frame_count());
+        bus_transport::report_skipped_frames(skipped, &mut std::io::stderr());
         if let Some(guard) = activity.take() {
             guard.finish(if found.is_ok() { "finished" } else { "failed" });
         }

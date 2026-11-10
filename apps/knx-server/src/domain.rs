@@ -2770,7 +2770,28 @@ fn device_detail_with_product_data(
                 {
                     Some(row) => {
                         detail.product.resolution = knx_projection::ProductResolution::Resolved;
+                        let details = knx_productdb::query::device_product_details(
+                            products,
+                            product_ref,
+                            program_ref,
+                        )
+                        .map_err(|e| e.to_string())?
+                        .into_iter()
+                        .map(|section| knx_projection::ProductDetailSection {
+                            kind: section.kind,
+                            id: section.id,
+                            fields: section
+                                .fields
+                                .into_iter()
+                                .map(|field| knx_projection::ProductDetailField {
+                                    key: field.key,
+                                    value: field.value,
+                                })
+                                .collect(),
+                        })
+                        .collect();
                         detail.product.catalog = Some(knx_projection::DeviceProductCatalog {
+                            details: Some(details),
                             manufacturer_id: row.manufacturer_id,
                             manufacturer_name: row.manufacturer_name,
                             product_text: row.product_text,

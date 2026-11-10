@@ -189,6 +189,7 @@ pub(crate) async fn get(
                    inputs: Vec<(DeviceNode, (String, String))>|
      -> Result<(Vec<DeviceCatalogRow>, Option<&'static str>), ApiError> {
         let mut metadata = HashMap::new();
+        let mut manufacturer_names = HashMap::new();
         let mut problem = None;
         let mut devices = Vec::with_capacity(inputs.len());
         for (device, refs) in inputs {
@@ -199,11 +200,12 @@ pub(crate) async fn get(
                 } else if let Some(products) = &products {
                     // Product identity plus the program's declared mask (WP-20); no
                     // application compatibility or parameter evaluation.
-                    match knx_productdb::query::device_product(
+                    match knx_productdb::query::device_product_cached(
                         products,
                         product_ref,
                         program_ref,
                         query.language.as_deref(),
+                        &mut manufacturer_names,
                     ) {
                         Ok(Some(row)) => ProductMetadata {
                             resolution: ProductResolution::Resolved,

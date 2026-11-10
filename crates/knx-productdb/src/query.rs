@@ -10,6 +10,11 @@ use rusqlite::{Connection, OptionalExtension};
 
 use crate::ProductDbError;
 
+mod product_details;
+pub use product_details::{
+    device_product_details, manufacturer_name, ProductDetailField, ProductDetailSection,
+};
+
 mod caption_templates;
 pub use caption_templates::{parameter_caption_templates, CaptionTemplateError};
 
@@ -1924,6 +1929,23 @@ pub fn device_product(
     hardware2program_ref_id: &str,
     language: Option<&str>,
 ) -> Result<Option<DeviceProductRow>, ProductDbError> {
+    device_product_cached(
+        conn,
+        product_ref_id,
+        hardware2program_ref_id,
+        language,
+        &mut HashMap::new(),
+    )
+}
+
+/// Request-local name cache for catalogue batches. Never retain it across database snapshots.
+pub fn device_product_cached(
+    conn: &Connection,
+    product_ref_id: &str,
+    hardware2program_ref_id: &str,
+    language: Option<&str>,
+    manufacturer_names: &mut HashMap<String, Option<String>>,
+) -> Result<Option<DeviceProductRow>, ProductDbError> {
     const SQL: &str = "SELECT p.manufacturer_id, m.name, p.text, p.order_number,
                 h.name, h.version_number, h.serial_number,
                 ci.name, ci.number,
@@ -1941,7 +1963,7 @@ pub fn device_product(
          LEFT JOIN catalog_item ci ON ci.product_ref_id = ?1
               AND ci.hardware2program_ref_id = ?2
               AND h2p.hardware_id = p.hardware_id
-         WHERE p.id = ?1";
+         WHERE p.id = ?1 ORDER BY ci.id";
     let raw = conn
         .query_row(
             SQL,
@@ -1949,9 +1971,18 @@ pub fn device_product(
             row_to_device_product_raw,
         )
         .optional()?;
-    let Some(raw) = raw else {
+    let Some(mut raw) = raw else {
         return Ok(None);
     };
+    if !manufacturer_names.contains_key(&raw.row.manufacturer_id) {
+        let name = manufacturer_name(
+            conn,
+            &raw.row.manufacturer_id,
+            raw.row.manufacturer_name.as_deref(),
+        )?;
+        manufacturer_names.insert(raw.row.manufacturer_id.clone(), name);
+    }
+    raw.row.manufacturer_name = manufacturer_names[&raw.row.manufacturer_id].clone();
     let Some(lang) = language else {
         return Ok(Some(raw.row));
     };

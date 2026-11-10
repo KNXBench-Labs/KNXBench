@@ -12,6 +12,19 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Manufacturer names and product metadata (10 November 2026; source candidate)
+
+Read-only product queries resolve missing/ID-shaped manufacturer names using
+unambiguous retained masters without rewriting existing names. The device
+overview and Devices list share that resolver. Product data now exposes every
+normalized scalar record, all matching catalogue placements/sections and sanitized
+source/additional-attribute metadata through the existing HTTP detail projection.
+EN/DE labels and nested disclosures preserve exact identifiers and source literals.
+[Coverage and limitations](contracts/device-product-metadata.md). Focused query,
+HTTP, binding, component and narrow/wide browser verification accompanies this
+candidate; independent review and complete package acceptance remain pending.
+No bus, migration, release or deployment change.
+
 ## Background activity footer (10 November 2026; bounded source implementation)
 
 App-owned open/import, save/readback, device-detail and read-only comparison

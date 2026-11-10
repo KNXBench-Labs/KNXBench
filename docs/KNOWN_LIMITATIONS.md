@@ -332,7 +332,7 @@ Previously derived rows need explicit migration/backfill or fresh ingest. Parser
 ### 88. Manufacturer display-name winner
 
 **Ledger status:** `ACCEPTED_BOUNDARY` ([KL-88](status/LEDGER.md#snapshot-ids)).
-Display names deliberately use last-writer-wins. Ingest order can change names independently of first-winner product definitions.
+Installed display names deliberately use last-writer-wins. Missing/ID-shaped device names can use unambiguous retained masters read-only; conflicts retain the ID. Ingest order still affects installed real names.
 [Details and history](limitations/KL-088-manufacturer-display-name-winner.md)
 
 <a id="catalogue-kl-128"></a>

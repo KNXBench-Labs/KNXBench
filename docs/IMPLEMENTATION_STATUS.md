@@ -21,6 +21,16 @@ browser flow passed in both languages, both widths and both owning lanes. No job
 new cancellation or panel-owned download lifetime migration is claimed.
 [Design, inventory, exclusions and verification](status/2026-11-10-background-activity-footer.md).
 
+Acceptance at `4a5325e38`: all 11 selected package stages passed with frozen
+inputs and no touched or unchecked user-data paths. The web gate passed 5,605
+unit tests, the root TypeScript build and 27 separate fixture/tooling TypeScript
+configurations; default Chromium ran 1,075
+functional and 97 exclusive cases. Production ran 32 task-status cases and
+115 functional plus 29 exclusive communication cases, with no failed, flaky or
+skipped cases. These are executions across lanes, not a unique-case total.
+Rust tests and private corpus were not selected; no hardware, release or
+deployment verification is claimed.
+
 ## Device-scoped readiness and parameter reply ordering (10 November 2026; issues #36/#37)
 
 The Download panel requests offline readiness only for its selected device,

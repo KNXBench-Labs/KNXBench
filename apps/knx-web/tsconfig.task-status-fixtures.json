@@ -1,4 +1,5 @@
 {
   "extends": "./tsconfig.json",
-  "include": ["src", "e2e/import-status.e2e.ts"]
+  "compilerOptions": { "types": ["node"] },
+  "include": ["src", "e2e/import-status.e2e.ts", "e2e/background-activity.e2e.ts", "playwright.task-status.config.ts"]
 }

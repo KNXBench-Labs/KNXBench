@@ -202,7 +202,8 @@ class Hazards(unittest.TestCase):
         self.assertIn('tcp-tunnel-transport.e2e.ts', files)
         self.assertIn('tcp-line-scan.e2e.ts', files)
         self.assertIn('parameter-block-rename.e2e.ts', files)
-        self.assertEqual(len(files), 40)
+        self.assertIn('background-activity.e2e.ts', files)
+        self.assertEqual(len(files), 41)
         for name in files:
             self.assertTrue((APP / 'e2e' / name).is_file(), name)
 

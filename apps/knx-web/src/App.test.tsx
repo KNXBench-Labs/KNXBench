@@ -27,6 +27,9 @@ import { messages as deMessages } from "./messages/de";
 import { PRODUCT_LANGUAGE_STORAGE_KEY, resetProductLanguageForTests, useProductLanguage } from "./productLanguage";
 import { resetUiLanguageForTests, saveUiLanguage } from "./uiLanguage";
 
+import { catalogueJobsApi } from "./catalogueJobsApi";
+import { admission as activityAdmission, status as activityCatalogueStatus } from "./catalogueJobsFixtures";
+import type { Status as CatalogueActivityStatus } from "./catalogueJobsTypes";
 import type { BundlePreview, BundleQuery } from "./diagnosticBundleShape";
 const reportApi = vi.hoisted(() => ({ previewBundle: vi.fn(), sectionText: vi.fn(), exportBundle: vi.fn(), deleteRecordings: vi.fn() }));
 vi.mock("./diagnosticBundleApi", async (original) => ({ ...(await original<typeof import("./diagnosticBundleApi")>()), ...reportApi }));
@@ -208,6 +211,7 @@ vi.mock("@tauri-apps/api/window", () => ({ getCurrentWindow: () => tauriWindowMo
 import App from "./App";
 import type { SessionControls } from "./session";
 import { subscribeAchievementEvents, type AchievementEvent } from "./achievementEvents";
+import { publishProjectContext, readProjectContext } from "./busContext";
 import { resetSettingsForTests, setSetting, settingsStorage } from "./settingsStore";
 
 // F9's client half: every load generates its own token via
@@ -5214,6 +5218,388 @@ describe("independent review retained-modal witness", () => {
       expect(host!.querySelector('[aria-labelledby="comparison-title"]')).toBeNull();
       expect(document.activeElement).toBe(opener);
       expect(host!.querySelector(".workbench-pane-left")!.closest("[inert]")).toBeNull();
+    } finally { await act(async () => root.unmount()); }
+  });
+});
+
+describe("App — production background-activity ownership", () => {
+  const summary = () => host!.querySelector(".activity-footer-summary")!;
+  const advance = async (ms: number) => { await act(async () => vi.advanceTimersByTimeAsync(ms)); };
+  function deferred<T>() {
+    let resolve!: (value: T) => void;
+    let reject!: (error: Error) => void;
+    const promise = new Promise<T>((yes, no) => { resolve = yes; reject = no; });
+    return { promise, resolve, reject };
+  }
+  type CurrentProject = Awaited<ReturnType<typeof import("./api").currentProject>>;
+  function ownedProject(): CurrentProject {
+    const base = treeWithDevice();
+    return { ...base, server_incarnation: "activity-owner", project_incarnation: 1, snapshot_revision: 10,
+      can_undo: true, has_store_path: true, is_modified: true, comparison_revisions: { 42: 1 },
+      installations: base.installations.map(installation => ({ ...installation, name: "Original activity project",
+        unassigned: installation.unassigned.map(device => ({ ...device, name: "Pump controller", address: "1.1.42" })),
+      })) };
+  }
+  function replacementOf(first: CurrentProject): CurrentProject {
+    return { ...first, project_incarnation: 2, snapshot_revision: 20,
+      installations: first.installations.map(installation => ({ ...installation, name: "Replacement activity project",
+        unassigned: installation.unassigned.map(device => ({ ...device, name: "Replacement device", address: "2.1.42" })),
+      })) };
+  }
+  const inventory = async () => {
+    if (host!.querySelector(".activity-footer-toggle")!.getAttribute("aria-expanded") !== "true") {
+      await act(async () => host!.querySelector<HTMLButtonElement>(".activity-footer-toggle")!.click());
+    }
+  };
+  function activityRow(kind: "resume" | "save" | "autosave" | "deviceDetail" | "compare", projectName?: string) {
+    const row = [...host!.querySelectorAll<HTMLElement>(".activity-footer-panel li")]
+      .find(item => item.querySelector("strong")?.textContent?.startsWith(enMessages[`backgroundActivity.kind.${kind}`])
+        && (!projectName || item.textContent?.includes(projectName)));
+    expect(row, `real App must register ${kind}`).toBeDefined(); return row!;
+  }
+  type SaveCaller = "save" | "saveAs" | "autosave";
+  async function triggerSave(caller: SaveCaller, quit = false) {
+    if (caller === "autosave") { await advance(60_000); return; }
+    if (quit) {
+      await act(async () => { expect(tauriCloseRequested()).toBe(false); });
+      await act(async () => findButton(enMessages["quit.save"]).click());
+    } else if (caller === "saveAs") {
+      await act(async () => host!.querySelector<HTMLElement>(".file-menu summary")!.click());
+      await act(async () => findButton(enMessages["toolbar.saveAs"]).click());
+    } else await act(async () => findButton(enMessages["toolbar.save"]).click());
+  }
+  it.each(["accepted", "newer-published-context"] as const)("deferred resume %s reports admission, not merely a successful response", async outcome => {
+    vi.useFakeTimers(); setSetting("autosaveEnabled", "false");
+    const current = deferred<CurrentProject>(); const project = ownedProject();
+    apiMock.currentProject.mockReturnValueOnce(current.promise);
+    const root = await renderApp();
+    try {
+      await advance(2_000);
+      expect(summary().textContent).toContain(enMessages["backgroundActivity.kind.resume"]);
+      if (outcome === "newer-published-context") {
+        // Another window publishes a newer context without installing any local tree.
+        expect(publishProjectContext({ ...project, snapshot_revision: 30 })).toBe(true);
+      }
+      await act(async () => current.resolve(project));
+      await inventory();
+      const row = activityRow("resume");
+      expect(row.dataset.state).toBe(outcome === "accepted" ? "succeeded" : "discarded");
+      expect(row.querySelector(".task-status-text")).toBeNull();
+      expect(readProjectContext(window.localStorage)?.snapshotRevision).toBe(outcome === "accepted" ? 10 : 30);
+      const projectCaption = host!.querySelector(".workbench-status > span:first-child")!.textContent;
+      if (outcome === "accepted") {
+        expect(projectCaption).toContain("Original activity project");
+        expect(row.textContent).toContain("Original activity project");
+      } else {
+        expect(projectCaption).toBe("KNXBench");
+        expect(row.textContent).not.toContain(enMessages["backgroundActivity.state.succeeded"]);
+      }
+    } finally { await act(async () => root.unmount()); }
+  });
+  const rejectedSaves = (["save", "saveAs", "autosave"] as const).flatMap(caller =>
+    (["project-replaced", "older-local-revision", "newer-published-context", "readback-other-project"] as const).map(fence => ({ caller, fence })));
+  it.each(rejectedSaves)("$caller discards $fence readback without success, achievements or a fabricated failure", async ({ caller, fence }) => {
+    vi.useFakeTimers(); setSetting("autosaveEnabled", String(caller === "autosave")); setSetting("autosaveIntervalMinutes", "1");
+    filePickerMock.isTauri.mockReturnValue(true);
+    const first = ownedProject(); const refresh = deferred<CurrentProject>();
+    apiMock.currentProject.mockResolvedValueOnce(first);
+    apiMock.saveProject.mockReset().mockResolvedValue(undefined);
+    apiMock.saveProjectAs.mockReset().mockResolvedValue(undefined);
+    filePickerMock.pickSavePath.mockResolvedValue("/fixture/private/activity-copy.knxdb");
+    const seen: AchievementEvent[] = []; const stop = subscribeAchievementEvents(event => seen.push(event));
+    const root = await renderApp();
+    try {
+      apiMock.currentProject.mockReturnValueOnce(refresh.promise);
+      await triggerSave(caller); await advance(2_000);
+      expect(summary().textContent).toContain(enMessages[`backgroundActivity.kind.${caller === "autosave" ? "autosave" : "save"}`]);
+      if (caller === "saveAs") expect(apiMock.saveProjectAs).toHaveBeenCalledTimes(1);
+      else expect(apiMock.saveProject).toHaveBeenCalledTimes(1);
+      let expectedCaption = "Original activity project";
+      if (fence === "newer-published-context") {
+        expect(publishProjectContext({ ...first, snapshot_revision: 30 })).toBe(true);
+      } else if (fence !== "readback-other-project") {
+        const newer = fence === "project-replaced" ? replacementOf(first) : { ...first, snapshot_revision: 20 };
+        apiMock.undo.mockResolvedValueOnce(newer);
+        await act(async () => findButton(enMessages["toolbar.undo"]).click());
+        if (fence === "project-replaced") expectedCaption = "Replacement activity project";
+      }
+      await act(async () => refresh.resolve({ ...first, snapshot_revision: 11, is_modified: false,
+        project_incarnation: fence === "readback-other-project" ? 2 : first.project_incarnation }));
+      await inventory(); const row = activityRow(caller === "autosave" ? "autosave" : "save");
+      expect(row.dataset.state).toBe("discarded");
+      expect(row.textContent).toContain("Original activity project");
+      expect(row.textContent).not.toContain("Replacement activity project");
+      expect(row.textContent).not.toContain("/fixture/private/");
+      if (caller === "saveAs") expect(row.textContent).toContain("activity-copy.knxdb");
+      expect(host!.querySelector(".workbench-status > span:first-child")!.textContent).toContain(expectedCaption);
+      expect(host!.querySelector(".activity-footer .task-status-text")).toBeNull();
+      expect(seen.filter(event => event.type === "projectSaved" || event.type === "autosaveSucceeded")).toEqual([]);
+      expect(host!.querySelector(".toast--error")).toBeNull();
+      expect(host!.querySelector('.activity-footer li[data-state="failed"]')).toBeNull();
+      // Refused readback must leave the current dirty project protected by the real close guard.
+      await act(async () => { expect(tauriCloseRequested()).toBe(false); });
+      expect(host!.querySelector(".quit-confirm")).not.toBeNull();
+      expect(tauriWindowMock.close).not.toHaveBeenCalled();
+    } finally { stop(); await act(async () => root.unmount()); filePickerMock.isTauri.mockReturnValue(false); }
+  });
+  const acceptedSaves = (["save", "saveAs", "autosave"] as const).flatMap(caller =>
+    ([false, true] as const).map(dirty => ({ caller, dirty })));
+  it.each(acceptedSaves)("$caller confirms an accepted readback (still dirty: $dirty) without authorizing a dirty exit", async ({ caller, dirty }) => {
+    vi.useFakeTimers(); setSetting("autosaveEnabled", String(caller === "autosave")); setSetting("autosaveIntervalMinutes", "1");
+    filePickerMock.isTauri.mockReturnValue(true);
+    const first = { ...ownedProject(), has_store_path: caller !== "saveAs" };
+    const refresh = deferred<CurrentProject>();
+    apiMock.currentProject.mockResolvedValueOnce(first);
+    apiMock.saveProject.mockReset().mockResolvedValue(undefined);
+    apiMock.saveProjectAs.mockReset().mockResolvedValue(undefined);
+    filePickerMock.pickSavePath.mockResolvedValue("/fixture/private/activity-copy.knxdb");
+    const seen: AchievementEvent[] = []; const stop = subscribeAchievementEvents(event => seen.push(event));
+    const root = await renderApp();
+    try {
+      apiMock.currentProject.mockReturnValueOnce(refresh.promise);
+      // Manual callers go through Save-and-quit: only accepted-clean may return true.
+      await triggerSave(caller, true); await advance(2_000);
+      await act(async () => refresh.resolve({ ...first, has_store_path: true, snapshot_revision: 11, is_modified: dirty }));
+      if (caller !== "autosave") {
+        expect(tauriWindowMock.close).toHaveBeenCalledTimes(dirty ? 0 : 1);
+        // The native close is mocked; a successful close does not unmount this test App.
+        if (dirty) expect(host!.querySelector(".quit-confirm")).not.toBeNull();
+        if (dirty) await act(async () => findButton(enMessages["quit.cancel"]).click());
+      }
+      await inventory(); const row = activityRow(caller === "autosave" ? "autosave" : "save");
+      expect(row.dataset.state).toBe("succeeded");
+      expect(row.textContent).toContain("Original activity project");
+      expect(row.textContent?.includes(enMessages["backgroundActivity.savedWithEdits"])).toBe(dirty);
+      expect(row.querySelector(".task-status-text")).toBeNull();
+      expect(seen.filter(event => event.type === "projectSaved")).toEqual([{ type: "projectSaved" }]);
+      expect(seen.filter(event => event.type === "autosaveSucceeded")).toEqual(caller === "autosave" ? [{ type: "autosaveSucceeded" }] : []);
+      if (caller === "autosave") {
+        let mayClose = false;
+        await act(async () => { mayClose = tauriCloseRequested(); });
+        expect(mayClose).toBe(!dirty);
+        // The native close is mocked; a successful close does not unmount this test App.
+        if (dirty) expect(host!.querySelector(".quit-confirm")).not.toBeNull();
+      }
+    } finally { stop(); await act(async () => root.unmount()); filePickerMock.isTauri.mockReturnValue(false); }
+  });
+  it("autosave reschedules after a discarded readback and real failure, without losing dirty state or inventing achievements", async () => {
+    vi.useFakeTimers(); setSetting("autosaveEnabled", "true"); setSetting("autosaveIntervalMinutes", "1");
+    const first = ownedProject(); const refresh = deferred<CurrentProject>();
+    apiMock.currentProject.mockResolvedValueOnce(first);
+    apiMock.saveProject.mockReset().mockResolvedValue(undefined);
+    const seen: AchievementEvent[] = []; const stop = subscribeAchievementEvents(event => seen.push(event));
+    const root = await renderApp();
+    try {
+      apiMock.currentProject.mockReturnValueOnce(refresh.promise);
+      await advance(60_000);
+      expect(publishProjectContext({ ...first, snapshot_revision: 30 })).toBe(true);
+      await act(async () => refresh.resolve({ ...first, snapshot_revision: 11, is_modified: false }));
+      await inventory(); expect(activityRow("autosave").dataset.state).toBe("discarded");
+      expect(seen.filter(event => event.type === "autosaveSucceeded")).toEqual([]);
+      expect(host!.textContent).not.toContain(enMessages["autosave.failed"]);
+      apiMock.saveProject.mockRejectedValueOnce(new Error("fictional disk full"));
+      await advance(60_000);
+      expect(apiMock.saveProject).toHaveBeenCalledTimes(2);
+      expect(host!.textContent).toContain(enMessages["autosave.failed"]);
+      expect(host!.querySelector('li[data-state="failed"]')?.textContent).toContain("fictional disk full");
+      apiMock.currentProject.mockResolvedValueOnce({ ...first, snapshot_revision: 31, is_modified: true });
+      await advance(60_000);
+      expect(apiMock.saveProject).toHaveBeenCalledTimes(3);
+      expect(host!.querySelectorAll('li[data-state="succeeded"]')).toHaveLength(2); // resume + accepted autosave
+      expect(seen.filter(event => event.type === "projectSaved")).toEqual([{ type: "projectSaved" }]);
+      expect(seen.filter(event => event.type === "autosaveSucceeded")).toEqual([{ type: "autosaveSucceeded" }]);
+    } finally { stop(); await act(async () => root.unmount()); }
+  });
+  it("keeps a real device read's original project, name and address after project replacement", async () => {
+    vi.useFakeTimers(); setSetting("autosaveEnabled", "false");
+    const first = ownedProject(); const detail = deferred<DeviceDetail>();
+    apiMock.currentProject.mockResolvedValueOnce(first);
+    apiMock.deviceDetail.mockReset().mockReturnValueOnce(detail.promise)
+      .mockResolvedValue({ ...deviceDetailFixture(), name: "Replacement device", address: "2.1.42" });
+    const root = await renderApp();
+    try {
+      await expandExplorer(); await act(async () => treeLabel("1.1.42 Pump controller").click());
+      await advance(2_000);
+      expect(summary().textContent).toContain("Original activity project");
+      expect(summary().textContent).toContain("Pump controller · 1.1.42");
+      apiMock.undo.mockResolvedValueOnce(replacementOf(first));
+      await act(async () => findButton(enMessages["toolbar.undo"]).click());
+      await act(async () => detail.resolve({ ...deviceDetailFixture(), name: "Pump controller", address: "1.1.42" }));
+      await inventory(); const row = activityRow("deviceDetail", "Original activity project");
+      expect(row.dataset.state).toBe("discarded");
+      const successor = activityRow("deviceDetail", "Replacement activity project");
+      expect(successor.dataset.state).toBe("succeeded");
+      expect(successor.textContent).toContain("Replacement device · 2.1.42");
+      expect(row.textContent).toContain("Original activity project");
+      expect(row.textContent).toContain("Pump controller · 1.1.42");
+      expect(row.textContent).not.toContain("Replacement activity project");
+      expect(row.textContent).not.toContain("Replacement device");
+    } finally { await act(async () => root.unmount()); }
+  });
+  it("preserves the original comparison project and reviewed device labels in history after replacement", async () => {
+    vi.useFakeTimers(); setSetting("autosaveEnabled", "false");
+    const first = ownedProject(); const compared = deferred<BoundDeviceComparison>();
+    apiMock.currentProject.mockResolvedValueOnce(first);
+    apiMock.compareDevice.mockReset().mockReturnValueOnce(compared.promise);
+    const root = await renderApp();
+    try {
+      await act(async () => findButton(enMessages["workbench.devices"]).click());
+      await act(async () => findButton(enMessages["compare.all"]).click());
+      const gateway = host!.querySelector<HTMLInputElement>(".comparison-gateway")!;
+      await act(async () => {
+        Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!.call(gateway, "192.0.2.10:3671");
+        gateway.dispatchEvent(new Event("input", { bubbles: true }));
+      });
+      await act(async () => findButton(enMessages["compare.confirm"]).click());
+      await advance(2_000);
+      expect(summary().textContent).toContain("Original activity project");
+      expect(summary().textContent).toContain("Pump controller · 1.1.42");
+      await act(async () => compared.resolve({ serverIncarnation: "activity-owner", projectIncarnation: 1, deviceId: 42,
+        comparisonRevision: 1, address: "1.1.42", deviceName: "Pump controller", programId: "A", written: false,
+        partial: false, mask: 0x0701, manufacturer: 0x83, same: true, octets: 1, differingOctets: 0, changes: [],
+        loadStates: [{ machine: "Application", state: "Loaded" }], outdated: false,
+        decoded: [{ kind: "raw", label: "", address: 0x4000, project: "21", device: "21", reason: null }] }));
+      await act(async () => findButton(enMessages["compare.close"]).click());
+      apiMock.undo.mockResolvedValueOnce(replacementOf(first));
+      await act(async () => findButton(enMessages["toolbar.undo"]).click());
+      await inventory(); const row = activityRow("compare");
+      expect(row.dataset.state).toBe("succeeded");
+      expect(row.textContent).toContain("Original activity project");
+      expect(row.textContent).toContain("Pump controller · 1.1.42");
+      expect(row.textContent).not.toContain("Replacement activity project");
+      expect(row.textContent).not.toContain("Replacement device");
+      expect(apiMock.compareDevice).toHaveBeenCalledExactlyOnceWith("1.1.42", "192.0.2.10:3671", {
+        serverIncarnation: "activity-owner", projectIncarnation: 1, deviceId: 42, comparisonRevision: 1,
+      });
+    } finally { await act(async () => root.unmount()); apiMock.compareDevice.mockReset(); }
+  });
+  it.each(["open", "import"] as const)("%s acknowledges immediately, delays footer and waits for the complete producer", async kind => {
+    vi.useFakeTimers();
+    const body = deferred<ProjectTree>();
+    apiMock.loadProgress.mockResolvedValue({ operationId: 1, clientToken: OWN_CLIENT_TOKEN, source: "fictional.knxdb", kind,
+      phase: "buildProjectTree", completed: null, total: null, status: "running", error: null });
+    filePickerMock.pickOpenPath.mockResolvedValue(`fictional.${kind === "open" ? "knxdb" : "knxproj"}`);
+    (kind === "open" ? apiMock.openProject : apiMock.importProject).mockReturnValueOnce(body.promise);
+    const root = await renderApp();
+    try {
+      await act(async () => findButton(enMessages[kind === "open" ? "toolbar.openNativeProject" : "toolbar.openProject"]).click());
+      expect(host!.querySelector(".load-progress")).not.toBeNull();
+      expect(summary().textContent).toBe("");
+      await advance(1_999); expect(summary().querySelector(".task-status-text")).toBeNull();
+      // A poll at the reveal deadline can re-arm its zero-delay timer for the next tick.
+      await advance(2); expect(summary().textContent).toContain(enMessages[`backgroundActivity.kind.${kind}`]);
+      expect(summary().textContent).toContain(enMessages["loadProgress.phase.buildProjectTree"]);
+      // A server terminal poll is not the response body and cannot prematurely finish the UI owner.
+      apiMock.loadProgress.mockResolvedValue({ operationId: 1, clientToken: OWN_CLIENT_TOKEN, source: "fictional.knxdb", kind, phase: "buildProjectTree", completed: null, total: null, status: "succeeded", error: null });
+      await advance(500); expect(summary().querySelector(".task-status-text")).not.toBeNull();
+      await act(async () => body.resolve(baseTree()));
+      expect(summary().textContent).toContain(enMessages["backgroundActivity.state.succeeded"]);
+      expect(summary().textContent).not.toContain(enMessages["loadProgress.phase.buildProjectTree"]);
+      expect(summary().querySelector(".task-status-text")).toBeNull();
+      await advance(3_000); expect(summary().textContent).toBe("");
+      await act(async () => host!.querySelector<HTMLButtonElement>(".activity-footer-toggle")!.click());
+      expect(host!.querySelector("li[data-state=succeeded]")).not.toBeNull();
+    } finally { await act(async () => root.unmount()); }
+  });
+  it.each([
+    { status: 422, kind: "projectPasswordRequired" },
+    { status: 409, kind: "projectUnsavedChanges" },
+  ])("load refusal $kind is a static decision rather than a failure", async refusal => {
+    vi.useFakeTimers();
+    const body = deferred<ProjectTree>(); apiMock.importProject.mockReturnValueOnce(body.promise);
+    filePickerMock.pickOpenPath.mockResolvedValue("decision.knxproj");
+    const root = await renderApp();
+    try {
+      await act(async () => findButton(enMessages["toolbar.openProject"]).click());
+      await advance(2_000);
+      await act(async () => body.reject(Object.assign(new Error("decision required"), { status: refusal.status, body: { kind: refusal.kind } })));
+      expect(summary().textContent).toContain(enMessages["backgroundActivity.state.decision"]);
+      expect(summary().querySelector(".task-status-text")).toBeNull();
+      expect(summary().textContent).not.toContain(enMessages["backgroundActivity.state.failed"]);
+      expect(host!.querySelector(".load-progress")).toBeNull();
+    } finally { await act(async () => root.unmount()); }
+  });
+  it("keeps a retained catalogue observer when Help removes its initiating panel", async () => {
+    vi.useFakeTimers();
+    const upload = deferred<CatalogueActivityStatus>();
+    const spies = [vi.spyOn(catalogueJobsApi, "admission").mockResolvedValue(activityAdmission),
+      vi.spyOn(catalogueJobsApi, "create").mockResolvedValue(activityCatalogueStatus()),
+      vi.spyOn(catalogueJobsApi, "upload").mockReturnValue(upload.promise),
+      vi.spyOn(catalogueJobsApi, "status").mockResolvedValue(activityCatalogueStatus())];
+    const root = await renderApp();
+    try {
+      await act(async () => findButton(enMessages["workbench.catalog"]).click());
+      const input = host!.querySelector<HTMLInputElement>('.catalog-workspace input[type="file"]')!;
+      expect(input).not.toBeNull();
+      await act(async () => { Object.defineProperty(input, "files", { value: [new File(["x"], "x.knxprod")], configurable: true }); input.dispatchEvent(new Event("change", { bubbles: true })); });
+      const selection = host!.querySelector("[data-catalogue-job-selection]")!;
+      const profile = selection.querySelector<HTMLSelectElement>("select")!;
+      await act(async () => { Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value")!.set!.call(profile, "large"); profile.dispatchEvent(new Event("change", { bubbles: true })); });
+      await act(async () => selection.querySelector<HTMLInputElement>('input[type="checkbox"]')!.click());
+      await act(async () => findButton(enMessages["catalogJob.start"]).click());
+      await act(async () => window.dispatchEvent(new KeyboardEvent("keydown", { key: "F1", bubbles: true })));
+      expect(host!.querySelector(".catalog-workspace")).toBeNull();
+      await advance(2_000); expect(summary().textContent).toContain(enMessages["backgroundActivity.kind.catalogue"]);
+      await act(async () => upload.resolve(activityCatalogueStatus("ready", "2")));
+      expect(summary().textContent).toContain(enMessages["backgroundActivity.state.waiting"]);
+      expect(summary().querySelector(".task-status-text")).toBeNull();
+      expect(catalogueJobsApi.create).toHaveBeenCalledTimes(1); expect(catalogueJobsApi.upload).toHaveBeenCalledTimes(1);
+    } finally { await act(async () => root.unmount()); spies.forEach(spy => spy.mockRestore()); }
+  });
+  it("does not adopt a late load after an accepted project replacement", async () => {
+    vi.useFakeTimers();
+    const first = { ...treeWithDevice(), server_incarnation: "activity-fixture", project_incarnation: 1, snapshot_revision: 1, can_undo: true };
+    apiMock.currentProject.mockResolvedValueOnce(first);
+    const body = deferred<ProjectTree>(); apiMock.openProject.mockReturnValueOnce(body.promise);
+    filePickerMock.pickOpenPath.mockResolvedValue("late.knxdb");
+    const root = await renderApp();
+    try {
+      await act(async () => findButton(enMessages["toolbar.openNativeProject"]).click());
+      const replacement = { ...first, project_incarnation: 2, snapshot_revision: 2, installations: [{ ...first.installations[0], name: "Replacement project" }] };
+      apiMock.undo.mockResolvedValueOnce(replacement);
+      await act(async () => findButton(enMessages["toolbar.undo"]).click());
+      await act(async () => body.resolve({ ...first, snapshot_revision: 3 }));
+      expect(host!.querySelector(".workbench-status")!.textContent).toContain("Replacement project");
+      expect(host!.querySelector(".load-progress")).toBeNull();
+      await act(async () => host!.querySelector<HTMLButtonElement>(".activity-footer-toggle")!.click());
+      expect(host!.querySelector('li[data-state="discarded"]')?.textContent).toContain("late.knxdb");
+      expect(host!.querySelector(".activity-footer .task-status-text")).toBeNull();
+    } finally { await act(async () => root.unmount()); }
+  });
+  it("save activity includes its refreshed response and rejects an old project's late snapshot", async () => {
+    vi.useFakeTimers();
+    const first = { ...treeWithDevice(), server_incarnation: "activity-save", project_incarnation: 1, snapshot_revision: 1, has_store_path: true, can_undo: true };
+    apiMock.currentProject.mockResolvedValueOnce(first);
+    apiMock.saveProject.mockResolvedValueOnce(undefined);
+    const refresh = deferred<ProjectTree>();
+    const root = await renderApp();
+    try {
+      apiMock.currentProject.mockReturnValueOnce(refresh.promise);
+      await act(async () => findButton(enMessages["toolbar.save"]).click());
+      await advance(2_000); expect(summary().textContent).toContain(enMessages["backgroundActivity.kind.save"]);
+      const replacement = { ...first, project_incarnation: 2, snapshot_revision: 2, installations: [{ ...first.installations[0], name: "Current replacement" }] };
+      apiMock.undo.mockResolvedValueOnce(replacement);
+      await act(async () => findButton(enMessages["toolbar.undo"]).click());
+      await act(async () => refresh.resolve({ ...first, snapshot_revision: 3, is_modified: false }));
+      expect(host!.querySelector(".workbench-status")!.textContent).toContain("Current replacement");
+      expect(summary().querySelector(".task-status-text")).toBeNull();
+      await inventory();
+      expect(activityRow("save").dataset.state).toBe("discarded");
+    } finally { await act(async () => root.unmount()); }
+  });
+  it("a failed load remains in footer history until explicitly acknowledged", async () => {
+    vi.useFakeTimers();
+    filePickerMock.pickOpenPath.mockResolvedValue("bad.knxdb");
+    apiMock.openProject.mockRejectedValueOnce(new Error("fictional load failure"));
+    const root = await renderApp();
+    try {
+      await act(async () => findButton(enMessages["toolbar.openNativeProject"]).click());
+      await advance(30_000); expect(summary().textContent).toContain(enMessages["backgroundActivity.state.failed"]);
+      await act(async () => host!.querySelector<HTMLButtonElement>(".activity-footer-toggle")!.click());
+      expect(host!.querySelector(".activity-footer-panel")!.textContent).toContain("fictional load failure");
+      await act(async () => findButton(enMessages["backgroundActivity.acknowledge"]).click());
+      expect(summary().textContent).toBe("");
+      expect(host!.querySelector(".activity-footer .task-status-text")).toBeNull();
     } finally { await act(async () => root.unmount()); }
   });
 });

@@ -3,9 +3,10 @@ import { useEffect, useRef, useState } from "react";
 import * as api from "./api";
 import type { ProjectTree } from "./bindings/ProjectTree";
 import { runComparisonQueue, type ComparisonEntry, type ComparisonTarget } from "./deviceComparisons";
+import { projectActivityContext, type ActivityController, type ActivityHandle } from "./activityController";
 import { useTranslate } from "./i18n";
 
-export function useDeviceComparisons(tree: ProjectTree | null) {
+export function useDeviceComparisons(tree: ProjectTree | null, activity: ActivityController) {
   const t = useTranslate();
   const scopeKey = tree ? JSON.stringify([tree.server_incarnation, tree.project_incarnation]) : null;
   // A withdrawn scope never regains authority, even if its incarnation later reappears.
@@ -19,7 +20,9 @@ export function useDeviceComparisons(tree: ProjectTree | null) {
   const [stopping, setStopping] = useState(false);
   const [progress, setProgress] = useState({ completed: 0, current: null as ComparisonTarget | null });
   const [error, setError] = useState<string | null>(null);
-  const run = useRef<{ cancelled: boolean } | null>(null);
+  const run = useRef<{ cancelled: boolean; activity: ActivityHandle } | null>(null);
+  const activitySerial = useRef(0);
+  const activityId = useRef<number | null>(null);
   const mounted = useRef(false);
   useEffect(() => {
     mounted.current = true;
@@ -27,7 +30,7 @@ export function useDeviceComparisons(tree: ProjectTree | null) {
   }, []);
   useEffect(() => {
     // Withdrawal cancels the queue, not the still-pending read's ownership.
-    if (run.current) { run.current.cancelled = true; setStopping(true); }
+    if (run.current) { run.current.cancelled = true; run.current.activity.update({ state: "cancelling" }); setStopping(true); }
   }, [scope]);
 
   function entry(id: number): ComparisonEntry | null {
@@ -37,15 +40,16 @@ export function useDeviceComparisons(tree: ProjectTree | null) {
   }
   function open(targets: readonly { id: number; name: string; address: string | null }[]) {
     if (!tree || scope !== liveScope.current || run.current) return;
+    activityId.current = null;
     setError(null); setSelected(null); setProgress({ completed: 0, current: null });
     setReview({ scope, started: false, targets: targets.map((target) => ({
       id: target.id, name: target.name, address: target.address, revision: tree.comparison_revisions?.[target.id],
     })) });
   }
   function cancel() {
-    if (run.current) { run.current.cancelled = true; setStopping(true); }
+    if (run.current) { run.current.cancelled = true; run.current.activity.update({ state: "cancelling" }); setStopping(true); }
   }
-  function close() { if (run.current) cancel(); else setReview(null); }
+  function close() { if (run.current) cancel(); else { activityId.current = null; setReview(null); } }
   function inspect(target: { id: number; name: string; address: string | null }) {
     if (!tree || scope !== liveScope.current || run.current) return;
     open([target]); setSelected(target.id);
@@ -54,7 +58,12 @@ export function useDeviceComparisons(tree: ProjectTree | null) {
   async function confirm(gateway: string) {
     if (!tree || !review || review.scope !== scope || scope !== liveScope.current || review.started || run.current) return;
     if (!tree.server_incarnation || tree.project_incarnation === undefined) { setError(t("compare.noRevision")); return; }
-    const owned = { cancelled: false }; run.current = owned;
+    const owned = { cancelled: false, activity: activity.begin({ kind: "compare", operationId: String(++activitySerial.current),
+      projectScope: scope, access: "read", entityId: review.targets.map(target => target.id).join(",") }, { destination: "comparison",
+        ...projectActivityContext(tree), entities: review.targets.map(target => ({ label: target.name, address: target.address })),
+      }) }; run.current = owned;
+    activityId.current = owned.activity.id;
+    let failed = false;
     const reviewed = review;
     setReview({ ...review, started: true }); setRunning(true); setStopping(false); setError(null);
     const live = () => mounted.current && run.current === owned && liveScope.current === reviewed.scope;
@@ -70,10 +79,18 @@ export function useDeviceComparisons(tree: ProjectTree | null) {
           ]) }));
           setSelected((previous) => previous ?? id);
         },
-        progress: (completed, current) => { if (live()) setProgress({ completed, current }); },
+        progress: (completed, current) => {
+          owned.activity.update({ progress: { completed: String(completed), total: String(reviewed.targets.length) } });
+          if (live()) setProgress({ completed, current });
+        },
       });
-    } catch (reason) { if (live()) setError(api.errorMessage(reason)); }
+    } catch (reason) {
+      failed = true;
+      owned.activity.finish(!live() || owned.cancelled ? "cancelled" : "failed", live() && !owned.cancelled ? api.errorMessage(reason) : undefined);
+      if (live()) setError(api.errorMessage(reason));
+    }
     finally {
+      if (!failed) owned.activity.finish(owned.cancelled || !live() ? "cancelled" : "succeeded");
       if (run.current === owned) {
         run.current = null;
         if (mounted.current) { setRunning(false); setStopping(false); }
@@ -81,6 +98,7 @@ export function useDeviceComparisons(tree: ProjectTree | null) {
     }
   }
   return { entry, open, inspect, close, cancel, confirm, selected, setSelected, running, stopping, progress, error,
-    review: review?.scope === scope ? review : null };
+    ownsActivity: (id: number) => activityId.current === id && scope === liveScope.current,
+    activityId: activityId.current, review: review?.scope === scope ? review : null };
 }
 export type DeviceComparisons = ReturnType<typeof useDeviceComparisons>;

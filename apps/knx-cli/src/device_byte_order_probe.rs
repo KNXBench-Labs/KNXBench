@@ -35,6 +35,8 @@ pub struct ProbeArgs {
     pub product_db: Option<String>,
     /// Optional for an offline preview; required for the existing live probe.
     pub gateway: Option<std::net::SocketAddrV4>,
+    /// Explicit IP transport for an ordinary read; omission keeps UDP.
+    pub transport: knx_net::TunnelTransport,
     /// Preview only; no runtime, tunnel or device session is constructed.
     pub preview: bool,
     /// Preview source-derived System-2 fields, never enable a live override.
@@ -49,6 +51,7 @@ pub fn parse_probe_args(args: &[String]) -> Result<ProbeArgs, String> {
     let mut project = None;
     let mut product_db = None;
     let mut gateway = None;
+    let mut transport = None;
     let mut preview = false;
     let mut system2_source = false;
     let mut parameter_refs = Vec::new();
@@ -65,6 +68,10 @@ pub fn parse_probe_args(args: &[String]) -> Result<ProbeArgs, String> {
             }
             "--gateway" => {
                 gateway = Some(crate::take_value(args, i + 1, "--gateway")?);
+                i += 1;
+            }
+            "--tunnel-transport" => {
+                crate::bus_transport::take_tunnel_transport(&mut transport, args, i)?;
                 i += 1;
             }
             "--preview" => preview = true,
@@ -86,6 +93,9 @@ pub fn parse_probe_args(args: &[String]) -> Result<ProbeArgs, String> {
         }
         i += 1;
     }
+    if preview && transport.is_some() {
+        return Err("--tunnel-transport cannot be used with --preview".into());
+    }
     if system2_source && !preview {
         return Err("--system2-source requires --preview; it never enables a live probe".into());
     }
@@ -100,8 +110,13 @@ pub fn parse_probe_args(args: &[String]) -> Result<ProbeArgs, String> {
     }
     let gateway = gateway
         .map(|g| {
-            g.parse()
-                .map_err(|_| "--gateway must be host:port, e.g. 192.0.2.1:3671".to_string())
+            if preview {
+                // Keep legacy offline previews independent of runtime endpoint admission.
+                g.parse()
+                    .map_err(|_| "--gateway must be host:port, e.g. 192.0.2.1:3671".to_string())
+            } else {
+                crate::bus_transport::parse_gateway(&g)
+            }
         })
         .transpose()?;
     if !preview && gateway.is_none() {
@@ -112,6 +127,7 @@ pub fn parse_probe_args(args: &[String]) -> Result<ProbeArgs, String> {
         project: project.ok_or("--project <path.knxdb> is required")?,
         product_db,
         gateway,
+        transport: transport.unwrap_or(knx_net::TunnelTransport::Udp),
         preview,
         system2_source,
         parameter_refs,
@@ -610,6 +626,72 @@ mod tests {
         ]
         .map(String::from);
         assert!(parse_probe_args(&args).is_err());
+    }
+
+    #[test]
+    fn transport_is_strict_defaults_to_udp_and_is_never_a_preview_option() {
+        let base = ["1.1.5", "--project", "p", "--gateway", "192.0.2.1:3671"]
+            .map(String::from)
+            .to_vec();
+        assert_eq!(
+            parse_probe_args(&base).unwrap().transport,
+            knx_net::TunnelTransport::Udp
+        );
+        for (value, expected) in [
+            ("udp", knx_net::TunnelTransport::Udp),
+            ("tcp", knx_net::TunnelTransport::Tcp),
+        ] {
+            let mut args = base.clone();
+            args.extend(["--tunnel-transport".into(), value.into()]);
+            assert_eq!(parse_probe_args(&args).unwrap().transport, expected);
+            let mut preview = args.clone();
+            preview.push("--preview".into());
+            assert!(parse_probe_args(&preview)
+                .unwrap_err()
+                .contains("cannot be used with --preview"));
+            preview.extend([
+                "--system2-source".into(),
+                "--parameter-ref".into(),
+                "P_R".into(),
+            ]);
+            assert!(parse_probe_args(&preview)
+                .unwrap_err()
+                .contains("cannot be used with --preview"));
+            args.extend(["--tunnel-transport".into(), value.into()]);
+            assert!(parse_probe_args(&args).unwrap_err().contains("duplicate"));
+        }
+        for tail in [
+            vec!["--tunnel-transport"],
+            vec!["--tunnel-transport", "TCP"],
+            vec!["--tunnel-transport", "tls"],
+            vec!["--tunnel-transport", "--preview"],
+        ] {
+            let mut args = base.clone();
+            args.extend(tail.into_iter().map(String::from));
+            assert!(parse_probe_args(&args).is_err());
+        }
+    }
+
+    #[test]
+    fn runtime_endpoints_are_strict_but_legacy_previews_keep_syntax_only_admission() {
+        for endpoint in [
+            "0.0.0.0:3671",
+            "255.255.255.255:3671",
+            "224.0.23.12:3671",
+            "192.0.2.1:0",
+        ] {
+            let mut args = ["1.1.5", "--project", "p", "--gateway", endpoint]
+                .map(String::from)
+                .to_vec();
+            assert!(parse_probe_args(&args)
+                .unwrap_err()
+                .contains("unicast IPv4"));
+            args.push("--preview".into());
+            assert!(
+                parse_probe_args(&args).is_ok(),
+                "legacy offline preview: {endpoint}"
+            );
+        }
     }
 
     #[test]

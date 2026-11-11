@@ -608,11 +608,15 @@ function NewGroupLinkRow(props: {
   const [error, setError] = useState<string | null>(null);
   // Issue #47: follows the object until the user picks a direction; each link resets it.
   const suggestion = suggestLinkDirection(com, gaId);
-  const [picked, setPicked] = useState<"Send" | "Receive" | "Both" | null>(null);
+  const [picked, setPicked] = useState<"Send" | "Receive" | null>(null);
   const direction = picked ?? suggestion.direction;
   const hintId = useId();
   const [dropReady, setDropReady] = useState(false);
-  const canLink = gaId !== null;
+  // WP-39: one link per address and object; the other direction adds nothing on the device.
+  const alreadyLinked = (id: number) => com.links.some((link) => link.ga_id === id);
+  const linkedHere = gaId !== null && alreadyLinked(gaId);
+  const canLink = gaId !== null && !linkedHere;
+  const showHint = picked === null || linkedHere;
 
   async function linkTo(id: number, viaDrop = false) {
     setError(null);
@@ -649,6 +653,10 @@ function NewGroupLinkRow(props: {
       setError(t("inspector.dropNotLinkable"));
       return;
     }
+    if (alreadyLinked(id)) {
+      setError(t("inspector.direction.reason.alreadyLinked"));
+      return;
+    }
     void linkTo(id, true);
   }
 
@@ -667,19 +675,19 @@ function NewGroupLinkRow(props: {
       <select
         value={direction}
         aria-label={t("inspector.direction.label")}
-        aria-describedby={picked === null ? hintId : undefined}
+        aria-describedby={showHint ? hintId : undefined}
         data-link-direction-reason={picked === null ? suggestion.reason : "picked"}
-        onChange={(e) => setPicked(e.target.value as "Send" | "Receive" | "Both")}
+        onChange={(e) => setPicked(e.target.value as "Send" | "Receive")}
       >
         <option value="Send">{t("inspector.direction.send")}</option>
         <option value="Receive">{t("inspector.direction.receive")}</option>
-        <option value="Both">{t("inspector.direction.both")}</option>
       </select>
       <button onClick={link} disabled={!canLink}>
         {t("inspector.link")}
       </button>
-      {picked === null && (
-        <span className="link-direction-hint" id={hintId}>{t(`inspector.direction.reason.${suggestion.reason}`)}</span>
+      {showHint && (
+        <span className="link-direction-hint" id={hintId}>
+          {t(linkedHere ? "inspector.direction.reason.alreadyLinked" : `inspector.direction.reason.${suggestion.reason}`)}</span>
       )}
       {error && <span className="field-error">{error}</span>}
     </li>

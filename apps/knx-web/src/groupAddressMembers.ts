@@ -6,8 +6,12 @@ import type { ProjectTree } from "./bindings/ProjectTree";
 import { collectDevices, deviceInstallation, owningInstallation, projectContextKey } from "./treeUtils";
 
 /** The directions `POST /api/group-links` accepts; `Both` is one atomic batch. */
-export type MemberDirection = "Send" | "Receive" | "Both";
-export const MEMBER_DIRECTIONS: readonly MemberDirection[] = ["Send", "Receive", "Both"];
+// WP-39: a sending address also receives on the device (KNX Resources
+// §4.17.3.3.2), and ETS has no separate send-and-receive state, so a new link
+// is either Send or Receive. Existing send+receive pairs stay valid and can
+// still be unlinked together (`Inspector` "Unlink both").
+export type MemberDirection = "Send" | "Receive";
+export const MEMBER_DIRECTIONS: readonly MemberDirection[] = ["Send", "Receive"];
 
 // MODEL-01 / ADR-0070, mirroring `Command::LinkComObject`: a device placed
 // in one installation links only to that installation's group addresses; a
@@ -61,13 +65,13 @@ export function existingDirections(object: ComObjectNode, gaId: number): Set<"Se
 }
 
 /**
- * Whether adding `direction` would repeat a link the object already has.
- * The core refuses it (`LinkAlreadyExists`); `Both` fails as a whole when
- * either half exists, so it counts as a duplicate then too.
+ * Whether a new link of this object to `gaId` would repeat what it already
+ * has. Any existing link counts (WP-39): the same direction is refused by the
+ * core (`LinkAlreadyExists`), and the other one adds nothing on the device,
+ * where a sending address also receives and one entry per address is written.
  */
-export function isDuplicateMember(object: ComObjectNode, gaId: number, direction: MemberDirection): boolean {
-  const existing = existingDirections(object, gaId);
-  return direction === "Both" ? existing.size > 0 : existing.has(direction);
+export function isDuplicateMember(object: ComObjectNode, gaId: number): boolean {
+  return existingDirections(object, gaId).size > 0;
 }
 
 /** Objects in number order (then id), without dropping or merging any. */

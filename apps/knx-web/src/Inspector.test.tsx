@@ -1180,22 +1180,17 @@ describe("Inspector — new link direction follows the object (issue #47)", () =
 });
 
 describe("Inspector — atomic send-and-receive link action (ISSUE-09)", () => {
-  it("offers Both as one request while keeping Send and Receive choices", async () => {
+  it("offers Send and Receive only, as ETS does: a sending address also receives (WP-39)", async () => {
     const tree = deviceMoveTree();
     tree.installations[0].group_addresses = [ga(9, "Kitchen lights", "1/2/3")];
     apiMock.linkComObject.mockResolvedValue(tree);
     const onApplied = await renderInspector({ kind: "device", id: 42 }, tree, detailWithComObject());
     const row = host!.querySelector<HTMLElement>(".group-link-list .tree-new-row")!;
     const direction = row.querySelector<HTMLSelectElement>("select")!;
-    expect(Array.from(direction.options).map((option) => option.value)).toEqual(["Send", "Receive", "Both"]);
+    expect(Array.from(direction.options).map((option) => option.value)).toEqual(["Send", "Receive"]);
     await chooseAddress(row, "kitchen");
-    await act(async () => {
-      direction.value = "Both";
-      direction.dispatchEvent(new Event("change", { bubbles: true }));
-    });
     await act(async () => row.querySelector("button")!.click());
-    expect(apiMock.linkComObject).toHaveBeenCalledTimes(1);
-    expect(apiMock.linkComObject).toHaveBeenCalledWith(7, 9, "Both");
+    expect(apiMock.linkComObject).toHaveBeenCalledExactlyOnceWith(7, 9, "Send");
     expect(onApplied).toHaveBeenCalledWith(tree);
   });
 
@@ -1214,28 +1209,25 @@ describe("Inspector — atomic send-and-receive link action (ISSUE-09)", () => {
     expect(link.disabled).toBe(false);
   });
 
-  it("reports a refused paired link without refreshing or retrying a partial result", async () => {
+  it("refuses a second link to an address the object already has, in either direction, without a request", async () => {
     const tree = deviceMoveTree();
     tree.installations[0].group_addresses = [ga(9, "Kitchen lights", "1/2/3")];
-    apiMock.linkComObject.mockRejectedValueOnce(new Error("Receive is already linked"));
-    const onApplied = await renderInspector(
+    await renderInspector(
       { kind: "device", id: 42 },
       tree,
       detailWithComObject([{ ga_id: 9, address: "1/2/3", name: "Kitchen lights", direction: "Receive" }]),
     );
     const row = host!.querySelector<HTMLElement>(".group-link-list .tree-new-row")!;
     const direction = row.querySelector<HTMLSelectElement>("select")!;
+    const link = [...row.querySelectorAll("button")].find(b => b.textContent === "Link")!;
     await chooseAddress(row, "1/2/3");
     await act(async () => {
-      direction.value = "Both";
+      direction.value = "Send";
       direction.dispatchEvent(new Event("change", { bubbles: true }));
     });
-    await act(async () => row.querySelector("button")!.click());
-    expect(apiMock.linkComObject).toHaveBeenCalledTimes(1);
-    expect(apiMock.linkComObject).toHaveBeenCalledWith(7, 9, "Both");
-    expect(row.querySelector(".field-error")?.textContent).toContain("Receive is already linked");
-    expect(host!.querySelectorAll(".group-link-row")).toHaveLength(1);
-    expect(onApplied).not.toHaveBeenCalled();
+    expect(link.disabled).toBe(true);
+    expect(row.querySelector(".link-direction-hint")?.textContent).toBe(enMessages["inspector.direction.reason.alreadyLinked"]);
+    expect(apiMock.linkComObject).not.toHaveBeenCalled();
   });
 
   it("offers one atomic unlink-both action beside separate directional unlink buttons", async () => {
@@ -1563,8 +1555,8 @@ describe("Inspector — group address drop", () => {
     return event;
   }
 
-  async function linkRow(tree = linkTree()) {
-    const onApplied = await renderInspector({ kind: "device", id: 42 }, tree, detailWithComObject());
+  async function linkRow(tree = linkTree(), links: Parameters<typeof detailWithComObject>[0] = []) {
+    const onApplied = await renderInspector({ kind: "device", id: 42 }, tree, detailWithComObject(links));
     return { row: host!.querySelector<HTMLElement>(".group-link-list .tree-new-row")!, onApplied };
   }
 
@@ -1611,6 +1603,14 @@ describe("Inspector — group address drop", () => {
     expect(apiMock.linkComObject).not.toHaveBeenCalled();
     expect(row.querySelector(".field-error")?.textContent)
       .toBe("This group address cannot be linked to this device.");
+  });
+
+  it("refuses dropping an address the object already links, without a request (WP-39)", async () => {
+    const tree = linkTree();
+    const { row } = await linkRow(tree, [{ ga_id: 9, address: "1/2/3", name: "Kitchen lights", direction: "Send" }]);
+    await drag(row, "drop", carrying("9"));
+    expect(apiMock.linkComObject).not.toHaveBeenCalled();
+    expect(row.querySelector(".field-error")?.textContent).toBe(enMessages["inspector.direction.reason.alreadyLinked"]);
   });
 
   it("shows the server's refusal of a dropped link", async () => {

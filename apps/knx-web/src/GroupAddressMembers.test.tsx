@@ -128,10 +128,12 @@ it("adds one member with the chosen direction and hands the reply to the applica
   api.linkComObject.mockResolvedValue(next);
   const onTreeUpdate = await openWithObjects(status, project(), [object(20, 0, "Switch")]);
   await choose("[data-ga-member-object]", "20");
-  await choose("[data-ga-member-direction]", "Both");
+  // WP-39: Send and Receive only; a sending address also receives on the device.
+  expect(options("[data-ga-member-direction]")).toEqual([en["inspector.direction.send"], en["inspector.direction.receive"]]);
+  await choose("[data-ga-member-direction]", "Receive");
   expect(host.querySelector(".ga-member-dpt")?.textContent).toContain("object:");
   await press(button(en["addressTable.members.submit"])!);
-  expect(api.linkComObject).toHaveBeenCalledExactlyOnceWith(20, 31, "Both");
+  expect(api.linkComObject).toHaveBeenCalledExactlyOnceWith(20, 31, "Receive");
   expect(onTreeUpdate).toHaveBeenCalledWith(next);
   expect(host.querySelector(".ga-member-added")?.textContent).toContain("#0 Switch");
 });
@@ -145,7 +147,7 @@ it("pre-fills the direction from the chosen object and says why (issue #47)", as
   expect(host.querySelector(".link-direction-hint")?.textContent).toBe(en["inspector.direction.reason.firstSends"]);
   await choose("[data-ga-member-object]", "21");
   expect([direction().value, direction().dataset.linkDirectionReason]).toEqual(["Receive", "hasSender"]);
-  await choose("[data-ga-member-direction]", "Both");
+  await choose("[data-ga-member-direction]", "Send");
   expect(direction().dataset.linkDirectionReason).toBe("picked");
   await choose("[data-ga-member-object]", "20");
   expect(direction().value).toBe("Send");
@@ -161,17 +163,15 @@ it("never proposes a second sender or a second link on the same address", async 
   expect(button(en["addressTable.members.submit"])!.disabled).toBe(true);
 });
 
-it("refuses a duplicate locally, including Both when one half exists", async () => {
+it("refuses a second link of an object to this address locally, in either direction (WP-39)", async () => {
   await openWithObjects(light, project(), [object(20, 0, "Switch", [[30, "Receive"]])]);
   expect(options("[data-ga-member-object]")[1]).toContain("already linked: Receive");
   await choose("[data-ga-member-object]", "20");
-  await choose("[data-ga-member-direction]", "Receive");
-  expect(host.textContent).toContain(en["addressTable.members.duplicate"]);
-  expect(button(en["addressTable.members.submit"])!.disabled).toBe(true);
-  await choose("[data-ga-member-direction]", "Both");
-  expect(button(en["addressTable.members.submit"])!.disabled).toBe(true);
-  await choose("[data-ga-member-direction]", "Send");
-  expect(button(en["addressTable.members.submit"])!.disabled).toBe(false);
+  for (const direction of ["Receive", "Send"]) {
+    await choose("[data-ga-member-direction]", direction);
+    expect(host.textContent).toContain(en["addressTable.members.duplicate"]);
+    expect(button(en["addressTable.members.submit"])!.disabled).toBe(true);
+  }
   expect(api.linkComObject).not.toHaveBeenCalled();
 });
 

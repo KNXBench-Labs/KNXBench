@@ -217,21 +217,23 @@ for (const language of ["en", "de"] as const) for (const theme of ["porcelain", 
     await expect(form.locator("[data-ga-member-object] option")).toHaveCount(3);
     expect(f.reads).toEqual(["/api/device/11"]);
     await form.locator("[data-ga-member-object]").selectOption("110");
-    await form.locator("[data-ga-member-direction]").selectOption("Both");
+    // WP-39: Send and Receive only, as in ETS; the actuator's first link sends.
+    await expect(form.locator("[data-ga-member-direction] option")).toHaveCount(2);
+    await expect(form.locator("[data-ga-member-direction]")).toHaveValue("Send");
     await form.getByRole("button", { name: m["addressTable.members.submit"], exact: true }).scrollIntoViewIfNeeded();
     await inViewport(page, ".ga-workspace .ga-member-form");
     await noHorizontalOverflow(page);
     await shot(page, `members-form-${tag}`);
     await form.getByRole("button", { name: m["addressTable.members.submit"], exact: true }).click();
-    await expect(panel.locator("tbody tr")).toHaveCount(2);
+    await expect(panel.locator("tbody tr")).toHaveCount(1);
     await expect(panel.locator("tbody tr").first()).toContainText("Channel A switch");
-    expect(f.linkBodies).toEqual([{ method: "POST", comObjectId: 110, gaId: 501, direction: "Both" }]);
+    expect(f.linkBodies).toEqual([{ method: "POST", comObjectId: 110, gaId: 501, direction: "Send" }]);
     // The Inspector shows the same members as a compact list.
-    if (width === 1440) await expect(page.locator(".inspector .ga-members .ga-member")).toHaveCount(2);
+    if (width === 1440) await expect(page.locator(".inspector .ga-members .ga-member")).toHaveCount(1);
     await noHorizontalOverflow(page);
     await shot(page, `members-added-${tag}`);
 
-    // One undo step takes both directions of the one action back.
+    // One undo step takes the add back.
     // Ctrl+Z belongs to a focused field first; with none focused it undoes the project.
     await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
     await page.keyboard.press("Control+z");

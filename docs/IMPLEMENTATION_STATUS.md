@@ -12,6 +12,15 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## New links are Send or Receive, one per address, as in ETS (11 November 2026; WP-39)
+
+The link row on a communication object and **Add member…** no longer offer
+**Send + receive**: a sending address also receives on the device, and the
+download writes one entry per address and object. Both forms refuse a second
+link of an object to an address it already links, in either direction, before
+anything is sent. Existing pairs stay valid and keep **Unlink both**; the
+server still accepts `Both` from older clients.
+
 ## Communication objects show their links first and a compact toolbar (11 November 2026; issues #44, #46, WP-36)
 
 An expanded communication object now starts with **Linked group addresses**:

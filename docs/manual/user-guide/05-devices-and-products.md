@@ -1220,7 +1220,7 @@ Alpha 20, the linked group addresses and then the closed **Object settings**:
 | Control | What it does |
 | --- | --- |
 | Group links | One row per directional link, with Unlink; paired links can be unlinked together |
-| New link | Pick an address, choose Send, Receive or Send + Receive, then click Link — or drop a group address from the Project Explorer on this row, which links it in the direction the row shows |
+| New link | Pick an address, choose Send or Receive, then click Link — or drop a group address from the Project Explorer on this row, which links it in the direction the row shows. An address the object already links is refused with the reason shown |
 | DPT | Selects the object's datapoint type by number and localized name; preserves unknown existing values |
 | Description | Sets the object's description |
 | Flags | Read, Write, Transmit, Update, Communication, Read on init (with standard letters) |
@@ -1231,10 +1231,10 @@ Alpha 20, the linked group addresses and then the closed **Object settings**:
 The six toggles retain their KNX letters — `R`, `W`, `T`, `U`, `C` and `I` —
 and now show their full names alongside them. KNXBench stores what you set; it
 does not second-guess whether a combination is sensible for the product.
-Send + Receive creates **two separate links as one undoable edit**. If either
-already exists, neither is added; you may unlink or edit the individual
-Send/Receive links afterward. “Unlink both” likewise removes the pair in one
-undo step; a refused paired unlink leaves the other links in their original
+A new link is Send or Receive, one per address, because a sending address
+also receives on the device (since WP-39). A send and a receive link to one
+address from an older project stay editable one by one, and “Unlink both”
+removes the pair in one undo step; a refused paired unlink leaves the other links in their original
 order, and Undo restores a removed link to its previous position. The
 screenshot above ends before the flag and link controls.
 

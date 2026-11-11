@@ -983,22 +983,47 @@ function DeviceIdentity(props: { product: DeviceProductNode }) {
   </section>;
 }
 
+/** The set flags' stable code letters, in the flags row's order (#46 summary hint). */
+function setFlagLetters(com: ComObjectNode): string {
+  return ([["R", com.read], ["W", com.write], ["T", com.transmit], ["U", com.update], ["C", com.communication],
+    ["I", com.read_on_init]] as const).filter(([, set]) => set).map(([letter]) => letter).join(" ");
+}
+
+// Issue #46: the linked group addresses come first and stay visible; every
+// other object setting sits in a native `<details>`, closed by default. A
+// closed `<details>` keeps its subtree mounted, so drafts survive closing it.
 function ComObjectEditor(props: { com: ComObjectNode; groupAddresses: GroupAddressNode[]; onApplied: (tree: ProjectTree) => void; functions?: ReactNode }) {
   const { com, groupAddresses, onApplied } = props;
+  const t = useTranslate();
+  const headingId = useId();
+  const flags = setFlagLetters(com);
   return <div className="com-object-edit-fields">
-    <div className="com-object-type-fields">
-      <DptField com={com} onApplied={onApplied} />
-      {props.functions}
-    </div>
-    <ComObjectDescriptionField com={com} onApplied={onApplied} />
-    <ComObjectFlagsRow com={com} onApplied={onApplied} />
-    <SavedInstancePriorityRow priority={com.saved_instance_priority} />
-    <EffectivePriorityRow priority={com.effective_priority} />
-    <PriorityEditField com={com} onApplied={onApplied} />
-    <ul className="group-link-list">
+    <h4 className="com-object-links-heading" id={headingId}>{t("inspector.linkedGroupAddresses")}</h4>
+    <ul className="group-link-list" aria-labelledby={headingId}>
       {com.links.map(link => <GroupLinkRow key={`${link.ga_id}-${link.direction}`} com={com} link={link} onApplied={onApplied} />)}
       <NewGroupLinkRow com={com} groupAddresses={groupAddresses} onApplied={onApplied} />
     </ul>
+    <details className="com-object-more" onToggle={(event) => {
+      // A pending write keeps its field (and the error it may bring) in view,
+      // like the object row itself (ComObjectTable): closing waits for it.
+      const details = event.currentTarget;
+      if (!details.open && details.closest("fieldset")?.disabled) details.open = true;
+    }}>
+      <summary><span className="com-object-more-label">{t("inspector.objectSettings")}</span>{" "}
+        <span className="com-object-more-hint">{flags ? t("inspector.objectSettingsFlags", { flags }) : t("inspector.objectSettingsNoFlags")}</span>
+      </summary>
+      <div className="com-object-more-fields">
+        <div className="com-object-type-fields">
+          <DptField com={com} onApplied={onApplied} />
+          {props.functions}
+        </div>
+        <ComObjectDescriptionField com={com} onApplied={onApplied} />
+        <ComObjectFlagsRow com={com} onApplied={onApplied} />
+        <SavedInstancePriorityRow priority={com.saved_instance_priority} />
+        <EffectivePriorityRow priority={com.effective_priority} />
+        <PriorityEditField com={com} onApplied={onApplied} />
+      </div>
+    </details>
   </div>;
 }
 

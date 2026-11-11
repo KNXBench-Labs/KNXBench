@@ -3709,9 +3709,24 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
 .com-table-toolbar label { display: grid; gap: 4px; max-width: 100%; min-width: 0; color: var(--knx-muted); font-size: 0.82rem; }
 .com-table-toolbar select { min-width: 0; max-width: 230px; }
 .com-table-toolbar button { max-width: 100%; white-space: normal; }
-.com-table-views { display: flex; flex-wrap: wrap; gap: 4px; }
-.com-table-views [aria-pressed="true"] { background: var(--knx-accent); border-color: var(--knx-accent); color: var(--knx-on-accent) !important; }
-.com-table-priority-toggle[aria-pressed="true"] { background: var(--knx-accent); border-color: var(--knx-accent); color: var(--knx-on-accent) !important; }
+/* Issue #44: the rarely changed options sit behind one small menu, shaped like the structure `+ New` menu. */
+.com-table-options { position: relative; max-width: 100%; }
+.com-table-options > summary { cursor: pointer; list-style: none; display: inline-flex; align-items: center; gap: 6px; box-sizing: border-box;
+  min-height: var(--knx-control-height); padding: 0 12px; border: 1px solid var(--knx-border); border-radius: var(--knx-radius-input);
+  background: var(--knx-surface); color: var(--knx-foreground); overflow-wrap: anywhere; }
+.com-table-options > summary::-webkit-details-marker { display: none; }
+.com-table-options > summary::after { content: "▾"; color: var(--knx-muted); }
+.com-table-options[open] > summary { border-color: var(--knx-accent); }
+.com-table-options > summary:focus-visible { outline: 2px solid var(--knx-accent); outline-offset: 2px; }
+.com-table-options-content { position: absolute; top: calc(100% + 6px); left: 0; z-index: 20; display: grid; gap: 6px;
+  min-width: 12rem; max-width: min(20rem, calc(100vw - 20px)); padding: 8px; background: var(--knx-surface);
+  border: 1px solid var(--knx-border); border-radius: 8px; box-shadow: 0 12px 32px var(--knx-overlay-shadow); }
+.com-table-options-content[data-align="end"] { left: auto; right: 0; }
+/* Chromium keeps boxes for closed <details> content; a closed menu must not extend past the page edge. */
+.com-table-options:not([open]) > .com-table-options-content { display: none; }
+.com-table-options-content > button { width: 100%; text-align: start; }
+.com-table-toolbar .com-table-options-content label { display: flex; align-items: center; gap: 8px; color: var(--knx-foreground); font-size: inherit; cursor: pointer; }
+.com-table-options-content input[type="checkbox"] { flex: none; width: auto; min-height: 0; margin: 0; }
 /* Positioned so its absolute `.sr-only` label stays inside the scrolling table, not the page. */
 .com-object-priority { position: relative; }
 .com-object-priority .com-object-priority-source { display: block; color: var(--knx-muted); font-size: 0.72rem; }
@@ -3772,10 +3787,18 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
 .com-object-summary strong { font-weight: 500; }
 .com-object-summary:hover { background: color-mix(in srgb, var(--knx-accent) 8%, transparent); }
 .com-object-detail[open] > summary { background: color-mix(in srgb, var(--knx-accent) 12%, transparent); }
-.com-object-edit-fields { padding: 16px; display: flex; flex-wrap: wrap; gap: 12px; }
+/* Issue #46: links first, then the remaining settings behind a closed disclosure. */
+.com-object-edit-fields { padding: 12px 16px; display: flex; flex-direction: column; gap: 8px; }
 /* The table may scroll horizontally; its editor still fits the local viewport. */
 .com-table-panel .com-object-edit-fields { box-sizing: border-box; max-width: 100cqw; }
-.com-object-edit-fields > .inspector-field { flex: 1 1 240px; min-width: 0; }
+.com-object-links-heading { margin: 0; font-size: 0.85rem; font-weight: 600; color: var(--knx-muted); }
+.com-object-more { min-width: 0; border-top: 1px solid var(--knx-border); padding-top: 8px; }
+/* Stays a list item so the native disclosure marker shows open/closed. */
+.com-object-more > summary { cursor: pointer; width: fit-content; max-width: 100%; font-weight: 600; overflow-wrap: anywhere; }
+.com-object-more > summary:focus-visible { outline: 2px solid var(--knx-accent); outline-offset: 2px; }
+.com-object-more-hint { margin-inline-start: 6px; color: var(--knx-muted); font-size: 0.82rem; font-weight: 400; font-family: var(--knx-font-mono); }
+.com-object-more-fields { display: flex; flex-wrap: wrap; gap: 12px; padding-top: 12px; min-width: 0; }
+.com-object-more-fields > .inspector-field { flex: 1 1 240px; min-width: 0; }
 .com-object-edit-fields .inspector-field-heading { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 .com-object-edit-fields .inspector-field-heading .provenance-badge { max-width: 100%; overflow-wrap: anywhere; opacity: 1; }
 .com-object-edit-fields .dpt-field select { box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; }
@@ -3791,6 +3814,10 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
   padding: 0;
   list-style: none;
 }
+/* Compact link row: picker, direction and Link share one line where the
+   width allows; the #47 direction hint and errors wrap below. */
+.com-object-edit-fields .group-link-list > .tree-new-row { padding: 2px 0; }
+.com-object-edit-fields .group-link-list > .tree-new-row > .ga-picker { flex: 1 1 14rem; }
 /* Nested links are flex children of a narrow editor: their intrinsic text
    width must not force the entire list (or a translated button) off-screen. */
 .com-object-edit-fields .group-link-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; min-width: 0; }
@@ -5062,7 +5089,7 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
   font-variant-numeric: tabular-nums;
 }
 /* Hard-coded corners elsewhere in this stylesheet: square them too. */
-:root[data-presentation="rail"] :is(.search-panel, .file-menu-content, .structure-new-menu > summary,
+:root[data-presentation="rail"] :is(.search-panel, .file-menu-content, .structure-new-menu > summary, .com-table-options-content,
   .rename-context-menu, .toast, .toast-queue-note, .workspace-table-wrap, .device-workspace,
   .monitor-table-scroll, .telegram-details, .bus-compose-form, .topology-line, .building-diagram-node,
   .diagram-device, .functions-item > details, .new-project-conflict, .project-wizard-discard,

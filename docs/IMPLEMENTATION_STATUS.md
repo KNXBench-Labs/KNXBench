@@ -12,6 +12,18 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## New group links pre-fill their direction from the object (11 November 2026; issue #47, WP-36)
+
+The link row on a communication object and **Add member…** on a group address
+always started at Send. They now suggest Send for an object's first link (its
+sending address, as in ETS: it transmits and answers reads on it; legacy tables
+without one store FEh), Receive once the object sends on some address (one
+sending address per object; a download refuses a second), and keep the existing
+direction when the object already links the chosen address. Flags do not
+decide: a Write-only actuator object still answers reads. The reason is shown;
+a user's choice wins until the link is made. Not from the address name: a
+status address is sent by one object and received by others.
+
 ## A running device download stays visible in the status bar (11 November 2026; issue #43, WP-35)
 
 The status bar shows a running download's device address, finished steps and

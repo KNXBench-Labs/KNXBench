@@ -52,3 +52,11 @@ device download. Chromium layout checks cover 360, 640 and 1440 px with long
 names/addresses in both languages against a local Vite/mock fixture; native
 WebKitGTK, hardware behavior and screen-reader announcements remain unverified.
 <!-- END retained catalogue record -->
+
+## 2026-11-11: Send + Receive on one address and the download
+
+“Send + Receive” on one address is a valid project edit, but an ordinary
+memory download refuses it: the group-table builder takes the pair as the same
+object linked to the same address twice (`DuplicateLink`, `group_tables.rs`;
+found while reviewing issue #47). Whether such a pair should download as one
+sending association is open (OPEN_WORK WP-39).

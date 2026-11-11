@@ -1,5 +1,5 @@
 /** Adds one member: device, then communication object, then direction. */
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import * as api from "./api";
 import type { ComObjectNode } from "./bindings/ComObjectNode";
 import type { GroupAddressNode } from "./bindings/GroupAddressNode";
@@ -11,6 +11,7 @@ import {
   memberObjectChoices, type MemberDirection,
 } from "./groupAddressMembers";
 import { directionLabel } from "./groupAddressView";
+import { suggestLinkDirection } from "./linkDirectionDefault";
 import { useTranslate, type MessageKey } from "./i18n";
 import { useUiLanguage } from "./uiLanguage";
 import { projectContextKey } from "./treeUtils";
@@ -21,8 +22,9 @@ const DIRECTION_KEYS: Record<MemberDirection, MessageKey> = {
   Both: "inspector.direction.both",
 };
 
-interface Draft { deviceId: number | null; objectId: number | null; direction: MemberDirection }
-const EMPTY_DRAFT: Draft = { deviceId: null, objectId: null, direction: "Send" };
+/** `direction` is null until the user picks one: the object's suggestion applies (#47). */
+interface Draft { deviceId: number | null; objectId: number | null; direction: MemberDirection | null }
+const EMPTY_DRAFT: Draft = { deviceId: null, objectId: null, direction: null };
 
 /** The object's DPT as the device editor shows it: its own, else the program default. */
 const objectDpt = (object: ComObjectNode): string | null => object.dpt ?? object.program_dpt;
@@ -68,7 +70,10 @@ export default function GroupAddressMemberAdd(props: {
   const loaded = draft.deviceId === null ? undefined : inventory.current.get(draft.deviceId);
   const objects = useMemo(() => memberObjectChoices(loaded?.objects ?? []), [loaded]);
   const chosen: ComObjectNode | undefined = objects.find((object) => object.id === draft.objectId);
-  const duplicate = chosen !== undefined && isDuplicateMember(chosen, ga.id, draft.direction);
+  const suggestion = chosen === undefined ? null : suggestLinkDirection(chosen, ga.id);
+  const hintId = useId();
+  const direction: MemberDirection = draft.direction ?? suggestion?.direction ?? "Send";
+  const duplicate = chosen !== undefined && isDuplicateMember(chosen, ga.id, direction);
   // An object chosen before a re-read must still exist in the fresh list.
   useEffect(() => {
     if (loaded && draft.objectId !== null && !loaded.objects.some((object) => object.id === draft.objectId)) {
@@ -87,7 +92,7 @@ export default function GroupAddressMemberAdd(props: {
   async function submit() {
     if (pending.current || chosen === undefined || duplicate) return;
     const owned = generation.current;
-    const object = chosen, direction = draft.direction;
+    const object = chosen;
     pending.current = true; setBusy(true); setError(null); setAdded(null);
     try {
       const updated = await api.linkComObject(object.id, ga.id, direction);
@@ -100,7 +105,7 @@ export default function GroupAddressMemberAdd(props: {
         object: `#${object.number} ${object.name ?? t("addressTable.unnamedObject")}`,
         direction: t(DIRECTION_KEYS[direction]),
       }));
-      setDraft((current) => ({ ...current, objectId: null }));
+      setDraft((current) => ({ ...current, objectId: null, direction: null }));
     } catch (reason) {
       if (alive.current && generation.current === owned) setError(api.errorMessage(reason));
     } finally {
@@ -138,7 +143,7 @@ export default function GroupAddressMemberAdd(props: {
         ? <p role="status">{t("addressTable.members.noObjects")}</p>
         : <label>{t("addressTable.members.object")}
           <select data-ga-member-object value={draft.objectId ?? ""} disabled={busy}
-            onChange={(event) => { setDraft((current) => ({ ...current, objectId: event.target.value === "" ? null : Number(event.target.value) })); setError(null); setAdded(null); }}>
+            onChange={(event) => { setDraft((current) => ({ ...current, objectId: event.target.value === "" ? null : Number(event.target.value), direction: null })); setError(null); setAdded(null); }}>
             <option value="">{t("addressTable.members.chooseObject")}</option>
             {objects.map((object) => {
               const existing = [...existingDirections(object, ga.id)];
@@ -157,11 +162,17 @@ export default function GroupAddressMemberAdd(props: {
         address: ga.dpts.length > 0 ? ga.dpts.map((dpt) => dptDisplay(dpt, language)).join(" · ") : t("addressTable.noDpt"),
       })}</p>}
       <label>{t("addressTable.members.direction")}
-        <select data-ga-member-direction value={draft.direction} disabled={busy}
+        <select data-ga-member-direction value={direction} disabled={busy}
+          data-link-direction-reason={draft.direction !== null ? "picked" : suggestion?.reason}
+          aria-describedby={draft.direction === null && suggestion !== null && suggestion.reason !== "alreadyLinked" ? hintId : undefined}
           onChange={(event) => { setDraft((current) => ({ ...current, direction: event.target.value as MemberDirection })); setError(null); setAdded(null); }}>
           {MEMBER_DIRECTIONS.map((direction) => <option key={direction} value={direction}>{t(DIRECTION_KEYS[direction])}</option>)}
         </select>
       </label>
+      {/* An existing link already says so in the object list and the duplicate refusal. */}
+      {draft.direction === null && suggestion !== null && suggestion.reason !== "alreadyLinked" && (
+        <p className="link-direction-hint" id={hintId}>{t(`inspector.direction.reason.${suggestion.reason}`)}</p>
+      )}
       {duplicate && <p className="field-error" role="status">{t("addressTable.members.duplicate")}</p>}
     </>}
     {error && <p className="field-error" role="alert">{error}</p>}

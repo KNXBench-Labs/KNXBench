@@ -9,7 +9,7 @@ renamed or added here first.
 
 | Term | Direction | Meaning in KNXBench | Where it appears |
 |---|---|---|---|
-| **Download (to the device)** | KNXBench → **device**, over the bus | Writing configuration into a KNX device: application program, parameters, address and association tables, and the load state machines that go with them. The KNX sense of the word. | `knx_net::commissioning::memory_download`, `…::download`, `knx device download`, `/api/device-download/*`, the UI tab "Download to device" (German "In Gerät laden"), KNOWN_LIMITATIONS §7/§92/§136, `goal-commission.md` |
+| **Download (to the device)** | KNXBench → **device**, over the bus | Writing configuration into a KNX device: application program, parameters, address and association tables, and the load state machines that go with them. The KNX sense of the word. | `knx_net::commissioning::memory_download`, `…::download`, `knx device download`, `/api/device-download/*`, the UI tab "Download to device" (German "Gerät programmieren"), KNOWN_LIMITATIONS §7/§92/§136, `goal-commission.md` |
 | **Programming (the individual address)** | KNXBench → **device**, over the bus | Writing a device's individual address (MP §2.3). Counted as a write to the device, not as a download. | `individual_address_write`, `knx device program-address`, RESEARCH §8.8.6 |
 | **Read-back** | **device** → KNXBench, over the bus | Reading memory or properties back from a device, to check a write or to inspect it. Never called "upload". | `write_memory_region`'s verification, `live_memory_read` |
 | **Save / export (to your computer)** | KNXBench server → **user's computer**, over HTTP | Handing a project or report file to the browser. The browser File menu says "Export project…" / "Projekt exportieren…" (`toolbar.exportProject`); Save As instead writes to the server's permitted directory. | `/api/project/download` (route name kept for compatibility), File menu |
@@ -49,3 +49,33 @@ Standard doesn't have.
    because clients depend on it; the File menu calls it "Export project…".
 3. Every download report and progress display names its target device and
    says which direction the data goes (KNXBench → device).
+
+## German terminology for device writes
+
+The German UI follows ETS and KNX usage (issue #41): every write of
+configuration into a device over the bus is **Programmieren**. English keeps
+**Download**.
+
+| Meaning | German wording | Not |
+|---|---|---|
+| The bus operation (application program, parameters, group addresses) | *programmieren*, *Programmierung*, *Programmiervorgang*; compounds *Programmier-*: *Programmierplan*, *Programmierumfang*, *Programmierlauf* | *Download*, *In Gerät laden*, *Laden ins Gerät*, *Parametrieren* |
+| Complete or partial scope | *vollständige Programmierung*, *Teilprogrammierung* (ETS: *Teilweise programmieren*) | *Vollständiger Download*, *Teil-Download* |
+| Ordinary memory route vs. System 2 (the dialog field) | *Programmierart*, *Speicherprogrammierung* | *Downloadmodus*, *Programmiermodus* |
+| Writing the individual address | *Physikalische Adresse programmieren*, *Adressprogrammierung* | — |
+| The device's programming button/LED state | *Programmiermodus*, *Programmiertaste* (only this meaning) | — |
+| Editing parameter values in the project | *Parametrieren* (only this meaning; never the bus operation) | — |
+| A file the browser saves | *herunterladen*, *Download* (browser downloads, ZIP, report, design) | *programmieren* |
+
+Rules:
+
+1. German copy never uses *Download* or *laden* for the bus write. Where a
+   sentence needs the English term for orientation, name it once in
+   parentheses (*Programmieren, englisch „Download“*).
+2. *Download* and *herunterladen* stay for files handed to the browser.
+3. Plain low-level descriptions may still say *ins Gerät schreiben*, and KNX
+   load-state terms stay as the Standard names them (*Ladezustand*,
+   *geladen*, *entladen*, *Ladeverfahren*/*Ladeprozedur*).
+4. Proper names keep their wording: the ETS *Download-Plug-in* of a
+   manufacturer is a named ETS component (KL-006), not the KNXBench operation.
+5. *Programmierung* is feminine and *Programmiervorgang* masculine: adjust
+   articles and pronouns when replacing *der Download*.

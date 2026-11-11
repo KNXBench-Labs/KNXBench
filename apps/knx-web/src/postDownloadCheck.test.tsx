@@ -237,7 +237,7 @@ describe("run-state presentation", () => {
       await act(async () => root!.unmount()); host!.remove(); root = undefined;
     }
     expect(en["postDownloadCheck.runState.scope"]).toMatch(/not device health.*not a successful download.*not a unique program instance.*not installation function/s);
-    expect(de["postDownloadCheck.runState.scope"]).toMatch(/keine Gerätegesundheit.*kein erfolgreicher Download.*keine eindeutige Programminstanz.*keine Anlagenfunktion/s);
+    expect(de["postDownloadCheck.runState.scope"]).toMatch(/keine Gerätegesundheit.*keine erfolgreiche Programmierung.*keine eindeutige Programminstanz.*keine Anlagenfunktion/s);
   });
 
   it("keeps the load table independent of the run state", async () => {

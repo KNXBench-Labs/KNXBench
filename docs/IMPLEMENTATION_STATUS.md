@@ -12,6 +12,16 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## German UI says “Programmieren” for device writes (11 November 2026; issue #41, WP-34)
+
+The German catalogue used *In Gerät laden*, *Download* and *Programmieren* for
+the same bus operation. Following ETS usage it now says *programmieren* /
+*Programmierung* throughout (complete: *vollständige Programmierung*, partial:
+*Teilprogrammierung*, dialog field: *Programmierart*); *Programmiermodus* keeps
+its device-button meaning and *Download* stays for browser file downloads.
+Translation keys, placeholders and server confirmation phrases are unchanged.
+Rule: [GLOSSARY](GLOSSARY.md#german-terminology-for-device-writes).
+
 ## Hager 0701h parameters-only download verified from a tester report (11 November 2026; issue #38, WP-33)
 
 `M-0006_A-E052-12-3406` joins `verified_downloads.json` with the

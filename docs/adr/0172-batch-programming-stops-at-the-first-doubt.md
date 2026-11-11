@@ -193,6 +193,31 @@ Verified state of `main` on 2026-11-11 (source reading, no new run):
    command, no hardware claim. Copy follows WP-34: English **Download all…**,
    German **Alle programmieren…**.
 
+## Amendment 2026-11-11: what the implementation makes concrete
+
+Recorded before the server code (WP-38b), so the code does not drift from this
+text silently:
+
+- **Deselection travels with the start.** `batch/plan` reviews every candidate;
+  `batch/start` lists exactly the devices to write, each with its phrase and,
+  for `untested`, its acknowledgement. A reviewed device that is in the batch
+  but not listed is reported `deselected`. A listed device that is not in the
+  batch, a duplicate or an empty list refuses the whole start. Deselecting in
+  the review therefore needs no second plan, and the confirmation names exactly
+  the list the server runs.
+- **Three more per-device states than §7 names.** `waiting` (in the batch, its
+  turn has not come), `running` (its download id, so the single-device status
+  shows its steps) and `unconfirmed`: the device ended `Finished`, but one of
+  the conditions of §5 did not hold (restart unconfirmed, check not matching).
+  §7's `done` is kept for a device that met every condition; calling a doubtful
+  device `done` would hide the doubt that stopped the batch. A device whose
+  start ends before its download runs (plan changed, gateway not connecting,
+  history not recording) is `failed` with `written: no`.
+- **The busy holder** is `{ kind: "deviceDownloadBatch", batchId, address,
+  position, total }`: the device in progress, or the next one between devices.
+  The activity snapshot's `busyLocks` vocabulary does not change; each device's
+  download still appears there as the regular download it is.
+
 ## Alternatives considered
 
 - **A loop in the browser over the single-device routes.** Rejected. The slot

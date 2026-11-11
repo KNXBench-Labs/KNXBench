@@ -56,6 +56,15 @@ pub enum TunnelHolder {
         probed: usize,
         total: usize,
     },
+    /// A batch download (ADR-0172): `address` is the device in progress, or
+    /// the next one between devices; `position` counts from 1 to `total`.
+    DeviceDownloadBatch {
+        batch_id: u64,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        address: Option<String>,
+        position: usize,
+        total: usize,
+    },
     /// A session's lock is held, so its start is still connecting (or, for
     /// `busMonitorOrGroupWrite`, a group write is being sent): nothing about
     /// its target can be read, so nothing is guessed. Same names as the
@@ -109,8 +118,12 @@ pub fn gateway_connect_failed(gateway: SocketAddrV4, error: &BusSessionError) ->
 }
 
 /// The download holding (or about to hold) the tunnel, by `try_lock` only:
-/// a held lock is a start connecting right now.
+/// a held lock is a start connecting right now. A running batch holds it
+/// also between its devices and is named first.
 pub fn download_holder(state: &SharedState) -> Option<TunnelHolder> {
+    if let Some((holder, _)) = crate::device_download_batch::busy_except(state, None) {
+        return Some(holder);
+    }
     match state.device_download.try_lock() {
         Err(_) => Some(TunnelHolder::Connecting {
             session: "deviceDownload",

@@ -428,17 +428,29 @@ pub async fn observe_after_download<T: ManagementTransport>(
     }
 }
 
+/// Whether [`observe_after_download`] would send anything for `plan`: `Err`
+/// is the reason it would not, decided offline from the plan alone.
+pub fn check_performable(plan: &MemoryDownloadPlan) -> Result<(), NotPerformed> {
+    performable(plan).map(|_| ())
+}
+
+/// The application identity the check matches, or why there is none to match.
+fn performable(plan: &MemoryDownloadPlan) -> Result<[u8; 5], NotPerformed> {
+    if plan.mask.0 & 0xFFF0 != 0x0700 {
+        return Err(NotPerformed::UnsupportedMask(plan.mask));
+    }
+    application_identity(plan).ok_or(NotPerformed::ApplicationUnknown)
+}
+
 async fn observe<T: ManagementTransport>(
     transport: &T,
     target: IndividualAddress,
     timing: SessionTiming,
     plan: &MemoryDownloadPlan,
 ) -> ObservationOutcome {
-    if plan.mask.0 & 0xFFF0 != 0x0700 {
-        return ObservationOutcome::NotPerformed(NotPerformed::UnsupportedMask(plan.mask));
-    }
-    let Some(application) = application_identity(plan) else {
-        return ObservationOutcome::NotPerformed(NotPerformed::ApplicationUnknown);
+    let application = match performable(plan) {
+        Ok(application) => application,
+        Err(reason) => return ObservationOutcome::NotPerformed(reason),
     };
     let mut session =
         match ManagementSession::read_only(transport, target, AuthorisationPlan::Skip, timing) {

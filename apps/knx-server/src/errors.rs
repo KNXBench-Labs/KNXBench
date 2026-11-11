@@ -119,6 +119,12 @@ impl ApiError {
         self.kind
     }
 
+    /// The `error` text, for a caller that reports a refusal inside its own
+    /// result (a batch device's start) instead of returning it.
+    pub(crate) fn message(&self) -> &str {
+        &self.message
+    }
+
     /// Any status with a stable `kind`, for refusals that are neither a
     /// conflict nor a `422`, e.g. a 400 the client explains specifically.
     pub fn with_kind(status: StatusCode, kind: &'static str, message: impl Into<String>) -> Self {

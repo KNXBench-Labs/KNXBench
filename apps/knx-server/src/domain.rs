@@ -183,7 +183,7 @@ pub struct AppState {
     /// The plan last shown for a download to a device (ADR-0045 §3), kept
     /// so `POST /api/device-download/start` can prove it writes exactly
     /// that plan. Cleared once written.
-    pub device_download_plan: Mutex<Option<crate::ShownPlan>>,
+    pub device_download_plan: Mutex<Option<crate::ShownDownload>>,
     /// The plug-in data adoption plan last previewed (ADR-0136 amendment),
     /// kept so apply writes exactly that plan. Taken when applied or found
     /// stale, replaced by a newer preview, dropped by cancel.
@@ -193,6 +193,10 @@ pub struct AppState {
     /// across the tunnel connect, so a second start waits and then sees
     /// the first one running.
     pub device_download: tokio::sync::Mutex<Option<crate::DeviceDownloadSession>>,
+    /// At most one batch download (ADR-0172), retained after it ends so its
+    /// per-device results stay readable until the next batch replaces it.
+    /// While it runs it holds the download reservation, also between devices.
+    pub device_download_batch: Mutex<Option<Arc<crate::DownloadBatch>>>,
     /// Plan ids, never reused; a download keeps its plan's id.
     pub next_device_download_id: std::sync::atomic::AtomicU64,
     /// The management-session timing for downloads. The Standard's figures
@@ -437,6 +441,7 @@ impl AppState {
             line_scan_session: Arc::new(tokio::sync::Mutex::new(None)),
             next_line_scan_session_id: std::sync::atomic::AtomicU64::new(1),
             device_download_plan: Mutex::new(None),
+            device_download_batch: Mutex::new(None),
             plugin_data_plan: Mutex::new(None),
             device_download: tokio::sync::Mutex::new(None),
             diagnostic_results: Default::default(),

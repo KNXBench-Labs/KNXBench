@@ -49,6 +49,7 @@ fn fixture() -> (Arc<knx_server::AppState>, tempfile::TempDir) {
         device_download_plan: Default::default(),
         plugin_data_plan: Default::default(),
         device_download: Default::default(),
+        device_download_batch: Default::default(),
         device_system2: Arc::new(knx_server::System2Service::new(dir.path())),
         recordings: Arc::new(knx_server::operation_recordings::store(dir.path(), true)),
         next_device_download_id: Default::default(),

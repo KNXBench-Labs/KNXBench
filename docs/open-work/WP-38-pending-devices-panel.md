@@ -3,7 +3,8 @@
 External report by the issue reporter, 10 November 2026; triaged 11 November 2026.
 Status: **step 1 implemented** (11 November 2026, main-only); **step 2 designed**
 in [ADR-0172](../adr/0172-batch-programming-stops-at-the-first-doubt.md)
-(Proposed), not implemented. Depends on WP-34 copy.
+(Proposed); its **server part implemented** (WP-38b, 11 November 2026), the UI
+part (WP-38c) open. Depends on WP-34 copy.
 
 ## Packages
 
@@ -76,7 +77,22 @@ when the device has no address. The missing-address reason reuses
 `devices.downloadNeedsAddress` unchanged. German copy is neutral, with no
 formal address to the user.
 
-## Step 2 (designed, not implemented)
+## Step 2 server part (WP-38b, implemented 11 November 2026)
+
+Routes `batch/plan`, `batch/start`, `batch/status` and `batch/stop` under
+`/api/device-download/`, as ADR-0172 and its 11 November amendment describe
+(`apps/knx-server/src/device_download_batch.rs`, run in
+`device_download_batch_run.rs`; the single start's sequence is shared as
+`device_download_routes::launch`). Status states per device: `waiting`,
+`running`, `done`, `unconfirmed` (with `doubt`), `failed`, `stopped`,
+`notStarted` (`earlierDevice`, `stopRequest`, `serverStop`, `runEnded`),
+`notInBatch` (with `reason.code`) and `deselected`. Simulator and fake-tunnel
+tests only. Open for WP-38c: the **Download all…** / **Alle programmieren…**
+review in the pending block and the download tab, batch consent, per-device
+acknowledgements, status polling and en/de copy; wording for the new busy
+holder.
+
+## Step 2 (designed)
 
 No batch start button exists yet. The design is
 [ADR-0172](../adr/0172-batch-programming-stops-at-the-first-doubt.md)

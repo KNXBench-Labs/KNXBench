@@ -26,6 +26,43 @@ Per-parameter marking stays open (WP-37 step 2). Component tests and en/de
 browser checks at 1440 and 400 px cover the line, the tab marks, their clearing
 and no sideways overflow.
 
+## Batch download, server part (11 November 2026; issue #42, WP-38b)
+
+The web server can now download every pending device in one batch, as
+[ADR-0172](adr/0172-batch-programming-stops-at-the-first-doubt.md) designs it
+(still Proposed until the UI part lands; its 11 November amendment records the
+concrete states and the start's device list). There is **no button yet**; the
+routes are `POST /api/device-download/batch/plan`, `batch/start`, `batch/stop`
+and `GET batch/status`.
+
+- **Review:** every device the pending block lists, in its order, is either in
+  the batch with the plan of its advised scope, or *not in this batch* with a
+  reason: no address, excluded, nothing to download, address pending,
+  System-2, plan `unsupported`, no performable check after the download. The
+  batch grades its own plans; `/api/device-readiness` (complete download only)
+  does not decide. Nothing is sent. The shown-plan slot holds one single plan
+  or one batch; each replaces the other.
+- **Start:** lists exactly the devices to write, each with its phrase and, for
+  `untested`, its own acknowledgement. Every phrase is checked before the
+  reservation; one wrong entry refuses the whole batch with nothing started.
+  Unlisted devices of the batch are reported `deselected`.
+- **Run:** per device exactly the single start (shared code, not a copy):
+  prepared again and compared with the reviewed plan, history start, its own
+  tunnel, backup, settlement, check after the download. The next device starts
+  only after `written: yes`, a restart acknowledged or not in the plan, and a
+  check that reached the device, matched its identity and read every load state
+  `matchesPlan`; anything else stops the batch with the rest `notStarted`.
+  **Stop after this device**; a server stop applies ADR-0153 to the device in
+  progress and starts no further one. Between devices the batch keeps the
+  reservation; busy refusals name it (`holder.kind: "deviceDownloadBatch"`).
+  Each device keeps its own history row, recording (with `batchId`) and
+  settlement; the history format is unchanged. The batch summary lives in server
+  memory only.
+
+Tested only with simulated devices and fake tunnels (`http_download_batch`
+integration tests, batch unit tests); no hardware, no real gateway, no claim
+about back-to-back programming on a real line.
+
 ## Pending programming sidebar, read-only first step (11 November 2026; issue #42, WP-38)
 
 The navigation pane now has a **Pending programming ({count})** block (German

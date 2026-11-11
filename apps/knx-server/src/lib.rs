@@ -66,9 +66,12 @@ mod support_routes;
 pub use device_download::{
     DeviceDownloadSession, DownloadStatus, OnDownloadEnd, ProgressEvent, Restart, Written,
 };
+mod device_download_batch;
+mod device_download_batch_run;
 mod device_download_routes;
 mod device_readiness_routes;
-pub use device_download_routes::ShownPlan;
+pub use device_download_batch::{DownloadBatch, ShownBatch};
+pub use device_download_routes::{ShownDownload, ShownPlan};
 pub use plugin_data_routes::ShownAdoption;
 mod address_programming;
 pub use address_programming::{
@@ -258,6 +261,7 @@ pub fn app_with_auth(state: SharedState, static_dir: Option<PathBuf>, auth: Auth
         .merge(bus_routes::bus_routes())
         .merge(bus_activity_routes::bus_activity_routes())
         .merge(device_download_routes::device_download_routes())
+        .merge(device_download_batch::device_download_batch_routes())
         .merge(device_system2::routes())
         .merge(device_readiness_routes::device_readiness_routes())
         .merge(device_compare_routes::device_compare_routes())

@@ -22,10 +22,14 @@ stack and retained context under the lock, releases the project and stack,
 and writes that copy while still holding the store path and journal
 generation. Journal hand-overs, Save As, version actions and project
 replacement keep waiting for it; an edit applied during the write stays
-unsaved and is journaled afterwards. Requests that read the store path
-(project tree refresh, edits) still wait. The reporter's “Gerätedetails sind
-nicht verfügbar” message was not reproduced; a proxy timeout is an open
-hypothesis. [WP-31](open-work/WP-31-device-editor-unavailable-after-save.md).
+unsaved and is journaled afterwards. Measured after the fix on the same
+project: device detail during a save 0.20–0.27 s, the save itself about 6 s.
+Limit: an edit or project-tree refresh started during the write holds the
+project while it waits for the store path, so device reads queue behind it
+again until the save ends. Selective import now rechecks the revision after
+taking the store path, so it cannot restore pre-save catalogue references.
+The reporter's “Gerätedetails sind nicht verfügbar” message was not
+reproduced; a proxy timeout is an open hypothesis. [WP-31](open-work/WP-31-device-editor-unavailable-after-save.md).
 
 ## Parameter selection lists offer only declared values (11 November 2026; issue #45, WP-30)
 

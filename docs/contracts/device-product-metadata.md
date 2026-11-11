@@ -87,5 +87,9 @@ cover both device endpoints and unchanged project state. Mounted production and
 development browser cases cover EN/DE at 1440/400 pixels and long literals; all
 API requests, including automatic discovery, are intercepted inside an offline
 network namespace. This is synthetic software verification, not a reproduction
-against a private user database or real hardware. Independent review and the
-complete change-scoped package gate remain the delivery owner's acceptance step.
+against a private user database or real hardware. Independent backend, UI and MCP
+reviews approved the feature. Main `5494e3d6818040dc6ac5ac8b3003047c423529cb`
+composes a complete 17-stage acceptance with a fresh frontend/static delta;
+unchanged Rust/Cargo/runner/binding inputs carry their original native evidence.
+See [the delivery record](../IMPLEMENTATION_STATUS.md) for the measured scope.
+This publication is not a release or an update of a running installation.

@@ -186,9 +186,18 @@ overview and Devices list share that resolver. Product data now exposes every
 normalized scalar record, all matching catalogue placements/sections and sanitized
 source/additional-attribute metadata through the existing HTTP detail projection.
 EN/DE labels and nested disclosures preserve exact identifiers and source literals.
-[Coverage and limitations](contracts/device-product-metadata.md). Focused query,
-HTTP, binding, component and narrow/wide browser verification accompanies this
-candidate; independent review and complete package acceptance remain pending.
+[Coverage and limitations](contracts/device-product-metadata.md). Independent
+backend, UI and MCP reviews approved the implementation. Published on main as
+`5494e3d6818040dc6ac5ac8b3003047c423529cb` on 11 November 2026.
+
+Acceptance composes the complete 17-stage gate on `e7c6fd0a2` (5,917 Rust tests,
+90 binding tests and 97/97 private corpus tests) with the final 11-stage frontend
+and documentation delta. Rust/Cargo/runner/binding inputs were byte-identical;
+the six corresponding native stages were carried, not rerun. The final web gate
+passed 49 stages: 5,654 unit tests, 1,207 default browser cases and the selected
+production suites. These overlapping lane executions are not a unique-case total.
+All receipts report frozen inputs and no touched or unchecked user-data paths.
+Earlier failed and intentionally interrupted attempts remain separate evidence.
 No bus, migration, release or deployment change.
 
 ## Background activity footer (10 November 2026; bounded source implementation)

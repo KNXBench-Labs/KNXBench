@@ -239,6 +239,36 @@ fn link_adoption_with_parameters_is_one_undo_step_restoring_link_positions() {
     );
 }
 #[test]
+fn removing_a_send_and_receive_pair_on_one_address_is_one_edit() {
+    // WP-39: the pair downloads as one sending association, so a device
+    // without that address makes the comparison remove both links together.
+    let mut project = linked_fixture();
+    project
+        .devices
+        .com_object_mut(ComObjectInstanceId(1))
+        .unwrap()
+        .links
+        .push(GroupLink {
+            ga: GroupAddressId(1),
+            direction: Direction::Receive,
+        });
+    let stack = CommandStack::new();
+    let prepared = PreparedComparisonAdoption::prepare_with_links(
+        &project,
+        &stack,
+        DeviceId(1),
+        0,
+        vec![],
+        vec![
+            link(false, 1, 1, Direction::Send),
+            link(false, 1, 1, Direction::Receive),
+        ],
+    )
+    .unwrap();
+    assert!(prepared.changed());
+}
+
+#[test]
 fn link_adoption_refuses_foreign_duplicate_and_missing_links_without_effect() {
     let project = linked_fixture();
     let stack = CommandStack::new();
@@ -268,6 +298,14 @@ fn link_adoption_refuses_foreign_duplicate_and_missing_links_without_effect() {
     assert!(matches!(
         prepare(vec![link(false, 1, 2, Direction::Receive)]),
         Err(AdoptionCommandError::Command(_))
+    ));
+    // One object/address both removed and added is still one contradiction.
+    assert!(matches!(
+        prepare(vec![
+            link(false, 1, 1, Direction::Send),
+            link(true, 1, 1, Direction::Receive)
+        ]),
+        Err(AdoptionCommandError::DuplicateLink(..))
     ));
     let no_op = prepare(vec![]).unwrap();
     assert!(!no_op.changed());

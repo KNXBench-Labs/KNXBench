@@ -18,9 +18,11 @@ An object linked to one group address both to send and to receive made an
 ordinary download fail with a duplicate-link refusal. The download request now
 merges an object's links by address: such a pair is one sending association,
 because a device indicates every matching association, the sending one
-included (KNX Resources §4.17.3.3.2 / §4.17.9.4.2; ETS lists an address once
-per object). Links that reach one address twice become one association. The
-project keeps its links; two different sending addresses stay refused.
+included (KNX Resources §4.17.3.3.2 / §4.17.9.4.2; the ETS project format has
+no separate send-and-receive state). Removing such a pair during a device
+comparison adoption is accepted as one edit. Links that reach one address
+twice become one association. The project keeps its links; two different
+sending addresses stay refused.
 [Research](research/2026-11-11-send-and-receive-on-one-address.md).
 
 ## New group links pre-fill their direction from the object (11 November 2026; issue #47, WP-36)

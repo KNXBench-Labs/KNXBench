@@ -4,7 +4,7 @@
 //! came from a genuine comparison; Core validates the whole project mutation.
 use super::{stored_parameter_instance, Command, CommandError, CommandStack};
 use crate::{ComObjectInstanceId, DeviceId, Direction, GroupAddressId, Project};
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ParameterAdoption {
@@ -108,7 +108,11 @@ impl PreparedComparisonAdoption {
         }
         // Admit both history directions, not only the current edit.
         stack.visit_snapshot_states(project, |_, _, _| true)?;
+        // The same link twice, or one object/address both added and
+        // removed, is refused. A send and a receive link to one address are
+        // two links (WP-39): removing both is one coherent edit.
         let mut seen = BTreeSet::new();
+        let mut kinds: BTreeMap<(ComObjectInstanceId, GroupAddressId), bool> = BTreeMap::new();
         let mut removals = Vec::new();
         let mut additions = Vec::new();
         for link in links {
@@ -120,7 +124,9 @@ impl PreparedComparisonAdoption {
             if owner != device {
                 return Err(AdoptionCommandError::ForeignComObject(link.com_object));
             }
-            if !seen.insert((link.com_object, link.ga)) {
+            if !seen.insert((link.com_object, link.ga, link.direction == Direction::Send))
+                || *kinds.entry((link.com_object, link.ga)).or_insert(link.add) != link.add
+            {
                 return Err(AdoptionCommandError::DuplicateLink(
                     link.com_object,
                     link.ga,

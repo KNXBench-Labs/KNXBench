@@ -85,7 +85,25 @@ describe("download progress in the status bar", () => {
     await show(snapshot([download("running", 9, 1100)], ["deviceDownload"]));
     expect(live()).toBe("Download to 1.1.67 started.");
     await show(snapshot([download("finished", 14, 1457)]));
-    expect(live()).toBe("Download to 1.1.67 no longer running; see the download tab for its result.");
+    expect(live()).toBe("Download to 1.1.67 no longer running; see the Download to device tab for its result.");
+  });
+
+  it("announces nothing while the run's state is unknown: hidden window, failed read, own lock alone", async () => {
+    const live = () => host.querySelector("[aria-live=polite]")?.textContent;
+    await show(snapshot([download("running", 5, 524)], ["deviceDownload"]));
+    expect(live()).toBe("Download to 1.1.67 started.");
+    apiMock.busActivity.mockRejectedValueOnce(new Error("offline"));
+    await act(async () => { await refreshBusConnection(); });
+    await flush();
+    expect(live()).toBe("Download to 1.1.67 started.");
+    await show(snapshot([], ["deviceDownload"]));
+    expect(live()).toBe("Download to 1.1.67 started.");
+    Object.defineProperty(document, "visibilityState", { configurable: true, get: () => "hidden" });
+    await act(async () => { await refreshBusConnection(); });
+    Object.defineProperty(document, "visibilityState", { configurable: true, get: () => "visible" });
+    await show(snapshot([download("running", 9, 1100)], ["deviceDownload"]));
+    expect(live()).toBe("Download to 1.1.67 started.");
+    expect(host.querySelector(".download-footer-progress")).not.toBeNull();
   });
 
   it("names only steps when a plan writes no data, and the percent never exceeds 100", async () => {

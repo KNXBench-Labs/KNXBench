@@ -4280,7 +4280,7 @@ export const messages: Record<MessageKey, string> = {
   "deviceDownload.footer.steps": "Programmierung {address}: {done} von {of} Schritten erledigt",
   "deviceDownload.footer.openLabel": "Programmierung von {address} anzeigen",
   "deviceDownload.footer.started": "Programmierung {address} gestartet.",
-  "deviceDownload.footer.ended": "Programmierung {address} läuft nicht mehr; das Ergebnis steht im Programmier-Tab.",
+  "deviceDownload.footer.ended": "Programmierung {address} läuft nicht mehr; das Ergebnis steht im Tab „Gerät programmieren“.",
   "deviceDownload.footer.open": "Anzeigen",
   "deviceDownload.stepsProgress": "Schritte {done}/{of}",
   "deviceDownload.octetsProgress": "Geschrieben und zurückgelesen: {done}/{of} Oktette",

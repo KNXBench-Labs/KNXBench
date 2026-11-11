@@ -4454,7 +4454,7 @@ export const messages = {
   "deviceDownload.footer.steps": "Download to {address}: {done} of {of} steps done",
   "deviceDownload.footer.openLabel": "Show the download to {address}",
   "deviceDownload.footer.started": "Download to {address} started.",
-  "deviceDownload.footer.ended": "Download to {address} no longer running; see the download tab for its result.",
+  "deviceDownload.footer.ended": "Download to {address} no longer running; see the Download to device tab for its result.",
   "deviceDownload.footer.open": "Show",
   "deviceDownload.stepsProgress": "Steps {done}/{of}",
   "deviceDownload.octetsProgress": "Octets written and read back {done}/{of}",

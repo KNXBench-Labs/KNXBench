@@ -24,14 +24,19 @@ export default function DownloadFooterProgress({ onOpen }: { onOpen: () => void 
   // Announce only start and end, not every two-second poll; the bar carries the value.
   const [announcement, setAnnouncement] = useState("");
   const running = useRef<string | null>(null);
+  // A hidden window, a failed read or the download's own lock seen without its
+  // session say nothing about the run: keep the last known state, announce nothing.
+  const undecided = view.phase === "unknown"
+    || (view.phase === "occupied" && view.holder.kind === "connecting" && view.holder.session === "deviceDownload");
   useEffect(() => {
+    if (undecided) return;
     const address = holder?.address ?? null;
     if (address === running.current) return;
     setAnnouncement(address !== null
       ? t("deviceDownload.footer.started", { address })
       : t("deviceDownload.footer.ended", { address: running.current ?? "" }));
     running.current = address;
-  }, [holder?.address, t]);
+  }, [holder?.address, undecided, t]);
   const progress = holder?.progress;
   const percent = progress ? dataPercent(progress) : null;
   return <>

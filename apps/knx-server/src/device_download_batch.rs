@@ -702,6 +702,10 @@ pub fn judge(
             },
             false,
         ),
+        // Unreachable while the batch holds the reservation. `Written` has no
+        // `unknown`; `partially` is the value that never understates a write
+        // (the same choice as an unwitnessed end, ADR-0067), and the text says
+        // the outcome is unknown.
         DownloadStatus::Running => (
             DeviceState::Failed {
                 download_id,
@@ -974,13 +978,12 @@ async fn stop(
     Json(body): Json<StopRequest>,
 ) -> Result<Json<StopResponse>, ApiError> {
     let batch = current_batch(&state, Some(body.batch_id))?;
+    if !batch.is_running() {
+        return Ok(Json(StopResponse { stop: "ended" }));
+    }
     batch.stop_requested.store(true, Ordering::SeqCst);
     Ok(Json(StopResponse {
-        stop: if batch.is_running() {
-            "afterThisDevice"
-        } else {
-            "ended"
-        },
+        stop: "afterThisDevice",
     }))
 }
 

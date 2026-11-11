@@ -92,9 +92,16 @@ review in the pending block and the download tab, batch consent, per-device
 acknowledgements, status polling and en/de copy; wording for the new busy
 holder.
 
-## Step 2 (designed)
+Limits of the server part: the batch summary lives in server memory only (the
+per-device history rows are the durable record); tested with simulated devices
+and fake tunnels only; no claim about programming devices back to back on a
+real line or gateway; busy refusals of the other routes keep their text and name
+the batch only in `holder`. These move to `KNOWN_LIMITATIONS.md` with the UI
+part, when the feature becomes reachable.
 
-No batch start button exists yet. The design is
+## Step 2 design summary
+
+The design is
 [ADR-0172](../adr/0172-batch-programming-stops-at-the-first-doubt.md)
 (Proposed, 11 November 2026): a server-held batch over the regular memory
 download; devices with a pending or missing individual address, nothing to
@@ -105,5 +112,5 @@ and checked before the reservation is taken; one confirmation naming the devices
 remembered stage consent) plus each `untested` device's own acknowledgement;
 continue only after a written, restarted and fully matching checked device,
 otherwise stop with the rest `notStarted`; *stop after this device*;
-a result per device and per-device history. Implementation follows with
-simulator-only tests unless hardware is separately authorised.
+a result per device and per-device history. Simulator-only tests unless
+hardware is separately authorised.

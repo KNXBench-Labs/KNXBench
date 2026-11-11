@@ -1,7 +1,7 @@
 # ADR 0172: Programming all pending devices is one server-held batch that stops at the first doubt
 
 Date: 2026-11-11
-Status: Proposed (design only; no code, no hardware run)
+Status: Proposed (server part implemented in WP-38b; UI open; no hardware run)
 Session: issue intake #42, step 2 ([WP-38](../open-work/WP-38-pending-devices-panel.md))
 
 ## Context

@@ -648,3 +648,131 @@ fn snapshot_codec_refuses_unknown_native_schema_even_with_a_valid_image_hash() {
         "valid integrity metadata does not make unknown native data supported"
     );
 }
+
+/// One device with one parameter at `raw`, every part programmed.
+fn programmed_device_project(raw: &str) -> NativeSnapshot {
+    let mut snapshot = seed();
+    snapshot.project.installations.push(knx_core::Installation {
+        id: knx_core::InstallationId(1),
+        name: "Restore witness".into(),
+        default_line: None,
+        multicast_address: None,
+        completion: knx_core::CompletionStatus::FinishedDesign,
+        topology: knx_core::Topology {
+            areas: vec![],
+            lines: vec![],
+            unassigned: vec![knx_core::DeviceId(1)],
+        },
+        buildings: vec![],
+        group_ranges: vec![],
+        group_addresses: vec![],
+        parameters: vec![knx_core::ParameterInstance {
+            id: knx_core::ParameterInstanceId(1),
+            device: knx_core::DeviceId(1),
+            source: knx_core::SourceRef {
+                path: "synthetic".into(),
+                ets_id: "M-0001_A-0001-01-0001_P-1_R-1".into(),
+            },
+            raw: raw.into(),
+        }],
+    });
+    snapshot.project.devices.insert(knx_core::DeviceInstance {
+        id: knx_core::DeviceId(1),
+        source: knx_core::SourceRef {
+            path: "synthetic".into(),
+            ets_id: "synthetic-device".into(),
+        },
+        name: "Witness".into(),
+        description: None,
+        address: Some(knx_core::IndividualAddress::new(1, 1, 1).unwrap()),
+        product_ref: "P".into(),
+        program_ref: "M-0001_A-0001-01-0001".into(),
+        commissioning: knx_core::CommissioningState {
+            individual_address_loaded: true,
+            application_program_loaded: true,
+            parameters_loaded: true,
+            communication_part_loaded: true,
+            ..knx_core::CommissioningState::default()
+        },
+        visibility_calculated: true,
+        com_objects: vec![],
+        binary_data: vec![],
+    });
+    snapshot.project.ids = knx_core::IdAllocators::from_counts(1, 0, 0, 0, 0, 0, 0, 1, 0);
+    snapshot
+}
+
+#[test]
+fn a_restored_version_does_not_resurrect_programmed_claims_and_the_correction_is_durable() {
+    use knx_core::commissioning::pending::ProgrammingParts;
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("history.knxdb");
+    let conn = knx_store::open_and_migrate(&path).unwrap();
+    // Stored with value 1 programmed, then the device was programmed with
+    // value 2: the live project says programmed for value 2.
+    let version = programmed_device_project("1");
+    let generation =
+        history::save_editor(&conn, &version, &CommandStack::new(), None, true).unwrap();
+    let generation = history::create_version(&conn, &version, "Value 1", generation).unwrap();
+    let id = history::list_versions(&conn).unwrap()[0].id;
+    let live = programmed_device_project("2");
+    let generation =
+        history::save_editor(&conn, &live, &CommandStack::new(), Some(generation), true).unwrap();
+
+    let change = history::change_history(
+        &conn,
+        &live,
+        generation,
+        history::HistoryAction::Restore(id),
+    )
+    .unwrap();
+
+    let parameters_and_links = ProgrammingParts {
+        parameters: true,
+        group_addresses: true,
+        ..ProgrammingParts::NONE
+    };
+    let restored = change.restored.as_ref().unwrap().working.project.clone();
+    let device = restored.devices.get(knx_core::DeviceId(1)).unwrap();
+    assert_eq!(device.commissioning.pending_parts(), parameters_and_links);
+    assert_eq!(
+        change.restored_pending,
+        std::collections::BTreeMap::from([(knx_core::DeviceId(1), parameters_and_links)])
+    );
+    assert_eq!(
+        restored.installations[0].parameters[0].raw, "1",
+        "the version's value"
+    );
+    // Durable: the store and the recovered editor say the same after reopening.
+    drop(conn);
+    let conn = knx_store::open_and_migrate(&path).unwrap();
+    for project in [
+        NativeSnapshot::read(&conn).unwrap().project,
+        history::load_editor(&conn)
+            .unwrap()
+            .unwrap()
+            .working
+            .project,
+    ] {
+        assert_eq!(
+            project
+                .devices
+                .get(knx_core::DeviceId(1))
+                .unwrap()
+                .commissioning
+                .pending_parts(),
+            parameters_and_links
+        );
+    }
+    // The stored version itself is not rewritten.
+    let stored = history::read_version(&conn, id).unwrap().project;
+    assert_eq!(
+        stored
+            .devices
+            .get(knx_core::DeviceId(1))
+            .unwrap()
+            .commissioning
+            .pending_parts(),
+        ProgrammingParts::NONE
+    );
+}

@@ -234,3 +234,193 @@ fn linked_devices_are_found_through_their_objects() {
     assert_eq!(devices_linked_to(&project, GA1), BTreeSet::from([D1, D2]));
     assert!(devices_linked_to(&project, fixture::GA2).is_empty());
 }
+
+fn parts(
+    address: bool,
+    application: bool,
+    parameters: bool,
+    group_addresses: bool,
+) -> ProgrammingParts {
+    ProgrammingParts {
+        address,
+        application,
+        parameters,
+        group_addresses,
+    }
+}
+
+fn set_parameter(project: &mut Project, device: DeviceId, raw: &str) {
+    for parameter in project.installations[0].parameters.iter_mut() {
+        if parameter.device == device {
+            parameter.raw = raw.into();
+        }
+    }
+}
+
+fn at(seconds: i64) -> Option<chrono::DateTime<chrono::Utc>> {
+    chrono::DateTime::from_timestamp(seconds, 0)
+}
+
+#[test]
+fn a_restored_version_cannot_claim_values_the_device_no_longer_holds() {
+    // The version was stored with parameter value 1 programmed; the device
+    // was then programmed with value 2 (live, all programmed).
+    let version = fixture::project();
+    let mut live = fixture::project();
+    set_parameter(&mut live, D1, "2");
+    live.devices
+        .get_mut(D1)
+        .unwrap()
+        .commissioning
+        .last_download = at(200);
+    let mut restored = version.clone();
+    restored
+        .devices
+        .get_mut(D1)
+        .unwrap()
+        .commissioning
+        .last_download = at(100);
+
+    let corrected = settle_restored_version(&live, &mut restored);
+
+    let d1 = &restored.devices.get(D1).unwrap().commissioning;
+    // Parameters differ; the group-address tables depend on them.
+    assert_eq!(d1.pending_parts(), parts(false, false, true, true));
+    assert_eq!(d1.last_download, at(200), "the device's own download time");
+    // Device 2 is unchanged and keeps its live, programmed belief.
+    assert_eq!(
+        restored
+            .devices
+            .get(D2)
+            .unwrap()
+            .commissioning
+            .pending_parts(),
+        ProgrammingParts::NONE
+    );
+    assert_eq!(
+        corrected,
+        BTreeMap::from([(D1, parts(false, false, true, true))])
+    );
+    // Only the flags and the download time changed, not the content.
+    assert_eq!(content_of(&restored, D1), content_of(&version, D1));
+}
+
+#[test]
+fn unchanged_parts_take_the_live_belief_in_both_directions() {
+    // Live says pending for parts whose content equals the version's: the
+    // version's programmed claim is older, so the live one wins.
+    let mut version = fixture::project();
+    version
+        .devices
+        .get_mut(D2)
+        .unwrap()
+        .commissioning
+        .parameters_loaded = false;
+    let mut live = fixture::project();
+    live.devices
+        .get_mut(D1)
+        .unwrap()
+        .commissioning
+        .individual_address_loaded = false;
+    let mut restored = version.clone();
+
+    let corrected = settle_restored_version(&live, &mut restored);
+
+    assert_eq!(
+        restored
+            .devices
+            .get(D1)
+            .unwrap()
+            .commissioning
+            .pending_parts(),
+        parts(true, false, false, false)
+    );
+    // The version said pending, live says programmed for the same content.
+    assert_eq!(
+        restored
+            .devices
+            .get(D2)
+            .unwrap()
+            .commissioning
+            .pending_parts(),
+        ProgrammingParts::NONE
+    );
+    assert_eq!(
+        corrected,
+        BTreeMap::from([(D1, parts(true, false, false, false))])
+    );
+}
+
+#[test]
+fn an_application_or_address_change_takes_its_dependants_with_it() {
+    let version = fixture::project();
+    let mut live = fixture::project();
+    live.devices.get_mut(D1).unwrap().program_ref = "H2".into();
+    live.devices.get_mut(D2).unwrap().address = Some(IndividualAddress::new(1, 1, 9).unwrap());
+    let mut restored = version.clone();
+
+    settle_restored_version(&live, &mut restored);
+
+    assert_eq!(
+        restored
+            .devices
+            .get(D1)
+            .unwrap()
+            .commissioning
+            .pending_parts(),
+        parts(false, true, true, true)
+    );
+    assert_eq!(
+        restored
+            .devices
+            .get(D2)
+            .unwrap()
+            .commissioning
+            .pending_parts(),
+        parts(true, false, false, true)
+    );
+}
+
+#[test]
+fn a_device_the_live_project_lacks_is_pending_everywhere() {
+    let mut version = fixture::project();
+    version
+        .devices
+        .get_mut(D2)
+        .unwrap()
+        .commissioning
+        .last_download = at(100);
+    let mut live = fixture::project();
+    live.devices.remove(D2);
+    let mut restored = version.clone();
+
+    let corrected = settle_restored_version(&live, &mut restored);
+
+    let d2 = &restored.devices.get(D2).unwrap().commissioning;
+    assert_eq!(d2.pending_parts(), ProgrammingParts::ALL);
+    assert_eq!(d2.last_download, at(100), "no later download is known");
+    assert_eq!(corrected, BTreeMap::from([(D2, ProgrammingParts::ALL)]));
+    // The medium flag is not one of the four parts and stays as stored.
+    assert_eq!(
+        d2.medium_config_loaded,
+        version
+            .devices
+            .get(D2)
+            .unwrap()
+            .commissioning
+            .medium_config_loaded
+    );
+}
+
+#[test]
+fn restoring_the_live_state_itself_changes_nothing() {
+    let mut live = fixture::project();
+    live.devices
+        .get_mut(D1)
+        .unwrap()
+        .commissioning
+        .parameters_loaded = false;
+    let mut restored = live.clone();
+    assert!(settle_restored_version(&live, &mut restored).is_empty());
+    assert!(restored == live);
+}

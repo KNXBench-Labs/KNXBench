@@ -452,3 +452,98 @@ async fn restoring_a_version_republishes_live_context_without_sending_bus_frames
         StatusCode::OK
     );
 }
+
+/// Puts one device with one parameter at `raw`, every part programmed, into
+/// the open project (a stand-in for a settled download).
+fn put_programmed_device(state: &knx_server::AppState, raw: &str) {
+    let mut guard = state.project.lock().unwrap();
+    let project = guard.as_mut().unwrap();
+    let device = knx_core::DeviceId(1);
+    let installation = &mut project.installations[0];
+    installation.parameters = vec![knx_core::ParameterInstance {
+        id: knx_core::ParameterInstanceId(1),
+        device,
+        source: knx_core::SourceRef {
+            path: "synthetic".into(),
+            ets_id: "M-0001_A-0001-01-0001_P-1_R-1".into(),
+        },
+        raw: raw.into(),
+    }];
+    if !installation.topology.unassigned.contains(&device) {
+        installation.topology.unassigned.push(device);
+    }
+    project.devices.remove(device);
+    project.devices.insert(knx_core::DeviceInstance {
+        id: device,
+        source: knx_core::SourceRef {
+            path: "synthetic".into(),
+            ets_id: "synthetic-device".into(),
+        },
+        name: "Witness".into(),
+        description: None,
+        address: Some(knx_core::IndividualAddress::new(1, 1, 1).unwrap()),
+        product_ref: "P".into(),
+        program_ref: "M-0001_A-0001-01-0001".into(),
+        commissioning: knx_core::CommissioningState {
+            individual_address_loaded: true,
+            application_program_loaded: true,
+            parameters_loaded: true,
+            communication_part_loaded: true,
+            ..knx_core::CommissioningState::default()
+        },
+        visibility_calculated: true,
+        com_objects: vec![],
+        binary_data: vec![],
+    });
+    project.ids.raise_to(&knx_core::IdAllocators::from_counts(
+        1, 0, 0, 0, 0, 0, 0, 1, 0,
+    ));
+}
+
+#[tokio::test]
+async fn restoring_an_older_version_marks_what_the_device_no_longer_holds_and_says_so() {
+    let (_dir, _path, state, app) = fixture().await;
+    put_programmed_device(&state, "1");
+    let (_, view) = request(&app, "GET", "/api/project/history", Value::Null).await;
+    let mut payload = binding(&view, false);
+    payload["label"] = json!("Value 1 programmed");
+    let (status, view) = request(&app, "POST", "/api/project/history/versions", payload).await;
+    assert_eq!(status, StatusCode::OK, "{view}");
+    let id = view["versions"][0]["id"].as_i64().unwrap();
+    // The device was then programmed with value 2.
+    put_programmed_device(&state, "2");
+
+    let (_, view) = request(&app, "GET", "/api/project/history", Value::Null).await;
+    let (status, restored) = request(
+        &app,
+        "POST",
+        &format!("/api/project/history/versions/{id}/restore"),
+        binding(&view, true),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{restored}");
+
+    let project = state.project.lock().unwrap().clone().unwrap();
+    let pending = project
+        .devices
+        .get(knx_core::DeviceId(1))
+        .unwrap()
+        .commissioning
+        .pending_parts();
+    assert!(pending.parameters && pending.group_addresses, "{pending:?}");
+    assert!(!pending.address && !pending.application, "{pending:?}");
+    assert_eq!(project.installations[0].parameters[0].raw, "1");
+    let log = state.session_log.lock().unwrap();
+    let entry = log
+        .entries()
+        .iter()
+        .find(|entry| entry.source == "ProjectHistory")
+        .expect("the correction is logged");
+    assert!(
+        entry
+            .message
+            .contains("“Witness” (1.1.1) needs programming for parameters and group addresses"),
+        "{}",
+        entry.message
+    );
+}

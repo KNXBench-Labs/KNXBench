@@ -12,6 +12,20 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## The device editor shows what is not programmed yet (11 November 2026; issue #40, WP-37)
+
+The opened device now repeats its existing programming marks where you edit:
+a line under the heading such as **Not programmed yet: Parameters and Group
+addresses** (German **Noch nicht programmiert: …**), and an amber dot with a
+tooltip and an accessible description on the **Parameters** tab (parameters or
+application pending) and the **Communication objects** tab (group addresses
+pending). Unknown or clean state shows nothing. The marks come from the tree's
+existing per-part flags, so a covering download or address programming that
+reloads the project clears them; no server, model or flag semantics changed.
+Per-parameter marking stays open (WP-37 step 2). Component tests and en/de
+browser checks at 1440 and 400 px cover the line, the tab marks, their clearing
+and no sideways overflow.
+
 ## New links are Send or Receive, one per address, as in ETS (11 November 2026; WP-39)
 
 The link row on a communication object and **Add member…** no longer offer

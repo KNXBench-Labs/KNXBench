@@ -1,4 +1,4 @@
-/** P3 browser contract: pending-programming chips, filter, explorer dot and marking by hand. */
+/** Pending-programming browser contract: chips, filter, explorer and editor marks, hand marking. */
 import { openExplorerBranches, openNavigationSections } from "./disclosure-fixture";
 import { expect, test, type Page } from "@playwright/test";
 import { join } from "node:path";
@@ -264,5 +264,51 @@ for (const language of ["en", "de"] as const) {
     await expect(kitchen().locator(".programming-chip")).toHaveCount(4);
     expect(state.unexpected).toEqual([]);
     void m;
+  });
+}
+
+// Issue #40 (WP-37 step 1): the same flags in the device editor, cleared when the tree clears them.
+for (const language of ["en", "de"] as const) {
+  const m = language === "en" ? en : de;
+  const sentence = (keys: (keyof typeof en)[]) => m["deviceEditor.programmingPending"].replace("{parts}", parts(m, keys, language));
+  for (const width of [1440, 400]) {
+    test(`${language} device editor names pending parts and marks the affected tabs at ${width}px`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 850 });
+      const state = await intercept(page, language); await openProject(page, language); await openList(page, language);
+      await page.locator(".devices-table tbody button").filter({ hasText: /^Sensor hall$/ }).click();
+      const editor = page.locator(".device-editor-view .device-workspace");
+      const summary = editor.locator(".device-pending-summary");
+      await expect(summary).toHaveText(sentence(["programming.part.address", "programming.part.application",
+        "programming.part.parameters", "programming.part.groupAddresses"]));
+      // Tab names stay plain; the marker is the tab's description, with a dot to see.
+      const objects = editor.getByRole("tab", { name: m["inspector.communicationObjects"], exact: true });
+      const parameters = editor.getByRole("tab", { name: m["workbench.parameters"], exact: true });
+      await expect(objects).toHaveAccessibleDescription(sentence(["programming.part.groupAddresses"]));
+      await expect(parameters).toHaveAccessibleDescription(sentence(["programming.part.application", "programming.part.parameters"]));
+      await expect(parameters.locator(".device-pending-dot")).toBeVisible();
+      await expect(editor.getByRole("tab", { name: m["deviceIdentity.tab"], exact: true })).toHaveAccessibleDescription("");
+      const box = await summary.boundingBox();
+      expect(box!.x).toBeGreaterThanOrEqual(0);
+      expect(box!.x + box!.width).toBeLessThanOrEqual(width + 1);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(1);
+      await capture(page, `device-editor-pending-${language}-${width}`);
+      expect(state.unexpected).toEqual([]);
+      expect(state.marks).toEqual([]);
+    });
+  }
+  test(`${language} device editor drops the pending marks when the reloaded tree clears them`, async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 850 });
+    const state = await intercept(page, language); await openProject(page, language);
+    await page.locator(".tree-label", { hasText: "1.1.2 Dimmer kitchen" }).click();
+    const editor = page.locator(".device-editor-view .device-workspace");
+    await expect(editor.locator(".device-pending-summary")).toHaveText(sentence(["programming.part.address", "programming.part.parameters"]));
+    await expect(editor.getByRole("tab", { name: m["inspector.communicationObjects"], exact: true })).toHaveAccessibleDescription("");
+    // Any covering write ends with the editor holding the server's new tree; marking by hand takes the same path.
+    await page.locator(".device-programming").getByRole("button", { name: m["programming.markProgrammed"], exact: true }).click();
+    await expect(editor.locator(".device-pending-summary")).toHaveCount(0);
+    await expect(editor.locator(".device-pending-dot")).toHaveCount(0);
+    await expect(editor.getByRole("tab", { name: m["workbench.parameters"], exact: true })).toHaveAccessibleDescription("");
+    expect(state.marks).toHaveLength(1);
+    expect(state.unexpected).toEqual([]);
   });
 }

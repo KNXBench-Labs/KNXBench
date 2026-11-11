@@ -288,10 +288,10 @@ export default function DeviceDownloadBatch({ project, gateway, disabled, openRe
     <section className="device-download-batch" aria-label={t("deviceDownload.batch.title")}>
       <h3>{t("deviceDownload.batch.title")}</h3>
       {review === null && !reviewing && (
-        <div className="device-download-actions">
+        <div className="device-download-batch-actions">
           <button type="button" data-batch-open disabled={busy || disabled} onClick={() => void prepareReview()}>
             {t("deviceDownload.batch.open")}</button>
-          <span className="device-download-actions-note">{t("deviceDownload.batch.openNote")}</span>
+          <span className="device-download-batch-note">{t("deviceDownload.batch.openNote")}</span>
         </div>
       )}
       {reviewing && <p role="status" data-batch-reviewing><span className="task-status-text">{t("deviceDownload.batch.reviewing")}</span></p>}
@@ -352,7 +352,7 @@ export default function DeviceDownloadBatch({ project, gateway, disabled, openRe
           </ul>
           {blocker !== null && inBatch.length > 0
             && <p className="form-warning" id="device-download-batch-blocked" data-batch-blocked>{t(blocker)}</p>}
-          <div className="device-download-actions">
+          <div className="device-download-batch-actions">
             <button type="button" className="primary-action" data-batch-start
               aria-describedby={blocker !== null && inBatch.length > 0 ? "device-download-batch-blocked" : undefined}
               disabled={blocker !== null || busy || disabled} onClick={() => void start()}>

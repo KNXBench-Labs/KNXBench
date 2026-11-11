@@ -426,6 +426,11 @@ pub async fn drain_device_writes(
     drain
 }
 
+#[cfg(test)]
+pub(crate) fn device_writes_active_for_test(state: &AppState) -> bool {
+    device_writes_active(state)
+}
+
 fn device_writes_active(state: &AppState) -> bool {
     // System-2 holds these same admission locks through disconnect. Inspectors
     // must not wait outside the timer/second-signal boundary. A busy lock is
@@ -446,7 +451,9 @@ fn device_writes_active(state: &AppState) -> bool {
                 .is_some_and(crate::AddressProgrammingSession::is_active)
         })
         .unwrap_or(true);
-    download || programming
+    // A batch between two devices runs no download, but may start the next
+    // one until it sees the closed admission; wait for it to end.
+    download || programming || crate::device_download_batch::running(state)
 }
 
 #[cfg(test)]

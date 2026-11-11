@@ -39,6 +39,7 @@ use knx_app::download_support::{
     download_level, shipped_evidence, untested_acknowledgement, SupportLevel,
 };
 use knx_app::operation_recording::{OperationKind, OperationStart};
+use knx_core::commissioning::memory_download::MemoryDownloadPlan;
 use knx_core::commissioning::mutation::{required_confirmation_phrase, WriteAuthorisation};
 use knx_core::commissioning::partial_memory_download::{PartialDownloadParts, PartialPlanError};
 use knx_core::commissioning::scope_advice::{AdvisedWrite, ScopeAdvice};
@@ -76,6 +77,13 @@ pub struct ShownPlan {
     /// also refuses unless the flags, read in the snapshot it prepares from,
     /// still advise this scope.
     pub changes: bool,
+}
+
+/// The shown-plan slot: one single plan or one batch (ADR-0172 §2). Each
+/// replaces the other, so a stale single plan never starts beside a batch.
+pub enum ShownDownload {
+    Single(ShownPlan),
+    Batch(crate::device_download_batch::ShownBatch),
 }
 
 /// CP §3.9.2.4's *"Partial Download Type (Parameters and/or Group
@@ -214,7 +222,7 @@ struct SupportDto {
 }
 
 /// The support level of `prepared`, against the evidence this build ships.
-fn support_of(prepared: &PreparedDownload) -> Result<SupportLevel, ApiError> {
+pub(crate) fn support_of(prepared: &PreparedDownload) -> Result<SupportLevel, ApiError> {
     let evidence = shipped_evidence()
         .map_err(|e| ApiError::with_status(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
     Ok(download_level(prepared, &evidence))
@@ -239,7 +247,10 @@ pub(crate) fn parse_target(address: &str) -> Result<IndividualAddress, ApiError>
 /// The HTTP API takes no key: a key in a request body is a key in a
 /// browser's memory and a proxy's log. A device locked with a key the
 /// project does not carry is downloaded through the CLI's `--key-file`.
-fn keying(state: &SharedState, prepared: &PreparedDownload) -> Result<DownloadKeying, ApiError> {
+pub(crate) fn keying(
+    state: &SharedState,
+    prepared: &PreparedDownload,
+) -> Result<DownloadKeying, ApiError> {
     let opaque = state.opaque.lock().expect("state mutex poisoned");
     let project_key = project_access_key(&opaque).map_err(|e| {
         ApiError::with_kind(
@@ -551,13 +562,13 @@ async fn plan(
     *state
         .device_download_plan
         .lock()
-        .expect("state mutex poisoned") = Some(ShownPlan {
+        .expect("state mutex poisoned") = Some(ShownDownload::Single(ShownPlan {
         id,
         target,
         plan: prepared.plan,
         partial,
         changes,
-    });
+    }));
     Ok(Json(response))
 }
 
@@ -578,50 +589,75 @@ struct StartResponse {
     download_id: u64,
 }
 
-fn conflict(message: impl Into<String>) -> ApiError {
+pub(crate) fn conflict(message: impl Into<String>) -> ApiError {
     ApiError::conflict("downloadPlanStale", message)
 }
 
-async fn start(
-    State(state): State<SharedState>,
-    Json(body): Json<StartRequest>,
-) -> Result<Json<StartResponse>, ApiError> {
-    // Goal A3: no new tunnel once a stop has begun (KL-163).
-    state.stop_admission.admit()?;
-    let gateway: SocketAddrV4 = body.gateway.parse().map_err(|_| {
+/// The gateway of a start request, as `host:port` IPv4.
+pub(crate) fn parse_gateway(gateway: &str) -> Result<SocketAddrV4, ApiError> {
+    gateway.parse().map_err(|_| {
         ApiError::with_kind(
             StatusCode::BAD_REQUEST,
             "downloadGatewayInvalid",
             "gateway is not a host:port IPv4 address",
         )
-    })?;
-    let (target, partial, changes) = {
-        let shown = state
-            .device_download_plan
-            .lock()
-            .expect("state mutex poisoned");
-        match shown.as_ref() {
-            Some(shown) if shown.id == body.plan_id => (shown.target, shown.partial, shown.changes),
-            _ => {
-                return Err(conflict(
-                    "that plan is no longer the one shown; ask for the plan again",
-                ))
-            }
-        }
-    };
-    let authorisation =
-        WriteAuthorisation::for_hardware(target, WriteScope::Download, &body.confirmation)
-            .map_err(|e| {
-                ApiError::with_kind(
-                    StatusCode::BAD_REQUEST,
-                    "downloadConfirmationRefused",
-                    format!("not written: {e}"),
-                )
-            })?;
+    })
+}
 
+/// The device's confirmation phrase checked, as the authorisation it grants.
+pub(crate) fn authorise(
+    target: IndividualAddress,
+    confirmation: &str,
+) -> Result<WriteAuthorisation, ApiError> {
+    WriteAuthorisation::for_hardware(target, WriteScope::Download, confirmation).map_err(|e| {
+        ApiError::with_kind(
+            StatusCode::BAD_REQUEST,
+            "downloadConfirmationRefused",
+            format!("not written: {e}"),
+        )
+    })
+}
+
+/// The refusal of a missing or wrong `untested` acknowledgement.
+pub(crate) fn untested_refused(expected: &str) -> ApiError {
+    ApiError::with_kind(
+        StatusCode::BAD_REQUEST,
+        "downloadConfirmationRefused",
+        format!(
+            "not written: this download is untested on hardware; acceptUntested must read \
+             exactly {expected:?}"
+        ),
+    )
+}
+
+/// The gateway's one tunnel, reserved for a download start until its session
+/// is installed: download → address programming → monitor → line scan.
+pub(crate) struct TunnelLocks<'a> {
+    download: tokio::sync::MutexGuard<'a, Option<DeviceDownloadSession>>,
+    programming: tokio::sync::MutexGuard<'a, Option<crate::AddressProgrammingSession>>,
+    monitor: tokio::sync::MutexGuard<'a, Option<crate::BusSession>>,
+    scan: tokio::sync::MutexGuard<'a, Option<crate::bus_scan::LineScanSession>>,
+}
+
+/// Takes the four tunnel locks in their fixed order and refuses while any
+/// holder runs. `own_batch` is the batch this start belongs to: it holds the
+/// reservation between its devices and is not busy for itself.
+///
+/// The others take their own lock first and then only `try_lock` the
+/// download one, so none can start between these checks and the
+/// registration, and no wait can form a cycle.
+pub(crate) async fn lock_tunnel(
+    state: &SharedState,
+    own_batch: Option<u64>,
+) -> Result<TunnelLocks<'_>, ApiError> {
+    // A running batch is refused before the wait below: its device's start
+    // holds the download lock across a gateway connect.
+    if let Some((holder, message)) = crate::device_download_batch::busy_except(state, own_batch) {
+        return Err(crate::tunnel_holder::gateway_busy(holder, message));
+    }
     // Held until the run is registered: a second start waits here and
     // then sees the first one running.
-    let mut download = state.device_download.lock().await;
+    let download = state.device_download.lock().await;
     if let Some(existing) = download.as_ref() {
         if let Some(holder) = crate::tunnel_holder::download_holder_of(existing) {
             return Err(crate::tunnel_holder::gateway_busy(
@@ -633,15 +669,10 @@ async fn start(
             ));
         }
     }
-    // Registered while the reservation is held and before anything else is
-    // acquired or started: a stop that begins from here on requests this
-    // very token, whatever the async locks are doing (ADR-0153). Refused
-    // with 503 once a stop has begun, with nothing started or sent.
-    let stop = state.stop_admission.register_download()?;
-    // Held until the download is registered, in the order download →
-    // address programming → monitor → scan. The others take their own lock
-    // first and then only `try_lock` this one, so none can start between
-    // these checks and the registration, and no wait can form a cycle.
+    // Checked again under the lock: a batch started while this one waited.
+    if let Some((holder, message)) = crate::device_download_batch::busy_except(state, own_batch) {
+        return Err(crate::tunnel_holder::gateway_busy(holder, message));
+    }
     let programming = state.address_programming.lock().await;
     if let Some(holder) = programming
         .as_ref()
@@ -666,48 +697,105 @@ async fn start(
             "a line scan is running: the gateway serves one tunnel",
         ));
     }
+    Ok(TunnelLocks {
+        download,
+        programming,
+        monitor,
+        scan,
+    })
+}
 
+/// Which plan a start must arrive at again before anything is sent.
+pub(crate) enum Expected<'a> {
+    /// The single plan still in the slot under the start's id.
+    Shown,
+    /// The plan a batch review prepared for this device (ADR-0172 §4).
+    Reviewed(&'a MemoryDownloadPlan),
+}
+
+/// One device's start, checked up to its phrase: everything `launch` needs.
+pub(crate) struct DeviceStart<'a> {
+    /// The plan id; the download keeps it as its id.
+    pub(crate) id: u64,
+    pub(crate) target: IndividualAddress,
+    pub(crate) partial: Option<PartialDownloadParts>,
+    pub(crate) changes: bool,
+    pub(crate) gateway: SocketAddrV4,
+    pub(crate) authorisation: WriteAuthorisation,
+    pub(crate) accept_untested: Option<&'a str>,
+    pub(crate) expected: Expected<'a>,
+    /// The batch this device belongs to, recorded beside its download.
+    pub(crate) batch: Option<u64>,
+}
+
+/// Starts one device's download with the tunnel reserved and its stop token
+/// registered: the single start and every device of a batch run exactly this.
+///
+/// Prepares the plan again from the project as it is now, grades it, checks
+/// the acknowledgement and that the plan is the expected one, writes the
+/// durable history start, opens the tunnel and installs the session. Any
+/// refusal returns before a tunnel opens, except a failed connect.
+pub(crate) async fn launch(
+    state: &SharedState,
+    locks: TunnelLocks<'_>,
+    stop: std::sync::Arc<knx_net::commissioning::memory_download::DownloadStop>,
+    start: DeviceStart<'_>,
+) -> Result<(), ApiError> {
+    let TunnelLocks {
+        mut download,
+        programming,
+        monitor,
+        scan,
+    } = locks;
+    let DeviceStart {
+        id,
+        target,
+        partial,
+        changes,
+        gateway,
+        authorisation,
+        accept_untested,
+        expected,
+        batch,
+    } = start;
     // Before `prepare`: a project opened after this read can only make the
     // settlement skip, never land on the wrong project (ADR-0129).
-    let incarnation = crate::programming_state::incarnation(&state);
-    let prepared = prepare_shown(&state, target, partial, changes)?;
-    let keying = keying(&state, &prepared)?;
+    let incarnation = crate::programming_state::incarnation(state);
+    let prepared = prepare_shown(state, target, partial, changes)?;
+    let keying = keying(state, &prepared)?;
     // Recomputed from the plan that will run, not trusted from the shown
     // one: the evidence is the build's, the plan is checked equal below.
     let level = support_of(&prepared)?;
     if level.needs_acknowledgement() {
         let expected = untested_acknowledgement(target);
-        if body.accept_untested.as_deref() != Some(expected.as_str()) {
-            return Err(ApiError::with_kind(
-                StatusCode::BAD_REQUEST,
-                "downloadConfirmationRefused",
-                format!(
-                    "not written: this download is untested on hardware; acceptUntested must read \
-                 exactly {expected:?}"
-                ),
-            ));
+        if accept_untested != Some(expected.as_str()) {
+            return Err(untested_refused(&expected));
         }
     }
-    {
-        let shown = state
-            .device_download_plan
-            .lock()
-            .expect("state mutex poisoned");
-        let unchanged = shown
-            .as_ref()
-            .is_some_and(|shown| shown.id == body.plan_id && shown.plan == prepared.plan);
-        if !unchanged {
-            return Err(conflict(
-                "the project changed since the plan was shown; nothing was sent, ask for the plan again",
-            ));
+    let unchanged = match expected {
+        Expected::Shown => {
+            let shown = state
+                .device_download_plan
+                .lock()
+                .expect("state mutex poisoned");
+            matches!(
+                shown.as_ref(),
+                Some(ShownDownload::Single(shown)) if shown.id == id && shown.plan == prepared.plan
+            )
         }
+        Expected::Reviewed(plan) => *plan == prepared.plan,
+    };
+    if !unchanged {
+        return Err(conflict(
+            "the project changed since the plan was shown; nothing was sent, ask for the plan again",
+        ));
     }
 
     let report = {
         let Some(owner) = state.product_db.as_ref() else {
             return Err(ApiError::with_status(
                 StatusCode::CONFLICT,
-                no_application_program(&state),
+                no_application_program(state),
             ));
         };
         owner
@@ -728,9 +816,9 @@ async fn start(
         Some(preparation) => {
             state
                 .one_shot_activity
-                .start_download_prepared(body.plan_id, target, preparation)
+                .start_download_prepared(id, target, preparation)
         }
-        None => state.one_shot_activity.start_download(body.plan_id, target),
+        None => state.one_shot_activity.start_download(id, target),
     };
     let activity = started.map_err(|_| {
         ApiError::with_status(
@@ -738,24 +826,27 @@ async fn start(
             "activity history unavailable; not sent",
         )
     })?;
+    let mut operation = OperationStart::new(OperationKind::Download)
+        .target(serde_json::json!({
+            "individualAddress": target.to_string(),
+            "deviceName": prepared.device_name,
+            "programId": prepared.request.program_id,
+            "partial": partial.is_some(),
+        }))
+        .gateway(gateway)
+        .related("downloadId", id);
+    if let Some(batch) = batch {
+        operation = operation.related("batchId", batch);
+    }
     let recorder = crate::operation_recordings::start(
-        &state,
-        OperationStart::new(OperationKind::Download)
-            .target(serde_json::json!({
-                "individualAddress": target.to_string(),
-                "deviceName": prepared.device_name,
-                "programId": prepared.request.program_id,
-                "partial": partial.is_some(),
-            }))
-            .gateway(gateway)
-            .related("downloadId", body.plan_id)
-            .settings(crate::operation_recordings::tunnel_settings(
-                TunnelAckWait::Standard,
-                &state.device_download_timing,
-            )),
+        state,
+        operation.settings(crate::operation_recordings::tunnel_settings(
+            TunnelAckWait::Standard,
+            &state.device_download_timing,
+        )),
     );
     let tunnel = match crate::operation_recordings::connect(
-        &state,
+        state,
         gateway,
         TunnelAckWait::Standard,
         &recorder,
@@ -773,13 +864,12 @@ async fn start(
             return Err(crate::tunnel_holder::gateway_connect_failed(gateway, &e));
         }
     };
-    let id = body.plan_id;
     let backups = BackupDestination {
         dir: state.data_dir.join(BACKUP_DIR),
         taken: chrono::Local::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, false),
     };
     let (settler, settlement) =
-        crate::programming_state::download_settler_receipted(&state, incarnation, id, &prepared);
+        crate::programming_state::download_settler_receipted(state, incarnation, id, &prepared);
     *download = Some(DeviceDownloadSession::start_with_stop_receipted(
         id,
         tunnel,
@@ -798,12 +888,67 @@ async fn start(
     drop(scan);
     drop(monitor);
     drop(programming);
-    // A plan is written at most once.
-    *state
-        .device_download_plan
-        .lock()
-        .expect("state mutex poisoned") = None;
-    Ok(Json(StartResponse { download_id: id }))
+    if matches!(expected, Expected::Shown) {
+        // A plan is written at most once.
+        *state
+            .device_download_plan
+            .lock()
+            .expect("state mutex poisoned") = None;
+    }
+    Ok(())
+}
+
+async fn start(
+    State(state): State<SharedState>,
+    Json(body): Json<StartRequest>,
+) -> Result<Json<StartResponse>, ApiError> {
+    // Goal A3: no new tunnel once a stop has begun (KL-163).
+    state.stop_admission.admit()?;
+    let gateway = parse_gateway(&body.gateway)?;
+    let (target, partial, changes) = {
+        let shown = state
+            .device_download_plan
+            .lock()
+            .expect("state mutex poisoned");
+        match shown.as_ref() {
+            Some(ShownDownload::Single(shown)) if shown.id == body.plan_id => {
+                (shown.target, shown.partial, shown.changes)
+            }
+            _ => {
+                return Err(conflict(
+                    "that plan is no longer the one shown; ask for the plan again",
+                ))
+            }
+        }
+    };
+    let authorisation = authorise(target, &body.confirmation)?;
+    let locks = lock_tunnel(&state, None).await?;
+    // Registered while the reservation is held, after the busy checks and
+    // before anything else is started: a stop that begins from here on
+    // requests this very token, whatever the async locks are doing
+    // (ADR-0153). Refused with 503 once a stop has begun, with nothing
+    // started or sent.
+    let stop = state.stop_admission.register_download()?;
+    launch(
+        &state,
+        locks,
+        stop,
+        DeviceStart {
+            id: body.plan_id,
+            target,
+            partial,
+            changes,
+            gateway,
+            authorisation,
+            accept_untested: body.accept_untested.as_deref(),
+            expected: Expected::Shown,
+            batch: None,
+        },
+    )
+    .await?;
+    Ok(Json(StartResponse {
+        download_id: body.plan_id,
+    }))
 }
 
 #[derive(Deserialize)]

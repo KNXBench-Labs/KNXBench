@@ -41,7 +41,9 @@ pub(super) fn gateway(text: &str) -> Result<SocketAddrV4, ApiError> {
 pub(super) fn reserve(state: &SharedState) -> Result<Reservation<'_>, ApiError> {
     let busy = || refuse("gatewayBusy");
     let download = state.device_download.try_lock().map_err(|_| busy())?;
-    if download.as_ref().is_some_and(|s| s.is_running()) {
+    if download.as_ref().is_some_and(|s| s.is_running())
+        || crate::device_download_batch::running(state)
+    {
         return Err(busy());
     }
     let programming = state.address_programming.try_lock().map_err(|_| busy())?;

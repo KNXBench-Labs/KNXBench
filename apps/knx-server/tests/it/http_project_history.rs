@@ -533,20 +533,21 @@ async fn restoring_an_older_version_marks_what_the_device_no_longer_holds_and_sa
     assert!(pending.parameters && pending.group_addresses, "{pending:?}");
     assert!(!pending.address && !pending.application, "{pending:?}");
     assert_eq!(project.installations[0].parameters[0].raw, "1");
-    let log = state.session_log.lock().unwrap();
-    let entry = log
-        .entries()
-        .iter()
-        .find(|entry| entry.source == "ProjectHistory")
-        .expect("the correction is logged");
-    assert!(
-        entry
-            .message
-            .contains("“Witness” (1.1.1) needs programming for parameters and group addresses"),
-        "{}",
-        entry.message
-    );
-    drop(log);
+    {
+        let log = state.session_log.lock().unwrap();
+        let entry = log
+            .entries()
+            .iter()
+            .find(|entry| entry.source == "ProjectHistory")
+            .expect("the correction is logged");
+        assert!(
+            entry
+                .message
+                .contains("“Witness” (1.1.1) needs programming for parameters and group addresses"),
+            "{}",
+            entry.message
+        );
+    }
 
     // Going back to the preserved state restores its value 2, but not its
     // "programmed" flags: the conservative direction (ADR-0173 §6).

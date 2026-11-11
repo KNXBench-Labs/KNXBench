@@ -14,7 +14,7 @@ the former dated sections are in the [archive](history/OPEN_WORK_2026-10-25.md).
 | WP-33 | Record the Hager 0701 download reports (#38) | Parameters-only report recorded as verified 11 Nov; complete and parameters+GA need their report files | [WP-33](open-work/WP-33-hager-0701-download-evidence.md) |
 | WP-34 | One term for writing configuration to a device (#41) | Implemented 11 Nov: German catalogue uses “Programmieren”; rule in GLOSSARY | [WP-34](open-work/WP-34-download-terminology.md) |
 | WP-35 | Footer progress for a running device download (#43) | Open | [WP-35](open-work/WP-35-footer-download-progress.md) |
-| WP-36 | Communication-object view: links first, compact toolbar, direction pre-fill (#44, #46, #47) | #47 implemented 11 Nov (direction from object flags and links); #44/#46 open | [WP-36](open-work/WP-36-communication-object-view-cleanup.md) |
+| WP-36 | Communication-object view: links first, compact toolbar, direction pre-fill (#44, #46, #47) | #47 implemented 11 Nov (first link sends, later links receive); #44/#46 open | [WP-36](open-work/WP-36-communication-object-view-cleanup.md) |
 | WP-37 | Show pending changes across the UI (#40) | Open; per-parameter marking is a later schema package | [WP-37](open-work/WP-37-pending-changes-across-ui.md) |
 | WP-38 | Pending-devices panel and batch download (#42) | Open; batch download needs a design/ADR first | [WP-38](open-work/WP-38-pending-devices-panel.md) |
 | S2-02 | System-2: own-run busy hint and missing refusal reason (#30) | P1: diagnostic shipped in Alpha 17; start failure did not recur on later Alpha 17 builds; optional reporter retest requested 8 Nov; cause unproven | [S2-02](open-work/S2-02-gateway-busy-after-failed-runs.md) |

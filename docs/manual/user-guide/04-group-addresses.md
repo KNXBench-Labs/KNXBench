@@ -273,15 +273,16 @@ in each direction.
 Both link forms pre-fill the direction from the object, never from the address's name
 (since issue #47), and say why under the choice:
 
+- An object's first link gets **Send**: its first group address is its sending one,
+  as in ETS. The object transmits on it and answers reads on it, so this holds for a
+  Write-only actuator object too.
 - An object that already sends on an address gets **Receive**: an object has one
   sending address, and a download refuses a second.
-- Otherwise an object with the Transmit flag but not the Write flag gets **Send**, and
-  one with Write but not Transmit gets **Receive**.
-- Any other object (both flags, neither, or flags not known) keeps **Send**.
+- An object already linked to the chosen address keeps that direction, so the form
+  shows the existing refusal instead of proposing the same object on one address twice.
 
-The suggestion is only a starting value: change it, and your choice holds until the
-link is made. From the group address, a suggestion this address already has is
-replaced by the other direction. [Devices and products](05-devices-and-products.md) covers the
+The flags do not change the suggestion. It is only a starting value: change it, and
+your choice holds until the link is made. [Devices and products](05-devices-and-products.md) covers the
 communication object tab, including the six flags.
 
 > **Note**

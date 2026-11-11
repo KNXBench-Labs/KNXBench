@@ -33,9 +33,11 @@
     "restart": "unconfirmed",
     "stoppedInStep": null
   },
+  "independentPlanCheck": "an offline dry-run partial-parameters plan for this program yields the same 14 steps and 1457 octets, one memory write, nothing left out",
   "postDownloadCheck": {
     "reach": "reached",
     "identity": "match",
+    "identityExemplar": "notVerified",
     "planLoadVerdict": "matchesPlan",
     "loadStates": {
       "addressTable": "loaded",
@@ -46,7 +48,7 @@
   },
   "testerAnswer": {
     "deviceWorksAsConfigured": "Yes, everything I checked works",
-    "checked": "LED deactivation parameter took effect; device otherwise unchanged and working (issue #38 comment of 2026-11-10)"
+    "checked": "a parameters-only run (run 2 or 3 of the issue #38 comment of 2026-11-10; the attachment does not say which, both reported working)"
   },
   "recorded": {
     "verified_downloads.json": [

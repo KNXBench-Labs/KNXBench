@@ -39,7 +39,7 @@ fn file_name(path: &str) -> Option<&str> {
 /// `/home/alice/Downloads/x.knxprod` shows `x.knxprod`, an inner package of a
 /// vendor ZIP shows `vendor.zip!/inner.knxprod`. Local paths never leave the
 /// server through this field.
-fn display_source_name(recorded: &str) -> Option<String> {
+pub(crate) fn display_source_name(recorded: &str) -> Option<String> {
     match recorded.split_once(WRAPPER_SOURCE_SEPARATOR) {
         Some((outer, inner)) => Some(format!(
             "{}{WRAPPER_SOURCE_SEPARATOR}{}",

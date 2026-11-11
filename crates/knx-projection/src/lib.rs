@@ -735,9 +735,9 @@ pub struct DeviceProductNode {
 }
 
 /// What a product database knows about a device's product, hardware and
-/// application program, mirroring `knx_productdb::query::DeviceProductRow`
-/// field-for-field (this crate cannot depend on `knx-productdb` —
-/// `xtask check-layering` — so the shape is duplicated rather than shared).
+/// application program: overview fields plus complete normalized scalar records.
+/// This crate cannot depend on `knx-productdb` (`xtask check-layering`), so the
+/// server maps the read model explicitly without sharing persistence types.
 /// Every field beyond `manufacturer_id` is `Option` because a
 /// partially-installed manufacturer catalogue (a product installed without
 /// its application program, for instance) is real, valid database state,
@@ -745,8 +745,12 @@ pub struct DeviceProductNode {
 #[derive(Debug, Clone, Serialize, TS)]
 #[ts(export)]
 pub struct DeviceProductCatalog {
+    /// Complete normalized scalar records; absent only with an older server.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub details: Option<Vec<ProductDetailSection>>,
     pub manufacturer_id: String,
-    /// `manufacturer.name` from the KNX master data (`knx_master.xml`).
+    /// Resolved display name: real installed name, otherwise unambiguous retained master evidence.
     pub manufacturer_name: Option<String>,
     /// `product.text` — the product's display name.
     pub product_text: Option<String>,
@@ -797,6 +801,23 @@ pub struct DeviceProductCatalog {
     #[serde(skip_serializing_if = "Option::is_none")]
     #[ts(optional)]
     pub application_source_language: Option<String>,
+}
+
+/// One non-NULL scalar column, with its exact database key and literal value.
+#[derive(Debug, Clone, Serialize, TS)]
+#[ts(export)]
+pub struct ProductDetailField {
+    pub key: String,
+    pub value: String,
+}
+
+/// A normalized product record or explicitly file-scoped source diagnostic.
+#[derive(Debug, Clone, Serialize, TS)]
+#[ts(export)]
+pub struct ProductDetailSection {
+    pub kind: String,
+    pub id: String,
+    pub fields: Vec<ProductDetailField>,
 }
 
 /// Why [`DeviceProductNode::catalog`] is what it is.

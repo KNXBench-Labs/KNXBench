@@ -82,6 +82,80 @@ async fn body_json(response: axum::response::Response) -> Value {
 /// must never reach the wire once a real database is loaded and the refs
 /// resolve — the server overlay is obliged to overwrite it.
 #[tokio::test]
+async fn rich_product_metadata_and_retained_master_names_reach_both_http_views() {
+    let dir = tempfile::tempdir().unwrap();
+    let products = knx_productdb::open_and_migrate(&dir.path().join("rich.sqlite")).unwrap();
+    products
+        .execute_batch(include_str!(
+            "../../../../crates/knx-productdb/tests/fixtures/product_details.sql"
+        ))
+        .unwrap();
+    // Generic ingest retains masters without filling manufacturer.name: the real old-DB symptom.
+    knx_productdb::ingest_file(&products, "knx_master.xml", br#"<KNX><MasterData><Manufacturers><Manufacturer Id="M-0083" Name="Fictional Devices"/></Manufacturers></MasterData></KNX>"#).unwrap();
+    let expected: Vec<_> = knx_productdb::query::device_product_details(&products,"P-rich","HP-rich").unwrap().into_iter().map(|s| serde_json::json!({
+        "kind":s.kind,"id":s.id,"fields":s.fields.into_iter().map(|f|serde_json::json!({"key":f.key,"value":f.value})).collect::<Vec<_>>()
+    })).collect();
+    let state = Arc::new(state_with_device(Some(products), "P-rich", "HP-rich"));
+    let before = state.project.lock().unwrap().clone();
+    let app = knx_server::app(state.clone(), None);
+    let response = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .uri("/api/device/1")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::OK);
+    let body = body_json(response).await;
+    assert_eq!(
+        body["product"]["catalog"]["manufacturer_name"],
+        "Fictional Devices"
+    );
+    assert_eq!(
+        body["product"]["catalog"]["details"],
+        serde_json::json!(expected)
+    );
+    assert_eq!(
+        body["product"]["catalog"]["catalog_item_name"], "First placement",
+        "stable legacy overview, every placement remains in details"
+    );
+    let response = app
+        .oneshot(
+            Request::builder()
+                .uri("/api/devices")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::OK);
+    let batch = body_json(response).await;
+    assert_eq!(batch["devices"][0]["manufacturerName"], "Fictional Devices");
+    assert_eq!(batch["devices"][0]["manufacturerId"], "M-0083");
+    assert_eq!(*state.project.lock().unwrap(), before);
+    if let Ok(path) = std::env::var("KNXBENCH_PRODUCT_DETAILS_FIXTURE") {
+        // Opt-in source-bound browser fixture, from the actual HTTP handler, never a mock response.
+        let fixture = format!("/** Captures the fictional product fixture from the HTTP metadata regression. */\nimport type {{ DeviceProductNode }} from \"../../src/bindings/DeviceProductNode\";\nexport const product: DeviceProductNode = {};\n", serde_json::to_string_pretty(&body["product"]).unwrap());
+        std::fs::write(path, fixture).unwrap();
+    } else {
+        let captured = include_str!("../../../knx-web/e2e/fixtures/product-details.ts")
+            .split_once("export const product: DeviceProductNode = ")
+            .unwrap()
+            .1
+            .trim()
+            .trim_end_matches(';');
+        assert_eq!(
+            body["product"],
+            serde_json::from_str::<Value>(captured).unwrap(),
+            "mounted browser fixture must remain exact HTTP output"
+        );
+    }
+}
+
+#[tokio::test]
 async fn device_product_resolution_always_overwrites_the_projections_placeholder() {
     let (_dir, products) = temp_product_db();
     let state = Arc::new(state_with_device(Some(products), "M-1_P-1", "H-1_HP-1"));

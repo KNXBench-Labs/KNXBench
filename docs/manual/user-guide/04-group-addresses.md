@@ -242,7 +242,9 @@ From the device:
 
 1. Select the device.
 2. In the device panel, open the **Communication objects** tab.
-3. Expand the object you want to link.
+3. Expand the object you want to link. Its **Linked group addresses** come first,
+   ending with the link row; the other object settings stay folded (since the source
+   build after Alpha 20, issue #46).
 4. In the link row, type part of a group address, its name or its DPT and pick it
    from the list (↑/↓ and Enter work too), pick **Send** or **Receive**, and click
    **Link**. Each address shows its DPT; one that differs from the object's is marked

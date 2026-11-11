@@ -63,7 +63,7 @@ for (const language of ["en", "de"]) for (const flat of [false, true]) {
     await page.route("**/api/**", route => route.fulfill({ status: 404, body: "{}" }));
     await page.goto(`/e2e/table-columns-fixture.html?lang=${language}&words=1`);
     const table = page.locator('[data-table-id="communication-objects"]');
-    if (flat) await page.getByRole("button", { name: language === "de" ? "Alle Objekte" : "All objects", exact: true }).click();
+    if (flat) await page.getByRole("combobox", { name: language === "de" ? "Objektansicht" : "Object view", exact: true }).selectOption({ label: language === "de" ? "Alle Objekte" : "All objects" });
     else await page.locator(".com-object-channel-summary").click();
     await expect(table.locator(".com-object-effective-dpt > span")).toHaveText(language === "de" ? "Beleuchtungsstärke (9.004)" : "Illuminance (9.004)");
     await wordsIntact(table.locator(".com-object-summary td"));
@@ -263,7 +263,7 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 1920]) 
     const groupedFloors = await defaultFit(page, objects, `${language}-${width}-grouped`);
     await wordsIntact(objects.locator("thead .table-column-label"));
     await wordsIntact(objects.locator(".com-object-summary:not([hidden]) td"));
-    await page.getByRole("button", { name: language === "de" ? "Alle Objekte" : "All objects", exact: true }).click();
+    await page.getByRole("combobox", { name: language === "de" ? "Objektansicht" : "Object view", exact: true }).selectOption({ label: language === "de" ? "Alle Objekte" : "All objects" });
     await defaultFit(page, objects, `${language}-${width}-flat`, language === "de" && width === 1440, groupedFloors);
     await wordsIntact(objects.locator("thead .table-column-label"));
     await wordsIntact(objects.locator(".com-object-summary:not([hidden]) td"));

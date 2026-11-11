@@ -5,7 +5,7 @@ import { writeFileSync } from "node:fs";
 
 import { messages as en } from "../src/messages/en";
 import { messages as de } from "../src/messages/de";
-import { intercept, openList, openProject } from "./communication-fixture";
+import { chooseComView, dismissToasts, intercept, openList, openObjectSettings, openProject } from "./communication-fixture";
 import type { ComObjectProjectFolder } from "../src/bindings/ComObjectProjectFolder";
 import type { ProjectTreeNode } from "../src/bindings/ProjectTreeNode";
 import type { ProductFolderCaption } from "../src/bindings/ProductFolderCaption";
@@ -54,12 +54,13 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) f
     await expect(panel.locator("tr[data-object-id]:visible")).toHaveCount(1);
     await panel.getByRole("button", { name: m["comTable.resetFilters"], exact: true }).click();
     await expect(panel.locator(".com-object-channel-summary").first()).toHaveAttribute("aria-expanded", "false");
-    await panel.getByRole("button", { name: m["comTable.flat"], exact: true }).click();
+    await chooseComView(panel, m, "comTable.flat");
     await expect(panel.locator("thead th")).toHaveCount(7);
     await expect(panel.locator("tr[data-object-id]:visible")).toHaveCount(8);
-    const selectedView = panel.locator('.com-table-views [aria-pressed="true"]');
-    // The shared button background transitions for 120ms; inspect the settled style.
-    const colors = await selectedView.evaluate(async node => {
+    await expect(panel.getByRole("combobox", { name: m["comTable.view"], exact: true })).toHaveValue("flat");
+    // Issue #44: the Options summary replaced the pressed view buttons; it stays readable in every theme.
+    const optionsSummary = panel.locator(".com-table-options > summary");
+    const colors = await optionsSummary.evaluate(async node => {
       await Promise.all(node.getAnimations().map(animation => animation.finished));
       const css = getComputedStyle(node);
       return { color: css.color, background: css.backgroundColor, image: css.backgroundImage };
@@ -90,6 +91,10 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) f
     expect(alignment.every(delta => delta < 1)).toBe(true);
     const editor = panel.locator('[data-object-id="1"] summary');
     await editor.scrollIntoViewIfNeeded(); await editor.focus(); await page.keyboard.press("Enter");
+    // Issue #46: the links come first; the object settings open from their summary by keyboard too.
+    await expect(panel.locator('[data-editor-id="1"] .group-link-list .tree-new-row')).toBeVisible();
+    await expect(panel.locator('[data-editor-id="1"] .dpt-field select')).toBeHidden();
+    await panel.locator('[data-editor-id="1"] .com-object-more > summary').focus(); await page.keyboard.press("Enter");
     await expect(panel.locator('[data-editor-id="1"] .dpt-field select')).toBeVisible();
     const badgeHeight=await panel.locator('[data-editor-id="1"] .provenance-badge').first().evaluate(n=>n.getBoundingClientRect().height);
     expect(badgeHeight, "provenance badges must not stretch to the flag editor height").toBeLessThan(40);
@@ -104,8 +109,8 @@ test("blur saves exactly once and a refused editor survives filtering and view c
   const state = await intercept(page, "en"); await openProject(page, "en"); await openList(page, "en");
   await page.locator(".devices-table tbody td:nth-child(3) button").first().click();
   const panel = page.locator(".com-table-panel");
-  await panel.getByRole("button", { name: en["comTable.flat"], exact: true }).click();
-  await panel.locator('[data-object-id="1"] summary').click();
+  await chooseComView(panel, en, "comTable.flat");
+  await panel.locator('[data-object-id="1"] summary').click(); await openObjectSettings(panel, 1);
   const editor = panel.locator('[data-editor-id="1"] .dpt-field select');
   const before = JSON.stringify(state.tree); state.refuseDpt = true;
   await editor.focus(); await editor.selectOption("DPST-9-2");
@@ -113,7 +118,7 @@ test("blur saves exactly once and a refused editor survives filtering and view c
   await panel.getByRole("searchbox").fill("Object 2");
   await expect(panel.locator('[data-editor-id="1"] .field-error')).toHaveText("Fictional refusal");
   await expect(panel.locator('[data-object-id="1"]')).toContainText(en["comTable.editException"]);
-  await panel.getByRole("button", { name: en["comTable.grouped"], exact: true }).click();
+  await chooseComView(panel, en, "comTable.grouped");
   await expect(panel.locator('[data-editor-id="1"] .field-error')).toBeVisible();
   expect(state.requests.filter(r => r === "POST /api/com-object-dpt")).toHaveLength(1);
   expect(JSON.stringify(state.tree)).toBe(before); expect(state.unexpected).toEqual([]);
@@ -123,7 +128,7 @@ test("committed DPT re-evaluates the filter without losing the editing exception
   await page.locator(".devices-table tbody td:nth-child(3) button").first().click();
   const panel = page.locator(".com-table-panel");
   await panel.getByRole("combobox", { name: en["comTable.dptFilter"] }).selectOption("family:1");
-  await panel.locator('[data-object-id="1"] summary').click();
+  await panel.locator('[data-object-id="1"] summary').click(); await openObjectSettings(panel, 1);
   const editor = panel.locator('[data-editor-id="1"] .dpt-field select');
   await editor.focus(); await editor.selectOption("DPST-5-1"); await editor.press("Tab");
   await expect(panel.locator('[data-object-id="1"]')).toContainText(en["comTable.editException"]);
@@ -139,7 +144,7 @@ test("production synthetic 1000-object device records visible-operation timings"
   await expect(page.locator(".com-table-count")).toHaveText("1000 / 1000 objects");
   const renderMs = performance.now() - start;
   const panel = page.locator(".com-table-panel");
-  start = performance.now(); await panel.getByRole("button", { name: en["comTable.flat"], exact: true }).click();
+  start = performance.now(); await chooseComView(panel, en, "comTable.flat");
   await expect(panel.locator("tr[data-object-id]:visible")).toHaveCount(1000); const flatMs = performance.now() - start;
   start = performance.now(); await panel.getByRole("searchbox").fill("Object 1000");
   await expect(panel.locator("tr[data-object-id]:visible")).toHaveCount(1); const filterMs = performance.now() - start;
@@ -165,7 +170,7 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
     await header.click(); await expect(header).toHaveAttribute("aria-expanded", "true");
     const total = await siblings.count();
     expect(total, "the channel holds the opened object").toBeGreaterThan(0);
-    await panel.locator('[data-object-id="1"] summary').click();
+    await panel.locator('[data-object-id="1"] summary').click(); await openObjectSettings(panel, 1);
     const editor = panel.locator('[data-editor-id="1"] .dpt-field select');
     await expect(editor).toBeVisible();
     await editor.focus(); await editor.selectOption("DPST-9-2");
@@ -211,7 +216,7 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
     await expect(filled).toHaveText(`Page 1 - ${heading}`);
     await expect(filled).toHaveAttribute("data-text-fill", "StoredValue");
     if (process.env.KNX_CO_CAPTURE_DIR) await page.screenshot({ path: join(process.env.KNX_CO_CAPTURE_DIR, `co-text-fill-${language}-${width}-grouped.png`) });
-    await panel.getByRole("button", { name: m["comTable.flat"], exact: true }).click();
+    await chooseComView(panel, m, "comTable.flat");
     const unfilled = panel.locator('tr[data-object-id="5"] .com-object-name');
     await expect(unfilled).toHaveText("Dim {{0}}");
     await expect(unfilled).toHaveAttribute("title", new RegExp(m["comTable.textFill.NoReference"].replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
@@ -237,7 +242,7 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
     await page.locator(".devices-table tbody td:nth-child(3) button").first().click();
     const panel = page.locator(".com-table-panel");
     const requestStart = state.requests.length;
-    await panel.getByRole("button", { name: m["comTable.flat"], exact: true }).click();
+    await chooseComView(panel, m, "comTable.flat");
     const note = (id: number) => panel.locator(`tr[data-object-id="${id}"] .com-object-project-folder`);
     await expect(note(1)).toHaveText(m["comTable.projectFolder"].replace("{value}", "PB-3"));
     await expect(note(1)).toHaveAttribute("title", m["comTable.projectFolderTitle"].replace("{value}", "CH-1 › PB-3"));
@@ -274,12 +279,10 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
     await page.locator(".devices-table tbody td:nth-child(3) button").first().click();
     const panel = page.locator(".com-table-panel");
     const before = JSON.stringify(state.tree), requestStart = state.requests.length;
-    const views = panel.locator(".com-table-views button");
+    const views = panel.getByRole("combobox", { name: m["comTable.view"], exact: true }).locator("option");
     await expect(views).toHaveText([m["comTable.grouped"], m["comTable.byFolder"], m["comTable.flat"]]);
-    await panel.getByRole("button", { name: m["comTable.byFolder"], exact: true }).click();
-    await expect(views.nth(0)).toHaveAttribute("aria-pressed", "false");
-    await expect(views.nth(1)).toHaveAttribute("aria-pressed", "true");
-    await expect(views.nth(2)).toHaveAttribute("aria-pressed", "false");
+    await chooseComView(panel, m, "comTable.byFolder");
+    await expect(panel.getByRole("combobox", { name: m["comTable.view"], exact: true })).toHaveValue("folder");
     await expect(panel.locator("thead th")).toHaveCount(6);
     await expect(panel.locator(".com-folder-view-note")).toHaveText(m["comTable.folderViewNote"]);
     const headers = panel.locator("tr.com-object-channel");
@@ -315,7 +318,7 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
     await expect(header(F2)).toHaveAttribute("aria-expanded", "false");
     await expect(header("folder-none")).toHaveAttribute("aria-expanded", "false");
     // The channel view keeps its own collapse state.
-    await panel.getByRole("button", { name: m["comTable.grouped"], exact: true }).click();
+    await chooseComView(panel, m, "comTable.grouped");
     await expect(panel.locator(".com-object-channel-summary").first()).toHaveAttribute("aria-expanded", "false");
     await expect(panel.locator(".com-folder-view-note")).toHaveCount(0);
     expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1);
@@ -328,8 +331,8 @@ test("a refused editor survives switching through the folder view with exactly o
   const state = await intercept(page, "en"); await openProject(page, "en"); await openList(page, "en");
   await page.locator(".devices-table tbody td:nth-child(3) button").first().click();
   const panel = page.locator(".com-table-panel");
-  await panel.getByRole("button", { name: en["comTable.flat"], exact: true }).click();
-  await panel.locator('[data-object-id="1"] summary').click();
+  await chooseComView(panel, en, "comTable.flat");
+  await panel.locator('[data-object-id="1"] summary').click(); await openObjectSettings(panel, 1);
   const editor = panel.locator('[data-editor-id="1"] .dpt-field select');
   const before = JSON.stringify(state.tree); state.refuseDpt = true;
   await editor.focus(); await editor.selectOption("DPST-9-2");
@@ -338,7 +341,7 @@ test("a refused editor survives switching through the folder view with exactly o
   await panel.getByRole("searchbox").fill("Object 2");
   await expect(panel.locator('[data-editor-id="1"] .field-error')).toHaveText("Fictional refusal");
   for (const view of ["comTable.byFolder", "comTable.grouped", "comTable.byFolder"] as const) {
-    await panel.getByRole("button", { name: en[view], exact: true }).click();
+    await chooseComView(panel, en, view);
     await expect(panel.locator('[data-editor-id="1"] .field-error')).toHaveText("Fictional refusal");
     expect(await editor.evaluate((node, kept) => node === kept, handle), "the same editor stays mounted").toBe(true);
   }
@@ -373,7 +376,7 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
     const before = JSON.stringify({ tree: state.tree, objects: state.objects }), requestStart = state.requests.length;
     const header = (key: string) => panel.locator(`tr.com-object-channel[data-group-key="${key}"] .com-object-channel-summary`);
     const search = panel.getByRole("searchbox", { name: m["comTable.search"] });
-    await panel.getByRole("button", { name: m["comTable.byFolder"], exact: true }).click();
+    await chooseComView(panel, m, "comTable.byFolder");
     expect(await panel.locator("tr.com-object-channel").evaluateAll(rows => rows.map(r => r.getAttribute("data-group-key"))))
       .toEqual([F1, F2, "folder:Folder:4:PB-4", "folder:Folder:4:PB-5", "folder:Folder:4:PB-6", "folder-none"]);
     for (const [key, channel] of [[F1, "CH-1"], [F2, "CH-2"]]) {
@@ -405,7 +408,7 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
     await panel.getByRole("button", { name: m["comTable.resetFilters"], exact: true }).click();
     await expect(header(F1)).toHaveAttribute("aria-expanded", "true");
     await expect(header(F2)).toHaveAttribute("aria-expanded", "false");
-    await panel.getByRole("button", { name: m["comTable.flat"], exact: true }).click();
+    await chooseComView(panel, m, "comTable.flat");
     await expect(panel.locator("thead th")).toHaveCount(7);
     await expect(panel.locator('tr[data-object-id="7"] .com-object-project-folder')).toHaveText(m["comTable.projectFolderRefused.ModuleObject"]);
     await expect(panel.locator('tr[data-object-id="8"] .com-object-project-folder')).toHaveCount(0);
@@ -464,7 +467,7 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
     const header = (key: string) => panel.locator(`tr.com-object-channel[data-group-key="${key}"] .com-object-channel-summary`);
     const row = (id: number) => panel.locator(`tr.com-object-summary[data-object-id="${id}"]`);
     const search = panel.getByRole("searchbox", { name: m["comTable.search"] });
-    await panel.getByRole("button", { name: m["comTable.byFolder"], exact: true }).click();
+    await chooseComView(panel, m, "comTable.byFolder");
     expect(await panel.locator("tr.com-object-channel").evaluateAll(rows => rows.map(node => node.getAttribute("data-group-key"))))
       .toEqual([F1, F2, "folder:saved", "folder:empty", "folder:space", "folder:legacy", "folder:future", "folder:malformed", "folder-none"]);
     for (const [key, channel] of [[F1, "CH-1"], [F2, "CH-2"]]) {
@@ -501,7 +504,7 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
     await panel.getByRole("button", { name: m["comTable.resetFilters"], exact: true }).click();
     await expect(header(F1)).toHaveAttribute("aria-expanded", "true");
     await expect(header(F2)).toHaveAttribute("aria-expanded", "false");
-    await panel.getByRole("button", { name: m["comTable.flat"], exact: true }).click();
+    await chooseComView(panel, m, "comTable.flat");
     await expect(row(2).locator("[data-folder-caption-source]")).toBeVisible();
     await expect(row(2).locator(".com-object-folder-path")).toHaveText(m["comTable.folderPath"].replace("{value}", "CH-2 › PB-3"));
     await expect(row(8).locator(".com-object-project-folder")).toHaveText(m["comTable.projectFolderRefused.ModuleObject"]);
@@ -535,12 +538,18 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
     await expect(panel.locator("thead th")).toHaveCount(6);
     await expect(panel.getByRole("combobox", { name: m["comTable.priorityFilter"] })).toHaveCount(0);
     const before = JSON.stringify(state.tree), requestStart = state.requests.length;
-    const toggle = panel.getByRole("button", { name: m["comTable.priorityColumn"], exact: true });
-    await expect(toggle).toHaveAttribute("aria-pressed", "false");
-    await toggle.click();
-    await expect(toggle).toHaveAttribute("aria-pressed", "true");
+    // Issue #44: the toggle is a checkbox in the Options menu.
+    const options = panel.locator("details.com-table-options");
+    const toggle = options.getByRole("checkbox", { name: m["comTable.priorityColumn"], exact: true });
+    await expect(toggle).toBeHidden();
+    await options.locator(":scope > summary").click();
+    await expect(toggle).not.toBeChecked();
+    await toggle.check();
+    await expect(toggle).toBeChecked();
+    await page.keyboard.press("Escape");
+    await expect(options).not.toHaveAttribute("open", /.*/);
     await expect(panel.locator('th[data-column="priority"]')).toContainText(m["comTable.priority"]);
-    await panel.getByRole("button", { name: m["comTable.flat"], exact: true }).click();
+    await chooseComView(panel, m, "comTable.flat");
     await expect(panel.locator("thead th")).toHaveCount(8);
     const cell = (id: number) => panel.locator(`tr[data-object-id="${id}"] .com-object-priority`);
     await expect(cell(1)).toHaveAttribute("data-priority", "Alert");
@@ -562,13 +571,128 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
     expect(alignment.every(delta => delta < 1)).toBe(true);
     expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1);
     if (process.env.KNX_CO_CAPTURE_DIR) await page.screenshot({ path: join(process.env.KNX_CO_CAPTURE_DIR, `co-priority-${language}-${width}.png`) });
-    await toggle.click();
+    await options.locator(":scope > summary").click();
+    await toggle.uncheck();
     await expect(panel.locator("thead th")).toHaveCount(7);
     await expect(panel.locator("tr[data-object-id]:visible")).toHaveCount(8);
     // Only the view preference was written; the project is untouched.
     expect(state.settings.comTablePriorityColumn).toBe(false);
     expect(state.requests.slice(requestStart).filter(r => !r.startsWith("GET ") && r !== "POST /api/achievements/record")).toEqual(["PUT /api/settings", "PUT /api/settings"]);
     expect(JSON.stringify(state.tree)).toBe(before);
+    expect(state.unexpected).toEqual([]);
+  });
+}
+
+// Issues #44/#46: an opened object shows its links without opening anything else,
+// its other settings wait behind a closed disclosure, and the toolbar (one view
+// select, Reset filters, a small Options menu) wraps without overflowing.
+for (const language of ["en", "de"] as const) for (const width of [1440, 400]) for (const theme of ["porcelain", "graphite", "lcars"]) {
+  test(`${language} ${theme} ${width}px: an object editor shows its links first and the compact toolbar fits`, async ({ page }) => {
+    const m = language === "en" ? en : de;
+    await page.setViewportSize({ width, height: 900 });
+    const state = await intercept(page, language, 8, theme);
+    state.objects[0] = { ...state.objects[0], links: [{ ga_id: 500, address: "1/1/1", name: "Kitchen light", direction: "Send" }] };
+    await openProject(page, language);
+    // Transient toasts may cover any content; the menu checks below need it uncovered.
+    await dismissToasts(page, language);
+    await openList(page, language);
+    await page.locator(".devices-table tbody td:nth-child(3) button").first().click();
+    const panel = page.locator(".com-table-panel");
+    await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
+    const before = JSON.stringify(state.tree), requestStart = state.requests.length;
+    const toolbar = panel.locator(".com-table-toolbar");
+    // Search, the filters, the view and Reset filters stay directly reachable.
+    await expect(toolbar.getByRole("searchbox", { name: m["comTable.search"] })).toBeVisible();
+    for (const key of ["comTable.statusFilter", "comTable.linkFilter", "comTable.dptFilter", "comTable.view"] as const)
+      await expect(toolbar.getByRole("combobox", { name: m[key], exact: true })).toBeVisible();
+    await expect(toolbar.locator(":scope > button")).toHaveText([m["comTable.resetFilters"]]);
+    await expect(toolbar.locator("[aria-pressed]")).toHaveCount(0);
+    const fit = async () => toolbar.evaluate(node => {
+      const box = node.getBoundingClientRect();
+      const outside = [...node.children].map(child => child.getBoundingClientRect())
+        .filter(r => r.left < box.left - 1 || r.right > box.right + 1).length;
+      return { overflow: node.scrollWidth - node.clientWidth, outside, page: document.documentElement.scrollWidth - innerWidth };
+    });
+    const first = await fit();
+    expect(first.overflow, "toolbar scrolls sideways").toBeLessThanOrEqual(1);
+    expect(first.outside, "toolbar children outside its box").toBe(0);
+    expect(first.page).toBeLessThanOrEqual(1);
+    // The Options menu: original order and the priority column, reachable by keyboard, closed by Escape.
+    const options = toolbar.locator("details.com-table-options");
+    const summary = options.locator(":scope > summary");
+    await expect(summary).toHaveText(m["comTable.options"]);
+    await expect(options.getByRole("button", { name: m["comTable.originalOrder"], exact: true })).toBeHidden();
+    await summary.focus(); await page.keyboard.press("Enter");
+    await expect(options).toHaveAttribute("open", "");
+    const original = options.getByRole("button", { name: m["comTable.originalOrder"], exact: true });
+    const priority = options.getByRole("checkbox", { name: m["comTable.priorityColumn"], exact: true });
+    await expect(original).toBeVisible(); await expect(priority).toBeVisible();
+    for (const entry of [original, priority]) {
+      await entry.scrollIntoViewIfNeeded();
+      const placed = await entry.evaluate(node => {
+        const r = node.getBoundingClientRect(), hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+        const onTop = !!hit && (hit === node || node.contains(hit) || hit.contains(node) || node.closest("label")?.contains(hit) === true);
+        const chain: string[] = [];
+        for (let at = hit; at && chain.length < 6; at = at.parentElement) {
+          const css = getComputedStyle(at);
+          chain.push(`${at.tagName}.${at.className} ${css.position}/${css.zIndex}`);
+        }
+        return { inside: r.left >= 0 && r.right <= innerWidth && r.top >= 0 && r.bottom <= innerHeight, onTop, chain: onTop ? [] : chain };
+      });
+      expect(placed, "menu entry lies in the viewport and on top").toEqual({ inside: true, onTop: true, chain: [] });
+    }
+    if (process.env.KNX_CO_CAPTURE_DIR && theme === "graphite") {
+      await summary.scrollIntoViewIfNeeded();
+      await page.screenshot({ path: join(process.env.KNX_CO_CAPTURE_DIR, `co-toolbar-options-${language}-${width}.png`) });
+    }
+    await page.keyboard.press("Tab"); await page.keyboard.press("Tab");
+    await expect(priority).toBeFocused();
+    await page.keyboard.press("Escape");
+    await expect(options).not.toHaveAttribute("open", /.*/);
+    await expect(summary).toBeFocused();
+    expect((await fit()).page).toBeLessThanOrEqual(1);
+    // The editor: links first and visible, the settings closed until opened.
+    await chooseComView(panel, m, "comTable.flat");
+    await panel.locator('[data-object-id="1"] summary').click();
+    const editor = panel.locator('[data-editor-id="1"] .com-object-edit-fields');
+    await expect(editor.locator(".com-object-links-heading")).toHaveText(m["inspector.linkedGroupAddresses"]);
+    await expect(editor.getByRole("list", { name: m["inspector.linkedGroupAddresses"] })).toBeVisible();
+    await expect(editor.locator(".group-link-row")).toContainText("1/1/1");
+    await expect(editor.locator(".group-link-row").getByRole("button", { name: m["inspector.unlink"], exact: true })).toBeVisible();
+    const linkRow = editor.locator(".group-link-list .tree-new-row");
+    await expect(linkRow.getByRole("combobox").first()).toBeVisible();
+    await expect(linkRow.getByRole("button", { name: m["inspector.link"], exact: true })).toBeVisible();
+    const more = editor.locator("details.com-object-more");
+    await expect(more).not.toHaveAttribute("open", /.*/);
+    await expect(more.locator(".com-object-more-label")).toHaveText(m["inspector.objectSettings"]);
+    for (const hidden of [".dpt-field select", ".com-object-flags", ".com-object-effective-priority"]) await expect(editor.locator(hidden)).toBeHidden();
+    const layout = await editor.evaluate(node => {
+      const box = (selector: string) => node.querySelector(selector)!.getBoundingClientRect();
+      const row = node.querySelector(".group-link-list .tree-new-row")!;
+      const parts = [row.querySelector(".ga-picker > input")!, row.querySelector(":scope > select")!, row.querySelector(":scope > button")!]
+        .map(n => n.getBoundingClientRect());
+      return { order: box(".group-link-list").bottom <= box("details.com-object-more").top + 1,
+        oneLine: parts.every(r => Math.abs(r.top - parts[0].top) < 6), overflow: node.scrollWidth - node.clientWidth };
+    });
+    expect(layout.order, "links above the settings").toBe(true);
+    if (width === 1440) expect(layout.oneLine, "picker, direction and Link share a line").toBe(true);
+    expect(layout.overflow).toBeLessThanOrEqual(1);
+    if (process.env.KNX_CO_CAPTURE_DIR && theme === "graphite") {
+      await editor.scrollIntoViewIfNeeded();
+      await page.screenshot({ path: join(process.env.KNX_CO_CAPTURE_DIR, `co-editor-links-${language}-${width}.png`) });
+    }
+    await openObjectSettings(panel, 1);
+    await expect(editor.locator(".dpt-field select")).toBeVisible();
+    await expect(editor.locator(".com-object-flags")).toBeVisible();
+    expect(await editor.evaluate(node => node.scrollWidth - node.clientWidth)).toBeLessThanOrEqual(1);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1);
+    if (process.env.KNX_CO_CAPTURE_DIR && theme === "graphite") {
+      await editor.locator("details.com-object-more > summary").scrollIntoViewIfNeeded();
+      await page.screenshot({ path: join(process.env.KNX_CO_CAPTURE_DIR, `co-editor-settings-${language}-${width}.png`) });
+    }
+    // Looking, opening and closing write nothing to the project.
+    expect(JSON.stringify(state.tree)).toBe(before);
+    expect(state.requests.slice(requestStart).filter(r => !r.startsWith("GET ") && r !== "POST /api/achievements/record")).toEqual([]);
     expect(state.unexpected).toEqual([]);
   });
 }

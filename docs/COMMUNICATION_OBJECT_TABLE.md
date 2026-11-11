@@ -83,6 +83,18 @@ visually hidden spoken label. Editing stays in the
 object editor ([priority-edit contract](contracts/object-priority-edit.md)); the
 value is a project value, not read from the device.
 
+**Compact toolbar and links-first editor (11 November 2026, issues #44 and
+#46):** the three view buttons became one labelled *Object view* select over the
+same `channel`/`folder`/`flat` view state. *Original order* and the *Priority
+column* toggle (now a checkbox over the same `comTablePriorityColumn` setting)
+moved into a native `<details>` *Options* menu that Escape and an outside press
+close; search, the filters and *Reset filters* stay in the toolbar. An expanded
+object's editor lists its linked group addresses and the new-link row first; DPT,
+function, description, flags and priorities follow in a native *Object settings*
+`<details>`, closed by default. Its subtree stays mounted when closed, so drafts
+survive, and it reopens itself while a mutation of the same editor is pending.
+Field behaviour, validation and mutation paths are unchanged.
+
 ## Sorting and filters
 
 Original order is the default and a separate reset. Column clicks select ascending

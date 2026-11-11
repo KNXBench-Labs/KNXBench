@@ -1,6 +1,6 @@
 /** Devices navigation browser contracts with strictly intercepted, fictional API data. */
 import type { LineScanResultsResponse } from "../src/api";
-import { expect, type Page } from "@playwright/test";
+import { expect, type Locator, type Page } from "@playwright/test";
 import type { ProjectTree } from "../src/bindings/ProjectTree";
 import type { DeviceNode } from "../src/bindings/DeviceNode";
 import { messages as en } from "../src/messages/en";
@@ -142,4 +142,19 @@ function makeObjects(count: number): ComObjectNode[] {
     channel: index % 4 === 0 ? { key: `channel-${index % 5}`, order: index % 5, kind: "Channel", text: `Lighting ${index % 5}`, name: `Raw ${index % 5}`, number: "A/05" } : null,
     links: index % 2 === 0 ? [{ ga_id: 500, address: "1/1/1", name: "Kitchen light", direction: "Send" }] : [],
   }));
+}
+
+/** Issue #44: the communication table's view is one labelled select; choose a view by its option text. */
+export async function chooseComView(panel: Locator, m: { readonly [K in keyof typeof en]: string }, key: "comTable.flat" | "comTable.grouped" | "comTable.byFolder") {
+  const view = panel.getByRole("combobox", { name: m["comTable.view"], exact: true });
+  await view.selectOption({ label: m[key] });
+  await expect(view.locator("option:checked")).toHaveText(m[key]);
+}
+
+/** Issue #46: an object's DPT, description, flags and priority sit behind its closed "Object settings". */
+export async function openObjectSettings(panel: Locator, id: number) {
+  const more = panel.locator(`[data-editor-id="${id}"] details.com-object-more`);
+  await expect(more).not.toHaveAttribute("open", /.*/);
+  await more.locator(":scope > summary").click();
+  await expect(more).toHaveAttribute("open", "");
 }

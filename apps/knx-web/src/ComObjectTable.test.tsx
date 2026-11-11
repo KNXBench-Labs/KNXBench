@@ -38,14 +38,21 @@ async function render(objects: ComObjectNode[]) {
     Object.getOwnPropertyDescriptor(el instanceof HTMLSelectElement ? HTMLSelectElement.prototype : HTMLInputElement.prototype, "value")!.set!.call(el, value);
     el.dispatchEvent(new Event(el instanceof HTMLSelectElement ? "change" : "input", { bubbles: true }));
   }); };
-  return { host, button, input, set, applied, rerender,
+  // Issue #44: the view is one select; a view is chosen by its visible option text.
+  const viewSelect = () => host.querySelector<HTMLSelectElement>("select.com-table-view")!;
+  const view = async (name: string) => {
+    const option = [...viewSelect().options].find(o => o.textContent === name);
+    expect(option, `view option ${name}`).toBeDefined();
+    await set(viewSelect(), option!.value);
+  };
+  return { host, button, input, set, applied, rerender, view, viewSelect,
     click: async (el: HTMLElement) => { await act(async () => el.click()); },
     cleanup: async () => { await act(async () => root.unmount()); host.remove(); } };
 }
 it("renders explicit headings and switches to a sortable flat table without writes", async () => {
   const v = await render([object(10), object(2)]);
   expect([...v.host.querySelectorAll("thead th")].map(n => n.textContent)).toEqual(["No.", "Name", "Function", "DPT", "Group addresses", "Status"]);
-  await v.click(v.button("All objects"));
+  await v.view("All objects");
   expect(v.host.querySelector("thead")?.textContent).toContain("Channel");
   await v.click(v.host.querySelector<HTMLButtonElement>('th[data-column="number"] button')!);
   expect([...v.host.querySelectorAll("tr[data-object-id]")].map(n => n.getAttribute("data-object-id"))).toEqual(["2", "10"]);
@@ -69,14 +76,14 @@ it("reveals filtered channels and restores the unfiltered collapse state", async
 });
 it("preserves the same open editor DOM across filtering, views, sorting and channel changes", async () => {
   const v = await render([object(1, { dpt: "DPST-1-1" }), object(2)]);
-  await v.click(v.button("All objects"));
+  await v.view("All objects");
   await v.click(v.host.querySelector<HTMLDetailsElement>('[data-object-id="1"] summary')!);
   const editor = v.host.querySelector<HTMLSelectElement>('.dpt-field select')!;
   await v.set(editor, "DPST-9-2");
   await v.set(v.input("Search communication objects"), "Object 2");
   expect(v.host.textContent).toContain("Editing — outside filter");
   expect(v.host.querySelector(".com-table-count")?.textContent).toBe("1 / 2 objects");
-  await v.click(v.button("By channel"));
+  await v.view("By channel");
   const c = { key: "opaque", kind: "Channel" as const, text: "Moved", name: null, number: null, order: 0 };
   await v.rerender([object(1, { dpt: "DPST-1-1", activation: "Active", channel: c }), object(2)]);
   expect(v.host.querySelector('.dpt-field select')).toBe(editor);
@@ -86,7 +93,7 @@ it("preserves the same open editor DOM across filtering, views, sorting and chan
 });
 it("keeps a dirty DPT draft when a refreshed committed DPT changes", async () => {
   const v = await render([object(1, { dpt: "DPST-1-1" })]);
-  await v.click(v.button("All objects")); await v.click(v.host.querySelector<HTMLElement>(".com-object-detail summary")!);
+  await v.view("All objects"); await v.click(v.host.querySelector<HTMLElement>(".com-object-detail summary")!);
   const input = v.host.querySelector<HTMLSelectElement>('.dpt-field select')!;
   await v.set(input, "DPST-9-2"); await v.rerender([object(1, { dpt: "DPST-5-1" })]);
   expect(input.value).toBe("DPST-9-2"); await v.cleanup();
@@ -94,7 +101,7 @@ it("keeps a dirty DPT draft when a refreshed committed DPT changes", async () =>
 it("invalidates a removed object instead of publishing its delayed result", async () => {
   let resolve!: (t: ProjectTree) => void;
   api.setComObjectDpt.mockImplementationOnce(() => new Promise(r => { resolve = r; }));
-  const v = await render([object(1)]); await v.click(v.button("All objects"));
+  const v = await render([object(1)]); await v.view("All objects");
   await v.click(v.host.querySelector<HTMLElement>(".com-object-detail summary")!);
   const input = v.host.querySelector<HTMLSelectElement>('.dpt-field select')!;
   await v.set(input, "DPST-1-1"); await act(async () => input.dispatchEvent(new FocusEvent("focusout", { bubbles: true })));
@@ -106,7 +113,7 @@ it("invalidates a removed object instead of publishing its delayed result", asyn
 it("keeps pending/refused edits visible and blocks duplicate requests through presentation changes", async () => {
   let reject!: (e: Error) => void;
   api.setComObjectDpt.mockImplementationOnce(() => new Promise((_resolve, r) => { reject = r; }));
-  const v = await render([object(1)]); await v.click(v.button("All objects"));
+  const v = await render([object(1)]); await v.view("All objects");
   await v.click(v.host.querySelector<HTMLElement>('[data-object-id="1"] summary')!);
   const editor = v.host.querySelector<HTMLSelectElement>('.dpt-field select')!;
   await v.set(editor, "DPST-9-2");
@@ -121,7 +128,7 @@ it("keeps pending/refused edits visible and blocks duplicate requests through pr
 it("drops delayed editor results after switching device", async () => {
   let resolve!: (t: ProjectTree) => void;
   api.setComObjectDpt.mockImplementationOnce(() => new Promise(r => { resolve = r; }));
-  const v = await render([object(1)]); await v.click(v.button("All objects"));
+  const v = await render([object(1)]); await v.view("All objects");
   await v.click(v.host.querySelector<HTMLElement>('[data-object-id="1"] summary')!);
   const editor = v.host.querySelector<HTMLSelectElement>('.dpt-field select')!;
   await v.set(editor, "DPST-1-1"); await act(async () => editor.dispatchEvent(new FocusEvent("focusout", { bubbles: true })));
@@ -253,10 +260,9 @@ const pb3 = (ch: string): Folder => ({ status: "Assigned", key: `Channel:4:${ch}
   path: [{ kind: "Channel", ref_id: ch }, { kind: "Folder", ref_id: "PB-3" }] });
 const VIEWS = ["By channel", "By saved project folder", "All objects"];
 async function show(v: Awaited<ReturnType<typeof render>>, name: string) {
-  const button = v.button(name);
-  expect(button, `view button ${name}`).toBeDefined();
-  await v.click(button);
+  await v.view(name);
 }
+const shownView = (v: Awaited<ReturnType<typeof render>>) => [...v.viewSelect().options].find(o => o.value === v.viewSelect().value)?.textContent;
 const groupHeader = (host: HTMLElement, key: string) => host.querySelector<HTMLTableRowElement>(`tr.com-object-channel[data-group-key="${key}"]`);
 const groupButton = (host: HTMLElement, key: string) => groupHeader(host, key)?.querySelector<HTMLButtonElement>(".com-object-channel-summary") ?? null;
 const F1 = "folder:Channel:4:CH-1/Folder:4:PB-3", F2 = "folder:Channel:4:CH-2/Folder:4:PB-3";
@@ -265,13 +271,15 @@ it("WP-06 folder view: three exclusive views, six columns, disambiguated heading
   const v = await render([object(1, { activation: "Active", channel: c, project_folder: pb3("CH-1") }),
     object(2, { project_folder: pb3("CH-2") }), object(3, { project_folder: { status: "ModuleObject", key: null, path: [] } }), object(4)]);
   // Channel view: unchanged default, its headers name their group key too.
-  expect(VIEWS.map(name => v.button(name)?.getAttribute("aria-pressed"))).toEqual(["true", "false", "false"]);
+  expect([...v.viewSelect().options].map(o => o.textContent)).toEqual(VIEWS);
+  expect(VIEWS.map(name => v.button(name))).toEqual([undefined, undefined, undefined]);
+  expect(shownView(v)).toBe("By channel");
   expect([...v.host.querySelectorAll<HTMLElement>("tr.com-object-channel")].map(r => [r.dataset.groupKey, r.dataset.channelKey]))
     .toEqual([["channel:c-1", "channel:c-1"], ["unassigned", "unassigned"]]);
   expect(summaryRow(v.host, 1).dataset.groupKey).toBe("channel:c-1");
   expect(v.host.querySelector(".com-folder-view-note")).toBeNull();
   await show(v, "By saved project folder");
-  expect(VIEWS.map(name => v.button(name)?.getAttribute("aria-pressed"))).toEqual(["false", "true", "false"]);
+  expect(shownView(v)).toBe("By saved project folder");
   expect([...v.host.querySelectorAll("thead th")].map(n => n.textContent)).toEqual(["No.", "Name", "Function", "DPT", "Group addresses", "Status"]);
   const headers = [...v.host.querySelectorAll<HTMLElement>("tr.com-object-channel")];
   expect(headers.map(r => r.dataset.groupKey)).toEqual([F1, F2, "folder-none"]);
@@ -289,7 +297,7 @@ it("WP-06 folder view: three exclusive views, six columns, disambiguated heading
   expect(v.host.querySelector(".com-folder-view-note")?.textContent).toBe(
     "Folders as saved in the project at import; later parameter changes are not reflected. Product declarations label saved folders only; they do not establish current placement or activation.");
   await show(v, "All objects");
-  expect(VIEWS.map(name => v.button(name)?.getAttribute("aria-pressed"))).toEqual(["false", "false", "true"]);
+  expect(shownView(v)).toBe("All objects");
   expect(v.host.querySelectorAll("tr.com-object-channel")).toHaveLength(0);
   expect(summaryRow(v.host, 1).hasAttribute("data-group-key")).toBe(false);
   expect(v.host.querySelector(".com-folder-view-note")).toBeNull();
@@ -392,7 +400,7 @@ tableColumnSmoke([["communication-objects", 6]], async () => {
 });
 
 tableColumnSmoke([["communication-objects", 7]], async () => {
-  const v = await render([object(1)]); await v.click(v.button("All objects")); return v;
+  const v = await render([object(1)]); await v.view("All objects"); return v;
 });
 
 it.each(["By channel", "All objects"])("%s measures its DPT fit floor while preserving the stored minimum and rendered delta", async view => {
@@ -406,7 +414,7 @@ it.each(["By channel", "All objects"])("%s measures its DPT fit floor while pres
   });
   const v = await render([object(1, { program_dpt: "DPST-9-1", dpt_text: "Windgeschwindigkeit" })]);
   try {
-    await v.click(v.button(view));
+    await v.view(view);
     const dptColumn = () => v.host.querySelector<HTMLTableColElement>("colgroup col:nth-child(4)")!;
     const dptHandle = v.host.querySelector<HTMLElement>('th[data-column="dpt"] [role="separator"]')!;
     expect(parseFloat(dptColumn().style.width)).toBe(190);
@@ -604,7 +612,12 @@ it("WP-06 folder currency: the device-level notice follows the server and only a
   // No saved folder shown in the default view: no notice there; the folder view still shows it.
   await show([object(1), object(2)], { status: "changedSinceImport" });
   expect(notice()).toBeNull();
-  await act(async () => [...host.querySelectorAll<HTMLButtonElement>("button")].find(b => b.textContent === "By saved project folder")!.click());
+  await act(async () => {
+    const select = host.querySelector<HTMLSelectElement>("select.com-table-view")!;
+    Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value")!.set!.call(select, "folder");
+    select.dispatchEvent(new Event("change", { bubbles: true }));
+  });
+  expect(host.querySelector<HTMLSelectElement>("select.com-table-view")!.value).toBe("folder");
   expect(notice()?.textContent).toBe(en["comTable.folderCurrency.changed"]);
   await act(async () => root.unmount()); host.remove();
 });
@@ -622,18 +635,20 @@ it("WP-06 priority column: hidden by default, toggled and remembered as a view p
   expect(headings(v.host)).toEqual(["number", "name", "function", "dpt", "addresses", "status"]);
   expect(v.host.querySelector(".com-object-priority")).toBeNull();
   expect(v.host.querySelector(`[aria-label="${en["comTable.priorityFilter"]}"]`)).toBeNull();
-  const toggle = v.host.querySelector<HTMLButtonElement>(".com-table-priority-toggle")!;
-  expect(toggle.textContent).toBe(en["comTable.priorityColumn"]);
-  expect(toggle.getAttribute("aria-pressed")).toBe("false");
+  // Issue #44: the toggle is a checkbox inside the Options menu.
+  const label = v.host.querySelector<HTMLLabelElement>(".com-table-options .com-table-priority-toggle")!;
+  const toggle = label.querySelector<HTMLInputElement>('input[type="checkbox"]')!;
+  expect(label.textContent).toBe(en["comTable.priorityColumn"]);
+  expect(toggle.checked).toBe(false);
   await v.click(toggle);
   expect(getSetting("comTablePriorityColumn")).toBe(true);
-  expect(toggle.getAttribute("aria-pressed")).toBe("true");
+  expect(toggle.checked).toBe(true);
   expect(headings(v.host)).toEqual(["number", "name", "function", "dpt", "addresses", "status", "priority"]);
   expect(v.host.querySelector('th[data-column="priority"]')?.textContent).toContain("Priority");
   // Group headings and editor rows span every visible column.
   expect(v.host.querySelector<HTMLTableCellElement>(".com-object-channel th")!.colSpan).toBe(7);
   expect(v.host.querySelector<HTMLTableCellElement>(".com-object-editor-row td")!.colSpan).toBe(7);
-  await v.click(v.button("All objects"));
+  await v.view("All objects");
   expect(headings(v.host)).toEqual(["number", "name", "function", "dpt", "addresses", "status", "priority", "channel"]);
   expect(v.host.querySelector<HTMLTableCellElement>(".com-object-editor-row td")!.colSpan).toBe(8);
   const cell = (id: number) => v.host.querySelector<HTMLElement>(`tr[data-object-id="${id}"] .com-object-priority`)!;
@@ -651,8 +666,8 @@ it("WP-06 priority column: hidden by default, toggled and remembered as a view p
 });
 it("WP-06 priority column: sorts by token with unresolved last, filters, and hiding drops its filter and sort", async () => {
   const v = await render(PRIORITIES);
-  await v.click(v.host.querySelector<HTMLButtonElement>(".com-table-priority-toggle")!);
-  await v.click(v.button("All objects"));
+  await v.click(v.host.querySelector<HTMLInputElement>(".com-table-priority-toggle input")!);
+  await v.view("All objects");
   const order = () => [...v.host.querySelectorAll("tr[data-object-id]:not([hidden])")].map(n => n.getAttribute("data-object-id"));
   const sort = () => v.click(v.host.querySelector<HTMLButtonElement>('th[data-column="priority"] button')!);
   await sort(); expect(order()).toEqual(["3", "4", "1", "2"]);
@@ -662,7 +677,7 @@ it("WP-06 priority column: sorts by token with unresolved last, filters, and hid
   await v.set(filter, "unresolved"); expect(order()).toEqual(["2"]);
   await v.set(filter, "High"); expect(order()).toEqual(["4"]);
   expect(v.host.querySelector(".com-table-count")?.textContent).toBe("1 / 4 objects");
-  await v.click(v.host.querySelector<HTMLButtonElement>(".com-table-priority-toggle")!);
+  await v.click(v.host.querySelector<HTMLInputElement>(".com-table-priority-toggle input")!);
   expect(getSetting("comTablePriorityColumn")).toBe(false);
   expect(headings(v.host)).not.toContain("priority");
   expect(v.host.querySelector(".com-table-count")?.textContent).toBe("4 / 4 objects");
@@ -675,7 +690,7 @@ it("WP-06 priority column: an unknown server state is shown as unresolved, never
     object(2, priority({ status: "resolved", value: "Low", source: { kind: "later" } } as unknown as EffectivePriorityView)),
     object(3, { effective_priority: undefined } as unknown as Partial<ComObjectNode>)];
   const v = await render(odd);
-  await v.click(v.button("All objects"));
+  await v.view("All objects");
   const cells = [...v.host.querySelectorAll<HTMLElement>(".com-object-priority")];
   expect(cells.map(c => [c.dataset.priority, c.dataset.prioritySource ?? null])).toEqual([["unresolved", null], ["Low", null], ["unresolved", null]]);
   expect(cells[2].title).toBe(en["inspector.effectivePriority.unrecognisedState"]);
@@ -688,7 +703,7 @@ it("WP-06 priority column speaks German", async () => {
   expect(v.host.querySelector('th[data-column="priority"]')?.textContent).toContain(de["comTable.priority"]);
   expect(v.host.querySelector(".com-table-priority-toggle")?.textContent).toBe(de["comTable.priorityColumn"]);
   expect(v.host.querySelector(`[aria-label="${de["comTable.priorityFilter"]}"]`)).not.toBeNull();
-  await v.click([...v.host.querySelectorAll<HTMLButtonElement>("button")].find(b => b.textContent === de["comTable.flat"])!);
+  await v.view(de["comTable.flat"]);
   expect(v.host.querySelector('tr[data-object-id="3"] .com-object-priority-source')?.textContent).toBe(de["comTable.prioritySource.userEdit"]);
   await v.cleanup();
   settingsStorage.setItem("uiLanguage", "en"); resetUiLanguageForTests();
@@ -697,7 +712,7 @@ it("WP-06 priority column speaks German", async () => {
 it("WP-06 priority column: hiding it through the settings store (another window) also drops its filter and sort", async () => {
   setSetting("comTablePriorityColumn", true);
   const v = await render(PRIORITIES);
-  await v.click(v.button("All objects"));
+  await v.view("All objects");
   const order = () => [...v.host.querySelectorAll("tr[data-object-id]:not([hidden])")].map(n => n.getAttribute("data-object-id"));
   await v.click(v.host.querySelector<HTMLButtonElement>('th[data-column="priority"] button')!);
   await v.set(v.input(en["comTable.priorityFilter"]) as unknown as HTMLSelectElement, "High");
@@ -715,11 +730,165 @@ it("WP-06 priority column: hiding it through the settings store (another window)
 it("WP-06 priority column: folder-view headings span it and an unresolved cell has a spoken name", async () => {
   setSetting("comTablePriorityColumn", true);
   const v = await render(PRIORITIES);
-  await v.click(v.button(en["comTable.byFolder"]));
+  await v.view(en["comTable.byFolder"]);
   expect(headings(v.host)).toEqual(["number", "name", "function", "dpt", "addresses", "status", "priority"]);
   for (const th of v.host.querySelectorAll<HTMLTableCellElement>(".com-object-channel th")) expect(th.colSpan).toBe(7);
   const unresolved = v.host.querySelector<HTMLElement>('tr[data-object-id="2"] .com-object-priority')!;
   expect(unresolved.querySelector('[aria-hidden="true"]')?.textContent).toBe("—");
   expect(unresolved.querySelector(".sr-only")?.textContent).toBe(en["comTable.unresolvedPriority"]);
   await v.cleanup();
+});
+
+// Issue #46: an object's linked group addresses come first; the other settings
+// sit in a closed `<details>` that keeps drafts and pending writes.
+const SENT = { ga_id: 4, address: "1/2/0", name: "Kitchen light", direction: "Send" };
+async function openEditor(objects: ComObjectNode[], flatView = "All objects") {
+  const v = await render(objects); await v.view(flatView);
+  await v.click(v.host.querySelector<HTMLElement>('[data-object-id="1"] summary')!);
+  const editor = v.host.querySelector<HTMLElement>('[data-editor-id="1"] .com-object-edit-fields')!;
+  return { v, editor, more: editor.querySelector<HTMLDetailsElement>("details.com-object-more")! };
+}
+const precedes = (a: Element, b: Element) => (a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0;
+it("issue #46: linked group addresses come first and every other object setting starts collapsed", async () => {
+  const { v, editor, more } = await openEditor([object(1, { links: [SENT], write: true, transmit: true })]);
+  const heading = editor.querySelector<HTMLElement>(":scope > h4.com-object-links-heading")!;
+  const list = editor.querySelector<HTMLUListElement>(":scope > ul.group-link-list")!;
+  expect(heading.textContent).toBe("Linked group addresses");
+  expect(list.getAttribute("aria-labelledby")).toBe(heading.id);
+  expect([...editor.children].map(n => n.tagName)).toEqual(["H4", "UL", "DETAILS"]);
+  // The existing link and the new-link row sit in the list, outside the disclosure.
+  expect(list.querySelector(".group-link-row")?.textContent).toContain("1/2/0");
+  expect(list.querySelector(".tree-new-row input[role=combobox]")).not.toBeNull();
+  expect(more.contains(list)).toBe(false);
+  expect(precedes(list, more)).toBe(true);
+  // Closed by default; its summary names the section and the set flags.
+  expect(more.open).toBe(false);
+  expect(more.querySelector("summary .com-object-more-label")?.textContent).toBe("Object settings");
+  expect(more.querySelector("summary .com-object-more-hint")?.textContent).toBe("Flags: W T C");
+  for (const selector of [".dpt-field select", `input[aria-label="Description"]`, ".com-object-flags", ".com-object-effective-priority"])
+    expect(more.querySelector(selector), selector).not.toBeNull();
+  // The old order inside the disclosure is unchanged.
+  const fields = more.querySelector(".com-object-more-fields")!;
+  expect([...fields.children].map(n => n.className.split(" ")[0])).toEqual(
+    ["com-object-type-fields", "inspector-field", "com-object-flags", "com-object-saved-priority", "com-object-effective-priority", "com-object-priority-edit"]);
+  await v.cleanup();
+});
+it("issue #46: an object without links shows only the new-link row and a no-flags hint", async () => {
+  const { v, editor, more } = await openEditor([object(1, { communication: false })]);
+  const list = editor.querySelector(".group-link-list")!;
+  expect(list.querySelectorAll(":scope > li")).toHaveLength(1);
+  expect(list.querySelector(":scope > li.tree-new-row")).not.toBeNull();
+  expect(more.querySelector(".com-object-more-hint")?.textContent).toBe("No flags set");
+  await v.cleanup();
+});
+it("issue #46: closing the settings keeps a draft, and a pending write keeps them open", async () => {
+  let resolve!: (t: ProjectTree) => void;
+  api.setComObjectDpt.mockImplementationOnce(() => new Promise(r => { resolve = r; }));
+  const { v, more } = await openEditor([object(1)]);
+  const toggle = async (open: boolean) => { await act(async () => { more.open = open; more.dispatchEvent(new Event("toggle")); }); };
+  await toggle(true);
+  const description = more.querySelector<HTMLInputElement>(`input[aria-label="Description"]`)!;
+  await v.set(description, "Draft text");
+  await toggle(false);
+  expect(more.querySelector(`input[aria-label="Description"]`)).toBe(description);
+  expect(description.value).toBe("Draft text");
+  expect(api.setComObjectDescription).not.toHaveBeenCalled();
+  await toggle(true);
+  const dpt = more.querySelector<HTMLSelectElement>(".dpt-field select")!;
+  await v.set(dpt, "DPST-1-1");
+  await act(async () => dpt.dispatchEvent(new FocusEvent("focusout", { bubbles: true })));
+  expect(api.setComObjectDpt).toHaveBeenCalledTimes(1);
+  await toggle(false);
+  expect(more.open).toBe(true);
+  await act(async () => resolve({ ...tree, is_modified: true }));
+  await toggle(false);
+  expect(more.open).toBe(false);
+  await v.cleanup();
+});
+it("issue #46: the German editor names its sections", async () => {
+  settingsStorage.setItem("uiLanguage", "de"); resetUiLanguageForTests();
+  const { v, editor, more } = await openEditor([object(1)], de["comTable.flat"]);
+  expect(editor.querySelector(".com-object-links-heading")?.textContent).toBe(de["inspector.linkedGroupAddresses"]);
+  expect(more.querySelector(".com-object-more-label")?.textContent).toBe(de["inspector.objectSettings"]);
+  expect(more.querySelector(".com-object-more-hint")?.textContent).toBe("Flags: C");
+  await v.cleanup();
+  settingsStorage.setItem("uiLanguage", "en"); resetUiLanguageForTests();
+});
+
+// Issue #44: one view select and a small Options menu replace five toolbar buttons.
+it("issue #44: the labelled view select switches between channel, folder and flat views", async () => {
+  const v = await render([object(1, { project_folder: pb3("CH-1") }), object(2)]);
+  const toolbar = v.host.querySelector<HTMLElement>(".com-table-toolbar")!;
+  const select = v.viewSelect();
+  expect(select.closest("label")?.firstChild?.textContent).toBe("Object view");
+  expect([...select.options].map(o => [o.value, o.textContent])).toEqual(
+    [["channel", "By channel"], ["folder", "By saved project folder"], ["flat", "All objects"]]);
+  expect(select.value).toBe("channel");
+  expect(toolbar.querySelectorAll("[aria-pressed]")).toHaveLength(0);
+  expect(v.host.querySelectorAll("tr.com-object-channel")).toHaveLength(1);
+  await v.set(select, "folder");
+  expect(v.host.querySelector(".com-folder-view-note")).not.toBeNull();
+  expect([...v.host.querySelectorAll<HTMLElement>("tr.com-object-channel")].map(r => r.dataset.groupKey)).toEqual([F1, "folder-none"]);
+  await v.set(select, "flat");
+  expect(v.host.querySelectorAll("tr.com-object-channel")).toHaveLength(0);
+  expect(headings(v.host)).toContain("channel");
+  await v.set(select, "channel");
+  expect(headings(v.host)).not.toContain("channel");
+  for (const call of Object.values(api)) if (call !== api.deviceParameters) expect(call).not.toHaveBeenCalled();
+  await v.cleanup();
+});
+it("issue #44: filters and Reset stay in the toolbar; Options holds original order and the priority column", async () => {
+  const v = await render([object(10), object(2)]); await v.view("All objects");
+  const toolbar = v.host.querySelector<HTMLElement>(".com-table-toolbar")!;
+  const reset = [...toolbar.querySelectorAll<HTMLButtonElement>(":scope > button")].map(b => b.textContent);
+  expect(reset).toEqual(["Reset filters"]);
+  for (const label of ["Search communication objects", en["comTable.statusFilter"], en["comTable.linkFilter"], en["comTable.dptFilter"]])
+    expect(toolbar.querySelector(`[aria-label="${label}"]`)?.closest("details"), label).toBeNull();
+  const menu = toolbar.querySelector<HTMLDetailsElement>(":scope > details.com-table-options")!;
+  const summary = menu.querySelector<HTMLElement>(":scope > summary")!;
+  expect(menu.open).toBe(false);
+  expect(summary.textContent).toBe("Options");
+  const group = menu.querySelector<HTMLElement>('[role="group"]')!;
+  expect(group.getAttribute("aria-label")).toBe("Options");
+  expect([...group.querySelectorAll("button")].map(b => b.textContent)).toEqual(["Original order"]);
+  const checkbox = group.querySelector<HTMLInputElement>('label.com-table-priority-toggle input[type="checkbox"]')!;
+  expect(checkbox.closest("label")?.textContent).toBe("Priority column");
+  // Original order clears a column sort and closes the menu, focus back on its summary.
+  const order = () => [...v.host.querySelectorAll("tr[data-object-id]")].map(n => n.getAttribute("data-object-id"));
+  await v.click(v.host.querySelector<HTMLButtonElement>('th[data-column="number"] button')!);
+  expect(order()).toEqual(["2", "10"]);
+  await act(async () => { menu.open = true; menu.dispatchEvent(new Event("toggle")); });
+  await v.click(group.querySelector("button")!);
+  expect(order()).toEqual(["10", "2"]);
+  expect(v.host.querySelector('th[data-column="number"]')?.getAttribute("aria-sort")).toBe("none");
+  expect(menu.open).toBe(false);
+  expect(document.activeElement).toBe(summary);
+  // The checkbox is the same remembered setting as the old toggle.
+  await act(async () => { menu.open = true; menu.dispatchEvent(new Event("toggle")); });
+  await v.click(checkbox);
+  expect(getSetting("comTablePriorityColumn")).toBe(true);
+  expect(checkbox.checked).toBe(true);
+  expect(headings(v.host)).toContain("priority");
+  expect(toolbar.querySelector(`[aria-label="${en["comTable.priorityFilter"]}"]`)?.closest("details")).toBeNull();
+  // Escape closes the menu and returns focus to its summary.
+  checkbox.focus();
+  await act(async () => checkbox.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true })));
+  expect(menu.open).toBe(false);
+  expect(document.activeElement).toBe(summary);
+  await v.click(checkbox);
+  expect(getSetting("comTablePriorityColumn")).toBe(false);
+  expect(headings(v.host)).not.toContain("priority");
+  await v.cleanup();
+});
+it("issue #44: the German toolbar names the view and its options", async () => {
+  settingsStorage.setItem("uiLanguage", "de"); resetUiLanguageForTests();
+  const v = await render([object(1)]);
+  expect(v.viewSelect().closest("label")?.firstChild?.textContent).toBe(de["comTable.view"]);
+  expect([...v.viewSelect().options].map(o => o.textContent)).toEqual([de["comTable.grouped"], de["comTable.byFolder"], de["comTable.flat"]]);
+  const menu = v.host.querySelector<HTMLDetailsElement>("details.com-table-options")!;
+  expect(menu.querySelector("summary")?.textContent).toBe(de["comTable.options"]);
+  expect(menu.querySelector("button")?.textContent).toBe(de["comTable.originalOrder"]);
+  expect(menu.querySelector(".com-table-priority-toggle")?.textContent).toBe(de["comTable.priorityColumn"]);
+  await v.cleanup();
+  settingsStorage.setItem("uiLanguage", "en"); resetUiLanguageForTests();
 });

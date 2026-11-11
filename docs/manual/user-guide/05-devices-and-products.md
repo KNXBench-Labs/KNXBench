@@ -1007,13 +1007,28 @@ edit the project; they do not connect to, program or download a KNX device.
 
 ### Communication objects
 
+**Links first, compact toolbar** *(source build after Alpha 20, 11 November 2026;
+issues #44 and #46)*: expanding an object shows its **Linked group addresses**
+first: one row per link with **Unlink**, then the row to link another address.
+Everything else (DPT, the manufacturer function, description, flags and
+priorities) sits under **Object settings**, closed until you open it; its
+summary lists the object's set flag letters (for example **Flags: W T C**).
+Closing it keeps an unsaved entry, and it stays open while a change is being
+saved. Above the table, the three view buttons became one **Object view** list
+(**By channel**, **By saved project folder**, **All objects**). **Original
+order** and the **Priority column** checkbox moved into a small **Options**
+menu; Escape closes it. Search, the Status, Links, DPT and Priority filters and
+**Reset filters** stay directly in the toolbar. The screenshots in this chapter
+still show the Alpha 20 layout.
+
 *(Since Alpha 14:)* the **DPT** cell also names the object's size (for example
 **Size: 1 Bit** or **Size: 2 Bytes**) when the installed product data states it,
 which helps when picking a group address of matching size. Without product data
 the size stays blank rather than guessed.
 
 **Priority column** (since Alpha 20): the **Priority column**
-button above the table adds a column with each object's effective project
+checkbox (a button above the table in Alpha 20, under **Options** since the
+source build after Alpha 20) adds a column with each object's effective project
 priority (`Low`, `High` or `Alert`) and a short note where it comes from: *yours*
 (set by you), *saved* (from the imported project) or *product*. Hover a cell for
 the full wording (the object editor shows the same text); `—` means the priority cannot be determined and the tooltip
@@ -1091,7 +1106,8 @@ codec.*
 panel now has aligned **No., Name, Function, DPT, Group addresses, Status** headings,
 a **By channel / All objects** switch (flat view adds Channel), search and filters.
 Click a heading to sort ascending/descending, within channels or globally in flat
-view. **Original order** resets sorting; **Reset filters** leaves view/sort alone.
+view. **Original order** (under **Options** since the source build after Alpha 20)
+resets sorting; **Reset filters** leaves view/sort alone.
 
 Search covers object number/name/function/description, channel labels, effective
 DPT ID/text and every linked GA name/address; slash or dotted GA input works.
@@ -1123,7 +1139,7 @@ stay apart. Objects without a usable saved folder share one last group,
 the ones saved at import, not where the product would place an object after
 later parameter changes. Expanding, collapsing and filtering work as in the
 channel view, and each view keeps its own expansion. Switching views adds no
-write, but moving focus from a dirty field to a view button can trigger the
+write, but moving focus from a dirty field to the view choice can trigger the
 existing blur-save described above.
 
 **Changed since import (since Alpha 20).** When the
@@ -1198,18 +1214,19 @@ still leaves the project DPT unset until you explicitly select one. An unknown
 reference stays verbatim; an absent/ambiguous type gets no invented name.
 
 The screenshot above shows the channel-group wrapper and the localized DPT
-selection. Expanding a row gives you:
+selection. Expanding a row gives you, in this order since the source build after
+Alpha 20, the linked group addresses and then the closed **Object settings**:
 
 | Control | What it does |
 | --- | --- |
+| Group links | One row per directional link, with Unlink; paired links can be unlinked together |
+| New link | Pick an address, choose Send, Receive or Send + Receive, then click Link — or drop a group address from the Project Explorer on this row, which links it in the direction the row shows |
 | DPT | Selects the object's datapoint type by number and localized name; preserves unknown existing values |
 | Description | Sets the object's description |
 | Flags | Read, Write, Transmit, Update, Communication, Read on init (with standard letters) |
 | Saved project priority | Read-only: the object's own priority declaration as captured from the imported project file, or why none was captured |
 | Effective project priority | Read-only: the priority that results for the project and where it comes from, or why it cannot be determined |
 | Your priority | Sets the object's project priority to `Low`, `High` or `Alert`, or back to *Not set by you* |
-| Group links | One row per directional link, with Unlink; paired links can be unlinked together |
-| New link | Pick an address, choose Send, Receive or Send + Receive, then click Link — or drop a group address from the Project Explorer on this row, which links it in the direction the row shows |
 
 The six toggles retain their KNX letters — `R`, `W`, `T`, `U`, `C` and `I` —
 and now show their full names alongside them. KNXBench stores what you set; it

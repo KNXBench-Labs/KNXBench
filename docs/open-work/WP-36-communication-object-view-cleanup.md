@@ -4,7 +4,17 @@ External report by the issue reporter, 10 November 2026; triaged 11 November 202
 Status: **#47 implemented 11 November 2026** (`linkDirectionDefault.ts`, both link
 forms, reason shown under the choice). Review changed the planned flag rule:
 the first link always sends (ETS Schema23 `@Links`, read responses, legacy FEh),
-later links receive, an existing link on the address is kept. **#44 and #46 open.**
+later links receive, an existing link on the address is kept.
+**#44 and #46 implemented 11 November 2026** (`Inspector.tsx` `ComObjectEditor`,
+`ComObjectTable.tsx` toolbar): an expanded object lists its linked group
+addresses and the link row first, under a small **Linked group addresses**
+heading; DPT, function, description, flags and priorities sit in a native
+**Object settings** disclosure, closed by default, that keeps drafts when closed
+and stays open while a change is saved. The toolbar has one **Object view**
+select and an **Options** menu (**Original order**, **Priority column**
+checkbox; Escape closes it). Deviation from the #44 triage reply: **Reset
+filters** stays a direct toolbar button next to the filters it resets, rather
+than moving into Options.
 
 ## Requested outcome
 

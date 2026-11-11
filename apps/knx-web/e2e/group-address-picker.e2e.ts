@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { messages as en } from "../src/messages/en";
 import { messages as de } from "../src/messages/de";
 import type { GroupAddressNode } from "../src/bindings/GroupAddressNode";
-import { intercept, openList, openProject } from "./communication-fixture";
+import { chooseComView, intercept, openList, openProject } from "./communication-fixture";
 
 const ga = (id: number, address: string, name: string, dpts: string[]): GroupAddressNode =>
   ({ id, address, name, range: null, dpts, links: [] });
@@ -28,7 +28,7 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) f
     await page.locator(".devices-table tbody td:nth-child(3) button").first().click();
     const panel = page.locator(".com-table-panel");
     await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
-    await panel.getByRole("button", { name: m["comTable.flat"], exact: true }).click();
+    await chooseComView(panel, m, "comTable.flat");
     const summary = panel.locator('[data-object-id="1"] summary');
     await summary.scrollIntoViewIfNeeded(); await summary.click();
     const editor = panel.locator('[data-editor-id="1"]');

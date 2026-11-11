@@ -2479,11 +2479,23 @@ export interface DeviceDownloadBatchStartDevice {
 
 export type DeviceDownloadBatchNotStarted = "earlierDevice" | "stopRequest" | "serverStop" | "runEnded";
 
+/** How a finished device's restart ended (server `Restart`). */
+export type DeviceDownloadBatchRestart = "acknowledged" | "notInPlan" | "unconfirmed";
+
+/** Why a finished device stopped the batch (server `Doubt`). */
+export type DeviceDownloadBatchDoubt =
+  | "notWritten" | "restartUnconfirmed" | "checkNotChecked" | "checkUnsupported" | "checkNotPerformed"
+  | "checkInterrupted" | "checkNotReached" | "checkReachUnknown" | "identityUnavailable" | "identityMismatch"
+  | "loadStateDiffers" | "loadStateUnknown";
+
 /** Where one device of a batch stands (ADR-0172 §7 and its amendment). */
 export type DeviceDownloadBatchDeviceState =
   | { state: "waiting" | "running"; downloadId: number }
-  | { state: "done"; downloadId: number; written: DeviceDownloadWritten; restart: string }
-  | { state: "unconfirmed"; downloadId: number; doubt: string; written: DeviceDownloadWritten; restart: string; restartNote: string | null }
+  | { state: "done"; downloadId: number; written: DeviceDownloadWritten; restart: DeviceDownloadBatchRestart;
+      /** The single download's check record; read through `postDownloadCheck.ts` where shown. */
+      postDownloadCheck?: unknown }
+  | { state: "unconfirmed"; downloadId: number; doubt: DeviceDownloadBatchDoubt; written: DeviceDownloadWritten;
+      restart: DeviceDownloadBatchRestart; restartNote: string | null; postDownloadCheck?: unknown }
   | { state: "failed"; downloadId: number; written: DeviceDownloadWritten; stoppedInStep: number | null; error: string;
       hint: string | null; kind: string | null; backupFile: string | null }
   | { state: "stopped"; downloadId: number; backupFile: string | null }

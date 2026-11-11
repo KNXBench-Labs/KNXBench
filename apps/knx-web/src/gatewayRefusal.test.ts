@@ -71,7 +71,7 @@ describe("batch holder (ADR-0172)", () => {
     expect(describeGatewayRefusal(admitted, translateFor.bind(null, "en"))).toBe(
       "The gateway is busy: a batch download is running (device 2 of 3). Wait until it has finished.");
     expect(describeGatewayRefusal(admitted, translateFor.bind(null, "de"))).toBe(
-      "Das Gateway ist belegt: Ein Batch läuft (Gerät 2 von 3). Warte, bis er fertig ist.");
+      "Das Gateway ist belegt: Eine Sammelprogrammierung läuft (Gerät 2 von 3). Warte, bis sie fertig ist.");
     for (const bad of [{ ...holder, position: 4 }, { ...holder, position: 0 }, { ...holder, address: "x" }, { ...holder, extra: 1 }]) {
       expect(admitGatewayRefusal(busy(bad))).toBeNull();
     }

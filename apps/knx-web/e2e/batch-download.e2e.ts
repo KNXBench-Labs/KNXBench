@@ -60,7 +60,7 @@ const ended = { ...running, state: "ended", devices: [
 ] };
 
 async function intercept(page: Page, language: "en" | "de") {
-  const state = { unexpected: [] as string[], plans: 0, starts: [] as unknown[], statusReads: 0, started: false, settled: false };
+  const state = { unexpected: [] as string[], plans: 0, starts: [] as unknown[], statusReads: 0, started: false, settled: false, settledProjectReads: 0 };
   let projectOpen = false;
   await page.route("**/api/**", (route) => {
     const url = new URL(route.request().url()); const path = url.pathname; const method = route.request().method();
@@ -71,6 +71,7 @@ async function intercept(page: Page, language: "en" | "de") {
     else if (path === "/api/version" && method === "GET") body = { version: VERSION };
     else if (path === "/api/project" && method === "GET") {
       if (!projectOpen) return fulfillNoProjectOpen(route);
+      if (state.settled) state.settledProjectReads += 1;
       body = fixtureTree(state.settled);
     } else if (path === "/api/project/new" && method === "POST") { projectOpen = true; body = fixtureTree(false); }
     else if (path === "/api/project/load-progress" && method === "GET") body = null;
@@ -173,7 +174,10 @@ for (const language of ["en", "de"] as const) {
       await expect(run.locator("[data-batch-device='1.1.3']")).toContainText(m["deviceDownload.batch.state.restartUnconfirmed"]);
       await expect(run.locator("[role=status]").first()).toHaveText(m["deviceDownload.batch.ended"]);
       await noSidewaysOverflow(page, width);
-      // The settled project was reloaded: one device left in the pending count.
+      // The ended batch reloads the project once (settled flags); on the wide
+      // layout the dimmer has left the pending block.
+      await expect.poll(() => state.settledProjectReads).toBeGreaterThanOrEqual(1);
+      if (width === 1440) await expect(page.locator(".pending-programming-panel .pending-programming-row")).toHaveCount(2);
       expect(errors).toEqual([]);
       expect(state.unexpected).toEqual([]);
     });

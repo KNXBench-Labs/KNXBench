@@ -1,0 +1,66 @@
+{
+  "format": 1,
+  "date": "2026-11-10",
+  "kind": "tester-download-report",
+  "issue": "https://github.com/KNXBench-Labs/KNXBench/issues/38",
+  "report": {
+    "attachment": "https://github.com/user-attachments/files/34648916/knxbench-download-report-M-0006_A-E052-12-3406.json",
+    "sha256": "c199cbd361f186aa911b9f4b7d32737077dbbbe46e035c85cb36def66f083f6e",
+    "kind": "knxbench-download-report",
+    "format": 1,
+    "knxbenchVersion": "0.1.0-alpha.20+g7e5612b"
+  },
+  "program": {
+    "id": "M-0006_A-E052-12-3406",
+    "name": "S8014xxx0",
+    "applicationVersion": "18",
+    "manufacturer": "0006",
+    "mask": "0701",
+    "sourceSha256": "3cd53544f5cdf1947be75a376352bcc23d8131220a5f14326c76b5ac00c0cd5b",
+    "sourceSha256Checked": "matches a locally available copy of the program file M-0006_A-E052-12-3406.xml (6156008 bytes)"
+  },
+  "scope": "partial-parameters",
+  "plan": {
+    "steps": 14,
+    "dataOctets": 1457,
+    "groupLinks": 5
+  },
+  "warnings": [],
+  "inferences": [],
+  "outcome": {
+    "completed": true,
+    "written": "yes",
+    "restart": "unconfirmed",
+    "stoppedInStep": null
+  },
+  "postDownloadCheck": {
+    "reach": "reached",
+    "identity": "match",
+    "planLoadVerdict": "matchesPlan",
+    "loadStates": {
+      "addressTable": "loaded",
+      "associationTable": "loaded",
+      "applicationProgram": "loaded"
+    },
+    "runState": "running"
+  },
+  "testerAnswer": {
+    "deviceWorksAsConfigured": "Yes, everything I checked works",
+    "checked": "LED deactivation parameter took effect; device otherwise unchanged and working (issue #38 comment of 2026-11-10)"
+  },
+  "recorded": {
+    "verified_downloads.json": [
+      "partial-parameters"
+    ]
+  },
+  "notRecorded": {
+    "complete": "described in the issue thread, report file not attached",
+    "partial-both": "described in the issue thread, report file not attached",
+    "partial-group-addresses": "not run"
+  },
+  "parameterValues": "omitted from this record; present only in the tester's attachment",
+  "boundaries": [
+    "One device and one application version; not evidence for other Hager/Berker programs or masks.",
+    "The closing restart was not acknowledged; device function was confirmed by the tester."
+  ]
+}

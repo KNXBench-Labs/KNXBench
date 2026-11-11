@@ -467,7 +467,7 @@ export default function BusMonitorPanel({ projectOpen, project, projectScope, on
   // whole point of D3, applied here to the panel's own absence, not only
   // to a slow poller). A session already `"closed"` (the gateway dropped it
   // while nothing was mounted) still reattaches: its rows are worth
-  // showing and `stopBusMonitor()` still ends it, same as if the panel had
+  // showing and the bound stop still ends it, same as if the panel had
   // stayed mounted the whole time — `status === "closed"` alone does not
   // gate anything in the render below, so this falls out for free.
   useEffect(() => {

@@ -1887,8 +1887,9 @@ describe("App — the File menu by keyboard alone", () => {
     expect([...host!.querySelectorAll(".file-submenu-trigger > span:first-child")].map(node => node.textContent))
       .toEqual(["Import & export", "History & comparison", "Help & diagnostics"]);
     const sections = [...host!.querySelectorAll<HTMLElement>(".navigation-section")];
-    expect(sections).toHaveLength(3);
-    expect(sections.map(section => section.querySelector("button")!.getAttribute("aria-expanded"))).toEqual(["false", "false", "false"]);
+    // Workspaces, project explorer, pending programming (issue #42), diagnostics.
+    expect(sections).toHaveLength(4);
+    expect(sections.map(section => section.querySelector("button")!.getAttribute("aria-expanded"))).toEqual(["false", "false", "false", "false"]);
     await act(async () => sections.forEach(section => section.querySelector<HTMLButtonElement>(".navigation-section-toggle")!.click()));
     const explorer = host!.querySelector(".project-explorer")!;
     expect(explorer).not.toBeNull();
@@ -1896,6 +1897,7 @@ describe("App — the File menu by keyboard alone", () => {
     expect(explorer.closest("[hidden]")).not.toBeNull();
     expect(sections[0].querySelector("[hidden]")).toBeNull();
     expect(sections[2].querySelector("[hidden]")).toBeNull();
+    expect(sections[3].querySelector("[hidden]")).toBeNull();
     await act(async () => sections[1].querySelector<HTMLButtonElement>(".navigation-section-toggle")!.click());
     expect(host!.querySelector(".project-explorer")).toBe(explorer);
     await act(async () => root.unmount());

@@ -572,6 +572,35 @@ repeat a physical write just to refresh its marks. A storage error during
 settlement is logged and must be resolved before trusting persisted flags.
 [Technical rules and boundaries](../../adr/0129-per-part-pending-programming.md).
 
+<a id="pending-programming-panel-main-only-after-alpha-20"></a>
+
+### Pending programming panel (main-only after Alpha 20; issue #42)
+
+The navigation pane has a **Pending programming** block (German: **Ausstehende
+Programmierung**) between the project explorer and Diagnostics. Its heading
+shows how many devices have at least one pending part, for example **Pending
+programming (3)**, also while the block is folded; like the other blocks it
+starts folded. Open it to see each such device with its individual address,
+name and the same Adr/App/Par/GA chips as the Devices table, sorted the way the
+Devices table sorts by address (devices without an address first). A device
+whose programming state the server does not report is not listed; a line below
+the list counts such devices instead. With nothing pending the block says
+**Nothing pending** (**Nichts ausstehend**). Large projects show the first 50
+devices with the total and **Show all**.
+
+Click a device (or focus it and press Enter) to open it in the device editor,
+as a click in the explorer does. **Download…** (German: **Programmieren…**)
+opens the **Download to device** tab with that device selected: exactly what
+the device editor's **Download to device…** does, so it neither prepares a
+plan nor starts anything or connects to the bus. A device without an
+individual address shows the button disabled with the reason.
+
+The block reads the project's marks and is read-only. Downloading all pending
+devices one after another in a single batch is not available: it is a
+multi-device bus write and needs its own design decision first
+([WP-38](../../open-work/WP-38-pending-devices-panel.md)). This block needs a
+source build newer than Alpha 20; the screenshots in this manual do not show it.
+
 ## The product catalog
 
 Open it from the navigation pane (**Product catalog**) or from the `+` button on a

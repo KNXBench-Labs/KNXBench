@@ -311,12 +311,16 @@ it("a batch replaced elsewhere does not leave the panel running forever", async 
     { deviceId: 3, address: "1.1.8", name: "Dimmer", state: "running", downloadId: 41 },
   ] };
   const onBusyChange = vi.fn();
+  const onProjectChanged = vi.fn();
+  apiMock.currentProject.mockResolvedValue(PROJECT);
   apiMock.pollDeviceDownloadBatch.mockResolvedValueOnce(running).mockRejectedValue(notFound);
-  await render({ onBusyChange });
+  await render({ onBusyChange, onProjectChanged });
   expect(q("[data-batch-run]")!.dataset.batchRun).toBe("running");
   await act(async () => { await vi.advanceTimersByTimeAsync(600); });
   expect(q("[data-batch-run]")).toBeNull();
   expect(onBusyChange).toHaveBeenLastCalledWith(false);
+  // Our batch ended before it was replaced and may have written: reload once.
+  expect(onProjectChanged).toHaveBeenCalledTimes(1);
 });
 
 it("links the reason start is disabled to the start button", async () => {
@@ -324,4 +328,18 @@ it("links the reason start is disabled to the start button", async () => {
   await openReview();
   expect(startButton().getAttribute("aria-describedby")).toBe("device-download-batch-blocked");
   expect(document.getElementById("device-download-batch-blocked")!.textContent).toBe(en["deviceDownload.batch.blocked.acknowledgement"]);
+});
+
+it("a gateway kind does not hide a partial write, and a stopped row names its backup", async () => {
+  apiMock.pollDeviceDownloadBatch.mockResolvedValue({ batchId: 40, state: "ended", stopRequested: false, devices: [
+    { deviceId: 3, address: "1.1.8", name: "Dimmer", state: "failed", downloadId: 41, written: "partially", stoppedInStep: 4,
+      error: "the gateway closed the connection.", hint: null, kind: "gatewayTimeout", backupFile: null },
+    { deviceId: 4, address: "1.1.9", name: "Blind", state: "stopped", downloadId: 42, backupFile: "backups/1.1.9.json" },
+  ] } satisfies Api.DeviceDownloadBatchStatus);
+  await render();
+  const failed = q("[data-batch-run] [data-batch-device='1.1.8']")!.textContent!;
+  expect(failed).not.toContain(en["deviceDownload.batch.state.gatewayFailed"]);
+  expect(failed).toContain("Failed: the gateway closed the connection. " + en["deviceDownload.batch.written.partially"]);
+  expect(q("[data-batch-run] [data-batch-device='1.1.9']")!.textContent)
+    .toContain(en["deviceDownload.backupKept"].replace("{file}", "backups/1.1.9.json"));
 });

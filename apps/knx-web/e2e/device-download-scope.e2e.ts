@@ -23,7 +23,7 @@ const plan = (partial: boolean) => ({
   partial, notWritten: partial ? [[0x4100, 12]] : [],
 });
 
-async function open(page: Page) {
+async function open(page: Page, planOverride?: Record<string, unknown>) {
   const planBodies: unknown[] = [];
   const writes: string[] = [];
   // Like the real server: no project until the test creates one (ADR-0127).
@@ -46,7 +46,7 @@ async function open(page: Page) {
       if (body.partial && !body.partial.parameters) {
         return json({ error: "no partial download to device 1.1.67 prepared: the complete download allocates no application program task segment" }, 422);
       }
-      return json(plan(body.partial !== undefined));
+      return json({ ...plan(body.partial !== undefined), ...planOverride });
     }
     if (path.startsWith("/api/device-download/") || path.startsWith("/api/bus/")) {
       if (method !== "GET") writes.push(`${method} ${path}`);
@@ -98,3 +98,22 @@ test("a scope the server cannot derive is refused visibly and leaves no plan to 
   expect(planBodies).toEqual([{ address: "1.1.67", partial: { parameters: false, groupAddresses: true } }]);
   expect(writes).toEqual([]);
 });
+
+for (const width of [1400, 400]) {
+  test(`#39 at ${width}px: a parameters-only plan warns that a pending group-address change stays unwritten`, async ({ page }) => {
+    const { writes } = await open(page, { scope: "parameters", scopeFromChanges: false,
+      scopeAdvice: { basis: "projectFlags", write: "both", address: "current", mediumPending: false, fullyProgrammed: false } });
+    await page.setViewportSize({ width, height: 900 });
+    await page.getByRole("group", { name: "What to write" }).getByRole("radio", { name: "Parameters only" }).check();
+    await page.getByRole("button", { name: "Prepare download" }).click();
+    const warning = page.getByRole("note").filter({ hasText: "This scope leaves pending changes unwritten:" });
+    await expect(warning).toBeVisible();
+    await expect(warning).toContainText("Pending group-address changes are not written by this scope.");
+    await expect(warning).not.toContainText("Pending parameter changes");
+    const box = await warning.boundingBox();
+    expect(box!.x + box!.width).toBeLessThanOrEqual(width);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1);
+    await expect(page.locator(".programming-consent-dialog")).toHaveCount(0);
+    expect(writes).toEqual([]);
+  });
+}

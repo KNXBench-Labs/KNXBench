@@ -41,6 +41,25 @@ export function nothingPendingAdvice(error: unknown): DeviceDownloadScopeAdvice 
   return fields.kind === "downloadNothingPending" && isScopeAdvice(fields.scopeAdvice) ? fields.scopeAdvice : null;
 }
 
+/** A pending part of the project that a download scope can leave unwritten. */
+export type UncoveredPart = "application" | "parameters" | "groupAddresses";
+
+const PARTIAL: Record<"parameters" | "groupAddresses" | "both", readonly UncoveredPart[]> = {
+  parameters: ["parameters"],
+  groupAddresses: ["groupAddresses"],
+  both: ["parameters", "groupAddresses"],
+};
+
+/** #39: the parts the flags mark pending that `scope` does not write, in display order.
+ * Advice `complete` says only that the application is pending (the server does not say
+ * which other parts are), so a partial scope then names the application alone. */
+export function uncoveredParts(scope: DeviceDownloadScopeCode, advice: DeviceDownloadScopeAdvice): UncoveredPart[] {
+  if (advice.write === "nothing" || scope === "complete") return [];
+  if (advice.write === "complete") return ["application"];
+  const written = PARTIAL[scope];
+  return PARTIAL[advice.write].filter((part) => !written.includes(part));
+}
+
 /** The needs no memory download closes, in display order. */
 export function unmetNeeds(advice: DeviceDownloadScopeAdvice): ("address" | "medium")[] {
   return [

@@ -12,6 +12,16 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Download dialog names pending changes a partial scope leaves out (11 November 2026; issue #39, WP-32)
+
+When the prepared plan's scope does not write every part the project marks
+pending, the plan shows a warning before start that names each unwritten part
+(application program, parameters, group addresses) and says it stays pending.
+It reads the server's existing flag advice and plan scope; advice
+“complete” only says the application is pending, so a partial scope then names
+the application alone. A warning, not a refusal: starting stays possible (owner
+decision 11 November 2026). [WP-32](open-work/WP-32-download-scope-uncovered-warning.md).
+
 ## Saving no longer blocks the device editor (11 November 2026; issue #36, WP-31)
 
 Save wrote the whole project file while holding the project lock, so on a

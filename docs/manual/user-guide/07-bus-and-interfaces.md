@@ -480,7 +480,10 @@ changes, the project does not. Saving or exporting a project file is something e
    Since Alpha 10 the device editor also has **Download to
    device…**: it opens this tab with exactly that device selected — by its stable id in
    the open project — and does nothing else: no plan, no download, no connection. A
-   device without an individual address shows the button disabled with the reason. While
+   device without an individual address shows the button disabled with the reason. In
+   source builds after Alpha 20, **Download…** in the navigation's **Pending
+   programming** block does the same for each listed device (see
+   [Pending programming panel](05-devices-and-products.md#pending-programming-panel-main-only-after-alpha-20)). While
    a plan is being prepared or a download runs, the selection is not switched; if the
    tab cannot tell whether a download is running, it says so and leaves the choice to
    you. *(Since Alpha 12, issue #18:)* the requested device is named at

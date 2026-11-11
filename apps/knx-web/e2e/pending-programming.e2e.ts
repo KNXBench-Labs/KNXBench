@@ -1,4 +1,4 @@
-/** P3 browser contract: pending-programming chips, filter, explorer dot and marking by hand. */
+/** P3 browser contract: pending chips, filter, explorer dot, sidebar panel and marking by hand. */
 import { openExplorerBranches, openNavigationSections } from "./disclosure-fixture";
 import { expect, test, type Page } from "@playwright/test";
 import { join } from "node:path";
@@ -52,6 +52,10 @@ async function intercept(page: Page, language: "en" | "de", theme = "porcelain")
     else if (path === "/api/legacy-password" && method === "GET") body = { available: true, remembered: false, problem: null };
     else if (["/api/device-download/status", "/api/device-address/status"].includes(path) && method === "GET") { status = 404; body = { error: "no operation in this fixture" }; }
     else if (path === "/api/device-system2/status" && method === "GET") { state.system2Reads += 1; body = state.system2; }
+    // The bus workspace's download tab (issue #42 jump): read-only hints, no monitor session.
+    else if (path === "/api/bus/monitor/telegrams" && method === "GET") { status = 404; body = { error: "no monitor session is active" }; }
+    else if (path === "/api/bus/activity" && method === "GET") body = { serverIncarnation: "pending-browser", coverage: "partial", historyState: "disabled", sessions: [], oneShot: [], oneShotDropped: 0, busyLocks: [], untracked: [] };
+    else if (path === "/api/device-readiness" && method === "GET") body = { devices: [], counts: {} };
     else if (path === "/api/devices" && method === "GET") {
       const devices = state.tree.installations[0].topology[0].lines[0].devices;
       body = { schemaVersion: 1, serverIncarnation: "pending-browser", snapshotRevision: state.tree.snapshot_revision,
@@ -264,5 +268,99 @@ for (const language of ["en", "de"] as const) {
     await expect(kitchen().locator(".programming-chip")).toHaveCount(4);
     expect(state.unexpected).toEqual([]);
     void m;
+  });
+}
+
+// Issue #42 (WP-38 step 1): the read-only sidebar list of devices with pending parts.
+for (const language of ["en", "de"] as const) {
+  const m = language === "en" ? en : de;
+  for (const width of [1440, 400]) {
+    test(`${language} pending-programming panel lists, selects and jumps to the download tab at ${width}px`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 850 });
+      const errors: string[] = []; page.on("pageerror", (error) => errors.push(error.message));
+      const state = await intercept(page, language); await openProject(page, language);
+      // Stills only: the first-project toasts would cover the sidebar block.
+      if (process.env.KNX_PENDING_CAPTURE_DIR) await page.addStyleTag({ content: ".toast-stack { display: none !important; }" });
+      const toggle = page.locator(".navigation-section-toggle", { hasText: m["pendingPanel.title"].replace("{count}", "2") });
+      await expect(toggle).toHaveAttribute("aria-expanded", "true");
+      const panel = page.locator(".pending-programming-panel");
+      await panel.scrollIntoViewIfNeeded();
+      await expect(panel).toBeVisible();
+      const rows = panel.locator(".pending-programming-row");
+      await expect(rows).toHaveCount(2);
+      await expect(rows.locator(".pending-programming-address")).toHaveText(["1.1.2", "1.1.4"]);
+      await expect(rows.nth(0).locator(".programming-chip")).toHaveText([m["programming.part.address.short"], m["programming.part.parameters.short"]]);
+      await expect(rows.nth(1).locator(".programming-chip")).toHaveCount(4);
+      await expect(panel).not.toContainText("Blind living room");
+      const box = (await panel.boundingBox())!;
+      expect(box.x).toBeGreaterThanOrEqual(0);
+      expect(box.x + box.width).toBeLessThanOrEqual(width + 1);
+      expect(await panel.evaluate((node) => node.scrollWidth - node.clientWidth)).toBeLessThanOrEqual(1);
+      // Chips wrap inside their row and never paint under the row's Download button.
+      for (const row of await rows.all()) {
+        const button = (await row.locator(".pending-programming-download").boundingBox())!;
+        for (const chip of await row.locator(".programming-chip").all()) {
+          const chipBox = (await chip.boundingBox())!;
+          expect(chipBox.x + chipBox.width).toBeLessThanOrEqual(button.x + 1);
+        }
+      }
+      expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(1);
+      await capture(page, `pending-panel-${language}-${width}`);
+      if (process.env.KNX_PENDING_CAPTURE_DIR) {
+        const mode = test.info().config.configFile?.endsWith("playwright.devices.config.ts") ? "production" : "development";
+        await panel.screenshot({ path: join(process.env.KNX_PENDING_CAPTURE_DIR, mode, `pending-panel-element-${language}-${width}.png`) });
+      }
+
+      // The jump: the download tab opens with this device preselected; nothing is planned or started.
+      const download = rows.nth(0).getByRole("button", { name: m["pendingPanel.downloadDevice"].replace("{device}", "1.1.2 Dimmer kitchen"), exact: true });
+      await expect(download).toHaveText(m["pendingPanel.download"]);
+      await download.click();
+      const downloadPanel = page.locator(".device-download-panel");
+      await expect(downloadPanel).toBeVisible();
+      await expect(page.locator(".bus-diagnostics-tabs button[aria-current=page]")).toHaveText(m["deviceDownload.title"]);
+      await expect(downloadPanel.locator("select[data-download-device]")).toHaveValue("1");
+      await expect(downloadPanel.locator("[data-handoff=selected]")).toContainText("1.1.2");
+      const downloadBox = (await downloadPanel.boundingBox())!;
+      expect(downloadBox.x).toBeGreaterThanOrEqual(-1);
+      expect(downloadBox.x + downloadBox.width).toBeLessThanOrEqual(width + 1);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(1);
+      await capture(page, `pending-panel-download-${language}-${width}`);
+
+      // A row opens its device like the explorer does.
+      await openNavigationSections(page);
+      await panel.locator(".pending-programming-open", { hasText: "Sensor hall" }).click();
+      await expect(page.locator(".device-programming")).toBeVisible();
+      await expect(page.locator(".device-workspace")).toContainText("Sensor hall");
+      await openNavigationSections(page);
+      await expect(panel.locator(".pending-programming-open[aria-current=true]")).toContainText("Sensor hall");
+      expect(state.marks).toEqual([]);
+      expect(state.unexpected).toEqual([]);
+      expect(errors).toEqual([]);
+    });
+  }
+  test(`${language} pending-programming panel follows a hand mark`, async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 850 });
+    const state = await intercept(page, language);
+    await openProject(page, language);
+    const title = (count: number) => page.locator(".navigation-section-toggle", { hasText: m["pendingPanel.title"].replace("{count}", String(count)) });
+    await expect(title(2)).toBeVisible();
+    await page.locator(".pending-programming-open", { hasText: "Dimmer kitchen" }).click();
+    await page.locator(".device-programming").getByRole("button", { name: m["programming.markProgrammed"], exact: true }).click();
+    await expect(title(1)).toBeVisible();
+    await expect(page.locator(".pending-programming-row .pending-programming-address")).toHaveText(["1.1.4"]);
+    expect(state.marks).toHaveLength(1);
+    expect(state.unexpected).toEqual([]);
+  });
+  test(`${language} pending-programming panel says when nothing is pending`, async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 850 });
+    const state = await intercept(page, language);
+    state.tree = fixtureTree(CLEAN, 1);
+    state.tree.installations[0].topology[0].lines[0].devices[2].pending_programming = CLEAN;
+    await openProject(page, language);
+    await expect(page.locator(".navigation-section-toggle", { hasText: m["pendingPanel.title"].replace("{count}", "0") })).toBeVisible();
+    await expect(page.locator(".pending-programming-empty")).toHaveText(m["pendingPanel.empty"]);
+    await expect(page.locator(".pending-programming-row")).toHaveCount(0);
+    await capture(page, `pending-panel-empty-${language}`);
+    expect(state.unexpected).toEqual([]);
   });
 }

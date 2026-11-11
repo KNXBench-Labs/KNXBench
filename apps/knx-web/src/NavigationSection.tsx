@@ -1,8 +1,12 @@
 /** Independently foldable navigation content that retains mounted editor and tree state. */
 import { useId, useState, type ReactNode } from "react";
 
-export default function NavigationSection({ title, children, grow = false, revealKey }: {
-  title: string; children: ReactNode; grow?: boolean; revealKey?: number;
+/**
+ * `lazy` mounts the content only while the section is open: for read-only
+ * lists that hold no draft and would otherwise render rows nobody sees.
+ */
+export default function NavigationSection({ title, children, grow = false, revealKey, lazy = false }: {
+  title: string; children: ReactNode; grow?: boolean; revealKey?: number; lazy?: boolean;
 }) {
   const id = useId();
   const [collapsed, setCollapsed] = useState(revealKey === undefined);
@@ -15,6 +19,6 @@ export default function NavigationSection({ title, children, grow = false, revea
       aria-controls={id} onClick={() => setCollapsed(value => !value)}>
       <span aria-hidden="true">{collapsed ? "▸" : "▾"}</span>{title}
     </button>
-    <div id={id} className="navigation-section-content" hidden={collapsed}>{children}</div>
+    <div id={id} className="navigation-section-content" hidden={collapsed}>{lazy && collapsed ? null : children}</div>
   </section>;
 }

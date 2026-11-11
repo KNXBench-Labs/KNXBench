@@ -1,5 +1,5 @@
 /** Root component wiring project state, panels, and toolbars into the KNX Web UI shell. */
-import { useEffect, useLayoutEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
 import { version as packageVersion } from "../package.json";
 import brandMark from "./assets/knxbench-mark.png";
 import { isTauri, pickOpenPath, pickSavePath } from "./filePicker";
@@ -25,7 +25,7 @@ import CatalogBrowser from "./CatalogBrowser";
 import { ActivityProvider, useActivityController } from "./ActivityContext";
 import ActivityFooter from "./ActivityFooter";
 import { projectActivityContext, type ActivityHandle } from "./activityController";
-import { collectDevices } from "./treeUtils";
+import { collectDevices, projectContextKey } from "./treeUtils";
 import { observeCatalogueActivity } from "./catalogueActivity";
 import { CatalogueJobsProvider, CatalogueJobsRootNotice, useCatalogueJobs } from "./CatalogueJobsContext";
 import NewProjectDialog from "./NewProjectDialog";
@@ -61,6 +61,8 @@ import { publishProjectContext, rebasePublishedSessionContext } from "./busConte
 import { ensureBusDiscovery } from "./busDiscovery";
 import { downloadHandoff as buildDownloadHandoff, type DownloadHandoff } from "./downloadHandoff";
 import { DownloadNavigationProvider } from "./OpenDownloadButton";
+import PendingProgrammingPanel from "./PendingProgrammingPanel";
+import { pendingDevicesSummary } from "./pendingDevices";
 import { openCompanionWindow } from "./diagnosticsWindow";
 import { resolveFlowNavigation, type FlowTarget } from "./flowNavigation";
 import type { FlowModel } from "./flowModel";
@@ -344,6 +346,8 @@ function AppBody({ manifestVersion = packageVersion, session, editorReturn = fal
   // position into the next one. Nothing reads it but React's `key`.
   const [loadKey, setLoadKey] = useState(0);
   const [selection, setSelection] = useState<Selection | null>(null);
+  // Issue #42: one pass per tree snapshot and language, also when the panel is folded (its count is in the title).
+  const pendingSummary = useMemo(() => tree ? pendingDevicesSummary(tree, uiLanguage) : null, [tree, uiLanguage]);
   const [revealRequest, setRevealRequest] = useState<{
     selection: Selection;
     generation: number;
@@ -811,6 +815,8 @@ function AppBody({ manifestVersion = packageVersion, session, editorReturn = fal
     if (!current) return;
     setDownloadHandoff(buildDownloadHandoff(current, deviceId, ++downloadNonceRef.current));
     setLogOpen(false); setMonitorOpen(true);
+    // The pending-programming panel sits in the navigation; on a phone it covers the download tab.
+    if (window.innerWidth <= 650) setNavigationOpen(false);
   }
 
   /** Status-bar progress → the running download's own panel; selects and starts nothing. */
@@ -1744,6 +1750,11 @@ function AppBody({ manifestVersion = packageVersion, session, editorReturn = fal
           {tree && <PaneSplitter label={t("workbench.resizeNavigation")} target={navBlockRef} resizes="above" value={navHeight} onChange={setNavHeight} min={STACK_BLOCK_MIN_PX} max={STACK_BLOCK_MAX_PX} />}
           {tree && <NavigationSection title={t("workbench.projectExplorer")} grow revealKey={revealRequest?.generation}>
           <ProjectExplorer tree={tree} selection={selection} onSelect={selectEntity} onAddDevice={(target) => setDeviceWizard({ target })} onTreeUpdate={handleTreeUpdate} multiSelection={multiSelection} onItemClick={onItemClick} onSummary={pushFun} onError={reportError} revealRequest={revealRequest} onRevealComplete={completeSearchReveal} onOpenImportFindings={openImportFindings} />
+          </NavigationSection>}
+          {tree && pendingSummary && <NavigationSection lazy title={t("pendingPanel.title", { count: pendingSummary.devices.length })}>
+          <PendingProgrammingPanel key={projectContextKey(tree)} summary={pendingSummary}
+            selectedDeviceId={selection?.kind === "device" ? selection.id : null}
+            onSelect={(id) => void selectEntity({ kind: "device", id })} />
           </NavigationSection>}
           {tree && <PaneSplitter label={t("workbench.resizeDiagnostics")} target={diagnosticsBlockRef} resizes="below" value={diagnosticsHeight} onChange={setDiagnosticsHeight} min={STACK_BLOCK_MIN_PX} max={STACK_BLOCK_MAX_PX} />}
           <NavigationSection title={t("workbench.diagnostics")}>

@@ -66,6 +66,16 @@ impl ProgrammingParts {
         }
     }
 
+    /// The parts not in this set.
+    pub fn complement(self) -> Self {
+        Self {
+            address: !self.address,
+            application: !self.application,
+            parameters: !self.parameters,
+            group_addresses: !self.group_addresses,
+        }
+    }
+
     /// The parts in this set, as the load parts the flags are named after.
     pub fn load_parts(self) -> impl Iterator<Item = LoadPart> {
         [
@@ -267,6 +277,62 @@ fn flag_values(flags: &ResolvedFlags) -> FlagValues {
         value(&flags.communication),
         value(&flags.read_on_init),
     ]
+}
+
+/// Settles the belief of a `restored` project version against the `live`
+/// project it replaces (ADR-0173 §6): a version's flags describe the devices
+/// when it was stored, not now. A device present in both keeps the live flag
+/// for every part whose content is the same and becomes pending for the
+/// others, with settlement's dependencies (parameters need the same
+/// application, group addresses also the same parameters and address); it
+/// takes the live download time. A device the live project lacks becomes
+/// pending for all four parts. Returns, per device, the parts the version
+/// claimed programmed that are pending now.
+pub fn settle_restored_version(
+    live: &Project,
+    restored: &mut Project,
+) -> BTreeMap<DeviceId, ProgrammingParts> {
+    let ids: BTreeSet<DeviceId> = restored.devices.iter().map(|device| device.id).collect();
+    let live_content = programming_content(live, &ids);
+    let restored_content = programming_content(restored, &ids);
+    let mut corrected = BTreeMap::new();
+    for id in ids {
+        let Some(device) = restored.devices.get_mut(id) else {
+            continue;
+        };
+        let claimed = device.commissioning.pending_parts();
+        let live_device = live.devices.get(id);
+        let (pending, last_download) = match (
+            live_device,
+            live_content.get(&id),
+            restored_content.get(&id),
+        ) {
+            (Some(live_device), Some(now), Some(then)) => {
+                let changed = then.changed_parts(now);
+                let parameters = changed.application || changed.parameters;
+                let stale = ProgrammingParts {
+                    address: changed.address,
+                    application: changed.application,
+                    parameters,
+                    group_addresses: parameters || changed.address || changed.group_addresses,
+                };
+                (
+                    live_device.commissioning.pending_parts().union(stale),
+                    live_device.commissioning.last_download,
+                )
+            }
+            _ => (ProgrammingParts::ALL, device.commissioning.last_download),
+        };
+        let state = &mut device.commissioning;
+        ProgrammingChange::mark(ProgrammingParts::ALL, true).apply_to(state);
+        ProgrammingChange::mark(pending, false).apply_to(state);
+        state.last_download = last_download;
+        let newly = pending.intersection(claimed.complement());
+        if !newly.is_empty() {
+            corrected.insert(id, newly);
+        }
+    }
+    corrected
 }
 
 /// The devices whose communication objects link to `ga`.

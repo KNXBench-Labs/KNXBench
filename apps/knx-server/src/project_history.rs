@@ -280,6 +280,7 @@ fn mutate(
     }
     if let Some(restored) = change.restored {
         let restored_snapshot = restored.working;
+        log_restored_pending(state, &restored_snapshot.project, &change.restored_pending);
         *project = Some(restored_snapshot.project.clone());
         *state.clean_project.lock().expect("state mutex poisoned") =
             Some(restored_snapshot.project);
@@ -321,6 +322,40 @@ fn mutate(
         view.context_to_publish = Some(crate::GroupAddressContext::from_project(project.as_ref()));
     }
     Ok(view)
+}
+
+/// Names each device whose restored programming claim was corrected
+/// (ADR-0173 §6), so the extra pending marks have a visible reason.
+fn log_restored_pending(
+    state: &AppState,
+    project: &knx_core::Project,
+    corrected: &std::collections::BTreeMap<
+        knx_core::DeviceId,
+        knx_core::commissioning::pending::ProgrammingParts,
+    >,
+) {
+    use crate::log_text::{device_label, parts_text};
+    use crate::session_log::{self, LogEntry, Severity};
+    let mut log = state.session_log.lock().expect("state mutex poisoned");
+    for (device, parts) in corrected {
+        let Some(instance) = project.devices.get(*device) else {
+            continue;
+        };
+        log.push(LogEntry {
+            timestamp: session_log::now(),
+            severity: Severity::Info,
+            source: "ProjectHistory".into(),
+            message: format!(
+                "Restored version: {} needs programming for {}; the version's \"programmed\" \
+                 state is older than the project it replaced.",
+                device_label(instance),
+                parts_text(*parts)
+            ),
+            location: None,
+            detail: None,
+            diagnostic: None,
+        });
+    }
 }
 
 async fn run(

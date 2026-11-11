@@ -1,11 +1,12 @@
 //! Versioned native snapshots, durable editor recovery and atomic project time travel.
 
-use std::collections::HashSet;
+use std::collections::{BTreeMap, HashSet};
 use std::fmt;
 use std::time::Instant;
 
 use crate::StoreError;
-use knx_core::{CommandStack, Project};
+use knx_core::commissioning::pending::{settle_restored_version, ProgrammingParts};
+use knx_core::{CommandStack, DeviceId, Project};
 use rusqlite::{params, Connection, OptionalExtension, Transaction, TransactionBehavior};
 
 /// Read-only admission precedes a non-creating writable connection. Schema
@@ -1216,6 +1217,9 @@ pub struct HistoryChange {
     pub versions: Vec<ProjectVersion>,
     pub total_bytes: i64,
     pub restored: Option<EditorHistory>,
+    /// After a restore: per device, the parts the restored version claimed
+    /// programmed that are pending against the live project (ADR-0173 §6).
+    pub restored_pending: BTreeMap<DeviceId, ProgrammingParts>,
 }
 
 pub fn change_history(
@@ -1248,6 +1252,7 @@ pub fn change_history(
             &mut JournalWriteReport::default(),
         )?;
     }
+    let mut restored_pending = BTreeMap::new();
     let restored = match action {
         HistoryAction::Create(label) => {
             append_version(&tx, current_working, "named", label)?;
@@ -1277,6 +1282,10 @@ pub fn change_history(
                 .project
                 .ids
                 .raise_to(&current_working.project.ids);
+            // A version's programming flags describe the devices when it was
+            // stored; settle them against the live project before it lands.
+            restored_pending =
+                settle_restored_version(&current_working.project, &mut replacement.project);
             append_version(
                 &tx,
                 current_working,
@@ -1322,6 +1331,7 @@ pub fn change_history(
         versions,
         total_bytes,
         restored,
+        restored_pending,
     })
 }
 

@@ -10,6 +10,8 @@ all normalized scalar product/hardware/program data, every matching catalogue
 placement/section, sanitized source provenance and file-scoped additional
 attributes. Original XML, binary payloads and verified hardware capabilities are
 not implied. [Coverage, regression seam and limits](../contracts/device-product-metadata.md).
+Published and accepted on main `5494e3d68`; available in source builds after Alpha 20,
+not a claim that an existing Alpha 20 installation has been updated.
 
 ## Background activities (source only, after Alpha 20)
 

@@ -474,7 +474,8 @@ changes, the project does not. Saving or exporting a project file is something e
 (see the [glossary](../../GLOSSARY.md)).
 
 1. Open the project that contains the device, then **Bus monitor** in the navigation
-   sidebar and its **Download to device** tab (German: **In Gerät laden**), beside the
+   sidebar and its **Download to device** tab (German: **Gerät programmieren**; Alpha 20 and
+   earlier: *In Gerät laden*), beside the
    monitor and the line scan. Only devices that have an individual address are offered.
    Since Alpha 10 the device editor also has **Download to
    device…**: it opens this tab with exactly that device selected — by its stable id in
@@ -489,7 +490,8 @@ changes, the project does not. Saving or exporting a project file is something e
    **Check again** when either check failed. Both checks only read the server; neither
    touches the bus.
 2. Choose the device, **What to write** and the gateway, then **Prepare download**
-   (German: **Download vorbereiten**; nothing is written yet). Since the fix for issue
+   (German: **Programmierung vorbereiten**, Alpha 20 and earlier *Download vorbereiten*;
+   nothing is written yet). Since the fix for issue
    #10, a device the ordinary memory download cannot program yet is marked
    *(memory download: not supported yet)* in the list (Alpha 16 and
    earlier: *(cannot be programmed yet)*), and choosing it shows the reason in plain

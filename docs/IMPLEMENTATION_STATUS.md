@@ -12,6 +12,16 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## German UI says “Programmieren” for device writes (11 November 2026; issue #41, WP-34)
+
+The German catalogue used *In Gerät laden*, *Download* and *Programmieren* for
+the same bus operation. Following ETS usage it now says *programmieren* /
+*Programmierung* throughout (complete: *vollständige Programmierung*, partial:
+*Teilprogrammierung*, dialog field: *Programmierart*); *Programmiermodus* keeps
+its device-button meaning and *Download* stays for browser file downloads.
+Translation keys, placeholders and server confirmation phrases are unchanged.
+Rule: [GLOSSARY](GLOSSARY.md#german-terminology-for-device-writes).
+
 ## Download dialog names pending changes a partial scope leaves out (11 November 2026; issue #39, WP-32)
 
 When the prepared plan's scope does not write every part the project marks

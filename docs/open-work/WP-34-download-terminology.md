@@ -1,7 +1,11 @@
 # WP-34 — One term for writing configuration to a device (#41)
 
 External report by the issue reporter, 10 November 2026; triaged 11 November 2026.
-Status: **open; precedes WP-32, WP-35 and WP-38 copy.**
+Status: **implemented 11 November 2026.** 130 German catalogue values now say
+*programmieren*/*Programmierung*; 19 remaining *Download* values are browser file
+downloads, the ETS *Download-Plug-in* name and one parenthetical English term.
+The rule lives in [GLOSSARY](../GLOSSARY.md#german-terminology-for-device-writes).
+English copy is unchanged.
 
 ## Owner decision (11 November 2026)
 

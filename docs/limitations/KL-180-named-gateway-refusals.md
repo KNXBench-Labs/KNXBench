@@ -84,7 +84,11 @@ The web client words `busSessionChanged` in English and German through the
 existing strict refusal admission. The status bar and the bus monitor panel
 disconnect through this route only; a server without it answers `404`/`405`,
 which is shown as "no session-bound disconnect" and never falls back to the
-global stop. The download page's holder notice still uses the legacy stop.
+global stop. Since 11 November 2026 (source) the download page's holder notice
+also stops the monitor session it names through this route, bound to the
+activity snapshot's server incarnation; a changed session shows the
+`busSessionChanged` refusal and keeps running. No web caller uses the legacy
+stop any more; the route itself stays for older clients.
 
 The client publishes an action's side effects only while it still owns them:
 a start answer from a server lifetime other than the one observed last, a start

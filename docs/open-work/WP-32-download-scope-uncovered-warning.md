@@ -1,8 +1,9 @@
 # WP-32 — Download dialog: warn about pending changes outside the chosen scope (#39)
 
 External report by the issue reporter, 10 November 2026; triaged 11 November 2026.
-Status: **open.** Owner decision 11 November 2026: a warning is sufficient,
-no extra confirmation.
+Status: **implemented 11 November 2026** (warning in `DownloadScopeAdvice`,
+`uncoveredParts` in `downloadScopeAdvice.ts`). Owner decision 11 November 2026:
+a warning is sufficient, no extra confirmation.
 
 ## Requested outcome
 

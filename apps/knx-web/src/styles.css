@@ -2487,6 +2487,15 @@ main {
   min-width: 0;
 }
 .device-download-warnings { border-left: 3px solid var(--knx-warning-color, var(--knx-accent)); }
+/* #39: pending parts the chosen scope leaves unwritten, shown with the plan warnings' frame. */
+.device-download-scope-uncovered {
+  display: grid; gap: 6px; padding: 10px 12px; min-width: 0;
+  border: 1px solid var(--knx-border); border-left: 3px solid var(--knx-warning-color, var(--knx-accent));
+  border-radius: var(--knx-radius-card);
+}
+.device-download-scope-uncovered p { margin: 0; overflow-wrap: anywhere; }
+.device-download-scope-uncovered ul { display: grid; gap: 4px; margin: 0; padding-left: 1.2rem; }
+.device-download-scope-uncovered li { overflow-wrap: anywhere; }
 .device-download-warnings h4,
 .device-download-inferences h4,
 .device-download-verify h3,

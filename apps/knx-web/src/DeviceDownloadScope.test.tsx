@@ -126,6 +126,25 @@ it("asks the server for the pending scope and shows the scope it resolved to", a
   expect(host.querySelector("[data-scope-unmet]")).toBeNull();
 });
 
+it("warns before start when an explicit scope leaves a pending part unwritten (#39)", async () => {
+  apiMock.planDeviceDownload.mockResolvedValue({ ...PLAN, scopeFromChanges: false, scope: "parameters",
+    scopeAdvice: advice({ write: "both" }) });
+  await prepare("parameters");
+  const warning = host.querySelector("[data-scope-uncovered]");
+  expect(warning?.getAttribute("data-scope-uncovered")).toBe("groupAddresses");
+  expect(warning?.textContent).toContain(en["deviceDownload.scopeAdvice.uncovered.groupAddresses"]);
+  expect(warning?.textContent).toContain(en["deviceDownload.scopeAdvice.uncovered.after"]);
+  expect(host.querySelector('[data-scope-uncovered-part="parameters"]')).toBeNull();
+});
+
+it("names no uncovered part when the scope covers everything pending", async () => {
+  await prepare("changes");
+  expect(host.querySelector("[data-scope-uncovered]")).toBeNull();
+  apiMock.planDeviceDownload.mockResolvedValue({ ...PLAN, scopeFromChanges: false, scope: "both", scopeAdvice: advice({ write: "parameters" }) });
+  await prepare("both");
+  expect(host.querySelector("[data-scope-uncovered]")).toBeNull();
+});
+
 it("marks a pending address and medium configuration as unmet, never as fully programmed", async () => {
   apiMock.planDeviceDownload.mockResolvedValue({ ...PLAN, scopeAdvice: advice({ address: "pending", mediumPending: true }) });
   await prepare("changes");

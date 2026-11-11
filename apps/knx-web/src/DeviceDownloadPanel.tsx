@@ -675,7 +675,7 @@ export default function DeviceDownloadPanel({ project, handoff = null, onHandoff
             </section>
           )}
           {isScopeAdvice(plan.scopeAdvice) && (
-            <DownloadScopeAdvice advice={plan.scopeAdvice} resolved={plan.scopeFromChanges ? plan.scope : undefined} />
+            <DownloadScopeAdvice advice={plan.scopeAdvice} resolved={plan.scopeFromChanges ? plan.scope : undefined} scope={plan.scope} />
           )}
           {plan.partial && (
             <section className="device-download-not-written">

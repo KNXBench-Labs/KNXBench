@@ -527,7 +527,10 @@ changes, the project does not. Saving or exporting a project file is something e
    you confirmed. The marks are the project's belief, not read from the device. A
    pending individual address or medium configuration is shown separately: no
    download writes either. Every plan, including an explicitly chosen scope, also
-   says what the marks advise. "Nothing pending" needs no product data. The plan
+   says what the marks advise. When the chosen scope leaves a pending part
+   unwritten (for example **Parameters only** while a group-address change is
+   pending), the plan names that part in a warning before you start; it stays
+   marked pending afterwards, and you can still start the download. "Nothing pending" needs no product data. The plan
    names the application program, the mask and manufacturer the device must report
    before the first write, the parameter values and group links taken from the project,
    every memory segment with the octets written, and every step. Nothing has been sent.

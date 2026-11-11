@@ -1555,9 +1555,22 @@ disclosure, grouped as Product, Hardware and Application program: manufacturer I
 catalog item and its number; hardware name, version and serial number; program name,
 number, version, ID and mask version.
 
-Fields the database has no value for are left out rather than printed as dashes, and
-the disclosure ends by counting how many were omitted — so you can tell "the database
-is silent here" from "this view only shows six fields".
+Fields missing from that overview are omitted and counted as **overview fields**,
+not as a count of the whole database.
+
+**Source builds after Alpha 20:** **More product data → Database records** also
+shows all available normalized scalar metadata, every matching catalogue placement
+and its sections, source hashes and sanitized filenames, and retained additional
+source attributes/diagnostics. Open a record to inspect its exact IDs **and** names,
+technical data, descriptions, application/security/ETS declarations and source
+values. These records are untranslated source literals with translated field labels;
+empty values remain distinct from missing values. Additional diagnostics apply to
+the whole source file, not necessarily this device. Original XML and binary blobs
+are not dumped. [Coverage and limits](../../contracts/device-product-metadata.md).
+
+The manufacturer display uses a real installed name, or an unambiguous name from
+retained master data when an older database only has an ID-shaped/missing name.
+Without such evidence it keeps the exact ID; names are never guessed or downloaded.
 
 > **Note**
 >

@@ -79,6 +79,11 @@ catalogue creation stay durable before they answer.
    incarnation and history generation. It first preserves the complete current
    working project as a pre-restore version, then atomically installs the chosen
    version. Restore resets the edit stack; going back uses the preserved version.
+   The restored devices' four programming flags are settled against the replaced
+   project ([ADR-0173 §6](adr/0173-last-downloaded-parameter-values.md#6-version-restore-settles-the-four-flags-against-the-live-project)):
+   parts whose content differs become pending, the others keep the replaced
+   project's flag. Restoring the preserved version afterwards does not bring back
+   the earlier "programmed" flags; everything else is restored exactly.
 5. Snapshot envelopes are versioned and SHA-256 verified before decoding. Future,
    malformed, oversized, incomplete or cross-project journal data fail closed;
    never partially load a stack or silently erase history. Stores predating the
@@ -100,7 +105,7 @@ catalogue creation stay durable before they answer.
 | Unsaved native edit survives restart, remains dirty | HTTP working journal test |
 | Atomic failure and stale writer | Nonempty native store + injected failure/CAS |
 | Opaque/manufacturer preservation | Full snapshot/native roundtrip assertions |
-| Versions and restore safety | named/save/pre-restore rows + exact restored model |
+| Versions and restore safety | named/save/pre-restore rows + exact restored model apart from settled programming flags |
 | Malformed/future/size/gaps/IDs | store admission and migration regressions |
 | User confirmation and stale UI | API + component/browser assertions |
 | Desktop/server use same path | shared server domain integration + builds |

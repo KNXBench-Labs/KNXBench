@@ -280,7 +280,12 @@ fn mutate(
     }
     if let Some(restored) = change.restored {
         let restored_snapshot = restored.working;
-        log_restored_pending(state, &restored_snapshot.project, &change.restored_pending);
+        log_restored_pending(
+            state,
+            current,
+            &restored_snapshot.project,
+            &change.restored_pending,
+        );
         *project = Some(restored_snapshot.project.clone());
         *state.clean_project.lock().expect("state mutex poisoned") =
             Some(restored_snapshot.project);
@@ -328,6 +333,7 @@ fn mutate(
 /// (ADR-0173 §6), so the extra pending marks have a visible reason.
 fn log_restored_pending(
     state: &AppState,
+    replaced: &knx_core::Project,
     project: &knx_core::Project,
     corrected: &std::collections::BTreeMap<
         knx_core::DeviceId,
@@ -341,16 +347,26 @@ fn log_restored_pending(
         let Some(instance) = project.devices.get(*device) else {
             continue;
         };
-        log.push(LogEntry {
-            timestamp: session_log::now(),
-            severity: Severity::Info,
-            source: "ProjectHistory".into(),
-            message: format!(
+        let message = if replaced.devices.get(*device).is_some() {
+            format!(
                 "Restored version: {} needs programming for {}; the version's \"programmed\" \
                  state is older than the project it replaced.",
                 device_label(instance),
                 parts_text(*parts)
-            ),
+            )
+        } else {
+            format!(
+                "Restored version: {} was not in the project it replaced, so its programming \
+                 state is unknown; it needs programming for {}.",
+                device_label(instance),
+                parts_text(*parts)
+            )
+        };
+        log.push(LogEntry {
+            timestamp: session_log::now(),
+            severity: Severity::Info,
+            source: "ProjectHistory".into(),
+            message,
             location: None,
             detail: None,
             diagnostic: None,

@@ -424,7 +424,10 @@ a **named version** before a redesign, independently of autosave; search version
 and select a version to restore. Save/autosave also keeps the preceding distinct
 saved state. Restore asks explicitly, preserves the complete current working state
 as a **Before restore** version and then atomically replaces the project. It clears
-the edit stack; to go back, restore the preserved version. Cancel is initially
+the edit stack; to go back, restore the preserved version. Programming marks
+are the exception: a device whose restored content differs from what was there
+before shows those parts as not programmed, and the Log names it. Going back
+does not remove such marks; programming the device or marking it does. Cancel is initially
 focused and does not send a mutation. Changed revisions or server lifetimes
 invalidate old confirmations; reopen/refresh rather than forcing stale consent.
 

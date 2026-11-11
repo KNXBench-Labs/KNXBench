@@ -546,4 +546,34 @@ async fn restoring_an_older_version_marks_what_the_device_no_longer_holds_and_sa
         "{}",
         entry.message
     );
+    drop(log);
+
+    // Going back to the preserved state restores its value 2, but not its
+    // "programmed" flags: the conservative direction (ADR-0173 §6).
+    let (_, view) = request(&app, "GET", "/api/project/history", Value::Null).await;
+    let safety = view["versions"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|v| v["reason"] == "pre_restore")
+        .unwrap()["id"]
+        .as_i64()
+        .unwrap();
+    let (status, back) = request(
+        &app,
+        "POST",
+        &format!("/api/project/history/versions/{safety}/restore"),
+        binding(&view, true),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{back}");
+    let project = state.project.lock().unwrap().clone().unwrap();
+    assert_eq!(project.installations[0].parameters[0].raw, "2");
+    let pending = project
+        .devices
+        .get(knx_core::DeviceId(1))
+        .unwrap()
+        .commissioning
+        .pending_parts();
+    assert!(pending.parameters && pending.group_addresses, "{pending:?}");
 }

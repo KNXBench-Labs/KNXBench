@@ -88,12 +88,13 @@ Module-scoped values are out of scope until module downloads exist.
 ### 2. It lives outside the model images and outside undo
 
 The baseline is keyed by `DeviceId` and stored in its own native tables
-(§6), **outside** `Project`, `NativeSnapshot` history images and versions. So
+(§7), **outside** `Project`, `NativeSnapshot` history images and versions. So
 no undo, redo, snapshot recovery or version restore can bring back an older
 baseline, and the history images do not grow. No edit command touches it.
-A deleted device keeps its baseline entry while undo can bring it back (same
-id, the physical device untouched); the next native save prunes entries of
-devices absent from the saved project.
+A device deletion leaves its entry until the next native save, which prunes
+entries of devices absent from the saved project. A device that an undo,
+redo or version restore brings back after that save returns with an unknown
+baseline; this conservative loss is accepted.
 
 ### 3. Only settlement writes it
 
@@ -101,7 +102,9 @@ devices absent from the saved project.
 Remove | Record { program_id, values, at }`, so `apply_settlement` can tell
 "completed, project edited during the run" (record) from "changed source" or
 "interrupted" (remove), which all give `programmed.parameters = false`.
-`apply_settlement` is its single writer, in the same step as the flags.
+Only settlement records it, in `apply_settlement`, in the same step as the
+flags. It is removed by settlement, by a manual mark (below) and by pruning
+at save (§2); nothing else changes it.
 
 | Settler and end | Baseline |
 | --- | --- |
@@ -126,7 +129,9 @@ show as differing from the last download until the next one.
 A parameter **differs from the last download** when the baseline is usable
 and its stored value differs from the current effective value
 (`resolve_values` over the current chosen values). Setting a value explicitly
-to its default is therefore not a difference. Values compare as exact raw
+to its default is therefore not a difference. A ref with a value on exactly
+one side (no value at all, or a key the program does not declare) differs;
+a ref absent on both sides is not compared. Values compare as exact raw
 strings, the strings the image builder encodes.
 
 The baseline is **not usable** (state reported, no per-parameter verdict) when
@@ -166,8 +171,16 @@ project using `programming_content` (the same comparison edit commands use):
 
 The fifth flag, `medium_config_loaded`, is left alone (ADR-0129). The result
 is durable with the restore and no undo step (the restore clears the undo
-stack). `HistoryChange` returns the corrected devices; the server writes one
-session-log line per device. The stored version itself is not rewritten.
+stack). `HistoryChange` returns, per device, the parts that became pending although
+the version claimed them programmed; the server writes one session-log line
+per such device (separate wording for a device the live project lacks).
+Parts that move the other way (the version said pending, the live project
+programmed with the same content) are applied but not logged.
+
+Restore is therefore no longer an exact round trip for these flags: restoring
+version V and then its **Before restore** version P leaves pending every part
+where P and V differ, although the device still holds P's content. This is
+the conservative direction; a download or a manual mark clears it. The stored version itself is not rewritten.
 Delivered first and separately as [WP-40](../open-work/WP-40-version-restore-programming-claims.md).
 
 ### 7. Storage
@@ -179,6 +192,16 @@ snapshot codec and its schema check must know them as excluded tables. The
 migration from 19 is additive and leaves every baseline unknown; nothing is
 derived from imported ETS flags, the activity history or a settlement
 receipt. Older builds refuse schema 20 files, as with every schema step.
+
+Baseline rows are written in the same SQLite transaction as the working
+journal write that persists the settled flags (`persist_native_working_reported`),
+so a crash cannot pair newer flags with an older baseline. If that write
+fails, the existing `PersistFailed` handling applies to both: the session
+log says so and no durable claim is made. A project without a native file
+keeps baselines in server memory, bound to the project incarnation, and the
+first native save writes them; **Save As** to a new file copies them like
+the project. Row count is one per unscoped ref per programmed device; a
+large-project size and time test is part of the implementation.
 Restoring a version stored by schema 19 is tested. `.knxproj` import, project
 comparison, exports, reports and selective import ignore the baseline in this
 step; the selective-import reference closure is audited for the new tables.

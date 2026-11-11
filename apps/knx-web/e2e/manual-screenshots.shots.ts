@@ -144,6 +144,7 @@ async function captureReleaseDetails(page: Page): Promise<void> {
   await tabs.getByRole("tab", { name: "Communication objects", exact: true }).click();
   await page.locator(".com-object-channel-summary").filter({ hasText: "Channel A" }).click();
   await page.locator('summary[aria-label="Edit object 0"]').click();
+  await page.locator(".com-object-more > summary").click();
   const dpt = page.locator(".dpt-field select");
   await expect(dpt).toBeVisible();
   await expect(dpt.locator("option").filter({ hasText: "Switch" }).first()).toHaveCount(1);

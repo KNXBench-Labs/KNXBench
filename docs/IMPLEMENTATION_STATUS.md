@@ -12,6 +12,21 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Communication objects show their links first and a compact toolbar (11 November 2026; issues #44, #46, WP-36)
+
+An expanded communication object now starts with **Linked group addresses**:
+each link with **Unlink**, then the row to link another address, on one line
+where the width allows. DPT, function, description, flags and priorities moved
+into **Object settings**, closed by default; its summary lists the set flag
+letters, closing it keeps unsaved entries, and it stays open while a change is
+saved. Field behaviour and writes are unchanged. Above the table, one **Object
+view** list replaces the three view buttons, and **Original order** plus the
+**Priority column** checkbox sit in a small **Options** menu that Escape
+closes. Search, the filters and **Reset filters** stay in the toolbar.
+Component tests and en/de browser checks at 1440 and 400 px in Porcelain,
+Graphite and LCARS cover the order, the closed settings and a toolbar without
+sideways overflow.
+
 ## A send and a receive link to one address download as one sending association (11 November 2026; WP-39)
 
 An object linked to one group address both to send and to receive made an

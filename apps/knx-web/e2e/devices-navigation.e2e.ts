@@ -304,6 +304,9 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
     await page.locator(".com-object-channel-summary").click();
     await expect(page.locator(".com-object-name")).toHaveText("Rocker output");
     await page.locator('.com-object-detail > summary').click();
+    // Issue #46: the object-local function control sits in the closed object settings.
+    await expect(page.locator(".com-object-functions select")).toBeHidden();
+    await page.locator(".com-object-more > summary").click();
     const mode = page.locator(".com-object-functions select");
     await expect(mode).toBeVisible();
     await expect(mode).toHaveValue("1");

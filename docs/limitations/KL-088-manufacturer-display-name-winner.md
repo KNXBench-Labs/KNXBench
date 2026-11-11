@@ -6,6 +6,16 @@ This dossier preserves the technical detail and dated history. Earlier
 headings, failures and lifting conditions are historical where later
 updates supersede them; they are not new work assignments.
 
+## Current read-only display fallback (10 November 2026 source candidate)
+
+The device metadata queries preserve a real installed name. If it is missing,
+empty or only the exact manufacturer ID/four hex digits, they can use a single
+unambiguous name from retained, valid master XML. Conflicting names or absent
+masters leave the ID visible. This repairs display for older databases whose
+generic ingest retained the master but did not interpret it, without rewriting
+any row or changing the ingestion policy below. No built-in manufacturer-name
+list or network lookup is introduced. [Contract](../contracts/device-product-metadata.md).
+
 <!-- BEGIN retained catalogue record -->
 
 ## 88. A manufacturer's display name is last-writer-wins, and that is on purpose

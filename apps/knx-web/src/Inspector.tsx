@@ -41,6 +41,7 @@ import { useTranslate, type MessageKey, type Translate } from "./i18n";
 import { EffectivePriorityRow, PriorityEditField } from "./EffectivePriority";
 import { SavedInstancePriorityRow } from "./SavedInstancePriority";
 import { useProductLanguage } from "./productLanguage";
+import { ProductDatabaseDetails } from "./ProductDatabaseDetails";
 import DeviceInstructionsPanel from "./DeviceInstructionsPanel";
 import { LanguageFallbackBadge, fellBack } from "./languageFallback";
 import { useGroupAddressFormat } from "./gaNotation";
@@ -818,7 +819,7 @@ const RESOLUTION_KEYS: Record<ProductResolution, { badge: MessageKey; explain: M
 // disclosure below, so a fully resolved device does not push the
 // communication object table off the screen to say so.
 const HEADLINE_FIELDS: CatalogField[] = [
-  { label: "deviceIdentity.manufacturer", of: (c) => c.manufacturer_name },
+  { label: "deviceIdentity.manufacturer", of: (c) => c.manufacturer_name ?? c.manufacturer_id },
   { label: "deviceIdentity.productText", of: (c) => c.product_text,
     language: (c) => ({ answered: c.product_text_language, source: c.product_source_language }) },
   { label: "deviceIdentity.orderNumber", of: (c) => c.order_number, mono: true },
@@ -977,6 +978,7 @@ function DeviceIdentity(props: { product: DeviceProductNode }) {
               : <IdentityFields rows={group.rows} t={t} />}
           </div>
         ))}
+        {catalog.details && <ProductDatabaseDetails sections={catalog.details} />}
         {omitted > 0 && <p className="identity-note">{t("deviceIdentity.omitted", { count: omitted })}</p>}
       </details>
     )}

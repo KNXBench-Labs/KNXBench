@@ -278,8 +278,10 @@ Both link forms pre-fill the direction from the object, never from the address's
   Write-only actuator object too.
 - An object that already sends on an address gets **Receive**: an object has one
   sending address, and a download refuses a second.
-- An object already linked to the chosen address keeps that direction, so the form
-  shows the existing refusal instead of proposing the same object on one address twice.
+- An object already linked to the chosen address keeps that direction instead of
+  proposing the same object on one address twice. **Add member…** refuses it before
+  sending; the link row on the object says so in its hint, and **Link** then shows the
+  server's refusal.
 
 The flags do not change the suggestion. It is only a starting value: change it, and
 your choice holds until the link is made. [Devices and products](05-devices-and-products.md) covers the

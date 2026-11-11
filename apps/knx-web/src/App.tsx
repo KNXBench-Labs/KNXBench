@@ -41,6 +41,7 @@ import { StoredBusAccessDialog } from "./StoredBusAccess";
 import type { CommandContext } from "./commandRegistry";
 import { appUiScale } from "./appUiScale";
 import BusConnectionStatus from "./BusConnectionStatus";
+import DownloadFooterProgress from "./DownloadFooterProgress";
 import JournalStatusIndicator from "./JournalStatusIndicator";
 import SettingsPanel from "./SettingsPanel";
 import { ModalForeground } from "./ModalForeground";
@@ -361,6 +362,7 @@ function AppBody({ manifestVersion = packageVersion, session, editorReturn = fal
   // "Download to device…" requests; each click gets a new nonce so a repeat
   // on the same device acts again. Navigation only: nothing plans or sends.
   const [downloadHandoff, setDownloadHandoff] = useState<DownloadHandoff | null>(null);
+  const [downloadTabRequest, setDownloadTabRequest] = useState(0);
   const downloadNonceRef = useRef(0);
   useEffect(() => { if (monitorOpen) setMonitorMounted(true); }, [monitorOpen]);
   // A visibility override, not a project view: keep the real editor owners
@@ -808,6 +810,13 @@ function AppBody({ manifestVersion = packageVersion, session, editorReturn = fal
     const current = treeRef.current;
     if (!current) return;
     setDownloadHandoff(buildDownloadHandoff(current, deviceId, ++downloadNonceRef.current));
+    setLogOpen(false); setMonitorOpen(true);
+  }
+
+  /** Status-bar progress → the running download's own panel; selects and starts nothing. */
+  function openDownloadTab() {
+    setSettingsOpen(false);
+    setDownloadTabRequest(n => n + 1);
     setLogOpen(false); setMonitorOpen(true);
   }
 
@@ -1560,7 +1569,7 @@ function AppBody({ manifestVersion = packageVersion, session, editorReturn = fal
       )}
       <ModalForeground active={!settingsOpen}>
       <div className="workbench-content" hidden={settingsOpen}>
-      {(monitorMounted || monitorOpen) && <ModalForeground active={monitorOpen}><div hidden={!monitorOpen}><BusDiagnosticsPanel active={!settingsOpen && monitorOpen} project={tree} onTreeUpdate={handleTreeUpdate} projectScope={flowProjectScope} onFlowNavigate={navigateFlow} downloadHandoff={downloadHandoff} /></div></ModalForeground>}
+      {(monitorMounted || monitorOpen) && <ModalForeground active={monitorOpen}><div hidden={!monitorOpen}><BusDiagnosticsPanel active={!settingsOpen && monitorOpen} project={tree} onTreeUpdate={handleTreeUpdate} projectScope={flowProjectScope} onFlowNavigate={navigateFlow} downloadHandoff={downloadHandoff} downloadTabRequest={downloadTabRequest} /></div></ModalForeground>}
       {logOpen ? <LogPanel tree={tree} refreshKey={logVersion} notifications={notifications} notificationDroppedCount={notificationDroppedCount} notificationTarget={logTarget} onNotificationTargetHandled={() => setLogTarget(null)} importFocus={logImportFocus} onImportFocusHandled={() => setLogImportFocus(null)} /> : monitorOpen ? null : view === "catalog" ? null : tree ? (
         view === "device" ? <section className="device-editor-view" aria-label={t("workbench.device")}>
           <nav className="device-editor-navigation" aria-label={t("workbench.devices")}>
@@ -1768,6 +1777,7 @@ function AppBody({ manifestVersion = packageVersion, session, editorReturn = fal
             if (entry.destination === "comparison") { if (comparisons.ownsActivity(entry.id)) openDevices(); }
             else if (catalogueController.getSnapshot().operationId === entry.identity.operationId) setCatalogueActivityOpen(n => n + 1);
           }} />
+        <DownloadFooterProgress onOpen={openDownloadTab} />
         <BusConnectionStatus onOpenBusSettings={openBusSettings} />
         <span>v{manifestVersion}</span>
       </footer>

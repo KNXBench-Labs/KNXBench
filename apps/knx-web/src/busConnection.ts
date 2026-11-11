@@ -69,7 +69,9 @@ export function connectionFromActivity(snapshot: ActivitySnapshot): BusConnectio
   }
   for (const session of snapshot.sessions) {
     if (session.kind === "deviceDownload" && session.state === "running") {
-      return { phase: "occupied", holder: { kind: "deviceDownload", address: session.address, state: "running" } };
+      const { completedSteps, totalSteps, writtenOctets, totalOctets } = session;
+      return { phase: "occupied", holder: { kind: "deviceDownload", address: session.address, state: "running",
+        progress: { completedSteps, totalSteps, writtenOctets, totalOctets } } };
     }
     if (session.kind === "addressProgramming" && (session.state === "waiting" || session.state === "programming")) {
       return { phase: "occupied", holder: { kind: "addressProgramming", address: session.address, state: session.state } };

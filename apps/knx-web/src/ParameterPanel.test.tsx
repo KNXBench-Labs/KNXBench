@@ -332,8 +332,18 @@ describe("ParameterPanel", () => {
     apiMock.setParameterValue.mockReturnValue(new Promise<ParameterPanelDto>(() => {}));
     await act(async () => setSelectValue(undeclared.select, "10"));
     expect(apiMock.setParameterValue).toHaveBeenCalledExactlyOnceWith(1, "P1", "10", null, bound("7"));
-    expect(apiMock.setParameterValue.mock.calls.some((call) => call[2] === "")).toBe(false);
     await act(async () => undeclared.root.unmount());
+
+    // A refused write rolls back to the undeclared value, and its placeholder returns.
+    apiMock.setParameterValue.mockReset();
+    apiMock.setParameterValue.mockRejectedValue(new Error("refused"));
+    const refused = await optionsFor("7");
+    await act(async () => setSelectValue(refused.select, "30"));
+    const after = host!.querySelector<HTMLSelectElement>("select")!;
+    expect(after.value).toBe("7");
+    expect(after.options[0].disabled).toBe(true);
+    expect(after.options[0].value).toBe("7");
+    await act(async () => refused.root.unmount());
   });
 
   it("renders declared-grid cells with the same bound rows and the one existing write path", async () => {

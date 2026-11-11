@@ -203,7 +203,8 @@ class Hazards(unittest.TestCase):
         self.assertIn('tcp-line-scan.e2e.ts', files)
         self.assertIn('parameter-block-rename.e2e.ts', files)
         self.assertIn('background-activity.e2e.ts', files)
-        self.assertEqual(len(files), 41)
+        self.assertIn('device-download-footer.e2e.ts', files)
+        self.assertEqual(len(files), 42)
         for name in files:
             self.assertTrue((APP / 'e2e' / name).is_file(), name)
 

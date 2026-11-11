@@ -1962,7 +1962,7 @@ export const messages = {
   "inspector.priorityEdit.hint": "KNXBench does not program a changed priority: while the project priority differs from the product's, programming this device is refused.",
   "inspector.direction.label": "Direction of the new link",
   "inspector.direction.reason.hasSender": "Suggested: receive, because this object already sends on a group address (an object has one sending address).",
-  "inspector.direction.reason.firstSends": "Suggested: send, because an object's first group address is its sending one: it transmits and answers reads on it.",
+  "inspector.direction.reason.firstSends": "Suggested: send, because this object has no sending group address yet; it transmits and answers reads on that one.",
   "inspector.direction.reason.alreadyLinked": "This object is already linked to this group address.",
   "inspector.direction.send": "Send",
   "inspector.direction.receive": "Receive",

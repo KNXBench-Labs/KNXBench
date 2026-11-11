@@ -1955,7 +1955,7 @@ export const messages: Record<MessageKey, string> = {
   "inspector.priorityEdit.hint": "KNXBench programmiert keine geänderte Priorität: Solange die Projektpriorität von der des Produkts abweicht, wird das Programmieren dieses Geräts verweigert.",
   "inspector.direction.label": "Richtung der neuen Verknüpfung",
   "inspector.direction.reason.hasSender": "Vorschlag: Empfangen, weil dieses Objekt schon auf einer Gruppenadresse sendet (ein Objekt hat eine Sendeadresse).",
-  "inspector.direction.reason.firstSends": "Vorschlag: Senden, weil die erste Gruppenadresse eines Objekts seine Sendeadresse ist: Darauf sendet es und beantwortet Leseanfragen.",
+  "inspector.direction.reason.firstSends": "Vorschlag: Senden, weil dieses Objekt noch keine Sendeadresse hat; auf ihr sendet es und beantwortet Leseanfragen.",
   "inspector.direction.reason.alreadyLinked": "Dieses Objekt ist schon mit dieser Gruppenadresse verknüpft.",
   "inspector.direction.send": "Senden",
   "inspector.direction.receive": "Empfangen",

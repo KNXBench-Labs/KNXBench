@@ -10,11 +10,18 @@ import { pendingParts, type ProgrammingPart } from "./programmingState";
 import { collectDevices } from "./treeUtils";
 import { useUiLanguage } from "./uiLanguage";
 
+/** The device editor's tabs, in display order; `DeviceWorkspace` labels them. */
+export const DEVICE_TABS = ["objects", "parameters", "identity", "diagnostics", "restricted", "instructions"] as const;
+export type DeviceTab = (typeof DEVICE_TABS)[number];
+
 /**
- * The parts each device editor tab shows, by tab index: communication objects
- * carry the group-address links, parameters the application's settings.
+ * The parts each tab shows: communication objects carry the group-address
+ * links, parameters the application's settings. Others show none.
  */
-const TAB_PARTS: readonly (readonly ProgrammingPart[])[] = [["group_addresses"], ["application", "parameters"]];
+const TAB_PARTS: Partial<Record<DeviceTab, readonly ProgrammingPart[]>> = {
+  objects: ["group_addresses"],
+  parameters: ["application", "parameters"],
+};
 
 /** The device's pending parts in display order; none when the tree does not report them. */
 export function useDevicePendingParts(tree: ProjectTree, deviceId: number): ProgrammingPart[] {
@@ -25,8 +32,8 @@ export function useDevicePendingParts(tree: ProjectTree, deviceId: number): Prog
 }
 
 /** The pending parts a tab shows, in display order. */
-export function tabPendingParts(pending: readonly ProgrammingPart[], tabIndex: number): ProgrammingPart[] {
-  const parts = TAB_PARTS[tabIndex] ?? [];
+export function tabPendingParts(pending: readonly ProgrammingPart[], tab: DeviceTab): ProgrammingPart[] {
+  const parts = TAB_PARTS[tab] ?? [];
   return pending.filter((part) => parts.includes(part));
 }
 

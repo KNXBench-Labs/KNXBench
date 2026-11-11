@@ -57,7 +57,9 @@ export default function DownloadGatewayHolder({ gateway, disabled, onUseGateway 
     setError(null);
     setStopping(true);
     try {
-      if (current.kind === "busMonitor") await api.stopBusMonitor();
+      // WP-26: only the session this notice shows; a changed session answers
+      // `busSessionChanged` and stays running. Never the legacy global stop.
+      if (current.kind === "busMonitor") await api.stopBoundBusMonitor({ sessionId: current.sessionId, serverIncarnation });
       else if (current.kind === "lineScan") {
         const acknowledgement = await api.cancelLineScan({ sessionId: current.sessionId, serverIncarnation });
         if (acknowledgement.disconnectConfirmed === false) setScanCleanupError(acknowledgement.cleanupError);

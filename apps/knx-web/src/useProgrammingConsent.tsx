@@ -13,6 +13,10 @@
 // resolves `false` on Cancel, Escape, the backdrop, or when the component
 // unmounts with the question still open — never "yes" by default.
 //
+// `requestBatch()` (ADR-0172 §3) always asks, naming every device of the
+// batch: a remembered answer accepts a stage's risk, not this list. It
+// offers no "don't ask again"; the single-device question is unchanged.
+//
 // The version is fetched fresh for every request rather than cached for
 // the session: the stage decides whether a remembered answer still
 // applies, and a stale guess about which build is running is exactly
@@ -32,12 +36,16 @@ interface Pending {
   stage: ReleaseStage;
   version: string | null;
   target: string;
+  /** The devices of a batch request; `null` for a single device. */
+  batch: string[] | null;
   resolve: (confirmed: boolean) => void;
 }
 
 export interface ProgrammingConsent {
   /** Asks (or honours a remembered answer); resolves `true` only for a yes. */
   request: (target: string) => Promise<boolean>;
+  /** Asks for a batch, naming every device, even with a remembered answer. */
+  requestBatch: (targets: string[]) => Promise<boolean>;
   /** The dialog while a question is open, otherwise `null`. Render it. */
   dialog: ReactNode;
 }
@@ -73,34 +81,38 @@ export function useProgrammingConsent(): ProgrammingConsent {
     current.resolve(confirmed);
   }, []);
 
-  const request = useCallback(async (target: string): Promise<boolean> => {
+  const ask = useCallback(async (target: string, batch: string[] | null): Promise<boolean> => {
     // One question at a time: a second request while one is open is
     // refused rather than queued, so two writes cannot ride one "yes".
     if (pendingRef.current) return false;
+    if (batch !== null && batch.length === 0) return false;
     const version = await runningVersion();
     if (!mounted.current) return false;
     const stage = releaseStageOf(version);
-    if (isProgrammingConsentRemembered(stage)) return true;
+    if (batch === null && isProgrammingConsentRemembered(stage)) return true;
     if (pendingRef.current) return false;
     return new Promise<boolean>((resolve) => {
-      const next: Pending = { stage, version, target, resolve };
+      const next: Pending = { stage, version, target, batch, resolve };
       pendingRef.current = next;
       setPending(next);
     });
   }, []);
+  const request = useCallback((target: string) => ask(target, null), [ask]);
+  const requestBatch = useCallback((targets: string[]) => ask("", [...targets]), [ask]);
 
   const dialog = pending ? (
     <ProgrammingConsentDialog
       stage={pending.stage}
       version={pending.version}
       target={pending.target}
+      batch={pending.batch}
       onCancel={() => settle(false)}
       onConfirm={(remember) => {
-        if (remember) rememberProgrammingConsent(pending.stage, pending.version);
+        if (remember && pending.batch === null) rememberProgrammingConsent(pending.stage, pending.version);
         settle(true);
       }}
     />
   ) : null;
 
-  return { request, dialog };
+  return { request, requestBatch, dialog };
 }

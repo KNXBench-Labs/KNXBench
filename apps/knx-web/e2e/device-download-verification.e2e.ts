@@ -85,6 +85,7 @@ async function open(page: Page, language: "en" | "de", served: Served = { status
     if (path === "/api/device-download/status" && method === "GET") {
       return state.started ? json(served.status) : json({ error: "no download to a device yet" }, 404);
     }
+    if (path === "/api/device-download/batch/status" && method === "GET") return json({ error: "no batch download yet" }, 404);
     if (path === "/api/device-download/report" && method === "GET") {
       state.reportReads += 1;
       return json(served.report);

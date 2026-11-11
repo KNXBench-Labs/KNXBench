@@ -39,17 +39,20 @@ export interface ProgrammingConsentDialogProps {
   version: string | null;
   /** What is about to be programmed, e.g. "1.1.67 — Switch actuator". Shown verbatim. */
   target: string;
+  /** A batch (ADR-0172 §3): every device listed, no "don't ask again". */
+  batch?: string[] | null;
   /** Called with the checkbox's state when the user confirms. */
   onConfirm: (remember: boolean) => void;
   onCancel: () => void;
 }
 
 export default function ProgrammingConsentDialog(props: ProgrammingConsentDialogProps) {
-  const { stage, version, target, onConfirm, onCancel } = props;
+  const { stage, version, target, batch = null, onConfirm, onCancel } = props;
   const t = useTranslate();
   const [remember, setRemember] = useState(false);
   const cancelRef = useRef<HTMLButtonElement | null>(null);
   const stageLabel = t(STAGE_LABEL[stage]);
+  const offersRemember = batch === null && OFFERS_REMEMBER.has(stage);
 
   return (
     <Overlay
@@ -58,10 +61,22 @@ export default function ProgrammingConsentDialog(props: ProgrammingConsentDialog
       initialFocusRef={cancelRef}
       onClose={onCancel}
     >
-      <h2 id="programming-consent-title">{t("programmingConsent.title")}</h2>
-      <p className="programming-consent-target">
-        {t("programmingConsent.target", { target })}
-      </p>
+      <h2 id="programming-consent-title">
+        {batch === null ? t("programmingConsent.title") : t("programmingConsent.batch.title", { count: batch.length })}
+      </h2>
+      {batch === null ? (
+        <p className="programming-consent-target">
+          {t("programmingConsent.target", { target })}
+        </p>
+      ) : (
+        <>
+          <p className="programming-consent-target">{t("programmingConsent.batch.order", { count: batch.length })}</p>
+          <ol className="programming-consent-batch" aria-label={t("programmingConsent.batch.listLabel")}>
+            {batch.map((device) => <li key={device}>{device}</li>)}
+          </ol>
+          <p className="programming-consent-batch-stop">{t("programmingConsent.batch.stops")}</p>
+        </>
+      )}
       <dl className="programming-consent-facts">
         <dt>{t("programmingConsent.stageLabel")}</dt>
         <dd className={`programming-consent-stage programming-consent-stage-${stage}`}>{stageLabel}</dd>
@@ -72,7 +87,9 @@ export default function ProgrammingConsentDialog(props: ProgrammingConsentDialog
       </dl>
       <p className="programming-consent-risk">{t(STAGE_RISK[stage])}</p>
       <p>{t("programmingConsent.backup")}</p>
-      {OFFERS_REMEMBER.has(stage) ? (
+      {batch !== null ? (
+        <p className="programming-consent-no-remember">{t("programmingConsent.batch.alwaysAsked")}</p>
+      ) : offersRemember ? (
         <label className="settings-field settings-field-checkbox programming-consent-remember">
           <input
             type="checkbox"
@@ -91,9 +108,9 @@ export default function ProgrammingConsentDialog(props: ProgrammingConsentDialog
         <button
           type="button"
           className="programming-consent-confirm primary-action"
-          onClick={() => onConfirm(OFFERS_REMEMBER.has(stage) && remember)}
+          onClick={() => onConfirm(offersRemember && remember)}
         >
-          {t("programmingConsent.confirm")}
+          {batch === null ? t("programmingConsent.confirm") : t("programmingConsent.batch.confirm", { count: batch.length })}
         </button>
       </footer>
     </Overlay>

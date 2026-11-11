@@ -945,6 +945,13 @@ LoadedImage/CheckSums are retained, not decoded/verified as reusable download im
 New hardware, power-loss, vendor and ETS experiments were removed by user decision. This grants neither new write permission nor compatibility/recovery guarantees.
 [Details and history](limitations/accepted-commissioning-validation-boundary.md)
 
+<a id="catalogue-batch-download"></a>
+### Batch download
+
+**Ledger status:** Not separately tracked.
+**Download all…** (ADR-0172) is tested only with simulated devices, fake tunnels and intercepted browser requests; there is no hardware run and no claim about programming devices back to back on a real line, coupler or gateway. The order is the address order, with no topology rule. The batch summary lives in server memory until the next batch or a restart; the per-device history rows are the durable record. Devices with a pending address, System-2 devices and plans without a performable post-download check stay outside the batch.
+[Details and history](limitations/batch-download.md)
+
 <a id="catalogue-backup-directory-synchronization"></a>
 <a id="backup-directory-synchronization-is-not-a-disk-loss-or-confinement-proof"></a>
 ### Backup directory synchronization

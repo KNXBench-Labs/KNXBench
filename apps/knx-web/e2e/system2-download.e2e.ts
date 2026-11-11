@@ -31,6 +31,7 @@ async function interceptSystem2(page: Page, language: "en" | "de" = "en") {
     if (path === "/api/bus/activity") return json({ serverIncarnation: "server", coverage: "partial", historyState: "disabled", sessions: [], oneShot: [], oneShotDropped: 0, busyLocks: state.busyLocks, untracked: [] });
     if (path === "/api/device-readiness") return json({ devices: [], counts: {} });
     if (path === "/api/device-download/status") return json({ error: "no ordinary download" }, 404);
+    if (path === "/api/device-download/batch/status") return json({ error: "no batch download yet" }, 404);
     if (path === "/api/product-languages" && method === "GET") return json([]);
     if (method === "GET" && ["/api/achievements", "/api/project/status-metrics", "/api/bus/monitor/telegrams"].includes(path)) return json({ error: "Not available in this isolated fixture" }, 404);
     if (path === "/api/version") return json({ version: "0.1.0-alpha.16" });

@@ -49,7 +49,7 @@ async function intercept(page: Page, language: "en" | "de") {
     else if (path === "/api/bus/discover" && method === "POST") body = { interfaces: [] };
     else if (path === "/api/product-languages" && method === "GET") body = [];
     else if (path === "/api/fs/list" && method === "GET") body = [{ name: "edited-export.knxproj", is_dir: false }];
-    else if (["/api/device-download/status", "/api/device-address/status"].includes(path) && method === "GET") { status = 404; body = { error: "no operation in this fixture" }; }
+    else if (["/api/device-download/status", "/api/device-download/batch/status", "/api/device-address/status"].includes(path) && method === "GET") { status = 404; body = { error: "no operation in this fixture" }; }
     else if (path.startsWith("/api/project/plugin-data/") && method === "POST") {
       const sent = request.postDataJSON() as Record<string, unknown>;
       state.writes.push({ path, body: sent });

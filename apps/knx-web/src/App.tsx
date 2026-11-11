@@ -367,6 +367,7 @@ function AppBody({ manifestVersion = packageVersion, session, editorReturn = fal
   // on the same device acts again. Navigation only: nothing plans or sends.
   const [downloadHandoff, setDownloadHandoff] = useState<DownloadHandoff | null>(null);
   const [downloadTabRequest, setDownloadTabRequest] = useState(0);
+  const [downloadAllRequest, setDownloadAllRequest] = useState(0);
   const downloadNonceRef = useRef(0);
   useEffect(() => { if (monitorOpen) setMonitorMounted(true); }, [monitorOpen]);
   // A visibility override, not a project view: keep the real editor owners
@@ -816,6 +817,14 @@ function AppBody({ manifestVersion = packageVersion, session, editorReturn = fal
     setDownloadHandoff(buildDownloadHandoff(current, deviceId, ++downloadNonceRef.current));
     setLogOpen(false); setMonitorOpen(true);
     // The pending-programming panel sits in the navigation; on a phone it covers the download tab.
+    if (window.innerWidth <= 650) setNavigationOpen(false);
+  }
+
+  /** "Download all…" (ADR-0172) → the download tab's batch review; plans only, sends nothing. */
+  function openDownloadAll() {
+    setSettingsOpen(false);
+    setDownloadAllRequest(n => n + 1);
+    setLogOpen(false); setMonitorOpen(true);
     if (window.innerWidth <= 650) setNavigationOpen(false);
   }
 
@@ -1575,7 +1584,7 @@ function AppBody({ manifestVersion = packageVersion, session, editorReturn = fal
       )}
       <ModalForeground active={!settingsOpen}>
       <div className="workbench-content" hidden={settingsOpen}>
-      {(monitorMounted || monitorOpen) && <ModalForeground active={monitorOpen}><div hidden={!monitorOpen}><BusDiagnosticsPanel active={!settingsOpen && monitorOpen} project={tree} onTreeUpdate={handleTreeUpdate} projectScope={flowProjectScope} onFlowNavigate={navigateFlow} downloadHandoff={downloadHandoff} downloadTabRequest={downloadTabRequest} /></div></ModalForeground>}
+      {(monitorMounted || monitorOpen) && <ModalForeground active={monitorOpen}><div hidden={!monitorOpen}><BusDiagnosticsPanel active={!settingsOpen && monitorOpen} project={tree} onTreeUpdate={handleTreeUpdate} projectScope={flowProjectScope} onFlowNavigate={navigateFlow} downloadHandoff={downloadHandoff} downloadTabRequest={downloadTabRequest} downloadAllRequest={downloadAllRequest} /></div></ModalForeground>}
       {logOpen ? <LogPanel tree={tree} refreshKey={logVersion} notifications={notifications} notificationDroppedCount={notificationDroppedCount} notificationTarget={logTarget} onNotificationTargetHandled={() => setLogTarget(null)} importFocus={logImportFocus} onImportFocusHandled={() => setLogImportFocus(null)} /> : monitorOpen ? null : view === "catalog" ? null : tree ? (
         view === "device" ? <section className="device-editor-view" aria-label={t("workbench.device")}>
           <nav className="device-editor-navigation" aria-label={t("workbench.devices")}>
@@ -1635,7 +1644,7 @@ function AppBody({ manifestVersion = packageVersion, session, editorReturn = fal
   return (
     <RenameWorkbench tree={tree} scope={loadKey} onApplied={handleTreeUpdate}>
     <DeviceNavigationProvider tree={tree} catalogue={navigationCatalogue} onOpen={(id) => void selectEntity({ kind: "device", id })} onList={openDevices}>
-    <DownloadNavigationProvider onOpen={openDownload}>
+    <DownloadNavigationProvider onOpen={openDownload} onOpenAll={openDownloadAll}>
     <ReportProblemProvider request={reportRequest} onOpen={setReportRequest} onClose={() => setReportRequest(null)} tree={tree} notifications={notifications}>
     <main ref={workbenchRef} className={`workbench${stackInspector ? " workbench--stacked-inspector" : ""}${welcomeVisible ? " workbench--welcome" : ""}`}>
       <header className="workbench-toolbar">

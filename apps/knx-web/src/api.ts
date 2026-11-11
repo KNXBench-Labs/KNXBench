@@ -2441,6 +2441,90 @@ export function pollDeviceDownload(
   return request(`/api/device-download/status?since=${since}${expected}`);
 }
 
+/** Why a pending device takes no part in a batch (ADR-0172 §1). */
+export type DeviceDownloadBatchExclusion =
+  | { code: "noAddress" | "excluded" | "nothingToDownload" | "addressPending" | "system2" }
+  | { code: "unsupported"; category: string; detail: string }
+  | { code: "noPostDownloadCheck"; detail: string };
+
+/** One reviewed device of `POST /api/device-download/batch/plan`. Nothing is sent. */
+export type DeviceDownloadBatchReviewRow = { deviceId: number; address: string | null; name: string } & (
+  | {
+      status: "inBatch";
+      planId: number;
+      programId: string;
+      scope: DeviceDownloadScopeCode;
+      steps: number;
+      dataOctets: number;
+      support: "verified" | "untested";
+      inferences: string[];
+      warnings: string[];
+      confirmationPhrase: string;
+      untestedAcknowledgement: string | null;
+    }
+  | { status: "notInBatch"; reason: DeviceDownloadBatchExclusion }
+);
+
+export interface DeviceDownloadBatchReview {
+  batchId: number;
+  devices: DeviceDownloadBatchReviewRow[];
+}
+
+/** One device to write in `batch/start`: its phrase and, for `untested`, its acknowledgement. */
+export interface DeviceDownloadBatchStartDevice {
+  address: string;
+  confirmation: string;
+  acceptUntested?: string;
+}
+
+export type DeviceDownloadBatchNotStarted = "earlierDevice" | "stopRequest" | "serverStop" | "runEnded";
+
+/** Where one device of a batch stands (ADR-0172 §7 and its amendment). */
+export type DeviceDownloadBatchDeviceState =
+  | { state: "waiting" | "running"; downloadId: number }
+  | { state: "done"; downloadId: number; written: DeviceDownloadWritten; restart: string }
+  | { state: "unconfirmed"; downloadId: number; doubt: string; written: DeviceDownloadWritten; restart: string; restartNote: string | null }
+  | { state: "failed"; downloadId: number; written: DeviceDownloadWritten; stoppedInStep: number | null; error: string;
+      hint: string | null; kind: string | null; backupFile: string | null }
+  | { state: "stopped"; downloadId: number; backupFile: string | null }
+  | { state: "notStarted"; downloadId: number; reason: DeviceDownloadBatchNotStarted }
+  | { state: "notInBatch"; reason: DeviceDownloadBatchExclusion }
+  | { state: "deselected" };
+
+export type DeviceDownloadBatchStatusRow = { deviceId: number; address: string | null; name: string } & DeviceDownloadBatchDeviceState;
+
+export interface DeviceDownloadBatchStatus {
+  batchId: number;
+  state: "running" | "ended";
+  stopRequested: boolean;
+  devices: DeviceDownloadBatchStatusRow[];
+}
+
+/** Reviews every pending device for one batch; nothing is sent and no tunnel opens. */
+export function planDeviceDownloadBatch(): Promise<DeviceDownloadBatchReview> {
+  return request("/api/device-download/batch/plan", { method: "POST", body: JSON.stringify({}) });
+}
+
+/** Starts the reviewed batch with exactly `devices`; one wrong phrase refuses all of it. */
+export function startDeviceDownloadBatch(
+  batchId: number, gateway: string, devices: DeviceDownloadBatchStartDevice[],
+): Promise<{ batchId: number }> {
+  return request("/api/device-download/batch/start", {
+    method: "POST",
+    body: JSON.stringify({ batchId, gateway, devices }),
+  });
+}
+
+/** The last batch's per-device results; 404 before any batch. */
+export function pollDeviceDownloadBatch(batchId?: number): Promise<DeviceDownloadBatchStatus> {
+  return request(`/api/device-download/batch/status${batchId === undefined ? "" : `?batchId=${batchId}`}`);
+}
+
+/** Stop after the device in progress; never stops a device mid-download. */
+export function stopDeviceDownloadBatch(batchId: number): Promise<{ stop: "afterThisDevice" | "ended" }> {
+  return request("/api/device-download/batch/stop", { method: "POST", body: JSON.stringify({ batchId }) });
+}
+
 /** A tester's report of one download (ADR-0121, format 1). No project or
  * device name and no address; the parameter values written are included. */
 export interface DeviceDownloadReport {

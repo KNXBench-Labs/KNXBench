@@ -62,7 +62,7 @@ async function fixture(page: Page, language: Language, theme: string, width: num
       body: JSON.stringify({ error: "the open project has unsaved changes", kind: "projectUnsavedChanges" }) });
     if (path === "/api/bus/discover" && method === "POST") return ok({ interfaces: [] });
     if (["/api/product-languages", "/api/catalog/manufacturers", "/api/catalog/items"].includes(path)) return ok([]);
-    if (["/api/device-download/status", "/api/device-address/status"].includes(path)) {
+    if (["/api/device-download/status", "/api/device-download/batch/status", "/api/device-address/status"].includes(path)) {
       return route.fulfill({ status: 404, contentType: "application/json", body: '{"error":"no fixture operation"}' });
     }
     f.unexpected.push(`${method} ${path}`);

@@ -61,7 +61,7 @@ async function intercept(page: Page, language: "en" | "de") {
     else if (path === "/api/product-languages" && method === "GET") body = [];
     // The workbench's own start-up interface discovery, answered empty: not this view.
     else if (path === "/api/bus/discover" && method === "POST") body = { interfaces: [] };
-    else if (["/api/device-download/status", "/api/device-address/status"].includes(path) && method === "GET") { status = 404; body = { error: "no operation" }; }
+    else if (["/api/device-download/status", "/api/device-download/batch/status", "/api/device-address/status"].includes(path) && method === "GET") { status = 404; body = { error: "no operation" }; }
     else if (path === "/api/project/stored-bus-access" && method === "GET") body = { records: [ipConfig, access(false)] };
     else if (path === "/api/project/stored-bus-access/reveal" && method === "POST") {
       const { recordId } = route.request().postDataJSON();

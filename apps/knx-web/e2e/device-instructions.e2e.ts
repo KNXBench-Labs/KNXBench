@@ -82,7 +82,7 @@ async function fixture(page: Page, language: Language, theme: string, width: num
     if (path === "/api/legacy-password" && method === "GET") return ok({ available: true, remembered: false, problem: null });
     if (path === "/api/bus/discover" && method === "POST") return ok({ interfaces: [] });
     if (["/api/product-languages", "/api/catalog/manufacturers", "/api/catalog/items"].includes(path)) return ok([]);
-    if (["/api/device-download/status", "/api/device-address/status"].includes(path)) return refuse(404, "none", "no fixture operation");
+    if (["/api/device-download/status", "/api/device-download/batch/status", "/api/device-address/status"].includes(path)) return refuse(404, "none", "no fixture operation");
     if (path === "/api/device-system2/status" && method === "GET") return ok(null);
     if (path === "/api/devices" && method === "GET") return ok({ schemaVersion: 1, serverIncarnation: identity ? "instructions-fixture" : null,
       snapshotRevision: identity ? f.revision : null, devices: [] });

@@ -55,7 +55,7 @@ async function intercept(page: Page, language: Language, project?: OpenProject) 
     if (path === "/api/product-languages") return json([]);
     if (path === "/api/bus/discover") return json({ interfaces: [] });
     if (path === "/api/version") return json({ version: "0.1.0-alpha.18" });
-    if (["/api/device-download/status", "/api/device-address/status", "/api/device-system2/status"].includes(path)) return json({ error: "no operation" }, 404);
+    if (["/api/device-download/status", "/api/device-download/batch/status", "/api/device-address/status", "/api/device-system2/status"].includes(path)) return json({ error: "no operation" }, 404);
     const achievement = achievementsFixtureAnswer(method, path);
     if (achievement !== undefined) return json(achievement);
     const busActivity = busActivityFixtureAnswer(method, path);

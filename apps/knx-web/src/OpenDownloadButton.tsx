@@ -4,10 +4,20 @@ import { useTranslate } from "./i18n";
 
 type OpenDownload = (deviceId: number) => void;
 const DownloadNavigation = createContext<OpenDownload | null>(null);
+const DownloadAllNavigation = createContext<(() => void) | null>(null);
 
 /** Mounted by the main workbench only; the diagnostics companion has no bus workspace. */
-export function DownloadNavigationProvider({ onOpen, children }: { onOpen: OpenDownload; children: ReactNode }) {
-  return <DownloadNavigation.Provider value={onOpen}>{children}</DownloadNavigation.Provider>;
+export function DownloadNavigationProvider({ onOpen, onOpenAll, children }: {
+  onOpen: OpenDownload; onOpenAll?: () => void; children: ReactNode;
+}) {
+  return <DownloadNavigation.Provider value={onOpen}>
+    <DownloadAllNavigation.Provider value={onOpenAll ?? null}>{children}</DownloadAllNavigation.Provider>
+  </DownloadNavigation.Provider>;
+}
+
+/** "Download all…" (ADR-0172): opens the download tab's batch review; `null` outside the workbench. */
+export function useOpenDownloadAll(): (() => void) | null {
+  return useContext(DownloadAllNavigation);
 }
 
 /** The same hand-off for other entry points (pending-programming panel); `null` outside the workbench. */

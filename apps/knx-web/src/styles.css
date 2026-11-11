@@ -2401,6 +2401,29 @@ main {
   gap: 8px;
 }
 .device-download-actions-note { color: var(--knx-muted); font-size: 12px; }
+/* ADR-0172 batch review: one wrapping row per device, never wider than the panel. */
+.device-download-batch { margin-top: 16px; min-width: 0; }
+.device-download-batch-list { list-style: none; margin: 8px 0; padding: 0; display: grid; gap: 6px; }
+.device-download-batch-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  align-items: baseline;
+  padding: 6px 8px;
+  border: 1px solid var(--knx-border);
+  border-radius: 6px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.device-download-batch-row[data-batch-status="notInBatch"],
+.device-download-batch-row[data-batch-state="notInBatch"],
+.device-download-batch-row[data-batch-state="deselected"] { color: var(--knx-muted); }
+.device-download-batch-include { display: inline-flex; gap: 6px; align-items: baseline; }
+.device-download-batch-facts,
+.device-download-batch-reason { color: var(--knx-muted); font-size: 12px; }
+.device-download-batch-ack { display: grid; gap: 4px; flex-basis: 100%; font-size: 12px; }
+.device-download-batch-ack input { max-width: 100%; }
+.device-download-batch-result { flex-basis: 100%; font-size: 12px; }
 
 /* Issue #10: what holds the gateway, and why a device cannot be programmed,
    said before anything is prepared. The warning colour marks the edge only,
@@ -3547,6 +3570,8 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
 .pending-programming-name > span:last-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .pending-programming-address { flex: none; font-family: var(--knx-font-mono, ui-monospace, monospace); color: var(--knx-muted); }
 .workbench .pending-programming-download { padding: 2px 8px; font-size: 12px; white-space: nowrap; }
+.workbench .pending-programming-all { margin: 0 0 6px; }
+.workbench .pending-programming-all button { padding: 2px 8px; font-size: 12px; }
 .pending-programming-reason { grid-column: 1 / -1; padding: 0 6px; color: var(--knx-muted); }
 .pending-programming-empty, .pending-programming-unknown { margin: 4px 6px; color: var(--knx-muted); }
 .pending-programming-more { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 6px; color: var(--knx-muted); }
@@ -4192,6 +4217,7 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
 .search-panel.programming-consent-dialog { width: min(36rem, 92vw); padding: 1rem 1.15rem; }
 .programming-consent-dialog h2 { margin: 0 0 12px; font-size: 20px; }
 .programming-consent-target { font-weight: 600; }
+.programming-consent-batch { max-height: 40vh; overflow: auto; margin: 4px 0 8px; padding-left: 24px; overflow-wrap: anywhere; }
 .programming-consent-facts { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 6px 16px; margin: 0 0 12px; }
 .programming-consent-facts dt { color: var(--knx-muted); font-size: 12px; }
 .programming-consent-facts dd { margin: 0; font-size: 13px; }

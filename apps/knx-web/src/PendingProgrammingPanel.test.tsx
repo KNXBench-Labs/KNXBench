@@ -46,10 +46,11 @@ let host: HTMLDivElement; let root: Root;
 beforeEach(() => { locale.value = "en"; host = document.createElement("div"); document.body.append(host); root = createRoot(host); });
 afterEach(async () => { await act(async () => root.unmount()); host.remove(); });
 
-async function render(project: ProjectTree, options: { selected?: number | null; onSelect?: (id: number) => void; onOpen?: (id: number) => void } = {}) {
+async function render(project: ProjectTree, options: { selected?: number | null; onSelect?: (id: number) => void; onOpen?: (id: number) => void; onOpenAll?: () => void } = {}) {
   const summary = pendingDevicesSummary(project, locale.value);
   const panel = <PendingProgrammingPanel summary={summary} selectedDeviceId={options.selected ?? null} onSelect={options.onSelect ?? (() => {})} />;
-  await act(async () => root.render(options.onOpen ? <DownloadNavigationProvider onOpen={options.onOpen}>{panel}</DownloadNavigationProvider> : panel));
+  await act(async () => root.render(options.onOpen
+    ? <DownloadNavigationProvider onOpen={options.onOpen} onOpenAll={options.onOpenAll}>{panel}</DownloadNavigationProvider> : panel));
 }
 const rows = () => [...host.querySelectorAll<HTMLLIElement>(".pending-programming-row")];
 const rowOf = (id: number) => host.querySelector<HTMLLIElement>(`.pending-programming-row[data-device-id="${id}"]`)!;
@@ -143,4 +144,20 @@ it("summarises a large project in one pass and keeps the table's pending filter"
   expect(summary.devices).toHaveLength(1666);
   expect(summary.unknown).toBe(1667);
   expect(summary.devices[0].address).toBe("1.1.3");
+});
+
+it("offers Download all… only with pending devices and a workbench, and it only hands off", async () => {
+  const onOpenAll = vi.fn();
+  await render(FIXTURE, { onOpen: () => {}, onOpenAll });
+  const all = host.querySelector<HTMLButtonElement>("[data-pending-download-all]")!;
+  expect(all.textContent).toBe(en["pendingPanel.downloadAll"]);
+  await act(async () => all.click());
+  expect(onOpenAll).toHaveBeenCalledTimes(1);
+  locale.value = "de";
+  await render(FIXTURE, { onOpen: () => {}, onOpenAll });
+  expect(host.querySelector("[data-pending-download-all]")?.textContent).toBe(de["pendingPanel.downloadAll"]);
+  await render(tree([device(1, "1.1.2", "Clean blind", CLEAN)]), { onOpen: () => {}, onOpenAll });
+  expect(host.querySelector("[data-pending-download-all]")).toBeNull();
+  await render(FIXTURE);
+  expect(host.querySelector("[data-pending-download-all]")).toBeNull();
 });

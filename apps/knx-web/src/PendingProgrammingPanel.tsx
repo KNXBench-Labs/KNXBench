@@ -1,11 +1,12 @@
 /** Sidebar list of devices with unprogrammed parts: select one or open its download (issue #42). */
 // Read-only: nothing here plans, starts or touches the bus. "Download…" is
-// the same hand-off as the device editor's "Download to device…" button.
+// the same hand-off as the device editor's "Download to device…" button;
+// "Download all…" opens the download tab's batch review (ADR-0172).
 import { useId, useMemo, useState } from "react";
 import { useTranslate } from "./i18n";
 import { useUiLanguage } from "./uiLanguage";
 import { createProgrammingChips } from "./ProgrammingChips";
-import { useOpenDownload } from "./OpenDownloadButton";
+import { useOpenDownload, useOpenDownloadAll } from "./OpenDownloadButton";
 import type { PendingDevicesSummary } from "./pendingDevices";
 
 /** Rows rendered before "Show all": a sidebar list, not the Devices table. */
@@ -19,6 +20,7 @@ export default function PendingProgrammingPanel({ summary, selectedDeviceId, onS
   const t = useTranslate();
   const [language] = useUiLanguage();
   const openDownload = useOpenDownload();
+  const openDownloadAll = useOpenDownloadAll();
   const chips = useMemo(() => createProgrammingChips(t, language), [t, language]);
   const [showAll, setShowAll] = useState(false);
   const reasonId = useId();
@@ -26,6 +28,9 @@ export default function PendingProgrammingPanel({ summary, selectedDeviceId, onS
   const shown = showAll ? devices : devices.slice(0, PENDING_PANEL_LIMIT);
   return <div className="pending-programming-panel">
     {devices.length === 0 && <p className="pending-programming-empty">{t("pendingPanel.empty")}</p>}
+    {devices.length > 0 && openDownloadAll && <p className="pending-programming-all">
+      <button type="button" data-pending-download-all onClick={openDownloadAll}>{t("pendingPanel.downloadAll")}</button>
+    </p>}
     {devices.length > 0 && <ul className="pending-programming-list" aria-label={t("pendingPanel.listLabel")}>
       {shown.map((device) => {
         const label = device.address ? `${device.address} ${device.name}` : device.name;

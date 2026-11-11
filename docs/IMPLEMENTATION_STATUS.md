@@ -26,14 +26,30 @@ Per-parameter marking stays open (WP-37 step 2). Component tests and en/de
 browser checks at 1440 and 400 px cover the line, the tab marks, their clearing
 and no sideways overflow.
 
+## Download all pending, UI part (11 November 2026; issue #42, WP-38c)
+
+**Download all…** / **Alle programmieren…** in the pending-programming block
+and in the **Download to device** tab opens a review of every pending device
+(nothing sent), with the reason for every device *not in this batch*,
+deselection and a per-device acknowledgement for `untested` downloads. Start
+stays disabled until a gateway is set, a device is selected and every selected
+`untested` device is acknowledged. The confirmation goes through
+`useProgrammingConsent().requestBatch`, which asks even with a remembered stage
+consent and lists the devices (ADR-0040 narrowed by ADR-0172, now Accepted). The
+page polls a result per device, offers **Stop after this device**, reloads the
+project once the batch ends and words the new busy holder. en/de copy;
+component tests and en/de browser cases at 1440 and 400 px with every API
+request intercepted. No hardware run.
+[User guide](manual/user-guide/05-devices-and-products.md#download-all-pending);
+[WP-38](open-work/WP-38-pending-devices-panel.md).
+
 ## Batch download, server part (11 November 2026; issue #42, WP-38b)
 
 The web server can now download every pending device in one batch, as
 [ADR-0172](adr/0172-batch-programming-stops-at-the-first-doubt.md) designs it
-(still Proposed until the UI part lands; its 11 November amendment records the
-concrete states and the start's device list). There is **no button yet**; the
-routes are `POST /api/device-download/batch/plan`, `batch/start`, `batch/stop`
-and `GET batch/status`.
+(its 11 November amendment records the concrete states and the start's device
+list). The routes are `POST /api/device-download/batch/plan`, `batch/start`,
+`batch/stop` and `GET batch/status`.
 
 - **Review:** every device the pending block lists, in its order, is either in
   the batch with the plan of its advised scope, or *not in this batch* with a
@@ -81,10 +97,8 @@ without an address cannot use the download jump (reason shown). Empty means
 tree snapshot and language; while folded, no rows mount. The list initially
 renders 50 rows, with a total and **Show all**, inside its own scroll box.
 
-This is issue #42's promised first step only: **no batch start button**. Step 2,
-downloading all pending devices in sequence, is designed in
-[ADR-0172](adr/0172-batch-programming-stops-at-the-first-doubt.md) (Proposed)
-and not implemented. No server/domain changes and no real-bus or hardware tests.
+This was issue #42's first step; step 2, **Download all…**, followed the same
+day (sections above). No server/domain changes and no real-bus or hardware tests.
 [Design, copy and remaining work](open-work/WP-38-pending-devices-panel.md);
 [user guide](manual/user-guide/05-devices-and-products.md#pending-programming-panel-main-only-after-alpha-20).
 

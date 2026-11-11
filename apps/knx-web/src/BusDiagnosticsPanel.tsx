@@ -23,6 +23,7 @@ export default function BusDiagnosticsPanel({
   active = true,
   downloadHandoff = null,
   downloadTabRequest = 0,
+  downloadAllRequest = 0,
 }: {
   project: ProjectTree | null;
   active?: boolean;
@@ -33,6 +34,8 @@ export default function BusDiagnosticsPanel({
   downloadHandoff?: DownloadHandoff | null;
   /** Bumped by the status-bar progress: shows the download tab without selecting a device. */
   downloadTabRequest?: number;
+  /** Bumped by "Download all…": shows the download tab and opens its batch review. */
+  downloadAllRequest?: number;
 }) {
   const t = useTranslate();
   const [tab, setTab] = useState<"monitor" | "scan" | "checks" | "download" | "address" | "service" | "live" | "history">("monitor");
@@ -47,6 +50,14 @@ export default function BusDiagnosticsPanel({
     setPendingHandoff(downloadHandoff);
   }, [downloadHandoff]);
   useEffect(() => { if (downloadTabRequest > 0) setTab("download"); }, [downloadTabRequest]);
+  // Kept until the panel answers it, so a later tab switch cannot replay it.
+  const [pendingAll, setPendingAll] = useState<number | null>(null);
+  useEffect(() => {
+    if (downloadAllRequest > 0) { setTab("download"); setPendingAll(downloadAllRequest); }
+  }, [downloadAllRequest]);
+  const allHandled = useCallback((nonce: number) => {
+    setPendingAll((current) => current === nonce ? null : current);
+  }, []);
   const handoffHandled = useCallback((nonce: number) => {
     setPendingHandoff((current) => current?.nonce === nonce ? null : current);
   }, []);
@@ -65,7 +76,8 @@ export default function BusDiagnosticsPanel({
       <div hidden={tab !== "monitor"}><BusMonitorPanel active={active && tab === "monitor"} projectOpen={project !== null} project={project} projectScope={projectScope} onFlowNavigate={onFlowNavigate} /></div>
       {tab === "scan" && <LineScanPanel projectOpen={project !== null} projectRevision={project} onTreeUpdate={onTreeUpdate} />}
       {tab === "checks" && <DeviceInspectionPanel project={project} />}
-      {tab === "download" && <DeviceDownloadPanel project={project} handoff={pendingHandoff} onHandoffHandled={handoffHandled} onProjectChanged={onTreeUpdate} />}
+      {tab === "download" && <DeviceDownloadPanel project={project} handoff={pendingHandoff} onHandoffHandled={handoffHandled} onProjectChanged={onTreeUpdate}
+        batchRequest={pendingAll} onBatchRequestHandled={allHandled} />}
       {tab === "address" && <AddressProgrammingPanel project={project} onProjectChanged={onTreeUpdate} />}
       {tab === "service" && <ServiceControlPanel projectOpen={project !== null} projectRevision={project} />}
       {tab === "live" && <BusActivityLive />}

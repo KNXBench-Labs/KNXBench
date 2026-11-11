@@ -87,7 +87,7 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
         return;
       }
       if (method === "GET" && ["/api/product-languages", "/api/catalog/manufacturers", "/api/catalog/items", "/api/log", "/api/session-log"].includes(path)) return ok([]);
-      if (method === "GET" && ["/api/device-download/status", "/api/device-address/status"].includes(path))
+      if (method === "GET" && ["/api/device-download/status", "/api/device-download/batch/status", "/api/device-address/status"].includes(path))
         return route.fulfill({ status: 404, contentType: "application/json", body: '{"error":"no fixture operation"}' });
       unexpected.push(`${method} ${path}`);
       return route.fulfill({ status: 404, contentType: "application/json", body: '{"error":"unexpected fixture request"}' });

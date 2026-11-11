@@ -202,9 +202,11 @@ const USAGE: &str = "usage: knx import <file.knxproj> [--store <path.knxdb> [--r
      \x20         reads the memory ranges its System-2 load procedure declares; candidate\n\
      \x20         locations, not a backup. Nothing is written. ADR-0143.)\n\
      \x20     knx device byte-order-probe <area.line.device> --project <path.knxdb>\n\
-     \x20                  [--product-db <path>] [--gateway <host:port>] [--preview] [--tunnel-transport udp|tcp]\n\
-     \x20                  [--system2-source --parameter-ref <id>...]\n\
-     \x20         (--preview is offline and refuses transport selection; System-2 source selection requires it.)\n\
+     \x20                  [--product-db <path>] [--gateway <host:port>] [--preview]\n\
+     \x20                  [--tunnel-transport <udp|tcp>] [--system2-source --parameter-ref <id>...]\n\
+     \x20         (tunnel transport defaults to udp; explicit tcp never falls back to udp)\n\
+     \x20         (--preview is offline and refuses a transport; System-2 source selection\n\
+     \x20         requires it and never enables a read.)\n\
      \x20         (READ ONLY, KL-170: for a device ETS programmed with this project, reads\n\
      \x20         only its multi-octet parameter fields and one-octet controls and says\n\
      \x20         whether it holds the values high or low octet first. Works for any declared\n\

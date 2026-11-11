@@ -3,7 +3,7 @@
 use super::{
     collect, failed,
     fixture::Fixture,
-    peer::{gateway, no_udp},
+    peer::{gateway, no_retry},
     result, stderr,
 };
 use knx_net::{ApplicationService as A, Tpci};
@@ -49,7 +49,7 @@ fn tcp_reports_low_high_contradictory_and_neither_without_turning_completed_read
         worker.join().unwrap();
         result(&output, counts, controls, "TCP");
         assert!(!stderr(&output).contains("skipped"));
-        no_udp(&trap);
+        no_retry(&trap);
         fixture.intact();
     }
 }
@@ -75,7 +75,7 @@ fn ordinary_tcp_success_without_recording_discloses_two_sampled_skips() {
         "TCP",
     );
     assert_eq!(stderr(&output).matches("warning: 2 TCP frame(s) skipped before disconnecting (unknown service or larger than the local receive limit); their content was not kept").count(), 1);
-    no_udp(&trap);
+    no_retry(&trap);
     fixture.intact();
     assert_eq!(
         std::fs::read_dir(fixture.dir.path()).unwrap().count(),
@@ -97,7 +97,7 @@ fn ordinary_tcp_eof_without_recording_still_discloses_two_sampled_skips_and_no_t
     worker.join().unwrap();
     failed(&output, "not probed:");
     assert_eq!(stderr(&output).matches("warning: 2 TCP frame(s) skipped before disconnecting (unknown service or larger than the local receive limit); their content was not kept").count(), 1);
-    no_udp(&trap);
+    no_retry(&trap);
     fixture.intact();
 }
 
@@ -131,7 +131,7 @@ fn identity_refusals_stop_before_memory_reads_and_settle_both_protocol_ends() {
         worker.join().unwrap();
         failed(&output, "not probed:");
         assert!(!stderr(&output).contains("skipped"));
-        no_udp(&trap);
+        no_retry(&trap);
         fixture.intact();
     }
 }
@@ -173,7 +173,7 @@ fn read_refusal_short_mismatched_malformed_and_eof_never_emit_a_completed_tally_
         let output = collect(&mut fixture.command(&addr.to_string(), Some("tcp")));
         worker.join().unwrap();
         failed(&output, "not probed:");
-        no_udp(&trap);
+        no_retry(&trap);
         fixture.intact();
     }
 }
@@ -192,7 +192,7 @@ fn assigned_self_address_and_negative_management_confirmation_are_not_preconnect
         worker.join().unwrap();
         failed(&output, "not probed:");
         assert!(stderr(&output).contains("over TCP"));
-        no_udp(&trap);
+        no_retry(&trap);
         fixture.intact();
     }
 }
@@ -378,6 +378,6 @@ fn sigint_releases_the_actual_tcp_socket_without_claiming_graceful_protocol_clea
         serde_json::json!({"argv": argv, "signal": status.signal(), "peer_eof": true})
     );
     assert_eq!(status.signal(), Some(2));
-    no_udp(&trap);
+    no_retry(&trap);
     fixture.intact();
 }

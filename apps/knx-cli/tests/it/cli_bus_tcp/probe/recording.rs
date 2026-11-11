@@ -3,7 +3,7 @@
 use super::{
     collect, failed,
     fixture::Fixture,
-    peer::{gateway, no_udp, Wire},
+    peer::{gateway, no_retry, no_udp, Wire},
     result, stderr,
 };
 use knx_net::{ApplicationService, Tpci};
@@ -146,7 +146,7 @@ fn tcp_bundle_records_byte_order_probe_identity_raw_reads_redacted_keys_and_skip
             .collect::<Vec<_>>(),
         ["report.zip"]
     );
-    no_udp(&trap);
+    no_retry(&trap);
     fixture.intact();
 }
 
@@ -199,7 +199,7 @@ fn settled_read_refusal_and_eof_finalize_failed_recordings_without_temporary_dir
                 .collect::<Vec<_>>(),
             ["report.zip"]
         );
-        no_udp(&trap);
+        no_retry(&trap);
         fixture.intact();
     }
 }

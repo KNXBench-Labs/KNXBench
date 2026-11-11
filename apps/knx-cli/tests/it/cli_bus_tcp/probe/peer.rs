@@ -25,12 +25,16 @@ pub(super) struct Peer {
 pub(super) fn gateway(
     assigned: u8,
     script: impl FnOnce(&mut Peer) + Send + 'static,
-) -> (SocketAddr, Joined<Wire>, UdpSocket) {
+) -> (SocketAddr, Joined<Wire>, Trap) {
     let listener = TcpListener::bind((Ipv4Addr::LOCALHOST, 0)).unwrap();
     let addr = listener.local_addr().unwrap();
-    let trap = UdpSocket::bind(addr).unwrap();
-    trap.set_nonblocking(true).unwrap();
+    let udp = UdpSocket::bind(addr).unwrap();
+    udp.set_nonblocking(true).unwrap();
     listener.set_nonblocking(true).unwrap();
+    let trap = Trap {
+        udp,
+        tcp: listener.try_clone().unwrap(),
+    };
     let worker = thread::spawn(move || {
         let deadline = Instant::now() + WAIT;
         let stream = loop {
@@ -67,6 +71,22 @@ pub(super) fn gateway(
         peer.wire
     });
     (addr, Joined::new(worker), trap)
+}
+
+/// The gateway's own sockets, kept for checks after the CLI has exited.
+pub(super) struct Trap {
+    udp: UdpSocket,
+    tcp: TcpListener,
+}
+
+/// After the CLI exited: no UDP fallback and no late TCP reconnect or replay.
+pub(super) fn no_retry(trap: &Trap) {
+    no_udp(&trap.udp);
+    assert_eq!(
+        trap.tcp.accept().unwrap_err().kind(),
+        std::io::ErrorKind::WouldBlock,
+        "no reconnect/replay after exit"
+    );
 }
 
 pub(super) fn no_udp(trap: &UdpSocket) {

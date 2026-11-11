@@ -14,8 +14,8 @@ fragment aliases and update this index. Do not rewrite previous results.
 
 ## A running device download stays visible in the status bar (11 November 2026; issue #43, WP-35)
 
-The status bar shows a running download's device address, step and percentage
-of planned octets written and read back, from any view, with **Show** opening
+The status bar shows a running download's device address, finished steps and
+share of planned data octets written and read back, from any view, with **Show** opening
 the download tab. It reads the bus activity snapshot the bus-connection status
 already polls every two seconds, so it adds no request and cannot start,
 select or cancel anything; cancelling stays in the download panel.

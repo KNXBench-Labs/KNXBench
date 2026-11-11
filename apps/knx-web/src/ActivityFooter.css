@@ -37,7 +37,7 @@
 /* Issue #43: a running device download stays visible in the status bar. */
 .download-footer-progress { display: inline-flex; align-items: center; gap: 8px; min-width: 0; flex-wrap: wrap; }
 .download-footer-progress > span { overflow-wrap: anywhere; }
-.download-footer-progress progress { width: 6rem; height: 8px; }
+.download-footer-progress progress { width: 6rem; height: 8px; accent-color: var(--knx-accent); }
 .download-footer-progress button {
   font: inherit; color: var(--knx-foreground); background: var(--knx-surface);
   border: 1px solid var(--knx-border); border-radius: var(--knx-radius-button); padding: 3px 8px; min-height: 24px; cursor: pointer;

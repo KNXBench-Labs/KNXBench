@@ -40,14 +40,15 @@ for (const width of [1400, 400]) {
   test(`#43 at ${width}px: the status bar names the running download, follows it and opens its tab`, async ({ page }) => {
     const { progress, writes } = await open(page, width);
     const footer = page.locator(".download-footer-progress");
-    await expect(footer.getByRole("status")).toHaveText("Download to 1.1.67: step 5/14 · 35 %");
-    await expect(footer.getByRole("progressbar", { name: "Download progress for 1.1.67" })).toBeVisible();
+    const text = footer.locator(".task-status-text");
+    await expect(text).toHaveText("Download to 1.1.67: 5 of 14 steps done · 35 % of data written");
+    await expect(footer.getByRole("progressbar", { name: "Data written and read back for 1.1.67" })).toBeVisible();
     progress.completedSteps = 9; progress.writtenOctets = 1100;
-    await expect(footer.getByRole("status")).toHaveText("Download to 1.1.67: step 9/14 · 75 %", { timeout: 6_000 });
+    await expect(text).toHaveText("Download to 1.1.67: 9 of 14 steps done · 75 % of data written", { timeout: 6_000 });
     const box = await footer.boundingBox();
     expect(box!.x + box!.width).toBeLessThanOrEqual(width);
     expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1);
-    await footer.getByRole("button", { name: "Show" }).click();
+    await footer.getByRole("button", { name: "Show the download to 1.1.67" }).click();
     await expect(page.getByRole("navigation", { name: "Bus diagnostics" }).getByRole("button", { name: "Download to device", exact: true }))
       .toHaveAttribute("aria-current", "page");
     expect(writes).toEqual([]);

@@ -70,3 +70,24 @@ it("makes the Debug action reachable without opening a tunnel on tab selection",
   await act(async () => root.unmount());
   host.remove();
 });
+
+it("shows the download tab for each status-bar request, and only then (issue #43)", async () => {
+  const host = document.createElement("div");
+  document.body.appendChild(host);
+  const root = createRoot(host);
+  const panel = (request: number) => <BusDiagnosticsPanel project={null} onTreeUpdate={vi.fn()} downloadTabRequest={request} />;
+  const current = () => host.querySelector(".bus-diagnostics-tabs [aria-current=page]")?.textContent;
+  try {
+    await act(async () => root.render(panel(0)));
+    expect(current()).toBe(en["toolbar.busMonitor"]);
+    await act(async () => root.render(panel(1)));
+    expect(current()).toBe(en["deviceDownload.title"]);
+    expect(host.textContent).toContain("Download stub");
+    const other = [...host.querySelectorAll<HTMLButtonElement>(".bus-diagnostics-tabs button")].find((b) => b.textContent === en["serviceControl.tab"])!;
+    await act(async () => other.click());
+    await act(async () => root.render(panel(1)));
+    expect(current()).toBe(en["serviceControl.tab"]);
+    await act(async () => root.render(panel(2)));
+    expect(current()).toBe(en["deviceDownload.title"]);
+  } finally { await act(async () => root.unmount()); host.remove(); }
+});

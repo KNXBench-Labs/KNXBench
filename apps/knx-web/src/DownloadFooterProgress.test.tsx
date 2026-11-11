@@ -8,7 +8,7 @@ import type { ActivitySnapshot, SessionActivity } from "./liveActivity";
 const apiMock = vi.hoisted(() => ({ busActivity: vi.fn() }));
 vi.mock("./api", async (importOriginal) => ({ ...(await importOriginal<typeof import("./api")>()), ...apiMock }));
 
-import DownloadFooterProgress, { downloadPercent } from "./DownloadFooterProgress";
+import DownloadFooterProgress, { dataPercent } from "./DownloadFooterProgress";
 import { refreshBusConnection, resetBusConnectionForTests } from "./busConnection";
 import { resetSettingsForTests } from "./settingsStore";
 
@@ -48,8 +48,9 @@ afterEach(() => { act(() => root.unmount()); host.remove(); resetBusConnectionFo
 describe("download progress in the status bar", () => {
   it("names device, step and percent of octets while a download runs, and opens its panel", async () => {
     await show(snapshot([download("running")], ["deviceDownload"]));
-    const status = host.querySelector("[role=status]");
-    expect(status?.textContent).toBe("Download to 1.1.67: step 5/14 · 35 %");
+    // Finished steps and verified data, worded as such: never "step 5" while the panel runs step 6.
+    expect(host.querySelector(".download-footer-progress .task-status-text")?.textContent)
+      .toBe("Download to 1.1.67: 5 of 14 steps done · 35 % of data written");
     const bar = host.querySelector("progress")!;
     expect([bar.value, bar.max]).toEqual([524, 1457]);
     await act(async () => host.querySelector("button")!.click());
@@ -59,27 +60,40 @@ describe("download progress in the status bar", () => {
   it("follows the server's counts from poll to poll", async () => {
     await show(snapshot([download("running", 5, 524)], ["deviceDownload"]));
     await show(snapshot([download("running", 13, 1457)], ["deviceDownload"]));
-    expect(host.querySelector("[role=status]")?.textContent).toBe("Download to 1.1.67: step 13/14 · 100 %");
+    expect(host.querySelector(".download-footer-progress .task-status-text")?.textContent)
+      .toBe("Download to 1.1.67: 13 of 14 steps done · 100 % of data written");
   });
 
   it("shows nothing when no download runs: finished, failed, idle or another bus user", async () => {
     for (const value of [snapshot([download("finished")]), snapshot([download("failed")]), snapshot([]),
       snapshot([{ kind: "lineScan", id: 4, state: "running", probed: 1, total: 9 }], ["lineScan"])]) {
       await show(value);
-      expect(host.textContent).toBe("");
+      expect(host.querySelector(".download-footer-progress")).toBeNull();
     }
   });
 
   it("names no download from a held lock alone, without a visible session", async () => {
     // A held lock without a visible session is not a download the footer can name.
     await show(snapshot([], ["deviceDownload"]));
-    expect(host.textContent).toBe("");
+    expect(host.querySelector(".download-footer-progress")).toBeNull();
   });
 
-  it("uses steps when a plan writes no data, and never exceeds 100", () => {
-    expect(downloadPercent({ completedSteps: 3, totalSteps: 4, writtenOctets: 0, totalOctets: 0 })).toBe(75);
-    expect(downloadPercent({ completedSteps: 0, totalSteps: 0, writtenOctets: 0, totalOctets: 0 })).toBe(0);
-    expect(downloadPercent({ completedSteps: 1, totalSteps: 1, writtenOctets: 9, totalOctets: 8 })).toBe(100);
+  it("announces start and end once, not every poll", async () => {
+    const live = () => host.querySelector("[aria-live=polite]")?.textContent;
+    await show(snapshot([download("running", 5, 524)], ["deviceDownload"]));
+    expect(live()).toBe("Download to 1.1.67 started.");
+    await show(snapshot([download("running", 9, 1100)], ["deviceDownload"]));
+    expect(live()).toBe("Download to 1.1.67 started.");
+    await show(snapshot([download("finished", 14, 1457)]));
+    expect(live()).toBe("Download to 1.1.67 no longer running; see the download tab for its result.");
+  });
+
+  it("names only steps when a plan writes no data, and the percent never exceeds 100", async () => {
+    expect(dataPercent({ completedSteps: 3, totalSteps: 4, writtenOctets: 0, totalOctets: 0 })).toBeNull();
+    expect(dataPercent({ completedSteps: 1, totalSteps: 1, writtenOctets: 9, totalOctets: 8 })).toBe(100);
+    await show(snapshot([{ ...download("running", 3, 0), totalOctets: 0 } as SessionActivity], ["deviceDownload"]));
+    expect(host.querySelector(".download-footer-progress .task-status-text")?.textContent).toBe("Download to 1.1.67: 3 of 14 steps done");
+    expect(host.querySelector("progress")).toBeNull();
   });
 
 });

@@ -12,6 +12,21 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Saving no longer blocks the device editor (11 November 2026; issue #36, WP-31)
+
+Save wrote the whole project file while holding the project lock, so on a
+large project (offline reproduction: 336 MB `.knxdb`, 75 devices, release
+build) every device-detail request waited for the 7–15 s write and the editor
+showed “Gerät wird geladen…” meanwhile. Save now freezes a copy of project,
+stack and retained context under the lock, releases the project and stack,
+and writes that copy while still holding the store path and journal
+generation. Journal hand-overs, Save As, version actions and project
+replacement keep waiting for it; an edit applied during the write stays
+unsaved and is journaled afterwards. Requests that read the store path
+(project tree refresh, edits) still wait. The reporter's “Gerätedetails sind
+nicht verfügbar” message was not reproduced; a proxy timeout is an open
+hypothesis. [WP-31](open-work/WP-31-device-editor-unavailable-after-save.md).
+
 ## Parameter selection lists offer only declared values (11 November 2026; issue #45, WP-30)
 
 Selection-list (`Restriction`) parameters no longer offer an empty “(keine)”

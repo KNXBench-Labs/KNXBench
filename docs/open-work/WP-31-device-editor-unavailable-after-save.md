@@ -1,7 +1,7 @@
 # WP-31 — Device editor unavailable after saving the project (#36)
 
 External report by the issue reporter, 10 November 2026; triaged 11 November 2026.
-Status: **open, diagnosis first.** Follow-up to the original #36 path, which
+Status: **lock fix implemented 11 November 2026; original error message unreproduced.** Follow-up to the original #36 path, which
 the reporter confirmed fixed by `bf85a5b69` on 10 November 2026.
 
 ## Observed
@@ -26,3 +26,19 @@ the original endless loading state.
    regression test for exactly this sequence.
 3. Reporter questions asked on #36: whether *Erneut versuchen* helps, error
    text, status code of the failing request, autosave state.
+
+## Reproduction and fix (11 November 2026)
+
+Offline, release server, 336 MB / 75-device project: Save took 7–15 s and held
+the project lock throughout (`save_editor_state`); `GET /api/device/<id>` sent
+meanwhile waited up to 14.4 s, then loaded. No failed request occurred, so the
+reported `devices.editorUnavailable` state remains unexplained (open
+hypothesis: a reverse-proxy timeout; asked on #36).
+
+Save now writes a frozen copy after releasing the project and stack locks; the
+store path and journal generation stay held, so no other writer interleaves.
+Tests: `save_lets_readers_in_while_it_writes_its_frozen_copy`,
+`an_edit_during_the_save_write_stays_unsaved`.
+
+Remaining: requests that read the store path (project tree, edits) still wait
+for a running save; Save itself still costs seconds on large projects.

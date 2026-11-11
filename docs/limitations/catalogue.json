@@ -508,7 +508,7 @@
       "number": 88,
       "title": "Manufacturer display-name winner",
       "topic": "Manufacturer data and parameters",
-      "summary": "Display names deliberately use last-writer-wins. Ingest order can change names independently of first-winner product definitions.",
+      "summary": "Installed display names deliberately use last-writer-wins. Missing/ID-shaped device names can use unambiguous retained masters read-only; conflicts retain the ID. Ingest order still affects installed real names.",
       "file": "KL-088-manufacturer-display-name-winner.md",
       "ledger_ids": [
         "KL-88"

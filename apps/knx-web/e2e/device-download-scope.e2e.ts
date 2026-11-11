@@ -104,15 +104,19 @@ for (const width of [1400, 400]) {
     const { writes } = await open(page, { scope: "parameters", scopeFromChanges: false,
       scopeAdvice: { basis: "projectFlags", write: "both", address: "current", mediumPending: false, fullyProgrammed: false } });
     await page.setViewportSize({ width, height: 900 });
+    // A gateway first: changing it later drops a shown plan, and without one the start stays disabled.
+    await page.locator("input[data-download-gateway]").fill("192.0.2.10:3671");
     await page.getByRole("group", { name: "What to write" }).getByRole("radio", { name: "Parameters only" }).check();
     await page.getByRole("button", { name: "Prepare download" }).click();
-    const warning = page.getByRole("note").filter({ hasText: "This scope leaves pending changes unwritten:" });
+    const warning = page.getByRole("note").filter({ hasText: "This scope does not write every pending change:" });
     await expect(warning).toBeVisible();
     await expect(warning).toContainText("Pending group-address changes are not written by this scope.");
     await expect(warning).not.toContainText("Pending parameter changes");
     const box = await warning.boundingBox();
     expect(box!.x + box!.width).toBeLessThanOrEqual(width);
     expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1);
+    // A warning, not a refusal (owner decision): the start stays available.
+    await expect(page.getByRole("button", { name: "Download to 1.1.67", exact: true })).toBeEnabled();
     await expect(page.locator(".programming-consent-dialog")).toHaveCount(0);
     expect(writes).toEqual([]);
   });

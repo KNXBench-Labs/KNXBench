@@ -23,7 +23,8 @@ export default function DownloadScopeAdvice({ advice, resolved, scope }: Props) 
           : t("deviceDownload.scopeAdvice.advised", { scope: t(`deviceDownload.scopeAdvice.write.${advice.write}` as const) })}</p>}
       {uncovered.length > 0 && (
         <div className="device-download-scope-uncovered" role="note" data-scope-uncovered={uncovered.join(" ")}>
-          <p><strong>{t("deviceDownload.scopeAdvice.uncovered.title")}</strong></p>
+          <p><strong>{t(uncovered.includes("application") ? "deviceDownload.scopeAdvice.uncovered.titleApplication"
+            : "deviceDownload.scopeAdvice.uncovered.title")}</strong></p>
           <ul>{uncovered.map((part) => (
             <li key={part} data-scope-uncovered-part={part}>{t(`deviceDownload.scopeAdvice.uncovered.${part}` as const)}</li>
           ))}</ul>

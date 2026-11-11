@@ -530,7 +530,10 @@ changes, the project does not. Saving or exporting a project file is something e
    says what the marks advise. When the chosen scope leaves a pending part
    unwritten (for example **Parameters only** while a group-address change is
    pending), the plan names that part in a warning before you start; it stays
-   marked pending afterwards, and you can still start the download. "Nothing pending" needs no product data. The plan
+   marked pending afterwards, and you can still start the download. If the
+   application program is pending, the warning names it and says that the
+   marks do not tell which parameter or group-address changes are also pending.
+   "Nothing pending" needs no product data. The plan
    names the application program, the mask and manufacturer the device must report
    before the first write, the parameter values and group links taken from the project,
    every memory segment with the octets written, and every step. Nothing has been sent.

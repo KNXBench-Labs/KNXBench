@@ -22,5 +22,7 @@ describe("uncoveredParts", () => {
     expect(uncoveredParts("both", advice("parameters"))).toEqual([]);
     expect(uncoveredParts("both", advice("groupAddresses"))).toEqual([]);
     expect(uncoveredParts("parameters", advice("parameters"))).toEqual([]);
+    // An unknown scope code from a newer server names nothing instead of throwing.
+    expect(uncoveredParts("everything" as never, advice("both"))).toEqual([]);
   });
 });

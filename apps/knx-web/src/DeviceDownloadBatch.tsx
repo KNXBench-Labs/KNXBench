@@ -82,7 +82,7 @@ export function stateText(t: ReturnType<typeof useTranslate>, row: api.DeviceDow
       // written then); the rest keep the server's text and say what was written.
       if (row.written === "no" && (row.kind === "gatewayTimeout" || row.kind === "gatewayRefused")) return t("deviceDownload.batch.state.gatewayFailed");
       if (row.written === "no" && row.kind === "downloadPlanStale") return t("deviceDownload.batch.state.planChanged");
-      return `${t("deviceDownload.batch.state.failed", { error: row.error })}. ${t(WRITTEN[row.written])}`;
+      return `${t("deviceDownload.batch.state.failed", { error: row.error.replace(/[.\s]+$/, "") })}. ${t(WRITTEN[row.written])}`;
     case "stopped": return t("deviceDownload.batch.state.stopped");
     case "notStarted": return t(NOT_STARTED[row.reason]);
     case "notInBatch": return reasonText(t, row.reason);
@@ -195,11 +195,14 @@ export default function DeviceDownloadBatch({ project, gateway, disabled, openRe
     } catch (reason) {
       if (api.errorStatus(reason) !== 404) { setError(api.errorMessage(reason)); return; }
       if (batchId === undefined) return;
-      // Our batch was replaced (another page started one): show whichever is
-      // current now, or none, so the panel does not stay "running" forever.
+      // Our batch was replaced after it ended (another page started one): it
+      // may have written devices, so the project is reloaded once; then show
+      // whichever batch is current, or none, so the panel does not stay
+      // "running" forever.
+      reloaded.current = batchId;
+      if (onProjectChanged) api.currentProject().then(onProjectChanged, (failure) => setRefreshError(api.errorMessage(failure)));
       try {
         const current = await api.pollDeviceDownloadBatch();
-        if (current.state === "ended") reloaded.current = current.batchId;
         setStatus(current);
       } catch {
         setStatus(null);

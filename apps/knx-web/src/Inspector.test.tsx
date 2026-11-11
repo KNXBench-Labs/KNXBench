@@ -1,6 +1,7 @@
 /** Tests for Inspector's collapsed delete-restriction message on non-empty group ranges. */
 // @vitest-environment happy-dom
 import { act } from "react";
+import { messages as enMessages } from "./messages/en";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ProjectTree } from "./bindings/ProjectTree";
@@ -1143,6 +1144,40 @@ async function chooseAddress(row: HTMLElement, text: string) {
   });
   await act(async () => { input.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true })); });
 }
+
+describe("Inspector — new link direction follows the object (issue #47)", () => {
+  async function linkRow(links: Parameters<typeof detailWithComObject>[0] = []) {
+    const tree = deviceMoveTree();
+    tree.installations[0].group_addresses = [ga(9, "Kitchen lights", "1/2/3")];
+    apiMock.linkComObject.mockResolvedValue(tree);
+    await renderInspector({ kind: "device", id: 42 }, tree, detailWithComObject(links));
+    return host!.querySelector<HTMLElement>(".group-link-list .tree-new-row")!;
+  }
+
+  it("makes a Write-only object's first link its sending one, says why, and links so", async () => {
+    // The fixture object has Write and no Transmit: it still answers reads on its sending address.
+    const row = await linkRow();
+    const direction = row.querySelector<HTMLSelectElement>("select")!;
+    expect(direction.value).toBe("Send");
+    expect(direction.dataset.linkDirectionReason).toBe("firstSends");
+    const hint = row.querySelector(".link-direction-hint")!;
+    expect(hint.textContent).toBe(enMessages["inspector.direction.reason.firstSends"]);
+    expect(direction.getAttribute("aria-describedby")).toBe(hint.id);
+    await chooseAddress(row, "kitchen");
+    await act(async () => row.querySelector("button")!.click());
+    expect(apiMock.linkComObject).toHaveBeenCalledWith(7, 9, "Send");
+  });
+
+  it("suggests Receive once the object already sends, and a user choice wins", async () => {
+    const row = await linkRow([{ ga_id: 4, address: "1/2/0", name: "Other", direction: "Send" }]);
+    const direction = row.querySelector<HTMLSelectElement>("select")!;
+    expect(direction.dataset.linkDirectionReason).toBe("hasSender");
+    await act(async () => { direction.value = "Send"; direction.dispatchEvent(new Event("change", { bubbles: true })); });
+    expect(direction.value).toBe("Send");
+    expect(direction.dataset.linkDirectionReason).toBe("picked");
+    expect(row.querySelector(".link-direction-hint")).toBeNull();
+  });
+});
 
 describe("Inspector — atomic send-and-receive link action (ISSUE-09)", () => {
   it("offers Both as one request while keeping Send and Receive choices", async () => {

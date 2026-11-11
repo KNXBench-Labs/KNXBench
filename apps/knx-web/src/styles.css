@@ -720,6 +720,9 @@ main {
   overflow-wrap: anywhere;
 }
 
+/* Issue #47: why a new link's direction was suggested; muted, wraps under the row. */
+.link-direction-hint { display: block; flex-basis: 100%; color: var(--knx-muted); font-size: 0.85em; overflow-wrap: anywhere; }
+
 .field-error {
   display: block;
   color: var(--knx-error-color);

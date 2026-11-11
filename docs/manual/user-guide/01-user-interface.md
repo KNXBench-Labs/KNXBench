@@ -155,7 +155,8 @@ not a missing feature.
 
 ## The navigation pane
 
-The left pane has three stacked blocks.
+The left pane has three stacked blocks; source builds after Alpha 20 add a fourth,
+**Pending programming**, while a project is open.
 
 **Since Alpha 13:** click the **Workspaces**, **Project explorer**
 or **Diagnostics** heading to fold that entire block independently. Selection,
@@ -194,6 +195,11 @@ down, and about every twelve seconds a soft pulse runs from the top of the tree
 through the rows on screen. Turn that down or off under **Settings → Motion by
 category → Structure lines in the explorer**; the lines themselves stay. The
 screenshots in this manual still show the released explorer.
+
+**Pending programming** (main-only after Alpha 20), between the explorer and
+the diagnostics block: the devices that still have parts to program, with the
+count in its heading, a click to open each device and **Download…** to open its
+download tab. See [Pending programming panel](05-devices-and-products.md#pending-programming-panel-main-only-after-alpha-20).
 
 **The diagnostics block**, at the bottom: **Bus monitor**, **Log**, **Diagnostics
 window** and **Settings**. The first two swap the center workspace for a panel;

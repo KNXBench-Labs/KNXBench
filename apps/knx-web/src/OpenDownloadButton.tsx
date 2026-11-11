@@ -10,6 +10,11 @@ export function DownloadNavigationProvider({ onOpen, children }: { onOpen: OpenD
   return <DownloadNavigation.Provider value={onOpen}>{children}</DownloadNavigation.Provider>;
 }
 
+/** The same hand-off for other entry points (pending-programming panel); `null` outside the workbench. */
+export function useOpenDownload(): OpenDownload | null {
+  return useContext(DownloadNavigation);
+}
+
 /**
  * Opens the bus workspace's download tab with this device preselected. It
  * never prepares a plan, starts a download or opens a connection; a device

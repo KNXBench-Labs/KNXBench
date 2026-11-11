@@ -12,6 +12,42 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Pending programming sidebar, read-only first step (11 November 2026; issue #42, WP-38)
+
+The navigation pane now has a **Pending programming ({count})** block (German
+**Ausstehende Programmierung ({count})**) between the project explorer and
+Diagnostics. It starts folded like the other blocks; its count stays visible.
+It lists the devices with at least one pending part, in the Devices table's
+address order, with address, name and the same Adr/App/Par/GA chips. A row
+opens its device as the explorer does. **Download…** / **Programmieren…** uses
+the device editor's existing download hand-off: the download tab opens with
+that device selected, without planning, starting or connecting. On a narrow
+screen it closes navigation to reveal the tab.
+
+Unreported programming states are counted, never guessed or listed. A device
+without an address cannot use the download jump (reason shown). Empty means
+**Nothing pending** / **Nichts ausstehend**. The summary is computed once per
+tree snapshot and language; while folded, no rows mount. The list initially
+renders 50 rows, with a total and **Show all**, inside its own scroll box.
+
+This is issue #42's promised first step only: **no batch start button**. Step 2,
+downloading all pending devices in sequence, remains open and needs an ADR
+first. No server/domain changes and no real-bus or hardware tests.
+[Design, copy and remaining work](open-work/WP-38-pending-devices-panel.md);
+[user guide](manual/user-guide/05-devices-and-products.md#pending-programming-panel-main-only-after-alpha-20).
+
+Verification: TypeScript application and `tsconfig.ux-feedback.json` fixture
+checks; full Vitest **5,645 / 344 files**; production Devices Playwright lane
+**79**; development-fixture Playwright **131** across pending-programming,
+devices-navigation, device-editor-layout, controls/separators/theme matrix and
+the existing device-editor download hand-off. All passed. The pending-programming
+spec has **26 cases**, including **8 new panel cases**: en/de at 1440/400 px,
+selection, tab/device hand-off, no writes, no horizontal overflow or chip/action
+overlap, count refresh and empty state. Component coverage includes an unknown
+state, missing address, the 50-row cap and a 5,000-device projection. Production
+build, documentation and purpose-header checks passed; **14 new panel stills**
+were visually checked. API-intercepted browser tests only; no live bus.
+
 ## New links are Send or Receive, one per address, as in ETS (11 November 2026; WP-39)
 
 The link row on a communication object and **Add member…** no longer offer

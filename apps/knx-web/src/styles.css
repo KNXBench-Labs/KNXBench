@@ -3529,6 +3529,27 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
   box-shadow: 0 0 0 1px color-mix(in srgb, var(--knx-surface) 70%, transparent);
 }
 .device-programming { margin: 12px 0 16px; }
+/* Issue #42: sidebar list of devices with pending parts. Its own scroll box,
+   so a long list never pushes the explorer and diagnostics out of reach. */
+.pending-programming-panel { padding: 4px 8px 10px; font-size: 12px; max-height: calc(30dvh / var(--app-ui-scale, 1)); overflow: auto; }
+.pending-programming-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.pending-programming-row { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 2px 6px; min-width: 0; }
+.workbench .pending-programming-open {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 2px; min-width: 0; width: 100%;
+  padding: 4px 6px; text-align: left; border: 1px solid transparent; border-radius: var(--knx-radius-button);
+  background: transparent; color: var(--knx-foreground); box-shadow: none; transform: none; --button-press-scale: 1; overflow: hidden;
+}
+/* The sidebar can be narrower than four chips beside the button: wrap, never paint over it. */
+.pending-programming-open .programming-chips { flex-wrap: wrap; max-width: 100%; }
+.workbench .pending-programming-open:hover:not(:disabled) { transform: none; box-shadow: none; background: color-mix(in srgb, var(--knx-accent) 8%, var(--knx-surface)); }
+.workbench .pending-programming-open[aria-current="true"] { background: color-mix(in srgb, var(--knx-accent) 14%, transparent); }
+.pending-programming-name { display: flex; gap: 6px; min-width: 0; max-width: 100%; }
+.pending-programming-name > span:last-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pending-programming-address { flex: none; font-family: var(--knx-font-mono, ui-monospace, monospace); color: var(--knx-muted); }
+.workbench .pending-programming-download { padding: 2px 8px; font-size: 12px; white-space: nowrap; }
+.pending-programming-reason { grid-column: 1 / -1; padding: 0 6px; color: var(--knx-muted); }
+.pending-programming-empty, .pending-programming-unknown { margin: 4px 6px; color: var(--knx-muted); }
+.pending-programming-more { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 6px; color: var(--knx-muted); }
 .device-programming h3 { margin: 0 0 6px; font-size: 13px; }
 /* One part per row: the inspector is narrow at every window width. */
 .device-programming-parts { display: grid; gap: 2px; margin: 0; }

@@ -2944,8 +2944,10 @@ pub(crate) fn current_project_revision(state: &AppState) -> u64 {
     state.project_revision.load(Ordering::Relaxed)
 }
 
-/// Called only while `state.project` is held, so the number is ordered with
-/// the project mutation/baseline publication it identifies.
+/// Called while `state.project` is held, so the number is ordered with the
+/// project mutation/baseline publication it identifies. Exception: Save bumps it
+/// after its file write without the project lock (#36); it still holds the store
+/// path, and paths that snapshot before taking the store path recheck the revision.
 pub(crate) fn next_project_revision(state: &AppState) -> u64 {
     state.project_revision.fetch_add(1, Ordering::Relaxed) + 1
 }

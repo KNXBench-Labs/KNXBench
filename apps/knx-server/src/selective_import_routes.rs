@@ -94,12 +94,9 @@ async fn process(
         };
         let plan = import::plan(&snapshot, &source, request.selection)
             .map_err(|e| ApiError::refused("selectiveImportConflict", e))?;
+        let token_revision = domain::current_project_revision(&state);
         let token = plan
-            .confirmation_token(&format!(
-                "{}:{}",
-                state.server_incarnation,
-                domain::current_project_revision(&state)
-            ))
+            .confirmation_token(&format!("{}:{}", state.server_incarnation, token_revision))
             .map_err(ApiError::internal)?;
         if !apply {
             return Ok(json!({"preview":plan.preview,"confirmationToken":token}));
@@ -120,6 +117,14 @@ async fn process(
             .history_generation
             .lock()
             .expect("state mutex poisoned");
+        // A Save writes without the project lock (#36) and publishes its catalogue
+        // references afterwards: a snapshot taken before it finished is stale.
+        if domain::current_project_revision(&state) != token_revision {
+            return Err(ApiError::conflict(
+                "selectiveImportStale",
+                "the project was saved or changed meanwhile; preview again before confirming",
+            ));
+        }
         if let Some(path) = path.as_deref() {
             *generation = knx_app::project_history::persist_working(
                 path,

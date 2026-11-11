@@ -40,5 +40,16 @@ store path and journal generation stay held, so no other writer interleaves.
 Tests: `save_lets_readers_in_while_it_writes_its_frozen_copy`,
 `an_edit_during_the_save_write_stays_unsaved`.
 
-Remaining: requests that read the store path (project tree, edits) still wait
-for a running save; Save itself still costs seconds on large projects.
+After the fix (same project, release build): device detail during a save
+0.20–0.27 s, the save about 6 s.
+
+Remaining (independent review 11 November 2026): an edit (`commit_locked` →
+`enqueue_native_working`) or a project-tree/status/notes/instructions read
+that takes the store path while holding the project blocks for the rest of the
+write, and device reads queue behind it again. Releasing the store path during
+a plain Save would let a replacement hold `clean_project` while waiting for the
+journal generation the saver holds, a lock-order deadlock; a proper fix needs
+a lock-order redesign (or edits that enqueue without the store path). The
+save route also runs on a tokio worker without `spawn_blocking`.
+Selective import rechecks the revision after taking the store path
+(`a_save_finishing_while_the_apply_waits_makes_it_stale`).

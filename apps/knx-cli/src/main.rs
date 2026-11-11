@@ -202,9 +202,9 @@ const USAGE: &str = "usage: knx import <file.knxproj> [--store <path.knxdb> [--r
      \x20         reads the memory ranges its System-2 load procedure declares; candidate\n\
      \x20         locations, not a backup. Nothing is written. ADR-0143.)\n\
      \x20     knx device byte-order-probe <area.line.device> --project <path.knxdb>\n\
-     \x20                  [--product-db <path>] [--gateway <host:port>] [--preview]\n\
+     \x20                  [--product-db <path>] [--gateway <host:port>] [--preview] [--tunnel-transport udp|tcp]\n\
      \x20                  [--system2-source --parameter-ref <id>...]\n\
-     \x20         (--preview is offline; System-2 source selection requires it and never enables a read.)\n\
+     \x20         (--preview is offline and refuses transport selection; System-2 source selection requires it.)\n\
      \x20         (READ ONLY, KL-170: for a device ETS programmed with this project, reads\n\
      \x20         only its multi-octet parameter fields and one-octet controls and says\n\
      \x20         whether it holds the values high or low octet first. Works for any declared\n\
@@ -2976,7 +2976,7 @@ fn run_device_byte_order_probe(args: &[String]) -> ExitCode {
     runtime.block_on(async {
         use knx_net::BusConnection;
         let tunnel = match crate::diagnostic_bundle_cli::tapped(
-            knx_net::KnxNetIpClient::new(),
+            knx_net::KnxNetIpClient::new().with_tunnel_transport(parsed.transport),
             knx_app::operation_recording::OperationKind::ByteOrderProbe,
             gateway,
         )
@@ -2989,6 +2989,11 @@ fn run_device_byte_order_probe(args: &[String]) -> ExitCode {
                 return ExitCode::FAILURE;
             }
         };
+        eprintln!(
+            "connected to {gateway} over {}, assigned individual address {}. probing byte order...",
+            bus_transport::transport_label(tunnel.transport()),
+            tunnel.assigned_address()
+        );
         let probed = device_byte_order_probe::probe(
             &tunnel,
             target,
@@ -2997,6 +3002,10 @@ fn run_device_byte_order_probe(args: &[String]) -> ExitCode {
             &mut std::io::stdout(),
         )
         .await;
+        // Sample before consuming the tunnel, including failed reads; not final-wire totals.
+        let skipped = (tunnel.transport() == knx_net::TunnelTransport::Tcp)
+            .then(|| tunnel.skipped_frame_count());
+        bus_transport::report_skipped_frames(skipped, &mut std::io::stderr());
         if let Err(e) = tunnel.disconnect().await {
             eprintln!("tunnel disconnect: {e}");
         }

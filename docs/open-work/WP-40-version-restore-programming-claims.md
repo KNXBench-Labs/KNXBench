@@ -1,7 +1,8 @@
 # WP-40 — Version restore must not resurrect "programmed" claims
 
 Found 11 November 2026 while designing WP-37 step 2 (source reading of main
-`e17051626`, no run yet). Status: **open; not started.** Decision:
+`e17051626`). Status: **implemented 11 November 2026** (`settle_restored_version`
+in `knx-core`, called by `change_history`; server session-log line). Decision:
 [ADR-0173](../adr/0173-last-downloaded-parameter-values.md) §6.
 
 ## Defect
@@ -35,3 +36,14 @@ whose parts became pending.
   their live flags, a device absent live with all parts pending; the restored
   project reopens with the same flags (durable).
 - No change to undo/redo, settlement, download admission or bus behaviour.
+
+## Evidence
+
+- `crates/knx-core/src/commissioning/pending/tests.rs`: changed parameters with
+  their dependants, live belief in both directions, application/address
+  dependants, device absent live, no-op restore.
+- `crates/knx-store/tests/it/project_history.rs`
+  `a_restored_version_does_not_resurrect_programmed_claims_and_the_correction_is_durable`
+  and `apps/knx-server/tests/it/http_project_history.rs`
+  `restoring_an_older_version_marks_what_the_device_no_longer_holds_and_says_so`:
+  both fail on the flags with the settle call disabled, pass with it.

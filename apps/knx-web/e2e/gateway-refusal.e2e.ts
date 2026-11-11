@@ -95,9 +95,18 @@ for (const language of ["en", "de"] as const) {
           await page.route("**/api/bus/activity", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({
             serverIncarnation: "fixture", coverage: "partial", historyState: "disabled", oneShot: [], oneShotDropped: 0, busyLocks: [],
             untracked: [], sessions: monitor ? [{ kind: "busMonitor", id: 6, gateway: GATEWAY, state: "active" }] : [] }) }));
-          await page.route("**/api/bus/monitor/stop", (route) => {
+          const boundStops: string[] = [];
+          let legacyStops = 0;
+          await page.route("**/api/bus/monitor/stop-bound**", (route) => {
+            boundStops.push(new URL(route.request().url()).search);
             stops += 1; monitor = false;
-            return route.fulfill({ contentType: "application/json", body: JSON.stringify({ sessionId: 6, telegramCount: 0 }) });
+            return route.fulfill({ contentType: "application/json",
+              body: JSON.stringify({ sessionId: 6, serverIncarnation: "fixture", telegramCount: 0 }) });
+          });
+          // WP-26: the holder notice never uses the legacy global stop.
+          await page.route("**/api/bus/monitor/stop", (route) => {
+            legacyStops += 1;
+            return route.fulfill({ status: 500, contentType: "application/json", body: JSON.stringify({ error: "legacy stop" }) });
           });
           await page.route("**/api/device-readiness?deviceId=1", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({
             counts: {}, devices: [
@@ -145,6 +154,8 @@ for (const language of ["en", "de"] as const) {
           await holder.getByRole("button", { name: messages["deviceDownload.holder.stopMonitor"] }).click();
           await expect(holder).toHaveCount(0);
           expect(stops).toBe(1);
+          expect(boundStops).toEqual(["?sessionId=6&serverIncarnation=fixture"]);
+          expect(legacyStops).toBe(0);
           // The monitor's gateway is kept for the download.
           await expect(panel.locator("input[data-download-gateway]")).toHaveValue(GATEWAY);
           expect(state.requests.filter((request) => request.startsWith("POST /api/device-download/"))).toEqual([]);

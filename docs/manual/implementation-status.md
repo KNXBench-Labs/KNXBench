@@ -622,6 +622,11 @@ P4 live-device comparison; CLI/external work needs manual reconciliation.
 [Use and limits](user-guide/05-devices-and-products.md#programming-marks-p3-since-alpha-12),
 [ADR-0129](../adr/0129-per-part-pending-programming.md).
 
+In a source build after Alpha 20 the opened device editor also names its
+pending parts under the heading and marks the Parameters and Communication
+objects tabs (issue #40); per-parameter marking is not available.
+[Use](user-guide/05-devices-and-products.md#programming-marks-p3-since-alpha-12).
+
 A download can use these marks to choose its scope (since Alpha 17):
 *Only what the project marks pending* in the Download to device tab and
 `knx device download --changes` plan the complete, partial or no download the

@@ -593,3 +593,10 @@ experiment. The gateway allows one tunnel; a refused plan sends nothing.
 No general ETS commissioning parity, every-vendor download claim, automatic
 rollback or RF hardware support is established by one device.
 <!-- END retained catalogue record -->
+
+## 2026-11-11: tester-reported Hager `0701h` parameters-only download
+
+A tester report (issue #38) adds `M-0006_A-E052-12-3406` with the
+`partial-parameters` scope only; see the
+[KL-136 dossier](KL-136-0701h-download-and-restart-evidence.md) and the
+[evidence record](../evidence/tester-report-hager-0701-2026-11-10.json).

@@ -1624,6 +1624,13 @@ fn reinstall_manufacturer_files(
         .unwrap_or_default()
 }
 
+#[cfg(test)]
+thread_local! {
+    /// Runs on the saving thread while the file write would start (#36 tests).
+    static DURING_SAVE_WRITE: std::cell::RefCell<Option<Box<dyn FnOnce()>>> =
+        const { std::cell::RefCell::new(None) };
+}
+
 fn save_editor_state(
     state: &AppState,
     destination: Option<(&Path, bool)>,
@@ -1670,16 +1677,16 @@ fn save_editor_state(
         None => knx_app::catalogue_sources::acquire_for_save(&source_devices, &source_refs, None),
     }
     .map_err(SaveAsError::Failed)?;
-    let project = state.project.lock().expect("state mutex poisoned");
+    let project_guard = state.project.lock().expect("state mutex poisoned");
     if state.project_revision.load(Ordering::SeqCst) != source_revision {
         return Err(SaveAsError::Failed(
             "project changed while acquiring catalogue sources; save again".into(),
         ));
     }
-    let project = project
+    let project = project_guard
         .as_ref()
         .ok_or_else(|| SaveAsError::Failed("no project open".to_string()))?;
-    let stack = state.command_stack.lock().expect("state mutex poisoned");
+    let stack_guard = state.command_stack.lock().expect("state mutex poisoned");
     let mut store_path = state.store_path.lock().expect("state mutex poisoned");
     let mut generation = state
         .history_generation
@@ -1688,13 +1695,25 @@ fn save_editor_state(
     // Under the project lock and after the flush above: every job so far is
     // older than the state this save writes.
     let through = state.journal().sequence();
-    let mut clean_project = state.clean_project.lock().expect("state mutex poisoned");
-    let mut last_saved_at = state.last_saved_at.lock().expect("state mutex poisoned");
     let snapshot = knx_store::project_history::NativeSnapshot {
         project: project.clone(),
         opaque: state.opaque.lock().expect("state mutex poisoned").clone(),
         manufacturer_refs: acquired.refs.clone(),
     };
+    let stack = stack_guard.clone();
+    // #36: the file write takes seconds on large projects. It writes the frozen
+    // copy above, so readers of the project need not wait for it. Store path and
+    // generation stay held: every writer (journal hand-over, Save As, version
+    // actions, project replacement) takes one of them before writing, so none
+    // can interleave, and no lock is taken below that a waiting writer holds.
+    drop(stack_guard);
+    drop(project_guard);
+    #[cfg(test)]
+    DURING_SAVE_WRITE.with(|hook| {
+        if let Some(hook) = hook.borrow_mut().take() {
+            hook();
+        }
+    });
     let new_generation = match destination {
         Some((path, overwrite)) => knx_app::project_history::save_as_with_sources(
             path,
@@ -1724,8 +1743,10 @@ fn save_editor_state(
     }
     *generation = new_generation;
     state.journal().superseded(through);
-    *clean_project = Some(project.clone());
-    *last_saved_at = Some(session_log::now());
+    // The saved state is the frozen copy; a command applied while the file was
+    // written stays unsaved and is journaled after this save.
+    *state.clean_project.lock().expect("state mutex poisoned") = Some(snapshot.project);
+    *state.last_saved_at.lock().expect("state mutex poisoned") = Some(session_log::now());
     next_project_revision(state);
     for message in acquired.warnings {
         state
@@ -2923,8 +2944,10 @@ pub(crate) fn current_project_revision(state: &AppState) -> u64 {
     state.project_revision.load(Ordering::Relaxed)
 }
 
-/// Called only while `state.project` is held, so the number is ordered with
-/// the project mutation/baseline publication it identifies.
+/// Called while `state.project` is held, so the number is ordered with the
+/// project mutation/baseline publication it identifies. Exception: Save bumps it
+/// after its file write without the project lock (#36); it still holds the store
+/// path, and paths that snapshot before taking the store path recheck the revision.
 pub(crate) fn next_project_revision(state: &AppState) -> u64 {
     state.project_revision.fetch_add(1, Ordering::Relaxed) + 1
 }
@@ -8053,6 +8076,119 @@ mod tests {
             project_locked,
             "Save chose its path before locking its project"
         );
+    }
+
+    /// #36: a Save writes a frozen copy. Readers get the project while the file
+    /// is written; a project replacement still waits for the save; an edit made
+    /// meanwhile stays unsaved instead of being marked clean.
+    #[test]
+    fn save_lets_readers_in_while_it_writes_its_frozen_copy() {
+        use std::sync::{mpsc, Arc};
+        use std::time::Duration;
+
+        let state = Arc::new(AppState::default());
+        new_project_impl(&state, Some("Project A".into()), None, None, None, true).unwrap();
+        let dir = tempfile::tempdir().unwrap();
+        let file = dir.path().join("project.knxdb");
+        save_project_as(&state, &file).unwrap();
+
+        let (replacement_tx, replacement_rx) = mpsc::channel();
+        let (during_tx, during_rx) = mpsc::channel();
+        let hook_state = Arc::clone(&state);
+        DURING_SAVE_WRITE.with(|hook| {
+            *hook.borrow_mut() = Some(Box::new(move || {
+                // A reader on another thread: the project lock is free. Polled with
+                // try_lock and a deadline, so a regression fails instead of hanging.
+                let reader_state = Arc::clone(&hook_state);
+                let read = std::thread::spawn(move || {
+                    let deadline = std::time::Instant::now() + Duration::from_secs(2);
+                    loop {
+                        if let Ok(project) = reader_state.project.try_lock() {
+                            return Some(project.as_ref().unwrap().info.name.clone());
+                        }
+                        if std::time::Instant::now() >= deadline {
+                            return None;
+                        }
+                        std::thread::sleep(Duration::from_millis(5));
+                    }
+                });
+                let read_name = read.join().unwrap();
+                // A replacement must wait for the save to finish.
+                let replacing_state = Arc::clone(&hook_state);
+                std::thread::spawn(move || {
+                    let result = new_project_impl(
+                        &replacing_state,
+                        Some("Project B".into()),
+                        None,
+                        None,
+                        None,
+                        true,
+                    );
+                    replacement_tx.send(result.is_ok()).unwrap();
+                });
+                let replacement_waited = matches!(
+                    replacement_rx.recv_timeout(Duration::from_millis(200)),
+                    Err(mpsc::RecvTimeoutError::Timeout)
+                );
+                during_tx
+                    .send((read_name, replacement_waited, replacement_rx))
+                    .unwrap();
+            }));
+        });
+        save_project(&state).unwrap();
+
+        let (read_name, replacement_waited, replacement_rx) =
+            during_rx.recv_timeout(Duration::from_secs(5)).unwrap();
+        assert_eq!(
+            read_name.as_deref(),
+            Some("Project A"),
+            "a reader waited for the save write"
+        );
+        assert!(
+            replacement_waited,
+            "a replacement ran while Save wrote its file"
+        );
+        // The replacement proceeds once the save is done.
+        assert!(replacement_rx.recv_timeout(Duration::from_secs(5)).unwrap());
+        assert_eq!(
+            state.project.lock().unwrap().as_ref().unwrap().info.name,
+            "Project B"
+        );
+    }
+
+    /// #36: the clean baseline is the copy Save wrote, so an edit applied while
+    /// the file was written stays unsaved.
+    #[test]
+    fn an_edit_during_the_save_write_stays_unsaved() {
+        use std::sync::Arc;
+
+        let state = Arc::new(AppState::default());
+        new_project_impl(&state, Some("Project A".into()), None, None, None, true).unwrap();
+        let dir = tempfile::tempdir().unwrap();
+        save_project_as(&state, &dir.path().join("project.knxdb")).unwrap();
+        let hook_state = Arc::clone(&state);
+        DURING_SAVE_WRITE.with(|hook| {
+            *hook.borrow_mut() = Some(Box::new(move || {
+                let editor = std::thread::spawn(move || {
+                    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(2);
+                    loop {
+                        if let Ok(mut project) = hook_state.project.try_lock() {
+                            project.as_mut().unwrap().info.name = "Edited during save".into();
+                            return true;
+                        }
+                        if std::time::Instant::now() >= deadline {
+                            return false;
+                        }
+                        std::thread::sleep(std::time::Duration::from_millis(5));
+                    }
+                });
+                assert!(editor.join().unwrap(), "an edit waited for the save write");
+            }));
+        });
+        save_project(&state).unwrap();
+        let clean = state.clean_project.lock().unwrap().clone().unwrap();
+        assert_eq!(clean.info.name, "Project A");
+        assert!(has_unsaved_changes(&state));
     }
 
     #[test]

@@ -395,3 +395,22 @@ fn status_names_unreadable_prestate_allocations() {
     let none = settled_status(super::initial(LocalOutcome::Failed));
     assert_eq!(none["prestateUnreadableAllocations"], serde_json::json!([]));
 }
+
+/// ADR-0172 §4: a batch between two devices runs no download session, and
+/// System-2 still refuses to take the gateway beside it.
+#[tokio::test]
+async fn a_batch_between_two_devices_keeps_system2_off_the_gateway() {
+    let directory = tempfile::tempdir().unwrap();
+    let state = std::sync::Arc::new(crate::AppState::new(directory.path().to_path_buf()));
+    assert!(
+        super::worker::reserve(&state).is_ok(),
+        "idle: the gateway is free"
+    );
+    *state.device_download_batch.lock().unwrap() = Some(std::sync::Arc::new(
+        crate::DownloadBatch::running_for_test(40, "1.1.7".parse().unwrap()),
+    ));
+    let refused = super::worker::reserve(&state)
+        .err()
+        .expect("refused beside a batch");
+    assert_eq!(refused.kind(), Some("gatewayBusy"));
+}

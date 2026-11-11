@@ -208,11 +208,8 @@ fn a_failed_or_stopped_device_stops_the_batch_and_keeps_its_backup() {
     );
 }
 
-async fn send(state: &SharedState, request: Request<Body>) -> (StatusCode, Value) {
-    let response = crate::app(Arc::clone(state), None)
-        .oneshot(request)
-        .await
-        .unwrap();
+async fn send(state: SharedState, request: Request<Body>) -> (StatusCode, Value) {
+    let response = crate::app(state, None).oneshot(request).await.unwrap();
     let status = response.status();
     let bytes = axum::body::to_bytes(response.into_body(), usize::MAX)
         .await
@@ -259,7 +256,7 @@ async fn between_two_devices_the_batch_keeps_the_gateway_and_is_named() {
         changes: false,
     }));
     let (status, body) = send(
-        &state,
+        Arc::clone(&state),
         post(
             "/api/device-download/start",
             json!({ "planId": 7, "gateway": "192.0.2.10:3671",
@@ -279,7 +276,7 @@ async fn between_two_devices_the_batch_keeps_the_gateway_and_is_named() {
     );
 
     let (status, body) = send(
-        &state,
+        Arc::clone(&state),
         post(
             "/api/bus/monitor/start",
             json!({ "gateway": "192.0.2.10:3671" }),
@@ -292,7 +289,7 @@ async fn between_two_devices_the_batch_keeps_the_gateway_and_is_named() {
     assert!(crate::graceful_stop::device_writes_active_for_test(&state));
 
     let (status, body) = send(
-        &state,
+        Arc::clone(&state),
         post("/api/device-download/batch/stop", json!({ "batchId": 40 })),
     )
     .await;
@@ -305,7 +302,7 @@ async fn between_two_devices_the_batch_keeps_the_gateway_and_is_named() {
     assert!(crate::tunnel_holder::download_holder(&state).is_none());
     assert!(!running(&state));
     let (status, body) = send(
-        &state,
+        Arc::clone(&state),
         Request::get("/api/device-download/batch/status?batchId=40")
             .body(Body::empty())
             .unwrap(),
@@ -316,4 +313,43 @@ async fn between_two_devices_the_batch_keeps_the_gateway_and_is_named() {
     assert_eq!(body["stopRequested"], true);
     assert_eq!(body["devices"][0]["state"], "notStarted");
     assert_eq!(body["devices"][0]["reason"], "stopRequest");
+}
+
+/// A single start parked on the download lock while a batch starts is
+/// refused, naming the batch, once it gets the lock: the second check.
+#[tokio::test]
+async fn a_single_start_waiting_for_the_lock_sees_a_batch_that_started_meanwhile() {
+    let dir = tempfile::tempdir().unwrap();
+    let state: SharedState = Arc::new(crate::AppState::new(dir.path().to_path_buf()));
+    let target: IndividualAddress = "1.1.7".parse().unwrap();
+    *state.device_download_plan.lock().unwrap() = Some(ShownDownload::Single(crate::ShownPlan {
+        id: 7,
+        target,
+        plan: crate::device_download::synthetic_plan(),
+        partial: None,
+        changes: false,
+    }));
+    // Held as a batch device's start holds it across its gateway connect.
+    let held = state.device_download.lock().await;
+    let request = tokio::spawn(send(
+        Arc::clone(&state),
+        post(
+            "/api/device-download/start",
+            json!({ "planId": 7, "gateway": "192.0.2.10:3671",
+                "confirmation": "I confirm download to 1.1.7" }),
+        ),
+    ));
+    // Let the start pass its first check and park on the lock.
+    tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+    assert!(!request.is_finished(), "the start waits for the lock");
+    *state.device_download_batch.lock().unwrap() =
+        Some(Arc::new(DownloadBatch::running_for_test(40, target)));
+    drop(held);
+    let (status, body) = request.await.unwrap();
+    assert_eq!(status, StatusCode::CONFLICT, "{body}");
+    assert_eq!(body["holder"]["kind"], "deviceDownloadBatch", "{body}");
+    assert!(
+        state.device_download.try_lock().unwrap().is_none(),
+        "nothing started"
+    );
 }

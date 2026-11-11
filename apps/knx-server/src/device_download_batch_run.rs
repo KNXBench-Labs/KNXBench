@@ -60,9 +60,10 @@ async fn run(
             return;
         }
         let (result, go_on) = one_device(&state, &batch, gateway, device).await;
+        let reason = after_doubt(&state, &batch, &result);
         batch.set(device.plan.id, result);
         if !go_on {
-            batch.end(after_doubt(&state));
+            batch.end(reason);
             return;
         }
     }
@@ -82,9 +83,15 @@ fn before_next(state: &SharedState, batch: &DownloadBatch) -> Option<NotStartedR
 
 /// The rest's reason after a device that did not qualify: a closing server
 /// is named, since it may be why that device stopped.
-fn after_doubt(state: &SharedState) -> NotStartedReason {
+fn after_doubt(
+    state: &SharedState,
+    batch: &DownloadBatch,
+    device: &DeviceState,
+) -> NotStartedReason {
     if state.stop_admission.is_closed() {
         NotStartedReason::ServerStop
+    } else if batch.stop_requested() && matches!(device, DeviceState::NotStarted { .. }) {
+        NotStartedReason::StopRequest
     } else {
         NotStartedReason::EarlierDevice
     }
@@ -129,6 +136,17 @@ async fn one_device(
             )
         }
     };
+    // A stop after this device may have arrived while the reservation was
+    // taken: nothing has started for this device yet.
+    if batch.stop_requested() {
+        return (
+            DeviceState::NotStarted {
+                download_id: id,
+                reason: NotStartedReason::StopRequest,
+            },
+            false,
+        );
+    }
     // Checked before the batch started; checked again as the single start does.
     let authorisation = match authorise(device.plan.target, &device.confirmation) {
         Ok(authorisation) => authorisation,
@@ -163,8 +181,9 @@ async fn one_device(
 /// its final status and backup file (relative to the data directory).
 async fn wait_for_end(state: &SharedState, id: u64) -> (crate::DownloadStatus, Option<String>) {
     loop {
-        {
-            let guard = state.device_download.lock().await;
+        // `try_lock`: never queue in front of the status readers, which
+        // `try_lock` this reservation themselves; a held lock waits a round.
+        if let Ok(guard) = state.device_download.try_lock() {
             match guard.as_ref() {
                 Some(session) if session.id() == id => {
                     if !session.is_running() {

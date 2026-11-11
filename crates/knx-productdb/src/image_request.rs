@@ -24,7 +24,11 @@
 //!   [`Direction::Send`]. A program may declare several `ComObjectRef`s for
 //!   one object number (`A-0027-15-0BAC` has 23 for number 0), so a device
 //!   created from the catalog has as many instances with that number; only
-//!   the instances that carry links count. Refused: links on two instances
+//!   the instances that carry links count. A send and a receive link to one
+//!   address become one sending association, and links that reach one
+//!   address twice become one association: the device indicates every
+//!   matching association, the sending one included (Resources §4.17.3.3.2).
+//!   Refused: links on two instances
 //!   with one number, two sending links on one number, an object number
 //!   above `FFh` (the group object table holds one octet), and a link to a
 //!   group address the project does not have.
@@ -595,7 +599,12 @@ fn links(project: &Project, device: DeviceId) -> Result<Vec<Link>, ProjectReques
         }
         let object_octet = u8::try_from(number)
             .map_err(|_| ProjectRequestError::ObjectNumberTooLarge { device, number })?;
-        let mut sending = Vec::new();
+        // One association per group address: a device indicates every
+        // association whose address matches, the sending one included
+        // (Resources §4.17.3.3.2 / §4.17.9.4.2), so a send and a receive link
+        // to one address are exactly one sending association, and a second
+        // entry would only duplicate the indication.
+        let mut associations: BTreeMap<GroupAddress, bool> = BTreeMap::new();
         for link in &object.links {
             let group_address =
                 *addresses
@@ -605,16 +614,22 @@ fn links(project: &Project, device: DeviceId) -> Result<Vec<Link>, ProjectReques
                         number,
                         group_address: link.ga,
                     })?;
-            let is_sending = link.direction == Direction::Send;
-            if is_sending {
-                sending.push(group_address);
-            }
-            links.push(Link {
-                object: object_octet,
-                group_address,
-                sending: is_sending,
-            });
+            *associations.entry(group_address).or_default() |= link.direction == Direction::Send;
         }
+        let sending: Vec<GroupAddress> = associations
+            .iter()
+            .filter(|(_, sending)| **sending)
+            .map(|(address, _)| *address)
+            .collect();
+        links.extend(
+            associations
+                .into_iter()
+                .map(|(group_address, sending)| Link {
+                    object: object_octet,
+                    group_address,
+                    sending,
+                }),
+        );
         if sending.len() > 1 {
             return Err(ProjectRequestError::SeveralSendingLinks {
                 device,
@@ -1124,6 +1139,66 @@ mod tests {
         assert!(statements(&object_with_flags(ResolvedFlags::none())).is_empty());
         assert!(statements(&object_with_declared("High", false)).is_empty());
         assert!(statements(&object_with_declared("", false)).is_empty());
+    }
+
+    #[test]
+    fn a_send_and_a_receive_link_to_one_address_are_one_sending_association() {
+        let mut p = project();
+        object(&mut p, 10, 0, vec![receive(1), send(1)]);
+        assert_eq!(
+            map(&p).unwrap().links,
+            vec![Link {
+                object: 0,
+                group_address: GroupAddress::from_raw(0x1035),
+                sending: true,
+            }]
+        );
+    }
+
+    #[test]
+    fn two_receive_links_to_one_address_are_one_association() {
+        let mut p = project();
+        p.installations[0].group_addresses.push(GroupAddressEntry {
+            id: GroupAddressId(2),
+            source: source("GA-2"),
+            name: "Same address, second entry".into(),
+            address: GroupAddress::from_raw(0x1035),
+            central: false,
+            unfiltered: false,
+            range: None,
+            declared_dpt: Default::default(),
+            description: None,
+        });
+        object(&mut p, 10, 0, vec![receive(1), receive(2)]);
+        assert_eq!(
+            map(&p).unwrap().links,
+            vec![Link {
+                object: 0,
+                group_address: GroupAddress::from_raw(0x1035),
+                sending: false,
+            }]
+        );
+    }
+
+    #[test]
+    fn a_send_and_receive_pair_still_counts_as_the_one_sender() {
+        let mut p = project();
+        p.installations[0].group_addresses.push(GroupAddressEntry {
+            id: GroupAddressId(2),
+            source: source("GA-2"),
+            name: "Other".into(),
+            address: GroupAddress::from_raw(0x0001),
+            central: false,
+            unfiltered: false,
+            range: None,
+            declared_dpt: Default::default(),
+            description: None,
+        });
+        object(&mut p, 10, 0, vec![send(1), receive(1), send(2)]);
+        assert!(matches!(
+            map(&p),
+            Err(ProjectRequestError::SeveralSendingLinks { .. })
+        ));
     }
 
     #[test]

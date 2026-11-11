@@ -284,7 +284,8 @@ Both link forms pre-fill the direction from the object, never from the address's
 - An object that already sends on an address gets **Receive**: an object has one
   sending address, and a download refuses a second.
 - An object already linked to the chosen address keeps that direction, and both forms
-  refuse a second link before anything is sent, with the reason shown.
+  refuse a second link before anything is sent, with the reason shown. To change the
+  direction of an existing link, unlink it first and link it again.
 
 The flags do not change the suggestion. It is only a starting value: change it, and
 your choice holds until the link is made. [Devices and products](05-devices-and-products.md) covers the

@@ -1209,25 +1209,56 @@ describe("Inspector — atomic send-and-receive link action (ISSUE-09)", () => {
     expect(link.disabled).toBe(false);
   });
 
-  it("refuses a second link to an address the object already has, in either direction, without a request", async () => {
+  it.each([["Receive", "Send"], ["Send", "Receive"]] as const)(
+    "refuses a second link to an address the object already has (%s there, %s picked), without a request",
+    async (existing, picked) => {
+      const tree = deviceMoveTree();
+      tree.installations[0].group_addresses = [ga(9, "Kitchen lights", "1/2/3")];
+      await renderInspector(
+        { kind: "device", id: 42 },
+        tree,
+        detailWithComObject([{ ga_id: 9, address: "1/2/3", name: "Kitchen lights", direction: existing }]),
+      );
+      const row = host!.querySelector<HTMLElement>(".group-link-list .tree-new-row")!;
+      const direction = row.querySelector<HTMLSelectElement>("select")!;
+      const link = [...row.querySelectorAll("button")].find(b => b.textContent === "Link")!;
+      const hint = () => row.querySelector(".link-direction-hint");
+      await chooseAddress(row, "1/2/3");
+      // Before any pick: the suggestion keeps the existing direction, the hint says why linking is off.
+      expect(direction.value).toBe(existing);
+      expect(link.disabled).toBe(true);
+      expect(hint()?.textContent).toBe(enMessages["inspector.direction.reason.alreadyLinked"]);
+      expect(direction.getAttribute("aria-describedby")).toBe(hint()?.id);
+      await act(async () => {
+        direction.value = picked;
+        direction.dispatchEvent(new Event("change", { bubbles: true }));
+      });
+      expect(link.disabled).toBe(true);
+      expect(hint()?.textContent).toBe(enMessages["inspector.direction.reason.alreadyLinked"]);
+      expect(apiMock.linkComObject).not.toHaveBeenCalled();
+    },
+  );
+
+  it("reports a refused link click without refreshing", async () => {
     const tree = deviceMoveTree();
-    tree.installations[0].group_addresses = [ga(9, "Kitchen lights", "1/2/3")];
-    await renderInspector(
+    tree.installations[0].group_addresses = [ga(9, "Kitchen lights", "1/2/3"), ga(10, "Hall", "1/2/4")];
+    apiMock.linkComObject.mockRejectedValueOnce(new Error("object already has a sending address"));
+    const onApplied = await renderInspector(
       { kind: "device", id: 42 },
       tree,
-      detailWithComObject([{ ga_id: 9, address: "1/2/3", name: "Kitchen lights", direction: "Receive" }]),
+      detailWithComObject([{ ga_id: 10, address: "1/2/4", name: "Hall", direction: "Send" }]),
     );
     const row = host!.querySelector<HTMLElement>(".group-link-list .tree-new-row")!;
     const direction = row.querySelector<HTMLSelectElement>("select")!;
-    const link = [...row.querySelectorAll("button")].find(b => b.textContent === "Link")!;
-    await chooseAddress(row, "1/2/3");
+    await chooseAddress(row, "kitchen");
     await act(async () => {
       direction.value = "Send";
       direction.dispatchEvent(new Event("change", { bubbles: true }));
     });
-    expect(link.disabled).toBe(true);
-    expect(row.querySelector(".link-direction-hint")?.textContent).toBe(enMessages["inspector.direction.reason.alreadyLinked"]);
-    expect(apiMock.linkComObject).not.toHaveBeenCalled();
+    await act(async () => [...row.querySelectorAll("button")].find(b => b.textContent === "Link")!.click());
+    expect(apiMock.linkComObject).toHaveBeenCalledExactlyOnceWith(7, 9, "Send");
+    expect(row.querySelector(".field-error")?.textContent).toContain("object already has a sending address");
+    expect(onApplied).not.toHaveBeenCalled();
   });
 
   it("offers one atomic unlink-both action beside separate directional unlink buttons", async () => {

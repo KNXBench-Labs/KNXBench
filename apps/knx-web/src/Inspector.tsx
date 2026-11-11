@@ -612,7 +612,7 @@ function NewGroupLinkRow(props: {
   const direction = picked ?? suggestion.direction;
   const hintId = useId();
   const [dropReady, setDropReady] = useState(false);
-  // WP-39: one link per address and object; the other direction adds nothing on the device.
+  // WP-39: one link per address and object, as in ETS; changing direction means unlinking first.
   const alreadyLinked = (id: number) => com.links.some((link) => link.ga_id === id);
   const linkedHere = gaId !== null && alreadyLinked(gaId);
   const canLink = gaId !== null && !linkedHere;

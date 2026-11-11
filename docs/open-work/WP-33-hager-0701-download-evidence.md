@@ -1,7 +1,10 @@
 # WP-33 — Record the Hager 0701 download reports (#38)
 
 External report by the issue reporter, 10 November 2026; triaged 11 November 2026.
-Status: **open.**
+Status: **partial-parameters recorded 11 November 2026** (program hash matched;
+`verified_downloads.json` entry and
+[evidence record](../evidence/tester-report-hager-0701-2026-11-10.json)). Open: the
+report files for the complete and parameters-plus-group-addresses runs.
 
 ## Basis
 

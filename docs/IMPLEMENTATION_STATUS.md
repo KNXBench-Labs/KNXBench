@@ -12,6 +12,15 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Hager 0701h parameters-only download verified from a tester report (11 November 2026; issue #38, WP-33)
+
+`M-0006_A-E052-12-3406` joins `verified_downloads.json` with the
+`partial-parameters` scope only, from one tester report (ADR-0121): program
+hash matched, post-download identity and load states matched the plan, device
+function confirmed by the tester, closing restart unacknowledged. Other scopes
+stay `untested` until their report files arrive.
+[Evidence record](evidence/tester-report-hager-0701-2026-11-10.json).
+
 ## Download dialog names pending changes a partial scope leaves out (11 November 2026; issue #39, WP-32)
 
 When the prepared plan's scope does not write every part the project marks

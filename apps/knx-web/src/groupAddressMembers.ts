@@ -5,11 +5,12 @@ import type { GroupAddressNode } from "./bindings/GroupAddressNode";
 import type { ProjectTree } from "./bindings/ProjectTree";
 import { collectDevices, deviceInstallation, owningInstallation, projectContextKey } from "./treeUtils";
 
-/** The directions `POST /api/group-links` accepts; `Both` is one atomic batch. */
-// WP-39: a sending address also receives on the device (KNX Resources
-// §4.17.3.3.2), and ETS has no separate send-and-receive state, so a new link
-// is either Send or Receive. Existing send+receive pairs stay valid and can
-// still be unlinked together (`Inspector` "Unlink both").
+/**
+ * The directions a new link offers. `POST /api/group-links` still accepts
+ * `Both` from older clients, but WP-39 retired it here: a sending address also
+ * receives on the device (KNX Resources §4.17.3.3.2), and ETS has no separate
+ * send-and-receive state. Existing pairs stay valid ("Unlink both").
+ */
 export type MemberDirection = "Send" | "Receive";
 export const MEMBER_DIRECTIONS: readonly MemberDirection[] = ["Send", "Receive"];
 
@@ -66,9 +67,9 @@ export function existingDirections(object: ComObjectNode, gaId: number): Set<"Se
 
 /**
  * Whether a new link of this object to `gaId` would repeat what it already
- * has. Any existing link counts (WP-39): the same direction is refused by the
- * core (`LinkAlreadyExists`), and the other one adds nothing on the device,
- * where a sending address also receives and one entry per address is written.
+ * has. Any existing link counts (WP-39): one link per address and object, as
+ * in ETS. The same direction is refused by the core (`LinkAlreadyExists`); to
+ * change the direction, the user unlinks first.
  */
 export function isDuplicateMember(object: ComObjectNode, gaId: number): boolean {
   return existingDirections(object, gaId).size > 0;

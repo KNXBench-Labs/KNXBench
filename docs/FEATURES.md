@@ -19,6 +19,7 @@ Last updated: 2026-11-08 (Alpha 20 pre-release; source cutoff 2026-11-08)
 
 | Feature | Scope | Availability |
 | --- | --- | --- |
+| [Manufacturer names and product metadata](contracts/device-product-metadata.md) | Shared retained-master name fallback for older databases; all normalized scalar device/product records, matching catalogue placements, technical/application/source metadata and file-scoped additional attributes, read-only EN/DE | Source candidate (not in Alpha 20) |
 | [Background activity footer](status/2026-11-10-background-activity-footer.md) | Delayed concurrent/recent inventory for retained App-owned loading, saving, device-editor reads, read-only comparisons and catalogue jobs; sticky errors and existing details owner; no new cancellation or generic job persistence. Two-second reveal, bounded summary and full retained context | Source only (not in Alpha 20) |
 
 ## New in Alpha 20

@@ -38,6 +38,12 @@ any edit of an id that occurs in several installations. Whether the web
 dropdowns list later-installation targets is a UI question still open under
 the Web lock.
 
+“Send + Receive” on one address is a valid project edit, but an ordinary
+memory download refuses it: the group-table builder takes the pair as the same
+object linked to the same address twice (`DuplicateLink`, `group_tables.rs`;
+found 11 November 2026 while reviewing issue #47). Whether such a pair should
+download as one sending association is open (OPEN_WORK WP-39).
+
 “Send + Receive” and “unlink both” are one atomic project edit and one undo
 step. If either direction is already linked when adding both, the operation
 fails and leaves all links unchanged; if either is missing when unlinking

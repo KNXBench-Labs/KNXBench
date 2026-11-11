@@ -201,8 +201,11 @@ it("a pending-block request waits while another download is busy, then opens the
   await render({ openRequest: 3, onOpenHandled });
   expect(onOpenHandled).toHaveBeenCalledWith(3);
   expect(apiMock.planDeviceDownloadBatch).toHaveBeenCalledTimes(1);
+  // The effect re-runs when `disabled` flips; the same nonce is not replayed.
+  await render({ openRequest: 3, onOpenHandled, disabled: true });
   await render({ openRequest: 3, onOpenHandled });
   expect(apiMock.planDeviceDownloadBatch).toHaveBeenCalledTimes(1);
+  expect(onOpenHandled).toHaveBeenCalledTimes(1);
 });
 
 it("speaks German", async () => {
@@ -222,4 +225,103 @@ it("keeps the review through a reload of the same project state and drops it on 
   expect(q("[data-batch-review]")).not.toBeNull();
   await render({ project: { ...PROJECT, snapshot_revision: 2 } as unknown as ProjectTree });
   expect(q("[data-batch-review]")).toBeNull();
+});
+
+it("starts exactly the selected devices: a deselected one is neither asked about nor sent", async () => {
+  apiMock.startDeviceDownloadBatch.mockResolvedValue({ batchId: 40 });
+  await render();
+  await openReview();
+  await act(async () => q<HTMLInputElement>("[data-batch-device='1.1.9'] input[type=checkbox]")!.click());
+  await act(async () => startButton().click());
+  expect(consentMock.requestBatch).toHaveBeenCalledWith(["1.1.8 — Dimmer"]);
+  expect(apiMock.startDeviceDownloadBatch).toHaveBeenCalledWith(40, "192.0.2.10:3671", [
+    { address: "1.1.8", confirmation: "I confirm download to 1.1.8" },
+  ]);
+});
+
+it("a review dropped while the confirmation is open cannot start, whatever the answer", async () => {
+  let answer: (yes: boolean) => void = () => {};
+  consentMock.requestBatch.mockImplementation(() => new Promise<boolean>((resolve) => { answer = resolve; }));
+  await render();
+  await openReview();
+  await type(q<HTMLInputElement>("[data-batch-ack]")!, "I accept an untested download to 1.1.9");
+  await act(async () => startButton().click());
+  expect(consentMock.requestBatch).toHaveBeenCalledTimes(1);
+  // A project edit drops the review while the question is open.
+  await render({ project: { ...PROJECT, snapshot_revision: 2 } as unknown as ProjectTree });
+  await act(async () => answer(true));
+  expect(apiMock.startDeviceDownloadBatch).not.toHaveBeenCalled();
+});
+
+it("a review replaced on the server is dropped with a sentence, not offered again", async () => {
+  apiMock.startDeviceDownloadBatch.mockRejectedValue(Object.assign(new Error("that batch is no longer the one shown"),
+    { status: 409, body: { kind: "downloadPlanStale" } }));
+  await render();
+  await openReview();
+  await type(q<HTMLInputElement>("[data-batch-ack]")!, "I accept an untested download to 1.1.9");
+  await act(async () => startButton().click());
+  expect(q("[data-batch-review]")).toBeNull();
+  expect(q("[data-batch-error]")!.textContent).toBe(en["deviceDownload.batch.reviewReplaced"]);
+  expect(q("[data-batch-open]")).not.toBeNull();
+});
+
+it("shows each device's size, warnings and assumptions before the confirmation", async () => {
+  apiMock.planDeviceDownloadBatch.mockResolvedValue({ ...REVIEW, devices: REVIEW.devices.map((row) => row.address === "1.1.8"
+    ? { ...row, warnings: ["memory block 0x4000 is written without read-back"], inferences: ["load procedure assumed from mask 0701"] } : row) });
+  await render();
+  await openReview();
+  const row = q("[data-batch-device='1.1.8']")!;
+  expect(row.textContent).toContain("12 steps");
+  expect(row.textContent).toContain("40 octets");
+  const notes = row.querySelector("[data-batch-notes]")!;
+  expect(notes.querySelector("summary")!.textContent).toBe("2 warnings and assumptions");
+  expect(notes.textContent).toContain("memory block 0x4000 is written without read-back");
+  expect(notes.textContent).toContain("load procedure assumed from mask 0701");
+  expect(q("[data-batch-device='1.1.9'] [data-batch-notes]")).toBeNull();
+});
+
+it("a failed row says what was written and where the backup is, in both languages", async () => {
+  const ended: Api.DeviceDownloadBatchStatus = { batchId: 40, state: "ended", stopRequested: false, devices: [
+    { deviceId: 3, address: "1.1.8", name: "Dimmer", state: "failed", downloadId: 41, written: "partially", stoppedInStep: 7,
+      error: "write to 0x4000 not confirmed", hint: "check the line", kind: null, backupFile: "backups/1.1.8.json" },
+    { deviceId: 5, address: "1.1.10", name: "Blind", state: "done", downloadId: 43, written: "yes", restart: "notInPlan" },
+    { deviceId: 6, address: "1.1.11", name: "Switch", state: "unconfirmed", downloadId: 44, doubt: "identityMismatch",
+      written: "yes", restart: "acknowledged", restartNote: null },
+  ] };
+  apiMock.pollDeviceDownloadBatch.mockResolvedValue(ended);
+  await render();
+  const failed = q("[data-batch-run] [data-batch-device='1.1.8']")!;
+  expect(failed.textContent).toContain("write to 0x4000 not confirmed");
+  expect(failed.textContent).toContain(en["deviceDownload.batch.written.partially"]);
+  expect(failed.textContent).toContain("check the line");
+  expect(failed.textContent).toContain(en["deviceDownload.backupKept"].replace("{file}", "backups/1.1.8.json"));
+  expect(q("[data-batch-run] [data-batch-device='1.1.10']")!.textContent).toContain(en["deviceDownload.batch.state.doneNoRestart"]);
+  const doubtful = q("[data-batch-run] [data-batch-device='1.1.11']")!.textContent!;
+  expect(doubtful).toContain(en["deviceDownload.batch.doubt.identityMismatch"]);
+  expect(doubtful).not.toContain("identityMismatch");
+  locale.value = "de";
+  await render({ project: { ...PROJECT } as ProjectTree });
+  const german = q("[data-batch-run] [data-batch-device='1.1.8']")!.textContent!;
+  expect(german).toContain(de["deviceDownload.batch.written.partially"]);
+  expect(german).toContain(de["deviceDownload.backupKept"].replace("{file}", "backups/1.1.8.json"));
+});
+
+it("a batch replaced elsewhere does not leave the panel running forever", async () => {
+  const running: Api.DeviceDownloadBatchStatus = { batchId: 40, state: "running", stopRequested: false, devices: [
+    { deviceId: 3, address: "1.1.8", name: "Dimmer", state: "running", downloadId: 41 },
+  ] };
+  const onBusyChange = vi.fn();
+  apiMock.pollDeviceDownloadBatch.mockResolvedValueOnce(running).mockRejectedValue(notFound);
+  await render({ onBusyChange });
+  expect(q("[data-batch-run]")!.dataset.batchRun).toBe("running");
+  await act(async () => { await vi.advanceTimersByTimeAsync(600); });
+  expect(q("[data-batch-run]")).toBeNull();
+  expect(onBusyChange).toHaveBeenLastCalledWith(false);
+});
+
+it("links the reason start is disabled to the start button", async () => {
+  await render();
+  await openReview();
+  expect(startButton().getAttribute("aria-describedby")).toBe("device-download-batch-blocked");
+  expect(document.getElementById("device-download-batch-blocked")!.textContent).toBe(en["deviceDownload.batch.blocked.acknowledgement"]);
 });

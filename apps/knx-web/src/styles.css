@@ -2424,6 +2424,9 @@ main {
 .device-download-batch-ack { display: grid; gap: 4px; flex-basis: 100%; font-size: 12px; }
 .device-download-batch-ack input { max-width: 100%; }
 .device-download-batch-result { flex-basis: 100%; font-size: 12px; }
+.device-download-batch-notes { flex-basis: 100%; font-size: 12px; }
+.device-download-batch-notes h4 { margin: 4px 0 2px; font-size: 12px; }
+.device-download-batch-notes ul { margin: 0; padding-left: 18px; }
 
 /* Issue #10: what holds the gateway, and why a device cannot be programmed,
    said before anything is prepared. The warning colour marks the edge only,

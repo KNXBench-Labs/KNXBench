@@ -11,6 +11,7 @@
 import { useEffect, useRef, useState } from "react";
 import * as api from "./api";
 import { gatewayRefusalMessage } from "./gatewayRefusal";
+import { planWarnings } from "./downloadVerification";
 import { useTranslate, type MessageKey } from "./i18n";
 import { useProgrammingConsent } from "./useProgrammingConsent";
 import { projectContextKey } from "./treeUtils";
@@ -37,6 +38,27 @@ const NOT_STARTED: Record<api.DeviceDownloadBatchNotStarted, MessageKey> = {
   runEnded: "deviceDownload.batch.notStarted.runEnded",
 };
 
+const DOUBT: Record<api.DeviceDownloadBatchDoubt, MessageKey> = {
+  notWritten: "deviceDownload.batch.doubt.notWritten",
+  restartUnconfirmed: "deviceDownload.batch.doubt.restartUnconfirmed",
+  checkNotChecked: "deviceDownload.batch.doubt.checkNotChecked",
+  checkUnsupported: "deviceDownload.batch.doubt.checkUnsupported",
+  checkNotPerformed: "deviceDownload.batch.doubt.checkNotPerformed",
+  checkInterrupted: "deviceDownload.batch.doubt.checkInterrupted",
+  checkNotReached: "deviceDownload.batch.doubt.checkNotReached",
+  checkReachUnknown: "deviceDownload.batch.doubt.checkReachUnknown",
+  identityUnavailable: "deviceDownload.batch.doubt.identityUnavailable",
+  identityMismatch: "deviceDownload.batch.doubt.identityMismatch",
+  loadStateDiffers: "deviceDownload.batch.doubt.loadStateDiffers",
+  loadStateUnknown: "deviceDownload.batch.doubt.loadStateUnknown",
+};
+
+const WRITTEN: Record<api.DeviceDownloadWritten, MessageKey> = {
+  yes: "deviceDownload.batch.written.yes",
+  no: "deviceDownload.batch.written.no",
+  partially: "deviceDownload.batch.written.partially",
+};
+
 function label(row: { address: string | null; name: string }): string {
   return row.address === null ? row.name : `${row.address} — ${row.name}`;
 }
@@ -51,20 +73,35 @@ export function stateText(t: ReturnType<typeof useTranslate>, row: api.DeviceDow
   switch (row.state) {
     case "waiting": return t("deviceDownload.batch.state.waiting");
     case "running": return t("deviceDownload.batch.state.running");
-    case "done": return t("deviceDownload.batch.state.done");
+    case "done": return t(row.restart === "notInPlan" ? "deviceDownload.batch.state.doneNoRestart" : "deviceDownload.batch.state.done");
     case "unconfirmed": return t(row.doubt === "restartUnconfirmed" ? "deviceDownload.batch.state.restartUnconfirmed"
       : row.doubt === "notWritten" ? "deviceDownload.batch.state.notWritten"
-        : "deviceDownload.batch.state.checkNotConfirmed", { doubt: row.doubt });
+        : "deviceDownload.batch.state.checkNotConfirmed", { doubt: t(DOUBT[row.doubt]) });
     case "failed":
-      // A start refused before its download ran names its kind; the rest keep the server's text.
-      if (row.kind === "gatewayTimeout" || row.kind === "gatewayRefused") return t("deviceDownload.batch.state.gatewayFailed");
-      if (row.kind === "downloadPlanStale") return t("deviceDownload.batch.state.planChanged");
-      return t("deviceDownload.batch.state.failed", { error: row.error });
+      // A start refused before its download ran names its kind (nothing was
+      // written then); the rest keep the server's text and say what was written.
+      if (row.written === "no" && (row.kind === "gatewayTimeout" || row.kind === "gatewayRefused")) return t("deviceDownload.batch.state.gatewayFailed");
+      if (row.written === "no" && row.kind === "downloadPlanStale") return t("deviceDownload.batch.state.planChanged");
+      return `${t("deviceDownload.batch.state.failed", { error: row.error })}. ${t(WRITTEN[row.written])}`;
     case "stopped": return t("deviceDownload.batch.state.stopped");
     case "notStarted": return t(NOT_STARTED[row.reason]);
     case "notInBatch": return reasonText(t, row.reason);
     case "deselected": return t("deviceDownload.batch.state.deselected");
   }
+}
+
+/** What a failed or stopped row adds: the server's hint and the kept backup. */
+function stateDetails(t: ReturnType<typeof useTranslate>, row: api.DeviceDownloadBatchDeviceState): string[] {
+  const details: string[] = [];
+  if (row.state === "failed" && row.hint) details.push(row.hint);
+  if ((row.state === "failed" || row.state === "stopped") && row.backupFile) details.push(t("deviceDownload.backupKept", { file: row.backupFile }));
+  return details;
+}
+
+function errorKind(reason: unknown): string | undefined {
+  const body = (reason as { body?: unknown } | null)?.body;
+  return typeof body === "object" && body !== null && typeof (body as { kind?: unknown }).kind === "string"
+    ? (body as { kind: string }).kind : undefined;
 }
 
 export default function DeviceDownloadBatch({ project, gateway, disabled, openRequest, onOpenHandled, onBusyChange, onProjectChanged }: {
@@ -156,7 +193,17 @@ export default function DeviceDownloadBatch({ project, gateway, disabled, openRe
     try {
       apply(await api.pollDeviceDownloadBatch(batchId));
     } catch (reason) {
-      if (api.errorStatus(reason) !== 404) setError(api.errorMessage(reason));
+      if (api.errorStatus(reason) !== 404) { setError(api.errorMessage(reason)); return; }
+      if (batchId === undefined) return;
+      // Our batch was replaced (another page started one): show whichever is
+      // current now, or none, so the panel does not stay "running" forever.
+      try {
+        const current = await api.pollDeviceDownloadBatch();
+        if (current.state === "ended") reloaded.current = current.batchId;
+        setStatus(current);
+      } catch {
+        setStatus(null);
+      }
     }
   }
 
@@ -209,6 +256,12 @@ export default function DeviceDownloadBatch({ project, gateway, disabled, openRe
       setReview(null);
       await poll(batchId);
     } catch (reason) {
+      if (api.errorStatus(reason) === 409 && errorKind(reason) === "downloadPlanStale") {
+        // A single plan or a newer review replaced this one on the server.
+        dropReview();
+        setError(t("deviceDownload.batch.reviewReplaced"));
+        return;
+      }
       setError(gatewayRefusalMessage(reason) ?? api.errorMessage(reason));
     } finally {
       setStarting(false);
@@ -260,7 +313,24 @@ export default function DeviceDownloadBatch({ project, gateway, disabled, openRe
                   <span className="device-download-batch-facts">
                     {t(`deviceDownload.scope.${row.scope}` as const)} · {t(row.support === "verified"
                       ? "deviceDownload.batch.support.verified" : "deviceDownload.batch.support.untested")}
+                    {" · "}{t("deviceDownload.batch.steps", { count: row.steps })}
+                    {" · "}{t("deviceDownload.octetsValue", { count: row.dataOctets })}
                   </span>
+                  {(row.warnings.length > 0 || row.inferences.length > 0) && (
+                    <details className="device-download-batch-notes" data-batch-notes>
+                      <summary>{t("deviceDownload.batch.notes", { count: row.warnings.length + row.inferences.length })}</summary>
+                      {row.warnings.length > 0 && <>
+                        <h4>{t("deviceDownload.warnings.title")}</h4>
+                        <ul>{planWarnings(row.warnings).map((warning, index) => (
+                          <li key={index} data-plan-warning={warning.rule}>
+                            {warning.explanation === null ? <code>{warning.text}</code> : t(warning.explanation)}</li>))}</ul>
+                      </>}
+                      {row.inferences.length > 0 && <>
+                        <h4>{t("deviceDownload.inferences.title")}</h4>
+                        <ul>{row.inferences.map((text, index) => <li key={index}><code>{text}</code></li>)}</ul>
+                      </>}
+                    </details>
+                  )}
                   {row.untestedAcknowledgement !== null && !excluded.has(row.planId) && (
                     <label className="device-download-batch-ack">
                       {t("deviceDownload.untestedPrompt", { phrase: row.untestedAcknowledgement })}
@@ -277,9 +347,11 @@ export default function DeviceDownloadBatch({ project, gateway, disabled, openRe
               </li>
             ))}
           </ul>
-          {blocker !== null && inBatch.length > 0 && <p className="form-warning" data-batch-blocked>{t(blocker)}</p>}
+          {blocker !== null && inBatch.length > 0
+            && <p className="form-warning" id="device-download-batch-blocked" data-batch-blocked>{t(blocker)}</p>}
           <div className="device-download-actions">
             <button type="button" className="primary-action" data-batch-start
+              aria-describedby={blocker !== null && inBatch.length > 0 ? "device-download-batch-blocked" : undefined}
               disabled={blocker !== null || busy || disabled} onClick={() => void start()}>
               {t("deviceDownload.batch.start", { count: selected.length })}</button>
             <button type="button" data-batch-close disabled={busy} onClick={dropReview}>{t("deviceDownload.batch.close")}</button>
@@ -298,6 +370,8 @@ export default function DeviceDownloadBatch({ project, gateway, disabled, openRe
                 data-batch-state={row.state}>
                 <span><code>{row.address ?? "—"}</code> {row.name}</span>
                 <span className="device-download-batch-result">{stateText(t, row)}</span>
+                {stateDetails(t, row).map((detail, index) => (
+                  <span key={index} className="device-download-batch-result" data-batch-detail>{detail}</span>))}
               </li>
             ))}
           </ul>

@@ -649,9 +649,13 @@ Main-only after Alpha 20 (issue #42, WP-38 step 1): a read-only **Pending
 programming** block in the navigation lists every device with a pending part
 (count in its heading, chips, address order, unreported states counted, not
 listed), opens a device on click and hands it to the Download to device tab
-with **Download…**. It never plans, starts or connects. A sequential batch
-download of all pending devices is not implemented and needs an ADR first.
-[Use and limits](user-guide/05-devices-and-products.md#pending-programming-panel-main-only-after-alpha-20).
+with **Download…**. The block itself never plans, starts or connects. Step 2
+(same day, [ADR-0172](../adr/0172-batch-programming-stops-at-the-first-doubt.md)):
+**Download all…** reviews every pending device, asks one confirmation and
+programs them one after another, stopping at the first doubt; tested against
+simulated devices only.
+[Use and limits](user-guide/05-devices-and-products.md#pending-programming-panel-main-only-after-alpha-20),
+[Download all](user-guide/05-devices-and-products.md#download-all-pending).
 [Download tab](user-guide/07-bus-and-interfaces.md#downloading-to-a-device),
 [CLI](user-guide/10-command-line.md#knx-device-download--download-a-project-devices-configuration-to-the-device).
 

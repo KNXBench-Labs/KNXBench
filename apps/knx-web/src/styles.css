@@ -3537,6 +3537,19 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
 .device-programming-parts dd { margin: 0; text-align: right; }
 .device-programming-parts > div[data-pending="true"] dd { color: var(--knx-warning-color); font-weight: 600; }
 .device-programming-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+/* Issue #40: the same pending state in the device editor, as a notice, not an alarm. */
+.device-pending-summary {
+  display: flex; align-items: center; gap: 8px; width: fit-content; max-width: 100%; box-sizing: border-box;
+  margin: 0 0 12px; padding: 4px 10px; border-radius: 6px; font-size: 13px; overflow-wrap: anywhere;
+  color: var(--knx-foreground);
+  border: 1px solid color-mix(in srgb, var(--knx-warning-color) 60%, transparent);
+  background: color-mix(in srgb, var(--knx-warning-color) 12%, transparent);
+}
+.device-pending-dot {
+  display: inline-block; flex: none; width: 7px; height: 7px; border-radius: 50%;
+  background: var(--knx-warning-color);
+}
+.device-tabs button .device-pending-dot { margin-left: 6px; vertical-align: middle; }
 .workbench .device-link { display: inline; padding: 2px 4px; min-width: 24px; max-width: 100%; white-space: normal; text-align: left; overflow-wrap: anywhere; }
 .device-link-unresolved { cursor: help; }
 .ga-linked-devices { padding-left: 18px; }

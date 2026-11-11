@@ -1169,6 +1169,7 @@ export const messages: Record<MessageKey, string> = {
   "devices.programmingUnknown": "Nicht gemeldet",
   "devices.pendingOnly": "Nur ausstehende",
   "explorer.pendingProgramming": "Nicht programmiert: {parts}",
+  "deviceEditor.programmingPending": "Noch nicht programmiert: {parts}",
   "programming.part.address.short": "Adr",
   "programming.part.application.short": "App",
   "programming.part.parameters.short": "Par",

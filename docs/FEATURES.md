@@ -19,6 +19,7 @@ Last updated: 2026-11-08 (Alpha 20 pre-release; source cutoff 2026-11-08)
 
 | Feature | Scope | Availability |
 | --- | --- | --- |
+| [Pending marks in the device editor](open-work/WP-37-pending-changes-across-ui.md) | The opened device names its not-yet-programmed parts under the heading and marks the Parameters and Communication objects tabs; cleared when a covering write reloads the project (issue #40) | Main-only (not released) |
 | [Links-first object editor and compact toolbar](open-work/WP-36-communication-object-view-cleanup.md) | Expanded communication objects list linked group addresses and the link row first, other settings folded; one view select and an Options menu replace five toolbar buttons (issues #44, #46) | Main-only (not released) |
 | [Background activity footer](status/2026-11-10-background-activity-footer.md) | Delayed concurrent/recent inventory for retained App-owned loading, saving, device-editor reads, read-only comparisons and catalogue jobs; sticky errors and existing details owner; no new cancellation or generic job persistence. Two-second reveal, bounded summary and full retained context | Source only (not in Alpha 20) |
 

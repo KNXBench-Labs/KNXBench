@@ -1189,6 +1189,7 @@ export const messages = {
   "devices.programmingUnknown": "Not reported",
   "devices.pendingOnly": "Pending only",
   "explorer.pendingProgramming": "Not programmed: {parts}",
+  "deviceEditor.programmingPending": "Not programmed yet: {parts}",
   "programming.part.address.short": "Adr",
   "programming.part.application.short": "App",
   "programming.part.parameters.short": "Par",

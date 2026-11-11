@@ -1,4 +1,4 @@
-/** Tests for the device workspace tabs, their keyboard navigation, and the product identity. */
+/** Tests for the device workspace tabs, pending marks, keyboard navigation and product identity. */
 // @vitest-environment happy-dom
 import { act } from "react";
 import { createRoot } from "react-dom/client";
@@ -10,6 +10,9 @@ import type { ProductResolution } from "./bindings/ProductResolution";
 import type { ProjectTree } from "./bindings/ProjectTree";
 import { messages as germanMessages } from "./messages/de";
 import { messages as englishMessages } from "./messages/en";
+import type { PendingProgramming } from "./bindings/PendingProgramming";
+import { settingsStorage } from "./settingsStore";
+import { UI_LANGUAGE_STORAGE_KEY, resetUiLanguageForTests, saveUiLanguage } from "./uiLanguage";
 const api = vi.hoisted(() => ({ deviceParameters: vi.fn().mockResolvedValue({ programId: null, sections: [], stale: [], diagnostics: [] }), setComObjectDpt: vi.fn(), setParameterValue: vi.fn() }));
 vi.mock("./api", () => ({ ...api, errorMessage: String }));
 // The instructions editor's default client captures `fetch` at import; give
@@ -702,5 +705,105 @@ it("offers the checked parameter editor only with the tree's complete identity",
     expect(count(host.querySelector('[id="device-panel-9-1"]')!)).toBe(expected);
     expect(count(host.querySelector('[id="device-panel-9-4"]')!)).toBe(0);
     await act(async () => root.unmount()); host.remove();
+  }
+});
+
+// Issue #40 (WP-37 step 1): the tree's pending flags, shown in the device editor itself.
+function pendingTree(state: PendingProgramming | undefined, revision = 1): ProjectTree {
+  return { ...tree, snapshot_revision: revision, installations: [{ id: 1, name: "House", topology: [], buildings: [], group_addresses: [], group_ranges: [],
+    unassigned: [{ id: 9, name: "Example", address: null, description: null, com_object_count: 0, ...(state ? { pending_programming: state } : {}) }] }] };
+}
+const flags = (address: boolean, application: boolean, parameters: boolean, groupAddresses: boolean): PendingProgramming =>
+  ({ address, application, parameters, group_addresses: groupAddresses });
+
+async function renderPending(project: ProjectTree) {
+  const host = document.createElement("div"); document.body.append(host);
+  const root = createRoot(host);
+  await act(async () => root.render(<DeviceWorkspace detail={detail()} tree={project} onApplied={() => {}} />));
+  const tabs = () => [...host.querySelectorAll<HTMLButtonElement>('[role="tab"]')];
+  const summary = () => host.querySelector<HTMLElement>(".device-pending-summary");
+  /** The tab's description: the text its `aria-describedby` points at, or null. */
+  const note = (tab: HTMLButtonElement) => {
+    const id = tab.getAttribute("aria-describedby");
+    return id ? host.querySelector(`[id="${id}"]`)?.textContent ?? "" : null;
+  };
+  return {
+    host, tabs, summary, note,
+    rerender: async (next: ProjectTree) => { await act(async () => root.render(<DeviceWorkspace detail={detail()} tree={next} onApplied={() => {}} />)); },
+    cleanup: async () => { await act(async () => root.unmount()); host.remove(); },
+  };
+}
+
+it("summarises the pending parts under the heading in display order, and marks the affected tabs", async () => {
+  const view = await renderPending(pendingTree(flags(true, false, true, true)));
+  const summary = view.summary()!;
+  expect(summary.textContent).toBe("Not programmed yet: Address, Parameters, and Group addresses");
+  expect(summary.dataset.pendingParts).toBe("address parameters group_addresses");
+  expect(summary.previousElementSibling?.matches("header.workspace-heading")).toBe(true);
+  expect(summary.querySelector(".device-pending-dot")?.getAttribute("aria-hidden")).toBe("true");
+  // No second start button: the heading's existing download entry stays the action.
+  expect(summary.querySelector("button")).toBeNull();
+  const tabs = view.tabs();
+  expect(view.note(tabs[0])).toBe("Not programmed yet: Group addresses");
+  expect(view.note(tabs[1])).toBe("Not programmed yet: Parameters");
+  expect(tabs[0].title).toBe("Not programmed yet: Group addresses");
+  expect(tabs.slice(2).map(view.note)).toEqual([null, null, null, null]);
+  expect(tabs.map((tab) => tab.querySelector(".device-pending-dot") !== null)).toEqual([true, true, false, false, false, false]);
+  // The tab's name (its visible content) is unchanged; the marker is a description.
+  expect(tabs.map((tab) => [...tab.childNodes].filter((node) => !(node instanceof HTMLElement && node.hidden)).map((node) => node.textContent).join("")))
+    .toEqual(["Communication objects", "Parameters", "Product data", "Diagnostics", "Manufacturer fields", "Installation instructions"]);
+  expect(tabs[1].querySelector(".device-pending-dot")?.getAttribute("aria-hidden")).toBe("true");
+  await view.cleanup();
+});
+
+it("marks the parameters tab for a pending application and keeps tab keyboard navigation", async () => {
+  const view = await renderPending(pendingTree(flags(false, true, true, false)));
+  expect(view.summary()!.textContent).toBe("Not programmed yet: Application and Parameters");
+  const tabs = view.tabs();
+  expect(view.note(tabs[1])).toBe("Not programmed yet: Application and Parameters");
+  expect(view.note(tabs[0])).toBeNull();
+  expect(tabs[0].dataset.pending).toBeUndefined();
+  tabs[0].focus();
+  await act(async () => tabs[0].dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true })));
+  expect(document.activeElement).toBe(view.tabs()[1]);
+  expect(view.tabs()[1].getAttribute("aria-selected")).toBe("true");
+  await view.cleanup();
+});
+
+it("shows no pending line or tab marker when nothing is pending or the state is not reported", async () => {
+  for (const state of [flags(false, false, false, false), undefined]) {
+    const view = await renderPending(pendingTree(state));
+    expect(view.summary()).toBeNull();
+    expect(view.host.querySelector(".device-pending-dot")).toBeNull();
+    expect(view.tabs().map(view.note)).toEqual([null, null, null, null, null, null]);
+    expect(view.tabs().every((tab) => !tab.hasAttribute("title"))).toBe(true);
+    await view.cleanup();
+  }
+});
+
+it("clears the pending line and tab markers when the reloaded tree no longer reports them", async () => {
+  // A download whose end changed the project reloads the editor's tree; the same component then reads the cleared flags.
+  const view = await renderPending(pendingTree(flags(false, false, true, true)));
+  expect(view.summary()).not.toBeNull();
+  await view.rerender(pendingTree(flags(false, false, false, true), 2));
+  expect(view.summary()!.textContent).toBe("Not programmed yet: Group addresses");
+  expect(view.note(view.tabs()[1])).toBeNull();
+  await view.rerender(pendingTree(flags(false, false, false, false), 3));
+  expect(view.summary()).toBeNull();
+  expect(view.host.querySelector(".device-pending-dot")).toBeNull();
+  await view.cleanup();
+});
+
+it("words the pending line and tab markers in German", async () => {
+  saveUiLanguage(settingsStorage, "de"); resetUiLanguageForTests();
+  try {
+    const view = await renderPending(pendingTree(flags(false, false, true, true)));
+    expect(view.summary()!.textContent).toBe("Noch nicht programmiert: Parameter und Gruppenadressen");
+    expect(view.note(view.tabs()[0])).toBe("Noch nicht programmiert: Gruppenadressen");
+    expect(view.note(view.tabs()[1])).toBe("Noch nicht programmiert: Parameter");
+    expect(germanMessages["deviceEditor.programmingPending"]).toBe("Noch nicht programmiert: {parts}");
+    await view.cleanup();
+  } finally {
+    settingsStorage.removeItem(UI_LANGUAGE_STORAGE_KEY); resetUiLanguageForTests();
   }
 });

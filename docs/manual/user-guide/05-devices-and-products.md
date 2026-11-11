@@ -520,6 +520,19 @@ An amber dot beside a device in either explorer branch means at least one part
 is pending. Hover the dot or a chip group for the full part names. Selecting the
 device shows all four states under **Programming** in Properties.
 
+**In the device editor** *(source build after Alpha 20, 11 November 2026; issue #40)*:
+the opened device shows the same state where you edit it. A line under its name
+names the pending parts, for example **Not programmed yet: Parameters and Group
+addresses**. An amber dot marks the **Parameters** tab when parameters or the
+application are pending, and the **Communication objects** tab when
+group-address connections are pending; hover the tab for the parts, and screen
+readers announce them as the tab's description. Nothing is shown when no part is
+pending or the server does not report the state (Properties says so). The line
+and dots disappear on their own when a download or address programming whose
+scope covered those parts reloads the project; **Download to device…** in the
+heading stays the way to start one. Individual parameters are not marked: the
+project does not keep the last value sent for each parameter.
+
 The starting state comes from the ETS project's imported loaded flags. Editing
 an individual address marks Adr; a parameter value marks Par; linking/unlinking,
 changing an object's effective flags or renumbering/deleting a linked group

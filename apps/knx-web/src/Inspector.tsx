@@ -68,6 +68,7 @@ import {
 import { snapshotContextFromTree } from "./snapshotIdentity";
 import { PluginDataButton } from "./PluginDataDialog";
 import DeviceDiagnosticsEntry from "./DeviceDiagnosticsEntry";
+import { DevicePendingSummary, tabPendingParts, useDevicePendingParts, usePendingSentence } from "./DevicePendingMarks";
 
 // `BuildingNode.kind` is the raw `BuildingPartType` discriminant from the
 // server ("Building", "Floor", … — see `bindings/BuildingNode.ts`'s own
@@ -1060,11 +1061,16 @@ export function DeviceWorkspace(props: {
   const instructionsTab = tabs.length - 1;
   const [instructionsOpened, setInstructionsOpened] = useState(false);
   useEffect(() => { if (tab === instructionsTab) setInstructionsOpened(true); }, [tab, instructionsTab]);
+  // Issue #40: the tree's pending flags, shown where the user edits; a reloaded
+  // tree after a covering download clears them here too.
+  const pending = useDevicePendingParts(tree, detail.id);
+  const pendingSentence = usePendingSentence();
   return <section className="device-workspace">
     <header className="workspace-heading"><div><h2>{detail.name}</h2><span className="mono">{detail.address ?? t("workbench.unassigned")}</span></div>
       <div className="workspace-heading-actions"><OpenDownloadButton deviceId={detail.id} address={detail.address} />
         <button type="button" disabled={props.comparisons.running} onClick={() => props.comparisons.open([detail])}>{t("compare.one")}</button>
         <PluginDataButton tree={tree} deviceId={detail.id} onTreeUpdate={onApplied} onOpenHistory={props.onOpenHistory} /></div></header>
+    <DevicePendingSummary parts={pending} />
     <RenameNameField tree={tree} target={{ kind: "device", id: detail.id, name: detail.name }} onApplied={onApplied} />
     <div className="device-tabs" role="tablist" aria-label={detail.name} onKeyDown={(e) => {
       if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(e.key)) return;
@@ -1075,7 +1081,18 @@ export function DeviceWorkspace(props: {
         : (tab + step + tabs.length) % tabs.length;
       setTab(next); e.currentTarget.querySelectorAll<HTMLButtonElement>("button")[next].focus();
     }}>
-      {tabs.map((label, index) => <button key={label} id={`device-tab-${detail.id}-${index}`} role="tab" aria-selected={tab === index} aria-controls={`device-panel-${detail.id}-${index}`} tabIndex={tab === index ? 0 : -1} onClick={() => setTab(index)}>{label}</button>)}
+      {tabs.map((label, index) => {
+        // The marker is a description, not part of the name: the tab keeps its
+        // plain name for keyboard and locator use, and readers announce both.
+        const parts = tabPendingParts(pending, index);
+        const note = parts.length > 0 ? pendingSentence(parts) : undefined;
+        const noteId = `device-tab-${detail.id}-${index}-pending`;
+        return <button key={label} id={`device-tab-${detail.id}-${index}`} role="tab" aria-selected={tab === index} aria-controls={`device-panel-${detail.id}-${index}`} tabIndex={tab === index ? 0 : -1} onClick={() => setTab(index)}
+          title={note} aria-describedby={note ? noteId : undefined} data-pending={note ? "true" : undefined}>
+          {label}{note && <span className="device-pending-dot" aria-hidden="true" />}
+          {note && <span id={noteId} hidden>{note}</span>}
+        </button>;
+      })}
     </div>
     {/* `tabIndex={0}` on every panel, not only the ones that can end up
         with nothing focusable inside them: a panel's content is data-driven

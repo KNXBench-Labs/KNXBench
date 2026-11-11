@@ -2255,6 +2255,7 @@ export const messages = {
   "parameters.unresolved.notInArchive": "Not in this archive: {paths}",
   "parameters.unresolved.failed": "{path} could not be installed: {reason}",
   "parameters.none": "(none)",
+  "parameters.undeclaredValue": "{value} (not a declared value)",
   "parameters.conflict": "This value was changed elsewhere. Nothing was written; your draft is kept and the current state is being reloaded.",
   "parameters.conflictReloadFailed": "This value was changed elsewhere. Nothing was written and your draft is kept, but reloading the current state failed: {message}",
   "parameters.conflictCurrent": "Current value: {value}",

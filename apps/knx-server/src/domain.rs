@@ -8485,6 +8485,24 @@ mod tests {
         }
     }
 
+    /// #45: a selection parameter accepts exactly its declared values; the
+    /// empty string the editor used to offer as "(keine)" is not one of them.
+    #[test]
+    fn restriction_accepts_only_declared_values() {
+        let mut view = view_of_kind("Restriction");
+        view.enum_options = vec![("0".to_string(), None), ("1".to_string(), None)];
+        for good in ["0", "1"] {
+            assert!(validate_kind_and_bounds(&view, good).is_ok(), "{good}");
+        }
+        for bad in ["", "2", " 0", "00"] {
+            let error = validate_kind_and_bounds(&view, bad).unwrap_err();
+            assert!(
+                error.contains("not one of its declared values"),
+                "{bad:?}: {error}"
+            );
+        }
+    }
+
     /// WP-08: Schema23's `yyyy-mm-dd` with calendar days, nothing wider.
     #[test]
     fn date_accepts_only_schema_spelled_calendar_dates() {

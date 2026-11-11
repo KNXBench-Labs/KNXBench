@@ -2232,6 +2232,7 @@ export const messages: Record<MessageKey, string> = {
   "parameters.unresolved.notInArchive": "Nicht in diesem Archiv: {paths}",
   "parameters.unresolved.failed": "{path} konnte nicht installiert werden: {reason}",
   "parameters.none": "(keine)",
+  "parameters.undeclaredValue": "{value} (kein deklarierter Wert)",
   "parameters.conflict": "Dieser Wert wurde anderswo geändert. Nichts wurde geschrieben; dein Entwurf bleibt erhalten und der aktuelle Stand wird neu geladen.",
   "parameters.conflictReloadFailed": "Dieser Wert wurde anderswo geändert. Nichts wurde geschrieben und dein Entwurf bleibt erhalten, aber das Neuladen des aktuellen Stands ist fehlgeschlagen: {message}",
   "parameters.conflictCurrent": "Aktueller Wert: {value}",

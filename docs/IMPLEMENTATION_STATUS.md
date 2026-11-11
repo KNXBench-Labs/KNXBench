@@ -12,6 +12,15 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Parameter selection lists offer only declared values (11 November 2026; issue #45, WP-30)
+
+Selection-list (`Restriction`) parameters no longer offer an empty “(keine)”
+choice ahead of the declared values. A missing current value, or one that is
+not among the declared values, stays visible as a disabled placeholder
+(“(keine)” or “<value> (kein deklarierter Wert)”) so the mismatch is not
+hidden. The server already refused undeclared values; a unit test now pins
+that the empty string is refused too. [WP-30](open-work/WP-30-parameter-select-undeclared-none.md).
+
 ## Background activity footer (10 November 2026; bounded source implementation)
 
 App-owned open/import, save/readback, device-detail and read-only comparison

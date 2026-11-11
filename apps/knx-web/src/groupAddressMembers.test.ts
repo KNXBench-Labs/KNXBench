@@ -77,12 +77,11 @@ describe("duplicates", () => {
     expect([...existingDirections(linked, 11)]).toEqual(["Receive"]);
   });
 
-  it("treats Both as a duplicate when either half exists, as the atomic batch fails then", () => {
+  it("treats any existing link to the address as a duplicate: a sending address also receives (WP-39)", () => {
     const sending = object(1, 0, [[10, "Send"]]);
-    expect(isDuplicateMember(sending, 10, "Send")).toBe(true);
-    expect(isDuplicateMember(sending, 10, "Receive")).toBe(false);
-    expect(isDuplicateMember(sending, 10, "Both")).toBe(true);
-    expect(isDuplicateMember(sending, 11, "Both")).toBe(false);
+    expect(isDuplicateMember(sending, 10)).toBe(true);
+    expect(isDuplicateMember(sending, 11)).toBe(false);
+    expect(isDuplicateMember(object(1, 0, [[10, "Receive"]]), 10)).toBe(true);
   });
 });
 

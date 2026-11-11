@@ -62,3 +62,7 @@ the download writes the pair as one sending association, which is what it means
 for the device: the sending association receives too (KNX Resources
 §4.17.3.3.2, [research](../research/2026-11-11-send-and-receive-on-one-address.md)).
 The project keeps both links.
+
+Since the WP-39 UI change, new links offer only Send or Receive, and both link
+forms refuse a second link of an object to an address it already links. The
+server still accepts `Both` for older clients; existing pairs keep “Unlink both”.

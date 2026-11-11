@@ -12,6 +12,14 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## A running device download stays visible in the status bar (11 November 2026; issue #43, WP-35)
+
+The status bar shows a running download's device address, step and percentage
+of planned octets written and read back, from any view, with **Show** opening
+the download tab. It reads the bus activity snapshot the bus-connection status
+already polls every two seconds, so it adds no request and cannot start,
+select or cancel anything; cancelling stays in the download panel.
+
 ## Hager 0701h parameters-only download verified from a tester report (11 November 2026; issue #38, WP-33)
 
 `M-0006_A-E052-12-3406` joins `verified_downloads.json` with the

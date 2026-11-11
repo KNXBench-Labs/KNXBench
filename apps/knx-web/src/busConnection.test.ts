@@ -90,7 +90,7 @@ describe("connectionFromActivity", () => {
     const download = { kind: "deviceDownload", id: 2, address: "1.1.7", state: "running", completedSteps: 1,
       totalSteps: 4, writtenOctets: 10, totalOctets: 40 } satisfies SessionActivity;
     expect(connectionFromActivity(snapshot({ sessions: [download] }))).toEqual({
-      phase: "occupied", holder: { kind: "deviceDownload", address: "1.1.7", state: "running" },
+      phase: "occupied", holder: { kind: "deviceDownload", address: "1.1.7", state: "running", progress: { completedSteps: 1, totalSteps: 4, writtenOctets: 10, totalOctets: 40 } },
     });
     expect(connectionFromActivity(snapshot({ busyLocks: ["deviceDownload"] }))).toEqual({
       phase: "occupied", holder: { kind: "connecting", session: "deviceDownload" },

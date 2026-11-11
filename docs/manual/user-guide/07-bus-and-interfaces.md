@@ -837,6 +837,14 @@ connected" means KNXBench saw no own connection; it does not prove the bus is
 idle. Connecting opens the selected transport and buffers bus telegrams for the
 bus monitor.
 
+While a device download runs, the status bar also shows it from every view
+(since issue #43): the device address, the step, a percentage of the planned
+octets written and read back, and **Show**, which opens the download tab where
+the run is followed and can be cancelled. The figures are the server's own
+counts, refreshed every two seconds while the window is visible. The entry
+disappears when the run ends; its result stays in the download tab and in the
+bus activity history.
+
 The **Gateway** button opens a list of discovered IP interfaces and your saved
 gateway. Choosing one only saves it as the preferred gateway; it never connects
 and never switches a running connection. Interfaces without tunnelling are

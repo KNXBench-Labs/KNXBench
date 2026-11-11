@@ -9,13 +9,17 @@ import { BUSY_LOCKS, type ActivitySnapshot, type BusyLock } from "./liveActivity
  * the gateway's own refusal (`gatewayRefused`) instead.
  */
 export type TunnelHolder =
-  | { kind: "deviceDownload"; address: string; state: "running" }
+  /** `progress` is known only from the activity snapshot, never from a refusal. */
+  | { kind: "deviceDownload"; address: string; state: "running"; progress?: DownloadProgress }
   /** `sessionId` is known only from the activity snapshot (to stop it). */
   | { kind: "addressProgramming"; address: string; state: "waiting" | "programming"; sessionId?: number }
   /** `gateway` is missing only from an older server's activity snapshot. */
   | { kind: "busMonitor"; sessionId: number; gateway?: string; serial?: SerialTarget; transport?: IpTunnelTransport; state: "active" | "closed" }
   | { kind: "lineScan"; sessionId: number; probed: number; total: number }
   | { kind: "connecting"; session: BusyLock };
+
+/** A running download's server-counted progress (issue #43). */
+export interface DownloadProgress { completedSteps: number; totalSteps: number; writtenOctets: number; totalOctets: number }
 
 export type GatewayRefusal =
   | { kind: "gatewayBusy"; holder: TunnelHolder }

@@ -19,7 +19,6 @@ import { projectContextKey } from "./treeUtils";
 const DIRECTION_KEYS: Record<MemberDirection, MessageKey> = {
   Send: "inspector.direction.send",
   Receive: "inspector.direction.receive",
-  Both: "inspector.direction.both",
 };
 
 /** `direction` is null until the user picks one: the object's suggestion applies (#47). */
@@ -73,7 +72,7 @@ export default function GroupAddressMemberAdd(props: {
   const suggestion = chosen === undefined ? null : suggestLinkDirection(chosen, ga.id);
   const hintId = useId();
   const direction: MemberDirection = draft.direction ?? suggestion?.direction ?? "Send";
-  const duplicate = chosen !== undefined && isDuplicateMember(chosen, ga.id, direction);
+  const duplicate = chosen !== undefined && isDuplicateMember(chosen, ga.id);
   // An object chosen before a re-read must still exist in the fresh list.
   useEffect(() => {
     if (loaded && draft.objectId !== null && !loaded.objects.some((object) => object.id === draft.objectId)) {

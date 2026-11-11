@@ -5,9 +5,14 @@ import type { GroupAddressNode } from "./bindings/GroupAddressNode";
 import type { ProjectTree } from "./bindings/ProjectTree";
 import { collectDevices, deviceInstallation, owningInstallation, projectContextKey } from "./treeUtils";
 
-/** The directions `POST /api/group-links` accepts; `Both` is one atomic batch. */
-export type MemberDirection = "Send" | "Receive" | "Both";
-export const MEMBER_DIRECTIONS: readonly MemberDirection[] = ["Send", "Receive", "Both"];
+/**
+ * The directions a new link offers. `POST /api/group-links` still accepts
+ * `Both` from older clients, but WP-39 retired it here: a sending address also
+ * receives on the device (KNX Resources §4.17.3.3.2), and ETS has no separate
+ * send-and-receive state. Existing pairs stay valid ("Unlink both").
+ */
+export type MemberDirection = "Send" | "Receive";
+export const MEMBER_DIRECTIONS: readonly MemberDirection[] = ["Send", "Receive"];
 
 // MODEL-01 / ADR-0070, mirroring `Command::LinkComObject`: a device placed
 // in one installation links only to that installation's group addresses; a
@@ -61,13 +66,13 @@ export function existingDirections(object: ComObjectNode, gaId: number): Set<"Se
 }
 
 /**
- * Whether adding `direction` would repeat a link the object already has.
- * The core refuses it (`LinkAlreadyExists`); `Both` fails as a whole when
- * either half exists, so it counts as a duplicate then too.
+ * Whether a new link of this object to `gaId` would repeat what it already
+ * has. Any existing link counts (WP-39): one link per address and object, as
+ * in ETS. The same direction is refused by the core (`LinkAlreadyExists`); to
+ * change the direction, the user unlinks first.
  */
-export function isDuplicateMember(object: ComObjectNode, gaId: number, direction: MemberDirection): boolean {
-  const existing = existingDirections(object, gaId);
-  return direction === "Both" ? existing.size > 0 : existing.has(direction);
+export function isDuplicateMember(object: ComObjectNode, gaId: number): boolean {
+  return existingDirections(object, gaId).size > 0;
 }
 
 /** Objects in number order (then id), without dropping or merging any. */

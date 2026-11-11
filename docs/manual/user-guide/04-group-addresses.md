@@ -258,25 +258,22 @@ From the group address (since Alpha 10):
    address's own installation and devices placed in no installation. Choosing a device
    reads its communication objects; a failed read says so and offers **Retry**.
 4. Choose the **Communication object** (objects already linked to this address say in
-   which direction) and the **Direction**: **Send**, **Receive** or **Send + receive (one
-   action)**.
-5. Click **Add member**. A link that already exists in that direction is refused before
-   anything is sent; the server's own refusal is shown unchanged. Each add is one undo
-   step — **Send + receive** included.
+   which direction) and the **Direction**: **Send** or **Receive**.
+5. Click **Add member**. An object already linked to this address, in either direction,
+   is refused before anything is sent; the server's own refusal is shown unchanged. Each
+   add is one undo step.
 
 An address that occurs in more than one installation cannot get new members; the panel
 says so instead of offering the picker. Unlinking works from either side — the link row
 on the communication object, or **Unlink** next to the member.
 
-The direction is part of the link, not of the address: one object may hold both a send
-and a receive link to the same address, and the **Links** column then counts it once
-in each direction.
-
-On the device, **Send** already includes receiving: an object sends on its sending
-address and is updated by telegrams to it, like every other address it is linked to. A
-send and a receive link to the same address are therefore downloaded as one sending
-entry; ETS has no separate send-and-receive state either (since WP-39; before, such
-a pair made the download fail).
+The direction is part of the link, not of the address. On the device, **Send** already
+includes receiving: an object sends on its sending address and is updated by telegrams
+to it, like every other address it is linked to. So a new link is **Send** or
+**Receive**, one per address and object, as in ETS (since WP-39; the former **Send +
+receive** choice is gone). A send and a receive link to one address from an older
+project or import stay valid, are downloaded as one sending entry, count once in each
+direction in the **Links** column, and can be removed together with **Unlink both**.
 
 Both link forms pre-fill the direction from the object, never from the address's name
 (since issue #47), and say why under the choice:
@@ -286,10 +283,9 @@ Both link forms pre-fill the direction from the object, never from the address's
   Write-only actuator object too.
 - An object that already sends on an address gets **Receive**: an object has one
   sending address, and a download refuses a second.
-- An object already linked to the chosen address keeps that direction instead of
-  proposing the same object on one address twice. **Add member…** refuses it before
-  sending; the link row on the object says so in its hint, and **Link** then shows the
-  server's refusal.
+- An object already linked to the chosen address keeps that direction, and both forms
+  refuse a second link before anything is sent, with the reason shown. To change the
+  direction of an existing link, unlink it first and link it again.
 
 The flags do not change the suggestion. It is only a starting value: change it, and
 your choice holds until the link is made. [Devices and products](05-devices-and-products.md) covers the

@@ -236,6 +236,10 @@ async fn missing_confirmation_changed_selection_and_changed_target_refuse_withou
 }
 
 #[tokio::test]
+#[expect(
+    clippy::await_holding_lock,
+    reason = "the apply blocks in spawn_blocking; this task never waits on the lock it holds"
+)]
 async fn a_save_finishing_while_the_apply_waits_makes_it_stale() {
     // #36: Save writes with store path held but without the project lock, and
     // publishes its catalogue references afterwards. An apply that snapshots

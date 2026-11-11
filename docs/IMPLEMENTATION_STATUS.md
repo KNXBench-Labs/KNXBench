@@ -24,8 +24,8 @@ generation. Journal hand-overs, Save As, version actions and project
 replacement keep waiting for it; an edit applied during the write stays
 unsaved and is journaled afterwards. Measured after the fix on the same
 project: device detail during a save 0.20–0.27 s, the save itself about 6 s.
-Limit: an edit or project-tree refresh started during the write holds the
-project while it waits for the store path, so device reads queue behind it
+Limit: an edit, or a project-tree, status, notes or instructions read,
+started during the write holds the project while it waits for the store path, so device reads queue behind it
 again until the save ends. Selective import now rechecks the revision after
 taking the store path, so it cannot restore pre-save catalogue references.
 The reporter's “Gerätedetails sind nicht verfügbar” message was not

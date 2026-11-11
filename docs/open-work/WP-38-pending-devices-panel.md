@@ -1,8 +1,9 @@
 # WP-38 — Pending-devices panel and batch download (#42)
 
 External report by the issue reporter, 10 November 2026; triaged 11 November 2026.
-Status: **step 1 implemented** (11 November 2026, main-only); **step 2 open**
-(needs an ADR before any code). Depends on WP-34 copy.
+Status: **step 1 implemented** (11 November 2026, main-only); **step 2 designed**
+in [ADR-0172](../adr/0172-batch-programming-stops-at-the-first-doubt.md)
+(Proposed), not implemented. Depends on WP-34 copy.
 
 ## Packages
 
@@ -75,8 +76,18 @@ when the device has no address. The missing-address reason reuses
 `devices.downloadNeedsAddress` unchanged. German copy is neutral, with no
 formal address to the user.
 
-## Step 2 (not started)
+## Step 2 (designed, not implemented)
 
-No batch start button exists. Downloading every pending device in sequence is
-a multi-device bus write; it needs an ADR first (see package 2 above) and then
+No batch start button exists yet. The design is
+[ADR-0172](../adr/0172-batch-programming-stops-at-the-first-doubt.md)
+(Proposed, 11 November 2026): a server-held batch over the regular memory
+download; devices with a pending or missing individual address, nothing to
+download, `unsupported`/`excluded` readiness or the System-2 path are listed as
+*not in this batch*, as is a device whose advised-scope plan grades
+`unsupported` or allows no post-download check; all plans and phrases prepared
+and checked before the reservation is taken; one confirmation naming the devices (shown even with a
+remembered stage consent) plus each `untested` device's own acknowledgement;
+continue only after a written, restarted and fully matching checked device,
+otherwise stop with the rest `notStarted`; *stop after this device*;
+a result per device and per-device history. Implementation follows with
 simulator-only tests unless hardware is separately authorised.

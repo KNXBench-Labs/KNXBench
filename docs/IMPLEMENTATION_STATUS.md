@@ -45,8 +45,9 @@ tree snapshot and language; while folded, no rows mount. The list initially
 renders 50 rows, with a total and **Show all**, inside its own scroll box.
 
 This is issue #42's promised first step only: **no batch start button**. Step 2,
-downloading all pending devices in sequence, remains open and needs an ADR
-first. No server/domain changes and no real-bus or hardware tests.
+downloading all pending devices in sequence, is designed in
+[ADR-0172](adr/0172-batch-programming-stops-at-the-first-doubt.md) (Proposed)
+and not implemented. No server/domain changes and no real-bus or hardware tests.
 [Design, copy and remaining work](open-work/WP-38-pending-devices-panel.md);
 [user guide](manual/user-guide/05-devices-and-products.md#pending-programming-panel-main-only-after-alpha-20).
 

@@ -4,7 +4,7 @@ import { messages as en } from "../src/messages/en";
 import { messages as de } from "../src/messages/de";
 import { achievementsFixtureAnswer } from "./achievements-fixture";
 import { busActivityFixtureAnswer } from "./bus-activity-fixture";
-import { dismissToasts, intercept, openList, openProject as openCommunicationProject } from "./communication-fixture";
+import { chooseComView, dismissToasts, intercept, openList, openObjectSettings, openProject as openCommunicationProject } from "./communication-fixture";
 import { separatorLine } from "./control-roles";
 import { statusMetricsFixtureBody } from "./status-metrics-fixture";
 
@@ -304,10 +304,11 @@ for (const language of ["en", "de"] as const) {
     await openList(page, language);
     await page.locator(".devices-table tbody td:nth-child(3) button").first().click();
     const panel = page.locator(".com-table-panel");
-    await panel.getByRole("button", { name: m["comTable.flat"], exact: true }).click();
+    await chooseComView(panel, m, "comTable.flat");
     const instance = m["valueSource.label"].replace("{source}", m["valueSource.instance"]);
     await panel.locator('[data-object-id="1"] summary').click();
     const editor = panel.locator('[data-editor-id="1"]');
+    await openObjectSettings(panel, 1);
     await expect(editor.locator(".dpt-field")).toBeVisible();
     await expect(editor.locator(".inspector-field-heading .provenance-badge")).toHaveCount(0);
     // Both Instance layers wait in closed technical references (DPT and description).
@@ -323,7 +324,7 @@ for (const language of ["en", "de"] as const) {
     await expect(recorded).toHaveText(instance);
     await expect(recorded).toHaveAttribute("data-source-layer", "Instance");
     // Other sources keep their heading badge.
-    await panel.locator('[data-object-id="4"] summary').click();
+    await panel.locator('[data-object-id="4"] summary').click(); await openObjectSettings(panel, 4);
     await expect(panel.locator('[data-editor-id="4"] .dpt-field .inspector-field-heading .provenance-badge'))
       .toHaveText(m["valueSource.label"].replace("{source}", m["valueSource.userEdit"]));
     // The served object, i.e. the API data, still carries both layers; nothing was written.

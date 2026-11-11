@@ -30,6 +30,11 @@ for (const language of ["en", "de"] as const) {
       );
       await page.locator(".com-object-channel-summary").click();
       await page.locator(".com-object-detail summary").click();
+      // Issue #46: links first; flags and priority wait in the closed object settings.
+      await expect(page.locator(".group-link-row").first()).toBeVisible();
+      await expect(page.locator(".com-object-flags")).toBeHidden();
+      await page.locator(".com-object-more > summary").click();
+      await expect(page.locator(".com-object-flags")).toBeVisible();
       await expect(page.locator(".com-object-flags .flag-name")).toHaveText([...translations[language]]);
       await expect(page.locator(".com-object-flags .flag-code")).toHaveText(["R", "W", "T", "U", "C", "I"]);
       await expect(page.locator(".group-link-row")).toHaveCount(2);

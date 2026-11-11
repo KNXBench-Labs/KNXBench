@@ -3,7 +3,7 @@ import { expect, test } from "@playwright/test";
 import { join } from "node:path";
 import { messages as en } from "../src/messages/en";
 import { messages as de } from "../src/messages/de";
-import { dismissToasts, intercept, openList, openProject } from "./communication-fixture";
+import { chooseComView, dismissToasts, intercept, openList, openObjectSettings, openProject } from "./communication-fixture";
 for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
   test(`${language} DPT selection and contextual source at ${width}px`, async ({ page }) => {
     const m = language === "en" ? en : de;
@@ -20,9 +20,9 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
     await openList(page, language);
     await page.locator(".devices-table tbody td:nth-child(3) button").first().click();
     const panel = page.locator(".com-table-panel");
-    await panel.getByRole("button", { name: m["comTable.flat"], exact: true }).click();
+    await chooseComView(panel, m, "comTable.flat");
     await expect(panel.locator('[data-object-id="1"] .com-object-effective-dpt')).toContainText(`${scene} (17.001)`);
-    await panel.locator('[data-object-id="1"] summary').click();
+    await panel.locator('[data-object-id="1"] summary').click(); await openObjectSettings(panel, 1);
     const field = panel.locator('[data-editor-id="1"] .dpt-field');
     const select = field.getByRole("combobox", { name: "DPT", exact: true });
     await expect(field.locator("input")).toHaveCount(0);
@@ -51,7 +51,7 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
     await expect(panel.locator('[data-object-id="1"] .com-object-effective-dpt')).toContainText(`${temperature} (9.001)`);
     expect(state.objects[0].dpt).toBe("DPST-9-1");
     expect(state.requests.filter(r => r === "POST /api/com-object-dpt")).toHaveLength(1);
-    await panel.locator('[data-object-id="2"] summary').click();
+    await panel.locator('[data-object-id="2"] summary').click(); await openObjectSettings(panel, 2);
     const unknown = panel.locator('[data-editor-id="2"] .dpt-field select');
     await expect(unknown).toHaveValue("vendor:opaque");
     await unknown.focus(); await unknown.press("Tab");

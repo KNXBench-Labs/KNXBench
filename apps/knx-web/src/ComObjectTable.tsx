@@ -140,6 +140,41 @@ function ObjectRow({ com, flat, priority, span, groupKey, hidden, matches, open,
     </td></tr>
   </Fragment>;
 }
+/** Issue #44: rarely changed table options behind one small menu, modelled on `StructureCreateMenu`. */
+function ComTableOptions({ showPriority, onOriginalOrder }: { showPriority: boolean; onOriginalOrder: () => void }) {
+  const t = useTranslate();
+  const menu = useRef<HTMLDetailsElement>(null);
+  const [open, setOpen] = useState(false);
+  // Opens from the summary's start unless that would cross the table panel's end.
+  const [align, setAlign] = useState<"start" | "end">("start");
+  const close = (focus: boolean) => {
+    const details = menu.current; if (!details) return;
+    details.open = false; if (focus) details.querySelector("summary")?.focus();
+  };
+  useEffect(() => {
+    if (!open) return;
+    // A press anywhere outside closes the menu, like the File menu.
+    const outside = (event: PointerEvent) => { if (!menu.current?.contains(event.target as Node)) close(false); };
+    document.addEventListener("pointerdown", outside);
+    return () => document.removeEventListener("pointerdown", outside);
+  }, [open]);
+  return <details ref={menu} className="com-table-options" onToggle={() => {
+    const details = menu.current; if (!details) return;
+    setOpen(details.open);
+    if (!details.open) return;
+    const page = (details.closest(".com-table-panel") ?? document.documentElement).getBoundingClientRect();
+    const summary = details.querySelector("summary")!.getBoundingClientRect();
+    const width = details.querySelector<HTMLElement>(".com-table-options-content")?.offsetWidth ?? 0;
+    setAlign(summary.left + width <= page.right ? "start" : "end");
+  }} onKeyDown={event => { if (event.key === "Escape" && menu.current?.open) { event.stopPropagation(); close(true); } }}>
+    <summary>{t("comTable.options")}</summary>
+    <div className="com-table-options-content" data-align={align} role="group" aria-label={t("comTable.options")}>
+      <button type="button" onClick={() => { onOriginalOrder(); close(true); }}>{t("comTable.originalOrder")}</button>
+      <label className="com-table-priority-toggle"><input type="checkbox" checked={showPriority}
+        onChange={e => setSetting(PRIORITY_COLUMN_SETTING, e.target.checked)} />{t("comTable.priorityColumn")}</label>
+    </div>
+  </details>;
+}
 export default function ComObjectTable({ objects, editor, folderCurrency }: { objects: ComObjectNode[]; editor: (com: ComObjectNode) => ReactNode;
   /** Server-only: whether the saved folders still describe this device. */
   folderCurrency?: ProjectFolderCurrency }) {
@@ -235,14 +270,11 @@ export default function ComObjectTable({ objects, editor, folderCurrency }: { ob
         <option value="all">{t("comTable.allPriorities")}</option>{PRIORITY_ORDER.map(token => <option key={token} value={token}>{token}</option>)}
         <option value="unresolved">{t("comTable.unresolvedPriority")}</option></select></label>}
       <button type="button" onClick={() => { resetCollapse(); setFilters({ ...DEFAULT_FILTERS }); }}>{t("comTable.resetFilters")}</button>
-      <button type="button" onClick={() => setSort({ column: null, descending: false })}>{t("comTable.originalOrder")}</button>
-      <div className="com-table-views" role="group" aria-label={t("comTable.view")}>
-        <button type="button" aria-pressed={mode === "channel"} onClick={() => setMode("channel")}>{t("comTable.grouped")}</button>
-        <button type="button" aria-pressed={mode === "folder"} onClick={() => setMode("folder")}>{t("comTable.byFolder")}</button>
-        <button type="button" aria-pressed={flat} onClick={() => setMode("flat")}>{t("comTable.flat")}</button>
-      </div>
-      <button type="button" className="com-table-priority-toggle" aria-pressed={showPriority}
-        onClick={() => setSetting(PRIORITY_COLUMN_SETTING, !showPriority)}>{t("comTable.priorityColumn")}</button>
+      {/* Issue #44: one view choice instead of three buttons; same `mode` state. */}
+      <label>{t("comTable.view")}<select className="com-table-view" aria-label={t("comTable.view")} value={mode} onChange={e => setMode(e.target.value as ComGrouping | "flat")}>
+        <option value="channel">{t("comTable.grouped")}</option><option value="folder">{t("comTable.byFolder")}</option>
+        <option value="flat">{t("comTable.flat")}</option></select></label>
+      <ComTableOptions showPriority={showPriority} onOriginalOrder={() => setSort({ column: null, descending: false })} />
     </div>
     {removed > 0 && <p className="com-object-removal" role="status">{t("comTable.removed", { count: removed })}</p>}
     <p className="com-table-count" role="status">{t("comTable.count", { shown: view.objects.length, total: objects.length })}</p>

@@ -2,7 +2,7 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
 import { join } from "node:path";
 import { messages as en } from "../src/messages/en";
-import { intercept, openList } from "./communication-fixture";
+import { chooseComView, intercept, openList, openObjectSettings } from "./communication-fixture";
 import { controlPaint, separatorLine, type ControlRole } from "./control-roles";
 
 // Every theme the app ships: the six built-ins and the bundled CRT pack.
@@ -168,8 +168,10 @@ for (const theme of THEMES) for (const width of WIDTHS) {
 
     // A help tip keeps its small ring inside a full target.
     const panel = page.locator(".com-table-panel");
-    await panel.getByRole("button", { name: en["comTable.flat"], exact: true }).click();
+    await chooseComView(panel, en, "comTable.flat");
     await panel.locator('[data-object-id="1"] summary').click();
+    // Issue #46: the flags' help tip sits in the object settings, closed by default.
+    await openObjectSettings(panel, 1);
     const tip = panel.locator('[data-editor-id="1"] .help-tip-trigger').first();
     await tip.scrollIntoViewIfNeeded();
     const tipBox = await tip.evaluate((node) => {

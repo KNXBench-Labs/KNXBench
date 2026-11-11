@@ -983,10 +983,14 @@ function DeviceIdentity(props: { product: DeviceProductNode }) {
   </section>;
 }
 
-/** The set flags' stable code letters, in the flags row's order (#46 summary hint). */
-function setFlagLetters(com: ComObjectNode): string {
-  return ([["R", com.read], ["W", com.write], ["T", com.transmit], ["U", com.update], ["C", com.communication],
-    ["I", com.read_on_init]] as const).filter(([, set]) => set).map(([letter]) => letter).join(" ");
+const FLAG_LETTERS = [["R", "read", "inspector.comFlag.read"], ["W", "write", "inspector.comFlag.write"],
+  ["T", "transmit", "inspector.comFlag.transmit"], ["U", "update", "inspector.comFlag.update"],
+  ["C", "communication", "inspector.comFlag.communication"], ["I", "read_on_init", "inspector.comFlag.readOnInit"]] as const;
+
+/** The set flags, in the flags row's order (#46 summary hint): letters to see, names to hear. */
+function setFlags(com: ComObjectNode, t: ReturnType<typeof useTranslate>): { letters: string; names: string } {
+  const set = FLAG_LETTERS.filter(([, field]) => com[field]);
+  return { letters: set.map(([letter]) => letter).join(" "), names: set.map(([, , key]) => t(key)).join(", ") };
 }
 
 // Issue #46: the linked group addresses come first and stay visible; every
@@ -996,7 +1000,7 @@ function ComObjectEditor(props: { com: ComObjectNode; groupAddresses: GroupAddre
   const { com, groupAddresses, onApplied } = props;
   const t = useTranslate();
   const headingId = useId();
-  const flags = setFlagLetters(com);
+  const flags = setFlags(com, t);
   return <div className="com-object-edit-fields">
     <h4 className="com-object-links-heading" id={headingId}>{t("inspector.linkedGroupAddresses")}</h4>
     <ul className="group-link-list" aria-labelledby={headingId}>
@@ -1010,7 +1014,12 @@ function ComObjectEditor(props: { com: ComObjectNode; groupAddresses: GroupAddre
       if (!details.open && details.closest("fieldset")?.disabled) details.open = true;
     }}>
       <summary><span className="com-object-more-label">{t("inspector.objectSettings")}</span>{" "}
-        <span className="com-object-more-hint">{flags ? t("inspector.objectSettingsFlags", { flags }) : t("inspector.objectSettingsNoFlags")}</span>
+        {flags.letters
+          ? <span className="com-object-more-hint" title={flags.names}>
+            <span aria-hidden="true">{t("inspector.objectSettingsFlags", { flags: flags.letters })}</span>
+            <span className="sr-only">{t("inspector.objectSettingsFlags", { flags: flags.names })}</span>
+          </span>
+          : <span className="com-object-more-hint">{t("inspector.objectSettingsNoFlags")}</span>}
       </summary>
       <div className="com-object-more-fields">
         <div className="com-object-type-fields">

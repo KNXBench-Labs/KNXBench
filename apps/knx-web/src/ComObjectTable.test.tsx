@@ -764,7 +764,11 @@ it("issue #46: linked group addresses come first and every other object setting 
   // Closed by default; its summary names the section and the set flags.
   expect(more.open).toBe(false);
   expect(more.querySelector("summary .com-object-more-label")?.textContent).toBe("Object settings");
-  expect(more.querySelector("summary .com-object-more-hint")?.textContent).toBe("Flags: W T C");
+  const hint = more.querySelector("summary .com-object-more-hint")!;
+  // Letters to see, the flag names to hear (screen readers) and to hover.
+  expect(hint.querySelector("[aria-hidden=true]")?.textContent).toBe("Flags: W T C");
+  expect(hint.querySelector(".sr-only")?.textContent).toBe("Flags: Write, Transmit, Communication");
+  expect(hint.getAttribute("title")).toBe("Write, Transmit, Communication");
   for (const selector of [".dpt-field select", `input[aria-label="Description"]`, ".com-object-flags", ".com-object-effective-priority"])
     expect(more.querySelector(selector), selector).not.toBeNull();
   // The old order inside the disclosure is unchanged.
@@ -810,7 +814,7 @@ it("issue #46: the German editor names its sections", async () => {
   const { v, editor, more } = await openEditor([object(1)], de["comTable.flat"]);
   expect(editor.querySelector(".com-object-links-heading")?.textContent).toBe(de["inspector.linkedGroupAddresses"]);
   expect(more.querySelector(".com-object-more-label")?.textContent).toBe(de["inspector.objectSettings"]);
-  expect(more.querySelector(".com-object-more-hint")?.textContent).toBe("Flags: C");
+  expect(more.querySelector(".com-object-more-hint [aria-hidden=true]")?.textContent).toBe("Flags: C");
   await v.cleanup();
   settingsStorage.setItem("uiLanguage", "en"); resetUiLanguageForTests();
 });

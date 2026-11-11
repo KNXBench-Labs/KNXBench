@@ -303,6 +303,39 @@ describe("ParameterPanel", () => {
     await act(async () => root.unmount());
   });
 
+  it("offers only declared selection values and keeps a missing or undeclared value visible but unselectable (#45)", async () => {
+    const declared = [{ value: "10", text: "10 seconds", language: null }, { value: "30", text: "30 seconds", language: null }];
+    const base = { ...fixture.sections[0].fields[0], kind: "Restriction", group: { key: "brightness", label: "Brightness" }, enumOptions: declared };
+    async function optionsFor(value: string | null) {
+      const panel = { ...fixture, sections: [{ scope: null, fields: [{ ...base, value }] }] };
+      apiMock.deviceParameters.mockResolvedValue(panel);
+      const root = await renderPanel();
+      await act(async () => host!.querySelector<HTMLButtonElement>(".parameter-workspace-nav button")!.click());
+      const select = host!.querySelector<HTMLSelectElement>("select")!;
+      const options = [...select.options].map((o) => ({ value: o.value, text: o.textContent, disabled: o.disabled }));
+      return { root, select, options };
+    }
+    const valid = await optionsFor("30");
+    expect(valid.options).toEqual([{ value: "10", text: "10 seconds", disabled: false }, { value: "30", text: "30 seconds", disabled: false }]);
+    expect(valid.select.value).toBe("30");
+    await act(async () => valid.root.unmount());
+
+    const missing = await optionsFor(null);
+    expect(missing.options[0]).toEqual({ value: "", text: "(none)", disabled: true });
+    expect(missing.options.slice(1).map((o) => o.value)).toEqual(["10", "30"]);
+    expect(missing.select.value).toBe("");
+    await act(async () => missing.root.unmount());
+
+    const undeclared = await optionsFor("7");
+    expect(undeclared.options[0]).toEqual({ value: "7", text: "7 (not a declared value)", disabled: true });
+    expect(undeclared.select.value).toBe("7");
+    apiMock.setParameterValue.mockReturnValue(new Promise<ParameterPanelDto>(() => {}));
+    await act(async () => setSelectValue(undeclared.select, "10"));
+    expect(apiMock.setParameterValue).toHaveBeenCalledExactlyOnceWith(1, "P1", "10", null, bound("7"));
+    expect(apiMock.setParameterValue.mock.calls.some((call) => call[2] === "")).toBe(false);
+    await act(async () => undeclared.root.unmount());
+  });
+
   it("renders declared-grid cells with the same bound rows and the one existing write path", async () => {
     const choice = { ...fixture.sections[0].fields[0], kind: "Restriction", value: "0", cell: { row: 1, column: 2 },
       group: { key: "pairs", label: "Pairs" },

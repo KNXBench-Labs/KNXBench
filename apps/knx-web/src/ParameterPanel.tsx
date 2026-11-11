@@ -260,7 +260,14 @@ function ParameterFieldRow(props: {
       disabled={disabled}
       onChange={(e) => { const next = e.target.value; setValue(next); void apply(false, next); }}
     >
-      <option value="">{t("parameters.none")}</option>
+      {/* #45: only declared values are choosable. A missing or undeclared
+          current value stays visible as a disabled placeholder instead of
+          silently showing the first option or offering an empty choice. */}
+      {!field.enumOptions.some((opt) => opt.value === value) && (
+        <option value={value} disabled data-parameter-undeclared-value>
+          {value === "" ? t("parameters.none") : t("parameters.undeclaredValue", { value })}
+        </option>
+      )}
       {field.enumOptions.map((opt) => (
         <option key={opt.value} value={opt.value}>
           {opt.text ?? opt.value}

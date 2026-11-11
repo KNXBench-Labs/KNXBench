@@ -297,7 +297,7 @@ it("explains a tolerated firmware-maintained octet in English and German, with i
   expect(host.querySelector("[data-system2-diagnostics]")).toBeNull();
   await act(async () => setSetting("uiLanguage", "de"));
   expect(line()).toContain("Objekt 3 Oktett 3CF4h: KNXBench schrieb 01h, das Gerät hält jetzt 00h");
-  expect(line()).toContain("Vor dem Download stand dort 00h.");
+  expect(line()).toContain("Vor der Programmierung stand dort 00h.");
   await act(async () => setSetting("uiLanguage", "en"));
 });
 it("labels a restore run's post-load octet and an unreadable prestate", async () => {
@@ -364,7 +364,7 @@ it("renders the diagnosis fully in German", async () => {
   await act(async () => setSetting("uiLanguage", "de"));
   mock.getSystem2Status.mockResolvedValue(restoreFailedStatus); await render();
   const section = text("[data-system2-diagnostics]");
-  expect(section).toContain("Aufgezeichnete Zeiger-Lesebeobachtungen"); expect(section).toContain("Download-Lauf"); expect(section).toContain("Wiederherstellungslauf");
+  expect(section).toContain("Aufgezeichnete Zeiger-Lesebeobachtungen"); expect(section).toContain("Programmierlauf"); expect(section).toContain("Wiederherstellungslauf");
   expect(section).toContain("weder zwei noch vier Oktette"); expect(section).toContain("andere Elementanzahl als eins"); expect(section).toContain("Objekt 3"); expect(section).toContain("Oktette 8");
   expect(section).not.toContain("Download run"); expect(section).not.toContain("octets");
   await act(async () => setSetting("uiLanguage", "en"));
@@ -535,7 +535,7 @@ it("renders the final-step cause fully in German", async () => {
   await act(async () => setSetting("uiLanguage", "de"));
   mock.getSystem2Status.mockResolvedValue({ ...finalStepStatus, state: "restoreFailed", restoreAttempted: true, finalStepFailures: [finalDownloadWrite, finalRestoreRead] }); await render();
   const section = host.querySelector("[data-system2-final-steps]")!.textContent!;
-  expect(section).toContain("Ursache im abschließenden Schritt"); expect(finalLine("download")).toContain("Download-Lauf");
+  expect(section).toContain("Ursache im abschließenden Schritt"); expect(finalLine("download")).toContain("Programmierlauf");
   expect(finalLine("download")).toContain("abschließendes Schreiben fehlgeschlagen"); expect(finalLine("download")).toContain("Wiederherstellen des Verify-Modus");
   expect(finalLine("restore")).toContain("Wiederherstellungslauf"); expect(finalLine("restore")).toContain("abschließendes Lesen fehlgeschlagen");
   expect(section).not.toContain("Download run"); expect(section).not.toContain("final write failed");

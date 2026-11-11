@@ -546,6 +546,25 @@ it("stops the shown serial monitor of the shown server process, never the legacy
   expect(gatewayInput().value).toBe("");
 });
 
+it("stops the session of the latest poll after another one replaced the first, including a TCP holder", async () => {
+  vi.useFakeTimers();
+  apiMock.busActivity.mockResolvedValueOnce(activity([{ kind: "busMonitor", id: 6, gateway: "192.0.2.221:3671", state: "active" }]))
+    .mockResolvedValue({
+      ...activity([{ kind: "busMonitor", id: 7, gateway: "192.0.2.222:3671", transport: "tcp", state: "active" }]),
+      serverIncarnation: "process-b",
+    });
+  await render();
+  expect(text(".device-download-holder [role=status]")).toContain("192.0.2.221:3671");
+  await act(async () => { await vi.advanceTimersByTimeAsync(HOLDER_POLL_MS); });
+  expect(text(".device-download-holder [role=status]")).toContain("192.0.2.222:3671");
+  apiMock.stopBoundBusMonitor.mockResolvedValue({ sessionId: 7, serverIncarnation: "process-b", telegramCount: 0 });
+  apiMock.busActivity.mockResolvedValue(activity([]));
+  await act(async () => button(en["deviceDownload.holder.stopMonitor"])!.click());
+  await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+  expect(apiMock.stopBoundBusMonitor).toHaveBeenCalledExactlyOnceWith({ sessionId: 7, serverIncarnation: "process-b" });
+  expect(apiMock.stopBusMonitor).not.toHaveBeenCalled();
+});
+
 it("reports a changed session instead of stopping another one, and keeps the typed gateway empty", async () => {
   apiMock.busActivity.mockResolvedValue(activity([{ kind: "busMonitor", id: 6, gateway: "192.0.2.221:3671", state: "active" }]));
   await render();

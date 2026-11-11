@@ -12,7 +12,7 @@ the former dated sections are in the [archive](history/OPEN_WORK_2026-10-25.md).
 | WP-31 | Device editor unavailable after saving the project (#36) | Save no longer blocks device reads unless an edit or tree refresh queues behind it; reporter error message unreproduced, proxy question open | [WP-31](open-work/WP-31-device-editor-unavailable-after-save.md) |
 | WP-32 | Download dialog: warn about pending changes outside the chosen scope (#39) | Implemented 11 Nov: warning names the unwritten pending parts | [WP-32](open-work/WP-32-download-scope-uncovered-warning.md) |
 | WP-33 | Record the Hager 0701 download reports (#38) | Open; one report attached, two more requested | [WP-33](open-work/WP-33-hager-0701-download-evidence.md) |
-| WP-34 | One term for writing configuration to a device (#41) | Open; owner: DE “Programmieren”, EN “Download” | [WP-34](open-work/WP-34-download-terminology.md) |
+| WP-34 | One term for writing configuration to a device (#41) | Implemented 11 Nov: German catalogue uses “Programmieren”; rule in GLOSSARY | [WP-34](open-work/WP-34-download-terminology.md) |
 | WP-35 | Footer progress for a running device download (#43) | Open | [WP-35](open-work/WP-35-footer-download-progress.md) |
 | WP-36 | Communication-object view: links first, compact toolbar, direction pre-fill (#44, #46, #47) | Open; owner: pre-fill from object, not GA name | [WP-36](open-work/WP-36-communication-object-view-cleanup.md) |
 | WP-37 | Show pending changes across the UI (#40) | Open; per-parameter marking is a later schema package | [WP-37](open-work/WP-37-pending-changes-across-ui.md) |

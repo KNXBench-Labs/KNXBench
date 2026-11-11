@@ -43,7 +43,7 @@ describe("readinessReason", () => {
   it("explains customer-adjustable refusal explicitly in EN and DE without source payloads", () => {
     const mark = { kind: "unsupported" as const, category: "customer-adjustable-parameters", detail: "privateSentinel P-991" };
     expect(readinessReason(mark, en)).toBe("its application program contains uninterpreted customer-adjustable declarations; KNXBench refuses all regular download scopes because preservation semantics are not implemented. Read-only compare and diagnostics remain available");
-    expect(readinessReason(mark, de)).toBe("sein Applikationsprogramm enthält nicht interpretierte Customer-adjustable-Deklarationen; KNXBench verweigert alle regulären Download-Umfänge, da die Erhaltungssemantik nicht implementiert ist. Nur lesender Vergleich und Diagnose bleiben verfügbar");
+    expect(readinessReason(mark, de)).toBe("sein Applikationsprogramm enthält nicht interpretierte Customer-adjustable-Deklarationen; KNXBench verweigert alle regulären Programmierumfänge, da die Erhaltungssemantik nicht implementiert ist. Nur lesender Vergleich und Diagnose bleiben verfügbar");
     for (const t of [en, de]) {
       expect(readinessReason(mark, t)).not.toContain("privateSentinel");
       expect(readinessReason(mark, t)).not.toContain("P-991");

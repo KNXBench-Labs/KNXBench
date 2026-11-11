@@ -6,6 +6,15 @@ This dossier preserves the technical detail and dated history. Earlier
 headings, failures and lifting conditions are historical where later
 updates supersede them; they are not new work assignments.
 
+## Device metadata display (10 November 2026 source candidate)
+
+The Product data database-record disclosure includes all normalized scalar
+product, hardware, hardware-to-program, application and catalogue metadata,
+source hashes/sanitized filenames and retained file-scoped additional attributes.
+It does not parse the complete retained XML or display binary payloads. NULL,
+empty and false/zero stay distinct. In particular the security fields remain
+source lexemes, not capabilities. [Exact coverage](../contracts/device-product-metadata.md).
+
 <!-- BEGIN retained catalogue record -->
 
 ## PDB-7 catalogue metadata are source strings, not capabilities

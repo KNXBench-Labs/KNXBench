@@ -2,6 +2,15 @@
 
 # Implementation status
 
+## Manufacturer names and complete product metadata (source candidate, after Alpha 20)
+
+Devices and Product data share a read-only name resolver for installed names and
+unambiguous retained masters, with exact-ID fallback. Expand Database records for
+all normalized scalar product/hardware/program data, every matching catalogue
+placement/section, sanitized source provenance and file-scoped additional
+attributes. Original XML, binary payloads and verified hardware capabilities are
+not implied. [Coverage, regression seam and limits](../contracts/device-product-metadata.md).
+
 ## Background activities (source only, after Alpha 20)
 
 An expandable footer observes actual App-owned project loading/saving, device

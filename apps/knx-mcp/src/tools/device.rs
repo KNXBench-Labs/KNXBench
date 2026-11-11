@@ -274,7 +274,28 @@ fn resolve_product(
     match row {
         Some(row) => {
             product.resolution = ProductResolution::Resolved;
+            let details = knx_productdb::query::device_product_details(
+                &conn,
+                product.product_ref.as_deref().unwrap_or_default(),
+                product.program_ref.as_deref().unwrap_or_default(),
+            )
+            .map_err(|error| error.to_string())?
+            .into_iter()
+            .map(|section| knx_projection::ProductDetailSection {
+                kind: section.kind,
+                id: section.id,
+                fields: section
+                    .fields
+                    .into_iter()
+                    .map(|field| knx_projection::ProductDetailField {
+                        key: field.key,
+                        value: field.value,
+                    })
+                    .collect(),
+            })
+            .collect();
             product.catalog = Some(knx_projection::DeviceProductCatalog {
+                details: Some(details),
                 manufacturer_id: row.manufacturer_id,
                 manufacturer_name: row.manufacturer_name,
                 product_text: row.product_text,

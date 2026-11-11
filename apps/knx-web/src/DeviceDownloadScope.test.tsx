@@ -137,6 +137,16 @@ it("warns before start when an explicit scope leaves a pending part unwritten (#
   expect(host.querySelector('[data-scope-uncovered-part="parameters"]')).toBeNull();
 });
 
+it("says which other parts are pending is unknown when the application is pending", async () => {
+  apiMock.planDeviceDownload.mockResolvedValue({ ...PLAN, scopeFromChanges: false, scope: "parameters",
+    scopeAdvice: advice({ write: "complete" }) });
+  await prepare("parameters");
+  const warning = host.querySelector("[data-scope-uncovered]");
+  expect(warning?.getAttribute("data-scope-uncovered")).toBe("application");
+  expect(warning?.textContent).toContain(en["deviceDownload.scopeAdvice.uncovered.titleApplication"]);
+  expect(warning?.textContent).not.toContain(en["deviceDownload.scopeAdvice.uncovered.title"]);
+});
+
 it("names no uncovered part when the scope covers everything pending", async () => {
   await prepare("changes");
   expect(host.querySelector("[data-scope-uncovered]")).toBeNull();

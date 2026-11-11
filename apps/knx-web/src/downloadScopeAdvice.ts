@@ -54,7 +54,7 @@ const PARTIAL: Record<"parameters" | "groupAddresses" | "both", readonly Uncover
  * Advice `complete` says only that the application is pending (the server does not say
  * which other parts are), so a partial scope then names the application alone. */
 export function uncoveredParts(scope: DeviceDownloadScopeCode, advice: DeviceDownloadScopeAdvice): UncoveredPart[] {
-  if (advice.write === "nothing" || scope === "complete") return [];
+  if (!isScopeCode(scope) || advice.write === "nothing" || scope === "complete") return [];
   if (advice.write === "complete") return ["application"];
   const written = PARTIAL[scope];
   return PARTIAL[advice.write].filter((part) => !written.includes(part));

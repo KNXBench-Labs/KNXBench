@@ -6,6 +6,8 @@ import type { ProjectTree } from "../src/bindings/ProjectTree";
 import type { ParameterPanel, LineScanResultsResponse } from "../src/api";
 import type { ComObjectNode } from "../src/bindings/ComObjectNode";
 import type { DeviceNode } from "../src/bindings/DeviceNode";
+import type { DeviceProductNode } from "../src/bindings/DeviceProductNode";
+import { product as databaseProduct } from "./fixtures/product-details";
 import { messages as en } from "../src/messages/en";
 import { messages as de } from "../src/messages/de";
 import { achievementsFixtureAnswer } from "./achievements-fixture";
@@ -67,6 +69,76 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
   });
 }
 
+for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
+  test(`${language} complete product database metadata at ${width}px`, async ({ page }, testInfo) => {
+    const m = language === "de" ? de : en;
+    await page.setViewportSize({ width, height: 1000 });
+    const state = await intercept(page, language, 3, width === 1440 ? "graphite" : "porcelain");
+    state.detailProduct = structuredClone(databaseProduct);
+    await openProject(page, language); await openList(page, language);
+    const firstRow = page.locator(".devices-table tbody tr").filter({ hasText: "Actuator 1" });
+    await expect(firstRow).toContainText(databaseProduct.catalog!.manufacturer_name!);
+    await firstRow.getByRole("button", { name: "Actuator 1", exact: true }).click();
+    await page.getByRole("tab", { name: m["deviceIdentity.tab"], exact: true }).click();
+    const achievement = page.locator(".toast--achievement .toast-dismiss");
+    if (await achievement.count()) {
+      await achievement.first().click();
+      await expect(page.locator(".toast--achievement")).toHaveCount(0);
+    }
+    const identity = page.locator(".device-identity");
+    await expect(identity).toContainText("Fictional Devices");
+    await expect(identity).toContainText("P-rich");
+    await identity.locator(".identity-more > summary").click();
+    const records = identity.locator(".product-database-details");
+    const sections = databaseProduct.catalog!.details!;
+    await expect(records.locator("details")).toHaveCount(sections.length);
+    await expect(records.locator("dd")).toHaveCount(sections.reduce((count, section) => count + section.fields.length, 0));
+    await testInfo.attach(`product-overview-${language}-${width}`, { body: await identity.screenshot(), contentType: "image/png" });
+    for (const [index, section] of sections.entries()) {
+      const record = records.locator("details").nth(index);
+      await record.locator("summary").click();
+      await expect(record.locator("dd")).toHaveText(section.fields.map(field => field.value));
+      expect(await record.evaluate(node => node.scrollWidth - node.clientWidth)).toBeLessThanOrEqual(1);
+      if (["hardware", "application", "catalogItem", "source", "additionalAttributes", "package"].includes(section.kind)) {
+        await record.scrollIntoViewIfNeeded();
+        await testInfo.attach(`product-${section.kind}-${index}-${language}-${width}`, { body: await record.screenshot(), contentType: "image/png" });
+      }
+      await record.locator("summary").click();
+    }
+    const bounds = await records.boundingBox();
+    expect(bounds!.x).toBeGreaterThanOrEqual(0);
+    expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(width + 1);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1);
+    expect(state.requests.filter(request => /^(POST|PUT|DELETE) /.test(request))).toEqual([
+      "POST /api/bus/discover", "POST /api/project/new",
+      // Existing local achievement bookkeeping for opening the project/list/device; no project edit.
+      "POST /api/achievements/record", "POST /api/achievements/record", "POST /api/achievements/record",
+    ]);
+    expect(state.unexpected).toEqual([]);
+  });
+}
+
+test("unknown manufacturer IDs and long product metadata remain readable", async ({ page }) => {
+  await page.setViewportSize({ width: 400, height: 900 });
+  const state = await intercept(page, "en");
+  state.detailProduct = structuredClone(databaseProduct);
+  state.detailProduct.catalog!.manufacturer_name = null;
+  state.detailProduct.catalog!.manufacturer_id = "M-FFFF";
+  const long = "UnbrokenSourceLiteral".repeat(60);
+  state.detailProduct.catalog!.details!.push({ kind: "source", id: long, fields: [{ key: "sample", value: long }] });
+  await openProject(page, "en"); await openList(page, "en");
+  await page.getByRole("button", { name: "Actuator 1", exact: true }).click();
+  await page.getByRole("tab", { name: en["deviceIdentity.tab"], exact: true }).click();
+  const identity = page.locator(".device-identity");
+  await expect(identity.locator(".identity-fields").first()).toContainText("M-FFFF");
+  await identity.locator(".identity-more > summary").click();
+  const record = identity.locator(".product-database-details details").last();
+  await record.locator("summary").click();
+  await expect(record.locator("dd")).toHaveText(long);
+  expect(await record.evaluate(node => node.scrollWidth - node.clientWidth)).toBeLessThanOrEqual(1);
+  expect(state.unexpected).toEqual([]);
+});
+
 const devices = (count: number): DeviceNode[] => Array.from({ length: count }, (_, index) => ({
   id: index + 1, name: `Actuator ${index + 1}`, address: index < 2 ? `1.1.${index === 0 ? 2 : 10}` : null,
   description: `Fictional device ${index + 1}`, com_object_count: 0,
@@ -84,7 +156,7 @@ function fixtureTree(nodes: DeviceNode[]): ProjectTree {
 }
 async function intercept(page: Page, language: "en" | "de", count = 3, theme = "porcelain", parameterEditing = false, parameterWorkspace = false) {
   const nodes = devices(count); const tree = fixtureTree(nodes);
-  const state = { tree, nodes, unexpected: [] as string[], requests: [] as string[], polls: 0, failCatalogue: false };
+  const state = { tree, nodes, unexpected: [] as string[], requests: [] as string[], polls: 0, failCatalogue: false, detailProduct: null as DeviceProductNode | null };
   let mode = "0";
   tree.project_incarnation = 1;
   const panel = (): ParameterPanel => ({ programId: "A-FIXTURE", sourceLanguage: "en", tree: null, stale: [], diagnostics: [],
@@ -136,7 +208,7 @@ async function intercept(page: Page, language: "en" | "de", count = 3, theme = "
     } else if (/^\/api\/device\/\d+$/.test(path) && method === "GET") {
       const device = nodes.find((node) => node.id === Number(path.split("/").at(-1)));
       if (!device) { status = 400; body = { error: "device not found" }; }
-      else body = { ...device, com_objects: parameterEditing && mode !== "0" ? [configuredObject()] : [], product: { resolution: "NoReference", product_ref: null, program_ref: null, catalog: null } };
+      else body = { ...device, com_objects: parameterEditing && mode !== "0" ? [configuredObject()] : [], product: state.detailProduct ?? { resolution: "NoReference", product_ref: null, program_ref: null, catalog: null } };
     } else if (/^\/api\/device\/\d+\/parameters$/.test(path) && method === "GET") body = parameterEditing ? shownPanel() : { programId: null, sections: [], stale: [], diagnostics: [] };
     else if (parameterEditing && /^\/api\/device\/\d+\/parameters$/.test(path) && method === "POST") {
       const write = route.request().postDataJSON();

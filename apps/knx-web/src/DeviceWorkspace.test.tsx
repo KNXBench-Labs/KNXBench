@@ -485,7 +485,7 @@ it("shows a resolved device's catalogue entry, with refs verbatim in monospace",
   expect(more.textContent).toContain("MV-0701");
   // One null field (the serial number) is omitted, and the omission is stated
   // rather than left for the user to notice.
-  expect(more.textContent).toContain("1 further field is omitted");
+  expect(more.textContent).toContain("1 overview field is omitted");
   expect(identity.textContent).not.toContain("Hardware serial number");
   await cleanup();
 });
@@ -496,7 +496,7 @@ it("names the missing serial and missing application data honestly on a partly i
   const more = host.querySelector<HTMLElement>("details.identity-more")!;
   const identity = host.querySelector<HTMLElement>(".device-identity")!;
   expect(more.textContent).toContain("The product database holds no values here.");
-  expect(more.textContent).toContain("6 further fields are omitted");
+  expect(more.textContent).toContain("6 overview fields are omitted");
   // A ref the project never stated says so in prose — not blank, not "unknown",
   // and not in the monospace face reserved for real ref strings.
   const missing = [...identity.querySelectorAll("dd")].find((d) => d.textContent === "not stated in the project")!;

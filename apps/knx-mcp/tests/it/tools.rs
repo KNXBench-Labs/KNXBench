@@ -120,6 +120,23 @@ fn get_device_resolves_ids_addresses_and_refuses_ambiguity() {
         result["device"]["product"]["catalog"]["order_number"],
         "DIM-1"
     );
+    let catalog_details = result["device"]["product"]["catalog"]["details"]
+        .as_array()
+        .expect("MCP forwards the available product database records");
+    assert!(catalog_details.iter().any(|section| {
+        section["kind"] == "product"
+            && section["fields"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .any(|field| field["key"] == "order_number" && field["value"] == "DIM-1")
+    }));
+    assert!(catalog_details
+        .iter()
+        .any(|section| section["kind"] == "manufacturer"));
+    assert!(catalog_details
+        .iter()
+        .any(|section| section["kind"] == "application"));
     let empty_dir = tempfile::tempdir().unwrap();
     let empty = empty_dir.path().join("products.sqlite");
     knx_productdb::open_and_migrate(&empty).unwrap();

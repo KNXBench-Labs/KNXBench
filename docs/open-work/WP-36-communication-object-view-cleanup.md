@@ -1,7 +1,9 @@
 # WP-36 — Communication-object view: links first, compact toolbar, direction pre-fill (#44, #46, #47)
 
 External report by the issue reporter, 10 November 2026; triaged 11 November 2026.
-Status: **open.**
+Status: **#47 implemented 11 November 2026** (`linkDirectionDefault.ts`, both link
+forms, reason shown under the choice; a suggestion the address already has is
+replaced by the other direction on the address side). **#44 and #46 open.**
 
 ## Requested outcome
 

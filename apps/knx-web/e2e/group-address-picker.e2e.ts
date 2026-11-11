@@ -65,7 +65,8 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) f
     await expect(editor).toBeVisible();
     await editor.getByRole("button", { name: m["inspector.link"], exact: true }).click();
     await expect.poll(() => links.length).toBe(1);
-    expect(links[0]).toMatchObject({ gaId: 502, direction: "Send" });
+    // The fixture object is Write-only, so the row suggests Receive (issue #47).
+    expect(links[0]).toMatchObject({ gaId: 502, direction: "Receive" });
     await expect(picker).toHaveValue("");
     expect(state.unexpected).toEqual([]);
   });

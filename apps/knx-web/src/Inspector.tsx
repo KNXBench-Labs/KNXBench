@@ -1,5 +1,6 @@
 /** Properties inspector showing and editing details for whatever tree entity is selected. */
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { suggestLinkDirection } from "./linkDirectionDefault";
 import { LineStoredBusAccess } from "./StoredBusAccess";
 import { carriesGroupAddress, readDraggedGroupAddress } from "./groupAddressDrag";
 import * as api from "./api";
@@ -604,7 +605,10 @@ function NewGroupLinkRow(props: {
   const t = useTranslate();
   const mutate = useComMutation();
   const [gaId, setGaId] = useState<number | null>(null);
-  const [direction, setDirection] = useState<"Send" | "Receive" | "Both">("Send");
+  // Issue #47: follows the object until the user picks a direction; each link resets it.
+  const suggestion = suggestLinkDirection(com);
+  const [picked, setPicked] = useState<"Send" | "Receive" | "Both" | null>(null);
+  const direction = picked ?? suggestion.direction;
   const [error, setError] = useState<string | null>(null);
   const [dropReady, setDropReady] = useState(false);
   const canLink = gaId !== null;
@@ -617,6 +621,7 @@ function NewGroupLinkRow(props: {
       onApplied(tree);
       if (viaDrop) emitAchievementEvent({ type: "dragDropApplied" });
       setGaId(null);
+      setPicked(null);
     } catch (e) {
       setError(api.errorMessage(e));
     }
@@ -658,7 +663,9 @@ function NewGroupLinkRow(props: {
       <GroupAddressPicker addresses={groupAddresses} objectDpt={effectiveDpt(com)} value={gaId} onChange={setGaId} />
       <select
         value={direction}
-        onChange={(e) => setDirection(e.target.value as "Send" | "Receive" | "Both")}
+        aria-label={t("inspector.direction.label")}
+        data-link-direction-reason={picked === null ? suggestion.reason : "picked"}
+        onChange={(e) => setPicked(e.target.value as "Send" | "Receive" | "Both")}
       >
         <option value="Send">{t("inspector.direction.send")}</option>
         <option value="Receive">{t("inspector.direction.receive")}</option>
@@ -667,6 +674,9 @@ function NewGroupLinkRow(props: {
       <button onClick={link} disabled={!canLink}>
         {t("inspector.link")}
       </button>
+      {picked === null && suggestion.reason !== "fallback" && (
+        <span className="link-direction-hint">{t(`inspector.direction.reason.${suggestion.reason}`)}</span>
+      )}
       {error && <span className="field-error">{error}</span>}
     </li>
   );

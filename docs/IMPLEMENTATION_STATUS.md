@@ -12,6 +12,17 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## New group links pre-fill their direction from the object (11 November 2026; issue #47, WP-36)
+
+The link row on a communication object and **Add member…** on a group address
+used to start at Send. They now suggest: Receive when the object already has a
+sending link (one sending address per object; a download refuses a second),
+else Send for Transmit-without-Write, Receive for Write-without-Transmit, and
+Send otherwise. The reason is shown; a user's choice wins until the link is
+made. Not from the address name: a status address is sent by one object and
+received by others. Imported ETS projects mark most first links Send
+regardless of flags; this only changes the starting value of new links.
+
 ## German UI says “Programmieren” for device writes (11 November 2026; issue #41, WP-34)
 
 The German catalogue used *In Gerät laden*, *Download* and *Programmieren* for

@@ -268,7 +268,20 @@ on the communication object, or **Unlink** next to the member.
 
 The direction is part of the link, not of the address: one object may hold both a send
 and a receive link to the same address, and the **Links** column then counts it once
-in each direction. [Devices and products](05-devices-and-products.md) covers the
+in each direction.
+
+Both link forms pre-fill the direction from the object, never from the address's name
+(since issue #47), and say why under the choice:
+
+- An object that already sends on an address gets **Receive**: an object has one
+  sending address, and a download refuses a second.
+- Otherwise an object with the Transmit flag but not the Write flag gets **Send**, and
+  one with Write but not Transmit gets **Receive**.
+- Any other object (both flags, neither, or flags not known) keeps **Send**.
+
+The suggestion is only a starting value: change it, and your choice holds until the
+link is made. From the group address, a suggestion this address already has is
+replaced by the other direction. [Devices and products](05-devices-and-products.md) covers the
 communication object tab, including the six flags.
 
 > **Note**

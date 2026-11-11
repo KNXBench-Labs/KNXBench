@@ -28,7 +28,7 @@ async function serve(page:Page,language:"en"|"de") {
     if(path==="/api/legacy-password"&&method==="GET")return ok({available:true,remembered:false,problem:null});
     if(path==="/api/bus/discover"&&method==="POST")return ok({interfaces:[]});
     if(method==="GET"&&["/api/product-languages","/api/catalog/manufacturers","/api/catalog/items"].includes(path))return ok([]);
-    if(method==="GET"&&["/api/device-download/status","/api/device-address/status"].includes(path))return route.fulfill({status:404,contentType:"application/json",body:'{"error":"no fixture operation"}'});
+    if(method==="GET"&&["/api/device-download/status","/api/device-download/batch/status","/api/device-address/status"].includes(path))return route.fulfill({status:404,contentType:"application/json",body:'{"error":"no fixture operation"}'});
     if(method==="POST"&&path==="/api/project/monitor-export/preview"){posts.push({path,body:route.request().postDataJSON()});return ok(preview());}
     if(method==="POST"&&path==="/api/project/monitor-export/download"){posts.push({path,body:route.request().postDataJSON()});return route.fulfill({status:409,contentType:"application/json",body:'{"error":"Preview no longer current"}'});}
     unexpected.push(`${method} ${path}`);return route.fulfill({status:404,contentType:"application/json",body:'{"error":"strict monitoring export fixture"}'});

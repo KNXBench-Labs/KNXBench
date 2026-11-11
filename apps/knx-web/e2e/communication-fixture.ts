@@ -58,7 +58,7 @@ export async function intercept(page: Page, language: "en" | "de", count = 8, th
     else if (path === "/api/product-languages" && method === "GET") body = [];
     // Opening either download lane reads retained System-2 state without starting an operation.
     else if (path === "/api/device-system2/status" && method === "GET") body = null;
-    else if (["/api/device-download/status", "/api/device-address/status"].includes(path) && method === "GET") { status = 404; body = { error: "no operation in this fixture" }; }
+    else if (["/api/device-download/status", "/api/device-download/batch/status", "/api/device-address/status"].includes(path) && method === "GET") { status = 404; body = { error: "no operation in this fixture" }; }
     else if (path === "/api/devices" && method === "GET") {
       if (state.failCatalogue) { status = 500; body = { error: "fixture product database unavailable" }; }
       else body = { schemaVersion: 1, serverIncarnation: "devices-browser", snapshotRevision: state.tree.snapshot_revision,

@@ -1526,6 +1526,16 @@
       ]
     },
     {
+      "key": "batch-download",
+      "number": null,
+      "title": "Batch download",
+      "topic": "Commissioning and recovery",
+      "summary": "**Download all…** (ADR-0172) is tested only with simulated devices, fake tunnels and intercepted browser requests; there is no hardware run and no claim about programming devices back to back on a real line, coupler or gateway. The order is the address order, with no topology rule. The batch summary lives in server memory until the next batch or a restart; the per-device history rows are the durable record. Devices with a pending address, System-2 devices and plans without a performable post-download check stay outside the batch.",
+      "file": "batch-download.md",
+      "ledger_ids": [],
+      "anchors": []
+    },
+    {
       "key": "backup-directory-synchronization",
       "number": null,
       "title": "Backup directory synchronization",

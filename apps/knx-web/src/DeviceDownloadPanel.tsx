@@ -8,6 +8,7 @@
 
 import ResizableTable from "./ResizableTable";
 import System2DownloadPanel from "./System2DownloadPanel";
+import DeviceDownloadBatch from "./DeviceDownloadBatch";
 import { downloadEndChangesProject } from "./programmingState";
 import { useEffect, useMemo, useRef, useState } from "react";
 import * as api from "./api";
@@ -119,13 +120,20 @@ interface DeviceDownloadPanelProps {
   onHandoffHandled?: (nonce: number) => void;
   /** The project as reloaded after a run that wrote ended (ADR-0129). */
   onProjectChanged?: (tree: ProjectTree) => void;
+  /** A "Download all…" request (ADR-0172), answered once per nonce. */
+  batchRequest?: number | null;
+  onBatchRequestHandled?: (nonce: number) => void;
 }
 
-export default function DeviceDownloadPanel({ project, handoff = null, onHandoffHandled, onProjectChanged }: DeviceDownloadPanelProps) {
+export default function DeviceDownloadPanel({
+  project, handoff = null, onHandoffHandled, onProjectChanged, batchRequest = null, onBatchRequestHandled,
+}: DeviceDownloadPanelProps) {
   const t = useTranslate();
   const consent = useProgrammingConsent();
   const [mode, setMode] = useState<"memory" | "system2">("memory");
   const [system2Busy, setSystem2Busy] = useState(false);
+  // A batch starting or running: the single download waits (ADR-0172 §4).
+  const [batchBusy, setBatchBusy] = useState(false);
   const devices = useMemo(
     () =>
       project === null
@@ -216,7 +224,8 @@ export default function DeviceDownloadPanel({ project, handoff = null, onHandoff
     : selectedMark?.kind === "excluded" ? guidanceForMark(selectedMark) : null;
 
   const running = status?.status.state === "running";
-  const locked = planning || starting || running;
+  const singleBusy = planning || starting || running;
+  const locked = singleBusy || batchBusy;
   const runEnded = status !== null && !running;
   // Preparation/refusal belongs to the current selection, never a previous run.
   const report: ReportProblemRequest = {
@@ -608,6 +617,10 @@ export default function DeviceDownloadPanel({ project, handoff = null, onHandoff
 
       <System2DownloadPanel project={project} deviceId={deviceId} gateway={gateway}
         enabled={mode === "system2"} ordinaryBusy={locked} onBusyChange={setSystem2Busy} />
+
+      {project !== null && <DeviceDownloadBatch project={project} gateway={gateway} disabled={singleBusy || system2Busy}
+        openRequest={batchRequest} onOpenHandled={onBatchRequestHandled} onBusyChange={setBatchBusy}
+        onProjectChanged={onProjectChanged} />}
 
       {selectedDevice && <p><DeviceLink deviceId={selectedDevice.id}>{t("devices.openEditor")}</DeviceLink></p>}
       {error && <p className="form-error" role="alert">{error}</p>}

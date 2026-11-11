@@ -50,7 +50,7 @@ async function intercept(page: Page, language: "en" | "de", theme = "porcelain")
     else if (path === "/api/bus/discover" && method === "POST") body = { interfaces: [] };
     else if (path === "/api/product-languages" && method === "GET") body = [];
     else if (path === "/api/legacy-password" && method === "GET") body = { available: true, remembered: false, problem: null };
-    else if (["/api/device-download/status", "/api/device-address/status"].includes(path) && method === "GET") { status = 404; body = { error: "no operation in this fixture" }; }
+    else if (["/api/device-download/status", "/api/device-download/batch/status", "/api/device-address/status"].includes(path) && method === "GET") { status = 404; body = { error: "no operation in this fixture" }; }
     else if (path === "/api/device-system2/status" && method === "GET") { state.system2Reads += 1; body = state.system2; }
     // The bus workspace's download tab (issue #42 jump): read-only hints, no monitor session.
     else if (path === "/api/bus/monitor/telegrams" && method === "GET") { status = 404; body = { error: "no monitor session is active" }; }

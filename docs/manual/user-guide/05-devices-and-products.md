@@ -595,11 +595,41 @@ the device editor's **Download to device…** does, so it neither prepares a
 plan nor starts anything or connects to the bus. A device without an
 individual address shows the button disabled with the reason.
 
-The block reads the project's marks and is read-only. Downloading all pending
-devices one after another in a single batch is not available: it is a
-multi-device bus write and needs its own design decision first
-([WP-38](../../open-work/WP-38-pending-devices-panel.md)). This block needs a
+The block reads the project's marks and is read-only. This block needs a
 source build newer than Alpha 20; the screenshots in this manual do not show it.
+
+<a id="download-all-pending"></a>
+
+#### Download all pending (main-only after Alpha 20; issue #42)
+
+**Download all…** (German: **Alle programmieren…**) at the top of the block,
+or in the **Download to device** tab, opens a review of every pending device
+in the block's order. Asking for the review prepares the plans; nothing is
+sent yet. Each device is either in the batch, with what it would write (the
+scope its marks advise) and whether that download is verified on hardware or
+untested, or listed as **Not in this batch** with the reason: no individual
+address, an address that is itself pending (program the address first),
+only the address or medium configuration pending, a System-2 device, a plan
+KNXBench does not support, no check possible after the download, or an
+address on the project's exclusion list.
+
+Clear a device's box to leave it out. Each untested device needs its own
+acknowledgement phrase typed into its row; there is no "acknowledge all".
+The start button stays disabled until a gateway is set, at least one device
+is selected and every selected untested device is acknowledged. Starting asks
+one confirmation that lists the devices in order, even if you chose "don't
+ask again" for single downloads.
+
+The server then programs the devices one after the other, each exactly as a
+single download (fresh plan check, backup, its own connection, check after
+the download). The next device starts only when the previous one was written
+completely, restarted and checked as matching its plan. Anything else stops
+the batch, and the remaining devices are reported as not started. **Stop
+after this device** lets the device in progress finish and starts no other.
+The batch keeps running if you close the page; open the tab again to see its
+result per device. Batch programming has only been tested against simulated
+devices, not on a real installation
+([ADR-0172](../../adr/0172-batch-programming-stops-at-the-first-doubt.md)).
 
 ## The product catalog
 

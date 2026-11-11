@@ -46,7 +46,7 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
       if (path === "/api/project/status-metrics" && method === "GET") return ok(statusMetricsFixtureBody(tree));
       if (path === "/api/fs/list") return ok([{ name: "synthetic.knxproj", is_dir: false }]);
       if (["/api/product-languages", "/api/catalog/manufacturers", "/api/catalog/items"].includes(path)) return ok([]);
-      if (["/api/device-download/status", "/api/device-address/status"].includes(path)) {
+      if (["/api/device-download/status", "/api/device-download/batch/status", "/api/device-address/status"].includes(path)) {
         return route.fulfill({ status: 404, contentType: "application/json", body: '{"error":"no fixture operation"}' });
       }
       if (path === "/api/log") return ok([

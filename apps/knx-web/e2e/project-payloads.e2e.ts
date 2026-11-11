@@ -44,7 +44,7 @@ for (const language of ["en","de"] as const) for (const width of [400,1440]) {
       else if(path==="/api/project/status-metrics"&&method==="GET")body=statusMetricsFixtureBody(tree);
       else if(path==="/api/product-languages"&&method==="GET")body=[];
       else if(path==="/api/bus/discover"&&method==="POST")body={interfaces:[]};
-      else if(["/api/device-download/status","/api/device-address/status"].includes(path)&&method==="GET"){status=404;body={error:"no fixture operation"};}
+      else if(["/api/device-download/status","/api/device-download/batch/status","/api/device-address/status"].includes(path)&&method==="GET"){status=404;body={error:"no fixture operation"};}
       else if(achievementsFixtureAnswer(method,path)!==undefined)body=achievementsFixtureAnswer(method,path);
       else if(busActivityFixtureAnswer(method,path)!==undefined)body=busActivityFixtureAnswer(method,path);
       else {unexpected.push(`${method} ${path}`);status=404;body={error:"strict fictional evidence fixture"};}

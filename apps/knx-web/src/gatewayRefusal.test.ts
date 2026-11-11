@@ -61,6 +61,23 @@ describe("admitGatewayRefusal", () => {
   });
 });
 
+describe("batch holder (ADR-0172)", () => {
+  it("admits the batch holder, with or without an address, and words it per language", () => {
+    const holder = { kind: "deviceDownloadBatch", batchId: 40, address: "1.1.8", position: 1, total: 3 };
+    expect(admitGatewayRefusal(busy(holder))).toEqual({ kind: "gatewayBusy", holder });
+    const between = { kind: "deviceDownloadBatch", batchId: 40, position: 2, total: 3 };
+    const admitted = admitGatewayRefusal(busy(between))!;
+    expect(admitted).toEqual({ kind: "gatewayBusy", holder: between });
+    expect(describeGatewayRefusal(admitted, translateFor.bind(null, "en"))).toBe(
+      "The gateway is busy: a batch download is running (device 2 of 3). Wait until it has finished.");
+    expect(describeGatewayRefusal(admitted, translateFor.bind(null, "de"))).toBe(
+      "Das Gateway ist belegt: Ein Batch läuft (Gerät 2 von 3). Warte, bis er fertig ist.");
+    for (const bad of [{ ...holder, position: 4 }, { ...holder, position: 0 }, { ...holder, address: "x" }, { ...holder, extra: 1 }]) {
+      expect(admitGatewayRefusal(busy(bad))).toBeNull();
+    }
+  });
+});
+
 describe("describeGatewayRefusal", () => {
   it("names the KNXBench session that holds the tunnel, per kind", () => {
     const say = (holder: unknown) => describeGatewayRefusal(admitGatewayRefusal(busy(holder))!, en);

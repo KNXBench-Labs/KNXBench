@@ -157,7 +157,7 @@ async function fixture(page: Page, language: Language, theme: string, width: num
       f.items = f.items.filter((item) => !body.itemIds.includes(item.id));
       return ok({ removedItemIds: body.itemIds, backup: CLEANUP_BACKUP });
     }
-    if (["/api/device-download/status", "/api/device-address/status"].includes(path)) return refuse(404, "none", "no fixture operation");
+    if (["/api/device-download/status", "/api/device-download/batch/status", "/api/device-address/status"].includes(path)) return refuse(404, "none", "no fixture operation");
     if (path === "/api/device-system2/status" && method === "GET") return ok(null);
     if (path === "/api/devices" && method === "GET") return ok({ schemaVersion: 1, serverIncarnation: "catalogue-fixture", snapshotRevision: 1, devices: [] });
     if (path === "/api/catalog/backups" && method === "GET") return ok({ backups: f.backups });

@@ -16,6 +16,8 @@ export type TunnelHolder =
   /** `gateway` is missing only from an older server's activity snapshot. */
   | { kind: "busMonitor"; sessionId: number; gateway?: string; serial?: SerialTarget; transport?: IpTunnelTransport; state: "active" | "closed" }
   | { kind: "lineScan"; sessionId: number; probed: number; total: number }
+  /** ADR-0172: a batch holds the gateway also between its devices; `address` is the current or next one. */
+  | { kind: "deviceDownloadBatch"; batchId: number; address?: string; position: number; total: number }
   | { kind: "connecting"; session: BusyLock };
 
 /** A running download's server-counted progress (issue #43). */
@@ -74,6 +76,10 @@ function admitHolder(value: unknown): TunnelHolder | null {
       h = exactly(value, ["kind", "sessionId", "probed", "total"]);
       return h && positive(h.sessionId) && count(h.probed) && count(h.total) && h.probed <= h.total
         ? h as TunnelHolder : null;
+    case "deviceDownloadBatch":
+      h = exactly(value, ["kind", "batchId", "address", "position", "total"]) ?? exactly(value, ["kind", "batchId", "position", "total"]);
+      return h && count(h.batchId) && (h.address === undefined || individualAddress(h.address))
+        && positive(h.position) && positive(h.total) && h.position <= h.total ? h as TunnelHolder : null;
     case "connecting":
       h = exactly(value, ["kind", "session"]);
       return h && oneOf(h.session, BUSY_LOCKS) ? h as TunnelHolder : null;
@@ -196,6 +202,8 @@ export function describeHolder(holder: TunnelHolder, t: Translate): string {
         : t("gatewayRefusal.busy.busMonitorClosed", { gateway: gatewayWithTransport(holder.gateway, holder.transport) });
     case "lineScan":
       return t("gatewayRefusal.busy.lineScan", { probed: holder.probed, total: holder.total });
+    case "deviceDownloadBatch":
+      return t("gatewayRefusal.busy.deviceDownloadBatch", { position: holder.position, total: holder.total });
     case "connecting":
       return t(CONNECTING[holder.session]);
   }

@@ -91,7 +91,7 @@ async function fixture(page: Page, language: Language, width: number): Promise<F
     if (path === "/api/log") return ok([]);
     if (path === "/api/bus/discover" && method === "POST") return ok({ interfaces: [] });
     if (["/api/product-languages", "/api/catalog/manufacturers", "/api/catalog/items"].includes(path)) return ok([]);
-    if (["/api/device-download/status", "/api/device-address/status"].includes(path)) return refuse(404, "none", "no fixture operation");
+    if (["/api/device-download/status", "/api/device-download/batch/status", "/api/device-address/status"].includes(path)) return refuse(404, "none", "no fixture operation");
     if (path === "/api/device-system2/status" && method === "GET") return ok(null);
     if (path === "/api/devices" && method === "GET") return ok({ schemaVersion: 1, serverIncarnation: "rename-fixture", snapshotRevision: f.revision, devices: [] });
     if (path === "/api/device/41" && method === "GET") return ok({ ...DEVICE, com_objects: [], product: { resolution: "NoReference", product_ref: null, program_ref: null, catalog: null } });

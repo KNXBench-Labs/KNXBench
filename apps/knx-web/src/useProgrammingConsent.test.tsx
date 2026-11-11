@@ -190,6 +190,38 @@ it("an unmount with the question open is a no", async () => {
   await expect(answer).resolves.toBe(false);
 });
 
+it("a batch asks even with a remembered stage, names every device and offers no 'don't ask again'", async () => {
+  apiMock.serverVersion.mockResolvedValue({ version: "0.1.0-alpha.1" });
+  rememberProgrammingConsent("alpha", "0.1.0-alpha.1");
+  await mount();
+  // The single question honours the remembered stage …
+  await expect((await ask()).answer).resolves.toBe(true);
+  expect(dialog()).toBeNull();
+  // … a batch does not (ADR-0172 §3).
+  let answer: Promise<boolean> | undefined;
+  await act(async () => { answer = consent!.requestBatch(["1.1.8 — Dimmer", "1.1.9 — Blind"]); });
+  const panel = dialog()!;
+  expect(panel).not.toBeNull();
+  expect(panel.querySelector("h2")?.textContent).toBe(en["programmingConsent.batch.title.other"].replace("{count}", "2"));
+  expect([...panel.querySelectorAll(".programming-consent-batch li")].map((li) => li.textContent))
+    .toEqual(["1.1.8 — Dimmer", "1.1.9 — Blind"]);
+  expect(panel.querySelector(".programming-consent-remember")).toBeNull();
+  expect(panel.textContent).toContain(en["programmingConsent.batch.alwaysAsked"]);
+  await act(async () => button(en["programmingConsent.batch.confirm.other"].replace("{count}", "2")).click());
+  await expect(answer!).resolves.toBe(true);
+});
+
+it("a cancelled or empty batch is a no", async () => {
+  apiMock.serverVersion.mockResolvedValue({ version: "0.1.0-alpha.1" });
+  await mount();
+  await expect(consent!.requestBatch([])).resolves.toBe(false);
+  let answer: Promise<boolean> | undefined;
+  await act(async () => { answer = consent!.requestBatch(["1.1.8 — Dimmer"]); });
+  await act(async () => button(en["programmingConsent.cancel"]).click());
+  await expect(answer!).resolves.toBe(false);
+  expect(getSetting(PROGRAMMING_CONSENT_KEY)).toBeUndefined();
+});
+
 it("every message key exists in both catalogues", () => {
   const keys = Object.keys(en).filter((k) => k.startsWith("programmingConsent.") || k.startsWith("settings.programmingConsent"));
   expect(keys.length).toBeGreaterThan(20);

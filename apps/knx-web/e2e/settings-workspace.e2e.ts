@@ -57,7 +57,7 @@ async function fixture(page: Page, language: Language, loaded: boolean, uiScale 
     if (path === "/api/bus/discover" && method === "POST") return ok({ interfaces: [] });
     if (["/api/product-languages", "/api/catalog/manufacturers", "/api/catalog/items"].includes(path) && method === "GET") return ok([]);
     if (path === "/api/device-system2/status" && method === "GET") return ok(null);
-    if (["/api/device-download/status", "/api/device-address/status"].includes(path) && method === "GET") return refuse(404);
+    if (["/api/device-download/status", "/api/device-download/batch/status", "/api/device-address/status"].includes(path) && method === "GET") return refuse(404);
     if (path === "/api/devices" && method === "GET") return ok({ schemaVersion: 1, serverIncarnation: "settings-fixture", snapshotRevision: 1, devices: [] });
     state.unexpected.push(`${method} ${path}`); return refuse(404);
   });

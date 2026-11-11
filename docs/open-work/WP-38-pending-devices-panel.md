@@ -1,10 +1,11 @@
 # WP-38 — Pending-devices panel and batch download (#42)
 
 External report by the issue reporter, 10 November 2026; triaged 11 November 2026.
-Status: **step 1 implemented** (11 November 2026, main-only); **step 2 designed**
-in [ADR-0172](../adr/0172-batch-programming-stops-at-the-first-doubt.md)
-(Proposed); its **server part implemented** (WP-38b, 11 November 2026), the UI
-part (WP-38c) open. Depends on WP-34 copy.
+Status: **implemented** (11 November 2026, main-only): step 1 read-only panel;
+step 2 batch download per
+[ADR-0172](../adr/0172-batch-programming-stops-at-the-first-doubt.md)
+(Accepted), server part WP-38b and UI part WP-38c. Simulator and intercepted
+browser tests only; no hardware run. Depends on WP-34 copy.
 
 ## Packages
 
@@ -87,17 +88,40 @@ Routes `batch/plan`, `batch/start`, `batch/status` and `batch/stop` under
 `running`, `done`, `unconfirmed` (with `doubt`), `failed`, `stopped`,
 `notStarted` (`earlierDevice`, `stopRequest`, `serverStop`, `runEnded`),
 `notInBatch` (with `reason.code`) and `deselected`. Simulator and fake-tunnel
-tests only. Open for WP-38c: the **Download all…** / **Alle programmieren…**
-review in the pending block and the download tab, batch consent, per-device
-acknowledgements, status polling and en/de copy; wording for the new busy
-holder.
+tests only.
 
-Limits of the server part: the batch summary lives in server memory only (the
-per-device history rows are the durable record); tested with simulated devices
-and fake tunnels only; no claim about programming devices back to back on a
-real line or gateway; busy refusals of the other routes keep their text and name
-the batch only in `holder`. These move to `KNOWN_LIMITATIONS.md` with the UI
-part, when the feature becomes reachable.
+## Step 2 UI part (WP-38c, implemented 11 November 2026)
+
+- **Entry points:** **Download all…** / **Alle programmieren…** above the
+  pending block's list (only with pending devices) and in the **Download to
+  device** tab (`DeviceDownloadBatch.tsx`). The block's button opens the
+  download tab and asks for the review there, using that tab's gateway; it
+  waits while another download on the page is busy.
+- **Review:** every reviewed device in order; devices in the batch with a
+  checkbox, scope and support level; others with *Not in this batch* and the
+  server's reason. Each selected `untested` device has its own phrase field.
+  **Download {count} devices…** stays disabled until a gateway is set, one
+  device is selected and every selected `untested` device is acknowledged.
+- **Consent:** `useProgrammingConsent().requestBatch(devices)` shows the dialog
+  even with a remembered stage consent, lists the devices, offers no "don't ask
+  again" and states that the batch stops at the first doubt. ADR-0040 carries
+  the *narrowed by ADR-0172* note. Phrases are sent only after a yes.
+- **Run:** status polled every 500 ms with a sentence per device state;
+  **Stop after this device**; the project reloads once when the batch ends
+  (settled flags). A batch found running when the tab opens is shown.
+- **Busy holder:** `deviceDownloadBatch` refusals are worded ("a batch download
+  is running (device 2 of 3)").
+
+Tests: `DeviceDownloadBatch.test.tsx`, `useProgrammingConsent.test.tsx`,
+`PendingProgrammingPanel.test.tsx`, `gatewayRefusal.test.ts`, and en/de
+browser cases at 1440 and 400 px in `e2e/batch-download.e2e.ts` (development
+fixture config and production `playwright.devices.config.ts`), with every
+`/api/**` request intercepted and unexpected ones failing the case.
+
+Limits: the batch summary lives in server memory only (the per-device history
+rows are the durable record); no claim about programming devices back to back
+on a real line or gateway; busy refusals of other routes keep their text and
+name the batch in `holder`. See `KNOWN_LIMITATIONS.md`, *Batch download*.
 
 ## Step 2 design summary
 

@@ -1,7 +1,8 @@
 # ADR 0040: Programming a device needs a release-stage-aware consent, rememberable per stage
 
 Date: 2026-09-27
-Status: Accepted
+Status: Accepted; narrowed by [ADR-0172](0172-batch-programming-stops-at-the-first-doubt.md)
+(a batch confirmation is shown even with a remembered stage consent)
 Session: 7 (integration / hardening)
 
 ## Context

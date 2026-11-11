@@ -144,6 +144,7 @@ async function fixture(page: Page, options: Options): Promise<Fixture> {
       return (options.statusGate ?? Promise.resolve()).then(() => options.running ? ok(RUNNING) : ok({ error: "no download" }, 404));
     }
     if (path === "/api/device-address/status" && method === "GET") return ok({ error: "no operation" }, 404);
+    if (path === "/api/device-download/batch/status" && method === "GET") return ok({ error: "no batch download yet" }, 404);
     // The monitor tab reads the server's telegram buffer when the bus
     // workspace mounts; without a session the real server answers 404.
     if (path === "/api/bus/monitor/telegrams" && method === "GET") return ok({ error: "no monitor session is active" }, 404);

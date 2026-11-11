@@ -105,7 +105,7 @@ async function fixture(page: Page, language: Language, theme: string, width: num
     if (path === "/api/fs/list") return ok([{ name: "other-fictional.knxproj", is_dir: false }]);
     if (path === "/api/bus/discover" && method === "POST") return ok({ interfaces: [] });
     if (["/api/product-languages", "/api/catalog/manufacturers", "/api/catalog/items"].includes(path)) return ok([]);
-    if (["/api/device-download/status", "/api/device-address/status"].includes(path)) return refuse(404, "none", "no fixture operation");
+    if (["/api/device-download/status", "/api/device-download/batch/status", "/api/device-address/status"].includes(path)) return refuse(404, "none", "no fixture operation");
     if (path === "/api/project/notes" && method === "GET") return ok(viewOf(f));
     if (path === "/api/project/notes/targets" && method === "GET") { f.targetReads += 1; return ok(targetsOf(f)); }
     if (path === "/api/project/notes/preview" && method === "POST") {

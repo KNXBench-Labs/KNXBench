@@ -21,6 +21,13 @@
       "device": "MDT fourfold push button 1.1.14, mask 0701h",
       "date": "2026-10-09",
       "reference": "docs/research/commissioning.md §19.21 (complete, 1562 octets read back, function telegrams, restore verified across 1570 octets)"
+    },
+    {
+      "program_id": "M-0006_A-E052-12-3406",
+      "scopes": ["partial-parameters"],
+      "device": "Hager push button (S8014xxx0, application version 18), mask 0701h, tester device",
+      "date": "2026-11-10",
+      "reference": "docs/evidence/tester-report-hager-0701-2026-11-10.json (tester report, issue #38: parameters only, 1457 octets planned, post-download identity and load states matched, device function confirmed)"
     }
   ]
 }

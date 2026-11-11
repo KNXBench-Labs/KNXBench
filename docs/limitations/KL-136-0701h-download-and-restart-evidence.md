@@ -26,3 +26,14 @@ with independent readback and light-function telegrams; neither closing
 restart was acknowledged (§19.21). Three programs from two manufacturers
 on one mask are not evidence for other masks or revisions.
 <!-- END retained catalogue record -->
+
+## 2026-11-11: a fourth program from a tester report
+
+A tester report on issue #38 records a parameters-only download of the Hager
+push button `M-0006_A-E052-12-3406` (`0701h`, application version 18) on the
+tester's own device, with the post-download identity and load states matching
+the plan and the device working as configured; the closing restart was not
+acknowledged. The program file's SHA-256 matches the report. Only
+`partial-parameters` is listed as verified: the complete and
+parameters-plus-group-addresses runs described in the thread have no report
+file yet. [Evidence record](../evidence/tester-report-hager-0701-2026-11-10.json).

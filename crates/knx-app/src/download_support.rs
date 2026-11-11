@@ -726,7 +726,21 @@ mod tests {
         assert_eq!(button.scopes, ["complete"], "{button:?}");
         assert_eq!(button.date, "2026-10-09");
         assert!(button.reference.starts_with("docs/"), "{button:?}");
-        assert_eq!(shipped.len(), 3, "{shipped:?}");
+        assert_eq!(shipped.len(), 4, "{shipped:?}");
+    }
+
+    #[test]
+    fn the_shipped_evidence_names_the_hager_button_parameters_only() {
+        let shipped = shipped_evidence().expect("the shipped file parses");
+        let hager = shipped
+            .get("M-0006_A-E052-12-3406")
+            .expect("the Hager push button is verified");
+        // One tester report (issue #38) for parameters only. The complete and
+        // parameters-plus-group-addresses runs are described in the thread but
+        // have no report file, so they are not listed (ADR-0121).
+        assert_eq!(hager.scopes, ["partial-parameters"], "{hager:?}");
+        assert_eq!(hager.date, "2026-11-10");
+        assert!(hager.reference.starts_with("docs/evidence/"), "{hager:?}");
     }
 
     #[test]

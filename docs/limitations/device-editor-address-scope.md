@@ -55,8 +55,10 @@ WebKitGTK, hardware behavior and screen-reader announcements remain unverified.
 
 ## 2026-11-11: Send + Receive on one address and the download
 
-“Send + Receive” on one address is a valid project edit, but an ordinary
-memory download refuses it: the group-table builder takes the pair as the same
-object linked to the same address twice (`DuplicateLink`, `group_tables.rs`;
-found while reviewing issue #47). Whether such a pair should download as one
-sending association is open (OPEN_WORK WP-39).
+“Send + Receive” on one address used to make an ordinary memory download fail:
+the group-table builder took the pair as the same object linked to the same
+address twice (`DuplicateLink`; found while reviewing issue #47). Since WP-39
+the download writes the pair as one sending association, which is what it means
+for the device: the sending association receives too (KNX Resources
+§4.17.3.3.2, [research](../research/2026-11-11-send-and-receive-on-one-address.md)).
+The project keeps both links.

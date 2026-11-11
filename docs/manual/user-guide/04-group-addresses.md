@@ -273,8 +273,8 @@ in each direction.
 On the device, **Send** already includes receiving: an object sends on its sending
 address and is updated by telegrams to it, like every other address it is linked to. A
 send and a receive link to the same address are therefore downloaded as one sending
-entry, the way ETS lists an address once per object (since WP-39; before, such a pair
-made the download fail).
+entry; ETS has no separate send-and-receive state either (since WP-39; before, such
+a pair made the download fail).
 
 Both link forms pre-fill the direction from the object, never from the address's name
 (since issue #47), and say why under the choice:

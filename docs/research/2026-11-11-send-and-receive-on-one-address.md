@@ -16,8 +16,8 @@ numbers are the printed footers):
 - Same document, §4.17.9.4.1 *Frame transmission* (p. 258), §4.17.9.4.2
   *Frame reception* and §4.17.9.5 *Usage by the Management Client* (p. 259):
   GrOAT Easy 3, used by mask 0701h.
-- Same document, §4.17.5 (pp. 249–251): realisation type 6 (System B / 300),
-  "first matching entry" for transmission.
+- Same document, §4.17.5 (pp. 248–251): realisation type 6 (System B / 300),
+  "first matching entry" for transmission (p. 250/251).
 - `03_03_07 Application Layer v02.01.01 AS`, §3.1.1 *The relation between
   TSAPs and ASAPs* (p. 12).
 
@@ -39,9 +39,11 @@ numbered like the object in realisation type 1, the first matching entry in
 Easy 3 and type 6. An object with a sending address therefore both sends and
 receives on it.
 
-**[V]** ETS lists each group address of an object once and marks the first one
-as sending; the project format has no separate "send and receive" state for
-one address.
+**[V]** The project format marks the first group address of an object's
+`@Links` as the sending one and has no separate "send and receive" state for
+one address. **[I]** It does not say whether an id may repeat in that list;
+KNXBench has not seen a repeated id in imported ETS projects, so ETS is taken to
+list an address once per object.
 
 **[I]** "Send + Receive" on one address is, for the device, exactly one sending
 association. Writing two entries for it is at best redundant (double

@@ -41,3 +41,16 @@ it("only opens for a new explicit reveal, not when a reveal is cleared", async (
   expect(host.querySelector("button")!.getAttribute("aria-expanded")).toBe("true");
   await act(async () => root.unmount()); host.remove();
 });
+
+it("mounts lazy content only while open", async () => {
+  const host = document.createElement("div"); document.body.append(host);
+  const root = createRoot(host);
+  await act(async () => root.render(<NavigationSection title="Pending" lazy><ul className="lazy-list" /></NavigationSection>));
+  const toggle = host.querySelector<HTMLButtonElement>("button")!;
+  expect(host.querySelector(".lazy-list")).toBeNull();
+  await act(async () => toggle.click());
+  expect(host.querySelector(".lazy-list")).not.toBeNull();
+  await act(async () => toggle.click());
+  expect(host.querySelector(".lazy-list")).toBeNull();
+  await act(async () => root.unmount()); host.remove();
+});

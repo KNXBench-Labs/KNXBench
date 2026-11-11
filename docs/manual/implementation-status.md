@@ -633,6 +633,14 @@ A download can use these marks to choose its scope (since Alpha 17):
 marks advise, show the resolved scope, and list a pending address or medium
 configuration separately. The marks stay hints; the partial download still
 checks the device before it writes. Synthetic offline tests only.
+
+Main-only after Alpha 20 (issue #42, WP-38 step 1): a read-only **Pending
+programming** block in the navigation lists every device with a pending part
+(count in its heading, chips, address order, unreported states counted, not
+listed), opens a device on click and hands it to the Download to device tab
+with **Download…**. It never plans, starts or connects. A sequential batch
+download of all pending devices is not implemented and needs an ADR first.
+[Use and limits](user-guide/05-devices-and-products.md#pending-programming-panel-main-only-after-alpha-20).
 [Download tab](user-guide/07-bus-and-interfaces.md#downloading-to-a-device),
 [CLI](user-guide/10-command-line.md#knx-device-download--download-a-project-devices-configuration-to-the-device).
 

@@ -8,10 +8,10 @@ with the details. You do not need to write code to earn a place here.
 
 | Place | Bug hunter | Rank & title | Medal | XP | Issues | Replies | Resolved | PRs | Open PRs | Merged PRs | Closed unmerged | XP sources |
 | ---: | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
-| 1 | [@thengsty](https://github.com/thengsty) | Routing Riddle Resolver | 🏅 Golden Bus Probe<br>🏅 Double-Decade Fault Finder<br>🏅 Topology Treasure Hunter<br>🏅 Loose End Lasso<br>🏅 Regression Repair Ribbon<br>🏅 Acknowledgement Ace<br>🏅 Closed-Loop Champion<br>🏅 Quarter-Century Quencher<br>🏅 Patch Pilot<br>🏅 Green Merge Ribbon | **528** | 37 | 38 | 28 | 1 | 0 | 1 | 0 | 185 issue + 38 reply + 280 completion + 25 PR |
+| 1 | [@thengsty](https://github.com/thengsty) | Routing Riddle Resolver | 🏅 Golden Bus Probe<br>🏅 Double-Decade Fault Finder<br>🏅 Topology Treasure Hunter<br>🏅 Loose End Lasso<br>🏅 Regression Repair Ribbon<br>🏅 Acknowledgement Ace<br>🏅 Closed-Loop Champion<br>🏅 Quarter-Century Quencher<br>🏅 Patch Pilot<br>🏅 Green Merge Ribbon | **538** | 37 | 38 | 29 | 1 | 0 | 1 | 0 | 185 issue + 38 reply + 290 completion + 25 PR |
 | 2 | [@hagbardZ](https://github.com/hagbardZ) | Bus Bug Scout | — | **18** | 1 | 3 | 1 | 0 | 0 | 0 | 0 | 5 issue + 3 reply + 10 completion + 0 PR |
 
-*Snapshot: 2026-11-11T10:22:31Z.*
+*Snapshot: 2026-11-11T10:53:21Z.*
 
 ## How the points work
 

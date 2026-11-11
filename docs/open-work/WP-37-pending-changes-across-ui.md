@@ -25,7 +25,7 @@ Status: **step 1 implemented (11 November 2026, main only); step 2 open.**
   application are pending, and on **Communication objects** when group
   addresses are pending. Each marked tab has a tooltip and an accessible
   description naming its parts (“Not programmed yet: Group addresses”).
-  A pending address appears only in the heading line, beside the address.
+  A pending address appears only in the line under the heading.
 - **Device overview:** the Inspector's existing **Programming** section in
   Properties already lists all four parts and the unknown state; unchanged.
 - **Clearing:** the marks read the editor's current tree. A download or address

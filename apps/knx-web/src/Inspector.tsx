@@ -68,7 +68,7 @@ import {
 import { snapshotContextFromTree } from "./snapshotIdentity";
 import { PluginDataButton } from "./PluginDataDialog";
 import DeviceDiagnosticsEntry from "./DeviceDiagnosticsEntry";
-import { DevicePendingSummary, tabPendingParts, useDevicePendingParts, usePendingSentence } from "./DevicePendingMarks";
+import { DEVICE_TABS, DevicePendingSummary, tabPendingParts, useDevicePendingParts, usePendingSentence, type DeviceTab } from "./DevicePendingMarks";
 
 // `BuildingNode.kind` is the raw `BuildingPartType` discriminant from the
 // server ("Building", "Floor", … — see `bindings/BuildingNode.ts`'s own
@@ -1054,8 +1054,11 @@ export function DeviceWorkspace(props: {
   // the previous `1 - tab` toggle silently encoded "there are exactly two
   // tabs" three times over (it also hardcoded `End` and treated both arrow
   // keys as the same key, which a left-arrow-only test could never catch).
-  const tabs = [t("inspector.communicationObjects"), t("workbench.parameters"), t("deviceIdentity.tab"),
-    t("parameters.diagnosticsTab"), t("parameters.restrictedTab"), t("deviceInstructions.tab")];
+  const tabLabels: Record<DeviceTab, string> = {
+    objects: t("inspector.communicationObjects"), parameters: t("workbench.parameters"), identity: t("deviceIdentity.tab"),
+    diagnostics: t("parameters.diagnosticsTab"), restricted: t("parameters.restrictedTab"), instructions: t("deviceInstructions.tab"),
+  };
+  const tabs = DEVICE_TABS.map((name) => tabLabels[name]);
   // The instructions editor reads on mount, so it mounts on the tab's first
   // visit and then stays (hidden) so its draft survives other tabs.
   const instructionsTab = tabs.length - 1;
@@ -1084,7 +1087,7 @@ export function DeviceWorkspace(props: {
       {tabs.map((label, index) => {
         // The marker is a description, not part of the name: the tab keeps its
         // plain name for keyboard and locator use, and readers announce both.
-        const parts = tabPendingParts(pending, index);
+        const parts = tabPendingParts(pending, DEVICE_TABS[index]);
         const note = parts.length > 0 ? pendingSentence(parts) : undefined;
         const noteId = `device-tab-${detail.id}-${index}-pending`;
         return <button key={label} id={`device-tab-${detail.id}-${index}`} role="tab" aria-selected={tab === index} aria-controls={`device-panel-${detail.id}-${index}`} tabIndex={tab === index ? 0 : -1} onClick={() => setTab(index)}

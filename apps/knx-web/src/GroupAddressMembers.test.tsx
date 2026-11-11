@@ -136,6 +136,28 @@ it("adds one member with the chosen direction and hands the reply to the applica
   expect(host.querySelector(".ga-member-added")?.textContent).toContain("#0 Switch");
 });
 
+it("pre-fills the direction from the chosen object and says why (issue #47)", async () => {
+  api.linkComObject.mockResolvedValue(project());
+  await openWithObjects(status, project(), [object(20, 0, "Switch"), { ...object(21, 1, "Feedback"), write: false, transmit: true }]);
+  const direction = () => host.querySelector<HTMLSelectElement>("[data-ga-member-direction]")!;
+  await choose("[data-ga-member-object]", "20");
+  expect([direction().value, direction().dataset.linkDirectionReason]).toEqual(["Receive", "writeOnly"]);
+  expect(host.querySelector(".link-direction-hint")?.textContent).toBe(en["inspector.direction.reason.writeOnly"]);
+  await choose("[data-ga-member-object]", "21");
+  expect([direction().value, direction().dataset.linkDirectionReason]).toEqual(["Send", "transmitOnly"]);
+  await choose("[data-ga-member-direction]", "Both");
+  expect(direction().dataset.linkDirectionReason).toBe("picked");
+  await choose("[data-ga-member-object]", "20");
+  expect(direction().value).toBe("Receive");
+});
+
+it("never suggests the half this address already has", async () => {
+  await openWithObjects(light, project(), [object(20, 0, "Switch", [[30, "Receive"]])]);
+  await choose("[data-ga-member-object]", "20");
+  expect(host.querySelector<HTMLSelectElement>("[data-ga-member-direction]")!.value).toBe("Send");
+  expect(host.textContent).not.toContain(en["addressTable.members.duplicate"]);
+});
+
 it("refuses a duplicate locally, including Both when one half exists", async () => {
   await openWithObjects(light, project(), [object(20, 0, "Switch", [[30, "Receive"]])]);
   expect(options("[data-ga-member-object]")[1]).toContain("already linked: Receive");

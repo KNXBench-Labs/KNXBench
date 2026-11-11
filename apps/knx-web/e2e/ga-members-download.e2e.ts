@@ -243,10 +243,8 @@ for (const language of ["en", "de"] as const) for (const theme of ["porcelain", 
     await panel.getByRole("button", { name: m["addressTable.members.add"], exact: true }).click();
     await form.locator("[data-ga-member-device]").selectOption("10");
     await form.locator("[data-ga-member-object]").selectOption("100");
-    // Issue #47: the object already sends here, so the suggestion is the other half, never a duplicate.
-    await expect(form.locator("[data-ga-member-direction]")).toHaveValue("Receive");
-    await expect(form).not.toContainText(m["addressTable.members.duplicate"]);
-    await form.locator("[data-ga-member-direction]").selectOption("Send");
+    // Issue #47: the object already sends on this address, so the form keeps that and refuses it.
+    await expect(form.locator("[data-ga-member-direction]")).toHaveValue("Send");
     await expect(form).toContainText(m["addressTable.members.duplicate"]);
     await expect(form.getByRole("button", { name: m["addressTable.members.submit"], exact: true })).toBeDisabled();
     await form.getByRole("button", { name: m["addressTable.members.submit"], exact: true }).scrollIntoViewIfNeeded();

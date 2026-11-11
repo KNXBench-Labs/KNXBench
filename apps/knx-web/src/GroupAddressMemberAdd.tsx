@@ -1,5 +1,5 @@
 /** Adds one member: device, then communication object, then direction. */
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import * as api from "./api";
 import type { ComObjectNode } from "./bindings/ComObjectNode";
 import type { GroupAddressNode } from "./bindings/GroupAddressNode";
@@ -70,11 +70,8 @@ export default function GroupAddressMemberAdd(props: {
   const loaded = draft.deviceId === null ? undefined : inventory.current.get(draft.deviceId);
   const objects = useMemo(() => memberObjectChoices(loaded?.objects ?? []), [loaded]);
   const chosen: ComObjectNode | undefined = objects.find((object) => object.id === draft.objectId);
-  const rawSuggestion = chosen === undefined ? null : suggestLinkDirection(chosen);
-  // A suggestion that this address already has would only show "duplicate": offer the other half instead.
-  const suggestion = rawSuggestion !== null && chosen !== undefined && isDuplicateMember(chosen, ga.id, rawSuggestion.direction)
-    ? { direction: rawSuggestion.direction === "Send" ? "Receive" as const : "Send" as const, reason: "fallback" as const }
-    : rawSuggestion;
+  const suggestion = chosen === undefined ? null : suggestLinkDirection(chosen, ga.id);
+  const hintId = useId();
   const direction: MemberDirection = draft.direction ?? suggestion?.direction ?? "Send";
   const duplicate = chosen !== undefined && isDuplicateMember(chosen, ga.id, direction);
   // An object chosen before a re-read must still exist in the fresh list.
@@ -166,13 +163,15 @@ export default function GroupAddressMemberAdd(props: {
       })}</p>}
       <label>{t("addressTable.members.direction")}
         <select data-ga-member-direction value={direction} disabled={busy}
-          data-link-direction-reason={draft.direction !== null ? "picked" : suggestion?.reason ?? "fallback"}
+          data-link-direction-reason={draft.direction !== null ? "picked" : suggestion?.reason}
+          aria-describedby={draft.direction === null && suggestion !== null && suggestion.reason !== "alreadyLinked" ? hintId : undefined}
           onChange={(event) => { setDraft((current) => ({ ...current, direction: event.target.value as MemberDirection })); setError(null); setAdded(null); }}>
           {MEMBER_DIRECTIONS.map((direction) => <option key={direction} value={direction}>{t(DIRECTION_KEYS[direction])}</option>)}
         </select>
       </label>
-      {draft.direction === null && suggestion !== null && suggestion.reason !== "fallback" && (
-        <p className="link-direction-hint">{t(`inspector.direction.reason.${suggestion.reason}`)}</p>
+      {/* An existing link already says so in the object list and the duplicate refusal. */}
+      {draft.direction === null && suggestion !== null && suggestion.reason !== "alreadyLinked" && (
+        <p className="link-direction-hint" id={hintId}>{t(`inspector.direction.reason.${suggestion.reason}`)}</p>
       )}
       {duplicate && <p className="field-error" role="status">{t("addressTable.members.duplicate")}</p>}
     </>}

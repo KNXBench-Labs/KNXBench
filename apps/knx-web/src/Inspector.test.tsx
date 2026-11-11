@@ -1154,19 +1154,22 @@ describe("Inspector — new link direction follows the object (issue #47)", () =
     return host!.querySelector<HTMLElement>(".group-link-list .tree-new-row")!;
   }
 
-  it("suggests Receive for a Write-only object, says why, and links in that direction", async () => {
+  it("makes a Write-only object's first link its sending one, says why, and links so", async () => {
+    // The fixture object has Write and no Transmit: it still answers reads on its sending address.
     const row = await linkRow();
     const direction = row.querySelector<HTMLSelectElement>("select")!;
-    expect(direction.value).toBe("Receive");
-    expect(direction.dataset.linkDirectionReason).toBe("writeOnly");
-    expect(row.querySelector(".link-direction-hint")?.textContent).toBe(enMessages["inspector.direction.reason.writeOnly"]);
+    expect(direction.value).toBe("Send");
+    expect(direction.dataset.linkDirectionReason).toBe("firstSends");
+    const hint = row.querySelector(".link-direction-hint")!;
+    expect(hint.textContent).toBe(enMessages["inspector.direction.reason.firstSends"]);
+    expect(direction.getAttribute("aria-describedby")).toBe(hint.id);
     await chooseAddress(row, "kitchen");
     await act(async () => row.querySelector("button")!.click());
-    expect(apiMock.linkComObject).toHaveBeenCalledWith(7, 9, "Receive");
+    expect(apiMock.linkComObject).toHaveBeenCalledWith(7, 9, "Send");
   });
 
   it("suggests Receive once the object already sends, and a user choice wins", async () => {
-    const row = await linkRow([{ ga_id: 9, address: "1/2/3", name: "Kitchen lights", direction: "Send" }]);
+    const row = await linkRow([{ ga_id: 4, address: "1/2/0", name: "Other", direction: "Send" }]);
     const direction = row.querySelector<HTMLSelectElement>("select")!;
     expect(direction.dataset.linkDirectionReason).toBe("hasSender");
     await act(async () => { direction.value = "Send"; direction.dispatchEvent(new Event("change", { bubbles: true })); });
@@ -1585,8 +1588,7 @@ describe("Inspector — group address drop", () => {
     expect(over.defaultPrevented).toBe(true);
     expect(row.getAttribute("data-drop-ready")).toBe("true");
     await drag(row, "drop", carrying("9"));
-    // The fixture object is Write-only, so the row suggests Receive (issue #47).
-    expect(apiMock.linkComObject).toHaveBeenCalledExactlyOnceWith(7, 9, "Receive");
+    expect(apiMock.linkComObject).toHaveBeenCalledExactlyOnceWith(7, 9, "Send");
     expect(onApplied).toHaveBeenCalledExactlyOnceWith(tree);
     expect(row.getAttribute("data-drop-ready")).toBeNull();
   });
@@ -1596,11 +1598,11 @@ describe("Inspector — group address drop", () => {
     const { row } = await linkRow();
     const direction = row.querySelector<HTMLSelectElement>("select")!;
     await act(async () => {
-      direction.value = "Send";
+      direction.value = "Receive";
       direction.dispatchEvent(new Event("change", { bubbles: true }));
     });
     await drag(row, "drop", carrying("9"));
-    expect(apiMock.linkComObject).toHaveBeenCalledExactlyOnceWith(7, 9, "Send");
+    expect(apiMock.linkComObject).toHaveBeenCalledExactlyOnceWith(7, 9, "Receive");
   });
 
   it("refuses a group address this device cannot link, without a request", async () => {

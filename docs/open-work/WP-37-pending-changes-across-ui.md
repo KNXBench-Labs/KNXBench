@@ -1,7 +1,9 @@
 # WP-37 — Show pending, not-yet-downloaded changes across the UI (#40)
 
 External report by the issue reporter, 10 November 2026; triaged 11 November 2026.
-Status: **step 1 implemented (11 November 2026, main only); step 2 open.**
+Status: **step 1 implemented (11 November 2026, main only); step 2 designed in
+[ADR-0173](../adr/0173-last-downloaded-parameter-values.md) (Proposed), not
+implemented.**
 
 ## Packages
 
@@ -11,7 +13,10 @@ Status: **step 1 implemented (11 November 2026, main only); step 2 open.**
    **Implemented.**
 2. Per-parameter “differs from device” marking needs the last downloaded value
    per parameter in the project model: separate package with a native schema
-   change and ADR. **Open; not started.**
+   change and ADR. **Designed** in ADR-0173: a baseline of the chosen values a
+   completed download wrote, kept outside undo, compared per effective value
+   (native schema 20). Implementation open, after WP-40 (version restore,
+   ADR-0173 §6).
 
 ## Step 1 as implemented
 

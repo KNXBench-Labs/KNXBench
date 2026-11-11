@@ -1,0 +1,227 @@
+# ADR 0173: The project remembers the parameter values a verified download wrote
+
+Date: 2026-11-11
+Status: Proposed
+Session: issue intake #40, step 2 ([WP-37](../open-work/WP-37-pending-changes-across-ui.md)); restore finding [WP-40](../open-work/WP-40-version-restore-programming-claims.md)
+
+## Context
+
+Issue #40 asks to highlight changed-but-not-downloaded items wherever they
+appear, the parameter editor included, and to clear the highlight once a
+successful download covered the change. Step 1 (main `9f3a1e63a`) shows the
+existing per-part flags in the device editor heading and on its tabs. The
+triage reply promised step 2 as its own package: "this exact value differs
+from what is in the device" needs the last downloaded value of each parameter.
+
+Verified state of `main` `e17051626` on 2026-11-11 (source reading, no new
+run):
+
+- **The belief is four flags.** `CommissioningState` holds
+  `parameters_loaded` and three siblings; `pending_parts()` derives the
+  Parameters part from it alone ([ADR-0129](0129-per-part-pending-programming.md)).
+  Nothing in the project records *which* value the device holds.
+- **What a download sends for parameters.** `ImageRequest.values`
+  (`knx-productdb/src/image.rs`) is the device's chosen values by
+  `ParameterRef` id, built from its `ParameterInstance` rows
+  (`image_request.rs`, `parameter_values`); every absent ref takes its product
+  default (`resolve_values`, `dynamic/evaluate.rs`: instance value, else
+  `ParameterRef/@Value`, else `Parameter/@Value`).
+- **Where settlement already has it.** `settle_download`
+  (`knx-app/src/programming_state.rs`) receives the request the run wrote
+  (`written`) and the one the project yields when the run ends (`now`).
+  `DownloadEnd::Completed` means every step ran and every block was read back.
+  Parameters become programmed only if the program and `written.values ==
+  now.values` are unchanged and the product source still plans the same plan
+  (`SourcePlan::Unchanged`). `apply_settlement` applies the result outside the
+  undo history and calls `CommandStack::forget_programmed_claims`, which
+  rewrites live inverse commands and recovered snapshots so no undo or redo
+  restores an obsolete "programmed" claim.
+- **Manual marks are edits.** `POST /api/device/{id}/programming` runs the
+  undoable Core command `SetDeviceProgramming` over all four parts.
+- **History.** Live undo entries are inverse commands or whole `Project`
+  snapshots (`HistoryEntry::Snapshot`); a recovered stack holds snapshots
+  only. Persisted stack rows and versions are `NativeSnapshot` images
+  (`project_history.rs`), each bounded by `MAX_IMAGE_BYTES` and the history
+  budget (`check_limits`). Settlement persists through the working-journal
+  write that already carries the flags.
+- **Settlers.** Regular and batch downloads ([ADR-0172](0172-batch-programming-stops-at-the-first-doubt.md))
+  settle through `settle_download`. The experimental System-2 worker decides
+  with its own `decide` (`apps/knx-server/src/device_system2/settlement.rs`:
+  no `DownloadEnd`/`SourcePlan`, a recovery case, its written side the
+  bundle's original project); only `apply_settlement` is shared.
+- **What an image encodes.** Of `ImageRequest.values`, only refs the
+  parameters activate and that have a memory or property placement reach the
+  device; superseded union members and `Assign` targets carry another value
+  (`image.rs`, [ADR-0171](0171-assigned-invisible-parameters.md)). Module
+  instances are refused by the image builder.
+- **Ids.** Device ids are never issued twice ([ADR-0039](0039-project-mutation-goes-through-commands.md)
+  `ReserveIds`); undoing a deletion brings the same device back under its id.
+- **Version restore resurrects flags.** `HistoryAction::Restore` writes the
+  stored version's project as the new root and working state, and the server
+  publishes it unchanged (`apps/knx-server/src/project_history.rs`, `mutate`).
+  Its `*_loaded` flags and `last_download` come from the version. A device
+  programmed after that version was stored can therefore show "programmed"
+  for values it no longer holds. No document lists this. `programming_content`
+  with `ProgrammingContent::changed_parts`
+  (`knx-core/src/commissioning/pending.rs`) already compares the content of
+  each part between two projects.
+- **ETS.** This ADR claims nothing about whether or how ETS marks single
+  parameters; no ETS observation was made for it.
+
+## Decision
+
+### 1. The baseline records what a completed download built its image from
+
+Per device, the project may hold one **parameter baseline**: the program id,
+the **effective** value of every unscoped `ParameterRef` of that program as
+the completed download resolved it (`resolve_values` over `written.values`,
+in the same catalogue lease that proves `SourcePlan::Unchanged`), and the end
+time. Storing resolved values means a later change of product data cannot
+move the comparison. The baseline is **not** a per-parameter device read: a
+ref that was inactive, has no placement, or whose value an `Assign` replaced
+carries no claim about device memory. The UI therefore says "value at last
+download", never "value in the device". A device without a baseline has an
+*unknown* baseline, never "unchanged".
+
+Module-scoped values are out of scope until module downloads exist.
+
+### 2. It lives outside the model images and outside undo
+
+The baseline is keyed by `DeviceId` and stored in its own native tables
+(§6), **outside** `Project`, `NativeSnapshot` history images and versions. So
+no undo, redo, snapshot recovery or version restore can bring back an older
+baseline, and the history images do not grow. No edit command touches it.
+A deleted device keeps its baseline entry while undo can bring it back (same
+id, the physical device untouched); the next native save prunes entries of
+devices absent from the saved project.
+
+### 3. Only settlement writes it
+
+`Settlement` gains an explicit instruction, `parameter_baseline: Keep |
+Remove | Record { program_id, values, at }`, so `apply_settlement` can tell
+"completed, project edited during the run" (record) from "changed source" or
+"interrupted" (remove), which all give `programmed.parameters = false`.
+`apply_settlement` is its single writer, in the same step as the flags.
+
+| Settler and end | Baseline |
+| --- | --- |
+| download `Completed`, source `Unchanged`, Parameters in scope (complete or partial) | `Record` the written request's resolved values, even when the project changed during the run: exactly those edits then differ |
+| download `Completed`, source `ChangedOrUnknown`, Parameters in scope | `Remove` |
+| download `Interrupted`, Parameters attempted | `Remove` |
+| download `Interrupted`, Parameters in scope but not attempted | `Keep` |
+| download with Parameters not in scope (partial group addresses) | `Keep` |
+| download `NothingWritten` | `Keep` |
+| System-2 download or recovery whose settlement touches Parameters, **including a verified run** that marks them programmed | `Remove`: its written side is not an `ImageRequest`; Parameters may be programmed with the baseline unknown ([System-2 settlement](../contracts/system2-download-result.md#settlement)) |
+| System-2 without possible mutation | `Keep` |
+| individual-address programming | `Keep` |
+
+A manual **Mark as programmed / not programmed** removes the baseline outside
+its undoable command: a claim KNXBench did not witness. Undoing the mark
+restores the flags, not the baseline. Adopting values read from a device
+(project comparison adoption) never records a baseline; adopted values then
+show as differing from the last download until the next one.
+
+### 4. The comparison
+
+A parameter **differs from the last download** when the baseline is usable
+and its stored value differs from the current effective value
+(`resolve_values` over the current chosen values). Setting a value explicitly
+to its default is therefore not a difference. Values compare as exact raw
+strings, the strings the image builder encodes.
+
+The baseline is **not usable** (state reported, no per-parameter verdict) when
+it is absent, when its program id differs from the device's current resolved
+program, or when the product data needed for the current side is unavailable.
+
+The per-part flag stays the authority for "pending". The comparison can find
+no difference while Parameters is pending (a value set explicitly to its
+default; a System-2 or manual path that removed the baseline); the UI then
+says that no value differs from the last download, or that it is unknown.
+
+### 5. Presentation
+
+The device parameter response reports the state (`usable`, `absent`,
+`otherProgram`, `productUnavailable`) and, when usable, the end time and the
+differing refs with stored and current values. The parameter editor marks a
+differing visible row with the step-1 amber mark and a tooltip/accessible
+description "Value at last download: …" / "Wert beim letzten Programmieren:
+…", using enum labels where declared. The panel names the number of differing
+values and how many of them the current settings do not show (inactive in the
+current settings, which carry no device claim either). An unusable baseline
+gives one plain sentence and no row marks. Links and object flags get no
+per-item marks.
+
+### 6. Version restore settles the four flags against the live project
+
+Independent of the baseline, restoring a version must not resurrect programmed
+claims. Inside `change_history`, before the restored state becomes root and
+working state, each device of the restored project is compared with the live
+project using `programming_content` (the same comparison edit commands use):
+
+- present live under the same id: parts whose content differs, plus their
+  dependants (parameters on the application; group addresses on parameters
+  and address, as in `still_current`), become pending; the other parts take
+  the **live** flag; `last_download` takes the live value;
+- absent live: all four parts become pending; `last_download` stays as stored.
+
+The fifth flag, `medium_config_loaded`, is left alone (ADR-0129). The result
+is durable with the restore and no undo step (the restore clears the undo
+stack). `HistoryChange` returns the corrected devices; the server writes one
+session-log line per device. The stored version itself is not rewritten.
+Delivered first and separately as [WP-40](../open-work/WP-40-version-restore-programming-claims.md).
+
+### 7. Storage
+
+Native schema 20 adds `device_parameter_baseline` (device id primary key,
+program id, end time) and `device_parameter_baseline_value` (device id,
+`ParameterRef` id, raw value). They are not part of history images: the
+snapshot codec and its schema check must know them as excluded tables. The
+migration from 19 is additive and leaves every baseline unknown; nothing is
+derived from imported ETS flags, the activity history or a settlement
+receipt. Older builds refuse schema 20 files, as with every schema step.
+Restoring a version stored by schema 19 is tested. `.knxproj` import, project
+comparison, exports, reports and selective import ignore the baseline in this
+step; the selective-import reference closure is audited for the new tables.
+
+## Alternatives considered
+
+- **Store the written memory image and compare bytes per parameter.**
+  Closest to the device, but needs the memory layout of every parameter,
+  marks hidden and union parameters that share bytes, and fails for
+  property-placed parameters. Values are what the user edits and what the
+  flag already compares.
+- **Store only the chosen values, compare without defaults.** Marks a value
+  set explicitly to its default as different although the device holds the
+  same value.
+- **Make the baseline part of the undoable model or of `Project`.** Undo,
+  snapshot recovery and version restore would bring back an older baseline
+  after a later download, and every history image would carry a second copy
+  of all parameter values; the same reason settlement is outside undo
+  (ADR-0129).
+- **Store chosen values only and resolve defaults at display time.** A product
+  data change after the download would move the stored side; a real
+  difference could disappear.
+- **Derive the Parameters flag from the baseline.** Would change ADR-0129's
+  belief for imported projects, which have no baseline. The flag remains the
+  authority; the comparison only explains it.
+- **Keep the baseline on a manual mark.** A mark is a claim KNXBench did not
+  witness; keeping an older baseline could show stale differences, and
+  setting one from the project would invent a device read.
+- **Read the parameters from the device.** A bus read is a separate feature
+  with its own authority (P4); this ADR adds no bus traffic.
+
+## Consequences
+
+- The user sees which parameter values changed since the last download that
+  KNXBench completed, for devices programmed by KNXBench since schema 20.
+  Imported projects, older projects, System-2 runs and manually marked devices
+  show the per-part flag only until their next completed regular download.
+- New schema step with migration and refusal tests; the snapshot codec
+  excludes the new tables; history images keep their size.
+- Settlement tests cover every row of §3, including a project edited during
+  the run and a changed product source; restore, undo and redo tests pin that
+  no older baseline returns.
+- The comparison needs the product database at display time; without it the
+  state is reported, never guessed.
+- Not covered: module parameters, per-link and per-flag marks, a device read,
+  ETS behaviour, differential download (LS-03).

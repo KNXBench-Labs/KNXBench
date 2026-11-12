@@ -106,7 +106,7 @@ fn fixture() -> Fixture {
     let state = state(dir.path(), true);
     *state.project.lock().unwrap() = Some(working);
     *state.opaque.lock().unwrap() = opaque.clone();
-    *state.store_path.lock().unwrap() = Some(path.clone());
+    state.store_path.lock().unwrap().set(Some(path.clone()));
     Fixture {
         state,
         path,
@@ -605,7 +605,7 @@ async fn assert_refused(f: &Fixture, reason: &str) {
 #[tokio::test]
 async fn an_unsaved_project_is_visibly_unavailable() {
     let f = fixture();
-    *f.state.store_path.lock().unwrap() = None;
+    f.state.store_path.lock().unwrap().set(None);
     assert_refused(
         &f,
         "the project has not been saved as a KNXBench project file yet",

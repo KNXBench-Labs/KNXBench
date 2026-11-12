@@ -800,7 +800,8 @@ async fn parameter_panel(
     AxumPath(id): AxumPath<u32>,
     Query(q): Query<ParameterLanguageQuery>,
 ) -> Result<Json<ParameterPanelDto>, ApiError> {
-    domain::parameter_panel_impl(&state, id, q.language.as_deref())
+    off_runtime(move || domain::parameter_panel_impl(&state, id, q.language.as_deref()))
+        .await?
         .map(Json)
         .map_err(ApiError::bad_request)
 }
@@ -864,14 +865,17 @@ async fn set_parameter_value(
         }),
         _ => return Err(incomplete_binding()),
     };
-    domain::set_parameter_value_impl(
-        &state,
-        id,
-        body.ets_id,
-        body.raw,
-        q.language.as_deref(),
-        binding,
-    )
+    off_runtime(move || {
+        domain::set_parameter_value_impl(
+            &state,
+            id,
+            body.ets_id,
+            body.raw,
+            q.language.as_deref(),
+            binding,
+        )
+    })
+    .await?
     .map(Json)
     .map_err(|error| match error {
         domain::ParameterWriteError::Conflict(message) => {
@@ -1178,7 +1182,8 @@ async fn load_progress(State(state): State<SharedState>) -> Json<Option<LoadProg
 async fn current_project(
     State(state): State<SharedState>,
 ) -> Result<Json<domain::CurrentProject>, ApiError> {
-    domain::current_project_tree(&state)
+    off_runtime(move || domain::current_project_tree(&state))
+        .await?
         .map(Json)
         .map_err(ApiError::bad_request)
 }
@@ -1604,7 +1609,8 @@ async fn device_detail(
     AxumPath(id): AxumPath<u32>,
     Query(q): Query<ParameterLanguageQuery>,
 ) -> Result<Json<knx_projection::DeviceDetail>, ApiError> {
-    domain::device_detail(&state, id, q.language.as_deref())
+    off_runtime(move || domain::device_detail(&state, id, q.language.as_deref()))
+        .await?
         .map(Json)
         .map_err(ApiError::bad_request)
 }
@@ -1632,7 +1638,8 @@ async fn set_individual_address(
                 )
             })?;
     }
-    domain::set_individual_address_impl(&state, body.device_id, body.address)
+    off_runtime(move || domain::set_individual_address_impl(&state, body.device_id, body.address))
+        .await?
         .map(Json)
         .map_err(ApiError::bad_request)
 }
@@ -1648,9 +1655,12 @@ async fn set_device_description(
     State(state): State<SharedState>,
     Json(body): Json<SetDeviceDescriptionBody>,
 ) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
-    domain::set_device_description_impl(&state, body.device_id, body.description)
-        .map(Json)
-        .map_err(ApiError::bad_request)
+    off_runtime(move || {
+        domain::set_device_description_impl(&state, body.device_id, body.description)
+    })
+    .await?
+    .map(Json)
+    .map_err(ApiError::bad_request)
 }
 
 #[derive(Deserialize)]
@@ -1666,9 +1676,12 @@ async fn set_group_address_description(
     State(state): State<SharedState>,
     Json(body): Json<SetGroupAddressDescriptionBody>,
 ) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
-    domain::set_group_address_description_impl(&state, body.group_address_id, body.description)
-        .map(Json)
-        .map_err(ApiError::bad_request)
+    off_runtime(move || {
+        domain::set_group_address_description_impl(&state, body.group_address_id, body.description)
+    })
+    .await?
+    .map(Json)
+    .map_err(ApiError::bad_request)
 }
 
 #[derive(Deserialize)]
@@ -1692,7 +1705,8 @@ async fn set_com_object_dpt(
             )
         })?;
     }
-    domain::set_com_object_dpt_impl(&state, body.com_object_id, body.dpt)
+    off_runtime(move || domain::set_com_object_dpt_impl(&state, body.com_object_id, body.dpt))
+        .await?
         .map(Json)
         .map_err(ApiError::bad_request)
 }
@@ -1708,9 +1722,12 @@ async fn set_com_object_description(
     State(state): State<SharedState>,
     Json(body): Json<SetComObjectDescriptionBody>,
 ) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
-    domain::set_com_object_description_impl(&state, body.com_object_id, body.description)
-        .map(Json)
-        .map_err(ApiError::bad_request)
+    off_runtime(move || {
+        domain::set_com_object_description_impl(&state, body.com_object_id, body.description)
+    })
+    .await?
+    .map(Json)
+    .map_err(ApiError::bad_request)
 }
 
 #[derive(Deserialize)]
@@ -1725,9 +1742,12 @@ async fn set_com_object_flag(
     State(state): State<SharedState>,
     Json(body): Json<SetComObjectFlagBody>,
 ) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
-    domain::set_com_object_flag_impl(&state, body.com_object_id, body.flag, body.value)
-        .map(Json)
-        .map_err(ApiError::bad_request)
+    off_runtime(move || {
+        domain::set_com_object_flag_impl(&state, body.com_object_id, body.flag, body.value)
+    })
+    .await?
+    .map(Json)
+    .map_err(ApiError::bad_request)
 }
 
 /// `priority` is `"Low"`, `"High"`, `"Alert"` or `null` (clear the edit);
@@ -1751,9 +1771,12 @@ async fn set_com_object_priority(
     State(state): State<SharedState>,
     Json(body): Json<SetComObjectPriorityBody>,
 ) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
-    domain::set_com_object_priority_impl(&state, body.com_object_id, body.priority.as_deref())
-        .map(Json)
-        .map_err(ApiError::bad_request)
+    off_runtime(move || {
+        domain::set_com_object_priority_impl(&state, body.com_object_id, body.priority.as_deref())
+    })
+    .await?
+    .map(Json)
+    .map_err(ApiError::bad_request)
 }
 
 #[derive(Deserialize)]
@@ -4128,6 +4151,9 @@ async fn log(State(state): State<SharedState>) -> Json<Vec<crate::session_log::L
 }
 
 #[cfg(test)]
+mod editor_runtime_tests;
+
+#[cfg(test)]
 mod tests {
     use std::net::{Ipv4Addr, SocketAddrV4};
     use std::sync::Arc;
@@ -4147,7 +4173,7 @@ mod tests {
 
     /// Holds the project lock on a plain thread until released or 10 s pass;
     /// answers whether the release came in time.
-    fn hold_project_lock(
+    pub(super) fn hold_project_lock(
         state: &Arc<AppState>,
     ) -> (std::sync::mpsc::Sender<()>, std::thread::JoinHandle<bool>) {
         let (held_tx, held_rx) = std::sync::mpsc::channel();

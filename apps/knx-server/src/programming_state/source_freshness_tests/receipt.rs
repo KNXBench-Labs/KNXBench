@@ -383,7 +383,11 @@ fn a_settler_that_is_never_called_or_sees_a_running_status_leaves_no_receipt() {
 #[test]
 fn an_unwritable_project_file_computes_the_settlement_without_applying_any_of_it() {
     let f = fixture(&OLD, &OLD);
-    *f.state.store_path.lock().unwrap() = Some(f._dir.path().join("missing/dir/project.knxdb"));
+    f.state
+        .store_path
+        .lock()
+        .unwrap()
+        .set(Some(f._dir.path().join("missing/dir/project.knxdb")));
     let revision = domain::current_project_revision(&f.state);
     let stack = f.state.command_stack.lock().unwrap().clone();
     let project = f.state.project.lock().unwrap().clone();
@@ -443,7 +447,11 @@ fn invalid_catalogue_metadata_makes_the_program_unavailable_and_changes_no_flag_
 fn a_failed_persist_leaves_flags_stack_and_revision_untouched() {
     let f = fixture(&OLD, &OLD);
     // The owned store path cannot be opened: its directory does not exist.
-    *f.state.store_path.lock().unwrap() = Some(f._dir.path().join("missing/dir/project.knxdb"));
+    f.state
+        .store_path
+        .lock()
+        .unwrap()
+        .set(Some(f._dir.path().join("missing/dir/project.knxdb")));
     let revision = domain::current_project_revision(&f.state);
     let stack = f.state.command_stack.lock().unwrap().clone();
     let project = f.state.project.lock().unwrap().clone();

@@ -264,7 +264,7 @@ fn setup(dir: &std::path::Path) -> Arc<knx_server::AppState> {
     let saved = dir.join("source.knxdb");
     knx_server::save_project_as_impl(&saved, &project, &[], &[]).unwrap();
     *state.clean_project.lock().unwrap() = Some(project.clone());
-    *state.store_path.lock().unwrap() = Some(saved);
+    state.store_path.lock().unwrap().set(Some(saved));
     {
         let mut commands = state.command_stack.lock().unwrap();
         commands

@@ -306,7 +306,7 @@ async fn a_failed_native_commit_publishes_nothing() {
     let (dir, state, app, ids) = fixture().await;
     let before = state.project.lock().unwrap().clone();
     let missing = dir.path().join("removed-native.knxdb");
-    *state.store_path.lock().unwrap() = Some(missing.clone());
+    state.store_path.lock().unwrap().set(Some(missing.clone()));
     *state.history_generation.lock().unwrap() = 1;
     let (_, plan) = preview(&app, &[ids[0]], "New ", "").await;
     let (status, response) = apply(&app, &plan, true).await;

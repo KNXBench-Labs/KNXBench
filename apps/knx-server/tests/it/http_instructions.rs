@@ -388,7 +388,7 @@ async fn failed_native_commit_does_not_publish_memory_or_history_changes() {
     let before = state.project.lock().unwrap().clone();
     let opaque = state.opaque.lock().unwrap().clone();
     let missing = dir.path().join("removed-native.knxdb");
-    *state.store_path.lock().unwrap() = Some(missing.clone());
+    state.store_path.lock().unwrap().set(Some(missing.clone()));
     *state.history_generation.lock().unwrap() = 1;
     let (_, view) = request(
         &app,

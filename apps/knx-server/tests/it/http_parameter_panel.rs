@@ -979,7 +979,11 @@ async fn object_addition_preserves_preexisting_links_and_instance_overrides() {
 async fn failed_durable_object_addition_publishes_no_parameters_ids_or_history() {
     let (dir, products) = temp_product_db(&configured_object_program());
     let state = Arc::new(state_with_device(products, vec![]));
-    *state.store_path.lock().unwrap() = Some(dir.path().to_path_buf()); // directory, never a native file
+    state
+        .store_path
+        .lock()
+        .unwrap()
+        .set(Some(dir.path().to_path_buf())); // directory, never a native file
     let before = state.project.lock().unwrap().clone();
     let revision = state
         .project_revision

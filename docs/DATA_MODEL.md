@@ -894,3 +894,22 @@ and not to the editor history. A snapshot image with rows is refused, the
 semantic snapshot hash skips the table, and a schema-15 image still decodes and
 migrates. Additive: an older file gains an empty table and fills it on its next
 save ([ADR-0128](adr/0128-native-project-files-carry-their-manufacturer-files.md)).
+
+**Amendment (WP-37 step 2, 2026-11-11): schema 20, parameter baselines.**
+`migrate_v19_to_v20` adds `device_parameter_baseline` (`device_id` primary key,
+`program_id`, `at` as RFC 3339 UTC with every fractional digit) and
+`device_parameter_baseline_value` (`device_id` referring to the header,
+`ref_id`, `raw`; primary key `(device_id, ref_id)`, `WITHOUT ROWID`). Both
+`STRICT`. A row holds the effective value (chosen, else product default) of an
+unscoped `ParameterRef` as a completed download built its image from. The rows
+belong to the file, not to `Project` (no Rust field changed): no undo, redo,
+snapshot recovery or version restore brings one back, a history image carrying
+rows is refused, the semantic snapshot hash skips both tables and a schema-19
+image still decodes. No foreign key binds them to `device`: a device created and
+downloaded after the last save has a baseline before the saved root holds it.
+Only settlement writes them, in the same transaction as the working-journal
+write that persists the settled flags; a manual programming mark removes one
+in its own journal write. A native save prunes the rows of devices the saved
+project lacks, and a plain save of another project (other `project_id`) drops
+all of them. Additive: every baseline of an older file is unknown
+([ADR-0173](adr/0173-last-downloaded-parameter-values.md)).

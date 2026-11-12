@@ -30,7 +30,10 @@ fn source_limit_message() -> String {
 /// keep `None`; destination edits stay with their own objects.
 /// v19 group-address descriptions (ADR-0164) travel with the copied address;
 /// an existing destination address only matches with an equal description.
-pub const SELECTIVE_MODEL_VERSION: u32 = 19;
+/// v20 adds per-device parameter baselines (ADR-0173) as file-level rows
+/// outside `Project`: no model field changes, a copied device gets a fresh id
+/// and so no baseline, and the merge never touches the destination's.
+pub const SELECTIVE_MODEL_VERSION: u32 = 20;
 /// Source attributes remain evidence, not unscoped destination settings.
 pub const SELECTIVE_ATTRIBUTE_KIND: &str = "SelectiveImportRetainedAttribute";
 

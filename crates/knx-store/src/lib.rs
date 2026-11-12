@@ -16,6 +16,7 @@ pub mod module_instance;
 mod notes;
 pub mod opaque;
 pub mod parameter;
+pub mod parameter_baseline;
 mod priority_edit;
 pub mod project;
 pub mod project_history;
@@ -103,6 +104,8 @@ pub enum StoreError {
     UnknownGroupAddressStyle(String),
     /// Unknown persisted space kind must not be silently rewritten as Building.
     UnknownBuildingPartType(String),
+    /// A stored parameter baseline row cannot be read back exactly (ADR-0173).
+    ParameterBaselineIntegrity(String),
 }
 
 impl std::error::Error for StoreError {}
@@ -126,6 +129,9 @@ impl fmt::Display for StoreError {
             }
             StoreError::FunctionIntegrity(reason) => {
                 write!(f, "native project function integrity refused: {reason}")
+            }
+            StoreError::ParameterBaselineIntegrity(reason) => {
+                write!(f, "native parameter baseline integrity refused: {reason}")
             }
             StoreError::NoteIntegrity(reason) => {
                 write!(f, "native project note integrity refused: {reason}")

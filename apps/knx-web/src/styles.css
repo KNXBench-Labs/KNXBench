@@ -3611,14 +3611,11 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
   border: 4px solid transparent; border-radius: 50%; background: var(--knx-warning-color); background-clip: padding-box;
   cursor: help;
 }
-/* The downloaded value as a caption under its row: shown while the row has
-   focus (keyboard, touch), always beside an open checked editor or a control
-   that cannot take focus. Hidden, it still describes the control. */
-.parameter-download-note { display: none; margin: -10px 0 16px; overflow-wrap: anywhere; }
+/* The downloaded value as a caption under its row, always shown: visible for
+   keyboard and touch users, and no layout shift under a pointer. */
+.parameter-download-note { display: block; margin: -10px 0 16px; overflow-wrap: anywhere; }
 .parameter-workspace .parameter-download-note { margin: 5px 0 0; }
 .parameter-download-note + .parameter-checked-open { margin-top: 4px; }
-.parameter-field:focus-within + .parameter-download-note,
-.parameter-download-note[data-shown="always"] { display: block; }
 .parameter-download-note > .parameter-download-mark { margin: 0 2px 0 -4px; cursor: default; }
 /* A kept comparison awaits the read after a write: muted until replaced. */
 .parameter-last-download[data-refreshing="true"] { opacity: 0.6; }

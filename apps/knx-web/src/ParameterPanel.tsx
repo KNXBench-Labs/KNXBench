@@ -138,9 +138,11 @@ function ParameterFieldRow(props: {
   const t = useTranslate();
   const downloadNoteId = useId();
   // ADR-0173: the refs a write of this row touches, for the kept comparison.
+  // A module-scoped row shares its etsId with the unscoped ref but never its value.
   const onRowUpdated = useCallback((written: ParameterPanelDto) => onUpdated(written,
-    field.writeEtsId === null || field.writeEtsId === field.etsId ? [field.etsId] : [field.etsId, field.writeEtsId]),
-  [onUpdated, field.etsId, field.writeEtsId]);
+    moduleScoped ? []
+      : field.writeEtsId === null || field.writeEtsId === field.etsId ? [field.etsId] : [field.etsId, field.writeEtsId]),
+  [onUpdated, moduleScoped, field.etsId, field.writeEtsId]);
   const [value, setValue] = useState(field.value ?? "");
   const mutate = useComMutation();
   const [checkedOpen, setCheckedOpen] = useState(false);
@@ -271,7 +273,7 @@ function ParameterFieldRow(props: {
           snapshot={checked.snapshot} writeBinding={checked.writeBinding} onConflict={onConflict} language={language} label={label}
           onUpdated={onRowUpdated} onValueApplied={onValueApplied} onClose={() => setCheckedOpen(false)} />
       </div>
-      {downloadNote && <span className="parameter-field-caption parameter-download-note" data-shown="always">
+      {downloadNote && <span className="parameter-field-caption parameter-download-note">
         <span className="parameter-download-mark" aria-hidden="true" />{downloadNote}</span>}
     </>;
   }
@@ -349,10 +351,10 @@ function ParameterFieldRow(props: {
       {saving && <span className="parameter-field-caption parameter-field-saving" role="status">{t("parameters.savingCaption")}</span>}
       {error && <span className="field-error" role={conflict ? "alert" : undefined}>{error}</span>}
     </label>
-    {/* Outside the label, so it never joins the field's name. Shown while the
-        row has focus (keyboard, touch); always when the control cannot take it. */}
-    {downloadNote && <span id={downloadNoteId} className="parameter-field-caption parameter-download-note"
-      data-shown={restricted ? "always" : "focus"}>{downloadNote}</span>}
+    {/* Outside the label, so it never joins the field's name. Always shown:
+        visible for keyboard and touch, and no layout shift under a pointer. */}
+    {downloadNote && <span id={downloadNoteId} className="parameter-field-caption parameter-download-note">
+      {downloadNote}</span>}
     {conflict && <div className="parameter-conflict" data-conflict-for={field.etsId}>
       <span className="parameter-conflict-current">
         {t("parameters.conflictCurrent", { value: field.value ?? t("parameters.none") })}
@@ -588,10 +590,12 @@ function LastDownloadSummary(props: { lastDownload: LastDownload; sections: read
     text = t(`parameters.lastDownload.${lastDownload.state}` as const);
   }
   const differs = lastDownload.state === "usable" && (lastDownload.differing?.length ?? 0) > 0;
+  // After a write only the server may say that nothing differs any more.
+  if (refreshing && lastDownload.state === "usable" && !differs) return null;
   const { notShown, manufacturer } = elsewhere;
   // A retained comparison after a write is muted until the next read replaces it.
   return <p className="parameter-last-download" data-state={lastDownload.state} data-differs={differs ? "true" : undefined}
-    data-refreshing={refreshing ? "true" : undefined}>
+    data-refreshing={refreshing ? "true" : undefined} aria-busy={refreshing ? "true" : undefined}>
     {differs && <span className="parameter-last-download-dot" aria-hidden="true" />}
     <span>{text}{notShown > 0 && <> {t(notShown === 1 ? "parameters.lastDownload.hidden.one"
       : "parameters.lastDownload.hidden.other", { hidden: notShown })}</>}{manufacturer > 0 && <> {t(manufacturer === 1

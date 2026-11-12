@@ -61,9 +61,12 @@ hardware run.**
   label, an undeclared value or a free value its raw text, a missing one “no
   value” / “kein Wert”. The dot is `aria-hidden`, so the field's accessible name
   is unchanged. The description is a caption after the row's label (never part
-  of its name): shown while the row has focus (keyboard, touch), always under a
-  control that cannot take focus (Manufacturer fields) and beside an open
-  checked editor. Under `forced-colors: active` the row dot, the summary dot and
+  of its name), always shown under the row and beside an open checked editor:
+  visible for keyboard and touch users, and no layout shift when focus moves
+  (a focus-only caption could move a button away under the pointer between
+  press and release; re-review 12 November 2026). While a kept comparison
+  waits for the next read, the line carries `aria-busy`; if the written row was
+  the only differing one, the line is left out until the read decides. Under `forced-colors: active` the row dot, the summary dot and
   the step-1 dot (`device-pending-dot`) keep `forced-color-adjust: none` and paint
   in `CanvasText`. `refId` is the `ParameterRef` id, which is the unscoped field's
   `etsId` (`domain.rs` sets `ets_id: view.id`; baselines hold unscoped refs
@@ -124,7 +127,10 @@ description after the name.
 ## Not covered
 
 - Per-link marks and marks on individual communication objects or flags.
-- Module-scoped parameters (no baseline until module downloads exist).
+- Module-scoped parameters (no baseline until module downloads exist); a write
+  of a module-scoped row never drops the unscoped ref's mark.
+- The caption beside an open checked editor is visible but not linked to the
+  editor's controls as their description.
 - Devices imported, programmed by the System-2 path or marked by hand show only
   the pending marks until their next completed regular download.
 - Device identity is source, product and program reference within one project
@@ -177,7 +183,7 @@ Step 2, server part (synthetic data only, no bus):
 
 Step 2, UI part (intercepted fictional data, no bus):
 
-- `apps/knx-web/src/ParameterPanel.lastDownload.test.tsx` (15): marks and
+- `apps/knx-web/src/ParameterPanel.lastDownload.test.tsx` (18): marks and
   descriptions on differing unscoped rows only (the module row exists and is
   unmarked), the caption after the label, enum label, undeclared and missing
   value, singular/plural, the not-shown and Manufacturer-fields counts, no
@@ -185,7 +191,9 @@ Step 2, UI part (intercepted fictional data, no bus):
   `lastDownload`, line only in the Parameters view, always-shown caption in the
   Manufacturer fields view, retention across a write response without the
   written ref (by `etsId` and by `writeEtsId`) and with the line dimmed,
-  replacement by the next read, no carry-over to another program, no retention
+  `aria-busy` while waiting, no "no value differs" before the read when the
+  only differing ref was written, a module-scoped write keeping the unscoped
+  mark, replacement by the next read, no carry-over to another program, no retention
   after a device switch with a late write answer, at the row and at the read
   model.
 - `apps/knx-web/src/parameterLastDownload.test.ts` (6): the two counts kept
@@ -198,7 +206,8 @@ Step 2, UI part (intercepted fictional data, no bus):
   en/de at 1440 and 400 px, summary text with time (browser pinned to the zone
   the expected text is formatted in) and the Manufacturer-fields count, visible
   dots, unchanged accessible names and the exact accessible descriptions, the
-  caption shown only while the row has focus and inside the viewport, no
+  caption always shown and inside the viewport, the checked-editor button not
+  moving relative to its input when focus enters the row or the button, no
   sideways overflow, no unexpected request; an unusable state without marks;
   the dots under forced colours.
 

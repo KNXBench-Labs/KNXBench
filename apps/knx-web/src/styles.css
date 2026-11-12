@@ -3611,6 +3611,23 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
   border: 4px solid transparent; border-radius: 50%; background: var(--knx-warning-color); background-clip: padding-box;
   cursor: help;
 }
+/* The downloaded value as a caption under its row: shown while the row has
+   focus (keyboard, touch), always beside an open checked editor or a control
+   that cannot take focus. Hidden, it still describes the control. */
+.parameter-download-note { display: none; margin: -10px 0 16px; overflow-wrap: anywhere; }
+.parameter-workspace .parameter-download-note { margin: 5px 0 0; }
+.parameter-download-note + .parameter-checked-open { margin-top: 4px; }
+.parameter-field:focus-within + .parameter-download-note,
+.parameter-download-note[data-shown="always"] { display: block; }
+.parameter-download-note > .parameter-download-mark { margin: 0 2px 0 -4px; cursor: default; }
+/* A kept comparison awaits the read after a write: muted until replaced. */
+.parameter-last-download[data-refreshing="true"] { opacity: 0.6; }
+/* Forced colours drop author backgrounds: keep every status dot painted. */
+@media (forced-colors: active) {
+  .device-pending-dot, .parameter-last-download-dot, .parameter-download-mark {
+    forced-color-adjust: none; background-color: CanvasText;
+  }
+}
 .device-tabs button .device-pending-dot { margin-left: 6px; vertical-align: middle; }
 .workbench .device-link { display: inline; padding: 2px 4px; min-width: 24px; max-width: 100%; white-space: normal; text-align: left; overflow-wrap: anywhere; }
 .device-link-unresolved { cursor: help; }

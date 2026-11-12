@@ -116,6 +116,25 @@ describe("checked parameter editor in the parameter rows", () => {
     expect(onValueApplied).toHaveBeenCalledWith(tree(21));
   });
 
+  it("keeps the downloaded value visible beside the open editor until the write drops it (ADR-0173)", async () => {
+    const date = field("D1", "Date", { value: "1899-12-31", min: null, max: null, writeEtsId: "D-WRITE" });
+    apiMock.deviceParameters.mockResolvedValue({ ...panel, sections: [{ scope: null, fields: [date] }],
+      lastDownload: { state: "usable", at: "2026-01-05T08:09:10.000Z", differing: [{ refId: "D1", downloaded: "1899-12-30", current: "1899-12-31" }] } });
+    await mount();
+    await act(async () => openButtons()[0].click());
+    expect(host.textContent).toContain("checked:D1");
+    const note = () => host.querySelector<HTMLElement>(".parameter-download-note");
+    expect(row("D1")!.getAttribute("data-differs-from-download")).toBe("true");
+    expect(row("D1")!.nextElementSibling).toBe(note());
+    expect(note()!.textContent).toBe("Value at last download: 1899-12-30");
+    expect(note()!.dataset.shown).toBe("always");
+    expect(note()!.querySelector(".parameter-download-mark")!.getAttribute("aria-hidden")).toBe("true");
+    // The editor's write response carries no comparison; its ref becomes unknown.
+    await act(async () => editorProps.last!.onUpdated({ ...panel, sections: [{ scope: null, fields: [date] }], tree: tree(21) }));
+    expect(note()).toBeNull();
+    expect(host.querySelector(".parameter-last-download")!.getAttribute("data-refreshing")).toBe("true");
+  });
+
   it("passes the module scope through for scoped rows", async () => {
     apiMock.deviceParameters.mockResolvedValue(panel);
     await mount();

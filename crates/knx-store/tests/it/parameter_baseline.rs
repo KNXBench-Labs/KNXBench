@@ -491,9 +491,151 @@ fn a_plain_save_of_the_same_project_keeps_present_devices() {
     assert_eq!(kept, vec![1]);
 }
 
-/// 500 devices with 200 refs each: one native save and one full read stay
-/// within a few seconds even under `nice` on a shared machine. The bound is
-/// generous on purpose; the measured times are printed for the record.
+/// `project` whose device `id` is another device under the same id.
+fn replaced_device(
+    project: &Project,
+    id: u32,
+    change: impl FnOnce(&mut DeviceInstance),
+) -> Project {
+    let mut project = project.clone();
+    change(project.devices.get_mut(DeviceId(id)).unwrap());
+    project
+}
+
+#[test]
+fn a_replacing_save_of_the_same_project_id_keeps_only_rows_of_the_same_devices() {
+    // `knx import X.knxproj --store existing.knxdb --replace` writes a fresh
+    // import under the same project id: its ids may name other devices.
+    let dir = tempfile::tempdir().unwrap();
+    let base = project("P-1", 4);
+    let all = [record(1, 1), record(2, 1), record(3, 1), record(4, 1)];
+    let reimported = replaced_device(&base, 2, |d| d.source.ets_id = "D-other".into());
+    let reimported = replaced_device(&reimported, 3, |d| d.program_ref = "M-0001_H-2_HP-2".into());
+    let reimported = replaced_device(&reimported, 4, |d| d.product_ref = "M-0001_H-2_P-2".into());
+
+    // The plain store save the CLI uses.
+    let (path, generation) = saved(dir.path(), "plain.knxdb", &base);
+    settle(&path, &base, generation, &all).unwrap();
+    let conn = knx_store::open_existing_and_migrate(&path).unwrap();
+    knx_store::save_project_with_passthrough(&conn, &reimported, &[], &[]).unwrap();
+    drop(conn);
+    let kept: Vec<_> = stored(&path).iter().map(|(device, _)| device.0).collect();
+    assert_eq!(kept, vec![1], "source, program and product all identify");
+
+    // A root save not admitted at the journal's generation judges the same way.
+    let (path, generation) = saved(dir.path(), "unadmitted.knxdb", &base);
+    settle(&path, &base, generation, &all).unwrap();
+    let conn = history::open_editor_store(&path, false).unwrap();
+    history::save_editor_with_sources(&conn, &model(&reimported), &CommandStack::new(), None, &[])
+        .unwrap();
+    drop(conn);
+    let kept: Vec<_> = stored(&path).iter().map(|(device, _)| device.0).collect();
+    assert_eq!(kept, vec![1]);
+
+    // Control: the same devices saved again keep every row.
+    let (path, generation) = saved(dir.path(), "same.knxdb", &base);
+    settle(&path, &base, generation, &all).unwrap();
+    let conn = knx_store::open_existing_and_migrate(&path).unwrap();
+    knx_store::save_project_with_passthrough(&conn, &base, &[], &[]).unwrap();
+    drop(conn);
+    assert_eq!(stored(&path).len(), 4);
+}
+
+#[test]
+fn an_admitted_save_keeps_a_device_added_and_downloaded_after_the_last_save() {
+    let dir = tempfile::tempdir().unwrap();
+    let base = project("P-1", 1);
+    let (path, generation) = saved(dir.path(), "p.knxdb", &base);
+    // Device 2 exists only in the journal's working state, not in the root.
+    let grown = project("P-1", 2);
+    let generation = settle(&path, &grown, generation, &[record(2, 3)]).unwrap();
+    let conn = history::open_editor_store(&path, false).unwrap();
+    history::save_editor_with_sources(
+        &conn,
+        &model(&grown),
+        &CommandStack::new(),
+        Some(generation),
+        &[],
+    )
+    .unwrap();
+    drop(conn);
+    assert_eq!(stored(&path).get(DeviceId(2)), Some(&baseline(3)));
+}
+
+/// Temporary triggers on `conn` that count every insert and delete on both
+/// baseline tables. They live in the `temp` schema, never in the file.
+fn count_baseline_writes(conn: &Connection) {
+    conn.execute_batch(
+        "CREATE TEMP TABLE baseline_writes (n INTEGER NOT NULL);
+         INSERT INTO baseline_writes VALUES (0);
+         CREATE TEMP TRIGGER bw1 AFTER INSERT ON main.device_parameter_baseline
+         BEGIN UPDATE baseline_writes SET n = n + 1; END;
+         CREATE TEMP TRIGGER bw2 AFTER DELETE ON main.device_parameter_baseline
+         BEGIN UPDATE baseline_writes SET n = n + 1; END;
+         CREATE TEMP TRIGGER bw3 AFTER UPDATE ON main.device_parameter_baseline
+         BEGIN UPDATE baseline_writes SET n = n + 1; END;
+         CREATE TEMP TRIGGER bw4 AFTER INSERT ON main.device_parameter_baseline_value
+         BEGIN UPDATE baseline_writes SET n = n + 1; END;
+         CREATE TEMP TRIGGER bw5 AFTER DELETE ON main.device_parameter_baseline_value
+         BEGIN UPDATE baseline_writes SET n = n + 1; END;
+         CREATE TEMP TRIGGER bw6 AFTER UPDATE ON main.device_parameter_baseline_value
+         BEGIN UPDATE baseline_writes SET n = n + 1; END;",
+    )
+    .unwrap();
+}
+
+fn baseline_writes(conn: &Connection) -> i64 {
+    conn.query_row("SELECT n FROM temp.baseline_writes", [], |r| r.get(0))
+        .unwrap()
+}
+
+#[test]
+fn a_plain_save_of_the_same_devices_changes_no_baseline_row() {
+    let dir = tempfile::tempdir().unwrap();
+    let base = project("P-1", 3);
+    let (path, generation) = saved(dir.path(), "p.knxdb", &base);
+    let generation = settle(
+        &path,
+        &base,
+        generation,
+        &[record(1, 4), record(2, 4), record(3, 4)],
+    )
+    .unwrap();
+    let before = stored(&path);
+    let edited = programmed(&base, 1);
+    let conn = history::open_editor_store(&path, false).unwrap();
+    count_baseline_writes(&conn);
+    let generation = history::save_editor_with_sources(
+        &conn,
+        &model(&edited),
+        &CommandStack::new(),
+        Some(generation),
+        &[],
+    )
+    .unwrap();
+    assert_eq!(baseline_writes(&conn), 0, "a plain save writes no row");
+    assert_eq!(stored(&path), before);
+    // Calibration: the same triggers see a Save As style replacement.
+    history::save_editor_with_baselines(
+        &conn,
+        &model(&edited),
+        &CommandStack::new(),
+        Some(generation),
+        &[],
+        &before,
+    )
+    .unwrap();
+    assert_eq!(
+        baseline_writes(&conn),
+        2 * (3 + 3 * 4),
+        "deleted and inserted"
+    );
+}
+
+/// 500 devices with 200 refs each: a save writing every row, a plain save
+/// that leaves them alone and a full read each finish within 60 s, a bound
+/// generous on purpose for a shared machine; the times are printed for the
+/// record, not asserted closer.
 #[test]
 fn a_large_project_saves_and_reads_its_baselines_proportionately() {
     let dir = tempfile::tempdir().unwrap();
@@ -522,13 +664,30 @@ fn a_large_project_saves_and_reads_its_baselines_proportionately() {
     assert_eq!((read.len(), values), (500, 100_000));
     assert_eq!(read, held);
     let grown = size_after.saturating_sub(size_before);
+    // A plain save of the same project to the same file: no baseline row.
+    let conn = history::open_editor_store(&path, false).unwrap();
+    let generation = history::load_editor(&conn).unwrap().unwrap().generation;
+    let edited = programmed(&base, 1);
+    let started = Instant::now();
+    history::save_editor_with_sources(
+        &conn,
+        &model(&edited),
+        &CommandStack::new(),
+        Some(generation),
+        &[],
+    )
+    .unwrap();
+    let plain_in = started.elapsed();
+    drop(conn);
+    assert_eq!(stored(&path), held);
     println!(
-        "baselines 500x200: save {saved_in:?}, read {read_in:?}, file grew {:.1} MiB",
+        "baselines 500x200: Save As style save {saved_in:?}, plain save {plain_in:?}, \
+         read {read_in:?}, file grew {:.1} MiB",
         grown as f64 / (1024.0 * 1024.0)
     );
     // About 60 bytes per value row with this fixture's ids; far below 50 MiB.
     assert!(grown < 50 * 1024 * 1024, "{grown} bytes");
-    assert!(saved_in.as_secs() < 60 && read_in.as_secs() < 60);
+    assert!(saved_in.as_secs() < 60 && read_in.as_secs() < 60 && plain_in.as_secs() < 60);
 }
 
 #[test]

@@ -98,6 +98,26 @@ devices) drops every entry. A device that an undo,
 redo or version restore brings back after that save returns with an unknown
 baseline; this conservative loss is accepted.
 
+The same `project_id` does not prove the same devices: `knx import X.knxproj
+--store existing.knxdb --replace` writes a fresh import with fresh device ids
+under the id it had (amended after review, 12 November 2026). What a save that
+brings no baselines of its own keeps therefore depends on the writer:
+
+- A writer **admitted at the journal's generation** (the server's plain save,
+  every journal write) continues, command by command, the project the rows
+  were written for, and ids are never issued twice: an entry stays while the
+  saved project holds its device. Comparing with the saved root instead would
+  drop the entry of a device added and downloaded since the last save.
+- **Any other writer** (a plain store save such as the CLI's, an unadmitted
+  root save) keeps an entry only if the saved device has the same identity as
+  the device under that id in the project the rows were written for (the
+  journal's working state, else the saved root): the same `source` (path and
+  ETS id), the same `program_ref` and the same `product_ref`. Otherwise the
+  entry goes.
+
+The server's in-memory set needs no such check: it is replaced together with
+the project, and its save is admitted only at the generation it holds.
+
 ### 3. Only settlement writes it
 
 `Settlement` gains an explicit instruction, `parameter_baseline: Keep |

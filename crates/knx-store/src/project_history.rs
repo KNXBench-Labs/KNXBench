@@ -4,6 +4,7 @@ use std::collections::{BTreeMap, HashSet};
 use std::fmt;
 use std::time::Instant;
 
+use crate::parameter_baseline::PruneBasis;
 use crate::StoreError;
 use knx_core::commissioning::parameter_baseline::{BaselineEdit, ParameterBaselines};
 use knx_core::commissioning::pending::{settle_restored_version, ProgrammingParts};
@@ -948,8 +949,9 @@ pub fn save_editor_with_baselines(
 }
 
 /// Changes only the file's parameter baselines, in one transaction that
-/// first brings an older file to the current schema: what a manual
-/// programming mark does before its command (ADR-0173 §3).
+/// first brings an older file to the current schema. For tests and
+/// maintenance tools: the server never calls it, it writes every baseline
+/// edit in the journal transaction of its settlement or mark (ADR-0173 §3/§7).
 pub fn write_parameter_baselines(
     conn: &Connection,
     edits: &[BaselineEdit],
@@ -1022,7 +1024,10 @@ pub fn save_editor_if_unchanged(
 #[derive(Debug, Clone, Copy, Default)]
 pub enum BaselineWrite<'a> {
     /// Leaves them, except that a root save drops the rows of devices the
-    /// saved project lacks, and all of them when the file held another project.
+    /// saved project lacks, all of them when the file held another project,
+    /// and, for a writer not admitted at the journal's generation, every row
+    /// whose device is not the same device (source, product, program) as in
+    /// the project the rows were written for. Writes no row otherwise.
     #[default]
     Prune,
     /// A settlement's edits, in the transaction that persists its flags.
@@ -1131,6 +1136,9 @@ fn save_editor_inner(
             return Err(HistoryError::Stale);
         }
     }
+    // The journal's working state an unadmitted root save replaces: the
+    // project the file's parameter baselines were written for (ADR-0173 §2).
+    let mut replaced_working = None;
     if save_root {
         if expected_generation.is_none() {
             if let Some(previous) = load_editor_inner(&tx)? {
@@ -1142,6 +1150,7 @@ fn save_editor_inner(
                         "Recovered work before replacement",
                     )?;
                 }
+                replaced_working = Some(previous.working);
             }
         }
         if let Some(old) = old.as_ref().filter(|old| *old != working) {
@@ -1165,7 +1174,18 @@ fn save_editor_inner(
     // After the journal rows: a baseline write that fails takes the settled
     // flags down with it in the same rollback (ADR-0173 §7).
     let started = Instant::now();
-    let previous = old.as_ref().map(|old| old.project.info.project_id.as_str());
+    let basis = if expected_generation.is_some() || own_commit {
+        PruneBasis::Continued {
+            previous_project_id: old.as_ref().map(|old| old.project.info.project_id.as_str()),
+        }
+    } else {
+        PruneBasis::Replaced {
+            described: replaced_working
+                .as_ref()
+                .or(old.as_ref())
+                .map(|described| &described.project),
+        }
+    };
     match baselines {
         // Replacing already keeps only devices of the saved project.
         BaselineWrite::Replace(all) => {
@@ -1175,7 +1195,7 @@ fn save_editor_inner(
         BaselineWrite::Prune => {}
     }
     if save_root && !matches!(baselines, BaselineWrite::Replace(_)) {
-        crate::parameter_baseline::prune(&tx, previous, &working.project)?;
+        crate::parameter_baseline::prune(&tx, basis, &working.project)?;
     }
     // Only a write that touched them reports the phase.
     let touched = match baselines {
@@ -1493,14 +1513,19 @@ pub(crate) fn before_plain_save(
         Err(HistoryError::Store(StoreError::NotSaved)) => return Ok(()),
         Err(error) => return Err(error),
     };
-    // A plain save brings no baselines: rows of absent devices, or of another
-    // project, go (ADR-0173 §2).
+    let previous = load_editor_inner(tx)?;
+    // A plain save brings no baselines and may hold a freshly imported
+    // project under the same project id (`knx import --replace`): a row stays
+    // only where the saved device is the one it was written for, judged
+    // against the journal's working state, else the root (ADR-0173 §2).
+    let described = previous.as_ref().map_or(&old, |previous| &previous.working);
     crate::parameter_baseline::prune(
         tx,
-        Some(old.project.info.project_id.as_str()),
+        PruneBasis::Replaced {
+            described: Some(&described.project),
+        },
         &replacement.project,
     )?;
-    let previous = load_editor_inner(tx)?;
     list_versions_inner(tx)?;
     if let Some(previous) = &previous {
         if previous.working != previous.baseline && previous.working != *replacement {

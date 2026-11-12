@@ -911,5 +911,8 @@ Only settlement writes them, in the same transaction as the working-journal
 write that persists the settled flags; a manual programming mark removes one
 in its own journal write. A native save prunes the rows of devices the saved
 project lacks, and a plain save of another project (other `project_id`) drops
-all of them. Additive: every baseline of an older file is unknown
+all of them. A save not admitted at the journal's generation (a plain store
+save such as `knx import --replace`) also drops every row whose device differs
+in `source`, `program_ref` or `product_ref` from the device under that id in the
+project the rows were written for. A plain server save writes no row. Additive: every baseline of an older file is unknown
 ([ADR-0173](adr/0173-last-downloaded-parameter-values.md)).

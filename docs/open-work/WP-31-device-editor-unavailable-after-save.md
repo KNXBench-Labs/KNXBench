@@ -60,13 +60,22 @@ the route runs inline: `a_save_waiting_for_the_project_leaves_the_runtime_free`
 and `a_download_waiting_for_the_project_leaves_the_runtime_free`
 (`apps/knx-server/src/routes.rs`).
 
-Later the same day (review follow-ups): every other route that does file work
-or replaces the project runs off the runtime through one helper
-(`routes::off_runtime`): New Project, documentation export, group-address CSV
-export and import, project comparison, catalog and legacy product-database
-install. The project download now takes a copy under the project lock and
-writes it after releasing it, like Save. Tests: `file_and_project_routes_leave_the_runtime_free`
-(five routes; each one blocks it when run inline) and
-`a_download_writes_its_copy_without_holding_the_project` (fails when the copy
-is written under the lock). The two catalog installs take no project lock and
-are covered by review only.
+Later the same day (review follow-ups) these routes also run off the runtime
+through one helper (`routes::off_runtime`): New Project, documentation export,
+group-address CSV export and import, project comparison, catalog and legacy
+product-database install. The project download takes a copy under the project
+lock and writes it after releasing it, like Save; the open file supplies its
+manufacturer files only if no New or Open replaced the project meanwhile.
+Tests: `file_and_project_routes_leave_the_runtime_free` (five routes; each
+blocks it when run inline), `a_download_writes_its_copy_without_holding_the_project`
+(fails when the copy is written under the lock) and
+`a_replaced_project_does_not_lend_its_file_to_an_older_download`. The two
+catalog installs take no project lock and are covered by review only.
+
+Still on a runtime worker (review 12 November 2026): the debug report
+(`debug_report_routes.rs`, project lock plus zip write) and the project payload
+export (`project_payload_routes.rs`, temp file under the project and opaque
+locks). Edits still wait for the project lock on a runtime worker, so a long
+CSV import, comparison or documentation export can make them wait as Save
+did. Concurrent downloads each hold a full project copy while they write (no
+limit; acceptable for one user, unbounded for many).

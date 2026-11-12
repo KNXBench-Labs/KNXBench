@@ -167,11 +167,31 @@ struct ExportBinding {
     snapshot_revision: Option<u64>,
 }
 
-/// Runs on the writing thread after the copy is taken (#36 tests). Global, not
-/// thread-local: the write runs on a blocking thread the test does not own.
+/// A hook run on the writing thread after the copy is taken (#36 tests), for
+/// the one state it was installed for: other tests' downloads pass it by.
+/// Global, not thread-local: the write runs on a blocking thread.
 #[cfg(test)]
-pub(crate) static DURING_DOWNLOAD_WRITE: std::sync::Mutex<Option<Box<dyn FnOnce() + Send>>> =
-    std::sync::Mutex::new(None);
+pub(crate) type DownloadHook = (usize, Box<dyn FnOnce() + Send>);
+#[cfg(test)]
+pub(crate) static DURING_DOWNLOAD_WRITE: std::sync::Mutex<Vec<DownloadHook>> =
+    std::sync::Mutex::new(Vec::new());
+
+/// The open project's file, if the project is still the incarnation the
+/// download copied: after a New or Open the file belongs to another project and
+/// must not supply this copy's manufacturer files. A replacement changes the
+/// incarnation and the store path under the store-path lock, so reading both
+/// under it is consistent without holding the project.
+pub(crate) fn open_file_of(
+    state: &crate::AppState,
+    incarnation: u64,
+) -> Option<std::path::PathBuf> {
+    let store_path = state.store_path.lock().expect("state mutex poisoned");
+    if state.project_incarnation.load(Ordering::Relaxed) == incarnation {
+        store_path.clone()
+    } else {
+        None
+    }
+}
 
 async fn download(
     State(state): State<SharedState>,
@@ -196,7 +216,7 @@ async fn download(
     let writing_state = Arc::clone(&state);
     let tmp = crate::routes::off_runtime(move || {
         let state = writing_state;
-        let (project, opaque, manufacturer_refs) = {
+        let (project, opaque, manufacturer_refs, incarnation) = {
             let project = state.project.lock().expect("state mutex poisoned");
             let project = project
                 .as_ref()
@@ -218,11 +238,21 @@ async fn download(
                 .lock()
                 .expect("state mutex poisoned")
                 .clone();
-            (project.clone(), opaque, manufacturer_refs)
+            let incarnation = state.project_incarnation.load(Ordering::Relaxed);
+            (project.clone(), opaque, manufacturer_refs, incarnation)
         };
         #[cfg(test)]
-        if let Some(hook) = DURING_DOWNLOAD_WRITE.lock().unwrap().take() {
-            hook();
+        {
+            let key = Arc::as_ptr(&state) as usize;
+            let mut hooks = DURING_DOWNLOAD_WRITE.lock().unwrap();
+            let hook = hooks
+                .iter()
+                .position(|(owner, _)| *owner == key)
+                .map(|index| hooks.remove(index).1);
+            drop(hooks);
+            if let Some(hook) = hook {
+                hook();
+            }
         }
         let tmp = tempfile::NamedTempFile::new().map_err(|e| ApiError::internal(e.to_string()))?;
         domain::save_project_as_impl(tmp.path(), &project, &opaque, &manufacturer_refs)
@@ -230,11 +260,7 @@ async fn download(
         let tmp = tmp.into_temp_path();
         // ADR-0128: the downloaded file carries its manufacturer files like a
         // saved one; the open project's own file can supply them.
-        let open_file = state
-            .store_path
-            .lock()
-            .expect("state mutex poisoned")
-            .clone();
+        let open_file = open_file_of(&state, incarnation);
         domain::carry_manufacturer_files(&state, &tmp, open_file.as_deref(), "download");
         Ok::<_, ApiError>(tmp)
     })

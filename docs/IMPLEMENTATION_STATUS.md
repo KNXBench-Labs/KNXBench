@@ -21,8 +21,9 @@ request under one source-proving catalogue lease, and handles lifecycle over
 both section owners. GET DeviceDetail carries typed independent comparisons
 with checked exact-reference row attribution; edit responses omit them. Plain
 save does not rewrite evidence; failed persistence publishes nothing. The
-communication-object UI, final package review/gate/publication and hardware
-acceptance remain pending; no visible UI is changed by this backend package.
+communication-object UI and hardware acceptance remain pending; no visible UI
+is changed. Accepted after independent Standards/Spec review and the 17-stage
+package gate on main: Rust 8917/0, web 1209 browser, corpus 155/155.
 
 ## Object flag edits mark Parameters, not Group addresses (12 November 2026; ADR-0129 amendment)
 

@@ -1,7 +1,7 @@
 # ADR 0174: The project remembers the links and object flags a verified download wrote
 
 Date: 2026-11-12
-Status: Proposed (backend implemented in WP-37f; UI pending; package acceptance pending)
+Status: Proposed (backend implemented in WP-37f, main, 12 November 2026; UI pending)
 Session: WP-37d
 
 ## Context

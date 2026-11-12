@@ -1530,7 +1530,7 @@
       "number": null,
       "title": "Last-download object evidence",
       "topic": "Commissioning and recovery",
-      "summary": "WP-37f implements backend schema21 flags/link evidence and independent comparison; final package acceptance and communication-object UI remain pending. This describes a completed request, not device readback. Migrated flags stay unknown; modules, full-download duplicate-lookup refusal and the 070n object-table placement guard remain separate.",
+      "summary": "WP-37f implements backend schema21 flags/link evidence and independent comparison on main; the communication-object UI remains pending. This describes a completed request, not device readback. Migrated flags stay unknown; modules, full-download duplicate-lookup refusal and the 070n object-table placement guard remain separate.",
       "file": "last-download-object-evidence.md",
       "ledger_ids": [],
       "anchors": []

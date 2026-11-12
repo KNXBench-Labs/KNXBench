@@ -20,7 +20,7 @@ are planned below (owner request, 12 November 2026); not implemented or claimed.
    (native schema 20). WP-40 (version restore, ADR-0173 §6) is implemented.
    **Implemented**: server part and parameter-editor UI (see below).
 3. Per-link and per-object-flag marks in the communication-object view.
-   **Designed** (12 November 2026) in
+   **Backend implemented** (WP-37f, 12 November 2026; UI pending) per
    [ADR-0174](../adr/0174-last-downloaded-links-and-flags.md) (Proposed): the
    effective object flags join the parameter baseline (they are written with
    Parameters), the written links get their own baseline section following

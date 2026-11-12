@@ -2,8 +2,8 @@
 
 The [ADR-0174](../adr/0174-last-downloaded-links-and-flags.md) backend (WP-37f)
 records effective object flags with Parameters and links with Group addresses,
-with independent usability and settlement times. Final package acceptance and
-the communication-object UI remain pending.
+with independent usability and settlement times. The backend is on main; the
+communication-object UI remains pending.
 
 - Evidence describes what a completed regular/batch request built its image
   from, not a device readback. Per-part pending flags remain authoritative.

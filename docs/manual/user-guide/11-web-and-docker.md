@@ -99,8 +99,8 @@ warning. The quick-start plaintext password is visible in the container environm
 and may enter shell history; use [Setting a password](#setting-a-password) for a
 hashed credential in a lasting setup.
 
-- **Tags:** the release version without its `v` (`0.1.0-alpha.20` for the tag
-  `v0.1.0-alpha.20`) and `latest`. While KNXBench is in alpha, `latest` moves
+- **Tags:** the release version without its `v` (`0.1.0-alpha.21` for the tag
+  `v0.1.0-alpha.21`) and `latest`. While KNXBench is in alpha, `latest` moves
   with every pre-release; pin a version tag if an update should be your own
   decision.
 - **Availability:** from `v0.1.0-alpha.6` (9 October 2026) on; `v0.1.0-alpha.5`
@@ -164,6 +164,17 @@ those devices' **Parameters** tab and choose **Restore from original .knxproj…
 ([KL-183](../../KNOWN_LIMITATIONS.md#catalogue-kl-183)). Only files that match the
 project byte for byte are installed; save the project afterwards so its file carries
 them from then on.
+
+### Alpha 21 upgrade boundary
+
+**Alpha 21:** project files move **19 → 21** for independent last-download
+parameter, link and flag comparisons; the product database moves **32 → 33**
+for conditional block captions. **Alpha 20 refuses converted files and starts
+without products when given the converted catalogue.** Back up projects, the
+closed product database, the entire data directory/volume, device backups and
+original inputs first. Read-only readers migrate a memory copy only. Restore
+pre-upgrade copies to return; reinstalling alone is not a downgrade.
+[Alpha 21 upgrade notes](../../releases/alpha21.md#upgrade).
 
 ### Alpha 20 upgrade boundary
 
@@ -424,7 +435,7 @@ stopping fails, the service remains stopped until you correct it; this is not an
 automatic rollback.
 
 To choose a fixed release, replace `latest` in **both** image references with a
-published version such as `0.1.0-alpha.20`. The Linux default keeps
+published version such as `0.1.0-alpha.21`. The Linux default keeps
 `--network host` and `-e KNX_PORT=8484` (or your chosen port), as explained in
 [Networking](#networking). If migrating an older bridge deployment to host mode,
 review the firewall first: the authenticated listener becomes reachable on all

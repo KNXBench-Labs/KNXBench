@@ -18,17 +18,17 @@ Docker Desktop networking is not a verified substitute for Linux host networking
 ## a) Linux AppImage
 
 The commands below use the
-[`v0.1.0-alpha.20`](https://github.com/KNXBench-Labs/KNXBench/releases/tag/v0.1.0-alpha.20)
+[`v0.1.0-alpha.21`](https://github.com/KNXBench-Labs/KNXBench/releases/tag/v0.1.0-alpha.21)
 pre-release.
-Download **both** `KNXBench_0.1.0-alpha.20_amd64.AppImage` and `SHA256SUMS` from
+Download **both** `KNXBench_0.1.0-alpha.21_amd64.AppImage` and `SHA256SUMS` from
 that release page into the same directory.
 
 From that directory:
 
 ```bash
 sha256sum -c --ignore-missing SHA256SUMS
-chmod +x KNXBench_0.1.0-alpha.20_amd64.AppImage
-./KNXBench_0.1.0-alpha.20_amd64.AppImage
+chmod +x KNXBench_0.1.0-alpha.21_amd64.AppImage
+./KNXBench_0.1.0-alpha.21_amd64.AppImage
 ```
 
 `SHA256SUMS` also lists the `knx-mcp` binary; `--ignore-missing` checks only the
@@ -38,7 +38,7 @@ files you downloaded and still fails on any mismatch.
 welcome screen. Stop if the checksum differs; do not solve an integrity warning
 by becoming less interested in it.
 
-The Alpha 20 AppImage is built on Ubuntu 24.04 and needs **glibc 2.39 or newer**
+The Alpha 21 AppImage is built on Ubuntu 24.04 and needs **glibc 2.39 or newer**
 (the Alpha 19 AppImage needed 2.43 and could only be started by its file owner; both
 are fixed). The glibc floor is checked for every packaged library; it is not a
 promise for every distribution or graphics driver.
@@ -58,6 +58,15 @@ The [launcher contract](../../APPIMAGE_LAUNCHER.md) records the tested boundary.
 older data directory. Keep the old files and open/copy them deliberately; see
 [known limitation §161](../../KNOWN_LIMITATIONS.md#161-alpha5-does-not-pick-up-the-alpha4-data-folder).
 
+**Alpha 21:** project files move **19 → 21** for independent last-download
+parameter, link and flag comparisons; the product database moves **32 → 33**
+for conditional block captions. **Alpha 20 refuses converted files and starts
+without products when given the converted catalogue.** Back up projects, the
+closed product database, the entire data directory/volume, device backups and
+original inputs first. Read-only readers migrate a memory copy only. Restore
+pre-upgrade copies to return; reinstalling alone is not a downgrade.
+[Alpha 21 upgrade notes](../../releases/alpha21.md#upgrade).
+
 **Alpha 20:** native/store schema and core model move 16 → 19 (17 saved-instance
 priority, 18 priority edits, 19 group-address description) and the product database
 31 → 32 through one data-only Color/Time repair, when a writable server, desktop app
@@ -69,7 +78,7 @@ conversion. Alpha 19 also cannot read the new System-2 journal entries for the
 `Download_Flag` rule. Close the application and back up project/catalogue files,
 device backups, original import files and all Docker data independently before
 updating; to go back, restore those pre-upgrade copies.
-[Current release scope](../../releases/alpha20.md#upgrade).
+[Alpha 20 historical upgrade](../../releases/alpha20.md#upgrade).
 
 **Earlier Alpha 19:** native/store schema 16 and core model 16 were unchanged from Alpha 18.
 The product database moved 30 → 31 through one data-only migration when a writable
@@ -161,7 +170,7 @@ compare the browser's certificate fingerprint with the one in
 
 **Choose your update policy:** `latest` follows published releases, including
 alpha pre-releases; it does not track `main`. Use
-`knxbench/knxbench-server:0.1.0-alpha.20` in both commands to pin that release.
+`knxbench/knxbench-server:0.1.0-alpha.21` in both commands to pin that release.
 The source server and source-built images now default to 8484. Keeping
 `-e KNX_PORT=8484` also makes the commands work with Alpha.9 and older images.
 Images start at `0.1.0-alpha.6` (9 October 2026); see

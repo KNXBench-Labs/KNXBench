@@ -89,7 +89,9 @@ Two things appear in this bar only when they have something to say:
   found something worth telling you about. Clicking it goes to the Overview, where the
   counts are broken down. [Projects](02-projects.md) explains what those numbers mean.
 
-## Background activities (source only, after Alpha 20)
+<a id="background-activities-source-only-after-alpha-20"></a>
+
+## Background activities (since Alpha 21)
 
 The **Activities** button in the footer opens concurrent work and recent session
 results. Local loading feedback starts immediately; a global status summary
@@ -155,7 +157,7 @@ not a missing feature.
 
 ## The navigation pane
 
-The left pane has three stacked blocks; source builds after Alpha 20 add a fourth,
+The left pane has three stacked blocks; Alpha 21 add a fourth,
 **Pending programming**, while a project is open.
 
 **Since Alpha 13:** click the **Workspaces**, **Project explorer**
@@ -196,7 +198,7 @@ through the rows on screen. Turn that down or off under **Settings → Motion by
 category → Structure lines in the explorer**; the lines themselves stay. The
 screenshots in this manual still show the released explorer.
 
-**Pending programming** (main-only after Alpha 20), between the explorer and
+**Pending programming** (since Alpha 21), between the explorer and
 the diagnostics block: the devices that still have parts to program, with the
 count in its heading, a click to open each device and **Download…** to open its
 download tab. See [Pending programming panel](05-devices-and-products.md#pending-programming-panel-main-only-after-alpha-20).

@@ -1,11 +1,11 @@
-Last updated: 2026-11-08 (Alpha 20 pre-release; source cutoff 2026-11-08)
+Last updated: 2026-11-13 (Alpha 21 pre-release; source cutoff 2026-11-12)
 
 # KNXBench Features
 
 | Reference | Value |
 | --- | --- |
-| Source snapshot | `v0.1.0-alpha.20` (cutoff `dfb3f88b8`) |
-| Released baseline | `v0.1.0-alpha.20` |
+| Source snapshot | `v0.1.0-alpha.21` (cutoff `938e895c5`) |
+| Released baseline | `v0.1.0-alpha.21` |
 | Main-only | Newer than released baseline |
 | Local-only | Unpublished; not accepted on main |
 | Scope | Listed boundaries; not universal compatibility |
@@ -15,17 +15,23 @@ Last updated: 2026-11-08 (Alpha 20 pre-release; source cutoff 2026-11-08)
 
 <a id="main-only-after-alpha-19"></a>
 
-## Source updates after Alpha 20
+<a id="source-updates-after-alpha-20"></a>
+
+## New in Alpha 21
+
+[Release scope and upgrade](releases/alpha21.md): project 19 → 21, product database 32 → 33; keep backups. TCP/USB remain experimental, UDP supported.
 
 | Feature | Scope | Availability |
 | --- | --- | --- |
-| [Values that differ from the last download](open-work/WP-37-pending-changes-across-ui.md) | The parameter editor marks each value that differs from the value the device's last completed KNXBench download used (“Value at last download: …”) and counts them above the fields; marks the areas, scopes and sections holding them in the navigation (#48); says plainly when no comparison is possible (issue #40, ADR-0173) | Main-only (not released) |
-| [Links and flags that differ from the last download](open-work/WP-37-pending-changes-across-ui.md) | The communication-object table marks each object whose links or flags differ from the device's last completed KNXBench download, lists added, removed and redirected links and the flags at that download in its editor row, and counts them above the table; says plainly per section when no comparison is possible (issue #40, ADR-0174) | Main-only (not released) |
-| [Pending marks in the device editor](open-work/WP-37-pending-changes-across-ui.md) | The opened device names its not-yet-programmed parts under the heading and marks the Parameters and Communication objects tabs; cleared when a covering write reloads the project (issue #40) | Main-only (not released) |
-| [Pending programming panel](open-work/WP-38-pending-devices-panel.md) | Read-only navigation block listing every device with pending parts (count in the heading, Adr/App/Par/GA chips, address order, unreported states counted), opening a device on click and its Download to device tab with **Download…**; no batch download (issue #42) | Main-only (not released) |
-| [Links-first object editor and compact toolbar](open-work/WP-36-communication-object-view-cleanup.md) | Expanded communication objects list linked group addresses and the link row first, other settings folded; one view select and an Options menu replace five toolbar buttons (issues #44, #46) | Main-only (not released) |
-| [Manufacturer names and product metadata](contracts/device-product-metadata.md) | Shared retained-master name fallback for older databases; all normalized scalar device/product records, matching catalogue placements, technical/application/source metadata and file-scoped additional attributes, read-only EN/DE | Source candidate (not in Alpha 20) |
-| [Background activity footer](status/2026-11-10-background-activity-footer.md) | Delayed concurrent/recent inventory for retained App-owned loading, saving, device-editor reads, read-only comparisons and catalogue jobs; sticky errors and existing details owner; no new cancellation or generic job persistence. Two-second reveal, bounded summary and full retained context | Source only (not in Alpha 20) |
+| [Values that differ from the last download](open-work/WP-37-pending-changes-across-ui.md) | The parameter editor marks each value that differs from the value the device's last completed KNXBench download used (“Value at last download: …”) and counts them above the fields; marks the areas, scopes and sections holding them in the navigation (#48); says plainly when no comparison is possible (issue #40, ADR-0173) | alpha.21 |
+| [Links and flags that differ from the last download](open-work/WP-37-pending-changes-across-ui.md) | The communication-object table marks each object whose links or flags differ from the device's last completed KNXBench download, lists added, removed and redirected links and the flags at that download in its editor row, and counts them above the table; says plainly per section when no comparison is possible (issue #40, ADR-0174) | alpha.21 |
+| [Pending marks in the device editor](open-work/WP-37-pending-changes-across-ui.md) | The opened device names its not-yet-programmed parts under the heading and marks the Parameters and Communication objects tabs; cleared when a covering write reloads the project (issue #40) | alpha.21 |
+| [Pending programming panel](open-work/WP-38-pending-devices-panel.md) | Read-only navigation block listing every device with pending parts (count in the heading, Adr/App/Par/GA chips, address order, unreported states counted), opening a device on click and its Download to device tab with **Download…**; separate reviewed batch action below (issue #42) | alpha.21 |
+| [Links-first object editor and compact toolbar](open-work/WP-36-communication-object-view-cleanup.md) | Expanded communication objects list linked group addresses and the link row first, other settings folded; one view select and an Options menu replace five toolbar buttons (issues #44, #46) | alpha.21 |
+| [Manufacturer names and product metadata](contracts/device-product-metadata.md) | Shared retained-master name fallback for older databases; all normalized scalar device/product records, matching catalogue placements, technical/application/source metadata and file-scoped additional attributes, read-only EN/DE | alpha.21 |
+| [Background activity footer](status/2026-11-10-background-activity-footer.md) | Delayed concurrent/recent inventory for retained App-owned loading, saving, device-editor reads, read-only comparisons and catalogue jobs; sticky errors and existing details owner; no new cancellation or generic job persistence. Two-second reveal, bounded summary and full retained context | alpha.21 |
+
+| [Download all pending](adr/0172-batch-programming-stops-at-the-first-doubt.md) | Explicit preview and confirmation, sequential device work, stops at the first doubt; no new hardware permission | alpha.21 |
 
 ## New in Alpha 20
 
@@ -42,12 +48,12 @@ tested with one adapter type, TCP only against local test peers, and issues #30 
 | Feature | Scope | Availability |
 | --- | --- | --- |
 | [ETS6 group-address CSV import](adr/0164-group-address-description-and-csv-encoding.md) | ETS6 exports in the four full profiles, including "CSV (ETS3 Format)" and tab-separated files with a header; explicit UTF-8 (default) or Windows-1252 in the web import and `knx ga-import --encoding windows-1252`; a byte invalid for the chosen encoding stops the import with its offset; no guessing, headerless files still refused ([KL-038](KNOWN_LIMITATIONS.md#catalogue-kl-038)) | alpha.20 |
-| [Group-address description](adr/0164-group-address-description-and-csv-encoding.md) | New project field (native 19), filled from `.knxproj` imports and CSV description columns; a CSV datapoint type applies to addresses the import creates. After alpha.20 on main: an inspector editor, removal through CSV only with the explicit, confirmed clear-blank-descriptions option, and MCP `get_group_address`/`search` coverage | alpha.20 |
-| [Experimental transport labels](manual/implementation-status.md#experimental-transport-labels-main-only-after-alpha-20) | TCP and USB/serial selectors and observed status/monitor/scan captions disclose experimental scope (en/de); UDP tunnelling remains supported; presentation only | Main-only (not released) |
+| [Group-address description](adr/0164-group-address-description-and-csv-encoding.md) | New project field (native 19), filled from `.knxproj` imports and CSV description columns; a CSV datapoint type applies to addresses the import creates. Since alpha.21: an inspector editor, removal through CSV only with the explicit, confirmed clear-blank-descriptions option, and MCP `get_group_address`/`search` coverage | alpha.20 |
+| [Experimental transport labels](manual/implementation-status.md#experimental-transport-labels-main-only-after-alpha-20) | TCP and USB/serial selectors and observed status/monitor/scan captions disclose experimental scope (en/de); UDP tunnelling remains supported; presentation only | alpha.21 |
 | [USB/serial TP-UART](status/2026-11-04-usb-serial-ui.md) | Linux server + settings/footer/monitor; explicit passive/active mode, bound sends and reserved serial cleanup; transparent NCN5130 firmware required; correction review and software gates passed, no hardware compatibility claim | alpha.20 |
 | [Passive USB-serial candidates](research/2026-11-05-passive-serial-candidates.md) | Explicit Linux server-local by-id metadata list; bounded and unverified, path selection only, manual entry retained; without hardware verification | alpha.20 |
-| [Server/Web TCP line scans](status/2026-11-10-server-web-tcp-scans.md) | Explicit scan-local TCP, recorded DD0 scanner, strict session/incarnation actions, live/pre-disconnect skips and cleanup uncertainty; UDP default; software-accepted on main, no hardware claim | Main-only (not released) |
-| [Optional TCP tunnelling](contracts/tcp-tunnelling.md) | Explicit library, CLI monitor/write and server/Web monitor/group traffic; UDP default retained, other device/scan paths UDP-only; no real-gateway interoperability claim | alpha.20 |
+| [Server/Web TCP line scans](status/2026-11-10-server-web-tcp-scans.md) | Explicit scan-local TCP, recorded DD0 scanner, strict session/incarnation actions, live/pre-disconnect skips and cleanup uncertainty; UDP default; software-accepted on main, no hardware claim | alpha.21 |
+| [Optional TCP tunnelling](contracts/tcp-tunnelling.md) | Explicit library, CLI monitor/write and server/Web monitor/group traffic; UDP default retained, downloads and other programming paths UDP-only; no real-gateway interoperability claim | alpha.20 |
 | [Little-endian numbers and fixed load steps](adr/0159-little-endian-numbers-and-fixed-load-steps.md) | Download preparation for `ParameterByteOrder="LittleEndian"` programs and their `LdCtrlWriteProp`/`LdCtrlDelay` steps, compared with recorded ETS 6.4 images in the simulator; marked untested, needs explicit acceptance ([KL-170](KNOWN_LIMITATIONS.md#catalogue-kl-170)) | alpha.20 |
 | [Inactive choose controllers](adr/0160-inactive-choose-controllers-select-nothing.md) | A `choose` whose placed controller is inactive selects nothing, so hidden push-button LED controllers no longer produce conflicting values | alpha.20 |
 | Undeclared text encoding | Text parameters without a declared encoding are written as Windows-1252, as ETS does; marked untested ([KL-171](KNOWN_LIMITATIONS.md#catalogue-kl-171)) | alpha.20 |

@@ -520,7 +520,7 @@ An amber dot beside a device in either explorer branch means at least one part
 is pending. Hover the dot or a chip group for the full part names. Selecting the
 device shows all four states under **Programming** in Properties.
 
-**In the device editor** *(source build after Alpha 20, 11 November 2026; issue #40)*:
+**In the device editor** *(Alpha 21, 11 November 2026; issue #40)*:
 the opened device shows the same state where you edit it. A line under its name
 names the pending parts, for example **Not programmed yet: Parameters and Group
 addresses**. An amber dot marks the **Parameters** tab when parameters or the
@@ -537,7 +537,7 @@ and dots disappear on their own when a download or address programming whose
 scope covered those parts reloads the project; **Download to device…** in the
 heading stays the way to start one.
 
-**Values that differ from the last download** *(source build after Alpha 20,
+**Values that differ from the last download** *(Alpha 21,
 12 November 2026; issue #40)*: after a download by KNXBench completes, the
 project remembers, for each parameter, the value the download used. The
 **Parameters** tab then marks every value you have changed since with the same
@@ -616,7 +616,9 @@ settlement is logged and must be resolved before trusting persisted flags.
 
 <a id="pending-programming-panel-main-only-after-alpha-20"></a>
 
-### Pending programming panel (main-only after Alpha 20; issue #42)
+<a id="pending-programming-panel-main-only-after-alpha-20-issue-42"></a>
+
+### Pending programming panel (since Alpha 21; issue #42)
 
 The navigation pane has a **Pending programming** block (German: **Ausstehende
 Programmierung**) between the project explorer and Diagnostics. Its heading
@@ -642,7 +644,9 @@ source build newer than Alpha 20; the screenshots in this manual do not show it.
 
 <a id="download-all-pending"></a>
 
-#### Download all pending (main-only after Alpha 20; issue #42)
+<a id="download-all-pending-main-only-after-alpha-20-issue-42"></a>
+
+#### Download all pending (since Alpha 21; issue #42)
 
 **Download all…** (German: **Alle programmieren…**) at the top of the block,
 or in the **Download to device** tab, opens a review of every pending device
@@ -1121,7 +1125,7 @@ edit the project; they do not connect to, program or download a KNX device.
 
 ### Communication objects
 
-**Links first, compact toolbar** *(source build after Alpha 20, 11 November 2026;
+**Links first, compact toolbar** *(Alpha 21, 11 November 2026;
 issues #44 and #46)*: expanding an object shows its **Linked group addresses**
 first: one row per link with **Unlink**, then the row to link another address.
 Everything else (DPT, the manufacturer function, description, flags and
@@ -1142,7 +1146,7 @@ the size stays blank rather than guessed.
 
 **Priority column** (since Alpha 20): the **Priority column**
 checkbox (a button above the table in Alpha 20, under **Options** since the
-source build after Alpha 20) adds a column with each object's effective project
+Alpha 21) adds a column with each object's effective project
 priority (`Low`, `High` or `Alert`) and a short note where it comes from: *yours*
 (set by you), *saved* (from the imported project) or *product*. Hover a cell for
 the full wording (the object editor shows the same text); `—` means the priority cannot be determined and the tooltip
@@ -1220,7 +1224,7 @@ codec.*
 panel now has aligned **No., Name, Function, DPT, Group addresses, Status** headings,
 a **By channel / All objects** switch (flat view adds Channel), search and filters.
 Click a heading to sort ascending/descending, within channels or globally in flat
-view. **Original order** (under **Options** since the source build after Alpha 20)
+view. **Original order** (under **Options** since the Alpha 21)
 resets sorting; **Reset filters** leaves view/sort alone.
 
 Search covers object number/name/function/description, channel labels, effective
@@ -1689,7 +1693,7 @@ number, version, ID and mask version.
 Fields missing from that overview are omitted and counted as **overview fields**,
 not as a count of the whole database.
 
-**Source builds after Alpha 20:** **More product data → Database records** also
+**Since Alpha 21:** **More product data → Database records** also
 shows all available normalized scalar metadata, every matching catalogue placement
 and its sections, source hashes and sanitized filenames, and retained additional
 source attributes/diagnostics. Open a record to inspect its exact IDs **and** names,

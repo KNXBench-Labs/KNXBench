@@ -2,17 +2,21 @@
 
 # Implementation status
 
-## Experimental transport labels (main-only, after Alpha 20)
+<a id="experimental-transport-labels-main-only-after-alpha-20"></a>
+
+## Experimental transport labels (since Alpha 21)
 
 TCP tunnelling and USB/serial TP-UART are labelled **experimental** wherever
 transport is selected or observed in the status bar, Bus Monitor and TCP line
 scan. A translated note makes UDP tunnelling the supported path and discloses
 that TCP/serial tests use simulated and loopback peers, not a real interface.
-This changes presentation only, not connection behaviour; the next release's
-notes still need the same wording.
+This changes presentation only, not connection behaviour. The
+[Alpha 21 notes](../releases/alpha21.md) retain the same boundary.
 [Transport scope](user-guide/07-bus-and-interfaces.md#optional-tcp-source-candidate-8-november-2026).
 
-## Manufacturer names and complete product metadata (source candidate, after Alpha 20)
+<a id="manufacturer-names-and-complete-product-metadata-source-candidate-after-alpha-20"></a>
+
+## Manufacturer names and complete product metadata (since Alpha 21)
 
 Devices and Product data share a read-only name resolver for installed names and
 unambiguous retained masters, with exact-ID fallback. Expand Database records for
@@ -20,10 +24,11 @@ all normalized scalar product/hardware/program data, every matching catalogue
 placement/section, sanitized source provenance and file-scoped additional
 attributes. Original XML, binary payloads and verified hardware capabilities are
 not implied. [Coverage, regression seam and limits](../contracts/device-product-metadata.md).
-Published and accepted on main `5494e3d68`; available in source builds after Alpha 20,
-not a claim that an existing Alpha 20 installation has been updated.
+Available in Alpha 21; existing Alpha 20 installations need an upgrade.
 
-## Background activities (source only, after Alpha 20)
+<a id="background-activities-source-only-after-alpha-20"></a>
+
+## Background activities (since Alpha 21)
 
 An expandable footer observes actual App-owned project loading/saving, device
 editor reads, read-only comparison and retained catalogue jobs. Its summary
@@ -35,16 +40,20 @@ real-App browser verification cover both languages and narrow/wide layouts.
 
 <a id="serverweb-tcp-scan-candidate-after-alpha-20"></a>
 
-## Server/Web TCP scans (main-only, after Alpha 20)
+<a id="serverweb-tcp-scans-main-only-after-alpha-20"></a>
+
+## Server/Web TCP scans (since Alpha 21)
 
 The bounded source successor adds a scan-local UDP/TCP selector, actual
 transport/skip/cleanup provenance and strict session/incarnation cancellation,
 comparison and deliberate reconciliation. UDP remains the default independently
 of the monitor preference. Independent source closure passed; the complete selected acceptance plan
-is closed by source-bound composition; no release or real-gateway claim.
+is closed by source-bound composition; included in Alpha 21, no real-gateway claim.
 [Acceptance and verification boundary](../status/2026-11-10-server-web-tcp-scans.md).
 
-## German parameter metadata (main-only, after Alpha 20)
+<a id="german-parameter-metadata-main-only-after-alpha-20"></a>
+
+## German parameter metadata (since Alpha 21)
 
 The parameter editor translates known type, value-source and manufacturer-access
 labels with the UI language. German shows **Auswahl**, **Im Projekt gespeichert**,
@@ -54,30 +63,25 @@ names, choices and values still use the separate product-data language and its
 existing fallback; changing UI language never rewrites them.
 [Scope and regression coverage](../status/2026-11-09-german-ui-copy.md).
 
-## Alpha 20 — current pre-release
+## Alpha 21 — current pre-release
 
-Alpha 20 (`v0.1.0-alpha.20`, source cutoff `dfb3f88b8`) imports ETS6 group-address
-CSV exports, adds a group-address description, a Linux USB/serial TP-UART option,
-optional TCP tunnelling for the bus monitor, more download preparations and object
-priorities. None of it is verified on real hardware; the new download kinds are
-compared with recorded ETS images in the simulator and stay *untested*, and the
-allocation mismatch of issues #30/#22 is unresolved.
-[Release scope, upgrade notes and boundaries](../releases/alpha20.md).
+Alpha 21 adds pending-device navigation, batch programming with explicit review,
+last-download comparisons for parameter values, links and flags, improved
+save/editor concurrency, background journal writes, description editing and
+richer product metadata. TCP scans and read-only CLI lookups are explicit and
+experimental; UDP remains supported. No new physical-hardware evidence.
+[Release scope, upgrade notes and boundaries](../releases/alpha21.md).
 
-| Capability | Boundary |
-| --- | --- |
-| Group-address CSV | ETS6 exports with a header line import through the four full profiles; choose UTF-8 (default) or Windows-1252, nothing is guessed; a byte invalid for the chosen encoding stops the import with its offset. [CSV guide](user-guide/04-group-addresses.md#group-addresses-as-csv). |
-| Group-address description | Filled from `.knxproj` imports and CSV description columns, edited in the inspector (on main after Alpha 20); an empty CSV cell removes one only with the explicit, confirmed *clear blank descriptions* option. Older imports are not backfilled; import the `.knxproj` again. |
-| Bus transports | Linux USB/serial TP-UART for one adapter type (Busware TUL, transparent NCN5130 firmware) for monitoring and group telegrams; optional TCP for the bus monitor and its group traffic, UDP the default. Downloads, device management and server/Web scans stay KNXnet/IP over UDP; the 10 November CLI-scan source successor has explicit UDP/TCP, software-accepted on main `ac9b23814`, not in Alpha 20. |
-| Downloads | Little-endian numbers, undeclared text encoding, property-placed parameters with master resets, and time parameters can be prepared as *untested*; they need explicit acceptance. Property-based devices have no restore or partial download yet. |
-| Object priority | Saved, effective and edited priority in the object editor, an optional Priority column, comparison and report; programming refuses a device whose project priority differs from the product's ([KL-188](../KNOWN_LIMITATIONS.md#catalogue-kl-188)). |
-| Workbench | Faster saved-project edits (issue #35), status-bar connection, Compare from the device editor, Rail themes, checked Date editor, import findings after reopening. |
+Project schema **19 → 21**, product database **32 → 33**. Alpha 20 refuses both
+after writable conversion. Close KNXBench and back up the complete data directory,
+projects, product database and original inputs before upgrading. Return only by
+restoring pre-upgrade copies. History not yet flushed can be lost on a crash;
+ordinary editor requests skipping a save queue is not a blanket nonblocking claim.
 
-Native/store and model move **16 → 19** and the product database **31 → 32** on a
-writable open. Alpha 19 refuses schema-19 projects (`FutureSchemaVersion`) and
-product32 (`FutureVersion`; the server then starts without products), and cannot
-read the new System-2 `Download_Flag` journal entries. Going back is not tested;
-keep independent backups before upgrading and restore them to return.
+## Alpha 20 — previous pre-release
+
+The [Alpha 20 notes](../releases/alpha20.md) retain that release's historical
+scope and upgrade boundary; the newer capabilities above ship with Alpha 21.
 
 <a id="optional-tcp-monitorgroup-traffic-candidate-8-november-2026"></a>
 
@@ -643,7 +647,7 @@ P4 live-device comparison; CLI/external work needs manual reconciliation.
 [Use and limits](user-guide/05-devices-and-products.md#programming-marks-p3-since-alpha-12),
 [ADR-0129](../adr/0129-per-part-pending-programming.md).
 
-In a source build after Alpha 20 the opened device editor also names its
+In a Alpha 21 the opened device editor also names its
 pending parts under the heading and marks the Parameters and Communication
 objects tabs (issue #40). Its parameter editor marks each value that differs
 from the value the last completed KNXBench download used and counts them above
@@ -664,7 +668,7 @@ marks advise, show the resolved scope, and list a pending address or medium
 configuration separately. The marks stay hints; the partial download still
 checks the device before it writes. Synthetic offline tests only.
 
-Main-only after Alpha 20 (issue #42, WP-38 step 1): a read-only **Pending
+Since Alpha 21 (issue #42, WP-38 step 1): a read-only **Pending
 programming** block in the navigation lists every device with a pending part
 (count in its heading, chips, address order, unreported states counted, not
 listed), opens a device on click and hands it to the Download to device tab
@@ -1190,7 +1194,7 @@ Main source delivery is [verified](../status/2026-10-09-offline-ap1-verification
 | CSV export and re-import in KNXBench's own format | ✅ Implemented | Every address in the reference project round-trips unchanged |
 | CSV column-profile import | ✅ Bounded adapter | Four fixed name/address layouts; range rows explicitly omitted, unsupported metadata atomically refused. Since Alpha 20 a CSV datapoint type applies to addresses the import creates; existing addresses keep theirs. [Contract](../contracts/group-address-csv-profiles.md). No external export or general ETS/ESF interoperability claim. |
 | ETS6 CSV exports and explicit encoding | ✅ Since Alpha 20, bounded | ETS6 exports with a header line, including "CSV (ETS3 Format)" and tab-separated files; UTF-8 (default) or Windows-1252 chosen by you, never guessed; a byte invalid for that encoding stops the import with its offset; headerless files refused — [ADR-0164](../adr/0164-group-address-description-and-csv-encoding.md), [KL-038](../KNOWN_LIMITATIONS.md#catalogue-kl-038) |
-| Group-address description | ✅ Since Alpha 20; editor on main after Alpha 20 | Stored from `.knxproj` imports and CSV description columns (native schema 19); edited in the inspector; an empty CSV cell removes one only with the explicit, confirmed *clear blank descriptions* option; shown by the MCP `get_group_address` tool |
+| Group-address description | ✅ Since Alpha 20; editor since Alpha 21 | Stored from `.knxproj` imports and CSV description columns (native schema 19); edited in the inspector; an empty CSV cell removes one only with the explicit, confirmed *clear blank descriptions* option; shown by the MCP `get_group_address` tool |
 | Explicit, preview-confirmed re-addressing and unreferenced deletion through CSV | ✅ Implemented | Stable ids, directional-link preview, state-bound confirmation |
 | Creating or restructuring ranges through CSV | ❌ Not implemented | [§39](../KNOWN_LIMITATIONS.md#39-csv-import-never-re-addresses-deletes-or-manages-group-ranges) |
 

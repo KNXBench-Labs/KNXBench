@@ -77,7 +77,7 @@ Retained bytes are not a promise of complete ETS semantics.
   expansion stays at 4 GiB; the explicit Large profile permits up to 16 GiB, not an
   aggregate memory or disk quota.
 - 🧠 **Watch your bus think.**
-  Gateway discovery, KNXnet/IP tunnelling (UDP, optional TCP since Alpha 20), a
+  Gateway discovery, KNXnet/IP tunnelling (supported UDP, experimental TCP), an experimental
   Linux USB/serial TP-UART option for one adapter type, a live group monitor and a
   [flow view](docs/manual/user-guide/07-bus-and-interfaces.md#the-flow-view) where
   devices light up as they talk. You can send group values, too — when you mean it.
@@ -101,17 +101,14 @@ Retained bytes are not a promise of complete ETS semantics.
   command line for the scriptable bits.
 
 > [!NOTE]
-> **Alpha 20 is a pre-release (source cutoff 8 November 2026):** group addresses
-> import from ETS6 CSV exports with an explicit UTF-8 or Windows-1252 choice and gain
-> a description field; Linux can listen to and send group telegrams through one
-> USB/serial TP-UART adapter type; optional KNXnet/IP TCP tunnelling covers the bus monitor
-> and group traffic (UDP stays the default); more device kinds can be prepared for a
-> download as *untested*; object priorities are shown and editable; editing saved
-> projects is much faster (issue #35); and the AppImage starts for every user again.
-> None of this is verified on real hardware, and the allocation mismatch of issues
-> #30/#22 is unresolved. [Release scope](docs/releases/alpha20.md) lists the scope,
-> upgrade notes and boundaries. The project file moves from schema **16 to 19** and
-> the product database from **31 to 32**; Alpha 19 refuses both.
+> **Alpha 21 is a pre-release (source cutoff 12 November 2026):** pending-device
+> navigation and reviewed batch programming, last-download marks for values, links
+> and flags, more responsive saved-project editing, richer product data and
+> description editing. TCP and USB/serial are **experimental**; UDP is supported.
+> [Release scope](docs/releases/alpha21.md) lists the boundaries and upgrade notes.
+> Project files move **19 → 21**, the product database **32 → 33**; Alpha 20 refuses
+> converted files. Close KNXBench and back up the complete data directory first.
+> No new hardware compatibility is claimed; issues #30/#22 remain open.
 
 ## See it in action
 

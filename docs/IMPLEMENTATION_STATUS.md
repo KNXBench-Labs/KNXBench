@@ -12,6 +12,16 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Alpha 21 release preparation (13 November 2026)
+
+Source cutoff `938e895c5`, release `0.1.0-alpha.21`. The
+[release scope](releases/alpha21.md) consolidates shipped features, reporter
+changes, backup/downgrade boundaries and normal AppImage/MCP/multi-arch Docker
+channels. The release owner runs one integrated full candidate gate, release-only
+extras, an authentic Alpha 20 upgrade probe and packaging dry runs. Publication
+and historical private-corpus restoration require separate owner approval;
+no release acceptance is inferred from this preparation entry.
+
 ## Experimental transport labels and ETS 5.7 evidence check (12 November 2026; REL-01 B-14/B-11)
 
 TCP tunnelling and USB/serial TP-UART now read **experimental** in the web

@@ -55,6 +55,17 @@ UDP-only. Tested against local test peers only.
 
 <a id="native-project-schema17-current-source-not-a-new-release"></a>
 
+## Project schema 21 and product database 33 (since Alpha 21)
+
+**Alpha 21:** project files move **19 → 21** for independent last-download
+parameter, link and flag comparisons; the product database moves **32 → 33**
+for conditional block captions. **Alpha 20 refuses converted files and starts
+without products when given the converted catalogue.** Back up projects, the
+closed product database, the entire data directory/volume, device backups and
+original inputs first. Read-only readers migrate a memory copy only. Restore
+pre-upgrade copies to return; reinstalling alone is not a downgrade.
+[Alpha 21 upgrade notes](../releases/alpha21.md#upgrade).
+
 ## Project schema 19 (since Alpha 20)
 
 Alpha 20 moves native project files from schema 16 to 19 the first time it opens
@@ -63,10 +74,9 @@ edits, 19 group-address descriptions. Nothing existing is changed. **Alpha 19 re
 an upgraded file** as newer than it supports (`FutureSchemaVersion`); reinstalling
 Alpha 19 does not convert it back. Keep a copy of every project before you upgrade,
 and restore that pre-upgrade copy to go back. Read-only opening migrates a memory
-copy only and leaves the file at its own version. On main after Alpha 20 the
-schema moves on to 20 (the parameter values of each device's last download,
-[ADR-0173](../adr/0173-last-downloaded-parameter-values.md)); Alpha 20 refuses a
-file a main build has written, in the same way.
+copy only and leaves the file at its own version. Alpha 21 moves on to schema 21
+with independent last-download values, links and flags; Alpha 20 refuses a file
+Alpha 21 has written, in the same way.
 
 The captured saved-instance priority overlay never invents declarations or absence
 for historical files or history: they remain NotCaptured. No wire behaviour or new
@@ -885,10 +895,10 @@ is the remaining copy defect.
   follow ETS 6.4 too (ADR-0162), so Hager dimming actuators like the tester's
   plan as well. Other devices with time parameters in a plain unit now plan too,
   also untested.
-- **Changed after Alpha 20:** a property write that names no element count
+- **Changed in Alpha 21:** a property write that names no element count
   writes the elements the program declares for that property, as ETS 6.4 does
   (ADR-0167), so the tester's switch actuator 0.2.67 plans too, untested.
-- **Changed after Alpha 20:** hidden settings that the program sets itself,
+- **Changed in Alpha 21:** hidden settings that the program sets itself,
   hidden settings shown nowhere, a load allocation larger than the program's
   data and option bits packed inside one octet now follow ETS 6.4 (ADR-0168).
   The tester's push-button 0.2.49 and binary inputs 0.2.7, 0.2.63 and 0.2.66

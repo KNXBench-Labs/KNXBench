@@ -78,6 +78,10 @@ one data-only Color/Time repair ([contract](contracts/color-time-successor-repai
 Alpha 19 refuses native-model19 with `FutureSchemaVersion` and product32 with
 `FutureVersion` (source-established, not an executed downgrade test;
 [Alpha 20 upgrade notes](releases/alpha20.md#upgrade)).
+Alpha 21 moves native/model 19 → 21 (independent last-download values, links and flags)
+and product32 → product33 (conditional block captions, data-only). Alpha 20 refuses
+both newer versions. Restore closed pre-upgrade copies to return.
+[Alpha 21 upgrade notes](releases/alpha21.md#upgrade).
 Alpha 15 supports product26, and the preceding master-provenance source
 supports product27; builds with either older maximum refuse product28 by
 their version check. This is source-established refusal, not an executed

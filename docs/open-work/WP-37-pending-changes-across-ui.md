@@ -427,4 +427,3 @@ Step 2, UI part (intercepted fictional data, no bus):
   moving relative to its input when focus enters the row or the button, no
   sideways overflow, no unexpected request; an unusable state without marks;
   the dots under forced colours.
-

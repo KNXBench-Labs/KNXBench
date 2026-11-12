@@ -186,6 +186,44 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
   });
 }
 
+for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
+  test(`${language} marks the areas, scope and Manufacturer section holding differing values at ${width}px (#48)`, async ({ page }) => {
+    const m = language === "de" ? de : en;
+    const note = m["parameters.lastDownload.section"];
+    await page.setViewportSize({ width, height: 1000 });
+    const state = await intercept(page, language, usable);
+    await openParameters(page, language);
+    const nav = page.locator(".parameter-workspace-nav");
+    // No area is open yet: the area still says that it holds differing values.
+    await expect(page.locator(".parameter-workspace-closed")).toBeVisible();
+    const general = nav.getByRole("button", { name: /^General/ });
+    await expect(general).toHaveAccessibleDescription(note);
+    // The name stays the area's label and count: the dot adds no text.
+    await expect(general).toHaveAccessibleName(/^General\s*3$/);
+    const dots = page.locator(".parameter-workspace .parameter-section-download-mark");
+    await expect(dots).toHaveCount(2);
+    for (const dot of await dots.all()) {
+      await expect(dot).toBeVisible();
+      const box = (await dot.boundingBox())!;
+      expect(box.x).toBeGreaterThanOrEqual(0);
+      expect(box.x + box.width).toBeLessThanOrEqual(width);
+    }
+    await expect(nav.locator(".parameter-workspace-scope")).toHaveAttribute("data-differs-from-download", "true");
+    await expect(nav.locator(".parameter-workspace-scope")).toHaveText(`${m["parameters.deviceScope"]} (${note})`);
+    expect(await noOverflow(page)).toBeLessThanOrEqual(1);
+    // P-Factory differs and only the Manufacturer fields tab shows it: its closed section says so.
+    await page.getByRole("tab", { name: m["parameters.restrictedTab"], exact: true }).click();
+    const section = page.locator('[role="tabpanel"]:not([hidden]) details.parameter-section');
+    await expect(section).toHaveCount(1);
+    await expect(section).not.toHaveAttribute("open", "");
+    await expect(section.locator("summary")).toHaveAccessibleDescription(note);
+    await expect(section.locator("summary .parameter-section-download-mark")).toBeVisible();
+    expect(await noOverflow(page)).toBeLessThanOrEqual(1);
+    expect(state.posts).toBe(0);
+    expect(state.unexpected).toEqual([]);
+  });
+}
+
 for (const language of ["en", "de"] as const) {
   test(`${language} says plainly when values cannot be compared, without marks`, async ({ page }) => {
     const m = language === "de" ? de : en;
@@ -202,7 +240,7 @@ for (const language of ["en", "de"] as const) {
   });
 }
 
-test("keeps the row and summary dots painted under forced colours", async ({ page }) => {
+test("keeps the row, area and summary dots painted under forced colours", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.emulateMedia({ forcedColors: "active" });
   const state = await intercept(page, "en", usable);
@@ -216,8 +254,9 @@ test("keeps the row and summary dots painted under forced colours", async ({ pag
     probe.remove();
     return color;
   });
-  const dots = [page.locator(".parameter-last-download-dot"), ...await page.locator(".parameter-workspace .parameter-download-mark").all()];
-  expect(dots).toHaveLength(3);
+  const dots = [page.locator(".parameter-last-download-dot"), ...await page.locator(".parameter-workspace .parameter-download-mark").all(),
+    ...await page.locator(".parameter-workspace .parameter-section-download-mark").all()];
+  expect(dots).toHaveLength(5);
   for (const dot of dots) {
     await expect(dot).toBeVisible();
     await expect(dot).toHaveCSS("forced-color-adjust", "none");

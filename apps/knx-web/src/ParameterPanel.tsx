@@ -475,19 +475,31 @@ function ParameterSectionView(props: {
   // Remember only explicit openings: newly appearing source groups stay closed.
   const [expanded, setExpanded] = useState(new Set<string>());
   const groupOrder = [...new Set(fields.flatMap(field => field.group ? [field.group.key] : []))];
-  return (
+  // #48: the same rows the dots mark (unscoped value fields), carried up to their group and section.
+  const differs = (field: ParameterField) => section.scope === null && field.kind !== "None" && differing.has(field.etsId);
+  const markedGroups = new Set(fields.flatMap(field => field.group && differs(field) ? [field.group.key] : []));
+  const sectionDiffers = fields.some(differs);
+  const noteId = useId();
+  const note = t("parameters.lastDownload.section");
+  return (<>
+    {/* Outside the details, so a closed section still resolves its description. */}
+    {sectionDiffers && <span id={noteId} hidden>{note}</span>}
     <details className="parameter-section">
-      <summary>{sectionLabel(t, section.scope)}</summary>
+      <summary aria-describedby={sectionDiffers ? noteId : undefined} data-differs-from-download={sectionDiffers ? "true" : undefined}>
+        {sectionLabel(t, section.scope)}{sectionDiffers && <span className="parameter-section-download-mark" title={note} aria-hidden="true" />}</summary>
       <div className="parameter-fields">
         {fields.map((field, index) => <Fragment key={field.etsId}>
           {field.group && field.group.key !== fields[index - 1]?.group?.key && <button type="button"
             title={parameterCaption(field.group, t("parameters.groupNumber", { number: groupOrder.indexOf(field.group.key) + 1 }), t).title}
             className="parameter-group-toggle" aria-expanded={expanded.has(field.group.key)}
+            aria-describedby={markedGroups.has(field.group.key) ? noteId : undefined}
+            data-differs-from-download={markedGroups.has(field.group.key) ? "true" : undefined}
             onClick={() => setExpanded(previous => {
               const next = new Set(previous); const key = field.group!.key;
               if (next.has(key)) next.delete(key); else next.add(key); return next;
             })}><span aria-hidden="true">{!expanded.has(field.group.key) ? "▸" : "▾"}</span>
             {parameterCaption(field.group, t("parameters.groupNumber", { number: groupOrder.indexOf(field.group.key) + 1 }), t).label}
+            {markedGroups.has(field.group.key) && <span className="parameter-section-download-mark" title={note} aria-hidden="true" />}
           </button>}
           <div className="parameter-field-wrapper" hidden={field.group ? !expanded.has(field.group.key) : false}>
           <ParameterFieldRow
@@ -507,7 +519,7 @@ function ParameterSectionView(props: {
         </Fragment>)}
       </div>
     </details>
-  );
+  </>);
 }
 
 // D21: stored-but-unmatched values remain inspectable in Diagnostics.
@@ -803,6 +815,7 @@ export function ParameterPanelContent(props: ParameterPanelProps & {
           checked={props.snapshot && snapshot && panel.programId !== null
             ? { programId: panel.programId, snapshot: props.snapshot, writeBinding: snapshot, scope } : null}
           downloaded={scope === null ? differing.get(field.etsId) : undefined} />}
+        differs={(field, scope) => scope === null && differing.has(field.etsId)}
       /> : sections.map((section, i) => (
         <ParameterSectionView
           key={sectionKeys[i]}

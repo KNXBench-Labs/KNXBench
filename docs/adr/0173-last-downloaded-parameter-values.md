@@ -217,8 +217,17 @@ description "Value at last download: …" / "Wert beim letzten Programmieren:
 values, how many of them the current settings do not show (inactive in the
 current settings, which carry no device claim either) and, separately, how many
 only the Manufacturer fields tab shows, where they are marked. An unusable baseline
-gives one plain sentence and no row marks. Links and object flags have backend comparison under ADR-0174; their per-item
-UI marks in the communication-object view remain pending.
+gives one plain sentence and no row marks. Links and object flags have backend
+comparison and per-object marks in the communication-object view under ADR-0174.
+
+Issue #48 carries the same row population up the parameter navigation: an area
+button that holds a differing value, and its ancestor scope heading, carry the
+step-1 dot even before an area is opened. The button's description is “Contains
+values that differ from the last download” / “Enthält Werte, die vom letzten
+Programmieren abweichen”; its name stays unchanged. Manufacturer-field section
+summaries and group toggles carry it too. No field, no section mark; search and
+collapse do not change it. The marks read the same comparison map as the row
+dots, with the same write/read lifecycle, and compare nothing in the client.
 
 ### 6. Version restore settles the four flags against the live project
 

@@ -2295,6 +2295,7 @@ export const messages: Record<MessageKey, string> = {
   "parameters.lastDownload.otherProgram": "Das letzte Programmieren hat ein anderes Applikationsprogramm verwendet; die Werte lassen sich nicht vergleichen.",
   "parameters.lastDownload.productUnavailable": "Produktdaten fehlen; die Werte lassen sich nicht mit dem letzten Programmieren vergleichen.",
   "parameters.lastDownload.currentUnreadable": "Das Projekt enthält für einen Parameter dieses Geräts zwei verschiedene Werte; die Werte lassen sich nicht mit dem letzten Programmieren vergleichen.",
+  "parameters.lastDownload.section": "Enthält Werte, die vom letzten Programmieren abweichen",
   "parameters.conflictCurrent": "Aktueller Wert: {value}",
   "parameters.conflictApply": "Meinen Wert übernehmen",
   "parameters.conflictDiscard": "Meinen Wert verwerfen",

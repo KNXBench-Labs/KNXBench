@@ -2318,6 +2318,7 @@ export const messages = {
   "parameters.lastDownload.otherProgram": "The last download used another application program; values cannot be compared.",
   "parameters.lastDownload.productUnavailable": "Product data is missing; values cannot be compared with the last download.",
   "parameters.lastDownload.currentUnreadable": "The project holds two different values for one parameter of this device; values cannot be compared with the last download.",
+  "parameters.lastDownload.section": "Contains values that differ from the last download",
   "parameters.conflictCurrent": "Current value: {value}",
   "parameters.conflictApply": "Apply my value",
   "parameters.conflictDiscard": "Discard my value",

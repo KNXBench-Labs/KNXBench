@@ -111,6 +111,17 @@ export function indexParameterWorkspace(sections: readonly ParameterSection[]) {
   return { rows, groups, items, passiveLabels };
 }
 
+/**
+ * #48: the areas holding a value field whose value differs from the last
+ * download, and the scopes holding such an area. Derived from every row, never
+ * from the open area or a search; a ref no row presents marks nothing.
+ */
+export function differingAreas(rows: readonly ParameterWorkspaceRow[], groups: readonly ParameterWorkspaceGroup[],
+  differs: (field: ParameterField, scope: ModuleScope | null) => boolean): { groups: Set<string>; sections: Set<string> } {
+  const marked = new Set(rows.filter(row => row.field.kind !== "None" && differs(row.field, row.scope)).map(row => row.groupKey));
+  return { groups: marked, sections: new Set(groups.filter(group => marked.has(group.key)).map(group => group.sectionKey)) };
+}
+
 /** All terms must match; labels/options are searchable but never parsed for identity. */
 export function matchesParameterSearch(row: ParameterWorkspaceRow, query: string, displayedGroupLabel?: string): boolean {
   const field = row.field;

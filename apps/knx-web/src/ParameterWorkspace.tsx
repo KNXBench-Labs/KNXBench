@@ -2,7 +2,7 @@
 import { useId, useState, type ReactNode } from "react";
 import type { ModuleScope, ParameterField, ParameterSection } from "./api";
 import { useTranslate } from "./i18n";
-import { indexParameterWorkspace, matchesParameterSearch, type ParameterWorkspaceSeparator } from "./parameterWorkspace";
+import { differingAreas, indexParameterWorkspace, matchesParameterSearch, type ParameterWorkspaceSeparator } from "./parameterWorkspace";
 import { matrixStyle, planParameterMatrix, type GroupLayoutView } from "./parameterMatrix";
 import "./parameterWorkspace.css";
 import { parameterMetadataLabel } from "./parameterMetadata";
@@ -11,9 +11,13 @@ import { parameterCaption } from "./parameterCaption";
 interface Props {
   sections: readonly ParameterSection[];
   renderField: (field: ParameterField, scope: ModuleScope | null) => ReactNode;
+  /** #48: whether a row's value differs from the last download; the server decides, never this view. */
+  differs?: (field: ParameterField, scope: ModuleScope | null) => boolean;
 }
 
-export default function ParameterWorkspace({ sections, renderField }: Props) {
+const NEVER = () => false;
+
+export default function ParameterWorkspace({ sections, renderField, differs = NEVER }: Props) {
   const t = useTranslate();
   const id = useId();
   const [active, setActive] = useState<string | null>(null);
@@ -50,6 +54,8 @@ export default function ParameterWorkspace({ sections, renderField }: Props) {
   // unplaced declaration. The cell matters: the grid reader names an Id-less Button by its RefId.
   const shownButtons = new Set(matrix?.labels.flatMap(caption => caption.passive
     ? [shownButtonKey(passiveIds.get(caption.key)!, passiveCells.get(caption.key)!)] : []) ?? []);
+  const marks = differingAreas(rows, groups, differs);
+  const markNote = t("parameters.lastDownload.section");
   const resultCounts = new Map<string, number>();
   for (const row of rows) if (!searching || visible.has(row.key)) resultCounts.set(row.groupKey, (resultCounts.get(row.groupKey) ?? 0) + 1);
 
@@ -68,12 +74,17 @@ export default function ParameterWorkspace({ sections, renderField }: Props) {
     <div className="parameter-workspace-layout">
       <nav className="parameter-workspace-nav" aria-label={t("parameters.workspace.areas")}>
         <h4>{t("parameters.workspace.areas")}</h4>
+        {marks.groups.size > 0 && <span id={`${id}-differs`} hidden>{markNote}</span>}
         {groups.map((group, index) => <div key={group.key} className="parameter-workspace-nav-entry">
           {(index === 0 || group.sectionKey !== groups[index - 1].sectionKey) &&
-            <span className="parameter-workspace-scope">{scopeLabel(group.scope)}</span>}
+            <span className="parameter-workspace-scope" data-differs-from-download={marks.sections.has(group.sectionKey) ? "true" : undefined}>
+              {scopeLabel(group.scope)}{marks.sections.has(group.sectionKey) && <SectionMark note={markNote} />}</span>}
           <button type="button" title={caption(group).title} aria-current={!searching && group.key === activeKey ? "page" : undefined}
+            aria-describedby={marks.groups.has(group.key) ? `${id}-differs` : undefined}
+            data-differs-from-download={marks.groups.has(group.key) ? "true" : undefined}
             onClick={() => { setActive(group.key); setQuery(""); }}>
-            <span>{groupLabel(group)}</span><span className="parameter-workspace-nav-count">{resultCounts.get(group.key) ?? 0}</span>
+            <span>{groupLabel(group)}{marks.groups.has(group.key) && <span className="parameter-section-download-mark" title={markNote} aria-hidden="true" />}</span>
+            <span className="parameter-workspace-nav-count">{resultCounts.get(group.key) ?? 0}</span>
           </button>
         </div>)}
       </nav>
@@ -151,6 +162,14 @@ export default function ParameterWorkspace({ sections, renderField }: Props) {
       </aside>
     </div>
   </div>;
+}
+
+/**
+ * #48: the amber dot on a scope that holds a marked area. The scope label is
+ * not focusable, so its words go to screen readers as text, not a description.
+ */
+function SectionMark({ note }: { note: string }) {
+  return <><span className="parameter-section-download-mark" title={note} aria-hidden="true" /><span className="sr-only"> ({note})</span></>;
 }
 
 const SEPARATOR_PREFIX_KEYS = {

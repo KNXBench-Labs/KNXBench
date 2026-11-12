@@ -1,5 +1,8 @@
 # Restart snapshot
 Release freeze: released by claude-release-alpha20 (2026-11-09 00:24 CET): v0.1.0-alpha.20 published at 1d3c7d433 and verified; main is open again.
+## WP-37 UI links/flags + parameter-section marks (ACTIVE; observed 2026-11-12)
+- Owner Go: packages A (ADR-0174 UI) then B (#48) on main, no hardware/release/deploy. Source records `docs/open-work/WP-37-pending-changes-across-ui.md` and ADR-0174; private evidence `<profile>/evidence/wp37-ui-20261112/`.
+- A independently reviewed; B implementation and acceptance in progress. Other tracks and the stale/dirty root stay untouched.
 ## WP-08 checked Date text editor (STANDING; owner WebUI open-work-date; observed 2026-11-06 22:06 CET)
 - Runtime featureb19dfb131/main-first76dc954a1 accepted/published, exactlocal/tracking/live readback. IndependentAPPROVE/0findings,3assertion-killedmutants+2green244controls; maintained14stages proved/frozen/userdata checkeduntouched, web37/27TS/5293unit/default959(913+46)/productionparameters40; Rust103xtaskonly, tooling517/6optional skips, corpusselected0. Source record `docs/status/2026-11-06-checked-date-text-editor.md`; own result-only documentation successor leaves runtime unchanged. Private evidence `<profile>/evidence/2026-11-06-wp08-checked-date-editor/`; root-local checkpoint owns final retention/retirement. No native picker/image codec/schema/new backend persistence/hardware/native/release/deploy; broader WP08/PDB04 and foreign tracks preserved.
 ## WP-06 instance priority + WP-11 File-submenu viewport (STANDING; observed 2026-11-07 08:32 CET)

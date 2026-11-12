@@ -7,7 +7,7 @@ Status: **step 1 implemented (11 November 2026, main only); step 2 implemented
 implemented (backend and communication-object UI, 12 November 2026, main only)
 per [ADR-0174](../adr/0174-last-downloaded-links-and-flags.md) (Accepted). No
 hardware run.** Section-navigation marks from [#48](https://github.com/KNXBench-Labs/KNXBench/issues/48)
-are planned below (owner request, 12 November 2026); not implemented or claimed.
+(step 4) implemented 12 November 2026, main only (see below).
 
 ## Packages
 
@@ -46,12 +46,10 @@ are planned below (owner request, 12 November 2026); not implemented or claimed.
    (flag edits mark Parameters).
 4. Propagate per-parameter differences to the parameter editor's section
    navigation, including ancestors ([#48](https://github.com/KNXBench-Labs/KNXBench/issues/48)).
-   **Planned only**, owner request 12 November 2026; not claimed and no
-   implementation Go. Bounded UI follow-up to the delivered step 2, independent
-   of package 3's links/flags backend. Coordinate the shared parameter UI with
-   its current owner before implementation; do not edit frozen WP-37f inputs.
+   **Implemented** 12 November 2026 (main only), owner Go of the same day; a
+   bounded UI follow-up to step 2 with no server, API or schema change.
 
-## Planned section-navigation marks (#48)
+## Section-navigation marks (#48)
 
 **Report:** on `0.1.0-alpha.20+ge91da61a`, the reporter confirms the row dots,
 last-programming captions and summary from #40. Two differing values in
@@ -64,7 +62,7 @@ and UI prerequisites are delivered; no dependency on the new links/flags
 baseline, module-download support or a new native schema is intended. Do not
 create another client-side value comparator, baseline or settlement path.
 
-**Requested outcome and acceptance plan (not executed):**
+**Requested outcome and acceptance plan (executed; see *As implemented*):**
 
 - Show the existing amber visual cue on each section containing an eligible
   differing parameter and on every ancestor, including collapsed branches.
@@ -94,11 +92,35 @@ create another client-side value comparator, baseline or settlement path.
   accepted-write/GET refresh, clearing and late responses after scope switches.
   No real programming run is required for this UI acceptance.
 
-**Exclusions:** no product implementation in this planning change; no API,
-schema, persistence, module support or programming-flag changes; no hardware,
-release or deployment authority. #48 remains open until the actual UI change
-is separately implemented, verified and published. The ongoing backend package
-and its ownership remain unchanged.
+**Exclusions:** no API, schema, persistence, module support or
+programming-flag changes; no hardware, release or deployment authority.
+
+**As implemented (12 November 2026):**
+
+- **Parameters view** (`ParameterWorkspace`): an area button whose rows hold an
+  unscoped value field (not display-only) whose `etsId` is a usable
+  `lastDownload.differing` ref gets the amber dot after its label (own class
+  `parameter-section-download-mark`) and the accessible description
+  “Contains values that differ from the last download” / “Enthält Werte, die
+  vom letzten Programmieren abweichen”; its name stays label and count. The
+  scope heading above it (the ancestor, for example **Device**) gets the dot
+  and the same words as screen-reader text. `differingAreas` derives both from
+  every row, not from the open area or a search, so they show while no area is
+  open; one ref presented by several fields of one area marks it once; no
+  count is shown.
+- **Manufacturer fields view** (`ParameterSectionView`, also used by the
+  Functions view): the section's `<summary>` and each group toggle holding
+  such a field get the dot and the description, also while closed or
+  collapsed. Each view marks only the fields it presents, so the
+  hidden/Manufacturer-fields counts of the summary line stay as they were: a
+  ref no field presents marks no section.
+- **Same population and lifecycle as the row dots:** the marks read the same
+  `differingByRef` map, so a written ref's area loses its mark at once (others
+  keep theirs, the scope keeps its mark while one area does), the next read
+  replaces them, and unusable states, missing comparisons, module-scoped rows
+  and another device or program mark nothing. The Parameters tab itself keeps
+  only the step-1 pending dot.
+- Forced colours paint the new dot in `CanvasText`.
 
 ## Step 3, UI part as implemented
 
@@ -322,6 +344,25 @@ Step 2, server part (synthetic data only, no bus):
   adoption test asserts adoption leaves every baseline unchanged.
 - `apps/knx-server/tests/it/http_parameter_baseline.rs`: `lastDownload` over
   HTTP for each state and the manual mark in both directions, durable.
+
+Step 4, section marks (#48; intercepted fictional data, no bus):
+
+- `apps/knx-web/src/ParameterPanel.sectionMarks.test.tsx` (10): the reported
+  two-values case marks only Status LED and its scope before any area is open;
+  sibling, display-only, Manufacturer-only, unpresented and module rows mark
+  nothing; repeated refs mark once with the name unchanged; marks stay with
+  another area open and while searching; nothing for absent, unusable or empty
+  comparisons; a write drops only its own area (and the scope with the last
+  one) until the next read; no carry-over to another device; German; the
+  Manufacturer fields view marks the closed section and collapsed group of a
+  restricted value only; the `differingAreas` mapping.
+- `apps/knx-web/src/parameterLastDownload.test.ts`: forced-colours rule covers
+  the new dot.
+- `apps/knx-web/e2e/parameter-last-download.e2e.ts` (+4, dev and devices
+  lanes): en/de at 1440 and 400 px, area description and unchanged name, visible
+  dots inside the viewport, scope text, the closed Manufacturer section's
+  description, no sideways overflow, no unexpected request; the area dots under
+  forced colours.
 
 Step 3, UI part (intercepted fictional data, no bus):
 

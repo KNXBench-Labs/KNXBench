@@ -1,7 +1,7 @@
 # WP-36 — Communication-object view: links first, compact toolbar, direction pre-fill (#44, #46, #47)
 
 External report by the issue reporter, 10 November 2026; triaged 11 November 2026.
-Status: **#47 implemented 11 November 2026** (`linkDirectionDefault.ts`, both link
+**Closed 12 November 2026** (removed from [OPEN_WORK](../OPEN_WORK.md); issue closed where one exists). Status: **#47 implemented 11 November 2026** (`linkDirectionDefault.ts`, both link
 forms, reason shown under the choice). Review changed the planned flag rule:
 the first link always sends (ETS Schema23 `@Links`, read responses, legacy FEh),
 later links receive, an existing link on the address is kept.

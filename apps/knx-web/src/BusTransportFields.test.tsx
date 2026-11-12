@@ -144,6 +144,23 @@ for (const language of ["en", "de"] as const) {
     expect(getSetting("preferredIpTunnelTransport")).toBe("udp");
     expect(fetcher).not.toHaveBeenCalled(); // Selecting a transport never connects, discovers or lists.
   });
+  it(`${language}: marks TCP and USB/serial as experimental, never UDP (REL-01 B-14)`, async () => {
+    setSetting("uiLanguage", language); resetUiLanguageForTests(); setSetting("preferredBusTransport", "ip");
+    await render();
+    const note = () => host.querySelector(".bus-transport-experimental");
+    expect(note()).toBeNull();
+    expect(m["busTransport.ipTunnel.tcp"]).toMatch(language === "en" ? /experimental/ : /experimentell/);
+    await choose(tunnelSelect()!, "tcp");
+    expect(note()!.textContent).toBe(m["transport.experimentalNote"]);
+    expect(m["transport.experimentalNote"]).toMatch(/UDP/);
+    await choose(tunnelSelect()!, "udp");
+    expect(note()).toBeNull();
+    const transportSelect = host.querySelector<HTMLSelectElement>(".bus-transport-fields select")!;
+    expect([...transportSelect.options].map(option => option.textContent)).toEqual(["KNXnet/IP", m["busTransport.serialOption"]]);
+    await choose(transportSelect, "serial");
+    expect(note()!.textContent).toBe(m["transport.experimentalNote"]);
+    expect(fetcher).not.toHaveBeenCalled(); // Marking is presentation only: no request, no connect.
+  });
 }
 it.each(["TCP", "tls", "", null, 7, {}, ["tcp"]])("shows UDP, never TCP, for the invalid saved value %j", async (saved) => {
   setSetting("preferredBusTransport", "ip"); setSetting("preferredIpTunnelTransport", saved);

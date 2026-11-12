@@ -73,6 +73,7 @@ for (const language of ["en","de"] as const) for (const width of [1440,400]) {
     await expect(selector).toHaveValue("udp");expect(fixture.control.starts).toEqual([]);
     await fillPlan(page,language);await panel.getByRole("button",{name:m["lineScan.estimate"],exact:true}).click();
     await expect(panel.locator(".line-scan-start")).toBeEnabled();await selector.selectOption("tcp");
+    await expect(panel.locator(".line-scan-experimental")).toHaveText(m["transport.experimentalNote"]);
     await expect(panel.locator(".line-scan-start")).toBeDisabled();expect(fixture.control.starts).toEqual([]);
     await panel.getByRole("button",{name:m["lineScan.estimate"],exact:true}).click();await panel.locator(".line-scan-start").click();
     await expect(panel).toContainText(m["lineScan.actualTransport"].replace("{transport}","TCP"));

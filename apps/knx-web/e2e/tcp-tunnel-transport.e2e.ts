@@ -106,12 +106,15 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
     const tunnel = panel.getByRole("combobox", { name: m["busTransport.ipTunnel.label"], exact: true });
     await expect(tunnel).toHaveValue("tcp");
     await expect(panel).toContainText(m["busTransport.ipTunnel.note"]);
-    await tunnel.selectOption("udp"); await tunnel.selectOption("tcp");
+    await expect(panel.locator(".bus-transport-experimental")).toHaveText(m["transport.experimentalNote"]);
+    await tunnel.selectOption("udp"); await expect(panel.locator(".bus-transport-experimental")).toHaveCount(0);
+    await tunnel.selectOption("tcp");
     await expect.poll(() => fixture.settings.preferredIpTunnelTransport).toBe("tcp");
     expect(fixture.tcpStarts).toEqual([]); expect(fixture.udpStarts).toEqual([]);
     await page.locator(".bus-connection-action").click();
     await expect.poll(() => fixture.tcpStarts).toEqual([{ gateway: GATEWAY }]);
     await expect(page.locator(".bus-connection-state")).toContainText(`${GATEWAY} · TCP`);
+    await expect(page.locator(".bus-connection-state .transport-experimental-badge")).toHaveText(m["transport.experimental"]);
     expect(fixture.udpStarts).toEqual([]);
     await page.keyboard.press("Escape");
     await command(page, m["toolbar.busMonitor"]);

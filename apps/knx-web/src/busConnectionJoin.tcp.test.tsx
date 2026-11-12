@@ -133,7 +133,9 @@ describe("a saved TCP preference", () => {
     expect(startCalls()).toEqual({ udp: 0, tcp: 1, serial: 0 });
     expect(apiMock.startTcpBusMonitor).toHaveBeenCalledExactlyOnceWith(GATEWAY);
     expect(sessionLine()).toContain(en["busTransport.ipTunnel.observed"].replace("{transport}", "TCP"));
-    expect(footerState()).toBe(en["busConnection.state.connected"].replace("{gateway}", `${GATEWAY} · TCP`));
+    // TCP has no real-interface test yet: footer and monitor mark it experimental (REL-01 B-14).
+    expect(footerState()).toBe(en["busConnection.state.connected"].replace("{gateway}", `${GATEWAY} · TCP`) + " " + en["transport.experimental"]);
+    expect(host.querySelector(".bus-monitor-session .transport-experimental-badge")!.textContent).toBe(en["transport.experimental"]);
     expect(knownTcpSession({ sessionId: 7, serverIncarnation: "process-a" })).toBe(true);
     // The transport choice is locked with the session; the panel's own select is disabled.
     expect(tunnelSelects()[0].disabled).toBe(true);
@@ -173,6 +175,9 @@ describe("the observed transport wins over the saved preference", () => {
     expect(footerState()).not.toContain("TCP");
     expect(sessionLine()).toContain(en["busTransport.ipTunnel.observed"].replace("{transport}", "UDP"));
     expect(sessionLine()).not.toContain("TCP");
+    // The observed UDP session is the supported path: no experimental mark on what is connected.
+    expect(host.querySelector(".bus-connection-state .transport-experimental-badge")).toBeNull();
+    expect(host.querySelector(".bus-monitor-session .transport-experimental-badge")).toBeNull();
     expect(knownTcpSession({ sessionId: 3, serverIncarnation: "process-a" })).toBe(false);
     expect(startCalls()).toEqual({ udp: 0, tcp: 0, serial: 0 });
   });

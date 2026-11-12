@@ -26,9 +26,18 @@ hardware run.**
    the Group addresses part, same lifecycle as ADR-0173, native schema 21.
    Migration preserves existing parameter values and explicitly distinguishes
    unknown flags from known empty flags; links and flags compare with separate
-   states. The server part must factor shared effective-flag resolution out
-   of image construction and refuse duplicate active numbers before mapping.
-   Server part and UI part follow as separate packages. A first draft that
+   states. The shared effective-flag resolver prerequisite is implemented in
+   `knx_productdb::image::resolve_effective_object_flags` (WP-37e): checked
+   activation and flag precedence are shared with real image construction;
+   duplicate active numbers refuse before mapping. The image's invisible
+   Background-Assign consistency check is shared as well, so an assignment
+   that would change a consulted controller cannot yield a known-empty set.
+   It returns only the five
+   written flags, with no size/priority image-admission gates. Read-on-init
+   remains a separate request for the builder's existing loss/refusal handling,
+   not a written sixth flag. This adds no baseline storage, settlement,
+   comparison response or UI. Server part and UI part follow as separate
+   packages. A first draft that
    put flags with the links led to the ADR-0129 amendment of the same day
    (flag edits mark Parameters).
 

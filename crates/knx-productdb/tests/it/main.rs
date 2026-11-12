@@ -32,6 +32,7 @@ mod dynamic_channel_owner;
 mod dynamic_control_kind;
 mod dynamic_corpus_measurement;
 mod dynamic_tree;
+mod effective_object_flags;
 mod experimental_system2_image;
 mod golden_reference_products;
 mod install_reports;

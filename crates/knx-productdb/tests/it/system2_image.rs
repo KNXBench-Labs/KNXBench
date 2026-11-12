@@ -47,6 +47,31 @@ fn fixture(xml: &str) -> (tempfile::TempDir, knx_productdb::Connection, ImageReq
 }
 
 #[test]
+fn shared_effective_flags_keep_type2_bytes_and_update_encoding() {
+    super::effective_object_flags::check_legacy_flags(
+        PROGRAM,
+        fixture,
+        build_system2_image,
+        "OBJ",
+        6,
+        (0x6F, 0x33, true),
+    );
+}
+
+#[test]
+fn shared_effective_flags_keep_type2_activation_and_read_on_init_refusal() {
+    super::effective_object_flags::check_legacy_activation_and_read_on_init(
+        PROGRAM,
+        fixture,
+        build_system2_image,
+        "OBJ",
+        6,
+        0x6F,
+        "System2",
+    );
+}
+
+#[test]
 fn real_product_evaluator_builds_parameter_and_legacy_table_images_without_admitting_a_download() {
     let (_dir, conn, request) = fixture(PROGRAM);
     let image = build_system2_image(&conn, &request).expect("offline image");

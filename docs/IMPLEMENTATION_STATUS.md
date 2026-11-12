@@ -46,6 +46,25 @@ keep their ETS id. Copies of one project (Save As, a copied file) keep one id
 on purpose and remain indistinguishable once edited apart. Test: `every_new_project_gets_its_own_project_id`
 (`apps/knx-server/src/domain.rs`).
 
+## Shared effective-object flags prerequisite (12 November 2026; WP-37e)
+
+`knx_productdb::image::resolve_effective_object_flags` resolves checked
+activation, product object/ref precedence and explicit instance overrides into
+a number-keyed map of the five written flags. Uncertain evaluation, module
+scope, unreadable flags/numbers and duplicate active numbers return errors;
+known empty remains a successful empty map. The image's Background-Assign
+consistency check runs before returning it: a write that would change a
+consulted controller cannot masquerade as an inactive object set. It shares
+activation and flag resolution with the real Easy3/System-1/System-2 image paths without pulling
+object size or priority admission into future flag-only comparison.
+Read-on-init is not returned as a written false/default flag: the builder keeps
+its existing Easy3 loss inference and legacy refusal. Public-seam tests assert
+literal flag octets and format-specific refusals using synthetic fixtures.
+
+This is only the prerequisite for [ADR-0174](adr/0174-last-downloaded-links-and-flags.md)
+(still Proposed), not baseline storage, settlement, current comparison or UI.
+No private-corpus, bus or hardware acceptance is claimed.
+
 ## The parameter editor shows what differs from the last download (12 November 2026; issue #40, WP-37 step 2)
 
 The Parameters tab now reads `lastDownload` ([ADR-0173](adr/0173-last-downloaded-parameter-values.md),

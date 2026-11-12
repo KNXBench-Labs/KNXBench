@@ -92,8 +92,11 @@ mod experimental;
 pub mod float;
 pub(crate) mod inactive_selection;
 mod legacy_source;
+mod object_flags;
 pub mod property;
 mod system1;
+
+pub use object_flags::{resolve_effective_object_flags, EffectiveObjectFlags};
 
 /// Validated GA/association reservations; the object span is not capacity padding.
 pub(crate) fn system2_group_reservations(
@@ -115,8 +118,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 
 use knx_core::commissioning::group_object_table::{
-    write_group_object_table, ActiveObject, GroupObjectTableError, ObjectFlags,
-    TransmissionPriority, ValueType,
+    write_group_object_table, ActiveObject, GroupObjectTableError, TransmissionPriority, ValueType,
 };
 use knx_core::commissioning::group_tables::{
     build_group_tables, GroupTableError, TableCapacity, TableLink,
@@ -211,8 +213,8 @@ impl FlagOverrides {
         *self == Self::default()
     }
 
-    /// Writes every stated flag over `flags`; the priority is untouched.
-    fn apply(&self, flags: &mut ObjectFlags) {
+    /// Writes the five stated flags; read-on-init is a separate request.
+    fn apply(&self, flags: &mut EffectiveObjectFlags) {
         let set = |slot: &mut bool, stated: Option<bool>| {
             if let Some(value) = stated {
                 *slot = value;
@@ -986,15 +988,13 @@ fn build_image_selected(
                 ),
             });
         }
-        let (mut object, product_read_on_init) = active_object(ref_id, view, &mut inferences)?;
-        let overrides = request.flag_overrides.get(*ref_id);
-        if let Some(overrides) = overrides {
-            overrides.apply(&mut object.flags);
-        }
-        if overrides
-            .and_then(|overrides| overrides.read_on_init)
-            .unwrap_or(product_read_on_init)
-        {
+        let (object, requested_read_on_init) = active_object(
+            ref_id,
+            view,
+            request.flag_overrides.get(*ref_id),
+            &mut inferences,
+        )?;
+        if requested_read_on_init {
             if layout.legacy() {
                 return Err(ImageError::Unsupported {
                     what: format!(
@@ -1260,8 +1260,17 @@ pub(crate) fn activate(
     request: &ImageRequest,
     types: &ParameterTypes,
 ) -> Result<(ValueMap, Activation), ImageError> {
-    let program_id = request.program_id.as_str();
-    let supplied = request.values.clone().into_iter().collect();
+    activate_values(conn, &request.program_id, &request.values, types)
+}
+
+/// Shared checked activation, independent of image-only request fields.
+fn activate_values(
+    conn: &Connection,
+    program_id: &str,
+    choices: &BTreeMap<String, String>,
+    types: &ParameterTypes,
+) -> Result<(ValueMap, Activation), ImageError> {
+    let supplied = choices.clone().into_iter().collect();
     let values = resolve_values(conn, program_id, &supplied)?;
     let activation = evaluate(&load_program_trees(conn, program_id)?, &values);
     let mut undecided = Vec::new();
@@ -1626,20 +1635,18 @@ fn check_masks(code: &ProgramCode, segments: &[SegmentImage]) -> Result<(), Imag
 }
 
 /// One activated `ComObjectRef` as a group object table descriptor, and
-/// whether the product enables its `ReadOnInitFlag`. Inferences it applies
+/// whether read-on-init is requested. Inferences it applies
 /// are pushed onto `inferences`.
 fn active_object(
     ref_id: &str,
     view: &crate::query::ComObjectView,
+    overrides: Option<&FlagOverrides>,
     inferences: &mut Vec<Inference>,
 ) -> Result<(ActiveObject, bool), ImageError> {
     let unsupported = |why: String| ImageError::Unsupported {
         what: format!("{ref_id}: {why}"),
     };
-    let number = view
-        .number
-        .and_then(|n| u8::try_from(n).ok())
-        .ok_or_else(|| unsupported(format!("object number {:?}", view.number)))?;
+    let number = object_flags::object_number(ref_id, view)?;
     let bits = view
         .object_size
         .as_deref()
@@ -1664,32 +1671,16 @@ fn active_object(
         }
         Some(other) => return Err(unsupported(format!("Priority {other:?}"))),
     };
-    let flag = |name: &str, value: &Option<String>| match value.as_deref() {
-        Some("Enabled") => Ok(true),
-        Some("Disabled") => Ok(false),
-        other => Err(unsupported(format!("{name} {other:?}"))),
-    };
-    // `[D]` Resources §4.18.6.2.4.1.3, NOTE 85: a System B feature, so
-    // the `070nh` descriptor carries no bit for it; whether its loss is
-    // disclosed is the caller's business (the project may override it).
-    let read_on_init = match view.read_on_init.as_deref() {
-        None => false,
-        Some(_) => flag("ReadOnInitFlag", &view.read_on_init)?,
-    };
+    // Keep size/priority admission and inference order in the image path;
+    // comparison resolves only flags through the same lower-level seam.
+    let resolved = object_flags::resolve_flags(ref_id, view, overrides)?;
     Ok((
         ActiveObject {
             number,
-            flags: ObjectFlags {
-                update: flag("UpdateFlag", &view.update)?,
-                transmit: flag("TransmitFlag", &view.transmit)?,
-                write: flag("WriteFlag", &view.write)?,
-                read: flag("ReadFlag", &view.read)?,
-                communication: flag("CommunicationFlag", &view.communication)?,
-                priority,
-            },
+            flags: resolved.flags.with_priority(priority),
             value_type,
         },
-        read_on_init,
+        resolved.requested_read_on_init,
     ))
 }
 

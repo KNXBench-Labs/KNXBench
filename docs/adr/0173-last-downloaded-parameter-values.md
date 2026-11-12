@@ -116,9 +116,18 @@ brings no baselines of its own keeps therefore depends on the writer:
   entry goes.
 
 A **version restore** brings back a project whose ids may likewise name other
-devices (a version stored before such a re-import). It keeps an entry only if
-the restored device under that id has the same identity as the live one, in
-the file and in the server's held set alike; other entries go.
+devices (a version stored before such a re-import, or another project's
+version left in an overwritten file). The file keeps an entry only if the
+version has the live project id and the restored device under that id has the
+live one's identity; other entries go. The server then holds exactly the set
+the file kept.
+
+The identity rule cannot tell unrelated projects that share a project id
+apart (every project created in KNXBench starts as `P-0001` with `KB-DEV-n`
+sources; ETS ids repeat across installations). A version left in a file that
+Save As overwrote with such a project can therefore pair a baseline with a
+different physical device of the same product and program. This is a known
+limit; a unique id for new projects is the follow-up that closes it.
 
 Apart from a restore, the server's in-memory set needs no such check: it is
 replaced together with the project, and its save is admitted only at the

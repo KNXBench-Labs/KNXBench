@@ -743,7 +743,14 @@ fn a_restore_keeps_baselines_only_where_the_version_names_the_same_device() {
         &path,
         &live,
         generation,
-        &[record(1, 1), record(2, 1), record(3, 1), record(4, 1)],
+        // Device 5 was deleted live; a stale row for it must not survive.
+        &[
+            record(1, 1),
+            record(2, 1),
+            record(3, 1),
+            record(4, 1),
+            record(5, 1),
+        ],
     )
     .unwrap();
 
@@ -753,4 +760,32 @@ fn a_restore_keeps_baselines_only_where_the_version_names_the_same_device() {
 
     let kept: Vec<_> = stored(&path).iter().map(|(device, _)| device.0).collect();
     assert_eq!(kept, vec![1], "only device 1 is the same device in both");
+}
+
+#[test]
+fn a_restore_of_another_projects_version_keeps_no_baseline() {
+    // A version left by another project, then the CLI saved this project into
+    // the same file: the same ids and sources name other devices.
+    let dir = tempfile::tempdir().unwrap();
+    let other = project("P-other", 2);
+    let (path, generation) = saved(dir.path(), "overwritten.knxdb", &other);
+    let conn = history::open_editor_store(&path, false).unwrap();
+    history::create_version(&conn, &model(&other), "Other project", generation).unwrap();
+    let version = history::list_versions(&conn).unwrap()[0].id;
+    drop(conn);
+    let this = project("P-1", 2);
+    let conn = knx_store::open_existing_and_migrate(&path).unwrap();
+    knx_store::save_project_with_passthrough(&conn, &this, &[], &[]).unwrap();
+    drop(conn);
+    let conn = history::open_editor_store(&path, false).unwrap();
+    let editor = history::load_editor(&conn).unwrap().unwrap();
+    history::write_parameter_baselines(&conn, &[record(1, 1), record(2, 1)]).unwrap();
+    assert_eq!(stored(&path).len(), 2);
+
+    history::restore_version(&conn, version, &model(&this), editor.generation).unwrap();
+    drop(conn);
+    assert!(
+        stored(&path).is_empty(),
+        "another project's ids name other devices"
+    );
 }

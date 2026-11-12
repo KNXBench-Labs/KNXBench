@@ -42,7 +42,9 @@ server part implemented (11 November 2026, branch), the UI part open.**
   its first native save; a plain server save writes no baseline row; a plain
   save of another project drops every row, and a store save not admitted at
   the journal's generation (`knx import --replace`) keeps only rows whose device
-  has the same source, program and product reference.
+  has the same source, program and product reference. A version restore keeps
+  only rows whose restored device has the live device's identity within the same
+  project id; the server then holds exactly the set the file kept.
 - **API:** `GET /api/device/{id}/parameters` gains optional `lastDownload`:
   `{state: 'usable', at, differing: [{refId, downloaded, current}]}`, or only a
   state: `absent`, `otherProgram`, `productUnavailable` or `currentUnreadable`
@@ -84,6 +86,12 @@ description after the name.
 
 - Per-parameter marking in the UI (step 2, UI part); per-link marking.
 - Marks inside the parameter panel or on individual communication objects.
+- Device identity is source, product and program reference within one project
+  id. Two unrelated projects with the same project id (every project created in
+  KNXBench starts as `P-0001` with `KB-DEV-n` sources) cannot be told apart, so a
+  version left in a file overwritten by Save As can pair a baseline with another
+  physical device of the same product and program. A unique project id for new
+  projects would close this; not done here.
 
 ## Evidence
 
@@ -106,8 +114,13 @@ Step 2, server part (synthetic data only, no bus):
   a failed baseline write rolling back the settled flags, identical history and
   version image bytes with and without baselines, pruning (by device identity
   for an unadmitted save, by presence for an admitted one), a plain save
-  writing no row (counting triggers), an older stored version restoring,
-  500 devices × 200 refs.
+  writing no row (counting triggers), an older stored version restoring, a
+  restore keeping only same-identity devices
+  (`a_restore_keeps_baselines_only_where_the_version_names_the_same_device`) and
+  none for another project's version
+  (`a_restore_of_another_projects_version_keeps_no_baseline`), 500 devices × 200
+  refs. `apps/knx-server/tests/it/http_project_history.rs`
+  `a_restore_leaves_the_held_baselines_equal_to_what_the_file_kept`.
 - `apps/knx-server/src/programming_state/source_freshness_tests/parameter_baseline.rs`:
   the real download and address settlers over a synthetic catalogue (record,
   record during an edit, changed source, interrupted, partial, nothing written),

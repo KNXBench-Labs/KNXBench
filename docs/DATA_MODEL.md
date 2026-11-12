@@ -914,5 +914,8 @@ project lacks, and a plain save of another project (other `project_id`) drops
 all of them. A save not admitted at the journal's generation (a plain store
 save such as `knx import --replace`) also drops every row whose device differs
 in `source`, `program_ref` or `product_ref` from the device under that id in the
-project the rows were written for. A plain server save writes no row. Additive: every baseline of an older file is unknown
-([ADR-0173](adr/0173-last-downloaded-parameter-values.md)).
+project the rows were written for. A version restore keeps a row only where the
+restored device under that id has the live device's identity and the version
+belongs to the same `project_id`; the server takes exactly the set the file
+kept. A plain server save writes no row. Additive: every baseline of an older
+file is unknown ([ADR-0173](adr/0173-last-downloaded-parameter-values.md)).

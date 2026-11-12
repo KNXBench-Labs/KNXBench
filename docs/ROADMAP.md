@@ -3,9 +3,9 @@
 ## Last-download object evidence (12 November 2026; WP-37f)
 
 The ADR-0174 backend implements native schema21, independent flags/link
-settlement and typed GET DeviceDetail comparison. Final package acceptance is
-pending; communication-object row marks and summary remain the next separate
-UI package. No new hardware, whole-image compatibility or readback claim.
+settlement and typed GET DeviceDetail comparison (accepted on main after
+review and the package gate); communication-object row marks and summary remain
+the next separate UI package. No new hardware, whole-image compatibility or readback claim.
 [Contract and remaining boundaries](adr/0174-last-downloaded-links-and-flags.md).
 
 ## Background-activity feedback (10 November 2026)

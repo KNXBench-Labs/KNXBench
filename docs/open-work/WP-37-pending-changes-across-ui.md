@@ -1,9 +1,10 @@
 # WP-37 — Show pending, not-yet-downloaded changes across the UI (#40)
 
 External report by the issue reporter, 10 November 2026; triaged 11 November 2026.
-Status: **step 1 implemented (11 November 2026, main only); step 2 designed in
-[ADR-0173](../adr/0173-last-downloaded-parameter-values.md) (Proposed); its
-server part implemented (11 November 2026, branch), the UI part open.**
+Status: **step 1 implemented (11 November 2026, main only); step 2 implemented
+(server part 11 November, parameter-editor UI 12 November 2026, main only) per
+[ADR-0173](../adr/0173-last-downloaded-parameter-values.md) (Accepted). No
+hardware run.**
 
 ## Packages
 
@@ -16,9 +17,7 @@ server part implemented (11 November 2026, branch), the UI part open.**
    change and ADR. **Designed** in ADR-0173: a baseline of the chosen values a
    completed download wrote, kept outside undo, compared per effective value
    (native schema 20). WP-40 (version restore, ADR-0173 §6) is implemented.
-   **Server part implemented** (see below); **UI part open**: row marks,
-   tooltip “Value at last download: …” / “Wert beim letzten Programmieren: …”,
-   the panel's count sentence and the unusable-state sentence (ADR-0173 §5).
+   **Implemented**: server part and parameter-editor UI (see below).
 
 ## Step 2, server part as implemented
 
@@ -52,6 +51,35 @@ server part implemented (11 November 2026, branch), the UI part open.**
   too). The write response (`POST`) does not carry it; the client reads it with
   the next `GET`. TS type `LastDownload` in `apps/knx-web/src/api.ts`.
 
+## Step 2, UI part as implemented
+
+- **Row mark:** in the Parameters tab (and the Manufacturer fields tab) an unscoped field
+  whose `etsId` is a `differing` ref of a usable `lastDownload` gets the step-1
+  amber dot after its caption (own class `parameter-download-mark`). Its tooltip
+  and the control's accessible description say “Value at last download: …” /
+  “Wert beim letzten Programmieren: …”; a selection shows the declared option's
+  label, an undeclared value or a free value its raw text, a missing one “no
+  value” / “kein Wert”. The dot is `aria-hidden`, so the field's accessible name
+  is unchanged. `refId` is the `ParameterRef` id, which is the unscoped field's
+  `etsId` (`domain.rs` sets `ets_id: view.id`; baselines hold unscoped refs
+  only, `resolve_unscoped_values`); module-scoped rows are never marked.
+- **Summary line** (Parameters view only, above the fields, static text, not a
+  live region): “{count} values differ from the last download ({time}).” with
+  singular/plural, plus “{hidden} of them are not shown with the current
+  settings.” for differing refs no field of the Parameters view shows (inactive
+  under the current settings, or manufacturer-restricted fields that only the
+  Manufacturer fields tab shows); “No value differs from the last download ({time}).”
+  when none; one plain sentence for `absent`, `otherProgram`,
+  `productUnavailable` and `currentUnreadable`, and no row marks. No line when
+  the response has no `lastDownload` (older server) or the program is not
+  resolved. The time uses the app's log-time helper (`formatLogTime`: time only
+  for today, date and time otherwise, 24-hour clock).
+- **Write responses:** a parameter `POST` response carries no `lastDownload`;
+  `useDeviceParameters` keeps the shown comparison across an accepted write for
+  the same device, language, project lifetime and program until the follow-up
+  `GET` replaces it, so the marks do not blink off. The client never compares
+  values itself; until that `GET` the just-written row keeps its previous mark.
+
 ## Step 1 as implemented
 
 - **Device editor heading:** below the device name a notice line names the
@@ -84,8 +112,10 @@ description after the name.
 
 ## Not covered
 
-- Per-parameter marking in the UI (step 2, UI part); per-link marking.
-- Marks inside the parameter panel or on individual communication objects.
+- Per-link marks and marks on individual communication objects or flags.
+- Module-scoped parameters (no baseline until module downloads exist).
+- Devices imported, programmed by the System-2 path or marked by hand show only
+  the per-part hint until their next completed regular download.
 - Device identity is source, product and program reference within one project
   id. Two unrelated projects with the same project id (every project created in
   KNXBench starts as `P-0001` with `KB-DEV-n` sources) cannot be told apart, so a
@@ -133,4 +163,17 @@ Step 2, server part (synthetic data only, no bus):
   adoption test asserts adoption leaves every baseline unchanged.
 - `apps/knx-server/tests/it/http_parameter_baseline.rs`: `lastDownload` over
   HTTP for each state and the manual mark in both directions, durable.
+
+Step 2, UI part (intercepted fictional data, no bus):
+
+- `apps/knx-web/src/ParameterPanel.lastDownload.test.tsx`: marks and
+  descriptions on differing unscoped rows only, enum label, undeclared and
+  missing value, singular/plural and the hidden count, no difference, each
+  unusable state in English and German, nothing without `lastDownload`, line only
+  in the Parameters view, retention across a write response and replacement by
+  the next read, no carry-over to another program.
+- `apps/knx-web/e2e/parameter-last-download.e2e.ts` (devices lane): en/de at
+  1440 and 400 px, summary text with time, visible dots, unchanged accessible
+  names and the exact accessible descriptions, no sideways overflow, no
+  unexpected request; an unusable state without marks.
 

@@ -1,6 +1,7 @@
 # REL-01 — Beta exit criteria: what has to hold before KNXBench leaves alpha
 
-**Status:** Proposed 12 November 2026; owner approval pending. Listed in
+**Status:** Proposed 12 November 2026; version scheme decided (standard SemVer,
+see B-01); acceptance of the catalogue itself pending. Listed in
 [OPEN_WORK](../OPEN_WORK.md). Nothing here is decided until the owner accepts it;
 on acceptance the definition becomes an ADR and this file stays the checklist.
 
@@ -42,7 +43,7 @@ recorded owner decision. Each row ends with what the owner has to decide, if any
 
 | ID | Level | Criterion → acceptance | Current state |
 | --- | --- | --- | --- |
-| B-01 | Must | **Owner accepts this catalogue** → ADR recorded, version scheme chosen (`0.1.0-beta.1` or `0.2.0-beta.1`). | Proposed. *Decide:* catalogue, version scheme. |
+| B-01 | Must | **Owner accepts this catalogue** → ADR recorded, version scheme chosen. | **Version scheme decided 12 November 2026: standard SemVer.** The release target stays `0.1.0`; only the pre-release identifier changes, giving `0.1.0-alpha.20 < 0.1.0-beta.1 < … < 0.1.0-rc.1 < 0.1.0` (SemVer 2.0.0 §9, §11). The web update check already implements §11 precedence, and its tests cover the specification chain `alpha.1 → beta → beta.11 → rc.1` (`apps/knx-web/src/releaseUpdates.test.ts`); the AppImage and Docker workflows accept any `vMAJOR.MINOR.PATCH[-PRERELEASE]` tag. *Decide:* the catalogue. |
 | B-02 | Must | **Written compatibility promise** for `.knxdb`, product database, settings and journals from the first beta on: forward migration for every schema change, a clear refusal of newer files, no silent loss ([ADR-0020](../adr/0020-migrations-may-rederive-from-stored-bytes.md)). | Migrations exist per alpha, but there is no written promise. Alpha 20 alone moved native 16 → 19 and product database 31 → 32 ([upgrade notes](../releases/alpha20.md#upgrade)). |
 | B-03 | Must | **Upgrade test from pinned release fixtures**: a gate stage opens, saves and reopens a fictional project written by each published beta (and by the last alpha) and compares the names and counts. | Only a one-off release receipt check exists (Alpha 19 project, 647/647 names in the [Alpha 20 receipt](../evidence/release-alpha20-2026-11-09.json)). No permanent fixture per release. |
 | B-04 | Must | **No open data-loss or corruption defect.** Every open issue is triaged for data loss, and the result is recorded. | Not triaged against this criterion yet. Open issues #7, #22, #36 and #38 do not report data loss (based on their titles and the open-work notes, not re-verified). |
@@ -96,7 +97,7 @@ These stay open, documented and visible, but do not block the stage change:
 
 ## Owner decisions, smallest first
 
-1. Accept, change or reject this catalogue (B-01) and choose the version scheme.
+1. Accept, change or reject this catalogue (B-01). The version scheme is decided.
 2. ETS 5.7 import: before beta, or declared unsupported (B-11).
 3. System-2: fix first, or ship it as experimental (B-06).
 4. The declared family list, and whether it may include families with simulator evidence only (B-05, B-08).
@@ -106,3 +107,5 @@ These stay open, documented and visible, but do not block the stage change:
 
 - 12 November 2026: first proposal after the question "what is missing for
   KNXBench to leave alpha?". No implementation started.
+- 12 November 2026: owner decision "standard SemVer principle" recorded in B-01
+  and [OWN-01](OWN-01-owner-decisions.md). The beta is `0.1.0-beta.N`.

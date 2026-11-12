@@ -2,6 +2,14 @@
 
 **Status:** Decisions recorded; remaining evidence and owner review pending. Listed in [OPEN_WORK](../OPEN_WORK.md); per-ID status of record is the [ledger](../status/LEDGER.md).
 
+## Decision recorded — 12 November 2026
+
+- **Release versions follow standard SemVer.** The beta keeps the release
+  target and changes only the pre-release identifier: `0.1.0-alpha.N` is
+  followed by `0.1.0-beta.N`, then `0.1.0-rc.N`, then `0.1.0`. Recorded in
+  [REL-01](REL-01-beta-exit-criteria.md) (B-01); the beta exit catalogue itself
+  is not accepted yet, and this decision does not start a beta.
+
 ## Decisions recorded — 8 November 2026
 
 Owner answers to that day's list of open decisions. As before, none of them is

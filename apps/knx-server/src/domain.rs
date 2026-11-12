@@ -1252,7 +1252,7 @@ fn blank_project(
 ) -> knx_core::Project {
     let language = language.unwrap_or_else(|| DEFAULT_NEW_PROJECT_LANGUAGE.to_string());
     let mut replacement = knx_core::Project::new(knx_core::Language(language));
-    replacement.info.project_id = NEW_PROJECT_ID.to_string();
+    replacement.info.project_id = new_project_id();
     replacement.info.name = name.unwrap_or_default();
     if let Some(style) = group_address_style {
         replacement.info.group_address_style = style;
@@ -1341,11 +1341,25 @@ fn new_project_impl_with_pause(
 /// caller can say otherwise.
 const DEFAULT_NEW_PROJECT_LANGUAGE: &str = "en";
 
-/// Shaped like the project ids observed in the reference `.knxproj` files
-/// (`P-0512`, `P-03DE`), which is also the name of the directory they sit
-/// in inside the container. Only has to be unique inside one project file,
-/// so a constant is enough.
-const NEW_PROJECT_ID: &str = "P-0001";
+/// A project id no other project shares: `P-KB-` and 128 random bits in hex.
+/// The `P-` prefix follows the ids of imported `.knxproj` files (`P-0512`);
+/// `KB-` marks a project created in KNXBench. Device identity across saves and
+/// restores is judged within one project id (ADR-0173 §2), so two projects
+/// created independently must never share one (a constant `P-0001` did).
+/// Without the operating system's random source the time and process id stand
+/// in: still distinct between creations, not secret, which an id need not be.
+fn new_project_id() -> String {
+    let mut bytes = [0u8; 16];
+    if getrandom::fill(&mut bytes).is_err() {
+        let nanos = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map_or(0, |elapsed| elapsed.as_nanos());
+        bytes[..12].copy_from_slice(&nanos.to_le_bytes()[..12]);
+        bytes[12..].copy_from_slice(&std::process::id().to_le_bytes());
+    }
+    let hex: String = bytes.iter().map(|byte| format!("{byte:02x}")).collect();
+    format!("P-KB-{hex}")
+}
 
 /// Pushes one info entry on `Ok`, one error entry on `Err` — shared by
 /// every operation that reports outcomes to the session log
@@ -8450,6 +8464,54 @@ mod tests {
         let current = state.project.lock().unwrap();
         assert_eq!(current.as_ref().unwrap().info.name, "Project B");
         assert_eq!(*state.store_path.lock().unwrap(), None);
+    }
+
+    #[test]
+    fn every_new_project_gets_its_own_project_id() {
+        // ADR-0173 §2 judges device identity within one project id, so two
+        // projects created independently must never share one.
+        let ids: std::collections::BTreeSet<String> = (0..3)
+            .map(|_| {
+                let state = AppState::default();
+                new_project_impl(&state, None, None, None, None, true).unwrap();
+                let id = state
+                    .project
+                    .lock()
+                    .unwrap()
+                    .as_ref()
+                    .unwrap()
+                    .info
+                    .project_id
+                    .clone();
+                id
+            })
+            .collect();
+        assert_eq!(ids.len(), 3, "{ids:?}");
+        for id in &ids {
+            let hex = id.strip_prefix("P-KB-").expect("P-KB- prefix");
+            assert_eq!(hex.len(), 32, "{id}");
+            assert!(
+                hex.chars()
+                    .all(|c| c.is_ascii_hexdigit() && !c.is_ascii_uppercase()),
+                "{id}"
+            );
+        }
+        // The seeded wizard path takes the same id source.
+        let state = AppState::default();
+        new_seeded_project_impl(&state, NewProjectSpec::default(), true).unwrap();
+        let seeded = state
+            .project
+            .lock()
+            .unwrap()
+            .as_ref()
+            .unwrap()
+            .info
+            .project_id
+            .clone();
+        assert!(
+            seeded.starts_with("P-KB-") && !ids.contains(&seeded),
+            "{seeded}"
+        );
     }
 
     #[test]

@@ -123,11 +123,12 @@ live one's identity; other entries go. The server then holds exactly the set
 the file kept.
 
 The identity rule cannot tell unrelated projects that share a project id
-apart (every project created in KNXBench starts as `P-0001` with `KB-DEV-n`
-sources; ETS ids repeat across installations). A version left in a file that
-Save As overwrote with such a project can therefore pair a baseline with a
-different physical device of the same product and program. This is a known
-limit; a unique id for new projects is the follow-up that closes it.
+apart. Projects created in KNXBench get a random id since 12 November 2026
+(`P-KB-` and 128 random bits; before, every one was `P-0001` with `KB-DEV-n`
+sources, and files created then keep that id). ETS ids are short (`P-0512`)
+and can repeat across unrelated ETS installations. A version left in a file
+that Save As overwrote with such a project can therefore still pair a
+baseline with a different physical device of the same product and program.
 
 Apart from a restore, the server's in-memory set needs no such check: it is
 replaced together with the project, and its save is admitted only at the

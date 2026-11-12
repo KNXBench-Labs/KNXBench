@@ -11,9 +11,9 @@ use std::collections::BTreeMap;
 
 use chrono::{DateTime, SecondsFormat, Utc};
 use knx_core::commissioning::parameter_baseline::{
-    BaselineEdit, ParameterBaseline, ParameterBaselines,
+    same_device, BaselineEdit, ParameterBaseline, ParameterBaselines,
 };
-use knx_core::{DeviceId, DeviceInstance, Project};
+use knx_core::{DeviceId, Project};
 use rusqlite::{params, Connection};
 
 use crate::StoreError;
@@ -168,12 +168,6 @@ pub(crate) enum PruneBasis<'a> {
     /// is the project the rows were written for: the journal's working state,
     /// else the saved root.
     Replaced { described: Option<&'a Project> },
-}
-
-/// Whether two devices under one id are the same device: same source
-/// element, same product and same application program reference.
-fn same_device(a: &DeviceInstance, b: &DeviceInstance) -> bool {
-    a.source == b.source && a.product_ref == b.product_ref && a.program_ref == b.program_ref
 }
 
 /// What a save that brings no baselines of its own does with the stored

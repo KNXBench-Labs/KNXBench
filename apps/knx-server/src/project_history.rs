@@ -286,6 +286,13 @@ fn mutate(
             &restored_snapshot.project,
             &change.restored_pending,
         );
+        // The file dropped the rows of devices the restored ids no longer
+        // name; the held map follows (ADR-0173 §2).
+        state
+            .parameter_baselines
+            .lock()
+            .expect("state mutex poisoned")
+            .retain_same_devices(current, &restored_snapshot.project);
         *project = Some(restored_snapshot.project.clone());
         *state.clean_project.lock().expect("state mutex poisoned") =
             Some(restored_snapshot.project);

@@ -115,8 +115,14 @@ brings no baselines of its own keeps therefore depends on the writer:
   ETS id), the same `program_ref` and the same `product_ref`. Otherwise the
   entry goes.
 
-The server's in-memory set needs no such check: it is replaced together with
-the project, and its save is admitted only at the generation it holds.
+A **version restore** brings back a project whose ids may likewise name other
+devices (a version stored before such a re-import). It keeps an entry only if
+the restored device under that id has the same identity as the live one, in
+the file and in the server's held set alike; other entries go.
+
+Apart from a restore, the server's in-memory set needs no such check: it is
+replaced together with the project, and its save is admitted only at the
+generation it holds.
 
 ### 3. Only settlement writes it
 

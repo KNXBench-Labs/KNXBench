@@ -57,8 +57,7 @@ pub(crate) async fn download(
 ) -> Result<Response, ApiError> {
     // Off the runtime (#36): waiting for the project and writing the payload
     // are synchronous. The write stays under the locks: copying a payload of up
-    // to `MAX_DOWNLOAD_BYTES` out first would cost as long as writing it and
-    // double its memory.
+    // to `MAX_DOWNLOAD_BYTES` out first would double its memory per download.
     let writing_state = state.clone();
     let tmp = crate::routes::off_runtime(move || {
         let state = writing_state;

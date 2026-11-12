@@ -4286,11 +4286,8 @@ mod tests {
                 blocked.push(uri);
             }
             let status = call.await.unwrap();
-            assert_ne!(
-                status,
-                axum::http::StatusCode::NOT_FOUND,
-                "{uri} is not routed"
-            );
+            // Exact: an extractor refusal would answer before the lock is taken.
+            assert_eq!(status, axum::http::StatusCode::OK, "{uri}");
         }
         assert!(
             blocked.is_empty(),
@@ -4334,20 +4331,26 @@ mod tests {
     async fn report_and_payload_routes_leave_the_runtime_free() {
         use tower::ServiceExt;
         let dir = tempfile::tempdir().unwrap();
-        let routes: [(&str, &str, &str); 2] = [
+        // Exact statuses: an extractor refusal (400/422) would answer before
+        // the handler takes the lock and prove nothing. The payload binding
+        // names another server, so the handler answers 409 under the lock.
+        use axum::http::StatusCode;
+        let routes: [(&str, &str, &str, StatusCode); 2] = [
             (
                 "POST",
                 "/api/debug-report",
                 r#"{"includeProjectSummary":true,"path":"report.zip"}"#,
+                StatusCode::OK,
             ),
             (
                 "GET",
                 "/api/project/payloads/1/download?serverIncarnation=x&projectIncarnation=0&snapshotRevision=0",
                 "",
+                StatusCode::CONFLICT,
             ),
         ];
         let mut blocked = Vec::new();
-        for (method, uri, body) in routes {
+        for (method, uri, body, expected) in routes {
             let state = Arc::new(AppState::new(dir.path().to_path_buf()));
             crate::domain::new_project_impl(&state, None, None, None, None, true).unwrap();
             let router = super::project_routes()
@@ -4368,11 +4371,7 @@ mod tests {
                 blocked.push(uri);
             }
             let status = call.await.unwrap();
-            assert_ne!(
-                status,
-                axum::http::StatusCode::NOT_FOUND,
-                "{uri} is not routed"
-            );
+            assert_eq!(status, expected, "{uri}");
         }
         assert!(
             blocked.is_empty(),

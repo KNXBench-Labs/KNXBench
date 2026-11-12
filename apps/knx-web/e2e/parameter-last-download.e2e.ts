@@ -9,6 +9,11 @@ import { formatLogTime } from "../src/logRows";
 import { achievementsFixtureAnswer } from "./achievements-fixture";
 import { statusMetricsFixtureBody } from "./status-metrics-fixture";
 
+// The expected time is formatted in this Node process by the app's own helper;
+// the browser runs in the same zone, so both sides format the same instant alike.
+const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+test.use({ timezoneId: zone });
+
 const device: DeviceNode = { id: 1, name: "Fictional dimmer", address: "1.1.9", description: "Fictional device", com_object_count: 0 };
 const tree: ProjectTree = { schema_version: 11, errors: 0, warnings: 0, can_undo: false, can_redo: false, is_modified: false,
   group_address_style: "ThreeLevel", server_incarnation: "baseline-browser", project_incarnation: 1, snapshot_revision: 1,
@@ -25,6 +30,8 @@ const fields: ParameterField[] = [
   field("P-Mode", "Operating mode", { kind: "Restriction", value: "1", min: null, max: null,
     enumOptions: [{ value: "0", text: "Switching", language: null }, { value: "1", text: "Dimming", language: null }] }),
   field("P-Name", "Channel name", { kind: "Text", value: "Kitchen", min: null, max: null }),
+  // Manufacturer-restricted: only the Manufacturer fields tab shows (and marks) it.
+  field("P-Factory", "Factory calibration", { access: "Read", editable: false, writeEtsId: null }),
 ];
 const at = "2026-11-12T09:30:00.000Z";
 const usable: LastDownload = { state: "usable", at, differing: [
@@ -32,6 +39,7 @@ const usable: LastDownload = { state: "usable", at, differing: [
   { refId: "P-Mode", downloaded: "0", current: "1" },
   // Inactive under the current settings: counted, not shown.
   { refId: "P-Inactive", downloaded: "5", current: null },
+  { refId: "P-Factory", downloaded: "12", current: "30" },
 ] };
 
 async function intercept(page: Page, language: "en" | "de", lastDownload: LastDownload) {
@@ -95,10 +103,10 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
     await openParameters(page, language);
     const summary = page.locator(".parameter-last-download");
     await expect(summary).toHaveAttribute("data-state", "usable");
-    // The time in the browser's zone, formatted by the app's own log-time helper.
-    const time = await page.evaluate((iso) => Date.parse(iso), at).then((ms) => formatLogTime(ms, language, new Date()));
-    await expect(summary).toHaveText(`${m["parameters.lastDownload.differs.other"].replace("{count}", "3").replace("{time}", time!)} ${
-      m["parameters.lastDownload.hidden.one"].replace("{hidden}", "1")}`);
+    const time = formatLogTime(Date.parse(at), language, new Date());
+    await expect(summary).toHaveText(`${m["parameters.lastDownload.differs.other"].replace("{count}", "4").replace("{time}", time!)} ${
+      m["parameters.lastDownload.hidden.one"].replace("{hidden}", "1")} ${
+      m["parameters.lastDownload.manufacturer.one"].replace("{count}", "1").replace("{tab}", m["parameters.restrictedTab"])}`);
     const workspace = page.locator(".parameter-workspace");
     await workspace.locator(".parameter-workspace-nav button").filter({ hasText: "General" }).click();
     const value = (shown: string) => m["parameters.lastDownload.value"].replace("{value}", shown);
@@ -121,6 +129,21 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
       expect(box.x + box.width).toBeLessThanOrEqual(width);
     }
     await expect(workspace.locator('[data-ets-id="P-Mode"] .parameter-download-mark')).toHaveAttribute("title", value("Switching"));
+    // Keyboard and touch: the value shows as a caption while the row has focus.
+    const notes = workspace.locator(".parameter-download-note");
+    await expect(notes).toHaveCount(2);
+    for (const note of await notes.all()) await expect(note).toBeHidden();
+    await delay.focus();
+    const delayNote = workspace.locator('[data-ets-id="P-Delay"] + .parameter-download-note');
+    await expect(delayNote).toBeVisible();
+    await expect(delayNote).toHaveText(value("10"));
+    const noteBox = (await delayNote.boundingBox())!;
+    expect(noteBox.x).toBeGreaterThanOrEqual(0);
+    expect(noteBox.x + noteBox.width).toBeLessThanOrEqual(width);
+    await expect(workspace.locator('[data-ets-id="P-Mode"] + .parameter-download-note')).toBeHidden();
+    expect(await noOverflow(page)).toBeLessThanOrEqual(1);
+    await delay.blur();
+    await expect(delayNote).toBeHidden();
     const summaryBox = (await summary.boundingBox())!;
     expect(summaryBox.x).toBeGreaterThanOrEqual(0);
     expect(summaryBox.x + summaryBox.width).toBeLessThanOrEqual(width + 1);
@@ -145,3 +168,27 @@ for (const language of ["en", "de"] as const) {
     expect(state.unexpected).toEqual([]);
   });
 }
+
+test("keeps the row and summary dots painted under forced colours", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.emulateMedia({ forcedColors: "active" });
+  const state = await intercept(page, "en", usable);
+  await openParameters(page, "en");
+  await page.locator(".parameter-workspace-nav button").filter({ hasText: "General" }).click();
+  const canvasText = await page.evaluate(() => {
+    const probe = document.createElement("span");
+    probe.style.color = "CanvasText";
+    document.body.append(probe);
+    const color = getComputedStyle(probe).color;
+    probe.remove();
+    return color;
+  });
+  const dots = [page.locator(".parameter-last-download-dot"), ...await page.locator(".parameter-workspace .parameter-download-mark").all()];
+  expect(dots).toHaveLength(3);
+  for (const dot of dots) {
+    await expect(dot).toBeVisible();
+    await expect(dot).toHaveCSS("forced-color-adjust", "none");
+    await expect(dot).toHaveCSS("background-color", canvasText);
+  }
+  expect(state.unexpected).toEqual([]);
+});

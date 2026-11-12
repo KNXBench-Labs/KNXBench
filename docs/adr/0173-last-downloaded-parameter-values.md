@@ -1,7 +1,7 @@
 # ADR 0173: The project remembers the parameter values a verified download wrote
 
 Date: 2026-11-11
-Status: Accepted (main, 12 November 2026: server part 11 November, parameter-editor UI 12 November; WP-37 step 2; no hardware)
+Status: Accepted (main; simulator and intercepted-browser tests only, no hardware run)
 Session: issue intake #40, step 2 ([WP-37](../open-work/WP-37-pending-changes-across-ui.md)); restore finding [WP-40](../open-work/WP-40-version-restore-programming-claims.md)
 
 ## Context
@@ -200,8 +200,9 @@ write does not carry it; the client reads it with the next `GET`. The parameter 
 differing visible row with the step-1 amber mark and a tooltip/accessible
 description "Value at last download: …" / "Wert beim letzten Programmieren:
 …", using enum labels where declared. The panel names the number of differing
-values and how many of them the current settings do not show (inactive in the
-current settings, which carry no device claim either). An unusable baseline
+values, how many of them the current settings do not show (inactive in the
+current settings, which carry no device claim either) and, separately, how many
+only the Manufacturer fields tab shows, where they are marked. An unusable baseline
 gives one plain sentence and no row marks. Links and object flags get no
 per-item marks.
 

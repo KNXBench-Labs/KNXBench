@@ -636,10 +636,10 @@ P4 live-device comparison; CLI/external work needs manual reconciliation.
 In a source build after Alpha 20 the opened device editor also names its
 pending parts under the heading and marks the Parameters and Communication
 objects tabs (issue #40). Its parameter editor marks each value that differs
-from what the last completed KNXBench download sent and counts them above the
-fields ([ADR-0173](../adr/0173-last-downloaded-parameter-values.md)); that is the
-value sent, not a device read, and devices without such a download show only
-the per-part marks.
+from the value the last completed KNXBench download used and counts them above
+the fields ([ADR-0173](../adr/0173-last-downloaded-parameter-values.md)); that is
+the value the download used, not a device read, and devices without such a
+download show only the pending marks.
 [Use](user-guide/05-devices-and-products.md#programming-marks-p3-since-alpha-12).
 
 A download can use these marks to choose its scope (since Alpha 17):

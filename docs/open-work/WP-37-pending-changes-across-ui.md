@@ -60,15 +60,22 @@ hardware run.**
   “Wert beim letzten Programmieren: …”; a selection shows the declared option's
   label, an undeclared value or a free value its raw text, a missing one “no
   value” / “kein Wert”. The dot is `aria-hidden`, so the field's accessible name
-  is unchanged. `refId` is the `ParameterRef` id, which is the unscoped field's
+  is unchanged. The description is a caption after the row's label (never part
+  of its name): shown while the row has focus (keyboard, touch), always under a
+  control that cannot take focus (Manufacturer fields) and beside an open
+  checked editor. Under `forced-colors: active` the row dot, the summary dot and
+  the step-1 dot (`device-pending-dot`) keep `forced-color-adjust: none` and paint
+  in `CanvasText`. `refId` is the `ParameterRef` id, which is the unscoped field's
   `etsId` (`domain.rs` sets `ets_id: view.id`; baselines hold unscoped refs
   only, `resolve_unscoped_values`); module-scoped rows are never marked.
 - **Summary line** (Parameters view only, above the fields, static text, not a
   live region): “{count} values differ from the last download ({time}).” with
   singular/plural, plus “{hidden} of them are not shown with the current
-  settings.” for differing refs no field of the Parameters view shows (inactive
-  under the current settings, or manufacturer-restricted fields that only the
-  Manufacturer fields tab shows); “No value differs from the last download ({time}).”
+  settings.” for differing refs no unscoped value field of the panel presents
+  (inactive under the current settings, or undeclared), and “{count} of them are
+  in the Manufacturer fields tab.” for refs only manufacturer-restricted fields
+  present (same `isManufacturerRestricted` predicate as the view filter), both
+  counted against the unfiltered sections; “No value differs from the last download ({time}).”
   when none; one plain sentence for `absent`, `otherProgram`,
   `productUnavailable` and `currentUnreadable`, and no row marks. No line when
   the response has no `lastDownload` (older server) or the program is not
@@ -77,8 +84,12 @@ hardware run.**
 - **Write responses:** a parameter `POST` response carries no `lastDownload`;
   `useDeviceParameters` keeps the shown comparison across an accepted write for
   the same device, language, project lifetime and program until the follow-up
-  `GET` replaces it, so the marks do not blink off. The client never compares
-  values itself; until that `GET` the just-written row keeps its previous mark.
+  `GET` replaces it, so the other marks do not blink off. The entries of the
+  written field's `etsId`/`writeEtsId` are dropped (that row's state is unknown,
+  not compared), the count follows the remaining list and the line is dimmed
+  (`data-refreshing`) until the `GET`. The client never compares values itself.
+  A write answer for a previously selected device is refused by the read model
+  and never reaches the new device's comparison.
 
 ## Step 1 as implemented
 
@@ -115,7 +126,7 @@ description after the name.
 - Per-link marks and marks on individual communication objects or flags.
 - Module-scoped parameters (no baseline until module downloads exist).
 - Devices imported, programmed by the System-2 path or marked by hand show only
-  the per-part hint until their next completed regular download.
+  the pending marks until their next completed regular download.
 - Device identity is source, product and program reference within one project
   id. Two unrelated projects with the same project id (every project created in
   KNXBench starts as `P-0001` with `KB-DEV-n` sources) cannot be told apart, so a
@@ -166,14 +177,28 @@ Step 2, server part (synthetic data only, no bus):
 
 Step 2, UI part (intercepted fictional data, no bus):
 
-- `apps/knx-web/src/ParameterPanel.lastDownload.test.tsx`: marks and
-  descriptions on differing unscoped rows only, enum label, undeclared and
-  missing value, singular/plural and the hidden count, no difference, each
-  unusable state in English and German, nothing without `lastDownload`, line only
-  in the Parameters view, retention across a write response and replacement by
-  the next read, no carry-over to another program.
-- `apps/knx-web/e2e/parameter-last-download.e2e.ts` (devices lane): en/de at
-  1440 and 400 px, summary text with time, visible dots, unchanged accessible
-  names and the exact accessible descriptions, no sideways overflow, no
-  unexpected request; an unusable state without marks.
+- `apps/knx-web/src/ParameterPanel.lastDownload.test.tsx` (15): marks and
+  descriptions on differing unscoped rows only (the module row exists and is
+  unmarked), the caption after the label, enum label, undeclared and missing
+  value, singular/plural, the not-shown and Manufacturer-fields counts, no
+  difference, each unusable state in English and German, nothing without
+  `lastDownload`, line only in the Parameters view, always-shown caption in the
+  Manufacturer fields view, retention across a write response without the
+  written ref (by `etsId` and by `writeEtsId`) and with the line dimmed,
+  replacement by the next read, no carry-over to another program, no retention
+  after a device switch with a late write answer, at the row and at the read
+  model.
+- `apps/knx-web/src/parameterLastDownload.test.ts` (6): the two counts kept
+  apart (own and block access, a ref with a restricted and an unrestricted
+  field, a ref only a kind `None` field presents, module-only refs), dropping
+  written refs, and the forced-colours rule for all three dots.
+- `apps/knx-web/src/ParameterPanel.checked.test.tsx` (+1): the downloaded value
+  stays beside the open checked editor and goes when its write is accepted.
+- `apps/knx-web/e2e/parameter-last-download.e2e.ts` (dev and devices lanes, 7):
+  en/de at 1440 and 400 px, summary text with time (browser pinned to the zone
+  the expected text is formatted in) and the Manufacturer-fields count, visible
+  dots, unchanged accessible names and the exact accessible descriptions, the
+  caption shown only while the row has focus and inside the viewport, no
+  sideways overflow, no unexpected request; an unusable state without marks;
+  the dots under forced colours.
 

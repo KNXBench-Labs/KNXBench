@@ -1,5 +1,7 @@
 # Restart snapshot
-Release freeze: released by claude-release-alpha20 (2026-11-09 00:24 CET): v0.1.0-alpha.20 published at 1d3c7d433 and verified; main is open again.
+Release freeze: Alpha 21 owned by release-alpha21; cutoff `938e895c5`, branch `release/alpha21-20261113`. `main` stays release-frozen for code until the tag is published or this owner explicitly releases the freeze.
+## Alpha 21 preparation (ACTIVE; owner release-alpha21; observed 2026-11-13 00:05)
+- Go covers freeze/version/notes, one full integrated gate, existing-corpus checks, upgrade and packaging dry runs only. No publication/tag/upload/image push or historical private-corpus restoration approval. Evidence `<profile>/release-evidence/alpha21-20261113/`; next: candidate then source-bound acceptance. Other tracks/root edits preserved.
 ## WP-37 UI links/flags + parameter-section marks (STANDING; observed 2026-11-12)
 - Owner Go: packages A (ADR-0174 UI) then B (#48) on main, no hardware/release/deploy. Source records `docs/open-work/WP-37-pending-changes-across-ui.md` and ADR-0174; private evidence `<profile>/evidence/wp37-ui-20261112/`.
 - A `6817638aa`, B `54d243ae8` pushed/read back; both independent APPROVE and selected 11-stage gates green (nested web 37; unit 5721/5731, default browser 1225/1229, devices 108/112). #48 updated and left open; main only. Other tracks and the stale/dirty root stay untouched.
@@ -38,11 +40,9 @@ Release freeze: released by claude-release-alpha20 (2026-11-09 00:24 CET): v0.1.
 - NEXT: docs-only closeout, private evidence archive and owned cleanup.
 ## Proportionate gate acceptance reference (STANDING; observed 2026-11-03 03:12 CET)
 - Source703ec2904 published/readback equal; original policy and fixture reviews APPROVE.
-- Full490 acceptance10/10 +actual Rust diagnostic15/15 retained; exact successor composition,
-  complete delta11/11 with web42/42, frozen inputs and checked user data untouched.
+- Full490 acceptance10/10 +actual Rust diagnostic15/15 retained; exact successor composition, complete delta11/11 with web42/42, frozen inputs and checked user data untouched.
 - Verification: `docs/status/2026-11-03-proportionate-gates.md`; GATE-01 remains open for other work.
-- NEXT documentation closeout, private evidence archive and owned cleanup. No active implementation
-  claim, release/deployment/native/bus authority or shared-root update from this delivery.
+- NEXT documentation closeout, private evidence archive and owned cleanup. No active implementation claim, release/deployment/native/bus authority or shared-root update from this delivery.
 ## Retained boundaries (STANDING; observed 2026-11-02 20:47 CET)
 - System-2 acceptance: `docs/status/2026-11-02-system2-selective-settlement.md`.
 - Root intentionally stale/dirty: preserve private/untracked files and other edits. Foreign simulator-control-records worktree and Alpha16 belong to other tracks.

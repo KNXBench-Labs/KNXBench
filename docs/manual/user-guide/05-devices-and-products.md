@@ -528,7 +528,9 @@ application are pending, and the **Communication objects** tab when
 group-address connections are pending. A changed object flag counts as a
 parameter change, because the device keeps its flags with the application's
 parameter memory: the dot then appears on **Parameters**, and only a download
-that includes parameters sends it; hover the tab for the parts, and screen
+that includes parameters sends it (since 12 November 2026; if you changed flags
+with an older build and have not downloaded since, include parameters for every
+device that shows group addresses pending); hover the tab for the parts, and screen
 readers announce them as the tab's description. Nothing is shown when no part is
 pending or the server does not report the state (Properties says so). The line
 and dots disappear on their own when a download or address programming whose

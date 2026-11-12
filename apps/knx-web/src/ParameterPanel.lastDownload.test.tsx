@@ -150,7 +150,7 @@ describe("ParameterPanel last download (ADR-0173)", () => {
   it("says when no value differs, without marks", async () => {
     apiMock.deviceParameters.mockResolvedValue(panel(usable([])));
     await render();
-    expect(summary()!.textContent).toBe(`No value differs from the last download (${time("en")}).`);
+    expect(summary()!.textContent).toBe(`No value differs from the last download (${time("en")}). Object flags are not compared here; a changed flag is sent with the parameters.`);
     expect(summary()!.dataset.differs).toBeUndefined();
     expect(marks()).toHaveLength(0);
     expect(description(unscopedRow("P1"))).toBeNull();
@@ -261,7 +261,7 @@ describe("ParameterPanel last download (ADR-0173)", () => {
     expect(host!.textContent).not.toContain("No value differs");
     apiMock.deviceParameters.mockResolvedValueOnce(panel(usable([])));
     await render("parameters", tree(3));
-    expect(summary()!.textContent).toBe(`No value differs from the last download (${time("en")}).`);
+    expect(summary()!.textContent).toBe(`No value differs from the last download (${time("en")}). Object flags are not compared here; a changed flag is sent with the parameters.`);
     expect(summary()!.getAttribute("aria-busy")).toBeNull();
   });
 

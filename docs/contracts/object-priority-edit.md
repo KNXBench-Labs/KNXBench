@@ -43,7 +43,10 @@ evidence beyond the existing module identity.
   untouched in every case.
 - Programming state: the command changes whether the device image is admitted,
   so `ProgrammingContent` carries each object's edit and the command marks the
-  owning device's group-object part pending, like a flag edit.
+  owning device's Group addresses part pending. (A flag edit marks Parameters
+  since 12 November 2026: flags are octets of the group object table, which
+  lies in the application program's memory; a priority statement encodes no
+  octet and only decides whether the image is admitted.)
 
 ## Effective priority
 

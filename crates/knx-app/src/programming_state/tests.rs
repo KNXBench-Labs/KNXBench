@@ -644,6 +644,76 @@ fn applying_a_settlement_forgets_older_programmed_claims() {
     );
 }
 
+/// The reported chain end to end: a flag edit on a programmed device marks
+/// Parameters, and a completed group-addresses-only download, which does not
+/// write the group object table, leaves it pending.
+#[test]
+fn a_flag_edit_survives_a_group_addresses_only_download() {
+    use knx_core::flags::ComFlagKind;
+    use knx_core::{ComObjectInstance, ComObjectInstanceId, Override, ResolvedFlags};
+    let mut p = project();
+    let mut programmed = CommissioningState::default();
+    ProgrammingChange::mark(ProgrammingParts::ALL, true).apply_to(&mut programmed);
+    let device = p.devices.get_mut(DeviceId(1)).unwrap();
+    device.commissioning = programmed;
+    device.com_objects.push(ComObjectInstanceId(1));
+    p.devices.insert_com_object(ComObjectInstance {
+        priority_edit: None,
+        saved_instance_priority: Default::default(),
+        id: ComObjectInstanceId(1),
+        source: SourceRef {
+            path: "t".into(),
+            ets_id: "O-1".into(),
+        },
+        device: DeviceId(1),
+        number: 0,
+        text: Override::Absent,
+        description: Override::Absent,
+        dpt: Override::Absent,
+        flags: ResolvedFlags::default(),
+        size: None,
+        is_active: true,
+        links: vec![],
+        module_instance: None,
+    });
+    let mut stack = CommandStack::new();
+    stack
+        .do_command(
+            &mut p,
+            Command::SetComObjectFlag {
+                com_object: ComObjectInstanceId(1),
+                flag: ComFlagKind::Read,
+                value: true,
+            },
+        )
+        .unwrap_or_else(|e| panic!("{e}"));
+    let pending = |p: &Project| {
+        p.devices
+            .get(DeviceId(1))
+            .unwrap()
+            .commissioning
+            .pending_parts()
+    };
+    assert_eq!(pending(&p), parts(|p| p.parameters = true));
+    let s = settle_download(
+        Some(PartialDownloadParts {
+            parameters: false,
+            group_addresses: true,
+        }),
+        DownloadEnd::Completed,
+        &request(),
+        Some(&request()),
+        SourcePlan::Unchanged,
+        None,
+    );
+    let _ = apply_settlement(&mut p, &mut stack, DeviceId(1), &s, None);
+    assert_eq!(
+        pending(&p),
+        parts(|p| p.parameters = true),
+        "the flag was not sent"
+    );
+}
+
 fn resolved() -> WrittenParameters {
     WrittenParameters {
         values: BTreeMap::from([

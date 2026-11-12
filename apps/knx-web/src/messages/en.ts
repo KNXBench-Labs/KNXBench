@@ -2284,7 +2284,7 @@ export const messages = {
   "parameters.lastDownload.hidden.other": "{hidden} of them are not shown with the current settings.",
   "parameters.lastDownload.manufacturer.one": "{count} of them is in the {tab} tab.",
   "parameters.lastDownload.manufacturer.other": "{count} of them are in the {tab} tab.",
-  "parameters.lastDownload.noneDiffer": "No value differs from the last download ({time}).",
+  "parameters.lastDownload.noneDiffer": "No value differs from the last download ({time}). Object flags are not compared here; a changed flag is sent with the parameters.",
   "parameters.lastDownload.absent": "KNXBench has no stored values from a completed download of this device; only the per-part pending marks apply.",
   "parameters.lastDownload.otherProgram": "The last download used another application program; values cannot be compared.",
   "parameters.lastDownload.productUnavailable": "Product data is missing; values cannot be compared with the last download.",

@@ -2261,7 +2261,7 @@ export const messages: Record<MessageKey, string> = {
   "parameters.lastDownload.hidden.other": "Davon werden {hidden} mit den aktuellen Einstellungen nicht angezeigt.",
   "parameters.lastDownload.manufacturer.one": "Davon steht {count} im Tab {tab}.",
   "parameters.lastDownload.manufacturer.other": "Davon stehen {count} im Tab {tab}.",
-  "parameters.lastDownload.noneDiffer": "Kein Wert weicht vom letzten Programmieren ab ({time}).",
+  "parameters.lastDownload.noneDiffer": "Kein Wert weicht vom letzten Programmieren ab ({time}). Objekt-Flags werden hier nicht verglichen; ein geändertes Flag wird mit den Parametern programmiert.",
   "parameters.lastDownload.absent": "Für dieses Gerät sind keine Werte eines abgeschlossenen Programmierens durch KNXBench gespeichert; es gelten nur die Markierungen je Teil.",
   "parameters.lastDownload.otherProgram": "Das letzte Programmieren hat ein anderes Applikationsprogramm verwendet; die Werte lassen sich nicht vergleichen.",
   "parameters.lastDownload.productUnavailable": "Produktdaten fehlen; die Werte lassen sich nicht mit dem letzten Programmieren vergleichen.",

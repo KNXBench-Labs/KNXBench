@@ -55,7 +55,13 @@ pub(crate) async fn download(
     Path(id): Path<u32>,
     Query(binding): Query<Binding>,
 ) -> Result<Response, ApiError> {
-    let tmp = {
+    // Off the runtime (#36): waiting for the project and writing the payload
+    // are synchronous. The write stays under the locks: copying a payload of up
+    // to `MAX_DOWNLOAD_BYTES` out first would cost as long as writing it and
+    // double its memory.
+    let writing_state = state.clone();
+    let tmp = crate::routes::off_runtime(move || {
+        let state = writing_state;
         let project = state.project.lock().expect("state mutex poisoned");
         project
             .as_ref()
@@ -77,8 +83,9 @@ pub(crate) async fn download(
             tempfile::NamedTempFile::new().map_err(|e| ApiError::internal(e.to_string()))?;
         tmp.write_all(bytes)
             .map_err(|e| ApiError::internal(e.to_string()))?;
-        tmp.into_temp_path()
-    };
+        Ok::<_, ApiError>(tmp.into_temp_path())
+    })
+    .await??;
     let mut response = crate::fs_routes::stream_temp_file(tmp, 64 * 1024).await?;
     let headers = response.headers_mut();
     headers.insert(

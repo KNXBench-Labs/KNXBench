@@ -72,10 +72,13 @@ blocks it when run inline), `a_download_writes_its_copy_without_holding_the_proj
 `a_replaced_project_does_not_lend_its_file_to_an_older_download`. The two
 catalog installs take no project lock and are covered by review only.
 
-Still on a runtime worker (review 12 November 2026): the debug report
-(`debug_report_routes.rs`, project lock plus zip write) and the project payload
-export (`project_payload_routes.rs`, temp file under the project and opaque
-locks). Edits still wait for the project lock on a runtime worker, so a long
+The debug report and the retained-payload download followed
+(`report_and_payload_routes_leave_the_runtime_free`; fails for both when run
+inline). The payload download still writes under the project and opaque
+locks: copying a payload of up to 1 GB out first would take as long as writing
+it and double its memory.
+
+Edits and plain reads still wait for the project lock on a runtime worker, so a long
 CSV import, comparison or documentation export can make them wait as Save
 did. Concurrent downloads each hold a full project copy while they write (no
 limit; acceptable for one user, unbounded for many).

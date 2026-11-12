@@ -4328,6 +4328,62 @@ mod tests {
         );
     }
 
+    /// The debug report and the retained-payload download wait for the project
+    /// off the runtime as well.
+    #[tokio::test(flavor = "current_thread")]
+    async fn report_and_payload_routes_leave_the_runtime_free() {
+        use tower::ServiceExt;
+        let dir = tempfile::tempdir().unwrap();
+        let routes: [(&str, &str, &str); 2] = [
+            (
+                "POST",
+                "/api/debug-report",
+                r#"{"includeProjectSummary":true,"path":"report.zip"}"#,
+            ),
+            (
+                "GET",
+                "/api/project/payloads/1/download?serverIncarnation=x&projectIncarnation=0&snapshotRevision=0",
+                "",
+            ),
+        ];
+        let mut blocked = Vec::new();
+        for (method, uri, body) in routes {
+            let state = Arc::new(AppState::new(dir.path().to_path_buf()));
+            crate::domain::new_project_impl(&state, None, None, None, None, true).unwrap();
+            let router = super::project_routes()
+                .merge(crate::debug_report_routes::debug_report_routes())
+                .with_state(Arc::clone(&state));
+            let (release, holder) = hold_project_lock(&state);
+            let request = axum::http::Request::builder()
+                .method(method)
+                .uri(uri)
+                .header("content-type", "application/json")
+                .body(axum::body::Body::from(body))
+                .unwrap();
+            let call = tokio::spawn(async move { router.oneshot(request).await.unwrap().status() });
+            tokio::task::yield_now().await;
+            tokio::time::sleep(std::time::Duration::from_millis(20)).await;
+            let _ = release.send(());
+            if !holder.join().unwrap() {
+                blocked.push(uri);
+            }
+            let status = call.await.unwrap();
+            assert_ne!(
+                status,
+                axum::http::StatusCode::NOT_FOUND,
+                "{uri} is not routed"
+            );
+        }
+        assert!(
+            blocked.is_empty(),
+            "these routes blocked the runtime: {blocked:?}"
+        );
+        assert!(
+            dir.path().join("report.zip").is_file(),
+            "the report was written"
+        );
+    }
+
     /// A download whose project was replaced while it wrote takes no
     /// manufacturer files from the new project's file.
     #[test]

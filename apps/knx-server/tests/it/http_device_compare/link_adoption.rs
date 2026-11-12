@@ -5,6 +5,7 @@
 //! Compare → preview → apply → re-compare → undo → re-compare, never a write.
 
 use super::*;
+use knx_core::commissioning::parameter_baseline::{ParameterBaseline, ParameterBaselines};
 use knx_core::{
     ComObjectInstance, ComObjectInstanceId, CompletionStatus, DeviceInstance, Direction,
     GroupAddress, GroupAddressEntry, GroupLink, Installation, InstallationId, Language, Override,
@@ -313,6 +314,27 @@ async fn association_rows_adopt_links_at_the_mount_undo_and_never_write() {
         ]
     );
     assert_eq!(send(&h.app, get("/api/project")).await.1, before);
+    // Adoption never records or removes a parameter baseline (ADR-0173 §3).
+    let held: ParameterBaselines = h
+        .state
+        .project
+        .lock()
+        .unwrap()
+        .as_ref()
+        .unwrap()
+        .devices
+        .iter()
+        .map(|device| {
+            let baseline = ParameterBaseline {
+                program_id: "A-1".into(),
+                values: [("P-1_R-1".to_string(), "5".to_string())].into(),
+                at: chrono::DateTime::UNIX_EPOCH,
+            };
+            (device.id, baseline)
+        })
+        .collect();
+    assert!(!held.is_empty());
+    *h.state.parameter_baselines.lock().unwrap() = held.clone();
     let lengths = h.state.command_stack.lock().unwrap().history_lengths();
     let (status, applied) = send(
         &h.app,
@@ -341,6 +363,7 @@ async fn association_rows_adopt_links_at_the_mount_undo_and_never_write() {
             .len()
     };
     assert_eq!(groups(&h), 3, "no group address created");
+    assert_eq!(*h.state.parameter_baselines.lock().unwrap(), held);
     let (_, adopted) = compare_links(&h, Some(&cookie)).await;
     for kind in [
         "addressCount",

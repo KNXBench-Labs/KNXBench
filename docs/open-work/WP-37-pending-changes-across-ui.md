@@ -35,10 +35,14 @@ server part implemented (11 November 2026, branch), the UI part open.**
   be resolved removes the baseline.
 - **Manual mark:** either direction removes the baseline outside the undoable
   command, in the mark's own journal write (written synchronously even on a
-  server that journals in the background).
+  server that journals in the background); a device without a baseline keeps
+  the background path.
 - **Persistence:** a native save prunes devices absent from the saved project;
   Save As copies the set; a project without a file keeps it in memory until
-  its first native save; a plain save of another project drops every row.
+  its first native save; a plain server save writes no baseline row; a plain
+  save of another project drops every row, and a store save not admitted at
+  the journal's generation (`knx import --replace`) keeps only rows whose device
+  has the same source, program and product reference.
 - **API:** `GET /api/device/{id}/parameters` gains optional `lastDownload`:
   `{state: 'usable', at, differing: [{refId, downloaded, current}]}`, or only a
   state: `absent`, `otherProgram`, `productUnavailable` or `currentUnreadable`
@@ -100,13 +104,20 @@ Step 2, server part (synthetic data only, no bus):
 - `crates/knx-store/tests/it/parameter_baseline.rs` and the snapshot codec unit
   tests: 19 → 20 migration and read-only open, future-schema refusal, roundtrip,
   a failed baseline write rolling back the settled flags, identical history and
-  version image bytes with and without baselines, pruning, an older stored
-  version restoring, 500 devices × 200 refs.
+  version image bytes with and without baselines, pruning (by device identity
+  for an unadmitted save, by presence for an admitted one), a plain save
+  writing no row (counting triggers), an older stored version restoring,
+  500 devices × 200 refs.
 - `apps/knx-server/src/programming_state/source_freshness_tests/parameter_baseline.rs`:
   the real download and address settlers over a synthetic catalogue (record,
   record during an edit, changed source, interrupted, partial, nothing written),
-  persistence with the flags, Save As, session-only, prune on save, comparison
-  states. `device_system2/tests/settlement.rs`: System-2 removes.
+  persistence with the flags, a failed persist leaving the held baseline,
+  a plain save and reopen leaving it unchanged, Save As, session-only, prune
+  on save, comparison states. `device_system2/tests/settlement.rs`: System-2
+  removes. `journal_writer_tests/parameter_baseline.rs`: on a background
+  journaling server a mark that removes a baseline is in the file before it
+  answers; one without a baseline keeps the background path. The link
+  adoption test asserts adoption leaves every baseline unchanged.
 - `apps/knx-server/tests/it/http_parameter_baseline.rs`: `lastDownload` over
   HTTP for each state and the manual mark in both directions, durable.
 

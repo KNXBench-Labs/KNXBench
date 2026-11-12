@@ -1,7 +1,7 @@
 # WP-31 — Device editor unavailable after saving the project (#36)
 
 External report by the issue reporter, 10 November 2026; triaged 11 November 2026.
-Status: **lock fix implemented 11 November 2026; original error message unreproduced.** Follow-up to the original #36 path, which
+Status: **lock fix implemented 11 November 2026; save and download off the runtime workers 12 November 2026; original error message unreproduced.** Follow-up to the original #36 path, which
 the reporter confirmed fixed by `bf85a5b69` on 10 November 2026.
 
 ## Observed
@@ -50,6 +50,8 @@ write, and device reads queue behind it again. Releasing the store path during
 a plain Save would let a replacement hold `clean_project` while waiting for the
 journal generation the saver holds, a lock-order deadlock; a proper fix needs
 a lock-order redesign (or edits that enqueue without the store path).
+Selective import rechecks the revision after taking the store path
+(`a_save_finishing_while_the_apply_waits_makes_it_stale`).
 
 Since 12 November 2026 Save, Save As and the browser download of the project
 file run on a blocking thread (`spawn_blocking`), so a long write no longer
@@ -59,5 +61,3 @@ and `a_download_waiting_for_the_project_leaves_the_runtime_free`
 (`apps/knx-server/src/routes.rs`). The download still writes its copy while it
 holds the project lock, so device reads wait for it as they did for Save before
 the frozen-copy fix.
-Selective import rechecks the revision after taking the store path
-(`a_save_finishing_while_the_apply_waits_makes_it_stale`).

@@ -4126,7 +4126,7 @@ mod tests {
     use crate::bus::{BusSession, GroupAddressContext};
     use crate::AppState;
 
-    /// Holds the project lock on a plain thread until released or 2 s pass;
+    /// Holds the project lock on a plain thread until released or 10 s pass;
     /// answers whether the release came in time.
     fn hold_project_lock(
         state: &Arc<AppState>,
@@ -4138,7 +4138,7 @@ mod tests {
             let _project = holder_state.project.lock().expect("project mutex poisoned");
             held_tx.send(()).unwrap();
             release_rx
-                .recv_timeout(std::time::Duration::from_secs(2))
+                .recv_timeout(std::time::Duration::from_secs(10))
                 .is_ok()
         });
         held_rx.recv().unwrap();

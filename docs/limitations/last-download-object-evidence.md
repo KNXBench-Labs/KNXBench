@@ -2,8 +2,9 @@
 
 The [ADR-0174](../adr/0174-last-downloaded-links-and-flags.md) backend (WP-37f)
 records effective object flags with Parameters and links with Group addresses,
-with independent usability and settlement times. The backend is on main; the
-communication-object UI remains pending.
+with independent usability and settlement times. Backend and the
+communication-object UI (row marks, editor-row details, summary line) are on
+main; group-address views carry no marks.
 
 - Evidence describes what a completed regular/batch request built its image
   from, not a device readback. Per-part pending flags remain authoritative.
@@ -13,5 +14,8 @@ communication-object UI remains pending.
 - Modules remain outside these baselines. Current comparison refusals do not
   fix the full-download duplicate-lookup overwrite or the missing `070n`
   object-table-outside-application-segment guard.
-- Synthetic storage, settlement and comparison tests do not establish physical
-  device behavior, hardware compatibility or UI/browser acceptance.
+- Synthetic storage, settlement and comparison tests and intercepted-browser UI
+  tests do not establish physical device behavior or hardware compatibility.
+- Differences on object numbers without a selected project row (for example
+  product-active objects the project holds no instance of) are only counted in
+  the summary line, not listed.

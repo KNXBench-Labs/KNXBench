@@ -1,7 +1,7 @@
 # ADR 0174: The project remembers the links and object flags a verified download wrote
 
 Date: 2026-11-12
-Status: Proposed (backend implemented in WP-37f, main, 12 November 2026; UI pending)
+Status: Accepted (main; simulator and intercepted-browser tests only, no hardware run)
 Session: WP-37d
 
 ## Context
@@ -251,9 +251,38 @@ resolver, not whole-image admission. `resolve_effective_object_flags_with_refs`
 returns active reference provenance from that same checked pass for attribution;
 no second diagnostic-discarding activation pass chooses a row. The existing
 full-download duplicate-lookup overwrite and object-table placement guard remain
-separate follow-ups. No communication-object UI marks or summary are implemented
-in this package; proposed presentation above remains pending. Acceptance evidence
-is scoped software evidence, not hardware or whole-compatibility proof.
+separate follow-ups. Acceptance evidence is scoped software evidence, not
+hardware or whole-compatibility proof.
+
+## UI as implemented (WP-37 step 3)
+
+`ComObjectTable` reads `DeviceDetail.last_download`; the client compares
+nothing. Every edit already re-reads the device detail, so marks, rows and
+summary always come from one response; an edit response carries no comparison,
+and the shown detail stays until the next detail read replaces it whole.
+
+- **Row:** a row whose `ComObjectNode.id` is a key of `instances` gets the
+  step-1 amber dot after its name and an always-visible caption naming what
+  differs (“Links differ from the last download”, “Flags …”, “Links and flags
+  …”). The caption is the accessible description of the row's editor toggle,
+  whose name is unchanged; the dot is `aria-hidden`.
+- **Editor row:** above the object editor, “Since the last download” lists
+  links added (“Linked since then: 1/2/3 (Send)”), removed (struck through),
+  changed directions, “Flags at last download: R W C” when both sides are
+  active, “Not active at last download.” for a current-only object and “Not
+  active in current settings.” plus the stored flags for a stored-only one.
+  Raw addresses follow the project's group-address style; a null read-on-init
+  is never shown as set.
+- **Summary** above the table (static text): the differing-object count when
+  at least one section is usable, how many selected rows the current filters
+  or collapsed groups hide, how many have no selected row, then one sentence
+  per section: its compare time, or why it cannot be compared. An unusable
+  section never suppresses the other's marks.
+- **Deviation:** a collapsed channel or folder group that holds a marked row
+  also gets the dot, with “Contains objects that differ from the last
+  download” as its toggle's description, so the hidden count can be found.
+- Forced colours paint both new dots in `CanvasText`. Group-address views
+  still carry no marks.
 
 ## Alternatives considered
 

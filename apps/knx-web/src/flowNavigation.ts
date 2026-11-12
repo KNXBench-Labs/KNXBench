@@ -1,5 +1,6 @@
 /** Resolves flow evidence to exact entities in the current main editor; never guesses by label. */
 import type { ProjectTree } from "./bindings/ProjectTree";
+import { rawGroupAddressText } from "./gaNotation";
 import type { FlowModel, FlowNode } from "./flowModel";
 import type { Selection } from "./selection";
 
@@ -41,7 +42,7 @@ export function resolveFlowNavigation(model: FlowModel, target: FlowTarget, tree
   if (!groups || groups.length !== 1 || context.groupAddressStyle !== tree.group_address_style) return null;
   const evidence = groups[0];
   const raw = evidence.gaRaw;
-  const address = tree.group_address_style === "Free" ? String(raw) : tree.group_address_style === "TwoLevel" ? `${raw >> 11}/${raw & 2047}` : `${raw >> 11}/${(raw >> 8) & 7}/${raw & 255}`;
+  const address = rawGroupAddressText(raw, tree.group_address_style);
   const matches = tree.installations.flatMap(i => i.group_addresses.map(g => ({ g, installation: i.id })));
   const own = matches.filter(m => m.g.id === evidence.gaId);
   if (own.length !== 1 || matches.filter(m => m.g.address === address).length !== 1) return null;

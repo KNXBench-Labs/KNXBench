@@ -639,7 +639,10 @@ objects tabs (issue #40). Its parameter editor marks each value that differs
 from the value the last completed KNXBench download used and counts them above
 the fields ([ADR-0173](../adr/0173-last-downloaded-parameter-values.md)); that is
 the value the download used, not a device read, and devices without such a
-download show only the pending marks.
+download show only the pending marks. Its communication-object table marks
+objects whose links or flags differ from that download and lists the
+differences in the object's editor row
+([ADR-0174](../adr/0174-last-downloaded-links-and-flags.md)).
 [Use](user-guide/05-devices-and-products.md#programming-marks-p3-since-alpha-12).
 
 A download can use these marks to choose its scope (since Alpha 17):

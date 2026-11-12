@@ -12,6 +12,25 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## The object table shows links and flags that differ from the last download (12 November 2026; WP-37 step 3)
+
+The Communication objects tab now reads `DeviceDetail.last_download`
+([ADR-0174](adr/0174-last-downloaded-links-and-flags.md), now Accepted;
+simulator and intercepted-browser tests only, no hardware run). A row the
+server attributes a difference to gets the step-1 amber dot and a caption
+(“Links differ from the last download”, “Flags …”, “Links and flags …”) that
+is also its editor toggle's accessible description. Its editor row lists added,
+struck-through removed and redirected links and the flags at last download,
+with explicit wording for objects active on one side only. A group holding a
+marked row is marked too. A line above the table counts the differing objects,
+how many the filters or collapsed groups hide and how many have no row, and
+gives each section's compare time or why it cannot be compared; one unusable
+section does not hide the other's marks. Forced colours paint the dots in
+`CanvasText`. Web only, no server change. Tests: 18 component tests
+(`ComObjectTable.lastDownload.test.tsx`), the forced-colours rule test and 5
+browser cases (`parameter-last-download.e2e.ts`, dev and devices lanes: en/de,
+1440/400 px, forced colours).
+
 ## Independent last-download links and flags, backend (12 November 2026; WP-37f)
 
 Backend implementation of [ADR-0174](adr/0174-last-downloaded-links-and-flags.md):

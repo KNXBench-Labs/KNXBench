@@ -1,6 +1,7 @@
 /** Properties inspector showing and editing details for whatever tree entity is selected. */
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { suggestLinkDirection } from "./linkDirectionDefault";
+import { flagText } from "./objectLastDownload";
 import { LineStoredBusAccess } from "./StoredBusAccess";
 import { carriesGroupAddress, readDraggedGroupAddress } from "./groupAddressDrag";
 import * as api from "./api";
@@ -994,16 +995,6 @@ function DeviceIdentity(props: { product: DeviceProductNode }) {
   </section>;
 }
 
-const FLAG_LETTERS = [["R", "read", "inspector.comFlag.read"], ["W", "write", "inspector.comFlag.write"],
-  ["T", "transmit", "inspector.comFlag.transmit"], ["U", "update", "inspector.comFlag.update"],
-  ["C", "communication", "inspector.comFlag.communication"], ["I", "read_on_init", "inspector.comFlag.readOnInit"]] as const;
-
-/** The set flags, in the flags row's order (#46 summary hint): letters to see, names to hear. */
-function setFlags(com: ComObjectNode, t: ReturnType<typeof useTranslate>): { letters: string; names: string } {
-  const set = FLAG_LETTERS.filter(([, field]) => com[field]);
-  return { letters: set.map(([letter]) => letter).join(" "), names: set.map(([, , key]) => t(key)).join(", ") };
-}
-
 // Issue #46: the linked group addresses come first and stay visible; every
 // other object setting sits in a native `<details>`, closed by default. A
 // closed `<details>` keeps its subtree mounted, so drafts survive closing it.
@@ -1011,7 +1002,7 @@ function ComObjectEditor(props: { com: ComObjectNode; groupAddresses: GroupAddre
   const { com, groupAddresses, onApplied } = props;
   const t = useTranslate();
   const headingId = useId();
-  const flags = setFlags(com, t);
+  const flags = flagText(com, t);
   return <div className="com-object-edit-fields">
     <h4 className="com-object-links-heading" id={headingId}>{t("inspector.linkedGroupAddresses")}</h4>
     <ul className="group-link-list" aria-labelledby={headingId}>
@@ -1119,7 +1110,8 @@ export function DeviceWorkspace(props: {
         is ever in the tab order. */}
     <div role="tabpanel" id={`device-panel-${detail.id}-0`} aria-labelledby={`device-tab-${detail.id}-0`} hidden={tab !== 0} tabIndex={0}>
       <h3>{t("inspector.communicationObjects")}</h3>
-      <ComObjectTable key={detail.id} objects={detail.com_objects} folderCurrency={detail.project_folder_currency} editor={com =>
+      <ComObjectTable key={detail.id} objects={detail.com_objects} folderCurrency={detail.project_folder_currency}
+        lastDownload={detail.last_download} addressStyle={tree.group_address_style} editor={com =>
         <ComObjectEditor com={com} groupAddresses={groupAddresses} onApplied={onApplied}
           functions={<ComObjectFunctionControls deviceId={detail.id} objectId={com.id} state={parameterState} onValueApplied={onApplied} />} />} />
 

@@ -27,7 +27,7 @@ import { parameterSectionKeys } from "./parameterWorkspace";
 import { isSourceEditorCandidate } from "./parameterSourceHost";
 import UnresolvedProgramNotice from "./UnresolvedProgramNotice";
 import { useComMutation } from "./ComMutationBoundary";
-import { differingByRef, downloadedValueText, hiddenDifferingCount, type DownloadedValue } from "./parameterLastDownload";
+import { differingByRef, differingElsewhere, downloadedValueText, withoutWrittenRefs, type DownloadedValue } from "./parameterLastDownload";
 import { formatLogTime } from "./logRows";
 import { useUiLanguage } from "./uiLanguage";
 
@@ -122,7 +122,8 @@ function ParameterFieldRow(props: {
   deviceId: number;
   language: string | null;
   sourceLanguage: string | null;
-  onUpdated: (panel: ParameterPanelDto) => void;
+  /** `written` names the refs this write touched (ADR-0173: their marks become unknown). */
+  onUpdated: (panel: ParameterPanelDto, written: readonly string[]) => void;
   onValueApplied: (tree: ProjectTree) => void;
   /** Snapshot the shown panel was read under; `null` offers no write (A2). */
   binding: SnapshotContext | null;
@@ -136,6 +137,10 @@ function ParameterFieldRow(props: {
   const { field, moduleScoped, deviceId, language, sourceLanguage, onUpdated, onValueApplied, binding, onConflict, checked, downloaded } = props;
   const t = useTranslate();
   const downloadNoteId = useId();
+  // ADR-0173: the refs a write of this row touches, for the kept comparison.
+  const onRowUpdated = useCallback((written: ParameterPanelDto) => onUpdated(written,
+    field.writeEtsId === null || field.writeEtsId === field.etsId ? [field.etsId] : [field.etsId, field.writeEtsId]),
+  [onUpdated, field.etsId, field.writeEtsId]);
   const [value, setValue] = useState(field.value ?? "");
   const mutate = useComMutation();
   const [checkedOpen, setCheckedOpen] = useState(false);
@@ -203,7 +208,7 @@ function ParameterFieldRow(props: {
       // Object editors suppress publication after unmount and admit one mutation
       // at a time; standalone Parameters rows use the context's direct fallback.
       if (tree && written) {
-        if (isCurrent()) { clearConflict(); onUpdated(written); }
+        if (isCurrent()) { clearConflict(); onRowUpdated(written); }
         // A committed command belongs to App even after this row retires.
         // Its revision/lifetime guard decides whether the tree is still current.
         onValueApplied(tree);
@@ -250,20 +255,26 @@ function ParameterFieldRow(props: {
     return <ParameterLabelRow field={field} language={language} sourceLanguage={sourceLanguage} />;
   }
 
-  // The checked editor brings its own label and controls, so it replaces the
-  // row instead of nesting interactive elements inside this `<label>`.
-  const offerChecked = checked !== null && isSourceEditorCandidate(field.kind);
-  if (offerChecked && checkedOpen) {
-    return <div className="inspector-field parameter-field parameter-field-checked" data-ets-id={field.etsId}>
-      <ParameterSourceEditor deviceId={deviceId} field={field} scope={checked.scope} programId={checked.programId}
-        snapshot={checked.snapshot} writeBinding={checked.writeBinding} onConflict={onConflict} language={language} label={label}
-        onUpdated={onUpdated} onValueApplied={onValueApplied} onClose={() => setCheckedOpen(false)} />
-    </div>;
-  }
-
   // The mark describes the control; the dot is hidden, so the name stays the label.
   const downloadNote = downloaded ? t("parameters.lastDownload.value",
     { value: downloadedValueText(t, field, downloaded.downloaded) }) : undefined;
+
+  // The checked editor brings its own label and controls, so it replaces the
+  // row instead of nesting interactive elements inside this `<label>`. The
+  // downloaded value stays visible beside it while editing (ADR-0173).
+  const offerChecked = checked !== null && isSourceEditorCandidate(field.kind);
+  if (offerChecked && checkedOpen) {
+    return <>
+      <div className="inspector-field parameter-field parameter-field-checked" data-ets-id={field.etsId}
+        data-differs-from-download={downloadNote ? "true" : undefined}>
+        <ParameterSourceEditor deviceId={deviceId} field={field} scope={checked.scope} programId={checked.programId}
+          snapshot={checked.snapshot} writeBinding={checked.writeBinding} onConflict={onConflict} language={language} label={label}
+          onUpdated={onRowUpdated} onValueApplied={onValueApplied} onClose={() => setCheckedOpen(false)} />
+      </div>
+      {downloadNote && <span className="parameter-field-caption parameter-download-note" data-shown="always">
+        <span className="parameter-download-mark" aria-hidden="true" />{downloadNote}</span>}
+    </>;
+  }
   const control = field.kind === "Restriction" ? (
     <select
       value={value}
@@ -338,7 +349,10 @@ function ParameterFieldRow(props: {
       {saving && <span className="parameter-field-caption parameter-field-saving" role="status">{t("parameters.savingCaption")}</span>}
       {error && <span className="field-error" role={conflict ? "alert" : undefined}>{error}</span>}
     </label>
-    {downloadNote && <span id={downloadNoteId} hidden>{downloadNote}</span>}
+    {/* Outside the label, so it never joins the field's name. Shown while the
+        row has focus (keyboard, touch); always when the control cannot take it. */}
+    {downloadNote && <span id={downloadNoteId} className="parameter-field-caption parameter-download-note"
+      data-shown={restricted ? "always" : "focus"}>{downloadNote}</span>}
     {conflict && <div className="parameter-conflict" data-conflict-for={field.etsId}>
       <span className="parameter-conflict-current">
         {t("parameters.conflictCurrent", { value: field.value ?? t("parameters.none") })}
@@ -444,7 +458,7 @@ function ParameterSectionView(props: {
   deviceId: number;
   language: string | null;
   sourceLanguage: string | null;
-  onUpdated: (panel: ParameterPanelDto) => void;
+  onUpdated: (panel: ParameterPanelDto, written: readonly string[]) => void;
   onValueApplied: (tree: ProjectTree) => void;
   binding: SnapshotContext | null;
   onConflict: () => Promise<void>;
@@ -557,27 +571,32 @@ function DiagnosticsBanner(props: { diagnostics: ParameterDiagnostic[] }) {
  * ADR-0173 §5: one plain line on the comparison with the last download.
  * Static text, not a live region; nothing when the server did not report it.
  */
-function LastDownloadSummary(props: { lastDownload: LastDownload; shown: readonly ParameterSection[] }) {
-  const { lastDownload, shown } = props;
+function LastDownloadSummary(props: { lastDownload: LastDownload; sections: readonly ParameterSection[]; refreshing: boolean }) {
+  const { lastDownload, sections, refreshing } = props;
   const t = useTranslate();
   const [uiLanguage] = useUiLanguage();
   const time = lastDownload.at === undefined ? ""
     : formatLogTime(Date.parse(lastDownload.at), uiLanguage, new Date()) ?? lastDownload.at;
   let text: string;
-  let hidden = 0;
+  let elsewhere = { notShown: 0, manufacturer: 0 };
   if (lastDownload.state === "usable") {
     const count = lastDownload.differing?.length ?? 0;
-    hidden = hiddenDifferingCount(lastDownload, shown);
+    elsewhere = differingElsewhere(lastDownload, sections);
     text = count === 0 ? t("parameters.lastDownload.noneDiffer", { time })
       : t(count === 1 ? "parameters.lastDownload.differs.one" : "parameters.lastDownload.differs.other", { count, time });
   } else {
     text = t(`parameters.lastDownload.${lastDownload.state}` as const);
   }
   const differs = lastDownload.state === "usable" && (lastDownload.differing?.length ?? 0) > 0;
-  return <p className="parameter-last-download" data-state={lastDownload.state} data-differs={differs ? "true" : undefined}>
+  const { notShown, manufacturer } = elsewhere;
+  // A retained comparison after a write is muted until the next read replaces it.
+  return <p className="parameter-last-download" data-state={lastDownload.state} data-differs={differs ? "true" : undefined}
+    data-refreshing={refreshing ? "true" : undefined}>
     {differs && <span className="parameter-last-download-dot" aria-hidden="true" />}
-    <span>{text}{hidden > 0 && <> {t(hidden === 1 ? "parameters.lastDownload.hidden.one"
-      : "parameters.lastDownload.hidden.other", { hidden })}</>}</span>
+    <span>{text}{notShown > 0 && <> {t(notShown === 1 ? "parameters.lastDownload.hidden.one"
+      : "parameters.lastDownload.hidden.other", { hidden: notShown })}</>}{manufacturer > 0 && <> {t(manufacturer === 1
+      ? "parameters.lastDownload.manufacturer.one" : "parameters.lastDownload.manufacturer.other",
+      { count: manufacturer, tab: t("parameters.restrictedTab") })}</>}</span>
   </p>;
 }
 
@@ -614,7 +633,8 @@ function acceptsParameterSnapshot(next: SnapshotContext | null, current: Snapsho
 /** One read model shared by the editor and both inspection-only tabs. */
 export function useDeviceParameters(deviceId: number, refreshKey?: ProjectTree) {
   const [language] = useProductLanguage();
-  const [shown, setShown] = useState<{ panel: ParameterPanelDto; snapshot: SnapshotContext | null } | null>(null);
+  // `refreshing`: the comparison was kept across a write and awaits the next read.
+  const [shown, setShown] = useState<{ panel: ParameterPanelDto; snapshot: SnapshotContext | null; refreshing?: true } | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const requestIdRef = useRef(0);
   const ownerRef = useRef<object | null>(null);
@@ -660,7 +680,8 @@ export function useDeviceParameters(deviceId: number, refreshKey?: ProjectTree) 
     return () => { if (requestId === requestIdRef.current) ++requestIdRef.current; };
   }, [deviceId, language, refreshKey]);
 
-  const acceptWrite = useCallback((forDevice: number, forLanguage: string | null, panel: ParameterPanelDto) => {
+  const acceptWrite = useCallback((forDevice: number, forLanguage: string | null, panel: ParameterPanelDto,
+    written: readonly string[]) => {
     if (ownerRef.current === null || shownRef.current !== targetRef.current) return;
     if (selectionRef.current.deviceId !== forDevice || selectionRef.current.language !== forLanguage) return;
     const snapshot = panel.tree ? snapshotContextFromTree(panel.tree) : null;
@@ -672,10 +693,12 @@ export function useDeviceParameters(deviceId: number, refreshKey?: ProjectTree) 
     setLoadError(null);
     // ADR-0173: a write's response carries no comparison. Keep the shown
     // one for the same program until the follow-up GET replaces it, so
-    // the marks do not blink off in between; never derive one here.
-    setShown((previous) => ({ snapshot, panel: panel.lastDownload === undefined && previous !== null
+    // the marks do not blink off in between; never derive one here. The
+    // written refs are dropped: their state is unknown until that read.
+    setShown((previous) => panel.lastDownload === undefined && previous !== null
       && previous.panel.lastDownload !== undefined && previous.panel.programId === panel.programId
-      ? { ...panel, lastDownload: previous.panel.lastDownload } : panel }));
+      ? { snapshot, refreshing: true, panel: { ...panel, lastDownload: withoutWrittenRefs(previous.panel.lastDownload, written) } }
+      : { snapshot, panel });
   }, []);
 
   const reloadProject = useCallback(async (publish: (tree: ProjectTree) => void) => {
@@ -684,7 +707,8 @@ export function useDeviceParameters(deviceId: number, refreshKey?: ProjectTree) 
     if (owner !== null && ownerRef.current === owner && targetRef.current === target) publish(tree);
   }, []);
 
-  return { panel: shown?.panel ?? null, snapshot: shown?.snapshot ?? null, loadError, language, acceptWrite, reloadProject };
+  return { panel: shown?.panel ?? null, snapshot: shown?.snapshot ?? null, lastDownloadRefreshing: shown?.refreshing === true,
+    loadError, language, acceptWrite, reloadProject };
 }
 
 export function ParameterPanelContent(props: ParameterPanelProps & {
@@ -692,7 +716,7 @@ export function ParameterPanelContent(props: ParameterPanelProps & {
 }) {
   const { deviceId, onValueApplied, view = "parameters", state } = props;
   const { panel, snapshot, loadError, language, acceptWrite, reloadProject } = state;
-  const onUpdated = useCallback((written: ParameterPanelDto) => acceptWrite(deviceId, language, written),
+  const onUpdated = useCallback((written: ParameterPanelDto, refs: readonly string[]) => acceptWrite(deviceId, language, written, refs),
     [acceptWrite, deviceId, language]);
   // A stale-write refusal reloads the authoritative tree; publishing it
   // re-reads this panel through `refreshKey`. Nothing is written here.
@@ -763,7 +787,7 @@ export function ParameterPanelContent(props: ParameterPanelProps & {
       <UnresolvedProgramNotice key={deviceId} unresolved={panel.programId === null}
         info={panel.programId === null ? panel.unresolvedProgram ?? null : null} onRestored={onConflict} />
       {view === "parameters" && panel.programId !== null && panel.lastDownload !== undefined
-        && <LastDownloadSummary lastDownload={panel.lastDownload} shown={sections} />}
+        && <LastDownloadSummary lastDownload={panel.lastDownload} sections={panel.sections} refreshing={state.lastDownloadRefreshing} />}
       {panel.programId === null ? null : sections.length === 0 ? (
         <p className="inspector-description">{t(view === "restricted" ? "parameters.noRestrictedFields" : "parameters.noUserFields")}</p>
       ) : view === "parameters" ? <ParameterWorkspace
@@ -802,7 +826,7 @@ export function ComObjectFunctionControls(props: {
   const { deviceId, objectId, state, onValueApplied } = props;
   const { panel, snapshot, language, acceptWrite, loadError, reloadProject } = state;
   const t = useTranslate();
-  const onUpdated = useCallback((written: ParameterPanelDto) => acceptWrite(deviceId, language, written),
+  const onUpdated = useCallback((written: ParameterPanelDto, refs: readonly string[]) => acceptWrite(deviceId, language, written, refs),
     [acceptWrite, deviceId, language]);
   const onConflict = useCallback(() => reloadProject(onValueApplied), [reloadProject, onValueApplied]);
   if (loadError) return <div className="com-object-functions"><span className="field-error">{loadError}</span></div>;

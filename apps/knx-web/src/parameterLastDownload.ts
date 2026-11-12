@@ -2,6 +2,7 @@
 // The server alone decides which values differ; nothing here compares values.
 import type { LastDownload, ParameterField, ParameterSection } from "./api";
 import type { Translate } from "./i18n";
+import { isManufacturerRestricted } from "./parameterPresentation";
 
 /** One differing value as the server reported it; `null` when that side had none. */
 export interface DownloadedValue {
@@ -27,9 +28,44 @@ export function downloadedValueText(t: Translate, field: ParameterField, downloa
   return downloaded;
 }
 
-/** How many differing refs no unscoped field of the shown sections presents. */
-export function hiddenDifferingCount(lastDownload: LastDownload, shown: readonly ParameterSection[]): number {
-  const ids = new Set(shown.filter((section) => section.scope === null)
-    .flatMap((section) => section.fields.filter((field) => field.kind !== "None").map((field) => field.etsId)));
-  return (lastDownload.differing ?? []).filter((entry) => !ids.has(entry.refId)).length;
+/** Where the differing refs the Parameters view does not mark are. */
+export interface DifferingElsewhere {
+  /** No unscoped value field presents the ref: inactive or undeclared. */
+  notShown: number;
+  /** Only manufacturer-restricted unscoped fields present it (the Manufacturer fields tab). */
+  manufacturer: number;
+}
+
+/**
+ * Counts differing refs against the panel's unfiltered sections: a ref an
+ * unrestricted unscoped value field presents is marked in the Parameters view.
+ */
+export function differingElsewhere(lastDownload: LastDownload, sections: readonly ParameterSection[]): DifferingElsewhere {
+  // Ref id -> whether some unscoped value field presenting it is unrestricted.
+  const presented = new Map<string, boolean>();
+  for (const section of sections) {
+    if (section.scope !== null) continue;
+    for (const field of section.fields) {
+      if (field.kind === "None") continue;
+      presented.set(field.etsId, presented.get(field.etsId) === true || !isManufacturerRestricted(field));
+    }
+  }
+  const counts = { notShown: 0, manufacturer: 0 };
+  for (const entry of lastDownload.differing ?? []) {
+    const unrestricted = presented.get(entry.refId);
+    if (unrestricted === undefined) counts.notShown += 1;
+    else if (!unrestricted) counts.manufacturer += 1;
+  }
+  return counts;
+}
+
+/**
+ * ADR-0173: a write's response carries no comparison. The retained one
+ * forgets the refs the write touched: their state is unknown until the next
+ * read, so they are neither marked nor counted. Nothing is compared here.
+ */
+export function withoutWrittenRefs(lastDownload: LastDownload, written: readonly string[]): LastDownload {
+  if (lastDownload.differing === undefined) return lastDownload;
+  const drop = new Set(written);
+  return { ...lastDownload, differing: lastDownload.differing.filter((entry) => !drop.has(entry.refId)) };
 }

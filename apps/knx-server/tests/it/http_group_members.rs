@@ -109,6 +109,7 @@ fn fixture() -> (Arc<knx_server::AppState>, tempfile::TempDir) {
         opaque: Default::default(),
         folder_baselines: Default::default(),
         manufacturer_refs: Default::default(),
+        parameter_baselines: Default::default(),
         command_stack: Default::default(),
         history_generation: Default::default(),
         persisted_history: Default::default(),

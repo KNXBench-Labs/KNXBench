@@ -530,6 +530,35 @@ fn parameter_values(
     program_id: &str,
 ) -> Result<BTreeMap<String, String>, ProjectRequestError> {
     let prefix = format!("{program_id}_");
+    collect_parameter_values(project, device, |ets_id| {
+        if ets_id.starts_with(&prefix) {
+            Ok(())
+        } else {
+            Err(ProjectRequestError::ForeignParameter {
+                device,
+                ets_id: ets_id.to_string(),
+                program_id: program_id.to_string(),
+            })
+        }
+    })
+}
+
+/// Every value the project chooses for `device`, by `ParameterRef` id, the
+/// way a download request collects them but keeping keys of another program
+/// (they are values the current program does not declare, ADR-0173 §4).
+/// Two instances stating different values for one id are refused.
+pub fn chosen_parameter_values(
+    project: &Project,
+    device: DeviceId,
+) -> Result<BTreeMap<String, String>, ProjectRequestError> {
+    collect_parameter_values(project, device, |_| Ok(()))
+}
+
+fn collect_parameter_values(
+    project: &Project,
+    device: DeviceId,
+    admit: impl Fn(&str) -> Result<(), ProjectRequestError>,
+) -> Result<BTreeMap<String, String>, ProjectRequestError> {
     let mut values: BTreeMap<String, String> = BTreeMap::new();
     for parameter in project
         .installations
@@ -538,13 +567,7 @@ fn parameter_values(
         .filter(|p| p.device == device)
     {
         let ets_id = &parameter.source.ets_id;
-        if !ets_id.starts_with(&prefix) {
-            return Err(ProjectRequestError::ForeignParameter {
-                device,
-                ets_id: ets_id.clone(),
-                program_id: program_id.to_string(),
-            });
-        }
+        admit(ets_id)?;
         match values.get(ets_id) {
             Some(existing) if existing != &parameter.raw => {
                 return Err(ProjectRequestError::ConflictingParameter {

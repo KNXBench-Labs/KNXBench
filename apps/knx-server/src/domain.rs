@@ -79,6 +79,12 @@ pub struct AppState {
     /// currency check; keyed by the verified digest, never saved.
     pub folder_baselines: knx_app::saved_folder_currency::BaselineCache,
     pub manufacturer_refs: Mutex<Vec<knx_store::ManufacturerRef>>,
+    /// Per-device parameter values the last completed download wrote
+    /// (ADR-0173), bound to the open project incarnation: replaced with the
+    /// project, loaded from and written to its native file, never part of
+    /// `project`, its undo history or a version. A leaf lock: taken while
+    /// `project` is held and released before any other lock is taken.
+    pub parameter_baselines: Mutex<knx_core::commissioning::parameter_baseline::ParameterBaselines>,
     /// Live inverses or admitted native snapshot entries for undo/redo.
     /// Native open recovers the persisted stack; new/import starts a fresh one.
     pub command_stack: Mutex<knx_core::CommandStack>,
@@ -419,6 +425,7 @@ impl AppState {
             opaque: Mutex::new(Vec::new()),
             folder_baselines: Default::default(),
             manufacturer_refs: Mutex::new(Vec::new()),
+            parameter_baselines: Mutex::new(Default::default()),
             command_stack: Mutex::new(knx_core::CommandStack::new()),
             history_generation: Default::default(),
             persisted_history: Default::default(),
@@ -925,6 +932,9 @@ fn load_native(path: &Path, progress: &LoadHandle) -> Result<NativeLoad, LoadFai
     progress.phase(LoadPhase::BuildProjectTree);
     let recovered = knx_store::project_history::load_editor_with_trust(&read)
         .map_err(|e| LoadFailure::from(e.to_string()))?;
+    // File-level, outside every history image (ADR-0173).
+    let baselines = knx_store::parameter_baseline::load_all(&read)
+        .map_err(|e| LoadFailure::from(e.to_string()))?;
     let (project, opaque, manufacturer_refs) = match &recovered {
         Some(history) => (
             history.working.project.clone(),
@@ -951,6 +961,7 @@ fn load_native(path: &Path, progress: &LoadHandle) -> Result<NativeLoad, LoadFai
         (opaque, manufacturer_refs),
         allocator_repair,
         recovered,
+        baselines,
     ))
 }
 
@@ -962,6 +973,7 @@ type NativeLoad = (
     ImportedOpaqueData,
     Option<knx_store::AllocatorRepair>,
     Option<knx_store::project_history::EditorHistory>,
+    knx_core::commissioning::parameter_baseline::ParameterBaselines,
 );
 
 /// The session-log line for an allocator repair: a warning, because the
@@ -1014,7 +1026,7 @@ pub fn open_native_project(
         return Err(unsaved_changes_refusal(state, "open"));
     }
     let loaded = load_native(path, progress);
-    let (loaded_tree, project, (opaque, manufacturer_refs), allocator_repair, recovered) =
+    let (loaded_tree, project, (opaque, manufacturer_refs), allocator_repair, recovered, baselines) =
         match loaded {
             Ok(v) => v,
             Err(failure) => {
@@ -1054,7 +1066,7 @@ pub fn open_native_project(
         opaque,
         manufacturer_refs,
         discard_changes,
-        recovered,
+        (recovered, baselines),
     )
     .map_err(|UnsavedChanges| unsaved_changes_refusal(state, "open"))?;
     let reinstalled = reinstall_manufacturer_files(state, path, progress);
@@ -1281,7 +1293,7 @@ fn new_project_impl_with_pause(
         None,
         Vec::new(),
         Vec::new(),
-        None,
+        (None, Default::default()),
         |project, clean_project| {
             discard_changes
                 || !project.is_some_and(|project| project_is_modified(project, clean_project))
@@ -1706,6 +1718,13 @@ fn save_editor_state(
         manufacturer_refs: acquired.refs.clone(),
     };
     let stack = stack_guard.clone();
+    // Settlement takes the store path before it changes baselines, so none
+    // can land between this copy and the write below (ADR-0173 §7).
+    let baselines = state
+        .parameter_baselines
+        .lock()
+        .expect("state mutex poisoned")
+        .clone();
     // #36: the file write takes seconds on large projects. It writes the frozen
     // copy above, so readers of the project need not wait for it. Store path and
     // generation stay held: every writer (journal hand-over, Save As, version
@@ -1726,6 +1745,7 @@ fn save_editor_state(
             &stack,
             overwrite,
             &acquired.files,
+            Some(&baselines),
         )?,
         None => knx_app::project_history::save_with_sources(
             store_path.as_deref().ok_or_else(|| {
@@ -1735,9 +1755,16 @@ fn save_editor_state(
             &stack,
             *generation,
             &acquired.files,
+            Some(&baselines),
         )
         .map_err(SaveAsError::Failed)?,
     };
+    // The file now holds the baselines of the saved project's devices only.
+    state
+        .parameter_baselines
+        .lock()
+        .expect("state mutex poisoned")
+        .retain_devices_of(&snapshot.project);
     *state
         .manufacturer_refs
         .lock()
@@ -3020,9 +3047,16 @@ fn replace_unless_unsaved(
         replacement_opaque,
         replacement_manufacturer_refs,
         discard_changes,
-        None,
+        (None, Default::default()),
     )
 }
+
+/// What a native open recovered beside the project: its editor history and
+/// the file's parameter baselines (ADR-0173). Other replacements have none.
+type RecoveredState = (
+    Option<knx_store::project_history::EditorHistory>,
+    knx_core::commissioning::parameter_baseline::ParameterBaselines,
+);
 
 #[allow(clippy::too_many_arguments)]
 fn replace_unless_unsaved_with_history(
@@ -3033,7 +3067,7 @@ fn replace_unless_unsaved_with_history(
     replacement_opaque: Vec<knx_store::StoredOpaqueEntry>,
     replacement_manufacturer_refs: Vec<knx_store::ManufacturerRef>,
     discard_changes: bool,
-    recovered: Option<knx_store::project_history::EditorHistory>,
+    recovered: RecoveredState,
 ) -> Result<ProjectTree, UnsavedChanges> {
     replace_project_state_transaction(
         state,
@@ -3071,7 +3105,7 @@ fn replace_project_state_with_pause(
         replacement_store_path,
         replacement_opaque,
         replacement_manufacturer_refs,
-        None,
+        (None, Default::default()),
         |_, _| true,
         while_locked_before_publication,
     )
@@ -3086,7 +3120,7 @@ fn replace_project_state_transaction(
     replacement_store_path: Option<PathBuf>,
     replacement_opaque: Vec<knx_store::StoredOpaqueEntry>,
     replacement_manufacturer_refs: Vec<knx_store::ManufacturerRef>,
-    recovered: Option<knx_store::project_history::EditorHistory>,
+    (recovered, replacement_baselines): RecoveredState,
     can_replace: impl FnOnce(Option<&knx_core::Project>, Option<&knx_core::Project>) -> bool,
     after_guard: impl FnOnce(),
 ) -> Result<ProjectTree, UnsavedChanges> {
@@ -3135,6 +3169,11 @@ fn replace_project_state_transaction(
         trust,
     });
     *project = Some(replacement);
+    // Bound to this incarnation: a replaced project's baselines never carry over.
+    *state
+        .parameter_baselines
+        .lock()
+        .expect("state mutex poisoned") = replacement_baselines;
     *stack = recovered_stack;
     *state
         .history_generation
@@ -3271,15 +3310,19 @@ fn persist_native_working(
     project: &knx_core::Project,
     stack: &knx_core::CommandStack,
 ) -> Result<(), String> {
-    persist_native_working_reported(state, project, stack).map(|_| ())
+    persist_native_working_reported(state, project, stack, &[]).map(|_| ())
 }
 
 /// [`persist_native_working`] that also says whether a file was written:
 /// `false` is a project without a store path, which has nothing to persist.
+/// `baselines` are parameter baseline edits written in the same transaction
+/// as the journal (ADR-0173 §7); the caller applies them in memory after a
+/// success, and for a project without a file.
 fn persist_native_working_reported(
     state: &AppState,
     project: &knx_core::Project,
     stack: &knx_core::CommandStack,
+    baselines: &[knx_core::commissioning::parameter_baseline::BaselineEdit],
 ) -> Result<bool, String> {
     let started = std::time::Instant::now();
     let path = state.store_path.lock().expect("state mutex poisoned");
@@ -3291,7 +3334,7 @@ fn persist_native_working_reported(
     report.phase("storeWait", started);
     // Read before the write: the state written is at least this new.
     let through = state.journal().sequence();
-    let result = write_native_journal(state, path, project, stack, &mut report);
+    let result = write_native_journal(state, path, (project, stack), &mut report, baselines);
     state
         .journal_writes
         .lock()
@@ -3357,9 +3400,9 @@ fn enqueue_native_working(
 fn write_native_journal(
     state: &AppState,
     path: &std::path::Path,
-    project: &knx_core::Project,
-    stack: &knx_core::CommandStack,
+    (project, stack): (&knx_core::Project, &knx_core::CommandStack),
     report: &mut knx_store::project_history::JournalWriteReport,
+    baselines: &[knx_core::commissioning::parameter_baseline::BaselineEdit],
 ) -> Result<(), String> {
     let started = std::time::Instant::now();
     let mut generation = state
@@ -3388,9 +3431,9 @@ fn write_native_journal(
         path,
         &snapshot,
         stack,
-        *generation,
-        &trust,
+        (*generation, &trust),
         report,
+        baselines,
     )?;
     *generation = next;
     let started = std::time::Instant::now();
@@ -3447,12 +3490,18 @@ fn durable_mutation<T>(
     state: &AppState,
     project: &mut knx_core::Project,
     stack: &mut knx_core::CommandStack,
+    baselines: &[knx_core::commissioning::parameter_baseline::BaselineEdit],
     mutation: impl FnOnce(&mut knx_core::Project, &mut knx_core::CommandStack) -> Result<T, String>,
 ) -> Result<T, String> {
     let mut candidate = project.clone();
     let mut candidate_stack = stack.clone();
     let result = mutation(&mut candidate, &mut candidate_stack)?;
-    if state.journal().is_background() {
+    if !baselines.is_empty() {
+        // Baseline edits ride the same transaction as the journal, so they
+        // are written now, never handed to the background writer.
+        persist_native_working_reported(state, &candidate, &candidate_stack, baselines)?;
+        apply_baseline_edits(state, baselines);
+    } else if state.journal().is_background() {
         enqueue_native_working(state, &candidate, &candidate_stack)?;
     } else {
         persist_native_working(state, &candidate, &candidate_stack)?;
@@ -3460,6 +3509,24 @@ fn durable_mutation<T>(
     *project = candidate;
     *stack = candidate_stack;
     Ok(result)
+}
+
+/// Applies persisted (or, without a file, session-only) baseline edits to
+/// the baselines the server holds. Called while `project` is held.
+fn apply_baseline_edits(
+    state: &AppState,
+    edits: &[knx_core::commissioning::parameter_baseline::BaselineEdit],
+) {
+    if edits.is_empty() {
+        return;
+    }
+    let mut baselines = state
+        .parameter_baselines
+        .lock()
+        .expect("state mutex poisoned");
+    for edit in edits {
+        baselines.apply(edit);
+    }
 }
 
 /// What a bus write did to the programming belief, for the session log.
@@ -3470,6 +3537,9 @@ pub(crate) struct Settled {
     /// Whether the project or its history changed; a message alone is only
     /// logged.
     pub changed: bool,
+    /// Parameter baseline edits of the settlement (`apply_settlement`),
+    /// persisted with the flags and applied only if that succeeds.
+    pub baselines: Vec<knx_core::commissioning::parameter_baseline::BaselineEdit>,
 }
 
 /// What `settle_programming` did, as it happened. Callers that only want the
@@ -3523,10 +3593,16 @@ pub(crate) fn settle_programming(
         return SettleOutcome::Declined;
     };
     let (outcome, result) = if settled.changed {
-        match persist_native_working_reported(state, &candidate, &candidate_stack) {
+        match persist_native_working_reported(
+            state,
+            &candidate,
+            &candidate_stack,
+            &settled.baselines,
+        ) {
             Ok(written) => {
                 *project = candidate;
                 *stack = candidate_stack;
+                apply_baseline_edits(state, &settled.baselines);
                 next_project_revision(state);
                 let outcome = if written {
                     SettleOutcome::Persisted
@@ -3695,11 +3771,25 @@ pub(crate) fn apply_bound_command(
 
 /// [`apply_bound_command`] for a command built before the lock: the log
 /// line is the command's plain sentence (#13), and the new tree is returned.
+#[cfg(test)]
 pub(crate) fn apply_bound_prepared(
     state: &AppState,
     binding: &SnapshotBinding,
     label: &str,
     cmd: knx_core::Command,
+) -> Result<ProjectTree, BoundCommandError> {
+    apply_bound_prepared_with(state, binding, label, cmd, Vec::new())
+}
+
+/// [`apply_bound_prepared`] whose write also applies `baselines`, outside
+/// the undoable command and in the same transaction as the journal
+/// (ADR-0173 §3). Nothing changes unless the command commits.
+pub(crate) fn apply_bound_prepared_with(
+    state: &AppState,
+    binding: &SnapshotBinding,
+    label: &str,
+    cmd: knx_core::Command,
+    baselines: Vec<knx_core::commissioning::parameter_baseline::BaselineEdit>,
 ) -> Result<ProjectTree, BoundCommandError> {
     // Described from the project as it is now; if it changes before the
     // command runs, the binding check refuses the command anyway.
@@ -3732,7 +3822,13 @@ pub(crate) fn apply_bound_prepared(
             .and_then(|project| crate::log_text::describe(project, &cmd))
     };
     let detail = format!("{cmd:?}");
-    apply_bound(state, binding, label, message, detail, move |_| Ok(cmd))
+    apply_bound_with(
+        state,
+        binding,
+        (label, message, detail),
+        &baselines,
+        move |_| Ok(cmd),
+    )
 }
 
 pub(crate) fn apply_bound(
@@ -3741,6 +3837,16 @@ pub(crate) fn apply_bound(
     label: &str,
     message: Option<String>,
     detail: String,
+    build: impl FnOnce(&mut knx_core::Project) -> Result<knx_core::Command, String>,
+) -> Result<ProjectTree, BoundCommandError> {
+    apply_bound_with(state, binding, (label, message, detail), &[], build)
+}
+
+fn apply_bound_with(
+    state: &AppState,
+    binding: &SnapshotBinding,
+    (label, message, detail): (&str, Option<String>, String),
+    baselines: &[knx_core::commissioning::parameter_baseline::BaselineEdit],
     build: impl FnOnce(&mut knx_core::Project) -> Result<knx_core::Command, String>,
 ) -> Result<ProjectTree, BoundCommandError> {
     let mut lock = state.project.lock().expect("state mutex poisoned");
@@ -3755,7 +3861,8 @@ pub(crate) fn apply_bound(
     }
     let mut refused = false;
     let message = message.as_deref().unwrap_or(label);
-    let result = commit_locked(state, project, label, message, detail, |p, s| {
+    let names = (label, message, detail);
+    let result = commit_locked_with(state, project, names, baselines, |p, s| {
         let outcome = build(p).and_then(|cmd| s.do_command(p, cmd).map_err(|e| e.to_string()));
         refused = outcome.is_err();
         outcome
@@ -3794,8 +3901,20 @@ fn commit_locked(
     cmd_desc: String,
     mutation: impl FnOnce(&mut knx_core::Project, &mut knx_core::CommandStack) -> Result<(), String>,
 ) -> Result<ProjectTree, String> {
+    commit_locked_with(state, project, (cmd_name, message, cmd_desc), &[], mutation)
+}
+
+/// [`commit_locked`] whose durable write also carries parameter baseline
+/// edits outside the undoable command (ADR-0173 §3: a manual mark).
+fn commit_locked_with(
+    state: &AppState,
+    project: &mut knx_core::Project,
+    (cmd_name, message, cmd_desc): (&str, &str, String),
+    baselines: &[knx_core::commissioning::parameter_baseline::BaselineEdit],
+    mutation: impl FnOnce(&mut knx_core::Project, &mut knx_core::CommandStack) -> Result<(), String>,
+) -> Result<ProjectTree, String> {
     let mut stack = state.command_stack.lock().expect("state mutex poisoned");
-    let result = durable_mutation(state, project, &mut stack, mutation);
+    let result = durable_mutation(state, project, &mut stack, baselines, mutation);
     let import_counts = *state.import_counts.lock().expect("state mutex poisoned");
     let clean_project = state.clean_project.lock().expect("state mutex poisoned");
     let last_saved_at = state.last_saved_at.lock().expect("state mutex poisoned");
@@ -5986,7 +6105,7 @@ pub fn reconcile_scan_impl(
 
     let command = knx_core::Command::Batch(commands);
     let command_detail = format!("{command:?}");
-    let result = durable_mutation(state, project, stack, |p, s| {
+    let result = durable_mutation(state, project, stack, &[], |p, s| {
         s.do_command(p, command).map_err(|e| e.to_string())
     });
     let import_counts = *state.import_counts.lock().expect("state mutex poisoned");
@@ -6114,7 +6233,7 @@ pub fn undo_impl(state: &AppState) -> Result<knx_projection::ProjectTree, String
     let mut project = state.project.lock().expect("state mutex poisoned");
     let project = project.as_mut().ok_or("no project open")?;
     let mut stack = state.command_stack.lock().expect("state mutex poisoned");
-    let result = durable_mutation(state, project, &mut stack, |p, s| {
+    let result = durable_mutation(state, project, &mut stack, &[], |p, s| {
         s.undo(p).map_err(|e| e.to_string())
     });
     let import_counts = *state.import_counts.lock().expect("state mutex poisoned");
@@ -6142,7 +6261,7 @@ pub fn redo_impl(state: &AppState) -> Result<knx_projection::ProjectTree, String
     let mut project = state.project.lock().expect("state mutex poisoned");
     let project = project.as_mut().ok_or("no project open")?;
     let mut stack = state.command_stack.lock().expect("state mutex poisoned");
-    let result = durable_mutation(state, project, &mut stack, |p, s| {
+    let result = durable_mutation(state, project, &mut stack, &[], |p, s| {
         s.redo(p).map_err(|e| e.to_string())
     });
     let import_counts = *state.import_counts.lock().expect("state mutex poisoned");
@@ -6364,6 +6483,7 @@ fn empty_assembly(stale: Vec<(String, String)>) -> PanelAssembly {
             diagnostics: vec![],
             tree: None,
             unresolved_program: None,
+            last_download: None,
         },
         program_id: None,
         views_by_id: HashMap::new(),
@@ -6510,14 +6630,26 @@ fn assemble_parameter_panel(
     device_id: u32,
     language: Option<&str>,
 ) -> Result<PanelAssembly, String> {
-    let project = state
-        .project
-        .lock()
-        .expect("state mutex poisoned")
-        .as_ref()
-        .ok_or("no project open")?
-        .clone();
-    assemble_parameter_panel_for_project(state, &project, device_id, language)
+    // The project and the device's baseline are read under one project lock.
+    let (project, baseline) = {
+        let project = state.project.lock().expect("state mutex poisoned");
+        let project = project.as_ref().ok_or("no project open")?.clone();
+        let baseline = state
+            .parameter_baselines
+            .lock()
+            .expect("state mutex poisoned")
+            .get(knx_core::DeviceId(device_id))
+            .cloned();
+        (project, baseline)
+    };
+    let mut assembly = assemble_parameter_panel_for_project(state, &project, device_id, language)?;
+    assembly.dto.last_download = Some(crate::parameter_baseline::last_download(
+        state,
+        &project,
+        knx_core::DeviceId(device_id),
+        baseline.as_ref(),
+    ));
+    Ok(assembly)
 }
 
 /// Shared read projection, also used to preflight the complete prospective command.
@@ -7136,6 +7268,7 @@ fn assemble_parameter_panel_for_project(
             diagnostics,
             tree: None,
             unresolved_program: None,
+            last_download: None,
         },
         program_id: Some(program_id),
         views_by_id,

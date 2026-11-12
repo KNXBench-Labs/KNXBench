@@ -2958,6 +2958,29 @@ export interface ParameterPanel {
   /** Why `programId` is `null` for a device that names a program
    * (ADR-0128, GitHub #21); absent or `null` otherwise. */
   unresolvedProgram?: UnresolvedProgram | null;
+  /** ADR-0173: the comparison with the values of the device's last
+   * completed download. Present on `GET`; absent from a write's response and
+   * from older servers. Never a device read. */
+  lastDownload?: LastDownload;
+}
+
+/** Whether a device's last-download baseline can be compared (ADR-0173 §4). */
+export type LastDownloadState =
+  | "usable"
+  | "absent"
+  | "otherProgram"
+  | "productUnavailable"
+  | "currentUnreadable";
+
+/** The comparison of a device's current parameter values with the values its
+ * last completed download wrote. `at` and `differing` only for `usable`. */
+export interface LastDownload {
+  state: LastDownloadState;
+  /** RFC 3339 UTC time the download's settlement recorded the baseline. */
+  at?: string;
+  /** Every `ParameterRef` whose effective value differs, by id; `null` for a
+   * side without a value. */
+  differing?: { refId: string; downloaded: string | null; current: string | null }[];
 }
 
 /** A device's program reference no installed application program answers. */

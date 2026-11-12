@@ -56,6 +56,7 @@ fn settlement(
             programmed,
             pending,
             touched: programmed.union(pending),
+            ..Settlement::default()
         },
         at(),
     )

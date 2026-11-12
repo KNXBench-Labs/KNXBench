@@ -9,7 +9,10 @@ use knx_app::{
     programming_state::{apply_settlement, Settlement},
     property_validation::{DownloadResult, LocalOutcome, OperationProgress},
 };
-use knx_core::{commissioning::pending::ProgrammingParts, DeviceId, Project};
+use knx_core::{
+    commissioning::{parameter_baseline::BaselineChange, pending::ProgrammingParts},
+    DeviceId, Project,
+};
 use serde::Serialize;
 
 /// What the terminal settlement did, as the domain reported it. Volatile: a restart, a select
@@ -46,6 +49,8 @@ pub(super) enum Run {
 /// The pure belief decision. Only a verified download earns "programmed", and only for the
 /// `current` parts (still equal to what it wrote, on a proven unchanged source); its other
 /// memory parts, and every memory part after any other possible mutation, become pending.
+/// Every settlement touches the parameters, so it removes the parameter baseline, a verified
+/// run included: its written side is no `ImageRequest` (ADR-0173 §3).
 pub(super) fn decide(
     run: Run,
     progress: &OperationProgress,
@@ -72,12 +77,14 @@ pub(super) fn decide(
                 group_addresses: !current.group_addresses,
             },
             touched: MEMORY.union(current),
+            parameter_baseline: BaselineChange::Remove,
         }
     } else {
         Settlement {
             programmed: ProgrammingParts::NONE,
             pending: MEMORY,
             touched: MEMORY,
+            parameter_baseline: BaselineChange::Remove,
         }
     })
 }
@@ -122,7 +129,7 @@ pub(super) fn settle(
             };
             let settlement = decide(run, progress, parts)?;
             let at = chrono::Utc::now();
-            apply_settlement(project, stack, device, &settlement, Some(at));
+            let applied = apply_settlement(project, stack, device, &settlement, Some(at));
             let subject = match run {
                 Run::Download if !settlement.programmed.is_empty() => {
                     format!("Experimental System-2 download to {label} verified")
@@ -147,6 +154,7 @@ pub(super) fn settle(
                 message: format!("{subject}: {}", parts.join("; ")),
                 detail: None,
                 changed: true,
+                baselines: applied.baseline.into_iter().collect(),
             })
         });
     match outcome {

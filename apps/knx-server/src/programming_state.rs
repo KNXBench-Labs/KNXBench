@@ -20,8 +20,9 @@ use knx_app::device_download::{source_still_plans, PreparedDownload};
 use knx_app::download_failure::{DownloadFailure, FailureCategory};
 use knx_app::programming_state::{
     apply_settlement, attempted_parts, settle_address, settle_download, sole_device_at, AddressEnd,
-    DownloadEnd, Settlement, SourcePlan,
+    DownloadEnd, Settlement, SourcePlan, WrittenParameters,
 };
+use knx_core::commissioning::parameter_baseline::BaselineEdit;
 use knx_core::commissioning::partial_memory_download::PartialDownloadParts;
 use knx_core::commissioning::pending::{ProgrammingChange, ProgrammingParts};
 use knx_core::{Command, DeviceId, IndividualAddress};
@@ -61,7 +62,14 @@ async fn mark(
         device: DeviceId(id),
         change: ProgrammingChange::mark(ProgrammingParts::ALL, request.programmed),
     };
-    domain::apply_bound_prepared(&state, &binding, "MarkDeviceProgramming", command)
+    // A mark is a claim KNXBench did not witness: either direction forgets
+    // the parameter baseline, outside the undoable command (ADR-0173 §3).
+    // Undoing the mark restores the flags, never the baseline.
+    let forget = vec![BaselineEdit {
+        device: DeviceId(id),
+        baseline: None,
+    }];
+    domain::apply_bound_prepared_with(&state, &binding, "MarkDeviceProgramming", command, forget)
         .map(Json)
         .map_err(|error| match error {
             BoundCommandError::NoProject => ApiError::bad_request("No project open"),
@@ -305,9 +313,11 @@ fn after_download(
             let instance = project.devices.get(device)?;
             let label = device_label(instance);
             // Read under the project lock, in the same order `prepare` takes them.
-            // One catalogue lease answers both questions, so the request and the
-            // source it is checked against cannot come from different moments.
-            let (now, source) = match state.product_db.as_ref() {
+            // One catalogue lease answers all three questions, so the request,
+            // the source it is checked against and the defaults the written
+            // values resolve to cannot come from different moments.
+            let at = chrono::Utc::now();
+            let (now, source, resolved) = match state.product_db.as_ref() {
                 Some(owner) => owner
                     .with_read(|conn| {
                         let now = knx_productdb::image_request::image_request_for_device(
@@ -321,14 +331,27 @@ fn after_download(
                         } else {
                             SourcePlan::ChangedOrUnknown
                         };
-                        Ok::<_, std::convert::Infallible>((now, source))
+                        // ADR-0173 §1: only a completed run from an unchanged
+                        // source records what its image was built from.
+                        let resolved = (source == SourcePlan::Unchanged)
+                            .then(|| {
+                                knx_productdb::dynamic::resolve_unscoped_values(
+                                    conn,
+                                    &written.program_id,
+                                    &written.values,
+                                )
+                                .ok()
+                            })
+                            .flatten()
+                            .map(|values| WrittenParameters { values, at });
+                        Ok::<_, std::convert::Infallible>((now, source, resolved))
                     })
                     .ok()
                     .and_then(Result::ok)
-                    .unwrap_or((None, SourcePlan::ChangedOrUnknown)),
-                None => (None, SourcePlan::ChangedOrUnknown),
+                    .unwrap_or((None, SourcePlan::ChangedOrUnknown, None)),
+                None => (None, SourcePlan::ChangedOrUnknown, None),
             };
-            let settlement = settle_download(partial, end, written, now.as_ref(), source);
+            let settlement = settle_download(partial, end, written, now.as_ref(), source, resolved);
             let subject = match end {
                 DownloadEnd::Completed => format!("Download to {label} finished"),
                 DownloadEnd::Interrupted(_) => {
@@ -336,8 +359,7 @@ fn after_download(
                 }
                 DownloadEnd::NothingWritten => unreachable!("handled before settling"),
             };
-            let at = chrono::Utc::now();
-            apply_settlement(project, stack, device, &settlement, Some(at));
+            let applied = apply_settlement(project, stack, device, &settlement, Some(at));
             // A source is only checked for a run that completed.
             let verdict = match (end, source) {
                 (DownloadEnd::Completed, SourcePlan::Unchanged) => SourceVerdict::Unchanged,
@@ -351,13 +373,15 @@ fn after_download(
             } else {
                 CurrentRequest::Unavailable
             };
+            let message = sentence(&subject, &settlement);
             computed = Some((settlement, verdict, request, at));
             Some(Settled {
-                message: sentence(&subject, &settlement),
+                message,
                 // Links this settlement to its run's failure entry, if any.
                 detail: Some(download_correlation(id)),
                 // The history changed even where the flags did not.
                 changed: true,
+                baselines: applied.baseline.into_iter().collect(),
             })
         });
     let project_outcome = match outcome {
@@ -428,11 +452,12 @@ fn after_address_programming(
                     ),
                     detail: None,
                     changed: false,
+                    baselines: Vec::new(),
                 });
             };
             let label = device_label(project.devices.get(device)?);
             let settlement = settle_address(end);
-            apply_settlement(project, stack, device, &settlement, None);
+            let applied = apply_settlement(project, stack, device, &settlement, None);
             let subject = match end {
                 AddressEnd::Programmed => {
                     format!("Individual address {address} programmed into {label}")
@@ -446,6 +471,8 @@ fn after_address_programming(
                 message: sentence(&subject, &settlement),
                 detail: None,
                 changed: true,
+                // An address write keeps the parameter baseline (ADR-0173 §3).
+                baselines: applied.baseline.into_iter().collect(),
             })
         },
     );

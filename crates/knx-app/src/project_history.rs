@@ -3,6 +3,7 @@
 use std::fmt;
 use std::path::Path;
 
+use knx_core::commissioning::parameter_baseline::{BaselineEdit, ParameterBaselines};
 use knx_core::CommandStack;
 use knx_store::project_history::{self as history, NativeSnapshot};
 
@@ -23,20 +24,21 @@ pub fn persist_working(
 /// saved baseline it knows without re-deriving them
 /// (`history::save_editor_trusting`). Returns the new generation and what the
 /// write verified, for the next one. `report` receives the phase times and size
-/// facts, also of a write that fails.
+/// facts, also of a write that fails. `baselines` are a settlement's parameter
+/// baseline edits, written in the same transaction (ADR-0173 §7).
 pub fn persist_working_trusting(
     path: &Path,
     snapshot: &NativeSnapshot,
     stack: &CommandStack,
-    generation: i64,
-    trust: &history::JournalTrust,
+    (generation, trust): (i64, &history::JournalTrust),
     report: &mut history::JournalWriteReport,
+    baselines: &[BaselineEdit],
 ) -> Result<(i64, history::JournalTrust), String> {
     let started = std::time::Instant::now();
     let conn = history::open_editor_store_trusting(path, false, trust);
     report.phase("preAdmission", started);
     let conn = conn.map_err(|e| e.to_string())?;
-    history::save_editor_trusting(&conn, snapshot, stack, generation, trust, report)
+    history::save_editor_settling(&conn, snapshot, stack, generation, trust, report, baselines)
         .map_err(|e| e.to_string())
 }
 
@@ -141,7 +143,26 @@ pub fn save(
     stack: &CommandStack,
     generation: i64,
 ) -> Result<i64, String> {
-    save_with_sources(path, snapshot, stack, generation, &[])
+    save_with_sources(path, snapshot, stack, generation, &[], None)
+}
+
+/// One root save. With `baselines` the file then holds exactly those of
+/// devices the saved project contains (ADR-0173 §7); without, the file's own
+/// rows stay for those devices.
+fn save_root(
+    conn: &knx_store::Connection,
+    snapshot: &NativeSnapshot,
+    stack: &CommandStack,
+    generation: Option<i64>,
+    sources: &[knx_store::CarriedManufacturerFile],
+    baselines: Option<&ParameterBaselines>,
+) -> Result<i64, history::HistoryError> {
+    match baselines {
+        Some(baselines) => history::save_editor_with_baselines(
+            conn, snapshot, stack, generation, sources, baselines,
+        ),
+        None => history::save_editor_with_sources(conn, snapshot, stack, generation, sources),
+    }
 }
 
 /// Explicit save plus newly acquired file-owned manufacturer payloads.
@@ -151,9 +172,10 @@ pub fn save_with_sources(
     stack: &CommandStack,
     generation: i64,
     sources: &[knx_store::CarriedManufacturerFile],
+    baselines: Option<&ParameterBaselines>,
 ) -> Result<i64, String> {
     let conn = history::open_editor_store(path, false).map_err(|e| e.to_string())?;
-    history::save_editor_with_sources(&conn, snapshot, stack, Some(generation), sources)
+    save_root(&conn, snapshot, stack, Some(generation), sources, baselines)
         .map_err(|e| e.to_string())
 }
 
@@ -206,16 +228,18 @@ pub fn save_as_with(
     stack: &CommandStack,
     overwrite: bool,
 ) -> Result<i64, SaveAsError> {
-    save_as_with_sources(path, snapshot, stack, overwrite, &[])
+    save_as_with_sources(path, snapshot, stack, overwrite, &[], None)
 }
 
-/// Save As with source payloads in the unpublished candidate / save transaction.
+/// Save As with source payloads, and with `baselines` the server's parameter
+/// baselines (ADR-0173), in the unpublished candidate / save transaction.
 pub fn save_as_with_sources(
     path: &Path,
     snapshot: &NativeSnapshot,
     stack: &CommandStack,
     overwrite: bool,
     sources: &[knx_store::CarriedManufacturerFile],
+    baselines: Option<&ParameterBaselines>,
 ) -> Result<i64, SaveAsError> {
     let failed = |e: &dyn fmt::Display| SaveAsError::Failed(e.to_string());
     // Any directory entry counts, a dangling symlink included.
@@ -223,12 +247,11 @@ pub fn save_as_with_sources(
         return Err(SaveAsError::Exists);
     }
     let candidate = knx_store::open_and_migrate_in_memory().map_err(|e| failed(&e))?;
-    let generation = history::save_editor_with_sources(&candidate, snapshot, stack, None, sources)
-        .map_err(|e| failed(&e))?;
+    let generation =
+        save_root(&candidate, snapshot, stack, None, sources, baselines).map_err(|e| failed(&e))?;
     if overwrite && path.exists() {
         let conn = history::open_editor_store(path, true).map_err(|e| failed(&e))?;
-        return history::save_editor_with_sources(&conn, snapshot, stack, None, sources)
-            .map_err(|e| failed(&e));
+        return save_root(&conn, snapshot, stack, None, sources, baselines).map_err(|e| failed(&e));
     }
     let parent = path
         .parent()

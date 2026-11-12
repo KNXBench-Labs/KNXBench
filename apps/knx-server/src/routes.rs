@@ -408,6 +408,11 @@ pub(crate) struct ParameterPanelDto {
     /// (ADR-0128, GitHub #21); `null` when the program resolved or the
     /// device names none.
     pub(crate) unresolved_program: Option<UnresolvedProgramDto>,
+    /// The comparison with the values of the device's last completed
+    /// download (ADR-0173 §4). Absent from responses that do not compute it
+    /// (and from older servers); never a device read.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) last_download: Option<crate::parameter_baseline::LastDownloadDto>,
 }
 
 /// A device's `Hardware2ProgramRefId` that no installed application

@@ -1357,6 +1357,9 @@ pub struct HistoryChange {
     /// After a restore: per device, the parts the restored version claimed
     /// programmed that are pending against the live project (ADR-0173 §6).
     pub restored_pending: BTreeMap<DeviceId, ProgrammingParts>,
+    /// After a restore: the parameter baselines the file keeps, which the
+    /// held set must equal (ADR-0173 §2). `None` for other actions.
+    pub restored_baselines: Option<ParameterBaselines>,
 }
 
 pub fn change_history(
@@ -1390,6 +1393,7 @@ pub fn change_history(
         )?;
     }
     let mut restored_pending = BTreeMap::new();
+    let mut restored_baselines = None;
     let restored = match action {
         HistoryAction::Create(label) => {
             append_version(&tx, current_working, "named", label)?;
@@ -1433,6 +1437,7 @@ pub fn change_history(
                 },
                 &replacement.project,
             )?;
+            restored_baselines = Some(crate::parameter_baseline::load_all(&tx)?);
             append_version(
                 &tx,
                 current_working,
@@ -1479,6 +1484,7 @@ pub fn change_history(
         total_bytes,
         restored,
         restored_pending,
+        restored_baselines,
     })
 }
 

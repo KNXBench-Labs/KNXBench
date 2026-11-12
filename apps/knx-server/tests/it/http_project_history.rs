@@ -578,3 +578,70 @@ async fn restoring_an_older_version_marks_what_the_device_no_longer_holds_and_sa
         .pending_parts();
     assert!(pending.parameters && pending.group_addresses, "{pending:?}");
 }
+
+/// What the native file holds: the reference the held set must equal.
+fn file_baselines(
+    path: &std::path::Path,
+) -> knx_core::commissioning::parameter_baseline::ParameterBaselines {
+    let store = knx_store::open_existing_read_only(path).unwrap();
+    knx_store::project_history::load_parameter_baselines(&store.conn).unwrap()
+}
+
+fn seed_baselines(state: &knx_server::AppState, path: &std::path::Path) {
+    use knx_core::commissioning::parameter_baseline::{BaselineEdit, ParameterBaseline};
+    let edit = BaselineEdit {
+        device: knx_core::DeviceId(1),
+        baseline: Some(ParameterBaseline {
+            program_id: "M-0001_A-0001-01-0001".into(),
+            values: [("M-0001_A-0001-01-0001_P-1_R-1".to_string(), "1".to_string())].into(),
+            at: chrono::DateTime::UNIX_EPOCH,
+        }),
+    };
+    let conn = knx_store::project_history::open_editor_store(path, false).unwrap();
+    knx_store::project_history::write_parameter_baselines(&conn, std::slice::from_ref(&edit))
+        .unwrap();
+    state.parameter_baselines.lock().unwrap().apply(&edit);
+}
+
+#[tokio::test]
+async fn a_restore_leaves_the_held_baselines_equal_to_what_the_file_kept() {
+    // Another project id is covered where it can be built, in the store test;
+    // the server takes the store's surviving set for every case alike.
+    for (label, reimported) in [
+        ("same device", false),
+        ("another device under the id", true),
+    ] {
+        let (_dir, path, state, app) = fixture().await;
+        put_programmed_device(&state, "1");
+        let (_, view) = request(&app, "GET", "/api/project/history", Value::Null).await;
+        let mut payload = binding(&view, false);
+        payload["label"] = json!("Version");
+        let (status, view) = request(&app, "POST", "/api/project/history/versions", payload).await;
+        assert_eq!(status, StatusCode::OK, "{label}: {view}");
+        let id = view["versions"][0]["id"].as_i64().unwrap();
+        if reimported {
+            let mut guard = state.project.lock().unwrap();
+            let device = guard
+                .as_mut()
+                .unwrap()
+                .devices
+                .get_mut(knx_core::DeviceId(1))
+                .unwrap();
+            device.source.ets_id = "re-imported".into();
+        }
+        seed_baselines(&state, &path);
+
+        let (_, view) = request(&app, "GET", "/api/project/history", Value::Null).await;
+        let (status, restored) = request(
+            &app,
+            "POST",
+            &format!("/api/project/history/versions/{id}/restore"),
+            binding(&view, true),
+        )
+        .await;
+        assert_eq!(status, StatusCode::OK, "{label}: {restored}");
+        let held = state.parameter_baselines.lock().unwrap().clone();
+        assert_eq!(held, file_baselines(&path), "{label}");
+        assert_eq!(held.is_empty(), reimported, "{label}");
+    }
+}

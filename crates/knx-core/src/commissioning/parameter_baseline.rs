@@ -105,19 +105,6 @@ impl ParameterBaselines {
         }
     }
 
-    /// Keeps only the baselines of devices that `after` holds as the same
-    /// device `before` held under that id ([`same_device`]): what a version
-    /// restore or another whole-project replacement does, whose ids may name
-    /// other devices (ADR-0173 §2).
-    pub fn retain_same_devices(&mut self, before: &Project, after: &Project) {
-        self.by_device.retain(|device, _| {
-            match (before.devices.get(*device), after.devices.get(*device)) {
-                (Some(before), Some(after)) => same_device(before, after),
-                _ => false,
-            }
-        });
-    }
-
     /// Keeps only the baselines of devices `project` contains: what a native
     /// save does with the rows of deleted devices (ADR-0173 §2).
     pub fn retain_devices_of(&mut self, project: &Project) {
@@ -181,29 +168,6 @@ mod tests {
             .iter()
             .map(|(k, v)| (k.to_string(), v.to_string()))
             .collect()
-    }
-
-    #[test]
-    fn a_replacement_keeps_only_baselines_of_the_same_devices() {
-        use crate::commissioning::pending::fixture::{self, D1, D2};
-        let before = fixture::project();
-        let mut after = before.clone();
-        after.devices.get_mut(D2).unwrap().source.ets_id = "another".into();
-        let held = ParameterBaseline {
-            program_id: "H".into(),
-            values: values(&[("H_P-1_R-1", "1")]),
-            at: chrono::DateTime::UNIX_EPOCH,
-        };
-        let mut baselines: ParameterBaselines = [(D1, held.clone()), (D2, held.clone())]
-            .into_iter()
-            .collect();
-        baselines.retain_same_devices(&before, &after);
-        assert_eq!(baselines.get(D1), Some(&held));
-        assert_eq!(baselines.get(D2), None);
-        // A device the replacement lacks keeps nothing either.
-        after.devices.remove(D1);
-        baselines.retain_same_devices(&before, &after);
-        assert!(baselines.is_empty());
     }
 
     #[test]

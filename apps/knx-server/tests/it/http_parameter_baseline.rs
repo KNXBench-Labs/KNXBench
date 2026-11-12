@@ -324,8 +324,17 @@ async fn a_manual_mark_in_either_direction_forgets_the_baseline_durably_and_undo
     }
 
     // Written with the mark's journal entry: a restarted server has none.
+    // Seeded only in memory, so Save As (which copies the held baselines)
+    // puts it into a file; a plain save writes no baseline row.
     seed(&state, "A-1", &[("P-1_R-1", "5")]);
-    let (status, saved) = call(&state, "POST", "/api/project/save", Some(json!({}))).await;
+    let path = dir.path().join("seeded.knxdb");
+    let (status, saved) = call(
+        &state,
+        "POST",
+        "/api/project/save-as",
+        Some(json!({ "path": path })),
+    )
+    .await;
     assert_eq!(status, StatusCode::OK, "{saved}");
     let restarted = Arc::new(knx_server::AppState::default());
     let (status, opened) = call(

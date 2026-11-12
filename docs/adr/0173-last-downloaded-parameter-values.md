@@ -232,8 +232,10 @@ so a crash cannot pair newer flags with an older baseline. If that write
 fails, the existing `PersistFailed` handling applies to both: the session
 log says so and no durable claim is made. A project without a native file
 keeps baselines in server memory, bound to the project incarnation, and the
-first native save writes them; **Save As** to a new file copies them like
-the project. Row count is one per unscoped ref per programmed device; a
+first native save writes them; **Save As** (a new file, an overwritten other
+file, the first native save) copies them like the project. A plain save to
+the same file writes no baseline row: settlement and marks already wrote each
+change there, so it only prunes (§2). Row count is one per unscoped ref per programmed device; a
 large-project size and time test is part of the implementation.
 Restoring a version stored by an older schema is tested with the authentic
 native-18 fixture's named version; a schema-19 history image is tested to

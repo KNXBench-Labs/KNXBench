@@ -224,6 +224,25 @@ fn a_settled_baseline_is_written_with_the_flags_and_reopens() {
 }
 
 #[test]
+fn a_plain_save_leaves_the_file_baselines_as_settlement_wrote_them() {
+    let f = fixture(&OLD, &OLD);
+    install_rich_project(&f.state);
+    let path = f._dir.path().join("project.knxdb");
+    domain::save_project_as(&f.state, &path).expect("saves");
+    full(&f, false);
+    let recorded_baseline = baseline(&f.state).unwrap();
+    // An unsaved edit, so the plain save writes a new root.
+    edit_time(&f.state);
+    domain::save_project(&f.state).expect("saves");
+    assert_eq!(baseline(&f.state), Some(recorded_baseline.clone()));
+    let reopened = Arc::new(AppState::default());
+    let progress = domain::detached_progress(crate::load_progress::LoadKind::Open, &path);
+    domain::open_native_project(&reopened, &path, true, &progress).expect("reopens");
+    assert_eq!(baseline(&reopened), Some(recorded_baseline));
+    assert_eq!(reopened.parameter_baselines.lock().unwrap().len(), 1);
+}
+
+#[test]
 fn a_session_only_project_keeps_its_baseline_until_the_first_native_save() {
     let f = fixture(&OLD, &OLD);
     install_rich_project(&f.state);

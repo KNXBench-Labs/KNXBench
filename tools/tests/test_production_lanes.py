@@ -205,7 +205,8 @@ class Hazards(unittest.TestCase):
         self.assertIn('background-activity.e2e.ts', files)
         self.assertIn('device-download-footer.e2e.ts', files)
         self.assertIn('batch-download.e2e.ts', files)
-        self.assertEqual(len(files), 43)
+        self.assertIn('parameter-last-download.e2e.ts', files)
+        self.assertEqual(len(files), 44)
         for name in files:
             self.assertTrue((APP / 'e2e' / name).is_file(), name)
 

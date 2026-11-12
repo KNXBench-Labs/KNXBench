@@ -897,7 +897,6 @@ async fn install_catalog_package(
             .bytes()
             .await
             .map_err(|error| ApiError::with_status(error.status(), error.body_text()))?;
-        let state = state.clone();
         return off_runtime(move || {
             domain::install_catalog_package_impl(&state, &filename, &bytes)
         })
@@ -4308,9 +4307,15 @@ mod tests {
         crate::domain::new_project_impl(&state, None, None, None, None, true).unwrap();
         let (seen_tx, seen_rx) = std::sync::mpsc::channel();
         let hook_state = Arc::clone(&state);
-        *crate::fs_routes::DURING_DOWNLOAD_WRITE.lock().unwrap() = Some(Box::new(move || {
-            seen_tx.send(hook_state.project.try_lock().is_ok()).unwrap();
-        }));
+        crate::fs_routes::DURING_DOWNLOAD_WRITE
+            .lock()
+            .unwrap()
+            .push((
+                Arc::as_ptr(&state) as usize,
+                Box::new(move || {
+                    seen_tx.send(hook_state.project.try_lock().is_ok()).unwrap();
+                }),
+            ));
         let router = crate::fs_routes::fs_routes().with_state(Arc::clone(&state));
         let request = axum::http::Request::get("/api/project/download")
             .body(axum::body::Body::empty())
@@ -4321,6 +4326,27 @@ mod tests {
             seen_rx.try_recv().expect("the hook ran"),
             "the project was held during the write"
         );
+    }
+
+    /// A download whose project was replaced while it wrote takes no
+    /// manufacturer files from the new project's file.
+    #[test]
+    fn a_replaced_project_does_not_lend_its_file_to_an_older_download() {
+        let state = AppState::default();
+        crate::domain::new_project_impl(&state, None, None, None, None, true).unwrap();
+        let dir = tempfile::tempdir().unwrap();
+        let first = dir.path().join("first.knxdb");
+        crate::domain::save_project_as(&state, &first).unwrap();
+        let copied = state
+            .project_incarnation
+            .load(std::sync::atomic::Ordering::Relaxed);
+        assert_eq!(
+            crate::fs_routes::open_file_of(&state, copied),
+            Some(first.clone())
+        );
+        crate::domain::new_project_impl(&state, None, None, None, None, true).unwrap();
+        crate::domain::save_project_as(&state, &dir.path().join("second.knxdb")).unwrap();
+        assert_eq!(crate::fs_routes::open_file_of(&state, copied), None);
     }
 
     #[tokio::test]

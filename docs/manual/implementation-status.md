@@ -2,6 +2,16 @@
 
 # Implementation status
 
+## Experimental transport labels (main-only, after Alpha 20)
+
+TCP tunnelling and USB/serial TP-UART are labelled **experimental** wherever
+transport is selected or observed in the status bar, Bus Monitor and TCP line
+scan. A translated note makes UDP tunnelling the supported path and discloses
+that TCP/serial tests use simulated and loopback peers, not a real interface.
+This changes presentation only, not connection behaviour; the next release's
+notes still need the same wording.
+[Transport scope](user-guide/07-bus-and-interfaces.md#optional-tcp-source-candidate-8-november-2026).
+
 ## Manufacturer names and complete product metadata (source candidate, after Alpha 20)
 
 Devices and Product data share a read-only name resolver for installed names and

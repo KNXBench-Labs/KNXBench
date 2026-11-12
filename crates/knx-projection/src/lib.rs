@@ -5,6 +5,9 @@
 //! no storage (`xtask check-layering` enforces this, same rule as
 //! `knx-core` itself).
 
+mod object_last_download;
+pub use object_last_download::*;
+
 use std::collections::HashMap;
 
 mod effective_priority;
@@ -659,6 +662,10 @@ pub struct DeviceDetail {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[ts(optional)]
     pub project_folder_currency: Option<ProjectFolderCurrency>,
+    /// Server-only independently usable link/flag evidence; edit responses omit it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub last_download: Option<ObjectLastDownload>,
 }
 
 /// [`DeviceDetail::project_folder_currency`]. Never recomputes or hides a folder.
@@ -1182,6 +1189,7 @@ pub fn build_device_detail(project: &Project, id: knx_core::DeviceId) -> Option<
             .collect(),
         product: build_device_product_node(device),
         project_folder_currency: None,
+        last_download: None,
     })
 }
 

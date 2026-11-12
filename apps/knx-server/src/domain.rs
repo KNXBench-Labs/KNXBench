@@ -2736,7 +2736,7 @@ fn device_detail_with_product_data(
 ) -> Result<knx_projection::DeviceDetail, String> {
     // Step 1: lock `project` (and, in the established order, `opaque` for the
     // retained object tree); never `product_db` at the same time.
-    let (mut detail, overlay_input, activation_input, name_input, caption_schema) = {
+    let (mut detail, overlay_input, activation_input, name_input, caption_schema, download_input) = {
         let project = state.project.lock().expect("state mutex poisoned");
         let project = project.as_ref().ok_or("no project open")?;
         let detail = device_detail_impl(project, device_id)?;
@@ -2787,8 +2787,18 @@ fn device_detail_with_product_data(
             activation_input,
             name_input,
             caption_schema,
+            crate::object_last_download::ComparisonInput::collect(
+                state,
+                project,
+                knx_core::DeviceId(device_id),
+            ),
         )
     };
+
+    detail.last_download = Some(crate::object_last_download::last_download(
+        state,
+        &download_input,
+    ));
 
     if activation_input.is_none() {
         knx_projection::mark_product_priority_unavailable(
@@ -3547,7 +3557,7 @@ fn effective_baseline_edits(
         .expect("state mutex poisoned");
     edits
         .iter()
-        .filter(|edit| edit.baseline.is_some() || held.get(edit.device).is_some())
+        .filter(|edit| held.would_change(edit))
         .cloned()
         .collect()
 }

@@ -206,7 +206,7 @@ fn a_project_without_functions_keeps_its_semantic_identity_after_the_v15_tables_
         .semantic_hash()
         .unwrap();
     conn.execute_batch(
-        "DROP TABLE device_parameter_baseline_value; DROP TABLE device_parameter_baseline; DROP TABLE group_address_description; DROP TABLE com_object_priority_edit; DROP TABLE com_object_saved_priority; DROP TABLE manufacturer_file; \
+        "DROP TABLE device_object_flags_baseline; DROP TABLE device_link_baseline_link; DROP TABLE device_link_baseline; DROP TABLE device_parameter_baseline_value; DROP TABLE device_parameter_baseline; DROP TABLE group_address_description; DROP TABLE com_object_priority_edit; DROP TABLE com_object_saved_priority; DROP TABLE manufacturer_file; \
          DROP TABLE project_function_member; DROP TABLE project_function; \
          DROP TABLE project_function_state; PRAGMA user_version=14;",
     )

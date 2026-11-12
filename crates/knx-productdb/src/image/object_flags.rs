@@ -23,6 +23,28 @@ pub struct EffectiveObjectFlags {
     pub communication: bool,
 }
 
+impl From<EffectiveObjectFlags>
+    for knx_core::commissioning::parameter_baseline::WrittenObjectFlags
+{
+    fn from(flags: EffectiveObjectFlags) -> Self {
+        Self {
+            read: flags.read,
+            write: flags.write,
+            transmit: flags.transmit,
+            update: flags.update,
+            communication: flags.communication,
+            read_on_init: None,
+        }
+    }
+}
+
+/// Active reference provenance from the same checked pass that resolves its flags.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ActiveObjectFlags {
+    pub ref_id: String,
+    pub flags: EffectiveObjectFlags,
+}
+
 impl EffectiveObjectFlags {
     pub(super) fn with_priority(self, priority: TransmissionPriority) -> ObjectFlags {
         ObjectFlags {
@@ -55,6 +77,21 @@ pub fn resolve_effective_object_flags(
     values: &BTreeMap<String, String>,
     overrides: &BTreeMap<String, FlagOverrides>,
 ) -> Result<BTreeMap<u8, EffectiveObjectFlags>, ImageError> {
+    Ok(
+        resolve_effective_object_flags_with_refs(conn, program_id, values, overrides)?
+            .into_iter()
+            .map(|(number, active)| (number, active.flags))
+            .collect(),
+    )
+}
+
+/// Effective flags with exact active reference identity, without a second evaluation.
+pub fn resolve_effective_object_flags_with_refs(
+    conn: &Connection,
+    program_id: &str,
+    values: &BTreeMap<String, String>,
+    overrides: &BTreeMap<String, FlagOverrides>,
+) -> Result<BTreeMap<u8, ActiveObjectFlags>, ImageError> {
     let code = load_program_code(conn, program_id)?
         .ok_or_else(|| ImageError::UnknownProgram(program_id.to_string()))?;
     let types = ParameterTypes::load(conn, program_id, &code)?.admitting_floats();
@@ -90,7 +127,10 @@ pub fn resolve_effective_object_flags(
         }
         resolved.push((
             number,
-            resolve_flags(reference, view, overrides.get(reference))?.flags,
+            ActiveObjectFlags {
+                ref_id: reference.to_string(),
+                flags: resolve_flags(reference, view, overrides.get(reference))?.flags,
+            },
         ));
     }
     Ok(resolved.into_iter().collect())

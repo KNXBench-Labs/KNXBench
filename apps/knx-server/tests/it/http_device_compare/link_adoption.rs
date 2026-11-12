@@ -315,7 +315,7 @@ async fn association_rows_adopt_links_at_the_mount_undo_and_never_write() {
     );
     assert_eq!(send(&h.app, get("/api/project")).await.1, before);
     // Adoption never records or removes a parameter baseline (ADR-0173 §3).
-    let held: ParameterBaselines = h
+    let mut held: ParameterBaselines = h
         .state
         .project
         .lock()
@@ -326,6 +326,7 @@ async fn association_rows_adopt_links_at_the_mount_undo_and_never_write() {
         .iter()
         .map(|device| {
             let baseline = ParameterBaseline {
+                object_flags: Some(Default::default()),
                 program_id: "A-1".into(),
                 values: [("P-1_R-1".to_string(), "5".to_string())].into(),
                 at: chrono::DateTime::UNIX_EPOCH,
@@ -333,6 +334,23 @@ async fn association_rows_adopt_links_at_the_mount_undo_and_never_write() {
             (device.id, baseline)
         })
         .collect();
+    for device in held.device_ids() {
+        held.apply(&knx_core::commissioning::parameter_baseline::BaselineEdit {
+            device,
+            parameter: knx_core::commissioning::parameter_baseline::BaselineChange::Keep,
+            links: knx_core::commissioning::parameter_baseline::LinkBaselineChange::Record(
+                knx_core::commissioning::parameter_baseline::LinkBaseline {
+                    program_id: "A-1".into(),
+                    at: chrono::DateTime::UNIX_EPOCH,
+                    links: vec![knx_core::commissioning::parameter_baseline::BaselineLink {
+                        object: 0,
+                        group_address: knx_core::GroupAddress::from_raw(0x0801),
+                        sending: false,
+                    }],
+                },
+            ),
+        });
+    }
     assert!(!held.is_empty());
     *h.state.parameter_baselines.lock().unwrap() = held.clone();
     let lengths = h.state.command_stack.lock().unwrap().history_lengths();

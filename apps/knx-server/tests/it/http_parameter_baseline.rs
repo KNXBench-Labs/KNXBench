@@ -133,16 +133,20 @@ fn seed(state: &knx_server::AppState, program_id: &str, values: &[(&str, &str)])
         .unwrap()
         .apply(&BaselineEdit {
             device: DeviceId(1),
-            baseline: Some(ParameterBaseline {
-                program_id: program_id.into(),
-                values: values
-                    .iter()
-                    .map(|(k, v)| (k.to_string(), v.to_string()))
-                    .collect(),
-                at: chrono::DateTime::parse_from_rfc3339("2026-11-11T08:00:00.5Z")
-                    .unwrap()
-                    .with_timezone(&chrono::Utc),
-            }),
+            parameter: knx_core::commissioning::parameter_baseline::BaselineChange::Record(
+                ParameterBaseline {
+                    object_flags: None,
+                    program_id: program_id.into(),
+                    values: values
+                        .iter()
+                        .map(|(k, v)| (k.to_string(), v.to_string()))
+                        .collect(),
+                    at: chrono::DateTime::parse_from_rfc3339("2026-11-11T08:00:00.5Z")
+                        .unwrap()
+                        .with_timezone(&chrono::Utc),
+                },
+            ),
+            links: knx_core::commissioning::parameter_baseline::LinkBaselineChange::Keep,
         });
 }
 
@@ -367,3 +371,5 @@ async fn a_manual_mark_in_either_direction_forgets_the_baseline_durably_and_undo
     assert_eq!(status, StatusCode::OK, "{opened}");
     assert!(!has_baseline(&again), "the removal reached the file");
 }
+
+mod links_and_flags;

@@ -36,10 +36,31 @@ hardware run.**
    written flags, with no size/priority image-admission gates. Read-on-init
    remains a separate request for the builder's existing loss/refusal handling,
    not a written sixth flag. This adds no baseline storage, settlement,
-   comparison response or UI. Server part and UI part follow as separate
-   packages. A first draft that
+   comparison response or UI. WP-37f now implements the backend below; UI
+   remains a separate pending package. A first draft that
    put flags with the links led to the ADR-0129 amendment of the same day
    (flag edits mark Parameters).
+
+## Step 3, backend implemented (WP-37f; acceptance pending, UI pending)
+
+- Native schema 21 extends Parameters evidence with explicitly unknown versus
+  known-empty effective flags and gives links an independent header/program/time.
+  Both remain outside Project, undo, versions and snapshot semantic identities.
+- Regular/batch settlement records the written request, not current edited
+  content; section Keep/Remove/Record follows its own written part. System-2
+  possible mutation and manual marks remove both, including link-only owners.
+- Save, Save As, first save, pruning and restore use the union of section owners.
+  Plain save prunes but does not rewrite evidence rows; persist failure publishes
+  neither candidate belief nor baseline changes.
+- GET DeviceDetail adds optional typed `last_download` with independent links/flags
+  usability and times, deterministic per-number differences and exact row-id
+  attribution from checked active-reference provenance. The summary counts
+  differences without a selected row, including product-active objects absent
+  from the project. Edit responses omit comparison; current parameter comparison
+  remains independent. No object-view UI is implemented here.
+- Required scoped regression and counterexample evidence is retained by the
+  package owner; final package review/gate/publication is separate. No hardware,
+  browser or whole-compatibility acceptance is implied.
 
 ## Step 2, server part as implemented
 
@@ -149,7 +170,7 @@ description after the name.
 ## Not covered
 
 - Per-link marks and marks on individual communication objects or flags:
-  designed in ADR-0174, not implemented.
+  backend implemented in WP-37f; communication-object UI remains pending.
 - Module-scoped parameters (no baseline until module downloads exist); a write
   of a module-scoped row never drops the unscoped ref's mark.
 - The caption beside an open checked editor is visible but not linked to the

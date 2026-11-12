@@ -12,6 +12,18 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Independent last-download links and flags, backend (12 November 2026; WP-37f)
+
+Backend implementation of [ADR-0174](adr/0174-last-downloaded-links-and-flags.md):
+native schema 21 preserves authentic native20 parameter/history data, adds
+explicitly known object flags and independent links, settles from the written
+request under one source-proving catalogue lease, and handles lifecycle over
+both section owners. GET DeviceDetail carries typed independent comparisons
+with checked exact-reference row attribution; edit responses omit them. Plain
+save does not rewrite evidence; failed persistence publishes nothing. The
+communication-object UI, final package review/gate/publication and hardware
+acceptance remain pending; no visible UI is changed by this backend package.
+
 ## Object flag edits mark Parameters, not Group addresses (12 November 2026; ADR-0129 amendment)
 
 A changed communication-object flag now marks the device's **Parameters**

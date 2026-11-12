@@ -8,7 +8,8 @@
 
 use chrono::{DateTime, Utc};
 use knx_core::commissioning::parameter_baseline::{
-    BaselineChange, BaselineEdit, ParameterBaseline, ParameterValues,
+    BaselineChange, BaselineEdit, BaselineLink, LinkBaseline, LinkBaselineChange, ObjectFlagValues,
+    ParameterBaseline, ParameterValues,
 };
 use knx_core::commissioning::partial_memory_download::PartialDownloadParts;
 use knx_core::commissioning::pending::{ProgrammingChange, ProgrammingParts};
@@ -53,6 +54,8 @@ pub struct Settlement {
     /// "changed source" or "interrupted" (remove), which all leave
     /// `programmed.parameters` false.
     pub parameter_baseline: BaselineChange,
+    /// Independent Group-addresses evidence, never refreshed by a Parameters-only run.
+    pub link_baseline: LinkBaselineChange,
 }
 
 /// The written request's parameter values as a completed run's image was
@@ -62,6 +65,8 @@ pub struct Settlement {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct WrittenParameters {
     pub values: ParameterValues,
+    /// Effective flags resolved in the same source-proving lease; None is unknown.
+    pub object_flags: Option<ObjectFlagValues>,
     /// The settlement time the baseline records.
     pub at: DateTime<Utc>,
 }
@@ -197,7 +202,9 @@ pub enum SourcePlan {
 /// Parameters in scope records `resolved` when the source is unchanged, even
 /// if the project changed during the run, and removes it otherwise (also
 /// when `resolved` could not be read); an interrupted run removes it only if
-/// it attempted the parameters; every other end keeps it.
+/// it attempted the parameters; every other end keeps it. Links follow their own
+/// Group-addresses scope and attempted set; `at` remains available when parameter
+/// resolution fails, so a completed link write is still recorded.
 pub fn settle_download(
     partial: Option<PartialDownloadParts>,
     end: DownloadEnd,
@@ -205,6 +212,7 @@ pub fn settle_download(
     now: Option<&ImageRequest>,
     source: SourcePlan,
     resolved: Option<WrittenParameters>,
+    at: DateTime<Utc>,
 ) -> Settlement {
     let memory = written_parts(partial);
     match end {
@@ -217,6 +225,11 @@ pub fn settle_download(
                 BaselineChange::Remove
             } else {
                 BaselineChange::Keep
+            },
+            link_baseline: if attempted.intersection(memory).group_addresses {
+                LinkBaselineChange::Remove
+            } else {
+                LinkBaselineChange::Keep
             },
         },
         DownloadEnd::Completed => {
@@ -236,10 +249,28 @@ pub fn settle_download(
                 },
             };
             let programmed = confirmed.intersection(current);
+            let link_baseline = match (memory.group_addresses, source) {
+                (false, _) => LinkBaselineChange::Keep,
+                (true, SourcePlan::ChangedOrUnknown) => LinkBaselineChange::Remove,
+                (true, SourcePlan::Unchanged) => LinkBaselineChange::Record(LinkBaseline {
+                    program_id: written.program_id.clone(),
+                    links: written
+                        .links
+                        .iter()
+                        .map(|link| BaselineLink {
+                            object: link.object,
+                            group_address: link.group_address,
+                            sending: link.sending,
+                        })
+                        .collect(),
+                    at,
+                }),
+            };
             let parameter_baseline = match (memory.parameters, source, resolved) {
                 (false, _, _) => BaselineChange::Keep,
                 (true, SourcePlan::Unchanged, Some(resolved)) => {
                     BaselineChange::Record(ParameterBaseline {
+                        object_flags: resolved.object_flags,
                         program_id: written.program_id.clone(),
                         values: resolved.values,
                         at: resolved.at,
@@ -252,6 +283,7 @@ pub fn settle_download(
                 pending: confirmed.intersection(complement(programmed)),
                 touched: confirmed,
                 parameter_baseline,
+                link_baseline,
             }
         }
     }
@@ -279,12 +311,14 @@ pub fn settle_address(end: AddressEnd) -> Settlement {
             pending: ProgrammingParts::NONE,
             touched: address,
             parameter_baseline: BaselineChange::Keep,
+            link_baseline: LinkBaselineChange::Keep,
         },
         AddressEnd::Uncertain => Settlement {
             programmed: ProgrammingParts::NONE,
             pending: address,
             touched: address,
             parameter_baseline: BaselineChange::Keep,
+            link_baseline: LinkBaselineChange::Keep,
         },
         AddressEnd::NothingWritten => Settlement::default(),
     }
@@ -309,7 +343,7 @@ pub fn sole_device_at(project: &Project, address: IndividualAddress) -> Option<D
 pub struct Applied {
     /// Whether the device's flags or last download time changed.
     pub changed: bool,
-    /// The parameter baseline edit the caller must persist with the flags,
+    /// The explicit independent section edits the caller must persist with the flags,
     /// in the same write, and then apply to the baselines it holds.
     pub baseline: Option<BaselineEdit>,
 }
@@ -343,7 +377,13 @@ pub fn apply_settlement(
     }
     Applied {
         changed,
-        baseline: settlement.parameter_baseline.edit_for(device),
+        baseline: (!matches!(settlement.parameter_baseline, BaselineChange::Keep)
+            || !matches!(settlement.link_baseline, LinkBaselineChange::Keep))
+        .then(|| BaselineEdit {
+            device,
+            parameter: settlement.parameter_baseline.clone(),
+            links: settlement.link_baseline.clone(),
+        }),
     }
 }
 

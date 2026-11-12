@@ -90,10 +90,7 @@ pub(crate) fn mark_device(
     // the parameter baseline, outside the undoable command (ADR-0173 §3).
     // Undoing the mark restores the flags, never the baseline. Only a device
     // that has one makes the mark's journal write synchronous (ADR-0166).
-    let forget = vec![BaselineEdit {
-        device,
-        baseline: None,
-    }];
+    let forget = vec![BaselineEdit::remove(device)];
     domain::apply_bound_prepared_with(state, binding, "MarkDeviceProgramming", command, forget)
 }
 
@@ -354,7 +351,23 @@ fn after_download(
                                 .ok()
                             })
                             .flatten()
-                            .map(|values| WrittenParameters { values, at });
+                            .map(|values| WrittenParameters {
+                                values,
+                                object_flags: knx_productdb::image::resolve_effective_object_flags(
+                                    conn,
+                                    &written.program_id,
+                                    &written.values,
+                                    &written.flag_overrides,
+                                )
+                                .ok()
+                                .map(|flags| {
+                                    flags
+                                        .into_iter()
+                                        .map(|(number, flags)| (number, flags.into()))
+                                        .collect()
+                                }),
+                                at,
+                            });
                         Ok::<_, std::convert::Infallible>((now, source, resolved))
                     })
                     .ok()
@@ -362,7 +375,8 @@ fn after_download(
                     .unwrap_or((None, SourcePlan::ChangedOrUnknown, None)),
                 None => (None, SourcePlan::ChangedOrUnknown, None),
             };
-            let settlement = settle_download(partial, end, written, now.as_ref(), source, resolved);
+            let settlement =
+                settle_download(partial, end, written, now.as_ref(), source, resolved, at);
             let subject = match end {
                 DownloadEnd::Completed => format!("Download to {label} finished"),
                 DownloadEnd::Interrupted(_) => {

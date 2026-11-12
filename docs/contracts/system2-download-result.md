@@ -276,6 +276,14 @@ and reopen never settle.
 - A persistence failure applies nothing and is reported as `persistenceFailed`; flags,
   history and revision stay as they were.
 
+**Baselines.** Every settlement representing possible device mutation removes
+the parameter baseline, including verified downloads; no-mutation paths keep
+it (ADR-0173). The proposed [ADR-0174 extension](../adr/0174-last-downloaded-links-and-flags.md)
+requires the same for **both** baselines once implemented: every such settlement
+removes parameter/flags and links, including verified downloads, while
+no-mutation paths keep both. A programmed-part credit is not a baseline record;
+the System-2 written side is not an `ImageRequest`.
+
 **Unexpected worker end.** The retained service handle is a supervisor: it ends only after the
 worker and, when the worker panicked or was aborted inside this process, after a conservative
 terminal settlement computed from the durable journal alone (never a verified claim; no journal

@@ -146,6 +146,13 @@ Only settlement records it, in `apply_settlement`, in the same step as the
 flags. It is removed by settlement, by a manual mark (below) and by pruning
 at save (§2); nothing else changes it.
 
+Proposed extension, not implemented: [ADR-0174](0174-last-downloaded-links-and-flags.md)
+adds effective object flags to `WrittenParameters`, `ParameterBaseline` and
+`Record`, using shared image/settlement/comparison resolution. It distinguishes
+unknown flags from a known empty set without losing migrated parameter values.
+On implementation this values-only contract must be amended with that extension;
+the Parameters lifecycle rules remain unchanged.
+
 | Settler and end | Baseline |
 | --- | --- |
 | download `Completed`, source `Unchanged`, Parameters in scope (complete or partial) | `Record` the written request's resolved values, even when the project changed during the run: exactly those edits then differ |
@@ -206,8 +213,9 @@ description "Value at last download: …" / "Wert beim letzten Programmieren:
 values, how many of them the current settings do not show (inactive in the
 current settings, which carry no device claim either) and, separately, how many
 only the Manufacturer fields tab shows, where they are marked. An unusable baseline
-gives one plain sentence and no row marks. Links and object flags get no
-per-item marks.
+gives one plain sentence and no row marks. Links and object flags currently
+get no per-item marks; [ADR-0174](0174-last-downloaded-links-and-flags.md)
+proposes them in the communication-object view (not implemented).
 
 ### 6. Version restore settles the four flags against the live project
 

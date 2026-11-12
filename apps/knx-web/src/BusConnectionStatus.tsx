@@ -1,6 +1,7 @@
 /** Status-bar bus connection: state, gateway drop-up and explicit connect/disconnect. */
 import { useBusTransport, useIpTunnelTransport, useSerialTarget } from "./serialPreference";
 import BusTransportFields from "./BusTransportFields";
+import ExperimentalTransportBadge, { isExperimentalTransport } from "./ExperimentalTransportBadge";
 import { gatewayWithTransport, serialLabel, validSerialTarget, type BusEndpoint } from "./serialTransport";
 import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import * as api from "./api";
@@ -184,6 +185,8 @@ export default function BusConnectionStatus({ onOpenBusSettings }: { onOpenBusSe
       <span className="bus-connection-state" title={detailText(connection, t)}>
         <span className="bus-connection-indicator" data-tone={tone(connection)} aria-hidden="true" />
         {stateText(connection, t)}
+        {(connection.view.phase === "connected" || connection.view.phase === "lost")
+          && isExperimentalTransport(!!connection.view.serial, connection.view.transport) && <ExperimentalTransportBadge />}
       </span>
       <button
         ref={triggerRef}
@@ -194,6 +197,7 @@ export default function BusConnectionStatus({ onOpenBusSettings }: { onOpenBusSe
         onClick={() => setOpen((value) => !value)}
       >
         {transport === "serial" ? t("busTransport.selection", {target:selectedLabel}) : t("busConnection.trigger", { gateway: selectedLabel })}
+        {isExperimentalTransport(transport === "serial", transport === "ip" ? tunnel : undefined) && <ExperimentalTransportBadge />}
         <span aria-hidden="true"> ▴</span>
       </button>
       {bound ? (

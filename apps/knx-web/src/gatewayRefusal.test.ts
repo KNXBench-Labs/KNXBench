@@ -25,6 +25,19 @@ const busy = (holder: unknown) => refusal(409, { error: "the gateway serves one 
 
 afterEach(() => { active.language = "en"; });
 
+it.each(["en", "de"] as const)("%s: busy-holder transport captions retain the experimental warning", language => {
+  const t = (key: Parameters<typeof translateFor>[1], params?: Parameters<typeof translateFor>[2]) => translateFor(language, key, params);
+  for (const state of ["active", "closed"] as const) {
+    const base = { kind: "busMonitor" as const, sessionId: 3, state, gateway: "192.0.2.10:3671" };
+    const tcp = describeHolder({ ...base, transport: "tcp" }, t);
+    expect(tcp).toContain(`TCP (${t("transport.experimental")})`);
+    const serial = describeHolder({ ...base, serial: { path: "/dev/ttyACM0", source: "1.1.250", mode: "passive" } }, t);
+    expect(serial).toContain("TP-UART");
+    expect(serial).toContain(`(${t("transport.experimental")})`);
+    expect(describeHolder({ ...base, transport: "udp" }, t)).not.toContain(t("transport.experimental"));
+  }
+});
+
 describe("admitGatewayRefusal", () => {
   it("admits each holder kind the server names", () => {
     for (const holder of [

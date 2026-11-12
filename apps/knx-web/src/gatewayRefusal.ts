@@ -195,11 +195,12 @@ export function describeHolder(holder: TunnelHolder, t: Translate): string {
         ? t("gatewayRefusal.busy.addressProgrammingWaiting", { address: holder.address })
         : t("gatewayRefusal.busy.addressProgramming", { address: holder.address });
     case "busMonitor":
-      if (holder.serial) return t(holder.state === "active" ? "busTransport.connected" : "busTransport.lost", { target: serialLabel(holder.serial) });
+      if (holder.serial) return t(holder.state === "active" ? "busTransport.connected" : "busTransport.lost", { target: `${serialLabel(holder.serial)} (${t("transport.experimental")})` });
       if (holder.gateway === undefined) return t("gatewayRefusal.busy.busMonitorRunning");
-      return holder.state === "active"
-        ? t("gatewayRefusal.busy.busMonitor", { gateway: gatewayWithTransport(holder.gateway, holder.transport) })
-        : t("gatewayRefusal.busy.busMonitorClosed", { gateway: gatewayWithTransport(holder.gateway, holder.transport) });
+      return t(holder.state === "active" ? "gatewayRefusal.busy.busMonitor" : "gatewayRefusal.busy.busMonitorClosed", {
+        gateway: gatewayWithTransport(holder.gateway, holder.transport)
+          + (holder.transport === "tcp" ? ` (${t("transport.experimental")})` : ""),
+      });
     case "lineScan":
       return t("gatewayRefusal.busy.lineScan", { probed: holder.probed, total: holder.total });
     case "deviceDownloadBatch":

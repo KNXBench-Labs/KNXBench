@@ -101,6 +101,8 @@ for(const language of ["en","de"] as const) for(const width of [1440,400]) {
     await page.locator(".bus-connection-trigger").click();
     const panel=page.locator(".bus-connection-panel");
     await panel.getByRole("combobox",{name:m["busTransport.label"],exact:true}).selectOption("serial");
+    await expect(panel.locator(".bus-transport-experimental")).toHaveText(m["transport.experimentalNote"]);
+    await expect(page.locator(".bus-connection-trigger .transport-experimental-badge")).toHaveText(m["transport.experimental"]);
     await expect(panel.getByRole("button",{name:m["busConnection.connect"],exact:true})).toBeDisabled();
     await panel.getByLabel(m["busTransport.source"],{exact:true}).fill(serial.source);
     await expect(panel.getByRole("button",{name:m["busConnection.connect"],exact:true})).toBeDisabled(); // Empty path independently refuses.

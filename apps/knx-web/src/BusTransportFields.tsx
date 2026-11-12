@@ -4,6 +4,7 @@ import { useBusTransport, useIpTunnelTransport, useSerialTarget } from "./serial
 import { useTranslate } from "./i18n";
 import { validSerialPath, validSerialSource } from "./serialTransport";
 import SerialCandidateFields from "./SerialCandidateFields";
+import { isExperimentalTransport } from "./ExperimentalTransportBadge";
 import "./BusTransportFields.css";
 
 export default function BusTransportFields({ disabled = false }: { disabled?: boolean }) {
@@ -15,9 +16,11 @@ export default function BusTransportFields({ disabled = false }: { disabled?: bo
   return <div className="bus-transport-fields">
     <label>{t("busTransport.label")}
       <select value={transport} disabled={disabled} onChange={event => select(event.target.value === "serial" ? "serial" : "ip")}>
-        <option value="ip">KNXnet/IP</option><option value="serial">USB/serial TP-UART</option>
+        <option value="ip">KNXnet/IP</option><option value="serial">{t("busTransport.serialOption")}</option>
       </select>
     </label>
+    {isExperimentalTransport(transport === "serial", transport === "ip" ? tunnel : undefined)
+      && <p role="note" className="bus-transport-experimental">{t("transport.experimentalNote")}</p>}
     {transport === "ip" && <>
       <label>{t("busTransport.ipTunnel.label")}
         <select value={tunnel} disabled={disabled || pending} onChange={event => {

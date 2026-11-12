@@ -25,6 +25,15 @@ Independent, input-gated import/model cases:
    devices, and independent samples for other untested schemas (12/13/14).
 4. Real CSV/ESF/report/compare references (KL-038/044/051) when supplied.
 5. Issue #7: the reporter's log or report and acceptance.
+   **Checked 12 November 2026:** an ETS 5.7 project (schema 20) imports since
+   12 October 2026 (KL-177); this is not a silent failure. Synthetic
+   always-on tests (`crates/knx-etsproj/tests/it/schema20_import.rs`) pin the
+   import, the report's `unsupported` entry naming the three-public-sample
+   evidence boundary, and the refusal of a schema without a table with a
+   message naming it and the supported schemas (11, 20, 21, 23). A read-only
+   inventory of the available private corpus found no schema-20 export among
+   readable top-level XML; nested/protected archives were not classified. No
+   real ETS 5.7 project was run; acceptance on the reporter's project remains open.
 6. Primary `knx_cvexc` semantics before any runtime rule is enabled.
 7. Installation instructions: other source schemas/encodings and an ETS
    export of edited overrides.

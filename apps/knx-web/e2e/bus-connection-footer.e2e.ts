@@ -143,7 +143,7 @@ for (const language of ["en", "de"] as const) {
       await trigger.focus();
       await page.keyboard.press("Enter");
       await assertPanelFits(page, width, height);
-      await expect(page.locator(".bus-connection-panel select").first().locator("option")).toHaveText(["KNXnet/IP", "USB/serial TP-UART"]);
+      await expect(page.locator(".bus-connection-panel select").first().locator("option")).toHaveText(["KNXnet/IP", m["busTransport.serialOption"]]);
       await expect(page.locator(".bus-connection-panel select").first()).toHaveValue("ip");
       const router = page.locator(".bus-connection-panel .bus-discovery-option", { hasText: "Line router" });
       await expect(router).toBeDisabled();

@@ -2,6 +2,7 @@
 import { useBusTransport, useIpTunnelTransport, useSerialTarget } from "./serialPreference";
 import { gatewayRefusalMessage } from "./gatewayRefusal";
 import BusTransportFields from "./BusTransportFields";
+import ExperimentalTransportBadge from "./ExperimentalTransportBadge";
 import { serialLabel, validSerialTarget, type BusEndpoint, type IpTunnelTransport, type SerialTarget } from "./serialTransport";
 // apps/knx-web/src/BusMonitorPanel.tsx
 import ResizableTable from "./ResizableTable";
@@ -830,7 +831,7 @@ export default function BusMonitorPanel({ projectOpen, project, projectScope, on
           anybody's gateway. */}
       <header className="workspace-heading">
         <div>
-          <p className="eyebrow">{sessionSerial || (!session && transport === "serial") ? "USB/serial TP-UART" : t("busMonitor.eyebrow")}</p>
+          <p className="eyebrow">{sessionSerial || (!session && transport === "serial") ? <>USB/serial TP-UART<ExperimentalTransportBadge /></> : t("busMonitor.eyebrow")}</p>
           <h1>{t("busMonitor.title")}</h1>
         </div>
         <div className="bus-monitor-connect">
@@ -1027,11 +1028,11 @@ export default function BusMonitorPanel({ projectOpen, project, projectScope, on
       {session && (
         <p className="bus-monitor-session">
           {t("busMonitor.session", { id: session.sessionId })}
-          {sessionSerial && <span>{serialLabel(sessionSerial)} · {t(sessionSerial.mode === "active" ? "busTransport.activeWarning" : "busTransport.passiveHint")}</span>}
+          {sessionSerial && <span>{serialLabel(sessionSerial)}<ExperimentalTransportBadge /> · {t(sessionSerial.mode === "active" ? "busTransport.activeWarning" : "busTransport.passiveHint")}</span>}
           {!sessionSerial && session.assignedAddress && (
             <>{t("busMonitor.assignedAddress", { address: session.assignedAddress })}</>
           )}
-          {sessionTransport && <span data-testid="bus-session-transport"> · {t("busTransport.ipTunnel.observed", { transport: sessionTransport === "tcp" ? "TCP" : "UDP" })}</span>}
+          {sessionTransport && <span data-testid="bus-session-transport"> · {t("busTransport.ipTunnel.observed", { transport: sessionTransport === "tcp" ? "TCP" : "UDP" })}{sessionTransport === "tcp" && <ExperimentalTransportBadge />}</span>}
           {status === "closed" && (sessionSerial ? t("busTransport.lost", {target:serialLabel(sessionSerial)}) : t("busMonitor.closedByGateway"))}
         </p>
       )}

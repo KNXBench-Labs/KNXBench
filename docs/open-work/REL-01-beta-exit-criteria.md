@@ -63,7 +63,7 @@ recorded owner decision. Each row ends with what the owner has to decide, if any
 | ID | Level | Criterion → acceptance | Current state |
 | --- | --- | --- | --- |
 | B-10 | Must | **Device editor does not hang** after save or after the download dialog (#36, [WP-31](WP-31-device-editor-unavailable-after-save.md)): reproduced and fixed, or the remaining cause is known and has a recovery in the UI. | Partly fixed; the reporter's error message is not reproduced. |
-| B-11 | Must | **ETS import scope is declared**: ETS 5.7 projects (schema 20, #7, [WP-10](WP-10-import-and-model-evidence.md)) are either imported or refused with a clear message, and the supported ETS versions are listed. | #7 is open and input-gated. Whether schema 20 gets a clear refusal message today is *unverified*. *Decide:* import ETS 5.7 before beta, or declare it unsupported. |
+| B-11 | Must | **ETS import scope is declared**: ETS 5.7 projects (schema 20, #7, [WP-10](WP-10-import-and-model-evidence.md)) are either imported or refused with a clear message, and the supported ETS versions are listed. | Checked 12 Nov 2026: ETS 5.7 schema-20 projects **import** since 12 Oct 2026 (`f23be82cc`, KL-177), on evidence from three public ETS 5.7 samples; the import report carries an `unsupported` entry naming that evidence boundary. Unknown schemas are refused with a message naming the schema and the supported list (11, 20, 21, 23); schema 22 stays refused. Not verified on the #7 reporter's project. Remaining: list the supported ETS versions in the release notes. |
 | B-12 | Should | **Pending changes are visible everywhere** a download can change something ([WP-37](WP-37-pending-changes-across-ui.md)). | Steps 1–2 on main; per-link/object marks and module parameters are open. |
 | B-13 | Should | **Unsupported parameter features are visible**: wherever WP-05 to WP-09 and WP-14 are evidence-gated, the editor shows the item as unsupported or read-only, and a download refuses values it cannot encode. | The refusal rules exist per feature; that every gated construct is visible as such is *unverified*. |
 
@@ -71,7 +71,7 @@ recorded owner decision. Each row ends with what the owner has to decide, if any
 
 | ID | Level | Criterion → acceptance | Current state |
 | --- | --- | --- | --- |
-| B-14 | Must | **Transport scope is declared**: UDP tunnelling is the supported path. TCP ([WP-29](WP-29-knxnet-ip-tcp-tunnelling.md)) and the USB/serial TP-UART ([WP-26](WP-26-status-bar-bus-connection.md)) are marked experimental in the UI and the notes until a real-interface test exists. | The release notes state the limits. The web message catalogue has no "experimental" wording for TCP or USB/serial (only for System-2), so the UI does not mark them yet. |
+| B-14 | Must | **Transport scope is declared**: UDP tunnelling is the supported path. TCP ([WP-29](WP-29-knxnet-ip-tcp-tunnelling.md)) and the USB/serial TP-UART ([WP-26](WP-26-status-bar-bus-connection.md)) are marked experimental in the UI and the notes until a real-interface test exists. | UI part met on main (12 Nov 2026): the transport selectors in Settings, the status-bar drop-up and Bus Monitor, and the line-scan TCP option read "experimental" (en+de) with a note naming UDP as the supported path; the status-bar state, the monitor session and a TCP line-scan result carry an experimental tag. No behaviour change. The release notes still need the same wording at the next release. |
 | B-15 | Should | **Native Linux acceptance** reaches the 8 November target ([WP-11](WP-11-native-linux-acceptance.md#acceptance-target--owner-decision-8-november-2026)). | In progress; no whole-package closure. |
 
 ### Release mechanics
@@ -98,7 +98,9 @@ These stay open, documented and visible, but do not block the stage change:
 ## Owner decisions, smallest first
 
 1. Accept, change or reject this catalogue (B-01). The version scheme is decided.
-2. ETS 5.7 import: before beta, or declared unsupported (B-11).
+2. ETS 5.7 import: before beta, or declared unsupported (B-11). Fact check
+   12 Nov 2026: schema 20 already imports on public-sample evidence; the open
+   choice is whether that evidence suffices for beta.
 3. System-2: fix first, or ship it as experimental (B-06).
 4. The declared family list, and whether it may include families with simulator evidence only (B-05, B-08).
 5. Docker prerelease channel name (B-18).

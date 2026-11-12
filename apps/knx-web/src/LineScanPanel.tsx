@@ -8,6 +8,7 @@ import { emitAchievementEvent } from "./achievementEvents";
 import { loadPreferredGateway } from "./gatewayPreference";
 import { type Translate, useTranslate } from "./i18n";
 import type { IpTunnelTransport } from "./serialTransport";
+import ExperimentalTransportBadge from "./ExperimentalTransportBadge";
 import LineScanExclusionsEditor from "./LineScanExclusionsEditor";
 import {
   hasInvalidLineScanExclusions,
@@ -294,7 +295,8 @@ export default function LineScanPanel({
 
       <div className="line-scan-layout">
         <form className="line-scan-config" onSubmit={(event) => event.preventDefault()}>
-          <label>{t("lineScan.transport")}<select disabled={controlsLocked} value={transport} onChange={event => { setTransport(event.target.value === "tcp" ? "tcp" : "udp"); setEstimate(null); }}><option value="udp">UDP</option><option value="tcp">TCP</option></select></label>
+          <label>{t("lineScan.transport")}<select disabled={controlsLocked} value={transport} onChange={event => { setTransport(event.target.value === "tcp" ? "tcp" : "udp"); setEstimate(null); }}><option value="udp">UDP</option><option value="tcp">{t("busTransport.ipTunnel.tcp")}</option></select></label>
+          {transport === "tcp" && <p role="note" className="line-scan-experimental">{t("transport.experimentalNote")}</p>}
         <label>{t("lineScan.gateway")}<input disabled={controlsLocked} value={gateway} onChange={(event) => { gatewayTouchedRef.current = true; gatewaySeedResolvedRef.current = true; setGateway(event.target.value); setEstimate(null); }} placeholder="192.0.2.10:3671" /></label>
           <label>{t("lineScan.area")}<input disabled={controlsLocked} type="number" min="0" max="15" value={area} onChange={(event) => changeNumber(setArea, event.target.value)} /></label>
           <label>{t("lineScan.line")}<input disabled={controlsLocked} type="number" min="0" max="15" value={line} onChange={(event) => changeNumber(setLine, event.target.value)} /></label>
@@ -317,7 +319,7 @@ export default function LineScanPanel({
       {estimate && <section className="line-scan-estimate" aria-live="polite"><h3>{t("lineScan.estimateTitle")}</h3><p>{t("lineScan.candidates", { count: estimate.value.candidateCount })}</p><p>{t("lineScan.basis", { count: estimate.value.vacantConfirmations, timeout: estimate.value.responseTimeoutMs, confirmations: estimate.value.vacantConfirmations, pause: estimate.value.interProbePauseMs })}</p><strong>{t("lineScan.worstCase", { duration: seconds(estimate.value.worstCaseMs) })}</strong></section>}
       {error && <p className="form-error" role="alert">{error}</p>}
       {response && <section className="line-scan-progress" aria-live="polite"><p><span className={response.status === "running" ? "task-status-text" : undefined}>{t(statusKey(response.status))}</span> · {response.completedCount}/{response.totalCount}</p><progress max={response.totalCount} value={response.completedCount} />{response.error && <p className="form-error">{response.error}</p>}</section>}
-      {response && <p>{t("lineScan.actualTransport", { transport: response.transport.toUpperCase() })}</p>}
+      {response && <p>{t("lineScan.actualTransport", { transport: response.transport.toUpperCase() })}{response.transport === "tcp" && <ExperimentalTransportBadge />}</p>}
       {response?.skippedFrames !== null && response?.skippedFrames !== undefined && response.skippedFrames > 0 && <p role="status">{t("lineScan.skippedFrames", { count: response.skippedFrames })}</p>}
       {response?.transport === "tcp" && response.status !== "running" && <p>{t("lineScan.skipSample")}</p>}
       {response?.disconnectConfirmed === false && <p role="alert" className="form-error">{t("lineScan.cleanupUnconfirmed", { error: response.cleanupError ?? "" })}</p>}

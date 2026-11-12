@@ -1,0 +1,22 @@
+/* Small warning-toned tag for transports without a real-interface test (TCP, USB/serial). */
+.transport-experimental-badge {
+  display: inline-block;
+  padding: 0 0.35rem;
+  border: 1px solid color-mix(in srgb, var(--knx-warning-color) 60%, transparent);
+  border-radius: var(--knx-radius-button);
+  background: color-mix(in srgb, var(--knx-warning-color) 16%, transparent);
+  font-size: 0.72em;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+/* The matching note beside a transport selector: same warning tone, readable as body text. */
+.bus-transport-experimental, .line-scan-experimental {
+  margin: 0;
+  padding: 0.25rem 0.5rem;
+  border-inline-start: 3px solid var(--knx-warning-color);
+  background: color-mix(in srgb, var(--knx-warning-color) 7%, transparent);
+  overflow-wrap: anywhere;
+}

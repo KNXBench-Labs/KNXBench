@@ -135,6 +135,12 @@ does not connect. The running-session label uses observed transport rather than
 the saved preference. A server without the strict TCP start route refuses the
 request; KNXBench does not retry it as UDP.
 
+**Experimental (main-only after Alpha 20).** UDP tunnelling is the supported
+path. TCP and USB/serial TP-UART are tested only with simulated and loopback
+peers, not with a real interface, so the web UI labels them experimental: the
+selector option, a warning note beside it, and a tag on the status-bar state,
+the Bus Monitor session and a TCP line scan. Behaviour is unchanged.
+
 This selection covers only monitoring and the same session's bound group
 read/write actions. Device programming, downloads, scans, discovery and routing
 do not follow it and retain their existing UDP paths. TCP has no tunnelling ACK:
@@ -873,6 +879,8 @@ Settings, the status-bar popover and Bus Monitor. Enter the device path visible
 on the **server**, including its container if applicable; a browser-local device
 path does not grant the server access. Paths are entered manually; the passive
 candidate listing is described below.
+The option is labelled experimental on `main` after Alpha 20; see
+[Optional TCP](#optional-tcp-source-candidate-8-november-2026).
 Choose a valid individual source address that is unique on your installation.
 Your IP gateway preference stays available for device tools and scans.
 

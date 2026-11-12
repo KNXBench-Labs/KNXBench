@@ -1,7 +1,8 @@
 /** Panel rendering and editing a device's application-program parameters, fetched per selection. */
-import { Fragment, useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactElement } from "react";
+import { Fragment, useCallback, useEffect, useId, useLayoutEffect, useRef, useState, type ReactElement } from "react";
 import * as api from "./api";
 import type {
+  LastDownload,
   ModuleScope,
   ParameterDiagnostic,
   ParameterDiagnosticKind,
@@ -26,6 +27,9 @@ import { parameterSectionKeys } from "./parameterWorkspace";
 import { isSourceEditorCandidate } from "./parameterSourceHost";
 import UnresolvedProgramNotice from "./UnresolvedProgramNotice";
 import { useComMutation } from "./ComMutationBoundary";
+import { differingByRef, downloadedValueText, hiddenDifferingCount, type DownloadedValue } from "./parameterLastDownload";
+import { formatLogTime } from "./logRows";
+import { useUiLanguage } from "./uiLanguage";
 
 // T18 slice 3, task 4 (design docs/superpowers/specs/2026-09-11-parameter-editor-design.md).
 // Fetches `GET /api/device/{id}/parameters` on every device selection —
@@ -126,9 +130,12 @@ function ParameterFieldRow(props: {
   onConflict: () => Promise<void>;
   /** Present when the checked editor may be offered for this row. */
   checked: CheckedEditorContext | null;
+  /** ADR-0173: this value differs from the last download; absent otherwise. */
+  downloaded?: DownloadedValue;
 }) {
-  const { field, moduleScoped, deviceId, language, sourceLanguage, onUpdated, onValueApplied, binding, onConflict, checked } = props;
+  const { field, moduleScoped, deviceId, language, sourceLanguage, onUpdated, onValueApplied, binding, onConflict, checked, downloaded } = props;
   const t = useTranslate();
+  const downloadNoteId = useId();
   const [value, setValue] = useState(field.value ?? "");
   const mutate = useComMutation();
   const [checkedOpen, setCheckedOpen] = useState(false);
@@ -254,10 +261,14 @@ function ParameterFieldRow(props: {
     </div>;
   }
 
+  // The mark describes the control; the dot is hidden, so the name stays the label.
+  const downloadNote = downloaded ? t("parameters.lastDownload.value",
+    { value: downloadedValueText(t, field, downloaded.downloaded) }) : undefined;
   const control = field.kind === "Restriction" ? (
     <select
       value={value}
       disabled={disabled}
+      aria-describedby={downloadNote ? downloadNoteId : undefined}
       onChange={(e) => { const next = e.target.value; setValue(next); void apply(false, next); }}
     >
       {/* #45: only declared values are choosable. A missing or undeclared
@@ -281,6 +292,7 @@ function ParameterFieldRow(props: {
       min={field.min ?? undefined}
       max={field.max ?? undefined}
       disabled={disabled}
+      aria-describedby={downloadNote ? downloadNoteId : undefined}
       onChange={(e) => setValue(e.target.value)}
       onBlur={() => void apply()}
       onKeyDown={(e) => {
@@ -292,6 +304,7 @@ function ParameterFieldRow(props: {
       type="text"
       value={value}
       disabled={disabled}
+      aria-describedby={downloadNote ? downloadNoteId : undefined}
       onChange={(e) => setValue(e.target.value)}
       onBlur={() => void apply()}
       onKeyDown={(e) => {
@@ -301,8 +314,10 @@ function ParameterFieldRow(props: {
   );
 
   return <>
-    <label className="inspector-field parameter-field" data-ets-id={field.etsId}>
-      <span className="parameter-field-name">{label}</span>
+    <label className="inspector-field parameter-field" data-ets-id={field.etsId}
+      data-differs-from-download={downloadNote ? "true" : undefined}>
+      <span className="parameter-field-name">{label}{downloadNote && <span className="parameter-download-mark"
+        title={downloadNote} aria-hidden="true" />}</span>
       {field.access && <span className="provenance-badge" title={field.access}>{parameterMetadataLabel(t, "access", field.access)}</span>}
       {untranslated && language !== null && (
         <LanguageFallbackBadge selected={language} source={sourceLanguage} part={untranslated} />
@@ -323,6 +338,7 @@ function ParameterFieldRow(props: {
       {saving && <span className="parameter-field-caption parameter-field-saving" role="status">{t("parameters.savingCaption")}</span>}
       {error && <span className="field-error" role={conflict ? "alert" : undefined}>{error}</span>}
     </label>
+    {downloadNote && <span id={downloadNoteId} hidden>{downloadNote}</span>}
     {conflict && <div className="parameter-conflict" data-conflict-for={field.etsId}>
       <span className="parameter-conflict-current">
         {t("parameters.conflictCurrent", { value: field.value ?? t("parameters.none") })}
@@ -433,8 +449,10 @@ function ParameterSectionView(props: {
   binding: SnapshotContext | null;
   onConflict: () => Promise<void>;
   checked: Omit<CheckedEditorContext, "scope"> | null;
+  /** ADR-0173: differing unscoped refs; module-scoped rows are never marked. */
+  differing: ReadonlyMap<string, DownloadedValue>;
 }) {
-  const { section, deviceId, language, sourceLanguage, onUpdated, onValueApplied, binding, onConflict } = props;
+  const { section, deviceId, language, sourceLanguage, onUpdated, onValueApplied, binding, onConflict, differing } = props;
   const checked = props.checked === null ? null : { ...props.checked, scope: section.scope };
   const t = useTranslate();
   const fields = section.fields;
@@ -467,6 +485,7 @@ function ParameterSectionView(props: {
             binding={binding}
             onConflict={onConflict}
             checked={checked}
+            downloaded={section.scope === null ? differing.get(field.etsId) : undefined}
           />
           </div>
         </Fragment>)}
@@ -532,6 +551,34 @@ function DiagnosticsBanner(props: { diagnostics: ParameterDiagnostic[] }) {
       </ul>
     </details>
   );
+}
+
+/**
+ * ADR-0173 §5: one plain line on the comparison with the last download.
+ * Static text, not a live region; nothing when the server did not report it.
+ */
+function LastDownloadSummary(props: { lastDownload: LastDownload; shown: readonly ParameterSection[] }) {
+  const { lastDownload, shown } = props;
+  const t = useTranslate();
+  const [uiLanguage] = useUiLanguage();
+  const time = lastDownload.at === undefined ? ""
+    : formatLogTime(Date.parse(lastDownload.at), uiLanguage, new Date()) ?? lastDownload.at;
+  let text: string;
+  let hidden = 0;
+  if (lastDownload.state === "usable") {
+    const count = lastDownload.differing?.length ?? 0;
+    hidden = hiddenDifferingCount(lastDownload, shown);
+    text = count === 0 ? t("parameters.lastDownload.noneDiffer", { time })
+      : t(count === 1 ? "parameters.lastDownload.differs.one" : "parameters.lastDownload.differs.other", { count, time });
+  } else {
+    text = t(`parameters.lastDownload.${lastDownload.state}` as const);
+  }
+  const differs = lastDownload.state === "usable" && (lastDownload.differing?.length ?? 0) > 0;
+  return <p className="parameter-last-download" data-state={lastDownload.state} data-differs={differs ? "true" : undefined}>
+    {differs && <span className="parameter-last-download-dot" aria-hidden="true" />}
+    <span>{text}{hidden > 0 && <> {t(hidden === 1 ? "parameters.lastDownload.hidden.one"
+      : "parameters.lastDownload.hidden.other", { hidden })}</>}</span>
+  </p>;
 }
 
 export type ParameterView = "parameters" | "diagnostics" | "restricted" | "functions";
@@ -623,7 +670,12 @@ export function useDeviceParameters(deviceId: number, refreshKey?: ProjectTree) 
     ++requestIdRef.current;
     floorRef.current = { target: targetRef.current, snapshot };
     setLoadError(null);
-    setShown({ panel, snapshot });
+    // ADR-0173: a write's response carries no comparison. Keep the shown
+    // one for the same program until the follow-up GET replaces it, so
+    // the marks do not blink off in between; never derive one here.
+    setShown((previous) => ({ snapshot, panel: panel.lastDownload === undefined && previous !== null
+      && previous.panel.lastDownload !== undefined && previous.panel.programId === panel.programId
+      ? { ...panel, lastDownload: previous.panel.lastDownload } : panel }));
   }, []);
 
   const reloadProject = useCallback(async (publish: (tree: ProjectTree) => void) => {
@@ -697,6 +749,7 @@ export function ParameterPanelContent(props: ParameterPanelProps & {
 
   // WP-15: a section view keeps its own scope's state when a sibling vanishes.
   const sectionKeys = parameterSectionKeys(sections);
+  const differing = differingByRef(panel.lastDownload);
 
   if (view === "functions" && sections.length === 0) return <p className="inspector-description">{t("parameters.functionsEmpty")}</p>;
 
@@ -709,6 +762,8 @@ export function ParameterPanelContent(props: ParameterPanelProps & {
           reload that makes the program resolve (#21, ADR-0128). */}
       <UnresolvedProgramNotice key={deviceId} unresolved={panel.programId === null}
         info={panel.programId === null ? panel.unresolvedProgram ?? null : null} onRestored={onConflict} />
+      {view === "parameters" && panel.programId !== null && panel.lastDownload !== undefined
+        && <LastDownloadSummary lastDownload={panel.lastDownload} shown={sections} />}
       {panel.programId === null ? null : sections.length === 0 ? (
         <p className="inspector-description">{t(view === "restricted" ? "parameters.noRestrictedFields" : "parameters.noUserFields")}</p>
       ) : view === "parameters" ? <ParameterWorkspace
@@ -718,7 +773,8 @@ export function ParameterPanelContent(props: ParameterPanelProps & {
           deviceId={deviceId} language={language} sourceLanguage={panel.sourceLanguage}
           onUpdated={onUpdated} onValueApplied={onValueApplied} binding={snapshot} onConflict={onConflict}
           checked={props.snapshot && snapshot && panel.programId !== null
-            ? { programId: panel.programId, snapshot: props.snapshot, writeBinding: snapshot, scope } : null} />}
+            ? { programId: panel.programId, snapshot: props.snapshot, writeBinding: snapshot, scope } : null}
+          downloaded={scope === null ? differing.get(field.etsId) : undefined} />}
       /> : sections.map((section, i) => (
         <ParameterSectionView
           key={sectionKeys[i]}
@@ -731,6 +787,7 @@ export function ParameterPanelContent(props: ParameterPanelProps & {
           binding={snapshot}
           onConflict={onConflict}
           checked={null}
+          differing={differing}
         />
       ))}
     </div>

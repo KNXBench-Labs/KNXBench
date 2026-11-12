@@ -546,7 +546,10 @@ example **Value at last download: Switching**
 (screen readers read it as the field's description). A line above the fields
 says how many values differ and when the download ended, how many of them the
 current settings do not show (inactive parameters), and how many only the
-**Manufacturer fields** tab lists, where they are marked too. Right after you
+**Manufacturer fields** tab lists, where they are marked too. The navigation
+carries the dot as well: every area that holds a changed value and the heading
+above it (for example **Device**), and in **Manufacturer fields** the section
+and group, also while they are closed. Right after you
 change a marked value, its mark goes away and the line is dimmed until the
 editor has read the new comparison. Limits: this is the value the download
 used, not a value read back from the device. Devices imported from ETS,

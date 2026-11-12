@@ -3597,7 +3597,7 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
   border: 1px solid color-mix(in srgb, var(--knx-warning-color) 60%, transparent);
   background: color-mix(in srgb, var(--knx-warning-color) 12%, transparent);
 }
-.device-pending-dot, .parameter-last-download-dot, .com-last-download-dot {
+.device-pending-dot, .parameter-last-download-dot, .com-last-download-dot, .parameter-section-download-mark {
   display: inline-block; flex: none; width: 7px; height: 7px; border-radius: 50%;
   background: var(--knx-warning-color);
 }
@@ -3621,11 +3621,14 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
 .parameter-last-download[data-refreshing="true"] { opacity: 0.6; }
 /* Forced colours drop author backgrounds: keep every status dot painted. */
 @media (forced-colors: active) {
-  .device-pending-dot, .parameter-last-download-dot, .parameter-download-mark, .com-last-download-dot, .com-object-download-mark {
+  .device-pending-dot, .parameter-last-download-dot, .parameter-download-mark, .com-last-download-dot, .com-object-download-mark,
+  .parameter-section-download-mark {
     forced-color-adjust: none; background-color: CanvasText;
   }
 }
 .device-tabs button .device-pending-dot { margin-left: 6px; vertical-align: middle; }
+/* #48: a section, group or scope that holds a differing value. */
+.parameter-section-download-mark { margin-left: 6px; vertical-align: middle; }
 /* ADR-0174: an object row's caption names what differs; its editor row lists it. */
 .com-object-download-note { display: block; overflow-wrap: anywhere; }
 /* Like the editor fields below it: never wider than the scrolling table's viewport. */

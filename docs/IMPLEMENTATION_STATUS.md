@@ -12,6 +12,22 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Parameter areas and sections show where values differ from the last download (12 November 2026; issue #48, WP-37 step 4)
+
+The parameter editor now carries the step-2 differences up its navigation
+(#48): in the Parameters view each area holding a value that differs from the
+last completed KNXBench download, and the scope heading above it, get the amber
+dot; the area button's accessible description says “Contains values that differ
+from the last download”, its name is unchanged. The marks come from every row,
+so they show before an area is opened and while searching. In the Manufacturer
+fields view a closed section and a collapsed group holding such a restricted
+value are marked the same way. The marks use the same comparison and write/read
+lifecycle as the row dots: no client comparison, nothing for module rows or
+unusable comparisons. Web only, no server change. Tests: 10 component tests
+(`ParameterPanel.sectionMarks.test.tsx`), the forced-colours rule test and 4
+browser cases (`parameter-last-download.e2e.ts`: en/de, 1440/400 px) plus the
+extended forced-colours case.
+
 ## The object table shows links and flags that differ from the last download (12 November 2026; WP-37 step 3)
 
 The Communication objects tab now reads `DeviceDetail.last_download`

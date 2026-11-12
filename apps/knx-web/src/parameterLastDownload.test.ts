@@ -63,7 +63,8 @@ describe("status dots under forced colours", () => {
       && candidate.selector.includes(".parameter-download-mark"));
     expect(rule).toBeDefined();
     expect(rule!.selector.split(",").map((part) => part.trim()).sort())
-      .toEqual([".com-last-download-dot", ".com-object-download-mark", ".device-pending-dot", ".parameter-download-mark", ".parameter-last-download-dot"]);
+      .toEqual([".com-last-download-dot", ".com-object-download-mark", ".device-pending-dot", ".parameter-download-mark",
+        ".parameter-last-download-dot", ".parameter-section-download-mark"]);
     const value = (property: string) => rule!.declarations.find((declaration) => declaration.property === property)?.value;
     expect(value("forced-color-adjust")).toBe("none");
     expect(value("background-color")).toBe("CanvasText");

@@ -6,6 +6,7 @@ use crate::journal_writer::JournalStatus;
 use crate::{domain, AppState};
 use knx_store::project_history as history;
 
+mod during_save;
 mod parameter_baseline;
 
 /// A saved project on a server whose journal writer runs in the background.

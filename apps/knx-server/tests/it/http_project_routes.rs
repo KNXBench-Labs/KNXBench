@@ -466,7 +466,11 @@ async fn modified_state_clears_only_after_successful_save_or_save_as() {
         first_saved_at
     );
 
-    *state.store_path.lock().unwrap() = Some(dir.path().join("missing/project.knxdb"));
+    state
+        .store_path
+        .lock()
+        .unwrap()
+        .set(Some(dir.path().join("missing/project.knxdb")));
     let failed = app
         .clone()
         .oneshot(post("/api/project/save", json!({})))
@@ -484,7 +488,7 @@ async fn modified_state_clears_only_after_successful_save_or_save_as() {
         "a failed save must not advance the last-saved timestamp"
     );
 
-    *state.store_path.lock().unwrap() = Some(db_path);
+    state.store_path.lock().unwrap().set(Some(db_path));
     assert_eq!(
         app.clone()
             .oneshot(post("/api/project/save", json!({})))

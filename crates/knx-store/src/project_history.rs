@@ -1423,6 +1423,16 @@ pub fn change_history(
             // stored; settle them against the live project before it lands.
             restored_pending =
                 settle_restored_version(&current_working.project, &mut replacement.project);
+            // Baselines stay outside the version, but an id in it may name
+            // another device than the live one (a re-import under the same
+            // project id): keep only rows of the same devices (ADR-0173 §2).
+            crate::parameter_baseline::prune(
+                &tx,
+                crate::parameter_baseline::PruneBasis::Replaced {
+                    described: Some(&current_working.project),
+                },
+                &replacement.project,
+            )?;
             append_version(
                 &tx,
                 current_working,

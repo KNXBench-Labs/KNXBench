@@ -715,6 +715,42 @@ fn a_version_stored_by_an_older_schema_restores_and_leaves_the_baselines_alone()
             .unwrap()
             .get(DeviceId(1)),
         Some(&baseline(2)),
-        "a restore never brings back or drops a baseline; only a save prunes"
+        "a restore of the same device neither brings back nor drops its baseline"
     );
+}
+
+#[test]
+fn a_restore_keeps_baselines_only_where_the_version_names_the_same_device() {
+    // The version holds the devices before a re-import under the same project
+    // id; ids 2..=4 now name other devices than the version's.
+    let dir = tempfile::tempdir().unwrap();
+    let older = project("P-1", 5);
+    let live = replaced_device(&older, 2, |d| d.source.ets_id = "D-other".into());
+    let live = replaced_device(&live, 3, |d| d.program_ref = "M-0001_H-2_HP-2".into());
+    let live = replaced_device(&live, 4, |d| d.product_ref = "M-0001_H-2_P-2".into());
+    let mut live = live;
+    live.devices.remove(DeviceId(5));
+    live.installations[0]
+        .topology
+        .unassigned
+        .retain(|d| *d != DeviceId(5));
+    let (path, generation) = saved(dir.path(), "restore.knxdb", &older);
+    let conn = history::open_editor_store(&path, false).unwrap();
+    let generation = history::create_version(&conn, &model(&older), "Older", generation).unwrap();
+    let version = history::list_versions(&conn).unwrap()[0].id;
+    drop(conn);
+    let generation = settle(
+        &path,
+        &live,
+        generation,
+        &[record(1, 1), record(2, 1), record(3, 1), record(4, 1)],
+    )
+    .unwrap();
+
+    let conn = history::open_editor_store(&path, false).unwrap();
+    history::restore_version(&conn, version, &model(&live), generation).unwrap();
+    drop(conn);
+
+    let kept: Vec<_> = stored(&path).iter().map(|(device, _)| device.0).collect();
+    assert_eq!(kept, vec![1], "only device 1 is the same device in both");
 }

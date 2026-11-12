@@ -133,6 +133,7 @@ fn the_log_line_names_both_directions() {
             ..ProgrammingParts::NONE
         },
         touched: ProgrammingParts::ALL,
+        ..Settlement::default()
     };
     assert_eq!(
         sentence("Download to “A” (1.1.5) finished", &settlement),

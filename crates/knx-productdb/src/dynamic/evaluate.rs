@@ -986,6 +986,22 @@ pub fn resolve_values(
     Ok(values.into())
 }
 
+/// [`resolve_values`] over a request's ordered values, answering the
+/// unscoped effective values alone, ordered by `ParameterRef` id: what a
+/// download's image was built from (ADR-0173). A supplied key the program
+/// does not declare stays, as `resolve_values` keeps it.
+pub fn resolve_unscoped_values(
+    conn: &Connection,
+    program_id: &str,
+    supplied: &std::collections::BTreeMap<String, String>,
+) -> Result<std::collections::BTreeMap<String, String>, ProductDbError> {
+    let supplied: HashMap<String, String> = supplied.clone().into_iter().collect();
+    Ok(resolve_values(conn, program_id, &supplied)?
+        .unscoped
+        .into_iter()
+        .collect())
+}
+
 /// Everything `evaluate` could not decide. Returned, never logged, never
 /// swallowed (design D6). `choose_node`/`when_node`/`node_id` are the
 /// `dynamic_node.node_id` of the element in question, within the tree

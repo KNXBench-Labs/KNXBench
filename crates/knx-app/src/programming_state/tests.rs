@@ -219,6 +219,7 @@ fn a_completed_complete_download_programs_all_four_and_touches_all_four() {
         &request(),
         Some(&request()),
         SourcePlan::Unchanged,
+        None,
     );
     assert_eq!(s.programmed, ProgrammingParts::ALL);
     assert_eq!(s.pending, ProgrammingParts::NONE);
@@ -237,6 +238,7 @@ fn a_completed_partial_download_programs_only_what_it_wrote() {
         &request(),
         Some(&request()),
         SourcePlan::Unchanged,
+        None,
     );
     let only = parts(|p| p.parameters = true);
     assert_eq!(s.programmed, only);
@@ -254,6 +256,7 @@ fn a_part_edited_during_the_run_stays_pending() {
         &request(),
         Some(&now),
         SourcePlan::Unchanged,
+        None,
     );
     assert_eq!(
         s.programmed,
@@ -280,6 +283,7 @@ fn a_device_the_project_no_longer_describes_is_programmed_in_nothing() {
         &request(),
         None,
         SourcePlan::Unchanged,
+        None,
     );
     assert_eq!(s.programmed, ProgrammingParts::NONE);
     assert_eq!(s.pending, ProgrammingParts::ALL);
@@ -293,6 +297,7 @@ fn an_interrupted_download_marks_what_it_touched_even_if_it_was_clean() {
         &request(),
         Some(&request()),
         SourcePlan::Unchanged,
+        None,
     );
     assert_eq!(s.programmed, ProgrammingParts::NONE);
     assert_eq!(s.pending, MEMORY, "the address was not written");
@@ -307,6 +312,7 @@ fn an_interrupted_download_marks_what_it_touched_even_if_it_was_clean() {
         &request(),
         Some(&request()),
         SourcePlan::Unchanged,
+        None,
     );
     assert_eq!(s.pending, parts(|p| p.group_addresses = true));
 }
@@ -320,6 +326,7 @@ fn interruption_never_marks_parts_the_plan_has_not_reached() {
         &request(),
         Some(&request()),
         SourcePlan::Unchanged,
+        None,
     );
     assert_eq!(s.pending, only_tables);
     assert_eq!(s.touched, only_tables);
@@ -334,6 +341,7 @@ fn a_changed_source_leaves_a_complete_downloads_memory_pending_but_keeps_its_add
         &request(),
         Some(&request()),
         SourcePlan::ChangedOrUnknown,
+        None,
     );
     assert_eq!(s.programmed, parts(|p| p.address = true));
     assert_eq!(s.pending, MEMORY);
@@ -356,6 +364,7 @@ fn a_changed_source_never_programs_a_partial_download() {
         &request(),
         Some(&request()),
         SourcePlan::ChangedOrUnknown,
+        None,
     );
     assert_eq!(s.programmed, ProgrammingParts::NONE);
     assert_eq!(
@@ -378,6 +387,7 @@ fn a_changed_source_and_an_edited_address_credit_nothing() {
         &request(),
         Some(&now),
         SourcePlan::ChangedOrUnknown,
+        None,
     );
     assert_eq!(s.programmed, ProgrammingParts::NONE);
     assert_eq!(s.pending, ProgrammingParts::ALL);
@@ -407,8 +417,9 @@ fn a_changed_source_settlement_still_forgets_older_programmed_claims() {
         &request(),
         Some(&request()),
         SourcePlan::ChangedOrUnknown,
+        None,
     );
-    apply_settlement(&mut p, &mut stack, DeviceId(1), &s, None);
+    let _ = apply_settlement(&mut p, &mut stack, DeviceId(1), &s, None);
     stack.undo(&mut p).unwrap();
     let device = p.devices.get(DeviceId(1)).unwrap();
     assert_eq!(
@@ -425,7 +436,8 @@ fn a_download_that_wrote_nothing_changes_nothing() {
             DownloadEnd::NothingWritten,
             &request(),
             Some(&request()),
-            SourcePlan::Unchanged
+            SourcePlan::Unchanged,
+            None
         ),
         Settlement::default()
     );
@@ -520,14 +532,9 @@ fn applying_a_settlement_sets_belief_and_download_time() {
         }),
         pending: parts(|p| p.parameters = true),
         touched: ProgrammingParts::ALL,
+        ..Settlement::default()
     };
-    assert!(apply_settlement(
-        &mut p,
-        &mut stack,
-        DeviceId(1),
-        &s,
-        Some(at)
-    ));
+    assert!(apply_settlement(&mut p, &mut stack, DeviceId(1), &s, Some(at)).changed);
     let c = &p.devices.get(DeviceId(1)).unwrap().commissioning;
     assert_eq!(
         c.pending_parts(),
@@ -537,13 +544,7 @@ fn applying_a_settlement_sets_belief_and_download_time() {
         })
     );
     assert_eq!(c.last_download, Some(at));
-    assert!(!apply_settlement(
-        &mut p,
-        &mut stack,
-        DeviceId(9),
-        &s,
-        Some(at)
-    ));
+    assert!(!apply_settlement(&mut p, &mut stack, DeviceId(9), &s, Some(at)).changed);
 }
 
 #[test]
@@ -556,21 +557,16 @@ fn applying_a_settlement_without_programmed_parts_keeps_the_download_time() {
         &request(),
         None,
         SourcePlan::Unchanged,
+        None,
     );
     let at = Utc::now();
     assert!(
-        !apply_settlement(&mut p, &mut stack, DeviceId(1), &s, Some(at)),
+        !apply_settlement(&mut p, &mut stack, DeviceId(1), &s, Some(at)).changed,
         "already pending: nothing changes"
     );
     let state = &mut p.devices.get_mut(DeviceId(1)).unwrap().commissioning;
     ProgrammingChange::mark(ProgrammingParts::ALL, true).apply_to(state);
-    assert!(apply_settlement(
-        &mut p,
-        &mut stack,
-        DeviceId(1),
-        &s,
-        Some(at)
-    ));
+    assert!(apply_settlement(&mut p, &mut stack, DeviceId(1), &s, Some(at)).changed);
     let state = &p.devices.get(DeviceId(1)).unwrap().commissioning;
     assert_eq!(state.pending_parts(), MEMORY);
     assert_eq!(state.last_download, None);
@@ -600,8 +596,9 @@ fn applying_a_settlement_forgets_older_programmed_claims() {
         &request(),
         Some(&request()),
         SourcePlan::Unchanged,
+        None,
     );
-    apply_settlement(&mut p, &mut stack, DeviceId(1), &s, None);
+    let _ = apply_settlement(&mut p, &mut stack, DeviceId(1), &s, None);
     stack.undo(&mut p).unwrap();
     assert_eq!(
         p.devices
@@ -610,5 +607,229 @@ fn applying_a_settlement_forgets_older_programmed_claims() {
             .commissioning
             .pending_parts(),
         parts(|p| p.parameters = true)
+    );
+}
+
+fn resolved() -> WrittenParameters {
+    WrittenParameters {
+        values: BTreeMap::from([
+            ("P-1".to_string(), "1".to_string()),
+            ("P-2".to_string(), "default".to_string()),
+        ]),
+        at: DateTime::parse_from_rfc3339("2026-11-11T09:30:00.123456789Z")
+            .unwrap()
+            .with_timezone(&Utc),
+    }
+}
+
+fn recorded() -> BaselineChange {
+    let resolved = resolved();
+    BaselineChange::Record(ParameterBaseline {
+        program_id: request().program_id,
+        values: resolved.values,
+        at: resolved.at,
+    })
+}
+
+fn baseline(
+    partial: Option<PartialDownloadParts>,
+    end: DownloadEnd,
+    now: Option<&ImageRequest>,
+    source: SourcePlan,
+) -> BaselineChange {
+    settle_download(partial, end, &request(), now, source, Some(resolved())).parameter_baseline
+}
+
+const GROUP_ADDRESSES_ONLY: PartialDownloadParts = PartialDownloadParts {
+    parameters: false,
+    group_addresses: true,
+};
+const PARAMETERS_ONLY: PartialDownloadParts = PartialDownloadParts {
+    parameters: true,
+    group_addresses: false,
+};
+
+#[test]
+fn a_completed_run_from_an_unchanged_source_records_the_resolved_values() {
+    let now = request();
+    let complete = baseline(
+        None,
+        DownloadEnd::Completed,
+        Some(&now),
+        SourcePlan::Unchanged,
+    );
+    assert_eq!(complete, recorded());
+    let partial = baseline(
+        Some(PARAMETERS_ONLY),
+        DownloadEnd::Completed,
+        Some(&now),
+        SourcePlan::Unchanged,
+    );
+    assert_eq!(
+        partial,
+        recorded(),
+        "a partial run with parameters records too"
+    );
+}
+
+#[test]
+fn a_project_edited_during_the_run_still_records_what_was_written() {
+    let mut now = request();
+    now.values.insert("P-1".into(), "2".into());
+    let s = settle_download(
+        None,
+        DownloadEnd::Completed,
+        &request(),
+        Some(&now),
+        SourcePlan::Unchanged,
+        Some(resolved()),
+    );
+    assert!(!s.programmed.parameters, "the edit stays pending");
+    assert_eq!(
+        s.parameter_baseline,
+        recorded(),
+        "and differs from the record"
+    );
+    let gone = baseline(None, DownloadEnd::Completed, None, SourcePlan::Unchanged);
+    assert_eq!(gone, recorded(), "a request the project no longer yields");
+}
+
+#[test]
+fn a_completed_run_removes_the_baseline_when_the_source_changed_or_values_are_unknown() {
+    let now = request();
+    for partial in [None, Some(PARAMETERS_ONLY)] {
+        assert_eq!(
+            baseline(
+                partial,
+                DownloadEnd::Completed,
+                Some(&now),
+                SourcePlan::ChangedOrUnknown
+            ),
+            BaselineChange::Remove
+        );
+        let unresolved = settle_download(
+            partial,
+            DownloadEnd::Completed,
+            &request(),
+            Some(&now),
+            SourcePlan::Unchanged,
+            None,
+        );
+        assert_eq!(unresolved.parameter_baseline, BaselineChange::Remove);
+    }
+}
+
+#[test]
+fn an_interrupted_run_removes_only_after_attempting_the_parameters() {
+    let now = request();
+    let attempted = baseline(
+        None,
+        DownloadEnd::Interrupted(MEMORY),
+        Some(&now),
+        SourcePlan::Unchanged,
+    );
+    assert_eq!(attempted, BaselineChange::Remove);
+    let tables = parts(|p| p.group_addresses = true);
+    let not_reached = baseline(
+        None,
+        DownloadEnd::Interrupted(tables),
+        Some(&now),
+        SourcePlan::Unchanged,
+    );
+    assert_eq!(not_reached, BaselineChange::Keep);
+}
+
+#[test]
+fn runs_without_parameters_in_scope_or_without_a_write_keep_the_baseline() {
+    let now = request();
+    for end in [
+        DownloadEnd::Completed,
+        DownloadEnd::Interrupted(MEMORY),
+        DownloadEnd::NothingWritten,
+    ] {
+        for source in [SourcePlan::Unchanged, SourcePlan::ChangedOrUnknown] {
+            assert_eq!(
+                baseline(Some(GROUP_ADDRESSES_ONLY), end, Some(&now), source),
+                BaselineChange::Keep,
+                "{end:?} {source:?}"
+            );
+        }
+    }
+    assert_eq!(
+        baseline(
+            None,
+            DownloadEnd::NothingWritten,
+            Some(&now),
+            SourcePlan::Unchanged
+        ),
+        BaselineChange::Keep
+    );
+}
+
+#[test]
+fn an_address_programming_keeps_the_baseline() {
+    for end in [
+        AddressEnd::Programmed,
+        AddressEnd::Uncertain,
+        AddressEnd::NothingWritten,
+    ] {
+        assert_eq!(settle_address(end).parameter_baseline, BaselineChange::Keep);
+    }
+}
+
+#[test]
+fn applying_a_settlement_hands_its_baseline_instruction_back_as_an_edit() {
+    let mut p = project();
+    let mut stack = CommandStack::new();
+    let now = request();
+    let settle = |change: BaselineChange| Settlement {
+        parameter_baseline: change,
+        ..settle_download(
+            None,
+            DownloadEnd::Completed,
+            &request(),
+            Some(&now),
+            SourcePlan::Unchanged,
+            None,
+        )
+    };
+    let record = apply_settlement(&mut p, &mut stack, DeviceId(1), &settle(recorded()), None);
+    let BaselineChange::Record(expected) = recorded() else {
+        unreachable!()
+    };
+    assert_eq!(
+        record.baseline,
+        Some(BaselineEdit {
+            device: DeviceId(1),
+            baseline: Some(expected),
+        })
+    );
+    let remove = apply_settlement(
+        &mut p,
+        &mut stack,
+        DeviceId(1),
+        &settle(BaselineChange::Remove),
+        None,
+    );
+    assert_eq!(
+        remove.baseline,
+        Some(BaselineEdit {
+            device: DeviceId(1),
+            baseline: None,
+        })
+    );
+    let keep = apply_settlement(
+        &mut p,
+        &mut stack,
+        DeviceId(1),
+        &settle(BaselineChange::Keep),
+        None,
+    );
+    assert_eq!(keep.baseline, None);
+    let missing = apply_settlement(&mut p, &mut stack, DeviceId(9), &settle(recorded()), None);
+    assert_eq!(
+        missing,
+        Applied::default(),
+        "a missing device changes nothing"
     );
 }

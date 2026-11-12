@@ -12,7 +12,7 @@ use crate::domain::{self, SnapshotBinding};
 /// The `Time` parameter's shipped value and the user's edit of it.
 pub(super) const TIME_ORIGINAL: &str = "50";
 pub(super) const TIME_EDITED: &str = "77";
-const TIME_ID: &str = "M-0001_A-0001-01-0000_P-2_R-2";
+pub(super) const TIME_ID: &str = "M-0001_A-0001-01-0000_P-2_R-2";
 
 fn source_ref(ets_id: &str) -> SourceRef {
     SourceRef {

@@ -7,6 +7,9 @@
 //! project and stack it is handed.
 
 use chrono::{DateTime, Utc};
+use knx_core::commissioning::parameter_baseline::{
+    BaselineChange, BaselineEdit, ParameterBaseline, ParameterValues,
+};
 use knx_core::commissioning::partial_memory_download::PartialDownloadParts;
 use knx_core::commissioning::pending::{ProgrammingChange, ProgrammingParts};
 use knx_core::{CommandStack, DeviceId, IndividualAddress, Project};
@@ -36,7 +39,7 @@ pub enum AddressEnd {
 }
 
 /// The belief change one bus write leads to.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct Settlement {
     /// Parts the device now holds as the project states them.
     pub programmed: ProgrammingParts,
@@ -45,6 +48,22 @@ pub struct Settlement {
     /// Parts whose device content this write changed or confirmed: no undo
     /// or redo may restore an older \"programmed\" claim about them.
     pub touched: ProgrammingParts,
+    /// What becomes of the device's parameter baseline (ADR-0173 §3). It
+    /// tells "completed, project edited during the run" (record) from
+    /// "changed source" or "interrupted" (remove), which all leave
+    /// `programmed.parameters` false.
+    pub parameter_baseline: BaselineChange,
+}
+
+/// The written request's parameter values as a completed run's image was
+/// built from them: every unscoped `ParameterRef` of `written.program_id`
+/// with its default resolved, read in the catalogue lease that proved the
+/// source unchanged (ADR-0173 §1).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct WrittenParameters {
+    pub values: ParameterValues,
+    /// The settlement time the baseline records.
+    pub at: DateTime<Utc>,
 }
 
 /// The parts a download writes into device memory: a complete download the
@@ -173,12 +192,19 @@ pub enum SourcePlan {
 /// A `source` that is not [`SourcePlan::Unchanged`] leaves the memory parts
 /// the run wrote pending: the run's bytes are not what the product data
 /// says now.
+///
+/// The parameter baseline follows ADR-0173 §3: a completed run with
+/// Parameters in scope records `resolved` when the source is unchanged, even
+/// if the project changed during the run, and removes it otherwise (also
+/// when `resolved` could not be read); an interrupted run removes it only if
+/// it attempted the parameters; every other end keeps it.
 pub fn settle_download(
     partial: Option<PartialDownloadParts>,
     end: DownloadEnd,
     written: &ImageRequest,
     now: Option<&ImageRequest>,
     source: SourcePlan,
+    resolved: Option<WrittenParameters>,
 ) -> Settlement {
     let memory = written_parts(partial);
     match end {
@@ -187,6 +213,11 @@ pub fn settle_download(
             programmed: ProgrammingParts::NONE,
             pending: attempted.intersection(memory),
             touched: attempted.intersection(memory),
+            parameter_baseline: if attempted.intersection(memory).parameters {
+                BaselineChange::Remove
+            } else {
+                BaselineChange::Keep
+            },
         },
         DownloadEnd::Completed => {
             // The device answered at `written.individual_address`, the
@@ -205,10 +236,22 @@ pub fn settle_download(
                 },
             };
             let programmed = confirmed.intersection(current);
+            let parameter_baseline = match (memory.parameters, source, resolved) {
+                (false, _, _) => BaselineChange::Keep,
+                (true, SourcePlan::Unchanged, Some(resolved)) => {
+                    BaselineChange::Record(ParameterBaseline {
+                        program_id: written.program_id.clone(),
+                        values: resolved.values,
+                        at: resolved.at,
+                    })
+                }
+                (true, _, _) => BaselineChange::Remove,
+            };
             Settlement {
                 programmed,
                 pending: confirmed.intersection(complement(programmed)),
                 touched: confirmed,
+                parameter_baseline,
             }
         }
     }
@@ -229,16 +272,19 @@ pub fn settle_address(end: AddressEnd) -> Settlement {
         address: true,
         ..ProgrammingParts::NONE
     };
+    // An address write never touches parameters: the baseline is kept.
     match end {
         AddressEnd::Programmed => Settlement {
             programmed: address,
             pending: ProgrammingParts::NONE,
             touched: address,
+            parameter_baseline: BaselineChange::Keep,
         },
         AddressEnd::Uncertain => Settlement {
             programmed: ProgrammingParts::NONE,
             pending: address,
             touched: address,
+            parameter_baseline: BaselineChange::Keep,
         },
         AddressEnd::NothingWritten => Settlement::default(),
     }
@@ -257,18 +303,32 @@ pub fn sole_device_at(project: &Project, address: IndividualAddress) -> Option<D
     }
 }
 
-/// Applies `settlement` to `device`. Returns whether anything changed; a
-/// missing device changes nothing. `downloaded_at` records the time of a
-/// download that made something programmed.
+/// What [`apply_settlement`] did.
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+#[must_use]
+pub struct Applied {
+    /// Whether the device's flags or last download time changed.
+    pub changed: bool,
+    /// The parameter baseline edit the caller must persist with the flags,
+    /// in the same write, and then apply to the baselines it holds.
+    pub baseline: Option<BaselineEdit>,
+}
+
+/// Applies `settlement` to `device`: the single place a settlement's flags
+/// and its parameter baseline instruction take effect. The baseline lives
+/// outside the project, so it comes back as an edit for the caller to
+/// persist with the flags. A missing device changes nothing.
+/// `downloaded_at` records the time of a download that made something
+/// programmed.
 pub fn apply_settlement(
     project: &mut Project,
     stack: &mut CommandStack,
     device: DeviceId,
     settlement: &Settlement,
     downloaded_at: Option<DateTime<Utc>>,
-) -> bool {
+) -> Applied {
     let Some(instance) = project.devices.get_mut(device) else {
-        return false;
+        return Applied::default();
     };
     let state = &mut instance.commissioning;
     let before = state.clone();
@@ -281,7 +341,10 @@ pub fn apply_settlement(
     if !settlement.touched.is_empty() {
         stack.forget_programmed_claims(device, settlement.touched);
     }
-    changed
+    Applied {
+        changed,
+        baseline: settlement.parameter_baseline.edit_for(device),
+    }
 }
 
 #[cfg(test)]

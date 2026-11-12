@@ -491,6 +491,7 @@ fn a_source_change_does_not_touch_unrelated_programmed_flags() {
 
 mod admission;
 mod owner_health;
+mod parameter_baseline;
 mod persistence;
 mod project_edits;
 mod receipt;

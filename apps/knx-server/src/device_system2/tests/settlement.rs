@@ -501,3 +501,72 @@ fn s2_per_part_a_reopened_project_keeps_the_partial_credit_and_no_stale_claim() 
         );
     }
 }
+
+fn seed_baseline(state: &SharedState) {
+    use knx_core::commissioning::parameter_baseline::{BaselineEdit, ParameterBaseline};
+    state
+        .parameter_baselines
+        .lock()
+        .unwrap()
+        .apply(&BaselineEdit {
+            device: DeviceId(1),
+            baseline: Some(ParameterBaseline {
+                program_id: "M-0001_A-0001-01-0000".into(),
+                values: Default::default(),
+                at: chrono::DateTime::UNIX_EPOCH,
+            }),
+        });
+}
+
+fn has_baseline(state: &SharedState) -> bool {
+    state
+        .parameter_baselines
+        .lock()
+        .unwrap()
+        .get(DeviceId(1))
+        .is_some()
+}
+
+/// ADR-0173 §3: a System-2 run writes no `ImageRequest`, so every settlement that touches the
+/// parameters removes the baseline, the verified run that marks them programmed included.
+#[test]
+fn s2_every_settlement_that_may_have_mutated_removes_the_parameter_baseline() {
+    let mut recovery = verified();
+    recovery.outcome = LocalOutcome::Restored;
+    recovery.restore_attempted = true;
+    for (label, p, run) in [
+        ("verified", verified(), Run::Download),
+        ("failed", failed(), Run::Download),
+        ("recovery", recovery, Run::Recovery),
+    ] {
+        let state = fresh();
+        seed_baseline(&state);
+        let receipt = settle(&state, &meta(&state), &p, run, |_, _| ProgrammingParts::ALL);
+        assert_eq!(receipt, Receipt::SessionOnly, "{label}");
+        assert!(!has_baseline(&state), "{label} kept a baseline");
+    }
+    let state = fresh();
+    seed_baseline(&state);
+    settle(&state, &meta(&state), &verified(), Run::Download, |_, _| {
+        ProgrammingParts::ALL
+    });
+    assert_eq!(
+        belief(&state),
+        ProgrammingParts::ALL,
+        "programmed, baseline unknown"
+    );
+}
+
+#[test]
+fn s2_a_run_that_could_not_write_keeps_the_parameter_baseline() {
+    let state = fresh();
+    seed_baseline(&state);
+    let p = progress(LocalOutcome::Failed, DownloadResult::NothingWritten, false);
+    assert_eq!(
+        settle(&state, &meta(&state), &p, Run::Download, |_, _| {
+            ProgrammingParts::ALL
+        }),
+        Receipt::NoMutation
+    );
+    assert!(has_baseline(&state));
+}

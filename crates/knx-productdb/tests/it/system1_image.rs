@@ -51,6 +51,31 @@ fn fixture(xml: &str) -> (tempfile::TempDir, knx_productdb::Connection, ImageReq
 }
 
 #[test]
+fn shared_effective_flags_keep_type1_bytes_and_update_refusal() {
+    super::effective_object_flags::check_legacy_flags(
+        &program(),
+        fixture,
+        build_system1_image,
+        "S",
+        134,
+        (0xEF, 0xB3, false),
+    );
+}
+
+#[test]
+fn shared_effective_flags_keep_type1_activation_and_read_on_init_refusal() {
+    super::effective_object_flags::check_legacy_activation_and_read_on_init(
+        &program(),
+        fixture,
+        build_system1_image,
+        "S",
+        134,
+        0xEF,
+        "System1",
+    );
+}
+
+#[test]
 fn actual_evaluator_builds_literal_type1_bytes_and_preserves_pointers_without_download_admission() {
     let (_dir, conn, request) = fixture(&program());
     let before = conn.total_changes();

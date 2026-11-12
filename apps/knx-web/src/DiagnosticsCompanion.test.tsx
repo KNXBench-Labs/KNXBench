@@ -409,6 +409,7 @@ describe("one editing workspace", () => {
       "BusTransportFields.tsx",
       "DeviceLink.tsx",
       "DiagnosticsCompanion.tsx",
+      "ExperimentalTransportBadge.tsx", // Translated tag/note only (REL-01 B-14); no API call.
       "FlowImageExportDialog.tsx",
       "FsPicker.tsx",
       "HelpTip.tsx",

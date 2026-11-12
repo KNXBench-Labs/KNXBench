@@ -1,6 +1,6 @@
 # Restart snapshot
 Release freeze: Alpha 21 owned by release-alpha21; cutoff `938e895c5`, branch `release/alpha21-20261113`. `main` stays release-frozen for code until the tag is published or this owner explicitly releases the freeze.
-## Alpha 21 preparation (ACTIVE; owner release-alpha21; observed 2026-11-13 00:05)
+## Alpha 21 preparation (ACTIVE; owner release-alpha21; observed 2026-11-13 00:06)
 - Go covers freeze/version/notes, one full integrated gate, existing-corpus checks, upgrade and packaging dry runs only. No publication/tag/upload/image push or historical private-corpus restoration approval. Evidence `<profile>/release-evidence/alpha21-20261113/`; next: candidate then source-bound acceptance. Other tracks/root edits preserved.
 ## WP-37 UI links/flags + parameter-section marks (STANDING; observed 2026-11-12)
 - Owner Go: packages A (ADR-0174 UI) then B (#48) on main, no hardware/release/deploy. Source records `docs/open-work/WP-37-pending-changes-across-ui.md` and ADR-0174; private evidence `<profile>/evidence/wp37-ui-20261112/`.

@@ -1,11 +1,19 @@
 # Roadmap
 
+## Alpha 21 pre-release (source cutoff 12 November 2026)
+
+The [Alpha 21 scope](releases/alpha21.md) covers all delivered work through
+cutoff `938e895c5`: pending navigation/batch programming, last-download comparisons,
+save/editor concurrency, background history, product detail and experimental TCP
+scans. Project19 → 21 and product32 → 33 need backups; Alpha 20 refuses both.
+No hardware/deployment claim. Later main work belongs to the next release.
+
 ## Last-download object evidence (12 November 2026; WP-37f)
 
 The ADR-0174 backend implements native schema21, independent flags/link
 settlement and typed GET DeviceDetail comparison (accepted on main after
-review and the package gate); communication-object row marks and summary remain
-the next separate UI package. No new hardware, whole-image compatibility or readback claim.
+review and the package gate); communication-object row marks and summary now
+ship in Alpha 21, together with parameter-section navigation marks. No new hardware, whole-image compatibility or readback claim.
 [Contract and remaining boundaries](adr/0174-last-downloaded-links-and-flags.md).
 
 ## Background-activity feedback (10 November 2026)
@@ -19,7 +27,7 @@ and any new safe-exit/cancellation capability remain separate work.
 
 ## Alpha 20 pre-release (source cutoff 8 November 2026)
 
-`v0.1.0-alpha.20` is the current pre-release, cut from main at source cutoff
+`v0.1.0-alpha.20` is the previous pre-release, cut from main at source cutoff
 `dfb3f88b8`. It ships every delivery merged after Alpha 19 up to that cutoff,
 including the ETS6 group-address CSV import with an explicit UTF-8/Windows-1252
 choice and the new group-address description, optional TCP tunnelling for the bus
@@ -38,13 +46,15 @@ Work merged on main after `dfb3f88b8` belongs to the next alpha.
 
 <a id="serverweb-scan-successor-candidate-10-november-2026"></a>
 
-## Server/Web scan successor (10 November 2026; main-only acceptance)
+<a id="serverweb-scan-successor-10-november-2026-main-only-acceptance"></a>
+
+## Server/Web scan successor (since Alpha 21)
 
 Explicit TCP line scans are software-accepted on main as a bounded successor with
 UDP default, strict identity-bound effects and disclosed cleanup/skip provenance.
 Independent source closure passed; the complete selected acceptance plan
-is closed by source-bound composition. It is not in Alpha
-20 and does not widen device programming, downloads, discovery/routing, serial,
+is closed by source-bound composition. It ships in Alpha 21 and does not widen
+device programming, downloads, discovery/routing, serial,
 KNX IP Secure or real-gateway claims.
 [Acceptance and limitations](status/2026-11-10-server-web-tcp-scans.md).
 

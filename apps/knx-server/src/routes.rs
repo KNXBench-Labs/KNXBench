@@ -1536,8 +1536,13 @@ async fn open_native_project(
     .await
 }
 
+/// `POST /api/project/save`. The write takes seconds on a large project, so it
+/// runs on a blocking thread: the runtime keeps serving reads meanwhile (#36).
 async fn save_project(State(state): State<SharedState>) -> Result<(), ApiError> {
-    domain::save_project(&state).map_err(ApiError::internal)
+    tokio::task::spawn_blocking(move || domain::save_project(&state))
+        .await
+        .map_err(|e| ApiError::internal(format!("the save task did not finish: {e}")))?
+        .map_err(ApiError::internal)
 }
 
 /// `POST /api/project/save-as`. `overwrite` is absent (false) unless the
@@ -1570,13 +1575,17 @@ async fn save_project_as(
     Json(body): Json<SaveAsBody>,
 ) -> Result<(), ApiError> {
     let path = resolve_new_project_path(&state.data_dir, &body.path)?;
-    domain::save_project_as_with(&state, &path, body.overwrite).map_err(|error| match error {
-        knx_app::project_history::SaveAsError::Exists => ApiError::conflict(
-            "fileExists",
-            "a file with this name already exists; nothing was written",
-        ),
-        knx_app::project_history::SaveAsError::Failed(message) => ApiError::internal(message),
-    })
+    // Blocking thread, like Save: the write must not hold a runtime worker.
+    tokio::task::spawn_blocking(move || domain::save_project_as_with(&state, &path, body.overwrite))
+        .await
+        .map_err(|e| ApiError::internal(format!("the save task did not finish: {e}")))?
+        .map_err(|error| match error {
+            knx_app::project_history::SaveAsError::Exists => ApiError::conflict(
+                "fileExists",
+                "a file with this name already exists; nothing was written",
+            ),
+            knx_app::project_history::SaveAsError::Failed(message) => ApiError::internal(message),
+        })
 }
 
 async fn device_detail(
@@ -4116,6 +4125,91 @@ mod tests {
     use crate::bus::fake::{FakeConnector, FakeTunnel};
     use crate::bus::{BusSession, GroupAddressContext};
     use crate::AppState;
+
+    /// Holds the project lock on a plain thread until released or 2 s pass;
+    /// answers whether the release came in time.
+    fn hold_project_lock(
+        state: &Arc<AppState>,
+    ) -> (std::sync::mpsc::Sender<()>, std::thread::JoinHandle<bool>) {
+        let (held_tx, held_rx) = std::sync::mpsc::channel();
+        let (release_tx, release_rx) = std::sync::mpsc::channel::<()>();
+        let holder_state = Arc::clone(state);
+        let holder = std::thread::spawn(move || {
+            let _project = holder_state.project.lock().expect("project mutex poisoned");
+            held_tx.send(()).unwrap();
+            release_rx
+                .recv_timeout(std::time::Duration::from_secs(2))
+                .is_ok()
+        });
+        held_rx.recv().unwrap();
+        (release_tx, holder)
+    }
+
+    /// #36: a save that waits for the project (or writes for seconds) must not
+    /// hold the runtime thread. On this single-threaded runtime a save run
+    /// inline would block until the holder gives up, and the timer below
+    /// could not fire first.
+    #[tokio::test(flavor = "current_thread")]
+    async fn a_save_waiting_for_the_project_leaves_the_runtime_free() {
+        for save_as in [false, true] {
+            let state = Arc::new(AppState::default());
+            crate::domain::new_project_impl(&state, None, None, None, None, true).unwrap();
+            let dir = tempfile::tempdir().unwrap();
+            let file = dir.path().join("project.knxdb");
+            crate::domain::save_project_as(&state, &file).unwrap();
+
+            let (release, holder) = hold_project_lock(&state);
+            let saving_state = Arc::clone(&state);
+            let save = tokio::spawn(async move {
+                if save_as {
+                    super::save_project_as(
+                        State(saving_state),
+                        Json(super::SaveAsBody {
+                            path: file.to_string_lossy().into_owned(),
+                            overwrite: true,
+                        }),
+                    )
+                    .await
+                } else {
+                    super::save_project(State(saving_state)).await
+                }
+            });
+            // Let the save start and reach the held lock, then prove the
+            // runtime still runs other work.
+            tokio::task::yield_now().await;
+            tokio::time::sleep(std::time::Duration::from_millis(20)).await;
+            let _ = release.send(());
+            assert!(
+                holder.join().unwrap(),
+                "save_as={save_as}: the runtime was blocked"
+            );
+            save.await
+                .unwrap()
+                .unwrap_or_else(|e| panic!("save_as={save_as}: {e:?}"));
+        }
+    }
+
+    /// The same for the browser download of the project file, which writes a
+    /// copy while it holds the project.
+    #[tokio::test(flavor = "current_thread")]
+    async fn a_download_waiting_for_the_project_leaves_the_runtime_free() {
+        use tower::ServiceExt;
+        let state = Arc::new(AppState::default());
+        crate::domain::new_project_impl(&state, None, None, None, None, true).unwrap();
+        let router = crate::fs_routes::fs_routes().with_state(Arc::clone(&state));
+        let (release, holder) = hold_project_lock(&state);
+        let download = tokio::spawn(async move {
+            let request = axum::http::Request::get("/api/project/download")
+                .body(axum::body::Body::empty())
+                .unwrap();
+            router.oneshot(request).await.unwrap().status()
+        });
+        tokio::task::yield_now().await;
+        tokio::time::sleep(std::time::Duration::from_millis(20)).await;
+        let _ = release.send(());
+        assert!(holder.join().unwrap(), "the runtime was blocked");
+        assert_eq!(download.await.unwrap(), axum::http::StatusCode::OK);
+    }
 
     #[tokio::test]
     async fn concurrent_group_address_style_publications_keep_the_latest_accepted_context() {

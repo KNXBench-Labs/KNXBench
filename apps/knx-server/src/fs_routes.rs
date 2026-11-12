@@ -184,9 +184,13 @@ async fn download(
             ))
         }
     };
-    let tmp = {
-        let project = state.project.lock().expect("state mutex poisoned");
-        let project = project
+    // The copy is written on a blocking thread: on a large project the write
+    // takes seconds and must not hold a runtime worker (#36).
+    let writing_state = Arc::clone(&state);
+    let tmp = tokio::task::spawn_blocking(move || {
+        let state = writing_state;
+        let project_guard = state.project.lock().expect("state mutex poisoned");
+        let project = project_guard
             .as_ref()
             .ok_or_else(|| ApiError::bad_request("no project open"))?;
         if let Some((server, incarnation, revision)) = reviewed {
@@ -209,16 +213,20 @@ async fn download(
         let tmp = tempfile::NamedTempFile::new().map_err(|e| ApiError::internal(e.to_string()))?;
         domain::save_project_as_impl(tmp.path(), project, &opaque, &manufacturer_refs)
             .map_err(ApiError::internal)?;
-        tmp.into_temp_path()
-    };
-    // ADR-0128: the downloaded file carries its manufacturer files like a
-    // saved one; the open project's own file can supply them.
-    let open_file = state
-        .store_path
-        .lock()
-        .expect("state mutex poisoned")
-        .clone();
-    domain::carry_manufacturer_files(&state, &tmp, open_file.as_deref(), "download");
+        let tmp = tmp.into_temp_path();
+        drop((opaque, manufacturer_refs, project_guard));
+        // ADR-0128: the downloaded file carries its manufacturer files like a
+        // saved one; the open project's own file can supply them.
+        let open_file = state
+            .store_path
+            .lock()
+            .expect("state mutex poisoned")
+            .clone();
+        domain::carry_manufacturer_files(&state, &tmp, open_file.as_deref(), "download");
+        Ok::<_, ApiError>(tmp)
+    })
+    .await
+    .map_err(|e| ApiError::internal(format!("the export task did not finish: {e}")))??;
     let mut response = stream_temp_file(tmp, DOWNLOAD_CHUNK_BYTES).await?;
     response.headers_mut().insert(
         header::CONTENT_DISPOSITION,

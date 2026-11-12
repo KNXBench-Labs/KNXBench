@@ -530,8 +530,23 @@ readers announce them as the tab's description. Nothing is shown when no part is
 pending or the server does not report the state (Properties says so). The line
 and dots disappear on their own when a download or address programming whose
 scope covered those parts reloads the project; **Download to device…** in the
-heading stays the way to start one. Individual parameters are not marked: the
-project does not keep the last value sent for each parameter.
+heading stays the way to start one.
+
+**Values that differ from the last download** *(source build after Alpha 20,
+12 November 2026; issue #40)*: after a download by KNXBench completes, the
+project remembers the value it sent for each parameter. The **Parameters** tab
+then marks every value you have changed since with the same amber dot; hover it
+(screen readers read it as the field's description) for the value at that
+download, for example **Value at last download: Switching**. A line above the
+fields says how many values differ and when the download ended, and how many of
+them the current settings do not show (inactive parameters, or fields only the
+**Manufacturer fields** tab lists). Limits: this is the value KNXBench *sent*, not a
+value read back from the device. Devices imported from ETS, programmed through
+the experimental System-2 path or marked as programmed by hand have no such
+record; the line says so and only the per-part marks above apply until their
+next regular download. Parameters of module instances are not marked, and the
+line also says when the application program changed or product data is missing,
+since then nothing can be compared.
 
 The starting state comes from the ETS project's imported loaded flags. Editing
 an individual address marks Adr; a parameter value marks Par; linking/unlinking,

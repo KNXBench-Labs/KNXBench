@@ -19,6 +19,7 @@ Last updated: 2026-11-08 (Alpha 20 pre-release; source cutoff 2026-11-08)
 
 | Feature | Scope | Availability |
 | --- | --- | --- |
+| [Values that differ from the last download](open-work/WP-37-pending-changes-across-ui.md) | The parameter editor marks each value that differs from what the device's last completed KNXBench download sent (“Value at last download: …”) and counts them above the fields; says plainly when no comparison is possible (issue #40, ADR-0173) | Main-only (not released) |
 | [Pending marks in the device editor](open-work/WP-37-pending-changes-across-ui.md) | The opened device names its not-yet-programmed parts under the heading and marks the Parameters and Communication objects tabs; cleared when a covering write reloads the project (issue #40) | Main-only (not released) |
 | [Pending programming panel](open-work/WP-38-pending-devices-panel.md) | Read-only navigation block listing every device with pending parts (count in the heading, Adr/App/Par/GA chips, address order, unreported states counted), opening a device on click and its Download to device tab with **Download…**; no batch download (issue #42) | Main-only (not released) |
 | [Links-first object editor and compact toolbar](open-work/WP-36-communication-object-view-cleanup.md) | Expanded communication objects list linked group addresses and the link row first, other settings folded; one view select and an Options menu replace five toolbar buttons (issues #44, #46) | Main-only (not released) |

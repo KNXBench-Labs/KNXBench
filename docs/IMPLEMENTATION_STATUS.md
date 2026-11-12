@@ -12,6 +12,23 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## The parameter editor shows what differs from the last download (12 November 2026; issue #40, WP-37 step 2)
+
+The Parameters tab now reads `lastDownload` ([ADR-0173](adr/0173-last-downloaded-parameter-values.md),
+now Accepted). A value that differs from what the device's last completed
+KNXBench download sent gets the step-1 amber dot with the tooltip and accessible
+description **Value at last download: …** / **Wert beim letzten Programmieren:
+…** (option labels for selections, “no value” when there was none); the field's
+accessible name is unchanged. A line above the fields counts the differing
+values with the download time and names how many of them the current settings
+do not show, says when none differ, or says in one sentence why no comparison
+is possible (no recorded download, another application program, missing
+product data, conflicting project values). A write's response carries no
+comparison, so the shown one is kept until the follow-up read replaces it.
+Module-scoped parameters are not marked. Web only, no server change. Tests:
+12 component tests (`ParameterPanel.lastDownload.test.tsx`) and 6 browser
+cases (`parameter-last-download.e2e.ts`, devices lane: en/de, 1440/400 px).
+
 ## The project remembers what the last download wrote, server part (11 November 2026; issue #40, WP-37 step 2)
 
 Native schema 20 ([ADR-0173](adr/0173-last-downloaded-parameter-values.md),

@@ -1,7 +1,7 @@
 # ADR 0173: The project remembers the parameter values a verified download wrote
 
 Date: 2026-11-11
-Status: Proposed (server part implemented 11 November 2026, WP-37 step 2; UI pending)
+Status: Accepted (main, 12 November 2026: server part 11 November, parameter-editor UI 12 November; WP-37 step 2; no hardware)
 Session: issue intake #40, step 2 ([WP-37](../open-work/WP-37-pending-changes-across-ui.md)); restore finding [WP-40](../open-work/WP-40-version-restore-programming-claims.md)
 
 ## Context

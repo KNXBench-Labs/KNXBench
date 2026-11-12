@@ -536,8 +536,8 @@ heading stays the way to start one.
 12 November 2026; issue #40)*: after a download by KNXBench completes, the
 project remembers, for each parameter, the value the download used. The
 **Parameters** tab then marks every value you have changed since with the same
-amber dot; hover it, or move the focus into the field (keyboard or touch), for
-the value at that download, for example **Value at last download: Switching**
+amber dot and a short caption under it with the value at that download, for
+example **Value at last download: Switching**
 (screen readers read it as the field's description). A line above the fields
 says how many values differ and when the download ended, how many of them the
 current settings do not show (inactive parameters), and how many only the

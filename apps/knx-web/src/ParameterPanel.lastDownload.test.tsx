@@ -119,14 +119,12 @@ describe("ParameterPanel last download (ADR-0173)", () => {
     expect(dot.getAttribute("aria-hidden")).toBe("true");
     expect(dot.textContent).toBe("");
     expect(p1.querySelector(".parameter-field-name")!.textContent).toBe("Field P1");
-    // The note is the label's next sibling, never part of its name; CSS shows
-    // it while the row has focus, or always where the control cannot take it.
+    // The note is the label's next sibling, never part of its name, always shown.
     const note = document.getElementById(p1.querySelector("input")!.getAttribute("aria-describedby")!)!;
     expect(p1.contains(note)).toBe(false);
     expect(p1.nextElementSibling).toBe(note);
     expect(note.classList.contains("parameter-download-note")).toBe(true);
     expect(note.hidden).toBe(false);
-    expect(note.dataset.shown).toBe("focus");
     // Module-scoped rows never match: baselines are unscoped.
     expect(marks()).toHaveLength(2);
     const moduleRow = host!.querySelectorAll('[data-ets-id="P1"]')[1];
@@ -196,8 +194,7 @@ describe("ParameterPanel last download (ADR-0173)", () => {
     await render("restricted");
     expect(summary()).toBeNull();
     expect(description(unscopedRow("P5"))).toBe("Value at last download: 1");
-    // A disabled control takes no focus, so its caption is always shown.
-    expect(unscopedRow("P5").nextElementSibling!.getAttribute("data-shown")).toBe("always");
+    expect(unscopedRow("P5").nextElementSibling!.classList.contains("parameter-download-note")).toBe(true);
     await render("diagnostics");
     expect(summary()).toBeNull();
   });
@@ -248,6 +245,62 @@ describe("ParameterPanel last download (ADR-0173)", () => {
     await writeP1("4");
     expect(apiMock.setParameterValue.mock.calls[0][1]).toBe("P1-W");
     expect(summary()!.textContent).toBe(`1 value differs from the last download (${time("en")}).`);
+  });
+
+  it("says nothing while refreshing once the only differing value was written", async () => {
+    apiMock.deviceParameters.mockResolvedValueOnce(panel(usable([{ refId: "P1", downloaded: "4", current: "5" }])));
+    const written = panel(undefined);
+    written.sections[0].fields[0] = field("P1", { value: "4" });
+    written.tree = tree(3);
+    apiMock.setParameterValue.mockResolvedValue(written);
+    await render();
+    expect(summary()!.textContent).toContain("1 value differs");
+    await writeP1("4");
+    // Only the server's next read may say that no value differs.
+    expect(summary()).toBeNull();
+    expect(host!.textContent).not.toContain("No value differs");
+    apiMock.deviceParameters.mockResolvedValueOnce(panel(usable([])));
+    await render("parameters", tree(3));
+    expect(summary()!.textContent).toBe(`No value differs from the last download (${time("en")}).`);
+    expect(summary()!.getAttribute("aria-busy")).toBeNull();
+  });
+
+  it("marks a kept comparison as busy while it waits for the read", async () => {
+    apiMock.deviceParameters.mockResolvedValueOnce(panel(usable([{ refId: "P1", downloaded: "4", current: "5" },
+      { refId: "P4", downloaded: "0", current: "1" }])));
+    const written = panel(undefined);
+    written.sections[0].fields[0] = field("P1", { value: "4" });
+    written.tree = tree(3);
+    apiMock.setParameterValue.mockResolvedValue(written);
+    await render();
+    expect(summary()!.getAttribute("aria-busy")).toBeNull();
+    await writeP1("4");
+    expect(summary()!.getAttribute("aria-busy")).toBe("true");
+  });
+
+  it("keeps the unscoped mark when a module-scoped row of the same id is written", async () => {
+    const scoped = (dto: ParameterPanelDto) => {
+      dto.sections[1].fields[0] = field("P1", { writeEtsId: "P1@7" });
+      return dto;
+    };
+    apiMock.deviceParameters.mockResolvedValueOnce(scoped(panel(usable([{ refId: "P1", downloaded: "4", current: "5" }]))));
+    const written = scoped(panel(undefined));
+    written.sections[1].fields[0] = field("P1", { writeEtsId: "P1@7", value: "9" });
+    written.tree = tree(3);
+    apiMock.setParameterValue.mockResolvedValue(written);
+    await render();
+    const moduleInput = host!.querySelectorAll<HTMLLabelElement>('.parameter-field[data-ets-id="P1"]')[1]
+      .querySelector<HTMLInputElement>("input")!;
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value")!.set!.call(moduleInput, "9");
+      moduleInput.dispatchEvent(new Event("input", { bubbles: true }));
+      moduleInput.dispatchEvent(new FocusEvent("focusout", { bubbles: true }));
+      await Promise.resolve();
+    });
+    expect(apiMock.setParameterValue.mock.calls[0][1]).toBe("P1@7");
+    // The module row's value is its own; the unscoped comparison is unchanged.
+    expect(unscopedRow("P1").dataset.differsFromDownload).toBe("true");
+    expect(summary()!.textContent).toContain("1 value differs");
   });
 
   it("does not retain a comparison when a late write answers after a device switch", async () => {

@@ -129,21 +129,29 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
       expect(box.x + box.width).toBeLessThanOrEqual(width);
     }
     await expect(workspace.locator('[data-ets-id="P-Mode"] .parameter-download-mark')).toHaveAttribute("title", value("Switching"));
-    // Keyboard and touch: the value shows as a caption while the row has focus.
+    // Keyboard and touch: the value is a caption under each differing row.
     const notes = workspace.locator(".parameter-download-note");
     await expect(notes).toHaveCount(2);
-    for (const note of await notes.all()) await expect(note).toBeHidden();
-    await delay.focus();
     const delayNote = workspace.locator('[data-ets-id="P-Delay"] + .parameter-download-note');
     await expect(delayNote).toBeVisible();
     await expect(delayNote).toHaveText(value("10"));
-    const noteBox = (await delayNote.boundingBox())!;
-    expect(noteBox.x).toBeGreaterThanOrEqual(0);
-    expect(noteBox.x + noteBox.width).toBeLessThanOrEqual(width);
-    await expect(workspace.locator('[data-ets-id="P-Mode"] + .parameter-download-note')).toBeHidden();
+    await expect(workspace.locator('[data-ets-id="P-Mode"] + .parameter-download-note')).toHaveText(value("Switching"));
+    for (const note of await notes.all()) {
+      const noteBox = (await note.boundingBox())!;
+      expect(noteBox.x).toBeGreaterThanOrEqual(0);
+      expect(noteBox.x + noteBox.width).toBeLessThanOrEqual(width);
+    }
+    // Focus moves nothing within the row (the caption is always there), so a
+    // pointer press that moves focus from the input to the checked-editor
+    // button lands where it started.
+    const checkedOpen = workspace.locator('[data-checked-for="P-Delay"]');
+    const offset = async () => (await checkedOpen.boundingBox())!.y - (await delay.boundingBox())!.y;
+    const unfocused = await offset();
+    await delay.focus();
+    expect(await offset()).toBe(unfocused);
+    await checkedOpen.focus();
+    expect(await offset()).toBe(unfocused);
     expect(await noOverflow(page)).toBeLessThanOrEqual(1);
-    await delay.blur();
-    await expect(delayNote).toBeHidden();
     const summaryBox = (await summary.boundingBox())!;
     expect(summaryBox.x).toBeGreaterThanOrEqual(0);
     expect(summaryBox.x + summaryBox.width).toBeLessThanOrEqual(width + 1);

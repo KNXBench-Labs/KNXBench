@@ -32,12 +32,12 @@ parameter). A write's response carries no comparison: the shown one is kept
 until the follow-up read replaces it, without the written ref (that row's state
 is unknown meanwhile) and with the line dimmed. Under forced colours the row,
 summary and step-1 dots paint in `CanvasText`. Module-scoped parameters are not
-marked. Web only, no server change. Tests: 15 component tests
+marked. Web only, no server change. Tests: 18 component tests
 (`ParameterPanel.lastDownload.test.tsx`), 6 helper/CSS tests
 (`parameterLastDownload.test.ts`), 1 checked-editor test
 (`ParameterPanel.checked.test.tsx`) and 7 browser cases
 (`parameter-last-download.e2e.ts`, dev and devices lanes: en/de, 1440/400 px,
-focus caption, forced colours).
+always-shown caption without layout shift on focus, forced colours).
 
 ## The project remembers what the last download wrote, server part (11 November 2026; issue #40, WP-37 step 2)
 

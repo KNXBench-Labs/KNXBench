@@ -897,13 +897,17 @@ async fn install_catalog_package(
             .bytes()
             .await
             .map_err(|error| ApiError::with_status(error.status(), error.body_text()))?;
-        return domain::install_catalog_package_impl(&state, &filename, &bytes)
-            .map(CatalogInstallReportDto::from)
-            .map(Json)
-            .map_err(|error| match error {
-                domain::CatalogInstallError::BadRequest(error) => package_refusal(error),
-                domain::CatalogInstallError::Internal(error) => ApiError::internal(error),
-            });
+        let state = state.clone();
+        return off_runtime(move || {
+            domain::install_catalog_package_impl(&state, &filename, &bytes)
+        })
+        .await?
+        .map(CatalogInstallReportDto::from)
+        .map(Json)
+        .map_err(|error| match error {
+            domain::CatalogInstallError::BadRequest(error) => package_refusal(error),
+            domain::CatalogInstallError::Internal(error) => ApiError::internal(error),
+        });
     }
     Err(ApiError::bad_request("no file field in catalog install"))
 }
@@ -980,7 +984,8 @@ async fn install_legacy_product_database(
     }
     let (filename, bytes) =
         file.ok_or_else(|| ApiError::bad_request("no file field in legacy install"))?;
-    domain::install_legacy_impl(&state, &filename, &bytes, password, remember)
+    off_runtime(move || domain::install_legacy_impl(&state, &filename, &bytes, password, remember))
+        .await?
         .map(LegacyInstallReportDto::from)
         .map(Json)
         .map_err(|error| match error {
@@ -1494,28 +1499,28 @@ async fn new_project(
         .as_deref()
         .map(parse_group_address_style)
         .transpose()?;
-    domain::new_seeded_project_impl(
-        &state,
-        domain::NewProjectSpec {
-            name: body.name,
-            installation_name: body.installation_name,
-            language: body.language,
-            group_address_style,
-            seed: body.seed.unwrap_or_default().into(),
-        },
-        body.discard_changes,
-    )
-    .map(Json)
-    .map_err(|error| match error {
-        domain::NewProjectError::UnsavedChanges => ApiError::with_status(
-            axum::http::StatusCode::CONFLICT,
-            "the open project has unsaved changes; save it first or resend with \
+    let spec = domain::NewProjectSpec {
+        name: body.name,
+        installation_name: body.installation_name,
+        language: body.language,
+        group_address_style,
+        seed: body.seed.unwrap_or_default().into(),
+    };
+    let discard_changes = body.discard_changes;
+    // Replacing the project flushes the old one's journal first: file work.
+    off_runtime(move || domain::new_seeded_project_impl(&state, spec, discard_changes))
+        .await?
+        .map(Json)
+        .map_err(|error| match error {
+            domain::NewProjectError::UnsavedChanges => ApiError::with_status(
+                axum::http::StatusCode::CONFLICT,
+                "the open project has unsaved changes; save it first or resend with \
              discardChanges: true",
-        ),
-        domain::NewProjectError::InvalidSeed(error) => {
-            ApiError::refused("projectSeedInvalid", error.to_string())
-        }
-    })
+            ),
+            domain::NewProjectError::InvalidSeed(error) => {
+                ApiError::refused("projectSeedInvalid", error.to_string())
+            }
+        })
 }
 
 async fn open_native_project(
@@ -1536,12 +1541,21 @@ async fn open_native_project(
     .await
 }
 
-/// `POST /api/project/save`. The write takes seconds on a large project, so it
-/// runs on a blocking thread: the runtime keeps serving reads meanwhile (#36).
-async fn save_project(State(state): State<SharedState>) -> Result<(), ApiError> {
-    tokio::task::spawn_blocking(move || domain::save_project(&state))
+/// Runs synchronous project work (file writes, imports, project locks) on a
+/// blocking thread, so a long one never holds a runtime worker that other
+/// requests need (#36).
+pub(crate) async fn off_runtime<T: Send + 'static>(
+    work: impl FnOnce() -> T + Send + 'static,
+) -> Result<T, ApiError> {
+    tokio::task::spawn_blocking(work)
         .await
-        .map_err(|e| ApiError::internal(format!("the save task did not finish: {e}")))?
+        .map_err(|e| ApiError::internal(format!("the task did not finish: {e}")))
+}
+
+/// `POST /api/project/save`. The write takes seconds on a large project.
+async fn save_project(State(state): State<SharedState>) -> Result<(), ApiError> {
+    off_runtime(move || domain::save_project(&state))
+        .await?
         .map_err(ApiError::internal)
 }
 
@@ -1575,10 +1589,8 @@ async fn save_project_as(
     Json(body): Json<SaveAsBody>,
 ) -> Result<(), ApiError> {
     let path = resolve_new_project_path(&state.data_dir, &body.path)?;
-    // Blocking thread, like Save: the write must not hold a runtime worker.
-    tokio::task::spawn_blocking(move || domain::save_project_as_with(&state, &path, body.overwrite))
-        .await
-        .map_err(|e| ApiError::internal(format!("the save task did not finish: {e}")))?
+    off_runtime(move || domain::save_project_as_with(&state, &path, body.overwrite))
+        .await?
         .map_err(|error| match error {
             knx_app::project_history::SaveAsError::Exists => ApiError::conflict(
                 "fileExists",
@@ -1936,12 +1948,16 @@ async fn export_group_addresses_csv(
     Json(body): Json<CsvExportBody>,
 ) -> Result<Json<CsvExportReportDto>, ApiError> {
     let path = resolve_new_project_path(&state.data_dir, &body.path)?;
-    domain::export_group_addresses_csv_from_impl(&state, &path, body.installation_id)
-        .map(|export| CsvExportReportDto {
-            warnings: export.warnings.iter().map(CsvProblemDto::from).collect(),
-        })
-        .map(Json)
-        .map_err(ApiError::bad_request)
+    let installation_id = body.installation_id;
+    off_runtime(move || {
+        domain::export_group_addresses_csv_from_impl(&state, &path, installation_id)
+    })
+    .await?
+    .map(|export| CsvExportReportDto {
+        warnings: export.warnings.iter().map(CsvProblemDto::from).collect(),
+    })
+    .map(Json)
+    .map_err(ApiError::bad_request)
 }
 
 /// `ReportWarning` (`knx-report`) does not derive `Serialize` — that crate
@@ -2053,7 +2069,8 @@ async fn export_documentation(
     let (language, sections) =
         documentation_options(body.language.as_deref(), body.sections.as_deref())?;
     let path = resolve_new_project_path(&state.data_dir, &body.path)?;
-    domain::export_documentation_impl(&state, &path, language, sections)
+    off_runtime(move || domain::export_documentation_impl(&state, &path, language, sections))
+        .await?
         .map(|report| DocumentationExportReportDto {
             warnings: report
                 .warnings
@@ -2959,7 +2976,7 @@ async fn diff_project(
         .map(parse_input_kind)
         .transpose()?;
     let path = resolve_project_path(&state.data_dir, &body.path)?;
-    match domain::diff_project_impl(&state, &path, requested_kind) {
+    match off_runtime(move || domain::diff_project_impl(&state, &path, requested_kind)).await? {
         Ok(outcome) => Ok(Json(ProjectDiffResponseDto {
             input: ComparisonImportDto::new(outcome.input_kind, outcome.import_report),
             diff: ProjectDiffDto::from(&outcome.diff),
@@ -3148,16 +3165,19 @@ async fn import_group_addresses_csv(
         })?,
     };
     let path = resolve_project_path(&state.data_dir, &body.path)?;
-    domain::import_group_addresses_csv_encoded_impl(
-        &state,
-        &path,
-        body.confirmation_token.as_deref(),
-        body.installation_id,
-        encoding,
-        knx_csv::CsvImportOptions {
-            clear_blank_descriptions: body.clear_blank_descriptions,
-        },
-    )
+    off_runtime(move || {
+        domain::import_group_addresses_csv_encoded_impl(
+            &state,
+            &path,
+            body.confirmation_token.as_deref(),
+            body.installation_id,
+            encoding,
+            knx_csv::CsvImportOptions {
+                clear_blank_descriptions: body.clear_blank_descriptions,
+            },
+        )
+    })
+    .await?
     .map(|outcome| CsvImportResponseDto {
         tree: outcome.tree,
         report: CsvImportReportDto::from(&outcome.report),
@@ -4209,6 +4229,98 @@ mod tests {
         let _ = release.send(());
         assert!(holder.join().unwrap(), "the runtime was blocked");
         assert_eq!(download.await.unwrap(), axum::http::StatusCode::OK);
+    }
+
+    /// #36: every route that writes or reads project files, or replaces the
+    /// project, runs off the runtime. Each request meets a held project lock;
+    /// on this single-threaded runtime an inline route would block the timer.
+    #[tokio::test(flavor = "current_thread")]
+    async fn file_and_project_routes_leave_the_runtime_free() {
+        use tower::ServiceExt;
+        let dir = tempfile::tempdir().unwrap();
+        let routes: [(&str, &str, serde_json::Value); 5] = [
+            (
+                "POST",
+                "/api/project/new",
+                serde_json::json!({ "discardChanges": true }),
+            ),
+            (
+                "POST",
+                "/api/project/documentation-export",
+                serde_json::json!({ "path": "doc.html" }),
+            ),
+            (
+                "POST",
+                "/api/group-addresses/csv-export",
+                serde_json::json!({ "path": "out.csv" }),
+            ),
+            (
+                "POST",
+                "/api/group-addresses/csv-import",
+                serde_json::json!({ "path": "in.csv" }),
+            ),
+            (
+                "POST",
+                "/api/project/diff",
+                serde_json::json!({ "path": "other.knxdb" }),
+            ),
+        ];
+        let mut blocked = Vec::new();
+        for (method, uri, body) in routes {
+            let state = Arc::new(AppState::new(dir.path().to_path_buf()));
+            crate::domain::new_project_impl(&state, None, None, None, None, true).unwrap();
+            crate::domain::save_project_as(&state, &dir.path().join("other.knxdb")).unwrap();
+            std::fs::write(dir.path().join("in.csv"), "\"Group name\",\"Address\"\n").unwrap();
+            let router = super::project_routes().with_state(Arc::clone(&state));
+            let (release, holder) = hold_project_lock(&state);
+            let request = axum::http::Request::builder()
+                .method(method)
+                .uri(uri)
+                .header("content-type", "application/json")
+                .body(axum::body::Body::from(body.to_string()))
+                .unwrap();
+            let call = tokio::spawn(async move { router.oneshot(request).await.unwrap().status() });
+            tokio::task::yield_now().await;
+            tokio::time::sleep(std::time::Duration::from_millis(20)).await;
+            let _ = release.send(());
+            if !holder.join().unwrap() {
+                blocked.push(uri);
+            }
+            let status = call.await.unwrap();
+            assert_ne!(
+                status,
+                axum::http::StatusCode::NOT_FOUND,
+                "{uri} is not routed"
+            );
+        }
+        assert!(
+            blocked.is_empty(),
+            "these routes blocked the runtime: {blocked:?}"
+        );
+    }
+
+    /// The project download writes a copy taken under the project lock, not
+    /// the live project while holding it: readers get in during the write.
+    #[tokio::test]
+    async fn a_download_writes_its_copy_without_holding_the_project() {
+        use tower::ServiceExt;
+        let state = Arc::new(AppState::default());
+        crate::domain::new_project_impl(&state, None, None, None, None, true).unwrap();
+        let (seen_tx, seen_rx) = std::sync::mpsc::channel();
+        let hook_state = Arc::clone(&state);
+        *crate::fs_routes::DURING_DOWNLOAD_WRITE.lock().unwrap() = Some(Box::new(move || {
+            seen_tx.send(hook_state.project.try_lock().is_ok()).unwrap();
+        }));
+        let router = crate::fs_routes::fs_routes().with_state(Arc::clone(&state));
+        let request = axum::http::Request::get("/api/project/download")
+            .body(axum::body::Body::empty())
+            .unwrap();
+        let status = router.oneshot(request).await.unwrap().status();
+        assert_eq!(status, axum::http::StatusCode::OK);
+        assert!(
+            seen_rx.try_recv().expect("the hook ran"),
+            "the project was held during the write"
+        );
     }
 
     #[tokio::test]

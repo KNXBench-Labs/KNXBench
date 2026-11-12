@@ -1,7 +1,7 @@
 # WP-31 — Device editor unavailable after saving the project (#36)
 
 External report by the issue reporter, 10 November 2026; triaged 11 November 2026.
-Status: **lock fix implemented 11 November 2026; save and download off the runtime workers 12 November 2026; original error message unreproduced.** Follow-up to the original #36 path, which
+Status: **lock fix implemented 11 November 2026; file routes off the runtime workers and download without the project lock 12 November 2026; original error message unreproduced.** Follow-up to the original #36 path, which
 the reporter confirmed fixed by `bf85a5b69` on 10 November 2026.
 
 ## Observed
@@ -58,6 +58,15 @@ file run on a blocking thread (`spawn_blocking`), so a long write no longer
 holds a runtime worker. Tests on a single-threaded runtime, each failing when
 the route runs inline: `a_save_waiting_for_the_project_leaves_the_runtime_free`
 and `a_download_waiting_for_the_project_leaves_the_runtime_free`
-(`apps/knx-server/src/routes.rs`). The download still writes its copy while it
-holds the project lock, so device reads wait for it as they did for Save before
-the frozen-copy fix.
+(`apps/knx-server/src/routes.rs`).
+
+Later the same day (review follow-ups): every other route that does file work
+or replaces the project runs off the runtime through one helper
+(`routes::off_runtime`): New Project, documentation export, group-address CSV
+export and import, project comparison, catalog and legacy product-database
+install. The project download now takes a copy under the project lock and
+writes it after releasing it, like Save. Tests: `file_and_project_routes_leave_the_runtime_free`
+(five routes; each one blocks it when run inline) and
+`a_download_writes_its_copy_without_holding_the_project` (fails when the copy
+is written under the lock). The two catalog installs take no project lock and
+are covered by review only.

@@ -167,6 +167,12 @@ struct ExportBinding {
     snapshot_revision: Option<u64>,
 }
 
+/// Runs on the writing thread after the copy is taken (#36 tests). Global, not
+/// thread-local: the write runs on a blocking thread the test does not own.
+#[cfg(test)]
+pub(crate) static DURING_DOWNLOAD_WRITE: std::sync::Mutex<Option<Box<dyn FnOnce() + Send>>> =
+    std::sync::Mutex::new(None);
+
 async fn download(
     State(state): State<SharedState>,
     Query(binding): Query<ExportBinding>,
@@ -184,37 +190,44 @@ async fn download(
             ))
         }
     };
-    // The copy is written on a blocking thread: on a large project the write
-    // takes seconds and must not hold a runtime worker (#36).
+    // The copy is taken under the project lock and written after releasing
+    // it, on a blocking thread: the write takes seconds on a large project and
+    // must hold neither the project nor a runtime worker (#36).
     let writing_state = Arc::clone(&state);
-    let tmp = tokio::task::spawn_blocking(move || {
+    let tmp = crate::routes::off_runtime(move || {
         let state = writing_state;
-        let project_guard = state.project.lock().expect("state mutex poisoned");
-        let project = project_guard
-            .as_ref()
-            .ok_or_else(|| ApiError::bad_request("no project open"))?;
-        if let Some((server, incarnation, revision)) = reviewed {
-            if server != state.server_incarnation
-                || incarnation != state.project_incarnation.load(Ordering::Relaxed)
-                || revision != state.project_revision.load(Ordering::Relaxed)
-            {
-                return Err(ApiError::with_status(
-                    StatusCode::CONFLICT,
-                    "reviewed native export snapshot is stale; review it again",
-                ));
+        let (project, opaque, manufacturer_refs) = {
+            let project = state.project.lock().expect("state mutex poisoned");
+            let project = project
+                .as_ref()
+                .ok_or_else(|| ApiError::bad_request("no project open"))?;
+            if let Some((server, incarnation, revision)) = reviewed {
+                if server != state.server_incarnation
+                    || incarnation != state.project_incarnation.load(Ordering::Relaxed)
+                    || revision != state.project_revision.load(Ordering::Relaxed)
+                {
+                    return Err(ApiError::with_status(
+                        StatusCode::CONFLICT,
+                        "reviewed native export snapshot is stale; review it again",
+                    ));
+                }
             }
+            let opaque = state.opaque.lock().expect("state mutex poisoned").clone();
+            let manufacturer_refs = state
+                .manufacturer_refs
+                .lock()
+                .expect("state mutex poisoned")
+                .clone();
+            (project.clone(), opaque, manufacturer_refs)
+        };
+        #[cfg(test)]
+        if let Some(hook) = DURING_DOWNLOAD_WRITE.lock().unwrap().take() {
+            hook();
         }
-        let opaque = state.opaque.lock().expect("state mutex poisoned");
-        let manufacturer_refs = state
-            .manufacturer_refs
-            .lock()
-            .expect("state mutex poisoned");
-
         let tmp = tempfile::NamedTempFile::new().map_err(|e| ApiError::internal(e.to_string()))?;
-        domain::save_project_as_impl(tmp.path(), project, &opaque, &manufacturer_refs)
+        domain::save_project_as_impl(tmp.path(), &project, &opaque, &manufacturer_refs)
             .map_err(ApiError::internal)?;
         let tmp = tmp.into_temp_path();
-        drop((opaque, manufacturer_refs, project_guard));
         // ADR-0128: the downloaded file carries its manufacturer files like a
         // saved one; the open project's own file can supply them.
         let open_file = state
@@ -225,8 +238,7 @@ async fn download(
         domain::carry_manufacturer_files(&state, &tmp, open_file.as_deref(), "download");
         Ok::<_, ApiError>(tmp)
     })
-    .await
-    .map_err(|e| ApiError::internal(format!("the export task did not finish: {e}")))??;
+    .await??;
     let mut response = stream_temp_file(tmp, DOWNLOAD_CHUNK_BYTES).await?;
     response.headers_mut().insert(
         header::CONTENT_DISPOSITION,

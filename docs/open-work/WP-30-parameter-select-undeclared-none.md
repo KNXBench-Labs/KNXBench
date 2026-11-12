@@ -1,7 +1,7 @@
 # WP-30 — Parameter selection lists offer an undeclared “(keine)” value (#45)
 
 External report by the issue reporter, 10 November 2026; triaged 11 November 2026.
-Status: **implemented 11 November 2026**: only declared values are choosable; a
+**Closed 12 November 2026** (removed from [OPEN_WORK](../OPEN_WORK.md); issue closed where one exists). Status: **implemented 11 November 2026**: only declared values are choosable; a
 missing or undeclared current value shows as a disabled placeholder; the server refusal
 of `""` is pinned by `restriction_accepts_only_declared_values`. Independent review APPROVE.
 

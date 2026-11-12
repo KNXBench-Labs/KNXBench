@@ -1,7 +1,7 @@
 # WP-38 — Pending-devices panel and batch download (#42)
 
 External report by the issue reporter, 10 November 2026; triaged 11 November 2026.
-Status: **implemented** (11 November 2026, main-only): step 1 read-only panel;
+**Closed 12 November 2026** (removed from [OPEN_WORK](../OPEN_WORK.md); issue closed where one exists). Status: **implemented** (11 November 2026, main-only): step 1 read-only panel;
 step 2 batch download per
 [ADR-0172](../adr/0172-batch-programming-stops-at-the-first-doubt.md)
 (Accepted), server part WP-38b and UI part WP-38c. Simulator and intercepted

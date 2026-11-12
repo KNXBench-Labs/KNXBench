@@ -1,7 +1,7 @@
 # WP-40 — Version restore must not resurrect "programmed" claims
 
 Found 11 November 2026 while designing WP-37 step 2 (source reading of main
-`e17051626`). Status: **implemented 11 November 2026** (`settle_restored_version`
+`e17051626`). **Closed 12 November 2026** (removed from [OPEN_WORK](../OPEN_WORK.md); issue closed where one exists). Status: **implemented 11 November 2026** (`settle_restored_version`
 in `knx-core`, called by `change_history`; server session-log line). Decision:
 [ADR-0173](../adr/0173-last-downloaded-parameter-values.md) §6.
 

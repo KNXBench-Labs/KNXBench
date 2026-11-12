@@ -2260,7 +2260,7 @@ export const messages: Record<MessageKey, string> = {
   "parameters.lastDownload.hidden.one": "Davon wird {hidden} mit den aktuellen Einstellungen nicht angezeigt.",
   "parameters.lastDownload.hidden.other": "Davon werden {hidden} mit den aktuellen Einstellungen nicht angezeigt.",
   "parameters.lastDownload.noneDiffer": "Kein Wert weicht vom letzten Programmieren ab ({time}).",
-  "parameters.lastDownload.absent": "Für dieses Gerät ist noch kein Programmieren durch KNXBench erfasst; nur der Hinweis je Teil ist verfügbar.",
+  "parameters.lastDownload.absent": "Für dieses Gerät sind keine Werte eines abgeschlossenen Programmierens durch KNXBench gespeichert; nur der Hinweis je Teil ist verfügbar.",
   "parameters.lastDownload.otherProgram": "Das letzte Programmieren hat ein anderes Applikationsprogramm verwendet; die Werte lassen sich nicht vergleichen.",
   "parameters.lastDownload.productUnavailable": "Produktdaten fehlen; die Werte lassen sich nicht mit dem letzten Programmieren vergleichen.",
   "parameters.lastDownload.currentUnreadable": "Das Projekt enthält widersprüchliche Werte; sie lassen sich nicht mit dem letzten Programmieren vergleichen.",

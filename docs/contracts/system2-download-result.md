@@ -253,12 +253,13 @@ and reopen never settle.
      id. The current project must itself pass the same configured preparation; its request
      is then compared with the written one through the regular download's dependency mask
      (`programming_state::still_current`): Application needs the same program, Parameters
-     also the same values, Group addresses also the same individual address, links and
-     flag overrides.
+     also the same values and flag overrides (the group object table lies in the
+     application program's memory; ADR-0129 amendment of 12 November 2026), Group
+     addresses also the same individual address and links.
   The parts still equal are marked programmed (Address included: the device answered at
   the project's address for the whole run) and the download time recorded; the other
   memory parts become pending. So a rename or an edit elsewhere in the project keeps all
-  four, a link or flag edit leaves Group addresses pending, a parameter edit leaves
+  four, a link edit leaves Group addresses pending, a parameter or flag edit leaves
   Parameters and Group addresses pending. The start admission itself is unchanged and
   still requires the whole preparation. This is a comparison of the current project's
   request after original-source proof, not general per-part source equivalence.

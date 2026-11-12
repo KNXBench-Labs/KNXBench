@@ -77,7 +77,9 @@ Implement P3 in its own worktree: review, full gate, push.
 - What marks which part: individual address changed → Address;
   product/application changed → Application; any parameter value →
   Parameters; link/unlink, object flags, renumbering or deleting a linked
-  group address → Group addresses, on every linked device. DPT changes do
+  group address → Group addresses, on every linked device. *(Superseded for
+  object flags on 12 November 2026: they mark Parameters, see the ADR-0129
+  amendment.)* DPT changes do
   not count (the group object table carries the product's object types).
 - Marking happens in the same undo step as the edit, so undo clears it again.
 - What clears: a full download clears every part, a partial download only

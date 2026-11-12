@@ -20,12 +20,20 @@ table, which lies in the application program's memory; a partial download
 writes it only with Parameters. Before, a group-addresses-only download
 cleared the mark of a flag edit it had not written, and the project claimed
 the device held a flag it did not. A download likewise credits a flag only
-with the Parameters part. Found by the ADR-0174 design review. Tests:
+with the Parameters part. Found while designing per-link marks for WP-37 (a
+review of an unpublished draft). Tests:
 `an_object_flag_marks_parameters_but_a_datapoint_type_does_not`,
-`a_flag_edited_during_a_partial_download_is_never_credited` and the content
-and `still_current` cases. A Group addresses mark that an older build set for
-a flag edit stays a Group addresses mark; download Parameters too for such a
-device.
+`a_flag_edited_during_a_partial_download_is_never_credited`,
+`a_flag_edit_survives_a_group_addresses_only_download` and the content and
+`still_current` cases. The parameter editor's "no value differs" line now says
+that object flags are not compared there. A Group addresses mark that an older
+build set for a flag edit stays a Group addresses mark (see known issues). A
+load-time migration that also marks Parameters wherever Group addresses is
+pending was considered and not done: it needs a schema step and would mark
+every device with a pending link change, with no record of which marks came
+from flags. Evidence and the unguarded boundary (a `070n` product with the
+object table outside the application segment):
+[research note](research/2026-11-12-group-object-table-load-machine.md).
 
 ## New projects get their own project id (12 November 2026; ADR-0173 §2 follow-up)
 

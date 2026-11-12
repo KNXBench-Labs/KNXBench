@@ -15,19 +15,29 @@ fragment aliases and update this index. Do not rewrite previous results.
 ## The parameter editor shows what differs from the last download (12 November 2026; issue #40, WP-37 step 2)
 
 The Parameters tab now reads `lastDownload` ([ADR-0173](adr/0173-last-downloaded-parameter-values.md),
-now Accepted). A value that differs from what the device's last completed
-KNXBench download sent gets the step-1 amber dot with the tooltip and accessible
-description **Value at last download: …** / **Wert beim letzten Programmieren:
-…** (option labels for selections, “no value” when there was none); the field's
-accessible name is unchanged. A line above the fields counts the differing
-values with the download time and names how many of them the current settings
-do not show, says when none differ, or says in one sentence why no comparison
-is possible (no recorded download, another application program, missing
-product data, conflicting project values). A write's response carries no
-comparison, so the shown one is kept until the follow-up read replaces it.
-Module-scoped parameters are not marked. Web only, no server change. Tests:
-12 component tests (`ParameterPanel.lastDownload.test.tsx`) and 6 browser
-cases (`parameter-last-download.e2e.ts`, devices lane: en/de, 1440/400 px).
+now Accepted; simulator and intercepted-browser tests only, no hardware run). A
+value that differs from the value the device's last completed KNXBench download
+used gets the step-1 amber dot with the tooltip and accessible description
+**Value at last download: …** / **Wert beim letzten Programmieren: …** (option
+labels for selections, “no value” when there was none); the field's accessible
+name is unchanged. The same text shows as a caption under the row while the row
+has focus (keyboard, touch), always under a control that cannot take focus and
+beside an open checked editor. A line above the fields counts the differing
+values with the download time and says, separately, how many no field shows
+with the current settings (inactive or undeclared) and how many only the
+Manufacturer fields tab shows; it says when none differ, or says in one sentence
+why no comparison is possible (no stored download values, another application
+program, missing product data, two different project values for one
+parameter). A write's response carries no comparison: the shown one is kept
+until the follow-up read replaces it, without the written ref (that row's state
+is unknown meanwhile) and with the line dimmed. Under forced colours the row,
+summary and step-1 dots paint in `CanvasText`. Module-scoped parameters are not
+marked. Web only, no server change. Tests: 15 component tests
+(`ParameterPanel.lastDownload.test.tsx`), 6 helper/CSS tests
+(`parameterLastDownload.test.ts`), 1 checked-editor test
+(`ParameterPanel.checked.test.tsx`) and 7 browser cases
+(`parameter-last-download.e2e.ts`, dev and devices lanes: en/de, 1440/400 px,
+focus caption, forced colours).
 
 ## The project remembers what the last download wrote, server part (11 November 2026; issue #40, WP-37 step 2)
 

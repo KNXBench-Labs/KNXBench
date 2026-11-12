@@ -154,6 +154,8 @@ fn each_kind_of_edit_changes_exactly_its_part() {
         only(|s| s.parameters = true)
     );
 
+    // The group object table lies in the application program's memory: a
+    // flag reaches the device only with the Parameters part.
     let mut p = base.clone();
     p.devices.com_object_mut(CO1).unwrap().flags.read = Override::Value(Resolved {
         value: true,
@@ -161,7 +163,7 @@ fn each_kind_of_edit_changes_exactly_its_part() {
     });
     assert_eq!(
         before.changed_parts(&content_of(&p, D1)),
-        only(|s| s.group_addresses = true)
+        only(|s| s.parameters = true)
     );
 
     let mut p = base.clone();

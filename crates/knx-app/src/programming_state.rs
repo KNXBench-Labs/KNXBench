@@ -161,11 +161,11 @@ pub fn attempted_parts(
 pub fn still_current(written: &ImageRequest, now: &ImageRequest) -> ProgrammingParts {
     let address = written.individual_address == now.individual_address;
     let application = written.program_id == now.program_id;
-    let parameters = application && written.values == now.values;
-    let group_addresses = parameters
-        && address
-        && written.links == now.links
-        && written.flag_overrides == now.flag_overrides;
+    // The object flags travel with the parameters: the group object table
+    // lies in the application program's memory (see `ProgrammingContent`).
+    let parameters =
+        application && written.values == now.values && written.flag_overrides == now.flag_overrides;
+    let group_addresses = parameters && address && written.links == now.links;
     ProgrammingParts {
         address,
         application,

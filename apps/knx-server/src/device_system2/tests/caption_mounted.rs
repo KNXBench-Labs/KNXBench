@@ -435,8 +435,9 @@ async fn run(namespace: u8, retained: bool, edit: Edit, saved: bool, marked: boo
         }
     );
     let expected = match edit {
-        Edit::Parameter => [true, true, false, false, true],
-        Edit::Links | Edit::Flags => [true, true, true, false, true],
+        // Flags are Parameters content (ADR-0129 amendment, 12 November 2026).
+        Edit::Parameter | Edit::Flags => [true, true, false, false, true],
+        Edit::Links => [true, true, true, false, true],
         Edit::InvalidParameter
         | Edit::InvalidFlag
         | Edit::UnsupportedSource

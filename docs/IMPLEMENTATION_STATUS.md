@@ -26,7 +26,10 @@ lifecycle as the row dots: no client comparison, nothing for module rows or
 unusable comparisons. Web only, no server change. Tests: 10 component tests
 (`ParameterPanel.sectionMarks.test.tsx`), the forced-colours rule test and 4
 browser cases (`parameter-last-download.e2e.ts`: en/de, 1440/400 px) plus the
-extended forced-colours case.
+extended forced-colours case. Published as `54d243ae8`; independent review
+APPROVE, selected package gate 11/11 (nested web 37/37): 5731 Vitest tests,
+default browser 1229 (1132 functional + 97 exclusive), production devices 112
+(111 + 1); frozen inputs, checked user data untouched. No Rust suite selected.
 
 ## The object table shows links and flags that differ from the last download (12 November 2026; WP-37 step 3)
 
@@ -45,7 +48,10 @@ section does not hide the other's marks. Forced colours paint the dots in
 `CanvasText`. Web only, no server change. Tests: 18 component tests
 (`ComObjectTable.lastDownload.test.tsx`), the forced-colours rule test and 5
 browser cases (`parameter-last-download.e2e.ts`, dev and devices lanes: en/de,
-1440/400 px, forced colours).
+1440/400 px, forced colours). Published as `6817638aa`; independent review
+APPROVE, selected package gate 11/11 (nested web 37/37): 5721 Vitest tests,
+default browser 1225 (1128 functional + 97 exclusive), production devices 108
+(107 + 1); frozen inputs, checked user data untouched. No Rust suite selected.
 
 ## Independent last-download links and flags, backend (12 November 2026; WP-37f)
 

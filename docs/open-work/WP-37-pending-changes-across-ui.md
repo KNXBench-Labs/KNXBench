@@ -284,6 +284,20 @@ existing exact-name browser locators stable (including capture specs that run
 against imported projects with pending flags); screen readers announce the
 description after the name.
 
+## Acceptance of steps 3 UI and 4 (12 November 2026)
+
+- Step 3 UI `6817638aa` and step 4 `54d243ae8` are on main with exact remote
+  readback. Both independent reviews APPROVE; semantic mutants were killed and
+  no-op controls passed in disposable review copies.
+- Each selected package gate passed 11/11 stages, including a 37/37-stage web
+  gate. Step 3: Vitest 5721, default browser 1225 (1128 functional + 97
+  exclusive), production devices 108 (107 + 1). Step 4: Vitest 5731, default
+  browser 1229 (1132 + 97), production devices 112 (111 + 1). Browser lanes
+  overlap; these are per-lane counts, not unique totals. No Rust suite selected
+  for either web-only delta. Inputs frozen; user data checked and untouched.
+- #48 received a delivery comment and remains open. These are main-only changes,
+  shipping with the next alpha; no hardware verification, release or deployment.
+
 ## Not covered
 
 - Group-address views carry no last-download marks (ADR-0174 §5).

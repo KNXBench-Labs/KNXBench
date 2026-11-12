@@ -58,18 +58,7 @@ async fn mark(
         project_incarnation: request.project_incarnation,
         snapshot_revision: request.snapshot_revision,
     };
-    let command = Command::SetDeviceProgramming {
-        device: DeviceId(id),
-        change: ProgrammingChange::mark(ProgrammingParts::ALL, request.programmed),
-    };
-    // A mark is a claim KNXBench did not witness: either direction forgets
-    // the parameter baseline, outside the undoable command (ADR-0173 §3).
-    // Undoing the mark restores the flags, never the baseline.
-    let forget = vec![BaselineEdit {
-        device: DeviceId(id),
-        baseline: None,
-    }];
-    domain::apply_bound_prepared_with(&state, &binding, "MarkDeviceProgramming", command, forget)
+    mark_device(&state, &binding, DeviceId(id), request.programmed)
         .map(Json)
         .map_err(|error| match error {
             BoundCommandError::NoProject => ApiError::bad_request("No project open"),
@@ -84,6 +73,28 @@ async fn mark(
                 "The device was not marked because the change could not be persisted: {message}"
             )),
         })
+}
+
+/// A manual mark of every part of `device`, bound to the snapshot the user saw.
+pub(crate) fn mark_device(
+    state: &AppState,
+    binding: &SnapshotBinding,
+    device: DeviceId,
+    programmed: bool,
+) -> Result<ProjectTree, BoundCommandError> {
+    let command = Command::SetDeviceProgramming {
+        device,
+        change: ProgrammingChange::mark(ProgrammingParts::ALL, programmed),
+    };
+    // A mark is a claim KNXBench did not witness: either direction forgets
+    // the parameter baseline, outside the undoable command (ADR-0173 §3).
+    // Undoing the mark restores the flags, never the baseline. Only a device
+    // that has one makes the mark's journal write synchronous (ADR-0166).
+    let forget = vec![BaselineEdit {
+        device,
+        baseline: None,
+    }];
+    domain::apply_bound_prepared_with(state, binding, "MarkDeviceProgramming", command, forget)
 }
 
 pub fn router() -> Router<SharedState> {

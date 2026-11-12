@@ -7,13 +7,13 @@
 //! baseline may belong to a device the saved root does not hold yet (it was
 //! created and downloaded after the last save).
 
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeMap;
 
 use chrono::{DateTime, SecondsFormat, Utc};
 use knx_core::commissioning::parameter_baseline::{
     BaselineEdit, ParameterBaseline, ParameterBaselines,
 };
-use knx_core::{DeviceId, Project};
+use knx_core::{DeviceId, DeviceInstance, Project};
 use rusqlite::{params, Connection};
 
 use crate::StoreError;
@@ -150,13 +150,39 @@ pub(crate) fn replace_all(
     Ok(())
 }
 
+/// Whose devices the stored rows of a save without baselines of its own
+/// (ADR-0173 §2) are checked against.
+#[derive(Debug, Clone, Copy)]
+pub(crate) enum PruneBasis<'a> {
+    /// The writer committed at the journal generation it was admitted at, so
+    /// its project continues, command by command, the one the rows were
+    /// written for: an id it holds names the device the row was recorded for
+    /// (ADR-0039 never issues an id twice). Devices added and downloaded
+    /// since the last root save have rows but are absent from the old root,
+    /// which is why the old root is no reference here.
+    Continued {
+        previous_project_id: Option<&'a str>,
+    },
+    /// Any other writer (a plain store save, `knx import --replace`, an
+    /// unadmitted root save): its device ids may name other devices. `described`
+    /// is the project the rows were written for: the journal's working state,
+    /// else the saved root.
+    Replaced { described: Option<&'a Project> },
+}
+
+/// Whether two devices under one id are the same device: same source
+/// element, same product and same application program reference.
+fn same_device(a: &DeviceInstance, b: &DeviceInstance) -> bool {
+    a.source == b.source && a.product_ref == b.product_ref && a.program_ref == b.program_ref
+}
+
 /// What a save that brings no baselines of its own does with the stored
-/// ones: they stay for devices of `project`, and are dropped for every other
-/// device, or entirely when the file held another project
-/// (`previous_project_id`), whose device ids name different devices.
+/// ones: a row stays only for a device of `project` that is the device it
+/// was recorded for, judged by `basis`; every row goes when the file held
+/// another project, whose device ids name different devices.
 pub(crate) fn prune(
     conn: &Connection,
-    previous_project_id: Option<&str>,
+    basis: PruneBasis<'_>,
     project: &Project,
 ) -> Result<(), StoreError> {
     let stored: Vec<i64> = conn
@@ -166,11 +192,26 @@ pub(crate) fn prune(
     if stored.is_empty() {
         return Ok(());
     }
-    let same_project = previous_project_id == Some(project.info.project_id.as_str());
-    let present: BTreeSet<u32> = project.devices.iter().map(|d| d.id.0).collect();
+    let project_id = project.info.project_id.as_str();
+    let keeps = |id: u32| {
+        let Some(device) = project.devices.get(DeviceId(id)) else {
+            return false;
+        };
+        match basis {
+            PruneBasis::Continued {
+                previous_project_id,
+            } => previous_project_id == Some(project_id),
+            PruneBasis::Replaced { described } => described.is_some_and(|described| {
+                described.info.project_id == project_id
+                    && described
+                        .devices
+                        .get(DeviceId(id))
+                        .is_some_and(|before| same_device(before, device))
+            }),
+        }
+    };
     for id in stored {
-        let keep = same_project && u32::try_from(id).is_ok_and(|id| present.contains(&id));
-        if !keep {
+        if !u32::try_from(id).is_ok_and(keeps) {
             conn.execute(
                 "DELETE FROM device_parameter_baseline_value WHERE device_id = ?1",
                 [id],

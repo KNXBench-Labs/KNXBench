@@ -136,7 +136,8 @@ async fn caption_both_families_preserve_current_request_dependency_masks_and_ref
             .unwrap()
             .flags
             .write = exported(false);
-        assert_eq!(parts(&input.conn, &flags, &bundle), Some(ADR_APP_PAR));
+        // Flags are Parameters content (ADR-0129 amendment, 12 November 2026).
+        assert_eq!(parts(&input.conn, &flags, &bundle), Some(ADR_APP));
         let mut parameters = input.project.clone();
         parameter(&mut parameters, "772");
         assert_eq!(parts(&input.conn, &parameters, &bundle), Some(ADR_APP));

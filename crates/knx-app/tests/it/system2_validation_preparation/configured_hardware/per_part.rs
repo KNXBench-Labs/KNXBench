@@ -98,7 +98,7 @@ async fn s2_per_part_unchanged_rename_and_unrelated_edits_keep_every_part() {
 }
 
 #[tokio::test]
-async fn s2_per_part_links_or_flags_leave_only_the_group_tables_pending() {
+async fn s2_per_part_links_leave_only_the_group_tables_pending_and_flags_the_parameters() {
     let (_dir, conn, project, profile) = inputs();
     let bundle = observed(&conn, &project, &profile).await;
     let mut links = project.clone();
@@ -116,7 +116,9 @@ async fn s2_per_part_links_or_flags_leave_only_the_group_tables_pending() {
         .unwrap()
         .flags
         .write = exported(false);
-    assert_eq!(parts(&conn, &flags, &bundle), Some(ADR_APP_PAR));
+    // The group object table lies in the application program's memory: a
+    // flag is part of Parameters (ADR-0129 amendment, 12 November 2026).
+    assert_eq!(parts(&conn, &flags, &bundle), Some(ADR_APP));
 }
 
 #[tokio::test]

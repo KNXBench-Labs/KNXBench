@@ -75,10 +75,10 @@ catalog installs take no project lock and are covered by review only.
 The debug report and the retained-payload download followed
 (`report_and_payload_routes_leave_the_runtime_free`; fails for both when run
 inline). The payload download still writes under the project and opaque
-locks: copying a payload of up to 1 GB out first would take as long as writing
-it and double its memory.
+locks: copying a payload of up to 1 GB out first would double its memory per
+download.
 
 Edits and plain reads still wait for the project lock on a runtime worker, so a long
-CSV import, comparison or documentation export can make them wait as Save
-did. Concurrent downloads each hold a full project copy while they write (no
+CSV import, comparison, documentation export or large retained-payload download
+can make them wait as Save did. Concurrent downloads each hold a full project copy while they write (no
 limit; acceptable for one user, unbounded for many).

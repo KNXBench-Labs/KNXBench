@@ -171,15 +171,13 @@ async fn create_debug_report(
         bus_telegrams,
     };
 
-    let target = request
-        .path
-        .as_deref()
-        .map(|path| crate::paths::resolve_new_project_path(&state.data_dir, path))
-        .transpose()?;
+    let data_dir = state.data_dir.clone();
+    let target = request.path;
     let (bundle, written_path) = crate::routes::off_runtime(move || {
         let bundle = debug_report::build_bundle(&input, &Redactor::from_environment());
-        let written_path = match target {
-            Some(resolved) => {
+        let written_path = match target.as_deref() {
+            Some(path) => {
+                let resolved = crate::paths::resolve_new_project_path(&data_dir, path)?;
                 debug_report::write_zip(&resolved, &bundle.files).map_err(ApiError::internal)?;
                 Some(resolved.display().to_string())
             }

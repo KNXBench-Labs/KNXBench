@@ -58,7 +58,10 @@ edits, 19 group-address descriptions. Nothing existing is changed. **Alpha 19 re
 an upgraded file** as newer than it supports (`FutureSchemaVersion`); reinstalling
 Alpha 19 does not convert it back. Keep a copy of every project before you upgrade,
 and restore that pre-upgrade copy to go back. Read-only opening migrates a memory
-copy only and leaves the file at its own version.
+copy only and leaves the file at its own version. On main after Alpha 20 the
+schema moves on to 20 (the parameter values of each device's last download,
+[ADR-0173](../adr/0173-last-downloaded-parameter-values.md)); Alpha 20 refuses a
+file a main build has written, in the same way.
 
 The captured saved-instance priority overlay never invents declarations or absence
 for historical files or history: they remain NotCaptured. No wire behaviour or new

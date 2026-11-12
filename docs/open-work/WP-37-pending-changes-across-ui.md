@@ -136,8 +136,9 @@ description after the name.
 - Device identity is source, product and program reference within one project
   id. New projects get a random id (`P-KB-` and 128 bits, main 12 November
   2026; `domain.rs` `new_project_id`, test `every_new_project_gets_its_own_project_id`).
-  Files created before keep `P-0001`, and ETS ids (`P-0512`) can repeat across
-  unrelated installations: such projects still cannot be told apart, so a
+  Files created before keep `P-0001`, ETS ids (`P-0512`) can repeat across
+  unrelated installations, and copies of one project (Save As, a copied file)
+  keep one id once edited apart: such projects still cannot be told apart, so a
   version left in a file overwritten by Save As can pair a baseline with another
   physical device of the same product and program.
 

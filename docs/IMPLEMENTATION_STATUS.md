@@ -19,8 +19,8 @@ gets `P-KB-` and 128 random bits in hex as its project id instead of the shared
 constant `P-0001`. Parameter baselines are kept across restores and plain store
 saves only within one project id, so two independently created projects no
 longer look like the same project. Existing files keep their id; ETS imports
-keep their ETS id. Without the operating system's random source the time and
-process id stand in. Test: `every_new_project_gets_its_own_project_id`
+keep their ETS id. Copies of one project (Save As, a copied file) keep one id
+on purpose and remain indistinguishable once edited apart. Test: `every_new_project_gets_its_own_project_id`
 (`apps/knx-server/src/domain.rs`).
 
 ## The parameter editor shows what differs from the last download (12 November 2026; issue #40, WP-37 step 2)

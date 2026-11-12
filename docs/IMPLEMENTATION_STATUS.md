@@ -29,8 +29,16 @@ native save prunes deleted devices, Save As copies them, a session-only project
 keeps them in memory until its first save. `GET /api/device/{id}/parameters`
 gains an optional `lastDownload` (`usable` with the differing refs, `absent`,
 `otherProgram`, `productUnavailable`, `currentUnreadable`). No UI yet. Synthetic
-store, settlement, HTTP and simulated-download tests; 500 devices × 200 refs
-save and read within seconds. Older builds refuse schema-20 files.
+store, settlement, HTTP and simulated-download tests. Size: 500 devices × 200
+refs (100 000 rows) grow the file by 4.6 MiB; the test bounds each step at 60 s
+and prints its times. One debug-build run on the loaded dev machine took 2.2 s
+to write all rows as Save As does, 0.53 s for a plain save and 0.13 s to read
+them. A plain save writes no baseline row (store test with counting triggers;
+amended after review): with the rows rewritten on every save, a release-build
+plain save had measured 0.48–0.62 s against 0.33–0.52 s without baselines.
+A store save not admitted at the journal's generation (`knx import --replace`)
+keeps only rows whose device keeps its source, program and product reference.
+Older builds refuse schema-20 files.
 
 ## The device editor shows what is not programmed yet (11 November 2026; issue #40, WP-37)
 

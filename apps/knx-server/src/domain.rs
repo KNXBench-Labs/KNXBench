@@ -1718,13 +1718,18 @@ fn save_editor_state(
         manufacturer_refs: acquired.refs.clone(),
     };
     let stack = stack_guard.clone();
+    // Only Save As copies the baselines: its destination holds none of this
+    // project's yet. A plain save goes to the file every settlement and mark
+    // already wrote them to, so it leaves its rows alone (ADR-0173 §7).
     // Settlement takes the store path before it changes baselines, so none
-    // can land between this copy and the write below (ADR-0173 §7).
-    let baselines = state
-        .parameter_baselines
-        .lock()
-        .expect("state mutex poisoned")
-        .clone();
+    // can land between this copy and the write below.
+    let baselines = destination.is_some().then(|| {
+        state
+            .parameter_baselines
+            .lock()
+            .expect("state mutex poisoned")
+            .clone()
+    });
     // #36: the file write takes seconds on large projects. It writes the frozen
     // copy above, so readers of the project need not wait for it. Store path and
     // generation stay held: every writer (journal hand-over, Save As, version
@@ -1745,7 +1750,7 @@ fn save_editor_state(
             &stack,
             overwrite,
             &acquired.files,
-            Some(&baselines),
+            baselines.as_ref(),
         )?,
         None => knx_app::project_history::save_with_sources(
             store_path.as_deref().ok_or_else(|| {
@@ -1755,11 +1760,15 @@ fn save_editor_state(
             &stack,
             *generation,
             &acquired.files,
-            Some(&baselines),
+            None,
         )
         .map_err(SaveAsError::Failed)?,
     };
     // The file now holds the baselines of the saved project's devices only.
+    // Its id-only rule is the file's: this map was replaced with the project
+    // (`replace_project_state_transaction`), and a save is admitted only at
+    // the generation the server holds, so every id here names the device of
+    // this project's own command history (ADR-0039 never reissues one).
     state
         .parameter_baselines
         .lock()

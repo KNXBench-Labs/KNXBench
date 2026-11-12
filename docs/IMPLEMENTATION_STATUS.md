@@ -12,6 +12,26 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## The project remembers what the last download wrote, server part (11 November 2026; issue #40, WP-37 step 2)
+
+Native schema 20 ([ADR-0173](adr/0173-last-downloaded-parameter-values.md),
+still Proposed until the UI part lands): per device, a completed regular or
+batch download from an unchanged product source records the effective value of
+every unscoped `ParameterRef` it built its image from, in two file-level tables
+outside `Project`, undo, snapshot images and versions. Settlement carries an
+explicit `Keep`/`Remove`/`Record` instruction per the ADR's table: a changed or
+unknown source and an interrupted run that attempted the parameters remove it,
+runs without parameters in scope, address programming and runs that wrote
+nothing keep it, every System-2 settlement removes it, and a manual mark in
+either direction removes it outside its undoable command. The rows are written
+in the same SQLite transaction as the journal write of the settled flags; a
+native save prunes deleted devices, Save As copies them, a session-only project
+keeps them in memory until its first save. `GET /api/device/{id}/parameters`
+gains an optional `lastDownload` (`usable` with the differing refs, `absent`,
+`otherProgram`, `productUnavailable`, `currentUnreadable`). No UI yet. Synthetic
+store, settlement, HTTP and simulated-download tests; 500 devices × 200 refs
+save and read within seconds. Older builds refuse schema-20 files.
+
 ## The device editor shows what is not programmed yet (11 November 2026; issue #40, WP-37)
 
 The opened device now repeats its existing programming marks where you edit:

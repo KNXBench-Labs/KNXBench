@@ -1,7 +1,7 @@
 # ADR 0173: The project remembers the parameter values a verified download wrote
 
 Date: 2026-11-11
-Status: Proposed
+Status: Proposed (server part implemented 11 November 2026, WP-37 step 2; UI pending)
 Session: issue intake #40, step 2 ([WP-37](../open-work/WP-37-pending-changes-across-ui.md)); restore finding [WP-40](../open-work/WP-40-version-restore-programming-claims.md)
 
 ## Context
@@ -92,7 +92,9 @@ The baseline is keyed by `DeviceId` and stored in its own native tables
 no undo, redo, snapshot recovery or version restore can bring back an older
 baseline, and the history images do not grow. No edit command touches it.
 A device deletion leaves its entry until the next native save, which prunes
-entries of devices absent from the saved project. A device that an undo,
+entries of devices absent from the saved project. A plain save of another
+project into the file (another `project_id`, whose device ids name other
+devices) drops every entry. A device that an undo,
 redo or version restore brings back after that save returns with an unknown
 baseline; this conservative loss is accepted.
 
@@ -109,6 +111,7 @@ at save (§2); nothing else changes it.
 | Settler and end | Baseline |
 | --- | --- |
 | download `Completed`, source `Unchanged`, Parameters in scope (complete or partial) | `Record` the written request's resolved values, even when the project changed during the run: exactly those edits then differ |
+| download `Completed`, source `Unchanged`, Parameters in scope, but the written values cannot be resolved in that lease | `Remove` (added by the implementation: nothing to record, and an older baseline would no longer describe the device) |
 | download `Completed`, source `ChangedOrUnknown`, Parameters in scope | `Remove` |
 | download `Interrupted`, Parameters attempted | `Remove` |
 | download `Interrupted`, Parameters in scope but not attempted | `Keep` |
@@ -120,7 +123,10 @@ at save (§2); nothing else changes it.
 
 A manual **Mark as programmed / not programmed** removes the baseline outside
 its undoable command: a claim KNXBench did not witness. Undoing the mark
-restores the flags, not the baseline. Adopting values read from a device
+restores the flags, not the baseline. The removal is written in the same
+transaction as the mark's journal entry, which is therefore written at once
+even on a server that otherwise journals in the background (ADR-0166); a mark
+that is refused or stale removes nothing. Adopting values read from a device
 (project comparison adoption) never records a baseline; adopted values then
 show as differing from the last download until the next one.
 
@@ -137,6 +143,11 @@ strings, the strings the image builder encodes.
 The baseline is **not usable** (state reported, no per-parameter verdict) when
 it is absent, when its program id differs from the device's current resolved
 program, or when the product data needed for the current side is unavailable.
+The implementation found a fourth case: the project states two different
+values for one ref of the device, so the current side is unknown (a download
+refuses the device for the same reason); it is reported as its own state,
+`currentUnreadable`, rather than as missing product data. A stored key the
+current program does not declare is a value on the current side, as above.
 
 The per-part flag stays the authority for "pending". The comparison can find
 no difference while Parameters is pending (a value set explicitly to its
@@ -145,9 +156,11 @@ says that no value differs from the last download, or that it is unknown.
 
 ### 5. Presentation
 
-The device parameter response reports the state (`usable`, `absent`,
-`otherProgram`, `productUnavailable`) and, when usable, the end time and the
-differing refs with stored and current values. The parameter editor marks a
+The device parameter response (`GET /api/device/{id}/parameters`, optional
+field `lastDownload`) reports the state (`usable`, `absent`, `otherProgram`,
+`productUnavailable`, `currentUnreadable`) and, when usable, the end time and
+the differing refs with stored and current values. The response of a parameter
+write does not carry it; the client reads it with the next `GET`. The parameter editor marks a
 differing visible row with the step-1 amber mark and a tooltip/accessible
 description "Value at last download: …" / "Wert beim letzten Programmieren:
 …", using enum labels where declared. The panel names the number of differing
@@ -202,7 +215,9 @@ keeps baselines in server memory, bound to the project incarnation, and the
 first native save writes them; **Save As** to a new file copies them like
 the project. Row count is one per unscoped ref per programmed device; a
 large-project size and time test is part of the implementation.
-Restoring a version stored by schema 19 is tested. `.knxproj` import, project
+Restoring a version stored by an older schema is tested with the authentic
+native-18 fixture's named version; a schema-19 history image is tested to
+decode with its identity (snapshot codec unit test). `.knxproj` import, project
 comparison, exports, reports and selective import ignore the baseline in this
 step; the selective-import reference closure is audited for the new tables.
 

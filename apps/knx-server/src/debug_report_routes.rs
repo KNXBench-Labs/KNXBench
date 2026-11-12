@@ -113,10 +113,15 @@ async fn create_debug_report(
         json!(guard.entries())
     });
 
-    let (project_open, project_summary) = {
+    // Waiting for the project (a save or import can hold it for seconds) and
+    // writing the zip are synchronous: both run off the runtime (#36).
+    let summary_state = state.clone();
+    let include_project_summary = request.include_project_summary;
+    let (project_open, project_summary) = crate::routes::off_runtime(move || {
+        let state = summary_state;
         let guard = state.project.lock().expect("project mutex poisoned");
         let open = guard.is_some();
-        let summary = match (request.include_project_summary, guard.as_ref()) {
+        let summary = match (include_project_summary, guard.as_ref()) {
             (true, Some(project)) => {
                 let counts = &*state.import_counts.lock().expect("state mutex poisoned");
                 let saved = state
@@ -132,7 +137,8 @@ async fn create_debug_report(
             (false, _) => None,
         };
         (open, summary)
-    };
+    })
+    .await?;
 
     let bus_telegrams = if request.include_bus_telegrams {
         let guard = state.bus_session.lock().await;
@@ -165,16 +171,23 @@ async fn create_debug_report(
         bus_telegrams,
     };
 
-    let bundle = debug_report::build_bundle(&input, &Redactor::from_environment());
-
-    let written_path = match request.path.as_deref() {
-        Some(path) => {
-            let resolved = crate::paths::resolve_new_project_path(&state.data_dir, path)?;
-            debug_report::write_zip(&resolved, &bundle.files).map_err(ApiError::internal)?;
-            Some(resolved.display().to_string())
-        }
-        None => None,
-    };
+    let target = request
+        .path
+        .as_deref()
+        .map(|path| crate::paths::resolve_new_project_path(&state.data_dir, path))
+        .transpose()?;
+    let (bundle, written_path) = crate::routes::off_runtime(move || {
+        let bundle = debug_report::build_bundle(&input, &Redactor::from_environment());
+        let written_path = match target {
+            Some(resolved) => {
+                debug_report::write_zip(&resolved, &bundle.files).map_err(ApiError::internal)?;
+                Some(resolved.display().to_string())
+            }
+            None => None,
+        };
+        Ok::<_, ApiError>((bundle, written_path))
+    })
+    .await??;
 
     Ok(Json(DebugReportResponse {
         written: written_path.is_some(),

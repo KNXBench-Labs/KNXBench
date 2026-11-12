@@ -821,7 +821,7 @@ async fn native_working_notes_reopen_with_both_stacks_and_preserved_originals_th
 async fn failed_native_admission_never_publishes_notes_ids_history_or_paths() {
     let (dir, state, app, _) = fixture("original").await;
     let missing = dir.path().join("missing.knxdb");
-    *state.store_path.lock().unwrap() = Some(missing.clone());
+    state.store_path.lock().unwrap().set(Some(missing.clone()));
     *state.history_generation.lock().unwrap() = 1;
     let before = state.project.lock().unwrap().clone();
     let original = state.opaque.lock().unwrap().clone();

@@ -194,7 +194,10 @@ fn revision(state: &SharedState) -> InstructionRevision {
     }
 }
 async fn read(State(api): State<Api>, Path(id): Path<u32>) -> Result<Json<View>, ApiError> {
-    let state = &api.app;
+    crate::routes::off_runtime(move || read_blocking(&api.app, id)).await?
+}
+
+fn read_blocking(state: &SharedState, id: u32) -> Result<Json<View>, ApiError> {
     let lock = state.project.lock().expect("state mutex poisoned");
     let project = lock
         .as_ref()
@@ -262,12 +265,8 @@ async fn read(State(api): State<Api>, Path(id): Path<u32>) -> Result<Json<View>,
         preview_error,
         effective_document,
         override_document,
-        persistence: if state
-            .store_path
-            .lock()
-            .expect("state mutex poisoned")
-            .is_some()
-        {
+        // Not the path lock: a Save holds it while it writes (#36).
+        persistence: if state.store_path.known().is_some() {
             "native-working-history"
         } else {
             "session-only"

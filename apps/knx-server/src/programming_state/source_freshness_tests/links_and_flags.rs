@@ -512,7 +512,11 @@ fn link_only_evidence_survives_first_save_save_as_plain_save_and_failed_settleme
     let flags_before = belief(&f.state);
     let revision = domain::current_project_revision(&f.state);
     let generation = *f.state.history_generation.value.lock().unwrap();
-    *f.state.store_path.lock().unwrap() = Some(f._dir.path().join("missing/file.knxdb"));
+    f.state
+        .store_path
+        .lock()
+        .unwrap()
+        .set(Some(f._dir.path().join("missing/file.knxdb")));
     full(&f, false);
     assert_eq!(*f.state.parameter_baselines.lock().unwrap(), before);
     assert_eq!(belief(&f.state), flags_before);

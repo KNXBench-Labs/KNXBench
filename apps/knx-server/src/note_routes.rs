@@ -259,7 +259,10 @@ fn revision(state: &SharedState) -> NoteRevision {
     }
 }
 async fn read(State(api): State<Api>) -> Result<Json<View>, ApiError> {
-    let state = &api.app;
+    crate::routes::off_runtime(move || read_blocking(&api.app)).await?
+}
+
+fn read_blocking(state: &SharedState) -> Result<Json<View>, ApiError> {
     let lock = state.project.lock().expect("state mutex poisoned");
     let project = lock
         .as_ref()
@@ -274,13 +277,8 @@ async fn read(State(api): State<Api>) -> Result<Json<View>, ApiError> {
         server_incarnation: state.server_incarnation.clone(),
         project_incarnation: state.project_incarnation.load(Ordering::Relaxed),
         snapshot_revision: domain::current_project_revision(state),
-        persistence: persistence(
-            state
-                .store_path
-                .lock()
-                .expect("state mutex poisoned")
-                .is_some(),
-        ),
+        // Not the path lock: a Save holds it while it writes (#36).
+        persistence: persistence(state.store_path.known().is_some()),
     }))
 }
 #[derive(Serialize)]

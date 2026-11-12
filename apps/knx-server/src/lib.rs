@@ -144,6 +144,7 @@ mod routes;
 mod selective_import_routes;
 mod session_log;
 mod settings;
+pub mod store_path;
 mod tunnel_holder;
 mod tunnel_workers;
 /// Exported so `apps/knx-desktop` and integration tests can name the file

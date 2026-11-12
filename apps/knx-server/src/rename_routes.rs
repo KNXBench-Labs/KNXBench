@@ -42,14 +42,17 @@ pub(crate) async fn device(
     Json(body): Json<RenameBody>,
 ) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
     let expectation = body.expectation();
-    domain::rename_impl(
-        &state,
-        knx_core::Command::RenameDevice {
-            device: knx_core::DeviceId(id),
-            name: body.name,
-        },
-        expectation,
-    )
+    crate::routes::off_runtime(move || {
+        domain::rename_impl(
+            &state,
+            knx_core::Command::RenameDevice {
+                device: knx_core::DeviceId(id),
+                name: body.name,
+            },
+            expectation,
+        )
+    })
+    .await?
     .map(Json)
     .map_err(map_error)
 }

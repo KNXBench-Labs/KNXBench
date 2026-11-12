@@ -1,7 +1,7 @@
 # WP-31 — Device editor unavailable after saving the project (#36)
 
 External report by the issue reporter, 10 November 2026; triaged 11 November 2026.
-Status: **lock fix implemented 11 November 2026; file routes off the runtime workers and download without the project lock 12 November 2026; original error message unreproduced.** Follow-up to the original #36 path, which
+Status: **lock fix implemented 11 November 2026; file routes off the runtime workers and download without the project lock 12 November 2026; edits and plain reads no longer wait for a save's write, device editor routes off the runtime 12 November 2026; original error message unreproduced.** Follow-up to the original #36 path, which
 the reporter confirmed fixed by `bf85a5b69` on 10 November 2026.
 
 ## Observed
@@ -43,7 +43,8 @@ Tests: `save_lets_readers_in_while_it_writes_its_frozen_copy`,
 After the fix (same project, release build): device detail during a save
 0.20–0.27 s, the save about 6 s.
 
-Remaining (independent review 11 November 2026): an edit (`commit_locked` →
+Previously remaining (independent review 11 November 2026; addressed below on
+12 November): an edit (`commit_locked` →
 `enqueue_native_working`) or a project-tree/status/notes/instructions read
 that takes the store path while holding the project blocks for the rest of the
 write, and device reads queue behind it again. Releasing the store path during
@@ -78,7 +79,50 @@ inline). The payload download still writes under the project and opaque
 locks: copying a payload of up to 1 GB out first would double its memory per
 download.
 
-Edits and plain reads still wait for the project lock on a runtime worker, so a long
-CSV import, comparison, documentation export or large retained-payload download
-can make them wait as Save did. Concurrent downloads each hold a full project copy while they write (no
+Concurrent downloads each hold a full project copy while they write (no
 limit; acceptable for one user, unbounded for many).
+
+### Edits and plain reads during a save (12 November 2026)
+
+The store path now keeps a copy that answers while a Save holds the path
+(`apps/knx-server/src/store_path.rs`); it changes only together with the path,
+under its lock. The project tree, status metrics, notes and instructions reads
+use that copy, so they no longer hold the project while they wait for the
+write. An ordinary edit (`commit_locked` → `enqueue_native_working`) that finds
+the store path held hands the journal writer a job without a file: the writer
+takes the project's file once it holds the journal generation, which the save
+keeps until it has set the new path. So the edit is answered at once and
+journaled after the save, into the new file after a Save As, into the old one
+after a failed Save As, and nowhere for a project that still has no file. No
+revision check changed; a project replacement still writes every pending job
+before it changes the path. A deferred job also takes the save's newly acquired
+catalogue references after the generation is released, rather than restoring
+its own pre-save manifest.
+
+The device editor's routes also wait for the project off the runtime
+(`routes::off_runtime`): the project tree, device detail, parameter panel and
+parameter write, individual address, device and group-address descriptions,
+communication-object DPT, description, flag and priority, and device rename;
+notes and instructions reads use the same helper.
+
+Tests: `an_edit_during_a_save_is_answered_and_journaled_after_it`,
+`an_edit_during_save_as_is_journaled_into_the_new_file`,
+`an_edit_during_a_failed_save_as_stays_with_the_project` and
+`an_edit_during_a_save_keeps_the_saves_manifest`
+(`journal_writer_tests/during_save.rs`),
+`reads_and_an_edit_answer_while_a_save_writes` and
+`device_editor_routes_leave_the_runtime_free` (`routes/editor_runtime_tests.rs`).
+
+Remaining limits:
+
+- Edits that write the file in their own transaction still wait for a save
+  while holding the project: manual parameter-baseline marks that change a
+  baseline, note and instruction apply, naming recipes, device-compare
+  adoption, selective import apply and plugin-data writes; so do the
+  project-history panel and its version actions. They need the file and the
+  journal generation, which the save holds.
+- Other edit routes (topology, group addresses, functions, …) still wait for
+  the project on a runtime worker.
+- A long operation that holds the project (CSV import and export, project
+  comparison, retained-payload download) still makes device reads wait; they
+  now wait off the runtime.

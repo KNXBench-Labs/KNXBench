@@ -33,7 +33,10 @@ pub enum JournalStatus {
 pub(crate) struct JournalJob {
     /// Assigned by [`JournalWriter::enqueue`]; later jobs hold newer states.
     pub sequence: u64,
-    pub path: PathBuf,
+    /// `None` while a Save holds the store path. Resolve it only after taking
+    /// the generation: the save then established the destination and acquired
+    /// catalogue references. Project replacement flushes every job first.
+    pub path: Option<PathBuf>,
     pub snapshot: NativeSnapshot,
     pub stack: knx_core::CommandStack,
     pub cells: JournalCells,
@@ -43,6 +46,8 @@ pub(crate) struct JournalJob {
 #[derive(Clone, Default)]
 pub(crate) struct JournalCells {
     pub generation: Arc<Mutex<i64>>,
+    pub store_path: Arc<Mutex<Option<PathBuf>>>,
+    pub manufacturer_refs: Arc<Mutex<Vec<knx_store::ManufacturerRef>>>,
     pub persisted: Arc<Mutex<Option<PersistedHistory>>>,
     pub writes: Arc<Mutex<RecentJournalWrites>>,
 }
@@ -179,7 +184,7 @@ impl JournalWriter {
     fn run(&self) {
         let mut kept: Option<(PathBuf, i64, knx_app::project_history::KeptJournal)> = None;
         loop {
-            let job = {
+            let mut job = {
                 let mut queue = self.queue();
                 while queue.pending.is_none() || queue.failure.is_some() {
                     queue = self
@@ -194,7 +199,7 @@ impl JournalWriter {
             // A panic must not leave the writer busy forever: every reader of
             // the generation and every stop would wait for it.
             let written = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-                write_job(&job, &mut kept)
+                write_job(&mut job, &mut kept)
             }));
             let failure = match written {
                 Ok(result) => result.err(),
@@ -221,7 +226,7 @@ impl JournalWriter {
 /// One background write: the own-commit path while the kept connection proves
 /// that only this writer committed since, the full ADR-0165 path otherwise.
 fn write_job(
-    job: &JournalJob,
+    job: &mut JournalJob,
     kept: &mut Option<(PathBuf, i64, knx_app::project_history::KeptJournal)>,
 ) -> Result<(), String> {
     #[cfg(test)]
@@ -230,20 +235,39 @@ fn write_job(
     }
     let started = Instant::now();
     let mut report = JournalWriteReport::default();
-    let result = (|| {
+    let result = (|| -> Result<bool, String> {
         let mut generation = job
             .cells
             .generation
             .lock()
             .unwrap_or_else(std::sync::PoisonError::into_inner);
+        let Some(path) = job
+            .path
+            .clone()
+            .or_else(|| crate::store_path::read(&job.cells.store_path))
+        else {
+            return Ok(false);
+        };
+        // Save may have acquired new exact catalogue references while this
+        // edit was handed over. Freeze those after its generation is released,
+        // rather than restoring the pre-save manifest (same rule as selective
+        // import's store-path revision recheck).
+        if job.path.is_none() {
+            job.snapshot.manufacturer_refs = job
+                .cells
+                .manufacturer_refs
+                .lock()
+                .unwrap_or_else(std::sync::PoisonError::into_inner)
+                .clone();
+        }
         let mut persisted = job
             .cells
             .persisted
             .lock()
             .unwrap_or_else(std::sync::PoisonError::into_inner);
         let own = match kept.take() {
-            Some((path, at, connection))
-                if path == job.path && at == *generation && connection.still_own(&job.path) =>
+            Some((kept_path, at, connection))
+                if kept_path == path && at == *generation && connection.still_own(&path) =>
             {
                 Some(connection)
             }
@@ -254,7 +278,7 @@ fn write_job(
         });
         report.phase("prepare", started);
         let (next, trust, connection) = knx_app::project_history::persist_working_kept(
-            &job.path,
+            &path,
             own,
             &job.snapshot,
             &job.stack,
@@ -270,20 +294,22 @@ fn write_job(
             trust,
         ));
         report.phase("retain", retained);
-        *kept = Some((job.path.clone(), next, connection));
-        Ok(())
+        *kept = Some((path, next, connection));
+        Ok(true)
     })();
-    job.cells
-        .writes
-        .lock()
-        .unwrap_or_else(std::sync::PoisonError::into_inner)
-        .record(JournalWriteRecord {
-            at: chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Millis, true),
-            total: started.elapsed(),
-            ok: result.is_ok(),
-            report,
-        });
-    result
+    if result != Ok(false) {
+        job.cells
+            .writes
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+            .record(JournalWriteRecord {
+                at: chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Millis, true),
+                total: started.elapsed(),
+                ok: result.is_ok(),
+                report,
+            });
+    }
+    result.map(|_| ())
 }
 
 /// The journal generation of the open native project. Locking it waits for

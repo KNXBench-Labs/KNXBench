@@ -71,8 +71,11 @@ pub(crate) async fn current(
 }
 
 fn current_blocking(state: &crate::AppState) -> Json<StatusMetrics> {
-    // The short metadata read shares the lock that publishes a replacement or
-    // save. Thus the measured path belongs to the revision in this response.
+    // The short metadata read shares the lock that publishes a replacement,
+    // so the measured path belongs to this project. A Save sets a new path and
+    // then a new revision without it; the revision is read first, so a racing
+    // Save As pairs an older revision with the newer path, never the reverse.
+    // The path copy, not the path lock: a Save holds that while it writes (#36).
     let project = {
         let open = state.project.lock().expect("project poisoned");
         if open.is_none() {
@@ -89,15 +92,14 @@ fn current_blocking(state: &crate::AppState) -> Json<StatusMetrics> {
             let revision = state
                 .project_revision
                 .load(std::sync::atomic::Ordering::Relaxed);
-            let path = state.store_path.lock().expect("store path poisoned");
-            match path.as_ref() {
+            match state.store_path.known() {
                 None => ProjectFileMetric {
                     state: "notSavedYet",
                     project_incarnation: Some(incarnation),
                     snapshot_revision: Some(revision),
                     current_on_disk_bytes: None,
                 },
-                Some(path) => match file_bytes(path) {
+                Some(path) => match file_bytes(&path) {
                     Ok(bytes) => ProjectFileMetric {
                         state: "available",
                         project_incarnation: Some(incarnation),

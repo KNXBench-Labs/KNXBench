@@ -491,13 +491,13 @@ fn future_normalized_source_versions_refuse_instead_of_ignoring_new_entity_field
     for unsupported in [0, 16, current + 1, u32::MAX] {
         source.project.schema_version = unsupported;
         let error = import::plan(&target, &source, selection.clone()).unwrap_err();
-        assert!(error.contains("normalized model v19 only"), "{error}");
+        assert!(error.contains("normalized model v20 only"), "{error}");
         assert_eq!(target, before);
         source.project.schema_version = current;
         target.project.schema_version = unsupported;
         let refused = target.clone();
         let error = import::plan(&target, &source, selection.clone()).unwrap_err();
-        assert!(error.contains("normalized model v19 only"), "{error}");
+        assert!(error.contains("normalized model v20 only"), "{error}");
         assert_eq!(target, refused);
         target.project.schema_version = current;
     }

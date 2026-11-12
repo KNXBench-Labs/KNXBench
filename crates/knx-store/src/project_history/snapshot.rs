@@ -119,7 +119,7 @@ impl NativeSnapshot {
         conn.deserialize_read_exact(MAIN_DB, bytes, bytes.len(), false)?;
         conn.execute_batch("PRAGMA trusted_schema = OFF; PRAGMA foreign_keys = ON;")?;
         let version: i64 = conn.query_row("PRAGMA user_version", [], |r| r.get(0))?;
-        if ![12, 13, 14, 15, 16, 17, 18, crate::CURRENT_SCHEMA_VERSION].contains(&version) {
+        if !ADMITTED_VERSIONS.contains(&version) {
             return Err(HistoryError::Invalid("unsupported snapshot schema version"));
         }
         let creator: String = conn.query_row(
@@ -161,6 +161,19 @@ impl NativeSnapshot {
                 ));
             }
         }
+        // Parameter baselines belong to the file, never to a snapshot
+        // (ADR-0173): an image holding any is not one we wrote.
+        if version >= 20 {
+            for table in crate::parameter_baseline::TABLES {
+                let rows: i64 =
+                    conn.query_row(&format!("SELECT count(*) FROM {table}"), [], |r| r.get(0))?;
+                if rows != 0 {
+                    return Err(HistoryError::Invalid(
+                        "snapshot carries file-level parameter baselines",
+                    ));
+                }
+            }
+        }
         check_schema_version(&conn, version)?;
         if version < crate::CURRENT_SCHEMA_VERSION {
             crate::migration::migrate(&conn)
@@ -172,6 +185,19 @@ impl NativeSnapshot {
         Ok(snapshot)
     }
 }
+
+/// Native schema versions a stored image may have been written at.
+const ADMITTED_VERSIONS: [i64; 9] = [
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19,
+    crate::CURRENT_SCHEMA_VERSION,
+];
 
 pub fn image_hash(bytes: &[u8]) -> String {
     format!("{:x}", Sha256::digest(bytes))
@@ -201,8 +227,13 @@ fn check_schema_version(conn: &Connection, version: i64) -> Result<(), HistoryEr
     }
     let expected = crate::open_and_migrate_in_memory()
         .map_err(|_| HistoryError::Invalid("native schema admission initialization failed"))?;
-    if ![12, 13, 14, 15, 16, 17, 18, crate::CURRENT_SCHEMA_VERSION].contains(&version) {
+    if !ADMITTED_VERSIONS.contains(&version) {
         return Err(HistoryError::Invalid("unsupported native schema shape"));
+    }
+    if version < 20 {
+        expected.execute_batch(
+            "DROP TABLE device_parameter_baseline_value; DROP TABLE device_parameter_baseline;",
+        )?;
     }
     if version < 19 {
         expected.execute_batch("DROP TABLE group_address_description;")?;
@@ -308,6 +339,8 @@ fn semantic_store_hash(conn: &Connection) -> Result<String, HistoryError> {
             || name == "schema_meta"
             // File-level carried bytes, never snapshot content (ADR-0128).
             || name == "manufacturer_file"
+            // File-level download baselines, never snapshot content (ADR-0173).
+            || crate::parameter_baseline::TABLES.contains(&name.as_str())
             || (!priorities && name == "com_object_saved_priority")
             || (!edits && name == "com_object_priority_edit")
             || (!descriptions && name == "group_address_description")
@@ -381,7 +414,7 @@ mod tests {
         };
         crate::save_project(&conn, &snapshot.project).unwrap();
         let current = semantic_store_hash(&conn).unwrap();
-        conn.execute_batch("DROP TABLE group_address_description; DROP TABLE com_object_priority_edit; DROP TABLE com_object_saved_priority; PRAGMA user_version=16;")
+        conn.execute_batch("DROP TABLE device_parameter_baseline_value; DROP TABLE device_parameter_baseline; DROP TABLE group_address_description; DROP TABLE com_object_priority_edit; DROP TABLE com_object_saved_priority; PRAGMA user_version=16;")
             .unwrap();
         check_schema_version(&conn, 16).unwrap();
         let bytes = conn.serialize(MAIN_DB).unwrap().to_vec();
@@ -395,6 +428,61 @@ mod tests {
             .execute_batch("CREATE TABLE unknown_overlay (id INTEGER) STRICT;")
             .unwrap();
         assert!(check_schema_version(&invalid, 16).is_err());
+    }
+
+    fn empty_snapshot() -> NativeSnapshot {
+        NativeSnapshot {
+            project: Project::new(knx_core::Language("en".into())),
+            opaque: vec![],
+            manufacturer_refs: vec![],
+        }
+    }
+
+    const BASELINE_ROWS: &str =
+        "INSERT INTO device_parameter_baseline VALUES (1, 'P', '2026-11-11T10:00:00Z');
+         INSERT INTO device_parameter_baseline_value VALUES (1, 'P_R-1', '7');";
+
+    #[test]
+    fn a_native19_image_without_baseline_tables_decodes_with_its_identity() {
+        let snapshot = empty_snapshot();
+        let conn = snapshot.memory_store().unwrap();
+        let current = semantic_store_hash(&conn).unwrap();
+        conn.execute_batch(
+            "DROP TABLE device_parameter_baseline_value; DROP TABLE device_parameter_baseline; \
+             PRAGMA user_version=19;",
+        )
+        .unwrap();
+        check_schema_version(&conn, 19).unwrap();
+        assert!(
+            check_schema_version(&conn, crate::CURRENT_SCHEMA_VERSION).is_err(),
+            "a native20 image must hold both baseline tables"
+        );
+        let bytes = conn.serialize(MAIN_DB).unwrap().to_vec();
+        let decoded = NativeSnapshot::decode(&bytes, &image_hash(&bytes)).unwrap();
+        assert_eq!(decoded, snapshot);
+        assert_eq!(decoded.semantic_hash().unwrap(), current);
+    }
+
+    #[test]
+    fn baseline_rows_never_enter_a_semantic_identity_and_an_image_carrying_them_is_refused() {
+        let snapshot = empty_snapshot();
+        let conn = snapshot.memory_store().unwrap();
+        let empty = semantic_store_hash(&conn).unwrap();
+        let clean = conn.serialize(MAIN_DB).unwrap().to_vec();
+        conn.execute_batch(BASELINE_ROWS).unwrap();
+        assert_eq!(semantic_store_hash(&conn).unwrap(), empty);
+        let carrying = conn.serialize(MAIN_DB).unwrap().to_vec();
+        assert!(NativeSnapshot::decode(&clean, &image_hash(&clean)).is_ok());
+        let refused = NativeSnapshot::decode(&carrying, &image_hash(&carrying));
+        assert!(
+            matches!(
+                refused,
+                Err(HistoryError::Invalid(
+                    "snapshot carries file-level parameter baselines"
+                ))
+            ),
+            "{refused:?}"
+        );
     }
 
     #[test]

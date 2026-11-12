@@ -21,6 +21,8 @@ pub(super) fn plan(
     // stay literal. Unbound captured source facts refuse rather than acquiring applicability.
     // Model19 (ADR-0164) adds GroupAddressEntry::description: plain text with no entity reference,
     // so it is copied with its address and needs no remapping.
+    // Model20 (ADR-0173) adds no Project field: parameter baselines are file-level rows keyed
+    // by device id, and the merge allocates fresh ids, so no copied device inherits one.
     // A model bump needs a new audit, not accidental acceptance of newly cloned but unremapped entity fields.
     if before.project.schema_version != super::SELECTIVE_MODEL_VERSION
         || source.project.schema_version != super::SELECTIVE_MODEL_VERSION

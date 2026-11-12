@@ -22,7 +22,7 @@ use std::path::Path;
 use rusqlite::{params, Connection, OptionalExtension, Transaction};
 
 /// Matches `knx_core::project::CURRENT_SCHEMA_VERSION`.
-pub const CURRENT_SCHEMA_VERSION: i64 = 19;
+pub const CURRENT_SCHEMA_VERSION: i64 = 20;
 
 #[derive(Debug)]
 pub enum MigrationError {
@@ -728,6 +728,15 @@ fn migrate_v18_to_v19(conn: &Connection) -> Result<(), MigrationError> {
     Ok(())
 }
 
+/// v19 -> v20: per-device parameter baselines (ADR-0173). Additive: every
+/// baseline of an older file is unknown. Nothing is derived from imported
+/// ETS flags, the activity history or a settlement receipt; only the next
+/// completed download records one.
+fn migrate_v19_to_v20(conn: &Connection) -> Result<(), MigrationError> {
+    conn.execute_batch(crate::parameter_baseline::CREATE_TABLES)?;
+    Ok(())
+}
+
 type Migration = fn(&Connection) -> Result<(), MigrationError>;
 
 /// History owns the surrounding transaction so a refused editor write also
@@ -782,6 +791,7 @@ fn migrations() -> Vec<Migration> {
         migrate_v16_to_v17,
         migrate_v17_to_v18,
         migrate_v18_to_v19,
+        migrate_v19_to_v20,
     ]
 }
 
@@ -1518,7 +1528,7 @@ mod tests {
             // Back to a genuine v7 shape: remove every later table and
             // column before rewinding the header, including native17's table.
             conn.execute_batch(
-                "DROP TABLE group_address_description; DROP TABLE com_object_priority_edit; DROP TABLE com_object_saved_priority;
+                "DROP TABLE device_parameter_baseline_value; DROP TABLE device_parameter_baseline; DROP TABLE group_address_description; DROP TABLE com_object_priority_edit; DROP TABLE com_object_saved_priority;
                  DROP TABLE instruction_run;
                  DROP TABLE instruction_document; DROP TABLE manufacturer_file; DROP TABLE project_function_member; DROP TABLE project_function; DROP TABLE project_function_state; DROP TABLE project_note; DROP TABLE project_note_state;
                  DROP TABLE project_history_state;

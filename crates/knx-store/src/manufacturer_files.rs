@@ -314,7 +314,7 @@ mod tests {
     fn a_v15_file_gains_an_empty_table_and_nothing_else_changes() {
         let conn = open_and_migrate_in_memory().unwrap();
         conn.execute_batch(
-            "DROP TABLE group_address_description; DROP TABLE com_object_priority_edit; DROP TABLE com_object_saved_priority; DROP TABLE manufacturer_file; \
+            "DROP TABLE device_parameter_baseline_value; DROP TABLE device_parameter_baseline; DROP TABLE group_address_description; DROP TABLE com_object_priority_edit; DROP TABLE com_object_saved_priority; DROP TABLE manufacturer_file; \
              PRAGMA user_version = 15;",
         )
         .unwrap();

@@ -19,6 +19,7 @@ pub mod mcb;
 pub mod memory;
 pub mod memory_download;
 pub mod mutation;
+pub mod parameter_baseline;
 pub mod parameter_image;
 pub mod partial_download_variant;
 pub mod partial_memory_download;

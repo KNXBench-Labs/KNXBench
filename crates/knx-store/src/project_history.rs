@@ -5,6 +5,7 @@ use std::fmt;
 use std::time::Instant;
 
 use crate::StoreError;
+use knx_core::commissioning::parameter_baseline::{BaselineEdit, ParameterBaselines};
 use knx_core::commissioning::pending::{settle_restored_version, ProgrammingParts};
 use knx_core::{CommandStack, DeviceId, Project};
 use rusqlite::{params, Connection, OptionalExtension, Transaction, TransactionBehavior};
@@ -894,6 +895,81 @@ pub fn save_editor_after_own_commit(
     )
 }
 
+/// [`save_editor_trusting`] for a programming settlement: `edits` change the
+/// file's parameter baselines in the same transaction as the settled flags,
+/// so no crash can pair newer flags with an older baseline (ADR-0173 §7).
+pub fn save_editor_settling(
+    conn: &Connection,
+    working: &NativeSnapshot,
+    stack: &CommandStack,
+    expected_generation: i64,
+    trust: &JournalTrust,
+    report: &mut JournalWriteReport,
+    edits: &[BaselineEdit],
+) -> Result<(i64, JournalTrust), HistoryError> {
+    save_editor_inner(
+        conn,
+        working,
+        stack,
+        Some(expected_generation),
+        false,
+        SaveExtras {
+            reuse: Some(trust),
+            report: Some(report),
+            baselines: BaselineWrite::Settle(edits),
+            ..SaveExtras::default()
+        },
+    )
+}
+
+/// [`save_editor_with_sources`] whose file then holds exactly the baselines
+/// of `baselines` that belong to devices of `working` (a native save).
+pub fn save_editor_with_baselines(
+    conn: &Connection,
+    working: &NativeSnapshot,
+    stack: &CommandStack,
+    expected_generation: Option<i64>,
+    sources: &[crate::CarriedManufacturerFile],
+    baselines: &ParameterBaselines,
+) -> Result<i64, HistoryError> {
+    save_editor_inner(
+        conn,
+        working,
+        stack,
+        expected_generation,
+        true,
+        SaveExtras {
+            sources,
+            baselines: BaselineWrite::Replace(baselines),
+            ..SaveExtras::default()
+        },
+    )
+    .map(|(generation, _)| generation)
+}
+
+/// Changes only the file's parameter baselines, in one transaction that
+/// first brings an older file to the current schema: what a manual
+/// programming mark does before its command (ADR-0173 §3).
+pub fn write_parameter_baselines(
+    conn: &Connection,
+    edits: &[BaselineEdit],
+) -> Result<(), HistoryError> {
+    let tx = Transaction::new_unchecked(conn, TransactionBehavior::Immediate)?;
+    crate::migration::migrate_in_transaction(&tx)?;
+    snapshot::check_schema(&tx)?;
+    crate::parameter_baseline::apply_edits(&tx, edits)?;
+    tx.commit()?;
+    Ok(())
+}
+
+/// Every parameter baseline the file holds, read in one transaction.
+pub fn load_parameter_baselines(conn: &Connection) -> Result<ParameterBaselines, HistoryError> {
+    let tx = conn.unchecked_transaction()?;
+    let baselines = crate::parameter_baseline::load_all(&tx)?;
+    tx.commit()?;
+    Ok(baselines)
+}
+
 /// Saves the explicit root and its newly acquired retained sources atomically.
 /// Payloads are file-owned and never enter editor history images.
 pub fn save_editor_with_sources(
@@ -941,6 +1017,21 @@ pub fn save_editor_if_unchanged(
     .map(|(generation, _)| generation)
 }
 
+/// What one editor write does with the file's parameter baselines
+/// (ADR-0173 §7). They are file-level rows, never part of an image.
+#[derive(Debug, Clone, Copy, Default)]
+pub enum BaselineWrite<'a> {
+    /// Leaves them, except that a root save drops the rows of devices the
+    /// saved project lacks, and all of them when the file held another project.
+    #[default]
+    Prune,
+    /// A settlement's edits, in the transaction that persists its flags.
+    Settle(&'a [BaselineEdit]),
+    /// A native save of a server that holds the complete set: the file's rows
+    /// become exactly the baselines of devices the saved project contains.
+    Replace(&'a ParameterBaselines),
+}
+
 /// The optional inputs of one editor save; the default asks for none.
 #[derive(Default)]
 struct SaveExtras<'a> {
@@ -950,6 +1041,7 @@ struct SaveExtras<'a> {
     report: Option<&'a mut JournalWriteReport>,
     /// See [`save_editor_after_own_commit`].
     own_commit: bool,
+    baselines: BaselineWrite<'a>,
 }
 
 fn save_editor_inner(
@@ -966,6 +1058,7 @@ fn save_editor_inner(
         reuse,
         report,
         own_commit,
+        baselines,
     } = extras;
     let mut unreported = JournalWriteReport::default();
     let report = report.unwrap_or(&mut unreported);
@@ -1069,6 +1162,30 @@ fn save_editor_inner(
     };
     let written = write_workspace(&tx, baseline, working, stack, generation, reuse, report)?
         .with_checked_contexts(checked_contexts);
+    // After the journal rows: a baseline write that fails takes the settled
+    // flags down with it in the same rollback (ADR-0173 §7).
+    let started = Instant::now();
+    let previous = old.as_ref().map(|old| old.project.info.project_id.as_str());
+    match baselines {
+        // Replacing already keeps only devices of the saved project.
+        BaselineWrite::Replace(all) => {
+            crate::parameter_baseline::replace_all(&tx, all, &working.project)?
+        }
+        BaselineWrite::Settle(edits) => crate::parameter_baseline::apply_edits(&tx, edits)?,
+        BaselineWrite::Prune => {}
+    }
+    if save_root && !matches!(baselines, BaselineWrite::Replace(_)) {
+        crate::parameter_baseline::prune(&tx, previous, &working.project)?;
+    }
+    // Only a write that touched them reports the phase.
+    let touched = match baselines {
+        BaselineWrite::Prune => save_root,
+        BaselineWrite::Settle(edits) => save_root || !edits.is_empty(),
+        BaselineWrite::Replace(_) => true,
+    };
+    if touched {
+        report.phase("parameterBaselines", started);
+    }
     for source in sources {
         let sha = crate::manufacturer_file_hash(&source.bytes);
         if !working.manufacturer_refs.iter().any(|r| {
@@ -1376,6 +1493,13 @@ pub(crate) fn before_plain_save(
         Err(HistoryError::Store(StoreError::NotSaved)) => return Ok(()),
         Err(error) => return Err(error),
     };
+    // A plain save brings no baselines: rows of absent devices, or of another
+    // project, go (ADR-0173 §2).
+    crate::parameter_baseline::prune(
+        tx,
+        Some(old.project.info.project_id.as_str()),
+        &replacement.project,
+    )?;
     let previous = load_editor_inner(tx)?;
     list_versions_inner(tx)?;
     if let Some(previous) = &previous {

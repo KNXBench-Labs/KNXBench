@@ -139,19 +139,23 @@ generation it holds.
 ### 3. Only settlement writes it
 
 `Settlement` gains an explicit instruction, `parameter_baseline: Keep |
-Remove | Record { program_id, values, at }`, so `apply_settlement` can tell
+Remove | Record { program_id, values, object_flags, at }`, so `apply_settlement` can tell
 "completed, project edited during the run" (record) from "changed source" or
 "interrupted" (remove), which all give `programmed.parameters = false`.
 Only settlement records it, in `apply_settlement`, in the same step as the
 flags. It is removed by settlement, by a manual mark (below) and by pruning
 at save (§2); nothing else changes it.
 
-Proposed extension, not implemented: [ADR-0174](0174-last-downloaded-links-and-flags.md)
-adds effective object flags to `WrittenParameters`, `ParameterBaseline` and
-`Record`, using shared image/settlement/comparison resolution. It distinguishes
-unknown flags from a known empty set without losing migrated parameter values.
-On implementation this values-only contract must be amended with that extension;
-the Parameters lifecycle rules remain unchanged.
+Backend extension [ADR-0174](0174-last-downloaded-links-and-flags.md), WP-37f:
+`WrittenParameters` and `Record` also carry optional effective object flags,
+resolved from the actual written choices/overrides in the same catalogue lease.
+Unknown flags and a known empty set are distinct; flag resolution failure replaces
+old flags with unknown while keeping independently resolved parameter values.
+Parameter-value resolution failure still removes this section. Parameters rules
+and timestamp apply to values and flags together; written links have their own
+Group-addresses section and settlement time. The settler receives the settlement
+instant independently of parameter resolution. UI presentation of links/flags
+remains pending; parameter comparison is unchanged and independently usable.
 
 | Settler and end | Baseline |
 | --- | --- |
@@ -166,12 +170,12 @@ the Parameters lifecycle rules remain unchanged.
 | System-2 without possible mutation | `Keep` |
 | individual-address programming | `Keep` |
 
-A manual **Mark as programmed / not programmed** removes the baseline outside
+A manual **Mark as programmed / not programmed** removes both baseline sections outside
 its undoable command: a claim KNXBench did not witness. Undoing the mark
 restores the flags, not the baseline. The removal is written in the same
 transaction as the mark's journal entry, which is therefore written at once
 even on a server that otherwise journals in the background (ADR-0166); a mark
-of a device without a baseline has nothing to remove and keeps the ordinary
+of a device without either baseline has nothing to remove and keeps the ordinary
 (background) journal path; a mark that is refused or stale removes nothing. Adopting values read from a device
 (project comparison adoption) never records a baseline; adopted values then
 show as differing from the last download until the next one.
@@ -213,9 +217,8 @@ description "Value at last download: …" / "Wert beim letzten Programmieren:
 values, how many of them the current settings do not show (inactive in the
 current settings, which carry no device claim either) and, separately, how many
 only the Manufacturer fields tab shows, where they are marked. An unusable baseline
-gives one plain sentence and no row marks. Links and object flags currently
-get no per-item marks; [ADR-0174](0174-last-downloaded-links-and-flags.md)
-proposes them in the communication-object view (not implemented).
+gives one plain sentence and no row marks. Links and object flags have backend comparison under ADR-0174; their per-item
+UI marks in the communication-object view remain pending.
 
 ### 6. Version restore settles the four flags against the live project
 
@@ -246,7 +249,7 @@ Delivered first and separately as [WP-40](../open-work/WP-40-version-restore-pro
 
 ### 7. Storage
 
-Native schema 20 adds `device_parameter_baseline` (device id primary key,
+Native schema 20 originally added `device_parameter_baseline` (device id primary key,
 program id, end time) and `device_parameter_baseline_value` (device id,
 `ParameterRef` id, raw value). They are not part of history images: the
 snapshot codec and its schema check must know them as excluded tables. The
@@ -254,6 +257,8 @@ migration from 19 is additive and leaves every baseline unknown; nothing is
 derived from imported ETS flags, the activity history or a settlement
 receipt. Older builds refuse schema 20 files, as with every schema step.
 
+Native schema 21 adds independently known object flags and links (ADR-0174 §6),
+preserving existing parameter values and all predecessor history identities.
 Baseline rows are written in the same SQLite transaction as the working
 journal write that persists the settled flags (`persist_native_working_reported`),
 so a crash cannot pair newer flags with an older baseline. If that write
@@ -311,5 +316,5 @@ step; the selective-import reference closure is audited for the new tables.
   no older baseline returns.
 - The comparison needs the product database at display time; without it the
   state is reported, never guessed.
-- Not covered: module parameters, per-link and per-flag marks, a device read,
+- Not covered: module parameters, per-link and per-flag UI marks, a device read,
   ETS behaviour, differential download (LS-03).

@@ -33,7 +33,11 @@ fn source_limit_message() -> String {
 /// v20 adds per-device parameter baselines (ADR-0173) as file-level rows
 /// outside `Project`: no model field changes, a copied device gets a fresh id
 /// and so no baseline, and the merge never touches the destination's.
-pub const SELECTIVE_MODEL_VERSION: u32 = 20;
+/// v21 (ADR-0174) adds only file-level flag/link evidence, not Project fields.
+/// The existing device/object/module/parameter/GA reference closure is unchanged:
+/// fresh imported ids inherit neither section, and destination evidence is untouched.
+/// NativeSnapshot and every history image exclude all five baseline tables.
+pub const SELECTIVE_MODEL_VERSION: u32 = 21;
 /// Source attributes remain evidence, not unscoped destination settings.
 pub const SELECTIVE_ATTRIBUTE_KIND: &str = "SelectiveImportRetainedAttribute";
 

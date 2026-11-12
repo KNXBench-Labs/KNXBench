@@ -1,7 +1,7 @@
 # ADR 0174: The project remembers the links and object flags a verified download wrote
 
 Date: 2026-11-12
-Status: Proposed
+Status: Proposed (backend implemented in WP-37f; UI pending; package acceptance pending)
 Session: WP-37d
 
 ## Context
@@ -155,7 +155,9 @@ object number. The last case makes flags `currentUnreadable`: never merge
 or choose a winner, even when their effective flags happen to be equal.
 The image table writers already refuse duplicate active numbers. Perform
 this check before map collection and row attribution; link-only errors affect
-links and flag-only errors affect flags.
+links and flag-only errors affect flags. A missing individual address is an
+intentional shared prerequisite: each present, otherwise usable link or flag
+section is `currentUnreadable`; parameter-value comparison stays independent.
 
 The per-part flags stay the authority. A part can be pending while nothing
 differs: Group addresses after an address change, a parameter change (the
@@ -226,6 +228,33 @@ excluded-table lists of the snapshot, manufacturer-file and migration tests
 and both schema constants (store and core) change with it. Rows are written
 in the transaction that persists the settled flags, as in ADR-0173 §7.
 
+## Backend contract (WP-37f)
+
+The backend implements native schema 21 and independent section settlement.
+`WrittenParameters` carries resolved values and optional effective object flags;
+`settle_download` also receives the settlement instant independently, so a failed
+parameter resolution cannot prevent recording written links. `BaselineEdit`
+names parameter and link changes explicitly: Keep does not refresh or remove
+an unselected section. The held collection and native lifecycle enumerate the
+union of section owners, including link-only devices.
+
+`GET /api/device/{id}` adds optional `last_download: ObjectLastDownload`.
+Its `links` and `flags` have separate `state` and usable `at`; `differing`
+is number-ordered with presence-aware raw-address/direction and effective-flag
+differences. `instances` keys are actual selected `ComObjectNode.id` values;
+`differing_objects` counts each number once and `no_selected_row` includes
+product-active numbers without a project instance, not only deleted objects.
+Edit responses do not carry this comparison. Read-on-init remains null.
+
+Current comparison uses the writer's link/override helpers and checked flag
+resolver, not whole-image admission. `resolve_effective_object_flags_with_refs`
+returns active reference provenance from that same checked pass for attribution;
+no second diagnostic-discarding activation pass chooses a row. The existing
+full-download duplicate-lookup overwrite and object-table placement guard remain
+separate follow-ups. No communication-object UI marks or summary are implemented
+in this package; proposed presentation above remains pending. Acceptance evidence
+is scoped software evidence, not hardware or whole-compatibility proof.
+
 ## Alternatives considered
 
 - **Compare the downloaded table images byte by byte.** The association and
@@ -258,8 +287,7 @@ in the transaction that persists the settled flags, as in ADR-0173 §7.
   section; their tests cover both and that prune, restore and marks treat
   them alike.
 - Acceptance must amend ADR-0173's `WrittenParameters`/`Record` contract
-  and per-item-mark scope when this extension is implemented. Its existing
-  values-only behavior remains implemented until then. The System-2
+  and per-item-mark scope when this extension is implemented. Its values comparison remains independent of flag usability. The System-2
   settlement contract must remove both baselines for every settlement
   representing possible device mutation, including verified downloads;
   no-mutation paths keep both.

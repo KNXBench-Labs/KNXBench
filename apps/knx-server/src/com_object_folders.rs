@@ -316,6 +316,7 @@ mod tests {
                 resolution: knx_projection::ProductResolution::NoReference,
             },
             project_folder_currency: None,
+            last_download: None,
         };
         let mut saved_node = node(TreeNodeKind::Folder, "PB-1");
         saved_node.text = Some("Must disappear with inactive placement".into());

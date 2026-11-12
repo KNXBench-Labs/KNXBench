@@ -96,7 +96,10 @@ mod object_flags;
 pub mod property;
 mod system1;
 
-pub use object_flags::{resolve_effective_object_flags, EffectiveObjectFlags};
+pub use object_flags::{
+    resolve_effective_object_flags, resolve_effective_object_flags_with_refs, ActiveObjectFlags,
+    EffectiveObjectFlags,
+};
 
 /// Validated GA/association reservations; the object span is not capacity padding.
 pub(crate) fn system2_group_reservations(

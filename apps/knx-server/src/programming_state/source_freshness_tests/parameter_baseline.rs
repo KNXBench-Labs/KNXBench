@@ -19,6 +19,7 @@ fn baseline(state: &SharedState) -> Option<ParameterBaseline> {
 /// A baseline an earlier run left, so that keeping and removing differ.
 fn seed(state: &SharedState) -> ParameterBaseline {
     let earlier = ParameterBaseline {
+        object_flags: None,
         program_id: PROGRAM_ID.into(),
         values: [(TIME_ID.to_string(), "1".to_string())].into(),
         at: chrono::DateTime::UNIX_EPOCH,
@@ -29,7 +30,10 @@ fn seed(state: &SharedState) -> ParameterBaseline {
         .unwrap()
         .apply(&BaselineEdit {
             device: DeviceId(1),
-            baseline: Some(earlier.clone()),
+            parameter: knx_core::commissioning::parameter_baseline::BaselineChange::Record(
+                earlier.clone(),
+            ),
+            links: knx_core::commissioning::parameter_baseline::LinkBaselineChange::Keep,
         });
     earlier
 }
@@ -190,7 +194,8 @@ fn the_comparison_names_another_program_and_missing_product_data() {
         .unwrap()
         .apply(&BaselineEdit {
             device: DeviceId(1),
-            baseline: Some(other),
+            parameter: knx_core::commissioning::parameter_baseline::BaselineChange::Record(other),
+            links: knx_core::commissioning::parameter_baseline::LinkBaselineChange::Keep,
         });
     assert_eq!(panel(&f.state).state, LastDownloadState::OtherProgram);
     // A program reference the catalogue does not answer.
@@ -304,6 +309,7 @@ fn a_deleted_device_keeps_its_baseline_until_a_save_prunes_it() {
             .cloned()
     };
     let earlier = ParameterBaseline {
+        object_flags: None,
         program_id: PROGRAM_ID.into(),
         values: Default::default(),
         at: chrono::DateTime::UNIX_EPOCH,
@@ -314,7 +320,10 @@ fn a_deleted_device_keeps_its_baseline_until_a_save_prunes_it() {
         .unwrap()
         .apply(&BaselineEdit {
             device: DeviceId(2),
-            baseline: Some(earlier.clone()),
+            parameter: knx_core::commissioning::parameter_baseline::BaselineChange::Record(
+                earlier.clone(),
+            ),
+            links: knx_core::commissioning::parameter_baseline::LinkBaselineChange::Keep,
         });
     let path = f._dir.path().join("project.knxdb");
     domain::save_project_as(&f.state, &path).expect("saves");

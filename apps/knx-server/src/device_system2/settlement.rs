@@ -78,6 +78,7 @@ pub(super) fn decide(
             },
             touched: MEMORY.union(current),
             parameter_baseline: BaselineChange::Remove,
+            link_baseline: knx_core::commissioning::parameter_baseline::LinkBaselineChange::Remove,
         }
     } else {
         Settlement {
@@ -85,6 +86,7 @@ pub(super) fn decide(
             pending: MEMORY,
             touched: MEMORY,
             parameter_baseline: BaselineChange::Remove,
+            link_baseline: knx_core::commissioning::parameter_baseline::LinkBaselineChange::Remove,
         }
     })
 }

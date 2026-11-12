@@ -164,7 +164,11 @@ impl NativeSnapshot {
         // Parameter baselines belong to the file, never to a snapshot
         // (ADR-0173): an image holding any is not one we wrote.
         if version >= 20 {
-            for table in crate::parameter_baseline::TABLES {
+            for table in if version >= 21 {
+                &crate::parameter_baseline::TABLES[..]
+            } else {
+                &crate::parameter_baseline::TABLES_V20[..]
+            } {
                 let rows: i64 =
                     conn.query_row(&format!("SELECT count(*) FROM {table}"), [], |r| r.get(0))?;
                 if rows != 0 {
@@ -187,7 +191,7 @@ impl NativeSnapshot {
 }
 
 /// Native schema versions a stored image may have been written at.
-const ADMITTED_VERSIONS: [i64; 9] = [
+const ADMITTED_VERSIONS: [i64; 10] = [
     12,
     13,
     14,
@@ -196,6 +200,7 @@ const ADMITTED_VERSIONS: [i64; 9] = [
     17,
     18,
     19,
+    20,
     crate::CURRENT_SCHEMA_VERSION,
 ];
 
@@ -229,6 +234,9 @@ fn check_schema_version(conn: &Connection, version: i64) -> Result<(), HistoryEr
         .map_err(|_| HistoryError::Invalid("native schema admission initialization failed"))?;
     if !ADMITTED_VERSIONS.contains(&version) {
         return Err(HistoryError::Invalid("unsupported native schema shape"));
+    }
+    if version < 21 {
+        expected.execute_batch("DROP TABLE device_object_flags_baseline; DROP TABLE device_link_baseline_link; DROP TABLE device_link_baseline; ALTER TABLE device_parameter_baseline DROP COLUMN object_flags_known;")?;
     }
     if version < 20 {
         expected.execute_batch(
@@ -414,7 +422,7 @@ mod tests {
         };
         crate::save_project(&conn, &snapshot.project).unwrap();
         let current = semantic_store_hash(&conn).unwrap();
-        conn.execute_batch("DROP TABLE device_parameter_baseline_value; DROP TABLE device_parameter_baseline; DROP TABLE group_address_description; DROP TABLE com_object_priority_edit; DROP TABLE com_object_saved_priority; PRAGMA user_version=16;")
+        conn.execute_batch("DROP TABLE device_object_flags_baseline; DROP TABLE device_link_baseline_link; DROP TABLE device_link_baseline; DROP TABLE device_parameter_baseline_value; DROP TABLE device_parameter_baseline; DROP TABLE group_address_description; DROP TABLE com_object_priority_edit; DROP TABLE com_object_saved_priority; PRAGMA user_version=16;")
             .unwrap();
         check_schema_version(&conn, 16).unwrap();
         let bytes = conn.serialize(MAIN_DB).unwrap().to_vec();
@@ -439,7 +447,7 @@ mod tests {
     }
 
     const BASELINE_ROWS: &str =
-        "INSERT INTO device_parameter_baseline VALUES (1, 'P', '2026-11-11T10:00:00Z');
+        "INSERT INTO device_parameter_baseline (device_id, program_id, at) VALUES (1, 'P', '2026-11-11T10:00:00Z');
          INSERT INTO device_parameter_baseline_value VALUES (1, 'P_R-1', '7');";
 
     #[test]
@@ -448,7 +456,7 @@ mod tests {
         let conn = snapshot.memory_store().unwrap();
         let current = semantic_store_hash(&conn).unwrap();
         conn.execute_batch(
-            "DROP TABLE device_parameter_baseline_value; DROP TABLE device_parameter_baseline; \
+            "DROP TABLE device_object_flags_baseline; DROP TABLE device_link_baseline_link; DROP TABLE device_link_baseline; DROP TABLE device_parameter_baseline_value; DROP TABLE device_parameter_baseline; \
              PRAGMA user_version=19;",
         )
         .unwrap();
@@ -525,5 +533,22 @@ mod tests {
         let mut changed = snapshot;
         changed.project.info.name = "Changed content".into();
         assert_ne!(changed.semantic_hash().unwrap(), original);
+    }
+    #[test]
+    fn schema21_flag_and_link_evidence_never_enters_images_or_semantic_hashes() {
+        for evidence in [
+            "INSERT INTO device_link_baseline VALUES (1,'P','2026-11-12T00:00:00Z');",
+            "INSERT INTO device_link_baseline VALUES (1,'P','2026-11-12T00:00:00Z'); INSERT INTO device_link_baseline_link VALUES (1,255,65535,1);",
+            "INSERT INTO device_parameter_baseline VALUES (1,'P','2026-11-12T00:00:00Z',1);",
+            "INSERT INTO device_parameter_baseline VALUES (1,'P','2026-11-12T00:00:00Z',1); INSERT INTO device_object_flags_baseline VALUES (1,255,1,0,1,0,1,NULL);",
+        ] {
+            let snapshot=empty_snapshot();
+            let conn=snapshot.memory_store().unwrap();
+            let before=semantic_store_hash(&conn).unwrap();
+            conn.execute_batch(evidence).unwrap();
+            assert_eq!(semantic_store_hash(&conn).unwrap(),before);
+            let bytes=conn.serialize(MAIN_DB).unwrap().to_vec();
+            assert!(matches!(NativeSnapshot::decode(&bytes,&image_hash(&bytes)),Err(HistoryError::Invalid("snapshot carries file-level parameter baselines"))));
+        }
     }
 }

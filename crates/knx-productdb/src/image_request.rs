@@ -473,7 +473,9 @@ fn priority_statements(
 /// `ComObjectRef` id. `Program`/`ProgramRef` values are enrichment's copy
 /// of the product's own flags and are left out, so the builder keeps
 /// taking those from the product database.
-fn flag_overrides(
+/// Preserves the download helper's existing duplicate-lookup behavior; comparison
+/// callers must validate unique unscoped lookup ids before using this map.
+pub fn flag_overrides(
     project: &Project,
     device: DeviceId,
     program_id: &str,
@@ -585,7 +587,8 @@ fn collect_parameter_values(
     Ok(values)
 }
 
-fn links(project: &Project, device: DeviceId) -> Result<Vec<Link>, ProjectRequestError> {
+/// Normalized link content only; address, program and activation admission are separate.
+pub fn links(project: &Project, device: DeviceId) -> Result<Vec<Link>, ProjectRequestError> {
     let instance = project
         .devices
         .get(device)

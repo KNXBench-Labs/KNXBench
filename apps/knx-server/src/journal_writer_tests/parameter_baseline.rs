@@ -16,6 +16,7 @@ const DEVICE: DeviceId = DeviceId(1);
 
 fn baseline() -> ParameterBaseline {
     ParameterBaseline {
+        object_flags: None,
         program_id: "M-0001_A-0001-01-0000".into(),
         values: [("M-0001_A-0001-01-0000_P-1_R-1".to_string(), "7".to_string())].into(),
         at: chrono::DateTime::UNIX_EPOCH,
@@ -54,7 +55,10 @@ fn with_device(seeded: bool) -> impl FnOnce(&AppState) {
                 .unwrap()
                 .apply(&BaselineEdit {
                     device: id,
-                    baseline: Some(baseline()),
+                    parameter: knx_core::commissioning::parameter_baseline::BaselineChange::Record(
+                        baseline(),
+                    ),
+                    links: knx_core::commissioning::parameter_baseline::LinkBaselineChange::Keep,
                 });
         }
     }
@@ -143,4 +147,42 @@ fn a_mark_of_a_device_without_a_baseline_keeps_the_background_path() {
     state.journal().flush();
     assert!(stored_marked(&path), "the background writer wrote the mark");
     assert_eq!(stored_baseline(&path), None);
+}
+
+#[test]
+fn a_link_only_owner_forces_synchronous_manual_mark_journaling_in_both_directions() {
+    use knx_core::commissioning::parameter_baseline::{
+        BaselineChange, LinkBaseline, LinkBaselineChange,
+    };
+    for programmed in [true, false] {
+        let dir = tempfile::tempdir().unwrap();
+        let (state, path, _) = background_with(&dir, |state| {
+            with_device(false)(state);
+            state
+                .parameter_baselines
+                .lock()
+                .unwrap()
+                .apply(&BaselineEdit {
+                    device: DEVICE,
+                    parameter: BaselineChange::Keep,
+                    links: LinkBaselineChange::Record(LinkBaseline {
+                        program_id: "P".into(),
+                        links: vec![],
+                        at: chrono::DateTime::UNIX_EPOCH,
+                    }),
+                });
+        });
+        let writes_before = super::writes(&state);
+        crate::programming_state::mark_device(&state, &binding(&state), DEVICE, programmed)
+            .unwrap();
+        let read = knx_store::open_existing_read_only(&path).unwrap();
+        assert!(
+            history::load_parameter_baselines(&read.conn)
+                .unwrap()
+                .is_empty(),
+            "link-only removal must be durable before answering"
+        );
+        assert_eq!(super::writes(&state), writes_before + 1);
+        assert!(state.parameter_baselines.lock().unwrap().is_empty());
+    }
 }

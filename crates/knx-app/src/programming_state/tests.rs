@@ -236,6 +236,7 @@ fn a_flag_edited_during_a_partial_download_is_never_credited() {
             Some(&now),
             SourcePlan::Unchanged,
             None,
+            chrono::DateTime::<chrono::Utc>::UNIX_EPOCH,
         );
         assert_eq!(
             s.programmed,
@@ -254,6 +255,7 @@ fn a_completed_complete_download_programs_all_four_and_touches_all_four() {
         Some(&request()),
         SourcePlan::Unchanged,
         None,
+        chrono::DateTime::<chrono::Utc>::UNIX_EPOCH,
     );
     assert_eq!(s.programmed, ProgrammingParts::ALL);
     assert_eq!(s.pending, ProgrammingParts::NONE);
@@ -273,6 +275,7 @@ fn a_completed_partial_download_programs_only_what_it_wrote() {
         Some(&request()),
         SourcePlan::Unchanged,
         None,
+        chrono::DateTime::<chrono::Utc>::UNIX_EPOCH,
     );
     let only = parts(|p| p.parameters = true);
     assert_eq!(s.programmed, only);
@@ -291,6 +294,7 @@ fn a_part_edited_during_the_run_stays_pending() {
         Some(&now),
         SourcePlan::Unchanged,
         None,
+        chrono::DateTime::<chrono::Utc>::UNIX_EPOCH,
     );
     assert_eq!(
         s.programmed,
@@ -318,6 +322,7 @@ fn a_device_the_project_no_longer_describes_is_programmed_in_nothing() {
         None,
         SourcePlan::Unchanged,
         None,
+        chrono::DateTime::<chrono::Utc>::UNIX_EPOCH,
     );
     assert_eq!(s.programmed, ProgrammingParts::NONE);
     assert_eq!(s.pending, ProgrammingParts::ALL);
@@ -332,6 +337,7 @@ fn an_interrupted_download_marks_what_it_touched_even_if_it_was_clean() {
         Some(&request()),
         SourcePlan::Unchanged,
         None,
+        chrono::DateTime::<chrono::Utc>::UNIX_EPOCH,
     );
     assert_eq!(s.programmed, ProgrammingParts::NONE);
     assert_eq!(s.pending, MEMORY, "the address was not written");
@@ -347,6 +353,7 @@ fn an_interrupted_download_marks_what_it_touched_even_if_it_was_clean() {
         Some(&request()),
         SourcePlan::Unchanged,
         None,
+        chrono::DateTime::<chrono::Utc>::UNIX_EPOCH,
     );
     assert_eq!(s.pending, parts(|p| p.group_addresses = true));
 }
@@ -361,6 +368,7 @@ fn interruption_never_marks_parts_the_plan_has_not_reached() {
         Some(&request()),
         SourcePlan::Unchanged,
         None,
+        chrono::DateTime::<chrono::Utc>::UNIX_EPOCH,
     );
     assert_eq!(s.pending, only_tables);
     assert_eq!(s.touched, only_tables);
@@ -376,6 +384,7 @@ fn a_changed_source_leaves_a_complete_downloads_memory_pending_but_keeps_its_add
         Some(&request()),
         SourcePlan::ChangedOrUnknown,
         None,
+        chrono::DateTime::<chrono::Utc>::UNIX_EPOCH,
     );
     assert_eq!(s.programmed, parts(|p| p.address = true));
     assert_eq!(s.pending, MEMORY);
@@ -399,6 +408,7 @@ fn a_changed_source_never_programs_a_partial_download() {
         Some(&request()),
         SourcePlan::ChangedOrUnknown,
         None,
+        chrono::DateTime::<chrono::Utc>::UNIX_EPOCH,
     );
     assert_eq!(s.programmed, ProgrammingParts::NONE);
     assert_eq!(
@@ -422,6 +432,7 @@ fn a_changed_source_and_an_edited_address_credit_nothing() {
         Some(&now),
         SourcePlan::ChangedOrUnknown,
         None,
+        chrono::DateTime::<chrono::Utc>::UNIX_EPOCH,
     );
     assert_eq!(s.programmed, ProgrammingParts::NONE);
     assert_eq!(s.pending, ProgrammingParts::ALL);
@@ -452,6 +463,7 @@ fn a_changed_source_settlement_still_forgets_older_programmed_claims() {
         Some(&request()),
         SourcePlan::ChangedOrUnknown,
         None,
+        chrono::DateTime::<chrono::Utc>::UNIX_EPOCH,
     );
     let _ = apply_settlement(&mut p, &mut stack, DeviceId(1), &s, None);
     stack.undo(&mut p).unwrap();
@@ -471,7 +483,8 @@ fn a_download_that_wrote_nothing_changes_nothing() {
             &request(),
             Some(&request()),
             SourcePlan::Unchanged,
-            None
+            None,
+            chrono::DateTime::<chrono::Utc>::UNIX_EPOCH
         ),
         Settlement::default()
     );
@@ -592,6 +605,7 @@ fn applying_a_settlement_without_programmed_parts_keeps_the_download_time() {
         None,
         SourcePlan::Unchanged,
         None,
+        chrono::DateTime::<chrono::Utc>::UNIX_EPOCH,
     );
     let at = Utc::now();
     assert!(
@@ -631,6 +645,7 @@ fn applying_a_settlement_forgets_older_programmed_claims() {
         Some(&request()),
         SourcePlan::Unchanged,
         None,
+        chrono::DateTime::<chrono::Utc>::UNIX_EPOCH,
     );
     let _ = apply_settlement(&mut p, &mut stack, DeviceId(1), &s, None);
     stack.undo(&mut p).unwrap();
@@ -705,6 +720,7 @@ fn a_flag_edit_survives_a_group_addresses_only_download() {
         Some(&request()),
         SourcePlan::Unchanged,
         None,
+        chrono::DateTime::<chrono::Utc>::UNIX_EPOCH,
     );
     let _ = apply_settlement(&mut p, &mut stack, DeviceId(1), &s, None);
     assert_eq!(
@@ -716,6 +732,7 @@ fn a_flag_edit_survives_a_group_addresses_only_download() {
 
 fn resolved() -> WrittenParameters {
     WrittenParameters {
+        object_flags: None,
         values: BTreeMap::from([
             ("P-1".to_string(), "1".to_string()),
             ("P-2".to_string(), "default".to_string()),
@@ -729,6 +746,7 @@ fn resolved() -> WrittenParameters {
 fn recorded() -> BaselineChange {
     let resolved = resolved();
     BaselineChange::Record(ParameterBaseline {
+        object_flags: None,
         program_id: request().program_id,
         values: resolved.values,
         at: resolved.at,
@@ -741,7 +759,16 @@ fn baseline(
     now: Option<&ImageRequest>,
     source: SourcePlan,
 ) -> BaselineChange {
-    settle_download(partial, end, &request(), now, source, Some(resolved())).parameter_baseline
+    settle_download(
+        partial,
+        end,
+        &request(),
+        now,
+        source,
+        Some(resolved()),
+        chrono::DateTime::<chrono::Utc>::UNIX_EPOCH,
+    )
+    .parameter_baseline
 }
 
 const GROUP_ADDRESSES_ONLY: PartialDownloadParts = PartialDownloadParts {
@@ -787,6 +814,7 @@ fn a_project_edited_during_the_run_still_records_what_was_written() {
         Some(&now),
         SourcePlan::Unchanged,
         Some(resolved()),
+        chrono::DateTime::<chrono::Utc>::UNIX_EPOCH,
     );
     assert!(!s.programmed.parameters, "the edit stays pending");
     assert_eq!(
@@ -818,6 +846,7 @@ fn a_completed_run_removes_the_baseline_when_the_source_changed_or_values_are_un
             Some(&now),
             SourcePlan::Unchanged,
             None,
+            chrono::DateTime::<chrono::Utc>::UNIX_EPOCH,
         );
         assert_eq!(unresolved.parameter_baseline, BaselineChange::Remove);
     }
@@ -888,6 +917,7 @@ fn applying_a_settlement_hands_its_baseline_instruction_back_as_an_edit() {
     let now = request();
     let settle = |change: BaselineChange| Settlement {
         parameter_baseline: change,
+        link_baseline: LinkBaselineChange::Keep,
         ..settle_download(
             None,
             DownloadEnd::Completed,
@@ -895,6 +925,7 @@ fn applying_a_settlement_hands_its_baseline_instruction_back_as_an_edit() {
             Some(&now),
             SourcePlan::Unchanged,
             None,
+            chrono::DateTime::<chrono::Utc>::UNIX_EPOCH,
         )
     };
     let record = apply_settlement(&mut p, &mut stack, DeviceId(1), &settle(recorded()), None);
@@ -905,7 +936,10 @@ fn applying_a_settlement_hands_its_baseline_instruction_back_as_an_edit() {
         record.baseline,
         Some(BaselineEdit {
             device: DeviceId(1),
-            baseline: Some(expected),
+            parameter: knx_core::commissioning::parameter_baseline::BaselineChange::Record(
+                expected
+            ),
+            links: knx_core::commissioning::parameter_baseline::LinkBaselineChange::Keep,
         })
     );
     let remove = apply_settlement(
@@ -919,7 +953,8 @@ fn applying_a_settlement_hands_its_baseline_instruction_back_as_an_edit() {
         remove.baseline,
         Some(BaselineEdit {
             device: DeviceId(1),
-            baseline: None,
+            parameter: knx_core::commissioning::parameter_baseline::BaselineChange::Remove,
+            links: knx_core::commissioning::parameter_baseline::LinkBaselineChange::Keep,
         })
     );
     let keep = apply_settlement(
@@ -937,3 +972,5 @@ fn applying_a_settlement_hands_its_baseline_instruction_back_as_an_edit() {
         "a missing device changes nothing"
     );
 }
+
+mod links_and_flags;

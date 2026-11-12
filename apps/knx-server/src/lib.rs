@@ -58,6 +58,7 @@ mod device_diagnostics_routes;
 mod device_download;
 mod device_system2;
 pub use device_system2::{drain_device_system2, System2Drain, System2Service};
+mod object_last_download;
 mod parameter_baseline;
 mod parameter_captions;
 mod parameter_grid;

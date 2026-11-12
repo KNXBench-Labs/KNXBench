@@ -1,4 +1,4 @@
-//! Parameter values a completed download built its image from, held outside the model (ADR-0173).
+//! Downloaded parameter, flag and link evidence, held outside model history (ADR-0173/0174).
 //!
 //! A baseline is keyed by device and lives beside the project, never inside
 //! `Project`, its undo history or a version image: no undo, redo, snapshot
@@ -24,6 +24,8 @@ pub struct ParameterBaseline {
     /// The written request's values, defaults resolved in the same catalogue
     /// lease that proved the source unchanged.
     pub values: ParameterValues,
+    /// Unknown is distinct from a completed write with no active objects.
+    pub object_flags: Option<ObjectFlagValues>,
     /// When the run's settlement recorded it.
     pub at: DateTime<Utc>,
 }
@@ -40,34 +42,76 @@ pub enum BaselineChange {
     Record(ParameterBaseline),
 }
 
+/// The five flags actually written; read-on-init is unwritten in admitted formats.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct WrittenObjectFlags {
+    pub read: bool,
+    pub write: bool,
+    pub transmit: bool,
+    pub update: bool,
+    pub communication: bool,
+    pub read_on_init: Option<bool>,
+}
+
+pub type ObjectFlagValues = BTreeMap<u8, WrittenObjectFlags>;
+
+/// One association exactly as the written request built its tables.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct BaselineLink {
+    pub object: u8,
+    pub group_address: crate::GroupAddress,
+    pub sending: bool,
+}
+
+/// Independently written Group-addresses evidence, outside model history.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct LinkBaseline {
+    pub program_id: String,
+    pub links: Vec<BaselineLink>,
+    pub at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub enum LinkBaselineChange {
+    #[default]
+    Keep,
+    Remove,
+    Record(LinkBaseline),
+}
+
 impl BaselineChange {
-    /// The durable edit this instruction makes for `device`; `None` keeps.
     pub fn edit_for(&self, device: DeviceId) -> Option<BaselineEdit> {
-        match self {
-            Self::Keep => None,
-            Self::Remove => Some(BaselineEdit {
-                device,
-                baseline: None,
-            }),
-            Self::Record(baseline) => Some(BaselineEdit {
-                device,
-                baseline: Some(baseline.clone()),
-            }),
+        (!matches!(self, Self::Keep)).then(|| BaselineEdit {
+            device,
+            parameter: self.clone(),
+            links: LinkBaselineChange::Keep,
+        })
+    }
+}
+
+/// Explicit independent edits: an unselected section genuinely keeps its time.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct BaselineEdit {
+    pub device: DeviceId,
+    pub parameter: BaselineChange,
+    pub links: LinkBaselineChange,
+}
+
+impl BaselineEdit {
+    pub fn remove(device: DeviceId) -> Self {
+        Self {
+            device,
+            parameter: BaselineChange::Remove,
+            links: LinkBaselineChange::Remove,
         }
     }
 }
 
-/// One device's new baseline (`None`: removed), as written to storage.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct BaselineEdit {
-    pub device: DeviceId,
-    pub baseline: Option<ParameterBaseline>,
-}
-
-/// Every known baseline of one project incarnation, by device.
+/// Independent sections of one project incarnation, by device (including link-only owners).
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct ParameterBaselines {
     by_device: BTreeMap<DeviceId, ParameterBaseline>,
+    links: BTreeMap<DeviceId, LinkBaseline>,
 }
 
 impl ParameterBaselines {
@@ -80,27 +124,68 @@ impl ParameterBaselines {
     }
 
     pub fn len(&self) -> usize {
-        self.by_device.len()
+        self.device_ids().len()
     }
 
     pub fn is_empty(&self) -> bool {
-        self.by_device.is_empty()
+        self.by_device.is_empty() && self.links.is_empty()
     }
 
+    /// Parameter headers only; lifecycle enumeration must use `device_ids`.
     pub fn iter(&self) -> impl Iterator<Item = (DeviceId, &ParameterBaseline)> {
         self.by_device
             .iter()
             .map(|(device, baseline)| (*device, baseline))
     }
 
-    /// Sets or removes one device's baseline.
+    pub fn get_links(&self, device: DeviceId) -> Option<&LinkBaseline> {
+        self.links.get(&device)
+    }
+
+    pub fn iter_links(&self) -> impl Iterator<Item = (DeviceId, &LinkBaseline)> {
+        self.links.iter().map(|(id, baseline)| (*id, baseline))
+    }
+
+    /// Union of independently stored section owners, in deterministic order.
+    pub fn device_ids(&self) -> std::collections::BTreeSet<DeviceId> {
+        self.by_device
+            .keys()
+            .chain(self.links.keys())
+            .copied()
+            .collect()
+    }
+
+    pub fn would_change(&self, edit: &BaselineEdit) -> bool {
+        let parameter = match &edit.parameter {
+            BaselineChange::Keep => false,
+            BaselineChange::Remove => self.get(edit.device).is_some(),
+            BaselineChange::Record(value) => self.get(edit.device) != Some(value),
+        };
+        let links = match &edit.links {
+            LinkBaselineChange::Keep => false,
+            LinkBaselineChange::Remove => self.get_links(edit.device).is_some(),
+            LinkBaselineChange::Record(value) => self.get_links(edit.device) != Some(value),
+        };
+        parameter || links
+    }
+
     pub fn apply(&mut self, edit: &BaselineEdit) {
-        match &edit.baseline {
-            Some(baseline) => {
-                self.by_device.insert(edit.device, baseline.clone());
+        match &edit.parameter {
+            BaselineChange::Keep => {}
+            BaselineChange::Record(value) => {
+                self.by_device.insert(edit.device, value.clone());
             }
-            None => {
+            BaselineChange::Remove => {
                 self.by_device.remove(&edit.device);
+            }
+        }
+        match &edit.links {
+            LinkBaselineChange::Keep => {}
+            LinkBaselineChange::Record(value) => {
+                self.links.insert(edit.device, value.clone());
+            }
+            LinkBaselineChange::Remove => {
+                self.links.remove(&edit.device);
             }
         }
     }
@@ -108,6 +193,8 @@ impl ParameterBaselines {
     /// Keeps only the baselines of devices `project` contains: what a native
     /// save does with the rows of deleted devices (ADR-0173 §2).
     pub fn retain_devices_of(&mut self, project: &Project) {
+        self.links
+            .retain(|device, _| project.devices.get(*device).is_some());
         self.by_device
             .retain(|device, _| project.devices.get(*device).is_some());
     }
@@ -117,6 +204,7 @@ impl FromIterator<(DeviceId, ParameterBaseline)> for ParameterBaselines {
     fn from_iter<T: IntoIterator<Item = (DeviceId, ParameterBaseline)>>(iter: T) -> Self {
         Self {
             by_device: iter.into_iter().collect(),
+            links: BTreeMap::new(),
         }
     }
 }
@@ -206,6 +294,7 @@ mod tests {
     #[test]
     fn keep_edits_nothing_remove_and_record_edit_the_device() {
         let baseline = ParameterBaseline {
+            object_flags: None,
             program_id: "P".into(),
             values: values(&[("R-1", "1")]),
             at: DateTime::<Utc>::UNIX_EPOCH,

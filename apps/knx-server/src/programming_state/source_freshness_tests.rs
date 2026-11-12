@@ -528,3 +528,5 @@ fn a_failed_run_logs_its_cause_before_and_linked_to_the_settlement() {
     assert_eq!(cause.detail.as_deref(), Some("download 1"));
     assert_eq!(settlement.detail, cause.detail, "linked to the same run");
 }
+
+mod links_and_flags;

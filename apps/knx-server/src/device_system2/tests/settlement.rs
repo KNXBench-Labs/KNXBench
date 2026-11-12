@@ -510,11 +510,21 @@ fn seed_baseline(state: &SharedState) {
         .unwrap()
         .apply(&BaselineEdit {
             device: DeviceId(1),
-            baseline: Some(ParameterBaseline {
-                program_id: "M-0001_A-0001-01-0000".into(),
-                values: Default::default(),
-                at: chrono::DateTime::UNIX_EPOCH,
-            }),
+            parameter: knx_core::commissioning::parameter_baseline::BaselineChange::Record(
+                ParameterBaseline {
+                    object_flags: Some(Default::default()),
+                    program_id: "M-0001_A-0001-01-0000".into(),
+                    values: Default::default(),
+                    at: chrono::DateTime::UNIX_EPOCH,
+                },
+            ),
+            links: knx_core::commissioning::parameter_baseline::LinkBaselineChange::Record(
+                knx_core::commissioning::parameter_baseline::LinkBaseline {
+                    program_id: "M-0001_A-0001-01-0000".into(),
+                    links: vec![],
+                    at: chrono::DateTime::UNIX_EPOCH,
+                },
+            ),
         });
 }
 
@@ -544,6 +554,15 @@ fn s2_every_settlement_that_may_have_mutated_removes_the_parameter_baseline() {
         let receipt = settle(&state, &meta(&state), &p, run, |_, _| ProgrammingParts::ALL);
         assert_eq!(receipt, Receipt::SessionOnly, "{label}");
         assert!(!has_baseline(&state), "{label} kept a baseline");
+        assert!(
+            state
+                .parameter_baselines
+                .lock()
+                .unwrap()
+                .get_links(DeviceId(1))
+                .is_none(),
+            "{label} kept links"
+        );
     }
     let state = fresh();
     seed_baseline(&state);
@@ -569,4 +588,10 @@ fn s2_a_run_that_could_not_write_keeps_the_parameter_baseline() {
         Receipt::NoMutation
     );
     assert!(has_baseline(&state));
+    assert!(state
+        .parameter_baselines
+        .lock()
+        .unwrap()
+        .get_links(DeviceId(1))
+        .is_some());
 }

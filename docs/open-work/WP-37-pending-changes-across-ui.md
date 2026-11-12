@@ -4,7 +4,8 @@ External report by the issue reporter, 10 November 2026; triaged 11 November 202
 Status: **step 1 implemented (11 November 2026, main only); step 2 implemented
 (server part 11 November, parameter-editor UI 12 November 2026, main only) per
 [ADR-0173](../adr/0173-last-downloaded-parameter-values.md) (Accepted). No
-hardware run.**
+hardware run.** Section-navigation marks from [#48](https://github.com/KNXBench-Labs/KNXBench/issues/48)
+are planned below (owner request, 12 November 2026); not implemented or claimed.
 
 ## Packages
 
@@ -40,6 +41,61 @@ hardware run.**
    packages. A first draft that
    put flags with the links led to the ADR-0129 amendment of the same day
    (flag edits mark Parameters).
+4. Propagate per-parameter differences to the parameter editor's section
+   navigation, including ancestors ([#48](https://github.com/KNXBench-Labs/KNXBench/issues/48)).
+   **Planned only**, owner request 12 November 2026; not claimed and no
+   implementation Go. Bounded UI follow-up to the delivered step 2, independent
+   of package 3's links/flags backend. Coordinate the shared parameter UI with
+   its current owner before implementation; do not edit frozen WP-37f inputs.
+
+## Planned section-navigation marks (#48)
+
+**Report:** on `0.1.0-alpha.20+ge91da61a`, the reporter confirms the row dots,
+last-programming captions and summary from #40. Two differing values in
+**Status LED** have no corresponding mark on that section or its parent.
+This is a navigation enhancement, not evidence of an incorrect stored baseline.
+
+**Existing basis and dependency:** reuse the usable `lastDownload.differing`
+comparison, unscoped-ref eligibility and section structure of step 2. Its server
+and UI prerequisites are delivered; no dependency on the new links/flags
+baseline, module-download support or a new native schema is intended. Do not
+create another client-side value comparator, baseline or settlement path.
+
+**Requested outcome and acceptance plan (not executed):**
+
+- Show the existing amber visual cue on each section containing an eligible
+  differing parameter and on every ancestor, including collapsed branches.
+  Unaffected siblings and ancestors with no differing descendants stay unmarked.
+  Preserve existing navigation, expansion state and field accessible names.
+- Derive marks from distinct differing unscoped refs mapped to their actual
+  section paths, not from whichever section is currently open or from matching
+  captions. Repeated fields for one ref must not multiply a count if a count is
+  used. A dot is sufficient; a numeric badge is optional, not a new requirement.
+- Use the same comparison population as the existing row/summary semantics.
+  Preserve the hidden/Manufacturer-fields distinction; do not invent a section
+  for an unmappable ref or silently turn a hidden difference into a clean claim.
+  Define that mapping explicitly in implementation tests for both view modes.
+- Keep the existing write-response/read-refresh lifecycle: dropping a written
+  ref updates its section and ancestors, unrelated marks remain, and the next
+  accepted GET replaces the comparison. Refreshing is not proof that the device
+  is up to date. No stale marks after a device, program or project switch.
+- No difference marks for missing or unusable comparisons or module-scoped
+  parameters. Keep the existing explanatory summary and whole-device pending
+  flags distinct from these last-programming differences.
+- Provide an English/German accessible description, not colour alone or a
+  mouse-only tooltip; preserve section names and keyboard navigation. Verify
+  forced colours and no horizontal overflow at narrow and desktop widths.
+- Add component and browser regression coverage with fictional data for the
+  reported two-values/Status-LED case, nested/collapsed parents, unaffected
+  siblings, repeated refs, hidden/Manufacturer fields, unusable states,
+  accepted-write/GET refresh, clearing and late responses after scope switches.
+  No real programming run is required for this UI acceptance.
+
+**Exclusions:** no product implementation in this planning change; no API,
+schema, persistence, module support or programming-flag changes; no hardware,
+release or deployment authority. #48 remains open until the actual UI change
+is separately implemented, verified and published. The ongoing backend package
+and its ownership remain unchanged.
 
 ## Step 2, server part as implemented
 

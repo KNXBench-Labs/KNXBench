@@ -126,7 +126,9 @@ The identity rule cannot tell unrelated projects that share a project id
 apart. Projects created in KNXBench get a random id since 12 November 2026
 (`P-KB-` and 128 random bits; before, every one was `P-0001` with `KB-DEV-n`
 sources, and files created then keep that id). ETS ids are short (`P-0512`)
-and can repeat across unrelated ETS installations. A version left in a file
+and can repeat across unrelated ETS installations, and copies of one project
+(Save As, a copied file) keep one id and are not told apart once edited
+separately. A version left in a file
 that Save As overwrote with such a project can therefore still pair a
 baseline with a different physical device of the same product and program.
 

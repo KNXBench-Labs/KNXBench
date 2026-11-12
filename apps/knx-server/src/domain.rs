@@ -1346,17 +1346,11 @@ const DEFAULT_NEW_PROJECT_LANGUAGE: &str = "en";
 /// `KB-` marks a project created in KNXBench. Device identity across saves and
 /// restores is judged within one project id (ADR-0173 §2), so two projects
 /// created independently must never share one (a constant `P-0001` did).
-/// Without the operating system's random source the time and process id stand
-/// in: still distinct between creations, not secret, which an id need not be.
+/// The server already needs the operating system's random source to start
+/// (its incarnation id); without it here there is no id worth inventing.
 fn new_project_id() -> String {
     let mut bytes = [0u8; 16];
-    if getrandom::fill(&mut bytes).is_err() {
-        let nanos = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .map_or(0, |elapsed| elapsed.as_nanos());
-        bytes[..12].copy_from_slice(&nanos.to_le_bytes()[..12]);
-        bytes[12..].copy_from_slice(&std::process::id().to_le_bytes());
-    }
+    getrandom::fill(&mut bytes).expect("operating-system random source for a new project id");
     let hex: String = bytes.iter().map(|byte| format!("{byte:02x}")).collect();
     format!("P-KB-{hex}")
 }

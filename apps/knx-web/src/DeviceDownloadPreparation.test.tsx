@@ -14,6 +14,7 @@ const apiMock = vi.hoisted(() => ({
   busActivity: vi.fn(),
   getDeviceReadiness: vi.fn(),
   stopBusMonitor: vi.fn(),
+  stopBoundBusMonitor: vi.fn(),
   cancelLineScan: vi.fn(),
   stopAddressProgramming: vi.fn(),
 }));
@@ -137,7 +138,8 @@ beforeEach(() => {
   apiMock.serverVersion.mockReset().mockResolvedValue({ version: "0.1.0-alpha.1" });
   apiMock.busActivity.mockReset().mockResolvedValue(activity([]));
   apiMock.getDeviceReadiness.mockReset().mockResolvedValue({ devices: [], counts: {} });
-  apiMock.stopBusMonitor.mockReset().mockResolvedValue({ sessionId: 6, telegramCount: 0 });
+  apiMock.stopBusMonitor.mockReset().mockRejectedValue(new Error("legacy global stop must not be used"));
+  apiMock.stopBoundBusMonitor.mockReset().mockResolvedValue({ sessionId: 6, serverIncarnation: "srv", telegramCount: 0 });
   apiMock.cancelLineScan.mockReset();
   apiMock.stopAddressProgramming.mockReset();
   host = document.createElement("div"); document.body.appendChild(host); root = createRoot(host);
@@ -522,10 +524,59 @@ it("names a connected bus monitor before anything is prepared, and stops it on r
   apiMock.busActivity.mockResolvedValue(activity([]));
   await act(async () => button(en["deviceDownload.holder.stopMonitor"])!.click());
   await flush();
-  expect(apiMock.stopBusMonitor).toHaveBeenCalledTimes(1);
+  expect(apiMock.stopBoundBusMonitor).toHaveBeenCalledExactlyOnceWith({ sessionId: 6, serverIncarnation: "srv" });
+  expect(apiMock.stopBusMonitor).not.toHaveBeenCalled();
   expect(host.querySelector(".device-download-holder")).toBeNull();
   // No gateway was entered yet: the monitor's, which worked, is kept.
   expect(gatewayInput().value).toBe("192.0.2.221:3671");
+});
+
+// WP-26: the notice stops the session it shows, bound to that server process.
+it("stops the shown serial monitor of the shown server process, never the legacy global stop", async () => {
+  apiMock.busActivity.mockResolvedValue({
+    ...activity([{ kind: "busMonitor", id: 9, serial: { path: "/dev/ttyUSB0", source: "1.1.250", mode: "passive" }, state: "closed" }]),
+    serverIncarnation: "process-b",
+  });
+  await render();
+  apiMock.busActivity.mockResolvedValue(activity([]));
+  await act(async () => button(en["deviceDownload.holder.stopMonitor"])!.click());
+  await flush();
+  expect(apiMock.stopBoundBusMonitor).toHaveBeenCalledExactlyOnceWith({ sessionId: 9, serverIncarnation: "process-b" });
+  expect(apiMock.stopBusMonitor).not.toHaveBeenCalled();
+  expect(gatewayInput().value).toBe("");
+});
+
+it("stops the session of the latest poll after another one replaced the first, including a TCP holder", async () => {
+  vi.useFakeTimers();
+  apiMock.busActivity.mockResolvedValueOnce(activity([{ kind: "busMonitor", id: 6, gateway: "192.0.2.221:3671", state: "active" }]))
+    .mockResolvedValue({
+      ...activity([{ kind: "busMonitor", id: 7, gateway: "192.0.2.222:3671", transport: "tcp", state: "active" }]),
+      serverIncarnation: "process-b",
+    });
+  await render();
+  expect(text(".device-download-holder [role=status]")).toContain("192.0.2.221:3671");
+  await act(async () => { await vi.advanceTimersByTimeAsync(HOLDER_POLL_MS); });
+  expect(text(".device-download-holder [role=status]")).toContain("192.0.2.222:3671");
+  apiMock.stopBoundBusMonitor.mockResolvedValue({ sessionId: 7, serverIncarnation: "process-b", telegramCount: 0 });
+  apiMock.busActivity.mockResolvedValue(activity([]));
+  await act(async () => button(en["deviceDownload.holder.stopMonitor"])!.click());
+  await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+  expect(apiMock.stopBoundBusMonitor).toHaveBeenCalledExactlyOnceWith({ sessionId: 7, serverIncarnation: "process-b" });
+  expect(apiMock.stopBusMonitor).not.toHaveBeenCalled();
+});
+
+it("reports a changed session instead of stopping another one, and keeps the typed gateway empty", async () => {
+  apiMock.busActivity.mockResolvedValue(activity([{ kind: "busMonitor", id: 6, gateway: "192.0.2.221:3671", state: "active" }]));
+  await render();
+  apiMock.stopBoundBusMonitor.mockRejectedValue(new Error("monitor session 6 of the named server is not the session held now; nothing was stopped"));
+  apiMock.busActivity.mockResolvedValue(activity([{ kind: "busMonitor", id: 7, gateway: "192.0.2.222:3671", state: "active" }]));
+  await act(async () => button(en["deviceDownload.holder.stopMonitor"])!.click());
+  await flush();
+  expect(apiMock.stopBoundBusMonitor).toHaveBeenCalledExactlyOnceWith({ sessionId: 6, serverIncarnation: "srv" });
+  expect(apiMock.stopBusMonitor).not.toHaveBeenCalled();
+  expect(text(".device-download-holder [role=alert]")).toContain("nothing was stopped");
+  expect(text(".device-download-holder [role=status]")).toContain("192.0.2.222:3671");
+  expect(gatewayInput().value).toBe("");
 });
 
 it("offers the monitor's gateway as a suggestion and never overwrites a typed one by itself", async () => {

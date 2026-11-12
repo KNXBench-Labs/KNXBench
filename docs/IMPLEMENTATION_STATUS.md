@@ -501,6 +501,17 @@ review and all 13 selected integrated package stages passed on `ac9b23814`
 Server/Web scans, programming and discovery/routing are unchanged.
 [Scope](open-work/WP-29-knxnet-ip-tcp-tunnelling.md).
 
+## Optional TCP byte-order probe (11 November 2026; bounded WP-29 successor)
+
+`knx device byte-order-probe` accepts `--tunnel-transport udp|tcp` for a live
+read; omission remains UDP, `--preview` refuses the option and runtime gateways
+are admitted strictly before any input is opened. Stderr names the opened
+transport and reports positive TCP skips sampled before disconnect. The read-only
+plan, classification and exits are unchanged. Loopback CLI regressions against
+TCP/UDP peers cover all four classifications, refusals, recording and cleanup;
+no release or hardware claim.
+[Record](status/2026-11-11-cli-tcp-byte-order-probe.md).
+
 ## Group-address description follow-ups (9 November 2026; KL-038b)
 
 The three KL-038b follow-ups ([ADR-0164 amendment](adr/0164-group-address-description-and-csv-encoding.md#amendment--9-november-2026-editor-csv-removal-mcp)):

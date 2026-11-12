@@ -936,6 +936,11 @@ for lifting the limitation, so please share the output (it contains your device'
 parameter values) with the KNXBench maintainers if you are happy to. Exit 0: read and
 reported; 1: not probed (wrong device, read-protected memory, nothing to read).
 
+On source builds after 11 November 2026, `--tunnel-transport tcp` reads over
+KNXnet/IP TCP tunnelling instead of the default UDP; there is no fallback to UDP.
+The command prints which transport it opened and, over TCP, how many unknown
+frames it skipped. Preview mode refuses the option because it opens no connection.
+
 #### Preview first, without contacting a device
 
 On source builds after Alpha 14, add `--preview` to inspect planned fields

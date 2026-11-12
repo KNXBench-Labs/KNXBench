@@ -74,6 +74,18 @@ This is a narrow exception to the earlier device-workflow exclusion, not device
 programming/address assignment, KNX IP Secure, hardware interoperability or
 closure of wider WP-29.
 
+## CLI byte-order-probe successor (11 November 2026)
+
+The ordinary read-only `knx device byte-order-probe` admits explicit
+`--tunnel-transport udp|tcp` with the find-serial policies: UDP default, no
+fallback, strict runtime gateway admission before any input is opened, actual
+transport and pre-disconnect TCP skips on stderr. `--preview` refuses the option.
+Probe plan, classification, exits, history and recording are unchanged. Loopback
+CLI regressions run the public MV-0701 fixture over real TCP and UDP peers
+([record](../status/2026-11-11-cli-tcp-byte-order-probe.md)). Remaining device
+workflows (programming, downloads, address assignment, other reads) stay UDP-only;
+hardware interoperability and KNX IP Secure remain open.
+
 ## Independently checked source basis
 
 The original KNXnet/IP Core v01.06.02 and Tunnelling v01.07.01 clauses were read

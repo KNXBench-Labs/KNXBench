@@ -48,6 +48,11 @@ default, no fallback and unchanged device-evidence rules. This supersedes the
 CLI-scan exclusion above only; server/Web scans, other device workflows,
 serial, discovery and routing are not widened. No release or hardware claim.
 
+**10–11 November source updates:** the read-only `knx device find-serial` queries
+and `knx device byte-order-probe` also accept explicit `--tunnel-transport tcp`
+(UDP default, no fallback). Programming, downloads and address assignment stay
+UDP-only. Tested against local test peers only.
+
 <a id="native-project-schema17-current-source-not-a-new-release"></a>
 
 ## Project schema 19 (since Alpha 20)

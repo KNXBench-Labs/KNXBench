@@ -105,6 +105,18 @@ fn a_parameter_edit_during_the_run_records_what_was_written_and_shows_as_differi
 }
 
 #[test]
+fn a_settlement_whose_file_write_fails_leaves_the_held_baseline_alone() {
+    let f = fixture(&OLD, &OLD);
+    let earlier = seed(&f.state);
+    // The owned store path cannot be opened: its directory does not exist.
+    *f.state.store_path.lock().unwrap() = Some(f._dir.path().join("missing/dir/project.knxdb"));
+    // A completed run from an unchanged source would record another one.
+    run(&f, None, false, finished());
+    assert_eq!(belief(&f.state), NONE, "nothing was applied");
+    assert_eq!(baseline(&f.state), Some(earlier), "nor the baseline record");
+}
+
+#[test]
 fn a_changed_source_removes_the_baseline() {
     let f = fixture(&OLD, &new_base());
     seed(&f.state);

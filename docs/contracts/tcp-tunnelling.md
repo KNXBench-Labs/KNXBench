@@ -1,7 +1,7 @@
 # Optional TCP tunnelling for monitoring, group traffic and read-only CLI queries
 
 Initial monitor/group-traffic acceptance: 8 November 2026; ships in Alpha 20.
-The separately dated scan/find-serial successors below are main-only additions.
+The separately dated scan/find-serial/byte-order-probe successors below are main-only additions.
 [WP-29](../open-work/WP-29-knxnet-ip-tcp-tunnelling.md) remains open beyond this
 slice. The [execution record](../status/2026-11-08-optional-tcp-tunnelling.md)
 separates actual passed checks from this contract's required behaviour and from
@@ -23,7 +23,7 @@ it is not part of the Alpha 20 release above. At that accepted CLI baseline,
 Server/Web line scans retained UDP; the separate source successor below adds
 explicit TCP and is now software-accepted on main. Device programming,
 downloads/restores and individual-address programming retain their UDP path.
-The read-only find-serial exception below does not widen those write workflows.
+The read-only find-serial and byte-order-probe exceptions below do not widen those write workflows.
 Discovery and routing are separate UDP services.
 No preference silently converts those paths
 to TCP. Plain TCP is not KNX IP Secure, hardware compatibility or a remedy for
@@ -109,6 +109,30 @@ general cancellation guarantee. Independent source reviews and narrow optional
 fixture closure and the complete selected integrated package gate passed;
 runtime publication was read back. This is not an Alpha 20 release or hardware
 claim ([scoped execution record](../status/2026-11-10-cli-tcp-find-serial.md)).
+
+## Read-only CLI byte-order probe successor (11 November 2026; main-only acceptance)
+
+The ordinary read-only probe accepts the same optional selection:
+
+```text
+knx device byte-order-probe <a.l.d> --project <path.knxdb> --gateway <host:port> [--tunnel-transport udp|tcp]
+```
+
+Omission is UDP. Invalid, missing or duplicate transport values refuse before
+I/O. `--tunnel-transport` is refused together with `--preview` (also with
+`--system2-source`): a preview opens nothing, so a transport would be a silent
+no-op. A live probe requires a unicast IPv4 gateway and nonzero port, checked
+before project, product database, history or runtime are opened; offline
+previews keep their earlier syntax-only gateway parsing. Explicit TCP never
+falls back to UDP, reconnects or replays.
+
+As for find-serial, transport selection precedes the diagnostic tap, stderr
+names the opened handle's actual transport, and positive TCP skipped-frame
+counts are sampled before disconnect and reported after success or failure,
+with recording disabled too. The probe plan, the read/control APDU set, stdout
+classification, exit codes 0/1, unjournalled history, optional recording and
+best-effort cleanup are unchanged. No write, key, restart or programming path
+is added ([scoped execution record](../status/2026-11-11-cli-tcp-byte-order-probe.md)).
 
 ## Wire and lifecycle
 

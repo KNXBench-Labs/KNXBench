@@ -32,7 +32,8 @@ and disconnects through that controller and stops only its own session. All nine
 runtime review findings and the browser-fixture review are closed. The selected
 15-stage main-first gate passed with frozen inputs and checked, untouched user
 data. [Acceptance and remaining boundaries](../status/2026-11-02-wp26-status-bar-connection.md).
-The download page's holder notice remains on the legacy global stop. At that IP
+The download page's holder notice remained on the legacy global stop until
+11 November 2026, when it moved to the bound stop (see below). At that IP
 checkpoint USB was still open; the bounded successor below adds TP-UART software
 support without claiming complete transport coverage. Limits:
 [KL-180](../limitations/KL-180-named-gateway-refusals.md#session-bound-stop-and-status-bar-connection-2-november-2026-source).
@@ -137,3 +138,18 @@ test belongs to this package. Published `edc6c90d5` completes this bounded
 software successor, not complete USB detection or the wider WP-26 hardware scope.
 [Acceptance and distinct execution bindings](../status/2026-11-05-wp26-passive-serial-candidates.md) ·
 [Primary source, API and test boundary](../research/2026-11-05-passive-serial-candidates.md).
+
+## Download holder notice on the bound stop (11 November 2026)
+
+The download page's **Stop bus monitor** action, the last web caller of the
+legacy global `POST /api/bus/monitor/stop`, now stops only the monitor session
+its notice shows: `stop-bound` with that session's id and the activity
+snapshot's server incarnation. If another session took its place meanwhile, the
+server answers `busSessionChanged`, the notice shows the error and the current
+holder, and nothing else is stopped; there is no fallback to the global stop.
+The monitor gateway is kept for the download only after a successful stop.
+Tests: component tests (IP and serial holders, changed session) and the
+existing EN/DE wide/narrow browser fixture with intercepted HTTP. No real
+installation access. Remaining WP-26 scope: physical adapter compatibility,
+KNX USB HID, FT1.2, further serial adapters, and device management/downloads/
+scans over serial; all need hardware evidence or a newly bounded package.

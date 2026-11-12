@@ -117,6 +117,48 @@ fn source_preview_reports_three_boundary_facts_and_never_sends_to_the_supplied_g
 }
 
 #[test]
+fn explicit_udp_or_tcp_with_source_preview_refuses_without_contact_or_input_changes() {
+    let dir = tempfile::tempdir().unwrap();
+    let (project, products) = fixture(dir.path());
+    let project_before = std::fs::read(&project).unwrap();
+    let products_before = std::fs::read(&products).unwrap();
+    let tcp = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+    tcp.set_nonblocking(true).unwrap();
+    let endpoint = tcp.local_addr().unwrap();
+    let udp = UdpSocket::bind(endpoint).unwrap();
+    udp.set_nonblocking(true).unwrap();
+    for transport in ["udp", "tcp"] {
+        let result = Command::new(env!("CARGO_BIN_EXE_knx"))
+            .args(["device", "byte-order-probe", "1.1.67", "--project"])
+            .arg(&project)
+            .arg("--product-db")
+            .arg(&products)
+            .args([
+                "--preview",
+                "--system2-source",
+                "--parameter-ref",
+                "P_R",
+                "--tunnel-transport",
+                transport,
+                "--gateway",
+            ])
+            .arg(endpoint.to_string())
+            .output()
+            .unwrap();
+        assert_eq!(result.status.code(), Some(1));
+        assert!(String::from_utf8_lossy(&result.stderr)
+            .lines()
+            .next()
+            .unwrap()
+            .contains("--tunnel-transport cannot be used with --preview"));
+        assert!(tcp.accept().is_err());
+        assert!(udp.recv_from(&mut [0; 1024]).is_err());
+        assert_eq!(std::fs::read(&project).unwrap(), project_before);
+        assert_eq!(std::fs::read(&products).unwrap(), products_before);
+    }
+}
+
+#[test]
 fn source_override_without_preview_refuses_before_opening_the_project_or_gateway() {
     let peer = UdpSocket::bind("127.0.0.1:0").unwrap();
     peer.set_read_timeout(Some(Duration::from_millis(100)))

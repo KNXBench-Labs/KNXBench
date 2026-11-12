@@ -58,7 +58,8 @@ pub struct AppState {
     /// The `.knxdb` file the in-memory project was last saved to or loaded
     /// from, if any. `None` until `save_project_as`/`open_native_project`
     /// sets it; plain `save_project` requires it already set.
-    pub store_path: Mutex<Option<PathBuf>>,
+    /// [`crate::store_path::StorePath::known`] answers while a save holds it.
+    pub store_path: crate::store_path::StorePath,
     /// Digest of `store_path` for [`ProjectTree::view_key`]. A *leaf* lock:
     /// written right after `store_path` changes and read by `tree_with_state`,
     /// it is never held while another lock is taken, so it adds no ordering.
@@ -78,7 +79,7 @@ pub struct AppState {
     /// Session-only memo of the parsed original topology member for the saved-folder
     /// currency check; keyed by the verified digest, never saved.
     pub folder_baselines: knx_app::saved_folder_currency::BaselineCache,
-    pub manufacturer_refs: Mutex<Vec<knx_store::ManufacturerRef>>,
+    pub manufacturer_refs: std::sync::Arc<Mutex<Vec<knx_store::ManufacturerRef>>>,
     /// Per-device parameter values the last completed download wrote
     /// (ADR-0173), bound to the open project incarnation: replaced with the
     /// project, loaded from and written to its native file, never part of
@@ -301,6 +302,8 @@ impl AppState {
     fn journal_cells(&self) -> crate::journal_writer::JournalCells {
         crate::journal_writer::JournalCells {
             generation: std::sync::Arc::clone(&self.history_generation.value),
+            store_path: self.store_path.known_cell(),
+            manufacturer_refs: std::sync::Arc::clone(&self.manufacturer_refs),
             persisted: std::sync::Arc::clone(&self.persisted_history),
             writes: std::sync::Arc::clone(&self.journal_writes),
         }
@@ -420,11 +423,11 @@ impl AppState {
             project: Mutex::new(None),
             clean_project: Mutex::new(None),
             last_saved_at: Mutex::new(None),
-            store_path: Mutex::new(None),
+            store_path: Default::default(),
             view_path_key: Mutex::new(None),
             opaque: Mutex::new(Vec::new()),
             folder_baselines: Default::default(),
-            manufacturer_refs: Mutex::new(Vec::new()),
+            manufacturer_refs: Default::default(),
             parameter_baselines: Mutex::new(Default::default()),
             command_stack: Mutex::new(knx_core::CommandStack::new()),
             history_generation: Default::default(),
@@ -1652,7 +1655,7 @@ fn reinstall_manufacturer_files(
 #[cfg(test)]
 thread_local! {
     /// Runs on the saving thread while the file write would start (#36 tests).
-    static DURING_SAVE_WRITE: std::cell::RefCell<Option<Box<dyn FnOnce()>>> =
+    pub(crate) static DURING_SAVE_WRITE: std::cell::RefCell<Option<Box<dyn FnOnce()>>> =
         const { std::cell::RefCell::new(None) };
 }
 
@@ -1740,9 +1743,11 @@ fn save_editor_state(
     });
     // #36: the file write takes seconds on large projects. It writes the frozen
     // copy above, so readers of the project need not wait for it. Store path and
-    // generation stay held: every writer (journal hand-over, Save As, version
+    // generation stay held: every writer (journal write, Save As, version
     // actions, project replacement) takes one of them before writing, so none
     // can interleave, and no lock is taken below that a waiting writer holds.
+    // An edit meanwhile hands over a job without a file instead of waiting for
+    // the store path (`enqueue_native_working`).
     drop(stack_guard);
     drop(project_guard);
     #[cfg(test)]
@@ -1787,7 +1792,9 @@ fn save_editor_state(
         .lock()
         .expect("state mutex poisoned") = acquired.refs;
     if let Some((path, _)) = destination {
-        *store_path = Some(path.to_path_buf());
+        // Set while the generation is held: a journal job handed over during
+        // this write is resolved against the path under that lock.
+        store_path.set(Some(path.to_path_buf()));
         *state.view_path_key.lock().expect("state mutex poisoned") = Some(view_key_of_path(path));
     }
     *generation = new_generation;
@@ -3233,7 +3240,7 @@ fn replace_project_state_transaction(
         Ordering::Relaxed,
     );
     let path_key = replacement_store_path.as_deref().map(view_key_of_path);
-    *store_path = replacement_store_path;
+    store_path.set(replacement_store_path);
     *state.view_path_key.lock().expect("state mutex poisoned") = path_key;
     *clean_project = Some(clean_replacement);
     // `last_saved_at` describes the project on screen, not the session: a
@@ -3267,11 +3274,8 @@ pub fn current_project_tree(state: &AppState) -> Result<CurrentProject, String> 
     let project = project.as_ref().ok_or("no project open")?;
     let stack = state.command_stack.lock().expect("state mutex poisoned");
     let import_counts = *state.import_counts.lock().expect("state mutex poisoned");
-    let has_store_path = state
-        .store_path
-        .lock()
-        .expect("state mutex poisoned")
-        .is_some();
+    // Not the path lock: a Save holds it while it writes (#36).
+    let has_store_path = state.store_path.known().is_some();
     let clean_project = state.clean_project.lock().expect("state mutex poisoned");
     let last_saved_at = state.last_saved_at.lock().expect("state mutex poisoned");
     Ok(CurrentProject {
@@ -3394,14 +3398,21 @@ pub fn retry_journal(state: &AppState) {
 
 /// Hands the newest state of an acknowledged project command to the
 /// background journal writer (ADR-0166). Refused while its last write failed.
+/// While a Save holds the store path to write its file (#36), the job names no
+/// file: the writer resolves it once the save has finished (see
+/// [`crate::journal_writer::JournalJob::path`]), so the caller never waits for
+/// the write while it holds the project.
 fn enqueue_native_working(
     state: &AppState,
     project: &knx_core::Project,
     stack: &knx_core::CommandStack,
 ) -> Result<(), String> {
-    let path = state.store_path.lock().expect("state mutex poisoned");
-    let Some(path) = path.clone() else {
-        return Ok(());
+    let path = match state.store_path.lock_if_free() {
+        Some(held) => match held.clone() {
+            Some(path) => Some(path),
+            None => return Ok(()),
+        },
+        None => None,
     };
     state.journal().refuse_if_failed()?;
     let snapshot = knx_store::project_history::NativeSnapshot {
@@ -8416,7 +8427,11 @@ mod tests {
             true,
         )
         .unwrap();
-        *state.store_path.lock().unwrap() = Some(PathBuf::from("a.knxdb"));
+        state
+            .store_path
+            .lock()
+            .unwrap()
+            .set(Some(PathBuf::from("a.knxdb")));
 
         let (snapshot_tx, snapshot_rx) = mpsc::channel();
         let (release_tx, release_rx) = mpsc::channel();
@@ -8619,7 +8634,11 @@ mod tests {
             true,
         )
         .unwrap();
-        *state.store_path.lock().unwrap() = Some(PathBuf::from("a.knxdb"));
+        state
+            .store_path
+            .lock()
+            .unwrap()
+            .set(Some(PathBuf::from("a.knxdb")));
         *state.opaque.lock().unwrap() = vec![opaque("A")];
         *state.manufacturer_refs.lock().unwrap() = vec![manufacturer("A")];
 
@@ -8763,7 +8782,11 @@ mod tests {
         .unwrap();
         create_area_impl(&state, "Old area".into(), 1).unwrap();
         *state.import_counts.lock().unwrap() = (7, 9);
-        *state.store_path.lock().unwrap() = Some(PathBuf::from("old.knxdb"));
+        state
+            .store_path
+            .lock()
+            .unwrap()
+            .set(Some(PathBuf::from("old.knxdb")));
 
         // Stop a replacement at the second lock. A correct publication
         // keeps the first (`project`) lock until stack and counts are also

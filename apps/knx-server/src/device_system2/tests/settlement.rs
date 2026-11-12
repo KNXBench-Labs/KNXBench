@@ -321,7 +321,11 @@ fn a_failed_persist_applies_nothing_and_says_so() {
     let state = fresh();
     mark_all(&state, true);
     let dir = tempfile::tempdir().unwrap();
-    *state.store_path.lock().unwrap() = Some(dir.path().join("missing/dir/project.knxdb"));
+    state
+        .store_path
+        .lock()
+        .unwrap()
+        .set(Some(dir.path().join("missing/dir/project.knxdb")));
     let (revision, before) = (domain::current_project_revision(&state), belief(&state));
     assert_eq!(
         settle(&state, &meta(&state), &failed(), Run::Download, |_, _| {
@@ -451,7 +455,11 @@ fn s2_per_part_a_failed_persist_keeps_flags_history_and_revision() {
     let state = fresh();
     mark_all(&state, true);
     let dir = tempfile::tempdir().unwrap();
-    *state.store_path.lock().unwrap() = Some(dir.path().join("missing/dir/project.knxdb"));
+    state
+        .store_path
+        .lock()
+        .unwrap()
+        .set(Some(dir.path().join("missing/dir/project.knxdb")));
     let (revision, before) = (domain::current_project_revision(&state), belief(&state));
     assert_eq!(
         settle(&state, &meta(&state), &verified(), Run::Download, |_, _| {
@@ -464,7 +472,7 @@ fn s2_per_part_a_failed_persist_keeps_flags_history_and_revision() {
         (revision, before)
     );
     // The history is untouched: once a store works again, undo reaches the state before the mark.
-    *state.store_path.lock().unwrap() = None;
+    state.store_path.lock().unwrap().set(None);
     domain::undo_impl(&state).unwrap();
     assert_eq!(belief(&state), NONE);
 }

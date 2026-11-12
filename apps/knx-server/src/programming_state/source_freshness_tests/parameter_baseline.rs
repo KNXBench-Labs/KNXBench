@@ -113,7 +113,11 @@ fn a_settlement_whose_file_write_fails_leaves_the_held_baseline_alone() {
     let f = fixture(&OLD, &OLD);
     let earlier = seed(&f.state);
     // The owned store path cannot be opened: its directory does not exist.
-    *f.state.store_path.lock().unwrap() = Some(f._dir.path().join("missing/dir/project.knxdb"));
+    f.state
+        .store_path
+        .lock()
+        .unwrap()
+        .set(Some(f._dir.path().join("missing/dir/project.knxdb")));
     // A completed run from an unchanged source would record another one.
     run(&f, None, false, finished());
     assert_eq!(belief(&f.state), NONE, "nothing was applied");

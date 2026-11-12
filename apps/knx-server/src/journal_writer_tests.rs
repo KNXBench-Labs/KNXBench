@@ -6,11 +6,22 @@ use crate::journal_writer::JournalStatus;
 use crate::{domain, AppState};
 use knx_store::project_history as history;
 
+mod parameter_baseline;
+
 /// A saved project on a server whose journal writer runs in the background.
 fn background(dir: &tempfile::TempDir) -> (AppState, std::path::PathBuf, u8) {
+    background_with(dir, |_| {})
+}
+
+/// [`background`] whose new project `setup` changes before it is saved.
+fn background_with(
+    dir: &tempfile::TempDir,
+    setup: impl FnOnce(&AppState),
+) -> (AppState, std::path::PathBuf, u8) {
     let path = dir.path().join("project.knxdb");
     let state = AppState::default();
     let tree = domain::new_project_impl(&state, None, None, None, None, true).unwrap();
+    setup(&state);
     domain::save_project_as(&state, &path).unwrap();
     state.journal().run_in_background();
     (state, path, tree.installations[0].id)

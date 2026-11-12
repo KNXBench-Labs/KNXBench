@@ -146,7 +146,8 @@ its undoable command: a claim KNXBench did not witness. Undoing the mark
 restores the flags, not the baseline. The removal is written in the same
 transaction as the mark's journal entry, which is therefore written at once
 even on a server that otherwise journals in the background (ADR-0166); a mark
-that is refused or stale removes nothing. Adopting values read from a device
+of a device without a baseline has nothing to remove and keeps the ordinary
+(background) journal path; a mark that is refused or stale removes nothing. Adopting values read from a device
 (project comparison adoption) never records a baseline; adopted values then
 show as differing from the last download until the next one.
 

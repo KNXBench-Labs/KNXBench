@@ -3505,11 +3505,12 @@ fn durable_mutation<T>(
     let mut candidate = project.clone();
     let mut candidate_stack = stack.clone();
     let result = mutation(&mut candidate, &mut candidate_stack)?;
+    let baselines = effective_baseline_edits(state, baselines);
     if !baselines.is_empty() {
         // Baseline edits ride the same transaction as the journal, so they
         // are written now, never handed to the background writer.
-        persist_native_working_reported(state, &candidate, &candidate_stack, baselines)?;
-        apply_baseline_edits(state, baselines);
+        persist_native_working_reported(state, &candidate, &candidate_stack, &baselines)?;
+        apply_baseline_edits(state, &baselines);
     } else if state.journal().is_background() {
         enqueue_native_working(state, &candidate, &candidate_stack)?;
     } else {
@@ -3518,6 +3519,29 @@ fn durable_mutation<T>(
     *project = candidate;
     *stack = candidate_stack;
     Ok(result)
+}
+
+/// The edits of `edits` that change anything: removing a baseline the
+/// server does not hold is dropped, so a manual mark of a device without one
+/// keeps the ordinary (background) journal path of ADR-0166. The file holds
+/// no baseline the server lacks: every one reached both together. Called
+/// while `project` is held, so no settlement records one in between.
+fn effective_baseline_edits(
+    state: &AppState,
+    edits: &[knx_core::commissioning::parameter_baseline::BaselineEdit],
+) -> Vec<knx_core::commissioning::parameter_baseline::BaselineEdit> {
+    if edits.is_empty() {
+        return Vec::new();
+    }
+    let held = state
+        .parameter_baselines
+        .lock()
+        .expect("state mutex poisoned");
+    edits
+        .iter()
+        .filter(|edit| edit.baseline.is_some() || held.get(edit.device).is_some())
+        .cloned()
+        .collect()
 }
 
 /// Applies persisted (or, without a file, session-only) baseline edits to

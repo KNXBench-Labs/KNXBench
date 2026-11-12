@@ -35,6 +35,13 @@ export function formatGroupAddress(address: string): string {
   return levels === null ? address : levels.join(CANONICAL_SEPARATOR);
 }
 
+/** A raw 16-bit group address in the project's address style (Free, TwoLevel or three-level). */
+export function rawGroupAddressText(raw: number, style: string): string {
+  if (style === "Free") return String(raw);
+  if (style === "TwoLevel") return `${raw >> 11}/${raw & 2047}`;
+  return `${raw >> 11}/${(raw >> 8) & 7}/${raw & 255}`;
+}
+
 /** Canonicalises slash or dotted input before it reaches an API. */
 export function canonicalGroupAddress(text: string): string {
   const levels = groupAddressLevels(text.trim());

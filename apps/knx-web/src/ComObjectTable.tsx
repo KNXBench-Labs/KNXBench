@@ -1,10 +1,14 @@
 /** Communication-object table with stable editor ownership across all view changes. */
 import ResizableTable from "./ResizableTable";
-import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { Fragment, useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
 import type { ComObjectNode } from "./bindings/ComObjectNode";
 import type { ComObjectChannel } from "./bindings/ComObjectChannel";
 import type { ComObjectProjectFolder } from "./bindings/ComObjectProjectFolder";
 import type { ProjectFolderCurrency } from "./bindings/ProjectFolderCurrency";
+import type { DownloadObjectDifference } from "./bindings/DownloadObjectDifference";
+import type { ObjectLastDownload } from "./bindings/ObjectLastDownload";
+import { ObjectLastDownloadSummary, RowDownloadDetails, rowNoteText } from "./ComObjectLastDownload";
+import { rowDifference } from "./objectLastDownload";
 import { FolderCurrencyNotice } from "./FolderCurrency";
 import type { TextFill } from "./bindings/TextFill";
 import { useTranslate, type MessageKey, type Translate } from "./i18n";
@@ -99,22 +103,29 @@ function ProjectFolderNote({ com }: { com: ComObjectNode }) {
     : <small className="com-object-project-folder" data-folder-status={refusal}>{t(FOLDER_REFUSAL_KEYS[refusal])}</small>;
 }
 interface RowProps { com: ComObjectNode; flat: boolean; priority: boolean; span: number; groupKey: string | null; hidden: boolean; matches: boolean; open: boolean;
-  descriptionMatch: boolean; editor: (com: ComObjectNode) => ReactNode; onOpen: (id: number, open: boolean) => void }
-function ObjectRow({ com, flat, priority, span, groupKey, hidden, matches, open, descriptionMatch, editor, onOpen }: RowProps) {
+  descriptionMatch: boolean; editor: (com: ComObjectNode) => ReactNode; onOpen: (id: number, open: boolean) => void;
+  /** ADR-0174: the server's verdict for exactly this row, if it differs from the last download. */
+  difference: DownloadObjectDifference | undefined; addressStyle: string }
+function ObjectRow({ com, flat, priority, span, groupKey, hidden, matches, open, descriptionMatch, editor, onOpen, difference, addressStyle }: RowProps) {
   const t = useTranslate(); const [productLanguage] = useProductLanguage();
   const [language] = useUiLanguage();
   const [visited, setVisited] = useState(false), [busy, setBusy] = useState(false);
   const details = useRef<HTMLDetailsElement>(null);
   const dpt = effectiveDpt(com);
+  // The caption describes the row's editor toggle; the dot is hidden, so the name stays.
+  const noteId = useId(), note = difference ? rowNoteText(t, difference) : undefined;
   return <Fragment>
-    <tr className={flat ? "com-object-summary" : "com-object-summary com-object-summary--grouped"} data-object-id={com.id} data-channel-key={channelKey(com)} data-group-key={groupKey ?? undefined} data-activation={com.activation} hidden={hidden}>
+    <tr className={flat ? "com-object-summary" : "com-object-summary com-object-summary--grouped"} data-object-id={com.id} data-channel-key={channelKey(com)} data-group-key={groupKey ?? undefined} data-activation={com.activation}
+      data-differs-from-download={note ? "true" : undefined} hidden={hidden}>
       <td className="mono"><details className="com-object-detail" ref={details} open={open} onToggle={event => {
         const next = event.currentTarget.open;
         if (!next && busy) { event.currentTarget.open = true; return; }
         if (next) setVisited(true);
         if (next !== open) onOpen(com.id, next);
-      }}><summary aria-label={t("comTable.edit", { number: com.number })}>{com.number}</summary></details></td>
+      }}><summary aria-label={t("comTable.edit", { number: com.number })} aria-describedby={note ? noteId : undefined}>{com.number}</summary></details></td>
       <td><strong className="com-object-name" {...fillProps(com.name === null ? undefined : com.name_fill, t)}>{com.name ?? t("inspector.unnamed")}</strong>
+        {note && <><span className="com-object-download-mark" title={note} aria-hidden="true" />
+          <small className="com-object-download-note" id={noteId}>{note}</small></>}
         <ProjectFolderNote com={com} />
         {descriptionMatch && <small className="com-description-match">{t("comTable.descriptionMatch", { value: com.description ?? "" })}</small>}
         {!matches && open && <small className="com-edit-exception">{t("comTable.editException")}</small>}</td>
@@ -136,6 +147,7 @@ function ObjectRow({ com, flat, priority, span, groupKey, hidden, matches, open,
       {/* Once opened, keep this subtree mounted even when closed. Row keys are
           direct siblings under one tbody in every view: keys cannot preserve
           state if a channel/folder/flat switch reparents a component. */}
+      {(visited || open) && difference && <RowDownloadDetails difference={difference} addressStyle={addressStyle} />}
       {(visited || open) && <ComMutationBoundary onBusy={setBusy}>{editor(com)}</ComMutationBoundary>}
     </td></tr>
   </Fragment>;
@@ -175,10 +187,15 @@ function ComTableOptions({ showPriority, onOriginalOrder }: { showPriority: bool
     </div>
   </details>;
 }
-export default function ComObjectTable({ objects, editor, folderCurrency }: { objects: ComObjectNode[]; editor: (com: ComObjectNode) => ReactNode;
+export default function ComObjectTable({ objects, editor, folderCurrency, lastDownload, addressStyle = "ThreeLevel" }: { objects: ComObjectNode[]; editor: (com: ComObjectNode) => ReactNode;
   /** Server-only: whether the saved folders still describe this device. */
-  folderCurrency?: ProjectFolderCurrency }) {
+  folderCurrency?: ProjectFolderCurrency;
+  /** Server-only links/flags comparison (ADR-0174); absent from edit responses and older servers. */
+  lastDownload?: ObjectLastDownload;
+  /** The project's group-address style, for the raw addresses of that comparison. */
+  addressStyle?: string }) {
   const t = useTranslate(); const [language] = useUiLanguage();
+  const groupNoteId = useId();
   const [filters, setFilters] = useState<ComFilters>({ ...DEFAULT_FILTERS });
   const [sort, setSort] = useState<ComSort>({ column: null, descending: false });
   // Channel and folder groups use disjoint key namespaces, so one expansion set serves both.
@@ -233,17 +250,22 @@ export default function ComObjectTable({ objects, editor, folderCurrency }: { ob
     const keys = new Set(previous); if (open) keys.add(id); else keys.delete(id); return keys;
   });
   const rows: ReactNode[] = [];
+  let hiddenDiffering = 0;
   const orderedGroups = flat ? [{ key: "flat", channel: null, folder: null, objects: all.objects, total: objects.length }] : all.groups;
   for (const group of orderedGroups) {
     const count = groupMatches.get(group.key) ?? 0;
     const hasEditor = group.objects.some(o => openObjects.has(o.id));
     const groupVisible = flat || !filtered || count > 0 || hasEditor;
+    // A collapsed group still shows that it holds differing rows.
+    const groupDiffers = !flat && group.objects.some(o => rowDifference(lastDownload, o.id) !== undefined);
     if (!flat) rows.push(<tr className="com-object-channel" key={`group:${group.key}`} data-group-key={group.key}
       data-channel-key={by === "channel" ? group.key : undefined} hidden={!groupVisible}>
-      <th colSpan={columns.length} scope="row"><button type="button" className="com-object-channel-summary" aria-expanded={isExpanded(group.key)} onClick={() => toggle(group.key)}>
+      <th colSpan={columns.length} scope="row"><button type="button" className="com-object-channel-summary" aria-expanded={isExpanded(group.key)} onClick={() => toggle(group.key)}
+        aria-describedby={groupDiffers ? groupNoteId : undefined} data-differs-from-download={groupDiffers ? "true" : undefined}>
         <span aria-hidden="true">{isExpanded(group.key) ? "▾" : "▸"}</span>
         {by === "folder" ? <FolderText folder={group.folder} /> : <ChannelText channel={group.channel} />}
         <span aria-hidden="true" className="com-object-channel-separator">·</span><span className="com-object-channel-count">{t("comTable.count", { shown: count, total: group.total })}</span>
+        {groupDiffers && <span className="com-object-download-mark" title={t("comTable.lastDownload.group")} aria-hidden="true" />}
       </button></th></tr>);
     for (const com of group.objects) {
       const open = openObjects.has(com.id), matches = matchedIds.has(com.id);
@@ -251,8 +273,10 @@ export default function ComObjectTable({ objects, editor, folderCurrency }: { ob
       // Inside an expanded group (and in the flat view) an open editor stays
       // visible even outside the filter. Hidden rows keep their editors mounted.
       const visible = (open || matches) && (flat || groupVisible && isExpanded(group.key));
+      const difference = rowDifference(lastDownload, com.id);
+      if (difference && !visible) hiddenDiffering += 1;
       rows.push(<ObjectRow key={`object:${com.id}`} com={com} flat={flat} priority={showPriority} span={columns.length} groupKey={flat ? null : group.key} hidden={!visible} matches={matches} open={open}
-        descriptionMatch={view.descriptionMatches.has(com.id)} editor={editor} onOpen={onOpen} />);
+        descriptionMatch={view.descriptionMatches.has(com.id)} editor={editor} onOpen={onOpen} difference={difference} addressStyle={addressStyle} />);
     }
   }
   return <section className="com-table-panel" aria-label={t("inspector.communicationObjects")}>
@@ -278,6 +302,8 @@ export default function ComObjectTable({ objects, editor, folderCurrency }: { ob
     </div>
     {removed > 0 && <p className="com-object-removal" role="status">{t("comTable.removed", { count: removed })}</p>}
     <p className="com-table-count" role="status">{t("comTable.count", { shown: view.objects.length, total: objects.length })}</p>
+    {lastDownload !== undefined && <ObjectLastDownloadSummary lastDownload={lastDownload} hidden={hiddenDiffering} />}
+    <span id={groupNoteId} hidden>{t("comTable.lastDownload.group")}</span>
     {mode === "folder" && <p className="com-folder-view-note">{t("comTable.folderViewNote")}</p>}
     {(mode === "folder" || objects.some(o => o.project_folder?.status === "Assigned")) && <FolderCurrencyNotice currency={folderCurrency} />}
       <ResizableTable scrollClassName="workspace-table-wrap com-table-scroll" scrollLabel={t("comTable.table")} tableId="communication-objects"

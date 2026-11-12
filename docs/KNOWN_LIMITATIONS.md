@@ -949,7 +949,7 @@ New hardware, power-loss, vendor and ETS experiments were removed by user decisi
 ### Last-download object evidence
 
 **Ledger status:** Not separately tracked.
-WP-37f implements backend schema21 flags/link evidence and independent comparison on main; the communication-object UI remains pending. This describes a completed request, not device readback. Migrated flags stay unknown; modules, full-download duplicate-lookup refusal and the 070n object-table placement guard remain separate.
+WP-37 step 3 marks links and object flags that differ from the last completed KNXBench download in the communication-object table (main). This describes a completed request, not device readback. Migrated flags stay unknown; group-address views, modules, full-download duplicate-lookup refusal and the 070n object-table placement guard remain separate.
 [Details and history](limitations/last-download-object-evidence.md)
 
 <a id="catalogue-batch-download"></a>

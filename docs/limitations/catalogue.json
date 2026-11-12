@@ -1530,7 +1530,7 @@
       "number": null,
       "title": "Last-download object evidence",
       "topic": "Commissioning and recovery",
-      "summary": "WP-37f implements backend schema21 flags/link evidence and independent comparison on main; the communication-object UI remains pending. This describes a completed request, not device readback. Migrated flags stay unknown; modules, full-download duplicate-lookup refusal and the 070n object-table placement guard remain separate.",
+      "summary": "WP-37 step 3 marks links and object flags that differ from the last completed KNXBench download in the communication-object table (main). This describes a completed request, not device readback. Migrated flags stay unknown; group-address views, modules, full-download duplicate-lookup refusal and the 070n object-table placement guard remain separate.",
       "file": "last-download-object-evidence.md",
       "ledger_ids": [],
       "anchors": []

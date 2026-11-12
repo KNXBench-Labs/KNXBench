@@ -1,4 +1,4 @@
-/** Unit tests for the last-download helpers and the dots' forced-colours rule (ADR-0173). */
+/** Unit tests for the last-download helpers and the dots' forced-colours rule (ADR-0173/0174). */
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import type { LastDownload, ParameterField, ParameterSection } from "./api";
@@ -58,12 +58,12 @@ describe("withoutWrittenRefs", () => {
 
 describe("status dots under forced colours", () => {
   const rules = parseRules(readFileSync(new URL("./styles.css", import.meta.url), "utf8"));
-  it("paints the row, summary and step-1 dots in a system colour", () => {
+  it("paints the row, summary and step-1 dots of both editors in a system colour", () => {
     const rule = rules.find((candidate) => candidate.ancestors.includes("@media (forced-colors: active)")
       && candidate.selector.includes(".parameter-download-mark"));
     expect(rule).toBeDefined();
     expect(rule!.selector.split(",").map((part) => part.trim()).sort())
-      .toEqual([".device-pending-dot", ".parameter-download-mark", ".parameter-last-download-dot"]);
+      .toEqual([".com-last-download-dot", ".com-object-download-mark", ".device-pending-dot", ".parameter-download-mark", ".parameter-last-download-dot"]);
     const value = (property: string) => rule!.declarations.find((declaration) => declaration.property === property)?.value;
     expect(value("forced-color-adjust")).toBe("none");
     expect(value("background-color")).toBe("CanvasText");

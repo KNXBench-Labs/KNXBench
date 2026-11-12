@@ -3,7 +3,9 @@
 External report by the issue reporter, 10 November 2026; triaged 11 November 2026.
 Status: **step 1 implemented (11 November 2026, main only); step 2 implemented
 (server part 11 November, parameter-editor UI 12 November 2026, main only) per
-[ADR-0173](../adr/0173-last-downloaded-parameter-values.md) (Accepted). No
+[ADR-0173](../adr/0173-last-downloaded-parameter-values.md) (Accepted); step 3
+implemented (backend and communication-object UI, 12 November 2026, main only)
+per [ADR-0174](../adr/0174-last-downloaded-links-and-flags.md) (Accepted). No
 hardware run.** Section-navigation marks from [#48](https://github.com/KNXBench-Labs/KNXBench/issues/48)
 are planned below (owner request, 12 November 2026); not implemented or claimed.
 
@@ -20,8 +22,9 @@ are planned below (owner request, 12 November 2026); not implemented or claimed.
    (native schema 20). WP-40 (version restore, ADR-0173 §6) is implemented.
    **Implemented**: server part and parameter-editor UI (see below).
 3. Per-link and per-object-flag marks in the communication-object view.
-   **Backend implemented** (WP-37f, 12 November 2026; UI pending) per
-   [ADR-0174](../adr/0174-last-downloaded-links-and-flags.md) (Proposed): the
+   **Implemented**: backend (WP-37f) and communication-object UI (12 November
+   2026, see below) per
+   [ADR-0174](../adr/0174-last-downloaded-links-and-flags.md) (Accepted): the
    effective object flags join the parameter baseline (they are written with
    Parameters), the written links get their own baseline section following
    the Group addresses part, same lifecycle as ADR-0173, native schema 21.
@@ -36,9 +39,9 @@ are planned below (owner request, 12 November 2026); not implemented or claimed.
    It returns only the five
    written flags, with no size/priority image-admission gates. Read-on-init
    remains a separate request for the builder's existing loss/refusal handling,
-   not a written sixth flag. This adds no baseline storage, settlement,
-   comparison response or UI. WP-37f now implements the backend below; UI
-   remains a separate pending package. A first draft that
+   not a written sixth flag. The resolver alone added no baseline storage,
+   settlement, comparison response or UI; WP-37f added the backend and the
+   step-3 UI added the object-table marks (both below). A first draft that
    put flags with the links led to the ADR-0129 amendment of the same day
    (flag edits mark Parameters).
 4. Propagate per-parameter differences to the parameter editor's section
@@ -97,7 +100,43 @@ release or deployment authority. #48 remains open until the actual UI change
 is separately implemented, verified and published. The ongoing backend package
 and its ownership remain unchanged.
 
-## Step 3, backend implemented (WP-37f; acceptance pending, UI pending)
+## Step 3, UI part as implemented
+
+- **Rows:** in the Communication objects tab a row the server attributed a
+  difference to (`last_download.instances`, keyed by `ComObjectNode.id`, never
+  by object number) gets the step-1 amber dot after its name (own class
+  `com-object-download-mark`) and an always-visible caption: “Links differ
+  from the last download” / “Verknüpfungen weichen vom letzten Programmieren
+  ab”, “Flags …”, or “Links and flags …”. The caption is the accessible
+  description of the row's editor toggle; its name stays “Edit object N”.
+- **Editor row:** above the object editor, “Since the last download” /
+  “Seit dem letzten Programmieren” lists added links, removed links (struck
+  through), changed directions, the flags at last download when the object is
+  active on both sides, and “Not active at last download.” / “Not active in
+  current settings.” (with the stored flags) for one-sided objects. Flags show
+  as letters with their names for screen readers; a null read-on-init never
+  shows as set. Raw addresses use the project's group-address style.
+- **Groups:** a channel or folder group holding a marked row gets the dot and
+  the description “Contains objects that differ from the last download”, so a
+  collapsed group does not hide that it holds one (not in ADR-0174 §5's
+  wording; recorded there as a deviation).
+- **Summary** above the table (static text, not a live region): “{count}
+  objects differ from the last download.” when at least one section is usable,
+  “{count} of them are hidden by the current filters or collapsed groups.”,
+  “{count} of them have no row in this table.” (the server's
+  `no_selected_row`), then per section “Links compared with the last download
+  ({time}).” / “Flags compared …” or one plain sentence per unusable state
+  (`absent`, `otherProgram`, `productUnavailable`, `currentUnreadable`). An
+  unusable section does not suppress the other's marks. No line without
+  `last_download` (older server).
+- **Lifecycle:** the client compares nothing. Every object edit already
+  re-reads the device detail (`handleTreeUpdate` → `readSelectedDevice`); the
+  shown detail stays until that read replaces it whole, so rows, marks and
+  summary always come from the same response; the table is keyed by device id, and a late detail for another
+  device is discarded by the existing request guard.
+- Forced colours paint the new row and summary dots in `CanvasText`.
+
+## Step 3, backend implemented (WP-37f)
 
 - Native schema 21 extends Parameters evidence with explicitly unknown versus
   known-empty effective flags and gives links an independent header/program/time.
@@ -225,8 +264,9 @@ description after the name.
 
 ## Not covered
 
-- Per-link marks and marks on individual communication objects or flags:
-  backend implemented in WP-37f; communication-object UI remains pending.
+- Group-address views carry no last-download marks (ADR-0174 §5).
+- Differences on object numbers without a selected project row are counted in
+  the communication-object summary, not listed.
 - Module-scoped parameters (no baseline until module downloads exist); a write
   of a module-scoped row never drops the unscoped ref's mark.
 - The caption beside an open checked editor is visible but not linked to the
@@ -282,6 +322,26 @@ Step 2, server part (synthetic data only, no bus):
   adoption test asserts adoption leaves every baseline unchanged.
 - `apps/knx-server/tests/it/http_parameter_baseline.rs`: `lastDownload` over
   HTTP for each state and the manual mark in both directions, durable.
+
+Step 3, UI part (intercepted fictional data, no bus):
+
+- `apps/knx-web/src/ComObjectTable.lastDownload.test.tsx` (18): marks by row id
+  (not object number) with caption, hidden dot and toggle description; no mark
+  for a link entry that lists no change; added,
+  struck-through removed and redirected links; address style; flags on both
+  sides, current-only and stored-only objects; no invented read-on-init and
+  “none”; summary counts with collapsed groups, flat view and a filter; group
+  dots only on groups with marked rows; usable links beside unreadable flags;
+  nothing differs; each unusable state per section; nothing without
+  `last_download`; German; replacement by the next detail; the device editor
+  passing comparison and address style through.
+- `apps/knx-web/src/parameterLastDownload.test.ts`: the forced-colours rule
+  now covers the two new dots.
+- `apps/knx-web/e2e/parameter-last-download.e2e.ts` (+5, dev and devices
+  lanes): en/de at 1440 and 400 px, exact summary with time, group description,
+  row toggle names and descriptions, visible dots, editor-row details with a
+  line-through removed link, no sideways overflow, no unexpected request; the
+  object dots under forced colours.
 
 Step 2, UI part (intercepted fictional data, no bus):
 

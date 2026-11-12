@@ -3590,23 +3590,23 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
 .device-programming-actions { display: flex; flex-wrap: wrap; gap: 6px; }
 /* Issue #40: the same pending state in the device editor, as a notice, not an alarm.
    ADR-0173: the parameter panel's last-download line shares it when values differ. */
-.device-pending-summary, .parameter-last-download[data-differs="true"] {
+.device-pending-summary, .parameter-last-download[data-differs="true"], .com-last-download[data-differs="true"] {
   display: flex; align-items: center; gap: 8px; width: fit-content; max-width: 100%; box-sizing: border-box;
   margin: 0 0 12px; padding: 4px 10px; border-radius: 6px; font-size: 13px; overflow-wrap: anywhere;
   color: var(--knx-foreground);
   border: 1px solid color-mix(in srgb, var(--knx-warning-color) 60%, transparent);
   background: color-mix(in srgb, var(--knx-warning-color) 12%, transparent);
 }
-.device-pending-dot, .parameter-last-download-dot {
+.device-pending-dot, .parameter-last-download-dot, .com-last-download-dot {
   display: inline-block; flex: none; width: 7px; height: 7px; border-radius: 50%;
   background: var(--knx-warning-color);
 }
 /* ADR-0173: a plain line when nothing differs or nothing can be compared. */
-.parameter-last-download { margin: 0 0 12px; font-size: 13px; color: var(--knx-muted); overflow-wrap: anywhere; }
-.parameter-last-download[data-differs="true"] { color: var(--knx-foreground); }
+.parameter-last-download, .com-last-download { margin: 0 0 12px; font-size: 13px; color: var(--knx-muted); overflow-wrap: anywhere; }
+.parameter-last-download[data-differs="true"], .com-last-download[data-differs="true"] { color: var(--knx-foreground); }
 /* The step-1 dot beside a value that differs from the last download; the
    transparent border widens the tooltip target without growing the dot. */
-.parameter-download-mark {
+.parameter-download-mark, .com-object-download-mark {
   display: inline-block; box-sizing: content-box; width: 7px; height: 7px; margin-left: 2px; vertical-align: middle;
   border: 4px solid transparent; border-radius: 50%; background: var(--knx-warning-color); background-clip: padding-box;
   cursor: help;
@@ -3621,11 +3621,18 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
 .parameter-last-download[data-refreshing="true"] { opacity: 0.6; }
 /* Forced colours drop author backgrounds: keep every status dot painted. */
 @media (forced-colors: active) {
-  .device-pending-dot, .parameter-last-download-dot, .parameter-download-mark {
+  .device-pending-dot, .parameter-last-download-dot, .parameter-download-mark, .com-last-download-dot, .com-object-download-mark {
     forced-color-adjust: none; background-color: CanvasText;
   }
 }
 .device-tabs button .device-pending-dot { margin-left: 6px; vertical-align: middle; }
+/* ADR-0174: an object row's caption names what differs; its editor row lists it. */
+.com-object-download-note { display: block; overflow-wrap: anywhere; }
+/* Like the editor fields below it: never wider than the scrolling table's viewport. */
+.com-object-download-diff { box-sizing: border-box; max-width: 100cqw; margin: 0; padding: 12px 16px 0; font-size: 13px; overflow-wrap: anywhere; }
+.com-object-download-diff h4 { margin: 0 0 4px; font-size: 13px; }
+.com-object-download-diff ul { margin: 0; padding-left: 18px; }
+.com-object-download-diff del { text-decoration-thickness: 2px; }
 .workbench .device-link { display: inline; padding: 2px 4px; min-width: 24px; max-width: 100%; white-space: normal; text-align: left; overflow-wrap: anywhere; }
 .device-link-unresolved { cursor: help; }
 .ga-linked-devices { padding-left: 18px; }

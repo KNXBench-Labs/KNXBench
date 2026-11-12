@@ -179,4 +179,4 @@ the old one gets `Status: Superseded by ADR-NNNN`.
 | [0171](0171-assigned-invisible-parameters.md) | Invisible parameters an active `Assign` sets carry the assigned value | Accepted | 2026-11-09 |
 | [0172](0172-batch-programming-stops-at-the-first-doubt.md) | Programming all pending devices is one server-held batch that stops at the first doubt | Accepted | 2026-11-11 |
 | [0173](0173-last-downloaded-parameter-values.md) | The project remembers the parameter values a verified download wrote | Accepted | 2026-11-11 |
-| [0174](0174-last-downloaded-links-and-flags.md) | The project remembers the links and object flags a verified download wrote | Proposed | 2026-11-12 |
+| [0174](0174-last-downloaded-links-and-flags.md) | The project remembers the links and object flags a verified download wrote | Accepted | 2026-11-12 |

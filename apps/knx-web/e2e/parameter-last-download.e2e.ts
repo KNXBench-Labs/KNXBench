@@ -1,6 +1,9 @@
-/** Parameters-tab last-download marks and summary (ADR-0173) on intercepted fictional data. */
+/** Last-download marks of parameters (ADR-0173) and objects (ADR-0174) on fictional data. */
 import { expect, test, type Page } from "@playwright/test";
 import type { LastDownload, ParameterField, ParameterPanel } from "../src/api";
+import type { ComObjectNode } from "../src/bindings/ComObjectNode";
+import type { DownloadObjectDifference } from "../src/bindings/DownloadObjectDifference";
+import type { ObjectLastDownload } from "../src/bindings/ObjectLastDownload";
 import type { DeviceNode } from "../src/bindings/DeviceNode";
 import type { ProjectTree } from "../src/bindings/ProjectTree";
 import { messages as de } from "../src/messages/de";
@@ -42,7 +45,24 @@ const usable: LastDownload = { state: "usable", at, differing: [
   { refId: "P-Factory", downloaded: "12", current: "30" },
 ] };
 
-async function intercept(page: Page, language: "en" | "de", lastDownload: LastDownload) {
+// ADR-0174: one row with link changes, one whose flags differ, one object the server could not select.
+const kitchen = { key: "c-kitchen", kind: "Channel" as const, text: "Kitchen", name: null, number: null, order: 0 };
+const comObject = (id: number, number: number, name: string): ComObjectNode => ({
+  saved_instance_priority: { status: "unavailable", reason: "NotCaptured" }, effective_priority: { status: "unresolved", reason: "InstanceUnavailable", source: null, raw: null },
+  id, number, name, function_text: null, description: null, description_layer: null, dpt: null, dpt_layer: null, program_dpt: null, dpt_text: null,
+  is_active: true, activation: "Active", channel: kitchen, read: false, write: true, transmit: false, update: false, communication: true, read_on_init: false, links: [] });
+const comObjects = [comObject(21, 1, "Switch with a long fictional object name that has to wrap on narrow screens"), comObject(22, 2, "Status"), comObject(23, 3, "Unchanged")];
+// 1/2/3 = 0x0A03, 1/2/4 = 0x0A04.
+const linkChange: DownloadObjectDifference = { number: 1, instance_id: 21, flags: null, links: [
+  { group_address: 0x0a03, downloaded: null, current: true }, { group_address: 0x0a04, downloaded: false, current: null }] };
+const flagChange: DownloadObjectDifference = { number: 2, instance_id: 22, links: [], flags: {
+  downloaded: { read: true, write: true, transmit: false, update: false, communication: true, read_on_init: null },
+  current: { read: false, write: true, transmit: false, update: false, communication: true, read_on_init: null } } };
+const objectsUsable: ObjectLastDownload = { links: { state: "usable", at }, flags: { state: "usable", at },
+  differing: [linkChange, flagChange, { number: 9, instance_id: null, links: [], flags: { downloaded: flagChange.flags!.current, current: null } }],
+  instances: { 21: linkChange, 22: flagChange }, differing_objects: 3, no_selected_row: 1 };
+
+async function intercept(page: Page, language: "en" | "de", lastDownload: LastDownload, objectLastDownload?: ObjectLastDownload) {
   const state = { unexpected: [] as string[], posts: 0, projectOpen: false };
   const panel = (): ParameterPanel => ({ programId: "A-FICTIONAL", sourceLanguage: "en", tree: null, stale: [], diagnostics: [],
     lastDownload, sections: [{ scope: null, fields }] });
@@ -65,7 +85,8 @@ async function intercept(page: Page, language: "en" | "de", lastDownload: LastDo
       devices: [{ id: 1, device, productRef: "Fictional-P-1", resolution: "Resolved", manufacturerId: "Fictional-M-1",
         manufacturerName: "Fictional Devices", productText: "Fictional dimmer", orderNumber: "FD-1", productTextLanguage: null, productSourceLanguage: null,
         system: { state: "family", mask: 0x07b0, family: "systemB" } }] };
-    else if (path === "/api/device/1" && method === "GET") body = { ...device, com_objects: [], product: { resolution: "NoReference", product_ref: null, program_ref: null, catalog: null } };
+    else if (path === "/api/device/1" && method === "GET") body = { ...device, com_objects: objectLastDownload ? comObjects : [],
+      product: { resolution: "NoReference", product_ref: null, program_ref: null, catalog: null }, last_download: objectLastDownload };
     else if (path === "/api/device/1/parameters" && method === "GET") body = panel();
     else if (path === "/api/device/1/parameters" && method === "POST") { state.posts += 1; status = 500; body = { error: "no writes in this fixture" }; }
     else if (path === "/api/bus/monitor/telegrams" && method === "GET") body = { sessionId: 1, serverIncarnation: "baseline-browser", contextStatus: "current",
@@ -80,7 +101,7 @@ async function intercept(page: Page, language: "en" | "de", lastDownload: LastDo
   return state;
 }
 
-async function openParameters(page: Page, language: "en" | "de") {
+async function openDevice(page: Page, language: "en" | "de") {
   const m = language === "en" ? en : de;
   await page.goto("/");
   await page.getByRole("button", { name: m["toolbar.newProject"], exact: true }).first().click();
@@ -90,7 +111,11 @@ async function openParameters(page: Page, language: "en" | "de") {
   await page.getByRole("combobox").fill(m["workbench.devices"]);
   await page.getByRole("combobox").press("Enter");
   await page.locator(".devices-table tbody td:nth-child(3) button").filter({ hasText: /^Fictional dimmer$/ }).click();
-  await page.getByRole("tab", { name: m["workbench.parameters"], exact: true }).click();
+}
+
+async function openParameters(page: Page, language: "en" | "de") {
+  await openDevice(page, language);
+  await page.getByRole("tab", { name: (language === "en" ? en : de)["workbench.parameters"], exact: true }).click();
 }
 
 const noOverflow = (page: Page) => page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
@@ -193,6 +218,77 @@ test("keeps the row and summary dots painted under forced colours", async ({ pag
   });
   const dots = [page.locator(".parameter-last-download-dot"), ...await page.locator(".parameter-workspace .parameter-download-mark").all()];
   expect(dots).toHaveLength(3);
+  for (const dot of dots) {
+    await expect(dot).toBeVisible();
+    await expect(dot).toHaveCSS("forced-color-adjust", "none");
+    await expect(dot).toHaveCSS("background-color", canvasText);
+  }
+  expect(state.unexpected).toEqual([]);
+});
+
+for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
+  test(`${language} marks objects whose links or flags differ from the last download at ${width}px`, async ({ page }) => {
+    const m = language === "de" ? de : en;
+    await page.setViewportSize({ width, height: 1000 });
+    const state = await intercept(page, language, usable, objectsUsable);
+    await openDevice(page, language);
+    const panel = page.locator(".com-table-panel");
+    const summary = panel.locator(".com-last-download");
+    const time = formatLogTime(Date.parse(at), language, new Date())!;
+    // The grouped view starts collapsed: both selected rows are hidden, and the group says it holds them.
+    await expect(summary).toHaveText(`${m["comTable.lastDownload.differs.other"].replace("{count}", "3")} ${
+      m["comTable.lastDownload.hidden.other"].replace("{count}", "2")} ${m["comTable.lastDownload.noRow.one"].replace("{count}", "1")} ${
+      m["comTable.lastDownload.links.usable"].replace("{time}", time)} ${m["comTable.lastDownload.flags.usable"].replace("{time}", time)}`);
+    const group = panel.locator(".com-object-channel-summary");
+    await expect(group).toHaveAccessibleDescription(m["comTable.lastDownload.group"]);
+    await expect(group.locator(".com-object-download-mark")).toBeVisible();
+    await group.click();
+    await expect(summary).not.toContainText(m["comTable.lastDownload.hidden.other"].replace("{count}", "2"));
+    const toggle = (id: number) => panel.locator(`tr[data-object-id="${id}"] summary`);
+    await expect(toggle(21)).toHaveAccessibleName(m["comTable.edit"].replace("{number}", "1"));
+    await expect(toggle(21)).toHaveAccessibleDescription(m["comTable.lastDownload.row.links"]);
+    await expect(toggle(22)).toHaveAccessibleDescription(m["comTable.lastDownload.row.flags"]);
+    await expect(toggle(23)).toHaveAccessibleDescription("");
+    const marks = panel.locator("tbody .com-object-download-mark");
+    await expect(marks).toHaveCount(3);
+    for (const mark of await marks.all()) {
+      await expect(mark).toBeVisible();
+      await expect(mark).toHaveCSS("width", "7px");
+    }
+    await toggle(21).click();
+    const diff = panel.locator('tr[data-editor-id="21"] .com-object-download-diff');
+    await expect(diff.locator('[data-link-change="added"]')).toHaveText(`${m["comTable.lastDownload.linkAdded"]} 1/2/3 (${m["inspector.direction.send"]})`);
+    const removed = diff.locator('[data-link-change="removed"] del');
+    await expect(removed).toHaveText("1/2/4");
+    await expect(removed).toHaveCSS("text-decoration-line", "line-through");
+    await toggle(22).click();
+    await expect(panel.locator('tr[data-editor-id="22"] [data-flag-change="changed"]')).toContainText(`${m["comTable.lastDownload.flagsAt"]} R W C`);
+    for (const box of [await summary.boundingBox(), ...await Promise.all((await panel.locator(".com-object-download-note, .com-object-download-diff").all()).map(n => n.boundingBox()))]) {
+      expect(box!.x).toBeGreaterThanOrEqual(0);
+      expect(box!.x + box!.width).toBeLessThanOrEqual(width + 1);
+    }
+    expect(await noOverflow(page)).toBeLessThanOrEqual(1);
+    expect(state.posts).toBe(0);
+    expect(state.unexpected).toEqual([]);
+  });
+}
+
+test("keeps the object dots painted under forced colours", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.emulateMedia({ forcedColors: "active" });
+  const state = await intercept(page, "en", usable, objectsUsable);
+  await openDevice(page, "en");
+  await page.locator(".com-object-channel-summary").click();
+  const canvasText = await page.evaluate(() => {
+    const probe = document.createElement("span");
+    probe.style.color = "CanvasText";
+    document.body.append(probe);
+    const color = getComputedStyle(probe).color;
+    probe.remove();
+    return color;
+  });
+  const dots = [page.locator(".com-last-download-dot"), ...await page.locator(".com-table-panel .com-object-download-mark").all()];
+  expect(dots).toHaveLength(4);
   for (const dot of dots) {
     await expect(dot).toBeVisible();
     await expect(dot).toHaveCSS("forced-color-adjust", "none");

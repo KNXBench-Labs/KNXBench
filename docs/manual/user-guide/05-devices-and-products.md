@@ -556,9 +556,25 @@ apply until their next regular download. Parameters of module instances are not 
 line also says when the application program changed or product data is missing,
 since then nothing can be compared.
 
+**Links and flags that differ from the last download** *(source build after
+Alpha 20, 12 November 2026; issue #40)*: the project also remembers the links
+and the object flags a completed KNXBench download wrote. The **Communication
+objects** tab marks each object whose links or flags you have changed since
+with the amber dot and a caption under its name, for example **Links differ
+from the last download**; a collapsed group that holds such an object carries
+the dot too. Open the object to see the details above its editor: links added
+since, links removed since (struck through), changed directions, and the flags
+at that download. A line above the table counts the differing objects, says
+how many the current filters or collapsed groups hide and how many have no row
+in the table, and when links and flags were last compared, or why one of them
+cannot be compared. Links follow the Group addresses part, flags the
+Parameters part, so one can be comparable while the other is not. Limits as
+above: what the download wrote, not a device read; group address views show no
+such marks.
+
 The starting state comes from the ETS project's imported loaded flags. Editing
-an individual address marks Adr; a parameter value marks Par; linking/unlinking,
-changing an object's effective flags or renumbering/deleting a linked group
+an individual address marks Adr; a parameter value or an object's effective
+flags mark Par; linking/unlinking or renumbering/deleting a linked group
 address marks GA on each affected device. DPT choices, names and descriptions
 do not count. A mark is in the edit's same undo step. The application reference
 is part of App tracking, but this feature adds no application-swap editor.

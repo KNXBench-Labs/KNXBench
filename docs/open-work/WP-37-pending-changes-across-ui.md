@@ -18,6 +18,19 @@ hardware run.**
    completed download wrote, kept outside undo, compared per effective value
    (native schema 20). WP-40 (version restore, ADR-0173 §6) is implemented.
    **Implemented**: server part and parameter-editor UI (see below).
+3. Per-link and per-object-flag marks in the communication-object view.
+   **Designed** (12 November 2026) in
+   [ADR-0174](../adr/0174-last-downloaded-links-and-flags.md) (Proposed): the
+   effective object flags join the parameter baseline (they are written with
+   Parameters), the written links get their own baseline section following
+   the Group addresses part, same lifecycle as ADR-0173, native schema 21.
+   Migration preserves existing parameter values and explicitly distinguishes
+   unknown flags from known empty flags; links and flags compare with separate
+   states. The server part must factor shared effective-flag resolution out
+   of image construction and refuse duplicate active numbers before mapping.
+   Server part and UI part follow as separate packages. A first draft that
+   put flags with the links led to the ADR-0129 amendment of the same day
+   (flag edits mark Parameters).
 
 ## Step 2, server part as implemented
 
@@ -126,7 +139,8 @@ description after the name.
 
 ## Not covered
 
-- Per-link marks and marks on individual communication objects or flags.
+- Per-link marks and marks on individual communication objects or flags:
+  designed in ADR-0174, not implemented.
 - Module-scoped parameters (no baseline until module downloads exist); a write
   of a module-scoped row never drops the unscoped ref's mark.
 - The caption beside an open checked editor is visible but not linked to the

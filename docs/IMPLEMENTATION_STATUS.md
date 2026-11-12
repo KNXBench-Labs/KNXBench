@@ -12,6 +12,33 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Experimental transport labels and ETS 5.7 evidence check (12 November 2026; REL-01 B-14/B-11)
+
+TCP tunnelling and USB/serial TP-UART now read **experimental** in the web
+transport selectors, status-bar connection/drop-up, Bus Monitor and TCP line
+scan; busy-holder captions retain the warning too (English/German). A note
+names UDP tunnelling as the supported path and states the simulated/loopback
+only evidence boundary. Transport behaviour is unchanged. The
+[manual](manual/user-guide/07-bus-and-interfaces.md#optional-tcp-source-candidate-8-november-2026)
+and [beta criteria](open-work/REL-01-beta-exit-criteria.md) distinguish this
+main-only UI change from the next release's pending notes.
+
+Schema 20 already imports since 12 October (KL-177): seven synthetic tests
+passed, two public-resource opt-in tests stayed ignored. The report names its
+three-public-sample evidence boundary; a schema without a table is refused
+clearly. No importer change, new refusal or issue #7 comment was needed.
+[WP-10](open-work/WP-10-import-and-model-evidence.md) retains the reporter's
+project acceptance as open, not a claim of full ETS 5.7 compatibility.
+
+Verification: complete change-scoped 11-stage acceptance, nested web 37 stages,
+5,737 Vitest cases, default browser 1,218 and overlapping communication lane
+156, all passed with frozen inputs. Tooling: 547 passed, 16 optional skips.
+One-shot self-review passed after busy-holder wording and corpus-evidence
+scope corrections. Final integration carries byte-identical web results from
+`ce8a0ecd2` and the incoming server package's verified Rust results from
+`2aeb0f29d`, with exact composition/input-equality and fresh documentation
+checks. No hardware, bus, release or deployment acceptance.
+
 ## Parameter areas and sections show where values differ from the last download (12 November 2026; issue #48, WP-37 step 4)
 
 The parameter editor now carries the step-2 differences up its navigation

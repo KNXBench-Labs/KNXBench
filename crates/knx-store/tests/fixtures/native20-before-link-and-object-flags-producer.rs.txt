@@ -1,0 +1,486 @@
+//! Produces and verifies a fictional native20 predecessor through unchanged public APIs.
+
+use chrono::{DateTime, Utc};
+use knx_core::commissioning::parameter_baseline::{
+    BaselineEdit, ParameterBaseline, ParameterBaselines,
+};
+use knx_core::project::IdAllocators;
+use knx_core::{
+    Command, CommandStack, CommissioningState, CompletionStatus, DeviceId, DeviceInstance,
+    Installation, InstallationId, Language, Project, SourceRef, Topology,
+};
+use knx_store::project_history::{
+    self as history, JournalTrust, JournalWriteReport, NativeSnapshot,
+};
+use knx_store::{Connection, StoredOpaqueEntry};
+use rusqlite::MAIN_DB;
+use std::{fs, path::Path};
+
+const FILE: &str = "native20-before-link-and-object-flags.sqlite";
+const PROJECT: &str = "P-NATIVE20-SYNTHETIC";
+const SOURCE: &str = "P-NATIVE20-SYNTHETIC/0.xml";
+const PROGRAM: &str = "M-00FA_A-0001-01-0000";
+const PRODUCT: &str = "M-00FA_H-0001_P-0001";
+const PROGRAM_REF: &str = "M-00FA_H-0001_HP-0001";
+const AT: &str = "2026-01-02T03:04:05.123456789Z";
+const LABEL: &str = "Synthetic native20 saved root";
+const OPAQUE: &[u8] = b"Synthetic retained payload\0\xff\x01\nnot manufacturer data";
+
+fn project() -> Project {
+    let mut project = Project::new(Language("en".into()));
+    project.info.project_id = PROJECT.into();
+    project.info.name = "Fictional native20 predecessor".into();
+    project.info.project_number = Some("NATIVE20-FIXTURE".into());
+    project.info.completion = CompletionStatus::FinishedDesign;
+    project.installations.push(Installation {
+        id: InstallationId(0),
+        name: "Fictional installation".into(),
+        default_line: None,
+        multicast_address: None,
+        completion: CompletionStatus::FinishedDesign,
+        topology: Topology {
+            areas: vec![],
+            lines: vec![],
+            unassigned: (1..=3).map(DeviceId).collect(),
+        },
+        buildings: vec![],
+        group_ranges: vec![],
+        group_addresses: vec![],
+        parameters: vec![],
+    });
+    for id in 1..=3 {
+        project.devices.insert(DeviceInstance {
+            id: DeviceId(id),
+            source: SourceRef {
+                path: SOURCE.into(),
+                ets_id: format!("{PROJECT}-0_DI-{id}"),
+            },
+            name: format!("Fictional device {id}"),
+            description: None,
+            address: None,
+            product_ref: PRODUCT.into(),
+            program_ref: PROGRAM_REF.into(),
+            commissioning: CommissioningState::default(),
+            visibility_calculated: true,
+            com_objects: vec![],
+            binary_data: vec![],
+        });
+    }
+    project.ids = IdAllocators::from_counts(3, 0, 0, 0, 0, 0, 0, 0, 0);
+    project
+}
+
+fn baselines() -> ParameterBaselines {
+    let at = DateTime::parse_from_rfc3339(AT)
+        .unwrap()
+        .with_timezone(&Utc);
+    [
+        (
+            DeviceId(1),
+            ParameterBaseline {
+                program_id: PROGRAM.into(),
+                values: [
+                    (format!("{PROGRAM}_P-1_R-1"), "01".into()),
+                    (format!("{PROGRAM}_P-2_R-2"), String::new()),
+                    (
+                        format!("{PROGRAM}_P-3_R-3"),
+                        "Text; \"quoted\" ß\nnext line".into(),
+                    ),
+                ]
+                .into_iter()
+                .collect(),
+                at,
+            },
+        ),
+        (
+            DeviceId(2),
+            ParameterBaseline {
+                program_id: PROGRAM.into(),
+                values: Default::default(),
+                at,
+            },
+        ),
+    ]
+    .into_iter()
+    .collect()
+}
+
+fn opaque() -> Vec<StoredOpaqueEntry> {
+    vec![StoredOpaqueEntry {
+        source_path: "P-NATIVE20-SYNTHETIC/evidence.bin".into(),
+        xpath: "/Synthetic/Device[@Id='P-NATIVE20-SYNTHETIC-0_DI-1']".into(),
+        kind: "ContainerEntry".into(),
+        name: "fictional-retained-control".into(),
+        bytes: OPAQUE.to_vec(),
+        sha256: history::image_hash(OPAQUE),
+    }]
+}
+
+fn model(project: &Project) -> NativeSnapshot {
+    NativeSnapshot {
+        project: project.clone(),
+        opaque: vec![],
+        manufacturer_refs: vec![],
+    }
+}
+
+fn complete(project: &Project) -> NativeSnapshot {
+    NativeSnapshot {
+        project: project.clone(),
+        opaque: opaque(),
+        manufacturer_refs: vec![],
+    }
+}
+
+fn preserved(snapshot: &NativeSnapshot, with_opaque: bool) {
+    let project = &snapshot.project;
+    assert_eq!(project.schema_version, 20);
+    assert_eq!(project.info.project_id, PROJECT);
+    assert_eq!(project.devices.iter().count(), 3);
+    assert_eq!(project.ids.peek_device(), 3);
+    assert_eq!(project.installations.len(), 1);
+    assert_eq!(
+        project.installations[0].topology.unassigned,
+        vec![DeviceId(1), DeviceId(2), DeviceId(3)]
+    );
+    for id in 1..=3 {
+        let device = project.devices.get(DeviceId(id)).unwrap();
+        assert_eq!(device.id, DeviceId(id));
+        assert_eq!(device.source.path, SOURCE);
+        assert_eq!(device.source.ets_id, format!("{PROJECT}-0_DI-{id}"));
+        assert_eq!(device.product_ref, PRODUCT);
+        assert_eq!(device.program_ref, PROGRAM_REF);
+    }
+    assert_eq!(snapshot.opaque, if with_opaque { opaque() } else { vec![] });
+    for entry in &snapshot.opaque {
+        assert_eq!(entry.bytes, OPAQUE);
+        assert_eq!(entry.sha256, history::image_hash(&entry.bytes));
+    }
+    assert!(snapshot.manufacturer_refs.is_empty());
+}
+
+fn schema(conn: &Connection) {
+    assert_eq!(knx_core::project::CURRENT_SCHEMA_VERSION, 20);
+    assert_eq!(knx_store::CURRENT_SCHEMA_VERSION, 20);
+    let version: i64 = conn
+        .query_row("PRAGMA user_version", [], |r| r.get(0))
+        .unwrap();
+    assert_eq!(version, 20);
+    let columns = conn
+        .prepare("PRAGMA table_info(device_parameter_baseline)")
+        .unwrap()
+        .query_map([], |r| r.get::<_, String>(1))
+        .unwrap()
+        .collect::<Result<Vec<_>, _>>()
+        .unwrap();
+    assert_eq!(columns, vec!["device_id", "program_id", "at"]);
+    let tables = conn
+        .prepare("SELECT name FROM sqlite_schema WHERE type='table' AND (name GLOB 'device_*baseline*') ORDER BY name")
+        .unwrap()
+        .query_map([], |r| r.get::<_, String>(0))
+        .unwrap()
+        .collect::<Result<Vec<_>, _>>()
+        .unwrap();
+    assert_eq!(
+        tables,
+        vec![
+            "device_parameter_baseline",
+            "device_parameter_baseline_value"
+        ]
+    );
+    let integrity: String = conn
+        .query_row("PRAGMA integrity_check", [], |r| r.get(0))
+        .unwrap();
+    assert_eq!(integrity, "ok");
+    assert!(!conn
+        .prepare("PRAGMA foreign_key_check")
+        .unwrap()
+        .exists([])
+        .unwrap());
+}
+
+fn baseline_rows(conn: &Connection, expected: &ParameterBaselines) {
+    let all = history::load_parameter_baselines(conn).unwrap();
+    assert_eq!(&all, expected);
+    assert_eq!(all.len(), 2);
+    assert_eq!(all.get(DeviceId(1)).unwrap().values.len(), 3);
+    assert!(
+        all.get(DeviceId(2)).unwrap().values.is_empty(),
+        "recorded empty header"
+    );
+    assert_eq!(
+        all.get(DeviceId(3)),
+        None,
+        "present device with no baseline is unknown"
+    );
+    let headers = conn
+        .prepare(
+            "SELECT device_id, program_id, at FROM device_parameter_baseline ORDER BY device_id",
+        )
+        .unwrap()
+        .query_map([], |r| {
+            Ok((
+                r.get::<_, u32>(0)?,
+                r.get::<_, String>(1)?,
+                r.get::<_, String>(2)?,
+            ))
+        })
+        .unwrap()
+        .collect::<Result<Vec<_>, _>>()
+        .unwrap();
+    assert_eq!(
+        headers,
+        vec![
+            (1, PROGRAM.into(), AT.into()),
+            (2, PROGRAM.into(), AT.into())
+        ]
+    );
+    let values = conn
+        .prepare("SELECT device_id, ref_id, raw FROM device_parameter_baseline_value ORDER BY device_id, ref_id")
+        .unwrap()
+        .query_map([], |r| Ok((r.get::<_, u32>(0)?, r.get::<_, String>(1)?, r.get::<_, String>(2)?)))
+        .unwrap()
+        .collect::<Result<Vec<_>, _>>()
+        .unwrap();
+    let expected_values: Vec<_> = expected
+        .iter()
+        .flat_map(|(id, b)| {
+            b.values
+                .iter()
+                .map(move |(key, raw)| (id.0, key.clone(), raw.clone()))
+        })
+        .collect();
+    assert_eq!(values, expected_values);
+}
+
+fn image_without_baselines(bytes: &[u8]) {
+    // This small fixture uses the codec's raw-SQLite lane, not compressed images.
+    assert!(bytes.starts_with(b"SQLite format 3\0"));
+    let mut conn = Connection::open_in_memory().unwrap();
+    conn.deserialize_read_exact(MAIN_DB, bytes, bytes.len(), true)
+        .unwrap();
+    schema(&conn);
+    for table in [
+        "device_parameter_baseline",
+        "device_parameter_baseline_value",
+    ] {
+        let count: i64 = conn
+            .query_row(&format!("SELECT count(*) FROM {table}"), [], |r| r.get(0))
+            .unwrap();
+        assert_eq!(count, 0, "file-level rows must not enter history images");
+    }
+    let decoded = NativeSnapshot::decode(bytes, &history::image_hash(bytes)).unwrap();
+    assert_eq!(decoded.project.schema_version, 20);
+}
+
+fn capture_image(out: &Path, name: &str, snapshot: &NativeSnapshot) {
+    let bytes = snapshot.encode().unwrap();
+    let hash = history::image_hash(&bytes);
+    assert_eq!(NativeSnapshot::decode(&bytes, &hash).unwrap(), *snapshot);
+    assert!(NativeSnapshot::decode(&bytes, &"0".repeat(64)).is_err());
+    image_without_baselines(&bytes);
+    fs::write(out.join(format!("{name}.image")), &bytes).unwrap();
+    fs::write(
+        out.join(format!("{name}.semantic-sha256")),
+        snapshot.semantic_hash().unwrap(),
+    )
+    .unwrap();
+    fs::write(
+        out.join(format!("{name}.debug")),
+        format!("{snapshot:#?}\n"),
+    )
+    .unwrap();
+}
+
+fn stored_images(conn: &Connection) -> Vec<(String, Vec<u8>, String)> {
+    conn.prepare(
+        "SELECT 'stored-working', working, working_hash FROM project_history_state
+         UNION ALL SELECT 'stored-' || side || '-' || position, image, image_hash FROM project_history_stack
+         UNION ALL SELECT 'stored-named-' || id, image, image_hash FROM project_history_version
+         UNION ALL SELECT 'stored-context', image, image_hash FROM project_history_context ORDER BY 1",
+    ).unwrap().query_map([], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)))
+        .unwrap().collect::<Result<Vec<_>, _>>().unwrap()
+}
+
+fn verify_reopen(
+    path: &Path,
+    root: &NativeSnapshot,
+    working: &NativeSnapshot,
+    undo: &[Project],
+    redo: &[Project],
+    generation: i64,
+    named: i64,
+) {
+    let before = fs::read(path).unwrap();
+    let store = knx_store::open_existing_read_only(path).unwrap();
+    assert_eq!(store.migrated_from, None);
+    schema(&store.conn);
+    baseline_rows(&store.conn, &baselines());
+    assert_eq!(NativeSnapshot::read(&store.conn).unwrap(), *root);
+    let recovered = history::load_editor(&store.conn).unwrap().unwrap();
+    assert_eq!(recovered.generation, generation);
+    assert_eq!(recovered.baseline, *root);
+    assert_eq!(recovered.working, *working);
+    assert_eq!(recovered.undo, undo);
+    assert_eq!(recovered.redo, redo);
+    assert_eq!((recovered.undo.len(), recovered.redo.len()), (2, 1));
+    let versions = history::list_versions(&store.conn).unwrap();
+    assert_eq!(versions.len(), 1);
+    assert_eq!(versions[0].label, LABEL);
+    assert_eq!(versions[0].reason, "named");
+    assert_eq!(versions[0].id, named);
+    assert_eq!(history::read_version(&store.conn, named).unwrap(), *root);
+    preserved(&recovered.baseline, true);
+    preserved(&recovered.working, true);
+    let mut project = recovered.working.project.clone();
+    let mut stack = CommandStack::from_snapshot_states(recovered.undo, recovered.redo);
+    stack.undo(&mut project).unwrap();
+    assert_eq!(project, undo[1]);
+    preserved(&complete(&project), true);
+    stack.undo(&mut project).unwrap();
+    assert_eq!(project, root.project);
+    stack.redo(&mut project).unwrap();
+    stack.redo(&mut project).unwrap();
+    assert_eq!(project, working.project);
+    stack.redo(&mut project).unwrap();
+    assert_eq!(project, redo[0]);
+    preserved(&complete(&project), true);
+    baseline_rows(&store.conn, &baselines());
+    for (_, bytes, hash) in stored_images(&store.conn) {
+        assert_eq!(history::image_hash(&bytes), hash);
+        image_without_baselines(&bytes);
+    }
+    assert!(store
+        .conn
+        .execute("DELETE FROM project_history_state", [])
+        .is_err());
+    store.conn.close().unwrap();
+    assert_eq!(
+        fs::read(path).unwrap(),
+        before,
+        "read-only reopen changed file bytes"
+    );
+    for suffix in ["-wal", "-shm", "-journal"] {
+        assert!(!path.with_file_name(format!("{FILE}{suffix}")).exists());
+    }
+}
+
+fn main() {
+    let args: Vec<_> = std::env::args().collect();
+    assert_eq!(args.len(), 2, "producer NEW_OUTPUT_DIRECTORY");
+    let out = Path::new(&args[1]);
+    fs::create_dir(out).expect("new attempt directory required; retain failed attempts");
+    let root = complete(&project());
+    preserved(&root, true);
+    let path = out.join(FILE);
+    let conn = knx_store::open_and_migrate(&path).unwrap();
+    schema(&conn);
+    let generation = history::save_editor(&conn, &root, &CommandStack::new(), None, true).unwrap();
+    assert_eq!(NativeSnapshot::read(&conn).unwrap(), root);
+    assert!(history::load_parameter_baselines(&conn).unwrap().is_empty());
+    let generation = history::create_version(&conn, &root, LABEL, generation).unwrap();
+    let named = history::list_versions(&conn).unwrap()[0].id;
+    let mut working = root.clone();
+    let mut stack = CommandStack::new();
+    stack
+        .do_command(
+            &mut working.project,
+            Command::RenameDevice {
+                device: DeviceId(1),
+                name: "Fictional dirty working name".into(),
+            },
+        )
+        .unwrap();
+    stack
+        .do_command(
+            &mut working.project,
+            Command::SetDeviceDescription {
+                device: DeviceId(2),
+                description: Some("Fictional working description; ß".into()),
+            },
+        )
+        .unwrap();
+    stack
+        .do_command(
+            &mut working.project,
+            Command::RenameDevice {
+                device: DeviceId(3),
+                name: "Fictional redo-only name".into(),
+            },
+        )
+        .unwrap();
+    stack.undo(&mut working.project).unwrap();
+    assert_eq!(stack.history_lengths(), (2, 1));
+    let (undo, redo) = stack.snapshot_states(&working.project).unwrap();
+    assert_eq!(undo[0], root.project);
+    assert_ne!(working, root);
+    for p in undo.iter().chain(redo.iter()).chain([&working.project]) {
+        preserved(&complete(p), true);
+    }
+    let generation =
+        history::save_editor(&conn, &working, &stack, Some(generation), false).unwrap();
+    let images_before = stored_images(&conn);
+    let expected = baselines();
+    let edits: Vec<_> = expected
+        .iter()
+        .map(|(device, b)| BaselineEdit {
+            device,
+            baseline: Some(b.clone()),
+        })
+        .collect();
+    let (generation, _) = history::save_editor_settling(
+        &conn,
+        &working,
+        &stack,
+        generation,
+        &JournalTrust::default(),
+        &mut JournalWriteReport::default(),
+        &edits,
+    )
+    .unwrap();
+    assert_eq!(
+        stored_images(&conn),
+        images_before,
+        "settlement changes no history image bytes"
+    );
+    baseline_rows(&conn, &expected);
+    assert_eq!(NativeSnapshot::read(&conn).unwrap(), root);
+    schema(&conn);
+    capture_image(out, "root-complete", &root);
+    capture_image(out, "root-model", &model(&root.project));
+    capture_image(out, "working-complete", &working);
+    capture_image(out, "working-model", &model(&working.project));
+    let named_snapshot = history::read_version(&conn, named).unwrap();
+    assert_eq!(named_snapshot, root);
+    capture_image(out, "named-complete", &named_snapshot);
+    capture_image(out, "named-model", &model(&named_snapshot.project));
+    for (side, projects) in [("undo", &undo), ("redo", &redo)] {
+        for (i, p) in projects.iter().enumerate() {
+            capture_image(out, &format!("{side}-{i}-model"), &model(p));
+            capture_image(out, &format!("{side}-{i}-complete"), &complete(p));
+        }
+    }
+    for (name, bytes, hash) in stored_images(&conn) {
+        assert_eq!(history::image_hash(&bytes), hash);
+        image_without_baselines(&bytes);
+        let snapshot = NativeSnapshot::decode(&bytes, &hash).unwrap();
+        fs::write(out.join(format!("{name}.image")), &bytes).unwrap();
+        fs::write(
+            out.join(format!("{name}.semantic-sha256")),
+            snapshot.semantic_hash().unwrap(),
+        )
+        .unwrap();
+    }
+    fs::write(out.join("generation.txt"), generation.to_string()).unwrap();
+    fs::write(out.join("baselines.debug"), format!("{expected:#?}\n")).unwrap();
+    conn.close().unwrap();
+    verify_reopen(&path, &root, &working, &undo, &redo, generation, named);
+    verify_reopen(&path, &root, &working, &undo, &redo, generation, named);
+    let result = "PASS: genuine schema20; devices=3; exact stable identities/allocators/topology; parameter headers=2 values=3 (one empty raw); recorded empty device2 distinct from absent device3; fractional UTC time exact; saved root differs from working; undo=2 redo=1 named=1; settlement leaves all history image bytes unchanged; all snapshot baseline tables empty; exact Project/opaque equality; recovered undo/redo replay; integrity_check=ok foreign_key_check=empty; read-only native reopen twice, no migration, no changed bytes or sidecars; bad image hash refused\n";
+    fs::write(out.join("producer-result.txt"), result).unwrap();
+    print!("{result}");
+    println!(
+        "history format={} generation={generation} named_id={named}",
+        history::FORMAT_VERSION
+    );
+}

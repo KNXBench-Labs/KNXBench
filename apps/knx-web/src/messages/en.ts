@@ -2283,7 +2283,7 @@ export const messages = {
   "parameters.lastDownload.hidden.one": "{hidden} of them is not shown with the current settings.",
   "parameters.lastDownload.hidden.other": "{hidden} of them are not shown with the current settings.",
   "parameters.lastDownload.noneDiffer": "No value differs from the last download ({time}).",
-  "parameters.lastDownload.absent": "No download by KNXBench recorded for this device yet; only the per-part hint is available.",
+  "parameters.lastDownload.absent": "No completed KNXBench download with recorded values for this device; only the per-part hint is available.",
   "parameters.lastDownload.otherProgram": "The last download used another application program; values cannot be compared.",
   "parameters.lastDownload.productUnavailable": "Product data is missing; values cannot be compared with the last download.",
   "parameters.lastDownload.currentUnreadable": "The project holds conflicting values; they cannot be compared with the last download.",

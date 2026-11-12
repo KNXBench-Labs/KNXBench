@@ -155,15 +155,17 @@ fn linking_and_unlinking_mark_group_addresses() {
     );
 }
 
+/// The group object table lies in the application program's memory, which a
+/// partial download writes only with Parameters: a flag is a Parameters edit.
 #[test]
-fn an_object_flag_marks_group_addresses_but_a_datapoint_type_does_not() {
+fn an_object_flag_marks_parameters_but_a_datapoint_type_does_not() {
     marks_then_round_trips(
         Command::SetComObjectFlag {
             com_object: CO1,
             flag: ComFlagKind::Read,
             value: true,
         },
-        &[(D1, parts(|p| p.group_addresses = true))],
+        &[(D1, parts(|p| p.parameters = true))],
     );
     marks_then_round_trips(
         Command::SetComObjectDpt {

@@ -201,14 +201,48 @@ fn each_change_takes_its_part_and_what_depends_on_it() {
             ..FlagOverrides::default()
         },
     );
+    // The object flags lie in the application program's memory: they are
+    // the Parameters part's, and the tables depend on it.
     assert_eq!(
         still_current(&written, &now),
         parts(|p| {
             p.address = true;
             p.application = true;
-            p.parameters = true;
         })
     );
+}
+
+/// A group-addresses-only partial download does not write the group object
+/// table, so a flag edited during it is not programmed by it, and a
+/// parameters-only one credits a flag only if it is still the written one.
+#[test]
+fn a_flag_edited_during_a_partial_download_is_never_credited() {
+    let mut now = request();
+    now.flag_overrides.insert(
+        "O-1".into(),
+        FlagOverrides {
+            write: Some(false),
+            ..FlagOverrides::default()
+        },
+    );
+    for (parameters, group_addresses) in [(true, false), (false, true)] {
+        let s = settle_download(
+            Some(PartialDownloadParts {
+                parameters,
+                group_addresses,
+            }),
+            DownloadEnd::Completed,
+            &request(),
+            Some(&now),
+            SourcePlan::Unchanged,
+            None,
+        );
+        assert_eq!(
+            s.programmed,
+            ProgrammingParts::NONE,
+            "P={parameters} GA={group_addresses}"
+        );
+    }
 }
 
 #[test]

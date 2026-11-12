@@ -37,8 +37,14 @@ flags nor history. Undo/redo returns the edit and marks together.
 
 The candidate-device match is exhaustive: a new command requires an explicit
 choice of programming impact. Existing address changes affect Address;
-parameter values affect Parameters; links, effective object flags and linked
-GA number/deletion affect Group addresses for every affected device. A linked
+parameter values and effective object flags affect Parameters; links and linked
+GA number/deletion affect Group addresses for every affected device.
+*(Amended 12 November 2026: flags first affected Group addresses. The group
+object table that holds them lies in the application program's memory, which
+a partial download writes only with Parameters (Configuration Procedures
+§3.9.2.4; `partial_memory_download.rs`), so a group-addresses-only download
+cleared a flag edit it never wrote. `still_current` likewise credits flags
+with the Parameters part now.)* A linked
 GA deletion is the existing atomic unlink-then-delete batch. Names, DPTs,
 placement, provenance-only equal flags and no-op values do not add marks.
 Product/program references form the Application content; there is currently

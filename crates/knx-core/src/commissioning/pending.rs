@@ -172,9 +172,14 @@ pub struct ProgrammingContent {
     application: (String, String),
     /// `(ParameterRef id, raw value)`, sorted.
     parameters: Vec<(String, String)>,
-    /// Per communication object, in id order: its effective flags, its user
-    /// priority edit (which decides whether an image is admitted) and its
-    /// links with the linked group address's numeric value.
+    /// Per communication object, in id order: its effective flags. They are
+    /// part of the Parameters part: the group object table that holds them
+    /// lies in the application program's memory, which a partial download
+    /// writes only with Parameters (CP §3.9.2.4; `partial_memory_download`).
+    object_flags: Vec<(ComObjectInstanceId, FlagValues)>,
+    /// Per communication object, in id order: its user priority edit (which
+    /// decides whether an image is admitted) and its links with the linked
+    /// group address's numeric value.
     group_addresses: Vec<ObjectContent>,
 }
 
@@ -189,7 +194,6 @@ type LinkContent = Vec<(Option<u16>, Direction)>;
 /// One communication object's share of the group address part.
 type ObjectContent = (
     ComObjectInstanceId,
-    FlagValues,
     Option<crate::ObjectPriority>,
     LinkContent,
 );
@@ -200,7 +204,8 @@ impl ProgrammingContent {
         ProgrammingParts {
             address: self.address != other.address,
             application: self.application != other.application,
-            parameters: self.parameters != other.parameters,
+            parameters: self.parameters != other.parameters
+                || self.object_flags != other.object_flags,
             group_addresses: self.group_addresses != other.group_addresses,
         }
     }
@@ -222,6 +227,7 @@ pub fn programming_content(
                     address: device.address,
                     application: (device.product_ref.clone(), device.program_ref.clone()),
                     parameters: Vec::new(),
+                    object_flags: Vec::new(),
                     group_addresses: Vec::new(),
                 },
             )
@@ -248,20 +254,29 @@ pub fn programming_content(
     for (id, content) in contents.iter_mut() {
         content.parameters.sort();
         let device = project.devices.get(*id).expect("collected above");
-        let mut objects: Vec<_> = device
+        let objects: Vec<_> = device
             .com_objects
             .iter()
             .filter_map(|co| project.devices.com_object(*co))
+            .collect();
+        let mut flags: Vec<_> = objects
+            .iter()
+            .map(|co| (co.id, flag_values(&co.flags)))
+            .collect();
+        flags.sort_by_key(|(co, _)| *co);
+        content.object_flags = flags;
+        let mut objects: Vec<_> = objects
+            .iter()
             .map(|co| {
                 let links = co
                     .links
                     .iter()
                     .map(|link| (numbers.get(&link.ga).copied(), link.direction))
                     .collect();
-                (co.id, flag_values(&co.flags), co.priority_edit, links)
+                (co.id, co.priority_edit, links)
             })
             .collect();
-        objects.sort_by_key(|(co, _, _, _)| *co);
+        objects.sort_by_key(|(co, _, _)| *co);
         content.group_addresses = objects;
     }
     contents

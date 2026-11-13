@@ -125,9 +125,8 @@ Remaining limits:
 - Some routes that interleave bus or session work with the project still take
   it on a runtime worker: the device comparison itself, the
   device-diagnostics preview, the support
-  diagnose run, the serial-address write and find, the diagnostic-bundle
-  preview, section and export (its project context, environment and
-  import-report sections) and the System-2 download worker. This list comes
+  diagnose run, the serial-address write and find, and the System-2 download
+  worker. Diagnostic-bundle collection is addressed below. This list comes
   from a source search plus an independent review, not an exhaustive proof.
 - Catalogue reads (manufacturers, items, product languages) do not take the
   project lock but still query the product database on a runtime worker.
@@ -229,3 +228,32 @@ reservation, and selected reconciliations still finish their mutation. No
 network or device I/O is used by these tests. This is a bounded follow-up,
 not an exhaustive route audit or a reproduction of the reporter's message;
 the other mixed bus/project paths listed above and the proxy question remain.
+
+### Diagnostic-bundle project waits off the runtime (13 November 2026)
+
+Preview, reviewed section text and consented export now collect their initial
+and final project context off the runtime. Each context still samples both
+counters while holding the project publication lock. Recording-address lookup
+also waits off the runtime, retaining the source-context match, in-lock context
+recheck and unique-address requirement. The environment and admitted import
+report builders, and the device/catalogue builders' transitive project reads,
+run on blocking threads without changing the synchronous helpers' other callers.
+The saved-project copy takes the store path on its blocking thread as well;
+unsaved-project and content-dependent privacy refusals are unchanged.
+
+Tests (`diagnostic_bundle_routes/runtime_tests.rs`) exercise the three mounted
+routes with a real prior review where required, seven independent builder/lock
+pairs (including a saved project's held store path and an admitted import report),
+the final context capture and recorded-address resolution on a current-thread
+runtime. They require a responsive timer, a pending request before lock release
+and the expected response or exact owned section bytes afterwards. A request-local
+test gate reaches the final capture separately and verifies context-change refusal
+across collection awaits. Address tests retain the unique-device and post-wait
+context checks. Existing binding, provenance, privacy and saved-root tests remain
+unchanged: text and ZIP still render the same owned bytes that were reviewed.
+
+This audit is limited to the collector/context files' direct and traced transitive
+project/store-path waits, not every diagnostic or server route. Other mixed paths,
+catalogue database reads outside this collector and the reporter's original
+error/proxy hypothesis remain open. Parent review and the selected package gate
+remain separate acceptance steps; no real installation was accessed.

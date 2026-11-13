@@ -152,6 +152,10 @@ pub(crate) struct BundleQuery {
     #[cfg(test)]
     #[serde(default)]
     test_recording_summary_supplier: Option<TestRecordingSummarySupplier>,
+    /// Request-local coordination after the initial coherent sample; never a wire field.
+    #[cfg(test)]
+    #[serde(skip)]
+    test_context_gate: Option<Arc<(tokio::sync::Notify, tokio::sync::Notify)>>,
 }
 
 #[cfg(test)]
@@ -951,7 +955,12 @@ async fn collect(
     reviewed: bool,
 ) -> Result<Collected, ApiError> {
     check_query(query)?;
-    let context = ProjectContext::capture(state);
+    let context = ProjectContext::capture_off_runtime(state).await?;
+    #[cfg(test)]
+    if let Some(gate) = &query.test_context_gate {
+        gate.0.notify_one();
+        gate.1.notified().await;
+    }
     if query
         .context
         .as_ref()
@@ -1016,26 +1025,12 @@ async fn collect(
         Err(_) => operation.as_ref().and_then(recording_context),
     };
     // Address-to-id resolution is allowed only in the proven, unchanged source project.
-    let run_device = run_device.or_else(|| {
-        let address = operation.as_ref()?.target["individualAddress"]
-            .as_str()?
-            .parse::<knx_core::IndividualAddress>()
-            .ok()?;
-        if source.as_ref() != Some(&context) {
-            return None;
+    let run_device = match run_device {
+        Some(id) => Some(id),
+        None => {
+            device_by_recorded_address(state, operation.as_ref(), source.as_ref(), &context).await?
         }
-        let project = state.project.lock().expect("state mutex poisoned");
-        if ProjectContext::locked(state) != context {
-            return None;
-        }
-        let mut devices = project
-            .as_ref()?
-            .devices
-            .iter()
-            .filter(|device| device.address == Some(address));
-        let device = devices.next()?.id.0;
-        devices.next().is_none().then_some(device)
-    });
+    };
     // Device ids are comparable only inside the proven, unchanged source project.
     if source.as_ref() == Some(&context)
         && query
@@ -1123,7 +1118,9 @@ async fn collect(
             bound: unavailable.map(|reason| reason.bound_message()),
         });
     }
-    if ProjectContext::capture(state) != context {
+    #[cfg(test)]
+    runtime_tests::before_final_context().await;
+    if ProjectContext::capture_off_runtime(state).await? != context {
         return Err(preview_changed());
     }
     Ok(Collected {
@@ -1137,6 +1134,48 @@ async fn collect(
         created_at,
         monitor,
     })
+}
+
+/// Resolve only an unambiguous address in the same source project, rechecked under its lock.
+async fn device_by_recorded_address(
+    state: &SharedState,
+    operation: Option<&RecordingSummary>,
+    source: Option<&ProjectContext>,
+    context: &ProjectContext,
+) -> Result<Option<u32>, ApiError> {
+    let address = operation
+        .and_then(|operation| operation.target["individualAddress"].as_str())
+        .and_then(|address| address.parse::<knx_core::IndividualAddress>().ok());
+    let Some(address) = address.filter(|_| source == Some(context)) else {
+        return Ok(None);
+    };
+    let state = Arc::clone(state);
+    let context = context.clone();
+    crate::routes::off_runtime(move || {
+        let project = state.project.lock().expect("state mutex poisoned");
+        if ProjectContext::locked(&state) != context {
+            return None;
+        }
+        let mut devices = project
+            .as_ref()?
+            .devices
+            .iter()
+            .filter(|device| device.address == Some(address));
+        let device = devices.next()?.id.0;
+        devices.next().is_none().then_some(device)
+    })
+    .await
+}
+
+/// A section owns its admitted bytes before the collector resumes; guards never cross awaits.
+async fn blocking_section(
+    state: &SharedState,
+    build: impl FnOnce(&SharedState) -> Result<BundleSection, SourceFailure> + Send + 'static,
+) -> Result<BundleSection, SourceFailure> {
+    let state = Arc::clone(state);
+    tokio::task::spawn_blocking(move || build(&state))
+        .await
+        .map_err(|_| SourceFailure::unavailable())?
 }
 
 /// What `collect` decided once per request for every section kind.
@@ -1168,7 +1207,9 @@ async fn build_section(
         monitor,
     } = scope;
     match kind {
-        SectionKind::Environment => Ok(vec![environment(state)]),
+        SectionKind::Environment => Ok(vec![
+            blocking_section(state, |state| Ok(environment(state))).await?,
+        ]),
         SectionKind::SessionLog => {
             // Projected under the log's lock, without cloning entry details; the live log
             // is never changed.
@@ -1264,7 +1305,9 @@ async fn build_section(
         SectionKind::Device => {
             let device =
                 projectable?.ok_or(SourceFailure::Unavailable(BundleUnavailableCode::NoDevice))?;
-            Ok(vec![device_section(state, device)?])
+            Ok(vec![
+                blocking_section(state, move |state| device_section(state, device)).await?,
+            ])
         }
         SectionKind::LegacyReports => {
             let evidence = evidence?;
@@ -1275,11 +1318,16 @@ async fn build_section(
             section.notes.extend(report_notes(&section.files));
             Ok(vec![section])
         }
-        SectionKind::ImportReport => Ok(vec![import_report(state)?]),
+        SectionKind::ImportReport => Ok(vec![blocking_section(state, import_report).await?]),
         SectionKind::ImportFile => Err(SourceFailure::Unavailable(
             BundleUnavailableCode::ImportFileNotKept,
         )),
-        SectionKind::Catalogue => Ok(vec![catalogue(state, projectable?)]),
+        SectionKind::Catalogue => {
+            let device = projectable?;
+            Ok(vec![
+                blocking_section(state, move |state| Ok(catalogue(state, device))).await?,
+            ])
+        }
         SectionKind::Project => Ok(vec![project_section(state).await?]),
         SectionKind::BusMonitor => {
             let snapshot =
@@ -1599,20 +1647,22 @@ fn import_report(state: &SharedState) -> Result<BundleSection, SourceFailure> {
 }
 
 async fn project_section(state: &SharedState) -> Result<BundleSection, SourceFailure> {
-    let path = state
-        .store_path
-        .lock()
-        .expect("state mutex poisoned")
-        .clone()
-        .ok_or(SourceFailure::Unavailable(
-            BundleUnavailableCode::ProjectUnsaved,
-        ))?;
+    let state = Arc::clone(state);
     let copy = tokio::task::spawn_blocking(move || {
+        let path = state
+            .store_path
+            .lock()
+            .expect("state mutex poisoned")
+            .clone()
+            .ok_or(SourceFailure::Unavailable(
+                BundleUnavailableCode::ProjectUnsaved,
+            ))?;
         knx_app::secret_free_copy::native_project_for_bundle(&path)
+            .map_err(|_| SourceFailure::unavailable())
     })
     .await
-    .map_err(|_| SourceFailure::unavailable())?
     .map_err(|_| SourceFailure::unavailable())?;
+    let copy = copy?;
     let (bytes, notes) = copy.into_parts();
     let mut section = BundleSection::new(SectionKind::Project);
     section.entries = 1;
@@ -1739,3 +1789,6 @@ mod tests;
 #[cfg(test)]
 #[path = "diagnostic_bundle_binding_tests.rs"]
 mod binding_tests;
+
+#[cfg(test)]
+mod runtime_tests;

@@ -856,23 +856,28 @@ async fn monitor_changes(change_contents: bool) {
 #[tokio::test]
 async fn a_context_change_during_collection_is_refused_before_any_owned_bytes_are_returned() {
     use axum::{extract::State, response::IntoResponse, Json};
-    use std::{future::Future, task::Poll};
     let dir = tempfile::tempdir().unwrap();
     let state = state(dir.path(), true);
     let monitor = state.bus_session.lock().await;
-    let query = serde_json::from_value(json!({"problemType":"deviceReading"})).unwrap();
-    let mut pending = Box::pin(super::preview(State(state.clone()), Json(query)));
-    // The real handler captures/validates context synchronously before its first await.
-    // Holding monitor guarantees collection cannot finish in this first poll.
-    let first = std::future::poll_fn(|cx| Poll::Ready(pending.as_mut().poll(cx))).await;
-    assert!(first.is_pending());
+    let gate = Arc::new((tokio::sync::Notify::new(), tokio::sync::Notify::new()));
+    let mut query: super::BundleQuery =
+        serde_json::from_value(json!({"problemType":"deviceReading"})).unwrap();
+    query.test_context_gate = Some(Arc::clone(&gate));
+    let pending = tokio::spawn(super::preview(State(state.clone()), Json(query)));
+    // Mutation must follow the coherent sample, not merely scheduling its blocking task.
+    tokio::time::timeout(std::time::Duration::from_secs(3), gate.0.notified())
+        .await
+        .expect("the initial coherent context must be captured");
+    assert!(!pending.is_finished());
     {
         let _project = state.project.lock().unwrap();
         crate::domain::next_project_revision(&state);
     }
     drop(monitor);
+    gate.1.notify_one();
     let error = pending
         .await
+        .unwrap()
         .err()
         .expect("context drift during collection must refuse");
     let response = error.into_response();

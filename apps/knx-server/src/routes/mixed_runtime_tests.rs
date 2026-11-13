@@ -10,6 +10,8 @@
 //!
 //! Two comparison cases change the project at those waits instead: under the
 //! reservations the recheck refuses, and after the read the result is outdated.
+//! Four support-run cases change the project or replace the preview at the same
+//! two waits: each refuses, and nothing is published over the newer state.
 
 use std::future::Future;
 use std::net::SocketAddrV4;
@@ -604,37 +606,16 @@ async fn the_support_diagnose_run_waits_off_the_runtime() {
         let dir = tempfile::tempdir().unwrap();
         let gate = Gate::default();
         let state = support_fixture(&dir, &gate);
-        let context = json!({
-            "serverIncarnation": state.server_incarnation,
-            "projectIncarnation": state.project_incarnation.load(std::sync::atomic::Ordering::SeqCst),
-            "revision": state.project_revision.load(std::sync::atomic::Ordering::SeqCst),
-        });
-        let preview = crate::app(Arc::clone(&state), None)
-            .oneshot(request(
-                "POST",
-                "/api/support/preview",
-                &json!({"deviceId": 7, "context": context, "input": {"mask": 37}}).to_string(),
-            ))
-            .await
-            .unwrap();
-        assert_eq!(preview.status(), StatusCode::OK, "{stage:?}");
-        let preview: Value = serde_json::from_slice(
-            &axum::body::to_bytes(preview.into_body(), usize::MAX)
-                .await
-                .unwrap(),
-        )
-        .unwrap();
-        let body =
-            json!({"token": preview["token"], "gateway": GATEWAY, "consent": true}).to_string();
+        let token = support_preview(&state).await;
         let (status, answer) = witness(
             &state,
-            request("POST", "/api/support/diagnose", &body),
+            request("POST", "/api/support/diagnose", &diagnose_body(&token)),
             stage,
             &gate,
         )
         .await;
         assert_eq!(status, StatusCode::OK, "{stage:?}: {answer}");
-        assert_eq!(answer["token"], preview["token"], "{stage:?}");
+        assert_eq!(answer["token"], token.as_str(), "{stage:?}");
         let live = answer["report"]["facts"]
             .as_array()
             .unwrap()
@@ -646,4 +627,227 @@ async fn the_support_diagnose_run_waits_off_the_runtime() {
         assert!(state.bus_session.try_lock().is_ok(), "{stage:?}");
         assert!(state.line_scan_session.try_lock().is_ok(), "{stage:?}");
     }
+}
+
+/// Takes a support preview of device 7 in the current project context and
+/// returns its token.
+async fn support_preview(state: &Arc<AppState>) -> String {
+    let context = json!({
+        "serverIncarnation": state.server_incarnation,
+        "projectIncarnation": state.project_incarnation.load(Ordering::SeqCst),
+        "revision": state.project_revision.load(Ordering::SeqCst),
+    });
+    let response = crate::app(Arc::clone(state), None)
+        .oneshot(request(
+            "POST",
+            "/api/support/preview",
+            &json!({"deviceId": 7, "context": context, "input": {"mask": 37}}).to_string(),
+        ))
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::OK);
+    let preview: Value = serde_json::from_slice(
+        &axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .unwrap(),
+    )
+    .unwrap();
+    preview["token"]
+        .as_str()
+        .expect("a preview token")
+        .to_owned()
+}
+
+fn diagnose_body(token: &str) -> String {
+    json!({"token": token, "gateway": GATEWAY, "consent": true}).to_string()
+}
+
+/// What the support slot retains for `token`: `published` only after a run
+/// published its live facts, `unfinished` for a preview without a run.
+fn retained(state: &AppState, token: &str) -> &'static str {
+    use crate::diagnostic_bundle_results::EvidenceLookup;
+    match state.support_results.evidence(token) {
+        Ok(_) => "published",
+        Err(EvidenceLookup::Unfinished) => "unfinished",
+        Err(EvidenceLookup::Missing) => "missing",
+        Err(EvidenceLookup::Expired) => "expired",
+        Err(EvidenceLookup::NonExportable) => "non-exportable",
+        Err(EvidenceLookup::Unavailable) => "unavailable",
+    }
+}
+
+/// An edit of the open project: the revision moves under the project lock.
+fn change_the_project(state: &AppState) {
+    let _project = state.project.lock().unwrap();
+    state.project_revision.fetch_add(1, Ordering::SeqCst);
+}
+
+/// The answer of a support run that must be refused before the bus.
+async fn refused_before_the_bus(
+    state: &AppState,
+    gate: &Gate,
+    call: JoinHandle<(StatusCode, Value)>,
+    code: &str,
+) {
+    let (status, answer) = tokio::time::timeout(HANG_GUARD, call)
+        .await
+        .expect("the support run answers")
+        .unwrap();
+    assert_eq!(status, StatusCode::CONFLICT, "{code}: {answer}");
+    assert_eq!(answer, json!({ "error": code }));
+    assert_eq!(
+        gate.connects.load(Ordering::SeqCst),
+        0,
+        "{code}: a tunnel was asked for"
+    );
+    assert!(
+        state.one_shot_activity.snapshot_with_dropped().0.is_empty(),
+        "{code}: an activity was started"
+    );
+    assert!(state.address_programming.try_lock().is_ok());
+    assert!(state.bus_session.try_lock().is_ok());
+    assert!(state.line_scan_session.try_lock().is_ok());
+}
+
+/// The project changes while the support run waits for its last gateway
+/// reservation: the recheck under them refuses before any tunnel.
+#[tokio::test(flavor = "current_thread")]
+async fn a_project_change_before_the_reserved_recheck_refuses_the_support_run() {
+    let dir = tempfile::tempdir().unwrap();
+    let gate = Gate::default();
+    let state = support_fixture(&dir, &gate);
+    let token = support_preview(&state).await;
+    // Open, so a recheck that let the change through would read the device.
+    gate.open.notify_one();
+    let scan = Arc::clone(&state.line_scan_session).lock_owned().await;
+    let call = send(
+        &state,
+        request("POST", "/api/support/diagnose", &diagnose_body(&token)),
+    );
+    reservation_taken(&state, "support").await;
+    change_the_project(&state);
+    drop(scan);
+    refused_before_the_bus(&state, &gate, call, "support-context-changed-preview-again").await;
+    assert_eq!(retained(&state, &token), "unfinished");
+}
+
+/// A new preview replaces the one the run was started for while the run waits
+/// for its last gateway reservation: it refuses before any tunnel and leaves
+/// the new preview in place.
+#[tokio::test(flavor = "current_thread")]
+async fn a_preview_replaced_before_the_reserved_recheck_refuses_the_support_run() {
+    let dir = tempfile::tempdir().unwrap();
+    let gate = Gate::default();
+    let state = support_fixture(&dir, &gate);
+    let token = support_preview(&state).await;
+    gate.open.notify_one();
+    let scan = Arc::clone(&state.line_scan_session).lock_owned().await;
+    let call = send(
+        &state,
+        request("POST", "/api/support/diagnose", &diagnose_body(&token)),
+    );
+    reservation_taken(&state, "support").await;
+    let newer = support_preview(&state).await;
+    assert_ne!(newer, token);
+    drop(scan);
+    refused_before_the_bus(&state, &gate, call, "support-preview-replaced").await;
+    assert_eq!(retained(&state, &token), "missing");
+    assert_eq!(retained(&state, &newer), "unfinished");
+}
+
+/// Runs the support read for `token` and calls `meanwhile` once the device was
+/// read and the tunnel closed, before the run's final check; returns the answer.
+async fn change_after_the_support_read(
+    state: &Arc<AppState>,
+    gate: &Gate,
+    token: &str,
+    meanwhile: impl FnOnce(),
+) -> (StatusCode, Value) {
+    let call = send(
+        state,
+        request("POST", "/api/support/diagnose", &diagnose_body(token)),
+    );
+    tokio::time::timeout(HANG_GUARD, gate.entered.notified())
+        .await
+        .expect("no tunnel was asked for");
+    // Holding the project keeps the final check waiting for the change.
+    let (release, holder) = super::tests::hold_project_lock(state);
+    gate.open.notify_one();
+    tokio::time::timeout(HANG_GUARD, gate.disconnected.notified())
+        .await
+        .expect("the tunnel was never closed");
+    meanwhile();
+    let _ = release.send(());
+    assert!(holder.join().unwrap(), "the project holder timed out");
+    let answer = tokio::time::timeout(HANG_GUARD, call)
+        .await
+        .expect("the support run answers")
+        .unwrap();
+    assert_eq!(gate.connects.load(Ordering::SeqCst), 1);
+    assert!(state.address_programming.try_lock().is_ok());
+    assert!(state.bus_session.try_lock().is_ok());
+    assert!(state.line_scan_session.try_lock().is_ok());
+    answer
+}
+
+/// The project changes after the device was read: the final check refuses and
+/// the live facts are not published for the outdated preview.
+#[tokio::test(flavor = "current_thread")]
+async fn a_project_change_after_the_support_read_withholds_its_publication() {
+    let dir = tempfile::tempdir().unwrap();
+    let gate = Gate::default();
+    let state = support_fixture(&dir, &gate);
+    let token = support_preview(&state).await;
+    // The test's holder thread has the project: the edit's revision moves.
+    let (status, answer) = change_after_the_support_read(&state, &gate, &token, || {
+        state.project_revision.fetch_add(1, Ordering::SeqCst);
+    })
+    .await;
+    assert_eq!(status, StatusCode::CONFLICT, "{answer}");
+    assert_eq!(
+        answer,
+        json!({ "error": "support-context-changed-preview-again" })
+    );
+    assert_eq!(
+        retained(&state, &token),
+        "unfinished",
+        "a read from before the change was published"
+    );
+}
+
+/// A new preview replaces the run's preview after the device was read: the
+/// run refuses and does not overwrite the new preview with its result.
+#[tokio::test(flavor = "current_thread")]
+async fn a_preview_replaced_after_the_support_read_is_kept() {
+    let dir = tempfile::tempdir().unwrap();
+    let gate = Gate::default();
+    let state = support_fixture(&dir, &gate);
+    let token = support_preview(&state).await;
+    // The new preview needs the project, so it is taken before the holder.
+    let call = send(
+        &state,
+        request("POST", "/api/support/diagnose", &diagnose_body(&token)),
+    );
+    tokio::time::timeout(HANG_GUARD, gate.entered.notified())
+        .await
+        .expect("no tunnel was asked for");
+    let newer = support_preview(&state).await;
+    assert_ne!(newer, token);
+    gate.open.notify_one();
+    let (status, answer) = tokio::time::timeout(HANG_GUARD, call)
+        .await
+        .expect("the support run answers")
+        .unwrap();
+    assert_eq!(status, StatusCode::CONFLICT, "{answer}");
+    assert_eq!(answer, json!({ "error": "support-preview-replaced" }));
+    assert_eq!(gate.connects.load(Ordering::SeqCst), 1);
+    assert_eq!(retained(&state, &token), "missing");
+    assert_eq!(
+        retained(&state, &newer),
+        "unfinished",
+        "the run overwrote the newer preview"
+    );
+    assert!(state.address_programming.try_lock().is_ok());
+    assert!(state.bus_session.try_lock().is_ok());
+    assert!(state.line_scan_session.try_lock().is_ok());
 }

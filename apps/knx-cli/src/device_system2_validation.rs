@@ -22,7 +22,7 @@ use knx_net::commissioning::{
     simulator::{SimulatedDevice, SimulatorConfig},
     SessionTiming,
 };
-use knx_net::{BusConnection, KnxNetIpClient, ManagementSession, TunnelAckWait};
+use knx_net::{BusConnection, KnxNetIpClient, ManagementSession, TunnelAckWait, TunnelTransport};
 use std::{
     collections::BTreeMap,
     net::SocketAddrV4,
@@ -47,9 +47,14 @@ pub fn run(args: &[String]) -> ExitCode {
 fn execute(args: &[String]) -> Result<(), String> {
     let mut values = BTreeMap::new();
     let mut simulate = false;
+    let mut transport = None;
     let mut index = 0;
     while index < args.len() {
         match args[index].as_str() {
+            "--tunnel-transport" => {
+                crate::bus_transport::take_tunnel_transport(&mut transport, args, index)?;
+                index += 1;
+            }
             "--simulate" if !simulate => simulate = true,
             flag @ ("--bundle" | "--gateway" | "--operation" | "--confirm" | "--accept-hypothesis" | "--recover" | "--confirm-recovery" | "--report" | "--download-confirm" | "--release-confirm" | "--activity-history" | "--project" | "--device-id" | "--product-db") => {
                 let value = args.get(index + 1).filter(|v| !v.starts_with("--")).ok_or_else(|| format!("{flag} needs a value"))?;
@@ -60,6 +65,22 @@ fn execute(args: &[String]) -> Result<(), String> {
         }
         index += 1;
     }
+    // Refuse no-op selection and invalid endpoints before input/history/output I/O.
+    if transport.is_some() && simulate {
+        return Err("--tunnel-transport is not valid with --simulate; no tunnel is opened".into());
+    }
+    if transport.is_some()
+        && !values.contains_key("--confirm")
+        && !values.contains_key("--confirm-recovery")
+    {
+        return Err(
+            "--tunnel-transport is not valid in the offline preview; no tunnel is opened".into(),
+        );
+    }
+    let gateway = values
+        .get("--gateway")
+        .map(|g| crate::bus_transport::parse_gateway(g))
+        .transpose()?;
     if simulate && values.contains_key("--gateway") {
         return Err(
             "--simulate cannot be combined with --gateway; simulator never opens a socket".into(),
@@ -183,11 +204,7 @@ fn execute(args: &[String]) -> Result<(), String> {
             // Also enforced by the executor; checked here before any socket or journal.
             service::refuse_superseded_defaults_profile(&bundle).map_err(|e| e.to_string())?;
         }
-        let gateway: SocketAddrV4 = values
-            .get("--gateway")
-            .ok_or("--gateway <ip:port> required for a real write")?
-            .parse()
-            .map_err(|_| "invalid --gateway address")?;
+        let gateway = gateway.ok_or("--gateway <ip:port> required for a real write")?;
         let download = values
             .get("--download-confirm")
             .ok_or("--download-confirm <phrase> required for a real write")?;
@@ -270,6 +287,7 @@ fn execute(args: &[String]) -> Result<(), String> {
         return run_hardware(
             &bundle,
             gateway,
+            transport.unwrap_or(TunnelTransport::Udp),
             history,
             operation,
             report,
@@ -466,6 +484,7 @@ fn seed_plan_memory(device: &SimulatedDevice, bundle: &PreparedBundle) -> Result
 fn run_hardware(
     bundle: &PreparedBundle,
     gateway: SocketAddrV4,
+    transport: TunnelTransport,
     history: &str,
     operation: PathBuf,
     report: Option<PathBuf>,
@@ -489,10 +508,15 @@ fn run_hardware(
     // Durable checkpoints run between frames; keep the tunnel serviced.
     let runtime = crate::tunnel_runtime::tunnel_runtime().map_err(|e| e.to_string())?;
     let executed = runtime.block_on(async {
+        // Patient ACK waiting is UDP-only; TCP keeps its existing stream policy.
+        let client = match transport {
+            TunnelTransport::Udp => KnxNetIpClient::new().with_tunnel_ack_wait(TunnelAckWait::Patient),
+            TunnelTransport::Tcp => KnxNetIpClient::new().with_tunnel_transport(transport),
+        };
         let tunnel = tokio::time::timeout(
             Duration::from_secs(10),
             crate::diagnostic_bundle_cli::tapped(
-                KnxNetIpClient::new().with_tunnel_ack_wait(TunnelAckWait::Patient),
+                client,
                 if recover {
                     knx_app::operation_recording::OperationKind::System2Recovery
                 } else {
@@ -505,6 +529,15 @@ fn run_hardware(
         .await
         .map_err(|_| "gateway timeout".to_string())?
         .map_err(|e| format!("gateway refused/unavailable: {e}"))?;
+        eprintln!(
+            "connected to {gateway} over {}, assigned individual address {}",
+            crate::bus_transport::transport_label(tunnel.transport()),
+            tunnel.assigned_address()
+        );
+        let prepared = async {
+        if tunnel.transport() != transport {
+            return Err("requested tunnel transport differs from opened transport".to_string());
+        }
         // Configured preparation already binds an observed serial. NEVER rebind
         // it at execute/recovery; the executor checks that original identity.
         let rebound = if bundle.format == 3 {
@@ -602,6 +635,18 @@ fn run_hardware(
             store.outcome(),
             store.mutation_possible()
         );
+        Ok((store, result, reported, rebound.binding))
+        }.await;
+        let skipped =
+            (tunnel.transport() == TunnelTransport::Tcp).then(|| tunnel.skipped_frame_count());
+        crate::bus_transport::report_skipped_frames(skipped, &mut std::io::stderr());
+        let (store, result, reported, binding) = match prepared {
+            Ok(prepared) => prepared,
+            Err(error) => {
+                let _ = tokio::time::timeout(Duration::from_secs(3), tunnel.disconnect()).await;
+                return Err(error);
+            }
+        };
         let released = diagnostic_finalize::release(
             || async {
                 let _ = tokio::time::timeout(Duration::from_secs(3), tunnel.disconnect()).await;
@@ -609,7 +654,7 @@ fn run_hardware(
             store,
             result,
             reported,
-            (operation.clone(), rebound.binding),
+            (operation.clone(), binding),
             |_| {},
         )
         .await;
@@ -655,7 +700,15 @@ mod patient_wiring_tests {
             count("KnxNetIpClient::new().with_tunnel_ack_wait(TunnelAckWait::Patient)"),
             1
         );
-        assert_eq!(count("KnxNetIpClient::new()"), 1, "no other client");
+        assert_eq!(
+            count("KnxNetIpClient::new()"),
+            2,
+            "one client per transport"
+        );
+        assert!(hardware.contains("TunnelTransport::Udp=>KnxNetIpClient::new().with_tunnel_ack_wait(TunnelAckWait::Patient)"));
+        assert!(hardware.contains(
+            "TunnelTransport::Tcp=>KnxNetIpClient::new().with_tunnel_transport(transport)"
+        ));
         assert_eq!(count("SessionTiming::patient_system2()"), 5);
         assert_eq!(count("SessionTiming::default()"), 0);
         let above: String = source[..source.find("fn run_hardware(").unwrap()]

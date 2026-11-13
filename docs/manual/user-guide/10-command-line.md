@@ -890,8 +890,8 @@ backup or key requirements**. A restore still requires its captured serial and
 matching live observations. This is transport selection, not permission to write
 or proof of device execution. First inspect the plan without the option:
 explicit transport selection is refused in plan-only modes, including
-`download --changes`. System-2 preparation/validation and other programming
-commands do not gain this option.
+`download --changes`. The separately dated System-2 successors below extend
+only their named consumers; other programming commands do not gain this option.
 
 Missing, repeated or invalid values refuse before effects. Explicit gateways
 must be unicast IPv4 with nonzero port, including in plans; gateway validation
@@ -917,12 +917,38 @@ explicit TCP never falls back to UDP, reconnects or replays. The option is refus
 in the offline preview (no gateway, so no tunnel), and missing, repeated or invalid
 values and an invalid gateway are refused before any project or product file is
 read. The exact confirmation phrase, source-freshness check, exclusive gateway
-lease and no-overwrite output rules are unchanged; the observation only reads and
-`system2-validation` does not gain the option. Stderr names the opened transport and
+lease and no-overwrite output rules are unchanged; the observation only reads.
+The separate validation successor below covers execution/recovery. Stderr names the opened transport and
 assigned address; positive skipped TCP frames are disclosed once, sampled before
 disconnect, also on failure. They are not lost-telegram totals. See the
 [scoped record](../../status/2026-11-13-cli-tcp-system2-observation.md); independent
 acceptance is pending, and there is no release or hardware claim.
+
+#### System-2 validation execution and recovery transport (13 November 2026 source candidate)
+
+Source builds containing this candidate accept `--tunnel-transport udp|tcp` on
+the socket-backed **execution and recovery** of `device system2-validation`.
+Append the option to the existing consent-gated command after inspecting its
+offline preview **without** the option. Omission stays UDP with the existing
+patient UDP ACK policy. Explicit TCP has no UDP ACK/retry policy, fallback,
+reconnect or automatic replay. Preview and `--simulate` refuse explicit
+transport before input/history/output I/O; invalid gateways are also refused
+early. Gateways must be unicast IPv4 with a nonzero port.
+
+All exact target/plan/hypothesis/download/release/recovery phrases, fresh
+project/device/product/source admission, immutable actual-state backup before
+any mutation (including setup), durable operation records and no-overwrite
+rules remain mandatory. Recovery uses the original retained operation, not a
+new backup or project defaults. Transport selection neither admits a synthetic
+bundle on hardware nor guarantees physical recovery. Ordinary stderr names the
+opened transport/assigned address and positive TCP skipped-frame counts sampled
+before disconnect, including on errors and with recording disabled. Zero is
+silent; absent evidence is not a measured zero. Counts are frames, not lost
+telegrams or final-wire totals.
+
+The [dedicated record](../../status/2026-11-13-cli-tcp-system2-validation.md)
+separates focused loopback evidence from independent review, integrated acceptance,
+publication and hardware interoperability. No release or hardware claim.
 
 #### Read-only device comparison (13 November 2026 source successor)
 

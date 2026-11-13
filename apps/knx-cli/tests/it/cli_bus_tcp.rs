@@ -9,6 +9,7 @@ mod restore;
 mod scan;
 mod service_control;
 mod system2_project;
+mod system2_validation;
 
 use std::{
     io::{BufRead, BufReader, Read, Write},

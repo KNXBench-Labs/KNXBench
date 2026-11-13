@@ -3,8 +3,9 @@
 ## Scope and state
 
 One bounded source change: `knx device system2-project` read-only observation
-accepts explicit `--tunnel-transport udp|tcp`. **Source candidate; independent
-review, the package gate and publication are pending.** This is not a release, not
+accepts explicit `--tunnel-transport udp|tcp`. **Software-accepted on main
+`7213ab41c`; independent Standards and Spec reviews APPROVE and all 13 selected
+package-gate stages passed.** This is not a release, not
 a hardware-interoperability result and not a recovery claim. WP-29 remains open.
 System-2 validation/execution, server/Web and other programming consumers are
 unchanged.

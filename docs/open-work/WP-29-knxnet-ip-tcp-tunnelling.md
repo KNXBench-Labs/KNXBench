@@ -145,7 +145,7 @@ three consumers' older UDP-only exclusions: System-2
 preparation/validation, other programming consumers, hardware interoperability,
 release and wider WP-29 remain separate.
 
-## CLI System-2 project observation successor (13 November 2026; source candidate)
+## CLI System-2 project observation successor (13 November 2026; software-accepted on main)
 
 `device system2-project` read-only observation accepts explicit
 `--tunnel-transport udp|tcp`; omission stays UDP. The option is refused in the
@@ -156,9 +156,11 @@ observation semantics are unchanged; no memory is admitted. The opened
 transport/assigned address and positive pre-disconnect TCP skips are disclosed
 on ordinary stderr, including on failure. The [bounded record](../status/2026-11-13-cli-tcp-system2-observation.md)
 owns the local results and separates the complete synthetic TCP observation
-from UDP handshake-only controls. Independent review, the package gate and
-publication are pending; System-2 validation/execution and other programming
-consumers do not gain the option. No release or hardware claim.
+from UDP handshake-only controls. Independent Standards and Spec reviews APPROVE;
+all 13 selected package-gate stages passed (716 Rust tests, 22 ignored; separate
+corpus 17/17; frozen inputs and checked, untouched user data), and publication
+on main `7213ab41c` was read back. System-2 validation/execution and other
+programming consumers do not gain the option. No release or hardware claim.
 
 ## Implementation boundaries
 

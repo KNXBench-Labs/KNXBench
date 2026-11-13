@@ -37,3 +37,13 @@ acknowledged. The program file's SHA-256 matches the report. Only
 `partial-parameters` is listed as verified: the complete and
 parameters-plus-group-addresses runs described in the thread have no report
 file yet. [Evidence record](../evidence/tester-report-hager-0701-2026-11-10.json).
+
+## 2026-11-13: the fourth program, complete and both
+
+Two re-run reports on issue #38 (source build `e91da61ae`, same tester device)
+add `complete` (28 steps) and `partial-both` (27 steps), 2477 octets each, for
+`M-0006_A-E052-12-3406`. The program hash matched, an offline plan gives the
+same shape, post-download identity and load states matched and the device
+worked as configured. As in every earlier run, the closing restart was not
+acknowledged. This makes it the fourth program verified for a complete
+download. [Evidence record](../evidence/tester-report-hager-0701-2026-11-12.json).

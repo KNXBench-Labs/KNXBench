@@ -1,0 +1,116 @@
+{
+  "format": 1,
+  "date": "2026-11-12",
+  "kind": "tester-download-report",
+  "issue": "https://github.com/KNXBench-Labs/KNXBench/issues/38",
+  "program": {
+    "id": "M-0006_A-E052-12-3406",
+    "name": "S8014xxx0",
+    "applicationVersion": "18",
+    "manufacturer": "0006",
+    "mask": "0701",
+    "sourceSha256": "3cd53544f5cdf1947be75a376352bcc23d8131220a5f14326c76b5ac00c0cd5b",
+    "sourceSha256Checked": "matches a locally available copy of the program file M-0006_A-E052-12-3406.xml (6156008 bytes), as for the 2026-11-10 report"
+  },
+  "reports": [
+    {
+      "report": {
+        "attachment": "https://github.com/user-attachments/files/34770029/Bericht1.json",
+        "sha256": "78bed495320a235cf003c21fd890e6f92c5a8648977cdd52c764b6c518e75ff8",
+        "kind": "knxbench-download-report",
+        "format": 1,
+        "knxbenchVersion": "0.1.0-alpha.20+ge91da61ae9c2300eff1feea34fe6d92d13215e7e"
+      },
+      "scope": "complete",
+      "plan": {
+        "steps": 28,
+        "dataOctets": 2477,
+        "groupLinks": 5
+      },
+      "warnings": [],
+      "inferences": [],
+      "outcome": {
+        "completed": true,
+        "written": "yes",
+        "restart": "unconfirmed",
+        "stoppedInStep": null
+      },
+      "independentPlanCheck": "an offline dry-run complete plan for this program yields the same 28 steps and 2477 octets (1457 + 509 + 511 across the three segments; the address table keeps its 2 octets that the device holds itself), no warnings or inferences",
+      "postDownloadCheck": {
+        "reach": "reached",
+        "identity": "match",
+        "identityExemplar": "notVerified",
+        "planLoadVerdict": "matchesPlan",
+        "loadStates": {
+          "addressTable": "loaded",
+          "associationTable": "loaded",
+          "applicationProgram": "loaded"
+        },
+        "runState": "running"
+      },
+      "testerAnswer": {
+        "deviceWorksAsConfigured": "yes (issue #38 comment of 2026-11-12)",
+        "checked": "button responds; the changed LED behaviour is visible as configured (issue #38 comment of 2026-11-12)"
+      }
+    },
+    {
+      "report": {
+        "attachment": "https://github.com/user-attachments/files/34770030/Bericht2.json",
+        "sha256": "8420a93035404e078ba61b423cbb2763325011a6232e7188dde4c50807371f64",
+        "kind": "knxbench-download-report",
+        "format": 1,
+        "knxbenchVersion": "0.1.0-alpha.20+ge91da61ae9c2300eff1feea34fe6d92d13215e7e"
+      },
+      "scope": "partial-both",
+      "plan": {
+        "steps": 27,
+        "dataOctets": 2477,
+        "groupLinks": 5
+      },
+      "warnings": [],
+      "inferences": [],
+      "outcome": {
+        "completed": true,
+        "written": "yes",
+        "restart": "unconfirmed",
+        "stoppedInStep": null
+      },
+      "independentPlanCheck": "an offline dry-run parameters-plus-group-addresses plan for this program yields the same 27 steps and 2477 octets, no warnings or inferences",
+      "postDownloadCheck": {
+        "reach": "reached",
+        "identity": "match",
+        "identityExemplar": "notVerified",
+        "planLoadVerdict": "matchesPlan",
+        "loadStates": {
+          "addressTable": "loaded",
+          "associationTable": "loaded",
+          "applicationProgram": "loaded"
+        },
+        "runState": "running"
+      },
+      "testerAnswer": {
+        "deviceWorksAsConfigured": "yes (issue #38 comment of 2026-11-12)",
+        "checked": "the group-address reassignment works; the device reacts on the new group address (issue #38 comment of 2026-11-12)"
+      }
+    }
+  ],
+  "independentPlanCheckBuild": "knx-cli built from e91da61ae, the commit named in both reports; every one of the 32 devices using this program in a private project plans identically per scope",
+  "recorded": {
+    "verified_downloads.json": [
+      "complete",
+      "partial-both"
+    ],
+    "alreadyRecorded": {
+      "partial-parameters": "docs/evidence/tester-report-hager-0701-2026-11-10.json"
+    }
+  },
+  "notRecorded": {
+    "partial-group-addresses": "not run"
+  },
+  "parameterValues": "omitted from this record; present only in the tester's attachments",
+  "boundaries": [
+    "One device and one application version; not evidence for other Hager/Berker programs or masks.",
+    "Re-runs on 2026-11-12 of scopes first run on 2026-11-10; the 2026-11-10 runs had no saved reports and are not counted.",
+    "The closing restart was not acknowledged in either run; the post-download check observed the application running and the tester confirmed device function."
+  ]
+}

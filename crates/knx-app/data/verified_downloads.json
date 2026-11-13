@@ -24,10 +24,10 @@
     },
     {
       "program_id": "M-0006_A-E052-12-3406",
-      "scopes": ["partial-parameters"],
+      "scopes": ["complete", "partial-parameters", "partial-both"],
       "device": "Hager push button (S8014xxx0, application version 18), mask 0701h, tester device",
-      "date": "2026-11-10",
-      "reference": "docs/evidence/tester-report-hager-0701-2026-11-10.json (tester report, issue #38: parameters only, 1457 octets planned, post-download identity and load states matched, device function confirmed)"
+      "date": "2026-11-12",
+      "reference": "docs/evidence/tester-report-hager-0701-2026-11-12.json (tester reports, issue #38: complete and parameters plus group addresses, 2477 octets each, 2026-11-12) and docs/evidence/tester-report-hager-0701-2026-11-10.json (parameters only, 1457 octets, 2026-11-10); post-download identity and load states matched, device function confirmed"
     }
   ]
 }

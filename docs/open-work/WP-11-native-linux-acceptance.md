@@ -1,6 +1,6 @@
 # WP-11 — Native Linux acceptance
 
-**Status:** In progress: bounded native editor, capture and real-pointer cells recorded; Properties has historical and pinned current-source six-cell pointer counterparts; separate current Navigation height and width counterparts are recorded at 80/100/150% (3 November), with an explicit software-render profile; four File-submenu viewport cells on that old source were observed on 7 November. Broader current-source parity and the wider matrix remain open. Listed in [OPEN_WORK](../OPEN_WORK.md); per-ID status of record is the [ledger](../status/LEDGER.md).
+**Status:** In progress: bounded native editor, capture and real-pointer cells recorded; Properties has historical and pinned current-source six-cell pointer counterparts; separate current Navigation height and width counterparts are recorded at 80/100/150% (3 November), with an explicit software-render profile; four File-submenu viewport cells on that old source were observed on 7 November. Broader current-source parity and the wider matrix remain open; twelve native Save As cells and restart/Open on fresh admission source `38d7ad5f5` were recorded on 13 November (not rebound to later runtime changes). Listed in [OPEN_WORK](../OPEN_WORK.md); per-ID status of record is the [ledger](../status/LEDGER.md).
 
 ## Task
 
@@ -237,6 +237,19 @@ parseable v1 capture with the one row; overwrite Cancel preserves bytes and
 mtime; Replace changes only `exportedAt`. Direct-chooser, software-render and
 shared session-bus exceptions remain. Not hardware or protocol completeness,
 other cells or whole WP-11; ledger status is unchanged.
+
+## Native Save As cells — 13 November 2026
+
+The [source-bound record](../status/2026-11-13-wp11-native-save-as.md) and
+[measurement](../evidence/wp11-native-save-as-2026-11-13.json) add twelve actual
+native chooser cells on freshly built `38d7ad5f5`: Cancel, Save, overwrite Cancel
+and Replace at 80/100/150%. Separate frozen overwrite targets make Cancel checks
+valid despite background journal writes. SQLite schema 21, project identity,
+exact fictional edits, ordinary restart/native Open and scale 150% persistence
+are verified. Source was current at original admission, not rebound to later
+CLI-runtime changes. Software-render/shared-service and incomplete screensaver
+restoration boundaries remain explicit. Other native cells and whole WP-11 stay
+open; no product change or ledger closure follows.
 
 ## Acceptance target — owner decision 8 November 2026
 

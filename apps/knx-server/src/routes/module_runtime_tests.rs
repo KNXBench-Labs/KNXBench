@@ -6,6 +6,7 @@ use axum::http::StatusCode;
 
 use super::editor_runtime_tests::{
     assert_routes_leave_the_runtime_free, assert_routes_leave_the_runtime_free_with,
+    project_with_device, request,
 };
 use crate::AppState;
 
@@ -111,8 +112,63 @@ async fn module_routes_leave_the_runtime_free() {
             r#"{"address":"1.1.7"}"#,
             StatusCode::UNPROCESSABLE_ENTITY,
         ),
+        ("GET", "/api/project/stored-bus-access", "", StatusCode::OK),
+        (
+            "POST",
+            "/api/project/stored-bus-access/reveal",
+            r#"{"recordId":"x"}"#,
+            StatusCode::NOT_FOUND,
+        ),
+        ("POST", "/api/support/preview", "{}", StatusCode::OK),
     ];
     assert_routes_leave_the_runtime_free(routes, app).await;
+}
+
+/// The support export needs the token and digest of a preview first; with
+/// them it rechecks the project under the lock before it builds the bundle.
+#[tokio::test(flavor = "current_thread")]
+async fn the_support_export_leaves_the_runtime_free() {
+    use tower::ServiceExt;
+    let state = Arc::new(AppState::default());
+    project_with_device(&state);
+    let router = app(&state);
+    let preview = router
+        .clone()
+        .oneshot(request("POST", "/api/support/preview", "{}"))
+        .await
+        .unwrap();
+    assert_eq!(preview.status(), StatusCode::OK);
+    let preview: serde_json::Value = serde_json::from_slice(
+        &axum::body::to_bytes(preview.into_body(), usize::MAX)
+            .await
+            .unwrap(),
+    )
+    .unwrap();
+    let body = serde_json::json!({
+        "token": preview["token"],
+        "digest": preview["digest"],
+        "consent": true,
+    })
+    .to_string();
+    let (release, holder) = super::tests::hold_project_lock(&state);
+    let call = tokio::spawn(async move {
+        router
+            .oneshot(request("POST", "/api/support/export", &body))
+            .await
+            .unwrap()
+            .status()
+    });
+    tokio::task::yield_now().await;
+    tokio::time::sleep(std::time::Duration::from_millis(20)).await;
+    let early = call.is_finished();
+    let _ = release.send(());
+    // A blocked runtime also finishes the call late, so check the holder first.
+    assert!(holder.join().unwrap(), "the export blocked the runtime");
+    assert!(
+        !early,
+        "the export answered without waiting for the project"
+    );
+    assert_eq!(call.await.unwrap(), StatusCode::OK);
 }
 
 /// Adoption needs a browser's comparison session cookie before it takes the

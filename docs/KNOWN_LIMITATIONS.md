@@ -1013,7 +1013,7 @@ Generic diagnostics read identity only (descriptor, PID12, PID78). CLI and, sinc
 ### 26. KNXnet/IP protocol scope
 
 **Ledger status:** Not separately tracked.
-Tunnelling/routing/discovery have bounded implementations. Plain TCP ships for monitor/group traffic since Alpha 20; later bounded scan/read consumers and the 13 November CLI service-control/download/restore source successor retain UDP defaults. The write-consumer successor has local loopback/simulator evidence only, pending independent package acceptance; no real-gateway interoperability is verified. Ordinary connectivity does not imply KNX IP Secure or extended discovery support.
+Tunnelling/routing/discovery have bounded implementations. Plain TCP ships for monitor/group traffic since Alpha 20; later bounded scan/read consumers and the 13 November CLI service-control/download/restore source successor retain UDP defaults. The write-consumer successor passed independent review and the selected package gate with loopback/simulator evidence only; no real-gateway interoperability is verified. Ordinary connectivity does not imply KNX IP Secure or extended discovery support.
 [Details and history](limitations/KL-026-knxnetip-protocol-scope.md)
 
 <a id="catalogue-kl-029"></a>

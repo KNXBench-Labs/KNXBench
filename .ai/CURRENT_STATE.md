@@ -1,5 +1,7 @@
 # Restart snapshot
 Release freeze: released by claude-release-alpha21 (2026-11-13): `v0.1.0-alpha.21` published from `616d26d2e`; `main` is open again.
+## CLI TCP three-consumer acceptance (STANDING; observed 2026-11-13 21:50)
+- Source `9209f0fe1` on base `35605e939`: service-control read/write, ordinary download, restore; independent Standards/Spec APPROVE, selected gate13/13, Rust710/0/22ignored, corpus17/17, inputs frozen/user data checked untouched. Record `docs/status/2026-11-13-cli-tcp-write-consumers.md`; retained evidence `<profile>/evidence/2026-11-13-next-three-tcp/`. No hardware/release/deploy; root-local track owns publication/retention/cleanup, wider WP-29 open.
 ## WP-37 UI links/flags + parameter-section marks (STANDING; observed 2026-11-12)
 - Owner Go: packages A (ADR-0174 UI) then B (#48) on main, no hardware/release/deploy. Source records `docs/open-work/WP-37-pending-changes-across-ui.md` and ADR-0174; private evidence `<profile>/evidence/wp37-ui-20261112/`.
 - A `6817638aa`, B `54d243ae8` pushed/read back; both independent APPROVE and selected 11-stage gates green (nested web 37; unit 5721/5731, default browser 1225/1229, devices 108/112). #48 updated and left open; main only. Other tracks and the stale/dirty root stay untouched.

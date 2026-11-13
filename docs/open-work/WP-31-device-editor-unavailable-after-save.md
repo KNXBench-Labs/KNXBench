@@ -1,7 +1,7 @@
 # WP-31 — Device editor unavailable after saving the project (#36)
 
 External report by the issue reporter, 10 November 2026; triaged 11 November 2026.
-Status: **lock fix implemented 11 November 2026; file routes off the runtime workers and download without the project lock 12 November 2026; edits and plain reads no longer wait for a save's write, device editor routes off the runtime 12 November 2026; the project router's remaining edits, the device list and the other modules' project routes off the runtime 13 November 2026; the device comparison, device-diagnostics preview, support diagnose run and serial-address routes off the runtime 13 November 2026; catalogue reads and update routes off the runtime 13 November 2026; original error message unreproduced.** Follow-up to the original #36 path, which
+Status: **lock fix implemented 11 November 2026; file routes off the runtime workers and download without the project lock 12 November 2026; edits and plain reads no longer wait for a save's write, device editor routes off the runtime 12 November 2026; the project router's remaining edits, the device list and the other modules' project routes off the runtime 13 November 2026; the device comparison, device-diagnostics preview, support diagnose run and serial-address routes off the runtime 13 November 2026; catalogue reads and update routes off the runtime 13 November 2026; the System-2 download worker's final binding wait off the runtime 13 November 2026; original error message unreproduced.** Follow-up to the original #36 path, which
 the reporter confirmed fixed by `bf85a5b69` on 10 November 2026.
 
 ## Observed
@@ -122,12 +122,13 @@ Remaining limits:
   version actions. They need the file and the journal generation, which the
   save holds. Since 13 November every one of them waits off the runtime (see
   below), so the wait no longer ties up a runtime worker.
-- The System-2 download worker still interleaves its bus work with project
-  waits on a runtime worker. Diagnostic-bundle collection and the other mixed
-  bus/project routes (device comparison, device-diagnostics preview, support
-  diagnose, serial-address write and find) are addressed below. This list
-  comes from a source search plus independent reviews, not an exhaustive
-  proof.
+- The System-2 download worker's source checks, observed-evidence admission
+  and terminal project settlement already ran off the runtime. Its remaining
+  final project-binding wait does too since 13 November (WP-31h, below).
+  Diagnostic-bundle collection and the other mixed bus/project routes (device
+  comparison, device-diagnostics preview, support diagnose, serial-address write
+  and find) are addressed below. This list comes from a source search plus
+  independent reviews, not an exhaustive proof.
 - Catalogue reads (manufacturers, items, product languages, backup list),
   update preview and apply, backup restore and deletion wait for or hold the
   product database off the runtime since 13 November (WP-31f/g, below).
@@ -397,9 +398,60 @@ The witness proves already-started cancellation behavior, not queued-job
 admission. Base replay and four isolated inline call-site reversions fail the
 intended runtime-blocking assertions; a restored control passes.
 
-Limits: catalogue operations remain serialized by the same mutex, and long
-operations can still delay other catalogue requests; moving them does not
-bound the blocking pool or request latency. The System-2 download worker and
-the original #36 cause/proxy hypothesis remain open. This is a bounded update
-route change, not an exhaustive server audit or a reproduction of the reporter's
-error; no real bus, gateway or device was used.
+Limits at that point: catalogue operations remain serialized by the same mutex,
+and long operations can still delay other catalogue requests; moving them does
+not bound the blocking pool or request latency. The System-2 worker's final
+binding wait followed in WP-31h below. The original #36 cause/proxy hypothesis
+remains open. This is a bounded update route change, not an exhaustive server
+audit or a reproduction of the reporter's error; no real bus, gateway or device
+was used.
+
+### System-2 final binding wait off the runtime (WP-31h, 13 November 2026)
+
+Only the final project-binding recheck in `device_system2::worker::download_inner`
+moved. Source checking, observed-evidence/current-source admission and terminal
+project settlement already used blocking jobs. The final acquisition of the real
+project publication mutex and the binding sample now run together in one
+read-only job through the existing `blocking` helper. The guard ends inside the
+closure, before its result returns to the async owner. Lock/join failure still
+maps to `system2Unavailable`; changed binding still maps to
+`system2PreparationStale`, with the same `binding-recheck` failure attribution.
+No lock order, reservation, source admission, durable backup, transport,
+executor, recovery or settlement policy changed.
+
+The additional await belongs to the existing retained, supervised worker, not
+the HTTP start response. Dropping that response does not cancel this owner.
+Cooperative cancel and process Stop leave it authoritative: after the pure
+binding read completes, the existing App entry checkpoints cancellation before
+another management connection or service. They are not worker aborts. An
+aborted async worker cannot resume from the await into execution even if the
+read-only blocking job finishes independently; the existing supervisor's
+unexpected-end settlement remains unchanged. This change makes no stronger
+runtime-shutdown, disconnect-on-abort or crash-recovery promise.
+
+Four tests in `device_system2/tests/caption_mounted/binding_runtime.rs` mount the
+real prepare/start/cancel/status handlers on a current-thread runtime, using
+retained synthetic sources and the existing in-process fake connector (no
+socket or physical target). A per-state, test-only phase rendezvous lets a native
+thread acquire the real project mutex specifically at the final binding check.
+The runtime must wake while that mutex is still held, without executor entry or
+mutation. Channel ordering establishes the hold/release; the bounded native
+backstop only prevents an inline regression from stranding cleanup.
+
+Normal release must finish verified with real synthetic writes and programming
+credit. A command-mediated project change under the held lock must instead end
+interrupted at the binding-stale check, without executor entry. Accepted cancel
+and process Stop must end cancelled through the existing journal producer. All
+three non-writing cases require zero further management frames, no backup or
+mutation claim, unchanged complete simulated device state and current project,
+no programming credit, released reservations/lease and joined worker ownership.
+The maintained witness is replayed in separate source copies against the base
+and exact inline reversion (identical production bytes, one campaign), and a
+separate stale-check omission; restored controls retain the same tests.
+
+Limits: this closes the identified final binding wait, not every synchronous
+operation in the worker or server, blocking-pool capacity or request latency.
+WP-31e's support-diagnose changed-context/replaced-refusal coverage remains open,
+as do the reporter's original error and proxy question. There is no real-device
+compatibility, physical recovery or hardware/firmware acceptance from these
+simulation-only tests.

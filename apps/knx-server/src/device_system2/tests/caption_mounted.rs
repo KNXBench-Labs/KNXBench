@@ -7,6 +7,8 @@ use crate::device_system2::tests::diagnostic_bundle_fallback::fixture;
 use knx_app::system2_validation_preparation::{prepare_project_hardware_source, RecoveryTrack};
 use knx_core::commissioning::pending::{ProgrammingChange, ProgrammingParts};
 
+#[path = "caption_mounted/binding_runtime.rs"]
+mod binding_runtime;
 #[path = "caption_mounted/contention.rs"]
 mod contention;
 #[path = "caption_mounted/ineligible_terminal.rs"]

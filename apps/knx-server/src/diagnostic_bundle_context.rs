@@ -25,6 +25,14 @@ impl ProjectContext {
         let _project = state.project.lock().expect("state mutex poisoned");
         Self::locked(state)
     }
+
+    /// Keep the publication lock and its coherent sample together, off the runtime.
+    pub(crate) async fn capture_off_runtime(
+        state: &crate::SharedState,
+    ) -> Result<Self, crate::errors::ApiError> {
+        let state = std::sync::Arc::clone(state);
+        crate::routes::off_runtime(move || Self::capture(&state)).await
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

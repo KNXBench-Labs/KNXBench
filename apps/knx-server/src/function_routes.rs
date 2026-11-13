@@ -167,7 +167,9 @@ fn view(state: &SharedState) -> Result<View, ApiError> {
 }
 
 async fn read(State(state): State<SharedState>) -> Result<Json<View>, ApiError> {
-    view(&state).map(Json)
+    crate::routes::off_runtime(move || view(&state))
+        .await?
+        .map(Json)
 }
 
 fn command(
@@ -242,31 +244,34 @@ async fn edit(
     State(state): State<SharedState>,
     Json(request): Json<EditRequest>,
 ) -> Result<Json<EditView>, ApiError> {
-    let binding = SnapshotBinding {
-        server_incarnation: request.server_incarnation,
-        project_incarnation: request.project_incarnation,
-        snapshot_revision: request.snapshot_revision,
-    };
-    let detail = format!("{:?}", request.action);
-    let mut created = None;
-    domain::apply_bound_command(&state, &binding, "FunctionEdit", detail, |project| {
-        command(project, request.action, &mut created)
+    crate::routes::off_runtime(move || {
+        let binding = SnapshotBinding {
+            server_incarnation: request.server_incarnation,
+            project_incarnation: request.project_incarnation,
+            snapshot_revision: request.snapshot_revision,
+        };
+        let detail = format!("{:?}", request.action);
+        let mut created = None;
+        domain::apply_bound_command(&state, &binding, "FunctionEdit", detail, |project| {
+            command(project, request.action, &mut created)
+        })
+        .map_err(|error| match error {
+            BoundCommandError::NoProject => ApiError::bad_request("No project open"),
+            BoundCommandError::Stale => ApiError::conflict(
+                "functionStale",
+                "The project changed since these Functions were read; refresh and edit again. Nothing was applied.",
+            ),
+            BoundCommandError::Refused(message) => ApiError::refused("functionRefused", message),
+            BoundCommandError::Failure(message) => ApiError::internal(format!(
+                "Function edit was not applied because it could not be persisted: {message}"
+            )),
+        })?;
+        Ok(Json(EditView {
+            created_id: created,
+            view: view(&state)?,
+        }))
     })
-    .map_err(|error| match error {
-        BoundCommandError::NoProject => ApiError::bad_request("No project open"),
-        BoundCommandError::Stale => ApiError::conflict(
-            "functionStale",
-            "The project changed since these Functions were read; refresh and edit again. Nothing was applied.",
-        ),
-        BoundCommandError::Refused(message) => ApiError::refused("functionRefused", message),
-        BoundCommandError::Failure(message) => ApiError::internal(format!(
-            "Function edit was not applied because it could not be persisted: {message}"
-        )),
-    })?;
-    Ok(Json(EditView {
-        created_id: created,
-        view: view(&state)?,
-    }))
+    .await?
 }
 
 pub fn router() -> Router<SharedState> {

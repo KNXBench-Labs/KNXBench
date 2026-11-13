@@ -163,10 +163,17 @@ pub(crate) struct DeviceCatalog {
     problem: Option<&'static str>,
 }
 
+/// `GET /api/devices`: waits for the project off the runtime (#36).
 pub(crate) async fn get(
     State(state): State<SharedState>,
     Query(query): Query<LanguageQuery>,
 ) -> Result<Json<DeviceCatalog>, ApiError> {
+    crate::routes::off_runtime(move || list(&state, &query))
+        .await?
+        .map(Json)
+}
+
+fn list(state: &crate::AppState, query: &LanguageQuery) -> Result<DeviceCatalog, ApiError> {
     // Copy only the identity/reference inputs while holding the project lock.
     // Product lookup never evaluates application parameters or touches the bus.
     let (revision, mut inputs) = {
@@ -243,11 +250,11 @@ pub(crate) async fn get(
             .map_err(crate::catalogue_owner::owner_error)??,
         None => compute(None, inputs)?,
     };
-    Ok(Json(DeviceCatalog {
+    Ok(DeviceCatalog {
         schema_version: 1,
         server_incarnation: state.server_incarnation.clone(),
         snapshot_revision: revision,
         devices,
         problem,
-    }))
+    })
 }

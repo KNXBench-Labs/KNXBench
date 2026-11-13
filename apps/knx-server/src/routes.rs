@@ -1583,9 +1583,12 @@ async fn journal_status(
 /// Runs a failed journal write again; answers the state right after.
 async fn journal_retry(
     State(state): State<SharedState>,
-) -> Json<crate::journal_writer::JournalStatus> {
-    crate::domain::retry_journal(&state);
-    Json(state.journal().status())
+) -> Result<Json<crate::journal_writer::JournalStatus>, ApiError> {
+    off_runtime(move || {
+        crate::domain::retry_journal(&state);
+        Json(state.journal().status())
+    })
+    .await
 }
 
 async fn save_project_as(
@@ -1841,18 +1844,33 @@ async fn publish_group_address_style(
     Json(publication.tree)
 }
 
+/// The mutation waits for the project off the runtime; the publication to a
+/// bus session stays on it, under the same transaction. Both run in their own
+/// task, so a client that goes away cannot release the transaction while the
+/// mutation still runs or skip the publication of a mutation that ran.
 async fn mutate_and_publish_group_address_context(
     state: &SharedState,
     refresh_when_style_is_unchanged: bool,
-    mutation: impl FnOnce(&crate::AppState) -> Result<knx_projection::ProjectTree, String>,
+    mutation: impl FnOnce(&crate::AppState) -> Result<knx_projection::ProjectTree, String>
+        + Send
+        + 'static,
 ) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
-    let _transaction = state.group_address_style_publication.lock().await;
-    let publication = prepare_group_address_context_publication(
-        state,
-        refresh_when_style_is_unchanged,
-        mutation,
-    )?;
-    Ok(publish_group_address_style(state, publication).await)
+    let state = std::sync::Arc::clone(state);
+    tokio::spawn(async move {
+        let _transaction = state.group_address_style_publication.lock().await;
+        let worker = std::sync::Arc::clone(&state);
+        let publication = off_runtime(move || {
+            prepare_group_address_context_publication(
+                &worker,
+                refresh_when_style_is_unchanged,
+                mutation,
+            )
+        })
+        .await??;
+        Ok(publish_group_address_style(&state, publication).await)
+    })
+    .await
+    .map_err(|e| ApiError::internal(format!("the task did not finish: {e}")))?
 }
 
 /// Restyles an already-open project. `400`, not `409`: unlike
@@ -1866,7 +1884,7 @@ async fn set_group_address_style(
     Json(body): Json<SetGroupAddressStyleBody>,
 ) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
     let style = parse_group_address_style(&body.group_address_style)?;
-    mutate_and_publish_group_address_context(&state, true, |state| {
+    mutate_and_publish_group_address_context(&state, true, move |state| {
         domain::set_group_address_style_impl(state, style)
     })
     .await
@@ -1888,46 +1906,54 @@ async fn create_group_address(
     State(state): State<SharedState>,
     Json(body): Json<CreateGroupAddressBody>,
 ) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
-    // Classification uses the exact core parser and the project's address
-    // style; domain remains authoritative for applying the command.
-    if let Some(project) = state.project.lock().expect("state mutex poisoned").as_ref() {
-        let style = project.info.group_address_style;
-        let syntax = match style {
-            knx_core::GroupAddressStyle::ThreeLevel => "main/middle/sub",
-            knx_core::GroupAddressStyle::TwoLevel => "main/sub",
-            knx_core::GroupAddressStyle::Free => "0..65535",
-        };
-        let example = match style {
-            knx_core::GroupAddressStyle::ThreeLevel => "1/2/3",
-            knx_core::GroupAddressStyle::TwoLevel => "1/42",
-            knx_core::GroupAddressStyle::Free => "1234",
-        };
-        knx_core::GroupAddress::parse(&body.address, style).map_err(|error| {
-            ApiError::validation("group_address", error.to_string(), syntax, example)
-        })?;
-    }
-    domain::create_group_address_in_impl(
-        &state,
-        body.name,
-        body.address,
-        body.range_id,
-        body.installation_id,
-    )
-    .map(Json)
-    .map_err(ApiError::bad_request)
+    off_runtime(move || {
+        // Classification uses the exact core parser and the project's address
+        // style; domain remains authoritative for applying the command.
+        if let Some(project) = state.project.lock().expect("state mutex poisoned").as_ref() {
+            let style = project.info.group_address_style;
+            let syntax = match style {
+                knx_core::GroupAddressStyle::ThreeLevel => "main/middle/sub",
+                knx_core::GroupAddressStyle::TwoLevel => "main/sub",
+                knx_core::GroupAddressStyle::Free => "0..65535",
+            };
+            let example = match style {
+                knx_core::GroupAddressStyle::ThreeLevel => "1/2/3",
+                knx_core::GroupAddressStyle::TwoLevel => "1/42",
+                knx_core::GroupAddressStyle::Free => "1234",
+            };
+            knx_core::GroupAddress::parse(&body.address, style).map_err(|error| {
+                ApiError::validation("group_address", error.to_string(), syntax, example)
+            })?;
+        }
+        domain::create_group_address_in_impl(
+            &state,
+            body.name,
+            body.address,
+            body.range_id,
+            body.installation_id,
+        )
+        .map(Json)
+        .map_err(ApiError::bad_request)
+    })
+    .await?
 }
 
 async fn delete_group_address(
     State(state): State<SharedState>,
     AxumPath(id): AxumPath<u32>,
 ) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
-    note_guard(
-        &state,
-        &knx_app::note_disposition::Deletion::GroupAddresses(vec![knx_core::GroupAddressId(id)]),
-    )?;
-    domain::delete_group_address_impl(&state, id)
-        .map(Json)
-        .map_err(ApiError::bad_request)
+    off_runtime(move || {
+        note_guard(
+            &state,
+            &knx_app::note_disposition::Deletion::GroupAddresses(vec![knx_core::GroupAddressId(
+                id,
+            )]),
+        )?;
+        domain::delete_group_address_impl(&state, id)
+            .map(Json)
+            .map_err(ApiError::bad_request)
+    })
+    .await?
 }
 
 /// `CsvProblem` (`knx-csv`) does not derive `Serialize` — it knows nothing
@@ -2108,20 +2134,23 @@ async fn preview_documentation(
     State(state): State<SharedState>,
     Json(body): Json<DocumentationOptionsBody>,
 ) -> Result<Json<DocumentationPreviewReportDto>, ApiError> {
-    let (language, sections) =
-        documentation_options(body.language.as_deref(), body.sections.as_deref())?;
-    domain::preview_documentation_impl(&state, language, sections)
-        .map(|report| {
-            Json(DocumentationPreviewReportDto {
-                warnings: report
-                    .warnings
-                    .iter()
-                    .map(DocumentationWarningDto::from)
-                    .collect(),
-                html: report.html,
+    off_runtime(move || {
+        let (language, sections) =
+            documentation_options(body.language.as_deref(), body.sections.as_deref())?;
+        domain::preview_documentation_impl(&state, language, sections)
+            .map(|report| {
+                Json(DocumentationPreviewReportDto {
+                    warnings: report
+                        .warnings
+                        .iter()
+                        .map(DocumentationWarningDto::from)
+                        .collect(),
+                    html: report.html,
+                })
             })
-        })
-        .map_err(ApiError::bad_request)
+            .map_err(ApiError::bad_request)
+    })
+    .await?
 }
 
 // ---------------------------------------------------------------------
@@ -3228,35 +3257,38 @@ async fn rename_installation(
     AxumPath(id): AxumPath<u8>,
     Json(body): Json<RenameInstallationBody>,
 ) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
-    match (
-        body.expected_name,
-        body.server_incarnation,
-        body.project_incarnation,
-        body.snapshot_revision,
-    ) {
-        (None, None, None, None) => domain::rename_installation_impl(&state, id, body.name)
+    off_runtime(move || {
+        match (
+            body.expected_name,
+            body.server_incarnation,
+            body.project_incarnation,
+            body.snapshot_revision,
+        ) {
+            (None, None, None, None) => domain::rename_installation_impl(&state, id, body.name)
+                .map(Json)
+                .map_err(ApiError::bad_request),
+            (
+                Some(expected_name),
+                Some(server_incarnation),
+                Some(project_incarnation),
+                Some(snapshot_revision),
+            ) => domain::rename_installation_bound_impl(
+                &state,
+                id,
+                body.name,
+                domain::RenameExpectation {
+                    server_incarnation,
+                    snapshot_revision,
+                    expected_name,
+                    project_incarnation,
+                },
+            )
             .map(Json)
-            .map_err(ApiError::bad_request),
-        (
-            Some(expected_name),
-            Some(server_incarnation),
-            Some(project_incarnation),
-            Some(snapshot_revision),
-        ) => domain::rename_installation_bound_impl(
-            &state,
-            id,
-            body.name,
-            domain::RenameExpectation {
-                server_incarnation,
-                snapshot_revision,
-                expected_name,
-                project_incarnation,
-            },
-        )
-        .map(Json)
-        .map_err(crate::rename_routes::map_error),
-        _ => Err(incomplete_binding()),
-    }
+            .map_err(crate::rename_routes::map_error),
+            _ => Err(incomplete_binding()),
+        }
+    })
+    .await?
 }
 
 #[derive(Deserialize)]
@@ -3272,22 +3304,28 @@ async fn create_area(
     State(state): State<SharedState>,
     Json(body): Json<CreateAreaBody>,
 ) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
-    domain::create_area_in_impl(&state, body.name, body.address, body.installation_id)
-        .map(Json)
-        .map_err(ApiError::bad_request)
+    off_runtime(move || {
+        domain::create_area_in_impl(&state, body.name, body.address, body.installation_id)
+            .map(Json)
+            .map_err(ApiError::bad_request)
+    })
+    .await?
 }
 
 async fn delete_area(
     State(state): State<SharedState>,
     AxumPath(id): AxumPath<u32>,
 ) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
-    note_guard(
-        &state,
-        &knx_app::note_disposition::Deletion::Area(knx_core::AreaId(id)),
-    )?;
-    domain::delete_area_impl(&state, id)
-        .map(Json)
-        .map_err(ApiError::bad_request)
+    off_runtime(move || {
+        note_guard(
+            &state,
+            &knx_app::note_disposition::Deletion::Area(knx_core::AreaId(id)),
+        )?;
+        domain::delete_area_impl(&state, id)
+            .map(Json)
+            .map_err(ApiError::bad_request)
+    })
+    .await?
 }
 
 #[derive(Deserialize)]
@@ -3300,9 +3338,12 @@ async fn rename_area(
     AxumPath(id): AxumPath<u32>,
     Json(body): Json<RenameTopologyBody>,
 ) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
-    domain::rename_area_impl(&state, id, body.name)
-        .map(Json)
-        .map_err(ApiError::bad_request)
+    off_runtime(move || {
+        domain::rename_area_impl(&state, id, body.name)
+            .map(Json)
+            .map_err(ApiError::bad_request)
+    })
+    .await?
 }
 
 #[derive(Deserialize)]
@@ -3318,28 +3359,34 @@ async fn create_line(
     State(state): State<SharedState>,
     Json(body): Json<CreateLineBody>,
 ) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
-    domain::create_line_impl(
-        &state,
-        body.area_id,
-        body.name,
-        body.address,
-        body.medium_ref,
-    )
-    .map(Json)
-    .map_err(ApiError::bad_request)
+    off_runtime(move || {
+        domain::create_line_impl(
+            &state,
+            body.area_id,
+            body.name,
+            body.address,
+            body.medium_ref,
+        )
+        .map(Json)
+        .map_err(ApiError::bad_request)
+    })
+    .await?
 }
 
 async fn delete_line(
     State(state): State<SharedState>,
     AxumPath(id): AxumPath<u32>,
 ) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
-    note_guard(
-        &state,
-        &knx_app::note_disposition::Deletion::Line(knx_core::LineId(id)),
-    )?;
-    domain::delete_line_impl(&state, id)
-        .map(Json)
-        .map_err(ApiError::bad_request)
+    off_runtime(move || {
+        note_guard(
+            &state,
+            &knx_app::note_disposition::Deletion::Line(knx_core::LineId(id)),
+        )?;
+        domain::delete_line_impl(&state, id)
+            .map(Json)
+            .map_err(ApiError::bad_request)
+    })
+    .await?
 }
 
 async fn rename_line(
@@ -3347,9 +3394,12 @@ async fn rename_line(
     AxumPath(id): AxumPath<u32>,
     Json(body): Json<RenameTopologyBody>,
 ) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
-    domain::rename_line_impl(&state, id, body.name)
-        .map(Json)
-        .map_err(ApiError::bad_request)
+    off_runtime(move || {
+        domain::rename_line_impl(&state, id, body.name)
+            .map(Json)
+            .map_err(ApiError::bad_request)
+    })
+    .await?
 }
 
 #[derive(Deserialize)]
@@ -3368,15 +3418,18 @@ async fn repair_device_placement(
     State(state): State<SharedState>,
     body: Result<Json<RepairDevicePlacementBody>, axum::extract::rejection::JsonRejection>,
 ) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
-    let Json(body) = body.map_err(|error| ApiError::bad_request(error.to_string()))?;
-    domain::repair_device_placement_impl(
-        &state,
-        body.device_id,
-        body.keep_line_id,
-        body.keep_unassigned_installation_id,
-    )
-    .map(Json)
-    .map_err(ApiError::bad_request)
+    off_runtime(move || {
+        let Json(body) = body.map_err(|error| ApiError::bad_request(error.to_string()))?;
+        domain::repair_device_placement_impl(
+            &state,
+            body.device_id,
+            body.keep_line_id,
+            body.keep_unassigned_installation_id,
+        )
+        .map(Json)
+        .map_err(ApiError::bad_request)
+    })
+    .await?
 }
 
 #[derive(Deserialize)]
@@ -3392,10 +3445,13 @@ async fn repair_line_owner(
     State(state): State<SharedState>,
     body: Result<Json<RepairLineOwnerBody>, axum::extract::rejection::JsonRejection>,
 ) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
-    let Json(body) = body.map_err(|error| ApiError::bad_request(error.to_string()))?;
-    domain::repair_line_owner_impl(&state, body.line_id, body.keep_area_id)
-        .map(Json)
-        .map_err(ApiError::bad_request)
+    off_runtime(move || {
+        let Json(body) = body.map_err(|error| ApiError::bad_request(error.to_string()))?;
+        domain::repair_line_owner_impl(&state, body.line_id, body.keep_area_id)
+            .map(Json)
+            .map_err(ApiError::bad_request)
+    })
+    .await?
 }
 
 #[derive(Deserialize)]
@@ -3409,10 +3465,13 @@ async fn move_line_to_area(
     State(state): State<SharedState>,
     body: Result<Json<MoveLineToAreaBody>, axum::extract::rejection::JsonRejection>,
 ) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
-    let Json(body) = body.map_err(|error| ApiError::bad_request(error.to_string()))?;
-    domain::move_line_to_area_impl(&state, body.id, body.area_id)
-        .map(Json)
-        .map_err(ApiError::bad_request)
+    off_runtime(move || {
+        let Json(body) = body.map_err(|error| ApiError::bad_request(error.to_string()))?;
+        domain::move_line_to_area_impl(&state, body.id, body.area_id)
+            .map(Json)
+            .map_err(ApiError::bad_request)
+    })
+    .await?
 }
 
 #[derive(Deserialize)]
@@ -3426,9 +3485,12 @@ async fn move_device_to_line(
     State(state): State<SharedState>,
     Json(body): Json<MoveDeviceBody>,
 ) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
-    domain::move_device_to_line_impl(&state, body.device_id, body.line_id)
-        .map(Json)
-        .map_err(ApiError::bad_request)
+    off_runtime(move || {
+        domain::move_device_to_line_impl(&state, body.device_id, body.line_id)
+            .map(Json)
+            .map_err(ApiError::bad_request)
+    })
+    .await?
 }
 
 #[derive(Deserialize)]
@@ -3448,29 +3510,35 @@ async fn create_group_range(
     State(state): State<SharedState>,
     Json(body): Json<CreateGroupRangeBody>,
 ) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
-    domain::create_group_range_in_impl(
-        &state,
-        body.name,
-        body.start,
-        body.end,
-        body.parent_id,
-        body.installation_id,
-    )
-    .map(Json)
-    .map_err(ApiError::bad_request)
+    off_runtime(move || {
+        domain::create_group_range_in_impl(
+            &state,
+            body.name,
+            body.start,
+            body.end,
+            body.parent_id,
+            body.installation_id,
+        )
+        .map(Json)
+        .map_err(ApiError::bad_request)
+    })
+    .await?
 }
 
 async fn delete_group_range(
     State(state): State<SharedState>,
     AxumPath(id): AxumPath<u32>,
 ) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
-    note_guard(
-        &state,
-        &knx_app::note_disposition::Deletion::GroupRange(knx_core::GroupRangeId(id)),
-    )?;
-    domain::delete_group_range_impl(&state, id)
-        .map(Json)
-        .map_err(ApiError::bad_request)
+    off_runtime(move || {
+        note_guard(
+            &state,
+            &knx_app::note_disposition::Deletion::GroupRange(knx_core::GroupRangeId(id)),
+        )?;
+        domain::delete_group_range_impl(&state, id)
+            .map(Json)
+            .map_err(ApiError::bad_request)
+    })
+    .await?
 }
 
 #[derive(Deserialize)]
@@ -3483,9 +3551,12 @@ async fn rename_group_range(
     AxumPath(id): AxumPath<u32>,
     Json(body): Json<RenameGroupRangeBody>,
 ) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
-    domain::rename_group_range_impl(&state, id, body.name)
-        .map(Json)
-        .map_err(ApiError::bad_request)
+    off_runtime(move || {
+        domain::rename_group_range_impl(&state, id, body.name)
+            .map(Json)
+            .map_err(ApiError::bad_request)
+    })
+    .await?
 }
 
 #[derive(Deserialize)]
@@ -3500,10 +3571,13 @@ async fn move_group_range(
     State(state): State<SharedState>,
     body: Result<Json<MoveGroupRangeBody>, axum::extract::rejection::JsonRejection>,
 ) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
-    let Json(body) = body.map_err(|error| ApiError::bad_request(error.to_string()))?;
-    domain::move_group_range_impl(&state, body.id, body.parent_id)
-        .map(Json)
-        .map_err(ApiError::bad_request)
+    off_runtime(move || {
+        let Json(body) = body.map_err(|error| ApiError::bad_request(error.to_string()))?;
+        domain::move_group_range_impl(&state, body.id, body.parent_id)
+            .map(Json)
+            .map_err(ApiError::bad_request)
+    })
+    .await?
 }
 
 #[derive(Deserialize)]
@@ -3522,28 +3596,34 @@ async fn create_building_part(
     State(state): State<SharedState>,
     Json(body): Json<CreateBuildingPartBody>,
 ) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
-    domain::create_building_part_in_impl(
-        &state,
-        body.name,
-        body.kind,
-        body.parent_id,
-        body.installation_id,
-    )
-    .map(Json)
-    .map_err(ApiError::bad_request)
+    off_runtime(move || {
+        domain::create_building_part_in_impl(
+            &state,
+            body.name,
+            body.kind,
+            body.parent_id,
+            body.installation_id,
+        )
+        .map(Json)
+        .map_err(ApiError::bad_request)
+    })
+    .await?
 }
 
 async fn delete_building_part(
     State(state): State<SharedState>,
     AxumPath(id): AxumPath<u32>,
 ) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
-    note_guard(
-        &state,
-        &knx_app::note_disposition::Deletion::BuildingPart(knx_core::BuildingPartId(id)),
-    )?;
-    domain::delete_building_part_impl(&state, id)
-        .map(Json)
-        .map_err(ApiError::bad_request)
+    off_runtime(move || {
+        note_guard(
+            &state,
+            &knx_app::note_disposition::Deletion::BuildingPart(knx_core::BuildingPartId(id)),
+        )?;
+        domain::delete_building_part_impl(&state, id)
+            .map(Json)
+            .map_err(ApiError::bad_request)
+    })
+    .await?
 }
 
 #[derive(Deserialize)]
@@ -3556,9 +3636,12 @@ async fn rename_building_part(
     AxumPath(id): AxumPath<u32>,
     Json(body): Json<RenameBuildingPartBody>,
 ) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
-    domain::rename_building_part_impl(&state, id, body.name)
-        .map(Json)
-        .map_err(ApiError::bad_request)
+    off_runtime(move || {
+        domain::rename_building_part_impl(&state, id, body.name)
+            .map(Json)
+            .map_err(ApiError::bad_request)
+    })
+    .await?
 }
 
 /// A missing destination must not silently mean "make root". Explicit JSON
@@ -3581,10 +3664,13 @@ async fn move_building_part(
     State(state): State<SharedState>,
     body: Result<Json<MoveBuildingPartBody>, axum::extract::rejection::JsonRejection>,
 ) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
-    let Json(body) = body.map_err(|error| ApiError::bad_request(error.to_string()))?;
-    domain::move_building_part_impl(&state, body.id, body.parent_id)
-        .map(Json)
-        .map_err(ApiError::bad_request)
+    off_runtime(move || {
+        let Json(body) = body.map_err(|error| ApiError::bad_request(error.to_string()))?;
+        domain::move_building_part_impl(&state, body.id, body.parent_id)
+            .map(Json)
+            .map_err(ApiError::bad_request)
+    })
+    .await?
 }
 
 #[derive(Deserialize)]
@@ -3598,9 +3684,12 @@ async fn move_device_to_building_part(
     State(state): State<SharedState>,
     Json(body): Json<MoveDeviceToBuildingPartBody>,
 ) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
-    domain::move_device_to_building_part_impl(&state, body.device_id, body.part_id)
-        .map(Json)
-        .map_err(ApiError::bad_request)
+    off_runtime(move || {
+        domain::move_device_to_building_part_impl(&state, body.device_id, body.part_id)
+            .map(Json)
+            .map_err(ApiError::bad_request)
+    })
+    .await?
 }
 
 #[derive(Deserialize)]
@@ -3615,18 +3704,24 @@ async fn link_com_object(
     State(state): State<SharedState>,
     Json(body): Json<GroupLinkBody>,
 ) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
-    domain::link_com_object_impl(&state, body.com_object_id, body.ga_id, body.direction)
-        .map(Json)
-        .map_err(ApiError::bad_request)
+    off_runtime(move || {
+        domain::link_com_object_impl(&state, body.com_object_id, body.ga_id, body.direction)
+            .map(Json)
+            .map_err(ApiError::bad_request)
+    })
+    .await?
 }
 
 async fn unlink_com_object(
     State(state): State<SharedState>,
     Json(body): Json<GroupLinkBody>,
 ) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
-    domain::unlink_com_object_impl(&state, body.com_object_id, body.ga_id, body.direction)
-        .map(Json)
-        .map_err(ApiError::bad_request)
+    off_runtime(move || {
+        domain::unlink_com_object_impl(&state, body.com_object_id, body.ga_id, body.direction)
+            .map(Json)
+            .map_err(ApiError::bad_request)
+    })
+    .await?
 }
 
 #[derive(serde::Serialize)]
@@ -3874,35 +3969,38 @@ async fn preview_devices(
     State(state): State<SharedState>,
     Json(body): Json<PreviewDevicesBody>,
 ) -> Result<Json<PreviewDevicesResponseDto>, ApiError> {
-    let preview = domain::preview_catalog_devices_impl(
-        &state,
-        domain::CatalogCreateRequest {
-            line_id: body.line_id,
-            catalog_item_id: body.catalog_item_id,
-            name: body.name,
-            quantity: body.quantity,
-            request_id: None,
-            allocate_addresses: body.allocate_addresses,
-            unique_names: body.unique_names,
-            installation_id: body.installation_id,
-            building_part_id: body.building_part_id,
-            expected: None,
-        },
-    )
-    .map_err(catalog_error)?;
-    Ok(Json(PreviewDevicesResponseDto {
-        items: preview
-            .items
-            .into_iter()
-            .map(|item| PreviewDeviceDto {
-                index: item.index,
-                name: item.name,
-                address: item.address.map(|a| a.to_string()),
-            })
-            .collect(),
-        diagnostics: preview.diagnostics.into_iter().map(Into::into).collect(),
-        installation_id: preview.installation_id,
-    }))
+    off_runtime(move || {
+        let preview = domain::preview_catalog_devices_impl(
+            &state,
+            domain::CatalogCreateRequest {
+                line_id: body.line_id,
+                catalog_item_id: body.catalog_item_id,
+                name: body.name,
+                quantity: body.quantity,
+                request_id: None,
+                allocate_addresses: body.allocate_addresses,
+                unique_names: body.unique_names,
+                installation_id: body.installation_id,
+                building_part_id: body.building_part_id,
+                expected: None,
+            },
+        )
+        .map_err(catalog_error)?;
+        Ok(Json(PreviewDevicesResponseDto {
+            items: preview
+                .items
+                .into_iter()
+                .map(|item| PreviewDeviceDto {
+                    index: item.index,
+                    name: item.name,
+                    address: item.address.map(|a| a.to_string()),
+                })
+                .collect(),
+            diagnostics: preview.diagnostics.into_iter().map(Into::into).collect(),
+            installation_id: preview.installation_id,
+        }))
+    })
+    .await?
 }
 
 fn default_catalog_quantity() -> u32 {
@@ -4023,10 +4121,13 @@ async fn create_device(
     State(state): State<SharedState>,
     Json(body): Json<CreateDeviceBody>,
 ) -> Result<Json<CreateDeviceResponseDto>, ApiError> {
-    domain::create_catalog_devices_impl(&state, body.into_request()?)
-        .map(CreateDeviceResponseDto::from)
-        .map(Json)
-        .map_err(catalog_error)
+    off_runtime(move || {
+        domain::create_catalog_devices_impl(&state, body.into_request()?)
+            .map(CreateDeviceResponseDto::from)
+            .map(Json)
+            .map_err(catalog_error)
+    })
+    .await?
 }
 
 /// ADR-0138: a delete that would strand project notes answers the
@@ -4045,13 +4146,16 @@ async fn delete_device(
     State(state): State<SharedState>,
     AxumPath(id): AxumPath<u32>,
 ) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
-    note_guard(
-        &state,
-        &knx_app::note_disposition::Deletion::Devices(vec![knx_core::DeviceId(id)]),
-    )?;
-    domain::delete_device_impl(&state, id)
-        .map(Json)
-        .map_err(ApiError::bad_request)
+    off_runtime(move || {
+        note_guard(
+            &state,
+            &knx_app::note_disposition::Deletion::Devices(vec![knx_core::DeviceId(id)]),
+        )?;
+        domain::delete_device_impl(&state, id)
+            .map(Json)
+            .map_err(ApiError::bad_request)
+    })
+    .await?
 }
 
 #[derive(Deserialize)]
@@ -4063,34 +4167,40 @@ async fn batch_delete_devices(
     State(state): State<SharedState>,
     Json(body): Json<BatchIdsBody>,
 ) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
-    note_guard(
-        &state,
-        &knx_app::note_disposition::Deletion::Devices(
-            body.ids.iter().copied().map(knx_core::DeviceId).collect(),
-        ),
-    )?;
-    domain::batch_delete_devices_impl(&state, body.ids)
-        .map(Json)
-        .map_err(ApiError::bad_request)
+    off_runtime(move || {
+        note_guard(
+            &state,
+            &knx_app::note_disposition::Deletion::Devices(
+                body.ids.iter().copied().map(knx_core::DeviceId).collect(),
+            ),
+        )?;
+        domain::batch_delete_devices_impl(&state, body.ids)
+            .map(Json)
+            .map_err(ApiError::bad_request)
+    })
+    .await?
 }
 
 async fn batch_delete_group_addresses(
     State(state): State<SharedState>,
     Json(body): Json<BatchIdsBody>,
 ) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
-    note_guard(
-        &state,
-        &knx_app::note_disposition::Deletion::GroupAddresses(
-            body.ids
-                .iter()
-                .copied()
-                .map(knx_core::GroupAddressId)
-                .collect(),
-        ),
-    )?;
-    domain::batch_delete_group_addresses_impl(&state, body.ids)
-        .map(Json)
-        .map_err(ApiError::bad_request)
+    off_runtime(move || {
+        note_guard(
+            &state,
+            &knx_app::note_disposition::Deletion::GroupAddresses(
+                body.ids
+                    .iter()
+                    .copied()
+                    .map(knx_core::GroupAddressId)
+                    .collect(),
+            ),
+        )?;
+        domain::batch_delete_group_addresses_impl(&state, body.ids)
+            .map(Json)
+            .map_err(ApiError::bad_request)
+    })
+    .await?
 }
 
 #[derive(Deserialize)]
@@ -4104,9 +4214,12 @@ async fn batch_move_devices_to_line(
     State(state): State<SharedState>,
     Json(body): Json<BatchMoveDevicesToLineBody>,
 ) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
-    domain::batch_move_devices_to_line_impl(&state, body.device_ids, body.line_id)
-        .map(Json)
-        .map_err(ApiError::bad_request)
+    off_runtime(move || {
+        domain::batch_move_devices_to_line_impl(&state, body.device_ids, body.line_id)
+            .map(Json)
+            .map_err(ApiError::bad_request)
+    })
+    .await?
 }
 
 #[derive(Deserialize)]
@@ -4120,9 +4233,16 @@ async fn batch_move_devices_to_building_part(
     State(state): State<SharedState>,
     Json(body): Json<BatchMoveDevicesToBuildingPartBody>,
 ) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
-    domain::batch_move_devices_to_building_part_impl(&state, body.device_ids, body.building_part_id)
+    off_runtime(move || {
+        domain::batch_move_devices_to_building_part_impl(
+            &state,
+            body.device_ids,
+            body.building_part_id,
+        )
         .map(Json)
         .map_err(ApiError::bad_request)
+    })
+    .await?
 }
 
 async fn undo(
@@ -4152,6 +4272,9 @@ async fn log(State(state): State<SharedState>) -> Json<Vec<crate::session_log::L
 
 #[cfg(test)]
 mod editor_runtime_tests;
+
+#[cfg(test)]
+mod edit_runtime_tests;
 
 #[cfg(test)]
 mod tests {

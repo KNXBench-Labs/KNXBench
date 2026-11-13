@@ -1,7 +1,7 @@
 # Restart snapshot
-Release freeze: Alpha 21 owned by release-alpha21; cutoff `938e895c5`, branch `release/alpha21-20261113`. `main` stays release-frozen for code until the tag is published or this owner explicitly releases the freeze.
-## Alpha 21 preparation (ACTIVE; owner release-alpha21; observed 2026-11-13 00:06)
-- Go covers freeze/version/notes, one full integrated gate, existing-corpus checks, upgrade and packaging dry runs only. No publication/tag/upload/image push or historical private-corpus restoration approval. Evidence `<profile>/release-evidence/alpha21-20261113/`; next: candidate then source-bound acceptance. Other tracks/root edits preserved.
+Release freeze: released by claude-release-alpha21 (2026-11-13): `v0.1.0-alpha.21` published from `616d26d2e`; `main` is open again.
+## Alpha 21 release (PUBLISHED, closing; owner claude-release-alpha21; observed 2026-11-13)
+- Tag/GitHub pre-release/Docker workflows started from `616d26d2e`; main fast-forwarded to it. Pinned legacy-name lane green and 28-file Alpha 20 vs 21 ingest comparison 28/28 identical (matrix not run, disclosed). Next: external verification, separate docs pass, cleanup. Evidence `<profile>/release-evidence/alpha21-20261113/`. Other tracks preserved.
 ## WP-37 UI links/flags + parameter-section marks (STANDING; observed 2026-11-12)
 - Owner Go: packages A (ADR-0174 UI) then B (#48) on main, no hardware/release/deploy. Source records `docs/open-work/WP-37-pending-changes-across-ui.md` and ADR-0174; private evidence `<profile>/evidence/wp37-ui-20261112/`.
 - A `6817638aa`, B `54d243ae8` pushed/read back; both independent APPROVE and selected 11-stage gates green (nested web 37; unit 5721/5731, default browser 1225/1229, devices 108/112). #48 updated and left open; main only. Other tracks and the stale/dirty root stay untouched.

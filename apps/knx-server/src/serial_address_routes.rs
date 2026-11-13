@@ -46,6 +46,17 @@ fn parse_serial(text: &str) -> Result<SerialNumber, ApiError> {
         .map_err(|e| ApiError::bad_request(format!("serialNumber {text:?}: {e}")))
 }
 
+/// [`resolve`] on a blocking thread: the project wait leaves the runtime (#36).
+async fn resolve_off_runtime(
+    state: &SharedState,
+    serial_number: Option<String>,
+    device: Option<String>,
+) -> Result<SerialNumber, ApiError> {
+    let state = std::sync::Arc::clone(state);
+    crate::routes::off_runtime(move || resolve(&state, serial_number.as_deref(), device.as_deref()))
+        .await?
+}
+
 /// The serial number from the request, or from the open project.
 fn resolve(
     state: &SharedState,
@@ -124,11 +135,7 @@ async fn write(
         &body.confirmation,
     )
     .map_err(|e| ApiError::bad_request(format!("not written: {e}")))?;
-    let serial = resolve(
-        &state,
-        body.serial_number.as_deref(),
-        body.device.as_deref(),
-    )?;
+    let serial = resolve_off_runtime(&state, body.serial_number, body.device).await?;
 
     // A phrase and a project serial are not durable recovery evidence. Refuse
     // even a possible no-op before opening a tunnel: that cannot be known yet.
@@ -237,11 +244,7 @@ async fn find(
         .gateway
         .parse()
         .map_err(|_| ApiError::bad_request("gateway is not a host:port IPv4 address"))?;
-    let serial = resolve(
-        &state,
-        query.serial_number.as_deref(),
-        query.device.as_deref(),
-    )?;
+    let serial = resolve_off_runtime(&state, query.serial_number, query.device).await?;
     let Ok(programming) = state.address_programming.try_lock() else {
         return Err(crate::tunnel_holder::gateway_busy(
             crate::tunnel_holder::TunnelHolder::Connecting {

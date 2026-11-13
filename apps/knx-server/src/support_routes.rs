@@ -482,31 +482,40 @@ async fn diagnose(
     if !b.consent {
         return Err(ApiError::bad_request("support-live-consent-required"));
     }
-    let mut s = snapshot(&slot, &b.token)?;
-    fresh(&state, &s)?;
-    let target = s
-        .address
-        .ok_or_else(|| ApiError::bad_request("support-no-target-address"))?;
-    ContactableAddress::new(target).map_err(|_| ApiError::bad_request("support-excluded"))?;
-    if knx_core::is_project_excluded(target) {
-        return Err(ApiError::bad_request("support-excluded"));
-    }
-    {
-        let p = state
-            .project
-            .lock()
-            .map_err(|_| ApiError::internal("project unavailable"))?;
-        if p.as_ref().is_some_and(|p| {
-            let count = p
-                .devices
-                .iter()
-                .filter(|d| d.address == Some(target))
-                .count();
-            count > 1 || (s.device_id.is_some() && count != 1)
-        }) {
-            return Err(ApiError::bad_request("support-ambiguous-target"));
-        }
-    }
+    // Project waits run off the runtime workers (#36); bus I/O stays here.
+    let (mut s, target) = {
+        let (state, slot, token) = (Arc::clone(&state), Arc::clone(&slot), b.token.clone());
+        crate::routes::off_runtime(move || -> Result<_, ApiError> {
+            let s = snapshot(&slot, &token)?;
+            fresh(&state, &s)?;
+            let target = s
+                .address
+                .ok_or_else(|| ApiError::bad_request("support-no-target-address"))?;
+            ContactableAddress::new(target)
+                .map_err(|_| ApiError::bad_request("support-excluded"))?;
+            if knx_core::is_project_excluded(target) {
+                return Err(ApiError::bad_request("support-excluded"));
+            }
+            {
+                let p = state
+                    .project
+                    .lock()
+                    .map_err(|_| ApiError::internal("project unavailable"))?;
+                if p.as_ref().is_some_and(|p| {
+                    let count = p
+                        .devices
+                        .iter()
+                        .filter(|d| d.address == Some(target))
+                        .count();
+                    count > 1 || (s.device_id.is_some() && count != 1)
+                }) {
+                    return Err(ApiError::bad_request("support-ambiguous-target"));
+                }
+            }
+            Ok((s, target))
+        })
+        .await??
+    };
     let gateway: SocketAddrV4 = b
         .gateway
         .parse()
@@ -533,7 +542,11 @@ async fn diagnose(
     {
         return Err(busy());
     }
-    fresh(&state, &s)?;
+    // The reservations above stay with this request while it waits.
+    s = {
+        let state = Arc::clone(&state);
+        crate::routes::off_runtime(move || fresh(&state, &s).map(|()| s)).await??
+    };
     {
         let mut held = slot
             .lock()
@@ -628,64 +641,70 @@ async fn diagnose(
     drop(scan);
     drop(monitor);
     drop(programming);
-    fresh(&state, &s)?;
-    // One snapshot describes the latest returned acquisition, not an unlabelled
-    // mixture of observations from different gateways/attempts.
-    s.report.facts.retain(|f| f.origin != "live");
-    s.report
-        .missing_evidence
-        .retain(|m| m != "live-diagnostics-not-collected" && m != "reviewed-family-diagnostics");
-    s.report
-        .missing_evidence
-        .push("live-diagnostics-not-collected".into());
-    match result {
-        Ok(Ok(d)) => {
-            s.report.fact(
-                "mask",
-                "live",
-                Some(format!("{:04X}", d.mask)),
-                "unavailable",
-            );
-            s.report.fact(
-                "diagnosticProfile",
-                "live",
-                Some(d.profile.into()),
-                "unavailable",
-            );
-            for f in d.facts {
-                s.report.fact(f.field, "live", f.value, f.status);
-            }
-            s.report
-                .missing_evidence
-                .retain(|x| x != "live-diagnostics-not-collected");
-            if d.profile == "descriptor-only-v1" {
+    // One blocking job from here on, as the synchronous tail was before: a client
+    // that goes away cannot cut the final check from the publication (#36).
+    let result = crate::routes::off_runtime(move || -> Result<Preview, ApiError> {
+        fresh(&state, &s)?;
+        // One snapshot describes the latest returned acquisition, not an unlabelled
+        // mixture of observations from different gateways/attempts.
+        s.report.facts.retain(|f| f.origin != "live");
+        s.report.missing_evidence.retain(|m| {
+            m != "live-diagnostics-not-collected" && m != "reviewed-family-diagnostics"
+        });
+        s.report
+            .missing_evidence
+            .push("live-diagnostics-not-collected".into());
+        match result {
+            Ok(Ok(d)) => {
+                s.report.fact(
+                    "mask",
+                    "live",
+                    Some(format!("{:04X}", d.mask)),
+                    "unavailable",
+                );
+                s.report.fact(
+                    "diagnosticProfile",
+                    "live",
+                    Some(d.profile.into()),
+                    "unavailable",
+                );
+                for f in d.facts {
+                    s.report.fact(f.field, "live", f.value, f.status);
+                }
                 s.report
                     .missing_evidence
-                    .push("reviewed-family-diagnostics".into());
+                    .retain(|x| x != "live-diagnostics-not-collected");
+                if d.profile == "descriptor-only-v1" {
+                    s.report
+                        .missing_evidence
+                        .push("reviewed-family-diagnostics".into());
+                }
+            }
+            Ok(Err("identity-mismatch")) => {
+                return Err(ApiError::with_status(
+                    StatusCode::CONFLICT,
+                    "support-live-identity-mismatch",
+                ))
+            }
+            _ => {
+                s.report
+                    .fact("liveDiagnostics", "live", None, "partial-unavailable");
             }
         }
-        Ok(Err("identity-mismatch")) => {
+        let mut guard = slot
+            .lock()
+            .map_err(|_| ApiError::internal("support busy"))?;
+        if guard.as_ref().is_none_or(|v| v.token != s.token) {
             return Err(ApiError::with_status(
                 StatusCode::CONFLICT,
-                "support-live-identity-mismatch",
-            ))
+                "support-preview-replaced",
+            ));
         }
-        _ => {
-            s.report
-                .fact("liveDiagnostics", "live", None, "partial-unavailable");
-        }
-    }
-    let mut guard = slot
-        .lock()
-        .map_err(|_| ApiError::internal("support busy"))?;
-    if guard.as_ref().is_none_or(|v| v.token != s.token) {
-        return Err(ApiError::with_status(
-            StatusCode::CONFLICT,
-            "support-preview-replaced",
-        ));
-    }
-    s.acquired = true;
-    let result = view(&s);
-    *guard = Some(s);
+        s.acquired = true;
+        let result = view(&s);
+        *guard = Some(s);
+        Ok(result)
+    })
+    .await??;
     Ok(Json(result))
 }

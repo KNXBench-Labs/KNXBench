@@ -319,50 +319,54 @@ async fn preview(
     if memory && state.product_db.is_none() {
         return Err(ApiError::bad_request("diagnostics-product-db-required"));
     }
-    let project = state
-        .project
-        .lock()
-        .map_err(|_| error("diagnostics-project-unavailable"))?;
-    let p = project
-        .as_ref()
-        .ok_or_else(|| ApiError::bad_request("diagnostics-project-required"))?;
-    let device = DeviceId(body.device_id);
-    let plan = match state.product_db.as_ref() {
-        None => service::prepare(p, device, None).map(Plan::Identity),
-        Some(owner) => owner
-            .with_read(|conn| {
-                if memory {
-                    service::prepare_memory(p, device, conn).map(Plan::Memory)
-                } else {
-                    service::prepare(p, device, Some(conn)).map(Plan::Identity)
-                }
-            })
-            .map_err(|_| error("diagnostics-catalogue-unavailable"))?,
-    }
-    .map_err(ApiError::bad_request)?;
-    // The capability token is never the reference written into a shareable ZIP.
-    let mut token = [0u8; 32];
-    getrandom::fill(&mut token).map_err(|_| error("diagnostics-token-unavailable"))?;
-    let job = Job {
-        token: token.iter().map(|b| format!("{b:02x}")).collect(),
-        created: Instant::now(),
-        export: plan.pending(&crate::version_string()),
-        exportable: false,
-        plan,
-        gateway,
-        binding: body.context,
-        device_id: body.device_id,
-        phase: "preview",
-        cancel: Arc::new(AtomicBool::new(false)),
-    };
-    fresh(&state, &job)?;
-    let mut held = slot.lock().map_err(|_| error("diagnostics-unavailable"))?;
-    if held.as_ref().is_some_and(|j| j.phase == "running") {
-        return Err(error("diagnostics-already-running"));
-    }
-    let result = view(&job);
-    *held = Some(job);
-    Ok(Json(result))
+    // The project wait runs off the runtime workers (#36); no bus I/O here.
+    crate::routes::off_runtime(move || {
+        let project = state
+            .project
+            .lock()
+            .map_err(|_| error("diagnostics-project-unavailable"))?;
+        let p = project
+            .as_ref()
+            .ok_or_else(|| ApiError::bad_request("diagnostics-project-required"))?;
+        let device = DeviceId(body.device_id);
+        let plan = match state.product_db.as_ref() {
+            None => service::prepare(p, device, None).map(Plan::Identity),
+            Some(owner) => owner
+                .with_read(|conn| {
+                    if memory {
+                        service::prepare_memory(p, device, conn).map(Plan::Memory)
+                    } else {
+                        service::prepare(p, device, Some(conn)).map(Plan::Identity)
+                    }
+                })
+                .map_err(|_| error("diagnostics-catalogue-unavailable"))?,
+        }
+        .map_err(ApiError::bad_request)?;
+        // The capability token is never the reference written into a shareable ZIP.
+        let mut token = [0u8; 32];
+        getrandom::fill(&mut token).map_err(|_| error("diagnostics-token-unavailable"))?;
+        let job = Job {
+            token: token.iter().map(|b| format!("{b:02x}")).collect(),
+            created: Instant::now(),
+            export: plan.pending(&crate::version_string()),
+            exportable: false,
+            plan,
+            gateway,
+            binding: body.context,
+            device_id: body.device_id,
+            phase: "preview",
+            cancel: Arc::new(AtomicBool::new(false)),
+        };
+        fresh(&state, &job)?;
+        let mut held = slot.lock().map_err(|_| error("diagnostics-unavailable"))?;
+        if held.as_ref().is_some_and(|j| j.phase == "running") {
+            return Err(error("diagnostics-already-running"));
+        }
+        let result = view(&job);
+        *held = Some(job);
+        Ok(Json(result))
+    })
+    .await?
 }
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]

@@ -1,7 +1,7 @@
 # WP-31 — Device editor unavailable after saving the project (#36)
 
 External report by the issue reporter, 10 November 2026; triaged 11 November 2026.
-Status: **lock fix implemented 11 November 2026; file routes off the runtime workers and download without the project lock 12 November 2026; edits and plain reads no longer wait for a save's write, device editor routes off the runtime 12 November 2026; the project router's remaining edits, the device list and the other modules' project routes off the runtime 13 November 2026; original error message unreproduced.** Follow-up to the original #36 path, which
+Status: **lock fix implemented 11 November 2026; file routes off the runtime workers and download without the project lock 12 November 2026; edits and plain reads no longer wait for a save's write, device editor routes off the runtime 12 November 2026; the project router's remaining edits, the device list and the other modules' project routes off the runtime 13 November 2026; the device comparison, device-diagnostics preview, support diagnose run and serial-address routes off the runtime 13 November 2026; original error message unreproduced.** Follow-up to the original #36 path, which
 the reporter confirmed fixed by `bf85a5b69` on 10 November 2026.
 
 ## Observed
@@ -122,12 +122,12 @@ Remaining limits:
   version actions. They need the file and the journal generation, which the
   save holds. Since 13 November every one of them waits off the runtime (see
   below), so the wait no longer ties up a runtime worker.
-- Some routes that interleave bus or session work with the project still take
-  it on a runtime worker: the device comparison itself, the
-  device-diagnostics preview, the support
-  diagnose run, the serial-address write and find, and the System-2 download
-  worker. Diagnostic-bundle collection is addressed below. This list comes
-  from a source search plus an independent review, not an exhaustive proof.
+- The System-2 download worker still interleaves its bus work with project
+  waits on a runtime worker. Diagnostic-bundle collection and the other mixed
+  bus/project routes (device comparison, device-diagnostics preview, support
+  diagnose, serial-address write and find) are addressed below. This list
+  comes from a source search plus independent reviews, not an exhaustive
+  proof.
 - Catalogue reads (manufacturers, items, product languages) do not take the
   project lock but still query the product database on a runtime worker.
 - A long operation that holds the project (CSV import and export, project
@@ -255,5 +255,52 @@ unchanged: text and ZIP still render the same owned bytes that were reviewed.
 This audit is limited to the collector/context files' direct and traced transitive
 project/store-path waits, not every diagnostic or server route. Other mixed paths,
 catalogue database reads outside this collector and the reporter's original
-error/proxy hypothesis remain open. Parent review and the selected package gate
-remain separate acceptance steps; no real installation was accessed.
+error/proxy hypothesis remain open. Acceptance followed: an independent review
+approved the package, the selected 14-stage package gate passed and it was
+published as `789dfcbdd`; no real installation was accessed.
+
+### Mixed bus/project routes off the runtime (WP-31e, 13 November 2026)
+
+The routes that reserve the gateway or read a device and also consult the
+project now wait for it through `routes::off_runtime`; bus I/O stays on the
+async side and no std guard is held across an await:
+
+- `POST /api/device-compare`: the preparation (full and partial), the
+  currency check made while it holds the programming, monitor and scan
+  reservations, and the tail after the read (result currency, recording and
+  observation retention under the project lock). The tail runs as one blocking
+  job, so, as before, a client that goes away after the read can no longer cut
+  the recording from the retention.
+- `POST /api/device-diagnostics/preview`: its whole body after the gateway and
+  profile checks (it does no bus I/O; the run itself never took the project).
+- `POST /api/support/diagnose`: the admission check (snapshot freshness and
+  target ambiguity), the recheck under the reservations, and the final check
+  and publication after the read, again as one blocking job.
+- `POST /api/device-address/by-serial` and `GET
+  /api/device-address/find-serial`: the serial number taken from the open
+  project.
+
+Reservation order, `try_lock` refusals, stop admission, activity and recording
+starts, answers and error texts are unchanged. A request dropped while it
+waits under its reservations releases them as before, with nothing registered
+yet. The comparison and the diagnose run also release their reservations when
+the client goes away during the currency recheck under them; before, that
+recheck could not be interrupted.
+
+Tests (`routes/mixed_runtime_tests.rs`, whole application, current-thread
+runtime, simulated devices behind an in-process connector, no socket):
+`first_project_waits_of_mixed_routes_leave_the_runtime_free` (five rows: full
+and partial comparison, diagnostics preview, serial write and find, each with
+the exact status and refusal reached under the lock),
+`the_device_comparison_waits_off_the_runtime` and
+`the_support_diagnose_run_waits_off_the_runtime` (each at the first wait,
+under the reservations, with the test holding the scan lock until the project
+is held, and after the read, with the tunnel held until the project is held;
+each requires the full answer afterwards and released reservations). A case
+fails if the runtime blocks or the request answers while the lock is held.
+Each of the eight call sites turned back to inline in a separate copy fails
+the case at its own stage.
+
+Limits: the System-2 download worker, catalogue product-database reads and
+the original #36 cause or proxy question remain open; this is not an
+exhaustive route audit, and no real gateway or device was used.

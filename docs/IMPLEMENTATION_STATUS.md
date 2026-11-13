@@ -454,8 +454,10 @@ environment/import-report and device/catalogue project reads, and saved-project
 store-path wait off the runtime as well. Privacy admission, reviewed owned bytes
 and source-context/fingerprint refusals are unchanged; independent builder/lock
 witnesses supplement the mounted route tests. This is a bounded collector audit,
-not whole-server acceptance. Other mixed bus/project paths (device comparison,
-device diagnostics, support diagnose, serial address and System-2) remain open.
+not whole-server acceptance. The device comparison, the device-diagnostics
+preview, the support diagnose run and the serial-address write and find now
+also wait for the project off the runtime; their gateway reservations, bus I/O
+and answers are unchanged. The System-2 download worker remains open.
 Limit: edits that write the file in their own transaction (notes and
 instructions apply, naming recipes, device-compare adoption, selective import,
 baseline marks) and the project-history panel still hold

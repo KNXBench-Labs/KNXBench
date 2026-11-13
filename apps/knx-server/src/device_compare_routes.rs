@@ -192,7 +192,15 @@ async fn compare(
         .map_err(|_| ApiError::bad_request("gateway is not a host:port IPv4 address"))?;
     let target = parse_target(&body.address)?;
     let partial = body.partial.map(PartialDownloadParts::from);
-    let prepared = read::Read::prepare(&state, target, partial, body.binding.as_ref())?;
+    let expected = body.binding;
+    // Project waits run off the runtime workers (#36); bus I/O stays here.
+    let prepared = {
+        let state = Arc::clone(&state);
+        crate::routes::off_runtime(move || {
+            read::Read::prepare(&state, target, partial, expected.as_ref())
+        })
+        .await??
+    };
     let binding = prepared.binding.clone();
     let device_name = prepared.name.clone();
     let (browser, cookie) = adoption::browser(&headers)?;
@@ -235,7 +243,16 @@ async fn compare(
         ));
     }
 
-    if !prepared.is_current(&state) {
+    // The reservations above stay with this request while it waits.
+    let (prepared, current) = {
+        let state = Arc::clone(&state);
+        crate::routes::off_runtime(move || {
+            let current = prepared.is_current(&state);
+            (prepared, current)
+        })
+        .await?
+    };
+    if !current {
         return Err(read::stale());
     }
     // Register only after validation and gateway-conflict checks. A dropped
@@ -291,82 +308,91 @@ async fn compare(
     drop(monitor);
     drop(programming);
     let observed = compared?;
-    let outdated = !observed.is_current(&state, target, &binding);
-    let decoded = decoded(observed.rows());
-    let segments = &observed.image().segments;
-    let compared = observed.comparison();
-    let changes = compared
-        .changes
-        .iter()
-        .map(|change| ChangeDto {
-            address: change.address,
-            segment: segments
+    // One blocking job from here on: the project waits leave the runtime, and a
+    // client that goes away cannot cut recording from retention (#36).
+    let response = {
+        let state = Arc::clone(&state);
+        crate::routes::off_runtime(move || -> Result<CompareResponse, ApiError> {
+            let outdated = !observed.is_current(&state, target, &binding);
+            let decoded = decoded(observed.rows());
+            let segments = &observed.image().segments;
+            let compared = observed.comparison();
+            let changes = compared
+                .changes
                 .iter()
-                .find(|segment| {
-                    let start = segment.address;
-                    let end = start + segment.octets.len() as u32;
-                    (start..end).contains(&u32::from(change.address))
+                .map(|change| ChangeDto {
+                    address: change.address,
+                    segment: segments
+                        .iter()
+                        .find(|segment| {
+                            let start = segment.address;
+                            let end = start + segment.octets.len() as u32;
+                            (start..end).contains(&u32::from(change.address))
+                        })
+                        .map(|segment| segment.id.clone()),
+                    device: change.device.clone(),
+                    project: change.planned.clone(),
                 })
-                .map(|segment| segment.id.clone()),
-            device: change.device.clone(),
-            project: change.planned.clone(),
-        })
-        .collect();
-    let mut response = CompareResponse {
-        address: target.to_string(),
-        device_name,
-        program_id: observed.program_id().to_owned(),
-        written: false,
-        partial: matches!(&observed, read::Observation::Partial { .. }),
-        mask: compared.held.mask.0,
-        manufacturer: compared.held.manufacturer,
-        load_states: compared
-            .held
-            .load_states
-            .iter()
-            .map(|(machine, state)| LoadStateDto {
-                machine: machine.to_string(),
-                state: state.to_string(),
-            })
-            .collect(),
-        octets: compared.held.octets(),
-        differing_octets: compared.differing_octets(),
-        same: compared.is_same(),
-        changes,
-        binding,
-        outdated,
-        decoded,
-        observation_token: None,
-        observation_expires_in_seconds: None,
-    };
-    // Every compared octet, device and project side, for the recording.
-    recorder.note(
-        "comparison",
-        serde_json::to_value(&response).unwrap_or_default(),
-    );
-    recorder.finish(knx_app::operation_recording::RecordedOutcome::succeeded(
-        serde_json::json!({ "same": response.same, "differingOctets": response.differing_octets }),
-    ));
-    // Retain only genuine full reads, under current project ownership. A late
-    // result cannot evict the new project's evidence or acquire a fresh token.
-    if let read::Observation::Full(observation) = observed {
-        let project = state.project.lock().expect("state mutex poisoned");
-        let stack = state.command_stack.lock().expect("state mutex poisoned");
-        if project
-            .as_ref()
-            .is_some_and(|p| observation.is_current(p, &stack, &adoption::scope(&state)))
-        {
-            response.observation_token = Some(
-                sessions
-                    .lock()
-                    .expect("comparison mutex poisoned")
-                    .observe(browser, *observation)?,
+                .collect();
+            let mut response = CompareResponse {
+                address: target.to_string(),
+                device_name,
+                program_id: observed.program_id().to_owned(),
+                written: false,
+                partial: matches!(&observed, read::Observation::Partial { .. }),
+                mask: compared.held.mask.0,
+                manufacturer: compared.held.manufacturer,
+                load_states: compared
+                    .held
+                    .load_states
+                    .iter()
+                    .map(|(machine, state)| LoadStateDto {
+                        machine: machine.to_string(),
+                        state: state.to_string(),
+                    })
+                    .collect(),
+                octets: compared.held.octets(),
+                differing_octets: compared.differing_octets(),
+                same: compared.is_same(),
+                changes,
+                binding,
+                outdated,
+                decoded,
+                observation_token: None,
+                observation_expires_in_seconds: None,
+            };
+            // Every compared octet, device and project side, for the recording.
+            recorder.note(
+                "comparison",
+                serde_json::to_value(&response).unwrap_or_default(),
             );
-            response.observation_expires_in_seconds = Some(600);
-        } else {
-            response.outdated = true;
-        }
-    }
+            recorder.finish(knx_app::operation_recording::RecordedOutcome::succeeded(
+                serde_json::json!({ "same": response.same, "differingOctets": response.differing_octets }),
+            ));
+            // Retain only genuine full reads, under current project ownership. A late
+            // result cannot evict the new project's evidence or acquire a fresh token.
+            if let read::Observation::Full(observation) = observed {
+                let project = state.project.lock().expect("state mutex poisoned");
+                let stack = state.command_stack.lock().expect("state mutex poisoned");
+                if project
+                    .as_ref()
+                    .is_some_and(|p| observation.is_current(p, &stack, &adoption::scope(&state)))
+                {
+                    response.observation_token = Some(
+                        sessions
+                            .lock()
+                            .expect("comparison mutex poisoned")
+                            .observe(browser, *observation)?,
+                    );
+                    response.observation_expires_in_seconds = Some(600);
+                } else {
+                    response.outdated = true;
+                }
+            }
+            Ok(response)
+        })
+        .await??
+    };
     let mut response = Json(response).into_response();
     if let Some(cookie) = cookie {
         response.headers_mut().insert(header::SET_COOKIE, cookie);

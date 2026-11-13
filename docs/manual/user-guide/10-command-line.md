@@ -872,6 +872,17 @@ rules (plan first, a device-specific phrase, a backup before any write):
 | `knx device service-control` | Reads, and after a backup changes, the Individual Address Write Enable bit |
 | `knx device reset-address`, `knx device address-by-serial` | Plan only today: confirmed writes are refused before a tunnel opens, like `program-address` below |
 
+On source builds with the 13 November 2026 diagnostics transport change,
+`knx device diagnostics` accepts `--tunnel-transport udp|tcp` for both the generic
+identity export and the declared-memory profile below. Omission remains UDP;
+explicit TCP never falls back to UDP. Without `--confirm-read`, a TCP preview
+names the selected transport but opens no connection. `--simulate` refuses the
+transport option because it needs no gateway. A live run prints the transport it
+actually opened and its assigned individual address on stderr; positive TCP
+skipped-frame counts are sampled before disconnect and reported once, including
+when a read stops early. These software tests do not establish real-gateway
+interoperability ([scope and evidence](../../status/2026-11-13-cli-tcp-diagnostics.md)).
+
 ### `knx device diagnostics --profile system2-declared-segments-v1` — declared memory, read only
 
 ```bash

@@ -738,8 +738,9 @@ Server/Web scans, programming and discovery/routing are unchanged.
 profiles; omission remains UDP, `--simulate` refuses the option and a preview
 names an explicit TCP. Stderr names the opened transport and reports positive TCP
 skips sampled before disconnect. Recipes, export format and gateway lease are
-unchanged. Loopback CLI regressions run the identity export over TCP and UDP
-peers; no release or hardware claim.
+unchanged. Loopback CLI regressions cover the TCP identity export and the
+default/explicit UDP handshake (refused before acquisition); no release or
+hardware claim.
 [Record](status/2026-11-13-cli-tcp-diagnostics.md).
 
 ## Optional TCP byte-order probe (11 November 2026; bounded WP-29 successor)

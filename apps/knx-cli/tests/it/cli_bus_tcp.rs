@@ -2,6 +2,7 @@
 
 mod compare;
 mod diagnostics;
+mod download;
 mod find_serial;
 mod probe;
 mod scan;

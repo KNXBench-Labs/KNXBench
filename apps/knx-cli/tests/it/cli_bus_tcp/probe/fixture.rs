@@ -78,6 +78,26 @@ impl Fixture {
 
     /// The same saved numeric inputs, with an explicit read-comparison plan.
     pub fn comparison() -> Self {
+        Self::with_program(&Self::comparison_program())
+    }
+
+    /// A complete load-state sequence, not the comparison-only allocation recipe.
+    pub fn download() -> Self {
+        let program = Self::comparison_program()
+            .replace(
+                "<LdCtrlAbsSegment",
+                "<LdCtrlUnload LsmIdx=\"3\"/><LdCtrlLoad LsmIdx=\"3\"/><LdCtrlAbsSegment",
+            )
+            .replace(
+                "<LdCtrlDisconnect/>",
+                "<LdCtrlLoadCompleted LsmIdx=\"3\"/><LdCtrlDisconnect/>",
+            );
+        assert!(program.contains("<LdCtrlUnload LsmIdx=\"3\"/><LdCtrlLoad LsmIdx=\"3\"/>"));
+        assert!(program.contains("<LdCtrlLoadCompleted LsmIdx=\"3\"/>"));
+        Self::with_program(&program)
+    }
+
+    fn comparison_program() -> String {
         let program = PROGRAM.replace("ApplicationVersion=\"1\"", "ApplicationVersion=\"1\" PeiType=\"1\"").replace("</Static>", r#"<LoadProcedures><LoadProcedure>
 <LdCtrlConnect/><LdCtrlCompareProp ObjIdx="3" PropId="13" InlineData="0002000101" />
 <LdCtrlAbsSegment LsmIdx="3" SegType="0" Address="17408" Size="32" Access="255" MemType="3" SegFlags="128" />
@@ -90,7 +110,7 @@ impl Fixture {
         assert!(program
             .contains(r#"<LdCtrlCompareProp ObjIdx="3" PropId="13" InlineData="0002000101" />"#));
         assert!(program.contains("<Data>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</Data>"));
-        Self::with_program(&program)
+        program
     }
 
     fn with_program(program: &str) -> Self {

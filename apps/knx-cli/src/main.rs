@@ -128,6 +128,8 @@ const USAGE: &str = "usage: knx import <file.knxproj> [--store <path.knxdb> [--r
      \x20         opening a connection; --tunnel-transport defaults to udp; tcp never falls back\n\
      \x20         to udp. Scans require device evidence, not just a TCP socket send; no serial)\n\
      \x20     knx device download <area.line.device> --project <path.knxdb> [--product-db <path>]\n\
+     \x20                  [--tunnel-transport <udp|tcp>]\n\
+     \x20         (source builds: defaults to udp; tcp never falls back to udp; refused in plan-only mode)\n\
      \x20                  [--activity-history <path>]\n\
      \x20         (activity history: required for confirmed writes; metadata, not recovery)\n\
      \x20                  [--key-file <path>] [--partial parameters|group-addresses|both | --changes]\n\
@@ -2784,7 +2786,9 @@ fn run_device_download(args: &[String]) -> ExitCode {
     runtime.block_on(async {
         use knx_net::BusConnection;
         let tunnel = match crate::diagnostic_bundle_cli::tapped(
-            knx_net::KnxNetIpClient::new(),
+            knx_net::KnxNetIpClient::new().with_tunnel_transport(
+                parsed.tunnel_transport.unwrap_or(knx_net::TunnelTransport::Udp),
+            ),
             knx_app::operation_recording::OperationKind::Download,
             gateway,
         )
@@ -2802,6 +2806,11 @@ fn run_device_download(args: &[String]) -> ExitCode {
                 return ExitCode::FAILURE;
             }
         };
+        eprintln!(
+            "connected to {gateway} over {}, assigned individual address {}",
+            bus_transport::transport_label(tunnel.transport()),
+            tunnel.assigned_address()
+        );
         let run = device_download::execute_regular_download(
             &tunnel,
             authorisation,
@@ -2821,6 +2830,9 @@ fn run_device_download(args: &[String]) -> ExitCode {
             &mut std::io::stdout(),
         )
         .await;
+        let skipped = (tunnel.transport() == knx_net::TunnelTransport::Tcp)
+            .then(|| tunnel.skipped_frame_count());
+        bus_transport::report_skipped_frames(skipped, &mut std::io::stderr());
         let cleanup_ok = match tunnel.disconnect().await {
             Ok(()) => true,
             Err(error) => {

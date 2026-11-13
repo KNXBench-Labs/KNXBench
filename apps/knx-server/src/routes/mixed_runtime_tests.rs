@@ -815,15 +815,17 @@ async fn a_project_change_after_the_support_read_withholds_its_publication() {
     );
 }
 
-/// A new preview replaces the run's preview after the device was read: the
-/// run refuses and does not overwrite the new preview with its result.
+/// A new preview replaces the run's preview while its tunnel is being opened,
+/// after the reserved recheck: only the final check can refuse, and the run
+/// does not overwrite the new preview with its result.
 #[tokio::test(flavor = "current_thread")]
-async fn a_preview_replaced_after_the_support_read_is_kept() {
+async fn a_preview_replaced_during_the_support_read_is_kept() {
     let dir = tempfile::tempdir().unwrap();
     let gate = Gate::default();
     let state = support_fixture(&dir, &gate);
     let token = support_preview(&state).await;
-    // The new preview needs the project, so it is taken before the holder.
+    // Replaced while the connect waits: after the disconnect the final check
+    // could finish before this task runs again.
     let call = send(
         &state,
         request("POST", "/api/support/diagnose", &diagnose_body(&token)),

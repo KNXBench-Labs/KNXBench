@@ -30,6 +30,7 @@ use knx_net::{ManagementTransport, SessionTiming};
 pub struct ServiceControlArgs {
     pub address: String,
     pub gateway: Option<String>,
+    pub tunnel_transport: Option<knx_net::TunnelTransport>,
     /// `Some(true)` for `--enable`, `Some(false)` for `--disable`.
     pub enable: Option<bool>,
     pub confirm: Option<String>,
@@ -42,6 +43,7 @@ pub struct ServiceControlArgs {
 pub fn parse_args(args: &[String]) -> Result<ServiceControlArgs, String> {
     let mut address = None;
     let mut gateway = None;
+    let mut tunnel_transport = None;
     let mut enable = None;
     let mut confirm = None;
     let mut key_file = None;
@@ -50,6 +52,10 @@ pub fn parse_args(args: &[String]) -> Result<ServiceControlArgs, String> {
     let mut i = 0;
     while i < args.len() {
         match args[i].as_str() {
+            "--tunnel-transport" => {
+                crate::bus_transport::take_tunnel_transport(&mut tunnel_transport, args, i)?;
+                i += 2;
+            }
             "--enable" | "--disable" => {
                 if enable.replace(args[i] == "--enable").is_some() {
                     return Err("give --enable or --disable once".to_string());
@@ -90,6 +96,7 @@ pub fn parse_args(args: &[String]) -> Result<ServiceControlArgs, String> {
     Ok(ServiceControlArgs {
         address,
         gateway,
+        tunnel_transport,
         enable,
         confirm,
         key_file,
@@ -113,13 +120,14 @@ pub enum Mode {
     },
 }
 
-fn parse_gateway(text: &str) -> Result<std::net::SocketAddrV4, String> {
-    text.parse()
-        .map_err(|_| "--gateway must be host:port, e.g. 192.0.2.1:3671".to_string())
-}
-
 /// Parses the address, refuses an excluded one, and checks the phrase.
 pub fn check(args: &ServiceControlArgs) -> Result<(ContactableAddress, Mode), String> {
+    if let Some(gateway) = &args.gateway {
+        crate::bus_transport::parse_gateway(gateway)?;
+    }
+    if args.tunnel_transport.is_some() && args.enable.is_some() && args.confirm.is_none() {
+        return Err("--tunnel-transport is not valid with a plan only; no tunnel is opened".into());
+    }
     let address: IndividualAddress = args
         .address
         .parse()
@@ -129,7 +137,7 @@ pub fn check(args: &ServiceControlArgs) -> Result<(ContactableAddress, Mode), St
         args.gateway
             .as_deref()
             .ok_or_else(|| "this asks the device and needs --gateway <host:port>".to_string())
-            .and_then(parse_gateway)
+            .and_then(crate::bus_transport::parse_gateway)
     };
     let mode = match (args.enable, &args.confirm) {
         (None, _) => Mode::Read {

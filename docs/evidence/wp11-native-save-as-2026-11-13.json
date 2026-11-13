@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "scope": "WP-11 S1 native Save As and incidental Z1 restart scale persistence",
+  "observedOn": "2026-11-13",
+  "buildSource": "38d7ad5f59f74076d9d32c29e47af13ed1004ab6",
+  "currentAtOriginalAdmission": true,
+  "closeoutSource": "99a78fe35af81dde3449b3e57cc6d904948202b1",
+  "reboundToCloseoutSource": false,
+  "nativeSchema": 21,
+  "binarySha256": "ed3491994512be6e7d6afe3c17b535a5558562be9df91f94661fece0d00cb291",
+  "frontendManifestSha256": "d25ec0653dbfa4359b38bd1016443a5dadf11835769e302abffe17e70643e54a",
+  "frontendFiles": 147,
+  "cells": [
+    {"id": "S1-100-cancel", "scale": 1.0, "action": "cancel", "result": "pass"},
+    {"id": "S1-100-save", "scale": 1.0, "action": "save", "result": "pass"},
+    {"id": "S1-100-overwrite-cancel", "scale": 1.0, "action": "overwrite-cancel", "result": "pass"},
+    {"id": "S1-100-replace", "scale": 1.0, "action": "replace", "result": "pass"},
+    {"id": "S1-80-cancel", "scale": 0.8, "action": "cancel", "result": "pass"},
+    {"id": "S1-80-save", "scale": 0.8, "action": "save", "result": "pass"},
+    {"id": "S1-80-overwrite-cancel", "scale": 0.8, "action": "overwrite-cancel", "result": "pass"},
+    {"id": "S1-80-replace", "scale": 0.8, "action": "replace", "result": "pass"},
+    {"id": "S1-150-cancel", "scale": 1.5, "action": "cancel", "result": "pass"},
+    {"id": "S1-150-save", "scale": 1.5, "action": "save", "result": "pass"},
+    {"id": "S1-150-overwrite-cancel", "scale": 1.5, "action": "overwrite-cancel", "result": "pass"},
+    {"id": "S1-150-replace", "scale": 1.5, "action": "replace", "result": "pass"}
+  ],
+  "restart": {
+    "nativeOpen": true,
+    "exactNoteEditsReadBack": 3,
+    "uiScale": 1.5,
+    "fileHashAndMtimeUnchanged": true,
+    "ordinaryCloseLauncherExits": [0, 0]
+  },
+  "artifactVerification": {"retainedFiles": 660, "savedSqliteFiles": 6, "parentVerifierExit": 0},
+  "cleanup": {"ownedProcessesWindowsOutputAndIpcRetired": true, "rulesDisabled": true, "fullSeatRestored": false},
+  "boundaries": [
+    "software-rendered native Wayland/WebKitGTK with shared session services",
+    "pinned build only; not rebound across later CLI runtime changes",
+    "initial screensaver not restored; ordinary workspace, focused monitor and cursor restored",
+    "other editor, capture, pointer, layout and hover cells not established by this slice",
+    "no real project, bus, device or ETS operation; no whole-WP-11 acceptance"
+  ]
+}

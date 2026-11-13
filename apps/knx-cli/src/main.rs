@@ -246,6 +246,8 @@ const USAGE: &str = "usage: knx import <file.knxproj> [--store <path.knxdb> [--r
      \x20         (which address has this serial number, MP §2.4 broadcast; or which serial\n\
      \x20         number the device at --address has, PID_SERIAL_NUMBER; read-only)\n\
      \x20     knx device service-control <area.line.device> --gateway <host:port> [--key-file <path>]\n\
+     \x20                  [--tunnel-transport <udp|tcp>]\n\
+     \x20         (source builds: defaults to udp; tcp never falls back to udp; refused in plan-only mode)\n\
      \x20                  [--activity-history <path>]\n\
      \x20         (activity history: required for confirmed writes; metadata, not recovery)\n\
      \x20                  [--enable|--disable [--confirm \"I confirm individual-address write enable to <address>\"]] [--backup-dir <path>]\n\
@@ -3977,7 +3979,9 @@ fn run_device_service_control(args: &[String]) -> ExitCode {
     runtime.block_on(async {
         use knx_net::BusConnection;
         let tunnel = match crate::diagnostic_bundle_cli::tapped(
-            knx_net::KnxNetIpClient::new(),
+            knx_net::KnxNetIpClient::new().with_tunnel_transport(
+                parsed.tunnel_transport.unwrap_or(knx_net::TunnelTransport::Udp),
+            ),
             knx_app::operation_recording::OperationKind::ServiceControl,
             gateway,
         )
@@ -3996,6 +4000,11 @@ fn run_device_service_control(args: &[String]) -> ExitCode {
                 return ExitCode::FAILURE;
             }
         };
+        eprintln!(
+            "connected to {gateway} over {}, assigned individual address {}",
+            bus_transport::transport_label(tunnel.transport()),
+            tunnel.assigned_address()
+        );
         let timing = knx_net::SessionTiming::default();
         let mut out = std::io::stdout();
         let ok = match mode {
@@ -4035,6 +4044,9 @@ fn run_device_service_control(args: &[String]) -> ExitCode {
         if let Some(guard) = read_activity.take() {
             guard.finish(if ok { "finished" } else { "failed" });
         }
+        let skipped = (tunnel.transport() == knx_net::TunnelTransport::Tcp)
+            .then(|| tunnel.skipped_frame_count());
+        bus_transport::report_skipped_frames(skipped, &mut std::io::stderr());
         let cleanup_ok = match tunnel.disconnect().await {
             Ok(()) => true,
             Err(e) => {

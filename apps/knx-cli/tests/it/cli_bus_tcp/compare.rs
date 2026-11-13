@@ -506,9 +506,9 @@ fn compare_help_names_the_source_build_option_default_and_no_fallback() {
 }
 
 #[test]
-fn unrelated_download_restore_and_service_control_still_refuse_the_transport_option() {
+fn unrelated_download_and_restore_still_refuse_the_transport_option() {
     let fixture = fixture();
-    for subcommand in ["download", "restore", "service-control"] {
+    for subcommand in ["download", "restore"] {
         let output = collect(fixture.bare_command().args([
             "device",
             subcommand,

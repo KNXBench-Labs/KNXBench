@@ -98,6 +98,84 @@ pub(in super::super) fn no_udp(trap: &UdpSocket) {
 }
 
 impl Peer {
+    /// Bridge the maintained management simulator through real TCP/cEMI, without new encoders.
+    pub fn simulate(
+        &mut self,
+        device: &knx_net::commissioning::simulator::SimulatedDevice,
+        skips: bool,
+        mut observe: impl FnMut(&LDataFrame),
+    ) {
+        use knx_net::{ManagementTransport, TunnelEvent};
+        let runtime = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .unwrap();
+        let mut events = device.subscribe();
+        let mut injected = false;
+        let mut management_open = false;
+        let mut management_sessions = 0;
+        loop {
+            let raw = self.read();
+            if raw[2..4] == [2, 9] {
+                assert!(
+                    management_sessions > 0,
+                    "completed management acquisition required"
+                );
+                assert!(
+                    !management_open,
+                    "management disconnect must precede tunnel disconnect"
+                );
+                assert_eq!(
+                    raw,
+                    [6, 0x10, 2, 9, 0, 16, CHANNEL, 0, 8, 2, 0, 0, 0, 0, 0, 0]
+                );
+                self.send(&DISCONNECT_RESPONSE);
+                self.eof();
+                break;
+            }
+            assert_eq!(&raw[..4], [6, 0x10, 4, 0x20]);
+            assert_eq!(&raw[6..10], [4, CHANNEL, self.outer_seq, 0]);
+            self.outer_seq = self.outer_seq.wrapping_add(1);
+            let frame = decode_l_data(&raw[10..]).unwrap();
+            assert_eq!(frame.kind, LDataMessageKind::Request);
+            assert_eq!(frame.destination, Destination::Individual(device.address()));
+            match frame.transport {
+                Tpci::Connect => {
+                    assert!(!management_open, "no nested/replayed management connect");
+                    management_open = true;
+                    management_sessions += 1;
+                }
+                Tpci::Disconnect => {
+                    assert!(
+                        management_open,
+                        "disconnect belongs to an opened management session"
+                    );
+                    management_open = false;
+                }
+                _ => assert!(management_open, "no management traffic outside the session"),
+            }
+            observe(&frame);
+            if skips && !injected && matches!(frame.transport, Tpci::NumberedData { .. }) {
+                self.skips();
+                injected = true;
+            }
+            runtime
+                .block_on(device.send_frame(frame.destination, frame.transport, frame.service))
+                .unwrap();
+            while let Ok(event) = events.try_recv() {
+                let TunnelEvent::Telegram(mut reply) = event else {
+                    panic!("unexpected simulator event: {event:?}");
+                };
+                if matches!(reply.kind, LDataMessageKind::Confirmation { .. }) {
+                    reply.source = "1.1.250".parse().unwrap();
+                } else {
+                    reply.destination = Destination::Individual("1.1.250".parse().unwrap());
+                }
+                self.frame(reply);
+            }
+        }
+    }
+
     fn read(&mut self) -> Vec<u8> {
         let frame = read_frame(&mut self.stream);
         self.wire.push((true, frame.clone()));

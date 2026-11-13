@@ -5,6 +5,7 @@ mod diagnostics;
 mod find_serial;
 mod probe;
 mod scan;
+mod service_control;
 
 use std::{
     io::{BufRead, BufReader, Read, Write},

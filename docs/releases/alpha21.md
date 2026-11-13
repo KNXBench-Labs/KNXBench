@@ -128,6 +128,7 @@ changes, and no new Docker channel policy.
 
 ## Boundaries
 
+- **Receipt:** the [sanitized public receipt](../evidence/release-alpha21-2026-11-13.json) records the candidate, the dry runs, the tag publishers and the checks of the final public bytes: downloads and `SHA256SUMS` match, `knx-mcp` and the server report `0.1.0-alpha.21+g616d26d`, the Docker version and `latest` share one index for amd64 and arm64 with the exact revision label, an isolated amd64 container passed the authenticated smoke (create, save as, reopen), and the extracted AppImage started headless with frontend and API answering. The owner's own container was not touched.
 - **Not verified:** physical KNX hardware or real TCP/USB interface interoperability
   for these changes, native desktop-window interaction, ARM runtime execution,
   FUSE launch, universal ETS compatibility or downgrade without restored backups.
@@ -154,8 +155,30 @@ changes, and no new Docker channel policy.
 
 ## By the numbers
 
-RELEASE-GATE-PENDING
+| | Alpha 21 |
+|---|---|
+| Commits since Alpha 20 | **241** (203 without merges) |
+| Files changed | **600**, +48,661 / −2,560 lines |
+| Estimated active development time | **about 50 hours** in 34 working sessions, over about 4 calendar days* |
+| Rust tests | **8,949 passed, 0 failed**; 252 ignored ones are reported, not counted as coverage |
+| Frontend unit tests | **5,737 passed** |
+| Browser test executions | **1,229** fixture (1,132 + 97 exclusive), **844** production in 37 configurations, **45** extra, **12 + 12** native — overlapping suites, not one unique total |
+| Corpus tests | **155/155** in 9 targets, plus the 4 whole-corpus product modules (15 tests), the legacy-name check and the download-coverage baseline |
+| Alpha 20 vs Alpha 21 on 28 real product files | **28/28 identical** ingest results (27 install with both, the same 1 refuses with both) |
+| Upgrade probes | Alpha 20 project and product database converted by Alpha 21, saved and reopened: **0 failures**; Alpha 20 then politely refuses both |
+| Release candidates | **1**, **23/23 green** on its first complete gate run — nothing to fix between freeze and tag |
+| Gate time | about **1 h 25 min** for the complete run; the first attempt lost its connection mid-gate and is kept as aborted, not counted as a result |
+| Packaging dry runs | **2** (AppImage + Docker), **0 accidental publications** |
 
-## Acceptance
+\* Estimated from commit times (a gap over 45 minutes starts a new session, each session counts from 15 minutes before its first commit) — not time tracking.
 
-RELEASE-GATE-PENDING
+## Acceptance and public verification
+
+Published on **13 November 2026** from immutable `616d26d2ec86ceeadd86a3441a7e3b2bfaa9b6cc` (branch `release/alpha21-20261113`, source cutoff `938e895c5`).
+
+- **Source campaign:** the complete maintained package gate (complete, plan completed, inputs frozen, no user data touched) plus the release-only browser, native, product-corpus and download-coverage stages: **23/23 green** with the candidate unchanged from start to end.
+- **Historical product files:** on a representative 28-file cross-section of the archived pinned product selection, restored byte-exact and hash-checked, the legacy-name check passed unchanged, and Alpha 20 and Alpha 21 ingested every file identically (28/28). The full 115-instance compatibility matrix needs the complete selection and was not run; the comparison replaces it.
+- **Upgrade:** a project written by Alpha 20 converts to the new project schema, and an Alpha 20 product database to the new product-database schema; both reopen, the originals stay unchanged and Alpha 20 refuses the converted copies.
+- **AppImage (dry run of this commit):** highest glibc requirement 2.39 across 165 bundled ELF files, CI smoke bound to the downloaded image, loopback only. `knx-mcp` reports `0.1.0-alpha.21+g616d26d`.
+- **Docker (dry run of this commit):** amd64 and arm64 built; publishing was skipped until the tag.
+- **Not verified:** physical KNX hardware and real KNX interfaces (including TCP tunnelling and USB/serial), native WebKitGTK/Tauri windows, ARM runtime execution, FUSE AppImage launch and the full 115-instance pinned compatibility matrix (replaced by the 28-file comparison above).

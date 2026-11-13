@@ -1,0 +1,161 @@
+{
+ "schema": "knxbench-release-publication/1",
+ "tag": "v0.1.0-alpha.21",
+ "tag_object": "54093b1cf1e23161b56ba861056f3de7528108ab",
+ "candidate": "616d26d2ec86ceeadd86a3441a7e3b2bfaa9b6cc",
+ "source_cutoff": "938e895c5",
+ "published_date": "2026-11-13",
+ "published_at": "2026-11-13T04:23:41Z",
+ "release_url": "https://github.com/KNXBench-Labs/KNXBench/releases/tag/v0.1.0-alpha.21",
+ "prerelease": true,
+ "draft": false,
+ "source_acceptance": "../releases/alpha21.md#acceptance-and-public-verification",
+ "candidates": [
+  {
+   "revision": "616d26d2ec86ceeadd86a3441a7e3b2bfaa9b6cc",
+   "verdict": "accepted",
+   "stages": 23,
+   "green": 23,
+   "gate_attempts": {
+    "aborted": 1,
+    "complete": 1,
+    "aborted_reason": "runner terminated by an agent-session disconnect during the package gate; kept as aborted, not a product result"
+   },
+   "dry_runs": {
+    "appimage_mcp": 43327381507,
+    "docker": 43327381581,
+    "publish_jobs_skipped": true
+   }
+  }
+ ],
+ "acceptance_boundary": {
+  "runtime_revision": "616d26d2ec86ceeadd86a3441a7e3b2bfaa9b6cc",
+  "method": "One frozen candidate; complete maintained package gate plus release-only extras on that candidate; owner-approved pinned lanes on a representative cross-section afterwards, same revision.",
+  "package_gate": {
+   "mode": "complete",
+   "requested_full": true,
+   "plan_completed": true,
+   "inputs_frozen": true,
+   "user_data_touched": [],
+   "user_data_unchecked": [],
+   "rust": {
+    "passed": 8949,
+    "failed": 0,
+    "ignored": 252,
+    "harnesses": 56
+   },
+   "bindings": {
+    "passed": 97,
+    "failed": 0
+   },
+   "vitest": 5737,
+   "fixture_browser": {
+    "total": 1229,
+    "functional": 1132,
+    "exclusive": 97
+   },
+   "production_browser": {
+    "passed": 844,
+    "configs": 37
+   },
+   "corpus": {
+    "passed": 155,
+    "selected": 155,
+    "targets": 9
+   }
+  },
+  "release_extras": {
+   "extra_browser_configs": 45,
+   "native_evidence": 12,
+   "native_edit_specs": 12,
+   "product_whole_corpus_modules": {
+    "modules": 4,
+    "tests": 15
+   },
+   "download_coverage_baseline": "1 passed",
+   "legacy_member_names": "1 passed on owner-approved 28-file cross-section of the archived pinned selection, restored byte-exact and removed after closeout",
+   "ingest_differential": {
+    "files": 28,
+    "identical": 28,
+    "different": 0,
+    "installed_previous": 27,
+    "installed_candidate": 27
+   },
+   "pinned_compatibility_matrix": "not run; replaced by the 28-file ingest differential"
+  },
+  "upgrade_probes": {
+   "project": "Alpha 20-written project converted to the new schema, saved and reopened; Alpha 20 refuses the converted copy and leaves it unchanged",
+   "product_database": "Alpha 20 product database converted to the new schema; the older reader refuses it; original unchanged",
+   "failures": 0
+  }
+ },
+ "publication": {
+  "workflows": {
+   "appimage_mcp": {
+    "run": 43365230207,
+    "event": "push",
+    "head": "616d26d2ec86ceeadd86a3441a7e3b2bfaa9b6cc",
+    "build": "success",
+    "publish": "success"
+   },
+   "docker": {
+    "run": 43365230200,
+    "event": "push",
+    "head": "616d26d2ec86ceeadd86a3441a7e3b2bfaa9b6cc",
+    "amd64": "success",
+    "arm64": "success",
+    "publish": "success"
+   }
+  },
+  "assets": [
+   {
+    "name": "knx-mcp-x86_64-linux",
+    "size": 14902784,
+    "digest": "sha256:de5085f5ce62835e87eb4f3b26cf9806b1314fdd80fe670bccaacfcb10fbfed1"
+   },
+   {
+    "name": "KNXBench_0.1.0-alpha.21_amd64.AppImage",
+    "size": 95197688,
+    "digest": "sha256:f875392d8ce93d2dc97b218c5cb1037990596f379a906af9218fee4e7ba6f9df"
+   },
+   {
+    "name": "SHA256SUMS",
+    "size": 194,
+    "digest": "sha256:f727123c858555088673f783247b08def4ba76f44349c632ba740d8dd5bb7c3f"
+   }
+  ],
+  "sha256sums_check": "OK for both binaries",
+  "mcp_version": "knx-mcp 0.1.0-alpha.21+g616d26d",
+  "appimage": {
+   "libwayland_client_bundled": 0,
+   "glibc_max_required_dry_run": "2.39",
+   "headless_start": {
+    "display": "Broadway",
+    "network": "loopback only",
+    "api_version": "0.1.0-alpha.21+g616d26d",
+    "frontend_http": 200,
+    "egl_errors": 0
+   }
+  },
+  "docker": {
+   "index_digest": "sha256:7566bfd0174e809399fbde2ad0b7c57ad6f495a752224bc2bd506d6532c7e3e0",
+   "latest_equal": true,
+   "platforms": [
+    "linux/amd64",
+    "linux/arm64"
+   ],
+   "revision_label_matches": true,
+   "server_version": "knx-server 0.1.0-alpha.21+g616d26d",
+   "isolated_amd64_smoke": "authenticated create/save as/reopen passed, --network none",
+   "owner_container_unchanged": true
+  }
+ },
+ "not_verified": [
+  "physical KNX hardware",
+  "real KNX interfaces including TCP tunnelling and USB/serial",
+  "native WebKitGTK/Tauri windows",
+  "ARM runtime execution",
+  "FUSE AppImage launch",
+  "full 115-instance pinned compatibility matrix"
+ ]
+}

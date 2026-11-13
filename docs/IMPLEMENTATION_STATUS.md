@@ -463,7 +463,15 @@ install holds for its whole transaction, off the runtime too. Catalogue update
 preview/apply, restore and backup deletion now do too (WP-31g); each mutation
 keeps path lookup, backup work, settlement and response inputs in one blocking
 job that continues if its HTTP waiter goes away.
-The System-2 download worker remains open.
+Since 13 November 2026 the System-2 download worker's final project-binding
+wait also runs off the runtime (WP-31h). Its source checks, observed-evidence
+admission and terminal project settlement already did. The final lock and
+binding sample remain one read-only blocking job; stale binding refuses before
+execution. Mounted synthetic tests cover lock release, a genuine project change,
+cooperative cancel and process Stop without further management frames in the
+three non-writing cases. The retained worker still uses the existing App entry
+to checkpoint cooperative cancellation before further management services; this is
+not an abort or a new cancellation policy.
 Limit: edits that write the file in their own transaction (notes and
 instructions apply, naming recipes, device-compare adoption, selective import,
 baseline marks) and the project-history panel still hold

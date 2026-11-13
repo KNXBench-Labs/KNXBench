@@ -683,20 +683,23 @@ async fn download_inner(
         state
             .device_system2
             .publish_progress(&preparation.metadata.operation_id, updates.clone());
-        {
-            observe!(state, phase("binding-recheck"));
-            let project = state.project.lock().map_err(|_| {
+        let copy = state.clone();
+        let binding = preparation.metadata.binding.clone();
+        observe!(state, phase("binding-recheck"));
+        blocking(move || {
+            // Sample the binding under the same publication lock, off the runtime.
+            let _project = copy.project.lock().map_err(|_| {
                 observe!(
-                    state,
+                    copy,
                     failure("binding-recheck", "project-lock-unavailable", None)
                 );
                 refuse("system2Unavailable")
             })?;
-            check_binding(state, &preparation.metadata.binding).inspect_err(|_| {
-                observe!(state, failure("binding-recheck", "binding-stale", None));
-            })?;
-            drop(project);
-        }
+            check_binding(&copy, &binding).inspect_err(|_| {
+                observe!(copy, failure("binding-recheck", "binding-stale", None));
+            })
+        })
+        .await?;
         observe!(state, phase("executor"));
         let result = off_tunnel_workers(app::execute_project_hardware(
             &Transport {

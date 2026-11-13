@@ -6,7 +6,16 @@ use serde_json::{json, Value};
 use std::{io, io::Read, path::PathBuf};
 
 #[derive(Default)]
-pub(super) struct Observation(Mutex<Snapshot>, Mutex<Option<&'static str>>);
+pub(super) struct Observation(
+    Mutex<Snapshot>,
+    Mutex<Option<&'static str>>,
+    Mutex<Option<PhaseRendezvous>>,
+);
+struct PhaseRendezvous {
+    phase: &'static str,
+    entered: std::sync::mpsc::Sender<()>,
+    held: std::sync::mpsc::Receiver<()>,
+}
 #[derive(Default)]
 struct Snapshot {
     kind: Option<&'static str>,
@@ -85,6 +94,32 @@ impl Observation {
     pub(super) fn arm_panic(&self, phase: &'static str) {
         *self.1.lock().unwrap() = Some(phase);
     }
+    /// Per-state scheduling rendezvous: a native fixture takes the real project
+    /// lock before acknowledging. No injected result, branch, source or transport.
+    /// The acknowledgement ends the hook; only the real mutex can then wait.
+    pub(super) fn rendezvous(
+        &self,
+        phase: &'static str,
+    ) -> (std::sync::mpsc::Receiver<()>, std::sync::mpsc::Sender<()>) {
+        let (entered, events) = std::sync::mpsc::channel();
+        let (held, acquired) = std::sync::mpsc::channel();
+        *self.2.lock().unwrap() = Some(PhaseRendezvous {
+            phase,
+            entered,
+            held: acquired,
+        });
+        (events, held)
+    }
+    pub(super) fn executor_entered(&self) -> bool {
+        self.0.lock().unwrap().executor_entry.is_some()
+    }
+    pub(super) fn first_failure(&self) -> Option<(&'static str, &'static str)> {
+        self.0
+            .lock()
+            .unwrap()
+            .failure
+            .map(|(phase, class, _)| (phase, class))
+    }
     pub(super) fn phase(&self, phase: &'static str) {
         self.update(|s| {
             s.phase = Some(phase);
@@ -92,6 +127,21 @@ impl Observation {
                 s.executor_entry = s.started.map(|start| start.elapsed());
             }
         });
+        let rendezvous = {
+            let mut armed = self.2.lock().unwrap();
+            if armed.as_ref().is_some_and(|r| r.phase == phase) {
+                armed.take()
+            } else {
+                None
+            }
+        };
+        if let Some(rendezvous) = rendezvous {
+            rendezvous.entered.send(()).unwrap();
+            rendezvous
+                .held
+                .recv_timeout(std::time::Duration::from_secs(10))
+                .expect("native fixture must acquire the real project lock");
+        }
         if *self.1.lock().unwrap() == Some(phase) {
             panic!("armed test panic at phase {phase}");
         }

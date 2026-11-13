@@ -280,87 +280,94 @@ fn review(state: &SharedState) -> Result<Vec<Candidate>, ApiError> {
 }
 
 async fn plan(State(state): State<SharedState>) -> Result<Json<PlanResponse>, ApiError> {
-    let candidates = review(&state)?;
-    let batch_id = state.next_device_download_id.fetch_add(1, Ordering::SeqCst);
-    let mut rows = Vec::with_capacity(candidates.len());
-    let mut devices = Vec::with_capacity(candidates.len());
-    for candidate in candidates {
-        let verdict = match candidate.verdict {
-            Ok((prepared, level)) => match crate::device_download_routes::keying(&state, &prepared)
-            {
-                Err(error) => Err(unsupported("access-key", error.message())),
-                Ok(_) => Ok((prepared, level)),
-            },
-            Err(reason) => Err(reason),
-        };
-        let (dto, kept) = match verdict {
-            Err(reason) => (
-                VerdictDto::NotInBatch {
-                    reason: reason.clone(),
-                },
-                Err(reason),
-            ),
-            Ok((prepared, level)) => {
-                let target = prepared.target;
-                let id = state.next_device_download_id.fetch_add(1, Ordering::SeqCst);
-                let partial = prepared.partial.as_ref().map(|(parts, _)| *parts);
-                let needs_acknowledgement = level.needs_acknowledgement();
-                let dto = VerdictDto::InBatch {
-                    plan_id: id,
-                    program_id: prepared.request.program_id.clone(),
-                    scope: partial
-                        .map_or(AdvisedWrite::Complete, AdvisedWrite::Partial)
-                        .code(),
-                    steps: prepared.plan.steps.len(),
-                    data_octets: prepared.plan.data_octets(),
-                    support: level.code(),
-                    inferences: match &level {
-                        SupportLevel::Untested { inferences, .. } => {
-                            inferences.iter().map(ToString::to_string).collect()
-                        }
-                        _ => Vec::new(),
+    crate::routes::off_runtime(move || {
+        let candidates = review(&state)?;
+        let batch_id = state.next_device_download_id.fetch_add(1, Ordering::SeqCst);
+        let mut rows = Vec::with_capacity(candidates.len());
+        let mut devices = Vec::with_capacity(candidates.len());
+        for candidate in candidates {
+            let verdict = match candidate.verdict {
+                Ok((prepared, level)) => {
+                    match crate::device_download_routes::keying(&state, &prepared) {
+                        Err(error) => Err(unsupported("access-key", error.message())),
+                        Ok(_) => Ok((prepared, level)),
+                    }
+                }
+                Err(reason) => Err(reason),
+            };
+            let (dto, kept) = match verdict {
+                Err(reason) => (
+                    VerdictDto::NotInBatch {
+                        reason: reason.clone(),
                     },
-                    warnings: prepared.warnings.iter().map(ToString::to_string).collect(),
-                    confirmation_phrase: required_confirmation_phrase(target, WriteScope::Download),
-                    untested_acknowledgement: needs_acknowledgement
-                        .then(|| untested_acknowledgement(target)),
-                };
-                let kept = Ok(BatchPlan {
-                    id,
-                    target,
-                    plan: prepared.plan,
-                    partial,
-                    needs_acknowledgement,
-                });
-                (dto, kept)
-            }
-        };
-        rows.push(ReviewRowDto {
-            device_id: candidate.device_id,
-            address: candidate.address.map(|address| address.to_string()),
-            name: candidate.name.clone(),
-            verdict: dto,
-        });
-        devices.push(ReviewedDevice {
-            device_id: candidate.device_id,
-            address: candidate.address,
-            name: candidate.name,
-            verdict: kept,
-        });
-    }
-    // The batch replaces whatever plan was shown; a running batch keeps the
-    // plans it took at its start and is not touched.
-    *state
-        .device_download_plan
-        .lock()
-        .expect("state mutex poisoned") = Some(ShownDownload::Batch(ShownBatch {
-        id: batch_id,
-        devices,
-    }));
-    Ok(Json(PlanResponse {
-        batch_id,
-        devices: rows,
-    }))
+                    Err(reason),
+                ),
+                Ok((prepared, level)) => {
+                    let target = prepared.target;
+                    let id = state.next_device_download_id.fetch_add(1, Ordering::SeqCst);
+                    let partial = prepared.partial.as_ref().map(|(parts, _)| *parts);
+                    let needs_acknowledgement = level.needs_acknowledgement();
+                    let dto = VerdictDto::InBatch {
+                        plan_id: id,
+                        program_id: prepared.request.program_id.clone(),
+                        scope: partial
+                            .map_or(AdvisedWrite::Complete, AdvisedWrite::Partial)
+                            .code(),
+                        steps: prepared.plan.steps.len(),
+                        data_octets: prepared.plan.data_octets(),
+                        support: level.code(),
+                        inferences: match &level {
+                            SupportLevel::Untested { inferences, .. } => {
+                                inferences.iter().map(ToString::to_string).collect()
+                            }
+                            _ => Vec::new(),
+                        },
+                        warnings: prepared.warnings.iter().map(ToString::to_string).collect(),
+                        confirmation_phrase: required_confirmation_phrase(
+                            target,
+                            WriteScope::Download,
+                        ),
+                        untested_acknowledgement: needs_acknowledgement
+                            .then(|| untested_acknowledgement(target)),
+                    };
+                    let kept = Ok(BatchPlan {
+                        id,
+                        target,
+                        plan: prepared.plan,
+                        partial,
+                        needs_acknowledgement,
+                    });
+                    (dto, kept)
+                }
+            };
+            rows.push(ReviewRowDto {
+                device_id: candidate.device_id,
+                address: candidate.address.map(|address| address.to_string()),
+                name: candidate.name.clone(),
+                verdict: dto,
+            });
+            devices.push(ReviewedDevice {
+                device_id: candidate.device_id,
+                address: candidate.address,
+                name: candidate.name,
+                verdict: kept,
+            });
+        }
+        // The batch replaces whatever plan was shown; a running batch keeps the
+        // plans it took at its start and is not touched.
+        *state
+            .device_download_plan
+            .lock()
+            .expect("state mutex poisoned") = Some(ShownDownload::Batch(ShownBatch {
+            id: batch_id,
+            devices,
+        }));
+        Ok(Json(PlanResponse {
+            batch_id,
+            devices: rows,
+        }))
+    })
+    .await?
 }
 
 #[derive(Deserialize)]

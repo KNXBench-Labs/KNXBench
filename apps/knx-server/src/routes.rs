@@ -4277,6 +4277,9 @@ mod editor_runtime_tests;
 mod edit_runtime_tests;
 
 #[cfg(test)]
+mod module_runtime_tests;
+
+#[cfg(test)]
 mod tests {
     use std::net::{Ipv4Addr, SocketAddrV4};
     use std::sync::Arc;

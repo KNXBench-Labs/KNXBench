@@ -29,25 +29,28 @@ pub(crate) struct Binding {
 pub(crate) async fn catalogue(
     State(state): State<SharedState>,
 ) -> Result<(HeaderMap, Json<Catalogue>), ApiError> {
-    let project = state.project.lock().expect("state mutex poisoned");
-    project
-        .as_ref()
-        .ok_or_else(|| ApiError::bad_request("no project open"))?;
-    let opaque = state.opaque.lock().expect("state mutex poisoned");
-    let records = knx_app::project_payloads::catalogue(&opaque)
-        .map_err(|e| ApiError::with_status(StatusCode::UNPROCESSABLE_ENTITY, e))?;
-    let mut headers = HeaderMap::new();
-    headers.insert(header::CACHE_CONTROL, HeaderValue::from_static("no-store"));
-    Ok((
-        headers,
-        Json(Catalogue {
-            server_incarnation: state.server_incarnation.clone(),
-            project_incarnation: state.project_incarnation.load(Ordering::Relaxed),
-            snapshot_revision: state.project_revision.load(Ordering::Relaxed),
-            max_download_bytes: knx_app::project_payloads::MAX_DOWNLOAD_BYTES,
-            records,
-        }),
-    ))
+    crate::routes::off_runtime(move || {
+        let project = state.project.lock().expect("state mutex poisoned");
+        project
+            .as_ref()
+            .ok_or_else(|| ApiError::bad_request("no project open"))?;
+        let opaque = state.opaque.lock().expect("state mutex poisoned");
+        let records = knx_app::project_payloads::catalogue(&opaque)
+            .map_err(|e| ApiError::with_status(StatusCode::UNPROCESSABLE_ENTITY, e))?;
+        let mut headers = HeaderMap::new();
+        headers.insert(header::CACHE_CONTROL, HeaderValue::from_static("no-store"));
+        Ok((
+            headers,
+            Json(Catalogue {
+                server_incarnation: state.server_incarnation.clone(),
+                project_incarnation: state.project_incarnation.load(Ordering::Relaxed),
+                snapshot_revision: state.project_revision.load(Ordering::Relaxed),
+                max_download_bytes: knx_app::project_payloads::MAX_DOWNLOAD_BYTES,
+                records,
+            }),
+        ))
+    })
+    .await?
 }
 
 pub(crate) async fn download(

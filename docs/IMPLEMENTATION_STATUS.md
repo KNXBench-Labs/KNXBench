@@ -441,8 +441,11 @@ project tree, status, notes and instructions reads read a copy of the store
 path instead of waiting for it; the device editor's routes wait for the project
 off the runtime. Since 13 November 2026 the project router's other edits
 (topology, group addresses and ranges, links, devices, undo/redo, the
-group-address style), the Functions panel and the device list do too; route
-modules such as bus, download and device comparison are not yet audited.
+group-address style), the Functions panel, the device list and the other
+modules' project reads and edits (notes, instructions, recipes, adoption,
+readiness, download plans, metadata) do too; bus and session routes (monitor
+start, scan comparison, device comparison, diagnostics) still wait on a
+runtime worker.
 Limit: edits that write the file in their own transaction (notes and
 instructions apply, naming recipes, device-compare adoption, selective import,
 baseline marks) and the project-history panel still hold

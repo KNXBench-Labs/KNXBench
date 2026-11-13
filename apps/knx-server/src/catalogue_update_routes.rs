@@ -603,15 +603,17 @@ async fn cleanup_preview(
     State(state): State<SharedState>,
     Json(request): Json<CleanupPreviewRequest>,
 ) -> Result<Json<CleanupPreviewView>, ApiError> {
-    let bindings = open_project_bindings(&state);
-    let preview = blocking(move || {
+    // Both wait off the runtime (#36); the project lock is released first.
+    let (bindings, preview) = blocking(move || {
+        let bindings = open_project_bindings(&state);
         let owner = owner(&state)?;
-        owner
+        let preview = owner
             .with_read(|products| {
                 knx_productdb::preview_catalog_cleanup(products, &request.item_ids)
                     .map_err(cleanup_error)
             })
-            .map_err(crate::catalogue_owner::owner_error)?
+            .map_err(crate::catalogue_owner::owner_error)??;
+        Ok((bindings, preview))
     })
     .await?;
     let items = preview

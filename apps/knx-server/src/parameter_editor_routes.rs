@@ -82,59 +82,64 @@ async fn read(
     Path(device): Path<u32>,
     Query(query): Query<SourceQuery>,
 ) -> Result<Json<View>, ApiError> {
-    if query.ets_id.is_empty() || query.ets_id.len() > 1024 {
-        return Err(ApiError::bad_request(
-            "Parameter reference must contain 1 to 1024 bytes",
-        ));
-    }
-    let before = identity(&state, device)?;
-    // Never hold the project and product database mutexes together.
-    let evidence = if let Some(owner) = state.product_db.as_ref() {
-        owner
-            .with_read(|products| -> Result<_, ApiError> {
-                match knx_productdb::query::resolve_program(products, &before.0)
-                    .map_err(|e| ApiError::internal(e.to_string()))?
-                {
-                    None => Ok(unavailable("missingProgram")),
-                    Some(program) => {
-                        match parameter_editor_evidence(products, &program, &query.ets_id)
-                            .map_err(|e| ApiError::internal(e.to_string()))?
-                        {
-                            ParameterEditorEvidence::Unavailable(issue) => {
-                                Ok(unavailable(issue_name(issue)))
+    crate::routes::off_runtime(move || {
+        if query.ets_id.is_empty() || query.ets_id.len() > 1024 {
+            return Err(ApiError::bad_request(
+                "Parameter reference must contain 1 to 1024 bytes",
+            ));
+        }
+        let before = identity(&state, device)?;
+        // Never hold the project and product database mutexes together.
+        let evidence = if let Some(owner) = state.product_db.as_ref() {
+            owner
+                .with_read(|products| -> Result<_, ApiError> {
+                    match knx_productdb::query::resolve_program(products, &before.0)
+                        .map_err(|e| ApiError::internal(e.to_string()))?
+                    {
+                        None => Ok(unavailable("missingProgram")),
+                        Some(program) => {
+                            match parameter_editor_evidence(products, &program, &query.ets_id)
+                                .map_err(|e| ApiError::internal(e.to_string()))?
+                            {
+                                ParameterEditorEvidence::Unavailable(issue) => {
+                                    Ok(unavailable(issue_name(issue)))
+                                }
+                                ParameterEditorEvidence::Declared(source) => {
+                                    Ok(Evidence::Declared {
+                                        source: Source {
+                                            source_sha256: source.source_sha256,
+                                            program_id: source.program_id,
+                                            parameter_type_id: source.parameter_type_id,
+                                            schema: source.schema,
+                                            child: source.child,
+                                            attributes: source.attributes,
+                                            parent_attributes: source.parameter_type_attributes,
+                                        },
+                                    })
+                                }
                             }
-                            ParameterEditorEvidence::Declared(source) => Ok(Evidence::Declared {
-                                source: Source {
-                                    source_sha256: source.source_sha256,
-                                    program_id: source.program_id,
-                                    parameter_type_id: source.parameter_type_id,
-                                    schema: source.schema,
-                                    child: source.child,
-                                    attributes: source.attributes,
-                                    parent_attributes: source.parameter_type_attributes,
-                                },
-                            }),
                         }
                     }
-                }
-            })
-            .map_err(crate::catalogue_owner::owner_error)??
-    } else {
-        unavailable("missingProductDatabase")
-    };
-    let after = identity(&state, device)?;
-    if before != after {
-        return Err(ApiError::with_status(
-            axum::http::StatusCode::CONFLICT,
-            "Project changed while reading parameter evidence",
-        ));
-    }
-    Ok(Json(View {
-        device,
-        parameter_ref_id: query.ets_id,
-        server_incarnation: state.server_incarnation.clone(),
-        project_incarnation: before.1,
-        snapshot_revision: before.2,
-        evidence,
-    }))
+                })
+                .map_err(crate::catalogue_owner::owner_error)??
+        } else {
+            unavailable("missingProductDatabase")
+        };
+        let after = identity(&state, device)?;
+        if before != after {
+            return Err(ApiError::with_status(
+                axum::http::StatusCode::CONFLICT,
+                "Project changed while reading parameter evidence",
+            ));
+        }
+        Ok(Json(View {
+            device,
+            parameter_ref_id: query.ets_id,
+            server_incarnation: state.server_incarnation.clone(),
+            project_incarnation: before.1,
+            snapshot_revision: before.2,
+            evidence,
+        }))
+    })
+    .await?
 }

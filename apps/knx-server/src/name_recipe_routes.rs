@@ -160,118 +160,124 @@ async fn preview(
     State(api): State<Api>,
     Json(request): Json<PreviewRequest>,
 ) -> Result<Json<PreviewView>, ApiError> {
-    let state = &api.app;
-    let lock = state.project.lock().expect("state mutex poisoned");
-    let project = lock
-        .as_ref()
-        .ok_or_else(|| ApiError::bad_request("No project open"))?;
-    if request.server_incarnation != state.server_incarnation
-        || request.project_incarnation != state.project_incarnation.load(Ordering::Relaxed)
-        || request.snapshot_revision != domain::current_project_revision(state)
-    {
-        return Err(stale());
-    }
-    let plan = recipe::preview_name_recipe(
-        &snapshot(state, project),
-        &revision(state),
-        NameRecipeIntent {
-            ids: request
-                .group_addresses
-                .into_iter()
-                .map(GroupAddressId)
+    crate::routes::off_runtime(move || {
+        let state = &api.app;
+        let lock = state.project.lock().expect("state mutex poisoned");
+        let project = lock
+            .as_ref()
+            .ok_or_else(|| ApiError::bad_request("No project open"))?;
+        if request.server_incarnation != state.server_incarnation
+            || request.project_incarnation != state.project_incarnation.load(Ordering::Relaxed)
+            || request.snapshot_revision != domain::current_project_revision(state)
+        {
+            return Err(stale());
+        }
+        let plan = recipe::preview_name_recipe(
+            &snapshot(state, project),
+            &revision(state),
+            NameRecipeIntent {
+                ids: request
+                    .group_addresses
+                    .into_iter()
+                    .map(GroupAddressId)
+                    .collect(),
+                prefix: request.prefix,
+                suffix: request.suffix,
+            },
+        )
+        .map_err(error)?;
+        let mut random = [0_u8; 24];
+        getrandom::fill(&mut random)
+            .map_err(|_| ApiError::internal("Unable to allocate a preview identity"))?;
+        let token = URL_SAFE_NO_PAD.encode(random);
+        let shown = plan.preview();
+        let response = PreviewView {
+            token: token.clone(),
+            rows: shown
+                .rows
+                .iter()
+                .map(|row| RowView {
+                    id: row.id.0,
+                    before: row.before.clone(),
+                    after: row.after.clone(),
+                    changed: row.changed,
+                })
                 .collect(),
-            prefix: request.prefix,
-            suffix: request.suffix,
-        },
-    )
-    .map_err(error)?;
-    let mut random = [0_u8; 24];
-    getrandom::fill(&mut random)
-        .map_err(|_| ApiError::internal("Unable to allocate a preview identity"))?;
-    let token = URL_SAFE_NO_PAD.encode(random);
-    let shown = plan.preview();
-    let response = PreviewView {
-        token: token.clone(),
-        rows: shown
-            .rows
-            .iter()
-            .map(|row| RowView {
-                id: row.id.0,
-                before: row.before.clone(),
-                after: row.after.clone(),
-                changed: row.changed,
-            })
-            .collect(),
-        changed: shown.changed,
-        no_op: shown.changed == 0,
-        expires_in_seconds: PREVIEW_TTL.as_secs(),
-    };
-    *api.pending.lock().expect("preview mutex poisoned") = Some(Pending {
-        token,
-        created: Instant::now(),
-        plan,
-    });
-    Ok(Json(response))
+            changed: shown.changed,
+            no_op: shown.changed == 0,
+            expires_in_seconds: PREVIEW_TTL.as_secs(),
+        };
+        *api.pending.lock().expect("preview mutex poisoned") = Some(Pending {
+            token,
+            created: Instant::now(),
+            plan,
+        });
+        Ok(Json(response))
+    })
+    .await?
 }
 
 async fn apply(
     State(api): State<Api>,
     Json(request): Json<ApplyRequest>,
 ) -> Result<Json<ApplyView>, ApiError> {
-    if !request.confirmed {
-        return Err(ApiError::refused(
-            "nameRecipeConfirmationRequired",
-            "Confirm the shown preview before renaming",
-        ));
-    }
-    let state = &api.app;
-    let mut lock = state.project.lock().expect("state mutex poisoned");
-    let project = lock
-        .as_mut()
-        .ok_or_else(|| ApiError::bad_request("No project open"))?;
-    let mut pending = api.pending.lock().expect("preview mutex poisoned");
-    let shown = pending.as_ref().ok_or_else(stale)?;
-    if shown.token != request.token || shown.created.elapsed() >= PREVIEW_TTL {
-        return Err(stale());
-    }
-    let mut candidate = snapshot(state, project);
-    let mut stack = state.command_stack.lock().expect("state mutex poisoned");
-    let path = state.store_path.lock().expect("state mutex poisoned");
-    let mut generation = state
-        .history_generation
-        .lock()
-        .expect("state mutex poisoned");
-    let target = path.as_deref().map(|path| NameRecipeNativeTarget {
-        path,
-        history_generation: *generation,
-    });
-    let outcome = recipe::apply_name_recipe(
-        &mut candidate,
-        &mut stack,
-        &revision(state),
-        &shown.plan,
-        target,
-    )
-    .map_err(error)?;
-    if outcome.changed {
-        *project = candidate.project;
-        if let Some(next) = outcome.native_generation {
-            *generation = next;
+    crate::routes::off_runtime(move || {
+        if !request.confirmed {
+            return Err(ApiError::refused(
+                "nameRecipeConfirmationRequired",
+                "Confirm the shown preview before renaming",
+            ));
         }
-        domain::next_project_revision(state);
-    }
-    // A preview is confirmed once; a replay previews again.
-    *pending = None;
-    Ok(Json(ApplyView {
-        changed: outcome.changed,
-        native_generation: outcome.native_generation,
-        snapshot_revision: domain::current_project_revision(state),
-        persistence: if path.is_some() {
-            "native-working-history"
-        } else {
-            "session-only"
-        },
-    }))
+        let state = &api.app;
+        let mut lock = state.project.lock().expect("state mutex poisoned");
+        let project = lock
+            .as_mut()
+            .ok_or_else(|| ApiError::bad_request("No project open"))?;
+        let mut pending = api.pending.lock().expect("preview mutex poisoned");
+        let shown = pending.as_ref().ok_or_else(stale)?;
+        if shown.token != request.token || shown.created.elapsed() >= PREVIEW_TTL {
+            return Err(stale());
+        }
+        let mut candidate = snapshot(state, project);
+        let mut stack = state.command_stack.lock().expect("state mutex poisoned");
+        let path = state.store_path.lock().expect("state mutex poisoned");
+        let mut generation = state
+            .history_generation
+            .lock()
+            .expect("state mutex poisoned");
+        let target = path.as_deref().map(|path| NameRecipeNativeTarget {
+            path,
+            history_generation: *generation,
+        });
+        let outcome = recipe::apply_name_recipe(
+            &mut candidate,
+            &mut stack,
+            &revision(state),
+            &shown.plan,
+            target,
+        )
+        .map_err(error)?;
+        if outcome.changed {
+            *project = candidate.project;
+            if let Some(next) = outcome.native_generation {
+                *generation = next;
+            }
+            domain::next_project_revision(state);
+        }
+        // A preview is confirmed once; a replay previews again.
+        *pending = None;
+        Ok(Json(ApplyView {
+            changed: outcome.changed,
+            native_generation: outcome.native_generation,
+            snapshot_revision: domain::current_project_revision(state),
+            persistence: if path.is_some() {
+                "native-working-history"
+            } else {
+                "session-only"
+            },
+        }))
+    })
+    .await?
 }
 
 async fn cancel(

@@ -65,87 +65,92 @@ async fn readiness(
     State(state): State<SharedState>,
     Query(query): Query<ReadinessQuery>,
 ) -> Result<Json<ReadinessResponse>, ApiError> {
-    let Some(owner) = state.product_db.as_ref() else {
-        return Err(ApiError::with_kind(
-            StatusCode::CONFLICT,
-            "downloadProductDataMissing",
-            crate::device_download_routes::no_application_program(&state),
-        ));
-    };
-    let evidence = shipped_evidence()
-        .map_err(|e| ApiError::with_status(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-    // The project lock, then the product lock, as `/api/device-download/plan`
-    // takes them; both are released before the response is built.
-    let rows = {
-        let project_guard = state.project.lock().expect("state mutex poisoned");
-        let Some(project) = project_guard.as_ref() else {
+    crate::routes::off_runtime(move || {
+        let Some(owner) = state.product_db.as_ref() else {
             return Err(ApiError::with_kind(
                 StatusCode::CONFLICT,
-                "downloadProjectMissing",
-                "no project is open",
+                "downloadProductDataMissing",
+                crate::device_download_routes::no_application_program(&state),
             ));
         };
-        owner
-            .with_read(|products| match query.device_id {
-                Some(id) => device_readiness(products, project, DeviceId(id), &evidence)
-                    .map(|row| vec![row])
-                    .ok_or_else(|| {
-                        ApiError::with_status(StatusCode::NOT_FOUND, "device not found")
-                    }),
-                None => Ok(project_readiness(products, project, &evidence)),
-            })
-            .map_err(crate::catalogue_owner::owner_error)??
-    };
-    let counts = ReadinessSummary::of(&rows).by_code;
-    let devices = rows
-        .into_iter()
-        .map(|row| {
-            let (category, detail, steps, octets) = match &row.readiness {
-                DeviceReadiness::Graded(SupportLevel::Verified {
-                    evidence,
-                    steps,
-                    octets,
-                }) => (
-                    None,
-                    Some(format!(
-                        "{}, {}; {}",
-                        evidence.device, evidence.date, evidence.reference
-                    )),
-                    Some(*steps),
-                    Some(*octets),
-                ),
-                DeviceReadiness::Graded(SupportLevel::Untested {
-                    steps,
-                    octets,
-                    inferences,
-                }) => (
-                    None,
-                    (!inferences.is_empty()).then(|| {
-                        inferences
-                            .iter()
-                            .map(|inference| format!("inference {inference}"))
-                            .collect::<Vec<_>>()
-                            .join("; ")
-                    }),
-                    Some(*steps),
-                    Some(*octets),
-                ),
-                DeviceReadiness::Graded(SupportLevel::Unsupported { category, detail }) => {
-                    (Some(category.code()), Some(detail.clone()), None, None)
-                }
-                DeviceReadiness::Excluded | DeviceReadiness::NoAddress => (None, None, None, None),
+        let evidence = shipped_evidence()
+            .map_err(|e| ApiError::with_status(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+        // The project lock, then the product lock, as `/api/device-download/plan`
+        // takes them; both are released before the response is built.
+        let rows = {
+            let project_guard = state.project.lock().expect("state mutex poisoned");
+            let Some(project) = project_guard.as_ref() else {
+                return Err(ApiError::with_kind(
+                    StatusCode::CONFLICT,
+                    "downloadProjectMissing",
+                    "no project is open",
+                ));
             };
-            DeviceDto {
-                address: row.address.map(|address| address.to_string()),
-                readiness: row.readiness.code(),
-                name: row.name,
-                program_ref: row.program_ref,
-                category,
-                detail,
-                steps,
-                octets,
-            }
-        })
-        .collect();
-    Ok(Json(ReadinessResponse { devices, counts }))
+            owner
+                .with_read(|products| match query.device_id {
+                    Some(id) => device_readiness(products, project, DeviceId(id), &evidence)
+                        .map(|row| vec![row])
+                        .ok_or_else(|| {
+                            ApiError::with_status(StatusCode::NOT_FOUND, "device not found")
+                        }),
+                    None => Ok(project_readiness(products, project, &evidence)),
+                })
+                .map_err(crate::catalogue_owner::owner_error)??
+        };
+        let counts = ReadinessSummary::of(&rows).by_code;
+        let devices = rows
+            .into_iter()
+            .map(|row| {
+                let (category, detail, steps, octets) = match &row.readiness {
+                    DeviceReadiness::Graded(SupportLevel::Verified {
+                        evidence,
+                        steps,
+                        octets,
+                    }) => (
+                        None,
+                        Some(format!(
+                            "{}, {}; {}",
+                            evidence.device, evidence.date, evidence.reference
+                        )),
+                        Some(*steps),
+                        Some(*octets),
+                    ),
+                    DeviceReadiness::Graded(SupportLevel::Untested {
+                        steps,
+                        octets,
+                        inferences,
+                    }) => (
+                        None,
+                        (!inferences.is_empty()).then(|| {
+                            inferences
+                                .iter()
+                                .map(|inference| format!("inference {inference}"))
+                                .collect::<Vec<_>>()
+                                .join("; ")
+                        }),
+                        Some(*steps),
+                        Some(*octets),
+                    ),
+                    DeviceReadiness::Graded(SupportLevel::Unsupported { category, detail }) => {
+                        (Some(category.code()), Some(detail.clone()), None, None)
+                    }
+                    DeviceReadiness::Excluded | DeviceReadiness::NoAddress => {
+                        (None, None, None, None)
+                    }
+                };
+                DeviceDto {
+                    address: row.address.map(|address| address.to_string()),
+                    readiness: row.readiness.code(),
+                    name: row.name,
+                    program_ref: row.program_ref,
+                    category,
+                    detail,
+                    steps,
+                    octets,
+                }
+            })
+            .collect();
+        Ok(Json(ReadinessResponse { devices, counts }))
+    })
+    .await?
 }

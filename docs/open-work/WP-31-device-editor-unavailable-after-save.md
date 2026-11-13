@@ -1,7 +1,7 @@
 # WP-31 — Device editor unavailable after saving the project (#36)
 
 External report by the issue reporter, 10 November 2026; triaged 11 November 2026.
-Status: **lock fix implemented 11 November 2026; file routes off the runtime workers and download without the project lock 12 November 2026; edits and plain reads no longer wait for a save's write, device editor routes off the runtime 12 November 2026; the project router's remaining edits and the device list off the runtime 13 November 2026; original error message unreproduced.** Follow-up to the original #36 path, which
+Status: **lock fix implemented 11 November 2026; file routes off the runtime workers and download without the project lock 12 November 2026; edits and plain reads no longer wait for a save's write, device editor routes off the runtime 12 November 2026; the project router's remaining edits, the device list and the other modules' project routes off the runtime 13 November 2026; original error message unreproduced.** Follow-up to the original #36 path, which
 the reporter confirmed fixed by `bf85a5b69` on 10 November 2026.
 
 ## Observed
@@ -115,16 +115,16 @@ Tests: `an_edit_during_a_save_is_answered_and_journaled_after_it`,
 
 Remaining limits:
 
-- Edits that write the file in their own transaction still wait for a save
-  while holding the project: manual parameter-baseline marks that change a
-  baseline, note and instruction apply, naming recipes, device-compare
-  adoption, selective import apply and plugin-data writes; so do the
-  project-history panel and its version actions. They need the file and the
-  journal generation, which the save holds.
-- Routes in the other route modules (bus, download, readiness, device
-  comparison, naming recipes, note dispositions, recorded state, metadata and
-  import-report reads, among others) still wait for the project on a runtime
-  worker; they were not audited route by route.
+- Edits that write the file in their own transaction still wait for a save:
+  manual parameter-baseline marks that change a baseline, note and
+  instruction apply, naming recipes, device-compare adoption, selective import
+  apply and plugin-data writes; so do the project-history panel and its
+  version actions. They need the file and the journal generation, which the
+  save holds. Since 13 November most of them wait off the runtime (see below).
+- Bus and session routes still take the project on a runtime worker: starting
+  a monitor, the line-scan comparison and reconciliation (they hold the scan
+  reservation guard across the call), the device comparison itself, the
+  diagnostics preview and the System-2 download worker.
 - Catalogue reads (manufacturers, items, product languages) do not take the
   project lock but still query the product database on a runtime worker.
 - A long operation that holds the project (CSV import and export, project
@@ -157,3 +157,25 @@ group-address context mutation, the Functions read and edit or the device list
 back to inline makes them report exactly those routes.
 `a_dropped_undo_keeps_the_transaction_until_its_mutation_is_done` fails when
 the transaction is held by the request instead of its own task.
+
+### Project routes in the other modules off the runtime (13 November 2026)
+
+A route-by-route audit of the other route modules moved every remaining
+project read and edit that is not bus or session work off the runtime
+(`routes::off_runtime`): modelled metadata, recorded device state, payload and
+source-report catalogues, the source report and import report; note targets,
+preview and apply; instruction preview and apply; naming-recipe preview and
+apply; the delete-with-notes disposition; the programming-state mark; the
+parameter-editor source; device-compare adoption (preview and apply);
+download readiness, the download plan and the batch plan; and the catalogue
+cleanup preview, whose open-project count now runs in its blocking task. The
+plugin-data routes already did. Each handler body moved unchanged; none
+contained an `.await`.
+
+Tests (`routes/module_runtime_tests.rs`, against the whole application):
+`module_routes_leave_the_runtime_free` (18 routes),
+`comparison_adoption_leaves_the_runtime_free` (with a comparison session
+cookie) and `readiness_and_batch_plan_leave_the_runtime_free` (with an empty
+product database, which both require before the project). Turning metadata,
+note apply, adoption preview, readiness, the batch plan or the cleanup
+preview's count back to inline makes them report exactly those routes.

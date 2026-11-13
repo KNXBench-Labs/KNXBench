@@ -143,15 +143,22 @@ pub(super) async fn assert_routes_leave_the_runtime_free(
     routes: &[(&str, &str, &str, StatusCode)],
     router: fn(&Arc<AppState>) -> axum::Router,
 ) {
-    assert_routes_leave_the_runtime_free_with(routes, router, || Arc::new(AppState::default()))
-        .await;
+    assert_routes_leave_the_runtime_free_with(
+        routes,
+        router,
+        || Arc::new(AppState::default()),
+        None,
+    )
+    .await;
 }
 
-/// As above, with a caller-built state (for example one with products).
+/// As above, with a caller-built state (for example one with products) and
+/// an optional header on every request (for example a session cookie).
 pub(super) async fn assert_routes_leave_the_runtime_free_with(
     routes: &[(&str, &str, &str, StatusCode)],
     router: fn(&Arc<AppState>) -> axum::Router,
     new_state: impl Fn() -> Arc<AppState>,
+    header: Option<(&str, &str)>,
 ) {
     let mut blocked = Vec::new();
     let mut before_the_lock = Vec::new();
@@ -160,7 +167,13 @@ pub(super) async fn assert_routes_leave_the_runtime_free_with(
         project_with_device(&state);
         let router = router(&state);
         let (release, holder) = super::tests::hold_project_lock(&state);
-        let request = request(method, uri, body);
+        let mut request = request(method, uri, body);
+        if let Some((name, value)) = header {
+            request.headers_mut().insert(
+                axum::http::HeaderName::from_bytes(name.as_bytes()).unwrap(),
+                axum::http::HeaderValue::from_str(value).unwrap(),
+            );
+        }
         let call = tokio::spawn(async move { router.oneshot(request).await.unwrap().status() });
         tokio::task::yield_now().await;
         tokio::time::sleep(Duration::from_millis(20)).await;

@@ -122,10 +122,9 @@ Remaining limits:
   version actions. They need the file and the journal generation, which the
   save holds. Since 13 November every one of them waits off the runtime (see
   below), so the wait no longer ties up a runtime worker.
-- Routes that interleave bus or session work with the project still take it on
-  a runtime worker: starting a monitor, the line-scan comparison and
-  reconciliation (they hold the scan reservation guard across the call), the
-  device comparison itself, the device-diagnostics preview, the support
+- Some routes that interleave bus or session work with the project still take
+  it on a runtime worker: the device comparison itself, the
+  device-diagnostics preview, the support
   diagnose run, the serial-address write and find, the diagnostic-bundle
   preview, section and export (its project context, environment and
   import-report sections) and the System-2 download worker. This list comes
@@ -187,3 +186,34 @@ product database, which both require before the project). Turning metadata,
 note apply, adoption preview, readiness, the batch plan or the cleanup
 preview's count, stored bus access or the support preview and export back
 to inline makes them report exactly those routes.
+
+### Monitor context and scan project work off the runtime (13 November 2026)
+
+The monitor starts (`POST /api/bus/monitor/start`, `start-tcp` and
+`start-serial`) now build their owned `GroupAddressContext` snapshot through
+`routes::off_runtime`. The monitor reservation is acquired without queueing in
+the request and kept by a separate async owner through the project wait,
+connection and cleanup of a start whose caller has gone away. Stop admission
+is checked again under that reservation after the snapshot wait, before any
+connector call. The existing System-2, download and programming-holder checks
+remain before the snapshot; no transport or connector implementation changed.
+
+The line-scan `GET /api/bus/scan/comparison` and `comparison-bound`, and
+`POST /api/bus/scan/reconcile` and `reconcile-bound`, also run their project
+work through `routes::off_runtime`. They still reserve immediately and check
+the same session binding before scheduling. The blocking job owns the scan
+reservation until the read or reconciliation finishes, even if its client
+disconnects; cancellation or replacement cannot overtake a pending mutation.
+Body, binding and selection refusal order is unchanged.
+
+Tests (`bus_routes/runtime_tests.rs`) mount the actual handlers on a
+single-threaded runtime. All four scan routes use completed in-memory scans
+(UDP for the legacy routes, TCP for the bound routes); their held-project
+tests reject an answer before the lock and check the exact eventual response.
+The monitor tests cover UDP, TCP and serial through fake connectors, immediate
+busy refusals, admission closing during the project wait, and dropped clients
+during both the context wait and connect. Dropped scan requests retain their
+reservation, and selected reconciliations still finish their mutation. No
+network or device I/O is used by these tests. This is a bounded follow-up,
+not an exhaustive route audit or a reproduction of the reporter's message;
+the other mixed bus/project paths listed above and the proxy question remain.

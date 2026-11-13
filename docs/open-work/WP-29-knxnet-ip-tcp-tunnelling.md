@@ -159,8 +159,24 @@ owns the local results and separates the complete synthetic TCP observation
 from UDP handshake-only controls. Independent Standards and Spec reviews APPROVE;
 all 13 selected package-gate stages passed (716 Rust tests, 22 ignored; separate
 corpus 17/17; frozen inputs and checked, untouched user data), and publication
-on main `7213ab41c` was read back. System-2 validation/execution and other
+on main `7213ab41c` was read back. This observation increment does not itself
+enable execution/recovery; that separate candidate is described below. Other
 programming consumers do not gain the option. No release or hardware claim.
+
+## CLI System-2 validation successor (13 November 2026; source candidate)
+
+Socket-backed `device system2-validation` execution **and recovery** accept strict
+`--tunnel-transport udp|tcp`; omission retains UDP and its patient ACK policy.
+TCP does not inherit UDP retry semantics, fall back, reconnect or replay. Preview
+and `--simulate` refuse explicit selection before input/history/output I/O;
+gateway admission is early too. Actual transport/assigned address and positive
+TCP skips sampled before disconnect are disclosed on ordinary stderr even on
+failure, independently of recording. Every existing consent, source/identity,
+fresh configured-input, durable backup-before-mutation and recovery gate remains.
+The [dedicated record](../status/2026-11-13-cli-tcp-system2-validation.md) owns
+focused evidence and remaining limits; independent review, final package acceptance
+and publication belong to the parent. No hardware or release claim; broader WP-29
+and other programming consumers remain open.
 
 ## Implementation boundaries
 

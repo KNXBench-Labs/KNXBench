@@ -53,26 +53,29 @@ async fn mark(
     Path(id): Path<u32>,
     Json(request): Json<MarkRequest>,
 ) -> Result<Json<ProjectTree>, ApiError> {
-    let binding = SnapshotBinding {
-        server_incarnation: request.server_incarnation,
-        project_incarnation: request.project_incarnation,
-        snapshot_revision: request.snapshot_revision,
-    };
-    mark_device(&state, &binding, DeviceId(id), request.programmed)
-        .map(Json)
-        .map_err(|error| match error {
-            BoundCommandError::NoProject => ApiError::bad_request("No project open"),
-            BoundCommandError::Stale => ApiError::conflict(
-                "programmingStale",
-                "The project changed since this device was shown; refresh and mark again. Nothing was changed.",
-            ),
-            BoundCommandError::Refused(message) => {
-                ApiError::refused("programmingRefused", message)
-            }
-            BoundCommandError::Failure(message) => ApiError::internal(format!(
-                "The device was not marked because the change could not be persisted: {message}"
-            )),
-        })
+    crate::routes::off_runtime(move || {
+        let binding = SnapshotBinding {
+            server_incarnation: request.server_incarnation,
+            project_incarnation: request.project_incarnation,
+            snapshot_revision: request.snapshot_revision,
+        };
+        mark_device(&state, &binding, DeviceId(id), request.programmed)
+            .map(Json)
+            .map_err(|error| match error {
+                BoundCommandError::NoProject => ApiError::bad_request("No project open"),
+                BoundCommandError::Stale => ApiError::conflict(
+                    "programmingStale",
+                    "The project changed since this device was shown; refresh and mark again. Nothing was changed.",
+                ),
+                BoundCommandError::Refused(message) => {
+                    ApiError::refused("programmingRefused", message)
+                }
+                BoundCommandError::Failure(message) => ApiError::internal(format!(
+                    "The device was not marked because the change could not be persisted: {message}"
+                )),
+            })
+    })
+    .await?
 }
 
 /// A manual mark of every part of `device`, bound to the snapshot the user saw.

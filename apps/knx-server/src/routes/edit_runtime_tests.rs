@@ -259,17 +259,23 @@ async fn the_device_preview_leaves_the_runtime_free() {
         ("POST", "/api/devices", &body, StatusCode::BAD_REQUEST),
     ];
     let fresh = std::sync::atomic::AtomicUsize::new(0);
-    assert_routes_leave_the_runtime_free_with(routes, router, || {
-        let n = fresh.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-        let dir = dir.path().join(n.to_string());
-        std::fs::create_dir(&dir).unwrap();
-        Arc::new(AppState {
-            product_db: Some(
-                crate::CatalogueOwner::adopt_opened(products(&dir), Default::default()).unwrap(),
-            ),
-            ..Default::default()
-        })
-    })
+    assert_routes_leave_the_runtime_free_with(
+        routes,
+        router,
+        || {
+            let n = fresh.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+            let dir = dir.path().join(n.to_string());
+            std::fs::create_dir(&dir).unwrap();
+            Arc::new(AppState {
+                product_db: Some(
+                    crate::CatalogueOwner::adopt_opened(products(&dir), Default::default())
+                        .unwrap(),
+                ),
+                ..Default::default()
+            })
+        },
+        None,
+    )
     .await;
 }
 

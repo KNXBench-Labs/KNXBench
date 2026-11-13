@@ -299,118 +299,127 @@ struct TargetsView {
 /// The service-owned target catalogue (`knx_app::note_targets`), stamped with
 /// the same snapshot identity as the notes read so a host can drop a stale one.
 async fn targets(State(api): State<Api>) -> Result<Json<TargetsView>, ApiError> {
-    let state = &api.app;
-    let lock = state.project.lock().expect("state mutex poisoned");
-    let project = lock
-        .as_ref()
-        .ok_or_else(|| ApiError::bad_request("No project open"))?;
-    Ok(Json(TargetsView {
-        targets: note_target_catalogue(project)
-            .into_iter()
-            .map(|option| TargetOptionView {
-                target: option.target.into(),
-                owner: option.owner,
-                parts: option.parts,
-            })
-            .collect(),
-        server_incarnation: state.server_incarnation.clone(),
-        project_incarnation: state.project_incarnation.load(Ordering::Relaxed),
-        snapshot_revision: domain::current_project_revision(state),
-    }))
+    crate::routes::off_runtime(move || {
+        let state = &api.app;
+        let lock = state.project.lock().expect("state mutex poisoned");
+        let project = lock
+            .as_ref()
+            .ok_or_else(|| ApiError::bad_request("No project open"))?;
+        Ok(Json(TargetsView {
+            targets: note_target_catalogue(project)
+                .into_iter()
+                .map(|option| TargetOptionView {
+                    target: option.target.into(),
+                    owner: option.owner,
+                    parts: option.parts,
+                })
+                .collect(),
+            server_incarnation: state.server_incarnation.clone(),
+            project_incarnation: state.project_incarnation.load(Ordering::Relaxed),
+            snapshot_revision: domain::current_project_revision(state),
+        }))
+    })
+    .await?
 }
 async fn preview(
     State(api): State<Api>,
     Json(request): Json<PreviewRequest>,
 ) -> Result<Json<PreviewView>, ApiError> {
-    let state = &api.app;
-    let lock = state.project.lock().expect("state mutex poisoned");
-    let project = lock
-        .as_ref()
-        .ok_or_else(|| ApiError::bad_request("No project open"))?;
-    if request.server_incarnation != state.server_incarnation
-        || request.project_incarnation != state.project_incarnation.load(Ordering::Relaxed)
-        || request.snapshot_revision != domain::current_project_revision(state)
-    {
-        return Err(conflict());
-    }
-    let plan = edit::preview_note_edit(
-        &snapshot(state, project),
-        &revision(state),
-        request.action.normalized(),
-    )
-    .map_err(error)?;
-    let mut random = [0_u8; 24];
-    getrandom::fill(&mut random)
-        .map_err(|_| ApiError::internal("Unable to allocate note preview identity"))?;
-    let token = URL_SAFE_NO_PAD.encode(random);
-    let response = PreviewView {
-        token: token.clone(),
-        previous: request.action.previous(project),
-        action: request.action,
-        created_id: plan.created_id().map(|id| id.0),
-        no_op: plan.is_no_op(),
-        expires_in_seconds: PREVIEW_TTL.as_secs(),
-    };
-    *api.pending.lock().expect("preview mutex poisoned") = Some(Pending {
-        token,
-        created: Instant::now(),
-        plan,
-    });
-    Ok(Json(response))
+    crate::routes::off_runtime(move || {
+        let state = &api.app;
+        let lock = state.project.lock().expect("state mutex poisoned");
+        let project = lock
+            .as_ref()
+            .ok_or_else(|| ApiError::bad_request("No project open"))?;
+        if request.server_incarnation != state.server_incarnation
+            || request.project_incarnation != state.project_incarnation.load(Ordering::Relaxed)
+            || request.snapshot_revision != domain::current_project_revision(state)
+        {
+            return Err(conflict());
+        }
+        let plan = edit::preview_note_edit(
+            &snapshot(state, project),
+            &revision(state),
+            request.action.normalized(),
+        )
+        .map_err(error)?;
+        let mut random = [0_u8; 24];
+        getrandom::fill(&mut random)
+            .map_err(|_| ApiError::internal("Unable to allocate note preview identity"))?;
+        let token = URL_SAFE_NO_PAD.encode(random);
+        let response = PreviewView {
+            token: token.clone(),
+            previous: request.action.previous(project),
+            action: request.action,
+            created_id: plan.created_id().map(|id| id.0),
+            no_op: plan.is_no_op(),
+            expires_in_seconds: PREVIEW_TTL.as_secs(),
+        };
+        *api.pending.lock().expect("preview mutex poisoned") = Some(Pending {
+            token,
+            created: Instant::now(),
+            plan,
+        });
+        Ok(Json(response))
+    })
+    .await?
 }
 async fn apply(
     State(api): State<Api>,
     Json(request): Json<ApplyRequest>,
 ) -> Result<Json<ApplyView>, ApiError> {
-    if !request.confirmed {
-        return Err(ApiError::refused(
-            "noteConfirmationRequired",
-            "Confirm the displayed note change before applying",
-        ));
-    }
-    let state = &api.app;
-    let mut lock = state.project.lock().expect("state mutex poisoned");
-    let project = lock
-        .as_mut()
-        .ok_or_else(|| ApiError::bad_request("No project open"))?;
-    let mut pending = api.pending.lock().expect("preview mutex poisoned");
-    let plan = pending.as_ref().ok_or_else(conflict)?;
-    if plan.token != request.token || plan.created.elapsed() >= PREVIEW_TTL {
-        return Err(conflict());
-    }
-    let mut candidate = snapshot(state, project);
-    let mut stack = state.command_stack.lock().expect("state mutex poisoned");
-    let path = state.store_path.lock().expect("state mutex poisoned");
-    let mut generation = state
-        .history_generation
-        .lock()
-        .expect("state mutex poisoned");
-    let target = path.as_deref().map(|path| NoteNativeTarget {
-        path,
-        history_generation: *generation,
-    });
-    let outcome = edit::apply_note_edit(
-        &mut candidate,
-        &mut stack,
-        &revision(state),
-        &plan.plan,
-        target,
-    )
-    .map_err(error)?;
-    if outcome.changed {
-        *project = candidate.project;
-        if let Some(next) = outcome.native_generation {
-            *generation = next;
+    crate::routes::off_runtime(move || {
+        if !request.confirmed {
+            return Err(ApiError::refused(
+                "noteConfirmationRequired",
+                "Confirm the displayed note change before applying",
+            ));
         }
-        domain::next_project_revision(state);
-    }
-    *pending = None;
-    Ok(Json(ApplyView {
-        changed: outcome.changed,
-        native_generation: outcome.native_generation,
-        snapshot_revision: domain::current_project_revision(state),
-        persistence: persistence(path.is_some()),
-    }))
+        let state = &api.app;
+        let mut lock = state.project.lock().expect("state mutex poisoned");
+        let project = lock
+            .as_mut()
+            .ok_or_else(|| ApiError::bad_request("No project open"))?;
+        let mut pending = api.pending.lock().expect("preview mutex poisoned");
+        let plan = pending.as_ref().ok_or_else(conflict)?;
+        if plan.token != request.token || plan.created.elapsed() >= PREVIEW_TTL {
+            return Err(conflict());
+        }
+        let mut candidate = snapshot(state, project);
+        let mut stack = state.command_stack.lock().expect("state mutex poisoned");
+        let path = state.store_path.lock().expect("state mutex poisoned");
+        let mut generation = state
+            .history_generation
+            .lock()
+            .expect("state mutex poisoned");
+        let target = path.as_deref().map(|path| NoteNativeTarget {
+            path,
+            history_generation: *generation,
+        });
+        let outcome = edit::apply_note_edit(
+            &mut candidate,
+            &mut stack,
+            &revision(state),
+            &plan.plan,
+            target,
+        )
+        .map_err(error)?;
+        if outcome.changed {
+            *project = candidate.project;
+            if let Some(next) = outcome.native_generation {
+                *generation = next;
+            }
+            domain::next_project_revision(state);
+        }
+        *pending = None;
+        Ok(Json(ApplyView {
+            changed: outcome.changed,
+            native_generation: outcome.native_generation,
+            snapshot_revision: domain::current_project_revision(state),
+            persistence: persistence(path.is_some()),
+        }))
+    })
+    .await?
 }
 async fn cancel(
     State(api): State<Api>,

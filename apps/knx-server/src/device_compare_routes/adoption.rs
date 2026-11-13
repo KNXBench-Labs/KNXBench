@@ -189,59 +189,62 @@ pub(super) async fn preview(
     headers: HeaderMap,
     Json(body): Json<PreviewRequest>,
 ) -> Result<Json<PreviewResponse>, ApiError> {
-    state.stop_admission.admit()?;
-    let owner = owner(&headers).ok_or_else(missing)?;
-    // All editors/replacement/save serialize on project first. No lock crosses await.
-    let project = state.project.lock().expect("state mutex poisoned");
-    let project = project.as_ref().ok_or_else(missing)?;
-    let stack = state.command_stack.lock().expect("state mutex poisoned");
-    let scope = scope(&state);
-    let snapshot = NativeSnapshot {
-        project: project.clone(),
-        opaque: state.opaque.lock().expect("state mutex poisoned").clone(),
-        manufacturer_refs: state
-            .manufacturer_refs
-            .lock()
-            .expect("state mutex poisoned")
-            .clone(),
-    };
-    let mut sessions = sessions.lock().expect("comparison mutex poisoned");
-    sessions.prune(&scope);
-    let observed = &sessions
-        .observations
-        .iter()
-        .find(|e| e.token == body.observation_token && e.owner == owner)
-        .ok_or_else(missing)?
-        .value;
-    let products = state.product_db.as_ref().ok_or_else(|| {
-        ApiError::conflict("downloadProductDataMissing", "Product data unavailable")
-    })?;
-    let preview = products
-        .with_read(|conn| {
-            service::preview_adoption(conn, &snapshot, &stack, &scope, observed, &body.selected)
-        })
-        .map_err(crate::catalogue_owner::owner_error)?
-        .map_err(error)?;
-    let token = entropy()?;
-    let response = PreviewResponse {
-        preview_token: token.clone(),
-        selected: preview.selected().to_vec(),
-        changed: preview.changed(),
-        rows: super::decoded(preview.rows()),
-        link_changes: preview.link_changes().iter().map(Into::into).collect(),
-        expires_in_seconds: PREVIEW_TTL.as_secs(),
-    };
-    while sessions.previews.len() >= MAX_PREVIEWS {
-        sessions.previews.pop_front();
-    }
-    sessions.previews.push_back(Entry {
-        token,
-        owner,
-        created: Instant::now(),
-        scope,
-        value: preview,
-    });
-    Ok(Json(response))
+    crate::routes::off_runtime(move || {
+        state.stop_admission.admit()?;
+        let owner = owner(&headers).ok_or_else(missing)?;
+        // All editors/replacement/save serialize on project first. No lock crosses await.
+        let project = state.project.lock().expect("state mutex poisoned");
+        let project = project.as_ref().ok_or_else(missing)?;
+        let stack = state.command_stack.lock().expect("state mutex poisoned");
+        let scope = scope(&state);
+        let snapshot = NativeSnapshot {
+            project: project.clone(),
+            opaque: state.opaque.lock().expect("state mutex poisoned").clone(),
+            manufacturer_refs: state
+                .manufacturer_refs
+                .lock()
+                .expect("state mutex poisoned")
+                .clone(),
+        };
+        let mut sessions = sessions.lock().expect("comparison mutex poisoned");
+        sessions.prune(&scope);
+        let observed = &sessions
+            .observations
+            .iter()
+            .find(|e| e.token == body.observation_token && e.owner == owner)
+            .ok_or_else(missing)?
+            .value;
+        let products = state.product_db.as_ref().ok_or_else(|| {
+            ApiError::conflict("downloadProductDataMissing", "Product data unavailable")
+        })?;
+        let preview = products
+            .with_read(|conn| {
+                service::preview_adoption(conn, &snapshot, &stack, &scope, observed, &body.selected)
+            })
+            .map_err(crate::catalogue_owner::owner_error)?
+            .map_err(error)?;
+        let token = entropy()?;
+        let response = PreviewResponse {
+            preview_token: token.clone(),
+            selected: preview.selected().to_vec(),
+            changed: preview.changed(),
+            rows: super::decoded(preview.rows()),
+            link_changes: preview.link_changes().iter().map(Into::into).collect(),
+            expires_in_seconds: PREVIEW_TTL.as_secs(),
+        };
+        while sessions.previews.len() >= MAX_PREVIEWS {
+            sessions.previews.pop_front();
+        }
+        sessions.previews.push_back(Entry {
+            token,
+            owner,
+            created: Instant::now(),
+            scope,
+            value: preview,
+        });
+        Ok(Json(response))
+    })
+    .await?
 }
 
 pub(super) async fn apply(
@@ -250,82 +253,85 @@ pub(super) async fn apply(
     headers: HeaderMap,
     Json(body): Json<ApplyRequest>,
 ) -> Result<Json<ApplyResponse>, ApiError> {
-    state.stop_admission.admit()?;
-    let Confirmation::AdoptDeviceComparison = body.confirmation;
-    let owner = owner(&headers).ok_or_else(missing)?;
-    let mut project = state.project.lock().expect("state mutex poisoned");
-    let project = project.as_mut().ok_or_else(missing)?;
-    let mut stack = state.command_stack.lock().expect("state mutex poisoned");
-    let counts = *state.import_counts.lock().expect("state mutex poisoned");
-    let path = state.store_path.lock().expect("state mutex poisoned");
-    let clean = state.clean_project.lock().expect("state mutex poisoned");
-    let saved = state.last_saved_at.lock().expect("state mutex poisoned");
-    let opaque = state.opaque.lock().expect("state mutex poisoned");
-    let refs = state
-        .manufacturer_refs
-        .lock()
-        .expect("state mutex poisoned");
-    let mut generation = state
-        .history_generation
-        .lock()
-        .expect("state mutex poisoned");
-    let scope = scope(&state);
-    let mut sessions = sessions.lock().expect("comparison mutex poisoned");
-    // Expiry checked at apply admission, not by an eventual background timer.
-    sessions.prune(&scope);
-    let preview = &sessions
-        .previews
-        .iter()
-        .find(|e| e.token == body.preview_token && e.owner == owner)
-        .ok_or_else(missing)?
-        .value;
-    let mut snapshot = NativeSnapshot {
-        project: project.clone(),
-        opaque: opaque.clone(),
-        manufacturer_refs: refs.clone(),
-    };
-    let products = state.product_db.as_ref().ok_or_else(|| {
-        ApiError::conflict("downloadProductDataMissing", "Product data unavailable")
-    })?;
-    let native = path.as_deref().map(|path| service::AdoptionNativeTarget {
-        path,
-        history_generation: *generation,
-    });
-    let outcome = products
-        .with_read(|conn| {
-            service::apply_adoption(conn, &mut snapshot, &mut stack, &scope, preview, native)
-        })
-        .map_err(crate::catalogue_owner::owner_error)?
-        .map_err(error)?;
-    if outcome.changed {
-        // Service persisted the candidate/history transaction before this publication.
-        *project = snapshot.project;
-        if let Some(next) = outcome.native_generation {
-            *generation = next;
-        }
-        crate::domain::next_project_revision(&state);
-        state.session_log.lock().expect("state mutex poisoned").push(crate::session_log::LogEntry {
-            timestamp: crate::session_log::now(), severity: crate::session_log::Severity::Info,
-            source: "AdoptDeviceComparison".into(), message: "Adopted observed device values (named parameters and/or object links) into the project (one undoable edit; no device write)".into(), location: None, detail: None, diagnostic: None,
+    crate::routes::off_runtime(move || {
+        state.stop_admission.admit()?;
+        let Confirmation::AdoptDeviceComparison = body.confirmation;
+        let owner = owner(&headers).ok_or_else(missing)?;
+        let mut project = state.project.lock().expect("state mutex poisoned");
+        let project = project.as_mut().ok_or_else(missing)?;
+        let mut stack = state.command_stack.lock().expect("state mutex poisoned");
+        let counts = *state.import_counts.lock().expect("state mutex poisoned");
+        let path = state.store_path.lock().expect("state mutex poisoned");
+        let clean = state.clean_project.lock().expect("state mutex poisoned");
+        let saved = state.last_saved_at.lock().expect("state mutex poisoned");
+        let opaque = state.opaque.lock().expect("state mutex poisoned");
+        let refs = state
+            .manufacturer_refs
+            .lock()
+            .expect("state mutex poisoned");
+        let mut generation = state
+            .history_generation
+            .lock()
+            .expect("state mutex poisoned");
+        let scope = scope(&state);
+        let mut sessions = sessions.lock().expect("comparison mutex poisoned");
+        // Expiry checked at apply admission, not by an eventual background timer.
+        sessions.prune(&scope);
+        let preview = &sessions
+            .previews
+            .iter()
+            .find(|e| e.token == body.preview_token && e.owner == owner)
+            .ok_or_else(missing)?
+            .value;
+        let mut snapshot = NativeSnapshot {
+            project: project.clone(),
+            opaque: opaque.clone(),
+            manufacturer_refs: refs.clone(),
+        };
+        let products = state.product_db.as_ref().ok_or_else(|| {
+            ApiError::conflict("downloadProductDataMissing", "Product data unavailable")
+        })?;
+        let native = path.as_deref().map(|path| service::AdoptionNativeTarget {
+            path,
+            history_generation: *generation,
         });
-    }
-    // Consume only after success. A failed native write leaves preview retryable.
-    sessions.previews.retain(|e| e.token != body.preview_token);
-    if outcome.changed {
-        sessions.observations.clear();
-        sessions.previews.clear();
-    }
-    let tree = crate::domain::tree_with_state(
-        project,
-        clean.as_ref(),
-        &stack,
-        counts,
-        crate::domain::current_project_revision(&state),
-        &state,
-        saved.as_deref(),
-    );
-    Ok(Json(ApplyResponse {
-        changed: outcome.changed,
-        tree,
-    }))
+        let outcome = products
+            .with_read(|conn| {
+                service::apply_adoption(conn, &mut snapshot, &mut stack, &scope, preview, native)
+            })
+            .map_err(crate::catalogue_owner::owner_error)?
+            .map_err(error)?;
+        if outcome.changed {
+            // Service persisted the candidate/history transaction before this publication.
+            *project = snapshot.project;
+            if let Some(next) = outcome.native_generation {
+                *generation = next;
+            }
+            crate::domain::next_project_revision(&state);
+            state.session_log.lock().expect("state mutex poisoned").push(crate::session_log::LogEntry {
+                timestamp: crate::session_log::now(), severity: crate::session_log::Severity::Info,
+                source: "AdoptDeviceComparison".into(), message: "Adopted observed device values (named parameters and/or object links) into the project (one undoable edit; no device write)".into(), location: None, detail: None, diagnostic: None,
+            });
+        }
+        // Consume only after success. A failed native write leaves preview retryable.
+        sessions.previews.retain(|e| e.token != body.preview_token);
+        if outcome.changed {
+            sessions.observations.clear();
+            sessions.previews.clear();
+        }
+        let tree = crate::domain::tree_with_state(
+            project,
+            clean.as_ref(),
+            &stack,
+            counts,
+            crate::domain::current_project_revision(&state),
+            &state,
+            saved.as_deref(),
+        );
+        Ok(Json(ApplyResponse {
+            changed: outcome.changed,
+            tree,
+        }))
+    })
+    .await?
 }

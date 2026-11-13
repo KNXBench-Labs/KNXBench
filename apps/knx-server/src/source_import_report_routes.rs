@@ -31,38 +31,44 @@ pub(crate) struct SourceReportView {
 pub(crate) async fn catalogue(
     State(state): State<SharedState>,
 ) -> Result<Json<SourceCatalogue>, ApiError> {
-    let project = state.project.lock().expect("state mutex poisoned");
-    project
-        .as_ref()
-        .ok_or_else(|| ApiError::bad_request("no project open"))?;
-    let opaque = state.opaque.lock().expect("state mutex poisoned");
-    let records = source_reports::catalogue(&opaque)
-        .map_err(|message| ApiError::with_status(StatusCode::UNPROCESSABLE_ENTITY, message))?;
-    Ok(Json(SourceCatalogue {
-        server_incarnation: state.server_incarnation.clone(),
-        project_incarnation: state.project_incarnation.load(Ordering::Relaxed),
-        snapshot_revision: state.project_revision.load(Ordering::Relaxed),
-        records,
-    }))
+    crate::routes::off_runtime(move || {
+        let project = state.project.lock().expect("state mutex poisoned");
+        project
+            .as_ref()
+            .ok_or_else(|| ApiError::bad_request("no project open"))?;
+        let opaque = state.opaque.lock().expect("state mutex poisoned");
+        let records = source_reports::catalogue(&opaque)
+            .map_err(|message| ApiError::with_status(StatusCode::UNPROCESSABLE_ENTITY, message))?;
+        Ok(Json(SourceCatalogue {
+            server_incarnation: state.server_incarnation.clone(),
+            project_incarnation: state.project_incarnation.load(Ordering::Relaxed),
+            snapshot_revision: state.project_revision.load(Ordering::Relaxed),
+            records,
+        }))
+    })
+    .await?
 }
 
 pub(crate) async fn read(
     State(state): State<SharedState>,
     Path(id): Path<String>,
 ) -> Result<Json<SourceReportView>, ApiError> {
-    let project = state.project.lock().expect("state mutex poisoned");
-    project
-        .as_ref()
-        .ok_or_else(|| ApiError::bad_request("no project open"))?;
-    let opaque = state.opaque.lock().expect("state mutex poisoned");
-    let report = source_reports::read(&opaque, &id)
-        .map_err(|message| ApiError::with_status(StatusCode::UNPROCESSABLE_ENTITY, message))?;
-    Ok(Json(SourceReportView {
-        scope: "selectiveSource",
-        id,
-        server_incarnation: state.server_incarnation.clone(),
-        project_incarnation: state.project_incarnation.load(Ordering::Relaxed),
-        snapshot_revision: state.project_revision.load(Ordering::Relaxed),
-        report_json: report.report_json,
-    }))
+    crate::routes::off_runtime(move || {
+        let project = state.project.lock().expect("state mutex poisoned");
+        project
+            .as_ref()
+            .ok_or_else(|| ApiError::bad_request("no project open"))?;
+        let opaque = state.opaque.lock().expect("state mutex poisoned");
+        let report = source_reports::read(&opaque, &id)
+            .map_err(|message| ApiError::with_status(StatusCode::UNPROCESSABLE_ENTITY, message))?;
+        Ok(Json(SourceReportView {
+            scope: "selectiveSource",
+            id,
+            server_incarnation: state.server_incarnation.clone(),
+            project_incarnation: state.project_incarnation.load(Ordering::Relaxed),
+            snapshot_revision: state.project_revision.load(Ordering::Relaxed),
+            report_json: report.report_json,
+        }))
+    })
+    .await?
 }

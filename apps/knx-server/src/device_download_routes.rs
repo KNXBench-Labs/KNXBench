@@ -469,107 +469,110 @@ async fn plan(
     State(state): State<SharedState>,
     Json(body): Json<PlanRequest>,
 ) -> Result<Json<PlanResponse>, ApiError> {
-    let target = parse_target(&body.address)?;
-    let request = scope_request(&body)?;
-    let scoped = prepare_scoped(&state, target, request)?;
-    let advice = ScopeAdviceDto::from(&scoped.advice);
-    let Some(prepared) = scoped.prepared else {
-        // No plan is the shown plan now: one shown earlier cannot be
-        // started after this answer.
+    crate::routes::off_runtime(move || {
+        let target = parse_target(&body.address)?;
+        let request = scope_request(&body)?;
+        let scoped = prepare_scoped(&state, target, request)?;
+        let advice = ScopeAdviceDto::from(&scoped.advice);
+        let Some(prepared) = scoped.prepared else {
+            // No plan is the shown plan now: one shown earlier cannot be
+            // started after this answer.
+            *state
+                .device_download_plan
+                .lock()
+                .expect("state mutex poisoned") = None;
+            let mut details = serde_json::Map::new();
+            details.insert(
+                "scopeAdvice".into(),
+                serde_json::to_value(&advice).expect("advice serialises"),
+            );
+            return Err(ApiError::with_details(
+                StatusCode::UNPROCESSABLE_ENTITY,
+                "downloadNothingPending",
+                format!(
+                    "nothing to download to device {target}: the project marks no application, \
+                     parameter or group address part pending; no plan was built"
+                ),
+                details,
+            ));
+        };
+        let partial = prepared.partial.as_ref().map(|(parts, _)| *parts);
+        let changes = request == ScopeRequest::Changes;
+        let keying = keying(&state, &prepared)?;
+        let level = support_of(&prepared)?;
+        let id = state.next_device_download_id.fetch_add(1, Ordering::SeqCst);
+        let response = PlanResponse {
+            plan_id: id,
+            address: target.to_string(),
+            device_id: prepared.device.0,
+            device_name: prepared.device_name.clone(),
+            program_id: prepared.request.program_id.clone(),
+            mask_version: prepared.plan.mask.0,
+            manufacturer: prepared.plan.manufacturer,
+            parameter_values: prepared.request.values.len(),
+            group_links: prepared.request.links.len(),
+            segments: prepared
+                .octets_to_write()
+                .into_iter()
+                .map(|(id, address, size, written)| SegmentDto {
+                    id,
+                    address,
+                    size,
+                    written,
+                })
+                .collect(),
+            data_octets: prepared.plan.data_octets(),
+            steps: prepared
+                .plan
+                .steps
+                .iter()
+                .map(ToString::to_string)
+                .collect(),
+            confirmation_phrase: required_confirmation_phrase(target, WriteScope::Download),
+            access_key: keying.source.to_string(),
+            partial: prepared.partial.is_some(),
+            not_written: prepared
+                .partial
+                .as_ref()
+                .map(|(_, ignored)| ignored.clone())
+                .unwrap_or_default(),
+            support: SupportDto {
+                level: level.code(),
+                evidence: match &level {
+                    SupportLevel::Verified { evidence, .. } => Some(format!(
+                        "{}, {}; {}",
+                        evidence.device, evidence.date, evidence.reference
+                    )),
+                    _ => None,
+                },
+                inferences: match &level {
+                    SupportLevel::Untested { inferences, .. } => {
+                        inferences.iter().map(ToString::to_string).collect()
+                    }
+                    _ => Vec::new(),
+                },
+            },
+            untested_acknowledgement: level
+                .needs_acknowledgement()
+                .then(|| untested_acknowledgement(target)),
+            warnings: prepared.warnings.iter().map(ToString::to_string).collect(),
+            scope: scope_code(partial),
+            scope_from_changes: changes,
+            scope_advice: advice,
+        };
         *state
             .device_download_plan
             .lock()
-            .expect("state mutex poisoned") = None;
-        let mut details = serde_json::Map::new();
-        details.insert(
-            "scopeAdvice".into(),
-            serde_json::to_value(&advice).expect("advice serialises"),
-        );
-        return Err(ApiError::with_details(
-            StatusCode::UNPROCESSABLE_ENTITY,
-            "downloadNothingPending",
-            format!(
-                "nothing to download to device {target}: the project marks no application, \
-                 parameter or group address part pending; no plan was built"
-            ),
-            details,
-        ));
-    };
-    let partial = prepared.partial.as_ref().map(|(parts, _)| *parts);
-    let changes = request == ScopeRequest::Changes;
-    let keying = keying(&state, &prepared)?;
-    let level = support_of(&prepared)?;
-    let id = state.next_device_download_id.fetch_add(1, Ordering::SeqCst);
-    let response = PlanResponse {
-        plan_id: id,
-        address: target.to_string(),
-        device_id: prepared.device.0,
-        device_name: prepared.device_name.clone(),
-        program_id: prepared.request.program_id.clone(),
-        mask_version: prepared.plan.mask.0,
-        manufacturer: prepared.plan.manufacturer,
-        parameter_values: prepared.request.values.len(),
-        group_links: prepared.request.links.len(),
-        segments: prepared
-            .octets_to_write()
-            .into_iter()
-            .map(|(id, address, size, written)| SegmentDto {
-                id,
-                address,
-                size,
-                written,
-            })
-            .collect(),
-        data_octets: prepared.plan.data_octets(),
-        steps: prepared
-            .plan
-            .steps
-            .iter()
-            .map(ToString::to_string)
-            .collect(),
-        confirmation_phrase: required_confirmation_phrase(target, WriteScope::Download),
-        access_key: keying.source.to_string(),
-        partial: prepared.partial.is_some(),
-        not_written: prepared
-            .partial
-            .as_ref()
-            .map(|(_, ignored)| ignored.clone())
-            .unwrap_or_default(),
-        support: SupportDto {
-            level: level.code(),
-            evidence: match &level {
-                SupportLevel::Verified { evidence, .. } => Some(format!(
-                    "{}, {}; {}",
-                    evidence.device, evidence.date, evidence.reference
-                )),
-                _ => None,
-            },
-            inferences: match &level {
-                SupportLevel::Untested { inferences, .. } => {
-                    inferences.iter().map(ToString::to_string).collect()
-                }
-                _ => Vec::new(),
-            },
-        },
-        untested_acknowledgement: level
-            .needs_acknowledgement()
-            .then(|| untested_acknowledgement(target)),
-        warnings: prepared.warnings.iter().map(ToString::to_string).collect(),
-        scope: scope_code(partial),
-        scope_from_changes: changes,
-        scope_advice: advice,
-    };
-    *state
-        .device_download_plan
-        .lock()
-        .expect("state mutex poisoned") = Some(ShownDownload::Single(ShownPlan {
-        id,
-        target,
-        plan: prepared.plan,
-        partial,
-        changes,
-    }));
-    Ok(Json(response))
+            .expect("state mutex poisoned") = Some(ShownDownload::Single(ShownPlan {
+            id,
+            target,
+            plan: prepared.plan,
+            partial,
+            changes,
+        }));
+        Ok(Json(response))
+    })
+    .await?
 }
 
 #[derive(Deserialize)]

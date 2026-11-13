@@ -153,45 +153,48 @@ async fn apply(
     State(state): State<SharedState>,
     Json(request): Json<ApplyRequest>,
 ) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
-    let binding = SnapshotBinding {
-        server_incarnation: request.server_incarnation,
-        project_incarnation: request.project_incarnation,
-        snapshot_revision: request.snapshot_revision,
-    };
-    let deletion = request.delete.deletion();
-    let choices: Vec<_> = request
-        .choices
-        .iter()
-        .map(|choice| {
-            let action = match &choice.action {
-                ActionWire::Project => Choice::MoveTo(ProjectNoteTarget::Project),
-                ActionWire::Move { target } => Choice::MoveTo(target.normalized()),
-                ActionWire::Delete => Choice::Delete,
-            };
-            (ProjectNoteId(choice.note), action)
+    crate::routes::off_runtime(move || {
+        let binding = SnapshotBinding {
+            server_incarnation: request.server_incarnation,
+            project_incarnation: request.project_incarnation,
+            snapshot_revision: request.snapshot_revision,
+        };
+        let deletion = request.delete.deletion();
+        let choices: Vec<_> = request
+            .choices
+            .iter()
+            .map(|choice| {
+                let action = match &choice.action {
+                    ActionWire::Project => Choice::MoveTo(ProjectNoteTarget::Project),
+                    ActionWire::Move { target } => Choice::MoveTo(target.normalized()),
+                    ActionWire::Delete => Choice::Delete,
+                };
+                (ProjectNoteId(choice.note), action)
+            })
+            .collect();
+        let detail = format!("{deletion:?} with note choices {choices:?}");
+        domain::apply_bound(
+            &state,
+            &binding,
+            "DeleteWithNoteChoices",
+            None,
+            detail,
+            |project| disposition::plan(project, &deletion, &choices).map_err(|e| e.to_string()),
+        )
+        .map_err(|error| match error {
+            BoundCommandError::NoProject => ApiError::bad_request("No project open"),
+            BoundCommandError::Stale => ApiError::conflict(
+                "noteDispositionStale",
+                "The project changed since the affected notes were listed; nothing was deleted. Delete again to see the current notes.",
+            ),
+            BoundCommandError::Refused(message) => {
+                ApiError::refused("noteDispositionRefused", message)
+            }
+            BoundCommandError::Failure(message) => ApiError::internal(format!(
+                "The delete was not applied because it could not be persisted: {message}"
+            )),
         })
-        .collect();
-    let detail = format!("{deletion:?} with note choices {choices:?}");
-    domain::apply_bound(
-        &state,
-        &binding,
-        "DeleteWithNoteChoices",
-        None,
-        detail,
-        |project| disposition::plan(project, &deletion, &choices).map_err(|e| e.to_string()),
-    )
-    .map_err(|error| match error {
-        BoundCommandError::NoProject => ApiError::bad_request("No project open"),
-        BoundCommandError::Stale => ApiError::conflict(
-            "noteDispositionStale",
-            "The project changed since the affected notes were listed; nothing was deleted. Delete again to see the current notes.",
-        ),
-        BoundCommandError::Refused(message) => {
-            ApiError::refused("noteDispositionRefused", message)
-        }
-        BoundCommandError::Failure(message) => ApiError::internal(format!(
-            "The delete was not applied because it could not be persisted: {message}"
-        )),
+        .map(Json)
     })
-    .map(Json)
+    .await?
 }

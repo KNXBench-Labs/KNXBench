@@ -451,10 +451,10 @@ separate stale-check omission; restored controls retain the same tests.
 
 Limits: this closes the identified final binding wait, not every synchronous
 operation in the worker or server, blocking-pool capacity or request latency.
-WP-31e's support-diagnose changed-context/replaced-refusal coverage followed
-as WP-31i (below); the reporter's original error and proxy question remain open. There is no real-device
-compatibility, physical recovery or hardware/firmware acceptance from these
-simulation-only tests.
+WP-31e's support-diagnose changed-context/replaced-refusal coverage followed as
+WP-31i (below); the reporter's original error and proxy question remain open.
+There is no real-device compatibility, physical recovery or hardware/firmware
+acceptance from these simulation-only tests.
 
 ### Support-run refusal coverage (WP-31i, 13 November 2026)
 
@@ -470,11 +470,13 @@ behind the in-process connector, no socket). No production code changed.
   (`support-context-changed-preview-again` or `support-preview-replaced`), no
   tunnel request, no started activity and released reservations; the replaced
   case also requires the newer preview to stay in place, unfinished.
-- `a_project_change_after_the_support_read_withholds_its_publication` and
-  `a_preview_replaced_after_the_support_read_is_kept` make the same changes
-  after the device read, before the final check. Each requires the exact `409`
-  and that nothing is published: the older preview stays unfinished, or the
-  newer preview is not overwritten by the run's result.
+- `a_project_change_after_the_support_read_withholds_its_publication` changes
+  the project after the device read, before the final check;
+  `a_preview_replaced_during_the_support_read_is_kept` takes a newer preview
+  while the tunnel is being opened, after the reserved recheck, so only the
+  final check can refuse. Each requires the exact `409` and that nothing is
+  published: the older preview stays unfinished, or the newer preview is not
+  overwritten by the run's result.
 
 The slot is observed through the diagnostic bundle's own retained-evidence
 lookup (`published`, `unfinished` or `missing`). Each of the four checks

@@ -7,7 +7,8 @@ use axum::http::StatusCode;
 use tower::ServiceExt;
 
 use super::editor_runtime_tests::{
-    assert_routes_leave_the_runtime_free, project_with_device, request,
+    assert_routes_leave_the_runtime_free, assert_routes_leave_the_runtime_free_with,
+    project_with_device, request,
 };
 use crate::AppState;
 
@@ -104,7 +105,7 @@ async fn edit_routes_leave_the_runtime_free() {
         (
             "POST",
             "/api/repair/device-placement",
-            r#"{"deviceId":99}"#,
+            r#"{"deviceId":99,"keepLineId":98}"#,
             StatusCode::BAD_REQUEST,
         ),
         (
@@ -188,14 +189,9 @@ async fn edit_routes_leave_the_runtime_free() {
         ("GET", "/api/devices", "", StatusCode::OK),
         (
             "POST",
-            "/api/devices/preview",
-            r#"{"catalogItemId":"x","name":"D"}"#,
-            StatusCode::BAD_REQUEST,
-        ),
-        (
-            "POST",
             "/api/devices",
-            r#"{"catalogItemId":"x","name":"D"}"#,
+            // A request id is looked up under the lock before the products.
+            r#"{"catalogItemId":"x","name":"D","requestId":"r1"}"#,
             StatusCode::BAD_REQUEST,
         ),
         ("DELETE", "/api/devices/1", "", StatusCode::OK),
@@ -226,6 +222,55 @@ async fn edit_routes_leave_the_runtime_free() {
         ),
     ];
     assert_routes_leave_the_runtime_free(routes, router).await;
+}
+
+const ITEM: &str = "M-0001_H-1_P-1_CI-1";
+
+/// One catalogue item, enough for the device preview to reach the project.
+fn products(dir: &std::path::Path) -> knx_productdb::Connection {
+    let conn = knx_productdb::open_and_migrate(&dir.join("p.sqlite")).unwrap();
+    conn.execute_batch(
+        "INSERT INTO manufacturer (id, name) VALUES ('M-0001', 'M');
+         INSERT INTO hardware (id, manufacturer_id, name, has_application_program, source_sha256)
+              VALUES ('M-0001_H-1', 'M-0001', 'Power supply', 0, 'x');
+         INSERT INTO product (id, manufacturer_id, hardware_id, text, source_sha256)
+              VALUES ('M-0001_H-1_P-1', 'M-0001', 'M-0001_H-1', 'Power supply', 'x');
+         INSERT INTO catalog_item (id, manufacturer_id, section_id, name, product_ref_id, source_sha256)
+              VALUES ('M-0001_H-1_P-1_CI-1', 'M-0001', 'S', 'Power supply', 'M-0001_H-1_P-1', 'x');",
+    )
+    .unwrap();
+    conn
+}
+
+/// The device preview reads the products first and only then the project, so
+/// it needs a known catalogue item to meet the held lock; the unknown line
+/// (99) is refused under it.
+#[tokio::test(flavor = "current_thread")]
+async fn the_device_preview_leaves_the_runtime_free() {
+    let dir = tempfile::tempdir().unwrap();
+    let body = format!(r#"{{"catalogItemId":"{ITEM}","name":"D","lineId":99}}"#);
+    let routes: &[(&str, &str, &str, StatusCode)] = &[
+        (
+            "POST",
+            "/api/devices/preview",
+            &body,
+            StatusCode::BAD_REQUEST,
+        ),
+        ("POST", "/api/devices", &body, StatusCode::BAD_REQUEST),
+    ];
+    let fresh = std::sync::atomic::AtomicUsize::new(0);
+    assert_routes_leave_the_runtime_free_with(routes, router, || {
+        let n = fresh.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        let dir = dir.path().join(n.to_string());
+        std::fs::create_dir(&dir).unwrap();
+        Arc::new(AppState {
+            product_db: Some(
+                crate::CatalogueOwner::adopt_opened(products(&dir), Default::default()).unwrap(),
+            ),
+            ..Default::default()
+        })
+    })
+    .await;
 }
 
 /// Undo, redo and the style change hold the group-address transaction until

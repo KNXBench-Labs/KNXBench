@@ -146,9 +146,14 @@ before; mutation and publication run in their own task, so a client that goes
 away no longer releases the transaction while the mutation still waits for the
 project. No lock order, revision check or answer changed.
 
-Test: `edit_routes_leave_the_runtime_free` (`routes/edit_runtime_tests.rs`,
-41 routes, each with a well-formed body and the exact status its handler gives
-under the lock). Turning `create_area`, the group-address context mutation,
-the Functions read and edit or the device list back to inline makes it report
-exactly those routes. `a_dropped_undo_keeps_the_transaction_until_its_mutation_is_done`
-fails when the transaction is held by the request instead of its own task.
+Tests (`routes/edit_runtime_tests.rs`): `edit_routes_leave_the_runtime_free`
+(39 routes) and `the_device_preview_leaves_the_runtime_free` (preview and
+create with a one-item product database, since both read the products before
+the project). Each row has a well-formed body and the exact status its handler
+gives under the lock; the shared helper also fails a row that answers while
+the lock is still held, so a refusal before the lock cannot pass as coverage.
+Turning `create_area`, `repair_device_placement`, the device preview, the
+group-address context mutation, the Functions read and edit or the device list
+back to inline makes them report exactly those routes.
+`a_dropped_undo_keeps_the_transaction_until_its_mutation_is_done` fails when
+the transaction is held by the request instead of its own task.

@@ -1,7 +1,7 @@
 # WP-31 — Device editor unavailable after saving the project (#36)
 
 External report by the issue reporter, 10 November 2026; triaged 11 November 2026.
-Status: **lock fix implemented 11 November 2026; file routes off the runtime workers and download without the project lock 12 November 2026; edits and plain reads no longer wait for a save's write, device editor routes off the runtime 12 November 2026; the project router's remaining edits, the device list and the other modules' project routes off the runtime 13 November 2026; the device comparison, device-diagnostics preview, support diagnose run and serial-address routes off the runtime 13 November 2026; catalogue reads off the runtime 13 November 2026; original error message unreproduced.** Follow-up to the original #36 path, which
+Status: **lock fix implemented 11 November 2026; file routes off the runtime workers and download without the project lock 12 November 2026; edits and plain reads no longer wait for a save's write, device editor routes off the runtime 12 November 2026; the project router's remaining edits, the device list and the other modules' project routes off the runtime 13 November 2026; the device comparison, device-diagnostics preview, support diagnose run and serial-address routes off the runtime 13 November 2026; catalogue reads and update routes off the runtime 13 November 2026; original error message unreproduced.** Follow-up to the original #36 path, which
 the reporter confirmed fixed by `bf85a5b69` on 10 November 2026.
 
 ## Observed
@@ -128,10 +128,9 @@ Remaining limits:
   diagnose, serial-address write and find) are addressed below. This list
   comes from a source search plus independent reviews, not an exhaustive
   proof.
-- Catalogue reads (manufacturers, items, product languages, backup list)
-  wait for the product database off the runtime since 13 November (WP-31f,
-  below). The catalogue update preview and apply, backup restore and backup
-  deletion still wait for it, or hold it, on a runtime worker.
+- Catalogue reads (manufacturers, items, product languages, backup list),
+  update preview and apply, backup restore and deletion wait for or hold the
+  product database off the runtime since 13 November (WP-31f/g, below).
 - A long operation that holds the project (CSV import and export, project
   comparison, retained-payload download) still makes device reads wait; they
   now wait off the runtime.
@@ -312,8 +311,9 @@ in a separate copy when its check is dropped (recheck always current; retention
 whenever a project is open). The support run's changed-context and replaced
 refusals have no such case yet.
 
-Limits: the System-2 download worker, catalogue product-database reads and
-the original #36 cause or proxy question remain open; this is not an
+Limits at that point: catalogue product-database reads were still open
+(superseded by WP-31f below). The System-2 download worker and the original
+#36 cause or proxy question remain open; this is not an
 exhaustive route audit, and no real gateway or device was used.
 
 ### Catalogue reads off the runtime (WP-31f, 13 November 2026)
@@ -343,7 +343,63 @@ without its timestamp and file identity).
 database and with a poisoned owner. Turning a handler back to inline in a
 separate copy makes the witness report exactly that route.
 
-Limits: the update preview and apply, restore and backup deletion still wait
-for or hold the catalogue on a runtime worker; they belong to the update flow
-and were left alone. The System-2 download worker and the original #36 cause
-or proxy question remain open; this is not an exhaustive route audit.
+Limits at that point: the update preview and apply, restore and backup deletion
+were left in the update flow (addressed by WP-31g below). The System-2 download
+worker and the original #36 cause or proxy question remain open; this is not
+an exhaustive route audit.
+
+### Catalogue updates off the runtime (WP-31g, 13 November 2026)
+
+`POST /api/catalog/update/preview`, `/api/catalog/update/apply`,
+`/api/catalog/restore` and `/api/catalog/backups/delete` now wait for and hold
+the `CatalogueOwner` mutex through `routes::off_runtime`. Multipart upload
+reading stays async, before scheduling; apply still refuses a missing or empty
+token with the same `400` before any owner access. The existing read-lease →
+mutation ordering, backup identity recheck, refusal kinds, texts and JSON are
+unchanged. No ProductDB, owner, job-control, schema or DTO behavior changed.
+
+Each mutation is one owned blocking closure, including its initial path lease,
+backup work, mutation, managed settlement and response construction inputs.
+There is no await separating mutation from settlement. Dropping the HTTP
+waiter drops its join handle, not the job: it continues independently. Tokio's
+[`JoinHandle`](https://docs.rs/tokio/1.54.1/tokio/task/struct.JoinHandle.html)
+documents detachment on drop;
+[`spawn_blocking`](https://docs.rs/tokio/1.54.1/tokio/task/fn.spawn_blocking.html)
+documents that a started blocking job cannot be aborted. This is not a promise
+that explicit abort or runtime shutdown cannot prevent a queued, not-yet-started
+job from starting, nor a crash-durability guarantee.
+
+The shared route helper matches the backup listing and other WP-31 routes;
+the existing cleanup-only `blocking` helper instead maps a join failure to
+`catalogue cleanup worker failed`. These mappings are not identical, so the
+cleanup helper and its callers are left alone. The newly offloaded routes use
+the shared helper's `500` task-failure mapping; existing handler errors retain
+their original mappings.
+
+Tests (`catalogue_update_routes/runtime_tests.rs`, mounted application,
+current-thread runtime, synthetic SQLite and backup files): four liveness
+tests each hold the real owner once through a read lease and once through an
+empty legacy mutation. Each request must stay unanswered while held, let the
+runtime's timer progress and return the exact body recorded from unchanged
+base handlers afterwards. Preview/apply exercise a semantic package refusal
+inside the lease/mutation; restore refuses an unusable listed backup; deletion
+succeeds and removes only the backup, preserving the live database bytes.
+Separate cases pin missing/empty-token validation while the owner is held,
+missing/poisoned owners and backup refusal parity.
+
+`a_dropped_delete_finishes_its_started_job_and_settlement` uses a per-state
+test-only observer inside the real blocking closure. It confirms that the
+started job observes the held owner, then drops the mounted HTTP request,
+releases the owner and awaits independent job completion, without sleep-based
+ordering. It requires persisted deletion, unchanged live bytes, a healthy
+nonblocking read lease and another successful managed mutation afterwards.
+The witness proves already-started cancellation behavior, not queued-job
+admission. Base replay and four isolated inline call-site reversions fail the
+intended runtime-blocking assertions; a restored control passes.
+
+Limits: catalogue operations remain serialized by the same mutex, and long
+operations can still delay other catalogue requests; moving them does not
+bound the blocking pool or request latency. The System-2 download worker and
+the original #36 cause/proxy hypothesis remain open. This is a bounded update
+route change, not an exhaustive server audit or a reproduction of the reporter's
+error; no real bus, gateway or device was used.

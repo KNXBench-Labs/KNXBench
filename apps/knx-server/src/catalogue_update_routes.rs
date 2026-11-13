@@ -220,23 +220,26 @@ async fn preview(
     multipart: Multipart,
 ) -> Result<Json<PreviewView>, ApiError> {
     let upload = read_upload(multipart).await?;
-    let owner = owner(&state)?;
-    let preview = owner
-        .with_read(|conn| {
-            let path = db_path(conn)?;
-            knx_productdb::preview_package_update(
-                &path,
-                &upload.name,
-                &upload.bytes,
-                PackageLimits::STANDARD,
-            )
-            .map_err(update_error)
-        })
-        .map_err(crate::catalogue_owner::owner_error)??;
-    Ok(Json(PreviewView {
-        applied: false,
-        preview,
-    }))
+    crate::routes::off_runtime(move || {
+        let owner = owner(&state)?;
+        let preview = owner
+            .with_read(|conn| {
+                let path = db_path(conn)?;
+                knx_productdb::preview_package_update(
+                    &path,
+                    &upload.name,
+                    &upload.bytes,
+                    PackageLimits::STANDARD,
+                )
+                .map_err(update_error)
+            })
+            .map_err(crate::catalogue_owner::owner_error)??;
+        Ok(Json(PreviewView {
+            applied: false,
+            preview,
+        }))
+    })
+    .await?
 }
 
 async fn apply(
@@ -248,44 +251,49 @@ async fn apply(
         .token
         .filter(|token| !token.is_empty())
         .ok_or_else(|| ApiError::bad_request("a catalogue update needs the preview's token"))?;
-    // Held for the whole update: no install or read on the shared
-    // connection runs while the file is backed up and changed.
-    let owner = owner(&state)?;
-    let path = owner
-        .with_read(db_path)
-        .map_err(crate::catalogue_owner::owner_error)??;
-    let applied = owner
-        .with_legacy_mutation(
-            LegacyMutationKind::PathUpdate,
-            |_conn| {
-                knx_productdb::apply_package_update(
-                    &path,
-                    &upload.name,
-                    &upload.bytes,
-                    PackageLimits::STANDARD,
-                    &token,
-                )
-            },
-            update_settlement,
-        )
-        .map_err(crate::catalogue_owner::owner_error)?
-        .map_err(update_error)?;
-    let backup =
-        file_name(&applied.backup).ok_or_else(|| ApiError::internal("backup has no file name"))?;
-    Ok(Json(AppliedView {
-        applied: true,
-        preview: applied.preview,
-        backup,
-        packages: applied
-            .installed
-            .packages
-            .into_iter()
-            .map(|package| AppliedPackageView {
-                path: package.path,
-                report: package.report.into(),
-            })
-            .collect(),
-    }))
+    // One owned blocking job includes backup, mutation, settlement and response
+    // inputs. Dropping the HTTP waiter does not cancel a started blocking job.
+    crate::routes::off_runtime(move || {
+        // Held for the whole update: no install or read on the shared
+        // connection runs while the file is backed up and changed.
+        let owner = owner(&state)?;
+        let path = owner
+            .with_read(db_path)
+            .map_err(crate::catalogue_owner::owner_error)??;
+        let applied = owner
+            .with_legacy_mutation(
+                LegacyMutationKind::PathUpdate,
+                |_conn| {
+                    knx_productdb::apply_package_update(
+                        &path,
+                        &upload.name,
+                        &upload.bytes,
+                        PackageLimits::STANDARD,
+                        &token,
+                    )
+                },
+                update_settlement,
+            )
+            .map_err(crate::catalogue_owner::owner_error)?
+            .map_err(update_error)?;
+        let backup = file_name(&applied.backup)
+            .ok_or_else(|| ApiError::internal("backup has no file name"))?;
+        Ok(Json(AppliedView {
+            applied: true,
+            preview: applied.preview,
+            backup,
+            packages: applied
+                .installed
+                .packages
+                .into_iter()
+                .map(|package| AppliedPackageView {
+                    path: package.path,
+                    report: package.report.into(),
+                })
+                .collect(),
+        }))
+    })
+    .await?
 }
 
 fn file_name(path: &Path) -> Option<String> {
@@ -409,28 +417,32 @@ async fn restore(
     State(state): State<SharedState>,
     Json(request): Json<RestoreRequest>,
 ) -> Result<Json<Restored>, ApiError> {
-    let owner = owner(&state)?;
-    let path = owner
-        .with_read(db_path)
-        .map_err(crate::catalogue_owner::owner_error)??;
-    // Only a name from a fresh listing: never a client-chosen path.
-    let listed = list_backups(&path)?
-        .into_iter()
-        .any(|entry| entry.name == request.name);
-    if !listed {
-        return Err(ApiError::with_kind(
-            StatusCode::BAD_REQUEST,
-            "unknownBackup",
-            "not a product database backup listed by this server",
-        ));
-    }
-    let backup = path.with_file_name(&request.name);
-    owner
-        .restore_legacy(&path, &backup)
-        .map_err(crate::catalogue_owner::restore_error)?;
-    Ok(Json(Restored {
-        restored: request.name,
-    }))
+    // Keep retirement, reopen and settlement together if the client goes away.
+    crate::routes::off_runtime(move || {
+        let owner = owner(&state)?;
+        let path = owner
+            .with_read(db_path)
+            .map_err(crate::catalogue_owner::owner_error)??;
+        // Only a name from a fresh listing: never a client-chosen path.
+        let listed = list_backups(&path)?
+            .into_iter()
+            .any(|entry| entry.name == request.name);
+        if !listed {
+            return Err(ApiError::with_kind(
+                StatusCode::BAD_REQUEST,
+                "unknownBackup",
+                "not a product database backup listed by this server",
+            ));
+        }
+        let backup = path.with_file_name(&request.name);
+        owner
+            .restore_legacy(&path, &backup)
+            .map_err(crate::catalogue_owner::restore_error)?;
+        Ok(Json(Restored {
+            restored: request.name,
+        }))
+    })
+    .await?
 }
 
 fn backup_changed() -> ApiError {
@@ -445,58 +457,64 @@ async fn delete_backup(
     State(state): State<SharedState>,
     Json(request): Json<DeleteBackupRequest>,
 ) -> Result<Json<Deleted>, ApiError> {
-    let owner = owner(&state)?;
-    let path = owner
-        .with_read(db_path)
-        .map_err(crate::catalogue_owner::owner_error)??;
-    if !request.confirmed {
-        return Err(ApiError::with_kind(
-            StatusCode::BAD_REQUEST,
-            "confirmationRequired",
-            "deleting a catalogue backup needs an explicit confirmation",
-        ));
-    }
-    // Only a name from a fresh listing, which holds regular files only.
-    let entry = list_backups(&path)?
-        .into_iter()
-        .find(|entry| entry.name == request.name)
-        .ok_or_else(|| {
-            ApiError::with_kind(
+    // The blocking job owns both leases and the complete mutation settlement.
+    crate::routes::off_runtime(move || {
+        #[cfg(test)]
+        let _observer = runtime_tests::observe_delete(&state);
+        let owner = owner(&state)?;
+        let path = owner
+            .with_read(db_path)
+            .map_err(crate::catalogue_owner::owner_error)??;
+        if !request.confirmed {
+            return Err(ApiError::with_kind(
                 StatusCode::BAD_REQUEST,
-                "unknownBackup",
-                "not a product database backup listed by this server",
+                "confirmationRequired",
+                "deleting a catalogue backup needs an explicit confirmation",
+            ));
+        }
+        // Only a name from a fresh listing, which holds regular files only.
+        let entry = list_backups(&path)?
+            .into_iter()
+            .find(|entry| entry.name == request.name)
+            .ok_or_else(|| {
+                ApiError::with_kind(
+                    StatusCode::BAD_REQUEST,
+                    "unknownBackup",
+                    "not a product database backup listed by this server",
+                )
+            })?;
+        if entry.identity != request.identity {
+            return Err(backup_changed());
+        }
+        let backup = path.with_file_name(&entry.name);
+        // Serialised with apply and restore, which write and read backups.
+        owner
+            .with_legacy_mutation(
+                LegacyMutationKind::BackupDelete,
+                |_conn| {
+                    // Checked again right before removal, without following a link.
+                    let still = std::fs::symlink_metadata(&backup).map_err(|_| backup_changed())?;
+                    if !still.file_type().is_file() || file_identity(&still) != request.identity {
+                        return Err(backup_changed());
+                    }
+                    std::fs::remove_file(&backup).map_err(|error| {
+                        ApiError::internal(format!("the backup could not be deleted: {error}"))
+                    })?;
+                    Ok::<_, ApiError>(())
+                },
+                |result| match result {
+                    Ok(_) => LegacySettlementHint::SuccessfulReturn,
+                    // File removal never mutates the live catalogue: any failure
+                    // leaves W unchanged and healthy.
+                    Err(_) => LegacySettlementHint::PreCommitSemanticRefusal,
+                },
             )
-        })?;
-    if entry.identity != request.identity {
-        return Err(backup_changed());
-    }
-    let backup = path.with_file_name(&entry.name);
-    // Serialised with apply and restore, which write and read backups.
-    owner
-        .with_legacy_mutation(
-            LegacyMutationKind::BackupDelete,
-            |_conn| {
-                // Checked again right before removal, without following a link.
-                let still = std::fs::symlink_metadata(&backup).map_err(|_| backup_changed())?;
-                if !still.file_type().is_file() || file_identity(&still) != request.identity {
-                    return Err(backup_changed());
-                }
-                std::fs::remove_file(&backup).map_err(|error| {
-                    ApiError::internal(format!("the backup could not be deleted: {error}"))
-                })?;
-                Ok::<_, ApiError>(())
-            },
-            |result| match result {
-                Ok(_) => LegacySettlementHint::SuccessfulReturn,
-                // File removal never mutates the live catalogue: any failure
-                // leaves W unchanged and healthy.
-                Err(_) => LegacySettlementHint::PreCommitSemanticRefusal,
-            },
-        )
-        .map_err(crate::catalogue_owner::owner_error)??;
-    Ok(Json(Deleted {
-        deleted: entry.name,
-    }))
+            .map_err(crate::catalogue_owner::owner_error)??;
+        Ok(Json(Deleted {
+            deleted: entry.name,
+        }))
+    })
+    .await?
 }
 
 // --- Catalogue placement cleanup ---------------------------------------------
@@ -680,3 +698,6 @@ async fn cleanup_apply(
         backup,
     }))
 }
+
+#[cfg(test)]
+mod runtime_tests;

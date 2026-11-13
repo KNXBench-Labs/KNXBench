@@ -14,7 +14,7 @@ use crate::AppState;
 const ANSWER: Duration = Duration::from_secs(10);
 
 /// A new project with device 1 in it, as the editor would show it.
-fn project_with_device(state: &AppState) {
+pub(super) fn project_with_device(state: &AppState) {
     domain::new_project_impl(state, None, None, None, None, true).unwrap();
     let mut project = state.project.lock().unwrap();
     let project = project.as_mut().unwrap();
@@ -47,7 +47,11 @@ fn router(state: &Arc<AppState>) -> axum::Router {
         .with_state(Arc::clone(state))
 }
 
-fn request(method: &str, uri: &str, body: &str) -> axum::http::Request<axum::body::Body> {
+pub(super) fn request(
+    method: &str,
+    uri: &str,
+    body: &str,
+) -> axum::http::Request<axum::body::Body> {
     axum::http::Request::builder()
         .method(method)
         .uri(uri)
@@ -126,8 +130,19 @@ async fn device_editor_routes_leave_the_runtime_free() {
             StatusCode::BAD_REQUEST,
         ),
     ];
+    assert_routes_leave_the_runtime_free(&routes, router).await;
+}
+
+/// Sends each request to a fresh project with device 1 while another thread
+/// holds the project lock. A handler that waits inline on this
+/// single-threaded runtime keeps the timer from firing, so the holder times
+/// out and the route is reported. Each status is checked after the release.
+pub(super) async fn assert_routes_leave_the_runtime_free(
+    routes: &[(&str, &str, &str, StatusCode)],
+    router: fn(&Arc<AppState>) -> axum::Router,
+) {
     let mut blocked = Vec::new();
-    for (method, uri, body, expected) in routes {
+    for &(method, uri, body, expected) in routes {
         let state = Arc::new(AppState::default());
         project_with_device(&state);
         let router = router(&state);

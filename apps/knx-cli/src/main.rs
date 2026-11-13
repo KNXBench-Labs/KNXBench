@@ -219,6 +219,8 @@ const USAGE: &str = "usage: knx import <file.knxproj> [--store <path.knxdb> [--r
      \x20         ParameterByteOrder, LittleEndian included; changes nothing a download writes.\n\
      \x20         Exit 0: read and reported; 1: not probed.)\n\
      \x20     knx device restore <backup.json> [--product-db <path>] [--key-file <path>]\n\
+     \x20                  [--tunnel-transport <udp|tcp>]\n\
+     \x20         (source builds: defaults to udp; tcp never falls back to udp; refused in plan-only mode)\n\
      \x20                  [--activity-history <path>]\n\
      \x20         (activity history: required for confirmed writes; metadata, not recovery)\n\
      \x20                  [--backup-dir <dir>] [--gateway <host:port> --confirm \"I confirm download to <address>\"]\n\
@@ -2787,7 +2789,9 @@ fn run_device_download(args: &[String]) -> ExitCode {
         use knx_net::BusConnection;
         let tunnel = match crate::diagnostic_bundle_cli::tapped(
             knx_net::KnxNetIpClient::new().with_tunnel_transport(
-                parsed.tunnel_transport.unwrap_or(knx_net::TunnelTransport::Udp),
+                parsed
+                    .tunnel_transport
+                    .unwrap_or(knx_net::TunnelTransport::Udp),
             ),
             knx_app::operation_recording::OperationKind::Download,
             gateway,
@@ -3227,11 +3231,21 @@ fn run_device_restore(args: &[String]) -> ExitCode {
     let mut key_file = None;
     let mut backup_dir = None;
     let mut gateway = None;
+    let mut tunnel_transport = None;
     let mut confirm = None;
     let mut accept_untested = None;
     let mut activity_history = None;
     let mut i = 0;
     while i < args.len() {
+        if args[i] == "--tunnel-transport" {
+            if let Err(error) = bus_transport::take_tunnel_transport(&mut tunnel_transport, args, i)
+            {
+                eprintln!("{error}\n{USAGE}");
+                return ExitCode::FAILURE;
+            }
+            i += 2;
+            continue;
+        }
         let slot = match args[i].as_str() {
             "--product-db" => &mut product_db,
             "--key-file" => &mut key_file,
@@ -3266,6 +3280,21 @@ fn run_device_restore(args: &[String]) -> ExitCode {
         eprintln!("missing the backup file\n{USAGE}");
         return ExitCode::FAILURE;
     };
+    let gateway = match gateway
+        .as_deref()
+        .map(bus_transport::parse_gateway)
+        .transpose()
+    {
+        Ok(gateway) => gateway,
+        Err(error) => {
+            eprintln!("{error}");
+            return ExitCode::FAILURE;
+        }
+    };
+    if tunnel_transport.is_some() && confirm.is_none() {
+        eprintln!("--tunnel-transport is not valid with a plan only; no tunnel is opened");
+        return ExitCode::FAILURE;
+    }
     if confirm.is_some() && gateway.is_none() {
         eprintln!("--confirm writes to a device and needs --gateway <host:port>");
         return ExitCode::FAILURE;
@@ -3406,13 +3435,6 @@ fn run_device_restore(args: &[String]) -> ExitCode {
         println!("written to the device: no");
         return ExitCode::FAILURE;
     }
-    let gateway: std::net::SocketAddrV4 = match gateway.parse() {
-        Ok(gateway) => gateway,
-        Err(_) => {
-            eprintln!("--gateway must be host:port, e.g. 192.0.2.1:3671");
-            return ExitCode::FAILURE;
-        }
-    };
     let authorisation = match knx_core::WriteAuthorisation::for_hardware(
         target.address(),
         knx_core::WriteScope::Download,
@@ -3450,7 +3472,7 @@ fn run_device_restore(args: &[String]) -> ExitCode {
     };
     runtime.block_on(async {
         use knx_net::BusConnection;
-        let tunnel = match crate::diagnostic_bundle_cli::tapped(knx_net::KnxNetIpClient::new(), knx_app::operation_recording::OperationKind::Download, gateway).connect_tunnel(gateway).await {
+        let tunnel = match crate::diagnostic_bundle_cli::tapped(knx_net::KnxNetIpClient::new().with_tunnel_transport(tunnel_transport.unwrap_or(knx_net::TunnelTransport::Udp)), knx_app::operation_recording::OperationKind::Download, gateway).connect_tunnel(gateway).await {
             Ok(tunnel) => tunnel,
             Err(e) => {
                 eprintln!("could not connect to {gateway}: {e}");
@@ -3462,6 +3484,11 @@ fn run_device_restore(args: &[String]) -> ExitCode {
                 return ExitCode::FAILURE;
             }
         };
+        eprintln!(
+            "connected to {gateway} over {}, assigned individual address {}",
+            bus_transport::transport_label(tunnel.transport()),
+            tunnel.assigned_address()
+        );
         let (result, recorded) = device_download::execute_and_record_download(
             &tunnel,
             authorisation,
@@ -3480,6 +3507,9 @@ fn run_device_restore(args: &[String]) -> ExitCode {
             &mut activity,
             &mut std::io::stdout(),
         ).await;
+        let skipped = (tunnel.transport() == knx_net::TunnelTransport::Tcp)
+            .then(|| tunnel.skipped_frame_count());
+        bus_transport::report_skipped_frames(skipped, &mut std::io::stderr());
         let cleanup_ok = match tunnel.disconnect().await {
             Ok(()) => true,
             Err(error) => {
@@ -3992,7 +4022,9 @@ fn run_device_service_control(args: &[String]) -> ExitCode {
         use knx_net::BusConnection;
         let tunnel = match crate::diagnostic_bundle_cli::tapped(
             knx_net::KnxNetIpClient::new().with_tunnel_transport(
-                parsed.tunnel_transport.unwrap_or(knx_net::TunnelTransport::Udp),
+                parsed
+                    .tunnel_transport
+                    .unwrap_or(knx_net::TunnelTransport::Udp),
             ),
             knx_app::operation_recording::OperationKind::ServiceControl,
             gateway,

@@ -8,6 +8,7 @@ mod probe;
 mod restore;
 mod scan;
 mod service_control;
+mod system2_project;
 
 use std::{
     io::{BufRead, BufReader, Read, Write},

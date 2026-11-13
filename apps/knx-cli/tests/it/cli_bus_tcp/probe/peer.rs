@@ -20,6 +20,7 @@ pub(in super::super) struct Peer {
     stream: TcpStream,
     wire: Wire,
     outer_seq: u8,
+    target: knx_core::IndividualAddress,
 }
 
 pub(in super::super) fn gateway(
@@ -57,6 +58,7 @@ pub(in super::super) fn gateway(
             stream,
             wire: Vec::new(),
             outer_seq: 0,
+            target: "1.1.67".parse().unwrap(),
         };
         assert_eq!(peer.read(), TCP_CONNECT_REQUEST);
         let mut response = TCP_CONNECT_RESPONSE;
@@ -176,6 +178,11 @@ impl Peer {
         }
     }
 
+    /// Address the scripted requests must name; defaults to the byte-order fixture's 1.1.67.
+    pub fn target(&mut self, address: &str) {
+        self.target = address.parse().unwrap();
+    }
+
     fn read(&mut self) -> Vec<u8> {
         let frame = read_frame(&mut self.stream);
         self.wire.push((true, frame.clone()));
@@ -193,10 +200,7 @@ impl Peer {
         let frame = decode_l_data(&raw[10..]).unwrap();
         assert_eq!(frame.kind, LDataMessageKind::Request);
         assert_eq!(frame.source.to_string(), "0.0.0");
-        assert_eq!(
-            frame.destination,
-            Destination::Individual("1.1.67".parse().unwrap())
-        );
+        assert_eq!(frame.destination, Destination::Individual(self.target));
         assert_eq!(frame.transport, tpci);
         assert_eq!(frame.service, service, "only independently enumerated reads/control PDUs allowed; no writes/key/restart/Verify Mode");
         frame

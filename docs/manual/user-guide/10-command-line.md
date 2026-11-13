@@ -902,6 +902,28 @@ totals. Zero is silent. The [scoped record](../../status/2026-11-13-cli-tcp-writ
 distinguishes complete synthetic TCP operations from UDP handshake-only controls
 and pending independent acceptance. No release or hardware claim.
 
+#### System-2 project observation transport (13 November 2026 source candidate)
+
+```bash
+knx device system2-project --project house.knxdb --device-id 1 --product-db products.sqlite \
+  --operation-id obs-1 --source-mode retained-sources --gateway 192.0.2.1:3671 \
+  --observe-confirm "I confirm read-only System-2 observation to 1.2.52" \
+  --output prepared-private.json --tunnel-transport tcp
+```
+
+Source builds containing this candidate accept optional `--tunnel-transport udp|tcp`
+on the read-only observation of `device system2-project`. Omission stays UDP;
+explicit TCP never falls back to UDP, reconnects or replays. The option is refused
+in the offline preview (no gateway, so no tunnel), and missing, repeated or invalid
+values and an invalid gateway are refused before any project or product file is
+read. The exact confirmation phrase, source-freshness check, exclusive gateway
+lease and no-overwrite output rules are unchanged; the observation only reads and
+`system2-validation` does not gain the option. Stderr names the opened transport and
+assigned address; positive skipped TCP frames are disclosed once, sampled before
+disconnect, also on failure. They are not lost-telegram totals. See the
+[scoped record](../../status/2026-11-13-cli-tcp-system2-observation.md); independent
+acceptance is pending, and there is no release or hardware claim.
+
 #### Read-only device comparison (13 November 2026 source successor)
 
 ```bash

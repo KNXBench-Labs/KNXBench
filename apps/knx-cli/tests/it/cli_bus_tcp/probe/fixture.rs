@@ -1,4 +1,4 @@
-//! Save and independently admit a public MV-0701 project through the real probe planner.
+//! Save and independently admit synthetic MV-0701 inputs through real read-only planners.
 
 use knx_core::{
     CompletionStatus, DeviceId, DeviceInstance, Installation, InstallationId, Language, Project,
@@ -37,7 +37,7 @@ pub(super) const HARDWARE: &[u8] = br#"<KNX xmlns="http://knx.org/xml/project/20
 <ApplicationProgramRef RefId="M-0002_A-0001-01-0000" /></Hardware2Program></Hardware2Programs>
 </Hardware></Hardware></Manufacturer></ManufacturerData></KNX>"#;
 
-pub(super) struct Fixture {
+pub(in super::super) struct Fixture {
     pub dir: tempfile::TempDir,
     pub project: PathBuf,
     pub products: PathBuf,
@@ -73,13 +73,34 @@ pub(super) fn tree(path: &Path) -> Vec<(String, Vec<u8>)> {
 
 impl Fixture {
     pub fn new() -> Self {
+        Self::with_program(PROGRAM)
+    }
+
+    /// The same saved numeric inputs, with an explicit read-comparison plan.
+    pub fn comparison() -> Self {
+        let program = PROGRAM.replace("ApplicationVersion=\"1\"", "ApplicationVersion=\"1\" PeiType=\"1\"").replace("</Static>", r#"<LoadProcedures><LoadProcedure>
+<LdCtrlConnect/><LdCtrlCompareProp ObjIdx="3" PropId="13" InlineData="0002000101" />
+<LdCtrlAbsSegment LsmIdx="3" SegType="0" Address="17408" Size="32" Access="255" MemType="3" SegFlags="128" />
+<LdCtrlDisconnect/></LoadProcedure></LoadProcedures></Static>"#);
+        let program = program.replace(
+            r#"<AbsoluteSegment Id="PAR" Address="17408" Size="32" />"#,
+            r#"<AbsoluteSegment Id="PAR" Address="17408" Size="32"><Data>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</Data></AbsoluteSegment>"#,
+        );
+        assert!(program.contains(r#"PeiType="1""#));
+        assert!(program
+            .contains(r#"<LdCtrlCompareProp ObjIdx="3" PropId="13" InlineData="0002000101" />"#));
+        assert!(program.contains("<Data>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</Data>"));
+        Self::with_program(&program)
+    }
+
+    fn with_program(program: &str) -> Self {
         let dir = tempfile::tempdir().unwrap();
         let inputs = dir.path().join("inputs");
         std::fs::create_dir(&inputs).unwrap();
         let products = inputs.join("products.sqlite");
         let project_path = inputs.join("project.knxdb");
         let db = knx_productdb::open_and_migrate(&products).unwrap();
-        knx_productdb::ingest_file(&db, "Synthetic.xml", PROGRAM.as_bytes()).unwrap();
+        knx_productdb::ingest_file(&db, "Synthetic.xml", program.as_bytes()).unwrap();
         knx_productdb::ingest_file(&db, "Hardware.xml", HARDWARE).unwrap();
         let mut project = Project::new(Language("en".into()));
         project.installations.push(Installation {

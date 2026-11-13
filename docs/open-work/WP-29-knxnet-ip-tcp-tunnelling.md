@@ -96,7 +96,23 @@ lease are unchanged; the export records no transport. Loopback CLI regressions
 cover the identity recipe over TCP and default/explicit UDP handshake selection
 (refused before acquisition)
 ([record](../status/2026-11-13-cli-tcp-diagnostics.md)). Programming, downloads,
-address assignment, device comparison and other reads stay UDP-only.
+address assignment and other reads stay UDP-only; comparison has the separately
+bounded source successor below.
+
+## CLI device-compare successor (13 November 2026; source candidate)
+
+The read-only `knx device compare` accepts strict `--tunnel-transport udp|tcp`;
+UDP omission remains the default, with no fallback, reconnect or replay. Actual
+transport/assigned address and positive pre-disconnect TCP skips are disclosed on
+stderr without recording, including failed reads. Existing preparation, partial
+selection, read-only recipe, optional history and legacy exits are unchanged.
+Complete synthetic TCP CLI same/different acquisitions and failed-read history
+are covered by loopback peers that pin all reads/control and both disconnects;
+default/explicit UDP is a refused-handshake selection control only, not completed
+UDP acquisition. [Focused evidence and limits](../status/2026-11-13-cli-tcp-compare.md)
+separate author checks from parent-owned acceptance/publication. Programming,
+download/restore, server/Web changes, real-gateway interoperability and wider
+WP-29 remain outside this source candidate.
 
 ## Independently checked source basis
 

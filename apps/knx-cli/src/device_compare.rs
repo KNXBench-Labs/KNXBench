@@ -41,6 +41,8 @@ pub struct CompareArgs {
     pub activity_history: Option<String>,
     /// The gateway.
     pub gateway: std::net::SocketAddrV4,
+    /// Explicit tunnel selection; omission retains UDP.
+    pub transport: knx_net::TunnelTransport,
 }
 
 /// Parses `knx device compare`'s arguments.
@@ -51,9 +53,14 @@ pub fn parse_compare_args(args: &[String]) -> Result<CompareArgs, String> {
     let mut partial = None;
     let mut gateway = None;
     let mut activity_history = None;
+    let mut transport = None;
     let mut i = 0;
     while i < args.len() {
         match args[i].as_str() {
+            "--tunnel-transport" => {
+                crate::bus_transport::take_tunnel_transport(&mut transport, args, i)?;
+                i += 1;
+            }
             "--project" => {
                 project = Some(crate::take_value(args, i + 1, "--project")?);
                 i += 1;
@@ -105,6 +112,7 @@ pub fn parse_compare_args(args: &[String]) -> Result<CompareArgs, String> {
         partial,
         activity_history,
         gateway,
+        transport: transport.unwrap_or(knx_net::TunnelTransport::Udp),
     })
 }
 
@@ -342,6 +350,50 @@ mod tests {
 
     fn args(line: &str) -> Vec<String> {
         line.split_whitespace().map(String::from).collect()
+    }
+
+    #[test]
+    fn transport_is_strict_explicit_and_defaults_to_udp() {
+        let baseline = "1.1.67 --project p.knxdb --gateway 192.0.2.1:3671";
+        assert_eq!(
+            parse_compare_args(&args(baseline)).unwrap().transport,
+            knx_net::TunnelTransport::Udp
+        );
+        for (value, expected) in [
+            ("udp", knx_net::TunnelTransport::Udp),
+            ("tcp", knx_net::TunnelTransport::Tcp),
+        ] {
+            for line in [
+                format!("{baseline} --tunnel-transport {value}"),
+                format!("--tunnel-transport {value} {baseline}"),
+            ] {
+                assert_eq!(
+                    parse_compare_args(&args(&line)).unwrap().transport,
+                    expected
+                );
+            }
+        }
+        for (flags, expected) in [
+            ("--tunnel-transport", "needs a value"),
+            ("--tunnel-transport --activity-history", "needs a value"),
+            ("--tunnel-transport TCP", "must be udp or tcp"),
+            ("--tunnel-transport tls", "must be udp or tcp"),
+            (
+                "--tunnel-transport udp --tunnel-transport tcp",
+                "duplicate --tunnel-transport",
+            ),
+            (
+                "--tunnel-transport tcp --tunnel-transport tcp",
+                "duplicate --tunnel-transport",
+            ),
+        ] {
+            assert!(
+                parse_compare_args(&args(&format!("{baseline} {flags}")))
+                    .unwrap_err()
+                    .contains(expected),
+                "{flags}"
+            );
+        }
     }
 
     #[test]

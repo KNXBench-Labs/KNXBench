@@ -459,8 +459,10 @@ preview, the support diagnose run and the serial-address write and find now
 also wait for the project off the runtime; their gateway reservations, bus I/O
 and answers are unchanged. The catalogue reads (manufacturers, items,
 product languages, backup list) wait for the product database, which an
-install holds for its whole transaction, off the runtime too; the catalogue
-update, restore and backup deletion routes still wait on a runtime worker.
+install holds for its whole transaction, off the runtime too. Catalogue update
+preview/apply, restore and backup deletion now do too (WP-31g); each mutation
+keeps path lookup, backup work, settlement and response inputs in one blocking
+job that continues if its HTTP waiter goes away.
 The System-2 download worker remains open.
 Limit: edits that write the file in their own transaction (notes and
 instructions apply, naming recipes, device-compare adoption, selective import,

@@ -457,7 +457,11 @@ witnesses supplement the mounted route tests. This is a bounded collector audit,
 not whole-server acceptance. The device comparison, the device-diagnostics
 preview, the support diagnose run and the serial-address write and find now
 also wait for the project off the runtime; their gateway reservations, bus I/O
-and answers are unchanged. The System-2 download worker remains open.
+and answers are unchanged. The catalogue reads (manufacturers, items,
+product languages, backup list) wait for the product database, which an
+install holds for its whole transaction, off the runtime too; the catalogue
+update, restore and backup deletion routes still wait on a runtime worker.
+The System-2 download worker remains open.
 Limit: edits that write the file in their own transaction (notes and
 instructions apply, naming recipes, device-compare adoption, selective import,
 baseline marks) and the project-history panel still hold

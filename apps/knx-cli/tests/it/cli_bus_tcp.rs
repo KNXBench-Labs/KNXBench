@@ -1,5 +1,6 @@
 //! Drive the real `knx` binary through optional TCP tunnelling against loopback gateways.
 
+mod diagnostics;
 mod find_serial;
 mod probe;
 mod scan;

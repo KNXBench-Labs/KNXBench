@@ -732,6 +732,16 @@ review and all 13 selected integrated package stages passed on `ac9b23814`
 Server/Web scans, programming and discovery/routing are unchanged.
 [Scope](open-work/WP-29-knxnet-ip-tcp-tunnelling.md).
 
+## Optional TCP device diagnostics (13 November 2026; bounded WP-29 successor)
+
+`knx device diagnostics` accepts `--tunnel-transport udp|tcp` for both export
+profiles; omission remains UDP, `--simulate` refuses the option and a preview
+names an explicit TCP. Stderr names the opened transport and reports positive TCP
+skips sampled before disconnect. Recipes, export format and gateway lease are
+unchanged. Loopback CLI regressions run the identity export over TCP and UDP
+peers; no release or hardware claim.
+[Record](status/2026-11-13-cli-tcp-diagnostics.md).
+
 ## Optional TCP byte-order probe (11 November 2026; bounded WP-29 successor)
 
 `knx device byte-order-probe` accepts `--tunnel-transport udp|tcp` for a live

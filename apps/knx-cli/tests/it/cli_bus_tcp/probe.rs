@@ -3,7 +3,7 @@
 mod admission;
 mod fixture;
 mod outcomes;
-mod peer;
+pub(super) mod peer;
 mod recording;
 
 use super::{stderr, stdout, KillOnDrop};
@@ -16,12 +16,12 @@ use std::{
 
 const WAIT: Duration = Duration::from_secs(35);
 
-struct Joined<T>(Option<thread::JoinHandle<T>>);
+pub(super) struct Joined<T>(Option<thread::JoinHandle<T>>);
 impl<T> Joined<T> {
     fn new(handle: thread::JoinHandle<T>) -> Self {
         Self(Some(handle))
     }
-    fn join(mut self) -> thread::Result<T> {
+    pub(super) fn join(mut self) -> thread::Result<T> {
         self.0.take().unwrap().join()
     }
 }
@@ -34,7 +34,7 @@ impl<T> Drop for Joined<T> {
 }
 
 /// Drain both pipes while waiting; even a failing assertion kills and waits for the child.
-fn collect(cmd: &mut Command) -> Output {
+pub(super) fn collect(cmd: &mut Command) -> Output {
     let argv = std::iter::once(cmd.get_program())
         .chain(cmd.get_args())
         .map(|arg| arg.to_string_lossy().into_owned())

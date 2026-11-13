@@ -86,6 +86,17 @@ CLI regressions run the public MV-0701 fixture over real TCP and UDP peers
 workflows (programming, downloads, address assignment, other reads) stay UDP-only;
 hardware interoperability and KNX IP Secure remain open.
 
+## CLI device-diagnostics successor (13 November 2026)
+
+The read-only `knx device diagnostics` export (both profiles) admits explicit
+`--tunnel-transport udp|tcp` with the same policies: UDP default, no fallback,
+actual transport and pre-disconnect TCP skips on stderr. `--simulate` refuses
+the option; a preview names an explicit TCP. Recipes, export format and gateway
+lease are unchanged; the export records no transport. Loopback CLI regressions
+run the identity recipe over real TCP and UDP peers
+([record](../status/2026-11-13-cli-tcp-diagnostics.md)). Programming, downloads,
+address assignment, device comparison and other reads stay UDP-only.
+
 ## Independently checked source basis
 
 The original KNXnet/IP Core v01.06.02 and Tunnelling v01.07.01 clauses were read

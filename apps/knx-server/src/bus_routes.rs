@@ -1032,6 +1032,30 @@ async fn start_serial_monitor(
     start_monitor_target(state, MonitorTarget::Serial(target)).await
 }
 
+type MonitorReservation = tokio::sync::OwnedMutexGuard<Option<BusSession>>;
+
+/// Own the reservation until success is consumed, or return it to the cleanup owner.
+struct MonitorStartClaim {
+    unclaimed: Option<(
+        MonitorReservation,
+        tokio::sync::oneshot::Sender<MonitorReservation>,
+    )>,
+}
+impl MonitorStartClaim {
+    fn accept(mut self) {
+        // Release synchronously: immediate follow-up requests must see the active
+        // session, not a connecting reservation awaiting another owner-task poll.
+        drop(self.unclaimed.take());
+    }
+}
+impl Drop for MonitorStartClaim {
+    fn drop(&mut self) {
+        if let Some((guard, cleanup)) = self.unclaimed.take() {
+            let _ = cleanup.send(guard);
+        }
+    }
+}
+
 async fn start_monitor_target(
     state: SharedState,
     target: MonitorTarget,
@@ -1086,23 +1110,39 @@ async fn start_monitor_target(
         ));
     }
 
-    // Reserve in the request without queueing. An independent owner keeps that
-    // reservation through the project wait, connect and unclaimed-session cleanup.
+    // Reserve in the request without queueing. Success carries the reservation
+    // until consumed; discarding it returns custody to the independent cleanup owner.
     let (done, answer) = tokio::sync::oneshot::channel();
     tokio::spawn(async move {
         let mut guard = guard;
-        let result = start_reserved_monitor(&state, target, &mut guard).await;
-        if let Err(Ok(_)) = done.send(result) {
-            if let Some(session) = guard.take() {
-                session.stop().await;
+        match start_reserved_monitor(&state, target, &mut guard).await {
+            Ok(response) => {
+                let (cleanup, unclaimed) = tokio::sync::oneshot::channel();
+                let claim = MonitorStartClaim {
+                    unclaimed: Some((guard, cleanup)),
+                };
+                // Failed sends and discarded buffered successes both drop the claim,
+                // returning the same reservation without releasing it before cleanup.
+                let _ = done.send(Ok((response, claim)));
+                if let Ok(mut guard) = unclaimed.await {
+                    if let Some(session) = guard.take() {
+                        session.stop().await;
+                    }
+                }
+            }
+            Err(error) => {
+                let _ = done.send(Err(error));
             }
         }
     });
-    answer.await.unwrap_or_else(|_| {
+    let (response, claim) = answer.await.unwrap_or_else(|_| {
         Err(ApiError::internal(
             "the monitor start task ended without an answer",
         ))
-    })
+    })?;
+    // No await between claiming ownership and returning the consumed response.
+    claim.accept();
+    Ok(response)
 }
 
 async fn start_reserved_monitor(

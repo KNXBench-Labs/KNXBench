@@ -193,7 +193,14 @@ The monitor starts (`POST /api/bus/monitor/start`, `start-tcp` and
 `start-serial`) now build their owned `GroupAddressContext` snapshot through
 `routes::off_runtime`. The monitor reservation is acquired without queueing in
 the request and kept by a separate async owner through the project wait,
-connection and cleanup of a start whose caller has gone away. Stop admission
+connection and cleanup of a start whose caller has gone away. Successful channel
+delivery alone does not transfer ownership: the buffered success carries the owned
+reservation in a claim envelope. Consuming success disarms that envelope and releases
+the reservation synchronously, with no further await before returning, so an immediate
+follow-up sees the active session rather than a still-connecting reservation. A failed
+send or discarded buffered success instead returns the same guard to the independent
+owner, which removes and stops the unclaimed session before releasing it. Error
+responses require no claim. Stop admission
 is checked again under that reservation after the snapshot wait, before any
 connector call. The existing System-2, download and programming-holder checks
 remain before the snapshot; no transport or connector implementation changed.
@@ -212,7 +219,12 @@ single-threaded runtime. All four scan routes use completed in-memory scans
 tests reject an answer before the lock and check the exact eventual response.
 The monitor tests cover UDP, TCP and serial through fake connectors, immediate
 busy refusals, admission closing during the project wait, and dropped clients
-during both the context wait and connect. Dropped scan requests retain their
+during both the context wait and connect. Three additional UDP/TCP/serial tests
+observe the mounted HTTP future's answer-delivery wake without repolling it, then
+drop it and join cleanup through the reservation; they cover success buffered but
+not consumed. The ordinary successful-start controls still check exact responses,
+a retained session and synchronous reservation release before any follow-up await.
+Dropped scan requests retain their
 reservation, and selected reconciliations still finish their mutation. No
 network or device I/O is used by these tests. This is a bounded follow-up,
 not an exhaustive route audit or a reproduction of the reporter's message;

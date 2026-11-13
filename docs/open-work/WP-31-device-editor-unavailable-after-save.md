@@ -1,7 +1,7 @@
 # WP-31 — Device editor unavailable after saving the project (#36)
 
 External report by the issue reporter, 10 November 2026; triaged 11 November 2026.
-Status: **lock fix implemented 11 November 2026; file routes off the runtime workers and download without the project lock 12 November 2026; edits and plain reads no longer wait for a save's write, device editor routes off the runtime 12 November 2026; the project router's remaining edits, the device list and the other modules' project routes off the runtime 13 November 2026; the device comparison, device-diagnostics preview, support diagnose run and serial-address routes off the runtime 13 November 2026; original error message unreproduced.** Follow-up to the original #36 path, which
+Status: **lock fix implemented 11 November 2026; file routes off the runtime workers and download without the project lock 12 November 2026; edits and plain reads no longer wait for a save's write, device editor routes off the runtime 12 November 2026; the project router's remaining edits, the device list and the other modules' project routes off the runtime 13 November 2026; the device comparison, device-diagnostics preview, support diagnose run and serial-address routes off the runtime 13 November 2026; catalogue reads off the runtime 13 November 2026; original error message unreproduced.** Follow-up to the original #36 path, which
 the reporter confirmed fixed by `bf85a5b69` on 10 November 2026.
 
 ## Observed
@@ -128,8 +128,10 @@ Remaining limits:
   diagnose, serial-address write and find) are addressed below. This list
   comes from a source search plus independent reviews, not an exhaustive
   proof.
-- Catalogue reads (manufacturers, items, product languages) do not take the
-  project lock but still query the product database on a runtime worker.
+- Catalogue reads (manufacturers, items, product languages, backup list)
+  wait for the product database off the runtime since 13 November (WP-31f,
+  below). The catalogue update preview and apply, backup restore and backup
+  deletion still wait for it, or hold it, on a runtime worker.
 - A long operation that holds the project (CSV import and export, project
   comparison, retained-payload download) still makes device reads wait; they
   now wait off the runtime.
@@ -313,3 +315,35 @@ refusals have no such case yet.
 Limits: the System-2 download worker, catalogue product-database reads and
 the original #36 cause or proxy question remain open; this is not an
 exhaustive route audit, and no real gateway or device was used.
+
+### Catalogue reads off the runtime (WP-31f, 13 November 2026)
+
+The catalogue reads take no project lock, but they lease the product database
+through `CatalogueOwner::with_read`, which locks the owner's one mutex. A
+catalogue install (`with_legacy_mutation`), a catalogue update apply, a backup
+restore and a controlled catalogue job apply hold that same mutex for their
+whole transaction. So `GET /api/catalog/manufacturers`,
+`GET /api/catalog/items`, `GET /api/product-languages` and the plain backup
+listing `GET /api/catalog/backups` now run their whole body through
+`routes::off_runtime`. Bodies, status codes and error texts are unchanged:
+the reads' `400` with the missing-database or owner-unavailable text, `200 []`
+for the product languages without a database, the backup list's `503`/`500`,
+and the item language fallback (`en` answered by `en-US`).
+
+Tests (`routes/catalogue_runtime_tests.rs`, whole application, current-thread
+runtime): `catalogue_reads_leave_the_runtime_free` holds the owner mutex once
+as a read lease and once through an empty legacy mutation (the guard an
+install takes; no package is installed), and requires
+each of the seven requests (manufacturers; items plain, filtered and with an
+exact and a fallback language; product languages; backup list) to leave the
+timer running, stay unanswered while the mutex is held and then return the
+exact body recorded from the unchanged handlers (for the backup entry
+without its timestamp and file identity).
+`catalogue_read_refusals_are_unchanged` pins the answers without a product
+database and with a poisoned owner. Turning a handler back to inline in a
+separate copy makes the witness report exactly that route.
+
+Limits: the update preview and apply, restore and backup deletion still wait
+for or hold the catalogue on a runtime worker; they belong to the update flow
+and were left alone. The System-2 download worker and the original #36 cause
+or proxy question remain open; this is not an exhaustive route audit.

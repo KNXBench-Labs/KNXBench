@@ -3730,18 +3730,23 @@ struct CatalogManufacturerDto {
     name: Option<String>,
 }
 
+/// `GET /api/catalog/manufacturers`. Waits for the catalogue off the
+/// runtime (#36): an install holds it for its whole transaction.
 async fn catalog_manufacturers(
     State(state): State<SharedState>,
 ) -> Result<Json<Vec<CatalogManufacturerDto>>, ApiError> {
-    domain::catalog_manufacturers_impl(&state)
-        .map(|rows| {
-            Json(
-                rows.into_iter()
-                    .map(|(id, name)| CatalogManufacturerDto { id, name })
-                    .collect(),
-            )
-        })
-        .map_err(ApiError::bad_request)
+    off_runtime(move || {
+        domain::catalog_manufacturers_impl(&state)
+            .map(|rows| {
+                Json(
+                    rows.into_iter()
+                        .map(|(id, name)| CatalogManufacturerDto { id, name })
+                        .collect(),
+                )
+            })
+            .map_err(ApiError::bad_request)
+    })
+    .await?
 }
 
 #[derive(Deserialize)]
@@ -3805,9 +3810,13 @@ async fn catalog_items(
     State(state): State<SharedState>,
     Query(q): Query<CatalogItemsQuery>,
 ) -> Result<Json<Vec<CatalogItemDto>>, ApiError> {
-    domain::catalog_items_impl(&state, q.manufacturer, q.search, q.language)
-        .map(|rows| Json(rows.into_iter().map(CatalogItemDto::from).collect()))
-        .map_err(ApiError::bad_request)
+    // Off the runtime like the manufacturers (#36).
+    off_runtime(move || {
+        domain::catalog_items_impl(&state, q.manufacturer, q.search, q.language)
+            .map(|rows| Json(rows.into_iter().map(CatalogItemDto::from).collect()))
+            .map_err(ApiError::bad_request)
+    })
+    .await?
 }
 
 /// One language identifier the product database has any translation rows
@@ -3832,13 +3841,16 @@ impl From<knx_productdb::query::TranslationLanguage> for ProductLanguageDto {
 
 /// `GET /api/product-languages`. With no product database configured this
 /// returns `200 []`, not an error — see `domain::product_languages_impl`'s
-/// own doc comment for why.
+/// own doc comment for why. Off the runtime like the catalogue reads (#36).
 async fn product_languages(
     State(state): State<SharedState>,
 ) -> Result<Json<Vec<ProductLanguageDto>>, ApiError> {
-    domain::product_languages_impl(&state)
-        .map(|rows| Json(rows.into_iter().map(ProductLanguageDto::from).collect()))
-        .map_err(ApiError::bad_request)
+    off_runtime(move || {
+        domain::product_languages_impl(&state)
+            .map(|rows| Json(rows.into_iter().map(ProductLanguageDto::from).collect()))
+            .map_err(ApiError::bad_request)
+    })
+    .await?
 }
 
 #[derive(Deserialize)]
@@ -4281,6 +4293,9 @@ mod module_runtime_tests;
 
 #[cfg(test)]
 mod mixed_runtime_tests;
+
+#[cfg(test)]
+mod catalogue_runtime_tests;
 
 #[cfg(test)]
 mod tests {

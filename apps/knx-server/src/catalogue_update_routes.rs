@@ -390,14 +390,19 @@ fn list_backups(path: &Path) -> Result<Vec<BackupEntry>, ApiError> {
     Ok(found.into_iter().map(|(_, entry)| entry).collect())
 }
 
+/// `GET /api/catalog/backups`. Waits for the catalogue and lists the
+/// directory off the runtime (#36); an update holds the catalogue meanwhile.
 async fn backups(State(state): State<SharedState>) -> Result<Json<BackupList>, ApiError> {
-    let owner = owner(&state)?;
-    let path = owner
-        .with_read(db_path)
-        .map_err(crate::catalogue_owner::owner_error)??;
-    Ok(Json(BackupList {
-        backups: list_backups(&path)?,
-    }))
+    crate::routes::off_runtime(move || {
+        let owner = owner(&state)?;
+        let path = owner
+            .with_read(db_path)
+            .map_err(crate::catalogue_owner::owner_error)??;
+        Ok(Json(BackupList {
+            backups: list_backups(&path)?,
+        }))
+    })
+    .await?
 }
 
 async fn restore(

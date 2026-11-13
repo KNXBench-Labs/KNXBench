@@ -600,3 +600,10 @@ A tester report (issue #38) adds `M-0006_A-E052-12-3406` with the
 `partial-parameters` scope only; see the
 [KL-136 dossier](KL-136-0701h-download-and-restart-evidence.md) and the
 [evidence record](../evidence/tester-report-hager-0701-2026-11-10.json).
+
+## 2026-11-13: the Hager `0701h` program gains complete and both
+
+Two further tester reports (issue #38) add the `complete` and `partial-both`
+scopes for `M-0006_A-E052-12-3406`; group addresses only stays untested. See
+the [KL-136 dossier](KL-136-0701h-download-and-restart-evidence.md) and the
+[evidence record](../evidence/tester-report-hager-0701-2026-11-12.json).

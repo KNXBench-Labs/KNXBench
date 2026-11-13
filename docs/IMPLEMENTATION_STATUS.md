@@ -401,6 +401,18 @@ function confirmed by the tester, closing restart unacknowledged. Other scopes
 stay `untested` until their report files arrive.
 [Evidence record](evidence/tester-report-hager-0701-2026-11-10.json).
 
+## Hager 0701h complete and parameters-plus-group-addresses downloads verified (13 November 2026; issue #38, WP-33)
+
+Two more tester reports (ADR-0121), re-runs on a source build of
+`e91da61ae`, add `complete` and `partial-both` for
+`M-0006_A-E052-12-3406`: program hash matched; an offline plan for the
+program gives the same 28 and 27 steps and 2477 octets with no warnings;
+post-download identity and load states matched; the device worked as
+configured; the closing restart was unacknowledged. With `complete` listed,
+`device readiness` now grades devices with this program `verified`. Group
+addresses only never ran and stays `untested`.
+[Evidence record](evidence/tester-report-hager-0701-2026-11-12.json).
+
 ## Download dialog names pending changes a partial scope leaves out (11 November 2026; issue #39, WP-32)
 
 When the prepared plan's scope does not write every part the project marks

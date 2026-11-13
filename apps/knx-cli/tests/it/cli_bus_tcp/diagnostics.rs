@@ -203,13 +203,14 @@ fn tcp_peer_eof_mid_read_keeps_the_partial_export_and_the_skip_count() {
 #[test]
 fn refused_tcp_fails_without_a_file_and_never_falls_back_to_udp() {
     let fixture = Fixture::new();
-    let port = {
-        let listener = TcpListener::bind((Ipv4Addr::LOCALHOST, 0)).unwrap();
-        listener.local_addr().unwrap().port()
-    };
-    let trap = UdpSocket::bind((Ipv4Addr::LOCALHOST, port)).unwrap();
+    // Keep TCP bound but not listening until the child exits: no other test can
+    // take the port between selection and the refused connect.
+    let reserved = tokio::net::TcpSocket::new_v4().unwrap();
+    reserved.bind((Ipv4Addr::LOCALHOST, 0).into()).unwrap();
+    let address = reserved.local_addr().unwrap();
+    let trap = UdpSocket::bind(address).unwrap();
     trap.set_nonblocking(true).unwrap();
-    let gateway = format!("127.0.0.1:{port}");
+    let gateway = address.to_string();
     let output =
         collect(&mut fixture.command(&gateway, &["--tunnel-transport", "tcp", "--confirm-read"]));
     assert_eq!(output.status.code(), Some(1), "{}", stderr(&output));

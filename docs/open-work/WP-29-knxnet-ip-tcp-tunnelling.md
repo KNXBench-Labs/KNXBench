@@ -93,7 +93,8 @@ The read-only `knx device diagnostics` export (both profiles) admits explicit
 actual transport and pre-disconnect TCP skips on stderr. `--simulate` refuses
 the option; a preview names an explicit TCP. Recipes, export format and gateway
 lease are unchanged; the export records no transport. Loopback CLI regressions
-run the identity recipe over real TCP and UDP peers
+cover the identity recipe over TCP and default/explicit UDP handshake selection
+(refused before acquisition)
 ([record](../status/2026-11-13-cli-tcp-diagnostics.md)). Programming, downloads,
 address assignment, device comparison and other reads stay UDP-only.
 

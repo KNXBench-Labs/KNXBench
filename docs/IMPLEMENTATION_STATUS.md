@@ -22,6 +22,16 @@ extras, an authentic Alpha 20 upgrade probe and packaging dry runs. Publication
 and historical private-corpus restoration require separate owner approval;
 no release acceptance is inferred from this preparation entry.
 
+Published on 13 November 2026 at immutable `616d26d2ec86ceeadd86a3441a7e3b2bfaa9b6cc`
+from the first and only candidate (23/23 release stages green; one earlier gate
+attempt aborted by a session disconnect is kept as aborted). Owner-approved pinned
+lanes ran on a 28-file cross-section: the legacy-name check passed and Alpha 20 vs
+Alpha 21 ingest was 28/28 identical; the full pinned matrix was not run. Both tag
+publishers succeeded; downloaded AppImage/MCP/checksum bytes, a headless AppImage
+start, the amd64/arm64 registry identities and an isolated amd64 authenticated smoke
+were checked separately from the source gate. Limits are explicit in the
+[public verification receipt](evidence/release-alpha21-2026-11-13.json).
+
 ## Experimental transport labels and ETS 5.7 evidence check (12 November 2026; REL-01 B-14/B-11)
 
 TCP tunnelling and USB/serial TP-UART now read **experimental** in the web

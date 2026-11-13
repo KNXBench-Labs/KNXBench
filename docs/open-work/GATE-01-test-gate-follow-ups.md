@@ -1,6 +1,6 @@
 # GATE-01 — Test-gate speed and stability follow-ups
 
-**Status:** Open; parked until release preparation (owner decision 8 November 2026). Listed in [OPEN_WORK](../OPEN_WORK.md); per-ID status of record is the [ledger](../status/LEDGER.md).
+**Status:** Open; parked until release preparation (owner decision 8 November 2026). Alpha 21 preparation (13 November 2026) passed its complete release gate 23/23 on the first full run without taking these items up; they await re-prioritisation. Listed in [OPEN_WORK](../OPEN_WORK.md); per-ID status of record is the [ledger](../status/LEDGER.md).
 
 Small and optional; none blocks a delivery.
 

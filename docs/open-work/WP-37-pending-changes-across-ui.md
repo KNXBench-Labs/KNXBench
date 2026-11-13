@@ -295,8 +295,8 @@ description after the name.
   browser 1229 (1132 + 97), production devices 112 (111 + 1). Browser lanes
   overlap; these are per-lane counts, not unique totals. No Rust suite selected
   for either web-only delta. Inputs frozen; user data checked and untouched.
-- #48 received a delivery comment and remains open. These are main-only changes,
-  shipping with the next alpha; no hardware verification, release or deployment.
+- #48 received a delivery comment and remains open. These changes shipped in
+  Alpha 21 (13 November 2026); no hardware verification.
 
 ## Not covered
 

@@ -269,7 +269,7 @@ async side and no std guard is held across an await:
   currency check made while it holds the programming, monitor and scan
   reservations, and the tail after the read (result currency, recording and
   observation retention under the project lock). The tail runs as one blocking
-  job, so, as before, a client that goes away after the read can no longer cut
+  job, so, as before, a client that goes away after the read still cannot cut
   the recording from the retention.
 - `POST /api/device-diagnostics/preview`: its whole body after the gateway and
   profile checks (it does no bus I/O; the run itself never took the project).
@@ -300,6 +300,15 @@ each requires the full answer afterwards and released reservations). A case
 fails if the runtime blocks or the request answers while the lock is held.
 Each of the eight call sites turned back to inline in a separate copy fails
 the case at its own stage.
+`a_project_change_before_the_reserved_recheck_refuses_the_comparison` and
+`a_comparison_read_before_a_project_change_is_outdated_without_a_token` change
+the project (device 1's comparison revision) while the comparison waits for its
+last reservation, or after the read while the project is held: the first
+requires the exact `deviceCompareStale` refusal with no tunnel and nothing
+registered, the second `outdated: true` with no observation token. Each fails
+in a separate copy when its check is dropped (recheck always current; retention
+whenever a project is open). The support run's changed-context and replaced
+refusals have no such case yet.
 
 Limits: the System-2 download worker, catalogue product-database reads and
 the original #36 cause or proxy question remain open; this is not an

@@ -7,16 +7,21 @@
 //! lock is still held, so a refusal before the lock cannot pass as coverage,
 //! and checks the exact answer after release. The bus is an in-memory
 //! simulated device behind a fake connector; no socket is opened.
+//!
+//! Two comparison cases change the project at those waits instead: under the
+//! reservations the recheck refuses, and after the read the result is outdated.
 
 use std::future::Future;
 use std::net::SocketAddrV4;
 use std::pin::Pin;
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
 
 use axum::body::Body;
 use axum::http::{Request, StatusCode};
 use knx_core::commissioning::load_state::LoadState;
+use knx_core::commissioning::pending::ProgrammingParts;
 use knx_core::commissioning::properties::{ObjectIndex, PID_MANUFACTURER_ID};
 use knx_core::{DeviceId, DeviceInstance, Language, Project, SourceRef};
 use knx_net::commissioning::simulator::{SimulatedDevice, SimulatorConfig};
@@ -26,6 +31,7 @@ use knx_net::{
 };
 use serde_json::{json, Value};
 use tokio::sync::{broadcast, Notify};
+use tokio::task::JoinHandle;
 use tower::ServiceExt;
 
 use super::editor_runtime_tests::{project_with_device, request};
@@ -49,6 +55,7 @@ enum Stage {
 /// Lets a test hold the tunnel open and see when it is closed again.
 #[derive(Clone, Default)]
 struct Gate {
+    connects: Arc<AtomicUsize>,
     entered: Arc<Notify>,
     open: Arc<Notify>,
     disconnected: Arc<Notify>,
@@ -111,6 +118,7 @@ impl GatewayConnector for GatedConnector {
         let gate = self.gate.clone();
         let device = Arc::clone(&self.device);
         Box::pin(async move {
+            gate.connects.fetch_add(1, Ordering::SeqCst);
             gate.entered.notify_one();
             gate.open.notified().await;
             let tunnel: Box<dyn BusTunnel> = Box::new(SimTunnel {
@@ -164,6 +172,33 @@ fn fast() -> SessionTiming {
     }
 }
 
+/// Sends `request` to `state`'s application on its own task.
+fn send(state: &Arc<AppState>, request: Request<Body>) -> JoinHandle<(StatusCode, Value)> {
+    let router = crate::app(Arc::clone(state), None);
+    tokio::spawn(async move {
+        let response = router.oneshot(request).await.unwrap();
+        let status = response.status();
+        let bytes = axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .unwrap();
+        let body = serde_json::from_slice(&bytes)
+            .unwrap_or_else(|_| Value::String(String::from_utf8_lossy(&bytes).into_owned()));
+        (status, body)
+    })
+}
+
+/// Waits until the request took the programming reservation, which it does
+/// only after its preparation and before the scan lock.
+async fn reservation_taken(state: &AppState, label: &str) {
+    tokio::time::timeout(HANG_GUARD, async {
+        while state.address_programming.try_lock().is_ok() {
+            tokio::time::sleep(Duration::from_millis(1)).await;
+        }
+    })
+    .await
+    .unwrap_or_else(|_| panic!("{label}: the reservation was never taken"));
+}
+
 /// Sends `request` with the project lock taken at `stage`, checks that the
 /// runtime stayed free and that the request waited for the lock, and
 /// returns the answer given after release.
@@ -173,7 +208,6 @@ async fn witness(
     stage: Stage,
     gate: &Gate,
 ) -> (StatusCode, Value) {
-    let router = crate::app(Arc::clone(state), None);
     let label = format!("{} {} at {stage:?}", request.method(), request.uri());
     if !matches!(stage, Stage::AfterTheRead) {
         gate.open.notify_one();
@@ -184,28 +218,13 @@ async fn witness(
     };
     let mut held =
         matches!(stage, Stage::Immediately).then(|| super::tests::hold_project_lock(state));
-    let call = tokio::spawn(async move {
-        let response = router.oneshot(request).await.unwrap();
-        let status = response.status();
-        let bytes = axum::body::to_bytes(response.into_body(), usize::MAX)
-            .await
-            .unwrap();
-        let body = serde_json::from_slice(&bytes)
-            .unwrap_or_else(|_| Value::String(String::from_utf8_lossy(&bytes).into_owned()));
-        (status, body)
-    });
+    let call = send(state, request);
     match stage {
         Stage::Immediately => {}
         Stage::UnderReservation => {
             // The programming reservation is taken after the first project
             // wait and before the scan lock this test still holds.
-            tokio::time::timeout(HANG_GUARD, async {
-                while state.address_programming.try_lock().is_ok() {
-                    tokio::time::sleep(Duration::from_millis(1)).await;
-                }
-            })
-            .await
-            .unwrap_or_else(|_| panic!("{label}: the reservation was never taken"));
+            reservation_taken(state, &label).await;
             held = Some(super::tests::hold_project_lock(state));
             drop(scan);
         }
@@ -436,6 +455,101 @@ async fn the_device_comparison_waits_off_the_runtime() {
         assert!(state.bus_session.try_lock().is_ok(), "{stage:?}");
         assert!(state.line_scan_session.try_lock().is_ok(), "{stage:?}");
     }
+}
+
+/// A download that wrote device 1 invalidates its comparisons (ADR-0129):
+/// the change both currency checks must notice. Returns the old revision.
+fn invalidate_comparisons_of_device_1(state: &AppState) -> u64 {
+    let mut stack = state.command_stack.lock().unwrap();
+    let before = stack.comparison_revision(DeviceId(1));
+    stack.forget_programmed_claims(DeviceId(1), ProgrammingParts::ALL);
+    assert!(stack.comparison_revision(DeviceId(1)) > before);
+    before
+}
+
+/// The project changes after the comparison was prepared, while the request
+/// waits for its last gateway reservation: the recheck made under them refuses
+/// with the stale answer, opens no tunnel and registers nothing.
+#[tokio::test(flavor = "current_thread")]
+async fn a_project_change_before_the_reserved_recheck_refuses_the_comparison() {
+    let dir = tempfile::tempdir().unwrap();
+    let gate = Gate::default();
+    let state = compare_fixture(&dir, &gate);
+    // Open, so a recheck that let the change through would read the device.
+    gate.open.notify_one();
+    let scan = Arc::clone(&state.line_scan_session).lock_owned().await;
+    let body = json!({"address": "1.1.7", "gateway": GATEWAY}).to_string();
+    let call = send(&state, request("POST", "/api/device-compare", &body));
+    reservation_taken(&state, "compare").await;
+    invalidate_comparisons_of_device_1(&state);
+    drop(scan);
+    let (status, answer) = tokio::time::timeout(HANG_GUARD, call)
+        .await
+        .expect("the comparison answers")
+        .unwrap();
+    assert_eq!(
+        status,
+        StatusCode::CONFLICT,
+        "the recheck under the reservations let a changed project through: {answer}"
+    );
+    assert_eq!(
+        answer,
+        json!({
+            "error": "Project/device changed; refresh and compare again. No tunnel was opened.",
+            "kind": "deviceCompareStale",
+        })
+    );
+    assert_eq!(
+        gate.connects.load(Ordering::SeqCst),
+        0,
+        "a tunnel was asked for"
+    );
+    assert!(state.one_shot_activity.snapshot_with_dropped().0.is_empty());
+    assert!(state.address_programming.try_lock().is_ok());
+    assert!(state.bus_session.try_lock().is_ok());
+    assert!(state.line_scan_session.try_lock().is_ok());
+}
+
+/// The project changes after the device was read, before the result's checks:
+/// the answer is marked outdated and no observation is retained for adoption.
+#[tokio::test(flavor = "current_thread")]
+async fn a_comparison_read_before_a_project_change_is_outdated_without_a_token() {
+    let dir = tempfile::tempdir().unwrap();
+    let gate = Gate::default();
+    let state = compare_fixture(&dir, &gate);
+    let body = json!({"address": "1.1.7", "gateway": GATEWAY}).to_string();
+    let call = send(&state, request("POST", "/api/device-compare", &body));
+    // The tunnel is asked for only after the recheck under the reservations.
+    tokio::time::timeout(HANG_GUARD, gate.entered.notified())
+        .await
+        .expect("no tunnel was asked for");
+    // Holding the project keeps the result's checks waiting for the change.
+    let (release, holder) = super::tests::hold_project_lock(&state);
+    gate.open.notify_one();
+    tokio::time::timeout(HANG_GUARD, gate.disconnected.notified())
+        .await
+        .expect("the tunnel was never closed");
+    let before = invalidate_comparisons_of_device_1(&state);
+    let _ = release.send(());
+    assert!(holder.join().unwrap(), "the project holder timed out");
+    let (status, answer) = tokio::time::timeout(HANG_GUARD, call)
+        .await
+        .expect("the comparison answers")
+        .unwrap();
+    assert_eq!(status, StatusCode::OK, "{answer}");
+    assert!(
+        answer["observationToken"].is_null(),
+        "a result read before the project changed was retained: {answer}"
+    );
+    assert!(answer["observationExpiresInSeconds"].is_null(), "{answer}");
+    assert_eq!(answer["outdated"], true, "{answer}");
+    assert_eq!(answer["written"], false);
+    // The answer keeps the binding it was prepared under.
+    assert_eq!(answer["comparisonRevision"], before);
+    assert_eq!(gate.connects.load(Ordering::SeqCst), 1);
+    assert!(state.address_programming.try_lock().is_ok());
+    assert!(state.bus_session.try_lock().is_ok());
+    assert!(state.line_scan_session.try_lock().is_ok());
 }
 
 /// `http_support_diagnostics.rs`'s device: mask 0025h at 1.1.67, device 7.

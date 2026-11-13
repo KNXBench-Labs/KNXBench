@@ -872,6 +872,36 @@ rules (plan first, a device-specific phrase, a backup before any write):
 | `knx device service-control` | Reads, and after a backup changes, the Individual Address Write Enable bit |
 | `knx device reset-address`, `knx device address-by-serial` | Plan only today: confirmed writes are refused before a tunnel opens, like `program-address` below |
 
+#### Service-control, download and restore transport (13 November 2026 source successor)
+
+Source builds containing this successor accept optional
+`--tunnel-transport udp|tcp` on `device service-control` (read or confirmed
+write), ordinary `device download`, and `device restore`. Omission stays UDP;
+TCP is experimental, never silently retried over UDP, reconnected or replayed.
+For example, the existing read can select TCP without gaining write authority:
+
+```bash
+knx device service-control 1.1.67 --gateway 192.0.2.1:3671 --tunnel-transport tcp
+```
+
+For a confirmed write, add the option to the existing command **without changing
+its exact device-specific confirmation, untested acknowledgement, history,
+backup or key requirements**. A restore still requires its captured serial and
+matching live observations. This is transport selection, not permission to write
+or proof of device execution. First inspect the plan without the option:
+explicit transport selection is refused in plan-only modes, including
+`download --changes`. System-2 preparation/validation and other programming
+commands do not gain this option.
+
+Missing, repeated or invalid values refuse before effects. Explicit gateways
+must be unicast IPv4 with nonzero port, including in plans; gateway validation
+precedes input, key and history I/O. Stderr names the opened transport and
+assigned address. Positive skipped TCP frames are disclosed once after success
+or failure, sampled before disconnect; they are not lost-telegram or final-wire
+totals. Zero is silent. The [scoped record](../../status/2026-11-13-cli-tcp-write-consumers.md)
+distinguishes complete synthetic TCP operations from UDP handshake-only controls
+and pending independent acceptance. No release or hardware claim.
+
 #### Read-only device comparison (13 November 2026 source successor)
 
 ```bash

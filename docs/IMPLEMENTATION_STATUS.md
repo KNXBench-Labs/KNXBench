@@ -12,6 +12,16 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## CLI TCP write-consumer source successor (13 November 2026; WP-29)
+
+The separately bounded source candidate adds explicit UDP/TCP selection to
+service-control read/confirmed-write, ordinary download and backup restore.
+UDP stays the default; plans refuse explicit transport rather than ignore it.
+The existing authorisation, recovery, readback, history and cleanup procedures
+remain in force. [Scope and actual checks](status/2026-11-13-cli-tcp-write-consumers.md)
+separate local loopback/simulator verification from pending independent package
+acceptance. Not part of the Alpha 21 cutoff; no hardware/release claim.
+
 ## Alpha 21 release preparation (13 November 2026)
 
 Source cutoff `938e895c5`, release `0.1.0-alpha.21`. The

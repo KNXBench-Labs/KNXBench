@@ -114,3 +114,17 @@ fixture closure and all selected integrated package stages passed; runtime
 publication was read back ([scoped record](../status/2026-11-10-cli-tcp-find-serial.md)).
 This does not add serial-port transport, discovery/routing, KNX IP Secure or
 real-gateway interoperability and does not close WP-29.
+
+## 13 November 2026 — bounded CLI write-consumer source successor
+
+The candidate adds explicit UDP/TCP to `device service-control` read/write,
+ordinary `device download` and `device restore` only. UDP stays the default;
+plan-only invocations refuse explicit selection. The existing safety, backup,
+readback, history and cleanup gates remain; no fallback/reconnect/replay is
+introduced. [Scoped execution](../status/2026-11-13-cli-tcp-write-consumers.md)
+distinguishes completed synthetic TCP operations from deliberately refused UDP
+handshake controls and pending independent package acceptance. This supersedes
+only these three CLI consumers' earlier UDP-only boundary, not System-2
+preparation/validation, other programming, KNX IP Secure, release or physical
+gateway/device interoperability. The retained historical catalogue block above
+is unchanged.

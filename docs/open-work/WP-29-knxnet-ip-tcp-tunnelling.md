@@ -124,6 +124,25 @@ Well-formed oversized/unknown frames are skipped, not grounds for closing TCP;
 active inner connections do not acquire a blanket 10 s partial-frame timeout.
 Do not transplant UDP-specific behaviour or invent error responses.
 
+## CLI service-control, download and restore successor (13 November 2026)
+
+Three bounded source changes add explicit `--tunnel-transport udp|tcp` to
+service-control read/confirmed-write, ordinary download and backup restore.
+Omission stays UDP. Plan-only invocations refuse explicit selection, rather
+than silently ignoring it. Strict gateway admission precedes input/history I/O;
+the opened transport/assigned address and positive pre-disconnect TCP skips are
+disclosed on ordinary stderr. Existing phrases, untested acknowledgement,
+target/key/history/backup/readback gates, results and cleanup are unchanged.
+
+Maintained public-CLI loopback peers reuse the existing codecs and management
+simulator. The [bounded record](../status/2026-11-13-cli-tcp-write-consumers.md)
+owns actual local check results and explicitly separates completed TCP
+operations from refused UDP handshake controls. Independent review and final
+package acceptance belong to the integrating owner. This source candidate
+supersedes only these three consumers' older UDP-only exclusions: System-2
+preparation/validation, other programming consumers, hardware interoperability,
+release and wider WP-29 remain separate.
+
 ## Implementation boundaries
 
 - Define explicit transport selection through service, CLI and server/Web paths.

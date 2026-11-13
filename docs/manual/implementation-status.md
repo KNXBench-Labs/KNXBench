@@ -1366,7 +1366,7 @@ KNXBench reads, understands, edits and writes back KNX project data, and it
 can watch a non-secure bus. “Writes back” means native `.knxdb`, not an ETS
 archive; supported editable semantics are narrower than retained source bytes.
 It can download a device's configuration only within a very
-narrow verified scope (one device so far), cannot handle KNX Secure, and
+narrow verified scope (four device programs so far), cannot handle KNX Secure, and
 cannot be shared between two people. The last two are absences, the first is
 a beginning, and the next chapter is careful about what it does and does not
 promise regarding them.

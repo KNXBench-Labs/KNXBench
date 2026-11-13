@@ -21,7 +21,7 @@ row-by-row evidence.
 
 Only narrowly. `knx device download` and the **Download to device** tab write a project
 device's application tables and parameters after a plan and a per-device confirmation;
-this has been verified on one device so far, and procedures KNXBench cannot plan are
+this has been verified on four device programs so far, and procedures KNXBench cannot plan are
 refused. Programming an individual address is currently refused until durable recovery
 exists, and unloading and secure devices are not supported. For anything beyond that,
 use a commissioning tool that covers your devices. See

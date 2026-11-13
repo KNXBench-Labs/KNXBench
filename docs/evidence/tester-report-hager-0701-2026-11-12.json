@@ -22,6 +22,7 @@
         "knxbenchVersion": "0.1.0-alpha.20+ge91da61ae9c2300eff1feea34fe6d92d13215e7e"
       },
       "scope": "complete",
+      "support": "untested",
       "plan": {
         "steps": 28,
         "dataOctets": 2477,
@@ -62,6 +63,7 @@
         "knxbenchVersion": "0.1.0-alpha.20+ge91da61ae9c2300eff1feea34fe6d92d13215e7e"
       },
       "scope": "partial-both",
+      "support": "untested",
       "plan": {
         "steps": 27,
         "dataOctets": 2477,

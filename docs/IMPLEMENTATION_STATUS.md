@@ -439,9 +439,13 @@ Since 12 November 2026 an ordinary edit made during the write is answered at
 once and journaled after the save (into the new file after a Save As), and the
 project tree, status, notes and instructions reads read a copy of the store
 path instead of waiting for it; the device editor's routes wait for the project
-off the runtime. Limit: edits that write the file in their own transaction
-(notes and instructions apply, naming recipes, device-compare adoption,
-selective import, baseline marks) and the project-history panel still hold
+off the runtime. Since 13 November 2026 the project router's other edits
+(topology, group addresses and ranges, links, devices, undo/redo, the
+group-address style), the Functions panel and the device list do too; route
+modules such as bus, download and device comparison are not yet audited.
+Limit: edits that write the file in their own transaction (notes and
+instructions apply, naming recipes, device-compare adoption, selective import,
+baseline marks) and the project-history panel still hold
 the project while they wait for the save. Selective import now rechecks the revision after
 taking the store path, so it cannot restore pre-save catalogue references.
 The reporter's “Gerätedetails sind nicht verfügbar” message was not

@@ -1613,7 +1613,7 @@
       "number": 26,
       "title": "KNXnet/IP protocol scope",
       "topic": "Bus diagnostics and DPT",
-      "summary": "Tunnelling/routing/discovery have bounded implementations; since Alpha 20 optional plain TCP covers only the bus monitor and its bound group traffic, with UDP the default and no real-gateway interoperability verified. Ordinary connectivity does not imply KNX IP Secure or extended discovery support.",
+      "summary": "Tunnelling/routing/discovery have bounded implementations. Plain TCP ships for monitor/group traffic since Alpha 20; later bounded scan/read consumers and the 13 November CLI service-control/download/restore source successor retain UDP defaults. The write-consumer successor has local loopback/simulator evidence only, pending independent package acceptance; no real-gateway interoperability is verified. Ordinary connectivity does not imply KNX IP Secure or extended discovery support.",
       "file": "KL-026-knxnetip-protocol-scope.md",
       "ledger_ids": [],
       "anchors": [

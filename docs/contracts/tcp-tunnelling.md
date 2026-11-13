@@ -1,4 +1,4 @@
-# Optional TCP tunnelling for monitoring, group traffic and read-only CLI queries
+# Optional TCP tunnelling for bounded bus and CLI device consumers
 
 Initial monitor/group-traffic acceptance: 8 November 2026; ships in Alpha 20.
 The separately dated scan/find-serial/byte-order-probe successors below are main-only additions.
@@ -21,8 +21,9 @@ single device or a line/range. This increment passed independent review and the
 selected integrated gate on `ac9b23814` ([acceptance](../status/2026-11-10-cli-tcp-scans.md));
 it is not part of the Alpha 20 release above. At that accepted CLI baseline,
 Server/Web line scans retained UDP; the separate source successor below adds
-explicit TCP and is now software-accepted on main. Device programming,
-downloads/restores and individual-address programming retain their UDP path.
+explicit TCP and is now software-accepted on main. At that baseline, device programming, downloads/restores and individual-address
+programming retained their UDP path; the separately dated CLI successor below
+changes only service-control, ordinary download and restore.
 The read-only find-serial and byte-order-probe exceptions below do not widen those write workflows.
 Discovery and routing are separate UDP services.
 No preference silently converts those paths
@@ -189,3 +190,27 @@ EN/DE and narrow/wide layouts, with discovery intercepted.
 Independent whole-feature review, discriminating mutations and the maintained
 change-scoped package gate are still required. Authored tests and a source-only
 handoff are not acceptance, a release or real-gateway interoperability.
+
+## CLI service-control, ordinary download and restore (13 November 2026 source successor)
+
+These three existing consumers accept `--tunnel-transport udp|tcp`. Omission
+remains UDP. Service-control supports both its existing read and confirmed
+write; ordinary download and restore retain their existing confirmed write
+procedures. System-2 validation/preparation, other programming consumers and
+server/Web downloads are not widened. The option refuses in plan-only modes
+(including `download --changes`); omit it to inspect the offline plan.
+
+Invalid, missing or duplicate transport values refuse before effects. Every
+explicit gateway must be unicast IPv4 with a nonzero port, checked before
+input, key, history or runtime I/O, even for a plan. Transport selection precedes
+the unchanged diagnostic tap (`ServiceControl` or `Download`). Stderr names
+the actual opened transport and assigned address. Positive TCP skipped-frame
+counts are sampled before disconnect and disclosed once on success or failure,
+without optional recording. Zero is silent; skips are not lost-telegram totals.
+
+Exact authorisation/untested phrases, exclusions, key/history admission,
+backup-before-mutation and readback requirements, result/report/exit semantics
+and cleanup policies remain authoritative. Explicit TCP neither falls back to
+UDP nor adds reconnect, replay, new timeouts or new download algorithms.
+[Execution boundary](../status/2026-11-13-cli-tcp-write-consumers.md): synthetic
+loopback/simulator evidence only; independent package acceptance is separate.

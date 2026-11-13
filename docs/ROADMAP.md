@@ -1,5 +1,15 @@
 # Roadmap
 
+## CLI TCP service-control, download and restore source successor (13 November 2026)
+
+WP-29's bounded candidate adds explicit TCP to service-control read/write,
+ordinary download and restore, without changing UDP defaults, authorisation or
+recovery algorithms. [Verification and limits](status/2026-11-13-cli-tcp-write-consumers.md)
+keep local loopback/simulator checks separate from independent package
+acceptance, release and hardware interoperability. System-2 preparation and
+validation, remaining programming consumers, KNX IP Secure and wider WP-29
+remain open; no real-installation authority is conferred.
+
 ## Alpha 21 pre-release (source cutoff 12 November 2026)
 
 The [Alpha 21 scope](releases/alpha21.md) covers all delivered work through

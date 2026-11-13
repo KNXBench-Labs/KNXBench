@@ -46,6 +46,7 @@ pub struct DownloadArgs {
     pub project: String,
     pub product_db: Option<String>,
     pub gateway: Option<String>,
+    pub tunnel_transport: Option<knx_net::TunnelTransport>,
     pub confirm: Option<String>,
     /// A file holding the access key. Never the key itself on the command
     /// line: argv is visible to every user through `ps`.
@@ -90,6 +91,7 @@ pub fn parse_download_args(args: &[String]) -> Result<DownloadArgs, String> {
     let mut project = None;
     let mut product_db = None;
     let mut gateway = None;
+    let mut tunnel_transport = None;
     let mut confirm = None;
     let mut key_file = None;
     let mut partial = None;
@@ -101,6 +103,10 @@ pub fn parse_download_args(args: &[String]) -> Result<DownloadArgs, String> {
     let mut i = 0;
     while i < args.len() {
         match args[i].as_str() {
+            "--tunnel-transport" => {
+                crate::bus_transport::take_tunnel_transport(&mut tunnel_transport, args, i)?;
+                i += 1;
+            }
             "--project" => {
                 project = Some(crate::take_value(args, i + 1, "--project")?);
                 i += 1;
@@ -185,6 +191,7 @@ pub fn parse_download_args(args: &[String]) -> Result<DownloadArgs, String> {
         project,
         product_db,
         gateway,
+        tunnel_transport,
         confirm,
         key_file,
         partial,
@@ -287,6 +294,12 @@ pub enum Mode {
 /// Parses the address, refuses an excluded one, and checks the phrase.
 /// Runs before the project is opened and before any socket.
 pub fn check_target(args: &DownloadArgs) -> Result<(ContactableAddress, Mode), String> {
+    if let Some(gateway) = &args.gateway {
+        crate::bus_transport::parse_gateway(gateway)?;
+    }
+    if args.tunnel_transport.is_some() && args.confirm.is_none() {
+        return Err("--tunnel-transport is not valid with a plan only; no tunnel is opened".into());
+    }
     let address: IndividualAddress = args
         .target
         .parse()
@@ -294,9 +307,7 @@ pub fn check_target(args: &DownloadArgs) -> Result<(ContactableAddress, Mode), S
     let target = ContactableAddress::new(address).map_err(|e| e.to_string())?;
     let mode = match (&args.gateway, &args.confirm) {
         (Some(gateway), Some(confirmation)) => {
-            let gateway = gateway
-                .parse()
-                .map_err(|_| "--gateway must be host:port, e.g. 192.0.2.1:3671".to_string())?;
+            let gateway = crate::bus_transport::parse_gateway(gateway)?;
             let expected = required_confirmation_phrase(address, WriteScope::Download);
             if *confirmation != expected {
                 return Err(format!(
@@ -408,6 +419,16 @@ pub fn rerun_command(
     };
     if let Some(value) = &args.product_db {
         flag(&mut command, "--product-db", value);
+    }
+    if let Some(transport) = args.tunnel_transport {
+        flag(
+            &mut command,
+            "--tunnel-transport",
+            match transport {
+                knx_net::TunnelTransport::Udp => "udp",
+                knx_net::TunnelTransport::Tcp => "tcp",
+            },
+        );
     }
     if let Some(value) = &args.key_file {
         flag(&mut command, "--key-file", value);

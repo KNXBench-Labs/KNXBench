@@ -157,7 +157,8 @@ const USAGE: &str = "usage: knx import <file.knxproj> [--store <path.knxdb> [--r
      \x20         no-address. It prepares what `knx device download` would; nothing is sent)\n\
      \x20     knx device compare <area.line.device> --project <path.knxdb> [--product-db <path>]\n\
      \x20                  [--partial parameters|group-addresses|both] --gateway <host:port>\n\
-     \x20                  [--activity-history <path>]\n\
+     \x20                  [--activity-history <path>] [--tunnel-transport <udp|tcp>]\n\
+     \x20         (source builds: transport defaults to udp; tcp never falls back to udp)\n\
      \x20         (activity history: optional; metadata, not recovery; omission is unjournaled)\n\
      \x20         (READ ONLY: reads exactly what `knx device download` would write and lists\n\
      \x20         every octet run where the device and the project differ. It sends no\n\
@@ -3135,7 +3136,7 @@ fn run_device_compare(args: &[String]) -> ExitCode {
     runtime.block_on(async {
         use knx_net::BusConnection;
         let tunnel = match crate::diagnostic_bundle_cli::tapped(
-            knx_net::KnxNetIpClient::new(),
+            knx_net::KnxNetIpClient::new().with_tunnel_transport(parsed.transport),
             knx_app::operation_recording::OperationKind::Compare,
             gateway,
         )
@@ -3159,6 +3160,11 @@ fn run_device_compare(args: &[String]) -> ExitCode {
                 return ExitCode::FAILURE;
             }
         };
+        eprintln!(
+            "connected to {gateway} over {}, assigned individual address {}. comparing read only...",
+            bus_transport::transport_label(tunnel.transport()),
+            tunnel.assigned_address()
+        );
         let compared = device_compare::compare(
             &tunnel,
             target,
@@ -3175,6 +3181,10 @@ fn run_device_compare(args: &[String]) -> ExitCode {
                 device_compare::Compared::Failed => "failed",
             });
         }
+        // Sample before consuming the tunnel, including failed reads; not final-wire totals.
+        let skipped = (tunnel.transport() == knx_net::TunnelTransport::Tcp)
+            .then(|| tunnel.skipped_frame_count());
+        bus_transport::report_skipped_frames(skipped, &mut std::io::stderr());
         if let Err(e) = tunnel.disconnect().await {
             eprintln!("tunnel disconnect: {e}");
         }

@@ -353,22 +353,3 @@ fn tcp_refusal_and_rejected_handshake_do_not_fallback_or_replay_and_keep_inputs(
     no_udp(&udp);
     fixture.intact();
 }
-
-/// `device diagnostics` gained its own transport choice on 13 November (WP-29,
-/// `cli_bus_tcp::diagnostics`); the comparison still has none.
-#[test]
-fn compare_does_not_gain_the_probe_transport_flag() {
-    let fixture = Fixture::new();
-    let trap = Trap::new();
-    let mut cmd = fixture.bare_command();
-    cmd.args(["device", "compare", "--tunnel-transport", "tcp"]);
-    let output = collect(&mut cmd);
-    failed(&output, "--tunnel-transport");
-    assert!(stderr(&output)
-        .lines()
-        .next()
-        .unwrap()
-        .contains("--tunnel-transport"));
-    trap.silent();
-    fixture.intact();
-}

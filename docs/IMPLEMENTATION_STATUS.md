@@ -732,6 +732,20 @@ review and all 13 selected integrated package stages passed on `ac9b23814`
 Server/Web scans, programming and discovery/routing are unchanged.
 [Scope](open-work/WP-29-knxnet-ip-tcp-tunnelling.md).
 
+## Optional TCP device comparison (13 November 2026; bounded WP-29 source candidate)
+
+`knx device compare` accepts strict `--tunnel-transport udp|tcp`, with UDP the
+default and no fallback/reconnect/replay. The existing read-only plan, partial
+selection, exits (same 0 / different 2 / failed 1), optional history and cleanup
+policy remain unchanged. Stderr names the actual transport/address and reports
+positive TCP skips sampled before disconnect, even after failure without recording.
+Maintained loopback CLI regressions exercise complete synthetic TCP same/different
+acquisition, failed reads/history and skip disclosure; default/explicit UDP controls
+stop at a refused handshake, not a complete comparison. Source candidate only;
+independent acceptance/publication belongs to the enclosing delivery. No hardware,
+release, programming or restore claim.
+[Record](status/2026-11-13-cli-tcp-compare.md).
+
 ## Optional TCP device diagnostics (13 November 2026; bounded WP-29 successor)
 
 `knx device diagnostics` accepts `--tunnel-transport udp|tcp` for both export

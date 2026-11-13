@@ -1,7 +1,7 @@
 //! Exercise the ordinary read-only byte-order probe through the built CLI and local sockets.
 
 mod admission;
-mod fixture;
+pub(super) mod fixture;
 mod outcomes;
 pub(super) mod peer;
 mod recording;
@@ -18,7 +18,7 @@ const WAIT: Duration = Duration::from_secs(35);
 
 pub(super) struct Joined<T>(Option<thread::JoinHandle<T>>);
 impl<T> Joined<T> {
-    fn new(handle: thread::JoinHandle<T>) -> Self {
+    pub(super) fn new(handle: thread::JoinHandle<T>) -> Self {
         Self(Some(handle))
     }
     pub(super) fn join(mut self) -> thread::Result<T> {

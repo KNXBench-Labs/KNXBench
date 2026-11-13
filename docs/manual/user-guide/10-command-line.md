@@ -872,6 +872,35 @@ rules (plan first, a device-specific phrase, a backup before any write):
 | `knx device service-control` | Reads, and after a backup changes, the Individual Address Write Enable bit |
 | `knx device reset-address`, `knx device address-by-serial` | Plan only today: confirmed writes are refused before a tunnel opens, like `program-address` below |
 
+#### Read-only device comparison (13 November 2026 source successor)
+
+```bash
+knx device compare 1.1.67 --project house.knxdb --product-db products.sqlite --gateway 192.0.2.1:3671 --tunnel-transport tcp
+```
+
+Source builds containing the 13 November comparison transport change accept
+`--tunnel-transport udp|tcp`; omission remains UDP. Explicit TCP never falls back
+to UDP, reconnects or replays the comparison. Invalid, missing or repeated values
+refuse before project, product database or optional history I/O. This is only a
+transport choice for `device compare`, not permission to program or restore.
+
+The command retains the download plan and optional `--partial` selection. It
+checks identity, reads the planned memory regions and load states, sends no access
+key or Verify Mode write, and cannot write. A read-protected device is refused,
+not compared as empty. Exit **0** means the device holds all planned octets;
+**2** means a completed comparison found differences; **1** means not compared.
+`--activity-history <path>` remains optional metadata: a completed difference is
+`finished`, while a failed read is `failed`. Omission stays unjournaled.
+
+Stderr identifies the opened transport and assigned individual address. Positive
+TCP skipped-frame counts are reported once without requiring a diagnostic bundle,
+including after a failed read. They are sampled **before disconnect**, not final
+wire totals or counts of lost telegrams; zero is silent. These source-build
+regressions establish complete synthetic TCP comparisons and default/explicit UDP
+**handshake selection only** (deliberately refused before acquisition), not a new
+release, real-gateway interoperability or hardware acceptance.
+[Verification and limits](../../status/2026-11-13-cli-tcp-compare.md).
+
 On source builds with the 13 November 2026 diagnostics transport change,
 `knx device diagnostics` accepts `--tunnel-transport udp|tcp` for both the generic
 identity export and the declared-memory profile below. Omission remains UDP;

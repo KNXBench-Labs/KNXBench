@@ -621,14 +621,18 @@ async fn scan_comparison(
 ) -> Result<Json<ScanComparisonResponse>, ApiError> {
     let guard = state
         .line_scan_session
-        .try_lock()
+        .clone()
+        .try_lock_owned()
         .map_err(|_| scan_reservation_busy())?;
     let session = guard.as_ref().ok_or_else(scan_changed)?;
     if query.session_id != session.id() {
         return Err(scan_changed());
     }
     require_legacy_udp(session)?;
-    scan_comparison_impl(&state, session)
+    crate::routes::off_runtime(move || {
+        scan_comparison_impl(&state, guard.as_ref().expect("matched scan"))
+    })
+    .await?
 }
 
 async fn scan_comparison_bound(
@@ -638,10 +642,14 @@ async fn scan_comparison_bound(
     let bound = parse_scan_bound(query.as_deref())?;
     let guard = state
         .line_scan_session
-        .try_lock()
+        .clone()
+        .try_lock_owned()
         .map_err(|_| scan_reservation_busy())?;
     check_scan_binding(&state, guard.as_ref(), &bound)?;
-    scan_comparison_impl(&state, guard.as_ref().expect("matched scan"))
+    crate::routes::off_runtime(move || {
+        scan_comparison_impl(&state, guard.as_ref().expect("matched scan"))
+    })
+    .await?
 }
 
 fn scan_comparison_impl(
@@ -722,14 +730,24 @@ async fn reconcile_scan(
 ) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
     let guard = state
         .line_scan_session
-        .try_lock()
+        .clone()
+        .try_lock_owned()
         .map_err(|_| scan_reservation_busy())?;
     let session = guard.as_ref().ok_or_else(scan_changed)?;
     if body.session_id != session.id() {
         return Err(scan_changed());
     }
     require_legacy_udp(session)?;
-    reconcile_scan_impl(&state, session, body.unexpected, body.missing)
+    // The job keeps the reservation after a dropped request, until its mutation ends.
+    crate::routes::off_runtime(move || {
+        reconcile_scan_impl(
+            &state,
+            guard.as_ref().expect("matched scan"),
+            body.unexpected,
+            body.missing,
+        )
+    })
+    .await?
 }
 
 #[derive(Deserialize)]
@@ -752,15 +770,19 @@ async fn reconcile_scan_bound(
     })?;
     let guard = state
         .line_scan_session
-        .try_lock()
+        .clone()
+        .try_lock_owned()
         .map_err(|_| scan_reservation_busy())?;
     check_scan_binding(&state, guard.as_ref(), &bound)?;
-    reconcile_scan_impl(
-        &state,
-        guard.as_ref().expect("matched scan"),
-        body.unexpected,
-        body.missing,
-    )
+    crate::routes::off_runtime(move || {
+        reconcile_scan_impl(
+            &state,
+            guard.as_ref().expect("matched scan"),
+            body.unexpected,
+            body.missing,
+        )
+    })
+    .await?
 }
 
 fn reconcile_scan_impl(
@@ -937,34 +959,7 @@ async fn start_tcp_monitor(
     })?;
     let gateway = parse_tcp_gateway(&body.gateway)?;
     state.stop_admission.admit()?;
-    // The connect and its cleanup run in a task of their own: a dropped
-    // request must not release the reservation while a socket is still
-    // being opened or closed.
-    let (done, answer) = tokio::sync::oneshot::channel();
-    let task_state = state.clone();
-    tokio::spawn(async move {
-        let result = start_monitor_target(task_state.clone(), MonitorTarget::Tcp(gateway)).await;
-        if let Err(Ok(Json(unclaimed))) = done.send(result) {
-            release_unclaimed(&task_state, unclaimed.session_id).await;
-        }
-    });
-    answer.await.unwrap_or_else(|_| {
-        Err(ApiError::with_status(
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "the TCP start task ended without an answer",
-        ))
-    })
-}
-
-/// Stops a session nobody is waiting for, holding the reservation until the
-/// tunnel is released. A session already replaced or stopped is left alone.
-async fn release_unclaimed(state: &SharedState, session_id: u64) {
-    let mut guard = state.bus_session.lock().await;
-    if guard.as_ref().is_some_and(|held| held.id() == session_id) {
-        if let Some(session) = guard.take() {
-            session.stop().await;
-        }
-    }
+    start_monitor_target(state, MonitorTarget::Tcp(gateway)).await
 }
 
 /// Finishes the stop of the TCP session held under `guard` in a task of its own. The guard
@@ -1046,12 +1041,12 @@ async fn start_monitor_target(
     // refused at once, before any connector call. The System-2 check follows
     // the `try_lock` so an operation admitted before it holds its locks is
     // still seen; an unknown holder of the lock stays unnamed.
-    let held = state.bus_session.try_lock();
+    let held = state.bus_session.clone().try_lock_owned();
     let system2_running = system2_running(&state);
     if system2_running {
         return Err(session_lock_busy(&state, system2_running));
     }
-    let mut guard = held.map_err(|_| session_lock_busy(&state, system2_running))?;
+    let guard = held.map_err(|_| session_lock_busy(&state, system2_running))?;
     // The handler admitted before this task (or the lock) was reached; an orderly stop may
     // have closed admission since. Under the reservation, before any connector call, a
     // closed admission means nothing opens: the stop's release then cannot miss a late session.
@@ -1091,19 +1086,44 @@ async fn start_monitor_target(
         ));
     }
 
-    // Build an owned `GroupAddressContext` snapshot from whatever project is
-    // open right now, then drop the project lock before `BusSession::start`
-    // — `knx_core::Project` does not derive `Clone`, and a
-    // `std::sync::MutexGuard` cannot be held across that call's `.await`
-    // (not `Send`, and holding the whole app's project mutex for the
-    // duration of a real gateway connect would stall every other
-    // project-touching route for no reason connected to this session). See
-    // `bus.rs`'s `BusSession::start` doc comment — this is exactly the
-    // pattern it asks callers to follow.
-    let ctx = {
-        let project_guard = state.project.lock().expect("project mutex poisoned");
+    // Reserve in the request without queueing. An independent owner keeps that
+    // reservation through the project wait, connect and unclaimed-session cleanup.
+    let (done, answer) = tokio::sync::oneshot::channel();
+    tokio::spawn(async move {
+        let mut guard = guard;
+        let result = start_reserved_monitor(&state, target, &mut guard).await;
+        if let Err(Ok(_)) = done.send(result) {
+            if let Some(session) = guard.take() {
+                session.stop().await;
+            }
+        }
+    });
+    answer.await.unwrap_or_else(|_| {
+        Err(ApiError::internal(
+            "the monitor start task ended without an answer",
+        ))
+    })
+}
+
+async fn start_reserved_monitor(
+    state: &SharedState,
+    target: MonitorTarget,
+    guard: &mut Option<BusSession>,
+) -> Result<Json<StartResponse>, ApiError> {
+    // Snapshot off the runtime, releasing the project before any connector await.
+    // The async owner retains the monitor reservation while the blocking job waits.
+    let snapshot_state = state.clone();
+    let ctx = crate::routes::off_runtime(move || {
+        let project_guard = snapshot_state
+            .project
+            .lock()
+            .expect("project mutex poisoned");
         GroupAddressContext::from_project(project_guard.as_ref())
-    };
+    })
+    .await?;
+    // Stop may close admission during the new await. Recheck under the same
+    // reservation so its release cannot miss a late connector/session.
+    state.stop_admission.admit()?;
 
     let id = state
         .next_bus_session_id
@@ -2059,3 +2079,6 @@ async fn discover_interfaces(
 #[cfg(test)]
 #[path = "bus_routes_admission_tests.rs"]
 mod admission_tests;
+
+#[cfg(test)]
+mod runtime_tests;

@@ -444,9 +444,12 @@ off the runtime. Since 13 November 2026 the project router's other edits
 group-address style), the Functions panel, the device list and the other
 modules' plain project reads and edits (notes, instructions, recipes,
 adoption, readiness, download plans, metadata, stored bus access, support
-preview and export) do too; routes that mix bus or session work with the
-project (monitor start, scan comparison, device comparison, diagnostics, the
-diagnostic bundle, serial address) still wait on a runtime worker.
+preview and export) do too. Monitor-start context snapshots and the four
+line-scan comparison/reconciliation routes now wait off the runtime as well,
+keeping their nonqueueing session reservations through the work and client
+cancellation; monitor starts recheck stop admission after the snapshot wait.
+Other mixed bus/project paths (device comparison, diagnostics, the diagnostic
+bundle, serial address) still wait on a runtime worker.
 Limit: edits that write the file in their own transaction (notes and
 instructions apply, naming recipes, device-compare adoption, selective import,
 baseline marks) and the project-history panel still hold

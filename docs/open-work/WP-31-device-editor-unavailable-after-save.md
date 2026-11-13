@@ -310,7 +310,7 @@ requires the exact `deviceCompareStale` refusal with no tunnel and nothing
 registered, the second `outdated: true` with no observation token. Each fails
 in a separate copy when its check is dropped (recheck always current; retention
 whenever a project is open). The support run's changed-context and replaced
-refusals have no such case yet.
+refusals got the same cases later (WP-31i, below).
 
 Limits at that point: catalogue product-database reads were still open
 (superseded by WP-31f below). The System-2 download worker and the original
@@ -451,7 +451,36 @@ separate stale-check omission; restored controls retain the same tests.
 
 Limits: this closes the identified final binding wait, not every synchronous
 operation in the worker or server, blocking-pool capacity or request latency.
-WP-31e's support-diagnose changed-context/replaced-refusal coverage remains open,
-as do the reporter's original error and proxy question. There is no real-device
+WP-31e's support-diagnose changed-context/replaced-refusal coverage followed
+as WP-31i (below); the reporter's original error and proxy question remain open. There is no real-device
 compatibility, physical recovery or hardware/firmware acceptance from these
 simulation-only tests.
+
+### Support-run refusal coverage (WP-31i, 13 November 2026)
+
+Test-only follow-up to the WP-31e review: the support diagnose run's
+changed-context and replaced-preview refusals now have cases at the same two
+waits as the comparison's (`routes/mixed_runtime_tests.rs`, synthetic device
+behind the in-process connector, no socket). No production code changed.
+
+- `a_project_change_before_the_reserved_recheck_refuses_the_support_run` and
+  `a_preview_replaced_before_the_reserved_recheck_refuses_the_support_run`
+  change the project revision, or take a newer preview, while the run waits
+  for its last gateway reservation. Each requires the exact `409`
+  (`support-context-changed-preview-again` or `support-preview-replaced`), no
+  tunnel request, no started activity and released reservations; the replaced
+  case also requires the newer preview to stay in place, unfinished.
+- `a_project_change_after_the_support_read_withholds_its_publication` and
+  `a_preview_replaced_after_the_support_read_is_kept` make the same changes
+  after the device read, before the final check. Each requires the exact `409`
+  and that nothing is published: the older preview stays unfinished, or the
+  newer preview is not overwritten by the run's result.
+
+The slot is observed through the diagnostic bundle's own retained-evidence
+lookup (`published`, `unfinished` or `missing`). Each of the four checks
+removed in turn (reserved recheck, reserved token match, final recheck, final
+token match) fails exactly its case: a tunnel is asked for, or the run answers
+`200` and publishes over the newer state; dropping the final recheck also
+fails the existing after-the-read runtime case. Limits: the reporter's
+original error and proxy question remain open; this is not an exhaustive
+route audit, and no real gateway or device was used.

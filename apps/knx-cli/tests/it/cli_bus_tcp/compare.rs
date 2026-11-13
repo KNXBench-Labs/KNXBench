@@ -506,9 +506,9 @@ fn compare_help_names_the_source_build_option_default_and_no_fallback() {
 }
 
 #[test]
-fn unrelated_restore_still_refuses_the_transport_option() {
+fn unrelated_programming_still_refuses_the_transport_option() {
     let fixture = fixture();
-    for subcommand in ["restore"] {
+    for subcommand in ["program-address", "reset-address", "address-by-serial"] {
         let output = collect(fixture.bare_command().args([
             "device",
             subcommand,

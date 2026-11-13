@@ -5,6 +5,7 @@ mod diagnostics;
 mod download;
 mod find_serial;
 mod probe;
+mod restore;
 mod scan;
 mod service_control;
 

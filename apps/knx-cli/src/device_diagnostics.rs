@@ -5,6 +5,8 @@
 //! ProductDB-declared memory ranges (ADR-0143). The device is chosen with
 //! `--device <area.line.device>` or `--device-id <id>`. `--simulate` never
 //! constructs a network client; without `--confirm-read` nothing is acquired.
+//! `--tunnel-transport udp|tcp` picks the gateway tunnel; UDP is the default and an
+//! explicit TCP never falls back to UDP.
 use crate::device_selector::{DeviceSelector, ADDRESS_UNIQUENESS_REQUIRED};
 use knx_app::device_diagnostics as service;
 use knx_core::{DeviceId, DeviceInstance, Language, Project, SourceRef};
@@ -32,11 +34,16 @@ fn execute(args: &[String]) -> Result<(), String> {
     let mut values = BTreeMap::new();
     let mut simulate = false;
     let mut confirm = false;
+    let mut transport = None;
     let mut i = 0;
     while i < args.len() {
         match args[i].as_str() {
             "--simulate" if !simulate => simulate = true,
             "--confirm-read" if !confirm => confirm = true,
+            "--tunnel-transport" => {
+                crate::bus_transport::take_tunnel_transport(&mut transport, args, i)?;
+                i += 1;
+            }
             flag @ ("--project" | "--device-id" | "--device" | "--product-db" | "--gateway"
             | "--output" | "--profile") => {
                 let value = args
@@ -57,6 +64,10 @@ fn execute(args: &[String]) -> Result<(), String> {
         }
         i += 1;
     }
+    if simulate && transport.is_some() {
+        return Err("--tunnel-transport cannot be combined with --simulate".into());
+    }
+    let transport = transport.unwrap_or(knx_net::TunnelTransport::Udp);
     let memory_profile = match values.get("--profile").map(String::as_str) {
         None | Some(service::PROFILE) => false,
         Some(service::MEMORY_PROFILE) => true,
@@ -137,9 +148,12 @@ fn execute(args: &[String]) -> Result<(), String> {
         }
         Some(g)
     };
-    let via = gateway
-        .map(|g| g.to_string())
-        .unwrap_or("SIMULATOR (no network)".into());
+    // UDP keeps the earlier wording; only an explicit TCP choice is named.
+    let via = match gateway {
+        Some(g) if transport == knx_net::TunnelTransport::Tcp => format!("{g} over TCP"),
+        Some(g) => g.to_string(),
+        None => "SIMULATOR (no network)".into(),
+    };
     match &plan {
         Plan::Identity(plan) => println!("Device {} via {}. Read only: no programming, authorisation/key, Verify Mode, memory or property writes.\nScope: descriptor type 0; Device Object PID12 (2 bytes), PID78 (6 bytes), optional services.\nMemory: not requested, no admitted safe profile. Mask/manufacturer agreement does not identify a product.\nLocal selection reference: {}",
             plan.target.address(),via,plan.reference),
@@ -169,10 +183,40 @@ fn execute(args: &[String]) -> Result<(), String> {
         } else {
             use knx_net::BusConnection;
             let _lease=service::gateway_lease()?;
-            let tunnel=tokio::time::timeout(Duration::from_secs(10),crate::diagnostic_bundle_cli::tapped(knx_net::KnxNetIpClient::new(),knx_app::operation_recording::OperationKind::DeviceDiagnostics,gateway.unwrap()).connect_tunnel(gateway.unwrap())).await.map_err(|_|"gateway timeout")?.map_err(|e|format!("gateway refused/unavailable: {e}"))?;
-            let mut export=acquire(&tunnel,&plan,&cancel).await;
-            if !matches!(tokio::time::timeout(Duration::from_secs(3),tunnel.disconnect()).await,Ok(Ok(()))){export.report.stop_reason.get_or_insert(service::TUNNEL_DISCONNECT_UNCONFIRMED.into());}
-            Ok::<_,String>(export)
+            let gateway = gateway.expect("a live read has a gateway");
+            let client = knx_net::KnxNetIpClient::new().with_tunnel_transport(transport);
+            let tunnel = tokio::time::timeout(
+                Duration::from_secs(10),
+                crate::diagnostic_bundle_cli::tapped(
+                    client,
+                    knx_app::operation_recording::OperationKind::DeviceDiagnostics,
+                    gateway,
+                )
+                .connect_tunnel(gateway),
+            )
+            .await
+            .map_err(|_| "gateway timeout")?
+            .map_err(|e| format!("gateway refused/unavailable: {e}"))?;
+            eprintln!(
+                "connected to {gateway} over {}, assigned individual address {}",
+                crate::bus_transport::transport_label(tunnel.transport()),
+                tunnel.assigned_address()
+            );
+            let mut export = acquire(&tunnel, &plan, &cancel).await;
+            // Sampled before the disconnect consumes the tunnel, failed reads included.
+            let skipped = (tunnel.transport() == knx_net::TunnelTransport::Tcp)
+                .then(|| tunnel.skipped_frame_count());
+            if !matches!(
+                tokio::time::timeout(Duration::from_secs(3), tunnel.disconnect()).await,
+                Ok(Ok(()))
+            ) {
+                export
+                    .report
+                    .stop_reason
+                    .get_or_insert(service::TUNNEL_DISCONNECT_UNCONFIRMED.into());
+            }
+            crate::bus_transport::report_skipped_frames(skipped, &mut std::io::stderr());
+            Ok::<_, String>(export)
         };
         signal.abort();let export=result?;
         service::write_new_export(&output,&export)?;
@@ -372,5 +416,53 @@ mod tests {
             .map(String::from)
             .to_vec();
         assert!(execute(&args).unwrap_err().contains("duplicate --device"));
+    }
+
+    #[test]
+    fn the_transport_is_strict_and_refused_with_the_simulator() {
+        let dir = tempfile::tempdir().unwrap();
+        let a = |extra: &[&str]| refusal_in(dir.path(), &[&["--device-id", "1"], extra].concat());
+        for (extra, expected) in [
+            (
+                vec!["--tunnel-transport"],
+                "--tunnel-transport needs a value",
+            ),
+            (vec!["--tunnel-transport", "TCP"], "must be udp or tcp"),
+            (vec!["--tunnel-transport", "tls"], "must be udp or tcp"),
+            (
+                vec!["--tunnel-transport", "--confirm-read"],
+                "--tunnel-transport needs a value",
+            ),
+            (
+                vec!["--tunnel-transport", "tcp", "--tunnel-transport", "udp"],
+                "duplicate --tunnel-transport",
+            ),
+        ] {
+            let error = a(&extra);
+            assert!(error.contains(expected), "{extra:?}: {error}");
+        }
+        // Both accepted values reach the project, like no transport at all.
+        let none = a(&[]);
+        assert!(!none.contains("tunnel-transport"), "{none}");
+        for value in ["udp", "tcp"] {
+            assert_eq!(a(&["--tunnel-transport", value]), none, "{value}");
+        }
+        let output = dir.path().join("simulated.zip");
+        let args: Vec<String> = [
+            "--simulate",
+            "--tunnel-transport",
+            "tcp",
+            "--output",
+            output.to_str().unwrap(),
+            "--confirm-read",
+        ]
+        .map(String::from)
+        .to_vec();
+        let error = execute(&args).unwrap_err();
+        assert!(
+            error.contains("--tunnel-transport cannot be combined with --simulate"),
+            "{error}"
+        );
+        assert!(!output.exists());
     }
 }

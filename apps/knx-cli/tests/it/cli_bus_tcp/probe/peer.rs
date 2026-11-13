@@ -15,14 +15,14 @@ use std::{
     time::{Duration, Instant},
 };
 
-pub(super) type Wire = Vec<(bool, Vec<u8>)>;
-pub(super) struct Peer {
+pub(in super::super) type Wire = Vec<(bool, Vec<u8>)>;
+pub(in super::super) struct Peer {
     stream: TcpStream,
     wire: Wire,
     outer_seq: u8,
 }
 
-pub(super) fn gateway(
+pub(in super::super) fn gateway(
     assigned: u8,
     script: impl FnOnce(&mut Peer) + Send + 'static,
 ) -> (SocketAddr, Joined<Wire>, Trap) {
@@ -74,13 +74,13 @@ pub(super) fn gateway(
 }
 
 /// The gateway's own sockets, kept for checks after the CLI has exited.
-pub(super) struct Trap {
+pub(in super::super) struct Trap {
     udp: UdpSocket,
     tcp: TcpListener,
 }
 
 /// After the CLI exited: no UDP fallback and no late TCP reconnect or replay.
-pub(super) fn no_retry(trap: &Trap) {
+pub(in super::super) fn no_retry(trap: &Trap) {
     no_udp(&trap.udp);
     assert_eq!(
         trap.tcp.accept().unwrap_err().kind(),
@@ -89,7 +89,7 @@ pub(super) fn no_retry(trap: &Trap) {
     );
 }
 
-pub(super) fn no_udp(trap: &UdpSocket) {
+pub(in super::super) fn no_udp(trap: &UdpSocket) {
     assert_eq!(
         trap.recv_from(&mut [0; 2048]).unwrap_err().kind(),
         std::io::ErrorKind::WouldBlock,

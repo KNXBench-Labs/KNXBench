@@ -5,6 +5,7 @@ use std::{
     net::SocketAddrV4,
     pin::Pin,
     sync::{mpsc, Arc, Mutex},
+    task::{Context, Wake, Waker},
     time::Duration,
 };
 
@@ -495,6 +496,7 @@ async fn monitor_reserves_before_scheduling_its_context_snapshot() {
         )
         .await;
         assert_eq!(request.await.0, StatusCode::OK);
+        let released_on_success = f.state.bus_session.try_lock().is_ok();
         f.state
             .bus_session
             .lock()
@@ -503,6 +505,10 @@ async fn monitor_reserves_before_scheduling_its_context_snapshot() {
             .unwrap()
             .stop()
             .await;
+        assert!(
+            released_on_success,
+            "{target:?} returned success before releasing its reservation"
+        );
         assert!(
             reserved,
             "{target:?} scheduled its reservation instead of taking it immediately"
@@ -610,6 +616,89 @@ async fn scan_binding_and_body_refusals_keep_their_order_before_the_project_wait
         .unwrap()
         .cancel()
         .await;
+}
+
+struct DeliveryWake(Notify);
+impl Wake for DeliveryWake {
+    fn wake(self: Arc<Self>) {
+        self.0.notify_one();
+    }
+}
+
+async fn dropped_delivered_monitor_start(target: Target) {
+    let f = fixture(target, 1);
+    let request = Request::builder()
+        .method("POST")
+        .uri(target.path())
+        .header("content-type", "application/json")
+        .body(Body::from(target.body().to_string()))
+        .unwrap();
+    // Poll the mounted HTTP future once, then observe its wake without repolling it.
+    // Unlike `call`, this future has no timer that could produce an unrelated wake.
+    let mut request = Box::pin(f.app.clone().oneshot(request));
+    let wake = Arc::new(DeliveryWake(Notify::new()));
+    let waker = Waker::from(wake.clone());
+    let pending = request
+        .as_mut()
+        .poll(&mut Context::from_waker(&waker))
+        .is_pending();
+    // The project snapshot and connector are polled by the independent owner, not
+    // this HTTP waker. Its wake witnesses answer delivery, not reservation release.
+    let delivered = tokio::time::timeout(WAIT, wake.0.notified()).await.is_ok();
+    let reserved = f.state.bus_session.try_lock().is_err();
+    let disconnected_before_drop = f.handle.disconnected();
+    drop(request);
+    // Taking the reservation joins independent cleanup after discarding the answer.
+    let session = tokio::time::timeout(WAIT, f.state.bus_session.lock())
+        .await
+        .unwrap()
+        .take();
+    let leaked = session.is_some();
+    let disconnected_after_drop = f.handle.disconnected();
+    // Also stop and join a leaked fixture on pre-fix production, before asserting RED.
+    if let Some(session) = session {
+        session.stop().await;
+    }
+    assert!(
+        pending,
+        "{target:?}: the HTTP future did not remain pending"
+    );
+    assert!(
+        delivered,
+        "{target:?}: no answer-delivery wake was observed"
+    );
+    assert_eq!(*f.calls.lock().unwrap(), vec![target]);
+    assert!(
+        !leaked,
+        "{target:?}: pending HTTP future dropped after successful delivery leaked a session"
+    );
+    assert!(
+        disconnected_after_drop,
+        "{target:?}: the unclaimed fake tunnel was not disconnected"
+    );
+    assert!(
+        !disconnected_before_drop,
+        "{target:?}: no live delivered session"
+    );
+    assert!(
+        reserved,
+        "{target:?}: custody ended before success was consumed"
+    );
+}
+
+#[tokio::test(flavor = "current_thread")]
+async fn dropped_delivered_udp_monitor_start_cleans_up() {
+    dropped_delivered_monitor_start(Target::Udp).await;
+}
+
+#[tokio::test(flavor = "current_thread")]
+async fn dropped_delivered_tcp_monitor_start_cleans_up() {
+    dropped_delivered_monitor_start(Target::Tcp).await;
+}
+
+#[tokio::test(flavor = "current_thread")]
+async fn dropped_delivered_serial_monitor_start_cleans_up() {
+    dropped_delivered_monitor_start(Target::Serial).await;
 }
 
 #[tokio::test(flavor = "current_thread")]

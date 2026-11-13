@@ -1,10 +1,9 @@
 //! Project-configured experimental preview and explicit read-only target observation.
 use knx_app::system2_validation_preparation as app;
 use knx_core::DeviceId;
-use knx_net::{commissioning::SessionTiming, BusConnection, KnxNetIpClient};
+use knx_net::{commissioning::SessionTiming, BusConnection, KnxNetIpClient, TunnelTransport};
 use std::{
     collections::BTreeMap,
-    net::SocketAddrV4,
     path::Path,
     process::ExitCode,
     sync::{
@@ -25,10 +24,17 @@ pub fn run(args: &[String]) -> ExitCode {
 }
 fn execute(args: &[String]) -> Result<(), String> {
     let mut values = BTreeMap::new();
-    let mut args = args.iter();
-    while let Some(flag) = args.next() {
+    let mut transport = None;
+    let mut i = 0;
+    while i < args.len() {
+        let flag = args[i].as_str();
+        if flag == "--tunnel-transport" {
+            crate::bus_transport::take_tunnel_transport(&mut transport, args, i)?;
+            i += 2;
+            continue;
+        }
         if !matches!(
-            flag.as_str(),
+            flag,
             "--project"
                 | "--device-id"
                 | "--product-db"
@@ -40,16 +46,27 @@ fn execute(args: &[String]) -> Result<(), String> {
                 | "--observe-confirm"
                 | "--output"
         ) {
-            return Err("system2-project accepts --project --device-id --product-db --operation-id --source-mode retained-sources|profile [--profile file] [--recovery-track knxbench-best-effort|external-ets]; observation additionally requires --gateway --observe-confirm --output".into());
+            return Err("system2-project accepts --project --device-id --product-db --operation-id --source-mode retained-sources|profile [--profile file] [--recovery-track knxbench-best-effort|external-ets]; observation additionally requires --gateway --observe-confirm --output and accepts --tunnel-transport udp|tcp (default udp)".into());
         }
         let value = args
-            .next()
+            .get(i + 1)
             .filter(|v| !v.starts_with("--"))
             .ok_or("missing option value")?;
-        if values.insert(flag.as_str(), value.as_str()).is_some() {
+        if values.insert(flag, value.as_str()).is_some() {
             return Err(format!("duplicate {flag}"));
         }
+        i += 2;
     }
+    // Everything below may read inputs; refuse what can never connect before touching any.
+    if transport.is_some() && !values.contains_key("--observe-confirm") {
+        return Err(
+            "--tunnel-transport is not valid in the offline preview; no tunnel is opened".into(),
+        );
+    }
+    let gateway = values
+        .get("--gateway")
+        .map(|g| crate::bus_transport::parse_gateway(g))
+        .transpose()?;
     let required = |flag| {
         values
             .get(flag)
@@ -134,16 +151,7 @@ fn execute(args: &[String]) -> Result<(), String> {
     if required("--observe-confirm")? != observe_phrase {
         return Err("exact read-only target observation confirmation required".into());
     }
-    let gateway: SocketAddrV4 = required("--gateway")?
-        .parse()
-        .map_err(|_| "invalid gateway")?;
-    if gateway.port() == 0
-        || gateway.ip().is_unspecified()
-        || gateway.ip().is_multicast()
-        || gateway.ip().is_broadcast()
-    {
-        return Err("unicast gateway with nonzero port required".into());
-    }
+    let gateway = gateway.ok_or("--gateway required")?;
     let output = Path::new(required("--output")?);
     if output.exists() {
         return Err("output exists; no overwrite or connection".into());
@@ -151,13 +159,14 @@ fn execute(args: &[String]) -> Result<(), String> {
     source
         .check_current(&products.conn, &project, device)
         .map_err(|e| e.to_string())?;
+    let requested = transport.unwrap_or(TunnelTransport::Udp);
     let _lease = knx_app::device_diagnostics::gateway_lease().map_err(|e| e.to_string())?;
     let runtime = crate::tunnel_runtime::tunnel_runtime().map_err(|e| e.to_string())?;
     let result = runtime.block_on(async {
         let tunnel = tokio::time::timeout(
             Duration::from_secs(10),
             crate::diagnostic_bundle_cli::tapped(
-                KnxNetIpClient::new(),
+                KnxNetIpClient::new().with_tunnel_transport(requested),
                 knx_app::operation_recording::OperationKind::DeviceRead,
                 gateway,
             )
@@ -165,7 +174,12 @@ fn execute(args: &[String]) -> Result<(), String> {
         )
         .await
         .map_err(|_| "gateway timeout".to_string())?
-        .map_err(|e| e.to_string())?;
+        .map_err(|e| format!("could not connect to {gateway}: {e}"))?;
+        eprintln!(
+            "connected to {gateway} over {}, assigned individual address {}",
+            crate::bus_transport::transport_label(tunnel.transport()),
+            tunnel.assigned_address()
+        );
         let cancel = Arc::new(AtomicBool::new(false));
         let flag = cancel.clone();
         let signal = tokio::spawn(async move {
@@ -178,6 +192,9 @@ fn execute(args: &[String]) -> Result<(), String> {
                 .await
                 .map_err(|e| e.to_string());
         signal.abort();
+        let skipped =
+            (tunnel.transport() == TunnelTransport::Tcp).then(|| tunnel.skipped_frame_count());
+        crate::bus_transport::report_skipped_frames(skipped, &mut std::io::stderr());
         let _ = tokio::time::timeout(Duration::from_secs(3), tunnel.disconnect()).await;
         observed
     })?;

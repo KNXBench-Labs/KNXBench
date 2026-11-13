@@ -45,7 +45,7 @@ pub(in super::super) struct Fixture {
     before: Vec<(String, Vec<u8>)>,
 }
 
-pub(super) fn tree(path: &Path) -> Vec<(String, Vec<u8>)> {
+pub(in super::super) fn tree(path: &Path) -> Vec<(String, Vec<u8>)> {
     fn visit(root: &Path, path: &Path, out: &mut Vec<(String, Vec<u8>)>) {
         for entry in std::fs::read_dir(path).unwrap() {
             let entry = entry.unwrap();

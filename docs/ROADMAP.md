@@ -2,11 +2,12 @@
 
 ## CLI TCP service-control, download and restore source successor (13 November 2026)
 
-WP-29's bounded candidate adds explicit TCP to service-control read/write,
-ordinary download and restore, without changing UDP defaults, authorisation or
-recovery algorithms. [Verification and limits](status/2026-11-13-cli-tcp-write-consumers.md)
-keep local loopback/simulator checks separate from independent package
-acceptance, release and hardware interoperability. System-2 preparation and
+WP-29's bounded, software-accepted successor adds explicit TCP to service-control
+read/write, ordinary download and restore, without changing UDP defaults,
+authorisation or recovery algorithms. Independent Standards/Spec reviews and the
+complete selected 13-stage package gate passed.
+[Verification and limits](status/2026-11-13-cli-tcp-write-consumers.md) keep the
+loopback/simulator acceptance separate from release and hardware interoperability. System-2 preparation and
 validation, remaining programming consumers, KNX IP Secure and wider WP-29
 remain open; no real-installation authority is conferred.
 

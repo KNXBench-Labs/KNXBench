@@ -8,9 +8,12 @@ Three bounded source changes enable explicit `--tunnel-transport udp|tcp` on:
 2. Ordinary `device download`: existing prepared memory-download procedure.
 3. `device restore`: existing serial-bound backup restore.
 
-This is author-side local verification, **not independent package acceptance**,
-publication, a release or hardware interoperability. The integrating owner owns
-independent review, the complete owning CLI suite and final package acceptance.
+The source candidate `9209f0fe1` is **software-accepted** after independent
+Standards and Spec reviews (both APPROVE, no blocking findings) and the complete
+selected 13-stage package gate. The gate passed 710 Rust tests (22 ignored) and
+17/17 separately selected private-corpus tests, with frozen inputs and no touched
+or unchecked user data. Web/browser execution was not selected for this CLI-only
+change. This is not a release or hardware-interoperability result.
 WP-29 remains open. No real bus/device, System-2 validation/preparation,
 server/Web programming, other programming command or protocol algorithm changed.
 
@@ -87,10 +90,31 @@ prevented formatting before execution. No production safety gate was weakened.
 Private raw logs retain argv, stdout/stderr, direct exits, source hashes,
 qualified inventories and copies/digests of the executed CLI and test binaries.
 
+## Independent review and complete selected acceptance
+
+Both independent axes reviewed `35605e939...9209f0fe1` and returned APPROVE
+without blocking findings. A private-archive discriminator removed only the
+service-control skipped-frame report: the maintained EOF regression compiled
+and failed at its expected warning assertion (0 versus 1). Original and exact
+restored controls each passed. The mutant stopped in the read row; its later
+write row is not independently credited as killed.
+
+The maintained change-scoped package gate on `9209f0fe1` completed all 13
+selected stages: formatting, documentation, browser-lane declarations, five
+xtask checks, tool tests, all-target Clippy, complete CLI/xtask Rust suites,
+selected private corpus and whitespace. All stages exited zero with valid
+proofs. Rust: 710 passed, zero failed, 22 ignored. Separate corpus: 17/17.
+Inputs remained frozen; user-data checks found no touched or unchecked paths.
+No web/browser execution, workspace-wide Rust suite, bindings generation,
+hardware access, release or deployment was selected or claimed. The earlier
+failed author attempts remain failed and distinct from this successful gate.
+Final result-only documentation is accepted separately against this gated head;
+no product inputs change in that delta.
+
 ## Remaining limits
 
 This adds transport selection to already-authorised software workflows, not new
 write authority or proof that a gateway/device supports TCP. Timing, retry,
 download and restore algorithms are unchanged. No general physical recovery,
 KNX IP Secure, real-gateway compatibility, release or deployment claim follows.
-Independent review and the integrating owner's final acceptance remain required.
+Source-level software acceptance does not lift any of those remaining boundaries.

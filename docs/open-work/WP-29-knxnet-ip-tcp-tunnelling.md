@@ -137,9 +137,11 @@ target/key/history/backup/readback gates, results and cleanup are unchanged.
 Maintained public-CLI loopback peers reuse the existing codecs and management
 simulator. The [bounded record](../status/2026-11-13-cli-tcp-write-consumers.md)
 owns actual local check results and explicitly separates completed TCP
-operations from refused UDP handshake controls. Independent review and final
-package acceptance belong to the integrating owner. This source candidate
-supersedes only these three consumers' older UDP-only exclusions: System-2
+operations from refused UDP handshake controls. Independent Standards and Spec
+reviews APPROVE, and the selected 13-stage package gate passed on `9209f0fe1`
+(710 Rust tests, 22 ignored; separate corpus 17/17; frozen inputs and checked,
+untouched user data). This software-accepted successor supersedes only these
+three consumers' older UDP-only exclusions: System-2
 preparation/validation, other programming consumers, hardware interoperability,
 release and wider WP-29 remain separate.
 

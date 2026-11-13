@@ -213,4 +213,6 @@ backup-before-mutation and readback requirements, result/report/exit semantics
 and cleanup policies remain authoritative. Explicit TCP neither falls back to
 UDP nor adds reconnect, replay, new timeouts or new download algorithms.
 [Execution boundary](../status/2026-11-13-cli-tcp-write-consumers.md): synthetic
-loopback/simulator evidence only; independent package acceptance is separate.
+independent Standards/Spec reviews and the selected 13-stage package gate passed
+on `9209f0fe1`; the acceptance remains loopback/simulator-only, not hardware
+interoperability or a release.

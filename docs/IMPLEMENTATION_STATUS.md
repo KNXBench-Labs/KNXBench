@@ -14,13 +14,16 @@ fragment aliases and update this index. Do not rewrite previous results.
 
 ## CLI TCP write-consumer source successor (13 November 2026; WP-29)
 
-The separately bounded source candidate adds explicit UDP/TCP selection to
-service-control read/confirmed-write, ordinary download and backup restore.
-UDP stays the default; plans refuse explicit transport rather than ignore it.
-The existing authorisation, recovery, readback, history and cleanup procedures
-remain in force. [Scope and actual checks](status/2026-11-13-cli-tcp-write-consumers.md)
-separate local loopback/simulator verification from pending independent package
-acceptance. Not part of the Alpha 21 cutoff; no hardware/release claim.
+The separately bounded, software-accepted successor adds explicit UDP/TCP
+selection to service-control read/confirmed-write, ordinary download and backup
+restore. UDP stays the default; plans refuse explicit transport rather than
+ignore it. Existing authorisation, recovery, readback, history and cleanup
+procedures remain in force. Independent Standards/Spec reviews APPROVE; the
+selected package gate passed 13/13 stages, 710 Rust tests (22 ignored) and 17/17
+corpus tests with frozen inputs and untouched, checked user data.
+[Scope and actual checks](status/2026-11-13-cli-tcp-write-consumers.md) retain the
+loopback/simulator-only boundary. Not part of the Alpha 21 cutoff; no hardware
+or release claim.
 
 ## Alpha 21 release preparation (13 November 2026)
 

@@ -117,13 +117,15 @@ real-gateway interoperability and does not close WP-29.
 
 ## 13 November 2026 — bounded CLI write-consumer source successor
 
-The candidate adds explicit UDP/TCP to `device service-control` read/write,
+The software-accepted successor adds explicit UDP/TCP to `device service-control` read/write,
 ordinary `device download` and `device restore` only. UDP stays the default;
 plan-only invocations refuse explicit selection. The existing safety, backup,
 readback, history and cleanup gates remain; no fallback/reconnect/replay is
 introduced. [Scoped execution](../status/2026-11-13-cli-tcp-write-consumers.md)
 distinguishes completed synthetic TCP operations from deliberately refused UDP
-handshake controls and pending independent package acceptance. This supersedes
+handshake controls. Independent Standards/Spec reviews and the selected
+13-stage software package gate passed; this remains loopback/simulator evidence.
+This supersedes
 only these three CLI consumers' earlier UDP-only boundary, not System-2
 preparation/validation, other programming, KNX IP Secure, release or physical
 gateway/device interoperability. The retained historical catalogue block above

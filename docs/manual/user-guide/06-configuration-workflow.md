@@ -187,7 +187,7 @@ wall is a separate, guarded step, and KNXBench covers it only narrowly so far.
 
 `knx device download` and the **Download to device** tab write a project device's
 application tables and parameters. Both show the plan first and write only after a
-confirmation for that one device. This has been verified on one device so far; other
+confirmation for that one device. This has been verified on four device programs so far; other
 devices, application versions and masks have no such evidence, and procedures KNXBench
 cannot plan are refused by name rather than guessed. Programming an individual address
 is currently blocked until durable recovery exists. The details, including what is

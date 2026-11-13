@@ -125,7 +125,7 @@ workflow itself.
 | --- | --- | --- |
 | Reading, storing and displaying a device's parameters from its application program | ✅ Implemented | 1,390 parameter values from the reference project import correctly — [COMPATIBILITY.md §2](../../COMPATIBILITY.md#2-verified-today) |
 | Editing a parameter value in the open project, with validation and re-evaluation of the program's dynamic tree | ✅ Implemented | Described in [Devices and products](../user-guide/05-devices-and-products.md); the value is stored as an undo step and validated against the program's declared parameter chain |
-| Writing an edited parameter value to a real device | 🟡 Partial or experimental | As part of a device download, verified on one device so far — see *Commissioning* below and [Downloading to a device](../user-guide/07-bus-and-interfaces.md#downloading-to-a-device) |
+| Writing an edited parameter value to a real device | 🟡 Partial or experimental | As part of a device download, verified on four device programs so far — see *Commissioning* below and [Downloading to a device](../user-guide/07-bus-and-interfaces.md#downloading-to-a-device) |
 
 > **Note**
 >

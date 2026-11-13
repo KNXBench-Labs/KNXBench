@@ -64,7 +64,7 @@ Equally important is what KNXBench does not do, at least not yet:
   verify it against; see
   [Supported and unsupported KNX/ETS functionality](../reference/02-supported-and-unsupported.md).
 - It is not yet a **commissioning** tool. A device download works within a
-  very narrow verified scope (one device so far), individual addresses cannot
+  very narrow verified scope (four device programs so far), individual addresses cannot
   be programmed at the moment, and most devices still need another tool; see
   [Downloading to a device](../user-guide/07-bus-and-interfaces.md#downloading-to-a-device).
 - It does not implement **KNX IP Secure**. Only plain KNXnet/IP installations

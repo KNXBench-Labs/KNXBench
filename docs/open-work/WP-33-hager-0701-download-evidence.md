@@ -8,7 +8,7 @@ External report by the issue reporter, 10 November 2026; triaged 11 November 202
 ([evidence record](../evidence/tester-report-hager-0701-2026-11-12.json)).
 Group addresses only was never run and stays untested.
 
-## Basis
+## Basis (as triaged 11 November; historical)
 
 Four real-device runs on `M-0006_A-E052-12-3406` (mask 0701, application
 version 18) with `0.1.0-alpha.20+g7e5612b`: complete, parameters only,
@@ -16,7 +16,7 @@ parameters only with an uncovered group-address change, parameters plus group
 addresses; the reporter confirmed device function each time. Only the
 `partial-parameters` report file is attached.
 
-## Work
+## Work (as planned 11 November; historical)
 
 Follow `docs/contracts/download-verification-reports.md`: check the program
 hash, add an evidence file under `docs/evidence/` and a

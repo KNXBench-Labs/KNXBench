@@ -789,8 +789,8 @@ in it.
 *to the device* (application tables and parameters), from two places: the
 `knx device download` command and the **Download to device** tab described
 [below](#downloading-to-a-device). Both show the plan first and write only with the
-confirmation for that one device. It has been verified on one product family on one
-device so far. See
+confirmation for that one device. It has been verified on four device programs
+so far, all mask `0701h`. See
 [`knx device download`](10-command-line.md#knx-device-download--download-a-project-devices-configuration-to-the-device).
 
 **Individual-address programming is currently blocked.** The retained CLI and

@@ -78,7 +78,7 @@ feature to appear in an older AppImage. A version label is not a time machine.
   Without a password it refuses to leave loopback at all.
   [Installation](04-installation.md) has the recipe and the caveats.
 - Writing configuration to a real KNX device is limited to a device download
-  verified on one device so far; address programming is refused for now and
+  verified on four device programs so far; address programming is refused for now and
   most devices still need another commissioning tool.
 
 None of this means KNXBench is unusable — it is under active development and

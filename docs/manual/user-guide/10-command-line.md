@@ -901,6 +901,8 @@ regressions establish complete synthetic TCP comparisons and default/explicit UD
 release, real-gateway interoperability or hardware acceptance.
 [Verification and limits](../../status/2026-11-13-cli-tcp-compare.md).
 
+### `knx device diagnostics` — transport selection
+
 On source builds with the 13 November 2026 diagnostics transport change,
 `knx device diagnostics` accepts `--tunnel-transport udp|tcp` for both the generic
 identity export and the declared-memory profile below. Omission remains UDP;

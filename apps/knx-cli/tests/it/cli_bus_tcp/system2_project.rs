@@ -29,17 +29,17 @@ mod old_device;
 
 const PHRASE: &str = "I confirm read-only System-2 observation to 1.2.52";
 
-struct Inputs {
-    dir: tempfile::TempDir,
-    project: PathBuf,
-    products: PathBuf,
-    device: Arc<SimulatedDevice>,
+pub(super) struct Inputs {
+    pub(super) dir: tempfile::TempDir,
+    pub(super) project: PathBuf,
+    pub(super) products: PathBuf,
+    pub(super) device: Arc<SimulatedDevice>,
     confirmation: String,
     before: Vec<(String, Vec<u8>)>,
 }
 
 /// Fictional source inputs saved through the production APIs, then reopened by the CLI.
-fn inputs() -> Inputs {
+pub(super) fn inputs() -> Inputs {
     let (_source_dir, conn, project, _profile) = fixture::configured_inputs();
     let dir = tempfile::tempdir().unwrap();
     let saved = dir.path().join("inputs");
@@ -82,7 +82,7 @@ fn inputs() -> Inputs {
 }
 
 impl Inputs {
-    fn bare(&self) -> Command {
+    pub(super) fn bare(&self) -> Command {
         let mut cmd = Command::new(env!("CARGO_BIN_EXE_knx"));
         for (key, leaf) in [
             ("HOME", "home"),
@@ -96,10 +96,10 @@ impl Inputs {
         }
         cmd
     }
-    fn output(&self) -> PathBuf {
+    pub(super) fn output(&self) -> PathBuf {
         self.dir.path().join("out").join("prepared.json")
     }
-    fn command(&self, gateway: &str, transport: Option<&str>) -> Command {
+    pub(super) fn command(&self, gateway: &str, transport: Option<&str>) -> Command {
         let mut cmd = self.bare();
         cmd.args(["device", "system2-project", "--project"])
             .arg(&self.project)

@@ -171,7 +171,7 @@ const USAGE: &str = "usage: knx import <file.knxproj> [--store <path.knxdb> [--r
      \x20                  [--recover <existing-operation> --confirm-recovery <target-plan-phrase>] [--report <new.json>]\n\
      \x20         (offline preview by default; --simulate for an isolated synthetic device; or a\n\
      \x20          consent-gated real write: add --gateway <ip:port> --download-confirm <phrase>\n\
-     \x20          --release-confirm <phrase> --activity-history <path>; best-effort, ADR-0152)\n\
+     \x20          --release-confirm <phrase> --activity-history <path> [--tunnel-transport <udp|tcp>]; best-effort, ADR-0152)\n\
      \x20     knx device system2-project --project <path.knxdb> --device-id <id> --product-db <path>\n\
      \x20                  --operation-id <id> --source-mode retained-sources\n\
      \x20                  [--recovery-track knxbench-best-effort|external-ets]\n\
@@ -185,11 +185,13 @@ const USAGE: &str = "usage: knx import <file.knxproj> [--store <path.knxdb> [--r
      \x20                  [--gateway <host:port> --operation <new-dir> --confirm <phrase>\n\
      \x20                   --accept-hypothesis <phrase> --download-confirm <phrase>\n\
      \x20                   --release-confirm <phrase> --activity-history <path>\n\
-     \x20                   --project <path.knxdb> --device-id <id> --product-db <path>]\n\
+     \x20                   --project <path.knxdb> --device-id <id> --product-db <path> [--tunnel-transport <udp|tcp>]]\n\
      \x20                  [--recover <existing-dir> --confirm-recovery <phrase>] [--report <new.json>]\n\
      \x20         (experimental best-effort; previews print exact phrases, no connection by default.\n\
      \x20         Configured execution rebuilds current project/source; recovery uses the original\n\
      \x20         backup, not project defaults. No automatic retry/restore or recovery guarantee.\n\
+     \x20         Source builds: execute and recovery accept transport udp (default) or tcp; no fallback.\n\
+     \x20         Explicit transport is refused in preview and --simulate; all write/recovery gates remain.\n\
      \x20         --simulate is synthetic only; v2 simulator bundles cannot gain hardware admission.)\n\
      \x20     knx device diagnostics --project <path.knxdb>\n\
      \x20                  (--device <area.line.device> | --device-id <id>) --gateway <host:port>\n\

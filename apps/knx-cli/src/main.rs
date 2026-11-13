@@ -175,7 +175,9 @@ const USAGE: &str = "usage: knx import <file.knxproj> [--store <path.knxdb> [--r
      \x20     knx device system2-project --project <path.knxdb> --device-id <id> --product-db <path>\n\
      \x20                  --operation-id <id> --source-mode retained-sources\n\
      \x20                  [--recovery-track knxbench-best-effort|external-ets]\n\
-     \x20                  [--gateway <host:port> --observe-confirm <phrase> --output <new-private.json>]\n\
+     \x20                  [--gateway <host:port> --observe-confirm <phrase> --output <new-private.json>\n\
+     \x20                   [--tunnel-transport <udp|tcp>]]\n\
+     \x20         (source builds: transport defaults to udp; tcp never falls back to udp; refused in preview)\n\
      \x20         (offline configured UP258 preview by default; explicit read-only observation\n\
      \x20         creates separate physical preparation. --source-mode profile --profile <v2.json>\n\
      \x20         permits an explicitly selected standalone package; never defaults substitution.)\n\

@@ -120,11 +120,16 @@ Remaining limits:
   instruction apply, naming recipes, device-compare adoption, selective import
   apply and plugin-data writes; so do the project-history panel and its
   version actions. They need the file and the journal generation, which the
-  save holds. Since 13 November most of them wait off the runtime (see below).
-- Bus and session routes still take the project on a runtime worker: starting
-  a monitor, the line-scan comparison and reconciliation (they hold the scan
-  reservation guard across the call), the device comparison itself, the
-  diagnostics preview and the System-2 download worker.
+  save holds. Since 13 November every one of them waits off the runtime (see
+  below), so the wait no longer ties up a runtime worker.
+- Routes that interleave bus or session work with the project still take it on
+  a runtime worker: starting a monitor, the line-scan comparison and
+  reconciliation (they hold the scan reservation guard across the call), the
+  device comparison itself, the device-diagnostics preview, the support
+  diagnose run, the serial-address write and find, the diagnostic-bundle
+  preview, section and export (its project context, environment and
+  import-report sections) and the System-2 download worker. This list comes
+  from a source search plus an independent review, not an exhaustive proof.
 - Catalogue reads (manufacturers, items, product languages) do not take the
   project lock but still query the product database on a runtime worker.
 - A long operation that holds the project (CSV import and export, project
@@ -160,22 +165,25 @@ the transaction is held by the request instead of its own task.
 
 ### Project routes in the other modules off the runtime (13 November 2026)
 
-A route-by-route audit of the other route modules moved every remaining
-project read and edit that is not bus or session work off the runtime
-(`routes::off_runtime`): modelled metadata, recorded device state, payload and
+A route-by-route audit of the other route modules moved the remaining plain
+project reads and edits off the runtime (`routes::off_runtime`): modelled
+metadata, recorded device state, payload and
 source-report catalogues, the source report and import report; note targets,
 preview and apply; instruction preview and apply; naming-recipe preview and
 apply; the delete-with-notes disposition; the programming-state mark; the
 parameter-editor source; device-compare adoption (preview and apply);
-download readiness, the download plan and the batch plan; and the catalogue
+download readiness, the download plan and the batch plan; the stored bus
+access list and reveal; the support preview and export; and the catalogue
 cleanup preview, whose open-project count now runs in its blocking task. The
 plugin-data routes already did. Each handler body moved unchanged; none
 contained an `.await`.
 
 Tests (`routes/module_runtime_tests.rs`, against the whole application):
-`module_routes_leave_the_runtime_free` (18 routes),
+`module_routes_leave_the_runtime_free` (21 routes),
+`the_support_export_leaves_the_runtime_free` (export after a real preview),
 `comparison_adoption_leaves_the_runtime_free` (with a comparison session
 cookie) and `readiness_and_batch_plan_leave_the_runtime_free` (with an empty
 product database, which both require before the project). Turning metadata,
 note apply, adoption preview, readiness, the batch plan or the cleanup
-preview's count back to inline makes them report exactly those routes.
+preview's count, stored bus access or the support preview and export back
+to inline makes them report exactly those routes.

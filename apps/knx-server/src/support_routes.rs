@@ -307,113 +307,116 @@ async fn preview(
     Extension(slot): Extension<Slot>,
     Json(b): Json<PreviewRequest>,
 ) -> Result<Json<Preview>, ApiError> {
-    if b.input.include_context && !b.input.context_rights {
-        return Err(ApiError::bad_request("source-rights-confirmation-required"));
-    }
-    let (base, address, revision, incarnation, has_project) = base(&state, b.device_id, &b.input)?;
-    if b.device_id.is_some() && b.address.is_some() {
-        return Err(ApiError::bad_request("support-choose-one-target"));
-    }
-    let manual_address = b
-        .address
-        .as_deref()
-        .map(|a| {
-            a.parse::<IndividualAddress>()
-                .map_err(|_| ApiError::bad_request("support-invalid-target"))
-        })
-        .transpose()?;
-    let address = address.or(manual_address);
-    if b.device_id.is_some()
-        && b.context.as_ref().is_none_or(|c| {
-            c.server_incarnation != state.server_incarnation
-                || c.project_incarnation != incarnation
-                || c.revision != revision
-        })
-    {
-        return Err(ApiError::with_status(
-            StatusCode::CONFLICT,
-            "support-selection-stale",
-        ));
-    }
-    let mut report = base.clone();
-    if manual_address.is_some_and(|a| ContactableAddress::new(a).is_err()) {
-        report.support = "excluded".into();
-        report.fact(
-            "refusalCategory",
-            "target-policy",
-            Some("target-excluded".into()),
-            "unavailable",
-        );
-    }
-    if let Some(id) = b.download_id {
-        let run = state
-            .device_download
-            .try_lock()
-            .map_err(|_| ApiError::with_status(StatusCode::CONFLICT, "support-run-busy"))?;
-        let session = run.as_ref().filter(|s| s.id() == id).ok_or_else(|| {
-            ApiError::with_status(StatusCode::CONFLICT, "support-run-unavailable")
-        })?;
-        if address != Some(session.target()) {
+    crate::routes::off_runtime(move || {
+        if b.input.include_context && !b.input.context_rights {
+            return Err(ApiError::bad_request("source-rights-confirmation-required"));
+        }
+        let (base, address, revision, incarnation, has_project) =
+            base(&state, b.device_id, &b.input)?;
+        if b.device_id.is_some() && b.address.is_some() {
+            return Err(ApiError::bad_request("support-choose-one-target"));
+        }
+        let manual_address = b
+            .address
+            .as_deref()
+            .map(|a| {
+                a.parse::<IndividualAddress>()
+                    .map_err(|_| ApiError::bad_request("support-invalid-target"))
+            })
+            .transpose()?;
+        let address = address.or(manual_address);
+        if b.device_id.is_some()
+            && b.context.as_ref().is_none_or(|c| {
+                c.server_incarnation != state.server_incarnation
+                    || c.project_incarnation != incarnation
+                    || c.revision != revision
+            })
+        {
             return Err(ApiError::with_status(
                 StatusCode::CONFLICT,
-                "support-run-target-mismatch",
+                "support-selection-stale",
             ));
         }
-        let old = session
-            .report()
-            .ok_or_else(|| ApiError::with_status(StatusCode::CONFLICT, "support-run-not-ended"))?;
-        let same = base
+        let mut report = base.clone();
+        if manual_address.is_some_and(|a| ContactableAddress::new(a).is_err()) {
+            report.support = "excluded".into();
+            report.fact(
+                "refusalCategory",
+                "target-policy",
+                Some("target-excluded".into()),
+                "unavailable",
+            );
+        }
+        if let Some(id) = b.download_id {
+            let run = state
+                .device_download
+                .try_lock()
+                .map_err(|_| ApiError::with_status(StatusCode::CONFLICT, "support-run-busy"))?;
+            let session = run.as_ref().filter(|s| s.id() == id).ok_or_else(|| {
+                ApiError::with_status(StatusCode::CONFLICT, "support-run-unavailable")
+            })?;
+            if address != Some(session.target()) {
+                return Err(ApiError::with_status(
+                    StatusCode::CONFLICT,
+                    "support-run-target-mismatch",
+                ));
+            }
+            let old = session.report().ok_or_else(|| {
+                ApiError::with_status(StatusCode::CONFLICT, "support-run-not-ended")
+            })?;
+            let same =
+                base.facts.iter().any(|f| {
+                    f.field == "applicationId" && f.value.as_deref() == Some(&old.program.id)
+                }) && base
+                    .facts
+                    .iter()
+                    .any(|f| f.field == "sourceSha256" && f.value == old.program.source_sha256);
+            if !same {
+                return Err(ApiError::with_status(
+                    StatusCode::CONFLICT,
+                    "support-run-source-mismatch",
+                ));
+            }
+            report.prior_run(&old);
+        }
+        let mask = base
             .facts
             .iter()
-            .any(|f| f.field == "applicationId" && f.value.as_deref() == Some(&old.program.id))
-            && base
-                .facts
-                .iter()
-                .any(|f| f.field == "sourceSha256" && f.value == old.program.source_sha256);
-        if !same {
-            return Err(ApiError::with_status(
-                StatusCode::CONFLICT,
-                "support-run-source-mismatch",
-            ));
-        }
-        report.prior_run(&old);
-    }
-    let mask = base
-        .facts
-        .iter()
-        .rev()
-        .find(|f| f.field == "mask" && f.value.is_some())
-        .and_then(|f| u16::from_str_radix(f.value.as_ref()?, 16).ok());
-    let token = format!(
-        "{:x}",
-        Sha256::digest(format!(
-            "{}:{}:{}",
-            state.server_incarnation,
-            NEXT.fetch_add(1, Ordering::Relaxed),
-            hash(&report)
-        ))
-    );
-    let s = Snapshot {
-        token,
-        created: Instant::now(),
-        revision,
-        incarnation,
-        has_project,
-        server_incarnation: state.server_incarnation.clone(),
-        acquired: false,
-        device_id: b.device_id,
-        input: b.input,
-        base,
-        report,
-        address,
-        manual_address,
-        mask,
-    };
-    let result = view(&s);
-    *slot
-        .lock()
-        .map_err(|_| ApiError::internal("support busy"))? = Some(s);
-    Ok(Json(result))
+            .rev()
+            .find(|f| f.field == "mask" && f.value.is_some())
+            .and_then(|f| u16::from_str_radix(f.value.as_ref()?, 16).ok());
+        let token = format!(
+            "{:x}",
+            Sha256::digest(format!(
+                "{}:{}:{}",
+                state.server_incarnation,
+                NEXT.fetch_add(1, Ordering::Relaxed),
+                hash(&report)
+            ))
+        );
+        let s = Snapshot {
+            token,
+            created: Instant::now(),
+            revision,
+            incarnation,
+            has_project,
+            server_incarnation: state.server_incarnation.clone(),
+            acquired: false,
+            device_id: b.device_id,
+            input: b.input,
+            base,
+            report,
+            address,
+            manual_address,
+            mask,
+        };
+        let result = view(&s);
+        *slot
+            .lock()
+            .map_err(|_| ApiError::internal("support busy"))? = Some(s);
+        Ok(Json(result))
+    })
+    .await?
 }
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
@@ -435,30 +438,33 @@ async fn export(
     Extension(slot): Extension<Slot>,
     Json(b): Json<ExportRequest>,
 ) -> Result<Response, ApiError> {
-    if !b.consent {
-        return Err(ApiError::bad_request("support-export-consent-required"));
-    }
-    let s = snapshot(&slot, &b.token)?;
-    fresh(&state, &s)?;
-    if hash(&s.report) != b.digest {
-        return Err(ApiError::with_status(
-            StatusCode::CONFLICT,
-            "support-preview-changed",
-        ));
-    }
-    let bytes = s.report.bundle().map_err(ApiError::bad_request)?;
-    Ok((
-        [
-            (header::CONTENT_TYPE, "application/zip"),
-            (
-                header::CONTENT_DISPOSITION,
-                "attachment; filename=knxbench-support.zip",
-            ),
-            (header::CACHE_CONTROL, "no-store"),
-        ],
-        bytes,
-    )
-        .into_response())
+    crate::routes::off_runtime(move || {
+        if !b.consent {
+            return Err(ApiError::bad_request("support-export-consent-required"));
+        }
+        let s = snapshot(&slot, &b.token)?;
+        fresh(&state, &s)?;
+        if hash(&s.report) != b.digest {
+            return Err(ApiError::with_status(
+                StatusCode::CONFLICT,
+                "support-preview-changed",
+            ));
+        }
+        let bytes = s.report.bundle().map_err(ApiError::bad_request)?;
+        Ok((
+            [
+                (header::CONTENT_TYPE, "application/zip"),
+                (
+                    header::CONTENT_DISPOSITION,
+                    "attachment; filename=knxbench-support.zip",
+                ),
+                (header::CACHE_CONTROL, "no-store"),
+            ],
+            bytes,
+        )
+            .into_response())
+    })
+    .await?
 }
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]

@@ -39,14 +39,17 @@ fn view(state: &SharedState, reveal: Option<&str>) -> Result<StoredBusAccess, Ap
 }
 
 async fn list(State(state): State<SharedState>) -> Result<Json<StoredBusAccess>, ApiError> {
-    view(&state, None).map(Json)
+    crate::routes::off_runtime(move || view(&state, None))
+        .await?
+        .map(Json)
 }
 
 async fn reveal(
     State(state): State<SharedState>,
     Json(request): Json<RevealRequest>,
 ) -> Result<Json<StoredRecord>, ApiError> {
-    view(&state, Some(&request.record_id))?
+    crate::routes::off_runtime(move || view(&state, Some(&request.record_id)))
+        .await??
         .records
         .into_iter()
         .find(|record| record.revealed)

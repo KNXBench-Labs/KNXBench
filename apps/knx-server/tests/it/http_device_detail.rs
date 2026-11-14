@@ -284,6 +284,81 @@ async fn an_orphan_module_object_is_undetermined_while_controls_keep_their_state
     assert_eq!(resolved["O-1_R-1"], objects["O-1_R-1"]);
 }
 
+/// F1: exercise device-local owner lookup through the real HTTP projection.
+/// Only the stored owner id changes; the imported resolved owner stays held.
+async fn assert_not_held_module_owner_is_undetermined(foreign_device: bool) {
+    let dir = tempfile::tempdir().unwrap();
+    let (state, app) =
+        import_orphan(dir.path(), Some(&orphan_program(true)), Modules::Present).await;
+    let (device, _, resolved) = objects_by_source(&app, &state).await;
+    assert_eq!(resolved[ORPHAN_MODULE_OBJECT]["activation"], "Active");
+    assert_eq!(
+        resolved[ORPHAN_MODULE_OBJECT]["channel"]["text"],
+        "Zone channel"
+    );
+    let held = module_owner(&state).unwrap();
+    let not_held = knx_core::ModuleInstanceId(9001);
+    let before = {
+        let mut project = state.project.lock().unwrap();
+        let project = project.as_mut().unwrap();
+        assert!(project.devices.module_instance(not_held).is_none());
+        if foreign_device {
+            let foreign = DeviceId(9000);
+            assert!(project.devices.get(foreign).is_none());
+            let mut other = project.devices.get(DeviceId(device)).unwrap().clone();
+            other.id = foreign;
+            other.source.ets_id = "Fictional-other-device".into();
+            other.com_objects.clear();
+            other.binary_data.clear();
+            project.devices.insert(other);
+            // Same RefId as the held owner: neither existence in the project
+            // nor a matching RefId establishes ownership by this device.
+            let mut instance = project.devices.module_instance(held).unwrap().clone();
+            instance.id = not_held;
+            instance.device = foreign;
+            project.devices.insert_module_instance(instance);
+            assert_eq!(
+                project.devices.module_instance(not_held).unwrap().device,
+                foreign
+            );
+        }
+        assert_eq!(
+            project.devices.module_instance(held).unwrap().device,
+            DeviceId(device)
+        );
+        project
+            .devices
+            .com_objects_mut()
+            .find(|com| com.source.ets_id == ORPHAN_MODULE_OBJECT)
+            .unwrap()
+            .module_instance = Some(not_held);
+        project.clone()
+    };
+    let history = state.command_stack.lock().unwrap().history_lengths();
+    let (observed_device, _, objects) = objects_by_source(&app, &state).await;
+    assert_eq!(observed_device, device);
+    assert_orphan_undetermined(&objects);
+    // A clean evaluated miss stays Inactive, so uncertainty cannot mask M3.
+    assert_eq!(objects["O-3_R-1"]["activation"], "Inactive");
+    assert_eq!(objects["O-3_R-1"], resolved["O-3_R-1"]);
+    assert_eq!(objects["O-1_R-1"], resolved["O-1_R-1"]);
+    assert_eq!(state.project.lock().unwrap().as_ref(), Some(&before));
+    assert_eq!(
+        state.command_stack.lock().unwrap().history_lengths(),
+        history
+    );
+}
+
+#[tokio::test]
+async fn a_dangling_module_instance_id_is_undetermined_not_unscoped() {
+    assert_not_held_module_owner_is_undetermined(false).await;
+}
+
+#[tokio::test]
+async fn a_foreign_device_module_instance_id_is_undetermined_not_unscoped() {
+    assert_not_held_module_owner_is_undetermined(true).await;
+}
+
 /// A2: a missing and an explicitly empty `ModuleInstances` container both
 /// leave the object without instance authority, never as known-zero.
 #[tokio::test]

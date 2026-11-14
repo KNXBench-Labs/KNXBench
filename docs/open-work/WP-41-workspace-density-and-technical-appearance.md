@@ -17,7 +17,7 @@ isolated controls. The existing web-like character may remain. Additionally offe
 a technical appearance as a new built-in light/dark theme pair.
 
 - Preserve the explorer/workspace/inspector foundation and familiar workflows;
-  improve alignment, hierarchy and arrangement within those areas.
+  improve alignment, visual hierarchy and arrangement within those areas.
 - Use consistent spacing, aligned label/value rows, content-appropriate field
   widths and fewer redundant containers. Related short fields may share a row
   when there is sufficient width; return to a single-column arrangement when
@@ -113,13 +113,52 @@ native-shell acceptance. Do not start a clickable prototype as part of Phase A.
 
 ## Coordination, dependencies and exclusions
 
-- [WP-05](WP-05-parameter-layout-fidelity.md) owns evidence-gated parameter
-  layout/hierarchy semantics, including inline sections, nested blocks and
-  `CollapseIfEmpty`. A separate parameter-grouping investigation is pending;
-  reuse its conclusions and coordinate with its owner. This package neither
-  claims that work nor guesses missing hierarchy or manufacturer behaviour.
-  General spacing work is not blanket-blocked on those unrelated semantics;
-  any dependent grouping slice waits for its evidenced contract.
+### Boundary with WP-05 and parameter navigation
+
+Owner decision, 14 November 2026: keep the packages separate and coordinate the
+shared parameter workspace; shared files do not imply duplicate implementation.
+[WP-05](WP-05-parameter-layout-fidelity.md) includes UI work, not just backend
+preparation. Its evidence-gated source-layout semantics remain authoritative.
+
+| Concern | Responsibility |
+| --- | --- |
+| Declared parameter groups, nesting, inline sections, conditional visibility and `CollapseIfEmpty` | WP-05 or its coordinated parameter-navigation slice, under that slice's evidenced contract |
+| Declared table/grid placement, axis captions and layout/control-hint semantics | WP-05; retain its delivered behavior and explicit unsupported boundaries |
+| Consistent spacing, field widths, control sizes and visual hierarchy across themes | WP-41, within the existing declared structure |
+| Additional technical light/dark appearance | WP-41, using the same components and workflows |
+| Compact visual treatment of parameter groups and navigation | WP-41, consuming the relevant delivered parameter structure rather than rebuilding it |
+
+WP-41 must not flatten nested groups, reorder declared cells, change conditional
+sections/captions or infer missing hierarchy from names to achieve a denser
+presentation. Unsupported source semantics stay explicit; a theme is not a
+substitute for the missing domain/presentation contract.
+
+### Delivery order and shared edit surfaces
+
+1. WP-05 and the coordinated parameter-navigation owner deliver and accept the
+   relevant evidenced hierarchy/layout slice first. Reuse their existing
+   captions, declared grids and regression coverage rather than a second engine.
+2. Parameter-specific WP-41 design/layout work then builds on that delivered
+   structure. Its final design comparison and future product acceptance must
+   use the actual accepted structure, preserving group identity, nesting, order,
+   captions, conditional visibility and declared row/matrix placement in both
+   existing and technical appearances.
+3. This is a slice dependency, not a requirement to finish all of WP-05. General
+   shell spacing, device-list/inspector composition and theme-palette work are
+   not blanket-blocked by unrelated WP-05 features. They still require WP-41's
+   own design/implementation Go; the three-view design acceptance remains intact.
+4. The parameter workspace, its styles and server/caption/grid projections are
+   shared edit surfaces. Before future edits, re-read current coordination,
+   agree revision and ownership with the active WP-05/parameter-navigation
+   owner, and preserve its frozen inputs. A disjoint worktree grants neither
+   source ownership nor permission to refactor another track's contracts.
+
+This documentation records the boundary and order only. WP-41 remains planned,
+not claimed: no static designs, prototype, implementation, VM input or product
+acceptance are started or authorised by this clarification.
+
+### Other dependencies and exclusions
+
 - Reconcile shared parameter, inspector and table consumers with
   [WP-37](WP-37-pending-changes-across-ui.md), and native acceptance boundaries
   with [WP-11](WP-11-native-linux-acceptance.md), before future edits.

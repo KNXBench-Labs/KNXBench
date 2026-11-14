@@ -6,7 +6,9 @@ This dossier preserves the technical detail and dated history. Earlier
 headings, failures and lifting conditions are historical where later
 updates supersede them; they are not new work assignments.
 
-## Update 2026-11-14: bounded parameter navigation source candidate
+<a id="update-2026-11-14-bounded-parameter-navigation-source-candidate"></a>
+
+## Update 2026-11-14: bounded parameter navigation on main
 
 The parameter workspace projects agreed evaluated display owners above existing
 leaf areas, with source-derived captions, fallback paths and presentation-only
@@ -14,8 +16,11 @@ disclosures ([contract](../contracts/parameter-workspace.md#evaluated-display-co
 It does not enumerate empty containers or every conditional declaration, infer
 parents from captions/indentation, or expand arbitrary nested-block, module,
 Repeat or callback semantics. Missing/ambiguous hierarchy stays at the root.
-Fictional producer and captured-response browser tests are separate from
-independent review, package acceptance and physical-device interoperability.
+The bounded slice is independently reviewed, software-accepted and published on
+main as `2867ee1b5`; the selected 15-stage package gate and fresh fictional
+producer/captured-response browser composition passed.
+[Actual checks and exclusions](../status/2026-11-14-parameter-navigation.md)
+retain the distinction from release availability and physical-device interoperability.
 
 ## Update 2026-11-09: conditional block captions (WP-05)
 

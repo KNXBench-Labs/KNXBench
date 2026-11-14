@@ -1,11 +1,15 @@
 # Roadmap
 
-## Parameter navigation hierarchy (14 November 2026 source candidate)
+<a id="parameter-navigation-hierarchy-14-november-2026-source-candidate"></a>
 
-The bounded nearest evaluated display-container → leaf slice is implemented
-with fictional producer/captured-response regressions. Independent review and
-package acceptance remain pending; broader nested blocks, empty containers,
-Repeat, module semantics and callbacks are not expanded.
+## Parameter navigation hierarchy (14 November 2026; main-only)
+
+The bounded nearest evaluated display-container → leaf slice is independently
+reviewed, software-accepted and published on main as `2867ee1b5`. The selected
+15-stage package gate and fresh fictional producer/captured-response browser
+composition passed; this is not part of Alpha 21. Broader nested blocks, empty
+containers, Repeat, module semantics and callbacks remain outside this slice.
+[Checks and acceptance limits](status/2026-11-14-parameter-navigation.md) ·
 [Contract and explicit exclusions](contracts/parameter-workspace.md#evaluated-display-containers-source-candidate-after-alpha-21).
 
 ## Literal axis translations (14 November 2026; WP-05)

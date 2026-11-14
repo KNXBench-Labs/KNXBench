@@ -2,13 +2,17 @@
 
 # Implementation status
 
-## Parameter navigation hierarchy (14 November 2026 source candidate)
+<a id="parameter-navigation-hierarchy-14-november-2026-source-candidate"></a>
+
+## Parameter navigation hierarchy (14 November 2026; main-only)
 
 Supported evaluated display containers organize their existing child parameter
 areas. Disclosure state is presentation-only; search and contextual paths name
 the container, and existing downloaded-value marks aggregate from its children.
-No new write authority or arbitrary nested hierarchy is inferred. Independent
-review, package acceptance and release availability remain separate.
+No new write authority or arbitrary nested hierarchy is inferred. This bounded
+slice is independently reviewed, software-accepted and published on main as
+`2867ee1b5`; it is not included in Alpha 21 or a hardware-interoperability claim.
+[Actual checks and boundaries](../status/2026-11-14-parameter-navigation.md) ·
 [Bounded contract](../contracts/parameter-workspace.md#evaluated-display-containers-source-candidate-after-alpha-21).
 
 ## Literal row/column translations (14 November 2026 source/focused verification)

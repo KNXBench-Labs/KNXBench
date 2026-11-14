@@ -28,9 +28,12 @@ integration base `52559229b` or main-first candidate `994d9bd5d`. Native05
 preserves exact draft text, full backend/43 SQLite tables including history and
 whole-file identity, with no Apply; equality does not prove zero mutating HTTP
 requests. The linked record separates native audit and delivery acceptance.
-The candidate gate has not run; no push/release/deployment is claimed. Earlier
-persistence evidence, unrelated E4 work and whole WP-11/KL-130 remain unchanged
-or open.
+The main-first delivery is software-accepted and published as `ea7ac7ae1`:
+selected package gate 11/11, nested web 43/43, inputs frozen and checked user
+data untouched; tool tests 547 passed / 16 optional skips. No Rust tests or
+private corpus were selected. No release/deployment or current-main native
+rebind; earlier persistence evidence, unrelated E4 work and whole WP-11/KL-130
+remain unchanged or open.
 
 <a id="evaluated-parameter-navigation-14-november-2026-source-candidate"></a>
 

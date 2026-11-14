@@ -288,8 +288,11 @@ was not performed; there is no mutating-HTTP trace proving zero requests.
 
 The actual retained ELF is bound to frozen `9ea3c5a9c-DIRTY` and its 147-file
 frontend, not integration base `52559229b` or main-first candidate `994d9bd5d`.
-The result record separates native audit and delivery boundaries: the final
-candidate gate has not run and this delivery does not push, release or deploy.
+Independent native aggregate review approves that bounded six-cell composition.
+The main-first runtime delivery is software-accepted and published as `ea7ac7ae1`
+after the complete selected 11-stage package gate (43 nested web stages), with
+frozen inputs and checked user data untouched. No release/deployment or native
+source rebinding is inferred.
 Native01 remains failed/incomplete as an original attempt; its Notes 100%
 partial is discarded, and Native02/03/04 add no valid measured predicates.
 Native05's seat restoration and owned teardown are verified without upgrading

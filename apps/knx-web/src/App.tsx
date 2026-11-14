@@ -1771,9 +1771,11 @@ function AppBody({ manifestVersion = packageVersion, session, editorReturn = fal
             <button aria-current={!settingsOpen && monitorOpen ? "page" : undefined} onClick={() => { setSettingsOpen(false); setLogOpen(false); setMonitorOpen(true); }}><WorkbenchIcon name="monitor" />{t("toolbar.busMonitor")}</button>
             <button aria-current={!settingsOpen && logOpen ? "page" : undefined} onClick={() => { setSettingsOpen(false); setMonitorOpen(false); setLogOpen(true); }}><WorkbenchIcon name="log" />{t("toolbar.log")}</button>
             <button className="companion-open" onClick={() => void openCompanion()}><WorkbenchIcon name="panel" />{t("companion.open")}</button>
-            <button aria-current={settingsOpen ? "page" : undefined} onClick={openSettings}><GearIcon />{t("toolbar.settings")}</button>
           </nav>
           </NavigationSection>
+          <nav className="workbench-navigation settings-navigation" aria-label={t("toolbar.settings")}>
+            <button aria-current={settingsOpen ? "page" : undefined} onClick={openSettings}><GearIcon />{t("toolbar.settings")}</button>
+          </nav>
         </ResizablePane>}
         {!welcomeVisible && centerWorkspace}
         {inspectorVisible && <ResizablePane label={t("workbench.properties")} side="right" initialWidth={inspectorWidth} min={INSPECTOR_PANE.min} max={INSPECTOR_PANE.max} onWidthCommit={(width) => setSetting("inspectorPaneWidth", width)}>

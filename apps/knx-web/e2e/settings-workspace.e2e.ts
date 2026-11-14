@@ -6,7 +6,6 @@ import { messages as de } from "../src/messages/de";
 import { achievementsFixtureAnswer } from "./achievements-fixture";
 import { busActivityFixtureAnswer } from "./bus-activity-fixture";
 import { statusMetricsFixtureBody } from "./status-metrics-fixture";
-import { openNavigationSections } from "./disclosure-fixture";
 
 type Language = "en" | "de";
 const TREE: ProjectTree = {
@@ -86,16 +85,41 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) f
     const collapsed = loaded;
     if (collapsed) await properties.click();
     const gear = page.locator(".workbench-toolbar").getByRole("button", { name: m["toolbar.settings"], exact: true });
-    if (width === 400) await palette(page, m["toolbar.settings"]);
-    else {
-      await openNavigationSections(page);
-      await page.locator(".diagnostic-navigation").getByRole("button", { name: m["toolbar.settings"], exact: true }).click();
+    const navigationToggle = page.locator(".workbench-panel-controls").getByRole("button", { name: m["workbench.navigation"], exact: true });
+    if (await navigationToggle.getAttribute("aria-expanded") === "false") await navigationToggle.click();
+    const diagnosticsToggle = page.getByRole("button", { name: m["workbench.diagnostics"], exact: true });
+    await expect(diagnosticsToggle).toHaveAttribute("aria-expanded", "false");
+    const entry = page.locator(".settings-navigation").getByRole("button", { name: m["toolbar.settings"], exact: true });
+    await expect(entry).toBeVisible();
+    await expect(entry).not.toHaveAttribute("aria-expanded");
+    expect(await entry.evaluate(node => node.closest(".navigation-section"))).toBeNull();
+    expect(await entry.evaluate(node => node.parentElement?.parentElement === document.querySelector(".diagnostic-navigation")?.closest(".navigation-section")?.parentElement)).toBe(true);
+    await expect(page.locator(".diagnostic-navigation").getByRole("button", { name: m["toolbar.settings"], exact: true })).toHaveCount(0);
+    if (!loaded) {
+      await entry.scrollIntoViewIfNeeded();
+      await expect(entry).toBeInViewport();
+      const path = testInfo.outputPath("settings-entry.png");
+      await page.screenshot({ path });
+      await testInfo.attach("settings-entry", { path, contentType: "image/png" });
     }
+    await entry.focus();
+    await expect(entry).toBeFocused();
+    await entry.press("Enter");
     const workspace = page.getByRole("region", { name: m["settings.title"], exact: true });
     const title = workspace.getByRole("heading", { name: m["settings.title"], level: 1, exact: true });
     await expect(page.locator(".workbench-center .settings-workspace")).toBeVisible();
     await expect(page.getByRole("dialog", { name: m["settings.title"], exact: true })).toHaveCount(0);
     await expect(title).toBeFocused();
+    if (width === 1440) {
+      await expect(entry).toHaveAttribute("aria-current", "page");
+      await expect(page.locator('.workbench-navigation [aria-current="page"]')).toHaveCount(1);
+      await expect(diagnosticsToggle).toHaveAttribute("aria-expanded", "false");
+    }
+    if (!loaded) {
+      const path = testInfo.outputPath("settings-workspace.png");
+      await page.screenshot({ path });
+      await testInfo.attach("settings-workspace", { path, contentType: "image/png" });
+    }
     await page.keyboard.press("Shift+Tab");
     await expect(workspace.getByRole("button", { name: m["settings.back"], exact: true })).toBeFocused();
     await page.keyboard.press("Shift+Tab");
@@ -110,6 +134,16 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) f
     await page.keyboard.press("Escape");
     await expect(workspace).toBeVisible();
     await gear.click();
+    await expect(page.locator(".settings-workspace")).toHaveCount(1);
+    if (width === 400) {
+      await expect(navigationToggle).toHaveAttribute("aria-expanded", "false");
+      await navigationToggle.click();
+    }
+    await expect(entry).toHaveAttribute("aria-current", "page");
+    await expect(page.locator('.workbench-navigation [aria-current="page"]')).toHaveCount(1);
+    await entry.focus();
+    await expect(entry).toBeFocused();
+    await entry.press("Enter");
     await expect(page.locator(".settings-workspace")).toHaveCount(1);
     const jump = workspace.getByRole("navigation", { name: m["settings.jumpNavigation"], exact: true });
     await expect(jump.getByRole("link")).toHaveCount(8);
@@ -138,6 +172,8 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) f
     const back = workspace.getByRole("button", { name: m["settings.back"], exact: true });
     await back.click();
     await expect(workspace).toHaveCount(0);
+    if (width === 400) await navigationToggle.click();
+    await expect(entry).not.toHaveAttribute("aria-current");
     await expect(properties).toBeEnabled();
     await expect(properties).toHaveAttribute("aria-expanded", String(!collapsed));
     await expect(page.locator(".workbench-pane-right")).toHaveCount(collapsed ? 0 : 1);

@@ -23,6 +23,7 @@ Last updated: 2026-11-14 (Alpha 21 baseline; accepted main-only navigation succe
 
 | Feature | Scope | Availability |
 | --- | --- | --- |
+| [First-class Settings entry](contracts/settings-workspace.md) | Direct sidebar action alongside Diagnostics, also without a project or category disclosure; existing workspace, toolbar gear and palette retained | Main-only; not in Alpha 21 |
 | [Evaluated parameter navigation](contracts/parameter-workspace.md#evaluated-display-containers-source-candidate-after-alpha-21) | Display-container/leaf navigation, source caption provenance, presentation-only folding, stable editor routing and descendant download marks; no arbitrary nested hierarchy | Main-only; [software-accepted](status/2026-11-14-parameter-navigation.md), not in Alpha 21 |
 
 ## New in Alpha 21

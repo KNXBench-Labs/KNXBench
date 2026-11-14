@@ -1,5 +1,17 @@
 # Roadmap
 
+## Unresolved module-owner overlay (14 November 2026; WP07-S1 integration candidate)
+
+The bounded source-only read overlay distinguishes unresolved own module
+authority from genuinely unscoped objects: after evaluation it reports
+`Undetermined`, not accidental `Inactive`, with no channel. Corrected source
+`8873e0150f` is independently reviewed with retained focused 17 unit + 9 HTTP
+passes; main-first `1c8b146fb` has parent-verified patch equivalence only.
+Fresh integrated selected package gate and publication remain pending.
+[Epochs and limits](status/2026-11-14-wp07-unresolved-module-owner.md) keep
+positive identity, repeated/nested mapping, numbering and module write policy
+outside the slice. Whole WP-07 remains evidence-blocked; no KL-068 closure.
+
 <a id="parameter-navigation-hierarchy-14-november-2026-source-candidate"></a>
 
 ## Parameter navigation hierarchy (14 November 2026; main-only)

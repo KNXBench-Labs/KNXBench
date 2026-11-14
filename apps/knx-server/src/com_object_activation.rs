@@ -15,6 +15,9 @@
 //!   `module_id` ends with `_<ModuleInstance RefId>`). Two instances with
 //!   the same `RefId` cannot be told apart (D40), so their objects are
 //!   `Undetermined`, never `Active` or `Inactive` by chance.
+//! - A module object whose own `ModuleInstance` is not in the project
+//!   (imported without it) has no instance authority: `Undetermined`
+//!   whenever the evaluation ran, never `Inactive` as if it were unscoped.
 //! - Not activated is `Inactive` only when every stored value reached the
 //!   evaluation (`values_complete`: none was set aside as stale), nothing in
 //!   the evaluation could have hidden the object
@@ -70,8 +73,19 @@ pub(crate) fn text_fill(source: PositionalSource, template: &str) -> Option<Text
 pub(crate) struct ComObjectKey<'a> {
     /// `knx_productdb::com_object_lookup_id` for this object.
     pub(crate) lookup_id: String,
-    /// The object's own `ModuleInstance`, `None` for an unscoped object.
-    pub(crate) module_instance: Option<&'a knx_core::ModuleInstance>,
+    /// Which module instance, if any, owns the object.
+    pub(crate) scope: ObjectScope<'a>,
+}
+
+/// The module ownership of one communication object, as far as the project knows it.
+pub(crate) enum ObjectScope<'a> {
+    /// Not module-based: only an unscoped `ComObjectRefRef` activates it.
+    Unscoped,
+    /// Module-based and owned by this device `ModuleInstance`.
+    Module(&'a knx_core::ModuleInstance),
+    /// Module-based, but its own `ModuleInstance` is not in the project
+    /// (WP07): no activation can be attributed to it, so its state is unknown.
+    UnresolvedModule,
 }
 
 /// Sets `activation` and `channel` on every object in `com_objects` that
@@ -136,13 +150,16 @@ fn decide<'a>(
         .iter()
         .filter(|r| r.ref_id == key.lookup_id);
 
-    match key.module_instance {
-        None => match same_ref.clone().find(|r| r.scope.is_none()) {
+    match key.scope {
+        ObjectScope::Unscoped => match same_ref.clone().find(|r| r.scope.is_none()) {
             Some(hit) => (ComObjectActivation::Active, Some(hit)),
             None if uncertain => (ComObjectActivation::Undetermined, None),
             None => (ComObjectActivation::Inactive, None),
         },
-        Some(own) => {
+        // Without its own instance no expansion can be attributed to the
+        // object, so neither `Active` nor `Inactive` is known (WP07).
+        ObjectScope::UnresolvedModule => (ComObjectActivation::Undetermined, None),
+        ObjectScope::Module(own) => {
             if instances_sharing_ref(device_instances, own) > 1 {
                 return (ComObjectActivation::Undetermined, None);
             }
@@ -396,7 +413,7 @@ mod tests {
     fn unscoped(lookup: &str) -> ComObjectKey<'static> {
         ComObjectKey {
             lookup_id: lookup.to_string(),
-            module_instance: None,
+            scope: ObjectScope::Unscoped,
         }
     }
 
@@ -609,14 +626,14 @@ mod tests {
                 1,
                 ComObjectKey {
                     lookup_id: "A_MD-1_O-1".to_string(),
-                    module_instance: Some(&instances[0]),
+                    scope: ObjectScope::Module(&instances[0]),
                 },
             ),
             (
                 2,
                 ComObjectKey {
                     lookup_id: "A_MD-1_O-1".to_string(),
-                    module_instance: Some(&instances[1]),
+                    scope: ObjectScope::Module(&instances[1]),
                 },
             ),
         ]);
@@ -682,14 +699,14 @@ mod tests {
                 1,
                 ComObjectKey {
                     lookup_id: "A_MD-1_O-1".to_string(),
-                    module_instance: Some(&instances[0]),
+                    scope: ObjectScope::Module(&instances[0]),
                 },
             ),
             (
                 2,
                 ComObjectKey {
                     lookup_id: "A_MD-1_O-1".to_string(),
-                    module_instance: Some(&instances[1]),
+                    scope: ObjectScope::Module(&instances[1]),
                 },
             ),
             (3, unscoped("A_O-9")),
@@ -751,7 +768,7 @@ mod tests {
             1,
             ComObjectKey {
                 lookup_id: "A_MD-1_O-1".into(),
-                module_instance: Some(&instances[0]),
+                scope: ObjectScope::Module(&instances[0]),
             },
         )]);
         let mut nodes = vec![com_node(1)];
@@ -780,7 +797,7 @@ mod tests {
             1,
             ComObjectKey {
                 lookup_id: "A_MD-1_O-1".to_string(),
-                module_instance: Some(&instances[0]),
+                scope: ObjectScope::Module(&instances[0]),
             },
         )]);
         let nodes = run(&module_program(), &keys, &instances, &HashMap::new(), &[1]);
@@ -797,7 +814,7 @@ mod tests {
             1,
             ComObjectKey {
                 lookup_id: "A_MD-1_O-NOT-IN-TREE".to_string(),
-                module_instance: Some(&instances[0]),
+                scope: ObjectScope::Module(&instances[0]),
             },
         )]);
         let nodes = run(&module_program(), &keys, &instances, &HashMap::new(), &[1]);
@@ -816,14 +833,14 @@ mod tests {
                 2,
                 ComObjectKey {
                     lookup_id: "A_MD-1_O-1".to_string(),
-                    module_instance: Some(&instances[0]),
+                    scope: ObjectScope::Module(&instances[0]),
                 },
             ),
             (
                 3,
                 ComObjectKey {
                     lookup_id: "A_MD-1_O-1".to_string(),
-                    module_instance: Some(&instances[1]),
+                    scope: ObjectScope::Module(&instances[1]),
                 },
             ),
         ]);
@@ -836,5 +853,75 @@ mod tests {
         );
         assert_eq!(nodes[0].activation, ComObjectActivation::Active);
         assert_eq!(nodes[1].activation, ComObjectActivation::Undetermined);
+    }
+
+    fn unresolved(lookup: &str) -> ComObjectKey<'static> {
+        ComObjectKey {
+            lookup_id: lookup.to_string(),
+            scope: ObjectScope::UnresolvedModule,
+        }
+    }
+
+    /// WP07: a module object whose own `ModuleInstance` is not in the project
+    /// is `Undetermined` on a clean evaluation, while a genuinely unscoped
+    /// object of the same run that nothing activates stays `Inactive`.
+    #[test]
+    fn a_module_object_without_its_own_instance_is_undetermined_not_inactive() {
+        let instances = vec![instance(11, "MD-1_M-2")];
+        let keys = HashMap::from([
+            (1, unresolved("MD-1_M-1_MI-1_O-1_R-1")),
+            (2, unresolved("A_MD-1_O-1")),
+            (3, unscoped("A_O-9")),
+        ]);
+        let activation = evaluate(&module_program(), &ValueMap::default());
+        assert!(activation.diagnostics.is_empty(), "no other uncertainty");
+        let mut nodes: Vec<ComObjectNode> = [1, 2, 3].iter().map(|&id| com_node(id)).collect();
+        for node in &mut nodes {
+            node.function_text = Some("Zone {{No}}".to_string());
+        }
+        apply(
+            &mut nodes,
+            &keys,
+            &instances,
+            &activation,
+            &HashMap::new(),
+            true,
+            None,
+        )
+        .unwrap();
+        let states: Vec<_> = nodes
+            .iter()
+            .map(|n| (n.id, n.activation, n.channel.is_some()))
+            .collect();
+        assert_eq!(
+            states,
+            vec![
+                (1, ComObjectActivation::Undetermined, false),
+                (2, ComObjectActivation::Undetermined, false),
+                (3, ComObjectActivation::Inactive, false),
+            ]
+        );
+        // No owner, no scope: nothing fills the module placeholder.
+        assert_eq!(nodes[1].function_text.as_deref(), Some("Zone {{No}}"));
+        assert!(
+            nodes.iter().all(|n| n.is_active),
+            "stored activity is untouched"
+        );
+    }
+
+    /// Without any module in the evaluated tree the ownerless module object
+    /// still has no instance authority; the unscoped control is `Inactive`.
+    #[test]
+    fn an_ownerless_module_object_is_undetermined_even_without_module_activations() {
+        let keys = HashMap::from([(1, unresolved("A_MD-1_O-1")), (2, unscoped("A_MD-1_O-1"))]);
+        let nodes = run(&two_channels(), &keys, &[], &HashMap::new(), &[1, 2]);
+        assert_eq!(
+            (nodes[0].activation, nodes[1].activation),
+            (
+                ComObjectActivation::Undetermined,
+                ComObjectActivation::Inactive
+            )
+        );
+        assert!(nodes[0].channel.is_none());
     }
 }

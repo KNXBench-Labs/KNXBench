@@ -268,6 +268,16 @@ newer-Mesa host (issue #6) and other desktops or compositors stay explicitly
 untested boundaries. They are documented, not claimed, and need no further
 work for WP-11.
 
+## Preview/Cancel focus candidate — 14 November 2026
+
+A retained native run on `38d7ad5f5` reproduced Notes and Instructions focus loss
+after Preview settlement and explicit Cancel at 80/100/150%. A
+[source/test candidate](../status/2026-11-14-wp11-editor-focus-candidate.md)
+adds request-local exact-initiator restoration without automatic Apply or
+completion-driven focus stealing. It is unbuilt and untested; actual new-build
+native acceptance is pending. Earlier records, the separate save/cancel work
+and the wider matrix are not upgraded or closed by source authorship.
+
 ## Done when
 
 Native actions and resulting files/states are recorded for each tested cell;

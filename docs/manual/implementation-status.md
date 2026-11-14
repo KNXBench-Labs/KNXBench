@@ -23,8 +23,7 @@ fallback, explicit empty and conservative template/scope exclusions are retained
 Fictional ProductDB/actual HTTP and both matrix browser configurations have passed
 focused regressions; independent Standards and Spec source reviews approve with
 no findings. [Contract and evidence limits](../contracts/alpha16-parameter-layout.md#literal-program-owned-axis-translations).
-These results do not claim package-gate, release, publication or native-app
-acceptance. Parameter-driven axis captions, modules/Repeat and the broader layout
+Afterwards the selected 15-stage package gate (Rust 6001 passed/181 ignored, corpus 97/97, 37 web stages) accepted it and it was published on main 14 November; no release or native-app claim. Parameter-driven axis captions, modules/Repeat and the broader layout
 backlog stay open.
 
 <a id="experimental-transport-labels-main-only-after-alpha-20"></a>

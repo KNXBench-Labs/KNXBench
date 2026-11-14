@@ -12,6 +12,26 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Notes/Instructions Preview and Cancel focus (14 November 2026; WP-11 E4 candidate)
+
+Exact-initiator focus restoration is implemented with real disabled semantics,
+no automatic Apply and no completion-driven focus stealing. Independent
+production-source and test-delta reviews approve; focused component 88/88 and
+production-browser 44/44 checks passed, not a final package gate. The
+[source-bound result](status/2026-11-14-wp11-editor-focus-candidate.md) records
+five valid carried Native01 cells plus Native05's newly completed Notes 100%
+cell: six whole cells / twelve focus predicates across two epochs. Original
+failed/incomplete attempts remain retained, not relabelled green.
+
+The measured retained ELF/frontend belongs to frozen `9ea3c5a9c-DIRTY`, not
+integration base `52559229b` or main-first candidate `994d9bd5d`. Native05
+preserves exact draft text, full backend/43 SQLite tables including history and
+whole-file identity, with no Apply; equality does not prove zero mutating HTTP
+requests. The linked record separates native audit and delivery acceptance.
+The candidate gate has not run; no push/release/deployment is claimed. Earlier
+persistence evidence, unrelated E4 work and whole WP-11/KL-130 remain unchanged
+or open.
+
 <a id="evaluated-parameter-navigation-14-november-2026-source-candidate"></a>
 
 ## Evaluated parameter navigation (14 November 2026)

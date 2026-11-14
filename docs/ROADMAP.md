@@ -530,9 +530,18 @@ Four [File-submenu viewport cells](status/2026-11-07-wp11-file-submenu-viewport.
 `6ecb69427`, not current main. The failed original fourth cell was a harness
 precondition fault, rerun alone after an independently reviewed correction. No
 product change or new zoom/click/scroll policy.
-WP-11 stays open for other controls/imported-original instructions,
-virtual-key replacement attribution, remaining keyboard/layout/pointer cells
-and unavailable environments; no code, hardware or release capability is added.
+The [14 November E4 focus result](status/2026-11-14-wp11-editor-focus-candidate.md)
+records implemented exact-initiator Preview/Cancel restoration and passing
+focused component/browser checks. Five complete carried Native01 cells plus
+Native05's Notes 100% cell cover six whole cells / twelve focus predicates
+across two epochs, not a fresh six-cell replay. The measured build remains
+frozen `9ea3c5a9c-DIRTY`; main-first candidate `994d9bd5d` is a distinct
+integration epoch with no final package gate, push, release or deployment claim.
+Native audit and remaining acceptance are bounded in that result record.
+WP-11 stays open for unrelated E4 items, other controls/imported-original
+instructions, virtual-key replacement attribution and remaining keyboard/layout/
+pointer cells; unavailable environments retain their explicit boundaries.
+No whole-WP-11/KL-130, hardware or release acceptance is added.
 The separate confirmed owner decisions are recorded in
 [OWN-01](open-work/OWN-01-owner-decisions.md), including MODEL-05's deferral and
 retention of the S2-03 communication-bit policy.

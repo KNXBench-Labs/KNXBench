@@ -1,8 +1,9 @@
 # Notes and instructions: preview focus ownership
 
-Status: candidate source contract, 14 November 2026. Regression tests are
-written but unexecuted; new native verification is still required. This does
-not upgrade earlier source-bound native editor or persistence evidence.
+Status: implemented source contract, 14 November 2026. Focused component and
+production-browser checks passed; bounded native focus observations are recorded
+across two execution epochs. Final integration acceptance remains separate; this
+does not upgrade earlier source-bound native editor or persistence evidence.
 
 ## Required behaviour
 
@@ -40,7 +41,7 @@ Mounted component regressions model only WebKit's disabled-button blur before
 settling a held request. Production-browser fixtures use actual Tab and Enter,
 a held intercepted Preview response, exact element/focus-visible/outline checks,
 explicit keyboard Cancel, no Apply requests and moved-focus controls. Neither
-kind is actual GTK/WebKitGTK proof. The
-[candidate status](../status/2026-11-14-wp11-editor-focus-candidate.md) records the
-remaining acceptance boundary. Unrelated dialogs and checked-parameter controls
-are outside this source change.
+kind is actual GTK/WebKitGTK proof. The separate native observations in the
+[source-bound result](../status/2026-11-14-wp11-editor-focus-candidate.md) retain
+their measured source epochs and delivery limits. Unrelated dialogs and
+checked-parameter controls are outside this source change.

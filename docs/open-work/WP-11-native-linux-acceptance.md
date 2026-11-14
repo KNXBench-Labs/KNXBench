@@ -268,15 +268,34 @@ newer-Mesa host (issue #6) and other desktops or compositors stay explicitly
 untested boundaries. They are documented, not claimed, and need no further
 work for WP-11.
 
-## Preview/Cancel focus candidate — 14 November 2026
+## Preview/Cancel focus implementation and observations — 14 November 2026
 
-A retained native run on `38d7ad5f5` reproduced Notes and Instructions focus loss
-after Preview settlement and explicit Cancel at 80/100/150%. A
-[source/test candidate](../status/2026-11-14-wp11-editor-focus-candidate.md)
-adds request-local exact-initiator restoration without automatic Apply or
-completion-driven focus stealing. It is unbuilt and untested; actual new-build
-native acceptance is pending. Earlier records, the separate save/cancel work
-and the wider matrix are not upgraded or closed by source authorship.
+After focus loss reproduced on `38d7ad5f5`, the
+[source-bound result](../status/2026-11-14-wp11-editor-focus-candidate.md) records
+request-local exact-initiator restoration, real disabled semantics and no
+completion-driven focus stealing or automatic Apply. Independent production
+and test-delta reviews approve; focused components 88/88 and browsers 44/44
+passed. These are not the final package gate.
+
+Five complete Native01 cells (Notes 80/150%, Instructions 80/100/150%) plus the
+newly completed Native05 Notes 100% cell provide six whole cells / twelve focus
+predicates across two epochs, not a fresh six-cell run. Native05 passes both
+original exact AT-SPI proxy predicates; first Tab leaves the initiating Preview
+for Confirm without activating it, and after Cancel for the Properties
+separator. Draft text stays exact; full backend, all 43 typed SQLite tables /
+84 rows including history and whole file hash/size/mtime remain equal. Apply
+was not performed; there is no mutating-HTTP trace proving zero requests.
+
+The actual retained ELF is bound to frozen `9ea3c5a9c-DIRTY` and its 147-file
+frontend, not integration base `52559229b` or main-first candidate `994d9bd5d`.
+The result record separates native audit and delivery boundaries: the final
+candidate gate has not run and this delivery does not push, release or deploy.
+Native01 remains failed/incomplete as an original attempt; its Notes 100%
+partial is discarded, and Native02/03/04 add no valid measured predicates.
+Native05's seat restoration and owned teardown are verified without upgrading
+earlier partial restoration receipts. Software-render/shared-service exceptions,
+other E4 items, earlier persistence/source epochs and whole WP-11/KL-130 remain
+open or unchanged; no bus/device/VM or broad environment acceptance follows.
 
 ## Done when
 

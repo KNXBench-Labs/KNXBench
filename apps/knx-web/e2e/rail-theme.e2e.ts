@@ -1,4 +1,4 @@
-/** Checks Rail primary paint in real interaction states and live motion cancellation. */
+/** Checks trusted primary paint in real interaction states and Rail motion cancellation. */
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { expect, test, type Locator } from "@playwright/test";
 import { messages as en } from "../src/messages/en";
@@ -42,7 +42,7 @@ async function finishEffects(control: Locator) {
   await control.evaluate((node) => node.getAnimations().forEach((animation) => animation.finish()));
 }
 
-for (const theme of ["rail", "rail-dark"]) test(`${theme}: primary contrast at rest, hover and press`, async ({ page }, info) => {
+for (const theme of ["rail", "rail-dark", "technical-light", "technical-dark"]) test(`${theme}: primary contrast at rest, hover and press`, async ({ page }, info) => {
   const state = await intercept(page, "en", 8, theme);
   await page.emulateMedia({ reducedMotion: "no-preference" });
   await page.goto("/");

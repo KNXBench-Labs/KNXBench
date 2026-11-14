@@ -47,7 +47,8 @@ const passiveLabels: ParameterPassiveLabel[] = [
   passive("B-HTML", "<b>Fictional</b> & note", { key: "only", label: null }, 1, 1),
 ];
 
-async function intercept(page: Page, language: "en" | "de", translatedAxes = false) {
+async function intercept(page: Page, language: "en" | "de", translatedAxes = false,
+  appearance = { theme: "porcelain", density: "compact" }) {
   const state = { unexpected: [] as string[], posts: [] as { etsId: string; raw: string }[], envelopes: [] as Record<string, unknown>[],
     projectOpen: false, aLeft: "0", bLeft: "1", revision: 1,
     history: [] as { aLeft: string; bLeft: string }[] };
@@ -72,7 +73,7 @@ async function intercept(page: Page, language: "en" | "de", translatedAxes = fal
     const url = new URL(route.request().url()); const path = url.pathname; const method = route.request().method();
     let body: unknown; let status = 200;
     if (path === "/api/auth/status" && method === "GET") body = { required: false, authenticated: true };
-    else if (path === "/api/settings" && method === "GET") body = { schemaVersion: 1, status: "ok", settings: { uiLanguage: language, theme: "porcelain" } };
+    else if (path === "/api/settings" && method === "GET") body = { schemaVersion: 1, status: "ok", settings: { uiLanguage: language, accent: "violet", ...appearance } };
     else if (path === "/api/project" && method === "GET") { if (state.projectOpen) body = current(); else { status = 400; body = { error: "no project open" }; } }
     else if (path === "/api/project/new" && method === "POST") { state.projectOpen = true; body = current(); }
     else if (path === "/api/project/load-progress" && method === "GET") body = null;
@@ -115,6 +116,50 @@ async function intercept(page: Page, language: "en" | "de", translatedAxes = fal
     return route.fulfill({ status, contentType: "application/json", body: JSON.stringify(body) });
   });
   return state;
+}
+
+const DENSITY_PALETTES = ["porcelain", "graphite", "cupertino", "lcars", "rail", "rail-dark", "technical-light", "technical-dark", "user-modern-retro-green-crt"] as const;
+
+for (const language of ["en", "de"] as const) for (const width of [1440, 400])
+  for (const theme of DENSITY_PALETTES) for (const density of ["compact", "comfortable"]) {
+  test(`WP41 ${theme} ${density} ${language}: declared matrix identities and cells at ${width}px`, async ({ page }, info) => {
+    await page.setViewportSize({ width, height: 1000 });
+    const state = await intercept(page, language, false, { theme, density });
+    await openParameters(page, language);
+    await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
+    await expect(page.locator("html")).toHaveAttribute("data-density", density);
+    const workspace = page.locator(".parameter-workspace");
+    await workspace.locator(".parameter-workspace-nav button").filter({ hasText: "Fictional pairs" }).click();
+    const matrix = workspace.locator('.parameter-workspace-rows[data-layout="matrix"]');
+    const row = (id: string) => matrix.locator(`[data-parameter-row="${id}"]`);
+    const [aLeft, aRight, bLeft, bRight, loose] = await Promise.all(
+      ["A-left", "A-right", "B-left", "B-right", "Loose"].map(async id => (await row(id).boundingBox())!));
+    expect(Math.abs(aLeft.y - aRight.y)).toBeLessThanOrEqual(1);
+    expect(Math.abs(bLeft.y - bRight.y)).toBeLessThanOrEqual(1);
+    expect(aRight.x).toBeGreaterThan(aLeft.x);
+    expect(bLeft.y).toBeGreaterThan(aLeft.y);
+    expect(Math.abs(bLeft.x - aLeft.x)).toBeLessThanOrEqual(1);
+    expect(loose.y).toBeGreaterThan(bLeft.y);
+    for (const caption of ["Left side", "Right side", "Pair A", "Pair B"]) {
+      await expect(matrix.locator(".parameter-matrix-caption").filter({ hasText: caption })).toBeVisible();
+    }
+    const passive = matrix.locator('[data-passive-label="B-PAIR"]');
+    expect(await passive.evaluate(node => [(node as HTMLElement).style.gridRow, (node as HTMLElement).style.gridColumn]))
+      .toEqual(["3 / span 1", "2 / span 1"]);
+    const value = row("A-left").locator("select");
+    expect((await value.boundingBox())!.width).toBeLessThanOrEqual(160);
+    await expect(value).toHaveValue("0");
+    await expect(row("B-left").locator("input")).toHaveValue("1");
+    await expect(workspace.locator(".parameter-matrix-issues")).toBeVisible();
+    if (width === 400) {
+      expect(await matrix.evaluate(node => node.scrollWidth > node.clientWidth)).toBe(true);
+      await matrix.evaluate(node => { node.scrollLeft = 100; });
+      expect(await matrix.evaluate(node => node.scrollLeft)).toBeGreaterThan(0);
+    }
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1);
+    await info.attach("wp41-declared-matrix", { body: await workspace.screenshot(), contentType: "image/png" });
+    expect(state.posts).toEqual([]); expect(state.unexpected).toEqual([]);
+  });
 }
 
 async function openParameters(page: Page, language: "en" | "de", existing = false) {

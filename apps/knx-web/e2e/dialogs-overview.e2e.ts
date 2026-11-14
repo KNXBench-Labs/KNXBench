@@ -17,7 +17,7 @@ import { openFileSubmenu } from "./file-menu";
 type Language = "en" | "de";
 type Catalogue = { readonly [K in keyof typeof en]: string };
 const CAPTURE = process.env.KNX_DIALOGS_CAPTURE_DIR;
-const PALETTES = ["porcelain", "graphite", "cupertino", "lcars", "rail", "rail-dark", "user-modern-retro-green-crt"];
+const PALETTES = ["porcelain", "graphite", "cupertino", "lcars", "rail", "rail-dark", "technical-light", "technical-dark", "user-modern-retro-green-crt"];
 
 interface Fixture { unexpected: string[]; logRequests: number }
 

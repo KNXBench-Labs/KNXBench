@@ -96,7 +96,7 @@ export default function RenameNameField({ tree, target, onApplied, onDone, onPen
   }
   return <div className="rename-name-field">
     <label className="inspector-field">{t("inspector.name")}
-      <input data-rename-name aria-label={inputLabel} value={draft} disabled={!eligible || busy} autoFocus={autoFocus}
+      <input className="value-slot-text" data-rename-name aria-label={inputLabel} value={draft} disabled={!eligible || busy} autoFocus={autoFocus}
         onFocus={() => { cancelled.current = false; }}
         onPaste={(event) => {
           if (nameProblem(event.clipboardData.getData("text")) === "control") {

@@ -25,6 +25,16 @@ toolbar rail and the theme motion category cannot be requested by imported
 metadata or CSS; Geist is not part of the pack font allow-list. See
 [ADR-0157](adr/0157-rail-built-in-presentation.md).
 
+## Built-in Technical presentation (WP-41 source candidate, 2026-11-14)
+
+`technical-light` and `technical-dark` share the trusted built-in presentation
+`technical`, using the same mechanism as ADR-0157. Neither is an executable or
+imported theme pack. Only the ordinary theme ID is saved. The v1 pack envelope,
+font allow-list, colour/status admission and imported `user-` identity boundary
+are unchanged. Shared density/field widths belong to the component/settings
+layer; this pair adds no animation. Authored source is awaiting independent
+review and parent-owned verification, not yet a release or acceptance claim.
+
 ## Runtime implementation boundary
 
 `themePack.ts` admits original JSON text through byte, duplicate, depth and node

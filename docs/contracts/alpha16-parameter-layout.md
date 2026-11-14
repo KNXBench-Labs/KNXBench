@@ -60,8 +60,7 @@ belongs to the one final candidate campaign.
 ## Literal program-owned axis translations
 
 Implemented source and focused verification recorded 14 November 2026. Independent
-Standards and Spec reviews approve the source with no findings; package-gate,
-release and publication acceptance are separate. This successor does not change
+Standards and Spec reviews approve the source with no findings; afterwards the selected 15-stage package gate (Rust 6001 passed/181 ignored, corpus 97/97, 37 web stages) accepted it and it was published on main 14 November; release is separate. This successor does not change
 the historical Alpha 16 acceptance above. [Admitted observation](../research/2026-11-13-literal-grid-axis-translations.md):
 one ETS6 6.4.1 offline fictional single-device Table, literal captions only.
 

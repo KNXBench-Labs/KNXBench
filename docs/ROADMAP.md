@@ -5,8 +5,7 @@
 The bounded literal program-owned row/column caption slice is implemented and
 focused-verified with fictional ProductDB/actual HTTP tests and both owning matrix
 browser configurations. Independent Standards and Spec reviews approve the source
-with no findings. These results are not package-gate, release or publication
-acceptance. The
+with no findings. Afterwards the selected 15-stage package gate (Rust 6001 passed/181 ignored, corpus 97/97, 37 web stages) accepted it and it was published on main 14 November; release is separate. The
 [contract](contracts/alpha16-parameter-layout.md#literal-program-owned-axis-translations)
 keeps module/Repeat, text references/templates, collapse/inline/nested layout,
 Button actions and Table-versus-Grid visual differences open. Whole WP-05 remains open.

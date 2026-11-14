@@ -1,8 +1,8 @@
 # WP-05 — Parameter layout fidelity: remaining features
 
 **Status:** In progress: conditional block rename is implemented (9 November 2026).
-Literal program-owned axis translations are implemented and focused-verified
-(14 November), with independent source review; broader features stay open.
+Literal program-owned axis translations are implemented, package-gate accepted and
+published on main (14 November), with independent source review; broader features stay open.
 Listed in [OPEN_WORK](../OPEN_WORK.md); per-ID status of record is the [ledger](../status/LEDGER.md).
 
 **Evidence route:** clean-room observation is admitted by the owner ([OWN-01](OWN-01-owner-decisions.md#decisions-recorded--8-november-2026), [rules](../RESEARCH.md#evidence-routes)). Bounded observations cover
@@ -37,7 +37,7 @@ Area register, matrix placement, separators, block access, indentation, the
 Button labels in grid cells
 ([`button-literal-passive-v1`](../contracts/alpha16-parameter-layout.md#passive-source-button-labels-button-literal-passive-v1)).
 
-## Implemented and focused-verified 14 November 2026: literal axis translations
+## Implemented and published 14 November 2026: literal axis translations
 
 Source-bound literal program-owned rows/columns select their own requested-language
 Text without changing layout identity, values or activation. Missing stays source;
@@ -47,7 +47,7 @@ records executed fictional ProductDB, actual HTTP and both owning matrix-browser
 regressions, preservation boundaries and independent Standards/Spec approval with
 no findings. Existing-value history/reopen coverage is not allocator rewind;
 intercepted browser fixtures are not joined real-server/native compatibility.
-Package-gate, release and publication acceptance are separate. WP-05 is not closed.
+After that, the selected 15-stage package gate (Rust 6001 passed/181 ignored, corpus 97/97, 37 web stages) accepted it and it was published on main 14 November; not released. WP-05 is not closed.
 
 ## Implemented 9 November 2026: conditional block rename
 

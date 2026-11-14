@@ -1372,6 +1372,20 @@ review and both selected 11-stage gates passed; this is a prerequisite fix,
 not WP-27 delivery or native-server/hardware acceptance.
 [Measured coverage and boundaries](status/2026-11-03-catalogue-poll-lifetime.md).
 
+## Shared workspace density and technical pair (14 November 2026; WP-41, main-only)
+
+Accepted design revision 2 is delivered on main `836824491`: common Compact/
+Comfortable spacing, 10 rem scalar slots including prefix/unit, one bounded
+24 rem Text/name/description class, and optional Technical Light/Technical Dark
+through the existing trusted presentation. Stored widths, navigation, declared
+parameter structure/captions/grids and App/E4 focus handlers keep their owners.
+No second UI, new schema/storage, pack geometry authority or added animation.
+Independent whole-feature and bounded correction reviews passed; all twelve
+selected package stages and 43 nested web stages passed with frozen inputs and
+checked user data untouched. Browser/fictional-fixture evidence is separate from
+native, hardware and broader WP-05 acceptance. Main-only after Alpha 21, no release
+or deployment. [Measured populations, publication and limits](status/2026-11-14-wp41-workspace-density.md).
+
 ## Rail and Rail Dark themes (2 November 2026, source)
 
 Two new built-in themes on owner request: **Rail** (light) and **Rail Dark**.

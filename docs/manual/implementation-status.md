@@ -1412,7 +1412,8 @@ only; hardware outcome and physical best-effort recovery remain unverified.
 
 | Capability | Status | Notes |
 | --- | --- | --- |
-| Themes, System selection and managed declarative packs | ✅ Implemented | Porcelain/Graphite/Cupertino/LCARS/Rail/Rail Dark plus bundled/importable packs; no arbitrary CSS or code — [Settings](user-guide/09-settings-and-appearance.md) |
+| Themes, System selection and managed declarative packs | ✅ Implemented | Porcelain/Graphite/Cupertino/LCARS/Rail/Rail Dark plus bundled/importable packs; Technical Light/Dark are main-only after Alpha 21; no arbitrary CSS or code — [Settings](user-guide/09-settings-and-appearance.md) |
+| Shared engineering density | ✅ Main-only after Alpha 21 | Both densities, common 10 rem scalar and bounded 24 rem text classes in Devices/parameters/Inspector; browser-verified, not new native acceptance — [WP-41](../status/2026-11-14-wp41-workspace-density.md) |
 | Achievements | ✅ Implemented at stated scope | Shipped catalogue and server record; does not authorize device operations — [ADR-0089](../adr/0089-achievements.md) |
 | Toast notifications | ✅ Implemented | Status, error and achievement cards share their frame, nine-second duration and motion-aware exit; errors retain alert semantics and server-text disclosure — [Settings](user-guide/09-settings-and-appearance.md#toast-notifications) |
 | Humour templates | ✅ Implemented | Thirty error wrappers and thirty late-night entries plus holiday pairs; extra copy is optional |

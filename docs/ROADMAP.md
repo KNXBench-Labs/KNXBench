@@ -1,12 +1,16 @@
 # Roadmap
 
-## Folder-caption namespace and language (14 November 2026; WP06-S1 integration candidate)
+## Folder-caption namespace and language (14 November 2026; WP06-S1 published runtime)
 
-The bounded source-only successor admits uniform project/20 or the schema-23
+The bounded runtime successor admits uniform project/20 or the schema-23
 owner's exact namespace and literal captions in an explicitly requested product
-language. Independent correction review approves `9b0d937dc`; main-first
-`789ab6143` on `041df68a0` preserves the full reviewed patch, not fresh execution.
-The complete selected integrated gate and publication remain **pending**.
+language. Independent correction review approves `9b0d937dc`; integration
+`789ab6143` on `041df68a0` is carried by published runtime `8de9487de`.
+The parent verified independent Standards/Spec APPROVE, complete selected gate
+17/17, frozen inputs/fingerprint, checked user data untouched and exact
+local/tracking/live readback. Separate corpus regression is 97/97, not full
+manufacturer/reference compatibility. This result-only docs successor still awaits
+its own independent review, complete planner-selected gate and publication.
 [Source/evidence epochs and amendments](status/2026-11-14-wp06-folder-caption-language.md)
 keep no-language responses unchanged and resource refusal distinct from a literal
 fallback: translation-pass resource refusal withholds the whole optional overlay.

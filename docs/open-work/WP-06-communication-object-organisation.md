@@ -1,6 +1,6 @@
 # WP-06 — Communication-object organisation: remaining slices
 
-**Status:** Saved schema-20 text display delivered; bounded literal installed-product declaration fallback and captured saved-instance priority foundation software-accepted on main. WP06-S1 same-schema namespace/explicit-language caption successor is a reviewed main-first integration candidate, with integrated gate/publication pending; broader slices remain evidence-gated. Listed in [OPEN_WORK](../OPEN_WORK.md); per-ID status of record is the [ledger](../status/LEDGER.md).
+**Status:** Saved schema-20 text display delivered; bounded literal installed-product declaration fallback and captured saved-instance priority foundation software-accepted on main. WP06-S1 same-schema namespace/explicit-language caption runtime is independently reviewed, software-accepted and published on main `8de9487de`; its result-only documentation successor awaits independent review, complete planner-selected gate and publication. Broader slices remain evidence-gated. Listed in [OPEN_WORK](../OPEN_WORK.md); per-ID status of record is the [ledger](../status/LEDGER.md).
 
 **Evidence route (8 November 2026):** clean-room observation is admitted by the owner ([OWN-01](OWN-01-owner-decisions.md#decisions-recorded--8-november-2026), [rules](../RESEARCH.md#evidence-routes)); no observation has been made for this package yet.
 
@@ -34,12 +34,16 @@ requirements below or any hardware/native/release/deployment acceptance.
 ## Additional bounded increment — same-schema and explicit-language captions
 
 The [WP06-S1 result](../status/2026-11-14-wp06-folder-caption-language.md)
-records corrected source `9b0d937dc` and main-first candidate `789ab6143` on
-`041df68a0`. Independent correction review APPROVE closes F1/F2/F3/F5;
-retained focused GREEN is captions 29, shared language rule 7, HTTP 12 and
-server unit 5 (filtered/overlapping, not additive). The complete integrated
-selected gate and publication are **pending**; this is not yet a delivered or
-released successor.
+records corrected source `9b0d937dc`, main-first integration `789ab6143` and
+published runtime `8de9487de` on `041df68a0`. Independent correction review APPROVE
+closes F1/F2/F3/F5; retained focused GREEN is captions 29, shared language rule 7,
+HTTP 12 and server unit 5 (filtered/overlapping, not additive). The parent verified
+Standards/Spec APPROVE, complete selected gate 17/17, nested web 34/34 and exact
+local/tracking/live readback. Fresh Rust is 6,187 passed / 181 ignored (binding 100
+overlaps), separate namespace corpus regression 97/97 and tool tests 547 passed /
+16 skipped. Inputs/fingerprint were frozen and user data checked untouched. This
+result-only documentation successor still awaits its independent review, complete
+planner-selected gate and publication; the runtime is published, not released.
 
 Uniform project/20 or the schema-23 owner's exact project/23 namespace is
 admitted; mixed/foreign namespaces and schema 21 remain refused. Explicit
@@ -53,8 +57,8 @@ and stored bytes remain unchanged; no new schema, mapping or writes.
 The record separates unit-only A7 disagreement from HTTP coverage and the
 mixed-namespace fixture's installer bypass from actual uniform project/23
 installation. Templates, empty/nested/module-folder semantics and recomputed
-placement remain open. This source-only contract supplies no new ETS observation
-or compatibility claim and no multi-program importer repair.
+placement remain open. This bounded slice supplies no new ETS observation,
+full manufacturer/reference compatibility or multi-program importer repair.
 
 ## Task
 
@@ -81,8 +85,9 @@ priority losslessly.
 ## Open
 
 1. Broader product-folder captions: the bounded literal installed-product subset
-   is software-accepted on main; WP06-S1 same-schema/explicit-language support is
-   a reviewed integration candidate only (above). Templates, rename and broader
+   is software-accepted on main; WP06-S1 same-schema/explicit-language runtime is
+   also software-accepted and published as `8de9487de` (above), not whole-WP
+   acceptance. Templates, rename and broader
    source-schema mapping still need evidence, not guessed manufacturer behavior.
 2. Folders for module objects (depends on
    [WP-07](WP-07-module-instance-authority.md)).

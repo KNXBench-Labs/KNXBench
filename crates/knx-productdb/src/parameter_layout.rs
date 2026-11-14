@@ -84,8 +84,16 @@ pub struct ParameterLayout {
     declarations: HashMap<(String, i64), SeparatorDeclaration>,
     buttons: HashMap<i64, ButtonLiteral>,
     button_binding: ButtonBinding,
+    axis_program: String,
+    literal_grid_axes: std::collections::HashSet<String>,
 }
 impl ParameterLayout {
+    pub(crate) fn literal_grid_axes(
+        &self,
+        program: &str,
+    ) -> Option<&std::collections::HashSet<String>> {
+        (self.axis_program == program).then_some(&self.literal_grid_axes)
+    }
     /// `button-literal-passive-v1`: the admitted literal of the program-owned
     /// `Button` at `node`; module definitions never have one.
     pub fn button(&self, definition: &str, node: i64) -> Option<&ButtonLiteral> {
@@ -169,6 +177,7 @@ pub fn load(conn: &Connection, program: &str) -> Result<ParameterLayout, Product
     }
     let mut result = ParameterLayout {
         button_binding: ButtonBinding::Bound,
+        axis_program: program.to_owned(),
         ..ParameterLayout::default()
     };
     for (scope, nodes) in trees {
@@ -346,6 +355,16 @@ pub fn load(conn: &Connection, program: &str) -> Result<ParameterLayout, Product
             );
         }
         if scope.is_empty() {
+            if let Some(source_grids) = &grids {
+                let bound = grid::axis_caption_ids(source_grids, &nodes);
+                result.literal_grid_axes = scope_grids
+                    .values()
+                    .filter(|grid| grid.status == GridStatus::Grid)
+                    .flat_map(|grid| grid.rows.iter().chain(&grid.columns))
+                    .filter(|axis| bound.contains(&axis.id))
+                    .map(|axis| axis.id.clone())
+                    .collect();
+            }
             // button-literal-passive-v1: program-owned Buttons only.
             let (binding, buttons) = button::bind(
                 source.as_deref(),

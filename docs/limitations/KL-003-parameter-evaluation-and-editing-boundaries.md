@@ -28,6 +28,15 @@ existing ledger status is unchanged. No native or hardware acceptance follows.
 
 ## Current caption and unit boundary (20 October 2026)
 
+Source/focused successor, 14 November 2026: source-bound literal program-owned
+axis Text translations use the existing product-language/query/grid projection.
+Fictional query/actual HTTP and intercepted-browser regressions have executed;
+independent Standards and Spec source reviews approve with no findings. Missing
+translations retain the axis's own source caption; text references, module/Repeat
+and templates remain excluded. This does not establish package-gate, release,
+publication, native-app or complete WP-05 acceptance.
+[Bounded contract and actual focused results](../contracts/alpha16-parameter-layout.md#literal-program-owned-axis-translations).
+
 The older blanket exclusion of parameter-driven captions below is superseded
 for supported positional `ParameterBlock` and active `ParameterSeparator`
 labels, including placed grid separator labels. The server reuses the device

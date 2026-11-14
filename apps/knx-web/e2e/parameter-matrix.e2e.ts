@@ -47,20 +47,27 @@ const passiveLabels: ParameterPassiveLabel[] = [
   passive("B-HTML", "<b>Fictional</b> & note", { key: "only", label: null }, 1, 1),
 ];
 
-async function intercept(page: Page, language: "en" | "de") {
+async function intercept(page: Page, language: "en" | "de", translatedAxes = false) {
   const state = { unexpected: [] as string[], posts: [] as { etsId: string; raw: string }[], envelopes: [] as Record<string, unknown>[],
-    projectOpen: false, aLeft: "0", bLeft: "1", revision: 1 };
+    projectOpen: false, aLeft: "0", bLeft: "1", revision: 1,
+    history: [] as { aLeft: string; bLeft: string }[] };
   // The authoritative snapshot a bound write names; a write moves it on.
-  const current = (): ProjectTree => ({ ...tree, snapshot_revision: state.revision, can_undo: state.revision > 1, is_modified: state.revision > 1 });
+  const current = (): ProjectTree => ({ ...tree, snapshot_revision: state.revision, can_undo: state.history.length > 0, is_modified: state.history.length > 0 });
+  // Consumer fixture for the literal-axis HTTP contract, not a client translation resolver.
+  const projectedPairs: ParameterGroupLayout = translatedAxes && language === "de" ? {
+    ...pairs,
+    rows: pairs.rows.map((row, index) => index === 0 ? { ...row, text: "Paar A" } : row),
+    columns: pairs.columns.map((column, index) => index === 1 ? { ...column, text: "Linke Seite" } : column),
+  } : pairs;
   const panel = (): ParameterPanel => ({ programId: "A-FICTIONAL", sourceLanguage: "en", tree: null, stale: [], diagnostics: [],
-    sections: [{ scope: null, groupLayouts: [pairs, legacy, only], passiveLabels, fields: [
+    sections: [{ scope: null, groupLayouts: [projectedPairs, legacy, only], passiveLabels, fields: [
       choice("A-left", state.aLeft, 1, 2), choice("A-right", "0", 1, 3),
       { ...base("B-left", "pairs", "Fictional pairs"), value: state.bLeft, cell: { row: 2, column: 2 } },
       { ...base("B-right", "pairs", "Fictional pairs"), cell: { row: 2, column: 3 } },
       { ...base("Loose", "pairs", "Fictional pairs"), kind: "Text", value: "Fictional note" },
       base("Delay", "timing", "Fictional timing"),
       base("Variant", "legacy", "Fictional carousel"),
-    ] }] });
+    ].filter(field => !translatedAxes || state.aLeft === "0" || field.etsId !== "B-left") }] });
   await page.route("**/api/**", (route) => {
     const url = new URL(route.request().url()); const path = url.pathname; const method = route.request().method();
     let body: unknown; let status = 200;
@@ -88,11 +95,16 @@ async function intercept(page: Page, language: "en" | "de") {
       state.envelopes.push(write);
       if (write.snapshotRevision !== state.revision) { status = 409; body = { error: "stale fixture snapshot", code: "snapshotStale" }; }
       else {
+        state.history.push({ aLeft: state.aLeft, bLeft: state.bLeft });
         if (write.etsId === "A-left") state.aLeft = write.raw;
         if (write.etsId === "B-left") state.bLeft = write.raw;
         state.revision += 1;
         body = { ...panel(), tree: current() };
       }
+    } else if (path === "/api/undo" && method === "POST") {
+      const previous = state.history.pop();
+      if (!previous) { status = 400; body = { error: "no fixture history" }; }
+      else { state.aLeft = previous.aLeft; state.bLeft = previous.bLeft; state.revision += 1; body = current(); }
     } else if (path === "/api/bus/monitor/telegrams" && method === "GET") body = { sessionId: 1, serverIncarnation: "matrix-browser", contextStatus: "current",
       projectOpen: true, status: "active", nextSince: 0, droppedBefore: 0, telegrams: [] };
     else if (path === "/api/device-readiness" && method === "GET") body = { devices: [], counts: {} };
@@ -105,13 +117,18 @@ async function intercept(page: Page, language: "en" | "de") {
   return state;
 }
 
-async function openParameters(page: Page, language: "en" | "de") {
+async function openParameters(page: Page, language: "en" | "de", existing = false) {
   const m = language === "en" ? en : de;
   await page.goto("/");
-  await page.getByRole("button", { name: m["toolbar.newProject"], exact: true }).first().click();
-  await page.getByRole("dialog", { name: m["newProject.title"], exact: true }).getByRole("button", { name: m["newProject.create"], exact: true }).click();
-  await page.getByRole("dialog", { name: m["projectWizard.done.title"], exact: true }).getByRole("button", { name: m["projectWizard.done.close"], exact: true }).click();
-  await page.keyboard.press("Control+Shift+P");
+  if (!existing) {
+    await page.getByRole("button", { name: m["toolbar.newProject"], exact: true }).first().click();
+    await page.getByRole("dialog", { name: m["newProject.title"], exact: true }).getByRole("button", { name: m["newProject.create"], exact: true }).click();
+    await page.getByRole("dialog", { name: m["projectWizard.done.title"], exact: true }).getByRole("button", { name: m["projectWizard.done.close"], exact: true }).click();
+  }
+  if (existing) {
+    // A reload skips the awaited project dialogs: use the mounted action, not an early hotkey.
+    await page.getByRole("button", { name: m["toolbar.commands"], exact: true }).click();
+  } else await page.keyboard.press("Control+Shift+P");
   await page.getByRole("combobox").fill(m["workbench.devices"]);
   await page.getByRole("combobox").press("Enter");
   await page.locator(".devices-table tbody td:nth-child(3) button").filter({ hasText: /^Fictional keypad$/ }).click();
@@ -273,3 +290,57 @@ test("a typed value beside a passive label is written on leaving and its editor 
   expect(state.posts).toHaveLength(1);
   expect(state.unexpected).toEqual([]);
 });
+
+for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
+  test(`${language} literal translated axes survive edit cancel undo reload at ${width}px`, async ({ page }: { page: Page }) => {
+    const m = language === "de" ? de : en;
+    await page.setViewportSize({ width, height: 1000 });
+    const state = await intercept(page, language, true);
+    await openParameters(page, language);
+    const workspace = page.locator(".parameter-workspace");
+    const area = () => workspace.locator(".parameter-workspace-nav button").filter({ hasText: "Fictional pairs" });
+    const matrix = workspace.locator('.parameter-workspace-rows[data-layout="matrix"]');
+    const assertHeaders = async () => {
+      await expect(matrix.locator('[data-caption="row"]')).toHaveText([language === "de" ? "Paar A" : "Pair A", "Pair B"]);
+      await expect(matrix.locator('[data-caption="column"]')).toHaveText([language === "de" ? "Linke Seite" : "Left side", "Right side"]);
+    };
+    await area().click();
+    await assertHeaders();
+    const input = matrix.locator('[data-parameter-row="B-left"] input');
+    await input.evaluate((node: Element) => node.setAttribute("data-axis-editor", "kept"));
+    await input.fill("42");
+    expect(state.posts).toEqual([]);
+    // Ordinary rows have no Escape-cancel: restore the accepted draft before blur.
+    await input.fill("1");
+    await input.blur();
+    expect(state.posts).toEqual([]);
+    await assertHeaders();
+    const search = workspace.locator('input[type="search"]');
+    await search.fill("B-left");
+    await expect(matrix).toHaveCount(0);
+    await expect(workspace.locator('[data-parameter-row="B-left"]')).toBeVisible();
+    await search.fill("");
+    await expect(input).toHaveAttribute("data-axis-editor", "kept");
+    await assertHeaders();
+    // The fictional activation changes child presence, never axis coordinates or text.
+    const selector = matrix.locator('[data-parameter-row="A-left"] select');
+    await selector.selectOption("1");
+    await expect.poll(() => state.posts).toEqual([{ etsId: "A-left", raw: "1" }]);
+    await expect(workspace.locator('[data-parameter-row="B-left"]')).toHaveCount(0);
+    await assertHeaders();
+    await page.getByRole("button", { name: m["toolbar.undo"], exact: true }).click();
+    await expect(selector).toHaveValue("0");
+    await expect(matrix.locator('[data-parameter-row="B-left"] input')).toHaveValue("1");
+    await assertHeaders();
+    // A new app mount reads the retained fixture server state, rather than a new project.
+    await openParameters(page, language, true);
+    await area().click();
+    await assertHeaders();
+    await expect(matrix.locator('[data-parameter-row="A-left"] select')).toHaveValue("0");
+    expect(state.posts).toHaveLength(1);
+    const bounds = await matrix.evaluate((node: Element) => ({ right: node.getBoundingClientRect().right, width: innerWidth }));
+    expect(bounds.right).toBeLessThanOrEqual(bounds.width + 1);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1);
+    expect(state.unexpected).toEqual([]);
+  });
+}

@@ -1481,9 +1481,14 @@ is plain text, cannot be clicked or focused, and its action is not supported.
 The note above such a grid says the label is shown but its action is not
 supported, instead of listing it as not placed. If the labels cannot be bound to
 the stored product source, none of them is shown and the **Diagnostics** tab
-says why. Row/column captions retain their declared text; the
-block/separator language overlay above does not add row/column text-parameter
-resolution.
+says why. The literal-axis implementation also selects literal program-owned
+row/column captions in the requested product
+language. A missing translation keeps that heading's own source text; an explicit
+empty translation leaves it empty. Template translations fall back rather than
+binding a parameter. Module/Repeat and row/column text-parameter resolution are
+not added. Fictional query/HTTP and intercepted-browser regressions verify this
+bounded behavior, not ETS/native-app compatibility or a release.
+[Source scope and focused verification](../../contracts/alpha16-parameter-layout.md#literal-program-owned-axis-translations).
 See the [workspace contract](../../contracts/parameter-workspace.md).
 
 *(Since Alpha 14:)* rows the product data declares as indented (for example a

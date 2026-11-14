@@ -156,6 +156,8 @@ cards. Explorer trees, forms and manufacturer-declared parameter grids
   is 12 px and comfortable is 14 px; theme packs can override the shorthand.
   More-specific surface rules retain their existing spacing, including project
   diff (0.1 rem block), name recipe (6 px block) and flow inspector cells.
+  Devices cells use 10 px inline padding since WP-41 (header 4 px, body the
+  density row padding, block).
   These actual insets contribute to the measured floors. Sortable
   header buttons and inline device/flow links avoid duplicate horizontal padding.
   Grouped object controls retain their nested tree indentation.
@@ -163,8 +165,9 @@ cards. Explorer trees, forms and manufacturer-declared parameter grids
   EN/DE headings, including Location/Ort, Topology/Topologie and Prog.; full
   sort names remain accessible and appear in title tooltips, including
   separator context.
-- Declared default budgets are devices 1180 px (the sum of the thirteen declared
-  column defaults; 1100 px before WP-20 added the 80 px System default),
+- Declared default budgets are devices 1471 px (the sum of the thirteen declared
+  column defaults revised by WP-41; 1180 px before WP-41 and 1100 px before
+  WP-20 added the 80 px System default),
   communication objects 800/804 px and monitor 1024 px. Each default baseline
   is raised to its measured floor when necessary, then compressed
   proportionally toward that floor to fit
@@ -214,12 +217,20 @@ application root scale. It does not shrink the production viewport or read its c
 
 | Window | Surface | EN intrinsic / pane | DE intrinsic / pane |
 | --- | --- | --- | --- |
-| 1440 px | Devices | 1005 / 780 px: local scroll | 1042 / 780 px: local scroll |
-| 1440 px | Grouped objects | 599 / 738 px: fits | 683 / 738 px: fits |
-| 1440 px | Flat objects after grouped view | 690 / 738 px: fits | 800 / 738 px: local scroll |
-| 1920 px | Devices | 1005 / 1260 px: fits | 1042 / 1260 px: fits |
-| 1920 px | Grouped objects | 599 / 1218 px: fits | 683 / 1218 px: fits |
-| 1920 px | Flat objects after grouped view | 690 / 1218 px: fits | 800 / 1218 px: fits |
+| 1440 px | Devices | 953 / 804 px: local scroll | 990 / 804 px: local scroll |
+| 1440 px | Grouped objects (pre-WP-41) | 599 / 738 px: fits | 683 / 738 px: fits |
+| 1440 px | Flat objects after grouped view (pre-WP-41) | 690 / 738 px: fits | 800 / 738 px: local scroll |
+| 1920 px | Devices | 953 / 1284 px: fits | 990 / 1284 px: fits |
+| 1920 px | Grouped objects | 599 / 1258 px: fits | 683 / 1258 px: fits |
+| 1920 px | Flat objects after grouped view | 690 / 1258 px: fits | 800 / 1258 px: fits |
+
+WP-41 re-measured the Devices and 1920 px rows in the maintained browser gate
+(`fit-budget` attachments); its smaller workbench inset widened the panes
+(Devices 780 → 804 px at 1440 px). Devices floors were 1005 / 1042 px before
+WP-41's 10 px cell insets. The 1440 px object rows are earlier measurements;
+WP-41 does not change object-table insets, and the 1440 px object assertions
+(including the reviewed German flat total of 800 px) passed unchanged in the
+WP-41 gate.
 
 Intrinsic and production token floors are different measurements. Native
 min-content includes a 44 px checkbox footprint while the declared text-free
@@ -233,8 +244,8 @@ columns lost 4 px; the totals were 1000 / 1037 px before WP-41 and 919 / 955 px
 before WP-20 added the System column. German flat objects 800 px. Device text
 columns alone require 913 / 950 px (961 / 998 before WP-41; 880 / 917 before
 WP-20; DE 999 px while the fixtures still omitted `system`), independently
-exceeding the Devices pane (804 px since WP-41's 12 px workbench inset, 780 px
-before). WP-41 also revised the Devices initial widths (address 82 px instead of
+exceeding the Devices pane (804 px measured since WP-41's 12 px workbench
+inset, 780 px before). WP-41 also revised the Devices initial widths (address 82 px instead of
 100 px); stored preferences remain unchanged. These fixture bounds reject inflated
 floors; they are not a proof of globally optimal layout or arbitrary imported-project fit.
 

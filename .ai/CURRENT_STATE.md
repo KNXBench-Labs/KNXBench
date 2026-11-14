@@ -1,5 +1,8 @@
 # Restart snapshot
 Release freeze: released by claude-release-alpha21 (2026-11-13): `v0.1.0-alpha.21` published from `616d26d2e`; `main` is open again.
+## WP05-B reporting-policy reference (STANDING; owner WebUI WP05-B docs; observed 2026-11-14 16:32 CET)
+- Owner-approved docs-only clarification: reached program-owned Button without Cell in a valid Table/Grid has no passive label/additional grid-local unshownContent; existing UnrecognizedNode remains. Contract `docs/contracts/alpha16-parameter-layout.md`, WP-05 dossier; KNXBench policy, not observed ETS behaviour. Private delivery receipts: `<profile>/evidence/2026-11-14-wp05-b-docs/`.
+- Broader WP05 open; WP09/A remains evidence-blocked. No product/test/fixture changes, VM/bus/download or retirement action. Own branch `docs/wp05-b-cellless-20261114` / `<sources>/KNXBench-wp05-b-docs-20261114` retained; root stale/dirty and foreign tracks untouched. NEXT only separately authorised work.
 ## CLI TCP three-consumer acceptance (STANDING; observed 2026-11-13 21:50)
 - Source `9209f0fe1` on base `35605e939`: service-control read/write, ordinary download, restore; independent Standards/Spec APPROVE, selected gate13/13, Rust710/0/22ignored, corpus17/17, inputs frozen/user data checked untouched. Record `docs/status/2026-11-13-cli-tcp-write-consumers.md`; retained evidence `<profile>/evidence/2026-11-13-next-three-tcp/`. No hardware/release/deploy; root-local track owns publication/retention/cleanup, wider WP-29 open.
 ## WP-37 UI links/flags + parameter-section marks (STANDING; observed 2026-11-12)

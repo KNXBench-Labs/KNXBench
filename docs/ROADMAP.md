@@ -1,5 +1,16 @@
 # Roadmap
 
+## Literal axis translations (14 November 2026; WP-05)
+
+The bounded literal program-owned row/column caption slice is implemented and
+focused-verified with fictional ProductDB/actual HTTP tests and both owning matrix
+browser configurations. Independent Standards and Spec reviews approve the source
+with no findings. These results are not package-gate, release or publication
+acceptance. The
+[contract](contracts/alpha16-parameter-layout.md#literal-program-owned-axis-translations)
+keeps module/Repeat, text references/templates, collapse/inline/nested layout,
+Button actions and Table-versus-Grid visual differences open. Whole WP-05 remains open.
+
 ## CLI TCP service-control, download and restore source successor (13 November 2026)
 
 WP-29's bounded, software-accepted successor adds explicit TCP to service-control

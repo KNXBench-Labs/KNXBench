@@ -1,4 +1,5 @@
 //! Public synthetic regressions for declared parameter grids; fictional data only.
+mod translated_axes;
 use knx_productdb::parameter_layout::{
     load, BlockGrid, Cell, GridIssue, GridIssueKind, GridStatus, ParameterLayout,
 };

@@ -103,6 +103,41 @@ pub(super) struct SourceGrids {
     /// `(block @Id, ParameterRefRef @RefId)` → the one valid `@IndentLevel`
     /// every occurrence in that block declares (census P4).
     pub indents: HashMap<(String, String), u8>,
+    /// Program-tree structure, counted exactly like the stored dynamic parser.
+    program_nodes: Vec<(String, Option<i64>, i64, Option<String>)>,
+    program_roots: usize,
+    /// Only literal axes outside modules and Repeat, with document-unique identities.
+    axis_candidates: HashSet<String>,
+    identifiers: HashMap<String, usize>,
+}
+
+/// Bind literal axis identities only after complete source/stored-tree correspondence.
+/// Axis IDs/text are not typed dynamic columns; never reconstruct them from `extra`.
+pub(super) fn axis_caption_ids(
+    source: &SourceGrids,
+    stored: &std::collections::BTreeMap<i64, super::Node>,
+) -> HashSet<String> {
+    if source.program_roots != 1 || source.program_nodes.len() != stored.len() {
+        return HashSet::new();
+    }
+    for ((id, node), (index, (kind, parent, position, block_id))) in
+        stored.iter().zip(source.program_nodes.iter().enumerate())
+    {
+        if *id != index as i64
+            || node.kind != *kind
+            || node.parent != *parent
+            || node.position != *position
+            || (kind == "ParameterBlock" && node.id != *block_id)
+        {
+            return HashSet::new();
+        }
+    }
+    source
+        .axis_candidates
+        .iter()
+        .filter(|id| source.identifiers.get(*id) == Some(&1))
+        .cloned()
+        .collect()
 }
 
 struct Frame {
@@ -131,10 +166,15 @@ enum Role {
 struct Entry {
     kind: String,
     active: bool,
+    /// Entire ancestry resolves to the root namespace; axis authority only.
+    axis_namespace: bool,
     dynamic: bool,
     role: Role,
     /// Nearest enclosing grid frame, inherited by descendants.
     owner: Option<usize>,
+    program_node: Option<i64>,
+    children: i64,
+    axis_candidate: Option<String>,
 }
 
 pub(super) fn read_grids(bytes: &[u8], program: &str) -> Option<SourceGrids> {
@@ -148,11 +188,13 @@ fn read_grids_within(bytes: &[u8], program: &str, budget: usize) -> Option<Sourc
     let mut block_ids = HashSet::new();
     let mut namespace = None;
     let mut owners = 0;
+    let mut bindings = SourceGrids::default();
     for _ in 0..budget {
         let (ns, event) = reader.read_resolved_event().ok()?;
         let empty = matches!(&event, Event::Empty(_));
         match event {
             Event::Start(e) | Event::Empty(e) => {
+                let resolved_known = !matches!(&ns, ResolveResult::Unknown(_));
                 let resolved = match ns {
                     ResolveResult::Bound(ns) => Some(ns.as_ref().to_owned()),
                     _ => None,
@@ -167,11 +209,16 @@ fn read_grids_within(bytes: &[u8], program: &str, budget: usize) -> Option<Sourc
                 let same = resolved == namespace;
                 let path: Vec<&str> = stack.iter().map(|entry| entry.kind.as_str()).collect();
                 let parent = stack.last();
-                // Attributes matter only for the owner, blocks, axes and
-                // anything below a block; skipping the rest (mostly `Static`)
-                // is the measured hot path of this read.
+                // Keep the existing root/source-identity namespace policy, but
+                // never restart new translation authority below a foreign or
+                // unresolved ancestor. Baseline grid rendering is unchanged.
+                let axis_namespace =
+                    resolved_known && same && parent.is_none_or(|p| p.axis_namespace);
+                // IDs of the selected program establish unique translation ownership;
+                // attributes outside it matter only to the existing layout read.
                 let relevant = kind == "ApplicationProgram"
                     || kind == "ParameterBlock"
+                    || parent.is_some_and(|p| p.active)
                     || parent.is_some_and(|p| p.owner.is_some() || p.role != Role::Other);
                 let attr = if relevant {
                     crate::xml::attrs(&e, "parameter grid").ok()?
@@ -186,6 +233,31 @@ fn read_grids_within(bytes: &[u8], program: &str, budget: usize) -> Option<Sourc
                     owners += 1;
                 }
                 let active = same && (owner_here || parent.is_some_and(|p| p.active));
+                if active {
+                    if let Some(id) = attr.evidence_value("Id") {
+                        *bindings.identifiers.entry(id.to_owned()).or_default() += 1;
+                    }
+                }
+                // Count every namespace's child, as dynamic::parse does. Only the
+                // canonical program root can bind; module trees never enter this map.
+                let mut program_node = None;
+                if active && kind == "Dynamic" && !path.contains(&"ModuleDef") {
+                    bindings.program_roots += 1;
+                    if path.last() == Some(&"ApplicationProgram") && bindings.program_roots == 1 {
+                        program_node = Some(0);
+                        bindings.program_nodes.push((kind.clone(), None, 0, None));
+                    }
+                } else if let Some(parent_node) = parent.and_then(|p| p.program_node) {
+                    program_node = Some(bindings.program_nodes.len() as i64);
+                    bindings.program_nodes.push((
+                        kind.clone(),
+                        Some(parent_node),
+                        parent.expect("parent node").children,
+                        (same && kind == "ParameterBlock")
+                            .then(|| attr.evidence_value("Id").map(str::to_owned))
+                            .flatten(),
+                    ));
+                }
                 let parent_dynamic = parent.is_some_and(|p| p.dynamic);
                 let dynamic = active
                     && (is_dynamic_root(&kind, &path)
@@ -251,13 +323,47 @@ fn read_grids_within(bytes: &[u8], program: &str, budget: usize) -> Option<Sourc
                 } else if same && parent_dynamic {
                     place(&mut frames, inherited, &kind, &attr);
                 }
+                let mut axis_candidate = None;
+                if axis_namespace
+                    && program_node.is_some()
+                    && matches!(kind.as_str(), "Row" | "Column")
+                    && matches!(
+                        parent.map(|p| p.role),
+                        Some(Role::Rows(_) | Role::Columns(_))
+                    )
+                    && !path.contains(&"Repeat")
+                    && attr.evidence_value("TextParameterRefId").is_none()
+                    && attr.evidence_value("Text").is_some_and(literal_caption)
+                    && attr.names().all(|name| {
+                        name == "xmlns"
+                            || name.starts_with("xmlns:")
+                            || matches!(name, "Id" | "Text" | "Width" | "CollapseIfEmpty")
+                    })
+                {
+                    if let Some(id) = attr.evidence_value("Id") {
+                        bindings.axis_candidates.insert(id.to_owned());
+                        axis_candidate = Some(id.to_owned());
+                    }
+                }
+                if let Some(id) = parent.and_then(|p| p.axis_candidate.as_ref()) {
+                    bindings.axis_candidates.remove(id);
+                }
+                if program_node.is_some() {
+                    if let Some(parent) = stack.last_mut() {
+                        parent.children += 1;
+                    }
+                }
                 if !empty {
                     stack.push(Entry {
                         kind,
                         active,
+                        axis_namespace,
                         dynamic,
                         role,
                         owner,
+                        program_node,
+                        children: 0,
+                        axis_candidate,
                     });
                     if stack.len() > MAX_DEPTH {
                         return None;
@@ -268,13 +374,34 @@ fn read_grids_within(bytes: &[u8], program: &str, budget: usize) -> Option<Sourc
                 stack.pop()?;
             }
             Event::DocType(_) => return None,
+            Event::Text(text) if !text.as_ref().as_bytes().iter().all(u8::is_ascii_whitespace) => {
+                if let Some(id) = stack.last().and_then(|p| p.axis_candidate.as_ref()) {
+                    bindings.axis_candidates.remove(id);
+                }
+            }
+            Event::CData(_) | Event::GeneralRef(_) => {
+                if let Some(id) = stack.last().and_then(|p| p.axis_candidate.as_ref()) {
+                    bindings.axis_candidates.remove(id);
+                }
+            }
             Event::Eof => {
-                return (stack.is_empty() && owners == 1).then(|| finish(frames));
+                return (stack.is_empty() && owners == 1).then(|| {
+                    let mut result = finish(frames);
+                    result.program_nodes = bindings.program_nodes;
+                    result.program_roots = bindings.program_roots;
+                    result.axis_candidates = bindings.axis_candidates;
+                    result.identifiers = bindings.identifiers;
+                    result
+                });
             }
             _ => {}
         }
     }
     None
+}
+
+pub(crate) fn literal_caption(text: &str) -> bool {
+    !text.contains("{{") && !text.contains("}}")
 }
 
 /// Whether this reader interprets `kind` below `parent` (the axes of a block grid).

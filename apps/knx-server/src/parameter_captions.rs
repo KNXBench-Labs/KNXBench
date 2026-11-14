@@ -1,4 +1,4 @@
-//! Fills parameter block and separator captions through the existing device text resolver.
+//! Projects parameter captions and literal grid axes with one device text budget.
 use std::collections::HashMap;
 
 use knx_productdb::device_evaluation::DeviceEvaluation;
@@ -12,9 +12,48 @@ pub(crate) type CaptionKey = (Option<Vec<i64>>, i64);
 pub(crate) struct CaptionFills {
     fills: HashMap<CaptionKey, TextFill>,
     budget: TextProjectionBudget,
+    axes: knx_productdb::query::GridAxisCaptions,
 }
 
 impl CaptionFills {
+    pub(crate) fn load_grid_axes(
+        &mut self,
+        products: &knx_productdb::Connection,
+        program: &str,
+        layout: &knx_productdb::parameter_layout::ParameterLayout,
+        language: Option<&str>,
+    ) -> Result<(), String> {
+        self.axes = knx_productdb::query::parameter_grid_axis_captions(
+            products,
+            program,
+            layout,
+            language,
+            &mut self.budget,
+        )
+        .map_err(|e| e.to_string())?;
+        Ok(())
+    }
+
+    pub(crate) fn copy_axis_text(
+        &mut self,
+        definition: &str,
+        axis: &knx_productdb::parameter_layout::GridAxis,
+    ) -> Result<Option<String>, String> {
+        let text = definition
+            .is_empty()
+            .then(|| self.axes.texts.get(&axis.id))
+            .flatten()
+            .map(String::as_str)
+            .or(axis.text.as_deref());
+        text.map(|text| self.budget.copy_text(text))
+            .transpose()
+            .map_err(|e| e.to_string())
+    }
+
+    pub(crate) fn axis_unsupported(&self, definition: &str, id: &str) -> bool {
+        definition.is_empty() && self.axes.unsupported.contains(id)
+    }
+
     pub(crate) fn copy_text(&mut self, text: Option<&str>) -> Result<Option<String>, String> {
         text.map(|text| self.budget.copy_text(text))
             .transpose()
@@ -165,7 +204,11 @@ pub(crate) fn apply(
                 },
             });
     }
-    Ok(CaptionFills { fills, budget })
+    Ok(CaptionFills {
+        fills,
+        budget,
+        axes: Default::default(),
+    })
 }
 
 /// The inside of the first placeholder in `text`, or everything after an unclosed opener.

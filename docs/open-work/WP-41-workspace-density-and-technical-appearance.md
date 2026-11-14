@@ -1,14 +1,25 @@
 # WP-41 — Consistent workspace density and an optional technical appearance
 
 Owner request: 13 November 2026; target agreed after design questions Q1–Q10.
-**Recorded only; not claimed. No design, prototype or implementation Go.**
-The owner explicitly confirmed the target but requested saving a work package,
-not starting it. Listed in [OPEN_WORK](../OPEN_WORK.md).
+**Design revision 2 accepted and separate implementation Go granted on
+14 November 2026.** Phases B–D are now authorised: shared density/layout,
+technical light/dark presentation, independent review, relevant gates and source
+publication. No release or deployment authority. Listed in [OPEN_WORK](../OPEN_WORK.md).
 
-**Priority:** Unscheduled; no implementation priority or release target assigned.
-**Status:** Planned only. The next possible phase is a separately authorised
-static design comparison; product implementation requires later design acceptance
-and its own explicit Go. This entry is not automatic goal-execution authority.
+**Priority:** Owner-authorised bounded implementation; no release target assigned.
+**Status:** Claimed by WebUI WP41 on `work/wp41-density-technical-20261114`,
+worktree `<sources>/KNXBench-wp41-implementation-20261114`, starting on ed6524b96.
+Static approval evidence remains private; no product acceptance is claimed yet.
+
+### Accepted revision 2 geometry
+
+Use a shared scalar value slot of **10 rem (160 CSS-px at the reviewed 100% UI
+scale)** for numbers and ordinary choices, not content-based widths. Keep the
+same width across densities and appearances; prefix/unit belongs to that slot.
+Use one larger text class, up to **24 rem**, for names/descriptions, bounded by
+the actual pane. Preserve long text access and constrained-width fallback.
+Compact/Comfortable control targets remain distinct (reviewed 32/40 px), while
+shared alignment, hierarchy and existing theme identities remain authoritative.
 
 ## Requested outcome and owner decisions
 
@@ -69,10 +80,10 @@ No space-saving percentage, final pixel budget or finished design is claimed.
 
 | Phase | Outcome | Actual status / entry condition |
 | --- | --- | --- |
-| A — Static design comparison | Read-only current-state inspection and static before/after comparisons for device list, parameter workspace and inspector; shared representative data across variants; proposed baseline and technical light/dark composition | Not started; requires explicit design Go |
-| B — Shared density/layout | Apply the accepted spacing, field-width and visual hierarchy system across affected existing themes and both densities using common components | Not started; requires Phase A acceptance and explicit implementation Go |
-| C — Technical theme pair | Add the accepted built-in light/dark technical presentation on the same components and improved layout, preserving other theme identities | Not started; requires Phase A acceptance and explicit implementation Go; integrate with B rather than duplicating its layout |
-| D — Integrated verification | Verify the complete affected UI and relevant regressions; retain visual evidence and the scoped acceptance record | Not started; part of future authorised implementation, not performed by saving this package |
+| A — Static design comparison | Read-only current-state inspection and static before/after comparisons for device list, parameter workspace and inspector; shared representative data across variants; proposed baseline and technical light/dark composition | Accepted revision 2 on 14 November; fictional static dossier retained privately |
+| B — Shared density/layout | Apply the accepted spacing, field-width and visual hierarchy system across affected existing themes and both densities using common components | Authorised and claimed 14 November; not product-accepted |
+| C — Technical theme pair | Add the accepted built-in light/dark technical presentation on the same components and improved layout, preserving other theme identities | Authorised and claimed 14 November; integrate with B on the same components |
+| D — Integrated verification | Verify the complete affected UI and relevant regressions; retain visual evidence and the scoped acceptance record | Authorised; execute after implementation/review, no acceptance claimed yet |
 
 Phase A is a design artifact, not a claim that the proposed UI exists. Label the
 before view with the inspected source/build and the after view as a proposal;
@@ -153,9 +164,11 @@ substitute for the missing domain/presentation contract.
    owner, and preserve its frozen inputs. A disjoint worktree grants neither
    source ownership nor permission to refactor another track's contracts.
 
-This documentation records the boundary and order only. WP-41 remains planned,
-not claimed: no static designs, prototype, implementation, VM input or product
-acceptance are started or authorised by this clarification.
+The boundary clarification itself granted no execution authority. The subsequent
+14 November owner decisions accepted static design revision 2 and separately
+authorised phases B–D. Generic parameter navigation2867ee1b5/af05c8e57 is already
+published and reused; only missing semantic slices remain deferred. This does
+not grant VM/bus access, release/deployment authority or product acceptance.
 
 ### Other dependencies and exclusions
 

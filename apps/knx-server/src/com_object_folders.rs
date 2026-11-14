@@ -81,6 +81,7 @@ pub(crate) fn apply_product_captions(
             &caption.parameter_block_id,
             &caption.source_sha256,
             "ProductDeclaration",
+            translated_language(caption),
         ] {
             budget.admit_copy(text)?;
         }
@@ -104,6 +105,7 @@ pub(crate) fn apply_product_captions(
                     &caption.parameter_block_id,
                     &caption.source_sha256,
                     "ProductDeclaration",
+                    translated_language(caption),
                 ] {
                     budget.admit_copy(text)?;
                 }
@@ -129,11 +131,43 @@ pub(crate) fn apply_product_captions(
                     application_program_id: caption.application_program_id.clone(),
                     parameter_block_id: caption.parameter_block_id.clone(),
                     source_sha256: caption.source_sha256.clone(),
+                    language: caption.language.as_ref().map(caption_language),
                 });
             }
         }
     }
     Ok(())
+}
+
+/// The selected language identifier a caption copies into the DTO, else empty.
+fn translated_language(caption: &knx_productdb::com_object_folder_captions::FolderCaption) -> &str {
+    caption
+        .language
+        .as_ref()
+        .and_then(knx_productdb::com_object_folder_captions::CaptionLanguage::translated)
+        .unwrap_or_default()
+}
+
+/// Maps the reader's language provenance onto the DTO; never feeds ids or keys.
+fn caption_language(
+    language: &knx_productdb::com_object_folder_captions::CaptionLanguage,
+) -> knx_projection::ProductFolderCaptionLanguage {
+    use knx_productdb::com_object_folder_captions::{CaptionLanguage, Untranslated};
+    use knx_projection::{
+        ProductFolderCaptionLanguage as Language, ProductFolderCaptionUntranslated as Reason,
+    };
+    match language {
+        CaptionLanguage::Translated(language) => Language::Translated {
+            language: language.clone(),
+        },
+        CaptionLanguage::Untranslated(reason) => Language::Untranslated {
+            reason: match reason {
+                Untranslated::NoTranslation => Reason::NoTranslation,
+                Untranslated::UnusableTranslation => Reason::UnusableTranslation,
+                Untranslated::TranslationDisagrees => Reason::TranslationDisagrees,
+            },
+        },
+    }
 }
 
 fn caption_path(
@@ -383,6 +417,7 @@ mod tests {
                 application_program_id: "AP".into(),
                 parameter_block_id: "AP_PB-1".into(),
                 source_sha256: "a".repeat(64),
+                language: None,
             },
         )]);
         let before = serde_json::to_value(&detail).unwrap();

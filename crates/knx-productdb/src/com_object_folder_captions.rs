@@ -1,4 +1,4 @@
-//! Reads bounded literal folder declarations from the exact installed product source.
+//! Reads bounded folder declarations, optionally translated, from the installed product source.
 
 use std::collections::BTreeMap;
 
@@ -23,7 +23,19 @@ const MAX_EVENTS: usize = 1_000_000;
 const MAX_DEPTH: usize = 64;
 const MAX_IDENTITIES: usize = 8192;
 const MAX_ATTRIBUTE_BYTES: usize = 4096;
-const NS: &str = "http://knx.org/xml/project/20";
+const PROJECT_20: &str = "http://knx.org/xml/project/20";
+/// Admitted only for a schema-23 project whose product sources all use it.
+const PROJECT_23: &str = "http://knx.org/xml/project/23";
+const TRANSLATION_PATH: [&str; 8] = [
+    "KNX",
+    "ManufacturerData",
+    "Manufacturer",
+    "Languages",
+    "Language",
+    "TranslationUnit",
+    "TranslationElement",
+    "Translation",
+];
 const PROGRAM_PATH: [&str; 5] = [
     "KNX",
     "ManufacturerData",
@@ -46,6 +58,38 @@ pub struct FolderCaption {
     pub application_program_id: String,
     pub parameter_block_id: String,
     pub source_sha256: String,
+    /// `None` when the request named no language: `text` is the default declaration.
+    pub language: Option<CaptionLanguage>,
+}
+
+/// Which text an explicit-language request received; never feeds ids or keys.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum CaptionLanguage {
+    /// The stored `Language/@Identifier` whose verified translation is `text`.
+    Translated(String),
+    /// `text` is the default declaration, for this reason.
+    Untranslated(Untranslated),
+}
+
+impl CaptionLanguage {
+    /// The selected stored identifier when `text` is a translation, else `None`.
+    pub fn translated(&self) -> Option<&str> {
+        match self {
+            Self::Translated(language) => Some(language),
+            Self::Untranslated(_) => None,
+        }
+    }
+}
+
+/// Why an explicit-language request kept the default declaration text.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Untranslated {
+    /// No translation of the block matches the requested language.
+    NoTranslation,
+    /// The selected translation is blank, oversized, a template or ambiguous.
+    UnusableTranslation,
+    /// The normalized translation row disagrees with the verified source bytes.
+    TranslationDisagrees,
 }
 
 pub type FolderCaptions = BTreeMap<Vec<FolderPathNode>, FolderCaption>;
@@ -73,12 +117,24 @@ pub fn folder_captions(
     hardware2program: &str,
     project_schema: u32,
 ) -> Result<CaptionEvidence, ProductDbError> {
+    localized_folder_captions(conn, product, hardware2program, project_schema, None)
+}
+
+/// [`folder_captions`] in the request's explicit `language`, when the same verified
+/// application source translates a block; otherwise its default text, with the reason.
+pub fn localized_folder_captions(
+    conn: &Connection,
+    product: &str,
+    hardware2program: &str,
+    project_schema: u32,
+    language: Option<&str>,
+) -> Result<CaptionEvidence, ProductDbError> {
     if !matches!(project_schema, 20 | 23) {
         return Ok(CaptionEvidence::Unavailable(
             CaptionIssue::UnsupportedSchema,
         ));
     }
-    match read_owned(conn, product, hardware2program) {
+    match read_owned(conn, product, hardware2program, project_schema, language) {
         Ok(v) => Ok(v),
         Err(ProductDbError::Xml { .. }) => {
             Ok(CaptionEvidence::Unavailable(CaptionIssue::SourceIdentity))
@@ -91,6 +147,8 @@ fn read_owned(
     conn: &Connection,
     product: &str,
     hardware2program: &str,
+    project_schema: u32,
+    language: Option<&str>,
 ) -> Result<CaptionEvidence, ProductDbError> {
     type Owner = (
         String,
@@ -177,6 +235,25 @@ fn read_owned(
         Ok(bytes) => bytes,
         Err(issue) => return Ok(CaptionEvidence::Unavailable(issue)),
     };
+    // Only schema 23 consults the application root, so schema 20 keeps its load order.
+    // An unavailable application never decides the namespace: its issue surfaces below.
+    let application = (project_schema == 23)
+        .then(|| verified_source(conn, &sha))
+        .transpose()?;
+    // project/23 only for a schema-23 project whose hardware and loaded application
+    // are rooted in it; a distinct product source in another namespace is refused
+    // by its ownership link below.
+    let namespace = if project_schema == 23
+        && rooted_in(&hardware_bytes, PROJECT_23)
+        && application
+            .as_ref()
+            .and_then(|loaded| loaded.as_ref().ok())
+            .is_none_or(|bytes| rooted_in(bytes, PROJECT_23))
+    {
+        PROJECT_23
+    } else {
+        PROJECT_20
+    };
     // Product and H2P can have distinct winning members; never substitute one
     // member's otherwise valid declarations for the other's source authority.
     let product_link = if psha == hpsha {
@@ -185,6 +262,7 @@ fn read_owned(
             HardwareOwner::Product(product),
             &hardware,
             &manufacturer,
+            namespace,
         )
     } else {
         let product_bytes = match verified_source(conn, &psha)? {
@@ -196,6 +274,7 @@ fn read_owned(
             HardwareOwner::Product(product),
             &hardware,
             &manufacturer,
+            namespace,
         )
     };
     if let Err(issue) = product_link {
@@ -207,14 +286,19 @@ fn read_owned(
         &hardware,
         &program,
         &manufacturer,
+        namespace,
     ) {
         return Ok(CaptionEvidence::Unavailable(issue));
     }
-    let bytes = match verified_source(conn, &sha)? {
+    let application = match application {
+        Some(loaded) => loaded,
+        None => verified_source(conn, &sha)?,
+    };
+    let bytes = match application {
         Ok(bytes) => bytes,
         Err(issue) => return Ok(CaptionEvidence::Unavailable(issue)),
     };
-    let parsed = match read_source(&bytes, &program, &manufacturer) {
+    let parsed = match read_source(&bytes, &program, &manufacturer, namespace) {
         Ok(v) => v,
         Err(issue) => return Ok(CaptionEvidence::Unavailable(issue)),
     };
@@ -222,13 +306,56 @@ fn read_owned(
         Ok(v) => v,
         Err(issue) => return Ok(CaptionEvidence::Unavailable(issue)),
     };
+    let translations = match language {
+        Some(requested) => {
+            let shown = parsed
+                .iter()
+                .zip(&corroborated)
+                .filter(|(_, consistent)| **consistent)
+                .map(|(c, _)| c.id.as_str())
+                .collect();
+            let scope = TranslationScope {
+                program: &program,
+                manufacturer: &manufacturer,
+                namespace,
+                requested,
+            };
+            match read_translations(&bytes, &scope, &shown) {
+                Ok(found) => Some((requested, found)),
+                Err(issue) => return Ok(CaptionEvidence::Unavailable(issue)),
+            }
+        }
+        None => None,
+    };
+    // At most one row per primary key; an oversized stored text reads as NULL.
+    let mut row = match translations {
+        Some(_) => Some(conn.prepare(
+            "SELECT CASE WHEN length(CAST(text AS BLOB))<=4096 THEN text END FROM translation
+             WHERE scope='Program' AND scope_id=?1 AND language=?2 AND ref_id=?3
+               AND attribute_name='Text'",
+        )?),
+        None => None,
+    };
     let mut output = BTreeMap::new();
     let mut budget = TextProjectionBudget::default();
     for (candidate, consistent) in parsed.into_iter().zip(corroborated) {
         if !consistent {
             continue;
         }
-        for text in [&candidate.text, &program, &candidate.id, &sha] {
+        let (text, language) = match (&translations, row.as_mut()) {
+            (Some((requested, found)), Some(row)) => {
+                match localize(row, &program, &candidate.id, requested, found)? {
+                    Ok((text, language)) => (text, Some(CaptionLanguage::Translated(language))),
+                    Err(reason) => (candidate.text, Some(CaptionLanguage::Untranslated(reason))),
+                }
+            }
+            _ => (candidate.text, None),
+        };
+        let selected = language
+            .as_ref()
+            .and_then(CaptionLanguage::translated)
+            .unwrap_or_default();
+        for text in [&text, &program, &candidate.id, &sha, selected] {
             if budget.admit_copy(text).is_err() {
                 return Ok(CaptionEvidence::Unavailable(CaptionIssue::ResourceLimit));
             }
@@ -236,14 +363,142 @@ fn read_owned(
         output.insert(
             candidate.path,
             FolderCaption {
-                text: candidate.text,
+                text,
                 application_program_id: program.clone(),
                 parameter_block_id: candidate.id,
                 source_sha256: sha.clone(),
+                language,
             },
         );
     }
     Ok(CaptionEvidence::Declared(output))
+}
+
+/// Selects with the shared `best_matching_language` rule, then applies the default
+/// text's literal filters and corroborates an existing normalized row; no second pick.
+fn localize(
+    row: &mut rusqlite::Statement<'_>,
+    program: &str,
+    block: &str,
+    requested: &str,
+    found: &Translations,
+) -> Result<Result<(String, String), Untranslated>, ProductDbError> {
+    let Some(available) = found.get(block) else {
+        return Ok(Err(Untranslated::NoTranslation));
+    };
+    let languages: Vec<&str> = available.keys().map(String::as_str).collect();
+    let Some(selected) = crate::query::best_matching_language(requested, &languages) else {
+        return Ok(Err(Untranslated::NoTranslation));
+    };
+    let Some(text) = available[selected].as_deref().filter(|text| literal(text)) else {
+        return Ok(Err(Untranslated::UnusableTranslation));
+    };
+    let stored: Option<Option<String>> = row
+        .query_row(rusqlite::params![program, selected, block], |r| r.get(0))
+        .optional()?;
+    if stored.is_some_and(|stored| stored.as_deref() != Some(text)) {
+        return Ok(Err(Untranslated::TranslationDisagrees));
+    }
+    Ok(Ok((text.to_owned(), selected.to_owned())))
+}
+
+/// Block id -> language identifier -> `Text` (`None`: declared more than once).
+type Translations = BTreeMap<String, BTreeMap<String, Option<String>>>;
+
+struct TranslationScope<'a> {
+    program: &'a str,
+    manufacturer: &'a str,
+    namespace: &'a str,
+    requested: &'a str,
+}
+
+/// Second bounded walk of the already admitted application bytes. Retains only
+/// `Text` translations of shown blocks in languages the shared rule could select.
+fn read_translations(
+    bytes: &[u8],
+    scope: &TranslationScope<'_>,
+    shown: &std::collections::BTreeSet<&str>,
+) -> Result<Translations, CaptionIssue> {
+    let mut reader = NsReader::from_reader(bytes);
+    reader.config_mut().check_comments = true;
+    let mut stack = Vec::<Frame>::new();
+    let mut found = Translations::new();
+    let mut budget = TextProjectionBudget::default();
+    for _ in 0..MAX_EVENTS {
+        let (ns, event) = reader
+            .read_resolved_event()
+            .map_err(|_| CaptionIssue::UnsupportedXml)?;
+        let empty = matches!(event, Event::Empty(_));
+        match event {
+            Event::Start(e) | Event::Empty(e) => {
+                if stack.len() >= MAX_DEPTH {
+                    return Err(CaptionIssue::ResourceLimit);
+                }
+                let known =
+                    matches!(ns, ResolveResult::Bound(ref uri) if uri.as_ref() == scope.namespace);
+                stack.push(read_frame(&e, known)?);
+                if let Some((block, language, text)) = translation(&stack, scope, shown) {
+                    for s in [block, language, text.unwrap_or_default()] {
+                        budget
+                            .admit_copy(s)
+                            .map_err(|_| CaptionIssue::ResourceLimit)?;
+                    }
+                    let entry = found.entry(block.to_owned()).or_default();
+                    let text = text.unwrap_or_default().to_owned();
+                    entry
+                        .entry(language.to_owned())
+                        .and_modify(|seen| *seen = None)
+                        .or_insert(Some(text));
+                }
+                if empty {
+                    stack.pop();
+                }
+            }
+            Event::End(_) => {
+                if stack.pop().is_none() {
+                    return Err(CaptionIssue::UnsupportedXml);
+                }
+            }
+            Event::Eof => return Ok(found),
+            _ => {}
+        }
+    }
+    Err(CaptionIssue::ResourceLimit)
+}
+
+/// `(block, language, Text)` for an unqualified owned `Text` translation, else `None`.
+fn translation<'a>(
+    stack: &'a [Frame],
+    scope: &TranslationScope<'_>,
+    shown: &std::collections::BTreeSet<&str>,
+) -> Option<(&'a str, &'a str, Option<&'a str>)> {
+    if !path(stack, &TRANSLATION_PATH) || stack.iter().any(|f| qualified(&f.attrs)) {
+        return None;
+    }
+    let attr = |index: usize, name: &str| stack[index].attrs.get(name).map(String::as_str);
+    let block = attr(6, "RefId")?;
+    let language = attr(4, "Identifier")?;
+    (attr(2, "RefId") == Some(scope.manufacturer)
+        && attr(5, "RefId") == Some(scope.program)
+        && attr(7, "AttributeName") == Some("Text")
+        && shown.contains(block)
+        && crate::query::best_matching_language(scope.requested, &[language]).is_some())
+    .then_some((block, language, attr(7, "Text")))
+}
+
+/// Root element namespace equals `namespace`; malformed input is simply not rooted.
+fn rooted_in(bytes: &[u8], namespace: &str) -> bool {
+    let mut reader = NsReader::from_reader(bytes);
+    for _ in 0..MAX_EVENTS {
+        match reader.read_resolved_event() {
+            Ok((ns, Event::Start(_) | Event::Empty(_))) => {
+                return matches!(ns, ResolveResult::Bound(ref uri) if uri.as_ref() == namespace);
+            }
+            Ok((_, Event::Eof)) | Err(_) => return false,
+            Ok(_) => {}
+        }
+    }
+    false
 }
 
 /// One indexed program/scope range walk, never one scan per caption. Only
@@ -360,12 +615,14 @@ fn hardware_program_link(
     hardware: &str,
     program: &str,
     manufacturer: &str,
+    namespace: &str,
 ) -> Result<(), CaptionIssue> {
     hardware_owner_link(
         bytes,
         HardwareOwner::Program { hp, program },
         hardware,
         manufacturer,
+        namespace,
     )
 }
 
@@ -375,6 +632,7 @@ fn hardware_owner_link(
     owner: HardwareOwner<'_>,
     hardware: &str,
     manufacturer: &str,
+    namespace: &str,
 ) -> Result<(), CaptionIssue> {
     let (container, element, id, expected_program) = match owner {
         HardwareOwner::Product(id) => ("Products", "Product", id, None),
@@ -409,7 +667,7 @@ fn hardware_owner_link(
                 }
                 stack.push(read_frame(
                     &e,
-                    matches!(ns,ResolveResult::Bound(ref uri) if uri.as_ref()==NS),
+                    matches!(ns,ResolveResult::Bound(ref uri) if uri.as_ref()==namespace),
                 )?);
                 let current = stack.last().expect("pushed frame");
                 let selected = stack.len() >= 7
@@ -541,6 +799,7 @@ fn read_source(
     bytes: &[u8],
     program: &str,
     manufacturer: &str,
+    namespace: &str,
 ) -> Result<Vec<Candidate>, CaptionIssue> {
     let text = std::str::from_utf8(bytes).map_err(|_| CaptionIssue::UnsupportedXml)?;
     if text.chars().any(|c| !matches!(c, '\t'|'\n'|'\r'|'\u{20}'..='\u{D7FF}'|'\u{E000}'..='\u{FFFD}'|'\u{10000}'..='\u{10FFFF}')) {
@@ -575,7 +834,8 @@ fn read_source(
                 if stack.len() >= MAX_DEPTH {
                     return Err(CaptionIssue::ResourceLimit);
                 }
-                let known = matches!(ns, ResolveResult::Bound(ref uri) if uri.as_ref() == NS);
+                let known =
+                    matches!(ns, ResolveResult::Bound(ref uri) if uri.as_ref() == namespace);
                 if stack.is_empty() {
                     roots += 1;
                     if roots != 1 || !known || e.local_name().as_ref() != "KNX" {
@@ -676,13 +936,15 @@ fn read_source(
     Err(CaptionIssue::ResourceLimit)
 }
 
+/// Shown caption text: nonblank, bounded, never a `{{…}}` template.
+fn literal(text: &str) -> bool {
+    !text.trim().is_empty() && text.len() <= 4096 && !text.contains("{{") && !text.contains("}}")
+}
+
 fn candidate(stack: &[Frame], program: &str) -> Option<Candidate> {
     let current = stack.last()?;
     let text = current.attrs.get("Text")?;
-    if text.trim().is_empty()
-        || text.len() > 4096
-        || text.contains("{{")
-        || text.contains("}}")
+    if !literal(text)
         || current.attrs.contains_key("TextParameterRefId")
         || !matches!(
             current.attrs.get("ShowInComObjectTree").map(String::as_str),

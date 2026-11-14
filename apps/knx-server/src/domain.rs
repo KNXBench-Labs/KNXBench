@@ -2927,13 +2927,14 @@ fn device_detail_with_product_data(
 
             if let Some(schema) = caption_schema {
                 use knx_productdb::com_object_folder_captions::{
-                    folder_captions, CaptionEvidence, CaptionIssue,
+                    localized_folder_captions, CaptionEvidence, CaptionIssue,
                 };
-                match folder_captions(
+                match localized_folder_captions(
                     products,
                     detail.product.product_ref.as_deref().unwrap_or_default(),
                     detail.product.program_ref.as_deref().unwrap_or_default(),
                     schema,
+                    language,
                 )
                 .map_err(|e| e.to_string())?
                 {

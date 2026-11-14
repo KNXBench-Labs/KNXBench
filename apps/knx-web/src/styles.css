@@ -3467,6 +3467,7 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
    some of it back rather than pushing the explorer out of existence. Both
    scroll internally for the same reason. */
 .workbench-pane-left .workbench-navigation { flex: 0 1 auto; overflow: auto; }
+.workbench-pane-left .settings-navigation { flex: 0 0 auto; border-top: 1px solid var(--knx-border); }
 /* Basis 0, not auto: the explorer takes only the space the two blocks leave.
    With `auto` its whole tree height entered the flex calculation, and the
    column shrank the navigation blocks — and every height a splitter set —

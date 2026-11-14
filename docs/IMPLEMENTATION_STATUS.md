@@ -12,6 +12,24 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Folder-caption namespace and language (14 November 2026; WP06-S1 integration candidate)
+
+Corrected source `9b0d937dc` extends the existing read-only caption fallback to
+uniform project/20 or the schema-23 owner's exact namespace and explicit product
+language requests using the shared language rule. Optional provenance records the
+selected language or literal fallback reason; no-language responses omit the field.
+Translation-pass resource refusal withholds the whole optional caption overlay,
+not just the translation. Saved text, placement, keys, grouping, currency, stored
+bytes and history are unchanged. Independent correction review APPROVE closes
+F1/F2/F3/F5; retained focused GREEN is captions 29, language 7, HTTP 12 and server
+unit 5 (filtered/overlapping, not additive). Main-first `789ab6143` on `041df68a0`
+preserves the reviewed full feature patch; fresh complete selected gate and
+publication are **pending**, not inferred from those results. [Epochs, amendments
+and limits](status/2026-11-14-wp06-folder-caption-language.md) keep initial compile
+RED, unit-only A7 and the installer-bypassing mixed-namespace fixture separate.
+Whole WP-06 remains evidence-gated; no new mapping, writes, migration, native UI,
+ETS compatibility, release or hardware acceptance.
+
 ## Unresolved module-owner overlay (14 November 2026; WP07-S1 integration candidate)
 
 An imported module communication object without resolved own instance authority

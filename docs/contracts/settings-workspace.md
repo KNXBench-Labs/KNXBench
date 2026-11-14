@@ -12,8 +12,12 @@ keep the modal settings window.
 - All existing app settings appear on one continuous page, grouped into sections.
   A compact jump navigation above the sections leads to their headings; it does
   not hide other categories or create separate category pages.
-- Left app navigation stays usable. Selecting Settings again keeps the same
-  settings page active, rather than toggling it closed or stacking another page.
+- Left app navigation stays usable. Main-only after Alpha 21: Settings is a
+  direct sidebar entry alongside the Diagnostics block, not inside it. It needs
+  no category disclosure and exposes the active page through `aria-current`.
+  The toolbar gear and command palette keep opening this same workspace.
+  Selecting Settings again keeps the same settings page active, rather than
+  toggling it closed or stacking another page.
 - Project Properties is not shown alongside app settings. Leaving Settings
   restores its existing visibility preference; opening Settings must not change
   that preference or persist a new pane width.

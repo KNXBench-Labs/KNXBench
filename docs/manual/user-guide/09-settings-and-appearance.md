@@ -17,9 +17,13 @@ shown as enabled only after the server persists and reads it back.
 
 ## Opening Settings
 
-**Since Alpha 19:** click **Settings** in the left navigation's
-Diagnostics section, or open the command palette with `Ctrl+Shift+P` and run
-**Settings**. All app settings appear in the center workspace as one continuous
+**Main-only after Alpha 21:** **Settings** is its own entry in the left
+navigation, alongside the Diagnostics block; you do not need to unfold a category.
+In a narrow window, show **Navigation** first. In Alpha 19–21, the sidebar entry
+is inside Diagnostics. The toolbar gear and command palette (`Ctrl+Shift+P` →
+**Settings**) remain available.
+
+**Since Alpha 19:** all app settings appear in the center workspace as one continuous
 page. Use the compact jump navigation at the top to reach a section; the other
 sections remain on the same page. The left navigation stays usable and the
 project Properties pane is temporarily hidden. When you leave Settings, its

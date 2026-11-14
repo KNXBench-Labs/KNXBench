@@ -310,7 +310,10 @@ drafts remain intact. Existing immediate-apply, acknowledged-save and failure
 feedback paths are unchanged. Alpha 18 and earlier have the older modal.
 [Settings contract](../contracts/settings-workspace.md) ·
 [Opening Settings](user-guide/09-settings-and-appearance.md#opening-settings).
-Browser verification is not native WebKitGTK/Tauri or hardware acceptance.
+Main-only after Alpha 21: Settings has its own direct sidebar entry alongside
+Diagnostics, reachable without opening a category; the toolbar gear and palette
+still open the same workspace. Released Alpha 19–21 keeps the sidebar entry
+inside Diagnostics. Browser verification is not native WebKitGTK/Tauri or hardware acceptance.
 
 <a id="diag-03-local-candidate--not-released-29-october-2026"></a>
 

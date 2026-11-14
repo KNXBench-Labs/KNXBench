@@ -203,10 +203,12 @@ the diagnostics block: the devices that still have parts to program, with the
 count in its heading, a click to open each device and **Download…** to open its
 download tab. See [Pending programming panel](05-devices-and-products.md#pending-programming-panel-main-only-after-alpha-20).
 
-**The diagnostics block**, at the bottom: **Bus monitor**, **Log**, **Diagnostics
-window** and **Settings**. The first two swap the center workspace for a panel;
-the third opens a second window (below). **Since Alpha 19:** Settings
-also opens in the center workspace, with all settings on a continuous page and
+**The diagnostics block**, at the bottom: **Bus monitor**, **Log** and **Diagnostics
+window**. The first two swap the center workspace for a panel;
+the third opens a second window (below). **Main-only after Alpha 21:** **Settings**
+is its own entry alongside this block and is available even while Diagnostics
+is folded. Alpha 19–21 keeps it inside Diagnostics. **Since Alpha 19:** Settings
+opens in the center workspace, with all settings on a continuous page and
 jump navigation at the top. Project Properties is temporarily hidden; leaving
 Settings restores its previous visibility. In Alpha 18 and earlier,
 Settings opens a modal window. See [Settings](09-settings-and-appearance.md#opening-settings).

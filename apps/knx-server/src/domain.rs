@@ -2502,7 +2502,16 @@ fn apply_com_object_activation(
         .com_objects
         .iter()
         .map(|(id, (ets_id, instance))| {
-            let module_instance = instance.and_then(|i| by_id.get(&i).copied());
+            use crate::com_object_activation::ObjectScope;
+            let scope = match instance {
+                // An own instance the project does not hold is no owner either.
+                Some(own) => by_id
+                    .get(own)
+                    .copied()
+                    .map_or(ObjectScope::UnresolvedModule, ObjectScope::Module),
+                None if names_module_object(ets_id) => ObjectScope::UnresolvedModule,
+                None => ObjectScope::Unscoped,
+            };
             (
                 *id,
                 crate::com_object_activation::ComObjectKey {
@@ -2511,7 +2520,7 @@ fn apply_com_object_activation(
                         ets_id,
                         instance.is_some(),
                     ),
-                    module_instance,
+                    scope,
                 },
             )
         })
@@ -2538,6 +2547,13 @@ fn apply_com_object_activation(
         parameters,
         module_instances: input.module_instances,
     }))
+}
+
+/// Whether an object's own source id names a module object (`MD-…`), even
+/// when its `ModuleInstance` was never imported: the same recognition
+/// `knx_app::com_object_folders` and the saved-priority readers use.
+fn names_module_object(ets_id: &str) -> bool {
+    ets_id.starts_with("MD-")
 }
 
 /// What filling object names needs once the translation overlay has run

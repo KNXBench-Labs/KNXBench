@@ -1,5 +1,15 @@
 # Roadmap
 
+## Workspace density and technical appearance (14 November 2026; WP-41 delivered on main)
+
+The owner-approved revision 2 and separate B–D Go are completed at the bounded
+software/browser scope: common spacing and 10 rem scalar / bounded 24 rem text
+classes, plus optional Technical Light/Dark on the same components. Runtime
+`836824491` is independently reviewed, accepted by all twelve selected package
+stages and published/read back. Main-only after Alpha 21, not a release or
+deployment. Source structure and navigation remain with WP-05; wider native
+acceptance remains WP-11. [Checks and limits](status/2026-11-14-wp41-workspace-density.md).
+
 ## Folder-caption namespace and language (14 November 2026; WP06-S1 published runtime)
 
 The bounded runtime successor admits uniform project/20 or the schema-23

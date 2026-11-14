@@ -4,12 +4,15 @@ Owner request: 13 November 2026; target agreed after design questions Q1–Q10.
 **Design revision 2 accepted and separate implementation Go granted on
 14 November 2026.** Phases B–D are now authorised: shared density/layout,
 technical light/dark presentation, independent review, relevant gates and source
-publication. No release or deployment authority. Listed in [OPEN_WORK](../OPEN_WORK.md).
+publication. No release or deployment authority. The delivered package was
+removed from [OPEN_WORK](../OPEN_WORK.md); the decisions remain recorded here.
 
 **Priority:** Owner-authorised bounded implementation; no release target assigned.
-**Status:** Claimed by WebUI WP41 on `work/wp41-density-technical-20261114`,
-worktree `<sources>/KNXBench-wp41-implementation-20261114`, starting on ed6524b96.
-Static approval evidence remains private; no product acceptance is claimed yet.
+**Closed 14 November 2026** (removed from [OPEN_WORK](../OPEN_WORK.md)): phases
+A–D delivered at the bounded software/browser scope. Runtime `836824491` is
+accepted and published on main after independent review and all twelve selected
+package-gate stages. Main-only after Alpha 21, no release/deployment or native
+acceptance. [Measured acceptance and limits](../status/2026-11-14-wp41-workspace-density.md).
 
 ### Accepted revision 2 geometry
 
@@ -72,20 +75,20 @@ future design or implementation; reuse the following mechanisms:
   presentation mechanism used by Rail. Reuse that boundary for the optional
   appearance without silently overriding density or accessibility preferences.
 
-The remaining gap is a consistent, visually evaluated composition and spacing
-system across the affected surfaces, plus the optional technical presentation.
-No space-saving percentage, final pixel budget or finished design is claimed.
+At intake, the gap was a consistent composition and spacing system plus the
+optional technical presentation. The accepted revision 2 and delivered source
+now implement that bounded scope; no space-saving percentage is inferred.
 
 ## Bounded phases and actual status
 
 | Phase | Outcome | Actual status / entry condition |
 | --- | --- | --- |
 | A — Static design comparison | Read-only current-state inspection and static before/after comparisons for device list, parameter workspace and inspector; shared representative data across variants; proposed baseline and technical light/dark composition | Accepted revision 2 on 14 November; fictional static dossier retained privately |
-| B — Shared density/layout | Apply the accepted spacing, field-width and visual hierarchy system across affected existing themes and both densities using common components | Source, regressions and first-review corrections authored 14 November; independent closure and complete integrated verification pending |
-| C — Technical theme pair | Add the accepted built-in light/dark technical presentation on the same components and improved layout, preserving other theme identities | `technical-light` / `technical-dark` authored on the existing trusted presentation boundary; not product-accepted |
-| D — Integrated verification | Verify the complete affected UI and relevant regressions; retain visual evidence and the scoped acceptance record | Authorised; execute after implementation/review, no acceptance claimed yet |
+| B — Shared density/layout | Apply the accepted spacing, field-width and visual hierarchy system across affected existing themes and both densities using common components | Accepted and published on main `836824491`; shared components, existing themes and both densities verified |
+| C — Technical theme pair | Add the accepted built-in light/dark technical presentation on the same components and improved layout, preserving other theme identities | `technical-light` / `technical-dark` accepted on the existing trusted presentation boundary; main-only |
+| D — Integrated verification | Verify the complete affected UI and relevant regressions; retain visual evidence and the scoped acceptance record | Complete selected package gate 12/12 and nested web 43/43, source-bound review/visual/focus evidence; publication verified |
 
-### Authored B–C implementation boundary
+### Historical author-phase B–C boundary
 
 The author-phase candidate starts from `d44a02d72`, retaining the published
 navigation and E4 focus fix. It uses setting-owned panel/row spacing (12/4 px Compact, 16/8 px
@@ -110,19 +113,20 @@ theme/control/dialog inventories; unit coverage pins bootstrap/runtime identity,
 the exact accepted colours, setting independence and metadata-owned width
 classes. **No tests, builds, gates or browser servers were executed in the
 author phase.** No measured density gain, screenshot review, publication or
-native acceptance is claimed by that author handoff. Phase D remains parent-owned.
+native acceptance was claimed by that author handoff. The parent subsequently
+completed phase D; the final source-bound result is recorded below.
 
 First independent review identified pressed-primary contrast, an Inspector text-slot
 cascade conflict and stale/incomplete regression oracles. The candidate corrects
-these through the existing shared presentation boundary; integrated acceptance and
-publication still require the completed parent-owned checks.
+these through the existing shared presentation boundary; later parent-owned
+checks established integrated acceptance and publication on `836824491`.
 
 The second independent Standards and Spec reviews approve the frozen source
 candidate. Bounded follow-up documents the technical boundary in ADR-0157,
 explains the scalar-anchored shared header and extends the declared-matrix
 population to every existing palette and both densities, languages and viewport
-widths. Those additional cases still require execution in the final package gate;
-source-review approval is not integrated acceptance or publication.
+widths. Their selecting configurations subsequently passed in the final package
+gate. Source-review approval itself is not runtime acceptance or publication.
 
 Focus coverage keeps the existing [Settings page contract](../contracts/settings-workspace.md):
 its round trip preserves drafts, selection and settings, but adds no automatic
@@ -140,7 +144,7 @@ use public-safe representative data. Do not publish private project content or
 manufacturer originals. A static after view does not establish interactive or
 native-shell acceptance. Do not start a clickable prototype as part of Phase A.
 
-## Acceptance for future authorised work
+## Acceptance contract
 
 ### Static design acceptance
 
@@ -170,6 +174,22 @@ native-shell acceptance. Do not start a clickable prototype as part of Phase A.
   coverage separately; do not infer native acceptance from static drafts.
 - Review common component consumers and run the relevant scoped package gate.
   Saving this plan does not implement or execute these acceptance cases.
+
+## Final acceptance and publication
+
+Runtime `836824491` passed the complete selected twelve-stage gate on base
+`475b3a793`, with frozen inputs, valid direct stage proofs and checked user data
+untouched. Nested web: 43 stages, all 27 fixture TypeScript configurations,
+5,810 Vitest cases; default browser 1,284 functional + 97 exclusive, production
+dialogs 26, devices 237 + 1, table columns 243 + 4. Browser populations overlap;
+none reported skipped, unexpected or flaky cases. Tool suite: 547 passed and
+16 optional skips; all 17 diagnostic-section tests passed (other library tests
+not selected). Earlier failed/queued/interrupted epochs remain separate.
+
+The conditional push and fresh main readback confirmed source publication.
+No private corpus, full Rust workspace, native shell, VM, hardware/bus, release
+or deployment was run. Broader WP-05 and WP-11 remain separate. Full evidence
+boundaries: [acceptance record](../status/2026-11-14-wp41-workspace-density.md).
 
 ## Coordination, dependencies and exclusions
 

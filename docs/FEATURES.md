@@ -402,6 +402,8 @@ records the tested commit separately from artifact publication verification.
 | Themes | Light/dark/system; LCARS/CRT | alpha.6 |
 | Theme packs | Import/export; declarative only | alpha.6 |
 | Appearance controls | Accent/density/motion | alpha.6 |
+| Shared engineering density | Device list, parameter workspace and Inspector; 10 rem scalar / bounded 24 rem text slots, both densities; [WP-41 acceptance](status/2026-11-14-wp41-workspace-density.md) | Main, after alpha.21 |
+| Technical Light / Technical Dark | Optional trusted built-in pair on the same components; no extra animation or pack layout authority | Main, after alpha.21 |
 | Reduced motion | OS preference takes precedence | alpha.6 |
 | Motion per category | Toasts/achievements/Flow; can only reduce | alpha.11 |
 | Interface languages | English/German/Bavarian/Klingon | alpha.6 |

@@ -5,6 +5,8 @@
 //! Compare → preview → apply → re-compare → undo → re-compare, never a write.
 
 use super::*;
+
+mod tcp;
 use knx_core::commissioning::parameter_baseline::{ParameterBaseline, ParameterBaselines};
 use knx_core::{
     ComObjectInstance, ComObjectInstanceId, CompletionStatus, DeviceInstance, Direction,
@@ -113,6 +115,10 @@ fn project() -> Project {
 }
 
 async fn link_harness() -> Harness {
+    link_harness_with_connector(None).await
+}
+
+async fn link_harness_with_connector(connector: Option<Box<dyn GatewayConnector>>) -> Harness {
     let dir = tempfile::tempdir().unwrap();
     let products = knx_productdb::open_and_migrate(&dir.path().join("p.sqlite")).unwrap();
     knx_productdb::ingest_file(
@@ -175,10 +181,13 @@ async fn link_harness() -> Harness {
             knx_server::CatalogueOwner::adopt_opened(products, std::path::PathBuf::new()).unwrap(),
         ),
         data_dir: dir.path().to_path_buf(),
-        connector: Box::new(SimConnector {
-            device: Arc::clone(&device),
-            calls: Arc::clone(&calls),
+        connector: connector.unwrap_or_else(|| {
+            Box::new(SimConnector {
+                device: Arc::clone(&device),
+                calls: Arc::clone(&calls),
+            })
         }),
+        recordings: Arc::new(knx_server::operation_recordings::store(dir.path(), true)),
         device_download_timing: fast(),
         ..knx_server::AppState::new(dir.path().to_path_buf())
     });

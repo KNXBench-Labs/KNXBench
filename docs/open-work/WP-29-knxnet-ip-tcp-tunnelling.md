@@ -192,6 +192,17 @@ and other programming consumers remain open.
   to the exercised scope. Plain TCP is not KNX IP Secure and is not an
   established fix for the S2-04 tunnel-loss report.
 
+## Server/Web device-compare successor (14 November 2026; source candidate)
+
+A distinct strict `POST /api/device-compare/tcp` shares the unchanged comparison
+behaviour; the legacy route stays UDP with an unchanged response body (its operation
+recordings gain an additive `connection` note and `requestedTransport`). The Web review has a compare-local UDP/TCP
+choice (UDP default, TCP experimental) frozen with the gateway for the queue; the
+TCP route is never retried over UDP. Responses and post-connect errors carry
+required `connection` metadata (actual transport, assigned address, pre-disconnect
+skipped-frame sample); the client refuses missing or mismatched metadata.
+Loopback/simulator evidence only. [Evidence and limits](../status/2026-11-14-server-web-tcp-comparison.md).
+
 ## Acceptance criteria
 
 - Real TCP loopback peers exercise connection/send/receive/disconnect, fragmented

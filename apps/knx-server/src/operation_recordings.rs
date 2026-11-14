@@ -80,6 +80,31 @@ pub(crate) async fn connect(
         .await
 }
 
+/// Opens an explicitly selected transport without changing legacy UDP callers.
+pub(crate) async fn connect_with_transport(
+    state: &AppState,
+    gateway: SocketAddrV4,
+    wait: TunnelAckWait,
+    recorder: &OperationRecorder,
+    transport: knx_net::TunnelTransport,
+) -> Result<Box<dyn BusTunnel>, BusSessionError> {
+    state
+        .connector
+        .connect_tunnel_recorded_with_transport(gateway, wait, recorder.wire_tap(), transport)
+        .await
+}
+
+/// Requested transport is intent, not evidence that a connection opened.
+pub(crate) fn tunnel_settings_with_transport(
+    wait: TunnelAckWait,
+    session: &knx_net::SessionTiming,
+    transport: knx_net::TunnelTransport,
+) -> Value {
+    let mut settings = tunnel_settings(wait, session);
+    settings["requestedTransport"] = json!(transport.as_str());
+    settings
+}
+
 /// Starts a recording with the tunnel settings filled in, then opens the
 /// route's tunnel through it. A connection that fails ends the recording.
 pub(crate) async fn open(

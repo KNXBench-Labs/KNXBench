@@ -131,6 +131,20 @@ describe("api.stopBoundBusMonitor (WP-26)", () => {
 });
 
 describe("api", () => {
+  it("selects only the strict TCP comparison route, passes 404/405 through and never retries", async () => {
+    const binding = { serverIncarnation: "session", projectIncarnation: 3, deviceId: 2, comparisonRevision: 7 };
+    const connection: api.TcpComparisonConnection = { requestedTransport: "tcp", actualTransport: "tcp", assignedAddress: "1.1.250", skippedFramesBeforeDisconnect: 0 };
+    mockFetchOnce({ written: false, connection });
+    expect(await api.compareDeviceTcp("1.1.2", "192.0.2.1:3671", binding)).toEqual({ written: false, connection });
+    expect(vi.mocked(fetch).mock.calls[0][0]).toBe("/api/device-compare/tcp");
+    expect(JSON.parse(vi.mocked(fetch).mock.calls[0][1]!.body as string)).toEqual({ address: "1.1.2", gateway: "192.0.2.1:3671", binding });
+    for (const status of [404, 405]) {
+      mockFetchOnce({ error: "unsupported" }, false, status);
+      await expect(api.compareDeviceTcp("1.1.2", "192.0.2.1:3671", binding)).rejects.toMatchObject({ status });
+      expect(fetch).toHaveBeenCalledTimes(1);
+      expect(vi.mocked(fetch).mock.calls[0][0]).toBe("/api/device-compare/tcp");
+    }
+  });
   it("binds an explicit device comparison to the reviewed project content without write authority", async () => {
     mockFetchOnce({ written: false });
     const binding = { serverIncarnation: "session", projectIncarnation: 3, deviceId: 2, comparisonRevision: 7 };

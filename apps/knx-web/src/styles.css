@@ -254,6 +254,68 @@
   --knx-backdrop-mask: none;
 }
 
+/* Technical — restrained engineering palettes; shared geometry belongs to the presentation. */
+:root[data-theme="technical-light"] {
+  color-scheme: light;
+  --knx-bg: #edf1f5;
+  --knx-surface: #ffffff;
+  --knx-foreground: #202d3b;
+  --knx-muted: #536376;
+  --knx-border: #a8b6c5;
+  --knx-border-hover: var(--knx-accent);
+  --knx-accent: #145b8f;
+  --knx-on-accent: #ffffff;
+  --knx-accent-tertiary: var(--knx-accent);
+  --knx-gradient-primary: linear-gradient(var(--knx-accent), var(--knx-accent));
+  --knx-gradient-display: var(--knx-gradient-primary);
+  --knx-error-color: #a52336;
+  --knx-warning-color: #805000;
+  --knx-success-color: #176344;
+  --knx-overlay-backdrop: #202d3b66;
+  --knx-overlay-shadow: transparent;
+  --knx-shadow-raised: none;
+  --knx-shadow-hover: none;
+  --knx-font-heading: "Inter", sans-serif;
+  --knx-font-body: "Inter", sans-serif;
+  --knx-font-mono: "JetBrains Mono", monospace;
+  --knx-radius-card: 2px;
+  --knx-radius-button: 2px;
+  --knx-radius-input: 2px;
+  --knx-backdrop-image: none;
+  --knx-backdrop-size: auto;
+  --knx-backdrop-mask: none;
+}
+:root[data-theme="technical-dark"] {
+  color-scheme: dark;
+  --knx-bg: #161e27;
+  --knx-surface: #202a35;
+  --knx-foreground: #e6edf5;
+  --knx-muted: #b4c1cf;
+  --knx-border: #607286;
+  --knx-border-hover: var(--knx-accent);
+  --knx-accent: #8fcaff;
+  --knx-on-accent: #102c42;
+  --knx-accent-tertiary: var(--knx-accent);
+  --knx-gradient-primary: linear-gradient(var(--knx-accent), var(--knx-accent));
+  --knx-gradient-display: var(--knx-gradient-primary);
+  --knx-error-color: #ff9d9d;
+  --knx-warning-color: #ffd180;
+  --knx-success-color: #8dd9b4;
+  --knx-overlay-backdrop: #161e27bb;
+  --knx-overlay-shadow: transparent;
+  --knx-shadow-raised: none;
+  --knx-shadow-hover: none;
+  --knx-font-heading: "Inter", sans-serif;
+  --knx-font-body: "Inter", sans-serif;
+  --knx-font-mono: "JetBrains Mono", monospace;
+  --knx-radius-card: 2px;
+  --knx-radius-button: 2px;
+  --knx-radius-input: 2px;
+  --knx-backdrop-image: none;
+  --knx-backdrop-size: auto;
+  --knx-backdrop-mask: none;
+}
+
 /* Accent variations — opt-in, per theme, never by negation. Porcelain and
    Graphite treat the accent as the user's choice; Cupertino treats it as
    part of its identity and declares nothing here. "violet" is these
@@ -843,10 +905,11 @@ main {
 
 /* T18 slice 3 task 4: the parameter panel (ParameterPanel.tsx). */
 .parameter-panel {
-  margin-top: 1.5rem;
+  margin-top: 8px;
   border-top: 1px solid var(--knx-border);
-  padding-top: 1rem;
+  padding-top: 8px;
 }
+.parameter-panel > h3 { margin: 8px 0 12px; }
 
 .parameter-section {
   margin-bottom: 0.75rem;
@@ -3225,8 +3288,8 @@ h6 {
   border: 0;
 }
 
-:root { --knx-control-height: 32px; --knx-cell-padding: 7px 12px; --knx-control-padding-inline: 12px; --knx-control-gap: 6px; }
-:root[data-density="comfortable"] { --knx-control-height: 40px; --knx-cell-padding: 11px 14px; --knx-control-padding-inline: 16px; --knx-control-gap: 8px; }
+:root { --knx-control-height: 32px; --knx-cell-padding: 7px 12px; --knx-control-padding-inline: 12px; --knx-control-gap: 6px; --workspace-panel-padding: 12px; --workspace-gap: 8px; --workspace-row-padding: 4px; --workspace-scalar-width: 10rem; --workspace-text-width: 24rem; }
+:root[data-density="comfortable"] { --knx-control-height: 40px; --knx-cell-padding: 11px 14px; --knx-control-padding-inline: 16px; --knx-control-gap: 8px; --workspace-panel-padding: 16px; --workspace-gap: 12px; --workspace-row-padding: 8px; }
 * { box-sizing: border-box; }
 body { font-size: 13px; line-height: 1.5; }
 button, input, select, textarea { font-size: inherit; }
@@ -3272,7 +3335,7 @@ h1, h2, h3 { letter-spacing: -0.025em; }
 :root { zoom: var(--app-ui-scale, 1); }
 /* Three-pane shell. Narrow displays stack panes instead of clipping actions. */
 .workbench { padding: 0; height: calc(100dvh / var(--app-ui-scale, 1)); display: flex; flex-direction: column; overflow: hidden; }
-.workbench-toolbar { display: flex; align-items: center; gap: 12px; padding: 12px 20px; border-bottom: 1px solid var(--knx-border); background: var(--knx-surface); flex-wrap: wrap; z-index: 5; }
+.workbench-toolbar { display: flex; align-items: center; gap: 8px; padding: 6px var(--workspace-panel-padding); border-bottom: 1px solid var(--knx-border); background: var(--knx-surface); flex-wrap: wrap; z-index: 5; }
 /* The open File menu is what the user is pointing at; modals stay above the toolbar, so the
    transient toasts step behind it (below the toolbar's 5) instead of the menu rising over modals. */
 .workbench:has(.file-menu[open]) > .toast-stack { z-index: 4; }
@@ -3301,7 +3364,7 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
 .file-menu summary { cursor: pointer; padding: 7px 10px; list-style: none; }
 .file-menu-content { position: absolute; z-index: 6; top: calc(100% + 8px); left: var(--file-menu-shift, 0px); min-width: 260px; background: var(--knx-surface); border: 1px solid var(--knx-border); border-radius: 8px; box-shadow: 0 12px 32px var(--knx-overlay-shadow); padding: 8px; }
 .file-menu-content > button, .file-menu-content > div { display: block; width: 100%; margin: 3px 0; }
-.workbench-panel-controls { display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: center; justify-content: space-between; min-height: 35px; border-bottom: 1px solid var(--knx-border); }
+.workbench-panel-controls { display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: center; justify-content: space-between; min-height: var(--knx-control-height); border-bottom: 1px solid var(--knx-border); }
 .workbench-panel-controls .bulk-action-toolbar { flex: 1 1 260px; min-width: 0; max-width: 100%; margin: 4px 0; }
 .workbench-panel-controls .bulk-action-toolbar select { min-width: 0; max-width: 100%; }
 .workbench-panel-controls button { display: flex; align-items: center; gap: 8px; font-size: 11px; }
@@ -3344,7 +3407,7 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
   --separator-band: color-mix(in srgb, var(--knx-accent) 16%, transparent);
   --separator-weight: 2px;
 }
-.workbench-center { flex: 1; min-width: 200px; overflow: auto; padding: 24px; }
+.workbench-center { flex: 1; min-width: 200px; overflow: auto; padding: var(--workspace-panel-padding); }
 
 .parameter-group-toggle { display: flex; align-items: center; gap: 8px; width: 100%; text-align: left; border: 0; border-bottom: 1px solid var(--knx-border); border-radius: 0; box-shadow: none; background: transparent; color: var(--knx-foreground); font-weight: 600; padding: 10px 4px; }
 .parameter-group-toggle:hover:not(:disabled) { transform: none; box-shadow: none; }
@@ -3424,13 +3487,44 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
 }
 .workbench .tree-new-row { flex-wrap: wrap; }
 .workbench .tree-new-row input, .workbench .tree-new-row select { min-width: 50px; max-width: 100%; }
-.workbench .inspector { padding: 16px; min-width: 0; }
-.inspector-heading { padding: 17px 20px; border-bottom: 1px solid var(--knx-border); font-weight: 600; }
+.workbench .inspector { padding: var(--workspace-panel-padding); min-width: 0; container-type: inline-size; }
+.inspector-heading { padding: 10px var(--workspace-panel-padding); border-bottom: 1px solid var(--knx-border); font-weight: 600; }
 .inspector-empty { padding: 20px; color: var(--knx-muted); }
 .workbench .inspector-field { display: flex; flex-direction: column; gap: 6px; margin: 0 0 16px; }
 /* A bare action between fields (Delete, Show recorded state) keeps the fields' rhythm. */
-.workbench .inspector > button { margin: 0 0 16px; }
-.workbench .inspector-field input { margin: 0; width: 100%; }
+.workbench .inspector > button { margin: 0 0 var(--workspace-gap); }
+.workbench .inspector-field > input { margin: 0; width: 100%; }
+/* Explicit scalar/text classes, not caption, inputmode or content-length heuristics. */
+.workbench .inspector > .inspector-field,
+.workbench .inspector > .rename-name-field > .inspector-field,
+.device-workspace > .rename-name-field > .inspector-field {
+  display: grid; grid-template-columns: 100px minmax(0, 1fr); align-items: center;
+  gap: 4px 10px; margin-bottom: var(--workspace-gap); overflow-wrap: anywhere;
+}
+.workbench .inspector .inspector-field > :is(input, select, textarea, .address-editor):not(.value-slot-text) {
+  min-width: 0; width: min(100%, var(--workspace-scalar-width));
+}
+.workbench .inspector-field > :is(input, textarea).value-slot-text {
+  width: min(100%, var(--workspace-text-width));
+}
+.workbench .inspector > .inspector-field > :is(input, select, textarea, .address-editor),
+.workbench .inspector > .rename-name-field > .inspector-field > input,
+.device-workspace > .rename-name-field > .inspector-field > input { grid-column: 2; grid-row: 1; }
+.workbench .inspector > .inspector-field > :is(.field-error, .inspector-description, details, small) { grid-column: 1 / -1; }
+.workbench .individual-address-field .address-editor input { width: 0; flex: 1 1 0; }
+.workbench .inspector h2 { margin: 0 0 12px; font-size: 18px; line-height: 1.4; overflow-wrap: anywhere; }
+.inspector-description { line-height: 1.5; overflow-wrap: anywhere; }
+.device-workspace > .rename-name-field { max-width: calc(var(--workspace-text-width) + 110px); }
+@container (max-width: 300px) {
+  .workbench .inspector > .inspector-field,
+  .workbench .inspector > .rename-name-field > .inspector-field { grid-template-columns: minmax(0, 1fr); }
+  .workbench .inspector > .inspector-field > :is(input, select, textarea, .address-editor),
+  .workbench .inspector > .rename-name-field > .inspector-field > input { grid-column: 1; grid-row: auto; }
+}
+@container (max-width: 360px) {
+  .device-workspace > .rename-name-field > .inspector-field { grid-template-columns: minmax(0, 1fr); }
+  .device-workspace > .rename-name-field > .inspector-field > input { grid-column: 1; grid-row: auto; }
+}
 .workbench-status { display: flex; justify-content: space-between; gap: 20px; padding: 8px 20px; border-top: 1px solid var(--knx-border); color: var(--knx-muted); font-size: 11px; background: var(--knx-surface); }
 .welcome-workspace { width: min(100%, 62rem); margin: clamp(2rem, 8vh, 5rem) auto; }
 /* DOM puts the welcome first for narrow-screen Tab order. On wide screens
@@ -3445,8 +3539,10 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
 .welcome-card-description { color: var(--knx-muted); font-size: 0.86rem; line-height: 1.5; overflow-wrap: anywhere; }
 .welcome-workspace .welcome-card.primary-action { background: var(--knx-accent); color: var(--knx-on-accent); border-color: var(--knx-accent); }
 .welcome-card.primary-action .welcome-card-description { color: inherit; opacity: 0.86; }
-.workspace-heading { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 24px; flex-wrap: wrap; }
-.workspace-heading h1 { margin: 4px 0; font-size: 28px; }
+.workspace-heading { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+.workspace-heading h1 { margin: 0; font-size: 24px; }
+.devices-workspace > .workspace-heading > div { display: flex; flex-wrap: wrap; gap: 8px 20px; align-items: baseline; }
+.devices-workspace > .workspace-heading p { margin: 0; }
 .structure-context-editor { max-width: 36rem; margin: 0 0 1.25rem; padding: 1rem; border: 1px solid var(--knx-border); border-radius: var(--knx-radius-card); background: var(--knx-surface); }
 .workbench .structure-context-editor .inspector { padding: 0; }
 .structure-create { max-width: 36rem; margin: 0 0 0.75rem; border: 1px solid var(--knx-border); border-radius: var(--knx-radius-card); background: var(--knx-surface); }
@@ -3523,11 +3619,17 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
 .building-diagram-children { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; padding: 16px; background: var(--knx-bg); }
 /* Devices is a dedicated central workspace; its wide table scrolls locally. */
 .devices-workspace, .device-editor-view { min-width: 0; max-width: 100%; }
-.device-editor-view .device-workspace { margin-top: 16px; }
-.device-editor-navigation, .devices-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 16px; }
-.devices-toolbar input { flex: 1 1 220px; min-width: 0; max-width: 100%; }
-.devices-table-scroll { max-height: 65vh; overscroll-behavior: contain; }
-.devices-table { min-width: 1100px; margin: 0; }
+.device-editor-view .device-workspace { margin-top: 8px; }
+.device-editor-navigation, .devices-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 8px; }
+.devices-toolbar input { flex: 1 1 220px; min-width: 0; max-width: min(100%, 28rem); }
+.devices-table-scroll { max-height: calc(100dvh / var(--app-ui-scale, 1) - 280px); min-height: 240px; overscroll-behavior: contain; }
+@media (max-width: 1100px) {
+  .devices-table-scroll { max-height: calc(56dvh / var(--app-ui-scale, 1)); }
+}
+.devices-table { margin: 0; }
+.devices-table td { padding: var(--workspace-row-padding) 10px; }
+.devices-table th { padding: 4px 10px; }
+.devices-table .table-select { min-height: var(--knx-control-height); padding: 2px 0; }
 .devices-table th { position: sticky; top: 0; background: var(--knx-surface); z-index: 1; }
 .devices-table th button { background: transparent; color: var(--knx-foreground); box-shadow: none; border: 0; text-align: left; }
 .devices-table td { max-width: 28ch; overflow-wrap: anywhere; }
@@ -3722,7 +3824,7 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
   .pane-resizer, .pane-splitter { display: none; }
   /* The hidden splitters took their rule with them; the boundary keeps one. */
   .navigation-section + .pane-splitter + .navigation-section { border-top: 1px solid var(--knx-border); }
-  .workbench-center { padding: 16px; }
+  .workbench-center { padding: var(--workspace-panel-padding); }
   .file-menu-content { position: fixed; left: 10px; right: 10px; top: 65px; }
 }
 /* Narrow or short screens: a flyout would leave the viewport (or the scrolling menu around it would
@@ -3754,8 +3856,8 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
   .file-menu-content[data-layout="inline"] > .file-submenu > .file-submenu-panel:not([hidden]),
   .file-submenu[data-layout="inline"] > .file-submenu-panel:not([hidden]) { animation-name: knx-file-submenu-fade; }
 }
-.device-workspace { background: var(--knx-surface); border: 1px solid var(--knx-border); border-radius: 8px; padding: 20px; margin-top: 24px; }
-.device-workspace .workspace-heading { margin-bottom: 15px; }
+.device-workspace { background: var(--knx-surface); border: 1px solid var(--knx-border); border-radius: 8px; padding: var(--workspace-panel-padding); margin-top: 12px; container-type: inline-size; }
+.device-workspace .workspace-heading { margin-bottom: 8px; }
 .device-workspace h2 { margin: 0 0 4px; }
 /* T16: the product identity block, the content of the workspace's third tab
    ("Produktdaten", per the approved concept images). It has no surface and no
@@ -3863,8 +3965,8 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
 .com-table .com-object-editor-row td { max-width: none; }
 
 .identity-group { margin-top: 14px; }
-.device-tabs { display: flex; flex-wrap: wrap; gap: 4px 12px; border-bottom: 1px solid var(--knx-border); margin-bottom: 14px; }
-.device-tabs button { background: transparent; color: var(--knx-muted) !important; border: 0; box-shadow: none; border-radius: 0; padding: 10px 8px; min-width: 0; max-width: 100%; white-space: normal; text-align: left; }
+.device-tabs { display: flex; flex-wrap: wrap; gap: 4px 12px; border-bottom: 1px solid var(--knx-border); margin-block: 8px; }
+.device-tabs button { background: transparent; color: var(--knx-muted) !important; border: 0; box-shadow: none; border-radius: 0; padding: 8px; min-width: 0; max-width: 100%; white-space: normal; text-align: left; }
 .device-tabs button[aria-selected="true"] { color: var(--knx-accent) !important; border-bottom: 2px solid var(--knx-accent); }
 .com-object-groups { display: grid; gap: 10px; min-width: 0; }
 .com-object-channel { min-width: 0; border: 1px solid var(--knx-border); border-radius: var(--knx-radius-card); background: var(--knx-surface); }
@@ -5000,7 +5102,7 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
   border-block: 4px solid var(--knx-accent-tertiary);
 }
 :root[data-presentation="lcars"] .workbench-center {
-  padding: 20px;
+  padding: var(--workspace-panel-padding);
   background: var(--knx-surface);
 }
 :root[data-presentation="lcars"] .inspector-heading {
@@ -5074,11 +5176,35 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
   :root[data-presentation="lcars"] .workbench-pane-left {
     border-inline-start-width: 6px;
   }
-  :root[data-presentation="lcars"] .workbench-center { padding: 14px; }
+  :root[data-presentation="lcars"] .workbench-center { padding: var(--workspace-panel-padding); }
 }
 @media (max-width: 700px) {
   :root[data-presentation="lcars"] .workbench-toolbar { border-inline-start-width: 0; }
   :root[data-presentation="lcars"] .workbench-pane-left { border-inline-start-width: 0; }
+}
+
+/* WP-41: trusted technical geometry; density, motion and semantic inks keep their owners. */
+:root[data-presentation="technical"] :is(button, input, select, textarea,
+  .search-panel, .file-menu-content, .rename-context-menu, .workspace-table-wrap,
+  .device-workspace, .topology-line, .building-diagram-node, .diagram-device) {
+  border-radius: 2px;
+}
+:root[data-presentation="technical"] :is(.search-panel, .file-menu-content, .rename-context-menu) {
+  box-shadow: none;
+}
+:root[data-presentation="technical"] :is(button, input, select, textarea):focus-visible {
+  outline: 2px solid var(--knx-accent);
+  outline-offset: 3px;
+}
+/* Use palette ink, not on-accent ink, to retain primary contrast in both palettes. */
+:root[data-presentation="technical"] .primary-action:hover:not(:disabled) {
+  --button-veil: color-mix(in srgb, var(--knx-foreground) 14%, transparent);
+}
+:root[data-presentation="technical"] .primary-action:active:not(:disabled) {
+  --button-veil: color-mix(in srgb, var(--knx-foreground) 26%, transparent);
+}
+:root[data-presentation="technical"] .workspace-table tbody tr:nth-child(even):not([aria-selected="true"]) {
+  background: color-mix(in srgb, var(--knx-bg) 38%, var(--knx-surface));
 }
 
 /* ADR-0157: Rail — trusted built-in presentation for the `rail` and

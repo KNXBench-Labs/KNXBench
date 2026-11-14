@@ -783,6 +783,8 @@ const SHIPPED_THEMES: &[&str] = &[
     "lcars",
     "rail",
     "rail-dark",
+    "technical-light",
+    "technical-dark",
     "system",
     "user-modern-retro-green-crt",
 ];

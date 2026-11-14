@@ -138,6 +138,29 @@ function setSelectValue(select: HTMLSelectElement, value: string) {
 }
 
 describe("ParameterPanel", () => {
+  it("assigns scalar and text slots by declared kind, never label, value or field identity", async () => {
+    const base = fixture.sections[0].fields[0];
+    const fields = ["Number", "Restriction", "Time", "Text", "Color", "Picture", "IPAddress", "Date", "Unknown"].map((kind, index) => ({
+      ...base, kind, etsId: `width-${index}`, writeEtsId: `width-${index}`,
+      text: index % 2 ? "Ein sehr langer deutscher Beschriftungstext für dieselbe Feldbreite" : "An equally long English label for exactly the same value slot",
+      value: kind === "Text" ? "A" : "12345678901234567890", suffixText: kind === "Number" ? "s" : null,
+    }));
+    apiMock.deviceParameters.mockResolvedValue({ ...fixture, sections: [{ scope: null, fields }] });
+    const root = await renderPanel();
+    for (const field of fields) {
+      const row = host!.querySelector(`[data-ets-id="${field.etsId}"]`)!;
+      expect(row.classList.contains("parameter-field-text")).toBe(field.kind === "Text");
+      expect(row.classList.contains("parameter-field-scalar")).toBe(field.kind !== "Text");
+    }
+    const unit = host!.querySelector('[data-ets-id="width-0"] .parameter-field-control')!;
+    expect(unit.querySelector("input")).not.toBeNull();
+    expect(unit.querySelector(".parameter-field-suffix")!.textContent).toBe("s");
+    expect(host!.querySelector<HTMLInputElement>('[data-ets-id="width-3"] input')!.value).toBe("A");
+    expect(apiMock.setParameterValue).not.toHaveBeenCalled();
+    expect(apiMock.parameterEditorSource).not.toHaveBeenCalled();
+    await act(async () => root.unmount());
+  });
+
   it("keeps Restricted section captions readable with original template evidence", async () => {
     const panel = structuredClone(fixture);
     panel.sections[0].fields[0] = { ...panel.sections[0].fields[0], access: "Read", editable: false,

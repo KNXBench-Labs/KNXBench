@@ -1,6 +1,6 @@
 /** Devices navigation browser contracts with strictly intercepted, fictional API data. */
 import { openExplorerBranches, openNavigationSections, openParameterSections } from "./disclosure-fixture";
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "@playwright/test";
 import { join } from "node:path";
 import type { ProjectTree } from "../src/bindings/ProjectTree";
 import type { ParameterPanel, LineScanResultsResponse } from "../src/api";
@@ -139,6 +139,273 @@ test("unknown manufacturer IDs and long product metadata remain readable", async
   expect(state.unexpected).toEqual([]);
 });
 
+const DENSITY_PALETTES = ["porcelain", "graphite", "cupertino", "lcars", "rail", "rail-dark", "technical-light", "technical-dark", "user-modern-retro-green-crt"] as const;
+
+for (const language of ["en", "de"] as const) for (const density of ["compact", "comfortable"] as const) {
+  for (const theme of DENSITY_PALETTES) test(`WP41 ${theme} ${density} ${language}: shared slots, table room and real state marks`, async ({ page }, info) => {
+    const m = language === "en" ? en : de;
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    const state = await intercept(page, language, 24, theme, true, true, { density, study: true });
+    await openProject(page, language); await openList(page, language);
+    await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
+    await expect(page.locator("html")).toHaveAttribute("data-density", density);
+    await page.evaluate(() => document.fonts.ready);
+    const table = page.locator(".devices-table");
+    await expect(table.locator("thead th")).toHaveCount(13);
+    await expect(table.locator("tbody tr")).toHaveCount(24);
+    await expect(table.locator('tbody tr[data-rename-id="1"] .programming-chip[data-part="parameters"]')).toBeVisible();
+    const scrolling = await page.locator(".devices-table-scroll").evaluate(node => {
+      const rect = node.getBoundingClientRect();
+      const head = node.querySelector("thead")!.getBoundingClientRect();
+      node.scrollLeft = 100;
+      return { body: rect.height - head.height, local: node.scrollWidth > node.clientWidth, moved: node.scrollLeft };
+    });
+    expect(scrolling.body).toBeGreaterThanOrEqual(300);
+    expect(scrolling.local).toBe(true); expect(scrolling.moved).toBeGreaterThan(0);
+    expect(await table.locator("tbody tr").first().evaluate(node => getComputedStyle(node.querySelector("td")!).fontSize)).toBe("13px");
+    await info.attach("wp41-devices", { body: await page.screenshot(), contentType: "image/png" });
+    await dismissStudyNotifications(page);
+    const select = page.getByRole("checkbox", { name: m["devices.select"].replace("{name}", "Actuator 1"), exact: true });
+    await select.check();
+    await expect(select).toBeChecked();
+    await expect(page.locator(".device-workspace")).toHaveCount(0); // Checkbox does not activate the editor.
+    await table.locator("tbody td:nth-child(3) button").filter({ hasText: /^Actuator 1$/ }).click();
+    const inspector = page.locator(".workbench-pane-right .inspector");
+    const address = inspector.locator(".individual-address-field .address-editor");
+    await expect(address).toBeVisible();
+    expect((await address.boundingBox())!.width).toBeCloseTo(160, 0);
+    const name = inspector.locator("input.value-slot-text[data-rename-name]");
+    expect((await name.boundingBox())!.width).toBeLessThanOrEqual(384);
+    expect((await name.boundingBox())!.width).toBeGreaterThan(160);
+    const textFields = inspector.locator("input.value-slot-text, textarea.value-slot-text");
+    await expect(textFields).toHaveCount(2);
+    for (const field of await textFields.all()) {
+      const width = (await field.boundingBox())!.width;
+      expect(width).toBeGreaterThan(160); expect(width).toBeLessThanOrEqual(384);
+    }
+    await expect(inspector.locator('.device-programming-parts [data-pending="true"]')).toHaveCount(1);
+    const addressInput = address.locator("input");
+    await addressInput.fill("256"); await addressInput.press("Enter");
+    await expect(inspector.locator(".individual-address-field .field-error")).toBeVisible();
+    await expect(addressInput).toHaveValue("256");
+    await info.attach("wp41-inspector", { body: await inspector.screenshot(), contentType: "image/png" });
+    await addressInput.fill("2"); await addressInput.press("Enter");
+    await expect(inspector.locator(".individual-address-field .field-error")).toHaveCount(0);
+    await page.getByRole("tab", { name: m["workbench.parameters"], exact: true }).click();
+    const workspace = page.locator(".parameter-workspace");
+    await workspace.locator(".parameter-workspace-nav button").first().click();
+    const mode = workspace.locator('[data-parameter-row="Mode"] select');
+    const scalar = workspace.locator('[data-parameter-row="Study-number"] .parameter-field-control');
+    expect((await mode.boundingBox())!.width).toBeCloseTo(160, 0);
+    expect((await scalar.boundingBox())!.width).toBeCloseTo(160, 0);
+    await expect(scalar.locator(".parameter-field-suffix")).toHaveText("s");
+    await expect(scalar.locator("input")).toBeDisabled();
+    await expect(scalar.locator("input")).toHaveValue("5");
+    await expect(workspace.locator('[data-parameter-row="Study-number"] .parameter-field-caption')).not.toBeEmpty();
+    const text = workspace.locator('[data-parameter-row="Study-text"] .parameter-field-text input');
+    expect((await text.boundingBox())!.width).toBeLessThanOrEqual(384);
+    expect((await text.boundingBox())!.width).toBeGreaterThan(160);
+    await expect(text).toHaveValue("Fictional engineering description");
+    for (const control of [mode, scalar.locator("input")]) {
+      const box = (await control.boundingBox())!;
+      expect(box.height).toBeGreaterThanOrEqual(density === "compact" ? 32 : 40);
+      await expect(control).toHaveCSS("font-size", "13px");
+    }
+    const label = workspace.locator('[data-parameter-row="Mode"] .parameter-field-name');
+    await expect(label).toContainText(language === "de" ? "Busspannungsversorgung" : "voltage recovery");
+    expect(await label.evaluate(node => node.scrollHeight - node.clientHeight)).toBeLessThanOrEqual(1);
+    await expectSourceNotice(workspace, "Information", "Fictional source warning");
+    await expectSourceNotice(workspace, "Error", "Fictional source error");
+    await mode.focus(); await page.keyboard.press("Tab"); await page.keyboard.press("Shift+Tab");
+    await expect(mode).toBeFocused();
+    expect(await mode.evaluate(node => node.matches(":focus-visible"))).toBe(true);
+    expect(await mode.evaluate(node => getComputedStyle(node).boxShadow)).not.toBe("none");
+    await info.attach("wp41-parameters-focused", { body: await workspace.screenshot(), contentType: "image/png" });
+    await page.locator(".device-editor-navigation button").first().click();
+    await expect(select).toBeChecked();
+    expect(state.requests.filter(request => /^(POST|PUT|DELETE) /.test(request)
+      && request !== "POST /api/bus/discover" && request !== "POST /api/project/new" && request !== "POST /api/achievements/record")).toEqual([]);
+    expect(state.unexpected).toEqual([]);
+  });
+
+  for (const theme of ["technical-light", "technical-dark"]) test(`WP41 ${theme} ${density} ${language}: narrow panes bound slots and retain labels`, async ({ page }, info) => {
+    const m = language === "en" ? en : de;
+    await page.setViewportSize({ width: 400, height: 1000 });
+    const state = await intercept(page, language, 24, theme, true, true, { density, study: true });
+    await openProject(page, language); await openList(page, language);
+    expect((await page.locator(".devices-table-scroll").boundingBox())!.height).toBeGreaterThanOrEqual(240);
+    await page.locator(".devices-table tbody td:nth-child(3) button").filter({ hasText: /^Actuator 1$/ }).click();
+    await page.getByRole("tab", { name: m["workbench.parameters"], exact: true }).click();
+    const workspace = page.locator(".parameter-workspace");
+    await workspace.locator(".parameter-workspace-nav button").first().click();
+    const mode = workspace.locator('[data-parameter-row="Mode"] select');
+    const label = workspace.locator('[data-parameter-row="Mode"] .parameter-field-name');
+    const [labelBox, modeBox] = [(await label.boundingBox())!, (await mode.boundingBox())!];
+    expect(modeBox.y).toBeGreaterThanOrEqual(labelBox.y + labelBox.height);
+    expect(modeBox.width).toBeCloseTo(160, 0);
+    for (const editor of await workspace.locator(".parameter-field > input, .parameter-field > select, .parameter-field-control").all()) {
+      if (!await editor.isVisible()) continue;
+      const box = (await editor.boundingBox())!;
+      expect(box.x).toBeGreaterThanOrEqual(0); expect(box.x + box.width).toBeLessThanOrEqual(401);
+    }
+    await expectSourceNotice(workspace, "Information", "Fictional source warning");
+    await expectSourceNotice(workspace, "Error", "retained evidence");
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1);
+    await info.attach("wp41-narrow-parameters", { body: await workspace.screenshot(), contentType: "image/png" });
+    expect(state.unexpected).toEqual([]);
+  });
+}
+
+for (const language of ["en", "de"] as const) test(`WP41 ${language}: saved/resized columns and draft survive Settings; active focus survives in-place refresh`, async ({ page }, info) => {
+  const m = language === "en" ? en : de;
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.addInitScript(() => {
+    const key = "knxbench:table-column-widths:v1:devices";
+    // Init scripts also run on reload: seed an absent preference, never overwrite a resize.
+    if (localStorage.getItem(key) === null) localStorage.setItem(key, JSON.stringify({ name: 280, description: 220 }));
+  });
+  const state = await intercept(page, language, 24, "technical-light", true, true, { density: "compact", study: true });
+  await openProject(page, language); await openList(page, language);
+  const table = page.locator('[data-table-id="devices"]');
+  const stored = () => page.evaluate(() => JSON.parse(localStorage.getItem("knxbench:table-column-widths:v1:devices")!));
+  expect(await stored()).toEqual({ name: 280, description: 220 });
+  const renderedName = () => table.locator("col").nth(2).evaluate(node => node.getBoundingClientRect().width);
+  const initialRenderedName = await renderedName();
+  await table.getByRole("separator").nth(2).press("ArrowRight");
+  const resized = await stored(); expect(resized.name).toBe(288); expect(resized.description).toBe(220);
+  await expect.poll(renderedName).toBeCloseTo(initialRenderedName + 8, 0);
+  const selected = page.getByRole("checkbox", { name: m["devices.select"].replace("{name}", "Actuator 1"), exact: true });
+  await selected.check();
+  await table.locator("tbody td:nth-child(3) button").filter({ hasText: /^Actuator 1$/ }).click();
+  await page.getByRole("tab", { name: m["workbench.parameters"], exact: true }).click();
+  const workspace = page.locator(".parameter-workspace");
+  await workspace.locator(".parameter-workspace-nav button").first().click();
+  await workspace.locator('[data-checked-for="Study-date"]').click();
+  const checked = workspace.locator('[data-ets-id="Study-date"] .parameter-checked-editor');
+  const draft = checked.locator('input[type="text"]');
+  await draft.fill("2026-12-24");
+  await draft.evaluate(node => node.setAttribute("data-wp41-retained", "same"));
+  await page.keyboard.press("Tab"); await page.keyboard.press("Shift+Tab");
+  await expect(draft).toBeFocused();
+  const before = state.requests.length;
+  for (const [theme, density] of [["technical-dark", "comfortable"], ["graphite", "compact"], ["technical-light", "comfortable"]]) {
+    await page.keyboard.press("Control+Shift+P");
+    const palette = page.getByRole("dialog").getByRole("combobox");
+    await palette.fill(m["toolbar.settings"]); await palette.press("Enter");
+    await page.getByRole("combobox", { name: m["settings.theme"], exact: true }).selectOption(theme);
+    await page.getByRole("combobox", { name: m["appearance.density"], exact: true }).selectOption(density);
+    await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
+    await expect(page.locator("html")).toHaveAttribute("data-density", density);
+    await page.getByRole("button", { name: m["settings.back"], exact: true }).click();
+    await expect(draft).toHaveAttribute("data-wp41-retained", "same");
+    await expect(draft).toHaveValue("2026-12-24");
+    // Settings is page navigation; its Back action does not promise inline focus restoration.
+    expect((await draft.boundingBox())!.width).toBeCloseTo(160, 0);
+    await expect(workspace.locator('.parameter-workspace-nav [aria-current="page"]')).toHaveCount(1);
+    expect(await stored()).toEqual(resized);
+    await info.attach(`wp41-switch-${theme}-${density}`, { body: await workspace.screenshot(), contentType: "image/png" });
+  }
+  // Re-enter by real pointer/keyboard input before testing an in-place update.
+  await draft.click(); await page.keyboard.press("Tab"); await page.keyboard.press("Shift+Tab");
+  await expect(draft).toBeFocused();
+  for (const [theme, density] of [["technical-dark", "compact"], ["technical-light", "comfortable"]]) {
+    // Simulated change in the server's record; the production refresh applies it.
+    // No focusing, clicking or locator.press between these before/after assertions.
+    state.settings = { ...state.settings, theme, density };
+    await expect(page.locator("html")).toHaveAttribute("data-theme", theme, { timeout: 10_000 });
+    await expect(page.locator("html")).toHaveAttribute("data-density", density);
+    await expect(draft).toHaveAttribute("data-wp41-retained", "same");
+    await expect(draft).toHaveValue("2026-12-24");
+    await expect(draft).toBeFocused();
+    expect(await draft.evaluate(node => node.matches(":focus-visible"))).toBe(true);
+    await expect(draft).toHaveCSS("outline-style", "solid");
+    await expect(draft).toHaveCSS("outline-width", "2px");
+    await page.keyboard.press("End"); await page.keyboard.press("Backspace");
+    await expect(draft).toHaveValue("2026-12-2");
+    await page.keyboard.type("4"); await expect(draft).toHaveValue("2026-12-24");
+    expect(await stored()).toEqual(resized);
+    await info.attach(`wp41-active-${theme}-${density}`, { body: await workspace.screenshot(), contentType: "image/png" });
+  }
+  await expect.poll(() => ({ theme: state.settings.theme, density: state.settings.density }))
+    .toEqual({ theme: "technical-light", density: "comfortable" });
+  await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem("knx-desktop:settings-cache")!)))
+    .toMatchObject({ schemaVersion: 1, settings: { theme: "technical-light", density: "comfortable" } });
+  expect(state.requests.slice(before).filter(request => /^(POST|DELETE) /.test(request) && request !== "POST /api/achievements/record")).toEqual([]);
+  expect(state.tree.snapshot_revision).toBe(1); expect(state.tree.can_undo).toBe(false);
+  await page.locator(".device-editor-navigation button").first().click();
+  await expect(selected).toBeChecked();
+  const finalRenderedName = await renderedName();
+  await table.getByRole("separator").nth(2).press("ArrowLeft");
+  await expect.poll(renderedName).toBeCloseTo(finalRenderedName - 8, 0);
+  await table.getByRole("separator").nth(2).press("ArrowRight");
+  await expect.poll(renderedName).toBeCloseTo(finalRenderedName, 0);
+  expect(await stored()).toEqual(resized);
+  expect(state.settings).toMatchObject({ theme: "technical-light", density: "comfortable" });
+  await page.reload();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "technical-light");
+  await expect(page.locator("html")).toHaveAttribute("data-density", "comfortable");
+  expect(await stored()).toEqual(resized);
+  expect(state.unexpected).toEqual([]);
+});
+
+for (const [theme, density, language, width, uiScale] of [
+  ["technical-light", "compact", "en", 1440, 0.8],
+  ["technical-light", "comfortable", "de", 400, 1.5],
+  ["technical-dark", "compact", "de", 400, 0.8],
+  ["technical-dark", "comfortable", "en", 1440, 1.5],
+] as const) test(`WP41 ${theme} ${density} ${language}: scale ${uiScale} at ${width}px and constrained inspector`, async ({ page }, info) => {
+  const m = language === "en" ? en : de;
+  await page.setViewportSize({ width, height: 1000 });
+  const state = await intercept(page, language, 24, theme, true, true, { density, study: true, uiScale });
+  await openProject(page, language); await openList(page, language);
+  await expect(page.locator("html")).toHaveCSS("--app-ui-scale", String(uiScale));
+  const tableScroll = page.locator(".devices-table-scroll");
+  expect((await tableScroll.boundingBox())!.height / uiScale).toBeGreaterThanOrEqual(160);
+  await page.locator('tr[data-rename-id="1"] td:nth-child(3) button').click();
+  const inspector = page.locator(".workbench-pane-right .inspector");
+  // Host-size constraint on the real consumer, not a new inspector implementation.
+  await inspector.evaluate(node => { (node as HTMLElement).style.inlineSize = "min(240px, 100%)"; });
+  const name = inspector.locator("input[data-rename-name]");
+  await name.scrollIntoViewIfNeeded();
+  const label = inspector.locator(".rename-name-field .inspector-field");
+  await expect(label).toHaveText(m["inspector.name"]);
+  // The caption is an anonymous grid text item, not an invented wrapper element.
+  const labelBox = await label.evaluate(node => {
+    const text = Array.from(node.childNodes).find(child => child.nodeType === Node.TEXT_NODE && child.textContent?.trim())!;
+    const range = document.createRange(); range.selectNodeContents(text);
+    const box = range.getBoundingClientRect(); return { y: box.y, height: box.height };
+  });
+  const nameBox = (await name.boundingBox())!;
+  expect(nameBox.y).toBeGreaterThanOrEqual(labelBox.y + labelBox.height - 1);
+  await expect(name).toHaveValue("Actuator 1");
+  const pane = (await inspector.boundingBox())!;
+  for (const field of await inspector.locator("input.value-slot-text, .address-editor").all()) {
+    const box = (await field.boundingBox())!;
+    expect(box.width).toBeGreaterThan(0);
+    expect(box.x).toBeGreaterThanOrEqual(pane.x - 1);
+    expect(box.x + box.width).toBeLessThanOrEqual(pane.x + pane.width + 1);
+  }
+  expect((await inspector.locator(".address-editor").boundingBox())!.width / uiScale).toBeCloseTo(160, 0);
+  await inspector.screenshot({ path: info.outputPath("wp41-scale-inspector.png") });
+  await page.getByRole("tab", { name: m["workbench.parameters"], exact: true }).click();
+  const workspace = page.locator(".parameter-workspace");
+  await workspace.locator(".parameter-workspace-nav button").first().click();
+  const mode = workspace.locator('[data-parameter-row="Mode"] select');
+  expect((await mode.boundingBox())!.width / uiScale).toBeCloseTo(160, 0);
+  const expectedHeight = density === "compact" ? 32 : 40;
+  await expect(mode).toHaveCSS("min-height", `${expectedHeight}px`);
+  // Chromium quantizes scaled DOMRects; retain the exact CSS contract and a 1/64px bound.
+  expect((await mode.boundingBox())!.height / uiScale).toBeGreaterThanOrEqual(expectedHeight - 1 / 64);
+  await expectSourceNotice(workspace, "Information", "Fictional source warning");
+  await expectSourceNotice(workspace, "Error", "retained evidence");
+  expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1);
+  await workspace.screenshot({ path: info.outputPath("wp41-scale-parameters.png") });
+  expect(state.tree.snapshot_revision).toBe(1); expect(state.tree.can_undo).toBe(false);
+  expect(state.requests.filter(request => /^(POST|PUT|DELETE) /.test(request)
+    && !["POST /api/bus/discover", "POST /api/project/new", "POST /api/achievements/record"].includes(request))).toEqual([]);
+  expect(state.unexpected).toEqual([]);
+});
+
 const devices = (count: number): DeviceNode[] => Array.from({ length: count }, (_, index) => ({
   id: index + 1, name: `Actuator ${index + 1}`, address: index < 2 ? `1.1.${index === 0 ? 2 : 10}` : null,
   description: `Fictional device ${index + 1}`, com_object_count: 0,
@@ -154,9 +421,42 @@ function fixtureTree(nodes: DeviceNode[]): ProjectTree {
           com_object_number: 1, com_object_name: "Switch", direction: "Receive" }] }],
     }] };
 }
-async function intercept(page: Page, language: "en" | "de", count = 3, theme = "porcelain", parameterEditing = false, parameterWorkspace = false) {
+/** Dismiss transient first-project notices through their real UI before durable visual capture. */
+async function dismissStudyNotifications(page: Page) {
+  const dismiss = page.locator(".toast:not(.toast--leaving) .toast-dismiss");
+  for (let round = 0; round < 20 && await dismiss.count() > 0; round++) await dismiss.first().click();
+  await expect(page.locator(".toast")).toHaveCount(0);
+}
+
+/** Source notices must remain visibly rendered and reachable, not merely present in the DOM. */
+async function expectSourceNotice(workspace: Locator, hint: "Information" | "Error", text: string) {
+  const row = workspace.locator(`.parameter-workspace-separator[data-ui-hint="${hint}"]`);
+  const message = row.locator("p");
+  await expect(row).toBeVisible(); await expect(message).toBeVisible();
+  await expect(message).toContainText(text);
+  await message.scrollIntoViewIfNeeded();
+  await expect(message).toBeInViewport({ ratio: 1 });
+  const bounds = (await message.boundingBox())!;
+  const pane = (await workspace.boundingBox())!;
+  expect(bounds.width).toBeGreaterThan(0); expect(bounds.height).toBeGreaterThan(0);
+  expect(bounds.x).toBeGreaterThanOrEqual(pane.x - 1);
+  expect(bounds.x + bounds.width).toBeLessThanOrEqual(pane.x + pane.width + 1);
+  if (hint === "Error") {
+    const paint = await message.evaluate(node => {
+      const style = getComputedStyle(node); const probe = document.createElement("span");
+      probe.style.color = style.getPropertyValue("--knx-error-color").trim();
+      return { actual: style.color, expected: probe.style.color };
+    });
+    expect(paint.actual).toBe(paint.expected);
+  }
+}
+
+async function intercept(page: Page, language: "en" | "de", count = 3, theme = "porcelain", parameterEditing = false, parameterWorkspace = false,
+  appearance: { density: "compact" | "comfortable"; study?: boolean; uiScale?: number } = { density: "compact" }) {
   const nodes = devices(count); const tree = fixtureTree(nodes);
-  const state = { tree, nodes, unexpected: [] as string[], requests: [] as string[], polls: 0, failCatalogue: false, detailProduct: null as DeviceProductNode | null };
+  if (appearance.study) nodes[0].pending_programming = { address: false, application: false, parameters: true, group_addresses: false };
+  const state = { tree, nodes, unexpected: [] as string[], requests: [] as string[], polls: 0, failCatalogue: false, detailProduct: null as DeviceProductNode | null,
+    settings: { uiLanguage: language, theme, density: appearance.density, ...(appearance.study ? { motionLevel: "off", accent: "violet", releaseChecksEnabled: false, ...(appearance.uiScale === undefined ? {} : { uiScale: appearance.uiScale }) } : {}) } as Record<string, unknown> };
   let mode = "0";
   tree.project_incarnation = 1;
   const panel = (): ParameterPanel => ({ programId: "A-FIXTURE", sourceLanguage: "en", tree: null, stale: [], diagnostics: [],
@@ -173,6 +473,18 @@ async function intercept(page: Page, language: "en" | "de", count = 3, theme = "
       enumOptions: [], group: { key: "timing", label: "Timing and start-up" } });
     data.sections[0].fields.push({ ...modeField, etsId: "Ungrouped", writeEtsId: null, editable: false,
       kind: "Text", text: "Engineering note", value: "Fictional ungrouped parameter", enumOptions: [], group: null });
+    if (appearance.study) {
+      modeField.text = language === "de" ? "Bedienverhalten nach Wiederkehr der Busspannungsversorgung mit langer Beschriftung"
+        : "Operating behavior after bus voltage recovery with a deliberately long engineering label";
+      data.sections[0].fields.push(
+        { ...modeField, etsId: "Study-number", kind: "Number", enumOptions: [], value: "5", suffixText: "s", editable: false, writeEtsId: null },
+        { ...modeField, etsId: "Study-text", kind: "Text", enumOptions: [], value: "Fictional engineering description", editable: false, writeEtsId: null },
+        { ...modeField, etsId: "Study-date", kind: "Date", enumOptions: [], value: "2026-11-14", writeEtsId: "Study-date", min: null, max: null });
+      data.sections[0].separators = [
+        { position: 0, group: modeField.group!, elementId: "study-information", text: "Fictional source warning — do not hide", uiHint: "Information", access: null, blockAccess: null },
+        { position: 1, group: modeField.group!, elementId: "study-error", text: "Fictional source error — retained evidence", uiHint: "Error", access: null, blockAccess: null },
+      ];
+    }
     data.sections.push({ scope: { moduleNode: 7, moduleId: "Channel A", moduleDefId: "MD-A" },
       fields: [{ ...modeField, etsId: "Module-mode", writeEtsId: null, editable: false,
         text: "Operating mode", group: { key: "buttons", label: "Buttons" } }] });
@@ -188,7 +500,16 @@ async function intercept(page: Page, language: "en" | "de", count = 3, theme = "
     state.requests.push(`${method} ${path}`);
     let body: unknown; let status = 200;
     if (path === "/api/auth/status" && method === "GET") body = { required: false, authenticated: true };
-    else if (path === "/api/settings" && method === "GET") body = { schemaVersion: 1, status: "ok", settings: { uiLanguage: language, theme } };
+    else if (path === "/api/settings" && method === "GET") body = { schemaVersion: 1, ...(appearance.study ? { conditionalPatchVersion: 1 } : {}), status: "ok", settings: state.settings };
+    // The acknowledged study document enables the first-run build metadata read.
+    else if (appearance.study && path === "/api/version" && method === "GET") body = { version: "0.0.0-fixture" };
+    else if (appearance.study && path === "/api/settings" && method === "PUT") {
+      const payload = route.request().postDataJSON() as { settings: Record<string, unknown>; expectedSettings?: Record<string, unknown> };
+      expect(Object.keys(payload.settings).every(key => ["theme", "density"].includes(key))).toBe(true);
+      for (const [key, value] of Object.entries(payload.expectedSettings ?? {})) expect(state.settings[key] ?? null).toEqual(value);
+      state.settings = { ...state.settings, ...payload.settings };
+      body = { schemaVersion: 1, conditionalPatchVersion: 1, status: "ok", settings: state.settings };
+    }
     else if (path === "/api/project" && method === "GET") { if (projectOpen) body = state.tree; else { status = 400; body = { error: "no project open" }; } }
     else if (path === "/api/project/new" && method === "POST") { projectOpen = true; body = state.tree; }
     else if (path === "/api/project/load-progress" && method === "GET") body = null;
@@ -209,6 +530,13 @@ async function intercept(page: Page, language: "en" | "de", count = 3, theme = "
       const device = nodes.find((node) => node.id === Number(path.split("/").at(-1)));
       if (!device) { status = 400; body = { error: "device not found" }; }
       else body = { ...device, com_objects: parameterEditing && mode !== "0" ? [configuredObject()] : [], product: state.detailProduct ?? { resolution: "NoReference", product_ref: null, program_ref: null, catalog: null } };
+    } else if (appearance.study && path === "/api/device/1/parameter-editor-source" && method === "GET") {
+      expect(url.searchParams.get("etsId")).toBe("Study-date");
+      body = { device: 1, parameterRefId: "Study-date", serverIncarnation: "devices-browser", projectIncarnation: 1,
+        snapshotRevision: state.tree.snapshot_revision, evidence: { status: "declared", source: {
+          sourceSha256: "a".repeat(64), programId: "A-FIXTURE", parameterTypeId: "T-date", schema: 23,
+          child: "TypeDate", attributes: { Encoding: "DPT 11" }, parentAttributes: { Id: "T-date" },
+        } } };
     } else if (/^\/api\/device\/\d+\/parameters$/.test(path) && method === "GET") body = parameterEditing ? shownPanel() : { programId: null, sections: [], stale: [], diagnostics: [] };
     else if (parameterEditing && /^\/api\/device\/\d+\/parameters$/.test(path) && method === "POST") {
       const write = route.request().postDataJSON();

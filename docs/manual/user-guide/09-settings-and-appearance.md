@@ -70,6 +70,7 @@ The **Theme** menu is the one place to choose a theme. It lists:
 | Cupertino | A light theme with its own fixed accent |
 | LCARS | Dark orange/lavender palette with recognizable framing and rounded navigation; quiet engineering surfaces |
 | Rail / Rail Dark | A light and a dark sharp theme: square controls, Geist type, a measuring rail under the toolbar and KNX-cable green as its fixed accent |
+| Technical Light / Technical Dark | WP-41 source candidate, not yet released or product-accepted: restrained blue-grey palettes, 2 px corners and the existing Inter/JetBrains Mono fonts |
 | Modern Retro Green CRT | Shipped with KNXBench: a dark phosphor-green theme with its own fixed accent |
 | *your imported themes* | Every theme file you imported, by its name |
 
@@ -118,6 +119,22 @@ Subtle keeps only short fades. The category **Theme effects (Rail)** under
 **Motion by category** turns these off without touching any other motion;
 Motion level Off and OS reduced motion stop them as well.
 
+### Technical Light and Technical Dark — WP-41 source candidate
+
+The candidate adds two built-in choices, **Technical Light** and **Technical
+Dark**, on the same device list, parameter workspace and Properties controls.
+They are not theme files or a second application. Their fixed accent does not
+replace warning, error or success meanings; they add no animation. Density and
+motion preferences stay independent. System still follows Porcelain/Graphite,
+and Rail retains its own appearance. Product verification is pending; this is
+not a claim about Alpha 21 or native-shell acceptance.
+
+The shared WP-41 layout candidate keeps short values at 10 rem (160 CSS px at
+the normal root size), including a unit or address prefix. Names, descriptions
+and declared text fields use one larger class bounded at 24 rem. Narrow panes
+stack labels and bound fields to the available space. Device-table columns
+retain your saved/resized widths and scroll horizontally inside the table.
+
 ## Theme files
 
 Below the menu, **Theme files** handles `.knx-theme.json` files:
@@ -145,7 +162,7 @@ The accent tints interactive elements only. Status colors — the red of an erro
 amber of a warning — never depend on it, because a color that means something must not
 change meaning when you pick a nicer purple.
 
-Cupertino, LCARS, Rail, Rail Dark and Modern Retro Green CRT carry their own accent as part of their
+Cupertino, LCARS, Rail, Rail Dark, the Technical pair (WP-41 candidate) and Modern Retro Green CRT carry their own accent as part of their
 identity (as can an imported theme), and under those the control is disabled with the reason spelled out on screen: *"This theme keeps its own
 accent; the accent setting has no effect here."*
 

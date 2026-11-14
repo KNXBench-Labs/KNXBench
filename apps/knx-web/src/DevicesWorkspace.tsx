@@ -20,19 +20,19 @@ import { ComparisonTag } from "./DeviceComparisonDialog";
 import "./deviceComparisons.css";
 
 const DEVICES_COLUMNS = [
-  { id: "select", width: 48, min: 32 },
-  { id: "address", width: 100, min: 48 },
-  { id: "name", width: 120, min: 48 },
-  { id: "programming", width: 100, min: 48 },
-  { id: "manufacturer", width: 90, min: 48 },
-  { id: "product", width: 110, min: 48 },
-  { id: "orderNumber", width: 80, min: 48 },
-  { id: "system", width: 80, min: 48 },
-  { id: "topology", width: 80, min: 48 },
-  { id: "building", width: 90, min: 48 },
-  { id: "com_object_count", width: 80, min: 48 },
-  { id: "description", width: 100, min: 48 },
-  { id: "comparison", width: 102, min: 48 }
+  { id: "select", width: 38, min: 32 },
+  { id: "address", width: 82, min: 48 },
+  { id: "name", width: 170, min: 48 },
+  { id: "programming", width: 88, min: 48 },
+  { id: "manufacturer", width: 132, min: 48 },
+  { id: "product", width: 146, min: 48 },
+  { id: "orderNumber", width: 88, min: 48 },
+  { id: "system", width: 90, min: 48 },
+  { id: "topology", width: 170, min: 48 },
+  { id: "building", width: 145, min: 48 },
+  { id: "com_object_count", width: 62, min: 48 },
+  { id: "description", width: 160, min: 48 },
+  { id: "comparison", width: 100, min: 48 }
 ];
 
 const COLUMNS: { column: DeviceSortColumn; label: MessageKey }[] = [

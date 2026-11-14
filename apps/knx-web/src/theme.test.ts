@@ -1,3 +1,4 @@
+/** Pins built-in theme identities and preserves explicit settings across palette changes. */
 import { describe, expect, it, vi } from "vitest";
 import { THEMES, loadThemeId, resolveThemeId, saveThemeId } from "./theme";
 
@@ -13,7 +14,7 @@ function fakeStorage(initial: Record<string, string> = {}) {
 
 describe("THEMES", () => {
   it("no longer offers Neon Grid or Bitcoin DeFi (removed 2026-10-05, ADR-0079)", () => {
-    expect(THEMES.map((t) => t.id)).toEqual(["system", "porcelain", "graphite", "cupertino", "lcars", "rail", "rail-dark"]);
+    expect(THEMES.map((t) => t.id)).toEqual(["system", "porcelain", "graphite", "cupertino", "lcars", "rail", "rail-dark", "technical-light", "technical-dark"]);
   });
 
   it("offers at least three palettes besides the System entry", () => {

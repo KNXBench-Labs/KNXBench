@@ -81,11 +81,60 @@ No space-saving percentage, final pixel budget or finished design is claimed.
 | Phase | Outcome | Actual status / entry condition |
 | --- | --- | --- |
 | A — Static design comparison | Read-only current-state inspection and static before/after comparisons for device list, parameter workspace and inspector; shared representative data across variants; proposed baseline and technical light/dark composition | Accepted revision 2 on 14 November; fictional static dossier retained privately |
-| B — Shared density/layout | Apply the accepted spacing, field-width and visual hierarchy system across affected existing themes and both densities using common components | Authorised and claimed 14 November; not product-accepted |
-| C — Technical theme pair | Add the accepted built-in light/dark technical presentation on the same components and improved layout, preserving other theme identities | Authorised and claimed 14 November; integrate with B on the same components |
+| B — Shared density/layout | Apply the accepted spacing, field-width and visual hierarchy system across affected existing themes and both densities using common components | Source, regressions and first-review corrections authored 14 November; independent closure and complete integrated verification pending |
+| C — Technical theme pair | Add the accepted built-in light/dark technical presentation on the same components and improved layout, preserving other theme identities | `technical-light` / `technical-dark` authored on the existing trusted presentation boundary; not product-accepted |
 | D — Integrated verification | Verify the complete affected UI and relevant regressions; retain visual evidence and the scoped acceptance record | Authorised; execute after implementation/review, no acceptance claimed yet |
 
-Phase A is a design artifact, not a claim that the proposed UI exists. Label the
+### Authored B–C implementation boundary
+
+The author-phase candidate starts from `d44a02d72`, retaining the published
+navigation and E4 focus fix. It uses setting-owned panel/row spacing (12/4 px Compact, 16/8 px
+Comfortable) and the existing 32/40 px control minima. Scalar slots stay 10 rem
+in both densities; an explicit declared-Text/name/description class is bounded
+at 24 rem. Units and address prefixes share the scalar slot. Narrow panes stack
+labels above controls. Text rows reserve label space rather than consuming the
+whole pane; checked sliders and raw evidence retain their own usable layouts.
+
+Device columns use revised **initial** widths through the existing resizing
+hook, not CSS overrides of stored preferences. The table remains native and
+locally scrollable. No parameter navigation, evaluated identity, declared cell
+placement, conditional caption or mutation handler is changed.
+
+Technical Light and Technical Dark use `data-presentation="technical"`, complete
+fixed-accent palettes, the existing Inter/JetBrains Mono fonts and restrained
+2 px geometry. They add no animation and do not alter System, Rail or pack
+admission. The diagnostics inventory names both built-in IDs.
+
+Authored regressions extend the existing Devices/matrix browser fixtures and
+theme/control/dialog inventories; unit coverage pins bootstrap/runtime identity,
+the exact accepted colours, setting independence and metadata-owned width
+classes. **No tests, builds, gates or browser servers were executed in the
+author phase.** No measured density gain, screenshot review, publication or
+native acceptance is claimed by that author handoff. Phase D remains parent-owned.
+
+First independent review identified pressed-primary contrast, an Inspector text-slot
+cascade conflict and stale/incomplete regression oracles. The candidate corrects
+these through the existing shared presentation boundary; integrated acceptance and
+publication still require the completed parent-owned checks.
+
+The second independent Standards and Spec reviews approve the frozen source
+candidate. Bounded follow-up documents the technical boundary in ADR-0157,
+explains the scalar-anchored shared header and extends the declared-matrix
+population to every existing palette and both densities, languages and viewport
+widths. Those additional cases still require execution in the final package gate;
+source-review approval is not integrated acceptance or publication.
+
+Focus coverage keeps the existing [Settings page contract](../contracts/settings-workspace.md):
+its round trip preserves drafts, selection and settings, but adds no automatic
+inline-input return-focus policy. A separate in-place server-settings refresh
+checks the still-active editor's exact DOM identity, draft, keyboard focus and
+continued typing across palette/density changes. Existing E4 preview/cancel
+ownership stays unchanged; it is not extended into a global focus manager.
+Scaled real-consumer checks cover 80%/150%, wide/narrow viewports and constrained
+Inspector text/address fields; source warning/error checks require visible,
+nonempty and locally reachable rendered text, not only DOM content.
+
+Phase A is a design artifact, not product verification. Label the
 before view with the inspected source/build and the after view as a proposal;
 use public-safe representative data. Do not publish private project content or
 manufacturer originals. A static after view does not establish interactive or

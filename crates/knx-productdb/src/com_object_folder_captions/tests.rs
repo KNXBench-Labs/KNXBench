@@ -1006,6 +1006,89 @@ fn mixed_and_foreign_product_namespaces_stay_refused_with_todays_issues() {
     );
 }
 
+/// Points the product at a second, distinct retained hardware source.
+fn distinct_product_source(conn: &Connection, hardware: &str) -> String {
+    let second = hardware.replace("</KNX>", "<!-- distinct product source --></KNX>");
+    crate::ingest_file(conn, "M-0001/ProductHardware.xml", second.as_bytes()).unwrap();
+    let sha = crate::sha256_hex(second.as_bytes());
+    conn.execute(
+        "UPDATE product SET source_sha256=?1 WHERE id=?2",
+        [&sha, PRODUCT],
+    )
+    .unwrap();
+    sha
+}
+
+#[test]
+fn schema23_unavailable_product_or_application_source_reports_its_own_issue() {
+    let application = source(&block("PB-8", "Brindle shelf"));
+    for namespace in ["http://knx.org/xml/project/20", PROJECT_23_URI] {
+        for distinct_product in [false, true] {
+            let hardware = in_namespace(HARDWARE, namespace);
+            let (_dir, conn) = setup_sources(&hardware, &in_namespace(&application, namespace));
+            let product_sha = distinct_product.then(|| distinct_product_source(&conn, &hardware));
+            assert_eq!(
+                only(localized(&conn, 23, None)).text,
+                "Brindle shelf",
+                "calibrate: {namespace} distinct product {distinct_product}"
+            );
+            // Oversize the distinct product source when present, else the application.
+            let oversize = format!(
+                "UPDATE source_file SET bytes=zeroblob(?1),len=?1 WHERE {}",
+                if distinct_product {
+                    "sha256=?2"
+                } else {
+                    "source_path LIKE '%Application.xml' AND ?2 IS NULL"
+                }
+            );
+            conn.execute(
+                &oversize,
+                rusqlite::params![MAX_SOURCE_BYTES as i64 + 1, product_sha],
+            )
+            .unwrap();
+            // A uniform project/23 product reports the refusal exactly like project/20.
+            for language in [None, Some("xx-YY")] {
+                assert_eq!(
+                    localized(&conn, 23, language),
+                    CaptionEvidence::Unavailable(CaptionIssue::ResourceLimit),
+                    "{namespace} distinct product {distinct_product} {language:?}"
+                );
+            }
+        }
+    }
+}
+
+#[test]
+fn distinct_product_source_in_another_namespace_than_the_hardware_is_refused() {
+    let application = source(&block("PB-8", "Brindle shelf"));
+    for (hardware, product, application) in [
+        (
+            in_namespace(HARDWARE, PROJECT_23_URI),
+            HARDWARE.to_owned(),
+            in_namespace(&application, PROJECT_23_URI),
+        ),
+        (
+            HARDWARE.to_owned(),
+            in_namespace(HARDWARE, PROJECT_23_URI),
+            application.clone(),
+        ),
+    ] {
+        let (_dir, conn) = setup_sources(&hardware, &application);
+        assert!(matches!(
+            localized(&conn, 23, None),
+            CaptionEvidence::Declared(_)
+        ));
+        distinct_product_source(&conn, &product);
+        for language in [None, Some("xx-YY")] {
+            assert_eq!(
+                localized(&conn, 23, language),
+                CaptionEvidence::Unavailable(CaptionIssue::SourceIdentity),
+                "{hardware} / {product} {language:?}"
+            );
+        }
+    }
+}
+
 #[test]
 fn explicit_language_selects_the_verified_translation_with_provenance() {
     let rows = [
@@ -1153,7 +1236,7 @@ fn missing_or_unusable_translations_fall_back_to_the_default_text_with_a_reason(
     }
     // A translation owned by another program, manufacturer or attribute is not this block's.
     let rows = languages(&[("xx-YY", "PB-8", "Yelmint")]);
-    for foreign in [
+    let mut applications = [
         rows.replace(
             &format!("TranslationUnit RefId=\"{AP}\""),
             "TranslationUnit RefId=\"M-0001_A-0009-01-0000\"",
@@ -1167,12 +1250,26 @@ fn missing_or_unusable_translations_fall_back_to_the_default_text_with_a_reason(
             "Text=\"Yelmint\"",
             "xmlns:q=\"urn:fictional:foreign\" q:Text=\"Yelmint\"",
         ),
-    ] {
-        let application = localized_source(&block("PB-8", "Brindle shelf"), &foreign);
+    ]
+    .map(|foreign| localized_source(&block("PB-8", "Brindle shelf"), &foreign))
+    .to_vec();
+    // A second manufacturer translating the same program id is not its owner.
+    let foreign_manufacturer = localized_source(&block("PB-8", "Brindle shelf"), "").replace(
+        "</ManufacturerData>",
+        &format!(r#"<Manufacturer RefId="M-0099"><Languages>{rows}</Languages></Manufacturer></ManufacturerData>"#),
+    );
+    assert!(
+        foreign_manufacturer.contains(&format!(
+            r#"</Manufacturer><Manufacturer RefId="M-0099"><Languages><Language Identifier="xx-YY"><TranslationUnit RefId="{AP}">"#
+        )),
+        "guard: the foreign manufacturer carries this program's translation"
+    );
+    applications.push(foreign_manufacturer);
+    for application in applications {
         let (_dir, conn) = setup_sources(HARDWARE, &application);
         let caption = only(localized(&conn, 20, Some("xx-YY")));
-        assert_eq!(caption.text, "Brindle shelf", "{foreign}");
-        assert_ne!(caption.language, translated("xx-YY"), "{foreign}");
+        assert_eq!(caption.text, "Brindle shelf", "{application}");
+        assert_ne!(caption.language, translated("xx-YY"), "{application}");
     }
     // The 4096-byte attribute boundary is admitted; one byte more is today's
     // whole-source attribute limit, with or without a language.

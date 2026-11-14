@@ -71,6 +71,16 @@ pub enum CaptionLanguage {
     Untranslated(Untranslated),
 }
 
+impl CaptionLanguage {
+    /// The selected stored identifier when `text` is a translation, else `None`.
+    pub fn translated(&self) -> Option<&str> {
+        match self {
+            Self::Translated(language) => Some(language),
+            Self::Untranslated(_) => None,
+        }
+    }
+}
+
 /// Why an explicit-language request kept the default declaration text.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Untranslated {
@@ -225,23 +235,20 @@ fn read_owned(
         Ok(bytes) => bytes,
         Err(issue) => return Ok(CaptionEvidence::Unavailable(issue)),
     };
-    // Loaded early only to choose the namespace; their issues keep today's order.
-    let product_bytes = if psha == hpsha {
-        None
-    } else {
-        Some(verified_source(conn, &psha)?)
-    };
-    let application = verified_source(conn, &sha)?;
-    // project/23 only when the project is schema 23 and every source is uniformly
-    // project/23; anything else keeps the project/20 walk and its issues unchanged.
+    // Only schema 23 consults the application root, so schema 20 keeps its load order.
+    // An unavailable application never decides the namespace: its issue surfaces below.
+    let application = (project_schema == 23)
+        .then(|| verified_source(conn, &sha))
+        .transpose()?;
+    // project/23 only for a schema-23 project whose hardware and loaded application
+    // are rooted in it; a distinct product source in another namespace is refused
+    // by its ownership link below.
     let namespace = if project_schema == 23
         && rooted_in(&hardware_bytes, PROJECT_23)
-        && product_bytes
-            .as_ref()
-            .is_none_or(|bytes| bytes.as_ref().is_ok_and(|b| rooted_in(b, PROJECT_23)))
         && application
             .as_ref()
-            .is_ok_and(|bytes| rooted_in(bytes, PROJECT_23))
+            .and_then(|loaded| loaded.as_ref().ok())
+            .is_none_or(|bytes| rooted_in(bytes, PROJECT_23))
     {
         PROJECT_23
     } else {
@@ -249,22 +256,26 @@ fn read_owned(
     };
     // Product and H2P can have distinct winning members; never substitute one
     // member's otherwise valid declarations for the other's source authority.
-    let product_link = match &product_bytes {
-        None => hardware_owner_link(
+    let product_link = if psha == hpsha {
+        hardware_owner_link(
             &hardware_bytes,
             HardwareOwner::Product(product),
             &hardware,
             &manufacturer,
             namespace,
-        ),
-        Some(Err(issue)) => return Ok(CaptionEvidence::Unavailable(*issue)),
-        Some(Ok(product_bytes)) => hardware_owner_link(
-            product_bytes,
+        )
+    } else {
+        let product_bytes = match verified_source(conn, &psha)? {
+            Ok(bytes) => bytes,
+            Err(issue) => return Ok(CaptionEvidence::Unavailable(issue)),
+        };
+        hardware_owner_link(
+            &product_bytes,
             HardwareOwner::Product(product),
             &hardware,
             &manufacturer,
             namespace,
-        ),
+        )
     };
     if let Err(issue) = product_link {
         return Ok(CaptionEvidence::Unavailable(issue));
@@ -279,6 +290,10 @@ fn read_owned(
     ) {
         return Ok(CaptionEvidence::Unavailable(issue));
     }
+    let application = match application {
+        Some(loaded) => loaded,
+        None => verified_source(conn, &sha)?,
+    };
     let bytes = match application {
         Ok(bytes) => bytes,
         Err(issue) => return Ok(CaptionEvidence::Unavailable(issue)),
@@ -336,10 +351,10 @@ fn read_owned(
             }
             _ => (candidate.text, None),
         };
-        let selected = match &language {
-            Some(CaptionLanguage::Translated(language)) => language.as_str(),
-            _ => "",
-        };
+        let selected = language
+            .as_ref()
+            .and_then(CaptionLanguage::translated)
+            .unwrap_or_default();
         for text in [&text, &program, &candidate.id, &sha, selected] {
             if budget.admit_copy(text).is_err() {
                 return Ok(CaptionEvidence::Unavailable(CaptionIssue::ResourceLimit));

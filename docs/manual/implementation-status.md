@@ -2,6 +2,20 @@
 
 # Implementation status
 
+## Notes and instructions keyboard focus (14 November 2026; integration candidate)
+
+Preview settlement and explicit Cancel restore focus to the exact initiating
+button while that action still owns focus; moving elsewhere withdraws automatic
+restoration. Buttons retain real disabled semantics, and Confirm/Apply is never
+automatically activated. Focused component and production-browser checks passed.
+The [bounded native record](../status/2026-11-14-wp11-editor-focus-candidate.md)
+combines five valid carried cells with Native05's new Notes 100% cell: six whole
+cells / twelve focus predicates across two epochs, not a fresh six-cell run.
+The measured build is frozen `9ea3c5a9c-DIRTY`, not the main-first integration
+candidate `994d9bd5d`. The record retains failed attempts, shared-service/software
+rendering exclusions and the separate native audit/delivery boundary. No final
+candidate gate, publication or release is claimed; broader WP-11 stays open.
+
 <a id="parameter-navigation-hierarchy-14-november-2026-source-candidate"></a>
 
 ## Parameter navigation hierarchy (14 November 2026; main-only)

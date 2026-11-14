@@ -31,6 +31,91 @@ describe("isolated project notes editor",()=>{
 function byText(host:Element,label:string){const button=Array.from(host.querySelectorAll("button")).find(button=>button.textContent===label);expect(button,`missing button ${label}`).toBeDefined();return button!;}
 async function click(host:Element,label:string){const button=Array.from(host.querySelectorAll("button")).find(button=>button.textContent===label);expect(button,`missing button ${label}`).toBeDefined();await act(async()=>button!.click());}
 async function edit(host:Element,label:string,value:string){const caption=Array.from(host.querySelectorAll("label")).find(entry=>entry.textContent===label);expect(caption).toBeDefined();const field=document.getElementById(caption!.htmlFor) as HTMLTextAreaElement;expect(field).not.toBeNull();await act(async()=>{Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype,"value")!.set!.call(field,value);field.dispatchEvent(new Event("input",{bubbles:true}));});}
+describe("preview focus ownership (DOM contract, not native acceptance)",()=>{
+ function deferredPreview() {
+  let release!:()=>void;let reject!:(reason:Error)=>void;
+  const held=new Promise<void>((done,fail)=>{release=done;reject=fail;});
+  const original=fixture().preview;
+  const client=fixture({preview:vi.fn(async(...args:Parameters<NotesClient["preview"]>)=>{await held;return original(...args);})});
+  return {client,release,reject};
+ }
+ async function start(host:Element,label="Preview change") {
+  const trigger=byText(host,label);trigger.focus();await act(async()=>trigger.click());
+  expect(trigger.disabled).toBe(true);
+  // happy-dom refuses disabled blur; briefly enable only to model that native transition.
+  trigger.disabled=false;try{trigger.blur();}finally{trigger.disabled=true;}
+  expect(document.activeElement).toBe(document.body);return trigger;
+ }
+ it("restores the re-enabled exact Preview after a held response and explicit Cancel, never Confirm",async()=>{
+  const {client,release}=deferredPreview();const {host}=await mount(client);
+  const text="Größe 🙂\nsecond line";await edit(host,"Title",text);
+  const trigger=await start(host);expect(client.apply).not.toHaveBeenCalled();
+  await act(async()=>release());expect(trigger.disabled).toBe(false);expect(document.activeElement).toBe(trigger);
+  const cancel=byText(host,"Cancel preview");cancel.focus();await act(async()=>cancel.click());
+  expect(document.activeElement).toBe(trigger);expect(cancel.isConnected).toBe(false);
+  expect(host.querySelector("textarea")?.value).toBe(text);
+  expect(client.cancel).toHaveBeenCalledWith("synthetic-plan");expect(client.apply).not.toHaveBeenCalled();
+ });
+ it.each(["Remove note","Move down","Move up"])("returns to %s, not the disabled main Preview",async(label)=>{
+  const two:NotesView={...source,notes:[source.notes[0],{...source.notes[0],id:2,position:1,title:"Second"}]};
+  const client=fixture({read:vi.fn().mockResolvedValue(two)});const {host}=await mount(client);
+  if(label==="Move up")await click(host,"Second");
+  const trigger=byText(host,label);trigger.focus();await act(async()=>trigger.click());
+  expect(document.activeElement).toBe(trigger);expect(byText(host,"Preview change").disabled).toBe(true);
+  const cancel=byText(host,"Cancel preview");cancel.focus();await act(async()=>cancel.click());
+  expect(document.activeElement).toBe(trigger);expect(client.apply).not.toHaveBeenCalled();
+ });
+ it("restores Preview on request error after re-enable without losing the draft",async()=>{
+  const {client,reject}=deferredPreview();const {host}=await mount(client);await edit(host,"Title","draft 🙂\nkept");
+  const trigger=await start(host);await act(async()=>reject(new Error("preview refused")));
+  expect(document.activeElement).toBe(trigger);expect(trigger.disabled).toBe(false);
+  expect(host.textContent).toContain("preview refused");expect(host.querySelector("textarea")?.value).toBe("draft 🙂\nkept");
+  expect(client.apply).not.toHaveBeenCalled();
+ });
+ it.each(["focused elsewhere","Tab to document","window blur"])("does not steal focus after %s while pending",async(mode)=>{
+  const {client,release}=deferredPreview();const {host}=await mount(client);await edit(host,"Title","draft");
+  const trigger=await start(host);const outside=document.createElement("button");document.body.append(outside);
+  if(mode==="focused elsewhere")outside.focus();
+  else if(mode==="Tab to document")document.dispatchEvent(new KeyboardEvent("keydown",{key:"Tab",bubbles:true}));
+  else window.dispatchEvent(new Event("blur"));
+  const before=document.activeElement;await act(async()=>release());
+  expect(document.activeElement).toBe(before);expect(document.activeElement).not.toBe(trigger);
+  // Explicit keyboard Cancel is a new user intention, even after earlier navigation.
+  const cancel=byText(host,"Cancel preview");cancel.focus();await act(async()=>cancel.click());expect(document.activeElement).toBe(trigger);
+  expect(client.apply).not.toHaveBeenCalled();
+ });
+ it.each(["project","server","revision","client"])("retires late focus authority after a %s replacement",async(kind)=>{
+  const {client,release}=deferredPreview();const {root,host}=await mount(client);await edit(host,"Title","draft");
+  await start(host);const nextContext={...context,...(kind==="project"?{projectIncarnation:2}:kind==="server"?{serverIncarnation:"other-server"}:kind==="revision"?{snapshotRevision:3}:{})};
+  const nextClient=kind==="client"?fixture():client;const outside=document.createElement("button");document.body.append(outside);outside.focus();
+  await act(async()=>root.render(<ProjectNotesEditor context={nextContext} client={nextClient} onApplied={vi.fn()}/>));
+  expect(vi.mocked(client.preview).mock.calls[0][2]?.aborted).toBe(true);
+  const focus=vi.spyOn(HTMLButtonElement.prototype,"focus");await act(async()=>release());
+  expect(focus).not.toHaveBeenCalled();expect(document.activeElement).toBe(outside);
+  expect(client.cancel).toHaveBeenCalledWith("synthetic-plan");expect(client.apply).not.toHaveBeenCalled();
+ });
+ it("does not fall back to a disabled initiator when write authority disappears",async()=>{
+  const {client,release}=deferredPreview();const {root,host}=await mount(client);await edit(host,"Title","draft");const trigger=await start(host);
+  await act(async()=>root.render(<ProjectNotesEditor context={context} client={client}/>));
+  const before=document.activeElement;const focus=vi.spyOn(HTMLButtonElement.prototype,"focus");await act(async()=>release());
+  expect(trigger.disabled).toBe(true);expect(document.activeElement).toBe(before);expect(focus).not.toHaveBeenCalled();expect(client.apply).not.toHaveBeenCalled();
+ });
+ it("does not focus a hidden editor or steal focus on a non-focused Cancel dispatch",async()=>{
+  const {client,release}=deferredPreview();const {host}=await mount(client);await edit(host,"Title","draft");await start(host);host.hidden=true;
+  const focus=vi.spyOn(HTMLButtonElement.prototype,"focus");await act(async()=>release());expect(focus).not.toHaveBeenCalled();host.hidden=false;
+  const outside=document.createElement("button");document.body.append(outside);outside.focus();focus.mockClear();await click(host,"Cancel preview");
+  expect(document.activeElement).toBe(outside);expect(focus).not.toHaveBeenCalled();expect(client.apply).not.toHaveBeenCalled();
+ });
+ it("does not focus on initial reads, passive edits or an unmounted response",async()=>{
+  const focus=vi.spyOn(HTMLButtonElement.prototype,"focus");const client=fixture();const {host}=await mount(client);
+  expect(focus).not.toHaveBeenCalled();await edit(host,"Title","draft");await click(host,"Preview change");
+  focus.mockClear();await edit(host,"Title","changed again");expect(focus).not.toHaveBeenCalled();
+  const {client:late,release}=deferredPreview();const next=await mount(late);await edit(next.host,"Title","late");await start(next.host);
+  await act(async()=>next.root.unmount());roots=roots.filter(root=>root!==next.root);focus.mockClear();await act(async()=>release());
+  expect(focus).not.toHaveBeenCalled();expect(late.cancel).toHaveBeenCalledWith("synthetic-plan");
+ });
+});
+
 describe("notes editing gestures",()=>{
  it("requires preview and explicit confirmation, retaining untouched body spelling",async()=>{
   const client=fixture();const onApplied=vi.fn();const onDirtyChange=vi.fn();const {host}=await mount(client,{onApplied,onDirtyChange});
@@ -137,7 +222,9 @@ describe("notes editor expiry/help/read-only boundaries",()=>{
  it("expires a reviewed plan without applying or losing the draft",async()=>{
   const client=fixture({preview:vi.fn(async(_context,action)=>({token:"short-plan",action,previous:source.notes[0],createdId:null,noOp:false,expiresInSeconds:1}))});
   const {host}=await mount(client);vi.useFakeTimers();
-  try{await edit(host,"Title","not auto applied");await click(host,"Preview change");await act(async()=>{vi.advanceTimersByTime(1001);});
+  try{await edit(host,"Title","not auto applied");await click(host,"Preview change");
+   const outside=document.createElement("button");document.body.append(outside);outside.focus();const focus=vi.spyOn(HTMLButtonElement.prototype,"focus");
+   await act(async()=>{vi.advanceTimersByTime(1001);});expect(document.activeElement).toBe(outside);expect(focus).not.toHaveBeenCalled();
    expect(client.cancel).toHaveBeenCalledWith("short-plan");expect(client.apply).not.toHaveBeenCalled();expect(host.textContent).toContain("Preview expired");
    expect(Array.from(host.querySelectorAll("textarea")).some(field=>field.value==="not auto applied")).toBe(true);
   }finally{vi.useRealTimers();}

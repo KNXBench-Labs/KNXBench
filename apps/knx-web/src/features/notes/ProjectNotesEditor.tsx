@@ -5,6 +5,7 @@ import { applyTextareaEdit, textareaText } from "./text";
 import { noteCopy } from "./copy";
 import HelpTip from "../../HelpTip";
 import { requestHelpTopic } from "../../help";
+import { usePreviewFocus } from "../usePreviewFocus";
 import styles from "./editor.module.css";
 export type NoteTargetChoice=Readonly<{target:NoteTarget;label:string}>;
 export type ProjectNotesEditorProps=Readonly<{context:NotesContext;language?:"en"|"de";targetChoices?:readonly NoteTargetChoice[];client?:NotesClient;onApplied?:(outcome:NotesApplied)=>void|Promise<void>;onDirtyChange?:(dirty:boolean)=>void}>;
@@ -18,6 +19,7 @@ function sameNoteList(a:readonly NoteView[],b:readonly NoteView[]):boolean{
 }
 export function ProjectNotesEditor({context,client=defaultClient,language="en",targetChoices=[],onApplied,onDirtyChange}:ProjectNotesEditorProps){
  const id=useId();const copy=noteCopy[language];
+ const previewFocus=usePreviewFocus(JSON.stringify([context.serverIncarnation,context.projectIncarnation,context.snapshotRevision]),client);
  const [view,setView]=useState<NotesView|null>(null);const [draft,setDraft]=useState<NoteDraft|null>(null);
  const [selected,setSelected]=useState<number|null>(null);const [dirty,setDirty]=useState(false);const dirtyRef=useRef(false);
  const [pending,setPending]=useState<NotePreview|null>(null);const pendingRef=useRef<NotePreview|null>(null);
@@ -37,7 +39,8 @@ export function ProjectNotesEditor({context,client=defaultClient,language="en",t
  const actionName=(kind:NoteAction["kind"])=>({create:copy.actionCreate,replace:copy.actionReplace,remove:copy.actionRemove,move:copy.actionMove})[kind];
  const targetLabel=(target:NoteTarget)=>choices.find(choice=>noteTargetKey(choice.target)===noteTargetKey(target))?.label??`${copy.lostTarget}: ${noteTargetKey(target)}`;
  function markDirty(value:boolean){dirtyRef.current=value;setDirty(value);dirtyCallback.current?.(value);}
- function revoke(){
+ function revoke(cancel?:HTMLButtonElement){
+  if(cancel)previewFocus.cancel(cancel);else previewFocus.revoke();
   const old=pendingRef.current;pendingRef.current=null;setPending(null);
   if(old)void client.cancel(old.token).catch(()=>undefined);
  }
@@ -100,16 +103,16 @@ export function ProjectNotesEditor({context,client=defaultClient,language="en",t
   else choose(view,next.id);
  }
  function switchTo(next:SwitchIntent){if(busy)return;if(dirty) setIntent(next);else performSwitch(next);}
- async function preview(action:NoteAction){
+ async function preview(action:NoteAction,trigger:HTMLButtonElement){
   if(!writable||!view)return;
   const generation=++sequence.current;request.current?.abort();const controller=new AbortController();request.current=controller;revoke();setBusy(true);setError(null);setNotice(null);
-  const owner={context,client};
+  const owner={context,client};const focusRequest=previewFocus.begin(trigger);
   try{
    const value=await client.preview(context,action,controller.signal);
    if(controller.signal.aborted||generation!==sequence.current||!sameNotesContext(currentOwner.current.context,owner.context)||currentOwner.current.client!==client){void client.cancel(value.token).catch(()=>undefined);return;}
    pendingRef.current=value;setPending(value);
   }catch(reason){if(!controller.signal.aborted&&generation===sequence.current)setError(reason instanceof Error?reason.message:copy.changed);}
-  finally{if(generation===sequence.current)setBusy(false);}
+  finally{if(generation===sequence.current){if(!controller.signal.aborted)previewFocus.settle(focusRequest);setBusy(false);}}
  }
  async function confirm(){
   const plan=pendingRef.current;if(!plan||!writable||!onApplied||applying.current)return;
@@ -152,10 +155,10 @@ export function ProjectNotesEditor({context,client=defaultClient,language="en",t
     </select>
     <label className={styles.check}><input type="checkbox" checked={draft.includeInDocumentation} disabled={!editable} onChange={event=>edit({...draft,includeInDocumentation:event.target.checked})}/>{copy.include}</label>
     <div className={styles.toolbar}>
-     <button type="button" disabled={!writable||!dirty||!validNoteDraft(draft)} onClick={()=>void preview(selected===null?{kind:"create",position:view.notes.length,draft}:{kind:"replace",id:selected,draft})}>{copy.preview}</button>
-     {stored&&<><button type="button" disabled={!writable||dirty} onClick={()=>void preview({kind:"remove",id:stored.id})}>{copy.remove}</button>
-      <button type="button" disabled={!writable||dirty||stored.position===0} onClick={()=>void preview({kind:"move",id:stored.id,position:stored.position-1})}>{copy.up}</button>
-      <button type="button" disabled={!writable||dirty||stored.position>=view.notes.length-1} onClick={()=>void preview({kind:"move",id:stored.id,position:stored.position+1})}>{copy.down}</button></>}
+     <button type="button" disabled={!writable||!dirty||!validNoteDraft(draft)} onClick={event=>void preview(selected===null?{kind:"create",position:view.notes.length,draft}:{kind:"replace",id:selected,draft},event.currentTarget)}>{copy.preview}</button>
+     {stored&&<><button type="button" disabled={!writable||dirty} onClick={event=>void preview({kind:"remove",id:stored.id},event.currentTarget)}>{copy.remove}</button>
+      <button type="button" disabled={!writable||dirty||stored.position===0} onClick={event=>void preview({kind:"move",id:stored.id,position:stored.position-1},event.currentTarget)}>{copy.up}</button>
+      <button type="button" disabled={!writable||dirty||stored.position>=view.notes.length-1} onClick={event=>void preview({kind:"move",id:stored.id,position:stored.position+1},event.currentTarget)}>{copy.down}</button></>}
     </div>
     {dirty&&!validNoteDraft(draft)&&<p className={styles.guidance}>{copy.invalid}</p>}
    </div>}
@@ -164,7 +167,7 @@ export function ProjectNotesEditor({context,client=defaultClient,language="en",t
    {pending.noOp&&<p>{copy.noop}</p>}
    <div className={styles.preview}><div><h5>{copy.before}</h5>{pending.previous&&<><p className={styles.literal}>{pending.previous.title}</p><p className={styles.literal}>{pending.previous.body}</p><p>{targetLabel(pending.previous.target)} · {copy.include}: {pending.previous.includeInDocumentation?copy.yes:copy.no}</p><p>#{pending.previous.position}</p></>}</div>
     <div><h5>{copy.after}</h5>{reviewAfter&&<><p className={styles.literal}>{reviewAfter.title}</p><p className={styles.literal}>{reviewAfter.body}</p><p>{targetLabel(reviewAfter.target)} · {copy.include}: {reviewAfter.includeInDocumentation?copy.yes:copy.no}</p></>}{pending.action.kind==="move"&&<p>#{pending.action.position}</p>}</div></div>
-   <div className={styles.toolbar}><button type="button" className={pending.action.kind==="remove"?"danger-action":undefined} disabled={!writable} onClick={()=>void confirm()}>{copy.confirm}</button><button type="button" disabled={busy} onClick={revoke}>{copy.cancel}</button></div>
+   <div className={styles.toolbar}><button type="button" className={pending.action.kind==="remove"?"danger-action":undefined} disabled={!writable} onClick={()=>void confirm()}>{copy.confirm}</button><button type="button" disabled={busy} onClick={event=>revoke(event.currentTarget)}>{copy.cancel}</button></div>
   </section>}
  </section>;
 }

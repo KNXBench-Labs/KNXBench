@@ -2767,9 +2767,27 @@ export interface ParameterGroupLayout {
   issues: ParameterGridIssue[];
 }
 
+/** Evaluated display owner; neither this identity nor its caption is a write target. */
+export interface ParameterContainer {
+  scope: ModuleScope | null;
+  nodeId: number;
+  elementId: string | null;
+  kind: string;
+  label: string | null;
+  labelFill?: import("./bindings/TextFill").TextFill | null;
+}
+
+export interface ParameterGroup {
+  key: string;
+  label: string | null;
+  labelFill?: import("./bindings/TextFill").TextFill | null;
+  /** Absent on older servers; null for unavailable or ambiguous ownership. */
+  container?: ParameterContainer | null;
+}
+
 export interface ParameterField {
   /** Structural presentation metadata; absent on older servers. */
-  group?: { key: string; label: string | null; labelFill?: import("./bindings/TextFill").TextFill | null } | null;
+  group?: ParameterGroup | null;
   controlsComObjects?: boolean;
   /** Declared grid cell (ADR-0137); absent on older servers. */
   cell?: ParameterGridCell | null;
@@ -2818,7 +2836,7 @@ export interface ParameterSeparator {
   textFill?: import("./bindings/TextFill").TextFill | null;
   /** Index in the section's `fields` it stands before; `fields.length` after the last. */
   position: number;
-  group: { key: string; label: string | null; labelFill?: import("./bindings/TextFill").TextFill | null } | null;
+  group: ParameterGroup | null;
   elementId: string | null;
   /** `null` for a ruler. */
   text: string | null;
@@ -2852,7 +2870,7 @@ export interface ParameterPassiveLabel {
   text: string;
   cell: ParameterGridCell;
   /** The nearest grid block; the server always sends it, so there is no ungrouped label. */
-  group: { key: string; label: string | null; labelFill?: import("./bindings/TextFill").TextFill | null };
+  group: ParameterGroup;
   /** As `ParameterField.blockAccess`. */
   blockAccess: string | null;
 }

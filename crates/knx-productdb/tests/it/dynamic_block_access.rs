@@ -196,18 +196,21 @@ fn separators_are_listed_where_they_were_activated_rulers_included() {
         [
             ActiveSeparator {
                 scope: None,
+                channel: None,
                 node_id: 2,
                 block_access: read.clone(),
                 parameter_refs_before: 0,
             },
             ActiveSeparator {
                 scope: None,
+                channel: None,
                 node_id: 4,
                 block_access: read.clone(),
                 parameter_refs_before: 1,
             },
             ActiveSeparator {
                 scope: None,
+                channel: None,
                 node_id: 7,
                 block_access: read,
                 parameter_refs_before: 1,

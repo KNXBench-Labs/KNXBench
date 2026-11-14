@@ -1433,6 +1433,16 @@ write authority. Missing group information is available under **Other parameters
 option caption across all areas. Clearing search returns to your chosen area;
 a no-result search does not delete fields or values.
 
+**Source candidate after Alpha 21:** where evaluated product data supplies a
+display container, its child areas appear under a folded disclosure. Expand it
+with a click, Enter or Space. Folding affects the area register only, not the
+selected editor or saved settings. Search reveals matching child paths across
+folded containers; clearing it restores the prior disclosure state. Equal
+captions remain separate. A container with no readable caption gets a numbered
+fallback with source provenance in its tooltip. Device/module scope, container
+and area are distinct, and a missing hierarchy leaves an honest root area.
+Download-difference dots propagate from the real child areas.
+
 **Since Alpha 15 (issue #26).** Area captions and separator
 text fill supported text placeholders from the exact referenced text parameter: a
 stored device value first, otherwise its product default. An explicitly empty

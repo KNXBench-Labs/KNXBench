@@ -1,5 +1,5 @@
 /** Read-only parameter navigation derived exclusively from declared scopes and groups. */
-import type { ModuleScope, ParameterField, ParameterPassiveLabel, ParameterSection, ParameterSeparator } from "./api";
+import type { ModuleScope, ParameterContainer, ParameterField, ParameterPassiveLabel, ParameterSection, ParameterSeparator } from "./api";
 import type { TextFill } from "./bindings/TextFill";
 import { classifyGroupLayout, type GroupLayoutView } from "./parameterMatrix";
 import { moduleScopeIdentity } from "./moduleScope";
@@ -7,6 +7,8 @@ import { moduleScopeIdentity } from "./moduleScope";
 export interface ParameterWorkspaceGroup {
   key: string;
   sectionKey: string;
+  container: ParameterContainer | null;
+  containerKey: string | null;
   scope: ModuleScope | null;
   label: string | null;
   labelFill?: TextFill | null;
@@ -73,6 +75,8 @@ export function indexParameterWorkspace(sections: readonly ParameterSection[]) {
       let found = declared.get(groupIdentity);
       if (!found) {
         found = { key: JSON.stringify([sectionKey, groupIdentity]), sectionKey, scope,
+          container: group?.container ?? null,
+          containerKey: group?.container ? JSON.stringify([sectionKey, moduleScopeIdentity(group.container.scope), group.container.nodeId]) : null,
           label: group?.label ?? null, labelFill: group?.labelFill, number: declared.size + 1, ungrouped: group == null,
           layout: classifyGroupLayout(section.groupLayouts, group?.key ?? null) };
         declared.set(groupIdentity, found);
@@ -117,15 +121,38 @@ export function indexParameterWorkspace(sections: readonly ParameterSection[]) {
  * from the open area or a search; a ref no row presents marks nothing.
  */
 export function differingAreas(rows: readonly ParameterWorkspaceRow[], groups: readonly ParameterWorkspaceGroup[],
-  differs: (field: ParameterField, scope: ModuleScope | null) => boolean): { groups: Set<string>; sections: Set<string> } {
+  differs: (field: ParameterField, scope: ModuleScope | null) => boolean): { groups: Set<string>; sections: Set<string>; containers: Set<string> } {
   const marked = new Set(rows.filter(row => row.field.kind !== "None" && differs(row.field, row.scope)).map(row => row.groupKey));
-  return { groups: marked, sections: new Set(groups.filter(group => marked.has(group.key)).map(group => group.sectionKey)) };
+  const markedGroups = groups.filter(group => marked.has(group.key));
+  return { groups: marked, sections: new Set(markedGroups.map(group => group.sectionKey)),
+    containers: new Set(markedGroups.flatMap(group => group.containerKey === null ? [] : [group.containerKey])) };
+}
+
+/** Contiguous source-order runs: never move a root area to join equal-looking parents. */
+export function parameterNavigation(groups: readonly ParameterWorkspaceGroup[]) {
+  const entries: { key: string; containerKey: string | null; groups: ParameterWorkspaceGroup[]; number: number }[] = [];
+  const numbers = new Map<string, number>();
+  const occurrences = new Map<string, number>();
+  for (const group of groups) {
+    if (group.containerKey !== null && !numbers.has(group.containerKey)) numbers.set(group.containerKey, numbers.size + 1);
+    const previous = entries.at(-1);
+    if (previous && group.containerKey !== null && previous.containerKey === group.containerKey) previous.groups.push(group);
+    else {
+      const occurrence = occurrences.get(group.containerKey ?? group.key) ?? 0;
+      occurrences.set(group.containerKey ?? group.key, occurrence + 1);
+      entries.push({ key: group.containerKey === null ? group.key : JSON.stringify([group.containerKey, occurrence]),
+        containerKey: group.containerKey, groups: [group],
+        number: group.containerKey === null ? 0 : numbers.get(group.containerKey)! });
+    }
+  }
+  return entries;
 }
 
 /** All terms must match; labels/options are searchable but never parsed for identity. */
 export function matchesParameterSearch(row: ParameterWorkspaceRow, query: string, displayedGroupLabel?: string): boolean {
   const field = row.field;
   const text = [field.etsId, field.name, field.text, field.value, displayedGroupLabel, row.groupLabel,
+    field.group?.container?.label, field.group?.container?.labelFill?.template,
     field.group?.labelFill?.template, row.scope?.moduleId,
     ...field.enumOptions.flatMap(option => [option.value, option.text])].join(" ").toLocaleLowerCase();
   return query.trim().toLocaleLowerCase().split(/\s+/u).every(term => text.includes(term));

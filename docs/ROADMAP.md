@@ -536,8 +536,10 @@ focused component/browser checks. Five complete carried Native01 cells plus
 Native05's Notes 100% cell cover six whole cells / twelve focus predicates
 across two epochs, not a fresh six-cell replay. The measured build remains
 frozen `9ea3c5a9c-DIRTY`; main-first candidate `994d9bd5d` is a distinct
-integration epoch with no final package gate, push, release or deployment claim.
-Native audit and remaining acceptance are bounded in that result record.
+integration epoch. The reviewed main-first delivery is software-accepted and
+published as `ea7ac7ae1` after the complete selected 11-stage gate (43 nested
+web stages); no release or deployment. The native audit and remaining boundaries
+are recorded separately in that result record.
 WP-11 stays open for unrelated E4 items, other controls/imported-original
 instructions, virtual-key replacement attribution and remaining keyboard/layout/
 pointer cells; unavailable environments retain their explicit boundaries.

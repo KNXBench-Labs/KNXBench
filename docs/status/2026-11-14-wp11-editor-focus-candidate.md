@@ -115,10 +115,17 @@ Native01 Notes 100% partial is excluded; Native01 remains failed/incomplete. Thi
 bounded evidence approval is not current-main native proof, a fresh six-cell
 suite, whole-WP-11 acceptance or final-package acceptance.
 
-The main-first candidate `994d9bd5d` has not run its final package gate and is
-not pushed, released or deployed by this delivery. Focused software approvals
-and the independently accepted source-bound native composition do not substitute
-for that gate. This result-only documentation update changes no product behaviour.
+The main-first delivery was software-accepted and published on main as
+`ea7ac7ae1` on 14 November. The complete selected package gate passed **11/11**
+ordered stages, including **43/43** nested web stages, the 103 selected default
+browser specs and production Instructions, Notes and Reload-Guard lanes.
+Inputs remained frozen; user-data checks reported no touched or unchecked
+paths. Tool tests ran 563 cases: 547 passed and 16 optional cases skipped.
+Rust tests and private-corpus execution were not selected for this web/docs delta.
+Local, tracking and live remote refs matched the accepted published commit.
+The native proof remains bound to its measured source, not this integration
+build. No release or deployment was performed. This result-only documentation
+successor carries that unchanged acceptance and adds no product behaviour.
 
 The native profile uses software rendering, direct GTK dialogs and memory
 GSettings, with shared Wayland/session-D-Bus/AT-SPI and possible GVFS exceptions.

@@ -8,7 +8,7 @@ import { useDeviceComparisons, type DeviceComparisons } from "./useDeviceCompari
 import type { ProjectTree } from "./bindings/ProjectTree";
 import type { BoundDeviceComparison } from "./deviceComparisons";
 
-const api = vi.hoisted(() => ({ compareDevice: vi.fn() }));
+const api = vi.hoisted(() => ({ compareDevice: vi.fn(), compareDeviceTcp: vi.fn() }));
 vi.mock("./api", () => ({ ...api, errorMessage: String }));
 const tree: ProjectTree = { schema_version: 11, errors: 0, warnings: 0, can_undo: false, can_redo: false,
   is_modified: false, group_address_style: "ThreeLevel", installations: [],
@@ -34,7 +34,7 @@ let controller: DeviceComparisons;
 let activity: ActivityController;
 function Harness({ project }: { project: ProjectTree | null }) { controller = useDeviceComparisons(project, activity); return null; }
 async function render(project: ProjectTree | null = tree) { await act(async () => root.render(<Harness project={project} />)); }
-beforeEach(() => { activity = new ActivityController(); api.compareDevice.mockReset(); host = document.createElement("div"); document.body.append(host); root = createRoot(host); });
+beforeEach(() => { activity = new ActivityController(); api.compareDevice.mockReset(); api.compareDeviceTcp.mockReset(); host = document.createElement("div"); document.body.append(host); root = createRoot(host); });
 afterEach(async () => { await act(async () => root.unmount()); host.remove(); });
 
 it("retains one activity across view-like rerenders and waits for the in-flight read before stopping", async () => {
@@ -160,4 +160,37 @@ it("freezes review metadata and ordered targets before confirmation and marks re
   expect(api.compareDevice).toHaveBeenCalledExactlyOnceWith("1.1.2", endpoint,
     { serverIncarnation: "compare-test", projectIncarnation: 1, deviceId: 2, comparisonRevision: 3 });
   expect(controller.entry(2)?.tag).toBe("outdated"); expect(controller.entry(9)).toBeNull();
+});
+
+const connection = { requestedTransport: "tcp", actualTransport: "tcp", assignedAddress: "1.1.250", skippedFramesBeforeDisconnect: 2 } as const;
+it("freezes gateway and explicit TCP for every reviewed target with no legacy calls", async () => {
+  const pending = deferred<BoundDeviceComparison & { connection: typeof connection }>();
+  api.compareDeviceTcp.mockReturnValueOnce(pending.promise).mockResolvedValueOnce({ ...result(), deviceId: 9,
+    address: "1.1.9", comparisonRevision: 4, connection });
+  await render(); await act(async () => controller.open(targets));
+  let running!: Promise<void>;
+  await act(async () => { running = controller.confirm(endpoint, "tcp"); });
+  expect(controller.review?.connection).toEqual({ gateway: endpoint, transport: "tcp" });
+  await act(async () => { await controller.confirm("192.0.2.99:3671", "udp"); controller.open([targets[1]]); });
+  expect(api.compareDeviceTcp).toHaveBeenCalledTimes(1); expect(api.compareDevice).not.toHaveBeenCalled();
+  await act(async () => { pending.resolve({ ...result(), connection }); await running; });
+  expect(api.compareDeviceTcp.mock.calls).toEqual([
+    ["1.1.2", endpoint, { serverIncarnation: "compare-test", projectIncarnation: 1, deviceId: 2, comparisonRevision: 3 }],
+    ["1.1.9", endpoint, { serverIncarnation: "compare-test", projectIncarnation: 1, deviceId: 9, comparisonRevision: 4 }],
+  ]);
+  expect(controller.entry(2)?.connection).toEqual(connection); expect(controller.entry(9)?.tag).toBe("synced");
+  expect(activity.getSnapshot()).toHaveLength(1); expect(api.compareDevice).not.toHaveBeenCalled();
+});
+it.each(["resolve", "reject"] as const)("TCP late %s after cancellation and project switch stays fenced until settlement", async (settlement) => {
+  const pending = deferred<BoundDeviceComparison & { connection: typeof connection }>(); api.compareDeviceTcp.mockReturnValue(pending.promise);
+  await render(); await act(async () => controller.open(targets));
+  let running!: Promise<void>;
+  await act(async () => { running = controller.confirm(endpoint, "tcp"); controller.cancel(); });
+  await render({ ...tree, project_incarnation: 2 });
+  expect(controller.running).toBe(true); expect(controller.stopping).toBe(true);
+  await act(async () => { controller.open(targets); await controller.confirm(endpoint, "udp"); });
+  expect(api.compareDevice).not.toHaveBeenCalled(); expect(api.compareDeviceTcp).toHaveBeenCalledTimes(1);
+  await act(async () => { if (settlement === "resolve") pending.resolve({ ...result(), connection }); else pending.reject(new Error("late TCP failure")); await running; });
+  expect(controller.running).toBe(false); expect(controller.entry(2)).toBeNull(); expect(controller.entry(9)).toBeNull();
+  expect(controller.error).toBeNull(); expect(activity.getSnapshot()[0].state).toBe("cancelled");
 });

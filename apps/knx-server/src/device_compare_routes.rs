@@ -47,6 +47,7 @@ mod read;
 pub fn device_compare_routes() -> Router<SharedState> {
     Router::new()
         .route("/api/device-compare", post(compare))
+        .route("/api/device-compare/tcp", post(compare_tcp))
         .route("/api/device-compare/preview", post(adoption::preview))
         .route("/api/device-compare/apply", post(adoption::apply))
         .layer(DefaultBodyLimit::max(16 * 1024))
@@ -178,11 +179,104 @@ struct CompareResponse {
     observation_expires_in_seconds: Option<u64>,
 }
 
+// The sibling requires a binding; the legacy request shape remains unchanged.
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct TcpCompareRequest {
+    address: String,
+    gateway: String,
+    #[serde(default)]
+    partial: Option<PartialDto>,
+    binding: ComparisonBinding,
+}
+
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ComparisonConnection {
+    requested_transport: &'static str,
+    actual_transport: Option<String>,
+    assigned_address: Option<String>,
+    skipped_frames_before_disconnect: Option<u64>,
+}
+
+impl ComparisonConnection {
+    fn unopened() -> Self {
+        Self {
+            requested_transport: "tcp",
+            actual_transport: None,
+            assigned_address: None,
+            skipped_frames_before_disconnect: None,
+        }
+    }
+}
+
+// Keep the error vocabulary/status, adding route-specific evidence only on TCP.
+async fn tcp_error(error: ApiError, connection: ComparisonConnection) -> Response {
+    let response = error.into_response();
+    let (parts, body) = response.into_parts();
+    let annotated = async {
+        let bytes = axum::body::to_bytes(body, 16 * 1024).await.ok()?;
+        let mut body: serde_json::Value = serde_json::from_slice(&bytes).ok()?;
+        body["connection"] = serde_json::to_value(connection).ok()?;
+        Some(body)
+    }
+    .await;
+    match annotated {
+        Some(body) => (parts, Json(body)).into_response(),
+        // An unreadable error body must not panic the route; report it as an internal error.
+        None => ApiError::internal("comparison error body could not carry connection facts")
+            .into_response(),
+    }
+}
+
+async fn compare_tcp(
+    State(state): State<SharedState>,
+    Extension(sessions): Extension<adoption::Sessions>,
+    headers: HeaderMap,
+    Json(body): Json<TcpCompareRequest>,
+) -> Response {
+    let body = CompareRequest {
+        address: body.address,
+        gateway: body.gateway,
+        partial: body.partial,
+        binding: Some(body.binding),
+    };
+    match compare_with_transport(
+        state,
+        sessions,
+        headers,
+        body,
+        knx_net::TunnelTransport::Tcp,
+    )
+    .await
+    {
+        Ok(response) => response,
+        Err(error) => tcp_error(error, ComparisonConnection::unopened()).await,
+    }
+}
+
 async fn compare(
     State(state): State<SharedState>,
     Extension(sessions): Extension<adoption::Sessions>,
     headers: HeaderMap,
     Json(body): Json<CompareRequest>,
+) -> Result<Response, ApiError> {
+    compare_with_transport(
+        state,
+        sessions,
+        headers,
+        body,
+        knx_net::TunnelTransport::Udp,
+    )
+    .await
+}
+
+async fn compare_with_transport(
+    state: SharedState,
+    sessions: adoption::Sessions,
+    headers: HeaderMap,
+    body: CompareRequest,
+    transport: knx_net::TunnelTransport,
 ) -> Result<Response, ApiError> {
     // Goal A3: no new tunnel once a stop has begun (KL-163).
     state.stop_admission.admit()?;
@@ -265,16 +359,18 @@ async fn compare(
         OperationStart::new(OperationKind::Compare)
             .target(serde_json::json!({ "individualAddress": target.to_string() }))
             .gateway(gateway)
-            .settings(crate::operation_recordings::tunnel_settings(
+            .settings(crate::operation_recordings::tunnel_settings_with_transport(
                 TunnelAckWait::Standard,
                 &state.device_download_timing,
+                transport,
             )),
     );
-    let tunnel = match crate::operation_recordings::connect(
+    let tunnel = match crate::operation_recordings::connect_with_transport(
         &state,
         gateway,
         TunnelAckWait::Standard,
         &recorder,
+        transport,
     )
     .await
     {
@@ -291,6 +387,17 @@ async fn compare(
             state.device_download_timing,
         )
         .await;
+    // Sample while the real handle still exists, independently of optional recording.
+    let connection = ComparisonConnection {
+        requested_transport: transport.as_str(),
+        actual_transport: Some(tunnel.transport().as_str().to_owned()),
+        assigned_address: Some(tunnel.assigned_address().to_string()),
+        skipped_frames_before_disconnect: Some(tunnel.skipped_frames()),
+    };
+    recorder.note(
+        "connection",
+        serde_json::to_value(&connection).unwrap_or_default(),
+    );
     let _ = tunnel.disconnect().await;
     if let Err(error) = &compared {
         crate::operation_recordings::finish_failed(
@@ -307,7 +414,13 @@ async fn compare(
     drop(scan);
     drop(monitor);
     drop(programming);
-    let observed = compared?;
+    let observed = match compared {
+        Ok(observed) => observed,
+        Err(error) if transport == knx_net::TunnelTransport::Tcp => {
+            return Ok(tcp_error(error, connection).await)
+        }
+        Err(error) => return Err(error),
+    };
     // One blocking job from here on: the project waits leave the runtime, and a
     // client that goes away cannot cut recording from retention (#36).
     let response = {
@@ -391,9 +504,30 @@ async fn compare(
             }
             Ok(response)
         })
-        .await??
+        .await
     };
-    let mut response = Json(response).into_response();
+    let response = match response.and_then(|result| result) {
+        Ok(response) => response,
+        Err(error) if transport == knx_net::TunnelTransport::Tcp => {
+            return Ok(tcp_error(error, connection).await)
+        }
+        Err(error) => return Err(error),
+    };
+    let mut response = if transport == knx_net::TunnelTransport::Tcp {
+        #[derive(Serialize)]
+        struct TcpResponse {
+            #[serde(flatten)]
+            comparison: CompareResponse,
+            connection: ComparisonConnection,
+        }
+        Json(TcpResponse {
+            comparison: response,
+            connection,
+        })
+        .into_response()
+    } else {
+        Json(response).into_response()
+    };
     if let Some(cookie) = cookie {
         response.headers_mut().insert(header::SET_COOKIE, cookie);
     }

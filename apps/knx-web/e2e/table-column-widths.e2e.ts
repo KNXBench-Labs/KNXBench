@@ -8,6 +8,9 @@ import { wordsIntact, scrollsLocally } from "./table-word-assertions";
 import { messages as en } from "../src/messages/en";
 import { messages as de } from "../src/messages/de";
 
+// WP-41 accepted Devices defaults: address 82 px; 10 px cell insets (was 100/12).
+const ADDRESS_DEFAULT = 82;
+
 async function evidenceScreenshot(page: Page, name: string) {
   await page.screenshot({ path: test.info().outputPath(`${name}.png`), fullPage: true });
   const context = await page.evaluate(() => ({ uiScale: getComputedStyle(document.documentElement).getPropertyValue("--app-ui-scale"), path: location.pathname, query: location.search,
@@ -94,9 +97,9 @@ for (const [language, theme, width] of [
     await expect(sorting).toHaveAttribute("aria-sort", "ascending");
     const initial = Number(await handle.getAttribute("aria-valuenow"));
     await announcedWidth(devices, 1);
-    await drag(page, handle, 48); await preference(page, "devices", "address", 148); await announcedWidth(devices, 1);
+    await drag(page, handle, 48); await preference(page, "devices", "address", ADDRESS_DEFAULT + 48); await announcedWidth(devices, 1);
     await expect(sorting).toHaveAttribute("aria-sort", "ascending"); await expect(page.locator("[data-row-clicks]")).toHaveText("0");
-    await handle.focus(); await page.keyboard.press("Shift+ArrowRight"); await preference(page, "devices", "address", 188); await announcedWidth(devices, 1);
+    await handle.focus(); await page.keyboard.press("Shift+ArrowRight"); await preference(page, "devices", "address", ADDRESS_DEFAULT + 88); await announcedWidth(devices, 1);
     await aligned(devices, 1);
     // Header sticks inside the resized table's actual vertical scroller.
     const scroller = devices.locator(".resizable-table-scroll");
@@ -104,11 +107,11 @@ for (const [language, theme, width] of [
     const top = (await scroller.boundingBox())!.y;
     expect(Math.abs((await sorting.boundingBox())!.y - top)).toBeLessThan(3);
     const resizedDeviceWidth = await handle.getAttribute("aria-valuenow");
-    await page.reload(); await preference(page, "devices", "address", 188); await announcedWidth(devices, 1);
+    await page.reload(); await preference(page, "devices", "address", ADDRESS_DEFAULT + 88); await announcedWidth(devices, 1);
     await expect(handle).toHaveAttribute("aria-valuenow", resizedDeviceWidth!);
     await handle.press("Home"); await preference(page, "devices", "address", 48); await announcedWidth(devices, 1);
     await handle.press("ArrowLeft"); await preference(page, "devices", "address", 48); await announcedWidth(devices, 1);
-    await handle.press("Enter"); await preference(page, "devices", "address", 100); await expect(handle).toHaveAttribute("aria-valuenow", String(initial));
+    await handle.press("Enter"); await preference(page, "devices", "address", ADDRESS_DEFAULT); await expect(handle).toHaveAttribute("aria-valuenow", String(initial));
     await sorting.getByRole("button").click(); await expect(sorting).toHaveAttribute("aria-sort", "descending");
     await handle.press("ArrowRight"); await devices.locator(".table-column-reset").click(); await expect(handle).toHaveAttribute("aria-valuenow", String(initial));
     const comparison = page.locator('[data-table-id="device-comparison"]');
@@ -238,7 +241,8 @@ async function defaultFit(page: Page, table: Locator, name: string, expectScroll
     // Device text columns alone exceed the pane, independently of the compact
     // selection-column exception in the reviewed rendered budget.
     if (name.endsWith("devices")) expect(minimum - floors[0]).toBeGreaterThan(size.client);
-    const reviewedTotal = name.endsWith("devices") ? (name.startsWith("de-") ? 1037 : 1000) : 800;
+    // WP-41: twelve text columns each lose 4 px inline cell padding (1000/1037 before).
+    const reviewedTotal = name.endsWith("devices") ? (name.startsWith("de-") ? 989 : 952) : 800;
     await assertFloorOverflow(table, floors, reviewedTotal);
     expect(Math.abs(size.scroll - minimum), JSON.stringify(measurement)).toBeLessThanOrEqual(2 * floors.length);
     await scrollsLocally(page, table);
@@ -523,13 +527,13 @@ test("independent fit assertion rejects an inflated rendered floor and accepts r
   await waitForCatalogue(page, "en");
   const table = page.locator('[data-table-id="devices"]');
   const floors = await intrinsicFloors(table);
-  await assertFloorOverflow(table, floors, 1000);
+  await assertFloorOverflow(table, floors, 952);
   const original = await table.locator("col").nth(2).getAttribute("style");
   await table.locator("col").nth(2).evaluate(e => { e.style.width = "240px"; });
   expect(await intrinsicFloors(table)).toEqual(floors);
-  await expect(assertFloorOverflow(table, floors, 1000)).rejects.toThrow();
+  await expect(assertFloorOverflow(table, floors, 952)).rejects.toThrow();
   await table.locator("col").nth(2).evaluate((e, style) => { e.setAttribute("style", style!); }, original);
-  await assertFloorOverflow(table, floors, 1000);
+  await assertFloorOverflow(table, floors, 952);
   expect(server.unexpected).toEqual([]);
 });
 
@@ -613,23 +617,23 @@ for (const scale of [0.8, 1.5]) {
     await handle.scrollIntoViewIfNeeded();
     const before = await edge();
     await drag(page, handle, 60);
-    await preference(page, "devices", "address", 100 + 60 / scale);
+    await preference(page, "devices", "address", ADDRESS_DEFAULT + 60 / scale);
     await expect.poll(async () => Math.abs(await edge() - before - 60), "60 visual pixels follow the pointer").toBeLessThan(1);
     await announcedWidth(table, 1);
     const dragged = await layoutWidth();
     await handle.press("ArrowRight");
-    await preference(page, "devices", "address", 108 + 60 / scale);
+    await preference(page, "devices", "address", ADDRESS_DEFAULT + 8 + 60 / scale);
     await expect.poll(async () => Math.abs(await layoutWidth() - dragged - 8)).toBeLessThan(1);
     await announcedWidth(table, 1);
     await handle.press("Enter");
-    await preference(page, "devices", "address", 100);
+    await preference(page, "devices", "address", ADDRESS_DEFAULT);
     await expect.poll(async () => Math.abs(await layoutWidth() - initial)).toBeLessThan(1);
     await drag(page, handle, 60);
     await table.locator(".table-column-reset").click();
     await expect.poll(async () => Math.abs(await layoutWidth() - initial)).toBeLessThan(1);
     await drag(page, handle, 60);
     const savedLayoutWidth = await layoutWidth();
-    const saved = 100 + 60 / scale;
+    const saved = ADDRESS_DEFAULT + 60 / scale;
     await preference(page, "devices", "address", saved);
     await page.setViewportSize({ width: 1440, height: 1000 });
     await page.reload();
@@ -675,11 +679,11 @@ async function pointerTracks(page: Page, table: Locator, scale: number) {
   await handle.scrollIntoViewIfNeeded();
   const before = await edge();
   await drag(page, handle, 60);
-  await preference(page, "devices", "address", 100 + 60 / scale);
+  await preference(page, "devices", "address", ADDRESS_DEFAULT + 60 / scale);
   await expect.poll(async () => Math.abs(await edge() - before - 60), "60 visual pixels follow the pointer").toBeLessThan(1);
   await announcedWidth(table, 1);
   await handle.press("Enter");
-  await preference(page, "devices", "address", 100);
+  await preference(page, "devices", "address", ADDRESS_DEFAULT);
 }
 
 test("stored uiScale: App's own scale drives inspector stacking, table fit and drags; a reload remeasures at the stored scale", async ({ page }) => {

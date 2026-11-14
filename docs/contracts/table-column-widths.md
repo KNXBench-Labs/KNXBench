@@ -227,12 +227,16 @@ selection column renders at 32 px; shared inline branches also differ by up to
 8 px from separately summed token insets. Tests bound per-column differences
 (12 px for selection, 8 px elsewhere, plus one Chromium geometry subpixel
 `1 / 64 / scale` for zoom rounding) and additionally assert reviewed rendered
-fixture totals within 2 px: devices EN 1000 / DE 1037 px (919 / 955 px before
-WP-20 added the System column, re-measured 19 October 2026); German flat objects
-800 px. Device text columns alone require 961 / 998 px (previously 880 / 917;
-DE 999 px while the fixtures still omitted `system`),
-independently exceeding the 780 px pane. These fixture bounds reject inflated floors; they are not a
-proof of globally optimal layout or arbitrary imported-project fit.
+fixture totals within 2 px: devices EN 952 / DE 989 px. WP-41 (14 November 2026)
+reduced Devices inline cell padding from 12 to 10 px, so each of the twelve text
+columns lost 4 px; the totals were 1000 / 1037 px before WP-41 and 919 / 955 px
+before WP-20 added the System column. German flat objects 800 px. Device text
+columns alone require 913 / 950 px (961 / 998 before WP-41; 880 / 917 before
+WP-20; DE 999 px while the fixtures still omitted `system`), independently
+exceeding the Devices pane (804 px since WP-41's 12 px workbench inset, 780 px
+before). WP-41 also revised the Devices initial widths (address 82 px instead of
+100 px); stored preferences remain unchanged. These fixture bounds reject inflated
+floors; they are not a proof of globally optimal layout or arbitrary imported-project fit.
 
 The flat-view measurements include the grouped mount's retained number floor.
 The EN/DE monitor fixture fits at both widths. Flow current-values now has a

@@ -12,6 +12,19 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Literal grid-axis translations (14 November 2026; WP-05)
+
+Implemented source-bound literal program-owned row/column Text translations using
+retained-source binding, the existing product-language policy and shared caption
+budget. Focused fictional ProductDB, actual HTTP and intercepted-browser
+regressions verify selection, conservative fallbacks and preservation boundaries;
+independent Standards and Spec reviews approve the source with no findings.
+The existing matrix consumer is unchanged. [Focused results and evidence limits](contracts/alpha16-parameter-layout.md#literal-program-owned-axis-translations)
+distinguish existing-value edit/history/reopen coverage from allocator restoration
+and browser fixtures from joined real-server/native compatibility. This records
+source and focused verification, not package-gate, release or publication acceptance.
+No schema/dependency change, broader layout or completed WP-05 claim.
+
 ## CLI TCP write-consumer source successor (13 November 2026; WP-29)
 
 The separately bounded, software-accepted successor adds explicit UDP/TCP

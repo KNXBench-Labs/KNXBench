@@ -1,8 +1,14 @@
 # WP-05 — Parameter layout fidelity: remaining features
 
-**Status:** In progress: the conditional block rename slice is implemented (9 November 2026); the rest stays blocked on evidence. Listed in [OPEN_WORK](../OPEN_WORK.md); per-ID status of record is the [ledger](../status/LEDGER.md).
+**Status:** In progress: conditional block rename is implemented (9 November 2026).
+Literal program-owned axis translations are implemented and focused-verified
+(14 November), with independent source review; broader features stay open.
+Listed in [OPEN_WORK](../OPEN_WORK.md); per-ID status of record is the [ledger](../status/LEDGER.md).
 
-**Evidence route (8 November 2026):** clean-room observation is admitted by the owner ([OWN-01](OWN-01-owner-decisions.md#decisions-recorded--8-november-2026), [rules](../RESEARCH.md#evidence-routes)). One observation exists: the [conditional block rename](../research/2026-11-09-conditional-parameter-block-rename.md); none for the other items below.
+**Evidence route:** clean-room observation is admitted by the owner ([OWN-01](OWN-01-owner-decisions.md#decisions-recorded--8-november-2026), [rules](../RESEARCH.md#evidence-routes)). Bounded observations cover
+[conditional block rename](../research/2026-11-09-conditional-parameter-block-rename.md)
+and [literal program-owned axis translations](../research/2026-11-13-literal-grid-axis-translations.md);
+neither admits the other layout behaviors below.
 
 ## Task
 
@@ -14,7 +20,8 @@ feature at a time, never inferred manufacturer behaviour.
 - Parameter-driven row/column captions (`TextParameterRefId`). `Rename` is implemented only for the
   literal leaf that retitles its enclosing block; module-scoped, cross-target and text-parameter
   renames remain open (see below).
-- Translated row/column captions.
+- Translated row/column captions outside the bounded literal program-owned
+  implementation; module/Repeat, template and text-reference semantics remain open.
 - Inline sections, nested blocks and `CollapseIfEmpty`.
 - Button actions inside grid cells (`EventHandler*`, online callbacks, own
   `Access`, translated or text-parameter Button text, module-scoped Buttons).
@@ -29,6 +36,18 @@ Area register, matrix placement, separators, block access, indentation, the
 `Text` language overlays (A16-07, `cde8d89a3`) and, since Alpha 19, passive literal
 Button labels in grid cells
 ([`button-literal-passive-v1`](../contracts/alpha16-parameter-layout.md#passive-source-button-labels-button-literal-passive-v1)).
+
+## Implemented and focused-verified 14 November 2026: literal axis translations
+
+Source-bound literal program-owned rows/columns select their own requested-language
+Text without changing layout identity, values or activation. Missing stays source;
+explicit empty stays empty; selected placeholders are not evaluated. The
+[contract](../contracts/alpha16-parameter-layout.md#literal-program-owned-axis-translations)
+records executed fictional ProductDB, actual HTTP and both owning matrix-browser
+regressions, preservation boundaries and independent Standards/Spec approval with
+no findings. Existing-value history/reopen coverage is not allocator rewind;
+intercepted browser fixtures are not joined real-server/native compatibility.
+Package-gate, release and publication acceptance are separate. WP-05 is not closed.
 
 ## Implemented 9 November 2026: conditional block rename
 

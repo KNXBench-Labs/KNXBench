@@ -2,6 +2,24 @@
 
 use super::*;
 
+// Pre-WP06-S1 call shapes: the project/20 walk every existing case was written for.
+fn read_source(
+    bytes: &[u8],
+    program: &str,
+    manufacturer: &str,
+) -> Result<Vec<Candidate>, CaptionIssue> {
+    super::read_source(bytes, program, manufacturer, PROJECT_20)
+}
+fn hardware_program_link(
+    bytes: &[u8],
+    hp: &str,
+    hardware: &str,
+    program: &str,
+    manufacturer: &str,
+) -> Result<(), CaptionIssue> {
+    super::hardware_program_link(bytes, hp, hardware, program, manufacturer, PROJECT_20)
+}
+
 const AP: &str = "M-0001_A-0001-01-0000";
 const HP: &str = "M-0001_H-1_HP-1";
 const PRODUCT: &str = "M-0001_P-1";
@@ -828,5 +846,397 @@ fn same_length_well_formed_raw_tamper_requires_hash_and_original_restore_admits(
         )
         .unwrap();
         assert_eq!(unchanged_read(&conn), expected);
+    }
+}
+
+// --- WP06-S1: same-schema namespace admission and explicit-language captions.
+// Fictional manufacturer/program, invented words and private language tags.
+
+const PROJECT_23_URI: &str = "http://knx.org/xml/project/23";
+const OTHER_PROGRAM: &str = r#"<ApplicationProgram Id="M-0001_A-0002-01-0000"><Dynamic><ParameterBlock Id="M-0001_A-0002-01-0000_PB-8" Text="Other program" ShowInComObjectTree="true"/></Dynamic></ApplicationProgram>"#;
+
+fn in_namespace(xml: &str, namespace: &str) -> String {
+    xml.replace("http://knx.org/xml/project/20", namespace)
+}
+/// `(language, block, Text)` rows grouped per `Language`, in first-seen order.
+fn languages(rows: &[(&str, &str, &str)]) -> String {
+    let mut order = Vec::<&str>::new();
+    for (language, _, _) in rows {
+        if !order.contains(language) {
+            order.push(language);
+        }
+    }
+    order
+        .iter()
+        .map(|language| {
+            let elements: String = rows
+                .iter()
+                .filter(|(l, _, _)| l == language)
+                .map(|(_, block, text)| format!(r#"<TranslationElement RefId="{AP}_{block}"><Translation AttributeName="Text" Text="{text}"/></TranslationElement>"#))
+                .collect();
+            format!(r#"<Language Identifier="{language}"><TranslationUnit RefId="{AP}">{elements}</TranslationUnit></Language>"#)
+        })
+        .collect()
+}
+/// One program per document, like a real application file, so the normalized
+/// translation rows are stored under this program.
+fn localized_source(dynamic: &str, languages: &str) -> String {
+    source(dynamic).replace(OTHER_PROGRAM, "").replace(
+        "</ApplicationPrograms>",
+        &format!("</ApplicationPrograms><Languages>{languages}</Languages>"),
+    )
+}
+fn setup_sources(hardware: &str, application: &str) -> (tempfile::TempDir, Connection) {
+    let dir = tempfile::tempdir().unwrap();
+    let conn = crate::open_and_migrate(&dir.path().join("products.sqlite")).unwrap();
+    crate::ingest_file(&conn, "M-0001/Hardware.xml", hardware.as_bytes()).unwrap();
+    crate::ingest_file(&conn, "M-0001/Application.xml", application.as_bytes()).unwrap();
+    (dir, conn)
+}
+fn localized(conn: &Connection, schema: u32, language: Option<&str>) -> CaptionEvidence {
+    let before = catalogue_snapshot(conn);
+    let changes = conn.total_changes();
+    let evidence = localized_folder_captions(conn, PRODUCT, HP, schema, language).unwrap();
+    assert_eq!(
+        conn.total_changes(),
+        changes,
+        "the reader must not repair evidence"
+    );
+    assert_eq!(catalogue_snapshot(conn), before);
+    evidence
+}
+fn only(evidence: CaptionEvidence) -> FolderCaption {
+    let CaptionEvidence::Declared(captions) = evidence else {
+        panic!("expected declared captions, got {evidence:?}");
+    };
+    assert_eq!(captions.len(), 1, "{captions:?}");
+    captions.into_values().next().unwrap()
+}
+fn untranslated(reason: Untranslated) -> Option<CaptionLanguage> {
+    Some(CaptionLanguage::Untranslated(reason))
+}
+fn translated(language: &str) -> Option<CaptionLanguage> {
+    Some(CaptionLanguage::Translated(language.into()))
+}
+
+#[test]
+fn schema23_project_admits_a_uniform_project23_product_source() {
+    let application = in_namespace(&source(&block("PB-8", "Brindle shelf")), PROJECT_23_URI);
+    let (_dir, conn) = setup_sources(&in_namespace(HARDWARE, PROJECT_23_URI), &application);
+    let installed: i64 = conn
+        .query_row(
+            "SELECT count(*) FROM product p JOIN hardware2program hp ON hp.id=?2 WHERE p.id=?1 AND hp.application_program_ref=?3",
+            [PRODUCT, HP, AP],
+            |r| r.get(0),
+        )
+        .unwrap();
+    assert_eq!(
+        installed, 1,
+        "calibrate: the project/23 product is installed"
+    );
+    let caption = only(localized(&conn, 23, None));
+    assert_eq!(caption.text, "Brindle shelf");
+    assert_eq!(caption.application_program_id, AP);
+    assert_eq!(caption.parameter_block_id, format!("{AP}_PB-8"));
+    assert_eq!(
+        caption.source_sha256,
+        crate::sha256_hex(application.as_bytes())
+    );
+    assert_eq!(caption.language, None, "no language requested");
+    assert_eq!(
+        folder_captions(&conn, PRODUCT, HP, 23).unwrap(),
+        localized(&conn, 23, None)
+    );
+    // Only the owning project's own schema admits project/23; schema 20 stays as today.
+    assert_eq!(
+        localized(&conn, 20, None),
+        CaptionEvidence::Unavailable(CaptionIssue::SourceIdentity)
+    );
+    assert_eq!(
+        localized(&conn, 21, Some("xx")),
+        CaptionEvidence::Unavailable(CaptionIssue::UnsupportedSchema)
+    );
+}
+
+#[test]
+fn mixed_and_foreign_product_namespaces_stay_refused_with_todays_issues() {
+    let application = source(&block("PB-8", "Brindle shelf"));
+    for (hardware, application, expected) in [
+        (
+            HARDWARE.to_owned(),
+            in_namespace(&application, PROJECT_23_URI),
+            CaptionIssue::UnsupportedXml,
+        ),
+        (
+            in_namespace(HARDWARE, PROJECT_23_URI),
+            application.clone(),
+            CaptionIssue::SourceIdentity,
+        ),
+        (
+            in_namespace(HARDWARE, "http://knx.org/xml/project/21"),
+            in_namespace(&application, "http://knx.org/xml/project/21"),
+            CaptionIssue::SourceIdentity,
+        ),
+        (
+            in_namespace(HARDWARE, "urn:fictional:catalogue"),
+            in_namespace(&application, "urn:fictional:catalogue"),
+            CaptionIssue::SourceIdentity,
+        ),
+    ] {
+        let (_dir, conn) = setup_sources(&hardware, &application);
+        for schema in [20, 23] {
+            for language in [None, Some("xx-YY")] {
+                assert_eq!(
+                    localized(&conn, schema, language),
+                    CaptionEvidence::Unavailable(expected),
+                    "schema {schema} {language:?}: {hardware} / {application}"
+                );
+            }
+        }
+    }
+    // A project/23 application whose inner Dynamic switches namespace is not uniform.
+    let inner = in_namespace(&application, PROJECT_23_URI).replace(
+        "<Dynamic>",
+        "<Dynamic xmlns=\"http://knx.org/xml/project/20\">",
+    );
+    let (_dir, conn) = setup_sources(&in_namespace(HARDWARE, PROJECT_23_URI), &inner);
+    assert_eq!(
+        localized(&conn, 23, None),
+        CaptionEvidence::Unavailable(CaptionIssue::UnsupportedXml)
+    );
+}
+
+#[test]
+fn explicit_language_selects_the_verified_translation_with_provenance() {
+    let rows = [
+        ("xx-YY", "PB-8", "Glimmerfach &amp; Tralvo"),
+        ("zz-QQ", "PB-8", "Quorvel"),
+    ];
+    for namespace in ["http://knx.org/xml/project/20", PROJECT_23_URI] {
+        let application = in_namespace(
+            &localized_source(&block("PB-8", "Brindle shelf"), &languages(&rows)),
+            namespace,
+        );
+        let (_dir, conn) = setup_sources(&in_namespace(HARDWARE, namespace), &application);
+        let stored: String = conn
+            .query_row(
+                "SELECT text FROM translation WHERE scope='Program' AND scope_id=?1 AND language='xx-YY' AND ref_id=?2 AND attribute_name='Text'",
+                [AP, &format!("{AP}_PB-8")],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(
+            stored, "Glimmerfach & Tralvo",
+            "calibrate the normalized row"
+        );
+        let default = only(localized(&conn, 23, None));
+        let caption = only(localized(&conn, 23, Some("xx-YY")));
+        assert_eq!(caption.text, "Glimmerfach & Tralvo");
+        assert_eq!(caption.language, translated("xx-YY"));
+        // Provenance and identity stay the exact installed declaration.
+        assert_eq!(
+            caption.application_program_id,
+            default.application_program_id
+        );
+        assert_eq!(caption.parameter_block_id, default.parameter_block_id);
+        assert_eq!(caption.source_sha256, default.source_sha256);
+        assert_eq!(default.text, "Brindle shelf");
+        assert_eq!(default.language, None);
+        assert_eq!(only(localized(&conn, 23, Some("zz-QQ"))).text, "Quorvel");
+    }
+}
+
+#[test]
+fn language_selection_follows_best_matching_language_exactly() {
+    for (rows, requested, text, language) in [
+        // Prefix request: the lowest identifier of the matching variants.
+        (
+            vec![("xx-ZZ", "PB-8", "Zorvane"), ("xx-YY", "PB-8", "Yelmint")],
+            "xx",
+            "Yelmint",
+            translated("xx-YY"),
+        ),
+        // An exact identifier wins over a prefix variant.
+        (
+            vec![("xx-YY", "PB-8", "Yelmint"), ("xx", "PB-8", "Plain xx")],
+            "xx",
+            "Plain xx",
+            translated("xx"),
+        ),
+        // A longer request never falls back to a shorter stored identifier.
+        (
+            vec![("xx", "PB-8", "Plain xx")],
+            "xx-YY",
+            "Brindle shelf",
+            untranslated(Untranslated::NoTranslation),
+        ),
+        // The separator is required: `xx` does not match `xxx-YY`.
+        (
+            vec![("xxx-YY", "PB-8", "Trixel")],
+            "xx",
+            "Brindle shelf",
+            untranslated(Untranslated::NoTranslation),
+        ),
+    ] {
+        let application = localized_source(&block("PB-8", "Brindle shelf"), &languages(&rows));
+        let (_dir, conn) = setup_sources(HARDWARE, &application);
+        let caption = only(localized(&conn, 20, Some(requested)));
+        assert_eq!(
+            (caption.text.as_str(), &caption.language),
+            (text, &language),
+            "{rows:?} {requested}"
+        );
+    }
+}
+
+#[test]
+fn missing_or_unusable_translations_fall_back_to_the_default_text_with_a_reason() {
+    for (rows, requested, reason) in [
+        (vec![], "xx-YY", Untranslated::NoTranslation),
+        (
+            vec![("xx-YY", "PB-8", "Yelmint")],
+            "zz",
+            Untranslated::NoTranslation,
+        ),
+        (
+            vec![("xx-YY", "PB-8", "Yelmint")],
+            "",
+            Untranslated::NoTranslation,
+        ),
+        (
+            vec![("xx-YY", "PB-9", "Other block")],
+            "xx-YY",
+            Untranslated::NoTranslation,
+        ),
+        (
+            vec![("xx-YY", "PB-8", "")],
+            "xx-YY",
+            Untranslated::UnusableTranslation,
+        ),
+        (
+            vec![("xx-YY", "PB-8", "   ")],
+            "xx-YY",
+            Untranslated::UnusableTranslation,
+        ),
+        (
+            vec![("xx-YY", "PB-8", "Kanal {{0}}")],
+            "xx-YY",
+            Untranslated::UnusableTranslation,
+        ),
+        (
+            vec![("xx-YY", "PB-8", "a }}")],
+            "xx-YY",
+            Untranslated::UnusableTranslation,
+        ),
+        // A block translated twice in one language is ambiguous, even when equal.
+        (
+            vec![("xx-YY", "PB-8", "Yelmint"), ("xx-YY", "PB-8", "Yelmint")],
+            "xx-YY",
+            Untranslated::UnusableTranslation,
+        ),
+        // The selected variant is unusable: no fallback to another variant.
+        (
+            vec![("xx-AA", "PB-8", ""), ("xx-BB", "PB-8", "Usable")],
+            "xx",
+            Untranslated::UnusableTranslation,
+        ),
+    ] {
+        let application = localized_source(&block("PB-8", "Brindle shelf"), &languages(&rows));
+        let (_dir, conn) = setup_sources(HARDWARE, &application);
+        let caption = only(localized(&conn, 20, Some(requested)));
+        assert_eq!(caption.text, "Brindle shelf", "{rows:?} {requested}");
+        assert_eq!(
+            caption.language,
+            untranslated(reason),
+            "{rows:?} {requested}"
+        );
+    }
+    // A translation owned by another program, manufacturer or attribute is not this block's.
+    let rows = languages(&[("xx-YY", "PB-8", "Yelmint")]);
+    for foreign in [
+        rows.replace(
+            &format!("TranslationUnit RefId=\"{AP}\""),
+            "TranslationUnit RefId=\"M-0001_A-0009-01-0000\"",
+        ),
+        rows.replace("AttributeName=\"Text\"", "AttributeName=\"Name\""),
+        rows.replace(
+            "<TranslationUnit ",
+            "<TranslationUnit xmlns=\"urn:fictional:foreign\" ",
+        ),
+        rows.replace(
+            "Text=\"Yelmint\"",
+            "xmlns:q=\"urn:fictional:foreign\" q:Text=\"Yelmint\"",
+        ),
+    ] {
+        let application = localized_source(&block("PB-8", "Brindle shelf"), &foreign);
+        let (_dir, conn) = setup_sources(HARDWARE, &application);
+        let caption = only(localized(&conn, 20, Some("xx-YY")));
+        assert_eq!(caption.text, "Brindle shelf", "{foreign}");
+        assert_ne!(caption.language, translated("xx-YY"), "{foreign}");
+    }
+    // The 4096-byte attribute boundary is admitted; one byte more is today's
+    // whole-source attribute limit, with or without a language.
+    let boundary = "é".repeat(2048);
+    let application = localized_source(
+        &block("PB-8", "Brindle shelf"),
+        &languages(&[("xx-YY", "PB-8", &boundary)]),
+    );
+    let (_dir, conn) = setup_sources(HARDWARE, &application);
+    let caption = only(localized(&conn, 20, Some("xx")));
+    assert_eq!(
+        (caption.text, caption.language),
+        (boundary, translated("xx-YY"))
+    );
+    let oversized = "é".repeat(2049);
+    let application = localized_source(
+        &block("PB-8", "Brindle shelf"),
+        &languages(&[("xx-YY", "PB-8", &oversized)]),
+    );
+    let (_dir, conn) = setup_sources(HARDWARE, &application);
+    for language in [None, Some("xx")] {
+        assert_eq!(
+            localized(&conn, 20, language),
+            CaptionEvidence::Unavailable(CaptionIssue::ResourceLimit)
+        );
+    }
+}
+
+#[test]
+fn translation_row_disagreeing_with_the_verified_bytes_is_not_shown() {
+    let rows = languages(&[("xx-YY", "PB-8", "Yelmint")]);
+    let application = localized_source(&block("PB-8", "Brindle shelf"), &rows);
+    let update = "UPDATE translation SET text=?1 WHERE scope='Program' AND scope_id=?2 AND language='xx-YY' AND attribute_name='Text'";
+    for (sql, value, expected) in [
+        (
+            update,
+            Some("Tampered"),
+            untranslated(Untranslated::TranslationDisagrees),
+        ),
+        (
+            update,
+            None,
+            untranslated(Untranslated::TranslationDisagrees),
+        ),
+        (update, Some("Yelmint"), translated("xx-YY")),
+        (
+            "DELETE FROM translation WHERE scope='Program' AND scope_id=?2 AND ?1 IS NULL",
+            None,
+            translated("xx-YY"),
+        ),
+    ] {
+        let (_dir, conn) = setup_sources(HARDWARE, &application);
+        assert_eq!(
+            only(localized(&conn, 20, Some("xx-YY"))).language,
+            translated("xx-YY")
+        );
+        conn.execute(sql, rusqlite::params![value, AP]).unwrap();
+        let caption = only(localized(&conn, 20, Some("xx-YY")));
+        assert_eq!(caption.language, expected, "{sql} {value:?}");
+        let text = if expected == translated("xx-YY") {
+            "Yelmint"
+        } else {
+            "Brindle shelf"
+        };
+        assert_eq!(caption.text, text, "{sql} {value:?}");
     }
 }

@@ -225,6 +225,18 @@ it("saved text wins over product metadata, including explicit empty and whitespa
   expect(nodes.map(projectFolderProductCaption)).toEqual([null, null, null, caption, null]);
   expect(JSON.stringify(nodes)).toBe(before);
 });
+it("WP06-S1: a translated caption with language provenance still yields to saved text", () => {
+  const translated: ProductFolderCaption = { ...productCaption("Glimmerfach"), language: { status: "Translated", language: "xx-YY" } };
+  const fallback: ProductFolderCaption = { ...productCaption(), language: { status: "Untranslated", reason: "NoTranslation" } };
+  const nodes: ProjectTreeNode[] = [
+    { kind: "Folder", ref_id: "PB-3", text: "Saved literal", product_caption: translated },
+    { kind: "Folder", ref_id: "PB-3", text: "", product_caption: translated },
+    { kind: "Folder", ref_id: "PB-3", product_caption: translated },
+    { kind: "Folder", ref_id: "PB-3", product_caption: fallback },
+  ];
+  expect(nodes.map(projectFolderNodeLabel)).toEqual(["Saved literal (PB-3)", "PB-3", "Glimmerfach (PB-3)", "Literal product label (PB-3)"]);
+  expect(nodes.map(projectFolderProductCaption)).toEqual([null, null, translated, fallback]);
+});
 it("only a complete known product declaration on a Folder can supply a label", () => {
   const caption = productCaption();
   const invalid: unknown[] = [null, "Literal product label", [], {},

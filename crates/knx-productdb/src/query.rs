@@ -110,7 +110,10 @@ fn pick(program: Option<String>, program_ref: Option<String>) -> (Option<String>
 ///    `None`, exactly like a `language` with zero candidates — a miss
 ///    here is never an error, only the call site decides what the
 ///    untranslated fallback is.
-fn best_matching_language<'a>(requested: &str, available: &[&'a str]) -> Option<&'a str> {
+pub(crate) fn best_matching_language<'a>(
+    requested: &str,
+    available: &[&'a str],
+) -> Option<&'a str> {
     if requested.is_empty() {
         return None;
     }

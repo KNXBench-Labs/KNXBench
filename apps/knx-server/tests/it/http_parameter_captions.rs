@@ -1,4 +1,5 @@
 //! Parameter captions use exact positional references without changing project data.
+mod navigation;
 mod translated_axes;
 
 use std::sync::Arc;

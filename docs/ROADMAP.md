@@ -1,5 +1,13 @@
 # Roadmap
 
+## Parameter navigation hierarchy (14 November 2026 source candidate)
+
+The bounded nearest evaluated display-container → leaf slice is implemented
+with fictional producer/captured-response regressions. Independent review and
+package acceptance remain pending; broader nested blocks, empty containers,
+Repeat, module semantics and callbacks are not expanded.
+[Contract and explicit exclusions](contracts/parameter-workspace.md#evaluated-display-containers-source-candidate-after-alpha-21).
+
 ## Literal axis translations (14 November 2026; WP-05)
 
 The bounded literal program-owned row/column caption slice is implemented and

@@ -250,22 +250,22 @@ async fn separators_are_listed_between_the_fields_with_their_declarations() {
         dto["sections"][0]["separators"],
         json!([
             {
-                "position": 0, "group": { "key": "PB-OPEN", "label": "Open page" },
+                "position": 0, "group": { "key": "PB-OPEN", "label": "Open page", "container": null },
                 "elementId": "PS-HEAD", "text": "Heading", "uiHint": "Headline",
                 "access": null, "blockAccess": null
             },
             {
-                "position": 1, "group": { "key": "PB-OPEN", "label": "Open page" },
+                "position": 1, "group": { "key": "PB-OPEN", "label": "Open page", "container": null },
                 "elementId": "PS-RULE", "text": null, "uiHint": "HorizontalRuler",
                 "access": null, "blockAccess": null
             },
             {
-                "position": 3, "group": { "key": "PB-READ", "label": "Read page" },
+                "position": 3, "group": { "key": "PB-READ", "label": "Read page", "container": null },
                 "elementId": "PS-ERR", "text": "Invalid combination", "uiHint": "Error",
                 "access": "None", "blockAccess": "Read"
             },
             {
-                "position": 4, "group": { "key": "PB-INFO", "label": "About" },
+                "position": 4, "group": { "key": "PB-INFO", "label": "About", "container": null },
                 "elementId": "PS-INFO", "text": "Firmware notes", "uiHint": "Information",
                 "access": null, "blockAccess": null
             }

@@ -1,6 +1,13 @@
 # CLI System-2 validation TCP transport — 13 November 2026
 
-## Bounded source candidate
+## Software-accepted on main
+
+Source `e2d5a4914` was integrated main-first as `99a78fe35` and publication was
+read back exactly. Independent Standards and Spec reviews APPROVE with no
+in-scope findings; all 13 selected package stages passed (726 Rust tests,
+0 failed, 22 ignored; separate corpus 17/17), inputs frozen and user data
+checked and untouched. The source-bound author evidence below remains distinct
+from that integrated acceptance.
 
 `device system2-validation` socket-backed execution and recovery admit strict
 `--tunnel-transport udp|tcp`. Omission retains the existing patient UDP ACK
@@ -51,9 +58,13 @@ Execution and recovery both disclose positive skips on EOF, without recording.
 Backup-persistence injection blocks every mutation including setup. Default and
 explicit UDP cover **handshake selection only** in both execution and recovery.
 
-This is author evidence and self-review, not independent approval. Independent
-review, final maintained package acceptance and publication belong to the parent.
-No hardware, release, deployment, broader programming or wider WP-29 closure claim.
+The author evidence and self-review above are not relabelled as independent
+execution. The independent Spec review additionally calibrated exactly two
+isolated mutations: omitted skip reporting and ignored backup-persistence failure.
+Both reached their intended assertion; rebuilt baseline and restored control each
+passed 2/2. An initial cached-harness attempt was retained as precompiled-only,
+not credited as a private rebuilt producer. No hardware, release, deployment,
+broader programming or wider WP-29 closure claim.
 
 [WP-29](../open-work/WP-29-knxnet-ip-tcp-tunnelling.md) ·
 [CLI manual](../manual/user-guide/10-command-line.md)

@@ -163,7 +163,7 @@ on main `7213ab41c` was read back. This observation increment does not itself
 enable execution/recovery; that separate candidate is described below. Other
 programming consumers do not gain the option. No release or hardware claim.
 
-## CLI System-2 validation successor (13 November 2026; source candidate)
+## CLI System-2 validation successor (13 November 2026; software-accepted on main)
 
 Socket-backed `device system2-validation` execution **and recovery** accept strict
 `--tunnel-transport udp|tcp`; omission retains UDP and its patient ACK policy.
@@ -174,9 +174,11 @@ TCP skips sampled before disconnect are disclosed on ordinary stderr even on
 failure, independently of recording. Every existing consent, source/identity,
 fresh configured-input, durable backup-before-mutation and recovery gate remains.
 The [dedicated record](../status/2026-11-13-cli-tcp-system2-validation.md) owns
-focused evidence and remaining limits; independent review, final package acceptance
-and publication belong to the parent. No hardware or release claim; broader WP-29
-and other programming consumers remain open.
+focused evidence and remaining limits. Independent Standards and Spec reviews
+APPROVE; all 13 selected package stages passed (726 Rust tests, 22 ignored;
+separate corpus 17/17; frozen inputs and checked, untouched user data), and
+publication as main `99a78fe35` was read back. No hardware or release claim;
+broader WP-29 and other programming consumers remain open.
 
 ## Implementation boundaries
 

@@ -12,6 +12,8 @@ const palettes: Palette[] = [
   { id: "lcars", resolved: "lcars", scheme: "dark", accents: false },
   { id: "rail", resolved: "rail", scheme: "light", accents: false },
   { id: "rail-dark", resolved: "rail-dark", scheme: "dark", accents: false },
+  { id: "technical-light", resolved: "technical-light", scheme: "light", accents: false },
+  { id: "technical-dark", resolved: "technical-dark", scheme: "dark", accents: false },
   { id: "system", resolved: "porcelain", scheme: "light", accents: true },
   { id: "system", resolved: "graphite", scheme: "dark", accents: true },
   { id: "user-orchid", resolved: "user-orchid", scheme: "light", accents: true },

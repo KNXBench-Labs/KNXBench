@@ -257,7 +257,7 @@ function DeviceDescriptionField(props: {
   return (
     <label className="inspector-field">
       {t("inspector.description")}
-      <input
+      <input className="value-slot-text"
         value={value}
         onChange={(e) => setValue(e.target.value)}
         onBlur={apply}
@@ -347,8 +347,7 @@ function GroupAddressDescriptionField(props: {
   return (
     <label className="inspector-field">
       {t("inspector.groupAddressDescription")}
-      <textarea
-        className="ga-description-editor"
+      <textarea className="ga-description-editor value-slot-text"
         aria-label={t("inspector.groupAddressDescription")}
         rows={2}
         value={value}
@@ -402,7 +401,7 @@ function ComObjectDescriptionField(props: {
       <span className="inspector-field-heading">{t("inspector.description")}
         <ValueProvenance layer={com.description_layer} />
       </span>
-      <input
+      <input className="value-slot-text"
         aria-label={t("inspector.description")}
         value={value}
         onChange={(e) => setValue(e.target.value)}
@@ -1434,7 +1433,7 @@ function GroupRangeNameField(props: {
   return (
     <label className="inspector-field">
       {t("inspector.name")}
-      <input
+      <input className="value-slot-text"
         value={value}
         onChange={(e) => setValue(e.target.value)}
         onBlur={apply}
@@ -1662,7 +1661,7 @@ function NameField(props: {
 
   return <label className="inspector-field">
     {props.label}
-    <input value={value} disabled={busy} onChange={(e) => setValue(e.target.value)} onBlur={apply}
+    <input className="value-slot-text" value={value} disabled={busy} onChange={(e) => setValue(e.target.value)} onBlur={apply}
       onKeyDown={(e) => {
         if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); setValue(name); setError(null); }
         if (e.key === "Enter" && !e.nativeEvent.isComposing) (e.target as HTMLInputElement).blur();
@@ -1845,7 +1844,7 @@ function BuildingPartNameField(props: {
   return (
     <label className="inspector-field">
       {t("inspector.name")}
-      <input
+      <input className="value-slot-text"
         value={value}
         onChange={(e) => setValue(e.target.value)}
         onBlur={apply}

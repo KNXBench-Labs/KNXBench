@@ -25,9 +25,14 @@ const PALETTE_THEMES: readonly ThemeDef[] = [
   { id: "lcars", name: "LCARS", hasAccentVariations: false },
   { id: "rail", name: "Rail", hasAccentVariations: false },
   { id: "rail-dark", name: "Rail Dark", hasAccentVariations: false },
+  { id: "technical-light", name: "Technical Light", hasAccentVariations: false },
+  { id: "technical-dark", name: "Technical Dark", hasAccentVariations: false },
 ];
 /** Built-in palettes that also carry a trusted presentation (ADR-0092, ADR-0157). */
-const BUILT_IN_PRESENTATIONS: Readonly<Record<string, string>> = { lcars: "lcars", rail: "rail", "rail-dark": "rail" };
+const BUILT_IN_PRESENTATIONS: Readonly<Record<string, string>> = {
+  lcars: "lcars", rail: "rail", "rail-dark": "rail",
+  "technical-light": "technical", "technical-dark": "technical",
+};
 /** The presentation marker a resolved built-in id (never a pack) puts on the document. */
 export function builtInPresentation(id: string): string | undefined {
   return Object.hasOwn(BUILT_IN_PRESENTATIONS, id) ? BUILT_IN_PRESENTATIONS[id] : undefined;

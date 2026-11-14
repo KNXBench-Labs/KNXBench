@@ -327,7 +327,7 @@ function ParameterFieldRow(props: {
   );
 
   return <>
-    <label className="inspector-field parameter-field" data-ets-id={field.etsId}
+    <label className={`inspector-field parameter-field ${field.kind === "Text" ? "parameter-field-text" : "parameter-field-scalar"}`} data-ets-id={field.etsId}
       data-differs-from-download={downloadNote ? "true" : undefined}>
       <span className="parameter-field-name">{label}{downloadNote && <span className="parameter-download-mark"
         title={downloadNote} aria-hidden="true" />}</span>

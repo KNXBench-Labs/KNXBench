@@ -8,7 +8,7 @@ import { chooseComView, dismissToasts, intercept, openList, openObjectSettings, 
 import { separatorLine } from "./control-roles";
 import { statusMetricsFixtureBody } from "./status-metrics-fixture";
 
-const THEMES = ["porcelain", "graphite", "cupertino", "lcars", "rail", "rail-dark", "user-modern-retro-green-crt"] as const;
+const THEMES = ["porcelain", "graphite", "cupertino", "lcars", "rail", "rail-dark", "technical-light", "technical-dark", "user-modern-retro-green-crt"] as const;
 type Catalogue = { readonly [K in keyof typeof en]: string };
 
 // Forty installations: an explorer taller than the column, as in workbench-splitters.e2e.ts.

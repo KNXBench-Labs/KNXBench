@@ -32,7 +32,7 @@
         // Keep this id list in sync with THEMES in src/theme.ts — duplicated
         // here because this script runs before any module loads, so it cannot
         // import from theme.ts. themeTokens.test.ts fails if the two drift.
-        var knownThemes = ["porcelain", "graphite", "cupertino", "lcars", "rail", "rail-dark"];
+        var knownThemes = ["porcelain", "graphite", "cupertino", "lcars", "rail", "rail-dark", "technical-light", "technical-dark"];
         var t = read("theme", "knx-desktop:theme");
         if (t === "light") t = "porcelain";
         if (t === "dark") t = "graphite";
@@ -42,6 +42,7 @@
         // Built-in presentations (ADR-0092, ADR-0157); keep in sync with theme.ts.
         if (t === "lcars") document.documentElement.dataset.presentation = "lcars";
         if (t === "rail" || t === "rail-dark") document.documentElement.dataset.presentation = "rail";
+        if (t === "technical-light" || t === "technical-dark") document.documentElement.dataset.presentation = "technical";
         var accent = read("accent", "knx-desktop:accent");
         document.documentElement.dataset.accent = ["violet", "mint", "blue", "amber", "rose"].indexOf(accent) === -1 ? "violet" : accent;
         document.documentElement.dataset.density = read("density", "knx-desktop:density") === "comfortable" ? "comfortable" : "compact";

@@ -15,6 +15,8 @@ import { statusMetricsFixtureBody } from "./status-metrics-fixture";
 type Phase = "initial" | "applied" | "changed" | "undo";
 type Language = "en" | "de";
 const captureRoot = process.env.KNXBENCH_PARAMETER_NAVIGATION_CAPTURE_DIR;
+/** Cases exist only when runtime-produced bodies are supplied; ordinary lanes must not carry skips. */
+export const parameterNavigationCapturesAvailable = Boolean(captureRoot);
 
 async function capturedFixture(page: Page, language: Language) {
   const bodies = new Map<string, string>();
@@ -88,7 +90,6 @@ async function capturedFixture(page: Page, language: Language) {
 
 /** Runs one exact-response case; its owning spec registers the test for gate inventory. */
 export async function runParameterNavigationCapture(page: Page, language: Language, width: number) {
-      test.skip(!captureRoot,"requires runtime-produced fictional HTTP bodies; no fabricated DTO substitute");
       const m = language === "de" ? de : en;
       await page.setViewportSize({ width,height:1000 });
       const errors: string[] = []; page.on("pageerror",error => errors.push(error.message));

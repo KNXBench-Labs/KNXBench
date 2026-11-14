@@ -231,6 +231,6 @@ describe("differingAreas", () => {
     const marks = differingAreas(rows, groups, (candidate, scope) => scope === null && refs.has(candidate.etsId));
     expect([...marks.groups].map(key => groups.find(g => g.key === key)!.label)).toEqual(["Status LED"]);
     expect(marks.sections.size).toBe(1);
-    expect(differingAreas(rows, groups, () => false)).toEqual({ groups: new Set(), sections: new Set() });
+    expect(differingAreas(rows, groups, () => false)).toEqual({ groups: new Set(), sections: new Set(), containers: new Set() });
   });
 });

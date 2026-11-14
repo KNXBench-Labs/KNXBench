@@ -2,6 +2,15 @@
 
 # Implementation status
 
+## Parameter navigation hierarchy (14 November 2026 source candidate)
+
+Supported evaluated display containers organize their existing child parameter
+areas. Disclosure state is presentation-only; search and contextual paths name
+the container, and existing downloaded-value marks aggregate from its children.
+No new write authority or arbitrary nested hierarchy is inferred. Independent
+review, package acceptance and release availability remain separate.
+[Bounded contract](../contracts/parameter-workspace.md#evaluated-display-containers-source-candidate-after-alpha-21).
+
 ## Literal row/column translations (14 November 2026 source/focused verification)
 
 The bounded WP-05 implementation projects literal program-owned axis captions in

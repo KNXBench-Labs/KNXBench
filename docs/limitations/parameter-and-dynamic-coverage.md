@@ -6,6 +6,17 @@ This dossier preserves the technical detail and dated history. Earlier
 headings, failures and lifting conditions are historical where later
 updates supersede them; they are not new work assignments.
 
+## Update 2026-11-14: bounded parameter navigation source candidate
+
+The parameter workspace projects agreed evaluated display owners above existing
+leaf areas, with source-derived captions, fallback paths and presentation-only
+disclosures ([contract](../contracts/parameter-workspace.md#evaluated-display-containers-source-candidate-after-alpha-21)).
+It does not enumerate empty containers or every conditional declaration, infer
+parents from captions/indentation, or expand arbitrary nested-block, module,
+Repeat or callback semantics. Missing/ambiguous hierarchy stays at the root.
+Fictional producer and captured-response browser tests are separate from
+independent review, package acceptance and physical-device interoperability.
+
 ## Update 2026-11-09: conditional block captions (WP-05)
 
 A literal `ParameterBlockRename`/`Rename` leaf naming its own unique enclosing

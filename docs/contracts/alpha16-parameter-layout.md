@@ -178,8 +178,21 @@ Button behaviour, handler support or Table/Grid visual equivalence.
   `row,column` parser. Anything else (local `Access`, `TextParameterRefId`,
   other or qualified attributes, child elements, non-whitespace text, CDATA or
   entity content, malformed or out-of-range cells, list/invalid/nested-list
-  blocks) shows no label; the grid's existing `unshownContent` issue for the
-  `Button` stays.
+  blocks) shows no label. The grid's existing `unshownContent` issue for a
+  `Button` stays only when it declares a `Cell` and enters grid cell settlement.
+- **Absent Cell (WP05-B clarification, 14 November 2026).** A reached,
+  program-owned `Button` without `Cell` inside a valid Table/Grid block has no
+  defined table position: it receives neither a passive label nor an additional
+  grid-local `unshownContent` issue. The existing evaluator `UnrecognizedNode`
+  diagnostic still reaches the server/UI and reports the unsupported node; this
+  is not silent loss. Position basis: the public KNX Project Schema 23
+  description v01.00.00, §1.1.2.35 `CellRef_t` (printed page 23/64;
+  [schema reference](../adr/0137-declared-parameter-grids-reach-the-workspace.md#context)),
+  describes a cell as required for tabular parameter display. The reporting
+  choice is KNXBench policy, not an observed ETS rule. An absent `Cell` is distinct
+  from a declared malformed or out-of-range `Cell`, whose existing grid issue
+  stays. Field identities, values, write authority, area admission and the
+  module/`Repeat` refusal are unchanged; this clarification changes no behaviour.
 - **Activation.** The single existing walker records each `Button` it reaches
   (`ActiveButton`: scope, node, inherited block access) and keeps its
   `UnrecognizedNode`/skipped-child diagnostics; it never descends a `Button`.

@@ -25,7 +25,12 @@ feature at a time, never inferred manufacturer behaviour.
 - Inline sections, nested blocks and `CollapseIfEmpty`.
 - Button actions inside grid cells (`EventHandler*`, online callbacks, own
   `Access`, translated or text-parameter Button text, module-scoped Buttons).
-  The literal text alone is delivered as passive labels.
+  Admitted literal in-cell text alone is delivered as passive labels. The
+  [WP05-B clarification](../contracts/alpha16-parameter-layout.md#passive-source-button-labels-button-literal-passive-v1)
+  (14 November 2026) records the unchanged reporting policy for a reached
+  program-owned Button without `Cell`: no passive label or additional grid-local
+  `unshownContent`; the existing `UnrecognizedNode` remains. This is KNXBench
+  policy, not an observed ETS rule; no product code, test or fixture change.
 - `Table` versus `Grid` visual rules (needs the referenced schema rules
   document) and remaining control hints.
 

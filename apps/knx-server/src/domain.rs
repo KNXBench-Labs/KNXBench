@@ -6879,6 +6879,7 @@ fn assemble_parameter_panel_for_project(
     }
     let layout =
         knx_productdb::parameter_layout::load(products, &program_id).map_err(|e| e.to_string())?;
+    caption_fills.load_grid_axes(products, &program_id, &layout, language)?;
     diagnostics.extend(passive_label_binding_diagnostic(
         layout.button_binding(),
         activation.buttons.iter().filter(|b| b.scope.is_none()).count(),

@@ -16,8 +16,8 @@ or protocol schema change; product database v24 adds typed presentation columns
   section captions are a read-only resolved display over preserved source metadata.
   See the [positional text contract](positional-text-templates.md#parameter-workspace-captions-issue-26)
   for exact source references, readable fallbacks and tooltips. Block captions
-  use untranslated program text; changing the product language does not translate
-  them (nor separator captions). The fallback policy deliberately also covers
+  and separators use the existing requested-product-language template overlay
+  before supported positional filling. The fallback policy deliberately also covers
   literal template delimiters in already-resolved values. Tooltips describe that
   policy without asserting the result is unresolved; the result, original
   template and resolver provenance are retained, and result/template remain
@@ -70,13 +70,17 @@ or protocol schema change; product database v24 adds typed presentation columns
 - **Wire (additive, versioned).** Every section carries `groupLayouts` (possibly
   empty). Each entry: `groupKey` (equals the fields' `group.key`), `version: 1`,
   raw `declaredLayout`, `status` (`grid`, `unknownLayout`, `invalidGrid`,
-  `sourceUnavailable`), verbatim `rows`/`columns` (`text`,
+  `sourceUnavailable`), source-owned `rows`/`columns` (`text`,
   `textParameterRefId`, row `collapseIfEmpty`, column `width`), activated
   separator `labels` with their cells and original text, and `issues`
   (`cellMalformed`, `cellOutOfRange`, `missingCell`, `ambiguousCell`,
   `unshownContent` with element, reference and raw cell). Every field carries
   `cell` (`{row, column}` or `null`); it is set only for a `grid` group and an
-  unambiguous, in-range declaration.
+  unambiguous, in-range declaration. The literal-axis implementation
+  overlays only admitted program-owned `text` for the requested product language;
+  other axis metadata stays verbatim. Missing translations keep that axis's source
+  text and selected empty stays empty. Selected translated placeholders fall back
+  with a named grid issue. [Contract and focused verification limits](alpha16-parameter-layout.md#literal-program-owned-axis-translations).
 - **Rendering.** A chosen area renders as a matrix only for `version: 1` and
   `status: grid`. Anything else keeps the row view with a hint naming the
   reason: no grid declared, unreported by the server (`groupLayouts` absent),
@@ -112,7 +116,7 @@ or protocol schema change; product database v24 adds typed presentation columns
   source order: `Headline` as a heading, `Information`/`Error` as marked text
   (screen readers hear "Information:"/"Manufacturer warning:"), `HorizontalRuler`
   and textless separators as a rule, any other hint as plain text with the token
-  kept in `data-ui-hint`. Their text is the program's, not translated; named
+  kept in `data-ui-hint`. Their text uses the product-language overlay; named
   arguments and supported positional text references use the shared resolver.
   Source text and fill provenance stay available in the tooltip.
 - Separators hidden or restricted by their own or their block's `Access` are not

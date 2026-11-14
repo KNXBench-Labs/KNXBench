@@ -50,11 +50,12 @@ pub(crate) fn group_layout_dto<'a>(
             });
         }
     }
-    grid_dto(group_key, grid, labels, captions).map(Some)
+    grid_dto(group_key, definition, grid, labels, captions).map(Some)
 }
 
 fn grid_dto(
     group_key: String,
+    definition: &str,
     grid: &BlockGrid,
     labels: Vec<ParameterGridLabelDto>,
     captions: &mut crate::parameter_captions::CaptionFills,
@@ -75,7 +76,7 @@ fn grid_dto(
             .map(|row| {
                 Ok(ParameterGridRowDto {
                     id: row.id.clone(),
-                    text: captions.copy_text(row.text.as_deref())?,
+                    text: captions.copy_axis_text(definition, row)?,
                     text_parameter_ref_id: row.text_parameter_ref_id.clone(),
                     collapse_if_empty: row.collapse_if_empty.clone(),
                 })
@@ -87,7 +88,7 @@ fn grid_dto(
             .map(|column| {
                 Ok(ParameterGridColumnDto {
                     id: column.id.clone(),
-                    text: captions.copy_text(column.text.as_deref())?,
+                    text: captions.copy_axis_text(definition, column)?,
                     text_parameter_ref_id: column.text_parameter_ref_id.clone(),
                     width: column.width.clone(),
                 })
@@ -109,6 +110,19 @@ fn grid_dto(
                 reference: issue.reference.clone(),
                 cell: issue.cell.clone(),
             })
+            .chain(
+                grid.rows
+                    .iter()
+                    .map(|axis| ("Row", axis))
+                    .chain(grid.columns.iter().map(|axis| ("Column", axis)))
+                    .filter(|(_, axis)| captions.axis_unsupported(definition, &axis.id))
+                    .map(|(kind, axis)| ParameterGridIssueDto {
+                        kind: ParameterGridIssueKindDto::UnshownContent,
+                        element: kind.into(),
+                        reference: Some(axis.id.clone()),
+                        cell: None,
+                    }),
+            )
             .collect(),
     })
 }

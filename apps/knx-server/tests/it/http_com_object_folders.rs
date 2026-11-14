@@ -93,6 +93,15 @@ async fn call(app: &axum::Router, method: &str, path: &str, body: Option<Value>)
 
 /// `source.ets_id` -> the `project_folder` the device detail reports for it.
 async fn folders(app: &axum::Router, state: &knx_server::AppState) -> BTreeMap<String, Value> {
+    folders_with(app, state, "").await
+}
+
+/// [`folders`] for a device-detail request with an explicit query (e.g. `?language=`).
+async fn folders_with(
+    app: &axum::Router,
+    state: &knx_server::AppState,
+    query: &str,
+) -> BTreeMap<String, Value> {
     let (device, ets_ids) = {
         let project = state.project.lock().unwrap();
         let project = project.as_ref().unwrap();
@@ -104,7 +113,7 @@ async fn folders(app: &axum::Router, state: &knx_server::AppState) -> BTreeMap<S
             .collect();
         (device.id.0, ets_ids)
     };
-    let detail = call(app, "GET", &format!("/api/device/{device}"), None).await;
+    let detail = call(app, "GET", &format!("/api/device/{device}{query}"), None).await;
     detail["com_objects"]
         .as_array()
         .unwrap()
@@ -346,6 +355,16 @@ async fn assert_schema20_display_is_read_only(
     expected: &BTreeMap<String, Value>,
     tree: &str,
 ) {
+    assert_schema20_display_is_read_only_with(app, state, expected, tree, "").await;
+}
+
+async fn assert_schema20_display_is_read_only_with(
+    app: &axum::Router,
+    state: &knx_server::AppState,
+    expected: &BTreeMap<String, Value>,
+    tree: &str,
+    query: &str,
+) {
     use std::sync::atomic::Ordering;
     let project = state.project.lock().unwrap().clone();
     let clean = state.clean_project.lock().unwrap().clone();
@@ -355,7 +374,7 @@ async fn assert_schema20_display_is_read_only(
     let opaque = state.opaque.lock().unwrap().clone();
     assert_schema20_retained(&opaque, tree);
     let before = call(app, "GET", "/api/project", None).await;
-    assert_eq!(&folders(app, state).await, expected);
+    assert_eq!(&folders_with(app, state, query).await, expected);
     assert_eq!(call(app, "GET", "/api/project", None).await, before);
     assert_eq!(*state.project.lock().unwrap(), project);
     assert_eq!(*state.clean_project.lock().unwrap(), clean);
@@ -562,10 +581,21 @@ fn caption_state_with_sources(
     extra_sources: usize,
     hardware: &str,
 ) -> Arc<knx_server::AppState> {
+    caption_state_with_schema(dir, 20, program, missing_source, extra_sources, hardware)
+}
+
+fn caption_state_with_schema(
+    dir: &std::path::Path,
+    schema: u32,
+    program: &str,
+    missing_source: bool,
+    extra_sources: usize,
+    hardware: &str,
+) -> Arc<knx_server::AppState> {
     let db = knx_productdb::open_and_migrate(&dir.join("products.sqlite")).unwrap();
     super::native_source_fixture::install(
         &db,
-        20,
+        schema,
         ("M-0001/Hardware.xml", hardware.as_bytes()),
         ("M-0001/Application.xml", program.as_bytes()),
     );
@@ -1040,5 +1070,355 @@ async fn folder_currency_is_absent_without_a_shown_folder_and_unknown_without_th
     assert_eq!(
         currency(&app, &state).await,
         json!({ "status": "unknown", "reason": "SourceIntegrity" })
+    );
+}
+
+// --- WP06-S1: same-schema (project/23) product source and explicit-language captions.
+// Fictional product, invented words and private language tags only.
+
+const PROJECT_23_URI: &str = "http://knx.org/xml/project/23";
+
+/// Root without an object list, a Folder first, a Channel after, no saved node text.
+const SCHEMA23_TREE: &str = concat!(
+    r#"<GroupObjectTree><Nodes>"#,
+    r#"<Node Type="Folder" RefId="PB-2" GroupObjectInstances="O-1_R-1"/>"#,
+    r#"<Node Type="Channel" RefId="CH-1" GroupObjectInstances="O-2_R-1"><Nodes>"#,
+    r#"<Node Type="Folder" RefId="PB-3" GroupObjectInstances="O-3_R-1"/>"#,
+    r#"</Nodes></Node></Nodes></GroupObjectTree>"#,
+);
+
+fn schema23_knxproj() -> Vec<u8> {
+    let topology = format!(
+        r#"<KNX xmlns="http://knx.org/xml/project/23"><Project Id="P-0001"><Installations><Installation InstallationId="0"><Topology><Area Id="P-0001-0_A-1" Address="1"><Line Id="P-0001-0_L-1" Address="1"><Segment Id="P-0001-0_S-1" Number="1"><DeviceInstance Id="P-0001-0_DI-1" Address="1" ProductRefId="M-0001_P-1" Hardware2ProgramRefId="M-0001_H-1_HP-1">{SCHEMA23_TREE}</DeviceInstance></Segment></Line></Area></Topology></Installation></Installations></Project></KNX>"#
+    );
+    let info = r#"<KNX xmlns="http://knx.org/xml/project/23"><Project Id="P-0001"><ProjectInformation Name="Fictional schema-23 folders"/></Project></KNX>"#;
+    knx_testsupport::zip_with_entries(&[
+        ("P-0001.signature", b""),
+        ("P-0001/0.xml", topology.as_bytes()),
+        ("P-0001/project.xml", info.as_bytes()),
+    ])
+}
+
+/// `Languages` for this program: `(language, block, Text)` rows, one `Language` each.
+fn caption_languages(rows: &[(&str, &str, &str)]) -> String {
+    let languages: String = rows
+        .iter()
+        .map(|(language, block, text)| format!(r#"<Language Identifier="{language}"><TranslationUnit RefId="{CAPTION_AP}"><TranslationElement RefId="{CAPTION_AP}_{block}"><Translation AttributeName="Text" Text="{text}"/></TranslationElement></TranslationUnit></Language>"#))
+        .collect();
+    format!("<Languages>{languages}</Languages>")
+}
+
+fn schema23_program(namespace: &str, languages: &str) -> String {
+    let objects: String = (1..=3).map(|n| format!(r#"<ComObject Id="{CAPTION_AP}_O-{n}" Number="{n}" Name="Object {n}" ObjectSize="1 Bit" CommunicationFlag="Enabled"/>"#)).collect();
+    let refs: String = (1..=3)
+        .map(|n| {
+            format!(r#"<ComObjectRef Id="{CAPTION_AP}_O-{n}_R-1" RefId="{CAPTION_AP}_O-{n}"/>"#)
+        })
+        .collect();
+    let active: String = (1..=3)
+        .map(|n| format!(r#"<ComObjectRefRef RefId="{CAPTION_AP}_O-{n}_R-1"/>"#))
+        .collect();
+    format!(
+        r#"<KNX xmlns="{namespace}"><ManufacturerData><Manufacturer RefId="M-0001"><ApplicationPrograms><ApplicationProgram Id="{CAPTION_AP}" Name="Fictional" ApplicationVersion="1" MaskVersion="MV-0701"><Static><ComObjectTable>{objects}</ComObjectTable><ComObjectRefs>{refs}</ComObjectRefs></Static><Dynamic>{active}<ParameterBlock Id="{CAPTION_AP}_PB-2" Text="Brindle shelf" ShowInComObjectTree="true"/><Channel Id="{CAPTION_AP}_CH-1"><ParameterBlock Id="{CAPTION_AP}_PB-3" Text="Quorvel tray" ShowInComObjectTree="true"/></Channel></Dynamic></ApplicationProgram></ApplicationPrograms>{languages}</Manufacturer></ManufacturerData></KNX>"#
+    )
+}
+
+/// `language` is the expected provenance per block, `None` when no language was requested.
+fn schema23_expected(
+    program: &str,
+    texts: [&str; 2],
+    language: [Option<Value>; 2],
+) -> BTreeMap<String, Value> {
+    let sha = knx_productdb::sha256_hex(program.as_bytes());
+    let caption = |block: &str, text: &str, language: &Option<Value>| {
+        let mut caption = json!({ "source": "ProductDeclaration", "text": text,
+            "application_program_id": CAPTION_AP,
+            "parameter_block_id": format!("{CAPTION_AP}_{block}"), "source_sha256": sha });
+        if let Some(language) = language {
+            caption["language"] = language.clone();
+        }
+        caption
+    };
+    [
+        (
+            "O-1_R-1",
+            json!({ "status": "Assigned", "key": "Folder:4:PB-2", "path": [
+                { "kind": "Folder", "ref_id": "PB-2", "product_caption": caption("PB-2", texts[0], &language[0]) },
+            ] }),
+        ),
+        ("O-2_R-1", refused("NoFolder")),
+        (
+            "O-3_R-1",
+            json!({ "status": "Assigned", "key": "Channel:4:CH-1/Folder:4:PB-3", "path": [
+                { "kind": "Channel", "ref_id": "CH-1" },
+                { "kind": "Folder", "ref_id": "PB-3", "product_caption": caption("PB-3", texts[1], &language[1]) },
+            ] }),
+        ),
+    ]
+    .into_iter()
+    .map(|(id, value)| (id.to_owned(), value))
+    .collect()
+}
+
+fn without_product_captions(mut folders: BTreeMap<String, Value>) -> BTreeMap<String, Value> {
+    for folder in folders.values_mut() {
+        for node in folder["path"].as_array_mut().unwrap() {
+            node.as_object_mut().unwrap().remove("product_caption");
+        }
+    }
+    folders
+}
+
+async fn import(app: &axum::Router, dir: &std::path::Path, name: &str, bytes: &[u8]) {
+    let source = dir.join(name);
+    std::fs::write(&source, bytes).unwrap();
+    call(
+        app,
+        "POST",
+        "/api/project/import",
+        Some(json!({ "path": source })),
+    )
+    .await;
+}
+
+/// Repeated reads with and without a language: same placement, no history or revision change.
+async fn assert_read_only_reads(
+    app: &axum::Router,
+    state: &knx_server::AppState,
+    cases: &[(&str, BTreeMap<String, Value>)],
+) {
+    use std::sync::atomic::Ordering;
+    let project = state.project.lock().unwrap().clone();
+    let history = state.command_stack.lock().unwrap().history_lengths();
+    let revision = state.project_revision.load(Ordering::Relaxed);
+    let opaque = state.opaque.lock().unwrap().clone();
+    let placement = without_product_captions(cases[0].1.clone());
+    for _ in 0..2 {
+        for (query, expected) in cases {
+            let actual = folders_with(app, state, query).await;
+            assert_eq!(&actual, expected, "{query}");
+            assert_eq!(without_product_captions(actual), placement, "{query}");
+        }
+    }
+    assert_eq!(*state.project.lock().unwrap(), project);
+    assert_eq!(
+        state.command_stack.lock().unwrap().history_lengths(),
+        history
+    );
+    assert_eq!(state.project_revision.load(Ordering::Relaxed), revision);
+    assert_eq!(*state.opaque.lock().unwrap(), opaque);
+}
+
+#[tokio::test]
+async fn schema23_project_shows_installed_project23_captions_in_the_requested_language() {
+    let dir = tempfile::tempdir().unwrap();
+    let program = schema23_program(
+        PROJECT_23_URI,
+        &caption_languages(&[
+            ("xx-YY", "PB-2", "Glimmerfach"),
+            ("xx-YY", "PB-3", "Tralvo &amp; Quint"),
+            ("zz-QQ", "PB-3", "{{0}} Zentrix"),
+        ]),
+    );
+    let hardware = CAPTION_HARDWARE.replace("http://knx.org/xml/project/20", PROJECT_23_URI);
+    let state = caption_state_with_schema(dir.path(), 23, &program, false, 0, &hardware);
+    let installed = state
+        .product_db
+        .as_ref()
+        .unwrap()
+        .with_read(|db| {
+            db.query_row(
+                "SELECT count(*) FROM product p JOIN hardware2program hp ON hp.hardware_id=p.hardware_id WHERE p.id='M-0001_P-1' AND hp.id='M-0001_H-1_HP-1' AND hp.application_program_ref=?1",
+                [CAPTION_AP],
+                |row| row.get::<_, i64>(0),
+            )
+        })
+        .unwrap()
+        .unwrap();
+    assert_eq!(installed, 1, "premise: the project/23 product installs");
+    let app = knx_server::app(state.clone(), None);
+    import(&app, dir.path(), "schema23.knxproj", &schema23_knxproj()).await;
+    assert_eq!(
+        state
+            .project
+            .lock()
+            .unwrap()
+            .as_ref()
+            .unwrap()
+            .info
+            .ets_schema_version,
+        23
+    );
+    let translated = |language: &str| Some(json!({ "status": "Translated", "language": language }));
+    let untranslated = |reason: &str| Some(json!({ "status": "Untranslated", "reason": reason }));
+    let defaults = ["Brindle shelf", "Quorvel tray"];
+    assert_read_only_reads(
+        &app,
+        &state,
+        &[
+            ("", schema23_expected(&program, defaults, [None, None])),
+            (
+                "?language=xx-YY",
+                schema23_expected(
+                    &program,
+                    ["Glimmerfach", "Tralvo & Quint"],
+                    [translated("xx-YY"), translated("xx-YY")],
+                ),
+            ),
+            (
+                "?language=xx",
+                schema23_expected(
+                    &program,
+                    ["Glimmerfach", "Tralvo & Quint"],
+                    [translated("xx-YY"), translated("xx-YY")],
+                ),
+            ),
+            (
+                "?language=zz-QQ",
+                schema23_expected(
+                    &program,
+                    defaults,
+                    [
+                        untranslated("NoTranslation"),
+                        untranslated("UnusableTranslation"),
+                    ],
+                ),
+            ),
+            (
+                "?language=qq",
+                schema23_expected(
+                    &program,
+                    defaults,
+                    [untranslated("NoTranslation"), untranslated("NoTranslation")],
+                ),
+            ),
+        ],
+    )
+    .await;
+}
+
+#[tokio::test]
+async fn mixed_namespace_product_never_captions_a_schema23_project() {
+    let dir = tempfile::tempdir().unwrap();
+    let program = schema23_program(
+        PROJECT_23_URI,
+        &caption_languages(&[("xx-YY", "PB-2", "Glimmerfach")]),
+    );
+    // Hardware stays project/20 while the application is project/23. The package
+    // installer refuses such a mix, so ingest the single files directly.
+    let path = dir.path().join("products.sqlite");
+    let db = knx_productdb::open_and_migrate(&path).unwrap();
+    knx_productdb::ingest_file(&db, "M-0001/Hardware.xml", CAPTION_HARDWARE.as_bytes()).unwrap();
+    knx_productdb::ingest_file(&db, "M-0001/Application.xml", program.as_bytes()).unwrap();
+    let state = Arc::new(knx_server::AppState {
+        data_dir: dir.path().to_path_buf(),
+        product_db: Some(knx_server::CatalogueOwner::adopt_opened(db, path).unwrap()),
+        ..Default::default()
+    });
+    let app = knx_server::app(state.clone(), None);
+    import(
+        &app,
+        dir.path(),
+        "schema23-mixed.knxproj",
+        &schema23_knxproj(),
+    )
+    .await;
+    let plain = without_product_captions(schema23_expected(&program, ["", ""], [None, None]));
+    assert_read_only_reads(
+        &app,
+        &state,
+        &[("", plain.clone()), ("?language=xx-YY", plain)],
+    )
+    .await;
+}
+
+#[tokio::test]
+async fn saved_schema20_text_and_placement_are_unchanged_by_a_translated_product_caption() {
+    let dir = tempfile::tempdir().unwrap();
+    let program = caption_program("Installed declaration").replace(
+        "</ApplicationPrograms>",
+        &format!(
+            "</ApplicationPrograms>{}",
+            caption_languages(&[
+                ("xx-YY", "PB-3", "Glimmerfach"),
+                ("xx-YY", "PB-12", "Zentrix lantern"),
+            ])
+        ),
+    );
+    let state = caption_state(dir.path(), &program, false);
+    let app = knx_server::app(state.clone(), None);
+    let tree = schema20_tree();
+    import(
+        &app,
+        dir.path(),
+        "saved-text.knxproj",
+        &schema20_knxproj(&tree),
+    )
+    .await;
+    let untranslated = caption_expected(&program, "Installed declaration");
+    let mut translated = untranslated.clone();
+    for folder in translated.values_mut() {
+        for node in folder["path"].as_array_mut().unwrap() {
+            let Some(caption) = node.get_mut("product_caption") else {
+                continue;
+            };
+            let block = caption["parameter_block_id"].as_str().unwrap().to_owned();
+            caption["language"] = if block.ends_with("_PB-3") {
+                caption["text"] = json!("Glimmerfach");
+                json!({ "status": "Translated", "language": "xx-YY" })
+            } else if block.ends_with("_PB-12") {
+                caption["text"] = json!("Zentrix lantern");
+                json!({ "status": "Translated", "language": "xx-YY" })
+            } else {
+                json!({ "status": "Untranslated", "reason": "NoTranslation" })
+            };
+        }
+    }
+    // Saved text (including blank and whitespace) still precedes the translated caption.
+    assert_eq!(
+        translated["O-3_R-1"]["path"][1]["text"],
+        "Saved & <b>{{ChNo}}</b>"
+    );
+    assert_eq!(
+        translated["O-3_R-1"]["path"][1]["product_caption"]["text"],
+        "Glimmerfach"
+    );
+    assert_eq!(translated["O-5_R-1"]["path"][2]["text"], "");
+    assert_schema20_display_is_read_only_with(&app, &state, &translated, &tree, "?language=xx-YY")
+        .await;
+    assert_schema20_display_is_read_only(&app, &state, &untranslated, &tree).await;
+    assert_read_only_reads(
+        &app,
+        &state,
+        &[("", untranslated), ("?language=xx-YY", translated)],
+    )
+    .await;
+    let device = state
+        .project
+        .lock()
+        .unwrap()
+        .as_ref()
+        .unwrap()
+        .devices
+        .iter()
+        .next()
+        .unwrap()
+        .id
+        .0;
+    let plain = call(&app, "GET", &format!("/api/device/{device}"), None).await;
+    let localized = call(
+        &app,
+        "GET",
+        &format!("/api/device/{device}?language=xx-YY"),
+        None,
+    )
+    .await;
+    assert_eq!(
+        plain["project_folder_currency"],
+        localized["project_folder_currency"]
+    );
+    assert_eq!(
+        currency(&app, &state).await,
+        plain["project_folder_currency"]
     );
 }

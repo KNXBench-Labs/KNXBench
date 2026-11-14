@@ -989,6 +989,32 @@ pub struct ProductFolderCaption {
     pub application_program_id: String,
     pub parameter_block_id: String,
     pub source_sha256: String,
+    /// Absent when the request named no language; otherwise which text `text` is.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub language: Option<ProductFolderCaptionLanguage>,
+}
+
+/// Display-language provenance of [`ProductFolderCaption::text`]; never an id or key.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, serde::Deserialize, TS)]
+#[serde(tag = "status")]
+#[ts(export)]
+pub enum ProductFolderCaptionLanguage {
+    /// The stored language identifier whose verified translation `text` is.
+    Translated { language: String },
+    /// `text` is the default declaration text.
+    Untranslated {
+        reason: ProductFolderCaptionUntranslated,
+    },
+}
+
+/// Why an explicit-language request kept the default declaration text.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, serde::Deserialize, TS)]
+#[ts(export)]
+pub enum ProductFolderCaptionUntranslated {
+    NoTranslation,
+    UnusableTranslation,
+    TranslationDisagrees,
 }
 
 /// A declaration source, never the project's saved caption or current placement.
@@ -1032,10 +1058,32 @@ mod product_caption_contract_tests {
                 application_program_id: "AP".into(),
                 parameter_block_id: "AP_PB-1".into(),
                 source_sha256: "a".repeat(64),
+                language: None,
             }),
         };
         assert_eq!(saved.text.as_deref(), Some(""));
         assert_eq!(saved.product_caption.unwrap().text, "Product");
+    }
+
+    #[test]
+    fn caption_language_provenance_is_one_optional_tagged_field() {
+        let config = ts_rs::Config::default();
+        let caption = ProductFolderCaption::decl(&config);
+        assert!(
+            caption.contains("language?: ProductFolderCaptionLanguage"),
+            "{caption}"
+        );
+        let language = ProductFolderCaptionLanguage::decl(&config);
+        for shape in [
+            "\"status\": \"Translated\", language: string",
+            "\"status\": \"Untranslated\", reason: ProductFolderCaptionUntranslated",
+        ] {
+            assert!(language.contains(shape), "{shape}: {language}");
+        }
+        assert_eq!(
+            ProductFolderCaptionUntranslated::decl(&config),
+            "type ProductFolderCaptionUntranslated = \"NoTranslation\" | \"UnusableTranslation\" | \"TranslationDisagrees\";"
+        );
     }
 }
 

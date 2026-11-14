@@ -141,14 +141,14 @@ pub(crate) fn apply_product_captions(
 
 /// The selected language identifier a caption copies into the DTO, else empty.
 fn translated_language(caption: &knx_productdb::com_object_folder_captions::FolderCaption) -> &str {
-    match &caption.language {
-        Some(knx_productdb::com_object_folder_captions::CaptionLanguage::Translated(language)) => {
-            language
-        }
-        _ => "",
-    }
+    caption
+        .language
+        .as_ref()
+        .and_then(knx_productdb::com_object_folder_captions::CaptionLanguage::translated)
+        .unwrap_or_default()
 }
 
+/// Maps the reader's language provenance onto the DTO; never feeds ids or keys.
 fn caption_language(
     language: &knx_productdb::com_object_folder_captions::CaptionLanguage,
 ) -> knx_projection::ProductFolderCaptionLanguage {

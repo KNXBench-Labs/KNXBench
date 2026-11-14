@@ -99,9 +99,9 @@ test("with both blocks dragged to their maximum, the explorer keeps a visible mi
   await drag(page, page.getByRole("separator", { name: "Height of the diagnostics block" }), -500);
   const explorer = page.locator(".workbench-pane-left .project-explorer");
   expect(await height(explorer)).toBeGreaterThanOrEqual(72);
-  // Nothing spills out of the column: the last diagnostics button stays inside it.
+  // Nothing spills out of the column: the last navigation action stays inside it.
   const column = (await page.locator(".workbench-pane-left .workbench-pane-content").boundingBox())!;
-  const settings = (await page.getByRole("navigation", { name: "Bus monitor" }).getByRole("button", { name: "Settings" }).boundingBox())!;
+  const settings = (await page.locator(".settings-navigation").getByRole("button", { name: "Settings", exact: true }).boundingBox())!;
   expect(settings.y + settings.height).toBeLessThanOrEqual(column.y + column.height + 1);
 });
 

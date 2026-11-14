@@ -86,10 +86,8 @@ async function capturedFixture(page: Page, language: Language) {
   } };
 }
 
-/** Existing production parameter lane calls this registration; no separate hidden runner. */
-export function registerParameterNavigationCaptures() {
-  for (const language of ["en","de"] as const) for (const width of [1440,400]) {
-    test(`${language} ${width}px: producer-backed parameter navigation retains drafts and write authority`, async ({ page }) => {
+/** Runs one exact-response case; its owning spec registers the test for gate inventory. */
+export async function runParameterNavigationCapture(page: Page, language: Language, width: number) {
       test.skip(!captureRoot,"requires runtime-produced fictional HTTP bodies; no fabricated DTO substitute");
       const m = language === "de" ? de : en;
       await page.setViewportSize({ width,height:1000 });
@@ -162,6 +160,4 @@ export function registerParameterNavigationCaptures() {
       await workspace.screenshot({ path:shot });
       await test.info().attach("fictional-navigation",{ path:shot,contentType:"image/png" });
       expect(state.unexpected).toEqual([]); expect(errors).toEqual([]); verify();
-    });
-  }
 }

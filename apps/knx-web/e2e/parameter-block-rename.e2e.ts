@@ -1,5 +1,5 @@
 /** A renamed parameter area keeps one identity while its caption follows the selector value. */
-import { registerParameterNavigationCaptures } from "./parameter-navigation-capture";
+import { runParameterNavigationCapture } from "./parameter-navigation-capture";
 import { openExplorerBranches } from "./disclosure-fixture";
 import { expect, test, type Page } from "@playwright/test";
 import type { ParameterField, ParameterPanel } from "../src/api";
@@ -174,4 +174,8 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
   });
 }
 
-registerParameterNavigationCaptures();
+for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
+  test(`${language} ${width}px: producer-backed parameter navigation retains drafts and write authority`, async ({ page }) => {
+    await runParameterNavigationCapture(page, language, width);
+  });
+}

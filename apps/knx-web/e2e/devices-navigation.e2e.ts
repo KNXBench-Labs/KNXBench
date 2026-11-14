@@ -846,7 +846,7 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
       await expect(monitor).not.toHaveAttribute("aria-current", "page");
       await expect(search).toHaveValue("keep my filter");
     }
-    await sidebar.getByRole("button", { name: m["toolbar.settings"], exact: true }).click();
+    await page.locator(".settings-navigation").getByRole("button", { name: m["toolbar.settings"], exact: true }).click();
     await expect(page.locator(".settings-panel")).toBeVisible();
     await page.keyboard.press("Escape");
     await expect(page.locator(".settings-panel")).toBeVisible();

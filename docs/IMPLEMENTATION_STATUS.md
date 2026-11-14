@@ -12,6 +12,20 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## First-class Settings navigation (14 November 2026; main-only after Alpha 21)
+
+Settings is a direct sidebar action alongside the Diagnostics block, not a child
+of its disclosure. It reuses the existing Settings workspace, toolbar gear and
+command palette; active-page, keyboard, projectless access, Back and Properties
+restoration behavior are preserved. App settings and persistence are unchanged.
+Independent Standards/Spec reviews approve the bounded relocation; focused
+Chromium coverage passed 18/18 across English/German and 1440/400-pixel layouts.
+Existing navigation/splitter regression locators follow the relocated action
+without weakening their state or containment assertions. The maintained package
+gate owns final source-bound acceptance; interrupted attempts are not passes.
+[Workspace contract](contracts/settings-workspace.md). No native-desktop,
+hardware, release or deployment acceptance is implied.
+
 ## Folder-caption namespace and language (14 November 2026; WP06-S1 published runtime)
 
 Corrected source `9b0d937dc` extends the existing read-only caption fallback to

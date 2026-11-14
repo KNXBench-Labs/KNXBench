@@ -2,7 +2,7 @@
 
 **Status:** Blocked: evidence. Listed in [OPEN_WORK](../OPEN_WORK.md); per-ID status of record is the [ledger](../status/LEDGER.md).
 
-**Evidence route (8 November 2026):** clean-room observation is admitted by the owner ([OWN-01](OWN-01-owner-decisions.md#decisions-recorded--8-november-2026), [rules](../RESEARCH.md#evidence-routes)); no observation has been made for this package yet.
+**Evidence route:** clean-room observation is admitted by the owner (8 November 2026; [OWN-01](OWN-01-owner-decisions.md#decisions-recorded--8-november-2026), [rules](../RESEARCH.md#evidence-routes)). The full independently counted mapping witness is not yet accepted. The bounded source-only classification below does not supply missing/duplicate/nested/repeated authority or public ETS-observation provenance.
 
 ## Task
 
@@ -15,6 +15,18 @@ activated module objects. Caption matching is no substitute.
 Read-only own instance values and unscoped object creation are delivered. A
 parameter write that would activate a module object not already represented
 by an imported instance is refused as a whole; the project stays unchanged.
+
+**WP07-S1 integration candidate (14 November 2026):** an imported module
+object with unresolved own instance authority projects `Undetermined` without
+a channel after evaluation, rather than accidentally taking the genuine
+unscoped `Inactive` path. `NotEvaluated` without an evaluable program and the
+existing unscoped/resolved controls stay unchanged. Corrected source
+`8873e0150f` has retained focused 17 unit + 9 HTTP passes and independent F1
+closure; main-first `1c8b146fb` has parent-verified patch equivalence, not fresh
+integrated execution. Selected package gate and publication remain pending.
+The read-only overlay adds no persisted owner, numbering or write authority;
+constructed missing/foreign-owner states are not malformed-store load/reopen
+evidence. [Epochs, controls and limits](../status/2026-11-14-wp07-unresolved-module-owner.md).
 
 ## First deliverable
 

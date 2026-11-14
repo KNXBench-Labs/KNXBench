@@ -1,7 +1,16 @@
 # WP-31 — Device editor unavailable after saving the project (#36)
 
 External report by the issue reporter, 10 November 2026; triaged 11 November 2026.
-Status: **lock fix implemented 11 November 2026; file routes off the runtime workers and download without the project lock 12 November 2026; edits and plain reads no longer wait for a save's write, device editor routes off the runtime 12 November 2026; the project router's remaining edits, the device list and the other modules' project routes off the runtime 13 November 2026; the device comparison, device-diagnostics preview, support diagnose run and serial-address routes off the runtime 13 November 2026; catalogue reads and update routes off the runtime 13 November 2026; the System-2 download worker's final binding wait off the runtime 13 November 2026; original error message unreproduced.** Follow-up to the original #36 path, which
+**Status update — 14 November 2026:** the #36 reporter retest and proxy-information
+blockers are **done**. On `0.1.0-alpha.21+g6a9336c5` the reporter could no longer
+reproduce either the save/reopen freeze or the unavailable-editor message and
+confirmed that the setup has no reverse proxy; the reporter closed #36.
+[Closure evidence and remaining scope](../status/2026-11-14-issues36-48-reporter-closure.md).
+WP-31 remains open only for the broader runtime/locking follow-ups below; no
+further #36 retest or proxy answer is pending. The exact historical failure
+mechanism was not established by this retest.
+
+Historical implementation status: **lock fix implemented 11 November 2026; file routes off the runtime workers and download without the project lock 12 November 2026; edits and plain reads no longer wait for a save's write, device editor routes off the runtime 12 November 2026; the project router's remaining edits, the device list and the other modules' project routes off the runtime 13 November 2026; the device comparison, device-diagnostics preview, support diagnose run and serial-address routes off the runtime 13 November 2026; catalogue reads and update routes off the runtime 13 November 2026; the System-2 download worker's final binding wait off the runtime 13 November 2026; original error message unreproduced.** Follow-up to the original #36 path, which
 the reporter confirmed fixed by `bf85a5b69` on 10 November 2026.
 
 ## Observed
@@ -18,7 +27,7 @@ finished without a detail: the `GET /api/device/<id>` request failed, or its
 result was withdrawn while the loading flag was already cleared. It is not
 the original endless loading state.
 
-## Next steps
+## Historical next steps (11 November 2026; #36 follow-up now closed)
 
 1. Reproduce change → save → reopen against a real scratch server with a
    large synthetic project (no bus access).

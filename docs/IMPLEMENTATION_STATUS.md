@@ -517,8 +517,13 @@ instructions apply, naming recipes, device-compare adoption, selective import,
 baseline marks) and the project-history panel still hold
 the project while they wait for the save. Selective import now rechecks the revision after
 taking the store path, so it cannot restore pre-save catalogue references.
-The reporter's “Gerätedetails sind nicht verfügbar” message was not
-reproduced; a proxy timeout is an open hypothesis. [WP-31](open-work/WP-31-device-editor-unavailable-after-save.md).
+The reporter's “Gerätedetails sind nicht verfügbar” message was not reproduced
+locally. On 14 November the reporter confirmed that save/reopen works on
+`0.1.0-alpha.21+g6a9336c5`, with neither the hang nor that error, and closed #36.
+The setup has no reverse proxy, so no proxy answer or retest remains pending.
+The exact historical cause remains unproven; broader locking/runtime limits are
+unchanged. [WP-31](open-work/WP-31-device-editor-unavailable-after-save.md) and
+[closure evidence](status/2026-11-14-issues36-48-reporter-closure.md).
 
 ## Parameter selection lists offer only declared values (11 November 2026; issue #45, WP-30)
 

@@ -1,7 +1,13 @@
 # WP-37 — Show pending, not-yet-downloaded changes across the UI (#40)
 
 External report by the issue reporter, 10 November 2026; triaged 11 November 2026.
-Status: **step 1 implemented (11 November 2026, main only); step 2 implemented
+**Status update — 14 November 2026:** step 4's reporter-acceptance task is
+**done**. The reporter confirmed the area/section/ancestor marks on
+`0.1.0-alpha.21+g6a9336c5` and closed #48. Steps 1–4 shipped in Alpha 21;
+module-scoped parameters and the other exclusions below remain outside this
+closure. [Reporter evidence](../status/2026-11-14-issues36-48-reporter-closure.md).
+
+Historical implementation status: **step 1 implemented (11 November 2026, main only); step 2 implemented
 (server part 11 November, parameter-editor UI 12 November 2026, main only) per
 [ADR-0173](../adr/0173-last-downloaded-parameter-values.md) (Accepted); step 3
 implemented (backend and communication-object UI, 12 November 2026, main only)
@@ -295,8 +301,10 @@ description after the name.
   browser 1229 (1132 + 97), production devices 112 (111 + 1). Browser lanes
   overlap; these are per-lane counts, not unique totals. No Rust suite selected
   for either web-only delta. Inputs frozen; user data checked and untouched.
-- #48 received a delivery comment and remains open. These changes shipped in
-  Alpha 21 (13 November 2026); no hardware verification.
+- #48 received a delivery comment and was left open at this acceptance checkpoint.
+  These changes shipped in Alpha 21 (13 November 2026). Reporter acceptance is
+  complete and #48 closed as of 14 November (see status update above); this
+  does not establish hardware verification.
 
 ## Not covered
 

@@ -1,11 +1,13 @@
 /** P4: real App gestures with strictly intercepted, fictional device comparisons only. */
 import { expect, test, type Locator, type Page } from "@playwright/test";
 import { join } from "node:path";
+import { readFileSync } from "node:fs";
 import type { ProjectTree } from "../src/bindings/ProjectTree";
 import type { DeviceNode } from "../src/bindings/DeviceNode";
 import type { DeviceDetail } from "../src/bindings/DeviceDetail";
 import type { ParameterPanel } from "../src/api";
 import type { ComparisonBinding, BoundDeviceComparison } from "../src/deviceComparisons";
+import { admitTcpConnection } from "../src/deviceComparisons";
 import { messages as en } from "../src/messages/en";
 import { messages as de } from "../src/messages/de";
 import { achievementsFixtureAnswer } from "./achievements-fixture";
@@ -55,9 +57,9 @@ const linkPreview = (rows: unknown) => ({ previewToken: "p".repeat(64), selected
   { add: false, object: 7, comObjectId: 70, groupAddress: "2/2/3", groupAddressId: 3, sending: true },
   { add: true, object: 7, comObjectId: 70, groupAddress: "2/2/4", groupAddressId: 4, sending: true },
 ] });
-async function intercept(page: Page, language: "en" | "de", mode: "normal" | "busy" | "held" | "adopt" = "normal") {
+async function intercept(page: Page, language: "en" | "de", mode: "normal" | "busy" | "held" | "adopt" | "tcp" | "tcp-held" | "tcp-legacy" | "tcp-missing" | "tcp-failed" = "normal") {
   const state = { tree: tree(), unexpected: [] as string[], requests: [] as { address: string; gateway: string; binding: ComparisonBinding }[],
-    previews: [] as unknown[], applies: [] as unknown[], release: () => {} };
+    previews: [] as unknown[], applies: [] as unknown[], paths: [] as string[], release: () => {} };
   let opened = false;
   await page.route("**/api/**", async (route) => {
     const path = new URL(route.request().url()).pathname; const method = route.request().method();
@@ -84,14 +86,25 @@ async function intercept(page: Page, language: "en" | "de", mode: "normal" | "bu
     } else if (path === "/api/undo" && method === "POST") {
       state.tree = { ...state.tree, snapshot_revision: 2, comparison_revisions: { ...state.tree.comparison_revisions, 1: 8 } };
       body = state.tree;
-    } else if (path === "/api/device-compare" && method === "POST") {
+    } else if ((path === "/api/device-compare" || path === "/api/device-compare/tcp") && method === "POST") {
+      state.paths.push(path);
       const request = route.request().postDataJSON() as (typeof state.requests)[number]; state.requests.push(request);
-      if (mode === "held") await new Promise<void>((resolve) => { state.release = resolve; });
+      if (mode === "held" || (mode === "tcp-held" && state.requests.length === 1)) await new Promise<void>((resolve) => { state.release = resolve; });
       if (mode === "busy") { status = 409; body = { error: "Stop the bus monitor first", kind: "gatewayBusy",
         holder: { kind: "busMonitor", sessionId: 1, gateway, state: "active" } }; }
       else if (request.binding.deviceId >= 3) { status = 502; body = { error: "Fictional device diagnostic", kind:
         request.binding.deviceId === 3 ? "deviceCompareWrongApplication" : request.binding.deviceId === 4 ? "deviceCompareNoAnswer" : "deviceCompareNotComparable" }; }
       else body = mode === "adopt" ? adoptable(result(request.binding, request.address)) : result(request.binding, request.address);
+      if (path === "/api/device-compare/tcp") {
+        const file = mode === "tcp-failed" ? "eof.json" : request.binding.deviceId === 1 ? "same.json" : "different.json";
+        const captured: unknown = process.env.KNX_COMPARE_HTTP_CAPTURE_DIR ? JSON.parse(readFileSync(join(process.env.KNX_COMPARE_HTTP_CAPTURE_DIR, file), "utf8")) : null;
+        const connection = captured ? admitTcpConnection(captured, mode !== "tcp-failed") : {
+          requestedTransport: "tcp", actualTransport: "tcp", assignedAddress: "1.1.250", skippedFramesBeforeDisconnect: request.binding.deviceId === 1 ? 0 : 2,
+        };
+        if (mode === "tcp-legacy") { status = 404; body = { error: "unsupported" }; }
+        else if (mode === "tcp-failed") { status = 502; body = captured ?? { error: "Connection released", kind: "deviceCompareNotComparable", connection: { ...connection, skippedFramesBeforeDisconnect: 4 } }; }
+        else if (mode !== "tcp-missing") body = { ...(body as object), connection };
+      }
     } else if (path === "/api/device-compare/preview" && method === "POST" && mode === "adopt") {
       state.previews.push(route.request().postDataJSON());
       body = linkPreview(adoptable(result(state.requests.at(-1)!.binding, state.requests.at(-1)!.address)).decoded);
@@ -243,6 +256,67 @@ test("a busy bus monitor refuses the run clearly without marking any device", as
   await expect(dialog.locator(".comparison-results li").filter({ hasText: "Fictional device 1" }).locator(".comparison-tag")).toHaveCount(0);
   expect(state.requests).toHaveLength(1); expect(state.unexpected).toEqual([]);
 });
+
+for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
+  const m = language === "en" ? en : de;
+  test(`${language} explicit TCP review freezes pending queue and actual same/different metadata at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 });
+    const state = await intercept(page, language, "tcp-held"); await open(page, language);
+    await page.getByRole("button", { name: m["compare.all"], exact: true }).click();
+    const dialog = page.getByRole("dialog", { name: m["compare.title"], exact: true });
+    const select = dialog.getByRole("combobox", { name: m["compare.transport"], exact: true });
+    await expect(select).toHaveValue("udp"); await select.selectOption("tcp");
+    expect(state.requests).toEqual([]); await expect(select).toContainText(m["compare.tcpExperimental"]);
+    await dialog.locator(".comparison-gateway").fill(gateway);
+    await capture(page, `tcp-review-${language}-${width}`);
+    await dialog.getByRole("button", { name: m["compare.confirm"], exact: true }).click();
+    await expect.poll(() => state.requests.length).toBe(1);
+    await expect(select).toHaveCount(0); await expect(dialog.locator(".comparison-gateway")).toHaveCount(0);
+    await expect(dialog.locator(".comparison-connection")).toHaveText(m["compare.frozenConnection"].replace("{gateway}", gateway).replace("{transport}", "TCP"));
+    await capture(page, `tcp-pending-${language}-${width}`); state.release();
+    await expect(dialog.getByRole("button", { name: m["compare.close"], exact: true })).toBeVisible();
+    for (const [id, tag, skipped] of [[1, "synced", 0], [2, "different", 2]] as const) {
+      const row = dialog.locator(".comparison-results li").filter({ hasText: `Fictional device ${id}` });
+      await expect(row.locator(".comparison-tag")).toHaveText(m[`compare.tag.${tag}`]);
+      await row.locator("button").first().click();
+      const actual = dialog.locator(".comparison-connection[role=status]");
+      await expect(actual).toHaveText(m["compare.actualConnection"].replace("{transport}", "TCP").replace("{address}", "1.1.250").replace("{skipped}", String(skipped)));
+      await actual.scrollIntoViewIfNeeded(); await capture(page, `tcp-${tag}-${language}-${width}`);
+    }
+    expect(state.paths).toEqual(Array(6).fill("/api/device-compare/tcp"));
+    expect(state.requests.every((r) => r.gateway === gateway && r.binding.comparisonRevision === 7)).toBe(true);
+    expect(state.applies).toEqual([]); expect(state.unexpected).toEqual([]);
+    const box = await dialog.boundingBox(); expect(box!.x).toBeGreaterThanOrEqual(0); expect(box!.x + box!.width).toBeLessThanOrEqual(width + 1);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(1);
+    await dialog.getByRole("button", { name: m["compare.close"], exact: true }).click();
+    await page.getByRole("button", { name: m["compare.all"], exact: true }).click();
+    await expect(dialog.getByRole("combobox", { name: m["compare.transport"], exact: true })).toHaveValue("udp");
+  });
+  const failedSkips = process.env.KNX_COMPARE_HTTP_CAPTURE_DIR ? admitTcpConnection(JSON.parse(readFileSync(join(process.env.KNX_COMPARE_HTTP_CAPTURE_DIR, "eof.json"), "utf8")), false).skippedFramesBeforeDisconnect : 4;
+  for (const mode of ["tcp-failed", "tcp-legacy", "tcp-missing"] as const) {
+    test(`${language} explicit TCP ${mode} has no success or UDP fallback at ${width}px`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 900 });
+      const state = await intercept(page, language, mode); await open(page, language);
+      await page.getByRole("searchbox", { name: m["devices.filter"], exact: true }).fill("Fictional device 1");
+      await page.getByRole("button", { name: m["compare.all"], exact: true }).click();
+      const dialog = page.getByRole("dialog", { name: m["compare.title"], exact: true });
+      await dialog.getByRole("combobox", { name: m["compare.transport"], exact: true }).selectOption("tcp");
+      await dialog.locator(".comparison-gateway").fill(gateway);
+      await dialog.getByRole("button", { name: m["compare.confirm"], exact: true }).click();
+      await expect(dialog.getByRole("button", { name: m["compare.close"], exact: true })).toBeVisible();
+      await expect(dialog.locator(".comparison-results .comparison-tag")).toHaveText(m["compare.tag.notComparable"]);
+      await expect(dialog.locator(".comparison-decoded")).toHaveCount(0);
+      if (mode === "tcp-failed") {
+        await expect(dialog.locator(".comparison-connection[role=status]")).toHaveText(m["compare.actualConnection"].replace("{transport}", "TCP").replace("{address}", "1.1.250").replace("{skipped}", String(failedSkips)));
+      } else {
+        await expect(dialog.locator(".comparison-reason")).toHaveText(m["compare.invalidResult"]);
+        await expect(dialog.locator(".comparison-connection[role=status]")).toHaveCount(0);
+      }
+      await capture(page, `${mode}-${language}-${width}`);
+      expect(state.paths).toEqual(["/api/device-compare/tcp"]); expect(state.applies).toEqual([]); expect(state.unexpected).toEqual([]);
+    });
+  }
+}
 
 /** Uses the real global command path even while a comparison owns the modal foreground. */
 async function navigate(page: Page, label: string) {

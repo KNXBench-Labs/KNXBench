@@ -118,6 +118,15 @@ filter after opening review does not change the reviewed list. Choose a
 gateway and confirm the **read-only** operation once for the whole list.
 Opening the review alone contacts no device.
 
+**Transport (source candidate, not in a release):** the review has its own
+**Comparison transport** choice. It starts at UDP on every fresh review; **TCP
+(experimental)** is never taken from the bus-monitor preference. Gateway and
+transport freeze together for the whole queue. A selected TCP comparison asks only
+the TCP route, never retries over UDP and never reconnects. Each result shows the
+transport that actually opened, the assigned address and the skipped-frame sample
+taken just before disconnect, also after a failed read. "Unavailable" means no
+connection opened or no sample exists; it is not zero skipped frames.
+
 **Since Alpha 20:** the opened device editor also has **Compare**
 beside **Download to device…**. It reviews exactly that device, regardless of
 the table filter or checkboxes, and uses the same gateway confirmation, running

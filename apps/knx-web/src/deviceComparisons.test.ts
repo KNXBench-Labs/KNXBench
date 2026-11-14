@@ -11,7 +11,7 @@ export function response(deviceId = 1): BoundDeviceComparison {
 }
 function queue() {
   const entries = new Map<number, ComparisonEntry>();
-  const options: ComparisonQueue = { scope, gateway: "192.0.2.1:3671", cancelled: () => false,
+  const options: ComparisonQueue = { scope, transport: "udp", gateway: "192.0.2.1:3671", cancelled: () => false,
     targets: [1, 2, 3].map((id) => ({ id, name: `D${id}`, address: `1.1.${id}`, revision: 7 })),
     compare: vi.fn(async (_address, _gateway, binding) => response(binding.deviceId)),
     result: (id, entry) => entries.set(id, entry), progress: vi.fn() };
@@ -68,4 +68,44 @@ it.each([
   options.compare = vi.fn().mockResolvedValue({ ...response(), ...change });
   await runComparisonQueue(options); expect(entries.get(1)?.tag).toBe("notComparable");
   expect(entries.get(1)?.result).toBeNull();
+});
+
+it("freezes TCP choice across a multi-target queue and keeps actual samples including zero", async () => {
+  const { options, entries } = queue(); options.transport = "tcp";
+  options.compare = vi.fn(async (_address, _gateway, binding) => ({ ...response(binding.deviceId),
+    connection: { requestedTransport: "tcp", actualTransport: "tcp", assignedAddress: "1.1.250", skippedFramesBeforeDisconnect: binding.deviceId === 1 ? 0 : 2 } }));
+  await runComparisonQueue(options);
+  expect(options.compare).toHaveBeenCalledTimes(3);
+  expect([...entries.values()].map((entry) => entry.connection?.skippedFramesBeforeDisconnect)).toEqual([0, 2, 2]);
+  expect([...entries.values()].map((entry) => entry.tag)).toEqual(["synced", "synced", "synced"]);
+});
+it.each([undefined, { requestedTransport: "tcp", actualTransport: "udp", assignedAddress: "1.1.250", skippedFramesBeforeDisconnect: 0 },
+  { requestedTransport: "tcp", actualTransport: null, assignedAddress: null, skippedFramesBeforeDisconnect: null },
+  { requestedTransport: "tcp", actualTransport: "tcp", assignedAddress: "1.1.250" }])("refuses missing/mismatched TCP metadata without retry: %j", async (connection) => {
+  const { options, entries } = queue(); options.transport = "tcp"; options.targets = options.targets.slice(0, 1);
+  options.compare = vi.fn().mockResolvedValue({ ...response(), connection });
+  await runComparisonQueue(options);
+  expect(options.compare).toHaveBeenCalledTimes(1); expect(entries.get(1)?.result).toBeNull();
+  expect(entries.get(1)?.tag).toBe("notComparable");
+});
+it("refuses a response whose connection key is truly absent, without retry", async () => {
+  const { options, entries } = queue(); options.transport = "tcp"; options.targets = options.targets.slice(0, 1);
+  const absent = response(); expect("connection" in absent).toBe(false);
+  options.compare = vi.fn().mockResolvedValue(absent);
+  await runComparisonQueue(options);
+  expect(options.compare).toHaveBeenCalledTimes(1); expect(entries.get(1)?.result).toBeNull();
+  expect(entries.get(1)?.tag).toBe("notComparable");
+});
+it("retains failed-read connection facts, not an observation or successful comparison", async () => {
+  const { options, entries } = queue(); options.transport = "tcp"; options.targets = options.targets.slice(0, 1);
+  const connection = { requestedTransport: "tcp", actualTransport: "tcp", assignedAddress: "1.1.250", skippedFramesBeforeDisconnect: 2 };
+  options.compare = vi.fn().mockRejectedValue(Object.assign(new Error("Connection released"), { body: { kind: "deviceCompareNoAnswer", connection } }));
+  await runComparisonQueue(options);
+  expect(entries.get(1)).toMatchObject({ tag: "noAnswer", result: null, connection, reason: "Connection released" });
+});
+it("older unsupported TCP server cannot become UDP success or trigger a retry", async () => {
+  const { options, entries } = queue(); options.transport = "tcp"; options.targets = options.targets.slice(0, 1);
+  options.compare = vi.fn().mockRejectedValue(Object.assign(new Error("404"), { body: { error: "Not found" } }));
+  await runComparisonQueue(options); expect(options.compare).toHaveBeenCalledTimes(1);
+  expect(entries.get(1)?.tag).toBe("notComparable"); expect(entries.get(1)?.result).toBeNull();
 });

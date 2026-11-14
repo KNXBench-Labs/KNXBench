@@ -2381,6 +2381,19 @@ export function compareDevice(address: string, gateway: string, binding?: import
   return request("/api/device-compare", { method: "POST", body: JSON.stringify({ address, gateway, ...(binding ? { binding } : {}) }) });
 }
 
+/** TCP is a strict sibling: never retry an unsupported server over UDP. */
+export interface TcpComparisonConnection {
+  requestedTransport: "tcp";
+  actualTransport: "tcp" | null;
+  assignedAddress: string | null;
+  skippedFramesBeforeDisconnect: number | null;
+}
+export type TcpDeviceCompareResponse = DeviceCompareResponse & { connection: TcpComparisonConnection };
+export async function compareDeviceTcp(address: string, gateway: string, binding: import("./deviceComparisons").ComparisonBinding): Promise<TcpDeviceCompareResponse> {
+  // Route/metadata admission lives in the comparison queue (`admitTcpConnection`), not here.
+  return request<TcpDeviceCompareResponse>("/api/device-compare/tcp", { method: "POST", body: JSON.stringify({ address, gateway, binding }) });
+}
+
 // Device Object PID_SERVICE_CONTROL bit 2 (ADR-0051): separate debug-only
 // procedure, never called by download or address-programming paths.
 export interface ServiceControlReading {

@@ -1,4 +1,4 @@
-Last updated: 2026-11-13 (Alpha 21 pre-release; source cutoff 2026-11-12)
+Last updated: 2026-11-14 (Alpha 21 baseline; accepted main-only navigation successor)
 
 # KNXBench Features
 
@@ -17,11 +17,13 @@ Last updated: 2026-11-13 (Alpha 21 pre-release; source cutoff 2026-11-12)
 
 <a id="source-updates-after-alpha-20"></a>
 
-## Source candidate after Alpha 21
+<a id="source-candidate-after-alpha-21"></a>
+
+## Main updates after Alpha 21
 
 | Feature | Scope | Availability |
 | --- | --- | --- |
-| [Evaluated parameter navigation](contracts/parameter-workspace.md#evaluated-display-containers-source-candidate-after-alpha-21) | Display-container/leaf navigation, source caption provenance, presentation-only folding, stable editor routing and descendant download marks; no arbitrary nested hierarchy | Local-only; review/package acceptance pending |
+| [Evaluated parameter navigation](contracts/parameter-workspace.md#evaluated-display-containers-source-candidate-after-alpha-21) | Display-container/leaf navigation, source caption provenance, presentation-only folding, stable editor routing and descendant download marks; no arbitrary nested hierarchy | Main-only; [software-accepted](status/2026-11-14-parameter-navigation.md), not in Alpha 21 |
 
 ## New in Alpha 21
 

@@ -59,7 +59,15 @@ or protocol schema change; product database v24 adds typed presentation columns
   label/value. Metadata moves below the editor when a third column will not fit.
   Existing light/dark/theme tokens remain authoritative.
 
-## Evaluated display containers (source candidate after Alpha 21)
+<a id="evaluated-display-containers-source-candidate-after-alpha-21"></a>
+
+## Evaluated display containers (main-only after Alpha 21)
+
+**Software acceptance, 14 November 2026:** the bounded source is independently
+reviewed and published on main as `2867ee1b5`, after the selected 15-stage package
+gate and a fresh fictional producer/consumer composition. The
+[acceptance record](../status/2026-11-14-parameter-navigation.md) supersedes the
+initial source-candidate status; it adds no release or hardware claim.
 
 - A leaf group may carry additive `container`: `{scope, nodeId, elementId, kind,
   label, labelFill?}`. `scope` is the evaluated owner's full module scope, not
@@ -96,10 +104,12 @@ real evaluated-ownership/HTTP producer and capture original response bytes when
 `KNXBENCH_PARAMETER_NAVIGATION_CAPTURE_DIR` names a fresh output directory. The
 existing production parameters lane registers capture-backed mounted-app tests
 through `parameter-block-rename.e2e.ts`; with that same directory they consume
-the original bodies unchanged (EN/DE, wide/narrow). Without captures these four
-cases are explicitly skipped, not fabricated or credited as passes. This is an
-intercepted producer/consumer composition proof, not a simultaneous live-backend,
-native or hardware test. Independent review and package acceptance remain separate.
+the original bodies unchanged (EN/DE, wide/narrow). Without a supplied capture
+directory these four cases are not registered in ordinary browser lanes; no
+runtime skip or fabricated DTO is credited as a pass. The separate final
+composition requires all four cases to pass against 26 fresh producer responses.
+This is an intercepted producer/consumer composition proof, not a simultaneous
+live-backend, native or hardware test.
 
 ## Declared grids (ADR-0137)
 

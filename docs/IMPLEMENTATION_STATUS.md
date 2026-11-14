@@ -12,6 +12,16 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Evaluated parameter navigation (14 November 2026 source candidate)
+
+A generic evaluated display-container/leaf relationship is projected through the
+parameter HTTP producer and mounted workspace. Scope, container and leaf remain
+distinct; source ordering, caption provenance, existing write targets, stable
+editor keys and presentation-only disclosures are retained. Fictional producer
+and captured-response browser regressions accompany the source. This entry is
+not independent-review, package-gate, publication or release acceptance.
+[Source-only contract and limits](contracts/parameter-workspace.md#evaluated-display-containers-source-candidate-after-alpha-21).
+
 ## Literal grid-axis translations (14 November 2026; WP-05)
 
 Implemented source-bound literal program-owned row/column Text translations using

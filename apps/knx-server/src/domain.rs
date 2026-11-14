@@ -6977,6 +6977,7 @@ fn assemble_parameter_panel_for_project(
             acc
         });
 
+    let owners = crate::parameter_navigation::AreaOwners::new(&activation, &layout);
     let mut sections = Vec::with_capacity(section_order.len());
     for key in section_order {
         let section = sections_by_key.remove(&key).expect("just inserted above");
@@ -7110,6 +7111,7 @@ fn assemble_parameter_panel_for_project(
                 label,
             )?;
             Ok(crate::routes::ParameterGroupDto {
+                container: owners.container(&section.scope, group.node_id, captions)?,
                 key,
                 label,
                 label_fill,

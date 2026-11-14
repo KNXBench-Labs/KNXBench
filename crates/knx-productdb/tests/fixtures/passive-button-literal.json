@@ -3,12 +3,12 @@
   "selector": "PR-MODE=1",
   "passiveLabels": {
     "en": [
-      {"kind":"buttonLiteral","elementId":"B-ONLY","text":"Fictional source label","cell":{"row":1,"column":2},"group":{"key":"PB-ONLY","label":null},"blockAccess":null},
-      {"kind":"buttonLiteral","elementId":"B-MIX","text":"Fictional mixed label","cell":{"row":1,"column":2},"group":{"key":"PB-MIX","label":"Fictional mixed grid"},"blockAccess":null}
+      {"kind":"buttonLiteral","elementId":"B-ONLY","text":"Fictional source label","cell":{"row":1,"column":2},"group":{"key":"PB-ONLY","label":null,"container":null},"blockAccess":null},
+      {"kind":"buttonLiteral","elementId":"B-MIX","text":"Fictional mixed label","cell":{"row":1,"column":2},"group":{"key":"PB-MIX","label":"Fictional mixed grid","container":null},"blockAccess":null}
     ],
     "de": [
-      {"kind":"buttonLiteral","elementId":"B-ONLY","text":"Fiktive Quellbeschriftung","cell":{"row":1,"column":2},"group":{"key":"PB-ONLY","label":null},"blockAccess":null},
-      {"kind":"buttonLiteral","elementId":"B-MIX","text":"Fiktive gemischte Beschriftung","cell":{"row":1,"column":2},"group":{"key":"PB-MIX","label":"Fictional mixed grid"},"blockAccess":null}
+      {"kind":"buttonLiteral","elementId":"B-ONLY","text":"Fiktive Quellbeschriftung","cell":{"row":1,"column":2},"group":{"key":"PB-ONLY","label":null,"container":null},"blockAccess":null},
+      {"kind":"buttonLiteral","elementId":"B-MIX","text":"Fiktive gemischte Beschriftung","cell":{"row":1,"column":2},"group":{"key":"PB-MIX","label":"Fictional mixed grid","container":null},"blockAccess":null}
     ]
   },
   "unchangedFields": [

@@ -62,6 +62,7 @@ mod object_last_download;
 mod parameter_baseline;
 mod parameter_captions;
 mod parameter_grid;
+mod parameter_navigation;
 mod parameter_objects;
 mod plugin_data_routes;
 mod support_routes;

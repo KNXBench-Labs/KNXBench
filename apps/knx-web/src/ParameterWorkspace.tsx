@@ -2,7 +2,7 @@
 import { useId, useState, type ReactNode } from "react";
 import type { ModuleScope, ParameterField, ParameterSection } from "./api";
 import { useTranslate } from "./i18n";
-import { differingAreas, indexParameterWorkspace, matchesParameterSearch, type ParameterWorkspaceSeparator } from "./parameterWorkspace";
+import { differingAreas, indexParameterWorkspace, matchesParameterSearch, parameterNavigation, type ParameterWorkspaceSeparator } from "./parameterWorkspace";
 import { matrixStyle, planParameterMatrix, type GroupLayoutView } from "./parameterMatrix";
 import "./parameterWorkspace.css";
 import { parameterMetadataLabel } from "./parameterMetadata";
@@ -22,6 +22,7 @@ export default function ParameterWorkspace({ sections, renderField, differs = NE
   const id = useId();
   const [active, setActive] = useState<string | null>(null);
   const [query, setQuery] = useState("");
+  const [expanded, setExpanded] = useState<ReadonlySet<string>>(() => new Set());
   const [selected, setSelected] = useState<string | null>(null);
   const { rows, groups, items, passiveLabels } = indexParameterWorkspace(sections);
   // Closed by default: no area opens until chosen; a vanished choice closes again.
@@ -34,7 +35,13 @@ export default function ParameterWorkspace({ sections, renderField, differs = NE
     ? { label: t("parameters.workspace.ungrouped"), title: undefined }
     : parameterCaption(group, t("parameters.groupNumber", { number: group.number }), t);
   const groupLabel = (group: typeof groups[number]) => caption(group).label;
-  const displayedGroupLabels = new Map(groups.map(group => [group.key, groupLabel(group)]));
+  const navigation = parameterNavigation(groups);
+  const containerNumbers = new Map(navigation.filter(entry => entry.containerKey !== null).map(entry => [entry.containerKey!, entry.number]));
+  const containerCaption = (group: typeof groups[number]) => parameterCaption(group.container!,
+    t("parameters.workspace.containerNumber", { number: containerNumbers.get(group.containerKey!) ?? 1 }), t);
+  const path = (group: typeof groups[number]) => [scopeLabel(group.scope),
+    ...(group.container ? [containerCaption(group).label] : []), groupLabel(group)].join(" / ");
+  const displayedGroupLabels = new Map(groups.map(group => [group.key, path(group)]));
   const visible = new Set(rows.filter(row => searching ? matchesParameterSearch(row, query, displayedGroupLabels.get(row.groupKey)) : row.groupKey === activeKey).map(row => row.key));
   const current = groups.find(group => group.key === activeKey);
   const selectedRow = rows.find(row => row.key === selected);
@@ -58,6 +65,14 @@ export default function ParameterWorkspace({ sections, renderField, differs = NE
   const markNote = t("parameters.lastDownload.section");
   const resultCounts = new Map<string, number>();
   for (const row of rows) if (!searching || visible.has(row.key)) resultCounts.set(row.groupKey, (resultCounts.get(row.groupKey) ?? 0) + 1);
+  const areaButton = (group: typeof groups[number]) => <button type="button" key={group.key}
+    title={caption(group).title} aria-current={!searching && group.key === activeKey ? "page" : undefined}
+    aria-describedby={marks.groups.has(group.key) ? `${id}-differs` : undefined}
+    data-differs-from-download={marks.groups.has(group.key) ? "true" : undefined}
+    onClick={() => { setActive(group.key); setQuery(""); }}>
+    <span>{groupLabel(group)}{marks.groups.has(group.key) && <span className="parameter-section-download-mark" title={markNote} aria-hidden="true" />}</span>
+    <span className="parameter-workspace-nav-count">{resultCounts.get(group.key) ?? 0}</span>
+  </button>;
 
   return <div className="parameter-workspace">
     <div className="parameter-workspace-toolbar">
@@ -75,23 +90,40 @@ export default function ParameterWorkspace({ sections, renderField, differs = NE
       <nav className="parameter-workspace-nav" aria-label={t("parameters.workspace.areas")}>
         <h4>{t("parameters.workspace.areas")}</h4>
         {marks.groups.size > 0 && <span id={`${id}-differs`} hidden>{markNote}</span>}
-        {groups.map((group, index) => <div key={group.key} className="parameter-workspace-nav-entry">
-          {(index === 0 || group.sectionKey !== groups[index - 1].sectionKey) &&
-            <span className="parameter-workspace-scope" data-differs-from-download={marks.sections.has(group.sectionKey) ? "true" : undefined}>
-              {scopeLabel(group.scope)}{marks.sections.has(group.sectionKey) && <SectionMark note={markNote} />}</span>}
-          <button type="button" title={caption(group).title} aria-current={!searching && group.key === activeKey ? "page" : undefined}
-            aria-describedby={marks.groups.has(group.key) ? `${id}-differs` : undefined}
-            data-differs-from-download={marks.groups.has(group.key) ? "true" : undefined}
-            onClick={() => { setActive(group.key); setQuery(""); }}>
-            <span>{groupLabel(group)}{marks.groups.has(group.key) && <span className="parameter-section-download-mark" title={markNote} aria-hidden="true" />}</span>
-            <span className="parameter-workspace-nav-count">{resultCounts.get(group.key) ?? 0}</span>
-          </button>
-        </div>)}
+        {navigation.map((entry, index) => {
+          const first = entry.groups[0];
+          const isContainer = entry.containerKey !== null;
+          const open = searching || (isContainer && expanded.has(entry.containerKey!));
+          const childrenId = `${id}-children-${index}`;
+          const marked = isContainer && marks.containers.has(entry.containerKey!);
+          return <div key={entry.key} className="parameter-workspace-nav-entry" data-container-key={entry.containerKey ?? undefined}>
+            {(index === 0 || first.sectionKey !== navigation[index - 1].groups[0].sectionKey) &&
+              <span className="parameter-workspace-scope" data-differs-from-download={marks.sections.has(first.sectionKey) ? "true" : undefined}>
+                {scopeLabel(first.scope)}{marks.sections.has(first.sectionKey) && <SectionMark note={markNote} />}</span>}
+            {isContainer ? <>
+              <button type="button" className="parameter-workspace-container-toggle" title={containerCaption(first).title}
+                aria-expanded={open} aria-controls={childrenId} aria-describedby={marked ? `${id}-differs` : undefined}
+                data-differs-from-download={marked ? "true" : undefined}
+                onClick={() => setExpanded(previous => {
+                  const next = new Set(previous);
+                  if (next.has(entry.containerKey!)) next.delete(entry.containerKey!); else next.add(entry.containerKey!);
+                  return next;
+                })}>
+                <span><span aria-hidden="true">{open ? "▾" : "▸"} </span>{containerCaption(first).label}
+                  {marked && <span className="parameter-section-download-mark" title={markNote} aria-hidden="true" />}</span>
+                <span className="parameter-workspace-nav-count">{entry.groups.reduce((sum, group) => sum + (resultCounts.get(group.key) ?? 0), 0)}</span>
+              </button>
+              <div id={childrenId} className="parameter-workspace-container-children" hidden={!open}>
+                {entry.groups.map(areaButton)}
+              </div>
+            </> : areaButton(first)}
+          </div>;
+        })}
       </nav>
       <div className="parameter-workspace-editor" id={`${id}-editor`}>
         {closed ? <p className="parameter-workspace-closed">{t("parameters.workspace.closed")}</p> : <>
           <header className="parameter-workspace-heading">
-            <div><span>{searching ? t("parameters.workspace.allAreas") : current && scopeLabel(current.scope)}</span>
+            <div><span>{searching ? t("parameters.workspace.allAreas") : current && path(current)}</span>
               <h4 title={current && !searching ? caption(current).title : undefined}>{searching ? t("parameters.workspace.results") : current && groupLabel(current)}</h4></div>
             <span>{t("parameters.workspace.sourceGroups")}</span>
           </header>
@@ -115,7 +147,7 @@ export default function ParameterWorkspace({ sections, renderField, differs = NE
             data-selected={selected === row.key} data-access={row.field.access} data-display-only={row.field.kind === "None"}
             onFocusCapture={() => setSelected(row.key)} onClick={() => setSelected(row.key)}>
             <div className="parameter-workspace-field">
-              {searching && <span className="parameter-workspace-result-path">{scopeLabel(row.scope)} / {groupLabel(groups.find(group => group.key === row.groupKey)!)}</span>}
+              {searching && <span className="parameter-workspace-result-path">{path(groups.find(group => group.key === row.groupKey)!)}</span>}
               {matrix?.fields.has(row.key) && row.field.cell && !matrix.unplaced.includes(row.key) &&
                 <span className="sr-only">{t("parameters.matrix.position", { row: row.field.cell.row, column: row.field.cell.column })}</span>}
               {renderField(row.field, row.scope)}
@@ -144,7 +176,7 @@ export default function ParameterWorkspace({ sections, renderField, differs = NE
         {selectedField ? <section>
           <h5>{t("parameters.workspace.information")}</h5>
           <h4>{label(selectedField)}</h4>
-          <p>{selectedRow && scopeLabel(selectedRow.scope)} / {selectedGroup && groupLabel(selectedGroup)}</p>
+          <p>{selectedGroup && path(selectedGroup)}</p>
           {!visible.has(selectedRow!.key) && <p className="parameter-workspace-hidden-note">{t("parameters.workspace.selectedHidden")}</p>}
           <dl>
             <dt>{t("parameters.workspace.identifier")}</dt><dd>{selectedField.etsId}</dd>

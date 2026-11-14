@@ -29,6 +29,25 @@ describe("grid layout classification", () => {
 });
 
 describe("matrix plan", () => {
+  it("uses projected axis text verbatim without changing identities or declared coordinates", () => {
+    const source = layout();
+    const translated = layout({
+      rows: [{ ...source.rows[0], text: "Oberer Bereich" }, source.rows[1]],
+      columns: [source.columns[0], { ...source.columns[1], text: "Rechts" }],
+    });
+    const fields = [{ key: "same-field", cell: { row: 1, column: 2 } }];
+    const originalPlan = planParameterMatrix(source, fields);
+    const plan = planParameterMatrix(translated, fields);
+    expect(plan.rowHeaders).toEqual([{ ...originalPlan.rowHeaders[0], text: "Oberer Bereich" }]);
+    expect(plan.columnHeaders).toEqual([{ ...originalPlan.columnHeaders[0], text: "Rechts" }]);
+    expect(plan.fields).toEqual(originalPlan.fields);
+    expect(plan.templateColumns).toBe(originalPlan.templateColumns);
+    expect(source.rows[0].text).toBe("Upper");
+    const empty = planParameterMatrix(layout({ rows: [{ ...source.rows[0], text: "" }] }), fields);
+    expect(empty.rowHeaders).toEqual([]);
+    expect(empty.columnHeaders[0].text).toBe("Right");
+  });
+
   it("places fields and captions at their declared 1-based cells after the header row and column", () => {
     const plan = planParameterMatrix(layout(), [
       { key: "a", cell: { row: 1, column: 2 } }, { key: "b", cell: { row: 2, column: 2 } }]);

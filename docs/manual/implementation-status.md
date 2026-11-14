@@ -2,6 +2,18 @@
 
 # Implementation status
 
+## Literal row/column translations (14 November 2026 source/focused verification)
+
+The bounded WP-05 implementation projects literal program-owned axis captions in
+the requested product language through the existing grid text fields. Own-source
+fallback, explicit empty and conservative template/scope exclusions are retained.
+Fictional ProductDB/actual HTTP and both matrix browser configurations have passed
+focused regressions; independent Standards and Spec source reviews approve with
+no findings. [Contract and evidence limits](../contracts/alpha16-parameter-layout.md#literal-program-owned-axis-translations).
+These results do not claim package-gate, release, publication or native-app
+acceptance. Parameter-driven axis captions, modules/Repeat and the broader layout
+backlog stay open.
+
 <a id="experimental-transport-labels-main-only-after-alpha-20"></a>
 
 ## Experimental transport labels (since Alpha 21)

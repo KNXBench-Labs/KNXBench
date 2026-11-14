@@ -17,7 +17,10 @@ pub use product_details::{
 };
 
 mod caption_templates;
-pub use caption_templates::{parameter_caption_templates, CaptionTemplateError};
+pub use caption_templates::{
+    parameter_caption_templates, parameter_grid_axis_captions, CaptionTemplateError,
+    GridAxisCaptions,
+};
 
 /// Canonical catalogue rows in the active product database. These are not
 /// project device instances or catalogue placements (`catalog_item`).

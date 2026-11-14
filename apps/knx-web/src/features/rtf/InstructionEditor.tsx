@@ -3,6 +3,7 @@ import { useEffect, useId, useRef, useState } from "react";
 import { createInstructionClient, sameContext, type Context, type InstructionApplied, type InstructionClient, type InstructionPreview, type InstructionView } from "./client";
 import { displayText, formatSelection, literal, replaceText, type Document, type Style } from "./document";
 import { editorCopy } from "./copy";
+import { usePreviewFocus } from "../usePreviewFocus";
 import styles from "./editor.module.css";
 /** `context: null` (no complete project identity) mounts a read-only view: it reads, never writes. */
 export type InstructionEditorProps = Readonly<{ deviceId: number; context: Context | null; language?: "en" | "de"; client?: InstructionClient; onApplied?: (outcome: InstructionApplied) => void; onDirtyChange?: (dirty: boolean) => void }>;
@@ -18,6 +19,7 @@ function Rendered({ document }: { document: Document }) {
 }
 export function InstructionEditor({ deviceId, context, language = "en", client = defaultClient, onApplied, onDirtyChange }: InstructionEditorProps) {
   const copy = editorCopy[language]; const id = useId(); const readOnly = context === null;
+  const previewFocus = usePreviewFocus(JSON.stringify([deviceId, context?.serverIncarnation, context?.projectIncarnation, context?.snapshotRevision]), client);
   const [view, setView] = useState<InstructionView | null>(null);
   const [draft, setDraft] = useState<Document>(literal("")); const draftRef = useRef(draft);
   const [plan, setPlan] = useState<InstructionPreview | null>(null);
@@ -32,7 +34,8 @@ export function InstructionEditor({ deviceId, context, language = "en", client =
   const base = useRef<InstructionView | null>(null);
   callbacks.current = { onApplied, onDirtyChange };
   function markDirty(value: boolean) { dirty.current = value; callbacks.current.onDirtyChange?.(value); }
-  function revoke() {
+  function revoke(cancel?: HTMLButtonElement) {
+    if (cancel) previewFocus.cancel(cancel); else previewFocus.revoke();
     const previous = planRef.current; planRef.current = null; setPlan(null); setConversion(false);
     if (previous) void client.cancel(previous.device, previous.token).catch(() => undefined);
   }
@@ -77,15 +80,16 @@ export function InstructionEditor({ deviceId, context, language = "en", client =
       change(next); textarea.current?.focus(); textarea.current?.setSelectionRange(start, end);
     } catch { setError(copy.invalid); }
   }
-  async function makePreview(document: Document | null) {
+  async function makePreview(document: Document | null, trigger: HTMLButtonElement) {
     if (!view || conflict || busy || rebasing || readOnly) return;
     revoke(); setBusy(true); setError(null); const active = generation.current; const controller = new AbortController();
+    const focusRequest = previewFocus.begin(trigger);
     try {
       const value = await client.preview(deviceId, { serverIncarnation: view.serverIncarnation, projectIncarnation: view.projectIncarnation, snapshotRevision: view.snapshotRevision }, document, controller.signal);
       if (generation.current !== active) { void client.cancel(deviceId, value.token).catch(() => undefined); return; }
       planRef.current = { device: deviceId, token: value.token }; setPlan(value);
     } catch (reason) { if (generation.current === active) setError(reason instanceof Error ? reason.message : copy.invalid); }
-    finally { if (generation.current === active) setBusy(false); }
+    finally { if (generation.current === active) { if (!controller.signal.aborted) previewFocus.settle(focusRequest); setBusy(false); } }
   }
   async function apply() {
     if (!plan || busy || rebasing || conflict || readOnly || (plan.conversionRequired && !conversion)) return;
@@ -114,8 +118,8 @@ export function InstructionEditor({ deviceId, context, language = "en", client =
       {!readOnly && <div className={styles.toolbar} role="toolbar" aria-label={copy.rendered}>{(["bold", "italic", "underline", "clear"] as const).map(flag => <button key={flag} type="button" disabled={busy || conflict} onMouseDown={event => event.preventDefault()} onClick={() => format(flag)}>{copy[flag]}</button>)}</div>}
       <textarea id={`${id}-text`} ref={textarea} className={styles.input} value={displayText(draft)} readOnly={readOnly} disabled={busy || conflict} onChange={() => undefined} onSelect={event => { selection.current = [event.currentTarget.selectionStart, event.currentTarget.selectionEnd]; }} onInput={event => { try { change(replaceText(draftRef.current, event.currentTarget.value)); } catch { setError(copy.invalid); } }}/>
       <h4>{copy.rendered}</h4><Rendered document={draft}/>
-      {!readOnly && <div className={styles.actions}><button type="button" disabled={busy || rebasing || conflict || !dirty.current} onClick={() => void makePreview(draft)}>{copy.preview}</button><button type="button" disabled={busy || rebasing || conflict || view?.overrideDocument === null} onClick={() => void makePreview(null)}>{nothingToReturnTo ? copy.remove : copy.reset}</button></div>}
+      {!readOnly && <div className={styles.actions}><button type="button" disabled={busy || rebasing || conflict || !dirty.current} onClick={event => void makePreview(draft, event.currentTarget)}>{copy.preview}</button><button type="button" disabled={busy || rebasing || conflict || view?.overrideDocument === null} onClick={event => void makePreview(null, event.currentTarget)}>{nothingToReturnTo ? copy.remove : copy.reset}</button></div>}
     </>}
-    {plan && <section className={styles.change} aria-label={copy.change}><h4>{copy.change}</h4>{plan.noOp && <p>{copy.noOp}</p>}{plan.replacement ? <Rendered document={plan.replacement}/> : <p>{nothingToReturnTo ? copy.removePreview : copy.resetPreview}</p>}{plan.conversionRequired && <label className={styles.confirm}><input type="checkbox" checked={conversion} onChange={event => setConversion(event.currentTarget.checked)}/><span>{copy.conversion}</span></label>}<div className={styles.actions}><button type="button" className={plan.replacement ? undefined : "danger-action"} disabled={busy || conflict || (plan.conversionRequired && !conversion)} onClick={() => void apply()}>{copy.apply}</button><button type="button" disabled={busy} onClick={revoke}>{copy.cancel}</button></div></section>}
+    {plan && <section className={styles.change} aria-label={copy.change}><h4>{copy.change}</h4>{plan.noOp && <p>{copy.noOp}</p>}{plan.replacement ? <Rendered document={plan.replacement}/> : <p>{nothingToReturnTo ? copy.removePreview : copy.resetPreview}</p>}{plan.conversionRequired && <label className={styles.confirm}><input type="checkbox" checked={conversion} onChange={event => setConversion(event.currentTarget.checked)}/><span>{copy.conversion}</span></label>}<div className={styles.actions}><button type="button" className={plan.replacement ? undefined : "danger-action"} disabled={busy || conflict || (plan.conversionRequired && !conversion)} onClick={() => void apply()}>{copy.apply}</button><button type="button" disabled={busy} onClick={event => revoke(event.currentTarget)}>{copy.cancel}</button></div></section>}
   </section>;
 }

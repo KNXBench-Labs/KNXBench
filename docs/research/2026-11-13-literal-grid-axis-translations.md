@@ -40,4 +40,4 @@ On 14 November 2026, source-bound focused fictional ProductDB/actual HTTP and bo
 owning matrix-browser configurations passed; independent Standards and Spec source
 reviews approve with no findings. These are independent KNXBench tests, not new
 reference observations, joined real-server/browser or native-app compatibility.
-Package-gate, release and publication acceptance are separate; WP-05 remains open.
+Afterwards the selected 15-stage package gate (Rust 6001 passed/181 ignored, corpus 97/97, 37 web stages) accepted it and it was published on main 14 November; release is separate and WP-05 remains open.

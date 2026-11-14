@@ -22,6 +22,8 @@ interface Fixture {
   projectReads: number;
   applyMode: ApplyMode;
   applied: number;
+  applyRequests: number;
+  cancelled: number;
   targetReads: number;
 }
 
@@ -76,7 +78,7 @@ function applyAction(f: Fixture, action: NoteAction) {
 }
 
 async function fixture(page: Page, language: Language, theme: string, width: number): Promise<Fixture> {
-  const f: Fixture = { unexpected: [], revision: 1, projectReads: 0, applyMode: "ok", applied: 0, targetReads: 0, notes: [
+  const f: Fixture = { unexpected: [], revision: 1, projectReads: 0, applyMode: "ok", applied: 0, applyRequests: 0, cancelled: 0, targetReads: 0, notes: [
     { id: 1, position: 0, target: { kind: "device", id: 41 }, title: "Check the kitchen actuator", body: "Relay clicks twice.\nRecheck after commissioning.", includeInDocumentation: true },
   ] };
   const plans = new Map<string, NoteAction>();
@@ -118,6 +120,7 @@ async function fixture(page: Page, language: Language, theme: string, width: num
       return ok({ token, action, previous, createdId: action.kind === "create" ? 100 + f.applied : null, noOp: false, expiresInSeconds: 300 });
     }
     if (path === "/api/project/notes/apply" && method === "POST") {
+      f.applyRequests += 1;
       const body = route.request().postDataJSON();
       const action = plans.get(body.token);
       if (!action || body.confirmed !== true) return refuse(409, "noteStale", "unknown plan");
@@ -128,7 +131,7 @@ async function fixture(page: Page, language: Language, theme: string, width: num
       f.applied += 1; f.revision += 1;
       return ok({ changed: true, nativeGeneration: null, snapshotRevision: f.revision, persistence: "session-only" });
     }
-    if (path === "/api/project/notes/cancel" && method === "POST") { plans.delete(route.request().postDataJSON().token); return ok({ cancelled: true }); }
+    if (path === "/api/project/notes/cancel" && method === "POST") { f.cancelled += 1; plans.delete(route.request().postDataJSON().token); return ok({ cancelled: true }); }
     f.unexpected.push(`${method} ${path}`);
     return refuse(404, "strict", "strict notes fixture");
   });
@@ -235,6 +238,63 @@ for (const language of ["en", "de"] as const) for (const theme of ["porcelain", 
     await capture(page, `${tag}-3-applied`);
     expect(f.unexpected).toEqual([]);
     expect(errors).toEqual([]);
+  });
+}
+
+for (const language of ["en", "de"] as const) for (const theme of ["porcelain", "graphite"]) for (const width of [1440, 400]) {
+  test(`${language} ${theme} ${width}: keyboard Preview and Cancel retain exact focus without applying`, async ({ page }) => {
+    const f = await fixture(page, language, theme, width);
+    const editor = (await openNotes(page, language === "de" ? de : en, width)).locator("section").first();
+    const before = structuredClone(f.notes);
+    const text = "Größe 🙂\nsecond line";
+    const title = editor.getByLabel(language === "de" ? "Titel" : "Title", { exact: true });
+    await title.fill(text);
+    const preview = editor.getByRole("button", { name: language === "de" ? "Änderung prüfen" : "Preview change", exact: true });
+    await preview.evaluate(node => node.setAttribute("data-focus-initiator", "notes"));
+    let release!: () => void;
+    let held = new Promise<void>(done => { release = done; });
+    let requests = 0;
+    await page.route("**/api/project/notes/preview", async route => {
+      requests += 1; await held; await route.fallback();
+    });
+    // Known adjacent starting point, then real Tab and Enter rather than locator.press on Preview.
+    await editor.locator('input[type="checkbox"]').focus();
+    await page.keyboard.press("Tab");
+    await expect(preview).toBeFocused();
+    expect(await preview.evaluate(node => node.matches(":focus-visible"))).toBe(true);
+    await expect(preview).toHaveCSS("outline-style", "solid");
+    expect(await preview.evaluate(node => Number.parseFloat(getComputedStyle(node).outlineWidth))).toBeGreaterThan(0);
+    await page.keyboard.press("Enter");
+    await expect.poll(() => requests).toBe(1);
+    await expect(preview).toBeDisabled();
+    expect(f.applied).toBe(0);
+    release();
+    const review = editor.getByRole("region", { name: language === "de" ? "Änderung prüfen" : "Review change" });
+    await expect(review).toBeVisible();
+    await expect(editor.locator('[data-focus-initiator="notes"]')).toBeFocused();
+    await expect(preview).toBeEnabled();
+    expect(await preview.evaluate(node => node.matches(":focus-visible"))).toBe(true);
+    await expect(preview).toHaveCSS("outline-style", "solid");
+    expect(await preview.evaluate(node => Number.parseFloat(getComputedStyle(node).outlineWidth))).toBeGreaterThan(0);
+    const confirm = review.getByRole("button", { name: language === "de" ? "Änderung bestätigen" : "Confirm change", exact: true });
+    await expect(confirm).not.toBeFocused();
+    await page.keyboard.press("Tab"); await expect(confirm).toBeFocused();
+    await page.keyboard.press("Tab");
+    await expect(review.getByRole("button", { name: language === "de" ? "Vorschau abbrechen" : "Cancel preview", exact: true })).toBeFocused();
+    await page.keyboard.press("Enter");
+    await expect(review).toHaveCount(0); await expect(preview).toBeFocused();
+    await expect.poll(() => f.cancelled).toBe(1); expect(f.applyRequests).toBe(0);
+    expect(await preview.evaluate(node => node.matches(":focus-visible"))).toBe(true);
+    await expect(preview).toHaveCSS("outline-style", "solid");
+    expect(await preview.evaluate(node => Number.parseFloat(getComputedStyle(node).outlineWidth))).toBeGreaterThan(0);
+    await expect(title).toHaveValue(text); expect(f.applied).toBe(0); expect(f.notes).toEqual(before);
+    // A subsequent pending Preview must not reclaim focus after deliberate navigation.
+    held = new Promise<void>(done => { release = done; });
+    await page.keyboard.press("Enter"); await expect.poll(() => requests).toBe(2);
+    const filter = editor.getByRole("searchbox"); await filter.focus();
+    release(); await expect(review).toBeVisible(); await expect(preview).toBeEnabled();
+    await expect(filter).toBeFocused(); expect(f.applied).toBe(0); expect(f.notes).toEqual(before);
+    expect(f.unexpected).toEqual([]);
   });
 }
 

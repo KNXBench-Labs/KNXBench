@@ -24,6 +24,8 @@ interface Fixture {
   override: Document | null;
   applyMode: ApplyMode;
   applied: number;
+  applyRequests: number;
+  cancelled: number;
   projectReads: number;
   identity: boolean;
   native: boolean;
@@ -56,7 +58,7 @@ function viewOf(f: Fixture) {
 }
 
 async function fixture(page: Page, language: Language, theme: string, width: number, identity = true, native = false): Promise<Fixture> {
-  const f: Fixture = { unexpected: [], revision: 1, override: null, applyMode: "ok", applied: 0, projectReads: 0, identity, native };
+  const f: Fixture = { unexpected: [], revision: 1, override: null, applyMode: "ok", applied: 0, applyRequests: 0, cancelled: 0, projectReads: 0, identity, native };
   const plans = new Map<string, Document | null>();
   await page.setViewportSize({ width, height: 900 });
   await page.route("https://api.github.com/**", (route) => { f.unexpected.push(route.request().url()); return route.abort(); });
@@ -99,6 +101,7 @@ async function fixture(page: Page, language: Language, theme: string, width: num
       return ok({ token, device: 41, replacement: body.document, conversionRequired: false, noOp: false, expiresInSeconds: 300 });
     }
     if (path === "/api/devices/41/instructions/apply" && method === "POST") {
+      f.applyRequests += 1;
       const body = route.request().postDataJSON();
       if (!plans.has(body.token) || body.confirmed !== true) return refuse(409, "instructionStale", "Instruction preview no longer matches the open project; refresh and preview again");
       if (f.applyMode === "stale") return refuse(409, "instructionStale", "Instruction preview no longer matches the open project; refresh and preview again");
@@ -108,7 +111,7 @@ async function fixture(page: Page, language: Language, theme: string, width: num
       f.applied += 1; f.revision += 1;
       return ok({ changed: true, nativeGeneration: null, snapshotRevision: f.revision, persistence: "session-only" });
     }
-    if (path === "/api/devices/41/instructions/cancel" && method === "POST") { plans.delete(route.request().postDataJSON().token); return ok({ cancelled: true }); }
+    if (path === "/api/devices/41/instructions/cancel" && method === "POST") { f.cancelled += 1; plans.delete(route.request().postDataJSON().token); return ok({ cancelled: true }); }
     f.unexpected.push(`${method} ${path}`);
     return refuse(404, "strict", "strict instructions fixture");
   });
@@ -187,6 +190,59 @@ for (const language of ["en", "de"] as const) for (const theme of ["porcelain", 
     await capture(page, `${tag}-3-applied`);
     expect(f.unexpected).toEqual([]);
     expect(errors).toEqual([]);
+  });
+}
+
+for (const language of ["en", "de"] as const) for (const theme of ["porcelain", "graphite"]) for (const width of [1440, 400]) {
+  test(`${language} ${theme} ${width}: keyboard Preview and Cancel retain exact focus without applying`, async ({ page }) => {
+    const m = language === "de" ? de : en;
+    const f = await fixture(page, language, theme, width);
+    const panel = await openInstructions(page, m);
+    const text = panel.locator("textarea"); const draft = "Größe 🙂\nsecond line";
+    await text.fill(draft);
+    const preview = panel.getByRole("button", { name: language === "de" ? "Änderung prüfen" : "Preview change", exact: true });
+    await preview.evaluate(node => node.setAttribute("data-focus-initiator", "instructions"));
+    let release!: () => void;
+    let held = new Promise<void>(done => { release = done; });
+    let requests = 0;
+    await page.route("**/api/devices/41/instructions/preview", async route => {
+      requests += 1; await held; await route.fallback();
+    });
+    // The text field is immediately before the action row in keyboard order.
+    await text.focus(); await page.keyboard.press("Tab");
+    await expect(preview).toBeFocused();
+    expect(await preview.evaluate(node => node.matches(":focus-visible"))).toBe(true);
+    await expect(preview).toHaveCSS("outline-style", "solid");
+    expect(await preview.evaluate(node => Number.parseFloat(getComputedStyle(node).outlineWidth))).toBeGreaterThan(0);
+    await page.keyboard.press("Enter");
+    await expect.poll(() => requests).toBe(1); await expect(preview).toBeDisabled();
+    expect(f.applied).toBe(0); expect(f.override).toBeNull();
+    release();
+    const review = panel.getByRole("region", { name: language === "de" ? "Änderungsvorschau" : "Change preview" });
+    await expect(review).toBeVisible(); await expect(preview).toBeEnabled();
+    await expect(panel.locator('[data-focus-initiator="instructions"]')).toBeFocused();
+    expect(await preview.evaluate(node => node.matches(":focus-visible"))).toBe(true);
+    await expect(preview).toHaveCSS("outline-style", "solid");
+    expect(await preview.evaluate(node => Number.parseFloat(getComputedStyle(node).outlineWidth))).toBeGreaterThan(0);
+    const apply = review.getByRole("button", { name: language === "de" ? "Änderung anwenden" : "Apply change", exact: true });
+    await expect(apply).not.toBeFocused();
+    await page.keyboard.press("Tab"); await expect(apply).toBeFocused();
+    await page.keyboard.press("Tab");
+    await expect(review.getByRole("button", { name: language === "de" ? "Änderung abbrechen" : "Cancel change", exact: true })).toBeFocused();
+    await page.keyboard.press("Enter");
+    await expect(review).toHaveCount(0); await expect(preview).toBeFocused();
+    await expect.poll(() => f.cancelled).toBe(1); expect(f.applyRequests).toBe(0);
+    expect(await preview.evaluate(node => node.matches(":focus-visible"))).toBe(true);
+    await expect(preview).toHaveCSS("outline-style", "solid");
+    expect(await preview.evaluate(node => Number.parseFloat(getComputedStyle(node).outlineWidth))).toBeGreaterThan(0);
+    await expect(text).toHaveValue(draft); expect(f.applied).toBe(0); expect(f.override).toBeNull();
+    // A selected tab is outside the editor but does not unmount this draft.
+    held = new Promise<void>(done => { release = done; });
+    await page.keyboard.press("Enter"); await expect.poll(() => requests).toBe(2);
+    const tab = page.getByRole("tab", { name: m["deviceInstructions.tab"], exact: true }); await tab.focus();
+    release(); await expect(review).toBeVisible(); await expect(preview).toBeEnabled();
+    await expect(tab).toBeFocused(); expect(f.applied).toBe(0); expect(f.override).toBeNull();
+    expect(f.unexpected).toEqual([]);
   });
 }
 

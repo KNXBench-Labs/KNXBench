@@ -29,8 +29,10 @@ defines this request-local behaviour, not a global focus policy.
 
 - Independent production-source reviews and the test-delta review: **APPROVE**.
 - Mounted component checks: **88/88**. Production-browser checks: **44/44**,
-  including a sixteen-cell keyboard matrix and four assertion-mutant checks.
-  These focused checks are not the final package gate or native proof.
+  including the sixteen-cell keyboard matrix. Separately, four component-hook
+  mutants reached their named assertions and failed as intended; restored
+  controls passed. These focused checks are not the final package gate or
+  native proof.
 - The measured retained ELF has SHA-256
   `7063dfcabd8062b11db4e0b45b7bda76efa882f3cf28f0100401a62f425a21e7`.
   Its build source is frozen `9ea3c5a9c-DIRTY` with eleven frozen files and a
@@ -98,20 +100,25 @@ deadline bounds sampled settlement, not callback preemption or receipt I/O.
 Final retention contains 175 evidence and 251 scratch files, independently
 rehashed by the parent. Owned processes, window, output and IPC are absent after
 teardown, rules are disabled and all three leases are free. This run's full
-recorder reports `seatRestoration=true`; earlier vanished-screensaver failures
-remain partial, not retrospectively repaired. Private receipts, captures,
+recorder reports `fullRestoration=true` within its restoration predicate, not
+complete client/workspace inventory or clipboard/screensaver-state attestation.
+Earlier vanished-screensaver failures remain partial, not retrospectively repaired. Private receipts, captures,
 original failures and retained artifacts stay under
 `<profile>/evidence/2026-11-13-wp05-14/native/E4-focus-fix/`.
 
 ## Delivery boundary and remaining acceptance
 
-Independent native aggregate audit (`deleg_38bfb49c`) is pending; no independent native-acceptance verdict is claimed yet.
+Independent native evidence review: **APPROVE**. Native05's complete Notes 100%
+cell plus five complete Native01 cells support six whole cells / twelve passing
+focus predicates across two execution epochs on frozen `9ea3c5a9c-DIRTY`. The old
+Native01 Notes 100% partial is excluded; Native01 remains failed/incomplete. This
+bounded evidence approval is not current-main native proof, a fresh six-cell
+suite, whole-WP-11 acceptance or final-package acceptance.
 
 The main-first candidate `994d9bd5d` has not run its final package gate and is
 not pushed, released or deployed by this delivery. Focused software approvals
-and parent-verified native observations do not substitute for that gate or the
-independent native audit. This result-only documentation update changes no
-product behaviour.
+and the independently accepted source-bound native composition do not substitute
+for that gate. This result-only documentation update changes no product behaviour.
 
 The native profile uses software rendering, direct GTK dialogs and memory
 GSettings, with shared Wayland/session-D-Bus/AT-SPI and possible GVFS exceptions.

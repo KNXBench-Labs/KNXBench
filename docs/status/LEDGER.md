@@ -308,6 +308,20 @@ not checked.
 | `KL-182` | P2 | later | GitHub issue #7 (found while checking) | DONE | — | docs/KNOWN_LIMITATIONS.md §182; without `on_download` WebKitGTK saved every in-app `<a download>` silently into the XDG Downloads folder and replaced a same-named file (probe on WebKitGTK 2.52.6, not inside the AppImage). Fixed in source: private staging per download, native save dialog, atomic copy, staged copy always removed, failures reported; all windows share the WebKit context. Tests: `download_delivery` (6), `download_handler` (2, mock runtime); two mutants killed. **2026-10-13 native-window check** (release build `6ba1590a`, X11): import-report download opens the save dialog; Cancel writes nothing and removes the staged copy; Save writes the chosen file (0600) and removes it; Downloads stays empty. Wayland backend, failure dialogs and Flow/diagnostics routing not driven. **20 October 2026 release reconciliation:** the first fixed AppImage is alpha.12 (`docs/releases/alpha12.md`, retained `docs/evidence/release-alpha12-2026-10-15.json`); installed older copies and the untested native paths above are unchanged. |
 | `KL-183` | P1 | later | GitHub issue #21 | ACCEPTED_BOUNDARY | — | docs/KNOWN_LIMITATIONS.md §183, ADR-0128; store schema v16 carries manufacturer files (zlib, SHA-256 keyed, outside the editor history), filled by Save/Save As/download/`knx import --store`, reinstalled on open; Docker keeps the product database on `/data`. Remaining boundary: files saved before v16 need **Restore from original .knxproj** (hash-matched members only, project untouched); master data not reinstalled; CLI readers do not reinstall. Tests: `http_knxdb_product_data` (9), store unit tests, CLI store test, Docker image check, web panel tests. No real Docker rebuild driven. **20 October 2026 source reconciliation:** embedding supplies available hash-matched saved-manifest files, not automatically every referenced application. A newly saved file can still lack bytes (`a_save_that_cannot_carry_a_file_says_so`, existing HTTP test source). A catalogue-added program outside that manifest is a source-traced portability candidate, not runtime-reproduced; require catalogue-create/Save/empty-product-DB-reopen regression before confirming that case. **24 October 2026 (Alpha 16, A16-06):** catalogue-authored Save/Save As acquire winning-hash sources with one recorded original package and reopen into an empty product database (`b1703d61d`, `5763745fa`; HTTP `a_catalogue_created_device_reopens_without_external_products_after_save`); pre-v16/unbacked/ambiguous/no-product-database cases stay bounded, status unchanged. |
 
+## WP-06 bounded integration-candidate evidence (14 November 2026)
+
+Package-level [WP-06](../open-work/WP-06-communication-object-organisation.md)
+remains evidence-gated. The same-schema namespace/explicit-language caption
+successor `9b0d937dc` has independent correction APPROVE (F1/F2/F3/F5 closed)
+and retained filtered GREEN: captions 29, language 7, HTTP 12, server unit 5;
+these overlapping counts are not additive. Main-first `789ab6143` on `041df68a0`
+preserves the full reviewed feature patch. Complete selected integrated gate and
+publication remain **pending**, not implied by focused checks or source equality.
+[Epochs, amendments and limits](2026-11-14-wp06-folder-caption-language.md) record
+absent no-language provenance, whole-overlay resource refusal, unit-only A7 and
+the installer-bypassing mixed-namespace HTTP fixture. No source-ID row or count
+changes; broader captions, module placement and write/owner stops remain.
+
 ## WP-07 bounded integration-candidate evidence (14 November 2026)
 
 Package-level [WP-07](../open-work/WP-07-module-instance-authority.md) remains

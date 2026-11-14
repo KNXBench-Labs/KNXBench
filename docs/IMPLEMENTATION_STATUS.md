@@ -21,8 +21,8 @@ regressions verify selection, conservative fallbacks and preservation boundaries
 independent Standards and Spec reviews approve the source with no findings.
 The existing matrix consumer is unchanged. [Focused results and evidence limits](contracts/alpha16-parameter-layout.md#literal-program-owned-axis-translations)
 distinguish existing-value edit/history/reopen coverage from allocator restoration
-and browser fixtures from joined real-server/native compatibility. This records
-source and focused verification, not package-gate, release or publication acceptance.
+and browser fixtures from joined real-server/native compatibility. Afterwards
+the selected 15-stage package gate (Rust 6001 passed/181 ignored, corpus 97/97, 37 web stages) accepted it and it was published on main 14 November; no release or native-app claim.
 No schema/dependency change, broader layout or completed WP-05 claim.
 
 ## CLI TCP write-consumer source successor (13 November 2026; WP-29)

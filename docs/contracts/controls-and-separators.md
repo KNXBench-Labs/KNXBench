@@ -217,11 +217,12 @@ reference never repeats a heading badge.
 
 ## Tests
 
-- `e2e/controls-theme-matrix.e2e.ts`: Porcelain, Graphite, Cupertino, LCARS
-  and CRT at 600 and 1440 px, one page load each: dialog Cancel/Keep secondary,
-  Create primary, Discard destructive; toolbar Commands and Undo icon quiet,
-  Save primary; inspector Delete destructive with the form's 16px spacing to the
-  next field; a table device link (group-address members) and a devices-table
+- `e2e/controls-theme-matrix.e2e.ts`: Porcelain, Graphite, Cupertino, LCARS,
+  Rail, Rail Dark, Technical Light, Technical Dark and CRT at 600 and 1440 px,
+  one page load each: dialog Cancel/Keep secondary, Create primary, Discard
+  destructive; toolbar Commands and Undo icon quiet, Save primary; inspector
+  Delete destructive with 8 px Compact / 12 px Comfortable spacing to the next
+  field, with its role and keyboard focus checked in both densities; a table device link (group-address members) and a devices-table
   row action, both with a one-letter label, quiet and at least 24×24 px;
   keyboard focus ring on dialog, toolbar, device-link, table-row and inspector
   buttons; every checked control, the toast's ×, the import-finding links and

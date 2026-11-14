@@ -398,6 +398,8 @@ fn shipped_language_packs_and_bundled_themes_are_known() {
         ),
         ("tlh", "user-imported-pack", "other"),
         ("de", "rail-dark", "rail-dark"),
+        ("en", "technical-light", "technical-light"),
+        ("de", "technical-dark", "technical-dark"),
     ] {
         let client = json!({"uiLanguage": language, "theme": theme});
         let body = body(&client_state(client.as_object().unwrap()));

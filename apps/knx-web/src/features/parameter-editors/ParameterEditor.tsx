@@ -105,8 +105,8 @@ function ParameterDraft<T>(props: ParameterEditorProps<T>) {
   }
 
   // A suffix needs a value to stand beside; "no value is present" gets none.
-  const withSuffix = (value: ReactElement) => props.suffix
-    ? <div className={styles.value}>{value}<span className={styles.suffix}>{props.suffix}</span></div> : value;
+  const withSuffix = (value: ReactElement, scalar = false) => props.suffix
+    ? <div className={`${styles.value}${scalar ? ` ${styles.scalarValue}` : ""}`}>{value}<span className={styles.suffix}>{props.suffix}</span></div> : value;
   if (plan.kind === "fallback") {
     return <section className={styles.panel} aria-label={props.label}>
       <h4>{props.label}</h4><p role="status" className={styles.notice}>{copy.fallback[plan.reason]}</p>
@@ -143,7 +143,7 @@ function ParameterDraft<T>(props: ParameterEditorProps<T>) {
         const pasted = event.clipboardData.getData("text/plain");
         setDraft(wholeValue ? pasted : draft.slice(0, start) + pasted + draft.slice(end));
         setFailure(null); setSettled(false);
-      }} onChange={event => { setDraft(event.target.value); setFailure(null); setSettled(false); }} />)}
+      }} onChange={event => { setDraft(event.target.value); setFailure(null); setSettled(false); }} />, true)}
     {plan.kind === "integer-slider" && <input type="range" className={styles.slider} aria-label={`${props.label}: ${copy.slider}`}
       min={plan.min} max={plan.max} step={plan.step} value={issue === null ? Number(draft) : Number(field.value)}
       disabled={restricted || pending || accepted || stale || issue !== null}

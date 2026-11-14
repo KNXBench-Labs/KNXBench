@@ -5,8 +5,8 @@ import { messages as en } from "../src/messages/en";
 import { chooseComView, intercept, openList, openObjectSettings } from "./communication-fixture";
 import { controlPaint, separatorLine, type ControlRole } from "./control-roles";
 
-// Every theme the app ships: the six built-ins and the bundled CRT pack.
-const THEMES = ["porcelain", "graphite", "cupertino", "lcars", "rail", "rail-dark", "user-modern-retro-green-crt"] as const;
+// Every shipped palette: the eight built-ins and the bundled CRT pack.
+const THEMES = ["porcelain", "graphite", "cupertino", "lcars", "rail", "rail-dark", "technical-light", "technical-dark", "user-modern-retro-green-crt"] as const;
 // Narrow is below the 650px breakpoint (splitters hidden, panes stacked); wide is a desktop.
 const WIDTHS = [600, 1440] as const;
 // docs/contracts/controls-and-separators.md: no interactive control below 24px.
@@ -159,12 +159,22 @@ for (const theme of THEMES) for (const width of WIDTHS) {
     await page.mouse.move(1, 1);
     await expectRole(remove, "danger", "inspector Delete");
     await expectFocusRing(page, remove, "inspector Delete");
-    const gap = await remove.evaluate((node) => {
-      let next = node.nextElementSibling;
-      while (next && next.getBoundingClientRect().height === 0) next = next.nextElementSibling;
-      return next ? next.getBoundingClientRect().top - node.getBoundingClientRect().bottom : Number.POSITIVE_INFINITY;
-    });
-    expect(gap, "space between Delete and the next field (the form's 16px field rhythm)").toBeGreaterThanOrEqual(16);
+    const root = page.locator("html");
+    const originalDensity = await root.getAttribute("data-density");
+    for (const [density, expectedGap] of [["compact", 8], ["comfortable", 12]] as const) {
+      await root.evaluate((node, value) => node.setAttribute("data-density", value), density);
+      await expectRole(remove, "danger", `${density} inspector Delete`);
+      await expectFocusRing(page, remove, `${density} inspector Delete`);
+      const gap = await remove.evaluate((node) => {
+        let next = node.nextElementSibling;
+        while (next && next.getBoundingClientRect().height === 0) next = next.nextElementSibling;
+        return next ? next.getBoundingClientRect().top - node.getBoundingClientRect().bottom : Number.POSITIVE_INFINITY;
+      });
+      expect(gap, `${density}: space between Delete and the next field`).toBeCloseTo(expectedGap, 0);
+    }
+    await root.evaluate((node, value) => {
+      if (value === null) node.removeAttribute("data-density"); else node.setAttribute("data-density", value);
+    }, originalDensity);
 
     // A help tip keeps its small ring inside a full target.
     const panel = page.locator(".com-table-panel");

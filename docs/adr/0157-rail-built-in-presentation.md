@@ -64,3 +64,22 @@ Verification is Chromium with intercepted synthetic API replies; native
 WebKitGTK/Orca, Firefox and full WCAG acceptance are not established. The
 `rail-theme.e2e.ts` browser regression composites the actual constant-colour
 primary layers at rest, hover and press, and checks live motion cancellation.
+
+## Addendum: WP-41 technical pair (14 November 2026)
+
+The separately accepted WP-41 design reuses this trusted built-in boundary for
+`technical-light` (**Technical Light**) and `technical-dark` (**Technical Dark**).
+Both map to `data-presentation="technical"` in the runtime and pre-paint bootstrap;
+imported packs, inherited object keys and arbitrary theme IDs cannot acquire it.
+The pair uses complete fixed-accent palettes, the existing locally bundled
+Inter/JetBrains Mono fonts, restrained 2 px geometry and an ink-based primary veil.
+It adds no animation, setting, schema, persistence path or second component tree.
+
+Shared workspace density and the scalar/text width classes belong to the common
+component layer, independently of palette/presentation. Compact/Comfortable and
+existing theme identities remain separate; the technical marker cannot override
+density or accessibility preferences. Raw evidence and declared grids retain their
+existing owners and constraints. The diagnostics inventory names both new IDs.
+`technicalPresentation.test.ts` pins runtime/bootstrap identity and the pack,
+motion and density boundaries; the existing browser matrices exercise the pair.
+This addendum records the architecture, not a release or native-shell acceptance.

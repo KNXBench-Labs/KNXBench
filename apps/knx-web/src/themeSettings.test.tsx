@@ -116,7 +116,7 @@ afterEach(() => {
 describe("Appearance theme choice", () => {
   it("offers the shipped CRT theme in the dropdown, drops Neon Grid and Bitcoin DeFi, and shows no preview cards", async () => {
     await mount({ theme: "graphite" });
-    expect(optionNames()).toEqual(["System", "Porcelain", "Graphite", "Cupertino", "LCARS", "Rail", "Rail Dark", "Modern Retro Green CRT"]);
+    expect(optionNames()).toEqual(["System", "Porcelain", "Graphite", "Cupertino", "LCARS", "Rail", "Rail Dark", "Technical Light", "Technical Dark", "Modern Retro Green CRT"]);
     expect(host.textContent).not.toMatch(/Preview|Neon Grid|Bitcoin DeFi|Included with the application/);
     expect(host.querySelector(".theme-manager-list")).toBeNull();
   });
@@ -203,6 +203,31 @@ describe("Rail presentation", () => {
     expect(themeSelect().value).toBe("rail-dark");
     expect(document.documentElement.dataset.presentation).toBe("rail");
     expect(writes).toEqual([]);
+  });
+});
+
+describe("Technical presentation", () => {
+  it.each(["technical-light", "technical-dark"])("restores %s without installing a pack or writing settings", async id => {
+    await mount({ theme: id, density: "comfortable", motionLevel: "off" });
+    expect(themeSelect().value).toBe(id);
+    expect(document.documentElement.dataset).toMatchObject({ theme: id, presentation: "technical" });
+    expect(writes).toEqual([]);
+    expect(server).toMatchObject({ density: "comfortable", motionLevel: "off" });
+  });
+
+  it("switches the pair and hands framing back without changing independent preferences", async () => {
+    await mount({ theme: "rail-dark", density: "comfortable", motionLevel: "off", motionTheme: "off", foreign: "preserved" });
+    await choose("technical-light");
+    expect(document.documentElement.dataset).toMatchObject({ theme: "technical-light", presentation: "technical" });
+    await choose("technical-dark");
+    expect(document.documentElement.dataset).toMatchObject({ theme: "technical-dark", presentation: "technical" });
+    expect(host.querySelector<HTMLSelectElement>('select[aria-label="Accent color"]')!.disabled).toBe(true);
+    expect(writes).toEqual([{ theme: "technical-light" }, { theme: "technical-dark" }]);
+    expect(server).toMatchObject({ density: "comfortable", motionLevel: "off", motionTheme: "off", accent: "mint", foreign: "preserved" });
+    await choose("rail");
+    expect(document.documentElement.dataset.presentation).toBe("rail");
+    await choose("porcelain");
+    expect(document.documentElement.hasAttribute("data-presentation")).toBe(false);
   });
 });
 

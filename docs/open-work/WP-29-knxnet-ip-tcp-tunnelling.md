@@ -194,7 +194,7 @@ broader WP-29 and other programming consumers remain open.
   to the exercised scope. Plain TCP is not KNX IP Secure and is not an
   established fix for the S2-04 tunnel-loss report.
 
-## Server/Web device-compare successor (14 November 2026; source candidate)
+## Server/Web device-compare successor (14 November 2026; software-accepted on main)
 
 A distinct strict `POST /api/device-compare/tcp` shares the unchanged comparison
 behaviour; the legacy route stays UDP with an unchanged response body (its operation

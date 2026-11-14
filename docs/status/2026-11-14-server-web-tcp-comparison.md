@@ -1,7 +1,22 @@
-# Server/Web TCP device comparison — source candidate
+# Server/Web TCP device comparison
 
-Date: 14 November 2026. Source candidate only; not reviewed, accepted, released or
-deployed. Loopback and simulator evidence only: no real-gateway interoperability.
+Date: 14 November 2026. Software-accepted on main; not released or deployed.
+Loopback and simulator evidence only: no real-gateway interoperability.
+
+## Acceptance
+
+The reviewed source was integrated main-first as `cc62f5585` and publication was
+read back exactly. Two independent reviews (Standards, Spec) first returned BLOCK;
+every finding was fixed (rustfmt, a surviving missing-metadata mutant, exact refusal
+statuses, the legacy-recording wording). The package gate then failed twice on
+consumers outside the author's focused runs, and both were fixed in the tests:
+the Diagnostics companion's import-graph test (the client had gained a value import
+of a UI module, now removed) and the tab order in `devices-navigation.e2e.ts` (the
+transport choice now sits between the gateway field and Confirm). The third run passed
+all 15 selected stages (Rust 1988 passed, 0 failed, 73 ignored; Vitest 5824; 1386
+browser tests; separate corpus 51/51), inputs frozen and user data untouched. The
+reviews covered the first candidate; the two later fixes were not independently
+re-reviewed but ran in the complete gate.
 
 ## Contract
 
@@ -24,8 +39,8 @@ deployed. Loopback and simulator evidence only: no real-gateway interoperability
 
 ## Evidence
 
-Retained by the author outside the repository; parent owns the complete gate and
-independent review. Loopback tests pin literal same/different bytes and the
+Retained outside the repository (author logs, both review reports, the three gate
+receipts including the two red attempts). Loopback tests pin literal same/different bytes and the
 management/outer disconnects; the browser fixture replays the producer's captured
 bodies, but only when `KNX_COMPARE_HTTP_CAPTURE_DIR` is set. UDP controls are refused-handshake selection only, not completed UDP reads.
 

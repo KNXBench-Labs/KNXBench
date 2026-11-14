@@ -19,8 +19,10 @@ projects `Undetermined` with no channel after evaluation. Genuine unscoped and
 resolved-instance controls, `NotEvaluated` without an evaluable program and the
 module write stop-line are unchanged. Corrected source `8873e0150f` has retained
 17 unit + 9 HTTP passes and independent finding-specific approval (F1 closed).
-Main-first `1c8b146fb` is patch-equivalent to the reviewed candidate; fresh
-integrated selected package gate and publication remain pending. The
+Main-first `e31f0e062` is software-accepted and published: complete selected
+gate 14/14, Rust 2090 passed / 73 ignored, separate corpus 51/51; frozen inputs
+and checked user data untouched. Tool tests: 547 passed / 16 optional skips.
+Browser suites were not selected; no native UI/release/deployment claim. The
 [bounded result](status/2026-11-14-wp07-unresolved-module-owner.md) separates
 source/test epochs, original-production HTTP RED, exact M3 discrimination and
 the historical broad-suite deviation. Read overlay only: no persistence,

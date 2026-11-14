@@ -6,8 +6,10 @@ The bounded source-only read overlay distinguishes unresolved own module
 authority from genuinely unscoped objects: after evaluation it reports
 `Undetermined`, not accidental `Inactive`, with no channel. Corrected source
 `8873e0150f` is independently reviewed with retained focused 17 unit + 9 HTTP
-passes; main-first `1c8b146fb` has parent-verified patch equivalence only.
-Fresh integrated selected package gate and publication remain pending.
+passes. Main-first `e31f0e062` is now software-accepted and published after the
+complete selected 14-stage gate: Rust 2090 passed / 73 ignored and separate
+corpus 51/51, inputs frozen and checked user data untouched. No release or
+deployment; no new native UI or broader module authority.
 [Epochs and limits](status/2026-11-14-wp07-unresolved-module-owner.md) keep
 positive identity, repeated/nested mapping, numbering and module write policy
 outside the slice. Whole WP-07 remains evidence-blocked; no KL-068 closure.

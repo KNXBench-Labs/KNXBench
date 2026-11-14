@@ -1,6 +1,8 @@
 # WP07-S1 — Unresolved module-owner projection (14 November 2026)
 
-## Integration-candidate boundary
+<a id="integration-candidate-boundary"></a>
+
+## Published bounded delivery
 
 The bounded source fix distinguishes an imported module communication object
 whose own instance authority is unresolved from a genuinely unscoped object.
@@ -8,12 +10,17 @@ After evaluation, the former projects `Undetermined` with no channel, rather
 than accidentally taking the unscoped `Inactive` path. This is a read-only
 server overlay, not a new module-instance mapping contract.
 
-The corrected source candidate is independently reviewed; its focused results
-below are retained evidence from the feature branch. Main-first integration is
-prepared as `1c8b146fb4897734942da1b465260b41d3cc74d5` on main base
-`ed6524b969fde98938313d2003e0f4806586399b`. **Fresh integrated selected package
-gate and publication remain pending.** This documentation successor runs no
-product tests, builds or gates and changes no runtime or test source.
+The bounded slice is independently reviewed, software-accepted and published
+on main as `e31f0e062db95f692966b989a65baa0bcf4f6668`, based on
+`d44a02d722f61e1772a224829261ec9a2820c259`. The complete selected gate passed
+**14/14 stages**: **2090 Rust passes / 0 failures / 73 ignored**, separately
+**51/51 selected corpus tests**, and tool tests **547 passed / 16 optional skips**.
+Inputs remained frozen; user-data checks found no touched or unchecked paths.
+Local, tracking and live remote refs matched the published commit. Browser
+suites were not selected; the desktop dependency was built, not natively
+UI-measured. No release or deployment was performed. This result-only successor
+changes no runtime or test source and does not claim its own gate/publication.
+The earlier focused results below remain tied to their original feature epoch.
 
 ## Source and evidence epochs
 
@@ -92,9 +99,9 @@ evidence-blocked: the full independently counted mapping witness covering
 missing, duplicate, nested and repeated authority is not yet accepted.
 [KL-068](../limitations/KL-068-repeated-module-activation.md), positive identity,
 repeat expansion, number offsets/allocators, module creation/deletion and write
-authority remain unchanged. Fresh integrated selected package acceptance and
-publication are separate pending delivery steps, not supplied by focused GREEN
-or patch equivalence. WP-12 consent and all foreign-owner stop lines remain
+authority remain unchanged. Integrated selected package acceptance and
+publication were completed separately by the full gate above, not inferred
+from focused GREEN or patch equivalence. WP-12 consent and all foreign-owner stop lines remain
 in force; this slice grants no release or deployment authority.
 
 ## Retained admitted inputs
@@ -110,3 +117,12 @@ Private handles below identify summaries, not tracked raw evidence. Root:
 - `implementation-wp07/review02/RESULT.json` — independent F1 closure and limits.
 - `implementation-wp07/mainfirst01/PARENT_INTEGRATION.json` — source composition,
   no build/test execution or publication.
+- `implementation-wp07/mainfirst02/PARENT_COMPOSITION.json` — fresh main-first
+  transfer after upstream documentation-only changes; runtime bytes and entire
+  feature/documentation hunks including context unchanged.
+- `implementation-wp07/delivery-review01/{standards,spec}/RESULT.json` — independent
+  integrated reviews, originally bound to `bc2ee45d0`; exact-delta transfer
+  authenticated by the parent, not labelled as new reviews of another commit.
+- `implementation-wp07/delivery/PARENT_PACKAGE_ACCEPTANCE.json` and
+  `delivery/gate1/receipt.json` / `delivery/gate1-publication.json` beneath
+  `implementation-wp07/` — completed selected acceptance and publication readback.

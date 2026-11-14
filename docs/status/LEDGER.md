@@ -312,10 +312,15 @@ not checked.
 
 Package-level [WP-07](../open-work/WP-07-module-instance-authority.md) remains
 evidence-blocked; the full independently counted module mapping witness is not
-yet accepted. The source-only unresolved-owner read-overlay slice is a reviewed
-integration candidate (`8873e0150f`, main-first `1c8b146fb`), with retained
-focused 17 unit + 9 HTTP passes and F1 closed, not fresh integrated acceptance.
-Selected package gate and publication remain pending. [Source/test epochs and
+yet accepted. The earlier reviewed source-only unresolved-owner integration
+candidate (`8873e0150f`, main-first `1c8b146fb`) carries retained focused
+17 unit + 9 HTTP passes and F1 closed; those focused counts alone are not
+fresh integrated acceptance.
+**Publication update:** main-first `e31f0e062` is software-accepted and published
+with full selected gate14/14, Rust2090passed/73ignored, separate corpus51/51,
+frozen inputs and checked user data untouched; no release/deployment/native UI
+or whole-package closure. Earlier focused counts remain source-bound, not
+retroactively refreshed. [Source/test epochs and
 limits](2026-11-14-wp07-unresolved-module-owner.md) preserve the initial RED,
 corrected M3 discrimination and historical broader-suite deviation. No source-ID
 row or count changes; KL-68/PDB-01 boundaries and module write stops remain.

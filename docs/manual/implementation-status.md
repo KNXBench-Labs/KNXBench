@@ -8,9 +8,10 @@ The bounded read-only server overlay reports an imported module object's
 activation as `Undetermined` with no channel when its own instance cannot be
 resolved and evaluation ran. Genuine unscoped/resolved controls are unchanged;
 without an evaluable program the state remains `NotEvaluated`. Corrected source
-has retained focused 17 unit + 9 HTTP passes and independent approval; main-first
-composition is prepared, but fresh integrated package acceptance and publication
-remain pending. This is not a released capability, a new module mapping or
+has retained focused 17 unit + 9 HTTP passes and independent approval. The
+main-first slice is software-accepted and published as `e31f0e062` (selected
+gate14/14, Rust2090passed/73ignored, separate corpus51/51). This is not yet a
+released capability, native UI acceptance, a new module mapping or
 permission to create/write module objects. Whole WP-07/KL-068 remains open.
 [Source epochs, fictional controls and limitations](../status/2026-11-14-wp07-unresolved-module-owner.md).
 

@@ -22,8 +22,10 @@ a channel after evaluation, rather than accidentally taking the genuine
 unscoped `Inactive` path. `NotEvaluated` without an evaluable program and the
 existing unscoped/resolved controls stay unchanged. Corrected source
 `8873e0150f` has retained focused 17 unit + 9 HTTP passes and independent F1
-closure; main-first `1c8b146fb` has parent-verified patch equivalence, not fresh
-integrated execution. Selected package gate and publication remain pending.
+closure. The main-first slice is software-accepted and published as `e31f0e062`
+after the complete selected gate14/14 (Rust2090passed/73ignored, separate
+corpus51/51; frozen inputs and checked user data untouched). No release,
+deployment or native UI claim.
 The read-only overlay adds no persisted owner, numbering or write authority;
 constructed missing/foreign-owner states are not malformed-store load/reopen
 evidence. [Epochs, controls and limits](../status/2026-11-14-wp07-unresolved-module-owner.md).

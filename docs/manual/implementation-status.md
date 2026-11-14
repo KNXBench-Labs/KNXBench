@@ -2,21 +2,24 @@
 
 # Implementation status
 
-## Folder-caption language (14 November 2026; WP06-S1 integration candidate)
+## Folder-caption language (14 November 2026; WP06-S1 published on main)
 
-A bounded source-only successor can read literal installed-product folder captions
-from uniform project/20 or a schema-23 owner's exact namespace and select a
+A bounded runtime successor reads literal installed-product folder captions
+from uniform project/20 or a schema-23 owner's exact namespace and selects a
 translation for an explicitly requested product language using the existing rule.
 Saved text, including blank fields, still wins; grouping, placement and history
 stay unchanged. Optional provenance names the selected language or why the
 literal default was kept; without a language request the field is absent.
 A translation-pass resource refusal withholds the whole optional caption overlay,
-not a default-caption fallback. Corrected source is independently reviewed and
-has retained focused results, but the main-first candidate `789ab6143` still
-awaits the complete integrated selected gate and publication. **Not a released
-capability or whole-WP-06 acceptance.** Templates, empty/nested/module folders,
-recomputed placement and new writes remain outside this slice; no ETS
-compatibility, native UI or hardware claim.
+not a default-caption fallback. Runtime `8de9487de` is independently reviewed,
+software-accepted through the complete selected 17-stage gate and published on
+main with parent-verified exact readback, frozen inputs and checked user data
+untouched. The selected namespace corpus regression passed 97/97; this is not
+full manufacturer/reference compatibility. This result-only docs successor still
+awaits its independent review, complete planner-selected gate and publication.
+**Not a released capability or whole-WP-06 acceptance.** Templates,
+empty/nested/module folders, recomputed placement and new writes remain outside
+this slice; no ETS compatibility, native UI or hardware claim.
 [Exact epochs, amendments and coverage limits](../status/2026-11-14-wp06-folder-caption-language.md).
 
 ## Unresolved module-owner activation (14 November 2026; integration candidate)

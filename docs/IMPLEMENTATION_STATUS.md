@@ -12,7 +12,7 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
-## Folder-caption namespace and language (14 November 2026; WP06-S1 integration candidate)
+## Folder-caption namespace and language (14 November 2026; WP06-S1 published runtime)
 
 Corrected source `9b0d937dc` extends the existing read-only caption fallback to
 uniform project/20 or the schema-23 owner's exact namespace and explicit product
@@ -22,13 +22,19 @@ Translation-pass resource refusal withholds the whole optional caption overlay,
 not just the translation. Saved text, placement, keys, grouping, currency, stored
 bytes and history are unchanged. Independent correction review APPROVE closes
 F1/F2/F3/F5; retained focused GREEN is captions 29, language 7, HTTP 12 and server
-unit 5 (filtered/overlapping, not additive). Main-first `789ab6143` on `041df68a0`
-preserves the reviewed full feature patch; fresh complete selected gate and
-publication are **pending**, not inferred from those results. [Epochs, amendments
-and limits](status/2026-11-14-wp06-folder-caption-language.md) keep initial compile
-RED, unit-only A7 and the installer-bypassing mixed-namespace fixture separate.
-Whole WP-06 remains evidence-gated; no new mapping, writes, migration, native UI,
-ETS compatibility, release or hardware acceptance.
+unit 5 (filtered/overlapping, not additive). Runtime `8de9487de` (integration
+`789ab6143`, base `041df68a0`) is independently reviewed, software-accepted and
+published with parent-verified exact local/tracking/live readback. Complete selected
+gate 17/17 and nested web 34/34 passed; Rust 6,187 passed / 181 ignored, separate
+corpus 97/97 and tool tests 547 passed / 16 skipped. Binding 100 overlaps Rust;
+browser 1,238 = 1,143 functional + 95 exclusive in targeted/default 103 specs,
+not production configs. Inputs/fingerprint were frozen and user data checked
+untouched. This result-only docs successor still awaits independent review, its
+complete planner-selected gate and publication. [Epochs, amendments and limits](status/2026-11-14-wp06-folder-caption-language.md)
+keep initial compile RED, unit-only A7 and the installer-bypassing mixed-namespace
+fixture separate. Whole WP-06 remains evidence-gated; no new mapping, writes,
+migration, native UI, full manufacturer/reference compatibility, release or hardware
+acceptance.
 
 ## Unresolved module-owner overlay (14 November 2026; WP07-S1 integration candidate)
 

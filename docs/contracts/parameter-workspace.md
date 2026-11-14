@@ -59,6 +59,48 @@ or protocol schema change; product database v24 adds typed presentation columns
   label/value. Metadata moves below the editor when a third column will not fit.
   Existing light/dark/theme tokens remain authoritative.
 
+## Evaluated display containers (source candidate after Alpha 21)
+
+- A leaf group may carry additive `container`: `{scope, nodeId, elementId, kind,
+  label, labelFill?}`. `scope` is the evaluated owner's full module scope, not
+  necessarily the field's scope. Identity uses owner scope plus response-local
+  node ID, never captions, source ID, numbering or whitespace. The original
+  group key and editor row keys stay unchanged. Older servers omit this field.
+- The actual evaluated `Channel`/`ChannelIndependentBlock` owner is forwarded
+  only when the reached items of the leaf agree. Missing/ambiguous ownership
+  stays at the root. Missing IDs still have node identity; missing or unreadable
+  text gets a localized numbered container caption using the existing tooltip
+  and fill-provenance policy. Equal captions never merge containers.
+- Source-order runs are retained. A non-contiguous recurrence of an owner gets
+  another navigation disclosure rather than moving intervening root areas.
+  Only reached fields, admitted passive labels and separators create areas;
+  this does not list every conditional declaration or empty container.
+- Container disclosures start folded, independently of the selected area.
+  Folding the register does not close the selected editor. Search temporarily
+  reveals child paths and includes displayed/source container captions; clearing
+  search restores the previous disclosure state. Heading, context and search
+  results include scope / container / leaf. State is mount-local, not saved.
+- Disclosure controls are ordinary keyboard-focusable buttons with
+  `aria-expanded`/`aria-controls`. Their state never invokes a parameter command,
+  Apply, undo or programming operation. Existing ordinary blur-save remains
+  owned by the editor; checked drafts retain their explicit Apply/stale policy.
+  Editors remain under the same stable parent through search and reevaluation.
+- Download-difference marks aggregate from actual value children, including
+  folded children, without introducing a programming-state or value store.
+  Access, grid admission, translated axes and all existing diagnostics remain
+  authoritative. No nested-block, module-instance, Repeat, callback, arbitrary
+  hierarchy or universal reference-tool fidelity claim is added.
+
+Fictional server tests in `http_parameter_captions/navigation.rs` exercise the
+real evaluated-ownership/HTTP producer and capture original response bytes when
+`KNXBENCH_PARAMETER_NAVIGATION_CAPTURE_DIR` names a fresh output directory. The
+existing production parameters lane registers capture-backed mounted-app tests
+through `parameter-block-rename.e2e.ts`; with that same directory they consume
+the original bodies unchanged (EN/DE, wide/narrow). Without captures these four
+cases are explicitly skipped, not fabricated or credited as passes. This is an
+intercepted producer/consumer composition proof, not a simultaneous live-backend,
+native or hardware test. Independent review and package acceptance remain separate.
+
 ## Declared grids (ADR-0137)
 
 - **What counts.** A `ParameterBlock` whose `Layout` is `Table` or `Grid` with
@@ -163,8 +205,8 @@ or protocol schema change; product database v24 adds typed presentation columns
 
 ## Boundaries and evidence
 
-The HTTP projection exposes the nearest declared ParameterBlock plus its declared
-grid geometry; it is not a complete Channel/repeat graph or a physical-device
+The HTTP projection exposes the nearest declared ParameterBlock, its agreed evaluated
+display owner and declared grid geometry; it is not a complete Channel/repeat graph or a physical-device
 view. No translated-text parsing, manufacturer/product ID switch, inferred rocker
 arrangement or auto-generated multi-channel editing operation is permitted.
 Unsupported source constructs and manufacturer-only fields remain governed by

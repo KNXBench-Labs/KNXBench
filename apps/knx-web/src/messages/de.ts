@@ -2214,6 +2214,7 @@ export const messages: Record<MessageKey, string> = {
   "parameters.workspace.count": "{visible} von {total} Einträgen",
   "parameters.workspace.clear": "Suche zurücksetzen",
   "parameters.workspace.areas": "Bereiche",
+  "parameters.workspace.containerNumber": "Container {number}",
   "parameters.workspace.allAreas": "In allen Bereichen",
   "parameters.workspace.results": "Suchergebnisse",
   "parameters.workspace.sourceGroups": "Gruppiert nach Applikationsdaten",

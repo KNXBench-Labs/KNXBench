@@ -2237,6 +2237,7 @@ export const messages = {
   "parameters.workspace.count": "{visible} of {total} entries",
   "parameters.workspace.clear": "Clear search",
   "parameters.workspace.areas": "Areas",
+  "parameters.workspace.containerNumber": "Container {number}",
   "parameters.workspace.allAreas": "Across all areas",
   "parameters.workspace.results": "Search results",
   "parameters.workspace.sourceGroups": "Grouped by application data",

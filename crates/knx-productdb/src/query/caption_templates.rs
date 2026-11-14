@@ -52,7 +52,7 @@ pub fn parameter_caption_templates(
          FROM dynamic_node AS n JOIN translation AS t
            ON t.scope='Program' AND t.scope_id=n.program_id
           AND t.ref_id=n.element_id AND t.attribute_name='Text'
-         WHERE n.program_id=?1 AND n.kind IN ('ParameterBlock','ParameterSeparator','ParameterBlockRename','Rename')
+         WHERE n.program_id=?1 AND n.kind IN ('ParameterBlock','ParameterSeparator','ParameterBlockRename','Rename','Channel','ChannelIndependentBlock')
            AND t.text IS NOT NULL
          ORDER BY n.module_def_id, n.node_id, t.language",
     )?;

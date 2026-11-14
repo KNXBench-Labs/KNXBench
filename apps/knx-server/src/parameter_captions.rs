@@ -116,7 +116,10 @@ pub(crate) fn apply(
         .map(|rename| (rename.target_node_id, rename))
         .collect();
     for (index, label) in evaluation.activation.labels.iter().enumerate() {
-        if !matches!(label.kind.as_str(), "ParameterBlock" | "ParameterSeparator") {
+        if !matches!(
+            label.kind.as_str(),
+            "ParameterBlock" | "ParameterSeparator" | "Channel" | "ChannelIndependentBlock"
+        ) {
             continue;
         }
         // The replacement is translated by its own identity, never by the block's: the base

@@ -1,4 +1,4 @@
-//! Evaluates a stored `Dynamic` tree: given a set of parameter values,
+//! Evaluates stored dynamic trees, retaining scoped activation and presentation ownership.
 //! which `ParameterRefRef`s and `ComObjectRefRef`s are active, and what
 //! could not be decided.
 //!
@@ -1435,6 +1435,8 @@ pub struct ActiveRef {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ActiveSeparator {
     pub scope: Option<Rc<ModuleScope>>,
+    /// Evaluated display owner, shared across reached presentation leaves.
+    pub channel: Option<Rc<ChannelOwner>>,
     /// `dynamic_node.node_id` within the tree named by `scope`.
     pub node_id: i64,
     /// As [`ActiveRef::block_access`], for the path that activated it.
@@ -1451,6 +1453,8 @@ pub struct ActiveSeparator {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ActiveButton {
     pub scope: Option<Rc<ModuleScope>>,
+    /// Shared evaluated display owner; no button action semantics are implied.
+    pub channel: Option<Rc<ChannelOwner>>,
     /// `dynamic_node.node_id` within the tree named by `scope`.
     pub node_id: i64,
     /// As [`ActiveRef::block_access`], for the path that reached it.
@@ -1615,7 +1619,7 @@ type Seen = HashMap<ScopeKey, usize>;
 #[derive(Debug, Clone, Copy, Default)]
 struct PathContext<'a> {
     /// The innermost channel element ([`ActiveRef::channel`]).
-    channel: Option<&'a ChannelOwner>,
+    channel: Option<&'a Rc<ChannelOwner>>,
     /// The most restrictive block `Access` so far ([`ActiveRef::block_access`]).
     block_access: Option<&'a Rc<str>>,
     /// The nearest enclosing `ParameterBlock`, the only target a rename may name.
@@ -1766,7 +1770,8 @@ impl Activation {
         self.parameter_refs.push(ActiveRef {
             scope: scope.cloned(),
             ref_id: id,
-            channel: path.channel.cloned(),
+            // Preserve the existing owned ActiveRef API; passive leaves share the path owner.
+            channel: path.channel.map(|owner| owner.as_ref().clone()),
             block_access: path.block_access.map(|access| access.to_string()),
         });
     }
@@ -1792,7 +1797,8 @@ impl Activation {
         self.com_object_refs.push(ActiveRef {
             scope: scope.cloned(),
             ref_id: id,
-            channel: path.channel.cloned(),
+            // Preserve the existing owned ActiveRef API; passive leaves share the path owner.
+            channel: path.channel.map(|owner| owner.as_ref().clone()),
             block_access: path.block_access.map(|access| access.to_string()),
         });
     }
@@ -2199,13 +2205,16 @@ fn walk(
         }
         // ISSUE-08: a channel element becomes the owner of everything
         // activated below it; any other container passes the current one on.
-        let opened = is_channel(&node.kind).then(|| ChannelOwner {
-            scope: scope.cloned(),
-            node_id,
-            kind: node.kind.clone(),
-            element_id: node.element_id.clone(),
-            name: node.name.clone(),
-            number: node.number.clone(),
+        // One immutable owner allocation per channel visit, not per passive leaf.
+        let opened = is_channel(&node.kind).then(|| {
+            Rc::new(ChannelOwner {
+                scope: scope.cloned(),
+                node_id,
+                kind: node.kind.clone(),
+                element_id: node.element_id.clone(),
+                name: node.name.clone(),
+                number: node.number.clone(),
+            })
         });
         // ADR-0139: a block's `Access` binds everything below it.
         let narrowed = (node.kind == "ParameterBlock")
@@ -2285,6 +2294,7 @@ fn walk(
             if record_label(activation, scope, node) {
                 activation.separators.push(ActiveSeparator {
                     scope: scope.cloned(),
+                    channel: path.channel.cloned(),
                     node_id,
                     block_access: path.block_access.map(|access| access.to_string()),
                     parameter_refs_before: activation.parameter_refs.len(),
@@ -2434,6 +2444,7 @@ fn walk(
             if other == "Button" {
                 activation.buttons.push(ActiveButton {
                     scope: scope.cloned(),
+                    channel: path.channel.cloned(),
                     node_id,
                     block_access: path.block_access.map(|access| access.to_string()),
                 });

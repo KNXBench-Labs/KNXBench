@@ -17,6 +17,12 @@ Last updated: 2026-11-13 (Alpha 21 pre-release; source cutoff 2026-11-12)
 
 <a id="source-updates-after-alpha-20"></a>
 
+## Source candidate after Alpha 21
+
+| Feature | Scope | Availability |
+| --- | --- | --- |
+| [Evaluated parameter navigation](contracts/parameter-workspace.md#evaluated-display-containers-source-candidate-after-alpha-21) | Display-container/leaf navigation, source caption provenance, presentation-only folding, stable editor routing and descendant download marks; no arbitrary nested hierarchy | Local-only; review/package acceptance pending |
+
 ## New in Alpha 21
 
 [Release scope and upgrade](releases/alpha21.md): project 19 → 21, product database 32 → 33; keep backups. TCP/USB remain experimental, UDP supported.

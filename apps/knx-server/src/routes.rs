@@ -575,10 +575,25 @@ pub(crate) struct ModuleScopeDto {
 #[derive(serde::Serialize, Debug, Clone, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct ParameterGroupDto {
+    /// Evaluated display owner, separate from this leaf and its evaluation scope.
+    pub(crate) container: Option<ParameterContainerDto>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) label_fill: Option<knx_projection::TextFill>,
     pub(crate) key: String,
     pub(crate) label: Option<String>,
+}
+
+/// One evaluated navigation container; node identity is scoped, never caption-derived.
+#[derive(serde::Serialize, Debug, Clone, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct ParameterContainerDto {
+    pub(crate) scope: Option<ModuleScopeDto>,
+    pub(crate) node_id: i64,
+    pub(crate) element_id: Option<String>,
+    pub(crate) kind: String,
+    pub(crate) label: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) label_fill: Option<knx_projection::TextFill>,
 }
 
 /// ADR-0139: one activated `ParameterSeparator`, display only. Every

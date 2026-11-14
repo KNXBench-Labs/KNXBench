@@ -7,6 +7,72 @@ use knx_productdb::dynamic::{
 use knx_productdb::parameter_layout::{load, ButtonBinding, Cell, ParameterLayout};
 use knx_productdb::{ingest_file, open_and_migrate, Connection};
 
+#[test]
+fn rejected_button_owner_metadata_is_shared_across_fanout() {
+    // Independently authored source, with one admitted neighbor and otherwise valid grids.
+    for (id_len, name_len, number_len) in [(8, 8, 8), (8192, 8, 8), (8, 8192, 8), (8, 8, 8192)] {
+        for count in [2, 64] {
+            let rejected = (0..count)
+                .map(|index| {
+                    format!(r#"<Button Id="FABLE-B-{index}" Text="No cell, no passive label"/>"#)
+                })
+                .collect::<String>();
+            let id = "i".repeat(id_len);
+            let name = "n".repeat(name_len);
+            let number = "7".repeat(number_len);
+            let source = format!(
+                r#"<KNX xmlns="http://knx.org/xml/project/20">
+<ManufacturerData><Manufacturer RefId="M-FIX"><ApplicationPrograms>
+<ApplicationProgram Id="A-FIX" Name="Fable owner sharing" ApplicationVersion="1" MaskVersion="MV-091A">
+<Static/><Dynamic><Channel Id="{id}" Name="{name}" Number="{number}" Text="Fable channel">
+<ParameterBlock Id="FABLE-PAGE" Layout="Grid" Access="Read">
+<Rows><Row Id="FABLE-R"/></Rows><Columns><Column Id="FABLE-C" Width="100%"/></Columns>
+<Button Id="FABLE-ADMITTED" Text="Neighbor stays visible" Cell="1,1"/>{rejected}
+</ParameterBlock></Channel></Dynamic></ApplicationProgram>
+</ApplicationPrograms></Manufacturer></ManufacturerData></KNX>"#
+            );
+            let fixture = ingest(&source);
+            let active = activation(&fixture.conn, &[]);
+            assert_eq!(active.buttons.len(), count + 1);
+            assert!(active.parameter_refs.is_empty());
+            let layout = load(&fixture.conn, "A-FIX").unwrap();
+            assert_eq!(layout.button_binding(), ButtonBinding::Bound);
+            let first = &active.buttons[0];
+            let literal = layout.button("", first.node_id).expect("admitted neighbor");
+            assert_eq!(literal.text, "Neighbor stays visible");
+            let shared = first.channel.as_ref().unwrap();
+            assert_eq!(shared.kind, "Channel");
+            assert!(shared.scope.is_none());
+            assert_eq!(shared.element_id.as_deref(), Some(id.as_str()));
+            assert_eq!(shared.name.as_deref(), Some(name.as_str()));
+            assert_eq!(shared.number.as_deref(), Some(number.as_str()));
+            assert_eq!(active.labels.len(), 1);
+            assert_eq!(active.labels[0].node_id, shared.node_id);
+            assert_eq!(active.labels[0].text, "Fable channel");
+            for button in active.buttons.iter().skip(1) {
+                assert!(
+                    layout.button("", button.node_id).is_none(),
+                    "missing Cell refuses this label"
+                );
+                assert_eq!(button.block_access.as_deref(), Some("Read"));
+                let owner = button.channel.as_ref().unwrap();
+                assert_eq!(owner, shared);
+                for (actual, first) in [
+                    (&owner.element_id, &shared.element_id),
+                    (&owner.name, &shared.name),
+                    (&owner.number, &shared.number),
+                ] {
+                    assert_eq!(
+                        actual.as_ref().unwrap().as_ptr(),
+                        first.as_ref().unwrap().as_ptr(),
+                        "rejected button fanout must not copy owner payload: lengths={id_len}/{name_len}/{number_len}, count={count}"
+                    );
+                }
+            }
+        }
+    }
+}
+
 const EN: &str = include_str!("../../fixtures/passive-button-literal.en.xml");
 const DE: &str = include_str!("../../fixtures/passive-button-literal.de.xml");
 const ONLY: &str = include_str!("../../fixtures/passive-button-only.xml");
@@ -308,7 +374,10 @@ fn only_the_exact_literal_form_is_admitted() {
     );
     // Whitespace, comments and processing instructions are no content.
     assert_eq!(
-        admitted("<Button Id=\"B-ONLY\" Text=\"Spaced\" Cell=\"1,2\">\n  <!-- note --><?pi x?> </Button>").len(),
+        admitted(
+            "<Button Id=\"B-ONLY\" Text=\"Spaced\" Cell=\"1,2\">\n  <!-- note --><?pi x?> </Button>"
+        )
+        .len(),
         1
     );
     for refused in [

@@ -13,6 +13,9 @@
 .parameter-workspace-nav button > span:first-child { overflow-wrap: anywhere; min-width: 0; }
 .parameter-workspace-nav button[aria-current="page"] { border-left-color: var(--knx-accent); color: var(--knx-accent); background: var(--knx-surface); font-weight: 650; }
 .parameter-workspace-nav button:hover { background: var(--knx-surface); }
+.parameter-workspace-container-children { margin-inline-start: 12px; border-inline-start: 1px solid var(--knx-border); }
+.parameter-workspace-container-children[hidden] { display: none; }
+.parameter-workspace-nav .parameter-workspace-container-toggle { font-weight: 650; }
 .parameter-workspace-nav-count { font-variant-numeric: tabular-nums; color: var(--knx-muted); font-size: 11px; }
 .parameter-workspace-editor { min-width: 0; padding-top: 16px; }
 .parameter-workspace-heading { display: flex; justify-content: space-between; align-items: start; gap: 12px; min-height: 52px; }

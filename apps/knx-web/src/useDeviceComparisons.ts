@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import * as api from "./api";
 import type { ProjectTree } from "./bindings/ProjectTree";
-import { runComparisonQueue, type ComparisonEntry, type ComparisonTarget } from "./deviceComparisons";
+import { runComparisonQueue, type ComparisonEntry, type ComparisonTarget, type ComparisonTransport } from "./deviceComparisons";
 import { projectActivityContext, type ActivityController, type ActivityHandle } from "./activityController";
 import { useTranslate } from "./i18n";
 
@@ -14,7 +14,7 @@ export function useDeviceComparisons(tree: ProjectTree | null, activity: Activit
   if (liveScope.current.key !== scopeKey) liveScope.current = { key: scopeKey };
   const scope = liveScope.current;
   const [records, setRecords] = useState<{ scope: typeof scope; entries: Map<number, ComparisonEntry> }>({ scope, entries: new Map() });
-  const [review, setReview] = useState<{ scope: typeof scope; targets: ComparisonTarget[]; started: boolean } | null>(null);
+  const [review, setReview] = useState<{ scope: typeof scope; targets: ComparisonTarget[]; started: boolean; connection?: { gateway: string; transport: ComparisonTransport } } | null>(null);
   const [selected, setSelected] = useState<number | null>(null);
   const [running, setRunning] = useState(false);
   const [stopping, setStopping] = useState(false);
@@ -55,7 +55,7 @@ export function useDeviceComparisons(tree: ProjectTree | null, activity: Activit
     open([target]); setSelected(target.id);
     setReview({ scope, started: true, targets: [{ ...target, revision: tree.comparison_revisions?.[target.id] }] });
   }
-  async function confirm(gateway: string) {
+  async function confirm(gateway: string, transport: ComparisonTransport = "udp") {
     if (!tree || !review || review.scope !== scope || scope !== liveScope.current || review.started || run.current) return;
     if (!tree.server_incarnation || tree.project_incarnation === undefined) { setError(t("compare.noRevision")); return; }
     const owned = { cancelled: false, activity: activity.begin({ kind: "compare", operationId: String(++activitySerial.current),
@@ -65,13 +65,13 @@ export function useDeviceComparisons(tree: ProjectTree | null, activity: Activit
     activityId.current = owned.activity.id;
     let failed = false;
     const reviewed = review;
-    setReview({ ...review, started: true }); setRunning(true); setStopping(false); setError(null);
+    setReview({ ...review, started: true, connection: { gateway, transport } }); setRunning(true); setStopping(false); setError(null);
     const live = () => mounted.current && run.current === owned && liveScope.current === reviewed.scope;
     try {
       await runComparisonQueue({ targets: reviewed.targets,
         scope: { serverIncarnation: tree.server_incarnation, projectIncarnation: tree.project_incarnation }, gateway,
         cancelled: () => !live() || owned.cancelled,
-        compare: api.compareDevice,
+        transport, compare: transport === "tcp" ? api.compareDeviceTcp : api.compareDevice,
         describe: (code) => t(`compare.${code}`),
         result: (id, value) => { if (!live()) return;
           setRecords((previous) => ({ scope: reviewed.scope, entries: new Map([

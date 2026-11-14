@@ -1,4 +1,7 @@
 /* P4 uses the existing engineering palette: quiet table, earned status, no new theme. */
+.comparison-transport { display: grid; gap: .35rem; max-width: 24rem; }
+.comparison-transport select { width: 100%; padding: .5rem; }
+.comparison-connection { overflow-wrap: anywhere; padding: .6rem; border: 1px solid var(--knx-border); border-radius: .35rem; }
 .search-panel.device-comparison-dialog {
   width: min(1100px, calc(100vw - 32px));
   min-width: 0;

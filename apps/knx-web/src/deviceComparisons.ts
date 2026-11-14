@@ -6,11 +6,13 @@ export interface ComparisonBinding { serverIncarnation: string; projectIncarnati
 export interface DecodedComparisonRow { index?: number; adoptable?: boolean; kind: string; label: string; address: number; project: string | null; device: string | null; reason: string | null }
 export type BoundDeviceComparison = DeviceCompareResponse & ComparisonBinding & { decoded: DecodedComparisonRow[]; outdated: boolean };
 export interface ComparisonTarget { id: number; name: string; address: string | null; revision: number | undefined }
-export interface ComparisonEntry { tag: ComparisonTag; revision: number | undefined; reason: string | null; result: BoundDeviceComparison | null }
+export type ComparisonTransport = "udp" | "tcp";
+export interface ComparisonEntry { connection?: import("./api").TcpComparisonConnection; tag: ComparisonTag; revision: number | undefined; reason: string | null; result: BoundDeviceComparison | null }
 export interface ComparisonQueue {
   targets: readonly ComparisonTarget[];
   scope: { serverIncarnation: string; projectIncarnation: number };
   gateway: string;
+  transport: ComparisonTransport;
   describe?: (code: ComparisonReason) => string;
   cancelled: () => boolean;
   compare: (address: string, gateway: string, binding: ComparisonBinding) => Promise<unknown>;
@@ -35,17 +37,24 @@ export async function runComparisonQueue(queue: ComparisonQueue): Promise<void> 
     } else {
       try {
         const value = await queue.compare(target.address, queue.gateway, binding);
+        const connection = queue.transport === "tcp" ? admitTcpConnection(value, true) : undefined;
         const result = admitComparison(value, target.address, binding);
         const loaded = result.loadStates.length > 0 && result.loadStates.every((state) => state.state === "Loaded");
         entry = { tag: result.outdated ? "outdated" : result.same && loaded ? "synced" : "different",
-          revision: target.revision, reason: loaded ? null : describe("notLoaded"), result };
+          revision: target.revision, reason: loaded ? null : describe("notLoaded"), result, ...(connection ? { connection } : {}) };
       } catch (error) {
         const kind = errorKind(error);
+        let connection: import("./api").TcpComparisonConnection | undefined;
+        let invalidMetadata = false;
+        if (queue.transport === "tcp" && !(error instanceof InvalidComparison)) {
+          try { connection = admitTcpConnection(typeof error === "object" && error !== null && "body" in error ? error.body : null, false); }
+          catch { invalidMetadata = true; }
+        }
         // A shared-tunnel refusal is about admission, not evidence about a device.
         if (kind === "gatewayBusy") throw error;
         entry = { tag: kind === "deviceCompareWrongApplication" ? "wrongApplication" :
           kind === "deviceCompareNoAnswer" ? "noAnswer" : "notComparable", revision: target.revision,
-          reason: error instanceof InvalidComparison ? describe("invalidResult") : error instanceof Error ? error.message : String(error), result: null };
+          reason: error instanceof InvalidComparison || invalidMetadata ? describe("invalidResult") : error instanceof Error ? error.message : String(error), result: null, ...(connection ? { connection } : {}) };
       }
     }
     queue.result(target.id, entry);
@@ -59,6 +68,22 @@ export function errorKind(error: unknown): string | undefined {
   return typeof body === "object" && body !== null && "kind" in body && typeof body.kind === "string" ? body.kind : undefined;
 }
 class InvalidComparison extends Error {}
+
+/** Validate route-specific facts; missing is not zero and selected is not actual. */
+export function admitTcpConnection(value: unknown, success: boolean): import("./api").TcpComparisonConnection {
+  if (!value || typeof value !== "object" || !("connection" in value)) throw new InvalidComparison();
+  const c = value.connection as import("./api").TcpComparisonConnection | null;
+  const address = (v: unknown) => typeof v === "string" && /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/.test(v) &&
+    v.split(".").every((part, index) => Number(part) <= (index === 2 ? 255 : 15));
+  if (!c || c.requestedTransport !== "tcp" ||
+    (c.actualTransport !== "tcp" && c.actualTransport !== null) ||
+    (c.assignedAddress !== null && !address(c.assignedAddress)) ||
+    (c.skippedFramesBeforeDisconnect !== null && (!Number.isSafeInteger(c.skippedFramesBeforeDisconnect) || c.skippedFramesBeforeDisconnect < 0)) ||
+    (c.actualTransport === null && (c.assignedAddress !== null || c.skippedFramesBeforeDisconnect !== null)) ||
+    (c.actualTransport === "tcp" && (c.assignedAddress === null || c.skippedFramesBeforeDisconnect === null)) ||
+    (success && c.actualTransport !== "tcp")) throw new InvalidComparison();
+  return c;
+}
 
 function admitComparison(value: unknown, address: string, binding: ComparisonBinding): BoundDeviceComparison {
   const v = value as BoundDeviceComparison | null;

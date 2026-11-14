@@ -1,5 +1,5 @@
 /** One gateway review for a frozen device list, progress, cancellation and decoded results. */
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Overlay from "./Overlay";
 import ComparisonAdoptionPanel from "./ComparisonAdoptionPanel";
 import OpenDownloadButton from "./OpenDownloadButton";
@@ -27,12 +27,14 @@ export default function DeviceComparisonDialog({ controller: c, onTreeUpdate, sn
   const [adopting, setAdopting] = useState(false);
   const [adoptedToken, setAdoptedToken] = useState<string | null>(null);
   const review = c.review;
+  const [transport, setTransport] = useState<"udp" | "tcp">("udp");
+  useEffect(() => { if (review && !review.started) setTransport("udp"); }, [review]);
   if (!review) return null;
   const selected = c.selected === null ? null : c.entry(c.selected);
   function confirm() {
     const value = validateGatewayFields(splitGatewayEndpoint(gateway));
     if (!value.ok) { setGatewayError(t(value.reason === "hostRequired" ? "busMonitor.connectNeedsGateway" : value.reason === "invalidPort" ? "busMonitor.invalidPort" : "busMonitor.invalidHost")); return; }
-    setGatewayError(null); void c.confirm(value.endpoint);
+    setGatewayError(null); void c.confirm(value.endpoint, transport);
   }
   return <Overlay className="device-comparison-dialog" labelledBy="comparison-title" onClose={() => { if (!adopting) c.close(); }}>
     <header><p className="eyebrow">{t("compare.readOnly")}</p><h2 id="comparison-title">{t("compare.title")}</h2>
@@ -42,10 +44,16 @@ export default function DeviceComparisonDialog({ controller: c, onTreeUpdate, sn
       <ul className="comparison-targets">{review.targets.map((target) => <li key={target.id}><code>{target.address ?? "—"}</code> — {target.name}</li>)}</ul>
       <label className="comparison-gateway-label">{t("deviceDownload.gateway")}
         <input className="comparison-gateway" value={gateway} onChange={(event) => { setGateway(event.target.value); setGatewayError(null); }} placeholder="192.0.2.10:3671" /></label>
+      <label className="comparison-transport">{t("compare.transport")}
+        <select value={transport} onChange={(event) => setTransport(event.target.value === "tcp" ? "tcp" : "udp")}>
+          <option value="udp">UDP</option><option value="tcp">{t("compare.tcpExperimental")}</option>
+        </select></label>
+      <p>{t("compare.transportHint")}</p>
       {gatewayError && <p className="field-error" role="alert">{gatewayError}</p>}
       <div className="dialog-actions"><button type="button" className="primary-action" onClick={confirm}>{t("compare.confirm")}</button>
         <button type="button" onClick={c.close}>{t("deviceChecks.cancel")}</button></div>
     </> : <>
+      {review.connection && <p className="comparison-connection">{t("compare.frozenConnection", { gateway: review.connection.gateway, transport: review.connection.transport.toUpperCase() })}</p>}
       <p role="status">{t("compare.progress", { completed: c.progress.completed, total: review.targets.length })}
         {c.progress.current && <> — {c.progress.current.address ?? "—"} · {c.progress.current.name}</>}</p>
       <progress max={review.targets.length || 1} value={c.progress.completed} aria-label={t("compare.progressLabel")} />
@@ -57,6 +65,10 @@ export default function DeviceComparisonDialog({ controller: c, onTreeUpdate, sn
           aria-pressed={c.selected === target.id}>{target.address ?? "—"} — {target.name}</button>
           <ComparisonTag entry={entry} onClick={() => { if (!adopting) c.setSelected(target.id); }} /></li>;
       })}</ul>
+      {selected?.connection && <p className="comparison-connection" role="status">{selected.connection.actualTransport === null ? t("compare.connectionUnavailable") : t("compare.actualConnection", {
+        transport: selected.connection.actualTransport.toUpperCase(), address: selected.connection.assignedAddress ?? "—",
+        skipped: selected.connection.skippedFramesBeforeDisconnect ?? "—",
+      })}</p>}
       {selected?.reason && <p className="comparison-reason">{selected.reason}</p>}
       {selected?.tag === "outdated" && <p className="form-warning">{t("compare.outdatedHint")}</p>}
       {selected?.result?.observationToken && selected.result.observationToken === adoptedToken && <p role="status">{t("compare.adoption.applied")}</p>}

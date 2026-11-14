@@ -939,6 +939,9 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
     const comparison = page.locator(".device-comparison-dialog");
     const gateway = comparison.locator("input");
     await gateway.fill("192.0.2.17:3671");
+    // The compare-local transport choice sits between the gateway field and Confirm.
+    await page.keyboard.press("Tab");
+    await expect(comparison.getByRole("combobox")).toBeFocused();
     // This is the last real control used, not merely the dialog's default target.
     await page.keyboard.press("Tab");
     await expect(comparison.getByRole("button", { name: m["compare.confirm"], exact: true })).toBeFocused();

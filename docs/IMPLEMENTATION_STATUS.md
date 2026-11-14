@@ -12,6 +12,20 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Unresolved module-owner overlay (14 November 2026; WP07-S1 integration candidate)
+
+An imported module communication object without resolved own instance authority
+projects `Undetermined` with no channel after evaluation. Genuine unscoped and
+resolved-instance controls, `NotEvaluated` without an evaluable program and the
+module write stop-line are unchanged. Corrected source `8873e0150f` has retained
+17 unit + 9 HTTP passes and independent finding-specific approval (F1 closed).
+Main-first `1c8b146fb` is patch-equivalent to the reviewed candidate; fresh
+integrated selected package gate and publication remain pending. The
+[bounded result](status/2026-11-14-wp07-unresolved-module-owner.md) separates
+source/test epochs, original-production HTTP RED, exact M3 discrimination and
+the historical broad-suite deviation. Read overlay only: no persistence,
+identity/numbering or module write authority; whole WP-07/KL-068 stays open.
+
 ## Notes/Instructions Preview and Cancel focus (14 November 2026; WP-11 E4 candidate)
 
 Exact-initiator focus restoration is implemented with real disabled semantics,

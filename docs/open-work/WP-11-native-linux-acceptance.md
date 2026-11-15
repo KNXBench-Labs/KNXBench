@@ -291,8 +291,8 @@ frontend, not integration base `52559229b` or main-first candidate `994d9bd5d`.
 Independent native aggregate review approves that bounded six-cell composition.
 The main-first runtime delivery is software-accepted and published as `ea7ac7ae1`
 after the complete selected 11-stage package gate (43 nested web stages), with
-frozen inputs and checked user data untouched. No release/deployment or native
-source rebinding is inferred.
+frozen inputs and checked user data untouched. The focus slice ships in Alpha 22;
+no deployment or native source rebinding is inferred.
 Native01 remains failed/incomplete as an original attempt; its Notes 100%
 partial is discarded, and Native02/03/04 add no valid measured predicates.
 Native05's seat restoration and owned teardown are verified without upgrading

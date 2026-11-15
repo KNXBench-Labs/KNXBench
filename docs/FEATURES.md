@@ -1,11 +1,11 @@
-Last updated: 2026-11-14 (Alpha 21 baseline; accepted main-only navigation successor)
+Last updated: 2026-11-15 (Alpha 22 released baseline)
 
 # KNXBench Features
 
 | Reference | Value |
 | --- | --- |
-| Source snapshot | `v0.1.0-alpha.21` (cutoff `938e895c5`) |
-| Released baseline | `v0.1.0-alpha.21` |
+| Source snapshot | `v0.1.0-alpha.22` (source cutoff 15 November 2026) |
+| Released baseline | `v0.1.0-alpha.22` |
 | Main-only | Newer than released baseline |
 | Local-only | Unpublished; not accepted on main |
 | Scope | Listed boundaries; not universal compatibility |
@@ -19,12 +19,25 @@ Last updated: 2026-11-14 (Alpha 21 baseline; accepted main-only navigation succe
 
 <a id="source-candidate-after-alpha-21"></a>
 
-## Main updates after Alpha 21
+<a id="main-updates-after-alpha-21"></a>
+
+## New in Alpha 22
+
+[Release scope and upgrade](releases/alpha22.md): project schema 21 and product
+database 33 unchanged from Alpha 21. No migration; keep complete backups.
+TCP remains experimental, explicitly selected, with UDP the default and no fallback.
 
 | Feature | Scope | Availability |
 | --- | --- | --- |
-| [First-class Settings entry](contracts/settings-workspace.md) | Direct sidebar action alongside Diagnostics, also without a project or category disclosure; existing workspace, toolbar gear and palette retained | Main-only; not in Alpha 21 |
-| [Evaluated parameter navigation](contracts/parameter-workspace.md#evaluated-display-containers-source-candidate-after-alpha-21) | Display-container/leaf navigation, source caption provenance, presentation-only folding, stable editor routing and descendant download marks; no arbitrary nested hierarchy | Main-only; [software-accepted](status/2026-11-14-parameter-navigation.md), not in Alpha 21 |
+| [First-class Settings entry](contracts/settings-workspace.md) | Direct sidebar action alongside Diagnostics, also without a project or category disclosure; existing workspace, toolbar gear and palette retained | alpha.22 |
+| [Evaluated parameter navigation](contracts/parameter-workspace.md#evaluated-display-containers-source-candidate-after-alpha-21) | Display-container/leaf navigation, source caption provenance, presentation-only folding, stable editor routing and descendant download marks; no arbitrary nested hierarchy | alpha.22; [bounded checks](status/2026-11-14-parameter-navigation.md) |
+| [Shared density and technical themes](status/2026-11-14-wp41-workspace-density.md) | Consistent spacing and scalar/text widths in Devices, parameters and Properties; optional Technical Light/Dark, browser-tested without blanket native acceptance | alpha.22 |
+| [Literal grid-axis translations](contracts/alpha16-parameter-layout.md#literal-program-owned-axis-translations) | Supported program-owned literal row/column captions follow product language; module/Repeat and template semantics remain bounded | alpha.22 |
+| [Folder-caption language](status/2026-11-14-wp06-folder-caption-language.md) | Supported installed-product captions, including project/23; saved text still wins; no new placement or write authority | alpha.22 |
+| [Unresolved module-owner activation](status/2026-11-14-wp07-unresolved-module-owner.md) | Read overlay uses Undetermined, not accidental Inactive, when own instance authority is unresolved | alpha.22 |
+| [Preview/Cancel focus](contracts/editor-preview-focus.md) | Notes/Instructions return focus to the initiating button without automatic Apply or stealing moved focus | alpha.22 |
+| [More off-runtime waits](open-work/WP-31-device-editor-unavailable-after-save.md) | More project/bus/catalogue/diagnostic/System-2 waits leave async workers; file-writing edits can still wait for Save | alpha.22 |
+| [Experimental TCP device consumers](contracts/tcp-tunnelling.md) | CLI diagnostics, comparison, service control, ordinary download/restore and System-2 observation/execution/recovery; server/Web comparison, diagnostics and service control; simulator/loopback only | alpha.22 |
 
 ## New in Alpha 21
 
@@ -62,7 +75,7 @@ tested with one adapter type, TCP only against local test peers, and issues #30 
 | [USB/serial TP-UART](status/2026-11-04-usb-serial-ui.md) | Linux server + settings/footer/monitor; explicit passive/active mode, bound sends and reserved serial cleanup; transparent NCN5130 firmware required; correction review and software gates passed, no hardware compatibility claim | alpha.20 |
 | [Passive USB-serial candidates](research/2026-11-05-passive-serial-candidates.md) | Explicit Linux server-local by-id metadata list; bounded and unverified, path selection only, manual entry retained; without hardware verification | alpha.20 |
 | [Server/Web TCP line scans](status/2026-11-10-server-web-tcp-scans.md) | Explicit scan-local TCP, recorded DD0 scanner, strict session/incarnation actions, live/pre-disconnect skips and cleanup uncertainty; UDP default; software-accepted on main, no hardware claim | alpha.21 |
-| [Optional TCP tunnelling](contracts/tcp-tunnelling.md) | Explicit library, CLI monitor/write and server/Web monitor/group traffic; UDP default retained, downloads and other programming paths UDP-only; no real-gateway interoperability claim | alpha.20 |
+| [Optional TCP tunnelling](contracts/tcp-tunnelling.md) | Explicit library, CLI monitor/write and server/Web monitor/group traffic; UDP default retained; Alpha 22 adds the bounded device consumers listed above, not every server/Web programming path; no real-gateway interoperability claim | alpha.20 |
 | [Little-endian numbers and fixed load steps](adr/0159-little-endian-numbers-and-fixed-load-steps.md) | Download preparation for `ParameterByteOrder="LittleEndian"` programs and their `LdCtrlWriteProp`/`LdCtrlDelay` steps, compared with recorded ETS 6.4 images in the simulator; marked untested, needs explicit acceptance ([KL-170](KNOWN_LIMITATIONS.md#catalogue-kl-170)) | alpha.20 |
 | [Inactive choose controllers](adr/0160-inactive-choose-controllers-select-nothing.md) | A `choose` whose placed controller is inactive selects nothing, so hidden push-button LED controllers no longer produce conflicting values | alpha.20 |
 | Undeclared text encoding | Text parameters without a declared encoding are written as Windows-1252, as ETS does; marked untested ([KL-171](KNOWN_LIMITATIONS.md#catalogue-kl-171)) | alpha.20 |

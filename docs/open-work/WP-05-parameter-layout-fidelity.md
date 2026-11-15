@@ -52,7 +52,7 @@ records executed fictional ProductDB, actual HTTP and both owning matrix-browser
 regressions, preservation boundaries and independent Standards/Spec approval with
 no findings. Existing-value history/reopen coverage is not allocator rewind;
 intercepted browser fixtures are not joined real-server/native compatibility.
-After that, the selected 15-stage package gate (Rust 6001 passed/181 ignored, corpus 97/97, 37 web stages) accepted it and it was published on main 14 November; not released. WP-05 is not closed.
+After that, the selected 15-stage package gate (Rust 6001 passed/181 ignored, corpus 97/97, 37 web stages) accepted it and it was published on main 14 November; ships in Alpha 22. WP-05 is not closed.
 
 ## Implemented 9 November 2026: conditional block rename
 

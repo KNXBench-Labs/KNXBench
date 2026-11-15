@@ -99,8 +99,8 @@ warning. The quick-start plaintext password is visible in the container environm
 and may enter shell history; use [Setting a password](#setting-a-password) for a
 hashed credential in a lasting setup.
 
-- **Tags:** the release version without its `v` (`0.1.0-alpha.21` for the tag
-  `v0.1.0-alpha.21`) and `latest`. While KNXBench is in alpha, `latest` moves
+- **Tags:** the release version without its `v` (`0.1.0-alpha.22` for the tag
+  `v0.1.0-alpha.22`) and `latest`. While KNXBench is in alpha, `latest` moves
   with every pre-release; pin a version tag if an update should be your own
   decision.
 - **Availability:** from `v0.1.0-alpha.6` (9 October 2026) on; `v0.1.0-alpha.5`
@@ -164,6 +164,15 @@ those devices' **Parameters** tab and choose **Restore from original .knxproj…
 ([KL-183](../../KNOWN_LIMITATIONS.md#catalogue-kl-183)). Only files that match the
 project byte for byte are installed; save the project afterwards so its file carries
 them from then on.
+
+### Alpha 22 upgrade boundary
+
+Alpha 22 retains project schema **21** and product database **33** from Alpha 21:
+no migration for this update. Close the server and keep an independent copy of
+the whole data volume before replacing the image, not only the project files.
+The technical themes are new saved choices; Alpha 21 uses its unavailable-theme
+fallback to System without overwriting their stored identity. This is a source
+rule, not a downgrade test. [Alpha 22 scope](../../releases/alpha22.md#upgrade).
 
 ### Alpha 21 upgrade boundary
 
@@ -435,7 +444,7 @@ stopping fails, the service remains stopped until you correct it; this is not an
 automatic rollback.
 
 To choose a fixed release, replace `latest` in **both** image references with a
-published version such as `0.1.0-alpha.21`. The Linux default keeps
+published version such as `0.1.0-alpha.22`. The Linux default keeps
 `--network host` and `-e KNX_PORT=8484` (or your chosen port), as explained in
 [Networking](#networking). If migrating an older bridge deployment to host mode,
 review the firewall first: the authenticated listener becomes reachable on all

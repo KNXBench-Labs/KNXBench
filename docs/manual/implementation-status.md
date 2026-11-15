@@ -2,7 +2,23 @@
 
 # Implementation status
 
-## Folder-caption language (14 November 2026; WP06-S1 published on main)
+## Alpha 22 baseline
+
+[Alpha 22](../releases/alpha22.md) ships the bounded workspace, parameter,
+caption, focus and module-owner changes below. It also moves more server waits
+off the asynchronous runtime and extends **experimental**, explicitly selected
+TCP to CLI diagnostics, comparison, service control, ordinary download/restore
+and System-2 observation/execution/recovery, plus server/Web device comparison,
+diagnostics and service control. UDP stays the default, with no fallback;
+software/loopback evidence is not real-interface interoperability.
+Project schema 21 and product database 33 are unchanged from Alpha 21.
+The #36/#48 reporter confirmations concern fixes shipped in Alpha 21, not new
+Alpha 22 fixes. #30 is closed; #22 remains open. Native evidence below retains
+its measured builds, not blanket acceptance of the Alpha 22 desktop.
+
+<a id="folder-caption-language-14-november-2026-wp06-s1-published-on-main"></a>
+
+## Folder-caption language (since Alpha 22)
 
 A bounded runtime successor reads literal installed-product folder captions
 from uniform project/20 or a schema-23 owner's exact namespace and selects a
@@ -15,14 +31,15 @@ not a default-caption fallback. Runtime `8de9487de` is independently reviewed,
 software-accepted through the complete selected 17-stage gate and published on
 main with parent-verified exact readback, frozen inputs and checked user data
 untouched. The selected namespace corpus regression passed 97/97; this is not
-full manufacturer/reference compatibility. This result-only docs successor still
-awaits its independent review, complete planner-selected gate and publication.
-**Not a released capability or whole-WP-06 acceptance.** Templates,
+full manufacturer/reference compatibility. **Ships in Alpha 22, not whole-WP-06
+acceptance.** Templates,
 empty/nested/module folders, recomputed placement and new writes remain outside
 this slice; no ETS compatibility, native UI or hardware claim.
 [Exact epochs, amendments and coverage limits](../status/2026-11-14-wp06-folder-caption-language.md).
 
-## Unresolved module-owner activation (14 November 2026; integration candidate)
+<a id="unresolved-module-owner-activation-14-november-2026-integration-candidate"></a>
+
+## Unresolved module-owner activation (since Alpha 22)
 
 The bounded read-only server overlay reports an imported module object's
 activation as `Undetermined` with no channel when its own instance cannot be
@@ -30,12 +47,14 @@ resolved and evaluation ran. Genuine unscoped/resolved controls are unchanged;
 without an evaluable program the state remains `NotEvaluated`. Corrected source
 has retained focused 17 unit + 9 HTTP passes and independent approval. The
 main-first slice is software-accepted and published as `e31f0e062` (selected
-gate14/14, Rust2090passed/73ignored, separate corpus51/51). This is not yet a
-released capability, native UI acceptance, a new module mapping or
+gate14/14, Rust2090passed/73ignored, separate corpus51/51). Ships in Alpha 22;
+this is not native UI acceptance, a new module mapping or
 permission to create/write module objects. Whole WP-07/KL-068 remains open.
 [Source epochs, fictional controls and limitations](../status/2026-11-14-wp07-unresolved-module-owner.md).
 
-## Notes and instructions keyboard focus (14 November 2026; integration candidate)
+<a id="notes-and-instructions-keyboard-focus-14-november-2026-integration-candidate"></a>
+
+## Notes and instructions keyboard focus (since Alpha 22)
 
 Preview settlement and explicit Cancel restore focus to the exact initiating
 button while that action still owns focus; moving elsewhere withdraws automatic
@@ -48,24 +67,28 @@ The measured build is frozen `9ea3c5a9c-DIRTY`, not the main-first integration
 candidate `994d9bd5d`. The record retains failed attempts, shared-service/software
 rendering exclusions and separate native/runtime source epochs. The bounded
 focus slice is independently reviewed, software-accepted and published on main
-as `ea7ac7ae1` (selected package gate 11/11, nested web 43/43). It is not yet
-released, does not rebind the native evidence to main and does not close broader
+as `ea7ac7ae1` (selected package gate 11/11, nested web 43/43). It ships in
+Alpha 22, does not rebind the native evidence to main and does not close broader
 WP-11.
 
 <a id="parameter-navigation-hierarchy-14-november-2026-source-candidate"></a>
 
-## Parameter navigation hierarchy (14 November 2026; main-only)
+<a id="parameter-navigation-hierarchy-14-november-2026-main-only"></a>
+
+## Parameter navigation hierarchy (since Alpha 22)
 
 Supported evaluated display containers organize their existing child parameter
 areas. Disclosure state is presentation-only; search and contextual paths name
 the container, and existing downloaded-value marks aggregate from its children.
 No new write authority or arbitrary nested hierarchy is inferred. This bounded
 slice is independently reviewed, software-accepted and published on main as
-`2867ee1b5`; it is not included in Alpha 21 or a hardware-interoperability claim.
+`2867ee1b5`; ships in Alpha 22, without a hardware-interoperability claim.
 [Actual checks and boundaries](../status/2026-11-14-parameter-navigation.md) ·
 [Bounded contract](../contracts/parameter-workspace.md#evaluated-display-containers-source-candidate-after-alpha-21).
 
-## Literal row/column translations (14 November 2026 source/focused verification)
+<a id="literal-rowcolumn-translations-14-november-2026-sourcefocused-verification"></a>
+
+## Literal row/column translations (since Alpha 22)
 
 The bounded WP-05 implementation projects literal program-owned axis captions in
 the requested product language through the existing grid text fields. Own-source
@@ -73,7 +96,7 @@ fallback, explicit empty and conservative template/scope exclusions are retained
 Fictional ProductDB/actual HTTP and both matrix browser configurations have passed
 focused regressions; independent Standards and Spec source reviews approve with
 no findings. [Contract and evidence limits](../contracts/alpha16-parameter-layout.md#literal-program-owned-axis-translations).
-Afterwards the selected 15-stage package gate (Rust 6001 passed/181 ignored, corpus 97/97, 37 web stages) accepted it and it was published on main 14 November; no release or native-app claim. Parameter-driven axis captions, modules/Repeat and the broader layout
+Afterwards the selected 15-stage package gate (Rust 6001 passed/181 ignored, corpus 97/97, 37 web stages) accepted it and it was published on main 14 November; ships in Alpha 22 without a new native-app claim. Parameter-driven axis captions, modules/Repeat and the broader layout
 backlog stay open.
 
 <a id="experimental-transport-labels-main-only-after-alpha-20"></a>
@@ -310,7 +333,7 @@ drafts remain intact. Existing immediate-apply, acknowledged-save and failure
 feedback paths are unchanged. Alpha 18 and earlier have the older modal.
 [Settings contract](../contracts/settings-workspace.md) ·
 [Opening Settings](user-guide/09-settings-and-appearance.md#opening-settings).
-Main-only after Alpha 21: Settings has its own direct sidebar entry alongside
+Since Alpha 22: Settings has its own direct sidebar entry alongside
 Diagnostics, reachable without opening a category; the toolbar gear and palette
 still open the same workspace. Released Alpha 19–21 keeps the sidebar entry
 inside Diagnostics. Browser verification is not native WebKitGTK/Tauri or hardware acceptance.
@@ -1415,8 +1438,8 @@ only; hardware outcome and physical best-effort recovery remain unverified.
 
 | Capability | Status | Notes |
 | --- | --- | --- |
-| Themes, System selection and managed declarative packs | ✅ Implemented | Porcelain/Graphite/Cupertino/LCARS/Rail/Rail Dark plus bundled/importable packs; Technical Light/Dark are main-only after Alpha 21; no arbitrary CSS or code — [Settings](user-guide/09-settings-and-appearance.md) |
-| Shared engineering density | ✅ Main-only after Alpha 21 | Both densities, common 10 rem scalar and bounded 24 rem text classes in Devices/parameters/Inspector; browser-verified, not new native acceptance — [WP-41](../status/2026-11-14-wp41-workspace-density.md) |
+| Themes, System selection and managed declarative packs | ✅ Implemented | Porcelain/Graphite/Cupertino/LCARS/Rail/Rail Dark plus bundled/importable packs; Technical Light/Dark ship in Alpha 22; no arbitrary CSS or code — [Settings](user-guide/09-settings-and-appearance.md) |
+| Shared engineering density | ✅ Since Alpha 22 | Both densities, common 10 rem scalar and bounded 24 rem text classes in Devices/parameters/Inspector; browser-verified, not new native acceptance — [WP-41](../status/2026-11-14-wp41-workspace-density.md) |
 | Achievements | ✅ Implemented at stated scope | Shipped catalogue and server record; does not authorize device operations — [ADR-0089](../adr/0089-achievements.md) |
 | Toast notifications | ✅ Implemented | Status, error and achievement cards share their frame, nine-second duration and motion-aware exit; errors retain alert semantics and server-text disclosure — [Settings](user-guide/09-settings-and-appearance.md#toast-notifications) |
 | Humour templates | ✅ Implemented | Thirty error wrappers and thirty late-night entries plus holiday pairs; extra copy is optional |

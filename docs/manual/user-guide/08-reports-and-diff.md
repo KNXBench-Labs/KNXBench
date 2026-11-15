@@ -290,7 +290,7 @@ the dialog also asks for a **Diagnostic profile** (*Diagnoseprofil*): keep
 ([see below](#reading-declared-memory-ranges-system-2)). Then press **Preview
 diagnostic reads** (*Diagnoselesungen prüfen*). Nothing is sent to the bus yet.
 
-**Interface transport (source candidate, not in a release):** the dialog also has an
+**Interface transport (since Alpha 22, experimental):** the dialog also has an
 **Interface transport** (*Transport zur Schnittstelle*) choice. It starts at UDP in
 every freshly opened dialog; **TCP (experimental)** is never taken from another
 preference. The choice is fixed when you press **Preview diagnostic reads** and the

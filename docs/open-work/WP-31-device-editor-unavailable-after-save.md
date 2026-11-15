@@ -13,6 +13,14 @@ mechanism was not established by this retest.
 Historical implementation status: **lock fix implemented 11 November 2026; file routes off the runtime workers and download without the project lock 12 November 2026; edits and plain reads no longer wait for a save's write, device editor routes off the runtime 12 November 2026; the project router's remaining edits, the device list and the other modules' project routes off the runtime 13 November 2026; the device comparison, device-diagnostics preview, support diagnose run and serial-address routes off the runtime 13 November 2026; catalogue reads and update routes off the runtime 13 November 2026; the System-2 download worker's final binding wait off the runtime 13 November 2026; original error message unreproduced.** Follow-up to the original #36 path, which
 the reporter confirmed fixed by `bf85a5b69` on 10 November 2026.
 
+## Release scope
+
+The save/editor and ordinary-read/edit changes of 11–12 November ship in Alpha
+21. The 13 November follow-ups below—remaining project/module routes, mixed
+bus/diagnostic operations, catalogue waits and final System-2 binding—ship in
+Alpha 22. Neither release claims exhaustive route coverage or nonblocking file-
+writing transactions. Reporter confirmation is separate from the new follow-ups.
+
 ## Observed
 
 Change parameters on a device, save the project, return to the device list

@@ -17,7 +17,7 @@ shown as enabled only after the server persists and reads it back.
 
 ## Opening Settings
 
-**Main-only after Alpha 21:** **Settings** is its own entry in the left
+**Since Alpha 22:** **Settings** is its own entry in the left
 navigation, alongside the Diagnostics block; you do not need to unfold a category.
 In a narrow window, show **Navigation** first. In Alpha 19–21, the sidebar entry
 is inside Diagnostics. The toolbar gear and command palette (`Ctrl+Shift+P` →
@@ -74,11 +74,21 @@ The **Theme** menu is the one place to choose a theme. It lists:
 | Cupertino | A light theme with its own fixed accent |
 | LCARS | Dark orange/lavender palette with recognizable framing and rounded navigation; quiet engineering surfaces |
 | Rail / Rail Dark | A light and a dark sharp theme: square controls, Geist type, a measuring rail under the toolbar and KNX-cable green as its fixed accent |
-| Technical Light / Technical Dark | WP-41 source candidate, not yet released or product-accepted: restrained blue-grey palettes, 2 px corners and the existing Inter/JetBrains Mono fonts |
+| Technical Light / Technical Dark | Since Alpha 22: restrained blue-grey palettes, 2 px corners and the existing Inter/JetBrains Mono fonts; optional, on the same workspace components |
 | Modern Retro Green CRT | Shipped with KNXBench: a dark phosphor-green theme with its own fixed accent |
 | *your imported themes* | Every theme file you imported, by its name |
 
-A choice is saved immediately; to go back, pick the previous entry.
+A choice is saved immediately in the existing shared server settings; to go
+back, pick the previous entry. Alpha 21 does not include Technical Light/Dark.
+Its source falls back to System for an unavailable theme and reports the missing
+selection without overwriting the stored choice. This is source-established,
+not an executed downgrade test.
+
+**Since Alpha 22:** Compact and Comfortable share consistent spacing and aligned
+value fields in Devices, parameters and Properties, while retaining their distinct
+control sizes. Ordinary scalar fields share one width; long names/descriptions
+have a wider bounded field. These layout changes apply across themes; choosing
+Technical is optional. [Checks and native limits](../../status/2026-11-14-wp41-workspace-density.md).
 
 ![The published Alpha 20 workbench in Graphite, showing the fictional Sample house’s open group-address ranges and Kitchen light properties](../../assets/screenshots/graphite-group-addresses.png)
 
@@ -123,17 +133,19 @@ Subtle keeps only short fades. The category **Theme effects (Rail)** under
 **Motion by category** turns these off without touching any other motion;
 Motion level Off and OS reduced motion stop them as well.
 
-### Technical Light and Technical Dark — WP-41 source candidate
+<a id="technical-light-and-technical-dark--wp-41-source-candidate"></a>
 
-The candidate adds two built-in choices, **Technical Light** and **Technical
+### Technical Light and Technical Dark (since Alpha 22)
+
+Alpha 22 adds two built-in choices, **Technical Light** and **Technical
 Dark**, on the same device list, parameter workspace and Properties controls.
 They are not theme files or a second application. Their fixed accent does not
 replace warning, error or success meanings; they add no animation. Density and
 motion preferences stay independent. System still follows Porcelain/Graphite,
-and Rail retains its own appearance. Product verification is pending; this is
-not a claim about Alpha 21 or native-shell acceptance.
+and Rail retains its own appearance. The bounded software/browser checks passed;
+this is not blanket native-shell acceptance. Alpha 21 does not include the pair.
 
-The shared WP-41 layout candidate keeps short values at 10 rem (160 CSS px at
+The shared Alpha 22 layout keeps short values at 10 rem (160 CSS px at
 the normal root size), including a unit or address prefix. Names, descriptions
 and declared text fields use one larger class bounded at 24 rem. Narrow panes
 stack labels and bound fields to the available space. Device-table columns

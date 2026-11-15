@@ -144,8 +144,9 @@ selector option, a warning note beside it, and a tag on the status-bar state,
 the Bus Monitor session and a TCP line scan. Behaviour is unchanged.
 
 This selection covers only monitoring and the same session's bound group
-read/write actions. Device programming, downloads, scans, discovery and routing
-do not follow it and retain their existing UDP paths. TCP has no tunnelling ACK:
+read/write actions. Other workflows do not follow the monitor preference:
+scans and the bounded Alpha 22 consumers below have their own explicit choices;
+remaining consumers retain UDP. Discovery and routing stay UDP. TCP has no tunnelling ACK:
 a successful send reports local socket acceptance, not device delivery. Skipped
 TCP frames are accounted separately from buffered telegram drops; an unknown
 service is not automatically a lost telegram. Plain TCP is not KNX IP Secure.
@@ -161,6 +162,20 @@ The 10 November source successor separately adds explicit UDP/TCP to CLI
 `knx bus scan` only (single device and line/range), software-accepted on main
 `ac9b23814` ([acceptance and limits](../../status/2026-11-10-cli-tcp-scans.md)).
 It does not change this monitor preference or server/Web line scans.
+
+### More device operations over TCP (since Alpha 22, experimental)
+
+| Where | Explicit TCP choices added in Alpha 22 |
+| --- | --- |
+| CLI | Device diagnostics and comparison; service-control read/write; ordinary download and restore; System-2 observation, execution and recovery |
+| Server/Web | Device comparison, device diagnostics and service-control read/write |
+
+UDP stays the operation default. TCP never falls back to UDP, reconnects or
+replays. Selection alone contacts nothing, and a web operation does not inherit
+the monitor preference. Existing write confirmations and recovery requirements
+stay in force. Server/Web download and restore are not enabled by this change.
+Only simulator/loopback evidence exists; no real TCP gateway interoperability is
+verified. [Scope and records](../../contracts/tcp-tunnelling.md).
 
 ## What the monitor shows
 
@@ -746,7 +761,7 @@ restore other possible manufacturer side effects. Switching this option on
 never automatically enables it for a download or serial-address write. No
 live bus was contacted to validate this UI.
 
-**Interface transport (experimental).** The Debug tab offers **UDP** (default) or
+**Interface transport (since Alpha 22, experimental).** The Debug tab offers **UDP** (default) or
 **TCP (experimental)** per operation. Choosing it contacts nothing; the read freezes
 it, the review repeats it, and the write uses exactly that transport. TCP never
 falls back to UDP, retries or replays, and an older server that lacks the TCP routes

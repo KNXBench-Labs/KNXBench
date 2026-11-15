@@ -118,7 +118,7 @@ filter after opening review does not change the reviewed list. Choose a
 gateway and confirm the **read-only** operation once for the whole list.
 Opening the review alone contacts no device.
 
-**Transport (source candidate, not in a release):** the review has its own
+**Transport (since Alpha 22, experimental):** the review has its own
 **Comparison transport** choice. It starts at UDP on every fresh review; **TCP
 (experimental)** is never taken from the bus-monitor preference. Gateway and
 transport freeze together for the whole queue. A selected TCP comparison asks only
@@ -1335,7 +1335,11 @@ state, and linked group addresses. **Active**, **Inactive**, **Undetermined**
 evaluated** (no usable program evaluation) mean different things. The project's
 stored `IsActive` claim remains separate; if it disagrees with an evaluated
 active/inactive state, the row says **Stored active** or **Stored inactive**.
-No status silently rewrites the imported project. An object whose project DPT
+No status silently rewrites the imported project. **Since Alpha 22**, an imported
+module object with unresolved own instance authority is **Undetermined** after
+evaluation, with no invented channel, rather than accidentally **Inactive**.
+This read-only overlay adds no module identity or write authority.
+[Module-owner limits](../../status/2026-11-14-wp07-unresolved-module-owner.md). An object whose project DPT
 is empty can show a **Program default** DPT for reference; opening the row
 still leaves the project DPT unset until you explicitly select one. An unknown
 reference stays verbatim; an absent/ambiguous type gets no invented name.
@@ -1442,7 +1446,7 @@ write authority. Missing group information is available under **Other parameters
 option caption across all areas. Clearing search returns to your chosen area;
 a no-result search does not delete fields or values.
 
-**Source candidate after Alpha 21:** where evaluated product data supplies a
+**Since Alpha 22:** where evaluated product data supplies a
 display container, its child areas appear under a folded disclosure. Expand it
 with a click, Enter or Space. Folding affects the area register only, not the
 selected editor or saved settings. Search reveals matching child paths across
@@ -1500,13 +1504,13 @@ is plain text, cannot be clicked or focused, and its action is not supported.
 The note above such a grid says the label is shown but its action is not
 supported, instead of listing it as not placed. If the labels cannot be bound to
 the stored product source, none of them is shown and the **Diagnostics** tab
-says why. The literal-axis implementation also selects literal program-owned
-row/column captions in the requested product
+says why. **Since Alpha 22**, literal program-owned
+row/column captions also follow the requested product
 language. A missing translation keeps that heading's own source text; an explicit
 empty translation leaves it empty. Template translations fall back rather than
 binding a parameter. Module/Repeat and row/column text-parameter resolution are
 not added. Fictional query/HTTP and intercepted-browser regressions verify this
-bounded behavior, not ETS/native-app compatibility or a release.
+bounded behavior, not ETS/native-app compatibility. This slice ships in Alpha 22.
 [Source scope and focused verification](../../contracts/alpha16-parameter-layout.md#literal-program-owned-axis-translations).
 See the [workspace contract](../../contracts/parameter-workspace.md).
 
@@ -1647,6 +1651,16 @@ warning. Up to Alpha 16 the analysis offers the generic identity reads only;
 since Alpha 17 the same dialog also offers the System-2 declared-memory
 profile
 ([guide](08-reports-and-diff.md#reading-declared-memory-ranges-system-2)).
+
+### Product-folder captions (since Alpha 22)
+
+Supported literal installed-product folder captions can use the requested
+**Product data language**, including admitted project/23 sources. Saved project
+text, even an explicitly blank field, still wins. Missing translations keep the
+literal source caption with the documented fallback reason; a translation-pass
+resource refusal withholds the whole optional overlay. This does not move or
+regroup objects, rewrite history or infer missing module folders.
+[Language and preservation boundary](../../status/2026-11-14-wp06-folder-caption-language.md).
 
 ### Manufacturer fields
 

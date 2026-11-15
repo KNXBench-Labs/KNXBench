@@ -61,13 +61,15 @@ or protocol schema change; product database v24 adds typed presentation columns
 
 <a id="evaluated-display-containers-source-candidate-after-alpha-21"></a>
 
-## Evaluated display containers (main-only after Alpha 21)
+<a id="evaluated-display-containers-main-only-after-alpha-21"></a>
+
+## Evaluated display containers (since Alpha 22)
 
 **Software acceptance, 14 November 2026:** the bounded source is independently
 reviewed and published on main as `2867ee1b5`, after the selected 15-stage package
 gate and a fresh fictional producer/consumer composition. The
 [acceptance record](../status/2026-11-14-parameter-navigation.md) supersedes the
-initial source-candidate status; it adds no release or hardware claim.
+initial source-candidate status; it ships in Alpha 22 without a hardware claim.
 
 - A leaf group may carry additive `container`: `{scope, nodeId, elementId, kind,
   label, labelFill?}`. `scope` is the evaluated owner's full module scope, not

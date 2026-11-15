@@ -4,6 +4,17 @@ Owner request: 8 November 2026. Continuation authorised 8 November 2026.
 Bounded monitor/group-traffic slice software-accepted; broader WP-29 remains open.
 No live-bus operation is authorised by this entry.
 
+## Released scope
+
+The initial monitor/group-traffic slice ships in Alpha 20; scans, find-serial
+and byte-order probe ship in Alpha 21. Alpha 22 ships CLI diagnostics,
+comparison, service-control read/write, ordinary download/restore and System-2
+observation/execution/recovery, plus server/Web device comparison, diagnostics
+and service-control read/write. All explicit TCP remains experimental, UDP stays
+the default and there is no fallback. No real-gateway interoperability is
+verified; other server/Web programming consumers and KNX IP Secure remain open.
+[Release scope](../releases/alpha22.md#more-explicit-tcp-choices--experimental).
+
 ## Requested outcome and current basis
 
 Add optional TCP tunnelling alongside the existing UDP transport, behind the

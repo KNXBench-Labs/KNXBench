@@ -2,6 +2,29 @@
 
 # Known issues
 
+## Alpha 22 boundaries
+
+[Alpha 22](../releases/alpha22.md) keeps project schema 21 and product database
+33 from Alpha 21: no migration for this update, but complete backups remain
+necessary. Its new Technical Light/Dark choices are unknown to Alpha 21; that
+source uses System and reports the unavailable choice without rewriting it.
+Downgrade is not tested.
+
+New workspace/navigation/caption changes do not close the remaining parameter,
+folder or module semantics. Preview/Cancel native focus observations retain
+their measured source epochs, not blanket desktop acceptance. #36 and #48 were
+reporter confirmed and closed on 14 November for changes shipped in Alpha 21.
+#30 is closed; #22 remains open. System-2 is still experimental and application-
+specific. KNX Secure and `.knxproj` export remain unsupported.
+
+Explicit **experimental TCP** now also covers CLI diagnostics, comparison,
+service-control read/write, ordinary download/restore and System-2 observation,
+execution/recovery, and server/Web device comparison, diagnostics and service
+control. UDP stays default; there is no fallback or real-gateway interoperability
+verification. Server/Web download and restore are not enabled by this slice.
+The earlier dated scope statements below describe their own baselines;
+[operation scope and limits](../contracts/tcp-tunnelling.md) identify extensions.
+
 **Current-source review: 8 October 2026, `608a204b`.** This page separates
 remaining defects, intentional safety/scope boundaries and missing evidence.
 Historical titles do not mean that their old defect is still present. The
@@ -10,7 +33,9 @@ the reconciliation; formal task dispositions remain in the engineering ledger.
 
 <a id="serverweb-tcp-scans-source-candidate-pending-acceptance"></a>
 
-## Server/Web TCP scans (main-only software acceptance)
+<a id="serverweb-tcp-scans-main-only-software-acceptance"></a>
+
+## Server/Web TCP scans (since Alpha 21)
 
 The 10 November source successor separately enables explicit TCP line scans; UDP stays
 the scan-local default. Strict routes refuse old servers without UDP retry.

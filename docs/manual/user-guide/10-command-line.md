@@ -872,9 +872,11 @@ rules (plan first, a device-specific phrase, a backup before any write):
 | `knx device service-control` | Reads, and after a backup changes, the Individual Address Write Enable bit |
 | `knx device reset-address`, `knx device address-by-serial` | Plan only today: confirmed writes are refused before a tunnel opens, like `program-address` below |
 
-#### Service-control, download and restore transport (13 November 2026 source successor)
+<a id="service-control-download-and-restore-transport-13-november-2026-source-successor"></a>
 
-Source builds containing this successor accept optional
+#### Service-control, download and restore transport (since Alpha 22)
+
+Since Alpha 22, the CLI accepts optional
 `--tunnel-transport udp|tcp` on `device service-control` (read or confirmed
 write), ordinary `device download`, and `device restore`. Omission stays UDP;
 TCP is experimental, never silently retried over UDP, reconnected or replayed.
@@ -900,9 +902,12 @@ assigned address. Positive skipped TCP frames are disclosed once after success
 or failure, sampled before disconnect; they are not lost-telegram or final-wire
 totals. Zero is silent. The [scoped record](../../status/2026-11-13-cli-tcp-write-consumers.md)
 distinguishes complete synthetic TCP operations from UDP handshake-only controls
-and pending independent acceptance. No release or hardware claim.
+from the separately recorded independent acceptance. Ships in Alpha 22; no
+hardware interoperability claim.
 
-#### System-2 project observation transport (13 November 2026 source candidate)
+<a id="system-2-project-observation-transport-13-november-2026-source-candidate"></a>
+
+#### System-2 project observation transport (since Alpha 22)
 
 ```bash
 knx device system2-project --project house.knxdb --device-id 1 --product-db products.sqlite \
@@ -911,7 +916,7 @@ knx device system2-project --project house.knxdb --device-id 1 --product-db prod
   --output prepared-private.json --tunnel-transport tcp
 ```
 
-Source builds containing this candidate accept optional `--tunnel-transport udp|tcp`
+Since Alpha 22, the CLI accepts optional `--tunnel-transport udp|tcp`
 on the read-only observation of `device system2-project`. Omission stays UDP;
 explicit TCP never falls back to UDP, reconnects or replays. The option is refused
 in the offline preview (no gateway, so no tunnel), and missing, repeated or invalid
@@ -922,11 +927,13 @@ The separate validation successor below covers execution/recovery. Stderr names 
 assigned address; positive skipped TCP frames are disclosed once, sampled before
 disconnect, also on failure. They are not lost-telegram totals. See the
 [scoped record](../../status/2026-11-13-cli-tcp-system2-observation.md); independent
-acceptance is pending, and there is no release or hardware claim.
+acceptance is recorded separately. Ships in Alpha 22; no hardware claim.
 
-#### System-2 validation execution and recovery transport (13 November 2026 source candidate)
+<a id="system-2-validation-execution-and-recovery-transport-13-november-2026-source-candidate"></a>
 
-Source builds containing this candidate accept `--tunnel-transport udp|tcp` on
+#### System-2 validation execution and recovery transport (since Alpha 22)
+
+Since Alpha 22, the CLI accepts `--tunnel-transport udp|tcp` on
 the socket-backed **execution and recovery** of `device system2-validation`.
 Append the option to the existing consent-gated command after inspecting its
 offline preview **without** the option. Omission stays UDP with the existing
@@ -948,15 +955,17 @@ telegrams or final-wire totals.
 
 The [dedicated record](../../status/2026-11-13-cli-tcp-system2-validation.md)
 separates focused loopback evidence from independent review, integrated acceptance,
-publication and hardware interoperability. No release or hardware claim.
+publication and hardware interoperability. Ships in Alpha 22; no hardware claim.
 
-#### Read-only device comparison (13 November 2026 source successor)
+<a id="read-only-device-comparison-13-november-2026-source-successor"></a>
+
+#### Read-only device comparison (since Alpha 22)
 
 ```bash
 knx device compare 1.1.67 --project house.knxdb --product-db products.sqlite --gateway 192.0.2.1:3671 --tunnel-transport tcp
 ```
 
-Source builds containing the 13 November comparison transport change accept
+Since Alpha 22, comparison accepts
 `--tunnel-transport udp|tcp`; omission remains UDP. Explicit TCP never falls back
 to UDP, reconnects or replays the comparison. Invalid, missing or repeated values
 refuse before project, product database or optional history I/O. This is only a
@@ -975,13 +984,13 @@ TCP skipped-frame counts are reported once without requiring a diagnostic bundle
 including after a failed read. They are sampled **before disconnect**, not final
 wire totals or counts of lost telegrams; zero is silent. These source-build
 regressions establish complete synthetic TCP comparisons and default/explicit UDP
-**handshake selection only** (deliberately refused before acquisition), not a new
-release, real-gateway interoperability or hardware acceptance.
+**handshake selection only** (deliberately refused before acquisition), not
+real-gateway interoperability or hardware acceptance. Ships in Alpha 22.
 [Verification and limits](../../status/2026-11-13-cli-tcp-compare.md).
 
 ### `knx device diagnostics` — transport selection
 
-On source builds with the 13 November 2026 diagnostics transport change,
+Since Alpha 22,
 `knx device diagnostics` accepts `--tunnel-transport udp|tcp` for both the generic
 identity export and the declared-memory profile below. Omission remains UDP;
 explicit TCP never falls back to UDP. Without `--confirm-read`, a TCP preview

@@ -7,12 +7,11 @@ technical light/dark presentation, independent review, relevant gates and source
 publication. No release or deployment authority. The delivered package was
 removed from [OPEN_WORK](../OPEN_WORK.md); the decisions remain recorded here.
 
-**Priority:** Owner-authorised bounded implementation; no release target assigned.
+**Priority:** Delivered bounded implementation; ships in Alpha 22.
 **Closed 14 November 2026** (removed from [OPEN_WORK](../OPEN_WORK.md)): phases
 A–D delivered at the bounded software/browser scope. Runtime `836824491` is
 accepted and published on main after independent review and all twelve selected
-package-gate stages. Main-only after Alpha 21, no release/deployment or native
-acceptance. [Measured acceptance and limits](../status/2026-11-14-wp41-workspace-density.md).
+package-gate stages. Ships in Alpha 22; no deployment or native acceptance. [Measured acceptance and limits](../status/2026-11-14-wp41-workspace-density.md).
 
 ### Accepted revision 2 geometry
 
@@ -85,7 +84,7 @@ now implement that bounded scope; no space-saving percentage is inferred.
 | --- | --- | --- |
 | A — Static design comparison | Read-only current-state inspection and static before/after comparisons for device list, parameter workspace and inspector; shared representative data across variants; proposed baseline and technical light/dark composition | Accepted revision 2 on 14 November; fictional static dossier retained privately |
 | B — Shared density/layout | Apply the accepted spacing, field-width and visual hierarchy system across affected existing themes and both densities using common components | Accepted and published on main `836824491`; shared components, existing themes and both densities verified |
-| C — Technical theme pair | Add the accepted built-in light/dark technical presentation on the same components and improved layout, preserving other theme identities | `technical-light` / `technical-dark` accepted on the existing trusted presentation boundary; main-only |
+| C — Technical theme pair | Add the accepted built-in light/dark technical presentation on the same components and improved layout, preserving other theme identities | `technical-light` / `technical-dark` accepted on the existing trusted presentation boundary; ships in Alpha 22 |
 | D — Integrated verification | Verify the complete affected UI and relevant regressions; retain visual evidence and the scoped acceptance record | Complete selected package gate 12/12 and nested web 43/43, source-bound review/visual/focus evidence; publication verified |
 
 ### Historical author-phase B–C boundary

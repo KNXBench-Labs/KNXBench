@@ -1,16 +1,34 @@
 # Roadmap
 
-## Workspace density and technical appearance (14 November 2026; WP-41 delivered on main)
+## Alpha 22 pre-release (source cutoff 15 November 2026)
+
+The [Alpha 22 scope](releases/alpha22.md) ships the delivered work since Alpha 21:
+a direct Settings entry, shared workspace density and Technical Light/Dark,
+display-container navigation, literal grid-axis and folder-caption language,
+Undetermined module-owner reporting, Preview/Cancel focus and more off-runtime
+server waits. Explicit experimental TCP extends to CLI diagnostics, comparison,
+service control, ordinary download/restore and System-2 observation/execution/
+recovery, plus server/Web device comparison, diagnostics and service control.
+Project schema 21 and product database 33 are unchanged; no migration from
+Alpha 21. UDP stays the default, with no fallback. Simulator/loopback evidence
+is not real-gateway interoperability or whole-desktop acceptance. #36/#48
+reporter confirmations concern Alpha 21 fixes; #30 is closed and #22 stays open.
+Work after this source cutoff belongs to a later release.
+
+<a id="workspace-density-and-technical-appearance-14-november-2026-wp-41-delivered-on-main"></a>
+
+## Workspace density and technical appearance (14 November 2026; ships in Alpha 22)
 
 The owner-approved revision 2 and separate B–D Go are completed at the bounded
 software/browser scope: common spacing and 10 rem scalar / bounded 24 rem text
 classes, plus optional Technical Light/Dark on the same components. Runtime
 `836824491` is independently reviewed, accepted by all twelve selected package
-stages and published/read back. Main-only after Alpha 21, not a release or
-deployment. Source structure and navigation remain with WP-05; wider native
+stages and published/read back. Ships in Alpha 22; no deployment claim. Source structure and navigation remain with WP-05; wider native
 acceptance remains WP-11. [Checks and limits](status/2026-11-14-wp41-workspace-density.md).
 
-## Folder-caption namespace and language (14 November 2026; WP06-S1 published runtime)
+<a id="folder-caption-namespace-and-language-14-november-2026-wp06-s1-published-runtime"></a>
+
+## Folder-caption namespace and language (14 November 2026; ships in Alpha 22)
 
 The bounded runtime successor admits uniform project/20 or the schema-23
 owner's exact namespace and literal captions in an explicitly requested product
@@ -19,17 +37,19 @@ language. Independent correction review approves `9b0d937dc`; integration
 The parent verified independent Standards/Spec APPROVE, complete selected gate
 17/17, frozen inputs/fingerprint, checked user data untouched and exact
 local/tracking/live readback. Separate corpus regression is 97/97, not full
-manufacturer/reference compatibility. This result-only docs successor still awaits
-its own independent review, complete planner-selected gate and publication.
+manufacturer/reference compatibility. The bounded runtime ships in Alpha 22; historical documentation and evidence
+epochs stay separate.
 [Source/evidence epochs and amendments](status/2026-11-14-wp06-folder-caption-language.md)
 keep no-language responses unchanged and resource refusal distinct from a literal
 fallback: translation-pass resource refusal withholds the whole optional overlay.
 Saved authority, placement, keys, grouping, currency, history and stored bytes do
 not change. Whole WP-06, templates, empty/nested/module-folder semantics and
 recomputed placement remain evidence-gated; no new mapping or write authority,
-ETS compatibility, release/deployment, native UI or hardware claim.
+ETS compatibility, deployment, native UI or hardware claim.
 
-## Unresolved module-owner overlay (14 November 2026; WP07-S1 integration candidate)
+<a id="unresolved-module-owner-overlay-14-november-2026-wp07-s1-integration-candidate"></a>
+
+## Unresolved module-owner overlay (14 November 2026; ships in Alpha 22)
 
 The bounded source-only read overlay distinguishes unresolved own module
 authority from genuinely unscoped objects: after evaluation it reports
@@ -37,20 +57,22 @@ authority from genuinely unscoped objects: after evaluation it reports
 `8873e0150f` is independently reviewed with retained focused 17 unit + 9 HTTP
 passes. Main-first `e31f0e062` is now software-accepted and published after the
 complete selected 14-stage gate: Rust 2090 passed / 73 ignored and separate
-corpus 51/51, inputs frozen and checked user data untouched. No release or
-deployment; no new native UI or broader module authority.
+corpus 51/51, inputs frozen and checked user data untouched. Ships in Alpha 22;
+no deployment, new native UI or broader module authority.
 [Epochs and limits](status/2026-11-14-wp07-unresolved-module-owner.md) keep
 positive identity, repeated/nested mapping, numbering and module write policy
 outside the slice. Whole WP-07 remains evidence-blocked; no KL-068 closure.
 
 <a id="parameter-navigation-hierarchy-14-november-2026-source-candidate"></a>
 
-## Parameter navigation hierarchy (14 November 2026; main-only)
+<a id="parameter-navigation-hierarchy-14-november-2026-main-only"></a>
+
+## Parameter navigation hierarchy (14 November 2026; ships in Alpha 22)
 
 The bounded nearest evaluated display-container → leaf slice is independently
 reviewed, software-accepted and published on main as `2867ee1b5`. The selected
 15-stage package gate and fresh fictional producer/captured-response browser
-composition passed; this is not part of Alpha 21. Broader nested blocks, empty
+composition passed; this ships in Alpha 22. Broader nested blocks, empty
 containers, Repeat, module semantics and callbacks remain outside this slice.
 [Checks and acceptance limits](status/2026-11-14-parameter-navigation.md) ·
 [Contract and explicit exclusions](contracts/parameter-workspace.md#evaluated-display-containers-source-candidate-after-alpha-21).
@@ -60,7 +82,7 @@ containers, Repeat, module semantics and callbacks remain outside this slice.
 The bounded literal program-owned row/column caption slice is implemented and
 focused-verified with fictional ProductDB/actual HTTP tests and both owning matrix
 browser configurations. Independent Standards and Spec reviews approve the source
-with no findings. Afterwards the selected 15-stage package gate (Rust 6001 passed/181 ignored, corpus 97/97, 37 web stages) accepted it and it was published on main 14 November; release is separate. The
+with no findings. Afterwards the selected 15-stage package gate (Rust 6001 passed/181 ignored, corpus 97/97, 37 web stages) accepted it and it was published on main 14 November; ships in Alpha 22. The
 [contract](contracts/alpha16-parameter-layout.md#literal-program-owned-axis-translations)
 keeps module/Repeat, text references/templates, collapse/inline/nested layout,
 Button actions and Table-versus-Grid visual differences open. Whole WP-05 remains open.
@@ -72,8 +94,9 @@ read/write, ordinary download and restore, without changing UDP defaults,
 authorisation or recovery algorithms. Independent Standards/Spec reviews and the
 complete selected 13-stage package gate passed.
 [Verification and limits](status/2026-11-13-cli-tcp-write-consumers.md) keep the
-loopback/simulator acceptance separate from release and hardware interoperability. System-2 preparation and
-validation, remaining programming consumers, KNX IP Secure and wider WP-29
+loopback/simulator acceptance separate from hardware interoperability. This slice
+ships in Alpha 22 alongside the separately recorded System-2 TCP observation,
+execution and recovery. Remaining programming consumers, KNX IP Secure and wider WP-29
 remain open; no real-installation authority is conferred.
 
 ## Alpha 21 pre-release (source cutoff 12 November 2026)
@@ -82,7 +105,7 @@ The [Alpha 21 scope](releases/alpha21.md) covers all delivered work through
 cutoff `938e895c5`: pending navigation/batch programming, last-download comparisons,
 save/editor concurrency, background history, product detail and experimental TCP
 scans. Project19 → 21 and product32 → 33 need backups; Alpha 20 refuses both.
-No hardware/deployment claim. Later main work belongs to the next release.
+No hardware/deployment claim. The later deliveries above ship in Alpha 22.
 
 ## Last-download object evidence (12 November 2026; WP-37f)
 
@@ -581,7 +604,8 @@ across two epochs, not a fresh six-cell replay. The measured build remains
 frozen `9ea3c5a9c-DIRTY`; main-first candidate `994d9bd5d` is a distinct
 integration epoch. The reviewed main-first delivery is software-accepted and
 published as `ea7ac7ae1` after the complete selected 11-stage gate (43 nested
-web stages); no release or deployment. The native audit and remaining boundaries
+web stages); the focus slice ships in Alpha 22, without deployment claims.
+The native audit and remaining boundaries
 are recorded separately in that result record.
 WP-11 stays open for unrelated E4 items, other controls/imported-original
 instructions, virtual-key replacement attribution and remaining keyboard/layout/

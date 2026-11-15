@@ -89,8 +89,8 @@ Retained bytes are not a promise of complete ETS semantics.
   Command palette, <kbd>Ctrl</kbd>+<kbd>K</kbd> search, project explorer, properties
   inspector, drag & drop.
 - 🎨 **Looks the way you like it.**
-  Porcelain, Graphite, Cupertino, LCARS, Rail and a phosphor-green CRT theme. English and
-  German, plus Boarisch (Bavarian) and Klingon packs for the brave. And 42 optional
+  Porcelain, Graphite, Cupertino, LCARS, Rail, Technical Light/Dark and a
+  phosphor-green CRT theme. English and German, plus Boarisch (Bavarian) and Klingon packs for the brave. And 42 optional
   achievements, because engineering work deserves a little applause.
 - 🤖 **Your AI agent gets a workbench, not the bus keys.**
   `knx-mcp` lets an MCP client such as Claude Code or Hermes answer questions about your
@@ -101,14 +101,15 @@ Retained bytes are not a promise of complete ETS semantics.
   command line for the scriptable bits.
 
 > [!NOTE]
-> **Alpha 21 is a pre-release (source cutoff 12 November 2026):** pending-device
-> navigation and reviewed batch programming, last-download marks for values, links
-> and flags, more responsive saved-project editing, richer product data and
-> description editing. TCP and USB/serial are **experimental**; UDP is supported.
-> [Release scope](docs/releases/alpha21.md) lists the boundaries and upgrade notes.
-> Project files move **19 → 21**, the product database **32 → 33**; Alpha 20 refuses
-> converted files. Close KNXBench and back up the complete data directory first.
-> No new hardware compatibility is claimed; issues #30/#22 remain open.
+> **Alpha 22 is a pre-release (source cutoff 15 November 2026):** consistent
+> workspace spacing, optional Technical Light/Dark themes, a direct Settings entry,
+> clearer parameter navigation and translated product captions. More server waits
+> run off the asynchronous runtime, and more device operations offer explicit TCP.
+> TCP and USB/serial remain **experimental**; UDP is supported and stays the default.
+> [Release scope](docs/releases/alpha22.md) lists the boundaries and upgrade notes.
+> Project schema **21** and product database **33** are unchanged from Alpha 21.
+> Close KNXBench and back up the complete data directory first. No new hardware
+> interoperability is claimed; #30 is closed, #22 remains open.
 
 ## See it in action
 

@@ -82,6 +82,12 @@ Alpha 21 moves native/model 19 → 21 (independent last-download values, links a
 and product32 → product33 (conditional block captions, data-only). Alpha 20 refuses
 both newer versions. Restore closed pre-upgrade copies to return.
 [Alpha 21 upgrade notes](releases/alpha21.md#upgrade).
+Alpha 22 keeps native/model21 and product33: no migration from Alpha 21.
+An Alpha 22 technical-theme selection is unknown to Alpha 21, whose source uses
+System presentation and reports an unavailable selection without overwriting the
+saved identity. This is source-established fallback, not an executed downgrade
+probe. Whole-data downgrade compatibility remains untested.
+[Alpha 22 upgrade notes](releases/alpha22.md#upgrade).
 Alpha 15 supports product26, and the preceding master-provenance source
 supports product27; builds with either older maximum refuse product28 by
 their version check. This is source-established refusal, not an executed

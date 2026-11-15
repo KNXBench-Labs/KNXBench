@@ -12,7 +12,7 @@ keep the modal settings window.
 - All existing app settings appear on one continuous page, grouped into sections.
   A compact jump navigation above the sections leads to their headings; it does
   not hide other categories or create separate category pages.
-- Left app navigation stays usable. Main-only after Alpha 21: Settings is a
+- Left app navigation stays usable. Since Alpha 22: Settings is a
   direct sidebar entry alongside the Diagnostics block, not inside it. It needs
   no category disclosure and exposes the active page through `aria-current`.
   The toolbar gear and command palette keep opening this same workspace.

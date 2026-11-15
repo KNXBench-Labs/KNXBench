@@ -12,7 +12,20 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
-## First-class Settings navigation (14 November 2026; main-only after Alpha 21)
+## Alpha 22 pre-release (source cutoff 15 November 2026)
+
+The [released scope](releases/alpha22.md) contains the bounded 14 November
+workspace, navigation, caption, focus and module-owner slices below, more
+WP-31 off-runtime waits and the explicit experimental TCP CLI/server/Web
+extensions. Project schema 21 and product database 33 stay unchanged from Alpha
+21. Historical source/build observations keep their original identities; release
+inclusion does not rebind native or hardware evidence. #36/#48 were reporter
+confirmed and closed 14 November for changes shipped in Alpha 21; #30 is closed,
+#22 remains open. Final release verification is recorded in the release notes.
+
+<a id="first-class-settings-navigation-14-november-2026-main-only-after-alpha-21"></a>
+
+## First-class Settings navigation (14 November 2026; ships in Alpha 22)
 
 Settings is a direct sidebar action alongside the Diagnostics block, not a child
 of its disclosure. It reuses the existing Settings workspace, toolbar gear and
@@ -24,9 +37,11 @@ Existing navigation/splitter regression locators follow the relocated action
 without weakening their state or containment assertions. The maintained package
 gate owns final source-bound acceptance; interrupted attempts are not passes.
 [Workspace contract](contracts/settings-workspace.md). No native-desktop,
-hardware, release or deployment acceptance is implied.
+hardware or deployment acceptance is implied. Ships in Alpha 22.
 
-## Folder-caption namespace and language (14 November 2026; WP06-S1 published runtime)
+<a id="folder-caption-namespace-and-language-14-november-2026-wp06-s1-published-runtime"></a>
+
+## Folder-caption namespace and language (14 November 2026; ships in Alpha 22)
 
 Corrected source `9b0d937dc` extends the existing read-only caption fallback to
 uniform project/20 or the schema-23 owner's exact namespace and explicit product
@@ -43,14 +58,16 @@ gate 17/17 and nested web 34/34 passed; Rust 6,187 passed / 181 ignored, separat
 corpus 97/97 and tool tests 547 passed / 16 skipped. Binding 100 overlaps Rust;
 browser 1,238 = 1,143 functional + 95 exclusive in targeted/default 103 specs,
 not production configs. Inputs/fingerprint were frozen and user data checked
-untouched. This result-only docs successor still awaits independent review, its
-complete planner-selected gate and publication. [Epochs, amendments and limits](status/2026-11-14-wp06-folder-caption-language.md)
+untouched. The bounded runtime ships in Alpha 22; historical result-only
+documentation epochs remain separate. [Epochs, amendments and limits](status/2026-11-14-wp06-folder-caption-language.md)
 keep initial compile RED, unit-only A7 and the installer-bypassing mixed-namespace
 fixture separate. Whole WP-06 remains evidence-gated; no new mapping, writes,
-migration, native UI, full manufacturer/reference compatibility, release or hardware
+migration, native UI, full manufacturer/reference compatibility or hardware
 acceptance.
 
-## Unresolved module-owner overlay (14 November 2026; WP07-S1 integration candidate)
+<a id="unresolved-module-owner-overlay-14-november-2026-wp07-s1-integration-candidate"></a>
+
+## Unresolved module-owner overlay (14 November 2026; ships in Alpha 22)
 
 An imported module communication object without resolved own instance authority
 projects `Undetermined` with no channel after evaluation. Genuine unscoped and
@@ -60,13 +77,15 @@ module write stop-line are unchanged. Corrected source `8873e0150f` has retained
 Main-first `e31f0e062` is software-accepted and published: complete selected
 gate 14/14, Rust 2090 passed / 73 ignored, separate corpus 51/51; frozen inputs
 and checked user data untouched. Tool tests: 547 passed / 16 optional skips.
-Browser suites were not selected; no native UI/release/deployment claim. The
+Browser suites were not selected; ships in Alpha 22 without native UI/deployment claims. The
 [bounded result](status/2026-11-14-wp07-unresolved-module-owner.md) separates
 source/test epochs, original-production HTTP RED, exact M3 discrimination and
 the historical broad-suite deviation. Read overlay only: no persistence,
 identity/numbering or module write authority; whole WP-07/KL-068 stays open.
 
-## Notes/Instructions Preview and Cancel focus (14 November 2026; WP-11 E4 candidate)
+<a id="notesinstructions-preview-and-cancel-focus-14-november-2026-wp-11-e4-candidate"></a>
+
+## Notes/Instructions Preview and Cancel focus (14 November 2026; ships in Alpha 22)
 
 Exact-initiator focus restoration is implemented with real disabled semantics,
 no automatic Apply and no completion-driven focus stealing. Independent
@@ -85,8 +104,8 @@ requests. The linked record separates native audit and delivery acceptance.
 The main-first delivery is software-accepted and published as `ea7ac7ae1`:
 selected package gate 11/11, nested web 43/43, inputs frozen and checked user
 data untouched; tool tests 547 passed / 16 optional skips. No Rust tests or
-private corpus were selected. No release/deployment or current-main native
-rebind; earlier persistence evidence, unrelated E4 work and whole WP-11/KL-130
+private corpus were selected. Ships in Alpha 22 without deployment or current-main
+native rebind; earlier persistence evidence, unrelated E4 work and whole WP-11/KL-130
 remain unchanged or open.
 
 <a id="evaluated-parameter-navigation-14-november-2026-source-candidate"></a>
@@ -99,7 +118,7 @@ source ordering, caption provenance, existing write targets, stable editor keys
 and presentation-only disclosures are retained. Independent Spec/Standards
 reviews approve the corrected source. The selected 15-stage package gate and a
 fresh fictional producer-to-production-browser composition passed. This supersedes
-the initial source-candidate status, not the Alpha 21 release cutoff.
+the initial source-candidate status. Ships in Alpha 22, not Alpha 21.
 [Actual checks and exclusions](status/2026-11-14-parameter-navigation.md) ·
 [Contract and limits](contracts/parameter-workspace.md#evaluated-display-containers-source-candidate-after-alpha-21).
 
@@ -1386,7 +1405,9 @@ review and both selected 11-stage gates passed; this is a prerequisite fix,
 not WP-27 delivery or native-server/hardware acceptance.
 [Measured coverage and boundaries](status/2026-11-03-catalogue-poll-lifetime.md).
 
-## Shared workspace density and technical pair (14 November 2026; WP-41, main-only)
+<a id="shared-workspace-density-and-technical-pair-14-november-2026-wp-41-main-only"></a>
+
+## Shared workspace density and technical pair (14 November 2026; ships in Alpha 22)
 
 Accepted design revision 2 is delivered on main `836824491`: common Compact/
 Comfortable spacing, 10 rem scalar slots including prefix/unit, one bounded
@@ -1397,8 +1418,7 @@ No second UI, new schema/storage, pack geometry authority or added animation.
 Independent whole-feature and bounded correction reviews passed; all twelve
 selected package stages and 43 nested web stages passed with frozen inputs and
 checked user data untouched. Browser/fictional-fixture evidence is separate from
-native, hardware and broader WP-05 acceptance. Main-only after Alpha 21, no release
-or deployment. [Measured populations, publication and limits](status/2026-11-14-wp41-workspace-density.md).
+native, hardware and broader WP-05 acceptance. Ships in Alpha 22; no deployment claim. [Measured populations, publication and limits](status/2026-11-14-wp41-workspace-density.md).
 
 ## Rail and Rail Dark themes (2 November 2026, source)
 

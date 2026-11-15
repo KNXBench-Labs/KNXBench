@@ -1,11 +1,35 @@
 # Optional TCP tunnelling for bounded bus and CLI device consumers
 
 Initial monitor/group-traffic acceptance: 8 November 2026; ships in Alpha 20.
-The separately dated scan/find-serial/byte-order-probe successors below are main-only additions.
+The separately dated scan/find-serial/byte-order-probe successors ship in Alpha
+21. Alpha 22 adds CLI diagnostics, comparison, service-control read/write,
+ordinary download/restore and System-2 observation/execution/recovery, plus
+server/Web comparison, diagnostics and service-control read/write. These slices
+are experimental, with UDP defaults and no fallback; no real-gateway
+interoperability is verified. Historical per-operation limits below stay local
+to their dated baseline; the linked later records identify extensions.
 [WP-29](../open-work/WP-29-knxnet-ip-tcp-tunnelling.md) remains open beyond this
 slice. The [execution record](../status/2026-11-08-optional-tcp-tunnelling.md)
 separates actual passed checks from this contract's required behaviour and from
 unverified real-gateway interoperability.
+
+## Alpha 22 operation records
+
+All are experimental, explicitly selected and simulator/loopback tested only:
+
+- CLI [diagnostics](../status/2026-11-13-cli-tcp-diagnostics.md) and
+  [comparison](../status/2026-11-13-cli-tcp-compare.md).
+- CLI [service control, ordinary download and restore](../status/2026-11-13-cli-tcp-write-consumers.md).
+- CLI [System-2 observation](../status/2026-11-13-cli-tcp-system2-observation.md)
+  and [execution/recovery](../status/2026-11-13-cli-tcp-system2-validation.md).
+- Server/Web [device comparison](../status/2026-11-14-server-web-tcp-comparison.md),
+  [diagnostics](../status/2026-11-14-server-web-tcp-diagnostics.md) and
+  [service control](../status/2026-11-15-server-web-tcp-service-control.md).
+
+The maintained [WP-29 delivery record](../open-work/WP-29-knxnet-ip-tcp-tunnelling.md)
+records integrated acceptance separately from older source-only status headings.
+Server/Web download/restore, address programming, KNX IP Secure and real-gateway
+interoperability are not enabled by these extensions.
 
 ## Scope and defaults
 
@@ -32,7 +56,9 @@ an unresolved tunnel-loss report.
 
 <a id="serverweb-line-scan-successor-10-november-2026-candidate"></a>
 
-## Server/Web line-scan successor (10 November 2026; main-only acceptance)
+<a id="serverweb-line-scan-successor-10-november-2026-main-only-acceptance"></a>
+
+## Server/Web line-scan successor (since Alpha 21)
 
 The bounded successor adds `POST /api/bus/scan/start-tcp`, not a transport flag
 on the legacy UDP start. It uses recorded transport selection and the unchanged
@@ -55,7 +81,7 @@ Missing or contradictory metadata locks actions, never guesses UDP.
 
 Independent source closure passed; the complete selected acceptance plan
 is closed by source-bound composition.
-This is a main-only successor, not an Alpha 20 addition or hardware result. See the
+This ships in Alpha 21, not Alpha 20, and adds no hardware result. See the
 [scoped record](../status/2026-11-10-server-web-tcp-scans.md).
 
 ## Explicit public selection
@@ -79,7 +105,9 @@ This is a main-only successor, not an Alpha 20 addition or hardware result. See 
 - Group actions and Stop retain the exact session ID and server incarnation.
   A replacement session/process is not the target of an older callback.
 
-## Read-only CLI find-serial successor (10 November 2026; main-only acceptance)
+<a id="read-only-cli-find-serial-successor-10-november-2026-main-only-acceptance"></a>
+
+## Read-only CLI find-serial successor (since Alpha 21)
 
 Both existing queries accept optional `--tunnel-transport udp|tcp`:
 
@@ -111,7 +139,9 @@ fixture closure and the complete selected integrated package gate passed;
 runtime publication was read back. This is not an Alpha 20 release or hardware
 claim ([scoped execution record](../status/2026-11-10-cli-tcp-find-serial.md)).
 
-## Read-only CLI byte-order probe successor (11 November 2026; main-only acceptance)
+<a id="read-only-cli-byte-order-probe-successor-11-november-2026-main-only-acceptance"></a>
+
+## Read-only CLI byte-order probe successor (since Alpha 21)
 
 The ordinary read-only probe accepts the same optional selection:
 
@@ -215,4 +245,4 @@ UDP nor adds reconnect, replay, new timeouts or new download algorithms.
 [Execution boundary](../status/2026-11-13-cli-tcp-write-consumers.md): synthetic
 independent Standards/Spec reviews and the selected 13-stage package gate passed
 on `9209f0fe1`; the acceptance remains loopback/simulator-only, not hardware
-interoperability or a release.
+interoperability. Ships in Alpha 22.

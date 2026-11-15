@@ -205,7 +205,7 @@ download tab. See [Pending programming panel](05-devices-and-products.md#pending
 
 **The diagnostics block**, at the bottom: **Bus monitor**, **Log** and **Diagnostics
 window**. The first two swap the center workspace for a panel;
-the third opens a second window (below). **Main-only after Alpha 21:** **Settings**
+the third opens a second window (below). **Since Alpha 22:** **Settings**
 is its own entry alongside this block and is available even while Diagnostics
 is folded. Alpha 19–21 keeps it inside Diagnostics. **Since Alpha 19:** Settings
 opens in the center workspace, with all settings on a continuous page and

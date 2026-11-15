@@ -41,9 +41,9 @@ HTTP 12 and server unit 5 (filtered/overlapping, not additive). The parent verif
 Standards/Spec APPROVE, complete selected gate 17/17, nested web 34/34 and exact
 local/tracking/live readback. Fresh Rust is 6,187 passed / 181 ignored (binding 100
 overlaps), separate namespace corpus regression 97/97 and tool tests 547 passed /
-16 skipped. Inputs/fingerprint were frozen and user data checked untouched. This
-result-only documentation successor still awaits its independent review, complete
-planner-selected gate and publication; the runtime is published, not released.
+16 skipped. Inputs/fingerprint were frozen and user data checked untouched. The
+bounded runtime ships in Alpha 22; the historical documentation review and
+publication epochs remain separate.
 
 Uniform project/20 or the schema-23 owner's exact project/23 namespace is
 admitted; mixed/foreign namespaces and schema 21 remain refused. Explicit

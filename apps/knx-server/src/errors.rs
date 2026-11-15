@@ -168,6 +168,20 @@ impl ApiError {
         }
     }
 
+    /// Adds one structured field to the body; a plain error gets `kind` as its stable token.
+    pub(crate) fn with_detail(
+        mut self,
+        kind: &'static str,
+        key: &str,
+        value: serde_json::Value,
+    ) -> Self {
+        self.kind.get_or_insert(kind);
+        self.details
+            .get_or_insert_with(Default::default)
+            .insert(key.into(), value);
+        self
+    }
+
     /// Parser-level rejection. Preserve the legacy `error` text while
     /// exposing a stable kind and actionable syntax separately.
     pub fn validation(

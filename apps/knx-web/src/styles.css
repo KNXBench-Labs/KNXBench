@@ -2368,7 +2368,10 @@ main {
 .service-control-fields label,
 .service-control-review label { display: grid; gap: 6px; min-width: 0; }
 .service-control-fields input,
+.service-control-fields select,
 .service-control-review input { width: 100%; min-width: 0; box-sizing: border-box; }
+.service-control-transport-hint,
+.service-control-connection { margin: 0; overflow-wrap: anywhere; }
 .service-control-panel > button { justify-self: start; }
 .service-control-observation,
 .service-control-review { display: grid; gap: 10px; min-width: 0; }

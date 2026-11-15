@@ -79,7 +79,9 @@ export default function BusDiagnosticsPanel({
       {tab === "download" && <DeviceDownloadPanel project={project} handoff={pendingHandoff} onHandoffHandled={handoffHandled} onProjectChanged={onTreeUpdate}
         batchRequest={pendingAll} onBatchRequestHandled={allHandled} />}
       {tab === "address" && <AddressProgrammingPanel project={project} onProjectChanged={onTreeUpdate} />}
-      {tab === "service" && <ServiceControlPanel projectOpen={project !== null} projectRevision={project} />}
+      {tab === "service" && <ServiceControlPanel projectOpen={project !== null} projectRevision={project}
+        binding={project?.snapshot_revision === undefined || typeof project.project_incarnation !== "number" || typeof project.server_incarnation !== "string" ? undefined : { serverIncarnation: project.server_incarnation,
+          projectIncarnation: project.project_incarnation, revision: project.snapshot_revision }} />}
       {tab === "live" && <BusActivityLive />}
       {tab === "history" && <BusActivityHistory />}
     </section>

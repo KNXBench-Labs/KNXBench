@@ -232,6 +232,21 @@ refuses 404/405 or missing/mismatched metadata. Legacy-route recordings are unch
 TCP recordings carry `requestedTransport` and a `connection` note.
 Loopback/simulator evidence only. [Evidence and limits](../status/2026-11-14-server-web-tcp-diagnostics.md).
 
+## Server/Web service-control successor (15 November 2026; source candidate)
+
+The Debug service-control read and write gain strict explicit-TCP siblings,
+`POST /api/device/service-control/tcp/read` and `POST /api/device/service-control/tcp`
+(`deny_unknown_fields`, project binding required). The legacy `GET`/`POST` routes and
+bodies are unchanged and stay UDP; an old server answers 404/405 for the siblings. The
+server-side Debug setting is checked before the binding and before any I/O. A TCP
+operation opens TCP only (no UDP retry, reconnect or replay) and its answer, success or
+failure, carries `connection` facts sampled before disconnect (unavailable, not zero,
+when no tunnel existed). Backup files and legacy recordings are unchanged; TCP
+recordings carry `requestedTransport` and a `connection` note. The Debug tab has a
+per-operation UDP/TCP choice (UDP default, nothing contacted on choice, frozen into
+the review). Loopback/simulator evidence only.
+[Evidence and limits](../status/2026-11-15-server-web-tcp-service-control.md).
+
 ## References
 
 [Open work](../OPEN_WORK.md) · [Architecture](../ARCHITECTURE.md) ·

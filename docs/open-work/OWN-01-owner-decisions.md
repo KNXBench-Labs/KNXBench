@@ -27,7 +27,9 @@ blanket authority for bus or device writes, releases or deployments.
 - **Reporter field runs (#30/#22).** One optional System-2 attempt on a current
   `main` build was requested ([#30](https://github.com/KNXBench-Labs/KNXBench/issues/30#issuecomment-6718382084), pointer in #22). It serves as the
   S2-02 reporter retest and as the S2-05 field run of the `Download_Flag`
-  tolerance.
+  tolerance. Done 8 November 2026: the run finished verified 27/27
+  ([S2-05](S2-05-result-and-settlement.md#field-run-8-november-2026)); #30 closed
+  10 November, S2-02 and S2-04 closed 15 November without a proven original cause.
 - **WP-11 scope: the simplest complete target.** See
   [acceptance target](WP-11-native-linux-acceptance.md#acceptance-target--owner-decision-8-november-2026).
 - **GATE-01:** the larger scheduler and the historical timeouts are reconsidered

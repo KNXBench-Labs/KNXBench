@@ -76,3 +76,17 @@ pinned public package that its plan writes `01h` at exactly that octet.
 The prestate caveat of the first analysis no longer decides anything: the reporter's device held
 `00h` there before the download too, but the per-chunk Verify Mode check proves the write itself,
 so a tolerated `00h` after load is the firmware's own value, not a lost write.
+
+## Status update, 15 November 2026
+
+The field run of a build with the declared tolerance arrived on 8 November 2026
+(reporter-named build `0.1.0-alpha.19+gac8f005`): the reporter states that KNXBench
+wrote `01h` at `3CF4h`, read back `00h` in the final verification, and the prestate
+held `00h`; the run finished verified
+([report](https://github.com/KNXBench-Labs/KNXBench/issues/30#issuecomment-6719332657)) and the reporter confirmed normal function
+([confirmation](https://github.com/KNXBench-Labs/KNXBench/issues/30#issuecomment-6719421160);
+[S2-05](../open-work/S2-05-result-and-settlement.md#field-run-8-november-2026)). This
+is consistent with the 2 November corroboration above for that device. Still not
+established: the clear time (the only read-back follows Load Completed, so clearing at
+Load Completed versus at the following restart stays open), other values and other
+firmware revisions.

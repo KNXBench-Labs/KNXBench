@@ -645,6 +645,10 @@ evidence remains open. Physical recovery evidence and issue #30 remain open
 has a delivered own-run gateway-hint/refusal-reason diagnostic slice (`aa2f39f1b`).
 The reporter's newer run starts without that banner, but the earlier actual
 start failure remains unexplained. Neither package establishes hardware support.
+Status update (15 November 2026), superseding the open #30/S2-02 statement above: issue
+#30 is closed after a verified reporter run;
+S2-02/S2-04 are closed without a proven original cause
+([S2-05 field run](open-work/S2-05-result-and-settlement.md#field-run-8-november-2026)).
 
 Run-scoped [download receipts](contracts/download-settlement-receipt.md) distinguish
 preparation, applied or computed settlement, and the separate post-download check.

@@ -15,6 +15,8 @@ import {useReportProblem} from "./ReportProblemEntry";
 import "./universalSupport.css";
 import "./diagnosticExport.css";
 
+/** UDP calls keep their legacy arity; only an explicit TCP choice adds the transport argument. */
+const only=(transport:api.DiagnosticTransport):[]|["tcp"]=>transport==="tcp"?["tcp"]:[];
 export default function DiagnosticExportButton({project,deviceId=null}:{project:ProjectTree|null;deviceId?:number|null}){
  const t=useTranslate();const entry=useFileMenuItemProps();const [open,setOpen]=useState(false);
  return <><button type="button" {...entry} data-diagnostics-open disabled={!project} onClick={()=>setOpen(true)}>{t("diagnostics.title")}</button>{open&&createPortal(<DiagnosticExportDialog project={project!} initialDevice={deviceId} close={()=>setOpen(false)}/>,document.body)}</>;
@@ -28,20 +30,22 @@ export function DiagnosticExportDialog({project,initialDevice,close}:{project:Pr
  const [device,setDevice]=useState<number|null>(initialDevice);const [gateway,setGateway]=useState(loadPreferredGateway);
  const [view,setView]=useState<api.DiagnosticView|null>(null);const [readConsent,setReadConsent]=useState(false);
  const [profile,setProfile]=useState<api.DiagnosticProfile>(api.IDENTITY_PROFILE);
+ // UDP for every fresh dialog; the preview freezes the choice, the job runs exactly that.
+ const [transport,setTransport]=useState<api.DiagnosticTransport>("udp");const [viewTransport,setViewTransport]=useState<api.DiagnosticTransport>("udp");
  const [busy,setBusy]=useState(false);const [error,setError]=useState<false|{key:MessageKey|null;detail:string|null}>(false);
- const epoch=useRef(0);const running=useRef<string|null>(null);const mounted=useRef(true);
+ const epoch=useRef(0);const transportRef=useRef<api.DiagnosticTransport>("udp");transportRef.current=viewTransport;const running=useRef<string|null>(null);const mounted=useRef(true);
  // Own response tokens synchronously: unmount may precede the queued view's React commit.
  function updateView(next:api.DiagnosticView|null){running.current=next?.phase==="running"?next.token:null;setView(next);}
  const contextKey=`${projectContextKey(project)}/${project.snapshot_revision??"unbound"}`;
  const [reviewContext,setReviewContext]=useState<string|null>(null);
  const stale=reviewContext!==null&&reviewContext!==contextKey;
- useEffect(()=>{mounted.current=true;return()=>{mounted.current=false;++epoch.current;const token=running.current;running.current=null;if(token)void api.cancelDiagnostics(token).catch(()=>{});};},[]);
+ useEffect(()=>{mounted.current=true;return()=>{mounted.current=false;++epoch.current;const token=running.current;running.current=null;if(token)void api.cancelDiagnostics(token,...only(transportRef.current)).catch(()=>{});};},[]);
  useEffect(()=>{
   if(view?.phase!=="running")return;
   let active=true;let timer:ReturnType<typeof setTimeout>;const token=view.token;
-  const poll=async()=>{try{const next=await api.pollDiagnostics(token);if(active){updateView(next);if(next.phase==="complete")return;}}catch{if(active)setError({key:null,detail:null});}if(active)timer=setTimeout(()=>void poll(),250);};
+  const poll=async()=>{try{const next=await api.pollDiagnostics(token,...only(viewTransport));if(active){updateView(next);if(next.phase==="complete")return;}}catch{if(active)setError({key:null,detail:null});}if(active)timer=setTimeout(()=>void poll(),250);};
   timer=setTimeout(()=>void poll(),250);return()=>{active=false;clearTimeout(timer);};
- },[view?.token,view?.phase]);
+ },[view?.token,view?.phase,viewTransport]);
  const acquiring=view?.phase==="running";const memory=view?.memory??null;const progress=view?diagnosticProgress(view):null;
  function invalidate(){++epoch.current;updateView(null);setReadConsent(false);setError(false);setReviewContext(null);}
  async function perform(kind:"preview"|"start"|"cancel"){
@@ -50,20 +54,20 @@ export function DiagnosticExportDialog({project,initialDevice,close}:{project:Pr
    if(kind==="preview"){
     if(device===null||project.server_incarnation===undefined||project.project_incarnation===undefined||project.snapshot_revision===undefined)throw new Error("unbound project");
     const checked=validateGatewayFields(splitGatewayEndpoint(gateway));if(!checked.ok)throw new Error("invalid gateway");
-    const next=await api.previewDiagnostics(device,checked.endpoint,profile,{serverIncarnation:project.server_incarnation,projectIncarnation:project.project_incarnation,revision:project.snapshot_revision});
-    if(mounted.current&&epoch.current===version){updateView(next);setReviewContext(contextKey);setReadConsent(false);}
+    const next=await api.previewDiagnostics(device,checked.endpoint,profile,{serverIncarnation:project.server_incarnation,projectIncarnation:project.project_incarnation,revision:project.snapshot_revision},...only(transport));
+    if(mounted.current&&epoch.current===version){setViewTransport(transport);updateView(next);setReviewContext(contextKey);setReadConsent(false);}
    }else if(kind==="start"){
-    if(!view||!readConsent||stale)return;const next=await api.startDiagnostics(view.token);
+    if(!view||!readConsent||stale)return;const next=await api.startDiagnostics(view.token,...only(viewTransport));
     if(mounted.current&&epoch.current===version){updateView(next);setReadConsent(false);}
     // Cleanup may run before Start returns, while the displayed view is still a preview.
-    else if(next.phase==="running")void api.cancelDiagnostics(next.token).catch(()=>{});
+    else if(next.phase==="running")void api.cancelDiagnostics(next.token,...only(viewTransport)).catch(()=>{});
    }else{
-    if(!view)return;const next=await api.cancelDiagnostics(view.token);if(mounted.current&&epoch.current===version)updateView(next);
+    if(!view)return;const next=await api.cancelDiagnostics(view.token,...only(viewTransport));if(mounted.current&&epoch.current===version)updateView(next);
    }
   }catch(e){
    // Only a preview refusal names why: its code is the server's fixed token (product data, identity, target).
    // The translated text leads; the server's raw detail follows as secondary evidence.
-   if(mounted.current&&epoch.current===version)setError(kind==="preview"&&e instanceof api.DiagnosticRefusal?{key:refusalMessage(e.code),detail:e.detail}:{key:null,detail:null});
+   if(mounted.current&&epoch.current===version)setError(kind==="preview"&&e instanceof api.DiagnosticRefusal?{key:transport==="tcp"&&(e.status===404||e.status===405)?"diagnostics.refusal.tcpUnsupported":refusalMessage(e.code),detail:e.detail}:{key:null,detail:null});
   }finally{if(mounted.current&&epoch.current===version)setBusy(false);}
  }
  const requestClose=()=>{if(acquiring){void perform("cancel");return;}close();};
@@ -75,12 +79,16 @@ export function DiagnosticExportDialog({project,initialDevice,close}:{project:Pr
     <label>{t("support.gateway")}<input data-diagnostics-gateway value={gateway} onChange={e=>{invalidate();setGateway(e.target.value);}} placeholder="IPv4:port"/></label>
     <label>{t("diagnostics.profile")}<select data-diagnostics-profile value={profile} onChange={e=>{invalidate();setProfile(e.target.value===api.MEMORY_PROFILE?api.MEMORY_PROFILE:api.IDENTITY_PROFILE);}}>
      <option value={api.IDENTITY_PROFILE}>{t("diagnostics.profile.identity")}</option><option value={api.MEMORY_PROFILE}>{t("diagnostics.profile.memory")}</option></select></label>
+    <label>{t("diagnostics.transport")}<select data-diagnostics-transport value={transport} onChange={e=>{invalidate();setTransport(e.target.value==="tcp"?"tcp":"udp");}}>
+     <option value="udp">UDP</option><option value="tcp">{t("diagnostics.transport.tcp")}</option></select></label>
+    <p data-diagnostics-transport-hint>{t("diagnostics.transportHint")}</p>
     <p data-diagnostics-profile-hint className={profile===api.MEMORY_PROFILE?"form-warning":undefined}>{t(profile===api.MEMORY_PROFILE?"diagnostics.profileHint.memory":"diagnostics.profileHint.identity")}</p>
     <button type="button" data-diagnostics-preview disabled={device===null||!gateway} onClick={()=>void perform("preview")}>{t("diagnostics.preview")}</button>
    </fieldset>
    {error&&<div role="alert" data-diagnostics-error><p>{t(error.key??"diagnostics.failed")}</p>{error.detail&&<p data-diagnostics-error-detail>{t("diagnostics.serverDetail")} <code>{error.detail}</code></p>}</div>}
    {view&&<>
     <section data-diagnostics-review><h3>{t("diagnostics.preview")}</h3><p><strong>{view.target}</strong> · {view.gateway}</p>
+     {view.connection&&<p data-diagnostics-frozen-transport>{t("diagnostics.reviewedTransport",{transport:"TCP"})}</p>}
      <p>{t("diagnostics.readOnly")}</p>{memory?<MemoryPreview view={view} memory={memory}/>:<><p>{t("diagnostics.limits")}</p><p>{t("diagnostics.memory")}</p></>}
      <p>{t("diagnostics.identity")}</p>
      <ul>{view.report.items.map(item=><li key={item.query}>{item.query} · {item.propertyId===null?"DeviceDescriptorRead (0)":`PropertyRead object ${item.objectIndex}, PID ${item.propertyId}, index ${item.startIndex}, elements ${item.requestedElements}`} · {item.expectedBytes} bytes</li>)}</ul>
@@ -92,6 +100,7 @@ export function DiagnosticExportDialog({project,initialDevice,close}:{project:Pr
     {acquiring&&<><p role="status">{progress?.memory?t("diagnostics.progressMemory",{identity:progress.identity,...progress.memory}):t("diagnostics.progress",{count:progress?.identity??0})}</p><button type="button" data-diagnostics-cancel disabled={busy||view.cancelRequested} onClick={()=>void perform("cancel")}>{t(view.cancelRequested?"diagnostics.stopping":"diagnostics.cancel")}</button></>}
     {view.phase==="complete"&&<section data-diagnostics-result>
      <h3>{t("diagnostics.result")}</h3>{view.report.stopReason&&<p role="status" data-diagnostics-stop-reason>{t("diagnostics.stopReason",{label:t(stopReasonMessage(view.report.stopReason))})} <code>{view.report.stopReason}</code></p>}
+     {view.connection&&<p data-diagnostics-connection role="status">{view.connection.actualTransport===null?t("diagnostics.connectionUnavailable"):t("diagnostics.actualConnection",{transport:view.connection.actualTransport.toUpperCase(),address:view.connection.assignedAddress??"—",skipped:view.connection.skippedFramesBeforeDisconnect??"—"})}</p>}
      <ul>{view.report.items.map(i=><li key={i.query}>{i.query}: {t(`diagnostics.status.${i.status}`)} · {i.receivedBytes}/{i.expectedBytes} bytes</li>)}</ul>
      {memory&&<><h4>{t("diagnostics.coverageHeading")}</h4><ul data-diagnostics-coverage>{memory.ranges.map(r=><li key={r.order}>{t("diagnostics.coverage",{address:hexWord(r.address),length:r.length,read:r.coverage.read,refused:r.coverage.refusedAmbiguous,partial:r.coverage.partial,error:r.coverage.error,notRead:r.coverage.notRead})}</li>)}</ul></>}
      <details><summary>{t(memory?"diagnostics.sharePreviewMemory":"diagnostics.sharePreview")}</summary><pre aria-label="report.json">{JSON.stringify(view.report,null,2)}</pre>{memory&&<pre aria-label="memory.json">{JSON.stringify(memory,null,2)}</pre>}</details>

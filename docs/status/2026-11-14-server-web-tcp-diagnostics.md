@@ -1,0 +1,55 @@
+# Server/Web TCP device diagnostics — source candidate
+
+Date: 14 November 2026. Source candidate only; not reviewed, accepted, released or
+deployed. Loopback and simulator evidence only: no real-gateway interoperability.
+
+## Contract
+
+- New strict `POST /api/device-diagnostics/preview/tcp` (`deny_unknown_fields`, same
+  body as the legacy preview, binding required). The transport is stored in the job at
+  preview time; `start` runs with exactly that transport. Legacy preview, start,
+  status, cancel and export routes and bodies are unchanged and stay UDP; an old server
+  answers 404/405 for the sibling instead of silently reading over UDP.
+- A TCP job opens TCP only: no UDP retry, reconnect or replay. Admission order,
+  gateway-busy locks, lease, activity, `stop_admission`, cancel, the 10 s connect
+  timeout, the 3 s disconnect and the 900 s / binding freshness are unchanged.
+- Views of TCP jobs (and only those) carry `connection`: `requestedTransport`,
+  `actualTransport`, `assignedAddress`, `skippedFramesBeforeDisconnect`, sampled from the
+  real handle before disconnect, independent of recording, also after a post-connect
+  failure (for example peer EOF: `connection-lost`). Preview, refusals and connect
+  failures before a tunnel exists report `actualTransport: null` and null facts
+  (unavailable, not zero). The type is the comparison route's `ComparisonConnection`,
+  shared, not copied.
+- Recordings: the TCP route's settings carry `requestedTransport: "tcp"` and a
+  `connection` note after the sample. The legacy diagnostics route's recording settings
+  are unchanged (no `requestedTransport`, no note), unlike the comparison route.
+- Report and export bundles (format 1/2) are unchanged: the test asserts the exported
+  bytes of a TCP run equal `bundle_export` of its report alone and the report carries no
+  transport facts.
+- Web: diagnostics-local UDP/TCP choice (UDP for every freshly opened dialog, changing
+  it drops the review, nothing contacted on selection), frozen into the preview. TCP
+  calls only the sibling route; 404/405 or missing, mismatched or inconsistent metadata
+  is a refusal, never a success and never a UDP retry. UDP calls keep their legacy call
+  shape. Metadata admission lives in `diagnosticApi.ts` and the shared
+  `tcpConnectionFacts.ts` (also used by comparison), not in `api.ts`.
+
+## Evidence
+
+Retained by the author outside the repository; the parent owns the complete gate and
+independent review. The Rust HTTP test drives the real `RealConnector` over loopback TCP
+with the package-3 peer (shared by module path, not copied): clean run, skipped frames
+before the first reply, and peer EOF during the hardware-type read (four skipped frames,
+`connection-lost`). Refusal and control tests use a refusing connector: the legacy
+UDP route is only a refused-connect selection control, not a completed UDP read. The
+browser lane replays the producer's captured bodies only when
+`KNX_DIAGNOSTICS_HTTP_CAPTURE_DIR` is set (the Rust test writes `preview`, `start`,
+`complete` and `eof` there); without it, hand-written fallback bodies are used, so
+routine runs do not prove producer/client wire agreement.
+
+## Limits
+
+Experimental. Skipped-frame counts are pre-disconnect samples, not telegram loss or
+final wire totals; their sampling order relative to disconnect is not pinned by a
+discriminating test. While a TCP job runs its `connection` still shows the unopened
+facts; actual facts appear when the acquisition ends. No KNX IP Secure. Writes,
+programming and restore are out of scope. No real gateway was contacted.

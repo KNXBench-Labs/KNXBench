@@ -5,10 +5,12 @@
 diagnostic `5f1ad454e`, exact-profile width correction `54b052885` (inherited, reviewed
 and integrated-gate accepted, [record](../status/2026-10-26-up258-pid7-width.md)), and
 the safe typed status/report/reopen/UI projection. No longer listed in
-[OPEN_WORK](../OPEN_WORK.md) because the engineering slice is done; physical outcome and
-recovery stay open separately under [S2-02](S2-02-gateway-busy-after-failed-runs.md) and
-[S2-03](S2-03-up258-image-interpretation.md), and issue #30 remains open. Origin:
-GitHub issue #30.
+[OPEN_WORK](../OPEN_WORK.md) because the engineering slice is done. Status update
+(15 November 2026): the single-device field run is verified and issue #30 is closed;
+[S2-02](S2-02-gateway-busy-after-failed-runs.md) and
+[S2-04](S2-04-tunnel-loss-after-checkpoint.md) are closed without a proven original
+cause. Physical recovery stays unverified under
+[S2-03](S2-03-up258-image-interpretation.md). Origin: GitHub issue #30.
 
 ## Current evidence
 

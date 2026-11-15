@@ -2297,6 +2297,9 @@ The [S2-02 record](open-work/S2-02-gateway-busy-after-failed-runs.md) remains P1
 this is diagnostics, not a reproduced fix for the reporter's actual start failure.
 Delivered in `aa2f39f1b` (main `a15b8f0eb`): independent review APPROVE, change-scoped
 package gate 15/15 green. Ships in Alpha 17; reporter re-test is open.
+Status update (15 November 2026): S2-02 and S2-04 are closed without a reproduced or
+proven original cause; the 8 November reporter run started and finished verified
+([closure](open-work/S2-02-gateway-busy-after-failed-runs.md#closure-15-november-2026)).
 
 ## Conservative regular procedure admission (25 October 2026 source)
 

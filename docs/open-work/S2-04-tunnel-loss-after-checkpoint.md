@@ -2,9 +2,10 @@
 
 **Priority:** P1. **Status:** System-2 fix published on `main` as `1ab4ad6a5`;
 ordinary download/service-control follow-up published as `ca940e2ed`;
-individual-address settler hardening published as `c59d14280`; field
-verification remains open.
-Listed in [OPEN_WORK](../OPEN_WORK.md). Origin: GitHub issue #30.
+individual-address settler hardening published as `c59d14280`. **Closed
+15 November 2026** (removed from [OPEN_WORK](../OPEN_WORK.md)): the tunnel held to
+the end of the 28 October and 8 November 2026 reporter runs; the original cause stays
+unproven ([closure](#closure-15-november-2026)). Origin: GitHub issue #30.
 
 ## Field report (27 October 2026)
 
@@ -198,8 +199,7 @@ exact original snapshot equality, durable Restored reopen and once-only/restart
 refusal with its unchanged ten-second deadline. No simulator, protocol or field
 repair is inferred. [Cause, regression/counterprobe and limits](../status/2026-11-04-system2-recovery-conversion.md).
 
-## Remaining
-
+## Remaining at the 8 November 2026 request (historical)
 - The reporter retest requested in `6455873678` ran on 28 October 2026 on
   `0.1.0-alpha.17+g5837537`, which contains `3583ab8e0` (comment `6468817418`):
   the tunnel held through 26 of 27 operations and the device adopted the
@@ -211,3 +211,15 @@ repair is inferred. [Cause, regression/counterprobe and limits](../status/2026-1
   The 8 November 2026 request in [#30](https://github.com/KNXBench-Labs/KNXBench/issues/30#issuecomment-6718382084) is the next confirmation.
 - The hardware outcome stays in [WP-12](WP-12-field-evidence-and-owner-acceptance.md)
   and issue #22.
+
+## Closure, 15 November 2026
+
+The 8 November 2026 reporter run (reported build `0.1.0-alpha.19+gac8f005`, one
+operation on the UP 258D12) held the tunnel through all 27 operations and finished
+verified ([comment](https://github.com/KNXBench-Labs/KNXBench/issues/30#issuecomment-6719332657);
+[S2-05](S2-05-result-and-settlement.md#field-run-8-november-2026)). The tunnel loss
+therefore did not recur on two reporter runs after the fixes. That is consistent with
+the fixes on this one installation; it does not prove the original cause, which stays
+unproven, and it is no general gateway-interoperability claim. Issue #30 is closed;
+broader device support stays in issue #22 and
+[WP-12](WP-12-field-evidence-and-owner-acceptance.md).

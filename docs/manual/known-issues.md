@@ -313,8 +313,9 @@ remains simulator-only. Current source also mounts a distinct **configured**
 UI/HTTP/App/CLI path for UP 258D12 application `M-0001_A-9205-04-9270` only.
 It uses actual project parameters, group links and flags; missing retained sources
 refuse rather than substitute defaults. Ordinary consent plus four exact typed
-phrases are required. This is **experimental, software-tested scope only;
-hardware outcome unverified**, not all-System-2 support or ETS certification.
+phrases are required. This remains **experimental**: software-tested scope plus one
+reporter-verified UP 258D12 field run (8 November 2026), not all-System-2 support or
+ETS certification.
 
 Fresh actual affected prestate must be persisted/read back before setup and every
 later mutation. It is not a whole-device/allocator backup: historical allocator
@@ -375,7 +376,14 @@ backup/readback and recovery-integrity barriers; no general speedup is establish
   final write did not complete) when it could be classified; older operations and
   unclassified stops (for example a journal failure or a cancellation) show
   *unavailable*, and a classified operation is not a cause. The device is never shown
-  as loaded, and the actual allocation mismatch of issues #30/#22 is not diagnosed.
+  as loaded. For the #30 allocation mismatch see the next point.
+- **Since Alpha 20:** the #30 mismatch is attributed to the firmware clearing the hidden
+  `Download_Flag` octet itself after the load (observed on the reporter's device). New
+  System-2 preparations for this application tolerate that one declared octet and show
+  it; older preparations stay strict. A reporter run on 8 November 2026, on a
+  pre-release source build that contains this rule, finished verified. When the firmware
+  clears the octet is not known, and this is one device and configuration, not general
+  System-2 support.
 - **Table scope:** only the selected operation of the current server session and the
   open project appears there; after a server restart it stays in the panel and report.
 - **Details:** [System-2 download result](../contracts/system2-download-result.md),

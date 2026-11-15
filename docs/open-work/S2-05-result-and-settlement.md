@@ -3,7 +3,12 @@
 **Priority:** P1. **Status:** bounded result/report and automatic project-belief
 integration accepted on main-first `8c06ddc96`, including supervised terminal
 settlement and application-level status/reload ownership. Feature and integrated
-selected gates15/15 each passed; #30's allocation mismatch remains unresolved.
+selected gates15/15 each passed. #30's allocation mismatch is accounted for by the
+firmware clearing the hidden `Download_Flag` octet itself (observed 2 November 2026,
+[research](../research/2026-11-01-up258-post-load-flag-octet.md)); that one octet is
+tolerated, every other octet is verified strictly, and the 8 November 2026 reporter run finished verified
+([field run](#field-run-8-november-2026)); #30 and #31 are closed. Open: when the
+firmware clears that octet, and general per-part source equivalence.
 Origin: GitHub issue #31.
 
 [Acceptance, counts and boundaries](../status/2026-10-28-system2-result-integration.md).
@@ -29,8 +34,9 @@ The narrow caption class and physical/general-equivalence limits are unchanged.
   the KNXBench download (2 November 2026) show the firmware clearing the hidden `Download_Flag`
   octet itself ([research](../research/2026-11-01-up258-post-load-flag-octet.md)). Source since
   2 November 2026: a revision-3 UP258 preparation declares that octet, journals and shows each
-  tolerated value; every other byte stays strict. Open: a field run of a build that contains it
-  (requested 8 November 2026 in #30), and the exact clear time (Load Completed or restart).
+  tolerated value; every other byte stays strict. The requested field run is done
+  ([field run](#field-run-8-november-2026)). Open: the exact clear time (Load Completed or
+  restart); the run reads the octet back only after Load Completed, so it does not settle that.
 - General per-part source equivalence stays open. Since main-first `0d6299187`
   (2 November 2026) a verified run on a proven
   unchanged source credits the parts the current project still states as written.
@@ -93,9 +99,41 @@ The narrow caption class and physical/general-equivalence limits are unchanged.
   cross. Later lifecycle, complete backup conservation and real-worker contention
   evidence is recorded in the software consolidation above; it does not rewrite
   these historical verdicts or authorize physical recovery.
-- Field verification: one optional reporter run on a current `main` build was
-  requested on 8 November 2026 ([#30](https://github.com/KNXBench-Labs/KNXBench/issues/30#issuecomment-6718382084)); the software change itself needs
-  no hardware retry.
+- Field verification: done for this device and configuration, see below.
+
+## Field run, 8 November 2026
+
+The optional reporter run requested in
+[#30](https://github.com/KNXBench-Labs/KNXBench/issues/30#issuecomment-6718382084) finished
+on 8 November 2026. The reporter names build `0.1.0-alpha.19+gac8f005`
+([report](https://github.com/KNXBench-Labs/KNXBench/issues/30#issuecomment-6719332657));
+that revision contains the tolerance merge `046ce3fef` (the request asked for any
+build containing `e3cd474c0`). The bundle identifies its exporter as that build,
+but records `executionBuild: unknown`; the execution version remains a reporter
+statement, not independent bundle evidence. The public reporter observations are:
+
+- One operation on the UP 258D12 (application `M-0001_A-9205-04-9270`): finished,
+  27/27 steps, `downloadResult: "verified"`, project settlement `persisted`; the
+  programming marks were set, which is field evidence for the #31 display fix.
+- The preview named the tolerated octet before confirmation. Tolerated line after the
+  run: object 3, `3CF4h`, written `01`, observed `00`, prestate `00`. Every other octet
+  was verified strictly.
+- The reporter states that the exported diagnostic bundle and functional confirmation
+  were sent privately, and publicly confirms normal detector function
+  ([confirmation](https://github.com/KNXBench-Labs/KNXBench/issues/30#issuecomment-6719421160)).
+  The maintainers checked the bundle against its checksums and the report
+  ([reply](https://github.com/KNXBench-Labs/KNXBench/issues/30#issuecomment-6719833331)).
+  The journal-derived report confirms `finished`, `verified`, 27/27 and one object-3
+  post-load observation, without byte values. Raw byte values and project settlement
+  above are reporter statements, not facts independently reconstructed from that
+  report; normal function is a reporter observation, not our hardware measurement.
+  Private bundle contents are not reproduced here.
+- The fix shipped in Alpha 20; #30 was closed on 10 November 2026
+  ([comment](https://github.com/KNXBench-Labs/KNXBench/issues/30#issuecomment-6759794276)).
+
+This is one verified download of one device with one configuration: no general
+System-2, MV-0025 or recovery claim, and System-2 stays experimental. Broader support
+stays in issue #22 and [WP-12](WP-12-field-evidence-and-owner-acceptance.md).
 
 ## Update 28 October 2026: final-step failure category (source, focused proof)
 

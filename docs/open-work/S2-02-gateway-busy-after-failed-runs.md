@@ -1,9 +1,10 @@
 # S2-02 — System-2: misleading busy hint and missing refusal reason
 
-**Priority:** P1. **Status:** In progress: the own-run hint/refusal diagnostic
-slice ships in the published Alpha 17 (`v0.1.0-alpha.17`), so a reporter re-test
-was requested on 8 November 2026; the actual reporter-side start failure remains unresolved.
-Listed in [OPEN_WORK](../OPEN_WORK.md). Origin: GitHub issue #30.
+**Priority:** P1. **Status:** **Closed 15 November 2026** (removed from
+[OPEN_WORK](../OPEN_WORK.md); not reproduced, cause unproven). The own-run
+hint/refusal diagnostic slice ships in Alpha 17; the original start failure did not
+recur, and the 8 November 2026 reporter run started and finished verified (see
+[field outcome](#field-outcome-8-november-2026)). Issue #30 is closed. Origin: GitHub issue #30.
 
 ## Facts and unknowns (25 October 2026)
 
@@ -41,10 +42,11 @@ The reported short HTTP stall and the actual refused step remain unresolved.
   handling. No automatic retry, force-disconnect or clear-state control is added.
 
 Diagnostic slice delivered in `aa2f39f1b` (main `a15b8f0eb`) and published in Alpha 17
-(tag commit `a9ea32d72`); no reporter re-test has been requested or run yet. See the source/HTTP contract in
+(tag commit `a9ea32d72`). At that delivery no reporter re-test had been requested or run;
+for the later runs see the closure section below. See the source/HTTP contract in
 [alpha16-system2-http-mount](../contracts/alpha16-system2-http-mount.md).
 
-## Remaining investigation and closure
+## Investigation and closure plan (historical, through 8 November 2026)
 
 1. Review and exercise this diagnostic slice with synthetic software/loopback
    fixtures, including zero device access for pre-connect refusals.
@@ -66,3 +68,24 @@ Diagnostic slice delivered in `aa2f39f1b` (main `a15b8f0eb`) and published in Al
 No live-bus access, forced tunnel release, firmware/protocol relaxation or vendor
 contact is authorized. Coordinate shared source with
 [PRG-01](PRG-01-programming-gaps.md). This diagnostic slice does not close issue #30.
+
+## Field outcome, 8 November 2026
+
+The reporter's one requested attempt (reported build `0.1.0-alpha.19+gac8f005`) was first
+refused with `system2ConnectFailed` ("nothing was written";
+[report](https://github.com/KNXBench-Labs/KNXBench/issues/30#issuecomment-6719267699)); that refusal happens before any device contact or
+operation journal ([reply](https://github.com/KNXBench-Labs/KNXBench/issues/30#issuecomment-6719331526)). The reporter then found that the
+interface address used in the first attempt was wrong
+([comment](https://github.com/KNXBench-Labs/KNXBench/issues/30#issuecomment-6719332657)), so this refusal was an environment
+input error, not a recurrence of the original failure. With the correct address one
+new operation started without a refusal and finished verified, 27/27 steps (see
+[S2-05](S2-05-result-and-settlement.md#field-run-8-november-2026)).
+
+## Closure, 15 November 2026
+
+Closed without a reproduced cause. The original reporter-side start failure did not
+recur on the 27 and 28 October runs or on 8 November, so no leak was reproduced and no
+fix beyond the delivered diagnostic is admitted (item 4 above). Still true and
+documented as a boundary, not open work: `gatewayBusy` covers shared-lock conflicts,
+process-lease failures and lease-file/runtime I/O errors alike, and does not identify
+which one happened. A new report with that refusal is tracked as a new issue.

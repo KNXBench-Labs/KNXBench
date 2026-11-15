@@ -129,3 +129,38 @@ it("explains a known preview refusal and keeps the server's detail",async()=>{
  expect(paragraphs()).toEqual(["diagnostics.failed"]);
  expect(document.querySelector("[data-diagnostics-review]")).toBeNull();expect(calls.start).not.toHaveBeenCalled();
 });
+
+const tcp={requestedTransport:"tcp",actualTransport:null,assignedAddress:null,skippedFramesBeforeDisconnect:null};
+const doneReport={...report,complete:true,items:[{...report.items[0],status:"read",bytes:[7,1],receivedBytes:2,completedAt:"2026-10-17T06:00:00Z"}]};
+it("offers UDP by default, contacts nothing on selection and freezes TCP into preview, start and poll",async()=>{
+ await open();
+ expect(document.querySelector<HTMLSelectElement>("[data-diagnostics-transport]")!.value).toBe("udp");
+ await select("[data-diagnostics-transport]","tcp");
+ expect(calls.preview).not.toHaveBeenCalled();expect(calls.start).not.toHaveBeenCalled();expect(calls.poll).not.toHaveBeenCalled();
+ calls.preview.mockResolvedValue({...preview,connection:tcp});await click("[data-diagnostics-preview]");
+ expect(calls.preview).toHaveBeenCalledExactlyOnceWith(7,"192.0.2.10:3671","generic-identity-v1",{serverIncarnation:"synthetic",projectIncarnation:1,revision:2},"tcp");
+ expect(document.querySelector("[data-diagnostics-frozen-transport]")!.textContent).toBe('diagnostics.reviewedTransport {"transport":"TCP"}');
+ calls.start.mockResolvedValue({...preview,phase:"running",connection:tcp});
+ calls.poll.mockResolvedValue({...preview,phase:"complete",exportable:true,report:doneReport,connection:{...tcp,actualTransport:"tcp",assignedAddress:"1.1.250",skippedFramesBeforeDisconnect:2}});
+ await click("[data-diagnostics-read-consent]");await click("[data-diagnostics-start]");
+ expect(calls.start).toHaveBeenCalledExactlyOnceWith(preview.token,"tcp");
+ await act(async()=>{await new Promise(resolve=>setTimeout(resolve,350));});
+ expect(calls.poll.mock.calls.every(c=>c[0]===preview.token&&c[1]==="tcp")).toBe(true);
+ expect(document.querySelector("[data-diagnostics-connection]")!.textContent).toBe('diagnostics.actualConnection {"transport":"TCP","address":"1.1.250","skipped":2}');
+});
+it("shows unavailable, not zero, when a TCP run never opened a tunnel",async()=>{
+ await open();await select("[data-diagnostics-transport]","tcp");calls.preview.mockResolvedValue({...preview,connection:tcp});await click("[data-diagnostics-preview]");
+ calls.start.mockResolvedValue({...preview,phase:"running",connection:tcp});calls.poll.mockResolvedValue({...preview,phase:"complete",exportable:true,report:{...doneReport,stopReason:"gateway-connect-failed"},connection:tcp});
+ await click("[data-diagnostics-read-consent]");await click("[data-diagnostics-start]");await act(async()=>{await new Promise(resolve=>setTimeout(resolve,350));});
+ expect(document.querySelector("[data-diagnostics-connection]")!.textContent).toBe("diagnostics.connectionUnavailable");
+});
+it("keeps UDP calls at their legacy arity, drops the review on a transport change and refuses a missing TCP route",async()=>{
+ await open();await click("[data-diagnostics-preview]");
+ expect(calls.preview).toHaveBeenCalledExactlyOnceWith(7,"192.0.2.10:3671","generic-identity-v1",{serverIncarnation:"synthetic",projectIncarnation:1,revision:2});
+ expect(document.querySelector("[data-diagnostics-connection],[data-diagnostics-frozen-transport]")).toBeNull();
+ await select("[data-diagnostics-transport]","tcp");expect(document.querySelector("[data-diagnostics-review]")).toBeNull();
+ calls.preview.mockRejectedValue(new Refusal(404,null,null));await click("[data-diagnostics-preview]");
+ expect(document.querySelector("[data-diagnostics-error]")!.textContent).toContain("diagnostics.refusal.tcpUnsupported");
+ expect(document.querySelector("[data-diagnostics-review]")).toBeNull();
+ expect(calls.preview).toHaveBeenCalledTimes(2);expect(calls.preview.mock.calls[1][4]).toBe("tcp");expect(calls.start).not.toHaveBeenCalled();
+});

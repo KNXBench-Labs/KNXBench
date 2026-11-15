@@ -1,6 +1,7 @@
 /** One application service over same-origin HTTP; no external submission. */
 // Strict admission of both profiles: identity (format 1) and declared memory (format 2).
 import {noteRefusal} from "./api";
+import {validTcpConnection,type TcpConnectionFacts} from "./tcpConnectionFacts";
 /** The project snapshot a preview is bound to; a changed one refuses the read. */
 export interface SupportBinding {serverIncarnation:string;projectIncarnation:number;revision:number}
 export interface DiagnosticReading {
@@ -34,12 +35,16 @@ export interface MemoryEvidence {
  hardwareTypeComparison:{objectIndex:number;propertyId:number;procedurePosition:number;inlineData:string};
  chunkOctets:number;ranges:MemoryRange[];chunks:MemoryChunk[];
 }
+/** Chosen per preview and frozen into the job; `tcp` is experimental and never falls back to UDP. */
+export type DiagnosticTransport="udp"|"tcp";
 export interface DiagnosticView {
  token:string;target:string;gateway:string;phase:"preview"|"running"|"complete";cancelRequested:boolean;report:DiagnosticReport;
  /** `null` exactly for `generic-identity-v1`. */
  memory:MemoryEvidence|null;
  /** The server's archive writer admits the finished result; never before completion. */
  exportable:boolean;
+ /** Present exactly for explicit-TCP jobs: facts sampled before disconnect; null facts mean unavailable, not zero. */
+ connection?:TcpConnectionFacts;
 }
 /** A refused request; `code` is the server's leading fixed token, when it sent one. */
 export class DiagnosticRefusal extends Error {
@@ -111,10 +116,20 @@ function validMemory(m:MemoryEvidence,complete:boolean):boolean {
  }
  return m.ranges.every((r,i)=>(Object.keys(coverage[i]) as (keyof MemoryCoverage)[]).every(key=>r.coverage[key]===coverage[i][key]));
 }
-export function admitDiagnostics(value:unknown):DiagnosticView {
+/** The key is truly absent for UDP jobs and truly present, well-formed and requested-TCP for TCP jobs. */
+function validConnection(v:object,transport:DiagnosticTransport):boolean {
+ if(transport==="udp")return !("connection" in v);
+ // A finished run without a stop reason read over a tunnel: unavailable facts would contradict it.
+ const view=v as DiagnosticView;
+ const succeeded=view.phase==="complete"&&view.report?.stopReason===null;
+ if(!("connection" in v)||!validTcpConnection((v as {connection:unknown}).connection,succeeded))return false;
+ // A preview contacted nothing: any actual transport there is invented.
+ return (v as DiagnosticView).phase!=="preview"||(v as {connection:TcpConnectionFacts}).connection.actualTransport===null;
+}
+export function admitDiagnostics(value:unknown,transport:DiagnosticTransport="udp"):DiagnosticView {
  if(typeof value!=="object"||value===null)throw new Error("diagnostics-invalid-response");
  const v=value as Partial<DiagnosticView>;const r=v.report;
- if(!onlyFields(v,["token","target","gateway","phase","cancelRequested","report","memory","exportable"])||typeof v.exportable!=="boolean"||(v.exportable&&v.phase!=="complete")||v.memory===undefined||typeof v.token!=="string"||!/^[a-f0-9]{64}$/.test(v.token)||typeof v.target!=="string"||typeof v.gateway!=="string"||!(["preview","running","complete"] as unknown[]).includes(v.phase)||typeof v.cancelRequested!=="boolean"||!r||
+ if(!onlyFields(v,["token","target","gateway","phase","cancelRequested","report","memory","exportable","connection"])||!validConnection(v,transport)||typeof v.exportable!=="boolean"||(v.exportable&&v.phase!=="complete")||v.memory===undefined||typeof v.token!=="string"||!/^[a-f0-9]{64}$/.test(v.token)||typeof v.target!=="string"||typeof v.gateway!=="string"||!(["preview","running","complete"] as unknown[]).includes(v.phase)||typeof v.cancelRequested!=="boolean"||!r||
   !onlyFields(r,["kind","format","build","collectedAt","device","projectReference","profile","assertedMask","assertedManufacturer","simulated","written","complete","items","stopReason","memoryStatus","memoryReason","disconnectAttemptCompleted"])||
   r.written!==false||r.kind!=="knxbench-device-diagnostics"||!(r.format===1?r.profile===IDENTITY_PROFILE&&r.memoryStatus==="not-requested"&&r.memoryReason===IDENTITY_MEMORY_REASON&&v.memory===null:r.format===2&&r.profile===MEMORY_PROFILE&&r.memoryStatus==="requested"&&r.memoryReason===MEMORY_REASON&&v.memory!==null&&typeof v.memory==="object"&&validMemory(v.memory,r.complete===true))||r.device!=="device-1"||typeof r.projectReference!=="string"||!/^[a-f0-9]{64}$/.test(r.projectReference)||typeof r.build!=="string"||!nullableTime(r.collectedAt)||r.collectedAt===null||
   typeof r.simulated!=="boolean"||typeof r.complete!=="boolean"||typeof r.disconnectAttemptCompleted!=="boolean"||typeof r.memoryReason!=="string"||
@@ -122,11 +137,13 @@ export function admitDiagnostics(value:unknown):DiagnosticView {
   ![r.assertedMask,r.assertedManufacturer].every(n=>n===null||(Number.isInteger(n)&&n>=0&&n<=65535))||!Array.isArray(r.items)||r.items.length!==3||!r.items.every((item,index)=>validReading(item,index,r.complete as boolean)))throw new Error("diagnostics-invalid-response");
  return v as DiagnosticView;
 }
-async function view(path:string,body?:unknown){return admitDiagnostics(await(await request(path,body)).json());}
-export function previewDiagnostics(deviceId:number,gateway:string,profile:DiagnosticProfile,context:SupportBinding){return view("/api/device-diagnostics/preview",{deviceId,gateway,profile,context});}
-export function startDiagnostics(token:string){return view("/api/device-diagnostics/start",{token,consent:true});}
-export function pollDiagnostics(token:string){return view(`/api/device-diagnostics/${encodeURIComponent(token)}`);}
-export function cancelDiagnostics(token:string){return view(`/api/device-diagnostics/${encodeURIComponent(token)}/cancel`,{});}
+async function view(path:string,transport:DiagnosticTransport,body?:unknown){return admitDiagnostics(await(await request(path,body)).json(),transport);}
+/** TCP calls only the strict sibling route: an older server answers 404/405, never a UDP read. */
+export function previewDiagnostics(deviceId:number,gateway:string,profile:DiagnosticProfile,context:SupportBinding,transport:DiagnosticTransport="udp"){return view(transport==="tcp"?"/api/device-diagnostics/preview/tcp":"/api/device-diagnostics/preview",transport,{deviceId,gateway,profile,context});}
+/** Start, poll and cancel carry the transport the preview froze, only to admit the matching metadata. */
+export function startDiagnostics(token:string,transport:DiagnosticTransport="udp"){return view("/api/device-diagnostics/start",transport,{token,consent:true});}
+export function pollDiagnostics(token:string,transport:DiagnosticTransport="udp"){return view(`/api/device-diagnostics/${encodeURIComponent(token)}`,transport);}
+export function cancelDiagnostics(token:string,transport:DiagnosticTransport="udp"){return view(`/api/device-diagnostics/${encodeURIComponent(token)}/cancel`,transport,{});}
 export async function saveDiagnostics(token:string):Promise<void>{
  const response=await request("/api/device-diagnostics/export",{token,consent:true});
  if(!response.headers.get("content-type")?.startsWith("application/zip"))throw new Error("diagnostics-invalid-export");

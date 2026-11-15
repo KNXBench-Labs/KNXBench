@@ -3,7 +3,7 @@ use super::*;
 use knx_net::{TunnelAckWait, TunnelTransport};
 use std::net::Ipv4Addr;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
-mod peer;
+pub(crate) mod peer;
 
 fn binding(h: &Harness) -> Value {
     json!({"serverIncarnation": h.state.server_incarnation,

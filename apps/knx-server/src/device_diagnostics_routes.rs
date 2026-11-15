@@ -3,7 +3,7 @@
 //! Single-device, snapshot-bound read-only diagnosis with the generic identity
 //! recipe or the ProductDB-declared memory profile (ADR-0143). Background ownership
 //! keeps partial bytes and teardown alive when a browser disconnects or cancels.
-use crate::{errors::ApiError, SharedState};
+use crate::{device_compare_routes::ComparisonConnection, errors::ApiError, SharedState};
 use axum::{
     extract::{DefaultBodyLimit, Extension, Path, State},
     http::{header, StatusCode},
@@ -99,6 +99,10 @@ struct Job {
     /// failure, ...) has no admitted archive shape, like the CLI's refusal.
     exportable: bool,
     cancel: Arc<AtomicBool>,
+    /// Fixed at preview; `start` runs with exactly this transport.
+    transport: knx_net::TunnelTransport,
+    /// Explicit-TCP jobs only: sampled before disconnect, unavailable until a tunnel existed.
+    connection: Option<ComparisonConnection>,
 }
 type Slot = Arc<Mutex<Option<Job>>>;
 
@@ -217,6 +221,8 @@ impl Results {
             export,
             exportable: !matches!(retention, BundleTestRetention::NonExportable),
             cancel: Arc::new(AtomicBool::new(false)),
+            transport: knx_net::TunnelTransport::Udp,
+            connection: None,
         });
     }
 }
@@ -232,6 +238,9 @@ struct View {
     /// `memory.json` of format 2; `null` for `generic-identity-v1`.
     memory: Option<MemoryEvidence>,
     exportable: bool,
+    /// Present only for explicit-TCP jobs (legacy UDP views are unchanged).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    connection: Option<ComparisonConnection>,
 }
 fn view(job: &Job) -> View {
     View {
@@ -243,6 +252,7 @@ fn view(job: &Job) -> View {
         report: job.export.report.clone(),
         memory: job.export.memory.clone(),
         exportable: job.exportable,
+        connection: job.connection.clone(),
     }
 }
 fn error(code: &str) -> ApiError {
@@ -269,6 +279,8 @@ fn snapshot(slot: &Slot, token: &str) -> Result<Job, ApiError> {
 pub fn routes(results: Results) -> Router<SharedState> {
     Router::new()
         .route("/api/device-diagnostics/preview", post(preview))
+        // Strict sibling: an old server answers 404/405 instead of silently reading over UDP.
+        .route("/api/device-diagnostics/preview/tcp", post(preview_tcp))
         .route("/api/device-diagnostics/start", post(start))
         .route("/api/device-diagnostics/export", post(export))
         .route("/api/device-diagnostics/{token}", get(status))
@@ -298,6 +310,21 @@ async fn preview(
     State(state): State<SharedState>,
     Extension(slot): Extension<Slot>,
     Json(body): Json<PreviewRequest>,
+) -> Result<Json<View>, ApiError> {
+    preview_with(state, slot, body, knx_net::TunnelTransport::Udp).await
+}
+async fn preview_tcp(
+    State(state): State<SharedState>,
+    Extension(slot): Extension<Slot>,
+    Json(body): Json<PreviewRequest>,
+) -> Result<Json<View>, ApiError> {
+    preview_with(state, slot, body, knx_net::TunnelTransport::Tcp).await
+}
+async fn preview_with(
+    state: SharedState,
+    slot: Slot,
+    body: PreviewRequest,
+    transport: knx_net::TunnelTransport,
 ) -> Result<Json<View>, ApiError> {
     let gateway: SocketAddrV4 = body
         .gateway
@@ -356,6 +383,9 @@ async fn preview(
             device_id: body.device_id,
             phase: "preview",
             cancel: Arc::new(AtomicBool::new(false)),
+            transport,
+            connection: (transport == knx_net::TunnelTransport::Tcp)
+                .then(ComparisonConnection::unopened),
         };
         fresh(&state, &job)?;
         let mut held = slot.lock().map_err(|_| error("diagnostics-unavailable"))?;
@@ -494,20 +524,46 @@ async fn run_inner(state: &SharedState, slot: &Slot, job: &Job) -> Result<(), &'
             "projectContext",
             serde_json::to_string(&job.binding).expect("binding serializes"),
         )
-        .settings(crate::operation_recordings::tunnel_settings(
-            knx_net::TunnelAckWait::Standard,
-            &state.device_download_timing,
-        )),
+        .settings(match job.transport {
+            // Legacy UDP recordings keep their exact settings.
+            knx_net::TunnelTransport::Udp => crate::operation_recordings::tunnel_settings(
+                knx_net::TunnelAckWait::Standard,
+                &state.device_download_timing,
+            ),
+            transport => crate::operation_recordings::tunnel_settings_with_transport(
+                knx_net::TunnelAckWait::Standard,
+                &state.device_download_timing,
+                transport,
+            ),
+        }),
     );
     // A known connect failure is "failed"; only a dropped future is "unknown".
     let tunnel = match tokio::time::timeout(
         Duration::from_secs(10),
-        crate::operation_recordings::connect(
-            state,
-            job.gateway,
-            knx_net::TunnelAckWait::Standard,
-            &recorder,
-        ),
+        // The transport is the preview's, never retried or swapped.
+        async {
+            match job.transport {
+                knx_net::TunnelTransport::Udp => {
+                    crate::operation_recordings::connect(
+                        state,
+                        job.gateway,
+                        knx_net::TunnelAckWait::Standard,
+                        &recorder,
+                    )
+                    .await
+                }
+                transport => {
+                    crate::operation_recordings::connect_with_transport(
+                        state,
+                        job.gateway,
+                        knx_net::TunnelAckWait::Standard,
+                        &recorder,
+                        transport,
+                    )
+                    .await
+                }
+            }
+        },
     )
     .await
     {
@@ -552,6 +608,19 @@ async fn run_inner(state: &SharedState, slot: &Slot, job: &Job) -> Result<(), &'
             .await
         }
     };
+    // Sample while the real handle exists, independent of optional recording.
+    if job.transport == knx_net::TunnelTransport::Tcp {
+        let connection = ComparisonConnection::sampled(job.transport, tunnel.as_ref());
+        recorder.note(
+            "connection",
+            serde_json::to_value(&connection).unwrap_or_default(),
+        );
+        if let Ok(mut held) = slot.lock() {
+            if let Some(held) = held.as_mut().filter(|j| j.token == job.token) {
+                held.connection = Some(connection);
+            }
+        }
+    }
     // The report survives failed tunnel teardown; no "successful disconnect" claim.
     match tokio::time::timeout(Duration::from_secs(3), tunnel.disconnect()).await {
         Ok(Ok(())) => {}

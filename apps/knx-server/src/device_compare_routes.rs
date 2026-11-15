@@ -190,9 +190,10 @@ struct TcpCompareRequest {
     binding: ComparisonBinding,
 }
 
+/// Transport facts of one explicit-TCP run; also the device-diagnostics `connection` view.
 #[derive(Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
-struct ComparisonConnection {
+pub(crate) struct ComparisonConnection {
     requested_transport: &'static str,
     actual_transport: Option<String>,
     assigned_address: Option<String>,
@@ -200,7 +201,21 @@ struct ComparisonConnection {
 }
 
 impl ComparisonConnection {
-    fn unopened() -> Self {
+    /// Sampled from the real handle; call before disconnecting it.
+    pub(crate) fn sampled(
+        requested: knx_net::TunnelTransport,
+        tunnel: &dyn crate::bus::BusTunnel,
+    ) -> Self {
+        Self {
+            requested_transport: requested.as_str(),
+            actual_transport: Some(tunnel.transport().as_str().to_owned()),
+            assigned_address: Some(tunnel.assigned_address().to_string()),
+            skipped_frames_before_disconnect: Some(tunnel.skipped_frames()),
+        }
+    }
+
+    /// No tunnel existed: every fact is unavailable, not zero.
+    pub(crate) fn unopened() -> Self {
         Self {
             requested_transport: "tcp",
             actual_transport: None,
@@ -388,12 +403,7 @@ async fn compare_with_transport(
         )
         .await;
     // Sample while the real handle still exists, independently of optional recording.
-    let connection = ComparisonConnection {
-        requested_transport: transport.as_str(),
-        actual_transport: Some(tunnel.transport().as_str().to_owned()),
-        assigned_address: Some(tunnel.assigned_address().to_string()),
-        skipped_frames_before_disconnect: Some(tunnel.skipped_frames()),
-    };
+    let connection = ComparisonConnection::sampled(transport, tunnel.as_ref());
     recorder.note(
         "connection",
         serde_json::to_value(&connection).unwrap_or_default(),

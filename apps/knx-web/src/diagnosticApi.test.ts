@@ -183,3 +183,67 @@ describe("format 2 admission follows the Rust writer exactly",()=>{
   ]){const invalid=structuredClone(partial);change(invalid);expect(()=>admitDiagnostics(invalid)).toThrow("diagnostics-invalid-response");}
  });
 });
+
+/** Explicit TCP: strict sibling route and required connection metadata, never a UDP retry. */
+const tcpFacts={requestedTransport:"tcp" as const,actualTransport:"tcp" as const,assignedAddress:"1.1.250",skippedFramesBeforeDisconnect:2};
+const tcpView:DiagnosticView={...structuredClone(view),connection:tcpFacts};
+const context={serverIncarnation:"fixture",projectIncarnation:1,revision:2};
+describe("explicit TCP diagnostics contract",()=>{
+ it("calls only the sibling preview route with the legacy body and admits the matching metadata",async()=>{
+  const fetch=vi.fn().mockImplementation(async()=>new Response(JSON.stringify(tcpView),{headers:{"content-type":"application/json"}}));vi.stubGlobal("fetch",fetch);
+  expect(await previewDiagnostics(7,"192.0.2.10:3671","generic-identity-v1",context,"tcp")).toEqual(tcpView);
+  await startDiagnostics(tcpView.token,"tcp");await pollDiagnostics(tcpView.token,"tcp");await cancelDiagnostics(tcpView.token,"tcp");
+  expect(fetch.mock.calls.map(c=>c[0])).toEqual(["/api/device-diagnostics/preview/tcp","/api/device-diagnostics/start",`/api/device-diagnostics/${tcpView.token}`,`/api/device-diagnostics/${tcpView.token}/cancel`]);
+  expect(JSON.parse(fetch.mock.calls[0][1].body)).toEqual({deviceId:7,gateway:"192.0.2.10:3671",profile:"generic-identity-v1",context});
+ });
+ it("keeps the UDP default on the legacy route and refuses metadata it never asked for",async()=>{
+  const fetch=vi.fn().mockImplementation(async()=>new Response(JSON.stringify(tcpView),{headers:{"content-type":"application/json"}}));vi.stubGlobal("fetch",fetch);
+  await expect(previewDiagnostics(7,"192.0.2.10:3671","generic-identity-v1",context)).rejects.toThrow("diagnostics-invalid-response");
+  expect(fetch.mock.calls.map(c=>c[0])).toEqual(["/api/device-diagnostics/preview"]);
+  expect(()=>admitDiagnostics(tcpView)).toThrow("diagnostics-invalid-response");
+ });
+ it("refuses a TCP view whose connection key is absent, wrong, invented or unavailable-as-zero",()=>{
+  expect(admitDiagnostics(tcpView,"tcp")).toEqual(tcpView);
+  const absent=structuredClone(view);expect(Object.hasOwn(absent,"connection")).toBe(false);
+  expect(()=>admitDiagnostics(absent,"tcp")).toThrow("diagnostics-invalid-response");
+  const undefinedKey={...structuredClone(view),connection:undefined};
+  expect(()=>admitDiagnostics(undefinedKey,"tcp")).toThrow("diagnostics-invalid-response");
+  for(const change of [
+   (c:Record<string,unknown>)=>{c.requestedTransport="udp";},
+   (c:Record<string,unknown>)=>{c.actualTransport="udp";},
+   (c:Record<string,unknown>)=>{c.assignedAddress="1.1.256";},
+   (c:Record<string,unknown>)=>{c.assignedAddress=null;},
+   (c:Record<string,unknown>)=>{c.skippedFramesBeforeDisconnect=null;},
+   (c:Record<string,unknown>)=>{c.skippedFramesBeforeDisconnect=-1;},
+   (c:Record<string,unknown>)=>{c.skippedFramesBeforeDisconnect=1.5;},
+   // Unavailable is null everywhere; zero would claim a sample that never happened.
+   (c:Record<string,unknown>)=>{c.actualTransport=null;c.assignedAddress=null;c.skippedFramesBeforeDisconnect=0;},
+   (c:Record<string,unknown>)=>{c.actualTransport=null;},
+  ]){const invalid=structuredClone(tcpView) as unknown as {connection:Record<string,unknown>};change(invalid.connection);expect(()=>admitDiagnostics(invalid,"tcp")).toThrow("diagnostics-invalid-response");}
+  // The strict-object rule of this client applies to the view's own keys.
+  expect(()=>admitDiagnostics({...tcpView,hostPath:"/private"},"tcp")).toThrow("diagnostics-invalid-response");
+ });
+ it("admits unavailable facts of a refused connect, but never an opened transport in a preview",()=>{
+  const unavailableFacts={requestedTransport:"tcp" as const,actualTransport:null,assignedAddress:null,skippedFramesBeforeDisconnect:null};
+  const refused=structuredClone(view);refused.report.complete=true;refused.report.stopReason="gateway-connect-failed";refused.exportable=false;
+  const unavailable={...refused,connection:unavailableFacts};
+  expect(admitDiagnostics(unavailable,"tcp")).toEqual(unavailable);
+  // A clean success with no opened transport is a contradiction, never admitted.
+  expect(()=>admitDiagnostics({...structuredClone(view),connection:unavailableFacts},"tcp")).toThrow("diagnostics-invalid-response");
+  const preview=structuredClone(tcpView);preview.phase="preview";preview.exportable=false;preview.report.complete=false;
+  preview.report.items=preview.report.items.map(i=>({...i,status:"not-read" as const,bytes:[],receivedBytes:0,returnedElements:null,attemptedAt:null,completedAt:null}));
+  expect(()=>admitDiagnostics(preview,"tcp")).toThrow("diagnostics-invalid-response");
+  preview.connection=unavailable.connection;expect(admitDiagnostics(preview,"tcp")).toEqual(preview);
+ });
+ it("turns 404, 405 and invalid metadata into a refusal after exactly one request",async()=>{
+  for(const status of [404,405]){
+   const fetch=vi.fn().mockResolvedValue(new Response("{}",{status,headers:{"content-type":"application/json"}}));vi.stubGlobal("fetch",fetch);
+   const refusal=await previewDiagnostics(7,"192.0.2.10:3671","generic-identity-v1",context,"tcp").catch((e:unknown)=>e);
+   expect(refusal).toBeInstanceOf(DiagnosticRefusal);expect((refusal as DiagnosticRefusal).status).toBe(status);
+   expect(fetch).toHaveBeenCalledTimes(1);expect(fetch.mock.calls[0][0]).toBe("/api/device-diagnostics/preview/tcp");
+  }
+  const fetch=vi.fn().mockResolvedValue(new Response(JSON.stringify(view),{headers:{"content-type":"application/json"}}));vi.stubGlobal("fetch",fetch);
+  await expect(previewDiagnostics(7,"192.0.2.10:3671","generic-identity-v1",context,"tcp")).rejects.toThrow("diagnostics-invalid-response");
+  expect(fetch).toHaveBeenCalledTimes(1);
+ });
+});

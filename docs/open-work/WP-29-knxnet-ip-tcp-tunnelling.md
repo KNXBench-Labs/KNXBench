@@ -232,7 +232,7 @@ refuses 404/405 or missing/mismatched metadata. Legacy-route recordings are unch
 TCP recordings carry `requestedTransport` and a `connection` note.
 Loopback/simulator evidence only. [Evidence and limits](../status/2026-11-14-server-web-tcp-diagnostics.md).
 
-## Server/Web service-control successor (15 November 2026; source candidate)
+## Server/Web service-control successor (15 November 2026; software-accepted on main)
 
 The Debug service-control read and write gain strict explicit-TCP siblings,
 `POST /api/device/service-control/tcp/read` and `POST /api/device/service-control/tcp`

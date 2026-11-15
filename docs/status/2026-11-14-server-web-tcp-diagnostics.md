@@ -1,7 +1,21 @@
-# Server/Web TCP device diagnostics — source candidate
+# Server/Web TCP device diagnostics
 
-Date: 14 November 2026. Source candidate only; not reviewed, accepted, released or
-deployed. Loopback and simulator evidence only: no real-gateway interoperability.
+Date: 14 November 2026. Software-accepted on main; not released or deployed.
+Loopback and simulator evidence only: no real-gateway interoperability.
+
+
+## Acceptance
+
+The reviewed source was integrated main-first as `fef417bb9` and publication was
+read back exactly. Two independent reviews (Standards, Spec) returned APPROVE with
+no blocker. Standards noted one medium finding (a complete success with null actual
+transport was admitted; fixed before commit) and three low judgments. Spec noted
+two low findings (a dead test setup line, missing TCP cancel test) and ran two
+server mutants in an isolated copy (both killed). The package gate passed all 15
+selected stages (Rust 1990 passed, 0 failed, 73 ignored; Vitest 5832; 1421 browser
+tests; separate corpus 51/51), inputs frozen and user data untouched. The first gate
+attempt failed on tool-tests (production spec count 44 vs 45); the fix added the new
+spec to the test assertion and passed in the second run.
 
 ## Contract
 

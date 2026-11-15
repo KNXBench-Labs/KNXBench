@@ -28,12 +28,12 @@ fn read_frame(stream: &mut TcpStream) -> Vec<u8> {
     stream.read_exact(&mut frame[6..]).unwrap();
     frame
 }
-pub(super) struct Joined<T>(Option<thread::JoinHandle<T>>);
+pub(crate) struct Joined<T>(Option<thread::JoinHandle<T>>);
 impl<T> Joined<T> {
     fn new(handle: thread::JoinHandle<T>) -> Self {
         Self(Some(handle))
     }
-    pub(super) fn join(mut self) -> thread::Result<T> {
+    pub(crate) fn join(mut self) -> thread::Result<T> {
         self.0.take().unwrap().join()
     }
 }
@@ -44,14 +44,14 @@ impl<T> Drop for Joined<T> {
         }
     }
 }
-pub(super) type Wire = Vec<(bool, Vec<u8>)>;
-pub(super) struct Peer {
+pub(crate) type Wire = Vec<(bool, Vec<u8>)>;
+pub(crate) struct Peer {
     stream: TcpStream,
     wire: Wire,
     outer_seq: u8,
 }
 
-pub(super) fn gateway(
+pub(crate) fn gateway(
     assigned: u8,
     script: impl FnOnce(&mut Peer) + Send + 'static,
 ) -> (SocketAddr, Joined<Wire>, Trap) {
@@ -103,13 +103,13 @@ pub(super) fn gateway(
 }
 
 /// The gateway's own sockets, kept for checks after the CLI has exited.
-pub(super) struct Trap {
+pub(crate) struct Trap {
     udp: UdpSocket,
     tcp: TcpListener,
 }
 
 /// After the CLI exited: no UDP fallback and no late TCP reconnect or replay.
-pub(super) fn no_retry(trap: &Trap) {
+pub(crate) fn no_retry(trap: &Trap) {
     no_udp(&trap.udp);
     assert_eq!(
         trap.tcp.accept().unwrap_err().kind(),
@@ -118,7 +118,7 @@ pub(super) fn no_retry(trap: &Trap) {
     );
 }
 
-pub(super) fn no_udp(trap: &UdpSocket) {
+pub(crate) fn no_udp(trap: &UdpSocket) {
     assert_eq!(
         trap.recv_from(&mut [0; 2048]).unwrap_err().kind(),
         std::io::ErrorKind::WouldBlock,
@@ -128,7 +128,7 @@ pub(super) fn no_udp(trap: &UdpSocket) {
 
 impl Peer {
     /// Bridge the maintained management simulator through real TCP/cEMI, without new encoders.
-    pub(super) fn simulate(
+    pub(crate) fn simulate(
         &mut self,
         device: &knx_net::commissioning::simulator::SimulatedDevice,
         skips: bool,

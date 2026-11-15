@@ -6,7 +6,7 @@
 
 use super::*;
 
-mod tcp;
+pub(crate) mod tcp;
 use knx_core::commissioning::parameter_baseline::{ParameterBaseline, ParameterBaselines};
 use knx_core::{
     ComObjectInstance, ComObjectInstanceId, CompletionStatus, DeviceInstance, Direction,

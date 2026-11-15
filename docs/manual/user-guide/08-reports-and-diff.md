@@ -290,6 +290,16 @@ the dialog also asks for a **Diagnostic profile** (*Diagnoseprofil*): keep
 ([see below](#reading-declared-memory-ranges-system-2)). Then press **Preview
 diagnostic reads** (*Diagnoselesungen prüfen*). Nothing is sent to the bus yet.
 
+**Interface transport (source candidate, not in a release):** the dialog also has an
+**Interface transport** (*Transport zur Schnittstelle*) choice. It starts at UDP in
+every freshly opened dialog; **TCP (experimental)** is never taken from another
+preference. The choice is fixed when you press **Preview diagnostic reads** and the
+read runs with exactly that transport: no fallback to UDP, no reconnect, no replay,
+and still read-only. A TCP result shows the transport that actually opened, the
+assigned address and the skipped-frame sample taken just before disconnect, also after
+a failed read; "unavailable" means no connection opened, it is not zero skipped frames.
+A server without the TCP route refuses the preview and nothing is contacted.
+
 ![The dialog with one device selected, the interface entered and the preview button](../../assets/screenshots/porcelain-diagnostic-export-2-device-and-interface.png)
 
 ### Step 3: check the preview and read

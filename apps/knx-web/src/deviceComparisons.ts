@@ -1,5 +1,6 @@
 /** Session-only comparison contracts and a serial, cancellable read-only queue. */
 import type { DeviceCompareResponse } from "./api";
+import { validTcpConnection } from "./tcpConnectionFacts";
 
 export type ComparisonTag = "synced" | "different" | "outdated" | "wrongApplication" | "noAnswer" | "notComparable";
 export interface ComparisonBinding { serverIncarnation: string; projectIncarnation: number; deviceId: number; comparisonRevision: number }
@@ -72,16 +73,8 @@ class InvalidComparison extends Error {}
 /** Validate route-specific facts; missing is not zero and selected is not actual. */
 export function admitTcpConnection(value: unknown, success: boolean): import("./api").TcpComparisonConnection {
   if (!value || typeof value !== "object" || !("connection" in value)) throw new InvalidComparison();
-  const c = value.connection as import("./api").TcpComparisonConnection | null;
-  const address = (v: unknown) => typeof v === "string" && /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/.test(v) &&
-    v.split(".").every((part, index) => Number(part) <= (index === 2 ? 255 : 15));
-  if (!c || c.requestedTransport !== "tcp" ||
-    (c.actualTransport !== "tcp" && c.actualTransport !== null) ||
-    (c.assignedAddress !== null && !address(c.assignedAddress)) ||
-    (c.skippedFramesBeforeDisconnect !== null && (!Number.isSafeInteger(c.skippedFramesBeforeDisconnect) || c.skippedFramesBeforeDisconnect < 0)) ||
-    (c.actualTransport === null && (c.assignedAddress !== null || c.skippedFramesBeforeDisconnect !== null)) ||
-    (c.actualTransport === "tcp" && (c.assignedAddress === null || c.skippedFramesBeforeDisconnect === null)) ||
-    (success && c.actualTransport !== "tcp")) throw new InvalidComparison();
+  const c = value.connection;
+  if (!validTcpConnection(c, success)) throw new InvalidComparison();
   return c;
 }
 

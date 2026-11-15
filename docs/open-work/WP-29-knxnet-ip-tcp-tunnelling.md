@@ -219,6 +219,19 @@ Loopback/simulator evidence only. [Evidence and limits](../status/2026-11-14-ser
   real-gateway interoperability. Hardware validation is a later separately
   authorised activity under `AGENTS.md`, not a prerequisite for offline work.
 
+## Server/Web device-diagnostics successor (14 November 2026; source candidate)
+
+A distinct strict `POST /api/device-diagnostics/preview/tcp` (same body as the legacy
+preview, binding required) fixes the transport in the job; `start`, status, cancel and
+export keep their legacy routes and bodies, and a TCP job opens TCP only, with no UDP
+retry, reconnect or replay. Views of TCP jobs carry required `connection` metadata
+(same semantics as device comparison; null facts mean unavailable); UDP views stay
+byte-shaped as before and report/export bundles (format 1/2) are unchanged. The Web
+dialog has a diagnostics-local UDP/TCP choice (UDP default per fresh dialog) and
+refuses 404/405 or missing/mismatched metadata. Legacy-route recordings are unchanged;
+TCP recordings carry `requestedTransport` and a `connection` note.
+Loopback/simulator evidence only. [Evidence and limits](../status/2026-11-14-server-web-tcp-diagnostics.md).
+
 ## References
 
 [Open work](../OPEN_WORK.md) · [Architecture](../ARCHITECTURE.md) ·

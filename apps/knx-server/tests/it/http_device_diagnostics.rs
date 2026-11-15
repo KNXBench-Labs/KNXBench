@@ -2,6 +2,7 @@
 mod bundle_tests;
 #[path = "../common/system2_diagnostic_fixture.rs"]
 mod system2_fixture;
+mod tcp;
 use axum::{
     body::{to_bytes, Body},
     http::{Request, StatusCode},

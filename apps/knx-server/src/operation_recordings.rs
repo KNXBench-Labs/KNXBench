@@ -130,6 +130,31 @@ pub(crate) async fn open(
     (recorder, connected)
 }
 
+/// Like [`open`] for an explicitly selected transport; never retries another one.
+pub(crate) async fn open_with_transport(
+    state: &AppState,
+    operation: OperationStart,
+    gateway: SocketAddrV4,
+    wait: TunnelAckWait,
+    timing: &knx_net::SessionTiming,
+    transport: knx_net::TunnelTransport,
+) -> (
+    OperationRecorder,
+    Result<Box<dyn BusTunnel>, BusSessionError>,
+) {
+    let recorder = start(
+        state,
+        operation
+            .gateway(gateway)
+            .settings(tunnel_settings_with_transport(wait, timing, transport)),
+    );
+    let connected = connect_with_transport(state, gateway, wait, &recorder, transport).await;
+    if let Err(error) = &connected {
+        finish_error(&recorder, error, Value::Null);
+    }
+    (recorder, connected)
+}
+
 /// Ends the recording with `result`: succeeded with `summary`, or failed.
 pub(crate) fn finish_result<T, E>(
     recorder: &OperationRecorder,

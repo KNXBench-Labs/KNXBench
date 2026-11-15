@@ -746,6 +746,16 @@ restore other possible manufacturer side effects. Switching this option on
 never automatically enables it for a download or serial-address write. No
 live bus was contacted to validate this UI.
 
+**Interface transport (experimental).** The Debug tab offers **UDP** (default) or
+**TCP (experimental)** per operation. Choosing it contacts nothing; the read freezes
+it, the review repeats it, and the write uses exactly that transport. TCP never
+falls back to UDP, retries or replays, and an older server that lacks the TCP routes
+is refused (the server answers 404/405; nothing is read or written). After a TCP read or write the tab shows the
+opened transport, the assigned address and the skipped frames before disconnect (a
+sample, not lost telegrams), also after a failure; if no tunnel opened it says the
+facts are unavailable. Recorded as loopback/simulator-tested only; no real gateway
+was contacted.
+
 ## Live activity and activity history
 
 Two read-only tabs in the bus tools say what the server has done; neither

@@ -207,7 +207,7 @@ class Hazards(unittest.TestCase):
         self.assertIn('batch-download.e2e.ts', files)
         self.assertIn('parameter-last-download.e2e.ts', files)
         self.assertIn('device-diagnostics-tcp.e2e.ts', files)
-        self.assertEqual(len(files), 45)
+        self.assertEqual(len(files), 46)
         for name in files:
             self.assertTrue((APP / 'e2e' / name).is_file(), name)
 

@@ -4,7 +4,7 @@ import { defineConfig } from "@playwright/test";
 
 export default defineConfig({
   testDir: "./e2e",
-  testMatch: "service-control.e2e.ts",
+  testMatch: ["service-control.e2e.ts", "service-control-tcp.e2e.ts"],
   outputDir: `${process.env.TMPDIR ?? "target"}/ui-service-control-playwright`,
   fullyParallel: false,
   workers: 1,

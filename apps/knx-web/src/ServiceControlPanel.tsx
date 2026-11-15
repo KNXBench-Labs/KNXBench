@@ -4,15 +4,30 @@ import * as api from "./api";
 import { loadPreferredGateway } from "./gatewayPreference";
 import { splitGatewayEndpoint, validateGatewayFields } from "./gatewayEndpoint";
 import { useTranslate } from "./i18n";
+import {
+  readServiceControlTcp, ServiceControlTcpRefusal, writeServiceControlTcp,
+  type ServiceControlBinding,
+} from "./serviceControlApi";
+import type { TcpConnectionFacts } from "./tcpConnectionFacts";
 
 const CONTACTABLE_ADDRESS = /^(?:[0-9]|1[0-5])\.(?:[0-9]|1[0-5])\.(?:[1-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$/;
 const HEX_WORD = /^[0-9A-Fa-f]{4}$/;
 
+/** `tcp` is experimental, chosen per operation and never falls back to UDP. */
+type Transport = "udp" | "tcp";
+
 interface Review {
   address: string;
   gateway: string;
+  transport: Transport;
+  binding: ServiceControlBinding | null;
   before: api.ServiceControlReading;
   enable: boolean;
+}
+
+/** Facts exist only on the TCP siblings' answers, already admitted by `serviceControlApi`. */
+function factsOf(value: object): TcpConnectionFacts | null {
+  return "connection" in value ? (value as { connection: TcpConnectionFacts }).connection : null;
 }
 
 function validReading(read: api.ServiceControlReading | null | undefined, address: string): boolean {
@@ -38,14 +53,20 @@ function validResult(result: api.ServiceControlWriteResponse | null | undefined,
     (result.written ? before !== after : before === after);
 }
 
-export default function ServiceControlPanel({ projectOpen, projectRevision }: {
+export default function ServiceControlPanel({ projectOpen, projectRevision, binding }: {
   projectOpen: boolean;
   projectRevision?: unknown;
+  /** The open project's snapshot; without it the explicit TCP choice is unavailable. */
+  binding?: ServiceControlBinding;
 }) {
   const t = useTranslate();
   const [address, setAddress] = useState("");
   const [gateway, setGateway] = useState(loadPreferredGateway);
+  // UDP for every fresh operation; the choice is frozen into the request and nothing is contacted by choosing.
+  const [transport, setTransport] = useState<Transport>("udp");
   const [reading, setReading] = useState<api.ServiceControlReading | null>(null);
+  const [readingTransport, setReadingTransport] = useState<Transport>("udp");
+  const [connection, setConnection] = useState<TcpConnectionFacts | null>(null);
   const [review, setReview] = useState<Review | null>(null);
   const [confirmation, setConfirmation] = useState("");
   const [busy, setBusy] = useState<"reading" | "writing" | null>(null);
@@ -62,13 +83,25 @@ export default function ServiceControlPanel({ projectOpen, projectRevision }: {
     setConfirmation("");
     setResult(null);
     setError(null);
+    setConnection(null);
     if (!inFlight.current) setBusy(null);
   }
   useEffect(() => {
     mounted.current = true;
+    setTransport("udp");
     invalidate();
     return () => { mounted.current = false; ++version.current; };
   }, [projectOpen, projectRevision]);
+
+  /** A TCP refusal is never success and never retried over UDP; its facts are shown when valid. */
+  function fail(reason: unknown) {
+    if (reason instanceof ServiceControlTcpRefusal) {
+      setConnection(reason.connection);
+      setError(reason.status === 404 || reason.status === 405 ? t("serviceControl.tcpUnsupported")
+        : reason.status === 0 ? t("serviceControl.tcpMetadata")
+        : reason.detail ?? t("serviceControl.tcpFailed"));
+    } else setError(api.errorMessage(reason));
+  }
 
   async function read() {
     if (!projectOpen || busy !== null || inFlight.current) return;
@@ -84,16 +117,24 @@ export default function ServiceControlPanel({ projectOpen, projectRevision }: {
       return;
     }
     const target = address;
+    const chosen = transport;
+    if (chosen === "tcp" && !binding) { setError(t("serviceControl.tcpNeedsProject")); return; }
     const active = ++version.current;
     inFlight.current = true;
     setBusy("reading");
     try {
-      const next = await api.readServiceControl(target, checked.endpoint);
+      const next = chosen === "tcp"
+        ? await readServiceControlTcp(target, checked.endpoint, binding!)
+        : await api.readServiceControl(target, checked.endpoint);
       if (version.current !== active) return;
       if (!validReading(next, target)) setError(t("serviceControl.unexpectedRead"));
-      else setReading(next);
+      else {
+        setReading(next);
+        setReadingTransport(chosen);
+        setConnection(chosen === "tcp" ? factsOf(next) : null);
+      }
     } catch (reason) {
-      if (version.current === active) setError(api.errorMessage(reason));
+      if (version.current === active) fail(reason);
     } finally {
       inFlight.current = false;
       if (mounted.current) setBusy(null);
@@ -104,7 +145,9 @@ export default function ServiceControlPanel({ projectOpen, projectRevision }: {
     if (!projectOpen || busy !== null || inFlight.current || reading === null || !validReading(reading, address)) return;
     const checked = validateGatewayFields(splitGatewayEndpoint(gateway));
     if (!checked.ok) return;
-    setReview({ address, gateway: checked.endpoint, before: reading, enable: !reading.individualAddressWriteEnabled });
+    if (readingTransport === "tcp" && !binding) return;
+    setReview({ address, gateway: checked.endpoint, transport: readingTransport, binding: binding ?? null,
+      before: reading, enable: !reading.individualAddressWriteEnabled });
     setConfirmation("");
     setResult(null);
     setError(null);
@@ -123,9 +166,14 @@ export default function ServiceControlPanel({ projectOpen, projectRevision }: {
     setError(null);
     setBusy("writing");
     try {
-      const next = await api.writeServiceControl(selected.address, selected.gateway, selected.enable, phrase);
+      // The review froze the transport: TCP calls only the strict sibling, UDP keeps the legacy call.
+      const next = selected.transport === "tcp"
+        ? await writeServiceControlTcp(selected.address, selected.gateway, selected.enable, phrase, selected.binding!)
+        : await api.writeServiceControl(selected.address, selected.gateway, selected.enable, phrase);
       if (version.current !== active) return;
+      setTransport("udp"); // the next operation starts from the default again
       setReading(null); // a failed or contradictory result must be read again
+      setConnection(selected.transport === "tcp" ? factsOf(next) : null);
       if (!validResult(next, selected)) setError(t("serviceControl.unexpectedWrite"));
       else if (next.written && (typeof next.backupPath !== "string" || !next.backupPath.trim())) {
         setError(t("serviceControl.backupMissing"));
@@ -136,7 +184,8 @@ export default function ServiceControlPanel({ projectOpen, projectRevision }: {
     } catch (reason) {
       if (version.current === active) {
         setReading(null);
-        setError(api.errorMessage(reason));
+        setTransport("udp");
+        fail(reason);
       }
     } finally {
       inFlight.current = false;
@@ -162,7 +211,15 @@ export default function ServiceControlPanel({ projectOpen, projectRevision }: {
         <input name="gateway" value={gateway} disabled={!projectOpen || busy !== null}
           onChange={(event) => { invalidate(); setGateway(event.target.value); }} placeholder="192.0.2.10:3671" />
       </label>
+      <label>{t("serviceControl.transport")}
+        <select name="transport" value={transport} disabled={!projectOpen || busy !== null}
+          onChange={(event) => { invalidate(); setTransport(event.target.value === "tcp" ? "tcp" : "udp"); }}>
+          <option value="udp">UDP</option>
+          <option value="tcp" disabled={!binding}>{t("serviceControl.transport.tcp")}</option>
+        </select>
+      </label>
     </div>
+    <p className="service-control-transport-hint">{t("serviceControl.transportHint")}</p>
     <button type="button" className="service-control-read" disabled={!projectOpen || busy !== null}
       onClick={() => void read()}>{busy === "reading" ? t("serviceControl.reading") : t("serviceControl.read")}</button>
     {reading && <div className="service-control-observation">
@@ -173,6 +230,7 @@ export default function ServiceControlPanel({ projectOpen, projectRevision }: {
     </div>}
     {review && <div className="service-control-review" role="group" aria-label={t("serviceControl.review")}>
       <p>{t("serviceControl.reviewHint", { address: review.address, gateway: review.gateway })}</p>
+      {review.transport === "tcp" && <p className="service-control-frozen-transport">{t("serviceControl.reviewedTransport", { transport: "TCP" })}</p>}
       <label>{t("serviceControl.phrase", { phrase })}
         <input name="confirmation" value={confirmation} autoComplete="off" spellCheck={false}
           onChange={(event) => setConfirmation(event.target.value)} />
@@ -184,6 +242,10 @@ export default function ServiceControlPanel({ projectOpen, projectRevision }: {
       </div>
     </div>}
     {busy === "writing" && <p role="status"><span className="task-status-text">{t("serviceControl.writing")}</span></p>}
+    {connection && <p className="service-control-connection" role="status">{connection.actualTransport === null
+      ? t("serviceControl.connectionUnavailable")
+      : t("serviceControl.actualConnection", { transport: connection.actualTransport.toUpperCase(),
+        address: connection.assignedAddress ?? "—", skipped: connection.skippedFramesBeforeDisconnect ?? "—" })}</p>}
     {error && <p className="form-error" role="alert">{error}</p>}
     {result && <p role="status" className="service-control-result">{result}</p>}
   </section>;

@@ -20,12 +20,19 @@
 //! lock order as `serial_address_routes`. The HTTP API takes no access key
 //! (as `device_download_routes::keying`); the project's key is used when
 //! the project has one.
+//!
+//! Both operations also exist as strict explicit-TCP siblings
+//! (`POST .../tcp/read`, `POST .../tcp`): a distinct body with a required project
+//! binding and no unknown fields, so an old server cannot silently read or write
+//! over UDP. The legacy routes and bodies stay UDP. A TCP operation opens TCP only,
+//! never retries, and reports the sampled `connection` facts (also on failure).
 
 use std::net::SocketAddrV4;
+use std::sync::atomic::Ordering;
 
 use axum::extract::{Query, State};
 use axum::http::StatusCode;
-use axum::routing::get;
+use axum::routing::{get, post};
 use axum::{Json, Router};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -41,6 +48,7 @@ use knx_net::commissioning::service_control::{
 };
 use knx_net::TunnelAckWait;
 
+use crate::device_compare_routes::ComparisonConnection;
 use crate::device_download::TunnelTransport;
 use crate::errors::ApiError;
 use crate::one_shot_activity::WriteOutcome;
@@ -53,7 +61,125 @@ use crate::SharedState;
 pub const DEBUG_SETTING_KEY: &str = "debugIndividualAddressWriteEnable";
 
 pub fn service_control_routes() -> Router<SharedState> {
-    Router::new().route("/api/device/service-control", get(read).post(write))
+    Router::new()
+        .route("/api/device/service-control", get(read).post(write))
+        .route("/api/device/service-control/tcp", post(write_tcp))
+        .route("/api/device/service-control/tcp/read", post(read_tcp))
+}
+
+/// The project snapshot an explicit-TCP operation is bound to.
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct Binding {
+    server_incarnation: String,
+    project_incarnation: u64,
+    revision: u64,
+}
+
+/// Refuses a stale or foreign snapshot before any I/O: the plan's key comes from the project.
+fn check_binding(state: &SharedState, binding: &Binding) -> Result<(), ApiError> {
+    if binding.server_incarnation != state.server_incarnation
+        || binding.project_incarnation != state.project_incarnation.load(Ordering::SeqCst)
+        || binding.revision != state.project_revision.load(Ordering::SeqCst)
+    {
+        return Err(ApiError::with_kind(
+            StatusCode::CONFLICT,
+            "serviceControlContextChanged",
+            "the project changed since this review; read the device again",
+        ));
+    }
+    Ok(())
+}
+
+/// A TCP response: the legacy body plus the transport facts, sampled before disconnect.
+#[derive(Serialize)]
+struct WithConnection<T> {
+    #[serde(flatten)]
+    body: T,
+    connection: ComparisonConnection,
+}
+
+/// A failure of a TCP operation carries the facts too; legacy failures stay plain.
+fn failure(
+    status: StatusCode,
+    detail: String,
+    connection: Option<&ComparisonConnection>,
+) -> ApiError {
+    match connection {
+        None => ApiError::with_status(status, detail),
+        Some(c) => ApiError::with_status(status, detail).with_detail(
+            "serviceControlFailed",
+            "connection",
+            serde_json::to_value(c).unwrap_or_default(),
+        ),
+    }
+}
+
+/// Connect failure: the legacy error, plus unavailable facts for a TCP operation.
+fn connect_failure(
+    gateway: SocketAddrV4,
+    error: &crate::bus::BusSessionError,
+    transport: knx_net::TunnelTransport,
+) -> ApiError {
+    let error = crate::tunnel_holder::gateway_connect_failed(gateway, error);
+    match transport {
+        knx_net::TunnelTransport::Udp => error,
+        _ => error.with_detail(
+            "gatewayConnectFailed",
+            "connection",
+            serde_json::to_value(ComparisonConnection::unopened()).unwrap_or_default(),
+        ),
+    }
+}
+
+/// Facts of a TCP operation, sampled while the real handle exists; recorded as a note.
+fn sample(
+    transport: knx_net::TunnelTransport,
+    recorder: &knx_app::operation_recording::OperationRecorder,
+    tunnel: &dyn crate::bus::BusTunnel,
+) -> Option<ComparisonConnection> {
+    (transport == knx_net::TunnelTransport::Tcp).then(|| {
+        let connection = ComparisonConnection::sampled(transport, tunnel);
+        recorder.note(
+            "connection",
+            serde_json::to_value(&connection).unwrap_or_default(),
+        );
+        connection
+    })
+}
+
+async fn open_tunnel(
+    state: &SharedState,
+    operation: OperationStart,
+    gateway: SocketAddrV4,
+    transport: knx_net::TunnelTransport,
+) -> (
+    knx_app::operation_recording::OperationRecorder,
+    Result<Box<dyn crate::bus::BusTunnel>, crate::bus::BusSessionError>,
+) {
+    match transport {
+        knx_net::TunnelTransport::Udp => {
+            crate::operation_recordings::open(
+                state,
+                operation,
+                gateway,
+                TunnelAckWait::Standard,
+                &state.address_programming_timing,
+            )
+            .await
+        }
+        transport => {
+            crate::operation_recordings::open_with_transport(
+                state,
+                operation,
+                gateway,
+                TunnelAckWait::Standard,
+                &state.address_programming_timing,
+                transport,
+            )
+            .await
+        }
+    }
 }
 
 /// Whether the settings file says `true` for [`DEBUG_SETTING_KEY`].
@@ -195,34 +321,78 @@ async fn read(
     State(state): State<SharedState>,
     Query(query): Query<ReadQuery>,
 ) -> Result<Json<ServiceControlDto>, ApiError> {
+    read_with(
+        &state,
+        &query.address,
+        &query.gateway,
+        knx_net::TunnelTransport::Udp,
+    )
+    .await
+    .map(|(dto, _)| Json(dto))
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct TcpReadRequest {
+    address: String,
+    gateway: String,
+    binding: Binding,
+}
+
+async fn read_tcp(
+    State(state): State<SharedState>,
+    Json(body): Json<TcpReadRequest>,
+) -> Result<Json<WithConnection<ServiceControlDto>>, ApiError> {
     require_enabled(&state)?;
-    let gateway = parse_gateway(&query.gateway)?;
-    let address = parse_address(&query.address)?;
-    let plan = plan(&state)?;
-    let _reservation = reserve_tunnel(&state).await?;
+    check_binding(&state, &body.binding)?;
+    let (dto, connection) = read_with(
+        &state,
+        &body.address,
+        &body.gateway,
+        knx_net::TunnelTransport::Tcp,
+    )
+    .await?;
+    Ok(Json(WithConnection {
+        body: dto,
+        connection: connection.expect("a TCP read samples its connection"),
+    }))
+}
+
+async fn read_with(
+    state: &SharedState,
+    address: &str,
+    gateway: &str,
+    transport: knx_net::TunnelTransport,
+) -> Result<(ServiceControlDto, Option<ComparisonConnection>), ApiError> {
+    require_enabled(state)?;
+    let gateway = parse_gateway(gateway)?;
+    let address = parse_address(address)?;
+    let plan = plan(state)?;
+    let _reservation = reserve_tunnel(state).await?;
     let activity = state
         .one_shot_activity
         .start("serviceControlRead", Some(address.to_string()));
-    let (recorder, connected) = crate::operation_recordings::open(
-        &state,
+    let (recorder, connected) = open_tunnel(
+        state,
         OperationStart::new(OperationKind::ServiceControl).target(
             serde_json::json!({ "individualAddress": address.to_string(), "write": false }),
         ),
         gateway,
-        TunnelAckWait::Standard,
-        &state.address_programming_timing,
+        transport,
     )
     .await;
     let connected = match connected {
         Ok(connected) => connected,
         Err(e) => {
             activity.finish("failed");
-            return Err(crate::tunnel_holder::gateway_connect_failed(gateway, &e));
+            return Err(connect_failure(gateway, &e, transport));
         }
     };
     let tunnel = TunnelTransport(connected.as_ref());
     let outcome =
         read_service_control(&tunnel, address, plan, state.address_programming_timing).await;
+    // Sampled while the real handle exists, independently of optional recording.
+    let connection = sample(transport, &recorder, connected.as_ref());
     let _ = connected.disconnect().await;
     crate::operation_recordings::finish_result(
         &recorder,
@@ -234,9 +404,10 @@ async fn read(
     } else {
         "failed"
     });
-    outcome
-        .map(|value| Json(ServiceControlDto::new(address, value)))
-        .map_err(|e| ApiError::with_status(status_of(&e), e.to_string()))
+    match outcome {
+        Ok(value) => Ok((ServiceControlDto::new(address, value), connection)),
+        Err(e) => Err(failure(status_of(&e), e.to_string(), connection.as_ref())),
+    }
 }
 
 #[derive(Deserialize)]
@@ -269,7 +440,53 @@ async fn write(
     State(state): State<SharedState>,
     Json(body): Json<WriteRequest>,
 ) -> Result<Json<WriteResponse>, ApiError> {
+    write_with(&state, body, knx_net::TunnelTransport::Udp)
+        .await
+        .map(|(response, _)| Json(response))
+}
+
+/// Same body as the legacy write, plus the required project binding; nothing else.
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct TcpWriteRequest {
+    address: String,
+    gateway: String,
+    confirmation: String,
+    enable: bool,
+    binding: Binding,
+}
+
+async fn write_tcp(
+    State(state): State<SharedState>,
+    Json(body): Json<TcpWriteRequest>,
+) -> Result<Json<WithConnection<WriteResponse>>, ApiError> {
     require_enabled(&state)?;
+    check_binding(&state, &body.binding)?;
+    let (response, connection) = write_with(
+        &state,
+        WriteRequest {
+            address: body.address,
+            gateway: body.gateway,
+            confirmation: body.confirmation,
+            enable: body.enable,
+            #[cfg(test)]
+            before_backup: None,
+        },
+        knx_net::TunnelTransport::Tcp,
+    )
+    .await?;
+    Ok(Json(WithConnection {
+        body: response,
+        connection: connection.expect("a TCP write samples its connection"),
+    }))
+}
+
+async fn write_with(
+    state: &SharedState,
+    body: WriteRequest,
+    transport: knx_net::TunnelTransport,
+) -> Result<(WriteResponse, Option<ComparisonConnection>), ApiError> {
+    require_enabled(state)?;
     let gateway = parse_gateway(&body.gateway)?;
     let address = parse_address(&body.address)?;
     let authorisation = WriteAuthorisation::for_hardware(
@@ -278,8 +495,8 @@ async fn write(
         &body.confirmation,
     )
     .map_err(|e| ApiError::bad_request(format!("not written: {e}")))?;
-    let plan = plan(&state)?;
-    let _reservation = reserve_tunnel(&state).await?;
+    let plan = plan(state)?;
+    let _reservation = reserve_tunnel(state).await?;
     let activity = state
         .one_shot_activity
         .start_write("serviceControlWrite", Some(address.to_string()))
@@ -296,23 +513,22 @@ async fn write(
             "activity history unavailable; not sent",
         ));
     }
-    let (recorder, connected) = crate::operation_recordings::open(
-        &state,
+    let (recorder, connected) = open_tunnel(
+        state,
         OperationStart::new(OperationKind::ServiceControl).target(serde_json::json!({
             "individualAddress": address.to_string(),
             "write": true,
             "enable": body.enable,
         })),
         gateway,
-        TunnelAckWait::Standard,
-        &state.address_programming_timing,
+        transport,
     )
     .await;
     let connected = match connected {
         Ok(connected) => connected,
         Err(e) => {
             activity.finish(WriteOutcome::NotSent);
-            return Err(crate::tunnel_holder::gateway_connect_failed(gateway, &e));
+            return Err(connect_failure(gateway, &e, transport));
         }
     };
     let tunnel = TunnelTransport(connected.as_ref());
@@ -352,6 +568,8 @@ async fn write(
         },
     )
     .await;
+    // Sampled while the real handle exists, independently of optional recording.
+    let connection = sample(transport, &recorder, connected.as_ref());
     let _ = connected.disconnect().await;
     let write_outcome = match &outcome {
         Ok(change) if change.written => WriteOutcome::Verified,
@@ -375,21 +593,24 @@ async fn write(
     );
     activity.finish(write_outcome);
     match outcome {
-        Ok(change) => Ok(Json(WriteResponse {
-            before: ServiceControlDto::new(address, change.before),
-            after: format!("{:04X}", change.after),
-            individual_address_write_enabled: change.after
-                & knx_core::commissioning::properties::SERVICE_CONTROL_IA_WRITE_ENABLE
-                != 0,
-            written: change.written,
-            backup_path: backup_path.map(|p: std::path::PathBuf| p.display().to_string()),
-        })),
+        Ok(change) => Ok((
+            WriteResponse {
+                before: ServiceControlDto::new(address, change.before),
+                after: format!("{:04X}", change.after),
+                individual_address_write_enabled: change.after
+                    & knx_core::commissioning::properties::SERVICE_CONTROL_IA_WRITE_ENABLE
+                    != 0,
+                written: change.written,
+                backup_path: backup_path.map(|p: std::path::PathBuf| p.display().to_string()),
+            },
+            connection,
+        )),
         Err(e) => {
             let detail = match backup_path {
                 Some(path) => format!("{e}; pre-write property backup: {}", path.display()),
                 None => e.to_string(),
             };
-            Err(ApiError::with_status(status_of(&e), detail))
+            Err(failure(status_of(&e), detail, connection.as_ref()))
         }
     }
 }

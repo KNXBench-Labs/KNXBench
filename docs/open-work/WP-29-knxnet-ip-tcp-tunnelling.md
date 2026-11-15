@@ -219,7 +219,7 @@ Loopback/simulator evidence only. [Evidence and limits](../status/2026-11-14-ser
   real-gateway interoperability. Hardware validation is a later separately
   authorised activity under `AGENTS.md`, not a prerequisite for offline work.
 
-## Server/Web device-diagnostics successor (14 November 2026; source candidate)
+## Server/Web device-diagnostics successor (14 November 2026; software-accepted on main)
 
 A distinct strict `POST /api/device-diagnostics/preview/tcp` (same body as the legacy
 preview, binding required) fixes the transport in the job; `start`, status, cancel and

@@ -27,8 +27,10 @@ use crate::errors::ApiError;
 use crate::tls_cert::TLS_DIR_NAME;
 
 /// The directory names no route may reach, even by absolute path.
-const RESERVED_DIR_NAMES: [&str; 4] = [
+const RESERVED_DIR_NAMES: [&str; 6] = [
     TLS_DIR_NAME,
+    crate::online_catalogue::CONFIG_DIR_NAME,
+    crate::online_catalogue::DATA_DIR_NAME,
     ARTIFACT_ROOT_NAME,
     crate::device_system2::ROOT_NAME,
     knx_app::operation_recording::DIAGNOSTICS_DIR_NAME,
@@ -147,8 +149,15 @@ pub(crate) fn is_reserved_entry(data_dir: &Path, dir: &Path, name: &std::ffi::Os
 }
 
 fn contains_private_component(path: &Path) -> bool {
-    path.components()
-        .any(|c| c.as_os_str() == ARTIFACT_ROOT_NAME)
+    path.components().any(|c| {
+        [
+            ARTIFACT_ROOT_NAME,
+            crate::online_catalogue::CONFIG_DIR_NAME,
+            crate::online_catalogue::DATA_DIR_NAME,
+        ]
+        .iter()
+        .any(|name| c.as_os_str() == *name)
+    })
 }
 pub(crate) fn refuse_private_target(path: &Path) -> Result<(), ApiError> {
     refuse_private_target_inner(path, 0)

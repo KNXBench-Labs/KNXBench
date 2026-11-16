@@ -223,18 +223,6 @@ fn capability(headers: &HeaderMap) -> Result<Capability, FailureKind> {
         .map_err(|_| FailureKind::InvalidHandle)
 }
 fn authority(request: &Request) -> Result<(Handle, Capability), FailureKind> {
-    let capability = capability(request.headers())?;
-    let incarnation = header(request.headers(), INCARNATION, 32)?
-        .ok_or(FailureKind::InvalidHandle)?
-        .parse()
-        .map_err(|_| FailureKind::InvalidHandle)?;
-    let serial: U64 = header(request.headers(), SERIAL, 20)?
-        .ok_or(FailureKind::InvalidHandle)?
-        .parse()
-        .map_err(|_| FailureKind::InvalidHandle)?;
-    if serial == U64(0) || serial == U64::MAX {
-        return Err(FailureKind::InvalidHandle);
-    }
     let path = request
         .uri()
         .path()
@@ -247,6 +235,23 @@ fn authority(request: &Request) -> Result<(Handle, Capability), FailureKind> {
         .ok_or(FailureKind::InvalidHandle)?
         .parse()
         .map_err(|_| FailureKind::InvalidHandle)?;
+    handle_for(request.headers(), job)
+}
+
+/// The job handle and capability a request's headers carry for the given job.
+fn handle_for(headers: &HeaderMap, job: JobId) -> Result<(Handle, Capability), FailureKind> {
+    let capability = capability(headers)?;
+    let incarnation = header(headers, INCARNATION, 32)?
+        .ok_or(FailureKind::InvalidHandle)?
+        .parse()
+        .map_err(|_| FailureKind::InvalidHandle)?;
+    let serial: U64 = header(headers, SERIAL, 20)?
+        .ok_or(FailureKind::InvalidHandle)?
+        .parse()
+        .map_err(|_| FailureKind::InvalidHandle)?;
+    if serial == U64(0) || serial == U64::MAX {
+        return Err(FailureKind::InvalidHandle);
+    }
     Ok((
         Handle {
             incarnation,
@@ -255,6 +260,38 @@ fn authority(request: &Request) -> Result<(Handle, Capability), FailureKind> {
         },
         capability,
     ))
+}
+
+/// What a server-held catalogue file must match to be streamed into an existing job.
+pub(crate) struct Feed<'a> {
+    pub name: &'a str,
+    pub bytes: u64,
+}
+
+/// Feeds `body` (a verified local file) to a job exactly as the browser upload route would,
+/// after checking that the job was created for this very file.
+pub(crate) async fn feed(
+    runtime: &Arc<CatalogueRuntime>,
+    headers: &HeaderMap,
+    job: &str,
+    expect: Feed<'_>,
+    body: Body,
+) -> Response {
+    respond(
+        async {
+            let job: JobId = job.parse().map_err(|_| FailureKind::InvalidHandle)?;
+            let (handle, capability) = handle_for(headers, job)?;
+            let status = runtime.status(handle, &capability)?;
+            if status.source.name != expect.name
+                || status.source.declared_bytes.get() != expect.bytes
+            {
+                return Err(FailureKind::UploadLengthMismatch);
+            }
+            let status = runtime.upload(handle, &capability, body).await?;
+            json(StatusCode::ACCEPTED, &status)
+        }
+        .await,
+    )
 }
 fn no_query(request: &Request) -> Result<(), FailureKind> {
     if request.uri().query().is_some() {

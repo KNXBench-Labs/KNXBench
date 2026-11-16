@@ -17,6 +17,12 @@ path = "src/lib.rs"
 
 [dependencies]
 http-body = "1"
+http-body-util.workspace = true
+hyper.workspace = true
+hyper-util.workspace = true
+webpki-roots.workspace = true
+ring.workspace = true
+flate2.workspace = true
 knx-app.workspace = true
 knx-core.workspace = true
 knx-csv.workspace = true
@@ -63,7 +69,6 @@ zip.workspace = true
 [dev-dependencies]
 # Independent saved-state XML oracle for private activation comparison.
 quick-xml.workspace = true
-http-body-util = "0.1"
 knx-testsupport.workspace = true
 rusqlite.workspace = true
 # Paused clock for the stop-grace tests.

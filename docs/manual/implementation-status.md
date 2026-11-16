@@ -870,7 +870,10 @@ change before anything is installed, backs up the product catalogue before
 installing, and lists backups you can restore after confirming
 ([how to use it](user-guide/05-devices-and-products.md#updating-with-a-preview-since-alpha-10),
 [limits](../KNOWN_LIMITATIONS.md#catalogue-updates-come-only-from-files-you-supply-2026-10-12)).
-There is still no online catalogue: you bring the file. Included in Alpha.10.
+That supplied-file workflow is included in Alpha.10. The released workflow
+described here does not fetch an online catalogue. A separate owner-authorized
+[Reko branch workflow](user-guide/05-devices-and-products.md#reko-online-catalogue-branch-wip)
+is WIP as of 16 November 2026, not accepted, published or included in Alpha 22.
 
 ## Checked parameter editors (12 October 2026 source)
 

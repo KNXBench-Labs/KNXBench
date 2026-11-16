@@ -6,6 +6,7 @@ import { CatalogueWizardOrigin, useOptionalCatalogueJobs } from "./CatalogueJobs
 import CatalogueJobSelection from "./CatalogueJobSelection";
 import CatalogueJobPanel from "./CatalogueJobPanel";
 import CatalogPackageUpdate from "./CatalogPackageUpdate";
+import OnlineCatalogue from "./OnlineCatalogue";
 import { LegacyInstallReportView } from "./LegacyInstallReport";
 import LegacyPasswordDialog from "./LegacyPasswordDialog";
 import { useTranslate } from "./i18n";
@@ -24,6 +25,7 @@ export default function ProductInstallControl(props: {
   const t = useTranslate();
   const jobs = useOptionalCatalogueJobs();
   const origin = useContext(CatalogueWizardOrigin);
+  const [source, setSource] = useState("local");
   const [installing, setInstalling] = useState(false);
   const [outcome, setOutcome] = useState<LegacyInstallReport | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -63,7 +65,11 @@ export default function ProductInstallControl(props: {
 
   return (
     <>
-      <label className={className}>
+      <label className="online-catalogue-source">{t("online.source")}<select value={source} disabled={installing || pkgBusy || pkg !== null} onChange={event => setSource(event.target.value)}>
+        <option value="local">{t("online.local")}</option><option value="reko">Reko</option>
+      </select></label>
+      {source === "reko" && <OnlineCatalogue onInstalled={onInstalled} />}
+      {source === "local" && <label className={className}>
         {installing ? t("catalog.installing") : label}
         <input type="file" accept={PRODUCT_FILE_ACCEPT} disabled={installing || pkgBusy || Boolean(jobs && (jobs.state.pending || jobs.state.status || jobs.state.uncertain))}
           onChange={(e) => {
@@ -71,7 +77,7 @@ export default function ProductInstallControl(props: {
             if (file) choose(file);
             e.currentTarget.value = "";
           }} />
-      </label>
+      </label>}
       {pkg !== null && jobs && <CatalogueJobSelection key={pkgGeneration} file={pkg} onDone={() => setPkg(null)} />}
       {jobs && pkg === null && (jobs.state.status || jobs.state.uncertain || jobs.state.error) && <CatalogueJobPanel />}
       {jobs?.state.legacyAvailable && jobs.state.origin === origin && <button type="button" disabled={installing} onClick={() => { const file = jobs.controller.takeLegacyFile(origin); if (file) void installLegacy(file); }}>{t("catalogJob.legacyHandoff")}</button>}

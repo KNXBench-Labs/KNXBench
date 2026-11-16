@@ -1002,6 +1002,17 @@ async fn install_legacy_product_database(
     }
     let (filename, bytes) =
         file.ok_or_else(|| ApiError::bad_request("no file field in legacy install"))?;
+    run_legacy_install(state, filename, bytes, password, remember).await
+}
+
+/// The legacy import itself, shared by the upload route and the online catalogue's cached files.
+pub(crate) async fn run_legacy_install(
+    state: SharedState,
+    filename: String,
+    bytes: axum::body::Bytes,
+    password: Option<knx_app::legacy::LegacyPassword>,
+    remember: bool,
+) -> Result<Json<LegacyInstallReportDto>, ApiError> {
     off_runtime(move || domain::install_legacy_impl(&state, &filename, &bytes, password, remember))
         .await?
         .map(LegacyInstallReportDto::from)
@@ -1026,7 +1037,7 @@ async fn install_legacy_product_database(
 
 #[derive(serde::Serialize)]
 #[serde(rename_all = "camelCase")]
-struct LegacyInstallReportDto {
+pub(crate) struct LegacyInstallReportDto {
     payload_sha256: String,
     original_sha256: String,
     namespace: String,

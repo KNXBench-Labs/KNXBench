@@ -1,0 +1,31 @@
+/** Online catalogue controls inherit shell tokens and wrap within narrow catalogue/wizard panes. */
+.online-catalogue-source { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; }
+.online-catalogue { display: grid; gap: .75rem; min-width: 0; width: 100%; overflow-wrap: anywhere; }
+.online-catalogue p { margin-block: .25rem; }
+.online-catalogue-actions { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; }
+.online-catalogue button, .online-catalogue-account button { max-width: 100%; white-space: normal; }
+.online-catalogue-search { display: flex; flex-wrap: wrap; align-items: end; gap: .5rem; }
+.online-catalogue-search label, .online-catalogue-account label { display: grid; gap: .35rem; min-width: 0; }
+.online-catalogue-search label:first-child { flex: 1 1 16rem; }
+.online-catalogue input, .online-catalogue select, .online-catalogue-account input, .online-catalogue-account select { box-sizing: border-box; min-width: 0; width: 100%; }
+.online-catalogue-results { list-style: none; margin: 0; padding: 0; max-height: 24rem; overflow-y: auto; display: grid; gap: .35rem; }
+.online-catalogue-results li { min-width: 0; }
+.online-catalogue-results button { width: 100%; display: grid; gap: .2rem; text-align: start; }
+.online-catalogue-results button[aria-pressed="true"] { border-color: var(--knx-accent); outline: 1px solid var(--knx-accent); outline-offset: -2px; }
+.online-catalogue-results span { font-size: .9em; }
+.online-catalogue-metadata { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); gap: .25rem .75rem; margin: 0; }
+.online-catalogue-metadata dd { min-width: 0; margin: 0; }
+.online-catalogue-details { border: 1px solid var(--knx-border); border-radius: var(--knx-radius-input); padding: .75rem; min-width: 0; }
+.online-catalogue-digest { font-family: var(--knx-font-mono); font-size: .85em; overflow-wrap: anywhere; }
+.online-catalogue-progress { display: grid; gap: .35rem; }
+.online-catalogue-progress progress { width: 100%; }
+.online-catalogue-account { display: grid; gap: .75rem; min-width: 0; overflow-wrap: anywhere; }
+.online-catalogue-account form { display: grid; gap: .6rem; }
+.online-catalogue-dialog { width: min(38rem, calc(100vw / var(--app-ui-scale, 1) - 2rem)); max-height: calc(100dvh / var(--app-ui-scale, 1) - 2rem); overflow-y: auto; }
+.online-catalogue-settings { min-width: 0; }
+.online-catalogue-error { overflow-wrap: anywhere; }
+@media (max-width: 40rem) {
+ .online-catalogue-metadata { grid-template-columns: minmax(0, 1fr); }
+ .online-catalogue-metadata dd { margin-bottom: .35rem; }
+ .online-catalogue-search { display: grid; }
+}

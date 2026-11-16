@@ -1,5 +1,18 @@
 # Roadmap
 
+## Reko online catalogue (16 November 2026; branch WIP)
+
+The owner-authorized Reko source is being implemented on its own branch, not
+accepted or published and not part of Alpha 22. The bounded scope is manual
+HTTPS index sync, local paginated search, one encrypted account per installation
+and size/hash-verified acquisition into the existing modern/legacy import paths.
+No automatic sync, product/project upgrade, VD1/VD2 importer or user management.
+The rights/provenance audit is owner-excluded for this package, not deemed
+satisfied and not a package blocker. Release/deployment remain separate.
+[Work and pending acceptance](open-work/LS-02-online-catalogue.md) ·
+[ADR-0176](adr/0176-manual-reko-catalogue-acquisition.md) ·
+[Provider/API contract](contracts/reko-online-catalogue.md).
+
 ## Alpha 22 pre-release (source cutoff 15 November 2026)
 
 The [Alpha 22 scope](releases/alpha22.md) ships the delivered work since Alpha 21:

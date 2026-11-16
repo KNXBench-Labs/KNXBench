@@ -1,5 +1,6 @@
 /** Continuous settings workspace with immediate controls and accessible section jumps. */
 import BusTransportFields from "./BusTransportFields";
+import OnlineCatalogueSettings from "./OnlineCatalogueAccount";
 import { emitAchievementEvent } from "./achievementEvents";
 import AchievementSettings from "./AchievementSettings";
 import UpdateSettings from "./UpdateSettings";
@@ -408,6 +409,7 @@ export default function SettingsPanel(props: {
           ["bus", "settings.section.busDiagnostics"],
           ...(props.achievementTracker ? [["achievements", "settings.section.achievements"]] as const : []),
           ...(props.legacyPassword ? [["legacy-password", "settings.section.legacyPassword"]] as const : []),
+          ["catalogues", "online.settings"],
           ["updates", "updates.section"],
           ["debug", "settings.section.debug"],
         ] as const).map(([id, key]) => <a key={id} href={`#settings-${id}`} onClick={(event) => {
@@ -664,6 +666,7 @@ export default function SettingsPanel(props: {
       </section>
       {props.achievementTracker && <AchievementSettings tracker={props.achievementTracker} />}
       {props.legacyPassword && <LegacyPasswordSettings access={props.legacyPassword} />}
+      <OnlineCatalogueSettings />
       <UpdateSettings />
       <ServiceControlDebugSetting />
     </section>

@@ -11,7 +11,7 @@ export type CatalogueJobsSnapshot = {
 };
 type Operation = {
  capability: string; create: Create; owner: Owner | null; file: File | null;
- uploadAttempted: boolean; apply: ApplyCommand | null; cancel: CancelCommand | null; notified: boolean;
+ uploadAttempted: boolean; feedRefusal: string | null; apply: ApplyCommand | null; cancel: CancelCommand | null; notified: boolean;
 };
 export function catalogueRandomId(bytes = 16): string {
  const data = new Uint8Array(bytes); crypto.getRandomValues(data);
@@ -45,6 +45,7 @@ export class CatalogueJobsController {
  }
  #error(error: unknown) {
   const kind = error instanceof CatalogueJobRefusal ? error.kind : error instanceof CatalogueProtocolError ? "protocol" : "transport";
+  if (kind.startsWith("online.") && this.#op) this.#op.feedRefusal = kind;
   this.#patch({error:kind,uncertain:this.#op !== null, unavailable:this.#state.unavailable || ["outcomeUnavailable","incarnationChanged"].includes(kind)});
  }
  #accept(status: Status, op: Operation) {
@@ -55,7 +56,7 @@ export class CatalogueJobsController {
   const old = this.#state.status;
   if (old) {
    if (u64(s.revision) < u64(old.revision)) return;
-   if (s.revision === old.revision) { if (JSON.stringify(s) !== JSON.stringify(old)) throw new CatalogueProtocolError(); this.#patch({error:null,uncertain:this.#state.applyUncertain}); return; }
+   if (s.revision === old.revision) { if (JSON.stringify(s) !== JSON.stringify(old)) throw new CatalogueProtocolError(); this.#patch({error:op.feedRefusal,uncertain:this.#state.applyUncertain}); return; }
    if (old.state !== "running" && s.state !== old.state || old.source.sha256 !== null && old.source.sha256 !== s.source.sha256 || u64(s.source.receivedBytes) < u64(old.source.receivedBytes) || old.preview !== null && JSON.stringify(old.preview) !== JSON.stringify(s.preview) || old.result !== null && JSON.stringify(old.result) !== JSON.stringify(s.result) || old.apply.acceptedCommandId !== null && old.apply.acceptedCommandId !== s.apply.acceptedCommandId || old.gate !== "open" && old.gate !== s.gate || old.commit.outcome === "committed" && s.commit.outcome !== "committed" || old.phase === s.phase && old.state === s.state && old.lease.deadlineTickMs !== s.lease.deadlineTickMs) throw new CatalogueProtocolError();
   }
   if (s.apply.acceptedCommandId !== null && s.apply.acceptedCommandId !== op.apply?.commandId) throw new CatalogueProtocolError();
@@ -67,10 +68,14 @@ export class CatalogueJobsController {
   }
   const committed = s.commit.outcome === "committed";
   const notify = committed && !op.notified; if (notify) op.notified = true;
-  this.#patch({status:s, selecting:false,error:null,uncertain:false,legacyAvailable,applyUncertain:this.#state.applyUncertain && s.apply.acceptedCommandId === null && s.state === "running",committed:this.#state.committed || committed,
+  this.#patch({status:s, selecting:false,error:op.feedRefusal,uncertain:false,legacyAvailable,applyUncertain:this.#state.applyUncertain && s.apply.acceptedCommandId === null && s.state === "running",committed:this.#state.committed || committed,
    ...(notify ? {catalogueRevision:this.#state.catalogueRevision+1n,committedOrigin:this.#state.origin} : {})});
  }
  async start(file: File, profile: "standard" | "large", acknowledged: boolean, origin: string | null) {
+  return this.startSource(file,profile,acknowledged,origin,owner => this.api.upload(owner,file),file);
+ }
+ /** Acquisition injection retains one capability owner and the ordinary preview/apply lifecycle. */
+ async startSource(file: {name: string; size: number}, profile: "standard" | "large", acknowledged: boolean, origin: string | null, feed: (owner: Owner) => Promise<Status>, legacyFile: File | null = null) {
   if (this.#op || this.#state.selecting || profile === "large" && !acknowledged) return;
   const signal = this.#transport.signal;
   this.#patch({operationId:String(++this.#operationSerial),sourceName:file.name,selecting:true,pending:true,error:null,origin});
@@ -82,7 +87,7 @@ export class CatalogueJobsController {
    const create: Create = {schemaVersion:1,policyVersion:"wp043-v1",serverIncarnation:offer.serverIncarnation,admissionSerial:offer.nextAdmissionSerial,sourceName:file.name,declaredBytes:BigInt(file.size).toString(),profile,allowLargePackage:profile === "large"};
    parseCatalogueMessage("Create",JSON.stringify(create));
    const capability = catalogueRandomId(32);
-   const op: Operation = {capability,create,owner:null,file,uploadAttempted:false,apply:null,cancel:this.#cancelIntent,notified:false}; this.#op = op;
+   const op: Operation = {capability,create,owner:null,file:legacyFile,uploadAttempted:false,feedRefusal:null,apply:null,cancel:this.#cancelIntent,notified:false}; this.#op = op;
    this.#accept(await this.api.create(create,capability,signal),op);
    if (signal.aborted) throw new Error("Transport closed");
    if (op.cancel) { await this.cancel(); return; }
@@ -90,7 +95,7 @@ export class CatalogueJobsController {
     op.uploadAttempted = true;
     // Start polling before awaiting upload: progress is server-written bytes, never browser sent bytes.
     this.#schedule();
-    this.#accept(await this.api.upload(op.owner,file),op);
+    this.#accept(await feed(op.owner),op);
    }
   } catch (error) { this.#error(error); } finally { if (!this.#op) { this.#cancelIntent = null; this.#patch({cancelQueued:false}); } this.#patch({selecting:false,pending:false}); this.#schedule(); }
  }

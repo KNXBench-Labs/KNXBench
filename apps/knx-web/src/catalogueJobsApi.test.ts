@@ -1,6 +1,6 @@
 /** Intercepted HTTP transport tests: route/identity/byte admission, not real-server acceptance. */
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { catalogueJobsApi } from "./catalogueJobsApi";
+import { catalogueJobsApi, feedOnlineCatalogueJob } from "./catalogueJobsApi";
 import { admission, status } from "./catalogueJobsFixtures";
 const headers = {"Content-Type":"application/json","Cache-Control":"no-store"};
 afterEach(()=>vi.unstubAllGlobals());
@@ -16,6 +16,22 @@ describe("catalogue-specific HTTP client",()=>{
   const uploadCall=fetcher.mock.calls[2];expect(uploadCall[0]).toBe(`/api/catalog/update/jobs/${owner.handle.jobId}/upload`);
   expect(uploadCall[1].method).toBe("PUT");expect(uploadCall[1].headers).toMatchObject({"Content-Type":"application/octet-stream","X-KNX-Catalogue-Serial":"9007199254740993","X-KNX-Catalogue-Capability":capability});
   expect(calls[0].init.headers).toBeUndefined();expect(JSON.stringify(command)).not.toContain(capability);
+ });
+ it("feeds a selected cached entry with the existing header-only job authority and no browser file body",async()=>{
+  const ready=status("ready","2");const fetcher=vi.fn(async()=>new Response(JSON.stringify(ready),{status:202,headers}));vi.stubGlobal("fetch",fetcher);
+  const signal=new AbortController().signal;const owner={handle:ready.handle,capability:"c".repeat(64),signal};
+  await expect(feedOnlineCatalogueJob(owner,{id:"fictional /?#",sha256:"a".repeat(64)})).resolves.toEqual(ready);
+  expect(fetcher).toHaveBeenCalledTimes(1);
+  expect(fetcher).toHaveBeenCalledWith(`/api/online-catalogue/reko/jobs/${ready.handle.jobId}/feed/fictional%20%2F%3F%23?sha256=${"a".repeat(64)}`,{
+   method:"POST",signal,headers:{"X-KNX-Catalogue-Capability":owner.capability,"X-KNX-Catalogue-Incarnation":ready.handle.serverIncarnation,"X-KNX-Catalogue-Serial":ready.handle.admissionSerial},
+   cache:"no-store",credentials:"same-origin",redirect:"error",
+  });
+ });
+ it("preserves a selection-changed refusal from before feed admission without a second request",async()=>{
+  const fetcher=vi.fn(async()=>new Response(JSON.stringify({kind:"selectionChanged",error:"Fictional stale entry"}),{status:409,headers:{"Content-Type":"application/json"}}));vi.stubGlobal("fetch",fetcher);
+  const owner={handle:status().handle,capability:"c".repeat(64)};
+  await expect(feedOnlineCatalogueJob(owner,{id:"fictional",sha256:"a".repeat(64)})).rejects.toMatchObject({kind:"online.selectionChanged"});
+  expect(fetcher).toHaveBeenCalledTimes(1);
  });
  it("refuses duplicate fields before parse, invalid UTF-8, BOM, byte overflow and wrong media",async()=>{
   const bad=[new Response(JSON.stringify(admission).replace('"schemaVersion":1','"schemaVersion":1,"schemaVersion":1'),{headers}),new Response(new Uint8Array([0xff]),{headers}),new Response(new Uint8Array([0xef,0xbb,0xbf,...new TextEncoder().encode(JSON.stringify(admission))]),{headers}),new Response(" ".repeat(16385),{headers}),new Response(JSON.stringify(admission),{headers:{...headers,"Content-Type":"text/plain"}})];

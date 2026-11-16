@@ -263,7 +263,7 @@ describe("CatalogBrowser", () => {
     apiMock.catalogItems.mockResolvedValue([]);
     const { root } = await renderBrowser();
 
-    const select = host!.querySelector<HTMLSelectElement>("select")!;
+    const select = host!.querySelector<HTMLSelectElement>('select:has(option[value="M-2"])')!;
     await act(async () => {
       select.value = "M-2";
       select.dispatchEvent(new Event("change", { bubbles: true }));

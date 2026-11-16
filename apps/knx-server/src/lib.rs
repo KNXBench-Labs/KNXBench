@@ -137,6 +137,7 @@ mod journal_write_log;
 pub mod journal_writer;
 #[cfg(test)]
 mod journal_writer_tests;
+mod online_catalogue;
 mod parameter_editor_routes;
 mod paths;
 mod project_history;
@@ -258,6 +259,7 @@ pub fn app_with_auth(state: SharedState, static_dir: Option<PathBuf>, auth: Auth
         .merge(parameter_editor_routes::router())
         .merge(catalogue_update_routes::router())
         .merge(catalogue_jobs.with_state(()))
+        .merge(online_catalogue::router())
         .merge(stored_bus_access_routes::router())
         .merge(manufacturer_file_routes::router())
         .merge(fs_routes::fs_routes())

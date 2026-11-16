@@ -13,12 +13,14 @@ interface Options {
   stale?: () => boolean;
   legacy?: boolean;
   onApplied?: () => void;
+  onlineFeed?: { entryId: string; sha256: string; bytes: Buffer };
 }
 
 /** Exact responses and headers are validated before fulfilment, not repaired to pass parsing. */
 export function catalogueJobsFixture(options: Options = {}) {
   const creates: Create[] = [];
   const uploads: Buffer[] = [];
+  const feeds: string[] = [];
   const applies: ApplyCommand[] = [];
   const disposes: Handle[] = [];
   const retired: { handle: Handle; capability: string }[] = [];
@@ -97,20 +99,30 @@ export function catalogueJobsFixture(options: Options = {}) {
       parseCatalogueMessage("Error", JSON.stringify(body));
       return reply(route, body, 410);
     }
-    if (!current || !path.startsWith(`${BASE}/${current.handle.jobId}`)) return null;
+    const onlineFeed = Boolean(current && options.onlineFeed && method === "POST"
+      && path === `/api/online-catalogue/reko/jobs/${current.handle.jobId}/feed/${encodeURIComponent(options.onlineFeed.entryId)}`);
+    if (!current || !onlineFeed && !path.startsWith(`${BASE}/${current.handle.jobId}`)) return null;
     // Never handle another job or an unexpected action as a generic successful API request.
-    const suffix = path.slice(`${BASE}/${current.handle.jobId}`.length);
-    if (![["", "GET"], ["", "DELETE"], ["/upload", "PUT"], ["/apply", "POST"], ["/details", "GET"]]
+    const suffix = onlineFeed ? "/feed" : path.slice(`${BASE}/${current.handle.jobId}`.length);
+    if (!onlineFeed && ![["", "GET"], ["", "DELETE"], ["/upload", "PUT"], ["/apply", "POST"], ["/details", "GET"]]
       .some(([expectedPath, expectedMethod]) => suffix === expectedPath && method === expectedMethod)) return null;
     expect(request.headers()["x-knx-catalogue-capability"]).toBe(capability);
     expect(request.headers()["x-knx-catalogue-incarnation"]).toBe(current.handle.serverIncarnation);
     expect(request.headers()["x-knx-catalogue-serial"]).toBe(current.handle.admissionSerial);
-    if (suffix === "/upload") {
+    if (suffix === "/upload" || onlineFeed) {
       expect(current.phase).toBe("receiving");
-      expect(request.headers()["content-type"]).toBe("application/octet-stream");
-      const bytes = request.postDataBuffer()!;
+      let bytes: Buffer;
+      if (onlineFeed) {
+        expect([...url.searchParams]).toEqual([["sha256", options.onlineFeed!.sha256]]);
+        expect(request.postData()).toBeNull();
+        bytes = options.onlineFeed!.bytes;
+        feeds.push(request.url());
+      } else {
+        expect(request.headers()["content-type"]).toBe("application/octet-stream");
+        bytes = request.postDataBuffer()!;
+        uploads.push(bytes);
+      }
       expect(String(bytes.length)).toBe(current.source.declaredBytes);
-      uploads.push(bytes);
       current = { ...current, revision: "2", source: { ...current.source, receivedBytes: String(bytes.length), sha256: digest(bytes) } };
       if (options.legacy) {
         current = { ...current, state: "failed", phase: null, lease: { kind: "retention", deadlineTickMs: "95000" },
@@ -177,5 +189,5 @@ export function catalogueJobsFixture(options: Options = {}) {
     }
     return statusReply(route);
   }
-  return { answer, creates, uploads, applies, disposes, status: () => current };
+  return { answer, creates, uploads, feeds, applies, disposes, status: () => current };
 }

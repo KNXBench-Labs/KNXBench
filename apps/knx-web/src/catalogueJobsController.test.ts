@@ -32,6 +32,18 @@ describe("App-owned catalogue controller", () => {
   expect(api.apply).toHaveBeenCalledTimes(1); expect(api.create).toHaveBeenCalledTimes(1); expect(api.upload).toHaveBeenCalledTimes(1);
   expect(c.getSnapshot().origin).toBe("wizard-one"); expect(JSON.stringify(c.getSnapshot(), (_key, value) => typeof value === "bigint" ? value.toString() : value)).not.toContain("capability");
  });
+ it("retains a refused server feed across receiving polls without resending or hiding the reason", async () => {
+  const api = fakeApi(); api.status.mockResolvedValue(status());
+  const feed = vi.fn(async (): Promise<Status> => { throw new CatalogueJobRefusal("online.selectionChanged"); });
+  const c = new CatalogueJobsController(api);
+  await c.startSource({name:"x.knxprod",size:1},"large",true,null,feed);
+  expect(c.getSnapshot().error).toBe("online.selectionChanged");
+  await c.refresh(); await c.refresh();
+  expect(c.getSnapshot().error).toBe("online.selectionChanged");
+  expect(c.getSnapshot().status?.phase).toBe("receiving");
+  expect(c.getSnapshot().uncertain).toBe(false);
+  expect(feed).toHaveBeenCalledTimes(1); expect(api.upload).not.toHaveBeenCalled(); expect(api.apply).not.toHaveBeenCalled();
+ });
  it("keeps an exact lost-create offer but never automatically creates or reuploads", async () => {
   const api = fakeApi(); api.create.mockRejectedValueOnce(new Error("lost")); const c = new CatalogueJobsController(api);
   await c.start(new File(["x"], "x.knxprod"), "large", true, null);

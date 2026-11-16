@@ -14,6 +14,12 @@ fragment aliases and update this index. Do not rewrite previous results.
 
 ## Alpha 22 pre-release (source cutoff 15 November 2026)
 
+**Pending branch, not a delivery:** the owner-authorized Reko online catalogue
+is WIP after this cutoff, with no accepted final review/package gate or
+publication at the 16 November documentation checkpoint. See
+[LS-02](open-work/LS-02-online-catalogue.md) for the decision, implementation
+scope and remaining acceptance; it is not included in the Alpha 22 result below.
+
 The [released scope](releases/alpha22.md) contains the bounded 14 November
 workspace, navigation, caption, focus and module-owner slices below, more
 WP-31 off-runtime waits and the explicit experimental TCP CLI/server/Web

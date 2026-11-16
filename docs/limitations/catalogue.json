@@ -706,7 +706,7 @@
       "number": null,
       "title": "Catalogue updates from supplied files",
       "topic": "Manufacturer data and parameters",
-      "summary": "Updates use user-supplied files, not the KNX Online Catalog. Full database backups and plain install are separate from the reviewed update/restore workflow.",
+      "summary": "The accepted/released workflow uses supplied files, not the KNX Online Catalog. An owner-authorized Reko source is branch WIP, pending final review/package acceptance and delivery; no released online-source claim. Full database backups and plain install remain separate from the reviewed update/restore workflow.",
       "file": "catalogue-updates-from-supplied-files.md",
       "ledger_ids": [
         "FUTURE-05"

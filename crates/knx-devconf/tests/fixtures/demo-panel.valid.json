@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "features": { "night_mode": "unsupported" },
+  "name": "Hall",
+  "offset": -2,
+  "pages": [
+    { "id": 1, "parent": 0, "label": "Home" },
+    { "id": 2, "parent": 1, "label": "Lights" }
+  ],
+  "actions": [
+    { "id": 10, "kind": "dim_up", "object": 60, "payload": [0, 0] },
+    { "id": 11, "kind": "dim_down", "object": 61, "payload": [0, 0] },
+    { "id": 12, "kind": "literal", "object": 62, "payload": [1, 255] }
+  ],
+  "buttons": [
+    { "action": 10, "partner": 1 },
+    { "action": 11, "partner": 0 },
+    { "action": 12, "partner": 255 },
+    { "action": 0, "partner": 255 }
+  ]
+}

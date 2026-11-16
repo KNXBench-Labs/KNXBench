@@ -235,6 +235,13 @@ fn check_layering(root: &Path) -> ExitCode {
         "knx-diff",
         layering::CORE_FORBIDDEN,
     ));
+    // knx-devconf (ADR-0175) applies declarative device configuration modules
+    // as a pure engine.
+    violations.extend(layering::forbidden_reachable(
+        &graph,
+        "knx-devconf",
+        layering::DEVCONF_FORBIDDEN,
+    ));
     // knx-secure (ADR-0008, ARCHITECTURE.md §9) must never reach knx-core, so
     // no type path exists along which key material could reach the project
     // model, and must never reach serde, so no knx-secure type can gain a
@@ -280,11 +287,13 @@ fn check_layering(root: &Path) -> ExitCode {
              none of {:?}; knx-csv reaches none of knx-store, knx-etsproj, knx-productdb; \
              knx-report reaches none of knx-store, knx-etsproj, knx-productdb, or {:?}; \
              knx-diff reaches none of knx-store, knx-etsproj, knx-productdb, or {:?}; \
+             knx-devconf reaches none of {:?}; \
              knx-secure reaches none of {:?}; knx-mcp reaches none of {:?}; knx-edit reaches none of {:?}",
             layering::CORE_FORBIDDEN,
             layering::CORE_FORBIDDEN,
             layering::CORE_FORBIDDEN,
             layering::CORE_FORBIDDEN,
+            layering::DEVCONF_FORBIDDEN,
             layering::SECURE_FORBIDDEN,
             layering::MCP_FORBIDDEN,
             layering::OFFLINE_EDIT_FORBIDDEN

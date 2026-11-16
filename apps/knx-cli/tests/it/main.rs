@@ -12,6 +12,7 @@ mod cli_bus_dpt;
 mod cli_bus_serial;
 mod cli_bus_tcp;
 mod cli_compare_activity;
+mod cli_devconf;
 mod cli_diagnostic_bundle;
 mod cli_documentation_export;
 mod cli_download_scope;

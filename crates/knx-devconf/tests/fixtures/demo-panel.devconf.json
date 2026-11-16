@@ -1,0 +1,114 @@
+{
+  "format": "knxbench-device-configuration-module",
+  "format_version": 1,
+  "id": "example.demo-panel",
+  "version": "1.0.0",
+  "title": "Demo panel (fictional)",
+  "max_document_bytes": 65536,
+  "document": {
+    "type": "object",
+    "members": {
+      "version": { "type": "const", "value": 1 },
+      "features": { "type": "const", "value": { "night_mode": "unsupported" } },
+      "name": { "type": "text", "charset": "utf8", "min_bytes": 1, "max_bytes": 40, "title": "Panel name" },
+      "offset": { "type": "int", "min": -100, "max": 100 },
+      "pages": {
+        "type": "table", "key": "id", "min_rows": 1, "max_rows": 8, "title": "Pages",
+        "row": { "type": "object", "members": {
+          "id": { "type": "int", "min": 1, "max": 255 },
+          "parent": { "type": "ref", "table": "pages", "none": 0 },
+          "label": { "type": "text", "charset": "printable-ascii", "min_bytes": 1, "max_bytes": 7 }
+        } }
+      },
+      "actions": {
+        "type": "table", "key": "id", "min_rows": 0, "max_rows": 8,
+        "row": { "type": "object", "members": {
+          "id": { "type": "int", "min": 1, "max": 255 },
+          "kind": { "type": "enum", "values": ["toggle", "dim_up", "dim_down", "stop", "literal"] },
+          "object": { "type": "int", "min": 0, "max": 255 },
+          "payload": { "type": "array", "items": { "type": "int", "min": 0, "max": 255 }, "min_len": 2, "max_len": 2 }
+        } }
+      },
+      "buttons": {
+        "type": "table", "min_rows": 4, "max_rows": 4,
+        "row": { "type": "object", "members": {
+          "action": { "type": "ref", "table": "actions", "none": 0 },
+          "partner": { "type": "int", "min": 0, "max": 255 }
+        } }
+      }
+    }
+  },
+  "rules": [
+    {
+      "id": "one-root",
+      "require": { "op": "eq", "args": [
+        { "count": { "table": "pages", "as": "p", "where": { "op": "eq", "args": [{ "field": "parent", "of": "p" }, 0] } } }, 1] },
+      "message": "Exactly one page has no parent."
+    },
+    {
+      "id": "page-depth", "table": "pages", "field": "parent",
+      "require": { "op": "le", "args": [{ "depth": { "table": "pages", "parent": "parent", "root": 0 } }, 1] },
+      "message": "Pages nest at most two levels and never in a cycle."
+    },
+    {
+      "id": "payload-only-literal", "table": "actions", "field": "payload",
+      "when": { "op": "ne", "args": [{ "field": "kind" }, "literal"] },
+      "require": { "op": "and", "args": [
+        { "op": "eq", "args": [{ "item": [{ "field": "payload" }, 0] }, 0] },
+        { "op": "eq", "args": [{ "item": [{ "field": "payload" }, 1] }, 0] }] },
+      "message": "Only literal actions carry payload bytes."
+    },
+    {
+      "id": "unique-object", "table": "actions", "field": "object",
+      "when": { "op": "ne", "args": [{ "field": "object" }, 0] },
+      "require": { "op": "eq", "args": [
+        { "count": { "table": "actions", "as": "a", "where": { "op": "eq", "args": [{ "field": "object", "of": "a" }, { "field": "object" }] } } }, 1] },
+      "message": "Each object is used by one action."
+    },
+    {
+      "id": "partner-pair", "table": "buttons", "field": "partner",
+      "when": { "op": "ne", "args": [{ "field": "partner" }, 255] },
+      "require": { "op": "and", "args": [
+        { "op": "eq", "args": [{ "field": "partner" }, { "op": "xor", "args": [{ "index": null }, 1] }] },
+        { "op": "eq", "args": [{ "get": [{ "row": { "table": "buttons", "index": { "field": "partner" } } }, "partner"] }, { "index": null }] }] },
+      "message": "Partners are reciprocal neighbours (0/1, 2/3)."
+    },
+    {
+      "id": "dim-pair", "table": "buttons", "field": "action",
+      "when": { "op": "eq", "args": [{ "get": [{ "lookup": { "table": "actions", "key": { "field": "action" } } }, "kind"] }, "dim_up"] },
+      "require": { "op": "eq", "args": [
+        { "get": [{ "lookup": { "table": "actions", "key": { "get": [{ "row": { "table": "buttons", "index": { "field": "partner" } } }, "action"] } } }, "kind"] },
+        "dim_down"] },
+      "message": "A dim-up button needs a dim-down partner."
+    }
+  ],
+  "exports": [
+    {
+      "id": "image", "title": "Panel image", "extension": "bin", "max_bytes": 512,
+      "layout": [
+        { "ascii": "DEMO" },
+        { "u8": { "field": "version" } },
+        { "u8": { "rows": "pages" } },
+        { "u8": { "rows": "actions" } },
+        { "zero": 1 },
+        { "total_length": "u16le" },
+        { "crc": "crc16-ccitt-false", "encoding": "u16le" },
+        { "i16le": { "field": "offset" } },
+        { "text": { "field": "name" }, "size": 8, "pad": "zero" },
+        { "rows": "pages", "layout": [
+          { "u8": { "field": "id" } },
+          { "u8": { "field": "parent" } },
+          { "text": { "field": "label" }, "size": 8, "pad": "nul-terminated" }] },
+        { "rows": "actions", "layout": [
+          { "u8": { "field": "id" } },
+          { "u8": { "op": "add", "args": [{ "ordinal": { "field": "kind" } }, 1] } },
+          { "u8": { "field": "object" } },
+          { "u8": { "item": [{ "field": "payload" }, 0] } },
+          { "u8": { "item": [{ "field": "payload" }, 1] } }] },
+        { "rows": "buttons", "layout": [
+          { "u8": { "field": "action" } },
+          { "u8": { "field": "partner" } }] }
+      ]
+    }
+  ]
+}

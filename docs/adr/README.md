@@ -180,3 +180,4 @@ the old one gets `Status: Superseded by ADR-NNNN`.
 | [0172](0172-batch-programming-stops-at-the-first-doubt.md) | Programming all pending devices is one server-held batch that stops at the first doubt | Accepted | 2026-11-11 |
 | [0173](0173-last-downloaded-parameter-values.md) | The project remembers the parameter values a verified download wrote | Accepted | 2026-11-11 |
 | [0174](0174-last-downloaded-links-and-flags.md) | The project remembers the links and object flags a verified download wrote | Accepted | 2026-11-12 |
+| [0175](0175-device-configuration-modules-are-declarative-data.md) | Device configuration modules are declarative data | Accepted | 2026-11-15 |

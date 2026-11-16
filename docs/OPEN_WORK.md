@@ -26,7 +26,7 @@ the former dated sections are in the [archive](history/OPEN_WORK_2026-10-25.md).
 | GATE-01 | Test-gate speed and stability follow-ups | Parked until release preparation (owner 8 Nov); Alpha 21 preparation passed its complete release gate 23/23 on the first full run without these items; scheduler and three historical timeouts remain unresolved, awaiting re-prioritisation | [GATE-01](open-work/GATE-01-test-gate-follow-ups.md) |
 | OWN-01 | Recorded owner decisions, deferred items and remaining review | Decisions recorded (latest 12 Nov: SemVer release versions); Docker signing, website privacy copy, KL-186 and WP-12 consents pending | [OWN-01](open-work/OWN-01-owner-decisions.md) |
 | LS-01 | Automation and agent writes beyond the rename recipe | Later scope | [LS-01](open-work/LS-01-automation.md) |
-| LS-02 | Online catalogue source | Later scope | [LS-02](open-work/LS-02-online-catalogue.md) |
+| LS-02 | Online catalogue source | Reko branch WIP: owner-approved manual sync/local search, encrypted installation account and verified acquisition; final independent review/package gate and delivery pending, not in Alpha 22 | [LS-02](open-work/LS-02-online-catalogue.md) |
 | LS-03 | Further media, procedures and differential download | Later scope | [LS-03](open-work/LS-03-media-and-procedures.md) |
 | LS-04 | Statistics tooling | Later scope | [LS-04](open-work/LS-04-statistics-tooling.md) |
 | LS-05 | Optional humour copy | Later scope | [LS-05](open-work/LS-05-humour-copy.md) |

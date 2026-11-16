@@ -2199,9 +2199,12 @@ dependencies = [
  "axum",
  "base64 0.22.1",
  "chrono",
+ "flate2",
  "getrandom 0.4.3",
  "http-body",
  "http-body-util",
+ "hyper",
+ "hyper-util",
  "knx-app",
  "knx-build-stamp",
  "knx-core",
@@ -2218,6 +2221,7 @@ dependencies = [
  "pbkdf2",
  "quick-xml 0.42.0",
  "rcgen",
+ "ring",
  "rusqlite",
  "rustix",
  "rustls",
@@ -2230,6 +2234,7 @@ dependencies = [
  "tokio-rustls",
  "tower",
  "tower-http",
+ "webpki-roots",
  "yasna",
  "zip",
 ]
@@ -5077,6 +5082,15 @@ dependencies = [
  "pkg-config",
  "soup3-sys",
  "system-deps",
+]
+
+[[package]]
+name = "webpki-roots"
+version = "1.0.12"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7265c9301c16a8711c992c2d8da90ee77ef54b1ed51482d6dfeb00dc756b1297"
+dependencies = [
+ "rustls-pki-types",
 ]
 
 [[package]]

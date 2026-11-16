@@ -176,6 +176,48 @@ it("builds nothing when nothing is pending and says what is still unmet", async 
   expect(host.querySelector(".download-support-notice")).toBeNull();
 });
 
+it("offers the explicit complete plan from the nothing-pending answer (#52)", async () => {
+  const COMPLETE_PLAN = { ...PLAN, partial: false, notWritten: [], scope: "complete", scopeFromChanges: false,
+    scopeAdvice: advice({ write: "nothing", fullyProgrammed: true }) };
+  apiMock.planDeviceDownload
+    .mockRejectedValueOnce(refusal(422, { kind: "downloadNothingPending", error: "nothing pending",
+      scopeAdvice: advice({ write: "nothing", fullyProgrammed: true }) }))
+    .mockResolvedValueOnce(COMPLETE_PLAN);
+  await prepare("changes");
+  const offer = host.querySelector<HTMLButtonElement>("[data-prepare-complete]")!;
+  expect(offer).not.toBeNull();
+  expect(offer.textContent).toBe(en["deviceDownload.prepareComplete"]);
+  expect(host.querySelector(".device-download-plan")).toBeNull();
+  await act(async () => { offer.click(); });
+  await flush();
+  // The same request the "complete" radio sends: no scope, no partial.
+  expect(apiMock.planDeviceDownload).toHaveBeenLastCalledWith("1.1.67");
+  expect(host.querySelector(".device-download-plan")).not.toBeNull();
+  expect(host.querySelector("[data-scope-nothing]")).toBeNull();
+});
+
+it("a refused complete plan from the nothing-pending offer is shown, never silent (#52)", async () => {
+  apiMock.planDeviceDownload
+    .mockRejectedValueOnce(refusal(422, { kind: "downloadNothingPending", error: "nothing pending",
+      scopeAdvice: advice({ write: "nothing" }) }))
+    .mockRejectedValueOnce(refusal(422, { kind: "downloadPreparationRefused", error: "no image",
+      category: "modules" }));
+  await prepare("changes");
+  await act(async () => { host.querySelector<HTMLButtonElement>("[data-prepare-complete]")!.click(); });
+  await flush();
+  expect(apiMock.planDeviceDownload).toHaveBeenLastCalledWith("1.1.67");
+  expect(host.querySelector(".device-download-plan")).toBeNull();
+  expect(host.querySelector("[data-scope-nothing]")).toBeNull();
+  expect(host.querySelector(".download-support-notice")).not.toBeNull();
+});
+
+it("a pending partial scope still resolves to its own plan, unchanged (#52)", async () => {
+  await prepare("changes");
+  expect(apiMock.planDeviceDownload).toHaveBeenCalledWith("1.1.67", "changes");
+  expect(host.querySelector("[data-prepare-complete]")).toBeNull();
+  expect(text("[data-scope-resolved]")).toBe(en["deviceDownload.scopeAdvice.resolved.parameters"]);
+});
+
 it("says fully programmed only when the project marks every part programmed", async () => {
   apiMock.planDeviceDownload.mockRejectedValue(refusal(422, { kind: "downloadNothingPending", error: "nothing pending",
     scopeAdvice: advice({ write: "nothing", fullyProgrammed: true }) }));

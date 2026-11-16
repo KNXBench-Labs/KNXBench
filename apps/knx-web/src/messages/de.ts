@@ -4348,6 +4348,7 @@ export const messages: Record<MessageKey, string> = {
   "deviceDownload.gateway": "Gateway-Adresse",
   "deviceDownload.preparePlan": "Programmierung vorbereiten",
   "deviceDownload.preparePlanNote": "Noch wird nichts geschrieben: Das zeigt nur den Plan.",
+  "deviceDownload.prepareComplete": "Vollständige Programmierung trotzdem vorbereiten",
   "deviceDownload.holder.stopMonitor": "Busmonitor beenden",
   "deviceDownload.holder.cancelScan": "Linienscan abbrechen",
   "deviceDownload.holder.stopProgramming": "Programmierung beenden",

@@ -4522,6 +4522,7 @@ export const messages = {
   "deviceDownload.gateway": "Gateway address",
   "deviceDownload.preparePlan": "Prepare download",
   "deviceDownload.preparePlanNote": "Nothing is written yet: this only shows the plan.",
+  "deviceDownload.prepareComplete": "Prepare the complete download anyway",
   "deviceDownload.holder.stopMonitor": "Stop bus monitor",
   "deviceDownload.holder.cancelScan": "Cancel line scan",
   "deviceDownload.holder.stopProgramming": "Stop programming",

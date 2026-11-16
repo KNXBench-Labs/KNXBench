@@ -214,3 +214,54 @@ fn unusable_input_exits_with_two() {
     }
     assert!(!Path::new(&out_path).exists());
 }
+
+#[test]
+fn long_output_names_and_unwritable_targets() {
+    let c = case();
+    let long = c.dir.path().join(format!("{}.bin", "p".repeat(240)));
+    let out = knx(
+        &[
+            "export",
+            &c.module,
+            &c.valid,
+            "--export",
+            "image",
+            "--output",
+            long.to_str().unwrap(),
+        ],
+        c.dir.path(),
+    );
+    assert_eq!(out.status.code(), Some(0), "{}", text(&out.stderr));
+    assert_eq!(std::fs::read(&long).unwrap().len(), 65);
+    // A directory as target makes the rename fail: the temporary file is removed and the
+    // directory is untouched.
+    let target = c.dir.path().join("target-dir");
+    std::fs::create_dir(&target).unwrap();
+    std::fs::write(target.join("keep"), b"x").unwrap();
+    let out = knx(
+        &[
+            "export",
+            &c.module,
+            &c.valid,
+            "--export",
+            "image",
+            "--output",
+            target.to_str().unwrap(),
+        ],
+        c.dir.path(),
+    );
+    assert_eq!(out.status.code(), Some(2), "{}", text(&out.stdout));
+    assert_eq!(std::fs::read(target.join("keep")).unwrap(), b"x");
+    let mut names: Vec<String> = std::fs::read_dir(c.dir.path())
+        .unwrap()
+        .map(|e| e.unwrap().file_name().to_string_lossy().into_owned())
+        .collect();
+    names.sort();
+    assert_eq!(
+        names,
+        [
+            long.file_name().unwrap().to_string_lossy().into_owned(),
+            "target-dir".to_owned()
+        ]
+    );
+}

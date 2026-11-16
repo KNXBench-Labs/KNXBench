@@ -1,7 +1,7 @@
 {
   "schema_version": 2,
   "repository": "KNXBench-Labs/KNXBench",
-  "generated_at": "2026-11-16T20:39:06Z",
+  "generated_at": "2026-11-16T20:39:52Z",
   "policy": {
     "excluded_logins": [
       "KNXBench-Labs",
@@ -358,7 +358,7 @@
     {
       "login": "thengsty",
       "issues": 43,
-      "replies": 44,
+      "replies": 48,
       "resolutions": 37,
       "pull_requests": 1,
       "pull_requests_open": 0,
@@ -366,11 +366,11 @@
       "pull_requests_merged": 1,
       "xp_breakdown": {
         "issues": 215,
-        "replies": 44,
+        "replies": 48,
         "resolutions": 370,
         "pull_requests": 25
       },
-      "xp": 654,
+      "xp": 658,
       "rank": {
         "minimum_xp": 650,
         "title": "Application Apocalypse Survivor"

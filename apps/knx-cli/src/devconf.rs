@@ -199,14 +199,39 @@ fn export(args: &[String]) -> Result<ExitCode, String> {
 }
 
 /// Writes through a temporary file in the target directory so a reader never sees half a file.
+///
+/// The temporary file is created like any new file (mode from the umask), renamed over the
+/// target and the directory is synced afterwards, so the rename survives a crash.
 fn write_atomically(path: &Path, bytes: &[u8]) -> std::io::Result<()> {
     let dir = match path.parent() {
         Some(p) if !p.as_os_str().is_empty() => p,
         _ => Path::new("."),
     };
-    let mut file = tempfile::NamedTempFile::new_in(dir)?;
-    file.write_all(bytes)?;
-    file.as_file().sync_all()?;
-    file.persist(path).map_err(|e| e.error)?;
-    Ok(())
+    let name = path.file_name().ok_or_else(|| {
+        std::io::Error::new(
+            std::io::ErrorKind::InvalidInput,
+            "the output needs a file name",
+        )
+    })?;
+    let nanos = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_or(0, |d| d.subsec_nanos());
+    let mut temp_name = std::ffi::OsString::from(".");
+    temp_name.push(name);
+    temp_name.push(format!(".{}-{nanos}.tmp", std::process::id()));
+    let temp = dir.join(temp_name);
+    let result = (|| {
+        let mut file = std::fs::OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&temp)?;
+        file.write_all(bytes)?;
+        file.sync_all()?;
+        std::fs::rename(&temp, path)?;
+        std::fs::File::open(dir)?.sync_all()
+    })();
+    if result.is_err() {
+        let _ = std::fs::remove_file(&temp);
+    }
+    result
 }

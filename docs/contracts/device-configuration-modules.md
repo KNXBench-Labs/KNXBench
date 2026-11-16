@@ -19,7 +19,7 @@ program.
 
 | File | Content |
 | --- | --- |
-| Module package (`*.devconf.json`) | `format`, `format_version`, `id`, `version`, `title`, `document`, `rules`, `exports` |
+| Module package (`*.devconf.json`) | `format`, `format_version`, `id`, `version`, `title`, `max_document_bytes`, `document`, `rules`, `exports` |
 | Configuration document (`*.json`) | one value shaped by the module's `document` type |
 | Export output | bytes produced by one of the module's `exports` |
 
@@ -121,16 +121,20 @@ Expressions are JSON values (no string syntax is parsed):
 | `{"op": NAME, "args": [ ... ]}` | operator, see below |
 
 Operators: `eq`, `ne`, `lt`, `le`, `gt`, `ge` (two args, integers or strings,
-both the same kind); `add`, `sub`, `mul`, `mod`, `xor` (two integers);
+both the same kind; `eq` and `ne` also compare two booleans; strings compare by
+bytes); `add`, `sub`, `mul`, `mod`, `xor` (two integers);
 `neg` (one integer); `mod` is the truncated remainder (sign of the dividend),
 `xor` is bitwise; `and`, `or` (one or more booleans), `not` (one boolean);
 `in` (value, then one or more candidates); `if` (condition, then, else);
 `is_null` (one value).
 
 `null` semantics are fixed: any operator with a `null` operand yields `null`,
-except `is_null`, `if` (a `null` condition selects the else branch), and
+except `is_null`, `if` (a `null` condition selects the else branch),
 `and`/`or` which follow three-valued logic (`false and null` is `false`,
-`true or null` is `true`). Integer overflow and `mod` by zero yield `null`.
+`true or null` is `true`), and `in`, which is `true` when a candidate equals
+the value even if other candidates are `null`, `null` when the value is `null`
+or no candidate matches but one is `null`, else `false`. Quantifiers count a
+`null` condition as not satisfied. Integer overflow and `mod` by zero yield `null`.
 Expressions are type-checked when the module is loaded: an operand of the wrong
 kind (a string where an integer is required), an unknown member, table or row
 variable, or comparing an enum with a string literal that is not one of its
@@ -139,8 +143,11 @@ value is `null`, a boolean, an integer or a string. Rows and arrays can only be
 read through `get`, `item`, `length` and quantifiers, not compared.
 
 Limits: expression depth 32, quantifier nesting 3, `depth` follows at most the
-row count of its table, and a whole validation or export stops with a refusal
-after 50 million evaluation steps.
+row count of its table. Validation has a budget of 50 million evaluation steps;
+an export validates first and then gets the same budget again for its layout.
+Exhausting a budget refuses the operation. At most 1000 findings are reported
+with their details; further findings are only counted, so memory does not grow
+with the number of violations.
 
 ### Exports
 
@@ -159,16 +166,16 @@ Exports run only on a valid document. Layout items, in order:
 | `{"text": E, "size": N, "pad": "zero"}` | the text's bytes, then zero bytes to `N`; the text may fill `N` |
 | `{"zero": N}` | `N` zero bytes |
 | `{"rows": "t", "layout": [ ... ]}` | the nested layout once per row of `t`, in array order, with that row as current row |
-| `{"total_length": "u16le"}` | the final output length |
+| `{"total_length": "u16le"}` / `{"total_length": "u32le"}` | the final output length |
 | `{"crc": "crc16-ccitt-false", "encoding": "u16le"}` | CRC-16 (poly 0x1021, init 0xFFFF, no reflection, no xor-out) over the final output with these two bytes as zero |
 
-At most one `total_length` and one `crc` item. The output is refused when longer
-than `max_bytes`. The same module and document always produce the same bytes.
+At most one `total_length` and one `crc` item, both outside `rows`; `rows` items
+cannot be nested. The output is refused when longer than `max_bytes`. The same module and document always produce the same bytes.
 
 ## CLI
 
 ```text
-knx devconf check   <module>                       # load and verify a module package
+knx devconf check   <module> [--json]              # load and verify a module package
 knx devconf validate <module> <document> [--json]  # structural errors and rule violations
 knx devconf export  <module> <document> --export <id> --output <file>
 ```

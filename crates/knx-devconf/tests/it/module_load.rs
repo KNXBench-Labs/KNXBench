@@ -216,3 +216,34 @@ fn layout_problems_are_found_at_load() {
         );
     }
 }
+
+#[test]
+fn unsupported_format_versions_and_fixed_array_items_are_refused() {
+    let package: Value = serde_json::from_slice(&fixture("demo-panel.devconf.json")).unwrap();
+    for version in [0, -1, 2] {
+        let mut p = package.clone();
+        p["format_version"] = json!(version);
+        let error = Module::load(&serde_json::to_vec(&p).unwrap())
+            .unwrap_err()
+            .0;
+        assert!(
+            error.contains(&format!("unsupported version {version}")),
+            "{error}"
+        );
+    }
+    let members = json!({ "a": { "type": "array", "items": { "type": "const", "value": 1 }, "min_len": 0, "max_len": 2 } });
+    let error = refused(members, json!([]), json!([]));
+    assert!(
+        error.contains("type \"const\" is not allowed here"),
+        "{error}"
+    );
+}
+
+#[test]
+fn a_type_error_names_the_type_not_a_debug_value() {
+    let error = refused(table(), rule(json!({ "field": "s" })), json!([]));
+    assert!(
+        error.ends_with("a condition must be boolean, found string"),
+        "{error}"
+    );
+}

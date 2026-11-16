@@ -96,10 +96,21 @@ impl Validation {
         self.findings.is_empty() && self.omitted == 0
     }
 
-    fn from(mut findings: Vec<Finding>) -> Self {
-        let omitted = findings.len().saturating_sub(MAX_FINDINGS);
-        findings.truncate(MAX_FINDINGS);
-        Validation { findings, omitted }
+    pub(crate) fn empty() -> Self {
+        Validation {
+            findings: Vec::new(),
+            omitted: 0,
+        }
+    }
+
+    /// Keeps the finding while fewer than [`MAX_FINDINGS`] are kept; otherwise only counts it.
+    /// The finding is built only when kept, so memory stays bounded however many rows fail.
+    pub(crate) fn push(&mut self, finding: impl FnOnce() -> Finding) {
+        if self.findings.len() < MAX_FINDINGS {
+            self.findings.push(finding());
+        } else {
+            self.omitted += 1;
+        }
     }
 }
 
@@ -400,17 +411,21 @@ impl Module {
     ) -> Result<Result<schema::Doc, Validation>, EngineError> {
         let json = match json::parse(document, self.max_document_bytes) {
             Ok(json) => json,
-            Err(e) => return Ok(Err(Validation::from(vec![Finding::structure("", e)]))),
+            Err(e) => {
+                let mut validation = Validation::empty();
+                validation.push(|| Finding::structure("", e));
+                return Ok(Err(validation));
+            }
         };
         let doc = match schema::check(&self.schema, &json) {
             Ok(doc) => doc,
-            Err(findings) => return Ok(Err(Validation::from(findings))),
+            Err(validation) => return Ok(Err(validation)),
         };
-        let findings = rules::run(&self.rules, &self.schema, &doc, limit)?;
-        Ok(if findings.is_empty() {
+        let validation = rules::run(&self.rules, &self.schema, &doc, limit)?;
+        Ok(if validation.is_valid() {
             Ok(doc)
         } else {
-            Err(Validation::from(findings))
+            Err(validation)
         })
     }
 

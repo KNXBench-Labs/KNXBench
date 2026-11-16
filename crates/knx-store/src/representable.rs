@@ -90,6 +90,7 @@ impl fmt::Display for RepresentationIssue {
 pub(crate) fn check_representable(project: &Project) -> Result<(), StoreError> {
     crate::saved_instance_priority::check(project)?;
     crate::notes::check(project)?;
+    crate::devconf_profile::check(project)?;
     crate::functions::check(project)?;
     crate::instructions::check(project)?;
     check_unambiguous_topology(project)?;

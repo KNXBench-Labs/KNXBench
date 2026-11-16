@@ -35,7 +35,7 @@ fn downgrade_to_v9(path: &Path) {
          ALTER TABLE group_address DROP COLUMN dpt_value;
          ALTER TABLE group_address DROP COLUMN dpt_layer;
          ALTER TABLE project_info DROP COLUMN unlifted_group_address_dpt_declarations;
-         PRAGMA user_version = 9;",
+         DROP TABLE device_config_profile; PRAGMA user_version = 9;",
     )
     .unwrap();
 }

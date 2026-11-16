@@ -22,7 +22,7 @@ use std::path::Path;
 use rusqlite::{params, Connection, OptionalExtension, Transaction};
 
 /// Matches `knx_core::project::CURRENT_SCHEMA_VERSION`.
-pub const CURRENT_SCHEMA_VERSION: i64 = 21;
+pub const CURRENT_SCHEMA_VERSION: i64 = 22;
 
 #[derive(Debug)]
 pub enum MigrationError {
@@ -743,6 +743,24 @@ fn migrate_v20_to_v21(conn: &Connection) -> Result<(), MigrationError> {
     Ok(())
 }
 
+/// v21 -> v22: one device configuration profile per device (ADR-0175
+/// decision 5, WP-42.2). Additive-only: a pre-v22 project simply has no
+/// profiles, which the read side treats as "no device configuration", never
+/// as an empty document. The document is stored as bytes; the module's own
+/// stricter limits apply when the engine validates it.
+fn migrate_v21_to_v22(conn: &Connection) -> Result<(), MigrationError> {
+    conn.execute_batch(
+        "CREATE TABLE device_config_profile (
+             device_id       INTEGER PRIMARY KEY REFERENCES device(id),
+             module_id       TEXT NOT NULL,
+             module_version  TEXT NOT NULL,
+             module_sha256   TEXT NOT NULL,
+             document        BLOB NOT NULL
+         ) STRICT;",
+    )?;
+    Ok(())
+}
+
 type Migration = fn(&Connection) -> Result<(), MigrationError>;
 
 /// History owns the surrounding transaction so a refused editor write also
@@ -799,6 +817,7 @@ fn migrations() -> Vec<Migration> {
         migrate_v18_to_v19,
         migrate_v19_to_v20,
         migrate_v20_to_v21,
+        migrate_v21_to_v22,
     ]
 }
 
@@ -1537,7 +1556,7 @@ mod tests {
             conn.execute_batch(
                 "DROP TABLE device_object_flags_baseline; DROP TABLE device_link_baseline_link; DROP TABLE device_link_baseline; DROP TABLE device_parameter_baseline_value; DROP TABLE device_parameter_baseline; DROP TABLE group_address_description; DROP TABLE com_object_priority_edit; DROP TABLE com_object_saved_priority;
                  DROP TABLE instruction_run;
-                 DROP TABLE instruction_document; DROP TABLE manufacturer_file; DROP TABLE project_function_member; DROP TABLE project_function; DROP TABLE project_function_state; DROP TABLE project_note; DROP TABLE project_note_state;
+                 DROP TABLE instruction_document; DROP TABLE device_config_profile; DROP TABLE manufacturer_file; DROP TABLE project_function_member; DROP TABLE project_function; DROP TABLE project_function_state; DROP TABLE project_note; DROP TABLE project_note_state;
                  DROP TABLE project_history_state;
                  DROP TABLE project_history_stack;
                  DROP TABLE project_history_version;

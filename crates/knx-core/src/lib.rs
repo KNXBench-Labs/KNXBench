@@ -9,6 +9,7 @@ pub mod allocation;
 pub mod building;
 pub mod command;
 pub mod commissioning;
+pub mod devconf;
 pub mod device;
 pub mod devices;
 pub mod dpt;
@@ -50,6 +51,7 @@ pub use commissioning::mutation::{WriteAuthorisation, WriteScope};
 pub use commissioning::{
     CommissioningState, CompletionStatus, DeviceLoadStates, LoadDisagreement, LoadPart,
 };
+pub use devconf::{DeviceConfigProfile, ProfileError};
 pub use device::{BinaryDataRef, ComObjectInstance, DeviceInstance, ProgramDefaults};
 pub use devices::Devices;
 pub use dpt::{

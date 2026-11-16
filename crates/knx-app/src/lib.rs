@@ -41,6 +41,7 @@ pub mod modeled_metadata;
 pub mod monitor_export;
 pub mod name_recipe;
 pub mod note_disposition;
+pub mod devconf_edit;
 pub mod note_edit;
 pub mod note_targets;
 pub mod operation_recording;

@@ -1,7 +1,7 @@
 {
   "schema_version": 2,
   "repository": "KNXBench-Labs/KNXBench",
-  "generated_at": "2026-11-16T19:15:15Z",
+  "generated_at": "2026-11-16T20:39:06Z",
   "policy": {
     "excluded_logins": [
       "KNXBench-Labs",
@@ -357,7 +357,7 @@
   "contributors": [
     {
       "login": "thengsty",
-      "issues": 42,
+      "issues": 43,
       "replies": 44,
       "resolutions": 37,
       "pull_requests": 1,
@@ -365,15 +365,15 @@
       "pull_requests_closed": 0,
       "pull_requests_merged": 1,
       "xp_breakdown": {
-        "issues": 210,
+        "issues": 215,
         "replies": 44,
         "resolutions": 370,
         "pull_requests": 25
       },
-      "xp": 649,
+      "xp": 654,
       "rank": {
-        "minimum_xp": 450,
-        "title": "Routing Riddle Resolver"
+        "minimum_xp": 650,
+        "title": "Application Apocalypse Survivor"
       },
       "medals": [
         "Golden Bus Probe",

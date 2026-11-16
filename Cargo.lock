@@ -2022,6 +2022,7 @@ dependencies = [
  "knx-build-stamp",
  "knx-core",
  "knx-csv",
+ "knx-devconf",
  "knx-diff",
  "knx-etsproj",
  "knx-net",
@@ -2065,6 +2066,15 @@ dependencies = [
  "tempfile",
  "tokio",
  "webkit2gtk",
+]
+
+[[package]]
+name = "knx-devconf"
+version = "0.1.0-alpha.1"
+dependencies = [
+ "serde",
+ "serde_json",
+ "sha2",
 ]
 
 [[package]]

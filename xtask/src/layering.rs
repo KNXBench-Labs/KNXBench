@@ -115,6 +115,23 @@ pub const OFFLINE_EDIT_FORBIDDEN: &[&str] = &[
     "tauri",
 ];
 
+/// The device configuration engine is pure (ADR-0175): no project model or
+/// store, product database, archive parser, application service, async
+/// runtime, network, bus or HTTP stack.
+pub const DEVCONF_FORBIDDEN: &[&str] = &[
+    "knx-core",
+    "knx-store",
+    "knx-etsproj",
+    "knx-productdb",
+    "knx-net",
+    "knx-app",
+    "rusqlite",
+    "tokio",
+    "axum",
+    "tower",
+    "quick-xml",
+];
+
 /// Build the resolved dependency graph of the whole workspace, including
 /// transitive third-party dependencies.
 pub fn workspace_graph(root: &std::path::Path) -> Result<DepGraph, String> {
@@ -173,6 +190,7 @@ fn build_graph(root: &std::path::Path, include_dev: bool) -> Result<DepGraph, St
         "knx-csv",
         "knx-report",
         "knx-diff",
+        "knx-devconf",
         "knx-secure",
     ] {
         if !metadata

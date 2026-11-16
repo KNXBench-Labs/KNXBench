@@ -11,6 +11,7 @@ mod activity_history_paths;
 mod bus_transport;
 mod catalog_update;
 mod contribution;
+mod devconf;
 mod device_address;
 mod device_byte_order_probe;
 mod device_compare;
@@ -57,6 +58,7 @@ const USAGE: &str = "usage: knx import <file.knxproj> [--store <path.knxdb> [--r
      \x20         (offline reduced monitoring projection, not a backup; never overwrites)\n\
      \x20     knx doc-export <store.knxdb> <out.html> [--language en|en-US|de|de-DE]\n\
      \x20     knx diff [--exit-code] <a.knxdb|a.knxproj> <b.knxdb|b.knxproj>\n\
+     \x20     knx devconf check|validate|export ...  (device configuration modules)\n\
      \x20     knx contribution analyze <file.knxproj|file.knxprod>\n\
      \x20     knx contribution preview <file> --options <options.json>\n\
      \x20     knx contribution export <file> <out.zip> --options <options.json>\n\
@@ -340,6 +342,7 @@ fn dispatch(args: &[String]) -> ExitCode {
         Some("diff") => run_diff(&args[1..]),
         Some("products") => run_products(&args[1..]),
         Some("contribution") => contribution::run(&args[1..]),
+        Some("devconf") => devconf::run(&args[1..]),
         Some("bus") => run_bus(&args[1..]),
         Some("device") => run_device(&args[1..]),
         Some("--version" | "-V") => {

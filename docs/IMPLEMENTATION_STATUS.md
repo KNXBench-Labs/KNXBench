@@ -23,6 +23,21 @@ inclusion does not rebind native or hardware evidence. #36/#48 were reporter
 confirmed and closed 14 November for changes shipped in Alpha 21; #30 is closed,
 #22 remains open. Final release verification is recorded in the release notes.
 
+<a id="device-configuration-modules-15-november-2026-wp-42-1"></a>
+
+## Device configuration modules: format, engine and CLI (15 November 2026; WP-42.1, after the Alpha 22 cutoff)
+
+A device configuration module is a JSON package describing a device's own
+configuration document: typed members and tables, rules as JSON expression
+trees and binary export layouts ([ADR-0175](adr/0175-device-configuration-modules-are-declarative-data.md),
+[contract](contracts/device-configuration-modules.md)). The new pure crate
+`knx-devconf` loads and type-checks modules, validates documents (structure,
+then every rule, with JSON-pointer locations) and produces exports with length
+and CRC-16/CCITT-FALSE; `knx devconf check|validate|export` exposes it on the
+CLI with atomic output files. KNXBench contains no device-specific code; tests
+use a fictional demo module with hand-computed export bytes. No project storage,
+server route, web editor, device download or bus access yet (WP-42.2/42.3).
+
 <a id="first-class-settings-navigation-14-november-2026-main-only-after-alpha-21"></a>
 
 ## First-class Settings navigation (14 November 2026; ships in Alpha 22)

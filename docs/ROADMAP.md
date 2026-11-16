@@ -15,6 +15,18 @@ is not real-gateway interoperability or whole-desktop acceptance. #36/#48
 reporter confirmations concern Alpha 21 fixes; #30 is closed and #22 stays open.
 Work after this source cutoff belongs to a later release.
 
+<a id="device-configuration-modules-15-november-2026-wp-42-1"></a>
+
+## Device configuration modules (15 November 2026; WP-42, after the Alpha 22 cutoff)
+
+Own-firmware devices get their configuration (for example menus, keys and LED
+policies) from declarative module packages instead of device code in KNXBench
+([ADR-0175](adr/0175-device-configuration-modules-are-declarative-data.md)).
+WP-42.1 delivers the format, the pure `knx-devconf` engine and `knx devconf`
+CLI. Next: installed modules with id/version/SHA-256 and a per-device document
+in the project (WP-42.2), then the structured editor in the device panel
+(WP-42.3). Downloading a configuration to a device is not planned here.
+
 <a id="workspace-density-and-technical-appearance-14-november-2026-wp-41-delivered-on-main"></a>
 
 ## Workspace density and technical appearance (14 November 2026; ships in Alpha 22)

@@ -1,7 +1,7 @@
 {
   "schema_version": 2,
   "repository": "KNXBench-Labs/KNXBench",
-  "generated_at": "2026-11-16T18:34:32Z",
+  "generated_at": "2026-11-16T18:35:35Z",
   "policy": {
     "excluded_logins": [
       "KNXBench-Labs",
@@ -358,7 +358,7 @@
     {
       "login": "thengsty",
       "issues": 39,
-      "replies": 43,
+      "replies": 44,
       "resolutions": 37,
       "pull_requests": 1,
       "pull_requests_open": 0,
@@ -366,11 +366,11 @@
       "pull_requests_merged": 1,
       "xp_breakdown": {
         "issues": 195,
-        "replies": 43,
+        "replies": 44,
         "resolutions": 370,
         "pull_requests": 25
       },
-      "xp": 633,
+      "xp": 634,
       "rank": {
         "minimum_xp": 450,
         "title": "Routing Riddle Resolver"

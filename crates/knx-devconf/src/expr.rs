@@ -21,7 +21,7 @@ pub enum STy {
 }
 
 impl STy {
-    fn name(&self) -> &'static str {
+    pub(crate) fn name(&self) -> &'static str {
         match self {
             STy::Null => "null",
             STy::Int => "integer",

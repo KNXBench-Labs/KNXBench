@@ -1,7 +1,7 @@
 //! Declared document types: loading them from a module and checking a document's structure.
 
 use crate::json::{fields, str_of, Json};
-use crate::Finding;
+use crate::{Finding, Validation};
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -346,7 +346,7 @@ fn load_ty(json: &Json, path: &str, place: Place, tables: &[&str]) -> Result<Loa
             }
             (Ty::Text { ascii, min, max }, annotations(&f)?)
         }
-        "const" => {
+        "const" if place != Place::Item => {
             let f = fields(json, path, &["type", "value"], &common)?;
             (Ty::Const(f.req("value").clone()), annotations(&f)?)
         }
@@ -425,13 +425,13 @@ pub struct TableData {
 
 struct Checker<'s> {
     schema: &'s Schema,
-    findings: Vec<Finding>,
+    findings: Validation,
     refs: Vec<(usize, Option<i64>, i64, String)>,
 }
 
 impl<'s> Checker<'s> {
     fn fail(&mut self, path: &str, message: String) {
-        self.findings.push(Finding::structure(path, message));
+        self.findings.push(|| Finding::structure(path, message));
     }
 
     fn value(&mut self, ty: &Ty, json: &Json, path: &str) -> Val {
@@ -589,10 +589,10 @@ impl<'s> Checker<'s> {
 }
 
 /// Checks `json` against the schema; returns the typed document when no finding was made.
-pub fn check(schema: &Schema, json: &Json) -> Result<Doc, Vec<Finding>> {
+pub fn check(schema: &Schema, json: &Json) -> Result<Doc, Validation> {
     let mut c = Checker {
         schema,
-        findings: Vec::new(),
+        findings: Validation::empty(),
         refs: Vec::new(),
     };
     let mut doc = Doc {
@@ -620,7 +620,7 @@ pub fn check(schema: &Schema, json: &Json) -> Result<Doc, Vec<Finding>> {
             c.fail(&path, format!("no row of \"{name}\" has key {value}"));
         }
     }
-    if c.findings.is_empty() {
+    if c.findings.is_valid() {
         Ok(doc)
     } else {
         Err(c.findings)

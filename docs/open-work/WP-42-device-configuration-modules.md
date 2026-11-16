@@ -9,7 +9,7 @@ only as explicitly entered object numbers; structured preview first.
 Decision: [ADR-0175](../adr/0175-device-configuration-modules-are-declarative-data.md).
 Contract: [device configuration modules](../contracts/device-configuration-modules.md).
 
-**Priority:** In progress.
+**Priority:** In progress: WP-42.1 delivered; WP-42.2 and WP-42.3 not started.
 
 ## Requested outcome
 
@@ -22,7 +22,9 @@ part of this work package.
 
 1. **WP-42.1 — format, engine, CLI.** Crate `knx-devconf` (strict JSON,
    types, rules, exports), `knx devconf check|validate|export`, fictional demo
-   module and tests. *In progress.*
+   module and tests. *Delivered* after independent review and the package gate;
+   the first device module is differentially tested against its firmware
+   outside this repository.
 2. **WP-42.2 — storage.** Module packages installed with id, version and
    SHA-256 in the product-data layer; per-device configuration document in the
    project (native schema 22) with one undoable command per apply; a missing

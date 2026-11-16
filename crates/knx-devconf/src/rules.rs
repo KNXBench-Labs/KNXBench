@@ -3,7 +3,7 @@
 use crate::expr::{compile, Env, EvalError, Expr, STy, Scope, V};
 use crate::json::{fields, Json};
 use crate::schema::{printable, Doc, Schema};
-use crate::Finding;
+use crate::{Finding, Validation};
 
 /// Most rules a module may declare.
 pub const MAX_RULES: usize = 4096;
@@ -33,7 +33,8 @@ fn boolean(json: &Json, scope: &mut Scope, path: &str) -> Result<Expr, String> {
     match sty {
         STy::Bool => Ok(expr),
         other => Err(format!(
-            "{path}: a condition must be boolean, found {other:?}"
+            "{path}: a condition must be boolean, found {}",
+            other.name()
         )),
     }
 }
@@ -108,13 +109,13 @@ pub fn load(json: &Json, schema: &Schema, path: &str) -> Result<Vec<Rule>, Strin
     Ok(rules)
 }
 
-/// Evaluates every rule; returns the violations in rule order, then row order.
+/// Evaluates every rule; keeps the first violations in rule order, then row order, and counts the rest.
 pub fn run(
     rules: &[Rule],
     schema: &Schema,
     doc: &Doc,
     limit: u64,
-) -> Result<Vec<Finding>, EvalError> {
+) -> Result<Validation, EvalError> {
     let mut env = Env {
         schema,
         doc,
@@ -123,7 +124,7 @@ pub fn run(
         steps: 0,
         limit,
     };
-    let mut findings = Vec::new();
+    let mut findings = Validation::empty();
     for rule in rules {
         let rows: Vec<Option<(usize, usize)>> = match rule.table {
             Some(t) => (0..doc.tables[t].rows.len())
@@ -138,15 +139,17 @@ pub fn run(
                 None => true,
             };
             if applies && env.eval(&rule.require)? != V::Bool(true) {
-                let mut path = match row {
-                    Some((t, r)) => format!("/{}/{r}", schema.tables[t].name),
-                    None => String::new(),
-                };
-                if let Some(field) = &rule.field {
-                    path.push('/');
-                    path.push_str(field);
-                }
-                findings.push(Finding::rule(&path, &rule.id, &rule.message));
+                findings.push(|| {
+                    let mut path = match row {
+                        Some((t, r)) => format!("/{}/{r}", schema.tables[t].name),
+                        None => String::new(),
+                    };
+                    if let Some(field) = &rule.field {
+                        path.push('/');
+                        path.push_str(field);
+                    }
+                    Finding::rule(&path, &rule.id, &rule.message)
+                });
             }
         }
     }

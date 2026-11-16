@@ -282,3 +282,127 @@ fn nul_terminated_text_needs_one_spare_byte_and_zero_padding_does_not() {
         Err(ExportError::Refused { .. })
     ));
 }
+
+#[test]
+fn text_charsets_refuse_delete_and_control_characters() {
+    for (name, ok) in [
+        ("Hall\u{7f}", false),
+        ("Hall\u{1}", false),
+        ("Hall\nway", false),
+        ("Halle \u{e4}", true),
+    ] {
+        let doc = demo_doc(|d| d["name"] = json!(name));
+        assert_eq!(
+            demo().validate(&doc).unwrap().is_valid(),
+            ok,
+            "utf8 name {name:?}"
+        );
+    }
+    for (label, ok) in [("Home\u{7f}", false), ("~ Home", true), ("H\u{e4}", false)] {
+        let doc = demo_doc(|d| d["pages"][0]["label"] = json!(label));
+        assert_eq!(
+            demo().validate(&doc).unwrap().is_valid(),
+            ok,
+            "ascii label {label:?}"
+        );
+    }
+}
+
+#[test]
+fn integer_items_refuse_values_outside_their_encoding() {
+    let members = json!({ "v": { "type": "int", "min": -100000, "max": 100000 } });
+    let module = |item: &str| {
+        crate::module(
+            members.clone(),
+            json!([]),
+            json!([{ "id": "e", "title": "E", "extension": "bin",
+            "max_bytes": 8, "layout": [{ item: { "field": "v" } }] }]),
+        )
+        .unwrap()
+    };
+    let cases: [(&str, i64, Option<&[u8]>); 12] = [
+        ("u8", 255, Some(&[255])),
+        ("u8", 256, None),
+        ("u8", 300, None),
+        ("u8", -1, None),
+        ("u16le", 65535, Some(&[255, 255])),
+        ("u16le", 65536, None),
+        ("i16le", -32768, Some(&[0, 0x80])),
+        ("i16le", 32768, None),
+        ("i16le", -32769, None),
+        ("u32le", 0, Some(&[0, 0, 0, 0])),
+        ("u32le", -1, None),
+        ("u8", 0, Some(&[0])),
+    ];
+    for (item, value, expected) in cases {
+        let doc = serde_json::to_vec(&json!({ "v": value })).unwrap();
+        match (module(item).export(&doc, "e"), expected) {
+            (Ok(bytes), Some(expected)) => assert_eq!(bytes, expected, "{item} {value}"),
+            (Err(ExportError::Refused { message, .. }), None) => {
+                assert!(
+                    message.contains("does not fit"),
+                    "{item} {value}: {message}"
+                )
+            }
+            (other, _) => panic!("{item} {value}: {other:?}"),
+        }
+    }
+}
+
+#[test]
+fn exports_refuse_output_beyond_max_bytes() {
+    let members = json!({ "rows": { "type": "table", "min_rows": 0, "max_rows": 8, "row": { "type": "object",
+        "members": { "v": { "type": "int", "min": 0, "max": 255 } } } } });
+    let module = crate::module(members, json!([]), json!([{ "id": "e", "title": "E", "extension": "bin",
+        "max_bytes": 3, "layout": [{ "ascii": "X" }, { "rows": "rows", "layout": [{ "u8": { "field": "v" } }] }] }])).unwrap();
+    assert_eq!(
+        module
+            .export(br#"{"rows":[{"v":1},{"v":2}]}"#, "e")
+            .unwrap(),
+        [b'X', 1, 2]
+    );
+    match module.export(br#"{"rows":[{"v":1},{"v":2},{"v":3}]}"#, "e") {
+        Err(ExportError::Refused { path, message }) => {
+            assert_eq!(path, "/rows/2");
+            assert!(message.contains("exceeds 3 bytes"), "{message}");
+        }
+        other => panic!("expected a refusal, got {other:?}"),
+    }
+}
+
+#[test]
+fn findings_beyond_the_cap_are_counted_not_kept() {
+    let members = json!({ "rows": { "type": "table", "min_rows": 0, "max_rows": 4096, "row": { "type": "object",
+        "members": { "v": { "type": "int", "min": 0, "max": 1 } } } } });
+    let rules: Vec<Value> = (0..3)
+        .map(
+            |i| json!({ "id": format!("r{i}"), "table": "rows", "require": false, "message": "m" }),
+        )
+        .collect();
+    let module = crate::module(members, json!(rules), json!([])).unwrap();
+    let rows: Vec<Value> = (0..1000).map(|_| json!({ "v": 0 })).collect();
+    let validation = module
+        .validate(&serde_json::to_vec(&json!({ "rows": rows })).unwrap())
+        .unwrap();
+    assert_eq!(
+        (validation.findings.len(), validation.omitted),
+        (knx_devconf::MAX_FINDINGS, 2000)
+    );
+    assert_eq!(
+        validation.findings[999].path, "/rows/999",
+        "the first findings in rule and row order are kept"
+    );
+    let rows: Vec<Value> = (0..1500).map(|_| json!({ "v": 9 })).collect();
+    let validation = module
+        .validate(&serde_json::to_vec(&json!({ "rows": rows })).unwrap())
+        .unwrap();
+    assert_eq!(
+        (validation.findings.len(), validation.omitted),
+        (1000, 500),
+        "structural findings too"
+    );
+    assert!(validation
+        .findings
+        .iter()
+        .all(|f| f.kind == FindingKind::Structure));
+}

@@ -133,6 +133,11 @@ fn export_writes_exactly_the_library_bytes() {
         1,
         "no temporary file left"
     );
+    // The output gets the mode of any new file under the inherited umask, not a temp-file 0600.
+    let reference = c.write("reference", b"");
+    use std::os::unix::fs::PermissionsExt;
+    let mode = |p: &Path| std::fs::metadata(p).unwrap().permissions().mode() & 0o777;
+    assert_eq!(mode(&output), mode(Path::new(&reference)));
 }
 
 #[test]

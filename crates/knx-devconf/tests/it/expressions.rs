@@ -157,3 +157,27 @@ fn quantifiers_over_an_empty_table() {
         );
     }
 }
+
+#[test]
+fn in_follows_three_valued_logic_and_a_null_predicate_counts_as_false() {
+    // A match decides even beside null candidates; no match beside one is unknown.
+    let m = row_rule(op("in", json!([{ "field": "v" }, missing(), 1])));
+    assert_eq!(violations(&m, &[(1, 1, "a"), (2, 2, "a")]), ["/t/1"]);
+    let m = row_rule(op(
+        "is_null",
+        json!([op("in", json!([{ "field": "v" }, missing(), 1]))]),
+    ));
+    assert_eq!(violations(&m, &[(1, 1, "a"), (2, 2, "a")]), ["/t/0"]);
+    let m = row_rule(op("is_null", json!([op("in", json!([missing(), 1]))])));
+    assert!(
+        violations(&m, &[(1, 1, "a")]).is_empty(),
+        "null needle is null"
+    );
+    let unknown = op("eq", json!([missing(), 1]));
+    let count = json!({ "count": { "table": "t", "as": "q", "where": unknown } });
+    let m = row_rule(op("eq", json!([count, 0])));
+    assert!(violations(&m, &[(1, 1, "a"), (2, 2, "a")]).is_empty());
+    let any = json!({ "any": { "table": "t", "as": "q", "where": unknown } });
+    let m = row_rule(op("not", json!([any])));
+    assert!(violations(&m, &[(1, 1, "a")]).is_empty());
+}

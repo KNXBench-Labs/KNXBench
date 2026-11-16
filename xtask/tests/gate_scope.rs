@@ -53,6 +53,7 @@ fn layering_workspace() -> tempfile::TempDir {
         "knx-diff",
         "knx-secure",
         "knx-edit",
+        "knx-devconf",
     ] {
         write(
             root.path(),
@@ -159,6 +160,75 @@ edition = "2021"
 }
 
 #[test]
+fn layering_refuses_device_configuration_dependencies_at_the_public_gate() {
+    for forbidden in [
+        "knx-core",
+        "knx-store",
+        "knx-etsproj",
+        "knx-productdb",
+        "knx-net",
+        "knx-app",
+        "rusqlite",
+        "tokio",
+        "axum",
+        "tower",
+        "quick-xml",
+    ] {
+        for indirect in [false, true] {
+            let root = layering_workspace();
+            for name in [forbidden, "fixture-bridge"] {
+                write(
+                    root.path(),
+                    &format!("crates/{name}/Cargo.toml"),
+                    &format!(
+                        "[package]\nname = \"{name}\"\nversion = \"0.0.0\"\nedition = \"2021\"\n"
+                    ),
+                );
+                write(
+                    root.path(),
+                    &format!("crates/{name}/src/lib.rs"),
+                    "//! Empty metadata fixture; never built or executed.\n",
+                );
+            }
+            let dependency = if indirect {
+                "fixture-bridge"
+            } else {
+                forbidden
+            };
+            if indirect {
+                let manifest = root.path().join("crates/fixture-bridge/Cargo.toml");
+                let source = fs::read_to_string(&manifest).unwrap();
+                fs::write(
+                    manifest,
+                    format!(
+                        "{source}[dependencies]\n{forbidden} = {{ path = \"../{forbidden}\" }}\n"
+                    ),
+                )
+                .unwrap();
+            }
+            let manifest = root.path().join("crates/knx-devconf/Cargo.toml");
+            let source = fs::read_to_string(&manifest).unwrap();
+            fs::write(
+                manifest,
+                format!(
+                    "{source}[dependencies]\n{dependency} = {{ path = \"../{dependency}\" }}\n"
+                ),
+            )
+            .unwrap();
+            let output = run(root.path(), &["check-layering"]);
+            let stderr = String::from_utf8(output.stderr).unwrap();
+            assert!(!output.status.success(), "{forbidden}, indirect={indirect}");
+            let path = if indirect {
+                format!("knx-devconf -> fixture-bridge -> {forbidden}")
+            } else {
+                format!("knx-devconf -> {forbidden}")
+            };
+            assert!(stderr.contains(&format!("layering violation: knx-devconf reaches forbidden package {forbidden} via {path}")), "expected device configuration policy violation, not a setup failure: {stderr}");
+        }
+    }
+}
+
+#[test]
 fn layering_requires_policy_roots_to_be_workspace_members() {
     let root = layering_workspace();
     fs::create_dir(root.path().join("outside")).unwrap();
@@ -237,7 +307,7 @@ fn layering_checks_a_complete_runtime_fixture_graph() {
         String::from_utf8_lossy(&output.stderr)
     );
     assert!(
-        String::from_utf8_lossy(&output.stdout).contains("layering scope: 10 resolved packages")
+        String::from_utf8_lossy(&output.stdout).contains("layering scope: 11 resolved packages")
     );
     write(
         root.path(),

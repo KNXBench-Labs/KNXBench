@@ -200,38 +200,60 @@ fn export(args: &[String]) -> Result<ExitCode, String> {
 
 /// Writes through a temporary file in the target directory so a reader never sees half a file.
 ///
-/// The temporary file is created like any new file (mode from the umask), renamed over the
-/// target and the directory is synced afterwards, so the rename survives a crash.
+/// The temporary file is created like any new file (mode from the umask) under a short name of
+/// its own, renamed over the target and the directory is synced afterwards. Only a temporary
+/// file this call created is ever removed. A failed directory sync after the rename is reported
+/// as such: the output is then already replaced, only its durability is unconfirmed.
 fn write_atomically(path: &Path, bytes: &[u8]) -> std::io::Result<()> {
+    let nanos = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_or(0, |d| d.subsec_nanos());
+    let temp_name = format!(".knx-devconf-{}-{nanos}.tmp", std::process::id());
+    write_atomically_via(path, bytes, &temp_name)
+}
+
+fn write_atomically_via(path: &Path, bytes: &[u8], temp_name: &str) -> std::io::Result<()> {
     let dir = match path.parent() {
         Some(p) if !p.as_os_str().is_empty() => p,
         _ => Path::new("."),
     };
-    let name = path.file_name().ok_or_else(|| {
-        std::io::Error::new(
-            std::io::ErrorKind::InvalidInput,
-            "the output needs a file name",
-        )
-    })?;
-    let nanos = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .map_or(0, |d| d.subsec_nanos());
-    let mut temp_name = std::ffi::OsString::from(".");
-    temp_name.push(name);
-    temp_name.push(format!(".{}-{nanos}.tmp", std::process::id()));
     let temp = dir.join(temp_name);
-    let result = (|| {
-        let mut file = std::fs::OpenOptions::new()
-            .write(true)
-            .create_new(true)
-            .open(&temp)?;
-        file.write_all(bytes)?;
-        file.sync_all()?;
-        std::fs::rename(&temp, path)?;
-        std::fs::File::open(dir)?.sync_all()
-    })();
-    if result.is_err() {
+    let mut file = std::fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(&temp)?;
+    let written = file
+        .write_all(bytes)
+        .and_then(|()| file.sync_all())
+        .and_then(|()| std::fs::rename(&temp, path));
+    if let Err(error) = written {
         let _ = std::fs::remove_file(&temp);
+        return Err(error);
     }
-    result
+    std::fs::File::open(dir)?.sync_all().map_err(|e| {
+        std::io::Error::new(
+            e.kind(),
+            format!("the output was replaced, but syncing its directory failed: {e}"),
+        )
+    })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::write_atomically_via;
+
+    #[test]
+    fn a_colliding_temporary_name_never_touches_the_existing_file() {
+        let dir = tempfile::tempdir().unwrap();
+        let foreign = dir.path().join(".taken.tmp");
+        std::fs::write(&foreign, b"someone else's").unwrap();
+        let target = dir.path().join("out.bin");
+        let error = write_atomically_via(&target, b"new", ".taken.tmp").unwrap_err();
+        assert_eq!(error.kind(), std::io::ErrorKind::AlreadyExists);
+        assert_eq!(std::fs::read(&foreign).unwrap(), b"someone else's");
+        assert!(!target.exists());
+        write_atomically_via(&target, b"new", ".free.tmp").unwrap();
+        assert_eq!(std::fs::read(&target).unwrap(), b"new");
+        assert!(!dir.path().join(".free.tmp").exists());
+    }
 }

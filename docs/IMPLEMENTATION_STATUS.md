@@ -549,6 +549,20 @@ its device-button meaning and *Download* stays for browser file downloads.
 Translation keys, placeholders and server confirmation phrases are unchanged.
 Rule: [GLOSSARY](GLOSSARY.md#german-terminology-for-device-writes).
 
+## Hager STCC510S four-scope tester evidence (16 November 2026; issue #53)
+
+Four report files add `M-0009_A-207C-10-0210` (STCC510S, application version
+16, mask `0701h`) as the fifth application with a verified complete download,
+with separate evidence for all three partial scopes. The application source
+hash matches; the production CLI built at the report-producing `f6ef90fb4`
+revision reproduces each scope's step and written-octet counts offline.
+All reports record matching post-download identity/load states and a running
+application; the tester confirms function. Restart remains unconfirmed.
+The later machine-compare differences are reporter observations with an
+unestablished cause, not a new byte tolerance or image rule. No new device
+operation was performed for this review.
+[Evidence and boundaries](evidence/tester-report-hager-stcc510s-2026-11-16.json).
+
 ## Hager 0701h parameters-only download verified from a tester report (11 November 2026; issue #38, WP-33)
 
 `M-0006_A-E052-12-3406` joins `verified_downloads.json` with the

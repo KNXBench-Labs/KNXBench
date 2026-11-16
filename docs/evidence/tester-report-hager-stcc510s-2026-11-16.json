@@ -1,0 +1,222 @@
+{
+  "format": 1,
+  "date": "2026-11-16",
+  "kind": "tester-download-report",
+  "issue": "https://github.com/KNXBench-Labs/KNXBench/issues/53",
+  "program": {
+    "id": "M-0009_A-207C-10-0210",
+    "name": "STCC510S V1.0",
+    "applicationVersion": "16",
+    "sourceSha256": "b3b6a92483b7d7679b57769e1f7d8b0c4b0ec24436f24c1749562699b24f44a2",
+    "manufacturer": "0009",
+    "mask": "0701",
+    "sourceSha256Checked": "matches the locally available application XML, 122138 bytes; no application XML or project data published"
+  },
+  "reports": [
+    {
+      "report": {
+        "attachment": "https://github.com/user-attachments/files/34937573/knxbench-download-report-M-0009_A-207C-10-0210.scope.1.json",
+        "sha256": "2fa0dd10dd2949f5aac485b6d8b1ff1db91de0cfcf49672d42f0836d534fce5f",
+        "kind": "knxbench-download-report",
+        "format": 1,
+        "knxbenchVersion": "0.1.0-alpha.22+gf6ef90fb43935228cf3716d0b9aa42a6580aff12"
+      },
+      "scope": "complete",
+      "support": "untested",
+      "plan": {
+        "steps": 25,
+        "dataOctets": 1084,
+        "groupLinks": 2
+      },
+      "warnings": [],
+      "inferences": [],
+      "outcome": {
+        "completed": true,
+        "written": "yes",
+        "restart": "unconfirmed",
+        "stoppedInStep": null
+      },
+      "postDownloadCheck": {
+        "reach": "reached",
+        "identity": "match",
+        "identityExemplar": "notVerified",
+        "planLoadVerdict": "matchesPlan",
+        "loadStates": {
+          "addressTable": "loaded",
+          "associationTable": "loaded",
+          "applicationProgram": "loaded"
+        },
+        "runState": "running"
+      },
+      "independentPlanCheck": {
+        "steps": 25,
+        "dataOctets": 1084,
+        "result": "matches offline production CLI plan shape; not a reconstruction of the edited tester snapshot"
+      },
+      "testerAnswer": {
+        "deviceWorksAsConfigured": true,
+        "source": "https://github.com/KNXBench-Labs/KNXBench/issues/53"
+      }
+    },
+    {
+      "report": {
+        "attachment": "https://github.com/user-attachments/files/34937572/knxbench-download-report-M-0009_A-207C-10-0210.scope.2.json",
+        "sha256": "607fa9afb6f6d7075ae1761c8952f5db059abdf408f92d369caab02fa7eef4c5",
+        "kind": "knxbench-download-report",
+        "format": 1,
+        "knxbenchVersion": "0.1.0-alpha.22+gf6ef90fb43935228cf3716d0b9aa42a6580aff12"
+      },
+      "scope": "partial-parameters",
+      "support": "untested",
+      "plan": {
+        "steps": 11,
+        "dataOctets": 64,
+        "groupLinks": 2
+      },
+      "warnings": [],
+      "inferences": [],
+      "outcome": {
+        "completed": true,
+        "written": "yes",
+        "restart": "unconfirmed",
+        "stoppedInStep": null
+      },
+      "postDownloadCheck": {
+        "reach": "reached",
+        "identity": "match",
+        "identityExemplar": "notVerified",
+        "planLoadVerdict": "matchesPlan",
+        "loadStates": {
+          "addressTable": "loaded",
+          "associationTable": "loaded",
+          "applicationProgram": "loaded"
+        },
+        "runState": "running"
+      },
+      "independentPlanCheck": {
+        "steps": 11,
+        "dataOctets": 64,
+        "result": "matches offline production CLI plan shape; not a reconstruction of the edited tester snapshot"
+      },
+      "testerAnswer": {
+        "deviceWorksAsConfigured": true,
+        "source": "https://github.com/KNXBench-Labs/KNXBench/issues/53#issuecomment-6928653789"
+      }
+    },
+    {
+      "report": {
+        "attachment": "https://github.com/user-attachments/files/34937574/knxbench-download-report-M-0009_A-207C-10-0210.scope.3.json",
+        "sha256": "4253e5077d2f3a439087ed83a274b158a665cebc5da74307d8f576ac4d95763d",
+        "kind": "knxbench-download-report",
+        "format": 1,
+        "knxbenchVersion": "0.1.0-alpha.22+gf6ef90fb43935228cf3716d0b9aa42a6580aff12"
+      },
+      "scope": "partial-group-addresses",
+      "support": "untested",
+      "plan": {
+        "steps": 21,
+        "dataOctets": 1020,
+        "groupLinks": 1
+      },
+      "warnings": [],
+      "inferences": [],
+      "outcome": {
+        "completed": true,
+        "written": "yes",
+        "restart": "unconfirmed",
+        "stoppedInStep": null
+      },
+      "postDownloadCheck": {
+        "reach": "reached",
+        "identity": "match",
+        "identityExemplar": "notVerified",
+        "planLoadVerdict": "matchesPlan",
+        "loadStates": {
+          "addressTable": "loaded",
+          "associationTable": "loaded",
+          "applicationProgram": "loaded"
+        },
+        "runState": "running"
+      },
+      "independentPlanCheck": {
+        "steps": 21,
+        "dataOctets": 1020,
+        "result": "matches offline production CLI plan shape; not a reconstruction of the edited tester snapshot"
+      },
+      "testerAnswer": {
+        "deviceWorksAsConfigured": true,
+        "source": "https://github.com/KNXBench-Labs/KNXBench/issues/53#issuecomment-6928654330"
+      }
+    },
+    {
+      "report": {
+        "attachment": "https://github.com/user-attachments/files/34937575/knxbench-download-report-M-0009_A-207C-10-0210.scope.4.json",
+        "sha256": "161da5c09ee40e9c12ecd17ae0a0fbf75060ea354cd6d685bb103d87725220c0",
+        "kind": "knxbench-download-report",
+        "format": 1,
+        "knxbenchVersion": "0.1.0-alpha.22+gf6ef90fb43935228cf3716d0b9aa42a6580aff12"
+      },
+      "scope": "partial-both",
+      "support": "untested",
+      "plan": {
+        "steps": 24,
+        "dataOctets": 1084,
+        "groupLinks": 2
+      },
+      "warnings": [],
+      "inferences": [],
+      "outcome": {
+        "completed": true,
+        "written": "yes",
+        "restart": "unconfirmed",
+        "stoppedInStep": null
+      },
+      "postDownloadCheck": {
+        "reach": "reached",
+        "identity": "match",
+        "identityExemplar": "notVerified",
+        "planLoadVerdict": "matchesPlan",
+        "loadStates": {
+          "addressTable": "loaded",
+          "associationTable": "loaded",
+          "applicationProgram": "loaded"
+        },
+        "runState": "running"
+      },
+      "independentPlanCheck": {
+        "steps": 24,
+        "dataOctets": 1084,
+        "result": "matches offline production CLI plan shape; not a reconstruction of the edited tester snapshot"
+      },
+      "testerAnswer": {
+        "deviceWorksAsConfigured": true,
+        "source": "https://github.com/KNXBench-Labs/KNXBench/issues/53#issuecomment-6928654781"
+      }
+    }
+  ],
+  "independentPlanCheckBuild": {
+    "revision": "f6ef90fb43935228cf3716d0b9aa42a6580aff12",
+    "reportedVersion": "0.1.0-alpha.22+gf6ef90fb43935228cf3716d0b9aa42a6580aff12",
+    "observedCliVersion": "knx 0.1.0-alpha.22+gf6ef90fb4",
+    "method": "Production knx-cli built at the report-producing revision; source-matching local project imported into scratch databases; all four scopes planned offline. Step and written-octet counts match. This does not establish identity with the tester's four edited project snapshots.",
+    "isolation": "Non-root network namespace, loopback only, all capabilities dropped; no gateway or write confirmation supplied."
+  },
+  "recorded": {
+    "verified_downloads.json": [
+      "complete",
+      "partial-parameters",
+      "partial-group-addresses",
+      "partial-both"
+    ]
+  },
+  "notRecorded": {},
+  "parameterValues": "omitted; never copied from the public attachments into this record",
+  "boundaries": [
+    "One tester device, application version 16 and source hash only; no general Hager, mask-family or firmware compatibility claim.",
+    "The restart was unconfirmed in all four reports. The reports observed a running application afterwards; the tester confirmed function.",
+    "The later machine compares and byte differences are reporter observations, not independently inspected capture artifacts. Their exact cause and clear time are not established; no tolerance or image-generation rule changes.",
+    "Source check 2026-11-16: at the declared Easy3 table base 0x43FE the literally named offsets 0x4404/0x441C/0x4420 are descriptor type octets (codes 0-14 only), not the config/flag octets one byte earlier, so the reporter's flag attribution is not supported as stated.",
+    "Read-back during transfer and post-restart plan equality are distinct: the reporter observes later application-segment differences in three scopes.",
+    "No independent hardware run, restore round trip, new bus access, device reset, release or deployment was performed for this evidence review."
+  ]
+}

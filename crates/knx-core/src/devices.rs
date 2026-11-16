@@ -4,6 +4,7 @@
 
 use std::collections::BTreeMap;
 
+use crate::devconf::DeviceConfigProfile;
 use crate::device::{ComObjectInstance, DeviceInstance, ProgramDefaults};
 use crate::ids::{ComObjectInstanceId, DeviceId, ModuleInstanceId};
 use crate::module::ModuleInstance;
@@ -20,6 +21,9 @@ pub struct Devices {
     /// callers distinguish those two, if they need to, via
     /// `EnrichmentReport`.
     program_defaults: BTreeMap<ComObjectInstanceId, ProgramDefaults>,
+    /// Each device's device configuration profile, keyed by device id
+    /// (ADR-0175 decision 5). At most one profile per device.
+    config_profiles: BTreeMap<DeviceId, DeviceConfigProfile>,
 }
 
 impl Devices {
@@ -107,6 +111,25 @@ impl Devices {
 
     pub fn module_instances(&self) -> impl Iterator<Item = &ModuleInstance> {
         self.module_instances.values()
+    }
+
+    /// The device configuration profile stored for `id`, if any.
+    pub fn config_profile(&self, id: DeviceId) -> Option<&DeviceConfigProfile> {
+        self.config_profiles.get(&id)
+    }
+
+    /// Replaces (or, with an empty profile map entry removed, clears) the
+    /// profile recorded for `id`. An absent entry means "no profile".
+    pub fn set_config_profile(&mut self, profile: DeviceConfigProfile) {
+        self.config_profiles.insert(profile.device, profile);
+    }
+
+    pub fn remove_config_profile(&mut self, id: DeviceId) -> Option<DeviceConfigProfile> {
+        self.config_profiles.remove(&id)
+    }
+
+    pub fn config_profiles(&self) -> impl Iterator<Item = &DeviceConfigProfile> {
+        self.config_profiles.values()
     }
 }
 

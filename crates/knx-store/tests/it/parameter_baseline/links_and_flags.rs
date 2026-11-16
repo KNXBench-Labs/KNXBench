@@ -144,7 +144,7 @@ fn authentic_native20_migration_preserves_predecessor_oracles_and_unknown_new_se
     );
     let readonly = knx_store::open_existing_read_only(&path).unwrap();
     assert_eq!(readonly.migrated_from, Some(20));
-    assert_eq!(user_version(&readonly.conn), 21);
+    assert_eq!(user_version(&readonly.conn), knx_store::CURRENT_SCHEMA_VERSION);
     let all = history::load_parameter_baselines(&readonly.conn).unwrap();
     assert_eq!(all.device_ids(), [DeviceId(1), DeviceId(2)].into());
     let one = all.get(DeviceId(1)).unwrap();

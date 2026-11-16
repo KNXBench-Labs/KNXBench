@@ -75,6 +75,7 @@ const DELETE_ALL_TABLES: &[&str] = &[
     "project_function_state",
     "project_note",
     "project_note_state",
+    "device_config_profile",
     // Child-to-parent order — matches the reverse of the insert order below.
     "instruction_run",
     "instruction_document",
@@ -369,6 +370,7 @@ pub(crate) fn write_project(tx: &Transaction<'_>, project: &Project) -> Result<(
 
     crate::instructions::write(tx, project)?;
     crate::notes::write(tx, project)?;
+    crate::devconf_profile::write(tx, project)?;
     crate::functions::write(tx, project)?;
     Ok(())
 }
@@ -666,6 +668,7 @@ fn load_project_unrepaired(conn: &Connection) -> Result<Project, StoreError> {
         ids,
     };
     crate::notes::load(conn, &mut project)?;
+    crate::devconf_profile::load(conn, &mut project)?;
     crate::functions::load(conn, &mut project)?;
     Ok(project)
 }

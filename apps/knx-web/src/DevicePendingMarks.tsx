@@ -11,7 +11,7 @@ import { collectDevices } from "./treeUtils";
 import { useUiLanguage } from "./uiLanguage";
 
 /** The device editor's tabs, in display order; `DeviceWorkspace` labels them. */
-export const DEVICE_TABS = ["objects", "parameters", "identity", "diagnostics", "restricted", "instructions"] as const;
+export const DEVICE_TABS = ["objects", "parameters", "identity", "diagnostics", "restricted", "instructions", "config"] as const;
 export type DeviceTab = (typeof DEVICE_TABS)[number];
 
 /**

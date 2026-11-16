@@ -47,3 +47,25 @@ same shape, post-download identity and load states matched and the device
 worked as configured. As in every earlier run, the closing restart was not
 acknowledged. This makes it the fourth program verified for a complete
 download. [Evidence record](../evidence/tester-report-hager-0701-2026-11-12.json).
+
+## 2026-11-16: fifth program, Hager STCC510S in four scopes
+
+Issue #53 supplies one report for each scope of `M-0009_A-207C-10-0210`
+(STCC510S V1.0, application version 16, mask `0701h`). The source hash
+matches the available application XML. Offline plans at the report-producing
+`f6ef90fb4` revision reproduce 25/11/21/24 steps and 1084/64/1020/1084
+written octets for complete/parameters/group-addresses/both respectively.
+The reports record completed transfers, matching post-download identity and
+load states and a running application; the tester confirms function in each
+scope. This is one device, not general mask or manufacturer coverage.
+
+Every restart remains unconfirmed. The later machine compares are the
+reporter's observations, not independently inspected captures. A source
+check against `origin/main` maps the literally named offsets `0x4404`,
+`0x441C` and `0x4420` to descriptor type octets (codes 0–14 only), not to
+the config/flag octets one byte earlier, so the reporter's flag attribution
+is not supported as stated; the true cause and clear time remain unknown.
+Reported differences do not change the write/read-back verdict or establish
+their own cause; no comparison tolerance, encoder or executor rule changes.
+The original MDT, Eibmarkt and Hager-button evidence remains unchanged.
+[Report provenance and boundaries](../evidence/tester-report-hager-stcc510s-2026-11-16.json).

@@ -32,3 +32,8 @@ Alpha 19 prerequisite delivered: DIAG-03
 - Gate change-scoped 16/16 PASS, inputsFrozen: Rust 56 binaries 7947/0/241 ignored, corpus 155/155, tool-tests 472 OK.
 - zip 9 drift for the release notes: unflagged UTF-8 names now decode as UTF-8 (corpus: 0 affected; KL-159),
   fallible `name()`, writer/reader fixture changes (DEVELOPER_PITFALLS "ZIP dependency"). Branch/worktree retired.
+
+<!-- archived 2026-11-16 from .ai/CURRENT_STATE.md -->
+## WP-42.1 device configuration modules (DELIVERED; owner WebUI R20 editor; observed 2026-11-16)
+- Owner 15 Nov: KNXBench modular and simple; module data separate from projects, device configuration in the project where sensible; independent codec with firmware differential evidence, explicit object numbers only, structured view first. ADR-0175, contract `docs/contracts/device-configuration-modules.md`, `docs/open-work/WP-42-device-configuration-modules.md`.
+- WP-42.1 (crate `knx-devconf`, `knx devconf` CLI) delivered with this commit after independent review and correction; the first device module and its differential parity live with the private firmware. NEXT WP-42.2 project storage (native schema 22), then WP-42.3 editor. No download, device or bus authority.

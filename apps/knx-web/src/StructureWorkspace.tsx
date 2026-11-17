@@ -35,6 +35,9 @@ export default function StructureWorkspace(props: {
   // never disagree about what the view is scoped to.
   rangeScope?: number | null;
   onRangeScope?: (id: number | null) => void;
+  // Issue #51: send the selected group address to the bus monitor's compose
+  // form. Owned by `App`, which owns the monitor tab.
+  onSendToMonitor?: (address: string) => void;
   // One shared multi-selection, owned by `App` (see `multiSelection.ts`) —
   // the address table feeds the same `BulkActionToolbar` the tree does.
   multiSelection: MultiSelection | null;
@@ -148,7 +151,7 @@ export default function StructureWorkspace(props: {
           installation={installation} tree={tree} selection={selection}
           showColumnReset={!sharedAddressReset}
           multiSelection={multiSelection} onItemClick={onItemClick} onTreeUpdate={onTreeUpdate}
-          rangeScope={props.rangeScope ?? null} />
+          rangeScope={props.rangeScope ?? null} onSendToMonitor={props.onSendToMonitor} />
       </>}
     </section>)}
   </section>;

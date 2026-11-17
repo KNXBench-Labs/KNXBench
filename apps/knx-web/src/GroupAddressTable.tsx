@@ -39,6 +39,8 @@ export default function GroupAddressTable(props: {
   rangeScope: number | null;
   projectContextKey?: string;
   showColumnReset?: boolean;
+  // Issue #51: opens the bus monitor's compose form prefilled with this address.
+  onSendToMonitor?: (address: string) => void;
 }) {
   const { installation, selection, multiSelection, onItemClick, onTreeUpdate, rangeScope } = props;
   const t = useTranslate(); const [language] = useUiLanguage();
@@ -198,5 +200,13 @@ export default function GroupAddressTable(props: {
       }}
       onClose={() => setCreateIn(null)} />}
     {selected && <GroupAddressLinks ga={selected} tree={props.tree} onTreeUpdate={onTreeUpdate} />}
+    {selected && props.onSendToMonitor && (
+      <p className="ga-send-action">
+        <button type="button" className="ga-send-button"
+          onClick={() => props.onSendToMonitor!(selected.address)}>
+          {t("gaWorkspace.sendValue")}
+        </button>
+      </p>
+    )}
   </div>;
 }

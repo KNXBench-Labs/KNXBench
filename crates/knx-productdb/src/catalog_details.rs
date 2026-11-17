@@ -19,6 +19,16 @@ pub struct CatalogItemDetails {
     pub application_name: Option<String>,
     pub application_version: Option<String>,
     pub catalog_section_id: Option<String>,
+    /// The section's own display name, resolved from `catalog_section_id`;
+    /// `None` when the section row is absent or unnamed. Additive (AR10-style):
+    /// older servers omit the whole `details` field, never these fields.
+    pub catalog_section_name: Option<String>,
+    /// The linked application program's declared mask version, verbatim
+    /// (e.g. `MV-0701`); `None` without an application link or declaration.
+    pub mask_version: Option<String>,
+    /// The linked hardware2program's comma-separated medium types (e.g. `TP1`);
+    /// `None` without a hardware2program link.
+    pub medium_types: Option<String>,
     pub source_names: Vec<String>,
 }
 
@@ -66,11 +76,13 @@ pub(crate) fn attach_details(
     let mut details: HashMap<usize, (CatalogItemDetails, BTreeSet<String>)> = HashMap::new();
     for chunk in ids.chunks(ID_CHUNK) {
         let mut stmt = conn.prepare(&format!(
-            "SELECT ci.id, ap.id, ap.name, ap.application_version, ci.section_id,
+            "SELECT ci.id, ap.id, ap.name, ap.application_version, ci.section_id, cs.name,
+                    ap.mask_version, hp.medium_types,
                     COALESCE(psn.source_name, p.source_name), sf.source_path
              FROM catalog_item ci
              LEFT JOIN hardware2program hp ON hp.id = ci.hardware2program_ref_id
              LEFT JOIN application_program ap ON ap.id = hp.application_program_ref
+             LEFT JOIN catalog_section cs ON cs.id = ci.section_id
              LEFT JOIN package_member pm ON pm.source_sha256 = ci.source_sha256
              LEFT JOIN package p ON p.sha256 = pm.package_sha256
              LEFT JOIN package_source_name psn ON psn.package_sha256 = p.sha256
@@ -90,12 +102,15 @@ pub(crate) fn attach_details(
                     application_name: row.get(2)?,
                     application_version: row.get(3)?,
                     catalog_section_id: row.get(4)?,
+                    catalog_section_name: row.get(5)?,
+                    mask_version: row.get(6)?,
+                    medium_types: row.get(7)?,
                     source_names: Vec::new(),
                 },
                 BTreeSet::new(),
             ));
-            let package_name: Option<String> = row.get(5)?;
-            let source_path: Option<String> = row.get(6)?;
+            let package_name: Option<String> = row.get(8)?;
+            let source_path: Option<String> = row.get(9)?;
             // Standalone XML ingests have no package name: the file itself.
             if let Some(name) = package_name
                 .or(source_path)

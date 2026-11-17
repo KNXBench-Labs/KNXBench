@@ -172,6 +172,29 @@ describe("CatalogBrowser", () => {
     } finally { await act(async () => root.unmount()); }
   });
 
+  it("shows the new section, mask and medium columns and hides one through the chooser", async () => {
+    apiMock.catalogItems.mockResolvedValue([{ ...item, details: { applicationProgramId: "APP-1", applicationName: "Switch program",
+      applicationVersion: "16", catalogSectionId: "SECTION-1", catalogSectionName: "Actuators", maskVersion: "MV-0701",
+      mediumTypes: "TP1", sourceNames: [] } }]);
+    const { root } = await renderBrowser();
+    try {
+      await act(async () => { await new Promise((resolve) => setTimeout(resolve, 250)); });
+      const headers = () => [...host!.querySelectorAll(".catalog-table thead th")].map((th) => th.getAttribute("data-column"));
+      expect(headers()).toEqual(["product", "manufacturer", "number", "application", "section", "mask", "medium"]);
+      expect(host!.querySelector("table tbody tr")!.textContent).toContain("Actuators");
+      expect(host!.querySelector("table tbody tr")!.textContent).toContain("MV-0701");
+      expect(host!.querySelector("table tbody tr")!.textContent).toContain("TP1");
+      const summary = host!.querySelector<HTMLDetailsElement>(".table-column-chooser > summary")!;
+      await act(async () => { summary.click(); });
+      const maskBox = [...host!.querySelectorAll<HTMLInputElement>(".table-column-chooser-content input[type='checkbox']")]
+        .find((input) => input.closest("label")!.textContent!.includes("Mask"))!;
+      await act(async () => { maskBox.click(); });
+      expect([...host!.querySelectorAll(".catalog-table thead th")].map((th) => th.getAttribute("data-column")))
+        .toEqual(["product", "manufacturer", "number", "application", "section", "medium"]);
+      expect(host!.querySelector("table tbody tr")!.textContent).not.toContain("MV-0701");
+    } finally { await act(async () => root.unmount()); }
+  });
+
   it("keeps the removal result in the catalogue and keeps a picked entry that was not removed", async () => {
     apiMock.catalogItems.mockResolvedValue([item, item2]);
     apiMock.previewCatalogCleanup.mockResolvedValue({ token: "t",

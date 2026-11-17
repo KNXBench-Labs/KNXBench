@@ -364,3 +364,34 @@ it("says so when the shared status cannot be read, instead of silently showing n
   await act(async () => refresh.click()); await settle();
   expect(host.querySelector("[data-system2-read-failed]")).toBeNull();
 });
+
+it("hides and re-shows a sortable column through the chooser, keeping the fixed columns", async () => {
+  await act(async () => setSetting("uiLanguage", "en"));
+  await render();
+  const headings = () => [...host.querySelectorAll(".devices-table thead th")].map((th) => th.textContent ?? "");
+  expect(headings().some((text) => /topolog/i.test(text))).toBe(true);
+  const summary = host.querySelector<HTMLDetailsElement>(".table-column-chooser > summary")!;
+  await act(async () => { summary.click(); });
+  const topologyBox = [...host.querySelectorAll<HTMLInputElement>(".table-column-chooser-content input[type='checkbox']")]
+    .find((input) => input.closest("label")!.textContent!.includes("KNX line"))!;
+  await act(async () => { topologyBox.click(); });
+  expect(headings().some((text) => /topolog/i.test(text))).toBe(false);
+  // The fixed selection and comparison columns stay regardless of the chooser.
+  expect(host.querySelectorAll(".devices-table thead th")).toHaveLength(12);
+  await act(async () => { topologyBox.click(); });
+  expect(headings().some((text) => /topolog/i.test(text))).toBe(true);
+  expect(host.querySelectorAll(".devices-table thead th")).toHaveLength(13);
+});
+it("refuses to hide the last sortable column in the chooser", async () => {
+  await act(async () => setSetting("uiLanguage", "en"));
+  await render();
+  const summary = host.querySelector<HTMLDetailsElement>(".table-column-chooser > summary")!;
+  await act(async () => { summary.click(); });
+  const boxes = () => [...host.querySelectorAll<HTMLInputElement>(".table-column-chooser-content input[type='checkbox']")];
+  // Hide every sortable column except the last one; that last hide must be refused.
+  for (const box of boxes().slice(0, -1)) await act(async () => { box.click(); });
+  const last = boxes().at(-1)!;
+  await act(async () => { last.click(); });
+  expect(last.checked).toBe(true);
+  expect(host.querySelectorAll(".devices-table thead th")).toHaveLength(3); // select + last + comparison
+});

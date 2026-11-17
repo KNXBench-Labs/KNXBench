@@ -164,8 +164,10 @@ impl NativeSnapshot {
         // Parameter baselines belong to the file, never to a snapshot
         // (ADR-0173): an image holding any is not one we wrote.
         if version >= 20 {
-            for table in if version >= 21 {
+            for table in if version >= 22 {
                 &crate::parameter_baseline::TABLES[..]
+            } else if version >= 21 {
+                &crate::parameter_baseline::TABLES_V21[..]
             } else {
                 &crate::parameter_baseline::TABLES_V20[..]
             } {
@@ -191,7 +193,7 @@ impl NativeSnapshot {
 }
 
 /// Native schema versions a stored image may have been written at.
-const ADMITTED_VERSIONS: [i64; 10] = [
+const ADMITTED_VERSIONS: [i64; 11] = [
     12,
     13,
     14,
@@ -201,6 +203,7 @@ const ADMITTED_VERSIONS: [i64; 10] = [
     18,
     19,
     20,
+    21,
     crate::CURRENT_SCHEMA_VERSION,
 ];
 
@@ -234,6 +237,9 @@ fn check_schema_version(conn: &Connection, version: i64) -> Result<(), HistoryEr
         .map_err(|_| HistoryError::Invalid("native schema admission initialization failed"))?;
     if !ADMITTED_VERSIONS.contains(&version) {
         return Err(HistoryError::Invalid("unsupported native schema shape"));
+    }
+    if version < 22 {
+        expected.execute_batch("DROP TABLE device_parameter_baseline_scoped_value;")?;
     }
     if version < 21 {
         expected.execute_batch("DROP TABLE device_object_flags_baseline; DROP TABLE device_link_baseline_link; DROP TABLE device_link_baseline; ALTER TABLE device_parameter_baseline DROP COLUMN object_flags_known;")?;
@@ -422,7 +428,7 @@ mod tests {
         };
         crate::save_project(&conn, &snapshot.project).unwrap();
         let current = semantic_store_hash(&conn).unwrap();
-        conn.execute_batch("DROP TABLE device_object_flags_baseline; DROP TABLE device_link_baseline_link; DROP TABLE device_link_baseline; DROP TABLE device_parameter_baseline_value; DROP TABLE device_parameter_baseline; DROP TABLE group_address_description; DROP TABLE com_object_priority_edit; DROP TABLE com_object_saved_priority; PRAGMA user_version=16;")
+        conn.execute_batch("DROP TABLE device_parameter_baseline_scoped_value; DROP TABLE device_object_flags_baseline; DROP TABLE device_link_baseline_link; DROP TABLE device_link_baseline; DROP TABLE device_parameter_baseline_value; DROP TABLE device_parameter_baseline; DROP TABLE group_address_description; DROP TABLE com_object_priority_edit; DROP TABLE com_object_saved_priority; PRAGMA user_version=16;")
             .unwrap();
         check_schema_version(&conn, 16).unwrap();
         let bytes = conn.serialize(MAIN_DB).unwrap().to_vec();
@@ -456,7 +462,7 @@ mod tests {
         let conn = snapshot.memory_store().unwrap();
         let current = semantic_store_hash(&conn).unwrap();
         conn.execute_batch(
-            "DROP TABLE device_object_flags_baseline; DROP TABLE device_link_baseline_link; DROP TABLE device_link_baseline; DROP TABLE device_parameter_baseline_value; DROP TABLE device_parameter_baseline; \
+            "DROP TABLE device_parameter_baseline_scoped_value; DROP TABLE device_object_flags_baseline; DROP TABLE device_link_baseline_link; DROP TABLE device_link_baseline; DROP TABLE device_parameter_baseline_value; DROP TABLE device_parameter_baseline; \
              PRAGMA user_version=19;",
         )
         .unwrap();

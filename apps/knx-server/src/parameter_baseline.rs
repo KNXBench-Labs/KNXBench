@@ -7,7 +7,7 @@
 //! which values changed, and says when it cannot.
 
 use chrono::SecondsFormat;
-use knx_core::commissioning::parameter_baseline::{differences, ParameterBaseline};
+use knx_core::commissioning::parameter_baseline::{differences, scoped_differences, ParameterBaseline};
 use knx_core::{DeviceId, Project};
 use serde::Serialize;
 
@@ -25,6 +25,10 @@ pub(crate) struct LastDownloadDto {
     /// Every ref whose value differs, by id. Only for `usable`; may be empty.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) differing: Option<Vec<DifferingParameterDto>>,
+    /// Every module-scoped ref whose value differs, ordered by
+    /// `(moduleId, refId)`. Only for `usable`; may be empty (WP-37).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) scoped_differing: Option<Vec<ScopedDifferingParameterDto>>,
 }
 
 #[derive(Serialize, Debug, Clone, Copy, PartialEq, Eq)]
@@ -54,12 +58,24 @@ pub(crate) struct DifferingParameterDto {
     pub(crate) current: Option<String>,
 }
 
+/// One module-scoped ref whose value at the last download is not its current
+/// value; a side without a value is `null` (WP-37, ADR-0177 key).
+#[derive(Serialize, Debug, Clone, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct ScopedDifferingParameterDto {
+    pub(crate) module_id: String,
+    pub(crate) ref_id: String,
+    pub(crate) downloaded: Option<String>,
+    pub(crate) current: Option<String>,
+}
+
 impl LastDownloadDto {
     fn unusable(state: LastDownloadState) -> Self {
         Self {
             state,
             at: None,
             differing: None,
+            scoped_differing: None,
         }
     }
 }
@@ -116,21 +132,46 @@ fn compare(
     if program != baseline.program_id {
         return LastDownloadDto::unusable(LastDownloadState::OtherProgram);
     }
-    match knx_productdb::dynamic::resolve_unscoped_values(conn, &program, chosen) {
-        Ok(current) => LastDownloadDto {
-            state: LastDownloadState::Usable,
-            at: Some(baseline.at.to_rfc3339_opts(SecondsFormat::Millis, true)),
-            differing: Some(
-                differences(&baseline.values, &current)
-                    .into_iter()
-                    .map(|difference| DifferingParameterDto {
-                        ref_id: difference.ref_id,
-                        downloaded: difference.downloaded,
-                        current: difference.current,
-                    })
-                    .collect(),
-            ),
-        },
+    // Module-qualified stored ids are scoped evidence, not unscoped values:
+    // the unscoped comparison sees the plain refs only (ADR-0173), the
+    // scoped one sees the decomposed pairs (WP-37, ADR-0177).
+    let unscoped_chosen: std::collections::BTreeMap<String, String> = chosen
+        .iter()
+        .filter(|(ets_id, _)| {
+            knx_productdb::device_evaluation::decompose_module_qualified(ets_id).is_none()
+        })
+        .map(|(k, v)| (k.clone(), v.clone()))
+        .collect();
+    match knx_productdb::dynamic::resolve_unscoped_values(conn, &program, &unscoped_chosen) {
+        Ok(current) => {
+            let current_scoped =
+                knx_productdb::dynamic::resolve_scoped_values(chosen);
+            LastDownloadDto {
+                state: LastDownloadState::Usable,
+                at: Some(baseline.at.to_rfc3339_opts(SecondsFormat::Millis, true)),
+                differing: Some(
+                    differences(&baseline.values, &current)
+                        .into_iter()
+                        .map(|difference| DifferingParameterDto {
+                            ref_id: difference.ref_id,
+                            downloaded: difference.downloaded,
+                            current: difference.current,
+                        })
+                        .collect(),
+                ),
+                scoped_differing: Some(
+                    scoped_differences(&baseline.scoped_values, &current_scoped)
+                        .into_iter()
+                        .map(|difference| ScopedDifferingParameterDto {
+                            module_id: difference.module_id,
+                            ref_id: difference.ref_id,
+                            downloaded: difference.downloaded,
+                            current: difference.current,
+                        })
+                        .collect(),
+                ),
+            }
+        }
         Err(_) => LastDownloadDto::unusable(LastDownloadState::ProductUnavailable),
     }
 }

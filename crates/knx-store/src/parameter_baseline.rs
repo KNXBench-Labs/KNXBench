@@ -48,9 +48,22 @@ CREATE TABLE device_link_baseline_link (
     PRIMARY KEY(device_id, object_number, group_address)
 ) STRICT, WITHOUT ROWID;";
 
+/// Native schema 22 (WP-37): module-scoped values a completed download wrote,
+/// keyed by `(Module/@Id, ParameterRef id)` — the WP-07 authority's
+/// `instance_counter` already lives inside `module_id`, so a re-numbered
+/// instance is a different key, never a silent overwrite (ADR-0177).
+pub(crate) const SCOPED_TABLES: &str = "CREATE TABLE device_parameter_baseline_scoped_value (
+    device_id INTEGER NOT NULL REFERENCES device_parameter_baseline(device_id),
+    module_id TEXT NOT NULL CHECK(length(module_id) > 0),
+    ref_id TEXT NOT NULL,
+    raw TEXT NOT NULL,
+    PRIMARY KEY(device_id, module_id, ref_id)
+) STRICT, WITHOUT ROWID;";
+
 /// File-level tables, children before headers; no foreign key to the saved root device.
-pub(crate) const TABLES: [&str; 5] = [
+pub(crate) const TABLES: [&str; 6] = [
     "device_object_flags_baseline",
+    "device_parameter_baseline_scoped_value",
     "device_parameter_baseline_value",
     "device_parameter_baseline",
     "device_link_baseline_link",
@@ -60,9 +73,24 @@ pub(crate) const TABLES_V20: [&str; 2] = [
     "device_parameter_baseline_value",
     "device_parameter_baseline",
 ];
+pub(crate) const TABLES_V21: [&str; 5] = [
+    "device_object_flags_baseline",
+    "device_parameter_baseline_value",
+    "device_parameter_baseline",
+    "device_link_baseline_link",
+    "device_link_baseline",
+];
 
 fn integrity(reason: impl Into<String>) -> StoreError {
     StoreError::ParameterBaselineIntegrity(reason.into())
+}
+fn table_exists(conn: &Connection, name: &str) -> Result<bool, StoreError> {
+    let count: i64 = conn.query_row(
+        "SELECT count(*) FROM sqlite_schema WHERE type = 'table' AND name = ?1",
+        [name],
+        |r| r.get(0),
+    )?;
+    Ok(count > 0)
 }
 fn decode_at(raw: &str) -> Result<DateTime<Utc>, StoreError> {
     DateTime::parse_from_rfc3339(raw)
@@ -103,6 +131,7 @@ pub fn load_all(conn: &Connection) -> Result<ParameterBaselines, StoreError> {
             parameter: BaselineChange::Record(ParameterBaseline {
                 program_id: program(row.get(1)?)?,
                 values: Default::default(),
+                scoped_values: Default::default(),
                 at: decode_at(&row.get::<_, String>(2)?)?,
                 object_flags: boolean(row.get(3)?)?.then(Default::default),
             }),
@@ -120,6 +149,19 @@ pub fn load_all(conn: &Connection) -> Result<ParameterBaselines, StoreError> {
             .ok_or_else(|| integrity("orphan parameter value"))?
             .values
             .insert(row.get(1)?, row.get(2)?);
+    }
+    // Native 22 scoped rows; a file written before schema 22 simply has no
+    // such table yet and this query is only issued when it exists.
+    if table_exists(conn, "device_parameter_baseline_scoped_value")? {
+        let mut stmt = conn.prepare("SELECT device_id, module_id, ref_id, raw FROM device_parameter_baseline_scoped_value ORDER BY device_id, module_id, ref_id")?;
+        let mut rows = stmt.query([])?;
+        while let Some(row) = rows.next()? {
+            parameters
+                .get_mut(&device(row.get(0)?)?)
+                .ok_or_else(|| integrity("orphan scoped parameter value"))?
+                .scoped_values
+                .insert((row.get(1)?, row.get(2)?), row.get(3)?);
+        }
     }
     let mut stmt = conn.prepare("SELECT device_id, object_number, read, write, transmit, update_flag, communication, read_on_init FROM device_object_flags_baseline ORDER BY device_id, object_number")?;
     let mut rows = stmt.query([])?;
@@ -190,16 +232,18 @@ pub fn load_one(
 }
 
 fn delete_parameters(conn: &Connection, device: DeviceId) -> Result<(), StoreError> {
-    for table in &TABLES[..3] {
-        conn.execute(
-            &format!("DELETE FROM {table} WHERE device_id = ?1"),
-            [device.0],
-        )?;
+    for table in &TABLES[..4] {
+        if table_exists(conn, table)? {
+            conn.execute(
+                &format!("DELETE FROM {table} WHERE device_id = ?1"),
+                [device.0],
+            )?;
+        }
     }
     Ok(())
 }
 fn delete_links(conn: &Connection, device: DeviceId) -> Result<(), StoreError> {
-    for table in &TABLES[3..] {
+    for table in &TABLES[4..] {
         conn.execute(
             &format!("DELETE FROM {table} WHERE device_id = ?1"),
             [device.0],
@@ -219,6 +263,15 @@ fn insert_parameters(
             "INSERT INTO device_parameter_baseline_value VALUES (?1, ?2, ?3)",
             params![device.0, reference, raw],
         )?;
+    }
+    // Native 22 scoped rows; only issued when the schema-22 table exists.
+    if table_exists(conn, "device_parameter_baseline_scoped_value")? {
+        for ((module_id, reference), raw) in &baseline.scoped_values {
+            conn.execute(
+                "INSERT INTO device_parameter_baseline_scoped_value VALUES (?1, ?2, ?3, ?4)",
+                params![device.0, module_id, reference, raw],
+            )?;
+        }
     }
     if let Some(flags) = &baseline.object_flags {
         for (number, flags) in flags {
@@ -296,7 +349,9 @@ pub(crate) fn replace_all(
     project: &Project,
 ) -> Result<(), StoreError> {
     for table in TABLES {
-        conn.execute(&format!("DELETE FROM {table}"), [])?;
+        if table_exists(conn, table)? {
+            conn.execute(&format!("DELETE FROM {table}"), [])?;
+        }
     }
     for id in baselines.device_ids() {
         if project.devices.get(id).is_none() {

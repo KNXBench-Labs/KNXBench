@@ -8,10 +8,10 @@ with the details. You do not need to write code to earn a place here.
 
 | Place | Bug hunter | Rank & title | Medal | XP | Issues | Replies | Resolved | PRs | Open PRs | Merged PRs | Closed unmerged | XP sources |
 | ---: | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
-| 1 | [@thengsty](https://github.com/thengsty) | Application Apocalypse Survivor | 🏅 Golden Bus Probe<br>🏅 Double-Decade Fault Finder<br>🏅 Topology Treasure Hunter<br>🏅 Four-Line Fault Patrol<br>🏅 Loose End Lasso<br>🏅 Regression Repair Ribbon<br>🏅 Acknowledgement Ace<br>🏅 Closed-Loop Champion<br>🏅 Quarter-Century Quencher<br>🏅 Topology Peacekeeper<br>🏅 Phantom Fault Buster<br>🏅 Patch Pilot<br>🏅 Green Merge Ribbon | **658** | 43 | 48 | 37 | 1 | 0 | 1 | 0 | 215 issue + 48 reply + 370 completion + 25 PR |
+| 1 | [@thengsty](https://github.com/thengsty) | Application Apocalypse Survivor | 🏅 Golden Bus Probe<br>🏅 Double-Decade Fault Finder<br>🏅 Topology Treasure Hunter<br>🏅 Four-Line Fault Patrol<br>🏅 Loose End Lasso<br>🏅 Regression Repair Ribbon<br>🏅 Acknowledgement Ace<br>🏅 Closed-Loop Champion<br>🏅 Quarter-Century Quencher<br>🏅 Topology Peacekeeper<br>🏅 Phantom Fault Buster<br>🏅 Patch Pilot<br>🏅 Green Merge Ribbon | **668** | 43 | 48 | 38 | 1 | 0 | 1 | 0 | 215 issue + 48 reply + 380 completion + 25 PR |
 | 2 | [@hagbardZ](https://github.com/hagbardZ) | Bus Bug Scout | — | **18** | 1 | 3 | 1 | 0 | 0 | 0 | 0 | 5 issue + 3 reply + 10 completion + 0 PR |
 
-*Snapshot: 2026-11-16T20:39:52Z.*
+*Snapshot: 2026-11-17T05:08:41Z.*
 
 ## How the points work
 

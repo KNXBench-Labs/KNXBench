@@ -366,6 +366,15 @@ function AppBody({ manifestVersion = packageVersion, session, editorReturn = fal
   // "Download to device…" requests; each click gets a new nonce so a repeat
   // on the same device acts again. Navigation only: nothing plans or sends.
   const [downloadHandoff, setDownloadHandoff] = useState<DownloadHandoff | null>(null);
+  const composeNonceRef = useRef(0);
+  const [composeHandoff, setComposeHandoff] = useState<{ nonce: number; address: string } | null>(null);
+
+  /** Issue #51: "Send value…" on a selected group address → monitor compose form. */
+  function openComposeFor(address: string) {
+    setSettingsOpen(false); setLogOpen(false); setMonitorOpen(true);
+    setComposeHandoff({ nonce: ++composeNonceRef.current, address });
+    if (window.innerWidth <= 650) setNavigationOpen(false);
+  }
   const [downloadTabRequest, setDownloadTabRequest] = useState(0);
   const [downloadAllRequest, setDownloadAllRequest] = useState(0);
   const downloadNonceRef = useRef(0);
@@ -1584,7 +1593,7 @@ function AppBody({ manifestVersion = packageVersion, session, editorReturn = fal
       )}
       <ModalForeground active={!settingsOpen}>
       <div className="workbench-content" hidden={settingsOpen}>
-      {(monitorMounted || monitorOpen) && <ModalForeground active={monitorOpen}><div hidden={!monitorOpen}><BusDiagnosticsPanel active={!settingsOpen && monitorOpen} project={tree} onTreeUpdate={handleTreeUpdate} projectScope={flowProjectScope} onFlowNavigate={navigateFlow} downloadHandoff={downloadHandoff} downloadTabRequest={downloadTabRequest} downloadAllRequest={downloadAllRequest} /></div></ModalForeground>}
+      {(monitorMounted || monitorOpen) && <ModalForeground active={monitorOpen}><div hidden={!monitorOpen}><BusDiagnosticsPanel active={!settingsOpen && monitorOpen} project={tree} onTreeUpdate={handleTreeUpdate} projectScope={flowProjectScope} onFlowNavigate={navigateFlow} downloadHandoff={downloadHandoff} downloadTabRequest={downloadTabRequest} downloadAllRequest={downloadAllRequest} composeHandoff={composeHandoff} /></div></ModalForeground>}
       {logOpen ? <LogPanel tree={tree} refreshKey={logVersion} notifications={notifications} notificationDroppedCount={notificationDroppedCount} notificationTarget={logTarget} onNotificationTargetHandled={() => setLogTarget(null)} importFocus={logImportFocus} onImportFocusHandled={() => setLogImportFocus(null)} /> : monitorOpen ? null : view === "catalog" ? null : tree ? (
         view === "device" ? <section className="device-editor-view" aria-label={t("workbench.device")}>
           <nav className="device-editor-navigation" aria-label={t("workbench.devices")}>
@@ -1599,6 +1608,7 @@ function AppBody({ manifestVersion = packageVersion, session, editorReturn = fal
               {!deviceDetailLoading && selection?.kind === "device" && <button type="button" onClick={() => void selectEntity(selection)}>{t("devices.retry")}</button>}</div>}
         </section> : view === "devices" || view === "notes" ? null : view === "overview" ? <Dashboard tree={tree} onOpenImportFindings={openImportFindings} /> : <StructureWorkspace tree={tree} view={view} selection={selection} buildingScope={buildingScope} onBuildingScope={setBuildingScope}
           rangeScope={addressScope} onRangeScope={setAddressScope}
+          onSendToMonitor={openComposeFor}
           multiSelection={multiSelection} onItemClick={onItemClick} onTreeUpdate={handleTreeUpdate} onDeleted={resetTree}
           addressActions={<GroupAddressCsvButtons tree={tree} onTreeUpdate={handleTreeUpdate} onSummary={pushFun} onError={reportError} onClearErrors={clearErrors} />}
           onSelect={selectEntity} onCatalog={openCatalog} />

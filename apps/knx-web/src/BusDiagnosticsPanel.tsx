@@ -24,6 +24,7 @@ export default function BusDiagnosticsPanel({
   downloadHandoff = null,
   downloadTabRequest = 0,
   downloadAllRequest = 0,
+  composeHandoff = null,
 }: {
   project: ProjectTree | null;
   active?: boolean;
@@ -36,6 +37,8 @@ export default function BusDiagnosticsPanel({
   downloadTabRequest?: number;
   /** Bumped by "Download all…": shows the download tab and opens its batch review. */
   downloadAllRequest?: number;
+  /** Issue #51: a group address picked in the workspace; prefills the compose form. */
+  composeHandoff?: { nonce: number; address: string } | null;
 }) {
   const t = useTranslate();
   const [tab, setTab] = useState<"monitor" | "scan" | "checks" | "download" | "address" | "service" | "live" | "history">("monitor");
@@ -52,9 +55,18 @@ export default function BusDiagnosticsPanel({
   useEffect(() => { if (downloadTabRequest > 0) setTab("download"); }, [downloadTabRequest]);
   // Kept until the panel answers it, so a later tab switch cannot replay it.
   const [pendingAll, setPendingAll] = useState<number | null>(null);
-  useEffect(() => {
-    if (downloadAllRequest > 0) { setTab("download"); setPendingAll(downloadAllRequest); }
+  useEffect(() => { if (downloadAllRequest > 0) { setTab("download"); setPendingAll(downloadAllRequest); }
   }, [downloadAllRequest]);
+  // Issue #51: a "send value" from the group-address workspace switches to
+  // the monitor tab and hands the address to its compose form.
+  const seenComposeNonce = useRef<number | null>(null);
+  const [pendingCompose, setPendingCompose] = useState<{ nonce: number; address: string } | null>(null);
+  useEffect(() => {
+    if (composeHandoff === null || seenComposeNonce.current === composeHandoff.nonce) return;
+    seenComposeNonce.current = composeHandoff.nonce;
+    setTab("monitor");
+    setPendingCompose(composeHandoff);
+  }, [composeHandoff]);
   const allHandled = useCallback((nonce: number) => {
     setPendingAll((current) => current === nonce ? null : current);
   }, []);
@@ -73,7 +85,7 @@ export default function BusDiagnosticsPanel({
         <button aria-current={tab === "live" ? "page" : undefined} onClick={() => setTab("live")}>{t("activityLive.tab")}</button>
         <button aria-current={tab === "history" ? "page" : undefined} onClick={() => setTab("history")}>{t("activityHistory.title")}</button>
       </nav>
-      <div hidden={tab !== "monitor"}><BusMonitorPanel active={active && tab === "monitor"} projectOpen={project !== null} project={project} projectScope={projectScope} onFlowNavigate={onFlowNavigate} /></div>
+      <div hidden={tab !== "monitor"}><BusMonitorPanel active={active && tab === "monitor"} projectOpen={project !== null} project={project} projectScope={projectScope} onFlowNavigate={onFlowNavigate} composeHandoff={pendingCompose} onComposeHandled={() => setPendingCompose(null)} /></div>
       {tab === "scan" && <LineScanPanel projectOpen={project !== null} projectRevision={project} onTreeUpdate={onTreeUpdate} />}
       {tab === "checks" && <DeviceInspectionPanel project={project} />}
       {tab === "download" && <DeviceDownloadPanel project={project} handoff={pendingHandoff} onHandoffHandled={handoffHandled} onProjectChanged={onTreeUpdate}

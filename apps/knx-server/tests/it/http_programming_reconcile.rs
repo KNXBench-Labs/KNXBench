@@ -84,9 +84,11 @@ fn state_with_catalogue() -> (Arc<knx_server::AppState>, std::path::PathBuf) {
         "the program file was not ingested: {a:?}"
     );
     knx_productdb::ingest_file(&products, "M-FFF6/Hardware.xml", HARDWARE_XML.as_bytes()).unwrap();
-    let mut state = knx_server::AppState::default();
-    state.product_db =
-        Some(knx_server::CatalogueOwner::adopt_opened(products, path.clone()).unwrap());
+    let adopted = knx_server::CatalogueOwner::adopt_opened(products, path.clone()).unwrap();
+    let mut state = knx_server::AppState {
+        product_db: Some(adopted),
+        ..Default::default()
+    };
     let project = project();
     *state.clean_project.lock().unwrap() = Some(project.clone());
     state.project = Mutex::new(Some(project));

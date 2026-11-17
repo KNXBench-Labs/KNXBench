@@ -6,6 +6,19 @@ This dossier preserves the technical detail and dated history. Earlier
 headings, failures and lifting conditions are historical where later
 updates supersede them; they are not new work assignments.
 
+## Current branch note (16 November 2026)
+
+The accepted/released workflow uses supplied files, not the KNX Online Catalog.
+An owner-authorized Reko source is now branch WIP: explicit manual index sync,
+local search and verified acquisition into the existing import paths. It is
+neither accepted nor published and is not included in Alpha 22. The
+[work record](../open-work/LS-02-online-catalogue.md) and
+[ADR-0176](../adr/0176-manual-reko-catalogue-acquisition.md) preserve the pending
+acceptance and explicit owner exception: rights/provenance auditing is excluded
+for this package, not a blocker and not proof of cleared rights. Reko is not
+the KNX Online Catalog. Historical supplied-file-only statements below keep
+their original dates and scope.
+
 <!-- BEGIN retained catalogue record -->
 
 ## Catalogue updates come only from files you supply (2026-10-12)

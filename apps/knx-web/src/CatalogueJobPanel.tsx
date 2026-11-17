@@ -3,6 +3,7 @@ import { useEffect, useId, useState } from "react";
 import { useCatalogueJobs } from "./CatalogueJobsContext";
 import { useTranslate } from "./i18n";
 import type { PublicRecord } from "./catalogueJobsTypes";
+import OnlineCatalogueError from "./OnlineCatalogueError";
 
 export default function CatalogueJobPanel() {
  const {controller,state} = useCatalogueJobs(); const t = useTranslate(); const id = useId();
@@ -63,7 +64,7 @@ export default function CatalogueJobPanel() {
   {state.selecting && <p role="status">{t("catalogJob.preparing")}</p>}
   {!s && (state.selecting || state.uncertain) && <button type="button" disabled={state.cancelQueued} onClick={() => void controller.cancel()}>{t("catalogJob.requestCancel")}</button>}
   {state.cancelQueued && <p role="status">{t("catalogJob.cancelQueued")}</p>}
-  {state.error && <p role="alert" className="field-error">{t(`catalogJob.error.${state.error}` as Parameters<typeof t>[0])}</p>}
+  {state.error && (state.error.startsWith("online.") ? <OnlineCatalogueError error={{kind:state.error.slice(7)}} /> : <p role="alert" className="field-error">{t(`catalogJob.error.${state.error}` as Parameters<typeof t>[0])}</p>)}
   {state.uncertain && <p className="catalog-update-warning">{t("catalogJob.unknown")}</p>}
   {state.applyUncertain && <p role="alert">{t("catalogJob.applyUncertain")}</p>}
   {s && !state.unavailable && <button type="button" onClick={() => void controller.refresh()}>{t("catalogJob.checkSame")}</button>}

@@ -19,6 +19,11 @@ allow = [
     "CC0-1.0",
     "MPL-2.0",
 ]
+# Only the pinned Mozilla CA root-data package may use this data licence. Its
+# exact agreement is shipped in the source and embedded in the server (ADR-0176).
+exceptions = [
+    { name = "webpki-roots", version = "=1.0.12", allow = ["CDLA-Permissive-2.0"] },
+]
 # Our own crates are `publish = false` and carry the workspace licence, which is
 # deliberately not on the allowlist above: the allowlist is policy for incoming
 # third-party code, not for this repository's own licence.

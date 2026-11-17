@@ -75,7 +75,9 @@ const POLL_INTERVAL_MS = 500;
  * partial download of the chosen parts. The server derives the partial plan
  * and refuses a scope it cannot; this panel only asks. `changes` lets the
  * server resolve the scope from the project's programming flags; the plan it
- * returns is bound to that concrete scope. */
+ * returns is bound to that concrete scope. #52: when `changes` finds nothing
+ * pending, the panel offers the explicit complete plan from the same button
+ * area — the server prepares it like any other explicit scope. */
 type DownloadScope = "complete" | "parameters" | "groupAddresses" | "both" | "changes";
 const SCOPES: readonly DownloadScope[] = ["complete", "parameters", "groupAddresses", "both", "changes"];
 const SCOPE_PARTS: Record<Exclude<DownloadScope, "complete" | "changes">, api.DeviceDownloadParts> = {
@@ -361,7 +363,10 @@ export default function DeviceDownloadPanel({
     return () => window.clearInterval(interval);
   }, [running, status?.downloadId]);
 
-  async function preparePlan() {
+  /** Prepares the plan of `asked`, or of the selected scope when omitted. #52:
+   * the nothing-pending block asks for the explicit complete plan this way;
+   * the server prepares it exactly like the "complete" radio's request. */
+  async function preparePlan(askedScope?: DownloadScope) {
     if (project === null || selectedDevice === null) return;
     setError(null);
     setRefusal(null);
@@ -375,9 +380,9 @@ export default function DeviceDownloadPanel({
     const current = () => request === planningRequest.current &&
       latestContext.current.project === context.project && latestContext.current.deviceId === context.deviceId &&
       latestContext.current.scope === context.scope;
+    const target = address.trim();
+    const asked: DownloadScope = askedScope ?? scope;
     try {
-      const target = address.trim();
-      const asked = scope;
       const next = asked === "complete"
         ? await api.planDeviceDownload(target)
         : asked === "changes"
@@ -392,7 +397,7 @@ export default function DeviceDownloadPanel({
     } catch (reason) {
       if (!current()) return;
       // Nothing pending is an answer, not a refusal: no plan, no support guidance.
-      const advice = context.scope === "changes" ? nothingPendingAdvice(reason) : null;
+      const advice = asked === "changes" ? nothingPendingAdvice(reason) : null;
       if (advice !== null) setNothingPending(advice);
       else setRefusal({ ...context, guidance: guidanceForError(reason) });
     } finally {
@@ -636,6 +641,9 @@ export default function DeviceDownloadPanel({
         <section className="device-download-nothing" data-scope-nothing role="status">
           <p>{t("deviceDownload.scopeAdvice.nothing")}</p>
           <DownloadScopeAdvice advice={nothingPending} />
+          <button type="button" data-prepare-complete disabled={locked} onClick={() => void preparePlan("complete")}>
+            {t("deviceDownload.prepareComplete")}
+          </button>
         </section>
       )}
 

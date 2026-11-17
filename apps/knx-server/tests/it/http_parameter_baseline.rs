@@ -127,6 +127,15 @@ fn state(
 }
 
 fn seed(state: &knx_server::AppState, program_id: &str, values: &[(&str, &str)]) {
+    seed_scoped(state, program_id, values, &[])
+}
+
+fn seed_scoped(
+    state: &knx_server::AppState,
+    program_id: &str,
+    values: &[(&str, &str)],
+    scoped: &[(&str, &str, &str)],
+) {
     state
         .parameter_baselines
         .lock()
@@ -140,6 +149,10 @@ fn seed(state: &knx_server::AppState, program_id: &str, values: &[(&str, &str)])
                     values: values
                         .iter()
                         .map(|(k, v)| (k.to_string(), v.to_string()))
+                        .collect(),
+                    scoped_values: scoped
+                        .iter()
+                        .map(|(m, r, v)| ((m.to_string(), r.to_string()), v.to_string()))
                         .collect(),
                     at: chrono::DateTime::parse_from_rfc3339("2026-11-11T08:00:00.5Z")
                         .unwrap()
@@ -225,6 +238,46 @@ async fn a_usable_baseline_names_every_differing_effective_value() {
                 { "refId": "A-1_OLD", "downloaded": "1", "current": null },
                 { "refId": "P-1_R-1", "downloaded": "5", "current": "9" },
             ],
+            "scopedDiffering": [],
+        })
+    );
+}
+
+#[tokio::test]
+async fn a_usable_baseline_names_module_scoped_differences_by_module_and_ref() {
+    let dir = tempfile::tempdir().unwrap();
+    // Current: one module-scoped value changed, one equal, one new.
+    let state = state(
+        Some(products(dir.path())),
+        &[
+            ("A-1_M-1_MI-1_R-1", "9"),
+            ("A-1_M-1_MI-2_R-1", "same"),
+            ("A-1_M-1_MI-1_R-2", "new"),
+        ],
+    );
+    // Downloaded: MI-1/R-1 at 5, MI-2/R-1 same, MI-1/R-3 gone; the plain
+    // refs at their defaults, so the unscoped side is all defaults too.
+    seed_scoped(
+        &state,
+        "A-1",
+        &[("P-1_R-1", "5"), ("P-2_R-1", "0")],
+        &[
+            ("A-1_M-1_MI-1", "R-1", "5"),
+            ("A-1_M-1_MI-2", "R-1", "same"),
+            ("A-1_M-1_MI-1", "R-3", "gone"),
+        ],
+    );
+    assert_eq!(
+        last_download(&state).await,
+        json!({
+            "state": "usable",
+            "at": "2026-11-11T08:00:00.500Z",
+            "differing": [],
+            "scopedDiffering": [
+                { "moduleId": "A-1_M-1_MI-1", "refId": "R-1", "downloaded": "5", "current": "9" },
+                { "moduleId": "A-1_M-1_MI-1", "refId": "R-2", "downloaded": null, "current": "new" },
+                { "moduleId": "A-1_M-1_MI-1", "refId": "R-3", "downloaded": "gone", "current": null },
+            ],
         })
     );
 }
@@ -236,7 +289,7 @@ async fn a_value_set_to_its_default_is_no_difference() {
     seed(&state, "A-1", &[("P-1_R-1", "5"), ("P-2_R-1", "0")]);
     assert_eq!(
         last_download(&state).await,
-        json!({ "state": "usable", "at": "2026-11-11T08:00:00.500Z", "differing": [] })
+        json!({ "state": "usable", "at": "2026-11-11T08:00:00.500Z", "differing": [], "scopedDiffering": [] })
     );
 }
 

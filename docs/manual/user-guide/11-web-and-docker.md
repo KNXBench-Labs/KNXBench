@@ -43,7 +43,9 @@ whether the server is reachable from the network at all (see
 
 ## Configuration
 
-Environment variables, and nothing else. There is no configuration file. The core five:
+Server startup options use environment variables. The Reko branch candidate also
+stores its provider address and encrypted account in separate backend files,
+not in the ordinary app-settings document. The core five startup variables:
 
 | Variable | Meaning | Default |
 | --- | --- | --- |
@@ -65,12 +67,19 @@ directory at startup if it is missing, and refuses to start if it cannot.
 all. That is the right setting for a headless deployment and the wrong one if you were
 expecting a user interface.
 
+`KNX_DATA_DIR` alone does not relocate all application state. Installed products
+and the Reko branch cache follow `XDG_DATA_HOME`; its encryption key follows
+`XDG_CONFIG_HOME`. See [Reko persistence](#reko-configuration-and-key-persistence-branch-wip)
+before configuring a Reko-enabled source build.
+
 ## The container
 
 The image is built from `apps/knx-server/Dockerfile`, in three stages: Node builds the
 frontend, Rust builds the server, and a slim Debian image carries just those two
 artifacts. It sets `KNX_STATIC_DIR=/app/frontend`, `KNX_DATA_DIR=/data` and
 `KNX_PORT=8484`, exposes `8484`, and declares `/data` as a volume.
+The Reko branch Dockerfile additionally sets `XDG_CONFIG_HOME=/config` and
+declares `/config`; that candidate is not a published-image feature yet.
 The Linux default run/update recipes use `--network host`; the Dockerfile cannot
 choose a runtime network mode. Explicit `-e KNX_PORT=8484` keeps these recipes
 compatible with Alpha.9 and older published images, which predate the 8484
@@ -164,6 +173,86 @@ those devices' **Parameters** tab and choose **Restore from original .knxproj…
 ([KL-183](../../KNOWN_LIMITATIONS.md#catalogue-kl-183)). Only files that match the
 project byte for byte are installed; save the project afterwards so its file carries
 them from then on.
+
+### Reko configuration and key persistence (branch WIP)
+
+**Availability:** this describes the owner-authorized Reko branch, not a feature
+accepted or shipped in Alpha 22. Its [workflow](05-devices-and-products.md#reko-online-catalogue-branch-wip)
+uses one account for everyone on this KNXBench installation. Account secrets
+are encrypted separately from ordinary settings. Keep both storage locations,
+but back them up independently:
+
+| Storage | Native/headless default | Reko branch container |
+| --- | --- | --- |
+| Index, source configuration, encrypted `credentials.enc`, bounded downloads | `$XDG_DATA_HOME/knx/.knxbench-online-catalogue/reko`, else `~/.local/share/knx/.knxbench-online-catalogue/reko` | `/data/.knxbench-share/knx/.knxbench-online-catalogue/reko` |
+| Separate encryption key | `$XDG_CONFIG_HOME/knx/.knxbench-config/online-catalogue-reko.key`, else `~/.config/knx/.knxbench-config/online-catalogue-reko.key` | `/config/knx/.knxbench-config/online-catalogue-reko.key` |
+
+These roots come from the default product-database path and the legacy
+remembered-password configuration resolver, respectively; selecting a different
+project directory is not a key migration. The source image sets
+`XDG_DATA_HOME=/data/.knxbench-share` and `XDG_CONFIG_HOME=/config`. The existing
+remembered legacy file password also follows that config root, but is a separate
+file/policy, not a Reko account. Newly created Reko private directories/files use
+0700/0600. Keep restrictive host permissions and backup access too.
+
+**Explicitly mount `/config` before saving the account.** `VOLUME /config` alone
+only causes Docker to create an anonymous volume. Such a volume may outlive the
+old container, but a newly created replacement does **not** automatically attach
+it. Mounting only `/data` therefore does not preserve usable Reko credentials
+across replacement. Use a stable named volume or an explicit bind directory and
+reattach the exact same one on every run/update.
+
+For a locally built Reko candidate image tagged `knxbench-server` (not the
+released Docker Hub image), a fresh-container example is:
+
+```bash
+docker volume create knxbench-config \
+  && docker run -d --name knxbench --network host \
+       -e KNX_PORT=8484 \
+       -e KNX_AUTH_PASSWORD='pick something long and boring' \
+       -v "$(pwd)/data:/data" \
+       --mount type=volume,source=knxbench-config,target=/config \
+       knxbench-server
+```
+
+Use your existing server authentication/TLS/network options; the Reko provider
+account is entered in Settings, **not** in this shell command. As a bind-mount
+alternative, create a private `config/` directory and replace the `--mount` line
+with `-v "$(pwd)/config:/config"`. Use that same directory on replacement, not a
+new empty one. For an existing container, inspect its mounts before removal:
+
+```bash
+docker inspect knxbench --format '{{json .Mounts}}'
+```
+
+If an account was already stored using an anonymous config volume or an older
+configuration location, retain it and back it up before recreation. Restore the
+matching configuration/key into the chosen persistent `/config` storage before
+using the retained encrypted account. Creating a new named volume does not copy
+the old key. Do not delete/prune the old volume until recovery is verified.
+
+**Backup and recovery:** stop the server normally after saving/finishing any
+active writes; back up the whole `/data` mount and separately the persistent
+`/config` mount, with access restricted to the operator. A `.knxdb` or product
+database backup is not a backup of the Reko account/key pair. Restore the matching
+encrypted account and key together to the same configured provider address.
+Keep them separate in storage/backup handling: anyone obtaining both can decrypt
+the account. Full host/process compromise is outside this protection.
+
+If the key is missing, wrong or the encrypted file is damaged, KNXBench refuses
+to read it; generating a new key does not recover it and an existing account is
+not silently overwritten. First restore the matching key/config backup. If that
+is impossible, explicitly choose **Forget saved account**, then enter the account
+again (repair an invalid/unusable key file as needed after preserving backups).
+Forgetting removes the encrypted account; it does not delete installed products
+or recover the lost secret. Never paste keys, passwords or tokens into logs,
+issues or diagnostic exports. Check credential status after restart/replacement
+before requesting another download; there is no automatic login or sync probe.
+
+This documentation/source review is not a Docker replacement/recovery test.
+Final controlled persistence evidence and package acceptance remain pending.
+[ADR-0176](../../adr/0176-manual-reko-catalogue-acquisition.md) ·
+[Technical API contract](../../contracts/reko-online-catalogue.md).
 
 ### Alpha 22 upgrade boundary
 
@@ -381,6 +470,10 @@ written, so check it before relying on it
 
 Save the project, independently back up `data/`, and finish any device write first.
 Preserve your existing password, mount, host name, restart policy and TLS settings.
+For a Reko-enabled build, back up `/config` separately and retain its exact named
+volume/bind as well; the source recipe below uses `knxbench-config`. If your
+existing key lives elsewhere, migrate/reattach it first rather than creating an
+empty substitute ([key persistence](#reko-configuration-and-key-persistence-branch-wip)).
 Run this from your KNXBench checkout. It pulls the latest source, builds a new
 image with its commit stamped in, replaces the container, and waits for the
 health check — with host networking, so the bus monitor keeps working:
@@ -394,7 +487,8 @@ git pull --ff-only \
   && docker run -d --name knxbench --network host \
        -e KNX_PORT=8484 \
        -e KNX_AUTH_PASSWORD='pick something long and boring' \
-       -v "$(pwd)/data:/data" knxbench-server \
+       -v "$(pwd)/data:/data" \
+       --mount type=volume,source=knxbench-config,target=/config knxbench-server \
   && curl --fail --silent --show-error --insecure \
        --retry 15 --retry-delay 1 --retry-all-errors https://127.0.0.1:8484/healthz \
   && echo " — KNXBench is up on https://127.0.0.1:8484"
@@ -425,6 +519,11 @@ Save the project, back up `data/`, and make sure no device write is running firs
 Use the same password as before; if you changed ports, mounts, restart policy,
 host name, TLS or other settings, preserve those options too. A pull does not
 update a running container by itself.
+
+If replacing a Reko-enabled candidate, preserve its separate `/config` mount in
+the `docker run` command too and back it up independently. The published Alpha
+22 image does not gain Reko by retaining this volume; do not mistake a source
+candidate for a released feature. Keep the key even while using an older image.
 
 ```bash
 docker pull knxbench/knxbench-server:latest \

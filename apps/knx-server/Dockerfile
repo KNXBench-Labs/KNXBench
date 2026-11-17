@@ -36,6 +36,10 @@ ENV KNX_DATA_DIR=/data
 # container keeps it (GitHub #21, ADR-0128). Saved projects also carry their own
 # manufacturer files since then and reinstall them on open.
 ENV XDG_DATA_HOME=/data/.knxbench-share
+# Keep catalogue encryption keys across container replacement. Back this directory up
+# separately from the data volume (ADR-0176); it contains no projects or product data.
+ENV XDG_CONFIG_HOME=/config
+VOLUME /config
 ENV KNX_PORT=8484
 VOLUME /data
 EXPOSE 8484

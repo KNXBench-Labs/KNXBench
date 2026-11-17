@@ -154,6 +154,11 @@ check; Alpha.9 and older do not announce updates. [Detailed scope and privacy](.
 
 ## b) Docker / web
 
+**Reko source candidate:** Alpha 22 does not include it. If you build the Reko
+branch, persist `/config` with an explicit named volume/bind as well as `/data`,
+reattach the same config storage on container replacement and back it up
+separately. [Key storage and recovery](../user-guide/11-web-and-docker.md#reko-configuration-and-key-persistence-branch-wip).
+
 The ready-made image is downloadable from
 [Docker Hub](https://hub.docker.com/r/knxbench/knxbench-server) for **x86-64
 (`linux/amd64`) and 64-bit Arm (`linux/arm64`)**. Docker selects your host's

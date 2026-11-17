@@ -80,6 +80,7 @@ mod http_parameter_type_none;
 mod http_parameter_write_authority;
 mod http_password_import;
 mod http_pending_programming;
+mod http_programming_reconcile;
 mod http_plugin_data_adoption;
 mod http_positional_text;
 mod http_product_install;

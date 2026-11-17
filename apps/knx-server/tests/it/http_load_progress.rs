@@ -79,6 +79,7 @@ fn state() -> (Arc<knx_server::AppState>, tempfile::TempDir) {
         achievements_lock: Default::default(),
         catalog_requests: Default::default(),
         legacy_password: None,
+        online_catalogue: None,
         stop_admission: Default::default(),
     };
     (Arc::new(state), dir)

@@ -17,6 +17,10 @@ export interface CatalogueJobsApi {
 export class CatalogueJobRefusal extends Error {
  constructor(readonly kind: string) { super("Catalogue job request refused"); }
 }
+/** Feed a verified server-side file using exactly the existing job authority and decoder. */
+export async function feedOnlineCatalogueJob(owner: Owner, entry: {id: string; sha256: string}): Promise<Status> {
+ return parseCatalogueMessage("Status", await raw(`/api/online-catalogue/reko/jobs/${owner.handle.jobId}/feed/${encodeURIComponent(entry.id)}?${new URLSearchParams({sha256:entry.sha256})}`, {method:"POST",signal:owner.signal,headers:headers(owner)},16384,[202],true));
+}
 const base = "/api/catalog/update/jobs";
 const id = (owner: Owner) => { headers(owner); return `${base}/${owner.handle.jobId}`; };
 function headers(owner: Owner): Record<string, string> {
@@ -25,10 +29,10 @@ function headers(owner: Owner): Record<string, string> {
 }
 /** api.request currently parses JSON before returning; that would destroy duplicate-key evidence.
  * Keep its existing auth notification boundary, but read these bounded responses directly. */
-async function raw(path: string, init: RequestInit, cap = 16384, expected = [200]): Promise<string> {
+async function raw(path: string, init: RequestInit, cap = 16384, expected = [200], online = false): Promise<string> {
  const response = await fetch(path, { ...init, cache: "no-store", credentials: "same-origin", redirect: "error" });
  if (response.status === 401) { noteRefusal(path, 401); await response.body?.cancel(); throw new CatalogueJobRefusal("unauthenticated"); }
- if (!/^application\/json(?:;\s*charset=utf-8)?$/i.test(response.headers.get("Content-Type") ?? "") || response.headers.get("Cache-Control") !== "no-store" || ![null, "identity"].includes(response.headers.get("Content-Encoding"))) { await response.body?.cancel(); throw new CatalogueProtocolError(); }
+ if (!/^application\/json(?:;\s*charset=utf-8)?$/i.test(response.headers.get("Content-Type") ?? "") || (response.ok || !online) && response.headers.get("Cache-Control") !== "no-store" || ![null, "identity"].includes(response.headers.get("Content-Encoding"))) { await response.body?.cancel(); throw new CatalogueProtocolError(); }
  if (response.ok && !expected.includes(response.status)) { await response.body?.cancel(); throw new CatalogueProtocolError(); }
  const length = response.headers.get("Content-Length");
  if (length !== null && u64(length) > BigInt(response.ok ? cap : 16384)) { await response.body?.cancel(); throw new CatalogueProtocolError(); }
@@ -39,6 +43,12 @@ async function raw(path: string, init: RequestInit, cap = 16384, expected = [200
   text += decoder.decode();
  } catch { await reader.cancel().catch(() => {}); throw new CatalogueProtocolError(); } finally { reader.releaseLock(); }
  if (length !== null && u64(length) !== BigInt(bytes)) throw new CatalogueProtocolError();
+ if (!response.ok && online) {
+  // The acquisition layer can refuse a stale selection before it reaches the job route.
+  const error: unknown = JSON.parse(text);
+  const kind = error && typeof error === "object" && "kind" in error ? error.kind : null;
+  if (typeof kind === "string" && ["selectionChanged","noIndex","unknownEntry","notFound","notDownloadable","unavailable","integrity","storage"].includes(kind)) throw Object.assign(new CatalogueJobRefusal(`online.${kind}`),{body:{kind}});
+ }
  if (!response.ok) { const error = parseCatalogueMessage("Error", text); if (policy.errors[error.kind].httpStatus !== response.status) throw new CatalogueProtocolError(); throw new CatalogueJobRefusal(error.kind); }
  return text;
 }

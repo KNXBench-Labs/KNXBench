@@ -547,7 +547,9 @@ changes, the project does not. Saving or exporting a project file is something e
    shown plan. **Only what the project marks pending** lets the server choose the
    scope from the device's programming marks: the complete download if the
    application is marked pending, otherwise the pending parameters and/or group
-   addresses, otherwise nothing (no plan is built). The plan then says which scope it
+   addresses, otherwise nothing (no plan is built; the tab then offers to prepare
+   the explicit **Complete download** anyway, which the server plans like any
+   explicitly chosen scope, #52). The plan then says which scope it
    resolved to, and starting it writes exactly that scope. On **Download** the server
    reads the marks again in the same project snapshot it prepares the plan from, and
    refuses and asks for a new plan if they now advise another scope or nothing. A mark
@@ -814,7 +816,7 @@ in it.
 *to the device* (application tables and parameters), from two places: the
 `knx device download` command and the **Download to device** tab described
 [below](#downloading-to-a-device). Both show the plan first and write only with the
-confirmation for that one device. It has been verified on four device programs
+confirmation for that one device. It has been verified on five device programs
 so far, all mask `0701h`. See
 [`knx device download`](10-command-line.md#knx-device-download--download-a-project-devices-configuration-to-the-device).
 

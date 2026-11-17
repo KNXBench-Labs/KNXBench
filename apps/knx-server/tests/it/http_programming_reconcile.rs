@@ -85,9 +85,8 @@ fn state_with_catalogue() -> (Arc<knx_server::AppState>, std::path::PathBuf) {
     );
     knx_productdb::ingest_file(&products, "M-FFF6/Hardware.xml", HARDWARE_XML.as_bytes()).unwrap();
     let mut state = knx_server::AppState::default();
-    state.product_db = Some(
-        knx_server::CatalogueOwner::adopt_opened(products, path.clone()).unwrap(),
-    );
+    state.product_db =
+        Some(knx_server::CatalogueOwner::adopt_opened(products, path.clone()).unwrap());
     let project = project();
     *state.clean_project.lock().unwrap() = Some(project.clone());
     state.project = Mutex::new(Some(project));
@@ -155,10 +154,7 @@ fn binding(tree: &Value) -> Value {
 /// exactly as the CLI computes it — the matching report's own numbers.
 /// Reads the catalogue through the state's owner lease (the file is the
 /// same database the server adopted; a second connection would race it).
-fn expected_plan(
-    state: &Arc<knx_server::AppState>,
-    scope: &str,
-) -> (usize, usize, usize) {
+fn expected_plan(state: &Arc<knx_server::AppState>, scope: &str) -> (usize, usize, usize) {
     let project = state.project.lock().unwrap().clone().unwrap();
     let device = project
         .devices
@@ -250,12 +246,13 @@ fn catalogue_hash(state: &Arc<knx_server::AppState>) -> String {
     let owner = state.product_db.as_ref().expect("catalogue adopted");
     owner
         .with_read(|conn| {
-            Ok::<_, String>(knx_productdb::query::program_identity(conn, PROGRAM_ID).expect("program identity query"))
+            Ok::<_, String>(
+                knx_productdb::query::program_identity(conn, PROGRAM_ID)
+                    .expect("program identity query"),
+            )
         })
         .expect("catalogue read lease")
-        .unwrap_or_else(|_| {
-            panic!("no application_program row for {PROGRAM_ID}")
-        })
+        .unwrap_or_else(|_| panic!("no application_program row for {PROGRAM_ID}"))
         .expect("program identity present")
         .source_sha256
 }
@@ -266,9 +263,22 @@ async fn reconcile_clears_only_the_scoped_parts_of_a_matching_completed_run() {
     let shown = tree(&state).await;
     assert_eq!(pending(&shown), all(true), "device starts fully pending");
 
-    let mut body = report(&state, "partial-group-addresses", true, Some(&catalogue_hash(&state)));
-    body.as_object_mut().unwrap().extend(binding(&shown).as_object().unwrap().clone());
-    let (status, reconciled) = call(&state, "POST", "/api/device/1/programming/reconcile", Some(body)).await;
+    let mut body = report(
+        &state,
+        "partial-group-addresses",
+        true,
+        Some(&catalogue_hash(&state)),
+    );
+    body.as_object_mut()
+        .unwrap()
+        .extend(binding(&shown).as_object().unwrap().clone());
+    let (status, reconciled) = call(
+        &state,
+        "POST",
+        "/api/device/1/programming/reconcile",
+        Some(body),
+    )
+    .await;
     assert_eq!(status, StatusCode::OK, "{reconciled}");
     assert_eq!(
         pending(&reconciled),
@@ -295,15 +305,36 @@ async fn reconcile_refuses_incomplete_mismatched_or_stale_reports_without_change
 
     // Not completed.
     let mut body = report(&state, "partial-group-addresses", false, Some(&hash));
-    body.as_object_mut().unwrap().extend(binding(&shown).as_object().unwrap().clone());
-    let (status, refused) = call(&state, "POST", "/api/device/1/programming/reconcile", Some(body)).await;
+    body.as_object_mut()
+        .unwrap()
+        .extend(binding(&shown).as_object().unwrap().clone());
+    let (status, refused) = call(
+        &state,
+        "POST",
+        "/api/device/1/programming/reconcile",
+        Some(body),
+    )
+    .await;
     assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "{refused}");
     assert_eq!(pending(&tree(&state).await), all(true));
 
     // Wrong program hash (device/program mismatch).
-    let mut body = report(&state, "partial-group-addresses", true, Some("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"));
-    body.as_object_mut().unwrap().extend(binding(&shown).as_object().unwrap().clone());
-    let (status, refused) = call(&state, "POST", "/api/device/1/programming/reconcile", Some(body)).await;
+    let mut body = report(
+        &state,
+        "partial-group-addresses",
+        true,
+        Some("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"),
+    );
+    body.as_object_mut()
+        .unwrap()
+        .extend(binding(&shown).as_object().unwrap().clone());
+    let (status, refused) = call(
+        &state,
+        "POST",
+        "/api/device/1/programming/reconcile",
+        Some(body),
+    )
+    .await;
     assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "{refused}");
     assert_eq!(pending(&tree(&state).await), all(true));
 
@@ -317,8 +348,16 @@ async fn reconcile_refuses_incomplete_mismatched_or_stale_reports_without_change
     .await;
     assert_eq!(status, StatusCode::OK);
     let mut body = report(&state, "partial-group-addresses", true, Some(&hash));
-    body.as_object_mut().unwrap().extend(binding(&shown).as_object().unwrap().clone());
-    let (status, conflict) = call(&state, "POST", "/api/device/1/programming/reconcile", Some(body)).await;
+    body.as_object_mut()
+        .unwrap()
+        .extend(binding(&shown).as_object().unwrap().clone());
+    let (status, conflict) = call(
+        &state,
+        "POST",
+        "/api/device/1/programming/reconcile",
+        Some(body),
+    )
+    .await;
     assert_eq!(status, StatusCode::CONFLICT, "{conflict}");
     assert_eq!(conflict["kind"], "programmingStale");
 }
@@ -335,12 +374,27 @@ async fn reconcile_refuses_a_plan_that_no_longer_matches_the_project() {
     body["report"]["plan"]["dataOctets"] = json!(data_octets - 1);
     body["report"]["plan"]["steps"] = json!(steps);
     body["report"]["plan"]["groupLinks"] = json!(group_links);
-    body.as_object_mut().unwrap().extend(binding(&shown).as_object().unwrap().clone());
-    let (status, refused) = call(&state, "POST", "/api/device/1/programming/reconcile", Some(body)).await;
+    body.as_object_mut()
+        .unwrap()
+        .extend(binding(&shown).as_object().unwrap().clone());
+    let (status, refused) = call(
+        &state,
+        "POST",
+        "/api/device/1/programming/reconcile",
+        Some(body),
+    )
+    .await;
     assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "{refused}");
     assert!(
-        refused["error"].as_str().unwrap().contains("does not match"),
+        refused["error"]
+            .as_str()
+            .unwrap()
+            .contains("does not match"),
         "{refused}"
     );
-    assert_eq!(pending(&tree(&state).await), all(true), "nothing was cleared");
+    assert_eq!(
+        pending(&tree(&state).await),
+        all(true),
+        "nothing was cleared"
+    );
 }

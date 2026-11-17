@@ -99,6 +99,7 @@ mod service_control_routes;
 mod source_import_report_routes;
 pub use domain::*;
 
+mod devconf_routes;
 mod errors;
 mod flow;
 mod fs_routes;
@@ -107,7 +108,6 @@ mod load_progress;
 mod log_text;
 mod manufacturer_file_routes;
 mod name_recipe_routes;
-mod devconf_routes;
 mod note_disposition_routes;
 mod note_routes;
 pub use load_progress::*;
@@ -127,8 +127,8 @@ pub use catalogue_jobs::{
 mod function_routes;
 mod one_shot_activity;
 pub mod operation_recordings;
-mod programming_state;
 mod programming_reconcile;
+mod programming_state;
 pub use programming_state::address_programming_settler;
 mod historical_import_log;
 #[cfg(test)]

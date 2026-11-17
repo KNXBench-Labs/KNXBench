@@ -211,12 +211,10 @@ fn owning_instance<'a>(
     if matches.next().is_some() {
         // Repeated instances: the Module/@Id's own MI- digits decide.
         let id_counter = mi_counter_of(module_id)?;
-        return device_instances
-            .iter()
-            .find(|m| {
-                module_id.contains(&format!("_{}", m.source.ets_id))
-                    && m.instance_counter() == Some(id_counter)
-            });
+        return device_instances.iter().find(|m| {
+            module_id.contains(&format!("_{}", m.source.ets_id))
+                && m.instance_counter() == Some(id_counter)
+        });
     }
     first.instance_counter().is_some().then_some(first)
 }
@@ -839,7 +837,13 @@ mod tests {
                 },
             ),
         ]);
-        let nodes = run(&module_program(), &keys, &instances, &HashMap::new(), &[1, 2]);
+        let nodes = run(
+            &module_program(),
+            &keys,
+            &instances,
+            &HashMap::new(),
+            &[1, 2],
+        );
         assert_eq!(nodes[0].activation, ComObjectActivation::Undetermined);
         assert_eq!(nodes[1].activation, ComObjectActivation::Undetermined);
     }
@@ -868,10 +872,8 @@ mod tests {
             channel(2, 1, "A_MD-1_CH-1", "Kanal"),
             com_ref(3, 2, "A_MD-1_O-1"),
         ]);
-        let trees = ProgramTrees::from_parts(
-            program,
-            HashMap::from([("A_MD-1".to_string(), module)]),
-        );
+        let trees =
+            ProgramTrees::from_parts(program, HashMap::from([("A_MD-1".to_string(), module)]));
         // Both expansions spell `Module/@Id` "A_MD-1_M-1", but the two
         // imported instances carry different counters; the fixture helper
         // always spells `_MI-1`, so give the second one `_MI-2`.

@@ -62,7 +62,9 @@ impl fmt::Display for ProfileError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::InvalidDevice => f.write_str("device id 0 is not a valid identity"),
-            Self::InvalidModuleId => f.write_str("module id is empty, over 64 bytes or not [a-z0-9.-]"),
+            Self::InvalidModuleId => {
+                f.write_str("module id is empty, over 64 bytes or not [a-z0-9.-]")
+            }
             Self::InvalidModuleVersion => {
                 f.write_str("module version is empty, over 24 bytes or not MAJOR.MINOR.PATCH")
             }
@@ -194,7 +196,13 @@ mod tests {
         );
         for bad in ["", "A", ".a", "a_b", &"a".repeat(65)] {
             assert_eq!(
-                DeviceConfigProfile::new(DeviceId(1), bad, "1.0.0", &"a".repeat(64), b"{}".to_vec()),
+                DeviceConfigProfile::new(
+                    DeviceId(1),
+                    bad,
+                    "1.0.0",
+                    &"a".repeat(64),
+                    b"{}".to_vec()
+                ),
                 Err(ProfileError::InvalidModuleId),
                 "{bad:?}"
             );
@@ -206,7 +214,12 @@ mod tests {
                 "{bad:?}"
             );
         }
-        for bad in ["", "A".repeat(64).as_str(), &"a".repeat(63), "g".repeat(64).as_str()] {
+        for bad in [
+            "",
+            "A".repeat(64).as_str(),
+            &"a".repeat(63),
+            "g".repeat(64).as_str(),
+        ] {
             assert_eq!(
                 DeviceConfigProfile::new(DeviceId(1), "m", "1.0.0", bad, b"{}".to_vec()),
                 Err(ProfileError::InvalidModuleSha256),

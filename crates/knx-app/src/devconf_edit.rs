@@ -184,8 +184,8 @@ mod tests {
 
     fn project_with_device(device: u32) -> knx_core::Project {
         use knx_core::{
-            Area, AreaId, CompletionStatus, Installation, InstallationId, Line,
-            LineId, SourceRef, Topology,
+            Area, AreaId, CompletionStatus, Installation, InstallationId, Line, LineId, SourceRef,
+            Topology,
         };
         let mut project = knx_core::Project::new(knx_core::Language("en".into()));
         let source = SourceRef {
@@ -279,17 +279,26 @@ mod tests {
         };
         let preview = preview_devconf_edit(&snapshot, &revision(), &draft).unwrap();
         assert!(!preview.is_no_op());
-        let outcome = apply_devconf_edit(&mut snapshot, &mut stack, &revision(), &preview, None)
-            .unwrap();
+        let outcome =
+            apply_devconf_edit(&mut snapshot, &mut stack, &revision(), &preview, None).unwrap();
         assert!(outcome.changed);
         assert_eq!(
-            snapshot.project.devices.config_profile(DeviceId(7)).unwrap().document(),
+            snapshot
+                .project
+                .devices
+                .config_profile(DeviceId(7))
+                .unwrap()
+                .document(),
             b"{\"nodes\": [1]}"
         );
         let mut undone = snapshot.project.clone();
         stack.undo(&mut undone).unwrap();
         assert_eq!(
-            undone.devices.config_profile(DeviceId(7)).unwrap().document(),
+            undone
+                .devices
+                .config_profile(DeviceId(7))
+                .unwrap()
+                .document(),
             b"{\"nodes\": []}"
         );
     }
@@ -319,8 +328,11 @@ mod tests {
 
     fn empty_snapshot() -> NativeSnapshot {
         let conn = knx_store::open_and_migrate_in_memory().unwrap();
-        knx_store::save_project(&conn, &knx_core::Project::new(knx_core::Language("en".into())))
-            .unwrap();
+        knx_store::save_project(
+            &conn,
+            &knx_core::Project::new(knx_core::Language("en".into())),
+        )
+        .unwrap();
         NativeSnapshot::read(&conn).unwrap()
     }
 
@@ -335,8 +347,7 @@ mod tests {
         ));
         // A present device without a profile refuses removal as no-op guard.
         assert!(matches!(
-            preview_devconf_removal(&snapshot, &revision(), DeviceId(7))
-                .map(|_| ()),
+            preview_devconf_removal(&snapshot, &revision(), DeviceId(7)).map(|_| ()),
             Ok(())
         ));
     }

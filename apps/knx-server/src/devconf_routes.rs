@@ -42,9 +42,9 @@ struct ProfileDraft {
 }
 impl ProfileDraft {
     fn normalized(&self) -> Result<edit::DevconfDraft, ApiError> {
-        let document = URL_SAFE_NO_PAD
-            .decode(&self.document_b64)
-            .map_err(|_| ApiError::refused("devconfInvalid", "Profile document is not valid base64url"))?;
+        let document = URL_SAFE_NO_PAD.decode(&self.document_b64).map_err(|_| {
+            ApiError::refused("devconfInvalid", "Profile document is not valid base64url")
+        })?;
         Ok(edit::DevconfDraft {
             device: DeviceId(self.device),
             module_id: self.module_id.clone(),
@@ -220,9 +220,11 @@ async fn preview(
             return Err(conflict());
         }
         let plan = match &request.action {
-            Action::Set { draft } => {
-                edit::preview_devconf_edit(&snapshot(state, project), &revision(state), &draft.normalized()?)
-            }
+            Action::Set { draft } => edit::preview_devconf_edit(
+                &snapshot(state, project),
+                &revision(state),
+                &draft.normalized()?,
+            ),
             Action::Remove { device } => edit::preview_devconf_removal(
                 &snapshot(state, project),
                 &revision(state),

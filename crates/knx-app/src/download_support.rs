@@ -739,7 +739,12 @@ mod tests {
         // (complete, parameters, both) and #49 (group addresses only).
         assert_eq!(
             hager.scopes,
-            ["complete", "partial-parameters", "partial-group-addresses", "partial-both"],
+            [
+                "complete",
+                "partial-parameters",
+                "partial-group-addresses",
+                "partial-both"
+            ],
             "{hager:?}"
         );
         assert_eq!(hager.date, "2026-11-17");

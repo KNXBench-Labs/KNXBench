@@ -1,9 +1,7 @@
 //! Offline partial-group-addresses plan probe for M-0006_A-E052-12-3406 (issue #49 evidence).
 
 use knx_app::download_support::offline_download;
-use knx_core::commissioning::partial_memory_download::{
-    derive_partial_plan, PartialDownloadParts,
-};
+use knx_core::commissioning::partial_memory_download::{derive_partial_plan, PartialDownloadParts};
 
 const PROGRAM_ID: &str = "M-0006_A-E052-12-3406";
 
@@ -29,9 +27,18 @@ fn the_49_report_plan_reproduces_offline() {
         group_addresses: true,
     };
     let partial = derive_partial_plan(&complete, parts).expect("partial plan");
-    assert_eq!(partial.plan.steps.len(), 24, "steps: {}", partial.plan.steps.len());
+    assert_eq!(
+        partial.plan.steps.len(),
+        24,
+        "steps: {}",
+        partial.plan.steps.len()
+    );
     assert_eq!(partial.plan.data_octets(), 1020, "octets");
-    assert!(partial.ignored_writes.is_empty(), "{:?}", partial.ignored_writes);
+    assert!(
+        partial.ignored_writes.is_empty(),
+        "{:?}",
+        partial.ignored_writes
+    );
     println!(
         "C49-OK complete steps={} octets={} partial-ga steps={} octets={}",
         complete.steps.len(),

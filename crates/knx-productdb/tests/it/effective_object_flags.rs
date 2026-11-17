@@ -247,7 +247,7 @@ pub(super) fn check_legacy_activation_and_read_on_init(
         build(&conn, &request).map(|_| ()),
     ] {
         assert!(
-            matches!(result, Err(ImageError::Unsupported { ref what }) if what == "O_R: a module instance"),
+            matches!(result, Err(ImageError::Unsupported { ref what }) if what == "O_R: a module instance object"),
             "{result:?}"
         );
     }
@@ -522,7 +522,7 @@ fn module_objects_are_refused_without_flattening_their_scope() {
         build_download_image(&conn, &request).map(|_| ()),
     ] {
         assert!(
-            matches!(result, Err(ImageError::Unsupported { ref what }) if what == "O0_R: a module instance"),
+            matches!(result, Err(ImageError::Unsupported { ref what }) if what == "O0_R: a module instance object"),
             "{result:?}"
         );
     }

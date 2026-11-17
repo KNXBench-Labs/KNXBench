@@ -87,6 +87,7 @@ mod http_product_install;
 mod http_product_language;
 mod http_project_diff;
 mod http_project_history;
+mod http_devconf_profiles;
 mod http_project_notes;
 mod http_project_payloads;
 mod http_project_routes;

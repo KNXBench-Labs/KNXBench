@@ -304,3 +304,87 @@ fn authentic_native21_project_migrates_to_v22_without_profiles() {
     assert_eq!(knx_store::load_project(&fresh).unwrap(), project);
     drop(writable);
 }
+
+#[test]
+fn duplicate_stored_profile_refuses_load() {
+    let conn = knx_store::open_and_migrate_in_memory().unwrap();
+    let project = project_with_device();
+    knx_store::save_project(&conn, &project).unwrap();
+    let row = "INSERT INTO device_config_profile (device_id, module_id, module_version, module_sha256, document) VALUES (1, 'm', '1.0.0', ?, x'7B226E6F64657322A16E6F646573223A205B5D7D')";
+    let sha = "a".repeat(64);
+    conn.execute(row, rusqlite::params![sha]).unwrap();
+    conn.execute(row, rusqlite::params![sha]).unwrap_err(); // PK already refuses the second
+    // Bypass the PK to reach the load-side duplicate guard: a second device
+    // row is impossible (device_id is PK), so the guard is exercised by
+    // loading a store whose table was corrupted to hold two rows for one
+    // device via a non-PK schema. Simpler: drop and recreate without the PK.
+    conn.execute_batch(
+        "CREATE TABLE dup_profiles (device_id INTEGER, module_id TEXT NOT NULL, module_version TEXT NOT NULL, module_sha256 TEXT NOT NULL, document BLOB NOT NULL) STRICT;",
+    )
+    .unwrap();
+    conn.execute("INSERT INTO dup_profiles SELECT * FROM device_config_profile", [])
+        .unwrap();
+    conn.execute("INSERT INTO dup_profiles SELECT * FROM device_config_profile", [])
+        .unwrap();
+    conn.execute_batch("DROP TABLE device_config_profile; ALTER TABLE dup_profiles RENAME TO device_config_profile;")
+        .unwrap();
+    let err = knx_store::load_project(&conn).unwrap_err();
+    assert!(
+        err.to_string().contains("duplicate stored profile"),
+        "{err}"
+    );
+}
+
+#[test]
+fn stored_profile_for_missing_device_refuses_load() {
+    let conn = knx_store::open_and_migrate_in_memory().unwrap();
+    let project = project_with_device();
+    knx_store::save_project(&conn, &project).unwrap();
+    conn.execute_batch("PRAGMA foreign_keys = OFF;")
+        .unwrap();
+    conn.execute(
+        "INSERT INTO device_config_profile (device_id, module_id, module_version, module_sha256, document) VALUES (99, 'm', '1.0.0', ?1, x'7B226E6F64657322A16E6F646573223A205B5D7D')",
+        rusqlite::params!["a".repeat(64)],
+    )
+    .unwrap();
+    let err = knx_store::load_project(&conn).unwrap_err();
+    assert!(
+        err.to_string().contains("does not exist"),
+        "{err}"
+    );
+}
+
+#[test]
+fn a_profile_keeps_its_snapshot_identity_and_a_profileless_image_keeps_the_older_one() {
+    use knx_store::project_history::NativeSnapshot;
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("p.knxdb");
+    let conn = knx_store::open_and_migrate(&path).unwrap();
+    let mut project = project_with_device();
+    knx_store::save_project(&conn, &project).unwrap();
+    let profileless = NativeSnapshot::read(&conn).unwrap();
+    let hash_without = profileless.semantic_hash().unwrap();
+
+    Command::SetDeviceConfigProfile {
+        profile: profile(1, "example.demo-panel"),
+    }
+    .apply(&mut project)
+    .unwrap();
+    knx_store::save_project(&conn, &project).unwrap();
+    let with_profile = NativeSnapshot::read(&conn).unwrap();
+    let hash_with = with_profile.semantic_hash().unwrap();
+    assert_ne!(hash_with, hash_without, "a profile changes the semantic identity");
+
+    // An older-shape image (profile table dropped) still decodes with the
+    // profile-less identity, exactly like the other additive overlays.
+    let conn2 = knx_store::open_and_migrate_in_memory().unwrap();
+    knx_store::save_project(&conn2, &project).unwrap();
+    conn2
+        .execute_batch(
+            "DROP TABLE device_config_profile; DROP TABLE device_parameter_baseline_scoped_value; PRAGMA user_version=21;",
+        )
+        .unwrap();
+    let bytes = conn2.serialize(rusqlite::MAIN_DB).unwrap().to_vec();
+    let decoded = NativeSnapshot::decode(&bytes, &knx_store::project_history::image_hash(&bytes)).unwrap();
+    assert_eq!(decoded.semantic_hash().unwrap(), hash_without);
+}

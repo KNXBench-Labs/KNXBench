@@ -277,7 +277,7 @@ fn a_future_native_store_is_refused_like_every_schema_step() {
                     supported: s,
                 }) if f == knx_store::CURRENT_SCHEMA_VERSION + 1
                     && s == knx_store::CURRENT_SCHEMA_VERSION
-            }),
+            ),
             "{refused:?}"
         );
     }

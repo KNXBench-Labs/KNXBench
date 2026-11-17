@@ -2,6 +2,7 @@
 
 mod authorized_restore_exports;
 mod backup_application_identity;
+mod c49_partial_group_addresses;
 mod commissioning_activity;
 mod comparison_input;
 mod contribution;

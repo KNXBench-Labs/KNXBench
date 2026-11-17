@@ -737,6 +737,7 @@ fn resolved() -> WrittenParameters {
             ("P-1".to_string(), "1".to_string()),
             ("P-2".to_string(), "default".to_string()),
         ]),
+        scoped_values: Default::default(),
         at: DateTime::parse_from_rfc3339("2026-11-11T09:30:00.123456789Z")
             .unwrap()
             .with_timezone(&Utc),
@@ -749,6 +750,7 @@ fn recorded() -> BaselineChange {
         object_flags: None,
         program_id: request().program_id,
         values: resolved.values,
+        scoped_values: Default::default(),
         at: resolved.at,
     })
 }

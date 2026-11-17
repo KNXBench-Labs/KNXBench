@@ -33,6 +33,7 @@ fn seed(state: &SharedState) {
             parameter: BaselineChange::Record(ParameterBaseline {
                 program_id: PROGRAM_ID.into(),
                 values: Default::default(),
+                scoped_values: Default::default(),
                 object_flags: Some([(0, flags())].into()),
                 at: chrono::DateTime::UNIX_EPOCH,
             }),

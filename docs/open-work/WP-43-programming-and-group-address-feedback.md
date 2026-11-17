@@ -41,11 +41,18 @@ planner on one unchanged fully-programmed fixture. Preparing never starts a devi
 operation. Parent inspected the offer and plan screenshots. These are focused checks,
 not final package acceptance; see the [bounded record](../status/2026-11-16-issue52-complete-preparation.md).
 
-### C — Queued, not started
+### C — Done, published with A1's branch
 
-Check artifact and program hashes, executing revision, plan shape and previous
-per-scope evidence. Preserve the distinction between unconfirmed restart and an
-application observed running. No repeat hardware run is requested.
+The #49 report (attachment sha256 `a54a9d7c…`, build `0.1.0-alpha.21+gaf05c8e5`)
+was bound to the program file `M-0006_A-E052-12-3406.xml`
+(sha256 `3cd53544…`, re-verified against the corpus copy, 6156008 bytes) and its
+plan independently reproduced offline: the partial-group-addresses plan is
+exactly 24 steps and 1020 data octets, no warnings or inferences
+(`crates/knx-app/tests/it/c49_partial_group_addresses.rs`). Tester confirmed the
+device works as configured (LED on the new group address, read-only compare
+clean); the unconfirmed restart stays an explicit limitation. Recorded in
+`docs/evidence/tester-report-hager-0701-2026-11-17.json` and added
+`partial-group-addresses` to `verified_downloads.json` for this program.
 
 ### B — Queued, not started
 
@@ -62,5 +69,5 @@ An evidence collector is not itself proof of external device programming.
 
 ## Next step
 
-Close the A1 review findings against the corrected regression candidate, execute the
-selected package gate on a frozen commit and verify publication. Then proceed to C.
+A1 is published (PR !55). Next: B (#51, group-address sending UI), then A2 (#50,
+external-run reconciliation).

@@ -195,7 +195,9 @@ fn instances_sharing_ref(
 
 /// The one device `ModuleInstance` a scoped activation belongs to, by the
 /// innermost scope's `Module/@Id` (D39: it ends with `_<RefId>`). `None`
-/// when zero or several instances match.
+/// when zero or several instances match. The resolved owner must also carry
+/// a well-formed instance counter (ADR-0177): a malformed `MI-` suffix has
+/// no authority to give, so it resolves to `None` here as well.
 fn owning_instance<'a>(
     hit: &ActiveRef,
     device_instances: &'a [knx_core::ModuleInstance],
@@ -205,7 +207,8 @@ fn owning_instance<'a>(
         .iter()
         .filter(|m| module_id.ends_with(&format!("_{}", m.source.ets_id)));
     let first = matches.next()?;
-    matches.next().is_none().then_some(first)
+    let unique = matches.next().is_none();
+    (unique && first.instance_counter().is_some()).then_some(first)
 }
 
 /// Channel nodes built so far, so every object of one channel shares one

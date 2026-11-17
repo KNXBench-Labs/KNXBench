@@ -184,6 +184,9 @@ pub(crate) fn include_missing(
     for active in &evaluation.activation.com_object_refs {
         // Instance construction for new module scopes needs a separate, exact
         // ModuleInstance authority; do not invent one from a declaration.
+        // ADR-0177: the one resolved owner must also carry a well-formed
+        // instance counter — a malformed `MI-` suffix is not an owner, so
+        // the whole edit refuses here instead of guessing a number.
         if let Some(scope) = &active.scope {
             let owners = modules
                 .iter()
@@ -194,7 +197,8 @@ pub(crate) fn include_missing(
                         .is_some_and(|id| id.ends_with(&format!("_{}", instance.source.ets_id)))
                 })
                 .collect::<Vec<_>>();
-            let present = owners.len() == 1
+            let authoritative = owners.len() == 1 && owners[0].instance_counter().is_some();
+            let present = authoritative
                 && represented.iter().any(|(instance, reference)| {
                     *instance == Some(owners[0].id) && reference == &active.ref_id
                 });

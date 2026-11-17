@@ -54,13 +54,13 @@ clean); the unconfirmed restart stays an explicit limitation. Recorded in
 `docs/evidence/tester-report-hager-0701-2026-11-17.json` and added
 `partial-group-addresses` to `verified_downloads.json` for this program.
 
-### B — Queued, not started
+### B — Done, published on main (`607f35578`, PR !55): searchable combobox destination in BusComposeForm with free-text fallback, send action from the group-address workspace pre-fills the compose form; selection never sends
 
 Reuse the existing send owner and DPT/value validation. Preserve free-text destinations,
 explicit sending, project/context lifetime and failure feedback. Verify with fixtures
 and loopback only, including name/address selection and navigation prefill.
 
-### A2 — Queued, not started
+### A2 — Done, published on main (`748c7ff3e` + `82116457b`, PR !55): external CLI download reports reconcile against pending marks only on authoritative match; stale/mismatched evidence cannot clear marks
 
 Establish authoritative matching of device, plan, source and current project state
 before changing stored marks. Stale, incomplete or mismatched evidence cannot clear
@@ -69,5 +69,4 @@ An evidence collector is not itself proof of external device programming.
 
 ## Next step
 
-A1 is published (PR !55). Next: B (#51, group-address sending UI), then A2 (#50,
-external-run reconciliation).
+All four packages are published on main (PR !55, merge `0b80d289`, 2026-11-17). WP-43 is complete; no further packages queued from this batch.

@@ -3012,6 +3012,9 @@ export interface LastDownload {
   /** Every `ParameterRef` whose effective value differs, by id; `null` for a
    * side without a value. */
   differing?: { refId: string; downloaded: string | null; current: string | null }[];
+  /** WP-37: every module-scoped ref whose value differs, ordered by
+   * `(moduleId, refId)`; `null` for a side without a value. */
+  scopedDiffering?: { moduleId: string; refId: string; downloaded: string | null; current: string | null }[];
 }
 
 /** A device's program reference no installed application program answers. */

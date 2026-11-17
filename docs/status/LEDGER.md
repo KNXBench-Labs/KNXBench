@@ -384,6 +384,23 @@ comparison 9/9; layering/headers/anchors/ledger/local-info all pass. Not
 claimed: download-image arithmetic on the wire, bus behavior, device
 readback, bus/device writes, release or deployment authority.
 
+## WP-37 module-scoped baseline values land (17 November 2026)
+
+First WP-07-authority consumer, on `work/wp37-module-scoped-20261117` off
+main: `ParameterBaseline` gains `scoped_values: BTreeMap<(Module/@Id,
+ParameterRef id), raw>` (native schema 22, pure addition
+`device_parameter_baseline_scoped_value`, migration v21→v22, snapshot
+admission extended). Settlement decomposes a written request's module-qualified
+ids once via `resolve_scoped_values` (rightmost `_M-<m>_MI-<k>_` marker, never
+guessed — ADR-0177), so a re-numbered instance is a new key. The
+last-download comparison answers `scopedDiffering` beside `differing`
+(`scoped_differences`, exact raw compare) and the web panel marks module-scoped
+rows by their section's `moduleId`; a module-scoped write drops only its own
+scoped pair. The image builder still refuses module instances, so no module
+download exists yet. ETS import is unchanged (module-qualified ids stay
+verbatim in `values`). Not claimed: module downloads, image arithmetic on the
+wire, bus behavior, device readback, bus/device writes.
+
 ## Reconciliation record (AR14D D2, 2026-10-04)
 
 The ledger was built from the routing table in `alpha-release-goal.md` §7–§8

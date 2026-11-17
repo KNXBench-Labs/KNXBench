@@ -114,6 +114,7 @@ fn link_settlement_truth_table_uses_scope_attempt_source_and_end_not_current_edi
                                     BaselineChange::Record(ParameterBaseline {
                                         program_id: written.program_id.clone(),
                                         values: resolved.values,
+                                        scoped_values: Default::default(),
                                         object_flags: resolved.object_flags,
                                         at: resolved.at,
                                     })
@@ -147,6 +148,7 @@ fn independent_edits_retain_other_section_and_its_timestamp_and_do_not_resurrect
     let parameters = ParameterBaseline {
         program_id: "P".into(),
         values: Default::default(),
+        scoped_values: Default::default(),
         object_flags: Some(
             [(
                 1,
@@ -224,6 +226,7 @@ fn settlement_propagates_unknown_known_empty_and_known_nonempty_flags_without_st
     for expected in [None, Some(Default::default()), Some([(7, flags)].into())] {
         let resolved = WrittenParameters {
             values: [("chosen".into(), "01".into())].into(),
+            scoped_values: Default::default(),
             object_flags: expected.clone(),
             at,
         };

@@ -28,6 +28,20 @@ nothing is guessed. Identity-keyed module comparison keys on
 `<ets_id>#k=<n>`, so two instances of one `Module` never merge into one
 compared row.
 
+**Update 2026-11-17 (WP-37, first authority consumer) — module-scoped values
+now land in the download baseline.** A completed download's settlement records
+the module-scoped values its request carried as `scoped_values` keyed
+`(Module/@Id, ParameterRef id)` (native schema 22, pure addition
+`device_parameter_baseline_scoped_value`, migration v21→v22), decomposed once
+on the write side via `instance_counter()` (ADR-0177): a re-numbered instance
+is a different key, never a silent overwrite. The last-download comparison
+answers `scopedDiffering` beside `differing` and the parameter panel marks
+module-scoped rows by their section's `moduleId`. The image builder still
+refuses module instances (`ImageError::Unsupported "{ref}: a module
+instance"`), so module downloads — and with them module-scoped baseline
+content from a real device write — do not exist yet; repeat-driven activation
+stays unsupported exactly as above.
+
 **Update 2026-10-10 — read-only instance dimension delivered in code.**
 [ADR-0108](../adr/0108-read-only-module-instance-values.md) separates stored
 instance evidence from Dynamic evaluation. `ValueMap` now has a separate

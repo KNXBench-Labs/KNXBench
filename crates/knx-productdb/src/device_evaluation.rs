@@ -120,8 +120,11 @@ pub enum MiAuthority {
 /// D39 rules 2-3, verbatim: the instance-matching rule is
 /// `module_id.ends_with("_" + instance.source.ets_id)` — the leading
 /// underscore is what keeps `MD-1_M-2` from matching a `..._MD-11_M-2`
-/// module id. `digits` must be all-ASCII (`\d+`), matching
-/// `decompose_module_qualified`'s own definition of a valid `MI-`.
+/// module id. The `MI-` digits now come from the shared authority
+/// [`knx_core::ModuleInstance::instance_counter`] (ADR-0177, accepted WP-07
+/// witness), which applies the same all-ASCII digit definition as
+/// `decompose_module_qualified`; `MiAuthority::Found` carries the counter as
+/// its decimal string so the existing callers keep their shape.
 pub fn resolve_mi_authority(
     instances: &[knx_core::ModuleInstance],
     module_id: &str,
@@ -132,20 +135,13 @@ pub fn resolve_mi_authority(
         .collect();
     match matches.as_slice() {
         [] => MiAuthority::NoMatch,
-        [one] => {
-            let expected_prefix = format!("{}_MI-", one.source.ets_id);
-            match one
-                .instance_ets_id
-                .strip_prefix(expected_prefix.as_str())
-                .filter(|digits| !digits.is_empty() && digits.chars().all(|c| c.is_ascii_digit()))
-            {
-                Some(digits) => MiAuthority::Found(digits.to_string()),
-                None => MiAuthority::Malformed {
-                    source_ets_id: one.source.ets_id.clone(),
-                    instance_ets_id: one.instance_ets_id.clone(),
-                },
-            }
-        }
+        [one] => match one.instance_counter() {
+            Some(k) => MiAuthority::Found(k.to_string()),
+            None => MiAuthority::Malformed {
+                source_ets_id: one.source.ets_id.clone(),
+                instance_ets_id: one.instance_ets_id.clone(),
+            },
+        },
         many => MiAuthority::Ambiguous {
             source_ets_id: many[0].source.ets_id.clone(),
             instance_ets_ids: many.iter().map(|m| m.instance_ets_id.clone()).collect(),
@@ -251,12 +247,15 @@ pub fn evaluate_device(
         let module_id = format!("{prefix}_M-{module_digits}");
         let declared_id = format!("{prefix}_{suffix}");
         // Resolve stored identity even below a skipped Repeat. This does not
-        // walk its iterations or decide activation (ADR-0108).
+        // walk its iterations or decide activation (ADR-0108). The stored
+        // `MI-<k>` comparison now goes through the shared authority
+        // (ADR-0177): the instance's counter must equal the candidate's
+        // `mi_digits`, which is the same all-ASCII-digit check expressed once.
         let matches: Vec<_> = module_instances
             .iter()
             .filter(|m| {
                 module_id.ends_with(&format!("_{}", m.source.ets_id))
-                    && m.instance_ets_id == format!("{}_MI-{mi_digits}", m.source.ets_id)
+                    && m.instance_counter().map(|k| k.to_string()) == Some(mi_digits.clone())
             })
             .collect();
         let declared: Vec<_> = declarations

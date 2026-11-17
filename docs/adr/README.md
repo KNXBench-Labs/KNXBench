@@ -182,3 +182,4 @@ the old one gets `Status: Superseded by ADR-NNNN`.
 | [0174](0174-last-downloaded-links-and-flags.md) | The project remembers the links and object flags a verified download wrote | Accepted | 2026-11-12 |
 | [0175](0175-device-configuration-modules-are-declarative-data.md) | Device configuration modules are declarative data | Accepted | 2026-11-15 |
 | [0176](0176-manual-reko-catalogue-acquisition.md) | Reko supplies files; the existing catalogue importer still decides | Accepted implementation direction; branch WIP, no software acceptance/release | 2026-11-16 |
+| [0177](0177-accepted-wp07-mapping-is-the-module-instance-authority.md) | The accepted WP-07 mapping is the module-instance authority | Proposed | 2026-11-17 |
